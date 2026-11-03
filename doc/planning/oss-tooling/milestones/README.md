@@ -17,6 +17,7 @@ for the locked naming surface.
 | `journeys.md` | User and agent journeys delivered at milestone end, each with the no-token guarantees and the story map | milestones with an operational CLI (M1 on) |
 | `man-page.md` | The command surface available after the milestone, with usage lines and delivery attribution | milestones with an operational CLI (M1 on) |
 | `contracts.md` | Per-command proposed contracts: inputs, outputs (text digest and machine envelope), exit codes, examples, test scenarios | milestones with an operational CLI (M1 on) |
+| `interactions.md` | Exact example sessions: concrete command lines with realistic outputs for the milestone's core flows (illustrative; shapes refined at delivery) | milestones with an operational CLI (M1 on) |
 
 M0 is backfilled with architecture only: the M0 CLI engines exist beside
 the bash stack (which stays authoritative), so journeys, a man page, and
@@ -45,4 +46,4 @@ authored during milestone planning and refined as stories deliver.
 | Milestone | Pack |
 |---|---|
 | M0 (trust substrate, delivered) | [m0/architecture.md](m0/architecture.md) |
-| M1 (delivery engine and autonomous dispatch, planned) | [m1/architecture.md](m1/architecture.md), [m1/journeys.md](m1/journeys.md), [m1/man-page.md](m1/man-page.md), [m1/contracts.md](m1/contracts.md) |
+| M1 (delivery engine and autonomous dispatch, planned) | [m1/architecture.md](m1/architecture.md), [m1/journeys.md](m1/journeys.md), [m1/man-page.md](m1/man-page.md), [m1/contracts.md](m1/contracts.md), [m1/interactions.md](m1/interactions.md) |

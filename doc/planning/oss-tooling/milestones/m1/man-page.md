@@ -59,7 +59,7 @@ record-plus-commit atomically for the completed phase's pending work.
 
 | Command (first delivered) | Usage |
 |---|---|
-| `status` (M0-S6, M1-S10) | `<binary> status [--repo <path>]... [--json]` |
+| `status` (M0-S6, M1-S10) | `<binary> status [--repo <path>]... [--watch] [--json]` |
 | `queue ready` (M0-S7) | `<binary> queue ready <ref>... (1..8 refs)` |
 | `queue` (M1-S17) | `<binary> queue [list\|plan\|add\|prioritize\|dep]` |
 | `lanes` (M1-S17) | `<binary> lanes [list\|show <lane>]` |
@@ -82,7 +82,7 @@ record-plus-commit atomically for the completed phase's pending work.
 | `db` (M0-S11) | `<binary> db size\|list\|prune\|reboot [--dry-run]` |
 | `watchdog` (M1-S1) | `<binary> watchdog preflight\|teardown\|liveness <lane>` |
 | `doctor` (M1-S3) | `<binary> doctor [--fix-hints]` |
-| `daemon start` (M1-S18) | `<binary> daemon start\|stop\|status` |
+| `daemon start` (M1-S18) | `<binary> daemon start [--foreground]\|stop\|status [--live]` |
 | `repos` | not delivered until M3-S6; bash utilities remain |
 
 ### Learn

@@ -681,7 +681,7 @@ the M1 redefinition).
 
 ### M1-S18 Resident dispatch daemon
 - Goal: A resident daemon drives the queue continuously (single-instance, crash-safe, never a lane itself, degrading to CLI one-shots), so lanes never idle waiting for a coordinator iteration.
-- Tasks: the daemon process (start, stop, status) drives lanes by
+- Tasks: the daemon process (start, stop, status) supervises lanes by
   consuming the scheduling engine; single-instance enforcement (lock with
   staleness takeover); crash-safe: scheduling state lives in the state
   layer and a restart resumes the queue without lost or duplicated work
@@ -691,11 +691,22 @@ the M1 redefinition).
   to its lanes (M1-S15); degradation: daemon failure or absence leaves
   the CLI one-shot path fully functional; runs under a real process
   supervisor (systemd or equivalent); prepares and queues merges but
-  never fires them (roadmap constraint 9).
+  never fires them (roadmap constraint 9). The command-to-daemon
+  communication contract: state-mediated truth with a local control
+  socket (derived from the state dir) as an optimization for wake-now
+  notifications and bounded live streams, never the only route; commands
+  write intent records (queue entries, priorities, dependencies, blocker
+  answers, resume notes) and the daemon writes execution records
+  (leases, lane state, heartbeats, parks) under the state layer's fence
+  tokens; every command interaction completes through the state path
+  alone when the daemon is down, and the daemon reconciles on start.
 - AC: a second daemon instance is refused or takes over stale state with
   evidence; killing the daemon mid-delivery and restarting converges
   without duplicated work; deliveries continue via the one-shot CLI
-  while the daemon is down; the daemon never executes a merge.
+  while the daemon is down; the daemon never executes a merge; commands
+  that mutate scheduling or blocker state complete daemon-down and are
+  applied on reconcile with zero loss; live-watch without the daemon
+  declares degraded mode rather than failing or silently idling.
 - Depends on: M1-S4, M1-S15, M1-S17.
 
 ### M1-S19 Spend read side and resume amplification

@@ -125,6 +125,28 @@ and retained). The remaining phases execute in the interactive session.
 - [x] Registration and links: forbidden-literals registry entries for the
   six new docs; planning README index row; roadmap pointer.
 
+## Phase 8: Interaction examples and daemon communication (owner review feedback)
+
+- [x] milestones/m1/interactions.md: eight exact example sessions
+  (coordinator iteration, batch planning, lane lifecycle, daemon
+  lifecycle and degradation, parks and weight classes, spend and
+  doctor, handover day, machine output) with concrete inputs and
+  realistic proposed outputs.
+- [x] m1/architecture.md: daemon communication section (state-mediated
+  truth, control socket as optimization, writer-ownership table,
+  daemon-down fallback matrix, wake model) ahead of the boundary
+  invariants.
+- [x] contracts.md: daemon entry extended with the communication
+  contract and degraded-mode errors; queue and blockers entries note
+  intent-write plus socket-notify semantics; status gains --watch with
+  declared degraded fallback.
+- [x] man-page.md: daemon start --foreground and status --live; status
+  --watch.
+- [x] backlog.md M1-S18 tasks and AC carry the command-to-daemon
+  communication contract (socket as optimization, state-only fallback
+  for every interaction, fence-token writer ownership, reconcile on
+  start); registry daemon row extended.
+
 ## Revision log
 
 - 2026-11-03: Added Phase 6 for code review iteration 1 remediation.

@@ -133,7 +133,9 @@ exit-code projection; secret redaction; bounded output.
 
 ### `status` (M0-S6 shipped; M1-S10 proposed expansion)
 
-- Inputs: `--repo <path>` repeated; `--json`.
+- Inputs: `--repo <path>` repeated; `--watch` (bounded live stream through
+  the daemon control socket; degrades to state polling in a declared
+  degraded mode when the daemon is down); `--json`.
 - Outputs (expansion): grouped, ranked digest with stable finding codes;
   new sections: attention-state (lanes delivering vs idle-with-reason),
   ready-to-merge action list, parked items with conditions, owner-gate
@@ -150,7 +152,10 @@ exit-code projection; secret redaction; bounded output.
 - Outputs: the dependency graph, ready set, per-repo lease holders,
   weight-class loads, park states with conditions; `queue plan` prints
   the next N scheduled actions with reasons (close-first, producer-first,
-  single-flight, weight-capped).
+  single-flight, weight-capped). Mutating subcommands (`add`,
+  `prioritize`, `dep`) write intent to state and notify a running daemon
+  through the control socket; without the daemon they still write state
+  and the daemon reconciles on start.
 - Errors: `queue.dependency-cycle`, `queue.lease-conflict`,
   `queue.park-condition-stuck` (park outliving its condition is a bug
   class).
@@ -172,7 +177,9 @@ exit-code projection; secret redaction; bounded output.
   asked-at, age }` with types decision-needed, spec-ambiguity,
   credential-missing (variable name only), external-wait; ranked by age
   and priority; answer applies and resumes the lane (no session
-  re-entry).
+  re-entry). Answers are intent records in state; a running daemon
+  applies them immediately (control-socket wake), a down daemon applies
+  them at reconcile, and a one-shot `dispatch --resume` path exists.
 - Errors: `blockers.invalid-type`, `blockers.credential-value-rejected`
   (the channel refuses values, names only).
 - Scenarios: question surfaces within one collection cycle; answer
@@ -216,16 +223,29 @@ exit-code projection; secret redaction; bounded output.
 
 ### `daemon` (M1-S18, proposed)
 
-- Inputs: `start | stop | status`.
+- Inputs: `start | stop | status`; `start --foreground` (no supervisor
+  assumption); `status --live` (socket stream, falls back to state with a
+  declared degraded mode).
+- Communication contract: state-mediated truth, socket as optimization.
+  Commands write intent records to state (queue entries, answers, resume
+  notes) and optionally poke the control socket (path derived from the
+  state dir) for wake-now behavior and bounded live streams; every
+  interaction has a state-only fallback, so all commands work daemon-down
+  and the daemon reconciles on start (idempotent convergence). Writer
+  ownership: commands write intent, the daemon writes execution records
+  (leases, lane state, heartbeats, parks), lifecycle agents write the
+  ledger; fence tokens prevent conflicts.
 - Outputs: status: instance identity, uptime, queue depth, lane states,
-  restart counters, last crash reason (classified); a second instance is
-  refused or takes over stale state with evidence.
-- Errors: `daemon.already-running`, `daemon.state-recovery-failed`
+  restart counters with classified reasons, heartbeat age, socket path
+  and reachability; merge code path absent (never fires merges).
+- Errors: `daemon.already-running`, `daemon.heartbeat-stale` (reads
+  declare degraded, never block), `daemon.state-recovery-failed`
   (degrades to one-shot guidance).
-- Scenarios: kill-and-restart converges without duplicated work
-  (rerun never duplicates tickets, comments, commits); one-shot path
-  fully functional while daemon down; daemon never executes a merge
-  (no code path exists).
+- Scenarios: kill-and-restart converges without duplicated work; commands
+  complete via the state path while the daemon is down (queue add, plan,
+  blockers answer, status); a second instance is refused or takes over
+  stale state with evidence; live-watch without the daemon declares
+  degraded mode; the daemon never executes a merge (no code path).
 
 ### Shipped M0 operate commands (`config`, `lint`, `phase`, `db`,
 `provider`)

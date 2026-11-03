@@ -176,6 +176,68 @@ flowchart LR
     AN --> AP[applied, lane resumes<br/>no session re-entry]
 ```
 
+## Daemon communication (command to daemon contract)
+
+Principle: **state-mediated truth, socket as optimization.** The state
+layer is the only shared truth; the daemon is a state-machine driver over
+it, not a server that owns data. Commands talk to the daemon through two
+channels:
+
+1. **State writes (always available, daemon or not).** Commands write
+   intent records to the state layer: queue entries, dependency edges,
+   blocker answers, resume notes. The daemon consumes the event log and
+   reconciles; anything written while it was down is picked up on start
+   (idempotent convergence).
+2. **Control socket (optimization, never the only route).** A local
+   control endpoint (unix domain socket at a path derived from the state
+   dir; named pipe equivalent on Windows) carries wake-now notifications
+   (so `queue add` takes effect in milliseconds, not at the next poll)
+   and bounded live streams (`status --watch`, `lanes --watch` tail
+   semantics). Reads of live process facts (uptime, current spawn,
+   restart counters) come from the daemon's heartbeat record in state,
+   written every few seconds; the socket serves immediate queries.
+
+**Writer ownership (single-writer discipline under the state layer's
+fence tokens):**
+
+| Writer | Writes |
+|---|---|
+| commands (any invocation) | intent: queue entries, priorities, dependency edges, blocker questions and answers, resume notes, waivers |
+| daemon | execution: lease acquisition and release, lane state, liveness heartbeats, park transitions, restart events and reasons |
+| lifecycle agents | ledger: phase transitions, capsule events (through `phase` and `commit`) |
+
+No writer ever mutates another writer's record class; conflicts are
+prevented by fence tokens, not by convention.
+
+**Every interaction has a state-only fallback:**
+
+| Command (daemon up) | Daemon down |
+|---|---|
+| `queue add` | writes the entry; daemon reconciles on start |
+| `queue plan` | computes from state; heartbeat age declared stale |
+| `blockers answer` | answer and resume note land in state; lane resumes when the daemon (or a one-shot `dispatch --resume`) applies it |
+| `status` / `lanes` | reads state; `--watch` degrades to bounded polling in a declared degraded mode |
+| `dispatch` | one-shot execution path (the queue names the next action; the command executes it) |
+| `phase complete` / `commit` | ledger writes; unaffected (never daemon-mediated) |
+
+The daemon wakes on: control-socket poke, state-change notification, or a
+bounded poll interval, in that order of preference.
+
+```mermaid
+flowchart LR
+    subgraph cmd [CLI invocation]
+        C1[write intent to state]
+        C2[poke control socket]
+    end
+    S[(state layer<br/>event log, fence tokens)]
+    D[daemon<br/>drives lanes, writes execution records]
+    C1 --> S
+    C2 -->|wake now| D
+    D -->|heartbeats, lane state, parks| S
+    D -->|reconcile on start| S
+    S -->|reads, degraded mode| cmd
+```
+
 ## Boundary invariants at M1 exit
 
 1. The daemon never executes a merge; it prepares and queues (roadmap
