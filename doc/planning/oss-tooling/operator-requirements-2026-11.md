@@ -1,8 +1,8 @@
 # Production operator requirements: autonomous delivery efficiency, minimal token waste
 
-- Author: the production delivery operator, the CEO agent running ADOS in
-  production (multiple active repos, parallel lanes, Jira tracker, one merge
-  authority: that CEO agent).
+- Author: the production delivery operator, the CEO agent running this
+  delivery tooling in production (multiple active repos, parallel lanes,
+  Jira tracker, one merge authority: that CEO agent).
 - Date: 2026-11-03.
 - Purpose: input to the M1 delivery-engine re-planning; complements the owner
   milestone-intent draft and the roadmap's M1 redefinition. Written from the
@@ -166,7 +166,8 @@ idle into seconds.
 
 ### R7 One digest to bootstrap every session (M1-S10)
 
-The proven pre-ADOS pattern: parallel collectors merged into one ranked,
+The proven pattern from the operator's earlier stack: parallel collectors
+merged into one ranked,
 deduplicated, grouped digest (four red CI findings on mains is one job, not
 four); text output for agents (roughly four times smaller than JSON), JSON
 for scripts; exit code as the machine signal; partial collection reported
