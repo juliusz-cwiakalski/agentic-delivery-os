@@ -1,0 +1,129 @@
+# inception-state.yaml
+#
+# Live inception state for the OSS tooling subproject run (GH-200).
+# Instantiated from doc/templates/inception-state-template.yaml.
+# Single-branch mode: all phases commit to docs/GH-200/tooling-inception
+# after each human gate; one PR to main-tools carries the run.
+schema_version: 1
+
+project:
+  name: OSS delivery tooling subproject
+  flow: legacy
+  profile: engineering-repo
+  characteristics:
+    ui_bearing: false        # CLI, MCP, and harness-plugin surfaces; no GUI
+    multi_user: false        # single-operator local-first design; shared state is future work
+    complex_domain: true     # delivery domain: lifecycle, primitives, adapters, migration
+    code_project: true       # TypeScript monorepo under packages/
+
+run:
+  anchor_issue: GH-200
+  branch: docs/GH-200/tooling-inception
+  base: main-tools
+  mode: single-branch-single-pr   # owner instruction 2026-10-31; overrides PR-per-phase default
+  scope_guard: >
+    Incepts the OSS tooling subproject (packages/ monorepo plus its delivery
+    stack) only. Repo framework artifacts (AGENTS.md, .ai/agent/*,
+    .opencode/**, doc/guides/**, delivery-system feature specs) are inputs,
+    verified never regenerated. Existing M0-S17 decision proposals are
+    reconciled at their canonical homes; merge does not establish acceptance.
+  inputs_commit: e424423     # doc/inception/inputs/tooling/ committed by owner
+  integrated_main_tools: 5330809
+  integration_commit: 49f46eb
+  readiness_verdict: PASS
+  readiness_human_gate: approved
+  remediation_phases: []
+  remaining_readiness_blockers: []
+  remediation_authorization: "OPEN-Q20 Answer, CEO under owner delegation, commit 95f2877: bounded Phase 3 reconciliation; Phase 4 exact B1/B3/B4; rerun Phase 6 then stop at human gate"
+  requested_review_cadence: "owner requested consolidated end-only review on 2026-11-01; recorded as preference, not approval of pending phase gates"
+
+phases:
+  - { id: 0, name: "Intake & material scan", status: completed, started: "2026-10-31T08:10:00+01:00", completed: "2026-10-31T08:40:00+01:00" }
+  - { id: 1, name: "North star & vision", status: completed, started: "2026-10-31T08:40:00+01:00", completed: "2026-10-31T12:50:24+01:00" }
+  - { id: 2, name: "Scope & roadmap", status: completed, started: "2026-10-31T12:50:24+01:00", completed: "2026-11-01T09:41:41+01:00" }
+  - { id: 3, name: "Tech stack & architecture", status: completed, started: "2026-11-01T09:41:41+01:00", completed: "2026-11-02", previously_approved: "2026-11-02T16:08:50+01:00", reopened_by: "READY-B2; bounded reconciliation completed under OPEN-Q20, final review at Gate 6" }
+  - { id: 4, name: "Domain, conventions & quality baseline", status: completed, started: "2026-11-02T16:08:50+01:00", completed: "2026-11-02", previously_approved: "2026-11-02T16:35:43+01:00", reopened_by: "READY-B1; CEO disposition dde826a clears content findings, bounded remediation complete; final owner review at Gate 6 pending" }
+  - { id: 5, name: "Delivery framework integration", status: completed, started: "2026-11-02T16:35:43+01:00", completed: "2026-11-02T16:59:49+01:00" }
+  - { id: 6, name: "Inception readiness check", status: completed, started: "2026-11-02T16:59:49+01:00", completed: "2026-11-02T21:11:07+01:00" }
+  - { id: 7, name: "Inception summary & handoff", status: completed, started: "2026-11-02T21:11:07+01:00", completed: "2026-11-03T09:30:00+01:00" }
+
+artifacts:
+  # status: pending | draft | approved | written ; confidence: 0.0-1.0
+  north_star:        { status: approved, path: "doc/overview/01-north-star.md", confidence: 0.85 }
+  roadmap:           { status: pending, path: "doc/planning/oss-tooling/roadmap.md", confidence: 0.0, note: "exists, committed; run verifies and extends, never rewrites" }
+  tech_stack:        { status: written, path: "doc/overview/tech-stack.md", confidence: 0.9, note: "bounded integrated-source refresh under OPEN-Q20; final Gate 6 review pending" }
+  architecture:      { status: written, path: "doc/overview/architecture-overview.md", confidence: 0.9, note: "bounded integrated-source refresh; operational/cross-surface readiness remains unverified" }
+  fse_audit:         { status: approved, path: "doc/inception/analysis/fse-audit.md", confidence: 0.8 }
+  decision_reconciliation: { status: written, path: "doc/inception/analysis/phase-3-decision-reconciliation.md", confidence: 0.9, note: "OPEN-Q20 refresh; thirteen Proposed tooling records retain status, human acceptance pending" }
+  glossary:          { status: written, path: "doc/overview/glossary.md", confidence: 0.9, note: "seven authorized reader rows applied; duplicate already removed by integration" }
+  ost:               { status: pending, path: "doc/overview/opportunity-solution-tree.md", confidence: 0.0, note: "not activated; owner approved roadmap/backlog/registry as canonical planning homes at gate 1" }
+  personas_jtbd:     { status: pending, path: "doc/overview/01-north-star.md", confidence: 0.0, note: "not activated (multi_user false)" }
+  user_journeys:     { status: pending, path: "doc/planning/oss-tooling/user-journeys.md", confidence: 0.0, note: "exists, committed; run verifies" }
+  screen_inventory:  { status: pending, path: "doc/overview/screen-inventory.md", confidence: 0.0, note: "not activated (ui_bearing false)" }
+  ux_guidance:       { status: pending, path: "doc/overview/ux-guidance.md", confidence: 0.0, note: "not activated (ui_bearing false)" }
+  ubiquitous_language: { status: approved, path: "doc/overview/ubiquitous-language.md", confidence: 0.85, note: "thin relationship map; primitive catalogue retains contracts and lifecycle inventory" }
+  quality_baseline: { status: written, path: "doc/inception/analysis/phase-4-quality-baseline.md", confidence: 0.9, note: "exact remediation and explicit profile/setup/environment dispositions; guard PASS after CEO disposition dde826a; owner Gate 6 pending" }
+  glossary_delta: { status: written, path: "doc/inception/analysis/phase-4-glossary-graduation.md", confidence: 0.9, note: "OPEN-Q20 exact delta applied and verified, no broader glossary rewrite" }
+  question_reconciliation: { status: written, path: "doc/inception/analysis/open-question-reconciliation.md", confidence: 0.9, note: "existing direction separated from engineering follow-ups and residual human decisions" }
+  framework_verification: { status: approved, path: "doc/inception/analysis/phase-5-framework-verification.md", confidence: 0.9, note: "Gate 5 approved with findings carried; verify-only audit, no framework files regenerated or repairs implied" }
+  readiness_report: { status: approved, path: "doc/inception/analysis/readiness-report.md", confidence: 0.95, note: "Gate 6 approved on 2026-11-02; scoped PASS, B1..B4 cleared; separate owner-gated acceptances and pilot evidence carried forward" }
+  testing_strategy: { status: draft, path: ".ai/rules/testing-strategy.md", confidence: 0.8, note: "existing strategy audited in quality_baseline, not rewritten or execution-certified" }
+  conventions: { status: draft, path: "doc/inception/analysis/phase-4-quality-baseline.md", confidence: 0.85 }
+  ci_baseline: { status: draft, path: "doc/inception/analysis/phase-4-quality-baseline.md", confidence: 0.8, note: "existing CI audited; shell-suite child-status propagation gap requires routing" }
+  dev_environment: { status: written, path: "doc/inception/analysis/phase-4-quality-baseline.md", confidence: 0.85, note: "OPEN-Q20 bounded contributor setup and value-free environment equivalent home; installation not executed" }
+  env_example: { status: written, path: "doc/inception/analysis/phase-4-quality-baseline.md", confidence: 0.9, note: "explicit exemption: value-free reference instead of mandatory .env.example; no dotenv loader inferred" }
+  assumptions:       { status: approved, path: "doc/inception/analysis/assumptions.md", confidence: 0.8, note: "Gate 2 approved with questions carried; validation statuses are unchanged" }
+  risks:             { status: approved, path: "doc/inception/analysis/risks.md", confidence: 0.8 }
+  scope_coverage:    { status: approved, path: "doc/inception/analysis/phase-2-scope-and-coverage.md", confidence: 0.85 }
+  tribal_graduation: { status: written, path: "doc/inception/analysis/phase-4-glossary-graduation.md", confidence: 0.9, note: "13/13 dispositions; exact permanent-home delta applied under OPEN-Q20; held items not promoted" }
+  material_inventory: { status: written, path: "doc/inception/analysis/material-inventory.md", confidence: 0.9 }
+  retrospective_notes: { status: draft, path: "doc/inception/retrospective/", confidence: 0.8 }
+  open_questions:    { status: draft, path: "doc/inception/open-questions/", confidence: 0.8 }
+  inception_summary: { status: approved, path: "doc/inception/inception-summary.md", confidence: 0.9, note: "Gate 7 sign-off recorded via OPEN-Q21 (CEO under delegated authority, 2026-11-03); separate owner-gated matters remain carried" }
+  initial_feature_specs: { status: draft, path: "doc/inception/analysis/phase-7-feature-specs-and-backlog-handoff.md", confidence: 0.9, note: "20 M0 outcomes reconciled to existing canonical specs; XC-001..013 mapped, HANDOFF-001..011 proposed AC not tickets or accepted implementation scope" }
+  repo_analysis:     { status: written, path: "doc/inception/analysis/repo-analysis.md", confidence: 0.85 }
+  tribal_knowledge:  { status: written, path: "doc/inception/analysis/tribal-knowledge.md", confidence: 0.8 }
+  project_prd:       { status: pending, path: "doc/overview/prd.md", confidence: 0.0, note: "not activated; roadmap + backlog are the living plan" }
+  nonfunctional:     { status: written, path: "doc/spec/nonfunctional.md", confidence: 0.9, note: "integrated closeout/verify reconciliation; five proposed validation targets remain unaccepted" }
+  feature_specs:     { status: pending, path: "doc/spec/features/", confidence: 0.0, note: "per-delivery specs exist and keep growing; run reconciles" }
+  decision_records:  { status: pending, path: "doc/decisions/", confidence: 0.0, note: "M0-S17 merged existing ADR-0008/0009 and ODR-0002/0003 proposals; phase 3 must reconcile, not duplicate; recorded acceptance remains outstanding" }
+
+decisions:
+  - { phase: 6, text: "Gate 6 readiness approved, carrying separate owner-gated matters forward; proceed to Phase 7", rationale: "explicit owner approval on 2026-11-02; not acceptance of Proposed records, dependency-license determination, session-admin privacy sign-off, NFR targets or pilot outcomes", date: "2026-11-02" }
+  - { phase: 6, text: "OPEN-Q20 authorized exact Phase 3/4 remediation and readiness rerun, stop at human gate", rationale: "CEO under owner delegation, commit 95f2877; no record acceptance, Phase 7, framework regeneration, tickets or push", date: "2026-11-02" }
+  - { phase: 5, text: "Gate 5 approved with findings carried forward; proceed to Phase 6 readiness assessment", rationale: "explicit owner approval; not readiness PASS, decision acceptance, or authorization of deferred existing-file repairs", date: "2026-11-02" }
+  - { phase: 4, text: "Gate 4 approved for continued bootstrap with remaining questions carried forward; proceed to Phase 5", rationale: "owner instruction to proceed after source-reconciliation discussion; no implicit decision-record acceptance or deferred repair authorization", date: "2026-11-02" }
+  - { phase: 3, text: "Gate 3 approved with OPEN-Q12..Q16 carried forward; proceed to Phase 4", rationale: "explicit owner approval; not decision-record acceptance, proposed NFR-target acceptance, or authorization to resolve deferred repair routes", date: "2026-11-02" }
+  - { phase: 2, text: "Gate 2 approved with OPEN-Q7..Q11 carried forward; proceed to Phase 3", rationale: "explicit owner approval on 2026-11-01; not an answer to substantive questions, authorization for out-of-scope writes, or acceptance of Proposed decision records", date: "2026-11-01" }
+  - { phase: 1, text: "Gate 1 approved; owner attention per accepted delivery is the NSM; no separate OST or PRD; no owner-known registry/journeys drift", rationale: "owner answers OPEN-Q4..Q6 and explicit instruction to commit and proceed", date: "2026-10-31" }
+  - { phase: 0, text: "project.flow = legacy, scoped to the OSS tooling subproject", rationale: "subproject exists with real delivery history but no inception record; repo framework is out of scope", date: "2026-10-31" }
+  - { phase: 0, text: "single-branch single-PR mode on docs/GH-200/tooling-inception, base main-tools", rationale: "explicit owner instruction; overrides the PR-per-phase default", date: "2026-10-31" }
+  - { phase: 0, text: "framework artifacts are inputs; verify-only, deltas route to tickets", rationale: "AGENTS.md, .ai/agent/*, .opencode/**, doc/guides/**, delivery-system specs predate the run and are the product", date: "2026-10-31" }
+  - { phase: 0, text: "decision-record seeds for the M0-S17 batch are proposals with options; ratification stays with GH-186", rationale: "keeps inception advisory and the delivery ticket authoritative", date: "2026-10-31" }
+  - { phase: 0, text: "committed input pack (e424423) accepted as trusted owner direction", rationale: "owner reviewed and committed doc/inception/inputs/tooling/ before kickoff", date: "2026-10-31" }
+  - { phase: 0, text: "gate 0 passed: flow, profile, characteristics, inventory, repo analysis, tribal knowledge approved", rationale: "owner answered OPEN-Q1..Q3 inline and confirmed continuation", date: "2026-10-31" }
+  - { phase: 0, text: "multi_user=false confirmed: build for a single user operating locally for now", rationale: "owner answer to OPEN-Q1; personas/JTBD stay deactivated", date: "2026-10-31" }
+  - { phase: 0, text: "ubiquitous-language artifact approved (thin, mapping to concept homes); overlap with the primitive catalogue resolved in phase 4", rationale: "owner answer to OPEN-Q2 pointing at the primitive catalogue", date: "2026-10-31" }
+  - { phase: 0, text: "sync policy: when a delivery merges to main-tools, merge main-tools into the inception branch; per-ticket worktrees readable for in-progress state", rationale: "owner answer to OPEN-Q3 (reconciliation stance)", date: "2026-10-31" }
+  - { phase: 0, text: "owner-maintained local working materials inform the run via owner direction and trust-boundary reading only; never referenced from committed artifacts", rationale: "owner remark at gate 0 on material-inventory scope", date: "2026-10-31" }
+
+assumptions:
+  # risk_type: value | usability | feasibility | viability
+  - { text: "M0 in-flight stories (GH-177, GH-182, GH-184) merge without breaking the reconciliation baseline of this run", risk_type: feasibility, validation_status: testing, date: "2026-10-31" }
+  # Canonical planning ownership is ratified governance, not validated value evidence.
+  # Outcome hypotheses and validation plans live in artifacts.assumptions.
+  - { text: "parallel M0 delivery and inception doc work can proceed without blocking conflicts (disjoint surfaces)", risk_type: feasibility, validation_status: testing, date: "2026-10-31" }
+
+sessions:
+  - { started: "2026-11-03T09:30:00+01:00", phase: 7, notes: "OPEN-Q21 answered: inception summary and feature/backlog handoff APPROVED as knowledge-base handoff by the CEO under delegated authority (owner instruction to finalize and answer pending questions). HANDOFF-001..011 remain recommendations only; thirteen Proposed records, license determination, session-admin privacy sign-off, pilot/outcome protocol and privacy population remain owner-gated and carried. Owner retains final say at PR #218. Phase 7 completed." }
+  - { started: "2026-11-02T21:11:07+01:00", phase: 7, notes: "Owner Gate 6 approval committed bd34031; separate record/license/privacy/pilot gates carried. Drafted summary, reconciled feature/backlog handoff, OPEN-Q21 and retrospective. Owner authorized four exact registry memberships; independent review verified unchanged remaining registry structure, metadata, 81 references and both focused guards. No product tests, tickets or final sign-off; Phase 7 remains in progress." }
+  - { started: "2026-11-02T18:47:33+01:00", phase: 6, notes: "User authorized scoped rerun and existing Phase 6 artifact/state updates after CEO disposition dde826a. Technical readiness PASS: metadata/YAML, local references, privacy and forbidden-literals guard pass; privacy hashed classes remain vacuous. Phase 4 bounded remediation complete, Phase 6 human gate pending, Phase 7 pending. Thirteen Proposed records plus separate license, session-admin privacy and pilot/outcome protocol review packaged in readiness report; none accepted. No source/framework edits, tickets, push or Phase 7." }
+  - { started: "2026-11-02T18:00:00+01:00", phase: 6, notes: "Merged origin/main-tools 5330809 as 49f46eb without conflicts. Phase 3 reconciliation fa92e80; exact Phase 4 remediation ce52536. All 37 memberships registered, seven glossary rows applied, integrated duplicate removal verified; profile exemption and contributor/environment equivalent home written. Focused metadata/references/privacy pass with vacuous classes. Guard exposes eleven literal findings in six existing documents; Phase 6 remains FAIL, Phase 4 reopened for separately bounded disposition. No PASS acceptance package or Phase 7, record acceptance, product repair, tickets, regeneration or push." }
+  - { started: "2026-10-31T08:10:00+01:00", phase: 0, notes: "phase 0 artifacts drafted: state, material inventory, repo analysis with gap map, tribal knowledge; gate 0 presented" }
+  - { started: "2026-10-31T08:40:00+01:00", phase: 0, notes: "gate 0 closed: OPEN-Q1..Q3 answered inline, answers folded into state and inventory conditions; phase 0 committed" }
+  - { started: "2026-11-01T08:15:49+01:00", phase: 2, notes: "Merged main-tools 3ebc61f as 773f2c9; refreshed Phase 2 drafts and OPEN-Q7..Q11. Tracker has 18 closed M0 issues, but GH-178 integrated planning is not runnable verify gates; GH-183 remains unmerged. Requested end-only review recorded without advancing pending gates." }
+  - { started: "2026-11-01T09:41:41+01:00", phase: 3, notes: "Gate 2 approved with carried questions and committed 0b7d1ba. Drafted architecture, tech stack, FSE audit, NFR index and decision reconciliation; OPEN-Q12..Q16 await review. Read-only review verified seven frontmatters and local links. Privacy scan reports zero violations with vacuous hashed classes; branding gate fails on 25 unregistered docs. No Phase 3 approval, runtime test battery, or decision acceptance claimed." }
+  - { started: "2026-11-02T16:08:50+01:00", phase: 4, notes: "Gate 3 approved with questions deferred and committed 35565b9. Fetched main-tools; already up to date. Phase 4 drafted UL, actual quality baseline, exact glossary delta, OPEN-Q17..19 and retrospective. Existing rules, glossary, workflows and env files not modified; graduation debt retained." }
+  - { started: "2026-11-02T16:35:43+01:00", phase: 5, notes: "Gate 4 approved for continued bootstrap and committed 59c9749. Reconciled Q7..19 against documented direction, preserved answer blocks and residual human choices. Phase 5 framework audit drafted; three configuration conflicts routed under existing authorization question, no new question IDs. 111 existing framework references checked; privacy zero violations with vacuous classes; branding membership fails on 34 docs. Phase 6 not started." }
+
+last_updated: "2026-11-02T21:11:07+01:00"
