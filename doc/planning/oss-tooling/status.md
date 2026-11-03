@@ -5,6 +5,24 @@ authority. Source of truth for scope and order: [backlog.md](backlog.md) and
 [backlog-ranking.md](backlog-ranking.md). This file is a status snapshot; the
 backlog remains canonical.
 
+## M0 exit amendment and M1 re-planning (2026-11-03)
+
+Recorded with the M1 re-planning (GH-219):
+
+- The dual-run pilot starts now and runs concurrently with M1 planning and
+  early M1 stories; those stories do not touch dispatch. Per-engine
+  handover still requires its own two-clean-weeks evidence; that constraint
+  is never waived.
+- The Proposed decision records remain Proposed during M1; owner acceptance
+  is formalization tracked in the inception readiness report. The M0
+  milestone stays open until the pilot evidence and record acceptance land.
+- M1 is redefined as the delivery-engine milestone (bash delivery stack
+  replaced; scheduling and waiting leave the coordinator's context); the
+  orchestration core formerly known as M2-S1 moved into M1. Scope and order
+  live in [backlog.md](backlog.md) and
+  [backlog-ranking.md](backlog-ranking.md); the recorded operator input is
+  [operator-requirements-2026-11.md](operator-requirements-2026-11.md).
+
 ## Story delivery: 20/20 complete
 
 All twenty M0 stories were delivered through the full 11-phase lifecycle and
@@ -61,15 +79,17 @@ invariants, never moving-base diffs.
 1. **Start the dual-run pilot now** (critical path for M0 exit): run
    status, verify change, provider, and closeout beside the bash stack on
    the pilot paths, accruing the two-week zero-false-success evidence. The
-   M0 surfaces exist; every day of delay moves M1.
+   M0 surfaces exist; the recorded amendment lets the pilot run concurrent
+   with M1 delivery that does not touch dispatch.
 2. **Owner acceptance pass** (required for exit): record acceptance or
    change requests for the Proposed records (ADR-0005, ADR-0007, TDR-0003,
    TDR-0004, ADR-0008, ADR-0009, ODR-0002, ODR-0003) in the decisions
    register. Short review; the register links every record.
-3. **M1 preparation, gated delivery**: create the M1 milestone and its 12
-   issues from the backlog in ranking order so the queue is ready, but hold
-   M1 dispatch until the exit criteria are met or the owner explicitly
-   approves starting M1 delivery before exit (recorded as a gate change).
+3. **M1 milestone and tickets** (after GH-219 merges): create the M1
+   milestone and its 20 issues from the redefined backlog in ranking
+   order. M1 delivery is approved to start under the recorded gate
+   amendment; stories are dispatched in ranking order, with dispatch
+   handover (M1-S9) still respecting the per-repo two-clean-weeks rule.
 4. **Memory consolidation pass** (housekeeping): run the consolidation
    curator over `.ai/memory` to promote the CEO's M0 captures into
    `lessons/` with proper ids and rebuild the index.

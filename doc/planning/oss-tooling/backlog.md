@@ -42,6 +42,10 @@ name is `ados` until the naming freeze.
 - Verify by artifact: pushed commit, pull request, tracker state, head
   pipeline for the pushed commit.
 - Bounded output: machine-readable result plus a short human digest.
+- Self-describing commands: `--help` with examples on every command and a
+  man-page-grade guide; where a bash script emitted a stable machine
+  contract (the key=value delivery summary), the replacement emits the
+  same shape; stable exit codes per the error table.
 - Failure visibility: every skipped or degraded path is reported.
 - Idempotent: safe to re-run after crash or restart.
 - Rollback story: revert to the bash behavior in one step.

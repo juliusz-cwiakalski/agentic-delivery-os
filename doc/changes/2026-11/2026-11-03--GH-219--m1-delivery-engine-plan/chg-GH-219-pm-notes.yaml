@@ -5,20 +5,22 @@ phases:
   clarify_scope: { started: "2026-11-03T06:16:00Z", completed: "2026-11-03T06:17:00Z" }
   specification: { started: "2026-11-03T06:18:01Z", completed: "2026-11-03T06:22:00Z" }
   test_planning: { started: "2026-11-03", completed: "2026-11-03T05:22:17Z" }
-  delivery_planning: { started: null, completed: null }
-  dor_check: { started: null, completed: null }
-  delivery: { started: null, completed: null }
-  system_spec_update: { started: null, completed: null }
+  delivery_planning: { started: "2026-11-03", completed: "2026-11-03" }
+  dor_check: { started: "2026-11-03", completed: "2026-11-03" }
+  delivery: { started: "2026-11-03", completed: "2026-11-03" }
+  system_spec_update: { started: "2026-11-03", completed: "2026-11-03" }
   review_fix: { started: null, completed: null }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-11-03", completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - { text: "Use all four binding owner decisions in GH-219; no new story tickets, tooling implementation, decision acceptance, or merge in this change.", date: "2026-11-03" }
   - { text: "Owner redirected delivery mode mid-change: GH-219 is planned and delivered as an interactive CEO-driven session in the CEO conversation (deliver-ticket dispatch aborted before phase 2; branch and pm-notes reclaimed), with small parts delegated as needed. Same 11-phase ledger discipline; phases recorded here as they complete. PR stays open for owner review; merge only after owner accepts the milestone plan. Story tickets are created in a follow-up change after merge.", date: "2026-11-03" }
+  - { text: "Spec and test plan authored by the interrupted dispatch run were reviewed by the CEO session and retained: they match the four binding owner decisions and the implemented deliverables; the plan artifact and all planning-document edits come from the interactive session.", date: "2026-11-03" }
 open_questions: []
 blockers: []
-notes:
+  - { text: "Resolved committer blocker: the 'unknown writer' modifications were the CEO interactive session's in-scope deliverable edits running in parallel after the owner's mode redirection; the checkpoint commits correctly excluded them (allowlist held); no corruption; phases resumed. Lesson: when a delivery is redirected to interactive mode mid-run, stop and reap the dispatch's process tree before editing the same tree, or work in a separate checkout.", type: retro, date: "2026-11-03" }
+  - { text: "DoR evidence (interactive, phase 5): backlog and ranking story sets match exactly (M1-S1 through M1-S20); dependency columns consistent file to file; dependency graph acyclic (scripted check); whole-file privacy corpus scan over all changed files: zero hits; zero em-dashes added; doc-distribution and inception doc-set guards pass; every spec AC maps to a plan phase.", type: info, date: "2026-11-03" }
   - { text: "Initial gh detection: issue open, no comments, no open/merged PR or matching branch. Clean main-tools working tree. Fresh start, not resume. Raw input drafts exist under ignored planning tmp; never stage or echo private literals.", type: info, date: "2026-11-03" }
   - { text: "Scope cross-check: roadmap M1/M2 reflects the old split; autonomous delivery spec describes current bash implementation, not future typed tooling. Keep future planning separate from current behavior. Privacy guard remains binding. Documentation impacts: six ticket deliverables, planning links/indexes only as needed; doc-syncer must not claim the planned engine is implemented.", type: risk, date: "2026-11-03" }
   - { text: "New doc under doc/planning/oss-tooling carries no license header: the header script's configured paths do not include that directory and agents never add headers manually; sibling-header consistency flagged to the owner in the PR.", type: info, date: "2026-11-03" }

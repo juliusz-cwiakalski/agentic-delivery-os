@@ -89,7 +89,7 @@ becomes policy-engine scope by gaining a check.
 | No hosted-product content in committed files | Planned guard (M0-S15) |
 | Merge freeze windows | FreezeFlag primitive (M1) |
 | Local gate breadth must equal CI breadth | Suite-to-job mapping (M2-S7) |
-| Build-weight class constraints (no two heavy builds per runner) | Lane plan (M2-S1) |
+| Build-weight class constraints (no two heavy builds per runner) | Lane plan (M1-S17) |
 | Agents use only models from their assigned profile class | Model profiles (concepts/model-profiles.md) |
 | Exceptions expire quarterly unless renewed | Exception lifecycle in the policy engine |
 | Policy changes carry an audit trail (who, what, snapshot diff) | Provenance of policy mutations |
@@ -103,7 +103,7 @@ becomes policy-engine scope by gaining a check.
 - M0-S4, M0-S15, M0-S18: config-layer enforcement, privacy guard, license
   gate (early policy checks).
 - M1-S5: owner-gate SLA (a prose rule gaining its check).
-- M2-S1, M2-S7: build-weight and suite-breadth policies.
+- M1-S17, M2-S7: build-weight and suite-breadth policies.
 - Blueprint grounding: the bash-era merge-policy, settings-snapshot, and
   pre-push-gate scripts (see the private blueprint inventory, section 6).
 

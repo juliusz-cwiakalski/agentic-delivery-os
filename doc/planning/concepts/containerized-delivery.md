@@ -167,7 +167,7 @@ without redesign:
 - The dispatch spawn path carries an **execution-environment
   descriptor** (host is the only implementation now); nothing in
   dispatch, supervision, or the harness adapters may hardcode host
-  execution (M1-S11, M2-S1).
+  execution (M1-S11, M1-S17).
 - Harness session stores, repo locations, and state paths resolve
   through **configuration**, not hardcoded paths, so bind mounts and
   per-project shared harness DBs slot in later (M1-S11 telemetry

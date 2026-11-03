@@ -64,9 +64,9 @@ near-synonym pairs are rejected at the naming lock.
 `ados --help` groups commands into families so the daily loop reads in
 order:
 
-- Deliver: dispatch, verify change, verify gates, merge, verify deploy, closeout
-- See: status, queue ready (queue, lanes later), board, brief
-- Operate: provider (AI model routing), config, state, lint, phase, db, watchdog, doctor, supervise, repos
+- Deliver: dispatch, plan, commit, verify change, verify gates, merge, verify deploy, closeout
+- See: status, queue (ready now, full queue and lanes in M1), board, brief, blockers
+- Operate: provider (AI model routing), config, state, lint, phase, db, watchdog, doctor, daemon, supervise, repos
 - Learn: retro, metrics, spend, policy
 - Surfaces: mcp, harness (opencode, Claude Code)
 - Maintain: update
@@ -126,15 +126,15 @@ grow it later.
 | Command | Purpose | Primary user | Delivery | Extended |
 |---|---|---|---|---|
 | `ados config` | Two modes. Basic: print the merged configuration evaluated for the current context as a plain JSON object. Debug (`config debug` or `--debug`): per-key provenance (which layer, file, line) as extended JSON, or annotated JSONC with the source as a per-key comment | all users | M0-S4 | - |
-| `ados status` | One bounded, ranked digest of the delivery world: six fixed sections — tracker, changes and PRs, CI, lanes or queue, providers, parked work — each with an observed/degraded/unknown/unavailable/not-delivered state and bounded evidence. The lanes-or-queue section reports a declared `not-delivered` gap until M2-S1 establishes the queue/lane engine; it never presents an empty queue and never duplicates `ados queue ready` (M0-S7) | coordinator, operator | M0-S6 | M1-S10 (collector expansion), M2-S4 (shared board state source) |
-| `ados queue ready` | Read-only ready-set for one or more candidate refs (1..8): six fixed tri-state conditions — deps satisfied, repo free, tier known, no owner gate, CI healthy, provider available — with bounded evidence and every non-satisfied condition named; associates open pull requests by the repository branch convention and ranks close items (merge-ready, review-pending) above new starts. Reuses the status reads and never runs the provider engine or writes. Specified in [Queue Ready](../../spec/features/feature-queue-ready.md) | coordinator | M0-S7 | M2-S1 (full queue, lanes, dispatch) |
+| `ados status` | One bounded, ranked digest of the delivery world: six fixed sections — tracker, changes and PRs, CI, lanes or queue, providers, parked work — each with an observed/degraded/unknown/unavailable/not-delivered state and bounded evidence. The lanes-or-queue section reports a declared `not-delivered` gap until M1-S17 establishes the queue/lane engine; it never presents an empty queue and never duplicates `ados queue ready` (M0-S7) | coordinator, operator | M0-S6 | M1-S10 (collector expansion), M2-S4 (shared board state source) |
+| `ados queue ready` | Read-only ready-set for one or more candidate refs (1..8): six fixed tri-state conditions — deps satisfied, repo free, tier known, no owner gate, CI healthy, provider available — with bounded evidence and every non-satisfied condition named; associates open pull requests by the repository branch convention and ranks close items (merge-ready, review-pending) above new starts. Reuses the status reads and never runs the provider engine or writes. Specified in [Queue Ready](../../spec/features/feature-queue-ready.md) | coordinator | M0-S7 | M1-S17 (full queue, lanes) |
 | `ados verify change` | Verify a delivered change against the 11-phase ledger and classify the delivery result tuple; malformed notes are classified, never a crash | coordinator | M0-S8 | M1-S9 (dual-run evidence consumer) |
 | `ados verify gates` | One command evaluating all merge gates for a change, each gate cited in the result (delivered) | coordinator | M0-S9 | M2-S7 (suite-to-job mapping) |
 | `ados lint` | Schema and format conformance for pm-notes and the delivery registry at write time; lands bundled with verify change (M0-S8) | lifecycle agents, coordinator | M0-S10 | M3-S4 (decision records, frontmatter, deploy checklist) |
 | `ados phase` | Phase bookkeeping for the 11-phase ledger: `phase list <ref>`, `phase complete <ref> <phase>`, `phase reopen <ref> <phase> <reason>`; the only write path for phase state, schema-validated and idempotent | lifecycle agents | M0-S10 | - |
 | `ados db` | Session-database admin: size, list, prune, reboot helpers; dry-run by default | operator, coordinator | M0-S11 | - |
 | `ados provider` | The AI provider family (model hosts only; tracker, VCS, and CI providers are adapters, not this family). Delivered subcommands: `resolve` (one chain decision; the only mutating path, persisting parks and announcements), `quota` (non-mutating condition evaluation for one provider or the default chain), and `parks list` (read-only active parks, `--all` for expired and cleared, `--provider` filter). Subscription-first chain resolution with eight skip reasons, UTC peak windows, quota evaluation, named self-expiring parks, and fail-loud announcements; model-profile selection and harness spawn are later stories | engines, coordinator | M0-S13 | - |
-| `ados closeout` | One idempotent post-merge transaction, dry-run by default and mutating only with `--apply`: ticket-to-done, lifecycle label sweep, unassign, owed-flip sweep, comment resolution, checkout restore, squash-safe local branch cleanup. Harness session telemetry capture is explicitly deferred to M1-S11 and is not part of this command. | coordinator | M0-S14 | M1-S11 (harness telemetry capture) |
+| `ados closeout` | One idempotent post-merge transaction, dry-run by default and mutating only with `--apply`: ticket-to-done, lifecycle label sweep, unassign, owed-flip sweep, comment resolution, checkout restore, squash-safe local branch cleanup. Harness session telemetry capture is explicitly deferred to M1-S11 and is not part of this command. | coordinator | M0-S14 | M1-S11 (harness telemetry capture), M1-S12 (capsule promotion, judgment residue, full mechanical sweep) |
 The adapters package is not a command. It implements the primitive ports
 (concepts/agent-primitive-surface.md) with capability flags and embedded
 metadata, verified by the conformance suite
@@ -145,32 +145,36 @@ this repository dogfoods status and verify from M0) ship in M0-S19; the
 conformance suite lands in M0-S20; adapter completion is M3-S3 (full
 GitHub, Azure on demand).
 
-### M1: Attention and minimal surfaces
+### M1: Delivery engine and autonomous dispatch
 
 | Command | Purpose | Primary user | Delivery | Extended |
 |---|---|---|---|---|
-| `ados watchdog` | Multi-signal liveness checks: pre-flight refuses non-base or dirty checkout; teardown restores on every exit (checks; it does not run) | coordinator, engines | M1-S1 | - |
+| `ados watchdog` | Multi-signal liveness checks: pre-flight refuses non-base or dirty checkout; teardown restores on every exit (checks; it does not run) | coordinator, engines | M1-S1 | M1-S15 (progress-based liveness signals) |
 | `ados state` | Validated state admin: schema checks at every read/write boundary (delivery registry, retro registry, ceremony artifacts), classification of unknown, repair guidance | engines, coordinator | M1-S2 | M3-S6 (backup, restore, migration) |
 | `ados doctor` | Doctor-style checks for repo, tracker, provider, state, CI wiring, each with a fix hint (diagnoses and prescribes) | operator, coordinator | M1-S3 | - |
-| `ados merge` | Merge transaction helper: verify gates fresh, squash, verify the merge landed | coordinator | M1-S4 | - |
+| `ados merge` | Merge transaction helper: verify gates fresh, squash, verify the merge landed; the gate set is config-declared, versioned data; a refusal names the failed gate with inline evidence; the freshness bound covers tracker state as well as CI | coordinator | M1-S4 | - |
 | `ados verify deploy` | Deploy verification by job trace, never by job status | coordinator | M1-S4 | - |
+| `ados plan` | Machine-readable delivery plans: validate (schema: per-phase files/packages/folders scope, done-artifacts, leases, weight class, declared interactions, ceremony tier as data), diff (declared scope versus actual branch diff), overlap (pairwise: run in sequence with overlapping paths named, or parallel); feeds the ready-for-development gate | lifecycle agents, coordinator | M1-S13 | - |
+| `ados commit` | Commit primitive: computes a conventional commit message from uncommitted files plus change context (ref, phase, plan phase), stages precisely, and performs record-plus-commit atomically on phase completion; never stages untracked strays | lifecycle agents | M1-S14 | - |
 | `ados board` | Owner-gate SLA mechanics: 24 h stale escalation, 72 h default-on-expiry, aging visible | operator, coordinator | M1-S5 | M2-S4 (full board: lanes, gates, owner asks, parked work, one screen) |
-| `ados brief` | Deterministic render-only owner brief from the M0 collectors with explicit placeholders; no LLM in the render path; decision-first layout | operator | M1-S6 | - |
+| `ados brief` | Deterministic render-only owner brief from the same collector state as the status digest (one source of truth) with explicit placeholders; no LLM in the render path; decision-first layout; carries ready-to-merge, blocker questions, owner-gate ages as anchored actions | operator | M1-S6 | - |
 | `ados mcp` | Minimal MCP mirroring the CLI scope over proven engines: status, verify-artifact, gate report | sessions | M1-S7 | M3-S2 (full MCP with batch semantics) |
 | `ados retro` | Retrospective evidence pipeline: collection, registry hardening, shape-crash guards, export; home of the periodic memory audit; runs retro levels on demand per concepts/retrospectives.md | coordinator | M1-S8 | - |
-| `ados dispatch` | Delivery pilot beside the bash stack on selected tickets with verify-change evidence; spawns sessions through the harness adapter (opencode first, Claude Code next) over an execution-environment descriptor (host now; containerized execution is a parked concept); shell stays authoritative | coordinator | M1-S9 | M2-S1 (programmatic queue, single-flight, preemption) |
+| `ados blockers` | Typed blocker and question channel: typed questions (decision-needed with options, spec-ambiguity, credential-missing with variable name only, external-wait) published to the state layer, ranked in digest and brief, answerable as data; answers resume lanes without re-entering delivery sessions; one mechanism, two audiences (owner gates and coordinator) | coordinator, operator | M1-S16 | - |
+| `ados queue` | Programmatic delivery queue: dependency graph, ready-set, per-remote single-flight (the only structural lane cap), preemption with named park state, build-weight classes, closing-beats-opening ranking, park/resume that re-checks its condition continuously; one-shot mode computes the next action without the daemon | coordinator | M1-S17 | - |
+| `ados lanes` | Lane plan with dependency awareness and a build-weight class; two lanes cannot deliver the same repo concurrently; producers scheduled before consumers | coordinator | M1-S17 | - |
+| `ados daemon` | Resident dispatch daemon: start, stop, status; single-instance enforcement, crash-safe state, dispatcher never a lane, prepares and queues merges but never fires them; absence or failure degrades to the CLI one-shot path | coordinator | M1-S18 | M2-S2 (supervision battery over its lanes) |
+| `ados spend` | Spend read side v0: per-ticket and per-phase tokens by class, calls, per agent and model from closeout-captured telemetry; resume-amplification metric and restart counts | operator, coordinator | M1-S19 | M2-S6 (burn-rate alarms, quota snapshots, ceremony share) |
+| `ados dispatch` | Delivery engine beside the bash stack: spawns sessions through the harness adapter (opencode first, Claude Code next) over an execution-environment descriptor; dual-run with verify-change evidence, then per-repo handover (new stack authoritative, bash fallback with deprecation pointers) after two clean weeks per repo | coordinator | M1-S9 | - |
 
-### M2: Orchestration and measurement
+### M2: Ceremonies, measurement, and memory
 
 | Command | Purpose | Primary user | Delivery | Extended |
 |---|---|---|---|---|
-| `ados queue` | Programmatic delivery queue: dependency graph, ready-set, per-remote single-flight, preemption with named park state | coordinator | M2-S1 | - |
-| `ados lanes` | Lane plan with dependency awareness and a build-weight class (heavy builds excluded per runner); two lanes cannot deliver the same repo concurrently | coordinator | M2-S1 | - |
-| `ados supervise` | Supervisor service (runs): tri-state status, progress watchdogs, duplicate-supervisor detection, lying-liveness signals | coordinator | M2-S2 | - |
-| `ados ceremony` | Ceremony runner: artifact-verified, resumable, compact at boundaries, tiered intake; the built-in set: morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync; ceremonies are declared units, so projects can add their own; retro ceremonies follow concepts/retrospectives.md (levels, triggers, follow-through-first) | coordinator | M2-S3 | - |
+| `ados supervise` | Supervision battery over the daemon's lanes: tri-state status, progress watchdogs, duplicate-supervisor detection, lying-liveness signals by artifact evidence, restart policies | coordinator | M2-S2 | - |
+| `ados ceremony` | Ceremony runner: artifact-verified, resumable, compact at boundaries, tiered intake; the ceremony tier engine (per-tier phase sets and escalation triggers as data, consuming M1-S13 plan tiers); the built-in set: morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync; ceremonies are declared units, so projects can add their own; retro ceremonies follow concepts/retrospectives.md (levels, triggers, follow-through-first) | coordinator | M2-S3 | - |
 | `ados steer` | Queued steering notes delivered at phase boundaries; owner asks batched with measured aging; the first message type of the typed message contract (origin, receipt, TTL), extensible to agent-to-agent messaging (concepts/inter-agent-communication.md) | operator, coordinator | M2-S5 | - |
 | `ados metrics` | Delivery metrics: ceremony share, cycle time, CI failure rate, escaped defects | coordinator, operator | M2-S6 | - |
-| `ados spend` | Cost observability: per-dispatch tokens/cost/restarts, quota snapshots, burn-rate alarms | operator, coordinator | M2-S6 | - |
 
 ### M3: Surfaces, adapters, validators
 
@@ -227,9 +231,21 @@ unless noted.
   the session ("hold the merge until I review").
 - `spend`: cost truth from the event log: burn by agent, model, and
   ticket; quota snapshots; alarms that catch silent overnight churn.
-- `watchdog` versus `supervise`: watchdog checks (pre-flight, teardown,
-  liveness probes); supervise runs (the daemon that starts, watches, and
-  restarts lanes). Watchdog checks, supervise runs.
+- `watchdog` versus `daemon` versus `supervise`: watchdog checks
+  (pre-flight, teardown, liveness probes); daemon runs (the resident
+  scheduler that starts lanes and drives the queue, M1-S18); supervise
+  watches (the supervision battery that detects stuck or lying deliveries
+  and applies restart policies over the daemon's lanes, M2-S2). Watchdog
+  checks, daemon runs the loop, supervise runs the watch.
+- `blockers`: typed questions with answers as data. Blockers publish from
+  lanes as typed records (decision-needed, spec-ambiguity,
+  credential-missing, external-wait), rank in the digest and brief, and
+  resolve with one answer command that resumes the lane without re-entering
+  the delivery session. Owner-gate asks render through the same mechanism.
+- `plan`: declared scope, not prose. The machine-readable plan says which
+  files, packages, and folders each phase touches, what artifact proves
+  the phase done, and which leases and weight class it needs. Overlap and
+  parallelism are computed from it; nobody reads a diff to guess.
 - `doctor`: diagnose and prescribe. One command checks repo, tracker,
   provider, state, and CI wiring, and prints a fix hint for each failing
   check.
@@ -247,7 +263,7 @@ unless noted.
   each with an explicit evidence state; a failed, absent, or unattempted
   read is reported as degraded, unknown, unavailable, or not-delivered,
   never as clear or zero. The queue/lane section is a declared
-  `not-delivered` gap until M2-S1, so an empty queue is never implied;
+  `not-delivered` gap until M1-S17, so an empty queue is never implied;
   `queue ready` (M0-S7) remains the separate ready-set command.
 - `policy`: policy as code. Declare what repos should enforce (branch
   protection, required checks, merge rules); check reports drift across the
@@ -266,16 +282,16 @@ M3-S7 or M4-S5 without a replacement.
 
 | Current tool | New command | Parity point |
 |---|---|---|
-| deliver-ticket.sh | `ados dispatch` + `ados verify change` | Dual-run pilot (M1-S9); full handover per repo after two clean weeks of verify-change evidence (M2-S1) |
+| deliver-ticket.sh | `ados dispatch` + `ados verify change` | Dual-run pilot (M1-S9); per-repo handover after two clean weeks of verify-change evidence (M1-S9) |
 | per-repo status collector scripts | `ados status` | Parity per collector, tracker included (M0-S6); digest parity only when every collector is verified |
-| loop watchdog script | `ados watchdog` | Watchdog checks (M1-S1); loop liveness is not a status collector |
+| pm-liveness.sh | `ados watchdog` + `ados daemon` liveness | Watchdog checks (M1-S1); progress-based liveness so prefilling never reads as stalled (M1-S15) |
 | merge gate battery (manual) | `ados verify gates` + `ados merge` | Gate battery cited per merge (M0-S9, M1-S4) |
 | provider resolver hooks (legacy bash) | `ados provider` | Ported provider test battery (M0-S13) |
-| manual closeout ceremony | `ados closeout` | Idempotent dual-run (M0-S14) |
+| manual closeout ceremony | `ados closeout` | Idempotent dual-run (M0-S14); full mechanical sweep with judgment residue (M1-S12) |
 | session-database admin prototype | `ados db` | Prune idempotent, no live lock deleted (M0-S11) |
 | CI and runner health checks | `ados doctor` | Fix hints per failing check (M1-S3) |
-| parallel delivery mechanism | `ados dispatch` + `ados supervise` | Dual-run (M1-S9), full handover (M2-S1/M2-S2) |
-| loop lifecycle script | `ados supervise` | Singleton lock and staleness takeover (M2-S2) |
+| batch-deliver.sh | `ados queue` + `ados daemon` | Scheduling engine one-shot mode (M1-S17); continuous operation under the daemon (M1-S18) |
+| ceo-loop.sh | `ados daemon` | Resident loop with single-instance enforcement and crash-safe resume (M1-S18) |
 | ceremony scripts | `ados ceremony` | Ceremony set enumerated (M2-S3) |
 | repo sync and branch utilities | `ados repos` | Safety rails on live-delivery repos (M3-S6) |
 | metrics collector | `ados metrics` | Thresholds and windows (M2-S6) |
@@ -298,7 +314,7 @@ M3-S7 or M4-S5 without a replacement.
 - Hosted-only commands (inbox, relay admin, fleet supervision): proprietary,
   never committed in this repository.
 - `ados queue ready` ships in M0 before its parent `ados queue` exists in
-  M2. This registry note records the partial family so it does not read as
+  M1. This registry note records the partial family so it does not read as
   a defect; no rendered command-help surface exists or is added in M0.
 - Concept-parked surfaces (no commands in M0-M4; see
   [../concepts/README.md](../concepts/README.md)): an agent messaging
@@ -321,11 +337,18 @@ M3-S7 or M4-S5 without a replacement.
 - `state` kept, distinct from `status` per the TERMINOLOGY section: state
   manages the persisted stores; status reports what is happening now.
 
-Renames made by this audit (before the M0-S17 lock): `change` to `phase`
-(the command manages phases; "change" is the domain noun and collided with
-`verify change`), `validate` to `lint` (near-synonym of `verify`; lint is
-document conformance, verify is evidence against reality), `workspace` to
-`repos` (workspace is the per-change artifact set in ADOS vocabulary; the
-command does repository hygiene), `opencode` to `harness` (the command
-manages harness integrations generally, not one harness). The remote
-connection command was deferred rather than named.
+Names added by the M1 redefinition (`plan`, `commit`, `blockers`, `daemon`,
+`queue`, `lanes`, `spend`) are provisional in this planning document: the
+ODR-0003 v1 lock covers the locked surface, and each family's delivery
+records the name through the lock's superseding-note path (one record
+covering the M1 additions, or per-story notes). Renames of locked names
+still require a superseding decision record.
+
+Renames made by the original audit (before the M0-S17 lock): `change` to
+`phase` (the command manages phases; "change" is the domain noun and
+collided with `verify change`), `validate` to `lint` (near-synonym of
+`verify`; lint is document conformance, verify is evidence against
+reality), `workspace` to `repos` (workspace is the per-change artifact set
+in ADOS vocabulary; the command does repository hygiene), `opencode` to
+`harness` (the command manages harness integrations generally, not one
+harness). The remote connection command was deferred rather than named.
