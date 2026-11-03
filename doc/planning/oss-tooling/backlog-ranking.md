@@ -63,8 +63,8 @@ Reading notes:
 | 32 | M1-S11 Harness adapters and dispatch portability | M0-S12, M0-S13 | The dispatch pilot needs the harness port; telemetry extraction rides the same story and feeds spend |
 | 33 | M1-S15 Session lifecycle economics | M1-S1, M1-S11 | Truth engine (R5): must land before the daemon so the dispatcher never kills a prefilling session |
 | 34 | M1-S19 Spend read side and resume amplification | M1-S11 | Read side early (R9): waste classes become visible the moment telemetry exists |
-| 35 | M1-S17 Scheduling engine: queue, lanes, dependency batching | M0-S7, M0-S13, M1-S13 | Sequenced behind the truth engines (constraint 1); computes parallelism from declared plans |
-| 36 | M1-S18 Resident dispatch daemon | M1-S15, M1-S17 | Constraint 1: the dispatcher goes live only after the exit contracts are proven; one-shot mode shipped with the queue keeps a bash-free fallback |
+| 35 | M1-S17 Scheduling engine: queue, lanes, dependency batching | M0-S7, M0-S13, M1-S2, M1-S4, M1-S13, M1-S15 | Sequenced behind the truth and transaction engines (constraint 1): its one-shot mode executes deliveries, so merge safety, session economics, validated state, and declared plans are hard prerequisites |
+| 36 | M1-S18 Resident dispatch daemon | M1-S4, M1-S15, M1-S17 | Constraint 1 made structural: the dispatcher goes live only after merge-as-transaction, session economics, and the scheduling engine are proven; one-shot mode shipped with the queue keeps a bash-free fallback |
 | 37 | M1-S9 Dispatch dual-run and per-repo handover | M0-S8, M1-S11, M1-S17, M1-S18 | Milestone closer: handover per repo happens only after that repo's two clean weeks of dual-run evidence |
 | 38 | M1-S12 Change capsule completion and closeout expansion | M0-S5, M0-S14, M1-S8 | Capsules and closeout residue; independent of the engine line, ranked near its end |
 | 39 | M1-S20 Agent integration: prompts consume the tooling | M0-S10, M1-S13, M1-S14 | Last of the M1 line: prompts reference surfaces that all exist by here (plan schema, commit primitive, phase path) |

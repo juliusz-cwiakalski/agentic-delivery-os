@@ -87,3 +87,16 @@ and retained). The remaining phases execute in the interactive session.
 - Accepting any Proposed decision record (owner formalization).
 - Any tooling implementation (the stories planned here deliver it).
 - Merging this PR without owner review (explicit owner gate).
+
+## Phase 6: Code Review Remediation (Iteration 1)
+
+- [x] Resolve the contradictory M0-to-M1 gate statement in status.md (F-1).
+- [x] Make truth and transaction prerequisites explicit in the M1-S17/S18 dependency graph and mirror them in ranking (F-2).
+- [x] Add owner-gate classification and recorded waiver tasks and AC to M1-S4 and align registry (F-3).
+- [x] Remove em dashes from newly added registry rows and check the full added-line diff (F-4).
+- [x] Attribute M1-S13 plan lint and M1-S14 phase completion in registry Extended columns (F-5).
+- [x] Reconcile the 13 Proposed records count and the status next-steps subset (F-6).
+
+## Revision log
+
+- 2026-11-03: Added Phase 6 for code review iteration 1 remediation.

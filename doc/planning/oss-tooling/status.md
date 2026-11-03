@@ -41,11 +41,15 @@ The roadmap's M0 exit criteria (roadmap.md, Milestone 0 section) are:
    Proposed, and the GH-186 register explicitly leaves owner acceptance
    pending (merge does not auto-accept). CEO-agent ratifications recorded at
    PR review (ADR-0007, TDR-0005, TDR-0006) do not substitute for recorded
-   owner acceptance of the Proposed set.
+   owner acceptance of the Proposed set. The full pending set is thirteen
+   records: the eight above plus TDR-0005, TDR-0006, TDR-0007, TDR-0008,
+   and ADR-0010, as enumerated in the inception readiness report.
 
-Per backlog-ranking.md, M1 delivery starts after the M0 exit criteria; the
-dual-run pilot is the critical path and can start now that the M0 surfaces
-exist.
+Per backlog-ranking.md reading notes and the recorded M0 exit amendment
+(above), M1 delivery starts now and runs beside the pilot: stories that do
+not touch dispatch are unconstrained, and dispatch handover (M1-S9) still
+requires its per-repository two-clean-weeks evidence. The dual-run pilot
+remains the critical path for M0 exit.
 
 | Story | Delivery | Story | Delivery |
 |---|---|---|---|
@@ -82,9 +86,11 @@ invariants, never moving-base diffs.
    M0 surfaces exist; the recorded amendment lets the pilot run concurrent
    with M1 delivery that does not touch dispatch.
 2. **Owner acceptance pass** (required for exit): record acceptance or
-   change requests for the Proposed records (ADR-0005, ADR-0007, TDR-0003,
-   TDR-0004, ADR-0008, ADR-0009, ODR-0002, ODR-0003) in the decisions
-   register. Short review; the register links every record.
+   change requests for the thirteen Proposed decision records (ADR-0005,
+   ADR-0007, TDR-0003, TDR-0004, ADR-0008, ADR-0009, ODR-0002, ODR-0003,
+   plus TDR-0005, TDR-0006, TDR-0007, TDR-0008, and ADR-0010) per the
+   inception readiness report, which links every record. Short review; the
+   register links each one.
 3. **M1 milestone and tickets** (after GH-219 merges): create the M1
    milestone and its 20 issues from the redefined backlog in ranking
    order. M1 delivery is approved to start under the recorded gate

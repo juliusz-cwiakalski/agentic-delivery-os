@@ -1,0 +1,78 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-219
+branch: docs/GH-219/m1-delivery-engine-plan
+status: FAIL
+summary: "The 64 backlog stories and ranking rows agree on identities and dependency edges, the graph is acyclic, and registry story codes resolve. The four bash successors and the planned M1/M2 scope are documented. Several safety and consistency requirements remain unmet: the status snapshot contradicts the M0 amendment, the scheduling graph does not enforce truth-before-dispatch, and the merge story omits owner-gate waiver handling; added lines also contain prohibited em dashes."
+severity_breakdown:
+  critical: 0
+  high: 3
+  medium: 3
+  low: 0
+  info: 0
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: doc/planning/oss-tooling/status.md:48
+    message: "The unchanged status sentence says M1 delivery starts after M0 exit, directly contradicting the added amendment allowing early M1 work while M0 pilot and record acceptance are pending. The document therefore gives two incompatible dispatch rules."
+    suggestion: "Replace the old gate sentence with the amended rule: early non-dispatch M1 stories may begin concurrently, while each dispatch authority transfer still waits for its own two clean weeks of evidence."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/backlog.md:692
+    message: "M1-S18 depends only on M1-S15 and M1-S17; M1-S17 depends only on M0-S7, M0-S13, and M1-S13. Neither dependency chain includes the M1-S4 merge transaction or M1-S2 signal validation even though the roadmap explicitly requires the scheduler and daemon to follow the truth and transaction engines (AC-F1-1, AC-F5-1). Ranking position is advisory, not a delivery dependency."
+    suggestion: "Add explicit truth-engine prerequisites to M1-S17/M1-S18 as appropriate, including M1-S4 and the required signal validation story, and mirror the exact edges in backlog-ranking.md."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/backlog.md:443
+    message: "M1-S4 specifies versioned gate data and fresh tracker/CI reads but never tasks or tests owner-gate classification and recorded waivers. Those mechanisms appear only in operator input, not in the self-contained merge story, leaving a required safety contract unassigned (AC-F4-1)."
+    suggestion: "Add owner-review-first/never-merge classification and recorded waiver handling to M1-S4 Tasks and AC, explicitly preserving the existing gate battery; align the registry merge row."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: documentation
+    location: doc/planning/oss-tooling/cli-command-registry.md:129
+    message: "Two added registry rows retain em-dash characters (lines 129 and 130), violating the explicit zero-em-dashes-in-added-lines requirement (NFR-6)."
+    suggestion: "Replace the em dashes in both added rows with commas or parentheses and rerun an added-line Unicode scan."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/cli-command-registry.md:133
+    message: "The registry's existing `ados lint` row still says Extended `M3-S4` only despite M1-S13 explicitly integrating plan lint there; `ados phase` still says Extended `-` despite M1-S14 changing phase completion into atomic record-plus-commit. AC-F8-1 requires accurate story attribution for proposed extensions."
+    suggestion: "Add M1-S13 to the lint Extended column and M1-S14 to the phase Extended column, explaining the planned behavior without presenting it as delivered."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: medium
+    confidence: medium
+    category: spec-compliance
+    location: doc/planning/oss-tooling/status.md:16
+    message: "The added amendment says only 'The Proposed decision records remain Proposed' and the existing exit section lists eight records, while AC-F1-2 requires status to record that all 13 Proposed records are pending owner acceptance. The count and complete set are not evidenced in the status snapshot."
+    suggestion: "Explicitly state the 13-record pending set and link its authoritative register, reconciling the eight-item next-steps list with the full count."
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-03T00:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

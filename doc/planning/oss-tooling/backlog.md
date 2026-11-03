@@ -445,11 +445,16 @@ the M1 redefinition).
   is config-declared, versioned data, so repositories add gates (workspace
   test gates, deploy verification) without code; the gate freshness bound
   covers tracker state as well as CI (a ticket that moved to an
-  owner-gated state after verification invalidates the verification).
+  owner-gated state after verification invalidates the verification);
+  owner-gate classification (never-merge classes, owner-review-first) is
+  policy-as-data the operator can inspect, and the override path is a
+  recorded waiver, never a hidden decision inside the tool.
 - AC: the merge helper refuses when gates were verified more than a bounded
   time ago; a refusal names the failed gate with inline evidence; deploy
   verified by trace; a repo-declared gate is enforced without code changes;
-  a post-verification tracker transition to an owner-gated state is caught.
+  a post-verification tracker transition to an owner-gated state is caught;
+  an owner-gate classification is readable from declared policy, and every
+  override is a recorded waiver.
 - Depends on: M0-S9, M0-S4.
 
 ### M1-S5 Owner-gate SLA
@@ -672,7 +677,7 @@ the M1 redefinition).
   is scheduled before its consumer; close items rank above new starts; a
   park resumes exactly when its condition clears; the queue operates end
   to end without the daemon (one-shot mode).
-- Depends on: M0-S7, M0-S13, M1-S13.
+- Depends on: M0-S7, M0-S13, M1-S2, M1-S4, M1-S13, M1-S15.
 
 ### M1-S18 Resident dispatch daemon
 - Goal: A resident daemon drives the queue continuously (single-instance, crash-safe, never a lane itself, degrading to CLI one-shots), so lanes never idle waiting for a coordinator iteration.
@@ -691,7 +696,7 @@ the M1 redefinition).
   evidence; killing the daemon mid-delivery and restarting converges
   without duplicated work; deliveries continue via the one-shot CLI
   while the daemon is down; the daemon never executes a merge.
-- Depends on: M1-S15, M1-S17.
+- Depends on: M1-S4, M1-S15, M1-S17.
 
 ### M1-S19 Spend read side and resume amplification
 - Goal: Per-ticket and per-phase spend plus the resume-amplification metric are visible from the event log, so waste classes are findable from the spend report alone.
