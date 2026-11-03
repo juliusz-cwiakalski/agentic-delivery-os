@@ -28,8 +28,9 @@ name is `ados` until the naming freeze.
   strict (the story cannot deliver without them), not sequencing
   preferences. Suggested delivery order, including non-forced
   placements, lives in [backlog-ranking.md](backlog-ranking.md).
-- M0 is fully specified. M1 through M4 are at outline level and get refined
-  at the start of each milestone.
+- M0 is fully specified. M1 is fully specified as of the delivery-engine
+  re-planning (2026-11-03). M2 through M4 are at outline level and get
+  refined at the start of each milestone.
 - Every story ends with machine-checkable acceptance criteria. Success is
   artifacts, not exit codes.
 - Stories are self-contained for ticket creation: no private-repository
@@ -398,7 +399,16 @@ floats behind it.
 
 ---
 
-## Epic M1: Attention and minimal surfaces (months 2-3)
+## Epic M1: Delivery engine and autonomous dispatch (months 2-3)
+
+Goal: replace the bash delivery stack (`deliver-ticket.sh`,
+`batch-deliver.sh`, `ceo-loop.sh`, `pm-liveness.sh`) with the typed delivery
+engine: truthful signals, merge as a transaction, machine-readable delivery
+plans, and scheduling plus waiting out of the coordinator's context. The
+recorded operator input for this epic is
+[operator-requirements-2026-11.md](operator-requirements-2026-11.md);
+the re-planning decisions are recorded in roadmap.md (M0 exit amendment and
+the M1 redefinition).
 
 ### M1-S1 Watchdog and lane contracts
 - Goal: Watchdog checks that refuse dirty or non-base checkouts and restore on every exit, so stranded and foreign commits become structurally impossible.
@@ -425,17 +435,25 @@ floats behind it.
 - Depends on: M0-S6, M0-S13.
 
 ### M1-S4 Merge and verify-deploy engine
-- Goal: Merge as a verified transaction (gates fresh, squash, landing verified) plus deploy verification by job trace, killing merge near-misses and vacuous-green deploys.
+- Goal: Merge as a verified transaction (gates fresh, squash, landing verified) plus deploy verification by job trace, killing merge near-misses and vacuous-green deploys; every refusal names its gate with inline evidence.
 - Tasks: merge transaction helper (verify gates fresh, squash, verify
-  landed); deploy verification by job trace, not job status.
+  landed); deploy verification by job trace, not job status; the gate set
+  is config-declared, versioned data, so repositories add gates (workspace
+  test gates, deploy verification) without code; the gate freshness bound
+  covers tracker state as well as CI (a ticket that moved to an
+  owner-gated state after verification invalidates the verification).
 - AC: the merge helper refuses when gates were verified more than a bounded
-  time ago; deploy verified by trace.
-- Depends on: M0-S9.
+  time ago; a refusal names the failed gate with inline evidence; deploy
+  verified by trace; a repo-declared gate is enforced without code changes;
+  a post-verification tracker transition to an owner-gated state is caught.
+- Depends on: M0-S9, M0-S4.
 
 ### M1-S5 Owner-gate SLA
 - Goal: Owner gates age into escalation or a default decision, never silence, so the fleet never idles on an unanswered ask.
 - Tasks: 24 h stale-review escalation; 72 h default-on-expiry; aging visible
-  in brief and board; one pre-agreed default per gate.
+  in brief and board; one pre-agreed default per gate. The escalation
+  mechanism is designed for reuse by the typed blocker channel (M1-S16):
+  one mechanism, two audiences (owner and coordinator).
 - AC: an owner gate older than the SLA ages into escalation or a proceed
   decision, never silence.
 - Depends on: M0-S6.
@@ -444,7 +462,10 @@ floats behind it.
 - Goal: A deterministic, render-only owner brief so the owner daily attention starts from facts, not chat.
 - Tasks: deterministic brief from the M0 collectors (tracker included) with
   explicit placeholders for unbuilt collectors; no LLM in the render path;
-  one screen; decision-first layout.
+  one screen; decision-first layout. The brief renders from the same
+  collector state as the status digest (one source of truth) and carries
+  ready-to-merge, blocker questions, and owner-gate ages as anchored
+  actions (blockers render as named placeholders until M1-S16 lands).
 - AC: brief output matches collector state exactly; placeholders are named,
   not silent.
 - Depends on: M0-S6.
@@ -468,21 +489,37 @@ floats behind it.
   delivery agent cannot alter evidence the retro will read.
 - Depends on: M0-S5, M1-S2.
 
-### M1-S9 Dispatch dual-run pilot
-- Goal: Dual-run dispatch beside the bash stack on pilot tickets, accumulating the verify-change evidence that justifies the later handover.
-- Tasks: dispatch runs beside the bash stack on selected tickets in one
-  pilot repository; verify-change evidence per ticket; shell stays
-  authoritative.
-- AC: pilot tickets produce dual-run evidence; divergence is reported.
-- Depends on: M0-S8, M1-S11.
+### M1-S9 Dispatch dual-run and per-repo handover
+- Goal: Dispatch runs beside the bash stack, accumulates verify-change evidence, and hands over per repository, so the new engine becomes authoritative with the bash stack demoted to fallback.
+- Tasks: dispatch dual-run beside the bash stack on pilot tickets (shell
+  stays authoritative during evidence accrual); verify-change evidence
+  recorded per ticket for parity; the handover procedure per repository:
+  after two clean weeks of evidence on the migrated engine, the
+  repository's delivery flips to the new stack as authoritative and the
+  bash entry points print deprecation pointers and remain reachable as
+  fallback; covers the functions of `deliver-ticket.sh`,
+  `batch-deliver.sh`, `ceo-loop.sh`, and `pm-liveness.sh` (one-shot mode
+  first, queue-driven when the daemon lands).
+- AC: pilot tickets produce dual-run evidence with divergence reported; a
+  handed-over repository dispatches through the new stack end to end; the
+  bash entry points still run as fallback with deprecation notices;
+  handover is per repository and reversible.
+- Depends on: M0-S8, M1-S11, M1-S17, M1-S18.
 
 ### M1-S10 status collector expansion
-- Goal: Collector expansion toward full attention-state coverage so status keeps replacing manual probing.
+- Goal: Collector expansion to full attention-state coverage so status keeps replacing manual probing and one digest bootstraps every session.
 - Tasks: expand beyond the six M0 collectors toward attention-state
-  coverage; tracker ticket-hygiene assertions (epic membership, story
-  points, in-sprint state) are named in this expansion.
+  coverage: lanes delivering versus idle-with-reason, ready-to-merge as a
+  first-class action list, parked items with their conditions, owner-gate
+  ages, spend summary (placeholder until M1-S19); stable finding codes so
+  findings are acted on without re-deriving; grouped, deduplicated, ranked
+  output (four red CI findings on mains is one job, not four); the
+  blockers section is a named placeholder until M1-S16; tracker
+  ticket-hygiene assertions (epic membership, story points, in-sprint
+  state) are named in this expansion.
 - AC: each new collector is artifact-verified and bounded; ticket-hygiene
-  assertions are covered by name.
+  assertions are covered by name; every finding carries a stable finding
+  code; ready-to-merge ranks as an action list.
 - Depends on: M0-S6.
 
 ### M1-S11 Harness adapters and dispatch portability
@@ -507,8 +544,8 @@ floats behind it.
   per agent and model) without re-querying harness stores.
 - Depends on: M0-S12, M0-S13.
 
-### M1-S12 Change capsule completion and closeout promotion
-- Goal: Every merged change leaves a closed memory capsule (events plus promotion decisions), starting the learning loop at the change boundary.
+### M1-S12 Change capsule completion and closeout expansion
+- Goal: Every merged change leaves a closed memory capsule (events plus promotion decisions), and post-merge mechanics become one idempotent command that emits judgment residue instead of consuming coordinator tokens.
 - Tasks: complete every change folder as a memory episode capsule:
   append-only events.jsonl (phase transitions, gate outcomes, review
   verdicts; one stream with the telemetry concept) and a candidates/
@@ -518,42 +555,187 @@ floats behind it.
   canonical home, archive the capsule (concepts/memory-lifecycle.md);
   capsules stay self-contained through phases 1 to 10 (no cross-change
   writes), which is what later makes preparation phases safely
-  concurrent (concepts/parallel-delivery.md).
+  concurrent (concepts/parallel-delivery.md). Closeout expansion: the
+  owed-flip sweep of the merged diff (feature-flag and class strings,
+  TODO markers, when-X-merges notes); MR comment-thread resolution
+  check; tracker done plus hygiene (unassign the ball, sweep todo-class
+  labels to done-class); branch and worktree cleanup; retro-coverage
+  registry move; closeout emits a bounded judgment residue list
+  (unresolved human comment threads, ambiguous flip hits) instead of the
+  coordinator grepping diffs.
 - AC: every merged change leaves behind a closed capsule with events and
   a promotion decision (promoted or rejected with reason) per candidate;
-  no candidate skips the capture bar or the evidence link.
+  no candidate skips the capture bar or the evidence link; closeout
+  performs the full mechanical sweep idempotently and emits bounded
+  judgment residue; a re-run after restart converges.
 - Depends on: M0-S5, M0-S14, M1-S8.
+
+### M1-S13 Machine-readable delivery plan schema
+- Goal: Delivery plans become machine-readable declared artifacts (per-phase scope, done-artifacts, leases, weight class, interactions) so parallelism is computable and the scheduler batches without an LLM in the loop.
+- Tasks: the plan schema (YAML) as the plan-writer output format: each
+  phase declares the files, packages, and folders it will modify; its
+  done-artifacts (MR URL, pipeline id, deployed environment, tracker
+  transition) so lane joins verify artifacts, not exit codes; the repo
+  leases and build-weight class it needs; declared interactions (contract
+  files, generated code) so the scheduler orders producers before
+  consumers mechanically; the change variant or ceremony tier is data in
+  the plan (per-tier phase sets and escalation triggers; no hardcoded
+  eleven); planning phases are declared lease-free (safely parallel) and
+  delivery phases lease-taking; the `ados plan` family: validate
+  (schema), diff (declared scope versus actual branch diff), overlap
+  (pairwise conflict answer: run in sequence or parallel); plan lint
+  integrated into `ados lint`; the ready-for-development gate: a change
+  is ready for development when its plan validates and its scope is
+  declared; migration path from the markdown plan format (writer output
+  flips; legacy markdown plans remain readable during transition).
+- AC: a plan with an invalid schema is rejected with a classified error;
+  the overlap of two plans that touch the same files answers
+  run-in-sequence with the overlapping paths named; disjoint plans
+  answer parallel; the tier is read from the plan, not hardcoded; the
+  ready-for-development gate refuses a change whose plan does not
+  validate.
+- Depends on: M0-S5, M0-S10.
+
+### M1-S14 Commit primitive and phase-transition commits
+- Goal: Commits become a tool primitive that computes the message from the working tree plus change context, and phase completion records and commits atomically, so agents stop hand-crafting commits and every transition lands as a conventional commit.
+- Tasks: `ados commit`: compute a conventional commit message from
+  uncommitted files plus the change context (ref, current phase, plan
+  phase); precise staging (never untracked strays; privacy-scanned at the
+  emitter); phase-transition integration: `ados phase complete` performs
+  the record plus commit as one atomic operation for the completed
+  phase's pending work; idempotent re-run; respects the repository
+  commitlint configuration.
+- AC: a commit message derives from tree state plus context without agent
+  authorship; phase complete plus commit is atomic (both land or
+  neither); stray untracked files are never staged; a re-run after
+  interruption converges.
+- Depends on: M0-S3, M0-S10.
+
+### M1-S15 Session lifecycle economics
+- Goal: Sessions resume without re-paying prefill, liveness is progress-based, and restart budgets fail loudly, killing the resume-loop amplification class (the largest measured token-waste incident class).
+- Tasks: progress-based liveness signals at the harness adapter level
+  (heartbeat, session traffic, token delta; CPU is never the only
+  signal; a prefilling or resuming session never reads as stalled);
+  resume economics: a resumed session attaches and continues without
+  re-paying its prefill, or the restart path is classified uneconomical
+  and refused with a reason; a bounded restart budget with a classified,
+  fail-loud terminal state (never a silent loop); lane status exposes
+  the restart count and the amplification signal.
+- AC: a large resuming session is not killed as stalled; a restart past
+  the budget fails loudly with a classified reason visible in lane
+  status; the resume-amplification metric is derivable per delivery
+  (feeds M1-S19).
+- Depends on: M1-S1, M1-S11.
+
+### M1-S16 Typed blocker and question channel
+- Goal: Blockers publish as typed, ranked, answerable questions and answers apply without re-entering delivery sessions, converting hours of lane idle into seconds.
+- Tasks: typed question records (decision-needed with options,
+  spec-ambiguity, credential-missing with variable name only and never
+  values, external-wait) published to the state layer; ranked in the
+  status digest and brief; answerable as data (`ados blockers answer`);
+  the answer is applied by the coordinator loop or the daemon and the
+  lane resumes without a full session re-entry where the harness
+  supports it; one mechanism, two audiences: owner gates (M1-S5) and
+  coordinator questions; credential values never transit the channel.
+- AC: a blocker surfaces in the digest within one collection cycle as a
+  typed question; an answer resumes the lane without re-entering the
+  delivery session; question types are validated; a credential-missing
+  question carries the variable name and never a value.
+- Depends on: M0-S5, M1-S5.
+
+### M1-S17 Scheduling engine: queue, lanes, dependency batching
+- Goal: The programmatic queue with dependency awareness schedules the delivery loop end to end from declared plans, so the coordinator stops being a dispatcher and parallelism is computed, not discovered.
+- Tasks: priority queue with explicit dependencies between changes
+  (priorities, repos, dependency graph as one artifact); readiness
+  computed from artifacts (builds on queue ready: deps satisfied, repo
+  free, tier known, no owner gate, CI healthy, provider available);
+  per-repo single-flight keyed on remote as the only structural lane cap
+  (capacity, bandwidth, and CI slots never gate lane count); build-weight
+  classes (at most one heavy-class job per constrained runner; a resource
+  class, not a lane cap); dependency-aware batching (producers before
+  consumers; a producer's deploy verified before a dependent repo
+  merges); closing beats opening (merge-ready, in-review, and parked
+  items rank above new starts); park and resume for external windows
+  that re-check their condition continuously and resume exactly when it
+  clears (a park that outlives its condition is a classified bug);
+  preemption releases the repo with a named park state; lease objects
+  carry a scope field (repo-exclusive is the only implemented scope;
+  worktree-scoped leases arrive without redesign, concepts/
+  parallel-delivery.md); one-shot mode: the queue computes the next
+  action and a CLI one-shot executes it (daemon-free operation).
+- AC: two lanes cannot deliver the same repo concurrently; a heavy build
+  is not scheduled onto a runner already carrying one; a ready producer
+  is scheduled before its consumer; close items rank above new starts; a
+  park resumes exactly when its condition clears; the queue operates end
+  to end without the daemon (one-shot mode).
+- Depends on: M0-S7, M0-S13, M1-S13.
+
+### M1-S18 Resident dispatch daemon
+- Goal: A resident daemon drives the queue continuously (single-instance, crash-safe, never a lane itself, degrading to CLI one-shots), so lanes never idle waiting for a coordinator iteration.
+- Tasks: the daemon process (start, stop, status) drives lanes by
+  consuming the scheduling engine; single-instance enforcement (lock with
+  staleness takeover); crash-safe: scheduling state lives in the state
+  layer and a restart resumes the queue without lost or duplicated work
+  (idempotent convergence: reruns never duplicate tickets, comments, or
+  commits); the dispatcher is never a lane (it spawns and observes; it
+  never runs delivery work in-process); progress-based liveness applied
+  to its lanes (M1-S15); degradation: daemon failure or absence leaves
+  the CLI one-shot path fully functional; runs under a real process
+  supervisor (systemd or equivalent); prepares and queues merges but
+  never fires them (roadmap constraint 9).
+- AC: a second daemon instance is refused or takes over stale state with
+  evidence; killing the daemon mid-delivery and restarting converges
+  without duplicated work; deliveries continue via the one-shot CLI
+  while the daemon is down; the daemon never executes a merge.
+- Depends on: M1-S15, M1-S17.
+
+### M1-S19 Spend read side and resume amplification
+- Goal: Per-ticket and per-phase spend plus the resume-amplification metric are visible from the event log, so waste classes are findable from the spend report alone.
+- Tasks: `ados spend` v0 read side over the closeout-captured harness
+  telemetry: per-ticket and per-phase tokens by class, calls, per agent
+  and model; the resume-amplification metric (tokens paid versus unique
+  progress); per-delivery restart counts; text digest plus JSON; alarms,
+  burn-rate, and quota snapshots stay in M2-S6.
+- AC: a closed change reports its spend breakdown from the event log
+  without re-querying harness stores; the resume-amplification metric
+  reads approximately 1 for a healthy delivery and flags amplification
+  events by name.
+- Depends on: M1-S11.
+
+### M1-S20 Agent integration: prompts consume the tooling
+- Goal: The lifecycle agents (the PM-style coordinator and its lane agents: plan writer, coder, reviewer, and the rest) use the tool primitives for coordination, so coordination is tool calls, not prose discipline.
+- Tasks: update the agent prompt definitions and lifecycle instructions:
+  phase bookkeeping exclusively via `ados phase`; pm-notes writes through
+  the linted path; plan-writer emits the M1-S13 plan schema; coder
+  executes against declared phase scope and marks phase completion
+  (record plus commit via the M1-S14 primitive); blockers publish as
+  typed questions instead of prose; the coordinator consumes the digest
+  and typed answers; man-page-grade guides and `--help` coverage for
+  every command the agents call; bash-era instruction residue removed
+  where superseded.
+- AC: no lifecycle agent instruction writes phase state by hand or
+  hand-crafts a commit for a phase transition; every tool call the
+  prompts require has `--help` and a guide; no prompt references a
+  retired bash entry point as the primary path.
+- Depends on: M0-S10, M1-S13, M1-S14.
 
 ---
 
-## Epic M2: Orchestration and measurement (months 3-6)
+## Epic M2: Ceremonies, measurement, and memory (months 3-6)
 
-### M2-S1 Queue, lanes, dispatch
-- Goal: The programmatic queue manages the delivery loop end to end: what is in flight, what needs review, what can start next; it starts work automatically when dependencies are satisfied and repos and resources are free, so the coordinating session stops being a dispatcher.
-- Tasks: priority queue, lane plan with dependency awareness and a
-  build-weight class (heavy builds excluded per runner), preemption,
-  single-flight per repo keyed on remote; the queue manages the loop:
-  in-delivery, needs-review, and ready states are computed from
-  artifacts, and ready work starts automatically when dependencies are
-  satisfied and repos and resources are free (the coordinator
-  supervises; it no longer hand-dispatches). Single-flight is enforced
-  through per-repo lease objects carrying a scope field; repo-exclusive
-  is the only implemented scope, and worktree-scoped leases (the
-  dormant N-per-repo mode) arrive without redesign
-  (concepts/parallel-delivery.md).
-- AC: two lanes cannot deliver the same repo concurrently; preemption
-  releases the repo with a named park state; a heavy build is not scheduled
-  onto a runner already carrying one.
-- Depends on: M1-S9.
+Note: the M1 redefinition moved the queue, lanes, and dispatch core (the
+former M2-S1) into M1; its content is delivered by M1-S17 (scheduling
+engine) and M1-S18 (resident dispatch daemon). The M2-S1 code is retired;
+the gap is deliberate. M2 stories keep their codes.
 
 ### M2-S2 Supervise
-- Goal: A supervisor service with artifact-evidence liveness so stuck or lying deliveries are detected and acted on, not just observed.
-- Tasks: supervisor service: tri-state status, progress watchdogs,
+- Goal: A supervisor battery with artifact-evidence liveness so stuck or lying deliveries are detected and acted on, not just observed, running over the M1 daemon's lanes.
+- Tasks: supervisor battery: tri-state status, progress watchdogs,
   duplicate-supervisor detection, lying-liveness signals by artifact
-  evidence.
+  evidence, restart policies over the resident dispatch daemon.
 - AC: a stuck supervisor is detected by artifact evidence, not process
   state.
-- Depends on: M1-S1, M2-S1.
+- Depends on: M1-S1, M1-S18.
 
 ### M2-S3 Ceremony runner
 - Goal: Ceremonies become declared, deterministic units, cutting ceremony share of active agent time toward 40 percent and making catch-up automatic.
@@ -564,7 +746,9 @@ floats behind it.
   testing-session assessment (owner note to item-by-item assessment with a
   coverage verdict per item), and decision-record mirror sync to affected
   repos before a new ticket dispatches there. Projects declare their own
-  ceremonies through the same contract (custom ceremony packs later).
+  ceremonies through the same contract (custom ceremony packs later). The
+  ceremony tier engine lands here: per-tier phase sets and escalation
+  triggers as data, consuming the tier declared in M1-S13 plans.
 - AC: ceremony share measured before and after; trend toward 40 percent;
   every built-in ceremony is parity-testable; a project-declared ceremony
   runs through the same runner without tooling changes; retro ceremonies
@@ -597,7 +781,7 @@ floats behind it.
 - Tasks: full board of lanes, gates, owner asks, parked work; one screen
   sharing the brief and status state source.
 - AC: board, brief, and status share one state source.
-- Depends on: M1-S5, M2-S1.
+- Depends on: M1-S5, M1-S17.
 
 ### M2-S5 Steer
 - Goal: The owner can change the course of a running delivery without killing the session: steering notes queue up, land at the next phase boundary, and carry receipts, so course corrections are safe and auditable.
@@ -615,9 +799,11 @@ floats behind it.
 ### M2-S6 Metrics and spend
 - Goal: Delivery metrics and spend from the event log with alarms, so success claims and cost drift are measurable, not anecdotal.
 - Tasks: ceremony share, per-dispatch tokens/cost/restarts, cycle time, CI
-  failure rate, escaped defects; burn-rate alarms.
+  failure rate, escaped defects; burn-rate alarms. Builds on the `ados
+  spend` read side delivered in M1-S19; this story adds the alarm and
+  metric layers.
 - AC: exit criteria measurable with committed numbers.
-- Depends on: M1-S11, M2-S3.
+- Depends on: M1-S19, M2-S3.
 
 ### M2-S7 Suite-to-job mapping in gates
 - Goal: Local gates must cite the same suite breadth as CI, so a narrow local suite cannot masquerade as full green.
@@ -730,7 +916,7 @@ floats behind it.
   pointing to the new equivalents; removal plan at the very last stage.
 - AC: every replaced bash command has a working new equivalent with a
   deprecation notice.
-- Depends on: M2-S1, M2-S2, M2-S3, M2-S6.
+- Depends on: M1-S18, M2-S2, M2-S3, M2-S6.
 
 ### M3-S8 Memory command family
 - Goal: The ados memory command family over canonical records, so memory governance (audit, promotion, supersession) is tool-enforced.
