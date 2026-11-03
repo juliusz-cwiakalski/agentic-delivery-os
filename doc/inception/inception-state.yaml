@@ -45,7 +45,7 @@ phases:
   - { id: 4, name: "Domain, conventions & quality baseline", status: completed, started: "2026-11-02T16:08:50+01:00", completed: "2026-11-02", previously_approved: "2026-11-02T16:35:43+01:00", reopened_by: "READY-B1; CEO disposition dde826a clears content findings, bounded remediation complete; final owner review at Gate 6 pending" }
   - { id: 5, name: "Delivery framework integration", status: completed, started: "2026-11-02T16:35:43+01:00", completed: "2026-11-02T16:59:49+01:00" }
   - { id: 6, name: "Inception readiness check", status: completed, started: "2026-11-02T16:59:49+01:00", completed: "2026-11-02T21:11:07+01:00" }
-  - { id: 7, name: "Inception summary & handoff", status: in_progress, started: "2026-11-02T21:11:07+01:00", completed: null }
+  - { id: 7, name: "Inception summary & handoff", status: completed, started: "2026-11-02T21:11:07+01:00", completed: "2026-11-03T09:30:00+01:00" }
 
 artifacts:
   # status: pending | draft | approved | written ; confidence: 0.0-1.0
@@ -79,7 +79,8 @@ artifacts:
   material_inventory: { status: written, path: "doc/inception/analysis/material-inventory.md", confidence: 0.9 }
   retrospective_notes: { status: draft, path: "doc/inception/retrospective/", confidence: 0.8 }
   open_questions:    { status: draft, path: "doc/inception/open-questions/", confidence: 0.8 }
-  inception_summary: { status: pending, path: "doc/inception/inception-summary.md", confidence: 0.0 }
+  inception_summary: { status: approved, path: "doc/inception/inception-summary.md", confidence: 0.9, note: "Gate 7 sign-off recorded via OPEN-Q21 (CEO under delegated authority, 2026-11-03); separate owner-gated matters remain carried" }
+  initial_feature_specs: { status: draft, path: "doc/inception/analysis/phase-7-feature-specs-and-backlog-handoff.md", confidence: 0.9, note: "20 M0 outcomes reconciled to existing canonical specs; XC-001..013 mapped, HANDOFF-001..011 proposed AC not tickets or accepted implementation scope" }
   repo_analysis:     { status: written, path: "doc/inception/analysis/repo-analysis.md", confidence: 0.85 }
   tribal_knowledge:  { status: written, path: "doc/inception/analysis/tribal-knowledge.md", confidence: 0.8 }
   project_prd:       { status: pending, path: "doc/overview/prd.md", confidence: 0.0, note: "not activated; roadmap + backlog are the living plan" }
@@ -114,6 +115,8 @@ assumptions:
   - { text: "parallel M0 delivery and inception doc work can proceed without blocking conflicts (disjoint surfaces)", risk_type: feasibility, validation_status: testing, date: "2026-10-31" }
 
 sessions:
+  - { started: "2026-11-03T09:30:00+01:00", phase: 7, notes: "OPEN-Q21 answered: inception summary and feature/backlog handoff APPROVED as knowledge-base handoff by the CEO under delegated authority (owner instruction to finalize and answer pending questions). HANDOFF-001..011 remain recommendations only; thirteen Proposed records, license determination, session-admin privacy sign-off, pilot/outcome protocol and privacy population remain owner-gated and carried. Owner retains final say at PR #218. Phase 7 completed." }
+  - { started: "2026-11-02T21:11:07+01:00", phase: 7, notes: "Owner Gate 6 approval committed bd34031; separate record/license/privacy/pilot gates carried. Drafted summary, reconciled feature/backlog handoff, OPEN-Q21 and retrospective. Owner authorized four exact registry memberships; independent review verified unchanged remaining registry structure, metadata, 81 references and both focused guards. No product tests, tickets or final sign-off; Phase 7 remains in progress." }
   - { started: "2026-11-02T18:47:33+01:00", phase: 6, notes: "User authorized scoped rerun and existing Phase 6 artifact/state updates after CEO disposition dde826a. Technical readiness PASS: metadata/YAML, local references, privacy and forbidden-literals guard pass; privacy hashed classes remain vacuous. Phase 4 bounded remediation complete, Phase 6 human gate pending, Phase 7 pending. Thirteen Proposed records plus separate license, session-admin privacy and pilot/outcome protocol review packaged in readiness report; none accepted. No source/framework edits, tickets, push or Phase 7." }
   - { started: "2026-11-02T18:00:00+01:00", phase: 6, notes: "Merged origin/main-tools 5330809 as 49f46eb without conflicts. Phase 3 reconciliation fa92e80; exact Phase 4 remediation ce52536. All 37 memberships registered, seven glossary rows applied, integrated duplicate removal verified; profile exemption and contributor/environment equivalent home written. Focused metadata/references/privacy pass with vacuous classes. Guard exposes eleven literal findings in six existing documents; Phase 6 remains FAIL, Phase 4 reopened for separately bounded disposition. No PASS acceptance package or Phase 7, record acceptance, product repair, tickets, regeneration or push." }
   - { started: "2026-10-31T08:10:00+01:00", phase: 0, notes: "phase 0 artifacts drafted: state, material inventory, repo analysis with gap map, tribal knowledge; gate 0 presented" }
