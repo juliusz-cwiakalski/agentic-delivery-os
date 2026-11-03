@@ -28,6 +28,7 @@ lifecycle; the concept doc links the delivered work.
 | Concept | Status | One-line summary |
 |---|---|---|
 | [agent-primitive-surface.md](agent-primitive-surface.md) | Draft | Agents speak ADOS primitives only; adapters translate; policy layer and audited escape hatch guard the boundary |
+| [automated-commit.md](automated-commit.md) | Draft | The automated commit capability: deterministic skeleton (ref, type, scope, staging, safety) plus one constrained model call for subject and conditional body; transport seam (core inference, then harness one-shot); marked template fallback |
 | [primitive-catalogue.md](primitive-catalogue.md) | Draft | The catalogue of primitives with a Planned, Typed, Delivered lifecycle; the load-bearing set, dependency graph, and change discipline |
 | [embedded-metadata.md](embedded-metadata.md) | Draft | Provider artifacts carry versioned ADOS metadata; the adapter writes, parses, and strips it; agents see only the primitive view |
 | [adapter-conformance.md](adapter-conformance.md) | Draft | One flow suite in primitives, run against every adapter; mock in CI plus scheduled live runs; green gates adapter changes |
