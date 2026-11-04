@@ -243,6 +243,20 @@ exit-code projection; secret redaction; bounded output.
   (drain/stop/takeover under fence tokens); authorization is filesystem
   (0700 state dir, same-user); no business truth on the wire (every
   frame derivable from state); secrets never cross the wire.
+- Transport layering: codec, session, and transport are separate layers;
+  the transport is config-selected (local socket default; stdio in
+  tests) behind an interface, so remote or container-attached transports
+  (TCP/TLS, SSH-tunneled, pipes into containers) reuse the same frames
+  and logic plus one additive `intent` frame class and a handshake
+  identity claim; remote stays off by default (M4-S6 connection point).
+- Concurrency: connection per CLI invocation (responses return only on
+  the asking connection; ids correlate within a connection); the daemon
+  is a multi-connection single event loop; mutations serialize through
+  the single-writer state layer under fence tokens with idempotency keys
+  (at-most-once); one daemon per state dir (per project scope), so
+  multiple agents and multiple projects on one host are isolated by
+  scope; every request has a bounded timeout that degrades instead of
+  blocking.
 - Outputs: status: instance identity, uptime, queue depth, lane states,
   restart counters with classified reasons, heartbeat age, socket path
   and reachability; merge code path absent (never fires merges).

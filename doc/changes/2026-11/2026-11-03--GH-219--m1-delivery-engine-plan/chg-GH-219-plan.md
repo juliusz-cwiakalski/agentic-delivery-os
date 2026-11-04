@@ -160,6 +160,22 @@ and retained). The remaining phases execute in the interactive session.
   state-fallback note, subscriber-degraded).
 - [x] backlog M1-S18 tasks pin the wire contract as a deliverable.
 
+## Phase 10: Transport layering and concurrency model (owner review feedback)
+
+- [x] m1/architecture.md: transport layering section (codec, session,
+  transport as separate layers; config-selected transport; stdio
+  conformance as the transport-independence proof; remote and
+  container-attached transports reuse the protocol plus one additive
+  intent frame class and a handshake identity claim; remote off by
+  default, M4-S6 connection point) and concurrency model section
+  (connection per invocation with connection-scoped response routing,
+  single event loop, state-layer serialization with idempotency keys,
+  one daemon per state dir scope, bounded waits that degrade).
+- [x] contracts.md daemon entry: transport layering and concurrency
+  summary lines.
+- [x] backlog M1-S18 tasks and AC: stdio conformance proof, no-crosstalk
+  and at-most-once concurrency acceptance criteria.
+
 ## Revision log
 
 - 2026-11-03: Added Phase 6 for code review iteration 1 remediation.

@@ -227,10 +227,11 @@ bounded poll interval, in that order of preference.
 
 - **Transport:** unix domain socket at a path derived from the state dir
   (named pipe equivalent on Windows). Filesystem permissions are the
-  authorization model: the socket lives in the 0700 state dir, same-user
-  only; cross-user connections are refused with a classified error.
-  No network transport, no ports, no tokens (multi-host is a parked
-  concept; the protocol gains an auth story then, not before).
+  authorization model for the local transport: the socket lives in the
+  0700 state dir, same-user only; cross-user connections are refused
+  with a classified error. No network transport ships by default and no
+  tokens exist locally; non-local transports are config-selected per the
+  layering section below, which is where an auth story appears.
 - **Wire format:** newline-delimited JSON frames, the same serialization
   discipline as the state layer's JSONL event log. Every frame carries
   `v` (protocol version), `id` (correlation), `kind` (one of `request`,
@@ -244,8 +245,9 @@ bounded poll interval, in that order of preference.
 - **No business truth on the wire.** Every frame is derivable from state;
   losing or ignoring any frame leaves the system correct (side effects
   are at-most-once; the daemon reconciles from the event log). The only
-  mutating frames are control-plane (`stop`, `drain`, `takeover`), each
-  also expressible without the socket (signal or state).
+  mutating frames delivered in M1 are control-plane (`stop`, `drain`,
+  `takeover`), each also expressible without the socket (signal or
+  state); the additive `intent` class arrives with remote transports.
 - **Interaction classes:**
   1. `poke` (request): "state changed at event cursor N" - the daemon
      re-reads state. No business logic crosses the wire.
@@ -274,6 +276,79 @@ Example frames (illustrative):
 <- {"v":1,"id":43,"kind":"request","type":"stop","payload":{"mode":"drain"}}
 <- {"v":1,"id":43,"kind":"response","type":"stop","data":{"draining":true,"lanes":3}}
 ```
+
+### Transport layering and the remote seam
+
+The protocol is layered so the transport is replaceable without touching
+codec or logic:
+
+- **Codec layer (transport-agnostic):** the NDJSON frames above, plus
+  encode/decode and the error table. Knows nothing about sockets.
+- **Session layer:** connection lifecycle, request/response correlation,
+  subscriptions, bounded buffers, timeouts. Talks in frames, not bytes.
+- **Transport layer (config-selected):** any ordered byte stream. Local
+  default: unix domain socket (named pipe on Windows). The same protocol
+  runs unchanged over stdio (used by conformance tests, proving transport
+  independence), TCP or TLS sockets, an SSH-tunneled socket, or a pipe
+  into a container or VM. Endpoint selection is configuration
+  (`transport`, `address`), never code.
+
+Remote and containerized control (a fleet of workers on remote hosts or
+inside containers or VMs, per concepts/containerized-delivery.md and the
+M1-S11 execution-environment descriptor) therefore needs no protocol
+change, only a new transport implementation plus two additive seams that
+M1 must not foreclose:
+
+1. **The `intent` frame class (additive, not delivered in M1).** Locally,
+   commands write intent to the shared local state and only poke. A
+   remote CLI has no access to the daemon's local state, so it sends the
+   same intent records as `intent` frames and the daemon applies them
+   through its own state write path (idempotent, same schema, same fence
+   discipline). Same records, same encoding, one new frame type.
+2. **Handshake-level identity (additive).** Filesystem permission is the
+   only authorization for local same-user sockets. Non-filesystem
+   transports add an identity claim in a handshake frame with a
+   pluggable verifier (token or mutual TLS from configuration); the
+   frame shape keeps a place for it so the protocol does not rewrite.
+   Secrets rules are unchanged: credentials never transit frames.
+
+Remote transports remain off by default and configuration-driven
+(local-first; the documented connection point for remote coordination
+lands with M4-S6). M1 delivers local transport only, with two seam
+proofs: the conformance suite drives the daemon over stdio (codec and
+session logic demonstrably transport-free), and the session layer
+exposes the transport as an interface, not an implementation.
+
+### Concurrency model (many CLIs, many agents, one host)
+
+- **Connection per invocation.** Every CLI process opens its own
+  connection; the kernel hands the daemon one accepted socket per
+  invocation. Responses are routed back only on the connection that
+  asked; the `id` field correlates requests to responses within one
+  connection (pipelining), never across connections. A CLI never
+  receives another CLI's response; broadcast frames are `event` frames
+  on subscribed topics only.
+- **Server shape.** The daemon is a multi-connection, single event loop:
+  frames from all connections are processed on the loop, shared
+  in-memory state is mutated only on the loop (no data races by
+  construction), and slow or idle connections never block it (bounded
+  per-connection buffers; see the subscribe overflow rule).
+- **Mutations serialize at the state layer.** Concurrent requests from
+  simultaneous agents and coordinators are applied as ordered events
+  through the single-writer state layer under fence tokens. Per record
+  class: appends are idempotent by identity (a re-sent queue add is a
+  no-op), sets are last-writer-wins with the writer named, and every
+  mutating request carries a client id usable as an idempotency key
+  (at-most-once application).
+- **Scoping.** State dir scopes the world: one daemon per state dir
+  (one project scope), socket path derived from it, single-instance per
+  scope. Multiple projects delivering on one host run one daemon each;
+  cross-project coordination happens above the tooling (the coordinator
+  reads multiple scopes), not by merging scopes.
+- **Bounded waiting.** Every request carries a bounded response timeout;
+  on timeout or unreachable transport the CLI degrades to its
+  state-path fallback (or the declared degraded mode) instead of
+  blocking the agent.
 
 ```mermaid
 flowchart LR

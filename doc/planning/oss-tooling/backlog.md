@@ -711,14 +711,31 @@ the M1 redefinition).
   streams; overflow degrades the subscriber, never the dispatcher), and
   control (drain, stop, takeover under fence tokens); authorization is
   filesystem permissions (same-user); no business truth crosses the wire
-  (every frame derivable from state) and secrets never transit it.
+  (every frame derivable from state) and secrets never transit it. The
+  protocol is layered (codec, session, transport) with the transport
+  config-selected behind an interface: the same frames and logic run
+  over stdio in the conformance suite (the transport-independence
+  proof), and remote or container-attached transports arrive later with
+  one additive `intent` frame class and a handshake identity claim,
+  never a protocol rewrite. Concurrency model: one connection per CLI
+  invocation (responses routed to the asking connection only; ids
+  correlate within a connection), a multi-connection single-event-loop
+  server, mutations serialized through the single-writer state layer
+  under fence tokens with idempotency keys, and one daemon per state
+  dir so multiple agents and multiple projects on one host are isolated
+  by scope.
 - AC: a second daemon instance is refused or takes over stale state with
   evidence; killing the daemon mid-delivery and restarting converges
   without duplicated work; deliveries continue via the one-shot CLI
   while the daemon is down; the daemon never executes a merge; commands
   that mutate scheduling or blocker state complete daemon-down and are
   applied on reconcile with zero loss; live-watch without the daemon
-  declares degraded mode rather than failing or silently idling.
+  declares degraded mode rather than failing or silently idling. The
+  conformance suite drives the daemon over stdio, proving codec and
+  session logic are transport-agnostic; concurrent invocations from
+  multiple connections are answered without cross-talk and concurrent
+  mutating requests serialize through the state layer with at-most-once
+  application (idempotency keys).
 - Depends on: M1-S4, M1-S15, M1-S17.
 
 ### M1-S19 Spend read side and resume amplification
