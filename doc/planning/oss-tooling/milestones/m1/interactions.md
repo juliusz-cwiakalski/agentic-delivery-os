@@ -171,6 +171,27 @@ daemon started  pid 22377  lock: previous fence t-91 stale (age 71s) -> takeover
 state recovery: 3 deliveries mid-flight resumed idempotently  0 duplicated tickets/comments/commits
 ```
 
+The same path covers login and boot restarts with dead-lane
+classification and budget enforcement:
+
+```
+$ <binary> daemon start
+daemon started (auto-start unit: delivery-engine@default.scope)
+startup reconciliation from state:
+  queue rebuilt: 7 entries, 2 dependency edges, 1 park (condition re-checked)
+  L1 GH-311  alive        reattached (pid 22810)
+  L2 GH-312  interrupted  host restarted 12h ago; resume from phase 8 (completed phases skipped)  restarts 1/3
+  L5 GH-315  crashed      exit signal recorded: harness spawn failed (provider outage)
+                          budget exhausted (3/3) -> queue: failed terminal
+                          typed question q-9042 raised to coordinator: delivery-failed, reason attached
+```
+
+```
+$ <binary> blockers list --open
+q-9042  delivery-failed  GH-315  restart budget exhausted (3/3); last crash: harness spawn failed
+                       options: [1] requeue with fresh budget  [2] park for owner review  age: 40s
+```
+
 Every daemon interaction has a state-only fallback: `queue add` without a
 socket writes the entry (daemon reconciles on start); `blockers answer`
 queues the resume note in state; watch streams degrade to bounded state

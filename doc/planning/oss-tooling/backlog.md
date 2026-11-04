@@ -638,7 +638,11 @@ the M1 redefinition).
 - AC: a large resuming session is not killed as stalled; a restart past
   the budget fails loudly with a classified reason visible in lane
   status; the resume-amplification metric is derivable per delivery
-  (feeds M1-S19).
+  (feeds M1-S19); budget exhaustion is durable across daemon restarts
+  and its terminal state is escalation, not silence: the delivery is
+  marked failed in the queue with the classified reason and restart
+  history, and a typed question reaches the coordinator within one
+  collection cycle (never a silent requeue loop).
 - Depends on: M1-S1, M1-S11.
 
 ### M1-S16 Typed blocker and question channel
@@ -723,7 +727,19 @@ the M1 redefinition).
   server, mutations serialized through the single-writer state layer
   under fence tokens with idempotency keys, and one daemon per state
   dir so multiple agents and multiple projects on one host are isolated
-  by scope.
+  by scope. Persistence and recovery: the daemon is stateful through the
+  state layer only (queue shape, lanes, leases, parks, restart counters,
+  and budgets are durable; no fact that matters survives solely in
+  memory); `daemon install` registers a user-level supervisor unit
+  (systemd user unit with linger, launchd, Windows equivalent) scoped
+  to the state dir so the daemon starts at login and survives logout,
+  optional and local-first-neutral; on start (login, boot, or crash) a
+  bounded idempotent startup reconciliation rebuilds the world from
+  state and classifies every in-flight lane by artifact evidence:
+  alive (reattach), interrupted (process gone without a failure record:
+  resume from the ledger position, completed phases idempotently
+  skipped, restart counter incremented), or crashed (failure recorded:
+  reason classified, resume per budget).
 - AC: a second daemon instance is refused or takes over stale state with
   evidence; killing the daemon mid-delivery and restarting converges
   without duplicated work; deliveries continue via the one-shot CLI
@@ -735,7 +751,13 @@ the M1 redefinition).
   session logic are transport-agnostic; concurrent invocations from
   multiple connections are answered without cross-talk and concurrent
   mutating requests serialize through the state layer with at-most-once
-  application (idempotency keys).
+  application (idempotency keys). After an unclean stop or host
+  restart, startup reconciliation classifies each in-flight lane
+  (alive, interrupted, crashed) from artifact evidence, resumes
+  interrupted deliveries from the ledger without redoing completed
+  phases, and enforces restart budgets durably; an installed login unit
+  starts the daemon against the right state-dir scope and its absence
+  changes nothing for one-shot operation.
 - Depends on: M1-S4, M1-S15, M1-S17.
 
 ### M1-S19 Spend read side and resume amplification

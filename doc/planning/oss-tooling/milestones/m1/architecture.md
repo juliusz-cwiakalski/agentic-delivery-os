@@ -319,7 +319,55 @@ proofs: the conformance suite drives the daemon over stdio (codec and
 session logic demonstrably transport-free), and the session layer
 exposes the transport as an interface, not an implementation.
 
+### Persistence and recovery model
+
+The daemon is stateful through the state layer only: no fact that matters
+survives solely in memory. Queue shape (entries, priorities, dependency
+edges), lane assignments, lease holders, park states, restart counters,
+and restart budgets are durable state; each delivery's position lives in
+its phase ledger plus the harness session records. A daemon that starts
+at login (or after a crash) rebuilds the entire world from state.
+
+**Auto-start.** `daemon install` registers a user-level supervisor unit
+(systemd user unit with linger enabled so it starts at login and survives
+logout; launchd agent; Windows service equivalent) pointing at the
+state-dir scope; `daemon uninstall` removes it. Installation is
+optional and changes nothing about local-first behavior (one-shots work
+with or without it); the daemon refuses nothing when uninstalled, it
+just is not resident.
+
+**Startup reconciliation.** On start (login, boot, or crash restart),
+the daemon runs a bounded, idempotent reconciliation:
+
+1. Rebuild the queue, lanes, leases, parks, and budgets from state.
+2. For every lane marked delivering, check liveness of the recorded OS
+   process and harness session (artifact evidence, not memory).
+3. Classify each: `alive` (reattach and observe), `interrupted` (process
+   gone without a completion record: machine restart, kill, supervisor
+   stop - resume from the ledger position; already-completed phases are
+   idempotently skipped; restart counter +1), or `crashed` (failure
+   signal recorded: classify the reason, resume per budget).
+4. Apply restart budgets: a delivery past its budget is marked `failed`
+   in the queue (terminal, classified reason, restart history attached)
+   and surfaces to the coordinator as a typed question within one
+   collection cycle. Exhaustion never silently requeues.
+
+```mermaid
+flowchart TB
+    START[daemon starts<br/>login, boot, or crash] --> REBUILD[rebuild queue, lanes,<br/>leases, budgets from state]
+    REBUILD --> CHECK{per in-flight lane:<br/>process or session alive?}
+    CHECK -->|alive| OBS[reattach and observe]
+    CHECK -->|gone, no failure record| RES[interrupted: resume from ledger,<br/>completed phases skipped, restarts +1]
+    CHECK -->|failure recorded| CLS[crashed: classified reason,<br/>resume per budget]
+    RES --> BUD{restart budget left?}
+    CLS --> BUD
+    BUD -->|yes| GO[delivery continues]
+    BUD -->|no| FAIL[queue: failed terminal<br/>typed question to coordinator<br/>never silent requeue]
+    OBS --> GO
+```
+
 ### Concurrency model (many CLIs, many agents, one host)
+
 
 - **Connection per invocation.** Every CLI process opens its own
   connection; the kernel hands the daemon one accepted socket per

@@ -82,7 +82,7 @@ record-plus-commit atomically for the completed phase's pending work.
 | `db` (M0-S11) | `<binary> db size\|list\|prune\|reboot [--dry-run]` |
 | `watchdog` (M1-S1) | `<binary> watchdog preflight\|teardown\|liveness <lane>` |
 | `doctor` (M1-S3) | `<binary> doctor [--fix-hints]` |
-| `daemon start` (M1-S18) | `<binary> daemon start [--foreground]\|stop\|status [--live]` |
+| `daemon start` (M1-S18) | `<binary> daemon start [--foreground]\|stop\|status [--live]\|install\|uninstall` |
 | `repos` | not delivered until M3-S6; bash utilities remain |
 
 ### Learn

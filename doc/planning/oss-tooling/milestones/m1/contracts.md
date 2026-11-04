@@ -223,9 +223,11 @@ exit-code projection; secret redaction; bounded output.
 
 ### `daemon` (M1-S18, proposed)
 
-- Inputs: `start | stop | status`; `start --foreground` (no supervisor
-  assumption); `status --live` (socket stream, falls back to state with a
-  declared degraded mode).
+- Inputs: `start [--foreground] | stop | status [--live] | install |
+  uninstall`. `install` registers a user-level supervisor unit (systemd
+  user unit with linger, launchd agent, Windows service equivalent)
+  scoped to the state dir so the daemon starts at login and survives
+  logout; optional and local-first-neutral (one-shots work without it).
 - Communication contract: state-mediated truth, socket as optimization.
   Commands write intent records to state (queue entries, answers, resume
   notes) and optionally poke the control socket (path derived from the
@@ -259,7 +261,17 @@ exit-code projection; secret redaction; bounded output.
   blocking.
 - Outputs: status: instance identity, uptime, queue depth, lane states,
   restart counters with classified reasons, heartbeat age, socket path
-  and reachability; merge code path absent (never fires merges).
+  and reachability; merge code path absent (never fires merges). On
+  start, a bounded startup reconciliation report: lanes rebuilt from
+  state, each in-flight lane classified alive (reattached),
+  interrupted (process gone without a failure record: resumed from the
+  ledger position, completed phases idempotently skipped, restart
+  counter incremented), or crashed (failure recorded: reason
+  classified, resumed per budget); restart budgets enforced durably
+  across daemon restarts, and a delivery past its budget is marked
+  failed in the queue (terminal, classified reason, restart history)
+  with a typed question surfaced to the coordinator within one
+  collection cycle; exhaustion never silently requeues.
 - Errors: `daemon.already-running`, `daemon.heartbeat-stale` (reads
   declare degraded, never block), `daemon.state-recovery-failed`
   (degrades to one-shot guidance), `daemon.protocol.unsupported`

@@ -176,6 +176,23 @@ and retained). The remaining phases execute in the interactive session.
 - [x] backlog M1-S18 tasks and AC: stdio conformance proof, no-crosstalk
   and at-most-once concurrency acceptance criteria.
 
+## Phase 11: Persistence and recovery model (owner review feedback)
+
+- [x] m1/architecture.md: persistence and recovery section: state-layer-
+  only truth (queue shape, lanes, leases, parks, counters, budgets
+  durable), `daemon install` user-level auto-start unit (linger, login,
+  optional, local-first-neutral), bounded idempotent startup
+  reconciliation with lane classification (alive, interrupted, crashed)
+  and durable budget enforcement ending in a terminal failed state plus
+  a typed question (never silent requeue); recovery flowchart.
+- [x] contracts.md and man-page.md: daemon install/uninstall subcommands;
+  startup reconciliation report and exhaustion surfacing in outputs.
+- [x] interactions.md Session D: login-restart example with dead-lane
+  classification and the budget-exhausted typed question.
+- [x] backlog M1-S18 tasks/AC: durable persistence, install, startup
+  reconciliation; M1-S15 AC: exhaustion escalates to queue-failed plus
+  typed question, durable across daemon restarts.
+
 ## Revision log
 
 - 2026-11-03: Added Phase 6 for code review iteration 1 remediation.
