@@ -147,6 +147,19 @@ and retained). The remaining phases execute in the interactive session.
   for every interaction, fence-token writer ownership, reconcile on
   start); registry daemon row extended.
 
+## Phase 9: Control protocol v1 (owner review question)
+
+- [x] m1/architecture.md: control protocol v1 section under daemon
+  communication: transport (unix socket, named pipe on Windows,
+  filesystem authorization), NDJSON frames with kinds and correlation,
+  versioning (n and n-1), the no-business-truth rule, four interaction
+  classes (poke, query, subscribe with overflow-degrades-subscriber,
+  control under fence tokens), secrets rule, and illustrative frames.
+- [x] contracts.md: daemon entry carries the protocol summary and the
+  new error codes (protocol.unsupported, socket-unreachable with the
+  state-fallback note, subscriber-degraded).
+- [x] backlog M1-S18 tasks pin the wire contract as a deliverable.
+
 ## Revision log
 
 - 2026-11-03: Added Phase 6 for code review iteration 1 remediation.

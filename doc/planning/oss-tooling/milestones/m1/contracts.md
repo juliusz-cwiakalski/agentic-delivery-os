@@ -235,12 +235,24 @@ exit-code projection; secret redaction; bounded output.
   ownership: commands write intent, the daemon writes execution records
   (leases, lane state, heartbeats, parks), lifecycle agents write the
   ledger; fence tokens prevent conflicts.
+- Wire protocol (control protocol v1, full contract in
+  [architecture.md](architecture.md)): NDJSON frames over the unix socket
+  (named pipe on Windows); frame kinds request, response, event, error;
+  versioned with n/n-1 support; interaction classes poke, query,
+  subscribe (bounded streams, degraded on overflow), control
+  (drain/stop/takeover under fence tokens); authorization is filesystem
+  (0700 state dir, same-user); no business truth on the wire (every
+  frame derivable from state); secrets never cross the wire.
 - Outputs: status: instance identity, uptime, queue depth, lane states,
   restart counters with classified reasons, heartbeat age, socket path
   and reachability; merge code path absent (never fires merges).
 - Errors: `daemon.already-running`, `daemon.heartbeat-stale` (reads
   declare degraded, never block), `daemon.state-recovery-failed`
-  (degrades to one-shot guidance).
+  (degrades to one-shot guidance), `daemon.protocol.unsupported`
+  (version refused, versions offered), `daemon.socket-unreachable`
+  (intent writes still succeed via state; `--live` and `--watch` report
+  it with a fallback hint), `daemon.subscriber-degraded` (slow consumer
+  dropped to state polling; dispatch never stalls).
 - Scenarios: kill-and-restart converges without duplicated work; commands
   complete via the state path while the daemon is down (queue add, plan,
   blockers answer, status); a second instance is refused or takes over

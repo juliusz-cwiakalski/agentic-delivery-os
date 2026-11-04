@@ -223,6 +223,58 @@ prevented by fence tokens, not by convention.
 The daemon wakes on: control-socket poke, state-change notification, or a
 bounded poll interval, in that order of preference.
 
+### Control protocol v1 (the wire contract)
+
+- **Transport:** unix domain socket at a path derived from the state dir
+  (named pipe equivalent on Windows). Filesystem permissions are the
+  authorization model: the socket lives in the 0700 state dir, same-user
+  only; cross-user connections are refused with a classified error.
+  No network transport, no ports, no tokens (multi-host is a parked
+  concept; the protocol gains an auth story then, not before).
+- **Wire format:** newline-delimited JSON frames, the same serialization
+  discipline as the state layer's JSONL event log. Every frame carries
+  `v` (protocol version), `id` (correlation), `kind` (one of `request`,
+  `response`, `event`, `error`), and `type`. Errors use the one internal
+  error table (code, category, retryable, consequence, remediationHint)
+  exactly as CLI errors do.
+- **Versioning:** the daemon serves v(n) and v(n-1); an unsupported
+  version is refused with `daemon.protocol.unsupported` naming the
+  versions offered. Frame shapes are stable contracts like command
+  output.
+- **No business truth on the wire.** Every frame is derivable from state;
+  losing or ignoring any frame leaves the system correct (side effects
+  are at-most-once; the daemon reconciles from the event log). The only
+  mutating frames are control-plane (`stop`, `drain`, `takeover`), each
+  also expressible without the socket (signal or state).
+- **Interaction classes:**
+  1. `poke` (request): "state changed at event cursor N" - the daemon
+     re-reads state. No business logic crosses the wire.
+  2. `query` (request/response): immediate facts (`daemon status`,
+     live lane state). Responses bounded, labeled `live`.
+  3. `subscribe` (request then event stream): `status --watch`,
+     `lanes --watch` receive bounded, deduplicated, finding-coded
+     frames. Slow consumers never stall the dispatcher: each
+     subscription has a bounded buffer and, on overflow, the daemon
+     drops the subscriber to a declared degraded mode (re-poll state)
+     rather than blocking dispatch - the dispatcher is never a lane,
+     including for its own watchers.
+  4. `control` (request/response): `stop` (drain: finish current lane
+     bookkeeping, stop spawning), `takeover` guarded by the fence token.
+- **Secrets never cross the wire:** credential facts are variable names
+  only, consistent with the blockers channel contract.
+
+Example frames (illustrative):
+
+```
+-> {"v":1,"id":41,"kind":"request","type":"poke","cursor":"e-004211"}
+<- {"v":1,"id":41,"kind":"response","type":"poke","data":{"applied":true}}
+-> {"v":1,"id":42,"kind":"request","type":"subscribe","topic":"lanes"}
+<- {"v":1,"id":42,"kind":"response","type":"subscribe","data":{"ok":true}}
+<- {"v":1,"kind":"event","type":"lane.state","data":{"lane":"L2","state":"delivering","phase":"delivery"}}
+<- {"v":1,"id":43,"kind":"request","type":"stop","payload":{"mode":"drain"}}
+<- {"v":1,"id":43,"kind":"response","type":"stop","data":{"draining":true,"lanes":3}}
+```
+
 ```mermaid
 flowchart LR
     subgraph cmd [CLI invocation]

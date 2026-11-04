@@ -184,7 +184,7 @@ requests per commit where this design pays one.
 - Diff budget numbers: proposed evidence-based defaults — total input
   budget ~4-8k tokens, per-file diff cap ~1-2k tokens with
   name-status fallback for over-cap files, top-N files fully diffed
-  (N ~ 10); validate against real ADOS commits during M1-S14
+  (N ~ 10); validate against real repository commits during M1-S14
   delivery.
 - Whether the per-file-summary fan-out (gptcommit's N+2 shape) is
   ever worth its extra calls for very large mixed commits, or whether

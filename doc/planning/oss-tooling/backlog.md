@@ -705,6 +705,13 @@ the M1 redefinition).
   (leases, lane state, heartbeats, parks) under the state layer's fence
   tokens; every command interaction completes through the state path
   alone when the daemon is down, and the daemon reconciles on start.
+  The wire contract is control protocol v1: NDJSON frames (request,
+  response, event, error) over the unix socket with version negotiation
+  (n and n-1), interaction classes poke, query, subscribe (bounded
+  streams; overflow degrades the subscriber, never the dispatcher), and
+  control (drain, stop, takeover under fence tokens); authorization is
+  filesystem permissions (same-user); no business truth crosses the wire
+  (every frame derivable from state) and secrets never transit it.
 - AC: a second daemon instance is refused or takes over stale state with
   evidence; killing the daemon mid-delivery and restarting converges
   without duplicated work; deliveries continue via the one-shot CLI
