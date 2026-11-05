@@ -4,8 +4,8 @@ delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-05T19:50:00Z", completed: "2026-11-05T21:12:00Z" }
   specification: { started: "2026-11-05T21:15:00Z", completed: "2026-11-05T21:26:00Z" }
-  test_planning: { started: null, completed: null }
-  delivery_planning: { started: null, completed: null }
+  test_planning: { started: "2026-11-05T21:28:00Z", completed: "2026-11-05T21:37:00Z" }
+  delivery_planning: { started: "2026-11-05T21:39:00Z", completed: "2026-11-05T21:50:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -34,5 +34,11 @@ notes:
     type: "info"
     date: "2026-11-05"
   - text: "Change planning summary — problem: delivery plans are prose markdown; parallelism is not computable and the scheduler cannot batch without an LLM in the loop; lane joins verify exit codes, not artifacts; the eleven-phase lifecycle is hardcoded rather than data. Goals: YAML plan schema as the plan-writer output format (per-phase declared scope files/packages/folders, done-artifacts MR URL/pipeline id/deployed environment/tracker transition, repo leases, build-weight class, declared interactions with producer/consumer semantics, ceremony tier as data with per-tier phase sets and escalation triggers); plan command family validate/diff/overlap; plan lint integrated into lint; ready-for-development gate (plan validates + scope declared); migration path (writer output flips, legacy markdown plans remain readable). AC: invalid schema rejected with classified error; same-file overlap answers run-in-sequence naming overlapping paths; disjoint plans answer parallel; tier read from plan not hardcoded; ready-for-development refuses an unvalidatable plan. Pins (binding, do not re-derive): tier is data, no hardcoded eleven; planning phases lease-free, delivery phases lease-taking; overlap answers name the overlapping paths; ready-for-development refuses an unvalidatable plan. Risks: doc-distribution guard applies to changed docs under doc/guides|templates; .opencode changes require build-claude-plugin.sh regeneration committed together; binary name stays behind the branding seam (use <binary> placeholder or registry name). Dependencies: M0-S5 delivered (GH-174), M0-S10 delivered (GH-179)."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Test plan authored with 30 scenarios (TC-DPLAN-001..030) covering all 11 spec ACs, 13 capabilities, 8 data elements, 7 NFRs; SC-M1-06 reconciled to exit 1 per DEC-1 (TC-DPLAN-013), SC-M1-07 realized as plan validate refusal + zero-plan-reads proof on queue ready per DEC-2 (TC-DPLAN-009). 8 non-blocking open questions with proposed resolutions and owners recorded in test plan section 8.3; routed to DoR gate."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Implementation plan authored: 7 independently committable phases (1 contracts/error identities/fixture foundation, 2 validation domain, 3 overlap+diff domain, 4 CLI plan family with edge projection and performance case, 5 lint plan target, 6 atomic writer flip incl. plugin regeneration, 7 finalize gates/changeset/doc-sync handoff). All 30 TCs mapped to phases; OQ-1/2/4/5/6/7 pinned in owning tasks (plan.artifact.missing identity; YAML precedence over markdown with disclosure; concrete-path-else-pattern overlap rendering; shared-contract-files/shared-paths reason vocabulary; shared plan.* codes in lint); OQ-3/OQ-8 marked review-routed with working defaults. Tests land with the code they verify."
     type: "info"
     date: "2026-11-05"
