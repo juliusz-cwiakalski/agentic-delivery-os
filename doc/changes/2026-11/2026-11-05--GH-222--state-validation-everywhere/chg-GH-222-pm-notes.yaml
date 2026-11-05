@@ -64,7 +64,10 @@ phases:
         date: "2026-11-06"
   quality_gates: { started: "2026-11-06T00:12:00Z", completed: "2026-11-06T00:20:00Z" }
   dod_check: { started: "2026-11-06T00:22:00Z", completed: "2026-11-06T00:23:00Z" }
-  pr_creation: { started: "2026-11-06T00:25:00Z", completed: null, url: null }
+  pr_creation:
+    started: "2026-11-06T00:25:00Z"
+    completed: "2026-11-06T00:40:00Z"
+    url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/246"
 decisions:
   - text: "OQ-1 RESOLVED (PM): GH-222 ships a library-only state-tier surface — no user-facing CLI command. Backlog (canonical for scope per milestones/README) names no command; current feature-state-layer spec ships no command surface; all 5 ticket ACs are testable at the library boundary. The m1 contracts pack 'state' command entry stays a proposed milestone-end artifact for the later operate-family CLI line; spec DEC-4 confirmed."
     date: "2026-11-05"
