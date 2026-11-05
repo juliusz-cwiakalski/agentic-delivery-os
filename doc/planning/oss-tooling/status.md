@@ -5,6 +5,24 @@ authority. Source of truth for scope and order: [backlog.md](backlog.md) and
 [backlog-ranking.md](backlog-ranking.md). This file is a status snapshot; the
 backlog remains canonical.
 
+## M0 exit amendment and M1 re-planning (2026-11-03)
+
+Recorded with the M1 re-planning (GH-219):
+
+- The dual-run pilot starts now and runs concurrently with M1 planning and
+  early M1 stories; those stories do not touch dispatch. Per-engine
+  handover still requires its own two-clean-weeks evidence; that constraint
+  is never waived.
+- The Proposed decision records remain Proposed during M1; owner acceptance
+  is formalization tracked in the inception readiness report. The M0
+  milestone stays open until the pilot evidence and record acceptance land.
+- M1 is redefined as the delivery-engine milestone (bash delivery stack
+  replaced; scheduling and waiting leave the coordinator's context); the
+  orchestration core formerly known as M2-S1 moved into M1. Scope and order
+  live in [backlog.md](backlog.md) and
+  [backlog-ranking.md](backlog-ranking.md); the recorded operator input is
+  [operator-requirements-2026-11.md](operator-requirements-2026-11.md).
+
 ## Story delivery: 20/20 complete
 
 All twenty M0 stories were delivered through the full 11-phase lifecycle and
@@ -23,11 +41,15 @@ The roadmap's M0 exit criteria (roadmap.md, Milestone 0 section) are:
    Proposed, and the GH-186 register explicitly leaves owner acceptance
    pending (merge does not auto-accept). CEO-agent ratifications recorded at
    PR review (ADR-0007, TDR-0005, TDR-0006) do not substitute for recorded
-   owner acceptance of the Proposed set.
+   owner acceptance of the Proposed set. The full pending set is thirteen
+   records: the eight above plus TDR-0005, TDR-0006, TDR-0007, TDR-0008,
+   and ADR-0010, as enumerated in the inception readiness report.
 
-Per backlog-ranking.md, M1 delivery starts after the M0 exit criteria; the
-dual-run pilot is the critical path and can start now that the M0 surfaces
-exist.
+Per backlog-ranking.md reading notes and the recorded M0 exit amendment
+(above), M1 delivery starts now and runs beside the pilot: stories that do
+not touch dispatch are unconstrained, and dispatch handover (M1-S9) still
+requires its per-repository two-clean-weeks evidence. The dual-run pilot
+remains the critical path for M0 exit.
 
 | Story | Delivery | Story | Delivery |
 |---|---|---|---|
@@ -61,15 +83,18 @@ invariants, never moving-base diffs.
 1. **Start the dual-run pilot now** (critical path for M0 exit): run
    status, verify change, provider, and closeout beside the bash stack on
    the pilot paths, accruing the two-week zero-false-success evidence. The
-   M0 surfaces exist; every day of delay moves M1.
+   M0 surfaces exist; the recorded amendment lets the pilot run concurrent
+   with M1 delivery that does not touch dispatch.
 2. **Owner acceptance pass** (required for exit): record acceptance or
-   change requests for the Proposed records (ADR-0005, ADR-0007, TDR-0003,
-   TDR-0004, ADR-0008, ADR-0009, ODR-0002, ODR-0003) in the decisions
-   register. Short review; the register links every record.
-3. **M1 preparation, gated delivery**: create the M1 milestone and its 12
-   issues from the backlog in ranking order so the queue is ready, but hold
-   M1 dispatch until the exit criteria are met or the owner explicitly
-   approves starting M1 delivery before exit (recorded as a gate change).
+   change requests for the thirteen Proposed decision records (ADR-0005,
+   ADR-0007, TDR-0003, TDR-0004, ADR-0008, ADR-0009, ODR-0002, ODR-0003,
+   plus TDR-0005, TDR-0006, TDR-0007, TDR-0008, and ADR-0010) per the
+   inception readiness report, which links every record. Short review; the
+   register links each one.
+3. **M1 delivery start**: milestone and 23 tickets created (GH-221
+   through GH-243; map below); dispatch in ranking order under the
+   recorded gate amendment, with dispatch handover (M1-S9) still
+   respecting the per-repo two-clean-weeks rule.
 4. **Memory consolidation pass** (housekeeping): run the consolidation
    curator over `.ai/memory` to promote the CEO's M0 captures into
    `lessons/` with proper ids and rebuild the index.
@@ -85,3 +110,20 @@ invariants, never moving-base diffs.
    tracker-poll retry/backoff tuning in deliver-ticket; review-thread
    resolution helper; perf-test noise pattern (best-of-n) applied to the
    remaining timing-sensitive suites.
+
+## M1 story tickets (created 2026-11-05)
+
+| Story | Ticket | Story | Ticket |
+|---|---|---|---|
+| M1-S1 | GH-221 | M1-S2 | GH-222 |
+| M1-S22 | GH-223 | M1-S3 | GH-224 |
+| M1-S4 | GH-225 | M1-S13 | GH-226 |
+| M1-S14 | GH-227 | M1-S6 | GH-228 |
+| M1-S5 | GH-229 | M1-S16 | GH-230 |
+| M1-S7 | GH-231 | M1-S8 | GH-232 |
+| M1-S11 | GH-233 | M1-S21 | GH-234 |
+| M1-S15 | GH-235 | M1-S19 | GH-236 |
+| M1-S17 | GH-237 | M1-S18 | GH-238 |
+| M1-S9 | GH-239 | M1-S12 | GH-240 |
+| M1-S23 | GH-241 | M1-S20 | GH-242 |
+| M1-S10 | GH-243 | | |

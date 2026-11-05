@@ -1,0 +1,38 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-219
+branch: docs/GH-219/m1-delivery-engine-plan
+status: FAIL
+summary: "Iteration 1 findings F-1, F-3, F-4, and F-5 are resolved, and the amended story dependencies match across backlog and ranking without cycles or dangling references. F-2 remains incomplete because the independently executable one-shot scheduler can land ahead of merge and session-liveness safety prerequisites. F-6 remains incomplete because the owner-action list still calls for decisions on only eight of the thirteen pending records. No new em dashes or listed privacy-corpus literals occur in added lines of the full working-tree diff."
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/backlog.md:677
+    message: "Iteration 1 F-2 remains partially unresolved. M1-S17 ships an executable end-to-end one-shot queue but depends only on M0-S7, M0-S13, M1-S2, and M1-S13; M1-S4 merge transactions and M1-S15 session economics gate only M1-S18. It can therefore dispatch before the truth and transaction engines despite roadmap.md:114-116 and :194-198 requiring the scheduling engine itself to follow them."
+    suggestion: "Make M1-S4 and M1-S15 prerequisites of M1-S17 and mirror those edges in backlog-ranking.md, or split read-only scheduling from executable one-shot dispatch and gate the executable path on those prerequisites."
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/status.md:89
+    message: "Iteration 1 F-6 remains partially unresolved. Status now identifies all thirteen pending Proposed records at lines 44-46, matching the inception readiness report, but the required owner acceptance pass in next step 2 still names only the original eight. Following that action list leaves five records unreviewed while the M0 exit gate demands all thirteen; the corresponding Phase 6 task is prematurely checked."
+    suggestion: "Update the owner acceptance action to explicitly cover all thirteen records, preferably by linking the complete readiness-report review package rather than maintaining a second partial list."
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-03T05:37:09Z
+next_step: EXECUTE_REMEDIATION_PHASE

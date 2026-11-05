@@ -18,7 +18,7 @@ trees without redesign - parallel-in-repo is a deliberate policy mode
 (the substrate), [software-delivery-autonomy.md](
 software-delivery-autonomy.md) (portfolio caps, budgets),
 [inter-agent-communication.md](inter-agent-communication.md)
-(coordination), the registry queue and lanes commands, M2-S1 lane
+(coordination), the registry queue and lanes commands, M1-S17 lane
 planning.
 
 ## Baseline: single-flight per repo, and why
@@ -149,7 +149,7 @@ conflict risk.
 A **lane is a long-lived parallel work stream - a virtual delivery
 team**: a queue with a theme and a scope (a repo, a service area, a
 docs lane, a chore lane), a capacity allocation (WIP limit,
-build-weight class per M2-S1), and its own telemetry budget. Lanes
+build-weight class per M1-S17), and its own telemetry budget. Lanes
 are the unit of parallel planning: the coordinator balances load
 across lanes, keeps hot-file changes inside one lane (serializing
 them there), and lets disjoint lanes run freely.
@@ -203,7 +203,7 @@ enabled without redesign:
 
 - Single-flight is enforced through **per-repo lease objects that
   carry a scope field** (repo-exclusive is the only implemented scope;
-  worktree-scoped leases arrive with the parallel mode) - M2-S1. The
+  worktree-scoped leases arrive with the parallel mode) - M1-S17. The
   invariant "two lanes cannot deliver the same repo concurrently" is
   the default policy, not a hardcoded assumption.
 - Change capsules stay **self-contained during phases 1 through 10**

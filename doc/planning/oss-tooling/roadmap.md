@@ -51,8 +51,8 @@ dates are adjusted as evidence lands.
 | MS | Name | Directional horizon | One-line goal |
 |---|---|---|---|
 | M0 | Trust substrate | weeks 1-4 | Typed core, result contract, status and verify change working end-to-end; verify gates, closeout, provider, and pm-notes validation bundled; the delivery loop usable on real tickets |
-| M1 | Attention and minimal surfaces | months 2-3 | Lying-signal class eliminated on migrated engines; merge as a transaction; owner-gate SLA, brief v0, minimal MCP, retro pipeline |
-| M2 | Orchestration and measurement | months 3-6 | Scheduling and ceremonies leave LLM context; metrics and spend measured |
+| M1 | Delivery engine and autonomous dispatch | months 2-3 | Bash delivery stack replaced: truthful signals, merge as a transaction, machine-readable delivery plans, scheduling engine plus resident daemon; the new stack authoritative on pilot repos |
+| M2 | Ceremonies, measurement, and memory | months 3-6 | Supervision battery, ceremonies, board, steer, metrics and spend alarms; the committed memory tree with typed records and lint |
 | M3 | Surfaces, adapters, validators | months 6-9 | Harness surfaces (opencode, Claude Code) plus full MCP; adapter completion; validators; v1.0 internal readiness with deprecation notices |
 | M4 | Public release readiness | after M3 | Naming freeze, publication, docs, merge of the tooling branch to the default branch, bash retirement |
 
@@ -79,36 +79,104 @@ and closeout beside the bash stack (dual-run, shell still authoritative);
 zero false-success incidents on pilot paths over two weeks; this repo
 adopts the scaffold.
 
-## M1: Attention and minimal surfaces (months 2-3)
+M0 exit amendment (2026-11-03, recorded with the M1 re-planning): the
+dual-run pilot starts now and runs concurrently with M1 planning and early
+M1 stories, which do not touch dispatch; per-engine handover still requires
+its own two-clean-weeks evidence, never waived. The Proposed decision
+records (as listed in the inception readiness report) remain Proposed
+during M1; owner acceptance is formalization tracked there, and merge never
+auto-accepts. The M0 milestone stays open until the pilot evidence and
+record acceptance land.
 
-Goal: every signal the fleet acts on is truthful; merge is a transaction;
-owner attention is managed with an SLA, a brief, minimal MCP, and a retro
-pipeline.
+## M1: Delivery engine and autonomous dispatch (months 2-3)
 
-Scope: watchdog and lane contracts; state validation at every boundary;
-`doctor`; `merge` plus `verify deploy` (deploy verified by job trace); the
-owner-gate SLA; `brief` render-only v0; minimal MCP mirroring proven
-engines; the retro pipeline; harness adapters making dispatch
-harness-agnostic (opencode first, Claude Code next); the dispatch dual-run
-pilot on one repository.
+Goal: replace the bash delivery stack (`deliver-ticket.sh`,
+`batch-deliver.sh`, `ceo-loop.sh`, `pm-liveness.sh`) with the typed delivery
+engine: every signal the fleet acts on is truthful, merge is a transaction,
+delivery plans are machine-readable with declared per-phase scope, and
+scheduling and waiting leave the coordinator's context. The coordinator
+plans (priorities, repos, dependencies), answers typed questions, merges,
+and closes out; the machinery schedules, waits, and verifies healthy paths.
 
-Exit criteria: false-success and lying-liveness counts near zero on migrated
-engines; merge near-miss classes structurally impossible.
+Scope: truth and transactions (watchdog and lane contracts, state
+validation at every boundary, doctor, merge plus verify deploy with the
+gate set as data and a tracker freshness bound, session lifecycle
+economics); attention surfaces (owner-gate SLA, brief render-only from the
+same collector state as the digest, status collector expansion, minimal
+MCP, retro pipeline, change capsule and closeout expansion, spend read
+side); the engine (machine-readable delivery plan schema, commit
+primitive with auto-commit on phase transitions, typed blocker and
+question channel, scheduling engine with queue and lanes, resident
+dispatch daemon with one-shot degradation, harness adapters and dispatch
+portability, model profiles with provider watching and automatic
+switch-or-park, command audit ledger with agent identity, coordinator
+supervision, dispatch
+dual-run to per-repo handover, agent prompts consuming the tooling). The
+recorded operator input is
+[operator-requirements-2026-11.md](operator-requirements-2026-11.md).
 
-## M2: Orchestration and measurement (months 3-6)
+Sequencing inside M1: the truth engines and the transaction layer land
+first; the scheduling engine and daemon land behind them (constraint 1);
+the dispatch handover happens per repository only after that repository's
+two clean weeks of dual-run evidence (constraint 6). The merge transaction
+stays an explicit coordinator action throughout: the daemon may prepare,
+verify, and queue merges; it never fires them. The reviewable end-state
+pack (architecture, journeys, man page, contracts) lives in
+[milestones/](milestones/README.md).
 
-Goal: scheduling, dispatch waiting, and ceremonies leave LLM context; the
-coordinating session stops being a dispatcher.
+Exit criteria: the four bash scripts' functions run end to end on the new
+stack on pilot repositories and the new stack is authoritative there, with
+the bash stack demoted to fallback with deprecation pointers (removal stays
+M4-S5); false-success and lying-liveness counts near zero on migrated
+engines (near zero, unlike M0's zero: residuals are classified and
+counted, not silently accepted); merge near-miss classes structurally
+impossible; no resume-loop class (sessions resume without re-paying
+prefill or fail loudly within a bounded restart budget, and the
+resume-amplification metric reads approximately 1); changes delivered
+late in the milestone carry machine-readable plans and the scheduler
+answers sequence versus parallel mechanically from declared scope; the
+coordinator iteration is digest, typed answers, merge, closeout, with
+scheduling, waiting, and healthy-path verification consuming zero
+coordinator tokens (operator acceptance criteria). Scope composition: one
+state-dir scope spans many repositories; cross-repo dependency edges are
+first-class within a scope; coordinating multiple scopes is the
+coordinator's job above the tooling.
 
-Scope: `queue`, `lanes`, `dispatch` (single-flight per repository,
-preemption, build-weight classes, dispatcher never a lane); `supervise`;
-`ceremony` with an enumerated ceremony set; `board`; `steer`; `metrics` and
-`spend`; suite-to-job mapping in the gate battery.
+M1 exit evidence (instrument, threshold, owning story per criterion):
 
-Exit criteria: the pilot repository dispatches through the new queue in
-production (dual-run retired for dispatch there); ceremony share of active
-agent time trending below 40 percent; idle coordination iterations near
-zero; owner-gate median age under two days.
+| Criterion | Instrument | Threshold and window | Owning story |
+|---|---|---|---|
+| False-success near zero | verify-change dual-run divergence log | zero unresolved divergences, final two weeks, pilot paths | M1-S9 |
+| Lying-liveness near zero | restart events + amplification records | zero unclassified stall/kill events, final two weeks | M1-S15, M1-S23 |
+| Resume amplification ~1 | spend amplification metric | median ~1 (accept band set at story delivery), final two weeks | M1-S19 |
+| Merge near-misses eliminated | merge transaction refusal log | zero near-miss classes reaching manual merge | M1-S4 |
+| Plans carried, parallelism computed | plan validate/overlap registry | every late-milestone change validates; overlap answered mechanically | M1-S13 |
+| Coordinator iteration shape | audit-ledger command trace + the S20 end-to-end AC | one J1 iteration on a pilot repo via primitives only; trace shows no polling loops | M1-S20, M1-S22 |
+| Spawns resolve profiles | audit ledger env-override count | zero manual model-environment overrides, final two weeks | M1-S21 |
+
+## M2: Ceremonies, measurement, and memory (months 3-6)
+
+Goal: supervision, ceremonies, steering, and measurement run as declared,
+deterministic units; the committed memory tree with typed records and lint
+starts the learning loop at fleet scale.
+
+Scope: `supervise` (tri-state status, lying-liveness by artifact evidence,
+duplicate-supervisor detection, restart policies over the M1 daemon);
+`ceremony` with the enumerated ceremony set, including the ceremony tier
+engine (per-tier phase sets and escalation triggers as data); `board`;
+`steer` (the first typed message type beyond the blocker channel);
+`metrics` and `spend` alarms; suite-to-job mapping in the gate battery; the
+memory line (records, layout, and lint; bootstrap conventions; retro action
+registry and follow-through).
+
+Note: the M1 redefinition moved the queue, lanes, and dispatch core (the
+former M2-S1) into M1; the M2-S1 code gap is documented in
+[backlog.md](backlog.md).
+
+Exit criteria: ceremony share of active agent time trending below 40
+percent; idle coordination iterations near zero; owner-gate median age
+under two days; exit criteria measurable with committed numbers from the
+metrics engine.
 
 ## M3: Surfaces, adapters, validators (months 6-9)
 
@@ -146,7 +214,9 @@ deprecation notices served through the transition window.
 ## Sequencing constraints
 
 1. The queue dispatcher must not go live before exit contracts are proven
-   (the fleet-wedging scenario).
+   (the fleet-wedging scenario). Within M1 this sequences the scheduling
+   engine and resident daemon behind the truth and transaction stories
+   (merge transaction, truthful signals, session lifecycle economics).
 2. Status needs the tri-state contract first.
 3. The provider resolver blocks the ceremony runner.
 4. MCP follows engines; minimal MCP mirrors only proven engines.
@@ -158,6 +228,11 @@ deprecation notices served through the transition window.
    decision window.
 8. Structure, toolchain, and configuration decisions are fixed by ADR-0003;
    revisit them only through a new decision record.
+9. The merge transaction remains an explicit coordinator action: resident
+   machinery may prepare, verify, and queue merges; it never fires them.
+10. Resident processes degrade to CLI one-shot paths (local-first), and the
+    render or scheduling path for digests, briefs, and plans contains no
+    LLM calls: deterministic code, judgment on top of its output.
 
 ## Standing risks
 

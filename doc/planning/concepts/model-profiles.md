@@ -45,7 +45,13 @@ from the class group under quota and subscription constraints.
 - Difficulty classification: the coordinating agent proposes the difficulty
   class for a change (with reasoning); the lifecycle agent cross-validates
   at intake; the running delivery selects the profile from the validated
-  class group. Disagreement is surfaced, not silently resolved.
+  class group. Disagreement is surfaced, not silently resolved. (M1-S21
+  note: the heuristics framework that ships in M1-S21 is declarative
+  policy - consequence times reasoning depth divided by volume, with hard
+  capability gates and typed pacingClass fields - so difficulty
+  classification by proposal cross-validates against declared policy
+  rather than free-form reasoning alone; the proposal flow remains the
+  escalation path when policy is ambiguous.)
 - Selection heuristics: best model for the job under quota, subscription
   state, and peak windows; hysteresis and fail-open come from the provider
   engine; every selection is recorded as a telemetry event with the
@@ -68,9 +74,11 @@ from the class group under quota and subscription constraints.
 
 - M0-S13: the provider engine ships first (chain resolution, quota, peak
   windows, parks, fail-loud announcements).
-- New story candidate: model profiles v1 (M2, with the ModelPolicy typed
-  contract): profile schema, classes, difficulty classification flow,
-  selection heuristics, telemetry join.
+- M1-S21: model profiles and provider watching ship in M1 (tier
+  structure with per-agent overrides, declarative selection heuristics,
+  eligibility chains with lazy probes, watching for the first-iteration
+  providers, switch-not-park with revert, pacing rungs as config with
+  typed pacingClass seats); the ModelPolicy typed contract refines there.
 - M2-S6: metrics and spend consume the selection events.
 
 ## Open questions

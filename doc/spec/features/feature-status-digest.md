@@ -156,7 +156,7 @@ The collector resolves the commit under observation from the current checkout HE
 
 ### Lanes or queue
 
-The section is always `not-delivered` with capability `queue-lane-engine`, expected delivering story `M2-S1`, reason `engine-not-delivered`, source `queue-engine`, zero items, zero counts, and an explicit note that no queue or lane engine exists in this release. It is never an observed empty queue, never a fabricated queue, and never a duplicate of `queue ready` (M0-S7). The `queue ready` command is the separate read-only ready-set specified in [Queue Ready](feature-queue-ready.md); it consumes the same tracker, pull-request, CI, provider, and local PM-context inputs, adds no status behavior, and does not fill or change this section.
+The section is always `not-delivered` with capability `queue-lane-engine`, expected delivering story `M1-S17`, reason `engine-not-delivered`, source `queue-engine`, zero items, zero counts, and an explicit note that no queue or lane engine exists in this release. It is never an observed empty queue, never a fabricated queue, and never a duplicate of `queue ready` (M0-S7). The `queue ready` command is the separate read-only ready-set specified in [Queue Ready](feature-queue-ready.md); it consumes the same tracker, pull-request, CI, provider, and local PM-context inputs, adds no status behavior, and does not fill or change this section.
 
 ### Providers
 
