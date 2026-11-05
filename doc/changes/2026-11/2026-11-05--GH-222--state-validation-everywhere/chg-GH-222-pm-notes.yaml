@@ -22,7 +22,7 @@ phases:
         result: "v1.1 amendment: OQ-1 resolved library-only (DEC-4 confirmed); OQ-2 resolved terminal-tail-only (DEC-2 amended, AC-F3-3 added); OQ-3 pinned in-spec as DEC-5 — new rows state.storage.exhausted + state.store.unknown, refined state.write.failed remediation, salvage/quarantine failures reuse existing rows (7 -> 9 code rows, bidirectional sync binding)"
         date: "2026-11-05"
   test_planning: { started: "2026-11-05T20:12:00Z", completed: "2026-11-05T20:18:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-11-05T20:22:00Z", completed: "2026-11-05T20:28:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -60,5 +60,8 @@ notes:
     type: risk
     date: "2026-11-05"
   - text: "Test plan authored: 23 story-local cases TC-GH222-001..023, 9/9 spec ACs covered bidirectionally (verified mechanically by the author), NFR-1..7 and EVT/DM interfaces mapped; inherits milestone pattern per m1/test-scenarios.md coverage rule; execution maps to tests/behaviour + tests/checks suites; phase-9 evidence pinned to pnpm check + bun test. Non-blocking notes: fault-point names for salvage write steps fixed at delivery (seam requirement binding); exhaustion injected at pre-commit points only."
+    type: info
+    date: "2026-11-05"
+  - text: "Implementation plan authored: 6 phases (contracts/error tables -> tear topology + exhaustion seam -> salvage/quarantine -> boundary validation + artifact contracts -> registry wiring + nine-code sweep -> gates/changeset), tests land alongside implementation, every phase ends green with per-phase verification + commit; 23/23 TCs mapped (TC-GH222-018 deliberately spans phases 1+5); all 9 ACs covered. Plan flags one non-blocking spec nuance: state.store.torn remediation text also needs a text-only refinement (guidance must mention salvage) — resolved in Phase 1 under the same both-tables sync discipline; submitted to DoR gate for adjudication."
     type: info
     date: "2026-11-05"
