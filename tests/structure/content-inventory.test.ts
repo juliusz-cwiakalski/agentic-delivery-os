@@ -276,6 +276,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readCloseoutHistory",
   ],
   "core/src/state/registry.ts": [
+    "PHASE_TRANSITION_BOUNDARY",
     "PHASE_TRANSITION_RECORD_KEY_PREFIX",
     "appendPhaseTransition",
     "foldPhaseState",

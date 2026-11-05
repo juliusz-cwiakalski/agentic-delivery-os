@@ -631,23 +631,23 @@ git diff --check
 
 **Tasks**:
 
-- [ ] **5.1** `packages/core/src/state/registry.ts`: declare the `phase.transition` boundary
+- [x] **5.1** `packages/core/src/state/registry.ts`: declare the `phase.transition` boundary
   (kind + payload schema + record identity) through the Phase-4 mechanism, so the delivery
   registry's reads and writes are validated boundaries (F-1); the presence-tolerant read keeps
   its presence tolerance (`present: false` for an absent store or per-change record) without
   swallowing torn classification.
-- [ ] **5.2** **TC-GH222-023**: extend `tests/behaviour/phase-registry.test.ts` — valid-store
+- [x] **5.2** **TC-GH222-023**: extend `tests/behaviour/phase-registry.test.ts` — valid-store
   behavior unchanged (history folds exactly, projection rebuildable, evidence counts stable,
   falsy/empty values not defaulted, no spurious rebuild/repair reports); torn store yields a
   classified torn failure (never an empty history, never `present: false`, never a produced or
   replaced `phase-state.<REF>.json`); absent per-change record stays explicit no-evidence; no
   read mutates ledger or derived documents.
-- [ ] **5.3** **TC-GH222-018** (trigger-sweep half): extend
+- [x] **5.3** **TC-GH222-018** (trigger-sweep half): extend
   `tests/behaviour/state-error-classification.test.ts` from seven to exactly nine codes —
   `state.storage.exhausted` triggered through the Phase-2 seam, `state.store.unknown` through
   the Phase-4 boundary — every code classified with `not_landed` and the canary sweep over each
   rendered failure (no payload, no checksum bytes).
-- [ ] **5.4** OQ-T2 decision: inspect `tests/fixtures/state/driver-map.json` and
+- [x] **5.4** OQ-T2 decision: inspect `tests/fixtures/state/driver-map.json` and
   `tests/behaviour/state-conformance.test.ts`; if the conformance matrix enumerates operations,
   add salvage coverage under the existing TC-GH222-007/008 ids (normalized shape per the
   matrix's convention); record the decision in the execution log either way.
@@ -672,6 +672,32 @@ git diff --check
 
 - TC-GH222-023 (delivery-registry regression).
 - TC-GH222-018 (nine-code trigger sweep completion — rows/sync half landed in Phase 1).
+
+**Task evidence (2026-11-05)**: `PHASE_TRANSITION_BOUNDARY` declares `phase.transition` under
+`phase.transitions:` with the change-ref identity, required top-level fields, and closed
+`operation`/`outcome` vocabularies. Registry reads use the boundary (latest artifact per key) for
+both strict and presence-tolerant variants; writes go through the boundary so a nonconforming
+payload never reaches the ledger. **OQ-T2 decision**: the conformance matrix
+(`tests/fixtures/state/driver-map.json` + `tests/behaviour/state-conformance.test.ts`) enumerates
+*case ids* (`open-empty-store`, `append-and-read`, …) and a driver-kind map, not operation names;
+salvage is not an operation the case shape can express (`CaseOutcome` has no salvage evidence),
+so no matrix change is required and none was made. **Boundary classification change** (spec
+AC-F1-1): a top-level `phase.transition` payload that loses a declared field now classifies
+`state.store.unknown` at the boundary, while nested transition entries that lose a declared field
+remain `state.keys.missing`; the GH-179 regression fixtures were updated to assert both
+outcomes explicitly (TC-VERIFY-010/012, phase-envelope). **Phase-3 repair note**: the Phase-3
+commit's verification block did not include `tests/behaviour/state-ledger.test.ts`, whose exact
+port-surface assertion needed `salvage` added; repaired here (expected operation list) and the
+full behaviour tier now runs green apart from the pre-existing pm-notes corpus defect below.
+
+**Acceptance (Phase 5)**: verified registry reads and torn classification preserved; torn never
+served as empty history or `present: false` — PASSED (TC-GH222-023, 4 tests). Exactly nine state
+rows, all triggerable, each `not_landed`, canary-swept — PASSED (TC-GH222-018 trigger sweep,
+10 tests in `state-error-classification.test.ts`). Conformance-matrix decision recorded — PASSED
+(OQ-T2 above). Full behaviour tier: 1438 pass, 4 skip (platform-conditional), 1 fail —
+`tests/behaviour/pm-notes-corpus.test.ts` fails on a pre-existing duplicate `completed` key in
+`chg-GH-222-pm-notes.yaml` (committed by the PM; parses with `Map keys must be unique` at HEAD).
+Outside this change's write scope; carried to Phase 6 evidence.
 
 **Verification**:
 
@@ -817,5 +843,6 @@ NFR-6 → 1, 5; NFR-7 → 3.
 | 1 — Contracts, vocabulary, and synced error tables | Done | 2026-11-05 | 2026-11-05 | 0684212d | `error-table-sync` entries=43 documented=43 exit 0; targeted suites 105 pass (error-table-sync, error-table, state-contract), state-error-classification 8 pass; `git diff --check` clean. Deliberate baseline regeneration: `BASELINE_ROWS + 9`, frozen state rows repinned to the refined texts. Fixtures updated: corpora, contract export inventory, content inventory. |
 | 2 — Tear topology, exhaustion seam, and fail-closed write boundaries | Done | 2026-11-05 | 2026-11-05 | 2ba51d72 | Verification block: torn+evidence 34 pass; storage-exhausted 5 pass; index 10 pass; keys+atomic-replace 13 pass regressions. Broader regression sweep (state-fence, state-permissions, state-error-classification, state-conformance, content-inventory, state-imports, state-scope, packed-state) 48 pass. No SQLite skip needed on this runtime. New module `state/storage-error.ts` registered in the inventory + executable allowance. |
 | 3 — Explicit guided tail salvage with quarantine | Done | 2026-11-05 | 2026-11-05 | fac0e764 | Verification block: salvage + invariants 11 pass; post-salvage + storage-exhausted 9 pass; permissions + fence 18 pass; `error-table-sync` entries=43 documented=43 exit 0. Broader sweep (15 suites incl. torn/evidence/index/keys/atomic-replace/error-classification/conformance/registry/content-inventory/imports/scope/contract/packed-state) 130 pass; verify suites 59 pass. OQ-T3: clean-ledger salvage is a reported no-op (TC-GH222-024 candidate). |
-| 4 — Reusable boundary validation and artifact-boundary contracts | Done | 2026-11-05 | 2026-11-05 | (this commit) | Verification block: artifact-boundary + unknown + boundary-validation 15 pass; state-contract/imports/scope 22 pass; packed-state 1 pass; content-inventory 6 pass; `git diff --check` clean. New module `state/artifact-boundary.ts` registered in the inventory + executable allowance. |
+| 4 — Reusable boundary validation and artifact-boundary contracts | Done | 2026-11-05 | 2026-11-05 | d09cf619 | Verification block: artifact-boundary + unknown + boundary-validation 15 pass; state-contract/imports/scope 22 pass; packed-state 1 pass; content-inventory 6 pass; `git diff --check` clean. New module `state/artifact-boundary.ts` registered in the inventory + executable allowance. |
+| 5 — Delivery-registry wiring and the nine-code trigger sweep | Done | 2026-11-05 | 2026-11-05 | (this commit) | Verification block: phase-registry + error-classification 28 pass; full behaviour tier 1438 pass / 4 platform skips / 1 pre-existing pm-notes corpus failure (duplicate `completed` key, PM-owned, outside scope); structure+boundaries+packed-state 521 pass; sync check entries=43 documented=43 exit 0; `git diff --check` clean. OQ-T2: matrix enumerates cases, not operations → no change. Repaired Phase-3 port-surface assertion (`state-ledger.test.ts`) and updated GH-179 corrupt-payload expectations to the new boundary classification. |
 | — | Not started | — | — | — | Populated during delivery; record per-phase commit, suite results, SQLite-binding skips, and the OQ-T2 decision |

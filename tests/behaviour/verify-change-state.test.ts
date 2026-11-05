@@ -160,9 +160,12 @@ describe("TC-VERIFY-010 registry failures are classified", () => {
   test("corrupt per-change payloads exit 2 with state.keys.missing", async () => {
     const variants: Array<[string, (payload: Record<string, unknown>) => void]> = [
       [
-        "missing-transitions",
+        "missing-transition-phase-id",
         (payload) => {
-          delete payload.transitions;
+          const transitions = payload.transitions as Record<string, unknown>[];
+          const first = transitions[0];
+          if (first === undefined) throw new Error("missing transition");
+          delete first.phaseId;
         },
       ],
       [
@@ -196,6 +199,21 @@ describe("TC-VERIFY-010 registry failures are classified", () => {
       expect(label.length).toBeGreaterThan(0);
       expectStateFailure(run, "state.keys.missing", 2);
     }
+  });
+
+  test("a top-level payload-schema violation exits 2 with state.store.unknown", async () => {
+    // The registry's validated boundary owns the top-level payload schema: a
+    // missing declared field is an undeclared-schema classification, not a
+    // key-set miss (GH-222 AC-F1-1, DEC-5).
+    const { run } = await runCase((state) => {
+      const records = ledgerRecords(state.identity);
+      const latest = records[records.length - 1];
+      if (latest === undefined) throw new Error("missing record");
+      delete (latest.payload as Record<string, unknown>).transitions;
+      resealLedgerRecord(latest);
+      writeLedgerRecords(state.identity, records);
+    });
+    expectStateFailure(run, "state.store.unknown", 2);
   });
 
   test("permission denial exits 1 with state.permission.denied", async () => {

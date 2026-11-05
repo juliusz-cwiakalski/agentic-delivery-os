@@ -101,6 +101,7 @@ describe("TC-STATE-005 append envelope and append-only order", () => {
         "releaseFence",
         "repairTornTail",
         "replaceDocument",
+        "salvage",
       ]);
       for (const forbidden of ["prune", "delete", "expire", "compact", "clear"]) {
         expect(operations).not.toContain(forbidden);
