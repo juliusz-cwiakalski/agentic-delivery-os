@@ -19,10 +19,12 @@ plus change context.
 Deterministic skeleton plus one constrained model call for the language
 parts (subject; body only when it earns its place); inference transports
 behind a seam; marked template fallback when no model is available.
-Staging is precise (never untracked strays; privacy-scanned). With
-`--phase`, the ledger transition and the commit land atomically through
-`phase complete` semantics (both or neither). Never runs inside a
-delivery session.
+Staging is precise (never untracked strays; privacy-scanned). On phase
+completions the ledger transition and the commit land atomically **by
+default** (`--no-commit` opts out per call; config disables per
+project): the PM's ledger transitions and the coder's plan-phase
+completions trigger the commit automatically, with no agent iteration
+spent on the commit act. Never runs inside a delivery session.
 
 ## OPTIONS
 

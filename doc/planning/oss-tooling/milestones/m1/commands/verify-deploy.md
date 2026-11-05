@@ -57,7 +57,7 @@ Created-but-never-ran reads unknown:
 
 ```
 $ <binary> verify deploy GH-305 --json | cat
-{"schemaVersion":1,"runId":"r_01J8ZP7H9P","exitCode":1,"timing":{"started":"2026-11-18T14:33:41Z","durationMs":900},"data":{"verdict":"unknown","trace":{"jobId":"deploy-44840","steps":[],"artifacts":[]},"reason":"pipeline-created-never-ran"}}
+{"data":{"verdict":"unknown","trace":{"jobId":"deploy-44840","steps":[],"artifacts":[]},"reason":"pipeline-created-never-ran"}}
 ```
 
 ## ERRORS

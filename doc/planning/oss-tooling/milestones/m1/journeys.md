@@ -67,7 +67,10 @@ Trigger: the queue starts a ready change.
 
 1. The daemon dispatches through the harness adapter (opencode first,
    Claude Code next; harness choice is configuration) over an
-   execution-environment descriptor.
+   execution-environment descriptor; **profile selection runs before
+   every spawn** (M1-S21): the resolved model environment is injected as
+   validated data records, with automatic switch-or-park on provider
+   conditions and revert on recovery.
 2. Lifecycle agents mark phases through `phase`; `phase complete` performs
    record-plus-commit atomically (computed conventional message from tree
    plus change context, precise staging).

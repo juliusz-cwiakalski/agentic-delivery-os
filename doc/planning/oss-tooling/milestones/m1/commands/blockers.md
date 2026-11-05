@@ -58,7 +58,7 @@ Credential value refused by the channel:
 
 ```
 $ <binary> blockers publish credential-missing --lane L4 "token" --text "ghp_livevalue" --json | cat
-{"schemaVersion":1,"runId":"r_01J8ZT6W1A","exitCode":1,"timing":{"started":"2026-11-18T09:22:41Z","durationMs":15},"error":{"code":"blockers.credential-value-rejected","category":"user","retryable":false,"consequence":"not_landed","remediationHint":"credential questions carry the variable name only; the value comes from the environment"}}
+{"error":{"code":"blockers.credential-value-rejected","category":"user","retryable":false,"consequence":"not_landed","remediationHint":"credential questions carry the variable name only; the value comes from the environment"}}
 ```
 
 ## ERRORS

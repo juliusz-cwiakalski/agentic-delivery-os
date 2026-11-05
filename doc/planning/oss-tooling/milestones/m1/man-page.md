@@ -73,6 +73,8 @@ record-plus-commit atomically for the completed phase's pending work.
 | Command (first delivered) | Usage |
 |---|---|
 | `provider resolve` (M0-S13) | `<binary> provider resolve [--profile <name>]` |
+| `provider profile resolve` (M1-S21) | `<binary> provider profile resolve [--agent <name>] [--for-spawn]` |
+| `provider watch status` (M1-S21) | `<binary> provider watch status [--provider <name>]` |
 | `provider quota` (M0-S13) | `<binary> provider quota [--provider <name>]` |
 | `provider parks list` (M0-S13) | `<binary> provider parks list [--all]` |
 | `config` (M0-S4) | `<binary> config [--debug]` |
@@ -100,13 +102,17 @@ record-plus-commit atomically for the completed phase's pending work.
 
 ## GLOBAL OPTIONS
 
-- `--json` - machine envelope output.
-- `--pretty[=auto|always|never]` - envelope formatting when `--json` is
-  set: `auto` (default) pretty-prints indented JSON on an interactive
-  terminal and emits one minified line when piped or scripted;
-  `always`/`never` enforce. Stream outputs (`--watch`) stay
+- `--json` - machine envelope output. Interactive terminals print the
+  full pretty envelope; scripted or piped invocations print one minified
+  line with only `{"data":...}` or `{"error":...}` (schemaVersion,
+  runId, and timing live in the audit ledger, not the agent's context);
+  `--verbose` forces the full envelope anywhere.
+- `--pretty[=auto|always|never]` - indentation when `--json` is set:
+  `auto` (default) indents on an interactive terminal and minifies when
+  piped; `always`/`never` enforce. Stream outputs (`--watch`) stay
   line-delimited (one JSON object per line) in every mode: multi-line
   objects would break stream framing.
+- `--verbose` - full envelope in any mode.
 - `--config <path>` - explicit config file.
 - `--no-color` - plain output.
 - `--help` - command help with examples.

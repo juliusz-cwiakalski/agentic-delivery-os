@@ -11,16 +11,16 @@ Proposed examples.
 
 ```
 <binary> phase list <ref>
-<binary> phase complete <ref> <phase> [--commit]
+<binary> phase complete <ref> <phase> [--no-commit]
 <binary> phase reopen <ref> <phase> --reason <text>
 ```
 
 ## DESCRIPTION
 
 Schema-validated, idempotent transitions. A reopen requires a reason.
-With `--commit` (M1-S14), completion performs the ledger transition and
-the conventional commit atomically (both land or neither; see
-[commit.md](commit.md)).
+Completion performs the ledger transition plus the conventional commit
+atomically **by default** (`--no-commit` records the transition alone;
+config disables per project) - see [commit.md](commit.md).
 
 ## OUTPUT
 
@@ -36,7 +36,7 @@ atomic abort (neither landed); 2 ledger unreachable.
 ## EXAMPLES
 
 ```
-$ <binary> phase complete GH-310 delivery --commit --json
+$ <binary> phase complete GH-310 delivery --json
 {
   "schemaVersion": 1,
   "runId": "r_01J8ZX7U5R",
@@ -50,6 +50,8 @@ $ <binary> phase complete GH-310 delivery --commit --json
   }
 }
 ```
+
+(The commit is the default; `--no-commit` records the transition alone.)
 
 ## ERRORS
 

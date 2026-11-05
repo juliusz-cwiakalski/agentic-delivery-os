@@ -16,11 +16,23 @@ Every error carries: stable hierarchical code (`domain.reason.detail`),
 category (user, platform, transient, permanent), retryable, consequence
 (did the mutation land; `unknown` is first-class), remediation hint.
 
-**Envelope formatting.** `--pretty[=auto|always|never]` (default auto):
-pretty-printed indented JSON on an interactive terminal, one minified
-line when piped or scripted (agent- and NDJSON-friendly); `always` and
-`never` enforce. Stream outputs (`--watch`) stay line-delimited in every
-mode: multi-line objects would break stream framing.
+**Envelope formatting and the agent-mode trim.** `--json` output adapts
+by context (owner decision, 2026-11-05):
+
+- Interactive terminal: the full pretty envelope (schemaVersion, runId,
+  exitCode, timing, data or error), indented.
+- Scripted or piped (the agent case): a minified single line carrying
+  only `{"data":...}` on success or `{"error":...}` on failure.
+  schemaVersion, runId, and timing are trimmed from the output - they
+  live in the command audit ledger (M1-S22) instead of the agent's
+  context. Error objects always keep the full error-table fields (code,
+  category, retryable, consequence, remediationHint).
+- `--verbose` forces the full envelope in any mode; `--pretty` has no
+  effect on the trim (only on indentation).
+- Stream outputs (`--watch`) stay line-delimited in every mode: one JSON
+  object per line; multi-line objects would break stream framing.
+- The process exit code always carries the status; the trim never
+  removes information agents need for valid operations.
 
 **Exit codes.** 0 success; 1 user/validation; 2 platform/provider, and
 all state-unverified outcomes (never exit-0 silence).

@@ -199,6 +199,29 @@ polling with a declared mode.
 
 ## Session E: parks, weight classes, and windows
 
+Profile resolution runs before every spawn and switches instead of
+parking when it can:
+
+```
+$ <binary> provider profile resolve --for-spawn --json
+{
+  "schemaVersion": 1,
+  "runId": "r_01J9A5F4T2Q",
+  "exitCode": 0,
+  "timing": { "started": "2026-11-20T07:00:00Z", "durationMs": 640 },
+  "data": {
+    "profile": "deepseek",
+    "rung": "n/a",
+    "eligibility": [
+      { "profile": "mixed", "verdict": "ineligible", "blockers": ["coding-plan quota exhausted (weekly 100%)"] },
+      { "profile": "deepseek", "verdict": "eligible", "blockers": [] }
+    ],
+    "switchedFrom": "mixed",
+    "revertOn": "weekly reset 04:00Z"
+  }
+}
+```
+
 ```
 $ <binary> provider parks list
 P-31 provider-b  cause: peak-window  expires 10:30Z  recheck every 60s

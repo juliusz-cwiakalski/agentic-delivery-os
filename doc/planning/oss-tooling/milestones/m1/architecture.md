@@ -57,8 +57,8 @@ flowchart TB
         TRUTH[truth and transaction plane<br/>verify change, verify gates,<br/>merge transaction, verify deploy,<br/>doctor, state validation, watchdog]
         PLAN[planning plane<br/>plan schema, overlap,<br/>ready-for-development gate]
         SCHED[scheduling engine<br/>queue, lanes, leases,<br/>weight classes, parks]
-        EXEC[execution plane<br/>dispatch, harness adapters,<br/>commit primitive, session economics]
-        LEARN[learning plane<br/>retro pipeline, capsule,<br/>closeout expansion, spend read side]
+        EXEC[execution plane<br/>dispatch, harness adapters,<br/>commit primitive, session economics,<br/>profiles and provider watching]
+        LEARN[learning plane<br/>retro pipeline, capsule,<br/>closeout expansion, spend read side,<br/>command audit ledger]
     end
     STATE[(state layer<br/>validated at every boundary)]
     CONFIG[(config layer<br/>gate sets, tiers, harnesses as data)]
@@ -115,11 +115,13 @@ flowchart LR
         HA[harness adapters<br/>opencode, Claude Code M1-S11]
         CM[commit primitive<br/>record-plus-commit M1-S14]
         SE[session economics<br/>progress liveness,<br/>restart budget M1-S15]
+        PF[profiles and watching<br/>tier routing, eligibility,<br/>switch-or-park, pacing M1-S21]
     end
     subgraph learn [learning plane]
         RT[retro pipeline M1-S8]
         CP[capsule + closeout residue M1-S12]
         SP[spend read side<br/>amplification metric M1-S19]
+        AUD[command audit ledger<br/>agent identity M1-S22]
     end
     ST --> BLK
     MG --> VG
@@ -129,9 +131,11 @@ flowchart LR
     DP --> HA
     DP --> SE
     DP --> QU
+    HA --> PF
     CM --> PS
     SP --> SE
     CP --> RT
+    AUD --> RT
 ```
 
 ## Key flows

@@ -60,7 +60,7 @@ Amplification event flagged:
 
 ```
 $ <binary> spend --ref GH-315 --amplification --json | cat
-{"schemaVersion":1,"runId":"r_01J8ZY3Z1W","exitCode":0,"timing":{"started":"2026-11-18T11:03:41Z","durationMs":190},"data":{"restarts":3,"amplification":{"ratio":8.7,"events":[{"cause":"restart-loop prefill re-pay","window":"2026-11-17T22:00Z/23:10Z","tokensWasted":41000000}]}}}
+{"data":{"restarts":3,"amplification":{"ratio":8.7,"events":[{"cause":"restart-loop prefill re-pay","window":"2026-11-17T22:00Z/23:10Z","tokensWasted":41000000}]}}}
 ```
 
 ## ERRORS

@@ -228,6 +228,40 @@ and retained). The remaining phases execute in the interactive session.
 - [x] Registered all 26 pages in the literal corpus; README contents
   row.
 
+## Phase 14: Owner feedback round 1 (profiles, watching, audit, auto-commit,
+output trim)
+
+- [x] backlog: M1-S14 default-on auto-commit (--no-commit, config
+  disable); new M1-S21 model profiles and provider watching (tier
+  structure, per-agent overrides, consequence-times-reasoning-divided-
+  by-volume heuristics as data, hard capability gates, eligibility
+  chain with lazy probes, first-iteration providers: coding-plan
+  subscription quota endpoints, DeepSeek balance, OpenAI subscription
+  windows; switch-not-park with revert; pacing rungs as config moving
+  only non-judgment seats; spawn wrapper emitting validated data
+  records; legacy resolver semantics ported with its test battery);
+  new M1-S22 command audit ledger and agent identity (agent-name env
+  convention from the opencode plugin PoC; context fields recorded so
+  scripted outputs trim them). M1 grows to 22 stories.
+- [x] ranking: S22 inserted early (rank 23), S21 after harness adapters
+  (rank 34); downstream ranks shifted.
+- [x] contracts and man page: agent-mode trim pinned (scripted --json
+  emits one minified {"data":...} or {"error":...} line; schemaVersion,
+  runId, timing live in the audit ledger; --verbose restores the full
+  envelope; TTY keeps full pretty); provider profile resolve and watch
+  status added; --verbose global option.
+- [x] command pages: provider gains profile/watch sections with
+  examples; commit and phase default-on with --no-commit; all scripted
+  examples converted to the trimmed form.
+- [x] architecture: profiles and watching in the execution plane,
+  audit ledger in the learning plane (L2 and L3); journeys J3 notes
+  profile resolution on spawn; interactions Session E shows switch-
+  instead-of-park resolution.
+- [x] test scenarios: SC-M1-21 (eligibility, vision hard gate, revert),
+  SC-M1-22 (park on windows, switch on exhaustion), SC-M1-23 (audit
+  record, trimmed output, identity capture); SC-M1-12 updated for the
+  default; coverage map extended.
+
 ## Revision log
 
 - 2026-11-03: Added Phase 6 for code review iteration 1 remediation.

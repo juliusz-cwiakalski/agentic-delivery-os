@@ -55,7 +55,7 @@ Incomplete ledger names the missing phases:
 
 ```
 $ <binary> verify change GH-309 --json | cat
-{"schemaVersion":1,"runId":"r_01J8ZN8X7J","exitCode":1,"timing":{"started":"2026-11-18T13:33:12Z","durationMs":290},"data":{"result":"blocked","variant":"full","phaseLedger":{"completed":9,"total":11},"missingPhases":["system_spec_update","pr_creation"]}}
+{"data":{"result":"blocked","variant":"full","phaseLedger":{"completed":9,"total":11},"missingPhases":["system_spec_update","pr_creation"]}}
 ```
 
 ## ERRORS

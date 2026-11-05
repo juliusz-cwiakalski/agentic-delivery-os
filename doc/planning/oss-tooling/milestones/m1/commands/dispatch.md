@@ -73,7 +73,7 @@ auto):
 
 ```
 $ <binary> dispatch GH-302 --json | cat
-{"schemaVersion":1,"runId":"r_01J8ZK4P2R","exitCode":1,"timing":{"started":"2026-11-18T10:02:11Z","durationMs":54000},"data":{"result":"blocked","blocker":{"id":"q-8f21","type":"decision-needed","question":"plan tier: full or lite for the closeout residue sweep?","options":["full","lite+escalation"]},"lastMessage":"lane parked on typed question q-8f21"}}
+{"data":{"result":"blocked","blocker":{"id":"q-8f21","type":"decision-needed","question":"plan tier: full or lite for the closeout residue sweep?","options":["full","lite+escalation"]},"lastMessage":"lane parked on typed question q-8f21"}}
 ```
 
 ## ERRORS

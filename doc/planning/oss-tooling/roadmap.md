@@ -104,11 +104,14 @@ gate set as data and a tracker freshness bound, session lifecycle
 economics); attention surfaces (owner-gate SLA, brief render-only from the
 same collector state as the digest, status collector expansion, minimal
 MCP, retro pipeline, change capsule and closeout expansion, spend read
-side); the engine (machine-readable delivery plan schema, commit primitive,
-typed blocker and question channel, scheduling engine with queue and lanes,
-resident dispatch daemon with one-shot degradation, harness adapters and
-dispatch portability, dispatch dual-run to per-repo handover, agent prompts
-consuming the tooling). The recorded operator input is
+side); the engine (machine-readable delivery plan schema, commit
+primitive with auto-commit on phase transitions, typed blocker and
+question channel, scheduling engine with queue and lanes, resident
+dispatch daemon with one-shot degradation, harness adapters and dispatch
+portability, model profiles with provider watching and automatic
+switch-or-park, command audit ledger with agent identity, dispatch
+dual-run to per-repo handover, agent prompts consuming the tooling). The
+recorded operator input is
 [operator-requirements-2026-11.md](operator-requirements-2026-11.md).
 
 Sequencing inside M1: the truth engines and the transaction layer land

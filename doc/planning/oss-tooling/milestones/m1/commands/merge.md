@@ -66,7 +66,10 @@ Refusal with inline evidence (SC-M1-02):
 
 ```
 $ <binary> merge GH-302 --json | cat
-{"schemaVersion":1,"runId":"r_01J8ZN3R1F","exitCode":1,"timing":{"started":"2026-11-18T13:11:02Z","durationMs":950},"data":{"result":"refused","gates":[{"id":"ci-on-pushed-sha","verdict":"failed","evidence":"gates verified 31m ago exceeds bound 30m; new red job 44832 on head sha 9f21c0e"}],"remediation":"re-run verify gates"}}
+{"data":{"result":"refused","gates":[{"id":"ci-on-pushed-sha","verdict":"failed","evidence":"gates verified 31m ago exceeds bound 30m; new red job 44832 on head sha 9f21c0e"}],"remediation":"re-run verify gates"}}
+
+(The refusal is exit 1 via the process; the trimmed line keeps the
+verdict and evidence. Use `--verbose` for the full envelope.)
 ```
 
 ## ERRORS

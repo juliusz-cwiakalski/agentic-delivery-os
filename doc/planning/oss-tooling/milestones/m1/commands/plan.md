@@ -67,7 +67,7 @@ Invalid plan, classified with the missing field:
 
 ```
 $ <binary> plan validate GH-308 --json | cat
-{"schemaVersion":1,"runId":"r_01J8ZL7V3X","exitCode":1,"timing":{"started":"2026-11-18T11:24:31Z","durationMs":41},"data":{"verdict":"invalid","errors":[{"code":"plan.schema.invalid","phase":6,"missing":"scope.files"}],"readyForDevelopment":false}}
+{"data":{"verdict":"invalid","errors":[{"code":"plan.schema.invalid","phase":6,"missing":"scope.files"}],"readyForDevelopment":false}}
 ```
 
 ## ERRORS

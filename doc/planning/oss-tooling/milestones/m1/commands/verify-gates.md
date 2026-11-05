@@ -58,7 +58,7 @@ Vacuous green caught (missing job):
 
 ```
 $ <binary> verify gates GH-305 --json | cat
-{"schemaVersion":1,"runId":"r_01J8ZP2C5L","exitCode":1,"timing":{"started":"2026-11-18T14:04:18Z","durationMs":1980},"data":{"overall":"fail","gates":[{"id":"ci-on-pushed-sha","verdict":"failed","evidence":"head pipeline 44829 has 9/10 expected jobs; job ts-tests absent"}]}}
+{"data":{"overall":"fail","gates":[{"id":"ci-on-pushed-sha","verdict":"failed","evidence":"head pipeline 44829 has 9/10 expected jobs; job ts-tests absent"}]}}
 ```
 
 ## ERRORS

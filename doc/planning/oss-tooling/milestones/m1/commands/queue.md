@@ -69,7 +69,7 @@ Dependency cycle refused:
 
 ```
 $ <binary> queue dep GH-306 GH-307 --json | cat
-{"schemaVersion":1,"runId":"r_01J8ZS3Q9W","exitCode":1,"timing":{"started":"2026-11-18T09:07:31Z","durationMs":22},"error":{"code":"queue.dependency-cycle","category":"user","retryable":false,"consequence":"not_landed","remediationHint":"the edge creates a cycle: GH-307 -> GH-306 already exists"}}
+{"error":{"code":"queue.dependency-cycle","category":"user","retryable":false,"consequence":"not_landed","remediationHint":"the edge creates a cycle: GH-307 -> GH-306 already exists"}}
 ```
 
 ## ERRORS

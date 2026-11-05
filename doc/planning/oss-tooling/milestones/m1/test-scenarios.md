@@ -124,14 +124,16 @@ queue.park-condition-stuck.
 
 ## C. Execution and lifecycle
 
-### SC-M1-12: atomic phase completion (M1-S14)
+### SC-M1-12: atomic phase completion is the default (M1-S14)
 Given: GH-310 phase delivery has pending work; one untracked stray
 file exists.
 When: `<binary> phase complete GH-310 delivery`
 Then: ledger transition recorded AND conventional commit landed (both
-or neither); stray file unstaged.
+or neither); stray file unstaged. `--no-commit` records the transition
+alone.
 Assert: ledger shows delivery complete; one commit with computed
-subject; stray file still untracked in git status.
+subject; stray file still untracked in git status; with `--no-commit`,
+no commit object is created.
 
 ### SC-M1-13: blocker round-trip without session re-entry (M1-S16)
 Given: lane L2 blocked, published decision-needed with options.
@@ -205,6 +207,44 @@ daemon dispatch loop unaffected.
 Assert: dispatcher event loop latency unchanged (bounded); degraded
 event emitted to the subscriber before drop.
 
+## E. Profiles, watching, and audit
+
+### SC-M1-21: profile eligibility with hard capability gate and
+auto-switch revert (M1-S21)
+Given: the chain is mixed, deepseek; the coding-plan subscription quota
+just exhausted; a vision-capable task is queued for an agent whose tier
+seats include a text-only profile candidate.
+When: a harness spawn resolves its profile
+Then: mixed is ineligible (provider exhausted) and deepseek is selected
+automatically; the text-only candidate is refused for the vision task
+regardless of chain position (hard gate); when the subscription resets,
+the target reverts to mixed.
+Assert: env record emitted as validated data (never shell code); the
+eligibility list names the blocker per refused profile; revert event
+recorded on recovery; judgment seats unchanged across pacing rungs.
+
+### SC-M1-22: expensive window parks; exhaustion switches (M1-S21)
+Given: a provider enters its declared peak window (priced multiplier);
+another provider's balance is exhausted.
+When: profile resolution runs
+Then: the peak-window provider parks with cause and expiry and resumes
+exactly when the window clears; the exhausted provider does not park
+the spawn - the chain switches to the next eligible profile.
+Assert: park record carries cause and expiry; switch event carries the
+new target and revert condition; no sleep-without-record path exists.
+
+### SC-M1-23: every invocation audited; scripted output trimmed
+(M1-S22)
+Given: an agent runs `<binary> lanes list --json` through a shell whose
+environment carries the agent-name convention (PM session shell).
+When: the command completes
+Then: exactly one audit record exists (runId, command, args redacted,
+exit, timing, agent identity); the agent's stdout is one minified
+`{"data":...}` line without schemaVersion, runId, or timing.
+Assert: audit record retains the trimmed fields; identity captured when
+present and absent-never-inferred otherwise; re-run produces a second
+record with a new runId; no secret patterns in the record.
+
 ## Coverage map
 
 | Story | Scenarios |
@@ -216,6 +256,8 @@ event emitted to the subscriber before drop.
 | M1-S16 | SC-M1-13 |
 | M1-S17 | SC-M1-08..11, SC-M1-17 |
 | M1-S18 | SC-M1-15..18, SC-M1-20 |
+| M1-S21 | SC-M1-21..22 |
+| M1-S22 | SC-M1-23 |
 | cross-cutting | SC-M1-19 |
 
 Stories not listed (S1, S2, S3, S5, S6, S7, S8, S9, S10, S11, S12,

@@ -611,18 +611,22 @@ the M1 redefinition).
   uncommitted files plus the change context (ref, current phase, plan
   phase); precise staging (never untracked strays; privacy-scanned at the
   emitter); phase-transition integration: `ados phase complete` performs
-  the record plus commit as one atomic operation for the completed
-  phase's pending work; idempotent re-run; respects the repository
-  commitlint configuration. The design follows
+  the record plus commit atomically for the completed phase's pending
+  work, **on by default** (`--no-commit` opts out per call; config
+  disables per project) - the PM's ledger transitions and the coder's
+  plan-phase completions trigger the commit automatically, with no
+  agent iteration spent on the commit act; idempotent re-run; respects
+  the repository commitlint configuration. The design follows
   concepts/automated-commit.md (owner decisions recorded there):
   deterministic skeleton plus one constrained model call for the
   language parts (subject; body only when it earns its place), inference
   transports behind a seam, marked template fallback when no model is
   available, and the commit never runs inside a delivery session.
 - AC: a commit message derives from tree state plus context without agent
-  authorship; phase complete plus commit is atomic (both land or
-  neither); stray untracked files are never staged; a re-run after
-  interruption converges.
+  authorship; a plain `phase complete` lands the ledger transition and
+  the commit atomically (both land or neither) by default, and `--no-commit`
+  records the transition alone; stray untracked files are never staged; a
+  re-run after interruption converges.
 - Depends on: M0-S3, M0-S10.
 
 ### M1-S15 Session lifecycle economics
@@ -789,6 +793,63 @@ the M1 redefinition).
   prompts require has `--help` and a guide; no prompt references a
   retired bash entry point as the primary path.
 - Depends on: M0-S10, M1-S13, M1-S14.
+
+### M1-S21 Model profiles and provider watching
+- Goal: Model routing becomes profile-driven configuration (tier structure, per-agent overrides, selection heuristics, eligibility rules) with live provider watching and automatic switch-or-park, reverse-engineered from the legacy user-config resolver scripting; every harness spawn resolves a profile first, so quota and cost policy are enforced by machinery, not agent discipline.
+- Tasks: the profile model as configuration data: tiers as structure
+  (responsibility groups) and profiles as the model-per-tier assignment
+  with per-agent overrides; the selection heuristics encoded as
+  declarative policy (assign by consequence of an error times reasoning
+  depth divided by volume; capability gates are hard rules - a
+  text-only seat never receives a vision task; amplification and
+  family-diversity rules declared, not hardcoded); profile hierarchy
+  and preference chain (base, fallback, chain order; a profile is a
+  candidate iff every provider it uses is available; probes lazy and
+  memoized); provider watching for the first-iteration set behind the
+  provider engine - the coding-plan subscription quota endpoints (weekly
+  and rolling windows), the DeepSeek balance API, and the OpenAI
+  subscription usage windows - with parks for expensive windows (peak
+  hours, priced multipliers) and switch-not-park on exhaustion plus
+  automatic revert on recovery; subscription pacing as configuration
+  data (declared goal priorities: utilize the subscription window, keep
+  the judgment seat until a configured tail, minimize paid use;
+  pacing rungs move only the declared non-judgment seats); spawn
+  integration: profile selection always runs before any harness spawn,
+  whether from the CLI or the dispatch daemon, and the spawn wrapper
+  injects the resolved model environment as validated data records,
+  never shell code (the legacy hook's data-only env-record contract
+  carries over); the current target profile persists in state with
+  revert-on-recovery; the legacy resolver scripting's semantics are
+  ported with its test battery (chain order, lazy probes,
+  park-versus-switch, revert, condition seams).
+- AC: a spawn never starts without a resolved profile; an exhausted
+  subscription provider switches to the next eligible profile
+  automatically and reverts when it recovers; a provider in an
+  expensive window parks with cause and expiry and resumes exactly when
+  the window clears; a text-only seat never receives a vision task; the
+  pacing rungs move only the declared non-judgment seats; chain,
+  thresholds, rungs, and overrides are configuration (no code changes);
+  the legacy scripting's decision table is covered by ported tests.
+- Depends on: M0-S13, M1-S11.
+
+### M1-S22 Command audit ledger and agent identity
+- Goal: Every CLI invocation is audited (command, args, outcome, timing, caller identity) in a durable ledger, so scripted outputs can drop context fields agents do not need and auditor or retro agents get a trustworthy record.
+- Tasks: append-only audit ledger in the state layer: runId, command,
+  arguments (through the redaction chokepoint), exit code, timing,
+  outcome class, scope or repo, and the calling agent's identity when
+  provided (the agent-name environment convention: a harness plugin
+  exposes the calling agent's name in the environment of shells it
+  starts, and the CLI captures it); the envelope context fields
+  (schemaVersion, runId, timing) are recorded here, enabling the
+  scripted-mode output trim; retention follows the state layer; a
+  bounded, filtered read surface for retro and auditor agents.
+- AC: every command invocation produces exactly one audit record
+  (idempotent re-runs distinguished by runId); the calling agent's name
+  is captured when provided and never inferred when absent; scripted
+  `--json` output omits schemaVersion, runId, and timing while the audit
+  record retains them; the ledger survives a malformed entry without
+  data loss; secrets never appear in any record.
+- Depends on: M0-S3, M0-S5.
 
 ---
 
