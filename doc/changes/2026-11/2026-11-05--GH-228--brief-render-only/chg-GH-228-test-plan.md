@@ -1,9 +1,9 @@
 ---
 id: chg-GH-228-test-plan
 status: Proposed
-version: 1.1
+version: 1.2
 created: 2026-11-05T00:00:00Z
-last_updated: 2026-11-06T00:00:00Z
+last_updated: 2026-11-06T12:00:00Z
 owners: [engineering]
 service: delivery-os
 labels: [change, m1]
@@ -48,9 +48,9 @@ This plan is a design and verification map, not an execution claim: no build, te
 - [OUT] Spend or cost surfaces (M1-S19, DEC-5); the battery asserts spend is *absent* from v0 rather than rendered.
 - [OUT] Any change to the status digest schema, sections, order, or command (NG-4); the existing status suites run unchanged as the regression half.
 - [OUT] Live-network, credentialed, or opt-in live-smoke variants; the brief battery is hermetic by construction.
-- [GAP-T1 — owner-gate ages have no digest-side claim to compare against] AC-F1-1 requires every brief "age" to equal "the digest's corresponding claim", but the shipped digest exposes `ageDays` only on stall items and parked-work items; owner-hand-back items carry no age or timestamp. AC-F2-2 nevertheless requires owner-gate ages. §4.2 resolves this: digest-exposed claims are compared strictly, and owner-gate ages are compared against an independent derivation from the *same injected `WorkItem.updatedAt` facts* using the digest's declared parse-and-floor rule with the injected clock. The AC is testable under this oracle; the spec wording ("equals the digest's corresponding claim") should be tightened to "equals the digest's claim where the digest makes one, otherwise equals the digest's declared derivation rule over the same facts". Flagged for the specification owner.
-- [GAP-T2 — the brief's surface set is not enumerated] DM-1 declares "per-surface states" and AC-F4-1 requires every affected surface to carry exactly the digest's section state, but neither the surface ids nor their correspondence to the six digest sections are pinned. §4.6 binds the default: one surface per digest section (six, fixed order) plus the three anchored/placeholder surfaces, so that a failed collector can never be invisible. If the specification owner intends a different set, AC-F4-1 becomes untestable as written.
-- [GAP-T3 — "named placeholders" on collector unavailability conflicts with the closed catalog] AC-F5-1 says collector unavailability yields exit `0` "with named placeholders", while DEC-6 closes the placeholder catalog at exactly three *unbuilt-capability* entries. Reading AC-F5-1 as requiring one placeholder per failed collector would break DEC-6. §4.3 and §4.8 bind the only compatible reading: a failed source renders its *surface* with the digest's state and evidence, and the catalog stays at three entries. Flagged for wording.
+- [GAP-T1 — resolved in spec v1.1] Owner-gate ages have no digest-side claim to compare against: the shipped digest exposes `ageDays` only on stall items and parked-work items, and owner-hand-back items carry no age or timestamp. AC-F1-1 v1.1 is two-branch (strict equality where the digest makes a claim; otherwise the digest's declared derivation rule over the same facts), and spec F-2 names the parse-and-floor rule as the source. §4.2 and §4.5 implement exactly that oracle; nothing further is owed.
+- [GAP-T2 — resolved in spec v1.1] The render-surface set is now pinned by DM-5: exactly nine ids, six digest-section surfaces plus the three DEC-6 placeholder surfaces, with ready-to-merge and owner-gate ages as anchored-action groups rather than surfaces. §4.6 restates DM-5 as TC-BRIEF-001's cited authority.
+- [GAP-T3 — resolved in spec v1.1] "Named placeholders" on collector unavailability is now disambiguated: spec F-5/DEC-2 say the affected *surface* names its own evidence state (state word plus reason), distinct from the closed DEC-6 catalog, which stays at exactly three entries. §4.3 and §4.8 already bind that reading.
 - [GAP-T4 — delivery-bound spellings] Export names, internal helper names, fixture/golden file names, surface ids, and human-line grammar (OQ-1) are delivery-bound. Semantics, states, identities, bounds, exits, and AC mapping are pinned here and may not be rebound.
 - [GAP-T5 — no dedicated AC for NFR-3, NFR-4, NFR-8] The read-cost, latency, and brand-neutrality NFRs have no AC of their own; §3.3 maps them to the AC they qualify (AC-F1-1) plus the existing literal/inventory gates, so nothing is tested without an anchor.
 
@@ -74,14 +74,14 @@ This plan is a design and verification map, not an execution claim: no build, te
 
 | AC | Criterion (abbreviated) | TC ID(s) | Plan phase | Status |
 |----|--------------------------|----------|------------|--------|
-| AC-F1-1 | On identical injected facts every brief truth claim (per-surface states, counts, ages, action identities, placeholder justifications) equals the digest's corresponding claim, and the brief performs zero collector reads of its own | TC-BRIEF-004, TC-BRIEF-005, TC-BRIEF-020 | Phase 2, Phase 3 | Covered |
+| AC-F1-1 | On identical injected facts every brief truth claim (per-surface states, counts, ages, action identities, placeholder justifications) equals the digest's corresponding claim, and the brief performs zero collector reads of its own | TC-BRIEF-002, TC-BRIEF-004, TC-BRIEF-005, TC-BRIEF-020 | Phase 2, Phase 3 | Covered |
 | AC-F1-2 | Any fact set renders exactly one screen within the declared bounds (≤24 human lines and 4096 bytes; machine `data` ≤65536 bytes) with explicit truncation markers on any drop | TC-BRIEF-006, TC-BRIEF-014, TC-BRIEF-015 | Phase 2, Phase 4 | Covered |
 | AC-F2-1 | An observed approved, non-draft, open pull request yields a ready-to-merge action citing that item's bounded digest evidence; unknown or unavailable review signals yield no merge-ready claim and a named five-value state | TC-BRIEF-007 | Phase 2 | Covered |
 | AC-F2-2 | Owner-hand-back age renders only from a parseable last-modified timestamp; the absent/unparseable case is unknown and never fabricated; no SLA escalation state renders and the `gate-sla-states` placeholder appears | TC-BRIEF-008 | Phase 2 | Covered |
 | AC-F3-1 | All three catalog placeholders render, each naming capability, owning story, and collector evidence state; blocker questions, SLA states, and the lane/queue surface never render as observed, empty, or zero | TC-BRIEF-001, TC-BRIEF-009, TC-BRIEF-016 | Phase 1, Phase 2 | Covered |
 | AC-F4-1 | Every surface carries exactly the digest's section state for every failure mode in the state-derivation matrix; no failed, absent, unattempted, or unresolved read renders as clear, green, available, or zero | TC-BRIEF-004, TC-BRIEF-010, TC-BRIEF-016 | Phase 2 | Covered |
 | AC-F5-1 | Exactly one valid `CommandResult` envelope with an exit in `{0,1,2}`; collector unavailability yields a success envelope at exit `0`; only existing containment identities fail (invocation → 1, internal → 2); zero new error-table rows and the sync check stays green | TC-BRIEF-002, TC-BRIEF-011, TC-BRIEF-012, TC-BRIEF-013, TC-BRIEF-015, TC-BRIEF-022 | Phase 3, Phase 4, Phase 8 | Covered |
-| AC-F6-1 | Identical inputs produce byte-identical human and machine output; the human text contains no timestamps, no raw payloads, and no generated prose | TC-BRIEF-014, TC-BRIEF-015, TC-BRIEF-017 | Phase 3, Phase 4 | Covered |
+| AC-F6-1 | Identical inputs produce byte-identical human and machine output; the human text contains no timestamps, no raw payloads, and no generated prose | TC-BRIEF-014, TC-BRIEF-015, TC-BRIEF-016, TC-BRIEF-017 | Phase 3, Phase 4 | Covered |
 | AC-F6-2 | The brief render surface imports no model-call capability and performs no model call, asserted by dependency-boundary checks and review | TC-BRIEF-003, TC-BRIEF-021 | Phase 3, Phase 5 | Covered |
 | AC-F6-3 | A planted secret never appears in output; the single redaction path covers envelope and human text; zero writes, zero state mutations, zero child processes; a non-credential-reference instance is refused exactly as status | TC-BRIEF-018, TC-BRIEF-019 | Phase 5 | Covered |
 
@@ -120,7 +120,7 @@ The spec declares no inbound HTTP/REST endpoint (API-#), no event or message sur
 
 - **Uncovered ACs**: none. All 10 ACs (AC-F1-1 … AC-F6-3) appear in §3.1 with at least one TC.
 - **Orphan TCs**: none. Each of the 22 TCs names at least one AC or NFR in §5.1 and §5.2.
-- **Untestable ACs**: none. AC-F1-1's "ages equal the digest's claim" is satisfiable only under the §4.2 derivation oracle (GAP-T1); AC-F4-1's surface set is satisfiable only under the §4.6 bound surface set (GAP-T2); AC-F5-1's "named placeholders" is satisfiable only under the §4.3/§4.8 reading that keeps the catalog closed (GAP-T3). Each is recorded, not hidden; none blocks authoring.
+- **Untestable ACs**: none. AC-F1-1's age branch is satisfiable under the §4.2/§4.5 derivation oracle (GAP-T1, resolved in spec v1.1); AC-F4-1's surface set is the §4.6 DM-5 nine-id set (GAP-T2, resolved); AC-F5-1's unavailability rendering is the §4.3/§4.8 reading that keeps the catalog closed (GAP-T3, resolved). Each resolution is recorded, not hidden.
 - **Intentional duplicate coverage**: AC-F5-1 spans six TCs because envelope shape, exit `0` on unavailability, containment projection, error-table stability, golden bytes, and the documentation posture are six different oracles. AC-F6-1 spans three because byte equality, content discipline, and the golden pin fail independently. AC-F3-1 spans three because the catalog is asserted as contract data, as rendered lines, and as corpus completeness.
 - **Regression half**: the existing `status-*` suites, `tests/structure/{error-table,result-contract,content-inventory,subpaths,branding-seam}.test.ts`, `tests/checks/{error-table-sync,exit-code-literals,forbidden-literals,privacy-literals,secret-read-boundary}.test.ts`, and `tests/boundaries` run unchanged and are the proof that this additive command changed nothing else.
 
@@ -215,9 +215,13 @@ The action record carries identity and citing evidence only. It must carry no bo
 
 No fabricated value may appear for an unknown age: not `0`, not `"0d"`, not an empty string.
 
-### 4.6 Bound Surface Set (binding for AC-F4-1, GAP-T2)
+### 4.6 Closed Render-Surface Set (binding for AC-F4-1, DM-5)
 
-The v0 brief carries, in decision-first order: the three anchored surfaces (ready-to-merge, blocker questions, owner-gate ages), then one context surface per digest section in the digest's fixed order (`tracker`, `changes-and-prs`, `ci`, `lanes-or-queue`, `providers`, `parked-work`), then the placeholder entries. The correspondence is fixed: `owner-gate ages → tracker`; `ready-to-merge → changes-and-prs`; `lane-queue-engine → lanes-or-queue`; the remaining context surfaces map one-to-one. This is the only reading under which a failed collector cannot be invisible while AC-F4-1 requires the brief to carry "exactly the digest's section state".
+The closed render-surface set is exactly **nine ids**: the six digest-section surfaces (`tracker`, `changes-and-prs`, `ci`, `lanes-or-queue`, `providers`, `parked-work`), each carrying its digest section's state, plus the three DEC-6 placeholder surfaces (`typed-questions`, `gate-sla-states`, `lane-queue-engine`).
+
+Decision-first ranking is not a surface property. Ready-to-merge and owner-gate ages are ranked anchored-action **groups** carried as DM-2 payload records — each action cites the digest item evidence it projects and the state of the surface it derives from — and they are **not** surface ids and never add a tenth surface. The blocker-questions block **is** the `typed-questions` placeholder surface, and `gate-sla-states` renders beside the owner-gate ages block; both are members of the nine-id set, not additional surfaces.
+
+The correspondence is fixed: `owner-gate ages → tracker`; `ready-to-merge → changes-and-prs`; `typed-questions → the blocker-questions block`; `gate-sla-states → beside the owner-gate ages block`; `lane-queue-engine → lanes-or-queue`; the remaining context surfaces map one-to-one. Every digest section state therefore has exactly one corresponding brief surface, which is what makes a failed collector impossible to hide while AC-F4-1 requires the brief to carry "exactly the digest's section state".
 
 ### 4.7 Failed/Absent-Read Negative-Control Matrix (binding for AC-F4-1)
 
@@ -1032,19 +1036,15 @@ All TCs are automated except TC-BRIEF-022, which is semi-automated with a record
 
 ### 7.1 Execution Order
 
-1. Contract, catalog, bounds, inventory: TC-BRIEF-001.
-2. Command surface and grammar: TC-BRIEF-002.
-3. Boundaries, purity, no-LLM: TC-BRIEF-003.
-4. Shared truth and read cost: TC-BRIEF-004, TC-BRIEF-005.
-5. Bounds, truncation, order: TC-BRIEF-006.
-6. Anchors: TC-BRIEF-007, TC-BRIEF-008.
-7. Placeholders: TC-BRIEF-009.
-8. Negative controls and corpus: TC-BRIEF-010, TC-BRIEF-016.
-9. Envelope, exits, error stability: TC-BRIEF-011, TC-BRIEF-012, TC-BRIEF-013.
-10. Goldens: TC-BRIEF-014, TC-BRIEF-015.
-11. Determinism, read-only, redaction: TC-BRIEF-017, TC-BRIEF-018, TC-BRIEF-019.
-12. Performance, mutants, documentation posture: TC-BRIEF-020, TC-BRIEF-021, TC-BRIEF-022.
-13. Aggregate: `pnpm check`.
+The `Plan phase` column in §3.1 and §7 is authoritative; this sequence is phase-ascending so an incremental run follows the delivery plan. Within a phase, TCs are grouped by subject.
+
+1. **Phase 1 — contract, catalog, bounds, inventory:** TC-BRIEF-001.
+2. **Phase 2 — projection, anchors, placeholders, negative controls, corpus, performance:** TC-BRIEF-004, TC-BRIEF-006, TC-BRIEF-007, TC-BRIEF-008, TC-BRIEF-009, TC-BRIEF-010, TC-BRIEF-016, TC-BRIEF-020.
+3. **Phase 3 — command surface, boundaries/purity/no-LLM, read cost, determinism:** TC-BRIEF-002, TC-BRIEF-003, TC-BRIEF-005, TC-BRIEF-017.
+4. **Phase 4 — envelope, exits, error stability, goldens:** TC-BRIEF-011, TC-BRIEF-012, TC-BRIEF-013, TC-BRIEF-014, TC-BRIEF-015.
+5. **Phase 5 — read-only posture, redaction, mutant corpus:** TC-BRIEF-018, TC-BRIEF-019, TC-BRIEF-021.
+6. **Phase 8 — documented posture:** TC-BRIEF-022.
+7. **Aggregate:** `pnpm check`.
 
 ### 7.2 CI Mapping
 
@@ -1158,13 +1158,13 @@ Notes:
 | OQ-T3 | Does the ready-to-merge evidence cite `deliveryState` only, or also the item-level review-signal token? | §4.4 binds "reproduce the item's `deliveryState`, `draft`, and review-signal state"; the exact evidence string is delivery-bound | Open — non-blocking | @coder |
 | OQ-T4 | Should a future `updatedAt` be `unknown` or clamped to `0`? | §4.5 forbids a negative age and forbids fabrication; it accepts either `unknown` or a non-negative value | Open — non-blocking | @coder |
 | OQ-T5 | Should the corpus completeness meta-check import the digest matrix directly instead of restating expectations? | Importing couples the brief test to status internals; restating risks drift. The plan prefers a parity assertion (brief case × digest matrix) | Open — non-blocking | @plan-writer |
-| GAP-T1 | AC-F1-1's "ages equal the digest's claim" has no digest-side claim for owner hand-backs | The digest exposes `ageDays` only on stalls and parked work. §4.2 binds a derivation oracle. Recommend a one-sentence spec clarification | Recorded — needs spec wording, non-blocking for execution | @pm / @spec-writer |
-| GAP-T2 | The brief surface set is not enumerated in the spec | DM-1 says "per-surface states"; AC-F4-1 needs a correspondence. §4.6 binds the six-digest-section set plus three placeholder surfaces | Recorded — spec confirmation recommended | @pm / @spec-writer |
-| GAP-T3 | AC-F5-1's "named placeholders" on unavailability versus DEC-6's closed three-entry catalog | §4.3/§4.8 bind the only compatible reading (surfaces name the state; the catalog stays at three) | Recorded — needs wording, non-blocking | @pm / @spec-writer |
+| GAP-T1 | AC-F1-1's "ages equal the digest's claim" has no digest-side claim for owner hand-backs | The digest exposes `ageDays` only on stalls and parked work. Spec v1.1 made AC-F1-1 two-branch and named the rule as the source; §4.2/§4.5 implement it | **Resolved in spec v1.1** — no further action | @spec-writer |
+| GAP-T2 | The brief surface set was not enumerated in the spec | Spec v1.1 added DM-5: nine ids (six digest sections + three placeholders), anchors as action groups | **Resolved in spec v1.1** — §4.6 restates DM-5 | @spec-writer |
+| GAP-T3 | "Named placeholders" on unavailability versus the closed DEC-6 catalog | Spec v1.1 F-5/DEC-2 say the affected surface names its own evidence state, distinct from the catalog | **Resolved in spec v1.1** — §4.3/§4.8 already bind it | @spec-writer |
 | GAP-T4 | Delivery-bound spellings | Pinned semantics; unpinned names | Recorded — non-blocking | @coder |
 | GAP-T5 | NFR-3, NFR-4, NFR-8 have no dedicated AC | Mapped to AC-F1-1 and the existing literal/inventory gates in §3.3 | Recorded — non-blocking | @spec-writer |
 
-**Gap summary for the readiness gate.** No AC is untestable, and no blocking gap exists for execution. Three spec *wording* gaps should be closed so the delivery and the DoD do not have to rely on this plan's bindings: (1) the age-comparison sentence in AC-F1-1 (GAP-T1), (2) the brief surface set (GAP-T2), (3) "named placeholders" on collector unavailability (GAP-T3). None changes the intended behaviour; each changes what a reviewer can hold the implementation to.
+**Gap summary for the readiness gate.** No AC is untestable, and no gap remains open at this revision: spec v1.1 closed the age-comparison wording (GAP-T1), pinned the nine-id render-surface set in DM-5 (GAP-T2), and disambiguated collector-unavailability rendering against the closed DEC-6 catalog (GAP-T3). This plan's §4.2, §4.5, §4.6, §4.3, and §4.8 now restate the spec rather than a local binding.
 
 ## 9. Plan Revision Log
 
@@ -1172,6 +1172,7 @@ Notes:
 |---|---|---|---|
 | 1.0 | 2026-11-05T00:00:00Z | Change Test Plan Writer | Initial plan: 22 TCs (`TC-BRIEF-001..022`, a new prefix). All 10 ACs and all 8 NFRs mapped with no orphan TCs. Binds the same-facts shared-truth model and claim map (§4.2), the closed placeholder catalog (§4.3), the ready-to-merge predicate (§4.4), the owner-gate age oracle (§4.5), the bound surface set (§4.6), the exhaustive failed/absent-read matrix (§4.7), the envelope/exit oracle (§4.8), the non-vacuity contract (§4.10), and the golden/corpus/mutant fixture strategy. Records three spec wording gaps (GAP-T1..T3) and the delivery-bound-spelling assumption (GAP-T4). Authored against spec v1.0; no spec, plan, pm-notes, or code file was modified. |
 | 1.1 | 2026-11-06T00:00:00Z | plan-writer | Filled the reserved "Plan phase" columns (§3.1 and §7) with the delivering phase ids from `chg-GH-228-plan.md` v1.0 (Phases 1–5 build the command and battery; Phase 8 is the @doc-syncer documentation phase delivering TC-BRIEF-022). No TC, oracle, suite target, control, or AC mapping changed; A-T8 bookkeeping only. |
+| 1.2 | 2026-11-06T12:00:00Z | Change Test Plan Writer | DoR iteration-1 test-plan touch-ups (F-2, F-3, F-6; spec v1.1 alignment). (1) F-2 reverse traceability: added TC-BRIEF-002 to the AC-F1-1 row and TC-BRIEF-016 to the AC-F6-1 row in §3.1, so the matrix matches the §5.1 Related IDs; forward coverage was already complete. (2) F-3 cross-artifact consistency: rewrote §4.6 as "Closed Render-Surface Set" per spec DM-5 and plan D2/D4 — exactly nine surface ids (six digest-section ids + `typed-questions`, `gate-sla-states`, `lane-queue-engine`), with ready-to-merge and owner-gate ages described as ranked DM-2 anchored-action groups, the blocker-questions block as the `typed-questions` placeholder surface, and `gate-sla-states` beside the owner-gate ages block; the fixed correspondence list is unchanged. (3) F-6: reordered §7.1 phase-ascending (Phase 1 → 2 → 3 → 4 → 5 → 8 → aggregate), named the phases, and stated that the §3.1/§7 `Plan phase` column is authoritative; all 22 TCs retained exactly once. (4) Consequential staleness only: marked GAP-T1, GAP-T2, and GAP-T3 resolved by spec v1.1 in §1.2, §3.4, and §8.3, because the spec now pins the two-branch age rule, DM-5, and the unavailability-rendering distinction; no oracle, assertion, or mapping changed. F-4 (placeholder render position) intentionally untouched — absorbed by the OQ-1 Phase-4 goldens. 22 TCs, 10 ACs, 8 NFRs, all suite targets, controls, and AC mappings unchanged. |
 
 ## 10. Test Execution Log
 

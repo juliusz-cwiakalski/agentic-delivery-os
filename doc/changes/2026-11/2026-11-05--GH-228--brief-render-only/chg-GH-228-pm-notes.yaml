@@ -3,8 +3,8 @@ title: "M1-S6: Brief render-only v0"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-05", completed: "2026-11-05" }
-  specification: { started: "2026-11-06", completed: null }
-  test_planning: { started: "2026-11-06", completed: null }
+  specification: { started: "2026-11-06", completed: "2026-11-06" }
+  test_planning: { started: "2026-11-06", completed: "2026-11-06" }
   delivery_planning: { started: "2026-11-05", completed: "2026-11-06" }
   dor_check: { started: "2026-11-06", completed: null }
   delivery: { started: null, completed: null }
@@ -57,6 +57,9 @@ notes: # { text, type, date } — type: info|decision|blocker|risk|question|reso
     date: "2026-11-06"
   - text: "REOPEN specification (iteration 3) for F-1: add explicit change-specific DoD section binding §4.1 metrics + §17 ACs into testable done conditions. REOPEN test_planning (iteration 3) for F-2/F-3/F-6 touch-ups. Delivery remains closed. DoR re-run planned as iteration 2 (max 3)."
     type: "info"
+    date: "2026-11-06"
+  - text: "DoR remediation complete: spec v1.2 adds §17.1 change-specific DoD (13 done conditions DoD-1..13, each binding §4.1 metrics/§17 ACs with verification method and delivering plan phase, fail-closed rule per doc/guides/definition-of-done.md); test plan v1.2 fixes F-2 (matrix rows 002→AC-F1-1, 016→AC-F6-1), F-3 (§4.6 retitled to Closed Render-Surface Set, nine-id set + anchored-action-group model aligned with DM-5/D2-D4), F-6 (§7.1 phase-ascending order, phase column authoritative); GAP-T1..T3 rows marked resolved in spec v1.1. F-4 left to Phase-4 goldens as planned."
+    type: "resolved"
     date: "2026-11-06"
   - text: "Retro: spec omitted the DoD section that repo precedent (GH-173) requires at this exact gate — artifact templates/author prompts should enforce a DoD section as a spec-completeness checklist item; the DoR catch is correct but costs an iteration every time it is missed."
     type: "retro"
