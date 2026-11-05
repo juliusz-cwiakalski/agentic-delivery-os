@@ -23,6 +23,7 @@ import {
 } from "@delivery-os/adapters/file";
 import {
   createGitBranchSeam,
+  createWatchdogGitSeam,
   type GitBranchSeam,
   type GitBranchSeamOptions,
 } from "@delivery-os/adapters/git";
@@ -68,8 +69,8 @@ import {
   type VerifyGatesOpenPrPage,
   type VerifyGatesReadResult,
   type VerifyGatesRepositoryFacts,
-  type VerifyGatesWorkItem,
   type VerifyGatesWorkflowFacts,
+  type VerifyGatesWorkItem,
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
@@ -100,8 +101,11 @@ import {
   type StatusReadFailure,
   type StatusRepositoryFacts,
   type StatusRepositoryTarget,
-  type WorkItem,
   VERIFY_GATES_FAILURE_CLASSES,
+  type WatchdogGitPort,
+  type WatchdogLaneRead,
+  type WatchdogSignalSource,
+  type WorkItem,
 } from "@delivery-os/core/contracts";
 import {
   createProviderEngine,
@@ -142,6 +146,10 @@ import { createQueueReadyCommandDefinition } from "./commands/queue.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
 import type { VerifyGatesCommandRuntime } from "./commands/verify-gates.js";
+import {
+  createWatchdogCommandDefinition,
+  type WatchdogCommandRuntime,
+} from "./commands/watchdog.js";
 import type { CliDependencies, CommandDefinition, CommandFlags, CommandProgram } from "./index.js";
 
 const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
@@ -976,6 +984,26 @@ export const createStatusCommandRuntime = (
   };
 };
 
+/** The watchdog composition seams; production M1-S1 wires zero signal sources. */
+export type WatchdogComposition = {
+  readonly readLane: (lane: string) => WatchdogLaneRead;
+  readonly git?: WatchdogGitPort;
+  readonly signalSources?: readonly WatchdogSignalSource[];
+};
+
+/**
+ * Compose the watchdog runtime: the injected lane reader, the bounded git seam
+ * (a production seam by default), and the declared signal sources (none in
+ * production M1-S1, so liveness always classifies absent).
+ */
+export const createWatchdogCommandRuntime = (
+  composition: WatchdogComposition,
+): WatchdogCommandRuntime => ({
+  readLane: composition.readLane,
+  git: composition.git ?? createWatchdogGitSeam(),
+  signalSources: composition.signalSources ?? [],
+});
+
 export type ConfigProgramOptions = {
   readonly workingName: string;
   readonly environment: Readonly<Record<string, string | undefined>>;
@@ -996,6 +1024,7 @@ export type ConfigProgramOptions = {
   readonly queueReady?: StatusComposition;
   readonly db?: DbComposition;
   readonly closeout?: CloseoutComposition;
+  readonly watchdog?: WatchdogComposition;
 };
 
 export type ConfigProgramResult =
@@ -1255,6 +1284,11 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   if (options.closeout !== undefined) {
     commands.closeout = createCloseoutCommandDefinition(
       createCloseoutCommandRuntime(options.closeout),
+    );
+  }
+  if (options.watchdog !== undefined) {
+    commands.watchdog = createWatchdogCommandDefinition(
+      createWatchdogCommandRuntime(options.watchdog),
     );
   }
   return {

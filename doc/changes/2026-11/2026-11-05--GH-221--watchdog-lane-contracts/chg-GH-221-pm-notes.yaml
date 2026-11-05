@@ -1,0 +1,79 @@
+change_id: GH-221
+title: "M1-S1: Watchdog and lane contracts"
+slug: watchdog-lane-contracts
+delivery_mode: autonomous
+branch: feat/GH-221/watchdog-lane-contracts
+worktree: "."
+issue_url: https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/221
+phases:
+  clarify_scope: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
+  specification: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
+  test_planning: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
+  delivery_planning: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
+  dor_check: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
+  delivery: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
+  system_spec_update: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
+  review_fix: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
+  quality_gates: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
+  dod_check: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
+  pr_creation: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/244" }
+decisions:
+  - text: "Scope interpretation of the backlog task 'memory-publish verification' (defined nowhere else in the planning corpus): it is part of the teardown task ('restore on every exit'), not a new command surface. Teardown verifies that agent-memory publications made under the lane (the .ai/memory tree) are either already published (committed) or preserved and reported with evidence in the teardown restoration report; teardown never silently discards or clobbers them. Rationale: the shipped-contract pack (m1/contracts.md watchdog entry + commands/watchdog.md man page) defines only preflight/teardown/liveness outputs; the AC's 'refused or restored with evidence' clause and the repo memory rules (unpublished memory = stranded work) support the teardown framing. Reversible; confirmed at the open-PR human gate. Recorded in the ticket decision log."
+    date: "2026-11-05"
+open_questions: []
+blockers: []
+notes:
+  - text: "Session start: state detection — issue open (labels: change, review), no open PR, no merged PR, no prior PR. Fresh start; branch feat/GH-221/watchdog-lane-contracts checked out in dedicated worktree at origin/main-tools (440829ee), 0 commits ahead, clean."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Issue carries 'review' label prematurely (no PR exists, 0 comments). No action needed now; label becomes accurate once PR is created at phase 11."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Dependency M0-S5 (GH-174 State layer) verified CLOSED/delivered 2026-10-30. No dependency blocker."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Scope boundary pinned by ticket decision: progress signals extend in M1-S15 (SC-M1-14); M1-S1 ships the liveness probe contract with classified signals-absent ('unknown, never guessed') when signal sources are unavailable. CPU never the only liveness signal. Watchdog checks; it does not run."
+    type: "decision"
+    date: "2026-11-05"
+  - text: "Ticket's design-baseline pointer 'm1/README.md (pack conventions)' resolves to doc/planning/oss-tooling/milestones/README.md (m1/ has no README). Non-blocking; backlog.md remains canonical scope."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Doc impact (phase 7): no existing spec covers watchdog/lane contracts — @doc-syncer must author doc/spec/features/feature-watchdog-lane-contracts.md (first-spec-only, always-resolve). Adjacent specs likely untouched: feature-state-layer.md (watchdog consumes state, does not change its contract), feature-result-contract.md (envelope reuse). Milestone planning packs (doc/planning/oss-tooling/milestones/m1/*) describe milestone end-state and are NOT reconciled during delivery."
+    type: "risk"
+    date: "2026-11-05"
+  - text: "github-mcp write tools fail with 'Requires authentication' (reads OK); gh CLI is authenticated as juliusz-cwiakalski (repo scope). Ticket comments/labels/transitions go through gh CLI via @runner; PR creation via @pr-manager (gh CLI) will work."
+    type: "info"
+    date: "2026-11-05"
+  - text: "clarify_scope complete: requirements complete and consistent with planning corpus; dependency M0-S5 delivered; one ambiguity (memory-publish verification) resolved by recorded decision; no STOP required."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Integration surfaces identified for spec/plan: DOMAIN_KINDS closed union in packages/core/src/contracts/error-table.ts must gain 'watchdog' kind + rows watchdog.checkout-dirty / watchdog.checkout-non-base / watchdog.signals-absent (man-page ERRORS); CLI command factory pattern create<X>CommandDefinition in packages/cli/src/commands/; envelope/result contracts in packages/core/src/contracts/envelope.ts + result.ts; branding seam for <binary> (never hardcode product name)."
+    type: "info"
+    date: "2026-11-05"
+  - text: "DoR gate READY on iteration 1 (10/10 facets PASS, 0 blockers); verdict artifact readiness-review/readiness-iter-1.md. Two non-blocking findings folded in per reviewer remediation guidance, no phase reopen: (1) plan task 1.3 now names every BASELINE_ROWS.length + 7 site in tests/checks/error-table-sync.test.ts — four sites (~962 guard, ~963 failure-message text, ~1033 control expectation, ~1056 source-count assertion); reviewer named three, PM verification found the fourth at ~963; (2) spec Appendix B gained the refusal-representation footnote (machine representation is the refusal identity on a failure envelope, no data.verdict — GAP-T5/PIN-1)."
+    type: "decision"
+    date: "2026-11-05"
+  - text: "Delivery completed: coder executed plan phases 1-6 and 9.1-9.3 (7/8 skipped per 'no review' directive; 9.4 PM-owned). Commits: 79d431c7 (contracts+error-table+docs rows), 689668fd (domain), b2a50d79 (git seam), 6c60dd9e (CLI), bd32ba13 (behaviour/golden/determinism suites), 0889b809 (feature spec+changeset), f8d4bd1f (finalize). Full pnpm check PASS: 2510 pass / 4 skip / 0 fail. 51 files; new: contracts/domain/adapters/cli watchdog modules, 7 behaviour + 2 structure suites, golden suite, feature-watchdog-lane-contracts.md, lockstep minor changeset. Tree clean."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Coder deviations accepted: (1) three hyphenated two-segment watchdog codes added to exact-pinned RESERVED_TWO_SEGMENT_CODES set (scanner required three segments; exact-pin, no general loosening); (2) error-table test prose assertion updated (mechanical consequence of task 1.3); (3) extra shared fixture helper tests/fixtures/watchdog/matrix.ts (no TC reshaped); (4) TC-024 byte-identity verified at the commit blob (base checkout lacks lane-only file); (5) coder mechanically repaired this PM-owned file for lint/privacy gates (ISO timestamps, worktree '.'). No semantic loss."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Retro: PM initially wrote date-only phase timestamps and an absolute worktree path in this file; the repo's pm-notes-lint and privacy gates require ISO timestamps and non-absolute paths, and the coder had to repair the file during 9.1 fix-forward. Next time, write gate-conforming pm-notes format (ISO T00:00:00Z timestamps, worktree '.') from creation."
+    type: "retro"
+    date: "2026-11-05"
+  - text: "Environmental quirk: local full pnpm check in this worktree needs TMPDIR=$PWD/tmp/tmpdir because tests/checks/ci-baseline-parity.test.ts uses git clone --local and the host /tmp is on another filesystem. Quality-gates phase must pass this env var."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Review PASS on iteration 1 (0 blocker / 0 major / 4 minor / 3 notes; verdict artifact review/review-iter-1.md; plan phase 8 stays skipped). ACs 14/14 verified with evidence; binding decisions honored; M1-S1 boundary confirmed; error-table sync exact. Minor findings F-2 (porcelain -z parsing), F-3 (N+1 memory scan), F-4 (partial-restoration report on mid-plan failure) and notes F-5..F-7 are non-blocking quality debts for the human PR gate / M1-S15-adjacent work — no follow-up tickets created per the no-autonomous-ticket-creation policy."
+    type: "info"
+    date: "2026-11-05"
+  - text: "F-1 resolution (reviewer-sanctioned option 'keep it and amend the record'): the code-grammar widening [a-z][a-z0-9]* -> [a-z][a-z0-9-]* in error-table-sync.ts CODE_PATTERN / error-table.test.ts CODE_FORMAT is DECLARED as an intentional grammar generalization; the earlier deviation wording 'no general loosening' referred only to refusing arbitrary unvalidated two-segment codes (exact-pinned RESERVED_TWO_SEGMENT_CODES remains the only two-segment admission path). Corrected here rather than reverting functionally identical code."
+    type: "decision"
+    date: "2026-11-05"
+  - text: "DoD walkthrough complete (plan task 9.4): pm-notes all phases complete except pr_creation; plan tasks 7.1/7.2 closed via review PASS (review/review-iter-1.md), 8.1/8.2 N/A (condition not triggered — zero accepted remediation findings), 9.1-9.4 done; 14/14 ACs review-verified with TC evidence; success metrics at target; current-truth docs complete with zero residual doc-syncer gaps and all binding checks green (44/44 sync, distribution guard, forbidden literals, pnpm check 2510/0). Handing off to PR creation against main-tools."
+    type: "info"
+    date: "2026-11-05"
+  - text: "PR #244 created against main-tools (base passed explicitly; head feat/GH-221/watchdog-lane-contracts pushed to origin). Open, not draft, mergeable, 16 commits. Body carries review guidance for the human gate: DEC-1 confirmation, grammar-widening declaration, GAP-T2 M1-S15 dependency, quality debts F-2..F-7. Ticket handed to the human owner; lifecycle STOPs here awaiting review/merge."
+    type: "info"
+    date: "2026-11-05"

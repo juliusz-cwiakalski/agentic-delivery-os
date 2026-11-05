@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 0
+  },
+  "data": {
+    "schemaVersion": "delivery.watchdog.v1",
+    "probe": "preflight",
+    "lane": "lane-1",
+    "verdict": "ok",
+    "signals": {},
+    "evidence": "checkout clean on base main"
+  }
+}

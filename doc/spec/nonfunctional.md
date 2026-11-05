@@ -2,10 +2,10 @@
 id: SPEC-TOOLING-NONFUNCTIONAL
 status: Proposed
 created: 2026-11-01
-last_updated: 2026-11-02
+last_updated: 2026-11-05
 owners: [engineering]
 links:
-  related_changes: [GH-200]
+  related_changes: [GH-200, GH-221]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -40,21 +40,24 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 ### NFR-TOOL-001: Truthful evidence and failure semantics
 
 - Quality attribute: reliability and diagnosability. Applies: result envelopes,
-  status, queue-ready, verify-change, provider reads.
+  status, queue-ready, verify-change, provider reads, and the watchdog probes.
 - Requirement/status: existing. Missing, failed, or unavailable evidence must not
   become a clear/ready/zero claim. Command success is not delivery success.
 - Evidence/test: [result](features/feature-result-contract.md),
   [status](features/feature-status-digest.md), [ready-set](features/feature-queue-ready.md),
-  [verify](features/feature-verify-change-and-exit-taxonomy.md);
+  [verify](features/feature-verify-change-and-exit-taxonomy.md),
+  [watchdog](features/feature-watchdog-lane-contracts.md);
   `packages/core/src/domain/ci-result.ts`, `tests/behaviour/status-negative-controls.test.ts`,
-  `tests/behaviour/queue-ready-negative-controls.test.ts`.
+  `tests/behaviour/queue-ready-negative-controls.test.ts`,
+  `tests/behaviour/watchdog-liveness.test.ts`.
 - Limits: CI observes one checkout-head page, not every required PR-head job;
   `merge-ready` is an approval-based close class, not merge authorization.
   Change-ledger verification is separate from implemented `verify gates`:
   [five-gate contract](features/feature-verify-gates.md) observes CI, push parity,
   squash surface, the owner gate, and lifecycle. The owner gate checks the work
   item's hand-back and human-input-needed labels; no gate asserts completion.
-  Unknown evidence is not green.
+  Unknown evidence is not green. The watchdog liveness probe classifies absent
+  signal sources as `watchdog.signals-absent` and emits no guessed verdict.
 - Owner/trigger: reviewer with PM; every new evidence consumer (RSK-002/003, XC-001).
 
 ### NFR-TOOL-002: Stable machine output and bounded read digests
@@ -170,7 +173,7 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 ### NFR-TOOL-008: Mutation safety and restart boundaries
 
 - Quality attribute: safety and recoverability. Applies: provider state, session
-  admin and integrated closeout; live convergence remains unverified (RSK-004/009, XC-003).
+  admin, integrated closeout, and watchdog restoration; live convergence remains unverified (RSK-004/009, XC-003).
 - Existing requirement: unchanged provider park generations append no duplicates;
   parks expire at read time. Provider selection neither spawns nor selects models,
   and production factory composition is not established by injected tests.
@@ -191,6 +194,16 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
   Evidence: `packages/core/src/state/closeout.ts`, `domain/closeout.ts`,
   `packages/cli/src/edge.ts`, `tests/behaviour/closeout-integration.test.ts`;
   real-local git/store with mocked providers inspected, not rerun.
+- Watchdog teardown preserves a stranded commit under the attributed
+  `watchdog-preserved/<lane>` ref, restores the declared base, removes only
+  untracked lane-workspace residue, preserves unattributable content, and reports
+  `.ai/memory` publications as `committed` or `preserved` without staging,
+  committing, reverting, cleaning, or deleting them. Every action carries
+  non-empty evidence, and unevaluable facts fail closed.
+  Evidence: `packages/core/src/domain/watchdog.ts`,
+  `packages/adapters/src/git/watchdog.ts`,
+  `tests/behaviour/watchdog-teardown.test.ts`, `watchdog-memory.test.ts`;
+  real temporary repositories with a live-workspace fixture guard.
 - Owner/trigger: engineering/reviewer; each mutation/replay change. Unit idempotence
   does not prove multi-step external restart convergence or an owner privacy sign-off.
 

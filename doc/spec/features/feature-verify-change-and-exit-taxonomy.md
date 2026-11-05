@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-VERIFY-CHANGE-AND-EXIT-TAXONOMY
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-01
+last_updated: 2026-11-05
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only `verify change <ref>` surface: ledger-only verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
 links:
-  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178"]
+  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-221"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
@@ -143,7 +143,7 @@ Envelope exclusivity is preserved: `finished` is the only token rendered as succ
 
 ### Error identities
 
-One additive row joins the error table under the `verify` domain kind. `verify` is a declared domain kind beside `provider`, `input`, `config`, `state`, and `lint`; the reserved `fallback` namespace is unchanged. The same kind also carries the two verify-gates rows, `verify.gates.failed` and `verify.gates.unavailable`, documented in [Verify Gates](feature-verify-gates.md) and the [result contract](feature-result-contract.md).
+One additive row joins the error table under the `verify` domain kind. `verify` is a declared domain kind beside `provider`, `input`, `config`, `state`, `lint`, `db`, `closeout`, and `watchdog`; the reserved `fallback` namespace is unchanged. The same kind also carries the two verify-gates rows, `verify.gates.failed` and `verify.gates.unavailable`, documented in [Verify Gates](feature-verify-gates.md) and the [result contract](feature-result-contract.md).
 
 | Code | Domain kind | Category | Retryable | Consequence | Projection class | Token | Summary |
 |---|---|---|---|---|---|---|---|

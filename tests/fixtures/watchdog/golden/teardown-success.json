@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 0
+  },
+  "data": {
+    "schemaVersion": "delivery.watchdog.v1",
+    "probe": "teardown",
+    "lane": "lane-1",
+    "verdict": "ok",
+    "signals": {},
+    "evidence": "restored lane lane-1 to base main",
+    "actions": [
+      {
+        "kind": "restore-checkout",
+        "observation": "checkout restored to base main",
+        "evidence": "restore checkout from feat/GH-221/lane-1 to base main"
+      },
+      {
+        "kind": "remove-residue",
+        "observation": "work/residue.txt removed",
+        "evidence": "lane-workspace residue work/residue.txt removed (untracked)"
+      }
+    ],
+    "memory": []
+  }
+}

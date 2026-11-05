@@ -1,0 +1,4 @@
+stdout:
+stderr:
+example-product: watchdog.checkout-dirty
+summary: checkout dirty relative to base main: README.md, notes.local
