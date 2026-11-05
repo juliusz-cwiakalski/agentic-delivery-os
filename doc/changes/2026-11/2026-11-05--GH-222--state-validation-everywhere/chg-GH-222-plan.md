@@ -720,7 +720,7 @@ behavior.
 
 **Tasks**:
 
-- [ ] **6.1** Full gate battery (test plan §7.2): aggregate `pnpm check` (lint → format:check →
+- [x] **6.1** Full gate battery (test plan §7.2): aggregate `pnpm check` (lint → format:check →
   typecheck → test → check:boundaries); binding `bun run scripts/checks/error-table-sync.ts`
   (exit 0, zero drift) plus `bun test tests/checks/error-table-sync.test.ts`; full behaviour
   tier `bun test tests/behaviour`; boundary/static `bun test tests/structure tests/boundaries`
@@ -728,16 +728,16 @@ behavior.
   `git diff --check`; packed surface `bun test tests/checks/packed-state.test.ts`. Record any
   SQLite-binding skip in the test execution log with the reason (a skip is not a pass; no Linux
   run claims Windows ACL verification).
-- [ ] **6.2** Version bump per repo conventions: add the lockstep changeset (minor —
+- [x] **6.2** Version bump per repo conventions: add the lockstep changeset (minor —
   `version_impact: minor`); never bump versions by hand (changesets owns it).
-- [ ] **6.3** Spec reconciliation (lifecycle phase 7, executed by `@doc-syncer`; scoped here so
+- [x] **6.3** Spec reconciliation (lifecycle phase 7, executed by `@doc-syncer`; scoped here so
   the plan's final phase includes it): `doc/spec/features/feature-state-layer.md` — the salvage
   operation and its safety model, the quarantine artifact and its store-layout row, the
   exhaustion classification at write boundaries, the reusable boundary-validation/artifact
   contracts, the nine-code failure identity, and the EVT-1/DM-1..4 vocabulary;
   `doc/spec/features/feature-result-contract.md` — prose around the rows that landed in Phase 1
   (rows themselves already synced). No `doc/business/**` content (engineering repo).
-- [ ] **6.4** Populate the test plan §10 execution log and this plan's Execution Log (per-phase
+- [x] **6.4** Populate the test plan §10 execution log and this plan's Execution Log (per-phase
   commits, suite results, skips, and the OQ-T2 decision record); leave no unchecked plan task.
 
 **Acceptance Criteria**:
@@ -751,6 +751,33 @@ behavior.
   behavior.
 - Should: execution logs complete enough that the DoD check and review phases need no
   re-derivation.
+
+**Task evidence (2026-11-05)**:
+
+- 6.1 — lint, `format:check`, and `typecheck` pass; `pnpm test` runs 2482 tests: 2477 pass, 4
+  platform skips, 1 fail. The single failure is the pre-existing, PM-owned
+  `tests/behaviour/pm-notes-corpus.test.ts` defect (duplicate `completed` key in
+  `chg-GH-222-pm-notes.yaml` at HEAD; `yaml` rejects it at parse time). Because `pnpm check`
+  stops at `test`, the remaining stages were run explicitly and pass: `pnpm check:boundaries`
+  (145 modules / 317 deps, ambient-globals 47 files, workspace entrypoints, secret-read boundary)
+  and `bun run scripts/checks/exports-parity.ts` (5 publishables). `TMPDIR` is set to a
+  repo-local directory so the hermetic-clone baseline test avoids a cross-device hardlink
+  failure on this host (environment-only; it passes with the workaround).
+- 6.2 — `.changeset/gh-222-state-validation-minor.md` (minor, lockstep across the five
+  publishables); no hand-bumped versions.
+- 6.3 — `feature-state-layer.md` reconciles the nine-code identity, boundary validation, guided
+  salvage and quarantine, fail-closed exhaustion, evidence model, store layout, module map, and
+  retention; `feature-result-contract.md` prose explains the two additive rows and the two
+  text-only refinements. No `doc/business/**` content.
+- 6.4 — test plan §10 populated with all 23 cases, the SQLite availability note (no skip), and
+  the pre-existing pm-notes defect; this Execution Log records per-phase commits and the OQ-T2
+  decision. Every plan task is checked.
+
+**Acceptance (Phase 6)**: `pnpm check` — **NOT fully green**: every code/test gate passes except
+the pre-existing pm-notes corpus failure described above (outside the change's write scope). §7
+targeted suites and sync check — PASSED. All TC-GH222-001..023 executed PASS; nine spec ACs
+demonstrated (AC-F1-1, AC-F2-1, AC-F3-1..3, AC-F4-1, AC-F5-1, AC-F5-2, AC-F6-1) — PASSED.
+Changeset + spec reconciliation — PASSED.
 
 **Files and modules**:
 
@@ -844,5 +871,6 @@ NFR-6 → 1, 5; NFR-7 → 3.
 | 2 — Tear topology, exhaustion seam, and fail-closed write boundaries | Done | 2026-11-05 | 2026-11-05 | 2ba51d72 | Verification block: torn+evidence 34 pass; storage-exhausted 5 pass; index 10 pass; keys+atomic-replace 13 pass regressions. Broader regression sweep (state-fence, state-permissions, state-error-classification, state-conformance, content-inventory, state-imports, state-scope, packed-state) 48 pass. No SQLite skip needed on this runtime. New module `state/storage-error.ts` registered in the inventory + executable allowance. |
 | 3 — Explicit guided tail salvage with quarantine | Done | 2026-11-05 | 2026-11-05 | fac0e764 | Verification block: salvage + invariants 11 pass; post-salvage + storage-exhausted 9 pass; permissions + fence 18 pass; `error-table-sync` entries=43 documented=43 exit 0. Broader sweep (15 suites incl. torn/evidence/index/keys/atomic-replace/error-classification/conformance/registry/content-inventory/imports/scope/contract/packed-state) 130 pass; verify suites 59 pass. OQ-T3: clean-ledger salvage is a reported no-op (TC-GH222-024 candidate). |
 | 4 — Reusable boundary validation and artifact-boundary contracts | Done | 2026-11-05 | 2026-11-05 | d09cf619 | Verification block: artifact-boundary + unknown + boundary-validation 15 pass; state-contract/imports/scope 22 pass; packed-state 1 pass; content-inventory 6 pass; `git diff --check` clean. New module `state/artifact-boundary.ts` registered in the inventory + executable allowance. |
-| 5 — Delivery-registry wiring and the nine-code trigger sweep | Done | 2026-11-05 | 2026-11-05 | (this commit) | Verification block: phase-registry + error-classification 28 pass; full behaviour tier 1438 pass / 4 platform skips / 1 pre-existing pm-notes corpus failure (duplicate `completed` key, PM-owned, outside scope); structure+boundaries+packed-state 521 pass; sync check entries=43 documented=43 exit 0; `git diff --check` clean. OQ-T2: matrix enumerates cases, not operations → no change. Repaired Phase-3 port-surface assertion (`state-ledger.test.ts`) and updated GH-179 corrupt-payload expectations to the new boundary classification. |
-| — | Not started | — | — | — | Populated during delivery; record per-phase commit, suite results, SQLite-binding skips, and the OQ-T2 decision |
+| 5 — Delivery-registry wiring and the nine-code trigger sweep | Done | 2026-11-05 | 2026-11-05 | 5d854030 | Verification block: phase-registry + error-classification 28 pass; full behaviour tier 1438 pass / 4 platform skips / 1 pre-existing pm-notes corpus failure (duplicate `completed` key, PM-owned, outside scope); structure+boundaries+packed-state 521 pass; sync check entries=43 documented=43 exit 0; `git diff --check` clean. OQ-T2: matrix enumerates cases, not operations → no change. Repaired Phase-3 port-surface assertion (`state-ledger.test.ts`) and updated GH-179 corrupt-payload expectations to the new boundary classification. |
+| 6 — Finalize: gate battery, changeset, spec reconciliation | Done (with one pre-existing out-of-scope failure) | 2026-11-05 | 2026-11-05 | (this commit) | lint + format:check + typecheck pass; `pnpm test` 2477 pass / 4 platform skips / 1 fail (pre-existing PM-owned pm-notes duplicate `completed` key, HEAD defect, outside scope); `pnpm check:boundaries` pass; `exports-parity` pass; sync check entries=43 documented=43 exit 0; error-table-sync tests 54 pass; `git diff --check` clean. Changeset `.changeset/gh-222-state-validation-minor.md` (minor, lockstep). System spec reconciled (state layer + result-contract prose). Test plan §10 populated. |
+| — | Not started | — | — | — | Later phases (review_fix, quality_gates, dod_check, pr_creation) are PM-orchestrated and outside this run's scope. |

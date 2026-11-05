@@ -1033,4 +1033,28 @@ No acceptance criterion is untestable as written. Coverage gaps: none.
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
-| — | — | Not executed | Populated during delivery and again in `quality_gates` (phase 9); record suite command, pass/fail/skip, and any SQLite-binding skip reason |
+| TC-GH222-001 | 2026-11-05 | PASS | `tests/behaviour/state-torn.test.ts` — framing break and truncated tail classify torn on `read`, `readRecords`, `checkIntegrity`; guidance names the explicit salvage operation; zero byte/listing change. |
+| TC-GH222-002 | 2026-11-05 | PASS | Same suite — sequence gap/duplicate/reset classify torn at the first discontinuity; indexed kind classifies identically. |
+| TC-GH222-003 | 2026-11-05 | PASS | Same suite — checksum mismatch classified by the pure `verifyLedger` (position 1) and the port; no checksum bytes echoed. |
+| TC-GH222-004 | 2026-11-05 | PASS | `tests/behaviour/state-unknown.test.ts` — undeclared kind/schema → `state.store.unknown`; version mismatch stays `state.schema.mismatch`; verified-empty distinct; raw port kind-agnostic. |
+| TC-GH222-005 | 2026-11-05 | PASS | `tests/behaviour/state-evidence.test.ts` — path/position-only evidence, verified-empty vs torn distinct, falsy exactness, non-empty key-set against an absent store. |
+| TC-GH222-006 | 2026-11-05 | PASS | `tests/behaviour/state-boundary-validation.test.ts` — three refusal classes `not_landed`, ledger byte-identical, no default filled. |
+| TC-GH222-007 | 2026-11-05 | PASS | `tests/behaviour/state-salvage.test.ts` — truncate + salvage record + quarantine + evidence; index not touched. |
+| TC-GH222-008 | 2026-11-05 | PASS | Same suite — byte-identical valid prefix, exact falsy values, salvage record additive, prefix reproducible. |
+| TC-GH222-009 | 2026-11-05 | PASS | Same suite — quarantine bytes equal the original tail, extent matches, no read serves the canary, POSIX `0600`, foreign-permission fixture detected. |
+| TC-GH222-010 | 2026-11-05 | PASS | `tests/behaviour/state-salvage-invariants.test.ts` — ledger + directory digests unchanged across four read paths twice each; no index created; no salvage record. |
+| TC-GH222-011 | 2026-11-05 | PASS | Same suite — mid-record tear refuses `state.store.torn` at record 3, whole-ledger byte identity, no quarantine/residue; fence contention `state.lock.busy`. |
+| TC-GH222-012 | 2026-11-05 | PASS | `tests/behaviour/state-index.test.ts` — absent (`missing`) and corrupt (`corrupt`) indexes rebuild from the ledger alone and converge with the `jsonl` oracle. |
+| TC-GH222-013 | 2026-11-05 | PASS | Same suite — altered/deleted/phantom rows rebuild (`divergent`), converge stably; forced `index-rebuild-write` stays `state.write.failed` with no stale truth. |
+| TC-GH222-014 | 2026-11-05 | PASS | `tests/behaviour/state-index-post-salvage.test.ts` — stale/deleted/corrupt indexes over a salvaged ledger converge with the verified scan; quarantine contributes no rows. |
+| TC-GH222-015 | 2026-11-05 | PASS | `tests/behaviour/state-storage-exhausted.test.ts` — `append-before-flush` exhaustion fail-closed, ledger byte-identical, retry lands sequence 4. |
+| TC-GH222-016 | 2026-11-05 | PASS | Same suite — three pre-commit replace points keep version 1; absent target stays absent; retry lands atomically; temporaries never served. |
+| TC-GH222-017 | 2026-11-05 | PASS | Same suite — exhaustion at `salvage-quarantine-write` / `salvage-ledger-write` leaves the ledger byte-identical and still torn; retry yields one record + one artifact; non-ENOSPC stays `state.write.failed`. |
+| TC-GH222-018 | 2026-11-05 | PASS | Rows/sync half: `tests/checks/error-table-sync.test.ts` + `tests/structure/error-table.test.ts`; trigger sweep: `tests/behaviour/state-error-classification.test.ts` (nine codes, each `not_landed`, canary-clean). `bun run scripts/checks/error-table-sync.ts` → entries=43 documented=43, exit 0. |
+| TC-GH222-019 | 2026-11-05 | PASS | `tests/checks/error-table-sync.test.ts` — four non-vacuity mutations (doc-only drop of `state.store.unknown`, machine-only drop of `state.storage.exhausted`, one-sided refinement edits on both refined rows, phantom `state.store.unknown-schema`) plus restore-and-pass. |
+| TC-GH222-020 | 2026-11-05 | PASS | `tests/behaviour/state-artifact-boundary.test.ts` — four distinct verdicts, no defaults, second-kind reuse, no retro/ceremony runtime import. |
+| TC-GH222-021 | 2026-11-05 | PASS | Same suite — retro stand-in round-trip incl. falsy fields; missing/wrong-typed/vocabulary writes refused with digest stability; undeclared kind classified. |
+| TC-GH222-022 | 2026-11-05 | PASS | Same suite — malformed bytes torn; out-of-vocabulary and missing identity unknown; undeclared sibling unknown; refused writes leave the ledger unchanged. |
+| TC-GH222-023 | 2026-11-05 | PASS | `tests/behaviour/phase-registry.test.ts` — valid-store fold/projection/evidence unchanged; torn never empty history or `present: false`; absent per-change record explicit no-evidence; reads mutate nothing. |
+| SQLite binding | 2026-11-05 | N/A (no skip) | The `sqlite` kind was available on this runtime (Bun 1.4.4 / Linux x64); no indexed case was skipped. Windows ACL verification is not claimed by this Linux run. |
+| Known unrelated failure | 2026-11-05 | FAIL (pre-existing, out of scope) | `tests/behaviour/pm-notes-corpus.test.ts` fails because `chg-GH-222-pm-notes.yaml` at HEAD has a duplicate `completed` key under `phases.specification` (`yaml`: `Map keys must be unique`). The file is PM-owned and outside this change's write scope; recorded for the PM/quality-gates phase. |

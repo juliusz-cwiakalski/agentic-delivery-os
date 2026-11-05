@@ -162,6 +162,8 @@ A success envelope has exactly the keys `schemaVersion`, `runId`, `exitCode`, `t
 
 This table is the human- and agent-readable counterpart of `ERROR_TABLE`. The sync check requires each source entry to have exactly one documented row and each documented row to have exactly one source entry; the two fallback rows are included with no containment exemption. For closeout target reads, an authentication, transport, or server failure on a non-404 provider response maps to the adapter-local `provider.payload.invalid` identity; a credential-port resolution failure remains `config.credential.missing`.
 
+The `state` domain kind declares nine rows. `state.storage.exhausted` (transient, retryable) classifies a full-disk or settled-quota write failure that never landed; `state.store.unknown` (platform, non-retryable) classifies a record kind or payload schema that is undeclared at a validated boundary and is distinct from the version-scoped `state.schema.mismatch`. Two existing rows carry text-only remediation refinements: `state.write.failed` is scoped to storage errors other than exhaustion, and `state.store.torn` points at the explicit salvage operation as a separate step (the salvage pointer lives in the guidance text, never in read evidence). Every state failure keeps consequence `not_landed`, and every state row is triggerable by a real behaviour, not only declared.
+
 ### Failure containment semantics
 
 Two containment entries cover distinct populations, and each population resolves through the entry matching its responsibility:
