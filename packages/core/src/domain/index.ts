@@ -36,7 +36,10 @@ export {
   scopeCoversPath,
   staticPrefix,
 } from "./plan-paths.js";
+export { computePlanDiff, type PlanDiffInput } from "./plan-diff.js";
+export { computePlanOverlap, type PlanOverlapInput } from "./plan-overlap.js";
 export {
+  planDocumentFromValidateData,
   validatePlan,
   validatePlanValue,
   type PlanValidateInput,

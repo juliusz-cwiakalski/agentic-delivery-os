@@ -1,0 +1,38 @@
+{
+  "same-basename": {
+    "verdict": "parallel",
+    "overlappingPaths": []
+  },
+  "sibling-folders": {
+    "verdict": "parallel",
+    "overlappingPaths": []
+  },
+  "different-phase": {
+    "verdict": "run-in-sequence",
+    "overlappingPaths": [
+      "packages/core/src/contracts/queue.ts"
+    ]
+  },
+  "wildcard-vs-file": {
+    "verdict": "run-in-sequence",
+    "overlappingPaths": [
+      "packages/core/src/contracts/queue.ts"
+    ]
+  },
+  "wildcard-vs-wildcard": {
+    "verdict": "run-in-sequence",
+    "overlappingPaths": [
+      "packages/core/src/contracts/**"
+    ]
+  },
+  "folder-vs-file": {
+    "verdict": "run-in-sequence",
+    "overlappingPaths": [
+      "doc/guides/plan.md"
+    ]
+  },
+  "prefix-bleed": {
+    "verdict": "parallel",
+    "overlappingPaths": []
+  }
+}

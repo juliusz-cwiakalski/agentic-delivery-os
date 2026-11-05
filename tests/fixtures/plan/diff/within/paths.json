@@ -1,0 +1,4 @@
+[
+  "packages/core/src/contracts/queue.ts",
+  "packages/core/src/domain/plan-diff.ts"
+]

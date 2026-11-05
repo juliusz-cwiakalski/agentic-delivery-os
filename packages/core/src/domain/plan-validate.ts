@@ -20,11 +20,13 @@ import {
   PLAN_MAX_PHASES,
   PLAN_MAX_SCOPE_PATHS,
   PLAN_PHASE_KINDS,
+  PLAN_SCHEMA_VERSION,
   PLAN_SCOPE_KEYS,
   PLAN_SUPPORTED_SCHEMA_VERSIONS,
   planArtifactPath,
   type PlanArtifactRead,
   type PlanArtifactRef,
+  type PlanDocument,
   type PlanDoneArtifacts,
   type PlanInteraction,
   type PlanPhaseKind,
@@ -624,4 +626,31 @@ export const validatePlan = (input: PlanValidateInput): PlanValidateData => {
       : { tierDeclaration: validated.tierDeclaration }),
     perPhase: validated.perPhase,
   });
+};
+
+/**
+ * Recover the declared document shape from a valid verdict for downstream
+ * overlap/diff consumers. Undefined when the plan did not validate.
+ */
+export const planDocumentFromValidateData = (data: PlanValidateData): PlanDocument | undefined => {
+  if (data.verdict !== "valid" || data.tier === undefined) return undefined;
+  return {
+    schemaVersion: data.schemaVersion ?? PLAN_SCHEMA_VERSION,
+    tier:
+      data.tierDeclaration === undefined ? { name: data.tier } : { ...data.tierDeclaration },
+    phases: data.perPhase.map((phase) => ({
+      id: phase.id,
+      title: phase.title,
+      kind: phase.kind,
+      scope: {
+        files: phase.scope.files,
+        packages: phase.scope.packages,
+        folders: phase.scope.folders,
+      },
+      interactions: phase.interactions,
+      ...(phase.doneArtifacts === undefined ? {} : { doneArtifacts: phase.doneArtifacts }),
+      ...(phase.weightClass === undefined ? {} : { weightClass: phase.weightClass }),
+      leases: phase.leases,
+    })),
+  };
 };

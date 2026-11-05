@@ -1,0 +1,9 @@
+{
+  "verdict": "run-in-sequence",
+  "overlappingPaths": [
+    "doc/spec/features/feature-scheduler.md",
+    "packages/core/src/contracts/queue.ts"
+  ],
+  "producer": "GH-306",
+  "reason": "shared-contract-files"
+}

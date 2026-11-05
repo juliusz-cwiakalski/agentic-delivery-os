@@ -1,0 +1,90 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-306
+tier:
+  name: full
+phases:
+  - id: 1
+    title: Phase 1
+    kind: planning
+    scope:
+      files:
+        - packages/core/src/domain/generated/file-000.ts
+        - packages/core/src/domain/generated/file-001.ts
+        - packages/core/src/domain/generated/file-002.ts
+        - packages/core/src/domain/generated/file-003.ts
+        - packages/core/src/domain/generated/file-004.ts
+        - packages/core/src/domain/generated/file-005.ts
+        - packages/core/src/domain/generated/file-006.ts
+        - packages/core/src/domain/generated/file-007.ts
+        - packages/core/src/domain/generated/file-008.ts
+        - packages/core/src/domain/generated/file-009.ts
+        - packages/core/src/domain/generated/file-010.ts
+        - packages/core/src/domain/generated/file-011.ts
+        - packages/core/src/domain/generated/file-012.ts
+        - packages/core/src/domain/generated/file-013.ts
+        - packages/core/src/domain/generated/file-014.ts
+        - packages/core/src/domain/generated/file-015.ts
+        - packages/core/src/domain/generated/file-016.ts
+        - packages/core/src/domain/generated/file-017.ts
+        - packages/core/src/domain/generated/file-018.ts
+        - packages/core/src/domain/generated/file-019.ts
+        - packages/core/src/domain/generated/file-020.ts
+        - packages/core/src/domain/generated/file-021.ts
+        - packages/core/src/domain/generated/file-022.ts
+        - packages/core/src/domain/generated/file-023.ts
+        - packages/core/src/domain/generated/file-024.ts
+        - packages/core/src/domain/generated/file-025.ts
+        - packages/core/src/domain/generated/file-026.ts
+        - packages/core/src/domain/generated/file-027.ts
+        - packages/core/src/domain/generated/file-028.ts
+        - packages/core/src/domain/generated/file-029.ts
+        - packages/core/src/domain/generated/file-030.ts
+        - packages/core/src/domain/generated/file-031.ts
+        - packages/core/src/domain/generated/file-032.ts
+        - packages/core/src/domain/generated/file-033.ts
+        - packages/core/src/domain/generated/file-034.ts
+        - packages/core/src/domain/generated/file-035.ts
+        - packages/core/src/domain/generated/file-036.ts
+        - packages/core/src/domain/generated/file-037.ts
+        - packages/core/src/domain/generated/file-038.ts
+        - packages/core/src/domain/generated/file-039.ts
+        - packages/core/src/domain/generated/file-040.ts
+        - packages/core/src/domain/generated/file-041.ts
+        - packages/core/src/domain/generated/file-042.ts
+        - packages/core/src/domain/generated/file-043.ts
+        - packages/core/src/domain/generated/file-044.ts
+        - packages/core/src/domain/generated/file-045.ts
+        - packages/core/src/domain/generated/file-046.ts
+        - packages/core/src/domain/generated/file-047.ts
+        - packages/core/src/domain/generated/file-048.ts
+        - packages/core/src/domain/generated/file-049.ts
+        - packages/core/src/domain/generated/file-050.ts
+        - packages/core/src/domain/generated/file-051.ts
+        - packages/core/src/domain/generated/file-052.ts
+        - packages/core/src/domain/generated/file-053.ts
+        - packages/core/src/domain/generated/file-054.ts
+        - packages/core/src/domain/generated/file-055.ts
+        - packages/core/src/domain/generated/file-056.ts
+        - packages/core/src/domain/generated/file-057.ts
+        - packages/core/src/domain/generated/file-058.ts
+        - packages/core/src/domain/generated/file-059.ts
+        - packages/core/src/domain/generated/file-060.ts
+        - packages/core/src/domain/generated/file-061.ts
+        - packages/core/src/domain/generated/file-062.ts
+        - packages/core/src/domain/generated/file-063.ts
+        - packages/core/src/domain/generated/file-064.ts
+        - packages/core/src/domain/generated/file-065.ts
+        - packages/core/src/domain/generated/file-066.ts
+        - packages/core/src/domain/generated/file-067.ts
+        - packages/core/src/domain/generated/file-068.ts
+        - packages/core/src/domain/generated/file-069.ts
+        - packages/core/src/domain/generated/file-070.ts
+        - packages/core/src/domain/generated/file-071.ts
+        - packages/core/src/domain/generated/file-072.ts
+        - packages/core/src/domain/generated/file-073.ts
+        - packages/core/src/domain/generated/file-074.ts
+        - packages/core/src/domain/generated/file-075.ts
+        - packages/core/src/domain/generated/file-076.ts
+        - packages/core/src/domain/generated/file-077.ts
+        - packages/core/src/domain/generated/file-078.ts
+        - packages/core/src/domain/generated/file-079.ts

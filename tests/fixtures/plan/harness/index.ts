@@ -13,11 +13,15 @@ import type {
   PlanArtifactRef,
   PlanDiffPort,
   PlanDiffRead,
+  PlanDocument,
   PlanReadPort,
   PlanValidateData,
   PlanYamlParser,
 } from "../../../../packages/core/src/contracts/index";
-import { validatePlan } from "../../../../packages/core/src/domain/plan-validate";
+import {
+  planDocumentFromValidateData,
+  validatePlan,
+} from "../../../../packages/core/src/domain/plan-validate";
 
 const PLAN_ROOT = join(import.meta.dir, "..");
 
@@ -190,3 +194,22 @@ export const validateMarkdownFixture = (
     },
     parseYaml: planYamlParser,
   });
+
+/** Validate a fixture and recover the declared document for downstream logic. */
+export const planDocumentFor = (workItemRef: string, relative: string): PlanDocument => {
+  const verdict = validateYamlFixture(workItemRef, relative);
+  const document = planDocumentFromValidateData(verdict);
+  if (document === undefined) {
+    throw new Error(`${relative} did not validate: ${JSON.stringify(verdict.errors)}`);
+  }
+  return document;
+};
+
+/** The committed actual-diff path list and its recorded base. */
+export const diffFixture = (
+  relative: string,
+): { readonly paths: readonly string[]; readonly against: string } => {
+  const paths = JSON.parse(fixture(`${relative}/paths.json`)) as string[];
+  const meta = JSON.parse(fixture(`${relative}/meta.json`)) as { readonly against: string };
+  return { paths, against: meta.against };
+};

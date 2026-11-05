@@ -1,0 +1,4 @@
+[
+  "packages/core/src/contracts/queue.ts",
+  "packages/cli/src/commands/plan.ts"
+]

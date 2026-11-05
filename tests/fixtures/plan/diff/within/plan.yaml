@@ -1,0 +1,17 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-308
+tier:
+  name: full
+phases:
+  - id: 1
+    title: Planning
+    kind: planning
+    scope:
+      files:
+        - packages/core/src/contracts/queue.ts
+  - id: 2
+    title: Delivery
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/plan-diff.ts

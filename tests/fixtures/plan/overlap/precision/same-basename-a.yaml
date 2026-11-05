@@ -1,0 +1,11 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-306
+tier:
+  name: full
+phases:
+  - id: 1
+    title: Phase 1
+    kind: planning
+    scope:
+      files:
+        - src/plan/index.ts
