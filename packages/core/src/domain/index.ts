@@ -6,6 +6,7 @@
 /** Placeholder marker for the pure domain tier. */
 export type DomainPlaceholder = { readonly __tier: "domain" };
 
+export { projectBrief, renderBriefHuman } from "./brief.js";
 export {
   boundCloseoutData,
   buildCloseoutPlan,
