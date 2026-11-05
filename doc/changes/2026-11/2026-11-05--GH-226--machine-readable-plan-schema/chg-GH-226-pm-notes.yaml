@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: "2026-11-05T23:10:00Z", completed: "2026-11-05T23:24:00Z" }
   review_fix: { started: "2026-11-05T23:30:00Z", completed: "2026-11-06T01:06:00Z", iterations: 2, last_status: "PASS" }
   quality_gates: { started: "2026-11-06T01:08:00Z", completed: "2026-11-06T00:12:00Z", iterations: 2, last_status: "PASS" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-11-06T00:15:00Z", completed: "2026-11-06T00:20:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "DoR gate READY (iteration 1, readiness-review/readiness-iter-1.md; 10/10 facets PASS, 0 critical, 0 major, 2 minor + 4 nits non-blocking). Minor finding 1 (spec NFR-2 says p95 < 500 ms; TC-DPLAN-026 asserts median) disposition: coder strengthens the performance case to report p95 alongside median during phase 4 delivery. Minor finding 2 (plan.artifact.missing pinned in plan task 1.3 but absent from spec DM-8 enumeration) disposition: doc-syncer reconciles the spec/error-identity enumeration at system_spec_update (phase 7). Nits picked up opportunistically."
@@ -55,6 +55,9 @@ decisions:
     date: "2026-11-06"
   - text: "Retro: base drift was not checked before the quality-gates phase; the gate caught it (by design — privacy-release compares changesets against origin/main-tools). Lesson: before quality_gates, refresh the base ref (git fetch origin main-tools) and rebase/merge if the base advanced; running the battery on a stale base wastes a full gate cycle (~4 min) plus a fixer loop. The resume-sync directive covered mid-delivery sync only at session start."
     type: "retro"
+    date: "2026-11-06"
+  - text: "DoD check PASS: (1) pm-notes phases 1-9 all completed with timestamps; (2) legacy plan flow — all tasks checked (46 original + remediation 8.1-8.6) with Execution Log rows carrying plan phase ids, commit hashes, and test results; (3) all 11 spec ACs verified non-vacuously by two review iterations, ticket ACs AC1-AC5 mapped (AC-F8-1, AC-F10-1/3, AC-F10-2, AC-F6-1, AC-F12-1); (4) current-truth docs reconciled with zero residual gaps (feature-plan-schema.md authored, registry/man pages shipped-status, corpus baseline enforced); (5) gates green at final HEAD 331dd83e (2607/0/4, lint 0 errors, distribution guard 81 docs, plugin-current); (6) changeset gh-226-plan-schema-minor.md present (TC-RELEASE-001 green); (7) pins DEC-3..6 honored, OQ-3/OQ-8 reviewer-confirmed; (8) no unresolved blockers or open questions; (9) seeded scenarios SC-M1-06/07 inherited and reconciled (TC-DPLAN-013/009). Change-scoped decisions live in the spec decision log; no system-wide decision record required (provisional-name governance deferred to M1 exit by registry convention)."
+    type: "info"
     date: "2026-11-06"
   - text: "Exit-code reconciliation: SC-M1-06 seed asserts exit 0 for a run-in-sequence overlap verdict, while commands/plan.md (contract page) pins exit 1 'a verdict, not a failure' (envelope example shows exitCode 1) and the shared refusal pin makes a negative verdict exit 1. Story refines to commands/plan.md semantics (exit 1 + verdict data). Empowered by milestones/README.md: contracts are proposals refined at story delivery; test scenarios are seeds the test plan 'inherits and reconciles'."
     date: "2026-11-05"
