@@ -16,6 +16,7 @@
     "src/contracts/envelope.ts",
     "src/contracts/error-table.ts",
     "src/contracts/index.ts",
+    "src/contracts/plan.ts",
     "src/contracts/pm-notes.ts",
     "src/contracts/ports.ts",
     "src/contracts/provider.ts",

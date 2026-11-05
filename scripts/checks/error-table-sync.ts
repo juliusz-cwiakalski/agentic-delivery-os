@@ -64,14 +64,14 @@ const FALLBACK_CODES = new Set(["fallback.invocation", "fallback.internal"]);
 // remains an exact declared code (not a pattern widening), and every other
 // failure identity keeps the three-segment minimum.
 const RESERVED_TWO_SEGMENT_CODES = new Set(["provider.outage"]);
-const CODE_PATTERN = /\b[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*){2,}\b/g;
+const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const FALLBACK_PATTERN = /\bfallback\.[a-z][a-z0-9]*\b/g;
 // GH-183: `provider.payload.invalid` is a distinct adapter-local identity for a
 // malformed provider payload. It is intentionally not an error-table row (an
 // explicit not-found has its own `closeout` identity), so the scan recognizes it
 // without demanding a documented row.
 const ADAPTER_LOCAL_CODES = new Set(["provider.payload.invalid"]);
-const CODE_FORMAT = /^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){2,}$/;
+const CODE_FORMAT = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*){2,}$/;
 const TABLE_ANNOUNCEMENT_VOCABULARY = "packages/core/src/contracts/provider.ts";
 
 type Reference = { readonly code: string; readonly line: number; readonly recognized: boolean };

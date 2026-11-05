@@ -19,6 +19,7 @@ export const DOMAIN_KINDS = [
   "verify",
   "db",
   "closeout",
+  "plan",
 ] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -356,6 +357,17 @@ export const ERROR_TABLE = [
     summary: "The pm-notes target is missing.",
   },
   {
+    code: "lint.document.unreadable",
+    domainKind: "lint",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Restore the named document's readability and encoding, then re-run lint; the document was not evaluated.",
+    projectionClass: "platform-provider",
+    summary: "A lint target document could not be read or decoded.",
+  },
+  {
     code: "verify.ledger.incomplete",
     domainKind: "verify",
     category: "user",
@@ -471,5 +483,60 @@ export const ERROR_TABLE = [
       "Restore access to the named gate-evidence source and re-run the gates; the gates were not fully evaluated.",
     projectionClass: "platform-provider",
     summary: "Merge-gate evidence could not be read.",
+  },
+  {
+    code: "plan.schema.invalid",
+    domainKind: "plan",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Correct the named plan phase and field to match the declared plan schema, then re-run `plan validate`.",
+    projectionClass: "user-validation",
+    summary: "The plan document does not conform to the plan schema.",
+  },
+  {
+    code: "plan.scope.undeclared-paths",
+    domainKind: "plan",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare the named path in a phase scope or revert the out-of-scope change, then re-run `plan diff`.",
+    projectionClass: "user-validation",
+    summary: "Actual changes fall outside the declared plan scope.",
+  },
+  {
+    code: "plan.tier.unknown",
+    domainKind: "plan",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare a known ceremony tier or extend the known-tier vocabulary, then re-run `plan validate`.",
+    projectionClass: "user-validation",
+    summary: "The plan declares an unknown ceremony tier.",
+  },
+  {
+    code: "plan.format.legacy-markdown",
+    domainKind: "plan",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Rewrite the plan as `chg-<ref>-plan.yaml` to make it schema-valid; legacy markdown stays readable during the transition.",
+    projectionClass: "user-validation",
+    summary: "The plan is a legacy markdown document, not a schema-valid YAML plan.",
+  },
+  {
+    code: "plan.artifact.missing",
+    domainKind: "plan",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Author `chg-<ref>-plan.yaml` (or a legacy `chg-<ref>-plan.md`) for the named change ref, then re-run the command.",
+    projectionClass: "user-validation",
+    summary: "No plan artifact exists for the change ref.",
   },
 ] as const satisfies readonly ErrorTableEntry[];
