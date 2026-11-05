@@ -1,0 +1,11 @@
+example-product brief  owner-placeholder/project-placeholder
+ready-to-merge  observed  none approved
+blocker-questions  typed-questions (M1-S16)  not-delivered
+owner-gate-ages  observed  GH-100 1d, GH-101 1d, GH-102 1d, GH-103 1d
+gate-sla-states  M1-S5  not-delivered
+tracker  observed  total 32 (8 unknown) +16 more
+changes-and-prs  observed  total 8 (0 unknown)
+ci  observed  total 8 (0 unknown)
+lanes-or-queue  not-delivered (engine-not-delivered)  lane-queue-engine (M1-S17)
+providers  observed  total 16 (0 unknown)
+parked-work  observed  total 8 (0 unknown)

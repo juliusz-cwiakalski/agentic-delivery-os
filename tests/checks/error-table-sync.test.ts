@@ -1283,3 +1283,26 @@ describe("TC-WATCHDOG-004 documented rows and corpora stay in two-way sync", () 
     );
   });
 });
+
+describe("TC-BRIEF-013 brief rows stay absent and the sync check stays green", () => {
+  test("the live tree is bidirectionally consistent and has no brief/status identity", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    expect(result.counts.sourceEntries).toBeGreaterThan(0);
+    expect(ERROR_TABLE.some((entry) => entry.code.startsWith("brief."))).toBe(false);
+    expect(ERROR_TABLE.some((entry) => entry.code.startsWith("status."))).toBe(false);
+  });
+
+  test("a documented-only brief row fails naming the offender", async () => {
+    const root = makeTempRoot();
+    editFile(
+      root,
+      DOC,
+      insertDocRow(
+        "| brief.phantom.row | brief | platform | false | unknown | Retry. | platform-provider | Phantom. |",
+      ),
+    );
+    const text = messages((await runSyncCheck({ root })).failures);
+    expect(text).toContain("documented code brief.phantom.row has no source entry");
+  });
+});
