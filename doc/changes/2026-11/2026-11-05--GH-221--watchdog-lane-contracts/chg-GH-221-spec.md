@@ -369,6 +369,10 @@ Operators gain a stable refusal/restore evidence trail for lane incidents, repla
 | Progressing (signal-corroborated; reachable from M1-S15) | `progressing` | `0` | — |
 | No signal sources | — (none emitted) | `2` | `watchdog.signals-absent` |
 
+> Refusal rows show the conceptual verdict `refused`; on the wire the machine
+> representation is the refusal identity carried on a failure envelope (no
+> `data.verdict`), per the exclusive `data`/`error` contract (GAP-T5, PIN-1).
+
 ## 25. DOCUMENT HISTORY
 
 | Version | Date | Author | Changes |
