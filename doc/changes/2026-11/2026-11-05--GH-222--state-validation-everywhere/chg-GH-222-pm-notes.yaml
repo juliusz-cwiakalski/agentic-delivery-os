@@ -22,13 +22,14 @@ phases:
         result: "v1.1 amendment: OQ-1 resolved library-only (DEC-4 confirmed); OQ-2 resolved terminal-tail-only (DEC-2 amended, AC-F3-3 added); OQ-3 pinned in-spec as DEC-5 — new rows state.storage.exhausted + state.store.unknown, refined state.write.failed remediation, salvage/quarantine failures reuse existing rows (7 -> 9 code rows, bidirectional sync binding)"
         date: "2026-11-05"
       - iteration: 3
-        result: "REOPENED by DoR gate (iter-1 NOT_READY): v1.2 surgical amendment required — declare the state.store.torn text-only remediation refinement alongside state.write.failed (§7.1/§8.5 consistency with §22); extend DEC-5 to four dispositions (or add DEC-6)"
+        result: "v1.2 amendment (DoR remediation): §7.1/§8.5/§16/§22 now declare BOTH text-only remediation refinements (state.write.failed + state.store.torn); DEC-5 extended to all four dispositions with the guardrail that the salvage pointer lives in guidance text, not read evidence; OQ table all-Resolved"
         date: "2026-11-05"
+    completed: "2026-11-05T20:45:00Z"
   test_planning: { started: "2026-11-05T20:12:00Z", completed: "2026-11-05T20:18:00Z" }
   delivery_planning: { started: "2026-11-05T20:22:00Z", completed: "2026-11-05T20:28:00Z" }
   dor_check:
     started: "2026-11-05T20:32:00Z"
-    completed: null
+    completed: "2026-11-05T20:52:00Z"
     iterations:
       - iteration: 1
         verdict: NOT_READY
@@ -36,6 +37,12 @@ phases:
         facets: "8/10 PASS; cross_artifact_consistency + decision_capture FAIL"
         findings: "[major] spec §7.1/§8.5 declare state.write.failed as the only refined remediation row while §22/TC-GH222-001/TC-GH222-010/plan-1.3 also require a text-only refinement of state.store.torn guidance; [major, same root] DEC-5 records three dispositions but the change makes four; [minor] plan task 1.7 under-describes three toHaveLength(7) sites in tests/structure/error-table.test.ts; [nit] plan wording on torn remediation."
         reopen: specification
+        date: "2026-11-05"
+      - iteration: 2
+        verdict: READY
+        artifact: readiness-review/readiness-iter-2.md
+        facets: "10/10 PASS; both blocking findings resolved; no new inconsistencies; non-blocking stale-summary minors in untouched plan/test-plan carried as adjudicated context"
+        residual_risks: "mechanism-first adoption bet (M1-S8/M2-S3); m1 pack state.store.unknown-schema naming drift (superseded by DEC-5); AC-F5-1 ledger-first reading; OQ-T2/T3 execution-log recording; SQLite skips-as-skips; stale plan/test-plan frontmatter summaries treated as non-operative"
         date: "2026-11-05"
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
