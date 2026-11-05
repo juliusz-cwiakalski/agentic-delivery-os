@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-RESULT-CONTRACT
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-01
+last_updated: 2026-11-05
 owners: ["engineering"]
 service: delivery-os
-summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity including the five provider-engine rows, the lint rows for pm-notes conformance, the three verify delivery-verdict and gates rows, the four db session-administration rows, and the four closeout rows, the domain-kind to app-error-code to projection classification chain with exact-code provider, db, and closeout classification, the adapter-local provider.payload.invalid projection, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
+summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity including the five provider-engine rows, the lint rows for pm-notes conformance, the three verify delivery-verdict and gates rows, the four db session-administration rows, the four closeout rows, and the three watchdog lane-safety rows, the domain-kind to app-error-code to projection classification chain with exact-code provider, db, and closeout classification, the adapter-local provider.payload.invalid projection, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
 links:
-  related_changes: ["GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-180", "GH-183", "GH-178"]
+  related_changes: ["GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-180", "GH-183", "GH-178", "GH-221"]
   related_decisions: ["ADR-0003", "TDR-0005", "TDR-0008"]
 ---
 
@@ -301,6 +301,7 @@ The result surface itself adds no runtime dependency or new CI job. Configuratio
 | schemaVersion | The brand-neutral stable envelope schema identifier; `delivery.result.v1` at v1. |
 | runId | Opaque per-invocation correlation identifier generated at the runtime-aware edge. |
 
-See also: [glossary](../../overview/glossary.md) for repository-wide terms, [feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md), [feature-branding-seam.md](feature-branding-seam.md), [feature-session-database-admin.md](feature-session-database-admin.md), [feature-closeout.md](feature-closeout.md), [feature-verify-gates.md](feature-verify-gates.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+See also: [glossary](../../overview/glossary.md) for repository-wide terms, [feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md), [feature-branding-seam.md](feature-branding-seam.md), [feature-session-database-admin.md](feature-session-database-admin.md), [feature-closeout.md](feature-closeout.md), [feature-watchdog-lane-contracts.md](feature-watchdog-lane-contracts.md), [feature-verify-gates.md](feature-verify-gates.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 ## Related
 - [Verify Gates](feature-verify-gates.md) adds the `verify.gates.failed` and `verify.gates.unavailable` identities.
+- [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md) adds the `watchdog` kind with `watchdog.checkout-dirty`, `watchdog.checkout-non-base`, and `watchdog.signals-absent`.
