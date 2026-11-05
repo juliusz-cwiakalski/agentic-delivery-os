@@ -9,6 +9,7 @@
     "src/config/resolver.ts",
     "src/config/schema.ts",
     "src/contracts/adapter-capabilities.ts",
+    "src/contracts/brief.ts",
     "src/contracts/closeout.ts",
     "src/contracts/config.ts",
     "src/contracts/credentials.ts",
@@ -29,6 +30,7 @@
     "src/contracts/verify-gates.ts",
     "src/contracts/watchdog.ts",
     "src/domain/ci-result.ts",
+    "src/domain/brief.ts",
     "src/domain/closeout.ts",
     "src/domain/index.ts",
     "src/domain/plan-diff.ts",
@@ -107,6 +109,7 @@
   ],
   "cli": [
     "src/classify.ts",
+    "src/commands/brief.ts",
     "src/commands/closeout.ts",
     "src/commands/config.ts",
     "src/commands/db.ts",

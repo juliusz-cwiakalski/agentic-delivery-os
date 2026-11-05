@@ -78,7 +78,31 @@ export {
   type CarrierSelectionInput,
   type DeclaredCarrierWrite,
 } from "./adapter-capabilities.js";
-
+// The `delivery.brief.v1` vocabulary (GH-228 F-2..F-4, DM-1..DM-5): constants
+// and types only; the pure projection lives in the core domain tier.
+export {
+  BRIEF_ANCHOR_GROUPS,
+  BRIEF_PLACEHOLDER_CATALOG,
+  BRIEF_PLACEHOLDER_SURFACE_IDS,
+  BRIEF_PLACEHOLDER_TITLES,
+  BRIEF_SCHEMA_VERSION,
+  BRIEF_SURFACE_ORDER,
+  type BriefAction,
+  type BriefActionEvidence,
+  type BriefAnchorGroup,
+  type BriefAnchorGroupId,
+  type BriefOwnerGateEvidence,
+  type BriefPayload,
+  type BriefPlaceholderEntry,
+  type BriefPlaceholderId,
+  type BriefPlaceholderSurfaceId,
+  type BriefPullRequestEvidence,
+  type BriefSurface,
+  type BriefSurfaceId,
+  type BriefSurfaceState,
+  type BriefTruncation,
+  type BriefTruncationTarget,
+} from "./brief.js";
 // The `delivery.closeout.v1` vocabulary (GH-183 F-1..F-15): constants and
 // types only; the pure planner lives in the core domain tier.
 export {
