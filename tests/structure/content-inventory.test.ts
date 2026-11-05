@@ -191,6 +191,16 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/domain/ci-result.ts": ["classifyPipelineRuns"],
   "core/src/domain/queue-ready.ts": ["evaluateQueueReady", "renderQueueReadyHuman"],
+  "core/src/domain/watchdog.ts": [
+    "buildWatchdogTeardownData",
+    "buildWatchdogVerdictData",
+    "classifyWatchdogLiveness",
+    "evaluateWatchdogPreflight",
+    "isLaneWorkspacePath",
+    "planWatchdogRestoration",
+    "readWatchdogSignals",
+    "watchdogPreservedRefName",
+  ],
   "core/src/domain/verify-gates.ts": [
     "evaluateVerifyGates",
     "isFullHexSha",

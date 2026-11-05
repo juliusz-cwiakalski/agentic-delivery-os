@@ -84,3 +84,18 @@ export {
   type VerifyGatesWorkItem,
   type VerifyGatesWorkflowFacts,
 } from "./verify-gates.js";
+export {
+  buildWatchdogTeardownData,
+  buildWatchdogVerdictData,
+  classifyWatchdogLiveness,
+  evaluateWatchdogPreflight,
+  isLaneWorkspacePath,
+  planWatchdogRestoration,
+  readWatchdogSignals,
+  watchdogPreservedRefName,
+  type WatchdogLivenessEvaluation,
+  type WatchdogPlannedAction,
+  type WatchdogPreflightBuildInput,
+  type WatchdogPreflightEvaluation,
+  type WatchdogRestorationPlan,
+} from "./watchdog.js";

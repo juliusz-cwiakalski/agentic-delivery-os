@@ -37,6 +37,7 @@
     "src/domain/status.ts",
     "src/domain/verify-change.ts",
     "src/domain/verify-gates.ts",
+    "src/domain/watchdog.ts",
     "src/index.ts",
     "src/provider/announcements.ts",
     "src/provider/chain.ts",
