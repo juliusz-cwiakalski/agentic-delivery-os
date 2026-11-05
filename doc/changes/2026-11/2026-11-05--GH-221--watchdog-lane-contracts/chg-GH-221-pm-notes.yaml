@@ -13,7 +13,7 @@ phases:
   dor_check: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
   delivery: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
   system_spec_update: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -64,4 +64,10 @@ notes:
     date: "2026-11-05"
   - text: "Environmental quirk: local full pnpm check in this worktree needs TMPDIR=$PWD/tmp/tmpdir because tests/checks/ci-baseline-parity.test.ts uses git clone --local and the host /tmp is on another filesystem. Quality-gates phase must pass this env var."
     type: "info"
+    date: "2026-11-05"
+  - text: "Review PASS on iteration 1 (0 blocker / 0 major / 4 minor / 3 notes; verdict artifact review/review-iter-1.md; plan phase 8 stays skipped). ACs 14/14 verified with evidence; binding decisions honored; M1-S1 boundary confirmed; error-table sync exact. Minor findings F-2 (porcelain -z parsing), F-3 (N+1 memory scan), F-4 (partial-restoration report on mid-plan failure) and notes F-5..F-7 are non-blocking quality debts for the human PR gate / M1-S15-adjacent work — no follow-up tickets created per the no-autonomous-ticket-creation policy."
+    type: "info"
+    date: "2026-11-05"
+  - text: "F-1 resolution (reviewer-sanctioned option 'keep it and amend the record'): the code-grammar widening [a-z][a-z0-9]* -> [a-z][a-z0-9-]* in error-table-sync.ts CODE_PATTERN / error-table.test.ts CODE_FORMAT is DECLARED as an intentional grammar generalization; the earlier deviation wording 'no general loosening' referred only to refusing arbitrary unvalidated two-segment codes (exact-pinned RESERVED_TWO_SEGMENT_CODES remains the only two-segment admission path). Corrected here rather than reverting functionally identical code."
+    type: "decision"
     date: "2026-11-05"
