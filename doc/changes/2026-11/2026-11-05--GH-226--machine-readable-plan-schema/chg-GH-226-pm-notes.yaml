@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-05T21:28:00Z", completed: "2026-11-05T21:37:00Z" }
   delivery_planning: { started: "2026-11-05T21:39:00Z", completed: "2026-11-05T21:50:00Z" }
   dor_check: { started: "2026-11-05T21:52:00Z", completed: "2026-11-05T22:01:00Z" }
-  delivery: { started: "2026-11-05T22:04:00Z", completed: null }
+  delivery: { started: "2026-11-05T22:04:00Z", completed: "2026-11-05T23:05:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -15,6 +15,16 @@ phases:
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "DoR gate READY (iteration 1, readiness-review/readiness-iter-1.md; 10/10 facets PASS, 0 critical, 0 major, 2 minor + 4 nits non-blocking). Minor finding 1 (spec NFR-2 says p95 < 500 ms; TC-DPLAN-026 asserts median) disposition: coder strengthens the performance case to report p95 alongside median during phase 4 delivery. Minor finding 2 (plan.artifact.missing pinned in plan task 1.3 but absent from spec DM-8 enumeration) disposition: doc-syncer reconciles the spec/error-identity enumeration at system_spec_update (phase 7). Nits picked up opportunistically."
+    type: "info"
+    date: "2026-11-05"
+  - text: "github-mcp server lacks write auth (update_issue failed: Requires authentication) while reads work; gh CLI authenticated as owner with repo scope. Sanctioned CLI fallback per pr-instructions used for tracker writes (labels). Not a blocker; PR creation will use MCP-first with CLI fallback, or CLI directly."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Delivery complete: 7 phase commits (90c10ae9, 9546258d, 4c8cc233, a5b028ab, e434f3ff, 474bada9, f09be877), 46/46 plan tasks checked, pnpm check green (2511 pass/4 skip/0 fail, 240 files), doc-distribution guard green (81 docs), .ados-claude plugin current. Performance evidence: median 6.41 ms / p95 11.25 ms for 30-phase plan (well under NFR-2 p95 < 500 ms). OQ-3/OQ-8 implemented as review-routed working defaults (legacy exit 1; opaque weight echo). Coder-flagged risk carried to review: consumer prompts outside phase-6 scope (reviewer, doc-syncer, test-plan-writer, pm, review/review-deep/sync-docs, write-test-plan) still reference chg-<ref>-plan.md; legacy .md plans remain valid so readers of old changes are fine, but prompts misdirect on new changes with YAML plans — reviewer to adjudicate fix-here vs follow-up."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Plain pnpm check failed only in tests/checks/ci-baseline-parity.test.ts because system /tmp is a different filesystem (git clone --local hardlink check); passes with repo-local TMPDIR. Environmental, not a code defect — worth a future note in testing-strategy docs if it recurs."
+    type: "retro"
     date: "2026-11-05"
   - text: "Exit-code reconciliation: SC-M1-06 seed asserts exit 0 for a run-in-sequence overlap verdict, while commands/plan.md (contract page) pins exit 1 'a verdict, not a failure' (envelope example shows exitCode 1) and the shared refusal pin makes a negative verdict exit 1. Story refines to commands/plan.md semantics (exit 1 + verdict data). Empowered by milestones/README.md: contracts are proposals refined at story delivery; test scenarios are seeds the test plan 'inherits and reconciles'."
     date: "2026-11-05"
