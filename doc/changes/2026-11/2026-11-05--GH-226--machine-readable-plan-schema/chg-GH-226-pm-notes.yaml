@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-05T21:52:00Z", completed: "2026-11-05T22:01:00Z" }
   delivery: { started: "2026-11-05T22:04:00Z", completed: "2026-11-05T23:05:00Z" }
   system_spec_update: { started: "2026-11-05T23:10:00Z", completed: "2026-11-05T23:24:00Z" }
-  review_fix: { started: "2026-11-05T23:30:00Z", completed: null, iterations: 1, last_status: "FAIL" }
+  review_fix: { started: "2026-11-05T23:30:00Z", completed: null, iterations: 1, last_status: "FAIL", remediation: "iteration 1 fixes applied (F-1..F-6), awaiting re-review" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -39,6 +39,15 @@ decisions:
     type: "info"
     date: "2026-11-05"
   - text: "Retro: phase-6 writer flip scoped only run-plan/coder as consuming prompts; the flip actually has 11+ consumer prompts (reviewer, pm, readiness-reviewer, doc-syncer, test-plan-writer, review, review-deep, sync-docs, write-test-plan, run-plan, coder). Root cause: consumers were enumerated from memory, not mechanically. Lesson for format flips: grep the artifact filename across .opencode/ during planning and enumerate every hit in the plan; spec F-13 said 'consuming prompts' but the plan narrowed it. Cost: one review iteration + toolsmith remediation (~1 loop)."
+    type: "retro"
+    date: "2026-11-05"
+  - text: "Remediation iteration 1 executed: F-1+F-2 via @toolsmith (commit 83b25ca6: 12 prompt sources + DoD guide + 11 regenerated plugin files, plugin-current verified); F-3/F-4/F-6 via @coder (plan/test-plan hygiene + same-static-prefix precision fixture; 88 plan behaviour tests green); F-5/F-6-docs + structure-gate fix via @doc-syncer re-run (feature spec corrected + forbidden-literals registry row; structure/boundaries 525 pass 0 fail). F-7/F-8 (info) deferred as follow-up polish per reviewer."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Empirical correction recorded: review F-5 premise (unconfigured readDiff -> exit 2) was wrong; shipped composition projects exit 1 via input.value.rejected -> user-validation. Doc-syncer verified empirically, feature spec documents exit 1, plan task 8.4 carries a bracketed correction. Review artifact left as the reviewer's record; the correction lives in the plan execution log and pm-notes."
+    type: "decision"
+    date: "2026-11-05"
+  - text: "Retro: the doc-sync commit (91c514c0) shipped without running the full structure/boundaries battery; the corpusBaseline registry requires new user-facing docs to be registered, and the gap surfaced only when the coder ran tests/structure during remediation. Lesson: doc-only commits that ADD doc files must run tests/structure (or the full pnpm check) before the phase checkpoint, same as code commits. Cost: one extra doc-sync loop."
     type: "retro"
     date: "2026-11-05"
   - text: "Exit-code reconciliation: SC-M1-06 seed asserts exit 0 for a run-in-sequence overlap verdict, while commands/plan.md (contract page) pins exit 1 'a verdict, not a failure' (envelope example shows exitCode 1) and the shared refusal pin makes a negative verdict exit 1. Story refines to commands/plan.md semantics (exit 1 + verdict data). Empowered by milestones/README.md: contracts are proposals refined at story delivery; test scenarios are seeds the test plan 'inherits and reconciles'."

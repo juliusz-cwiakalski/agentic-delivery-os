@@ -59,33 +59,33 @@ Deferred or untestable in this change (explicit, not silent):
 
 | Capability | Acceptance criterion | Scenario(s) | Status |
 |---|---|---|---|
-| F-1 versioned plan document | — (schema version surface) | TC-DPLAN-001, TC-DPLAN-003 | Planned |
-| F-2 per-phase declared scope | AC-F10-1 (precision), AC-F9-1 (classification) | TC-DPLAN-015, TC-DPLAN-017, TC-DPLAN-019 | Planned |
-| F-3 done-artifacts | AC-F3-1 | TC-DPLAN-007, TC-DPLAN-003 | Planned |
-| F-4 leases and weight class | AC-F7-1 | TC-DPLAN-008 | Planned |
-| F-5 declared interactions | AC-F10-3 | TC-DPLAN-013, TC-DPLAN-016 | Planned |
-| F-6 tier/variant as data | AC-F6-1 | TC-DPLAN-004, TC-DPLAN-005, TC-DPLAN-006 | Planned |
-| F-7 lease classes (planning lease-free / delivery lease-taking) | AC-F7-1 | TC-DPLAN-008 | Planned |
-| F-8 `plan validate` | AC-F8-1 | TC-DPLAN-001, TC-DPLAN-002, TC-DPLAN-003 | Planned |
-| F-9 `plan diff` | AC-F9-1 | TC-DPLAN-017, TC-DPLAN-018, TC-DPLAN-019 | Planned |
-| F-10 `plan overlap` | AC-F10-1, AC-F10-2, AC-F10-3 | TC-DPLAN-013, TC-DPLAN-014, TC-DPLAN-015, TC-DPLAN-016 | Planned |
-| F-11 plan lint target | AC-F11-1 | TC-DPLAN-020, TC-DPLAN-021 | Planned |
-| F-12 ready-for-development gate | AC-F12-1 | TC-DPLAN-009, TC-DPLAN-010 | Planned |
-| F-13 legacy migration path | AC-F13-1 | TC-DPLAN-011, TC-DPLAN-012, TC-DPLAN-029, TC-DPLAN-030 | Planned |
+| F-1 versioned plan document | — (schema version surface) | TC-DPLAN-001, TC-DPLAN-003 | Implemented |
+| F-2 per-phase declared scope | AC-F10-1 (precision), AC-F9-1 (classification) | TC-DPLAN-015, TC-DPLAN-017, TC-DPLAN-019 | Implemented |
+| F-3 done-artifacts | AC-F3-1 | TC-DPLAN-007, TC-DPLAN-003 | Implemented |
+| F-4 leases and weight class | AC-F7-1 | TC-DPLAN-008 | Implemented |
+| F-5 declared interactions | AC-F10-3 | TC-DPLAN-013, TC-DPLAN-016 | Implemented |
+| F-6 tier/variant as data | AC-F6-1 | TC-DPLAN-004, TC-DPLAN-005, TC-DPLAN-006 | Implemented |
+| F-7 lease classes (planning lease-free / delivery lease-taking) | AC-F7-1 | TC-DPLAN-008 | Implemented |
+| F-8 `plan validate` | AC-F8-1 | TC-DPLAN-001, TC-DPLAN-002, TC-DPLAN-003 | Implemented |
+| F-9 `plan diff` | AC-F9-1 | TC-DPLAN-017, TC-DPLAN-018, TC-DPLAN-019 | Implemented |
+| F-10 `plan overlap` | AC-F10-1, AC-F10-2, AC-F10-3 | TC-DPLAN-013, TC-DPLAN-014, TC-DPLAN-015, TC-DPLAN-016 | Implemented |
+| F-11 plan lint target | AC-F11-1 | TC-DPLAN-020, TC-DPLAN-021 | Implemented |
+| F-12 ready-for-development gate | AC-F12-1 | TC-DPLAN-009, TC-DPLAN-010 | Implemented |
+| F-13 legacy migration path | AC-F13-1 | TC-DPLAN-011, TC-DPLAN-012, TC-DPLAN-029, TC-DPLAN-030 | Implemented |
 
 | Acceptance criterion | Description (short) | Scenario(s) | Status |
 |---|---|---|---|
-| AC-F3-1 | Done-artifacts echoed per delivery phase | TC-DPLAN-007 | Planned |
-| AC-F6-1 | Tier echoed with no built-in default; unknown tier rejected | TC-DPLAN-004, TC-DPLAN-005, TC-DPLAN-006 | Planned |
-| AC-F7-1 | Planning lease-free, delivery lease-taking; leases and weight echoed | TC-DPLAN-008 | Planned |
-| AC-F8-1 | Invalid schema rejected with `plan.schema.invalid` naming phase and field | TC-DPLAN-002, TC-DPLAN-003 | Planned |
-| AC-F9-1 | Diff classifies `within` / `outside-declared` / `undeclared-missing` under the classified scope code | TC-DPLAN-017, TC-DPLAN-019 | Planned |
-| AC-F10-1 | Sequence verdict, every overlapping path named, exit 1 with verdict data | TC-DPLAN-013, TC-DPLAN-015 | Planned |
-| AC-F10-2 | Parallel verdict, empty overlapping list, exit 0 | TC-DPLAN-014 | Planned |
-| AC-F10-3 | Producer-first ordering with shared-contract reason | TC-DPLAN-013, TC-DPLAN-016 | Planned |
-| AC-F11-1 | Lint plan non-conformant with classified errors + location, exit 1; conformant exit 0 | TC-DPLAN-020, TC-DPLAN-021 | Planned |
-| AC-F12-1 | Unvalidatable plan refused: `readyForDevelopment=false`, classified error naming phase and field, exit 1 | TC-DPLAN-009, TC-DPLAN-010 | Planned |
-| AC-F13-1 | Legacy markdown answered with classified legacy-format verdict, no crash, never silently schema-valid | TC-DPLAN-011, TC-DPLAN-012 | Planned |
+| AC-F3-1 | Done-artifacts echoed per delivery phase | TC-DPLAN-007 | Implemented |
+| AC-F6-1 | Tier echoed with no built-in default; unknown tier rejected | TC-DPLAN-004, TC-DPLAN-005, TC-DPLAN-006 | Implemented |
+| AC-F7-1 | Planning lease-free, delivery lease-taking; leases and weight echoed | TC-DPLAN-008 | Implemented |
+| AC-F8-1 | Invalid schema rejected with `plan.schema.invalid` naming phase and field | TC-DPLAN-002, TC-DPLAN-003 | Implemented |
+| AC-F9-1 | Diff classifies `within` / `outside-declared` / `undeclared-missing` under the classified scope code | TC-DPLAN-017, TC-DPLAN-019 | Implemented |
+| AC-F10-1 | Sequence verdict, every overlapping path named, exit 1 with verdict data | TC-DPLAN-013, TC-DPLAN-015 | Implemented |
+| AC-F10-2 | Parallel verdict, empty overlapping list, exit 0 | TC-DPLAN-014 | Implemented |
+| AC-F10-3 | Producer-first ordering with shared-contract reason | TC-DPLAN-013, TC-DPLAN-016 | Implemented |
+| AC-F11-1 | Lint plan non-conformant with classified errors + location, exit 1; conformant exit 0 | TC-DPLAN-020, TC-DPLAN-021 | Implemented |
+| AC-F12-1 | Unvalidatable plan refused: `readyForDevelopment=false`, classified error naming phase and field, exit 1 | TC-DPLAN-009, TC-DPLAN-010 | Implemented |
+| AC-F13-1 | Legacy markdown answered with classified legacy-format verdict, no crash, never silently schema-valid | TC-DPLAN-011, TC-DPLAN-012 | Implemented |
 
 **Seeded scenario traceability and reconciliation** (source: `doc/planning/oss-tooling/milestones/m1/test-scenarios.md`, coverage map row M1-S13 = SC-M1-06..07):
 
@@ -101,31 +101,31 @@ No HTTP endpoints (spec §8.1) and no events (spec §8.2). The command-line surf
 
 | Surface / element | Scenario(s) | Status |
 |---|---|---|
-| `<binary> plan validate <ref>` — verdict, `perPhase`, `readyForDevelopment`, exit 0/1 | TC-DPLAN-001, TC-DPLAN-002, TC-DPLAN-009, TC-DPLAN-022 | Planned |
-| `<binary> plan diff <ref> [--against <base>]` — per-path table, exit 0/1 | TC-DPLAN-017, TC-DPLAN-018, TC-DPLAN-019, TC-DPLAN-022 | Planned |
-| `<binary> plan overlap <refA> <refB>` — verdict, `overlappingPaths`, `ordering`, `reason`, exit 0/1 | TC-DPLAN-013, TC-DPLAN-014, TC-DPLAN-015, TC-DPLAN-016, TC-DPLAN-022 | Planned |
-| `<binary> lint plan <ref>` — `documents[]` with verdict, errors, location; exit 0/1/2 | TC-DPLAN-020, TC-DPLAN-021 | Planned |
-| Text-mode keys (`verdict=`, `overlapping=`, `reason=`) | TC-DPLAN-013, TC-DPLAN-017, TC-DPLAN-022 | Planned |
-| DM-1 delivery plan document (versioned YAML, `chg-<ref>-plan.yaml`) | TC-DPLAN-001, TC-DPLAN-003, TC-DPLAN-010, TC-DPLAN-011, TC-DPLAN-030 | Planned |
-| DM-2 phase scope declaration with package/folder wildcards | TC-DPLAN-015, TC-DPLAN-019 | Planned |
-| DM-3 done-artifact typed slots | TC-DPLAN-007, TC-DPLAN-003 | Planned |
-| DM-4 lease and weight declaration | TC-DPLAN-008 | Planned |
-| DM-5 interaction declaration (producer/consumer) | TC-DPLAN-013, TC-DPLAN-016 | Planned |
-| DM-6 tier/variant declaration (phase sets, escalation triggers) | TC-DPLAN-004, TC-DPLAN-006 | Planned |
-| DM-7 verdict payloads (envelope `data`) | TC-DPLAN-001, TC-DPLAN-013, TC-DPLAN-017, TC-DPLAN-022, TC-DPLAN-025 | Planned |
-| DM-8 additive `plan.*` identities | TC-DPLAN-002, TC-DPLAN-003, TC-DPLAN-005, TC-DPLAN-011, TC-DPLAN-017, TC-DPLAN-028 | Planned |
+| `<binary> plan validate <ref>` — verdict, `perPhase`, `readyForDevelopment`, exit 0/1 | TC-DPLAN-001, TC-DPLAN-002, TC-DPLAN-009, TC-DPLAN-022 | Implemented |
+| `<binary> plan diff <ref> [--against <base>]` — per-path table, exit 0/1 | TC-DPLAN-017, TC-DPLAN-018, TC-DPLAN-019, TC-DPLAN-022 | Implemented |
+| `<binary> plan overlap <refA> <refB>` — verdict, `overlappingPaths`, `ordering`, `reason`, exit 0/1 | TC-DPLAN-013, TC-DPLAN-014, TC-DPLAN-015, TC-DPLAN-016, TC-DPLAN-022 | Implemented |
+| `<binary> lint plan <ref>` — `documents[]` with verdict, errors, location; exit 0/1/2 | TC-DPLAN-020, TC-DPLAN-021 | Implemented |
+| Text-mode keys (`verdict=`, `overlapping=`, `reason=`) | TC-DPLAN-013, TC-DPLAN-017, TC-DPLAN-022 | Implemented |
+| DM-1 delivery plan document (versioned YAML, `chg-<ref>-plan.yaml`) | TC-DPLAN-001, TC-DPLAN-003, TC-DPLAN-010, TC-DPLAN-011, TC-DPLAN-030 | Implemented |
+| DM-2 phase scope declaration with package/folder wildcards | TC-DPLAN-015, TC-DPLAN-019 | Implemented |
+| DM-3 done-artifact typed slots | TC-DPLAN-007, TC-DPLAN-003 | Implemented |
+| DM-4 lease and weight declaration | TC-DPLAN-008 | Implemented |
+| DM-5 interaction declaration (producer/consumer) | TC-DPLAN-013, TC-DPLAN-016 | Implemented |
+| DM-6 tier/variant declaration (phase sets, escalation triggers) | TC-DPLAN-004, TC-DPLAN-006 | Implemented |
+| DM-7 verdict payloads (envelope `data`) | TC-DPLAN-001, TC-DPLAN-013, TC-DPLAN-017, TC-DPLAN-022, TC-DPLAN-025 | Implemented |
+| DM-8 additive `plan.*` identities | TC-DPLAN-002, TC-DPLAN-003, TC-DPLAN-005, TC-DPLAN-011, TC-DPLAN-017, TC-DPLAN-028 | Implemented |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
 | NFR | Scenario(s) | Status |
 |---|---|---|
-| NFR-1 determinism / byte-identical replay | TC-DPLAN-016, TC-DPLAN-024 | Planned |
-| NFR-2 no network/LLM, p95 < 500 ms for 30 phases | TC-DPLAN-023, TC-DPLAN-026 | Planned |
-| NFR-3 read-only posture (zero writes, fences, mutations, spawns, credential reads) | TC-DPLAN-023, TC-DPLAN-027 | Planned |
-| NFR-4 bounded output with deterministic truncation marker | TC-DPLAN-025 | Planned |
-| NFR-5 every rejection carries a `plan.*` code naming phase and field; no fallback classification | TC-DPLAN-003, TC-DPLAN-028 | Planned |
-| NFR-6 legacy availability across the transition window | TC-DPLAN-011, TC-DPLAN-012 | Planned |
-| NFR-7 purity boundaries (data + pure functions in core, I/O-free command definitions, adapter YAML precedent) | TC-DPLAN-027 | Planned |
+| NFR-1 determinism / byte-identical replay | TC-DPLAN-016, TC-DPLAN-024 | Implemented |
+| NFR-2 no network/LLM, p95 < 500 ms for 30 phases | TC-DPLAN-023, TC-DPLAN-026 | Implemented |
+| NFR-3 read-only posture (zero writes, fences, mutations, spawns, credential reads) | TC-DPLAN-023, TC-DPLAN-027 | Implemented |
+| NFR-4 bounded output with deterministic truncation marker | TC-DPLAN-025 | Implemented |
+| NFR-5 every rejection carries a `plan.*` code naming phase and field; no fallback classification | TC-DPLAN-003, TC-DPLAN-028 | Implemented |
+| NFR-6 legacy availability across the transition window | TC-DPLAN-011, TC-DPLAN-012 | Implemented |
+| NFR-7 purity boundaries (data + pure functions in core, I/O-free command definitions, adapter YAML precedent) | TC-DPLAN-027 | Implemented |
 
 ## 4. Test Types and Layers
 
@@ -712,7 +712,7 @@ Per `.ai/rules/testing-strategy.md`, `packages/**` changes map to `bun test test
 **Tags**: @backend, @api
 
 **Preconditions**:
-- Fixtures that produce each outcome class: valid (exit 0), invalid schema (exit 1), sequence verdict (exit 1), diff findings (exit 1), lint non-conformant (exit 1), lint unreadable (exit 2), and a deliberately malformed invocation (unknown flag / missing ref).
+- Fixtures that produce each outcome class: valid (exit 0), invalid schema (exit 1), sequence verdict (exit 1), diff findings (exit 1), lint non-conformant (exit 1), lint unreadable (exit 2), and a deliberately malformed invocation (unknown flag / missing ref), projected as exit 1 via `input.value.rejected` (user-validation).
 
 **Steps**:
 1. For each fixture, run the command with `--json` and parse the output as JSON.
@@ -808,12 +808,12 @@ Per `.ai/rules/testing-strategy.md`, `packages/**` changes map to `bun test test
 - A generated-but-committed 30-phase plan fixture (committed so the measurement is reproducible, not generated at test time).
 
 **Steps**:
-1. Warm up once, then take several samples of validation latency; record the median with Bun version and platform, following the queue-ready performance precedent.
-2. Assert the median is below 500 ms.
+1. Warm up once, then take several samples of validation latency; record the median and p95 with Bun version and platform, following the queue-ready performance precedent.
+2. Assert both the median and p95 are below 500 ms (NFR-2 pins p95; the test hard-asserts both statistics).
 3. Assert the read count for the invocation is exactly one plan read and no other port is touched (proving the bound is local reads, not cached network).
 
 **Expected Outcome**:
-- Median validation latency < 500 ms for a 30-phase plan on CI-class hardware, with the measurement context logged in the run output.
+- Median and p95 validation latency < 500 ms for a 30-phase plan on CI-class hardware, with the measurement context logged in the run output.
 - If the bound proves flaky on shared CI, the assertion is relaxed only with a recorded justification in §10 — never silently deleted.
 
 #### TC-DPLAN-027 - Purity, layering, and registration invariants hold
@@ -934,38 +934,38 @@ Per `.ai/rules/testing-strategy.md`, `packages/**` changes map to `bun test test
 
 ## 7. Automation Plan and Implementation Mapping
 
-| Scenario | Test file (to create) | Execution | Mocking / injection | Status |
+| Scenario | Test file | Execution | Mocking / injection | Status |
 |---|---|---|---|---|
-| TC-DPLAN-001 | `tests/behaviour/plan-validate.test.ts` | `bun test tests/behaviour/plan-validate.test.ts` | In-memory plan read + CLI edge; no fs | To Implement |
-| TC-DPLAN-002 | `tests/behaviour/plan-validate-rejections.test.ts` | `bun test tests/behaviour/plan-validate-rejections.test.ts` | In-memory plan read | To Implement |
-| TC-DPLAN-003 | `tests/behaviour/plan-validate-rejections.test.ts` | same | Fixture corpus + expectation table; no parser mock (the real YAML parse path runs) | To Implement |
-| TC-DPLAN-004 | `tests/behaviour/plan-tier.test.ts` | `bun test tests/behaviour/plan-tier.test.ts` | Plan read recorder that fails on any unexpected read | To Implement |
-| TC-DPLAN-005 | `tests/behaviour/plan-tier.test.ts` | same | In-memory plan read | To Implement |
-| TC-DPLAN-006 | `tests/behaviour/plan-tier.test.ts` | same | In-memory plan read; assert no trigger evaluation side channel | To Implement |
-| TC-DPLAN-007 | `tests/behaviour/plan-validate.test.ts` | `bun test tests/behaviour/plan-validate.test.ts` | In-memory plan read | To Implement |
-| TC-DPLAN-008 | `tests/behaviour/plan-validate.test.ts` | same | In-memory plan read | To Implement |
-| TC-DPLAN-009 | `tests/behaviour/plan-ready-gate.test.ts` | `bun test tests/behaviour/plan-ready-gate.test.ts` | Plan read + queue-ready runtime recorder with baseline output | To Implement |
-| TC-DPLAN-010 | `tests/behaviour/plan-validate.test.ts` | `bun test tests/behaviour/plan-validate.test.ts` | Runtime returning absence | To Implement |
-| TC-DPLAN-011 | `tests/behaviour/plan-legacy.test.ts` | `bun test tests/behaviour/plan-legacy.test.ts` | In-memory plan read over `.md` fixture text | To Implement |
-| TC-DPLAN-012 | `tests/behaviour/plan-legacy.test.ts` | same | Legacy corpus; both-formats case | To Implement |
-| TC-DPLAN-013 | `tests/behaviour/plan-overlap-sequence.test.ts` | `bun test tests/behaviour/plan-overlap-sequence.test.ts` | Two in-memory plan reads; CLI edge for exit | To Implement |
-| TC-DPLAN-014 | `tests/behaviour/plan-overlap-parallel.test.ts` | `bun test tests/behaviour/plan-overlap-parallel.test.ts` | Two in-memory plan reads | To Implement |
-| TC-DPLAN-015 | `tests/behaviour/plan-overlap-precision.test.ts` | `bun test tests/behaviour/plan-overlap-precision.test.ts` | Fixture pairs + computed intersections | To Implement |
-| TC-DPLAN-016 | `tests/behaviour/plan-overlap-ordering.test.ts` | `bun test tests/behaviour/plan-overlap-ordering.test.ts` | Fixture pairs, both argument orders | To Implement |
-| TC-DPLAN-017 | `tests/behaviour/plan-diff.test.ts` | `bun test tests/behaviour/plan-diff.test.ts` | Plan read + injected diff port | To Implement |
-| TC-DPLAN-018 | `tests/behaviour/plan-diff.test.ts` | same | Injected diff port recording the base | To Implement |
-| TC-DPLAN-019 | `tests/behaviour/plan-diff.test.ts` | same | Injected diff port with wildcard fixtures | To Implement |
-| TC-DPLAN-020 | `tests/behaviour/plan-lint.test.ts` | `bun test tests/behaviour/plan-lint.test.ts` | Lint command runtime with plan/pm-notes/registry reads; baselines | To Implement |
-| TC-DPLAN-021 | `tests/behaviour/plan-lint.test.ts` | same | Reader returning an unreadable result | To Implement |
-| TC-DPLAN-022 | `tests/behaviour/plan-envelope.test.ts` | `bun test tests/behaviour/plan-envelope.test.ts` | CLI edge + `assertEnvelopeContract`; existing `exit-code-literals` check | To Implement |
-| TC-DPLAN-023 | `tests/behaviour/plan-readonly.test.ts` | `bun test tests/behaviour/plan-readonly.test.ts` | Recording fakes for every port; zero-call assertions | To Implement |
-| TC-DPLAN-024 | `tests/behaviour/plan-determinism.test.ts` | `bun test tests/behaviour/plan-determinism.test.ts` | Golden files in `tests/golden/plan/`, normalized | To Implement |
-| TC-DPLAN-025 | `tests/behaviour/plan-bounded-output.test.ts` | `bun test tests/behaviour/plan-bounded-output.test.ts` | Oversized fixtures in memory | To Implement |
-| TC-DPLAN-026 | `tests/behaviour/plan-performance.test.ts` | `bun test tests/behaviour/plan-performance.test.ts` | 30-phase committed fixture; warm-up + median | To Implement |
-| TC-DPLAN-027 | `tests/structure/*` additions, `tests/boundaries/*` if an edge is added | `pnpm check:boundaries`, `bun test tests/structure tests/boundaries` | None (tree-level) | To Implement |
-| TC-DPLAN-028 | `tests/structure/error-table.test.ts` (existing) + new plan rows | `bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts` | None | To Implement (additive rows) |
-| TC-DPLAN-029 | Review artifact (no test file) | `./scripts/build-claude-plugin.sh --verbose`; `git diff --exit-code -- .ados-claude`; `git diff --check` | N/A | Manual + CI staleness check |
-| TC-DPLAN-030 | Review artifact (no test file) | `bash scripts/.tests/test-doc-distribution.sh`; `git diff --check` | N/A | Manual + distribution guard |
+| TC-DPLAN-001 | `tests/behaviour/plan-validate.test.ts` | `bun test tests/behaviour/plan-validate.test.ts` | In-memory plan read + CLI edge; no fs | Implemented |
+| TC-DPLAN-002 | `tests/behaviour/plan-validate-rejections.test.ts` | `bun test tests/behaviour/plan-validate-rejections.test.ts` | In-memory plan read | Implemented |
+| TC-DPLAN-003 | `tests/behaviour/plan-validate-rejections.test.ts` | same | Fixture corpus + expectation table; no parser mock (the real YAML parse path runs) | Implemented |
+| TC-DPLAN-004 | `tests/behaviour/plan-tier.test.ts` | `bun test tests/behaviour/plan-tier.test.ts` | Plan read recorder that fails on any unexpected read | Implemented |
+| TC-DPLAN-005 | `tests/behaviour/plan-tier.test.ts` | same | In-memory plan read | Implemented |
+| TC-DPLAN-006 | `tests/behaviour/plan-tier.test.ts` | same | In-memory plan read; assert no trigger evaluation side channel | Implemented |
+| TC-DPLAN-007 | `tests/behaviour/plan-validate.test.ts` | `bun test tests/behaviour/plan-validate.test.ts` | In-memory plan read | Implemented |
+| TC-DPLAN-008 | `tests/behaviour/plan-validate.test.ts` | same | In-memory plan read | Implemented |
+| TC-DPLAN-009 | `tests/behaviour/plan-ready-gate.test.ts` | `bun test tests/behaviour/plan-ready-gate.test.ts` | Plan read + queue-ready runtime recorder with baseline output | Implemented |
+| TC-DPLAN-010 | `tests/behaviour/plan-validate.test.ts` | `bun test tests/behaviour/plan-validate.test.ts` | Runtime returning absence | Implemented |
+| TC-DPLAN-011 | `tests/behaviour/plan-legacy.test.ts` | `bun test tests/behaviour/plan-legacy.test.ts` | In-memory plan read over `.md` fixture text | Implemented |
+| TC-DPLAN-012 | `tests/behaviour/plan-legacy.test.ts` | same | Legacy corpus; both-formats case | Implemented |
+| TC-DPLAN-013 | `tests/behaviour/plan-overlap-sequence.test.ts` | `bun test tests/behaviour/plan-overlap-sequence.test.ts` | Two in-memory plan reads; CLI edge for exit | Implemented |
+| TC-DPLAN-014 | `tests/behaviour/plan-overlap-parallel.test.ts` | `bun test tests/behaviour/plan-overlap-parallel.test.ts` | Two in-memory plan reads | Implemented |
+| TC-DPLAN-015 | `tests/behaviour/plan-overlap-precision.test.ts` | `bun test tests/behaviour/plan-overlap-precision.test.ts` | Fixture pairs + computed intersections | Implemented |
+| TC-DPLAN-016 | `tests/behaviour/plan-overlap-ordering.test.ts` | `bun test tests/behaviour/plan-overlap-ordering.test.ts` | Fixture pairs, both argument orders | Implemented |
+| TC-DPLAN-017 | `tests/behaviour/plan-diff.test.ts` | `bun test tests/behaviour/plan-diff.test.ts` | Plan read + injected diff port | Implemented |
+| TC-DPLAN-018 | `tests/behaviour/plan-diff.test.ts` | same | Injected diff port recording the base | Implemented |
+| TC-DPLAN-019 | `tests/behaviour/plan-diff.test.ts` | same | Injected diff port with wildcard fixtures | Implemented |
+| TC-DPLAN-020 | `tests/behaviour/plan-lint.test.ts` | `bun test tests/behaviour/plan-lint.test.ts` | Lint command runtime with plan/pm-notes/registry reads; baselines | Implemented |
+| TC-DPLAN-021 | `tests/behaviour/plan-lint.test.ts` | same | Reader returning an unreadable result | Implemented |
+| TC-DPLAN-022 | `tests/behaviour/plan-envelope.test.ts` | `bun test tests/behaviour/plan-envelope.test.ts` | CLI edge + `assertEnvelopeContract`; existing `exit-code-literals` check | Implemented |
+| TC-DPLAN-023 | `tests/behaviour/plan-readonly.test.ts` | `bun test tests/behaviour/plan-readonly.test.ts` | Recording fakes for every port; zero-call assertions | Implemented |
+| TC-DPLAN-024 | `tests/behaviour/plan-determinism.test.ts` | `bun test tests/behaviour/plan-determinism.test.ts` | Golden files in `tests/golden/plan/`, normalized | Implemented |
+| TC-DPLAN-025 | `tests/behaviour/plan-bounded-output.test.ts` | `bun test tests/behaviour/plan-bounded-output.test.ts` | Oversized fixtures in memory | Implemented |
+| TC-DPLAN-026 | `tests/behaviour/plan-performance.test.ts` | `bun test tests/behaviour/plan-performance.test.ts` | 30-phase committed fixture; warm-up + median/p95 | Implemented |
+| TC-DPLAN-027 | `tests/structure/*` additions, `tests/boundaries/*` if an edge is added | `pnpm check:boundaries`, `bun test tests/structure tests/boundaries` | None (tree-level) | Implemented |
+| TC-DPLAN-028 | `tests/structure/error-table.test.ts` (existing) + new plan rows | `bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts` | None | Implemented (additive rows) |
+| TC-DPLAN-029 | Review artifact (no test file) | `./scripts/build-claude-plugin.sh --verbose`; `git diff --exit-code -- .ados-claude`; `git diff --check` | N/A | Implemented — manual review + CI staleness check |
+| TC-DPLAN-030 | Review artifact (no test file) | `bash scripts/.tests/test-doc-distribution.sh`; `git diff --check` | N/A | Implemented — manual review + distribution guard |
 
 **Suite ordering during iteration.** 1) pure domain units (`plan-validate*`, `plan-tier`, `plan-overlap*`, `plan-diff`, `plan-bounded-output`); 2) command/envelope (`plan-envelope`, `plan-ready-gate`, `plan-lint`); 3) structural/boundary (`tests/structure`, `tests/boundaries`); 4) determinism/performance; 5) `pnpm check` as the final gate. Execute the distribution guard and plugin regeneration check whenever prompt or doc files change, even if the code suite is green.
 
@@ -1014,7 +1014,12 @@ Per `.ai/rules/testing-strategy.md`, `packages/**` changes map to `bun test test
 
 | TC ID | Run Date | Result | Notes |
 |---|---|---|---|
-| All scenarios | Not run | Pending | Nothing executed at authoring time. Execution records the command, result summary, and (for TC-DPLAN-026) the measured median with Bun version and platform. Record any performance-threshold relaxation with its justification here. |
+| TC-DPLAN-001..026 (automated plan suites) | 2026-11-05 | Pass — 88/88 | `bun test tests/behaviour/plan-*.test.ts` across 16 files, 440 `expect()` calls: validate, rejection corpus, tier, ready gate, legacy, overlap (sequence/parallel/precision/ordering), diff, lint, envelope, read-only, determinism, bounded output, and performance. The count is 87 at review HEAD plus the F-6 conservative-overlap fixture added in remediation 8.6. |
+| TC-DPLAN-027/028 (structure and boundary invariants) | 2026-11-05 | Plan-family invariants pass; 2 unrelated pre-existing failures | `bun test tests/structure tests/boundaries`: 523 pass / 2 fail. Both failures are the missing `doc/spec/features/feature-plan-schema.md` row in `scripts/checks/forbidden-literals.registry.json` (`unregistered user-facing doc absent at corpusBaseline`), a doc-sync artifact outside the plan suites; no plan-family structure or boundary assertion fails. |
+| TC-DPLAN-026 | 2026-11-05 | Pass | 30-phase fixture, warm-up plus 20 samples, hard assertions median < 500 ms AND p95 < 500 ms (NFR-2). Delivery run: median 6.41 ms, p95 11.25 ms (Bun 1.4.4, linux/x64); reviewer independent re-run: p95 4.59 ms; remediation re-runs: median 3.64–4.47 ms, p95 5.50–6.75 ms. Exactly one plan read and no other port touched. No relaxation used: the relaxation rule remains available and unused. |
+| TC-DPLAN-029 | 2026-11-05 | Pass (manual) | Writer flip, template, and consuming prompts ship together; `.ados-claude` regenerated in the same commit; plugin staleness clean; no scheduler/queue/ceremony overclaim. |
+| TC-DPLAN-030 | 2026-11-05 | Pass (manual) | Naming/precedence and registry rows verified; distribution guard no drift (81 docs); `git diff --check` clean. |
+| Remediation gates (8.5–8.6) | 2026-11-05 | Pass | `pnpm typecheck` green; `pnpm exec biome check` clean on `tests/behaviour/plan-overlap-precision.test.ts` and the two new fixtures; `git status` shows only the intended change-artifact and fixture edits (uncommitted for the PM checkpoint). |
 
 ---
 

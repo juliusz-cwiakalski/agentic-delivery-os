@@ -27,7 +27,7 @@ Three read-only verdicts consume that document. `plan validate <ref>` answers sc
 
 A legacy `chg-<workItemRef>-plan.md` stays readable during the transition. It is answered with the classified `plan.format.legacy-markdown` verdict, is never treated as schema-valid, and never produces a crash. When both plan files exist for one ref, the YAML plan wins and the verdict discloses the artifact it read.
 
-The plan family consumes the [result contract](feature-result-contract.md) envelope, error table, and `{0, 1, 2}` exit projection; the [pm-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) lint surface; and the read-only repository-diff capability. The command surface is registered in the [CLI command registry](../../planning/oss-tooling/cli-command-registry.md); [ODR-0003](../../decisions/ODR-0003-cli-command-naming-v1-lock.md) locks the v1 names and records M1 additions through its superseding-note path. The change that delivered the surface is [GH-226](../../changes/2026-11/2026-11-05--GH-226--machine-readable-plan-schema/chg-GH-226-spec.md).
+The plan family consumes the [result contract](feature-result-contract.md) envelope, error table, and `{0, 1, 2}` exit projection, and the [pm-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) lint surface. Actual-diff input for `plan diff` is the embedder-injected `readDiff` port: no production repository-diff reader ships in-tree, and the repository adapter reads `.git` metadata without spawning git. A composition that does not inject `readDiff` classifies the diff read as `input.value.rejected` with exit `1` (the shared user-validation projection) and a summary stating that the repository diff could not be read; the port seam preserves the zero-spawn, read-only posture (NFR-3). The documented contract default base for the comparison is `main-tools`. The command surface is registered in the [CLI command registry](../../planning/oss-tooling/cli-command-registry.md); [ODR-0003](../../decisions/ODR-0003-cli-command-naming-v1-lock.md) locks the v1 names and records M1 additions through its superseding-note path. The change that delivered the surface is [GH-226](../../changes/2026-11/2026-11-05--GH-226--machine-readable-plan-schema/chg-GH-226-spec.md).
 
 ## Business Context
 
@@ -127,6 +127,8 @@ An overlapping entry is the concrete path when either plan declares it concretel
 
 Ordering is producer-first when a declared interaction decides it: a `producer` interaction in one plan on the same target as a `consumer` interaction in the other places the producer plan first with `reason: shared-contract-files`. Otherwise, a plan that declares production over an overlapping path is ordered first; when neither or both sides do, ordering falls back to the lexicographically smaller change ref. Every non-interaction sequence verdict carries `reason: shared-paths`. Ordering is symmetric across argument order: the same pair yields the same ordering and reason.
 
+Package-pattern comparison is conservative: two patterns that share a static prefix answer `run-in-sequence` even when their dynamic segments are provably disjoint (for example `packages/core/a*` and `packages/core/b*`). The error direction is safe—a false sequence, never a false parallel—and exact pattern-pair intersection belongs to the downstream scheduler (M1-S17). `tests/behaviour/plan-overlap-precision.test.ts` pins this approximation.
+
 ### Lint target
 
 `lint plan <ref>` is an additive target of the existing lint surface. It reports `{ changeRef, target: "plan", documents: [{ path, verdict, errors: [{ code, location, detail }] }] }`, where `location` names the phase and field. It cannot be combined with `--pm-notes` or `--registry`.
@@ -172,7 +174,7 @@ The schema, vocabulary, bounds, and verdict payload types are runtime-neutral co
 
 ### Data architecture
 
-The plan document is a YAML file in the change folder; no other store is read or written by the verdict paths. The validate path performs one plan read; overlap performs two plan reads; diff performs one plan read plus one repository-diff read. Verdict payloads are derived data only. The `artifact` echo records which file was read; the document is never modified.
+The plan document is a YAML file in the change folder; no other store is read or written by the verdict paths. The validate path performs one plan read; overlap performs two plan reads; diff performs one plan read plus one injected diff read through the `readDiff` port. Verdict payloads are derived data only. The `artifact` echo records which file was read; the document is never modified.
 
 ### API and interface contracts
 
@@ -227,7 +229,7 @@ The feature adds no dependency, package, service, or CI job. It runs inside the 
 
 - **Depends on** the [result contract](feature-result-contract.md) for the envelope, the error table, classification, and exit projection.
 - **Depends on** the [pm-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) surface that hosts the plan lint target.
-- **Depends on** the read-only repository-diff capability and the file adapter for artifact reads.
+- **Depends on** an embedder-injected `readDiff` port for actual-diff input and the file adapter for artifact reads.
 - **Consumed by** the scheduler (M1-S17) for overlap verdicts, tier, ready-for-development, leases, and weight; by the commit primitive (M1-S14) for declared scope context; and by the ceremony engine (M2-S3) for tier data.
 - **Risk — schema drift:** the writer and validator could diverge. Mitigation: one contracts vocabulary, write-time lint, and fixtures derived from the template shape.
 - **Risk — false parallel:** incomplete declarations could hide a real overlap. Mitigation: package/folder granularity, boundary-aware matching, a precision corpus, and a non-vacuity guard that a sequence verdict names real shared paths.
