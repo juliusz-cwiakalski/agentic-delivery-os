@@ -803,6 +803,78 @@ git diff --check
 
 ---
 
+### Phase 7: Code Review Remediation (Iteration 1)
+
+**Goal**: Close review finding F-1 (review-iter-1.yaml): salvage must refuse a ledger
+whose FIRST integrity break is mid-record even when the ledger additionally ends in a
+truncated tail — zero byte mutation before any refusal, per AC-F3-3 / DEC-2. One
+low-severity test-quality fix rides the same commit.
+
+**Tasks**:
+
+- [ ] **7.1** `packages/core/src/state/ledger.ts` (`analyzeTear`, truncated-tail
+  branch): before classifying topology `terminal`, verify the complete-lines prefix
+  (the text up to the last LF) — when that prefix is not itself verified/empty, return
+  topology `mid-record` at the prefix's first-break position so salvage refuses before
+  any write (F-1; empirical repro: digest changed + quarantine + salvage record
+  appended, then `state.store.torn` with `not_landed`). Note the M0-S5
+  `repairTornTail` shares the coarse-variant root (`index.ts`); guard it the same way
+  or record a follow-up ticket — pre-existing behavior, outside this change's ACs.
+- [ ] **7.2** Extend `tests/behaviour/state-salvage-invariants.test.ts`
+  (TC-GH222-011): a mid-record break (framing or checksum at record ~2/3 with a
+  parseable frame after it) COMBINED with a truncated final tail (no trailing LF) →
+  salvage fails `state.store.torn` naming the mid-record position, whole-ledger byte
+  identity (digest + buffer equals), no quarantine directory, no `state.salvage`
+  record, and a subsequent verified read reports the same tear position.
+- [ ] **7.3** `tests/behaviour/state-unknown.test.ts`: replace the tautological
+  `new Set([...]).size === 4` distinctness assertion with a behavioral assertion (or
+  remove it) — review finding F-2 (low).
+- [ ] **7.4** Verification: `bun test tests/behaviour/state-salvage.test.ts
+  tests/behaviour/state-salvage-invariants.test.ts
+  tests/behaviour/state-storage-exhausted.test.ts tests/behaviour/state-unknown.test.ts
+  tests/behaviour/state-index-post-salvage.test.ts tests/behaviour/state-torn.test.ts`;
+  full behaviour tier `bun test tests/behaviour`; `bun run
+  scripts/checks/error-table-sync.ts`; `git diff --check`. Record results in the
+  Execution Log and update this phase's task evidence.
+
+**Acceptance Criteria**:
+
+- Must: salvage on the combined mid-record + truncated-tail shape refuses
+  `state.store.torn` with zero ledger byte mutation, no quarantine artifact, and no
+  salvage record (AC-F3-3 holds on every tear topology; DEC-2).
+- Must: all existing salvage/exhaustion/index/unknown/torn suites stay green (no
+  regression on the terminal-tail happy path or the single-damage mid-record refusal).
+- Should: the vacuous distinctness assertion is gone (F-2).
+
+**Files and modules**:
+
+- Code areas: `packages/core/src/state/ledger.ts` (updated — analyzeTear truncated-tail
+  branch; optionally `packages/core/src/state/index.ts` for the repairTornTail guard),
+  `tests/behaviour/state-salvage-invariants.test.ts` (updated),
+  `tests/behaviour/state-unknown.test.ts` (updated).
+- System docs: none — `doc/spec/features/feature-state-layer.md` already states the
+  correct invariant; the code was wrong, not the doc.
+
+**Tests**:
+
+- TC-GH222-011 extension (combined tear-topology regression; rides the existing id
+  per OQ-T3 precedent — no new TC id needed for a refusal-shape extension).
+
+**Verification**:
+
+```bash
+bun test tests/behaviour/state-salvage.test.ts tests/behaviour/state-salvage-invariants.test.ts
+bun test tests/behaviour/state-storage-exhausted.test.ts tests/behaviour/state-unknown.test.ts
+bun test tests/behaviour/state-index-post-salvage.test.ts tests/behaviour/state-torn.test.ts
+bun test tests/behaviour
+bun run scripts/checks/error-table-sync.ts
+git diff --check
+```
+
+**Completion signal**: `fix(GH-222): refuse salvage on mid-record tears with truncated tails`
+
+---
+
 ## Test Scenarios
 
 Coverage matrix — every TC-GH222-\* id maps to the phase and task that implements it; every AC
@@ -862,6 +934,7 @@ NFR-6 → 1, 5; NFR-7 → 3.
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-05 | @plan-writer | Initial plan: 6 phases (contracts/error tables → tear topology + exhaustion seam → salvage → boundary/artifact contracts → registry wiring + nine-code sweep → gates/changeset/spec reconciliation); all 23 TC ids mapped; DEC-5 rows + refined remediations pinned to Phase 1 with both tables and the sync check; OQ-T1 fault-point names fixed (`salvage-quarantine-write`, `salvage-ledger-write`); spec §22 vs §8.5 tension on the `state.store.torn` remediation text flagged for DoR with the in-plan resolution |
+| 1.1 | 2026-11-05 | @reviewer | Appended Phase 7 (Code Review Remediation, iteration 1): review finding F-1 — analyzeTear's truncated-tail shortcut misclassifies a mid-record break + truncated tail as terminal, so salvage mutates bytes then fails `state.store.torn` claiming `not_landed` (AC-F3-3/DEC-2 violation, empirically reproduced); tasks 7.1–7.4 add the prefix-verification fix, a combined-shape TC-GH222-011 regression, the F-2 vacuous-assertion cleanup, and the verification block |
 
 ## Execution Log
 
@@ -873,4 +946,5 @@ NFR-6 → 1, 5; NFR-7 → 3.
 | 4 — Reusable boundary validation and artifact-boundary contracts | Done | 2026-11-05 | 2026-11-05 | d09cf619 | Verification block: artifact-boundary + unknown + boundary-validation 15 pass; state-contract/imports/scope 22 pass; packed-state 1 pass; content-inventory 6 pass; `git diff --check` clean. New module `state/artifact-boundary.ts` registered in the inventory + executable allowance. |
 | 5 — Delivery-registry wiring and the nine-code trigger sweep | Done | 2026-11-05 | 2026-11-05 | 5d854030 | Verification block: phase-registry + error-classification 28 pass; full behaviour tier 1438 pass / 4 platform skips / 1 pre-existing pm-notes corpus failure (duplicate `completed` key, PM-owned, outside scope); structure+boundaries+packed-state 521 pass; sync check entries=43 documented=43 exit 0; `git diff --check` clean. OQ-T2: matrix enumerates cases, not operations → no change. Repaired Phase-3 port-surface assertion (`state-ledger.test.ts`) and updated GH-179 corrupt-payload expectations to the new boundary classification. |
 | 6 — Finalize: gate battery, changeset, spec reconciliation | Done (with one pre-existing out-of-scope failure) | 2026-11-05 | 2026-11-05 | (this commit) | lint + format:check + typecheck pass; `pnpm test` 2477 pass / 4 platform skips / 1 fail (pre-existing PM-owned pm-notes duplicate `completed` key, HEAD defect, outside scope); `pnpm check:boundaries` pass; `exports-parity` pass; sync check entries=43 documented=43 exit 0; error-table-sync tests 54 pass; `git diff --check` clean. Changeset `.changeset/gh-222-state-validation-minor.md` (minor, lockstep). System spec reconciled (state layer + result-contract prose). Test plan §10 populated. |
+| 7 — Code Review Remediation (Iteration 1) | Not started | — | — | — | Appended by review iteration 1 (review-iter-1.yaml): F-1 analyzeTear truncated-tail topology fix + combined-shape TC-GH222-011 regression + F-2 test-quality cleanup. Blocking: AC-F3-3/DEC-2 violated on the mid-record + truncated-tail shape (salvage mutates then reports torn/`not_landed`). |
 | — | Not started | — | — | — | Later phases (review_fix, quality_gates, dod_check, pr_creation) are PM-orchestrated and outside this run's scope. |

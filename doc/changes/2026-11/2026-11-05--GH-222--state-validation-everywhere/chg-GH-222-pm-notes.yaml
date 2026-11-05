@@ -45,7 +45,17 @@ phases:
         date: "2026-11-05"
   delivery: { started: "2026-11-05T20:55:00Z", completed: "2026-11-05T22:55:00Z" }
   system_spec_update: { started: "2026-11-05T22:58:00Z", completed: "2026-11-05T23:10:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix:
+    started: "2026-11-05T23:18:00Z"
+    completed: null
+    iterations:
+      - iteration: 1
+        status: FAIL
+        artifact: code-review/review-iter-1.yaml
+        findings: "F-1 HIGH correctness (packages/core/src/state/ledger.ts:221): analyzeTear truncated-tail shortcut skips verifying complete lines before the final newline; combined mid-record + truncated-tail ledger lets salvage truncate at last newline (keeping the broken line), append the salvage record, write quarantine, then fail post-commit verification claiming not_landed after mutating bytes — empirically reproduced on HEAD; violates AC-F3-3/DEC-2. F-2 LOW test-quality: tautological pairwise-distinct assertion in state-unknown.test.ts:141. F-3 INFO performance: registry reads scan ledger 2-3x per operation — note only, no NFR governs; future stories."
+        remediation: "Reviewer appended plan Phase 7 (tasks 7.1-7.4): fix complete-lines verification in truncated-tail branch classifying mid-record; regression-test combined tear shape; behavioral or removed distinctness assertion; M0-S5 repairTornTail shares the coarse-variant root (pre-existing, outside this change's ACs — follow-up surfaces to human, no autonomous ticket)"
+        reopen: delivery
+        date: "2026-11-05"
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -66,6 +76,9 @@ blockers:
     date: "2026-11-05"
     resolved_date: null
 notes:
+  - text: "RETRO: the tear-topology test matrix covered each tear class individually but not the COMBINED shape (mid-record break + truncated tail) — the one combination where truncation-at-last-newline is unsound — and it shipped through spec v1.2, test plan (23 TCs), DoR gate, and implementation before the adversarial review reproduced it on HEAD. Improvement: for parsing/classification layers, enumerate pairwise combinations of detection classes in the test matrix, prioritizing shapes where a cheap shortcut (last-newline truncation) can alias a harder class (mid-record). Related retro: a tautological assertion (Set of 4 literals, size 4) also slipped through plan authoring and implementation — reviewers and DoR should sample-verify assertion substance, not just presence."
+    type: retro
+    date: "2026-11-05"
   - text: "RETRO: closing the specification phase, PM appended a second `completed` key to the phase block instead of editing the existing inline field — a duplicate YAML key that turned tests/behaviour/pm-notes-corpus.test.ts red at the coder's final gate and blocked pnpm check. Fixed by removing the stale line; targeted re-run green (17/17). Improvement: when closing a phase recorded with the inline { started, completed } shape, edit that line in place; after ANY pm-notes structural edit, run the pm-notes corpus test before handing off."
     type: retro
     date: "2026-11-05"

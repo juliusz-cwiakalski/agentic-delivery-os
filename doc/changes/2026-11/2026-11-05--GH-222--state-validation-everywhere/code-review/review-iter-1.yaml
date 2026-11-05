@@ -1,0 +1,117 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-222
+branch: feat/GH-222/state-validation
+status: FAIL
+summary: >-
+  The change delivers the spec with unusual discipline: all six plan phases landed as
+  specified with green per-phase verification, 23/23 test-plan cases are real and
+  sample-verified (non-vacuous, canary-swept, mutation-controlled), the nine-code error
+  tables are in bidirectional sync (entries=43 documented=43, exit 0), state-tier
+  boundary invariants hold (runtime APIs confined to the driver edge, no driver
+  discriminant on the port, no retro/ceremony or CLI leakage), and the disclosed
+  deviations (GH-179 fixture reclassification, corpora/baseline repins, OQ-T2/OQ-T3
+  records) are all legitimate and documented. One high-severity correctness defect
+  blocks: a ledger with BOTH a mid-record integrity break AND a truncated final tail is
+  misclassified as a terminal tear, so salvage mutates ledger bytes (truncate + salvage
+  record + quarantine artifact) and only then fails state.store.torn claiming
+  not_landed — violating AC-F3-3/DEC-2 zero-byte-mutation refusal and the truth of the
+  not_landed consequence (empirically reproduced; the reconciled system spec asserts
+  the violated invariant). Remediation is small and localized to the pure
+  analyzeTear helper plus one regression test.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 0
+  low: 1
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/core/src/state/ledger.ts:221
+    message: >-
+      analyzeTear's truncated-tail shortcut returns topology "terminal" without
+      scanning the complete lines before the final newline. On a ledger that has BOTH
+      a mid-record integrity break (e.g. framing-broken record 2 with a parseable
+      record after it) AND a truncated final tail (no trailing LF), verifyLedger
+      reports variant truncated-tail (its coarse pre-existing shape) and salvage
+      therefore proceeds as terminal: it truncates at the last newline (keeping the
+      broken line), appends the state.salvage record, writes the quarantine artifact,
+      and only then fails in post-commit verification with state.store.torn at the
+      mid-record position while claiming not_landed. Reproduced empirically on HEAD:
+      digest changed, quarantine created, salvage record appended, broken line
+      retained, store still torn. This violates AC-F3-3 / DEC-2 (a mid-record tear
+      must refuse salvage with ZERO byte mutation) and makes the not_landed
+      consequence false; doc/spec/features/feature-state-layer.md's "Guided salvage"
+      bullet asserts exactly the invariant the code breaks on this shape. The failed
+      path also leaves the quarantine artifact behind with no cleanup
+      (packages/core/src/state/index.ts:665 returns the raw torn failure after the
+      commit).
+    suggestion: >-
+      In analyzeTear's truncated-tail branch (ledger.ts:221-233), scan the
+      complete-lines prefix (text up to the last LF) for an earlier break — e.g. run
+      verifyLedger on that prefix and, when it is not verified/empty, return topology
+      "mid-record" with that prefix's first-break position — so salvage refuses before
+      any write. Add a TC-GH222-011 regression test in
+      tests/behaviour/state-salvage-invariants.test.ts for the combined shape
+      (mid-record break + truncated tail) asserting: salvage fails state.store.torn
+      naming the mid-record position, whole-ledger byte identity, no quarantine
+      directory, no salvage record, and the subsequent read reports the same tear.
+      Note: the M0-S5 repairTornTail operation (index.ts:554-570) shares the same
+      coarse-variant root and would mutate-then-fail on the same shape; guard it the
+      same way or record a follow-up ticket (pre-existing behavior, out of this
+      change's ACs).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: test-quality
+    location: tests/behaviour/state-unknown.test.ts:141
+    message: >-
+      The "verified-empty is pairwise distinct" test ends by constructing a Set of
+      four distinct string literals and asserting its size is 4 — a tautology that
+      cannot fail and adds no distinctness evidence. The behavioral distinctness is
+      adequately covered by the sibling cases (unknown vs schema.mismatch vs
+      verified-empty asserted per fixture), so coverage is not lost, but this
+      assertion is vacuous.
+    suggestion: >-
+      Replace the Set assertion with a behavioral one (e.g. assert the three fixtures
+      produce three different outcome shapes/codes plus the verified-empty success, or
+      simply delete the Set block). Opportunistic — can ride the F-1 remediation
+      commit.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: performance
+    location: packages/core/src/state/registry.ts:236
+    message: >-
+      readChangeTransitions/readChangeTransitionsTolerant read the ledger twice per
+      call (the probe store.read({requiredKeys: []}) then the boundary's
+      readRecords), and appendPhaseTransition scans a third time inside
+      appendRecord's verifiedState; each scan re-verifies checksums O(records x
+      payload). Acceptable at current local-registry sizes and no NFR governs
+      registry read cost; recorded as a note for future stories only.
+    suggestion: >-
+      No action in this change. If a future story touches these paths, consider a
+      single readRecords-based verified state reused by probe and boundary.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-05T22:25:05Z
+next_step: EXECUTE_REMEDIATION_PHASE
