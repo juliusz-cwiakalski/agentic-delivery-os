@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-11-05", completed: "2026-11-05" }
   specification: { started: "2026-11-05", completed: "2026-11-05" }
   test_planning: { started: "2026-11-05", completed: "2026-11-05" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-11-05", completed: "2026-11-06" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -35,6 +35,9 @@ notes: # { text, type, date } — type: info|decision|blocker|risk|question|reso
   - text: "Expected named placeholders in v0: typed blocker questions (M1-S16), SLA escalation states (M1-S5), queue/lane engine (M1-S17; digest section lanes-or-queue is not-delivered), spend summary (M1-S19). Spec-writer maps placeholders exactly to digest section states."
     type: "info"
     date: "2026-11-05"
+  - text: "Implementation plan authored (v1.0, 9 phases): mirrors status architecture (contracts/brief.ts, domain/brief.ts with projectBrief+renderBriefHuman, commands/brief.ts, edge composition reusing createStatusCommandRuntime + collectStatusFacts so reads happen once); 12 delivery bindings D1..D12 pin files, schema id delivery.brief.v1, nine-surface set, catalog, vocabulary-by-reference, anchor model, changeset, goldens; Phase 8 is @doc-syncer-owned (feature-brief.md current-truth spec), @coder obligation ends at Phase 9 handoff notes. Test plan filled to v1.1 (all TBD phase columns resolved). No spec-test-plan inconsistency found; OQ-1 resolved at Phase 4 via goldens."
+    type: "info"
+    date: "2026-11-06"
   - text: "Ticket label normalization: 'review' label was premature (no PR exists); set to 'planning' per workflow-state mapping at planning start."
     type: "info"
     date: "2026-11-05"

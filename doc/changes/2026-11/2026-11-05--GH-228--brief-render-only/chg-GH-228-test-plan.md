@@ -1,9 +1,9 @@
 ---
 id: chg-GH-228-test-plan
 status: Proposed
-version: 1.0
+version: 1.1
 created: 2026-11-05T00:00:00Z
-last_updated: 2026-11-05T00:00:00Z
+last_updated: 2026-11-06T00:00:00Z
 owners: [engineering]
 service: delivery-os
 labels: [change, m1]
@@ -11,7 +11,7 @@ version_impact: minor
 summary: "Verify M1-S6 brief render-only v0: one deterministic read-only command that projects the same injected collector facts as the status digest into a decision-first, one-screen owner brief. The battery proves shared-truth agreement (every brief claim equals the digest's claim for identical facts, zero brief-only facts, zero brief-only reads), anchored-action honesty (ready-to-merge only from observed approved non-draft open pull-request evidence and never a gate verdict; owner-gate ages only from parseable provider-native timestamps with unknown otherwise and no SLA state), a closed three-entry placeholder catalog that can never render as observed, empty, or zero, exact per-surface state agreement with the digest's state-derivation matrix including the full failed/absent-read negative-control matrix, the shipped contract posture (exit 0 with named surfaces on collector unavailability, only fallback.invocation/internal failing, zero new error-table rows, error-table sync green), byte-identical determinism, the 24-line/4096-byte human and 65536-byte machine bounds with explicit truncation, no LLM or network capability in the render path asserted by structure and boundary checks, and the redaction/read-only/zero-spawn/credential-reference posture. All fixtures are committed and injected; the battery performs zero live network calls, reads no real credential, and never rewrites its goldens."
 links:
   change_spec: ./chg-GH-228-spec.md
-  implementation_plan: ./chg-GH-228-plan.md   # authored in delivery_planning; absent at this revision
+  implementation_plan: ./chg-GH-228-plan.md   # authored in delivery_planning (v1.0)
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
@@ -74,16 +74,16 @@ This plan is a design and verification map, not an execution claim: no build, te
 
 | AC | Criterion (abbreviated) | TC ID(s) | Plan phase | Status |
 |----|--------------------------|----------|------------|--------|
-| AC-F1-1 | On identical injected facts every brief truth claim (per-surface states, counts, ages, action identities, placeholder justifications) equals the digest's corresponding claim, and the brief performs zero collector reads of its own | TC-BRIEF-004, TC-BRIEF-005, TC-BRIEF-020 | TBD — @plan-writer | Covered |
-| AC-F1-2 | Any fact set renders exactly one screen within the declared bounds (≤24 human lines and 4096 bytes; machine `data` ≤65536 bytes) with explicit truncation markers on any drop | TC-BRIEF-006, TC-BRIEF-014, TC-BRIEF-015 | TBD — @plan-writer | Covered |
-| AC-F2-1 | An observed approved, non-draft, open pull request yields a ready-to-merge action citing that item's bounded digest evidence; unknown or unavailable review signals yield no merge-ready claim and a named five-value state | TC-BRIEF-007 | TBD — @plan-writer | Covered |
-| AC-F2-2 | Owner-hand-back age renders only from a parseable last-modified timestamp; the absent/unparseable case is unknown and never fabricated; no SLA escalation state renders and the `gate-sla-states` placeholder appears | TC-BRIEF-008 | TBD — @plan-writer | Covered |
-| AC-F3-1 | All three catalog placeholders render, each naming capability, owning story, and collector evidence state; blocker questions, SLA states, and the lane/queue surface never render as observed, empty, or zero | TC-BRIEF-001, TC-BRIEF-009, TC-BRIEF-016 | TBD — @plan-writer | Covered |
-| AC-F4-1 | Every surface carries exactly the digest's section state for every failure mode in the state-derivation matrix; no failed, absent, unattempted, or unresolved read renders as clear, green, available, or zero | TC-BRIEF-004, TC-BRIEF-010, TC-BRIEF-016 | TBD — @plan-writer | Covered |
-| AC-F5-1 | Exactly one valid `CommandResult` envelope with an exit in `{0,1,2}`; collector unavailability yields a success envelope at exit `0`; only existing containment identities fail (invocation → 1, internal → 2); zero new error-table rows and the sync check stays green | TC-BRIEF-002, TC-BRIEF-011, TC-BRIEF-012, TC-BRIEF-013, TC-BRIEF-015, TC-BRIEF-022 | TBD — @plan-writer | Covered |
-| AC-F6-1 | Identical inputs produce byte-identical human and machine output; the human text contains no timestamps, no raw payloads, and no generated prose | TC-BRIEF-014, TC-BRIEF-015, TC-BRIEF-017 | TBD — @plan-writer | Covered |
-| AC-F6-2 | The brief render surface imports no model-call capability and performs no model call, asserted by dependency-boundary checks and review | TC-BRIEF-003, TC-BRIEF-021 | TBD — @plan-writer | Covered |
-| AC-F6-3 | A planted secret never appears in output; the single redaction path covers envelope and human text; zero writes, zero state mutations, zero child processes; a non-credential-reference instance is refused exactly as status | TC-BRIEF-018, TC-BRIEF-019 | TBD — @plan-writer | Covered |
+| AC-F1-1 | On identical injected facts every brief truth claim (per-surface states, counts, ages, action identities, placeholder justifications) equals the digest's corresponding claim, and the brief performs zero collector reads of its own | TC-BRIEF-004, TC-BRIEF-005, TC-BRIEF-020 | Phase 2, Phase 3 | Covered |
+| AC-F1-2 | Any fact set renders exactly one screen within the declared bounds (≤24 human lines and 4096 bytes; machine `data` ≤65536 bytes) with explicit truncation markers on any drop | TC-BRIEF-006, TC-BRIEF-014, TC-BRIEF-015 | Phase 2, Phase 4 | Covered |
+| AC-F2-1 | An observed approved, non-draft, open pull request yields a ready-to-merge action citing that item's bounded digest evidence; unknown or unavailable review signals yield no merge-ready claim and a named five-value state | TC-BRIEF-007 | Phase 2 | Covered |
+| AC-F2-2 | Owner-hand-back age renders only from a parseable last-modified timestamp; the absent/unparseable case is unknown and never fabricated; no SLA escalation state renders and the `gate-sla-states` placeholder appears | TC-BRIEF-008 | Phase 2 | Covered |
+| AC-F3-1 | All three catalog placeholders render, each naming capability, owning story, and collector evidence state; blocker questions, SLA states, and the lane/queue surface never render as observed, empty, or zero | TC-BRIEF-001, TC-BRIEF-009, TC-BRIEF-016 | Phase 1, Phase 2 | Covered |
+| AC-F4-1 | Every surface carries exactly the digest's section state for every failure mode in the state-derivation matrix; no failed, absent, unattempted, or unresolved read renders as clear, green, available, or zero | TC-BRIEF-004, TC-BRIEF-010, TC-BRIEF-016 | Phase 2 | Covered |
+| AC-F5-1 | Exactly one valid `CommandResult` envelope with an exit in `{0,1,2}`; collector unavailability yields a success envelope at exit `0`; only existing containment identities fail (invocation → 1, internal → 2); zero new error-table rows and the sync check stays green | TC-BRIEF-002, TC-BRIEF-011, TC-BRIEF-012, TC-BRIEF-013, TC-BRIEF-015, TC-BRIEF-022 | Phase 3, Phase 4, Phase 8 | Covered |
+| AC-F6-1 | Identical inputs produce byte-identical human and machine output; the human text contains no timestamps, no raw payloads, and no generated prose | TC-BRIEF-014, TC-BRIEF-015, TC-BRIEF-017 | Phase 3, Phase 4 | Covered |
+| AC-F6-2 | The brief render surface imports no model-call capability and performs no model call, asserted by dependency-boundary checks and review | TC-BRIEF-003, TC-BRIEF-021 | Phase 3, Phase 5 | Covered |
+| AC-F6-3 | A planted secret never appears in output; the single redaction path covers envelope and human text; zero writes, zero state mutations, zero child processes; a non-credential-reference instance is refused exactly as status | TC-BRIEF-018, TC-BRIEF-019 | Phase 5 | Covered |
 
 **Capability coverage** (every F-# has at least one TC): F-1 → 002, 004, 005, 006; F-2 → 007, 008; F-3 → 001, 009, 016; F-4 → 004, 008, 010, 016; F-5 → 002, 011, 012, 013, 015, 022; F-6 → 003, 014, 017, 018, 019, 020, 021.
 
@@ -1003,32 +1003,32 @@ Exactly one envelope per run. `schemaVersion` is the shipped `delivery.result.v1
 
 ## 7. Automation Plan and Implementation Mapping
 
-All TCs are automated except TC-BRIEF-022, which is semi-automated with a recorded content check. File names below are the proposed suite names; the plan phase column is left for `@plan-writer`.
+All TCs are automated except TC-BRIEF-022, which is semi-automated with a recorded content check. File names below are the proposed suite names; the plan phase column is filled by `@plan-writer` from the delivering phases of `chg-GH-228-plan.md` v1.0.
 
 | TC ID | Test file / artefact | Execution command | Control / mutation | Plan phase | Status |
 |-------|----------------------|-------------------|--------------------|------------|--------|
-| TC-BRIEF-001 | `tests/structure/brief-contract.test.ts` | `bun test tests/structure/brief-contract.test.ts`; `pnpm typecheck` | executable statement, 4th catalog entry, redeclared vocabulary, seeded product literal | TBD | To Implement |
-| TC-BRIEF-002 | `tests/behaviour/brief-command.test.ts` | `bun test tests/behaviour/brief-command.test.ts` | malformed invocation with zero-call assertion; valid sibling control | TBD | To Implement |
-| TC-BRIEF-003 | `tests/structure/brief-imports.test.ts`; `tests/boundaries` | `bun test tests/structure/brief-imports.test.ts tests/boundaries`; `bun run scripts/checks/ambient-globals.ts`; `pnpm check:boundaries` | seeded `node:http`, seeded `fetch`, seeded model SDK, seeded new dependency | TBD | To Implement |
-| TC-BRIEF-004 | `tests/behaviour/brief-shared-truth.test.ts` | `bun test tests/behaviour/brief-shared-truth.test.ts` | fabricated-surface-state mutant; closed-set equality | TBD | To Implement |
-| TC-BRIEF-005 | `tests/behaviour/brief-read-cost.test.ts` | `bun test tests/behaviour/brief-read-cost.test.ts` | brief-only reader member; status baseline diff | TBD | To Implement |
-| TC-BRIEF-006 | `tests/behaviour/brief-output.test.ts` | `bun test tests/behaviour/brief-output.test.ts` | over-cap renderer; missing-marker; order-dropping renderer; at/over-cap pair | TBD | To Implement |
-| TC-BRIEF-007 | `tests/behaviour/brief-anchors.test.ts` | `bun test tests/behaviour/brief-anchors.test.ts` | unknown-review-as-approved mutant; cap-omitted vs in-cap pair | TBD | To Implement |
-| TC-BRIEF-008 | `tests/behaviour/brief-anchors.test.ts` | `bun test tests/behaviour/brief-anchors.test.ts` | unknown-age-as-zero mutant; future-timestamp case | TBD | To Implement |
-| TC-BRIEF-009 | `tests/behaviour/brief-placeholders.test.ts` | `bun test tests/behaviour/brief-placeholders.test.ts` | placeholder-as-observed mutant; 4th-entry mutant | TBD | To Implement |
-| TC-BRIEF-010 | `tests/behaviour/brief-negative-controls.test.ts` | `bun test tests/behaviour/brief-negative-controls.test.ts` | corrupted-expectation each fails by name; fully observed control | TBD | To Implement |
-| TC-BRIEF-011 | `tests/behaviour/brief-envelope.test.ts` | `bun test tests/behaviour/brief-envelope.test.ts` | exit-1-on-unavailability mutant; rejected identity scan | TBD | To Implement |
-| TC-BRIEF-012 | `tests/behaviour/brief-envelope.test.ts` | `bun test tests/behaviour/brief-envelope.test.ts`; `bun run scripts/checks/exit-code-literals.ts` | wrong-projection mutant; seeded exit literal | TBD | To Implement |
-| TC-BRIEF-013 | `tests/checks/error-table-sync.test.ts`; `tests/structure/error-table.test.ts` | `bun test tests/checks/error-table-sync.test.ts`; `bun run scripts/checks/error-table-sync.ts` | temp-copy row addition (both directions); `status.`-prefix scan | TBD | Existing – Update |
-| TC-BRIEF-014 | `tests/golden/brief.test.ts`; golden `human.txt` | `bun test tests/golden/brief.test.ts` | one-fact mutation + restore; mtime immutability | TBD | To Implement |
-| TC-BRIEF-015 | `tests/golden/brief.test.ts`; golden `envelope.json` | `bun test tests/golden/brief.test.ts` | one-fact mutation + restore; bound assertion | TBD | To Implement |
-| TC-BRIEF-016 | `tests/behaviour/brief-corpus.test.ts`; `tests/fixtures/brief/corpus/**` | `bun test tests/behaviour/brief-corpus.test.ts` | corrupted state/count/id/age/truncation fails by case | TBD | To Implement |
-| TC-BRIEF-017 | `tests/behaviour/brief-determinism.test.ts` | `bun test tests/behaviour/brief-determinism.test.ts` | `Date.now()` renderer; map-order renderer; permuted inputs | TBD | To Implement |
-| TC-BRIEF-018 | `tests/behaviour/brief-readonly.test.ts` | `bun test tests/behaviour/brief-readonly.test.ts` | write/spawn mutant; deliberate-fence control; anonymous instance | TBD | To Implement |
-| TC-BRIEF-019 | `tests/behaviour/brief-readonly.test.ts`; `tests/golden/redaction.test.ts` | `bun test tests/behaviour/brief-readonly.test.ts tests/golden/redaction.test.ts` | canary presence-then-absence; bypassing renderer | TBD | To Implement |
-| TC-BRIEF-020 | `tests/behaviour/brief-performance.test.ts` | `bun test tests/behaviour/brief-performance.test.ts` | non-vacuity count; page-size invariance | TBD | To Implement |
-| TC-BRIEF-021 | `tests/checks/brief-mutants.test.ts`; `tests/fixtures/brief/mutants/**` | `bun test tests/checks/brief-mutants.test.ts` | the mutant corpus itself; AC-coverage of mutants | TBD | To Implement |
-| TC-BRIEF-022 | `doc/spec/features/feature-brief.md`, man page, registry, status spec | recorded `grep`/read + review checklist | documented exit/identity/example/catalog assertions | TBD | To Implement (manual half) |
+| TC-BRIEF-001 | `tests/structure/brief-contract.test.ts` | `bun test tests/structure/brief-contract.test.ts`; `pnpm typecheck` | executable statement, 4th catalog entry, redeclared vocabulary, seeded product literal | Phase 1 | To Implement |
+| TC-BRIEF-002 | `tests/behaviour/brief-command.test.ts` | `bun test tests/behaviour/brief-command.test.ts` | malformed invocation with zero-call assertion; valid sibling control | Phase 3 | To Implement |
+| TC-BRIEF-003 | `tests/structure/brief-imports.test.ts`; `tests/boundaries` | `bun test tests/structure/brief-imports.test.ts tests/boundaries`; `bun run scripts/checks/ambient-globals.ts`; `pnpm check:boundaries` | seeded `node:http`, seeded `fetch`, seeded model SDK, seeded new dependency | Phase 3 | To Implement |
+| TC-BRIEF-004 | `tests/behaviour/brief-shared-truth.test.ts` | `bun test tests/behaviour/brief-shared-truth.test.ts` | fabricated-surface-state mutant; closed-set equality | Phase 2 | To Implement |
+| TC-BRIEF-005 | `tests/behaviour/brief-read-cost.test.ts` | `bun test tests/behaviour/brief-read-cost.test.ts` | brief-only reader member; status baseline diff | Phase 3 | To Implement |
+| TC-BRIEF-006 | `tests/behaviour/brief-output.test.ts` | `bun test tests/behaviour/brief-output.test.ts` | over-cap renderer; missing-marker; order-dropping renderer; at/over-cap pair | Phase 2 | To Implement |
+| TC-BRIEF-007 | `tests/behaviour/brief-anchors.test.ts` | `bun test tests/behaviour/brief-anchors.test.ts` | unknown-review-as-approved mutant; cap-omitted vs in-cap pair | Phase 2 | To Implement |
+| TC-BRIEF-008 | `tests/behaviour/brief-anchors.test.ts` | `bun test tests/behaviour/brief-anchors.test.ts` | unknown-age-as-zero mutant; future-timestamp case | Phase 2 | To Implement |
+| TC-BRIEF-009 | `tests/behaviour/brief-placeholders.test.ts` | `bun test tests/behaviour/brief-placeholders.test.ts` | placeholder-as-observed mutant; 4th-entry mutant | Phase 2 | To Implement |
+| TC-BRIEF-010 | `tests/behaviour/brief-negative-controls.test.ts` | `bun test tests/behaviour/brief-negative-controls.test.ts` | corrupted-expectation each fails by name; fully observed control | Phase 2 | To Implement |
+| TC-BRIEF-011 | `tests/behaviour/brief-envelope.test.ts` | `bun test tests/behaviour/brief-envelope.test.ts` | exit-1-on-unavailability mutant; rejected identity scan | Phase 4 | To Implement |
+| TC-BRIEF-012 | `tests/behaviour/brief-envelope.test.ts` | `bun test tests/behaviour/brief-envelope.test.ts`; `bun run scripts/checks/exit-code-literals.ts` | wrong-projection mutant; seeded exit literal | Phase 4 | To Implement |
+| TC-BRIEF-013 | `tests/checks/error-table-sync.test.ts`; `tests/structure/error-table.test.ts` | `bun test tests/checks/error-table-sync.test.ts`; `bun run scripts/checks/error-table-sync.ts` | temp-copy row addition (both directions); `status.`-prefix scan | Phase 4 | Existing – Update |
+| TC-BRIEF-014 | `tests/golden/brief.test.ts`; golden `human.txt` | `bun test tests/golden/brief.test.ts` | one-fact mutation + restore; mtime immutability | Phase 4 | To Implement |
+| TC-BRIEF-015 | `tests/golden/brief.test.ts`; golden `envelope.json` | `bun test tests/golden/brief.test.ts` | one-fact mutation + restore; bound assertion | Phase 4 | To Implement |
+| TC-BRIEF-016 | `tests/behaviour/brief-corpus.test.ts`; `tests/fixtures/brief/corpus/**` | `bun test tests/behaviour/brief-corpus.test.ts` | corrupted state/count/id/age/truncation fails by case | Phase 2 | To Implement |
+| TC-BRIEF-017 | `tests/behaviour/brief-determinism.test.ts` | `bun test tests/behaviour/brief-determinism.test.ts` | `Date.now()` renderer; map-order renderer; permuted inputs | Phase 3 | To Implement |
+| TC-BRIEF-018 | `tests/behaviour/brief-readonly.test.ts` | `bun test tests/behaviour/brief-readonly.test.ts` | write/spawn mutant; deliberate-fence control; anonymous instance | Phase 5 | To Implement |
+| TC-BRIEF-019 | `tests/behaviour/brief-readonly.test.ts`; `tests/golden/redaction.test.ts` | `bun test tests/behaviour/brief-readonly.test.ts tests/golden/redaction.test.ts` | canary presence-then-absence; bypassing renderer | Phase 5 | To Implement |
+| TC-BRIEF-020 | `tests/behaviour/brief-performance.test.ts` | `bun test tests/behaviour/brief-performance.test.ts` | non-vacuity count; page-size invariance | Phase 2 | To Implement |
+| TC-BRIEF-021 | `tests/checks/brief-mutants.test.ts`; `tests/fixtures/brief/mutants/**` | `bun test tests/checks/brief-mutants.test.ts` | the mutant corpus itself; AC-coverage of mutants | Phase 5 | To Implement |
+| TC-BRIEF-022 | `doc/spec/features/feature-brief.md`, man page, registry, status spec | recorded `grep`/read + review checklist | documented exit/identity/example/catalog assertions | Phase 8 | To Implement (manual half) |
 
 ### 7.1 Execution Order
 
@@ -1171,6 +1171,7 @@ Notes:
 | Version | Date (UTC) | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-11-05T00:00:00Z | Change Test Plan Writer | Initial plan: 22 TCs (`TC-BRIEF-001..022`, a new prefix). All 10 ACs and all 8 NFRs mapped with no orphan TCs. Binds the same-facts shared-truth model and claim map (§4.2), the closed placeholder catalog (§4.3), the ready-to-merge predicate (§4.4), the owner-gate age oracle (§4.5), the bound surface set (§4.6), the exhaustive failed/absent-read matrix (§4.7), the envelope/exit oracle (§4.8), the non-vacuity contract (§4.10), and the golden/corpus/mutant fixture strategy. Records three spec wording gaps (GAP-T1..T3) and the delivery-bound-spelling assumption (GAP-T4). Authored against spec v1.0; no spec, plan, pm-notes, or code file was modified. |
+| 1.1 | 2026-11-06T00:00:00Z | plan-writer | Filled the reserved "Plan phase" columns (§3.1 and §7) with the delivering phase ids from `chg-GH-228-plan.md` v1.0 (Phases 1–5 build the command and battery; Phase 8 is the @doc-syncer documentation phase delivering TC-BRIEF-022). No TC, oracle, suite target, control, or AC mapping changed; A-T8 bookkeeping only. |
 
 ## 10. Test Execution Log
 
