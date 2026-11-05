@@ -12,6 +12,7 @@ Repo-local OpenCode agents, commands, and skills.
 - Agents: `.opencode/agent/*.md`
 - Commands: `.opencode/command/*.md`
 - Skills: `.opencode/skills/<skill-name>/SKILL.md`
+- Plugins: `.opencode/plugins/<plugin-name>/index.ts`
 
 Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. This repo uses singular folders.
 
@@ -87,3 +88,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 ## Skills
 
 - `consolidate-memory`: curate `.ai/memory` by validating evidence, deduplicating, superseding, pruning, promoting, enforcing caps, and rebuilding the index (`.opencode/skills/consolidate-memory/SKILL.md`).
+
+## Plugins
+
+- `agent-env`: expose the active agent ID to tool subprocesses as `OPENCODE_AGENT` (default; configurable). See `.opencode/plugins/agent-env/README.md`.
