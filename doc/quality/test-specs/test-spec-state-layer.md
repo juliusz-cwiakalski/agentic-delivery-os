@@ -93,7 +93,12 @@ None apply: the state tier is a local library surface with no command, and all a
 
 ### Scenario: Mid-record refusal
 
-- **Given** a non-terminal integrity break, **when** salvage is invoked, **then** it fails `state.store.torn`, zero ledger bytes change, and no quarantine artifact or residue is created. Fence contention on a salvage attempt stays `state.lock.busy`.
+- **Given** a non-terminal integrity break, including a tear whose first break is mid-record and whose final frame is also truncated, **when** salvage is invoked, **then** it fails `state.store.torn`, zero ledger bytes change, and no quarantine artifact or residue is created. Fence contention on a salvage attempt stays `state.lock.busy`.
+
+### Scenario: Terminal-tail repair
+
+- **Given** a store whose last frame is truncated after a clean complete-lines prefix, **when** repair runs, **then** only those tail bytes are removed, the removed byte and frame counts are reported without payload content, every earlier record stays byte-identical, and no record is appended.
+- **And** a verified or empty ledger is a reported no-op, and a non-truncated tear or a truncated tail whose complete-lines prefix is itself broken refuses `state.store.torn` with zero byte mutation.
 
 ### Scenario: Rebuild from the ledger alone
 
@@ -122,7 +127,7 @@ Not covered. The state layer has no latency or throughput budget; full-history v
 
 ## Negative Testing
 
-Negative coverage includes every torn class, undeclared kinds and schemas, missing key sets, nonconforming writes at declared boundaries, salvage on mid-record tears and clean ledgers, fence contention, permission violations, index rebuild write failures, and exhaustion at every pre-commit write point. Each negative asserts a classified code, `not_landed` where a mutation was attempted, and unchanged durable bytes.
+Negative coverage includes every torn class, undeclared kinds and schemas, missing key sets, nonconforming writes at declared boundaries, salvage on mid-record tears and clean ledgers, repair refusal on non-terminal tears, fence contention, permission violations, index rebuild write failures, and exhaustion at every pre-commit write point. Each negative asserts a classified code, `not_landed` where a mutation was attempted, and unchanged durable bytes.
 
 ## Automation Strategy
 

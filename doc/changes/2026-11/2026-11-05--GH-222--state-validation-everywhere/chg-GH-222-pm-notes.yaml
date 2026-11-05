@@ -47,7 +47,7 @@ phases:
   system_spec_update: { started: "2026-11-05T22:58:00Z", completed: "2026-11-05T23:10:00Z" }
   review_fix:
     started: "2026-11-05T23:18:00Z"
-    completed: null
+    completed: "2026-11-06T00:05:00Z"
     iterations:
       - iteration: 1
         status: FAIL
@@ -55,7 +55,13 @@ phases:
         findings: "F-1 HIGH correctness (packages/core/src/state/ledger.ts:221): analyzeTear truncated-tail shortcut skips verifying complete lines before the final newline; combined mid-record + truncated-tail ledger lets salvage truncate at last newline (keeping the broken line), append the salvage record, write quarantine, then fail post-commit verification claiming not_landed after mutating bytes — empirically reproduced on HEAD; violates AC-F3-3/DEC-2. F-2 LOW test-quality: tautological pairwise-distinct assertion in state-unknown.test.ts:141. F-3 INFO performance: registry reads scan ledger 2-3x per operation — note only, no NFR governs; future stories."
         remediation: "Reviewer appended plan Phase 7 (tasks 7.1-7.4): fix complete-lines verification in truncated-tail branch classifying mid-record; regression-test combined tear shape; behavioral or removed distinctness assertion; M0-S5 repairTornTail shares the coarse-variant root (pre-existing, outside this change's ACs — follow-up surfaces to human, no autonomous ticket)"
         reopen: delivery
+        remediation_result: "Delivered by coder in commit 0934fff9 (Phase 7 tasks 7.1-7.4 all done, plan revision 1.2): analyzeTear now verifies the complete-lines prefix (torn prefix -> mid-record refusal before ANY write; schema-mismatch prefix -> undefined/unsalvageable, zero mutation; clean prefix -> unchanged terminal salvage); repairTornTail guarded the same way per plan 7.1 permission (pure-terminal contract unchanged, verified by existing TC-STATE-010 + new combined-shape refusal regression); F-2 replaced with behavioral distinctness across four real operations; non-vacuity proven by mutation (reverting ledger.ts fails byte-identity assertion). Behaviour tier 1442 pass / 0 fail post-remediation."
         date: "2026-11-05"
+      - iteration: 2
+        status: PASS
+        artifact: code-review/review-iter-2.yaml
+        findings: "0 blocking. F-1 and F-2 verified closed (reviewer independently reproduced the non-vacuity mutation); merge with main-tools introduced no regressions (state count exact at 9, oracles honest, 1501 behaviour pass / 0 fail); invariants clean; plan Phases 1-7 all done; AC traceability 9/9. Four non-blocking info residuals: schema-mismatch-prefix refusal evidence reports coarse tail position; test-plan §9 lacks a one-line entry for the TC-GH222-011 combined-shape extension; uncommitted doc-sync doc fixes ride the next commit; F-3 perf note carried (no action)."
+        date: "2026-11-06"
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -76,6 +82,9 @@ blockers:
     date: "2026-11-05"
     resolved_date: null
 notes:
+  - text: "Resume-sync merge with origin/main-tools (dispatch duty): GH-221 watchdog/lane contracts landed in parallel; merge conflicted on the shared error-table surface (6 files, 10 hunks) — resolved as a pure union by coder (merge commit 5eb4a1e1): 9 state rows + 3 watchdog rows = 46 entries, oracles recomputed from the resolved table (BASELINE_ROWS +12, toHaveLength 46, state count 7->9), both features' suites green (behaviour 1501 pass / 0 fail), privacy-release green again, forbidden-literals and doc-distribution clean, check:boundaries clean. Process note for parallel-delivery batches: error-table oracles encode exact totals, so every batch member touching the tables must expect a semantic (not textual) merge."
+    type: info
+    date: "2026-11-05"
   - text: "RETRO: the tear-topology test matrix covered each tear class individually but not the COMBINED shape (mid-record break + truncated tail) — the one combination where truncation-at-last-newline is unsound — and it shipped through spec v1.2, test plan (23 TCs), DoR gate, and implementation before the adversarial review reproduced it on HEAD. Improvement: for parsing/classification layers, enumerate pairwise combinations of detection classes in the test matrix, prioritizing shapes where a cheap shortcut (last-newline truncation) can alias a harder class (mid-record). Related retro: a tautological assertion (Set of 4 literals, size 4) also slipped through plan authoring and implementation — reviewers and DoR should sample-verify assertion substance, not just presence."
     type: retro
     date: "2026-11-05"
