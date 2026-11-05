@@ -73,6 +73,11 @@ const stateFiles = (): string[] => {
 };
 
 describe("TC-STATE-022 state-tier imports and runtime confinement", () => {
+  test("the artifact-boundary module is inside the scanned state tier", () => {
+    expect(stateFiles()).toContain("packages/core/src/state/artifact-boundary.ts");
+    expect(stateFiles()).toContain("packages/core/src/state/storage-error.ts");
+  });
+
   test("the real state tier has no forbidden import", () => {
     const violations: string[] = [];
     for (const file of stateFiles()) {

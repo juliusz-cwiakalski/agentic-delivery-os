@@ -53,6 +53,7 @@ export {
   STATE_SCHEMA_VERSION,
   type StateDriverKind,
 } from "#contracts";
+export { createArtifactBoundary, type StateArtifactBoundary } from "./artifact-boundary.js";
 export {
   appendCloseoutOutcome,
   CLOSEOUT_OPERATION_RECORD_KEY_PREFIX,

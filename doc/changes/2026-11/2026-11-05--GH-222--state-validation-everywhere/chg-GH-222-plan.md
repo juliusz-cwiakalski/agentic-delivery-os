@@ -529,7 +529,7 @@ port stays kind-agnostic (ASM-4).
 
 **Tasks**:
 
-- [ ] **4.1** New `packages/core/src/state/artifact-boundary.ts` (imports contracts + own modules
+- [x] **4.1** New `packages/core/src/state/artifact-boundary.ts` (imports contracts + own modules
   only; composes the store port like `registry.ts`/`closeout.ts`): the declarative
   artifact-boundary contract — declared record kinds, payload-schema declarations (required
   fields, closed vocabularies, record identity), and the classification behavior: reads validate
@@ -541,9 +541,9 @@ port stays kind-agnostic (ASM-4).
   field fails `state.store.unknown` with `not_landed` and zero mutation (no default filled in).
   The declaration is reusable data: applying it to a second, differently named kind requires no
   code changes.
-- [ ] **4.2** `packages/core/src/state/index.ts`: export the boundary factory and types on the
+- [x] **4.2** `packages/core/src/state/index.ts`: export the boundary factory and types on the
   `core/state` subpath.
-- [ ] **4.3** **TC-GH222-020, TC-GH222-021, TC-GH222-022**: new
+- [x] **4.3** **TC-GH222-020, TC-GH222-021, TC-GH222-022**: new
   `tests/behaviour/state-artifact-boundary.test.ts` — the verdict matrix (four verdicts,
   pairwise distinct, no defaults; declaration applied to a second kind; suite imports no retro
   or ceremony runtime module); the retro-registry stand-in kind (conforming round-trip incl. a
@@ -551,16 +551,16 @@ port stays kind-agnostic (ASM-4).
   stability; undeclared kind read classified); the ceremony-artifact stand-in kind (malformed
   JSON → torn; out-of-vocabulary value and missing identity → `state.store.unknown`; undeclared
   sibling kind → unknown; refused writes leave ledger/documents unchanged).
-- [ ] **4.4** **TC-GH222-006**: new `tests/behaviour/state-boundary-validation.test.ts` —
+- [x] **4.4** **TC-GH222-006**: new `tests/behaviour/state-boundary-validation.test.ts` —
   write-boundary refusals (undeclared kind, schema-violating payload, missing required field)
   fail classified `state.store.unknown` with `not_landed`; ledger digest unchanged; verified
   read returns exactly the pre-existing records and evidence count.
-- [ ] **4.5** **TC-GH222-004**: new `tests/behaviour/state-unknown.test.ts` — undeclared kind and
+- [x] **4.5** **TC-GH222-004**: new `tests/behaviour/state-unknown.test.ts` — undeclared kind and
   undeclared payload schema → `state.store.unknown` with path/position/remediation and no value;
   version mismatch stays `state.schema.mismatch` (not overloaded); verified-empty is pairwise
   distinct from both; test names make explicit that the raw store port stays kind-agnostic and
   "undeclared" is boundary-relative (ASM-4).
-- [ ] **4.6** Structure guards: update `tests/structure/state-contract.test.ts` (contract
+- [x] **4.6** Structure guards: update `tests/structure/state-contract.test.ts` (contract
   surface), `tests/structure/state-imports.test.ts` / `tests/structure/state-scope.test.ts`
   (new module stays inside the state tier; no runtime API outside the driver edge), and run
   `tests/checks/packed-state.test.ts` (new exports on the packed `core/state` subpath).
@@ -592,6 +592,22 @@ port stays kind-agnostic (ASM-4).
 - TC-GH222-020, TC-GH222-021, TC-GH222-022 (verdict matrix; retro and ceremony stand-ins).
 - TC-GH222-006 (write-boundary schema validation).
 - TC-GH222-004 (unknown vs schema mismatch vs verified-empty).
+
+**Task evidence (2026-11-05)**: `createArtifactBoundary(store, declaration)` is the exported
+factory (`core/state`); declarations are plain data (`recordKeyPrefix`, `kinds[]` with
+`kind`, optional `payloadSchema`, `identityField`, typed `fields`, optional closed
+`vocabularies`). A boundary owns its `recordKeyPrefix` namespace and ignores unrelated consumer
+records, so the raw store port stays kind-agnostic (ASM-4). Reads validate schema identifier,
+required fields/types, identity, and vocabularies before returning; writes validate identically
+before delegating to `store.append`, so a refusal mutates nothing. Stand-in declarations live in
+`tests/fixtures/state/artifact-declarations.ts`.
+
+**Acceptance (Phase 4)**: four verdicts distinct with no default substitution — PASSED
+(TC-GH222-020, TC-GH222-004). Undeclared kind/schema → `state.store.unknown`; version mismatch
+stays `state.schema.mismatch` — PASSED (TC-GH222-004). Nonconforming writes fail `not_landed`
+with byte-identical ledger — PASSED (TC-GH222-006/021/022). No retro/ceremony runtime behaviour
+imported or required — PASSED (import-scan test; no such state modules exist). Reuse on a second
+kind — PASSED (ceremony stand-in).
 
 **Verification**:
 
@@ -800,5 +816,6 @@ NFR-6 → 1, 5; NFR-7 → 3.
 |-------|--------|---------|-----------|--------|-------|
 | 1 — Contracts, vocabulary, and synced error tables | Done | 2026-11-05 | 2026-11-05 | 0684212d | `error-table-sync` entries=43 documented=43 exit 0; targeted suites 105 pass (error-table-sync, error-table, state-contract), state-error-classification 8 pass; `git diff --check` clean. Deliberate baseline regeneration: `BASELINE_ROWS + 9`, frozen state rows repinned to the refined texts. Fixtures updated: corpora, contract export inventory, content inventory. |
 | 2 — Tear topology, exhaustion seam, and fail-closed write boundaries | Done | 2026-11-05 | 2026-11-05 | 2ba51d72 | Verification block: torn+evidence 34 pass; storage-exhausted 5 pass; index 10 pass; keys+atomic-replace 13 pass regressions. Broader regression sweep (state-fence, state-permissions, state-error-classification, state-conformance, content-inventory, state-imports, state-scope, packed-state) 48 pass. No SQLite skip needed on this runtime. New module `state/storage-error.ts` registered in the inventory + executable allowance. |
-| 3 — Explicit guided tail salvage with quarantine | Done | 2026-11-05 | 2026-11-05 | (this commit) | Verification block: salvage + invariants 11 pass; post-salvage + storage-exhausted 9 pass; permissions + fence 18 pass; `error-table-sync` entries=43 documented=43 exit 0. Broader sweep (15 suites incl. torn/evidence/index/keys/atomic-replace/error-classification/conformance/registry/content-inventory/imports/scope/contract/packed-state) 130 pass; verify suites 59 pass. OQ-T3: clean-ledger salvage is a reported no-op (TC-GH222-024 candidate). |
+| 3 — Explicit guided tail salvage with quarantine | Done | 2026-11-05 | 2026-11-05 | fac0e764 | Verification block: salvage + invariants 11 pass; post-salvage + storage-exhausted 9 pass; permissions + fence 18 pass; `error-table-sync` entries=43 documented=43 exit 0. Broader sweep (15 suites incl. torn/evidence/index/keys/atomic-replace/error-classification/conformance/registry/content-inventory/imports/scope/contract/packed-state) 130 pass; verify suites 59 pass. OQ-T3: clean-ledger salvage is a reported no-op (TC-GH222-024 candidate). |
+| 4 — Reusable boundary validation and artifact-boundary contracts | Done | 2026-11-05 | 2026-11-05 | (this commit) | Verification block: artifact-boundary + unknown + boundary-validation 15 pass; state-contract/imports/scope 22 pass; packed-state 1 pass; content-inventory 6 pass; `git diff --check` clean. New module `state/artifact-boundary.ts` registered in the inventory + executable allowance. |
 | — | Not started | — | — | — | Populated during delivery; record per-phase commit, suite results, SQLite-binding skips, and the OQ-T2 decision |

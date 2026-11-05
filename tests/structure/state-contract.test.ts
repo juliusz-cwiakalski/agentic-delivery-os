@@ -19,6 +19,7 @@ import {
   type StateStoreIdentity,
 } from "../../packages/core/src/contracts/index";
 import {
+  createArtifactBoundary,
   createStateStore,
   type StateEdgeFaultPoint,
   type StateRuntimeEdge,
@@ -184,6 +185,7 @@ describe("TC-GH222-001 contract surface: salvage and artifact-boundary declarati
       "array",
       "null",
     ]);
+    expect(typeof createArtifactBoundary).toBe("function");
   });
 
   test("salvage and artifact declarations are additive within the current schema version", () => {

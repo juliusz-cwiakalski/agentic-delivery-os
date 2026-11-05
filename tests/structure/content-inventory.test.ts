@@ -267,6 +267,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/domain/status.ts": ["aggregateStatus", "renderStatusHuman"],
   "core/src/state/index.ts": ["createStateStore"],
+  "core/src/state/artifact-boundary.ts": ["createArtifactBoundary"],
   "core/src/state/closeout.ts": [
     "CLOSEOUT_OPERATION_RECORD_KEY_PREFIX",
     "appendCloseoutOutcome",
