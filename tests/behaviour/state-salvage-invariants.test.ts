@@ -17,6 +17,7 @@ import {
   makeTempRoot,
   openStore,
   quarantineDirectory,
+  quarantineFiles,
   removeRoot,
   salvageTail,
   withinFence,
@@ -66,6 +67,14 @@ const plantMidRecordBreak = (text: string): string => {
   lines[2] = JSON.stringify({ ...record, payload: "planted-payload-corrupt" });
   return lines.join("\n");
 };
+
+/**
+ * Record 3's checksum is broken (records 4 and 5 stay parseable) AND the ledger
+ * ends in an unterminated fragment: the coarse whole-ledger verdict is
+ * `truncated-tail` while the first break is mid-record.
+ */
+const plantMidRecordWithTruncatedTail = (text: string): string =>
+  `${plantMidRecordBreak(text)}{"schemaVersion":"delivery.state.v1","kind":"park"`;
 
 describe("TC-GH222-010 reads never repair: torn reads are byte-side-effect-free", () => {
   const tears: Array<[string, (text: string) => string]> = [
@@ -172,6 +181,71 @@ describe("TC-GH222-011 salvage on a mid-record tear refuses with zero byte mutat
       const again = store.readRecords();
       expect(again.ok).toBe(false);
       if (!again.ok) expect(again.error.location.record).toBe(3);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("a mid-record break combined with a truncated tail refuses before any write", () => {
+    const root = makeTempRoot("gh222-invariant-midrecord-tail");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      seedRecords(store, 5);
+      writeFileSync(ledgerPath(identity), plantMidRecordWithTruncatedTail(ledgerText(identity)));
+      const before = ledgerBytes(identity);
+      const digestBefore = ledgerDigest(identity);
+
+      // The coarse whole-ledger verdict sees the unterminated final fragment.
+      const tornRead = store.readRecords();
+      expect(tornRead.ok).toBe(false);
+      if (tornRead.ok) return;
+      expect(tornRead.error.code).toBe("state.store.torn");
+      const coarsePosition = tornRead.error.location.record ?? 0;
+      expect(coarsePosition).toBe(6);
+
+      // Salvage refuses at the earlier mid-record break, not the tail.
+      const salvaged = salvageTail(store);
+      expect(salvaged.ok).toBe(false);
+      if (!salvaged.ok) {
+        expect(salvaged.error.code).toBe("state.store.torn");
+        expect(salvaged.error.location.record).toBe(3);
+        expect(salvaged.error.location.path).toBe(ledgerPath(identity));
+        expect(JSON.stringify(salvaged.error)).not.toContain("quarantine");
+        expect(JSON.stringify(salvaged.error)).not.toContain("truncation");
+      }
+      // Zero byte mutation: the broken line and the fragment both survive.
+      expect(ledgerBytes(identity).equals(before)).toBe(true);
+      expect(ledgerDigest(identity)).toBe(digestBefore);
+      expect(existsSync(quarantineDirectory(identity))).toBe(false);
+      expect(quarantineFiles(identity)).toHaveLength(0);
+      expect(ledgerText(identity)).not.toContain("state.salvage");
+
+      // No residue: the next verified read reports the same tear.
+      const again = store.readRecords();
+      expect(again.ok).toBe(false);
+      if (!again.ok) expect(again.error.location.record).toBe(coarsePosition);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("the same seed with a clean prefix still salvages (terminal classification holds)", () => {
+    const root = makeTempRoot("gh222-invariant-clean-prefix");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      seedRecords(store, 5);
+      writeFileSync(ledgerPath(identity), plantTruncatedTail(ledgerText(identity)));
+
+      const salvaged = salvageTail(store);
+      expect(salvaged.ok).toBe(true);
+      if (!salvaged.ok || !salvaged.value.salvaged) return;
+      expect(salvaged.value.report.keptRecords).toBe(5);
+      expect(salvaged.value.report.sequence).toBe(6);
+      expect(quarantineFiles(identity)).toHaveLength(1);
+      const verified = store.readRecords();
+      expect(verified.ok).toBe(true);
     } finally {
       removeRoot(root);
     }

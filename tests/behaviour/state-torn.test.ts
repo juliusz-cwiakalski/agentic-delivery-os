@@ -330,6 +330,31 @@ describe("TC-STATE-010 terminal repair versus mid-record refusal", () => {
     }
   });
 
+  test("repair refuses a mid-record break combined with a truncated tail", () => {
+    const root = makeTempRoot("repair-refusal-combined");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      seed(store);
+      const broken = mutateRecord(ledgerText(identity), 0, (record) => {
+        record.payload = "planted-payload-corrupt";
+      });
+      // The coarse verdict is `truncated-tail`; the first break is record 1.
+      writeFileSync(ledgerPath(identity), `${broken}{"schemaVersion":"delivery.state.v1"`);
+      const before = ledgerText(identity);
+      const repair = store.repairTornTail();
+      expect(repair.ok).toBe(false);
+      if (!repair.ok) {
+        expect(repair.error.code).toBe("state.store.torn");
+        expect(repair.error.location.record).toBe(1);
+      }
+      // Truncating at the last newline would keep the broken line: refused whole.
+      expect(ledgerText(identity)).toBe(before);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
   test("the auto-repair control would discard non-terminal data", () => {
     const root = makeTempRoot("repair-control");
     try {

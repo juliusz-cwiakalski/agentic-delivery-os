@@ -220,7 +220,27 @@ export const analyzeTear = (
   const totalBytes = utf8Length(text);
   if (verification.variant === "truncated-tail") {
     const prefixCharacters = text.lastIndexOf("\n") + 1;
-    const validPrefixBytes = utf8Length(text.slice(0, prefixCharacters));
+    const prefixText = text.slice(0, prefixCharacters);
+    // A truncated tail is terminal only when every complete line before it is
+    // clean. A break among those lines survives truncation at the last newline,
+    // so it is mid-record damage here: salvage must refuse before any write.
+    const prefix = verifyLedger(prefixText, schemaVersion);
+    if (prefix.status === "schema") return undefined;
+    if (prefix.status === "torn") {
+      const prefixTear = analyzeTear(prefixText, schemaVersion);
+      if (prefixTear === undefined) return undefined;
+      return {
+        topology: "mid-record",
+        variant: prefixTear.variant,
+        position: prefixTear.position,
+        validPrefixBytes: prefixTear.validPrefixBytes,
+        validPrefixCharacters: prefixTear.validPrefixCharacters,
+        tailBytes: totalBytes - prefixTear.validPrefixBytes,
+        // Everything from the first break on, including the partial frame.
+        discardedFrames: prefixTear.discardedFrames + 1,
+      };
+    }
+    const validPrefixBytes = utf8Length(prefixText);
     return {
       topology: "terminal",
       variant: verification.variant,

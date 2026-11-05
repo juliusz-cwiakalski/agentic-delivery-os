@@ -554,7 +554,14 @@ export const createStateStore = (
       if (verification.status !== "torn" || verification.variant !== "truncated-tail") {
         return torn(ledgerPath, verification.position);
       }
-      const kept = text.lastIndexOf("\n") + 1;
+      // A terminal tail is repairable only when every complete line before it
+      // verifies: a break among those lines survives any truncation at the last
+      // newline, so repair refuses here with zero byte mutation as well.
+      const tear = analyzeTear(text, identity.schemaVersion);
+      if (tear === undefined || tear.topology === "mid-record") {
+        return torn(ledgerPath, tear?.position ?? verification.position);
+      }
+      const kept = tear.validPrefixCharacters;
       const removedBytes = text.length - kept;
       try {
         edge.truncateFile(ledgerPath, kept);

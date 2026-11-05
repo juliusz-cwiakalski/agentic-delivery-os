@@ -6,8 +6,12 @@
  * both; and the raw store port remains kind-agnostic.
  */
 import { describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
-import { ERROR_TABLE, type ErrorTableEntry } from "../../packages/core/src/contracts/index";
+import { readFileSync, writeFileSync } from "node:fs";
+import {
+  ERROR_TABLE,
+  type ErrorTableEntry,
+  type StateStoreIdentity,
+} from "../../packages/core/src/contracts/index";
 import { createArtifactBoundary } from "../../packages/core/src/state/index";
 import { appendArtifact, RETRO_BOUNDARY } from "../fixtures/state/artifact-declarations";
 import {
@@ -23,7 +27,8 @@ const guidanceFor = (code: string): string =>
   (ERROR_TABLE as readonly ErrorTableEntry[]).find((entry) => entry.code === code)
     ?.remediationHint ?? "";
 
-const headerPath = (root: string): string => `${root}/header.workspace-a.json`;
+const headerPath = (identity: StateStoreIdentity): string =>
+  `${identity.stateDirectory}/header.${encodeURIComponent(identity.workspaceId)}.json`;
 
 const conforming = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   schemaId: "delivery.retro.finding.v1",
@@ -106,7 +111,7 @@ describe("TC-GH222-004 boundary-relative unknown versus version mismatch", () =>
         payload: conforming() as never,
       });
       writeFileSync(
-        headerPath(root),
+        headerPath(identity),
         `${JSON.stringify({ schemaVersion: "delivery.state.v999" })}\n`,
       );
       const read = boundary.read();
@@ -123,28 +128,68 @@ describe("TC-GH222-004 boundary-relative unknown versus version mismatch", () =>
   test("verified-empty is pairwise distinct from unknown, schema mismatch, and torn", () => {
     const root = makeTempRoot("gh222-unknown-distinct");
     try {
-      const identity = makeIdentity(root);
-      const { store } = openStore(identity);
-      const boundary = createArtifactBoundary(store, RETRO_BOUNDARY);
-      const empty = boundary.read();
+      // Each entry below is produced by a real operation, never a literal list.
+      const outcomes: string[] = [];
+
+      // Verified-empty: a boundary read over an absent store.
+      const emptyIdentity = makeIdentity(root, { workspaceId: "empty" });
+      const emptyStore = openStore(emptyIdentity).store;
+      const emptyBoundary = createArtifactBoundary(emptyStore, RETRO_BOUNDARY);
+      const empty = emptyBoundary.read();
       expect(empty.ok).toBe(true);
       if (empty.ok) {
         expect(empty.value.verdict).toBe("verified-empty");
         expect(empty.value.evidence.verifiedEmpty).toBe(true);
+        outcomes.push(`verified:${empty.value.verdict}`);
       }
       // Verified-empty satisfies only an empty key-set declaration.
-      expect(store.read({ requiredKeys: [] }).ok).toBe(true);
-      const nonEmpty = store.read({ requiredKeys: ["retro.records:F-1"] });
+      expect(emptyStore.read({ requiredKeys: [] }).ok).toBe(true);
+      const nonEmpty = emptyStore.read({ requiredKeys: ["retro.records:F-1"] });
       expect(nonEmpty.ok).toBe(false);
       if (!nonEmpty.ok) expect(nonEmpty.error.code).toBe("state.keys.missing");
 
-      const distinct = new Set([
-        "verified-empty",
-        "state.store.unknown",
-        "state.schema.mismatch",
-        "state.store.torn",
+      // Unknown: an undeclared record kind at the boundary.
+      const unknownIdentity = makeIdentity(root, { workspaceId: "unknown" });
+      const unknownStore = openStore(unknownIdentity).store;
+      const unknownBoundary = createArtifactBoundary(unknownStore, RETRO_BOUNDARY);
+      seedRaw(unknownStore, "retro.unknown-kind", conforming({ findingId: "U" }));
+      const unknown = unknownBoundary.read();
+      expect(unknown.ok).toBe(false);
+      if (!unknown.ok) outcomes.push(`failed:${unknown.error.code}`);
+
+      // Schema mismatch: a version-scoped store mismatch.
+      const schemaIdentity = makeIdentity(root, { workspaceId: "schema" });
+      const schemaStore = openStore(schemaIdentity).store;
+      const schemaBoundary = createArtifactBoundary(schemaStore, RETRO_BOUNDARY);
+      writeFileSync(
+        headerPath(schemaIdentity),
+        `${JSON.stringify({ schemaVersion: "delivery.state.v999" })}\n`,
+      );
+      const schema = schemaBoundary.read();
+      expect(schema.ok).toBe(false);
+      if (!schema.ok) outcomes.push(`failed:${schema.error.code}`);
+
+      // Torn: a verified integrity break over a declared record.
+      const tornIdentity = makeIdentity(root, { workspaceId: "torn" });
+      const tornStore = openStore(tornIdentity).store;
+      const tornBoundary = createArtifactBoundary(tornStore, RETRO_BOUNDARY);
+      appendArtifact(tornBoundary, tornStore, {
+        kind: "retro.finding",
+        recordKey: "retro.records:F-1",
+        payload: conforming() as never,
+      });
+      const tornLedger = readFileSync(ledgerPath(tornIdentity), "utf8").slice(0, -1);
+      writeFileSync(ledgerPath(tornIdentity), tornLedger);
+      const torn = tornBoundary.read();
+      expect(torn.ok).toBe(false);
+      if (!torn.ok) outcomes.push(`failed:${torn.error.code}`);
+
+      expect(outcomes).toEqual([
+        "verified:verified-empty",
+        "failed:state.store.unknown",
+        "failed:state.schema.mismatch",
+        "failed:state.store.torn",
       ]);
-      expect(distinct.size).toBe(4);
     } finally {
       removeRoot(root);
     }
