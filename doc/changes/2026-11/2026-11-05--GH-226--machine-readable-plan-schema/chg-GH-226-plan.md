@@ -351,6 +351,39 @@ From spec §4.1 — verified by the cited scenarios:
 
 ---
 
+### Phase 8: Code Review Remediation (Iteration 1)
+
+**Goal**: Close the review findings from `code-review/review-iter-1.yaml` — complete the F-13 consuming-prompt flip for the nine lifecycle prompts still locating only `chg-<ref>-plan.md` (F-1), pin the plan-phase completion-evidence convention (F-2), and land the low-severity documentation corrections (F-3..F-6). Code (contracts/domain/CLI/adapters/tests) needs no changes: the review re-ran the plan suites, structure suites, distribution guard, and plugin staleness check green at HEAD and confirmed OQ-3/OQ-8 defaults.
+
+**Tasks**:
+
+- [ ] **8.1** Route to `@toolsmith` (F-1, RSK-7, spec F-13): flip the nine residual prompts to the dual-format discovery rule already used by run-plan/coder — `chg-<workItemRef>-plan.yaml` is the current plan, YAML wins when both formats exist, legacy `chg-<workItemRef>-plan.md` stays readable via the classified `plan.format.legacy-markdown` verdict. Files: `.opencode/agent/reviewer.md` (~line 82 discovery; also the local-mode "Spec and Plan Audit" step 7 semantics), `.opencode/agent/pm.md` (~line 386 dod_check step), `.opencode/agent/readiness-reviewer.md` (~line 49 inputs), `.opencode/agent/doc-syncer.md` (~line 32), `.opencode/agent/test-plan-writer.md` (~line 50), `.opencode/command/review.md` (~line 38 + plan task-audit semantics), `.opencode/command/review-deep.md` (~line 39), `.opencode/command/sync-docs.md` (~lines 50, 171), `.opencode/command/write-test-plan.md` (~lines 46, 52). Where prompts parse task checkboxes, keep the checkbox flow for legacy markdown plans and add the YAML flow: plan audit / DoD verification compares declared `phases[]` scope against the diff (may use `plan diff`/`plan validate`) plus pm-notes completion evidence.
+- [ ] **8.2** Route to `@toolsmith` (F-2): pin the plan-phase completion-evidence convention in `.opencode/command/run-plan.md`, `.opencode/agent/coder.md`, `.opencode/agent/pm.md`, and `.opencode/agent/reviewer.md`: per-plan-phase evidence is recorded in `chg-<ref>-pm-notes.yaml` (notes entry naming the plan phase id, commit hash, and test outcome) — the `phase` CLI command only transitions lifecycle phases and must not be cited for plan-phase progress; declared YAML scope is never mutated to record progress. Align the DoD-guide wording ("phase ledger and PM notes") if needed so plan phases vs lifecycle phases are unambiguous.
+- [ ] **8.3** Route to `@toolsmith` (RSK-6, TC-DPLAN-029 step 3): regenerate `.ados-claude/` (`./scripts/build-claude-plugin.sh --verbose`), confirm `git diff --exit-code -- .ados-claude` after staging, run `bash scripts/.tests/test-doc-distribution.sh` and `git diff --check`; commit prompt sources and regenerated plugin output together.
+- [ ] **8.4** Docs (F-5): in `doc/spec/features/feature-plan-schema.md` (integration section), correct the repository-diff claim: the actual-diff input is an embedder-injected `readDiff` port; no production diff reader ships in-tree (the repo adapter reads `.git` metadata only); an unconfigured composition answers exit 2 `input.value.rejected`. Keep the existing `ados_distribution` marker; re-run the distribution guard.
+- [ ] **8.5** Change-artifact hygiene (F-3, F-4): correct plan task 4.2's exit text (malformed invocation projects exit 1 via `input.value.rejected` / user-validation per the shared error table; exit 2 stays the unreadable/platform class) and record the reconciliation in the Execution Log note for Phase 4; update `chg-GH-226-test-plan.md` §7 statuses to implemented/executed and §10 with the execution summary (suites green; TC-DPLAN-026 median 6.41 ms / p95 11.25 ms, re-verified at 2.40/4.59 ms; Bun 1.4.4 linux/x64) and add the p95 assertion to the TC-DPLAN-026 body per NFR-2.
+- [ ] **8.6** Optional, low (F-6): add one sentence to `feature-plan-schema.md` (overlap section) documenting the conservative same-static-prefix approximation for package-pattern pairs (sequence-biased, never false-parallel), and optionally a `tests/fixtures/plan/overlap/precision/` fixture pinning it. Skip is acceptable if 8.4 lands; record the choice in the Execution Log.
+
+**Acceptance Criteria**:
+
+- Must: zero `.opencode` prompts locate only `chg-<ref>-plan.md` (grep-verified); reviewer/pm/readiness prompts handle both plan formats with the YAML plan authoritative; regenerated plugin current (staleness clean); distribution guard green (F-1).
+- Must: plan-phase evidence convention named identically in run-plan, coder, pm, and reviewer prompts and consistent with the DoD guide (F-2).
+- Must: feature-spec diff-reader wording matches the shipped seam (F-5); plan task 4.2 text and test-plan §7/§10 reconciled (F-3, F-4).
+- Should: `pnpm check` green after the prompt/doc changes; no source-code changes required.
+
+**Files and modules**:
+
+- Code areas: none expected (prompt and documentation only; if 8.6 adds a fixture, its expectation row lands with it).
+- System docs: `.opencode/**` (nine prompts), `.ados-claude/**` (regenerated), `doc/spec/features/feature-plan-schema.md`, this change folder's plan and test plan.
+
+**Tests**:
+
+- `./scripts/build-claude-plugin.sh --verbose` + `git diff --exit-code -- .ados-claude`; `bash scripts/.tests/test-doc-distribution.sh`; `git diff --check`; `pnpm check`.
+
+**Completion signal**: `docs(GH-226): complete consuming-prompt flip and review remediation`
+
+---
+
 ## Test Scenarios
 
 All 30 scenarios from `chg-GH-226-test-plan.md` mapped to the phase that lands them (tests land with the code they verify; TC-DPLAN-001/013 domain halves in Phases 2–3, edge halves in Phase 4; TC-DPLAN-022 lint classes completed in Phase 5):
@@ -416,6 +449,7 @@ All 30 scenarios from `chg-GH-226-test-plan.md` mapped to the phase that lands t
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-05 | plan-writer | Initial plan from the completed GH-226 spec and test plan: 7 phases (contracts → validation domain → overlap/diff domain → CLI family → lint target → writer flip docs → finalize), OQ-1..OQ-8 pinned with OQ-3/OQ-8 routed to review, all 30 TCs mapped to phases, tests landing with their code. |
+| 1.1 | 2026-11-05 | reviewer | Appended Phase 8 remediation from review iteration 1 (`code-review/review-iter-1.yaml`, verdict FAIL): F-1 nine lifecycle prompts still locate only `chg-<ref>-plan.md` (fix-in-change via @toolsmith); F-2 plan-phase evidence convention unpinned (phase command is lifecycle-only); F-3..F-6 low-severity doc corrections; OQ-3/OQ-8 defaults confirmed; TC-DPLAN-026 p95 hard-assert judged matching NFR-2. Code phases 1–7 unchanged and green. |
 
 ## Execution Log
 
