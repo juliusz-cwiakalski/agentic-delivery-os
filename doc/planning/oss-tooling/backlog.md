@@ -415,6 +415,7 @@ the re-planning decisions are recorded in roadmap.md (M0 exit amendment and
 the M1 redefinition).
 
 ### M1-S1 Watchdog and lane contracts
+- Ticket: GH-221 (milestone M1)
 - Goal: Watchdog checks that refuse dirty or non-base checkouts and restore on every exit, so stranded and foreign commits become structurally impossible.
 - Tasks: pre-flight refuses non-base or dirty checkout; teardown restores on
   every exit; memory-publish verification; progress-based liveness.
@@ -423,6 +424,7 @@ the M1 redefinition).
 - Depends on: M0-S5.
 
 ### M1-S2 State validation everywhere
+- Ticket: GH-222 (milestone M1)
 - Goal: Schema validation at every state boundary so torn or unknown registries are classified events, never silently read as empty.
 - Tasks: schema checks at every state read/write boundary; classification of
   unknown, never silent zero. Coverage includes the delivery registry, the
@@ -439,6 +441,7 @@ the M1 redefinition).
 - Depends on: M0-S5.
 
 ### M1-S3 doctor v1
+- Ticket: GH-224 (milestone M1)
 - Goal: One command that diagnoses wiring problems with fix hints, so environment issues are found before they burn delivery quota.
 - Tasks: doctor-style checks for repo, tracker, provider, state, CI wiring;
   stable exit codes.
@@ -446,6 +449,7 @@ the M1 redefinition).
 - Depends on: M0-S6, M0-S13.
 
 ### M1-S4 Merge and verify-deploy engine
+- Ticket: GH-225 (milestone M1)
 - Goal: Merge as a verified transaction (gates fresh, squash, landing verified) plus deploy verification by job trace, killing merge near-misses and vacuous-green deploys; every refusal names its gate with inline evidence.
 - Tasks: merge transaction helper (verify gates fresh, squash, verify
   landed); deploy verification by job trace, not job status; the gate set
@@ -472,6 +476,7 @@ the M1 redefinition).
 - Depends on: M0-S9, M0-S4.
 
 ### M1-S5 Owner-gate SLA
+- Ticket: GH-229 (milestone M1)
 - Goal: Owner gates age into escalation or a default decision, never silence, so the fleet never idles on an unanswered ask.
 - Tasks: 24 h stale-review escalation; 72 h default-on-expiry; aging visible
   in brief and board; one pre-agreed default per gate. The escalation
@@ -482,6 +487,7 @@ the M1 redefinition).
 - Depends on: M0-S6.
 
 ### M1-S6 Brief render-only v0
+- Ticket: GH-228 (milestone M1)
 - Goal: A deterministic, render-only owner brief so the owner daily attention starts from facts, not chat.
 - Tasks: deterministic brief from the M0 collectors (tracker included) with
   explicit placeholders for unbuilt collectors; no LLM in the render path;
@@ -494,6 +500,7 @@ the M1 redefinition).
 - Depends on: M0-S6.
 
 ### M1-S7 Minimal MCP
+- Ticket: GH-231 (milestone M1)
 - Goal: A minimal MCP surface over proven engines so agent sessions consume the same core results through their native tool interface.
 - Tasks: thin MCP mirroring the CLI scope over proven engines: status,
   verify-artifact, gate report; no batch.
@@ -503,6 +510,7 @@ the M1 redefinition).
 - Depends on: M0-S6, M0-S8, M0-S9.
 
 ### M1-S8 OSS retro pipeline
+- Ticket: GH-232 (milestone M1)
 - Goal: The retro evidence pipeline with an independent evidence sidecar, so retrospectives read collector-truth delivery agents cannot alter.
 - Tasks: retro collection, registry hardening, shape-crash guards, export;
   home of the periodic memory audit; the independent evidence sidecar -
@@ -519,6 +527,7 @@ the M1 redefinition).
 - Depends on: M0-S5, M1-S2.
 
 ### M1-S9 Dispatch engine: dual-run evidence and per-repo handover
+- Ticket: GH-239 (milestone M1)
 - Goal: The typed dispatch loop (spawn, watch, classify, summarize) runs beside the bash stack, accumulates verify-change evidence, and hands over per repository, so the new engine becomes authoritative with the bash stack demoted to fallback.
 - Tasks: the per-ticket dispatch loop is this story's deliverable: spawn
   through the harness adapter, watch with progress-based liveness,
@@ -549,6 +558,7 @@ the M1 redefinition).
 - Depends on: M0-S8, M1-S11, M1-S17, M1-S18.
 
 ### M1-S10 status collector expansion
+- Ticket: GH-243 (milestone M1)
 - Goal: Collector expansion to full attention-state coverage so status keeps replacing manual probing and one digest bootstraps every session.
 - Tasks: expand beyond the six M0 collectors toward attention-state
   coverage: lanes delivering versus idle-with-reason, ready-to-merge as a
@@ -565,6 +575,7 @@ the M1 redefinition).
 - Depends on: M0-S6.
 
 ### M1-S11 Harness adapters and dispatch portability
+- Ticket: GH-233 (milestone M1)
 - Goal: Dispatch becomes harness-agnostic through adapters and session telemetry lands in the event log at closeout, making the harness a configuration choice and cost data durable.
 - Tasks: harness primitive ports (HarnessInstance, HarnessSession); the
   opencode delivery adapter (porting today's bash session spawn, resume,
@@ -595,6 +606,7 @@ the M1 redefinition).
 - Depends on: M0-S12, M0-S13.
 
 ### M1-S12 Change capsule completion and closeout expansion
+- Ticket: GH-240 (milestone M1)
 - Goal: Every merged change leaves a closed memory capsule (events plus promotion decisions), and post-merge mechanics become one idempotent command that emits judgment residue instead of consuming coordinator tokens.
 - Tasks: complete every change folder as a memory episode capsule:
   append-only events.jsonl (phase transitions, gate outcomes, review
@@ -628,6 +640,7 @@ the M1 redefinition).
 - Depends on: M0-S5, M0-S14, M1-S8, M1-S11.
 
 ### M1-S13 Machine-readable delivery plan schema
+- Ticket: GH-226 (milestone M1)
 - Goal: Delivery plans become machine-readable declared artifacts (per-phase scope, done-artifacts, leases, weight class, interactions) so parallelism is computable and the scheduler batches without an LLM in the loop.
 - Tasks: the plan schema (YAML) as the plan-writer output format: each
   phase declares the files, packages, and folders it will modify; its
@@ -654,6 +667,7 @@ the M1 redefinition).
 - Depends on: M0-S5, M0-S10.
 
 ### M1-S14 Commit primitive and phase-transition commits
+- Ticket: GH-227 (milestone M1)
 - Goal: Commits become a tool primitive that computes the message from the working tree plus change context, and phase completion records and commits atomically, so agents stop hand-crafting commits and every transition lands as a conventional commit.
 - Tasks: `ados commit`: compute a conventional commit message from
   uncommitted files plus the change context (ref, current phase, plan
@@ -678,6 +692,7 @@ the M1 redefinition).
 - Depends on: M0-S3, M0-S10.
 
 ### M1-S15 Session lifecycle economics
+- Ticket: GH-235 (milestone M1)
 - Goal: Sessions resume without re-paying prefill, liveness is progress-based, and restart budgets fail loudly, killing the resume-loop amplification class (the largest measured token-waste incident class).
 - Tasks: progress-based liveness signals at the harness adapter level
   (heartbeat, session traffic, token delta; CPU is never the only
@@ -700,6 +715,7 @@ the M1 redefinition).
 - Depends on: M1-S1, M1-S11.
 
 ### M1-S16 Typed blocker and question channel
+- Ticket: GH-230 (milestone M1)
 - Goal: Blockers publish as typed, ranked, answerable questions and answers apply without re-entering delivery sessions, converting hours of lane idle into seconds.
 - Tasks: typed question records (decision-needed with options,
   spec-ambiguity, credential-missing with variable name only and never
@@ -731,6 +747,7 @@ the M1 redefinition).
 - Depends on: M0-S5, M1-S5.
 
 ### M1-S17 Scheduling engine: queue, lanes, dependency batching
+- Ticket: GH-237 (milestone M1)
 - Goal: The programmatic queue with dependency awareness schedules the delivery loop end to end from declared plans, so the coordinator stops being a dispatcher and parallelism is computed, not discovered.
 - Tasks: priority queue with explicit dependencies between changes
   (priorities, repos, dependency graph as one artifact); readiness
@@ -770,6 +787,7 @@ the M1 redefinition).
 - Depends on: M0-S7, M0-S13, M1-S2, M1-S4, M1-S13, M1-S15.
 
 ### M1-S18 Resident dispatch daemon
+- Ticket: GH-238 (milestone M1)
 - Goal: A resident daemon drives the queue continuously (single-instance, crash-safe, never a lane itself, degrading to CLI one-shots), so lanes never idle waiting for a coordinator iteration.
 - Tasks: the daemon process (start, stop, status) supervises lanes by
   consuming the scheduling engine; single-instance enforcement (lock with
@@ -866,6 +884,7 @@ the M1 redefinition).
 - Depends on: M1-S4, M1-S15, M1-S16, M1-S17.
 
 ### M1-S19 Spend read side and resume amplification
+- Ticket: GH-236 (milestone M1)
 - Goal: Per-ticket and per-phase spend plus the resume-amplification metric are visible from the event log, so waste classes are findable from the spend report alone.
 - Tasks: `ados spend` v0 read side over the closeout-captured harness
   telemetry: per-ticket and per-phase tokens by class, calls, per agent
@@ -879,6 +898,7 @@ the M1 redefinition).
 - Depends on: M1-S11.
 
 ### M1-S20 Agent integration: prompts consume the tooling
+- Ticket: GH-242 (milestone M1)
 - Goal: The lifecycle agents (the PM-style coordinator and its lane agents: plan writer, coder, reviewer, and the rest) use the tool primitives for coordination, so coordination is tool calls, not prose discipline.
 - Tasks: update the agent prompt definitions and lifecycle instructions:
   phase bookkeeping exclusively via `ados phase`; pm-notes writes through
@@ -900,6 +920,7 @@ the M1 redefinition).
 - Depends on: M0-S10, M1-S4, M1-S10, M1-S13, M1-S14, M1-S16, M1-S17.
 
 ### M1-S21 Model profiles and provider watching
+- Ticket: GH-234 (milestone M1)
 - Goal: Model routing becomes profile-driven configuration (tier structure, per-agent overrides, selection heuristics, eligibility rules) with live provider watching and automatic switch-or-park, reverse-engineered from the legacy user-config resolver scripting; every harness spawn resolves a profile first, so quota and cost policy are enforced by machinery, not agent discipline.
 - Tasks: the profile model as configuration data: tiers as structure
   (responsibility groups) and profiles as the model-per-tier assignment
@@ -949,6 +970,7 @@ the M1 redefinition).
 - Depends on: M0-S13, M1-S11.
 
 ### M1-S22 Command audit ledger and agent identity
+- Ticket: GH-223 (milestone M1)
 - Goal: Every CLI invocation is audited (command, args, outcome, timing, caller identity) in a durable ledger, so scripted outputs can drop context fields agents do not need and auditor or retro agents get a trustworthy record.
 - Tasks: append-only audit ledger in the state layer: runId, command,
   arguments (through the redaction chokepoint), exit code, timing,
@@ -979,6 +1001,7 @@ the M1 redefinition).
 - Depends on: M0-S3, M0-S5.
 
 ### M1-S23 Coordinator supervision
+- Ticket: GH-241 (milestone M1)
 - Goal: The coordinator session gets the same managed lifecycle lanes have (resume on context pressure, artifact-evidence stuck detection, kill with grace, bounded restarts, wake on typed questions), replacing `ceo-loop.sh`'s actual function so the bash stack can retire at M4-S5 with no actor left unmanaged.
 - Tasks: coordinator-session supervision beside the lane daemon: spawn
   and join-or-resume decisions under context pressure (resume the

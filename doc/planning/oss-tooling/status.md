@@ -91,11 +91,10 @@ invariants, never moving-base diffs.
    plus TDR-0005, TDR-0006, TDR-0007, TDR-0008, and ADR-0010) per the
    inception readiness report, which links every record. Short review; the
    register links each one.
-3. **M1 milestone and tickets** (after GH-219 merges): create the M1
-   milestone and its 23 issues from the redefined backlog in ranking
-   order. M1 delivery is approved to start under the recorded gate
-   amendment; stories are dispatched in ranking order, with dispatch
-   handover (M1-S9) still respecting the per-repo two-clean-weeks rule.
+3. **M1 delivery start**: milestone and 23 tickets created (GH-221
+   through GH-243; map below); dispatch in ranking order under the
+   recorded gate amendment, with dispatch handover (M1-S9) still
+   respecting the per-repo two-clean-weeks rule.
 4. **Memory consolidation pass** (housekeeping): run the consolidation
    curator over `.ai/memory` to promote the CEO's M0 captures into
    `lessons/` with proper ids and rebuild the index.
@@ -111,3 +110,20 @@ invariants, never moving-base diffs.
    tracker-poll retry/backoff tuning in deliver-ticket; review-thread
    resolution helper; perf-test noise pattern (best-of-n) applied to the
    remaining timing-sensitive suites.
+
+## M1 story tickets (created 2026-11-05)
+
+| Story | Ticket | Story | Ticket |
+|---|---|---|---|
+| M1-S1 | GH-221 | M1-S2 | GH-222 |
+| M1-S22 | GH-223 | M1-S3 | GH-224 |
+| M1-S4 | GH-225 | M1-S13 | GH-226 |
+| M1-S14 | GH-227 | M1-S6 | GH-228 |
+| M1-S5 | GH-229 | M1-S16 | GH-230 |
+| M1-S7 | GH-231 | M1-S8 | GH-232 |
+| M1-S11 | GH-233 | M1-S21 | GH-234 |
+| M1-S15 | GH-235 | M1-S19 | GH-236 |
+| M1-S17 | GH-237 | M1-S18 | GH-238 |
+| M1-S9 | GH-239 | M1-S12 | GH-240 |
+| M1-S23 | GH-241 | M1-S20 | GH-242 |
+| M1-S10 | GH-243 | | |
