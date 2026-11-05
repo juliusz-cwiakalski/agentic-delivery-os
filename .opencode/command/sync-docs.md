@@ -47,7 +47,7 @@ Examples:
 <rule>Locate change folder: search `doc/changes/**/*--<workItemRef>--*/`</rule>
 <rule>If not found, search: `doc/changes/**/chg-<workItemRef>-spec.md`</rule>
 <rule>Spec file: `chg-<workItemRef>-spec.md`; derive slug & change.type from frontmatter.</rule>
-<rule>Plan file: `chg-<workItemRef>-plan.md`</rule>
+<rule>Plan file: `chg-<workItemRef>-plan.yaml` (YAML wins when both plan formats exist); legacy `chg-<workItemRef>-plan.md` remains readable during the transition.</rule>
 <rule>Folder pattern: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`</rule>
 </discovery_rules>
 
@@ -168,7 +168,7 @@ User-visible summary MUST include:
 </safety>
 
 <notes>
-- Resolve the implementation plan only as `chg-<workItemRef>-plan.md` in the change folder.
+- Resolve the implementation plan as `chg-<workItemRef>-plan.yaml` (YAML wins when both plan formats exist); legacy `chg-<workItemRef>-plan.md` remains readable during the transition.
 - If the Documentation Handbook (at `doc/documentation-handbook.md`) expects `/doc/spec/**` but that folder is absent, create the `/doc/spec/` tree lazily with `features/`, `api/` leveraging the current repo structure.
 - When the Documentation Handbook file is present, treat it as the authoritative description of how documentation should be structured and updated; follow it in addition to the rules in this command.
 - This command is self-sufficient when the handbook is missing: it embeds the required spec conventions and still keeps `/doc/spec/**` as the coherent "current truth".

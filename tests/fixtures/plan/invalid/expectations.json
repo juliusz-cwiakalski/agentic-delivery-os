@@ -1,0 +1,22 @@
+{
+  "unparseable.yaml.txt": { "code": "plan.schema.invalid", "field": "document" },
+  "top-level-sequence.yaml": { "code": "plan.schema.invalid", "field": "document" },
+  "missing-schema-version.yaml": { "code": "plan.schema.invalid", "field": "schemaVersion" },
+  "unsupported-schema-version.yaml": { "code": "plan.schema.invalid", "field": "schemaVersion" },
+  "missing-tier.yaml": { "code": "plan.schema.invalid", "field": "tier" },
+  "unknown-tier.yaml": { "code": "plan.tier.unknown", "field": "tier.name" },
+  "phase-missing-scope.yaml": { "code": "plan.schema.invalid", "phase": 6, "field": "scope.files" },
+  "unknown-scope-key.yaml": { "code": "plan.schema.invalid", "phase": 1, "field": "scope.sources" },
+  "wrong-value-type.yaml": { "code": "plan.schema.invalid", "phase": 1, "field": "scope.files" },
+  "malformed-done-artifact.yaml": {
+    "code": "plan.schema.invalid",
+    "phase": 2,
+    "field": "doneArtifacts.pipelineId"
+  },
+  "delivery-lease-free.yaml": { "code": "plan.schema.invalid", "phase": 2, "field": "leaseClass" },
+  "interaction-not-owned.yaml": {
+    "code": "plan.schema.invalid",
+    "phase": 1,
+    "field": "interactions[0].target"
+  }
+}

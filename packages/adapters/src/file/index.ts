@@ -28,6 +28,10 @@ export {
   stagePmNotesPhaseEntry,
 } from "./pm-notes-parser.js";
 export {
+  type PlanArtifactRequest,
+  readPlanArtifact,
+} from "./plan-artifact.js";
+export {
   type ParsedConfig,
   parseConfigYaml,
   parserHostSwitchBlocked,

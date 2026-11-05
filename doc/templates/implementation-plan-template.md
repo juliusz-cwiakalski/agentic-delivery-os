@@ -18,138 +18,87 @@ version_impact: <from-spec>
 ---
 
 <!-- TEMPLATE INSTRUCTIONS
-1. Copy this file to the change folder: doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/chg-<workItemRef>-plan.md
-2. Replace all <...> placeholders with actual values
-3. Remove these instructions before finalizing
-4. Derive all requirements from the change spec — do not invent
+1. Copy this file to the change folder as: doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/chg-<workItemRef>-plan.yaml
+   The body of that file is the YAML plan document below (drop this markdown wrapper and the front matter when authoring the YAML artifact).
+2. Replace all <...> placeholders with actual values.
+3. Remove these instructions before finalizing.
+4. Derive all requirements from the change spec and test plan — do not invent.
 -->
 
 # IMPLEMENTATION PLAN — <workItemRef>: <Change Title>
 
-## Context and Goals
+The current plan artifact is a versioned YAML document named
+`chg-<workItemRef>-plan.yaml`. A legacy `chg-<workItemRef>-plan.md` remains
+readable during the transition and is answered with the classified
+`plan.format.legacy-markdown` verdict; it is not schema-valid.
 
-<!-- Summarize what this plan delivers, how it connects to the change spec, and any resolved open questions.
-     If there are unresolved questions, list them as "Open questions" bullets. -->
+```yaml
+schemaVersion: delivery.plan.v1
+workItemRef: <workItemRef>
+tier:
+  name: <full | lite | declared tier>
+  phases: [<phase ids this tier runs>]
+  escalationTriggers:
+    - <inert trigger declared by the tier>
+defaultLeases:                    # optional plan-level default
+  - <repo lease>
+defaultWeightClass: <weight>      # optional plan-level default
+phases:
+  - id: 1
+    title: <Planning phase title>
+    kind: planning                # planning = lease-free
+    scope:
+      files:
+        - <concrete repository path>
+      folders:
+        - <boundary-aware directory prefix>
+      packages:
+        - packages/<package>/**   # package-granularity glob
+    interactions:
+      - kind: contract-file       # contract-file | generated-code
+        target: <path inside this phase's scope>
+        role: producer            # producer | consumer
+  - id: 2
+    title: <Delivery phase title>
+    kind: delivery                # delivery = lease-taking
+    scope:
+      files:
+        - <concrete repository path>
+    doneArtifacts:
+      mergeRequestUrl: <URL the phase must produce>
+      pipelineId: <pipeline id the phase must produce>
+      deployedEnvironment: <environment the phase deploys>
+      trackerTransition: <tracker state the phase moves to>
+    leases:
+      - <repo lease>
+    weightClass: <standard | heavy | opaque declared class>
+```
 
-## Scope
+## Scope semantics
 
-### In Scope
+- `files` entries are concrete repository-relative paths and match exactly.
+- `folders` entries are directory prefixes and match boundary-aware: `src/plan`
+  matches `src/plan/a.ts`, never `src/planner/a.ts`.
+- `packages` entries are package-granularity globs: `*` stays inside one path
+  segment and `**` crosses segments.
+- A phase must declare at least one non-empty scope key. Planning phases are
+  lease-free; delivery phases are lease-taking. An optional `leaseClass` must
+  agree with the phase kind.
+- `tier` is required plan data. Per-tier phase sets and escalation triggers are
+  inert declarations; unknown tiers are rejected with `plan.tier.unknown`.
+- `doneArtifacts` are typed declaration slots echoed by `plan validate`; the
+  verdict does not verify their reality.
 
-<!-- Bullet list of what is included, referencing spec F-# IDs -->
+## Validation
 
-### Out of Scope
+- `plan validate <workItemRef>` — schema verdict plus `readyForDevelopment`.
+- `plan overlap <refA> <refB>` — `parallel` or `run-in-sequence` with named paths.
+- `plan diff <workItemRef> [--against <base>]` — declared versus actual scope.
+- `lint plan <workItemRef>` — write-time conformance with locations.
 
-<!-- Bullet list of what is excluded -->
+## Legacy markdown transition
 
-### Constraints
-
-<!-- Technical and process constraints -->
-
-### Risks
-
-<!-- Key risks from spec, with mitigation strategy:
-- **RSK-#**: Description. Mitigated by...
--->
-
-### Success Metrics
-
-<!-- Key success metrics from spec -->
-
-## Phases
-
-<!-- Each phase follows this format:
-
-### Phase N: <Short Title>
-
-**Goal**: <What this phase achieves>
-
-**Tasks**:
-
-- [ ] **N.1** <Task description>
-- [ ] **N.2** <Task description>
-
-**Acceptance Criteria**:
-
-- Must: <Criterion from spec AC-#>
-- Should: <Nice-to-have criterion>
-
-**Affected code areas**:
-
-- <file/module/class> (new | updated)
-
-**System docs to update**:
-
-- <doc/spec/** path or system/quality doc> (new | updated)
-
-**Tests**:
-
-- <Validation step or test to run>
-
-**Completion signal**: <Commit message for this phase>
-
----
--->
-
-### Phase 1: <Title>
-
-**Goal**: <!-- What this phase achieves -->
-
-**Tasks**:
-
-- [ ] **1.1** <!-- Task description -->
-- [ ] **1.2** <!-- Task description -->
-
-**Acceptance Criteria**:
-
-- Must: <!-- Criterion -->
-
-**Affected code areas**:
-
-- <!-- file/module/class (new | updated) -->
-
-**System docs to update**:
-
-- <!-- doc/spec/** path or system/quality doc (new | updated) -->
-
-**Tests**:
-
-- <!-- test -->
-
-**Completion signal**: `<type>(workItemRef): <short description>`
-
----
-
-<!-- Add more phases as needed. Final phase should include:
-- Version bump per repo conventions
-- Spec reconciliation
--->
-
-## Test Scenarios
-
-<!-- Map test scenarios to phases and acceptance criteria:
-| ID | Scenario | Phases | AC |
-|----|----------|--------|----|
--->
-
-## Artifacts and Links
-
-<!-- Table of all artifacts created or modified:
-| Artifact | Location | Type |
-|----------|----------|------|
-| Change specification | ./chg-<workItemRef>-spec.md | Spec |
--->
-
-## Plan Revision Log
-
-<!-- Table format:
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | YYYY-MM-DD | plan-writer | Initial plan |
--->
-
-## Execution Log
-
-<!-- Populated during execution:
-| Phase | Status | Started | Completed | Commit | Notes |
-|-------|--------|---------|-----------|--------|-------|
--->
+`chg-<workItemRef>-plan.md` is read during the transition and answered with
+`plan.format.legacy-markdown` (`readyForDevelopment=false`, exit 1). New plans
+are authored as YAML; when both files exist, the YAML plan wins and the verdict
+discloses the artifact it read.

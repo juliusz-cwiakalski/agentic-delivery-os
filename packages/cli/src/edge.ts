@@ -16,7 +16,9 @@ import {
   type PmNotesFileSystemFacts,
   type RuntimePlatform,
   readCiWorkflowJobNames,
+  parseConfigYaml,
   readLocalPmContext,
+  readPlanArtifact,
   readPmNotesText,
   runtimePlatform,
   stagePmNotesPhaseEntry,
@@ -90,6 +92,7 @@ import {
   type ExternalSystemInstance,
   PHASE_STATE_DOCUMENT_PREFIX,
   PHASE_STATE_DOCUMENT_SUFFIX,
+  type PlanDiffPort,
   type ProviderClock,
   type ProviderSleep,
   type QuotaTransport,
@@ -137,6 +140,7 @@ import {
   type LintCommandRuntime,
   type LintRegistryRead,
 } from "./commands/lint.js";
+import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
 import { createPhaseCommandDefinition, type PhaseCommandRuntime } from "./commands/phase.js";
 import {
   createProviderCommandDefinition,
@@ -984,6 +988,31 @@ export const createStatusCommandRuntime = (
   };
 };
 
+/** The injected I/O for the plan command family (GH-226). */
+export type PlanRuntimeOptions = {
+  readonly changesDirectory: string;
+  readonly fs: PmNotesFileSystemFacts;
+  readonly readDiff?: PlanDiffPort;
+};
+
+/** Compose the plan runtime over the file adapter and an injected diff reader. */
+export const createPlanCommandRuntime = (options: PlanRuntimeOptions): PlanCommandRuntime => ({
+  readPlan: (changeRef) =>
+    readPlanArtifact({
+      changeRef,
+      changesDirectory: options.changesDirectory,
+      fs: options.fs,
+    }),
+  readDiff:
+    options.readDiff ?? ((workItemRef) => ({ ok: false, reason: "unreadable", workItemRef })),
+  parseYaml: (text) => {
+    const parsed = parseConfigYaml(text, "project-committed", "plan.yaml");
+    return parsed.ok
+      ? { ok: true, value: parsed.facts.values }
+      : { ok: false, reason: "unparseable" };
+  },
+});
+
 /** The watchdog composition seams; production M1-S1 wires zero signal sources. */
 export type WatchdogComposition = {
   readonly readLane: (lane: string) => WatchdogLaneRead;
@@ -1017,6 +1046,7 @@ export type ConfigProgramOptions = {
   readonly resolveBrand?: (input: ResolverInput) => Result<BrandIdentity, BrandingInputError>;
   readonly warn?: (message: string) => void;
   readonly lint?: LintCommandRuntime;
+  readonly plan?: PlanRuntimeOptions;
   readonly phase?: PhaseCommandRuntime;
   readonly provider?: ProviderComposition;
   readonly verify?: VerifyCommandRuntime;
@@ -1200,7 +1230,17 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
     config: createConfigCommandDefinition(runtime, catalog),
   };
   if (options.lint !== undefined) {
-    commands.lint = createLintCommandDefinition(options.lint);
+    const planRuntime =
+      options.plan === undefined ? undefined : createPlanCommandRuntime(options.plan);
+    commands.lint = createLintCommandDefinition({
+      ...options.lint,
+      ...(planRuntime === undefined
+        ? {}
+        : { readPlan: planRuntime.readPlan, parseYaml: planRuntime.parseYaml }),
+    });
+  }
+  if (options.plan !== undefined) {
+    commands.plan = createPlanCommandDefinition(createPlanCommandRuntime(options.plan));
   }
   if (options.phase !== undefined) {
     commands.phase = createPhaseCommandDefinition(options.phase);

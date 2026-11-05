@@ -1,0 +1,13 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-308
+tier:
+  name: full
+phases:
+  - id: 1
+    title: Planning
+    kind: planning
+    scope:
+      folders:
+        - doc/guides
+      packages:
+        - packages/core/src/domain/**

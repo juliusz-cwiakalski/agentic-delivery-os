@@ -18,6 +18,7 @@ ados_distribution: redistributable
 | [Adapter Conformance Suite](spec/features/feature-adapter-conformance.md) | The three provider-agnostic flows, capability-gated skips, coverage gates, `delivery.conformance.v1` artifact, and the scheduled read-only live tier |
 | [Status Digest](spec/features/feature-status-digest.md) | The read-only six-section delivery digest, its evidence states, bounds, and declared gaps |
 | [Queue Ready](spec/features/feature-queue-ready.md) | The read-only ready set: six tri-state readiness conditions, close classification and ranking, identity resolution, bounds, and evidence model |
+| [Machine-Readable Plan Schema](spec/features/feature-plan-schema.md) | The `delivery.plan.v1` YAML plan, the `plan validate`/`diff`/`overlap` verdicts, the `lint plan` target, and the legacy markdown transition |
 | [Verify Change and Exit Taxonomy](spec/features/feature-verify-change-and-exit-taxonomy.md) | Read-only ledger verification, the delivery-result enum, and the CLI exit taxonomy |
 | [Closeout Transaction](spec/features/feature-closeout.md) | The dry-run-by-default seven-step post-merge transaction, idempotency ledger, provider writes and gaps, review-thread resolution, and squash-safe local branch cleanup |
 | [Watchdog and Lane Contracts](spec/features/feature-watchdog-lane-contracts.md) | The check-only `preflight`/`teardown`/`liveness` family, restoration and memory-preservation semantics, and the contract-first liveness answer |

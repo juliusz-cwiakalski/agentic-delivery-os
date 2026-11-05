@@ -1,0 +1,189 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-306
+tier:
+  name: full
+  phases: [1]
+defaultLeases:
+  - repository
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: Phase 1
+    kind: planning
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-01.ts
+  - id: 2
+    title: Phase 2
+    kind: planning
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-02.ts
+  - id: 3
+    title: Phase 3
+    kind: planning
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-03.ts
+  - id: 4
+    title: Phase 4
+    kind: planning
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-04.ts
+  - id: 5
+    title: Phase 5
+    kind: planning
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-05.ts
+  - id: 6
+    title: Phase 6
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-06.ts
+  - id: 7
+    title: Phase 7
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-07.ts
+  - id: 8
+    title: Phase 8
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-08.ts
+  - id: 9
+    title: Phase 9
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-09.ts
+  - id: 10
+    title: Phase 10
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-10.ts
+  - id: 11
+    title: Phase 11
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-11.ts
+  - id: 12
+    title: Phase 12
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-12.ts
+  - id: 13
+    title: Phase 13
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-13.ts
+  - id: 14
+    title: Phase 14
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-14.ts
+  - id: 15
+    title: Phase 15
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-15.ts
+  - id: 16
+    title: Phase 16
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-16.ts
+  - id: 17
+    title: Phase 17
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-17.ts
+  - id: 18
+    title: Phase 18
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-18.ts
+  - id: 19
+    title: Phase 19
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-19.ts
+  - id: 20
+    title: Phase 20
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-20.ts
+  - id: 21
+    title: Phase 21
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-21.ts
+  - id: 22
+    title: Phase 22
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-22.ts
+  - id: 23
+    title: Phase 23
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-23.ts
+  - id: 24
+    title: Phase 24
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-24.ts
+  - id: 25
+    title: Phase 25
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-25.ts
+  - id: 26
+    title: Phase 26
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-26.ts
+  - id: 27
+    title: Phase 27
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-27.ts
+  - id: 28
+    title: Phase 28
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-28.ts
+  - id: 29
+    title: Phase 29
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-29.ts
+  - id: 30
+    title: Phase 30
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/generated/phase-30.ts

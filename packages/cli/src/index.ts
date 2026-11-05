@@ -14,6 +14,7 @@ import {
   type ErrorTableEntry,
   FALLBACK_INTERNAL_CODE,
   FALLBACK_INVOCATION_CODE,
+  type ProjectionClass,
   RESULT_SCHEMA_VERSION,
 } from "@delivery-os/core/contracts";
 import { classifyThrown, resolveAppErrorCode } from "./classify.js";
@@ -46,6 +47,12 @@ export type CommandDefinition = {
   readonly positionals?: { readonly max: number };
   readonly humanSuccess?: boolean;
   readonly humanText?: (data: unknown, brand: BrandIdentity) => string | undefined;
+  /**
+   * Project a successful handler's verdict data onto an exit class. A negative
+   * verdict is still a success envelope (data present); only the exit number
+   * comes from this projection. Handlers never choose an exit literal.
+   */
+  readonly exitProjection?: (data: unknown, brand: BrandIdentity) => ProjectionClass;
 };
 
 /** The injected command program. */
@@ -215,12 +222,13 @@ const buildEnvelope = (
   outcome: Outcome,
   runId: string,
   timing: { readonly totalMs: number },
+  successProjection: ProjectionClass,
 ): CommandResult => {
   if (outcome.type === "success") {
     return {
       schemaVersion: RESULT_SCHEMA_VERSION,
       runId,
-      exitCode: projectExitCode("success"),
+      exitCode: projectExitCode(successProjection),
       timing,
       data: outcome.data,
     };
@@ -258,6 +266,7 @@ export async function runCli(
   let outcome: Outcome;
   let humanSuccess = false;
   let humanText: string | undefined;
+  let successProjection: ProjectionClass = "success";
 
   try {
     const parsed = parseInvocation(argv, deps.program);
@@ -276,8 +285,14 @@ export async function runCli(
           brand: deps.brand,
         });
         outcome = outcomeFromResult(result);
-        if (outcome.type === "success" && definition.humanText !== undefined && !emitEnvelope) {
-          humanText = definition.humanText(outcome.data, deps.brand);
+        if (outcome.type === "success") {
+          successProjection =
+            definition.exitProjection === undefined
+              ? "success"
+              : definition.exitProjection(outcome.data, deps.brand);
+          if (definition.humanText !== undefined && !emitEnvelope) {
+            humanText = definition.humanText(outcome.data, deps.brand);
+          }
         }
       } catch (thrown) {
         outcome = failureOutcome(classifyThrown(thrown), thrown);
@@ -289,7 +304,7 @@ export async function runCli(
 
   const finishedAt = deps.clock.now();
   const timing = { totalMs: Math.max(0, Math.trunc(finishedAt - startedAt)) };
-  const envelope = buildEnvelope(outcome, runId, timing);
+  const envelope = buildEnvelope(outcome, runId, timing, successProjection);
   const diagnostic = diagnosticFor(outcome, deps.brand);
   let exitCode = envelope.exitCode;
 
@@ -302,7 +317,12 @@ export async function runCli(
         : {}),
     });
   } catch {
-    const fallback = buildEnvelope(internalFailure("Output serialization failed."), runId, timing);
+    const fallback = buildEnvelope(
+      internalFailure("Output serialization failed."),
+      runId,
+      timing,
+      "success",
+    );
     writeOutput(
       streams,
       fallback,

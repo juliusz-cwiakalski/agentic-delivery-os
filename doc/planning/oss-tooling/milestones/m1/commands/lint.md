@@ -1,7 +1,7 @@
 # lint(1)
 
-Status: M0 shipped (M0-S10); M1-S13 adds delivery-plan schema. Proposed
-examples.
+Status: M0 shipped (M0-S10); plan target shipped in GH-226 (M1-S13).
+Delivered contract.
 
 ## NAME
 
@@ -22,8 +22,10 @@ Verify is evidence against reality; lint is schema and format.
 
 ## OUTPUT
 
-Text: per-document verdicts. Envelope `data`: `documents[]` (path,
-verdict, errors[] with code and location).
+Text: per-document verdicts. Envelope `data` for the plan target:
+`changeRef`, `target` (`plan`), `documents[]` (path, verdict
+`valid | invalid | unreadable`, errors[] with code, location, detail).
+The pm-notes and registry targets keep their existing payloads.
 
 ## EXIT STATUS
 
@@ -50,8 +52,11 @@ $ <binary> lint GH-301 --json
 
 ## ERRORS
 
-`lint.notes.malformed`, `lint.registry.malformed`,
-`lint.plan.schema.invalid`.
+`lint.notes.malformed`, `lint.keys.missing`, `lint.variant.unknown`,
+`lint.phases.incomplete`, `lint.target.missing`,
+`lint.document.unreadable`, and the shared plan identities
+`plan.schema.invalid`, `plan.tier.unknown`, `plan.format.legacy-markdown`,
+`plan.artifact.missing`.
 
 ## SEE ALSO
 

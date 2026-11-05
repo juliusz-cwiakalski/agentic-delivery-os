@@ -1,0 +1,15 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-307
+tier:
+  name: full
+phases:
+  - id: 1
+    title: Phase 1
+    kind: planning
+    scope:
+      files:
+        - packages/core/src/generated/client.ts
+    interactions:
+      - kind: generated-code
+        target: packages/core/src/generated/client.ts
+        role: producer

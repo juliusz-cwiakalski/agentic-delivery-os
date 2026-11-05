@@ -1,0 +1,50 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-308
+tier:
+  name: full
+phases:
+  - id: 1
+    title: Planning
+    kind: planning
+    scope:
+      files:
+        - packages/core/src/domain/bounded/file-000.ts
+        - packages/core/src/domain/bounded/file-001.ts
+        - packages/core/src/domain/bounded/file-002.ts
+        - packages/core/src/domain/bounded/file-003.ts
+        - packages/core/src/domain/bounded/file-004.ts
+        - packages/core/src/domain/bounded/file-005.ts
+        - packages/core/src/domain/bounded/file-006.ts
+        - packages/core/src/domain/bounded/file-007.ts
+        - packages/core/src/domain/bounded/file-008.ts
+        - packages/core/src/domain/bounded/file-009.ts
+        - packages/core/src/domain/bounded/file-010.ts
+        - packages/core/src/domain/bounded/file-011.ts
+        - packages/core/src/domain/bounded/file-012.ts
+        - packages/core/src/domain/bounded/file-013.ts
+        - packages/core/src/domain/bounded/file-014.ts
+        - packages/core/src/domain/bounded/file-015.ts
+        - packages/core/src/domain/bounded/file-016.ts
+        - packages/core/src/domain/bounded/file-017.ts
+        - packages/core/src/domain/bounded/file-018.ts
+        - packages/core/src/domain/bounded/file-019.ts
+        - packages/core/src/domain/bounded/file-020.ts
+        - packages/core/src/domain/bounded/file-021.ts
+        - packages/core/src/domain/bounded/file-022.ts
+        - packages/core/src/domain/bounded/file-023.ts
+        - packages/core/src/domain/bounded/file-024.ts
+        - packages/core/src/domain/bounded/file-025.ts
+        - packages/core/src/domain/bounded/file-026.ts
+        - packages/core/src/domain/bounded/file-027.ts
+        - packages/core/src/domain/bounded/file-028.ts
+        - packages/core/src/domain/bounded/file-029.ts
+        - packages/core/src/domain/bounded/file-030.ts
+        - packages/core/src/domain/bounded/file-031.ts
+        - packages/core/src/domain/bounded/file-032.ts
+        - packages/core/src/domain/bounded/file-033.ts
+        - packages/core/src/domain/bounded/file-034.ts
+        - packages/core/src/domain/bounded/file-035.ts
+        - packages/core/src/domain/bounded/file-036.ts
+        - packages/core/src/domain/bounded/file-037.ts
+        - packages/core/src/domain/bounded/file-038.ts
+        - packages/core/src/domain/bounded/file-039.ts

@@ -1,0 +1,5 @@
+{
+  "interactionProducer": "GH-307",
+  "plainOrdering": "GH-308-before-GH-309",
+  "reason": "shared-paths"
+}

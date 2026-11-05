@@ -376,7 +376,7 @@ After updating PM notes and before triggering `@committer`, check if the delegat
   - The reviewer applies BOTH spec/plan compliance checks AND code quality heuristics (security, performance, correctness, etc.)
 - After each reviewer result, determine the status and iteration before committing.
 - On `Status=PASS`: record the verdict/iteration and mark `review_fix` completed in PM notes, then trigger `@committer` per `<commit_context_policy>` using the review outcome (unless `"no commit"` applies). Continue only after the checkpoint completes.
-- On `Status=FAIL` or added remediation: ensure remediation tasks exist in `chg-<workItemRef>-plan.md`; record the iteration, findings, remediation/reopen state, and `retro` note in PM notes; then commit the review artifact, plan updates, and matching durable state. Only after the checkpoint completes invoke `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`), re-run `@doc-syncer` if code changed, and re-run `@reviewer`.
+- On `Status=FAIL` or added remediation: ensure remediation tasks exist in the plan artifact (`chg-<workItemRef>-plan.yaml`, or legacy `chg-<workItemRef>-plan.md` during the transition); record the iteration, findings, remediation/reopen state, and `retro` note in PM notes; then commit the review artifact, plan updates, and matching durable state. Only after the checkpoint completes invoke `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`), re-run `@doc-syncer` if code changed, and re-run `@reviewer`.
 - Repeat review → durable outcome commit → remediation until `Status=PASS` (max 3 iterations; escalate to human if still failing).
 - If any code changes happen after doc-syncer, re-run `@doc-syncer`
 - Do not create tracker tickets for documentation coverage gaps; resolve them through `@doc-syncer` in the current change.
@@ -394,7 +394,7 @@ After updating PM notes and before triggering `@committer`, check if the delegat
 
 - Verify `chg-<workItemRef>-pm-notes.yaml` exists and all phases are recorded with completion timestamps
 - Verify ALL previous phases are completed in `chg-<workItemRef>-pm-notes.yaml`
-- Verify all tasks in `chg-<workItemRef>-plan.md` are checked
+- Verify plan completion: for `chg-<workItemRef>-plan.yaml`, every declared plan phase has a pm-notes `notes:` entry naming the plan phase id, commit hash, and test result (YAML wins when both plan formats exist); for legacy `chg-<workItemRef>-plan.md`, all task checkboxes are checked
 - Verify all acceptance criteria in `chg-<workItemRef>-spec.md` are satisfied
 - Verify current-truth documentation is complete, accurate, and up to date for the delivered change; `@doc-syncer` must report no unresolved documentation gaps.
 - If any gap is found: record the reopened phase, blocker/remediation state, and `retro` note in PM notes; invoke `@committer` before delegating to the relevant agent (unless `"no commit"` applies), and continue after the checkpoint completes

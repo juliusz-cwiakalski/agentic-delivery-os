@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-LOCAL-CODE-REVIEW
 status: Current
 created: 2026-06-28
-last_updated: 2026-08-04
+last_updated: 2026-11-05
 owners: ["engineering"]
 service: delivery-os
 summary: "Local code review via /review and /review-deep: spec/plan compliance plus code-quality heuristics, with a remediation-phase append loop, handled by the unified @reviewer (distinct from the remote workflow)."
 links:
-  related_changes: ["GH-79", "GH-151"]
+  related_changes: ["GH-79", "GH-151", "GH-226"]
 ---
 
 # Feature: Local Code Review
@@ -45,7 +45,7 @@ ADOS reviews a delivered change **locally** against its specification, plan, cod
 - **Spec/plan compliance (F-2):** The reviewer validates the change diff against: scope compliance (changed files align with spec capabilities); plan alignment (all tasks done, AC have evidence); a plan-task audit (OPEN_TASKS, DONE_BUT_UNCHECKED, CHECKED_BUT_MISSING); and out-of-scope detection (changes to files not in the plan).
 - **Code-quality heuristics (F-3):** A built-in heuristic framework — correctness, security, performance, reliability, API compatibility, testing gaps, documentation, dependencies — augmented by repository-local rules from `.ai/agent/code-review-instructions.md` and `.ai/rules/`.
 - **Ticket context (F-4):** When available, AC verification against the implementation and linked-issue traversal for additional constraints/decisions.
-- **Remediation-phase append (F-5):** If findings exist, the reviewer **appends** a new phase ("Code Review Remediation") to `chg-<workItemRef>-plan.md`:
+- **Remediation-phase append (F-5):** If findings exist, the reviewer **appends** a new phase ("Code Review Remediation") to the change's plan artifact (`chg-<workItemRef>-plan.yaml`; a legacy `chg-<workItemRef>-plan.md` stays readable during the transition):
   - The new phase number = max existing phase + 1.
   - It does **not** modify earlier phases.
   - It appends a revision-log entry.
@@ -92,7 +92,7 @@ The reviewer persists each review iteration as a single **`review-iter-<N>.yaml`
 
 ### Plan Mutation Contract
 
-The reviewer only modifies the **plan file** (`chg-<workItemRef>-plan.md`) — never the spec or code. It is a **pure writer**: it writes the `review-iter-<N>.yaml` artifact and (on findings) appends the remediation phase to the plan, then returns with zero git operations. The `/review` (or `/review-deep`) command triggers `/commit` (`@committer`) after the reviewer returns. It never uses `doc/changes/current` in paths.
+The reviewer only modifies the **plan artifact** (`chg-<workItemRef>-plan.yaml`, or a legacy `chg-<workItemRef>-plan.md` during the transition) — never the spec or code. It is a **pure writer**: it writes the `review-iter-<N>.yaml` artifact and (on findings) appends the remediation phase to the plan, then returns with zero git operations. The `/review` (or `/review-deep`) command triggers `/commit` (`@committer`) after the reviewer returns. It never uses `doc/changes/current` in paths.
 
 ## Non-Functional Requirements
 

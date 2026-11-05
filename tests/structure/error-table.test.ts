@@ -441,11 +441,14 @@ const LINT_ROWS = [
 ] as const;
 
 describe("TC-SYNC-007 lint rows are exact and additive", () => {
-  test("lint is a declared multi-row kind with exactly the five pinned rows", () => {
+  test("lint is a declared multi-row kind with the five conformance rows plus the unreadable row", () => {
     expect(DOMAIN_KINDS).toContain("lint");
     const lint = entries.filter((entry) => entry.domainKind === "lint");
-    expect(lint).toHaveLength(5);
-    expect(lint.map((entry) => entry.code)).toEqual(LINT_ROWS.map(([code]) => code));
+    expect(lint).toHaveLength(6);
+    expect(lint.map((entry) => entry.code)).toEqual([
+      ...LINT_ROWS.map(([code]) => code),
+      "lint.document.unreadable",
+    ]);
     for (const [code, hint, summary] of LINT_ROWS) {
       expect(classifyDomainKind("lint", code)).toMatchObject({
         code,
@@ -458,6 +461,13 @@ describe("TC-SYNC-007 lint rows are exact and additive", () => {
         summary,
       });
     }
+    expect(classifyDomainKind("lint", "lint.document.unreadable")).toMatchObject({
+      category: "platform",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "platform-provider",
+      summary: "A lint target document could not be read or decoded.",
+    });
   });
 
   test("lint codes round-trip exactly through returned and thrown classification", () => {
@@ -475,6 +485,9 @@ describe("TC-SYNC-007 lint rows are exact and additive", () => {
       const row = `| ${code} | lint | user | false | not_landed | ${hint} | user-validation | ${summary} |`;
       expect(doc.split(row).length - 1, code).toBe(1);
     }
+    const unreadable = classifyDomainKind("lint", "lint.document.unreadable");
+    const unreadableRow = `| ${unreadable.code} | lint | ${unreadable.category} | ${unreadable.retryable} | ${unreadable.consequence} | ${unreadable.remediationHint} | ${unreadable.projectionClass} | ${unreadable.summary ?? ""} |`;
+    expect(doc.split(unreadableRow).length - 1).toBe(1);
   });
 
   test("existing provider, input, config and state rows are unchanged", () => {
@@ -641,7 +654,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, and `watchdog`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, and `watchdog`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -652,10 +665,10 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
-    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(5);
+    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(3);
-    expect(entries).toHaveLength(44);
+    expect(entries).toHaveLength(50);
   });
 });
 
@@ -731,7 +744,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(44);
+    expect(entries).toHaveLength(50);
     expect(db).toHaveLength(4);
   });
 
@@ -947,7 +960,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(44);
+    expect(entries).toHaveLength(50);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1002,7 +1015,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
-    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(5);
+    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "verify")).toHaveLength(3);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "closeout")).toHaveLength(4);

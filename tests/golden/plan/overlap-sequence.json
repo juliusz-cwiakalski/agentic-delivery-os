@@ -1,0 +1,13 @@
+{
+  "verdict": "run-in-sequence",
+  "planA": "GH-306",
+  "planB": "GH-307",
+  "overlappingPaths": [
+    "doc/spec/features/feature-scheduler.md",
+    "packages/core/src/contracts/queue.ts"
+  ],
+  "truncated": false,
+  "totalOverlappingPaths": 2,
+  "ordering": "GH-306-before-GH-307",
+  "reason": "shared-contract-files"
+}

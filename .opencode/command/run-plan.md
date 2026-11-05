@@ -35,7 +35,8 @@ Examples:
 <discovery_rules>
 <rule>Locate change folder: search `doc/changes/**/*--<workItemRef>--*/`</rule>
 <rule>If not found, search for spec file: `doc/changes/**/chg-<workItemRef>-spec.md`</rule>
-<rule>Plan file: `chg-<workItemRef>-plan.md` inside the change folder.</rule>
+<rule>Plan file: `chg-<workItemRef>-plan.yaml` inside the change folder (YAML wins when both plan formats exist).</rule>
+<rule>Legacy plan: `chg-<workItemRef>-plan.md` remains readable during the transition; `plan validate` answers it with `plan.format.legacy-markdown`.</rule>
 <rule>Spec file: `chg-<workItemRef>-spec.md` for change.type and slug validation.</rule>
 <rule>Folder pattern: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`</rule>
 <rule>Never reference `doc/changes/current/` in edits or evidence.</rule>
@@ -62,12 +63,12 @@ Defaults (no directive): phasesToRun=1; askForReview=true; commitMode=per-phase.
 </directive_parsing>
 
 <plan_parsing_rules>
-<rule>Phase header regex: `/^### Phase (\d+):/`</rule>
-<rule>Tasks: checkboxes under "**Tasks**:" until blank line or "**Acceptance Criteria**:"</rule>
-<rule>Unchecked: `- [ ]`; Completed: `- [x]`</rule>
-<rule>Completion: replace token only, append note e.g. `(done: added config & tests)`</rule>
-<rule>Acceptance criteria: lines start with "- Must:" or "- Should:"; append `(PASSED: <summary>)` or `(FAILED: <summary>)`</rule>
-<rule>Execution Log: header "## Execution Log"; append if missing</rule>
+<rule>Current plan: YAML `chg-<workItemRef>-plan.yaml`; read `phases[]` in `id` order.</rule>
+<rule>Each phase declares `kind`, `scope` (files, packages, folders), optional `interactions`, `doneArtifacts`, `leases`, `weightClass`, and `leaseClass`.</rule>
+<rule>Declared scope is authoritative: execute only what a phase declares; `plan diff <workItemRef>` observes deviation.</rule>
+<rule>Plan-phase completion evidence: one `notes:` entry per completed plan phase in `chg-<workItemRef>-pm-notes.yaml`, naming the plan phase id, commit hash, and test result. The phase command records lifecycle phases only (`clarify_scope`..`pr_creation`). Never rewrite declared YAML scope to record progress.</rule>
+<rule>Acceptance evidence: report PASSED or FAILED with the commit and test result.</rule>
+<rule>Legacy `chg-<workItemRef>-plan.md`: parse `### Phase N` headings and task checkboxes as before; plan validate classifies it `plan.format.legacy-markdown`.</rule>
 </plan_parsing_rules>
 
 <core_principles>
@@ -149,7 +150,7 @@ No file edits, no commits. Output structured summary: starting phase, phasesToRu
 </process>
 
 <plan_update_rules>
-<rule>Modify only: task checkbox lines; acceptance criteria lines; Execution Log section.</rule>
+<rule>Legacy markdown plan only — modify: task checkbox lines; acceptance criteria lines; Execution Log section. YAML plan: record progress in pm-notes `notes:` entries, never in the plan file.</rule>
 <rule>Keep original line order & spacing (no reflow).</rule>
 <rule>Evidence parenthetical ≤ 80 chars; lowercase verbs; avoid redundancy.</rule>
 <rule>If Execution Log missing → append canonical section before first update.</rule>

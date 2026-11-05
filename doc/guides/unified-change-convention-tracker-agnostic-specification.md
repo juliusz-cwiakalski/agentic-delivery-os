@@ -97,10 +97,16 @@ Prefer suffixes only when needed (rare).
 ### Files inside the change folder
 Stable, slug-free filenames:
 - `chg-<workItemRef>-spec.md`
-- `chg-<workItemRef>-plan.md`
+- `chg-<workItemRef>-plan.yaml` (current machine-readable plan)
+- `chg-<workItemRef>-plan.md` (legacy markdown plan; readable during the transition)
 - `chg-<workItemRef>-test-plan.md`
 - `chg-<workItemRef>-pm-notes.yaml` (**mandatory**: PM progress + decisions + open questions)
 - `chg-<workItemRef>-notes.md` (optional)
+
+When both `chg-<workItemRef>-plan.yaml` and `chg-<workItemRef>-plan.md` exist,
+the YAML plan is authoritative: `plan validate` reads it and discloses the
+artifact it read in the verdict. The markdown plan stays readable and is
+classified `plan.format.legacy-markdown` when it is the only plan artifact.
 
 ### PM notes (change-scoped)
 PM progress notes are stored directly in the change folder:
@@ -240,7 +246,7 @@ The PM agent (`@pm`) orchestrates these phases:
 1. **clarify_scope** — Ensure requirements are unambiguous
 2. **specification** — Create `chg-<workItemRef>-spec.md` via `@spec-writer`
 3. **test_planning** — Create `chg-<workItemRef>-test-plan.md` via `@test-plan-writer`
-4. **delivery_planning** — Create `chg-<workItemRef>-plan.md` via `@plan-writer`
+4. **delivery_planning** — Create `chg-<workItemRef>-plan.yaml` via `@plan-writer`
 5. **dor_check** — Definition of Ready gate via `@readiness-reviewer` (critique spec+test-plan+plan vs ticket before delivery)
 6. **delivery** — Invoke `@coder` for implementation (via `/run-plan`)
 7. **system_spec_update** — Reconcile system docs via `@doc-syncer`
@@ -263,10 +269,14 @@ Minimum recommended sections:
 - Risks / Edge cases
 - Dependencies
 
-### Plan (`chg-<workItemRef>-plan.md`)
-- Implementation phases and steps (ordered)
-- Migration / rollout considerations
-- Observability (logging/metrics/alerts)
+### Plan (`chg-<workItemRef>-plan.yaml`)
+- `schemaVersion: delivery.plan.v1` so the format evolves additively
+- Ceremony tier as data (`tier.name`, optional phase set, escalation triggers)
+- Ordered phases with `kind` (`planning` is lease-free, `delivery` is lease-taking)
+- Per-phase declared scope: `files`, `folders`, and `packages` wildcards
+- Optional repo leases, build-weight class, typed done-artifacts, and producer/consumer interactions
+- Validated with `plan validate`; checked at write time with `lint plan`
+- Legacy `chg-<workItemRef>-plan.md` remains readable through the classified transition verdict
 
 ### Test Plan (`chg-<workItemRef>-test-plan.md`)
 - Test strategy (unit/integration/e2e)
@@ -306,7 +316,7 @@ Branch:
 
 Files:
 - `chg-PDEV-123-spec.md`
-- `chg-PDEV-123-plan.md`
+- `chg-PDEV-123-plan.yaml`
 - `chg-PDEV-123-test-plan.md`
 - `chg-PDEV-123-pm-notes.yaml`
 
@@ -319,7 +329,7 @@ Branch:
 
 Files:
 - `chg-GH-456-spec.md`
-- `chg-GH-456-plan.md`
+- `chg-GH-456-plan.yaml`
 - `chg-GH-456-test-plan.md`
 - `chg-GH-456-pm-notes.yaml`
 

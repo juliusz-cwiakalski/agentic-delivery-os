@@ -21,11 +21,11 @@ allowed-tools:
 ---
 
 <purpose>
-Produce (or update) a fully structured IMPLEMENTATION PLAN from the canonical CHANGE SPECIFICATION.
+Produce (or update) a fully structured machine-readable IMPLEMENTATION PLAN from the canonical CHANGE SPECIFICATION and test plan.
 
 User invocation: `/write-plan <workItemRef>`
 
-Writes (or updates): `chg-<workItemRef>-plan.md` in the same change folder as the spec.
+Writes (or updates): `chg-<workItemRef>-plan.yaml` in the same change folder as the spec. Legacy `chg-<workItemRef>-plan.md` remains readable through the classified `plan.format.legacy-markdown` verdict.
 </purpose>
 
 <inputs>
@@ -51,7 +51,8 @@ Given `workItemRef`:
 Files:
 
 - Spec: `chg-<workItemRef>-spec.md`
-- Plan: `chg-<workItemRef>-plan.md`
+- Test plan: `chg-<workItemRef>-test-plan.md`
+- Plan: `chg-<workItemRef>-plan.yaml` (YAML wins when a legacy markdown plan also exists)
 - Branch: `<change.type>/<workItemRef>/<slug>`
   </discovery_rules>
 
@@ -62,7 +63,8 @@ Files:
 4. Checkout/create branch
 5. Delegate to `@plan-writer` agent (it has full template and rules)
 6. After @plan-writer returns: trigger `/commit` using actual values: the resolved `workItemRef`, the specific delivery-planning `outcome`, and supported planning `why`. Omit unknown fields; never pass template/placeholders or merely restate a workflow phase. Skip when "no commit" is present.
-7. Report: path to created plan, next step: `/run-plan <workItemRef>`
+7. Run `plan validate <workItemRef>` and confirm the plan is schema-valid before reporting
+8. Report: path to created plan, next step: `/run-plan <workItemRef>`
 </process>
 
 <output>

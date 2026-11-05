@@ -1,0 +1,81 @@
+{
+  "verdict": "valid",
+  "readyForDevelopment": true,
+  "perPhase": [
+    {
+      "id": 1,
+      "title": "Contracts and fixtures",
+      "kind": "planning",
+      "leaseClass": "lease-free",
+      "scope": {
+        "files": [
+          "packages/core/src/contracts/queue.ts"
+        ],
+        "packages": [
+          "packages/core/src/contracts/**"
+        ],
+        "folders": [
+          "doc/changes/2026-11/2026-11-05--GH-306--plan-schema"
+        ]
+      },
+      "leases": [
+        "repository"
+      ],
+      "interactions": [
+        {
+          "kind": "contract-file",
+          "target": "packages/core/src/contracts/queue.ts",
+          "role": "producer"
+        }
+      ],
+      "tier": "full",
+      "weightClass": "standard"
+    },
+    {
+      "id": 2,
+      "title": "Delivery",
+      "kind": "delivery",
+      "leaseClass": "lease-taking",
+      "scope": {
+        "files": [
+          "packages/core/src/domain/plan-validate.ts"
+        ],
+        "packages": [
+          "packages/core/src/domain/**"
+        ],
+        "folders": []
+      },
+      "leases": [
+        "repository"
+      ],
+      "interactions": [],
+      "tier": "full",
+      "doneArtifacts": {
+        "mergeRequestUrl": "https://example.test/pr/306",
+        "pipelineId": "pipeline-306",
+        "deployedEnvironment": "staging",
+        "trackerTransition": "in-review"
+      },
+      "weightClass": "heavy"
+    }
+  ],
+  "errors": [],
+  "truncated": false,
+  "totalErrors": 0,
+  "artifact": {
+    "kind": "yaml",
+    "path": "chg-GH-306-plan.yaml"
+  },
+  "schemaVersion": "delivery.plan.v1",
+  "tier": "full",
+  "tierDeclaration": {
+    "name": "full",
+    "phases": [
+      1,
+      2
+    ],
+    "escalationTriggers": [
+      "owner-approval"
+    ]
+  }
+}

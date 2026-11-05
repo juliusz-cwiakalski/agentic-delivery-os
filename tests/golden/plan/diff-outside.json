@@ -1,0 +1,34 @@
+{
+  "verdict": "findings",
+  "against": "main-tools",
+  "entries": [
+    {
+      "path": "doc/spec/features/feature-scheduler.md",
+      "classification": "undeclared-missing",
+      "phase": 1
+    },
+    {
+      "path": "packages/cli/src/commands/plan.ts",
+      "classification": "outside-declared"
+    },
+    {
+      "path": "packages/core/src/contracts/queue.ts",
+      "classification": "within",
+      "phase": 1
+    }
+  ],
+  "findings": [
+    {
+      "classification": "undeclared-missing",
+      "path": "doc/spec/features/feature-scheduler.md",
+      "phase": 1
+    },
+    {
+      "classification": "outside-declared",
+      "path": "packages/cli/src/commands/plan.ts",
+      "code": "plan.scope.undeclared-paths"
+    }
+  ],
+  "truncated": false,
+  "totalEntries": 3
+}

@@ -30,6 +30,21 @@ export {
   summarizeCloseout,
 } from "./closeout.js";
 export {
+  globToRegExp,
+  normalizeRepoPath,
+  packageCovers,
+  scopeCoversPath,
+  staticPrefix,
+} from "./plan-paths.js";
+export { computePlanDiff, type PlanDiffInput } from "./plan-diff.js";
+export { computePlanOverlap, type PlanOverlapInput } from "./plan-overlap.js";
+export {
+  planDocumentFromValidateData,
+  validatePlan,
+  validatePlanValue,
+  type PlanValidateInput,
+} from "./plan-validate.js";
+export {
   lintPmNotes,
   type PmNotesLintFinding,
   type PmNotesLintLocation,

@@ -9,7 +9,7 @@ created: 2026-02-03
 owners: ["engineering"]
 summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates and artifacts." 
 links:
-  related_changes: ["GH-177", "GH-185"]
+  related_changes: ["GH-177", "GH-185", "GH-226"]
 ---
 
 # Change Lifecycle
@@ -103,7 +103,8 @@ Inside the change folder `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/
 |----------|---------|-----------|
 | `chg-<workItemRef>-spec.md` | Canonical specification (problem, goals, AC, DoD) | Yes |
 | `chg-<workItemRef>-test-plan.md` | Test strategy and traceability to AC | Yes |
-| `chg-<workItemRef>-plan.md` | Phased implementation plan with checklists | Yes |
+| `chg-<workItemRef>-plan.yaml` | Machine-readable phased implementation plan with declared per-phase scope | Yes |
+| `chg-<workItemRef>-plan.md` | Legacy markdown plan; readable during the transition and classified `plan.format.legacy-markdown` | Only for in-flight legacy changes |
 | `chg-<workItemRef>-pm-notes.yaml` | PM progress tracking, decisions, open questions (git-committed for traceability) | **Yes** |
 | `chg-<workItemRef>-notes.md` | Free-form notes, experiments, links | No |
 
@@ -253,14 +254,15 @@ flowchart TD
 
 - `@pm` delegates to `@plan-writer` with `workItemRef`.
 - `@plan-writer` reads the completed `chg-<workItemRef>-spec.md` **and** `chg-<workItemRef>-test-plan.md` first and derives all TC IDs, file names, AC coverage, phase structure, and test scenarios from them.
-- `@plan-writer` creates or updates `chg-<workItemRef>-plan.md`.
+- `@plan-writer` creates or updates `chg-<workItemRef>-plan.yaml`. When both plan formats exist, the YAML plan is authoritative; a legacy `chg-<workItemRef>-plan.md` remains readable through the classified `plan.format.legacy-markdown` verdict.
+- The plan validates with `plan validate <workItemRef>` and its write-time conformance is checked with `lint plan <workItemRef>`.
 
-**Outcome**: A phased implementation plan with check-listable tasks aligned with the spec and test plan.
+**Outcome**: A phased, machine-readable implementation plan aligned with the spec and test plan, with declared per-phase scope, done-artifacts, leases, weight class, interactions, and ceremony tier.
 
 **Exit criteria**:
 
-- `chg-<workItemRef>-plan.md` exists and is committed.
-- Plan is phased, check-listable, and aligns with the spec and test plan.
+- `chg-<workItemRef>-plan.yaml` exists and is committed.
+- `plan validate <workItemRef>` reports `verdict=valid` with `readyForDevelopment=true`; any reported error names the phase and field.
 
 ### 5) dor_check
 
@@ -305,8 +307,8 @@ flowchart TD
 
 **Exit criteria**:
 
-- Plan tasks for implementation phases are complete with evidence (commits, tests, logs).
-- All implementation-related checkboxes in the plan are checked.
+- Implementation phases declared in the plan are complete with evidence (commits, tests, logs).
+- All implementation phases declared in the plan are complete with evidence.
 
 ### 7) system_spec_update
 
@@ -344,7 +346,7 @@ flowchart TD
 - After every result, `@pm` records the review iteration and verdict in PM notes before committing the review artifact and matching state.
 - On `Status=PASS`, PM marks `review_fix` complete before the commit.
 - If reviewer returns `Status=FAIL` or adds remediation tasks:
-  - Remediation phase is appended to `chg-<workItemRef>-plan.md`.
+  - Remediation phase is appended to the change's plan artifact (`chg-<workItemRef>-plan.yaml`; a legacy `chg-<workItemRef>-plan.md` stays readable during the transition).
   - PM records findings, remediation/reopen state, and a retrospective note, then commits that durable state before invoking `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`).
   - Re-run `@reviewer` until `Status=PASS`.
 
@@ -387,14 +389,14 @@ flowchart TD
 
 - `@pm` performs a checklist review:
   - All phases above completed (check `chg-<workItemRef>-pm-notes.yaml`).
-  - All delivery plan tasks complete (all checkboxes checked in `chg-<workItemRef>-plan.md`).
+  - All delivery plan phases complete (every phase declared in `chg-<workItemRef>-plan.yaml` has completion evidence in the phase ledger and PM notes; a legacy markdown plan is read through the classified transition path).
   - All acceptance criteria satisfied (verify against `chg-<workItemRef>-spec.md`).
   - Current-truth documentation is complete and up to date for the delivered change (phase 7 has no unresolved documentation gaps).
   - No pending TODOs without an explicit follow-up ticket.
   - `verify change <ref>` reports the declared variant's ledger as complete: `finished` with exit `0`. An incomplete or unverifiable ledger is a non-zero failure naming the missing required phases, and finalization does not proceed until the gap is resolved or the phase is reopened. `verify gates <ref>` evaluates the five M0 merge gates (lifecycle, CI on the pushed commit, push parity, owner labels, and squash preflight); a fresh `verify gates` report is required before merge.
 - Finalization is variant-aware. A `full` change requires the canonical eleven phases; an explicit `lite` change requires the pinned six (`clarify_scope`, `specification`, `delivery`, `quality_gates`, `dod_check`, `pr_creation`). Verification never infers LITE from omission, and a completed declared-variant ledger is necessary but not sufficient for merge: commit, CI, push-parity, owner-gate, and squash-preflight evidence are the five merge gates evaluated by `verify gates`.
 - **If any gap is found**: reopen the appropriate phase and delegate to the relevant agent.
-  - Example: if a delivery plan task is incomplete, reopen `delivery` and delegate to `@coder`.
+  - Example: if a delivery plan phase is incomplete, reopen `delivery` and delegate to `@coder`.
   - Example: if docs are incomplete or stale, reopen `system_spec_update` and re-run `@doc-syncer` with explicit gaps.
 
 **Outcome**: Full verification that the change meets the Definition of Done.
@@ -451,7 +453,7 @@ Whenever a phase is reopened, `@pm` records a `retro` note in the change's pm-no
 | `dor_check` | Artifacts not ready (`NOT_READY`) | Reopen `specification`, `test_planning`, or `delivery_planning` (never `delivery`); re-run gate until `READY` |
 | `test_planning` | Spec gap found (e.g., untestable AC) | Reopen `specification`, re-delegate to `@spec-writer`, then resume `test_planning` |
 | `delivery_planning` | Spec or test-plan gap found | Reopen `specification` or `test_planning` as needed, re-delegate, then resume `delivery_planning` |
-| `dod_check` | Delivery plan task incomplete | Reopen `delivery`, delegate to `@coder` |
+| `dod_check` | Delivery plan phase incomplete | Reopen `delivery`, delegate to `@coder` |
 | `dod_check` | AC not satisfied | Reopen `delivery` or `specification` as needed |
 | `quality_gates` | Test failure reveals missing implementation | Reopen `delivery`, delegate to `@fixer` or `@coder` |
 | `review_fix` | Spec ambiguity discovered | Reopen `clarify_scope` or `specification` |

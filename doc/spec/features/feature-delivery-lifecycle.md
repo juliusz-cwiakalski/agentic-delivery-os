@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DELIVERY-LIFECYCLE
 status: Current
 created: 2026-06-28
-last_updated: 2026-10-31
+last_updated: 2026-11-05
 owners: ["engineering"]
 service: delivery-os
 summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, variant-aware read-only ledger verification at finalization, and phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed)."
 links:
-  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178"]
+  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226"]
   guides:
     - "doc/guides/change-lifecycle.md"
     - "doc/guides/definition-of-ready.md"
@@ -46,7 +46,7 @@ ADOS turns a single tracker ticket (`workItemRef`) into a reviewed, tested PR/MR
 - **11-phase gated workflow (F-1):** `clarify_scope` → `specification` → `test_planning` → `delivery_planning` → `dor_check` → `delivery` → `system_spec_update` → `review_fix` → `quality_gates` → `dod_check` → `pr_creation`. See the canonical table in [AGENTS.md](../../../AGENTS.md) and the per-phase sections in [change-lifecycle.md](../../guides/change-lifecycle.md).
 - **PM orchestration (F-2):** `@pm` owns the lifecycle; it delegates each phase to the matching agent (e.g. `specification` → `@spec-writer`, `delivery` → `@coder`, `dor_check` → `@readiness-reviewer`) and manages the ticket via MCP. `@pm` never implements code. (Authoritative: `.opencode/agent/pm.md`.)
 - **Definition of Ready gate (F-3):** `dor_check` (phase 5) is a **hard pre-delivery gate**: `@readiness-reviewer` adversarially critiques the **spec + test-plan + plan together against the ticket** and emits `READY` / `NOT_READY`. See [definition-of-ready.md](../../guides/definition-of-ready.md) (a human-readable mirror; the `@readiness-reviewer` prompt is authoritative).
-- **Definition of Done check (F-4):** `dod_check` (phase 10) verifies all phases complete, all plan tasks checked, and all acceptance criteria satisfied before PR creation. The read-only `verify change <ref>` surface reports whether the declared variant's phase ledger is complete; an incomplete or unverifiable ledger is a non-zero failure, not a success. See [definition-of-done.md](../../guides/definition-of-done.md) and [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md).
+- **Definition of Done check (F-4):** `dod_check` (phase 10) verifies all phases complete, all plan phases done with evidence, and all acceptance criteria satisfied before PR creation. The read-only `verify change <ref>` surface reports whether the declared variant's phase ledger is complete; an incomplete or unverifiable ledger is a non-zero failure, not a success. See [definition-of-done.md](../../guides/definition-of-done.md) and [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md).
 - **Phase reopening (F-5):** Phases are **not strictly linear**. When a gap is discovered in a later phase, `@pm` reopens the relevant earlier phase and re-delegates. Critically, a DoR `NOT_READY` reopens an **artifact-creation phase** (`specification`, `test_planning`, or `delivery_planning`) — **never `delivery`**. Review remediation, quality-gate fixes, and DoD gaps reopen `delivery` (or the relevant phase). Every reopening triggers a `retro` note in `chg-<ref>-pm-notes.yaml`.
   - **Strictly sequential artifact authoring:** Phases 2–4 (`specification` → `test_planning` → `delivery_planning`) are **strictly sequential** — each must complete before the next begins, and each consumes the completed previous artifact(s). This prevents cross-artifact drift (TC IDs, file names, AC coverage, canonical values diverging). If a downstream author discovers a gap in an upstream artifact mid-chain (e.g., `@test-plan-writer` finds an untestable AC), the workflow **reopens the owning artifact-creation phase**, corrects it, then resumes the chain. A lightweight **pre-DoR cross-check** (AC↔TC coverage, file inventory, shared values) catches residual drift before the formal gate. See the "Canonical DoR Trap" anti-pattern in [change-lifecycle.md](../../guides/change-lifecycle.md).
 - **Artifact set (F-6):** Each change lives under `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/` and carries four mandatory artifacts plus optional ones. The folder/branch/naming convention is defined authoritatively in [doc/guides/unified-change-convention-tracker-agnostic-specification.md](../../guides/unified-change-convention-tracker-agnostic-specification.md); this spec does not restate it.
@@ -64,7 +64,8 @@ ADOS turns a single tracker ticket (`workItemRef`) into a reviewed, tested PR/MR
 |----------|---------|-----------|
 | `chg-<ref>-spec.md` | Canonical specification (problem, goals, AC, DoD) | Yes |
 | `chg-<ref>-test-plan.md` | Test strategy + traceability to AC | Yes |
-| `chg-<ref>-plan.md` | Phased, check-listable implementation plan | Yes |
+| `chg-<ref>-plan.yaml` | Machine-readable phased implementation plan validated by `plan validate` | Yes |
+| `chg-<ref>-plan.md` | Legacy markdown plan, readable during the transition and classified `plan.format.legacy-markdown` | Only for in-flight legacy changes |
 | `chg-<ref>-pm-notes.yaml` | PM phase tracking, decisions, open questions, blockers, and retro notes (git-committed) | Yes |
 | `doc/decisions/<TYPE>-<zeroPad4>-<slug>.md` | Decision record for a major/precedent-setting decision | Optional |
 
@@ -75,7 +76,7 @@ The lifecycle is bracketed by two gates that mirror each other:
 | Gate | Phase | Owner | When | Checks |
 |------|-------|-------|------|--------|
 | **Definition of Ready** | 5. `dor_check` | `@readiness-reviewer` | Before code | Artifacts vs ticket + existing system spec; spec_completeness, ac_quality, plan_coverage, test_traceability, cross_artifact_consistency, etc. |
-| **Definition of Done** | 10. `dod_check` | `@pm` | After code | All phases complete; all plan tasks checked; all AC satisfied |
+| **Definition of Done** | 10. `dod_check` | `@pm` | After code | All phases complete; all plan phases done with evidence; all AC satisfied |
 
 ### User Flows
 

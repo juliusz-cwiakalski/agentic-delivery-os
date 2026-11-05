@@ -1,0 +1,5 @@
+{
+  "workItemRef": "GH-310",
+  "reason": "absent",
+  "note": "The harness models a change folder with no plan.yaml and no legacy plan.md."
+}

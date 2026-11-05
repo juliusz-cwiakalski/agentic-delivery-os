@@ -2,12 +2,12 @@
 id: SPEC-PM-NOTES-LINT-AND-PHASE-TRANSITIONS
 status: Current
 created: 2026-10-31
-last_updated: 2026-10-31
+last_updated: 2026-11-05
 owners: ["engineering"]
 service: delivery-os
-summary: "The implemented M0-S10 surface: pm-notes schema and variant conformance through a read-only lint command with named targets, the phase command family as the only schema-validated write path for phase state with a nine-row idempotency matrix, delivery-registry transition records and a derived phase-state projection over the state layer, the pinned evidence vocabulary, the five lint error rows, and the variant-era corpus boundary with an explicit exclusion manifest."
+summary: "The implemented M0-S10 surface: pm-notes schema and variant conformance through a read-only lint command with named targets, the phase command family as the only schema-validated write path for phase state with a nine-row idempotency matrix, delivery-registry transition records and a derived phase-state projection over the state layer, the pinned evidence vocabulary, the five pm-notes lint error rows, and the variant-era corpus boundary with an explicit exclusion manifest."
 links:
-  related_changes: ["GH-177", "GH-178", "GH-179"]
+  related_changes: ["GH-177", "GH-178", "GH-179", "GH-226"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -15,7 +15,7 @@ links:
 
 ## Overview
 
-This feature makes document conformance a write-time property and gives phase state exactly one write path. The `lint` command is read-only: it validates a named change's pm-notes document, the delivery registry, or both, and reports the first classified finding. The `phase` command family (`list`, `complete`, `reopen`) is the only schema-validated, idempotent path for changing phase state: it validates grammar before touching any target, lints the post-transition document, appends one delivery-registry transition on a landing, preserves opaque extras in the document, and replaces a derived phase-state projection. `phase list` derives state by folding the verified registry ledger; the stored projection is a replaceable convenience document, not a read dependency.
+This feature makes document conformance a write-time property and gives phase state exactly one write path. The `lint` command is read-only: it validates a named change's pm-notes document, the delivery registry, both, or the machine-readable delivery plan (`lint plan`, described in [Machine-Readable Delivery Plan Schema](feature-plan-schema.md)), and reports the first classified finding. The `phase` command family (`list`, `complete`, `reopen`) is the only schema-validated, idempotent path for changing phase state: it validates grammar before touching any target, lints the post-transition document, appends one delivery-registry transition on a landing, preserves opaque extras in the document, and replaces a derived phase-state projection. `phase list` derives state by folding the verified registry ledger; the stored projection is a replaceable convenience document, not a read dependency.
 
 The delivery registry is the first consumer of the state layer. Ledger records are the durable truth; the per-change projection is a pure fold that is atomically replaced and rebuildable. All I/O, time, and state access arrive through injected seams at the CLI edge; the contracts, domain, and registry modules stay runtime-neutral.
 
@@ -44,6 +44,9 @@ The command takes one change ref and additive target flags:
 | `lint <ref>` (or `--pm-notes`) | pm-notes | Missing file → `lint.target.missing`; otherwise the first family finding. |
 | `lint <ref> --registry` | delivery registry | Absent store → explicit verified-empty pass; torn/schema/key-set → classified `state.*`. |
 | `lint <ref> --pm-notes --registry` | both | pm-notes first, then registry; the first failure is the verdict. |
+| `lint plan <ref>` | machine-readable delivery plan | Cannot be combined with `--pm-notes` or `--registry`; reports per-document `valid`/`invalid`/`unreadable` verdicts with locations. |
+
+The plan target reuses the shared `plan.*` identities for non-conformant documents and `lint.document.unreadable` for a document that cannot be decoded; the pm-notes and registry identities below are unchanged. The full plan contract is in [Machine-Readable Delivery Plan Schema](feature-plan-schema.md).
 
 Lint is read-only: it never writes a target, acquires no fence, and returns the same verdict across replays. Registry pass evidence reports the record count, the verification classes performed, and whether the derived projection document is present. `--json` always rides the result envelope.
 

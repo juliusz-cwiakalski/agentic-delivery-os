@@ -1,0 +1,299 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-226
+branch: feat/GH-226/plan-schema
+status: FAIL
+summary: >-
+  The code delivery is strong and spec-faithful: all 11 ACs are implemented and
+  non-vacuously tested (87 plan behaviour + 68 structure tests re-run green at
+  HEAD by this review; distribution guard and plugin staleness verified clean),
+  purity/layering and the error contract hold throughout, the YAML parser path
+  is hardened against untrusted plans, and OQ-3 (legacy verdict exit 1 per
+  DEC-1) and OQ-8 (unknown weight class echoed opaquely) are both CONFIRMED as
+  correct working defaults. The FAIL verdict rests on one high-severity gap:
+  the F-13 migration flip updated writer/run-plan/coder/template/guide but left
+  nine lifecycle prompts (reviewer, pm, readiness-reviewer, doc-syncer,
+  test-plan-writer agents; review, review-deep, sync-docs, write-test-plan
+  commands) locating only chg-<ref>-plan.md, contradicting the reconciled docs
+  and breaking review/DoR/DoD for the first post-flip change — adjudicated
+  fix-in-change via @toolsmith. A secondary medium finding: the flipped prompts
+  point plan-phase evidence at "the phase command", whose grammar only accepts
+  lifecycle phase ids, leaving the plan-phase completion-evidence convention
+  undefined. Remaining findings are low/info polish.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 1
+  low: 4
+  info: 2
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: .opencode/agent/reviewer.md:82
+    message: >-
+      The F-13 "consuming prompts updated together" half of the migration is
+      incomplete. Nine prompts still locate only chg-<workItemRef>-plan.md:
+      agent/reviewer.md:82, agent/pm.md:386 (dod_check "verify all tasks in
+      ...-plan.md are checked"), agent/readiness-reviewer.md:49,
+      agent/doc-syncer.md:32, agent/test-plan-writer.md:50,
+      command/review.md:38, command/review-deep.md:39, command/sync-docs.md:50+171,
+      command/write-test-plan.md:46+52. Spec 5.1 F-13 and 7.1 require consuming
+      prompts to flip with the writer; RSK-7's mitigation is "writer flip,
+      template, and consuming prompt updates land in the same change". The first
+      change authored after merge ships chg-<ref>-plan.yaml: reviewer's
+      discovery rule then aborts its own pre-flight ("abort if [plan] missing"),
+      pm dod_check verifies checkboxes in a nonexistent file, the readiness gate
+      skips the plan, and doc-sync/review commands misdirect. The reconciled
+      guides (change-lifecycle, DoR/DoD, agents guide, naming guide) now
+      describe plan.yaml, so the prompts also contradict current-truth docs.
+      Adjudication: fix-in-change (prompt-only, @toolsmith, plugin regeneration
+      committed together); a follow-up ticket would leave the repo's own next
+      delivery broken, violating the single-change atomic flip principle the
+      change itself cites (RSK-7).
+    suggestion: >-
+      Route to @toolsmith: give all nine prompts the dual-format rule already
+      used by run-plan/coder (chg-<workItemRef>-plan.yaml current, YAML wins
+      when both exist; legacy .md readable via plan.format.legacy-markdown), and
+      update the semantics that assume checkbox plans — reviewer local-mode plan
+      audit (phase/scope conformance + pm-notes evidence for YAML plans;
+      checkbox audit for legacy), pm dod_check (every declared phase complete
+      with pm-notes evidence), readiness-reviewer inputs, doc-syncer/sync-docs
+      plan location. Regenerate .ados-claude and run the staleness and
+      distribution guards in the same commit.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: correctness
+    location: .opencode/command/run-plan.md:70
+    message: >-
+      The flipped prompts say "record phase progress through the phase command
+      and pm-notes ledger; never rewrite declared YAML scope to record
+      progress", but the phase CLI command (packages/cli/src/commands/phase.ts)
+      validates against CANONICAL_PHASE_IDS — lifecycle phases
+      (clarify_scope..pr_creation) only — and cannot record plan-phase
+      (id 1..N) completion. The template removed the old evidence carriers
+      (task checkboxes, per-phase AC, Execution Log), and no prompt pins where
+      per-plan-phase completion evidence (phase id, commit, test outcome) now
+      lives; the DoD guide's "completion evidence in the phase ledger and PM
+      notes" conflates the two phase vocabularies the same way. The next
+      change's coder has no defined evidence slot and the next reviewer/DoD
+      check has nothing defined to audit.
+    suggestion: >-
+      Fix-in-change with F-1 via @toolsmith: pin one convention — e.g. pm-notes
+      notes entries tagged with the plan phase id plus commit hash and test
+      result — in run-plan.md, coder.md, pm.md, and reviewer.md, and align the
+      DoD-guide wording so plan phases vs lifecycle phases are unambiguous.
+      Never mutate declared YAML scope for progress.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-05--GH-226--machine-readable-plan-schema/chg-GH-226-plan.md:227
+    message: >-
+      Plan task 4.2 states "malformed invocation -> 2", but the shipped
+      behaviour (asserted by TC-DPLAN-022 and correct per the shared result
+      contract) is exit 1: usage errors resolve through input.value.rejected,
+      whose pre-existing error-table row projects user-validation (exit 1).
+      The shared taxonomy wins over the plan text; the implementation is right
+      and the plan wording is an authoring slip.
+    suggestion: >-
+      Correct the task 4.2 wording (or add an execution-log note recording the
+      reconciliation: malformed invocation projects exit 1 via
+      input.value.rejected; exit 2 remains the unreadable/platform class) when
+      appending the remediation phase.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-05--GH-226--machine-readable-plan-schema/chg-GH-226-test-plan.md:1017
+    message: >-
+      Test plan section 7 still marks every scenario "To Implement" and section
+      10 records "Not run / Pending", although all 30 scenarios landed and
+      executed (evidence lives in the implementation plan's execution log and
+      the gate runs; this review re-ran the suites green). Section 10's own
+      contract says execution records land there, including the TC-DPLAN-026
+      measurement; the TC-DPLAN-026 body also still says "assert the median"
+      while the test correctly hard-asserts both median and p95 per NFR-2.
+    suggestion: >-
+      Update section 7 statuses to Implemented/Executed and section 10 with the
+      execution summary (suites, result, median/p95 with Bun version and
+      platform), and add the p95 assertion to the TC-DPLAN-026 body so the plan
+      matches the spec's NFR-2 threshold. No relaxation is being recorded.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: low
+    confidence: medium
+    category: documentation
+    location: doc/spec/features/feature-plan-schema.md:30
+    message: >-
+      The feature spec says the family "consumes ... the read-only
+      repository-diff capability", but no such capability exists in-tree: the
+      repo adapter reads .git metadata only (never spawns git), and the
+      composed default readDiff (packages/cli/src/edge.ts) always returns
+      unreadable, so an embedder that does not inject readDiff gets exit 2
+      "repository diff ... could not be read" from plan diff. The port seam and
+      zero-spawn posture (NFR-3) are defensible; the docs overstate what ships.
+      Spec section 12's assumption ("existing read-only repository diff
+      capability already available") was inaccurate at planning time.
+    suggestion: >-
+      One-paragraph docs fix in feature-plan-schema.md (integration section):
+      the actual-diff input is an embedder-injected readDiff port; no production
+      reader ships in-tree; an unconfigured composition classifies as
+      input.value.rejected (exit 2). Optionally note the default base
+      main-tools is the documented contract default.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/plan-overlap.ts:63
+    message: >-
+      packagePairOverlap declares overlap for any two package patterns that
+      share a static prefix, even when their dynamic segments are provably
+      disjoint (packages/core/a* vs packages/core/b*), and the emitted
+      descriptor may not literally match both scopes — in tension with
+      AC-F10-1's letter ("every overlapping path ... appears in both declared
+      scopes"). The error direction is safe (false sequence, never false
+      parallel) and deterministic, and the precision corpus does not include a
+      same-prefix disjoint pair, so TC-DPLAN-015 passes as shipped. Downstream
+      scheduling (M1-S17) should know sequence verdicts can be conservative.
+    suggestion: >-
+      Cheapest adequate fix: one sentence in feature-plan-schema.md's overlap
+      section documenting the conservative same-static-prefix approximation
+      (optionally plus a precision fixture pinning it). Exact pattern-pair
+      intersection can wait for the scheduler story.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/plan-paths.ts:59
+    message: >-
+      staticPrefix treats "?" as a wildcard marker (/[*?]/) while globToRegExp
+      neither documents nor translates "?" (it survives as a regex quantifier),
+      so a declared path containing a literal "?" behaves inconsistently
+      between the two helpers (a first-segment "?" yields an empty static
+      prefix and thus a conservative overlap). Relatedly, normalizeRepoPath
+      does not canonicalize ".." segments, so a/../b vs b would not match.
+      Both require pathological authoring that write-time lint and review would
+      catch; no action required for this change.
+    suggestion: >-
+      Follow-up polish (M1-S17 intake or a small chore): either support "?" as
+      a single-character wildcard in both helpers consistently or remove it
+      from staticPrefix's wildcard class, and decide whether ".." segments
+      should be rejected at validation time.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: performance
+    location: packages/core/src/domain/plan-validate.ts:593
+    message: >-
+      The document bound compares Array.from(read.text).length (Unicode code
+      points) against PLAN_MAX_DOCUMENT_BYTES (1 MiB) — a chars-vs-bytes naming
+      mismatch (astral-heavy documents are measured smaller than their byte
+      size) — and materializes a code-point array per validation on a
+      latency-sensitive path. Defense in depth still holds: the adapter
+      enforces its own 1 MiB UTF-16 bound plus node/depth/alias caps, and the
+      measured p95 (4.59–11.25 ms across runs) is far inside NFR-2.
+    suggestion: >-
+      Optional follow-up: compare read.text.length (UTF-16 units) instead —
+      cheaper and stricter — or rename the constant to reflect characters.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+adjudications:
+  oq_3_legacy_exit:
+    verdict: CONFIRMED
+    note: >-
+      Legacy-format verdict exits 1 (DEC-1 negative verdict): validatePlan
+      returns verdict=invalid with plan.format.legacy-markdown and
+      readyForDevelopment=false; the edge exitProjection maps it to
+      user-validation (exit 1); TC-DPLAN-011/012 and the lint legacy case
+      assert it; the envelope always carries the verdict data. Consistent with
+      the shared refusal pin and with TC-DPLAN-011 + test-plan section 8.3 as
+      written. No change needed.
+  oq_8_unknown_weight:
+    verdict: CONFIRMED
+    note: >-
+      Unknown build-weight class is echoed as opaque declared data
+      (plan-validate.test.ts asserts weightClass "quantum-batch" round-trips;
+      the domain only requires a non-empty string). Classifying would require
+      inventing a known-weight vocabulary — exactly the built-in default set
+      the spec's section 7.2 anti-goal forbids; the vocabulary belongs to
+      M1-S17. Feature spec documents the choice. No change needed.
+  dor_minor_1_tc_dplan_026_p95:
+    verdict: IMPLEMENTATION_MATCHES_SPEC
+    note: >-
+      tests/behaviour/plan-performance.test.ts hard-asserts BOTH median < 500 ms
+      and p95 < 500 ms (the spec NFR-2 threshold), logs Bun version/platform
+      and both statistics, and keeps the non-flaky read-count assertion. Measured
+      p95 across runs: 11.25 ms (delivery evidence) and 4.59 ms (this review's
+      re-run) — 44–100x headroom, so the hard p95 assertion carries no
+      realistic flake risk. The relaxation rule (test-plan section 10) remains
+      available and unused. Residual doc drift only: the TC-DPLAN-026 body text
+      still says "assert the median" (covered by F-4).
+  residual_prompt_gaps_fix_in_change_vs_follow_up:
+    verdict: FIX_IN_CHANGE
+    note: >-
+      Both residual gaps (nine stale prompts; plan-phase evidence convention)
+      are adjudicated fix-in-change, not follow-up. Reasons: (1) spec F-13/7.1
+      require consuming prompts to flip with the writer and RSK-7 pins the
+      single-change atomic flip; (2) the merged state hard-breaks phases 5/8/10
+      of the repo's own next delivery (reviewer aborts on missing plan.md, DoD
+      has nothing to verify) — and this repo delivers itself; (3) the fix is
+      prompt-only plus plugin regeneration, bounded and low-risk; (4) the
+      reconciled guides already promise plan.yaml, so prompts contradict
+      current-truth docs at merge. Routed to @toolsmith per repo convention.
+  milestone_pack_m1_proposal_content:
+    verdict: NON_GAP
+    note: >-
+      Agreed with the pm-notes disposition: m1/contracts.md and
+      test-scenarios.md retain proposal-era content (SC-M1-06 exit-0 seed,
+      SC-M1-07 queue warning) per the pack convention that contracts are
+      proposals refined at story delivery; reconciliation happens at M1 exit.
+      The shipped code contradicts nothing the test plan reconciled
+      (TC-DPLAN-013 asserts exit 1 per DEC-1; TC-DPLAN-009 realizes SC-M1-07 as
+      the validate refusal with the queue-ready zero-plan-reads baseline
+      guard), and the plan.md/lint.md man pages were reconciled to delivered
+      truth with pack snapshot discipline. Not a finding.
+reviewed_at: "2026-11-05T23:58:00Z"
+next_step: EXECUTE_REMEDIATION_PHASE

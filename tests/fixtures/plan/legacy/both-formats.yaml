@@ -1,0 +1,41 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-305
+tier:
+  name: full
+  phases: [1, 2]
+  escalationTriggers:
+    - owner-approval
+defaultLeases:
+  - repository
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: Contracts and fixtures
+    kind: planning
+    scope:
+      files:
+        - packages/core/src/contracts/queue.ts
+      folders:
+        - doc/changes/2026-11/2026-11-05--GH-306--plan-schema
+      packages:
+        - packages/core/src/contracts/**
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/queue.ts
+        role: producer
+  - id: 2
+    title: Delivery
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/plan-validate.ts
+      packages:
+        - packages/core/src/domain/**
+    doneArtifacts:
+      mergeRequestUrl: https://example.test/pr/306
+      pipelineId: "pipeline-306"
+      deployedEnvironment: staging
+      trackerTransition: in-review
+    leases:
+      - repository
+    weightClass: heavy
