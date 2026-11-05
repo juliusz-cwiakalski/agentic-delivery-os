@@ -11,6 +11,7 @@ import { pathToFileURL } from "node:url";
 import { type CliDependencies, type CommandProgram, runCli } from "../../packages/cli/src/index";
 import { redact } from "../../packages/cli/src/output/serialize";
 import { loadGoldenCases } from "../../packages/testkit/src/result-conformance";
+import { briefRuntime, capSizedFacts, runBriefCli } from "../fixtures/brief/harness";
 import {
   bufferSink,
   GOLDEN_ROOT,
@@ -216,5 +217,39 @@ describe("TC-REDACT-003 no-partial-leak sweep", () => {
     for (let index = 0; index < 3; index += 1) {
       expect(await runPayload(entry.payload, entry.secrets)).toEqual(first);
     }
+  });
+});
+
+describe("TC-BRIEF-019 brief output passes the single redaction chokepoint", () => {
+  test("a canary planted in injected facts never reaches either stream", async () => {
+    const canary = "planted-fake-brief-canary";
+    const facts = capSizedFacts();
+    const planted = facts.localContext.ok
+      ? {
+          ...facts,
+          localContext: {
+            ...facts.localContext,
+            context: { ...facts.localContext.context, path: `/work/${canary}/pm-context.yaml` },
+          },
+        }
+      : facts;
+    expect(JSON.stringify(planted)).toContain(canary);
+    for (const argv of [["brief"], ["--json", "brief"]] as const) {
+      const run = await runBriefCli(argv, briefRuntime(planted), { secrets: [canary] });
+      expect(run.exitCode).toBe(0);
+      expect(run.stdout.includes(canary), argv.join(" ")).toBe(false);
+      expect(run.stderr.includes(canary), argv.join(" ")).toBe(false);
+    }
+  });
+
+  test("the canary does not leak through placeholders, evidence, or markers", async () => {
+    const canary = "planted-fake-brief-canary";
+    const run = await runBriefCli(["--json", "brief"], briefRuntime(capSizedFacts()), {
+      secrets: [canary],
+    });
+    const envelope = JSON.parse(run.stdout) as { data: unknown };
+    const data = JSON.stringify(envelope.data);
+    expect(data.includes(canary)).toBe(false);
+    expect(data.includes("status.collector.")).toBe(false);
   });
 });
