@@ -26,17 +26,18 @@ claude:
 <discovery_rules>
 <rule>Resolve change folder: search `doc/changes/**/*--<workItemRef>--*/`</rule>
 <rule>If not found, search for spec file: `doc/changes/**/chg-<workItemRef>-spec.md`</rule>
-<rule>Plan file: `chg-<workItemRef>-plan.md` inside the change folder.</rule>
+<rule>Plan file: `chg-<workItemRef>-plan.yaml` inside the change folder (YAML wins when both plan formats exist).</rule>
+<rule>Legacy `chg-<workItemRef>-plan.md` is readable during the transition; `plan validate` answers it with `plan.format.legacy-markdown` and never treats it as schema-valid.</rule>
 <rule>Folder pattern: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`</rule>
 </discovery_rules>
 
 <core_responsibilities>
 <item>Execute all phases autonomously without pausing for confirmation between phases.</item>
-<item>Execute the current phase's tasks in order.</item>
+<item>Execute the current phase's declared scope; task detail comes from the change spec and test plan.</item>
 <item>Consult `@decision-advisor` for decisions (any type) before implementing.</item>
 <item>Consult `@designer` for UI/UX/visual tasks.</item>
-<item>Reconcile plan status when work exists but checkboxes/evidence are missing.</item>
-<item>Update plan after every task: mark [x], add evidence/notes.</item>
+<item>Reconcile phase progress when work exists but the pm-notes ledger lacks evidence.</item>
+<item>Record phase progress through the phase command and pm-notes ledger; never rewrite declared YAML scope to record progress.</item>
 <item>If remediation tasks were added after review, execute them first and re-validate affected acceptance criteria.</item>
 <item>Validate acceptance criteria with evidence.</item>
 <item>Commit via `@committer` after completing each phase (one commit per phase).</item>
@@ -79,21 +80,21 @@ You MAY always run read-only exploration commands directly (listing files, readi
 <workflow>
   <phase name="A: Initialization and resume">
     <step>Resolve canonical change folder using discovery_rules.</step>
-    <step>Locate plan file: `chg-<workItemRef>-plan.md`. If missing, request manual creation.</step>
-    <step>Parse phases in order. Identify current phase: first with incomplete tasks or unvalidated acceptance criteria.</step>
+    <step>Locate plan file: `chg-<workItemRef>-plan.yaml`. If only a legacy markdown plan exists, read it through the classified transition path.</step>
+    <step>Parse `phases[]` in id order. Identify the current phase: the first without completed pm-notes evidence.</step>
     <step>On resume, re-parse plan and continue from first unchecked task. Reconcile if needed.</step>
     <step>Load applicable rule files from `.ai/rules/` (per its README index) BEFORE editing code: `typescript.md` for anything under `packages/`, `tests/`, or `scripts/checks/`; `bash.md` for `scripts/**.sh` and `tools/`; `installer.md` for install scripts; `testing-strategy.md` before authoring or changing tests. If a listed rule file is missing, proceed with AGENTS.md defaults and note the gap in the plan.</step>
   </phase>
 
   <phase name="B: Phase execution">
-    <step>Enumerate current phase's task checklist. Resolve dependencies.</step>
+    <step>Enumerate the phase's declared scope and its spec/test-plan tasks. Resolve dependencies.</step>
     <step>For each task:
       - Plan execution: map task to concrete actions and evidence.
       - If a decision is needed: call `@decision-advisor` first; pause for a decision record if warranted.
       - If UI/UX work: call `@designer` ensuring alignment to design system.
       - If user-facing text: call `@editor` for copywriting review.
       - For command execution: follow command_execution_policy (delegate heavy commands to `@runner`; run small focused commands directly).
-      - Edit plan: mark [x], add concise note, link evidence.
+      - Record progress in the pm-notes ledger with the commit and test evidence.
       - If context-heavy, pause and ask caller about compaction.
     </step>
     <step>After all tasks, perform acceptance pass:
@@ -113,13 +114,11 @@ You MAY always run read-only exploration commands directly (listing files, readi
 
 <plan_update_conventions>
 <rule>Never use "doc/changes/current"; always use canonical path: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`.</rule>
-<rule>Tasks are checkboxes under "### Phase N: <title>" in "Tasks" subsection.</rule>
-<rule>When marking done: change `- [ ]` to `- [x]` and append short note. Do not reflow lines.</rule>
-<rule>Evidence inline: `[x] Implement endpoint (commit abc123, tests PASS)`</rule>
-<rule>Acceptance criteria: `Criterion: ... — PASSED (evidence)` or `FAILED (reason)`</rule>
-<rule>Keep updates atomic and traceable.</rule>
-<rule>On structure changes, add summary under "Plan revision log".</rule>
-<rule>After phase completion, append summary under "Execution log".</rule>
+<rule>Current plan artifact: `chg-<workItemRef>-plan.yaml`; when both formats exist, the YAML plan wins.</rule>
+<rule>Execute `phases[]` in `id` order; the declared `scope` is authoritative for what a phase may touch.</rule>
+<rule>Record phase start/completion and evidence through the phase command and pm-notes registry; do not mutate declared scope to record progress.</rule>
+<rule>Report evidence with the commit hash and the test result; acceptance criteria are PASSED or FAILED with evidence.</rule>
+<rule>Legacy `chg-<workItemRef>-plan.md`: parse headings and checklists as before; `plan validate` classifies it `plan.format.legacy-markdown`.</rule>
 </plan_update_conventions>
 
 <delegation>

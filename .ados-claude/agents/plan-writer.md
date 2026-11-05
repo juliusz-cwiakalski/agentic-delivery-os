@@ -58,7 +58,8 @@ Given `workItemRef`:
 Folder structure:
 
 - `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`
-- Files: `chg-<workItemRef>-spec.md`, `chg-<workItemRef>-test-plan.md`, `chg-<workItemRef>-plan.md`
+- Files: `chg-<workItemRef>-spec.md`, `chg-<workItemRef>-test-plan.md`, `chg-<workItemRef>-plan.yaml`
+- `chg-<workItemRef>-plan.md` is the legacy transition format: readable, classified `plan.format.legacy-markdown`, never schema-valid. When both plan files exist, the YAML plan wins.
   </discovery_rules>
 
 <field_extraction>
@@ -84,25 +85,20 @@ The orchestrator (PM or command) handles branch state and commits via @committer
 </pure_writer_note>
 
 <plan_structure>
-IMPLEMENTATION PLAN sections (EXACT order):
+Write one YAML document named `chg-<workItemRef>-plan.yaml` with these keys:
 
-1. Front matter (YAML):
-   - `id`: `chg-<workItemRef>-<slug>`
-   - `status`: Proposed | Updated
-   - `created`: ISO8601 UTC (unchanged on updates)
-   - `last_updated`: ISO8601 UTC (now)
-   - `owners`, `service`, `labels`: from spec
-   - `links.change_spec`: relative path to spec
-   - `summary`: from spec
-   - `version_impact`: from spec
+1. `schemaVersion`: `delivery.plan.v1`
+2. `workItemRef`: the resolved reference
+3. `tier`: `name` (required), optional `phases` (declared phase set), optional `escalationTriggers`
+4. `defaultLeases`, `defaultWeightClass`: optional plan-level defaults
+5. `phases`: non-empty ordered list; each phase declares:
+   - `id` (unique positive integer), `title`, `kind` (`planning` | `delivery`)
+   - `scope`: at least one non-empty `files`, `packages`, or `folders`
+   - optional `interactions`: `kind` (`contract-file` | `generated-code`), `target`, `role` (`producer` | `consumer`)
+   - optional `doneArtifacts`: `mergeRequestUrl`, `pipelineId`, `deployedEnvironment`, `trackerTransition`
+   - optional `leases`, `weightClass`, `leaseClass`
 
-2. `## Context and Goals`
-3. `## Scope` (In Scope, Out of Scope, Constraints, Risks, Success Metrics)
-4. `## Phases` (numbered, with tasks/criteria/tests)
-5. `## Test Scenarios`
-6. `## Artifacts and Links`
-7. `## Plan Revision Log`
-8. `## Execution Log`
+Planning phases are lease-free; delivery phases are lease-taking. Per-tier phase sets and escalation triggers are inert data, never evaluated here.
    </plan_structure>
 
 <authoring_rules>
@@ -111,39 +107,29 @@ IMPLEMENTATION PLAN sections (EXACT order):
 - Missing info → bullet under "Open questions" in Context and Goals
 - If a decision is needed: note "Decision needed: consult `@decision-advisor`" and include decision-record placeholder
 
-Phase formatting:
+Phase formatting (YAML):
 
-```markdown
-### Phase N: <short-title>
-
-**Goal**: <goal>
-
-**Tasks**:
-
-- [ ] <Task 1>
-- [ ] <Task 2>
-
-**Acceptance Criteria**:
-
-- Must: <Criteria 1>
-- Should: <Criteria 2>
-
-**Files and modules**:
-
-- Code areas: <specific files/modules/classes/components touched, or "none">
-- System docs: <`doc/spec/**`, quality/system docs to update during/after this phase, or "none">
-
-**Tests**:
-
-- <test>
-
-**Completion signal**: <commit message or state>
+```yaml
+phases:
+  - id: 1
+    title: <short title>
+    kind: planning
+    scope:
+      files: [<concrete path>]
+      folders: [<boundary-aware prefix>]
+      packages: [packages/<package>/**]
+    interactions:
+      - kind: contract-file
+        target: <path inside the scope>
+        role: producer
 ```
 
-Final release phase MUST include:
+Rules:
 
-- Version bump per repo conventions
-- Spec reconciliation
+- Keep declarations computable: `files` are exact paths, `folders` are boundary-aware prefixes, `packages` are globs (`*` inside a segment, `**` across segments).
+- Declare a requirement only when the spec or test plan supports it; prose rationale belongs in the spec.
+- The plan filename is part of the contract: `chg-<workItemRef>-plan.yaml`.
+- The final phase declares the release and spec-reconciliation obligations as scope, not as prose sections.
   </authoring_rules>
 
 <phase_generation>
@@ -161,14 +147,12 @@ Skip phases with no tasks; merge when task count < 3.
 </phase_generation>
 
 <update_behavior>
-If plan exists:
+If a plan exists:
 
-- Preserve `created` timestamp
-- Update `last_updated` to now
-- Set `status`: Updated
-- Append revision log entry
-- Preserve execution log
-- Re-render phases deterministically
+- Update the declared tier, defaults, and phases in place.
+- Preserve phase ids and ordering unless the spec changes them.
+- Re-render the YAML document deterministically.
+- When only a legacy markdown plan exists, author a YAML plan from the spec and test plan; do not treat the legacy file as schema-valid input.
   </update_behavior>
 
 <error_handling>
@@ -202,22 +186,22 @@ Before generating the plan, attempt to read the structural template:
 5. Validate required fields
 6. If plan exists → load for update per <update_behavior>
 7. Construct plan using <plan_structure> and <authoring_rules>
-8. Write: `<changeFolder>/chg-<workItemRef>-plan.md`
+8. Write: `<changeFolder>/chg-<workItemRef>-plan.yaml`
 9. Return (no git operations - orchestrator handles branch and commit)
 </process>
 
 <output_contract>
 
-- Writes exactly one file: `chg-<workItemRef>-plan.md`
+- Writes exactly one file: `chg-<workItemRef>-plan.yaml`
 - File placed next to spec in same change folder
-- Deterministic and fully structured
+- Deterministic, schema-valid YAML (`plan validate` returns `valid`)
 - No leftover `<...>` placeholders
 - No git operations (orchestrator handles branch and commit)
   </output_contract>
 
 <notes>
-- Centralizes creation and update logic
-- Canonical template ensures consistent format
+- The machine-readable YAML plan is the current output format
+- Legacy markdown plans remain readable through the classified transition verdict
 - Your output may be returned for revision by the Definition of Ready gate (`dor_check`, phase 5, `@readiness-reviewer`) before delivery; respond to `@pm`'s re-delegation.
 - Pure writer: no git operations; orchestrator commits your output via @committer
 </notes>
