@@ -63,7 +63,7 @@ phases:
         findings: "0 blocking. F-1 and F-2 verified closed (reviewer independently reproduced the non-vacuity mutation); merge with main-tools introduced no regressions (state count exact at 9, oracles honest, 1501 behaviour pass / 0 fail); invariants clean; plan Phases 1-7 all done; AC traceability 9/9. Four non-blocking info residuals: schema-mismatch-prefix refusal evidence reports coarse tail position; test-plan §9 lacks a one-line entry for the TC-GH222-011 combined-shape extension; uncommitted doc-sync doc fixes ride the next commit; F-3 perf note carried (no action)."
         date: "2026-11-06"
   quality_gates: { started: "2026-11-06T00:12:00Z", completed: "2026-11-06T00:20:00Z" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-11-06T00:22:00Z", completed: "2026-11-06T00:23:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "OQ-1 RESOLVED (PM): GH-222 ships a library-only state-tier surface — no user-facing CLI command. Backlog (canonical for scope per milestones/README) names no command; current feature-state-layer spec ships no command surface; all 5 ticket ACs are testable at the library boundary. The m1 contracts pack 'state' command entry stays a proposed milestone-end artifact for the later operate-family CLI line; spec DEC-4 confirmed."
