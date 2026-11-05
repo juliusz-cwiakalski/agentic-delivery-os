@@ -192,7 +192,8 @@ Meeting agendas, minutes/summaries, and transcripts use a single combined `meeti
       YYYY-MM-DD--<workItemRef>--<slug>/
         chg-<workItemRef>-spec.md       # Canonical change spec (with front-matter)
         chg-<workItemRef>-test-plan.md  # Per-change test plan (traceable to AC)
-        chg-<workItemRef>-plan.md       # Implementation plan (phases/tasks)
+        chg-<workItemRef>-plan.yaml      # Machine-readable implementation plan (delivery.plan.v1)
+        chg-<workItemRef>-plan.md        # Legacy markdown plan; readable during the transition
         chg-<workItemRef>-pm-notes.yaml # PM progress + decisions + open questions
         chg-<workItemRef>-notes.md      # Optional free-form notes
   /decisions/                      # Decision Records (ADR/PDR/TDR/BDR/ODR)
@@ -284,7 +285,8 @@ Meeting agendas, minutes/summaries, and transcripts use a single combined `meeti
 - **`/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`**:
   - `chg-<workItemRef>-spec.md` (required): The proposal accepted change (CHANGE SPEC).
   - `chg-<workItemRef>-test-plan.md` (recommended): Per-change test plan aligned to the CHANGE SPEC.
-  - `chg-<workItemRef>-plan.md` (recommended): Work breakdown, risks, rollout/rollback (IMPLEMENTATION PLAN).
+  - `chg-<workItemRef>-plan.yaml` (recommended): Machine-readable implementation plan validated by `plan validate` (phases, declared scope, done-artifacts, leases, weight, interactions, tier).
+  - `chg-<workItemRef>-plan.md` (legacy transition): Readable markdown plan classified `plan.format.legacy-markdown`; the YAML plan wins when both exist.
   - `chg-<workItemRef>-pm-notes.yaml` (recommended): PM progress + decisions + open questions.
   - `examples.json` (optional): Requests/responses, UI screenshots links.
 
@@ -366,7 +368,8 @@ summary: "Unify units display across UI using unit IDs + i18n."
 - Filenames are stable and slug-free:
   - `chg-<workItemRef>-spec.md`
   - `chg-<workItemRef>-test-plan.md`
-  - `chg-<workItemRef>-plan.md`
+  - `chg-<workItemRef>-plan.yaml`
+  - `chg-<workItemRef>-plan.md` (legacy transition format)
   - `chg-<workItemRef>-pm-notes.yaml`
 - `workItemRef` is tracker-linked (e.g., `PDEV-123`, `GH-456`).
 - Decision records: `<TYPE>-<zeroPad4>-<slug>.md` (e.g., `ADR-0001-event-bus-selection.md`, `PDR-0001-free-tier-scope.md`).
@@ -380,7 +383,7 @@ summary: "Unify units display across UI using unit IDs + i18n."
 2. **Discuss & revise** until Accepted/Rejected.
 3. **If the change settles a decision**, write a decision record under `/doc/decisions/` (or use `/plan-decision` + `/write-decision`) and link it from the change.
 4. **Create or update the per-change TEST PLAN** alongside the spec as `chg-<workItemRef>-test-plan.md` (or via `/write-test-plan <workItemRef>`).
-5. **Create or update the IMPLEMENTATION PLAN** alongside the spec as `chg-<workItemRef>-plan.md` (or via `/write-plan <workItemRef>`).
+5. **Create or update the IMPLEMENTATION PLAN** alongside the spec as `chg-<workItemRef>-plan.yaml` (or via `/write-plan <workItemRef>`) and validate it with `plan validate <workItemRef>`.
 6. **Update `/doc/spec/`** to reflect the _final_, coherent behavior (ideally via `/sync-docs <workItemRef>`).
 7. **Update `/doc/contracts/`** (OpenAPI/AsyncAPI/schemas) if any external surface changes.
 8. **Align test specs** under `/doc/quality/test-specs/` with the per-change TEST PLAN.
@@ -414,7 +417,7 @@ criteria, and pivot criteria.
 - **Plan & Implement:** load the current Change spec, referenced decision records, impacted Spec sections, Contracts, and testing strategy per
   `AGENTS.md` and `.opencode/command/*.md`.
 - **Write artifacts to the right place:**
-  - Implementation plan -> `/doc/changes/**/chg-<workItemRef>-plan.md` (or via `/write-plan <workItemRef>`)
+  - Implementation plan -> `/doc/changes/**/chg-<workItemRef>-plan.yaml` (or via `/write-plan <workItemRef>`; a legacy `chg-<workItemRef>-plan.md` stays readable during the transition)
   - Per-change TEST PLAN -> `/doc/changes/**/chg-<workItemRef>-test-plan.md` (or via `/write-test-plan <workItemRef>`)
   - PM progress notes -> `/doc/changes/**/chg-<workItemRef>-pm-notes.yaml`
   - Broader test specs -> `/doc/quality/test-specs/`
@@ -513,7 +516,7 @@ The table below indicates what is **shared across repos** (kept identical or cen
 - [ ] Create `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/chg-<workItemRef>-spec.md` from template or via `/write-spec <workItemRef>`.
 - [ ] Add front-matter; link related ADRs/contracts.
 - [ ] Create/Update per-change TEST PLAN as `chg-<workItemRef>-test-plan.md` (or via `/write-test-plan <workItemRef>`), then align broader test specs under `/doc/quality/test-specs/` to it.
-- [ ] Create/Update IMPLEMENTATION PLAN as `chg-<workItemRef>-plan.md` (or via `/write-plan <workItemRef>`).
+- [ ] Create/Update IMPLEMENTATION PLAN as `chg-<workItemRef>-plan.yaml` (or via `/write-plan <workItemRef>`) and run `plan validate <workItemRef>`.
 - [ ] Update `/doc/contracts/**` if surfaces change; bump version.
 - [ ] Update `/doc/spec/**` to reflect final behavior (ideally via `/sync-docs <workItemRef>`).
 - [ ] If a docs validation entry point exists, run it. If absent, run `git diff --check` + manual docs review and record follow-up.
@@ -540,7 +543,7 @@ The table below indicates what is **shared across repos** (kept identical or cen
 /doc/changes/2026-01/2026-01-22--GH-456--units-unified-display/
   chg-GH-456-spec.md
   chg-GH-456-test-plan.md
-  chg-GH-456-plan.md
+  chg-GH-456-plan.yaml
   chg-GH-456-pm-notes.yaml
   chg-GH-456-notes.md
   examples.json

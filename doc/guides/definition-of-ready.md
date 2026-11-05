@@ -8,6 +8,8 @@ status: Draft
 created: 2026-06-28
 owners: ["engineering"]
 summary: "Human-readable mirror of the Definition of Ready gate (dor_check) that runs before delivery."
+links:
+  related_changes: ["GH-226"]
 ---
 
 # Definition of Ready (DoR)
@@ -23,7 +25,7 @@ The Definition of Ready is a **pre-delivery gate** (`dor_check`, phase 5 of the 
 | Phase | 5. `dor_check` |
 | Owner | `@pm` delegates to `@readiness-reviewer` |
 | Command | `/check-readiness <ref>` |
-| Inputs | source ticket + `chg-<ref>-spec.md` + `chg-<ref>-test-plan.md` + `chg-<ref>-plan.md` + `chg-<ref>-pm-notes.yaml` + **existing system spec (`doc/spec/**`) and system/quality docs** (source code may be read to verify code-area coverage) |
+| Inputs | source ticket + `chg-<ref>-spec.md` + `chg-<ref>-test-plan.md` + `chg-<ref>-plan.yaml` (or a legacy `chg-<ref>-plan.md`) + `chg-<ref>-pm-notes.yaml` + **existing system spec (`doc/spec/**`) and system/quality docs** (source code may be read to verify code-area coverage) |
 | Output | `READY` or `NOT_READY` + a persisted readiness-review record under `<change_folder>/readiness-review/` |
 
 ## DoR facets
@@ -32,7 +34,7 @@ The Definition of Ready is a **pre-delivery gate** (`dor_check`, phase 5 of the 
 
 - **spec_completeness** — Spec addresses every ticket requirement; no gaps.
 - **ac_quality** — Acceptance criteria are clear, testable, and non-overlapping.
-- **plan_coverage** — Plan covers all requirements and all acceptance criteria with check-listable tasks.
+- **plan_coverage** — Plan covers all requirements and all acceptance criteria with phased work and declared scope.
 - **test_traceability** — Test plan traces to every acceptance criterion via a full traceability matrix.
 - **cross_artifact_consistency** — Ticket → spec → test-plan → plan align. This is the highest-value facet.
 - **decision_capture** — Decisions are captured in the right place: change-scoped in change docs; system-wide or precedent-setting in `doc/decisions/**`.

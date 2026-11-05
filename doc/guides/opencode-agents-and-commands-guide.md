@@ -9,7 +9,7 @@ created: 2026-01-09
 owners: ["engineering"]
 summary: "Comprehensive guide to Opencode AI agents and commands for manual and autopilot workflows."
 links:
-  related_changes: ["GH-185"]
+  related_changes: ["GH-185", "GH-226"]
 ---
 
 # Opencode Agents & Commands Guide
@@ -61,7 +61,7 @@ Use these when you want to trigger a specific step in the process.
 | `/plan-change`           | Interactive session to define a change (scope, goals, risks). | **Step 1**: To start a new feature or fix. |
 | `/write-spec <ref>`      | Generates the canonical `chg-<ref>-spec.md` file.             | **Step 2**: After planning is complete.    |
 | `/write-test-plan <ref>` | Generates the test strategy `chg-<ref>-test-plan.md`.         | **Step 3**: After the spec is approved.    |
-| `/write-plan <ref>`      | Generates the phased `chg-<ref>-plan.md`.                     | **Step 4**: After the test plan.           |
+| `/write-plan <ref>`      | Generates the phased `chg-<ref>-plan.yaml`.                   | **Step 4**: After the test plan.           |
 | `/run-plan <ref>`        | Launches the **Coder** to code the active phase.              | **Step 5**: To write code.                 |
 | `/review <ref>`          | Launches the **Reviewer** to critique work.                   | **Step 6**: After coding a phase.          |
 | `/review-deep <ref>`     | Deep review with a stronger reasoning model.                  | When thorough analysis is needed.          |
@@ -141,7 +141,9 @@ Create the test plan and implementation plan based on the spec.
 /write-plan <ref>
 ```
 
-_Output_: `chg-<ref>-test-plan.md` and `chg-<ref>-plan.md`
+_Output_: `chg-<ref>-test-plan.md` and `chg-<ref>-plan.yaml`
+
+> **Plan format**: `chg-<ref>-plan.yaml` is the machine-readable `delivery.plan.v1` document validated by `plan validate` and `lint plan`. A legacy `chg-<ref>-plan.md` stays readable during the transition and is classified `plan.format.legacy-markdown`; when both exist, the YAML plan wins.
 
 > **Note**: The order is spec → test plan → implementation plan. This ensures the test plan informs implementation priorities.
 
@@ -155,7 +157,7 @@ Execute the plan one phase at a time.
 /run-plan <ref>
 ```
 
-_Action_: The agent reads the plan, implements the current phase, updates the plan checklist, and runs relevant
+_Action_: The agent reads the plan, implements the current phase, records phase progress in the ledger and PM notes, and runs relevant
 validations (for log-heavy runs it may delegate to `@runner`).
 
 ### Step 5: Review & Refine
@@ -237,7 +239,7 @@ The `@pm` orchestrates these phases (see `doc/guides/change-lifecycle.md` for de
 1. **clarify_scope** — Ensure requirements are unambiguous; record in `chg-<ref>-pm-notes.yaml`
 2. **specification** — Delegate to `@spec-writer` to create `chg-<ref>-spec.md`
 3. **test_planning** — Delegate to `@test-plan-writer` to create `chg-<ref>-test-plan.md`
-4. **delivery_planning** — Delegate to `@plan-writer` to create `chg-<ref>-plan.md`
+4. **delivery_planning** — Delegate to `@plan-writer` to create `chg-<ref>-plan.yaml`
 5. **dor_check** — Delegate to `@readiness-reviewer`; hard DoR gate before delivery; reopen artifact phases on `NOT_READY`
 6. **delivery** — Invoke `@coder` for implementation (via `/run-plan`)
 7. **system_spec_update** — Delegate to `@doc-syncer` to reconcile system docs
@@ -255,7 +257,7 @@ The `@pm` will report back when the change is ready for final verification and t
 Before creating/updating the PR/MR, `@pm` runs the **dod_check** phase:
 
 1. Verify all phases completed (check `chg-<ref>-pm-notes.yaml`).
-2. Verify all delivery plan tasks complete.
+2. Verify all delivery plan phases complete.
 3. Verify all acceptance criteria satisfied.
 4. If any gap is found, reopen the appropriate phase.
 

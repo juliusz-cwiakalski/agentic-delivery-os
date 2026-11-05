@@ -14,7 +14,7 @@ version_impact: <from-spec>
 summary: "<from-spec>"
 links:
   change_spec: <relative-path>           # e.g., ./chg-GH-456-spec.md
-  implementation_plan: <relative-path>   # e.g., ./chg-GH-456-plan.md (if exists)
+  implementation_plan: <relative-path>   # e.g., ./chg-GH-456-plan.yaml (if exists; legacy .md readable)
   testing_strategy: .ai/rules/testing-strategy.md
 ---
 

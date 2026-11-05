@@ -9,7 +9,7 @@ created: 2026-06-28
 owners: ["engineering"]
 summary: "Human-readable Definition of Done: the post-implementation acceptance gate (dod_check) that closes delivery, including the read-only variant-aware verify-change ledger verdict."
 links:
-  related_changes: ["GH-177"]
+  related_changes: ["GH-177", "GH-226"]
 ---
 
 # Definition of Done (DoD)
@@ -23,7 +23,7 @@ The Definition of Done is the **post-implementation acceptance gate** (`dod_chec
 | Phase | 10. `dod_check` |
 | Owner | `@reviewer` (audit via `/review`) → `@pm` (final check) |
 | Commands | `/review <ref>` (phase 8 `review_fix`), `verify change <ref>` (read-only ledger verdict), then `@pm` runs the final `dod_check`; `verify gates <ref>` supplies the read-only M0 merge evidence |
-| Inputs | `chg-<ref>-spec.md` (incl. the change's DoD + AC) + `chg-<ref>-plan.md` (all checkboxes) + `chg-<ref>-test-plan.md` + implementation + `chg-<ref>-pm-notes.yaml` |
+| Inputs | `chg-<ref>-spec.md` (incl. the change's DoD + AC) + `chg-<ref>-plan.yaml` (all declared phases complete with ledger evidence; a legacy markdown plan is read through the transition path) + `chg-<ref>-test-plan.md` + implementation + `chg-<ref>-pm-notes.yaml` |
 | Output | `DONE` (proceed to PR) or a reopened phase with a remediation task |
 
 ## Two layers of "Done"

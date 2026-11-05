@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: "2026-11-05T21:39:00Z", completed: "2026-11-05T21:50:00Z" }
   dor_check: { started: "2026-11-05T21:52:00Z", completed: "2026-11-05T22:01:00Z" }
   delivery: { started: "2026-11-05T22:04:00Z", completed: "2026-11-05T23:05:00Z" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-11-05T23:10:00Z", completed: "2026-11-05T23:24:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -25,6 +25,15 @@ decisions:
     date: "2026-11-05"
   - text: "Plain pnpm check failed only in tests/checks/ci-baseline-parity.test.ts because system /tmp is a different filesystem (git clone --local hardlink check); passes with repo-local TMPDIR. Environmental, not a code defect — worth a future note in testing-strategy docs if it recurs."
     type: "retro"
+    date: "2026-11-05"
+  - text: "Doc-sync resolved: first-spec feature-plan-schema.md authored (always-resolve); error-identity enumeration consistent incl. plan.artifact.missing (DoR finding 2 closed); CLI registry plan/lint rows marked shipped; m1 man pages plan.md/lint.md reconciled to delivered truth with pack snapshot discipline preserved; 15 docs updated with GH-226 traceability; distribution guard green (81 docs)."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Residual gaps routed to review_fix remediation (prompt-only, outside doc-sync scope): (a) nine .opencode prompts (doc-syncer, reviewer, readiness-reviewer, test-plan-writer, pm agents; review, review-deep, sync-docs, write-test-plan commands) still locate only chg-<ref>-plan.md; (b) run-plan/coder task-checkbox parsing semantics vs delivery.plan.v1 phase/scope declarations. Both to be fixed via @toolsmith + plugin regeneration; reviewer adjudicates. Intentional non-gap: m1 contracts/test-scenarios proposal-era content reconciles at M1 exit per pack conventions."
+    type: "info"
+    date: "2026-11-05"
+  - text: "Provisional-name governance (registry pending item: 'plan' name under ODR-0003 superseding-note path) deferred to M1 exit naming lock — owner territory, recorded in registry; not a PR blocker."
+    type: "info"
     date: "2026-11-05"
   - text: "Exit-code reconciliation: SC-M1-06 seed asserts exit 0 for a run-in-sequence overlap verdict, while commands/plan.md (contract page) pins exit 1 'a verdict, not a failure' (envelope example shows exitCode 1) and the shared refusal pin makes a negative verdict exit 1. Story refines to commands/plan.md semantics (exit 1 + verdict data). Empowered by milestones/README.md: contracts are proposals refined at story delivery; test scenarios are seeds the test plan 'inherits and reconciles'."
     date: "2026-11-05"

@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-RESULT-CONTRACT
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-01
+last_updated: 2026-11-05
 owners: ["engineering"]
 service: delivery-os
-summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity including the five provider-engine rows, the lint rows for pm-notes conformance, the three verify delivery-verdict and gates rows, the four db session-administration rows, and the four closeout rows, the domain-kind to app-error-code to projection classification chain with exact-code provider, db, and closeout classification, the adapter-local provider.payload.invalid projection, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
+summary: "The command-surface result contract: the CommandResult envelope in core ./contracts, the machine-readable error table as the single source of failure identity including the five provider-engine rows, the lint rows for pm-notes conformance including the lint-document-unreadable row, the three verify delivery-verdict and gates rows, the four db session-administration rows, the four closeout rows, and the five machine-readable delivery-plan rows, the domain-kind to app-error-code to projection classification chain with exact-code provider, db, closeout, and plan classification, the adapter-local provider.payload.invalid projection, the standalone CLI {0, 1, 2} exit projection, the deterministic in-process runCli surface, the two-entry fallback containment, the serialization redaction chokepoint, the testkit conformance validator, and the binding docs/code sync and exit-literal invariants."
 links:
-  related_changes: ["GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-180", "GH-183", "GH-178"]
+  related_changes: ["GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-180", "GH-183", "GH-178", "GH-226"]
   related_decisions: ["ADR-0003", "TDR-0005", "TDR-0008"]
 ---
 
@@ -276,6 +276,7 @@ The result surface itself adds no runtime dependency or new CI job. Configuratio
 - **Consumed by** session database administration ([Session Database Administration](feature-session-database-admin.md)) for the `db` domain kind, the four `db.*` rows, exact-code classification, the envelope, and the redaction path.
 - **Consumed by** the closeout transaction ([feature-closeout.md](feature-closeout.md)) for the `closeout` domain kind, the four `closeout.*` rows, exact-code closeout classification, the adapter-local payload identity, and the envelope/redaction path.
 - **Consumed by** verify change and exit taxonomy ([feature-verify-change-and-exit-taxonomy.md](feature-verify-change-and-exit-taxonomy.md)) and verify gates ([feature-verify-gates.md](feature-verify-gates.md)) for the `verify` domain kind and its three rows, the delivery-result token projection, and the non-zero exit guarantee.
+- **Consumed by** the machine-readable plan schema and command family ([Machine-Readable Delivery Plan Schema](feature-plan-schema.md)) for the `plan` domain kind, the five `plan.*` rows, the `lint.document.unreadable` row, exact-code plan classification, the envelope, and the verdict-to-exit projection.
 - **Depends on** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) for runtime-neutral contract placement, package boundaries, and gate stability.
 - **Risk — contract cascade:** Every later command and surface consumes the envelope. Mitigation: the field set is fixed at v1, `schemaVersion` provides a breaking-change channel, and evolution is additive within a version.
 - **Risk — documentation drift:** The documented table can diverge from the source. Mitigation: the sync check fails closed in both directions and includes the fallback rows.

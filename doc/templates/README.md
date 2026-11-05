@@ -26,7 +26,7 @@ Agent prompts define quality rules and domain-specific logic; templates define o
 | `feature-spec-template.md` | Feature specifications for `doc/spec/features/` |
 | `test-spec-template.md` | Test specifications for `doc/quality/test-specs/` |
 | `test-plan-template.md` | Per-change test plans (`chg-<workItemRef>-test-plan.md`) |
-| `implementation-plan-template.md` | Per-change implementation plans (`chg-<workItemRef>-plan.md`) |
+| `implementation-plan-template.md` | Per-change implementation plans (`chg-<workItemRef>-plan.yaml`, `delivery.plan.v1`) |
 | `north-star-template.md` | Product north star document (`doc/overview/01-north-star.md`) |
 | `pr-instructions-template.md` | PR/MR platform instructions (`.ai/agent/pr-instructions.md`) |
 

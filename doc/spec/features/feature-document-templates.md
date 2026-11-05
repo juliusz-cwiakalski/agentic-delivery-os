@@ -6,11 +6,11 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-DOCUMENT-TEMPLATES
 status: Current
 created: 2026-03-10
-last_updated: 2026-07-05
+last_updated: 2026-11-05
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-52", "GH-133"]
+  related_changes: ["GH-32", "GH-52", "GH-133", "GH-226"]
   guides:
     - "doc/documentation-handbook.md"
     - "doc/guides/onboarding-existing-project.md"
@@ -144,7 +144,7 @@ Business Markdown templates intentionally stay concise (front matter + headings 
 | `doc/templates/` | Templates directory | Contains core templates plus optional business/profile/register templates |
 | `doc/templates/README.md` | Directory overview | Purpose, template inventory, usage instructions |
 | `doc/templates/change-spec-template.md` | Change spec template | 25-section structure matching the change spec standard |
-| `doc/templates/implementation-plan-template.md` | Plan template | Phased implementation plan structure |
+| `doc/templates/implementation-plan-template.md` | Plan template | `delivery.plan.v1` YAML plan shape: phases, declared scope, done-artifacts, leases, weight, interactions, and tier |
 | `doc/templates/test-plan-template.md` | Test plan template | Test plan structure with scope, strategy, and traceability matrix |
 | `doc/templates/feature-spec-template.md` | Feature spec template | 9-section feature specification structure |
 | `doc/templates/decision-record-template.md` | Decision record template | Single source of truth for the record body: type-selection helper, clean front matter (no top-level `decision_area`/`reversibility` for new records), tiered-default applicability tags per section, 18 body sections (Context → References, incl. Decision Rights, Evidence/Assumptions/Unknowns + Technical-Selection Evidence Pack, recommendation-vs-authorized-decision split, eligibility-first alternatives, Rollback, Communication Plan, Structured Retrospective), and worked R1/R2/R3 examples in an authoring appendix |
@@ -155,7 +155,7 @@ Business Markdown templates intentionally stay concise (front matter + headings 
 Agents that produce documents are configured to read templates at runtime:
 
 - **`@spec-writer`** reads `change-spec-template.md` when creating change specifications
-- **`@plan-writer`** reads `implementation-plan-template.md` when creating implementation plans
+- **`@plan-writer`** reads `implementation-plan-template.md` when creating implementation plans (`chg-<workItemRef>-plan.yaml`)
 - **`@test-plan-writer`** reads `test-plan-template.md` when creating test plans
 - **`@doc-syncer`** reads `feature-spec-template.md` when creating/updating feature specifications
 
