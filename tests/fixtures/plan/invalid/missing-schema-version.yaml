@@ -1,0 +1,16 @@
+workItemRef: GH-306
+tier:
+  name: full
+phases:
+  - id: 1
+    title: Planning
+    kind: planning
+    scope:
+      files:
+        - doc/changes/plan.yaml
+  - id: 2
+    title: Delivery
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/plan-validate.ts

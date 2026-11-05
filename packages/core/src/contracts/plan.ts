@@ -243,6 +243,7 @@ export type PlanValidateData = {
   readonly artifact?: PlanArtifactRef;
   readonly schemaVersion?: string;
   readonly tier?: string;
+  readonly tierDeclaration?: PlanTierDeclaration;
 };
 
 /** `plan overlap` envelope data (DM-7, F-10). */

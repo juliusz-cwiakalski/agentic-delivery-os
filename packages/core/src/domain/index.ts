@@ -30,6 +30,18 @@ export {
   summarizeCloseout,
 } from "./closeout.js";
 export {
+  globToRegExp,
+  normalizeRepoPath,
+  packageCovers,
+  scopeCoversPath,
+  staticPrefix,
+} from "./plan-paths.js";
+export {
+  validatePlan,
+  validatePlanValue,
+  type PlanValidateInput,
+} from "./plan-validate.js";
+export {
   lintPmNotes,
   type PmNotesLintFinding,
   type PmNotesLintLocation,

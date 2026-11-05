@@ -1,0 +1,23 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-306
+tier:
+  name: full
+  phases: [1, 2]
+phases:
+  - id: 1
+    title: Package wildcard
+    kind: planning
+    scope:
+      packages:
+        - packages/core/src/contracts/**
+  - id: 2
+    title: Folder scope
+    kind: delivery
+    scope:
+      folders:
+        - doc/guides
+    doneArtifacts:
+      mergeRequestUrl: https://example.test/pr/306
+      pipelineId: "pipeline-306"
+      deployedEnvironment: staging
+      trackerTransition: done

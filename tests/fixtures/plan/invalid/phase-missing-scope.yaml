@@ -1,0 +1,38 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-308
+tier:
+  name: full
+phases:
+  - id: 1
+    title: Planning
+    kind: planning
+    scope:
+      files:
+        - doc/changes/plan.yaml
+  - id: 2
+    title: Delivery one
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/plan-validate.ts
+  - id: 3
+    title: Delivery two
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/plan-paths.ts
+  - id: 4
+    title: Delivery three
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/commands/plan.ts
+  - id: 5
+    title: Delivery four
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/plan-validate.test.ts
+  - id: 6
+    title: Delivery five
+    kind: delivery

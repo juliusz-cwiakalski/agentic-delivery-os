@@ -143,6 +143,14 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "selectPruneCandidates",
     "renderSessionAdminHuman",
   ],
+  "core/src/domain/plan-paths.ts": [
+    "globToRegExp",
+    "normalizeRepoPath",
+    "packageCovers",
+    "scopeCoversPath",
+    "staticPrefix",
+  ],
+  "core/src/domain/plan-validate.ts": ["validatePlan", "validatePlanValue"],
   "core/src/domain/pm-notes-lint.ts": ["lintPmNotes"],
   "core/src/domain/verify-change.ts": [
     "classifyVerifyChange",

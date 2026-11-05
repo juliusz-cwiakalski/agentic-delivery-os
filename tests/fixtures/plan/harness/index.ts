@@ -7,13 +7,17 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseConfigYaml } from "../../../../packages/adapters/src/file/yaml-parser";
 import type {
   PlanArtifactRead,
   PlanArtifactRef,
   PlanDiffPort,
   PlanDiffRead,
   PlanReadPort,
+  PlanValidateData,
+  PlanYamlParser,
 } from "../../../../packages/core/src/contracts/index";
+import { validatePlan } from "../../../../packages/core/src/domain/plan-validate";
 
 const PLAN_ROOT = join(import.meta.dir, "..");
 
@@ -145,3 +149,44 @@ export const artifactRef = (kind: "yaml" | "markdown", workItemRef: string): Pla
   kind,
   path: `chg-${workItemRef}-plan.${kind === "yaml" ? "yaml" : "md"}`,
 });
+
+/**
+ * The real YAML parse path: the adapters precedent, not a mock. Its bounded
+ * node/depth/document guards run before any plan value is inspected.
+ */
+export const planYamlParser: PlanYamlParser = (text) => {
+  const parsed = parseConfigYaml(text, "project", "plan.yaml");
+  return parsed.ok
+    ? { ok: true, value: parsed.facts.values }
+    : { ok: false, reason: "unparseable" };
+};
+
+/** Validate one committed YAML fixture through the real parse path. */
+export const validateYamlFixture = (
+  workItemRef: string,
+  relative: string,
+): PlanValidateData =>
+  validatePlan({
+    workItemRef,
+    read: {
+      ok: true,
+      artifact: { kind: "yaml", path: `chg-${workItemRef}-plan.yaml` },
+      text: fixture(relative),
+    },
+    parseYaml: planYamlParser,
+  });
+
+/** Validate one committed markdown fixture through format detection. */
+export const validateMarkdownFixture = (
+  workItemRef: string,
+  relative: string,
+): PlanValidateData =>
+  validatePlan({
+    workItemRef,
+    read: {
+      ok: true,
+      artifact: { kind: "markdown", path: `chg-${workItemRef}-plan.md` },
+      text: fixture(relative),
+    },
+    parseYaml: planYamlParser,
+  });
