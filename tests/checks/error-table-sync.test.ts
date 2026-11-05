@@ -959,8 +959,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 7) {
-    failures.push(`table length ${live.length} != baseline + 7 (${BASELINE_ROWS.length + 7})`);
+  if (live.length !== BASELINE_ROWS.length + 10) {
+    failures.push(`table length ${live.length} != baseline + 10 (${BASELINE_ROWS.length + 10})`);
   }
   return failures;
 };
@@ -983,6 +983,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       lint: 5,
       verify: 3,
       closeout: 4,
+      watchdog: 3,
     });
   });
 
@@ -1030,7 +1031,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 7,
+      BASELINE_ROWS.length + 10,
     );
   });
 
@@ -1053,7 +1054,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 7);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 10);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1120,5 +1121,66 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the unchanged copy remains green (control)", async () => {
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
+  });
+});
+
+const ROW_WATCHDOG_DIRTY =
+  "| watchdog.checkout-dirty | watchdog | user | false | not_landed | Commit or discard the named uncommitted changes, then re-run the lane preflight. | user-validation | The lane checkout is dirty. |";
+const ROW_WATCHDOG_NON_BASE =
+  "| watchdog.checkout-non-base | watchdog | user | false | not_landed | Check out the lane's declared base (or correct the declaration), then re-run the lane preflight. | user-validation | The lane checkout is not on its declared base. |";
+const ROW_WATCHDOG_ABSENT =
+  "| watchdog.signals-absent | watchdog | platform | true | not_landed | Restore the declared progress-signal sources, then retry; without them the answer is unknown. | platform-provider | No liveness signal sources are available; the answer is unknown. |";
+
+describe("TC-WATCHDOG-004 documented rows and corpora stay in two-way sync", () => {
+  test("the delivered state is green with the three watchdog rows documented once", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
+    const doc = readFile(ROOT, DOC);
+    for (const row of [ROW_WATCHDOG_DIRTY, ROW_WATCHDOG_NON_BASE, ROW_WATCHDOG_ABSENT]) {
+      expect(doc.split(row).length - 1).toBe(1);
+    }
+  });
+
+  test("the three watchdog codes are recognized in S1 and resolvable in the corpus", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.counts.recognizedS1).toBeGreaterThan(0);
+    expect(result.counts.corpusRows).toBeGreaterThan(0);
+    const corpus = JSON.parse(readFile(ROOT, `${CORPUS}/true-positives.json`)) as {
+      readonly rows: readonly { readonly text: string; readonly recognized: boolean }[];
+    };
+    for (const code of [
+      "watchdog.checkout-dirty",
+      "watchdog.checkout-non-base",
+      "watchdog.signals-absent",
+    ]) {
+      expect(corpus.rows.some((row) => row.text === code && row.recognized)).toBe(true);
+    }
+  });
+
+  test("removing a documented watchdog row fails naming the source entry", async () => {
+    const root = makeTempRoot();
+    editFile(root, DOC, removeDocRow(ROW_WATCHDOG_ABSENT));
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "source entry watchdog.signals-absent is undocumented",
+    );
+  });
+
+  test("a mismatched watchdog hint fails naming the field", async () => {
+    const root = makeTempRoot();
+    editFile(root, DOC, (text) =>
+      text.replace(ROW_WATCHDOG_DIRTY, ROW_WATCHDOG_DIRTY.replace("Commit or discard", "Remove")),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "watchdog.checkout-dirty hint mismatch",
+    );
+  });
+
+  test("removing watchdog from DOMAIN_KINDS fails naming the undeclared namespace", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, replaceDomainKinds(["provider", "input", "config", "state", "lint"]));
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "undeclared namespace watchdog",
+    );
   });
 });

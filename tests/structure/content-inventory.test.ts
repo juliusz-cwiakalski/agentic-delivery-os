@@ -361,6 +361,16 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "validateProviderConfiguration",
   ],
   "core/src/contracts/config.ts": ["CONFIG_LAYERS"],
+  "core/src/contracts/watchdog.ts": [
+    "WATCHDOG_ERROR_CODES",
+    "WATCHDOG_MEMORY_STATUSES",
+    "WATCHDOG_PROBES",
+    "WATCHDOG_RESTORATION_ACTION_KINDS",
+    "WATCHDOG_SCHEMA_VERSION",
+    "WATCHDOG_SIGNAL_KEYS",
+    "WATCHDOG_STALL_HEARTBEAT_MS",
+    "WATCHDOG_VERDICTS",
+  ],
   "core/src/contracts/verify-gates.ts": [
     "VERIFY_GATES_CI_RUN_LIMIT",
     "VERIFY_GATES_CI_WORKFLOW_PATH",
