@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-gh226-baseline",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "schemaVersion": "delivery.queue-ready.v1",
+    "generatedAt": "2026-10-31T00:00:00Z",
+    "repository": {
+      "state": "observed",
+      "host": "github.com",
+      "owner": "owner-placeholder",
+      "name": "project-placeholder",
+      "remoteName": "origin"
+    },
+    "head": {
+      "branch": "feat/GH-176/queue-ready",
+      "sha": "b31ec47111111111111111111111111111111111"
+    },
+    "candidates": [
+      {
+        "workItemRef": "GH-176",
+        "rank": 1,
+        "ready": true,
+        "closeClass": "new-start",
+        "workItem": {
+          "state": "observed",
+          "itemState": "ready",
+          "labels": [
+            "priority:high"
+          ]
+        },
+        "close": {
+          "association": "not-associated",
+          "associatedCount": 0,
+          "reason": "pr-not-associated"
+        },
+        "conditions": [
+          {
+            "id": "deps-satisfied",
+            "state": "satisfied",
+            "evidence": [
+              {
+                "source": "tracker",
+                "reason": "no-blocked-dependencies"
+              }
+            ]
+          },
+          {
+            "id": "repo-free",
+            "state": "satisfied",
+            "evidence": [
+              {
+                "source": "local-context",
+                "reason": "no-active-change",
+                "detail": "repo:local-context"
+              }
+            ]
+          },
+          {
+            "id": "tier-known",
+            "state": "satisfied",
+            "evidence": [
+              {
+                "source": "tracker",
+                "reason": "tier-label",
+                "detail": "tier:priority-label; label:priority:high"
+              }
+            ]
+          },
+          {
+            "id": "no-owner-gate",
+            "state": "satisfied",
+            "evidence": [
+              {
+                "source": "tracker",
+                "reason": "no-owner-labels"
+              }
+            ]
+          },
+          {
+            "id": "ci-healthy",
+            "state": "satisfied",
+            "evidence": [
+              {
+                "source": "ci",
+                "reason": "ci-succeeded",
+                "detail": "result:succeeded"
+              }
+            ]
+          },
+          {
+            "id": "provider-available",
+            "state": "satisfied",
+            "evidence": [
+              {
+                "source": "provider-parks",
+                "reason": "no-active-park",
+                "detail": "chain:primary"
+              },
+              {
+                "source": "provider-config",
+                "reason": "engine-not-run"
+              }
+            ]
+          }
+        ],
+        "blockingConditions": [],
+        "truncated": false
+      }
+    ],
+    "summary": {
+      "candidates": 1,
+      "ready": 1,
+      "notReady": 0,
+      "mergeReady": 0,
+      "reviewPending": 0,
+      "newStart": 1,
+      "unknownClose": 0
+    },
+    "reasons": [],
+    "truncated": false
+  }
+}

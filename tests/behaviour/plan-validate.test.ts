@@ -125,3 +125,31 @@ describe("TC-DPLAN-001 bounded errors", () => {
     expect(fields).toEqual([...fields].sort());
   });
 });
+
+describe("TC-DPLAN-001 CLI edge and text mode", () => {
+  test("the edge projects exit 0 and a valid envelope", async () => {
+    const { parseEnvelope, planRuntime, planWorld, runPlanCli } = await import(
+      "../fixtures/plan/harness/index"
+    );
+    const world = planWorld({ "GH-306": "valid/baseline.yaml" });
+    const run = await runPlanCli(
+      ["plan", "validate", "GH-306", "--json"],
+      planRuntime(world),
+      { runId: "run-plan-valid" },
+    );
+    expect(run.exitCode).toBe(0);
+    const envelope = parseEnvelope(run.stdout);
+    expect(envelope.exitCode).toBe(0);
+    expect((envelope.data as { verdict: string }).verdict).toBe("valid");
+  });
+
+  test("text mode prints verdict and readiness", async () => {
+    const { planRuntime, planWorld, runPlanCli } = await import(
+      "../fixtures/plan/harness/index"
+    );
+    const world = planWorld({ "GH-306": "valid/baseline.yaml" });
+    const run = await runPlanCli(["plan", "validate", "GH-306"], planRuntime(world));
+    expect(run.stdout).toContain("verdict=valid");
+    expect(run.stdout).toContain("readyForDevelopment=true");
+  });
+});

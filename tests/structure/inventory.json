@@ -67,6 +67,7 @@
     "src/file/ci-workflow.ts",
     "src/file/config-source.ts",
     "src/file/index.ts",
+    "src/file/plan-artifact.ts",
     "src/file/pm-context.ts",
     "src/file/pm-notes-parser.ts",
     "src/file/yaml-parser.ts",
@@ -107,6 +108,7 @@
     "src/commands/index.ts",
     "src/commands/lint.ts",
     "src/commands/phase.ts",
+    "src/commands/plan.ts",
     "src/commands/provider.ts",
     "src/commands/queue.ts",
     "src/commands/status.ts",
@@ -115,6 +117,7 @@
     "src/edge.ts",
     "src/index.ts",
     "src/output/index.ts",
+    "src/output/plan-text.ts",
     "src/output/serialize.ts",
     "src/projection.ts"
   ],

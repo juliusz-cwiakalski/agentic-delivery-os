@@ -440,6 +440,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(declarers).toEqual([
       `${CLI_DIR}/commands/closeout.ts`,
       `${CLI_DIR}/commands/db.ts`,
+      `${CLI_DIR}/commands/plan.ts`,
       `${CLI_DIR}/commands/queue.ts`,
       `${CLI_DIR}/commands/status.ts`,
       `${CLI_DIR}/commands/verify.ts`,

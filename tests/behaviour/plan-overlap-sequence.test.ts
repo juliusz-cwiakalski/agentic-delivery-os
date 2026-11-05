@@ -38,3 +38,47 @@ describe("TC-DPLAN-013 sequence verdict", () => {
     }
   });
 });
+
+describe("TC-DPLAN-013 CLI edge and text mode", () => {
+  test("a sequence verdict exits 1 with the verdict carried in the envelope", async () => {
+    const { parseEnvelope, planRuntime, planWorld, runPlanCli } = await import(
+      "../fixtures/plan/harness/index"
+    );
+    const world = planWorld({
+      "GH-306": "overlap/sequence/gh-306.yaml",
+      "GH-307": "overlap/sequence/gh-307.yaml",
+    });
+    const run = await runPlanCli(
+      ["plan", "overlap", "GH-306", "GH-307", "--json"],
+      planRuntime(world),
+      { runId: "run-plan-overlap" },
+    );
+    expect(run.exitCode).toBe(1);
+    const envelope = parseEnvelope(run.stdout);
+    const data = envelope.data as {
+      verdict: string;
+      overlappingPaths: readonly string[];
+      ordering: string;
+      reason: string;
+    };
+    expect(envelope.exitCode).toBe(1);
+    expect(data.verdict).toBe("run-in-sequence");
+    expect(data.overlappingPaths).toContain("packages/core/src/contracts/queue.ts");
+    expect(data.ordering).toBe("GH-306-before-GH-307");
+    expect(data.reason).toBe("shared-contract-files");
+  });
+
+  test("text mode prints verdict, overlapping path, and reason", async () => {
+    const { planRuntime, planWorld, runPlanCli } = await import(
+      "../fixtures/plan/harness/index"
+    );
+    const world = planWorld({
+      "GH-306": "overlap/sequence/gh-306.yaml",
+      "GH-307": "overlap/sequence/gh-307.yaml",
+    });
+    const run = await runPlanCli(["plan", "overlap", "GH-306", "GH-307"], planRuntime(world));
+    expect(run.stdout).toContain("verdict=run-in-sequence");
+    expect(run.stdout).toContain("overlapping=packages/core/src/contracts/queue.ts");
+    expect(run.stdout).toContain("reason=shared-contract-files");
+  });
+});

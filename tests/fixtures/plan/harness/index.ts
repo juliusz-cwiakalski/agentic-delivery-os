@@ -8,6 +8,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseConfigYaml } from "../../../../packages/adapters/src/file/yaml-parser";
+import type { PlanCommandRuntime } from "../../../../packages/cli/src/commands/plan";
 import type {
   PlanArtifactRead,
   PlanArtifactRef,
@@ -22,6 +23,11 @@ import {
   planDocumentFromValidateData,
   validatePlan,
 } from "../../../../packages/core/src/domain/plan-validate";
+import {
+  type QueueCliOptions,
+  type QueueCliRun,
+  runProgram,
+} from "../../queue-ready/harness";
 
 const PLAN_ROOT = join(import.meta.dir, "..");
 
@@ -213,3 +219,49 @@ export const diffFixture = (
   const meta = JSON.parse(fixture(`${relative}/meta.json`)) as { readonly against: string };
   return { paths, against: meta.against };
 };
+
+/** Build the plan command runtime over one fixture world and recorder. */
+export const planRuntime = (
+  world: PlanWorld,
+  recorder: Recorder = createRecorder(),
+): PlanCommandRuntime => ({
+  readPlan: planReadPort(world, recorder),
+  readDiff: planDiffPort(world, recorder),
+  parseYaml: planYamlParser,
+});
+
+/** Run the plan command in process with fixed brand/clock/run id/streams. */
+export const runPlanCli = async (
+  argv: readonly string[],
+  runtime: PlanCommandRuntime,
+  options: QueueCliOptions = {},
+): Promise<QueueCliRun> => {
+  const { createPlanCommandDefinition } = await import(
+    "../../../../packages/cli/src/commands/plan"
+  );
+  return runProgram(
+    argv,
+    { commands: { plan: createPlanCommandDefinition(runtime) } },
+    options,
+  );
+};
+
+/** Parse a machine envelope from stdout, failing loudly on non-JSON output. */
+export const parseEnvelope = (stdout: string): Record<string, unknown> => {
+  const parsed: unknown = JSON.parse(stdout);
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("stdout is not an envelope object");
+  }
+  return parsed as Record<string, unknown>;
+};
+
+/** Build a world from ref → committed YAML fixture path (plus optional diffs). */
+export const planWorld = (
+  refs: Readonly<Record<string, string>>,
+  diff?: Readonly<Record<string, readonly string[]>>,
+): PlanWorld => ({
+  artifacts: Object.fromEntries(
+    Object.entries(refs).map(([ref, relative]) => [ref, [yamlFixture(ref, relative)]]),
+  ),
+  ...(diff === undefined ? {} : { diff }),
+});

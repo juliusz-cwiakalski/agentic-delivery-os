@@ -15,6 +15,8 @@ export type {
   LintRegistryRead,
 } from "./lint.js";
 export { createLintCommandDefinition } from "./lint.js";
+export type { PlanCommandRuntime } from "./plan.js";
+export { createPlanCommandDefinition } from "./plan.js";
 export type {
   PhaseCommandRuntime,
   PhasePmNotesRead,

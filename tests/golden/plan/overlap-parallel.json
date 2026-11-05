@@ -1,0 +1,8 @@
+{
+  "verdict": "parallel",
+  "planA": "GH-306",
+  "planB": "GH-307",
+  "overlappingPaths": [],
+  "truncated": false,
+  "totalOverlappingPaths": 0
+}

@@ -160,9 +160,10 @@ const parseScope = (raw: unknown, phase: number): ScopeParse => {
     if (!Object.hasOwn(raw, key)) continue;
     const result = parseStringArray(raw[key], `scope.${key}`, phase, PLAN_MAX_SCOPE_PATHS);
     errors.push(...result.errors);
-    if (key === "files") Object.assign(parsed, { files: result.values });
-    if (key === "packages") Object.assign(parsed, { packages: result.values });
-    if (key === "folders") Object.assign(parsed, { folders: result.values });
+    const sorted = [...result.values].sort(compareText);
+    if (key === "files") Object.assign(parsed, { files: sorted });
+    if (key === "packages") Object.assign(parsed, { packages: sorted });
+    if (key === "folders") Object.assign(parsed, { folders: sorted });
   }
   const declared = PLAN_SCOPE_KEYS.some((key) => (parsed[key] ?? []).length > 0);
   if (!declared && errors.length === 0) {
