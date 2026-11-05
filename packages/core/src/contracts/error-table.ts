@@ -20,6 +20,7 @@ export const DOMAIN_KINDS = [
   "db",
   "closeout",
   "plan",
+  "watchdog",
 ] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -538,5 +539,38 @@ export const ERROR_TABLE = [
       "Author `chg-<ref>-plan.yaml` (or a legacy `chg-<ref>-plan.md`) for the named change ref, then re-run the command.",
     projectionClass: "user-validation",
     summary: "No plan artifact exists for the change ref.",
+  },
+  {
+    code: "watchdog.checkout-dirty",
+    domainKind: "watchdog",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Commit or discard the named uncommitted changes, then re-run the lane preflight.",
+    projectionClass: "user-validation",
+    summary: "The lane checkout is dirty.",
+  },
+  {
+    code: "watchdog.checkout-non-base",
+    domainKind: "watchdog",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Check out the lane's declared base (or correct the declaration), then re-run the lane preflight.",
+    projectionClass: "user-validation",
+    summary: "The lane checkout is not on its declared base.",
+  },
+  {
+    code: "watchdog.signals-absent",
+    domainKind: "watchdog",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Restore the declared progress-signal sources, then retry; without them the answer is unknown.",
+    projectionClass: "platform-provider",
+    summary: "No liveness signal sources are available; the answer is unknown.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

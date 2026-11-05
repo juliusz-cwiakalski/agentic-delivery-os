@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 2,
+  "timing": {
+    "totalMs": 0
+  },
+  "error": {
+    "code": "watchdog.signals-absent",
+    "category": "platform",
+    "retryable": true,
+    "consequence": "not_landed",
+    "remediationHint": "Restore the declared progress-signal sources, then retry; without them the answer is unknown.",
+    "summary": "lane lane-1: no declared progress-signal sources are available; the answer is unknown"
+  }
+}

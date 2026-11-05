@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-CLOSEOUT
 status: Current
 created: 2026-11-01
-last_updated: 2026-11-01
+last_updated: 2026-11-05
 owners: ["engineering"]
 service: delivery-os
 summary: "The delivered closeout transaction: a dry-run-by-default `closeout <workItemRef>` command, the deterministic seven-step plan, SHA-256 operation identities and the append-only `closeout.operation` ledger over the real JSONL state driver, a production CLI composition over the real provider clients, git seam, and state store, GitHub and Jira writes with declared GitLab gaps, review-thread resolution, the owed-flip sweep, checkout restore, squash-safe local branch cleanup, the discriminated work-item read observation and the separate reverse-dependent no-surface vocabulary, provider-asserted label/relation availability signals, bounded output measured in UTF-8 bytes, and the four `closeout` error identities."
 links:
-  related_changes: ["GH-183"]
+  related_changes: ["GH-183", "GH-221"]
   related_decisions: ["TDR-0008", "ODR-0003", "ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
   contracts:
     - "packages/core/src/contracts/closeout.ts"
@@ -421,6 +421,6 @@ Closeout adds no runtime dependency, service, daemon, or scheduled job. It reuse
 | Reverse-dependent observation | The distinct discriminator for the bounded reverse-dependent read: `observed`, `no-surface`, `not-found`, `unavailable`, or `invalid`. `no-surface` is a provider-level gap; `unavailable` is a signal-level skip. |
 | Protected ref | A ref branch cleanup must never delete: `main`, `main-tools`, the resolved base, `HEAD`, and declared protected refs. |
 
-See also: [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Conformance Suite](feature-adapter-conformance.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [repository glossary](../../overview/glossary.md), [TDR-0008](../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+See also: [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Conformance Suite](feature-adapter-conformance.md), [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [repository glossary](../../overview/glossary.md), [TDR-0008](../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 **Change record:** `doc/changes/2026-11/2026-11-01--GH-183--closeout-v1-branch-cleanup/`.

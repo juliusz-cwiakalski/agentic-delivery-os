@@ -21,6 +21,7 @@ ados_distribution: redistributable
 | [Machine-Readable Plan Schema](spec/features/feature-plan-schema.md) | The `delivery.plan.v1` YAML plan, the `plan validate`/`diff`/`overlap` verdicts, the `lint plan` target, and the legacy markdown transition |
 | [Verify Change and Exit Taxonomy](spec/features/feature-verify-change-and-exit-taxonomy.md) | Read-only ledger verification, the delivery-result enum, and the CLI exit taxonomy |
 | [Closeout Transaction](spec/features/feature-closeout.md) | The dry-run-by-default seven-step post-merge transaction, idempotency ledger, provider writes and gaps, review-thread resolution, and squash-safe local branch cleanup |
+| [Watchdog and Lane Contracts](spec/features/feature-watchdog-lane-contracts.md) | The check-only `preflight`/`teardown`/`liveness` family, restoration and memory-preservation semantics, and the contract-first liveness answer |
 | [Verify Gates](spec/features/feature-verify-gates.md) | The five-gate read-only M0 merge battery and its cited verdicts |
 | [Measurement Baseline](spec/features/feature-measurement-baseline.md) | The committed bash-era measurement baseline: schema, `MET-` metrics, status semantics, source traceability, window, and comparison protocol |
 | [Documentation Handbook](documentation-handbook.md) | How docs work — structure, conventions, workflow |

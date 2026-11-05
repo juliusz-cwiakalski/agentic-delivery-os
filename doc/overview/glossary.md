@@ -2,14 +2,14 @@
 id: GLOSSARY
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-01
+last_updated: 2026-11-05
 owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-client-seed, status-digest, queue-readiness, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, and closeout terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-221"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer, adapter-port, provider-client-seed, status-digest, queue-readiness, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, and watchdog/lane terms used across the repository."
 ---
 
 # Glossary
@@ -72,8 +72,8 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Deny list | The authoritative set of license identifiers the audit never accepts, checked before the allow list so a denied identifier fails even when it is also allow-listed or approved. Each entry is a single identifier, the list must stay disjoint from the allow list, and it must contain the mandatory five-family baseline (SSPL, BUSL, Elastic, Commons Clause, and the CC-BY-NC family). | Legal | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
 | Delivery result tuple | The classified verification outcome: result token, effective variant, ordered missing phases, and evidence. Success carries it as structured `data`; failure carries the token, variant, and missing set in the deterministic summary. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
 | Delivery result enum | The eleven bash-era delivery-summary tokens adopted as the single typed CLI vocabulary: `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `failed`, `finished`, `max-restarts`, `state-unverified`, `partial`, `noop-lane-permission`, and `noop-lane-nothing-to-do`. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
-| Domain kind | The engine-level failure classification a domain engine attaches to an error; the first link of the classification chain. Declared kinds are `provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, and `closeout`, beside the reserved `fallback` containment kind. | Result contract | — |
-| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers, result contract, adapter contract substrate, provider engine, the three provider client slices (GitHub and Jira with closeout writes, GitLab reads only), the closeout planner, ledger, and git branch/checkout seam, the pm-notes lint and phase-transition surface, the verify-change and verify-gates surfaces, the status digest, and the session-database admin surface carry implemented code. | Scaffold | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
+| Domain kind | The engine-level failure classification a domain engine attaches to an error; the first link of the classification chain. Declared kinds are `provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, and `watchdog`, beside the reserved `fallback` containment kind. | Result contract | — |
+| Empty-but-enforced | Scaffold content policy for the remaining engines, business logic, and drivers: structure, exports, rules, fixtures, and green tests exist. The configuration and state tiers, result contract, adapter contract substrate, provider engine, the three provider client slices (GitHub and Jira with closeout writes, GitLab reads only), the closeout planner, ledger, and git branch/checkout seam, the pm-notes lint and phase-transition surface, the verify-change and verify-gates surfaces, the status digest, the session-database admin surface, and the watchdog check family carry implemented code. | Scaffold | [feature-monorepo-scaffold-toolchain.md](../spec/features/feature-monorepo-scaffold-toolchain.md) |
 | Error table | The internal, machine-readable, single-source set of failure entries from which error identity, structured fields, and exit-code projection are all derived. Declared once in `core ./contracts` as data and types. | Result contract | — |
 | Exit-code projection | The standalone CLI's mapping of table entries to `{0, 1, 2}`: `success` -> 0, `user-validation` -> 1, `platform-provider` -> 2. The only place exit codes exist. | Result contract | — |
 | Exit taxonomy | The total mapping from every delivery-result token to exactly one projection class and therefore one CLI exit in `{0, 1, 2}`. Only `finished` yields exit `0`; `state-unverified` projects `platform-provider` (exit `2`) where bash exits `1`, a deliberate divergence recorded in TDR-0005. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
@@ -232,6 +232,16 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | `provider.not-found` | An additive adapter-local read-result code for HTTP 404; it is not an error-table code. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | Structured ledger evaluation | `EvaluateVerifyChange` → `VerifyLedgerEvaluation`, the pure evaluation that returns variant, outcome, required/completed/missing phases, declaration counts, and registry evidence on every outcome. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | Open-PR resolution | The one deterministic rule that selects the target delivery request from one bounded open-PR page. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| Lane | One unit of delivery work with an identity, a declared base ref, and declared workspace paths; later scheduling and daemon consumers judge and restore lanes through the watchdog probes. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
+| Watchdog | The check-only `preflight`, `teardown`, and `liveness` command family over local lane facts; it checks and restores, and never dispatches, spawns a session, kills, or supervises. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
+| Preflight | The admission probe: a clean on-base checkout is admitted with verdict `ok`, a dirty checkout refuses `watchdog.checkout-dirty`, an off-base or detached checkout refuses `watchdog.checkout-non-base`, and unevaluable facts fail closed. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
+| Teardown restoration | The caller-invoked restoration probe that preserves a stranded commit, restores the declared base, removes lane-workspace residue, preserves unattributable content, and reports every action with evidence. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
+| Restoration report | Teardown `data`: the ordered restoration actions plus one memory-publication entry per `.ai/memory` path, each carrying a status and non-empty evidence. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
+| Liveness probe | The progress-signal probe over `heartbeatAgeMs`, `tokenDelta`, and `traffic`; absent sources classify `watchdog.signals-absent` rather than guessing, and CPU can never be the only signal. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
+| Signals-absent | The classified "unknown" liveness answer when no declared progress-signal source is available; it emits no verdict and exits `2`. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
+| Stranded commit | A commit reachable from no branch, left by an interrupted lane; teardown preserves it as the attributed ref `watchdog-preserved/<lane>`. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
+| Foreign commit | A commit on a checkout that is not the lane's declared base; preflight refuses it at admission. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
+| Memory publication | An agent-memory write under `.ai/memory`; teardown reports it as `committed` or `preserved` and never stages, commits, reverts, cleans, or deletes it. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
 
 ## Acronyms
 
@@ -267,5 +277,6 @@ _Expand every acronym at first use; keep the expanded list here._
 - [PM-Notes Lint and Phase Transitions](../spec/features/feature-pm-notes-lint-and-phase-transitions.md)
 - [Verify Change and Exit Taxonomy](../spec/features/feature-verify-change-and-exit-taxonomy.md)
 - [Verify Gates](../spec/features/feature-verify-gates.md)
+- [Watchdog and Lane Contracts](../spec/features/feature-watchdog-lane-contracts.md)
 - [ADR-0003 — OSS Tooling Monorepo Structure](../decisions/ADR-0003-oss-monorepo-structure.md)
 - [TDR-0005 — Delivery Result Enum and CLI Exit Taxonomy](../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md)

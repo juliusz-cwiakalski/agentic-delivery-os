@@ -60,11 +60,18 @@ const REQUIRED_COLUMNS = [
   "Summary",
 ] as const;
 const FALLBACK_CODES = new Set(["fallback.invocation", "fallback.internal"]);
-// GH-182: the spec pins the two-segment `provider.outage` identity exactly; it
-// remains an exact declared code (not a pattern widening), and every other
-// failure identity keeps the three-segment minimum.
-const RESERVED_TWO_SEGMENT_CODES = new Set(["provider.outage"]);
+// GH-182/GH-221: the specs pin the two-segment `provider.outage` identity and
+// the three lane-safety `watchdog.*` identities exactly; they remain exact
+// declared codes (not a pattern widening), and every other failure identity
+// keeps the three-segment minimum.
+const RESERVED_TWO_SEGMENT_CODES = new Set([
+  "provider.outage",
+  "watchdog.checkout-dirty",
+  "watchdog.checkout-non-base",
+  "watchdog.signals-absent",
+]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
+const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;
 const FALLBACK_PATTERN = /\bfallback\.[a-z][a-z0-9]*\b/g;
 // GH-183: `provider.payload.invalid` is a distinct adapter-local identity for a
 // malformed provider payload. It is intentionally not an error-table row (an
@@ -100,6 +107,15 @@ export const scanReferences = (text: string, domainKinds: readonly string[]): Re
     const namespace = code.split(".")[0] ?? "";
     const recognized = namespace === "fallback" || domainKinds.includes(namespace);
     references.push({ code, line: lineAt(text, match.index ?? 0), recognized });
+  }
+  for (const match of text.matchAll(TWO_SEGMENT_PATTERN)) {
+    const code = match[0];
+    if (!RESERVED_TWO_SEGMENT_CODES.has(code)) continue;
+    references.push({
+      code,
+      line: lineAt(text, match.index ?? 0),
+      recognized: true,
+    });
   }
   for (const match of text.matchAll(FALLBACK_PATTERN)) {
     references.push({

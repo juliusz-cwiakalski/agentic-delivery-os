@@ -1,0 +1,4 @@
+stdout:
+example-product watchdog preflight lane-1: ok
+evidence: checkout clean on base main
+stderr:

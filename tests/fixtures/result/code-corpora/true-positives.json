@@ -23,6 +23,24 @@
       "text": "fallback.internal",
       "recognized": true,
       "resolves": true
+    },
+    {
+      "id": "watchdog-checkout-dirty",
+      "text": "watchdog.checkout-dirty",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "watchdog-checkout-non-base",
+      "text": "watchdog.checkout-non-base",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "watchdog-signals-absent",
+      "text": "watchdog.signals-absent",
+      "recognized": true,
+      "resolves": true
     }
   ]
 }

@@ -290,3 +290,10 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
       remove(input.branch, input.expectedHead === undefined ? undefined : input.expectedHead),
   };
 };
+
+export {
+  createWatchdogGitSeam,
+  parseWatchdogStatus,
+  type WatchdogGitSeam,
+  type WatchdogGitSeamOptions,
+} from "./watchdog.js";

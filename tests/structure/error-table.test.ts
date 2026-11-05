@@ -51,10 +51,17 @@ const CONSEQUENCES = ["landed", "not_landed", "unknown"];
 const PROJECTION_CLASSES = ["success", "user-validation", "platform-provider"];
 const CODE_PATTERN = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*){2,}$/;
 
+const RESERVED_TWO_SEGMENT_CODES = new Set([
+  "provider.outage",
+  "watchdog.checkout-dirty",
+  "watchdog.checkout-non-base",
+  "watchdog.signals-absent",
+]);
+
 const isValidCode = (code: string): boolean =>
   code === FALLBACK_INVOCATION_CODE ||
   code === FALLBACK_INTERNAL_CODE ||
-  code === "provider.outage" ||
+  RESERVED_TWO_SEGMENT_CODES.has(code) ||
   CODE_PATTERN.test(code);
 
 const contractsFiles = (): string[] =>
@@ -647,7 +654,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, and `plan`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, and `watchdog`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -660,7 +667,8 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
-    expect(entries).toHaveLength(47);
+    expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(3);
+    expect(entries).toHaveLength(50);
   });
 });
 
@@ -736,7 +744,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(47);
+    expect(entries).toHaveLength(50);
     expect(db).toHaveLength(4);
   });
 
@@ -892,5 +900,124 @@ describe("TC-CLOSE-003 four closeout identities round-trip and contain", () => {
       const row = `| ${code} | closeout | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
       expect(doc.split(row).length - 1, code).toBe(1);
     }
+  });
+});
+
+const WATCHDOG_ROWS = [
+  [
+    "watchdog.checkout-dirty",
+    "user",
+    false,
+    "not_landed",
+    "Commit or discard the named uncommitted changes, then re-run the lane preflight.",
+    "user-validation",
+    "The lane checkout is dirty.",
+  ],
+  [
+    "watchdog.checkout-non-base",
+    "user",
+    false,
+    "not_landed",
+    "Check out the lane's declared base (or correct the declaration), then re-run the lane preflight.",
+    "user-validation",
+    "The lane checkout is not on its declared base.",
+  ],
+  [
+    "watchdog.signals-absent",
+    "platform",
+    true,
+    "not_landed",
+    "Restore the declared progress-signal sources, then retry; without them the answer is unknown.",
+    "platform-provider",
+    "No liveness signal sources are available; the answer is unknown.",
+  ],
+] as const;
+
+describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-trips", () => {
+  test("watchdog is a declared multi-row kind with exactly the three pinned identities", () => {
+    expect(DOMAIN_KINDS).toContain("watchdog");
+    const watchdog = entries.filter((entry) => entry.domainKind === "watchdog");
+    expect(watchdog).toHaveLength(3);
+    expect(watchdog.map((entry) => entry.code)).toEqual(WATCHDOG_ROWS.map(([code]) => code));
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of WATCHDOG_ROWS) {
+      expect(classifyDomainKind("watchdog", code)).toMatchObject({
+        code,
+        domainKind: "watchdog",
+        category,
+        retryable,
+        consequence,
+        projectionClass,
+        remediationHint: hint,
+        summary,
+      });
+      expect(String(hint).length).toBeGreaterThan(0);
+    }
+    expect(entries).toHaveLength(50);
+  });
+
+  test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
+    expect(classifyDomainKind("watchdog", "watchdog.checkout-dirty").projectionClass).toBe(
+      "user-validation",
+    );
+    expect(classifyDomainKind("watchdog", "watchdog.checkout-non-base").projectionClass).toBe(
+      "user-validation",
+    );
+    expect(classifyDomainKind("watchdog", "watchdog.signals-absent").projectionClass).toBe(
+      "platform-provider",
+    );
+  });
+
+  test("watchdog codes round-trip exactly through returned and thrown classification", () => {
+    for (const [code] of WATCHDOG_ROWS) {
+      const row = classifyDomainKind("watchdog", code);
+      expect(resolveAppErrorCode(code)).toEqual({ ok: true, entry: row });
+      expect(classifyThrown({ kind: "watchdog", code })).toEqual(row);
+      expect(classifyThrown({ kind: "watchdog", code, summary: "UNTRUSTED-CANARY" })).toEqual(row);
+    }
+  });
+
+  test("kind-only watchdog is ambiguous and contains; a wrong code contains", () => {
+    expect(() => classifyDomainKind("watchdog")).toThrow();
+    expect(classifyThrown({ kind: "watchdog" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    expect(classifyThrown({ kind: "watchdog", code: "state.store.torn" }).code).toBe(
+      FALLBACK_INTERNAL_CODE,
+    );
+    expect(() => classifyDomainKind("watchdog", "input.value.rejected")).toThrow();
+  });
+
+  test("the documented watchdog rows agree exactly once and match every column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of WATCHDOG_ROWS) {
+      const row = `| ${code} | watchdog | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
+    expect(doc).toContain("`watchdog` kind carries exactly the three lane-safety identities");
+  });
+
+  test("pre-existing provider, input, config, state, lint, verify, db and closeout rows are unchanged", () => {
+    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(5);
+    expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
+    expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
+    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
+    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
+    expect(entries.filter((entry) => entry.domainKind === "verify")).toHaveLength(3);
+    expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
+    expect(entries.filter((entry) => entry.domainKind === "closeout")).toHaveLength(4);
   });
 });
