@@ -130,3 +130,31 @@ describe("TC-DPLAN-022 envelope contract", () => {
     expect(error.category).toBe("user");
   });
 });
+
+describe("TC-DPLAN-022 lint outcome classes", () => {
+  test("lint non-conformant exits 1 with a valid envelope", async () => {
+    const { planLintRuntime } = await import("../fixtures/plan/harness/index");
+    const { runLint } = await import("./pm-notes-lint-command-support");
+    const run = await runLint(
+      planLintRuntime(planWorld({ "GH-308": "invalid/phase-missing-scope.yaml" })),
+      ["plan", "GH-308"],
+    );
+    expect(run.exitCode).toBe(1);
+    expect(assertEnvelopeContract(run.envelope)).toEqual([]);
+    expect(run.envelope?.exitCode).toBe(1);
+    expect(Object.hasOwn(run.envelope ?? {}, "data")).toBe(true);
+  });
+
+  test("lint unreadable exits 2 with a valid envelope", async () => {
+    const { planLintRuntime } = await import("../fixtures/plan/harness/index");
+    const { runLint } = await import("./pm-notes-lint-command-support");
+    const run = await runLint(
+      planLintRuntime({ artifacts: {}, unreadable: ["GH-310"] }),
+      ["plan", "GH-310"],
+    );
+    expect(run.exitCode).toBe(2);
+    expect(assertEnvelopeContract(run.envelope)).toEqual([]);
+    expect(run.envelope?.exitCode).toBe(2);
+    expect(Object.hasOwn(run.envelope ?? {}, "data")).toBe(true);
+  });
+});

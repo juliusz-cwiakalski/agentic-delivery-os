@@ -8,6 +8,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseConfigYaml } from "../../../../packages/adapters/src/file/yaml-parser";
+import type { LintCommandRuntime, LintRegistryRead } from "../../../../packages/cli/src/commands/lint";
 import type { PlanCommandRuntime } from "../../../../packages/cli/src/commands/plan";
 import type {
   PlanArtifactRead,
@@ -264,4 +265,23 @@ export const planWorld = (
     Object.entries(refs).map(([ref, relative]) => [ref, [yamlFixture(ref, relative)]]),
   ),
   ...(diff === undefined ? {} : { diff }),
+});
+
+const emptyLintRegistry = (): LintRegistryRead => ({
+  ok: true,
+  verifiedEmpty: true,
+  recordCount: 0,
+  verification: [],
+  projection: { present: false },
+});
+
+/** Build a lint runtime whose plan target is wired to one fixture world. */
+export const planLintRuntime = (
+  world: PlanWorld,
+  recorder: Recorder = createRecorder(),
+): LintCommandRuntime => ({
+  readPmNotes: () => ({ ok: false, reason: "missing" }),
+  readRegistry: emptyLintRegistry,
+  readPlan: planReadPort(world, recorder),
+  parseYaml: planYamlParser,
 });

@@ -374,7 +374,9 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(edge).toContain('from "./commands/lint.js"');
     expect(edge).toContain('from "./commands/phase.js"');
     expect(edge).toContain('from "./commands/verify.js"');
-    expect(edge).toContain("commands.lint = createLintCommandDefinition(options.lint)");
+    expect(edge).toContain("commands.lint = createLintCommandDefinition");
+    expect(edge).toContain('from "./commands/plan.js"');
+    expect(edge).toContain("commands.plan = createPlanCommandDefinition");
     expect(edge).toContain("commands.phase = createPhaseCommandDefinition(options.phase)");
     expect(edge).toContain("commands.status = createStatusCommandDefinition");
     expect(edge).toContain("commands.queue = createQueueReadyCommandDefinition");

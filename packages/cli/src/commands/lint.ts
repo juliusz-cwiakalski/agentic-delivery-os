@@ -6,8 +6,14 @@
  * failure. It never writes streams, never chooses an exit code, and never
  * mutates a target. The brand arrives through the injected invocation.
  */
-import { lintPmNotes, type PmNotesLintFinding } from "@delivery-os/core";
-import type { PmNotesParseFailure, StateFailure } from "@delivery-os/core/contracts";
+import { lintPmNotes, type PmNotesLintFinding, validatePlan } from "@delivery-os/core";
+import {
+  LINT_DOCUMENT_UNREADABLE_CODE,
+  type PlanArtifactRead,
+  type PlanYamlParser,
+  type PmNotesParseFailure,
+  type StateFailure,
+} from "@delivery-os/core/contracts";
 import type { CommandDefinition } from "../index.js";
 
 /** A pm-notes target read: values, absence, or a safe parse failure. */
@@ -36,6 +42,9 @@ export type LintRegistryRead =
 export type LintCommandRuntime = {
   readonly readPmNotes: (changeRef: string) => LintPmNotesRead;
   readonly readRegistry: (changeRef: string) => LintRegistryRead;
+  /** The additive plan target: absent when the surface is not configured. */
+  readonly readPlan?: (changeRef: string) => PlanArtifactRead;
+  readonly parseYaml?: PlanYamlParser;
 };
 
 type TargetSuccess = { readonly ok: true; readonly data: Record<string, unknown> };
@@ -124,6 +133,64 @@ const invocationError = (summary: string): { readonly error: Record<string, unkn
   error: { kind: "input", code: "input.value.rejected", summary },
 });
 
+type PlanDocumentReport = {
+  readonly path: string;
+  readonly verdict: "valid" | "invalid" | "unreadable";
+  readonly errors: readonly Record<string, unknown>[];
+};
+
+const planTarget = (
+  runtime: LintCommandRuntime,
+  changeRef: string,
+): TargetSuccess | TargetFailure => {
+  if (runtime.readPlan === undefined || runtime.parseYaml === undefined) {
+    return {
+      ok: false,
+      error: {
+        kind: "input",
+        code: "input.value.rejected",
+        summary: "the plan lint target is not configured",
+      },
+    };
+  }
+  const read = runtime.readPlan(changeRef);
+  const path = read.ok
+    ? read.artifact.path
+    : (read.path ?? `chg-${changeRef}-plan.yaml`);
+  if (!read.ok && read.reason === "unreadable") {
+    const document: PlanDocumentReport = {
+      path,
+      verdict: "unreadable",
+      errors: [
+        {
+          code: LINT_DOCUMENT_UNREADABLE_CODE,
+          location: { field: "artifact" },
+          detail: "the plan document could not be read or decoded",
+        },
+      ],
+    };
+    return { ok: true, data: { changeRef, target: "plan", documents: [document] } };
+  }
+  const verdict = validatePlan({
+    workItemRef: changeRef,
+    read,
+    parseYaml: runtime.parseYaml,
+  });
+  const document: PlanDocumentReport = {
+    path,
+    verdict: verdict.verdict,
+    errors: verdict.errors.map((error) => ({
+      code: error.code,
+      location: {
+        ...(error.phase === undefined ? {} : { phase: error.phase }),
+        field: error.field,
+      },
+      detail: error.problem,
+    })),
+  };
+  return { ok: true, data: { changeRef, target: "plan", documents: [document] } };
+};
+
 /**
  * Build the lint command definition. Target selection follows PIN-1: a bare
  * invocation targets pm-notes; `--registry` targets the registry; both flags
@@ -131,9 +198,28 @@ const invocationError = (summary: string): { readonly error: Record<string, unkn
  */
 export const createLintCommandDefinition = (runtime: LintCommandRuntime): CommandDefinition => ({
   flags: ["--pm-notes", "--registry"],
-  positionals: { max: 1 },
+  positionals: { max: 2 },
   humanSuccess: true,
+  exitProjection: (data) => {
+    if (typeof data !== "object" || data === null || Array.isArray(data)) return "success";
+    const record = data as { readonly target?: unknown; readonly documents?: unknown };
+    if (record.target !== "plan" || !Array.isArray(record.documents)) return "success";
+    const verdicts = record.documents
+      .filter((entry): entry is { readonly verdict?: unknown } => typeof entry === "object" && entry !== null)
+      .map((entry) => entry.verdict);
+    if (verdicts.includes("unreadable")) return "platform-provider";
+    return verdicts.includes("invalid") ? "user-validation" : "success";
+  },
   handler: ({ flags, positionals }) => {
+    if (positionals[0] === "plan") {
+      if (positionals.length !== 2) {
+        return invocationError("lint plan requires exactly one change ref");
+      }
+      if (flags["--registry"] === true || flags["--pm-notes"] === true) {
+        return invocationError("lint plan cannot be combined with another target");
+      }
+      return planTarget(runtime, positionals[1] as string);
+    }
     if (positionals.length !== 1) {
       return invocationError("lint requires exactly one change ref");
     }

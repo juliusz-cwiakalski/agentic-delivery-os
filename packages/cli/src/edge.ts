@@ -1207,7 +1207,14 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
     config: createConfigCommandDefinition(runtime, catalog),
   };
   if (options.lint !== undefined) {
-    commands.lint = createLintCommandDefinition(options.lint);
+    const planRuntime =
+      options.plan === undefined ? undefined : createPlanCommandRuntime(options.plan);
+    commands.lint = createLintCommandDefinition({
+      ...options.lint,
+      ...(planRuntime === undefined
+        ? {}
+        : { readPlan: planRuntime.readPlan, parseYaml: planRuntime.parseYaml }),
+    });
   }
   if (options.plan !== undefined) {
     commands.plan = createPlanCommandDefinition(createPlanCommandRuntime(options.plan));
