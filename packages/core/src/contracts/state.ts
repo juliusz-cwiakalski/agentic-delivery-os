@@ -350,6 +350,13 @@ export type StateStorePort = {
   recoverFence(token: string): StateResult<StateFenceRecoveryReport>;
   checkIntegrity(): StateResult<StateIntegrityOutcome>;
   repairTornTail(): StateResult<StateRepairOutcome>;
+  /**
+   * Explicit guided terminal-tail salvage (F-3, DEC-2): truncate to the last
+   * valid frame, append the classified salvage record, and quarantine the
+   * post-tear bytes. Never triggered by a read; a mid-record tear refuses with
+   * zero byte mutation.
+   */
+  salvage(handle: StateFenceHandle): StateResult<StateSalvageOutcome>;
 };
 
 /** One append: a consumer record kind, a store-scoped key, a JSON payload. */

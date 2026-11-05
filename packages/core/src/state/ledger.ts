@@ -198,6 +198,8 @@ export type LedgerTearAnalysis = {
   readonly position: number;
   /** UTF-8 byte offset of the last valid frame (the truncation point). */
   readonly validPrefixBytes: number;
+  /** Character offset of the last valid frame (the in-memory slice point). */
+  readonly validPrefixCharacters: number;
   /** UTF-8 byte extent of the post-tear suffix (the quarantined bytes). */
   readonly tailBytes: number;
   /** Frames (complete or partial) from the tear to the end of the text. */
@@ -224,6 +226,7 @@ export const analyzeTear = (
       variant: verification.variant,
       position: verification.position,
       validPrefixBytes,
+      validPrefixCharacters: prefixCharacters,
       tailBytes: totalBytes - validPrefixBytes,
       discardedFrames: 1,
     };
@@ -263,6 +266,7 @@ export const analyzeTear = (
     variant: verification.variant,
     position: verification.position,
     validPrefixBytes,
+    validPrefixCharacters: prefixCharacters,
     tailBytes: totalBytes - validPrefixBytes,
     discardedFrames: lines.length - breakIndex,
   };

@@ -28,6 +28,7 @@ import {
   type StateRepairOutcome,
   type StateResult,
   type StateSafeLocation,
+  type StateSalvageOutcome,
   type StateStoreIdentity,
   type StateStorePort,
 } from "#contracts";
@@ -37,7 +38,13 @@ import {
   type StateReadStrategy,
 } from "./driver/strategy.js";
 import type { StateRuntimeEdge } from "./edge.js";
-import { buildRecord, serializeRecord, verifyLedger } from "./ledger.js";
+import {
+  analyzeTear,
+  buildRecord,
+  buildSalvageRecord,
+  serializeRecord,
+  verifyLedger,
+} from "./ledger.js";
 import { isStorageExhaustion } from "./storage-error.js";
 
 export {
@@ -139,6 +146,9 @@ export const createStateStore = (
   const indexPath = `${stateDirectory}/index.${workspace}.sqlite`;
   const fencePath = `${stateDirectory}/fence.${workspace}.lock`;
   const documentsDirectory = `${stateDirectory}/documents.${workspace}`;
+  // Quarantine artifacts live outside the documents and index namespaces and
+  // are never served as content (GH-222 DM-2).
+  const quarantineDirectory = `${stateDirectory}/quarantine.${workspace}`;
 
   const activeHandles = new Set<StateFenceHandle>();
   const cleanedTemporaries: string[] = [];
@@ -210,6 +220,27 @@ export const createStateStore = (
     if (edge.exists(`${indexPath}.tmp`)) {
       edge.removeFile(`${indexPath}.tmp`);
       cleanedTemporaries.push(`${indexPath}.tmp`);
+    }
+    if (edge.exists(quarantineDirectory)) {
+      if (!edge.verifyPermissions(quarantineDirectory, "directory")) {
+        return {
+          kind: "state",
+          code: "state.permission.denied",
+          consequence: "not_landed",
+          location: { path: quarantineDirectory },
+        };
+      }
+      for (const name of edge.listDirectory(quarantineDirectory)) {
+        const path = `${quarantineDirectory}/${name}`;
+        if (!edge.verifyPermissions(path, "file")) {
+          return {
+            kind: "state",
+            code: "state.permission.denied",
+            consequence: "not_landed",
+            location: { path },
+          };
+        }
+      }
     }
     return undefined;
   };
@@ -534,6 +565,115 @@ export const createStateStore = (
       return ok({
         repaired: true,
         report: { removedBytes, removedRecords: removedBytes > 0 ? 1 : 0, path: ledgerPath },
+        evidence: after.value.evidence,
+      });
+    },
+
+    salvage(handle: StateFenceHandle): StateResult<StateSalvageOutcome> {
+      if (failure !== undefined) return { ok: false, error: failure };
+      // A store-version verdict precedes any destructive step: salvage must not
+      // truncate bytes and then report the store as unsupported.
+      const header = readHeader();
+      if (!header.ok) return header;
+      const fence = requireFence(handle);
+      if (!fence.ok) return fence;
+      if (!edge.exists(ledgerPath)) {
+        return ok({ salvaged: false, evidence: baseEvidence([]) });
+      }
+      let text: string;
+      try {
+        text = edge.readText(ledgerPath);
+      } catch {
+        return torn(ledgerPath, 1);
+      }
+      const verification = verifyLedger(text, identity.schemaVersion);
+      if (verification.status === "schema") {
+        return fail("state.schema.mismatch", { path: ledgerPath, record: verification.position });
+      }
+      if (verification.status !== "torn") {
+        // Nothing to salvage: a reported no-op, never a destructive step.
+        return ok({
+          salvaged: false,
+          evidence: baseEvidence(verification.status === "verified" ? verification.records : []),
+        });
+      }
+      const tear = analyzeTear(text, identity.schemaVersion);
+      if (tear === undefined) return torn(ledgerPath, verification.position);
+      if (tear.topology === "mid-record") {
+        // DEC-2: a non-terminal break refuses with zero byte mutation.
+        return torn(ledgerPath, tear.position);
+      }
+      const tail = text.slice(tear.validPrefixCharacters);
+      const quarantineName = `tail-${tear.position}-${tear.validPrefixBytes}-${tear.tailBytes}.bytes`;
+      const quarantinePath = `${quarantineDirectory}/${quarantineName}`;
+      let createdQuarantine = false;
+      const removeQuarantineQuietly = (): void => {
+        try {
+          edge.removeFile(quarantinePath);
+        } catch {
+          // Best effort: the ledger is the truth and it stays unchanged.
+        }
+      };
+      try {
+        if (!edge.exists(quarantineDirectory)) edge.ensureDirectory(quarantineDirectory);
+        edge.raiseFault("salvage-quarantine-write");
+        const existing = edge.exists(quarantinePath) ? edge.readText(quarantinePath) : undefined;
+        if (existing === undefined) {
+          edge.writeFile(quarantinePath, tail);
+          createdQuarantine = true;
+          edge.applyPermissions(quarantinePath, "file");
+        } else if (existing !== tail) {
+          // Never overwrite preserved evidence with a different extent.
+          return fail("state.write.failed", { path: quarantinePath });
+        }
+        if (!edge.verifyPermissions(quarantinePath, "file")) {
+          if (createdQuarantine) removeQuarantineQuietly();
+          return fail("state.permission.denied", { path: quarantinePath });
+        }
+      } catch (error) {
+        if (createdQuarantine) removeQuarantineQuietly();
+        return writeFailure(error, quarantinePath);
+      }
+
+      const keptRecords = tear.position - 1;
+      const record = buildSalvageRecord(
+        keptRecords + 1,
+        tear,
+        quarantinePath,
+        identity.schemaVersion,
+      );
+      try {
+        // Pre-commit seam: the truncate-and-append commit has not started.
+        edge.raiseFault("salvage-ledger-write");
+        edge.truncateFile(ledgerPath, tear.validPrefixBytes);
+        edge.appendFile(ledgerPath, serializeRecord(record));
+      } catch (error) {
+        if (createdQuarantine) removeQuarantineQuietly();
+        // Nothing landed: restore the pre-salvage ledger bytes (TR-2).
+        try {
+          edge.writeFile(ledgerPath, text);
+        } catch {
+          // Best effort under a storage fault; the classified failure still
+          // reports `not_landed`.
+        }
+        return writeFailure(error, ledgerPath, record.sequence);
+      }
+
+      // The index is never truth here: salvage does not read or mutate it, and
+      // the next indexed read rebuilds from the salvaged ledger (F-4).
+      const after = verifiedState();
+      if (!after.ok) return after;
+      return ok({
+        salvaged: true,
+        report: {
+          ledgerPath,
+          truncationOffset: tear.validPrefixBytes,
+          quarantinedBytes: tear.tailBytes,
+          quarantinePath,
+          keptRecords,
+          discardedFrames: tear.discardedFrames,
+          sequence: record.sequence,
+        },
         evidence: after.value.evidence,
       });
     },

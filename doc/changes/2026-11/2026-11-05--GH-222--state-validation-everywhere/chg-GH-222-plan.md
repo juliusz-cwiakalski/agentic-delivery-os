@@ -404,18 +404,18 @@ exhaustion, with the no-automatic-repair invariants asserted.
 
 **Tasks**:
 
-- [ ] **3.1** `packages/core/src/state/index.ts` (facade): the explicit salvage operation
+- [x] **3.1** `packages/core/src/state/index.ts` (facade): the explicit salvage operation
   (symbol name fixed at delivery; library surface only — NG-3). Store-version verdict precedes
   any destructive step (mirror `repairTornTail`); requires an acquired fence handle
   (`state.lock.busy` on contention — DEC-5 case 3); uses the Phase-2 tear-topology helpers:
   a mid-record (non-terminal) tear fails `state.store.torn` naming the position with zero byte
   mutation and no salvage performed (DEC-2, AC-F3-3); only a terminal/torn-tail tear salvages.
-- [ ] **3.2** Quarantine write (pre-commit point `salvage-quarantine-write`): persist the exact
+- [x] **3.2** Quarantine write (pre-commit point `salvage-quarantine-write`): persist the exact
   post-tear bytes as a store-managed file outside the `documents.<workspace>/` and index
   namespaces; deterministic per-tear naming so a retried salvage produces exactly one artifact;
   POSIX `0600` applied at creation and verified (Windows ACL per the existing platform branch);
   DM-2.
-- [ ] **3.3** Ledger commit (pre-commit point `salvage-ledger-write`): truncate the ledger at the
+- [x] **3.3** Ledger commit (pre-commit point `salvage-ledger-write`): truncate the ledger at the
   last valid frame and append the salvage record (sequence = kept records + 1, existing schema
   version, self-describing payload: tear position, quarantine reference, counts — never payload
   content or checksum bytes; EVT-1/DM-1). Ordering: quarantine first; if the ledger commit
@@ -424,32 +424,53 @@ exhaustion, with the no-automatic-repair invariants asserted.
   presented as evidence; a non-ENOSPC quarantine/ledger write failure → `state.write.failed`
   with nothing landed (DEC-5 case 3). Return the DM-3 evidence report (truncation position,
   quarantined extent and path, record counts); never claim an index rebuild that did not occur.
-- [ ] **3.4** Index discipline: salvage does not treat the index as truth and does not mutate it;
+- [x] **3.4** Index discipline: salvage does not treat the index as truth and does not mutate it;
   post-salvage index divergence is resolved by rebuild on the next indexed read (F-4).
-- [ ] **3.5** `tests/fixtures/state/harness.ts`: add the salvage helpers — ledger-prefix digest,
+- [x] **3.5** `tests/fixtures/state/harness.ts`: add the salvage helpers — ledger-prefix digest,
   quarantine path resolution, tail-byte capture, salvage invocation.
-- [ ] **3.6** **TC-GH222-007, TC-GH222-008, TC-GH222-009**: new
+- [x] **3.6** **TC-GH222-007, TC-GH222-008, TC-GH222-009**: new
   `tests/behaviour/state-salvage.test.ts` — happy path (truncate + salvage record + quarantine +
   evidence), byte-for-byte pre-tear preservation (falsy values, canary, remove-salvage-record
   reproduces the original prefix), quarantine integrity (bytes equal the original tail, extent
   matches artifact length, canary absent from every documented read outcome, `0600` POSIX bits,
   outside served documents, foreign-permission fixture detected).
-- [ ] **3.7** **TC-GH222-010, TC-GH222-011**: new
+- [x] **3.7** **TC-GH222-010, TC-GH222-011**: new
   `tests/behaviour/state-salvage-invariants.test.ts` — reads never repair (ledger + directory
   digests unchanged across `readRecords`/`read`/`checkIntegrity`/indexed read, twice each; no
   index created on a torn read; guidance mentions salvage as a separate operation); mid-record
   tear refuses salvage (`state.store.torn`, whole-ledger byte identity including parseable
   post-break records, no quarantine, no salvage record, no residue).
-- [ ] **3.8** **TC-GH222-014**: new `tests/behaviour/state-index-post-salvage.test.ts` — stale,
+- [x] **3.8** **TC-GH222-014**: new `tests/behaviour/state-index-post-salvage.test.ts` — stale,
   deleted, and corrupt index over a salvaged ledger all rebuild from the log alone and converge
   with the `jsonl` verified scan (pre-tear records + salvage record; quarantine contributes no
   rows; deleting the index again reproduces the result; no torn verdict).
-- [ ] **3.9** **TC-GH222-017** (salvage half): extend
+- [x] **3.9** **TC-GH222-017** (salvage half): extend
   `tests/behaviour/state-storage-exhausted.test.ts` — exhaustion at `salvage-quarantine-write`
   and `salvage-ledger-write` (ledger byte-identical, still torn at the same position, no partial
   quarantine presented, retry yields exactly one salvage record + one artifact with the original
   tail bytes); a seeded non-ENOSPC quarantine-preservation failure stays `state.write.failed`
   with the ledger unchanged.
+
+**Task evidence (2026-11-05)**: public symbol `salvage(handle)` on `StateStorePort`; evidence
+report fields `ledgerPath`, `truncationOffset`, `quarantinedBytes`, `quarantinePath`,
+`keptRecords`, `discardedFrames`, `sequence`. Quarantine directory
+`quarantine.<workspace>/tail-<position>-<prefixBytes>-<tailBytes>.bytes` (deterministic per tear,
+outside `documents.<workspace>/` and the index namespace, `0600` verified, verified on open). The
+store-version header verdict precedes every destructive step; a mid-record topology refuses
+before any write; the quarantine is written before the ledger commit, removed when the commit
+fails, and a failing commit restores the pre-salvage ledger bytes (TR-2). **OQ-T3 note**: salvage
+on a clean ledger is a reported no-op (`salvaged: false`) mirroring `repairTornTail`; recorded for
+a future `TC-GH222-024` test-plan revision rather than extending TC-GH222-007.
+
+**Acceptance (Phase 3)**: terminal-tail salvage truncates, appends the classified record,
+quarantines the exact post-tear bytes, and reports position/extent/counts — PASSED
+(TC-GH222-007/008/009, 5 tests). Reads never mutate and never repair; mid-record salvage refuses
+with byte identity, no quarantine, no residue — PASSED (TC-GH222-010/011, 6 tests). Post-salvage
+index rebuild converges with the verified scan and quarantined bytes never enter it — PASSED
+(TC-GH222-014, 1 test). Exhaustion at either salvage write step leaves the ledger byte-identical
+with a clean retry; non-ENOSPC stays `state.write.failed` — PASSED (TC-GH222-017, 3 tests).
+Quarantine artifacts carry `0600` and stay manually recoverable — PASSED (POSIX assertion in
+TC-GH222-009; Windows ACL not claimed on Linux).
 
 **Acceptance Criteria**:
 
@@ -778,5 +799,6 @@ NFR-6 → 1, 5; NFR-7 → 3.
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
 | 1 — Contracts, vocabulary, and synced error tables | Done | 2026-11-05 | 2026-11-05 | 0684212d | `error-table-sync` entries=43 documented=43 exit 0; targeted suites 105 pass (error-table-sync, error-table, state-contract), state-error-classification 8 pass; `git diff --check` clean. Deliberate baseline regeneration: `BASELINE_ROWS + 9`, frozen state rows repinned to the refined texts. Fixtures updated: corpora, contract export inventory, content inventory. |
-| 2 — Tear topology, exhaustion seam, and fail-closed write boundaries | Done | 2026-11-05 | 2026-11-05 | (this commit) | Verification block: torn+evidence 34 pass; storage-exhausted 5 pass; index 10 pass; keys+atomic-replace 13 pass regressions. Broader regression sweep (state-fence, state-permissions, state-error-classification, state-conformance, content-inventory, state-imports, state-scope, packed-state) 48 pass. No SQLite skip needed on this runtime. New module `state/storage-error.ts` registered in the inventory + executable allowance. |
+| 2 — Tear topology, exhaustion seam, and fail-closed write boundaries | Done | 2026-11-05 | 2026-11-05 | 2ba51d72 | Verification block: torn+evidence 34 pass; storage-exhausted 5 pass; index 10 pass; keys+atomic-replace 13 pass regressions. Broader regression sweep (state-fence, state-permissions, state-error-classification, state-conformance, content-inventory, state-imports, state-scope, packed-state) 48 pass. No SQLite skip needed on this runtime. New module `state/storage-error.ts` registered in the inventory + executable allowance. |
+| 3 — Explicit guided tail salvage with quarantine | Done | 2026-11-05 | 2026-11-05 | (this commit) | Verification block: salvage + invariants 11 pass; post-salvage + storage-exhausted 9 pass; permissions + fence 18 pass; `error-table-sync` entries=43 documented=43 exit 0. Broader sweep (15 suites incl. torn/evidence/index/keys/atomic-replace/error-classification/conformance/registry/content-inventory/imports/scope/contract/packed-state) 130 pass; verify suites 59 pass. OQ-T3: clean-ledger salvage is a reported no-op (TC-GH222-024 candidate). |
 | — | Not started | — | — | — | Populated during delivery; record per-phase commit, suite results, SQLite-binding skips, and the OQ-T2 decision |

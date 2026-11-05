@@ -154,3 +154,48 @@ export const withinFence = (
     store.releaseFence(acquired.value.handle);
   }
 };
+
+/** The quarantine directory a store owns (outside documents/index namespaces). */
+export const quarantineDirectory = (identity: StateStoreIdentity): string =>
+  `${identity.stateDirectory}/quarantine.${encodeURIComponent(identity.workspaceId)}`;
+
+/** The quarantine artifacts a store currently holds, sorted by name. */
+export const quarantineFiles = (identity: StateStoreIdentity): string[] => {
+  const directory = quarantineDirectory(identity);
+  return existsSync(directory) ? readdirSync(directory).sort() : [];
+};
+
+/** One quarantine artifact path by name. */
+export const quarantinePath = (identity: StateStoreIdentity, name: string): string =>
+  `${quarantineDirectory(identity)}/${name}`;
+
+/** The ledger's raw bytes (a capture for byte-identity comparisons). */
+export const ledgerBytes = (identity: StateStoreIdentity): Buffer =>
+  readFileSync(ledgerPath(identity));
+
+/** SHA-256 over the ledger's exact bytes (byte-identity evidence). */
+export const ledgerDigest = (identity: StateStoreIdentity): string =>
+  createHash("sha256")
+    .update(readFileSync(ledgerPath(identity)))
+    .digest("hex");
+
+/** The exact post-tear bytes: everything after the given byte offset. */
+export const tailBytesAfter = (
+  identity: StateStoreIdentity,
+  byteOffset: number,
+  captured?: Buffer,
+): Buffer => (captured ?? ledgerBytes(identity)).subarray(byteOffset);
+
+/** Run the explicit salvage operation under a freshly acquired fence. */
+export const salvageTail = (
+  store: StateStorePort,
+  token = "salvage-writer",
+): ReturnType<StateStorePort["salvage"]> => {
+  const acquired = store.acquireFence(token);
+  if (!acquired.ok) return acquired;
+  try {
+    return store.salvage(acquired.value.handle);
+  } finally {
+    store.releaseFence(acquired.value.handle);
+  }
+};

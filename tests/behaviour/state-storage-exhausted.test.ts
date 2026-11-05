@@ -6,17 +6,21 @@
  * Exhaustion is injected only at the ASM-3 pre-commit points.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { StateFenceHandle, StateStorePort } from "../../packages/core/src/contracts/index";
 import { ERROR_TABLE, type ErrorTableEntry } from "../../packages/core/src/contracts/index";
 import type { StateEdgeFaultPoint } from "../../packages/core/src/state/index";
 import {
   createTestEdge,
+  ledgerBytes,
   ledgerPath,
+  ledgerText,
   makeIdentity,
   makeTempRoot,
   openStore,
+  quarantineFiles,
   removeRoot,
+  salvageTail,
   type TestEdge,
 } from "../fixtures/state/harness";
 
@@ -240,6 +244,99 @@ describe("TC-GH222-016 derived-document replace under exhaustion keeps the previ
       expect(retried.ok).toBe(true);
       expect(JSON.parse(readFileSync(documentPath(root), "utf8"))).toEqual({ version: "new" });
       store.releaseFence(handle);
+    } finally {
+      removeRoot(root);
+    }
+  });
+});
+
+const TAIL_FRAGMENT = `{"schemaVersion":"delivery.state.v1","kind":"park","key":"torn","payload":"tail-canary-exhausted"`;
+const TAIL_BYTES = Buffer.from(TAIL_FRAGMENT, "utf8");
+
+const plantTerminalTear = (
+  store: StateStorePort,
+  identity: ReturnType<typeof makeIdentity>,
+): void => {
+  seedRecords(store, 3);
+  writeFileSync(ledgerPath(identity), `${ledgerText(identity)}${TAIL_FRAGMENT}`);
+};
+
+describe("TC-GH222-017 salvage write under exhaustion leaves the ledger unchanged", () => {
+  const salvagePoints: StateEdgeFaultPoint[] = ["salvage-quarantine-write", "salvage-ledger-write"];
+
+  for (const point of salvagePoints) {
+    test(`${point}: nothing lands, the store is still torn, and the retry yields one record and one artifact`, () => {
+      const root = makeTempRoot("gh222-exhausted-salvage");
+      try {
+        const identity = makeIdentity(root);
+        const edge = createTestEdge();
+        const { store } = openStore(identity, { edge });
+        plantTerminalTear(store, identity);
+        const before = ledgerBytes(identity);
+        const tornBefore = store.readRecords();
+        expect(tornBefore.ok).toBe(false);
+        const tornPosition = tornBefore.ok ? undefined : tornBefore.error.location.record;
+
+        edge.armExhaustion([point]);
+        const attempted = salvageTail(store);
+        const failure = observeExhaustion(attempted, point, edge);
+        expectExhausted(failure);
+        if (!attempted.ok) expect(attempted.error.location.path).toContain(identity.stateDirectory);
+
+        // Whole-ledger byte identity: still torn at the same position.
+        expect(ledgerBytes(identity).equals(before)).toBe(true);
+        const stillTorn = store.readRecords();
+        expect(stillTorn.ok).toBe(false);
+        if (!stillTorn.ok) expect(stillTorn.error.location.record).toBe(tornPosition);
+        expect(ledgerText(identity)).not.toContain("state.salvage");
+        // No quarantine artifact is presented as evidence for the failed attempt.
+        expect(quarantineFiles(identity)).toEqual([]);
+
+        // The retry produces exactly one salvage record and one artifact.
+        edge.disarm();
+        const retried = salvageTail(store);
+        expect(retried.ok).toBe(true);
+        if (!retried.ok || !retried.value.salvaged) return;
+        const verified = store.readRecords();
+        expect(verified.ok).toBe(true);
+        if (verified.ok) {
+          const salvageRecords = verified.value.records.filter(
+            (record) => record.kind === "state.salvage",
+          );
+          expect(salvageRecords).toHaveLength(1);
+          expect(verified.value.records).toHaveLength(4);
+        }
+        const artifacts = quarantineFiles(identity);
+        expect(artifacts).toHaveLength(1);
+        const artifact = readFileSync(`${root}/quarantine.workspace-a/${artifacts[0] as string}`);
+        expect(artifact.equals(TAIL_BYTES)).toBe(true);
+      } finally {
+        removeRoot(root);
+      }
+    });
+  }
+
+  test("a non-exhaustion quarantine failure stays state.write.failed with the ledger unchanged", () => {
+    const root = makeTempRoot("gh222-salvage-write-failed");
+    try {
+      const identity = makeIdentity(root);
+      const edge = createTestEdge();
+      const { store } = openStore(identity, { edge });
+      plantTerminalTear(store, identity);
+      const before = ledgerBytes(identity);
+
+      // A generic (non-ENOSPC) write error at the same pre-commit seam.
+      edge.arm(["salvage-quarantine-write"]);
+      const attempted = salvageTail(store);
+      expect(edge.raised).toContain("salvage-quarantine-write");
+      expect(attempted.ok).toBe(false);
+      if (!attempted.ok) {
+        expect(attempted.error.code).toBe("state.write.failed");
+        expect(attempted.error.code).not.toBe("state.storage.exhausted");
+        expect(attempted.error.consequence).toBe("not_landed");
+      }
+      expect(ledgerBytes(identity).equals(before)).toBe(true);
+      expect(quarantineFiles(identity)).toEqual([]);
     } finally {
       removeRoot(root);
     }
