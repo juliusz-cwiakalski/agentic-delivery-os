@@ -4,11 +4,7 @@
  * Pure formatting only: no stream writes and no redaction. The machine payload
  * stays authoritative; text may summarize a list.
  */
-import type {
-  PlanDiffData,
-  PlanOverlapData,
-  PlanValidateData,
-} from "@delivery-os/core/contracts";
+import type { PlanDiffData, PlanOverlapData, PlanValidateData } from "@delivery-os/core/contracts";
 
 const phaseSuffix = (phase: number | undefined): string =>
   phase === undefined ? "" : ` phase=${phase}`;
@@ -16,7 +12,8 @@ const phaseSuffix = (phase: number | undefined): string =>
 /** Text summary for `plan validate`; the machine payload stays authoritative. */
 export const serializePlanValidateText = (data: PlanValidateData): string => {
   const lines = [`verdict=${data.verdict}`];
-  if (data.artifact !== undefined) lines.push(`artifact=${data.artifact.kind}:${data.artifact.path}`);
+  if (data.artifact !== undefined)
+    lines.push(`artifact=${data.artifact.kind}:${data.artifact.path}`);
   if (data.tier !== undefined) lines.push(`tier=${data.tier}`);
   lines.push(`readyForDevelopment=${String(data.readyForDevelopment)}`);
   for (const error of data.errors) {

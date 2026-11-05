@@ -5,10 +5,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { validatePlan } from "../../packages/core/src/domain/plan-validate";
-import {
-  planYamlParser,
-  validateYamlFixture,
-} from "../fixtures/plan/harness/index";
+import { planYamlParser, validateYamlFixture } from "../fixtures/plan/harness/index";
 
 describe("TC-DPLAN-001 valid plan", () => {
   test("validates, is ready for development, and echoes the schema version", () => {
@@ -132,11 +129,9 @@ describe("TC-DPLAN-001 CLI edge and text mode", () => {
       "../fixtures/plan/harness/index"
     );
     const world = planWorld({ "GH-306": "valid/baseline.yaml" });
-    const run = await runPlanCli(
-      ["plan", "validate", "GH-306", "--json"],
-      planRuntime(world),
-      { runId: "run-plan-valid" },
-    );
+    const run = await runPlanCli(["plan", "validate", "GH-306", "--json"], planRuntime(world), {
+      runId: "run-plan-valid",
+    });
     expect(run.exitCode).toBe(0);
     const envelope = parseEnvelope(run.stdout);
     expect(envelope.exitCode).toBe(0);
@@ -144,9 +139,7 @@ describe("TC-DPLAN-001 CLI edge and text mode", () => {
   });
 
   test("text mode prints verdict and readiness", async () => {
-    const { planRuntime, planWorld, runPlanCli } = await import(
-      "../fixtures/plan/harness/index"
-    );
+    const { planRuntime, planWorld, runPlanCli } = await import("../fixtures/plan/harness/index");
     const world = planWorld({ "GH-306": "valid/baseline.yaml" });
     const run = await runPlanCli(["plan", "validate", "GH-306"], planRuntime(world));
     expect(run.stdout).toContain("verdict=valid");

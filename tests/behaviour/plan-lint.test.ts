@@ -4,16 +4,8 @@
  * distinctly (exit 2), and leaves the pm-notes/registry targets unchanged.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  emptyRegistry,
-  runLint,
-  runtimeForFixture,
-} from "./pm-notes-lint-command-support";
-import {
-  markdownFixture,
-  planLintRuntime,
-  planWorld,
-} from "../fixtures/plan/harness/index";
+import { emptyRegistry, runLint, runtimeForFixture } from "./pm-notes-lint-command-support";
+import { markdownFixture, planLintRuntime, planWorld } from "../fixtures/plan/harness/index";
 
 describe("TC-DPLAN-020 lint plan conformance", () => {
   test("a conformant plan reports valid with no errors and exits 0", async () => {
@@ -80,7 +72,9 @@ describe("TC-DPLAN-020 additive lint surface", () => {
     try {
       const run = await runLint(fixture.runtime, ["GH-179"]);
       expect(run.exitCode).toBe(0);
-      expect((run.envelope?.data as { target: string }).target).toBe("pm-notes");
+      const envelope = run.envelope;
+      if (envelope === undefined) throw new Error("pm-notes envelope is missing");
+      expect((envelope.data as { target: string }).target).toBe("pm-notes");
     } finally {
       fixture.cleanup();
     }
@@ -91,7 +85,9 @@ describe("TC-DPLAN-020 additive lint surface", () => {
     try {
       const run = await runLint(fixture.runtime, ["GH-179", "--registry"]);
       expect(run.exitCode).toBe(0);
-      expect((run.envelope?.data as { target: string }).target).toBe("registry");
+      const envelope = run.envelope;
+      if (envelope === undefined) throw new Error("registry envelope is missing");
+      expect((envelope.data as { target: string }).target).toBe("registry");
     } finally {
       fixture.cleanup();
     }

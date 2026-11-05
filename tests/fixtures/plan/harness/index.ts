@@ -8,7 +8,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseConfigYaml } from "../../../../packages/adapters/src/file/yaml-parser";
-import type { LintCommandRuntime, LintRegistryRead } from "../../../../packages/cli/src/commands/lint";
+import type {
+  LintCommandRuntime,
+  LintRegistryRead,
+} from "../../../../packages/cli/src/commands/lint";
 import type { PlanCommandRuntime } from "../../../../packages/cli/src/commands/plan";
 import type {
   PlanArtifactRead,
@@ -24,11 +27,7 @@ import {
   planDocumentFromValidateData,
   validatePlan,
 } from "../../../../packages/core/src/domain/plan-validate";
-import {
-  type QueueCliOptions,
-  type QueueCliRun,
-  runProgram,
-} from "../../queue-ready/harness";
+import { type QueueCliOptions, type QueueCliRun, runProgram } from "../../queue-ready/harness";
 
 const PLAN_ROOT = join(import.meta.dir, "..");
 
@@ -85,25 +84,31 @@ export const selectArtifact = (candidates: readonly PlanFixture[]): PlanFixture 
 };
 
 /** An in-memory plan-read port with the OQ-4 precedence rule. */
-export const planReadPort = (world: PlanWorld, recorder: Recorder): PlanReadPort => (workItemRef) => {
-  recorder.reads.push(`plan:${workItemRef}`);
-  if ((world.absent ?? []).includes(workItemRef)) {
-    return { ok: false, reason: "absent", workItemRef };
-  }
-  if ((world.unreadable ?? []).includes(workItemRef)) {
+export const planReadPort =
+  (world: PlanWorld, recorder: Recorder): PlanReadPort =>
+  (workItemRef) => {
+    recorder.reads.push(`plan:${workItemRef}`);
+    if ((world.absent ?? []).includes(workItemRef)) {
+      return { ok: false, reason: "absent", workItemRef };
+    }
+    if ((world.unreadable ?? []).includes(workItemRef)) {
+      return {
+        ok: false,
+        reason: "unreadable",
+        workItemRef,
+        path: `chg-${workItemRef}-plan.yaml`,
+      } satisfies PlanArtifactRead;
+    }
+    const selected = selectArtifact(world.artifacts[workItemRef] ?? []);
+    if (selected === undefined) {
+      return { ok: false, reason: "absent", workItemRef };
+    }
     return {
-      ok: false,
-      reason: "unreadable",
-      workItemRef,
-      path: `chg-${workItemRef}-plan.yaml`,
-    } satisfies PlanArtifactRead;
-  }
-  const selected = selectArtifact(world.artifacts[workItemRef] ?? []);
-  if (selected === undefined) {
-    return { ok: false, reason: "absent", workItemRef };
-  }
-  return { ok: true, artifact: { kind: selected.kind, path: selected.path }, text: selected.text };
-};
+      ok: true,
+      artifact: { kind: selected.kind, path: selected.path },
+      text: selected.text,
+    };
+  };
 
 /** An in-memory repository-diff port that records the requested base. */
 export const planDiffPort =
@@ -173,10 +178,7 @@ export const planYamlParser: PlanYamlParser = (text) => {
 };
 
 /** Validate one committed YAML fixture through the real parse path. */
-export const validateYamlFixture = (
-  workItemRef: string,
-  relative: string,
-): PlanValidateData =>
+export const validateYamlFixture = (workItemRef: string, relative: string): PlanValidateData =>
   validatePlan({
     workItemRef,
     read: {
@@ -188,10 +190,7 @@ export const validateYamlFixture = (
   });
 
 /** Validate one committed markdown fixture through format detection. */
-export const validateMarkdownFixture = (
-  workItemRef: string,
-  relative: string,
-): PlanValidateData =>
+export const validateMarkdownFixture = (workItemRef: string, relative: string): PlanValidateData =>
   validatePlan({
     workItemRef,
     read: {
@@ -240,11 +239,7 @@ export const runPlanCli = async (
   const { createPlanCommandDefinition } = await import(
     "../../../../packages/cli/src/commands/plan"
   );
-  return runProgram(
-    argv,
-    { commands: { plan: createPlanCommandDefinition(runtime) } },
-    options,
-  );
+  return runProgram(argv, { commands: { plan: createPlanCommandDefinition(runtime) } }, options);
 };
 
 /** Parse a machine envelope from stdout, failing loudly on non-JSON output. */

@@ -78,6 +78,18 @@
       "formatter": {
         "enabled": false
       }
+    },
+    {
+      "includes": ["tests/golden/plan/*.json"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": ["tests/fixtures/plan/queue-ready/**"],
+      "formatter": {
+        "enabled": false
+      }
     }
   ]
 }

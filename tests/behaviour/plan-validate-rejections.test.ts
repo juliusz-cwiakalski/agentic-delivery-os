@@ -7,11 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { validatePlanValue } from "../../packages/core/src/domain/plan-validate";
-import {
-  fixture,
-  planYamlParser,
-  validateYamlFixture,
-} from "../fixtures/plan/harness/index";
+import { fixture, planYamlParser, validateYamlFixture } from "../fixtures/plan/harness/index";
 
 const INVALID_DIR = join(import.meta.dir, "..", "fixtures", "plan", "invalid");
 

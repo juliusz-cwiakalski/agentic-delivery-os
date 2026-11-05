@@ -36,14 +36,37 @@ const parallelWorld = planWorld({
 });
 
 const paths: readonly Path[] = [
-  { id: "validate-valid", argv: ["plan", "validate", "GH-306"], world: validWorld, reads: ["plan:GH-306"] },
-  { id: "validate-invalid", argv: ["plan", "validate", "GH-308"], world: invalidWorld, reads: ["plan:GH-308"] },
-  { id: "validate-legacy", argv: ["plan", "validate", "GH-307"], world: legacyWorld, reads: ["plan:GH-307"] },
-  { id: "validate-absent", argv: ["plan", "validate", "GH-310"], world: absentWorld, reads: ["plan:GH-310"] },
+  {
+    id: "validate-valid",
+    argv: ["plan", "validate", "GH-306"],
+    world: validWorld,
+    reads: ["plan:GH-306"],
+  },
+  {
+    id: "validate-invalid",
+    argv: ["plan", "validate", "GH-308"],
+    world: invalidWorld,
+    reads: ["plan:GH-308"],
+  },
+  {
+    id: "validate-legacy",
+    argv: ["plan", "validate", "GH-307"],
+    world: legacyWorld,
+    reads: ["plan:GH-307"],
+  },
+  {
+    id: "validate-absent",
+    argv: ["plan", "validate", "GH-310"],
+    world: absentWorld,
+    reads: ["plan:GH-310"],
+  },
   {
     id: "diff",
     argv: ["plan", "diff", "GH-308"],
-    world: planWorld({ "GH-308": "diff/outside/plan.yaml" }, { "GH-308": ["packages/core/src/contracts/queue.ts"] }),
+    world: planWorld(
+      { "GH-308": "diff/outside/plan.yaml" },
+      { "GH-308": ["packages/core/src/contracts/queue.ts"] },
+    ),
     reads: ["plan:GH-308", "diff:GH-308:main-tools"],
   },
   {

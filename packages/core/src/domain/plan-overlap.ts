@@ -13,12 +13,7 @@ import {
   type PlanOverlapReason,
   type PlanScope,
 } from "#contracts";
-import {
-  globToRegExp,
-  normalizeRepoPath,
-  packageCovers,
-  staticPrefix,
-} from "./plan-paths.js";
+import { globToRegExp, normalizeRepoPath, packageCovers, staticPrefix } from "./plan-paths.js";
 
 /** The injected pair. */
 export type PlanOverlapInput = {
@@ -145,10 +140,7 @@ const interactionOrder = (
   return undefined;
 };
 
-const declaredProduction = (
-  document: PlanDocument,
-  overlapping: readonly string[],
-): boolean =>
+const declaredProduction = (document: PlanDocument, overlapping: readonly string[]): boolean =>
   document.phases.some((phase) =>
     (phase.interactions ?? []).some(
       (interaction) =>

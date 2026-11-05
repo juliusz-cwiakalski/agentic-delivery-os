@@ -6,10 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  classifyDomainKind,
-  resolveAppErrorCode,
-} from "../../packages/cli/src/classify";
+import { classifyDomainKind, resolveAppErrorCode } from "../../packages/cli/src/classify";
 import {
   ERROR_TABLE,
   type ErrorTableEntry,

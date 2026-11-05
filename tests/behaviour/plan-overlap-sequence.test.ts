@@ -23,7 +23,12 @@ describe("TC-DPLAN-013 sequence verdict", () => {
   });
 
   test("the ordering is unchanged when the refs are reversed", () => {
-    const verdict = computePlanOverlap({ refA: "GH-307", planA: planB, refB: "GH-306", planB: planA });
+    const verdict = computePlanOverlap({
+      refA: "GH-307",
+      planA: planB,
+      refB: "GH-306",
+      planB: planA,
+    });
     expect(verdict.ordering).toBe("GH-306-before-GH-307");
     expect(verdict.verdict).toBe("run-in-sequence");
   });
@@ -69,9 +74,7 @@ describe("TC-DPLAN-013 CLI edge and text mode", () => {
   });
 
   test("text mode prints verdict, overlapping path, and reason", async () => {
-    const { planRuntime, planWorld, runPlanCli } = await import(
-      "../fixtures/plan/harness/index"
-    );
+    const { planRuntime, planWorld, runPlanCli } = await import("../fixtures/plan/harness/index");
     const world = planWorld({
       "GH-306": "overlap/sequence/gh-306.yaml",
       "GH-307": "overlap/sequence/gh-307.yaml",

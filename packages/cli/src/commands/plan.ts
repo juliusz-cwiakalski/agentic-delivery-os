@@ -119,15 +119,13 @@ const overlapHandler = (
   return { data: computePlanOverlap({ refA, planA, refB, planB }) };
 };
 
-const diffHandler = (
-  runtime: PlanCommandRuntime,
-  invocation: CommandInvocation,
-): HandlerResult => {
+const diffHandler = (runtime: PlanCommandRuntime, invocation: CommandInvocation): HandlerResult => {
   const { positionals, flags } = invocation;
   if (positionals.length !== 2) return usage("usage: plan diff <ref> [--against <base>]");
   const ref = positionals[1];
   if (ref === undefined) return usage("usage: plan diff <ref> [--against <base>]");
-  const against = typeof flags["--against"] === "string" ? flags["--against"] : PLAN_DEFAULT_DIFF_BASE;
+  const against =
+    typeof flags["--against"] === "string" ? flags["--against"] : PLAN_DEFAULT_DIFF_BASE;
   const read = runtime.readPlan(ref);
   const verdict = validatePlan({ workItemRef: ref, read, parseYaml: runtime.parseYaml });
   const document = planDocumentFromValidateData(verdict);

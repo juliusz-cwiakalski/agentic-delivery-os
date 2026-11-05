@@ -54,10 +54,7 @@ const cases: readonly Case[] = [
     world: planWorld(
       { "GH-308": "diff/outside/plan.yaml" },
       {
-        "GH-308": [
-          "packages/core/src/contracts/queue.ts",
-          "packages/cli/src/commands/plan.ts",
-        ],
+        "GH-308": ["packages/core/src/contracts/queue.ts", "packages/cli/src/commands/plan.ts"],
       },
     ),
     exitCode: 1,
@@ -79,7 +76,9 @@ const cases: readonly Case[] = [
   },
 ];
 
-const run = async (testCase: Case): Promise<{ exitCode: number; envelope: Record<string, unknown>; stderr: string }> => {
+const run = async (
+  testCase: Case,
+): Promise<{ exitCode: number; envelope: Record<string, unknown>; stderr: string }> => {
   const result = await runPlanCli(testCase.argv, planRuntime(testCase.world), {
     runId: `run-${testCase.id}`,
     secrets: ["planted-fake-secret-0226"],
@@ -148,10 +147,10 @@ describe("TC-DPLAN-022 lint outcome classes", () => {
   test("lint unreadable exits 2 with a valid envelope", async () => {
     const { planLintRuntime } = await import("../fixtures/plan/harness/index");
     const { runLint } = await import("./pm-notes-lint-command-support");
-    const run = await runLint(
-      planLintRuntime({ artifacts: {}, unreadable: ["GH-310"] }),
-      ["plan", "GH-310"],
-    );
+    const run = await runLint(planLintRuntime({ artifacts: {}, unreadable: ["GH-310"] }), [
+      "plan",
+      "GH-310",
+    ]);
     expect(run.exitCode).toBe(2);
     expect(assertEnvelopeContract(run.envelope)).toEqual([]);
     expect(run.envelope?.exitCode).toBe(2);

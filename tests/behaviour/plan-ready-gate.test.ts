@@ -12,12 +12,7 @@ import {
   queueRuntime,
   runQueueReadyCli,
 } from "../fixtures/queue-ready/harness";
-import {
-  parseEnvelope,
-  planRuntime,
-  planWorld,
-  runPlanCli,
-} from "../fixtures/plan/harness/index";
+import { parseEnvelope, planRuntime, planWorld, runPlanCli } from "../fixtures/plan/harness/index";
 
 const BASELINE_STDOUT = readFileSync(
   join(import.meta.dir, "..", "fixtures", "plan", "queue-ready", "baseline.stdout.json"),
@@ -31,11 +26,9 @@ const BASELINE_STDERR = readFileSync(
 describe("TC-DPLAN-009 ready gate", () => {
   test("phase 6 without scope refuses development with a classified error", async () => {
     const world = planWorld({ "GH-308": "invalid/phase-missing-scope.yaml" });
-    const run = await runPlanCli(
-      ["plan", "validate", "GH-308", "--json"],
-      planRuntime(world),
-      { runId: "run-ready-gate" },
-    );
+    const run = await runPlanCli(["plan", "validate", "GH-308", "--json"], planRuntime(world), {
+      runId: "run-ready-gate",
+    });
     expect(run.exitCode).toBe(1);
     const envelope = parseEnvelope(run.stdout);
     const data = envelope.data as {

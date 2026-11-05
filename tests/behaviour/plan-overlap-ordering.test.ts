@@ -50,11 +50,15 @@ describe("TC-DPLAN-016 declared ordering", () => {
     expect(reverse.reason).toBe("shared-paths");
     expect(reverse.verdict).toBe(forward.verdict);
     expect(reverse.overlappingPaths).toEqual(forward.overlappingPaths);
-    expect(JSON.stringify(computePlanOverlap({
-      refA: "GH-308",
-      planA: plainA,
-      refB: "GH-309",
-      planB: plainB,
-    }))).toBe(JSON.stringify(forward));
+    expect(
+      JSON.stringify(
+        computePlanOverlap({
+          refA: "GH-308",
+          planA: plainA,
+          refB: "GH-309",
+          planB: plainB,
+        }),
+      ),
+    ).toBe(JSON.stringify(forward));
   });
 });

@@ -154,9 +154,7 @@ const planTarget = (
     };
   }
   const read = runtime.readPlan(changeRef);
-  const path = read.ok
-    ? read.artifact.path
-    : (read.path ?? `chg-${changeRef}-plan.yaml`);
+  const path = read.ok ? read.artifact.path : (read.path ?? `chg-${changeRef}-plan.yaml`);
   if (!read.ok && read.reason === "unreadable") {
     const document: PlanDocumentReport = {
       path,
@@ -205,7 +203,10 @@ export const createLintCommandDefinition = (runtime: LintCommandRuntime): Comman
     const record = data as { readonly target?: unknown; readonly documents?: unknown };
     if (record.target !== "plan" || !Array.isArray(record.documents)) return "success";
     const verdicts = record.documents
-      .filter((entry): entry is { readonly verdict?: unknown } => typeof entry === "object" && entry !== null)
+      .filter(
+        (entry): entry is { readonly verdict?: unknown } =>
+          typeof entry === "object" && entry !== null,
+      )
       .map((entry) => entry.verdict);
     if (verdicts.includes("unreadable")) return "platform-provider";
     return verdicts.includes("invalid") ? "user-validation" : "success";

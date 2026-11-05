@@ -3,7 +3,10 @@
  * explicit marker and total count; truncation never changes the verdict.
  */
 import { describe, expect, test } from "bun:test";
-import { PLAN_MAX_DIFF_PATHS, PLAN_MAX_OVERLAPPING_PATHS } from "../../packages/core/src/contracts/index";
+import {
+  PLAN_MAX_DIFF_PATHS,
+  PLAN_MAX_OVERLAPPING_PATHS,
+} from "../../packages/core/src/contracts/index";
 import { computePlanDiff } from "../../packages/core/src/domain/plan-diff";
 import { computePlanOverlap } from "../../packages/core/src/domain/plan-overlap";
 import { diffFixture, planDocumentFor } from "../fixtures/plan/harness/index";
@@ -18,9 +21,9 @@ describe("TC-DPLAN-025 overlap bounds", () => {
     expect(data.totalOverlappingPaths).toBe(80);
     expect(data.truncated).toBe(true);
     expect(data.overlappingPaths.length).toBeGreaterThan(0);
-    expect(JSON.stringify(computePlanOverlap({ refA: "GH-306", planA, refB: "GH-307", planB }))).toBe(
-      JSON.stringify(data),
-    );
+    expect(
+      JSON.stringify(computePlanOverlap({ refA: "GH-306", planA, refB: "GH-307", planB })),
+    ).toBe(JSON.stringify(data));
   });
 });
 

@@ -136,10 +136,7 @@ import {
   type LintCommandRuntime,
   type LintRegistryRead,
 } from "./commands/lint.js";
-import {
-  createPlanCommandDefinition,
-  type PlanCommandRuntime,
-} from "./commands/plan.js";
+import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
 import { createPhaseCommandDefinition, type PhaseCommandRuntime } from "./commands/phase.js";
 import {
   createProviderCommandDefinition,
@@ -991,9 +988,7 @@ export type PlanRuntimeOptions = {
 };
 
 /** Compose the plan runtime over the file adapter and an injected diff reader. */
-export const createPlanCommandRuntime = (
-  options: PlanRuntimeOptions,
-): PlanCommandRuntime => ({
+export const createPlanCommandRuntime = (options: PlanRuntimeOptions): PlanCommandRuntime => ({
   readPlan: (changeRef) =>
     readPlanArtifact({
       changeRef,
@@ -1001,8 +996,7 @@ export const createPlanCommandRuntime = (
       fs: options.fs,
     }),
   readDiff:
-    options.readDiff ??
-    ((workItemRef) => ({ ok: false, reason: "unreadable", workItemRef })),
+    options.readDiff ?? ((workItemRef) => ({ ok: false, reason: "unreadable", workItemRef })),
   parseYaml: (text) => {
     const parsed = parseConfigYaml(text, "project-committed", "plan.yaml");
     return parsed.ok

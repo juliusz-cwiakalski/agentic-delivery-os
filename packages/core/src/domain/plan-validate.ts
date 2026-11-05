@@ -150,12 +150,14 @@ const parseScope = (raw: unknown, phase: number): ScopeParse => {
   const keys = Object.keys(raw);
   for (const key of keys) {
     if (!(PLAN_SCOPE_KEYS as readonly string[]).includes(key)) {
-      errors.push(
-        schemaError(`scope.${key}`, "invalid", { phase, detail: "unknown scope key" }),
-      );
+      errors.push(schemaError(`scope.${key}`, "invalid", { phase, detail: "unknown scope key" }));
     }
   }
-  const parsed: { readonly files?: readonly string[]; readonly packages?: readonly string[]; readonly folders?: readonly string[] } = {};
+  const parsed: {
+    readonly files?: readonly string[];
+    readonly packages?: readonly string[];
+    readonly folders?: readonly string[];
+  } = {};
   for (const key of PLAN_SCOPE_KEYS) {
     if (!Object.hasOwn(raw, key)) continue;
     const result = parseStringArray(raw[key], `scope.${key}`, phase, PLAN_MAX_SCOPE_PATHS);
@@ -167,7 +169,9 @@ const parseScope = (raw: unknown, phase: number): ScopeParse => {
   }
   const declared = PLAN_SCOPE_KEYS.some((key) => (parsed[key] ?? []).length > 0);
   if (!declared && errors.length === 0) {
-    errors.push(schemaError("scope.files", "missing", { phase, detail: "phase declares no scope" }));
+    errors.push(
+      schemaError("scope.files", "missing", { phase, detail: "phase declares no scope" }),
+    );
   }
   return {
     scope: {
@@ -227,7 +231,10 @@ const parseInteractions = (
   raw: unknown,
   phase: number,
   scope: PlanScopeEcho,
-): { readonly value: readonly PlanInteraction[]; readonly errors: readonly PlanValidationError[] } => {
+): {
+  readonly value: readonly PlanInteraction[];
+  readonly errors: readonly PlanValidationError[];
+} => {
   if (raw === undefined) return { value: [], errors: [] };
   if (!Array.isArray(raw)) {
     return {
@@ -239,9 +246,7 @@ const parseInteractions = (
   const errors: PlanValidationError[] = [];
   const bounded = raw.slice(0, PLAN_MAX_INTERACTIONS);
   if (raw.length > PLAN_MAX_INTERACTIONS) {
-    errors.push(
-      schemaError("interactions", "invalid", { phase, detail: "too many interactions" }),
-    );
+    errors.push(schemaError("interactions", "invalid", { phase, detail: "too many interactions" }));
   }
   bounded.forEach((entry, index) => {
     const field = `interactions[${index}]`;
@@ -293,8 +298,7 @@ const parsePhase = (
     return undefined;
   }
   const idRaw = raw.id;
-  const id =
-    typeof idRaw === "number" && Number.isInteger(idRaw) && idRaw > 0 ? idRaw : position;
+  const id = typeof idRaw === "number" && Number.isInteger(idRaw) && idRaw > 0 ? idRaw : position;
   if (!(typeof idRaw === "number" && Number.isInteger(idRaw) && idRaw > 0)) {
     errors.push(schemaError("id", "invalid", { phase: id, detail: "expected a positive integer" }));
   }
@@ -325,7 +329,10 @@ const parsePhase = (
     );
   }
 
-  const leases = raw.leases === undefined ? undefined : parseStringArray(raw.leases, "leases", id, PLAN_MAX_LEASE_NAMES);
+  const leases =
+    raw.leases === undefined
+      ? undefined
+      : parseStringArray(raw.leases, "leases", id, PLAN_MAX_LEASE_NAMES);
   if (leases !== undefined) errors.push(...leases.errors);
   const weightClass = raw.weightClass;
   if (weightClass !== undefined && nonEmptyString(weightClass) === undefined) {
@@ -338,8 +345,7 @@ const parsePhase = (
   errors.push(...interactions.errors);
 
   const effectiveLeases = leases?.values ?? defaults.leases;
-  const effectiveWeight =
-    nonEmptyString(weightClass) ?? defaults.weightClass;
+  const effectiveWeight = nonEmptyString(weightClass) ?? defaults.weightClass;
 
   return {
     id,
@@ -424,7 +430,10 @@ export const validatePlanValue = (value: unknown): ValidatedDocument => {
       };
     }
     if (tierRaw.phases !== undefined) {
-      if (!Array.isArray(tierRaw.phases) || tierRaw.phases.some((entry) => typeof entry !== "number" || !Number.isInteger(entry))) {
+      if (
+        !Array.isArray(tierRaw.phases) ||
+        tierRaw.phases.some((entry) => typeof entry !== "number" || !Number.isInteger(entry))
+      ) {
         errors.push(
           schemaError("tier.phases", "invalid", { detail: "expected an array of integers" }),
         );
@@ -447,7 +456,12 @@ export const validatePlanValue = (value: unknown): ValidatedDocument => {
 
   let defaultLeases: readonly string[] = [];
   if (value.defaultLeases !== undefined) {
-    const parsed = parseStringArray(value.defaultLeases, "defaultLeases", undefined, PLAN_MAX_LEASE_NAMES);
+    const parsed = parseStringArray(
+      value.defaultLeases,
+      "defaultLeases",
+      undefined,
+      PLAN_MAX_LEASE_NAMES,
+    );
     errors.push(...parsed.errors);
     defaultLeases = parsed.values;
   }
@@ -478,7 +492,9 @@ export const validatePlanValue = (value: unknown): ValidatedDocument => {
       );
       if (parsed === undefined) return;
       if (seen.has(parsed.id)) {
-        errors.push(schemaError("id", "invalid", { phase: parsed.id, detail: "duplicate phase id" }));
+        errors.push(
+          schemaError("id", "invalid", { phase: parsed.id, detail: "duplicate phase id" }),
+        );
       }
       seen.add(parsed.id);
       perPhase.push(parsed);
@@ -495,7 +511,9 @@ export const validatePlanValue = (value: unknown): ValidatedDocument => {
   };
 };
 
-const bounded = (errors: readonly PlanValidationError[]): {
+const bounded = (
+  errors: readonly PlanValidationError[],
+): {
   readonly errors: readonly PlanValidationError[];
   readonly truncated: boolean;
   readonly totalErrors: number;
@@ -526,9 +544,7 @@ const invalid = (
     ...(options.artifact === undefined ? {} : { artifact: options.artifact }),
     ...(options.schemaVersion === undefined ? {} : { schemaVersion: options.schemaVersion }),
     ...(options.tier === undefined ? {} : { tier: options.tier }),
-    ...(options.tierDeclaration === undefined
-      ? {}
-      : { tierDeclaration: options.tierDeclaration }),
+    ...(options.tierDeclaration === undefined ? {} : { tierDeclaration: options.tierDeclaration }),
   };
 };
 
@@ -637,8 +653,7 @@ export const planDocumentFromValidateData = (data: PlanValidateData): PlanDocume
   if (data.verdict !== "valid" || data.tier === undefined) return undefined;
   return {
     schemaVersion: data.schemaVersion ?? PLAN_SCHEMA_VERSION,
-    tier:
-      data.tierDeclaration === undefined ? { name: data.tier } : { ...data.tierDeclaration },
+    tier: data.tierDeclaration === undefined ? { name: data.tier } : { ...data.tierDeclaration },
     phases: data.perPhase.map((phase) => ({
       id: phase.id,
       title: phase.title,

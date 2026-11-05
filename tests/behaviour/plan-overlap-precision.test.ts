@@ -12,9 +12,19 @@ import { planDocumentFor } from "../fixtures/plan/harness/index";
 const PRECISION_DIR = join(import.meta.dir, "..", "fixtures", "plan", "overlap", "precision");
 const expectations = JSON.parse(
   readFileSync(join(PRECISION_DIR, "expectations.json"), "utf8"),
-) as Record<string, { readonly verdict: "parallel" | "run-in-sequence"; readonly overlappingPaths: readonly string[] }>;
+) as Record<
+  string,
+  { readonly verdict: "parallel" | "run-in-sequence"; readonly overlappingPaths: readonly string[] }
+>;
 
-const presentInScope = (scope: { readonly files?: readonly string[]; readonly folders?: readonly string[]; readonly packages?: readonly string[] }, descriptor: string): boolean => {
+const presentInScope = (
+  scope: {
+    readonly files?: readonly string[];
+    readonly folders?: readonly string[];
+    readonly packages?: readonly string[];
+  },
+  descriptor: string,
+): boolean => {
   const value = normalizeRepoPath(descriptor);
   for (const key of ["files", "folders", "packages"] as const) {
     if ((scope[key] ?? []).some((entry) => normalizeRepoPath(entry) === value)) return true;
