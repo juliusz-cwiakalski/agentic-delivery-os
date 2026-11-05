@@ -332,8 +332,8 @@ These pins bind delivery choices the tests deliberately leave open. They may not
 
 **Tasks**:
 
-- [ ] **7.1** Run the review over the full branch diff: spec/plan/AC traceability, tier and boundary conformance, evidence totality, checks-not-runner proof, TC assertions un-reshaped versus the test plan, and the Phase 1 count updates (no weakened assertions).
-- [ ] **7.2** Triage findings into accepted (→ Phase 8) and rejected-with-reason; record the verdict. Confirm DEC-1 (memory verification inside teardown) at the PR review gate as the spec requires, and confirm no fixture claims a sourced liveness outcome (TR-11).
+- [x] **7.1** Run the review over the full branch diff: spec/plan/AC traceability, tier and boundary conformance, evidence totality, checks-not-runner proof, TC assertions un-reshaped versus the test plan, and the Phase 1 count updates (no weakened assertions). — DONE: lifecycle review iteration 1 ran the full-diff audit; verdict PASS (review/review-iter-1.md, commit 7a3e066f).
+- [x] **7.2** Triage findings into accepted (→ Phase 8) and rejected-with-reason; record the verdict. Confirm DEC-1 (memory verification inside teardown) at the PR review gate as the spec requires, and confirm no fixture claims a sourced liveness outcome (TR-11). — DONE: 0 blocker/0 major; 4 minor + 3 notes triaged as non-blocking debts routed to the human PR gate / M1-S15; F-1 resolved by declaring the grammar widening (pm-notes decision); DEC-1 confirmed at this gate (human PR gate to mirror); TR-11 confirmed (EXIT_MATRIX reachable:false, zero sources wired).
 
 **Acceptance Criteria**:
 
@@ -356,8 +356,8 @@ These pins bind delivery choices the tests deliberately leave open. They may not
 
 **Tasks**:
 
-- [ ] **8.1** Apply each accepted finding as a targeted fix; re-run the affected focused suites from the phase that owned the touched files (and the binding checks if `error-table.ts` or the documented table moved).
-- [ ] **8.2** Re-run the review; iterate 8.1 until PASS. Record each iteration in the Execution Log.
+- [x] **8.1** ~~Apply each accepted finding as a targeted fix; re-run the affected focused suites from the phase that owned the touched files (and the binding checks if `error-table.ts` or the documented table moved).~~ N/A — condition not triggered: review iteration 1 returned PASS with zero accepted remediation findings; minor findings recorded as quality debts, not remediations.
+- [x] **8.2** ~~Re-run the review; iterate 8.1 until PASS. Record each iteration in the Execution Log.~~ N/A — same condition: no remediation iteration required (single PASS, review/review-iter-1.md).
 
 **Acceptance Criteria**:
 
@@ -383,7 +383,7 @@ These pins bind delivery choices the tests deliberately leave open. They may not
 - [x] **9.1** Run the full aggregate battery: `pnpm check` (lint → format:check → typecheck → test → check:boundaries → exports parity) and `git diff --check`; fix-forward only through Phase 8 discipline if anything fails (lifecycle phase 9, `@runner`/`@fixer`).
 - [x] **9.2** Verify the version bump: the Phase 6 changeset is the single release marker and the lockstep group is coherent (no stray changesets from other work riding the branch).
 - [x] **9.3** Spec reconciliation check: `doc/spec/features/feature-watchdog-lane-contracts.md` and the result-contract rows match the delivered surface exactly (no drift between Phase 1/6 docs and the final code).
-- [ ] **9.4** DoD walkthrough: all 14 ACs verified with their TC evidence, every plan task checked, the success-metrics table at target, and the Execution Log populated. Hand off to PR creation (lifecycle phase 11, `@pr-manager`).
+- [x] **9.4** DoD walkthrough: all 14 ACs verified with their TC evidence, every plan task checked, the success-metrics table at target, and the Execution Log populated. Hand off to PR creation (lifecycle phase 11, `@pr-manager`). — DONE: 14/14 ACs verified by review iteration 1 with TC evidence; all plan tasks checked or N/A'd with reasons; success metrics at target per spec §4.1 (100% refused-or-restored matrix, 0 silent/undocumented outcomes — review-verified); Execution Log populated through finalize; handoff to `@pr-manager` against `main-tools` follows.
 
 **Acceptance Criteria**:
 

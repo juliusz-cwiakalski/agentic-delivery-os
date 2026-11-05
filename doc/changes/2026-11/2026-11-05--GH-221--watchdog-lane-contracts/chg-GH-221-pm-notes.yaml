@@ -15,7 +15,7 @@ phases:
   system_spec_update: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
   review_fix: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
   quality_gates: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "Scope interpretation of the backlog task 'memory-publish verification' (defined nowhere else in the planning corpus): it is part of the teardown task ('restore on every exit'), not a new command surface. Teardown verifies that agent-memory publications made under the lane (the .ai/memory tree) are either already published (committed) or preserved and reported with evidence in the teardown restoration report; teardown never silently discards or clobbers them. Rationale: the shipped-contract pack (m1/contracts.md watchdog entry + commands/watchdog.md man page) defines only preflight/teardown/liveness outputs; the AC's 'refused or restored with evidence' clause and the repo memory rules (unpublished memory = stranded work) support the teardown framing. Reversible; confirmed at the open-PR human gate. Recorded in the ticket decision log."
@@ -70,4 +70,7 @@ notes:
     date: "2026-11-05"
   - text: "F-1 resolution (reviewer-sanctioned option 'keep it and amend the record'): the code-grammar widening [a-z][a-z0-9]* -> [a-z][a-z0-9-]* in error-table-sync.ts CODE_PATTERN / error-table.test.ts CODE_FORMAT is DECLARED as an intentional grammar generalization; the earlier deviation wording 'no general loosening' referred only to refusing arbitrary unvalidated two-segment codes (exact-pinned RESERVED_TWO_SEGMENT_CODES remains the only two-segment admission path). Corrected here rather than reverting functionally identical code."
     type: "decision"
+    date: "2026-11-05"
+  - text: "DoD walkthrough complete (plan task 9.4): pm-notes all phases complete except pr_creation; plan tasks 7.1/7.2 closed via review PASS (review/review-iter-1.md), 8.1/8.2 N/A (condition not triggered — zero accepted remediation findings), 9.1-9.4 done; 14/14 ACs review-verified with TC evidence; success metrics at target; current-truth docs complete with zero residual doc-syncer gaps and all binding checks green (44/44 sync, distribution guard, forbidden literals, pnpm check 2510/0). Handing off to PR creation against main-tools."
+    type: "info"
     date: "2026-11-05"
