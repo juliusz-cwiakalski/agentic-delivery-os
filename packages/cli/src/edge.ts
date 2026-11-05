@@ -125,6 +125,7 @@ import {
   replacePhaseProjection,
 } from "@delivery-os/core/state";
 import { resolveAppErrorCode } from "./classify.js";
+import { createBriefCommandDefinition } from "./commands/brief.js";
 import {
   type CloseoutCommandRuntime,
   createCloseoutCommandDefinition,
@@ -1051,6 +1052,7 @@ export type ConfigProgramOptions = {
   readonly provider?: ProviderComposition;
   readonly verify?: VerifyCommandRuntime;
   readonly status?: StatusComposition;
+  readonly brief?: StatusComposition;
   readonly queueReady?: StatusComposition;
   readonly db?: DbComposition;
   readonly closeout?: CloseoutComposition;
@@ -1308,6 +1310,11 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   if (options.status !== undefined) {
     commands.status = createStatusCommandDefinition(
       createStatusCommandRuntime(options.status, resolveProviderConfig),
+    );
+  }
+  if (options.brief !== undefined) {
+    commands.brief = createBriefCommandDefinition(
+      createStatusCommandRuntime(options.brief, resolveProviderConfig),
     );
   }
   if (options.queueReady !== undefined) {
