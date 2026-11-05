@@ -52,10 +52,11 @@ The bash-era delivery stack carries the "lying liveness" defect family: exit-zer
 - Each subcommand accepts exactly one `<lane>` positional. A third positional, an unknown flag, a missing flag value, a conflicting flag pair, or an unknown top-level command is `fallback.invocation` before the handler. A missing subcommand, an unknown subcommand, or a missing/empty lane is `input.value.rejected` inside the handler, before any lane read.
 - `--json` is global and stripped by the shared parser. There are no command-specific flags and no run/mutate flags.
 - Handlers return `{ data }` or `{ error: { kind, code, summary } }`; the CLI edge owns envelope assembly and exit projection. No handler writes to a stream and no exit literal exists in the command.
+- Text mode renders the verdict line plus one line per restoration action and memory publication, using the same evidence as `--json`; the envelope remains the machine truth.
 
 ### 3.2 Preflight (F-1)
 
-Preflight reads the lane record through the injected state port and the checkout facts through the bounded git seam, then classifies admission:
+Preflight reads the lane record through the injected lane reader (`readLane`) and the checkout facts through the bounded git seam, then classifies admission:
 
 | Condition | Outcome |
 |---|---|
@@ -77,7 +78,7 @@ Teardown is the caller's unconditional restoration contract. It reads the lane r
 4. **Unattributable content.** Any other dirty path that is not an agent-memory path is preserved in place and reported.
 5. **Memory publications.** Every path under `.ai/memory` is classified `committed` (with file and commit evidence) or `preserved` (modified, untracked, or staged, preserved in place). Teardown never stages, commits, reverts, cleans, or deletes a memory path.
 
-The restoration report is always produced, including on a clean exit, and every action carries a kind, an observation, and non-empty evidence. Memory entries carry their status (`committed` or `preserved`) and evidence naming the path and reason. Ordering is deterministic (preserve commit, checkout action, residue, preserved content; memory entries sorted by path).
+The restoration report is always produced, including on a clean exit, and every action carries a kind, an observation, and non-empty evidence. Memory entries carry their status (`committed` or `preserved`) and evidence naming the path and reason. Ordering is deterministic: preserve commit, checkout action, then dirty paths in path order (each reported as residue removal or preserved content); memory entries are sorted by path.
 
 Restoration failures are classified through existing identities (`input.value.rejected` for unevaluable or failed restoration facts), never `fallback.internal` for a documented class and never a silent exit `0`.
 
@@ -85,7 +86,7 @@ Restoration failures are classified through existing identities (`input.value.re
 
 `watchdog liveness <lane>` evaluates the declared progress-signal shape `heartbeatAgeMs`, `tokenDelta`, `traffic`. The input type declares no CPU field, so a CPU-only reading can never satisfy the shape and can never classify `stalled`. `stalled` additionally requires corroboration: a heartbeat age at or beyond the declared bound together with `tokenDelta: 0` and `traffic: 0`. Any partial or progressing reading classifies `progressing`.
 
-Absent declared signal values classify as the absent outcome, which the command boundary maps to `watchdog.signals-absent` with exit `2`. No verdict key or value appears in that payload; the evidence-bearing summary states that the answer is unknown.
+Absent declared signal values classify as the absent outcome, which the command boundary maps to `watchdog.signals-absent` with exit `2`. No verdict key or value appears in that payload; the evidence-bearing summary states that the answer is unknown. The pure classifier implements the corroboration rule; the shipped composition wires zero signal sources, so no liveness run through the production edge reaches `stalled` or `progressing` until M1-S15 supplies them.
 
 ### 3.5 Error-table binding (F-5)
 
@@ -111,8 +112,8 @@ The surface never dispatches a lane, spawns a session, kills a process, restarts
 | Teardown restored, publications verified | `ok` | `0` | — | Yes |
 | Dirty checkout | `refused` | `1` | `watchdog.checkout-dirty` | Yes |
 | Off-base checkout | `refused` | `1` | `watchdog.checkout-non-base` | Yes |
-| Stall (signal-corroborated) | `stalled` | `1` | — | No — declared contract data for M1-S15 |
-| Progressing (signal-corroborated) | `progressing` | `0` | — | No — declared contract data for M1-S15 |
+| Stall (signal-corroborated) | `stalled` | `1` | — | No through the production edge — the classifier is delivered; sources arrive with M1-S15 |
+| Progressing (signal-corroborated) | `progressing` | `0` | — | No through the production edge — the classifier is delivered; sources arrive with M1-S15 |
 | No signal sources | none emitted | `2` | `watchdog.signals-absent` | Yes |
 | Grammar / invocation failure | none emitted | `1` | `input.value.rejected` / `fallback.invocation` | Yes |
 
@@ -122,15 +123,17 @@ Refusal rows show the conceptual verdict `refused`; on the wire the machine repr
 
 `packages/core/src/contracts/watchdog.ts` is the single home for:
 
+- `WATCHDOG_SCHEMA_VERSION` — `delivery.watchdog.v1`.
 - `WATCHDOG_VERDICTS` / `WatchdogVerdict` — `ok`, `refused`, `stalled`, `progressing`, derived from one `as const` declaration.
 - `WATCHDOG_SIGNAL_KEYS` / `WatchdogSignals` — `heartbeatAgeMs`, `tokenDelta`, `traffic`; no CPU field.
+- `WATCHDOG_STALL_HEARTBEAT_MS` — the declared stall-corroboration bound (300000 ms).
 - `WATCHDOG_PROBES` / `WatchdogProbe` — `preflight`, `teardown`, `liveness`.
 - `WATCHDOG_ERROR_CODES` — the three identities.
-- `WatchdogLaneRecord`, `WatchdogLaneRead`, `WatchdogGitPort`, `WatchdogGitFacts`, `WatchdogWorktreeEntry`, `WatchdogMemoryFact`.
+- `WatchdogLaneRecord`, `WatchdogLaneRead`, `WatchdogGitPort`, `WatchdogGitFacts`, `WatchdogWorktreeEntry`, `WatchdogMemoryFact`, `WatchdogSignalSource`.
 - `WatchdogRestorationAction` (kind, observation, evidence), `WatchdogMemoryPublication` (path, status, evidence), `WATCHDOG_RESTORATION_ACTION_KINDS`, `WATCHDOG_MEMORY_STATUSES`.
 - `WatchdogVerdictData` (schema version, probe, lane, verdict, signals, evidence) and `WatchdogTeardownData` (verdict data plus `actions` and `memory`).
 
-The domain tier `packages/core/src/domain/watchdog.ts` is runtime-neutral and exposes the pure classification, restoration planning, liveness classification, signal merging, and data builders. The bounded git seam `packages/adapters/src/git/watchdog.ts` implements `WatchdogGitPort` inside the existing `@delivery-os/adapters/git` subpath with fixed argv, no shell, no network, bounded timeouts, and `SIGKILL`. The command module composes all three; the edge registers the family behind an optional `watchdog` composition with a production git seam and zero signal sources.
+The domain tier `packages/core/src/domain/watchdog.ts` is runtime-neutral and exposes the pure classification, restoration planning, liveness classification, signal merging, and data builders. The bounded git seam `packages/adapters/src/git/watchdog.ts` implements `WatchdogGitPort` inside the existing `@delivery-os/adapters/git` subpath with fixed argv, no shell, no network, bounded timeouts, and `SIGKILL`. The command module composes all three; the edge registers the family behind an optional `watchdog` composition that requires an injected lane reader, defaults to a production git seam, and wires zero signal sources.
 
 ## 6. Non-Functional Behavior
 
@@ -142,14 +145,19 @@ The domain tier `packages/core/src/domain/watchdog.ts` is runtime-neutral and ex
 
 - Real progress-signal ingestion and sourced `stalled`/`progressing` outcomes are M1-S15 (SC-M1-14).
 - Daemon consumption (M1-S18), supervise (M2-S2), the `lanes` surface, scheduling, dispatch, restart budgeting, and session kill are out of scope.
-- The state-layer contract is consumed, not extended; the v1 envelope, `{0, 1, 2}` projection, and branding seam are reused unchanged.
+- The lane record arrives through the injected reader; no state-layer import, contract change, or stored-record migration is involved. The v1 envelope, `{0, 1, 2}` projection, and branding seam are reused unchanged.
 - Lane-branch deletion and closeout branch cleanup remain the delivered `closeout` surface.
 
 ## 8. Validation and References
 
 - Change artifacts: `doc/changes/2026-11/2026-11-05--GH-221--watchdog-lane-contracts/` (spec, test plan, plan).
 - Binding check: `scripts/checks/error-table-sync.ts`; documented rows in [Result Contract and Error Table](feature-result-contract.md).
-- Tests: `tests/structure/watchdog-*.test.ts`, `tests/behaviour/watchdog-*.test.ts`, and `tests/golden/watchdog-output.test.ts` (35 TCs, 14/14 acceptance criteria).
+- Test levels:
+  - Structure (`tests/structure/watchdog-contract.test.ts`, `watchdog-imports.test.ts`): exact verdict/signal/probe vocabularies, one-home constants, the three error identities, and tier/import boundaries.
+  - Behaviour (`tests/behaviour/watchdog-*.test.ts`): real temporary repositories for preflight admission/refusal, teardown restoration and memory preservation, liveness absence and corroboration, envelope/exit projection, grammar reuse, and the checks-not-runner assertion.
+  - Golden (`tests/golden/watchdog-output.test.ts`): committed normalized envelopes for admission, refusal, teardown, and signals-absent, with only the temporary repository root and volatile `runId`/`timing` normalized.
+  - Fixtures (`tests/fixtures/watchdog/`): a shared temporary-repository harness whose guard rejects any root equal to the live workspace.
+- Totals: 35 test cases cover 14/14 acceptance criteria.
 
 ## 9. Glossary
 
