@@ -10,7 +10,7 @@ phases:
   delivery: { started: "2026-11-05T22:04:00Z", completed: "2026-11-05T23:05:00Z" }
   system_spec_update: { started: "2026-11-05T23:10:00Z", completed: "2026-11-05T23:24:00Z" }
   review_fix: { started: "2026-11-05T23:30:00Z", completed: "2026-11-06T01:06:00Z", iterations: 2, last_status: "PASS" }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-11-06T01:08:00Z", completed: "2026-11-06T00:12:00Z", iterations: 2, last_status: "PASS" }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -50,12 +50,21 @@ decisions:
   - text: "Retro: the doc-sync commit (91c514c0) shipped without running the full structure/boundaries battery; the corpusBaseline registry requires new user-facing docs to be registered, and the gap surfaced only when the coder ran tests/structure during remediation. Lesson: doc-only commits that ADD doc files must run tests/structure (or the full pnpm check) before the phase checkpoint, same as code commits. Cost: one extra doc-sync loop."
     type: "retro"
     date: "2026-11-05"
+  - text: "Quality gates iteration 2 PASS after resume-sync merge: origin/main-tools advanced mid-delivery (GH-221 watchdog/lane-contracts landed, 57 files); merged at HEAD 331dd83e with 7 conflicts resolved preserving both sides (error-table union plan+watchdog rows = 50 live, edge runtime factories unioned, result-contract doc union with both traceability links, both changesets preserved). Final battery: pnpm check exit 0 (2607 pass / 0 fail / 4 skip, lint 0 errors, boundaries + exports-parity clean), distribution guard no drift (81 docs), plugin-current, plan behaviour 88/88. GH-221 error-table structure counts rebased to post-merge truth."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Retro: base drift was not checked before the quality-gates phase; the gate caught it (by design — privacy-release compares changesets against origin/main-tools). Lesson: before quality_gates, refresh the base ref (git fetch origin main-tools) and rebase/merge if the base advanced; running the battery on a stale base wastes a full gate cycle (~4 min) plus a fixer loop. The resume-sync directive covered mid-delivery sync only at session start."
+    type: "retro"
+    date: "2026-11-06"
   - text: "Exit-code reconciliation: SC-M1-06 seed asserts exit 0 for a run-in-sequence overlap verdict, while commands/plan.md (contract page) pins exit 1 'a verdict, not a failure' (envelope example shows exitCode 1) and the shared refusal pin makes a negative verdict exit 1. Story refines to commands/plan.md semantics (exit 1 + verdict data). Empowered by milestones/README.md: contracts are proposals refined at story delivery; test scenarios are seeds the test plan 'inherits and reconciles'."
     date: "2026-11-05"
   - text: "SC-M1-07 seed asserts 'queue add warns the entry is parked behind a valid plan', but queue add arrives with M1-S17 (current queue is read-only `queue ready`, M0 ready-set). In-scope realization: plan validate computes readyForDevelopment and refuses (exit 1, classified plan.schema.invalid) on unvalidatable plans; queue-add warning recorded as the M1-S17 integration point; spec decides whether existing `queue ready` consults plan validity."
     date: "2026-11-05"
 open_questions: []
-blockers: []
+blockers:
+  - text: "Quality gate 1 FAIL (iteration 1): privacy-release TC-RELEASE-001 reports 'pre-existing changeset deleted: .changeset/gh-221-watchdog-lane-contracts-minor.md' — root cause: origin/main-tools advanced during delivery (440829ee -> 2e6cda42; merge-base still 440829ee) and carries GH-221's changeset which this branch lacks. Branch is behind base; resume-sync merge required. ci-baseline-parity failure without repo-local TMPDIR confirmed environmental (cross-device hardlink), not a defect. Remediation: merge origin/main-tools into feat/GH-226/plan-schema via @fixer, re-run full battery."
+    date: "2026-11-05"
+    resolved_date: "2026-11-06"
 notes:
   - text: "State detection: issue open (labels change,review), no open/merged PR for feat/GH-226/plan-schema, no prior change artifacts, no pm-context.yaml -> fresh delivery."
     type: "info"
