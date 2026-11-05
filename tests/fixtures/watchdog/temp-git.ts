@@ -93,9 +93,7 @@ export const createWatchdogRepository = (
 };
 
 /** The lane record every fixture injects (PIN-5). */
-export const laneRecord = (
-  overrides: Partial<WatchdogLaneRecord> = {},
-): WatchdogLaneRecord => ({
+export const laneRecord = (overrides: Partial<WatchdogLaneRecord> = {}): WatchdogLaneRecord => ({
   lane: LANE,
   baseRef: BASE_REF,
   workspacePaths: ["work"],
@@ -207,7 +205,8 @@ export const makeUnattributed = (repo: WatchdogTempRepository): void => {
 };
 
 /** FIX-BASE-MISSING is a lane-record fact, not a repository mutation. */
-export const makeBaseMissingLane = (): WatchdogLaneRecord => laneRecord({ baseRef: "missing-base" });
+export const makeBaseMissingLane = (): WatchdogLaneRecord =>
+  laneRecord({ baseRef: "missing-base" });
 
 /** Read a file's bytes from the working tree. */
 export const readWorkingFile = (repo: WatchdogTempRepository, relative: string): string =>

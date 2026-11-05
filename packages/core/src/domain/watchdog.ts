@@ -32,10 +32,7 @@ const isMemoryPath = (path: string): boolean =>
 const normalizeWorkspacePath = (path: string): string => path.replace(/\/+$/, "");
 
 /** Whether an observed path sits under one of the lane's declared workspaces. */
-export const isLaneWorkspacePath = (
-  path: string,
-  workspacePaths: readonly string[],
-): boolean =>
+export const isLaneWorkspacePath = (path: string, workspacePaths: readonly string[]): boolean =>
   workspacePaths.some((workspace) => {
     const root = normalizeWorkspacePath(workspace);
     return root.length > 0 && (path === root || path.startsWith(`${root}/`));
@@ -255,9 +252,7 @@ const presentSignalKeys = (signals: WatchdogSignals): readonly WatchdogSignalKey
  * The input type declares no CPU field, and `stalled` additionally requires the
  * declared progress signals to corroborate the heartbeat age.
  */
-export const classifyWatchdogLiveness = (
-  signals: WatchdogSignals,
-): WatchdogLivenessEvaluation => {
+export const classifyWatchdogLiveness = (signals: WatchdogSignals): WatchdogLivenessEvaluation => {
   const present = presentSignalKeys(signals);
   if (present.length === 0) {
     return {

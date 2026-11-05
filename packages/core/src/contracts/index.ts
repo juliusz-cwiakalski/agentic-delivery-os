@@ -595,11 +595,11 @@ export {
   type VerifyGateNameList,
   type VerifyGateReason,
   type VerifyGateRecord,
-  type VerifyGatesReport,
-  type VerifyGatesSummary,
   type VerifyGateSource,
   type VerifyGateSourceName,
   type VerifyGateSourceOutcome,
+  type VerifyGatesReport,
+  type VerifyGatesSummary,
   type VerifyGateVerdict,
   type VerifyOwnerAttentionLabel,
 } from "./verify-gates.js";

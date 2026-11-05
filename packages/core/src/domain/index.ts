@@ -69,7 +69,6 @@ export {
   renderVerifyGatesFailureSummary,
   renderVerifyGatesHuman,
   resolveOpenPr,
-  verifyGatesUnknownIdentity,
   type VerifyGatesAbsence,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
@@ -81,8 +80,9 @@ export {
   type VerifyGatesReadFailureReason,
   type VerifyGatesReadResult,
   type VerifyGatesRepositoryFacts,
-  type VerifyGatesWorkItem,
   type VerifyGatesWorkflowFacts,
+  type VerifyGatesWorkItem,
+  verifyGatesUnknownIdentity,
 } from "./verify-gates.js";
 export {
   buildWatchdogTeardownData,
@@ -92,10 +92,10 @@ export {
   isLaneWorkspacePath,
   planWatchdogRestoration,
   readWatchdogSignals,
-  watchdogPreservedRefName,
   type WatchdogLivenessEvaluation,
   type WatchdogPlannedAction,
   type WatchdogPreflightBuildInput,
   type WatchdogPreflightEvaluation,
   type WatchdogRestorationPlan,
+  watchdogPreservedRefName,
 } from "./watchdog.js";

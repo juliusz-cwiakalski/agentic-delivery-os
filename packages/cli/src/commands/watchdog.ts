@@ -15,6 +15,7 @@ import {
   planWatchdogRestoration,
   readWatchdogSignals,
 } from "@delivery-os/core";
+import type { BrandIdentity } from "@delivery-os/core/contracts";
 import {
   WATCHDOG_PROBES,
   type WatchdogGitPort,
@@ -25,7 +26,6 @@ import {
   type WatchdogSignalSource,
   type WatchdogVerdictData,
 } from "@delivery-os/core/contracts";
-import type { BrandIdentity } from "@delivery-os/core/contracts";
 import type { CommandDefinition } from "../index.js";
 
 /** Everything the watchdog surface needs; all reads and mutations are injected. */
@@ -42,11 +42,10 @@ type WatchdogResult = WatchdogSuccess | WatchdogFailure;
 
 type WatchdogFailureKind = "input" | "state" | "watchdog";
 
-const failure = (
-  kind: WatchdogFailureKind,
-  code: string,
-  summary: string,
-): WatchdogFailure => ({ ok: false, error: { kind, code, summary } });
+const failure = (kind: WatchdogFailureKind, code: string, summary: string): WatchdogFailure => ({
+  ok: false,
+  error: { kind, code, summary },
+});
 
 const GRAMMAR_SUMMARY = "result=failed; reason=grammar; need=<preflight|teardown|liveness> <lane>";
 
@@ -120,9 +119,7 @@ const preflight = async (
   if (evaluation.outcome === "refused") {
     return failure(
       "watchdog",
-      evaluation.reason === "dirty"
-        ? "watchdog.checkout-dirty"
-        : "watchdog.checkout-non-base",
+      evaluation.reason === "dirty" ? "watchdog.checkout-dirty" : "watchdog.checkout-non-base",
       evaluation.evidence,
     );
   }
@@ -232,11 +229,7 @@ const liveness = (runtime: WatchdogCommandRuntime, lane: string): WatchdogResult
   }
   const evaluation = classifyWatchdogLiveness(signals);
   if (evaluation.outcome === "absent") {
-    return failure(
-      "watchdog",
-      "watchdog.signals-absent",
-      `lane ${lane}: ${evaluation.evidence}`,
-    );
+    return failure("watchdog", "watchdog.signals-absent", `lane ${lane}: ${evaluation.evidence}`);
   }
   return {
     ok: true,
@@ -250,9 +243,7 @@ const liveness = (runtime: WatchdogCommandRuntime, lane: string): WatchdogResult
   };
 };
 
-const isVerdictData = (
-  data: unknown,
-): data is WatchdogVerdictData & Record<string, unknown> =>
+const isVerdictData = (data: unknown): data is WatchdogVerdictData & Record<string, unknown> =>
   isRecord(data) &&
   typeof data.probe === "string" &&
   typeof data.lane === "string" &&

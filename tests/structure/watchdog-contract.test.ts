@@ -5,21 +5,11 @@
  * copies or in-memory strings, never the live tree.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
-import {
-  WATCHDOG_SIGNAL_KEYS,
-  WATCHDOG_VERDICTS,
-} from "../../packages/core/src/contracts/index";
+import { WATCHDOG_SIGNAL_KEYS, WATCHDOG_VERDICTS } from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();
 const CONTRACT = "packages/core/src/contracts/watchdog.ts";
@@ -106,7 +96,8 @@ export const signalShapeViolations = (keys: readonly string[]): string[] => {
     violations.push(`signal keys length ${keys.length} != ${expected.length}`);
   }
   for (const [index, value] of expected.entries()) {
-    if (keys[index] !== value) violations.push(`signal key[${index}] ${String(keys[index])} != ${value}`);
+    if (keys[index] !== value)
+      violations.push(`signal key[${index}] ${String(keys[index])} != ${value}`);
   }
   if (keys.some((key) => /cpu/i.test(key))) violations.push("signal keys declare a CPU field");
   return violations;
@@ -139,9 +130,7 @@ export const singleVocabularyHomeFailures = (root: string): string[] => {
     if (/(?:const|let|var|type)\s+WATCHDOG_VERDICTS\b/.test(text)) {
       failures.push(`${relative}: redeclares WATCHDOG_VERDICTS`);
     }
-    if (
-      WATCHDOG_VERDICTS.every((verdict) => new RegExp(`"${verdict}"`).test(text))
-    ) {
+    if (WATCHDOG_VERDICTS.every((verdict) => new RegExp(`"${verdict}"`).test(text))) {
       failures.push(`${relative}: redeclares the closed verdict list`);
     }
   }

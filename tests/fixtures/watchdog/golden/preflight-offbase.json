@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 1,
+  "timing": {
+    "totalMs": 0
+  },
+  "error": {
+    "code": "watchdog.checkout-non-base",
+    "category": "user",
+    "retryable": false,
+    "consequence": "not_landed",
+    "remediationHint": "Check out the lane's declared base (or correct the declaration), then re-run the lane preflight.",
+    "summary": "checkout not on base: expected main, actual chore/foreign"
+  }
+}

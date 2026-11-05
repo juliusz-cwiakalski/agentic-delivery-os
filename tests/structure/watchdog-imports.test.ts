@@ -8,10 +8,13 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
-import { WATCHDOG_PROBES } from "../../packages/core/src/contracts/index";
 import { createWatchdogCommandDefinition } from "../../packages/cli/src/commands/watchdog";
-import { readRegistry, type ForbiddenLiteralRegistry } from "../../scripts/checks/forbidden-literals";
+import { WATCHDOG_PROBES } from "../../packages/core/src/contracts/index";
 import { scan, scopedFiles } from "../../scripts/checks/ambient-globals";
+import {
+  type ForbiddenLiteralRegistry,
+  readRegistry,
+} from "../../scripts/checks/forbidden-literals";
 import { SYNTHETIC_BRAND } from "../golden/helpers";
 
 const ROOT = process.cwd();
@@ -92,9 +95,15 @@ export const domainPure = (text: string, label = DOMAIN): string[] => {
   }
   for (const name of callNames(source)) {
     if (
-      ["Date.now", "Math.random", "performance.now", "process.env", "Bun.env", "fetch", "readFileSync"].includes(
-        name,
-      )
+      [
+        "Date.now",
+        "Math.random",
+        "performance.now",
+        "process.env",
+        "Bun.env",
+        "fetch",
+        "readFileSync",
+      ].includes(name)
     ) {
       violations.push(`${label}: impure call ${name}`);
     }
@@ -184,9 +193,9 @@ describe("TC-WATCHDOG-002 contracts, domain, and command respect tier boundaries
     expect(contractsDataOnly(`${live(CONTRACT)}\nimport "node:fs";\n`).join("\n")).toContain(
       "runtime import node:fs",
     );
-    expect(domainPure(`${live(DOMAIN)}\nexport const rogue = () => Date.now();\n`).join("\n")).toContain(
-      "impure call Date.now",
-    );
+    expect(
+      domainPure(`${live(DOMAIN)}\nexport const rogue = () => Date.now();\n`).join("\n"),
+    ).toContain("impure call Date.now");
     expect(
       commandCoreOnly(`${live(COMMAND)}\nimport "@delivery-os/adapters/session";\n`).join("\n"),
     ).toContain("non-core command import @delivery-os/adapters/session");

@@ -137,8 +137,7 @@ export const WATCHDOG_RESTORATION_ACTION_KINDS = [
   "preserve-content",
 ] as const;
 
-export type WatchdogRestorationActionKind =
-  (typeof WATCHDOG_RESTORATION_ACTION_KINDS)[number];
+export type WatchdogRestorationActionKind = (typeof WATCHDOG_RESTORATION_ACTION_KINDS)[number];
 
 /** One restoration-report action: kind, observation, and non-empty evidence. */
 export type WatchdogRestorationAction = {

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 1,
+  "timing": {
+    "totalMs": 0
+  },
+  "error": {
+    "code": "watchdog.checkout-dirty",
+    "category": "user",
+    "retryable": false,
+    "consequence": "not_landed",
+    "remediationHint": "Commit or discard the named uncommitted changes, then re-run the lane preflight.",
+    "summary": "checkout dirty relative to base main: README.md, notes.local"
+  }
+}

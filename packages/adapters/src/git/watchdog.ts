@@ -11,13 +11,13 @@
 import { execFile } from "node:child_process";
 import { rm } from "node:fs/promises";
 import { isAbsolute, normalize, resolve, sep } from "node:path";
-import { CLOSEOUT_OPERATION_TIMEOUT_MS } from "@delivery-os/core/contracts";
 import type {
   WatchdogGitMutationResult,
   WatchdogGitPort,
   WatchdogMemoryFact,
   WatchdogWorktreeEntry,
 } from "@delivery-os/core/contracts";
+import { CLOSEOUT_OPERATION_TIMEOUT_MS } from "@delivery-os/core/contracts";
 import type { GitChildRunner, GitChildRunnerResult } from "./index.js";
 
 const MEMORY_ROOT = ".ai/memory";
@@ -129,9 +129,7 @@ export type WatchdogGitSeam = WatchdogGitPort;
 const failure = (detail: string): WatchdogGitMutationResult => ({ ok: false, detail });
 
 /** Build the bounded watchdog checkout seam over an injected child runner. */
-export const createWatchdogGitSeam = (
-  options: WatchdogGitSeamOptions = {},
-): WatchdogGitSeam => {
+export const createWatchdogGitSeam = (options: WatchdogGitSeamOptions = {}): WatchdogGitSeam => {
   const timeoutMs = options.timeoutMs ?? CLOSEOUT_OPERATION_TIMEOUT_MS;
   const runner = options.childRunner ?? execFileWatchdogRunner;
   const cwd = options.cwd;
@@ -160,7 +158,9 @@ export const createWatchdogGitSeam = (
       const log = await git(["log", "-1", "--format=%H", "--", path]);
       if (log.status !== 0) return undefined;
       const commit = log.stdout.trim();
-      facts.push(commit.length > 0 ? { path, state: "committed", commit } : { path, state: "committed" });
+      facts.push(
+        commit.length > 0 ? { path, state: "committed", commit } : { path, state: "committed" },
+      );
     }
     for (const [path, state] of dirty) {
       if (!tracked.includes(path)) facts.push({ path, state });
@@ -207,7 +207,10 @@ export const createWatchdogGitSeam = (
         "refs/heads",
       ]);
       if (containing.status !== 0) {
-        return { kind: "unreadable", detail: `branch containment unreadable (${containing.status})` };
+        return {
+          kind: "unreadable",
+          detail: `branch containment unreadable (${containing.status})`,
+        };
       }
       if (containing.stdout.trim().length === 0) strandedCommit = head;
     }

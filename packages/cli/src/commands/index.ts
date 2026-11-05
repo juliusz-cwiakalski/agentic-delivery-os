@@ -33,7 +33,7 @@ export type {
   VerifyPmNotesRead,
   VerifyRegistryRead,
 } from "./verify.js";
-export type { WatchdogCommandRuntime } from "./watchdog.js";
-export { createWatchdogCommandDefinition } from "./watchdog.js";
 export { createVerifyCommandDefinition } from "./verify.js";
 export type { VerifyGatesCommandRuntime } from "./verify-gates.js";
+export type { WatchdogCommandRuntime } from "./watchdog.js";
+export { createWatchdogCommandDefinition } from "./watchdog.js";

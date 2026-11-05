@@ -69,8 +69,8 @@ import {
   type VerifyGatesOpenPrPage,
   type VerifyGatesReadResult,
   type VerifyGatesRepositoryFacts,
-  type VerifyGatesWorkItem,
   type VerifyGatesWorkflowFacts,
+  type VerifyGatesWorkItem,
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
@@ -96,16 +96,16 @@ import {
   type Result,
   type StateStorePort,
   type StatusLocalContextRead,
-  type WatchdogGitPort,
-  type WatchdogLaneRead,
-  type WatchdogSignalSource,
   type StatusParkRead,
   type StatusProviderConfigRead,
   type StatusReadFailure,
   type StatusRepositoryFacts,
   type StatusRepositoryTarget,
-  type WorkItem,
   VERIFY_GATES_FAILURE_CLASSES,
+  type WatchdogGitPort,
+  type WatchdogLaneRead,
+  type WatchdogSignalSource,
+  type WorkItem,
 } from "@delivery-os/core/contracts";
 import {
   createProviderEngine,
@@ -145,11 +145,11 @@ import {
 import { createQueueReadyCommandDefinition } from "./commands/queue.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
+import type { VerifyGatesCommandRuntime } from "./commands/verify-gates.js";
 import {
   createWatchdogCommandDefinition,
   type WatchdogCommandRuntime,
 } from "./commands/watchdog.js";
-import type { VerifyGatesCommandRuntime } from "./commands/verify-gates.js";
 import type { CliDependencies, CommandDefinition, CommandFlags, CommandProgram } from "./index.js";
 
 const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
