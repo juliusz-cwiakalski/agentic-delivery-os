@@ -1,6 +1,9 @@
 /**
  * TC-DPLAN-015 — overlap precision across path and wildcard granularity: no
  * false positives, no prefix bleed, and every sequence path genuinely shared.
+ * The same-static-prefix conservative sequence is pinned separately (F-6): a
+ * pair whose patterns cannot intersect may still answer sequence, never
+ * parallel, because package comparison uses static prefixes only.
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -68,5 +71,42 @@ describe("TC-DPLAN-015 precision corpus", () => {
     const verdict = computePlanOverlap({ refA: "GH-306", planA, refB: "GH-307", planB });
     expect(verdict.verdict).toBe("parallel");
     expect(verdict.overlappingPaths).toEqual([]);
+  });
+
+  test("same-static-prefix disjoint package globs answer sequence conservatively", () => {
+    const planA = planDocumentFor("GH-306", "overlap/precision/same-static-prefix-a.yaml");
+    const planB = planDocumentFor("GH-307", "overlap/precision/same-static-prefix-b.yaml");
+    const scopeA = planA.phases[0]?.scope;
+    const scopeB = planB.phases[0]?.scope;
+    if (scopeA === undefined || scopeB === undefined) {
+      throw new Error("same-static-prefix fixtures must declare one phase");
+    }
+    // "packages/core/a*" and "packages/core/b*" share the "packages/core"
+    // static prefix but no concrete path can satisfy both (provably disjoint).
+    expect(scopeCoversPath(scopeA, "packages/core/auth.ts")).toBe(true);
+    expect(scopeCoversPath(scopeA, "packages/core/billing.ts")).toBe(false);
+    expect(scopeCoversPath(scopeB, "packages/core/billing.ts")).toBe(true);
+    expect(scopeCoversPath(scopeB, "packages/core/auth.ts")).toBe(false);
+
+    // packagePairOverlap compares static prefixes only, so it cannot see the
+    // disjoint dynamic segments; it answers sequence — the safe direction
+    // (conservative false sequence, never a false parallel). The emitted
+    // descriptor is the lexicographically smaller declared pattern, which is
+    // not literally present in the other scope.
+    const verdict = computePlanOverlap({ refA: "GH-306", planA, refB: "GH-307", planB });
+    expect(verdict.verdict).toBe("run-in-sequence");
+    expect(verdict.overlappingPaths).toEqual(["packages/core/a*"]);
+    expect(verdict.ordering).toBe("GH-306-before-GH-307");
+    expect(verdict.reason).toBe("shared-paths");
+
+    const reversed = computePlanOverlap({
+      refA: "GH-307",
+      planA: planB,
+      refB: "GH-306",
+      planB: planA,
+    });
+    expect(reversed.verdict).toBe("run-in-sequence");
+    expect(reversed.overlappingPaths).toEqual(["packages/core/a*"]);
+    expect(reversed.ordering).toBe("GH-306-before-GH-307");
   });
 });
