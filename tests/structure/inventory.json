@@ -110,6 +110,7 @@
     "src/commands/status.ts",
     "src/commands/verify-gates.ts",
     "src/commands/verify.ts",
+    "src/commands/watchdog.ts",
     "src/edge.ts",
     "src/index.ts",
     "src/output/index.ts",

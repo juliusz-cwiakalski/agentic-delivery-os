@@ -254,6 +254,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createPhaseCommandDefinition",
     "createStatusCommandDefinition",
     "createVerifyCommandDefinition",
+    "createWatchdogCommandDefinition",
   ],
   "cli/src/commands/status.ts": ["collectStatusFacts", "createStatusCommandDefinition"],
   "cli/src/commands/lint.ts": ["createLintCommandDefinition"],
@@ -261,6 +262,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/commands/provider.ts": ["createProviderCommandDefinition"],
   "cli/src/commands/queue.ts": ["createQueueReadyCommandDefinition"],
   "cli/src/commands/verify.ts": ["createVerifyCommandDefinition"],
+  "cli/src/commands/watchdog.ts": ["createWatchdogCommandDefinition", "renderWatchdogHuman"],
   "cli/src/commands/verify-gates.ts": ["createVerifyGatesHandler"],
   "cli/src/edge.ts": [
     "createProductionDependencies",
@@ -276,6 +278,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createStatusCommandRuntime",
     "createVerifyCommandRuntime",
     "createVerifyGatesCommandRuntime",
+    "createWatchdogCommandRuntime",
   ],
   "cli/src/index.ts": ["runCli"],
   "cli/src/output/serialize.ts": ["redact", "serializeEnvelope", "writeOutput"],
