@@ -37,7 +37,7 @@ claude:
 <item>Consult `@decision-advisor` for decisions (any type) before implementing.</item>
 <item>Consult `@designer` for UI/UX/visual tasks.</item>
 <item>Reconcile phase progress when work exists but the pm-notes ledger lacks evidence.</item>
-<item>Record phase progress through the phase command and pm-notes ledger; never rewrite declared YAML scope to record progress.</item>
+<item>Record plan-phase completion as a pm-notes `notes:` entry naming the plan phase id, commit hash, and test result; never rewrite declared YAML scope to record progress.</item>
 <item>If remediation tasks were added after review, execute them first and re-validate affected acceptance criteria.</item>
 <item>Validate acceptance criteria with evidence.</item>
 <item>Commit via `@committer` after completing each phase (one commit per phase).</item>
@@ -94,7 +94,7 @@ You MAY always run read-only exploration commands directly (listing files, readi
       - If UI/UX work: call `@designer` ensuring alignment to design system.
       - If user-facing text: call `@editor` for copywriting review.
       - For command execution: follow command_execution_policy (delegate heavy commands to `@runner`; run small focused commands directly).
-      - Record progress in the pm-notes ledger with the commit and test evidence.
+      - Record progress in the pm-notes ledger: one `notes:` entry per completed plan phase naming the plan phase id, commit hash, and test result.
       - If context-heavy, pause and ask caller about compaction.
     </step>
     <step>After all tasks, perform acceptance pass:
@@ -116,7 +116,7 @@ You MAY always run read-only exploration commands directly (listing files, readi
 <rule>Never use "doc/changes/current"; always use canonical path: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`.</rule>
 <rule>Current plan artifact: `chg-<workItemRef>-plan.yaml`; when both formats exist, the YAML plan wins.</rule>
 <rule>Execute `phases[]` in `id` order; the declared `scope` is authoritative for what a phase may touch.</rule>
-<rule>Record phase start/completion and evidence through the phase command and pm-notes registry; do not mutate declared scope to record progress.</rule>
+<rule>Plan-phase completion evidence: one `notes:` entry per completed plan phase in `chg-<workItemRef>-pm-notes.yaml` naming the plan phase id, commit hash, and test result. The phase command records lifecycle phases only (`clarify_scope`..`pr_creation`); do not mutate declared scope to record progress.</rule>
 <rule>Report evidence with the commit hash and the test result; acceptance criteria are PASSED or FAILED with evidence.</rule>
 <rule>Legacy `chg-<workItemRef>-plan.md`: parse headings and checklists as before; `plan validate` classifies it `plan.format.legacy-markdown`.</rule>
 </plan_update_conventions>

@@ -40,7 +40,7 @@ allowed-tools:
 <rule>Locate change folder: search `doc/changes/**/*--<workItemRef>--*/`</rule>
 <rule>If not found, search: `doc/changes/**/chg-<workItemRef>-spec.md`</rule>
 <rule>Spec file: `chg-<workItemRef>-spec.md`</rule>
-<rule>Plan file: `chg-<workItemRef>-plan.md`</rule>
+<rule>Plan file: `chg-<workItemRef>-plan.yaml` (YAML wins when both plan formats exist); legacy `chg-<workItemRef>-plan.md` remains readable during the transition.</rule>
 <rule>Test plan: `chg-<workItemRef>-test-plan.md`</rule>
 <rule>Folder pattern: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`</rule>
 </discovery_rules>

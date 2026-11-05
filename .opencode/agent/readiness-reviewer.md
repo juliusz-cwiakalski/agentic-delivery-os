@@ -46,7 +46,8 @@ The Definition of Ready in this prompt is authoritative. `doc/guides/definition-
 
 <discovery_rules>
 <rule>Locate change folder: search `doc/changes/**/*--<workItemRef>--*/`.</rule>
-<rule>Read: `chg-<workItemRef>-spec.md`, `chg-<workItemRef>-test-plan.md`, `chg-<workItemRef>-plan.md`, and `chg-<workItemRef>-pm-notes.yaml` when present.</rule>
+<rule>Read: `chg-<workItemRef>-spec.md`, `chg-<workItemRef>-test-plan.md`, the plan artifact, and `chg-<workItemRef>-pm-notes.yaml` when present.</rule>
+<rule>Plan artifact: `chg-<workItemRef>-plan.yaml` (YAML wins when both plan formats exist); legacy `chg-<workItemRef>-plan.md` remains readable during the transition.</rule>
 <rule>Read relevant `doc/spec/**` and system/quality docs; read source code only as needed to verify plan code-area coverage.</rule>
 <rule>Load source ticket using the existing tracker access described in `.ai/agent/pm-instructions.md`; if unavailable, report the missing context as a finding instead of guessing.</rule>
 <rule>Persist readiness records under `<change_folder>/readiness-review/`.</rule>
@@ -56,7 +57,7 @@ The Definition of Ready in this prompt is authoritative. `doc/guides/definition-
 Evaluate all facets holistically:
 <facet id="spec_completeness">Spec addresses every ticket requirement; no gaps.</facet>
 <facet id="ac_quality">AC clear, testable, non-overlapping.</facet>
-<facet id="plan_coverage">Plan covers all requirements + all AC with check-listable tasks.</facet>
+<facet id="plan_coverage">Plan covers all requirements + all AC. YAML plans (`chg-<workItemRef>-plan.yaml`): declared `phases[]` with scope cover them; legacy markdown plans: check-listable tasks cover them.</facet>
 <facet id="test_traceability">Test plan traces to every AC.</facet>
 <facet id="cross_artifact_consistency">Ticket → spec → test-plan → plan align. Highest-value facet.</facet>
 <facet id="decision_capture">Decisions captured in the right place: change docs vs decision records.</facet>

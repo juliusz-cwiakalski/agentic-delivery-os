@@ -35,7 +35,7 @@ Examples:
 <rule>Locate change folder: search `doc/changes/**/*--<workItemRef>--*/`</rule>
 <rule>If not found, search: `doc/changes/**/chg-<workItemRef>-spec.md`</rule>
 <rule>Spec file: `chg-<workItemRef>-spec.md`; derive slug & change.type from frontmatter.</rule>
-<rule>Plan file: `chg-<workItemRef>-plan.md`</rule>
+<rule>Plan file: `chg-<workItemRef>-plan.yaml` inside the change folder (YAML wins when both plan formats exist); legacy `chg-<workItemRef>-plan.md` remains readable during the transition.</rule>
 <rule>Folder pattern: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`</rule>
 <rule>Abort with clear error if spec OR plan missing.</rule>
 </discovery_rules>
@@ -71,10 +71,9 @@ Directives (case-insensitive):
 The reviewer agent applies its full review framework:
 
 **Spec/plan compliance (local mode):**
-- Scope compliance: changed files align with spec capabilities
-- Plan alignment: all tasks done, acceptance criteria have evidence
-- Plan task audit: OPEN_TASKS, DONE_BUT_UNCHECKED, CHECKED_BUT_MISSING
-- Out-of-scope detection: changes to files not in plan
+- Scope compliance: changed files align with spec capabilities and declared plan phase scope (`plan validate` / `plan diff` may support the audit)
+- Plan alignment (format-aware): YAML plan — every declared phase complete with a pm-notes `notes:` entry naming the plan phase id, commit hash, and test result (OPEN_PHASES, EVIDENCE_MISSING, SCOPE_DEVIATION); legacy markdown plan — all tasks done with evidence (OPEN_TASKS, DONE_BUT_UNCHECKED, CHECKED_BUT_MISSING)
+- Out-of-scope detection: changes to files outside declared plan scope
 
 **Code quality heuristics (both modes):**
 - Full built-in heuristic framework: correctness, security, performance, reliability, API compat, testing gaps, documentation, dependencies
@@ -110,8 +109,9 @@ If findings exist, append new phase to plan:
 Rules:
 
 - X = max existing phase + 1.
+- Append in the plan's own format: YAML plan — new `phases[]` entry with the next id and declared scope; legacy markdown plan — the markdown template above.
 - Do NOT modify earlier phases.
-- Append revision log entry.
+- Append revision log entry (legacy markdown plan).
   </remediation_phase>
 
 <commit_behavior>

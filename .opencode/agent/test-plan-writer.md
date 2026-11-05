@@ -47,7 +47,7 @@ Given `workItemRef`:
 
 1. Search for folder: `doc/changes/**/*--<workItemRef>--*/`
 2. Locate spec: `chg-<workItemRef>-spec.md`
-3. Locate plan (optional): `chg-<workItemRef>-plan.md`
+3. Locate plan (optional): `chg-<workItemRef>-plan.yaml` (YAML wins when both plan formats exist); legacy `chg-<workItemRef>-plan.md` remains readable during the transition
 4. If spec not found → FAIL
 
 Folder structure:

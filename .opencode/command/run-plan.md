@@ -66,7 +66,7 @@ Defaults (no directive): phasesToRun=1; askForReview=true; commitMode=per-phase.
 <rule>Current plan: YAML `chg-<workItemRef>-plan.yaml`; read `phases[]` in `id` order.</rule>
 <rule>Each phase declares `kind`, `scope` (files, packages, folders), optional `interactions`, `doneArtifacts`, `leases`, `weightClass`, and `leaseClass`.</rule>
 <rule>Declared scope is authoritative: execute only what a phase declares; `plan diff <workItemRef>` observes deviation.</rule>
-<rule>Record phase start/completion through the phase command and pm-notes registry; never rewrite declared YAML scope to record progress.</rule>
+<rule>Plan-phase completion evidence: one `notes:` entry per completed plan phase in `chg-<workItemRef>-pm-notes.yaml`, naming the plan phase id, commit hash, and test result. The phase command records lifecycle phases only (`clarify_scope`..`pr_creation`). Never rewrite declared YAML scope to record progress.</rule>
 <rule>Acceptance evidence: report PASSED or FAILED with the commit and test result.</rule>
 <rule>Legacy `chg-<workItemRef>-plan.md`: parse `### Phase N` headings and task checkboxes as before; plan validate classifies it `plan.format.legacy-markdown`.</rule>
 </plan_parsing_rules>
@@ -150,7 +150,7 @@ No file edits, no commits. Output structured summary: starting phase, phasesToRu
 </process>
 
 <plan_update_rules>
-<rule>Modify only: task checkbox lines; acceptance criteria lines; Execution Log section.</rule>
+<rule>Legacy markdown plan only — modify: task checkbox lines; acceptance criteria lines; Execution Log section. YAML plan: record progress in pm-notes `notes:` entries, never in the plan file.</rule>
 <rule>Keep original line order & spacing (no reflow).</rule>
 <rule>Evidence parenthetical ≤ 80 chars; lowercase verbs; avoid redundancy.</rule>
 <rule>If Execution Log missing → append canonical section before first update.</rule>

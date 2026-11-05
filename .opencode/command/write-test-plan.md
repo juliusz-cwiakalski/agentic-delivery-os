@@ -43,13 +43,13 @@ Given `workItemRef`:
 
 1. Search for folder: `doc/changes/**/*--<workItemRef>--*/`
 2. Locate spec: `chg-<workItemRef>-spec.md` (required)
-3. Locate plan: `chg-<workItemRef>-plan.md` (optional)
+3. Locate plan: `chg-<workItemRef>-plan.yaml` (optional; YAML wins when both plan formats exist, legacy `chg-<workItemRef>-plan.md` remains readable during the transition)
 4. Read: `.ai/rules/testing-strategy.md` (required)
 
 Files:
 
 - Spec: `chg-<workItemRef>-spec.md`
-- Plan: `chg-<workItemRef>-plan.md`
+- Plan: `chg-<workItemRef>-plan.yaml` (legacy `chg-<workItemRef>-plan.md` readable during the transition)
 - Test Plan: `chg-<workItemRef>-test-plan.md`
 - Branch: `<change.type>/<workItemRef>/<slug>`
   </discovery_rules>

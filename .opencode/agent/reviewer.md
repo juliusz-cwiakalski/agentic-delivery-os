@@ -79,7 +79,8 @@ If unknown flags: output `NEEDS_INPUT` with exact rerun suggestion.
 <rule>Locate change folder: search `doc/changes/**/*--<workItemRef>--*/`</rule>
 <rule>If not found, search: `doc/changes/**/chg-<workItemRef>-spec.md`</rule>
 <rule>Spec file: `chg-<workItemRef>-spec.md`</rule>
-<rule>Plan file: `chg-<workItemRef>-plan.md`</rule>
+<rule>Plan file: `chg-<workItemRef>-plan.yaml` inside the change folder (YAML wins when both plan formats exist).</rule>
+<rule>Legacy `chg-<workItemRef>-plan.md` is readable during the transition; `plan validate` answers it with `plan.format.legacy-markdown`.</rule>
 <rule>PM notes file: `chg-<workItemRef>-pm-notes.yaml`</rule>
 <rule>Folder pattern: `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/`</rule>
 <rule>changeBranch: `<change.type>/<workItemRef>/<slug>`</rule>
@@ -211,13 +212,20 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     - Detect out-of-scope changes not covered by the spec.
     - Flag contradictions with linked issue decisions or constraints.
 
-    **Plan Task Audit:**
-    - Parse plan task checklists (`- [ ]` / `- [x]`).
-    - Identify gap types:
-      - OPEN_TASKS: tasks still unchecked.
-      - DONE_BUT_UNCHECKED: implemented in diff but unchecked.
-      - CHECKED_BUT_MISSING: marked done but no evidence in code.
-    - Verify: tasks vs code (checked tasks need corresponding changes), tests vs scenarios.
+    **Plan Audit (format-aware):**
+    - YAML plan (`chg-<workItemRef>-plan.yaml`): audit declared `phases[]` —
+      - Phase/scope conformance: compare each phase's declared `scope` against the diff (may use `plan validate` / `plan diff`).
+      - Completion evidence: every completed plan phase has a pm-notes `notes:` entry naming the plan phase id, commit hash, and test result.
+      - Gap types:
+        - OPEN_PHASES: plan phases without a matching pm-notes completion entry.
+        - EVIDENCE_MISSING: completion entry lacks the commit hash or test result.
+        - SCOPE_DEVIATION: diff changes outside declared phase scope.
+    - Legacy markdown plan (`chg-<workItemRef>-plan.md`): parse task checklists (`- [ ]` / `- [x]`).
+      - Gap types:
+        - OPEN_TASKS: tasks still unchecked.
+        - DONE_BUT_UNCHECKED: implemented in diff but unchecked.
+        - CHECKED_BUT_MISSING: marked done but no evidence in code.
+    - Verify: phases/tasks vs code (completed phases need corresponding changes), tests vs scenarios.
 
     Add spec/plan findings to the findings list with appropriate severity.
   </step>
@@ -249,7 +257,7 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
     Findings Count: N issues (Xc / Xh / Xm / Xl / Xi)
     Summary: ...
     Plan Status: ALL_TASKS_DONE | INCOMPLETE | MISMATCH
-    Plan Gaps: OPEN_TASKS, DONE_BUT_UNCHECKED, CHECKED_BUT_MISSING
+    Plan Gaps: OPEN_PHASES, EVIDENCE_MISSING, SCOPE_DEVIATION (YAML plan) | OPEN_TASKS, DONE_BUT_UNCHECKED, CHECKED_BUT_MISSING (legacy markdown plan)
     Test Coverage Gaps: missing tests vs plan scenarios
     Next Step: PROCEED | CALL_CODER | EXECUTE_REMEDIATION_PHASE
     ```
