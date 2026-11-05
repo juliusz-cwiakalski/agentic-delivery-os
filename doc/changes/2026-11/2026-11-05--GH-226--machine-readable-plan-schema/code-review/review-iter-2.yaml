@@ -1,0 +1,164 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-226
+branch: feat/GH-226/plan-schema
+status: PASS
+summary: >-
+  Re-review after remediation iteration 1: all blocking findings are resolved
+  and verified against the actual files and commits, not just the claims. F-1
+  (high): all nine consuming prompts (reviewer, pm, readiness-reviewer,
+  doc-syncer, test-plan-writer agents; review, review-deep, sync-docs,
+  write-test-plan commands) now carry the dual-format plan rule identical to
+  run-plan/coder, no plan.md-only discovery rule remains in .opencode, and
+  .ados-claude was regenerated in the same commit (staleness clean at HEAD).
+  F-2 (medium): the plan-phase completion-evidence convention (one pm-notes
+  notes entry per completed plan phase naming phase id, commit hash, test
+  result) is pinned identically in run-plan, coder, pm, and reviewer, the
+  phase command is scoped to lifecycle ids, the DoD guide disambiguates the
+  two phase vocabularies, and run-plan checkbox edits are scoped to legacy
+  plans only. F-3/F-4/F-5/F-6 are resolved with accurate content — including
+  the F-5 empirical correction, which this review re-verified in code
+  (plan.ts maps a failed readDiff read to input.value.rejected, whose error
+  table row projects user-validation exit 1, exactly as the feature spec now
+  documents; the iteration-1 exit-2 premise was wrong). F-7/F-8 stay deferred
+  with no in-change action remaining. Gates re-run at HEAD by this review:
+  88/88 plan behaviour tests, 525/525 structure+boundaries (registry fix
+  confirmed), distribution guard no drift (81 docs), plugin staleness clean,
+  git diff --check clean, pnpm typecheck green; production code under
+  packages/ is byte-identical to the iteration-1 review HEAD, so the
+  iteration-1 AC verification stands. One non-blocking low finding remains:
+  plan tasks 8.1-8.3 are implemented and evidenced (commit 83b25ca6, pm-notes
+  remediation entry) but their checkboxes are unchecked and the Execution Log
+  has no Phase 8.1-8.3 row naming the commit — close this bookkeeping in the
+  same pending PM-checkpoint commit that lands the corrected TC-DPLAN-027/028
+  worktree row. Spec compliance now PASS: F-13's two halves (writer flip +
+  consuming prompts) are both complete and all 11 ACs hold.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-05--GH-226--machine-readable-plan-schema/chg-GH-226-plan.md:360
+    message: >-
+      Remediation tasks 8.1-8.3 (the @toolsmith prompt flip, evidence-convention
+      pinning, and plugin regeneration) are done and verifiably evidenced —
+      commit 83b25ca6 contains all of it and the pm-notes decisions entry
+      "Remediation iteration 1 executed" names the commit — but their
+      checkboxes remain unchecked and the Execution Log has no Phase 8.1-8.3
+      row for the commit (revision-log row 1.2 covers only the coder hygiene
+      in e827d89a/9da7cce3). Under this change's own legacy-markdown checkbox
+      convention this is DONE_BUT_UNCHECKED, and the downstream dod_check
+      ("all plan tasks checked", task 7.4) will trip on it if left as-is.
+    suggestion: >-
+      In the already-pending PM-checkpoint commit (the one that must also land
+      the uncommitted TC-DPLAN-027/028 correction in chg-GH-226-test-plan.md),
+      tick 8.1-8.3 and append one Execution Log row (or extend the revision
+      log) naming commit 83b25ca6 with the gate results already recorded in
+      pm-notes. No new remediation phase needed.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+remediation_verification:
+  iter1_f1_high_prompt_flip:
+    verdict: RESOLVED
+    evidence: >-
+      Commit 83b25ca6. Grep-verified: reviewer.md:82-83 (discovery) and 216-227
+      (format-aware plan audit with OPEN_PHASES/EVIDENCE_MISSING/SCOPE_DEVIATION
+      for YAML, checkbox gaps for legacy); pm.md:368 (remediation loop) and 386
+      (dod_check verifies per-phase pm-notes evidence for YAML, checkboxes for
+      legacy); readiness-reviewer.md:49-50,60; doc-syncer.md:32;
+      test-plan-writer.md:50; review.md:38; review-deep.md:39; sync-docs.md:50,171;
+      write-test-plan.md:46,52. Zero plan.md-only discovery rules remain — every
+      remaining chg-<workItemRef>-plan.md mention is an explicit legacy-transition
+      path. .ados-claude regenerated in the same commit; git diff --exit-code --
+      .ados-claude clean at HEAD. Frontmatter and license headers untouched; no
+      evolution-narration wording introduced (only pre-existing heuristic text
+      matches those patterns); prompts stay tight (single-rule additions).
+  iter1_f2_medium_evidence_convention:
+    verdict: RESOLVED
+    evidence: >-
+      Identical convention pinned in run-plan.md:69, coder.md:40/97/119,
+      pm.md:386, reviewer.md:216-227: one pm-notes notes entry per completed
+      plan phase naming the plan phase id, commit hash, and test result; the
+      phase command is explicitly scoped to lifecycle ids
+      (clarify_scope..pr_creation); declared YAML scope never mutated for
+      progress. doc/guides/definition-of-done.md:26,40 separates plan phases
+      from lifecycle phases and names both evidence homes. run-plan.md:153
+      scopes checkbox/Execution-Log edits to legacy markdown plans only.
+  iter1_f3_low_plan_task_42_exit:
+    verdict: RESOLVED
+    evidence: >-
+      e827d89a: task 4.2 and 4.5 corrected in place with bracketed remediation
+      notes (malformed invocation exits 1 via input.value.rejected /
+      user-validation; exit 2 stays the unreadable/platform class) and the
+      Phase 4 Execution Log row carries the reconciliation. Matches shipped
+      behaviour asserted by TC-DPLAN-022.
+  iter1_f4_low_test_plan_reconciliation:
+    verdict: RESOLVED
+    evidence: >-
+      Section 3 and 7 statuses all Implemented (0 "To Implement"/"Not
+      run"/"Pending", 74 "Implemented"); section 10 execution summary
+      populated with per-suite results and TC-DPLAN-026 median+p95 numbers
+      (Bun 1.4.4, linux/x64); TC-DPLAN-026 body now states BOTH median and p95
+      hard assertions per NFR-2. The uncommitted worktree edit corrects the
+      stale TC-DPLAN-027/028 row (523/2 -> 525/0) — content verified accurate
+      against this review's own 525-pass/0-fail re-run; it must land in the
+      pending PM-checkpoint commit.
+  iter1_f5_low_readdiff_docs:
+    verdict: RESOLVED
+    evidence: >-
+      feature-plan-schema.md:30 now states the shipped truth: embedder-injected
+      readDiff port, no production reader in-tree, repo adapter reads .git
+      metadata without spawning git. The empirical correction is right: this
+      review re-traced packages/cli/src/commands/plan.ts (diffHandler maps a
+      failed diff read to kind input / input.value.rejected with summary
+      "repository diff for <ref> could not be read"), packages/cli/src/edge.ts
+      (default readDiff returns ok:false reason:"unreadable"), and the shared
+      error table (input.value.rejected -> projectionClass user-validation ->
+      exit 1). Documenting exit 1 is correct; the iteration-1 exit-2 premise
+      was wrong and the plan task 8.4 bracketed correction records it.
+  iter1_f6_low_overlap_approximation:
+    verdict: RESOLVED
+    evidence: >-
+      Commit 9da7cce3. feature-plan-schema.md:130 documents the conservative
+      same-static-prefix approximation and names the pinning test.
+      tests/behaviour/plan-overlap-precision.test.ts is non-vacuous: it first
+      proves the fixtures provably disjoint via scopeCoversPath (a* covers
+      auth.ts not billing.ts; b* the converse), then asserts the conservative
+      run-in-sequence verdict, the emitted descriptor "packages/core/a*", and
+      ordering/reason symmetry across both argument orders. Fixtures minimal
+      and schema-valid.
+  iter1_f7_f8_info:
+    verdict: DEFERRED_CONFIRMED
+    evidence: >-
+      No action-needed remains in-change: no unchecked task references F-7/F-8
+      and the iteration-1 adjudication (follow-up polish) stands. Production
+      code is unchanged since iteration 1, so neither info note regressed.
+  structure_gate_regression:
+    verdict: RESOLVED
+    evidence: >-
+      scripts/checks/forbidden-literals.registry.json registers
+      doc/spec/features/feature-plan-schema.md (e827d89a); this review re-ran
+      bun test tests/structure tests/boundaries at HEAD: 525 pass / 0 fail
+      across 47 files (4745 expect calls).
+gates_rerun_at_head:
+  plan_behaviour: "88 pass / 0 fail (16 files, re-run by this review)"
+  structure_boundaries: "525 pass / 0 fail (47 files)"
+  distribution_guard: "exit 0 — 81 docs, no drift"
+  plugin_staleness: "clean (git diff --exit-code -- .ados-claude)"
+  git_diff_check: "clean"
+  typecheck: "green (all packages)"
+  production_code_delta_since_iter1: "empty — git diff a04a8447..HEAD -- packages/ is empty; only tests/fixtures, prompts, docs, and change artifacts changed"
+reviewed_at: "2026-11-06T00:55:00Z"
+next_step: PROCEED
