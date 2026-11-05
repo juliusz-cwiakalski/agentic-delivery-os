@@ -16,6 +16,12 @@ Every error carries: stable hierarchical code (`domain.reason.detail`),
 category (user, platform, transient, permanent), retryable, consequence
 (did the mutation land; `unknown` is first-class), remediation hint.
 
+**Envelope formatting.** `--pretty[=auto|always|never]` (default auto):
+pretty-printed indented JSON on an interactive terminal, one minified
+line when piped or scripted (agent- and NDJSON-friendly); `always` and
+`never` enforce. Stream outputs (`--watch`) stay line-delimited in every
+mode: multi-line objects would break stream framing.
+
 **Exit codes.** 0 success; 1 user/validation; 2 platform/provider, and
 all state-unverified outcomes (never exit-0 silence).
 
@@ -30,6 +36,16 @@ read never renders as clear or zero.
 **Stable finding codes.** Status-family findings carry stable symbolic
 codes (for example `ci.red-on-main`, `tracker.stalled-ticket`,
 `lane.idle-no-reason`) so agents act without re-deriving.
+
+**Refusal semantics (shared pin).** A clean refusal is a successful
+verification with a negative verdict: `result=refused`, exit 1,
+classified error naming the gate or condition with a remediation hint.
+Never exit 0 (silence), never exit 2 (that is reserved for
+platform/provider faults and state-unverified outcomes).
+
+Exact Given/When/Then scenarios with assertions per behavior are in
+[test-scenarios.md](test-scenarios.md); they are the seed each owning
+story's test plan inherits and reconciles.
 
 Test scenarios shared by all commands: envelope-valid-on-failure;
 exit-code projection; secret redaction; bounded output.

@@ -193,6 +193,41 @@ and retained). The remaining phases execute in the interactive session.
   reconciliation; M1-S15 AC: exhaustion escalates to queue-failed plus
   typed question, durable across daemon restarts.
 
+## Phase 12: Test scenarios as the API prototype (owner review request)
+
+- [x] m1/test-scenarios.md: 20 behavior-organized scenarios (SC-M1-01
+  through SC-M1-20) across truth and transaction, plans and scheduling,
+  execution and lifecycle, communication and contracts; each with
+  Given, exact When invocation, observable Then (text keys, envelope
+  fields, side effects), and machine Assert; shared refusal-semantics
+  pin (result=refused, exit 1, never exit 0 or 2); coverage map to
+  stories; status semantics: seed for owning story test plans,
+  reconciled at delivery, divergence is a defect.
+- [x] m1/journeys.md: compact command-sequence blocks added to J1
+  through J7 so each journey reads directly into its commands.
+- [x] contracts.md: shared refusal-semantics pin and a cross-link to
+  the scenario file.
+- [x] Registered test-scenarios.md in the literal corpus; README
+  contents row and index updated.
+
+## Phase 13: Per-command reference pages (owner review request)
+
+- [x] m1/commands/: 26 one-per-command reference pages (board, brief,
+  closeout, commit, config, daemon, db, dispatch, doctor, lanes, lint,
+  mcp, merge, phase, plan, provider, queue incl. queue ready, retro,
+  spend, state, status, verify change, verify deploy, verify gates,
+  watchdog), each with NAME, status, SYNOPSIS, DESCRIPTION, OPTIONS,
+  OUTPUT shape, EXIT STATUS, EXAMPLES including a pretty `--json`
+  envelope (and a minified script-context example where instructive),
+  ERRORS from the error table, and SEE ALSO links.
+- [x] Output formatting pinned: `--pretty[=auto|always|never]`, default
+  auto (interactive terminal -> indented; piped or scripted -> one
+  minified line, agent- and NDJSON-friendly); streams stay
+  line-delimited in every mode. Recorded in the man page global
+  options and the contracts shared pins.
+- [x] Registered all 26 pages in the literal corpus; README contents
+  row.
+
 ## Revision log
 
 - 2026-11-03: Added Phase 6 for code review iteration 1 remediation.

@@ -101,10 +101,19 @@ record-plus-commit atomically for the completed phase's pending work.
 ## GLOBAL OPTIONS
 
 - `--json` - machine envelope output.
+- `--pretty[=auto|always|never]` - envelope formatting when `--json` is
+  set: `auto` (default) pretty-prints indented JSON on an interactive
+  terminal and emits one minified line when piped or scripted;
+  `always`/`never` enforce. Stream outputs (`--watch`) stay
+  line-delimited (one JSON object per line) in every mode: multi-line
+  objects would break stream framing.
 - `--config <path>` - explicit config file.
 - `--no-color` - plain output.
 - `--help` - command help with examples.
 - `--version` - version and build info.
+
+Per-command reference pages with invocation examples and JSON outputs
+are in [commands/](commands/).
 
 ## EXIT STATUS
 

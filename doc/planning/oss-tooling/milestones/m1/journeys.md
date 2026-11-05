@@ -31,6 +31,11 @@ No-token guarantee: between iterations, zero coordinator tokens on
 waiting, polling, scheduling, or re-verification of healthy paths.
 Stories: M1-S10, M1-S16, M1-S4, M1-S12, M1-S17, M1-S18.
 
+```
+status -> blockers answer <id> --choice <n> -> merge <ref> -> closeout <ref> -> queue plan --next 1
+```
+
+
 ## J2: planning a batch of changes (priorities, repos, dependencies)
 
 Trigger: the owner or coordinator plans the next wave.
@@ -50,6 +55,11 @@ Trigger: the owner or coordinator plans the next wave.
 
 No-token guarantee: parallelism is computed, never discovered by reading
 diffs. Stories: M1-S13, M1-S17.
+
+```
+plan validate <ref> -> plan overlap <refA> <refB> -> queue add <ref> --priority <n> [--dep <ref>] -> queue plan --next N
+```
+
 
 ## J3: a lane under the daemon (spawn to handover)
 
@@ -74,6 +84,14 @@ No-token guarantee: no session babysitting, no silent restart loops;
 the resume-amplification metric reads approximately 1 and is visible in
 spend. Stories: M1-S9, M1-S11, M1-S14, M1-S15, M1-S18.
 
+```
+(lane, driven by the daemon)
+phase complete <ref> <phase>          # record + commit atomically
+blockers publish <type> --lane <id> "<question>" [--options a,b]
+(daemon) reconcile on start -> classify lanes -> resume from ledger
+```
+
+
 ## J4: the owner day
 
 Trigger: daily owner attention.
@@ -90,6 +108,11 @@ Trigger: daily owner attention.
 No-token guarantee: the owner starts from facts, not chat; no LLM in the
 render path. Stories: M1-S5, M1-S6, M1-S4.
 
+```
+brief -> board [--watch] -> blockers answer <gate-question-id> --choice <n>   # waivers recorded with author and scope
+```
+
+
 ## J5: a blocker round-trip (hours to seconds)
 
 Trigger: a lane hits a decision, ambiguity, missing credential, or
@@ -104,6 +127,11 @@ external wait.
    answer and resumes the lane without a full session re-entry.
 
 Stories: M1-S16 (built on the M1-S5 mechanism, two audiences).
+
+```
+blockers list [--open] -> blockers answer <id> [--choice <n>]        # lane resumes, no session re-entry
+```
+
 
 ## J6: degraded and fallback regimes
 
@@ -121,6 +149,13 @@ Trigger: daemon down, provider window, or constrained runner.
 
 Stories: M1-S17, M1-S18, M0-S13.
 
+```
+daemon status [--live] | status --watch          # degraded mode declared when the daemon is down
+provider parks list -> queue plan --next N       # parks with conditions; weight caps visible, not lane caps
+dispatch <ref>                                   # one-shot path while the daemon is down
+```
+
+
 ## J7: learning and accounting at the change boundary
 
 Trigger: a change merges and closes out.
@@ -135,6 +170,11 @@ Trigger: a change merges and closes out.
    cannot alter.
 
 Stories: M1-S8, M1-S11, M1-S12, M1-S19.
+
+```
+closeout <ref> [--apply] -> spend [--ref <ref>] [--amplification] -> retro report [--level <name>]
+```
+
 
 ## What explicitly does NOT change at M1
 
