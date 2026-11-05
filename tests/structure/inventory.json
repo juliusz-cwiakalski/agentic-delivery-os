@@ -60,7 +60,8 @@
     "src/state/edge.ts",
     "src/state/index.ts",
     "src/state/ledger.ts",
-    "src/state/registry.ts"
+    "src/state/registry.ts",
+    "src/state/storage-error.ts"
   ],
   "adapters": [
     "src/azure/index.ts",

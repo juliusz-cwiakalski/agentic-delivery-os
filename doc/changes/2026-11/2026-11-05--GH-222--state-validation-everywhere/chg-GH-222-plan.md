@@ -292,45 +292,64 @@ established at the driver edge.
 
 **Tasks**:
 
-- [ ] **2.1** `packages/core/src/state/ledger.ts` (pure): tear-topology helpers — classify a tear
+- [x] **2.1** `packages/core/src/state/ledger.ts` (pure): tear-topology helpers — classify a tear
   as terminal (torn-tail) vs mid-record (non-terminal, parseable frames after the break), compute
   the last-valid-frame byte offset and the post-tear extent, and build the salvage record
   envelope (EVT-1/DM-1: tear position, quarantine reference, record counts; additive record kind
   within `delivery.state.v1`; never payload content or checksum bytes). Unit-tested with byte
   strings, no filesystem.
-- [ ] **2.2** `packages/core/src/state/driver/runtime-edge.ts` + `tests/fixtures/state/harness.ts`:
+- [x] **2.2** `packages/core/src/state/driver/runtime-edge.ts` + `tests/fixtures/state/harness.ts`:
   classify ENOSPC-family write failures into a distinguishable exhaustion failure form (runtime
   error classification at the edge — the only runtime-API location); the test edge raises that
   same exhaustion-shaped form for the ASM-3 pre-commit points (`append-before-flush`,
   `replace-before-temp`, `replace-after-temp-write`, `replace-rename`) while other armed points
   and non-ENOSPC errors keep the generic write-failure form. Tests keep asserting `edge.raised`.
-- [ ] **2.3** `packages/core/src/state/index.ts`: map the exhaustion form at the append and
+- [x] **2.3** `packages/core/src/state/index.ts`: map the exhaustion form at the append and
   derived-document replace pre-commit points to `state.storage.exhausted` (consequence
   `not_landed`, remediation from the Phase-1 row, ledger/document at the last valid state);
   every other write error keeps `state.write.failed`; a failed index rebuild keeps
   `state.write.failed` (ASM-3 carve-out). Note: `replaceDocument` still lands its ledger-first
   intent record before the document replace (existing DEC-8 contract; TC-GH222-016 accepts the
   ledger-first record — the document target must stay at the previous version).
-- [ ] **2.4** **TC-GH222-001, TC-GH222-002, TC-GH222-003**: extend
+- [x] **2.4** **TC-GH222-001, TC-GH222-002, TC-GH222-003**: extend
   `tests/behaviour/state-torn.test.ts` — framing break/truncated tail, sequence gap/duplicate/
   reset, checksum mismatch (pure-ledger half via the ledger case): classified torn with store
   path and record position, guidance pointing at inspect/salvage, no values and no empty record
   set, byte-identity after reads, no canary/checksum text, indexed read classifies identically.
-- [ ] **2.5** **TC-GH222-005**: extend `tests/behaviour/state-evidence.test.ts` — evidence
+- [x] **2.5** **TC-GH222-005**: extend `tests/behaviour/state-evidence.test.ts` — evidence
   hygiene (path/position only), verified-empty distinctness (`verifiedEmpty: true` never shaped
   like torn), falsy-value exactness regression pointer, `state.keys.missing` on a non-empty
   key-set against an absent store.
-- [ ] **2.6** **TC-GH222-015, TC-GH222-016**: new `tests/behaviour/state-storage-exhausted.test.ts`
+- [x] **2.6** **TC-GH222-015, TC-GH222-016**: new `tests/behaviour/state-storage-exhausted.test.ts`
   — append under `append-before-flush` exhaustion (byte-identical ledger, not `state.write.failed`,
   disarm-and-retry lands exactly one record at the next sequence); derived-document replace under
   `replace-before-temp` / `replace-after-temp-write` / `replace-rename` exhaustion plus the
   absent-target fixture (target stays version 1 or absent, no partial document, retry lands
   atomically; `replace-after-rename` never used as a disk-full model).
-- [ ] **2.7** **TC-GH222-012, TC-GH222-013**: extend `tests/behaviour/state-index.test.ts` —
+- [x] **2.7** **TC-GH222-012, TC-GH222-013**: extend `tests/behaviour/state-index.test.ts` —
   rebuild from the ledger alone with the index absent (`reason: "missing"`) and corrupt
   (`reason: "corrupt"`); divergent index (altered/deleted/phantom row) rebuilds, reports
   (`reason: "divergent"`), converges stably, compared against the `jsonl` verified-scan oracle;
   forced `index-rebuild-write` fault fails `state.write.failed` and never serves stale truth.
+
+**Task evidence (2026-11-05)**: `ledger.ts` gains `analyzeTear` (terminal vs mid-record
+topology, UTF-8 prefix offset, post-tear extent, discarded frames) and `buildSalvageRecord`;
+`storage-error.ts` (new, runtime-neutral) carries the distinguishable exhaustion form;
+`driver/runtime-edge.ts` re-raises ENOSPC-family (`ENOSPC`/`EDQUOT`/`EFBIG`) storage failures in
+that form for every storage write; `index.ts` maps the form to `state.storage.exhausted` at the
+append and derived-document replace boundaries while every other write error keeps
+`state.write.failed` (a failed index rebuild keeps `state.write.failed` — ASM-3). The harness adds
+the opt-in `armExhaustion` seam so existing generic-fault contracts stay unchanged. No new error
+rows.
+
+**Acceptance (Phase 2)**: append/replace exhaustion → `state.storage.exhausted`, `not_landed`,
+ledger byte-identical with the same count/last sequence, target document at the previous version
+or absent — PASSED (TC-GH222-015/016, 5 tests). Torn classification with path/position/guidance
+and no values across `read`/`readRecords`/`checkIntegrity` on both driver kinds, zero byte and
+listing change — PASSED (TC-GH222-001/002/003). Absent/corrupt/divergent indexes rebuild from the
+ledger alone and converge with the `jsonl` oracle — PASSED (TC-GH222-012/013). Exhaustion form is
+distinguishable at the edge — PASSED (`armExhaustion` raises it; generic faults keep
+`state.write.failed`).
 
 **Acceptance Criteria**:
 
@@ -758,5 +777,6 @@ NFR-6 → 1, 5; NFR-7 → 3.
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
-| 1 — Contracts, vocabulary, and synced error tables | Done | 2026-11-05 | 2026-11-05 | (this commit) | `error-table-sync` entries=43 documented=43 exit 0; targeted suites 105 pass (error-table-sync, error-table, state-contract), state-error-classification 8 pass; `git diff --check` clean. Deliberate baseline regeneration: `BASELINE_ROWS + 9`, frozen state rows repinned to the refined texts. Fixtures updated: corpora, contract export inventory, content inventory. |
+| 1 — Contracts, vocabulary, and synced error tables | Done | 2026-11-05 | 2026-11-05 | 0684212d | `error-table-sync` entries=43 documented=43 exit 0; targeted suites 105 pass (error-table-sync, error-table, state-contract), state-error-classification 8 pass; `git diff --check` clean. Deliberate baseline regeneration: `BASELINE_ROWS + 9`, frozen state rows repinned to the refined texts. Fixtures updated: corpora, contract export inventory, content inventory. |
+| 2 — Tear topology, exhaustion seam, and fail-closed write boundaries | Done | 2026-11-05 | 2026-11-05 | (this commit) | Verification block: torn+evidence 34 pass; storage-exhausted 5 pass; index 10 pass; keys+atomic-replace 13 pass regressions. Broader regression sweep (state-fence, state-permissions, state-error-classification, state-conformance, content-inventory, state-imports, state-scope, packed-state) 48 pass. No SQLite skip needed on this runtime. New module `state/storage-error.ts` registered in the inventory + executable allowance. |
 | — | Not started | — | — | — | Populated during delivery; record per-phase commit, suite results, SQLite-binding skips, and the OQ-T2 decision |

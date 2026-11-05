@@ -38,6 +38,7 @@ import {
 } from "./driver/strategy.js";
 import type { StateRuntimeEdge } from "./edge.js";
 import { buildRecord, serializeRecord, verifyLedger } from "./ledger.js";
+import { isStorageExhaustion } from "./storage-error.js";
 
 export {
   STATE_DRIVER_KINDS,
@@ -97,6 +98,14 @@ const fail = (code: StateFailureCode, location: StateSafeLocation): StateResult<
 
 const torn = (path: string, record: number): StateResult<never> =>
   fail("state.store.torn", { path, record });
+
+/** A failed write is exhaustion (fail-closed full disk) or a generic write error. */
+const writeFailure = (error: unknown, path: string, record?: number): StateResult<never> => {
+  const location: StateSafeLocation = record === undefined ? { path } : { path, record };
+  return isStorageExhaustion(error)
+    ? fail("state.storage.exhausted", location)
+    : fail("state.write.failed", location);
+};
 
 const encodeSegment = (value: string): string => encodeURIComponent(value);
 
@@ -309,8 +318,8 @@ export const createStateStore = (
       ensureRoot();
       edge.raiseFault("append-before-flush");
       edge.appendFile(ledgerPath, serializeRecord(record));
-    } catch {
-      return fail("state.write.failed", { path: ledgerPath, record: sequence });
+    } catch (error) {
+      return writeFailure(error, ledgerPath, sequence);
     }
     // Crash barrier: the record has landed and is fsynced. An injected fault
     // here simulates a writer dying before the fence is released (TC-015), so
@@ -400,10 +409,10 @@ export const createStateStore = (
         edge.raiseFault("replace-after-temp-write");
         edge.raiseFault("replace-rename");
         edge.renameFile(temporary, target);
-      } catch {
+      } catch (error) {
         // The target is still the previous version; the document replace did
         // not land even though its intent record did (DEC-8).
-        return fail("state.write.failed", { path: target, record: record.value.sequence });
+        return writeFailure(error, target, record.value.sequence);
       }
       // Crash barrier: the rename already made the new version visible.
       edge.raiseFault("replace-after-rename");

@@ -6,7 +6,14 @@
  * edge supplies the bytes. Detection always completes before a value is
  * returned; a tear is reported as a position, never as a payload.
  */
-import { STATE_SCHEMA_VERSION, type StateJsonValue, type StateRecord } from "#contracts";
+import {
+  STATE_SALVAGE_PAYLOAD_SCHEMA,
+  STATE_SALVAGE_RECORD_KEY,
+  STATE_SALVAGE_RECORD_KIND,
+  STATE_SCHEMA_VERSION,
+  type StateJsonValue,
+  type StateRecord,
+} from "#contracts";
 
 /** The recorded checksum width (16 lowercase hex digits, FNV-1a 64-bit). */
 export const CHECKSUM_HEX_LENGTH = 16;
@@ -172,3 +179,117 @@ export const verifiedPrefixLength = (text: string): number => {
   if (text.length === 0) return 0;
   return text.endsWith("\n") ? text.length : text.lastIndexOf("\n") + 1;
 };
+
+const utf8Length = (text: string): number => new TextEncoder().encode(text).length;
+
+/**
+ * How a tear's damage is shaped relative to the last valid frame (DEC-2):
+ * `terminal` means the invalid suffix begins after the last complete frame
+ * (salvageable); `mid-record` means a parseable frame follows the break, so
+ * salvage must refuse and change nothing.
+ */
+export type LedgerTearTopology = "terminal" | "mid-record";
+
+/** The salvage-relevant geometry of one torn ledger (DM-3). */
+export type LedgerTearAnalysis = {
+  readonly topology: LedgerTearTopology;
+  readonly variant: TornTailVariant;
+  /** 1-based record position of the first invalid frame. */
+  readonly position: number;
+  /** UTF-8 byte offset of the last valid frame (the truncation point). */
+  readonly validPrefixBytes: number;
+  /** UTF-8 byte extent of the post-tear suffix (the quarantined bytes). */
+  readonly tailBytes: number;
+  /** Frames (complete or partial) from the tear to the end of the text. */
+  readonly discardedFrames: number;
+};
+
+/**
+ * Locate the first integrity break of a torn ledger and describe its topology.
+ * Returns undefined for a verified or empty ledger and for a schema-version
+ * mismatch (the version verdict precedes any salvage decision).
+ */
+export const analyzeTear = (
+  text: string,
+  schemaVersion: string = STATE_SCHEMA_VERSION,
+): LedgerTearAnalysis | undefined => {
+  const verification = verifyLedger(text, schemaVersion);
+  if (verification.status !== "torn") return undefined;
+  const totalBytes = utf8Length(text);
+  if (verification.variant === "truncated-tail") {
+    const prefixCharacters = text.lastIndexOf("\n") + 1;
+    const validPrefixBytes = utf8Length(text.slice(0, prefixCharacters));
+    return {
+      topology: "terminal",
+      variant: verification.variant,
+      position: verification.position,
+      validPrefixBytes,
+      tailBytes: totalBytes - validPrefixBytes,
+      discardedFrames: 1,
+    };
+  }
+  const lines = text.slice(0, -1).split("\n");
+  const records: StateRecord[] = [];
+  let breakIndex = -1;
+  for (const [index, line] of lines.entries()) {
+    const position = index + 1;
+    const record = parseRecordLine(line);
+    if (record === undefined) {
+      breakIndex = index;
+      break;
+    }
+    const previous = records[index - 1];
+    const sequence = sequenceVariant(previous?.sequence, record.sequence, position);
+    if (sequence !== undefined) {
+      breakIndex = index;
+      break;
+    }
+    if (record.checksum !== checksumOfPayload(record.payload)) {
+      breakIndex = index;
+      break;
+    }
+    records.push(record);
+  }
+  if (breakIndex < 0) return undefined;
+  const laterFrames = lines
+    .slice(breakIndex + 1)
+    .filter((line) => parseRecordLine(line) !== undefined).length;
+  const prefixCharacters = lines
+    .slice(0, breakIndex)
+    .reduce((total, line) => total + line.length + 1, 0);
+  const validPrefixBytes = utf8Length(text.slice(0, prefixCharacters));
+  return {
+    topology: laterFrames > 0 ? "mid-record" : "terminal",
+    variant: verification.variant,
+    position: verification.position,
+    validPrefixBytes,
+    tailBytes: totalBytes - validPrefixBytes,
+    discardedFrames: lines.length - breakIndex,
+  };
+};
+
+/**
+ * Build the classified salvage record (EVT-1, DM-1): tear position, quarantine
+ * reference, and counts only — never payload content or checksum bytes.
+ */
+export const buildSalvageRecord = (
+  sequence: number,
+  tear: LedgerTearAnalysis,
+  quarantinePath: string,
+  schemaVersion: string = STATE_SCHEMA_VERSION,
+): StateRecord =>
+  buildRecord(
+    STATE_SALVAGE_RECORD_KIND,
+    STATE_SALVAGE_RECORD_KEY,
+    sequence,
+    {
+      schemaId: STATE_SALVAGE_PAYLOAD_SCHEMA,
+      tearPosition: tear.position,
+      truncationOffset: tear.validPrefixBytes,
+      quarantinedBytes: tear.tailBytes,
+      quarantinePath,
+      keptRecords: sequence - 1,
+      discardedFrames: tear.discardedFrames,
+    },
+    schemaVersion,
+  );

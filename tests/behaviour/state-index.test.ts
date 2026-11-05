@@ -226,3 +226,155 @@ describe("TC-STATE-007 index divergence and rebuild", () => {
     }
   });
 });
+
+/**
+ * TC-GH222-012/013 — with only the ledger file, the index rebuilds from verified
+ * ledger truth and converges with the `jsonl` verified scan: absent, corrupt, and
+ * divergent (altered / deleted / phantom row) fixtures each report the rebuild
+ * with the right reason, converge stably, and never mutate the ledger.
+ */
+describe("TC-GH222-012/013 rebuild from the ledger alone converges with the verified scan", () => {
+  const seedIndexed = (
+    root: string,
+  ): {
+    identity: ReturnType<typeof makeIdentity>;
+    ledger: string;
+    records: readonly { kind: string; key: string; payload: never }[];
+  } => {
+    const identity = makeIdentity(root);
+    const { store } = openStore(identity, { driver: "sqlite" });
+    withinFence(store, "w1", (handle) => {
+      store.append(handle, { kind: "park", recordKey: "k1", payload: { n: 1 } });
+      store.append(handle, { kind: "park", recordKey: "k2", payload: 0 });
+    });
+    const verified = store.readRecords();
+    if (!verified.ok) throw new Error(verified.error.code);
+    return {
+      identity,
+      ledger: readFileSync(ledgerPath(identity), "utf8"),
+      records: verified.value.records as readonly {
+        kind: string;
+        key: string;
+        payload: never;
+      }[],
+    };
+  };
+
+  const oracleOf = (
+    records: readonly { kind: string; key: string; payload: never }[],
+    sourceLedger: string,
+  ): { values: Readonly<Record<string, unknown>>; count: number } => {
+    const oracleRoot = makeTempRoot("gh222-index-oracle");
+    try {
+      const identity = makeIdentity(oracleRoot);
+      const oracleStore = openStore(identity, { driver: "jsonl" }).store;
+      withinFence(oracleStore, "oracle-writer", (handle) => {
+        for (const record of records) {
+          const appended = oracleStore.append(handle, {
+            kind: record.kind,
+            recordKey: record.key,
+            payload: record.payload,
+          });
+          expect(appended.ok).toBe(true);
+        }
+      });
+      // The oracle consumes a byte-identical ledger fixture.
+      expect(readFileSync(ledgerPath(identity), "utf8")).toBe(sourceLedger);
+      const oracle = oracleStore.readRecords();
+      if (!oracle.ok) throw new Error(oracle.error.code);
+      return {
+        values: Object.fromEntries(oracle.value.records.map((row) => [row.key, row.payload])),
+        count: oracle.value.records.length,
+      };
+    } finally {
+      removeRoot(oracleRoot);
+    }
+  };
+
+  const expectConverged = (
+    identity: ReturnType<typeof makeIdentity>,
+    oracle: { values: Readonly<Record<string, unknown>>; count: number },
+    reason: "missing" | "corrupt" | "divergent",
+  ): void => {
+    const { store } = openStore(identity, { driver: "sqlite" });
+    const read = store.read({ requiredKeys: ["k1", "k2"] });
+    expect(read.ok).toBe(true);
+    if (!read.ok) return;
+    expect(read.value.values).toEqual(oracle.values);
+    expect(read.value.evidence.recordCount).toBe(oracle.count);
+    expect(read.value.evidence.rebuild?.reason).toBe(reason);
+
+    const again = openStore(identity, { driver: "sqlite" }).store.read({
+      requiredKeys: ["k1", "k2"],
+    });
+    expect(again.ok).toBe(true);
+    if (again.ok) {
+      expect(again.value.values).toEqual(oracle.values);
+      expect(again.value.evidence.rebuild).toBeUndefined();
+    }
+  };
+
+  test("absent and corrupt indexes rebuild and converge with the verified scan", () => {
+    const root = makeTempRoot("gh222-index-alone");
+    try {
+      const { identity, ledger, records } = seedIndexed(root);
+      const oracle = oracleOf(records, ledger);
+      expect(oracle.count).toBe(2);
+
+      rmSync(indexPath(identity.workspaceId, root), { force: true });
+      expectConverged(identity, oracle, "missing");
+      expect(readFileSync(ledgerPath(identity), "utf8")).toBe(ledger);
+
+      writeFileSync(indexPath(identity.workspaceId, root), "not-a-database");
+      expectConverged(identity, oracle, "corrupt");
+      expect(readFileSync(ledgerPath(identity), "utf8")).toBe(ledger);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("altered, deleted, and phantom index rows each rebuild and converge", () => {
+    const root = makeTempRoot("gh222-index-divergent");
+    try {
+      const { identity, ledger, records } = seedIndexed(root);
+      const oracle = oracleOf(records, ledger);
+      const path = indexPath(identity.workspaceId, root);
+      const edge = createTestEdge();
+      const rows = edge.indexRead(path);
+      expect(rows).toBeDefined();
+      if (rows === undefined) return;
+
+      const fixtures: Array<[string, typeof rows]> = [
+        ["altered", rows.map((row, index) => (index === 1 ? { ...row, key: "k-altered" } : row))],
+        ["deleted", rows.slice(1)],
+        [
+          "phantom",
+          [
+            ...rows,
+            {
+              sequence: 99,
+              key: "k-phantom",
+              kind: "park",
+              checksum: rows[0]?.checksum ?? "",
+              payload: JSON.stringify("phantom"),
+            },
+          ],
+        ],
+      ];
+      for (const [label, mutated] of fixtures) {
+        edge.indexWrite(path, mutated);
+        const read = openStore(identity, { driver: "sqlite", edge }).store.read({
+          requiredKeys: ["k1", "k2"],
+        });
+        expect(read.ok, label).toBe(true);
+        if (!read.ok) continue;
+        expect(read.value.values, label).toEqual(oracle.values);
+        expect(read.value.evidence.rebuild?.reason, label).toBe("divergent");
+        expect(read.value.values.k2, label).toBe(0);
+      }
+      expect(readFileSync(ledgerPath(identity), "utf8")).toBe(ledger);
+    } finally {
+      removeRoot(root);
+    }
+  });
+});

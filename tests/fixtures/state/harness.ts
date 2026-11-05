@@ -23,36 +23,51 @@ import {
   type StateEdgeFaultPoint,
   type StateRuntimeEdge,
 } from "../../../packages/core/src/state/index";
+import { storageExhaustionFailure } from "../../../packages/core/src/state/storage-error";
 
 export type TestFault = { readonly point: StateEdgeFaultPoint };
 
 export type TestEdge = StateRuntimeEdge & {
   readonly raised: StateEdgeFaultPoint[];
   arm(points: readonly StateEdgeFaultPoint[]): void;
+  /** Arms the ASM-3 pre-commit points to raise the exhaustion-shaped failure. */
+  armExhaustion(points: readonly StateEdgeFaultPoint[]): void;
   disarm(): void;
 };
 
 export type TestClock = { value: number };
 
 export const createTestEdge = (
-  options: { readonly faults?: readonly StateEdgeFaultPoint[]; readonly clock?: TestClock } = {},
+  options: {
+    readonly faults?: readonly StateEdgeFaultPoint[];
+    readonly exhaustion?: readonly StateEdgeFaultPoint[];
+    readonly clock?: TestClock;
+  } = {},
 ): TestEdge => {
   const base = createNodeStateEdge();
   let armed = new Set<StateEdgeFaultPoint>(options.faults ?? []);
+  let exhaustion = new Set<StateEdgeFaultPoint>(options.exhaustion ?? []);
   const raised: StateEdgeFaultPoint[] = [];
   return {
     ...base,
     now: () => (options.clock === undefined ? base.now() : options.clock.value),
     raiseFault: (point) => {
       raised.push(point);
+      if (exhaustion.has(point)) throw storageExhaustionFailure("ENOSPC");
       if (armed.has(point)) throw { point } satisfies TestFault;
     },
     raised,
     arm: (points) => {
       armed = new Set(points);
+      exhaustion = new Set();
+    },
+    armExhaustion: (points) => {
+      armed = new Set();
+      exhaustion = new Set(points);
     },
     disarm: () => {
       armed = new Set();
+      exhaustion = new Set();
     },
   };
 };
