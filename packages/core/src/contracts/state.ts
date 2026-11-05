@@ -71,7 +71,7 @@ export type StateSafeLocation = {
   readonly missingKeys?: readonly string[];
 };
 
-/** The seven dedicated state failure codes (GH-174 §8.3). */
+/** The nine dedicated state failure codes (GH-174 §8.3; GH-222 DEC-5). */
 export type StateFailureCode =
   | "state.store.torn"
   | "state.schema.mismatch"
@@ -79,7 +79,38 @@ export type StateFailureCode =
   | "state.lock.busy"
   | "state.permission.denied"
   | "state.write.failed"
-  | "state.level.unsupported";
+  | "state.level.unsupported"
+  | "state.storage.exhausted"
+  | "state.store.unknown";
+
+/**
+ * The additive salvage record kind (GH-222 EVT-1, DM-1). Additive inside
+ * `delivery.state.v1`: no schema-version bump and no migration (NG-6).
+ */
+export const STATE_SALVAGE_RECORD_KIND = "state.salvage" as const;
+
+/** The self-describing payload schema identifier of a salvage record. */
+export const STATE_SALVAGE_PAYLOAD_SCHEMA = "delivery.state.salvage.v1" as const;
+
+/** The store-scoped key that carries salvage records (latest value per key). */
+export const STATE_SALVAGE_RECORD_KEY = "state.salvage" as const;
+
+/** The four distinct boundary verdicts (AC-F1-1, DM-4). */
+export const STATE_BOUNDARY_VERDICTS = ["valid", "verified-empty", "torn", "unknown"] as const;
+
+export type StateBoundaryVerdict = (typeof STATE_BOUNDARY_VERDICTS)[number];
+
+/** The declared payload field types an artifact-boundary declaration admits. */
+export const STATE_ARTIFACT_FIELD_TYPES = [
+  "string",
+  "number",
+  "boolean",
+  "object",
+  "array",
+  "null",
+] as const;
+
+export type StateArtifactFieldType = (typeof STATE_ARTIFACT_FIELD_TYPES)[number];
 
 /**
  * A classified state failure. The classification chain resolves the exact
@@ -198,6 +229,97 @@ export type StateIntegrityOutcome = {
 export type StateRepairOutcome = {
   readonly repaired: boolean;
   readonly report: StateTornTailRepairReport;
+  readonly evidence: StateReadEvidence;
+};
+
+/**
+ * Salvage evidence (DM-3): the truncation position and the quarantined extent,
+ * with record counts only — never payload content or checksum bytes.
+ */
+export type StateSalvageReport = {
+  readonly ledgerPath: string;
+  /** Byte offset of the last valid frame the ledger was truncated to. */
+  readonly truncationOffset: number;
+  /** Byte extent of the quarantined post-tear bytes. */
+  readonly quarantinedBytes: number;
+  readonly quarantinePath: string;
+  readonly keptRecords: number;
+  readonly discardedFrames: number;
+  /** Sequence number of the appended salvage record. */
+  readonly sequence: number;
+};
+
+/**
+ * The explicit guided salvage outcome: a salvaged tear with its evidence
+ * report, or a reported no-op when the ledger has no terminal tear.
+ */
+export type StateSalvageOutcome =
+  | {
+      readonly salvaged: true;
+      readonly report: StateSalvageReport;
+      readonly evidence: StateReadEvidence;
+    }
+  | { readonly salvaged: false; readonly evidence: StateReadEvidence };
+
+/** The self-describing salvage record payload (EVT-1, DM-1). */
+export type StateSalvageRecord = {
+  readonly schemaId: typeof STATE_SALVAGE_PAYLOAD_SCHEMA;
+  readonly tearPosition: number;
+  readonly truncationOffset: number;
+  readonly quarantinedBytes: number;
+  readonly quarantinePath: string;
+  readonly keptRecords: number;
+  readonly discardedFrames: number;
+};
+
+/** One declared payload field of an artifact kind (DM-4). */
+export type StateArtifactField = {
+  readonly name: string;
+  readonly type: StateArtifactFieldType;
+  readonly required: boolean;
+};
+
+/** A closed value vocabulary for one declared payload field (DM-4). */
+export type StateArtifactVocabulary = {
+  readonly field: string;
+  readonly values: readonly string[];
+};
+
+/**
+ * One declared artifact kind: its payload schema identifier, the payload field
+ * that carries the record identity, and its declared fields. Declarations are
+ * data: applying them to another kind requires no code change (DM-4, ASM-4).
+ */
+export type StateArtifactKindDeclaration = {
+  readonly kind: string;
+  /** Required `payload.schemaId` value; omitted when the payload carries none. */
+  readonly payloadSchema?: string;
+  readonly identityField: string;
+  readonly fields: readonly StateArtifactField[];
+  readonly vocabularies?: readonly StateArtifactVocabulary[];
+};
+
+/**
+ * A reusable artifact-boundary declaration: the store-scoped key prefix the
+ * boundary owns and the kinds it declares under it (DM-4).
+ */
+export type StateArtifactBoundaryDeclaration = {
+  readonly recordKeyPrefix: string;
+  readonly kinds: readonly StateArtifactKindDeclaration[];
+};
+
+/** One verified artifact record as the boundary serves it. */
+export type StateArtifactRecord = {
+  readonly kind: string;
+  readonly recordKey: string;
+  readonly sequence: number;
+  readonly payload: StateJsonValue;
+};
+
+/** A validated boundary read: only the two value-bearing verdicts succeed. */
+export type StateArtifactRead = {
+  readonly verdict: "valid" | "verified-empty";
+  readonly artifacts: readonly StateArtifactRecord[];
   readonly evidence: StateReadEvidence;
 };
 

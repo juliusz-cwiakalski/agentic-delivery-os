@@ -19,6 +19,18 @@
       "resolves": true
     },
     {
+      "id": "declared-state-storage-exhausted",
+      "text": "state.storage.exhausted",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "declared-state-store-unknown",
+      "text": "state.store.unknown",
+      "recognized": true,
+      "resolves": true
+    },
+    {
       "id": "fallback-internal",
       "text": "fallback.internal",
       "recognized": true,

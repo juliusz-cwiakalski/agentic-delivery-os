@@ -394,7 +394,7 @@ describe("TC-STATE-018 state rows join the declared kind set", () => {
   test("state is a declared multi-row domain kind and never singleton-classified", () => {
     expect(DOMAIN_KINDS).toContain("state");
     const state = entries.filter((entry) => entry.domainKind === "state");
-    expect(state).toHaveLength(7);
+    expect(state).toHaveLength(9);
     for (const entry of state) {
       expect(entry.code.startsWith("state.")).toBe(true);
       expect(entry.consequence).toBe("not_landed");
@@ -497,7 +497,7 @@ describe("TC-SYNC-007 lint rows are exact and additive", () => {
     expect(() => classifyDomainKind("provider")).toThrow();
     expect(classifyDomainKind("input").code).toBe("input.value.rejected");
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
-    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
+    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(() => classifyDomainKind("config")).toThrow();
     expect(() => classifyDomainKind("state")).toThrow();
   });
@@ -664,11 +664,11 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(5);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
-    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
+    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(3);
-    expect(entries).toHaveLength(50);
+    expect(entries).toHaveLength(52);
   });
 });
 
@@ -744,7 +744,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(50);
+    expect(entries).toHaveLength(52);
     expect(db).toHaveLength(4);
   });
 

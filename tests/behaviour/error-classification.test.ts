@@ -312,13 +312,15 @@ const STATE_ROWS = [
   ["state.lock.busy", "transient", true, "not_landed", "platform-provider"],
   ["state.permission.denied", "user", false, "not_landed", "user-validation"],
   ["state.write.failed", "transient", true, "not_landed", "platform-provider"],
+  ["state.storage.exhausted", "transient", true, "not_landed", "platform-provider"],
+  ["state.store.unknown", "platform", false, "not_landed", "platform-provider"],
   ["state.level.unsupported", "user", false, "not_landed", "user-validation"],
 ] as const;
 
-describe("TC-STATE-018 seven exact state identities and containment", () => {
-  test("the table declares exactly the seven state rows with their fixed fields", () => {
+describe("TC-STATE-018 nine exact state identities and containment", () => {
+  test("the table declares exactly the nine state rows with their fixed fields", () => {
     const state = entries.filter((entry) => entry.domainKind === "state");
-    expect(state).toHaveLength(7);
+    expect(state).toHaveLength(9);
     expect(state.map((entry) => entry.code)).toEqual(STATE_ROWS.map(([code]) => code));
     for (const [code, category, retryable, consequence, projectionClass] of STATE_ROWS) {
       expect(classifyDomainKind("state", code)).toMatchObject({

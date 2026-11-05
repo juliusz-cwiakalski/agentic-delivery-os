@@ -93,7 +93,16 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "PHASE_TRANSITION_KIND",
     "REGISTRY_SCHEMA_VERSION",
   ],
-  "core/src/contracts/state.ts": ["STATE_DRIVER_KINDS", "STATE_LEVELS", "STATE_SCHEMA_VERSION"],
+  "core/src/contracts/state.ts": [
+    "STATE_ARTIFACT_FIELD_TYPES",
+    "STATE_BOUNDARY_VERDICTS",
+    "STATE_DRIVER_KINDS",
+    "STATE_LEVELS",
+    "STATE_SALVAGE_PAYLOAD_SCHEMA",
+    "STATE_SALVAGE_RECORD_KEY",
+    "STATE_SALVAGE_RECORD_KIND",
+    "STATE_SCHEMA_VERSION",
+  ],
   "core/src/contracts/session.ts": [
     "DB_SCHEMA_VERSION",
     "DB_COMMANDS",

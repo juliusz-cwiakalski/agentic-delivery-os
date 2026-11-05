@@ -197,37 +197,53 @@ data only; no behavior yet.
 
 **Tasks**:
 
-- [ ] **1.1** `packages/core/src/contracts/state.ts`: extend `StateFailureCode` with
+- [x] **1.1** `packages/core/src/contracts/state.ts`: extend `StateFailureCode` with
   `state.storage.exhausted` and `state.store.unknown`; add the salvage port-operation types
   (evidence report per DM-3: truncation position, quarantine path and extent, record counts;
   outcome types; request shape) and the artifact-boundary declaration types (DM-4: declared
   record kinds, payload-schema declarations with required fields / closed vocabularies / record
   identity, classification behavior). Types and data only, runtime-neutral.
-- [ ] **1.2** `packages/core/src/contracts/error-table.ts`: add the DEC-5 rows —
+- [x] **1.2** `packages/core/src/contracts/error-table.ts`: add the DEC-5 rows —
   `state.storage.exhausted` (`domainKind: state`, category transient, retryable, `not_landed`,
   remediation naming storage exhaustion and that the ledger remains at the last valid frame) and
   `state.store.unknown` (`domainKind: state`, non-retryable, `not_landed`, remediation pointing
   at declaring the kind/schema at the boundary or using a compatible tool version). Nine `state`
   rows total.
-- [ ] **1.3** Refine remediation guidance text only: `state.write.failed` (scoped to storage
+- [x] **1.3** Refine remediation guidance text only: `state.write.failed` (scoped to storage
   errors other than exhaustion; write-or-rebuild-did-not-land semantics unchanged — DEC-5) and
   `state.store.torn` (points at inspection and salvage as an explicit separate operation — spec
   §22, TC-GH222-001/010). Identity, category, retryability, consequence unchanged.
-- [ ] **1.4** `doc/spec/features/feature-result-contract.md`: mirror every Phase-1 machine-table
+- [x] **1.4** `doc/spec/features/feature-result-contract.md`: mirror every Phase-1 machine-table
   change (two new rows + refined remediations) in the documented table, same commit.
-- [ ] **1.5** `packages/core/src/state/edge.ts`: add `"salvage-quarantine-write"` and
+- [x] **1.5** `packages/core/src/state/edge.ts`: add `"salvage-quarantine-write"` and
   `"salvage-ledger-write"` to `StateEdgeFaultPoint` (OQ-T1 names fixed; both pre-commit).
-- [ ] **1.6** Corpora and goldens: add the two new `state` codes and the refined remediations to
+- [x] **1.6** Corpora and goldens: add the two new `state` codes and the refined remediations to
   `tests/fixtures/result/code-corpora/**`; deliberately regenerate any golden envelope fixture
   that enumerates the seven state codes (never a blanket rewrite).
-- [ ] **1.7** **TC-GH222-018** (rows/sync half) and **TC-GH222-019** (full): extend
+- [x] **1.7** **TC-GH222-018** (rows/sync half) and **TC-GH222-019** (full): extend
   `tests/checks/error-table-sync.test.ts` (row assertions for both tables; non-vacuity
   mutations — drop `state.store.unknown` documented-only, drop `state.storage.exhausted`
   machine-only, mutate the refined `state.write.failed` remediation one-side-only, insert
   phantom `state.store.unknown-schema`, restore-and-pass) and `tests/structure/error-table.test.ts`
   (row shape). The nine-code trigger sweep half of TC-GH222-018 lands in Phase 5.
-- [ ] **1.8** `tests/structure/state-contract.test.ts`: update the expected contract surface for
+- [x] **1.8** `tests/structure/state-contract.test.ts`: update the expected contract surface for
   the new salvage/artifact-boundary types (data-only, runtime-neutral).
+
+**Task evidence (2026-11-05)**: all eight tasks landed in one commit. Contract surface in
+`contracts/state.ts` + `contracts/index.ts`; both error tables carry `state.storage.exhausted`,
+`state.store.unknown`, the `state.write.failed` exhaustion carve-out, and the `state.store.torn`
+salvage pointer (`bun run scripts/checks/error-table-sync.ts`: entries=43 documented=43, exit 0).
+Deliberate fixture/baseline updates in the same commit: `true-positives.json` (two new codes), the
+frozen `BASELINE_ROWS` oracle (41→43 rows; `BASELINE_ROWS + 9`; the two refined rows repinned),
+`tests/fixtures/ports/v1-contract-inventory.json` (new contract exports), and
+`tests/structure/content-inventory.test.ts` (executable allowance for the new contracts constants).
+`tests/behaviour/error-classification.test.ts` (TC-STATE-018 row identity suite) moves to the nine
+rows here because it enumerates the live table and would otherwise fail before Phase 5.
+
+**Acceptance (Phase 1)**: both tables declare the two rows with `not_landed` and matching refined
+remediations; sync check zero drift — PASSED (entries=43 documented=43, exit 0). No existing row's
+identity/category/consequence changed — PASSED (frozen baseline oracle + TC-GH222-019 negative
+controls). Corpora/goldens updated in the same commit — PASSED (105/105 targeted tests).
 
 **Acceptance Criteria**:
 
@@ -742,4 +758,5 @@ NFR-6 → 1, 5; NFR-7 → 3.
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
+| 1 — Contracts, vocabulary, and synced error tables | Done | 2026-11-05 | 2026-11-05 | (this commit) | `error-table-sync` entries=43 documented=43 exit 0; targeted suites 105 pass (error-table-sync, error-table, state-contract), state-error-classification 8 pass; `git diff --check` clean. Deliberate baseline regeneration: `BASELINE_ROWS + 9`, frozen state rows repinned to the refined texts. Fixtures updated: corpora, contract export inventory, content inventory. |
 | — | Not started | — | — | — | Populated during delivery; record per-phase commit, suite results, SQLite-binding skips, and the OQ-T2 decision |
