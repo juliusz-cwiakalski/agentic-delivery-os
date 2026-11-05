@@ -44,7 +44,7 @@ phases:
         residual_risks: "mechanism-first adoption bet (M1-S8/M2-S3); m1 pack state.store.unknown-schema naming drift (superseded by DEC-5); AC-F5-1 ledger-first reading; OQ-T2/T3 execution-log recording; SQLite skips-as-skips; stale plan/test-plan frontmatter summaries treated as non-operative"
         date: "2026-11-05"
   delivery: { started: "2026-11-05T20:55:00Z", completed: "2026-11-05T22:55:00Z" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-11-05T22:58:00Z", completed: "2026-11-05T23:10:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -70,6 +70,9 @@ notes:
     type: retro
     date: "2026-11-05"
   - text: "Delivery completed: coder executed all 6 plan phases with per-phase commits 0684212d/2ba51d72/fac0e764/d09cf619/5d854030/65d52957, green phase-boundary verification, 23/23 TC coverage, all 9 spec ACs demonstrated. Disclosed deviations: extra fixture/golden repins in Phase 1 (kept enumerating suites green); opt-in armExhaustion harness seam preserving M0-S5 generic-fault contracts; salvage on clean ledger = reported no-op (TC-GH222-024 candidate); top-level phase.transition payload field loss now classifies state.store.unknown (AC-F1-1) with GH-179 regression fixtures updated; one Phase-3 boundary-escape test repaired in Phase 5. Pre-existing env quirk (not this change): hermetic-clone test needs TMPDIR=./tmp/tmpdir on this host; CI unaffected."
+    type: info
+    date: "2026-11-05"
+  - text: "System docs reconciled by doc-syncer (9 files): feature-state-layer.md brought current (nine codes, salvage semantics incl. clean-ledger no-op and restored terminal-tail-repair bullet, artifact-boundary stand-ins, quality-assurance section); feature-result-contract.md traceability; pm-notes-lint registry consumer; verify-change identity mapping (+state.store.unknown); nonfunctional NFR-TOOL-004; glossary + tech-stack; NEW enduring test spec doc/quality/test-specs/test-spec-state-layer.md (+ forbidden-literals corpus registration). Checks: error-table-sync OK (43/43), forbidden-literals 0 violations, doc-distribution no drift, links clean. Residual (accepted, outside current truth): m1 pack still names proposed state.store.unknown-schema + planned state CLI — planned-state pack artifacts per conventions; reconcile in the later operate-family CLI story (recorded in readiness-iter-2 as accepted residual)."
     type: info
     date: "2026-11-05"
   - text: "RETRO: the v1.1 spec introduced an internal contradiction (§8.5 'refines only state.write.failed' vs §22 requiring torn-read guidance to mention salvage) that passed both spec-writer authoring and PM validation, and was caught only by the adversarial DoR gate (1 gate iteration spent). Improvement: when an artifact asserts an exclusive claim ('only refined row', 'no other changes'), author and validator must cross-check every section that touches the same subject (here: §22 maintenance notes and the test cases naming torn guidance) before declaring the artifact complete."

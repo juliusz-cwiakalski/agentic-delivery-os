@@ -5,7 +5,7 @@ created: 2026-11-01
 last_updated: 2026-11-05
 owners: [engineering]
 links:
-  related_changes: [GH-200, GH-221]
+  related_changes: [GH-200, GH-222, GH-221]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -102,15 +102,24 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 - Quality attribute: integrity and recoverability. Applies: ledger, derived indexes,
   phase transitions, provider park persistence. Requirement/status: existing.
 - [State](features/feature-state-layer.md) requires verified ledger truth, explicit
-  verified-empty evidence, key-set assertions, torn-state detection, fenced writes,
-  explicit stale-lock recovery, and atomic derived-document replacement.
-- Read/index strategy does not change truth; only terminal-tail repair can remove
-  damaged bytes explicitly. Mid-stream corruption is not silently repaired.
-- POSIX modes are directory 0700/files 0600; Windows requires current-user-only
-  ACLs. Linux CI cannot establish the Windows branch. Only local level is implemented.
+  verified-empty evidence, key-set assertions, torn and unknown classification,
+  reusable artifact-boundary validation, fenced writes, explicit stale-lock recovery,
+  and atomic derived-document replacement.
+- Read/index strategy does not change truth; only the two explicit terminal-tail
+  operations remove ledger bytes, and guided salvage quarantines the removed bytes
+  instead of discarding them. Mid-stream corruption is not silently repaired, and
+  reads never mutate bytes.
+- Storage exhaustion is fail-closed: an append, derived-document replace, or salvage
+  write that cannot complete fails `state.storage.exhausted` with the ledger at its
+  last valid frame and no partial frame or partial document observable.
+- POSIX modes are directory 0700/files 0600, including the quarantine directory and
+  its artifacts; Windows requires current-user-only ACLs. Linux CI cannot establish
+  the Windows branch. Only local level is implemented.
 - Evidence/test: `packages/core/src/state/ledger.ts`, `driver/runtime-edge.ts`;
-  `tests/behaviour/state-torn.test.ts`, `state-fence.test.ts`,
-  `state-atomic-replace.test.ts`, `state-permissions.test.ts`.
+  `tests/behaviour/state-torn.test.ts`, `state-unknown.test.ts`, `state-salvage.test.ts`,
+  `state-salvage-invariants.test.ts`, `state-storage-exhausted.test.ts`,
+  `state-index-post-salvage.test.ts`, `state-artifact-boundary.test.ts`,
+  `state-fence.test.ts`, `state-atomic-replace.test.ts`, `state-permissions.test.ts`.
 - Owner/trigger: engineering/runner; storage format, driver, platform, or writer changes
   (RSK-003, XC-002). Forever retention has no compaction or global growth budget.
 

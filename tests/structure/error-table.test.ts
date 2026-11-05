@@ -960,7 +960,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(50);
+    expect(entries).toHaveLength(52);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1014,7 +1014,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
     expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(5);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
-    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(7);
+    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "verify")).toHaveLength(3);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);

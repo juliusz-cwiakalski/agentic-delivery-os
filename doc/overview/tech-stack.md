@@ -2,13 +2,13 @@
 id: TOOLING-TECH-STACK
 status: Draft
 created: 2026-11-01
-last_updated: 2026-11-02
+last_updated: 2026-11-05
 owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, TDR-0003, TDR-0004, TDR-0006, TDR-0007]
-  related_changes: [GH-200]
+  related_changes: [GH-200, GH-222]
 summary: "Phase 3 evidence-based OSS tooling stack inventory, decision rationale, existing alternatives, compatibility limits, and validation risks."
 ---
 
@@ -124,7 +124,7 @@ OPEN-Q11; absent registry membership must not be described as a clean scan.
 
 | Store / artifact | Actual ownership and behavior | Constraint / uncertainty |
 |---|---|---|
-| Schema-versioned JSONL ledger | Local durable truth; framed records with sequence/checksum; verified reads, explicit torn-tail repair and single-writer fences. | Only `local` level implemented. Full-history verification costs grow with history; checksum detects corruption, not adversarial tampering. |
+| Schema-versioned JSONL ledger | Local durable truth; framed records with sequence/checksum; verified reads with torn and unknown classification, explicit terminal-tail repair, guided tail salvage with quarantine, fail-closed writes, and single-writer fences. | Only `local` level implemented. Full-history verification costs grow with history; checksum detects corruption, not adversarial tampering. |
 | Optional SQLite index | Disposable derived rows over the same verified JSONL; rebuild on missing/corrupt/divergent index. | Every indexed read still verifies the ledger; no asymptotic read-scaling claim. Missing binding fails visibly, not silent in-memory fallback. |
 | Derived JSON documents | Phase/provider projections, ledger-first then atomic replacement. | Rebuildable outputs are not another source of truth. A landed intent and failed projection are different outcomes. |
 | Closeout operation history | Verified `closeout.operation` records, deterministic identities, fenced appends, terminal reuse and failed-outcome retry. | Real replay substrate, not a separate write-ahead-intent protocol or evidence of live crash convergence. |

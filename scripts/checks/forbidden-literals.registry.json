@@ -142,6 +142,7 @@
     "doc/planning/oss-tooling/milestones/m1/test-scenarios.md",
     "doc/planning/oss-tooling/operator-requirements-2026-11.md",
     "doc/planning/oss-tooling/status.md",
+    "doc/quality/test-specs/test-spec-state-layer.md",
     "doc/spec/features/feature-adapter-conformance.md",
     "doc/spec/features/feature-adapter-ports.md",
     "doc/spec/features/feature-branding-seam.md",

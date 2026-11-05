@@ -678,10 +678,12 @@ const ROW_VERIFY =
 /**
  * Frozen oracle of every row except the rows added after the baseline was
  * frozen (full column set). GH-180 pinned the four db rows here when it added
- * them; GH-222 adds two state rows (`state.storage.exhausted`,
- * `state.store.unknown`) without touching the baseline, so the frozen baseline
- * plus the nine later rows equals the live table; a changed baseline row fails
- * naming it.
+ * them. The eighteen later rows are the three verify rows, the four closeout
+ * rows, the lint-document-unreadable row, the two GH-222 state rows
+ * (`state.storage.exhausted`, `state.store.unknown`), the three GH-221 watchdog
+ * lane-safety rows, and the five GH-226 machine-readable delivery-plan rows, so
+ * the frozen baseline plus those eighteen later rows equals the live table; a
+ * changed baseline row fails naming it.
  */
 const BASELINE_ROWS: ReadonlyArray<
   readonly [string, string, string, boolean, string, string, string, string]
