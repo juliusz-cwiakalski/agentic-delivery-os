@@ -52,8 +52,10 @@ stable key=value summary, the replacement emits the same shape.
 | `merge` (M1-S4) | `<binary> merge <ref> [--dry-run]` |
 | `closeout` (M0-S14, M1-S12) | `<binary> closeout <ref> [--apply]` |
 
-`phase complete <ref> <phase>` (M0-S10, M1-S14) optionally performs the
-record-plus-commit atomically for the completed phase's pending work.
+`phase complete <ref> <phase>` (M0-S10, M1-S14) performs the
+record-plus-commit atomically for the completed phase's pending work by
+default (`--no-commit` records the transition alone; config disables
+per project).
 
 ### See
 

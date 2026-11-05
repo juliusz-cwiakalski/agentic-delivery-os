@@ -23,10 +23,13 @@ by context (owner decision, 2026-11-05):
   exitCode, timing, data or error), indented.
 - Scripted or piped (the agent case): a minified single line carrying
   only `{"data":...}` on success or `{"error":...}` on failure.
-  schemaVersion, runId, and timing are trimmed from the output - they
+  schemaVersion and timing are trimmed from the output - they
   live in the command audit ledger (M1-S22) instead of the agent's
-  context. Error objects always keep the full error-table fields (code,
-  category, retryable, consequence, remediationHint).
+  context; errors keep `runId` as the correlation key (agents need it
+  for blockers and audit). Error objects always keep the full
+  error-table fields (code, category, retryable, consequence,
+  remediationHint). The trim activates when M1-S22 lands; commands
+  shipped before it emit the full envelope until then.
 - `--verbose` forces the full envelope in any mode; `--pretty` has no
   effect on the trim (only on indentation).
 - Stream outputs (`--watch`) stay line-delimited in every mode: one JSON
@@ -136,10 +139,15 @@ exit-code projection; secret redaction; bounded output.
 - Inputs: `<ref>`; `--dry-run`; gate set from config (versioned data).
 - Outputs: on success `landed=true` squash SHA, landing verified; on
   refusal the failed gate named with inline evidence (no re-probe
-  needed); freshness bound covers CI and tracker state; waivers recorded
-  with author and scope.
+  needed); freshness bound covers CI and tracker state; waivers carry
+  an authorizer principal, and the transaction verifies the authorizer
+  against the gate class's declared policy (owner-authored for
+  never-merge classes) - waiver presence alone never passes the gate;
+  a behind-base PR attempts one rebase-refresh and a conflict is a
+  classified refusal naming the paths.
 - Errors: `merge.gate.<gate-id>.failed`, `merge.gates-stale`,
-  `merge.owner-gate-override-without-waiver`.
+  `merge.waiver-unauthorized`,
+  `merge.owner-gate-override-without-waiver`, `merge.rebase-conflict`.
 - Example: refusal prints `gate=tracker-freshness evidence="ticket moved
   to owner-gated 6 min after verification" remediation="re-run verify
   gates"`.
@@ -201,13 +209,20 @@ exit-code projection; secret redaction; bounded output.
 ### `blockers` (M1-S16, proposed)
 
 - Inputs: `list [--open]`; `answer <id> [--choice <n>] [--text <s>]`.
-- Outputs: typed question records `{ id, type, lane, question, options[],
-  asked-at, age }` with types decision-needed, spec-ambiguity,
-  credential-missing (variable name only), external-wait; ranked by age
+- Outputs: typed question records `{ id, type, audience, lane, question,
+  options[], asked-at, age }` with types decision-needed, spec-ambiguity,
+  credential-missing (variable name only), external-wait; the audience
+  field (owner or coordinator) routes answers - a cross-audience answer
+  is refused unless policy-as-data delegates; questions ranked by age
   and priority; answer applies and resumes the lane (no session
   re-entry). Answers are intent records in state; a running daemon
   applies them immediately (control-socket wake), a down daemon applies
   them at reconcile, and a one-shot `dispatch --resume` path exists.
+  Free-text answers refuse credential values like the question path
+  does. Resume modes (recorded on the answer): boundary-note,
+  attach-continue, or resume-prompt-reentry (the acknowledged fallback
+  when the harness adapter lacks resume injection; its prefill cost is
+  visible).
 - Errors: `blockers.invalid-type`, `blockers.credential-value-rejected`
   (the channel refuses values, names only).
 - Scenarios: question surfaces within one collection cycle; answer
@@ -350,8 +365,26 @@ resolve/quota/parks as shipped with named self-expiring parks.
 
 ## Cross-cutting test scenarios
 
+**Timing defaults (config keys with defaults; owning story in
+parentheses).** Collection cycle: 60 s (`daemon.heartbeat-cycle`, M1-S18;
+digest staleness bound 2 cycles). Daemon heartbeat to state: 5 s
+(`daemon.heartbeat-interval`, M1-S18). Lane liveness evaluation: 30 s
+(`lane.liveness-interval`, M1-S15). Gate freshness bound: 30 m
+(`merge.gate-freshness`, M1-S4). Lease TTL: 90 s with heartbeat renewal
+(`queue.lease-ttl`, M1-S17). Park recheck: per condition type, defaults
+60 s (windows) and 300 s (quota) (`queue.park-recheck.<type>`, M1-S17).
+Tracker/CI poll backoff: per platform, exponential, defaults 5 s base 60 s
+cap (`poll.<platform>.*`, M1-S18). All are configuration; stories own the
+key, the default, and the semantics.
+
 - Deterministic render paths (digest, brief, plan views, queue plan)
   contain no model calls: asserted by review and by dependency boundary
   checks.
 - Every command: `--help` with examples; secrets never in output; the
   bash-continuity keys where a predecessor existed.
+- Dispatch never fires a merge: the `merged` result token is
+  already-merged detection only (constraint 9; producer is the
+  coordinator's `merge`).
+- `verify deploy` unknown verdict (trace examined, evidence absent) is
+  disjoint from state-unverified (the read itself failed): different
+  classes, different exits (1 vs 2).

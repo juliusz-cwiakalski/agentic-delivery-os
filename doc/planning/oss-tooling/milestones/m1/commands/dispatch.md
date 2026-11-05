@@ -42,8 +42,10 @@ Text: the bash-continuity summary keys (`result=`, `pr_url=`,
 
 ## EXIT STATUS
 
-0 delivered or pr-open; 1 classified refusal or user error; 2 platform
-faults, restart budget exhaustion, or state-unverified outcomes.
+0 delivered or pr-open; 1 classified refusal, user error, or a
+max-restarts/failed result (TDR-0005 projection); 2 platform faults and
+state-unverified outcomes. `result=merged` is already-merged detection;
+dispatch never fires a merge (constraint 9).
 
 ## EXAMPLES
 

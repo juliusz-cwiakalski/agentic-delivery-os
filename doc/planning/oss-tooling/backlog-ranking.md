@@ -66,35 +66,36 @@ Reading notes:
 | 35 | M1-S15 Session lifecycle economics | M1-S1, M1-S11 | Truth engine (R5): must land before the daemon so the dispatcher never kills a prefilling session |
 | 36 | M1-S19 Spend read side and resume amplification | M1-S11 | Read side early (R9): waste classes become visible the moment telemetry exists |
 | 37 | M1-S17 Scheduling engine: queue, lanes, dependency batching | M0-S7, M0-S13, M1-S2, M1-S4, M1-S13, M1-S15 | Sequenced behind the truth and transaction engines (constraint 1): its one-shot mode executes deliveries, so merge safety, session economics, validated state, and declared plans are hard prerequisites |
-| 38 | M1-S18 Resident dispatch daemon | M1-S4, M1-S15, M1-S17 | Constraint 1 made structural: the dispatcher goes live only after merge-as-transaction, session economics, and the scheduling engine are proven; one-shot mode shipped with the queue keeps a bash-free fallback |
-| 39 | M1-S9 Dispatch dual-run and per-repo handover | M0-S8, M1-S11, M1-S17, M1-S18 | Milestone closer: handover per repo happens only after that repo's two clean weeks of dual-run evidence |
-| 40 | M1-S12 Change capsule completion and closeout expansion | M0-S5, M0-S14, M1-S8 | Capsules and closeout residue; independent of the engine line, ranked near its end |
-| 41 | M1-S20 Agent integration: prompts consume the tooling | M0-S10, M1-S13, M1-S14 | Last of the M1 line: prompts reference surfaces that all exist by here (plan schema, commit primitive, phase path) |
-| 42 | M1-S10 status collector expansion | M0-S6 | Flexible filler: independent of the M1 core line; slot wherever a gap opens |
-| 43 | M2-S2 Supervise | M1-S1, M1-S18 | Supervision battery consumes the daemon's lanes |
-| 44 | M2-S3 Ceremony runner | M0-S6, M0-S13, M1-S8 | Provider resolver and retro evidence both exist; ceremonies compact the loop the daemon just automated |
-| 45 | M2-S10 Retro action registry and follow-through | M1-S8 | Ranked after the ceremony runner so follow-through rituals attach to an existing cadence; the board surface joins at M2-S4 |
-| 46 | M2-S4 Board | M1-S5, M1-S17 | One screen over lanes, gates, owner asks; all sources exist by here |
-| 47 | M2-S5 Steer | M0-S10, M1-S11 | Message contract over the phase ledger and harness sessions; both stable at this point |
-| 48 | M2-S6 Metrics and spend | M1-S19, M2-S3 | Ceremony share needs ceremonies running to be measurable; spend engine exists from M1-S19 |
-| 49 | M2-S7 Suite-to-job mapping in gates | M0-S9 | Independent of the orchestration line; ranked here to close the merge-integrity gap before the memory line starts; slot earlier if gates drift in practice |
-| 50 | M2-S8 Memory records, layout, and lint | M1-S12 | Consumes the capsules M1-S12 produces; the memory line is self-contained from here |
-| 51 | M2-S9 Memory conventions in bootstrap templates | M2-S8 | Templates describe the layout the previous story defines |
-| 52 | M3-S3 Adapter completion | M0-S19, M0-S20 | First M3 story: full GitHub adapter unblocks self-hosted dogfooding for everything after it |
-| 53 | M3-S1 Harness surfaces | M1-S11 | Generated plugin surfaces over the adapter port |
-| 54 | M3-S2 Full MCP | M1-S7 | Batch semantics over the proven minimal surface |
-| 55 | M3-S4 Validators and deploy checklist | M0-S10 | Extends the lint family; independent of surfaces |
-| 56 | M3-S5 Policy engine | M0-S19 | Fleet check and apply through the write path; typed policy documents keep the autonomy kind open |
-| 57 | M3-S6 Workspace utilities | M0-S4, M0-S5 | Safety-rail utilities; independent filler in the M3 line |
-| 58 | M3-S8 Memory command family | M2-S8 | Commands over the canonical records |
-| 59 | M3-S9 Memory compiler to harness surfaces | M2-S8, M3-S1 | Last generator: compiles memory into the surfaces M3-S1 established |
-| 60 | M3-S7 v1.0 internal readiness and bash deprecation | M1-S18, M2-S2, M2-S3, M2-S6 | Deliberately last in M3: parity evidence requires every replaced engine delivered and measured |
-| 61 | M4-S1 Naming freeze and rename | M0-S2 | At M4 start so every name-derived surface exists before the freeze |
-| 62 | M4-S3 Docs, license registry, and public materials | M0-S18 | Finalized before first publication; written continuously from M0, closed out here |
-| 63 | M4-S2 Publication and release automation | M0-S17, M3-S7, M4-S1 | The release job follows the frozen name and the readiness verdict |
-| 64 | M4-S4 Merge the tooling branch to the default branch | M4-S2 | Installs move to the default branch only after a real release |
-| 65 | M4-S5 Bash stack retirement | M3-S7, M4-S4 | Wrappers outlived their purpose once installs come from the default branch |
-| 66 | M4-S6 Extension hooks | M0-S5 | Release-neutral opt-in sink; last because nothing local depends on it |
+| 38 | M1-S18 Resident dispatch daemon | M1-S4, M1-S15, M1-S16, M1-S17 | Constraint 1 made structural: the dispatcher goes live only after merge-as-transaction, session economics, typed blockers (it applies answers), and the scheduling engine are proven; one-shot mode shipped with the queue keeps a bash-free fallback |
+| 39 | M1-S9 Dispatch engine: dual-run evidence and per-repo handover | M0-S8, M1-S11, M1-S17, M1-S18 | Milestone closer: handover per repo happens only after that repo's two clean weeks of dual-run evidence (accrual itself starts when the one-shot queue ships, at rank 37; the dwell-time risk of the clock starting this late is accepted and recorded) |
+| 40 | M1-S12 Change capsule completion and closeout expansion | M0-S5, M0-S14, M1-S8, M1-S11 | Capsules and closeout residue; telemetry preservation AC bridges the S11 capture through the rewrite |
+| 41 | M1-S23 Coordinator supervision | M1-S15, M1-S16 | Replaces ceo-loop.sh's actual function (context resume, stuck detection, kill, budget, wake-on-question); must exist before agent integration claims the coordinator loop is managed |
+| 42 | M1-S20 Agent integration: prompts consume the tooling | M0-S10, M1-S4, M1-S10, M1-S13, M1-S14, M1-S16, M1-S17 | Last of the M1 line: prompts reference surfaces that all exist by here, and the J1 end-to-end AC closes the loop (S23 supervision included via S16) |
+| 43 | M1-S10 status collector expansion | M0-S6 | Flexible filler: independent of the M1 core line; slot wherever a gap opens |
+| 44 | M2-S2 Supervise | M1-S1, M1-S18 | Supervision battery consumes the daemon's lanes |
+| 45 | M2-S3 Ceremony runner | M0-S6, M0-S13, M1-S8 | Provider resolver and retro evidence both exist; ceremonies compact the loop the daemon just automated |
+| 46 | M2-S10 Retro action registry and follow-through | M1-S8 | Ranked after the ceremony runner so follow-through rituals attach to an existing cadence; the board surface joins at M2-S4 |
+| 47 | M2-S4 Board | M1-S5, M1-S17 | One screen over lanes, gates, owner asks; all sources exist by here |
+| 48 | M2-S5 Steer | M0-S10, M1-S11 | Message contract over the phase ledger and harness sessions; both stable at this point |
+| 49 | M2-S6 Metrics and spend | M1-S19, M2-S3 | Ceremony share needs ceremonies running to be measurable; spend engine exists from M1-S19 |
+| 50 | M2-S7 Suite-to-job mapping in gates | M0-S9 | Independent of the orchestration line; ranked here to close the merge-integrity gap before the memory line starts; slot earlier if gates drift in practice |
+| 51 | M2-S8 Memory records, layout, and lint | M1-S12 | Consumes the capsules M1-S12 produces; the memory line is self-contained from here |
+| 52 | M2-S9 Memory conventions in bootstrap templates | M2-S8 | Templates describe the layout the previous story defines |
+| 53 | M3-S3 Adapter completion | M0-S19, M0-S20 | First M3 story: full GitHub adapter unblocks self-hosted dogfooding for everything after it |
+| 54 | M3-S1 Harness surfaces | M1-S11 | Generated plugin surfaces over the adapter port |
+| 55 | M3-S2 Full MCP | M1-S7 | Batch semantics over the proven minimal surface |
+| 56 | M3-S4 Validators and deploy checklist | M0-S10 | Extends the lint family; independent of surfaces |
+| 57 | M3-S5 Policy engine | M0-S19 | Fleet check and apply through the write path; typed policy documents keep the autonomy kind open |
+| 58 | M3-S6 Workspace utilities | M0-S4, M0-S5 | Safety-rail utilities; independent filler in the M3 line |
+| 59 | M3-S8 Memory command family | M2-S8 | Commands over the canonical records |
+| 60 | M3-S9 Memory compiler to harness surfaces | M2-S8, M3-S1 | Last generator: compiles memory into the surfaces M3-S1 established |
+| 61 | M3-S7 v1.0 internal readiness and bash deprecation | M1-S18, M2-S2, M2-S3, M2-S6 | Deliberately last in M3: parity evidence requires every replaced engine delivered and measured |
+| 62 | M4-S1 Naming freeze and rename | M0-S2 | At M4 start so every name-derived surface exists before the freeze |
+| 63 | M4-S3 Docs, license registry, and public materials | M0-S18 | Finalized before first publication; written continuously from M0, closed out here |
+| 64 | M4-S2 Publication and release automation | M0-S17, M3-S7, M4-S1 | The release job follows the frozen name and the readiness verdict |
+| 65 | M4-S4 Merge the tooling branch to the default branch | M4-S2 | Installs move to the default branch only after a real release |
+| 66 | M4-S5 Bash stack retirement | M3-S7, M4-S4 | Wrappers outlived their purpose once installs come from the default branch |
+| 67 | M4-S6 Extension hooks | M0-S5 | Release-neutral opt-in sink; last because nothing local depends on it |
 
 ## Maintenance
 

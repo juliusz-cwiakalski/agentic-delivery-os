@@ -426,9 +426,16 @@ the M1 redefinition).
 - Goal: Schema validation at every state boundary so torn or unknown registries are classified events, never silently read as empty.
 - Tasks: schema checks at every state read/write boundary; classification of
   unknown, never silent zero. Coverage includes the delivery registry, the
-  retro registry, and ceremony artifacts, not only pm-notes.
+  retro registry, and ceremony artifacts, not only pm-notes. Self-corruption
+  salvage: a torn log tail is truncated to the last valid frame with a
+  classified salvage record (data after the tear is quarantined, never
+  silently read); indexes are rebuildable from the log alone; disk-full is
+  a classified fail-closed event, never a partial write.
 - AC: a torn registry read is classified, not treated as empty; retro and
-  ceremony artifacts validate at their boundaries too.
+  ceremony artifacts validate at their boundaries too; a torn tail
+  salvages to the last valid frame with the salvage recorded; indexes
+  rebuild from the log alone; disk-full fails classified with no partial
+  write.
 - Depends on: M0-S5.
 
 ### M1-S3 doctor v1
@@ -447,14 +454,21 @@ the M1 redefinition).
   covers tracker state as well as CI (a ticket that moved to an
   owner-gated state after verification invalidates the verification);
   owner-gate classification (never-merge classes, owner-review-first) is
-  policy-as-data the operator can inspect, and the override path is a
-  recorded waiver, never a hidden decision inside the tool.
+  policy-as-data the operator can inspect; waivers carry an authorizer
+  principal, and the merge verifies the authorizer against the gate
+  class's declared policy (owner-authored for never-merge classes) -
+  presence of a waiver is never sufficient; the override path is a
+  recorded waiver, never a hidden decision inside the tool; the refresh
+  path: when the PR has fallen behind its base, the transaction attempts
+  a rebase-refresh once, and a conflict is a classified refusal with the
+  conflicting paths named (never a force path).
 - AC: the merge helper refuses when gates were verified more than a bounded
   time ago; a refusal names the failed gate with inline evidence; deploy
   verified by trace; a repo-declared gate is enforced without code changes;
   a post-verification tracker transition to an owner-gated state is caught;
-  an owner-gate classification is readable from declared policy, and every
-  override is a recorded waiver.
+  an owner-gate classification is readable from declared policy; a waiver
+  authored by a principal not authorized for the gate class is refused;
+  a rebase conflict is a classified refusal naming the paths.
 - Depends on: M0-S9, M0-S4.
 
 ### M1-S5 Owner-gate SLA
@@ -494,24 +508,43 @@ the M1 redefinition).
   home of the periodic memory audit; the independent evidence sidecar -
   a collector identity delivery agents cannot write, append-only
   storage, trace ids, pipeline-truth checks (concepts/retrospectives.md).
-- AC: retro output survives a malformed entry without data loss; a
-  delivery agent cannot alter evidence the retro will read.
+  Integrity wording is tamper-evidence, not prevention: on a single-user
+  host nothing physically stops a lane process from touching the file,
+  so the sidecar is hash-chained with a chaining key that never enters
+  lane environments - a delivery agent cannot alter evidence
+  undetectably, and the retro flags the tamper.
+- AC: retro output survives a malformed entry without data loss; evidence
+  alteration by a delivery agent is detectable (hash-chain break flagged,
+  not silently trusted).
 - Depends on: M0-S5, M1-S2.
 
-### M1-S9 Dispatch dual-run and per-repo handover
-- Goal: Dispatch runs beside the bash stack, accumulates verify-change evidence, and hands over per repository, so the new engine becomes authoritative with the bash stack demoted to fallback.
-- Tasks: dispatch dual-run beside the bash stack on pilot tickets (shell
-  stays authoritative during evidence accrual); verify-change evidence
-  recorded per ticket for parity; the handover procedure per repository:
-  after two clean weeks of evidence on the migrated engine, the
-  repository's delivery flips to the new stack as authoritative and the
-  bash entry points print deprecation pointers and remain reachable as
-  fallback; covers the functions of `deliver-ticket.sh`,
-  `batch-deliver.sh`, `ceo-loop.sh`, and `pm-liveness.sh` (one-shot mode
-  first, queue-driven when the daemon lands).
-- AC: pilot tickets produce dual-run evidence with divergence reported; a
-  handed-over repository dispatches through the new stack end to end; the
-  bash entry points still run as fallback with deprecation notices;
+### M1-S9 Dispatch engine: dual-run evidence and per-repo handover
+- Goal: The typed dispatch loop (spawn, watch, classify, summarize) runs beside the bash stack, accumulates verify-change evidence, and hands over per repository, so the new engine becomes authoritative with the bash stack demoted to fallback.
+- Tasks: the per-ticket dispatch loop is this story's deliverable: spawn
+  through the harness adapter, watch with progress-based liveness,
+  classify into the TDR-0005 result enum, and emit the bash-continuity
+  key=value summary contract. Two phases with different gates:
+  (a) **evidence accrual** starts as soon as the scheduling engine ships
+  its one-shot mode (M1-S17): dual-run on pilot tickets with the bash
+  stack authoritative, verify-change evidence recorded per ticket,
+  divergences reported; (b) **handover per repository** additionally
+  requires the resident daemon live (M1-S18) and the evidence window
+  elapsed. Clean is defined: a rolling two-week window with zero
+  false-success incidents and zero unresolved divergences on the
+  repository's pilot paths. Handover flips the repository to the engine
+  as authoritative (recorded, reversible), and the bash entry points
+  print deprecation pointers and remain reachable as fallback. Covers
+  the functions of `deliver-ticket.sh`, `batch-deliver.sh`,
+  `pm-liveness.sh` (coordinator-session supervision has its own story,
+  M1-S23) and, with M1-S17/M1-S18, `ceo-loop.sh`'s loop-driving
+  function.
+- AC: pilot tickets produce dual-run evidence with divergence reported;
+  a dispatch is classified exit-0-with-no-artifact as failed (never
+  success); the key=value summary contract matches the bash shape;
+  handover is refused while the repository's clean window is unmet and
+  offered when met (the evidence gate is an AC, not a task note); a
+  handed-over repository dispatches through the new stack end to end;
+  the bash entry points still run as fallback with deprecation notices;
   handover is per repository and reversible.
 - Depends on: M0-S8, M1-S11, M1-S17, M1-S18.
 
@@ -545,10 +578,18 @@ the M1 redefinition).
   implementation now) and harness store locations resolve from
   configuration, so a containerized executor and bind-mounted shared
   stores slot in without redesign (concepts/
-  containerized-delivery.md).
+  containerized-delivery.md); the execution-environment descriptor
+  carries a deny-by-default environment allowlist: spawned harness
+  sessions receive only the variables the descriptor declares (model
+  routing, work paths), never the full parent environment - provider
+  credentials resolve through the credential port at use time rather
+  than by inheritance (concepts/credential-sidecar.md names the
+  exposure class this closes).
 - AC: dispatch runs the same delivery through either harness adapter with
   identical result classification; liveness signals are harness-agnostic;
-  the harness choice is configuration; after closeout the event log holds
+  the harness choice is configuration; a spawned session's environment
+  contains only allowlisted variables (an undeclared parent variable is
+  absent from the spawn env); after closeout the event log holds
   the delivery's session statistics (tokens by class, calls, tool usage,
   per agent and model) without re-querying harness stores.
 - Depends on: M0-S12, M0-S13.
@@ -571,13 +612,20 @@ the M1 redefinition).
   labels to done-class); branch and worktree cleanup; retro-coverage
   registry move; closeout emits a bounded judgment residue list
   (unresolved human comment threads, ambiguous flip hits) instead of the
-  coordinator grepping diffs.
+  coordinator grepping diffs. Telemetry store clarification: harness
+  telemetry (M1-S11) lands in the state-layer event log (the store
+  `spend` reads); the capsule's events.jsonl carries phase, gate, and
+  review events - two streams, two owners, no duplication. Closeout
+  also triggers session compaction (through the `db` integration) for
+  the closed delivery's sessions.
 - AC: every merged change leaves behind a closed capsule with events and
   a promotion decision (promoted or rejected with reason) per candidate;
   no candidate skips the capture bar or the evidence link; closeout
   performs the full mechanical sweep idempotently and emits bounded
-  judgment residue; a re-run after restart converges.
-- Depends on: M0-S5, M0-S14, M1-S8.
+  judgment residue; the M1-S11 telemetry capture still lands in the
+  state-layer event log after the closeout rewrite; a re-run after
+  restart converges.
+- Depends on: M0-S5, M0-S14, M1-S8, M1-S11.
 
 ### M1-S13 Machine-readable delivery plan schema
 - Goal: Delivery plans become machine-readable declared artifacts (per-phase scope, done-artifacts, leases, weight class, interactions) so parallelism is computable and the scheduler batches without an LLM in the loop.
@@ -642,8 +690,10 @@ the M1 redefinition).
 - AC: a large resuming session is not killed as stalled; a restart past
   the budget fails loudly with a classified reason visible in lane
   status; the resume-amplification metric is derivable per delivery
-  (feeds M1-S19); budget exhaustion is durable across daemon restarts
-  and its terminal state is escalation, not silence: the delivery is
+  (feeds M1-S19); budget exhaustion is durable and consumed by every
+  resume path, daemon or one-shot (a one-shot resume past the budget is
+  refused with the same classified reason), and its terminal state is
+  escalation, not silence: the delivery is
   marked failed in the queue with the classified reason and restart
   history, and a typed question reaches the coordinator within one
   collection cycle (never a silent requeue loop).
@@ -653,16 +703,31 @@ the M1 redefinition).
 - Goal: Blockers publish as typed, ranked, answerable questions and answers apply without re-entering delivery sessions, converting hours of lane idle into seconds.
 - Tasks: typed question records (decision-needed with options,
   spec-ambiguity, credential-missing with variable name only and never
-  values, external-wait) published to the state layer; ranked in the
+  values, external-wait) published to the state layer; every question
+  carries an `audience` field (owner or coordinator) and answers are
+  routed by it: `blockers answer` refuses a cross-audience answer except
+  where policy-as-data explicitly delegates (the confused-deputy guard);
+  free-text answers refuse credential values like the question path
+  does; questions ranked in the
   status digest and brief; answerable as data (`ados blockers answer`);
   the answer is applied by the coordinator loop or the daemon and the
-  lane resumes without a full session re-entry where the harness
-  supports it; one mechanism, two audiences: owner gates (M1-S5) and
-  coordinator questions; credential values never transit the channel.
+  lane resumes without a full session re-entry where the harness adapter
+  declares the resume-injection capability (the laneResume mode records
+  which path was taken: boundary-note, attach-continue, or
+  resume-prompt-reentry as the acknowledged fallback with its prefill
+  cost); one mechanism, two audiences: owner gates (M1-S5) and
+  coordinator questions; credential values never transit the channel;
+  the pickup contract: the coordinator session is woken (or its next
+  iteration is triggered) when a question ranked top-of-digest is
+  addressed to it - no question waits on the daily brief.
 - AC: a blocker surfaces in the digest within one collection cycle as a
-  typed question; an answer resumes the lane without re-entering the
-  delivery session; question types are validated; a credential-missing
-  question carries the variable name and never a value.
+  typed question; an answer addressed to the wrong audience is refused
+  (owner-audience question answered by a coordinator identity ->
+  refused, with the policy that would delegate named); an answer resumes
+  the lane, and when the adapter lacks resume injection the fallback is
+  the declared re-entry mode with its cost acknowledged; question types
+  are validated; a credential-missing question or answer carries the
+  variable name and never a value.
 - Depends on: M0-S5, M1-S5.
 
 ### M1-S17 Scheduling engine: queue, lanes, dependency batching
@@ -684,12 +749,24 @@ the M1 redefinition).
   carry a scope field (repo-exclusive is the only implemented scope;
   worktree-scoped leases arrive without redesign, concepts/
   parallel-delivery.md); one-shot mode: the queue computes the next
-  action and a CLI one-shot executes it (daemon-free operation).
-- AC: two lanes cannot deliver the same repo concurrently; a heavy build
+  action and a CLI one-shot executes it (daemon-free operation); lease
+  acquisition runs through the fence-token state path (any writer may
+  acquire, the daemon is just the usual holder), with a stale-lease
+  takeover rule (age beyond the lease TTL with no heartbeat), so
+  daemon-down one-shots are mutually exclusive too; park recheck
+  semantics: each condition type declares a default recheck interval as
+  configuration, a park whose condition cleared is auto-recovered with
+  a recorded incident (a park outliving its condition is a classified
+  bug, surfaced as a finding), and a parked lane is re-evaluated by the
+  next one-shot or daemon start when the daemon was down.
+- AC: two lanes cannot deliver the same repo concurrently (including two
+  daemon-down one-shots: the second refuses with lease-held evidence);
+  a heavy build
   is not scheduled onto a runner already carrying one; a ready producer
   is scheduled before its consumer; close items rank above new starts; a
-  park resumes exactly when its condition clears; the queue operates end
-  to end without the daemon (one-shot mode).
+  park resumes exactly when its condition clears (per-interval
+  re-evaluation; auto-recovery with a recorded incident); the queue
+  operates end to end without the daemon (one-shot mode).
 - Depends on: M0-S7, M0-S13, M1-S2, M1-S4, M1-S13, M1-S15.
 
 ### M1-S18 Resident dispatch daemon
@@ -743,14 +820,38 @@ the M1 redefinition).
   alive (reattach), interrupted (process gone without a failure record:
   resume from the ledger position, completed phases idempotently
   skipped, restart counter incremented), or crashed (failure recorded:
-  reason classified, resume per budget).
+  reason classified, resume per budget). Trust model statement (explicit residual risk): the local
+  transport's authorization is the filesystem boundary - every same-user
+  process, including lane sessions executing repository code, is inside
+  it; per-state-dir scoping isolates projects from each other, not lanes
+  from the engine; the boundary is accepted for M1 and the escape paths
+  are the parked concepts (credential sidecar, containerized lanes). A
+  caller-principal field is reserved (unauthenticated locally, exactly
+  like the handshake seam) on intent records and control frames, so a
+  later lane-scoped authorization can retrofit without a schema break.
+  External-effect protocol (the crash-safety mechanism behind the
+  convergence claims): every externally-visible effect (tracker
+  transition, comment, commit) is written as intent, applied once with a
+  receipt, `unknown` consequence is first-class when the effect may have
+  landed before its receipt, and re-apply is gated on query-based
+  check-before-reapply reconciliation (the primitive-catalogue rows for
+  CommandReceipt and OutboxEffect); commits are additionally protected
+  structurally by M1-S14 atomicity and SHA idempotency. Resident-daemon
+  polling hygiene: tracker and CI polling runs with per-platform
+  rate limits and backoff as configuration (a resident process never
+  hammers an API).
 - AC: a second daemon instance is refused or takes over stale state with
   evidence; killing the daemon mid-delivery and restarting converges
-  without duplicated work; deliveries continue via the one-shot CLI
+  without duplicated work - commits structurally (atomicity plus SHA
+  idempotency), tickets and comments via receipt-verified
+  reconciliation with unknown-first-class classification and
+  check-before-reapply (a re-driven effect that already landed is
+  detected, not duplicated); deliveries continue via the one-shot CLI
   while the daemon is down; the daemon never executes a merge; commands
   that mutate scheduling or blocker state complete daemon-down and are
   applied on reconcile with zero loss; live-watch without the daemon
-  declares degraded mode rather than failing or silently idling. The
+  declares degraded mode rather than failing or silently idling; intent
+  records and control frames carry the reserved caller-principal field. The
   conformance suite drives the daemon over stdio, proving codec and
   session logic are transport-agnostic; concurrent invocations from
   multiple connections are answered without cross-talk and concurrent
@@ -762,7 +863,7 @@ the M1 redefinition).
   phases, and enforces restart budgets durably; an installed login unit
   starts the daemon against the right state-dir scope and its absence
   changes nothing for one-shot operation.
-- Depends on: M1-S4, M1-S15, M1-S17.
+- Depends on: M1-S4, M1-S15, M1-S16, M1-S17.
 
 ### M1-S19 Spend read side and resume amplification
 - Goal: Per-ticket and per-phase spend plus the resume-amplification metric are visible from the event log, so waste classes are findable from the spend report alone.
@@ -791,8 +892,12 @@ the M1 redefinition).
 - AC: no lifecycle agent instruction writes phase state by hand or
   hand-crafts a commit for a phase transition; every tool call the
   prompts require has `--help` and a guide; no prompt references a
-  retired bash entry point as the primary path.
-- Depends on: M0-S10, M1-S13, M1-S14.
+  retired bash entry point as the primary path; the bash-continuity
+  key=value machine summaries are preserved on every replaced surface;
+  end-to-end: a coordinator session completes one full J1 iteration
+  (digest, typed answers, merge, closeout, next pick) using only the
+  tooling primitives on a pilot repository.
+- Depends on: M0-S10, M1-S4, M1-S10, M1-S13, M1-S14, M1-S16, M1-S17.
 
 ### M1-S21 Model profiles and provider watching
 - Goal: Model routing becomes profile-driven configuration (tier structure, per-agent overrides, selection heuristics, eligibility rules) with live provider watching and automatic switch-or-park, reverse-engineered from the legacy user-config resolver scripting; every harness spawn resolves a profile first, so quota and cost policy are enforced by machinery, not agent discipline.
@@ -821,15 +926,26 @@ the M1 redefinition).
   carries over); the current target profile persists in state with
   revert-on-recovery; the legacy resolver scripting's semantics are
   ported with its test battery (chain order, lazy probes,
-  park-versus-switch, revert, condition seams).
+  park-versus-switch, revert, condition seams); the env-record
+  validation schema is adversarially hardened (variable-name shape,
+  duplicate keys, metacharacters, homoglyphs, NUL and equals signs
+  rejected; values are never shell-interpreted); seat assignments carry
+  a typed pacingClass field (judgment or execution) as data - the
+  pacing rungs move only execution-class seats, and the field, not a
+  profile-naming convention, is what the engine enforces.
 - AC: a spawn never starts without a resolved profile; an exhausted
   subscription provider switches to the next eligible profile
   automatically and reverts when it recovers; a provider in an
   expensive window parks with cause and expiry and resumes exactly when
   the window clears; a text-only seat never receives a vision task; the
-  pacing rungs move only the declared non-judgment seats; chain,
+  pacing rungs move only seats whose declared pacingClass is execution;
+  chain,
   thresholds, rungs, and overrides are configuration (no code changes);
   the legacy scripting's decision table is covered by ported tests.
+  Milestone-exit criterion (declared in): every harness spawn on the
+  pilot paths resolves its profile through the engine, and the audit
+  ledger shows zero manual model-environment overrides in the final
+  two-week window.
 - Depends on: M0-S13, M1-S11.
 
 ### M1-S22 Command audit ledger and agent identity
@@ -837,19 +953,54 @@ the M1 redefinition).
 - Tasks: append-only audit ledger in the state layer: runId, command,
   arguments (through the redaction chokepoint), exit code, timing,
   outcome class, scope or repo, and the calling agent's identity when
-  provided (the agent-name environment convention: a harness plugin
-  exposes the calling agent's name in the environment of shells it
-  starts, and the CLI captures it); the envelope context fields
+  provided; the identity convention is specified: an environment
+  variable named through the branding seam, set by the harness adapter
+  at spawn from the agent role and lane id (per-lane-unique shape),
+  rendered into shells the agent starts by the harness plugin - the
+  identity is unauthenticated attribution (recorded as claimed, not
+  proven; see the S18 trust model); the envelope context fields
   (schemaVersion, runId, timing) are recorded here, enabling the
-  scripted-mode output trim; retention follows the state layer; a
-  bounded, filtered read surface for retro and auditor agents.
+  scripted-mode output trim (the trim activates when this story lands;
+  commands shipped before it emit the full envelope until then);
+  retention follows the state layer; integrity is tamper-evident
+  hash-chaining (a chaining key that never enters lane environments),
+  so records cannot be altered undetectably - wording is
+  tamper-evidence, not prevention, on a single-user host; a bounded,
+  filtered read surface for retro and auditor agents.
 - AC: every command invocation produces exactly one audit record
   (idempotent re-runs distinguished by runId); the calling agent's name
   is captured when provided and never inferred when absent; scripted
-  `--json` output omits schemaVersion, runId, and timing while the audit
+  `--json` output omits schemaVersion, runId, and timing (errors keep
+  runId as the correlation key) while the audit
   record retains them; the ledger survives a malformed entry without
-  data loss; secrets never appear in any record.
+  data loss; undetectable alteration of a record is not achievable
+  within the trust model (hash-chain break flags); secrets never appear
+  in any record.
 - Depends on: M0-S3, M0-S5.
+
+### M1-S23 Coordinator supervision
+- Goal: The coordinator session gets the same managed lifecycle lanes have (resume on context pressure, artifact-evidence stuck detection, kill with grace, bounded restarts, wake on typed questions), replacing `ceo-loop.sh`'s actual function so the bash stack can retire at M4-S5 with no actor left unmanaged.
+- Tasks: coordinator-session supervision beside the lane daemon: spawn
+  and join-or-resume decisions under context pressure (resume the
+  existing session when its context is recoverable, spawn fresh when
+  not, with the decision recorded); stuck detection by artifact
+  evidence (no digest consumed, no merge, no answer within declared
+  windows - not CPU); kill the coordinator tree with a grace period;
+  bounded restart budget with classified, loud exhaustion (escalates to
+  the owner brief, never a silent loop); wake-on-typed-question: a
+  top-of-digest coordinator-audience question triggers the next
+  coordinator iteration (the M1-S16 pickup contract's enforcement
+  arm); runs under the same supervisor regime as the daemon
+  (`daemon install` scope), distinct process, distinct budget.
+- AC: a coordinator session killed mid-iteration resumes or is
+  respawned per the recorded decision without losing closed-out work;
+  a stuck coordinator is detected by artifact evidence within the
+  declared window and restarted with the reason classified; restart
+  exhaustion escalates to the owner brief (never silent); a
+  coordinator-audience typed question wakes the coordinator within one
+  collection cycle; the ceo-loop.sh functions are covered: context
+  resume decision, stuck detection, kill-with-grace, restart budget.
+- Depends on: M1-S15, M1-S16.
 
 ---
 

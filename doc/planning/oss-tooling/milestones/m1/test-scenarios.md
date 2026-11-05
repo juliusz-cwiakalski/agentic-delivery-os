@@ -240,26 +240,104 @@ environment carries the agent-name convention (PM session shell).
 When: the command completes
 Then: exactly one audit record exists (runId, command, args redacted,
 exit, timing, agent identity); the agent's stdout is one minified
-`{"data":...}` line without schemaVersion, runId, or timing.
+`{"data":...}` line without schemaVersion, runId, or timing (an error
+line keeps runId).
 Assert: audit record retains the trimmed fields; identity captured when
 present and absent-never-inferred otherwise; re-run produces a second
 record with a new runId; no secret patterns in the record.
+
+### SC-M1-24: cross-audience answer refused (M1-S16)
+Given: question q-9043 is addressed to audience owner; the answering
+identity is the coordinator.
+When: `<binary> blockers answer q-9043 --choice 1`
+Then: refused with blockers.audience-mismatch naming the audience and
+the delegation policy (none).
+Assert: exit 1; no answer record applied; the question remains open.
+
+### SC-M1-17b: daemon-down one-shots are mutually exclusive (M1-S17)
+Given: daemon stopped; two one-shot dispatches target the same repo; no
+lease held.
+When: both run concurrently
+Then: exactly one acquires the lease via the fence-token state path;
+the other refuses with lease-held evidence naming the holder.
+Assert: one lease record with heartbeat; the refused process exits 1
+with the lease holder named; a stale lease (TTL exceeded, no heartbeat)
+is taken over with evidence.
+
+### SC-M1-25: coordinator supervision lifecycle (M1-S23)
+Given: a coordinator session mid-iteration; context pressure rises; a
+coordinator-audience question is ranked top-of-digest.
+When: supervision evaluates
+Then: the join-or-resume decision is recorded and applied; a stuck
+coordinator (no digest consumed, no merge, no answer within the declared
+window) is detected by artifact evidence, killed with grace, and
+restarted within budget; the typed question wakes the next iteration
+within one collection cycle.
+Assert: restart events classified; exhaustion escalates to the owner
+brief (never silent); the ceo-loop function map (resume decision, stuck
+detection, kill, budget, wake) is covered.
+
+### SC-M1-26: dispatch classifies the happy path (M1-S9)
+Given: a clean dual-run delivery lands its PR.
+When: the typed dispatch loop completes
+Then: classification `pr-open` with the key=value summary matching the
+bash shape (`result=`, `pr_url=`, `exit_code=`, `last_message=`).
+Assert: token parity with the bash enum (TDR-0005); summary keys
+identical.
+
+### SC-M1-27: exit-0-with-no-artifact classifies failed (M1-S9)
+Given: the spawned session exits 0 but no PR or branch commits exist.
+When: classification runs
+Then: result `failed` (exit 1), never success; the missing artifact is
+named.
+Assert: classification checks artifacts, not exit codes.
+
+### SC-M1-28: resume-prompt path (M1-S9)
+Given: a lane blocked on a question is answered; the harness adapter
+lacks resume injection.
+When: the resume applies
+Then: the resume mode records `resume-prompt-reentry` with its prefill
+cost acknowledged; the lane continues from its ledger position.
+Assert: mode recorded; phases before the block are not re-executed.
+
+### SC-M1-29: handover flips one repository (M1-S9)
+Given: repo-alpha's clean window met (two weeks, zero false-success,
+zero unresolved divergences); repo-beta's not.
+When: handover runs
+Then: repo-alpha flips to engine-authoritative (recorded, reversible)
+with bash fallback notices; repo-beta does not flip and names its
+remaining window.
+Assert: per-repo isolation of the flip; bash entry points still execute
+for repo-beta.
+
+### SC-M1-30: dual-run summary counts evidence (M1-S9)
+Given: fourteen days of dual-run evidence with two reported divergences,
+both resolved.
+When: `<binary> dispatch dual-run summary --repo <repo>`
+Then: the summary counts days, deliveries, incidents (zero
+false-success), divergences (two, resolved), and states eligibility.
+Assert: eligibility logic = clean window met; unresolved divergence
+blocks eligibility.
 
 ## Coverage map
 
 | Story | Scenarios |
 |---|---|
 | M1-S4 | SC-M1-01..05 |
+| M1-S9 | SC-M1-26..30 |
 | M1-S13 | SC-M1-06..07 |
 | M1-S14 | SC-M1-12 |
 | M1-S15 | SC-M1-14..15 |
-| M1-S16 | SC-M1-13 |
-| M1-S17 | SC-M1-08..11, SC-M1-17 |
+| M1-S16 | SC-M1-13, SC-M1-24 |
+| M1-S17 | SC-M1-08..11, SC-M1-17, SC-M1-17b |
 | M1-S18 | SC-M1-15..18, SC-M1-20 |
 | M1-S21 | SC-M1-21..22 |
 | M1-S22 | SC-M1-23 |
+| M1-S23 | SC-M1-25 |
 | cross-cutting | SC-M1-19 |
 
-Stories not listed (S1, S2, S3, S5, S6, S7, S8, S9, S10, S11, S12,
-S19, S20) inherit the pattern at test-plan time; their ACs are covered
-by the contracts scenarios and the story test plans.
+Coverage rule: every M1 story AC traces to an SC-M1 id here or to a
+named story-local test case in its own test plan; a story test plan
+without that traceability fails its own DoR. Stories not listed (S1,
+S2, S3, S5, S6, S7, S8, S10, S11, S12, S19, S20) inherit the pattern
+at test-plan time with story-local TC ids recorded in their plans.

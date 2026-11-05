@@ -47,6 +47,12 @@ Every command returns a CommandResult envelope: schemaVersion, runId,
 exitCode, timing, and data or error. Errors come from a single internal
 error table; exit codes are a projection of that table in the standalone
 CLI only. Machine output (--json) is always valid, even on failure.
+Output adapts by context: interactive terminals print the full pretty
+envelope; scripted or piped invocations print one minified
+`{"data":...}` or `{"error":...}` line (schemaVersion, runId, and
+timing live in the command audit ledger, M1-S22, not the agent's
+context; errors keep runId as the correlation key); `--verbose` forces
+the full envelope; the trim activates when M1-S22 lands.
 
 ### TERMINOLOGY
 
@@ -73,7 +79,11 @@ order:
 
 ### GLOBAL OPTIONS
 
-- `--json` - machine-readable envelope output.
+- `--json` - machine envelope output (context-adaptive; see the
+  envelope paragraph above).
+- `--verbose` - full envelope in any mode.
+- `--pretty[=auto|always|never]` - indentation for `--json` output;
+  streams stay line-delimited in every mode.
 - `--config <path>` - use an explicit config file instead of discovery.
 - `--no-color` - plain output.
 - `--help` - command help.
@@ -162,10 +172,10 @@ GitHub, Azure on demand).
 | `ados retro` | Retrospective evidence pipeline: collection, registry hardening, shape-crash guards, export; home of the periodic memory audit; runs retro levels on demand per concepts/retrospectives.md | coordinator | M1-S8 | - |
 | `ados blockers` | Typed blocker and question channel: typed questions (decision-needed with options, spec-ambiguity, credential-missing with variable name only, external-wait) published to the state layer, ranked in digest and brief, answerable as data; answers resume lanes without re-entering delivery sessions; one mechanism, two audiences (owner gates and coordinator) | coordinator, operator | M1-S16 | - |
 | `ados queue` | Programmatic delivery queue: dependency graph, ready-set, per-remote single-flight (the only structural lane cap), preemption with named park state, build-weight classes, closing-beats-opening ranking, park/resume that re-checks its condition continuously; one-shot mode computes the next action without the daemon | coordinator | M1-S17 | - |
-| `ados lanes` | Lane plan with dependency awareness and a build-weight class; two lanes cannot deliver the same repo concurrently; producers scheduled before consumers | coordinator | M1-S17 | - |
-| `ados daemon` | Resident dispatch daemon: start, stop, status; single-instance enforcement, crash-safe state, dispatcher never a lane, prepares and queues merges but never fires them; absence or failure degrades to the CLI one-shot path; communication contract: state-mediated truth with a local control socket as optimization (wake-now, live streams), every interaction carrying a state-only fallback | coordinator | M1-S18 | M2-S2 (supervision battery over its lanes) |
+| `ados lanes` | Lane observation surface: lanes with state (delivering, idle-with-reason, parked, merge-ready, in-review, failed), lease holders, restart counters, resume-amplification signal; `--watch` subscribes to bounded lane events | coordinator | M1-S17 | - |
+| `ados daemon` | Resident dispatch daemon: start [--foreground], stop, status [--live], install, uninstall; single-instance enforcement with fence-token takeover, crash-safe state, dispatcher never a lane, prepares and queues merges but never fires them, startup reconciliation with lane classification and durable restart budgets, trust model: the filesystem same-user boundary with a reserved caller-principal seam; absence or failure degrades to the CLI one-shot path; communication contract: state-mediated truth with a local control socket as optimization (wake-now, live streams), every interaction carrying a state-only fallback | coordinator | M1-S18 | M2-S2 (supervision battery over its lanes) |
 | `ados spend` | Spend read side v0: per-ticket and per-phase tokens by class, calls, per agent and model from closeout-captured telemetry; resume-amplification metric and restart counts | operator, coordinator | M1-S19 | M2-S6 (burn-rate alarms, quota snapshots, ceremony share) |
-| `ados dispatch` | Delivery engine beside the bash stack: spawns sessions through the harness adapter (opencode first, Claude Code next) over an execution-environment descriptor; dual-run with verify-change evidence, then per-repo handover (new stack authoritative, bash fallback with deprecation pointers) after two clean weeks per repo | coordinator | M1-S9 | - |
+| `ados dispatch` | The typed per-ticket dispatch loop (spawn, watch, classify, summarize with the key=value continuity contract) beside the bash stack: spawns sessions through the harness adapter over an execution-environment descriptor with a deny-by-default env allowlist; result `merged` means already-merged detection, never a merge fired by dispatch (constraint 9); dual-run with verify-change evidence, then per-repo handover (new stack authoritative, bash fallback with deprecation pointers) after two clean weeks per repo | coordinator | M1-S9 | - |
 
 ### M2: Ceremonies, measurement, and memory
 
@@ -291,7 +301,7 @@ M3-S7 or M4-S5 without a replacement.
 | session-database admin prototype | `ados db` | Prune idempotent, no live lock deleted (M0-S11) |
 | CI and runner health checks | `ados doctor` | Fix hints per failing check (M1-S3) |
 | batch-deliver.sh | `ados queue` + `ados daemon` | Scheduling engine one-shot mode (M1-S17); continuous operation under the daemon (M1-S18) |
-| ceo-loop.sh | `ados daemon` | Resident loop with single-instance enforcement and crash-safe resume (M1-S18) |
+| ceo-loop.sh | `ados daemon` (loop driving) + M1-S23 (coordinator-session supervision) | Loop-driving hands over with the daemon (M1-S18); coordinator supervision (context resume, stuck detection, kill, budget, wake-on-question) is M1-S23 - both are required before the M4-S5 bash retirement |
 | ceremony scripts | `ados ceremony` | Ceremony set enumerated (M2-S3) |
 | repo sync and branch utilities | `ados repos` | Safety rails on live-delivery repos (M3-S6) |
 | metrics collector | `ados metrics` | Thresholds and windows (M2-S6) |

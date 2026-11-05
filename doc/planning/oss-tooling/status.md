@@ -92,7 +92,7 @@ invariants, never moving-base diffs.
    inception readiness report, which links every record. Short review; the
    register links each one.
 3. **M1 milestone and tickets** (after GH-219 merges): create the M1
-   milestone and its 22 issues from the redefined backlog in ranking
+   milestone and its 23 issues from the redefined backlog in ranking
    order. M1 delivery is approved to start under the recorded gate
    amendment; stories are dispatched in ranking order, with dispatch
    handover (M1-S9) still respecting the per-repo two-clean-weeks rule.

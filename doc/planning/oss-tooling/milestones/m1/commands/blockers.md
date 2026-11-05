@@ -47,11 +47,19 @@ $ <binary> blockers answer q-8f21 --choice 2 --json
   "timing": { "started": "2026-11-18T09:20:00Z", "durationMs": 130 },
   "data": {
     "answered": "q-8f21",
+    "audience": "coordinator",
     "choice": "lite+escalation",
     "applied": true,
     "laneResume": { "lane": "L2", "mode": "boundary-note", "sessionReentry": false }
   }
 }
+```
+
+Cross-audience answer refused (the confused-deputy guard):
+
+```
+$ <binary> blockers answer q-9043 --choice 1 --json | cat
+{"runId":"r_01J9B7K2M4","error":{"code":"blockers.audience-mismatch","category":"user","retryable":false,"consequence":"not_landed","remediationHint":"question q-9043 is addressed to audience owner; this identity may not answer it (delegation policy: none)"}}
 ```
 
 Credential value refused by the channel:

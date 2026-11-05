@@ -109,7 +109,8 @@ primitive with auto-commit on phase transitions, typed blocker and
 question channel, scheduling engine with queue and lanes, resident
 dispatch daemon with one-shot degradation, harness adapters and dispatch
 portability, model profiles with provider watching and automatic
-switch-or-park, command audit ledger with agent identity, dispatch
+switch-or-park, command audit ledger with agent identity, coordinator
+supervision, dispatch
 dual-run to per-repo handover, agent prompts consuming the tooling). The
 recorded operator input is
 [operator-requirements-2026-11.md](operator-requirements-2026-11.md).
@@ -127,15 +128,31 @@ Exit criteria: the four bash scripts' functions run end to end on the new
 stack on pilot repositories and the new stack is authoritative there, with
 the bash stack demoted to fallback with deprecation pointers (removal stays
 M4-S5); false-success and lying-liveness counts near zero on migrated
-engines; merge near-miss classes structurally impossible; no resume-loop
-class (sessions resume without re-paying prefill or fail loudly within a
-bounded restart budget, and the resume-amplification metric reads
-approximately 1); changes delivered late in the milestone carry
-machine-readable plans and the scheduler answers sequence versus parallel
-mechanically from declared scope; the coordinator iteration is digest,
-typed answers, merge, closeout, with scheduling, waiting, and healthy-path
-verification consuming zero coordinator tokens (operator acceptance
-criteria).
+engines (near zero, unlike M0's zero: residuals are classified and
+counted, not silently accepted); merge near-miss classes structurally
+impossible; no resume-loop class (sessions resume without re-paying
+prefill or fail loudly within a bounded restart budget, and the
+resume-amplification metric reads approximately 1); changes delivered
+late in the milestone carry machine-readable plans and the scheduler
+answers sequence versus parallel mechanically from declared scope; the
+coordinator iteration is digest, typed answers, merge, closeout, with
+scheduling, waiting, and healthy-path verification consuming zero
+coordinator tokens (operator acceptance criteria). Scope composition: one
+state-dir scope spans many repositories; cross-repo dependency edges are
+first-class within a scope; coordinating multiple scopes is the
+coordinator's job above the tooling.
+
+M1 exit evidence (instrument, threshold, owning story per criterion):
+
+| Criterion | Instrument | Threshold and window | Owning story |
+|---|---|---|---|
+| False-success near zero | verify-change dual-run divergence log | zero unresolved divergences, final two weeks, pilot paths | M1-S9 |
+| Lying-liveness near zero | restart events + amplification records | zero unclassified stall/kill events, final two weeks | M1-S15, M1-S23 |
+| Resume amplification ~1 | spend amplification metric | median ~1 (accept band set at story delivery), final two weeks | M1-S19 |
+| Merge near-misses eliminated | merge transaction refusal log | zero near-miss classes reaching manual merge | M1-S4 |
+| Plans carried, parallelism computed | plan validate/overlap registry | every late-milestone change validates; overlap answered mechanically | M1-S13 |
+| Coordinator iteration shape | audit-ledger command trace + the S20 end-to-end AC | one J1 iteration on a pilot repo via primitives only; trace shows no polling loops | M1-S20, M1-S22 |
+| Spawns resolve profiles | audit ledger env-override count | zero manual model-environment overrides, final two weeks | M1-S21 |
 
 ## M2: Ceremonies, measurement, and memory (months 3-6)
 

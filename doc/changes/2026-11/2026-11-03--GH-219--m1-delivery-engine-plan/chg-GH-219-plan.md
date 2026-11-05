@@ -27,10 +27,12 @@ and retained). The remaining phases execute in the interactive session.
 ## Phase 2: Backlog and ranking redefinition (F-2 through F-7)
 
 - backlog.md: cross-cutting principle added (self-describing commands,
-  key=value contract continuity); M1 epic rewritten to 20 stories
-  (S1-S12 retained and extended, S13-S20 new: plan schema, commit
+  key=value contract continuity); M1 epic rewritten (23 stories after
+  the review rounds: S1-S12 retained and extended, S13-S23 new: plan
+  schema, commit
   primitive, session economics, typed blockers, scheduling engine,
-  daemon, spend read side, agent integration); closeout expansion folded
+  daemon, spend read side, agent integration, profiles and watching,
+  audit ledger, coordinator supervision); closeout expansion folded
   into M1-S12; M2 epic rescoped (M2-S1 retired with a gap note; M2-S2
   deps M1-S18; M2-S3 tier engine; M2-S4 deps M1-S17; M2-S6 deps M1-S19);
   M3-S7 deps updated; reading guide updated (M1 fully specified).
@@ -261,6 +263,78 @@ output trim)
   SC-M1-22 (park on windows, switch on exhaustion), SC-M1-23 (audit
   record, trimmed output, identity capture); SC-M1-12 updated for the
   default; coverage map extended.
+
+## Phase 15: CritiqueGrid assessment revision (owner-directed)
+
+Six-seat panel verdict BLOCK; all four CRITICAL findings verified against
+the branch and accepted; warnings W1-W18 and notes N1-N7 accepted with
+three adaptations (W6 restructured in place; W9 S21 declared in-exit;
+W18 capabilities folded into existing stories). Nothing rejected.
+
+- [x] CG-AUTH-001: audience field on typed questions, cross-audience
+  answer refusal (confused-deputy guard), authorizer principals on
+  waivers with merge verification against gate-class policy (backlog
+  S4/S16, contracts, blockers page, SC-M1-24).
+- [x] CG-SEC-001: explicit trust model (filesystem same-user boundary,
+  lanes inside it, parked escape paths), reserved caller-principal seam
+  on intent records and control frames (architecture, S18).
+- [x] CG-SRE-001: external-effect protocol (receipt, unknown-first-class,
+  check-before-reapply; CommandReceipt/OutboxEffect catalogue) in
+  architecture and S18 tasks; AC scoped honestly (commits structural,
+  tickets/comments receipt-verified); spec 7.3 deferral reconciled
+  (idempotent convergence moved into M1 scope).
+- [x] CG-PRD-002 + CG-DEC-002: new M1-S23 coordinator supervision
+  (context resume, artifact stuck detection, kill with grace, budget,
+  wake-on-typed-question); ceo-loop strangler row honest; J1 pickup
+  contract in S16.
+- [x] W1: dispatch exit codes aligned to TDR-0005 (max-restarts/failed
+  exit 1); verify-deploy unknown vs state-unverified disjoint.
+- [x] W2: dependency edges added (S18+=S16; S20+=S4,S10,S16,S17;
+  S12+=S11; M2-S3+=S13 planned at its story), S20 J1 end-to-end AC and
+  key=value AC.
+- [x] W3: dispatch never fires a merge, merged=detection (registry,
+  contracts, dispatch page); one-shot lease mutual exclusion via
+  fence-token path with stale-lease rule (S17, SC-M1-17b).
+- [x] W4: tamper-evidence wording with hash-chaining mechanism (S8
+  sidecar, S22 ledger); identity = unauthenticated attribution.
+- [x] W5: deny-by-default env allowlist in the execution-environment
+  descriptor (S11 task + AC).
+- [x] W6: S9 restructured (accrual gate at S17, handover additionally
+  S18 plus evidence window; clean defined; evidence gate as AC);
+  dispatch-loop tasks/ACs enumerated; dwell-time risk recorded in the
+  ranking row.
+- [x] W7: M1 exit-evidence table in the roadmap (instrument, threshold,
+  window, owning story per criterion); near-zero vs M0 zero reconciled.
+- [x] W8: laneResume modes with resume-prompt-reentry fallback; AC
+  conditioned on adapter capability (S16, contracts, blockers page).
+- [x] W9: typed pacingClass field; model-profiles concept reconciled to
+  M1-S21 declarative policy; S21 exit criterion declared (audit-ledger
+  zero manual overrides window).
+- [x] W10: park recheck semantics as config per condition type;
+  auto-recovery with recorded incident promoted to AC (S17).
+- [x] W11: timing-defaults table (config key, default, owning story);
+  wake source specified (event-log tail-follow plus bounded poll).
+- [x] W12: registry synced (envelope description with trim, global
+  options --verbose/--pretty, lanes observation row, daemon
+  install/uninstall and recovery contract, dispatch merged-pinning).
+- [x] W13: writer-table relay attribution scope; no-truth rule scoped to
+  state-derivable or at-most-once state-applied (architecture).
+- [x] W14: S12 deps S11, telemetry-preservation AC, telemetry store
+  clarified (state-layer event log vs capsule events.jsonl); closeout
+  session compaction task.
+- [x] W15: restart budgets consumed by every resume path including
+  one-shots (S15 AC).
+- [x] W16: torn-tail salvage, index rebuild, disk-full classified (S2
+  tasks + AC).
+- [x] W17: S9 seeded (SC-M1-26..30); coverage rule (every AC traces to
+  an SC id or story-local TC).
+- [x] W18: merge rebase-refresh path (S4); resident polling rate limits
+  and backoff (S18); R12 key=value AC (S20); compaction (S12).
+- [x] N1-N7: man-page default-on wording; trim activation timing (with
+  S22); errors keep runId; identity convention specified (env var via
+  branding seam, adapter setter, per-lane-unique, unauthenticated);
+  env-record adversarial validation (S21); scope-composition sentence
+  (roadmap); plan 20->23 stories; inception anchor link fixed.
 
 ## Revision log
 

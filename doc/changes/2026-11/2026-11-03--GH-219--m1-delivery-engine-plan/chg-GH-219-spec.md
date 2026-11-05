@@ -121,7 +121,11 @@ Because the published M1/M2 plan does not capture the owner-approved delivery-en
 
 - M2: ceremony runner, board, steer, metrics engine, memory records and follow-through except explicitly moved spend read side.
 - M4-S5: removal of the deprecated bash delivery stack.
-- Operator P2 ideas: idempotent convergence, stale-work sweep, and trust-boundary helpers, without implying M1 commitment.
+- Operator P2 ideas: stale-work sweep and trust-boundary helpers remain
+  P2 without M1 commitment. Idempotent convergence moved from P2 into
+  M1-S18 scope with the external-effect protocol (receipt,
+  unknown-first-class, check-before-reapply reconciliation), recorded
+  in the M1 revision (2026-11-05).
 
 ## 8. INTERFACES & INTEGRATION CONTRACTS
 

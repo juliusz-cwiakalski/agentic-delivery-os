@@ -116,6 +116,7 @@ flowchart LR
         CM[commit primitive<br/>record-plus-commit M1-S14]
         SE[session economics<br/>progress liveness,<br/>restart budget M1-S15]
         PF[profiles and watching<br/>tier routing, eligibility,<br/>switch-or-park, pacing M1-S21]
+        CS[coordinator supervision<br/>context resume, stuck detect,<br/>budget, wake-on-question M1-S23]
     end
     subgraph learn [learning plane]
         RT[retro pipeline M1-S8]
@@ -132,6 +133,7 @@ flowchart LR
     DP --> SE
     DP --> QU
     HA --> PF
+    CS --> BLK
     CM --> PS
     SP --> SE
     CP --> RT
@@ -211,7 +213,31 @@ fence tokens):**
 | lifecycle agents | ledger: phase transitions, capsule events (through `phase` and `commit`) |
 
 No writer ever mutates another writer's record class; conflicts are
-prevented by fence tokens, not by convention.
+prevented by fence tokens, not by convention. (Scoping for remote
+transports: when the daemon relays a client's `intent` frame it applies
+the record with writer attribution to the originating client - the
+daemon relays intent, never authors it; the class boundary holds.)
+
+**Trust model (explicit).** The local transport's authorization is the
+filesystem boundary: every same-user process, including lane sessions
+executing repository code, is inside it and could in principle write
+intent records, send control frames, or read the state dir. Per-state-dir
+scoping isolates projects from each other, not lanes from the engine.
+This boundary is accepted for M1 (it matches the bash-era posture); the
+escape paths are the parked concepts (credential sidecar, containerized
+lanes). Two seams keep the future retrofit cheap: a reserved
+caller-principal field on intent records and control frames
+(unauthenticated locally, exactly like the handshake seam), and the
+audience/authorizer routing on questions and waivers (see contracts).
+
+**External-effect protocol.** The crash-safety claims rest on this
+mechanism: every externally-visible effect (tracker transition, comment,
+commit) is written as intent, applied once with a receipt; `unknown`
+consequence is first-class when the effect may have landed before its
+receipt; re-apply is gated on query-based check-before-reapply
+reconciliation (CommandReceipt and OutboxEffect in the primitive
+catalogue). Commits are additionally protected structurally (atomic
+record-plus-commit plus SHA idempotency).
 
 **Every interaction has a state-only fallback:**
 
@@ -224,8 +250,10 @@ prevented by fence tokens, not by convention.
 | `dispatch` | one-shot execution path (the queue names the next action; the command executes it) |
 | `phase complete` / `commit` | ledger writes; unaffected (never daemon-mediated) |
 
-The daemon wakes on: control-socket poke, state-change notification, or a
-bounded poll interval, in that order of preference.
+The daemon wakes on: control-socket poke, its own tail-follow of the
+state event log (the notification source; inotify or log-tail, whichever
+the platform favors), or a
+bounded poll interval as the fallback, in that order of preference.
 
 ### Control protocol v1 (the wire contract)
 
@@ -246,7 +274,8 @@ bounded poll interval, in that order of preference.
   version is refused with `daemon.protocol.unsupported` naming the
   versions offered. Frame shapes are stable contracts like command
   output.
-- **No business truth on the wire.** Every frame is derivable from state;
+- **No business truth on the wire.** Every frame is derivable from state
+  or is an at-most-once state-applied intent relay (remote transports);
   losing or ignoring any frame leaves the system correct (side effects
   are at-most-once; the daemon reconciles from the event log). The only
   mutating frames delivered in M1 are control-plane (`stop`, `drain`,
