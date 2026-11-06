@@ -269,6 +269,45 @@ tc_007_zero_suites() {
   assert_not_contains "${out}" '[PASS]' "no fabricated pass list"
 }
 
+# ---------------------------------------------------------------------------
+# TC-CIPROP-012 — the bash-tests job invokes the runner and states the real
+# contract. Static tree assertion only; never a diff against a base branch.
+# ---------------------------------------------------------------------------
+job_block() {
+  local -r text="$1" job="$2"
+  printf '%s\n' "${text}" | awk -v job="${job}" '
+    $0 == "  " job ":" { inside = 1; print; next }
+    inside && /^  [a-z0-9-]+:[[:space:]]*$/ { inside = 0 }
+    inside { print }
+  '
+}
+
+tc_012_workflow_wiring() {
+  local workflow block
+  workflow="$(cat "${REPO_ROOT}/.github/workflows/ci.yml")"
+  block="$(job_block "${workflow}" "bash-tests")"
+  [[ -n "${block}" ]] || fail "bash-tests job not found in ci.yml"
+
+  assert_contains "${block}" 'bash scripts/run-bash-suites.sh' \
+    "bash-tests must invoke the runner by path"
+  assert_file_exists "${RUNNER}"
+  [[ -x "${RUNNER}" ]] || fail "runner is not executable: ${RUNNER}"
+  assert_not_contains "${workflow}" '-exec bash' \
+    "workflow must not execute suites through find -exec"
+  assert_contains "${block}" 'aggregates' "job comment states child-status aggregation"
+  assert_contains "${block}" 'runner' "job comment names the runner"
+  assert_not_contains "${block}" 'set -e fails the job' \
+    "job comment must not claim set -e alone fails the job"
+  assert_not_contains "${block}" 'first failing suite' \
+    "job comment must not claim fail-fast on the first failing suite"
+
+  local exclusion
+  for exclusion in "./tmp/*" '*e2e-providers*' '*e2e-suite*' '*performance*'; do
+    assert_contains "$(cat "${RUNNER}")" "${exclusion}" \
+      "runner keeps the CI-safe exclusion ${exclusion}"
+  done
+}
+
 main() {
   [[ -x "${RUNNER}" ]] || { fail "runner is missing or not executable: ${RUNNER}"; exit 1; }
   printf '[INFO] %s runner contract suite\n' "${TAG}"
@@ -279,6 +318,8 @@ main() {
   run_case "TC-CIPROP-005 discovery matches today's find expression" tc_005_discovery_parity
   run_case "TC-CIPROP-006 an unrunnable suite counts as a failure" tc_006_unrunnable
   run_case "TC-CIPROP-007 zero suites exits zero" tc_007_zero_suites
+  run_case "TC-CIPROP-012 bash-tests invokes the runner and states the contract" \
+    tc_012_workflow_wiring
 
   printf '\n[SUMMARY] %s %d passed, %d failed\n' "${TAG}" "${_passed}" "${_failed}"
   (( _failed == 0 ))

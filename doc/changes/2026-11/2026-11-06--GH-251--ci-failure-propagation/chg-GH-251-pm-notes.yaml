@@ -62,3 +62,6 @@ notes:
   - text: "DoR non-blocking findings to fold in opportunistically: (1) minor — test-plan frontmatter implementation_plan: null and GAP-1 stale now that plan.yaml exists; (2) minor — DEC-7 'change-scoped' label vs standing-rule reality: sharpen PR-review agenda sentence; (3) nit — TC-CIPROP-005 deterministic-ordering wording vs find's unguaranteed readdir order (set-equality is the contract); (4) nit — acknowledge new suites' visibility to test-all.sh in plan task 1.4. Fold into artifacts during review-fix/phase-7 if not superseded; do not block delivery."
     type: "info"
     date: "2026-11-06"
+  - text: "Plan phase 1 (917a22a1): suite-aggregation runner, runner contract suite (TC-CIPROP-001..007), and committed negative control (TC-CIPROP-008..011) delivered; contract 7/7 PASS, control PASS (green path, both counterfactuals, restored-runner non-vacuity, hermetic, bounded), bash -n clean, full runner 24/24 PASS exit 0. TC-CIPROP-012 deliberately deferred to phase 2 so every interim commit stays green. DoR nit folded in: both new suites are discovered by the runner and test-all.sh (executable bit + .tests/ name) and pass under the runner itself, satisfying TC-CIPROP-005 set-equality."
+    type: "info"
+    date: "2026-11-06"

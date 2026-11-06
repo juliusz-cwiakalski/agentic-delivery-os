@@ -19,7 +19,12 @@ import {
   scanText as scanSupplyChain,
   validate as validateSupplyChain,
 } from "../../scripts/checks/ci-supply-chain";
-import { BASH_JOBS, TS_JOBS, validate as validateTopology } from "../../scripts/checks/ci-topology";
+import {
+  BASH_JOBS,
+  TS_JOBS,
+  removedLineViolations,
+  validate as validateTopology,
+} from "../../scripts/checks/ci-topology";
 import { runSyncCheck } from "../../scripts/checks/error-table-sync";
 import { validate as validatePins } from "../../scripts/checks/pin-equality";
 import { validate as validateScriptSurface } from "../../scripts/checks/script-surface";
@@ -292,10 +297,209 @@ describe("forbidden-literal CI job", () => {
       ["diff", "--unified=0", "origin/main-tools...HEAD", "--", CI_PATH],
       { cwd: ROOT, encoding: "utf8" },
     );
-    const removed = diff
-      .split("\n")
-      .filter((line) => line.startsWith("-") && !line.startsWith("---"));
-    expect(removed).toEqual([]);
+    expect(removedLineViolations(base, diff)).toEqual([]);
+  });
+});
+
+const BASE_REPAIR_WORKFLOW = `name: CI
+on:
+  push:
+    branches: [main-tools]
+  pull_request:
+    branches: [main-tools]
+jobs:
+  bash-tests:
+    name: Bash test suites
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # GH-124: the old comment claims set -e fails the job on a failing suite.
+      # Exclusions are documented here.
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run all bash test suites
+        run: |
+          set -e
+          echo "=== Running all test suites ==="
+          find . -path '*/.tests/test-*.sh' \\
+            -not -path './tmp/*' \\
+            -print -exec bash {} \\;
+          echo "=== All test suites passed ==="
+
+  result-tuple-guard:
+    name: Result tuple guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run guard
+        run: bash scripts/.tests/test-deliver-ticket-result-tuples-modes.sh
+
+  ts-invariants:
+    name: TS invariants
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run invariants
+        run: bun run scripts/checks/ci-topology.ts
+`;
+
+const HEAD_REPAIR_WORKFLOW = `name: CI
+on:
+  push:
+    branches: [main-tools]
+  pull_request:
+    branches: [main-tools]
+jobs:
+  bash-tests:
+    name: Bash test suites
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # GH-251: the runner discovers every CI-safe suite, executes each, and
+      # aggregates child statuses, so the job fails iff any suite fails.
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run all bash test suites
+        run: |
+          set -e
+          bash scripts/run-bash-suites.sh
+
+  result-tuple-guard:
+    name: Result tuple guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run guard
+        run: bash scripts/.tests/test-deliver-ticket-result-tuples-modes.sh
+
+  ts-invariants:
+    name: TS invariants
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run invariants
+        run: bun run scripts/checks/ci-topology.ts
+`;
+
+const unifiedDiff = (base: string, head: string): string => {
+  const directory = mkdtempSync(join(tmpdir(), "gh251-diff-"));
+  try {
+    const basePath = join(directory, "base.yml");
+    const headPath = join(directory, "head.yml");
+    writeFileSync(basePath, base);
+    writeFileSync(headPath, head);
+    const result = spawnSync(
+      "git",
+      ["diff", "--no-index", "--unified=0", "--", basePath, headPath],
+      { encoding: "utf8" },
+    );
+    return result.stdout ?? "";
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+};
+
+const makeWorkflowTreeFromText = (text: string): string => {
+  const directory = mkdtempSync(join(tmpdir(), "gh251-workflow-"));
+  mkdirSync(join(directory, ".github/workflows"), { recursive: true });
+  cpSync(join(ROOT, "scripts/checks"), join(directory, "scripts/checks"), { recursive: true });
+  cpSync(join(ROOT, "package.json"), join(directory, "package.json"));
+  writeFileSync(join(directory, CI_PATH), text);
+  return directory;
+};
+
+describe("DEC-7 scoped ci-topology allowance", () => {
+  test("fixture A: bash-tests execution-block and comment removals are allowed", () => {
+    const diff = unifiedDiff(BASE_REPAIR_WORKFLOW, HEAD_REPAIR_WORKFLOW);
+    expect(diff).toContain("@@");
+    expect(removedLineViolations(BASE_REPAIR_WORKFLOW, diff)).toEqual([]);
+    expect(HEAD_REPAIR_WORKFLOW).toContain("  bash-tests:");
+    expect(HEAD_REPAIR_WORKFLOW).toContain("bash scripts/run-bash-suites.sh");
+  });
+
+  test("fixture A non-vacuity: the same diff fails when the allowance is disabled", () => {
+    const diff = unifiedDiff(BASE_REPAIR_WORKFLOW, HEAD_REPAIR_WORKFLOW);
+    const violations = removedLineViolations(BASE_REPAIR_WORKFLOW, diff, {
+      allowBashTestsExecutionBlockRemovals: false,
+    });
+    expect(violations.length).toBeGreaterThan(0);
+    expect(violations.some((message) => message.includes("set -e"))).toBe(true);
+  });
+
+  test("fixture B: a removal outside the bash-tests block still fails by line", () => {
+    const head = HEAD_REPAIR_WORKFLOW.replace(
+      "        run: bun run scripts/checks/ci-topology.ts\n",
+      "",
+    );
+    const violations = removedLineViolations(BASE_REPAIR_WORKFLOW, unifiedDiff(BASE_REPAIR_WORKFLOW, head));
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toContain("ci-topology.ts");
+  });
+
+  test("fixture C: deleting the whole bash-tests job still fails job presence", () => {
+    const head = BASE_REPAIR_WORKFLOW.replace(jobBlock(BASE_REPAIR_WORKFLOW, "bash-tests"), "");
+    const directory = makeWorkflowTreeFromText(head);
+    try {
+      expect(
+        validateTopology(directory).some((message) =>
+          message.includes("existing bash job bash-tests is missing"),
+        ),
+      ).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("fixture D: removing a ts job id fails by name", () => {
+    const head = BASE_REPAIR_WORKFLOW.replace(jobBlock(BASE_REPAIR_WORKFLOW, "ts-invariants"), "");
+    const directory = makeWorkflowTreeFromText(head);
+    try {
+      expect(
+        validateTopology(directory).some((message) =>
+          message.includes("required TypeScript job ts-invariants is missing"),
+        ),
+      ).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("fixture D: removing another bash job id fails by name", () => {
+    const head = BASE_REPAIR_WORKFLOW.replace(
+      jobBlock(BASE_REPAIR_WORKFLOW, "result-tuple-guard"),
+      "",
+    );
+    const directory = makeWorkflowTreeFromText(head);
+    try {
+      expect(
+        validateTopology(directory).some((message) =>
+          message.includes("existing bash job result-tuple-guard is missing"),
+        ),
+      ).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("fixture E: a line adjacent to but outside the allowed block still fails", () => {
+    const head = HEAD_REPAIR_WORKFLOW.replace(
+      "      - name: Run all bash test suites\n",
+      "      # name removed\n",
+    );
+    const violations = removedLineViolations(
+      BASE_REPAIR_WORKFLOW,
+      unifiedDiff(BASE_REPAIR_WORKFLOW, head),
+    );
+    expect(violations.some((message) => message.includes("Run all bash test suites"))).toBe(true);
+  });
+
+  test("live tree stays green under the allowance and exposes no bypass flag", () => {
+    expect(validateTopology(ROOT)).toEqual([]);
+    const source = readFileSync(join(ROOT, "scripts/checks/ci-topology.ts"), "utf8");
+    expect(source).not.toContain("process.argv");
+    expect(source).not.toContain("skip-diff");
   });
 });
 
