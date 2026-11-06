@@ -1,0 +1,9 @@
+example-product board  audience=owner  collectors=tracker:available
+GH-1704:owner-review  owner-review  GH-1704  age=unknown:activity-timestamp-absent  sla=escalated  default=null  waivedBy=null
+GH-1705:owner-review  owner-review  GH-1705  age=unknown:activity-timestamp-unparseable  sla=escalated  default=null  waivedBy=null
+GH-1706:owner-review  owner-review  GH-1706  age=4d  sla=escalated  default=null  waivedBy=owner
+GH-1707:owner-review  owner-review  GH-1707  age=3d  sla=escalated  default=null  waivedBy=null
+GH-1702:owner-review  owner-review  GH-1702  age=26h  sla=escalated  default=null  waivedBy=null
+GH-1703:waiver  waiver  GH-1703  age=3d  sla=default-applied  default=owner-review-first  waivedBy=null
+GH-1701:owner-review  owner-review  GH-1701  age=10h  sla=fresh  default=null  waivedBy=null
+GH-1708:owner-review  owner-review  GH-1708  age=2h  sla=fresh  default=null  waivedBy=null

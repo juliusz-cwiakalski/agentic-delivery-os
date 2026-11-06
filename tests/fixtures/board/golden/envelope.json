@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-board-fixture",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 0
+  },
+  "data": {
+    "schemaVersion": "delivery.board.v1",
+    "audience": "owner",
+    "gates": [
+      {
+        "id": "GH-1704:owner-review",
+        "kind": "owner-review",
+        "ref": "GH-1704",
+        "age": null,
+        "ageUnknownReason": "activity-timestamp-absent",
+        "slaState": "escalated",
+        "default": null,
+        "waivedBy": null
+      },
+      {
+        "id": "GH-1705:owner-review",
+        "kind": "owner-review",
+        "ref": "GH-1705",
+        "age": null,
+        "ageUnknownReason": "activity-timestamp-unparseable",
+        "slaState": "escalated",
+        "default": null,
+        "waivedBy": null
+      },
+      {
+        "id": "GH-1706:owner-review",
+        "kind": "owner-review",
+        "ref": "GH-1706",
+        "age": 360000000,
+        "slaState": "escalated",
+        "default": null,
+        "waivedBy": "owner"
+      },
+      {
+        "id": "GH-1707:owner-review",
+        "kind": "owner-review",
+        "ref": "GH-1707",
+        "age": 262800000,
+        "slaState": "escalated",
+        "default": null,
+        "waivedBy": null
+      },
+      {
+        "id": "GH-1702:owner-review",
+        "kind": "owner-review",
+        "ref": "GH-1702",
+        "age": 93600000,
+        "slaState": "escalated",
+        "default": null,
+        "waivedBy": null
+      },
+      {
+        "id": "GH-1703:waiver",
+        "kind": "waiver",
+        "ref": "GH-1703",
+        "age": 259200000,
+        "slaState": "default-applied",
+        "default": "owner-review-first",
+        "waivedBy": null
+      },
+      {
+        "id": "GH-1701:owner-review",
+        "kind": "owner-review",
+        "ref": "GH-1701",
+        "age": 36000000,
+        "slaState": "fresh",
+        "default": null,
+        "waivedBy": null
+      },
+      {
+        "id": "GH-1708:owner-review",
+        "kind": "owner-review",
+        "ref": "GH-1708",
+        "age": 7200000,
+        "slaState": "fresh",
+        "default": null,
+        "waivedBy": null
+      }
+    ],
+    "truncated": false,
+    "omitted": 0,
+    "collectors": [
+      {
+        "collector": "tracker",
+        "outcome": "available"
+      }
+    ]
+  }
+}

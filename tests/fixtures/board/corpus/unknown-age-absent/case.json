@@ -1,0 +1,28 @@
+{
+  "id": "unknown-age-absent",
+  "class": "unknown-age-absent",
+  "gates": [
+    {
+      "id": "GH-1504:owner-review",
+      "kind": "owner-review",
+      "ref": "GH-1504",
+      "activity": "absent"
+    }
+  ],
+  "expect": {
+    "exitCode": 0,
+    "gateCount": 1,
+    "records": 0,
+    "truncated": false,
+    "omitted": 0,
+    "gates": [
+      {
+        "id": "GH-1504:owner-review",
+        "slaState": "escalated",
+        "default": null,
+        "waivedBy": null,
+        "ageUnknownReason": "activity-timestamp-absent"
+      }
+    ]
+  }
+}

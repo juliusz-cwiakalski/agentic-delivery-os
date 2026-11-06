@@ -31,6 +31,15 @@ export {
   summarizeCloseout,
 } from "./closeout.js";
 export {
+  collectorUnavailableCode,
+  evaluateOwnerGateSla,
+  isCollectorUnavailableFamilyCode,
+  type OwnerGateSlaPolicyViolation,
+  renderBoardHuman,
+  toBoardData,
+  validateOwnerGateSlaPolicy,
+} from "./owner-gate-sla.js";
+export {
   globToRegExp,
   normalizeRepoPath,
   packageCovers,

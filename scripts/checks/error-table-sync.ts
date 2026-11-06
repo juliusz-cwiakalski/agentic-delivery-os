@@ -15,6 +15,11 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  BOARD_COLLECTOR_ERROR_PREFIX,
+  BOARD_COLLECTOR_ERROR_SUFFIX,
+  BOARD_COLLECTOR_IDS,
+} from "../../packages/core/src/contracts/owner-gate-sla.js";
 
 export type TableEntry = {
   readonly code: string;
@@ -99,6 +104,29 @@ const listFiles = (root: string, relativeDir: string, extensions: readonly strin
 };
 
 const lineAt = (text: string, index: number): number => text.slice(0, index).split("\n").length;
+
+/**
+ * The declared `status.collector.<id>.unavailable` family (GAP-3, DEC-7).
+ *
+ * The recognizer is deliberately narrow: it admits only the declared prefix and
+ * suffix over the closed collector-id set. There is no generic `status.*`
+ * widening and no template/empty id. A synthetic `status.other.<id>.unavailable`
+ * is therefore not a member and fails the ordinary table lookup.
+ */
+export const collectorIdOfFamilyCode = (code: string): string | undefined => {
+  if (!code.startsWith(BOARD_COLLECTOR_ERROR_PREFIX)) return undefined;
+  if (!code.endsWith(BOARD_COLLECTOR_ERROR_SUFFIX)) return undefined;
+  const id = code.slice(
+    BOARD_COLLECTOR_ERROR_PREFIX.length,
+    code.length - BOARD_COLLECTOR_ERROR_SUFFIX.length,
+  );
+  return /^[a-z][a-z0-9-]*$/.test(id) ? id : undefined;
+};
+
+export const isDeclaredCollectorFamilyCode = (code: string): boolean => {
+  const id = collectorIdOfFamilyCode(code);
+  return id !== undefined && (BOARD_COLLECTOR_IDS as readonly string[]).includes(id);
+};
 
 export const scanReferences = (text: string, domainKinds: readonly string[]): Reference[] => {
   const references: Reference[] = [];
@@ -363,8 +391,12 @@ const validateScan = (
       }
       recognizedCount += 1;
       if (!codes.has(reference.code) && !ADAPTER_LOCAL_CODES.has(reference.code)) {
+        const family =
+          isDeclaredCollectorFamilyCode(reference.code) ||
+          (reference.code.startsWith(BOARD_COLLECTOR_ERROR_PREFIX) &&
+            reference.code.endsWith(BOARD_COLLECTOR_ERROR_SUFFIX));
         failures.push(
-          `${file}:${reference.line} ${surface}: recognized code ${reference.code} has no table entry`,
+          `${file}:${reference.line} ${surface}: recognized ${family ? "collector-family " : ""}code ${reference.code} has no table entry`,
         );
       }
     }

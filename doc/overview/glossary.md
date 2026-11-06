@@ -8,8 +8,8 @@ area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-228"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, adapter-port, provider-client-seed, status-digest, queue-readiness, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, watchdog/lane, and brief-render terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-228", "GH-229"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, adapter-port, provider-client-seed, status-digest, queue-readiness, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, watchdog/lane, and brief-render terms used across the repository."
 ---
 
 # Glossary
@@ -237,6 +237,12 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Non-vacuous surface | At least one commit and at least one changed file reported by the delivery request; absent counts are unknown, never non-empty. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | `branch-mismatch` | A definitive failure in which the open-PR page contains one or more open requests but none has a `sourceRef` equal to the checkout branch. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | `provider.not-found` | An additive adapter-local read-result code for HTTP 404; it is not an error-table code. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| Owner-gate SLA | The pinned aging policy for owner gates: escalation at 24 h, a pre-agreed default at 72 h where policy permits, one default per gate kind/class, and no silent state. | Owner-gate SLA | [feature-owner-gate-sla.md](../spec/features/feature-owner-gate-sla.md) |
+| `slaState` | A gate's SLA posture: `fresh`, `escalated`, or `default-applied`; unknown age projects as `escalated` with the age declared unknown. | Owner-gate SLA | [feature-owner-gate-sla.md](../spec/features/feature-owner-gate-sla.md) |
+| Pre-agreed default | Exactly one decision per defaultable gate kind/class, held as policy-as-data before expiry and never invented at runtime. | Owner-gate SLA | [feature-owner-gate-sla.md](../spec/features/feature-owner-gate-sla.md) |
+| Never-merge class | A gate class the SLA never auto-proceeds; only a recorded waiver authored by a principal authorized for the class overrides it. | Owner-gate SLA | [feature-owner-gate-sla.md](../spec/features/feature-owner-gate-sla.md) |
+| Decision record (EVT-1) | The append-only, idempotent state record persisted at every owner-gate default application: gate, kind, ref, default, time, threshold, and clock source. | Owner-gate SLA | [feature-owner-gate-sla.md](../spec/features/feature-owner-gate-sla.md) |
+| Board | The render-once `board` command: the owner-gate aging grid with per-gate SLA state, declared collector unavailability, and bounded deterministic output. | Owner-gate SLA | [feature-owner-gate-sla.md](../spec/features/feature-owner-gate-sla.md) |
 | Structured ledger evaluation | `EvaluateVerifyChange` → `VerifyLedgerEvaluation`, the pure evaluation that returns variant, outcome, required/completed/missing phases, declaration counts, and registry evidence on every outcome. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | Open-PR resolution | The one deterministic rule that selects the target delivery request from one bounded open-PR page. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | Lane | One unit of delivery work with an identity, a declared base ref, and declared workspace paths; later scheduling and daemon consumers judge and restore lanes through the watchdog probes. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
@@ -282,6 +288,7 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Status Digest](../spec/features/feature-status-digest.md)
 - [Brief](../spec/features/feature-brief.md)
 - [Queue Ready](../spec/features/feature-queue-ready.md)
+- [Owner-Gate SLA](../spec/features/feature-owner-gate-sla.md)
 - [PM-Notes Lint and Phase Transitions](../spec/features/feature-pm-notes-lint-and-phase-transitions.md)
 - [Verify Change and Exit Taxonomy](../spec/features/feature-verify-change-and-exit-taxonomy.md)
 - [Verify Gates](../spec/features/feature-verify-gates.md)

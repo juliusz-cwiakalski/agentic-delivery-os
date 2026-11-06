@@ -53,6 +53,12 @@
       "text": "watchdog.signals-absent",
       "recognized": true,
       "resolves": true
+    },
+    {
+      "id": "declared-collector-family",
+      "text": "status.collector.tracker.unavailable",
+      "recognized": true,
+      "resolves": true
     }
   ]
 }

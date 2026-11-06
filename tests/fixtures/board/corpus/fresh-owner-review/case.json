@@ -1,0 +1,27 @@
+{
+  "id": "fresh-owner-review",
+  "class": "fresh",
+  "gates": [
+    {
+      "id": "GH-1501:owner-review",
+      "kind": "owner-review",
+      "ref": "GH-1501",
+      "ageMs": 3600000
+    }
+  ],
+  "expect": {
+    "exitCode": 0,
+    "gateCount": 1,
+    "records": 0,
+    "truncated": false,
+    "omitted": 0,
+    "gates": [
+      {
+        "id": "GH-1501:owner-review",
+        "slaState": "fresh",
+        "default": null,
+        "waivedBy": null
+      }
+    ]
+  }
+}

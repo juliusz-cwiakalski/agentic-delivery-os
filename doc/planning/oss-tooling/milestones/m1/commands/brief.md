@@ -127,8 +127,9 @@ parked-work  observed  total <n> (<n> unknown)
 The brief adds no error identity. Collector unavailability is payload
 data: the affected surface names its own evidence state (state word plus
 reason). Only `fallback.invocation` and `fallback.internal` can fail the
-command. There is no `status.collector.<id>.unavailable` identity, and
-collector failure never projects to exit `2`.
+command. The brief renders no `status.collector.<id>.unavailable`
+identity (the family itself is the board's declared status-domain
+identity, see board.md), and collector failure never projects to exit `2`.
 
 ## SEE ALSO
 

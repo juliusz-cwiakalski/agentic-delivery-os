@@ -1,0 +1,27 @@
+{
+  "id": "escalated-owner-review",
+  "class": "escalated",
+  "gates": [
+    {
+      "id": "GH-1502:owner-review",
+      "kind": "owner-review",
+      "ref": "GH-1502",
+      "ageMs": 93600000
+    }
+  ],
+  "expect": {
+    "exitCode": 0,
+    "gateCount": 1,
+    "records": 0,
+    "truncated": false,
+    "omitted": 0,
+    "gates": [
+      {
+        "id": "GH-1502:owner-review",
+        "slaState": "escalated",
+        "default": null,
+        "waivedBy": null
+      }
+    ]
+  }
+}

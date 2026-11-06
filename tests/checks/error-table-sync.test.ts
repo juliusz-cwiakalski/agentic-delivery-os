@@ -8,8 +8,19 @@ import { execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { ERROR_TABLE, type ErrorTableEntry } from "../../packages/core/src/contracts/index";
-import { runSyncCheck } from "../../scripts/checks/error-table-sync";
+import { classifyThrown } from "../../packages/cli/src/classify";
+import {
+  BOARD_COLLECTOR_ERROR_PREFIX,
+  BOARD_COLLECTOR_ERROR_SUFFIX,
+  BOARD_COLLECTOR_IDS,
+  ERROR_TABLE,
+  type ErrorTableEntry,
+} from "../../packages/core/src/contracts/index";
+import {
+  collectorIdOfFamilyCode,
+  isDeclaredCollectorFamilyCode,
+  runSyncCheck,
+} from "../../scripts/checks/error-table-sync";
 
 const ROOT = process.cwd();
 const DOC = "doc/spec/features/feature-result-contract.md";
@@ -1057,8 +1068,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 18) {
-    failures.push(`table length ${live.length} != baseline + 18 (${BASELINE_ROWS.length + 18})`);
+  if (live.length !== BASELINE_ROWS.length + 19) {
+    failures.push(`table length ${live.length} != baseline + 19 (${BASELINE_ROWS.length + 19})`);
   }
   return failures;
 };
@@ -1130,7 +1141,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 18,
+      BASELINE_ROWS.length + 19,
     );
   });
 
@@ -1153,7 +1164,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 18);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 19);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1284,13 +1295,84 @@ describe("TC-WATCHDOG-004 documented rows and corpora stay in two-way sync", () 
   });
 });
 
+const ROW_COLLECTOR_TRACKER =
+  "| status.collector.tracker.unavailable | status | platform | false | not_landed | Restore access to the named collector source and re-run the board; the board withheld its gates rather than display a partial picture. | platform-provider | The named board collector is unavailable. |";
+
+describe("TC-SLA-021 collector family is recognized narrowly and syncs both ways", () => {
+  test("the shipped family row is documented exactly once and the delivered tree is green", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
+    expect(readFile(ROOT, DOC).split(ROW_COLLECTOR_TRACKER).length - 1).toBe(1);
+  });
+
+  test("the family recognizer admits the declared id and rejects other shapes", () => {
+    expect(collectorIdOfFamilyCode("status.collector.tracker.unavailable")).toBe("tracker");
+    expect(isDeclaredCollectorFamilyCode("status.collector.tracker.unavailable")).toBe(true);
+    expect(isDeclaredCollectorFamilyCode("status.collector.coordination.unavailable")).toBe(false);
+    expect(collectorIdOfFamilyCode("status.other.tracker.unavailable")).toBeUndefined();
+    expect(collectorIdOfFamilyCode("status.collector..unavailable")).toBeUndefined();
+    expect(collectorIdOfFamilyCode("status.collector.Tracker.unavailable")).toBeUndefined();
+  });
+
+  test("a status.other.<id>.unavailable literal fails the sync check by name", async () => {
+    const root = makeTempRoot();
+    editFile(
+      root,
+      "packages/cli/src/index.ts",
+      (text) => `${text}\nconst drift = "status.other.tracker.unavailable";\n`,
+    );
+    const failures = messages((await runSyncCheck({ root })).failures);
+    expect(failures).toContain("status.other.tracker.unavailable");
+    expect(failures).toContain("has no table entry");
+  });
+
+  test("a family code naming an undeclared collector id fails the sync check", async () => {
+    const root = makeTempRoot();
+    editFile(
+      root,
+      "packages/cli/src/index.ts",
+      (text) => `${text}\nconst drift = "status.collector.coordination.unavailable";\n`,
+    );
+    const failures = messages((await runSyncCheck({ root })).failures);
+    expect(failures).toContain("collector-family code status.collector.coordination.unavailable");
+  });
+
+  test("removing the documented family row fails naming the source entry", async () => {
+    const root = makeTempRoot();
+    editFile(root, DOC, removeDocRow(ROW_COLLECTOR_TRACKER));
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "source entry status.collector.tracker.unavailable is undocumented",
+    );
+  });
+
+  test("runtime classification resolves a family code for an injected collector id", () => {
+    const entry = classifyThrown({
+      kind: "status",
+      code: "status.collector.coordination.unavailable",
+      summary: "ignored",
+    });
+    expect(entry.code).toBe("status.collector.coordination.unavailable");
+    expect(entry.projectionClass).toBe("platform-provider");
+    expect(classifyThrown({ kind: "status", code: "status.other.tracker.unavailable" }).code).toBe(
+      "fallback.internal",
+    );
+  });
+});
+
 describe("TC-BRIEF-013 brief rows stay absent and the sync check stays green", () => {
   test("the live tree is bidirectionally consistent and has no brief/status identity", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
     expect(result.counts.sourceEntries).toBeGreaterThan(0);
     expect(ERROR_TABLE.some((entry) => entry.code.startsWith("brief."))).toBe(false);
-    expect(ERROR_TABLE.some((entry) => entry.code.startsWith("status."))).toBe(false);
+    expect(
+      ERROR_TABLE.filter((entry) => entry.code.startsWith("status.")).map((entry) => entry.code),
+    ).toEqual(
+      BOARD_COLLECTOR_IDS.map(
+        (id) => `${BOARD_COLLECTOR_ERROR_PREFIX}${id}${BOARD_COLLECTOR_ERROR_SUFFIX}`,
+      ),
+    );
   });
 
   test("a documented-only brief row fails naming the offender", async () => {

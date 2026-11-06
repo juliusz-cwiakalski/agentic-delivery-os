@@ -2,12 +2,12 @@
 id: SPEC-STATE-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-05
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
-summary: "The implemented state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, rebuild from the ledger alone including a post-salvage ledger, classified torn/unknown detection with verified-empty evidence, explicit guided terminal-tail salvage with quarantine, reusable validated artifact-boundary contracts, fail-closed storage exhaustion, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, the provider park/announcement record kinds with the rebuildable provider-parks.json projection, and the additive closeout.operation outcome ledger."
+summary: "The implemented state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, rebuild from the ledger alone including a post-salvage ledger, classified torn/unknown detection with verified-empty evidence, explicit guided terminal-tail salvage with quarantine, reusable validated artifact-boundary contracts, fail-closed storage exhaustion, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, the provider park/announcement record kinds with the rebuildable provider-parks.json projection, the additive closeout.operation outcome ledger, and the additive owner-gate.decision default-application ledger."
 links:
-  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222"]
+  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-229"]
   related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
 ---
 
@@ -19,7 +19,7 @@ The state layer is the durable local substrate later verification reads through.
 
 The append-only, schema-versioned JSONL ledger is the single durable truth. The declared driver kinds select only the read/index strategy over that same ledger: `jsonl` reads by verified scan, `sqlite` maintains a disposable derived index that is rebuilt from verified ledger truth whenever it is missing, corrupt, or divergent. No operation, result, or type on the public port discriminates by driver kind.
 
-The layer ships no command surface and no configuration read. Its durable consumers append through the fenced port and read through verified reads: the delivery registry writes `phase.transition` records and replaces the per-change phase-state document as a rebuildable fold of verified records; verify change reads transition history; the provider engine writes park and announcement records; closeout writes `closeout.operation` outcome records and reads them to converge on re-run; and the status digest and the queue-ready ready-set read the verified provider park fold without writing anything. Store identity, paths, clock, and platform arrive as injected parameters; the state tier never imports branding and never derives a name.
+The layer ships no command surface and no configuration read. Its durable consumers append through the fenced port and read through verified reads: the delivery registry writes `phase.transition` records and replaces the per-change phase-state document as a rebuildable fold of verified records; verify change reads transition history; the provider engine writes park and announcement records; closeout writes `closeout.operation` outcome records and reads them to converge on re-run; the owner-gate SLA writes `owner-gate.decision` default-application records and reads them to stay idempotent; and the status digest and the queue-ready ready-set read the verified provider park fold without writing anything. Store identity, paths, clock, and platform arrive as injected parameters; the state tier never imports branding and never derives a name.
 
 ## Business Context
 
@@ -49,6 +49,7 @@ The layer ships no command surface and no configuration read. Its durable consum
 - **Failure identity:** the nine state codes (including `state.storage.exhausted` and `state.store.unknown`) are declared in both the machine error table and the documented error table, and the bidirectional sync check is binding: a code change in one table without the other fails. All state failures carry consequence `not_landed`, and each is triggerable by a real behaviour.
 - **Provider availability records:** the provider engine persists `provider.park` and `provider.announcement` records as additive kinds inside the existing state schema, with payload schemas `delivery.provider.park.v1` and `delivery.provider.announcement.v1`. It folds verified ledger truth into the rebuildable derived document `provider-parks.json` (`delivery.provider.parks.v1`). Park expiry is derived at read time; no expiry write or delete exists, and a park observed after expiry stays `expired` with no `cleared` write.
 - **Closeout outcome records:** the closeout transaction persists one `closeout.operation` record per attempted operation outcome as an additive kind inside the existing state schema, with payload schema `delivery.closeout.operation.v1` under the store-scoped key prefix `closeout.operations:`. Each payload carries exactly the new operation record; history is folded from the verified ledger records on read, so storage grows linearly with operations. Apply uses one single-writer fence; reads are verified; the first terminal outcome per operation identity is authoritative; each record's identity, types, closed vocabularies, canonical arguments, target, and evidence validate before admission, and a malformed record is a classified `state.*` failure, never zeros. No schema-version bump or migration is required.
+- **Owner-gate decision records:** the owner-gate SLA persists one `owner-gate.decision` record per default application as an additive kind inside the existing state schema, with payload schema `delivery.owner-gate.decision.v1` under the store-scoped key prefix `owner-gate.decisions:`. Each payload carries exactly the new decision: gate id, gate kind, work-item ref, applied default, application time, crossed threshold in milliseconds, and the declared clock-source marker. The first application per gate id is authoritative; a replay returns the existing record and appends nothing, while a distinct gate id is never suppressed. Appends use one single-writer fence and a post-append verified re-read that requires exactly one new record; a wrong record kind under the prefix, a malformed payload, or two records for one gate id is a classified `state.store.torn`, never a zeroed history. The history read that backs idempotency is performed by the board surface only when a gate is currently default-eligible (conditional-read boundary; see [Owner-Gate SLA](feature-owner-gate-sla.md)); the ledger's own idempotency and torn classification are unconditional once the read happens. No schema-version bump or migration is required.
 
 ### Store layout
 
@@ -93,6 +94,12 @@ The `queue ready` ready-set is a read-only consumer of the same verified park fo
 
 Queue ready acquires no fence, appends no record, replaces no derived document, and never repairs or clears a park. An unreadable store surfaces as `state-unreadable` evidence on the provider condition, never a command failure and never a "no parks" claim. The condition contract is specified in [Queue Ready](feature-queue-ready.md).
 
+### Board consumer
+
+The `board` command is the only owner-gate decision writer and reader. The CLI edge bridges the fenced `StateStorePort` to the board runtime, so the history read and the append run over the same verified JSONL ledger driver. A board run reads the decision history only when at least one gate is eligible for a default; a run with no eligible gate performs no decision read, acquires no fence, and appends nothing.
+
+On a default application the runtime calls `appendOwnerGateSlaDecision`, which returns the existing authoritative record without a fence when the gate id is already recorded, otherwise acquires one fence, re-reads the history, appends one `owner-gate.decision` record under `owner-gate.decisions:<gateId>`, re-reads to verify the count increased by exactly one, and releases the fence. A re-evaluation after application therefore honors the existing record and writes nothing. A wrong record kind, a malformed payload, a count mismatch, or two records for one gate id fails `state.store.torn`; no partial decision and no invented zero is served. The board contract is specified in [Owner-Gate SLA](feature-owner-gate-sla.md).
+
 ### Verify-change consumer
 
 Verify change is a read-only consumer of the state layer. It reads the registry's per-change transition history through a presence-tolerant verified read: the store is verified first, an absent store or an absent per-change record is explicit no-evidence (`present: false`), and a torn, schema-mismatched, or corrupt-payload read remains the classified `state.*` failure. The read acquires no fence and writes nothing.
@@ -106,6 +113,7 @@ The derived `phase-state.<REF>.json` projection is not evidence for verification
 - `packages/core/src/state/index.ts` — the facade over injected identity and the injected runtime edge; the only public factory that accepts a driver kind.
 - `packages/core/src/state/registry.ts` — registry records over the state port, including the presence-tolerant verified transition read (`readChangeTransitionsTolerant`) and the pure fold; no runtime API.
 - `packages/core/src/state/closeout.ts` — the `closeout.operation` ledger: store-scoped key, verified history read, append with post-append coverage verification, record validation, and the first-terminal fold; no runtime API.
+- `packages/core/src/state/owner-gate-sla.ts` — the `owner-gate.decision` ledger: store-scoped key, presence-tolerant verified history read, validated payloads, idempotent fenced append, and post-append coverage verification; no runtime API.
 - `packages/core/src/domain/verify-change.ts` — pure verify classification over parsed documents and folded transition records; no state access itself.
 - `packages/core/src/state/ledger.ts` — framing, FNV-1a 64-bit payload checksum, terminal completeness, sequence continuity, schema-version verification, and the pure tear-topology/salvage-record helpers. Pure.
 - `packages/core/src/state/artifact-boundary.ts` — the reusable validated artifact-boundary factory (declared kinds, payload schemas, identities, closed vocabularies; four verdicts; write refusal); composes the public port only.
@@ -148,7 +156,7 @@ The state layer is exercised entirely through automated `bun:test` suites; it ha
 | Level | Suites | Scope |
 |---|---|---|
 | Pure unit | `tests/behaviour/state-ledger.test.ts`, `tests/behaviour/state-evidence.test.ts` (pure half), `tests/structure/state-contract.test.ts` | Framing, checksum, terminal completeness, sequence continuity, schema verification, tear topology, evidence phrasing, and data-only contract shape |
-| Integration over a temporary store | `tests/behaviour/state-conformance.test.ts`, `state-torn`, `state-unknown`, `state-evidence`, `state-keys`, `state-fence`, `state-permissions`, `state-atomic-replace`, `state-boundary-validation`, `state-salvage`, `state-salvage-invariants`, `state-storage-exhausted`, `state-index`, `state-index-post-salvage`, `state-artifact-boundary`, `state-error-classification`, `phase-registry` | Both driver kinds, all corruption and unknown classes, verified-empty, falsy exactness, fences, atomic replace, artifact boundaries, salvage with quarantine, post-salvage rebuild, fail-closed exhaustion, and the registry consumer |
+| Integration over a temporary store | `tests/behaviour/state-conformance.test.ts`, `state-torn`, `state-unknown`, `state-evidence`, `state-keys`, `state-fence`, `state-permissions`, `state-atomic-replace`, `state-boundary-validation`, `state-salvage`, `state-salvage-invariants`, `state-storage-exhausted`, `state-index`, `state-index-post-salvage`, `state-artifact-boundary`, `state-error-classification`, `phase-registry`, `board-records`, `board-defaults` | Both driver kinds, all corruption and unknown classes, verified-empty, falsy exactness, fences, atomic replace, artifact boundaries, salvage with quarantine, post-salvage rebuild, fail-closed exhaustion, the registry consumer, and the owner-gate decision ledger (exactly-one-record idempotency, replay no-op, torn history) |
 | Contract | `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts` | Machine ↔ documented table parity in both directions, row shape, and non-vacuity mutations for new and refined rows |
 | Structure and boundaries | `tests/structure/state-imports.test.ts`, `state-scope.test.ts`, `tests/checks/packed-state.test.ts`, `tests/boundaries/**` | Import confinement, runtime-API placement, consumer scope, and the packed `core/state` subpath |
 
@@ -157,7 +165,7 @@ Fault injection is a fixture contract: `tests/fixtures/state/harness.ts` supplie
 ## Operational Notes
 
 - Store format evolution requires a new state schema version and the classified `state.schema.mismatch` path; readers never reinterpret a store from another version.
-- Retention is forever, now including quarantine artifacts. There is no prune, delete, compaction, or scheduled-expiry surface; provider parks become inactive by read-time expiry, but their records remain, and closeout operation records accumulate append-only per merge. Only two explicit operations remove ledger bytes: terminal-tail repair discards the truncated tail and reports its extent, while guided salvage quarantines the removed bytes and appends a classified record.
+- Retention is forever, now including quarantine artifacts. There is no prune, delete, compaction, or scheduled-expiry surface; provider parks become inactive by read-time expiry, but their records remain, closeout operation records accumulate append-only per merge, and owner-gate decision records accumulate one per default-applied gate. Only two explicit operations remove ledger bytes: terminal-tail repair discards the truncated tail and reports its extent, while guided salvage quarantines the removed bytes and appends a classified record.
 - The state schema version is carried by the header and by every record; a store artifact without a version is an integrity failure.
 
 ## Related
@@ -169,6 +177,7 @@ Fault injection is a fixture contract: `tests/fixtures/state/harness.ts` supplie
 - [Closeout transaction](feature-closeout.md) — the `closeout.operation` record kind, terminal-outcome reuse, and failed-outcome retry.
 - [Status digest](feature-status-digest.md) — the read-only verified park-fold consumer.
 - [Queue ready](feature-queue-ready.md) — the read-only ready-set consumer of the verified park fold.
+- [Owner-gate SLA](feature-owner-gate-sla.md) — the `owner-gate.decision` default-application ledger and the board consumer.
 - [Verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md) — the read-only verification consumer and the delivery-result exit taxonomy.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — tier and runtime-API boundaries.
 - [Branding seam](feature-branding-seam.md) — `stateDirectoryName` is consumed as an injected parameter, never imported here.

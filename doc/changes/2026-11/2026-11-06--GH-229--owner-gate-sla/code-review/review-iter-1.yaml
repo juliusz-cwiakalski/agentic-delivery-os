@@ -1,0 +1,136 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-229
+branch: feat/GH-229/owner-gate-sla
+status: PASS
+summary: >-
+  First review of GH-229 (M1-S5 owner-gate SLA) against the v1.1 spec (12 ACs),
+  the six-phase plan, repo rules (.ai/rules/typescript.md, testing-strategy.md),
+  and code-quality heuristics, diffed over origin/main-tools (merge 8e84cd96
+  included). The delivered truth is faithful: policy-as-data matches PDR-0003,
+  the evaluator is pure and audience-parameterized, never-merge protection is
+  structural, the EVT-1 ledger is append-only/idempotent/fail-closed, the board
+  surface is render-once with declared collector unavailability, and docs are
+  reconciled. Reviewer re-ran all 163 targeted tests (20 structure/golden + 65
+  domain/state + 78 behaviour) plus the error-table sync (entries=53
+  documented=53) — all green. All four declared deviations (TS fixture builders,
+  runtime family classifier in classify.ts, structure-fixture updates,
+  error-table count 44→53) are verified justified and documented in-plan. Four
+  advisory findings, none blocking: a conditional decision-history read that can
+  regress a previously applied default to `fresh` under a regressing clock
+  (probe-verified; unreachable with v0 real data; plan-pinned but phrased
+  unconditionally in the reconciled docs), a missing Plan Revision Log row for
+  the mid-delivery task-1.5 scope addition, an unpinned test-fixture policy
+  restatement, and a hardcoded family-code literal in the edge. PDR-0003 remains
+  Proposed pending owner ratification at PR review — the recorded delivery gate.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/board.ts:118
+    message: >-
+      The handler reads the decision history only when the eligibility probe
+      (evaluation with empty history) projects at least one default. Reviewer
+      probe: a waiver gate defaulted at 73 h, re-evaluated after an 80 h clock
+      regression, renders `fresh` instead of `default-applied` because the probe
+      yields zero decisions and the ledger (which holds the record) is never
+      read; the same skip means a torn decision ledger is not declared on runs
+      with no currently eligible gate. The behavior is pinned by the test plan
+      (§NFR evidence line and TC-SLA-026 step 6: "read ... when a default is
+      eligible", "at most 1") and is unreachable against v0 real data (every
+      real gate maps to non-defaultable owner-review), but spec F-4/NFR-7 and
+      feature-state-layer.md state the honoring behavior unconditionally
+      ("A re-evaluation after application therefore honors the existing record").
+    suggestion: >-
+      Either (a) make the single verified history read unconditional — still
+      within NFR-2's "at most one verified decision-history read"; update the
+      TC-SLA-026 read-only fixture expectation from 0 to 1 read — or (b) keep
+      the optimization and add one boundary sentence to
+      feature-owner-gate-sla.md (§ Default application) and the feature-state-
+      layer.md Board-consumer paragraph: honoring a prior record assumes the
+      gate is currently expiry-eligible (monotonic clock); under clock
+      regression the board re-derives from observed age alone.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-229--owner-gate-sla/chg-GH-229-plan.md:370
+    message: >-
+      The Plan Revision Log carries only version 1.0, but task 1.5's scope was
+      amended during delivery to add the runtime family classifier in
+      packages/cli/src/classify.ts — the plan as approved for delivery (commit
+      d39dd527) declared only the sync-check recognizer. The addition is
+      functionally necessary (TC-SLA-014's synthetic `coordination` collector
+      must resolve to exit 2) and is documented in the final task text and
+      feature doc, but a substantive mid-delivery scope change without a
+      revision-log row breaks the plan-hygiene convention the log exists to
+      record.
+    suggestion: >-
+      Append a `1.1` row to the Plan Revision Log (author: coder/plan-writer,
+      date 2026-11-06): "Task 1.5 amended during delivery to add the runtime
+      collector-family recognizer in packages/cli/src/classify.ts (required so
+      injected collector ids resolve to the declared family and exit 2;
+      TC-SLA-014); no pinned reading changed." Can ride the PR branch as a
+      trivial docs commit.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/fixtures/board/matrix.ts:58
+    message: >-
+      `shippedPolicy()` is an independent literal restatement of
+      `OWNER_GATE_SLA_POLICY` used as the harness default, and no test asserts
+      the two are equal. Contract-data drift is caught separately by TC-SLA-001,
+      but a fixture-only edit would silently decouple the behaviour, corpus, and
+      golden suites from the shipped policy while staying green.
+    suggestion: >-
+      Add one line to tests/structure/owner-gate-sla-contract.test.ts:
+      `expect(shippedPolicy()).toEqual(OWNER_GATE_SLA_POLICY);` so fixture and
+      contract drift fail together.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: consistency
+    location: packages/cli/src/edge.ts:1059
+    message: >-
+      The edge composition hardcodes the literal
+      "status.collector.tracker.unavailable" instead of deriving it with the
+      exported `collectorUnavailableCode("tracker")` (the same formatter the
+      command and test harness use). The literal is stable and sync-checked, so
+      there is no behavioral risk — only a second spelling of the family code.
+    suggestion: >-
+      Replace the literal with `collectorUnavailableCode("tracker")` in
+      createBoardCommandRuntime for single-source spelling (optional; the
+      classify.ts base-row lookup by canonical code is idiomatic and fine).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-06T23:59:00Z
+next_step: PROCEED

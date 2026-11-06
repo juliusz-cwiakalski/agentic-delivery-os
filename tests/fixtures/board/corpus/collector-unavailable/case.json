@@ -1,0 +1,20 @@
+{
+  "id": "collector-unavailable",
+  "class": "collector-unavailable",
+  "collectors": [
+    {
+      "id": "tracker",
+      "outcome": "failed"
+    }
+  ],
+  "gates": [],
+  "expect": {
+    "exitCode": 2,
+    "gateCount": 0,
+    "records": 0,
+    "truncated": false,
+    "omitted": 0,
+    "errorCode": "status.collector.tracker.unavailable",
+    "gates": []
+  }
+}
