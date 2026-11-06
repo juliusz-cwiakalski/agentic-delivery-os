@@ -2,7 +2,7 @@
 id: chg-GH-224-test-plan
 status: Updated
 created: 2026-11-06T04:55:00Z
-last_updated: 2026-11-06T06:20:00Z
+last_updated: 2026-11-06T07:05:00Z
 owners: [engineering]
 service: delivery-os CLI doctor command
 labels: [change, planning]
@@ -10,7 +10,7 @@ version_impact: minor
 summary: "M1-S3 doctor v1 (reconciled with spec v1.1): one read-only `doctor` command that runs exactly five checks in fixed order (repo, tracker, provider, state, ci), each with one verdict from ok/fail/unreachable, bounded evidence, a deterministic detail, and an unconditional fix hint on every non-ok verdict. The plan proves the five-check report totality and the Appendix A verdict derivation matrix cell by cell; the exhaustive AC-F2-3 negative-control matrix (no failed, unattempted, or unread tracker/provider/state/CI read ever becomes ok); the structured `httpStatus` (401/403) credential-rejection mechanism shared by tracker and CI with every other non-2xx/transport failure staying unreachable and no prose parsing; the tolerant provider-configuration read (`config-invalid`, `provider-chain-unresolved`) as check-level fail evidence that never aborts the run; `reevaluation-cap` as wiring-neutral; the additively extended reason set (`config-invalid`, `state-unreadable`, delivered `provider-chain-*` spellings) and evidence model (`failureClass`, `httpStatus`); the one additive GitHub trap-catalog entry and fixture assertion; per-check isolation for injected throws, rejections, and malformed results with sibling completion and no `fallback.internal` inside a check boundary; the verify-change outcome model (all-ok success data + exit 0; any non-ok `doctor.check.failed` error envelope + exit 1 with the Appendix B deterministic summary; unable-to-run through the existing projection + exit 2); provider quota safety; the 64 KiB / 24-line / 4096-byte / 200-char / 4-source / 4-reason bounds; the additive `doctor` error kind and single row with two-way sync coverage; tier, boundary, branding, privacy, and secret-read gates; and a fixture-driven default suite with zero live network, zero live credentials, and zero process spawns."
 links:
   change_spec: ./chg-GH-224-spec.md
-  implementation_plan: null
+  implementation_plan: ./chg-GH-224-plan.yaml
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
