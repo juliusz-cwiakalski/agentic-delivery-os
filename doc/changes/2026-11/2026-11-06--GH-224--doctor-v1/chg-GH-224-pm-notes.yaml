@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-11-06T04:20:00Z", completed: "2026-11-06T04:40:00Z" }
   specification: { started: "2026-11-06T04:40:00Z", completed: "2026-11-06T06:15:00Z" }
   test_planning: { started: "2026-11-06T04:55:00Z", completed: "2026-11-06T06:20:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-11-06T06:20:00Z", completed: "2026-11-06T06:45:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -15,6 +15,10 @@ phases:
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "Doctor outcome modeling follows the verify-change precedent: any failing check yields a classified error envelope (exit 1) whose deterministic summary names EACH failing check with its fix hint; all-checks-ok yields a success data envelope (exit 0) with structured checks; platform-classified store failures project exit 2. Result-contract evolution (data-bearing failure envelope, as sketched in the pack example) is ruled out: the result contract's NFR forbids failure envelopes carrying data and forbids exit overrides outside the projection module. The pack convention explicitly defers such proposals to story delivery."
+    date: "2026-11-06"
+  - text: "Plan format: dual delivery — chg-GH-224-plan.yaml (delivery.plan.v1, tooling-primary, validatePlan verdict valid/readyForDevelopment=true) plus chg-GH-224-plan.md (task-level narrative per GH-175/182 structure) because delivery.plan.v1 cannot carry task/TC/ledger detail; YAML wins on conflict per repo rule."
+    date: "2026-11-06"
+  - text: "Delivery-bound values pinned by plan: DOCTOR_TRACKER_READ_LIMIT=50 / DOCTOR_CI_READ_LIMIT=20 (status precedents); 23-entry hint catalog with Appendix B strings verbatim; NFR-7 50ms = median of 21 aggregator runs with expensive-control non-vacuity; doc-distribution guard in phase 6+7 gates, new feature spec declares ados_distribution: internal."
     date: "2026-11-06"
   - text: "Spec DEC-6 provider park semantics: capacity/time parks (peak, quota-exhausted, outage, chain-exhausted) are wiring-neutral detail with a provider-quota directive; only credential-caused parks fail the check. Rationale: exit stability — routine peak parks must not train operators to ignore exit 1."
     date: "2026-11-06"
