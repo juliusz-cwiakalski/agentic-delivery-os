@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   delivery: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T12:00:00Z" }
   system_spec_update: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-06T12:00:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -83,6 +83,15 @@ notes: # { text, type, date } — type: info|decision|blocker|risk|question|reso
     type: "retro"
     date: "2026-11-06"
   - text: "Retro: PM made three consecutive edit-tool mistakes appending pm-notes notes (replaced instead of appended, causing duplicated notes, a lost note, and a YAML duplicate-key syntax error the committer had to fix before committing b45e4dca). Lesson: when appending to a YAML list, always include the full matched anchor in newString; verify the file parses after every multi-note edit."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml). Blocking F-1: TC-BRIEF-021 non-vacuity guarantee does not survive deviation D-TC021 — the committed mutant catalog never executes mutated production code (proves only paired-detector tautologies; 8/20 entries are string tautologies; cap-sized fixture has no approved PR/unparseable timestamp, so disabling the review-signal or age guard stays green). Reviewer empirically refuted the file:// impossibility claim: tests/checks/closeout-mutants.test.ts (GH-183) rewrites specifiers to file:// URLs; a probe port on domain/brief.ts loaded clean (9 surfaces) and a one-guard mutation fired a ready-to-merge action from an unknown review signal (0→1). Minor: N-1 Phase 8 checkboxes unchecked (DoD-8 trip risk); N-2 redaction canary planted in localContext.context.path which the brief payload structurally cannot render. Notes: N-3 deriveAge duplicates module-private digest rule (dedup at M1-S10); N-4 degraded-tracker corner unpinned; N-5 stale 641-byte figure in doc-impact handoff (actual 564). Remediation register R-1..R-5 appended to plan Phase 7 (activated). Spec/ticket compliance PASS: all 10 ACs evidenced, D1-D12 un-rebound, pinned decisions verified in code; §10 evidence real (282/282 reproduced; only drift: expect-call count 4251 vs 4231 recorded)."
+    type: "risk"
+    date: "2026-11-06"
+  - text: "REOPEN delivery for remediation iteration 1: @coder executes plan Phase 7 remediation register R-1..R-5 (port the source-mutation file:// loader from closeout precedent; de-tautologize the mutant catalog; tick Phase 8 checkboxes 8.1-8.5; move redaction canary to a reachable identity; re-run full battery + refresh §10). Then @doc-syncer re-run (QA-strategy section of feature-brief.md references the mutant suite) and @reviewer iteration 2. Max 3 review iterations."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Retro: the accepted D-TC021 deviation claimed file:// source mutation was impossible; the reviewer refuted it empirically against an existing repo precedent (closeout-mutants loader) in one probe. Lesson: when a delegate claims a bound approach is technically impossible, require the claim to be checked against repo precedent (grep for an existing implementation) before accepting the deviation — the accepted-alternative must meet the same guarantee, not a weaker one."
     type: "retro"
     date: "2026-11-06"
   - text: "Retro: spec authored without checking digest item-shape details (owner-hand-back has no age field) against packages/core/src/domain/status.ts; caught downstream by test-plan-writer, costing one reopen iteration. Upstream artifact authors should cross-check AC wording against the referenced code contracts, not just docs."

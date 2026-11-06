@@ -1,0 +1,285 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-228
+branch: feat/GH-228/brief-render-only
+head_sha: e4e68a42140b2ef7d99749bc4cf1210e7088f963
+status: FAIL
+summary: >-
+  The delivered `brief` command is architecturally faithful and behaviorally sound: the
+  projection/renderer are pure and deterministic over the shared `StatusFacts`, the command reuses
+  `collectStatusFacts` through `createStatusCommandRuntime` (verified read-set identity with
+  status: 7 reads / 3 GETs, exit-0 unavailability, containment-only failures, zero new error rows),
+  the closed nine-surface set and three-entry placeholder catalog render named and never silent,
+  bounds/brand/error invariants hold, and every §10 evidence claim I spot-checked reproduced
+  exactly (282/282 brief tests, 370/370 extended battery slice, error-table sync, goldens 11
+  lines / 564 bytes, registry and man-page posture). The three pinned ticket decisions are
+  honored in code. One finding blocks PASS: the accepted deviation D-TC021 replaced the bound
+  TC-BRIEF-021 non-vacuity mechanism (file:// temp copies of the production modules, one guard
+  disabled, each mutant failing the intended suite) with a committed payload-transform catalog
+  whose meta-check never executes mutated production code and never runs a suite against a
+  mutant. The stated justification — workspace `#contracts`/`#domain` aliases do not resolve in
+  an out-of-tree copy — is refuted by in-repo precedent (`tests/checks/closeout-mutants.test.ts`,
+  GH-183, rewrites specifiers to file:// URLs) and by my reviewer probe, which ported that loader
+  to `domain/brief.ts` and proved a one-guard source mutation fires (ready action from an unknown
+  review signal: 0 -> 1) while the clean module resists. Eight of the twenty catalog entries are
+  pure string tautologies, and the fixture world has no approved PR and no unparseable timestamp,
+  so silently disabling the review-signal or age guard leaves the meta-check green. The
+  non-vacuity guarantee therefore only partially survives: the behavioral suites carry real,
+  largely discriminative assertions, but the meta-proof that those assertions are load-bearing —
+  the thing TC-BRIEF-021 was bound to deliver, and the standard GH-183's review explicitly
+  established against "hand-built tautologies" — is absent. Remediation is narrow (port the
+  source-mutation loader; see the appended remediation register), after which I expect a PASS.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 0
+  low: 2
+  info: 3
+spec_compliance: PASS
+plan_compliance: FAIL
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+findings:
+  - id: F-1
+    severity: high
+    classification: blocker
+    confidence: high
+    category: test-quality
+    location: tests/fixtures/brief/mutants/catalog.ts:35
+    message: >-
+      TC-BRIEF-021 is not delivered as bound. The test plan binds the mechanism three times
+      (§4.10 item 3: "imports temp copies of the projection/render modules through a file URL with
+      one named guard disabled"; §5.2 TC-BRIEF-021 step 2: "Assert each mutant fails the intended
+      suite"; §6.2 fixture table: "imported via file:// in temp") and plan task 5.3 repeats it.
+      The delivered committed catalog (accepted deviation D-TC021, pm-notes 2026-11-06) instead
+      applies payload transforms to a clean payload and pairs each with a bespoke detector; the
+      meta-check (tests/checks/brief-mutants.test.ts:34-40) proves only detect(clean)=false and
+      detect(apply(clean))=true. No mutated production code is executed and no suite runs against
+      a mutant, so the bound guarantee — "every guard is proven load-bearing; a silently disabled
+      guard fails the change" — is absent. Concretely: capSizedFacts() contains no approved pull
+      request and no absent/unparseable hand-back timestamp, so disabling the review-signal
+      predicate (packages/core/src/domain/brief.ts:112) or defaulting unknown ages to 0 leaves
+      every detector false and brief-mutants.test.ts green. Eight of twenty entries are pure
+      string tautologies (tokenMutant, catalog.ts:35-41 and 232-265: apply() returns a string
+      containing the token, detect() checks the string contains the token), so the AC-coverage
+      meta-assertion (brief-mutants.test.ts:27-32) passes vacuously for them. The deviation's
+      justification — out-of-tree copies cannot resolve workspace `#contracts`/`#domain/*`
+      aliases — is refuted by in-repo precedent: tests/checks/closeout-mutants.test.ts:26-45
+      (GH-183, on main-tools before this branch) rewrites `from "#contracts"` and relative
+      specifiers to file:// URLs of the real modules, writes the mutated source under tmp/tmpdir,
+      and imports it with a cache-busting query. My reviewer probe (see verification_evidence)
+      ported exactly that loader to packages/core/src/domain/brief.ts (`#contracts` ->
+      contracts/index.ts file URL; `./status.js` -> domain/status.ts file URL, whose own
+      `#contracts` import resolves natively at its real location): the clean rewritten module
+      loads and renders 9 surfaces, and the single-guard mutation `item.reviewState ===
+      "observed"` -> `true` produces a ready-to-merge action from an unknown review signal
+      (0 -> 1). The specified mechanism was implementable as written; GH-183's review precedent
+      (iteration-1 F-11, remediated in iteration 2 as "real source-mutation non-vacuity, not
+      hand-built tautologies") is the settled repo standard this change regresses from. The §10
+      evidence row for TC-BRIEF-021 ("20 mutants cover all 10 ACs; ... each mutant produces its
+      prohibited observable") is true only of the substituted weaker design.
+    suggestion: >-
+      Activate Phase 7 and port the closeout-mutants loader into brief-mutants.test.ts: rewrite
+      `#contracts` and `./status.js` specifiers to file:// URLs, write mutated sources under
+      tmp/tmpdir (never the live tree), import with a cache-busting query, and add source
+      mutations for the load-bearing guards — review-signal predicate (AC-F2-1), age
+      unknown/future guards (AC-F2-2), placeholder state and catalog guards (AC-F3-1),
+      surface-state mapping (AC-F4-1), exit-0-on-unavailability projection (AC-F5-1), renderer
+      bound/drop guard (AC-F1-2), redaction chokepoint (AC-F6-3) — each asserted clean-resists /
+      mutant-fires naming its case. Replace the eight tautological tokenMutant entries with
+      source mutations or with explicit cross-references to the already-seeded controls
+      (brief-imports.test.ts:181-187 seeded node:http/openai/fetch probes;
+      brief-readonly.test.ts:250-270 writeOutput chokepoint canary; error-table-sync.test.ts
+      temp-copy additions) so the AC-coverage meta-count includes only load-bearing mutants. If
+      the payload-resists scan is kept as an extra layer, keep it, but it cannot be the whole of
+      TC-BRIEF-021. Per test-plan A-T8, reopen the test plan if TC-BRIEF-021's oracle is
+      permanently re-worded.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: N-1
+    severity: low
+    classification: minor
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-05--GH-228--brief-render-only/chg-GH-228-plan.md:337
+    message: >-
+      Phase 8 tasks 8.1-8.5 are delivered but unchecked (DONE_BUT_UNCHECKED). I verified each:
+      doc/spec/features/feature-brief.md authored (287 lines, accurate against the code: nine
+      surfaces, three placeholders, exit-0 posture, no status.collector identity); the man page
+      EXIT STATUS/ERRORS sections corrected (doc/planning/oss-tooling/milestones/m1/commands/brief.md
+      ERRORS block) with the example grammar byte-matching the committed golden; the registry row
+      reads delivered naming M1-S6 (doc/planning/oss-tooling/cli-command-registry.md:170); the
+      status-digest spec cross-links both ways including the corrected humanText-hook claim; and
+      TC-BRIEF-022 evidence is recorded in test plan §10.1. DoD-8 requires every Phase 1-9
+      checkbox checked, so dod_check will trip on the stale boxes.
+    suggestion: >-
+      Tick 8.1-8.5 to [x] with a one-line Execution Log note referencing commit e4e68a42 and
+      §10.1, before dod_check. No code change required.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: N-2
+    severity: low
+    classification: minor
+    confidence: high
+    category: test-quality
+    location: tests/golden/redaction.test.ts:224
+    message: >-
+      The end-to-end brief canary is planted in `localContext.context.path`, but the brief payload
+      and human text carry no path fields (BriefSurface/BriefAction in
+      packages/core/src/contracts/brief.ts:73-105 are identities, states, counts, and reasons;
+      anchorLine/contextLine in domain/brief.ts:289-319 render only those). The canary therefore
+      cannot reach brief output even without redaction, so the zero-occurrence assertions in both
+      modes would pass against a broken (non-redacting) serializer. The real redaction proof for
+      the brief rests on the writeOutput chokepoint control (brief-readonly.test.ts:250-270),
+      which is sound; TC-BRIEF-019's precondition "canary can be made to appear in a reachable
+      artifact" is only half-met (present in the injected facts, not in a rendered field).
+    suggestion: >-
+      Add one end-to-end case planting the canary in a rendered identity (e.g., a
+      makeDeliveryRequest entityId), which flows into both the envelope anchors and the human
+      ready-to-merge line, so the zero-occurrence assertion genuinely exercises redaction through
+      the projection.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: N-3
+    severity: info
+    classification: note
+    confidence: high
+    category: code-quality
+    location: packages/core/src/domain/brief.ts:139
+    message: >-
+      Spec F-2/AC-F1-1 say the age rule is "the digest's parse-and-floor rule ... reused by
+      reference", but the digest exports no such rule (parseInstant at domain/status.ts:120 and
+      the inline floor at :408 are module-private) and plan D1 forbade editing status.ts, so
+      deriveAge re-implements identical semantics (Date.parse + isFinite + floor/DAY_MS plus the
+      D9 future guard, which the digest's stall rule does not need). Drift risk is bounded today
+      by TC-BRIEF-008's independent-derivation oracle (brief-anchors.test.ts:154-167).
+    suggestion: >-
+      At M1-S10 (digest expansion), export a shared parse-and-floor age helper from the status
+      domain and consume it by reference in the brief; no action required for v0.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: N-4
+    severity: info
+    classification: note
+    confidence: medium
+    category: test-quality
+    location: packages/core/src/domain/brief.ts:153
+    message: >-
+      The corner where the tracker section is degraded (another family failed) while the
+      ownerHandBacks family is observed WITH items is not pinned by a committed case: the code
+      renders the anchor at state "degraded" with real per-item ages (ownerGateState returns the
+      section state, never "observed", satisfying D4's "degraded section => no observed ages
+      claim" at the state level; ages still derive per the §4.5 table, which conditions only on
+      timestamp parseability). brief-anchors.test.ts:237-242 covers degraded only with an empty
+      family, so the with-items behavior is intentional but unpinned.
+    suggestion: >-
+      Add one corpus/anchor case (stalls unavailable + hand-backs observed with items) when
+      M1-S5 or M1-S10 next touches the surface; conformant today under the D4 state-level
+      reading, so no v0 action.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: N-5
+    severity: info
+    classification: note
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-05--GH-228--brief-render-only/chg-GH-228-doc-impact.md:36
+    message: >-
+      The doc-impact handoff states the cap-sized human golden renders in "11 lines and 641
+      bytes"; the committed file is 11 lines / 564 bytes (test plan §10 already corrects the
+      transcription). Trivial staleness in a handoff note, not current truth.
+    suggestion: >-
+      Correct the figure if the handoff file is touched again; no action otherwise.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+deviation_assessment:
+  d_tc021_mutant_catalog: >-
+    Judged NOT accepted as delivered. The guarantee that survives: the clean production payload is
+    re-scanned by roughly five genuinely invariant detectors (surface count 9, placeholder count 3
+    and state not-delivered, no-spend), so a production regression that inflates the surface set or
+    flips a placeholder state WOULD fail brief-mutants.test.ts; and the underlying behavioural
+    suites are real and largely discriminative (strict-equality oracles over fixed fixtures, live
+    fence/hostile-handler controls, seeded import-scan probes, golden mutation/restore controls).
+    The guarantee that does not survive: the bound non-vacuity meta-proof — mutated production
+    modules failing the intended suites — is entirely absent, 8/20 entries are tautologies, and the
+    two highest-value guards (review-signal predicate, age unknown-guard) sit in a fixture world
+    where disabling them changes nothing the detectors can see. The alias-resolution justification
+    is empirically false (closeout-mutants precedent + probe). See F-1.
+spec_and_ticket_compliance:
+  pinned_decisions: >-
+    All three pinned ticket decisions verified in code and tests: same collector state (DEC-1 —
+    commands/brief.ts reuses collectStatusFacts; read-cost identity proven in
+    brief-read-cost.test.ts:33-44); no LLM in the render path (DEC-3 — brief-imports.test.ts AST
+    scan with seeded controls, no model/network specifier in any render-path module, review half
+    asserted here); placeholders named never silent (DEC-6 — closed three-entry catalog renders as
+    named lines in goldens and placeholder suites; ticket AC "placeholders are named, not silent"
+    met). Ticket AC "brief output matches collector state exactly" met via the shared-truth
+    battery over 35 shared-fact cases and the 23-row digest matrix parity (brief-negative-controls).
+  acs: >-
+    AC-F1-1..AC-F6-3 all evidenced (spec_compliance PASS). AC-F6-2 review half performed by this
+    review: contracts/brief.ts imports type-only from ./ports.js and ./status.js plus
+    STATUS_SECTION_ORDER; domain/brief.ts imports #contracts + ./status.js only; commands/brief.ts
+    imports @delivery-os/core, ./index.js, ./status.js; no fetch/Date.now/Math.random/performance.now/
+    process.env/Bun.env/readFileSync in the domain; no node:*, undici, or model-SDK specifier
+    anywhere in the render path.
+  dod: >-
+    DoD-1..DoD-5, DoD-7, DoD-10..DoD-12 evidence verified real (suites re-run green; pnpm check
+    recorded 2961/4/0; error-table sync 52/52; verify change/gates recorded in §10). DoD-6/DoD-9
+    are the ones dented by F-1 (the non-vacuity half of the guards evidence); DoD-8 blocked by the
+    open Phase 6/7 boxes (this review) and the stale Phase 8 boxes (N-1); DoD-13 is downstream of
+    this FAIL.
+plan_task_audit:
+  OPEN_TASKS: "6.1/6.2 (this review — verdict recorded herewith), 7.1-7.3 (activated by this FAIL), 8.1-8.5 (done but unchecked, N-1)"
+  DONE_BUT_UNCHECKED: "8.1-8.5 — doc-sync work verified delivered at commit e4e68a42"
+  CHECKED_BUT_MISSING: none
+  bindings_D1_D12: >-
+    No binding rebound: D1 file set matches the diff exactly (plus the test-registration fixtures
+    inventory.json / ports v1-contract-inventory.json / EXECUTABLE_ALLOWANCES, which are the task
+    1.3 registration obligation); D2/D3 catalog, surface set, and vocabulary-by-reference verified
+    (TC-BRIEF-001, no BRIEF_* numeric bounds); D4 anchor-groups-not-surfaces verified (surface set
+    stays nine); D5/D6/D7 signatures and composition match; D8 parity corpus delivered;
+    D9 future-timestamp-unknown delivered and tested; D10 three-field evidence delivered;
+    D11 lockstep minor changeset mirrors the status precedent; D12 goldens committed with an
+    explicit regenerate.ts and mtime immutability asserted.
+regression_check:
+  status_suites: "error-table-sync, error-table structure, redaction golden extended additively; no existing assertion weakened (diffs are append-only describe blocks plus registrations)."
+  gates: "error-table-sync 52/52 green; forbidden-literals registry gains feature-brief.md (registration, not relaxation); exit-code-literals, ambient, secret-read-boundary unchanged and green per §10 aggregate."
+  boundaries: "pnpm check:boundaries recorded green (161 modules / 372 deps); no new dependency, subpath, or package (brief-imports.test.ts:195-213 pins manifests and core exports)."
+verification_evidence:
+  commands_run:
+    - "bun test tests/structure/brief-contract.test.ts tests/structure/brief-imports.test.ts tests/checks/brief-mutants.test.ts -> 37 pass / 0 fail"
+    - "bun test tests/behaviour/brief-*.test.ts tests/golden/brief.test.ts tests/golden/redaction.test.ts tests/checks/error-table-sync.test.ts tests/structure/error-table.test.ts -> 370 pass / 0 fail"
+    - "bun test tests/structure/brief tests/behaviour/brief tests/golden/brief.test.ts tests/checks/brief-mutants.test.ts -> 282 pass / 0 fail, 16 files (matches §10 aggregate row; expect() count 4251 vs recorded 4231 — trivial drift, pass/fail identical)"
+    - "grep -rn 'collectors unavailable' doc/spec/features/feature-brief.md doc/planning/oss-tooling/milestones/m1/commands/brief.md -> no matches (exit 1)"
+    - "grep -n 'brief' doc/planning/oss-tooling/cli-command-registry.md -> row 170 'Delivered in GH-228 (M1-S6)'"
+    - "wc -c tests/fixtures/brief/golden/human.txt -> 564 bytes / 11 lines (matches corrected §10)"
+  independent_probes:
+    - "Reviewer probe (/tmp/opencode/gh228-probe, outside the repo tree): ported the GH-183 closeout-mutants loader to packages/core/src/domain/brief.ts by rewriting 'from \"#contracts\"' -> file:// URL of contracts/index.ts and 'from \"./status.js\"' -> file:// URL of domain/status.ts; imported the temp copy. Clean module: loads, renders 9 surfaces, 0 ready-to-merge actions on an unknown-review-signal world. Mutant (item.reviewState === \"observed\" -> true): 1 ready-to-merge action from the unknown review signal. Proves the bound file:// mutant mechanism works for this module and that the D-TC021 alias-resolution justification does not hold."
+  code_reading:
+    - "All four render-path modules read line-by-line (contracts/brief.ts, domain/brief.ts, commands/brief.ts, edge.ts wiring); ranking comparators are code-unit/numeric-aware (locale-free); optional props modelled absent via spread; bound() drop logic keeps decision-first lines and emits an explicit omission marker; placeholder surfaces carry zero counts without rendering as observed/empty/zero."
+reviewed_at: 2026-11-06T15:30:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

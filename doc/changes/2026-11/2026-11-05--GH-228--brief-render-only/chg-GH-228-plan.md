@@ -436,6 +436,7 @@ Per-AC phase coverage: AC-F1-1 → Phases 2, 3; AC-F1-2 → Phases 2, 4; AC-F2-1
 | Version | Date (UTC) | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-06 | plan-writer | Initial plan: 9 phases (contracts → domain/fixtures → command/edge/boundaries → envelope/goldens → security/non-vacuity → review → conditional fixes → doc-sync handoff → changeset/final gates). All 22 TCs mapped to delivering phases; test-plan §3.1/§7 Plan-phase columns filled with these phase ids. Delivery Bindings D1–D12 pin delivery-bound names and modeling (anchor groups vs surface ids, age/future/evidence edges, corpus parity, changeset, goldens). |
+| 1.1 | 2026-11-06 | reviewer | Review iteration 1 (`code-review/review-iter-1.yaml`, verdict FAIL at HEAD `e4e68a42`): Phase 6 recorded Done with the FAIL verdict; Phase 7 activated with the appended Remediation Register R-1..R-5 (F-1 blocker: TC-BRIEF-021 non-vacuity mechanism not delivered as bound, deviation justification refuted; N-1 Phase-8 checkboxes done-but-unchecked; N-2 canary-reachability). No phase scope, task, TC mapping, or binding changed. |
 
 ## Execution Log
 
@@ -446,8 +447,8 @@ Per-AC phase coverage: AC-F1-1 → Phases 2, 3; AC-F1-2 → Phases 2, 4; AC-F2-1
 | 3 — CLI command, edge composition, read-cost, boundaries | Done | 2026-11-06 | 2026-11-06 | `5b45791c` | 23/23 Phase-3 suites pass; brief composed via `createStatusCommandRuntime`; reader member set identical to status. |
 | 4 — Envelope posture, exit projection, error table, goldens | Done | 2026-11-06 | 2026-11-06 | `4e6d697a` | 108/108 Phase-4 suites pass; goldens 11 lines / 641 bytes human, 4791 bytes machine data; error-table sync green. |
 | 5 — Read-only, redaction, credential posture, mutants | Done | 2026-11-06 | 2026-11-06 | `ed916459` | 43/43 Phase-5 suites pass; 20 mutants cover all 10 ACs; canary zero-occurrence proven non-vacuous. |
-| 6 — Code Review (Analysis) | Deferred | — | — | — | `no review` directive: the independent lifecycle review runs after delivery in the orchestrating `review_fix` phase; the coder's internal review loop was not run. |
-| 7 — Post-Code Review Fixes (conditional) | Not activated | — | — | — | Conditional on Phase 6; deferred with it. Any lifecycle-review findings will reopen this phase. |
+| 6 — Code Review (Analysis) | Done | 2026-11-06 | 2026-11-06 | — | Independent lifecycle review executed in `review_fix`: verdict **FAIL** (1 blocker F-1, 2 minor, 3 notes) recorded in `code-review/review-iter-1.yaml` at HEAD `e4e68a42`. All spec ACs and D1–D12 bindings verified compliant; §10 evidence claims reproduced. |
+| 7 — Post-Code Review Fixes (conditional) | Activated (iteration 1) | 2026-11-06 | — | — | Activated by the Phase-6 FAIL. Remediation register appended below (R-1..R-5 mapped to findings F-1, N-1, N-2). |
 | 8 — Documentation & Spec Synchronization | Handed off | — | — | — | Owner is `@doc-syncer`; handoff recorded in `chg-GH-228-doc-impact.md` (feature-brief spec, status cross-links, registry row, man-page exit-2 correction, `ados_distribution`). |
 | 9 — Finalize and Release | Done | 2026-11-06 | 2026-11-06 | phase-9 commit | `.changeset/brief-v1-minor.md` (lockstep minor); doc-impact handoff; `TMPDIR=$PWD/tmp/tmpdir pnpm check` green (2961 pass, 4 skip, 0 fail); worktree clean after battery. |
 
@@ -458,3 +459,15 @@ workspace `#contracts` / `#domain/*` aliases, so the meta-check applies each
 mutant to the clean payload and a clean source module and proves the prohibited
 observable appears only in the mutant, naming the case. The live tree is never
 written; all 10 ACs have at least one mutant.
+
+## Remediation Register (Phase 7 Activation — Review Iteration 1)
+
+Source: `code-review/review-iter-1.yaml` (independent `@reviewer` verdict FAIL, 2026-11-06, HEAD `e4e68a42`). Owner: `@coder` under Phase 7; re-review (task 7.3) closes the register. The deviation note above is superseded by R-1's outcome: the alias-resolution justification was refuted by review (in-repo precedent `tests/checks/closeout-mutants.test.ts` rewrites specifiers to `file://` URLs; the reviewer's probe confirmed the mechanism works for `domain/brief.ts`).
+
+- [ ] **R-1 (F-1, blocker)** Port the GH-183 source-mutation loader into `tests/checks/brief-mutants.test.ts`: read `packages/core/src/domain/brief.ts`, rewrite `from "#contracts"` → `file://` URL of `packages/core/src/contracts/index.ts` and `from "./status.js"` → `file://` URL of `packages/core/src/domain/status.ts`, write mutated sources under `tmp/tmpdir` only (never the live tree), import via `pathToFileURL(...)?x=<seq>`, delete after. Add named source mutations for the load-bearing guards — review-signal predicate (AC-F2-1: `item.reviewState === "observed"`), age unknown/future guards (AC-F2-2), placeholder state and catalog guards (AC-F3-1), surface-state mapping (AC-F4-1), exit-0-on-unavailability projection (AC-F5-1), renderer bound/drop guard (AC-F1-2) — each asserted clean-resists / mutant-fires naming its case.
+- [ ] **R-2 (F-1, blocker)** Replace the eight tautological `tokenMutant` entries in `tests/fixtures/brief/mutants/catalog.ts` (model-import, network-import, store-write, spawned-child, product-literal, sla-state-fabrication, date-now-renderer, status-collector-identity, canary-leak, exit-one — as applicable) with source mutations where the guard lives in `brief.ts`, or cross-reference the existing seeded controls (`brief-imports.test.ts` seeded `node:http`/`openai`/`fetch` probes; `brief-readonly.test.ts` writeOutput chokepoint canary; error-table-sync temp-copy controls) so the AC-coverage meta-assertion counts only load-bearing mutants. The payload-resists scan may remain as an additional layer. If TC-BRIEF-021's oracle is permanently re-worded, reopen the test plan per its A-T8 and record the deviation properly instead of D-TC021.
+- [ ] **R-3 (N-1, minor)** Tick Phase 8 tasks 8.1–8.5 to `[x]` with a one-line Execution Log note referencing commit `e4e68a42` and test-plan §10.1 (work verified delivered by review; DoD-8 requires the boxes checked).
+- [ ] **R-4 (N-2, minor)** Add one end-to-end redaction case in `tests/golden/redaction.test.ts` planting the canary in a rendered identity (e.g., a `makeDeliveryRequest` entityId) that flows into both the envelope anchors and the human ready-to-merge line, so zero-occurrence genuinely exercises redaction through the projection.
+- [ ] **R-5 (all)** Re-run the brief battery, `pnpm check`, and `git status --porcelain` cleanliness; update test-plan §10 evidence for TC-BRIEF-019/021; then request re-review (task 7.3).
+
+Notes (N-3 age-rule dedup at M1-S10, N-4 degraded-with-items corpus case, N-5 doc-impact byte figure) require no v0 action; record them as deferred observations.
