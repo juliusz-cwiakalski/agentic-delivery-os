@@ -31,9 +31,15 @@ export const SCRIPTED_RULES = [
   { id: "scripted.object", description: "the line parses as a plain object" },
   { id: "scripted.exclusivity", description: "exactly one of data or error is present" },
   { id: "scripted.success.keys", description: "a scripted success carries exactly data" },
-  { id: "scripted.failure.keys", description: "a scripted failure carries exactly error and runId" },
+  {
+    id: "scripted.failure.keys",
+    description: "a scripted failure carries exactly error and runId",
+  },
   { id: "scripted.trimmed-absent", description: "schemaVersion, exitCode, and timing are absent" },
-  { id: "scripted.error.keys", description: "the error object keeps full fields and no nested runId" },
+  {
+    id: "scripted.error.keys",
+    description: "the error object keeps full fields and no nested runId",
+  },
 ] as const;
 
 export type ScriptedRuleId = (typeof SCRIPTED_RULES)[number]["id"];
@@ -349,7 +355,6 @@ export const loadGoldenCases = async (root: string): Promise<GoldenCase[]> => {
   }
   return cases.sort((left, right) => left.id.localeCompare(right.id));
 };
-
 
 /**
  * Validate the scripted-mode machine projection: exactly one minified line,

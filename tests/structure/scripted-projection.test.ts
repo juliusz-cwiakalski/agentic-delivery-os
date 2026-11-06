@@ -32,7 +32,11 @@ describe("TC-GH223-021 scripted projection validator", () => {
 
   const negativeCases: Array<{ name: string; rule: ScriptedRuleId; text: string }> = [
     { name: "two lines", rule: "scripted.line", text: `${successLine()}${successLine()}` },
-    { name: "pretty-indented", rule: "scripted.line", text: `${JSON.stringify({ data: {} }, null, 2)}\n` },
+    {
+      name: "pretty-indented",
+      rule: "scripted.line",
+      text: `${JSON.stringify({ data: {} }, null, 2)}\n`,
+    },
     { name: "not json", rule: "scripted.object", text: "not-json\n" },
     {
       name: "success with schemaVersion",

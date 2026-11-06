@@ -3,6 +3,7 @@
  * Re-exports the envelope conformance validator for test suites.
  */
 
+export { CONFORMANCE_ADAPTERS } from "./conformance/adapters.js";
 export {
   CONFORMANCE_FLOW_STATUSES,
   CONFORMANCE_LIMITS,
@@ -17,16 +18,15 @@ export {
   toConformanceArtifact,
   validateConformanceArtifact,
 } from "./conformance/artifact.js";
-export { CONFORMANCE_ADAPTERS } from "./conformance/adapters.js";
 export {
   LIVE_READ_OPERATIONS,
   runtimeCoverageViolations,
   structuralCoverageViolations,
 } from "./conformance/coverage.js";
 export { CONFORMANCE_FLOWS, findFlow } from "./conformance/flows.js";
+export type { MockTenantTransport } from "./conformance/mock-tenant.js";
 export { createMockTenantTransport, decodeMockTenant } from "./conformance/mock-tenant.js";
 export { runConformance } from "./conformance/runner.js";
-export type { MockTenantTransport } from "./conformance/mock-tenant.js";
 export type {
   ConformanceAdapterClient,
   ConformanceAdapterRead,
@@ -69,15 +69,15 @@ export type {
   MockTenantRoute,
   RunConformanceInput,
 } from "./conformance/types.js";
-export {
-  assertEnvelopeContract,
-  assertScriptedProjection,
-  RULES,
-  SCRIPTED_RULES,
-} from "./result-conformance.js";
 export type {
   RuleId,
   ScriptedRuleId,
   ScriptedViolation,
   Violation,
+} from "./result-conformance.js";
+export {
+  assertEnvelopeContract,
+  assertScriptedProjection,
+  RULES,
+  SCRIPTED_RULES,
 } from "./result-conformance.js";
