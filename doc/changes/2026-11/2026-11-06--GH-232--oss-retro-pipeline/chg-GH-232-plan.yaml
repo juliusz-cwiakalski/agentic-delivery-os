@@ -164,7 +164,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-232
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6]
+  phases: [1, 2, 3, 4, 5, 6, 7]
 phases:
   # ---------------------------------------------------------------------
   # Phase 1 — Retro contracts, level declarations, and the four error rows
@@ -762,6 +762,104 @@ phases:
         - doc/spec/features/feature-result-contract.md
         - doc/overview/glossary.md
         - doc/00-index.md
+
+  # ---------------------------------------------------------------------
+  # Phase 7 — Code Review Remediation (Iteration 1)
+  #
+  # Appended by @reviewer after the phase-8 local review (FAIL, 2 blocking
+  # findings; see code-review/review-iter-1.yaml, F-1..F-14). Blocking: F-1
+  # (NFR-7 collect budget breach, O(n*m) per-record append) and F-2 (missing
+  # TC-RETRO-032 byte-equality oracle + reduced 24-case matrix + undelivered
+  # §4.2/§4.3 mutants). Non-blocking but required: F-3..F-6, F-7..F-11.
+  # Info findings F-12..F-14 need no code change this change.
+  #
+  # Tasks:
+  # - 7.1 (F-1, blocking) Batched sidecar append under one fence: extend the
+  #       sidecar consumer (packages/core/src/state/retro-sidecar.ts) with an
+  #       additive batched append member — ONE fence acquire covering the
+  #       verified pre-append read, all link computations, and ONE appendText
+  #       of all lines (DEC-13's run-level fence intent) — and switch
+  #       collectRetro's appendAll (domain/retro.ts) to it, keeping per-record
+  #       append for single-record callers. Record the NFR-7 wall-clock
+  #       reference numbers (collect/report/export over a 10,000-record
+  #       sidecar) in pm-notes per PIN-7, and add a bounded-work regression
+  #       test asserting ONE full read per batched collection run (10-record
+  #       vs 10,000-record sidecar invariance now includes collect).
+  # - 7.2 (F-1, blocking) Restore the per-command NFR-7 budgets in
+  #       doc/spec/features/feature-retro-pipeline.md (performance row) —
+  #       collect/report/export wall-clock budgets at the 10,000-record
+  #       ceiling — replacing the timeout-constant restatement; keep the
+  #       timeout constants as declared seam data.
+  # - 7.3 (F-2, blocking) Deliver TC-RETRO-032 in tests/behaviour/
+  #       retro-malformed.test.ts: run report on a clean fixture and the
+  #       equivalent one-malformed-entry fixture, strip the flag/diagnostic,
+  #       assert preserved valid-entry output byte-identical to the clean
+  #       run; add the drops-last-valid-entry and data+error mutants.
+  # - 7.4 (F-2, blocking) Complete the §4.5 24-case entry-level matrix (four
+  #       malformation classes x first/middle/last position x both stores)
+  #       and the §4.3 per-TC mutants: TC-030 crash-or-drop mutant, TC-031
+  #       ignore-malformed mutant, TC-033 repaired-store control per store-
+  #       level case, TC-049 mutate-on-export + registry-entry mutants,
+  #       TC-050 default-destination mutant, TC-054 identity-verification
+  #       mutant, TC-058 empty-hint mutant — or record an explicit reviewed
+  #       reduction in the test plan if a mutant is technically infeasible.
+  # - 7.5 (F-3) recordMemoryAuditRun returns RetroResult (no throw across the
+  #       engine seam); update retro-memory-audit.test.ts.
+  # - 7.6 (F-4) Validate the audit failure code against the state failure
+  #       vocabulary (or narrow AuditReadFailure.code in the audit contract)
+  #       so domain/retro.ts carries no unvalidated `as StateFailureCode`.
+  # - 7.7 (F-5) Registry store boundary: either compose a distinct store
+  #       instance for the retro registry at the CLI edge and use
+  #       RETRO_REGISTRY_FENCE_NAMESPACE for registry appends, or record the
+  #       single-store decision as a reviewed deviation, remove/use the dead
+  #       constant, and fix the doctor record-count double counting in
+  #       edge.ts readStateStores.
+  # - 7.8 (F-6) Replace the tautological TC-RETRO-029 meta-test with a
+  #       fixture-derived completeness check (each declared mutation class
+  #       must have a matching suite block/mutation helper).
+  # - 7.9 (F-7) Widen retro-key-containment scanning to all files under the
+  #       declared roots (or document the retro-path filter) and add a
+  #       planted mutant in a non-retro-named file.
+  # - 7.10 (F-8) Fix the two DoR nits: test-plan "revision 1" labels (3
+  #       places) -> revision 2; spec AC-F9-1 Linked column += DM-9.
+  # - 7.11 (F-9, F-10) Record the ados_distribution marker choice and the
+  #       doc-sync out-of-scope files as reviewed deviations in pm-notes.
+  # - 7.12 (F-11) Make C-03 live on the production fold: reportRetro
+  #       validates folded finding evidenceRefs against the known trace-id
+  #       set and flags dangling refs.
+  #
+  # Verification:
+  #   bun test tests/behaviour/retro-sidecar-append.test.ts \
+  #            tests/behaviour/retro-malformed.test.ts \
+  #            tests/behaviour/retro-chain-mutations.test.ts \
+  #            tests/behaviour/retro-performance.test.ts \
+  #            tests/behaviour/retro-memory-audit.test.ts
+  #   bun run scripts/checks/retro-key-containment.ts
+  #   bun run tmp/gh232-review/collect-probe.ts  (or equivalent 10k probe:
+  #   collect at the 10,000-record ceiling must land well inside 30 s)
+  #   pnpm check
+  #
+  # Commit: fix(GH-232): remediate review iteration 1 (batched appends, byte oracle, seam contracts)
+  # ---------------------------------------------------------------------
+  - id: 7
+    title: Code Review Remediation (Iteration 1)
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/state/retro-sidecar.ts
+        - packages/core/src/domain/retro.ts
+        - packages/cli/src/edge.ts
+        - scripts/checks/retro-key-containment.ts
+        - doc/spec/features/feature-retro-pipeline.md
+        - tests/behaviour/retro-sidecar-append.test.ts
+        - tests/behaviour/retro-malformed.test.ts
+        - tests/behaviour/retro-chain-mutations.test.ts
+        - tests/behaviour/retro-performance.test.ts
+        - tests/behaviour/retro-memory-audit.test.ts
+        - doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/chg-GH-232-spec.md
+        - doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/chg-GH-232-test-plan.md
+      folders:
+        - tests/fixtures/retro
 
 # =======================================================================
 # TRACEABILITY MATRIX — phase -> ACs -> TCs (all 16 ACs, all 64 TCs;

@@ -1,0 +1,322 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-232
+branch: feat/GH-232/oss-retro-pipeline
+status: FAIL
+summary: >-
+  The delivered retro pipeline is architecturally sound and spec-faithful on the
+  load-bearing guarantees: the sidecar HMAC chain is correctly constructed
+  (distinct 0600 key artifact, canonical field order, NUL-delimited HMAC
+  inputs), the full six-class tamper matrix and cross-process continuity are
+  genuinely tested through the production node:crypto edge, the locked CLI
+  surface is honored (no export verb/flag anywhere), the four retro error rows
+  round-trip exactly against the documented table, the no-target/vacuous-run
+  split matches DEC-14, and all 298 retro-related tests plus both new invariant
+  checks pass under my own runs. Two findings block: (1) NFR-7's collect
+  budget is empirically breached — a collect appending ~1,005 records onto a
+  10,000-record sidecar takes ~57s (budget 30s) because every per-record append
+  re-reads and re-verifies the entire growing sidecar under its own fence
+  (O(n*m) amplification, contradicting DEC-13's one-fence-per-run intent), and
+  the perf suite only measured the single-read path while the phase-7 doc
+  reconciliation quietly restated the wall-clock budgets as inert timeout
+  constants; (2) TC-RETRO-032 — the byte-equality oracle that proves binding
+  AC 1's no-data-loss claim — is entirely missing, the promised 24-case
+  entry-level matrix is reduced to ~9 cases, and most mutant/non-vacuity
+  obligations pinned by test-plan §4.2/§4.3 (crash/drop, ignore-malformed,
+  repaired-store controls, export/levels mutants) were not delivered, so the
+  "64/64 TCs covered" claim in pm-notes overstates. Non-blocking findings cover
+  a throw across the memory-audit engine seam, an unvalidated `as
+  StateFailureCode` cast, the registry riding the delivery store despite
+  PIN-4's own-store pin (dead fence-namespace constant), an under-scoped
+  key-containment scan, and the two carried DoR nits.
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 4
+  low: 5
+  info: 3
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: performance
+    location: packages/core/src/domain/retro.ts:594
+    message: >-
+      NFR-7's collect budget (<= 30s on a 10,000-record sidecar) is breached.
+      Empirically verified on this machine: a collect appending 1,005 records
+      onto a 10,000-record sidecar took 56.9s (probe: tmp/gh232-review/
+      collect-probe.ts). Root cause: appendAll calls sidecar.append once per
+      draft, and each append (retro-sidecar.ts:443-520) acquires/releases its
+      own fence file and performs a full verified re-read + re-HMAC of the
+      entire sidecar — O(append_count x total_records) work (~10.7M HMAC +
+      JSON.parse operations in the probe), plus 2 file writes per record (lock
+      + line). DEC-13 pins ONE collector fence covering the verified
+      pre-append read, the link computation, AND the appends (plural) — the
+      run-level fence was implemented per-record. The delivered perf suite
+      (TC-RETRO-061) only measured the single-read path (50.7ms) and
+      append==items on a fresh tiny store, never collect-on-large-sidecar;
+      PIN-7's one-time wall-clock reference measurement was never recorded
+      (execution-log deviation), so the breach went undetected. The report and
+      export paths are fine (~60ms at 10k); only collect is quadratic.
+    suggestion: >-
+      Add a batched append to the sidecar seam — one fence acquire, one
+      verified read, compute all links in memory, one appendText of all lines,
+      one fence release (keeps DEC-13's single-fence discipline and drops
+      collect to one chain walk); have collectRetro use it. Then record the
+      NFR-7 wall-clock reference numbers (collect/report/export at 10k) in the
+      change evidence per PIN-7, and restore the per-command budgets in
+      doc/spec/features/feature-retro-pipeline.md:322 instead of the inert
+      timeout-constant restatement.
+    suppressed: false
+  - id: F-2
+    severity: high
+    confidence: high
+    category: test-plan-compliance
+    location: tests/behaviour/retro-malformed.test.ts:212
+    message: >-
+      TC-RETRO-032 — the byte-equality oracle for binding AC 1 — is missing
+      entirely (no suite claims it; grep for "TC-RETRO-032" in tests/ returns
+      nothing). Test-plan §4.3 pins it as normative: compare preserved
+      valid-entry output byte-for-byte with the equivalent clean run, with a
+      drops-last-valid-entry mutant and a data+error mutant that must both
+      fail; §4.1 rule 5 states "counts alone never prove no data loss", yet
+      the delivered malformed suites assert only counts, positions, and
+      partial-string containment. Additionally the §4.5 24-case entry-level
+      matrix (4 classes x 3 positions x 2 stores) is reduced to ~7 sidecar +
+      2-3 registry cases, and the mutant obligations pinned per-TC in §4.3 are
+      largely undelivered (TC-030 crash/drop mutant, TC-031
+      ignore-malformed mutant, TC-033 repaired-store controls per case,
+      TC-049 mutate-on-export + registry-entry mutants, TC-050
+      default-destination mutant, TC-054 identity-verification mutant, TC-058
+      empty-hint mutant); only TC-047 (truth mutants) and TC-025 (unkeyed
+      verifier) honor §4.2's binding non-vacuity contract. The pm-notes claim
+      "64/64 TC coverage mapped to suites" overstates delivered coverage.
+    suggestion: >-
+      Add the TC-RETRO-032 test to retro-malformed: run report on a clean
+      fixture and on the equivalent one-malformed-entry fixture, strip the
+      flag/diagnostic line, and assert the preserved valid-entry output is
+      byte-identical; add the drops-last-valid-entry and data+error mutants.
+      Complete the 24-case matrix (4 classes x first/middle/last x both
+      stores) and the per-TC mutants listed in §4.3, or record an explicit
+      reviewed reduction in the test plan.
+    suppressed: false
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/retro.ts:1200
+    message: >-
+      recordMemoryAuditRun throws `new Error(appended.error.code)` on append
+      failure — a raw throw across an exported engine seam that discards the
+      classified failure's location/summary and violates .ai/rules/
+      typescript.md §7 ("Do not throw across a port boundary unless the
+      contract says so") and the workspace error contract (envelope + registry
+      codes). M2-S3's ceremony runner will consume this surface.
+    suggestion: >-
+      Return RetroResult<readonly RetroEvidenceRecord[]> (or
+      RetroCommandOutcome) like every other engine export, and let the caller
+      project the failure; update retro-memory-audit.test.ts accordingly.
+    suppressed: false
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/retro.ts:110
+    message: >-
+      fromAuditFailure casts `audit.code as StateFailureCode` without
+      validation — AuditReadFailure's state code is typed `string`
+      (contracts/audit.ts:237), so any string the audit read surface produces
+      flows unvalidated into the retro failure union and the error envelope.
+      .ai/rules/typescript.md §0 bans `as` casts used to silence type errors.
+    suggestion: >-
+      Validate the code against the state failure-code vocabulary (or the
+      ERROR_TABLE) before casting, or narrow AuditReadFailure.code to the
+      state code union in the audit contract so no cast is needed.
+    suppressed: false
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: packages/cli/src/edge.ts:2467
+    message: >-
+      Plan PIN-4 pins the retro registry as "its own validated store via the
+      public state port (fence namespace `retro-registry`)"; spec DEC-3/§8.5
+      call it a distinct validated store boundary. The implementation treats
+      the registry as three record kinds inside whatever StateStorePort it is
+      handed — the CLI edge's RetroCompositionOptions has a single `store`
+      used for BOTH registry writes and delivery-family reads, registry
+      appends ride the store's generic fence, and the declared
+      RETRO_REGISTRY_FENCE_NAMESPACE constant is dead vocabulary (no src
+      consumer). Side effects: doctor `readStateStores` sums delivery record
+      count + retro artifact count, double-counting retro records when one
+      store backs both (edge.ts:1838-1844). No integrity impact (registry is
+      levels/runs/triggers, not evidence), but the boundary is nominal.
+    suggestion: >-
+      Either compose a distinct store instance (separate artifact scope) for
+      the retro registry at the edge and use the declared fence namespace for
+      registry appends, or record the single-store decision as a reviewed
+      deviation, remove or use the dead constant, and fix the doctor
+      record-count aggregation to avoid double counting.
+    suppressed: false
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: test-quality
+    location: tests/behaviour/retro-chain-mutations.test.ts:186
+    message: >-
+      TC-RETRO-029, the mutation-suite completeness meta-test, is tautological:
+      it asserts a hardcoded six-name list is contained in a Set built from the
+      same six names. It cannot detect a removed mutation-class test, so the
+      removal-sensitivity NFR-2/RSK-4 rely on for the matrix is not actually
+      enforced (the six cases do exist today, but nothing keeps them).
+    suggestion: >-
+      Derive the expected class set from a committed fixture registry (the
+      plan's mutations.json) and assert each declared class has a matching
+      describe/mutation helper — e.g. scan the suite file for the six
+      describe("TC-RETRO-02x <class>") blocks — so deleting one fails the
+      meta-test.
+    suppressed: false
+  - id: F-7
+    severity: low
+    confidence: high
+    category: security
+    location: scripts/checks/retro-key-containment.ts:48
+    message: >-
+      The key-containment scan filters files by `/retro/i` on the path, so
+      non-retro-named files under the declared scan roots (e.g.
+      packages/cli/src/edge.ts, packages/core/src/state/driver/runtime-edge.ts)
+      are never scanned for key-shaped 64-hex literals. The module doc and
+      NFR-3 claim source-wide containment; the planted-mutant test only proves
+      detection inside retro-named paths.
+    suggestion: >-
+      Scan every file under the four roots (drop the RETRO_RELEVANT filter) or
+      document the narrowing; add one planted mutant in a non-retro-named file
+      to prove the scope.
+    suppressed: false
+  - id: F-8
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/chg-GH-232-test-plan.md:49
+    message: >-
+      The two DoR-iteration-2 accepted nits remain unfixed: (a) test-plan
+      "revision 1" label drift in 3 places (lines 49, 64, 2567 — the plan is
+      revision 2); (b) spec AC-F9-1's Linked column omits DM-9 (the
+      retro.trigger record kind it depends on). Both were explicitly deferred
+      to this review for correction.
+    suggestion: >-
+      Update the three "revision 1" labels to revision 2 in the test plan and
+      add DM-9 to AC-F9-1's Linked column in the spec.
+    suppressed: false
+  - id: F-9
+    severity: low
+    confidence: medium
+    category: plan-compliance
+    location: doc/spec/features/feature-retro-pipeline.md:2
+    message: >-
+      The plan's doc-sync handoff note requires feature-retro-pipeline.md to
+      declare `ados_distribution: redistributable`; the delivered marker is
+      `internal` (sibling-consistent, doc-distribution guard green). A silent
+      deviation from a plan pin — defensible choice, unrecorded.
+    suggestion: >-
+      Record the marker choice as a reviewed deviation in pm-notes/plan (or
+      align with the pin); confirm the install-set implication was intended.
+    suppressed: false
+  - id: F-10
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/chg-GH-232-plan.yaml:843
+    message: >-
+      Phase-7 doc-sync touched files outside the plan's phase-6 scope and the
+      handoff list (feature-doctor.md, nonfunctional.md,
+      test-spec-state-layer.md, architecture-overview.md,
+      ubiquitous-language.md, M1 pack commands/retro.md + contracts.md,
+      doc/decisions/00-index.md). The plan's own policy (final notes) requires
+      such files to be recorded as reviewed SCOPE_DEVIATION; pm-notes describe
+      the edits but neither the deviations list nor a SCOPE_DEVIATION label
+      covers them.
+    suggestion: >-
+      Add a reviewed-SCOPE_DEVIATION entry to pm-notes enumerating the
+      out-of-scope doc files touched by doc-sync (content itself verified
+      correct — M1 pack supersession reconciled, NFRs indexed).
+    suppressed: false
+  - id: F-11
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/retro.ts:1030
+    message: >-
+      C-03 (dangling evidence refs) can only fire through the
+      extraReferencedTraceIds injection seam; no production caller populates
+      it, and reportRetro never validates the folded findings' own `ref:`
+      evidence refs against the sidecar's trace-id set. Within today's fold the
+      check is vacuously true on the production path (all folded refs are
+      existing trace ids by construction), which weakens the spec's "every
+      evidenceRefs[] entry resolves" wording to consumer-supplied refs only.
+    suggestion: >-
+      In reportRetro, validate every finding.evidenceRefs entry (and follow-
+      through artifact refs where applicable) against the known trace-id set
+      and flag dangling ones as C-03 findings, so the check is live on the
+      production fold, not only via injection.
+    suppressed: false
+  - id: F-12
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/spec/features/feature-retro-pipeline.md:88
+    message: >-
+      Spec EVT-2/DM-5 describe run records "per collection or report run" with
+      mode collect|report, but production only ever records collect runs
+      (report never calls recordRun; the "report" mode value is exercised only
+      by handcrafted test fixtures). The authored feature spec already
+      documents the delivered behavior ("one validated record per collection
+      run"), so current truth is consistent — the change spec's EVT-2 wording
+      is the drift.
+    suggestion: >-
+      No action required for this change; future spec templates should mirror
+      the feature-spec wording, or support report-run recording in M2-S3.
+    suppressed: false
+  - id: F-13
+    severity: info
+    confidence: medium
+    category: plan-compliance
+    location: packages/core/src/contracts/retro.ts:298
+    message: >-
+      Minor pin/delivery deltas, all documented in the authored feature spec:
+      the fence file is per-workspace `retro-evidence.<ws>.lock` (PIN-3 pinned
+      the literal `retro-evidence.lock`; per-workspace is the better spelling
+      since the ledger is per-workspace); RETRO_READ/APPEND_TIMEOUT_MS are
+      declared and carried on the IO port but never enforced (no watchdog) —
+      they satisfy PIN-7's "referenced at the I/O seams" but are inert; the
+      `redact` seam is optional (identity when absent), so a host that forgets
+      to inject it gets unredacted evidence — consider making it required at
+      the composition seam when M2-S3 wires production composition; truth-check
+      finding drafts carry source "pm-notes" though engine-generated (the
+      six-value source vocabulary has no neutral member).
+    suggestion: >-
+      Keep as recorded deviations or fold into the M2-S3 composition work;
+      consider requiring redact in RetroCompositionOptions at that point.
+    suppressed: false
+  - id: F-14
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/state/retro-sidecar.ts:329
+    message: >-
+      Reported-salvage positions refer to positions in the POST-removal file,
+      so suppressing a middle-removal break actually suppresses the break of
+      the first surviving record at the shifted position (works for single
+      removals; multiple non-adjacent removals require callers to compute
+      shifted positions). Salvage semantics are otherwise sound (tail removal
+      verifies clean; wholesale deletion reads as a fresh empty store).
+    suggestion: >-
+      Document the position semantics on the read/verify options (or accept
+      original-position semantics) before the M2-S3 ceremony runner builds a
+      salvage flow on it.
+    suppressed: false
+reviewed_at: 2026-11-06T00:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE
