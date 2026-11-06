@@ -1,0 +1,311 @@
+{
+  "generatedAt": "2026-10-31T00:00:00Z",
+  "repository": {
+    "host": "github.com",
+    "name": "project-placeholder",
+    "owner": "owner-placeholder",
+    "remoteName": "origin",
+    "state": "observed"
+  },
+  "schemaVersion": "delivery.status.v1",
+  "sections": [
+    {
+      "counts": {
+        "observed": 2,
+        "omitted": 0,
+        "total": 2,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed",
+          "observed-empty"
+        ],
+        "sources": [
+          {
+            "outcome": "read",
+            "source": "tracker"
+          }
+        ]
+      },
+      "families": [
+        {
+          "counts": {
+            "observed": 1,
+            "omitted": 0,
+            "total": 1,
+            "unknown": 0
+          },
+          "family": "ownerHandBacks",
+          "items": [
+            {
+              "family": "ownerHandBacks",
+              "itemState": "observed",
+              "labels": [
+                "hand-back"
+              ],
+              "title": "Owner hand back",
+              "workItemRef": "GH-232"
+            }
+          ],
+          "state": "observed"
+        },
+        {
+          "counts": {
+            "observed": 0,
+            "omitted": 0,
+            "total": 0,
+            "unknown": 0
+          },
+          "family": "blockedDependencies",
+          "items": [],
+          "state": "observed"
+        },
+        {
+          "counts": {
+            "observed": 0,
+            "omitted": 0,
+            "total": 0,
+            "unknown": 0
+          },
+          "family": "stalls",
+          "items": [],
+          "state": "observed"
+        },
+        {
+          "counts": {
+            "observed": 1,
+            "omitted": 0,
+            "total": 1,
+            "unknown": 0
+          },
+          "family": "hygiene",
+          "items": [
+            {
+              "family": "hygiene",
+              "findings": [
+                "missing-labels"
+              ],
+              "itemState": "observed",
+              "title": "Observed item",
+              "workItemRef": "GH-231"
+            }
+          ],
+          "state": "observed"
+        }
+      ],
+      "id": "tracker",
+      "state": "observed",
+      "title": "Tracker",
+      "truncated": false
+    },
+    {
+      "activeChange": {
+        "branch": "feat/GH-175/status-v1",
+        "changeFolder": "doc/changes/2026-10/2026-10-31--GH-175--status-v1",
+        "state": "observed",
+        "workItemRef": "GH-175"
+      },
+      "counts": {
+        "observed": 2,
+        "omitted": 0,
+        "total": 2,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed"
+        ],
+        "sources": [
+          {
+            "outcome": "read",
+            "source": "local-context"
+          },
+          {
+            "outcome": "read",
+            "source": "changes"
+          }
+        ]
+      },
+      "id": "changes-and-prs",
+      "pullRequests": [
+        {
+          "deliveryState": "open",
+          "draft": false,
+          "entityId": "231",
+          "reviewState": "observed",
+          "reviewThreads": "observed",
+          "sourceRef": "feat/GH-231",
+          "targetRef": "main-tools"
+        },
+        {
+          "deliveryState": "draft",
+          "draft": true,
+          "entityId": "232",
+          "reviewState": "observed",
+          "reviewThreads": "observed",
+          "sourceRef": "feat/GH-232",
+          "targetRef": "main-tools"
+        }
+      ],
+      "state": "observed",
+      "title": "Changes and pull requests",
+      "truncated": false
+    },
+    {
+      "commit": {
+        "branch": "feat/GH-175/status-v1",
+        "sha": "1111111111111111111111111111111111111111"
+      },
+      "counts": {
+        "observed": 1,
+        "omitted": 0,
+        "total": 1,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed"
+        ],
+        "sources": [
+          {
+            "outcome": "read",
+            "source": "ci"
+          }
+        ]
+      },
+      "id": "ci",
+      "result": "succeeded",
+      "runs": [
+        {
+          "identity": {
+            "entityId": "9001",
+            "systemName": "github"
+          },
+          "jobs": [
+            {
+              "jobName": "build",
+              "jobState": "succeeded"
+            }
+          ],
+          "pipelineName": "ci-main",
+          "traceEvidence": []
+        }
+      ],
+      "state": "observed",
+      "title": "CI",
+      "truncated": false
+    },
+    {
+      "capability": "queue-lane-engine",
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "engine-not-delivered"
+        ],
+        "sources": [
+          {
+            "outcome": "not-delivered",
+            "source": "queue-engine"
+          }
+        ]
+      },
+      "expectedStory": "M2-S1",
+      "id": "lanes-or-queue",
+      "items": [],
+      "note": "no queue or lane engine exists in this release",
+      "state": "not-delivered",
+      "title": "Lanes or queue",
+      "truncated": false
+    },
+    {
+      "chain": {
+        "entries": [
+          "primary"
+        ],
+        "name": "primary",
+        "state": "declared"
+      },
+      "counts": {
+        "observed": 1,
+        "omitted": 0,
+        "total": 1,
+        "unknown": 0
+      },
+      "entries": [
+        {
+          "availability": "unverified",
+          "class": "subscription",
+          "enabled": true,
+          "name": "primary",
+          "peakDeclared": false,
+          "quotaDeclared": false
+        }
+      ],
+      "evidence": {
+        "reasons": [
+          "observed"
+        ],
+        "sources": [
+          {
+            "outcome": "read",
+            "source": "provider-config"
+          },
+          {
+            "outcome": "observed-empty",
+            "source": "provider-parks"
+          }
+        ]
+      },
+      "id": "providers",
+      "parks": [],
+      "state": "observed",
+      "title": "Providers",
+      "truncated": false
+    },
+    {
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed-empty"
+        ],
+        "sources": [
+          {
+            "outcome": "observed-empty",
+            "source": "local-context"
+          }
+        ]
+      },
+      "id": "parked-work",
+      "items": [],
+      "source": {
+        "gitIgnored": true,
+        "kind": "local-pm-context",
+        "path": "/home/user/.ai/local/pm-context.yaml",
+        "tracked": false
+      },
+      "state": "observed",
+      "title": "Parked work",
+      "truncated": false
+    }
+  ],
+  "summary": {
+    "actionable": 6,
+    "degraded": 0,
+    "notDelivered": 1,
+    "observed": 5,
+    "sections": 6,
+    "unavailable": 0,
+    "unknown": 0
+  }
+}
