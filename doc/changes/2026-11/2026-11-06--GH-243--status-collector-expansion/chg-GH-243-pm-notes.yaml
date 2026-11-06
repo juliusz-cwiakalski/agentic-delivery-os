@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-06T23:10:00Z", completed: "2026-11-06T23:55:00Z" }
   delivery_planning: { started: "2026-11-06T23:55:00Z", completed: "2026-11-07T00:25:00Z" }
   dor_check: { started: "2026-11-07T00:30:00Z", completed: "2026-11-07T01:00:00Z" }
-  delivery: { started: "2026-11-07T01:05:00Z", completed: null }
+  delivery: { started: "2026-11-07T01:05:00Z", completed: "2026-11-07T03:30:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -84,5 +84,14 @@ notes:
     type: "decision"
     date: "2026-11-07"
   - text: "Delivery deviations for reviewer visibility: (b) owner-review gates cannot reach default-applied because the digest injects no decision records per D-4; the state remains representable and is never fabricated, and no decision record is written. (c) A per-item partial review-unknown state is not representable because the existing pull-request read declares review availability section-wide; the section degrades as a whole and merge-ready renders ?. Both preserve the spec's no-fabrication rule and required zero new reads."
+  - text: "PM delivery validation: completion report accepted as complete (per-phase outcomes + commits + gate results present; deviations justified against recorded decisions). Delivery marked completed 2026-11-07; 8 delivery commits verified on branch; worktree clean before phase-7 handoff."
+    type: "info"
+    date: "2026-11-07"
+  - text: "Pre-existing spec/code divergence found during delivery validation (not introduced by this change): shipped code packages/core/src/domain/status.ts has lanes expectedStory M2-S1 while the status spec doc says M1-S17; also two capability strings coexist (queue-lane-engine in status vs lane-queue-engine in brief.ts). Change correctly preserved shipped values per DEC-16; flagged for @doc-syncer reconciliation and @reviewer audit."
+    type: "risk"
+    date: "2026-11-07"
+  - text: "retro: coder needed env workarounds for pnpm check (TMPDIR=$PWD/tmp/tmpdir, COREPACK_HOME=$HOME/.cache/node/corepack) to avoid sandbox /tmp cross-device and corepack-cache failures on two environment-sensitive checks — pre-existing infra sensitivity worth a repo-level fix; delivery itself unaffected."
+    type: "retro"
+    date: "2026-11-07"
     type: "risk"
     date: "2026-11-07"
