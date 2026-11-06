@@ -297,3 +297,9 @@ export {
   type WatchdogGitSeam,
   type WatchdogGitSeamOptions,
 } from "./watchdog.js";
+export {
+  createGitCommitSeam,
+  type CommitChildRunner,
+  type CommitChildRunnerResult,
+  type GitCommitSeamOptions,
+} from "./commit.js";

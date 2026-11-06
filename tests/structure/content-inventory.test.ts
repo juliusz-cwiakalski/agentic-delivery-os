@@ -696,6 +696,23 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "invalidKey",
     "serializeProductionSchema",
   ],
+  "adapters/src/git/commit.ts": ["createGitCommitSeam", "parsePorcelainStatus"],
+  "adapters/src/inference/index.ts": ["COMMIT_MESSAGE_SCHEMA", "createInferenceTransport"],
+  "adapters/src/session/commit-one-shot.ts": [
+    "createHarnessOneShotTransport",
+    "readOneShotPrompt",
+  ],
+  "adapters/src/session/delivery-session-facts.ts": ["createDeliverySessionFacts"],
+  "adapters/src/file/secret-scan.ts": [
+    "createSecretScanner",
+    "SECRET_CONTENT_PATTERNS",
+    "SECRET_FILENAME_PATTERNS",
+  ],
+  "adapters/src/file/commitlint.ts": [
+    "COMMITLINT_CONFIG_FILES",
+    "createCommitlintProbe",
+    "hasCommitlintConfig",
+  ],
   "adapters/src/session/index.ts": [
     "createOpencodeSessionIo",
     "createSessionStore",

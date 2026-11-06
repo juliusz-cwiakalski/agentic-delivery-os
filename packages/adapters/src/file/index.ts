@@ -36,3 +36,17 @@ export {
   parseConfigYaml,
   parserHostSwitchBlocked,
 } from "./yaml-parser.js";
+export {
+  createSecretScanner,
+  SECRET_CONTENT_PATTERNS,
+  SECRET_FILENAME_PATTERNS,
+  type SecretScannerOptions,
+} from "./secret-scan.js";
+export {
+  COMMITLINT_CONFIG_FILES,
+  createCommitlintProbe,
+  hasCommitlintConfig,
+  type CommitlintProbeChildResult,
+  type CommitlintProbeOptions,
+  type CommitlintProbeRunner,
+} from "./commitlint.js";

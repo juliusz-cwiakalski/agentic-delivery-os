@@ -618,6 +618,7 @@ const RUNTIME_ALLOWLIST = [
   "^packages/adapters/src/jira/",
   "^packages/adapters/src/provider-quota/",
   "^packages/adapters/src/git/",
+  "^packages/adapters/src/inference/",
   "^packages/cli/",
   "^packages/opencode/",
 ];

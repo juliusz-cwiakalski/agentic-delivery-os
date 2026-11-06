@@ -23,6 +23,7 @@ const ADAPTER_SUBPATHS = [
   "./credentials",
   "./provider-quota",
   "./git",
+  "./inference",
 ];
 
 const EXPECTED: Record<string, Record<string, string>> = {

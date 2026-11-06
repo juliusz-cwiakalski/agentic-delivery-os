@@ -609,6 +609,23 @@ export const RULE_CASES: RuleCase[] = [
     "packages/adapters/src/provider-quota/probe.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
+  // ADR-0005 C-2 (GH-227): the inference transport is an exact-path,
+  // reason-bearing runtime-I/O entry; a sibling path stays denied.
+  clean(
+    "runtime-control-commit-inference",
+    "TC-TIER-003",
+    ["adapters"],
+    "packages/adapters/src/inference/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  dep(
+    "runtime-node-fs-adapter-inference-suffix",
+    "TC-TIER-003",
+    "runtime-apis-confinement",
+    ["adapters"],
+    "packages/adapters/src/inference-probe/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
   dep(
     "runtime-node-fs-core-provider",
     "TC-PROV-006",

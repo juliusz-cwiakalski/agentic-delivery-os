@@ -112,6 +112,7 @@ describe("ADR-verbatim scope and allowlist assertions", () => {
       "^packages/adapters/src/jira/",
       "^packages/adapters/src/provider-quota/",
       "^packages/adapters/src/git/",
+      "^packages/adapters/src/inference/",
       "^packages/cli/",
       "^packages/opencode/",
     ]);
