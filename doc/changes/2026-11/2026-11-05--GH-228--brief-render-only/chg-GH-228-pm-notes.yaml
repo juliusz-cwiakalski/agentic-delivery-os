@@ -2,12 +2,12 @@ change_id: GH-228
 title: "M1-S6: Brief render-only v0"
 delivery_mode: autonomous
 phases:
-  clarify_scope: { started: "2026-11-05", completed: "2026-11-05" }
-  specification: { started: "2026-11-06", completed: "2026-11-06" }
-  test_planning: { started: "2026-11-06", completed: "2026-11-06" }
-  delivery_planning: { started: "2026-11-05", completed: "2026-11-06" }
-  dor_check: { started: "2026-11-06", completed: "2026-11-06" }
-  delivery: { started: "2026-11-06", completed: null }
+  clarify_scope: { started: "2026-11-05T00:00:00Z", completed: "2026-11-05T00:00:00Z" }
+  specification: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  test_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  delivery_planning: { started: "2026-11-05T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  dor_check: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  delivery: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T12:00:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -70,3 +70,24 @@ notes: # { text, type, date } — type: info|decision|blocker|risk|question|reso
   - text: "Retro: spec authored without checking digest item-shape details (owner-hand-back has no age field) against packages/core/src/domain/status.ts; caught downstream by test-plan-writer, costing one reopen iteration. Upstream artifact authors should cross-check AC wording against the referenced code contracts, not just docs."
     type: "retro"
     date: "2026-11-05"
+  - text: "Plan Phase 1 complete: delivery.brief.v1 contracts and inventory registration. Commit 4243506c; bun test tests/structure/brief-contract.test.ts 8/8 pass."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan Phase 2 complete: pure projectBrief/renderBriefHuman over the shared StatusFacts model. Commit ea86d819; 210/210 shared-truth, anchor, placeholder, negative-control, output, corpus, and performance tests pass."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan Phase 3 complete: brief command composed at the CLI edge through createStatusCommandRuntime; reader member set identical to one status invocation. Commit 5b45791c; 23/23 command, imports, read-cost, and determinism tests pass."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan Phase 4 complete: envelope posture, exit projection, error-table stability, and byte-exact goldens. Commit 4e6d697a; 108/108 tests pass; golden human 11 lines/641 bytes, machine data 4791 bytes."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan Phase 5 complete: read-only, redaction, credential guard, and mutant non-vacuity. Commit ed916459; 43/43 tests pass; 20 mutants cover all 10 ACs. Deviation: mutants are a committed catalog rather than file:// temp copies because workspace # aliases do not resolve in an out-of-tree copy; the live tree is never written."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan Phase 6-7 deferred under the no-review directive: the independent @reviewer lifecycle pass runs after delivery in review_fix; the coder did not run an internal review loop. Plan Phase 8 is handed off to @doc-syncer via chg-GH-228-doc-impact.md."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan Phase 9 complete: lockstep minor changeset .changeset/brief-v1-minor.md, doc-impact handoff, test-plan §10 evidence, and final gate. TMPDIR=$PWD/tmp/tmpdir pnpm check: 2961 pass, 4 skip, 0 fail, 274 files; boundaries and invariant checks green; git diff --check clean."
+    type: "info"
+    date: "2026-11-06"

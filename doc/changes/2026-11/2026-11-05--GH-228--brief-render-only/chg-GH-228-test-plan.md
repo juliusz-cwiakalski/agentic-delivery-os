@@ -1178,11 +1178,19 @@ Notes:
 
 | TC ID / gate | Run Date (UTC) | Result | Notes / command / HEAD |
 |---|---|---|---|
-| Not run | — | Planned | This writer ran no builds, tests, or commands and implemented no code. The executor records per-TC evidence, exact commands, HEAD, and the pushed-HEAD CI result. Unrun evidence must never be recorded as passing. |
-| TC-BRIEF-004 — shared truth | — | Planned (automated) | Record the case count and confirm the surface-id set and placeholder set equality assertions are non-vacuous. |
-| TC-BRIEF-007 — cap-omitted approved PR | — | Planned (automated) | Confirm the in-cap control produces the action and the cap-dropped case produces none plus a truncation marker. |
-| TC-BRIEF-010 — negative-control matrix | — | Planned (automated) | Confirm every §4.7 row is present and the fully observed control renders all surfaces observed. |
-| TC-BRIEF-014/015 — goldens | — | Planned (automated) | Confirm byte equality, bounds, the mutation/restore control, and unchanged `mtimeMs`. |
-| TC-BRIEF-019 — redaction canary | — | Planned (automated) | Confirm the canary is present in the fixture before asserting zero output occurrences. |
-| TC-BRIEF-021 — mutant corpus | — | Planned (automated) | Confirm every AC has at least one mutant and each mutant fails naming its case. |
-| TC-BRIEF-022 — documented posture | — | Planned (semi-automated) | Record the `grep` output proving no exit-2 unavailability row and no `status.collector.` identity, and the registry row state. |
+| Phase 1 — TC-BRIEF-001 (contracts, catalog, bounds by reference, inventory) | 2026-11-06 | PASS | `bun test tests/structure/brief-contract.test.ts`: 8 pass, 0 fail. HEAD `4243506c`. |
+| Phase 2 — TC-BRIEF-004/006/007/008/009/010/016/020 (projection, anchors, placeholders, controls, corpus, performance) | 2026-11-06 | PASS | `bun test tests/behaviour/brief-{shared-truth,anchors,placeholders,negative-controls,output,corpus,performance}.test.ts`: 210 pass, 0 fail. HEAD `ea86d819`. |
+| Phase 3 — TC-BRIEF-002/003/005/017 (command, imports, read cost, determinism) | 2026-11-06 | PASS | `bun test tests/behaviour/brief-{command,read-cost,determinism}.test.ts tests/structure/brief-imports.test.ts`: 23 pass, 0 fail. HEAD `5b45791c`. |
+| Phase 4 — TC-BRIEF-011/012/013/014/015 (envelope, exits, error table, goldens) | 2026-11-06 | PASS | `bun test tests/behaviour/brief-envelope.test.ts tests/golden/brief.test.ts tests/checks/error-table-sync.test.ts tests/structure/error-table.test.ts`: 108 pass, 0 fail. HEAD `4e6d697a`. |
+| Phase 5 — TC-BRIEF-018/019/021 (read-only, redaction, mutants) | 2026-11-06 | PASS | `bun test tests/behaviour/brief-readonly.test.ts tests/golden/redaction.test.ts tests/checks/brief-mutants.test.ts`: 43 pass, 0 fail. HEAD `ed916459`. |
+| All brief suites | 2026-11-06 | PASS | `bun test tests/structure/brief tests/behaviour/brief tests/golden/brief.test.ts tests/checks/brief-mutants.test.ts`: 282 pass, 0 fail, 16 files, 4231 expect calls. |
+| TC-BRIEF-004 — shared truth | 2026-11-06 | PASS | 140 case/surface assertions across 35 shared-fact cases (12 named cases + 23 matrix controls); surface-id and placeholder-set equality are non-vacuous. |
+| TC-BRIEF-007 — cap-omitted approved PR | 2026-11-06 | PASS | The in-cap control (`approved(8)`) produces the action set; `approved(9)` produces 8 actions, no identity `508`, and a truncation marker. |
+| TC-BRIEF-010 — negative-control matrix | 2026-11-06 | PASS | All 23 `matrixCases` rows mapped; the fully observed control renders tracker/changes/ci/providers/parked as `observed`; at-limit marker present, near-limit absent. |
+| TC-BRIEF-014/015 — goldens | 2026-11-06 | PASS | Byte equality for `human.txt` and `envelope.json`; cap-sized human 11 lines / 641 bytes; machine `data` 4791 bytes; mutation/restore control and unchanged `mtimeMs` pass. |
+| TC-BRIEF-019 — redaction canary | 2026-11-06 | PASS | The canary is asserted present in the planted fixture before zero occurrences in stdout/stderr; the `writeOutput` chokepoint redacts human text. |
+| TC-BRIEF-021 — mutant corpus | 2026-11-06 | PASS | 20 mutants cover all 10 ACs; the clean payload resists every mutant and each mutant produces its prohibited observable naming its case. |
+| TC-BRIEF-022 — documented posture | — | Deferred to Phase 8 (@doc-syncer) | Handoff recorded in `chg-GH-228-doc-impact.md`; no current-truth doc was authored by @coder. |
+| Aggregate `pnpm check` | 2026-11-06 | PASS | `TMPDIR=$PWD/tmp/tmpdir pnpm check`: 2961 pass, 4 skip, 0 fail, 274 files, 30225 expect calls (315.81 s); boundaries 161 modules / 372 deps; ambient, workspace-entrypoints, secret-read and exports-parity all green. |
+| `git diff --check` | 2026-11-06 | PASS | Clean (no whitespace or conflict markers) before and after the battery. |
+
