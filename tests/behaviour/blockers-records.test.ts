@@ -12,6 +12,7 @@ import {
   blockerQuestionRecordKey,
   readBlockerLedger,
 } from "../../packages/core/src/state/index";
+import { createBlockersHarness } from "../fixtures/blockers/harness";
 import { FIXED_ISO, makeAnswer, makeQuestion } from "../fixtures/blockers/records";
 import {
   createTestEdge,
@@ -309,5 +310,134 @@ describe("TC-BLK-010/012/013 record identity and authoritative closure", () => {
 
   test("the state schema version and record kinds are unchanged", () => {
     expect(STATE_SCHEMA_VERSION).toBe("delivery.state.v1");
+  });
+});
+
+describe("TC-BLK-010/013 runCli halves: identity and answer intent records", () => {
+  test("publish ids are unique, opaque, and deterministic under the injected generator", async () => {
+    const harness = createBlockersHarness();
+    try {
+      const first = await harness.run([
+        "publish",
+        "decision-needed",
+        "--lane",
+        "L5",
+        "--options",
+        "full,lite",
+        "first",
+      ]);
+      const second = await harness.run(["publish", "spec-ambiguity", "--lane", "L2", "second"]);
+      const firstQuestion = first.data?.question as Record<string, unknown> | undefined;
+      const secondQuestion = second.data?.question as Record<string, unknown> | undefined;
+      const firstId = String(firstQuestion?.id);
+      const secondId = String(secondQuestion?.id);
+      expect(firstId).toBe("q-fixture-1");
+      expect(secondId).toBe("q-fixture-2");
+      expect(firstId).not.toBe(secondId);
+      for (const question of harness.read().questions) {
+        expect(Object.hasOwn(question, "status")).toBe(false);
+        expect(Object.hasOwn(question, "open")).toBe(false);
+        expect(Object.hasOwn(question, "answered")).toBe(false);
+        expect(Object.hasOwn(question, "age")).toBe(false);
+        expect(Object.hasOwn(question, "rank")).toBe(false);
+      }
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  test("an answer records the option value, the injected time, applied:false, and laneResume", async () => {
+    const harness = createBlockersHarness({
+      capability: { resumeInjection: true, mode: "boundary-note" },
+    });
+    try {
+      await harness.run([
+        "publish",
+        "decision-needed",
+        "--lane",
+        "L5",
+        "--options",
+        "full,lite+escalation",
+        "closeout residue sweep: full or lite?",
+      ]);
+      const beforeQuestionBytes = harness.ledgerBytes();
+      const answer = await harness.run(["answer", "q-fixture-1", "--choice", "2"]);
+      expect(answer.exitCode).toBe(0);
+      expect(answer.data).toMatchObject({
+        answered: "q-fixture-1",
+        audience: "owner",
+        choice: "lite+escalation",
+        applied: false,
+        laneResume: {
+          mode: "boundary-note",
+          sessionReentry: false,
+          capabilitySource: "adapter-declared",
+        },
+      });
+      const afterQuestionBytes = harness.ledgerBytes();
+      expect(
+        afterQuestionBytes.subarray(0, beforeQuestionBytes.length).equals(beforeQuestionBytes),
+      ).toBe(true);
+      const read = harness.read();
+      expect(read.questions).toHaveLength(1);
+      expect(read.answers).toHaveLength(1);
+      const answerRecord = read.answers[0];
+      expect(Object.keys(answerRecord ?? {}).sort()).toEqual(
+        [
+          "answeringAudience",
+          "answeredAt",
+          "applied",
+          "choice",
+          "laneResume",
+          "questionId",
+          "schemaId",
+        ].sort(),
+      );
+      expect(answerRecord).toMatchObject({
+        questionId: "q-fixture-1",
+        answeringAudience: "owner",
+        choice: "lite+escalation",
+        answeredAt: "2026-11-06T12:00:00Z",
+        applied: false,
+      });
+      expect(Object.keys(answerRecord?.laneResume ?? {}).sort()).toEqual(
+        ["capabilitySource", "mode", "sessionReentry"].sort(),
+      );
+      const list = await harness.run(["list"]);
+      const questions = list.data?.questions as Record<string, unknown>[];
+      expect(questions.map((question) => question.status)).toEqual(["answered"]);
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  test("a text answer records text rather than choice", async () => {
+    const harness = createBlockersHarness();
+    try {
+      await harness.run(["publish", "spec-ambiguity", "--lane", "L2", "which spec?"]);
+      const answer = await harness.run(["answer", "q-fixture-1", "--text", "the first spec"]);
+      expect(answer.exitCode).toBe(0);
+      expect(answer.data).toMatchObject({ text: "the first spec" });
+      expect(answer.data).not.toHaveProperty("choice");
+      const record = harness.read().answers[0];
+      expect(record?.text).toBe("the first spec");
+      expect(record?.choice).toBeUndefined();
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  test("the answer record is durable across a reopened store instance", async () => {
+    const harness = createBlockersHarness();
+    try {
+      await harness.run(["publish", "decision-needed", "--lane", "L5", "--options", "a,b", "pick"]);
+      await harness.run(["answer", "q-fixture-1", "--choice", "1"]);
+      const reopened = openStore(harness.state.identity, { edge: createTestEdge() });
+      const read = readBlockerLedger(reopened.store);
+      expect(read.ok).toBe(true);
+      if (read.ok) expect(read.value.answers[0]?.choice).toBe("a");
+    } finally {
+      harness.cleanup();
+    }
   });
 });

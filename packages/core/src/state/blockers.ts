@@ -378,9 +378,13 @@ const appendRecord = (
  */
 export const appendBlockerQuestion = (
   store: StateStorePort,
-  request: { readonly record: BlockerQuestionRecord; readonly fenceToken: string },
+  request: {
+    readonly record: BlockerQuestionRecord;
+    readonly fenceToken: string;
+    readonly current?: BlockerLedgerRead;
+  },
 ): StateResult<BlockerRecordAppendOutcome> => {
-  const current = readBlockerLedger(store);
+  const current = request.current === undefined ? readBlockerLedger(store) : ok(request.current);
   if (!current.ok) return current;
   if (current.value.questions.some((question) => question.id === request.record.id)) {
     return fail("state.store.torn", {
@@ -416,9 +420,13 @@ export const appendBlockerQuestion = (
  */
 export const appendBlockerAnswer = (
   store: StateStorePort,
-  request: { readonly record: BlockerAnswerRecord; readonly fenceToken: string },
+  request: {
+    readonly record: BlockerAnswerRecord;
+    readonly fenceToken: string;
+    readonly current?: BlockerLedgerRead;
+  },
 ): StateResult<BlockerRecordAppendOutcome> => {
-  const current = readBlockerLedger(store);
+  const current = request.current === undefined ? readBlockerLedger(store) : ok(request.current);
   if (!current.ok) return current;
   if (current.value.answers.some((answer) => answer.questionId === request.record.questionId)) {
     return fail("state.store.torn", {

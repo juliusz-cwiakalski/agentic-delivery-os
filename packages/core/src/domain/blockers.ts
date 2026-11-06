@@ -131,6 +131,22 @@ export type BlockerPublishValidation =
   | { readonly ok: true; readonly value: BlockerPublishValidated }
   | BlockerValidationFailure;
 
+/** The injectable content caps (production defaults are the contract data). */
+export type BlockerContentLimits = {
+  readonly maxQuestionChars: number;
+  readonly maxOptions: number;
+  readonly maxOptionChars: number;
+  readonly maxAnswerChars: number;
+};
+
+/** The shipped content caps, read from the contract data. */
+export const BLOCKER_CONTENT_LIMITS: BlockerContentLimits = {
+  maxQuestionChars: BLOCKER_MAX_QUESTION_CHARS,
+  maxOptions: BLOCKER_MAX_OPTIONS,
+  maxOptionChars: BLOCKER_MAX_OPTION_CHARS,
+  maxAnswerChars: BLOCKER_MAX_ANSWER_CHARS,
+} as const;
+
 export type BlockerAnswerValidated = {
   readonly choice?: string;
   readonly text?: string;
@@ -153,7 +169,10 @@ const rejected = (summary: string): BlockerValidationFailure => ({
  * (GAP-5). Options are admitted only on the options-bearing type, preserved
  * verbatim, and bounded by the declared caps.
  */
-export const validateBlockerPublish = (input: BlockerPublishInput): BlockerPublishValidation => {
+export const validateBlockerPublish = (
+  input: BlockerPublishInput,
+  limits: BlockerContentLimits = BLOCKER_CONTENT_LIMITS,
+): BlockerPublishValidation => {
   if (!isBlockerQuestionType(input.type)) {
     return {
       ok: false,
@@ -172,24 +191,24 @@ export const validateBlockerPublish = (input: BlockerPublishInput): BlockerPubli
   if (typeof input.question !== "string" || input.question.trim().length === 0) {
     return rejected("question text must be non-empty");
   }
-  if (charLength(input.question) > BLOCKER_MAX_QUESTION_CHARS) {
-    return rejected(`question text exceeds ${BLOCKER_MAX_QUESTION_CHARS} characters`);
+  if (charLength(input.question) > limits.maxQuestionChars) {
+    return rejected(`question text exceeds ${limits.maxQuestionChars} characters`);
   }
   const channel = BLOCKER_ANSWER_CHANNEL_BY_TYPE[type];
   let options: readonly string[] = [];
   if (channel === "choice") {
     const supplied = input.options ?? [];
-    if (supplied.length < 1 || supplied.length > BLOCKER_MAX_OPTIONS) {
+    if (supplied.length < 1 || supplied.length > limits.maxOptions) {
       return rejected(
-        `decision-needed requires between 1 and ${BLOCKER_MAX_OPTIONS} ordered options`,
+        `decision-needed requires between 1 and ${limits.maxOptions} ordered options`,
       );
     }
     for (const option of supplied) {
       if (typeof option !== "string" || option.length === 0) {
         return rejected("options must be non-empty values");
       }
-      if (charLength(option) > BLOCKER_MAX_OPTION_CHARS) {
-        return rejected(`an option exceeds ${BLOCKER_MAX_OPTION_CHARS} characters`);
+      if (charLength(option) > limits.maxOptionChars) {
+        return rejected(`an option exceeds ${limits.maxOptionChars} characters`);
       }
     }
     options = [...supplied];
@@ -219,6 +238,7 @@ export const validateBlockerAnswer = (
   question: BlockerQuestionRecord,
   input: BlockerAnswerInput,
   answered: boolean,
+  limits: BlockerContentLimits = BLOCKER_CONTENT_LIMITS,
 ): BlockerAnswerValidation => {
   if (answered) {
     return rejected(`question ${question.id} already has an authoritative answer`);
@@ -253,8 +273,8 @@ export const validateBlockerAnswer = (
   }
   const text = input.text as string;
   if (text.trim().length === 0) return rejected("answer text must be non-empty");
-  if (charLength(text) > BLOCKER_MAX_ANSWER_CHARS) {
-    return rejected(`answer text exceeds ${BLOCKER_MAX_ANSWER_CHARS} characters`);
+  if (charLength(text) > limits.maxAnswerChars) {
+    return rejected(`answer text exceeds ${limits.maxAnswerChars} characters`);
   }
   return { ok: true, value: { text } };
 };
@@ -295,8 +315,10 @@ const containsRegisteredSecret = (text: string, secrets: readonly string[]): boo
 };
 
 /** Layer 2: the text is exactly a declared variable name, never a value or prose. */
-export const isCredentialNameShaped = (text: string): boolean =>
-  new RegExp(BLOCKER_VARIABLE_NAME_PATTERN).test(text);
+export const isCredentialNameShaped = (
+  text: string,
+  pattern: string = BLOCKER_VARIABLE_NAME_PATTERN,
+): boolean => new RegExp(pattern).test(text);
 
 /**
  * The layered credential guard, evaluated before any record lands.
@@ -306,7 +328,10 @@ export const isCredentialNameShaped = (text: string): boolean =>
  * `credential-missing` question text and requires the declared name shape
  * (AC-F3-2). No token-shape pattern scan exists anywhere (TDR-0009).
  */
-export const evaluateBlockerGuard = (request: BlockerGuardRequest): BlockerGuardVerdict => {
+export const evaluateBlockerGuard = (
+  request: BlockerGuardRequest,
+  contract: { readonly namePattern?: string } = {},
+): BlockerGuardVerdict => {
   // Layer 1 is the stronger rule and wins over layer 2.
   for (const value of [
     request.question,
@@ -326,7 +351,7 @@ export const evaluateBlockerGuard = (request: BlockerGuardRequest): BlockerGuard
   if (
     request.type === "credential-missing" &&
     request.question !== undefined &&
-    !isCredentialNameShaped(request.question)
+    !isCredentialNameShaped(request.question, contract.namePattern ?? BLOCKER_VARIABLE_NAME_PATTERN)
   ) {
     return guardFailure(
       "a credential-missing question must name the variable (for example GITHUB_TOKEN) and carry no value or prose",

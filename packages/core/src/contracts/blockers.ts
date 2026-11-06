@@ -156,8 +156,8 @@ export const BLOCKER_DELEGATION_POLICY_ROWS = [
   {
     questionAudience: "owner",
     answeringAudience: "coordinator",
-    allowed: true,
-    policy: "allowed",
+    allowed: false,
+    policy: "none",
   },
   {
     questionAudience: "coordinator",
@@ -168,8 +168,8 @@ export const BLOCKER_DELEGATION_POLICY_ROWS = [
   {
     questionAudience: "coordinator",
     answeringAudience: "owner",
-    allowed: false,
-    policy: "none",
+    allowed: true,
+    policy: "allowed",
   },
 ] as const satisfies readonly BlockerDelegationPolicyRow[];
 

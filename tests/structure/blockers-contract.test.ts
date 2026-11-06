@@ -228,8 +228,8 @@ const audit = (snapshot: ContractSnapshot): string[] => {
   const refused = snapshot.policy.filter((row) => !row.allowed);
   eq("BLOCKER_DELEGATION_POLICY_ROWS.refused", refused, [
     {
-      questionAudience: "coordinator",
-      answeringAudience: "owner",
+      questionAudience: "owner",
+      answeringAudience: "coordinator",
       allowed: false,
       policy: "none",
     },
@@ -358,8 +358,8 @@ describe("TC-BLK-002 delegation policy-as-data is closed and mutation-live", () 
     const refused = BLOCKER_DELEGATION_POLICY_ROWS.filter((row) => !row.allowed);
     expect(refused).toHaveLength(1);
     expect(refused[0]).toMatchObject({
-      questionAudience: "coordinator",
-      answeringAudience: "owner",
+      questionAudience: "owner",
+      answeringAudience: "coordinator",
       policy: "none",
     });
   });
@@ -419,6 +419,9 @@ describe("TC-BLK-003 contracts are declaration-only and inventory-registered", (
       readFileSync(join(ROOT, "tests/structure/inventory.json"), "utf8"),
     ) as Record<string, string[]>;
     expect(inventory.core).toContain("src/contracts/blockers.ts");
+    expect(inventory.core).toContain("src/domain/blockers.ts");
+    expect(inventory.core).toContain("src/state/blockers.ts");
+    expect(inventory.cli).toContain("src/commands/blockers.ts");
     const index = readFileSync(join(ROOT, "packages/core/src/contracts/index.ts"), "utf8");
     expect(index).toContain('from "./blockers.js"');
     expect(BLOCKER_QUESTION_TYPES).toHaveLength(4);
@@ -434,8 +437,8 @@ describe("TC-BLK-002 delegation resolver reads the injected map", () => {
       declared: true,
     });
     expect(resolveBlockerDelegation(policy, "owner", "coordinator")).toEqual({
-      allowed: true,
-      policy: "allowed",
+      allowed: false,
+      policy: "none",
       declared: true,
     });
     expect(resolveBlockerDelegation(policy, "coordinator", "coordinator")).toEqual({
@@ -444,19 +447,19 @@ describe("TC-BLK-002 delegation resolver reads the injected map", () => {
       declared: true,
     });
     expect(resolveBlockerDelegation(policy, "coordinator", "owner")).toEqual({
-      allowed: false,
-      policy: "none",
+      allowed: true,
+      policy: "allowed",
       declared: true,
     });
   });
 
   test("flipping the refusal is live; a missing row is a declared refusal", () => {
-    expect(resolveBlockerDelegation(coordinatorOwnerAllowed(), "coordinator", "owner")).toEqual({
+    expect(resolveBlockerDelegation(coordinatorOwnerAllowed(), "owner", "coordinator")).toEqual({
       allowed: true,
       policy: "allowed",
       declared: true,
     });
-    expect(resolveBlockerDelegation(missingCoordinatorOwner(), "coordinator", "owner")).toEqual({
+    expect(resolveBlockerDelegation(missingCoordinatorOwner(), "owner", "coordinator")).toEqual({
       allowed: false,
       policy: "none",
       declared: false,
@@ -470,7 +473,7 @@ describe("TC-BLK-002 delegation resolver reads the injected map", () => {
 
   test("the production map remains unchanged after mutation controls", () => {
     const before = JSON.stringify(BLOCKER_DELEGATION_POLICY_ROWS);
-    resolveBlockerDelegation(coordinatorOwnerAllowed(), "coordinator", "owner");
+    resolveBlockerDelegation(coordinatorOwnerAllowed(), "owner", "coordinator");
     expect(JSON.stringify(BLOCKER_DELEGATION_POLICY_ROWS)).toBe(before);
   });
 });

@@ -14,19 +14,19 @@ export const shippedPolicy = (): BlockerDelegationPolicy => ({
 
 export const productionPolicy = (): BlockerDelegationPolicy => BLOCKER_DELEGATION_POLICY;
 
-/** A deep copy that explicitly delegates coordinator -> owner. */
+/** A deep copy that explicitly delegates coordinator answering an owner question. */
 export const coordinatorOwnerAllowed = (): BlockerDelegationPolicy => ({
   rows: BLOCKER_DELEGATION_POLICY_ROWS.map((row) =>
-    row.questionAudience === "coordinator" && row.answeringAudience === "owner"
+    row.questionAudience === "owner" && row.answeringAudience === "coordinator"
       ? { ...row, allowed: true, policy: "allowed" as const }
       : { ...row },
   ),
 });
 
-/** A deep copy missing the coordinator -> owner row (a declared refusal). */
+/** A deep copy missing the owner-question/coordinator-answer row (declared refusal). */
 export const missingCoordinatorOwner = (): BlockerDelegationPolicy => ({
   rows: BLOCKER_DELEGATION_POLICY_ROWS.filter(
-    (row) => !(row.questionAudience === "coordinator" && row.answeringAudience === "owner"),
+    (row) => !(row.questionAudience === "owner" && row.answeringAudience === "coordinator"),
   ).map((row) => ({ ...row })),
 });
 

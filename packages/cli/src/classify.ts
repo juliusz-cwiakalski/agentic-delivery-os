@@ -12,6 +12,7 @@ import {
   ERROR_TABLE,
   type ErrorTableEntry,
   FALLBACK_INTERNAL_CODE,
+  FALLBACK_INVOCATION_CODE,
 } from "@delivery-os/core/contracts";
 
 export type CodeResolution =
@@ -123,6 +124,16 @@ const containedInternalEntry = (): ErrorTableEntry => {
 export function classifyThrown(value: unknown): ErrorTableEntry {
   if (typeof value === "object" && value !== null && "kind" in value) {
     const kind = (value as { readonly kind?: unknown }).kind;
+    // A handler may return the reserved containment namespace directly for a
+    // grammar-level refusal it detected after the parser admitted the tokens.
+    if (kind === "fallback") {
+      const code = (value as { readonly code?: unknown }).code;
+      if (code === FALLBACK_INVOCATION_CODE || code === FALLBACK_INTERNAL_CODE) {
+        const resolution = resolveAppErrorCode(code);
+        if (resolution.ok) return resolution.entry;
+      }
+      return containedInternalEntry();
+    }
     if (typeof kind === "string" && isDeclaredKind(kind)) {
       const code = (value as { readonly code?: unknown }).code;
       try {

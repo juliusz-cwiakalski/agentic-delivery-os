@@ -115,6 +115,7 @@
   ],
   "cli": [
     "src/classify.ts",
+    "src/commands/blockers.ts",
     "src/commands/board.ts",
     "src/commands/brief.ts",
     "src/commands/closeout.ts",

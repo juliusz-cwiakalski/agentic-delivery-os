@@ -3,6 +3,8 @@
  * Exposes the config command definition for edge composition.
  */
 
+export type { BlockerSessionPort, BlockersCommandRuntime } from "./blockers.js";
+export { createBlockersCommandDefinition } from "./blockers.js";
 export type { BoardCollector, BoardCommandRuntime } from "./board.js";
 export { createBoardCommandDefinition } from "./board.js";
 export type { BriefCommandRuntime } from "./brief.js";
@@ -19,8 +21,6 @@ export type {
   LintRegistryRead,
 } from "./lint.js";
 export { createLintCommandDefinition } from "./lint.js";
-export type { PlanCommandRuntime } from "./plan.js";
-export { createPlanCommandDefinition } from "./plan.js";
 export type {
   PhaseCommandRuntime,
   PhasePmNotesRead,
@@ -28,6 +28,8 @@ export type {
   PhaseTransitionWrite,
 } from "./phase.js";
 export { createPhaseCommandDefinition } from "./phase.js";
+export type { PlanCommandRuntime } from "./plan.js";
+export { createPlanCommandDefinition } from "./plan.js";
 export type { ProviderCommandRuntime } from "./provider.js";
 export { createProviderCommandDefinition } from "./provider.js";
 export type { QueueReadyCommandRuntime } from "./queue.js";
