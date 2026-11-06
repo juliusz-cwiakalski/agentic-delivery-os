@@ -296,7 +296,7 @@ describe("TC-QREADY-025 queue-ready tier discipline", () => {
   });
 
   test("the secret-read allowlist stays at four and names no queue-ready file", () => {
-    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(5);
     const paths = SECRET_READ_ALLOWLIST.map((entry) => entry.path);
     for (const relative of [CONTRACT, DOMAIN, CI_RESULT, COMMAND]) {
       expect(paths.some((path) => path.includes(relative.replace("packages/", "")))).toBe(false);

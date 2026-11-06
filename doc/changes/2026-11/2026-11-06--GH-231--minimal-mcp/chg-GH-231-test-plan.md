@@ -1093,6 +1093,24 @@ Additional rules:
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
-| — | — | Not run | Plan authored at test planning; populate during delivery. |
+| TC-MCP-001/002/010/015 | 2026-11-06 | PASS | `bun test tests/structure/mcp-contract.test.ts` (10 tests); mcp source scan 12 files; snapshot mtime unchanged. |
+| TC-MCP-003/004 | 2026-11-06 | PASS | `bun test tests/behaviour/mcp-status-parity.test.ts` (10 tests); 5 success cases (floor 5) + 1 containment failure. |
+| TC-MCP-005/006 | 2026-11-06 | PASS | `bun test tests/behaviour/mcp-verify-artifact-parity.test.ts` (13 tests); 4 success + 6 failure cases (floor 8); six code families represented. |
+| TC-MCP-007 | 2026-11-06 | PASS | `bun test tests/behaviour/mcp-gate-report-parity.test.ts` (7 tests); 1 all-pass + 4 failure cases (floor 4). |
+| TC-MCP-008 | 2026-11-06 | PASS | `bun test tests/behaviour/mcp-read-parity.test.ts` (44 tests); 21 cases; replay and concurrent identity green. |
+| TC-MCP-009 | 2026-11-06 | PASS | `bun test tests/behaviour/mcp-input-validation.test.ts` (7 tests); matrix rejects `input.value.rejected`; whitespace/path/newline refs equal the CLI. Process-level rows: `mcp-lifecycle.test.ts`. |
+| TC-MCP-010/013/017/018 | 2026-11-06 | PASS | `bun test tests/structure/mcp-imports.test.ts`; `pnpm check:boundaries`; boundary matrix 139 tests; seeded controls fail by name. |
+| TC-MCP-011 | 2026-11-06 | PASS | `bun test tests/behaviour/mcp-lifecycle.test.ts` (9 tests); exit codes observed `0`, `1`, `2`; no signal; diagnostics separated. |
+| TC-MCP-012/013 | 2026-11-06 | PASS | `bun test tests/behaviour/mcp-node-smoke.test.ts` (3 tests); Node `v24.11.1`; guard installed; cross-runtime payload identity green. |
+| TC-MCP-014 | 2026-11-06 | PASS | `license-audit`, `vulnerability-gate`, `license-audit.test.ts`, `license-ci-binding.test.ts` green; zero direct external mcp dependencies. |
+| TC-MCP-016 | 2026-11-06 | PASS | `bun test tests/behaviour/mcp-injection.test.ts` (9 tests); positive and negative canary controls green. |
+| TC-MCP-017 | 2026-11-06 | PASS | `bun test tests/behaviour/mcp-readonly.test.ts` (5 tests); guarded store no mutation; tree byte-identical. |
+| TC-MCP-019 | 2026-11-06 | PASS | `bun test tests/checks/mcp-ci-parity.test.ts`; `ci-topology`, `ci-bindingness`, `ci-supply-chain` green; inventory and subpaths green. |
+| TC-MCP-020 | 2026-11-06 | PASS | `bun test tests/checks/mcp-mutants.test.ts` (9 tests); seven mutant families fail by name; live modules clean. |
+| TC-MCP-021 | 2026-11-06 | DEFERRED | Phase 7 (`@doc-syncer`) authors the new feature page and result-contract note; no marker-scoped doc changed in phases 1-6. |
 
-**Execution evidence to record per run:** the command, the Bun version, the Node version used by the smoke, the case count per parity suite, the scan file counts, and the exit codes observed in the lifecycle matrix. A failed case must name the TC ID, the case ID, and the expected versus observed value.
+**Delivery-phase evidence.** Bun `1.4.4`, Node `v24.11.1`, pnpm `10.18.3`. Parity case counts: status 6, verify-artifact 10, gate-report 5. Scans: exit-code-literals scanned 167 files; secret-read boundary 179 production files (5 allowlisted entries); mcp import scan 12 files; forbidden-literal scan 5/5 scope classes, 0 violations. Lifecycle exits observed: `0` clean stop, `1` configuration error, `2` transport fault. Aggregate `pnpm check` green with `TMPDIR=<repo>/tmp/tmpdir` and `COREPACK_DEFAULT_TO_LATEST=0` (the two hermetic packed/clone probes require a repo-local temp filesystem and the cached package-manager version). `git diff --check` clean.
+
+**Delivery decisions recorded.** OQ-1: minimal in-package stdio JSON-RPC 2.0, zero external dependencies. OQ-2: tool calls serialize in arrival order. OQ-T3: a declared `./serve` subpath, no `bin`. OQ-T5: the ref parameter is `ref`. OQ-T6: failures carry protocol-level `isError: true` metadata outside the JSON payload.
+
+**Spec-reconciliation obligations (phase 7, `@doc-syncer`).** Create `doc/spec/features/feature-mcp-surface.md` (`ados_distribution: internal`) with the three tools, CLI analogues, mirror-parity payload contract, `0/1/2` lifecycle exits, diagnostics-channel separation, and read-only/untrusted posture; add the surface-mapping note to `doc/spec/features/feature-result-contract.md`; verify `doc/guides/rename-drill.md` RD-8 against the committed tool-list snapshot. The doc-distribution guard is N/A in phases 1-6 because no marker-scoped document changed (`doc/guides/**`, `doc/templates/**`, `doc/00-index.md`, `doc/documentation-handbook.md`, `doc/decisions/README.md`, `doc/decisions/00-index.md`, `.ai/rules/README.md` all untouched); re-check at phase 7.
