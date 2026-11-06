@@ -80,6 +80,7 @@ const EXPECTED_SOURCES = [
   "provider-parks",
   "local-context",
   "repository-binding",
+  "blockers",
 ];
 
 type ConstantSnapshot = {
@@ -151,6 +152,7 @@ const EXPECTED_ORDER = [
   "lanes-or-queue",
   "providers",
   "parked-work",
+  "typed-questions",
 ];
 const EXPECTED_STATES = ["observed", "degraded", "unknown", "unavailable", "not-delivered"];
 const EXPECTED_OUTCOMES = ["read", "observed-empty", "failed", "not-configured", "not-delivered"];
@@ -161,6 +163,7 @@ const EXPECTED_TITLES: Record<string, string> = {
   "lanes-or-queue": "Lanes or queue",
   providers: "Providers",
   "parked-work": "Parked work",
+  "typed-questions": "Typed questions",
 };
 
 const compareSnapshot = (candidate: ConstantSnapshot): string[] => {
@@ -239,9 +242,9 @@ const dataOnlyViolations = (text: string, label = CONTRACT): string[] => {
 describe("TC-STATUS-008 declared constants bind Appendix C", () => {
   test("the live constants equal the Appendix C vocabulary and bounds", () => {
     expect(compareSnapshot(liveSnapshot())).toEqual([]);
-    expect(STATUS_SECTION_ORDER).toHaveLength(6);
+    expect(STATUS_SECTION_ORDER).toHaveLength(7);
     expect(STATUS_EVIDENCE_REASONS).toHaveLength(20);
-    expect(STATUS_EVIDENCE_SOURCES).toHaveLength(8);
+    expect(STATUS_EVIDENCE_SOURCES).toHaveLength(9);
   });
 
   test("StatusProviderEntry binds the emitted quota and peak declarations", () => {

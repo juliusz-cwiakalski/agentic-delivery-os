@@ -8,7 +8,11 @@ import {
   BLOCKER_PRIORITY_BY_TYPE,
   type BlockerQuestionType,
 } from "../../packages/core/src/contracts/index";
-import { rankBlockerQuestions } from "../../packages/core/src/domain/blockers";
+import {
+  buildBlockerListData,
+  rankBlockerQuestions,
+} from "../../packages/core/src/domain/blockers";
+import { aggregateStatus, projectBrief } from "../../packages/core/src/domain/index";
 import {
   answeredOlderThanOpen,
   rankingQuestions,
@@ -16,6 +20,7 @@ import {
   tiedIdQuestions,
 } from "../fixtures/blockers/ranking";
 import { FIXED_MS, makeAnswer, makeQuestion } from "../fixtures/blockers/records";
+import { baseFacts, blockersRead } from "../fixtures/status/harness";
 
 describe("TC-BLK-029 shared ranking", () => {
   test("priority class wins before age", () => {
@@ -148,5 +153,33 @@ describe("TC-BLK-029 shared ranking", () => {
     const first = rankBlockerQuestions(rankingQuestions(), [], FIXED_MS);
     const second = rankBlockerQuestions(rankingQuestions(), [], FIXED_MS);
     expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+  });
+});
+
+describe("TC-BLK-029 surface integration half", () => {
+  test("list, digest section, and brief anchor share the same ids and ranks", () => {
+    const questions = rankingQuestions();
+    const list = buildBlockerListData(questions, [], FIXED_MS);
+    const listOpen = list.questions
+      .filter((question) => question.status === "open")
+      .map((question) => ({ id: question.id, rank: question.rank }));
+    const digest = aggregateStatus(
+      baseFacts({ blockers: blockersRead(questions, []) }),
+    ).sections.find((section) => section.id === "typed-questions");
+    const digestItems = (digest?.questions ?? []).map((question) => ({
+      id: question.id,
+      rank: question.rank,
+    }));
+    const brief = projectBrief(baseFacts({ blockers: blockersRead(questions, []) }));
+    const anchor = brief.anchors.find((entry) => entry.group === "blocker-questions");
+    const briefItems = (anchor?.items ?? []).map((item) => {
+      const evidence = item.evidence;
+      return {
+        id: item.identity,
+        rank: evidence.kind === "blocker-question" ? evidence.rank : -1,
+      };
+    });
+    expect(digestItems).toEqual(listOpen);
+    expect(briefItems).toEqual(listOpen);
   });
 });

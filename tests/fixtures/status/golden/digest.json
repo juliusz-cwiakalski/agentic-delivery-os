@@ -16,8 +16,8 @@
       "remoteName": "origin"
     },
     "summary": {
-      "sections": 6,
-      "observed": 5,
+      "sections": 7,
+      "observed": 6,
       "degraded": 0,
       "unknown": 0,
       "unavailable": 0,
@@ -799,6 +799,30 @@
             "itemState": "observed"
           }
         ]
+      },
+      {
+        "id": "typed-questions",
+        "title": "Typed questions",
+        "state": "observed",
+        "evidence": {
+          "sources": [
+            {
+              "source": "blockers",
+              "outcome": "observed-empty"
+            }
+          ],
+          "reasons": [
+            "observed-empty"
+          ]
+        },
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "truncated": false,
+        "questions": []
       }
     ]
   }

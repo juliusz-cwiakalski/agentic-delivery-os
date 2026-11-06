@@ -40,7 +40,7 @@ describe("TC-STATUS-031 golden full-digest snapshot", () => {
     expect(JSON.stringify(digest.data).length).toBeLessThanOrEqual(65536);
     expect(digest).not.toHaveProperty("error");
     if (!Array.isArray(digest.data.sections)) throw new Error("sections missing");
-    expect(digest.data.sections).toHaveLength(6);
+    expect(digest.data.sections).toHaveLength(7);
     const human = readFileSync(humanPath, "utf8");
     const lines = human.split("\n").filter((line) => line.length > 0);
     expect(lines.length).toBeLessThanOrEqual(24);

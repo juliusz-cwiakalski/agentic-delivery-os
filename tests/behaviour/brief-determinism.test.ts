@@ -110,6 +110,6 @@ describe("TC-BRIEF-017 determinism", () => {
     const source = readFileSync("packages/core/src/domain/brief.ts", "utf8");
     expect(source).not.toContain("Date.now");
     expect(source).not.toContain("new Map(Object.entries");
-    expect(aggregateStatus(baseFacts()).sections).toHaveLength(6);
+    expect(aggregateStatus(baseFacts()).sections).toHaveLength(7);
   });
 });

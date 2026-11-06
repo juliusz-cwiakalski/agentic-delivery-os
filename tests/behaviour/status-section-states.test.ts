@@ -1,5 +1,5 @@
 /**
- * TC-STATUS-003 / TC-STATUS-004 — six-section totality and the Appendix A
+ * TC-STATUS-003 / TC-STATUS-004 — seven-section totality and the Appendix A
  * derivation matrix, including item-unknown vs section-unknown twins.
  */
 import { describe, expect, test } from "bun:test";
@@ -38,7 +38,7 @@ const shapeFailures = (value: unknown): string[] => {
   if (!isRecord(value)) return ["digest is not an object"];
   const sections = value.sections;
   if (!Array.isArray(sections)) return ["sections is not an array"];
-  if (sections.length !== 6) failures.push(`sections length ${sections.length} != 6`);
+  if (sections.length !== 7) failures.push(`sections length ${sections.length} != 7`);
   const ids = sections.map((section) => (isRecord(section) ? section.id : undefined));
   if (JSON.stringify(ids) !== JSON.stringify(STATUS_SECTION_ORDER)) {
     failures.push(`section ids ${JSON.stringify(ids)} != ${JSON.stringify(STATUS_SECTION_ORDER)}`);
@@ -129,8 +129,8 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const sectionOf = (digest: StatusDigest, id: string): StatusSection =>
   sectionById(digest.sections, id);
 
-describe("TC-STATUS-003 six-section totality and shape", () => {
-  test("the fully observed digest has all six sections in fixed order", () => {
+describe("TC-STATUS-003 seven-section totality and shape", () => {
+  test("the fully observed digest has all seven sections in fixed order", () => {
     const digest = aggregateStatus(baseFacts());
     expect(shapeFailures(digest)).toEqual([]);
     expect(digest.sections.map((section) => section.id)).toEqual([...STATUS_SECTION_ORDER]);

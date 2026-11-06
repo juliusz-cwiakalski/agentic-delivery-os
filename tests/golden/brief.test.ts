@@ -115,7 +115,7 @@ describe("TC-BRIEF-015 golden machine envelope", () => {
     expect(data.schemaVersion).toBe("delivery.brief.v1");
     expect(data.generatedAt).toBe("2026-10-31T00:00:00Z");
     expect(Array.isArray(data.surfaces) && data.surfaces.length).toBe(9);
-    expect(Array.isArray(data.placeholders) && data.placeholders.length).toBe(3);
+    expect(Array.isArray(data.placeholders) && data.placeholders.length).toBe(2);
     expect(Array.isArray(data.truncation) && data.truncation.length).toBeGreaterThan(0);
   });
 

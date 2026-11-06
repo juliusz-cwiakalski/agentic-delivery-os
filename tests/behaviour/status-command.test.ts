@@ -113,7 +113,7 @@ describe("TC-STATUS-001 status command surface", () => {
     const facts = baseFacts();
     const human = await runStatusCli(["status"], statusRuntime(facts));
     expect(human.exitCode).toBe(0);
-    expect(human.stdout.split("\n").filter((line) => line.length > 0)).toHaveLength(7);
+    expect(human.stdout.split("\n").filter((line) => line.length > 0)).toHaveLength(8);
     const json = await runStatusCli(["--json", "status"], statusRuntime(facts));
     expect(json.exitCode).toBe(0);
     const envelope = PARSE(json.stdout);
@@ -180,7 +180,7 @@ describe("TC-STATUS-001 status command surface", () => {
 });
 
 describe("TC-STATUS-002 non-observed sections still succeed", () => {
-  test("a reachable non-observed digest keeps six sections and exit 0", async () => {
+  test("a reachable non-observed digest keeps seven sections and exit 0", async () => {
     const facts = baseFacts({
       tracker: failedWorkItemRead("read-failed"),
       changes: deliveryRequestRead([], REVIEWS_UNAVAILABLE),
@@ -200,8 +200,8 @@ describe("TC-STATUS-002 non-observed sections still succeed", () => {
     const data = envelope.data;
     if (!isRecord(data) || !isRecord(data.summary)) throw new Error("data summary missing");
     expect(data.summary).toEqual({
-      sections: 6,
-      observed: 0,
+      sections: 7,
+      observed: 1,
       degraded: 1,
       unknown: 2,
       unavailable: 2,

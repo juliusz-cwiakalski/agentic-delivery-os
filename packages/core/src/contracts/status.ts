@@ -8,10 +8,11 @@
  * in this module.
  */
 
+import type { BlockerLedgerView, BlockerQuestionView } from "./blockers.js";
 import type { DeliveryRequest, PipelineRun, WorkItem } from "./ports.js";
 import type { ProviderConfiguration, ProviderParkView } from "./provider.js";
 
-/** The six section ids in their fixed order (F-2, Appendix C). */
+/** The seven section ids in their fixed order (F-2, Appendix C). */
 export const STATUS_SECTION_ORDER = [
   "tracker",
   "changes-and-prs",
@@ -19,6 +20,7 @@ export const STATUS_SECTION_ORDER = [
   "lanes-or-queue",
   "providers",
   "parked-work",
+  "typed-questions",
 ] as const;
 export type StatusSectionId = (typeof STATUS_SECTION_ORDER)[number];
 
@@ -42,6 +44,7 @@ export const STATUS_EVIDENCE_SOURCES = [
   "provider-parks",
   "local-context",
   "repository-binding",
+  "blockers",
 ] as const;
 export type StatusEvidenceSource = (typeof STATUS_EVIDENCE_SOURCES)[number];
 
@@ -156,6 +159,7 @@ export const STATUS_SECTION_TITLES: Readonly<Record<StatusSectionId, string>> = 
   "lanes-or-queue": "Lanes or queue",
   providers: "Providers",
   "parked-work": "Parked work",
+  "typed-questions": "Typed questions",
 };
 
 /** Rendered-item cap for each non-tracker ranked list (Appendix C). */
@@ -348,6 +352,21 @@ export type StatusLocalContextRead =
       readonly path: string;
     };
 
+/** One ranked open question in the digest section (open only). */
+export type StatusTypedQuestionItem = Omit<BlockerQuestionView, "status"> & {
+  readonly rank: number;
+};
+
+/** The verified blocker-store read, or a classified unreadable source. */
+export type StatusBlockersRead =
+  | { readonly ok: true; readonly value: BlockerLedgerView }
+  | {
+      readonly ok: false;
+      readonly reason: "state-unreadable";
+      readonly failureCode?: string;
+      readonly failureClass?: string;
+    };
+
 /** The complete injected fact set the pure aggregator consumes. */
 export type StatusFacts = {
   readonly nowIso: string;
@@ -358,6 +377,7 @@ export type StatusFacts = {
   readonly ci: StatusPipelineRunRead;
   readonly providers: StatusProviderFacts;
   readonly localContext: StatusLocalContextRead;
+  readonly blockers: StatusBlockersRead;
 };
 
 /** The active-change item shape inside the changes section. */
@@ -480,6 +500,7 @@ export type StatusSection = {
   readonly parks?: readonly StatusProviderPark[];
   readonly source?: StatusParkedWorkSource;
   readonly items?: readonly StatusParkedWorkItem[];
+  readonly questions?: readonly StatusTypedQuestionItem[];
 };
 
 /** The digest summary counts (DM-1). */

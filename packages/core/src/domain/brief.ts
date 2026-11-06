@@ -209,10 +209,36 @@ const ownerGateAges = (facts: StatusFacts, tracker: StatusSection): OwnerGatePro
   };
 };
 
+/** Mirror the digest `typed-questions` section into the real ranked anchor (DM-6). */
+const blockerQuestions = (digest: StatusDigest): BriefAnchorGroup => {
+  const section = sectionOf(digest, "typed-questions");
+  const items = (section.questions ?? []).map(
+    (question): BriefAction => ({
+      identity: question.id,
+      state: section.state,
+      evidence: {
+        kind: "blocker-question",
+        type: question.type,
+        audience: question.audience,
+        lane: question.lane,
+        rank: question.rank,
+      },
+    }),
+  );
+  return {
+    group: "blocker-questions",
+    state: section.state,
+    items,
+    truncated: section.truncated,
+    omitted: section.counts.omitted,
+  };
+};
+
 const buildAnchors = (facts: StatusFacts, digest: StatusDigest): readonly BriefAnchorGroup[] => {
   const changes = sectionOf(digest, "changes-and-prs");
   const tracker = sectionOf(digest, "tracker");
   const readyItems = readyToMergeActions(changes);
+  const blockers = blockerQuestions(digest);
   const owner = ownerGateAges(facts, tracker);
   return [
     {
@@ -222,6 +248,7 @@ const buildAnchors = (facts: StatusFacts, digest: StatusDigest): readonly BriefA
       truncated: changes.truncated,
       omitted: changes.counts.omitted,
     },
+    blockers,
     {
       group: "owner-gate-ages",
       state: owner.state,
@@ -288,12 +315,23 @@ const bindingText = (brief: BriefPayload): string =>
 
 const anchorLine = (
   brief: BriefPayload,
-  group: "ready-to-merge" | "owner-gate-ages",
+  group: BriefAnchorGroup["group"],
   reason: string | undefined,
 ): string => {
   const anchor = brief.anchors.find((entry) => entry.group === group);
   if (anchor === undefined) return `${group}  unknown`;
   const suffix = truncationSuffix(anchor.truncated, anchor.omitted);
+  if (group === "blocker-questions") {
+    const entries = anchor.items.map((item) => {
+      const evidence = item.evidence;
+      return evidence.kind === "blocker-question"
+        ? `${evidence.rank}. ${item.identity} ${evidence.type} audience=${evidence.audience} lane=${evidence.lane}`
+        : item.identity;
+    });
+    return entries.length === 0
+      ? `blocker-questions  ${stateWord(anchor.state, reason)}  none${suffix}`
+      : `blocker-questions  ${stateWord(anchor.state, reason)}  ${entries.join(", ")}${suffix}`;
+  }
   if (group === "ready-to-merge") {
     const identities = anchor.items.map((item) => item.identity);
     return identities.length === 0
@@ -347,15 +385,12 @@ const bound = (lines: readonly string[]): string => {
 export const renderBriefHuman = (brief: BriefPayload, brand: BrandIdentity): string => {
   const tracker = surfaceOf(brief, "tracker");
   const changes = surfaceOf(brief, "changes-and-prs");
-  const typedQuestions = placeholderEntry("typed-questions");
   const gateSla = placeholderEntry("gate-sla-states");
   const laneQueue = placeholderEntry("lane-queue-engine");
   const lines: string[] = [`${brand.binaryName} brief  ${bindingText(brief)}`];
 
   lines.push(anchorLine(brief, "ready-to-merge", changes?.reason));
-  lines.push(
-    `blocker-questions  ${typedQuestions.capability} (${typedQuestions.owningStory})  ${typedQuestions.state}`,
-  );
+  lines.push(anchorLine(brief, "blocker-questions", surfaceOf(brief, "typed-questions")?.reason));
   lines.push(anchorLine(brief, "owner-gate-ages", tracker?.reason));
   lines.push(`${gateSla.capability}  ${gateSla.owningStory}  ${gateSla.state}`);
 

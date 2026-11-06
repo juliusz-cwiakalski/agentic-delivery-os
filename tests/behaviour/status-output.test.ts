@@ -174,7 +174,7 @@ describe("TC-STATUS-005 machine envelope and 64 KiB bound", () => {
         "unknown",
       ].sort(),
     );
-    expect(data.summary.sections).toBe(6);
+    expect(data.summary.sections).toBe(7);
     expect(JSON.stringify(data).length).toBeLessThanOrEqual(65536);
     const expectedKeys: Record<string, string[]> = {
       tracker: ["counts", "evidence", "families", "id", "state", "title", "truncated"],
@@ -473,7 +473,7 @@ describe("TC-STATUS-007 caps, omitted, truncation, and ordering", () => {
     expect(identity(reversed)).toEqual(identity(forward));
     const forwardData = forward.data;
     if (isRecord(forwardData) && Array.isArray(forwardData.sections)) {
-      expect(forwardData.sections).toHaveLength(6);
+      expect(forwardData.sections).toHaveLength(7);
     }
   });
 });

@@ -153,6 +153,7 @@ export {
   type BriefActionEvidence,
   type BriefAnchorGroup,
   type BriefAnchorGroupId,
+  type BriefBlockerQuestionEvidence,
   type BriefOwnerGateEvidence,
   type BriefPayload,
   type BriefPlaceholderEntry,
@@ -728,6 +729,7 @@ export {
   STATUS_TRACKER_FAMILIES,
   STATUS_TRACKER_FAMILY_STATES,
   type StatusActiveChange,
+  type StatusBlockersRead,
   type StatusCiResult,
   type StatusCounts,
   type StatusDeliveryAvailability,
@@ -770,6 +772,7 @@ export {
   type StatusTrackerFamilyId,
   type StatusTrackerFamilyState,
   type StatusTrackerItem,
+  type StatusTypedQuestionItem,
   type StatusWorkItemRead,
 } from "./status.js";
 

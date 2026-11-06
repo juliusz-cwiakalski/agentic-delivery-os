@@ -21,9 +21,8 @@ import { STATUS_SECTION_ORDER } from "./status.js";
 /** The brief payload schema (DM-1). */
 export const BRIEF_SCHEMA_VERSION = "delivery.brief.v1" as const;
 
-/** The closed three-entry placeholder catalog (DM-3, DEC-5, DEC-6). */
+/** The closed two-entry placeholder catalog (DM-3, DEC-5, DEC-6). */
 export const BRIEF_PLACEHOLDER_CATALOG = [
-  { capability: "typed-questions", owningStory: "M1-S16", state: "not-delivered" },
   { capability: "gate-sla-states", owningStory: "M1-S5", state: "not-delivered" },
   { capability: "lane-queue-engine", owningStory: "M1-S17", state: "not-delivered" },
 ] as const;
@@ -37,17 +36,13 @@ export type BriefPlaceholderId = BriefPlaceholderEntry["capability"];
 /** The digest's closed five-value section-state vocabulary, reused by reference (DM-4). */
 export type BriefSurfaceState = (typeof statusVocabulary.STATUS_SECTION_STATES)[number];
 
-/** The three placeholder surface ids (the catalog capabilities are surfaces, DM-5). */
-export const BRIEF_PLACEHOLDER_SURFACE_IDS = [
-  "typed-questions",
-  "gate-sla-states",
-  "lane-queue-engine",
-] as const;
+/** The two placeholder surface ids (the catalog capabilities are surfaces, DM-5). */
+export const BRIEF_PLACEHOLDER_SURFACE_IDS = ["gate-sla-states", "lane-queue-engine"] as const;
 
 /** One placeholder surface id. */
 export type BriefPlaceholderSurfaceId = (typeof BRIEF_PLACEHOLDER_SURFACE_IDS)[number];
 
-/** The closed nine-id render-surface set (DM-5): six digest sections plus three placeholders. */
+/** The closed nine-id render-surface set (DM-5): seven digest sections plus two placeholders. */
 export const BRIEF_SURFACE_ORDER = [
   ...STATUS_SECTION_ORDER,
   ...BRIEF_PLACEHOLDER_SURFACE_IDS,
@@ -56,15 +51,18 @@ export const BRIEF_SURFACE_ORDER = [
 /** One closed render-surface id. */
 export type BriefSurfaceId = (typeof BRIEF_SURFACE_ORDER)[number];
 
-/** The two decision-first anchored-action groups (D4). */
-export const BRIEF_ANCHOR_GROUPS = ["ready-to-merge", "owner-gate-ages"] as const;
+/** The three decision-first anchored-action groups (D4). */
+export const BRIEF_ANCHOR_GROUPS = [
+  "ready-to-merge",
+  "blocker-questions",
+  "owner-gate-ages",
+] as const;
 
 /** One anchored-action group id. */
 export type BriefAnchorGroupId = (typeof BRIEF_ANCHOR_GROUPS)[number];
 
-/** Human titles for the three placeholder surfaces (never part of the closed catalog). */
+/** Human titles for the two placeholder surfaces (never part of the closed catalog). */
 export const BRIEF_PLACEHOLDER_TITLES = {
-  "typed-questions": "Blocker questions",
   "gate-sla-states": "Gate SLA states",
   "lane-queue-engine": "Lane/queue engine",
 } as const;
@@ -94,8 +92,20 @@ export type BriefOwnerGateEvidence = {
   readonly ageDays?: number;
 };
 
+/** The citing digest evidence of a ranked blocker question (DM-6). */
+export type BriefBlockerQuestionEvidence = {
+  readonly kind: "blocker-question";
+  readonly type: string;
+  readonly audience: string;
+  readonly lane: string;
+  readonly rank: number;
+};
+
 /** The bounded evidence an anchored action cites; never a verdict or authorization. */
-export type BriefActionEvidence = BriefPullRequestEvidence | BriefOwnerGateEvidence;
+export type BriefActionEvidence =
+  | BriefPullRequestEvidence
+  | BriefOwnerGateEvidence
+  | BriefBlockerQuestionEvidence;
 
 /** One ranked anchored action record (DM-2). */
 export type BriefAction = {

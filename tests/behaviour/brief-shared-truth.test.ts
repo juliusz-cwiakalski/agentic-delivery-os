@@ -87,7 +87,6 @@ describe("TC-BRIEF-004 shared truth over identical facts", () => {
     test(`${testCase.name}: the placeholder set is the closed catalog`, () => {
       const brief = projectBrief(testCase.facts);
       expect(brief.placeholders.map((entry) => entry.capability)).toEqual([
-        "typed-questions",
         "gate-sla-states",
         "lane-queue-engine",
       ]);

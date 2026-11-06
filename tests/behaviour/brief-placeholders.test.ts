@@ -1,6 +1,8 @@
 /**
- * TC-BRIEF-009 — the closed three-entry placeholder catalog renders named with
- * its owning story and evidence state, never as an empty list, zero, or observed.
+ * TC-BRIEF-009 / TC-BLK-032 — the placeholder catalog retires the
+ * `typed-questions` entry (3 -> 2), renders the remaining entries named with
+ * their owning story, and the `typed-questions` surface becomes a real digest
+ * mirror.
  */
 import { describe, expect, test } from "bun:test";
 import { projectBrief, renderBriefHuman } from "../../packages/core/src/domain/index";
@@ -8,16 +10,15 @@ import { baseFacts, capSizedFacts } from "../fixtures/brief/harness";
 import { SYNTHETIC_BRAND } from "../golden/helpers";
 
 const EXPECTED = [
-  { capability: "typed-questions", owningStory: "M1-S16", state: "not-delivered" },
   { capability: "gate-sla-states", owningStory: "M1-S5", state: "not-delivered" },
   { capability: "lane-queue-engine", owningStory: "M1-S17", state: "not-delivered" },
 ] as const;
 
 describe("TC-BRIEF-009 closed placeholder catalog", () => {
-  test("exactly three placeholders render with their stable ids, stories, and state", () => {
+  test("exactly two placeholders render with their stable ids, stories, and state", () => {
     const brief = projectBrief(baseFacts());
     expect(brief.placeholders).toEqual(EXPECTED);
-    expect(brief.placeholders).toHaveLength(3);
+    expect(brief.placeholders).toHaveLength(2);
   });
 
   test("each placeholder is a named human line containing its capability and story", () => {
@@ -31,24 +32,17 @@ describe("TC-BRIEF-009 closed placeholder catalog", () => {
     expect(human).not.toMatch(/lane-queue-engine\s+0\b/);
   });
 
-  test("the blocker-question surface is the typed-questions placeholder with no question record", () => {
+  test("the typed-questions placeholder retires and the surface mirrors the digest section", () => {
     const brief = projectBrief(baseFacts());
-    const keys = new Set<string>();
-    const collect = (value: unknown): void => {
-      if (Array.isArray(value)) {
-        for (const entry of value) collect(entry);
-      } else if (typeof value === "object" && value !== null) {
-        for (const [key, entry] of Object.entries(value)) {
-          keys.add(key);
-          collect(entry);
-        }
-      }
-    };
-    collect(brief);
-    expect(keys.has("question")).toBe(false);
-    expect(keys.has("questions")).toBe(false);
-    const typed = brief.placeholders.find((entry) => entry.capability === "typed-questions");
-    expect(typed?.state).toBe("not-delivered");
+    expect(brief.placeholders.some((entry) => entry.capability === "typed-questions")).toBe(false);
+    const surface = brief.surfaces.find((entry) => entry.id === "typed-questions");
+    expect(surface).toBeDefined();
+    expect(surface?.state).toBe("observed");
+    expect(surface?.counts.total).toBe(0);
+    const human = renderBriefHuman(brief, SYNTHETIC_BRAND);
+    expect(human).not.toContain("typed-questions (M1-S16)");
+    expect(human).toContain("blocker-questions");
+    expect(human).toContain("none");
   });
 
   test("the lane/queue placeholder equals the digest lanes-or-queue state", () => {

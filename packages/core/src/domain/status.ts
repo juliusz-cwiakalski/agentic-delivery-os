@@ -11,6 +11,7 @@ import {
   type PipelineRun,
   STATUS_MAX_DETAIL_CHARS,
   STATUS_MAX_EVIDENCE_SOURCES,
+  STATUS_MAX_ITEMS_PER_SECTION,
   STATUS_MAX_OPEN_PULL_REQUESTS,
   STATUS_MAX_PARKED_CHANGES,
   STATUS_MAX_PIPELINE_RUNS,
@@ -55,6 +56,7 @@ import {
   type StatusWorkItemRead,
   type WorkItem,
 } from "#contracts";
+import { rankBlockerQuestions } from "./blockers.js";
 import { classifyPipelineRuns } from "./ci-result.js";
 
 const DAY_MS = 86_400_000;
@@ -1149,6 +1151,68 @@ const parkedSection = (facts: StatusFacts): StatusSection => {
   };
 };
 
+/* ----------------------------- typed questions ---------------------------- */
+
+/**
+ * Derive the digest `typed-questions` section from one verified blocker read.
+ *
+ * The section ranks open questions through the shared ranking (no second
+ * comparator), renders the first eight with an exact omitted count, and treats
+ * a failed/torn read as payload data: `unknown` + `state-unreadable`, never a
+ * command failure and never a fabricated question.
+ */
+const typedQuestionsSection = (facts: StatusFacts): StatusSection => {
+  const read = facts.blockers;
+  if (!read.ok) {
+    return {
+      ...sectionBase({
+        id: "typed-questions",
+        state: "unknown",
+        counts: zeroCounts(),
+        truncated: false,
+        sources: [
+          {
+            source: "blockers",
+            outcome: "failed",
+            ...(read.failureCode === undefined ? {} : { failureCode: read.failureCode }),
+            ...(read.failureClass === undefined ? {} : { failureClass: read.failureClass }),
+          },
+        ],
+        reasons: ["state-unreadable"],
+      }),
+      questions: [],
+    };
+  }
+  const ranking = rankBlockerQuestions(read.value.questions, read.value.answers, facts.nowMs);
+  const open = ranking.open;
+  const rendered = capped(open, STATUS_MAX_ITEMS_PER_SECTION);
+  const omitted = open.length - rendered.length;
+  const reasons: StatusEvidenceReason[] = [open.length === 0 ? "observed-empty" : "observed"];
+  if (omitted > 0) reasons.push("source-truncated");
+  return {
+    ...sectionBase({
+      id: "typed-questions",
+      state: "observed",
+      counts: countOf(open.length, 0, open.length, omitted),
+      truncated: omitted > 0,
+      sources: [{ source: "blockers", outcome: open.length === 0 ? "observed-empty" : "read" }],
+      reasons,
+    }),
+    questions: rendered.map((question) => ({
+      id: question.id,
+      type: question.type,
+      audience: question.audience,
+      lane: question.lane,
+      ref: question.ref,
+      question: question.question,
+      options: question.options,
+      askedAt: question.askedAt,
+      age: question.age,
+      rank: question.rank ?? 0,
+    })),
+  };
+};
+
 /* -------------------------------- assembly -------------------------------- */
 
 const summaryOf = (sections: readonly StatusSection[]): StatusDigest["summary"] => {
@@ -1187,7 +1251,8 @@ const summaryOf = (sections: readonly StatusSection[]): StatusDigest["summary"] 
         (section.runs?.length ?? 0) +
         (section.entries?.length ?? 0) +
         (section.parks?.length ?? 0) +
-        (section.id === "parked-work" ? (section.items?.length ?? 0) : 0);
+        (section.id === "parked-work" ? (section.items?.length ?? 0) : 0) +
+        (section.id === "typed-questions" ? (section.questions?.length ?? 0) : 0);
     }
   }
   return { sections: sections.length, ...counts };
@@ -1202,6 +1267,7 @@ export const aggregateStatus = (facts: StatusFacts): StatusDigest => {
     lanesSection(),
     providersSection(facts),
     parkedSection(facts),
+    typedQuestionsSection(facts),
   ];
   return {
     schemaVersion: STATUS_SCHEMA_VERSION,
@@ -1320,6 +1386,16 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
     lines.push(
       `parked     ${parked.state}  ${count} parked changes (git-ignored local state)${truncationSuffix(parked)}`,
     );
+  }
+
+  const typed = digest.sections.find((section) => section.id === "typed-questions");
+  if (typed !== undefined) {
+    const count = typed.state === "observed" ? String(typed.questions?.length ?? 0) : "?";
+    const reason =
+      typed.state === "unknown" && typed.evidence.reasons.length > 0
+        ? ` (${typed.evidence.reasons[0]})`
+        : "";
+    lines.push(`questions  ${typed.state}  ${count} open${reason}${truncationSuffix(typed)}`);
   }
 
   return `${lines.join("\n")}\n`;

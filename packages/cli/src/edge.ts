@@ -107,6 +107,7 @@ import {
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type StateStorePort,
+  type StatusBlockersRead,
   type StatusLocalContextRead,
   type StatusParkRead,
   type StatusProviderConfigRead,
@@ -1003,6 +1004,12 @@ export const createStatusCommandRuntime = (
     },
     readLocalContext: (): StatusLocalContextRead =>
       readLocalPmContext({ path: options.localContext.path, fs: options.localContext.fs }),
+    readBlockers: (): StatusBlockersRead => {
+      const read = readBlockerLedger(options.store);
+      return read.ok
+        ? { ok: true, value: read.value }
+        : { ok: false, reason: "state-unreadable", failureCode: read.error.code };
+    },
     nowIso: options.clock.nowIso,
     nowMs: options.clock.nowMs,
   };

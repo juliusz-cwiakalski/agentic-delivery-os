@@ -160,7 +160,7 @@ describe("TC-STATUS-033 performance and read-cost bounds", () => {
       expect(run.exitCode).toBe(0);
       expect(harness.transport.requests).toHaveLength(0);
       const envelope = JSON.parse(run.stdout) as { data: { sections: unknown[] } };
-      expect(envelope.data.sections).toHaveLength(6);
+      expect(envelope.data.sections).toHaveLength(7);
     } finally {
       harness.cleanup();
     }
