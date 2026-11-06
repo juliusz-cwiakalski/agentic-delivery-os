@@ -3,8 +3,8 @@ title: "M1-S10: status collector expansion"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-06T22:20:00Z", completed: "2026-11-06T22:35:00Z" }
-  specification: { started: "2026-11-06T22:35:00Z", completed: "2026-11-06T23:05:00Z" }
-  test_planning: { started: null, completed: null }
+  specification: { started: "2026-11-06T22:35:00Z", completed: "2026-11-06T23:40:00Z" }
+  test_planning: { started: "2026-11-06T23:10:00Z", completed: "2026-11-06T23:55:00Z" }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
@@ -40,4 +40,16 @@ notes:
     date: "2026-11-06"
   - text: "Spec authored (chg-GH-243-spec.md): additive delivery.status.v1 strategy (6 to 9 sections, no version bump); closed finding-code registry (10 codes incl. dormant lane.idle-no-reason); per-section per-code grouping with bounded member lists; ready-to-merge reuses queue-ready classification with zero new reads; three named hygiene assertions with ADR-0006 unknown semantics; owner-gate ages via M1-S5 SLA evaluator; spend/blockers as not-delivered placeholders; human bounds raised 24-to-32 lines / 4096-to-6144 bytes; corpus meta-check extends to 9 sections x 5 states. Open questions: none. Four ticket ACs traced to AC-F1..F10 cases."
     type: "decision"
+    date: "2026-11-06"
+  - text: "REOPEN specification (iteration 2): test-plan author detected material spec gaps — GAP-3 hygiene violation trigger undefined (spec pins only unknown/satisfied arms); GAP-4 no provenance for story-points/in-sprint signals (WorkItem lacks fields; without an additive mapped-signal element AC-F4-1 non-unknown arms are untestable); GAP-2 findings cap unreachable with 10-code registry; GAP-10 'sections 1-6 unchanged shape' conflicts with additive fields. Spec correction re-delegated to spec-writer; test_planning will reconcile after."
+    type: "blocker"
+    date: "2026-11-06"
+  - text: "retro: initial spec review (PM) validated AC traceability but missed underspecified tri-state arms and signal-provenance for new hygiene assertions; the test-plan author's traceability pass caught them. Consider an explicit tri-state arm completeness check (violation/unknown/satisfied each defined) plus field-provenance check for any new mapped signal during spec review."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "Spec iteration 2 complete: absence-as-violation hygiene model pinned (violation = supplied signal absent/non-conforming within declared availability; unknown only from availability gate; matches missing-title/missing-labels precedent); provenance via label conventions (epic:, points:) + milestone field with declared per-assertion availability, no new endpoints; findings cap 8 pinned as defensive headroom with pure-layer injection; additive-delta allowlist replaces 'unchanged shape'; DEC-13..18 appended; new AC-F2-4/F2-5/F4-4 anchors."
+    type: "decision"
+    date: "2026-11-06"
+  - text: "test_planning re-opened for reconciliation: plan iteration 1 pinned supplied-but-non-conforming triggers (its GAP-3 reading) which the corrected spec reversed to absence-as-violation; plan must be reconciled to spec v1.1."
+    type: "info"
     date: "2026-11-06"
