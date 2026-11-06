@@ -100,6 +100,7 @@ export const stateConfigViolations = (root: string): string[] => {
  * outside the state surface.
  */
 export const STATE_CONSUMERS = [
+  "packages/cli/src/commands/blockers.ts",
   "packages/cli/src/commands/board.ts",
   "packages/cli/src/commands/phase.ts",
   "packages/cli/src/edge.ts",

@@ -4,7 +4,7 @@
  */
 export const REGISTERED_SECRET = "blocker-test-secret-0001";
 export const REGISTERED_SECRET_B = "blocker-test-secret-0002";
-export const UNREGISTERED_TOKEN_LIKE = "ghp_exampleNotARegisteredSecret0000";
+export const UNREGISTERED_TOKEN_LIKE = "unregistered-token-like-0000";
 
 export const secrets = (): readonly string[] => [REGISTERED_SECRET];
 export const secretsB = (): readonly string[] => [REGISTERED_SECRET_B];

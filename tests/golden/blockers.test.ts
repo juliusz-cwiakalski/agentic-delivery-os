@@ -22,14 +22,14 @@ const expectGolden = (actual: string, name: string): void => {
 describe("TC-BLK-042 blocker goldens", () => {
   test("the list machine and human goldens are byte-exact", async () => {
     const run = await goldenListRun();
-    expectGolden(run.machine, "list-envelope.json");
+    expectGolden(run.machine, "list-envelope.txt");
     expectGolden(run.human, "list-human.txt");
-    const envelope = JSON.parse(readFileSync(path("list-envelope.json"), "utf8")) as Record<
+    const envelope = JSON.parse(readFileSync(path("list-envelope.txt"), "utf8")) as Record<
       string,
       unknown
     >;
     expect(envelope.runId).toBe(GOLDEN_RUN_ID);
-    expect(Buffer.byteLength(readFileSync(path("list-envelope.json"), "utf8"))).toBeLessThanOrEqual(
+    expect(Buffer.byteLength(readFileSync(path("list-envelope.txt"), "utf8"))).toBeLessThanOrEqual(
       65_536,
     );
     const human = readFileSync(path("list-human.txt"), "utf8");
@@ -39,9 +39,9 @@ describe("TC-BLK-042 blocker goldens", () => {
 
   test("the answer machine and human goldens are byte-exact and record v0 applied:false", async () => {
     const run = await goldenAnswerRun();
-    expectGolden(run.machine, "answer-envelope.json");
+    expectGolden(run.machine, "answer-envelope.txt");
     expectGolden(run.human, "answer-human.txt");
-    const envelope = JSON.parse(readFileSync(path("answer-envelope.json"), "utf8")) as {
+    const envelope = JSON.parse(readFileSync(path("answer-envelope.txt"), "utf8")) as {
       data: Record<string, unknown>;
     };
     expect(envelope.data.applied).toBe(false);
@@ -55,9 +55,9 @@ describe("TC-BLK-042 blocker goldens", () => {
 
   test("the goldens are never rewritten by the suite", async () => {
     const files = [
-      "list-envelope.json",
+      "list-envelope.txt",
       "list-human.txt",
-      "answer-envelope.json",
+      "answer-envelope.txt",
       "answer-human.txt",
     ];
     const before = files.map((file) => statSync(path(file)).mtimeMs);
@@ -82,7 +82,7 @@ describe("TC-BLK-042 blocker goldens", () => {
     });
     try {
       const run = await harness.run(["list"]);
-      expect(run.stdout).not.toBe(readFileSync(path("list-envelope.json"), "utf8"));
+      expect(run.stdout).not.toBe(readFileSync(path("list-envelope.txt"), "utf8"));
     } finally {
       harness.cleanup();
     }

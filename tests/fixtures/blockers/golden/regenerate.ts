@@ -15,9 +15,9 @@ const directory = import.meta.dir;
 const main = async (): Promise<void> => {
   const list = await goldenListRun();
   const answer = await goldenAnswerRun();
-  writeFileSync(join(directory, "list-envelope.json"), list.machine, "utf8");
+  writeFileSync(join(directory, "list-envelope.txt"), list.machine, "utf8");
   writeFileSync(join(directory, "list-human.txt"), list.human, "utf8");
-  writeFileSync(join(directory, "answer-envelope.json"), answer.machine, "utf8");
+  writeFileSync(join(directory, "answer-envelope.txt"), answer.machine, "utf8");
   writeFileSync(join(directory, "answer-human.txt"), answer.human, "utf8");
 };
 

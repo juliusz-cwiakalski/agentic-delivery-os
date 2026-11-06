@@ -15,7 +15,10 @@
         "lane": "L5",
         "ref": null,
         "question": "closeout residue sweep: full or lite?",
-        "options": ["full", "lite+escalation"],
+        "options": [
+          "full",
+          "lite+escalation"
+        ],
         "askedAt": "2026-11-06T10:00:00Z",
         "age": 7200000,
         "rank": 1,

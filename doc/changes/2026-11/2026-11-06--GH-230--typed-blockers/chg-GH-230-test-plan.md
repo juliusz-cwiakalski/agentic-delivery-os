@@ -885,7 +885,7 @@ All forty-three TCs are automated. TC-BLK-028, TC-BLK-036, and TC-BLK-042 includ
 
 **Preconditions**:
 
-- A synthetic unregistered token-like string (for example `ghp_exampleNotARegisteredSecret0000`, clearly fake) that is *not* in `deps.secrets`.
+- A synthetic unregistered token-like string (for example `unregistered-token-like-0000`, clearly fake) that is *not* in `deps.secrets`.
 - A registered secret (synthetic) for the layer-1 control.
 - Content paths: `spec-ambiguity` question text, `decision-needed` option value, `external-wait`/`spec-ambiguity` free-text answer, and `credential-missing` question text.
 

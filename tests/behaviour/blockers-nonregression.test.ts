@@ -9,6 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   BLOCKER_AUDIENCES,
+  ERROR_TABLE,
   OWNER_GATE_SLA_AUDIENCES,
   STATE_SCHEMA_VERSION,
   STATUS_SECTION_ORDER,
@@ -118,5 +119,34 @@ describe("TC-BLK-041 non-regression and declared evolution", () => {
     expect(text.toLowerCase()).toContain("residual");
     expect(text).toContain("M1-S20");
     expect(text).toContain("M1-S22");
+  });
+});
+
+const REGISTRY = "doc/planning/oss-tooling/cli-command-registry.md";
+const MAN_PAGE = "doc/planning/oss-tooling/milestones/m1/commands/blockers.md";
+const registryRowPattern = /^\|\s*`[^`]*\s+blockers`\s*\|/gm;
+
+const registryRows = (text: string): number => text.match(registryRowPattern)?.length ?? 0;
+
+const packCodes = (text: string): readonly string[] =>
+  [...new Set(text.match(/blockers\.[a-z][a-z0-9-]*/g) ?? [])].sort();
+
+describe("TC-BLK-041 docs-adjacent repo invariants", () => {
+  test("the command registry declares the blockers row exactly once", () => {
+    const text = readFileSync(join(ROOT, REGISTRY), "utf8");
+    expect(registryRows(text)).toBe(1);
+    const removed = text.replace(registryRowPattern, "");
+    expect(registryRows(removed)).toBe(0);
+  });
+
+  test("every blockers code named by the man page resolves through the machine table", () => {
+    const known = new Set(ERROR_TABLE.map((entry) => entry.code));
+    const named = packCodes(readFileSync(join(ROOT, MAN_PAGE), "utf8"));
+    expect(named.length).toBeGreaterThan(0);
+    for (const code of named) expect(known.has(code), code).toBe(true);
+    const unresolved = packCodes(
+      `${readFileSync(join(ROOT, MAN_PAGE), "utf8")}\nblockers.not-a-code`,
+    );
+    expect(unresolved.some((code) => !known.has(code))).toBe(true);
   });
 });
