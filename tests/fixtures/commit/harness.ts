@@ -31,7 +31,7 @@ import type {
 } from "../../../packages/core/src/contracts/index";
 import {
   appendPhaseTransition,
-  readChangeTransitions,
+  readChangeTransitionsTolerant,
   replacePhaseProjection,
 } from "../../../packages/core/src/state/index";
 import {
@@ -135,6 +135,12 @@ export type CommitHarnessOptions = {
     | null;
 };
 
+export type CommitHarnessFaults = {
+  commitObject: boolean;
+  ledgerAppend: boolean;
+  telemetryAppend: boolean;
+};
+
 export type CommitHarness = {
   readonly root: string;
   readonly repo: TempGitRepository;
@@ -151,6 +157,7 @@ export type CommitHarness = {
   readonly commitlint: ScriptedCommitlint;
   readonly sessionFacts: CommitSessionFacts;
   readonly availability: CommitTransportAvailability;
+  readonly faults: CommitHarnessFaults;
   readonly phaseDefinition: CommandDefinition;
   readonly commitDefinition: CommandDefinition;
   runCommit(args: readonly string[], options?: { readonly json?: boolean }): Promise<CommitRun>;
@@ -234,6 +241,33 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
   };
 
   const git = createGitCommitSeam({ cwd: repo.root });
+  const faults: CommitHarnessFaults = {
+    commitObject: false,
+    ledgerAppend: false,
+    telemetryAppend: false,
+  };
+  const gitWithFaults = {
+    ...git,
+    commit: async (message: Parameters<typeof git.commit>[0]) =>
+      faults.commitObject
+        ? { ok: false as const, detail: "injected commit-object failure" }
+        : git.commit(message),
+  };
+  const commitStore: StateStorePort = {
+    ...store,
+    append: (handle, request) =>
+      request.kind === "commit.telemetry" && faults.telemetryAppend
+        ? {
+            ok: false,
+            error: {
+              kind: "state",
+              code: "state.write.failed",
+              consequence: "not_landed",
+              location: { path: "injected-telemetry" },
+            },
+          }
+        : store.append(handle, request),
+  };
   const facts = {
     readPmNotes: (changeRef: string) => {
       const file = join(changeDirectory, `chg-${changeRef}-pm-notes.yaml`);
@@ -246,7 +280,7 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
     stageEntry: (text: string, edit: { readonly phaseId: string; readonly operation: "complete" | "reopen"; readonly timestamp: string }) =>
       stagePmNotesPhaseEntry(text, edit),
     readRegistry: (changeRef: string) => {
-      const read = readChangeTransitions(store, changeRef);
+      const read = readChangeTransitionsTolerant(store, changeRef);
       if (!read.ok) return { ok: false as const, error: read.error };
       return {
         ok: true as const,
@@ -256,7 +290,17 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
       };
     },
     appendTransition: (request: Parameters<typeof appendPhaseTransition>[1]) =>
-      appendPhaseTransition(store, request),
+      faults.ledgerAppend
+        ? {
+            ok: false as const,
+            error: {
+              kind: "state" as const,
+              code: "state.write.failed" as const,
+              consequence: "not_landed" as const,
+              location: { path: "injected-ledger" },
+            },
+          }
+        : appendPhaseTransition(store, request),
     replaceProjection: (request: Parameters<typeof replacePhaseProjection>[1]) =>
       replacePhaseProjection(store, request),
     writePmNotes: (file: string, text: string) => {
@@ -272,10 +316,10 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
     sessionFacts: () => sessionFacts,
   };
   const extension = createPhaseCommitExtension({
-    store,
+    store: commitStore,
     changesDirectory: join(repo.root, "doc", "changes"),
     fs: nodePmNotesFileSystemFacts(),
-    git,
+    git: gitWithFaults,
     safety: { scan: safety.scan },
     commitlint,
     transports: { coreInference: coreTransport, harnessOneShot: harnessTransport },
@@ -290,10 +334,10 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
   const commitDefinition = createCommitCommandDefinition(
     createCommitCommandRuntime(
       {
-        store,
+        store: commitStore,
         changesDirectory: join(repo.root, "doc", "changes"),
         fs: nodePmNotesFileSystemFacts(),
-        git,
+        git: gitWithFaults,
         safety: { scan: safety.scan },
         commitlint,
         transports: { coreInference: coreTransport, harnessOneShot: harnessTransport },
@@ -379,6 +423,7 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
       sessionFacts = value;
     },
     availability,
+    faults,
     phaseDefinition: phaseAtomicDefinition,
     commitDefinition,
     runPhase: (args, runOptions) =>

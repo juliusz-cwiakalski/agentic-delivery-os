@@ -330,7 +330,9 @@ export const runCommitAct = async (
   const telemetryRecord: CommitTelemetryRecord = {
     schemaId: "delivery.commit.telemetry.v1",
     changeRef: request.skeleton.ref,
-    ...(request.skeleton.phaseId === undefined ? {} : { phaseId: request.skeleton.phaseId }),
+    ...(request.mode === "phase" && request.skeleton.phaseId !== undefined
+      ? { phaseId: request.skeleton.phaseId }
+      : {}),
     commitSha: committed.sha,
     messageSource: resolved.source,
     transport: resolved.transport,

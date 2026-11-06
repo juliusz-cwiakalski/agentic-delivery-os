@@ -395,7 +395,7 @@ export const appendPhaseTransition = (
   const acquired = store.acquireFence(request.fenceToken);
   if (!acquired.ok) return acquired;
   const handle = acquired.value.handle;
-  const current = readChangeTransitions(store, request.changeRef);
+  const current = readChangeTransitionsTolerant(store, request.changeRef);
   if (!current.ok) {
     store.releaseFence(handle);
     return current;

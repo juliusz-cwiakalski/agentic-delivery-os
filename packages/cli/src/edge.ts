@@ -112,6 +112,7 @@ import {
   type OwnerGateCollectorRead,
   PHASE_STATE_DOCUMENT_PREFIX,
   PHASE_STATE_DOCUMENT_SUFFIX,
+  type PhaseTransitionRecord,
   type PlanDiffPort,
   type ProviderClock,
   type ProviderSleep,
@@ -151,7 +152,6 @@ import {
   createNodeStateEdge,
   createStateStore,
   foldCloseoutHistory,
-  readChangeTransitions,
   readChangeTransitionsTolerant,
   readCloseoutHistory,
   readCommitTelemetry,
@@ -312,7 +312,7 @@ export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCo
     }),
   stageEntry: (text, edit) => stagePmNotesPhaseEntry(text, edit),
   readRegistry: (changeRef) => {
-    const read = readChangeTransitions(options.store, changeRef);
+    const read = readChangeTransitionsTolerant(options.store, changeRef);
     if (!read.ok) return { ok: false, error: read.error };
     return {
       ok: true,
@@ -448,17 +448,28 @@ export const createPhaseCommitExtension = (
   },
   readEvidence: async (changeRef, phaseId): Promise<PhaseCommitEvidence> => {
     const read = readChangeTransitionsTolerant(options.store, changeRef);
-    const record = read.ok
-      ? [...read.value.transitions]
-          .reverse()
-          .find((entry) => entry.phaseId === phaseId && entry.operation === "complete")
-      : undefined;
+    let record: PhaseTransitionRecord | undefined;
+    let latest: PhaseTransitionRecord | undefined;
+    if (read.ok) {
+      for (const entry of read.value.transitions) {
+        if (entry.phaseId !== phaseId) continue;
+        latest = entry;
+        record = entry.operation === "complete" ? entry : undefined;
+      }
+    }
+    const reopenedAt = latest?.operation === "reopen" ? latest.timestamp : undefined;
     const telemetry = readCommitTelemetry(options.store, changeRef);
     const head = await options.git.head();
     const event = telemetry.ok
       ? [...telemetry.value.records]
           .reverse()
-          .find((entry) => entry.phaseId === phaseId && entry.commitSha === head)
+          .find(
+            (entry) =>
+              entry.phaseId === phaseId &&
+              entry.commitSha === head &&
+              (reopenedAt === undefined || entry.landedAt > reopenedAt) &&
+              (record === undefined || entry.transitionId === record.timestamp),
+          )
       : undefined;
     return {
       recordPresent: record !== undefined,
