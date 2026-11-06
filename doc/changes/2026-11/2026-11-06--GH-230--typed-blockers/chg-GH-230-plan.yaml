@@ -6,7 +6,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-230
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   escalationTriggers:
     - "error-table-sync gate red after Phase 1 (exact four-code allowlist failed)"
     - "a pinned spec or test-plan reading requires change (reopens the test plan per A-T2)"
@@ -189,3 +189,17 @@ phases:
         - tests/behaviour/blockers-nonregression.test.ts
       folders:
         - doc/changes/2026-11/2026-11-06--GH-230--typed-blockers
+  - id: 10
+    title: "Code Review Remediation (Iteration 1)"
+    kind: remediation
+    scope:
+      files:
+        - packages/core/src/contracts/status.ts
+        - packages/core/src/contracts/brief.ts
+        - packages/core/src/domain/blockers.ts
+        - tests/behaviour/blockers-edge-composition.test.ts
+        - tests/behaviour/blockers-list.test.ts
+        - doc/spec/features/feature-blockers.md
+        - doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/chg-GH-230-test-plan.md
+        - doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/chg-GH-230-plan.yaml
+        - doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/chg-GH-230-plan.md

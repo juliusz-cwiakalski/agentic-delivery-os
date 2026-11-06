@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-06T10:15:00Z", completed: "2026-11-06T10:30:00Z" }
   delivery: { started: "2026-11-06T10:40:00Z", completed: "2026-11-06T12:10:00Z" }
   system_spec_update: { started: "2026-11-06T12:20:00Z", completed: "2026-11-06T12:55:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-06T13:05:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -86,6 +86,15 @@ notes:
     date: "2026-11-06"
   - text: "Deviation: the checkpointed phase-2 delegation map had question/answering audiences inverted; fixed in phase 4 (contracts + fixtures + tests) to DEC-3 semantics. Deviation: the test-plan's illustrative unregistered token string used a provider token prefix that trips the privacy-literal gate; replaced with `unregistered-token-like-0000` in the fixture and the test-plan example (gate-blocking literal only)."
     type: "risk"
+    date: "2026-11-06"
+  - text: "Review iteration 1 verdict FAIL (spec compliance PASS, plan compliance PASS): 7 findings — F-1/F-2 medium stale count comments in contracts/status.ts ('eight evidence source ids', now nine) and contracts/brief.ts ('three-entry placeholder catalog', now two); F-3 medium createBlockersCommandRuntime untested (security-relevant production seam: brand-named env->audience, default policy, real-store bridge — GH-170 lesson); F-4 low blockers list --open counts filter-excluded answered rows as omitted/truncated, inconsistent with digest semantics and undocumented; F-5 low test-plan TC-BLK-041 index row stale (eight surfaces/two anchors vs delivered nine/three); F-6 info askedAt not parse-validated at read (garbage -> age 0, optional hardening); F-7 info all declared coder deviations judged legitimate. Remediation Phase 10 added to plan.md + plan.yaml by reviewer; verdict artifact code-review/review-iter-1.yaml."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Review FAIL reopened delivery for remediation (iteration 1, max 3): coder executes Phase 10 (F-1..F-5 mandatory; F-6 optional at coder judgment if contained, else defer with rationale to M1-S18 consumer story), then re-run doc-syncer if code changes touch documented behavior (F-3 seam test and F-4 semantics may), then review iteration 2. PM-decided F-6 default: prefer fail-closed consistency if contained."
+    type: "decision"
+    date: "2026-11-06"
+  - text: "Retro: all three medium findings are things gates cannot catch — stale comments (no check reads prose against constants), an untested production composition seam (unit suites test the pure path), and undocumented CLI flag semantics (tests passed because the behavior was never asserted). Lesson: reviewer's adversarial pass is where composition-seam coverage and comment-truth get checked; budget for it in every change."
+    type: "retro"
     date: "2026-11-06"
   - text: "Server restart interrupted the coder after plan phase 2 (2ca8d9de); recovery assessed actual git state via runner and resumed the same coder session with the completed-phase list — no work repeated, no conflicts, phases 3-9 delivered cleanly. Retro: on restart, always detect state from git log + worktree before re-delegating; resume the subagent session with explicit completed-phase list."
     type: "retro"

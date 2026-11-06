@@ -411,6 +411,27 @@ From spec §4.1: 100% of published blockers visible in the digest/brief ranking 
 - Code areas: `.changeset/gh-230-typed-blockers-minor.md` (new), `tests/behaviour/blockers-nonregression.test.ts` (updated — the two invariants), `doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/**` (plan execution log / pm-notes bookkeeping).
 - System docs: none authored in-change; the handoff list is recorded in the PR/change notes.
 
+## Phase 10: Code Review Remediation (Iteration 1)
+
+**Goal**: Resolve the seven findings of `code-review/review-iter-1.yaml` (0 critical / 0 high / 3 medium / 2 low / 2 info; Status FAIL, spec and plan compliance PASS). All are accuracy, documentation, and test-gap items; none change delivered behavior contracts except the optional F-4 semantics tightening.
+
+**Source**: reviewer agent, review iteration 1 (2026-11-06), artifact `code-review/review-iter-1.yaml`.
+
+- [ ] **10.1** (F-1) `packages/core/src/contracts/status.ts` — update the module comment above `STATUS_EVIDENCE_SOURCES` from "The eight evidence source ids" to nine (or drop the count). Comment-only. (evidence: `pnpm typecheck`; eyeball diff)
+- [ ] **10.2** (F-2) `packages/core/src/contracts/brief.ts` — update the header comment from "the closed three-entry placeholder catalog" to two-entry. Comment-only. (evidence: `pnpm typecheck`; eyeball diff)
+- [ ] **10.3** (F-3) Add `tests/behaviour/blockers-edge-composition.test.ts` exercising the production composition `createBlockersCommandRuntime` (and `createConfigProgram` with a `blockers` composition) over a temp store: the brand-named environment variable resolves the caller audience (coordinator value → coordinator audience and the end-to-end SC-M1-24 refusal; absent/unrecognized → owner), the default delegation policy refuses coordinator answering an owner-audience question, and one publish + one answer land on the real ledger with coverage. Mirrors the `createStatusCommandRuntime` precedent (`queue-ready-live`, `brief-readonly`). (evidence: suite green; `pnpm typecheck`)
+- [ ] **10.4** (F-4) Decide and deliver the `blockers list --open` omitted semantics: preferred — exclude filter-excluded answered rows from `omitted`/`truncated` in `buildBlockerListData` (omitted counts cap/byte-bound drops only), update `tests/behaviour/blockers-list.test.ts` and the golden if bytes change; alternatively document the current semantics explicitly in `doc/spec/features/feature-blockers.md` and pin the `--open` omitted value with a test. (evidence: suite green + golden regenerate script if changed; doc line if documented)
+- [ ] **10.5** (F-5) `chg-GH-230-test-plan.md` scenario-index row TC-BLK-041 — reword "brief eight surfaces/two anchors stable" to match delivered truth (nine surfaces/three anchors; the other eight surfaces and the two existing anchors stable). (evidence: eyeball diff)
+- [ ] **10.6** (F-6, optional) Either validate `askedAt`/`answeredAt` Date.parse-ability in `questionFrom`/`answerFrom` (torn on failure) with a record-integrity case, or record the residual in `doc/spec/features/feature-blockers.md`. Skipping with a documented reason is acceptable. (evidence: suite green or doc line)
+- [ ] **10.7** (F-7) No action — recorded for traceability only (documented deviations judged legitimate).
+- [ ] **10.8** Re-run the aggregate gates (`pnpm check`, `bun run scripts/checks/error-table-sync.ts`) and record results in the execution log; then re-review.
+
+**Acceptance Criteria**:
+
+- Must: F-1..F-5 resolved (F-6 optional with documented decision; F-7 informational); no behavior contract changes beyond the F-4 preferred tightening; all suites and `pnpm check` green.
+- Should: the edge-composition test (10.3) asserts the SC-M1-24 refusal end-to-end through the production composition, not a re-statement of handler-level tests.
+
+
 **Tests**: TC-BLK-041 (invariant extension); the full battery per test plan §7 evidence commands. Completion gate: `pnpm check` + `git diff --check` + `git status --porcelain`.
 
 **Completion signal**: `chore(GH-230): finalize typed blocker delivery with changeset and invariants`
@@ -494,6 +515,7 @@ Coverage cross-check: all 21 ACs (AC-F1-1..AC-F7-3), all 7 NFRs, EVT-1/EVT-2, DM
 | Version | Date (UTC) | Author | Changes |
 |---------|------------|--------|---------|
 | 1.0 | 2026-11-06T16:00:00Z | plan-writer | Initial plan. Nine phases per spec §18 order: (1) contract vocabulary + four-row error family with the exact two-segment allowlist in both `RESERVED_TWO_SEGMENT_CODES` owners; (2) pure domain (validation, layered guard, routing, shared ranking, resume projection, renderers); (3) the two additive state record kinds; (4) the `blockers` command surface + publish/records/types integration; (5) credential-guard + audience/identity/delegation pinning incl. TDR-0009 controls and identifier-field guard; (6) answer-as-data/`laneResume` + list/errors; (7) the atomic digest/brief contract edit with the shared-ranking proof; (8) bounds/determinism/cost/performance/privacy/non-regression/corpus/goldens; (9) changeset, docs-adjacent invariants (registry row, man-page anchor consistency), spec handoff, aggregate gates. All 43 TCs mapped without reshaping (TC-BLK-006 supplied with Phase 4); GAP-1..17 readings confirmed with delivery-bound spellings pinned (age ms, `boundary-note` default, `CALLER_AUDIENCE` suffix, section index after `parked-work`); authored alongside the schema-valid `chg-GH-230-plan.yaml` machine projection (GH-226 format flip). Verified: command registry + man page are planning truth; documented error table is the binding S2 surface; `BRIEF_SURFACE_ORDER` derives from `STATUS_SECTION_ORDER` (surfaces stay 9 mechanically). |
+| 1.1 | 2026-11-06T14:05:00Z | reviewer | Review iteration 1 (Status FAIL, spec/plan compliance PASS): appended Phase 10 "Code Review Remediation (Iteration 1)" — 3 medium (stale count comments in `contracts/status.ts` and `contracts/brief.ts` headers; untested `createBlockersCommandRuntime` production composition seam), 2 low (`--open` omitted-semantics wrinkle; stale TC-BLK-041 index row in the test plan), 2 info (askedAt parseability residual; documented deviations judged legitimate). Findings in `code-review/review-iter-1.yaml`; YAML phase list extended to 10. |
 
 ## Execution Log
 
