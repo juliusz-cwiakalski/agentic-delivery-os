@@ -1841,7 +1841,10 @@ export const createDoctorCommandRuntime = (
       return {
         ok: true,
         verifiedEmpty: base.verifiedEmpty && retro.verifiedEmpty,
-        recordCount: base.recordCount + retro.recordCount,
+        // The retro registry shares the delivery ledger (the reviewed PIN-4
+        // single-store decision); `base.recordCount` already includes the retro
+        // artifacts, so adding `retro.recordCount` would double-count them.
+        recordCount: base.recordCount,
         stores: [
           ...(base.stores ?? []),
           ...(retro.stores ?? [

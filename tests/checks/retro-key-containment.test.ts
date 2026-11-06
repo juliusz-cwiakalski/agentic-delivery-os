@@ -61,6 +61,20 @@ describe("TC-RETRO-011 key containment", () => {
     ).toBe(true);
   });
 
+  test("a planted key in a non-retro-named source file fails", () => {
+    const directory = mkdtempSync(join(tmpdir(), "key-containment-non-retro-"));
+    mkdirSync(join(directory, "packages/cli/src"), { recursive: true });
+    writeFileSync(join(directory, "packages/cli/src/edge.ts"), `export const forged = "${KEY}";\n`);
+    const report = checkRetroKeyContainment({
+      root: directory,
+      roots: ["packages/cli/src"],
+    });
+    expect(report.failures.some((failure) => failure.includes("packages/cli/src/edge.ts"))).toBe(
+      true,
+    );
+    expect(report.occurrences).toBe(1);
+  });
+
   test("the allowlisted path stays clean", () => {
     const report = checkRetroKeyContainment({
       root,

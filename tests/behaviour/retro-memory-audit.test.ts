@@ -68,7 +68,7 @@ describe("TC-RETRO-060 memory-audit trigger and run evidence", () => {
   test("a recorded run carries trigger identity, window, outcome refs and trace ids and is queryable through report", () => {
     const fixture = makeRetroDir("memory-run");
     seed(fixture, "run-memory-2");
-    const records = recordMemoryAuditRun(
+    const recorded = recordMemoryAuditRun(
       {
         sidecar: fixture.sidecar,
         newTraceId,
@@ -84,6 +84,9 @@ describe("TC-RETRO-060 memory-audit trigger and run evidence", () => {
         runId: "run-memory-2",
       },
     );
+    expect(recorded.ok).toBe(true);
+    if (!recorded.ok) return;
+    const records = recorded.value;
     expect(records).toHaveLength(2);
     expect(records.map((record) => record.traceId)).toEqual(["ev-0001", "ev-0002"]);
     for (const record of records) {
@@ -95,6 +98,32 @@ describe("TC-RETRO-060 memory-audit trigger and run evidence", () => {
     expect(report.ok).toBe(true);
     if (report.ok && "evidenceRefs" in report.data) {
       for (const record of records) expect(report.data.evidenceRefs).toContain(record.traceId);
+    }
+  });
+
+  test("an append failure returns a classified result instead of throwing across the seam", () => {
+    const fixture = makeRetroDir("memory-failure");
+    expect(fixture.io.createExclusive(fixture.sidecar.lockPath, '{"token":"held"}\n')).toBe(true);
+    try {
+      const result = recordMemoryAuditRun(
+        {
+          sidecar: fixture.sidecar,
+          newTraceId,
+          newFenceToken: () => "memory-fence",
+          clock: { nowMs: () => NOW_MS },
+          level: "change",
+        },
+        {
+          triggerIdentity: RETRO_MEMORY_AUDIT_TRIGGER_NAME,
+          windowStart: NOW_MS - 1000,
+          windowEnd: NOW_MS,
+          outcomeRefs: ["outcome-1"],
+        },
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe("state.lock.busy");
+    } finally {
+      fixture.io.removeFile(fixture.sidecar.lockPath);
     }
   });
 

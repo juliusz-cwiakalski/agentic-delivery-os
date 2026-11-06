@@ -1,7 +1,8 @@
 /**
  * The retro key-containment invariant (GH-232 TC-RETRO-011 static half,
  * NFR-3): key-shaped 64-hex literals may appear only in the single synthetic
- * allowlisted fixture. The check scans source, committed fixtures, and goldens.
+ * allowlisted fixture. Every file under the declared roots is scanned, not only
+ * retro-named paths.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -15,7 +16,6 @@ export const KEY_SCAN_ROOTS = [
 ] as const;
 const KEY_PATTERN = /\b[0-9a-f]{64}\b/g;
 const SKIPPED_DIRECTORIES = new Set(["node_modules", "dist", ".git"]);
-const RETRO_RELEVANT = /retro/i;
 
 export type KeyContainmentReport = {
   readonly failures: readonly string[];
@@ -43,10 +43,7 @@ export const checkRetroKeyContainment = (options: {
 }): KeyContainmentReport => {
   const roots = options.roots ?? KEY_SCAN_ROOTS;
   const allowlist = new Set(options.allowlist ?? KEY_ALLOWLIST);
-  const files = roots
-    .flatMap((root) => listFiles(options.root, root))
-    .filter((file) => RETRO_RELEVANT.test(file))
-    .sort();
+  const files = roots.flatMap((root) => listFiles(options.root, root)).sort();
   const failures: string[] = [];
   let occurrences = 0;
   for (const file of files) {

@@ -264,11 +264,27 @@ export const sidecarLines = (fixture: RetroFixture): string[] => {
 export const writeSidecarLines = (fixture: RetroFixture, lines: readonly string[]): void => {
   const path = retroEvidencePath(fixture.stateDirectory, fixture.workspaceId);
   writeFileSync(path, lines.length === 0 ? "" : `${lines.join("\n")}\n`);
+  chmodSync(path, 0o600);
 };
 
 export const readSidecarBytes = (fixture: RetroFixture): Buffer => {
   const path = retroEvidencePath(fixture.stateDirectory, fixture.workspaceId);
   return existsSync(path) ? readFileSync(path) : Buffer.alloc(0);
+};
+
+/** The registry's state-ledger path (the retro registry shares the store). */
+export const registryLedgerPath = (fixture: RetroFixture): string =>
+  join(fixture.stateDirectory, `ledger.${encodeURIComponent(fixture.workspaceId)}.jsonl`);
+
+export const readRegistryText = (fixture: RetroFixture): string => {
+  const path = registryLedgerPath(fixture);
+  return existsSync(path) ? readFileSync(path, "utf8") : "";
+};
+
+export const writeRegistryText = (fixture: RetroFixture, text: string): void => {
+  const path = registryLedgerPath(fixture);
+  writeFileSync(path, text);
+  chmodSync(path, 0o600);
 };
 
 const recordAt = (fixture: RetroFixture, position: number): Record<string, unknown> => {

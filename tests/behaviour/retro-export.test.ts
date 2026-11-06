@@ -6,8 +6,10 @@ import { describe, expect, test } from "bun:test";
 import {
   RETRO_EXPORT_MAX_LIMIT,
   RETRO_EXPORT_SCHEMA,
+  type RetroRunRecord,
 } from "../../packages/core/src/contracts/index";
 import { exportRetroEvidence } from "../../packages/core/src/domain/retro";
+import { recordRetroRun } from "../../packages/core/src/state/index";
 import {
   appendEvidence,
   exportDeps,
@@ -44,6 +46,47 @@ describe("TC-RETRO-049 bounded engine-boundary export", () => {
       expect(registryAfter.value.records.length).toBe(registryBefore.value.records.length);
     }
   });
+
+  test("mutate-on-export and registry-entry mutants fail the no-mutation oracle", () => {
+    const fixture = makeRetroDir("export-mutants");
+    appendEvidence(fixture);
+    const before = readSidecarBytes(fixture);
+    const registryBefore = fixture.store.readRecords();
+    const registryCount = (): number => {
+      const read = fixture.store.readRecords();
+      return read.ok ? read.value.records.length : -1;
+    };
+    const beforeCount = registryCount();
+
+    // Mutant 1: the export path appends evidence while exporting.
+    const mutateOnExport = (): void => {
+      appendEvidence(fixture, { payloadRefs: ["note:mutant-export"] });
+    };
+    mutateOnExport();
+    expect(readSidecarBytes(fixture).equals(before)).toBe(false);
+    expect(() => {
+      expect(readSidecarBytes(fixture).equals(before)).toBe(true);
+    }).toThrow();
+
+    // Mutant 2: the export path records a registry entry while exporting.
+    const run: RetroRunRecord = {
+      schemaId: "delivery.retro.run.v1",
+      runId: "run-export-mutant",
+      level: "change",
+      mode: "report",
+      scope: "GH-232",
+      counts: { collected: 0, malformed: 0, skippedSource: 0 },
+      consumed: [],
+      truth: { clean: true, blocking: null, checks: [] },
+    };
+    expect(recordRetroRun(fixture.store, run, "export-mutant").ok).toBe(true);
+    expect(registryCount()).not.toBe(beforeCount);
+    if (registryBefore.ok) {
+      expect(() => {
+        expect(registryCount()).toBe(registryBefore.value.records.length);
+      }).toThrow();
+    }
+  });
 });
 
 describe("TC-RETRO-050 export refusals", () => {
@@ -69,6 +112,23 @@ describe("TC-RETRO-050 export refusals", () => {
     }
     const valid = exportDeps(fixture);
     expect(exportRetroEvidence(valid.deps).ok).toBe(true);
+  });
+
+  test("a default-destination mutant writes and fails the refusal oracle", () => {
+    const fixture = makeRetroDir("export-default-mutant");
+    appendEvidence(fixture);
+    const holder = exportDeps(fixture, "", 1);
+    const defaultingMutant = (destination: string): string =>
+      destination.length === 0 ? "/temp/default-export.json" : destination;
+    const mutated = exportRetroEvidence({
+      ...holder.deps,
+      destination: defaultingMutant(holder.deps.destination),
+    });
+    expect(mutated.ok).toBe(true);
+    expect(holder.written.content).toBeDefined();
+    expect(() => {
+      expect(mutated.ok).toBe(false);
+    }).toThrow();
   });
 });
 

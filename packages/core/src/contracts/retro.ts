@@ -467,6 +467,14 @@ export type RetroSidecarPort = {
     draft: RetroEvidenceDraft,
     options?: { readonly fenceToken?: string },
   ): RetroResult<RetroEvidenceRecord>;
+  /**
+   * Append a run's evidence under one collector fence: one verified read, all
+   * link computations in memory, and one append (DEC-13's run-level fence).
+   */
+  appendBatch(
+    drafts: readonly RetroEvidenceDraft[],
+    options?: { readonly fenceToken?: string },
+  ): RetroResult<readonly RetroEvidenceRecord[]>;
   read(options?: { readonly reportedRemovals?: readonly number[] }): RetroResult<RetroSidecarRead>;
   verify(options?: {
     readonly reportedRemovals?: readonly number[];

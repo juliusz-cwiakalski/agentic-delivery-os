@@ -19,6 +19,7 @@ import {
   RETRO_MEMORY_AUDIT_TRIGGER_NAME,
   RETRO_MODES,
   RETRO_REGISTRY_BOUNDARY_DECLARATION,
+  RETRO_REGISTRY_FENCE_NAMESPACE,
   RETRO_RUN_PAYLOAD_SCHEMA,
   RETRO_RUN_RECORD_KEY_PREFIX,
   RETRO_RUN_RECORD_KIND,
@@ -359,6 +360,9 @@ const appendValidated = (
 ): StateResult<StateAppendOutcome> =>
   createArtifactBoundary(store, RETRO_REGISTRY_BOUNDARY_DECLARATION).append(handle, request);
 
+/** Registry fences carry the declared namespace on their token (PIN-4). */
+const registryFenceToken = (token: string): string => `${RETRO_REGISTRY_FENCE_NAMESPACE}:${token}`;
+
 /** Append one validated registry record under a caller-supplied fence token. */
 export const appendRetroRegistryRecord = (
   store: StateStorePort,
@@ -369,7 +373,7 @@ export const appendRetroRegistryRecord = (
     readonly fenceToken: string;
   },
 ): StateResult<StateAppendOutcome> => {
-  const acquired = store.acquireFence(request.fenceToken);
+  const acquired = store.acquireFence(registryFenceToken(request.fenceToken));
   if (!acquired.ok) return acquired;
   try {
     return appendValidated(store, acquired.value.handle, {
@@ -486,7 +490,7 @@ export const recordRetroRun = (
       });
     }
     if (requests.length === 0) return ok([]);
-    const acquired = store.acquireFence(fenceToken);
+    const acquired = store.acquireFence(registryFenceToken(fenceToken));
     if (!acquired.ok) return acquired;
     const appended: StateAppendOutcome[] = [];
     try {

@@ -106,4 +106,18 @@ describe("TC-RETRO-054 claimed collector identity", () => {
       .filter((value) => value !== undefined);
     expect(identities).toContain("delivery-agent");
   });
+
+  test("an identity-verification mutant fails the attribution oracle", () => {
+    const fixture = seed("identity-verify-mutant");
+    const verificationMutant = (value: string): { readonly ok: boolean } =>
+      value === "delivery-agent" ? { ok: false } : { ok: true };
+    const assertAttribution = (result: { readonly ok: boolean }): void => {
+      expect(result.ok).toBe(true);
+    };
+    expect(() => assertAttribution(verificationMutant("delivery-agent"))).toThrow();
+    const real = collectRetro(
+      collectDeps(fixture, { identity: { kind: "claimed", value: "delivery-agent" } }),
+    );
+    assertAttribution(real);
+  });
 });

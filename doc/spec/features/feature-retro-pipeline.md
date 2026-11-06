@@ -319,7 +319,7 @@ function attemptOutOfSeamEvidenceWrite(): { readonly ok: false; readonly error: 
 | Append-only discipline | No update, delete, reorder, or compaction path exists; reads never mutate; appends are serialized by the collector fence. |
 | Boundedness | The audit collector read uses limit `1000`; export requires a limit from `1` to `1000` and reports truncation in band; no unbounded dump path exists. |
 | Determinism | Identical sidecar and registry state, injected clock, and flags produce byte-identical output; no ambient clock, random, environment, or filesystem read outside the declared seams; zero model calls. |
-| Performance | Collect, report, and export are bounded over a sidecar of up to 10,000 records including full chain verification; read and append budgets are 10,000 ms and 30,000 ms. |
+| Performance | On a 10,000-record sidecar including full chain verification: collect ≤ 30 s, report ≤ 10 s, export ≤ 10 s. CI gates bounded work (one chain walk per read, one batched append per collection run, bounded per-record work); the declared seam timeout constants (`RETRO_READ_TIMEOUT_MS` 10,000 ms, `RETRO_APPEND_TIMEOUT_MS` 30,000 ms) are carried as seam data, not as a substitute for these budgets. |
 | Error-table binding | Four `retro` rows round-trip exactly in both directions; store-level failures reuse existing state identities with their delivered projections. |
 | Tier conformance | Contracts stay data-only; runtime APIs stay in the driver edge; registration is composition-only; no hardcoded product name. |
 | Secret hygiene | Zero edge-registered secret survivors in any record, finding, report, or exported bundle. |

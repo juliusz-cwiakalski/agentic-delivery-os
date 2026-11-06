@@ -46,6 +46,10 @@ export type RetroSidecar = {
     draft: RetroEvidenceDraft,
     options?: { readonly fenceToken?: string },
   ): RetroResult<RetroEvidenceRecord>;
+  appendBatch(
+    drafts: readonly RetroEvidenceDraft[],
+    options?: { readonly fenceToken?: string },
+  ): RetroResult<readonly RetroEvidenceRecord[]>;
   read(options?: { readonly reportedRemovals?: readonly number[] }): RetroResult<RetroSidecarRead>;
   verify(options?: {
     readonly reportedRemovals?: readonly number[];
@@ -510,6 +514,98 @@ export const createRetroSidecar = (io: RetroSidecarIo): RetroSidecar => {
           return stateFailure("state.permission.denied", { path: evidencePath });
         }
         return ok(record);
+      } finally {
+        try {
+          io.removeFile(lockPath);
+        } catch {
+          // Best effort: the collector fence is released on the normal path.
+        }
+      }
+    },
+
+    appendBatch(drafts, options = {}) {
+      if (drafts.some((draft) => !validateDraft(draft))) {
+        return inputFailure({ path: evidencePath });
+      }
+      if (drafts.length === 0) return ok([]);
+      io.ensureDirectory(io.stateDirectory);
+      const token = options.fenceToken ?? io.randomHex(8);
+      let acquired: boolean;
+      try {
+        acquired = io.createExclusive(lockPath, `${JSON.stringify({ token })}\n`);
+      } catch {
+        return stateFailure("state.write.failed", { path: lockPath });
+      }
+      if (!acquired) return stateFailure("state.lock.busy", { path: lockPath });
+      try {
+        const current = readSidecar(io, evidencePath, keyPath, []);
+        if (!current.ok) return current;
+        if (current.value.malformed.length > 0) {
+          const first = current.value.malformed[0];
+          return retroFailure("retro.evidence.malformed-entry", {
+            path: evidencePath,
+            ...(first?.position === undefined ? {} : { position: first.position }),
+            entriesProcessed: current.value.records.length + current.value.malformed.length,
+            entriesPreserved: current.value.records.length,
+            ...(first?.position === undefined ? {} : { firstFlaggedPosition: first.position }),
+          });
+        }
+        if (!current.value.chain.verified) {
+          const first = current.value.chain.breaks[0];
+          return retroFailure("retro.evidence.tamper-flagged", {
+            path: evidencePath,
+            ...(first?.position === undefined ? {} : { position: first.position }),
+            ...(first?.traceId === undefined ? {} : { traceId: first.traceId }),
+          });
+        }
+        const existingIds = new Set(current.value.records.map((record) => record.traceId));
+        const batchIds = new Set<string>();
+        for (const draft of drafts) {
+          if (existingIds.has(draft.traceId) || batchIds.has(draft.traceId)) {
+            return inputFailure({ path: evidencePath });
+          }
+          batchIds.add(draft.traceId);
+        }
+        const key = ensureKey(io, keyPath);
+        if (!key.ok) return key;
+        let previous =
+          current.value.records.length === 0
+            ? RETRO_CHAIN_ANCHOR
+            : (current.value.records[current.value.records.length - 1]?.chainValue ??
+              RETRO_CHAIN_ANCHOR);
+        const records: RetroEvidenceRecord[] = [];
+        for (const draft of drafts) {
+          const recordWithoutHash: Omit<RetroEvidenceRecord, "chainValue"> = {
+            schemaId: RETRO_EVIDENCE_PAYLOAD_SCHEMA,
+            traceId: draft.traceId,
+            level: draft.level,
+            source: draft.source,
+            windowStart: draft.windowStart,
+            windowEnd: draft.windowEnd,
+            collectedAt: draft.collectedAt,
+            ...(draft.collectorIdentity === undefined
+              ? {}
+              : { collectorIdentity: draft.collectorIdentity }),
+            payloadRefs: [...draft.payloadRefs],
+            payloadSchemaId: draft.payloadSchemaId,
+          };
+          const chainValue = io.keyedHash(key.value, previous, canonicalContent(recordWithoutHash));
+          previous = chainValue;
+          records.push({ ...recordWithoutHash, chainValue });
+        }
+        try {
+          io.appendText(
+            evidencePath,
+            `${records.map((record) => JSON.stringify(record)).join("\n")}\n`,
+          );
+          io.applyPermissions(evidencePath, "file");
+        } catch {
+          return stateFailure("state.write.failed", { path: evidencePath });
+        }
+        if (!io.verifyPermissions(evidencePath, "file")) {
+          return stateFailure("state.permission.denied", { path: evidencePath });
+        }
+        return ok(records);
       } finally {
         try {
           io.removeFile(lockPath);

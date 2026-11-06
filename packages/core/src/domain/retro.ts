@@ -42,6 +42,7 @@ import {
   type RetroLevelName,
   type RetroRegistryPort,
   type RetroReportData,
+  type RetroResult,
   type RetroRunCounts,
   type RetroRunRecord,
   type RetroSidecarPort,
@@ -98,6 +99,22 @@ const failure = (error: RetroFailure): { readonly ok: false; readonly error: Ret
   error,
 });
 
+/** The delivered state failure vocabulary an audit read surface may produce. */
+const STATE_FAILURE_CODES = [
+  "state.store.torn",
+  "state.schema.mismatch",
+  "state.keys.missing",
+  "state.lock.busy",
+  "state.permission.denied",
+  "state.write.failed",
+  "state.level.unsupported",
+  "state.storage.exhausted",
+  "state.store.unknown",
+] as const satisfies readonly StateFailureCode[];
+
+const isStateFailureCode = (code: string): code is StateFailureCode =>
+  (STATE_FAILURE_CODES as readonly string[]).includes(code);
+
 const inputFailure = (summary: string): { readonly ok: false; readonly error: RetroFailure } =>
   failure({ kind: "input", code: "input.value.rejected", consequence: "not_landed", summary });
 
@@ -107,7 +124,7 @@ const fromAuditFailure = (audit: AuditReadFailure): RetroFailure => {
   }
   return {
     kind: "state",
-    code: audit.code as StateFailureCode,
+    code: isStateFailureCode(audit.code) ? audit.code : "state.store.unknown",
     consequence: "not_landed",
     location: audit.location,
   };
@@ -588,25 +605,22 @@ const appendAll = (
 ): {
   readonly records: readonly RetroEvidenceRecord[];
   readonly error?: RetroFailure;
-  readonly partial?: string;
 } => {
-  const records: RetroEvidenceRecord[] = [];
-  for (const draft of drafts) {
-    const traceId = deps.newTraceId();
-    const appended = deps.sidecar.append(
-      { ...draft, traceId, level, windowStart: window.start, windowEnd: window.end, collectedAt },
-      { fenceToken: deps.newFenceToken() },
-    );
-    if (!appended.ok) {
-      return {
-        records,
-        error: appended.error,
-        partial: `preserved evidence records: ${records.map((record) => record.traceId).join(", ")}`,
-      };
-    }
-    records.push(appended.value);
+  const prepared = drafts.map((draft) => ({
+    ...draft,
+    traceId: deps.newTraceId(),
+    level,
+    windowStart: window.start,
+    windowEnd: window.end,
+    collectedAt,
+  }));
+  const appended = deps.sidecar.appendBatch(prepared, {
+    fenceToken: deps.newFenceToken(),
+  });
+  if (!appended.ok) {
+    return { records: [], error: appended.error };
   }
-  return { records };
+  return { records: appended.value };
 };
 
 const findingDrafts = (
@@ -828,11 +842,7 @@ export const collectRetro = (deps: RetroCollectDeps): RetroCommandOutcome => {
     collectedAt,
   );
   if (appended.error !== undefined) {
-    return {
-      ok: false,
-      error: appended.error,
-      ...(appended.partial === undefined ? {} : { partial: appended.partial }),
-    };
+    return { ok: false, error: appended.error };
   }
 
   const counts: RetroRunCounts = {
@@ -1027,9 +1037,13 @@ export const reportRetro = (deps: RetroReportDeps): RetroCommandOutcome => {
 
   const selected = recordsForRun(sidecar.value.records, run.runId);
   const findings = findingsOf(selected);
-  const extra = deps.extraReferencedTraceIds ?? [];
   const known = new Set(sidecar.value.records.map((record) => record.traceId));
-  const dangling = extra.filter((ref) => !known.has(ref));
+  // C-03 is live on the production fold: every folded finding's evidence refs
+  // must resolve to a known trace id; consumer-declared refs are checked too.
+  const referenced = new Set<string>();
+  for (const ref of deps.extraReferencedTraceIds ?? []) referenced.add(ref);
+  for (const finding of findings) for (const ref of finding.evidenceRefs) referenced.add(ref);
+  const dangling = [...referenced].filter((ref) => !known.has(ref));
   const withDangling =
     dangling.length === 0
       ? findings
@@ -1175,32 +1189,24 @@ export const recordMemoryAuditRun = (
     readonly identity?: RetroClaimedIdentity;
     readonly runId?: string;
   },
-): readonly RetroEvidenceRecord[] => {
+): RetroResult<readonly RetroEvidenceRecord[]> => {
   const collectedAt = deps.clock.nowMs();
-  const records: RetroEvidenceRecord[] = [];
-  for (const outcomeRef of input.outcomeRefs) {
-    const appended = deps.sidecar.append(
-      {
-        traceId: deps.newTraceId(),
-        level: deps.level,
-        source: "memory-audit",
-        windowStart: input.windowStart,
-        windowEnd: input.windowEnd,
-        collectedAt,
-        ...(input.identity === undefined ? {} : { collectorIdentity: input.identity }),
-        payloadRefs: [
-          ...(input.runId === undefined ? [] : [`run:${input.runId}`]),
-          `trigger:${input.triggerIdentity}`,
-          `outcome:${outcomeRef}`,
-        ],
-        payloadSchemaId: RETRO_PAYLOAD_SCHEMAS.memoryAudit,
-      },
-      { fenceToken: deps.newFenceToken() },
-    );
-    if (!appended.ok) throw new Error(appended.error.code);
-    records.push(appended.value);
-  }
-  return records;
+  const drafts: RetroEvidenceDraft[] = input.outcomeRefs.map((outcomeRef) => ({
+    traceId: deps.newTraceId(),
+    level: deps.level,
+    source: "memory-audit",
+    windowStart: input.windowStart,
+    windowEnd: input.windowEnd,
+    collectedAt,
+    ...(input.identity === undefined ? {} : { collectorIdentity: input.identity }),
+    payloadRefs: [
+      ...(input.runId === undefined ? [] : [`run:${input.runId}`]),
+      `trigger:${input.triggerIdentity}`,
+      `outcome:${outcomeRef}`,
+    ],
+    payloadSchemaId: RETRO_PAYLOAD_SCHEMAS.memoryAudit,
+  }));
+  return deps.sidecar.appendBatch(drafts, { fenceToken: deps.newFenceToken() });
 };
 
 /** The declared target ordering constant (asserted by contract tests). */

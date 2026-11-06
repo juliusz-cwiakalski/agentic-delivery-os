@@ -4,6 +4,8 @@
  * load-bearing against an unkeyed recompute.
  */
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   RETRO_CANONICAL_FIELD_ORDER,
   RETRO_CHAIN_ANCHOR,
@@ -183,30 +185,40 @@ describe("TC-RETRO-027 M-07 multiple alterations", () => {
   });
 });
 
-describe("TC-RETRO-029 mutation suite completeness", () => {
-  const mutationClasses = [
-    "content-edit",
-    "deletion",
-    "reorder",
-    "truncate-reappend",
-    "unkeyed-recompute",
-    "key-substitution",
-  ] as const;
+type MutationClass = {
+  readonly id: string;
+  readonly class: string;
+  readonly tc: string;
+  readonly helper: string;
+  readonly suiteMarker: string;
+};
 
-  test("all six pinned mutation classes have a fixture and an expected verdict", () => {
-    const covered = new Set(mutationClasses);
-    for (const name of [
-      "content-edit",
-      "deletion",
-      "reorder",
-      "truncate-reappend",
-      "unkeyed-recompute",
-      "key-substitution",
-    ]) {
-      expect(covered.has(name as (typeof mutationClasses)[number])).toBe(true);
+const declaredMutationClasses = (
+  JSON.parse(readFileSync(join(process.cwd(), "tests/fixtures/retro/mutations.json"), "utf8")) as {
+    classes: MutationClass[];
+  }
+).classes;
+
+describe("TC-RETRO-029 mutation suite completeness", () => {
+  const suite = readFileSync(
+    join(process.cwd(), "tests/behaviour/retro-chain-mutations.test.ts"),
+    "utf8",
+  );
+
+  test("every fixture-declared mutation class has its suite block and helper", () => {
+    expect(declaredMutationClasses).toHaveLength(6);
+    for (const entry of declaredMutationClasses) {
+      expect(suite, `${entry.tc} block`).toContain(`describe("${entry.suiteMarker}"`);
+      expect(suite, `${entry.tc} helper`).toContain(`${entry.helper}(`);
     }
-    expect(covered.size).toBe(6);
-    const incomplete = new Set(mutationClasses.filter((name) => name !== "deletion"));
-    expect(incomplete.size).toBe(5);
+  });
+
+  test("the suite declares no mutation block outside the fixture registry", () => {
+    const suiteMarkers = [...suite.matchAll(/describe\("(TC-RETRO-02[1-6] [^"]+)"/g)].map(
+      (match) => match[1],
+    );
+    expect(suiteMarkers.sort()).toEqual(
+      declaredMutationClasses.map((entry) => entry.suiteMarker).sort(),
+    );
   });
 });

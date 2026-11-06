@@ -3,7 +3,11 @@
  * zero I/O on refusal, the omitted-level default, and the locked surface.
  */
 import { describe, expect, test } from "bun:test";
-import { ERROR_TABLE, type ErrorTableEntry } from "../../packages/core/src/contracts/index";
+import {
+  ERROR_TABLE,
+  type ErrorTableEntry,
+  RETRO_LEVEL_OWNING_STORIES,
+} from "../../packages/core/src/contracts/index";
 import {
   auditOutcome,
   auditRecord,
@@ -45,6 +49,7 @@ describe("TC-RETRO-058 level refusal matrix", () => {
       expect(result.exitCode).toBe(1);
       expect(codeOf(result.error)).toBe("input.value.rejected");
       expect(result.stderr).toContain("owning story");
+      expect(result.stderr).toContain(RETRO_LEVEL_OWNING_STORIES[level]);
       expect(fixture.auditQueries).toEqual([]);
       expect(fixture.stateFamilyReads).toEqual([]);
       expect(fixture.noteReads).toEqual([]);
@@ -110,6 +115,16 @@ describe("TC-RETRO-058 level refusal matrix", () => {
     expect(codeOf(exportAttempt.error)).toBe("input.value.rejected");
     const table = ERROR_TABLE as readonly ErrorTableEntry[];
     expect(table.some((entry) => entry.code.includes("export"))).toBe(false);
+  });
+
+  test("an empty-hint mutant fails the owning-story oracle", () => {
+    const emptyHintMutant = (_level: string): string => "";
+    const assertHint = (hint: string): void => {
+      expect(hint).toContain("owning story");
+      expect(hint.length).toBeGreaterThan("owning story".length);
+    };
+    expect(() => assertHint(emptyHintMutant("session"))).toThrow();
+    assertHint(`owning story: ${RETRO_LEVEL_OWNING_STORIES.session}`);
   });
 });
 
