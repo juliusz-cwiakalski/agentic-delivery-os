@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
   review_fix: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
   quality_gates: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
-  dod_check: { started: "2026-11-06T12:00:00Z", completed: null }
+  dod_check: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions: # { text, date }
   - text: "DEC-5 confirmed (spec): spend summary (M1-S19) NOT surfaced in brief v0 — placeholder catalog closed at exactly three entries (typed-questions, gate-sla-states, lane-queue-engine); clarify-scope note expecting 4 placeholders is superseded by the spec's anchor-scope binding."
@@ -104,6 +104,9 @@ notes: # { text, type, date } — type: info|decision|blocker|risk|question|reso
     type: "risk"
     date: "2026-11-06"
   - text: "Quality gates PASSED (lifecycle phase 9 complete): after the pm-notes key fix, targeted pm-notes corpus 17/17 and full aggregate TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 — 2945 pass / 4 skip / 0 fail across 2949 tests / 274 files (385s), lint 0 errors (33 pre-existing warnings), format clean 942 files, typecheck 6 packages, boundaries clean (161 modules/372 deps), ambient/entrypoints/secret-read/exports-parity green. HEAD 9d1db1b1 unchanged; worktree clean except this pm-notes file. Flake from iteration 1 remains classified load-induced (did not recur in 2 subsequent clean runs; recorded as a repo-level observation, not a GH-228 defect)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "DoD check complete (lifecycle phase 10): all lifecycle phases 1-9 recorded complete with timestamps; plan checkboxes all ticked (7.3 closed with review iteration 2 PASS evidence at 9d1db1b1, 0 blocking findings); all 10 spec ACs evidenced (test plan §10 all PASS; adversarially verified by review-iter-2); DoD-1..11 satisfied (tests, gates, review, reconciled docs — doc-syncer reports no current-truth gaps). DoD-12/13 are PR-conditional by construction (they reference the pushed HEAD): pre-PR baseline captured via the documented read-only verify surface — verify change GH-228 = verify.ledger.incomplete result=partial missing=dod_check,pr_creation (exit 1, expected); verify gates GH-228 = 1/5 pass with lifecycle-finalization missing the same two phases, ci-green head-unresolved, push-parity/squash-preflight no-open-pr, owner-gate PASS (exit 1, expected). Completion evidence to be captured at pr_creation: re-run verify change (expect finished/exit 0) and verify gates (expect 5/5 on pushed HEAD with CI) and attach outputs to the PR and pm-notes. Repo-level observation (not a GH-228 defect): packages/cli has no bin entry, so verify runs via the in-process runCli harness over production edge composition."
     type: "info"
     date: "2026-11-06"
   - text: "Retro: the reviewer session returned its final message while an orphaned background battery was still running, so the verdict artifact was never written and required a follow-up nudge; the same concurrent runs switched branches in one checkout and produced a transient false test failure. Lessons: delegates must not wait on background jobs past session end (finalize with completed evidence or run gates in the foreground); and gates that use git or a shared checkout must run strictly sequentially in this environment."

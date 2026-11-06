@@ -310,7 +310,7 @@ No changes under `packages/adapters/**`, `packages/mcp/**`, `packages/opencode/*
 
 - [x] **7.1** Classify each finding (contract breach / wording / test gap) and apply the minimal fix; re-run the touched suites plus `pnpm check`.
 - [x] **7.2** If a fix changes any TC's behavior, oracle, or AC mapping, reopen the test plan per its A-T8 before landing the fix.
-- [ ] **7.3** Request re-review until PASS; record each iteration in the Execution Log.
+- [x] **7.3** Request re-review until PASS; record each iteration in the Execution Log. **Done:** review iteration 2 PASS at HEAD `9d1db1b1` (`code-review/review-iter-2.yaml`, 0 blocking findings, 2 info notes); aggregate battery re-verified solo by the reviewer (2945 pass / 4 skip / 0 fail).
 
 **Acceptance Criteria**:
 
