@@ -7,7 +7,7 @@ owners: ["engineering"]
 service: delivery-os
 labels: ["m1", "audit", "state-layer", "cli"]
 version_impact: minor
-summary: "Traceable coverage for GH-223 command audit ledger and agent identity (spec v1.1): exactly one durable record per invocation across every outcome class, UTC startedAt from the injected clock, monotonic auditSeq with in-band skipped-ordinal detection, claimed-identity capture with the explicit claimed marker and no inference, owner-pinned scripted-output trim with top-level runId on failure lines and interactive preservation, durable store-managed chaining key with cross-process verification, bounded filtered reads over startedAt/scope/repo, redaction-chokepoint hygiene, and classified audit-write degradation that never changes the command outcome."
+summary: "Traceable coverage for GH-223 command audit ledger and agent identity (spec v1.2): exactly one audit.invocation record per invocation across every outcome class (reservations are a distinct internal kind and never counted), the reservation-first two-phase append with a durable per-store auditSeq and both failure modes (orphan reservation vs failed reservation), a continuous chain over reservation and invocation records, durable store-managed chain-key.<workspace>.json with pinned open-failure identities, UTC epoch-millisecond startedAt with inclusive [from,to] time-window filters and unbounded omitted sides, claimed-identity capture with the explicit claimed marker, owner-pinned scripted-output trim with top-level runId on failure lines, bounded filtered reads with fold-from-ledger orphan findings, redaction-chokepoint hygiene, and classified audit-write degradation that never changes the command outcome."
 links:
   change_spec: ./chg-GH-223-spec.md
   implementation_plan: null
@@ -18,27 +18,29 @@ links:
 
 ## 1. Scope and Objectives
 
-This plan protects the delivery engine's new history guarantee: every command invocation through the command surface leaves exactly one durable, schema-validated audit record carrying runId, command, redacted arguments, exit code, timing, outcome class, `scope`, `repo`, `startedAt` (UTC start from the injected clock), `auditSeq` (the audit consumer's monotonic per-store ordinal), and claimed identity when present. It also protects the owner-pinned scripted-output amendment (one minified `{"data":...}`/`{"error":...}` line, with `runId` as a top-level key of failure lines), the durable store-managed chaining key that makes altered records detectable even when their unkeyed checksum is recomputed and keeps cross-process verification free of false breaks, the bounded/filtered read surface (including the `startedAt` time window and in-band skipped-ordinal findings), and the redaction chokepoint that must guard record content exactly as it guards output streams.
+This plan protects the delivery engine's new history guarantee: every command invocation through the command surface leaves exactly one durable `audit.invocation` record carrying runId, command, redacted arguments, exit code, timing, outcome class, `scope`, `repo`, `startedAt` (integer epoch milliseconds UTC from the injected clock), `auditSeq` (consumed by its durable `audit.reservation`), and claimed identity when present. The reservation-first two-phase append is the mechanism that makes ordinal consumption durable; reservations are a distinct internal kind, never counted as invocation records. The plan also protects the owner-pinned scripted-output amendment (one minified `{"data":...}`/`{"error":...}` line, with `runId` as a top-level key of failure lines), the continuous chain over both audit kinds with a durable `chain-key.<workspace>.json` artifact (including its pinned open-failure identities), the bounded/filtered read surface (inclusive `startedAt` time window, exact scope/repo filters, in-band truncation and reservation-orphan findings), and the redaction chokepoint that must guard record content exactly as it guards output streams.
 
-The data and security risks this plan primarily guards are: missing or duplicate records that make history untrustworthy; an undetectable failed append because no ordinal gap survives it; unredacted secrets persisted forever; inferred identities presented as if claimed; a trim that silently drops context with no ledger to hold it; a chaining key that is regenerated per process and false-flags earlier records; a chain that false-flags legitimate salvage or fails to flag a recomputed-checksum edit; an unbounded dump that exposes every historical command line; and an audit-write failure that either corrupts or misreports the command's own outcome.
+The data and security risks this plan primarily guards are: missing or duplicate invocation records that make history untrustworthy; an ordinal consumed with no durable evidence because the reservation or invocation half failed; unredacted secrets persisted forever; inferred identities presented as if claimed; a trim that silently drops context with no ledger to hold it; a chaining key that is regenerated per process, is missing/corrupt, or false-flags earlier records; a chain that false-flags legitimate salvage or fails to flag a recomputed-checksum edit to either kind; an unbounded dump that exposes every historical command line; and an audit-write failure that either corrupts or misreports the command's own outcome.
 
 Regressions protected: the M0-S3 envelope contract in interactive mode, error-table contents and bidirectional sync, text (non-`--json`) output, the single serialization/redaction chokepoint, the state layer's verified-read, fence, classification, salvage, and evidence discipline, and the no-spawn deterministic in-process test surface.
 
 ### 1.1 In Scope
 
-- Exactly-one audit-record semantics for success, void success, classified failure (user and platform), unknown failure, and broken invocation (unknown command/flag, missing flag value, conflicting flags).
-- Full v1.1 record field set: `runId`, `command`, `arguments`, `exitCode`, `timing`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`; envelope-context retention; additive-kind composition inside `delivery.state.v1` under the store-scoped key `audit.invocations`.
-- `startedAt` from the injected clock (UTC, the same clock that measures `timing`), recorded exactly once per invocation and distinct on re-runs; never an ambient clock read.
-- `auditSeq` as the audit consumer's monotonic per-store ordinal assigned at append time inside the shared audit fence; monotonicity across interleaved non-audit kinds; in-band skipped-ordinal findings after a failed append.
-- Idempotent re-runs producing a second record under a new runId with a distinct `startedAt` and a later `auditSeq`; no deduplication or overwrite.
+- Exactly-one `audit.invocation` semantics for success, void success, classified failure (user and platform), unknown failure, and broken invocation (unknown command/flag, missing flag value, conflicting flags); reservations are a distinct internal kind and are never counted.
+- Reservation-first two-phase append under one shared-fence acquisition: one `audit.reservation` (`delivery.audit.reservation.v1`, payload `auditSeq` + `runId` only) immediately before one `audit.invocation` (`delivery.audit.invocation.v1`) carrying the same `auditSeq`; ordinal allocation from verified ledger truth (highest reservation ordinal + 1); both failure modes — orphan reservation (gap evidence) and failed reservation (nothing consumed, no gap claimed).
+- Full v1.2 invocation field set: `runId`, `command`, `arguments`, `exitCode`, `timing`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`; envelope-context retention; additive composition inside `delivery.state.v1` under the store-scoped key `audit.invocations`.
+- `startedAt` as integer epoch milliseconds UTC from the injected clock (the same clock that measures `timing`), recorded exactly once per invocation and distinct on re-runs; never an ambient clock read.
+- `auditSeq` as the durable per-store ordinal consumed by its reservation; identical in the reservation and invocation frames; monotonic across interleaved non-audit kinds; in-band reservation-orphan findings after a failed invocation append; no gap when the reservation itself fails.
+- Idempotent re-runs producing a second invocation record under a new runId with its own reservation, a distinct `startedAt`, and a later `auditSeq`; no deduplication or overwrite.
 - Agent-identity consumption: seam-named environment variable read as injected edge data; presence decided on the trimmed value (absent, empty, and whitespace-only all count as absent); a present value recorded verbatim with the explicit attribution-kind marker `claimed`; claimed-not-proven semantics.
 - Scripted-mode trim for success, void success, classified failure, unknown failure, and broken invocation; failure lines carry `runId` as a top-level key and full error-table fields; interactive envelopes remain byte-conformant; `--verbose` full-envelope override; `--pretty` indentation-only; single-line discipline on the current machine channel (the future multi-event `--watch` rule is a forward contract, see §1.2).
 - Golden fixtures and testkit conformance validator extended to both modes, preserving the no-case-without-golden rule and the no-skip path; the scripted failure key set is `error` + top-level `runId`.
-- Keyed hash chaining with the durable store-managed key artifact: generated once on the store's first audit append, persisted under least-privilege permissions (0600) and verified on open, reused across later edges/processes; clean verification, interleaved non-audit kinds, alteration detection including recomputed unkeyed checksums, position-naming evidence, key exclusion from ledger record payloads/configuration/ambient environment/lane environments, chain anchoring, and continuity across terminal-tail repair and guided salvage.
-- Bounded, filtered read surface: exact-match `scope` and `repo` filters (repo-null records excluded from repo-constrained results only), `startedAt` time-window filter, command/outcome filters, explicit bound, in-band truncation, in-band skipped-ordinal findings, `input.value.rejected` refusal for missing/invalid bounds or filters, verified reads, no fence acquisition, no writes, torn/unknown classification without silent zeros.
-- Redaction-chokepoint hygiene for record content across all outcome classes, including an edge-registered secret embedded in arguments and in the identity value; unregistered values remain outside the guarantee.
-- Audit-write failure semantics: classified, loud diagnostics degradation that never changes the command's outcome or exit code, with no partial record; a later successful append's `auditSeq` proves the omission.
-- No new error-table rows and no error-table drift; no new CLI audit command; tier and boundary conformance.
+- Keyed hash chaining over the continuous audit-domain sequence covering BOTH `audit.reservation` and `audit.invocation` records: durable `chain-key.<workspace>.json` created once on the first audit append, `0600`, verified on open, reused across later edges/processes; clean verification, interleaved non-audit kinds, alteration detection for both kinds including recomputed unkeyed checksums, position-naming evidence, key exclusion from ledger record payloads/configuration/ambient environment/lane environments, chain anchoring, and continuity across terminal-tail repair and guided salvage.
+- Key-artifact open-failure identities: absent on a non-first open → `state.keys.missing`; corrupt/unparsable → the `state.store.torn` family; wrong permission bits → `state.permission.denied`; no new error-table rows.
+- Bounded, filtered read surface: exact-match `scope` and `repo` filters (repo-null records excluded from repo-constrained results only), inclusive `[from, to]` `startedAt` time window with an omitted side unbounded, command/outcome filters, explicit bound, in-band truncation, in-band reservation-orphan findings folded from verified ledger truth, `input.value.rejected` refusal for missing/invalid bounds or filters, verified reads, no fence acquisition, no writes, torn/unknown classification without silent zeros.
+- Redaction-chokepoint hygiene for record content across all outcome classes, including an edge-registered secret embedded in arguments and in the identity value; unregistered values remain outside the guarantee; reservation payloads carry no arguments/outcome/identity.
+- Audit-write failure semantics: classified, loud diagnostics degradation that never changes the command's outcome or exit code; reservation-orphan evidence when the invocation append fails; nothing consumed and no gap claimed when the reservation append fails; no partial frame.
+- No new error-table rows and no error-table drift; no new CLI audit command; tier and boundary conformance; no new runtime-API location for the key artifact.
 
 ### 1.2 Out of Scope & Known Gaps
 
@@ -52,11 +54,11 @@ Regressions protected: the M0-S3 envelope contract in interactive mode, error-ta
 - [OUT] Windows ACL execution. Permission assertions (including the key artifact's 0600) remain POSIX-only; no Linux run claims Windows verification.
 - [OUT] Performance/load characteristics of audit reads or chain verification.
 - **Forward contract:** stream outputs (a future `--watch`) stay line-delimited in every mode (F-3/DEC-2). No stream command ships in this story, so only the current single-invocation line discipline is asserted; the multi-event stream rule is inherited by the later command that introduces it.
-- **v1.1 gap watch:** the spec's v1.1 amendment resolves the v1.0 time-window and sequence-gap findings. New v1.1 details that remain unpinned (auditSeq allocation durability, key-artifact missing/corrupt semantics, `startedAt` serialization/time-window/bound-0 boundaries, salvage-caused ordinal gaps) are recorded in §8.3; the blocking one is called out for PM.
+- **v1.2 convergence note:** spec v1.2 resolves all five iteration-3 gaps: reservation-first durable ordinal consumption (OQ-15), key-artifact open-failure identities (OQ-16), integer-epoch-ms `startedAt` plus inclusive `[from, to]`/unbounded-side windows (OQ-17), wholesale salvage removal with a surviving-tail reservation (OQ-18), and the `chain-key.<workspace>.json` store-layout path (OQ-19). No OQ item remains; the mechanism-realism review found **one new blocking gap, MR-1** (no storage location for the reservation's keyed chain value, so an altered orphan reservation cannot be flagged). It is recorded in §8.3 and blocks TC-GH223-049; see §8.4 for the rest of the convergence review.
 
 ## 2. References
 
-- **Change specification (v1.1)**: [chg-GH-223-spec.md](./chg-GH-223-spec.md) — capabilities F-1..F-6, AC-F1-1..AC-F6-1 including v1.1's AC-F1-4, NFR-1..NFR-9, DM-1..DM-5, DEC-1..DEC-8, OQ-4..OQ-14 resolutions, Appendix B test-plan handoff.
+- **Change specification (v1.2)**: [chg-GH-223-spec.md](./chg-GH-223-spec.md) — capabilities F-1..F-6, AC-F1-1..AC-F6-1 (15 ACs), NFR-1..NFR-9, EVT-1/EVT-2, DM-1..DM-6, DEC-1..DEC-8, OQ-4..OQ-19 resolutions, Appendix B test-plan handoff.
 - **Change PM notes**: [chg-GH-223-pm-notes.yaml](./chg-GH-223-pm-notes.yaml) — scope resolution (consume-only identity), dependency verification, doc-sync obligations.
 - **Seeded milestone scenario**: [doc/planning/oss-tooling/milestones/m1/test-scenarios.md](../../../planning/oss-tooling/milestones/m1/test-scenarios.md) — SC-M1-23 (stable id; inherited and extended here).
 - **Current system truth — result contract**: [doc/spec/features/feature-result-contract.md](../../../spec/features/feature-result-contract.md) — envelope field contract, exit projection, redaction chokepoint, golden/conformance tooling, containment.
@@ -64,7 +66,7 @@ Regressions protected: the M0-S3 envelope contract in interactive mode, error-ta
 - **Current system truth — branding seam**: [doc/spec/features/feature-branding-seam.md](../../../spec/features/feature-branding-seam.md) — `environmentPrefix` derivation and forbidden-literal constraints.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — layers, module mapping, conventions, quality gates.
 - **TypeScript rules**: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — bun:test authoring, workspace boundaries, error contract.
-- **State test harness**: `tests/fixtures/state/harness.ts` — `createTestEdge` (`arm`, `armExhaustion`), `makeIdentity`, `openStore`, `withinFence`, `ledgerText`, `ledgerBytes`, `ledgerDigest`, `independentChecksum`, `salvageTail`. v1.1 adds key-artifact and audit-ordinal helpers (names fixed at delivery).
+- **State test harness**: `tests/fixtures/state/harness.ts` — `createTestEdge` (`arm`, `armExhaustion`), `makeIdentity`, `openStore`, `withinFence`, `ledgerText`, `ledgerBytes`, `ledgerDigest`, `independentChecksum`, `salvageTail`. v1.2 adds reservation, key-artifact (`chain-key.<workspace>.json`), and audit-ordinal helpers (names fixed at delivery).
 - **Result/golden harness**: `tests/golden/helpers.ts`, `packages/testkit/src/result-conformance.ts` — `runCase`, `runDescriptor`, `bufferSink`, `loadGoldenCases`, `assertEnvelopeContract`, `RULES`.
 - **Runtime edge and fault points**: `packages/cli/src/edge.ts` (environment facts as data), `packages/cli/src/index.ts` (`CliDependencies`), `packages/core/src/state/edge.ts` (`StateEdgeFaultPoint`).
 - **Existing suites to extend or guard**: `tests/golden/envelope-success.test.ts`, `tests/golden/envelope-failure.test.ts`, `tests/golden/broken-command.test.ts`, `tests/golden/redaction.test.ts`, `tests/golden/timing.test.ts`, `tests/structure/result-contract.test.ts`, `tests/structure/result-fixtures.test.ts`, `tests/structure/cli-edge-seam.test.ts`, `tests/structure/state-imports.test.ts`, `tests/structure/state-scope.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts`, `tests/checks/forbidden-literals.test.ts`.
@@ -75,58 +77,60 @@ Regressions protected: the M0-S3 envelope contract in interactive mode, error-ta
 
 | AC ID | Description | TC ID(s) | Status |
 |-------|-------------|----------|--------|
-| AC-F1-1 | Exactly one audit record per invocation in any outcome class, carrying runId, command (raw tokens for broken invocations), arguments, exit code, timing, outcome class, `scope`, `repo` (when targeted), `startedAt`, `auditSeq`, and claimed identity when provided; envelope context retained | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-005, TC-GH223-008, TC-GH223-009, TC-GH223-010, TC-GH223-022, TC-GH223-035, TC-GH223-036, TC-GH223-039 | Covered |
-| AC-F1-2 | Identical re-run appends a second record with a new runId; no deduplication or overwrite; the v1.1 timestamp and ordinal are distinct too | TC-GH223-006, TC-GH223-022, TC-GH223-036 | Covered |
+| AC-F1-1 | Exactly one `audit.invocation` record per invocation in any outcome class, carrying runId, command (raw tokens for broken invocations), arguments, exit code, timing, outcome class, `scope`, `repo` (when targeted), integer-epoch-ms `startedAt`, the `auditSeq` consumed by its durable reservation, and claimed identity when provided; envelope context retained; reservations are a distinct internal kind and are never counted as invocation records | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-005, TC-GH223-008, TC-GH223-009, TC-GH223-010, TC-GH223-022, TC-GH223-035, TC-GH223-036, TC-GH223-039, TC-GH223-043, TC-GH223-044 | Covered |
+| AC-F1-2 | Identical re-run appends a second invocation record with a new runId; no deduplication or overwrite; the second run has its own reservation, a distinct `startedAt`, and a later `auditSeq` | TC-GH223-006, TC-GH223-022, TC-GH223-036 | Covered |
 | AC-F1-3 | Malformed audit entry classifies as an existing state identity; pre-existing records remain verified-readable and unchanged; no silent byte drop; explicit salvage preserves the damaged region as evidence; retention forever | TC-GH223-007 | Covered |
-| AC-F1-4 | `startedAt` is the invocation's UTC wall-clock start taken from the injected clock (never ambient), recorded exactly once per invocation; a re-run records its own distinct `startedAt` | TC-GH223-035, TC-GH223-036, TC-GH223-041 | Covered |
+| AC-F1-4 | `startedAt` is the invocation's integer epoch-millisecond UTC start taken from the injected clock (never ambient), recorded exactly once per invocation; a re-run records its own distinct `startedAt` | TC-GH223-035, TC-GH223-036, TC-GH223-041 | Covered |
 | AC-F2-1 | Seam-named identity variable present with a non-empty trimmed value → value captured verbatim with the explicit attribution-kind marker `claimed`, recorded as claimed not proven | TC-GH223-011, TC-GH223-013, TC-GH223-022 | Covered |
 | AC-F2-2 | Identity variable absent, empty, or whitespace-only → no identity and nothing inferred from user, host, session, or any other signal | TC-GH223-012, TC-GH223-022 | Covered |
 | AC-F3-1 | Scripted `--json` success → exactly one minified `{"data":...}` line with no schemaVersion, runId, or timing; audit retains them; process exit code carries status | TC-GH223-014, TC-GH223-015, TC-GH223-022 | Covered |
 | AC-F3-2 | Scripted `--json` failure → exactly one minified line carrying the full `error` object plus `runId` as a top-level key; audit retains schemaVersion, runId, timing | TC-GH223-016, TC-GH223-017, TC-GH223-022 | Covered |
 | AC-F3-3 | Interactive terminal keeps the full M0-S3 envelope unchanged; documented override forces the full envelope in either mode; pretty flag affects indentation only | TC-GH223-018, TC-GH223-019 | Covered |
 | AC-F3-4 | Golden and conformance suites extended to both modes; interactive cases use envelope rules; scripted cases use scripted-projection rules (including top-level runId on failure); every case keeps its golden with no skip path | TC-GH223-020, TC-GH223-021 | Covered |
-| AC-F4-1 | Altered record (including recomputed unkeyed checksum) flagged as a chain break naming record position, never payload/checksum bytes; undetectable alteration unachievable within trust model | TC-GH223-024, TC-GH223-025, TC-GH223-033 | Covered |
-| AC-F4-2 | Chaining key appears nowhere in lane environment, ledger record payloads, configuration, ambient environment, or any record field; exists only as durable store-managed 0600 key material plus runtime-edge-injected data; earlier-process records verify from a later process with zero false chain-break flags | TC-GH223-026, TC-GH223-037, TC-GH223-038 | Covered |
-| AC-F4-3 | After terminal-tail repair or guided salvage, chain verifies continuously over the surviving sequence; reported removal is not a break; next record chains from the last surviving audit record | TC-GH223-027 | Covered |
-| AC-F5-1 | Bounded, filtered read returns verified matching records within the bound (exact `scope`/`repo`, `startedAt` time window, command/outcome class), reports truncation in-band, reports skipped `auditSeq` ordinals in-band, refuses missing/invalid bounds or filters with `input.value.rejected`, acquires no fence, writes nothing, classifies torn/unknown without silent zeros, no unbounded dump path | TC-GH223-028, TC-GH223-029, TC-GH223-030, TC-GH223-034, TC-GH223-039, TC-GH223-040, TC-GH223-041, TC-GH223-042 | Covered |
-| AC-F6-1 | Edge-registered secret values, including one in command arguments, never appear in any record field on any outcome class; arguments reach the ledger only through the redaction chokepoint; unregistered values are outside the guarantee | TC-GH223-031, TC-GH223-032 | Covered |
+| AC-F4-1 | Altered audit-domain record (reservation or invocation, including a recomputed unkeyed checksum) flagged as a chain break naming record position, never payload/checksum bytes; undetectable alteration unachievable within trust model | TC-GH223-024, TC-GH223-025, TC-GH223-033, TC-GH223-045, TC-GH223-049 | Covered for paired records; orphan-reservation alteration blocked by MR-1 (see §8.3) |
+| AC-F4-2 | Chaining key appears nowhere in lane environment, ledger record payloads, configuration, ambient environment, or any record field; exists only as durable store-managed `chain-key.<workspace>.json` (`0600`) plus runtime-edge-injected data; earlier-process records verify from a later process with zero false chain-break flags; pinned open failures reuse existing identities | TC-GH223-026, TC-GH223-037, TC-GH223-038, TC-GH223-047 | Covered |
+| AC-F4-3 | After terminal-tail repair or guided salvage (byte-contiguous, kind-agnostic removal of trailing invocations AND reservations wholesale), chain verifies continuously over the surviving audit-domain sequence; reported removal is not a break; next record chains from the last surviving one; a last-valid-frame reservation survives as the DEC-8 finding | TC-GH223-027, TC-GH223-048 | Covered |
+| AC-F5-1 | Bounded, filtered read returns verified matching records within the bound (exact `scope`/`repo`, inclusive `[from, to]` `startedAt` window with unbounded omitted side, command/outcome class), reports truncation in-band, reports any reservation with no matching invocation as the in-band skipped-ordinal finding, refuses missing/invalid bounds or filters with `input.value.rejected`, acquires no fence, writes nothing, classifies torn/unknown without silent zeros, no unbounded dump path | TC-GH223-028, TC-GH223-029, TC-GH223-030, TC-GH223-034, TC-GH223-039, TC-GH223-040, TC-GH223-041, TC-GH223-042, TC-GH223-043, TC-GH223-046 | Covered |
+| AC-F6-1 | Edge-registered secret values, including one in command arguments, never appear in any record field on any outcome class; arguments reach the ledger only through the redaction chokepoint; reservation payloads carry no arguments/outcome/identity; unregistered values are outside the guarantee | TC-GH223-031, TC-GH223-032 | Covered |
 
-Every acceptance criterion has at least one automated case. All 15 ACs (including v1.1's AC-F1-4) are covered.
+Every acceptance criterion has at least one automated case. All 15 ACs (including AC-F1-4) are represented, with v1.2's reservation-orphan, failed-reservation, both-kind chain, rebuild, key-open-failure, and surviving-tail scenarios added. AC-F4-1 is covered for paired reservation/invocation records; its orphan-reservation alteration case (TC-GH223-049) is blocked by MR-1 (§8.3).
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
 | Interface ID | Description | TC ID(s) | Status |
 |--------------|-------------|----------|--------|
-| EVT-1 | Audit invocation record: one additive classified record (`audit.invocation`, schema `delivery.audit.invocation.v1`, key `audit.invocations`) per invocation through the public state port under the shared audit fence, carrying the full v1.1 field set and chain value, never secrets/chaining key/evidence bytes | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-005, TC-GH223-006, TC-GH223-007, TC-GH223-008, TC-GH223-022, TC-GH223-035, TC-GH223-036, TC-GH223-039 | Covered |
-| DM-1 | Audit invocation record kind and payload schema inside `delivery.state.v1`: kind `audit.invocation`, schema `delivery.audit.invocation.v1`, key `audit.invocations`, with fields `runId`, `command`, `arguments`, `exitCode`, `timing`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`; validated by an artifact boundary with declared kinds, schema identity, required fields, and closed vocabularies | TC-GH223-005, TC-GH223-008, TC-GH223-034, TC-GH223-035, TC-GH223-036 | Covered |
-| DM-2 | Chain value covering the previous audit record's chain value and the new record's audited content; verification recomputes over the verified sequence; key never stored in a record | TC-GH223-023, TC-GH223-024, TC-GH223-025, TC-GH223-026, TC-GH223-027, TC-GH223-037, TC-GH223-038 | Covered |
-| DM-3 | Claimed identity field: verbatim seam-named variable value plus the explicit `claimed` attribution-kind marker when the trimmed value is non-empty; absent, empty, and whitespace-only are absent; attribution only | TC-GH223-011, TC-GH223-012, TC-GH223-013, TC-GH223-022 | Covered |
+| EVT-1 | Audit invocation record: `audit.invocation` / `delivery.audit.invocation.v1` under `audit.invocations`, appended second in the reservation-first two-phase append under the shared audit fence; carries the full v1.2 field set and chain value; never secrets/chaining key/evidence bytes | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-005, TC-GH223-006, TC-GH223-007, TC-GH223-008, TC-GH223-022, TC-GH223-035, TC-GH223-036, TC-GH223-039, TC-GH223-043, TC-GH223-044, TC-GH223-048 | Covered |
+| EVT-2 | Audit reservation record: `audit.reservation` / `delivery.audit.reservation.v1` under the same key family, appended first under the shared audit fence; payload only `auditSeq` + `runId`; a chain participant; an orphan is the DEC-8 finding | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-005, TC-GH223-006, TC-GH223-007, TC-GH223-008, TC-GH223-022, TC-GH223-039, TC-GH223-043, TC-GH223-044, TC-GH223-048 | Covered |
+| DM-1 | Audit invocation record kind: `audit.invocation`, schema `delivery.audit.invocation.v1`, key `audit.invocations`, fields `runId`, `command`, `arguments`, `exitCode`, `timing`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`; validated by one boundary declaring both audit kinds | TC-GH223-005, TC-GH223-008, TC-GH223-034, TC-GH223-035, TC-GH223-036 | Covered |
+| DM-2 | Chain value covering the previous audit-domain record (reservation or invocation) and the new record's audited content; verification recomputes over the verified sequence; key never stored in a record | TC-GH223-023, TC-GH223-024, TC-GH223-025, TC-GH223-026, TC-GH223-027, TC-GH223-037, TC-GH223-038, TC-GH223-045 | Covered |
+| DM-3 | Claimed identity field: verbatim seam-named variable value plus the explicit `claimed` marker when the trimmed value is non-empty; absent, empty, and whitespace-only are absent; attribution only | TC-GH223-011, TC-GH223-012, TC-GH223-013, TC-GH223-022 | Covered |
 | DM-4 | Stream-capability mode fact injected at the runtime-aware edge and consumed by the mode contract; part of golden-fixture injected facts | TC-GH223-018, TC-GH223-019, TC-GH223-020 | Covered |
-| DM-5 | Durable store-managed chaining-key artifact: generated once at the runtime edge on the store's first audit append, persisted through the public port with 0600 permissions, verified on open, read by every later process; never exported to configuration, ambient environment, lane environments, or record payloads | TC-GH223-026, TC-GH223-037, TC-GH223-038 | Covered |
+| DM-5 | Durable `chain-key.<workspace>.json` store-layout artifact: generated once at the runtime edge on the first audit append, persisted through the port's store-managed artifact path with `0600`, verified on open, read by every later process; open failures reuse existing identities (`state.keys.missing`, `state.store.torn` family, `state.permission.denied`); never exported to configuration, ambient environment, lane environments, or record payloads | TC-GH223-026, TC-GH223-037, TC-GH223-038, TC-GH223-047 | Covered |
+| DM-6 | Audit reservation record kind: `audit.reservation`, schema `delivery.audit.reservation.v1`, same key family; payload only `auditSeq` + `runId`; appended first in the two-phase append; a chain participant; orphan is the DEC-8 finding | TC-GH223-005, TC-GH223-008, TC-GH223-034, TC-GH223-043, TC-GH223-044, TC-GH223-048 | Covered |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
 | NFR ID | Requirement | TC ID(s) | Status |
 |--------|-------------|----------|--------|
-| NFR-1 | Exactly one record per invocation across all outcome classes; 0 missing, 0 duplicates; re-runs distinguished by runId; failed-append omissions detectable via the audit-sequence ordinal | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-006, TC-GH223-009, TC-GH223-010, TC-GH223-022, TC-GH223-035, TC-GH223-036, TC-GH223-039 | Covered |
-| NFR-2 | Edge-registered secret values never appear in any record field on any outcome class; unregistered values are outside the guarantee | TC-GH223-031, TC-GH223-032 | Covered |
-| NFR-3 | 100% of alteration mutations flagged as chain breaks naming position; 0 false verified verdicts; 0 false chain-break flags on cross-process verification of unaltered history | TC-GH223-023, TC-GH223-024, TC-GH223-025, TC-GH223-027, TC-GH223-038 | Covered |
-| NFR-4 | Chaining key never enters lane environments, ledger record payloads, configuration, ambient environment, or any record field; durable key material spans processes without false flags | TC-GH223-026, TC-GH223-037, TC-GH223-038 | Covered |
+| NFR-1 | Exactly one `audit.invocation` per invocation across all outcome classes; reservations never counted; durable ordinal consumption via the two-phase append; 100% of reservation-orphan omissions detected, including after a derived-document rebuild; 0 gap findings when the reservation itself fails | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-006, TC-GH223-009, TC-GH223-010, TC-GH223-022, TC-GH223-035, TC-GH223-036, TC-GH223-039, TC-GH223-043, TC-GH223-044, TC-GH223-046 | Covered |
+| NFR-2 | Edge-registered secret values never appear in any record field on any outcome class; reservation payloads carry no arguments/outcome/identity; unregistered values are outside the guarantee | TC-GH223-031, TC-GH223-032 | Covered |
+| NFR-3 | 100% of alteration mutations (reservation or invocation) flagged as chain breaks naming position; 0 false verified verdicts; 0 false chain-break flags on cross-process verification of unaltered history | TC-GH223-023, TC-GH223-024, TC-GH223-025, TC-GH223-027, TC-GH223-038, TC-GH223-045, TC-GH223-049 | Covered for paired records; orphan-reservation alteration blocked by MR-1 |
+| NFR-4 | Chaining key never enters lane environments, ledger record payloads, configuration, ambient environment, or any record field; durable `chain-key.<workspace>.json` spans processes without false flags; open failures reuse existing identities | TC-GH223-026, TC-GH223-037, TC-GH223-038, TC-GH223-047 | Covered |
 | NFR-5 | Identity captured verbatim when present (non-empty after trimming); 0 inferred identities; 0 empty-valued identity fields when absent, empty, or whitespace-only | TC-GH223-011, TC-GH223-012, TC-GH223-013, TC-GH223-022 | Covered |
 | NFR-6 | Scripted success lines carry exactly `data`; scripted failure lines carry `error` with full fields plus top-level `runId`; exactly one line per invocation; interactive envelopes byte-conform | TC-GH223-014, TC-GH223-015, TC-GH223-016, TC-GH223-017, TC-GH223-018, TC-GH223-019, TC-GH223-020, TC-GH223-021, TC-GH223-022 | Covered |
 | NFR-7 | Every read query honors its declared bound, reports truncation in-band, and refuses missing/invalid bounds or filters; 0 unbounded dump paths | TC-GH223-028, TC-GH223-029, TC-GH223-030, TC-GH223-040, TC-GH223-041, TC-GH223-042 | Covered |
-| NFR-8 | Malformed entries classify without silent loss; salvage preserves; retention forever; no prune/delete/compaction path | TC-GH223-007, TC-GH223-027 | Covered |
-| NFR-9 | Contracts runtime-neutral; audit consumer composes the public state port only; state tier never imports branding; no new runtime-API location or driver discriminant; error-table sync untouched | TC-GH223-008, TC-GH223-013, TC-GH223-033, TC-GH223-034 | Covered |
+| NFR-8 | Malformed entries classify without silent loss; salvage removes trailing records and reservations wholesale; a last-valid-frame reservation survives as evidence; retention forever; no prune/delete/compaction path | TC-GH223-007, TC-GH223-027, TC-GH223-048 | Covered |
+| NFR-9 | Contracts runtime-neutral; audit consumer composes the public state port only; state tier never imports branding; key artifact uses the store-layout path, not a new runtime-API location; no driver discriminant; error-table sync untouched | TC-GH223-008, TC-GH223-013, TC-GH223-033, TC-GH223-034, TC-GH223-037, TC-GH223-047 | Covered |
 
 
 ## 4. Test Types and Layers
 
 All cases are automated `bun:test` suites under `tests/**/*.test.ts`; no case is manual. The repository maps `packages/**` changes to `bun test tests/structure tests/behaviour`, the boundary suite, golden suites, and `pnpm typecheck`; the audit ledger touches all of those layers.
 
-- **Pure unit tier** — runtime-neutral modules driven directly with in-memory values and byte strings: audit record assembly from a normalized invocation fact (including `startedAt` conversion and `auditSeq` assignment), payload validation against the exact `delivery.audit.invocation.v1` vocabulary, chain-link computation and verification over a record sequence, filter matching (scope/repo/time window), bound/truncation arithmetic, skipped-ordinal detection, and the scripted-projection validator. No filesystem, no CLI.
-- **Integration tier (in-process surface + temp store)** — `runCli` with buffer streams, injected clock/run-id/environment/mode/secrets and an audit write port built over a real temporary state directory with the production node edge wrapped by `createTestEdge`. This is where exactly-one semantics, timestamp/ordinal capture, identity capture, trim rendering against the ledger, chain verification, durable key creation/reuse, cross-edge verification, salvage continuity, read-surface behaviour including time-window/repo filters and skipped-ordinal findings, and audit-write failure are exercised. Cross-process continuity is modeled by reopening the same temp store with a fresh store/edge instance.
+- **Pure unit tier** — runtime-neutral modules driven directly with in-memory values and byte strings: invocation/reservation record assembly (including `startedAt` integer-epoch-ms conversion and `auditSeq` pairing), payload validation against the exact `delivery.audit.invocation.v1` and `delivery.audit.reservation.v1` vocabularies, chain-link computation and verification over a mixed reservation/invocation sequence, filter matching (scope/repo/inclusive time window), bound/truncation arithmetic, reservation-orphan detection, and the scripted-projection validator. No filesystem, no CLI.
+- **Integration tier (in-process surface + temp store)** — `runCli` with buffer streams, injected clock/run-id/environment/mode/secrets and an audit write port built over a real temporary state directory with the production node edge wrapped by `createTestEdge`. This is where the two-phase append under one fence acquisition, exactly-one invocation counting, timestamp/ordinal capture, identity capture, trim rendering against the ledger, both-kind chain verification, durable key creation/reuse and open failures, cross-edge verification, salvage continuity, read-surface behaviour including time-window/repo filters and reservation-orphan findings, and both audit-write failure modes are exercised. Cross-process continuity is modeled by reopening the same temp store with a fresh store/edge instance.
 - **Golden tier** — `tests/golden/**` byte-for-byte cases, now carrying a mode fact and an audit store per run. Interactive cases retain the existing M0-S3 goldens as interactive cases; scripted cases add per-outcome-class goldens, with failure lines carrying top-level `runId`. Every discovered case requires its golden; there is no skip or auto-accept path.
-- **Structure / contract / boundary tier** — `tests/structure/**`, `tests/checks/**`, `tests/boundaries/**`: exact audit-kind/schema/key declarations, tier imports, absence of a CLI audit command, absence of an unbounded dump export, key-artifact permissions and exclusion, no ambient clock/environment reads, and error-table non-drift.
+- **Structure / contract / boundary tier** — `tests/structure/**`, `tests/checks/**`, `tests/boundaries/**`: exact audit-kind/schema/key declarations for both kinds, the `chain-key.<workspace>.json` store-layout path, tier imports, absence of a CLI audit command, absence of an unbounded dump export, key-artifact permissions/exclusion/open-failure identities, no ambient clock/environment reads, and error-table non-drift.
 - **Static/diff** — `git diff --check` plus the existing naming/path and forbidden-literal scans.
 
 Determinism rules: no process spawning, no real clock, no ambient environment read, no real process streams, no network, and no writes outside a per-test temp root. The no-spawn guard in `tests/fixtures/result/no-spawn-guard.ts` is installed around representative `runCli` cases.
@@ -137,14 +141,14 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 | TC ID | Title | Type | Tier | Automation | Priority | AC Coverage |
 |-------|-------|------|------|------------|----------|-------------|
-| TC-GH223-001 | Success and void success append exactly one full audit record | Happy Path | Integration | Automated | Critical | AC-F1-1 |
-| TC-GH223-002 | Classified user/platform failures append exactly one record with the projected outcome class | Negative | Integration | Automated | Critical | AC-F1-1 |
-| TC-GH223-003 | Unknown failures append exactly one record | Negative | Integration | Automated | Critical | AC-F1-1 |
-| TC-GH223-004 | Broken invocations append exactly one record with raw argv tokens | Negative | Integration | Automated | Critical | AC-F1-1 |
-| TC-GH223-005 | Audit record field set, exact vocabulary, scope/repo, and boundary schema | Happy Path | Unit + Integration | Automated | Critical | AC-F1-1, AC-F1-4 |
-| TC-GH223-006 | Identical re-run appends a second record distinguished by runId, startedAt, and auditSeq | Happy Path | Integration | Automated | Critical | AC-F1-2, AC-F1-4 |
-| TC-GH223-007 | Malformed audit entry is classified, preserved, and salvaged without data loss | Edge Case | Integration | Automated | Critical | AC-F1-3 |
-| TC-GH223-008 | Audit records are an additive kind (`audit.invocation`) within `delivery.state.v1` and interleave safely | Edge Case | Contract + Integration | Automated | High | AC-F1-1 |
+| TC-GH223-001 | Success and void success append one invocation record plus its reservation | Happy Path | Integration | Automated | Critical | AC-F1-1 |
+| TC-GH223-002 | Classified user/platform failures append one invocation record plus its reservation | Negative | Integration | Automated | Critical | AC-F1-1 |
+| TC-GH223-003 | Unknown failures append one invocation record plus its reservation | Negative | Integration | Automated | Critical | AC-F1-1 |
+| TC-GH223-004 | Broken invocations append one invocation record plus its reservation with raw argv tokens | Negative | Integration | Automated | Critical | AC-F1-1 |
+| TC-GH223-005 | Invocation/reservation field sets, exact vocabulary, two-phase order, and reservation payload hygiene | Happy Path | Unit + Integration | Automated | Critical | AC-F1-1, AC-F1-4 |
+| TC-GH223-006 | Identical re-run appends a second invocation/reservation pair with a new runId and later ordinal | Happy Path | Integration | Automated | Critical | AC-F1-2, AC-F1-4 |
+| TC-GH223-007 | Malformed reservation or invocation entry is classified, preserved, and salvaged without data loss | Edge Case | Integration | Automated | Critical | AC-F1-3 |
+| TC-GH223-008 | Both audit kinds are additive within `delivery.state.v1` and interleave safely | Edge Case | Contract + Integration | Automated | High | AC-F1-1 |
 | TC-GH223-009 | Generic audit-write fault degrades loudly without changing the command outcome | Negative | Integration | Automated | Critical | AC-F1-1 |
 | TC-GH223-010 | Shared-fence contention and exhaustion audit-write failures leave the outcome unchanged with no partial record | Negative | Integration | Automated | Critical | AC-F1-1 |
 | TC-GH223-011 | Identity present is recorded verbatim with the explicit `claimed` marker | Happy Path | Integration | Automated | High | AC-F2-1 |
@@ -158,36 +162,43 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 | TC-GH223-019 | `--verbose` forces the full envelope; `--pretty` affects indentation only; stream line discipline | Edge Case | Integration | Automated | High | AC-F3-3 |
 | TC-GH223-020 | Golden suites cover both modes with no case without a golden and no skip path | Contract | Golden + Structure | Automated | Critical | AC-F3-4 |
 | TC-GH223-021 | Conformance validator enforces scripted-projection rules (error + top-level runId) with negative controls | Contract | Unit + Structure | Automated | High | AC-F3-4 |
-| TC-GH223-022 | SC-M1-23: scripted invocation is audited and trimmed end-to-end | Happy Path | Integration | Automated | Critical | AC-F1-1, AC-F1-2, AC-F1-4, AC-F2-1, AC-F2-2, AC-F3-1, AC-F3-2, AC-F6-1 |
-| TC-GH223-023 | Clean chain verifies; interleaved non-audit kinds neither break nor participate; auditSeq is monotonic | Happy Path | Unit + Integration | Automated | Critical | AC-F1-1, AC-F4-1 |
-| TC-GH223-024 | Altered record with recomputed unkeyed checksum is flagged with position | Negative | Integration | Automated | Critical | AC-F4-1 |
-| TC-GH223-025 | Mutation matrix: every alteration is flagged; no false verified verdicts | Negative | Integration | Automated | Critical | AC-F4-1 |
-| TC-GH223-026 | Chaining key never enters lane environment, record payloads, config, or ambient env | Negative | Integration + Check | Automated | Critical | AC-F4-2 |
-| TC-GH223-027 | Salvage and terminal-tail repair keep chain continuity; reported removals are not breaks | Corner Case | Integration | Automated | Critical | AC-F4-3 |
-| TC-GH223-028 | Bounded reads with scope/repo/time-window filters return verified matches and report truncation in-band | Happy Path | Integration | Automated | High | AC-F5-1 |
+| TC-GH223-022 | SC-M1-23: scripted invocation is audited and trimmed end-to-end (invocation + reservation pair) | Happy Path | Integration | Automated | Critical | AC-F1-1, AC-F1-2, AC-F1-4, AC-F2-1, AC-F2-2, AC-F3-1, AC-F3-2, AC-F6-1 |
+| TC-GH223-023 | Clean chain verifies across reservation and invocation records; interleaved non-audit kinds do not participate | Happy Path | Unit + Integration | Automated | Critical | AC-F1-1, AC-F4-1 |
+| TC-GH223-024 | Altered invocation record with recomputed unkeyed checksum is flagged with position | Negative | Integration | Automated | Critical | AC-F4-1 |
+| TC-GH223-025 | Mutation matrix across both audit kinds: every alteration is flagged; no false verified verdicts | Negative | Integration | Automated | Critical | AC-F4-1 |
+| TC-GH223-026 | Chaining key never enters lane environment, record payloads, config, or ambient env (both kinds) | Negative | Integration + Check | Automated | Critical | AC-F4-2 |
+| TC-GH223-027 | Salvage/repair remove trailing invocations and reservations wholesale; reported removals are not breaks | Corner Case | Integration | Automated | Critical | AC-F4-3 |
+| TC-GH223-028 | Bounded reads with scope/repo/inclusive-time-window filters return verified matches and report truncation in-band | Happy Path | Integration | Automated | High | AC-F5-1 |
 | TC-GH223-029 | No unbounded dump path exists through the read surface | Negative | Structure | Automated | Critical | AC-F5-1 |
 | TC-GH223-030 | Read surface classifies torn/unknown without silent zeros and writes nothing | Negative | Integration | Automated | Critical | AC-F5-1 |
 | TC-GH223-031 | Edge-registered secrets in arguments never reach any audit record field | Negative | Integration | Automated | Critical | AC-F6-1 |
 | TC-GH223-032 | Record content passes the single redaction chokepoint; no secondary serialization path | Negative | Integration + Structure | Automated | Critical | AC-F6-1 |
-| TC-GH223-033 | No new error-table rows; sync passes; chain breaks and ordinal gaps are evidence not codes | Contract | Contract + Check | Automated | High | AC-F4-1, NFR-9 |
-| TC-GH223-034 | Tier and boundary conformance; audit read is library-only; exact audit vocabulary | Contract | Structure + Boundary | Automated | High | AC-F5-1, NFR-9 |
-| TC-GH223-035 | `startedAt` is the injected clock's UTC start, recorded exactly once and never ambient | Happy Path | Unit + Integration | Automated | Critical | AC-F1-4 |
+| TC-GH223-033 | No new error-table rows; key open failures and orphan findings reuse existing identities | Contract | Contract + Check | Automated | High | AC-F4-1, NFR-9 |
+| TC-GH223-034 | Tier/boundary conformance; audit read is library-only; key artifact uses the store-layout path | Contract | Structure + Boundary | Automated | High | AC-F5-1, NFR-9 |
+| TC-GH223-035 | `startedAt` is the injected clock's integer epoch-millisecond UTC start, recorded exactly once | Happy Path | Unit + Integration | Automated | Critical | AC-F1-4 |
 | TC-GH223-036 | Re-run records a distinct `startedAt` and an advanced `auditSeq` | Happy Path | Integration | Automated | Critical | AC-F1-2, AC-F1-4 |
-| TC-GH223-037 | Durable chaining-key artifact is created once, persisted 0600, verified on open, and never exported | Happy Path | Integration + Check | Automated | Critical | AC-F4-2 |
+| TC-GH223-037 | `chain-key.<workspace>.json` is created once, persisted 0600, verified on open, and never exported | Happy Path | Integration + Check | Automated | Critical | AC-F4-2 |
 | TC-GH223-038 | Cross-process chain verification has zero false chain-break flags | Happy Path | Integration | Automated | Critical | AC-F4-2 |
-| TC-GH223-039 | Failed append leaves a skipped `auditSeq` reported in-band while the command outcome is unchanged | Negative | Integration | Automated | Critical | AC-F1-1, AC-F5-1 |
+| TC-GH223-039 | Two-phase append failure matrix: orphan reservation vs failed reservation | Negative | Integration | Automated | Critical | AC-F1-1, AC-F5-1 |
 | TC-GH223-040 | Missing or invalid bound/filter refuses with `input.value.rejected` | Negative | Integration + Contract | Automated | High | AC-F5-1 |
-| TC-GH223-041 | `startedAt` time-window filter returns only records inside the window | Happy Path | Integration | Automated | High | AC-F1-4, AC-F5-1 |
+| TC-GH223-041 | `startedAt` time window is inclusive `[from,to]` with an omitted side unbounded | Happy Path | Integration | Automated | High | AC-F1-4, AC-F5-1 |
 | TC-GH223-042 | Exact scope/repo filter semantics with repo-null exclusion | Edge Case | Integration | Automated | High | AC-F5-1 |
+| TC-GH223-043 | Reservation-orphan scenario: invocation append fails after the reservation lands | Negative | Integration | Automated | Critical | AC-F1-1, AC-F5-1 |
+| TC-GH223-044 | Reservation-failure scenario: reservation append fails, nothing consumed, no gap claimed | Negative | Integration | Automated | Critical | AC-F1-1 |
+| TC-GH223-045 | Altered reservation record with recomputed checksum is flagged as a chain break with position | Negative | Integration | Automated | Critical | AC-F4-1 |
+| TC-GH223-046 | Derived-document rebuild preserves the reservation-orphan finding | Corner Case | Integration | Automated | Critical | AC-F5-1 |
+| TC-GH223-047 | Key-artifact open failures reuse existing state identities | Negative | Integration + Contract | Automated | Critical | AC-F4-2, NFR-9 |
+| TC-GH223-048 | Surviving-tail reservation after salvage remains the DEC-8 finding | Corner Case | Integration | Automated | Critical | AC-F4-3, AC-F5-1 |
+| TC-GH223-049 | Altered orphan reservation is flagged as a chain break with position | Negative | Integration | Automated (blocked by MR-1) | Critical | AC-F4-1 |
 
 ### 5.2 Scenario Details
 
-#### TC-GH223-001 - Success and void success append exactly one full audit record
+#### TC-GH223-001 - Success and void success append one invocation record plus its reservation
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-1, F-6, AC-F1-1, AC-F1-4, EVT-1, DM-1, NFR-1
+**Related IDs**: F-1, F-6, AC-F1-1, AC-F1-4, EVT-1, EVT-2, DM-1, DM-6, NFR-1
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-ledger.test.ts` (new); `tests/fixtures/state/harness.ts` (extend with audit-store helpers)
@@ -205,15 +216,18 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 1. Run the data command with `--json` through `runCli` with buffer streams and the audit deps.
 2. Run the void-success command with `--json` in a second invocation with run id `run-gh223-0002`.
 3. Run the data command in text mode (no `--json`) with run id `run-gh223-0003`.
-4. Read the store's verified records and filter the `audit.invocation` kind.
-5. For each run, inspect the record: runId, command, arguments, exit code, timing, outcome class, `scope`, `repo`, `startedAt`, `auditSeq`, identity presence, and chain presence.
+4. Read the store's verified records; group by kind and by runId.
+5. For each run, assert the two-frame sequence: one `audit.reservation` immediately followed by one `audit.invocation`, sharing the same `auditSeq`.
+6. Assert the invocation count is exactly one per run (reservations are not counted); assert the reservation payload key set is exactly `{auditSeq, runId}`.
+7. Inspect each invocation: runId, command, arguments, exit code, timing, outcome class, `scope`, `repo`, `startedAt`, `auditSeq`, identity presence, and chain presence.
 
 **Expected Outcome**:
 
-- Each of the three invocations produced exactly one audit record; no invocation produced zero or two.
-- The success records carry runId, the resolved command name, the full argv arguments, exit code `0`, `timing.totalMs` equal to the tick delta, outcome class `success`, the store/workspace `scope`, `startedAt` equal to the invocation's start tick as a UTC instant, an `auditSeq` of `1`, `2`, `3` in invocation order, and the envelope's schemaVersion (retained as context).
+- Each of the three invocations produced exactly one `audit.invocation` record and exactly one `audit.reservation` record; no invocation produced zero or two invocation records.
+- Each reservation immediately precedes its invocation and both carry the same `auditSeq` (`1`, `2`, `3` in invocation order); the reservation payload contains only `auditSeq` and `runId`.
+- The invocation records carry runId, the resolved command name, the full argv arguments, exit code `0`, `timing.totalMs` equal to the tick delta, outcome class `success`, the store/workspace `scope`, `startedAt` equal to the invocation's start tick as an integer epoch-millisecond UTC value, and the envelope's schemaVersion (retained as context).
 - The text-mode invocation is audited exactly like the `--json` invocation; auditing is not tied to the machine channel.
-- No record contains the chaining key. The record's own chain value and the store's framing checksum are present as required; no evidence text leaks payload or checksum bytes beyond the audited arguments.
+- No record contains the chaining key. Each audit-domain record's own chain value and the store's framing checksum are present as required; no evidence text leaks payload or checksum bytes beyond the audited arguments.
 
 **Postconditions**:
 
@@ -221,12 +235,12 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 ---
 
-#### TC-GH223-002 - Classified user/platform failures append exactly one record with the projected outcome class
+#### TC-GH223-002 - Classified user/platform failures append one invocation record plus its reservation
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-1, AC-F1-1, EVT-1, DM-1, NFR-1
+**Related IDs**: F-1, AC-F1-1, EVT-1, EVT-2, DM-1, DM-6, NFR-1
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-outcomes.test.ts` (new, outcome-class matrix)
@@ -241,23 +255,25 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 1. Run each failing command with `--json`.
 2. Assert the process exit code and the envelope error identity per case.
-3. Read the audit records and assert exactly one per run.
-4. Compare each record's outcome class with the exit projection class produced by the run.
+3. Read the audit records and assert exactly one `audit.invocation` and one preceding `audit.reservation` per run, sharing the same `auditSeq`.
+4. Assert the reservation payload contains only `auditSeq` and `runId`.
+5. Compare each invocation's outcome class with the exit projection class produced by the run.
 
 **Expected Outcome**:
 
-- Each classified failure produces exactly one record, carrying the failure's exit code and the projected outcome class (`user-validation` for the user failure, `platform-provider` for the platform failure), plus the v1.1 `startedAt` and `auditSeq` fields.
-- The record's exit code and outcome class agree with the rendered failure and its envelope context (schemaVersion, runId, exitCode, timing); the error is never treated as a missing record.
-- The record's arguments and command are the failing invocation's own, not a neighbouring run's.
+- Each classified failure produces exactly one invocation record and one reservation, carrying the failure's exit code and the projected outcome class (`user-validation` for the user failure, `platform-provider` for the platform failure), plus the v1.2 `startedAt` and `auditSeq` fields.
+- The invocation's exit code and outcome class agree with the rendered failure and its envelope context (schemaVersion, runId, exitCode, timing); the error is never treated as a missing record.
+- The reservation carries no arguments, outcome, or identity; it is ordinal evidence only.
+- The invocation's arguments and command are the failing invocation's own, not a neighbouring run's.
 
 ---
 
-#### TC-GH223-003 - Unknown failures append exactly one record
+#### TC-GH223-003 - Unknown failures append one invocation record plus its reservation
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-1, AC-F1-1, EVT-1, DM-1, NFR-1
+**Related IDs**: F-1, AC-F1-1, EVT-1, EVT-2, DM-1, DM-6, NFR-1
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-outcomes.test.ts`
@@ -271,23 +287,24 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 1. Run each descriptor with `--json`.
 2. Assert each run fails with the expected fallback/unknown classification and exit code.
-3. Read the audit records for the three runs.
-4. Assert one record per run and compare the record's outcome class and exit code with the rendered failure.
+3. Read the audit records for the three runs; assert one invocation and one preceding reservation per run, same `auditSeq`.
+4. Assert the reservation payload is only `auditSeq` + `runId`.
+5. Compare the invocation's outcome class and exit code with the rendered failure.
 
 **Expected Outcome**:
 
-- Unknown failures are audited exactly once, with the same outcome class and exit code the machine output carried.
-- No thrown value's message, stack, or partial assembly payload leaks into the record beyond the redacted arguments.
-- The record still carries runId, command, timing, exit code, `scope`, `startedAt`, and `auditSeq`.
+- Unknown failures are audited with exactly one invocation record and one reservation each, with the same outcome class and exit code the machine output carried.
+- No thrown value's message, stack, or partial assembly payload leaks into either record beyond the redacted arguments; the reservation carries no such content at all.
+- The invocation still carries runId, command, timing, exit code, `scope`, integer-epoch-ms `startedAt`, and `auditSeq`.
 
 ---
 
-#### TC-GH223-004 - Broken invocations append exactly one record with raw argv tokens
+#### TC-GH223-004 - Broken invocations append one invocation record plus its reservation with raw argv tokens
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-1, AC-F1-1, EVT-1, DM-1, NFR-1
+**Related IDs**: F-1, AC-F1-1, EVT-1, EVT-2, DM-1, DM-6, NFR-1
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-outcomes.test.ts`
@@ -302,24 +319,24 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 1. Run each fixture through `runCli`.
 2. Assert `fallback.invocation` and exit code `1`.
-3. Read the audit records.
-4. Inspect the command/arguments portion of each record.
+3. Read the audit records; assert one invocation and one preceding reservation per run, same `auditSeq`.
+4. Inspect the command/arguments portion of each invocation and assert the reservation has no command/arguments field.
 
 **Expected Outcome**:
 
-- Each broken invocation appends exactly one record.
-- The record preserves the raw argv tokens (the original flags, values, and positionals) and does not invent a resolved command name.
-- The record carries the invocation failure's exit code, outcome class, timing, `scope`, `startedAt`, `auditSeq`, and runId.
+- Each broken invocation appends exactly one invocation record and one reservation (two frames, same ordinal); it does not append a second invocation record.
+- The invocation preserves the raw argv tokens (the original flags, values, and positionals) and does not invent a resolved command name.
+- The invocation carries the invocation failure's exit code, outcome class, timing, `scope`, integer-epoch-ms `startedAt`, `auditSeq`, and runId; the reservation carries only `auditSeq` + `runId`.
 - Redaction still applies to the raw tokens (verified separately in TC-GH223-031).
 
 ---
 
-#### TC-GH223-005 - Audit record field set, scope/repo, and boundary schema
+#### TC-GH223-005 - Invocation/reservation field sets, exact vocabulary, two-phase order, and reservation payload hygiene
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-1, F-6, AC-F1-1, AC-F1-4, EVT-1, DM-1, NFR-1, NFR-9
+**Related IDs**: F-1, F-6, AC-F1-1, AC-F1-4, EVT-1, EVT-2, DM-1, DM-6, NFR-1, NFR-9
 **Test Type(s)**: Unit, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-ledger.test.ts` (unit assembly) and `tests/structure/audit-contract.test.ts` (new, declaration shape)
@@ -327,33 +344,37 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Preconditions**:
 
-- The delivered audit vocabulary exposed as runtime-neutral data: kind `audit.invocation`, payload schema `delivery.audit.invocation.v1`, store-scoped key `audit.invocations`, and payload fields `runId`, `command`, `arguments`, `exitCode`, `timing`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`.
+- The delivered audit vocabulary exposed as runtime-neutral data: `audit.invocation` / `delivery.audit.invocation.v1` with fields `runId`, `command`, `arguments`, `exitCode`, `timing`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`; `audit.reservation` / `delivery.audit.reservation.v1` with fields `auditSeq`, `runId` only; both under the `audit.invocations` key family.
 - A store identity with a workspace `scope` and a synthetic `repo` target.
 - A synthetic command that declares a repository target; injected clock start tick `5000`.
+- A call-order spy wrapping the public port (records `acquireFence`, `readRecords`, `append`, `releaseFence` order).
 
 **Steps**:
 
-1. Assemble a record from a normalized invocation fact in a pure unit case; assert the field set and closed vocabularies against the delivered declaration.
-2. Write the record through the artifact boundary in an integration case; assert it is admitted under the `audit.invocation` kind and `delivery.audit.invocation.v1` schema.
-3. Read it back and assert every required field is present and exact, including `scope`, `repo`, `startedAt`, and `auditSeq`.
-4. Attempt writes with a missing required field, an undeclared outcome-class value, a wrong schema identity, and a `repo` of the wrong type.
+1. Assemble an invocation record and its reservation from a normalized invocation fact in a pure unit case; assert each field set and closed vocabulary against the delivered declarations.
+2. Assert the reservation payload has exactly two keys `auditSeq` and `runId`; assert no `arguments`, `command`, `exitCode`, `outcomeClass`, `scope`, `repo`, `startedAt`, `agentIdentity`, or `chainValue` appears.
+3. Write the pair through the artifact boundary in an integration case; assert both kinds are admitted under their schemas and share the same `auditSeq`.
+4. Read the pair back and assert every required field is present and exact, including `scope`, `repo`, integer-epoch-ms `startedAt`, and the shared `auditSeq`.
+5. Assert the ordered call subsequence under one fence acquisition: `acquireFence` once → `readRecords` (ordinal allocation from verified ledger truth) → `append(audit.reservation)` → `append(audit.invocation)` → `releaseFence`; unrelated reads may interleave but no second fence is acquired.
+6. Attempt writes with a missing required field, an undeclared outcome-class value, a wrong schema identity, a `repo` of the wrong type, and a reservation carrying an extra `arguments` field.
 
 **Expected Outcome**:
 
-- The record carries the exact field set: `runId`, `command`/raw tokens, redacted `arguments`, `exitCode`, `timing`, `outcomeClass`, `scope`, `repo` when targeted, `startedAt` (the injected start tick as a UTC instant), `auditSeq` (monotonic per-store ordinal), `agentIdentity` when present, and `chainValue`.
-- The record kind is `audit.invocation`, its payload schema is `delivery.audit.invocation.v1`, and it is stored under the `audit.invocations` key.
-- Envelope context fields (schemaVersion, runId, exitCode, timing) are retained in the record.
+- The invocation record carries the exact field set: `runId`, `command`/raw tokens, redacted `arguments`, `exitCode`, `timing`, `outcomeClass`, `scope`, `repo` when targeted, integer-epoch-ms `startedAt`, `auditSeq`, `agentIdentity` when present, and `chainValue`.
+- The reservation record carries only `auditSeq` and `runId`; it contains no arguments, outcome, identity, or invocation context. The production assembly emits exactly the two keys; additionally attempt a boundary write with an extra `arguments` field and record whether the delivered boundary refuses it (extras are not part of the spec's required behavior).
+- Both kinds are stored under the `audit.invocations` key family; the reservation immediately precedes the invocation and both carry the same ordinal.
+- The call order proves one fence acquisition and ordinal allocation from verified ledger truth before the two appends; no second fence is acquired.
 - The artifact boundary refuses the nonconforming writes as `state.store.unknown` with consequence `not_landed`; nothing lands and no field is defaulted.
 - `scope` and `repo` are copied from the injected facts exactly; they are never derived from the host or ambient environment. `repo` is absent (not null/empty) when the command has no target.
 
 ---
 
-#### TC-GH223-006 - Identical re-run appends a second record distinguished by runId, startedAt, and auditSeq
+#### TC-GH223-006 - Identical re-run appends a second invocation/reservation pair with a new runId and later ordinal
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-1, AC-F1-2, AC-F1-4, EVT-1, NFR-1
+**Related IDs**: F-1, AC-F1-2, AC-F1-4, EVT-1, EVT-2, DM-1, DM-6, NFR-1
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-ledger.test.ts`
@@ -367,23 +388,26 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 **Steps**:
 
 1. Run the identical invocation twice.
-2. Read all audit records.
-3. Compare record count, runIds, `startedAt`, `auditSeq`, sequences, and audited content.
+2. Read all audit records; group by kind and runId.
+3. Assert two invocation records (one per run) and two reservations, each reservation immediately preceding its invocation and sharing the run's `auditSeq`.
+4. Assert the ordinals are `1` then `2`; assert the reservation ordinals match the invocation ordinals.
+5. Compare runIds, `startedAt`, and audited content.
 
 **Expected Outcome**:
 
-- Exactly two records exist; neither is deduplicated, updated, or overwritten.
-- The records are distinguishable by runId; both carry the same command and argv, but distinct runIds, `startedAt` values (each the corresponding start tick), and `auditSeq` values (`1`, then `2`).
-- Both records verify; the second record's chain links to the first.
+- Exactly two invocation records and two reservations exist; neither invocation is deduplicated, updated, or overwritten, and reservations are not counted as invocation records.
+- The pairs are distinguishable by runId; both invocations carry the same command and argv, but distinct runIds, `startedAt` values (each the corresponding start tick), and `auditSeq` values (`1`, then `2`).
+- Each reservation carries only `auditSeq` + `runId` and shares its invocation's ordinal.
+- The chain is continuous: reservation 1 → invocation 1 → reservation 2 → invocation 2.
 
 ---
 
-#### TC-GH223-007 - Malformed audit entry is classified, preserved, and salvaged without data loss
+#### TC-GH223-007 - Malformed reservation or invocation entry is classified, preserved, and salvaged without data loss
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-1, F-5, AC-F1-3, NFR-8
+**Related IDs**: F-1, F-5, AC-F1-3, EVT-1, EVT-2, DM-1, DM-6, NFR-8
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-malformed.test.ts` (new); reuse `tests/behaviour/state-salvage.test.ts` patterns
@@ -391,13 +415,13 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Preconditions**:
 
-- A temp store seeded with three valid audit records (`audit.invocation` / `delivery.audit.invocation.v1`), then three malformed fixtures: (a) a tail entry with broken framing, (b) a tail entry with a failing checksum, (c) an `audit.invocation` entry whose payload violates the audit boundary's declared schema (missing required field or undeclared outcome-class value) appended through the raw store so the state layer frames it cleanly.
+- A temp store seeded with three valid audit-domain pairs (reservation + invocation), then malformed fixtures: (a) a tail invocation with broken framing, (b) a tail invocation with a failing checksum, (c) an `audit.invocation` whose payload violates the audit boundary's declared schema (missing required field or undeclared outcome-class value) appended through the raw store so the state layer frames it cleanly, and (d) a malformed `audit.reservation` tail (broken framing or failing checksum).
 - The torn fixtures are verified to fail before salvage.
 
 **Steps**:
 
 1. Snapshot the ledger bytes and the pre-existing records for each fixture.
-2. Perform a verified audit read on fixtures (a) and (b); assert the classified torn failure and its identity.
+2. Perform a verified audit read on fixtures (a), (b), and (d); assert the classified torn failure and its identity.
 3. Perform a verified audit read on fixture (c); assert the artifact boundary classifies it as `state.store.unknown` with the record position.
 4. Assert the valid prefix's byte digest is unchanged, the pre-salvage torn read returned no values, and no record was deleted or rewritten.
 5. Invoke the explicit salvage operation on the torn fixtures on a fenced handle.
@@ -405,19 +429,19 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Expected Outcome**:
 
-- The malformed entry classifies through an existing state identity: torn for fixtures (a)/(b), `state.store.unknown` at the artifact boundary for fixture (c). Neither is an empty record set or a silent zero. Before salvage the torn read fails; after salvage every pre-existing record is verified-readable and unchanged.
-- No pre-existing audit record is lost or altered by classification; the valid prefix's digest is unchanged, and the unknown-payload record remains in the ledger as evidence (no silent drop, no delete path).
+- The malformed entry classifies through an existing state identity: torn for fixtures (a)/(b)/(d), `state.store.unknown` at the artifact boundary for fixture (c). Neither is an empty record set or a silent zero. Before salvage the torn read fails; after salvage every pre-existing record is verified-readable and unchanged.
+- No pre-existing audit-domain record (reservation or invocation) is lost or altered by classification; the valid prefix's digest is unchanged, and the unknown-payload record remains in the ledger as evidence (no silent drop, no delete path).
 - For the torn fixtures, the malformed region is preserved as evidence by the explicit salvage path (quarantine), the quarantined bytes are readable as evidence, and the operation reports the truncation position and extent.
 - Retention remains forever; no prune, delete, or compaction path is introduced.
 
 ---
 
-#### TC-GH223-008 - Audit records are an additive kind within `delivery.state.v1` and interleave safely
+#### TC-GH223-008 - Both audit kinds are additive within `delivery.state.v1` and interleave safely
 
 **Scenario Type**: Edge Case
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: F-1, AC-F1-1, EVT-1, DM-1, NFR-9
+**Related IDs**: F-1, AC-F1-1, EVT-1, EVT-2, DM-1, DM-6, NFR-9
 **Test Type(s)**: Contract, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/audit-contract.test.ts` (new) and `tests/behaviour/audit-ledger.test.ts`
@@ -426,21 +450,21 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 **Preconditions**:
 
 - A store already containing records of another consumer kind (e.g., a phase transition or closeout outcome) under `delivery.state.v1`.
-- The audit record kind `audit.invocation`, payload schema `delivery.audit.invocation.v1`, under the store-scoped key `audit.invocations`.
+- The two audit kinds: `audit.invocation` / `delivery.audit.invocation.v1` and `audit.reservation` / `delivery.audit.reservation.v1`, under the `audit.invocations` key family.
 
 **Steps**:
 
 1. Open the pre-existing store without migration.
-2. Append audit records interleaved with another consumer's records.
-3. Read all records and the audit subset.
-4. Assert the store schema version is unchanged and the `audit.invocation` kind is additive.
-5. Assert `auditSeq` advances `1..N` across the audit records despite the interleaved non-audit kinds.
+2. Append audit-domain pairs (reservation then invocation) interleaved with another consumer's records.
+3. Read all records and the audit-domain subset.
+4. Assert the store schema version is unchanged and both audit kinds are additive.
+5. Assert the `auditSeq` pairing (`1..N`) holds across the pairs despite the interleaved non-audit kinds.
 
 **Expected Outcome**:
 
 - Existing stores open unchanged; no schema bump, migration, backfill, or reinterpretation occurs.
-- Audit records are identifiable as `audit.invocation` under the `audit.invocations` key; other-kind records are untouched.
-- Interleaved records do not corrupt either consumer's read; the audit chain ignores non-audit kinds, and `auditSeq` remains monotonic with no gaps.
+- Both `audit.invocation` and `audit.reservation` are identifiable under the `audit.invocations` key family; other-kind records are untouched.
+- Interleaved records do not corrupt either consumer's read; the audit chain ignores non-audit kinds, and each reservation/invocation pair shares a monotonic `auditSeq` with no gap.
 - No new runtime-API location or driver discriminant is introduced (asserted structurally in TC-GH223-034).
 
 ---
@@ -460,6 +484,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 - A temp audit store whose edge is armed with a generic fault at the audit append's pre-commit point (`append-before-flush` proposed; the delivered point name is binding).
 - A synthetic success command and a synthetic failure command, each with a known exit code.
+- A second temp store with a torn ledger tail (broken framing) and no successful audit append.
 
 **Steps**:
 
@@ -467,15 +492,16 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 2. Run a succeeding command and a failing command with `--json`.
 3. Assert the returned exit code, stdout machine line, and stderr diagnostics.
 4. Disarm and assert the edge recorded the intended point as raised.
-5. Read the audit records.
+5. Read the audit records; assert no reservation or invocation landed and no partial frame was added.
+6. Run a command against the torn-ledger store; assert the command keeps its own outcome and exit code, the diagnostics carry `state.store.torn`, and no reservation/invocation is appended.
 
 **Expected Outcome**:
 
 - Both commands keep their own outcome and exit code: success stays `0` and its `data` line is emitted; failure stays its classified code and its `error` line is emitted.
-- The audit failure is loud on the diagnostics stream with an existing state identity (`state.write.failed` for a generic write fault), never a silent drop.
-- No audit record lands and no partial record is observable.
+- The audit failure is loud on the diagnostics stream with an existing state identity (`state.write.failed` for a generic write fault, `state.store.torn` for a torn ledger at ordinal allocation), never a silent drop.
+- No audit record lands and no partial record is observable; the torn store is not modified by the failed audit path.
 - The fault point assertion proves the degradation came from the injected append failure, not from an unrelated path.
-- The failed append's skipped `auditSeq` and the read-surface finding are asserted by TC-GH223-039; this case stays focused on the generic-fault degradation and outcome independence.
+- The two-phase failure modes are asserted by TC-GH223-039/043/044; this case stays focused on generic-fault/torn-store degradation and outcome independence.
 
 ---
 
@@ -492,29 +518,31 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Preconditions**:
 
-- Two fault fixtures: (a) the single shared audit fence is held by another token/store instance so the audit append cannot acquire it (`state.lock.busy`); (b) the edge is armed with `armExhaustion(["append-before-flush"])` so the append raises the distinguishable exhaustion failure (`state.storage.exhausted`).
-- A synthetic success command with a known exit code, run three times (before, during, after the fault).
+- Three fault fixtures: (a) the single shared audit fence is held by another token/store instance so the audit append cannot acquire it (`state.lock.busy`); (b) the edge is armed with `armExhaustion(["append-before-flush"])` on the reservation append (`state.storage.exhausted`); (c) the edge raises exhaustion only on the invocation append after the reservation lands (second-append fault).
+- A synthetic success command with a known exit code, run three times (before, during, after the fault) per fixture.
 
 **Steps**:
 
-1. Run invocation 1 successfully; record its `auditSeq`.
+1. Run invocation 1 successfully; record its pair's `auditSeq`.
 2. In fixture (a), hold the shared audit fence, run invocation 2, assert the outcome and diagnostics, then release.
-3. In fixture (b), arm exhaustion, run invocation 2, assert the outcome and diagnostics, then disarm.
-4. Run invocation 3 successfully in each fixture.
-5. Snapshot the ledger before and after each failed attempt; read verified records and the audit ordinals.
+3. In fixture (b), arm exhaustion on the reservation append, run invocation 2, assert the outcome and diagnostics, then disarm.
+4. In fixture (c), arm the second-append exhaustion, run invocation 2; assert the outcome and diagnostics, then disarm.
+5. Run invocation 3 successfully in each fixture.
+6. Snapshot the ledger before and after each failed attempt; read verified records, audit pairs, and reservation orphans.
 
 **Expected Outcome**:
 
-- In both cases the command still succeeds with exit code `0` and its normal `data` line; the audit failure never changes the command's outcome.
+- In all three cases the command still succeeds with exit code `0` and its normal `data` line; the audit failure never changes the command's outcome.
 - The diagnostics carry the classified state identity (`state.lock.busy`, `state.storage.exhausted`) loudly, with no payload or checksum bytes.
-- The ledger is byte-identical before and after the failed append; no partial frame exists.
-- Exactly-once holds only for invocations whose audit write succeeds; the degraded invocation is explicitly recorded as zero records, not as a fabricated record.
-- Invocation 3's `auditSeq` skips the failed invocation's ordinal, proving the omission; the verified read reports the skipped ordinal in-band (the full read-surface assertion is TC-GH223-039).
+- For fixtures (a) and (b), the ledger is byte-identical before and after the failed attempt; for fixture (c), it contains exactly the landed reservation and no partial invocation frame.
+- Fixtures (a) and (b) consume nothing: no reservation, no invocation, and no gap finding; invocation 3's pair reuses the would-be ordinal.
+- Fixture (c) lands the reservation and loses the invocation: the orphan is the DEC-8 finding; invocation 3's pair advances past it.
+- Exactly-once counts invocation records only; the degraded invocation is explicitly absent.
 
 **Notes / Clarifications**:
 
 - One shared fence serializes the whole audit domain (F-1/OQ-11); a per-key fence model is not tested. The fence-contention case uses a second store instance holding the shared fence, not a handler-held per-key fence.
-- The "failed attempt consumes an ordinal" behavior depends on the durable `auditSeq` allocation noted in §8.3 (NEW-GAP-1); if the spec's allocation mechanism is pinned differently, this case is revised with it.
+- TC-GH223-039/043/044 isolate the two-phase failure matrix in depth; this case keeps the shared-fence contention and exhaustion variants.
 
 ---
 
@@ -553,7 +581,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Notes / Clarifications**:
 
-- OQ-T7 is resolved in spec v1.1: the record uses `agentIdentity` with the explicit `claimed` marker. The test asserts the marker and rejects any verification marker.
+- OQ-10 is resolved in spec v1.1/v1.2: the record uses `agentIdentity` with the explicit `claimed` marker. The test asserts the marker and rejects any verification marker.
 
 ---
 
@@ -588,7 +616,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Notes / Clarifications**:
 
-- OQ-T10 is resolved in spec v1.1: trimming is used only for the presence decision; absent, empty, and whitespace-only are absent, and no empty-valued identity is recorded.
+- OQ-13 is resolved in spec v1.1/v1.2: trimming is used only for the presence decision; absent, empty, and whitespace-only are absent, and no empty-valued identity is recorded.
 
 ---
 
@@ -657,7 +685,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 - Stdout is one minified `{"data":{...}}` line, byte-identical to the golden.
 - The key set is exactly `data`; the trimmed tokens are absent, and the line has no newline inside it.
 - Status is carried by the process exit code, not the line.
-- The audit record for the same run carries the trimmed fields (schemaVersion, runId, timing, exit code), the v1.1 `startedAt`/`auditSeq` fields, and the invocation facts; the result `data` payload is not required in the record, and the runId correlates the line to the record.
+- The audit record for the same run carries the trimmed fields (schemaVersion, runId, timing, exit code), the v1.2 `startedAt`/`auditSeq` fields, and the invocation facts; the result `data` payload is not required in the record, and the runId correlates the line to the record.
 - The no-spawn guard records zero violations.
 
 ---
@@ -725,7 +753,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Notes / Clarifications**:
 
-- OQ-T1 is resolved in spec v1.1: `runId` is a top-level key of the minified error line, beside the `error` object. The test rejects a nested `runId` and a missing top-level `runId`.
+- OQ-4 is resolved in spec v1.1/v1.2: `runId` is a top-level key of the minified error line, beside the `error` object. The test rejects a nested `runId` and a missing top-level `runId`.
 
 ---
 
@@ -913,29 +941,30 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 1. Run `lanes list --json` through the in-process surface with the lane environment.
 2. Assert stdout is one minified `{"data":...}` line without schemaVersion, runId, or timing, and the exit code is `0`.
-3. Read the audit records; assert exactly one, with runId, command, redacted args, exit, timing, `startedAt`, `auditSeq`, and `agentIdentity` with the `claimed` marker.
-4. Re-run the identical invocation with a new run id and a later start tick; assert a second record with a new runId, a distinct `startedAt`, and the next `auditSeq`.
-5. Run a failing variant and assert the error line has top-level `runId` and full error fields.
-6. Run a variant without the identity variable, and separately with an empty/whitespace-only value; assert the record carries no identity and no inference.
+3. Read the audit records; assert exactly one `audit.invocation` and one immediately preceding `audit.reservation` with the same `auditSeq`, plus runId, command, redacted args, exit, timing, integer-epoch-ms `startedAt`, and `agentIdentity` with the `claimed` marker. Assert the reservation payload is only `auditSeq` + `runId`.
+4. Re-run the identical invocation with a new run id and a later start tick; assert a second invocation/reservation pair with a new runId, a distinct `startedAt`, and the next `auditSeq`.
+5. Run a failing variant and assert the error line has top-level `runId` and full error fields; assert the failing invocation still has its reservation.
+6. Run a variant without the identity variable, and separately with an empty/whitespace-only value; assert the invocation carries no identity and no inference, and the reservation carries none either.
 7. Search every record and the machine output for the planted edge-registered secret values.
 
 **Expected Outcome**:
 
-- Exactly one audit record per invocation; the trimmed fields live only in the record.
+- Exactly one `audit.invocation` per invocation (reservations are not counted); each invocation has exactly one reservation, immediately preceding it, with the same `auditSeq`.
+- The trimmed fields live only in the invocation record; the reservation is ordinal evidence only.
 - Identity is captured verbatim with the `claimed` marker when present; absent, empty, and whitespace-only are absent and never inferred.
-- Re-run yields a second record with a new runId, distinct `startedAt`, and a later `auditSeq`; no deduplication.
+- Re-run yields a second pair with a new runId, distinct `startedAt`, and a later `auditSeq`; no deduplication.
 - Failure lines keep `runId` as a top-level correlation key.
 - No edge-registered secret appears in any record field or on the machine channel.
 - The case reads as the seeded scenario's Given/When/Then and cites SC-M1-23 in its describe/title text.
 
 ---
 
-#### TC-GH223-023 - Clean chain verifies; interleaved non-audit kinds neither break nor participate; auditSeq is monotonic
+#### TC-GH223-023 - Clean chain verifies across reservation and invocation records; interleaved non-audit kinds do not participate
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-1, F-4, AC-F1-1, AC-F4-1, DM-2, NFR-1, NFR-3
+**Related IDs**: F-1, F-4, AC-F1-1, AC-F4-1, DM-2, EVT-1, EVT-2, NFR-1, NFR-3
 **Test Type(s)**: Unit, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-chain.test.ts` (new)
@@ -944,33 +973,33 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 **Preconditions**:
 
 - A deterministic in-memory key fixture for the pure unit half; the integration half uses the store's generated durable key artifact.
-- A temp store with audit records interleaved with records of another kind; all audit appends go through the shared audit fence.
+- A temp store with audit-domain pairs interleaved with records of another kind; all audit appends go through the shared audit fence.
 - A pure in-memory sequence fixture for the unit half.
 
 **Steps**:
 
-1. Append five audit records with other-kind records between them; assert `auditSeq` values `1..5`.
-2. Verify the chain; assert a verified verdict with the record count and no breaks.
-3. Recompute expected links with the independent oracle defined for the algorithm pinned at delivery (or, if the algorithm stays behind an opaque helper, assert the behavioural properties: determinism, key sensitivity, previous-link sensitivity, and content sensitivity).
-4. Repeat with a fresh store whose first record is an audit record, and with a store that already has other-kind records; assert the first audit record anchors correctly in both.
-5. Append a sixth audit record after the interleaved tail; assert its `auditSeq` is `6` and it chains from the fifth audit record, not from the intervening kind.
+1. Append five audit-domain pairs (reservation then invocation) with other-kind records between pairs; assert each pair shares an `auditSeq` (`1..5`).
+2. Verify the chain over the full audit-domain sequence; assert a verified verdict with the record count and no breaks.
+3. Recompute expected links with the independent oracle defined for the algorithm pinned at delivery (or, if the algorithm stays behind an opaque helper, assert the behavioural properties: determinism, key sensitivity, previous-link sensitivity, and content sensitivity) across both kinds.
+4. Repeat with a fresh store whose first audit-domain record is a reservation, and with a store that already has other-kind records; assert the first audit-domain record anchors correctly in both.
+5. Append a sixth pair after the interleaved tail; assert its reservation and invocation share `auditSeq` `6` and the reservation chains from the fifth invocation, not from the intervening kind.
 
 **Expected Outcome**:
 
-- The clean chain verifies with zero breaks over the audit-record subsequence in ledger order.
+- The clean chain verifies with zero breaks over the continuous reservation + invocation sequence in ledger order.
 - Interleaved non-audit kinds neither break nor participate; their content is not covered by the audit chain.
-- The first audit record anchors the chain on any store, including a store with pre-existing other-kind records.
-- `auditSeq` is monotonic `1..6` across the audit records despite the interleaved kinds.
+- The first audit-domain record (the first reservation) anchors the chain on any store, including a store with pre-existing other-kind records.
+- Each reservation/invocation pair shares the same `auditSeq`; ordinals are `1..6` across the pairs despite the interleaved kinds.
 - Verification is deterministic and repeatable; no wall clock or ambient value participates.
 
 ---
 
-#### TC-GH223-024 - Altered record with recomputed unkeyed checksum is flagged with position
+#### TC-GH223-024 - Altered invocation record with recomputed unkeyed checksum is flagged with position
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-4, AC-F4-1, DM-2, NFR-3
+**Related IDs**: F-4, AC-F4-1, DM-1, DM-2, NFR-3
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-chain.test.ts`
@@ -978,32 +1007,32 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Preconditions**:
 
-- A verified clean audit ledger.
-- A mutation helper that edits an audit record's audited content (for example the command arguments), recomputes the state layer's unkeyed checksum so the store still reads as framing/checksum-clean, and leaves the chain value unchanged.
+- A verified clean audit ledger containing reservation/invocation pairs.
+- A mutation helper that edits an *invocation* record's audited content (for example the command arguments), recomputes the state layer's unkeyed checksum so the store still reads as framing/checksum-clean, and leaves the chain value unchanged.
 
 **Steps**:
 
 1. Verify the clean ledger: zero breaks.
-2. Apply the mutation at a known audit position (not the first).
+2. Apply the mutation to an invocation record at a known audit position (not the first).
 3. Verify again.
 4. Inspect the break evidence.
 5. Assert records before the break remain verified-readable.
 
 **Expected Outcome**:
 
-- The mutation is flagged as a chain break naming the record position; the unkeyed checksum being recomputed does not produce a false "verified" verdict.
+- The invocation mutation is flagged as a chain break naming the record position; the unkeyed checksum being recomputed does not produce a false "verified" verdict.
 - Evidence names the position only — never payload content or checksum bytes.
 - Records before the break remain verified-readable; no data loss is introduced by verification.
-- The wording/report expresses "cannot alter undetectably", not "cannot alter".
+- The wording/report expresses "cannot alter undetectably", not "cannot alter". The reservation-alteration counterpart is TC-GH223-045.
 
 ---
 
-#### TC-GH223-025 - Mutation matrix: every alteration is flagged; no false verified verdicts
+#### TC-GH223-025 - Mutation matrix across both audit kinds: every alteration is flagged; no false verified verdicts
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-4, AC-F4-1, DM-2, NFR-3
+**Related IDs**: F-4, AC-F4-1, DM-1, DM-2, DM-6, EVT-1, EVT-2, NFR-3
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-chain-mutations.test.ts` (new); `tests/fixtures/audit/mutations.json` (new declarative matrix)
@@ -1011,34 +1040,36 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Preconditions**:
 
-- A clean five-record audit ledger and a declarative mutation matrix: payload edit with recomputed checksum; chain-value edit; record deletion; record reordering; record duplication with a new sequence; splicing a record from another store; changing the previous connection; corrupting a field without recomputing the checksum (state-layer torn, expected as a different identity).
+- A clean ten-record audit-domain ledger (five reservation/invocation pairs) and a declarative mutation matrix covering both kinds: reservation payload edit with recomputed checksum; invocation payload edit with recomputed checksum; chain-value edit; reservation deletion; invocation deletion (a state-layer sequence gap, expected as torn before chain verification); reservation reordering; invocation reordering; pair duplication with new sequences; splicing a record from another store; changing the previous connection; altering one side of the reservation/invocation ordinal pair; corrupting a field without recomputing the checksum (state-layer torn, expected as a different identity).
 
 **Steps**:
 
 1. For each mutation, start from a fresh copy of the clean ledger.
-2. Apply the mutation, verify the state layer's read, then verify the audit chain.
-3. Record whether the outcome is verified, a chain break with position, or a state-level classification.
-4. Run the clean control last and assert it still verifies.
+2. Apply the mutation, verify the state layer's read, then verify the audit chain and the orphan finding.
+3. Record whether the outcome is verified, a chain break with position, an orphan finding, or a state-level classification.
+4. Run the clean control last and assert it still verifies with no orphan finding.
 
 **Expected Outcome**:
 
-- Every content/chain mutation is flagged: either as a chain break naming the position or, for a state-layer framing/checksum break, as the existing torn identity. No mutation yields a false "verified" verdict.
-- The clean control verifies, proving the matrix is not vacuously failing.
+- Every content/chain mutation is flagged: a chain break naming the position, an orphan-reservation finding, or (for a framing/checksum break) the existing torn identity. No mutation yields a false "verified" verdict.
+- Reservation and invocation alterations are equally detectable; a tampered reservation is not a blind spot.
+- The clean control verifies with zero breaks and zero orphan findings, proving the matrix is not vacuously failing.
 - Each mutation's expected class is declared in the fixture, so a silent change in behaviour fails loudly.
 - Evidence hygiene holds for every failure path.
 
 **Notes / Clarifications**:
 
 - A mutation that corrupts a record without recomputing the unkeyed checksum is expected to be caught by the state layer as the existing torn identity before chain verification. That is defense in depth, not a false "verified" verdict. NFR-3's "flagged as chain breaks" wording is read as "detected", with the chain break specifically required for the recomputed-checksum and chain-forgery classes that the state layer cannot see (AC-F4-1).
+- Deletion/reordering mutations break the state layer's contiguous sequence and are expected to classify as `state.store.torn` before chain verification; they are not chain breaks. Chain-level mutations that keep framing/checksum/sequence valid (payload edits with recomputed checksums, chain-value edits, valid-sequence splicing, ordinal mismatch) are chain breaks. The reservation-orphan finding is tested on a valid ledger in TC-GH223-043/048, not by deleting a record.
 
 ---
 
-#### TC-GH223-026 - Chaining key never enters lane environment, record payloads, configuration, or ambient env
+#### TC-GH223-026 - Chaining key never enters lane environment, record payloads, configuration, or ambient env (both kinds)
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-4, AC-F4-2, DM-2, DM-5, NFR-4; RSK-3
+**Related IDs**: F-4, AC-F4-2, DM-1, DM-2, DM-5, DM-6, NFR-4; RSK-3
 **Test Type(s)**: Integration, Check
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-key-exclusion.test.ts` (new); `tests/fixtures/audit/lane-environment.json` (new)
@@ -1047,31 +1078,31 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 **Preconditions**:
 
 - A declared lane environment fixture carrying only its declared variables (including the identity variable) and explicitly not the chaining key.
-- A temp store populated with audit records under the generated durable key artifact.
-- The delivered key-artifact path/name constant and a helper to read the artifact in the test (single-user trust model).
+- A temp store populated with reservation/invocation pairs under the generated `chain-key.<workspace>.json` artifact.
+- The delivered key-artifact path constant and a helper to read the artifact in the test (single-user trust model).
 
 **Steps**:
 
 1. Inspect the lane environment fixture and the configuration/ambient-environment surfaces; assert the key's name and value are absent.
 2. Read the key artifact via the delivered helper; assert it is non-empty and that the key value is the one used by verification.
-3. Read the raw ledger bytes and walk every audit record's JSON; assert no field equals or contains the key value (including obvious hex/base64 encodings).
+3. Read the raw ledger bytes and walk every audit-domain record's JSON (reservation and invocation); assert no field equals or contains the key value (including obvious hex/base64 encodings).
 4. Assert the rendered/reported surfaces produced by this story (diagnostics, evidence, read views) contain no key value.
-5. Assert the key exists only in the store-managed artifact and the runtime-edge-injected data, not in any record, configuration value, or environment map.
+5. Assert the key exists only in the store-managed `chain-key.<workspace>.json` artifact and the runtime-edge-injected data, not in any record, configuration value, or environment map.
 
 **Expected Outcome**:
 
-- The chaining key appears nowhere in the lane environment, ledger record payloads, configuration, ambient environment, any record field, or any lane-visible surface rendered by this story.
+- The chaining key appears nowhere in the lane environment, ledger record payloads (either kind), configuration, ambient environment, any record field, or any lane-visible surface rendered by this story.
 - Verification succeeds using the store-managed key, proving the key was actually used rather than absent.
 - Two negative controls: planting the key value in a temp copy of a record is detected by the exclusion search (proving the search is non-vacuous); replacing the key artifact with a different key makes verification fail (proving key sensitivity).
 
 ---
 
-#### TC-GH223-027 - Salvage and terminal-tail repair keep chain continuity; reported removals are not breaks
+#### TC-GH223-027 - Salvage/repair remove trailing invocations and reservations wholesale; reported removals are not breaks
 
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-4, AC-F4-3, NFR-3, NFR-8; DEC-4; RSK-2
+**Related IDs**: F-4, AC-F4-3, DM-1, DM-6, EVT-1, EVT-2, NFR-3, NFR-8; DEC-4; RSK-2
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-chain-salvage.test.ts` (new)
@@ -1079,7 +1110,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Preconditions**:
 
-- Two fixtures derived from the same clean audit ledger: (a) a terminal-tail tear after an audit record, repaired with `repairTornTail`; (b) a terminal-tail tear salvaged with the explicit `salvage` operation.
+- Clean audit-domain pairs; two fixtures: (a) a terminal-tail tear after an invocation record, repaired with `repairTornTail`; (b) a terminal-tail tear after an invocation record, salvaged with the explicit `salvage` operation; (c) a store whose last valid frame is a reservation (its invocation torn or never landed).
 - The operations' own evidence reports the removal (position/extent).
 
 **Steps**:
@@ -1087,15 +1118,17 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 1. Verify the clean prefix chain before the tear.
 2. Apply repair in fixture (a); read the evidence and verify the chain.
 3. Apply salvage in fixture (b); read the evidence and verify the chain.
-4. Assert the reported removal is not a chain break and the surviving audit sequence verifies continuously.
-5. Append a new audit record after each operation and verify it chains from the last surviving audit record.
-6. Assert a genuinely altered surviving record still breaks (control).
+4. Assert the reported removal is byte-contiguous and kind-agnostic: no partial invocation or reservation frame survives; the surviving sequence verifies continuously.
+5. Append a new audit-domain pair after each operation and verify the reservation chains from the last surviving audit-domain record, then the invocation chains from the reservation.
+6. In fixture (c), assert the surviving reservation is the DEC-8 orphan finding, not silently dropped; assert the next pair's ordinal is greater than the surviving reservation's ordinal.
+7. Assert a genuinely altered surviving record still breaks (control).
 
 **Expected Outcome**:
 
 - Both operations report their removal in their own evidence; chain verification treats the removal as expected, not as tampering.
-- The surviving audit sequence verifies continuously; no re-anchoring failure arises.
-- The next audit record chains from the last surviving audit record and carries an `auditSeq` greater than the last surviving record's ordinal. Whether a salvage-removed ordinal also appears as an in-band gap finding is pinned by NEW-GAP-4; the chain-continuity assertion here does not depend on it.
+- The removal takes trailing invocations and reservations wholesale; no partial frame of either kind survives, and the surviving audit-domain sequence verifies continuously with no re-anchoring failure.
+- The next audit-domain pair chains from the last surviving record.
+- In fixture (c), the reservation that is the last valid frame survives as the in-band orphan finding and is never silently dropped; the next ordinal is greater than the surviving reservation's ordinal.
 - The alteration control still breaks, proving the continuity path does not suppress real breaks.
 - Retention/evidence discipline holds: no payload or checksum bytes in break or salvage evidence.
 
@@ -1114,31 +1147,32 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Preconditions**:
 
-- A temp audit store with at least ten audit records spanning several commands, all three outcome classes, two `scope` values, and a mix of `repo` values including repo-absent records, plus interleaved non-audit records.
-- Each record carries a distinct `startedAt`; the fixture uses a known set of start ticks (for example `1000`, `2000`, `3000`, `4000`).
+- A temp audit store with at least ten invocation records (each with its reservation) spanning several commands, all three outcome classes, two `scope` values, and a mix of `repo` values including repo-absent records, plus interleaved non-audit records.
+- Each invocation carries a distinct integer-epoch-ms `startedAt`; the fixture uses a known set of start ticks (for example `1000`, `2000`, `3000`, `4000`).
 - A read-surface fixture declaring filters and a bound.
 
 **Steps**:
 
-1. Query by the store's recorded `scope` (match) and by a deliberately different scope (no match); assert only matching audit records return, all verified.
-2. Query by command and by outcome class; assert exact match sets and no non-audit records.
-3. Query with a `startedAt` time window that contains some records and excludes others; assert only records inside the window return.
-4. Query with a bound smaller than the match count; assert the result is clipped to the bound and reports truncation in-band with the returned count and an indication that more matches exist.
-5. Query with a bound larger than the match count; assert no truncation flag.
-6. Snapshot the ledger and store directory before and after each query; assert no fence was acquired and nothing was written.
+1. Query by the store's recorded `scope` (match) and by a deliberately different scope (no match); assert only matching invocation records return, all verified.
+2. Query by command and by outcome class; assert exact match sets and no non-audit or reservation records.
+3. Query with an inclusive `[from, to]` `startedAt` window that contains some records and excludes others; assert only records inside the window return.
+4. Query with only `from` (unbounded `to`) and only `to` (unbounded `from`); assert each side omits the bound correctly.
+5. Query with a bound smaller than the match count; assert the result is clipped to the bound and reports truncation in-band with the returned count and an indication that more matches exist.
+6. Query with a bound larger than the match count; assert no truncation flag.
+7. Snapshot the ledger and store directory before and after each query; assert no fence was acquired and nothing was written.
 
 **Expected Outcome**:
 
-- Results contain verified records only, matching every declared filter (`scope`, `startedAt` window, command, outcome class); non-audit kinds and non-matching records never leak in.
-- The `startedAt` time-window filter returns exactly the records whose timestamp falls inside the declared window.
+- Results contain verified invocation records only, matching every declared filter (`scope`, inclusive `startedAt` window, command, outcome class); non-audit kinds, reservations, and non-matching records never leak in.
+- The `startedAt` time-window filter uses inclusive bounds; a record exactly at `from` or `to` is included, and an omitted side is unbounded.
 - Truncation is reported in-band whenever the bound clips; it is never silently applied.
 - Reads acquire no fence, write nothing, and leave the ledger and directory byte-identical.
 - The returned evidence names counts and positions only.
 
 **Notes / Clarifications**:
 
-- OQ-T5 is resolved in spec v1.1: the record carries `startedAt` and the time-window filter operates on it. OQ-T11 is resolved: `scope`/`repo` match exactly; repo-absent records are excluded only from repo-constrained results.
-- The window-boundary inclusivity rule and the exact `startedAt` encoding are pinned at delivery (NEW-GAP-3); this case uses interior windows that avoid the boundary. TC-GH223-041 covers the time window in depth and TC-GH223-042 covers scope/repo exactness; TC-GH223-040 covers missing/invalid refusal.
+- OQ-T5/OQ-17 is resolved in spec v1.2: `startedAt` is integer epoch milliseconds UTC; window bounds are inclusive `[from, to]` and an omitted side is unbounded. OQ-T11/OQ-14 is resolved: `scope`/`repo` match exactly; repo-absent records are excluded only from repo-constrained results.
+- TC-GH223-041 covers the time window and boundary probes in depth; TC-GH223-042 covers scope/repo exactness; TC-GH223-040 covers missing/invalid refusal.
 - The store's derived index is current before each query, so "writes nothing" is asserted against a no-rebuild read; a rebuild-on-read is a deviation (TR-12).
 
 ---
@@ -1230,7 +1264,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 **Steps**:
 
 1. Run each fixture.
-2. Read every audit record and serialize each record's JSON.
+2. Read every audit record (both kinds) and serialize each record's JSON.
 3. Search for each edge-registered secret value and for obvious encodings.
 4. Assert the arguments are present with `[redacted]` substitutions where the edge-registered secrets occurred, and that the unregistered canary remains verbatim (the guarantee is scoped to edge-registered values).
 5. Assert the machine output and diagnostics are also secret-free.
@@ -1244,7 +1278,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Notes / Clarifications**:
 
-- OQ-T9 is resolved in spec v1.1: "no secret patterns" means no edge-registered secret value survives into any record field. No broader pattern scan is invented.
+- OQ-12 is resolved in spec v1.1/v1.2: "no secret patterns" means no edge-registered secret value survives into any record field. No broader pattern scan is invented.
 
 ---
 
@@ -1280,12 +1314,12 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 ---
 
-#### TC-GH223-033 - No new error-table rows; sync passes; chain breaks and ordinal gaps are evidence not codes
+#### TC-GH223-033 - No new error-table rows; key open failures and orphan findings reuse existing identities
 
 **Scenario Type**: Contract
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: F-4, AC-F4-1, AC-F5-1, NFR-9; DEC-7, OQ-2
+**Related IDs**: F-4, AC-F4-1, AC-F4-2, AC-F5-1, NFR-9; DEC-7, OQ-2
 **Test Type(s)**: Contract, Check
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/error-table-sync.test.ts` (existing — no change expected); `tests/structure/error-table.test.ts` (existing — no change expected); `tests/behaviour/audit-chain.test.ts` (verdict shape)
@@ -1294,31 +1328,32 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 **Preconditions**:
 
 - The machine and documented error tables at the change base.
-- The audit chain verification verdict type and the read-surface gap/refusal verdict types.
+- The audit chain verification verdict type, the key-open-failure identities, and the read-surface gap/refusal verdict types.
 
 **Steps**:
 
 1. Run the bidirectional error-table sync check and assert zero drift.
-2. Assert the error table contains no audit-, chain-, or ordinal-gap-domain identities and no audit-specific rows; audit failures resolve only to the existing state identities or the existing `input.value.rejected` row for read-surface refusals.
-3. Assert every audit/state failure raised by the audit path uses an existing identity (`state.store.torn`, `state.store.unknown`, `state.lock.busy`, `state.storage.exhausted`, `state.write.failed`, `state.permission.denied`), and read-surface refusals use `input.value.rejected`.
-4. Assert a chain break is surfaced as a verification verdict/evidence with remediation guidance, not as an `AppErrorCode` table lookup; assert a skipped `auditSeq` is an in-band read-surface finding, not an error code.
-5. Mutation control: drop or add a row in a temp copy and assert the sync check fails.
+2. Assert the error table contains no audit-, chain-, key-artifact-, or reservation-orphan-domain identities and no audit-specific rows; audit failures resolve only to the existing state identities or the existing `input.value.rejected` row for read-surface refusals.
+3. Assert every audit/state failure raised by the audit path uses an existing identity (`state.store.torn`, `state.store.unknown`, `state.lock.busy`, `state.storage.exhausted`, `state.write.failed`, `state.permission.denied`, `state.keys.missing`), and read-surface refusals use `input.value.rejected`.
+4. Assert the key-artifact open failures use `state.keys.missing`, the `state.store.torn` family, and `state.permission.denied` — no new rows.
+5. Assert a chain break is surfaced as a verification verdict/evidence with remediation guidance, not as an `AppErrorCode` table lookup; assert a reservation orphan is an in-band read-surface finding, not an error code.
+6. Mutation control: drop or add a row in a temp copy and assert the sync check fails.
 
 **Expected Outcome**:
 
-- The tables remain in bidirectional sync with zero drift; no audit-, chain-, or ordinal-gap-domain identities are introduced.
-- Chain breaks, record gaps, and skipped-ordinal findings are read-surface verdicts/evidence; read-surface refusals reuse `input.value.rejected`.
-- Every audit-path state failure reuses an existing state identity.
+- The tables remain in bidirectional sync with zero drift; no audit-, chain-, key-artifact-, or orphan-domain identities are introduced.
+- Chain breaks, record gaps, and reservation-orphan findings are read-surface verdicts/evidence; read-surface refusals reuse `input.value.rejected`.
+- Every audit-path state failure reuses an existing state identity, including the three key-artifact open-failure classes.
 - The mutation control proves the sync check is non-vacuous for the touched surface.
 
 ---
 
-#### TC-GH223-034 - Tier and boundary conformance; audit read is library-only; exact audit vocabulary
+#### TC-GH223-034 - Tier/boundary conformance; audit read is library-only; key artifact uses the store-layout path
 
 **Scenario Type**: Contract
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: F-5, AC-F5-1, NFR-9, DM-1, DM-5; DEC-5, DEC-6; NG-3
+**Related IDs**: F-5, AC-F5-1, NFR-9, DM-1, DM-5, DM-6; DEC-5, DEC-6; NG-3
 **Test Type(s)**: Structure, Boundary
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/audit-contract.test.ts` (new), `tests/structure/audit-imports.test.ts` (new), `tests/structure/audit-surface.test.ts` (new); `tests/boundaries` when any import edge changes
@@ -1327,26 +1362,28 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 **Preconditions**:
 
 - The delivered audit modules, contracts, state modules, CLI command registry, and key-artifact module.
+- The delivered key-artifact path constant for `chain-key.<workspace>.json`.
 
 **Steps**:
 
-1. Assert the audit record/chain vocabulary lives in runtime-neutral contracts (types/data only; no I/O, clock, randomness, or environment access).
-2. Assert the audit consumer imports the public state port and its own modules only; no driver module, no runtime-API location, no driver discriminant. The key artifact is persisted through the public port, not through a new runtime API.
+1. Assert the audit record/chain vocabulary lives in runtime-neutral contracts (types/data only; no I/O, clock, randomness, or environment access), declaring both `audit.invocation` and `audit.reservation`.
+2. Assert the audit consumer imports the public state port and its own modules only; no driver module, no runtime-API location, no driver discriminant. The key artifact is the store-layout `chain-key.<workspace>.json` member created/read through the port's store-managed artifact path, not a new runtime API.
 3. Assert `packages/core/src/state/**` does not import branding; identity naming is resolved at the edge.
 4. Assert no audit CLI command is registered in `packages/cli/src/commands/**` and no command name for audit appears in the program registry.
 5. Assert the audit identity type does not appear in `packages/core/src/contracts/credentials.ts`, the config resolver, or any policy/authorization module; it is confined to audit record and read types. Assert the chaining-key type is confined to the state/edge modules and is not exported through the runtime-neutral contracts.
-6. Run `bun test tests/boundaries` if any package/subpath edge changed.
+6. Assert the key-artifact path matches the store-layout family (`chain-key.<workspace>.json` beside `header.<workspace>.json` and `fence.<workspace>.lock`) and is not a documents-path or driver-specific path.
+7. Run `bun test tests/boundaries` if any package/subpath edge changed.
 
 **Expected Outcome**:
 
 - Contracts stay runtime-neutral; the audit consumer composes only the public state port; the state tier stays branding-free.
-- No new runtime-API location, driver discriminant, or CLI audit command exists; the key artifact uses the existing port.
+- No new runtime-API location, driver discriminant, or CLI audit command exists; the key artifact uses the store-layout path through the port.
 - The identity vocabulary is not wired into authorization/credential paths; the chaining-key type stays out of contracts.
 - Boundary rules and fixture coverage remain green.
 
 ---
 
-#### TC-GH223-035 - `startedAt` is the injected clock's UTC start, recorded exactly once and never ambient
+#### TC-GH223-035 - `startedAt` is the injected clock's integer epoch-millisecond UTC start, recorded exactly once
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -1362,27 +1399,26 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 - A temp audit store with the production edge wrapped by `createTestEdge` and an injected clock whose start tick is `1000` and finish tick is `1013`.
 - A synthetic success command.
 - A pure record-assembly fixture carrying `startedAtMs: 1000`.
-- The delivered `startedAt` encoding helper/constant.
 
 **Steps**:
 
-1. Run the command through `runCli`; read the audit record.
+1. Run the command through `runCli`; read the invocation record.
 2. Assert the record has exactly one `startedAt` field.
-3. Assert `startedAt` denotes the injected start tick (`1000` ms since epoch) as a UTC instant, and that `timing.totalMs` is `13` (the separate timing value).
+3. Assert `startedAt` is the integer `1000` (epoch milliseconds UTC), not a date string or a floating-point value; assert `timing.totalMs` is `13` (the separate timing value).
 4. Re-read the record and assert `startedAt` is stable.
 5. Scan the audit assembly/write modules for ambient clock reads (`Date.now`, `new Date()` without the injected value, `performance.now`); assert none; the value comes from the injected clock.
 6. Mutation control: a temp-copy module using `Date.now()` is detected by the scan.
 
 **Expected Outcome**:
 
-- `startedAt` is the invocation's start instant from the injected clock, expressed in UTC, recorded exactly once.
+- `startedAt` is the invocation's start instant from the injected clock as an integer epoch-millisecond UTC value, recorded exactly once.
 - It is the start tick, not the finish tick; `timing` continues to use both ticks.
 - No ambient clock read exists in the audit path; the injected clock is the only source.
 - Re-reads return the same `startedAt`.
 
 **Notes / Clarifications**:
 
-- The spec pins the instant semantics (UTC start from the injected clock), not the exact serialization. The test compares the parsed instant with the injected tick and requires a UTC encoding; the concrete encoding is pinned at delivery (NEW-GAP-3).
+- OQ-17 is resolved in spec v1.2: `startedAt` is integer epoch milliseconds UTC, the same discipline as `timing.totalMs`. No serialization ambiguity remains.
 
 ---
 
@@ -1405,24 +1441,24 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 **Steps**:
 
 1. Run the identical invocation twice.
-2. Read both audit records.
-3. Assert each record's `startedAt` equals its own start tick as a UTC instant.
-4. Assert the two `startedAt` values are distinct and the two `auditSeq` values are `1` and `2`.
-5. Assert the runIds are distinct and neither record overwrote the other.
+2. Read the invocation records and their reservations.
+3. Assert each invocation's `startedAt` is the integer epoch-millisecond value of its own start tick (`1000`, `2000`).
+4. Assert the two `startedAt` values are distinct and the two reservation/invocation pairs carry `auditSeq` `1` and `2`.
+5. Assert the runIds are distinct and neither pair overwrote the other.
 
 **Expected Outcome**:
 
-- The re-run records its own distinct `startedAt`; no timestamp is reused or defaulted.
-- `auditSeq` advances monotonically (`1`, then `2`) and remains gap-free when both appends succeed.
-- The records remain distinguishable by runId and are not deduplicated.
+- The re-run records its own distinct integer-epoch-ms `startedAt`; no timestamp is reused or defaulted.
+- `auditSeq` advances monotonically (`1`, then `2`) and remains gap-free when both reservation/invocation pairs succeed.
+- The invocation records remain distinguishable by runId and are not deduplicated.
 
 **Notes / Clarifications**:
 
-- The failed-append case (where an ordinal is skipped) is TC-GH223-039 and depends on NEW-GAP-1's durable allocation.
+- The failed-append case (where an ordinal is consumed but the invocation is absent) is TC-GH223-039/043; the failed-reservation case (nothing consumed) is TC-GH223-044. Both are pinned by v1.2's reservation-first mechanism.
 
 ---
 
-#### TC-GH223-037 - Durable chaining-key artifact is created once, persisted 0600, verified on open, and never exported
+#### TC-GH223-037 - `chain-key.<workspace>.json` is created once, persisted 0600, verified on open, and never exported
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -1436,27 +1472,30 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 **Preconditions**:
 
 - A POSIX temp store with no prior audit append.
-- The delivered key-artifact path/name constant and read helper.
+- The delivered `chain-key.<workspace>.json` path constant and read helper.
 - A synthetic success command.
+- Copies of the store for the three open-failure fixtures.
 
 **Steps**:
 
-1. Run one invocation; assert exactly one key artifact exists, it is non-empty, and its file mode is `0600` (directory `0700`).
+1. Run one invocation; assert exactly one `chain-key.<workspace>.json` artifact exists, it is non-empty, and its file mode is `0600` (directory `0700`).
 2. Read the artifact bytes; run a second invocation; assert the artifact bytes and modification identity are unchanged (the key was created once, not regenerated).
-3. Open a second store/edge instance over the same temp root; verify the audit chain; assert verification succeeds with the same artifact.
-4. Walk every record payload, the configuration snapshot, the ambient environment map, and the lane environment fixture; assert the key value and obvious encodings are absent.
-5. Negative controls: a copy with a different key artifact makes verification fail; a copy with the artifact removed exercises the delivered "verified on open" failure behavior (pinned by NEW-GAP-2).
+3. Open a second store/edge instance over the same temp root; verify the audit-domain chain (reservations and invocations); assert verification succeeds with the same artifact.
+4. Walk both record kinds' payloads, the configuration snapshot, the ambient environment map, and the lane environment fixture; assert the key value and obvious encodings are absent.
+5. **Open-failure fixtures:** (a) remove the artifact from a store that already has audit records (non-first open) and assert the audit path fails `state.keys.missing`; (b) truncate/corrupt the artifact and assert the failure is in the `state.store.torn` family; (c) change the artifact mode away from `0600` and assert `state.permission.denied` (POSIX only).
+6. Negative control: a copy with a different key artifact makes verification fail; the unmodified store still passes.
 
 **Expected Outcome**:
 
-- The key artifact is created once on the store's first audit append and persisted through the public port under least-privilege permissions (`0600` file / `0700` directory).
+- The key artifact is created once on the store's first audit append as the store-layout `chain-key.<workspace>.json`, under least-privilege permissions (`0600` file / `0700` directory).
 - Later appends and later store/edge instances reuse the same artifact; the key is never regenerated.
-- The key never appears in record payloads, configuration, ambient environment, or lane environment.
+- The key never appears in either record kind's payloads, configuration, ambient environment, or lane environment.
+- Open failures reuse existing identities: absent on a non-first open → `state.keys.missing`; corrupt/unparsable → the `state.store.torn` family; wrong permission bits → `state.permission.denied`. No new error-table row is introduced.
 - Verification succeeds across the reopened store/edge; a different key fails.
 
 **Notes / Clarifications**:
 
-- "Verified on open" is specified as a requirement but the missing/corrupt-artifact failure mode is not pinned (NEW-GAP-2). This case asserts creation, permissions, reuse, and the successful verification path; the failure-mode assertion is added when the spec pins it.
+- OQ-16/OQ-19 are resolved in spec v1.2: the artifact is `chain-key.<workspace>.json` in the store-layout family, and the three open-failure identities are pinned to existing state rows. TC-GH223-047 isolates the three failure cases; TC-GH223-033 keeps the no-drift assertion.
 
 ---
 
@@ -1473,37 +1512,37 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Preconditions**:
 
-- A temp store written by edge/store instance A (three audit records).
+- A temp store written by edge/store instance A (three reservation/invocation pairs).
 - Fresh edge/store instances B and C over the same temp root (cross-process modeled without spawning).
-- The store-managed key artifact from A.
+- The store-managed `chain-key.<workspace>.json` artifact from A.
 
 **Steps**:
 
-1. Write three audit records with instance A; close/dispose A.
-2. Open instance B; verify the chain over A's records; assert zero breaks and zero false chain-break flags.
-3. Append a fourth audit record with B; assert it chains from A's third record and carries `auditSeq` 4.
-4. Open instance C; verify all four records; assert zero breaks.
+1. Write three audit-domain pairs with instance A; close/dispose A.
+2. Open instance B; verify the chain over A's reservation and invocation records; assert zero breaks and zero false chain-break flags.
+3. Append a fourth pair with B; assert its reservation chains from A's third invocation, the invocation chains from the reservation, and the pair carries `auditSeq` 4.
+4. Open instance C; verify all four pairs; assert zero breaks.
 5. Negative control: a copy whose key artifact is replaced with a different key fails verification; the unmodified store still passes.
 
 **Expected Outcome**:
 
-- Records written by an earlier instance verify from a later instance with zero false chain-break flags.
+- Records written by an earlier instance (both kinds) verify from a later instance with zero false chain-break flags.
 - The durable key artifact is reused, not regenerated; the chain is continuous across the instance boundary.
 - A different key fails verification (key sensitivity), proving the cross-instance pass is not vacuous.
 - No process is spawned; the case exercises the durable artifact and fresh store/edge instances.
 
 **Notes / Clarifications**:
 
-- This is the v1.1 cross-process continuity case required by AC-F4-2/Appendix B. It uses fresh store/edge instances over the same temp root, consistent with the repository's no-spawn rule.
+- This is the v1.2 cross-process continuity case required by AC-F4-2/Appendix B. It uses fresh store/edge instances over the same temp root, consistent with the repository's no-spawn rule.
 
 ---
 
-#### TC-GH223-039 - Failed append leaves a skipped `auditSeq` reported in-band while the command outcome is unchanged
+#### TC-GH223-039 - Two-phase append failure matrix: orphan reservation vs failed reservation
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-1, F-5, AC-F1-1, AC-F5-1, NFR-1; DEC-8
+**Related IDs**: F-1, F-5, AC-F1-1, AC-F5-1, DM-1, DM-6, EVT-1, EVT-2, NFR-1; DEC-8
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/audit-ordinal-gap.test.ts` (new)
@@ -1512,28 +1551,28 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 **Preconditions**:
 
 - A temp audit store and a synthetic success command.
-- Three sequential invocations: invocation 1 succeeds, invocation 2's audit append is armed with a generic fault at `append-before-flush`, invocation 3 succeeds.
-- The delivered `auditSeq` allocation behavior (see NEW-GAP-1).
+- Two fixtures: (a) the invocation append fails after its reservation lands; (b) the reservation append itself fails (nothing consumed).
+- A second-append fault wrapper over `createTestEdge` that raises `append-before-flush` only on the invocation append for fixture (a), and on the reservation append for fixture (b).
 
 **Steps**:
 
-1. Run invocation 1; read the record; assert `auditSeq` is `1`.
-2. Arm the generic append fault; run invocation 2; assert the command still succeeds with exit code `0`, its `data` line is emitted, the diagnostics carry `state.write.failed`, and no audit record landed.
-3. Disarm; run invocation 3; read the records.
-4. Assert the audit ordinals are `1` and `3` — ordinal `2` is skipped — and invocation 3's record is otherwise complete.
-5. Query the read surface; assert an in-band finding names the skipped ordinal `2`, and that no error-table row/code is introduced.
-6. Assert the read acquires no fence and writes nothing.
+1. **Fixture (a), orphan reservation:** run invocation 1 successfully; assert its pair uses `auditSeq` `1`. Arm the second-append fault. Run invocation 2; assert the command still succeeds with exit code `0`, its `data` line is emitted, the diagnostics carry the classified state identity, no invocation record landed, and the reservation with `auditSeq` `2` + runId 2 is present. Disarm.
+2. Query the read surface; assert an in-band finding names the orphaned reservation's `auditSeq` `2` and runId, and that no error-table row/code is introduced.
+3. Run invocation 3; assert its pair uses `auditSeq` `3`, proving the ordinal advanced past the orphan.
+4. **Fixture (b), failed reservation:** run invocation 1 successfully (`auditSeq` `1`). Arm the first-append fault. Run invocation 2; assert the command still succeeds with exit code `0`, the diagnostics carry the classified state identity, and neither a reservation nor an invocation landed. Disarm.
+5. Query the read surface; assert there is no orphan finding (nothing was consumed). Run invocation 3; assert its pair uses `auditSeq` `2` — the failed attempt's ordinal was reallocated, with no gap.
+6. In both fixtures, assert no partial frame survives and the read acquires no fence and writes nothing.
 
 **Expected Outcome**:
 
-- The failed append leaves no partial record and does not change the command's outcome or exit code.
-- The next successful append carries a later ordinal (`3`), proving the omission.
-- The verified read reports the skipped ordinal `2` in-band; the finding is evidence, not an error-table identity.
-- Exactly-once holds for invocations whose audit write succeeds; the degraded invocation is explicitly absent.
+- **Scenario (a):** the reservation lands, the invocation is absent, and the reservation orphan is the durable skipped-ordinal finding; the next pair's ordinal is `3`; the command outcome and exit code are unchanged.
+- **Scenario (b):** the reservation itself fails, nothing is consumed, no gap finding is reported, and the next pair reuses ordinal `2`; the command outcome and exit code are unchanged.
+- Both failures are loud with an existing state identity; neither introduces an error-table row.
+- Exactly-once counts invocation records only; the degraded invocation is explicitly absent in (a) and fully absent in (b).
 
 **Notes / Clarifications**:
 
-- **Blocking dependency:** the mechanism by which a failed append consumes an ordinal is not specified. If the ordinal is derived from the last verified record, no gap appears and this case cannot pass. NEW-GAP-1 requires the spec to pin a durable ordinal allocation (for example a store-managed counter artifact advanced inside the shared fence before the write) or to revise DEC-8. This case fails loudly until that is pinned; it is not silently relaxed.
+- OQ-15 resolves the former ordinal-durability gap: the two-phase append makes ordinal consumption durable ledger truth, so both failure modes are now testable. The second-append fault wrapper is a test-only edge decorator; no process is spawned. TC-GH223-043/044 isolate each scenario in depth.
 
 ---
 
@@ -1557,7 +1596,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 1. Query with the bound omitted.
 2. Query with each clearly invalid bound: a negative number, a non-integer, a non-number. Probe bound `0` separately and record whether the delivered validator refuses it or treats it as an empty bound.
-3. Query with each invalid filter: an unknown outcome class, a malformed/absent `startedAt` window, a window whose start is after its end, a non-string `scope`/`repo`.
+3. Query with each invalid filter: an unknown outcome class, a malformed/non-integer `startedAt` bound, a window whose start is after its end, a non-string `scope`/`repo`. An entirely omitted window is **valid** (unfiltered on time) and must not be listed as invalid.
 4. Assert each refusal is classified `input.value.rejected` (user/validation identity) and matches the existing table entry; no records are returned.
 5. Assert no fence is acquired, nothing is written, and no new error-table row exists.
 6. Negative control: an equivalent valid query succeeds, proving the refusal is specific.
@@ -1571,11 +1610,11 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Notes / Clarifications**:
 
-- OQ-T3 is resolved in spec v1.1: `input.value.rejected` is the refusal identity. The exact validation boundary (which malformed values are rejected, including whether bound `0` is invalid) is pinned at delivery; the cases above are the enumerated obvious classes and the 0 probe records the delivered rule.
+- OQ-6/OQ-T3 is resolved in spec v1.2: `input.value.rejected` is the refusal identity. The exact validation boundary (which malformed values are rejected, including whether bound `0` is invalid) is pinned at delivery; the cases above are the enumerated obvious classes and the 0 probe records the delivered rule.
 
 ---
 
-#### TC-GH223-041 - `startedAt` time-window filter returns only records inside the window
+#### TC-GH223-041 - `startedAt` time window is inclusive `[from,to]` with an omitted side unbounded
 
 **Scenario Type**: Happy Path
 **Impact Level**: Important
@@ -1588,26 +1627,28 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Preconditions**:
 
-- A temp store with audit records whose `startedAt` values are `1000`, `2000`, `3000`, and `4000` ms, plus interleaved non-audit records.
+- A temp store with invocation records whose integer-epoch-ms `startedAt` values are `1000`, `2000`, `3000`, and `4000`, each with its reservation, plus interleaved non-audit records.
 - A read-surface fixture declaring a `startedAt` window and a bound.
 
 **Steps**:
 
-1. Query the window `[1500, 3500]`; assert only the `2000` and `3000` records return.
-2. Query `[0, 500]` and `[4500, 5000]`; assert each returns an explicit verified-empty result, not an error or a silent zero.
-3. Query with the window plus a `scope` filter and a bound; assert the filters compose and truncation is reported in-band.
-4. Record the delivered boundary rule for records exactly on a window edge (inclusive/exclusive); use interior windows for the core assertions and one boundary probe.
+1. Query the inclusive window `[2000, 3000]`; assert the `2000` and `3000` records return (both boundary records included) and `1000`/`4000` do not.
+2. Query `[1001, 2999]`; assert only the `2000` record returns, proving inclusive boundaries in practice.
+3. Query `[0, 500]` and `[4500, 5000]`; assert each returns an explicit verified-empty result, not an error or a silent zero.
+4. Query with only `from = 2500`; assert `3000` and `4000` return (unbounded `to`). Query with only `to = 2500`; assert `1000` and `2000` return (unbounded `from`).
+5. Query with the window plus a `scope` filter and a bound; assert the filters compose and truncation is reported in-band.
 
 **Expected Outcome**:
 
-- The time-window filter operates on `startedAt` and returns exactly the records inside the window.
+- The time-window filter operates on integer-epoch-ms `startedAt` with inclusive `[from, to]` bounds; records exactly at either boundary are included.
+- An omitted `from` or `to` is unbounded on that side; a query with neither is unfiltered on the time dimension.
 - Empty windows return verified-empty, not torn/unknown and not an error.
 - The window composes with `scope` and the bound; truncation stays in-band.
-- The boundary rule is recorded and applied consistently.
+- Reservations never appear as results; only invocation records are filtered.
 
 **Notes / Clarifications**:
 
-- Boundary inclusivity and the exact `startedAt` encoding are not pinned (NEW-GAP-3); the core assertions use interior windows, and one boundary probe records the delivered rule.
+- OQ-17 is resolved in spec v1.2: inclusive `[from, to]`, omitted side unbounded, integer epoch milliseconds UTC. No boundary-rule ambiguity remains.
 
 ---
 
@@ -1624,7 +1665,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Preconditions**:
 
-- A temp store with four audit records: (A, repo R1), (A, repo absent), (B, repo R2), (A, repo R2).
+- A temp store with four invocation records (each with its reservation): (A, repo R1), (A, repo absent), (B, repo R2), (A, repo R2).
 - Exact-match filter fixture values.
 
 **Steps**:
@@ -1639,50 +1680,317 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 - `scope` and `repo` match by exact comparison; case and prefix near-matches do not match.
 - Repo-absent records are excluded only from repo-constrained results and remain reachable through unfiltered or scope-constrained queries.
-- The filter results are verified audit records only; no non-audit kinds leak in.
+- The filter results are verified invocation records only; reservations and non-audit kinds never leak in.
 
 **Notes / Clarifications**:
 
-- OQ-T11 is resolved in spec v1.1: exact-match semantics with repo-null exclusion from repo-constrained results only.
+- OQ-14/OQ-T11 is resolved in spec v1.2: exact-match semantics with repo-null exclusion from repo-constrained results only.
+
+---
+
+#### TC-GH223-043 - Reservation-orphan scenario: invocation append fails after the reservation lands
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-1, F-5, AC-F1-1, AC-F5-1, DM-6, EVT-2, NFR-1; DEC-8
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/audit-reservation-orphan.test.ts` (new)
+**Tags**: @backend, @audit, @reservation, @ordinal
+
+**Preconditions**:
+
+- A temp audit store and a synthetic success command.
+- A second-append fault wrapper over `createTestEdge` that raises `append-before-flush` only on the invocation append, leaving the reservation append untouched.
+- Invocation 1 succeeds; invocation 2's invocation append fails; invocation 3 succeeds.
+
+**Steps**:
+
+1. Run invocation 1; assert its reservation/invocation pair uses `auditSeq` `1`.
+2. Arm the second-append fault; run invocation 2; assert the command succeeds with exit code `0`, its `data` line is emitted, the diagnostics carry `state.write.failed`, no invocation record landed, and the reservation with `auditSeq` `2` + runId 2 is present.
+3. Disarm; query the read surface unfiltered; assert the in-band finding names the orphaned reservation's `auditSeq` `2` and runId 2. Repeat with a `scope`/`repo`/`startedAt` filter that matches no invocation; assert the orphan finding is still reported (findings are not filtered).
+4. Verify the chain over the surviving audit-domain sequence; assert zero breaks — the orphan is a finding, not a chain break.
+5. Run invocation 3; assert its pair uses `auditSeq` `3`, proving the ordinal advanced past the orphan.
+6. Assert exactly one `audit.invocation` exists for invocations 1 and 3 and none for invocation 2; assert no partial invocation frame survives.
+7. Assert no error-table row/code is introduced; the read acquires no fence and writes nothing.
+
+**Expected Outcome**:
+
+- The reservation lands and the invocation is absent: the reservation orphan is the durable DEC-8 skipped-ordinal finding, naming `auditSeq` 2 and the runId; it is reported even when the query filters would match no invocation record.
+- The command's outcome and exit code are unchanged; the failure is loud with `state.write.failed`.
+- The chain verifies over the surviving sequence; the orphan is not a chain break.
+- The next pair's ordinal is `3`; exactly-one counts invocation records only, so the degraded invocation is explicitly absent.
+- No partial frame, no new error-table row, no read-side fence or write.
+
+**Notes / Clarifications**:
+
+- This isolates scenario (a) of DEC-8; TC-GH223-039 covers the decision matrix and TC-GH223-044 covers scenario (b). The fault wrapper is test-only edge decoration; no process is spawned.
+
+---
+
+#### TC-GH223-044 - Reservation-failure scenario: reservation append fails, nothing consumed, no gap claimed
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-1, AC-F1-1, DM-6, EVT-2, NFR-1; DEC-8
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/audit-reservation-failure.test.ts` (new)
+**Tags**: @backend, @audit, @reservation, @ordinal
+
+**Preconditions**:
+
+- A temp audit store and a synthetic success command.
+- A first-append fault wrapper over `createTestEdge` that raises `append-before-flush` on the reservation append.
+- Invocation 1 succeeds; invocation 2's reservation append fails; invocation 3 succeeds.
+
+**Steps**:
+
+1. Run invocation 1; assert its pair uses `auditSeq` `1`.
+2. Arm the first-append fault; run invocation 2; assert the command succeeds with exit code `0`, its `data` line is emitted, the diagnostics carry `state.write.failed`, and neither a reservation nor an invocation landed.
+3. Disarm; query the read surface; assert there is **no** orphan finding and no skipped-ordinal finding.
+4. Run invocation 3; assert its pair uses `auditSeq` `2` — the failed attempt consumed nothing, so the ordinal was reallocated with no gap.
+5. Assert no error-table row/code is introduced and no partial frame survives.
+
+**Expected Outcome**:
+
+- The reservation itself fails: nothing is consumed, no gap is claimed, and the read surface reports no orphan.
+- The command's outcome and exit code are unchanged; the failure is loud with `state.write.failed`.
+- The next pair reuses `auditSeq` `2`, proving the ordinal was not consumed.
+- Exactly-one counts invocation records only; the degraded invocation is fully absent.
+
+**Notes / Clarifications**:
+
+- This isolates scenario (b) of DEC-8; TC-GH223-039 covers the decision matrix and TC-GH223-043 covers scenario (a). The test must not assert a gap finding here.
+
+---
+
+#### TC-GH223-045 - Altered reservation record with recomputed checksum is flagged as a chain break with position
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-4, AC-F4-1, DM-2, DM-6, EVT-2, NFR-3
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/audit-chain-reservation.test.ts` (new)
+**Tags**: @backend, @audit, @chain, @tamper, @reservation
+
+**Preconditions**:
+
+- A verified clean audit ledger containing reservation/invocation pairs.
+- A mutation helper that edits a *reservation* record's payload (e.g. `auditSeq` or `runId`), recomputes the state layer's unkeyed checksum so the store still reads as framing/checksum-clean, and leaves the chain value unchanged.
+
+**Steps**:
+
+1. Verify the clean ledger: zero breaks.
+2. Apply the reservation mutation at a known audit position (not the first).
+3. Verify again; inspect the break evidence.
+4. Assert records before the break remain verified-readable.
+5. Repeat with a mutation that makes the reservation's `auditSeq` differ from its invocation's `auditSeq`; assert the chain breaks at the altered reservation.
+6. Run the clean control last and assert it still verifies.
+
+**Expected Outcome**:
+
+- The reservation mutation is flagged as a chain break naming the record position; a tampered reservation is as detectable as a tampered invocation.
+- The unkeyed checksum being recomputed does not produce a false "verified" verdict.
+- Evidence names the position only — never payload content or checksum bytes.
+- Records before the break remain verified-readable; the clean control verifies.
+
+**Notes / Clarifications**:
+
+- TC-GH223-024 is the invocation-record counterpart; together they cover both audit kinds. The chain is a continuous link sequence across reservation and invocation records.
+
+---
+
+#### TC-GH223-046 - Derived-document rebuild preserves the reservation-orphan finding
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-5, AC-F5-1, DM-6, EVT-2, NFR-1, NFR-8; DEC-8
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/audit-rebuild-orphan.test.ts` (new)
+**Tags**: @backend, @audit, @read-surface, @rebuild
+
+**Preconditions**:
+
+- A temp store containing a reservation orphan (scenario (a)) and a valid derived index.
+- Helpers to delete and corrupt the derived index/documents without touching the ledger.
+
+**Steps**:
+
+1. Create the orphan reservation via the second-append fault; assert the read surface reports the finding.
+2. Delete the derived index (and any derived documents), then perform a fresh verified read; assert the orphan finding is still reported with the same `auditSeq`/runId.
+3. Corrupt the derived index, then perform a verified read; assert the rebuild occurs from the ledger and the finding persists.
+4. Reopen the store with a fresh store/edge instance; assert the finding persists.
+5. Assert no derived document carries ordinal truth and the read added no audit record/fence.
+
+**Expected Outcome**:
+
+- The orphan finding is folded from verified ledger truth on every read; deleting or corrupting a derived document does not lose it.
+- A rebuilt store reports the same orphan `auditSeq`/runId.
+- Nothing derived carries ordinal truth; the ledger remains the source.
+- The read acquires no fence and writes no audit record (index rebuild, if any, is a derived write and is reported separately per TR-12).
+
+**Notes / Clarifications**:
+
+- This is the v1.2 rebuild-durability assertion: reservation and invocation records are both ledger truth, so gap evidence survives derived-document rebuild by construction.
+
+---
+
+#### TC-GH223-047 - Key-artifact open failures reuse existing state identities
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-4, AC-F4-2, DM-5, NFR-4, NFR-9; DEC-7
+**Test Type(s)**: Integration, Contract
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/audit-key-open-failures.test.ts` (new); `tests/fixtures/state/harness.ts`
+**Tags**: @backend, @audit, @chain, @security, @key-artifact
+
+**Preconditions**:
+
+- Three copies of a store that already has audit-domain records and a valid `chain-key.<workspace>.json` artifact, plus one empty store with no prior audit append for the first-append creation check.
+- POSIX permissions available for the wrong-bits fixture.
+
+**Steps**:
+
+1. **Absent on non-first open:** remove the artifact from copy (a); open/read the store; assert `state.keys.missing`. Assert that a store with no audit records still creates the artifact on its first audit append (creation unchanged); a bare open does not create it.
+2. **Corrupt/unparsable:** truncate or replace the artifact with invalid bytes in copy (b); open/read; assert the failure is in the `state.store.torn` family.
+3. **Wrong permission bits:** change the artifact mode away from `0600` in copy (c); open/read; assert `state.permission.denied` (POSIX only; record the platform conditional).
+4. Assert none of the three failures introduces a new error-table row; assert the valid copy still verifies.
+5. Run the error-table sync check and assert zero drift (TC-GH223-033 owns the broader no-drift assertion).
+
+**Expected Outcome**:
+
+- Absent on a non-first open → `state.keys.missing`; corrupt/unparsable → `state.store.torn` family; wrong bits → `state.permission.denied`.
+- All three reuse existing state identities; no new rows.
+- First-open creation is unchanged; a valid artifact still verifies.
+- The failures are classified and loud, not silent.
+
+**Notes / Clarifications**:
+
+- OQ-16 resolves the key-open-failure semantics. TC-GH223-037 covers creation, `0600`, reuse, and successful verification; this case isolates the three open failures.
+
+---
+
+#### TC-GH223-048 - Surviving-tail reservation after salvage remains the DEC-8 finding
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-4, F-5, AC-F4-3, AC-F5-1, DM-6, EVT-2, NFR-8; DEC-8
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/audit-salvage-reservation.test.ts` (new)
+**Tags**: @backend, @audit, @salvage, @reservation, @ordinal
+
+**Preconditions**:
+
+- A store with valid audit-domain pairs, then a reservation whose invocation is torn or never landed, so the reservation is the last valid frame.
+- The explicit `salvage` operation and its evidence.
+
+**Steps**:
+
+1. Verify the chain over the valid prefix; assert the pre-salvage torn read classifies.
+2. Invoke `salvage`; read the operation evidence (truncation position/extent).
+3. Assert the reservation survives as the last valid frame; assert no partial invocation frame survives.
+4. Query the read surface; assert the surviving reservation is reported as the DEC-8 orphan finding naming its `auditSeq`/runId.
+5. Verify the chain over the surviving sequence; assert the reported removal is not a chain break and verification is continuous.
+6. Append a new pair; assert its `auditSeq` is greater than the surviving reservation's ordinal and it chains from the surviving reservation.
+7. Assert the reservation is never silently dropped by a read.
+
+**Expected Outcome**:
+
+- Salvage removes trailing invocations and reservations wholesale but leaves the last-valid-frame reservation intact.
+- The surviving reservation is durable gap evidence, reported in-band by the read surface; it is never silently dropped.
+- Chain verification is continuous over the surviving sequence; the reported removal is not a break.
+- The next pair chains from the surviving reservation and uses a greater ordinal.
+
+**Notes / Clarifications**:
+
+- This isolates the OQ-18 corollary pinned in v1.2; TC-GH223-027 covers wholesale removal and repair continuity.
+
+---
+
+#### TC-GH223-049 - Altered orphan reservation is flagged as a chain break with position
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-4, AC-F4-1, DM-2, DM-6, EVT-2, NFR-3
+**Test Type(s)**: Integration
+**Automation Level**: Automated (blocked by MR-1; see §8.3)
+**Target Layer / Location**: `tests/behaviour/audit-chain-reservation-orphan.test.ts` (new)
+**Tags**: @backend, @audit, @chain, @tamper, @reservation
+
+**Preconditions**:
+
+- A store with an orphan reservation (reservation landed, its invocation absent) and no following audit-domain record.
+- A mutation helper that edits the orphan reservation's `auditSeq`/`runId`, recomputes the state layer's unkeyed checksum, and leaves any audit chain value untouched.
+
+**Steps**:
+
+1. Verify the clean ledger; assert the orphan finding is reported.
+2. Apply the mutation to the orphan reservation.
+3. Verify the chain again.
+4. Assert the alteration is flagged as a chain break naming the reservation position; assert no false "verified" verdict.
+5. Assert the finding/evidence names the position only — never payload or checksum bytes.
+6. Run the clean control last and assert it verifies with the original orphan finding.
+
+**Expected Outcome**:
+
+- The altered orphan reservation is flagged as a chain break naming its position; an orphan reservation is as tamper-evident as a paired one.
+- The orphan finding remains durable, but the tamper is flagged rather than accepted as verified.
+- Evidence names positions only.
+
+**Notes / Clarifications**:
+
+- **Blocked by MR-1 (§8.3):** DM-6 restricts the reservation payload to `auditSeq` + `runId`, while F-4 requires each audit-domain record to carry a chain value. There is no specified storage location for the reservation's keyed chain value (the state record envelope has only the unkeyed `checksum`; adding a field would be a schema change). For a paired reservation, the following invocation's stored `chainValue` exposes an alteration; for an **orphan** reservation there is no following link, so the alteration is undetectable. TC-GH223-045 covers the paired case; this case cannot pass until the spec pins the reservation chain-value storage (or narrows AC-F4-1 for orphan reservations). The case is present but blocked; it is not silently dropped from the plan.
 
 ---
 
 ### 5.3 Seeded Scenario Inheritance (SC-M1-23)
 
-The milestone pack's SC-M1-23 ("every invocation audited; scripted output trimmed") is the seeded scenario for M1-S22 and is inherited, not restated as a new scenario id. Its Given/When/Then maps to TC-GH223-022, which is the end-to-end case (scripted `lanes list --json` through a lane shell carrying the identity convention; exactly one audit record with runId, command, redacted args, exit, timing, `startedAt`, `auditSeq`, and `agentIdentity`; one minified `{"data":...}` line; the failure line keeps `runId` as a top-level key; identity present with the `claimed` marker and absent-never-inferred; re-run yields a second record with a new runId and distinct timestamp/ordinal; no edge-registered secret in the record). The scenario's assertion families are extended by the rest of this plan:
+The milestone pack's SC-M1-23 ("every invocation audited; scripted output trimmed") is the seeded scenario for M1-S22 and is inherited, not restated as a new scenario id. Its Given/When/Then maps to TC-GH223-022, which is the end-to-end case (scripted `lanes list --json` through a lane shell carrying the identity convention; exactly one `audit.invocation` plus its preceding `audit.reservation` with the same ordinal; one minified `{"data":...}` line; the failure line keeps `runId` as a top-level key; identity present with the `claimed` marker and absent-never-inferred; re-run yields a second pair with a new runId and distinct integer-epoch-ms timestamp/ordinal; no edge-registered secret in either record). The scenario's assertion families are extended by the rest of this plan:
 
 | SC-M1-23 assertion family | Inheriting / extending TCs |
 |---------------------------|----------------------------|
-| Exactly one audit record per invocation | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-022 |
-| Record carries runId, command, redacted args, exit, timing, `startedAt`, `auditSeq`, identity | TC-GH223-005, TC-GH223-011, TC-GH223-022, TC-GH223-035, TC-GH223-036 |
+| Exactly one `audit.invocation` per invocation (reservations never counted) | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-022 |
+| Record carries runId, command, redacted args, exit, timing, integer-epoch-ms `startedAt`, `auditSeq`, identity | TC-GH223-005, TC-GH223-011, TC-GH223-022, TC-GH223-035, TC-GH223-036 |
 | Scripted success is one minified `{"data":...}` line without schemaVersion/runId/timing | TC-GH223-014, TC-GH223-015, TC-GH223-022 |
 | Error line keeps runId as a top-level key | TC-GH223-016, TC-GH223-017, TC-GH223-022 |
 | Identity captured when present with the `claimed` marker | TC-GH223-011, TC-GH223-013, TC-GH223-022 |
 | Absent, empty, and whitespace-only identity are never inferred | TC-GH223-012, TC-GH223-022 |
-| Re-run produces a second record with a new runId, distinct `startedAt`, and later `auditSeq` | TC-GH223-006, TC-GH223-022, TC-GH223-036 |
-| No edge-registered secret patterns in the record | TC-GH223-031, TC-GH223-032, TC-GH223-022 |
-| Extensions beyond the seeded text: all outcome classes, interactive/override modes, golden/conformance both modes, durable key/cross-process continuity, ordinal-gap detection, salvage continuity, bounded reads with time-window/scope/repo/refusal | TC-GH223-007..010, TC-GH223-018..021, TC-GH223-023..034, TC-GH223-037..042 |
+| Re-run produces a second pair with a new runId, distinct `startedAt`, and later `auditSeq` | TC-GH223-006, TC-GH223-022, TC-GH223-036 |
+| No edge-registered secret patterns in either record | TC-GH223-031, TC-GH223-032, TC-GH223-022 |
+| Extensions beyond the seeded text: all outcome classes, interactive/override modes, golden/conformance both modes, two-phase reservation/ordinal failure modes, both-kind chain, durable key/open failures, rebuild durability, salvage-tail reservation, bounded reads with time-window/scope/repo/refusal | TC-GH223-007..010, TC-GH223-018..021, TC-GH223-023..034, TC-GH223-037..048 |
 
 Rules honored here:
 
 - The scenario id `SC-M1-23` is stable and cited verbatim in the test titles/describes of TC-GH223-022.
 - Divergence after delivery is a defect, not a test-plan choice. The stand-in `lanes list` program is the only substitution; it exists because the real command ships later, and it preserves the scenario's shape (`lanes list --json` through an agent shell).
-- The seeded scenario's "no secret patterns" wording is resolved by OQ-T9: tests assert no edge-registered secret value survives into any record field; a broader pattern scan is not invented.
+- The seeded scenario's "no secret patterns" wording is resolved by OQ-T9/OQ-12: tests assert no edge-registered secret value survives into any record field; a broader pattern scan is not invented.
 
 ## 6. Environments and Test Data
 
 - **Runtime**: Bun pinned by `.bun-version`; `bun test` (or `pnpm test`) for `tests/**/*.test.ts`. No external services, no network, no process spawning, no real process streams.
 - **Directories**: every audit store lives under a per-test `mkdtempSync` root labelled with the `gh223-` prefix; teardown removes it recursively. No test writes the repository tree, the user state directory, or the live ledger.
-- **State fixtures**: `tests/fixtures/state/harness.ts` supplies `createTestEdge` (`arm`, `armExhaustion`, `disarm`, `raised`, mutable clock), `makeIdentity`, `openStore`, `withinFence`, `ledgerPath`, `ledgerText`, `ledgerLines`, `ledgerBytes`, `ledgerDigest`, `independentChecksum`, `digestPaths`, `listStoreFiles`, `quarantineDirectory`, `quarantineFiles`, `salvageTail`. v1.1 adds audit helpers: `makeAuditStore`, `seedAuditRecords`, `auditRecordsOf`, `auditOrdinals`, `mutateAuditRecord`, `tamperWithRecomputedChecksum`, `assertNoChainBreak`, `keyArtifactPath`, `readKeyArtifact`, `keyArtifactMode`, `reopenStore`, and `chainVerdict` (names fixed at delivery).
-- **CLI fixtures**: `tests/golden/helpers.ts` supplies `runCase`, `runDescriptor`, `bufferSink`, `programFor`, `loadProgram`, `SYNTHETIC_BRAND`. This change extends the injected fact type with `mode` (interactive/scripted), `environment` (string map), and `startTicks`/`startedAt` fixtures; each golden run creates its own temp audit store, and the store generates its own key artifact, so no fixture directory is a live store and no key is committed.
-- **New audit fixtures**: `tests/fixtures/audit/cases.json` (outcome/identity/time-window/scope/repo/bounds matrix), `tests/fixtures/audit/mutations.json` (declarative tamper matrix), and `tests/fixtures/audit/lane-environment.json` (declared lane variables only). A second unit-only key fixture may live in `tests/fixtures/audit/chain-keys.json` for the pure chain half; integration cases read the store-generated artifact. Fixtures are never named `*.test.ts`.
+- **State fixtures**: `tests/fixtures/state/harness.ts` supplies `createTestEdge` (`arm`, `armExhaustion`, `disarm`, `raised`, mutable clock), `makeIdentity`, `openStore`, `withinFence`, `ledgerPath`, `ledgerText`, `ledgerLines`, `ledgerBytes`, `ledgerDigest`, `independentChecksum`, `digestPaths`, `listStoreFiles`, `quarantineDirectory`, `quarantineFiles`, `salvageTail`. v1.2 adds audit helpers: `makeAuditStore`, `seedAuditPairs`, `auditRecordsOf`, `auditPairs`, `reservationOrphans`, `mutateAuditRecord`, `tamperWithRecomputedChecksum`, `assertNoChainBreak`, `keyArtifactPath` (`chain-key.<workspace>.json`), `readKeyArtifact`, `keyArtifactMode`, `removeKeyArtifact`, `corruptKeyArtifact`, `chmodKeyArtifact`, `reopenStore`, `armSecondAppendFault`, and `chainVerdict` (names fixed at delivery).
+- **CLI fixtures**: `tests/golden/helpers.ts` supplies `runCase`, `runDescriptor`, `bufferSink`, `programFor`, `loadProgram`, `SYNTHETIC_BRAND`. This change extends the injected fact type with `mode` (interactive/scripted), `environment` (string map), and `startTicks`/`startedAt` fixtures; each golden run creates its own temp audit store, and the store generates its own `chain-key.<workspace>.json`, so no fixture directory is a live store and no key is committed.
+- **New audit fixtures**: `tests/fixtures/audit/cases.json` (outcome/identity/time-window/scope/repo/bounds matrix), `tests/fixtures/audit/mutations.json` (declarative tamper matrix covering both kinds), `tests/fixtures/audit/reservations.json` (reservation orphan/failed-reservation cases), `tests/fixtures/audit/key-open-failures.json` (absent/corrupt/wrong-bits fixture descriptors), and `tests/fixtures/audit/lane-environment.json` (declared lane variables only). A unit-only key fixture may live in `tests/fixtures/audit/chain-keys.json` for the pure chain half; integration cases read the store-generated artifact. Fixtures are never named `*.test.ts`.
 - **Golden fixtures**: existing `tests/fixtures/result/envelopes/**` cases gain `mode` in `injected.json`/`meta.json` and remain interactive goldens. New scripted cases: `scripted-success-data`, `scripted-success-void`, `scripted-classified-user`, `scripted-classified-platform`, `scripted-unknown-failure`, `scripted-broken-unknown-command`, `scripted-broken-unknown-flag`, `scripted-broken-missing-value`, `scripted-broken-conflicting-flags`. Scripted failure goldens carry the top-level key set `{"error":..., "runId":...}`. Every case keeps a `stdout.json`; no case may be skipped.
 - **Stand-in program**: `tests/fixtures/result/programs/lanes-list.json` models `lanes list --json` for SC-M1-23; it returns a deterministic data payload and declares no real `lanes` behaviour.
 - **Identity variable**: name = `SYNTHETIC_BRAND.environmentPrefix` + the delivered suffix constant; values are obviously fake (`pm-lane-7`, `qa-lane-3`) and never derived from the host. The record stores `agentIdentity` as the verbatim value plus the `claimed` marker; absent, empty, and whitespace-only environments are separate fixtures.
-- **Chaining key**: durable store-managed key material generated at the runtime edge on the first audit append and persisted as a `0600` artifact; it is not injected from configuration or the environment. Tests read the artifact through the delivered helper (single-user trust model). A second, different key artifact is used for the negative control; no real key is committed.
+- **Chaining key**: durable store-managed key material generated at the runtime edge on the first audit append and persisted as the store-layout `chain-key.<workspace>.json` artifact with `0600`; it is not injected from configuration or the environment. Tests read the artifact through the delivered helper (single-user trust model). A second, different key artifact is used for the negative control; no real key is committed. Open-failure fixtures remove, corrupt, or chmod the artifact.
 - **Secrets**: obviously fake edge-registered tokens matching the `planted-fake-` prefix; registered at the edge through the existing secret-registration seam. An unregistered canary is included to prove the guarantee's boundary. No real credentials or user data.
-- **Fault injection**: only named `StateEdgeFaultPoint` values. `append-before-flush` is used with generic `arm` (write failure) and `armExhaustion` (storage exhaustion); shared-fence contention is produced by holding the audit fence from a second store instance; salvage/repair use the existing operations. Tests assert both the resulting outcome and that the intended point was raised, so a typo fails loudly rather than passing vacuously.
-- **Platform**: permission assertions (including the key artifact's `0600` and the state directory's `0700`) remain POSIX-only with the existing platform conditional; no Linux run claims Windows ACL verification.
+- **Fault injection**: only named `StateEdgeFaultPoint` values. `append-before-flush` is used with generic `arm` (write failure) and `armExhaustion` (storage exhaustion); the two-phase tests use `armSecondAppendFault` to raise only on the invocation append (or only on the reservation append for scenario (b)); shared-fence contention is produced by holding the audit fence from a second store instance; salvage/repair use the existing operations. Tests assert both the resulting outcome and that the intended point was raised, so a typo fails loudly rather than passing vacuously.
+- **Platform**: permission assertions (including the key artifact's `0600` and the state directory's `0700`) remain POSIX-only with the existing platform conditional; no Linux run claims Windows ACL verification. The wrong-bits fixture is skipped with an explicit reason on non-POSIX; a skip is not a pass.
 - **Isolation**: each case gets a fresh store, clock, run-id factory, environment record, and generated key artifact; mutation-style structural checks copy into a temp root before mutating. Cross-process cases reopen the same temp root with a fresh store/edge instance; no process is spawned.
 
 ## 7. Automation Plan and Implementation Mapping
@@ -1731,6 +2039,13 @@ Rules honored here:
 | TC-GH223-040 | `tests/behaviour/audit-read-refusal.test.ts`, `tests/checks/error-table-sync.test.ts` | `bun test tests/behaviour/audit-read-refusal.test.ts tests/checks/error-table-sync.test.ts` | New + Existing – No Change |
 | TC-GH223-041 | `tests/behaviour/audit-read-time-window.test.ts` | `bun test tests/behaviour/audit-read-time-window.test.ts` | New |
 | TC-GH223-042 | `tests/behaviour/audit-read.test.ts` | same | New |
+| TC-GH223-043 | `tests/behaviour/audit-reservation-orphan.test.ts` | `bun test tests/behaviour/audit-reservation-orphan.test.ts` | New |
+| TC-GH223-044 | `tests/behaviour/audit-reservation-failure.test.ts` | `bun test tests/behaviour/audit-reservation-failure.test.ts` | New |
+| TC-GH223-045 | `tests/behaviour/audit-chain-reservation.test.ts` | `bun test tests/behaviour/audit-chain-reservation.test.ts` | New |
+| TC-GH223-046 | `tests/behaviour/audit-rebuild-orphan.test.ts` | `bun test tests/behaviour/audit-rebuild-orphan.test.ts` | New |
+| TC-GH223-047 | `tests/behaviour/audit-key-open-failures.test.ts`, `tests/fixtures/state/harness.ts` | `bun test tests/behaviour/audit-key-open-failures.test.ts` | New |
+| TC-GH223-048 | `tests/behaviour/audit-salvage-reservation.test.ts` | `bun test tests/behaviour/audit-salvage-reservation.test.ts` | New |
+| TC-GH223-049 | `tests/behaviour/audit-chain-reservation-orphan.test.ts` | `bun test tests/behaviour/audit-chain-reservation-orphan.test.ts` | Blocked by MR-1 — spec pin required before implementation |
 
 Companion suites touched by new exports, fixtures, or mode metadata but carrying no new case ids:
 
@@ -1738,17 +2053,17 @@ Companion suites touched by new exports, fixtures, or mode metadata but carrying
 |-------|------|
 | `tests/structure/result-contract.test.ts` | Extend the validator rule bijection for scripted rules (top-level `runId` on failure); keep interactive rules intact. |
 | `tests/structure/result-fixtures.test.ts` | Validate the new `mode`/`environment`/`startTicks` metadata and the new scripted fixture cases; keep hygiene checks. |
-| `tests/golden/timing.test.ts` | Assert scripted success lines carry no timing and interactive lines still do; audit records still carry `timing` and `startedAt`. |
+| `tests/golden/timing.test.ts` | Assert scripted success lines carry no timing and interactive lines still do; audit records still carry `timing` and integer-epoch-ms `startedAt`. |
 | `tests/golden/redaction.test.ts` | Run the existing redaction cases in both modes; scripted lines stay secret-free. |
 | `tests/golden/envelope-failure.test.ts` | Keep the existing interactive cases byte-identical; scripted failure goldens (with top-level `runId`) live in `tests/golden/envelope-scripted.test.ts`. |
 | `tests/structure/envelope-contract.test.ts` | Envelope shape and key set remain the M0-S3 contract; no new keys. |
 | `tests/structure/delivery-result-contract.test.ts` | Result contract types remain runtime-neutral; audit vocabulary does not leak into the envelope. |
-| `tests/structure/state-contract.test.ts`, `tests/structure/state-imports.test.ts`, `tests/structure/state-scope.test.ts` | New audit state modules and the key-artifact module obey contract-only imports, no branding, no new runtime API. |
+| `tests/structure/state-contract.test.ts`, `tests/structure/state-imports.test.ts`, `tests/structure/state-scope.test.ts` | New audit state modules (both kinds) and the key-artifact module obey contract-only imports, no branding, no new runtime API; the `chain-key.<workspace>.json` path is in the store-layout family. |
 | `tests/structure/cli-edge-seam.test.ts` | No ambient environment or clock read; identity/mode/key-generation facts arrive as injected data; single stream-write site unchanged. |
-| `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts` | No row changes; `input.value.rejected` remains the only refusal identity; sync stays green. |
+| `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts` | No row changes; `input.value.rejected` remains the only refusal identity; key-open failures reuse `state.keys.missing`/`state.store.torn`/`state.permission.denied`; sync stays green. |
 | `tests/checks/forbidden-literals.test.ts` | New source/docs contain no hardcoded product token. |
 | `tests/boundaries` | Run if any package/subpath import edge or `workspaceImports` entry changes. |
-| `tests/behaviour/state-torn.test.ts`, `state-salvage.test.ts`, `state-salvage-invariants.test.ts`, `state-index.test.ts`, `state-storage-exhausted.test.ts` | M0-S5/GH-222 regressions; expected to pass unchanged. |
+| `tests/behaviour/state-torn.test.ts`, `state-salvage.test.ts`, `state-salvage-invariants.test.ts`, `state-index.test.ts`, `state-storage-exhausted.test.ts`, `state-permissions.test.ts` | M0-S5/GH-222 regressions; expected to pass unchanged. |
 
 Fixture/corpus updates required (delivery-blocking, no new TC ids):
 
@@ -1756,26 +2071,26 @@ Fixture/corpus updates required (delivery-blocking, no new TC ids):
 - `tests/fixtures/result/envelopes/**/meta.json` — add `mode` and keep `outcome`; update the fixture-hygiene expectations.
 - `tests/fixtures/result/envelope-key-set.json` — add the scripted success key set (`data`) and the scripted failure key set (`error` + `runId`) beside the existing interactive sets.
 - `tests/fixtures/result/programs/lanes-list.json` — the SC-M1-23 stand-in.
-- `tests/fixtures/state/harness.ts` — audit/key-artifact/ordinal helpers listed in §6.
-- `tests/fixtures/audit/**` — cases (including time-window/scope/repo), mutations, lane environment; a unit-only key fixture if needed.
+- `tests/fixtures/state/harness.ts` — audit pair, reservation-orphan, key-artifact/open-failure, and second-append-fault helpers listed in §6.
+- `tests/fixtures/audit/**` — cases (including time-window/scope/repo), mutations for both kinds, reservation orphan/failure cases, key-open-failure descriptors, lane environment; a unit-only key fixture if needed.
 - Goldens are regenerated deliberately with the explicit test command; never by blanket rewrite. Existing interactive goldens must remain byte-identical unless the change intentionally amends them; scripted failure goldens must carry top-level `runId`.
 
 ### 7.1 Unit vs Integration Split
 
-- **Pure unit**: the record-assembly field mapping and payload validation half of TC-GH223-005; the `startedAt` conversion half of TC-GH223-035; the chain-link computation and verification half of TC-GH223-023; filter matching (scope/repo/time window), bound/truncation arithmetic, and skipped-ordinal detection in TC-GH223-028, TC-GH223-039, TC-GH223-041, TC-GH223-042; the scripted-projection validator in TC-GH223-021.
-- **Integration (in-process `runCli` + temp store)**: TC-GH223-001..004, 006, 007, 009..012, 014..019, 022..028, 030..032, 035..042.
+- **Pure unit**: the invocation/reservation assembly and payload validation half of TC-GH223-005; the integer-epoch-ms `startedAt` half of TC-GH223-035; the both-kind chain-link computation and verification half of TC-GH223-023; reservation-orphan detection, filter matching (scope/repo/inclusive time window), and bound/truncation arithmetic in TC-GH223-028, TC-GH223-039, TC-GH223-041, TC-GH223-042, TC-GH223-043, TC-GH223-046; the scripted-projection validator in TC-GH223-021.
+- **Integration (in-process `runCli` + temp store)**: TC-GH223-001..004, 006, 007, 009..012, 014..019, 022..028, 030..032, 035..048.
 - **Golden**: TC-GH223-014..018, 020 (and the existing cases updated by 016/017).
-- **Structure / contract / check / boundary**: TC-GH223-008, 013, 020, 021, 029, 032, 033, 034, 037, 040.
+- **Structure / contract / check / boundary**: TC-GH223-008, 013, 020, 021, 029, 032, 033, 034, 037, 040, 047.
 
 ### 7.2 Execution Strategy and Quality Gates
 
 During delivery (fail fast, narrow first):
 
 1. `bun test tests/behaviour/audit-ledger.test.ts tests/behaviour/audit-outcomes.test.ts tests/behaviour/audit-identity.test.ts tests/behaviour/audit-timestamp.test.ts`
-2. `bun test tests/behaviour/audit-write-failure.test.ts tests/behaviour/audit-malformed.test.ts tests/behaviour/audit-ordinal-gap.test.ts`
+2. `bun test tests/behaviour/audit-write-failure.test.ts tests/behaviour/audit-malformed.test.ts tests/behaviour/audit-ordinal-gap.test.ts tests/behaviour/audit-reservation-orphan.test.ts tests/behaviour/audit-reservation-failure.test.ts`
 3. `bun test tests/behaviour/scripted-trim.test.ts tests/behaviour/envelope-mode.test.ts tests/golden/envelope-scripted.test.ts`
-4. `bun test tests/behaviour/audit-chain.test.ts tests/behaviour/audit-chain-mutations.test.ts tests/behaviour/audit-chain-salvage.test.ts tests/behaviour/audit-key-exclusion.test.ts tests/behaviour/audit-key-artifact.test.ts tests/behaviour/audit-chain-cross-process.test.ts`
-5. `bun test tests/behaviour/audit-read.test.ts tests/behaviour/audit-read-refusal.test.ts tests/behaviour/audit-read-time-window.test.ts tests/behaviour/audit-redaction.test.ts tests/behaviour/audit-scenario-m1-23.test.ts`
+4. `bun test tests/behaviour/audit-chain.test.ts tests/behaviour/audit-chain-mutations.test.ts tests/behaviour/audit-chain-salvage.test.ts tests/behaviour/audit-chain-reservation.test.ts tests/behaviour/audit-salvage-reservation.test.ts tests/behaviour/audit-key-exclusion.test.ts tests/behaviour/audit-key-artifact.test.ts tests/behaviour/audit-key-open-failures.test.ts tests/behaviour/audit-chain-cross-process.test.ts`
+5. `bun test tests/behaviour/audit-read.test.ts tests/behaviour/audit-read-refusal.test.ts tests/behaviour/audit-read-time-window.test.ts tests/behaviour/audit-rebuild-orphan.test.ts tests/behaviour/audit-redaction.test.ts tests/behaviour/audit-scenario-m1-23.test.ts`
 6. `bun test tests/structure/audit-contract.test.ts tests/structure/audit-imports.test.ts tests/structure/audit-surface.test.ts tests/structure/scripted-projection.test.ts`
 
 In the `quality_gates` phase (phase 9), the required evidence is:
@@ -1795,73 +2110,96 @@ In the `quality_gates` phase (phase 9), the required evidence is:
 
 | ID | Risk | Impact | Mitigation |
 |----|------|--------|------------|
-| TR-1 | **`auditSeq` allocation durability is unspecified:** if the ordinal is derived from the last verified record (or kept only in process memory), a failed append may leave no gap or may leave a gap only within one process, and AC-F5-1/NFR-1/DEC-8's per-store skipped-ordinal requirement and TC-GH223-039 cannot be guaranteed | H | NEW-GAP-1: pin a durable per-store ordinal allocation (for example a store-managed counter artifact advanced inside the shared fence before the write) or revise DEC-8. TC-GH223-039 fails loudly until pinned; it is not silently relaxed. |
-| TR-2 | The key artifact's "verified on open" failure mode (missing/corrupt artifact) is not specified | M | NEW-GAP-2: TC-GH223-037 asserts creation, `0600`, reuse, and successful verification; the failure-mode assertion is added when the spec pins refuse/regenerate/classify semantics. |
-| TR-3 | `startedAt` serialization, time-window boundary inclusivity, and bound-0 semantics are not pinned | M | NEW-GAP-3: TC-GH223-035/040/041 assert instant equality, UTC encoding, interior windows, and the 0 probe; one boundary probe records the delivered rule. |
-| TR-4 | A salvage-removed audit record creates an `auditSeq` gap that may be indistinguishable from a failed-append omission | M | NEW-GAP-4: TC-GH223-027 asserts chain continuity and a monotonic next ordinal; the gap-finding distinction is not asserted until pinned. |
+| TR-1 | The two-phase append is two public-port appends, not one transaction; a crash or fault between them intentionally leaves a reservation orphan (not an invocation record) | H | TC-GH223-039/043/044/046 assert the orphan is durable evidence, the command outcome is unchanged, the next ordinal advances, and a failed reservation consumes nothing; the failed-reservation case explicitly asserts no gap. |
+| TR-2 | The key artifact must be a `chain-key.<workspace>.json` store-layout member created/read through the port's store-managed artifact path, not a new runtime API | H | TC-GH223-034 asserts the path family and no new runtime-API location; TC-GH223-037/047 assert creation, `0600`, reuse, and the three open-failure identities. |
+| TR-3 | `startedAt` is integer epoch milliseconds and the window is inclusive `[from,to]` with unbounded omitted sides; a date-string or half-open implementation would fail | M | TC-GH223-035 asserts `Number.isInteger(startedAt)` and the exact tick; TC-GH223-041 probes both boundaries and both omitted sides. |
+| TR-4 | Salvage removal is byte-contiguous and kind-agnostic; a partial reservation/invocation frame or a silently dropped last-valid-frame reservation would violate AC-F4-3/DEC-8 | M | TC-GH223-027 asserts wholesale removal and repair/salvage continuity; TC-GH223-048 asserts the surviving-tail reservation remains the orphan finding. |
 | TR-5 | Extending golden injected facts (mode/environment/startTicks) breaks existing byte goldens or the fixture-hygiene checks | M | Default existing cases to interactive and keep their stdout byte-identical; update `result-fixtures.test.ts` deliberately; regenerate goldens only with the explicit command. |
 | TR-6 | Chain algorithm drift makes an independent oracle impossible | L | Assert behaviour, not algorithm: same key + sequence verifies, different key fails, altered content fails, forged chain fails. If delivery pins the primitive, add an independent oracle in `tests/fixtures/audit/`; if it stays opaque, keep the behavioural assertions and do not duplicate an unpinned algorithm. |
-| TR-7 | Salvage/repair false positives erode trust in chain-break flags | M | TC-GH223-027 exercises both operations, asserts the reported removal is not a break, and includes a genuine alteration control so continuity does not suppress real breaks. |
-| TR-8 | Audit payload field names and outcome-class vocabulary churn between plan and delivery | M | Tests bind to the delivered runtime-neutral constants and assert semantic equality with the envelope projection; a field rename changes constants, not assertions. |
-| TR-9 | A handler-held shared fence could cause an audit append to fail `state.lock.busy` and be misread as an external contention | M | OQ-T8 is resolved as one shared audit fence; TC-GH223-010's contention case uses a second store instance holding the shared fence, and distinguishes it from a handler-held-fence scenario recorded as a delivery-time clarification. |
+| TR-7 | Salvage/repair false positives erode trust in chain-break flags | M | TC-GH223-027/048 exercise both operations, assert the reported removal is not a break, and include a genuine alteration control so continuity does not suppress real breaks. |
+| TR-8 | Audit payload field names/outcome-class vocabulary or the reservation's minimal key set churn between plan and delivery | M | Tests bind to the delivered runtime-neutral constants and assert semantic equality; TC-GH223-005 asserts the reservation key set is exactly `{auditSeq, runId}`. |
+| TR-9 | A handler-held shared fence could cause an audit append to fail `state.lock.busy` and be misread as external contention | M | OQ-11 is resolved as one shared audit fence; TC-GH223-010's contention case uses a second store instance holding the shared fence, and distinguishes it from a handler-held-fence scenario recorded as a delivery-time clarification. |
 | TR-10 | Test isolation failures (shared temp store, ambient env/clock, real streams) create flaky or cross-contaminated results | L | Fresh temp root, clock, run-id factory, environment, and generated key per case; no-spawn guard; structure tests forbid ambient env and clock reads. |
 | TR-11 | The redaction chokepoint lives in the CLI serializer, while the audit write persists in the state tier; sharing it could create a second serialization path or a tier violation | H | Redact the invocation fact on the CLI side before handing it to the audit write port; keep one redaction function (shared through a runtime-neutral module only if needed); TC-GH223-032's structure guard forbids a second raw writer, and TC-GH223-034 keeps the state tier branding-free. |
-| TR-12 | The state layer's verified read may rebuild the derived index (a write), while F-5/AC-F5-1 says the audit read writes nothing | M | TC-GH223-028/041/042 seed a store whose derived index is current, then assert the ledger and directory are byte-identical across queries. A rebuild-on-read would surface as a deviation, not be waived; the delivery can read the ledger without an index rebuild. |
-| TR-13 | The key artifact's persistence path/API is not pinned (public-port document vs a new store-managed artifact write path) | M | NEW-GAP-5: TC-GH223-037 uses the delivered path constant; TC-GH223-034 asserts no new runtime-API location. The delivery pins the artifact write through the existing port. |
+| TR-12 | The state layer's verified read may rebuild the derived index (a write), while F-5/AC-F5-1 says the audit read writes nothing | M | TC-GH223-028/041/042 seed a store whose derived index is current, then assert the ledger and directory are byte-identical across queries. A rebuild-on-read would surface as a deviation, not be waived; TC-GH223-046 asserts the orphan finding survives a rebuild. |
+| TR-13 | The key-artifact open-failure identities could be mis-mapped or introduce a new row | M | TC-GH223-047 asserts absent-on-non-first-open → `state.keys.missing`, corrupt → `state.store.torn` family, wrong bits → `state.permission.denied`; TC-GH223-033 keeps the bidirectional no-drift assertion. |
+| TR-14 | The reservation payload could accidentally carry invocation context (arguments/outcome/identity), leaking redacted-sensitive data or duplicating the record | H | TC-GH223-002/003/004/005/022 assert the reservation key set is exactly `{auditSeq, runId}`; TC-GH223-031/032 assert no edge-registered secret in either kind. |
+| TR-15 | Ordinal allocation from verified ledger truth must happen inside the same fence acquisition as the two appends; a read outside the fence could race a concurrent process | H | TC-GH223-005's call-order spy asserts `acquireFence` → `readRecords` → `append(reservation)` → `append(invocation)` → `releaseFence`; TC-GH223-023/039 exercise the shared fence. |
 
 ### 8.2 Assumptions
 
-- **ASM-1**: M0-S3 (result contract, redaction chokepoint, deterministic in-process surface, golden and conformance tooling) and M0-S5 (state layer: ledger truth, verified reads, fences, classification, salvage, additive kinds, artifact boundaries) are delivered at the change base (spec v1.1 verified at HEAD `94036965`), as the spec assumes.
+- **ASM-1**: M0-S3 (result contract, redaction chokepoint, deterministic in-process surface, golden and conformance tooling) and M0-S5 (state layer: ledger truth, verified reads, fences, classification, salvage, additive kinds, artifact boundaries) are delivered at the change base (spec v1.2 verified at HEAD `47408a3e`), as the spec assumes.
 - **ASM-2**: `CliDependencies`/the runtime edge can be extended with an injected environment record, a stream-capability mode fact, a `startedAt` clock fact, and an audit write port without introducing an ambient read; `tests/structure/cli-edge-seam.test.ts` is updated in the same change to keep the no-ambient-read invariant.
-- **ASM-3**: The audit kind is additive within `delivery.state.v1`; no migration, schema bump, or new driver discriminant is required.
-- **ASM-4**: The chaining key is durable store-managed key material generated at the runtime edge and persisted as a `0600` artifact; tests read the artifact through the delivered helper (single-user trust model). The algorithm is verified behaviourally, not pinned to a specific primitive.
+- **ASM-3**: Both audit kinds (`audit.invocation`, `audit.reservation`) are additive within `delivery.state.v1`; no migration, schema bump, or new driver discriminant is required.
+- **ASM-4**: The chaining key is durable store-managed key material generated at the runtime edge and persisted as `chain-key.<workspace>.json` with `0600`; tests read the artifact through the delivered helper (single-user trust model). The algorithm is verified behaviourally, not pinned to a specific primitive.
 - **ASM-5**: The golden runner can create a temp audit store per case and extend `injected.json` with mode/environment/startTicks facts while keeping existing interactive goldens byte-identical.
 - **ASM-6**: `lanes list` is represented by a stand-in program for SC-M1-23 because the real command ships later; the scenario's id and Given/When/Then shape are preserved (GH-222 stand-in precedent).
 - **ASM-7**: Every case runs in process; no process spawning, real streams, real clock, or real state directory. Cross-process key continuity is modeled by reopening the same temp root with fresh store/edge instances.
-- **ASM-8**: The error table is unchanged; all audit-path state failures reuse existing state identities, and read-surface refusals reuse `input.value.rejected`.
+- **ASM-8**: The error table is unchanged; audit-path state failures reuse existing state identities (including the three key-open identities), and read-surface refusals reuse `input.value.rejected`.
 - **ASM-9**: The declared lane environment is fixture data; this story does not build or render a lane environment (NG-1).
-- **ASM-10**: The CLI side redacts the invocation fact (arguments, raw tokens, identity) before handing it to the audit write port; the state tier never imports the CLI serializer. If the redaction function is shared through a runtime-neutral module, it remains the single chokepoint and no second serialization path is introduced.
-- **ASM-11**: The injected clock used for `timing` is the same clock that supplies `startedAt`; the runtime edge already carries it.
-- **ASM-12**: The audit consumer assigns `auditSeq` from a durable per-store ordinal allocation inside the shared audit fence; the exact allocation mechanism is NEW-GAP-1 and must be pinned before TC-GH223-039 can pass.
-- **ASM-13**: The key artifact path/name is exposed as a delivered constant; the test reads it through a helper, not by hardcoding a state-directory layout.
+- **ASM-10**: The CLI side redacts the invocation fact (arguments, raw tokens, identity) before handing it to the audit write port; the state tier never imports the CLI serializer. If the redaction function is shared through a runtime-neutral module, it remains the single chokepoint and no second serialization path is introduced. Reservation payloads contain no redactable invocation content.
+- **ASM-11**: The injected clock used for `timing` is the same clock that supplies integer-epoch-ms `startedAt`; the runtime edge already carries it.
+- **ASM-12**: The audit consumer allocates `auditSeq` as `max(existing reservation ordinal) + 1` (starting at 1) from verified ledger truth inside the shared fence, then appends the reservation and invocation under that one handle. No process-memory counter exists.
+- **ASM-13**: The `chain-key.<workspace>.json` path is exposed as a delivered store-layout constant; the test reads it through a helper, not by hardcoding a state-directory layout.
 - **ASM-14**: `scope` is the store/workspace scope identity and `repo` is the target repository value or absent; both are exact-match filter operands.
+- **ASM-15**: The public port permits multiple `append(handle, request)` calls under one fence handle and a `readRecords` call inside the same fence; this is how the two-phase append and ordinal allocation are exercised.
+- **ASM-16**: Exactly-one counts `audit.invocation` records only; reservations are a distinct internal kind and are never counted as invocation records.
+- **ASM-17**: The second-append fault used in TC-GH223-039/043/044 is a test-only edge wrapper that counts `raiseFault` calls; it does not change production behavior or spawn a process.
 
 ### 8.3 Open Questions
 
-**Resolved by spec v1.1 (no open OQ-T items remain):**
+**All previously recorded items are resolved; no open OQ item remains.**
 
 | Test-plan item | Spec resolution | Effect on this plan |
 |----------------|-----------------|---------------------|
-| OQ-T1 | OQ-4: `runId` is a top-level key of the minified failure line, beside `error` | TC-GH223-016/017/021/022 now assert the top-level key set `error` + `runId` and reject a nested-only runId |
-| OQ-T2 | OQ-5: durable store-managed chaining-key artifact (DM-5), generated once on first append, persisted `0600`, read by later processes; per-process key rejected | TC-GH223-026 reworked; TC-GH223-037/038 added; the v1.0 placeholder is removed |
-| OQ-T3 | OQ-6: missing/invalid bound or filter refuses with the existing `input.value.rejected` | TC-GH223-028 updated; TC-GH223-040 added |
-| OQ-T4 | OQ-7: kind `audit.invocation`, schema `delivery.audit.invocation.v1`, key `audit.invocations`, field names pinned | TC-GH223-005/008/034 updated; exact vocabulary used throughout |
-| OQ-T5 | OQ-8: `startedAt` (UTC, injected clock) added; new AC-F1-4; time-window filter operates on it | TC-GH223-035/036/041 added; TC-GH223-028's time-window gap is closed |
-| OQ-T6 | OQ-9: DEC-8 narrowed to the audit consumer's `auditSeq`, with skipped ordinals reported as in-band read-surface findings; state port unchanged | TC-GH223-010 reworked; TC-GH223-039 added |
-| OQ-T7 | OQ-10: `agentIdentity` carries the verbatim value plus the explicit `claimed` marker | TC-GH223-011/013 updated; the marker is asserted |
-| OQ-T8 | OQ-11: one shared fence over the whole audit domain | TC-GH223-010 reworked to the shared-fence model |
-| OQ-T9 | OQ-12: "no secret patterns" means no edge-registered secret value per the chokepoint guarantee | TC-GH223-031/032/022 wording updated |
-| OQ-T10 | OQ-13: absent, empty, and whitespace-only all count as absent; trimming decides presence only | TC-GH223-012/013 updated to three absent cases |
-| OQ-T11 | OQ-14: `scope`/`repo` exact-match semantics; repo-absent records excluded only from repo-constrained results | TC-GH223-028/042 updated |
+| OQ-T1 | OQ-4: `runId` is a top-level key of the minified failure line, beside `error` | TC-GH223-016/017/021/022 assert the top-level key set `error` + `runId` and reject a nested-only runId |
+| OQ-T2 | OQ-5: durable store-managed chaining-key artifact (DM-5), persisted `0600`, read by later processes; per-process key rejected | TC-GH223-026/037/038/047 cover exclusion, creation, cross-process verification, and open failures |
+| OQ-T3 | OQ-6: missing/invalid bound or filter refuses with the existing `input.value.rejected` | TC-GH223-028/040 assert the refusal |
+| OQ-T4 | OQ-7: `audit.invocation` / `delivery.audit.invocation.v1` / `audit.invocations` / field names pinned | TC-GH223-005/008/034 use the exact vocabulary |
+| OQ-T5 | OQ-8: `startedAt` added; new AC-F1-4; time-window filter operates on it | TC-GH223-035/036/041 |
+| OQ-T6 / OQ-15 | OQ-9 and OQ-15: DEC-8 rewritten to the reservation-first two-phase append; durable `auditSeq` from verified ledger truth; both failure modes specified | TC-GH223-039/043/044/046 reworked/added; TC-010 remains the shared-fence failure case |
+| OQ-T7 | OQ-10: `agentIdentity` carries the verbatim value plus the explicit `claimed` marker | TC-GH223-011/013 |
+| OQ-T8 | OQ-11: one shared fence over the whole audit domain | TC-GH223-010/005 |
+| OQ-T9 | OQ-12: "no secret patterns" means no edge-registered secret value | TC-GH223-031/032/022 |
+| OQ-T10 | OQ-13: absent, empty, and whitespace-only all count as absent; trimming decides presence only | TC-GH223-012/013 |
+| OQ-T11 | OQ-14: `scope`/`repo` exact-match semantics; repo-absent records excluded only from repo-constrained results | TC-GH223-028/042 |
+| OQ-16 | OQ-16: key-artifact open failures reuse existing identities (`state.keys.missing`, `state.store.torn` family, `state.permission.denied`); no new rows | TC-GH223-037/047; TC-033 keeps no-drift |
+| OQ-17 | OQ-17: `startedAt` is integer epoch milliseconds UTC; time window inclusive `[from,to]`; omitted side unbounded | TC-GH223-035/041 |
+| OQ-18 | OQ-18: salvage removes trailing records and reservations wholesale; a last-valid-frame reservation survives as the DEC-8 finding | TC-GH223-027/048 |
+| OQ-19 | OQ-19: key artifact is `chain-key.<workspace>.json` in the store-layout family, through the port's store-managed artifact path | TC-GH223-034/037/047 |
 
-**New gaps found while reconciling to v1.1:**
+**No open OQ-T item remains.** The former v1.1 gaps are closed by spec v1.2. However, the mechanism-realism review found **one new blocking gap** that prevents full AC-F4-1 coverage for orphan reservations:
 
 | ID | Gap | Blocking? | Owner / resolution path |
 |----|-----|-----------|--------------------------|
-| NEW-GAP-1 | **`auditSeq` allocation durability is not specified.** "Assigned at append time inside the shared fence" does not say how a failed append still consumes an ordinal, or where the allocation lives. If the ordinal derives from the last verified record, no gap appears. If it is kept only in process memory, a same-process retry can show a gap while a later process reuses the failed ordinal, breaking the per-store guarantee. Either way, AC-F5-1/NFR-1/DEC-8's skipped-ordinal requirement (and TC-GH223-039's cross-process intent) cannot be guaranteed. | **Yes — spec reopening required** | `@pm`/`@spec-writer`: pin a durable per-store ordinal allocation (for example a store-managed counter artifact advanced inside the shared fence before the write, or an equivalent pre-allocation/rollback rule), or revise DEC-8/AC-F5-1/NFR-1. TC-GH223-039 fails loudly until then; it is not silently relaxed. |
-| NEW-GAP-2 | The key artifact's "verified on open" failure semantics are not pinned (missing, corrupt, wrong-permission artifact: refuse? regenerate? classify?). | No — happy-path creation/permissions/reuse are testable | Delivery/spec pins the failure behavior; TC-GH223-037 adds the negative assertion then. |
-| NEW-GAP-3 | The exact `startedAt` serialization (ISO 8601 string vs epoch number), the time-window boundary inclusivity rule, and whether a bound of `0` is invalid or an empty bound are not pinned. | No — instant equality, interior windows, and the 0 probe are testable | Delivery pins the encoding, boundary rule, and bound-0 semantics; TC-GH223-035/040/041 assert the instant, record the boundary probe, and record the 0 rule. |
-| NEW-GAP-4 | A salvage-removed audit record creates an `auditSeq` gap. The spec says a skipped ordinal is "evidence of an omitted or failed append"; it does not say whether a salvage-reported removal is suppressed, annotated, or reported as a gap. | No — chain continuity is testable independently | `@pm`/spec writer or delivery pins the interaction; TC-GH223-027 asserts chain continuity and monotonic ordinal, TC-GH223-039 covers the failed-append gap. |
-| NEW-GAP-5 | The key artifact's persistence path/API through the public port is not pinned (derived-document replace vs a store-managed artifact write). | No — tests use a delivered path constant | Delivery pins it while honoring "no new runtime-API location"; TC-GH223-034 guards the tier. |
+| MR-1 | **Reservation chain-value storage is contradictory.** F-4 says each audit-domain record (reservation and invocation alike) carries a chain value and AC-F4-1 requires an altered reservation to be flagged. DM-6/EVT-2 restrict the reservation payload to `auditSeq` + `runId`, and the state record envelope has only the unkeyed `checksum`. For a paired reservation, the following invocation's stored `chainValue` exposes an alteration; for an **orphan** reservation (no following invocation) there is no stored keyed link, so an altered orphan reservation cannot be flagged. | **Yes — spec reopening required** | `@pm`/`@spec-writer`: pin a storage location for the reservation's keyed chain value (e.g., permit a `chainValue` field in the reservation payload, or an envelope/auxiliary audit-chain artifact) or explicitly narrow AC-F4-1 for orphan reservations. TC-GH223-049 is present but blocked; TC-GH223-045 covers the paired case. |
 
-**Explicit gaps for PM:** the v1.0 blocking gaps (OQ-T5 timestamp, OQ-T6 sequence-gap claim) are resolved by spec v1.1. One new blocking gap remains: **NEW-GAP-1, the durable `auditSeq` allocation mechanism**, without which TC-GH223-039 and the DEC-8 skipped-ordinal guarantee cannot be tested as written. NEW-GAP-2..5 are non-blocking delivery pins. No acceptance criterion is wholly untestable; AC-F1-4 and AC-F5-1 are fully covered once NEW-GAP-1 is pinned.
+The mechanism-realism review in §8.4 confirms all other cases are achievable through the public port and injected CLI dependencies.
+
+### 8.4 Mechanism-Realism Review (v1.2 convergence)
+
+| Mechanism | Realism check | Exercising TCs |
+|-----------|---------------|----------------|
+| Two appends under one fence acquisition | The public port accepts multiple `append(handle, …)` calls under one `StateFenceHandle`; the audit consumer acquires once and releases after both frames. | TC-GH223-001/005/039/043/044 |
+| Ordinal allocation from verified ledger truth | `readRecords` can be called inside the fence; the consumer computes `max(existing reservation ordinal) + 1` before appending. | TC-GH223-005/006/039/043/044 |
+| Reservation payload minimality | The reservation is assembled with exactly `auditSeq` + `runId`; no invocation context is passed to it. | TC-GH223-002/003/004/005/022 |
+| Exactly-one counts invocation records only | The read/assert helpers group by kind; reservations are excluded from the invocation count. | TC-GH223-001/002/003/004/022 |
+| Both-kind continuous chain | The chain walks the verified audit-domain sequence in ledger order, including reservation and invocation frames; other kinds are skipped. **Blocked for orphan reservations:** the reservation payload is restricted to `auditSeq`+`runId`, leaving no stored keyed link for an orphan; see MR-1/TC-049. | TC-GH223-023/024/025/045 (paired); TC-GH223-049 (blocked) |
+| Orphan fold from ledger | The read surface matches reservations to invocations by runId; a missing invocation is an in-band finding; no derived document carries ordinal truth. | TC-GH223-039/043/046 |
+| Failed reservation consumes nothing | The ordinal is allocated from ledger truth before the append; if the reservation append fails, the next allocation sees the same max and reuses the ordinal. | TC-GH223-044 |
+| Durable key artifact path/open failures | The key is a `chain-key.<workspace>.json` store-layout member created/read through the store-managed path; absent/corrupt/wrong-bits reuse existing identities. | TC-GH223-037/047; TC-034 guards the path |
+| Cross-process verification | Fresh store/edge instances over the same temp root read the same durable key and verify earlier records; no process is spawned. | TC-GH223-038 |
+| Salvage to last valid frame | Salvage truncates the terminal tail byte-contiguously and kind-agnostically; a last-valid-frame reservation survives and is folded as an orphan. | TC-GH223-027/048 |
+| Integer-epoch-ms timestamp/inclusive window | The injected clock returns integer milliseconds; filters compare integers inclusively with unbounded omitted sides. | TC-GH223-035/041 |
+| Shared-fence contention | A second store instance holds the audit fence; the append fails `state.lock.busy` without changing the command outcome. | TC-GH223-010 |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-06 | @test-plan-writer | Initial plan: 34 story-local cases (`TC-GH223-*`) covering the then-current AC set (AC-F1-1..AC-F6-1), EVT-1, DM-1..4, NFR-1..9, and the inherited SC-M1-23 seeded scenario; both output modes, chain tamper-evidence/salvage continuity, bounded reads, and audit-write degradation. Records two spec gaps for PM: OQ-T5 (time-window filter without a timestamp) and OQ-T6 (sequence-gap detection). |
-| 1.1 | 2026-11-06 | @test-plan-writer | Reconcile to spec v1.1 (commit `94036965`): add AC-F1-4 and TC-GH223-035..042 (42 cases total, 15 ACs); add `startedAt`/`auditSeq` to the record field set; rework DEC-8 to the shared-fence, skipped-ordinal model (TC-010/039); add durable store-managed key artifact, `0600` permissions, and cross-process verification (TC-037/038); update `runId` to a top-level failure-line key (TC-016/017/021/022); make the time-window filter over `startedAt` real and add `input.value.rejected` refusal (TC-028/040/041); pin the exact vocabulary and exact scope/repo filters (TC-005/008/034/042); update identity to the `claimed` marker and empty/whitespace-absent rules (TC-011/012/013); mark OQ-T1..T11 resolved; record NEW-GAP-1 (blocking `auditSeq` allocation durability) and NEW-GAP-2..5 (non-blocking pins). |
+| 1.2 | 2026-11-06 | @test-plan-writer | Reconcile to spec v1.2 (commit `47408a3e`): add TC-GH223-043..049 (49 cases total, 15 ACs; TC-049 blocked by MR-1) for the reservation-orphan scenario, failed-reservation scenario, altered-reservation chain break, rebuild-preserves-gap, key-artifact open failures, and surviving-tail reservation. Update TC-001..008/022 for the reservation-first two-phase append (two frames, identical `auditSeq`, reservation payload `{auditSeq, runId}` only, exactly-one invocation counting); update TC-023..027/045 for the continuous chain over both kinds; rework TC-039 to the two failure modes; add the three key open-failure identities to TC-037/047; pin integer-epoch-ms `startedAt` and inclusive/unbounded time windows in TC-035/041; pin wholesale salvage/kind-agnostic removal in TC-027/048; reference `chain-key.<workspace>.json` in TC-034/037/047. Remove all v1.1 gap markers (resolved by OQ-15..19), add the mechanism-realism review (§8.4), and record the new blocking gap MR-1 (reservation chain-value storage for orphan reservations) in §8.3; full convergence is not claimed. |
+| 1.1 | 2026-11-06 | @test-plan-writer | Reconcile to spec v1.1 (commit `94036965`): add AC-F1-4 and TC-GH223-035..042 (42 cases total, 15 ACs); add `startedAt`/`auditSeq` to the record field set; rework DEC-8 to the shared-fence, skipped-ordinal model (TC-010/039); add durable store-managed key artifact, `0600` permissions, and cross-process verification (TC-037/038); update `runId` to a top-level failure-line key (TC-016/017/021/022); make the time-window filter over `startedAt` real and add `input.value.rejected` refusal (TC-028/040/041); pin the exact vocabulary and exact scope/repo filters (TC-005/008/034/042); update identity to the `claimed` marker and empty/whitespace-absent rules (TC-011/012/013); mark OQ-T1..T11 resolved; record the v1.1 gap set (ordinal allocation durability plus four non-blocking pins). |
 
 ## 10. Test Execution Log
 
@@ -1869,4 +2207,4 @@ Populated during execution. Each row records the TC id, run date, result, and th
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
-| — | — | — | Not yet executed (plan reconciled to spec v1.1; 42 cases proposed). |
+| — | — | — | Not yet executed (plan reconciled to spec v1.2; 49 cases proposed, TC-GH223-049 blocked by MR-1). |
