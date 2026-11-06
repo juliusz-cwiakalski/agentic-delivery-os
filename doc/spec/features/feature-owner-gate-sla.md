@@ -219,7 +219,7 @@ The decision record kind is additive inside `delivery.state.v1`. No existing rec
 | Latency | Pure evaluation, ranking, and rendering complete within 50 ms on the reference environment over the capped gate set. |
 | Bounds | At most 8 rendered gates; machine `data` at most 65 536 UTF-8 bytes; human grid at most 24 lines / 4 096 UTF-8 bytes; per-field caps enforced; every drop or clamp marked. |
 | Precision | Thresholds are evaluated against the injected clock on every invocation with the declared `>=` comparator; escalation at exactly 24 h, expiry at exactly 72 h; no background timer. |
-| Error identity | The only new identity is the `status.collector.<id>.unavailable` family, anchored by one documented table row; the documented table, machine table, and fixtures agree (53 rows); no other failure identity changes. |
+| Error identity | The only new identity is the `status.collector.<id>.unavailable` family, anchored by one documented table row; the documented table, machine table, and fixtures agree (59 rows); no other failure identity changes. |
 | Auditability and idempotency | Exactly one persisted decision record per default application; re-evaluation honors the existing record and appends nothing; a duplicated gate history is torn, never truth. |
 | Never-silence | A collector failure, unknown age, or truncation is always declared; a partial board is never rendered as an all-clear. |
 
