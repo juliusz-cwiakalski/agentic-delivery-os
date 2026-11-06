@@ -14,7 +14,7 @@ phases:
   review_fix: { started: "2026-11-06T06:00:00Z", completed: "2026-11-06T06:12:00Z" }
   quality_gates: { started: "2026-11-06T06:15:00Z", completed: "2026-11-06T06:22:00Z" }
   dod_check: { started: "2026-11-06T06:22:00Z", completed: "2026-11-06T06:26:00Z" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-11-06T06:28:00Z", completed: null, url: null }
 decisions:
   - text: "PM-decided (phase 7 divergences): (1) createProductionDependencies MUST wire the audit consumer and mode resolution by default — the ticket AC 'every command invocation produces exactly one audit record' applies to real invocations, not only tests; the runtime-aware edge is the composition point for mode/identity facts and edge.ts is already in plan scope. (2) The CLI edge default clock switches to epoch-ms UTC (Date.now-based) so startedAt conforms to spec v1.4 and audit records are meaningful across processes. NOT deferred: shipping the consumer unwired would make the story's core AC unmet in the shipped product. Divergences 3-5 recorded as consistent/no-change: --pretty accepted-but-unconsumed (docs state observable behavior; latent-semantics nit for reviewer), identity passes through redact() (AC6 precedence over verbatim), schemaId boundary marker documented as non-audited field."
     date: "2026-11-06"
