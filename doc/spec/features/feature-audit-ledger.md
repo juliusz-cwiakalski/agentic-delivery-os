@@ -62,7 +62,7 @@ Both kinds live under the same store-scoped key `audit.invocations` and are admi
 | `outcomeClass` | string | Always | One of `success`, `user-validation`, `platform-provider` — the envelope's projection class. A success envelope uses the command's declared exit projection (default `success`); a failure uses the error entry's projection class. |
 | `scope` | string | Always | The caller-injected invocation scope, conventionally the store workspace identity. |
 | `repo` | string | When targeted | The target repository when the command targets one; absent otherwise (never `null` or an empty string). |
-| `startedAt` | number | Always | The integer `CliClock.now()` value sampled at invocation start, before parsing; the same injected clock source that measures `timing`. The surface never reads an ambient clock. The contract treats the value as a UTC wall-clock epoch-millisecond instant; a caller that needs epoch instants injects an epoch clock. |
+| `startedAt` | number | Always | The integer `CliClock.now()` value sampled at invocation start, before parsing; the same injected clock source that measures `timing`. The surface never reads an ambient clock. The contract treats the value as a UTC wall-clock epoch-millisecond instant; the production composition's default clock is `Date.now()`, an integer epoch-millisecond source, and tests inject a deterministic clock. |
 | `auditSeq` | number | Always | The per-store audit ordinal consumed by this invocation's reservation. |
 | `agentIdentity` | object | When claimed | `{ "kind": "claimed", "value": <string> }` when the identity variable is present with a non-empty trimmed value; absent otherwise. The value is recorded without trimming (trimming decides presence only) and still passes the redaction chokepoint. |
 | `chainValue` | string | Always | The record's keyed chain link, 32 lowercase hex characters. |
@@ -254,7 +254,7 @@ Fixtures live in `tests/fixtures/audit/**` (cases, mutation matrix, reservation 
 
 ### Configuration
 
-The ledger has no configuration keys. The store, scope, optional repo, injected environment record, and environment prefix are supplied at the runtime-aware edge; the invocation clock, run-id factory, secrets, mode fact, and audit seam are injected into the command surface. The chaining key has no configuration surface: it is generated and persisted as store-managed material. The identity variable is the only operator-facing input, and its absence is valid.
+The ledger has no configuration keys. The runtime-aware edge supplies the store, scope, optional repo, injected environment record, and environment prefix; its production composition derives the state directory from the injected home directory (or the environment record's `HOME`) plus the branding state-directory name, and injects the epoch-millisecond clock, run-id factory, secrets, mode fact, and audit seam into the command surface. Every one of those facts remains injectable and overridable. The chaining key has no configuration surface: it is generated and persisted as store-managed material. The identity variable is the only operator-facing input, and its absence is valid.
 
 ### Observability
 

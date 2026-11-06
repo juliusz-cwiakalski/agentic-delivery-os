@@ -127,12 +127,15 @@ import {
   appendCloseoutOutcome,
   appendOwnerGateSlaDecision,
   appendPhaseTransition,
+  createNodeStateEdge,
+  createStateStore,
   foldCloseoutHistory,
   readChangeTransitions,
   readChangeTransitionsTolerant,
   readCloseoutHistory,
   readOwnerGateSlaDecisions,
   replacePhaseProjection,
+  STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
 import { resolveAppErrorCode } from "./classify.js";
 import { type BoardCommandRuntime, createBoardCommandDefinition } from "./commands/board.js";
@@ -478,16 +481,64 @@ export type EdgeOptions = {
   readonly program: CommandProgram;
   readonly environment?: Readonly<Record<string, string | undefined>>;
   readonly secretKeys?: readonly string[];
+  /** Injected stream capability fact; omitted means non-interactive. */
+  readonly isTTY?: boolean;
+  /** Injected state directory; defaults to `<home>/<stateDirectoryName>`. */
+  readonly stateDirectory?: string;
+  /** Injected home directory; defaults to the environment record's HOME. */
+  readonly homeDirectory?: string;
+  /** Injected workspace identity for the audit store. */
+  readonly workspaceId?: string;
+  /** Injected fence namespace for the audit store. */
+  readonly fenceNamespace?: string;
 };
 
-/** Assemble the production dependency set at the runtime-aware edge. */
+const trimTrailingSeparators = (path: string): string => path.replace(/[\\/]+$/u, "");
+
+const stateDirectoryFor = (options: EdgeOptions): string | undefined => {
+  if (options.stateDirectory !== undefined) return options.stateDirectory;
+  const environment = options.environment ?? {};
+  const home = options.homeDirectory ?? environment["HOME"] ?? environment["USERPROFILE"];
+  if (home === undefined || home.length === 0) return undefined;
+  return `${trimTrailingSeparators(home)}/${options.brand.stateDirectoryName}`;
+};
+
+/**
+ * Assemble the production dependency set at the runtime-aware edge. The clock
+ * is the epoch-millisecond UTC wall clock; the mode fact comes from the
+ * injected stream capability; and the audit seam composes over the state
+ * directory derived from the branding state-directory name.
+ */
 export function createProductionDependencies(options: EdgeOptions): CliDependencies {
+  const environment = options.environment ?? {};
+  const workspaceId = options.workspaceId ?? "default";
+  const stateDirectory = stateDirectoryFor(options);
+  const audit =
+    stateDirectory === undefined
+      ? undefined
+      : createCliAudit({
+          store: createStateStore(
+            {
+              level: "local",
+              workspaceId,
+              fenceNamespace: options.fenceNamespace ?? "cli-audit",
+              schemaVersion: STATE_SCHEMA_VERSION,
+              stateDirectory,
+            },
+            { driver: "jsonl", edge: createNodeStateEdge() },
+          ),
+          scope: workspaceId,
+          environment,
+          environmentPrefix: options.brand.environmentPrefix,
+        });
   return {
     brand: options.brand,
-    clock: { now: () => Math.trunc(performance.now()) },
+    clock: { now: () => Date.now() },
     newRunId: () => globalThis.crypto.randomUUID(),
-    secrets: registerEdgeSecrets(options.environment ?? {}, options.secretKeys ?? []),
+    secrets: registerEdgeSecrets(environment, options.secretKeys ?? []),
     program: options.program,
+    mode: resolveCliMode(options.isTTY === undefined ? {} : { isTTY: options.isTTY }),
+    ...(audit === undefined ? {} : { audit }),
   };
 }
 
