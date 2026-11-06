@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the additive optional DeliveryRequest.headSha merged-head identity, the four optional verify-gates facts, and resolve-delivery-thread operation, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, the dedicated git seam covering branch, checkout, precise staging, and commit-object creation, the declared inference network edge behind the commit primitive's transport seam, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227"]
+  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227", "GH-231"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0010", "TDR-0005", "TDR-0008"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
@@ -124,7 +124,7 @@ A missing or unresolvable reference parks the provider with cause `credential-mi
 
 `scripts/checks/secret-read-boundary.ts` is an AST invariant over every workspace package production source (`packages/<pkg>/src/**` TypeScript, excluding `dist` and `node_modules`). It names the rule, file, and line for each ambient environment access outside an enumerated allowlist and is fail-closed and non-vacuous: an empty scope fails, and every allowlisted path must exist with a reason.
 
-The v1 allowlist has exactly four entries:
+The v1 allowlist has exactly five entries:
 
 | Kind | Path | Class | Why |
 |------|------|-------|-----|
@@ -132,6 +132,7 @@ The v1 allowlist has exactly four entries:
 | file | `packages/core/src/state/driver/runtime-edge.ts` | `configuration-environment-source` | The state driver's Windows owner-identity resolution for icacls ACL verification. |
 | file | `packages/adapters/src/file/yaml-parser.ts` | `configuration-environment-source` | The file-tier parser host-switch guard. |
 | file | `packages/adapters/src/legacy/index.ts` | `configuration-environment-source` | The legacy-name adapter environment reader. |
+| file | `packages/mcp/src/serve.ts` | `configuration-environment-source` | The MCP serve composition root's one startup configuration-environment read. |
 
 Exactly one entry may carry the `credential-material` class, and it must be the credential implementation directory. Wildcards, prefixes, absolute paths, trailing separators, duplicate paths, and reasonless entries fail registry validation. Allowlist growth is a reviewed change. The provider engine adds no entry: its core policy and CLI command read no ambient environment, and its quota transport receives credential material as data.
 

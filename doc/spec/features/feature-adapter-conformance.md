@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-ADAPTER-CONFORMANCE
 status: Current
 created: 2026-11-01
-last_updated: 2026-11-01
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os provider adapters
 summary: "The provider-agnostic adapter conformance suite: one three-flow registry over the eight closed adapter operations, capability-gated execution with explicit declared-gap skips, production write execution in the mock tier, deterministic exact-URL mock tenants, structural and runtime coverage gates, the delivery.conformance.v1 artifact, and a scheduled read-only live evidence tier."
 links:
-  related_changes: ["GH-189", "GH-183"]
+  related_changes: ["GH-189", "GH-183", "GH-231"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0008"]
 ---
 
@@ -91,7 +91,7 @@ The live configuration reader lives under `tests/`, outside the production-sourc
 
 ## Security and boundaries
 
-The secret-read allowlist stays exactly four entries. Testkit source imports no `node:*` or `bun:*` module and reads no ambient environment, clock, or randomness. Filesystem fixture loading, the process environment read, native fetch, and artifact writing live only under `tests/`. The suite adds no package, subpath, dependency, or export-map edge, and `@delivery-os/adapters/io` remains undeclared. The scheduled workflow has no pull-request or push trigger, job-scoped `contents: read`, SHA-pinned actions, token secrets scoped to the live step, an always-run artifact upload, and Bun resolved from `.bun-version`.
+The conformance suite adds no secret-read allowlist entry. Testkit source imports no `node:*` or `bun:*` module and reads no ambient environment, clock, or randomness. Filesystem fixture loading, the process environment read, native fetch, and artifact writing live only under `tests/`. The suite adds no package, subpath, dependency, or export-map edge, and `@delivery-os/adapters/io` remains undeclared. The scheduled workflow has no pull-request or push trigger, job-scoped `contents: read`, SHA-pinned actions, token secrets scoped to the live step, an always-run artifact upload, and Bun resolved from `.bun-version`.
 
 ## Quality assurance
 

@@ -172,8 +172,8 @@ deep `src`/`dist` imports. [Manifests](../../packages/cli/package.json),
 |---|---|
 | core | No other production workspace package. Internal tiers follow the rules below. |
 | adapters | Core `./contracts` only; not core root, `./state`, `./branding` or `./provider`. |
-| CLI | Core `.`, `./contracts`, `./state`, `./branding`, `./provider`; declared adapter subpaths. |
-| MCP, OpenCode | Core `.`, `./contracts`, `./state`, `./branding`; declared adapter subpaths. Their manifests do not declare core `./provider`. |
+| CLI, MCP | Core `.`, `./contracts`, `./state`, `./branding`, `./provider`; declared adapter subpaths. |
+| OpenCode | Core `.`, `./contracts`, `./state`, `./branding`; declared adapter subpaths. |
 | testkit | Core `.` and `./contracts`, declared adapter subpaths, as development dependencies; no surfaces. |
 | production source | Never testkit. CLI, MCP and OpenCode never import each other. |
 

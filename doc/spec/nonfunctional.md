@@ -5,7 +5,7 @@ created: 2026-11-01
 last_updated: 2026-11-06
 owners: [engineering]
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -19,7 +19,7 @@ promote new targets to accepted policy. Numerical budgets remain canonical in th
 linked feature specs and contract constants; this index does not override them.
 An inconsistency requires reconciliation at the owning feature, not a silent choice.
 
-Scope is single-operator local tooling and delivered CLI/core/adapter surfaces.
+Scope is single-operator local tooling and delivered CLI/core/adapter/MCP surfaces.
 Full MCP/host parity, shared state, dispatch takeover, and release readiness are not
 established here. Missing documentation profile means engineering-repo behavior.
 Phase 2 approval carries OPEN-Q7 through OPEN-Q11 forward. Existing Proposed ADRs
@@ -33,7 +33,8 @@ Owners below are proposed accountable roles, not new assignments or tracker edit
 
 OPEN-Q20 reconciliation baseline: integrated `main-tools` `5330809`, including
 closeout PR #215 and verify-gates recovery PR #217. Shared `createRuntime` is
-declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholders.
+declaration-only; CLI has no `bin`; the MCP package serves three read-only tools
+over local stdio; the typed OpenCode entry remains a placeholder.
 
 ## Existing contract index
 

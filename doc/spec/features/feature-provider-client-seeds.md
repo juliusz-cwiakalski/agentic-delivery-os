@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The delivered provider clients behind the primitive ports: GitLab, Jira, and GitHub clients in the adapters package's per-provider subpaths, with normalized primitive views, honest capability/gap declarations, the GitHub and Jira closeout write slices, GitLab merged-head reads with writes still gapped, offline trap catalogs proven against sanitized hand-authored synthetic fixtures, credential-port-exclusive auth, declared custom-field and merge-status mappings, uniform absence semantics, bounded collection and reverse-dependent reads, the optional structured httpStatus on adapter-local read failures, and the reviewed runtime-API confinement admission."
 links:
-  related_changes: ["GH-188", "GH-175", "GH-176", "GH-183", "GH-189", "GH-178", "GH-224"]
+  related_changes: ["GH-188", "GH-175", "GH-176", "GH-183", "GH-189", "GH-178", "GH-224", "GH-231"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "TDR-0008"]
 ---
 
@@ -22,7 +22,7 @@ The seeds provide reads for all three providers and the closeout write slice for
 
 Every known provider quirk is captured as a trap-catalog entry: a named data record pairing the provider behavior, the expected normalized outcome at the port boundary, and one or more fixture references. The catalogs and the fixtures they cite are committed test assets; trap suites replay the fixtures through the production clients with zero live network calls. Fixtures are hand-authored synthetic captures modeled on recorded provider response shapes, sanitized before commit, and marked with their provenance.
 
-Authentication is credential-port exclusive. Each client receives an `ExternalSystemInstance`, a `CredentialPort`, and an injectable transport; it resolves the instance's declared credential reference on every request and never reads the ambient environment. The runtime-API confinement allowance admits the three provider client subpaths as exact, reason-bearing entries while the provider registry stays non-I/O; the secret-read allowlist remains exactly four entries. Provider truth is carried as declared data where the v1 contract has no destination: custom-field mapping rules and merge-status tables live beside the normalized view, and optional `WorkItem` fields use one uniform absence rule.
+Authentication is credential-port exclusive. Each client receives an `ExternalSystemInstance`, a `CredentialPort`, and an injectable transport; it resolves the instance's declared credential reference on every request and never reads the ambient environment. The runtime-API confinement allowance admits the three provider client subpaths as exact, reason-bearing entries while the provider registry stays non-I/O; the secret-read allowlist admits no provider entry. Provider truth is carried as declared data where the v1 contract has no destination: custom-field mapping rules and merge-status tables live beside the normalized view, and optional `WorkItem` fields use one uniform absence rule.
 
 The port substrate is described in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); the surrounding workspace and boundary mechanism in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); failure identity in [Result Contract and Error Table](feature-result-contract.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); the contract extensions follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md); the confinement refinement follows [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md).
 
@@ -198,7 +198,7 @@ Shared adapter support modules under `src/io/` are imported by the provider seed
 ## Security and Boundaries
 
 - Credential material is reachable only through `CredentialPort`; no client module reads `process.env`, `Bun.env`, `Deno.env`, or any other ambient source.
-- The secret-read allowlist remains exactly four entries: the credential implementation directory and the three configuration environment readers. The provider client subpaths add no entry and no `credential-material` reader.
+- The secret-read allowlist contains the credential implementation directory and the configuration environment readers; the provider client subpaths add no entry and no `credential-material` reader.
 - Runtime-API confinement admits the `core` state driver edge, the non-provider adapter I/O subpaths (`repo`, `file`, `host`, `session`, `legacy`, `credentials`), the dedicated git branch/checkout seam (`git`), the three provider client subpaths (`github`, `gitlab`, `jira`) as exact, reason-bearing entries per ADR-0005, the `cli` build, and the `opencode` host integration. The provider registry subpath and the remaining adapter subpaths stay non-I/O; the allowance is never widened by pattern.
 - Provider-native types and raw provider keys never cross a subpath surface. Normalization is the only place untrusted provider payloads are read.
 - Committed fixtures contain no secret, token, credential, private-corpus identifier, personal data, or non-example provider host; placeholders are declared and stable.

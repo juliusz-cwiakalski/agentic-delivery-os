@@ -99,7 +99,8 @@ Each package declares which entrypoints of its workspace dependencies it may imp
 |----------|------------------------|----------------------------|
 | `adapters` | `./contracts` | — |
 | `cli` | `.`, `./contracts`, `./state`, `./branding`, `./provider` | every declared adapters subpath |
-| `mcp`, `opencode` | `.`, `./contracts`, `./state`, `./branding` | every declared adapters subpath |
+| `mcp` | `.`, `./contracts`, `./state`, `./branding`, `./provider` | every declared adapters subpath |
+| `opencode` | `.`, `./contracts`, `./state`, `./branding` | every declared adapters subpath |
 | `testkit` | `.`, `./contracts` | every declared adapters subpath |
 
 Deep imports into another package's `src/` or `dist/`, and relative paths escaping the package root, are forbidden.
@@ -127,7 +128,7 @@ The cruise runs against the built tree: package-name specifiers resolve through 
 - `ambient-globals-neutral-tiers` — the neutral set (`core` `.` entry, `core/src/contracts/**`, and `core/src/{domain,app,config,branding,provider}/**`) must not use ambient globals (`process`, `Bun`, `Deno`, timers, `fetch`) or ambient clock/randomness (`Date.now`, `Math.random`).
 - `ambient-env-branding` — an environment read (`process.env` / `Bun.env`) inside the branding tier is classified under this rule.
 
-`bun run scripts/checks/secret-read-boundary.ts` is the AST guard for ambient secret acquisition across every workspace package production source (`packages/<pkg>/src/**` TypeScript, excluding `dist` and `node_modules`). Ambient environment access is permitted only in an enumerated allowlist. The v1 allowlist has four exact entries: the credential implementation directory (`packages/adapters/src/credentials`, class `credential-material`), the state driver runtime edge (`packages/core/src/state/driver/runtime-edge.ts`, class `configuration-environment-source`, for Windows owner-identity resolution in icacls ACL verification), and two pre-existing configuration environment readers (`packages/adapters/src/file/yaml-parser.ts` and `packages/adapters/src/legacy/index.ts`, class `configuration-environment-source`). Exactly one entry may be `credential-material`, and every entry carries a reason. Wildcards, prefixes, absolute paths, trailing separators, duplicate paths, and missing targets fail registry validation; an empty scan scope fails closed, so the gate cannot pass vacuously. The check detects `process.env`, `Bun.env`, and `Deno.env` property reads; element access to `env` or an ambient global by string-literal key; element access with a computed or template-literal key on `process`, `Bun`, `Deno`, or `globalThis`, which fails closed because a non-literal key cannot be checked statically; runtime imports of `process` or `bun`; and aliased ambient globals, while ignoring identifier positions such as property names, import specifiers, and type declarations. It runs in `check:boundaries` and as a binding step in the CI `ts-invariants` job; the behavior is documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
+`bun run scripts/checks/secret-read-boundary.ts` is the AST guard for ambient secret acquisition across every workspace package production source (`packages/<pkg>/src/**` TypeScript, excluding `dist` and `node_modules`). Ambient environment access is permitted only in an enumerated allowlist. The v1 allowlist has five exact entries: the credential implementation directory (`packages/adapters/src/credentials`, class `credential-material`), the state driver runtime edge (`packages/core/src/state/driver/runtime-edge.ts`, class `configuration-environment-source`, for Windows owner-identity resolution in icacls ACL verification), two pre-existing configuration environment readers (`packages/adapters/src/file/yaml-parser.ts` and `packages/adapters/src/legacy/index.ts`, class `configuration-environment-source`), and the MCP serve composition root (`packages/mcp/src/serve.ts`, class `configuration-environment-source`, for its one startup configuration-environment read). Exactly one entry may be `credential-material`, and every entry carries a reason. Wildcards, prefixes, absolute paths, trailing separators, duplicate paths, and missing targets fail registry validation; an empty scan scope fails closed, so the gate cannot pass vacuously. The check detects `process.env`, `Bun.env`, and `Deno.env` property reads; element access to `env` or an ambient global by string-literal key; element access with a computed or template-literal key on `process`, `Bun`, `Deno`, or `globalThis`, which fails closed because a non-literal key cannot be checked statically; runtime imports of `process` or `bun`; and aliased ambient globals, while ignoring identifier positions such as property names, import specifiers, and type declarations. It runs in `check:boundaries` and as a binding step in the CI `ts-invariants` job; the behavior is documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 
 ### Negative fixtures and coverage
 
@@ -252,9 +253,9 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 ### Package graph
 
 ```text
-cli               ──> core (., ./contracts, ./state, ./branding, ./provider)
+cli, mcp          ──> core (., ./contracts, ./state, ./branding, ./provider)
                   └─> adapters (every declared subpath)
-mcp, opencode     ──> core (., ./contracts, ./state, ./branding)
+opencode          ──> core (., ./contracts, ./state, ./branding)
                   └─> adapters (every declared subpath)
 
 adapters          ──> core ./contracts
