@@ -74,3 +74,6 @@ notes:
   - text: "Plan phase 4 complete (commit f5abbf39): tri-state hygiene assertions (epic-membership/story-points/in-sprint), absence-as-violation with the declared-availability gate, owner-gate ages via the M1-S5 evaluator and the two unknown-age markers, and parked conditions plus parked.stale-no-condition grouping. Gates green: five phase-4 suites (104 tests), board non-regression (15 tests), pnpm typecheck. Deviation: the digest injects no decision records (D-4), so owner-review gates can only be fresh/escalated; default-applied remains unreachable and is never fabricated."
     type: "info"
     date: "2026-11-07"
+  - text: "Plan phase 5 complete (commit f13ea4f8): ready-to-merge action list (queue-ready classification, merge-ready-first ranking, degraded merge-ready ?), spend/blockers placeholders, lanes vocabulary declaration, nine-section totality/summary additions, ready item cap, and the extended human grammar with attention rollup and 32/6144 bounds. Gates green: six phase-5 suites (106 tests), queue-ready non-regression (22 tests), pnpm typecheck."
+    type: "info"
+    date: "2026-11-07"

@@ -13,7 +13,28 @@
           "omitted": 0
         },
         "orderedIds": ["stalls:1", "stalls:2", "stalls:3"],
-        "truncated": false
+        "truncated": false,
+        "findings": [],
+        "assertions": [
+          {
+            "assertion": "epic-membership",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 3
+          },
+          {
+            "assertion": "story-points",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 3
+          },
+          {
+            "assertion": "in-sprint",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 3
+          }
+        ]
       },
       "changes-and-prs": {
         "state": "observed",
@@ -25,7 +46,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "ci": {
         "state": "observed",
@@ -37,7 +59,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "lanes-or-queue": {
         "state": "not-delivered",
@@ -49,7 +72,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "providers": {
         "state": "observed",
@@ -61,7 +85,8 @@
           "omitted": 0
         },
         "orderedIds": ["entry:primary"],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "parked-work": {
         "state": "observed",
@@ -73,7 +98,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "ready-to-merge": {
         "state": "observed",
@@ -85,7 +111,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "spend": {
         "state": "not-delivered",
@@ -97,7 +124,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "blockers": {
         "state": "not-delivered",
@@ -109,7 +137,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       }
     }
   }

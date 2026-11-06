@@ -12,9 +12,11 @@ import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/s
 import {
   anonymousInstance,
   baseFacts,
+  deliveryRequestRead,
   failedDeliveryRequestRead,
   failedPipelineRunRead,
   failedWorkItemRead,
+  makeDeliveryRequest,
   missingLocalContext,
   NOW_ISO,
   NOW_MS,
@@ -23,6 +25,7 @@ import {
   providerConfig,
   providerConfigRead,
   providers,
+  REVIEWS_UNAVAILABLE,
   repository,
   runStatusCli,
   sectionById,
@@ -356,6 +359,223 @@ describe("TC-STATUS-023 anonymous/credential-less composition control", () => {
       expect(stateOf("changes-and-prs")).toBe("degraded");
     } finally {
       removeRoot(root);
+    }
+  });
+});
+
+describe("TC-ATT-035 expanded new-section negative controls", () => {
+  const cases: Array<{
+    readonly name: string;
+    readonly facts: Parameters<typeof aggregateStatus>[0];
+    readonly id: string;
+    readonly state: string;
+    readonly reason: string;
+  }> = [
+    {
+      name: "failed PR read → ready unknown",
+      facts: baseFacts({ changes: failedDeliveryRequestRead("read-failed") }),
+      id: "ready-to-merge",
+      state: "unknown",
+      reason: "read-failed",
+    },
+    {
+      name: "review unavailable → ready degraded",
+      facts: baseFacts({
+        changes: deliveryRequestRead(
+          [makeDeliveryRequest({ entityId: "501" })],
+          REVIEWS_UNAVAILABLE,
+        ),
+      }),
+      id: "ready-to-merge",
+      state: "degraded",
+      reason: "signal-unavailable",
+    },
+    {
+      name: "no binding → ready unavailable",
+      facts: baseFacts({
+        repository: repository({ binding: unavailableBinding() }),
+        changes: failedDeliveryRequestRead("read-failed"),
+      }),
+      id: "ready-to-merge",
+      state: "unavailable",
+      reason: "addressing-unresolved",
+    },
+    {
+      name: "malformed context → parked unknown",
+      facts: baseFacts({ localContext: { ok: false, reason: "malformed", path: "/pm.yaml" } }),
+      id: "parked-work",
+      state: "unknown",
+      reason: "local-context-malformed",
+    },
+    {
+      name: "failed CI read → ci unknown",
+      facts: baseFacts({ ci: failedPipelineRunRead("read-failed") }),
+      id: "ci",
+      state: "unknown",
+      reason: "read-failed",
+    },
+  ];
+
+  for (const testCase of cases) {
+    test(testCase.name, () => {
+      const digest = aggregateStatus(testCase.facts);
+      const entry = digest.sections.find((candidate) => candidate.id === testCase.id);
+      expect(entry?.state).toBe(testCase.state);
+      expect(entry?.evidence.reasons).toContain(testCase.reason as never);
+      expect(entry?.findings ?? []).toEqual([]);
+      expect(entry?.state).not.toBe("observed");
+    });
+  }
+
+  test("the new sections never fabricate green or zero after a failure", () => {
+    const facts = baseFacts({
+      tracker: failedWorkItemRead("read-failed"),
+      changes: failedDeliveryRequestRead("read-failed"),
+      ci: failedPipelineRunRead("read-failed"),
+      localContext: missingLocalContext(),
+    });
+    const digest = aggregateStatus(facts);
+    const ready = digest.sections.find((entry) => entry.id === "ready-to-merge");
+    expect(ready?.state).not.toBe("observed");
+    const human = digest.sections.length;
+    expect(human).toBe(9);
+    expect(JSON.stringify(digest)).not.toContain("merge-ready 0");
+    expect(digest.sections.find((entry) => entry.id === "spend")?.state).toBe("not-delivered");
+    expect(digest.sections.find((entry) => entry.id === "blockers")?.state).toBe("not-delivered");
+  });
+
+  test("the lane section never emits a lane state or the dormant code", () => {
+    const lanes = section(baseFacts(), "lanes-or-queue");
+    expect(lanes.state).toBe("not-delivered");
+    expect(lanes.findings ?? []).toEqual([]);
+    expect(JSON.stringify(lanes)).not.toContain("lane.idle-no-reason");
+  });
+
+  test("an absent updatedAt is unknown age and escalated, never 0h or fresh", () => {
+    const facts = baseFacts({
+      tracker: {
+        ok: true,
+        items: [
+          {
+            identity: { systemName: "github", entityId: "GH-1" },
+            title: "Hand back",
+            status: { nativeStatus: "open", deliveryState: "ready" },
+            labels: ["hand-back"],
+            relations: [],
+          },
+        ],
+        pageItemCount: 1,
+        availability: {
+          ownerHandBacks: "available",
+          blockedDependencies: "available",
+          stalls: "available",
+          hygiene: "available",
+        },
+      },
+    });
+    const family = section(facts, "tracker").families?.find(
+      (entry) => entry.family === "ownerHandBacks",
+    );
+    expect(family?.items[0]?.age).toBeNull();
+    expect(family?.items[0]?.ageUnknownReason).toBe("activity-timestamp-absent");
+    expect(family?.items[0]?.slaState).toBe("escalated");
+    expect(JSON.stringify(family)).not.toContain('"age":0');
+  });
+
+  test("the named negative matrix is complete", () => {
+    const names = new Set(cases.map((testCase) => testCase.name));
+    for (const required of [
+      "failed PR read → ready unknown",
+      "review unavailable → ready degraded",
+      "no binding → ready unavailable",
+      "malformed context → parked unknown",
+      "failed CI read → ci unknown",
+    ]) {
+      expect(names.has(required)).toBe(true);
+    }
+    expect(cases.length).toBeGreaterThanOrEqual(5);
+  });
+});
+
+describe("TC-ATT-036 evidence hygiene", () => {
+  test("findings carry identity-shaped members only, never titles or payloads", () => {
+    const canary = "planted-status-title-canary";
+    const facts = baseFacts({
+      repository: primaryRepository(),
+      tracker: {
+        ok: true,
+        items: [
+          {
+            identity: { systemName: "github", entityId: "GH-1" },
+            title: canary,
+            status: { nativeStatus: "open", deliveryState: "ready" },
+            labels: ["hand-back"],
+            relations: [],
+          },
+        ],
+        pageItemCount: 1,
+        availability: {
+          ownerHandBacks: "available",
+          blockedDependencies: "available",
+          stalls: "available",
+          hygiene: "available",
+        },
+      },
+    });
+    const digest = aggregateStatus(facts);
+    const tracker = digest.sections.find((entry) => entry.id === "tracker");
+    expect(JSON.stringify(tracker?.findings ?? [])).not.toContain(canary);
+    for (const finding of tracker?.findings ?? []) {
+      for (const member of finding.members) {
+        expect(member).not.toContain(canary);
+        expect(member).toMatch(/^[A-Za-z0-9][A-Za-z0-9:._|#/@-]*$/);
+      }
+    }
+  });
+
+  test("parked conditions never appear in human text or finding members", () => {
+    const facts = baseFacts({
+      localContext: {
+        ok: true,
+        context: {
+          path: "/pm.yaml",
+          tracked: false,
+          parkedChanges: [{ workItemRef: "GH-1", condition: "planted-status-condition-canary" }],
+        },
+      },
+    });
+    const digest = aggregateStatus(facts);
+    expect(
+      JSON.stringify(digest.sections.find((entry) => entry.id === "parked-work")?.findings ?? []),
+    ).not.toContain("planted-status-condition-canary");
+  });
+
+  test("no status finding falls back to a title identity", () => {
+    const facts = baseFacts({
+      tracker: {
+        ok: true,
+        items: [
+          {
+            identity: { systemName: "github", entityId: "GH-1" },
+            title: "title-only",
+            status: { nativeStatus: "open", deliveryState: "ready" },
+            labels: ["hand-back"],
+            relations: [],
+          },
+        ],
+        pageItemCount: 1,
+        availability: {
+          ownerHandBacks: "available",
+          blockedDependencies: "available",
+          stalls: "available",
+          hygiene: "available",
+        },
+      },
+    });
+    const tracker = sectionById(aggregateStatus(facts).sections, "tracker");
+    for (const finding of tracker.findings ?? []) {
+      expect(finding.members).toContain("GH-1");
+      expect(finding.members).not.toContain("title-only");
     }
   });
 });

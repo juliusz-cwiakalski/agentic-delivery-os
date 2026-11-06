@@ -562,3 +562,103 @@ export const capSizedFacts = (): StatusFacts => {
     }),
   });
 };
+
+/** An all-caps fact set: every declared surface populated at its limit (TC-ATT-029). */
+export const allCapsFacts = (): StatusFacts => {
+  const providerNames = Array.from({ length: 8 }, (_, index) => `provider-${index}`);
+  const maxNote = "n".repeat(160);
+  return baseFacts({
+    repository: primaryRepository(),
+    tracker: workItemRead(
+      [
+        ...Array.from({ length: 8 }, (_, index) =>
+          makeWorkItem({
+            entityId: `GH-${100 + index}`,
+            title: `Hand back ${index}`,
+            labels: ["hand-back", "epic:x", "points:1"],
+            milestone: "Sprint 1",
+            updatedAt: "2026-09-01T00:00:00Z",
+          }),
+        ),
+        ...Array.from({ length: 8 }, (_, index) =>
+          makeWorkItem({
+            entityId: `GH-${200 + index}`,
+            title: `Blocked ${index}`,
+            labels: ["epic:x", "points:1"],
+            milestone: "Sprint 1",
+            relations: [blockedBy("missing")],
+          }),
+        ),
+        ...Array.from({ length: 8 }, (_, index) =>
+          makeWorkItem({
+            entityId: `GH-${300 + index}`,
+            title: `Stalled ${index}`,
+            labels: ["epic:x", "points:1"],
+            milestone: "Sprint 1",
+            updatedAt: "2026-09-01T00:00:00Z",
+          }),
+        ),
+        ...Array.from({ length: 8 }, (_, index) =>
+          makeWorkItem({
+            entityId: `GH-${400 + index}`,
+            title: "",
+            labels: [],
+          }),
+        ),
+      ],
+      ASSERTIONS_AVAILABLE,
+    ),
+    changes: deliveryRequestRead(
+      Array.from({ length: 8 }, (_, index) =>
+        makeDeliveryRequest({
+          entityId: String(500 + index),
+          reviewState: "approved",
+        }),
+      ),
+      REVIEWS_AVAILABLE,
+    ),
+    ci: pipelineRunRead(Array.from({ length: 8 }, (_, index) => failedRun(String(700 + index)))),
+    providers: providers({
+      config: providerConfigRead(
+        providerConfig({
+          defaultChain: "primary",
+          entries: Object.fromEntries(
+            providerNames.map((name) => [name, { name, class: "subscription", enabled: true }]),
+          ),
+          chains: {
+            primary: { name: "primary", entries: providerNames, allowPaidFallback: false },
+          },
+        }),
+      ),
+      parks: {
+        ok: true,
+        parks: Array.from({ length: 8 }, (_, index) =>
+          parkView({
+            name: `provider:provider-${index}`,
+            subjectName: `provider-${index}`,
+            expiresAt: `2026-11-0${index + 1}T00:00:00Z`,
+          }),
+        ),
+      },
+    }),
+    localContext: localContext({
+      activeChange: activeChange(),
+      parkedChanges: [
+        ...Array.from({ length: 8 }, (_, index) => ({
+          workItemRef: `GH-${800 + index}`,
+          branch: `feat/GH-${800 + index}/parked`,
+          changeFolder: `doc/changes/2026-10/GH-${800 + index}`,
+          reason: "waiting",
+        })),
+        ...Array.from({ length: 8 }, (_, index) => ({
+          workItemRef: `GH-${900 + index}`,
+          branch: `feat/GH-${900 + index}/parked`,
+          changeFolder: `doc/changes/2026-10/GH-${900 + index}`,
+          reason: "waiting",
+          parkedAt: "2026-10-01T00:00:00Z",
+          condition: maxNote,
+        })),
+      ],
+    }),
+  });
+};

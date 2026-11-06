@@ -3,10 +3,12 @@
  * caps/omitted/truncation, and deterministic ordering.
  */
 import { describe, expect, test } from "bun:test";
+import { readdirSync } from "node:fs";
 import {
   STATUS_HUMAN_CLAMP_MARKER,
   STATUS_MAX_HUMAN_BYTES,
   STATUS_MAX_HUMAN_LINES,
+  STATUS_MAX_MACHINE_BYTES,
   STATUS_MAX_TITLE_CHARS,
   STATUS_SOURCE_ITEM_LIMIT,
   STATUS_SOURCE_PIPELINE_LIMIT,
@@ -18,6 +20,7 @@ import { assertEnvelopeContract } from "../../packages/testkit/src/result-confor
 import {
   ALL_AVAILABLE,
   activeChange,
+  allCapsFacts,
   baseFacts,
   blockedBy,
   createStatusRecorder,
@@ -730,5 +733,40 @@ describe("TC-ATT-028 human bounds", () => {
     expect(STATUS_MAX_HUMAN_BYTES).not.toBe(4096);
     const human = renderStatusHuman(aggregateStatus(baseFacts()), SYNTHETIC_BRAND);
     expect(human).not.toMatch(/\+\n$/);
+  });
+});
+
+describe("TC-ATT-029 machine bound with every surface at cap", () => {
+  test("the all-caps digest stays within 65 536 bytes and populates every surface", async () => {
+    const facts = allCapsFacts();
+    const envelope = await runStatusCli(["--json", "status"], statusRuntime(facts));
+    expect(envelope.exitCode).toBe(0);
+    const parsed = JSON.parse(envelope.stdout) as unknown;
+    expect(assertEnvelopeContract(parsed)).toEqual([]);
+    if (!isRecord(parsed) || !isRecord(parsed.data)) throw new Error("data missing");
+    const data = parsed.data;
+    expect(Buffer.byteLength(JSON.stringify(data), "utf8")).toBeLessThanOrEqual(
+      STATUS_MAX_MACHINE_BYTES,
+    );
+    expect(parsed).not.toHaveProperty("error");
+    const sections = data.sections as Array<Record<string, unknown>>;
+    expect(sections).toHaveLength(9);
+    const tracker = section(data, "tracker");
+    expect((tracker.findings as unknown[]).length).toBe(7);
+    for (const finding of tracker.findings as Array<{ members: unknown[] }>) {
+      expect(finding.members.length).toBeLessThanOrEqual(8);
+    }
+    expect((section(data, "ci").runs as unknown[]).length).toBe(8);
+    expect((section(data, "changes-and-prs").pullRequests as unknown[]).length).toBe(8);
+    expect((section(data, "ready-to-merge").items as unknown[]).length).toBe(8);
+    expect((section(data, "providers").entries as unknown[]).length).toBe(8);
+    expect((section(data, "parked-work").items as unknown[]).length).toBe(8);
+    expect((section(data, "spend").items as unknown[]).length).toBe(0);
+    expect((section(data, "blockers").items as unknown[]).length).toBe(0);
+  });
+
+  test("the corpus carries the same all-caps case name", () => {
+    const cases = readdirSync("tests/fixtures/status/corpus");
+    expect(cases).toContain("all-caps-bound");
   });
 });

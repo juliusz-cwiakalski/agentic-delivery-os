@@ -6,42 +6,10 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type {
-  StatusCounts,
-  StatusFacts,
-  StatusSection,
-  StatusSectionId,
-} from "../../packages/core/src/contracts/index";
+import type { StatusCounts, StatusSection } from "../../packages/core/src/contracts/index";
+import { STATUS_SECTION_DERIVATION } from "../../packages/core/src/contracts/index";
 import { aggregateStatus } from "../../packages/core/src/domain/index";
-import {
-  ALL_AVAILABLE,
-  ASSERTIONS_AVAILABLE,
-  activeChange,
-  baseFacts,
-  capSizedFacts,
-  deliveryRequestRead,
-  failedDeliveryRequestRead,
-  failedPipelineRunRead,
-  failedRun,
-  failedWorkItemRead,
-  GITHUB_SLICE_AVAILABILITY,
-  localContext,
-  makeDeliveryRequest,
-  makeWorkItem,
-  malformedLocalContext,
-  missingLocalContext,
-  parkView,
-  pipelineRunRead,
-  primaryRepository,
-  providerConfig,
-  providerConfigRead,
-  providers,
-  repository,
-  REVIEWS_AVAILABLE,
-  REVIEWS_UNAVAILABLE,
-  unavailableBinding,
-  workItemRead,
-} from "../fixtures/status/harness";
+import { factsFor } from "../fixtures/status/scenarios";
 import { installThrowingFetchGuard } from "./providers/support";
 
 const ROOT = process.cwd();
@@ -53,6 +21,19 @@ type ExpectedSection = {
   readonly counts: StatusCounts;
   readonly orderedIds: readonly string[];
   readonly truncated: boolean;
+  readonly findings?: readonly {
+    readonly code: string;
+    readonly severity: string;
+    readonly count: number;
+    readonly members: readonly string[];
+    readonly evidenceRef: string;
+  }[];
+  readonly assertions?: readonly {
+    readonly assertion: string;
+    readonly violations: number;
+    readonly unknown: number;
+    readonly satisfied: number;
+  }[];
 };
 
 type CorpusCase = {
@@ -74,260 +55,6 @@ const loadCases = (): CorpusCase[] =>
       return parsed as CorpusCase;
     })
     .sort((left, right) => left.name.localeCompare(right.name));
-
-const noChain = () =>
-  providerConfigRead(providerConfig({ defaultChain: undefined, chains: {}, entries: {} }));
-
-const unresolvedChain = () =>
-  providerConfigRead(
-    providerConfig({
-      defaultChain: "ghost",
-      entries: { primary: { name: "primary", class: "subscription", enabled: true } },
-      chains: {
-        primary: { name: "primary", entries: ["primary"], allowPaidFallback: false },
-      },
-    }),
-  );
-
-const factsFor = (scenario: string): StatusFacts => {
-  switch (scenario) {
-    case "fully-observed":
-      return capSizedFacts();
-    case "tracker-degraded-github":
-      return baseFacts({ tracker: workItemRead([], GITHUB_SLICE_AVAILABILITY) });
-    case "failed-reads-degraded":
-      return baseFacts({
-        tracker: failedWorkItemRead("read-failed"),
-        changes: failedDeliveryRequestRead("read-failed"),
-        ci: failedPipelineRunRead("read-failed"),
-        localContext: localContext({ activeChange: activeChange() }),
-        providers: providers({ config: noChain() }),
-      });
-    case "missing-context-unavailable":
-      return baseFacts({
-        localContext: missingLocalContext(),
-        providers: providers({ config: noChain() }),
-      });
-    case "active-park-observed":
-      return baseFacts({
-        providers: providers({
-          config: providerConfigRead(providerConfig()),
-          parks: { ok: true, parks: [parkView()] },
-        }),
-      });
-    case "missing-credential-unknown":
-      return baseFacts({
-        tracker: failedWorkItemRead("credential-unavailable"),
-        changes: failedDeliveryRequestRead("credential-unavailable"),
-        ci: failedPipelineRunRead("credential-unavailable"),
-        localContext: localContext({ activeChange: activeChange() }),
-      });
-    case "unresolved-sha-unknown":
-      return baseFacts({ repository: repository({ head: { detached: true } }) });
-    case "unresolved-binding-unavailable":
-      return baseFacts({
-        repository: repository({ binding: unavailableBinding() }),
-        localContext: missingLocalContext(),
-      });
-    case "torn-park-degraded":
-      return baseFacts({
-        providers: providers({
-          parks: { ok: false, reason: "state-unreadable", failureCode: "state.store.torn" },
-        }),
-      });
-    case "unresolved-chain-unknown":
-      return baseFacts({ providers: providers({ config: unresolvedChain() }) });
-    case "malformed-context-unknown":
-      return baseFacts({ localContext: malformedLocalContext() });
-    case "changes-unknown-pr-failed":
-      return baseFacts({
-        changes: failedDeliveryRequestRead("read-failed"),
-        localContext: missingLocalContext(),
-      });
-    case "four-red-runs-grouped":
-      return baseFacts({
-        repository: primaryRepository(),
-        ci: pipelineRunRead([
-          failedRun("700"),
-          failedRun("701"),
-          failedRun("702"),
-          failedRun("703"),
-        ]),
-      });
-    case "ci-read-failed-no-finding":
-      return baseFacts({
-        repository: primaryRepository(),
-        ci: failedPipelineRunRead("read-failed"),
-      });
-    case "hygiene-assertions-tri-state":
-      return baseFacts({
-        tracker: workItemRead(
-          [
-            makeWorkItem({
-              entityId: "1",
-              title: "Missing title",
-              labels: ["epic:x", "points:3"],
-              milestone: "Sprint 1",
-            }),
-            makeWorkItem({
-              entityId: "2",
-              title: "No epic",
-              labels: ["bug", "points:2"],
-              milestone: "Sprint 1",
-            }),
-            makeWorkItem({
-              entityId: "3",
-              title: "No points",
-              labels: ["epic:x"],
-              milestone: "Sprint 1",
-            }),
-            makeWorkItem({ entityId: "4", title: "No sprint", labels: ["epic:x", "points:1"] }),
-            makeWorkItem({
-              entityId: "5",
-              title: "All good",
-              labels: ["epic", "points:0"],
-              milestone: "Sprint 1",
-            }),
-            makeWorkItem({ entityId: "6", title: "Closed", labels: [], deliveryState: "done" }),
-          ],
-          ASSERTIONS_AVAILABLE,
-        ),
-      });
-    case "hygiene-absence-violation":
-      return baseFacts({
-        tracker: workItemRead(
-          [
-            makeWorkItem({
-              entityId: "1",
-              title: "No epic",
-              labels: ["points:1"],
-              milestone: "Sprint 1",
-            }),
-            makeWorkItem({
-              entityId: "2",
-              title: "No points",
-              labels: ["epic:x"],
-              milestone: "Sprint 1",
-            }),
-            makeWorkItem({ entityId: "3", title: "No sprint", labels: ["epic:x", "points:1"] }),
-            makeWorkItem({
-              entityId: "4",
-              title: "Conforming",
-              labels: ["epic:x", "points:2"],
-              milestone: "Sprint 1",
-            }),
-          ],
-          ASSERTIONS_AVAILABLE,
-        ),
-      });
-    case "hygiene-satisfied-arm":
-      return baseFacts({
-        tracker: workItemRead(
-          [
-            makeWorkItem({
-              entityId: "1",
-              title: "Epic token",
-              labels: ["epic", "points:1"],
-              milestone: "Sprint 1",
-            }),
-            makeWorkItem({
-              entityId: "2",
-              title: "Epic prefix",
-              labels: ["epic:payments", "points:0"],
-              milestone: "Sprint 1",
-            }),
-            makeWorkItem({
-              entityId: "3",
-              title: "Points",
-              labels: ["epic:x", "points:42"],
-              milestone: "Sprint 1",
-            }),
-          ],
-          ASSERTIONS_AVAILABLE,
-        ),
-      });
-    case "hygiene-all-unknown":
-      return baseFacts({
-        tracker: workItemRead(
-          [
-            makeWorkItem({
-              entityId: "1",
-              title: "No epic",
-              labels: ["bug"],
-              milestone: "Sprint 1",
-            }),
-            makeWorkItem({
-              entityId: "2",
-              title: "No points",
-              labels: ["epic:x"],
-              milestone: "Sprint 1",
-            }),
-          ],
-          ALL_AVAILABLE,
-        ),
-      });
-    case "owner-gate-unknown-age-escalated":
-      return baseFacts({
-        tracker: workItemRead(
-          [makeWorkItem({ entityId: "GH-1", labels: ["hand-back"] })],
-          ALL_AVAILABLE,
-        ),
-      });
-    case "parked-condition-present":
-      return baseFacts({
-        localContext: localContext({
-          parkedChanges: [
-            {
-              workItemRef: "GH-1",
-              condition: "waiting for review",
-              parkedAt: "2026-10-30T00:00:00Z",
-            },
-          ],
-        }),
-      });
-    case "parked-stale-no-condition-grouped":
-      return baseFacts({
-        localContext: localContext({
-          parkedChanges: [
-            { workItemRef: "GH-1", reason: "waiting" },
-            { workItemRef: "GH-2", reason: "waiting" },
-            { branch: "feat/GH-3/x", changeFolder: "doc/GH-3", reason: "waiting" },
-            { workItemRef: "GH-4", condition: "waiting for design" },
-            { workItemRef: "GH-5", parkedAt: "2026-09-01T00:00:00Z", reason: "waiting" },
-          ],
-        }),
-      });
-    case "lanes-not-delivered-vocabulary":
-    case "placeholders-not-delivered":
-    case "no-findings-attention-zero":
-      return baseFacts();
-    case "mixed-attention-ranked":
-      return capSizedFacts();
-    case "ready-merge-ready-ranked":
-      return baseFacts({
-        changes: deliveryRequestRead(
-          [
-            makeDeliveryRequest({ entityId: "501", reviewState: "approved" }),
-            makeDeliveryRequest({ entityId: "502", reviewState: "open" }),
-            makeDeliveryRequest({ entityId: "503", reviewState: "draft" }),
-          ],
-          REVIEWS_AVAILABLE,
-        ),
-      });
-    case "ready-review-unknown-degraded":
-      return baseFacts({
-        changes: deliveryRequestRead(
-          [
-            makeDeliveryRequest({ entityId: "501", reviewState: "approved" }),
-            makeDeliveryRequest({ entityId: "502", reviewState: "open" }),
-          ],
-          REVIEWS_UNAVAILABLE,
-        ),
-      });
-    default:
-      throw new Error(`unknown corpus scenario ${scenario}`);
-  }
-};
 
 const orderedIds = (section: StatusSection): readonly string[] => {
   switch (section.id) {
@@ -393,22 +120,57 @@ const failuresFor = (cases: readonly CorpusCase[]): string[] => {
           `${testCase.name}: ${id} truncated ${section.truncated} != ${expected.truncated}`,
         );
       }
+      if (expected.findings !== undefined) {
+        const actual = (section.findings ?? []).map((finding) => ({
+          code: finding.code,
+          severity: finding.severity,
+          count: finding.count,
+          members: finding.members,
+          evidenceRef: finding.evidenceRef,
+        }));
+        if (JSON.stringify(actual) !== JSON.stringify(expected.findings)) {
+          failures.push(`${testCase.name}: ${id} findings ${JSON.stringify(actual)}`);
+        }
+      }
+      if (expected.assertions !== undefined) {
+        const hygiene = section.families?.find((family) => family.family === "hygiene");
+        const actual = (hygiene?.assertions ?? []).map((assertion) => ({
+          assertion: assertion.assertion,
+          violations: assertion.violations,
+          unknown: assertion.unknown,
+          satisfied: assertion.satisfied,
+        }));
+        if (JSON.stringify(actual) !== JSON.stringify(expected.assertions)) {
+          failures.push(`${testCase.name}: ${id} assertions ${JSON.stringify(actual)}`);
+        }
+      }
     }
   }
   return failures;
 };
 
-const SECTION_STATE_MATRIX: Readonly<Record<StatusSectionId, readonly string[]>> = {
-  tracker: ["observed", "degraded", "unknown", "unavailable"],
-  "changes-and-prs": ["observed", "degraded", "unknown", "unavailable"],
-  ci: ["observed", "unknown", "unavailable"],
-  "lanes-or-queue": ["not-delivered"],
-  providers: ["observed", "degraded", "unknown", "unavailable"],
-  "parked-work": ["observed", "unknown", "unavailable"],
-  "ready-to-merge": ["observed", "degraded", "unknown", "unavailable"],
-  spend: ["not-delivered"],
-  blockers: ["not-delivered"],
-};
+const SECTION_STATE_MATRIX = STATUS_SECTION_DERIVATION;
+
+const REQUIRED_CASES = [
+  "four-red-runs-grouped",
+  "hygiene-assertions-tri-state",
+  "hygiene-absence-violation",
+  "hygiene-satisfied-arm",
+  "hygiene-all-unknown",
+  "owner-gate-escalated-observed",
+  "owner-gate-unknown-age-escalated",
+  "parked-condition-present",
+  "parked-stale-no-condition-grouped",
+  "ready-merge-ready-ranked",
+  "ready-review-unknown-degraded",
+  "ready-read-failed-unknown",
+  "ci-read-failed-no-finding",
+  "placeholders-not-delivered",
+  "lanes-not-delivered-vocabulary",
+  "mixed-attention-ranked",
+  "no-findings-attention-zero",
+  "all-caps-bound",
+] as const;
 
 const REQUIRED_CONTROLS = [
   "failed issues read",
@@ -428,8 +190,11 @@ const completenessFailures = (cases: readonly CorpusCase[]): string[] => {
   const states = new Set<string>();
   const seenBySection = new Map<string, Set<string>>();
   const controls = new Set<string>();
+  const names = new Set<string>();
   for (const id of Object.keys(SECTION_STATE_MATRIX)) seenBySection.set(id, new Set());
   for (const testCase of cases) {
+    names.add(testCase.name);
+    names.add(testCase.scenario);
     for (const control of testCase.controls ?? []) controls.add(control);
     for (const [id, expected] of Object.entries(testCase.expected.sections)) {
       const stateSet = seenBySection.get(id);
@@ -451,6 +216,12 @@ const completenessFailures = (cases: readonly CorpusCase[]): string[] => {
       if (expected.counts === undefined) {
         failures.push(`${testCase.name}: ${id} has no counts`);
       }
+      if (!Array.isArray(expected.findings)) {
+        failures.push(`${testCase.name}: ${id} has no findings tuple`);
+      }
+      if (id === "tracker" && !Array.isArray(expected.assertions)) {
+        failures.push(`${testCase.name}: ${id} has no hygiene assertion tuple`);
+      }
     }
     for (const id of Object.keys(SECTION_STATE_MATRIX)) {
       if (testCase.expected.sections[id] === undefined) {
@@ -469,6 +240,9 @@ const completenessFailures = (cases: readonly CorpusCase[]): string[] => {
   }
   for (const control of REQUIRED_CONTROLS) {
     if (!controls.has(control)) failures.push(`corpus has no AC-F9-1 control: ${control}`);
+  }
+  for (const required of REQUIRED_CASES) {
+    if (!names.has(required)) failures.push(`corpus has no required case ${required}`);
   }
   return failures;
 };
@@ -561,6 +335,65 @@ describe("TC-STATUS-030 committed corpus", () => {
 
   test("removing all cases fails the completeness meta-check", () => {
     expect(completenessFailures([]).length).toBeGreaterThan(0);
+  });
+
+  test("removing a required case fails naming it", () => {
+    const without = loadCases().filter((testCase) => testCase.name !== "all-caps-bound");
+    expect(completenessFailures(without).some((line) => line.includes("all-caps-bound"))).toBe(
+      true,
+    );
+  });
+
+  test("a corrupted findings tuple or hygiene assertion fails by case name", () => {
+    const first = loadCases()[0];
+    if (first === undefined) throw new Error("corpus is empty");
+    const tracker = first.expected.sections.tracker;
+    if (tracker === undefined) throw new Error("corpus case has no tracker section");
+    const corruptedFindings: CorpusCase = {
+      ...first,
+      expected: {
+        ...first.expected,
+        sections: {
+          ...first.expected.sections,
+          tracker: {
+            ...tracker,
+            findings: [
+              {
+                code: "tracker.hygiene.missing-title",
+                severity: "low",
+                count: 1,
+                members: ["planted-member"],
+                evidenceRef: "planted-member",
+              },
+            ],
+          },
+        },
+      },
+    };
+    expect(failuresFor([corruptedFindings]).some((line) => line.startsWith(first.name))).toBe(true);
+    const corruptedAssertions: CorpusCase = {
+      ...first,
+      expected: {
+        ...first.expected,
+        sections: {
+          ...first.expected.sections,
+          tracker: {
+            ...tracker,
+            assertions: [
+              {
+                assertion: "epic-membership",
+                violations: 0,
+                unknown: 0,
+                satisfied: 999,
+              },
+            ],
+          },
+        },
+      },
+    };
+    expect(failuresFor([corruptedAssertions]).some((line) => line.startsWith(first.name))).toBe(
+      true,
+    );
   });
 
   test("the corpus files are read-only inputs (no writes are attempted)", () => {
