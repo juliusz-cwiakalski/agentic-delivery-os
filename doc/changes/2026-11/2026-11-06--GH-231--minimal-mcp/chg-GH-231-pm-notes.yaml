@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   quality_gates: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   dod_check: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-11-06T00:00:00Z", completed: null, url: null }
 decisions: []
 open_questions:
   - text: "MCP artifact/entry form (Bun-compiled binary vs Node-hosted process vs CLI subcommand `mcp serve`): ADR-0003 marks both runtime forms acceptable (TO-CONFIRM row resolved to 'both acceptable'); concrete form is an implementation decision for the spec within pinned constraints — not a human blocker."
