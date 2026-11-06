@@ -11,7 +11,7 @@ phases:
   dor_check: { started: "2026-11-06T02:56:00Z", completed: "2026-11-06T03:46:00Z" }
   delivery: { started: "2026-11-06T03:50:00Z", completed: "2026-11-06T04:55:00Z" }
   system_spec_update: { started: "2026-11-06T05:00:00Z", completed: "2026-11-06T05:38:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-06T06:00:00Z", completed: "2026-11-06T06:12:00Z" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -121,3 +121,6 @@ notes:
   - text: "plan-phase-6 complete: aggregate gate green, changeset landed, execution evidence recorded, base main-tools merged for release-diff honesty. Commits 2dc30291 (changeset+evidence), aa4ca9ee (base merge), 47da633a (gate evidence). Verification: pnpm check exit 0 (3276 pass, 4 skip, 0 fail; boundaries/ambient-globals/workspace-entrypoints/secret-read-boundary/exports-parity green); doc-distribution no drift; changesets-group exactly one fixed group; privacy-release 7 pass. Deviations recorded in chg-GH-223-execution-log.md (schemaId structural marker, 13 audited fields preserved)."
     type: info
     date: "2026-11-06T05:45:00Z"
+  - text: "REVIEW 1 = PASS (2026-11-06T06:05Z, artifact code-review/review-iter-1.yaml): 0 blocking / 1 major / 4 minor / 2 info; spec compliance PASS 15/15 ACs; plan compliance PASS ALL_TASKS_DONE; test coverage gaps none (50/50 cited in code, assertions non-vacuous). F-1 [major, security, non-blocking]: keyed chain is FNV-1a-64 key-prepend — invertible mod 2^64, so a same-user process reading one record can forge chain values without the key artifact; key exclusion (NFR-4/AC-F4-2) is cryptographically inert within the pinned trust model. Disposition: honest trust-model sentence added to feature-audit-ledger.md (in-model forgery resistance rests on 0600 permissions, not key secrecy); HMAC/SHA-256 hardening follow-up to be surfaced to the owner in the PR description (PM does not create tickets autonomously). F-2: AC-F2-1 redaction-precedence clause added (change spec + feature spec). F-3: plan rev-3 revision-log records the delivery scope-deviation set. F-4: containment-path note added (record retains original exitCode/outcomeClass; fallback.internal projects exit 2 — the doc states the entry's projection, not a hardcoded digit). F-5: home-less silent-unaudited branch judged not an AC violation by the reviewer; observable-skip recommended as follow-up, stays on record. Adversarial checks clean: fence discipline, cross-process ordinal durability, chain parity, tamper classes incl. orphans, redaction single-path, read-surface pins, scripted trim byte-exact, tier boundaries, error-table-sync 53/53 re-verified independently. review_fix completed with same-change doc amendments; no code change (guards re-run green: doc-distribution exit 0, forbidden-literals 5/5 0 violations)."
+    type: info
+    date: "2026-11-06"

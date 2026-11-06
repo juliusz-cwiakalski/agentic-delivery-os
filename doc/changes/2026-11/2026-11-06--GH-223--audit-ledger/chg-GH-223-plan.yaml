@@ -24,6 +24,19 @@
 #     raw-token broken invocations, tests/behaviour/audit-read-command-filter
 #     .test.ts) added to Phase 2 scope/tasks/verification and the matrix;
 #     totals 49 -> 50.
+#   - rev 3 (2026-11-06, review iteration 1 amendment): records the
+#     review-iteration-1 SCOPE_DEVIATION set that landed outside declared
+#     phase scopes — tests/behaviour/production-composition.test.ts
+#     (remediation 76965e8f), tests/behaviour/audit-run-support.ts (shared
+#     helper), tests/behaviour/state-ledger.test.ts (public-port surface pin),
+#     tests/structure/inventory.json (source inventory), and the doc-sync
+#     companions doc/00-index.md, doc/overview/glossary.md,
+#     doc/quality/test-specs/test-spec-state-layer.md, and
+#     scripts/checks/forbidden-literals.registry.json (P6 declared only the
+#     four feature specs). The remediation's packages/cli/src/edge.ts change
+#     re-touches a file already declared in P3/P4. Every item is recorded in
+#     the execution log or pm-notes; this is reviewed SCOPE_DEVIATION, not a
+#     scope-rule violation.
 #
 # Format note: this document is the machine-readable plan (delivery.plan.v1).
 # Phase goals, tasks (with TC/AC traceability), per-phase verification commands,

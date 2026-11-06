@@ -102,6 +102,8 @@ Verification walks the verified audit-domain records in ledger order. Both kinds
 
 Verification recomputes every expected link and compares it to the stored one. A mismatch is a chain break naming the record position and its `auditSeq`; verification continues over the sequence so multiple breaks can be reported. Evidence names positions and counts only — never payload bytes, checksum bytes, or the key. A chain break is a verification verdict, not an error-table entry and not a read failure. A reported salvage or repair removal is not a chain break: verification walks the surviving verified sequence, so the next audit-domain record chains from the last surviving record.
 
+Within the pinned single-user trust model, in-model forgery resistance rests on state-file permissions (the `0600` artifacts), not on chaining-key secrecy: the keyed construction detects corruption and out-of-model tampering, but a same-user process that reads one record can derive the internal chain state and forge values without reading the key artifact, because the link's FNV-1a-64 construction is invertible modulo 2⁶⁴.
+
 The chaining key is durable store-managed key material, not configuration and not an environment read:
 
 - It is generated once per store with cryptographically random bytes at the runtime edge (32 bytes rendered as 64 lowercase hex characters) on the store's first audit append.
@@ -138,7 +140,7 @@ The identity variable is named through the branding seam: the derived `BrandIden
 - Presence is decided on the trimmed value: leading and trailing whitespace are stripped for the presence decision only.
 - A present, non-empty value is recorded as supplied (trimming never alters the recorded value) together with the explicit marker `kind: "claimed"`.
 - An absent, empty, or whitespace-only value records no identity field; nothing is inferred from user, host, session, or any other signal.
-- The value passes through the same redaction chokepoint as every other record field, so an edge-registered secret value never survives in `agentIdentity`.
+- The value passes through the same redaction chokepoint as every other record field, so an edge-registered secret value never survives in `agentIdentity`; the secret-free-record guarantee takes precedence over as-supplied capture.
 - The identity is attribution only: never verified, never an authorization input, and always distinguishable from any future proven identity by the `claimed` marker.
 
 The spawn-side setter and the harness-plugin rendering are outside this feature: the ledger consumes the variable when it is present. Setting it at spawn from agent role and lane id is a convention owned by the harness adapter and plugin.
@@ -151,6 +153,8 @@ The command outcome is computed before the audit write. An audit append that fai
 - The command's own outcome, envelope, and exit code are unchanged; an audit failure never turns a successful command into a failure or vice versa.
 - A thrown audit-write error is reported as `state.write.failed`.
 - No partial invocation record exists. A reservation that landed without its invocation record is the durable skipped-ordinal finding described above; a failed reservation consumes nothing.
+
+If envelope serialization or `writeOutput` itself throws after the audit record was assembled, the surface's containment fallback renders a `fallback.internal` envelope with that entry's exit code while the already-written audit record retains the original `exitCode` and `outcomeClass`. The DEC-8 ordering makes the record authoritative for what the command computed, not for stream delivery.
 
 ### Scripted-mode relationship
 
@@ -212,7 +216,7 @@ function ensureAuditChainKey(store: StateStorePort): StateResult<string>;
 
 ## Security and Boundaries
 
-- **Tamper-evidence, not tamper-prevention.** Within the pinned single-user trust model, the guarantee is that an altered audit-domain record cannot go undetected; it is not that the record cannot be altered. Same-user processes can read state artifacts.
+- **Tamper-evidence, not tamper-prevention.** The chain detects corruption and alteration by an actor outside the single-user model; within the pinned single-user trust model, forgery resistance rests on state-file permissions (`0600`), not on chaining-key secrecy. Same-user processes can read state artifacts, and the guarantee is integrity evidence, not tamper prevention.
 - **Claimed-not-proven identity.** Identity is attribution only, never an authorization input. The `claimed` marker keeps it distinguishable from any future proven identity.
 - **Single redaction path.** Arguments, command tokens, and the identity value pass the same serialization/redaction chokepoint as machine output; registered secret values never survive into a record.
 - **No new ambient reads.** Identity is read from injected environment data at the runtime-aware edge. The chaining key is generated runtime state persisted through the store artifact path; no environment read is involved. No new error-table row exists: audit and key failures reuse the existing state identities, and a read refusal reuses `input.value.rejected`.
