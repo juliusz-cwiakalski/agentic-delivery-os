@@ -6,6 +6,7 @@
  * the runtime-provided SQLite binding. Tests inject their own edge.
  */
 import { execFileSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import {
   chmodSync,
   closeSync,
@@ -204,6 +205,7 @@ export const createNodeStateEdge = (): StateRuntimeEdge => ({
   raiseFault: (_point: StateEdgeFaultPoint) => {
     // Production never injects faults.
   },
+  randomHex: (bytes) => randomBytes(bytes).toString("hex"),
   indexAvailable: () => sqlite !== undefined,
   indexRead: (path) => {
     if (!existsSync(path)) return undefined;

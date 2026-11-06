@@ -329,6 +329,18 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/domain/brief.ts": ["projectBrief", "renderBriefHuman"],
   "core/src/state/index.ts": ["createStateStore"],
   "core/src/state/artifact-boundary.ts": ["createArtifactBoundary"],
+  "core/src/state/audit.ts": [
+    "appendAuditInvocation",
+    "assembleAuditInvocation",
+    "assembleAuditReservation",
+    "auditChainValue",
+    "createAuditBoundary",
+    "ensureAuditChainKey",
+    "readAuditChainKey",
+    "readAuditLedger",
+    "readAuditRecords",
+    "verifyAuditChain",
+  ],
   "core/src/state/closeout.ts": [
     "CLOSEOUT_OPERATION_RECORD_KEY_PREFIX",
     "appendCloseoutOutcome",

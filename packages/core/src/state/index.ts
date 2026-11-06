@@ -29,6 +29,9 @@ import {
   type StateResult,
   type StateSafeLocation,
   type StateSalvageOutcome,
+  type StateStoreArtifact,
+  type StateStoreArtifactReadRequest,
+  type StateStoreArtifactRequest,
   type StateStoreIdentity,
   type StateStorePort,
 } from "#contracts";
@@ -54,6 +57,19 @@ export {
   type StateDriverKind,
 } from "#contracts";
 export { createArtifactBoundary, type StateArtifactBoundary } from "./artifact-boundary.js";
+export {
+  type AuditAppendOutcome,
+  appendAuditInvocation,
+  assembleAuditInvocation,
+  assembleAuditReservation,
+  auditChainValue,
+  createAuditBoundary,
+  ensureAuditChainKey,
+  readAuditChainKey,
+  readAuditLedger,
+  readAuditRecords,
+  verifyAuditChain,
+} from "./audit.js";
 export {
   appendCloseoutOutcome,
   CLOSEOUT_OPERATION_RECORD_KEY_PREFIX,
@@ -378,6 +394,67 @@ export const createStateStore = (
       fenceNamespace: identity.fenceNamespace,
     }) as StateFenceHandle;
 
+  const artifactPathFor = (name: string): string => `${stateDirectory}/${name}`;
+
+  const readArtifactFile = (name: string): StateResult<{ path: string; content: string }> => {
+    const path = artifactPathFor(name);
+    if (!isSafeDocumentName(name)) return fail("state.write.failed", { path });
+    if (!edge.exists(path)) return fail("state.keys.missing", { path });
+    if (!edge.verifyPermissions(path, "file")) {
+      return fail("state.permission.denied", { path });
+    }
+    try {
+      return ok({ path, content: edge.readText(path) });
+    } catch {
+      return torn(path, 0);
+    }
+  };
+
+  const ensureArtifact = (request: StateStoreArtifactRequest): StateResult<StateStoreArtifact> => {
+    if (failure !== undefined) return { ok: false, error: failure };
+    const path = artifactPathFor(request.name);
+    if (!isSafeDocumentName(request.name)) return fail("state.write.failed", { path });
+    if (edge.exists(path)) {
+      const existing = readArtifactFile(request.name);
+      if (!existing.ok) return existing;
+      return ok({
+        name: request.name,
+        path,
+        created: false,
+        content: existing.value.content,
+      });
+    }
+    // An artifact absent while the store already carries guarded records is a
+    // non-first open: the key must never be silently regenerated.
+    const verified = verifiedState();
+    if (!verified.ok) return verified;
+    if (verified.value.records.some((record) => request.guardKinds.includes(record.kind))) {
+      return fail("state.keys.missing", { path });
+    }
+    const content = request.create(edge.randomHex(request.randomBytes));
+    let created: boolean;
+    try {
+      if (!edge.exists(stateDirectory)) edge.ensureDirectory(stateDirectory);
+      created = edge.createExclusiveFile(path, content);
+    } catch (error) {
+      return writeFailure(error, path);
+    }
+    if (!created) {
+      const existing = readArtifactFile(request.name);
+      if (!existing.ok) return existing;
+      return ok({
+        name: request.name,
+        path,
+        created: false,
+        content: existing.value.content,
+      });
+    }
+    if (!edge.verifyPermissions(path, "file")) {
+      return fail("state.permission.denied", { path });
+    }
+    return ok({ name: request.name, path, created: true, content });
+  };
+
   return {
     identity,
     read(request: StateReadRequest): StateResult<StateReadOutcome> {
@@ -692,6 +769,22 @@ export const createStateStore = (
         },
         evidence: after.value.evidence,
       });
+    },
+
+    readStoreArtifact(request: StateStoreArtifactReadRequest): StateResult<StateStoreArtifact> {
+      if (failure !== undefined) return { ok: false, error: failure };
+      const read = readArtifactFile(request.name);
+      if (!read.ok) return read;
+      return ok({
+        name: request.name,
+        path: read.value.path,
+        created: false,
+        content: read.value.content,
+      });
+    },
+
+    ensureStoreArtifact(request: StateStoreArtifactRequest): StateResult<StateStoreArtifact> {
+      return ensureArtifact(request);
     },
   };
 };

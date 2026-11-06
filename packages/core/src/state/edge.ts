@@ -71,6 +71,8 @@ export interface StateRuntimeEdge {
   renameFile(from: string, to: string): void;
   /** Raises an armed test fault (production: no-op). */
   raiseFault(point: StateEdgeFaultPoint): void;
+  /** Cryptographically random lowercase hex from the runtime (DM-5). */
+  randomHex(bytes: number): string;
   /** Whether the runtime provides a built-in SQLite binding (TDR-0004). */
   indexAvailable(): boolean;
   /** Returns derived rows, or undefined when the index is missing/unreadable. */

@@ -1,0 +1,17 @@
+{
+  "description": "Reservation failure matrix (TC-GH223-039/043/044).",
+  "cases": [
+    {
+      "id": "orphan-reservation",
+      "failAppend": 2,
+      "expectedOrphan": true,
+      "expectedNextOrdinal": 3
+    },
+    {
+      "id": "failed-reservation",
+      "failAppend": 1,
+      "expectedOrphan": false,
+      "expectedNextOrdinal": 2
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "description": "Declarative tamper matrix across both audit kinds (TC-GH223-025).",
+  "cases": [
+    { "id": "reservation-payload-edit", "kind": "audit.reservation", "expected": "chain-break" },
+    { "id": "invocation-payload-edit", "kind": "audit.invocation", "expected": "chain-break" },
+    { "id": "reservation-chain-edit", "kind": "audit.reservation", "expected": "chain-break" },
+    { "id": "invocation-chain-edit", "kind": "audit.invocation", "expected": "chain-break" },
+    {
+      "id": "reservation-ordinal-mismatch",
+      "kind": "audit.reservation",
+      "expected": "chain-break"
+    },
+    { "id": "invocation-ordinal-mismatch", "kind": "audit.invocation", "expected": "chain-break" },
+    { "id": "reservation-checksum-corrupt", "kind": "audit.reservation", "expected": "torn" },
+    { "id": "invocation-checksum-corrupt", "kind": "audit.invocation", "expected": "torn" },
+    { "id": "reservation-delete", "kind": "audit.reservation", "expected": "torn" },
+    { "id": "invocation-delete", "kind": "audit.invocation", "expected": "torn" },
+    { "id": "reservation-reorder", "kind": "audit.reservation", "expected": "torn" },
+    { "id": "clean-control", "kind": "none", "expected": "verified" }
+  ]
+}
