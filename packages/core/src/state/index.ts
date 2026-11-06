@@ -55,6 +55,19 @@ export {
 } from "#contracts";
 export { createArtifactBoundary, type StateArtifactBoundary } from "./artifact-boundary.js";
 export {
+  appendBlockerAnswer,
+  appendBlockerQuestion,
+  BLOCKER_ANSWER_RECORD_KEY_PREFIX,
+  BLOCKER_QUESTION_RECORD_KEY_PREFIX,
+  BLOCKERS_ARTIFACT_BOUNDARY,
+  BLOCKERS_RECORD_KEY_PREFIX,
+  type BlockerLedgerRead,
+  type BlockerRecordAppendOutcome,
+  blockerAnswerRecordKey,
+  blockerQuestionRecordKey,
+  readBlockerLedger,
+} from "./blockers.js";
+export {
   appendCloseoutOutcome,
   CLOSEOUT_OPERATION_RECORD_KEY_PREFIX,
   closeoutOperationRecordKey,

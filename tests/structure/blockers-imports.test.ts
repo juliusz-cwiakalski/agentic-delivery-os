@@ -189,3 +189,36 @@ describe("TC-BLK-004 pure blockers domain", () => {
     expect(inventory.core).toContain("src/domain/blockers.ts");
   });
 });
+
+const STATE_CONSUMER = "packages/core/src/state/blockers.ts";
+
+describe("TC-BLK-005 state consumer confinement", () => {
+  test("the state consumer imports only the contracts and state-boundary siblings", () => {
+    const specifiers = importSpecifiers(sourceOf(STATE_CONSUMER));
+    expect(specifiers.length).toBeGreaterThan(0);
+    for (const specifier of specifiers) {
+      expect(specifier === "#contracts" || specifier === "./artifact-boundary.js").toBe(true);
+    }
+    expect(specifiers.some((specifier) => specifier.startsWith("node:"))).toBe(false);
+    expect(specifiers.some((specifier) => specifier.startsWith("bun:"))).toBe(false);
+  });
+
+  test("the state consumer declares no direct runtime API", () => {
+    const violations = purityViolations(sourceOf(STATE_CONSUMER));
+    expect(
+      violations.filter((name) =>
+        ["fetch", "setTimeout", "setInterval", "setImmediate", "crypto", "Bun"].includes(name),
+      ),
+    ).toEqual([]);
+    const text = readFileSync(join(ROOT, STATE_CONSUMER), "utf8");
+    expect(text.includes("node:fs")).toBe(false);
+    expect(text.includes("process.env")).toBe(false);
+  });
+
+  test("the state consumer is registered in the inventory", () => {
+    const inventory = JSON.parse(
+      readFileSync(join(ROOT, "tests/structure/inventory.json"), "utf8"),
+    ) as Record<string, string[]>;
+    expect(inventory.core).toContain("src/state/blockers.ts");
+  });
+});
