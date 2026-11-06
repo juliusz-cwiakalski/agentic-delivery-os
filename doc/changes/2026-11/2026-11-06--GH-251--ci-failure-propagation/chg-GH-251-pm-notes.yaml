@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-06T19:10:00Z", completed: "2026-11-06T19:40:00Z" }
   quality_gates: { started: "2026-11-06T19:42:00Z", completed: "2026-11-06T19:48:00Z" }
   dod_check: { started: "2026-11-06T19:50:00Z", completed: "2026-11-06T19:52:00Z" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-11-06T19:54:00Z", completed: null, url: null }
 decisions:
   - text: "Parser limit reconciliation direction: enforce UTF-8 bytes (byte-accurate MAX_SOURCE_BYTES), not rename-to-chars. Driver: doc/spec/nonfunctional.md NFR-TOOL-005 spec truth says 'UTF-8 byte enforcement needs reconciliation'; fail-closed repo culture; preserves the byte-named contract. Final wording/implementation owned by spec-writer within ticket latitude."
     date: "2026-11-06"
