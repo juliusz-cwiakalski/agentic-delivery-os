@@ -145,6 +145,7 @@
     "doc/quality/test-specs/test-spec-state-layer.md",
     "doc/spec/features/feature-adapter-conformance.md",
     "doc/spec/features/feature-adapter-ports.md",
+    "doc/spec/features/feature-audit-ledger.md",
     "doc/spec/features/feature-branding-seam.md",
     "doc/spec/features/feature-brief.md",
     "doc/spec/features/feature-closeout.md",

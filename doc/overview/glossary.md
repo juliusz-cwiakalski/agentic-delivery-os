@@ -8,8 +8,8 @@ area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-228", "GH-229"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, adapter-port, provider-client-seed, status-digest, queue-readiness, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, watchdog/lane, and brief-render terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-228", "GH-229", "GH-223"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, adapter-port, provider-client-seed, status-digest, queue-readiness, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, watchdog/lane, and brief-render terms used across the repository."
 ---
 
 # Glossary
@@ -174,6 +174,12 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | State artifact boundary | A reusable declaration of the record kinds, payload schemas, record identities, required fields, and closed vocabularies one consumer owns under a store-scoped key prefix, with validation on every read and write. | State | [feature-state-layer.md](../spec/features/feature-state-layer.md) |
 | Guided state salvage | The explicit, fenced operation that truncates a terminal torn tail to its last valid frame, appends a classified `state.salvage` record, and quarantines the post-tear bytes outside the read path. Reads never repair; a mid-record tear refuses with zero byte mutation. | State | [feature-state-layer.md](../spec/features/feature-state-layer.md) |
 | Verified-empty | Explicit evidence that a state store is absent or holds zero records. It satisfies only an empty key-set declaration; a non-empty declaration fails `state.keys.missing`. Verified-empty and torn are never conflated. | State | [feature-state-layer.md](../spec/features/feature-state-layer.md) |
+| Audit ledger | The append-only, keyed-chain record of command invocations: one `audit.invocation` record per audited invocation, each preceded by its `audit.reservation` record, both additive inside `delivery.state.v1` under the key `audit.invocations`. | Audit | [feature-audit-ledger.md](../spec/features/feature-audit-ledger.md) |
+| Audit reservation | The three-field `audit.reservation` record (`auditSeq`, `runId`, `chainValue`) appended before its invocation record; durable ordinal-consumption and chain-link evidence, not an invocation record. | Audit | [feature-audit-ledger.md](../spec/features/feature-audit-ledger.md) |
+| Audit-sequence ordinal | The per-store monotonic `auditSeq`, allocated as the highest verified reservation ordinal plus one; a reservation without its invocation record is the in-band skipped-ordinal finding. | Audit | [feature-audit-ledger.md](../spec/features/feature-audit-ledger.md) |
+| Claimed identity | The value of the seam-named identity environment variable, recorded without trimming and with the explicit `claimed` marker; unauthenticated attribution, never inferred when absent, empty, or whitespace-only, and never an authorization input. | Audit | [feature-audit-ledger.md](../spec/features/feature-audit-ledger.md) |
+| Chaining key | The durable store-managed key material for the audit chain, generated once per store at the runtime edge and persisted as `chain-key.<workspace>.json`; never in configuration, an environment, a lane, or a record. | Audit | [feature-audit-ledger.md](../spec/features/feature-audit-ledger.md) |
+| Chain value | A record's keyed chain link over the previous audit-domain link and its audited content; present in both audit kinds, so an orphaned reservation stays alteration-detected. | Audit | [feature-audit-ledger.md](../spec/features/feature-audit-ledger.md) |
 | Verification summary | The deterministic failure prose `result=<token>; variant=<full|lite|unknown>; missing=<ids|->[; detail=<one-line>]`, with missing ids in required-set order. It is prose, never identity; `error.code` remains the identity. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
 | Baseline window | The fixed interval `2026-02-01T00:00:00Z` through `2026-10-31T23:59:59Z` used for the bash-era measurement baseline. | Measurement | [feature-measurement-baseline.md](../spec/features/feature-measurement-baseline.md) |
 | Ceremony share | The share of recorded lifecycle phase time spent in planning/governance phases rather than delivery, review, and documentation work; a bash-era proxy for scheduled-ceremony share. | Measurement | [feature-measurement-baseline.md](../spec/features/feature-measurement-baseline.md) |
@@ -285,6 +291,7 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Provider Engine](../spec/features/feature-provider-engine.md)
 - [Provider Client Seeds and Trap Catalogs](../spec/features/feature-provider-client-seeds.md)
 - [State Layer](../spec/features/feature-state-layer.md)
+- [Command Audit Ledger](../spec/features/feature-audit-ledger.md)
 - [Status Digest](../spec/features/feature-status-digest.md)
 - [Brief](../spec/features/feature-brief.md)
 - [Queue Ready](../spec/features/feature-queue-ready.md)
