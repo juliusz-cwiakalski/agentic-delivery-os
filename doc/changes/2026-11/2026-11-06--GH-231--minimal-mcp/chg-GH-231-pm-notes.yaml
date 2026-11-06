@@ -3,10 +3,10 @@ title: "M1-S7: Minimal MCP"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
-  specification: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
-  test_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
-  delivery_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
-  dor_check: { started: null, completed: null }
+  specification: { started: "2026-11-06T00:00:00Z", completed: null }
+  test_planning: { started: "2026-11-06T00:00:00Z", completed: null }
+  delivery_planning: { started: "2026-11-06T00:00:00Z", completed: null }
+  dor_check: { started: "2026-11-06T00:00:00Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -30,6 +30,9 @@ notes:
     date: "2026-11-06"
   - text: "Commit hygiene retro: first checkpoint commit (spec) failed repo commitlint body-max-line-length 100 in CI-enforced range lint (origin/main-tools..HEAD); fixed by local message-only reword (d03b7120 -> 8c1f16f5, tree-identical). Lesson: committer instructions for this repo must pin body/footer lines <=100 chars up front. Test-plan checkpoint authored compliant on first try."
     type: "retro"
+    date: "2026-11-06"
+  - text: "DoR iteration 1 verdict NOT_READY (7 PASS / 3 FAIL: plan_coverage, plan_code_area_coverage, cross_artifact_consistency). Verdict artifact: readiness-review/readiness-iter-1.md. Reopened phases: specification (NFR-4/AC-F1-3 absolute wording makes AC-F1-3 unsatisfiable given DEC-1; needs serve-composition-root carve-out matching plan 3.4/3.5 and test-plan 4.6/8.2), delivery_planning (MAJOR: phase-3 scope must add scripts/checks/secret-read-boundary.ts + tests/checks/secret-read-boundary.test.ts with a task extending SECRET_READ_ALLOWLIST with reason-bearing configuration-environment-source entry for the serve root and updating the toHaveLength(4) pin — else phase-3 test gate cannot pass), test_planning (nit: TC-MCP-013 cites ambient-globals.ts, core-only scan, vacuous for mcp — re-cite depcruise rule + mcp-imports AST floors). Remediation: mechanical, no human input; re-run gate as iteration 2 (max 3)."
+    type: "risk"
     date: "2026-11-06"
   - text: "Tracker write note: github-mcp lacks write auth (update_issue failed 'Requires authentication'); gh CLI authenticated as juliusz-cwiakalski with repo scope — all tracker writes and PR creation go through gh CLI via @runner. Labels synced: review (stale, no PR) removed, planning added; final set change+planning."
     type: "info"
