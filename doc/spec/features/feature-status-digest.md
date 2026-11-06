@@ -6,41 +6,43 @@ created: 2026-10-31
 last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
-summary: "The read-only status command and its bounded delivery.status.v1 digest: six fixed sections in order, a closed five-value section state, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, the declared lanes-or-queue gap, providers read from configuration and the verified park fold, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
+summary: "The read-only status command and its bounded delivery.status.v1 digest: seven fixed sections in order, a closed five-value section state, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, the declared lanes-or-queue gap, providers read from configuration and the verified park fold, parked work from the git-ignored local PM context, the state-sourced typed-questions section over the verified blocker ledger and its shared ranking, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228"]
+  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-230"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006"]
   contracts:
     - "packages/core/src/contracts/status.ts"
+    - "packages/core/src/contracts/blockers.ts"
 ---
 
 # Feature: Status Digest
 
 ## Overview
 
-The status command is the read-only first call of a delivery session. It returns one bounded digest of the delivery world instead of requiring the coordinator to probe the tracker, pull requests, CI, lanes, providers, and parked work by hand. The digest is `delivery.status.v1`: a schema version, an injected `generatedAt`, an origin-derived repository binding, summary counts, and exactly six sections in a fixed order.
+The status command is the read-only first call of a delivery session. It returns one bounded digest of the delivery world instead of requiring the coordinator to probe the tracker, pull requests, CI, lanes, providers, parked work, and the blocker ledger by hand. The digest is `delivery.status.v1`: a schema version, an injected `generatedAt`, an origin-derived repository binding, summary counts, and exactly seven sections in a fixed order.
 
-Each section carries one state from the closed set `observed`, `degraded`, `unknown`, `unavailable`, and `not-delivered`; a bounded evidence record naming its sources and reasons; uniform counts; a ranked, capped item surface; and an explicit truncation marker. A section state describes the quality and completeness of its evidence, never a global all-clear. A failed, absent, unattempted, or unresolved read is digest data, not a command failure: every successful run returns all six sections, and only parser or containment failures produce an error envelope.
+Each section carries one state from the closed set `observed`, `degraded`, `unknown`, `unavailable`, and `not-delivered`; a bounded evidence record naming its sources and reasons; uniform counts; a ranked, capped item surface; and an explicit truncation marker. A section state describes the quality and completeness of its evidence, never a global all-clear. A failed, absent, unattempted, or unresolved read is digest data, not a command failure: every successful run returns all seven sections, and only parser or containment failures produce an error envelope.
 
 The machine mode is the standard `CommandResult` envelope whose `data` is the full digest. Human mode is a deterministic, bounded digest rendered from the same data. Status performs zero writes, fences, state mutations, network writes, or child processes. It adds no error-table row, no configuration key, and no state-schema change; it introduces no new package, subpath, or runtime-API location. Closeout is a separate mutating surface: status does not import or compose the closeout engine, the git branch/checkout seam, or provider write operations, and its read-only guarantees are unchanged.
 
-The separate read-only ready-set command that consumes these inputs is specified in [Queue Ready](feature-queue-ready.md); it is a distinct command and does not change the status digest. The owner-facing one-screen projection of the same collector state is specified in [Brief](feature-brief.md); it is a distinct read-only command that consumes these facts without adding a status section, schema, or read. The surrounding contracts are described in [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md). Package tiers and runtime confinement follow [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); tracker absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md).
+The separate read-only ready-set command that consumes these inputs is specified in [Queue Ready](feature-queue-ready.md); it is a distinct command and does not change the status digest. The owner-facing one-screen projection of the same collector state is specified in [Brief](feature-brief.md); it is a distinct read-only command that consumes these facts without adding a status section, schema, or read. The typed question channel whose verified ledger backs the `typed-questions` section is specified in [Typed Blocker and Question Channel](feature-blockers.md). The surrounding contracts are described in [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md). Package tiers and runtime confinement follow [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); tracker absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md).
 
 ## Business Context
 
 ### Problem Statement
 
-- **Problem:** The coordinator probes six different sources at the start of every session. Those probes are inconsistent, unbounded, and unable to distinguish a failed read, an absent source, an omitted signal, a missing capability, and a genuinely quiet delivery world. The most expensive outcome is a false all-clear.
+- **Problem:** The coordinator probes the tracker, pull requests, CI, lanes, providers, parked work, and the persisted blocker ledger at the start of every session. Those probes are inconsistent, unbounded, and unable to distinguish a failed read, an absent source, an omitted signal, a missing capability, and a genuinely quiet delivery world. The most expensive outcome is a false all-clear.
 - **Affected Users:** The coordinator, lifecycle agents, and operators consuming the session bootstrap; maintainers of the tracker, VCS, CI, provider, and local PM-context sources.
 - **Business Impact:** A single typed, evidence-backed digest replaces ad-hoc probing, bounds the session-start token cost, and makes absent or degraded evidence visible instead of presenting as "nothing to do".
 
 ### Goals
 
 - Provide one read-only `status` command with no command-specific flags beyond the global machine-output switch.
-- Return exactly six named sections in fixed order, each with a closed state, bounded evidence, counts, ranked items, and truncation.
+- Return exactly seven named sections in fixed order, each with a closed state, bounded evidence, counts, ranked items, and truncation.
 - Never turn a failed, absent, unattempted, or unresolved read into an observed, clear, green, available, or zero claim.
 - Answer the four tracker families from normalized work-item data.
 - Report changes and pull requests, CI, providers, and parked work from declared sources with explicit degradation.
+- Report open typed questions from the verified blocker ledger through the shared question ranking.
 - Report the lanes-or-queue section as a declared capability gap, never as an empty queue.
 - Keep output deterministic, bounded, brand-neutral, read-only, and within the existing tiers, error table, configuration schema, and secret-read boundary.
 
@@ -52,7 +54,7 @@ The command is exactly `status`, composed where the other top-level commands are
 
 The command handler owns no stream writes and chooses no exit code. It reads the injected sources, assembles the digest, and returns it; the CLI edge renders the human text or the machine envelope. The optional human-text renderer hook on the command-definition contract is invoked by the CLI edge in human mode; status supplies one, as do brief ([feature-brief.md](feature-brief.md)) and the other human-rendering commands.
 
-### Six sections and five states
+### Seven sections and five states
 
 The section ids and order are fixed:
 
@@ -64,6 +66,7 @@ The section ids and order are fixed:
 | 4 | `lanes-or-queue` | Lanes or queue | None; declared capability gap |
 | 5 | `providers` | Providers | Provider configuration plus the verified park fold |
 | 6 | `parked-work` | Parked work | Local PM context's `parked_changes` |
+| 7 | `typed-questions` | Typed questions | One verified read of the blocker ledger |
 
 Every section has exactly one state:
 
@@ -79,7 +82,7 @@ Item-level unknown is distinct from a section state. An observed section may con
 
 ### Evidence, counts, truncation, and bounds
 
-The evidence record contains up to six source entries `{ source, outcome, failureCode?, failureClass? }` and up to six unique reasons from a closed set. Sources are `tracker`, `changes`, `ci`, `queue-engine`, `provider-config`, `provider-parks`, `local-context`, and `repository-binding`. Outcomes are `read`, `observed-empty`, `failed`, `not-configured`, and `not-delivered`. Evidence never carries a raw provider payload, response body, credential, arbitrary message, or free-form item content.
+The evidence record contains up to six source entries `{ source, outcome, failureCode?, failureClass? }` and up to six unique reasons from a closed set. Sources are `tracker`, `changes`, `ci`, `queue-engine`, `provider-config`, `provider-parks`, `local-context`, `repository-binding`, and `blockers`. Outcomes are `read`, `observed-empty`, `failed`, `not-configured`, and `not-delivered`. Evidence never carries a raw provider payload, response body, credential, arbitrary message, or free-form item content.
 
 The closed reason set is `observed`, `observed-empty`, `read-failed`, `source-unavailable`, `signal-unavailable`, `addressing-unresolved`, `remote-unsupported`, `credential-unavailable`, `config-invalid`, `state-unreadable`, `commit-unresolved`, `provider-chain-not-declared`, `provider-chain-unresolved`, `local-context-missing`, `local-context-malformed`, `local-state-untracked`, `engine-not-delivered`, `source-truncated`, `item-signal-absent`, and `partial-evidence`. Reasons are unique per section and ordered by first occurrence in the fixed source and family order.
 
@@ -122,6 +125,7 @@ The matrix is normative. Item-level unknowns do not by themselves turn an observ
 | lanes-or-queue | Never | Never | Never | Never | Always |
 | providers | Provider config read succeeded, a default chain is declared, and the park fold succeeded | Config and entries observed but the park fold failed | Config read failed, config invalid, or the declared chain does not resolve to declared entries | No declared default chain | Never |
 | parked-work | PM context read succeeded and `parked_changes` is an array, including empty | Never (single required read) | PM context malformed or wrong shape | PM context absent | Never |
+| typed-questions | Verified blocker-ledger read succeeded, including an empty or verified-empty ledger | Never (single required local read) | Blocker read failed or the ledger is torn or unknown | Never | Never |
 
 Providers resolve by fixed precedence: `unknown` first, then `unavailable`, then `degraded`, then `observed`. A failed or invalid config read, or a declared chain that does not resolve, yields `unknown` even when no default chain is declared. Otherwise an absent default chain yields `unavailable` even when the park fold also failed. Otherwise a park-fold failure yields `degraded`; otherwise the section is `observed`.
 
@@ -172,6 +176,18 @@ The source of truth is the local PM context's `parked_changes` array in the git-
 
 Parked entries rank by oldest parseable `parkedAt`, absent or invalid timestamps last, then `workItemRef` ascending with numeric-aware `PREFIX-number` comparison, then entries without a reference last ordered by change folder, branch, and reason. The list is capped at eight.
 
+### Typed questions
+
+The section is sourced from one verified read of the blocker ledger per invocation, exposed as the `blockers` evidence source. It renders open questions only; answered questions stay on the `blockers list` resolved group and are absent from the digest. The section reuses the channel's one shared ranking — priority class, then oldest `askedAt`, then question id — and assigns contiguous `rank` values before the render cap.
+
+| Condition | State | Evidence and counts |
+|---|---|---|
+| Verified read succeeded with at least one open question | `observed` | `blockers: read`; reason `observed`; counts report the open total as `observed` and `total`, zero unknown, and the omitted count |
+| Verified read succeeded with no open questions, including a verified-empty store | `observed` | `blockers: observed-empty`; reason `observed-empty`; zero counts |
+| Read failed or the ledger is torn or unknown | `unknown` | `blockers: failed` with the delivered state code as `failureCode`; reason `state-unreadable`; zero counts and an empty `questions` array |
+
+At most eight open questions render. Each rendered item carries `id`, `type`, `audience`, `lane`, `ref`, `question`, `options`, `askedAt`, `age`, and `rank`; a dropped question sets `truncated`, counts the omission, and adds the `source-truncated` reason. A failed read is payload data, never a command failure: the section is `unknown`, no question is fabricated, and the command still exits `0` with a success envelope. A question addressed to the coordinator at rank `1` is the payload-determinable pickup signal for later coordinator supervision; this command performs no wake or iteration.
+
 ### Repository binding and credential posture
 
 The runtime edge resolves the checkout's `origin` remote through the repository adapter, read-only and without a child process. It parses GitHub HTTPS and SSH forms and binds `owner`, `name`, and `host: github.com`. Userinfo and credentials are discarded and never enter evidence. No `origin`, an unparseable remote, or a non-GitHub host yields an unavailable binding with `addressing-unresolved` or `remote-unsupported`; the tracker, changes, and CI sections then report unavailable or unknown accordingly. No new configuration key and no alternate remote are read.
@@ -186,9 +202,9 @@ No affected section is ever `observed` under the guard. Restoring a credential-r
 
 ### Machine envelope and human digest
 
-`status --json` writes exactly one standard `CommandResult` envelope. Its `data` is the full `delivery.status.v1` digest: `schemaVersion`, `generatedAt`, `repository`, `summary`, and the six sections. The serialized `data` digest is at most 65 536 bytes; the total envelope size is recorded but not separately hard-capped. A success envelope carries no `error` key.
+`status --json` writes exactly one standard `CommandResult` envelope. Its `data` is the full `delivery.status.v1` digest: `schemaVersion`, `generatedAt`, `repository`, `summary`, and the seven sections. The serialized `data` digest is at most 65 536 bytes; the total envelope size is recorded but not separately hard-capped. A success envelope carries no `error` key.
 
-`summary` counts the six sections by state and reports `actionable` as the sum of the rendered item arrays of every section whose state is `observed` or `degraded`. Tracker family items are counted individually; rendered pull requests, CI runs, provider entries, provider parks, and parked-work items are counted. Sections in `unknown`, `unavailable`, or `not-delivered` contribute zero.
+`summary` counts the seven sections by state and reports `actionable` as the sum of the rendered item arrays of every section whose state is `observed` or `degraded`. Tracker family items are counted individually; rendered pull requests, CI runs, provider entries, provider parks, parked-work items, and typed questions are counted. Sections in `unknown`, `unavailable`, or `not-delivered` contribute zero.
 
 Human mode renders the same digest deterministically:
 
@@ -200,9 +216,10 @@ ci         <state>  <failed|pending|succeeded|canceled|none-reported|unknown> (<
 lanes      not-delivered  no queue or lane engine in this release
 providers  <state>  chain <name|none|unknown> | active parks <n|?> | <entries|?> entries
 parked     <state>  <n|?> parked changes (git-ignored local state)
+questions  <state>  <n|?> open[ (<reason>)]
 ```
 
-The header is optional and appears only when the repository binding is observed and the commit SHA is resolved. There is exactly one line per section in fixed order, and every line names its state. The digest never invents a zero for an unread source: `PRs ?` appears when the pull-request source was not read successfully, and review state is then `unknown`; otherwise review state is `unavailable` when a declared delivery signal is unavailable or any rendered pull request has an unknown review signal, and `observed` when those signals are present. `active parks ?` appears unless the provider section is `observed` and the park source was read successfully; `entries ?` appears when the provider section is `unknown`; `parked ?` appears when the local context was not observed. Truncation is marked with `+N` when items were omitted or `+more` for a source-at-limit signal. The digest is at most 24 lines and 4096 bytes, contains no raw provider payloads, no item titles, no secrets, and no LLM-generated prose, performs no extra reads, and contains no timestamps.
+The header is optional and appears only when the repository binding is observed and the commit SHA is resolved. There is exactly one line per section in fixed order, and every line names its state. The digest never invents a zero for an unread source: `PRs ?` appears when the pull-request source was not read successfully, and review state is then `unknown`; otherwise review state is `unavailable` when a declared delivery signal is unavailable or any rendered pull request has an unknown review signal, and `observed` when those signals are present. `active parks ?` appears unless the provider section is `observed` and the park source was read successfully; `entries ?` appears when the provider section is `unknown`; `parked ?` appears when the local context was not observed; `questions ?` appears whenever the section is not `observed`, and an `unknown` section appends its first reason as `(<reason>)`. The question count is the rendered open-question count. Truncation is marked with `+N` when items were omitted or `+more` for a source-at-limit signal. The digest is at most 24 lines and 4096 bytes, contains no raw provider payloads, no item titles, no secrets, and no LLM-generated prose, performs no extra reads, and contains no timestamps.
 
 ### Error identity reuse
 
@@ -217,7 +234,7 @@ Evidence reuses existing identities only. `failureCode` is an existing `config.*
 | Path | Responsibility |
 |---|---|
 | `packages/core/src/contracts/status.ts` | The complete `delivery.status.v1` vocabulary: section ids, states, reasons, source ids, outcomes, families, item shapes, counts, evidence, repository binding, bounds, rank data, and digest types. Types and `as const` data only. |
-| `packages/core/src/domain/status.ts` | The pure aggregator and human renderer: six section builders, state derivation, evidence assembly, ranking, capping, truncation, summary counts, and deterministic grammar over injected facts. No I/O, clock, randomness, or ambient environment. |
+| `packages/core/src/domain/status.ts` | The pure aggregator and human renderer: seven section builders, state derivation, evidence assembly, ranking, capping, truncation, summary counts, and deterministic grammar over injected facts. No I/O, clock, randomness, or ambient environment. |
 | `packages/core/src/contracts/index.ts` | Re-exports the status vocabulary through the shared contracts subpath. |
 | `packages/core/src/domain/index.ts` | Re-exports `aggregateStatus` and `renderStatusHuman`. |
 | `packages/cli/src/commands/status.ts` | The `status` command definition over injected readers; no stream writes and no exit-code choice. |
@@ -233,8 +250,8 @@ Evidence reuses existing identities only. `failureCode` is an existing `config.*
 
 1. The CLI edge resolves the brand and the repository binding from `origin`.
 2. When the binding is observed, the edge reads one bounded issues page, one bounded pull-request page, and one bounded check-runs page for the checkout SHA. When it is not observed, it injects classified unavailable reads instead of inventing a target.
-3. The edge reads the resolved provider configuration and folds the verified provider park views, then reads the local PM context.
-4. The pure aggregator derives the six section states, ranks and caps the item surfaces, assembles bounded evidence, and returns the digest.
+3. The edge reads the resolved provider configuration and folds the verified provider park views, reads the local PM context, and reads the verified blocker ledger once.
+4. The pure aggregator derives the seven section states, ranks and caps the item surfaces, assembles bounded evidence, and returns the digest.
 5. Machine mode wraps the digest in the existing envelope; human mode renders the deterministic digest from the same data.
 
 ### API and interface contracts
@@ -246,6 +263,7 @@ Evidence reuses existing identities only. `failureCode` is an existing `config.*
 - **CI read result** — either `{ ok: true, items, pageItemCount }` or a classified read failure.
 - **Provider facts** — either a resolved configuration or `{ ok: false, reason: "config-invalid" | "provider-chain-unresolved", failureCode? }`, plus either verified park views or a `state-unreadable` failure.
 - **Local-context read result** — either `{ ok: true, context: { path, tracked: false, activeChange?, parkedChanges } }` or `{ ok: false, reason: "missing" | "malformed", path }`.
+- **Blocker read result** — either `{ ok: true, value: { verifiedEmpty, questions, answers } }` or `{ ok: false, reason: "state-unreadable", failureCode?, failureClass? }`.
 
 The status contracts and domain import only the shared contracts and their own modules. The GitHub, repository, and file I/O stay in their already-admitted adapter subpaths. No new package, subpath, or runtime-API location is introduced.
 
@@ -265,14 +283,14 @@ The status contracts and domain import only the shared contracts and their own m
 
 | Concern | Current guarantee |
 |---|---|
-| Section totality | Exactly six sections in fixed order; one state from the five-value set per section; evidence, counts, items, and truncation present on every section; zero missing or extra sections. |
+| Section totality | Exactly seven sections in fixed order; one state from the five-value set per section; evidence, counts, items, and truncation present on every section; zero missing or extra sections. |
 | Non-verdict guarantee | Failed, absent, unattempted, or unresolved reads never render as observed, clear, green, available, or zero; active parks are never available; no-run CI is never succeeded; the queue is never an observed empty queue. |
 | Bounds | Serialized `data` digest at most 65 536 bytes; human digest at most 24 lines and 4096 bytes; every cap enforced; every dropped or limit-truncated case marked. |
 | Read-only and determinism | Zero writes, fence acquisitions, state mutations, network writes, or child processes; identical injected inputs produce identical digest and human bytes. |
-| Output contract | `--json` produces exactly one valid envelope; human mode produces exactly six section lines plus an optional header; rendering performs zero extra reads. |
+| Output contract | `--json` produces exactly one valid envelope; human mode produces exactly seven section lines plus an optional header; rendering performs zero extra reads. |
 | Error-table stability | Zero new rows or domain kinds; zero documented-table drift; the sync check stays green. |
 | Boundaries and branding | Zero new runtime-API locations or secret-read allowlist entries; zero product literals; structure, boundary, ambient, and literal gates stay green. |
-| Performance and read cost | Pure aggregation over cap-sized inputs completes within 50 ms on the reference environment; at most three network reads, one logical park-fold read, and one configuration resolve per invocation; zero retries or loops. |
+| Performance and read cost | Pure aggregation over cap-sized inputs completes within 50 ms on the reference environment; at most three network reads, one logical park-fold read, one configuration resolve, and one verified blocker-ledger read per invocation; zero retries or loops. |
 | Privacy | Zero secrets or raw provider payloads in the digest, evidence, or human text; no ambient environment reads outside the allowlist. |
 | Real evidence | The default suite exercises every section and state edge from committed fixtures with zero live calls; the opt-in live smoke asserts structural invariants without pinning volatile counts. |
 
@@ -281,16 +299,16 @@ The status contracts and domain import only the shared contracts and their own m
 | Level | Scope | Evidence |
 |---|---|---|
 | Structure | Contract vocabulary, declared constants and bounds, data-only contracts, pure domain imports, command import discipline, error-identity reuse, no product literals, inventory registration | `tests/structure/status-contract.test.ts`, `tests/structure/status-imports.test.ts`, `tests/structure/content-inventory.test.ts`, `tests/structure/inventory.json` |
-| Behaviour | Command surface, six-section totality, Appendix A state derivation, tracker families, changes and CI classification, lanes gap, providers and parks, parked work, repository binding, negative controls, read-only execution, determinism | `tests/behaviour/status-command.test.ts`, `status-section-states.test.ts`, `status-tracker.test.ts`, `status-changes-ci.test.ts`, `status-providers-parked.test.ts`, `status-repository.test.ts`, `status-negative-controls.test.ts`, `status-readonly-determinism.test.ts` |
+| Behaviour | Command surface, seven-section totality, Appendix A state derivation, tracker families, changes and CI classification, lanes gap, providers and parks, parked work, typed questions and their shared ranking, repository binding, negative controls, read-only execution, determinism | `tests/behaviour/status-command.test.ts`, `status-section-states.test.ts`, `status-tracker.test.ts`, `status-changes-ci.test.ts`, `status-providers-parked.test.ts`, `status-repository.test.ts`, `status-negative-controls.test.ts`, `status-readonly-determinism.test.ts`, `blockers-digest.test.ts`, `blockers-shared-ranking.test.ts` |
 | Output and golden | Machine envelope and 64 KiB bound, human grammar and bounds, caps and truncation, golden bytes | `tests/behaviour/status-output.test.ts`, `tests/golden/status-digest.test.ts` with `tests/fixtures/status/golden/**` |
 | Corpus and performance | Committed fixture corpus for every section and state edge; injected-clock cap behaviour; three network reads, one park fold, one config resolve; 50 ms aggregation bound | `tests/behaviour/status-corpus.test.ts` with `tests/fixtures/status/corpus/**`, `tests/behaviour/status-performance.test.ts` |
 | Provider read side | Bounded issue and pull-request list pages, at-limit raw page size, absent relations and review signals, check-runs page limit, trap replay and firing negative controls | `tests/behaviour/providers/github-collection.test.ts`, `tests/behaviour/providers/github-trap.test.ts`, `tests/structure/trap-catalog.test.ts` |
 | Live smoke | Opt-in structural assertions against a real repository | `tests/behaviour/status-live.test.ts` |
 | Aggregate | The whole workspace | `pnpm check` |
 
-The fixture model is explicit. Each committed corpus case under `tests/fixtures/status/corpus/**` declares, for every section, the expected state, reasons, counts, ordered item identities, and truncation flag. The corpus covers fully observed data, the GitHub tracker-degraded slice, failed issues/pull-request/check-run reads, a missing credential, an unresolved SHA, an unresolved repository binding, a torn park store, a missing default chain, an unresolved declared chain, a missing PM context, a malformed PM context, an active provider park, and a failed pull-request read with an absent PM context. A completeness meta-check requires every section and every state in the derivation matrix plus the named AC-F9-1 controls, and corrupted states, counts, identities, or truncation flags fail by case name. The shared harness under `tests/fixtures/status/harness.ts` supplies the injected facts and read results. The golden digest and human text under `tests/fixtures/status/golden/**` pin byte-identical output and are never rewritten by the suite.
+The fixture model is explicit. Each committed corpus case under `tests/fixtures/status/corpus/**` declares, for every section, the expected state, reasons, counts, ordered item identities, and truncation flag. The corpus covers fully observed data, the GitHub tracker-degraded slice, failed issues/pull-request/check-run reads, a missing credential, an unresolved SHA, an unresolved repository binding, a torn park store, a missing default chain, an unresolved declared chain, a missing PM context, a malformed PM context, an active provider park, and a failed pull-request read with an absent PM context. The typed-questions section's verified-empty and torn-ledger cases are exercised by the blocker digest suite, which injects the same `StatusFacts` shape. A completeness meta-check requires every section and every state in the derivation matrix plus the named AC-F9-1 controls, and corrupted states, counts, identities, or truncation flags fail by case name. The shared harness under `tests/fixtures/status/harness.ts` supplies the injected facts and read results. The golden digest and human text under `tests/fixtures/status/golden/**` pin byte-identical output and are never rewritten by the suite.
 
-The live smoke is opt-in and outside the aggregate check. It runs only when a test-only switch under `tests/**` is enabled together with a resolvable GitHub credential. It asserts structural invariants only: six sections in order, evidence present, bounds, no secrets, the queue section not delivered, no provider entry `available`, and no observed-with-zero section after a failed read. It never pins volatile item counts. The switch literal lives only in the test tree; any production edge that exposes it derives the name from the injected brand environment prefix. A bounded, secret-free live evidence artifact may be attached to the pull request but is not committed by default.
+The live smoke is opt-in and outside the aggregate check. It runs only when a test-only switch under `tests/**` is enabled together with a resolvable GitHub credential. It asserts structural invariants only: seven sections in order, evidence present, bounds, no secrets, the queue section not delivered, no provider entry `available`, and no observed-with-zero section after a failed read. It never pins volatile item counts. The switch literal lives only in the test tree; any production edge that exposes it derives the name from the injected brand environment prefix. A bounded, secret-free live evidence artifact may be attached to the pull request but is not committed by default.
 
 ## Operational & Support
 
@@ -304,7 +322,7 @@ The digest itself is the observability surface: the standard envelope's `runId` 
 
 ### Cost and read cost
 
-One invocation performs at most three outbound read-only GitHub requests, one logical verified park-fold read, and one configuration resolve. The pure aggregator is linear over capped input. There is no retry loop, pagination crawl, daemon, or new runtime dependency.
+One invocation performs at most three outbound read-only GitHub requests, one logical verified park-fold read, one configuration resolve, and one verified blocker-ledger read. The pure aggregator is linear over capped input. There is no retry loop, pagination crawl, daemon, or new runtime dependency.
 
 ### Maintenance
 
@@ -317,6 +335,7 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 
 ## Dependencies & Risks
 
+- **Depends on** the typed blocker channel ([feature-blockers.md](feature-blockers.md)) for the verified blocker-ledger read, the shared question ranking, and the rendered question fields the `typed-questions` section consumes.
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for verified reads and the read-only provider park fold; status never writes or repairs the store.
 - **Depends on** the provider client seeds ([feature-provider-client-seeds.md](feature-provider-client-seeds.md)) for normalized work-item, delivery-request, and pipeline-run views and for the bounded GitHub collection reads.
 - **Depends on** the adapter ports and credential port ([feature-adapter-ports.md](feature-adapter-ports.md)) for the primitive views, the external-system instance, and credential resolution.
@@ -330,13 +349,16 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 - **Risk — absent signals fabricated:** mitigated by item-level unknown states, the declared per-source availability, and ADR-0004/ADR-0006 absence rules.
 - **Risk — unbounded output:** mitigated by exact caps, source read limits, byte bounds, and truncation evidence.
 - **Risk — credential or provider payload leakage:** mitigated by credential-port-only resolution, bounded evidence, and the serialization redaction chokepoint.
+- **Risk — the question ranking forks from the list and the brief:** mitigated by one shared pure ranking consumed by all three surfaces, with an equality test over identical facts.
+- **Risk — a torn blocker ledger read as no questions:** mitigated by the `unknown` state with `state-unreadable` evidence, zero fabricated questions, and an exit-`0` success envelope.
 - **Risk — documentation drift:** mitigated by this in-change current-truth spec, the reconciled provider/state/config/result/monorepo docs, and the literal and distribution checks.
 
 ## Glossary & References
 
 | Term | Definition |
 |---|---|
-| Status digest | The bounded `delivery.status.v1` payload: six sections, states, evidence, counts, ranked items, and truncation markers. |
+| Status digest | The bounded `delivery.status.v1` payload: seven sections, states, evidence, counts, ranked items, and truncation markers. |
+| Typed questions | The digest's seventh section: open blocker questions from the verified ledger, ranked by the channel's shared ordering, declared `unknown` with `state-unreadable` on a failed read. |
 | Section state | One of `observed`, `degraded`, `unknown`, `unavailable`, `not-delivered`; describes evidence quality and availability, not a global all-clear. |
 | Evidence record | The bounded sources, outcomes, reasons, and failure codes or classes that justify a section or item state; never raw provider payloads. |
 | Observed | Every required source read for the section succeeded; item-level unknown signals may still exist and are counted. |
@@ -358,6 +380,6 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 | Source truncation | The explicit marker that output items were dropped by a cap or that the source returned its declared read limit, so more may exist. |
 | Live smoke | The opt-in, credentialed structural test against a real repository; not a default-CI network test. |
 
-See also: [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Brief](feature-brief.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Verify Gates](feature-verify-gates.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md). Verify Gates reuses `STATUS_OWNER_ATTENTION_LABELS`, `STATUS_CI_RESULTS` (including `unknown`), and `STATUS_SOURCE_PIPELINE_LIMIT` by reference; status remains a digest, not a merge-gate verdict.
+See also: [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Brief](feature-brief.md), [Typed Blocker and Question Channel](feature-blockers.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Verify Gates](feature-verify-gates.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md). Verify Gates reuses `STATUS_OWNER_ATTENTION_LABELS`, `STATUS_CI_RESULTS` (including `unknown`), and `STATUS_SOURCE_PIPELINE_LIMIT` by reference; status remains a digest, not a merge-gate verdict.
 
-**Change record:** `doc/changes/2026-10/2026-10-31--GH-175--status-v1/`.
+**Change records:** `doc/changes/2026-10/2026-10-31--GH-175--status-v1/` (the delivered digest) and `doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/` (the seventh `typed-questions` section and the `blockers` evidence source).

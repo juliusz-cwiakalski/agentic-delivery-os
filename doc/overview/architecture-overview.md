@@ -8,7 +8,7 @@ area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, ADR-0010]
-  related_changes: [GH-200, GH-229]
+  related_changes: [GH-200, GH-229, GH-230]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -112,8 +112,9 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
 
 ### Shipped versus planned behavior
 
-- `status` is a bounded, read-only six-section digest: human ceiling 24 lines /
+- `status` is a bounded, read-only seven-section digest: human ceiling 24 lines /
   4096 bytes; machine `data` ceiling 65536 bytes, with counts and truncation.
+  Its seventh section ranks open typed questions from the local blocker ledger.
 - `queue ready` is a bounded read-only tri-state ready-set with ranked resumption,
   at most eight candidates. It does not dispatch, acquire delivery ownership or
   implement the M2 queue/lane scheduler. See [status](../spec/features/feature-status-digest.md)
@@ -124,6 +125,12 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   data escalates without auto-defaulting, and a rendered board exits zero while an
   unavailable collector exits two. See the
   [owner-gate SLA](../spec/features/feature-owner-gate-sla.md).
+- `blockers` is the typed question channel: `list`, `answer`, and `publish` over
+  append-only local state, with audience routing through a policy-as-data map,
+  the layered credential guard, and a recorded `laneResume` projection. Answers
+  declare `applied: false` and no session is touched; open questions rank once
+  and surface on the list, the digest, and the brief. See the
+  [typed blocker channel](../spec/features/feature-blockers.md).
 - `verify change <ref>` classifies ledger/document completeness, not merge readiness.
   `verify gates <ref>` evaluates CI, push parity, squash surface, address completion
   and lifecycle gates. Both are delivered by integrated PR #217; see the

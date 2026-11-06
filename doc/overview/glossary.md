@@ -8,8 +8,8 @@ area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-228", "GH-229"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, adapter-port, provider-client-seed, status-digest, queue-readiness, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, watchdog/lane, and brief-render terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-228", "GH-229", "GH-230"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, adapter-port, provider-client-seed, status-digest, queue-readiness, owner-gate SLA, typed blocker channel, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, watchdog/lane, and brief-render terms used across the repository."
 ---
 
 # Glossary
@@ -201,7 +201,7 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Identity bridge | The provider-agnostic rule matching a canonical ref to an observed provider-native identity: exact canonical match first, then an unambiguous all-digit suffix bridge, never substring, prefix-only, or numeric coercion. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
 | value-clamped | The payload-level marker that a provider-derived payload value or collection was shortened or reduced to its declared cap; verdict-neutral and accompanied by payload `truncated`. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
 | Engine not run | The fixed `queue ready` evidence reason stating that configuration and parks were read but the provider engine was never executed. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
-| Status digest | The bounded `delivery.status.v1` payload returned by the read-only status command: six fixed sections, states, evidence, counts, ranked items, and truncation markers. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Status digest | The bounded `delivery.status.v1` payload returned by the read-only status command: seven fixed sections, states, evidence, counts, ranked items, and truncation markers. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Section state | One of `observed`, `degraded`, `unknown`, `unavailable`, `not-delivered`; describes the quality and availability of a section's evidence, never a global all-clear. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Evidence record | The bounded sources, outcomes, reasons, and failure codes or classes that justify a section or item state; never raw provider payloads. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Observed | Every required source read for a section succeeded, including verified-empty and provider-asserted empty results. Item-level unknown signals may still exist and are counted. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
@@ -243,6 +243,10 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Never-merge class | A gate class the SLA never auto-proceeds; only a recorded waiver authored by a principal authorized for the class overrides it. | Owner-gate SLA | [feature-owner-gate-sla.md](../spec/features/feature-owner-gate-sla.md) |
 | Decision record (EVT-1) | The append-only, idempotent state record persisted at every owner-gate default application: gate, kind, ref, default, time, threshold, and clock source. | Owner-gate SLA | [feature-owner-gate-sla.md](../spec/features/feature-owner-gate-sla.md) |
 | Board | The render-once `board` command: the owner-gate aging grid with per-gate SLA state, declared collector unavailability, and bounded deterministic output. | Owner-gate SLA | [feature-owner-gate-sla.md](../spec/features/feature-owner-gate-sla.md) |
+| Typed question | An append-only blocker record with a closed type, audience, lane, bounded content, and derived open/answered status; the unit of the typed question channel. | Typed blockers | [feature-blockers.md](../spec/features/feature-blockers.md) |
+| Confused-deputy guard | The audience-routing refusal that stops a cross-audience answer with the delegation policy named unless policy-as-data delegates. | Typed blockers | [feature-blockers.md](../spec/features/feature-blockers.md) |
+| `laneResume` | The per-answer resume projection: `boundary-note` or `attach-continue` without re-entry when the adapter declares injection, or the `resume-prompt-reentry` fallback with its prefill cost. | Typed blockers | [feature-blockers.md](../spec/features/feature-blockers.md) |
+| Applied posture | The explicit `applied` field on an answer: `false` while the recorded intent has no applying actor; the recorded-versus-applied boundary. | Typed blockers | [feature-blockers.md](../spec/features/feature-blockers.md) |
 | Structured ledger evaluation | `EvaluateVerifyChange` → `VerifyLedgerEvaluation`, the pure evaluation that returns variant, outcome, required/completed/missing phases, declaration counts, and registry evidence on every outcome. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | Open-PR resolution | The one deterministic rule that selects the target delivery request from one bounded open-PR page. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | Lane | One unit of delivery work with an identity, a declared base ref, and declared workspace paths; later scheduling and daemon consumers judge and restore lanes through the watchdog probes. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
@@ -289,6 +293,7 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Brief](../spec/features/feature-brief.md)
 - [Queue Ready](../spec/features/feature-queue-ready.md)
 - [Owner-Gate SLA](../spec/features/feature-owner-gate-sla.md)
+- [Typed Blocker and Question Channel](../spec/features/feature-blockers.md)
 - [PM-Notes Lint and Phase Transitions](../spec/features/feature-pm-notes-lint-and-phase-transitions.md)
 - [Verify Change and Exit Taxonomy](../spec/features/feature-verify-change-and-exit-taxonomy.md)
 - [Verify Gates](../spec/features/feature-verify-gates.md)

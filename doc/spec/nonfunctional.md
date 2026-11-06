@@ -5,7 +5,7 @@ created: 2026-11-01
 last_updated: 2026-11-06
 owners: [engineering]
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-228, GH-229]
+  related_changes: [GH-200, GH-222, GH-221, GH-228, GH-229, GH-230]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -40,8 +40,8 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 ### NFR-TOOL-001: Truthful evidence and failure semantics
 
 - Quality attribute: reliability and diagnosability. Applies: result envelopes,
-  status, brief, queue-ready, verify-change, provider reads, the watchdog probes, and the
-  owner-gate board.
+  status, brief, queue-ready, verify-change, provider reads, the watchdog probes,
+  the owner-gate board, and the typed blocker channel.
 - Requirement/status: existing. Missing, failed, or unavailable evidence must not
   become a clear/ready/zero claim. Command success is not delivery success.
 - Evidence/test: [result](features/feature-result-contract.md),
@@ -49,9 +49,11 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
   [ready-set](features/feature-queue-ready.md),
   [verify](features/feature-verify-change-and-exit-taxonomy.md),
   [owner-gate SLA](features/feature-owner-gate-sla.md),
+  [blockers](features/feature-blockers.md),
   [watchdog](features/feature-watchdog-lane-contracts.md);
   `packages/core/src/domain/ci-result.ts`, `tests/behaviour/status-negative-controls.test.ts`,
   `tests/behaviour/queue-ready-negative-controls.test.ts`,
+  `tests/behaviour/blockers-digest.test.ts`,
   `tests/behaviour/watchdog-liveness.test.ts`.
 - Limits: CI observes one checkout-head page, not every required PR-head job;
   `merge-ready` is an approval-based close class, not merge authorization.
@@ -61,12 +63,15 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
   item's hand-back and human-input-needed labels; no gate asserts completion.
   Unknown evidence is not green. The watchdog liveness probe classifies absent
   signal sources as `watchdog.signals-absent` and emits no guessed verdict.
+  A failed or torn blocker-ledger read makes the digest `typed-questions` section
+  `unknown` with `state-unreadable` evidence and zero fabricated questions; the
+  command still exits `0`.
 - Owner/trigger: reviewer with PM; every new evidence consumer (RSK-002/003, XC-001).
 
 ### NFR-TOOL-002: Stable machine output and bounded read digests
 
 - Quality attribute: interoperability and resource boundedness. Applies: CLI
-  envelope, status, brief, queue-ready, and board renderers. Status: existing.
+  envelope, status, brief, queue-ready, board, and blockers renderers. Status: existing.
 - Requirement: one valid `CommandResult` under `--json`, exactly one of data/error,
   classified containment, deterministic ordering, and visible truncation.
 - Canonical budgets: [status](features/feature-status-digest.md#evidence-counts-truncation-and-bounds)
@@ -76,21 +81,25 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
   [board](features/feature-owner-gate-sla.md#ranking-bounds-and-truncation) caps
   rendered gates at 8, human output at 24 lines/4096 UTF-8 bytes, and serialized
   data at 65536 UTF-8 bytes. These are data caps, not a universal total-envelope cap.
+  [blockers](features/feature-blockers.md#bounds-and-truncation) caps rendered
+  questions at 8 per surface, question text at 120 characters, options at 4×60,
+  free-text answers at 160, human output at 24 lines/4096 UTF-8 bytes, and
+  serialized data at 65536 UTF-8 bytes.
   Brief reuses the status human and machine caps by reference and declares no parallel
   numeric bound.
 - Queue-ready accepts 1..8 candidates of at most 64 canonical characters; its
   per-field caps and renderer-only reverse-rank drops remain feature-specific.
 - Evidence/test: `packages/core/src/contracts/status.ts`, `queue-ready.ts`,
-  `brief.ts`, `owner-gate-sla.ts`; `tests/behaviour/status-output.test.ts`,
+  `brief.ts`, `owner-gate-sla.ts`, `blockers.ts`; `tests/behaviour/status-output.test.ts`,
   `queue-ready-output.test.ts`, `brief-output.test.ts`, `board-output.test.ts`,
-  golden suites.
+  `blockers-bounds.test.ts`, golden suites.
 - Owner/trigger: engineering/reviewer; payload or renderer changes (XC-007).
 
 ### NFR-TOOL-003: Scoped performance and read cost
 
 - Quality attribute: performance efficiency. Applies: status/queue-ready pure
-  policy, the owner-gate board, provider evaluation, privacy scan/policy, session
-  administration.
+  policy, the owner-gate board, the typed blocker channel, provider evaluation,
+  privacy scan/policy, session administration.
 - Requirement/status: existing feature budgets only; no universal latency SLO.
   Reference-environment results are not promises for every platform or network.
 
@@ -100,6 +109,7 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 | [Brief](features/feature-brief.md#non-functional-requirements) | Pure cap-sized projection within 50 ms; the same three outbound reads, park fold, and config resolve as one status invocation; no brief-specific read. | `tests/behaviour/brief-performance.test.ts` samples projection latency and injected read counts. |
 | [Queue-ready](features/feature-queue-ready.md#non-functional-requirements) | Pure evaluation/ranking/rendering contract within 50 ms; same three outbound reads, one park fold/config/local-context read. | `tests/behaviour/queue-ready-performance.test.ts` samples evaluator latency and injected read counts; independent renderer timing not established here. |
 | [Board](features/feature-owner-gate-sla.md#non-functional-requirements) | Pure evaluation/ranking/rendering within 50 ms; one bounded tracker read, at most one decision-history read, and one fence plus one append per newly defaulted gate. | `tests/behaviour/board-performance.test.ts`, `board-read-cost.test.ts`. |
+| [Blockers](features/feature-blockers.md#non-functional-requirements) | Pure validation/guard/ranking/rendering within 50 ms; one verified blocker-ledger read per list, digest, or brief invocation; one business read plus one fence, append, and coverage read per publish or answer; zero outbound requests. | `tests/behaviour/blockers-performance.test.ts`, `blockers-read-cost.test.ts`. |
 | [Provider](features/feature-provider-engine.md#non-functional-requirements) | Pure evaluation of 100 entries within 50 ms, excluding transport; configurable quota timeout defaults to 15000 ms, sleep cap to 24 completed sleeps. | Provider behavior and evidence-bounds suites; these are not end-to-end command deadlines. |
 | [Privacy](features/feature-privacy-guard.md#non-functional-requirements) | Scan within 60 s for up to 50 MiB on CI reference runner; emitter within 10 ms per 2048-byte envelope; at most 32 hashed lengths. | `tests/checks/privacy-performance.test.ts`; production empty classes limit what a clean scan demonstrates. |
 | [Session admin](features/feature-session-database-admin.md#non-functional-requirements) | Reference size/list/selection/recheck/live-check/500-candidate apply: at most 30 s/10 s/30 s/250 ms each/10 s/180 s total. | Fake-I/O suites and separately recorded non-CI reference smoke; no host performance rerun here. |
@@ -112,7 +122,8 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 ### NFR-TOOL-004: Durable local state and fenced writes
 
 - Quality attribute: integrity and recoverability. Applies: ledger, derived indexes,
-  phase transitions, provider park persistence. Requirement/status: existing.
+  phase transitions, provider park persistence, owner-gate decisions, and blocker
+  question/answer records. Requirement/status: existing.
 - [State](features/feature-state-layer.md) requires verified ledger truth, explicit
   verified-empty evidence, key-set assertions, torn and unknown classification,
   reusable artifact-boundary validation, fenced writes, explicit stale-lock recovery,
@@ -145,8 +156,15 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 - [Result](features/feature-result-contract.md) redacts edge-registered non-empty
   secret values through `packages/cli/src/output/serialize.ts`; unregistered or
   transformed secret material is not a general detection guarantee.
+- [Blockers](features/feature-blockers.md) refuses registered secret values on the
+  question text, option values, free-text answers, and the `lane`/`ref` identifiers
+  before any record lands, and restricts `credential-missing` question text to the
+  declared variable-name shape. No token-shape pattern layer exists; values never
+  registered in the environment record remain the accepted residual recorded in
+  [TDR-0009](../decisions/TDR-0009-blockers-credential-guard-pattern-deferral.md).
 - Evidence/test: config restrictions/parser suites, result goldens, credential and
-  `tests/checks/secret-read-boundary.test.ts` negative controls.
+  `tests/checks/secret-read-boundary.test.ts` negative controls,
+  `tests/behaviour/blockers-credential*.test.ts`.
 - Gap: YAML parser limits nodes/depth/aliases to 2048/64/100, but its 1048576
   byte-named source constant compares `text.length`. UTF-8 byte enforcement needs
   reconciliation; do not claim it from the name alone.
@@ -194,17 +212,23 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 ### NFR-TOOL-008: Mutation safety and restart boundaries
 
 - Quality attribute: safety and recoverability. Applies: provider state, session
-  admin, integrated closeout, and watchdog restoration; live convergence remains unverified (RSK-004/009, XC-003).
+  admin, integrated closeout, the typed blocker channel, and watchdog restoration; live convergence remains unverified (RSK-004/009, XC-003).
 - Existing requirement: unchanged provider park generations append no duplicates;
   parks expire at read time. Provider selection neither spawns nor selects models,
   and production factory composition is not established by injected tests.
+- [Blockers](features/feature-blockers.md) appends one question or answer record per
+  fence with a coverage read that requires exactly one new record; duplicate question
+  ids, duplicate answers, torn or undeclared records fail closed, and no answer is
+  applied to a session.
 - [Session admin](features/feature-session-database-admin.md) defaults to dry-run;
   apply uses cold/non-live/leaf selection, immediate rechecks, official deletes,
   partial-failure accounting, and one live-gated checkpoint without host restart.
 - Bounds: list at most 100, prune at most 500; human 40 lines/8192 bytes, data
   524288 bytes. Liveness is activity within 15 minutes, not a PID/lock guarantee.
 - Evidence/test: provider parks tests; `tests/behaviour/session-admin-prune.test.ts`,
-  `session-admin-reboot.test.ts`, `session-admin-privacy.test.ts`.
+  `session-admin-reboot.test.ts`, `session-admin-privacy.test.ts`,
+  `tests/behaviour/blockers-records.test.ts`, `blockers-record-integrity.test.ts`,
+  `blockers-read-cost.test.ts`.
 - Closeout is a seven-step transaction, plan by default, `--apply` for mutation.
   Command-specific production composition bridges raw clients, real git and state.
   Verified `closeout.operation` history uses deterministic identities, fenced

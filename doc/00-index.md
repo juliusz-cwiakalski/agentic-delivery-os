@@ -16,8 +16,9 @@ ados_distribution: redistributable
 | [Overview](overview/) | North star, roadmap, architecture, glossary |
 | [System Spec](spec/) | Current truth — feature specs, API descriptions, NFRs |
 | [Adapter Conformance Suite](spec/features/feature-adapter-conformance.md) | The three provider-agnostic flows, capability-gated skips, coverage gates, `delivery.conformance.v1` artifact, and the scheduled read-only live tier |
-| [Status Digest](spec/features/feature-status-digest.md) | The read-only six-section delivery digest, its evidence states, bounds, and declared gaps |
-| [Brief](spec/features/feature-brief.md) | The read-only one-screen owner render: nine surfaces, three named placeholders, anchored actions, and collector failure as evidence at exit `0` |
+| [Status Digest](spec/features/feature-status-digest.md) | The read-only seven-section delivery digest, its evidence states, bounds, and declared gaps |
+| [Brief](spec/features/feature-brief.md) | The read-only one-screen owner render: nine surfaces, two named placeholders, three anchored-action groups, and collector failure as evidence at exit `0` |
+| [Typed Blocker and Question Channel](spec/features/feature-blockers.md) | The typed question channel: four question types, audience routing, the layered credential guard, recorded answers and resume projections, and the shared ranking on the list, digest, and brief |
 | [Queue Ready](spec/features/feature-queue-ready.md) | The read-only ready set: six tri-state readiness conditions, close classification and ranking, identity resolution, bounds, and evidence model |
 | [Owner-Gate SLA](spec/features/feature-owner-gate-sla.md) | The owner-gate aging and escalation contract: 24 h escalation, 72 h default-on-expiry, the recorded decision ledger, never-silence, and the render-once `board` surface |
 | [Machine-Readable Plan Schema](spec/features/feature-plan-schema.md) | The `delivery.plan.v1` YAML plan, the `plan validate`/`diff`/`overlap` verdicts, the `lint plan` target, and the legacy markdown transition |

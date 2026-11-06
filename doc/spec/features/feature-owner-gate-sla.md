@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The owner-gate SLA: the shared owner-gate population and its provider-native age clock, the pinned 24 h escalation and 72 h default-on-expiry thresholds with `>=` boundary semantics, the three-value `slaState` with declared unknown age, the PDR-0003 two-row policy-as-data default map (owner-review never-merge and non-defaultable, waiver defaulting to owner-review-first), the append-only idempotent EVT-1 decision record, structural never-merge protection, never-silence declared collector unavailability, the render-once board command with its deterministic rank key, bounds, and truncation marks, the owner/coordinator audience seam, and the v0 production-inertness boundary while every observed gate maps to owner-review."
 links:
-  related_changes: ["GH-229"]
+  related_changes: ["GH-229", "GH-230"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "PDR-0003"]
   contracts:
     - "packages/core/src/contracts/owner-gate-sla.ts"
@@ -22,7 +22,7 @@ An owner gate is an open work item carrying a declared owner-attention label (`h
 
 The mechanism is `delivery.board.v1` plus the owner-gate policy contract data. Thresholds, the two-kind/two-class vocabulary, the default map, the SLA states, the unknown-age markers, the audience dimension, the collector-id set, and the render bounds are contract data, not configuration keys. The pure evaluator consumes injected facts (clock, gate facts, policy, decision history) and produces the bounded gate projection and the decisions the edge must persist. The `board` command is the SLA surface: it reads the tracker collector once, evaluates, renders the aging grid or one `CommandResult` envelope, and appends at most one decision record per newly defaulted gate. The command is render-once; it declares no command-specific flags (`--json` is the global machine-output switch) and never starts a timer, loop, or daemon.
 
-The escalation mechanism carries an explicit audience dimension, `owner` or `coordinator`. The owner audience is the one the board renders in this release. The typed blocker channel is the planned coordinator-audience consumer of the same aging, threshold, and escalation mechanism; the seam adds no blocker-channel behavior to the board or the owner projection.
+The escalation mechanism carries an explicit audience dimension, `owner` or `coordinator`. The owner audience is the one the board renders. The typed blocker channel consumes the same audience dimension and the deterministic ranking and bounds discipline for its coordinator-audience questions; SLA aging, thresholds, default application, and decision records remain the board's mechanism and are not blocker-channel behavior.
 
 Two boundaries are part of the current contract. The gate-kind mapping that makes a real tracker gate reachable as a defaultable `waiver` gate is not delivered: every tracker-observed gate maps to kind `owner-review`, so against real data the SLA permanently escalates and never auto-defaults. The full defaulting path, the decision record, and `waivedBy` rendering are exercisable through injected evaluator facts and command runtimes. The classification is also the reconciliation point for the merge and verify-deploy story: the owner-review↔never-merge mapping is the recorded PDR-0003 assumption until that story reconciles and extends the vocabulary.
 
@@ -43,7 +43,7 @@ The surrounding contracts are described in [Status Digest](feature-status-digest
 - Apply exactly one pre-agreed default at 72 hours where policy permits, and record that decision durably and idempotently.
 - Never auto-proceed a never-merge class; a recorded waiver authored by an authorized principal remains the only override.
 - Surface the aging picture through the `board` command with deterministic ordering, bounded output, and declared unavailability.
-- Keep one escalation mechanism for two audiences: the owner now, the coordinator when the typed blocker channel arrives.
+- Keep the audience dimension and deterministic ranking discipline reusable by the board's owner audience and the blocker channel's coordinator audience.
 
 ## User Experience & Functionality
 
@@ -287,9 +287,9 @@ One invocation performs one bounded tracker list read and, only when a default i
 | Decision record (EVT-1) | The append-only, idempotent state record persisted at every default application. |
 | Declared unavailability | The named `status.collector.<id>.unavailable` statement that a collector read did not succeed, projected as exit `2`. |
 | Unknown age | A gate whose activity timestamp is absent or unparseable: age declared unknown, gate visible, never defaulted. |
-| Audience seam | The explicit `owner` \| `coordinator` dimension shared by the aging and escalation mechanism. |
+| Audience seam | The explicit `owner` \| `coordinator` dimension shared by the board's aging mechanism and the typed blocker channel's answer routing. |
 | Aging grid | The board's deterministic per-gate rendering: id, kind, ref, age, SLA state, default, waiver authorizer. |
 
-See also: [Status Digest](feature-status-digest.md), [Queue Ready](feature-queue-ready.md), [Verify Gates](feature-verify-gates.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [PDR-0003](../../decisions/PDR-0003-owner-gate-sla-default-map.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), and the [repository glossary](../../overview/glossary.md).
+See also: [Status Digest](feature-status-digest.md), [Queue Ready](feature-queue-ready.md), [Verify Gates](feature-verify-gates.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [Typed Blocker and Question Channel](feature-blockers.md), [PDR-0003](../../decisions/PDR-0003-owner-gate-sla-default-map.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), and the [repository glossary](../../overview/glossary.md).
 
-**Change record:** `doc/changes/2026-11/2026-11-06--GH-229--owner-gate-sla/`.
+**Change records:** `doc/changes/2026-11/2026-11-06--GH-229--owner-gate-sla/` (the SLA and board) and `doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/` (the shared audience dimension and ranking discipline consumed by the typed blocker channel).
