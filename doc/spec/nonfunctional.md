@@ -2,10 +2,10 @@
 id: SPEC-TOOLING-NONFUNCTIONAL
 status: Proposed
 created: 2026-11-01
-last_updated: 2026-11-05
+last_updated: 2026-11-06
 owners: [engineering]
 links:
-  related_changes: [GH-200, GH-222, GH-221]
+  related_changes: [GH-200, GH-222, GH-221, GH-228]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -40,11 +40,12 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 ### NFR-TOOL-001: Truthful evidence and failure semantics
 
 - Quality attribute: reliability and diagnosability. Applies: result envelopes,
-  status, queue-ready, verify-change, provider reads, and the watchdog probes.
+  status, brief, queue-ready, verify-change, provider reads, and the watchdog probes.
 - Requirement/status: existing. Missing, failed, or unavailable evidence must not
   become a clear/ready/zero claim. Command success is not delivery success.
 - Evidence/test: [result](features/feature-result-contract.md),
-  [status](features/feature-status-digest.md), [ready-set](features/feature-queue-ready.md),
+  [status](features/feature-status-digest.md), [brief](features/feature-brief.md),
+  [ready-set](features/feature-queue-ready.md),
   [verify](features/feature-verify-change-and-exit-taxonomy.md),
   [watchdog](features/feature-watchdog-lane-contracts.md);
   `packages/core/src/domain/ci-result.ts`, `tests/behaviour/status-negative-controls.test.ts`,
@@ -63,18 +64,20 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 ### NFR-TOOL-002: Stable machine output and bounded read digests
 
 - Quality attribute: interoperability and resource boundedness. Applies: CLI
-  envelope, status and queue-ready renderers. Status: existing.
+  envelope, status, brief, and queue-ready renderers. Status: existing.
 - Requirement: one valid `CommandResult` under `--json`, exactly one of data/error,
   classified containment, deterministic ordering, and visible truncation.
 - Canonical budgets: [status](features/feature-status-digest.md#evidence-counts-truncation-and-bounds)
   caps human output at 24 lines/4096 bytes and serialized data at 65536 bytes;
   [queue-ready](features/feature-queue-ready.md#reasons-bounds-and-truncation) caps
   human output at 16 lines/4096 UTF-8 bytes and serialized data at 65536 UTF-8 bytes.
-  These are data caps, not a universal total-envelope cap.
+  These are data caps, not a universal total-envelope cap. Brief reuses the status
+  human and machine caps by reference and declares no parallel numeric bound.
 - Queue-ready accepts 1..8 candidates of at most 64 canonical characters; its
   per-field caps and renderer-only reverse-rank drops remain feature-specific.
-- Evidence/test: `packages/core/src/contracts/status.ts`, `queue-ready.ts`;
-  `tests/behaviour/status-output.test.ts`, `queue-ready-output.test.ts`, golden suites.
+- Evidence/test: `packages/core/src/contracts/status.ts`, `queue-ready.ts`, `brief.ts`;
+  `tests/behaviour/status-output.test.ts`, `queue-ready-output.test.ts`,
+  `brief-output.test.ts`, golden suites.
 - Owner/trigger: engineering/reviewer; payload or renderer changes (XC-007).
 
 ### NFR-TOOL-003: Scoped performance and read cost
@@ -87,6 +90,7 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 | Canonical feature | Budget index and caveat | Evidence/test |
 |---|---|---|
 | [Status](features/feature-status-digest.md#non-functional-requirements) | Pure cap-sized aggregation within 50 ms; at most three network reads, one logical park fold, one config resolve; no retry/pagination loop. | `tests/behaviour/status-performance.test.ts` asserts median of five pure samples and request counts. |
+| [Brief](features/feature-brief.md#non-functional-requirements) | Pure cap-sized projection within 50 ms; the same three outbound reads, park fold, and config resolve as one status invocation; no brief-specific read. | `tests/behaviour/brief-performance.test.ts` samples projection latency and injected read counts. |
 | [Queue-ready](features/feature-queue-ready.md#non-functional-requirements) | Pure evaluation/ranking/rendering contract within 50 ms; same three outbound reads, one park fold/config/local-context read. | `tests/behaviour/queue-ready-performance.test.ts` samples evaluator latency and injected read counts; independent renderer timing not established here. |
 | [Provider](features/feature-provider-engine.md#non-functional-requirements) | Pure evaluation of 100 entries within 50 ms, excluding transport; configurable quota timeout defaults to 15000 ms, sleep cap to 24 completed sleeps. | Provider behavior and evidence-bounds suites; these are not end-to-end command deadlines. |
 | [Privacy](features/feature-privacy-guard.md#non-functional-requirements) | Scan within 60 s for up to 50 MiB on CI reference runner; emitter within 10 ms per 2048-byte envelope; at most 32 hashed lengths. | `tests/checks/privacy-performance.test.ts`; production empty classes limit what a clean scan demonstrates. |

@@ -2,14 +2,14 @@
 id: GLOSSARY
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-05
+last_updated: 2026-11-06
 owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, adapter-port, provider-client-seed, status-digest, queue-readiness, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, and watchdog/lane terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-228"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, adapter-port, provider-client-seed, status-digest, queue-readiness, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, watchdog/lane, and brief-render terms used across the repository."
 ---
 
 # Glossary
@@ -222,6 +222,10 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Repository binding | The `origin`-derived GitHub owner, name, and host used for read-only tracker, pull-request, and CI reads; no credentials or userinfo. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Source truncation | The explicit status marker that output items were dropped by a cap or that the source returned its declared read limit, so more may exist. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Live smoke | The opt-in, credentialed structural status test against a real repository; not a default-CI network test and never pinning volatile item counts. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Brief | The one-screen, decision-first, deterministic projection of the collector state for the owner's daily attention; read-only and render-only, with no LLM in the render path. | Brief | [feature-brief.md](../spec/features/feature-brief.md) |
+| Render surface (brief) | One of the closed nine brief surfaces: the six digest sections plus the three named placeholder surfaces, each carrying one five-value state. | Brief | [feature-brief.md](../spec/features/feature-brief.md) |
+| Anchored action | A decision-first brief entry in the ready-to-merge or owner-gate-age group, citing bounded collector evidence and carrying an explicit state; attention, never a gate verdict. | Brief | [feature-brief.md](../spec/features/feature-brief.md) |
+| Named placeholder | A closed-catalog brief entry naming an unbuilt capability, its owning story, and its `not-delivered` state; never silent and never a zero. | Brief | [feature-brief.md](../spec/features/feature-brief.md) |
 | Merge gate | One condition that must hold before a delivery is merged. The M0 battery has five: lifecycle finalization, CI green, push parity, owner gate, and squash preflight. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | Gate verdict | `pass`, `fail`, or `unknown`; a pass requires complete, readable, non-vacuous evidence, and unknown is never a pass. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | Citation | The bounded evidence attached to a gate verdict: ordered sources/outcomes, identity/refs/SHAs, counts, bounded names, and closed reasons. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
@@ -276,6 +280,7 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Provider Client Seeds and Trap Catalogs](../spec/features/feature-provider-client-seeds.md)
 - [State Layer](../spec/features/feature-state-layer.md)
 - [Status Digest](../spec/features/feature-status-digest.md)
+- [Brief](../spec/features/feature-brief.md)
 - [Queue Ready](../spec/features/feature-queue-ready.md)
 - [PM-Notes Lint and Phase Transitions](../spec/features/feature-pm-notes-lint-and-phase-transitions.md)
 - [Verify Change and Exit Taxonomy](../spec/features/feature-verify-change-and-exit-taxonomy.md)

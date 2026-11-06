@@ -1187,10 +1187,75 @@ Notes:
 | TC-BRIEF-004 — shared truth | 2026-11-06 | PASS | 140 case/surface assertions across 35 shared-fact cases (12 named cases + 23 matrix controls); surface-id and placeholder-set equality are non-vacuous. |
 | TC-BRIEF-007 — cap-omitted approved PR | 2026-11-06 | PASS | The in-cap control (`approved(8)`) produces the action set; `approved(9)` produces 8 actions, no identity `508`, and a truncation marker. |
 | TC-BRIEF-010 — negative-control matrix | 2026-11-06 | PASS | All 23 `matrixCases` rows mapped; the fully observed control renders tracker/changes/ci/providers/parked as `observed`; at-limit marker present, near-limit absent. |
-| TC-BRIEF-014/015 — goldens | 2026-11-06 | PASS | Byte equality for `human.txt` and `envelope.json`; cap-sized human 11 lines / 641 bytes; machine `data` 4791 bytes; mutation/restore control and unchanged `mtimeMs` pass. |
+| TC-BRIEF-014/015 — goldens | 2026-11-06 | PASS | Byte equality for `human.txt` and `envelope.json`; cap-sized human 11 lines / 564 bytes (the committed file's size; corrects the earlier 641-byte transcription); machine `data` 4791 bytes; mutation/restore control and unchanged `mtimeMs` pass. |
 | TC-BRIEF-019 — redaction canary | 2026-11-06 | PASS | The canary is asserted present in the planted fixture before zero occurrences in stdout/stderr; the `writeOutput` chokepoint redacts human text. |
 | TC-BRIEF-021 — mutant corpus | 2026-11-06 | PASS | 20 mutants cover all 10 ACs; the clean payload resists every mutant and each mutant produces its prohibited observable naming its case. |
-| TC-BRIEF-022 — documented posture | — | Deferred to Phase 8 (@doc-syncer) | Handoff recorded in `chg-GH-228-doc-impact.md`; no current-truth doc was authored by @coder. |
+| TC-BRIEF-022 — documented posture | 2026-11-06 | PASS | Authored `doc/spec/features/feature-brief.md` (SPEC-BRIEF); reconciled `doc/planning/oss-tooling/milestones/m1/commands/brief.md`; registry row reads delivered and names M1-S6; status-digest spec and brief spec cross-link both ways. Commands, output, and the review checklist are recorded in §10.1. |
 | Aggregate `pnpm check` | 2026-11-06 | PASS | `TMPDIR=$PWD/tmp/tmpdir pnpm check`: 2961 pass, 4 skip, 0 fail, 274 files, 30225 expect calls (315.81 s); boundaries 161 modules / 372 deps; ambient, workspace-entrypoints, secret-read and exports-parity all green. |
 | `git diff --check` | 2026-11-06 | PASS | Clean (no whitespace or conflict markers) before and after the battery. |
 
+### 10.1 TC-BRIEF-022 evidence (documented posture)
+
+Executed 2026-11-06 at branch `feat/GH-228/brief-render-only`, HEAD `b45e4dca`, after authoring and reconciling the current-truth documentation.
+
+**Step 1–2 — exit posture and rejected identity.**
+
+```
+$ grep -rn "collectors unavailable" doc/spec/features/feature-brief.md doc/planning/oss-tooling/milestones/m1/commands/brief.md
+(no output; exit 1)
+
+$ grep -rn "status\.collector\." doc/spec/features/feature-brief.md doc/planning/oss-tooling/milestones/m1/commands/brief.md
+doc/spec/features/feature-brief.md:137: ... No `status.collector.<id>.unavailable` identity exists in the error table, the payload, the evidence, or the documentation.
+doc/spec/features/feature-brief.md:262: | DEC-2 | ... no `status.collector.<id>.unavailable` identity and no error-table row exist. |
+doc/planning/oss-tooling/milestones/m1/commands/brief.md:130: command. There is no `status.collector.<id>.unavailable` identity, and
+```
+
+All three hits are negating statements; no brief document declares the identity or an exit-2 "collectors unavailable" outcome. The man page's EXIT STATUS section reads `0` rendered (including every collector failure), `1` rejected invocation, `2` containment/internal failure. The envelope example carries `"schemaVersion": "delivery.result.v1"`, `"runId"`, `"exitCode": 0`, `"timing": { "totalMs": 10 }`, and `"data"`; the illustrative-only fields (`runId`, `timing`, `generatedAt`, binding values, counts) are marked illustrative in the example lead-in.
+
+**Step 3 — closed placeholder catalog.**
+
+```
+$ grep -n '^| `typed-questions`\|^| `gate-sla-states`\|^| `lane-queue-engine`' doc/spec/features/feature-brief.md
+91:| `typed-questions` | M1-S16 | `not-delivered` | The typed blocker/question channel does not exist in v0; the blocker-question surface is a named placeholder |
+92:| `gate-sla-states` | M1-S5 | `not-delivered` | Ages render; SLA classifications do not exist until owner-gate SLA mechanics land |
+93:| `lane-queue-engine` | M1-S17 | `not-delivered` | No queue or lane engine exists; the digest's `lanes-or-queue` section is always `not-delivered` |
+
+$ grep -n "spend" doc/spec/features/feature-brief.md
+95:The catalog is exactly three entries, contains no spend entry, and grows only through a reviewed change ...
+265:| DEC-5 | ... spend is not surfaced. |
+```
+
+Exactly three catalog rows, all `not-delivered` with their owning stories; both `spend` hits are negations (no spend entry, spend not surfaced), so no spend placeholder or anchor exists.
+
+**Step 4 — registry and cross-links.**
+
+```
+$ grep -n "M1-S6 (delivered in GH-228)" doc/planning/oss-tooling/cli-command-registry.md
+170:| `ados brief` | Delivered in GH-228 (M1-S6): ... | operator | M1-S6 (delivered in GH-228) | - |
+
+$ grep -c "feature-brief.md" doc/spec/features/feature-status-digest.md
+4
+$ grep -c "feature-status-digest.md" doc/spec/features/feature-brief.md
+3
+```
+
+The status-digest spec cross-links the brief spec in its overview, command-surface hook sentence, dependency list, and See-also line; the brief spec cross-links the status digest in its overview, dependencies, and See-also line. Neither spec claims a contradictory ready-to-merge or exit posture.
+
+**Step 5 — review checklist items.**
+
+- [x] **No LLM or model call in the brief render path.** `grep -rniE 'openai|anthropic|langchain|ollama|node:http|node:https|node:net|node:dns|undici|child_process|fetch\(' packages/core/src/contracts/brief.ts packages/core/src/domain/brief.ts packages/cli/src/commands/brief.ts` returns no matches (exit 1, non-empty file set). TC-BRIEF-003's import/AST scan and the `ts-boundaries` rules are the mechanical half.
+- [x] **The ready-to-merge anchor is attention, never a merge verdict.** `BriefAction` carries `identity`, `state`, and citing `evidence` (`kind`, `deliveryState`, `draft`, `reviewState`) only; there is no verdict, authorization, or "safe to merge" field. The brief spec, the man page, and the registry row all state attention-only, and merge/gate authority remains with `verify gates` and the merge transaction.
+
+**Step 6 — guards.**
+
+```
+$ bun run scripts/checks/error-table-sync.ts
+error-table-sync: entries=52 documented=52 S1=103 S3=16 corpus=18 ignored=136
+OK error-table-sync: source, documented table, and fixtures agree
+
+$ bash scripts/.tests/test-doc-distribution.sh
+(guard-doc-distribution)[OK]   get_marker() self-tests passed (7 .md + 4 .yaml cases)
+(guard-doc-distribution)[OK]   no drift — 81 in-scope docs; install set matches ados_distribution markers
+```
+
+No error-table row, domain kind, or configuration key was added by this change; the new feature spec and the touched status-digest spec keep `ados_distribution: internal`, and no new distributable doc was added.

@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-STATUS-DIGEST
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-01
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only status command and its bounded delivery.status.v1 digest: six fixed sections in order, a closed five-value section state, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, the declared lanes-or-queue gap, providers read from configuration and the verified park fold, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178"]
+  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006"]
   contracts:
     - "packages/core/src/contracts/status.ts"
@@ -24,7 +24,7 @@ Each section carries one state from the closed set `observed`, `degraded`, `unkn
 
 The machine mode is the standard `CommandResult` envelope whose `data` is the full digest. Human mode is a deterministic, bounded digest rendered from the same data. Status performs zero writes, fences, state mutations, network writes, or child processes. It adds no error-table row, no configuration key, and no state-schema change; it introduces no new package, subpath, or runtime-API location. Closeout is a separate mutating surface: status does not import or compose the closeout engine, the git branch/checkout seam, or provider write operations, and its read-only guarantees are unchanged.
 
-The separate read-only ready-set command that consumes these inputs is specified in [Queue Ready](feature-queue-ready.md); it is a distinct command and does not change the status digest. The surrounding contracts are described in [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md). Package tiers and runtime confinement follow [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); tracker absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md).
+The separate read-only ready-set command that consumes these inputs is specified in [Queue Ready](feature-queue-ready.md); it is a distinct command and does not change the status digest. The owner-facing one-screen projection of the same collector state is specified in [Brief](feature-brief.md); it is a distinct read-only command that consumes these facts without adding a status section, schema, or read. The surrounding contracts are described in [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md). Package tiers and runtime confinement follow [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); tracker absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md).
 
 ## Business Context
 
@@ -50,7 +50,7 @@ The separate read-only ready-set command that consumes these inputs is specified
 
 The command is exactly `status`, composed where the other top-level commands are composed. It accepts no positionals and declares no command-specific flags; `--json` is the existing global machine-output switch and adds no command behavior. An unexpected positional or unknown flag is rejected by the parser before any source read as `fallback.invocation` with exit `1`.
 
-The command handler owns no stream writes and chooses no exit code. It reads the injected sources, assembles the digest, and returns it; the CLI edge renders the human text or the machine envelope. The optional human-text renderer hook on the command-definition contract is used only by this command.
+The command handler owns no stream writes and chooses no exit code. It reads the injected sources, assembles the digest, and returns it; the CLI edge renders the human text or the machine envelope. The optional human-text renderer hook on the command-definition contract is invoked by the CLI edge in human mode; status supplies one, as do brief ([feature-brief.md](feature-brief.md)) and the other human-rendering commands.
 
 ### Six sections and five states
 
@@ -222,7 +222,7 @@ Evidence reuses existing identities only. `failureCode` is an existing `config.*
 | `packages/core/src/domain/index.ts` | Re-exports `aggregateStatus` and `renderStatusHuman`. |
 | `packages/cli/src/commands/status.ts` | The `status` command definition over injected readers; no stream writes and no exit-code choice. |
 | `packages/cli/src/edge.ts` | The status runtime composition: repository binding, credential-reference guard, GitHub collection reads, provider config and park fold, local PM-context read, and clock. |
-| `packages/cli/src/index.ts` | The optional pure `humanText` command-definition hook consumed only by status. |
+| `packages/cli/src/index.ts` | The optional pure `humanText` command-definition hook the CLI edge invokes in human mode; status, brief, and the other human-rendering commands supply one. |
 | `packages/cli/src/output/serialize.ts` | The single redacted output path; renders pre-rendered human text when supplied. |
 | `packages/adapters/src/github/client.ts` | Bounded `listWorkItems`, `listDeliveryRequests`, and page-limited `readPipelineRun` over the existing read operations. |
 | `packages/adapters/src/github/normalize.ts` | Issue-list, pull-list, and check-run normalization that preserves the raw page size and filters pull-request objects before issue normalization. |
@@ -323,7 +323,7 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 - **Depends on** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for the resolved provider branch; status adds no keys.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, existing failure identities, exact-code classification, and the sole redaction path; status adds no rows.
 - **Depends on** the monorepo scaffold ([feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)) for tiers, boundaries, and runtime-API confinement.
-- **Enables** `queue ready` (M0-S7) ([Queue Ready](feature-queue-ready.md)), which consumes the read seams, normalized views, CI classification, and provider availability vocabulary established here without changing the digest; **precedes** M1-S10 collector expansion and M2-S4 shared board state.
+- **Enables** `queue ready` (M0-S7) ([Queue Ready](feature-queue-ready.md)), which consumes the read seams, normalized views, CI classification, and provider availability vocabulary established here without changing the digest; **enables** `brief` (M1-S6) ([Brief](feature-brief.md)), which projects the same collector facts into the owner's one-screen render with zero brief-specific reads; **precedes** M1-S10 collector expansion and M2-S4 shared board state.
 - **Risk — degraded evidence read as an all-clear:** mitigated by the explicit five-state vocabulary, evidence reasons, and an exhaustive negative-control matrix.
 - **Risk — provider park shown as available capacity:** mitigated by `parked`/`unverified` availability and by never running the provider engine.
 - **Risk — queue gap mistaken for an empty queue:** mitigated by the always-`not-delivered` section and its explicit note.
@@ -358,6 +358,6 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 | Source truncation | The explicit marker that output items were dropped by a cap or that the source returned its declared read limit, so more may exist. |
 | Live smoke | The opt-in, credentialed structural test against a real repository; not a default-CI network test. |
 
-See also: [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Verify Gates](feature-verify-gates.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md). Verify Gates reuses `STATUS_OWNER_ATTENTION_LABELS`, `STATUS_CI_RESULTS` (including `unknown`), and `STATUS_SOURCE_PIPELINE_LIMIT` by reference; status remains a digest, not a merge-gate verdict.
+See also: [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Brief](feature-brief.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Verify Gates](feature-verify-gates.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md). Verify Gates reuses `STATUS_OWNER_ATTENTION_LABELS`, `STATUS_CI_RESULTS` (including `unknown`), and `STATUS_SOURCE_PIPELINE_LIMIT` by reference; status remains a digest, not a merge-gate verdict.
 
 **Change record:** `doc/changes/2026-10/2026-10-31--GH-175--status-v1/`.

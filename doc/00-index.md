@@ -17,6 +17,7 @@ ados_distribution: redistributable
 | [System Spec](spec/) | Current truth — feature specs, API descriptions, NFRs |
 | [Adapter Conformance Suite](spec/features/feature-adapter-conformance.md) | The three provider-agnostic flows, capability-gated skips, coverage gates, `delivery.conformance.v1` artifact, and the scheduled read-only live tier |
 | [Status Digest](spec/features/feature-status-digest.md) | The read-only six-section delivery digest, its evidence states, bounds, and declared gaps |
+| [Brief](spec/features/feature-brief.md) | The read-only one-screen owner render: nine surfaces, three named placeholders, anchored actions, and collector failure as evidence at exit `0` |
 | [Queue Ready](spec/features/feature-queue-ready.md) | The read-only ready set: six tri-state readiness conditions, close classification and ranking, identity resolution, bounds, and evidence model |
 | [Machine-Readable Plan Schema](spec/features/feature-plan-schema.md) | The `delivery.plan.v1` YAML plan, the `plan validate`/`diff`/`overlap` verdicts, the `lint plan` target, and the legacy markdown transition |
 | [Verify Change and Exit Taxonomy](spec/features/feature-verify-change-and-exit-taxonomy.md) | Read-only ledger verification, the delivery-result enum, and the CLI exit taxonomy |

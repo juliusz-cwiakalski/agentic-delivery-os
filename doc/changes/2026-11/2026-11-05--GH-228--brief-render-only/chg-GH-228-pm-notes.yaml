@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: "2026-11-05T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   dor_check: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   delivery: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T12:00:00Z" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -73,7 +73,16 @@ notes: # { text, type, date } — type: info|decision|blocker|risk|question|reso
   - text: "DoR remediation complete: spec v1.2 adds §17.1 change-specific DoD (13 done conditions DoD-1..13, each binding §4.1 metrics/§17 ACs with verification method and delivering plan phase, fail-closed rule per doc/guides/definition-of-done.md); test plan v1.2 fixes F-2 (matrix rows 002→AC-F1-1, 016→AC-F6-1), F-3 (§4.6 retitled to Closed Render-Surface Set, nine-id set + anchored-action-group model aligned with DM-5/D2-D4), F-6 (§7.1 phase-ascending order, phase column authoritative); GAP-T1..T3 rows marked resolved in spec v1.1. F-4 left to Phase-4 goldens as planned."
     type: "resolved"
     date: "2026-11-06"
+  - text: "System docs reconciled (lifecycle phase 7): feature-brief.md authored (SPEC-BRIEF, ados_distribution internal); status-digest cross-links both ways incl. corrected humanText-hook claim; registry row delivered; brief man page exit-2 row removed and envelope aligned; TC-BRIEF-022 evidence PASS in test plan §10.1; glossary/index/nonfunctional updated; forbidden-literals registry entry for the new spec. Guards green: doc-distribution OK 81 docs, error-table-sync 52/52, forbidden-literals 5/5 classes, format clean."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Residual doc gaps declared out-of-scope by doc-syncer (accepted, not blockers for this change): (1) m1/contracts.md brief entry still 'proposed' — proposal index, folds into M1-S10 pack refresh; (2) architecture-overview.md pinned to frozen main-tools 5330809 baseline — refresh at next overview reconciliation; (3) PRE-EXISTING drift in m1/commands/status.md (declares exit-1/2 and status.collector.<id>.unavailable that shipped status digest does not support) — separate status-doc reconciliation, not caused by GH-228. Item 3 warrants a follow-up ticket if the owner wants it fixed; PM does not create tickets autonomously."
+    type: "risk"
+    date: "2026-11-06"
   - text: "Retro: spec omitted the DoD section that repo precedent (GH-173) requires at this exact gate — artifact templates/author prompts should enforce a DoD section as a spec-completeness checklist item; the DoR catch is correct but costs an iteration every time it is missed."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "Retro: PM made three consecutive edit-tool mistakes appending pm-notes notes (replaced instead of appended, causing duplicated notes, a lost note, and a YAML duplicate-key syntax error the committer had to fix before committing b45e4dca). Lesson: when appending to a YAML list, always include the full matched anchor in newString; verify the file parses after every multi-note edit."
     type: "retro"
     date: "2026-11-06"
   - text: "Retro: spec authored without checking digest item-shape details (owner-hand-back has no age field) against packages/core/src/domain/status.ts; caught downstream by test-plan-writer, costing one reopen iteration. Upstream artifact authors should cross-check AC wording against the referenced code contracts, not just docs."
