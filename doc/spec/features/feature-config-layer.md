@@ -5,9 +5,10 @@ created: 2026-10-30
 last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
+ados_distribution: internal
 summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251"]
   related_decisions: ["ADR-0003", "TDR-0003"]
 ---
 
@@ -163,6 +164,7 @@ Core configuration imports only its contracts and the trusted validator; it does
 - Catalog-designated secrets are environment-only; both repository layers and other non-environment sources fail `config.secret.forbidden` before merge. Defaults and CLI are checked as well.
 - Catalog-designated machine paths are system/user-global only; other layers fail `config.path.forbidden`.
 - The actual host `LOG_TOKENS` or `LOG_STREAM` switch causes a safe `config.value.invalid` before the YAML parser is constructed. The parser never forwards source text, snippets, stacks or raw summaries.
+- The YAML parser rejects a source whose UTF-8 byte length exceeds 1048576 (`MAX_SOURCE_BYTES`) as `config.file.malformed`, and bounds nodes/depth/aliases at 2048/64/100. The source-size limit is measured in bytes, not UTF-16 code units.
 - The edge registers non-empty catalog-designated environment secrets before inspection. Redaction runs at the single serialization chokepoint.
 - Disabled or selection-skipped sources are never read, including poisoned files present on disk.
 - No credential, keyring, sidecar, transport or remote-mediated operation is implemented in this feature. Credential resolution is the separate credential-resolution port in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md): one environment-backed implementation at the adapters `./credentials` subpath, with a later sidecar able to supply another implementation. Later direct and mediated adapters implement the same unchanged primitive ports, with mediated operations forwarded locally rather than receiving local credentials; that adoption path is documentation-only in this feature.

@@ -101,8 +101,15 @@ export const preExistingViolations = (
   return failures;
 };
 
+/**
+ * The branch's true base. `origin/main-tools` can advance after the branch was
+ * cut; changesets added to the base after that point are not this change's
+ * responsibility, so pre-existing comparisons anchor on the merge base.
+ */
+const mergeBase = (): string => git(["merge-base", BASE, "HEAD"]).trim();
+
 const baseChangesetFiles = (): string[] =>
-  git(["ls-tree", "-r", "--name-only", BASE, "--", ".changeset/"])
+  git(["ls-tree", "-r", "--name-only", mergeBase(), "--", ".changeset/"])
     .split("\n")
     .filter((path) => path.endsWith(".md"));
 
@@ -115,9 +122,10 @@ const currentChangesetFiles = (): string[] =>
 const baseContents = (): Record<string, string> => {
   const contents: Record<string, string> = {};
   const added = new Set(addedChangesetPaths());
+  const base = mergeBase();
   for (const path of baseChangesetFiles()) {
     if (added.has(path)) continue;
-    contents[path] = git(["show", `${BASE}:${path}`]);
+    contents[path] = git(["show", `${base}:${path}`]);
   }
   return contents;
 };

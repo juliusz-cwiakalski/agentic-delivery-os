@@ -1,12 +1,12 @@
 ---
-ados_distribution: internal
 id: SPEC-TOOLING-NONFUNCTIONAL
 status: Proposed
 created: 2026-11-01
 last_updated: 2026-11-06
 owners: [engineering]
+ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-232]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-232, GH-251]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -189,10 +189,16 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   environments. The key-containment invariant scans key-shaped literals in source,
   fixtures, and goldens.
 - Evidence/test: config restrictions/parser suites, result goldens, credential and
-  `tests/checks/secret-read-boundary.test.ts` negative controls.
-- Gap: YAML parser limits nodes/depth/aliases to 2048/64/100, but its 1048576
-  byte-named source constant compares `text.length`. UTF-8 byte enforcement needs
-  reconciliation; do not claim it from the name alone.
+  `tests/checks/secret-read-boundary.test.ts` negative controls;
+  `tests/behaviour/config-parser.test.ts` and
+  `tests/behaviour/pm-notes-source-limits.test.ts` pin the source-size boundary.
+- Bounded input: the YAML parser limits nodes/depth/aliases to 2048/64/100 and
+  enforces its 1048576-byte source limit as true UTF-8 byte length at the YAML
+  check site and both pm-notes parser check sites, fail-closed and with the
+  existing error identities. Boundary tests pin exactly-at-limit, one byte over,
+  one byte under, code-unit-at-limit-but-bytes-over, and all-ASCII content at all
+  three sites (3 sites × 5 fixture classes). This is a bounded-input control
+  proven by tests, not a security certification.
 - Owner/trigger: engineering/security reviewer; parser, credential, transport, or
   output changes (RSK-006, XC-004). No blanket security certification is implied.
 

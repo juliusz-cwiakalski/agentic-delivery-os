@@ -96,8 +96,10 @@ unregistered content is not thereby certified scanned or clean (XC-012).
 - Caveat: `merge-ready` is a bounded close class, not merge authorization;
   `provider-available` includes `engine-not-run`, not a live capacity check.
   `db reboot` checkpoints and requests manual host restart, rather than restarting.
-- Gap: `MAX_SOURCE_BYTES` in `packages/adapters/src/file/yaml-parser.ts` is checked
-  against `text.length`. This is a character-unit check, not a UTF-8 byte proof.
+- Resolved gap (GH-251): `MAX_SOURCE_BYTES` in
+  `packages/adapters/src/file/yaml-parser.ts` was previously checked against
+  `text.length`; the YAML parser and both pm-notes check sites now enforce UTF-8
+  byte length, pinned by boundary tests at all three sites.
 - Validation: engineering resolves the parser unit contract with non-ASCII inputs;
   owner/reviewer walks caller terminology at pilot review (RSK-002, XC-007).
   Caller comprehension and parser byte semantics are not-reverified.
@@ -111,6 +113,10 @@ unregistered content is not thereby certified scanned or clean (XC-012).
 - [Conformance](../../spec/features/feature-adapter-conformance.md) replays production
   client factories with exact-URL fixtures and a broken-adapter control. Coverage
   gates distinguish supported reads, declared gaps, and live-read-only deferrals.
+- Shell-suite propagation (GH-251): the CI `bash-tests` job invokes
+  `scripts/run-bash-suites.sh`, which executes each discovered suite once and
+  aggregates child statuses; a committed negative control proves a deliberately
+  failing synthetic suite fails the runner inside a green run.
 - Limits: fixtures are synthetic; live infrastructure is not a successful configured
   run. Unsupported writes and absent carriers are not tested production mutations.
   Windows ACL enforcement is not established by Linux state tests.

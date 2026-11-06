@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the binding privacy and no-cloud guard with its hashed-literal registry and envelope content policy, the durable local state layer, the provider engine and its confined quota transport, the dedicated git seam covering branch/checkout and commit operations, the declared inference network edge behind the commit primitive, the read-only owner-gate SLA board, the read-only doctor pre-flight diagnostic, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-183", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-178", "GH-221", "GH-227", "GH-228", "GH-229", "GH-224", "GH-231", "GH-225"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-183", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-178", "GH-221", "GH-227", "GH-228", "GH-229", "GH-224", "GH-231", "GH-225", "GH-251"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0006", "TDR-0007"]
 ---
 
@@ -203,7 +203,7 @@ The audit is invoked by the binding `ts-license-audit` CI job, which remains the
 
 ### CI coexistence
 
-The existing bash jobs remain byte-unchanged and authoritative. Sixteen additive `ts-*` jobs run beside them as binding gates:
+The bash jobs remain authoritative. `bash-tests` executes every discovered CI-safe suite through `scripts/run-bash-suites.sh`, which fails closed if suite discovery itself errors, then runs each discovered suite once, aggregates child exit statuses, names every failing suite, and fails the job if and only if discovery fails or at least one discovered suite fails or cannot run; a successful discovery that matches no suites exits zero. The committed self-verifying negative control `scripts/.tests/test-bash-suite-aggregation-modes.sh` plants a deliberately failing synthetic suite and proves the runner exits non-zero inside every green run. Sixteen additive `ts-*` jobs run beside the bash jobs as binding gates:
 
 `ts-fresh-clone`, `ts-invariants`, `ts-typecheck`, `ts-lint`, `ts-format`, `ts-test`, `ts-boundaries`, `ts-build`, `ts-exports`, `ts-pins`, `ts-publish-guard`, `ts-license-audit`, `ts-vuln`, `ts-aggregate`, `ts-commitlint`, `ts-forbidden-literals`.
 
@@ -214,6 +214,8 @@ The `ts-forbidden-literals` brand scan is specified in [feature-branding-seam.md
 All `ts-*` jobs check out full history (`fetch-depth: 0`), so jobs that read a recorded commit SHA or a remote-tracking ref resolve it in CI.
 
 No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scripts/checks/ci-bindingness.ts` rejects those constructs. Actions are SHA-pinned, permissions are job-scoped, and the vulnerability gate fails on any high or critical advisory.
+
+`scripts/checks/ci-topology.ts` keeps the additions-only rule for `ci.yml` with one scoped allowance: removed lines are admitted only inside the `bash-tests` job block — any `run:` step body in that job or any comment line in that block, including a trailing comment immediately above the next job key. Removals anywhere else remain fatal, and the bash/ts job-presence checks still fail on a deleted or renamed job. Committed negative fixtures in `tests/checks/ci-checks.test.ts` prove the allowance does not generalize; the job set itself is unchanged.
 
 ## Technical Architecture & Codebase Map
 
@@ -248,7 +250,7 @@ No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scr
 | `tests/golden/**` | Recorded envelope, status digest, and queue-ready payload and human output |
 | `tests/checks/**` | Mutation and contract tests for `scripts/checks/*.ts` |
 | `.changeset/config.json` | Lockstep fixed group and private-package policy |
-| `.github/workflows/ci.yml` | Untouched bash jobs plus the additive `ts-*` fast loop |
+| `.github/workflows/ci.yml` | Bash jobs (including runner-based `bash-tests` suite aggregation) plus the additive `ts-*` fast loop |
 | `.github/workflows/release.yml` | Manual pre-freeze publish guard and publish path |
 | `doc/legal/dependency-licenses.yaml` | License registry: schema v3, deny list, allow list, entries, and verdicts |
 
@@ -281,7 +283,7 @@ core              ──> no workspace dependencies
 | NFR-5 | Solution typecheck under the full strict flag set | Clean every pull request |
 | NFR-6 | Exports discipline for the five publishables | `dist` + `types` only; publint and `attw --pack` pass against built `dist` |
 | NFR-7 | CI bindingness | No advisory job, bypass flag, or error-swallowing construct |
-| NFR-8 | Bash stack | No regression; bash jobs remain authoritative |
+| NFR-8 | Bash stack | No regression; bash jobs remain authoritative; a failing shell suite fails `bash-tests`, proven by the committed negative control |
 | NFR-9 | Local commit-msg hook | Offline, non-mutating, never blocks an agent commit |
 | NFR-10 | Dependency risk | 0 high/critical advisories; every direct development/runtime use and locked runtime closure entry licensed and registered |
 

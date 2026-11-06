@@ -95,6 +95,24 @@ export type PmNotesParseResult =
       readonly parseFailure: PmNotesParseFailure;
     };
 
+/**
+ * UTF-8 byte length computed from code points: a surrogate pair is one 4-byte
+ * code point; a lone surrogate counts as the 3-byte replacement encoding. Kept
+ * local to this neutral adapter file: no TextEncoder, no Buffer, no new
+ * runtime-specific imports.
+ */
+const utf8ByteLength = (value: string): number => {
+  let bytes = 0;
+  for (const character of value) {
+    const point = character.codePointAt(0) ?? 0;
+    if (point <= 0x7f) bytes += 1;
+    else if (point <= 0x7ff) bytes += 2;
+    else if (point <= 0xffff) bytes += 3;
+    else bytes += 4;
+  }
+  return bytes;
+};
+
 const safeList = (fs: PmNotesFileSystemFacts, path: string): readonly string[] => {
   try {
     return fs.listDirectory(path);
@@ -164,7 +182,7 @@ const countNodes = (node: Node, depth: number, seen: Set<Node>, state: { nodes: 
  * original text and parser diagnostics stay inside this function.
  */
 export const parsePmNotesText = (text: string, file: string): PmNotesParseResult => {
-  if (text.length > MAX_SOURCE_BYTES) return malformed(file, file);
+  if (utf8ByteLength(text) > MAX_SOURCE_BYTES) return malformed(file, file);
   try {
     const lines = new LineCounter();
     const documents = parseAllDocuments(text, {
@@ -225,7 +243,7 @@ export const stagePmNotesPhaseEntry = (
   text: string,
   edit: PmNotesEntryEdit,
 ): PmNotesStageResult => {
-  if (text.length > MAX_SOURCE_BYTES)
+  if (utf8ByteLength(text) > MAX_SOURCE_BYTES)
     return { ok: false, parseFailure: { class: "syntax", location: "document" } };
   try {
     const document = parseDocument(text, {

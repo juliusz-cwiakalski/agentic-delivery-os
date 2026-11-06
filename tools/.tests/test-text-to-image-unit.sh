@@ -254,18 +254,17 @@ test_parse_yaml_with_yq() {
 }
 
 test_parse_yaml_fallback() {
-  # Mock yq not available
-  if ! command -v yq >/dev/null 2>&1; then
-    local yaml_file="${_test_tmpdir}/test.yaml"
-    echo "key: value" > "$yaml_file"
-    local output
-    output="$(parse_yaml "$yaml_file")"
-    # Fallback should produce export key=value
-    assert_contains "$output" "export key=value"
-  else
-    # Skip if yq available
-    true
-  fi
+  # Exercise the fallback deterministically: a PATH containing only awk hides
+  # yq in every environment without changing the product code path.
+  local yaml_file="${_test_tmpdir}/test.yaml"
+  echo "key: value" > "$yaml_file"
+  local bin_dir="${_test_tmpdir}/no-yq-bin"
+  mkdir -p "$bin_dir"
+  ln -sf "$(command -v awk)" "${bin_dir}/awk"
+  local output
+  output="$(PATH="$bin_dir" parse_yaml "$yaml_file")"
+  # The fallback's actual contract is key=value (no export prefix).
+  assert_eq "key=value" "$output"
 }
 
 test_merge_config() {
