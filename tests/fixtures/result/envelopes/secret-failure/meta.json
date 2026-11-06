@@ -1,4 +1,5 @@
 {
   "outcome": "classified-failure",
-  "secrets": true
+  "secrets": true,
+  "mode": "interactive"
 }

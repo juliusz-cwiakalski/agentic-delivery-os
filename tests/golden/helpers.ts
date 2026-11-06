@@ -159,6 +159,7 @@ export const runCase = async (
     newRunId: () => testCase.injected.runId,
     secrets: testCase.injected.secrets ?? [],
     program,
+    mode: testCase.injected.mode ?? "interactive",
   };
   const exitCode = await runCli(testCase.argv, streams, deps);
   return { exitCode, stdout: stdout.value, stderr: stderr.value };

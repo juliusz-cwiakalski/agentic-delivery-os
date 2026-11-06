@@ -1,5 +1,8 @@
 {
-  "ticks": [10000, 10013],
+  "ticks": [
+    10000,
+    10013
+  ],
   "runId": "run-fixture-0010",
   "brand": {
     "productName": "example-product",
@@ -22,5 +25,6 @@
     "planted-fake-secret-0003",
     "planted-fake-secret-0004",
     "planted-fake-secret-0005"
-  ]
+  ],
+  "mode": "interactive"
 }

@@ -69,4 +69,15 @@ export type {
   MockTenantRoute,
   RunConformanceInput,
 } from "./conformance/types.js";
-export { assertEnvelopeContract } from "./result-conformance.js";
+export {
+  assertEnvelopeContract,
+  assertScriptedProjection,
+  RULES,
+  SCRIPTED_RULES,
+} from "./result-conformance.js";
+export type {
+  RuleId,
+  ScriptedRuleId,
+  ScriptedViolation,
+  Violation,
+} from "./result-conformance.js";

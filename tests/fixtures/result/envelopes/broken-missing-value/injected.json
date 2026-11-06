@@ -1,5 +1,8 @@
 {
-  "ticks": [8000, 8002],
+  "ticks": [
+    8000,
+    8002
+  ],
   "runId": "run-fixture-0008",
   "brand": {
     "productName": "example-product",
@@ -15,5 +18,6 @@
     "releaseAssetPrefix": "example-product-",
     "installPath": "~/.example-product/bin/example-product"
   },
-  "program": "ok-data"
+  "program": "ok-data",
+  "mode": "interactive"
 }

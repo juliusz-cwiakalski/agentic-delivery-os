@@ -9,6 +9,7 @@ import ts from "typescript";
 import { RESULT_SCHEMA_VERSION } from "../../packages/core/src/contracts/index";
 import {
   assertEnvelopeContract,
+  assertScriptedProjection,
   loadGoldenCases,
   RULES,
   type RuleId,
@@ -23,6 +24,8 @@ const KEY_SET = JSON.parse(
   successKeys: string[];
   failureKeys: string[];
   errorKeys: string[];
+  scriptedSuccessKeys: string[];
+  scriptedFailureKeys: string[];
 };
 
 const errorObject = () => ({
@@ -334,12 +337,21 @@ describe("TC-RESULT-006 conformance validator rule bijection", () => {
 });
 
 describe("TC-RESULT-006 golden-file sweep", () => {
-  test("every delivered golden is accepted with zero violations", async () => {
+  test("every delivered golden is accepted by its mode's rules", async () => {
     const cases = await loadGoldenCases(join(ROOT, "tests/fixtures/result/envelopes"));
     expect(cases.length).toBeGreaterThan(0);
     for (const testCase of cases) {
-      const parsed = JSON.parse(testCase.stdout) as unknown;
-      expect(assertEnvelopeContract(parsed), testCase.id).toEqual([]);
+      if ((testCase.injected.mode ?? "interactive") === "scripted") {
+        expect(assertScriptedProjection(testCase.stdout), testCase.id).toEqual([]);
+      } else {
+        const parsed = JSON.parse(testCase.stdout) as unknown;
+        expect(assertEnvelopeContract(parsed), testCase.id).toEqual([]);
+      }
     }
+  });
+
+  test("the scripted key sets are pinned beside the interactive sets", () => {
+    expect(KEY_SET.scriptedSuccessKeys).toEqual(["data"]);
+    expect(KEY_SET.scriptedFailureKeys).toEqual(["error", "runId"]);
   });
 });

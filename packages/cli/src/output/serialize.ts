@@ -48,6 +48,20 @@ export function serializeEnvelope(envelope: CommandResult, secrets: readonly str
   return `${JSON.stringify(redacted, null, 2)}\n`;
 }
 
+/**
+ * Serialize the scripted-mode projection (DEC-2): one minified line — success
+ * carries exactly `data`; failure carries the full `error` object plus
+ * `runId` as a top-level correlation key. No schemaVersion, exitCode, or
+ * timing appears on a scripted line.
+ */
+export function serializeScriptedLine(envelope: CommandResult, secrets: readonly string[]): string {
+  const redacted = redact(envelope, secrets);
+  if ("error" in redacted) {
+    return `${JSON.stringify({ error: redacted.error, runId: redacted.runId })}\n`;
+  }
+  return `${JSON.stringify({ data: redacted.data })}\n`;
+}
+
 const writeText = (stream: CliSink, text: string): void => {
   stream.write(text);
 };
@@ -81,7 +95,10 @@ export function writeOutput(
   options: WriteOutputOptions = {},
 ): void {
   if (emitEnvelope) {
-    const text = serializeEnvelope(envelope, secrets);
+    const scripted = (options.mode ?? "interactive") === "scripted" && options.verbose !== true;
+    const text = scripted
+      ? serializeScriptedLine(envelope, secrets)
+      : serializeEnvelope(envelope, secrets);
     writeText(streams.stdout, text);
   } else if (options.humanText !== undefined) {
     writeText(streams.stdout, redact(options.humanText, secrets));

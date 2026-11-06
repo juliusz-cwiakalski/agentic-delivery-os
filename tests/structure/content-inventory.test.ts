@@ -442,9 +442,20 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "serializePlanOverlapText",
     "serializePlanValidateText",
   ],
-  "cli/src/output/serialize.ts": ["redact", "serializeEnvelope", "writeOutput"],
+  "cli/src/output/serialize.ts": [
+    "redact",
+    "serializeEnvelope",
+    "serializeScriptedLine",
+    "writeOutput",
+  ],
   "cli/src/projection.ts": ["projectExitCode"],
-  "testkit/src/result-conformance.ts": ["assertEnvelopeContract", "RULES", "loadGoldenCases"],
+  "testkit/src/result-conformance.ts": [
+    "RULES",
+    "SCRIPTED_RULES",
+    "assertEnvelopeContract",
+    "assertScriptedProjection",
+    "loadGoldenCases",
+  ],
   "testkit/src/conformance/artifact.ts": [
     "CONFORMANCE_FLOW_STATUSES",
     "CONFORMANCE_LIMITS",

@@ -1,5 +1,8 @@
 {
-  "ticks": [5000, 5000],
+  "ticks": [
+    5000,
+    5000
+  ],
   "runId": "run-fixture-0005",
   "brand": {
     "productName": "example-product",
@@ -15,5 +18,6 @@
     "releaseAssetPrefix": "example-product-",
     "installPath": "~/.example-product/bin/example-product"
   },
-  "program": "unknown-kind"
+  "program": "unknown-kind",
+  "mode": "interactive"
 }
