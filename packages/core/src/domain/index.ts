@@ -31,6 +31,56 @@ export {
   summarizeCloseout,
 } from "./closeout.js";
 export {
+  type CommitActFailure,
+  type CommitActNoPending,
+  type CommitActOutcome,
+  type CommitActPorts,
+  type CommitActRequest,
+  type CommitActScope,
+  type CommitActSuccess,
+  type CommitExcluded,
+  messageText,
+  runCommitAct,
+} from "./commit-act.js";
+export {
+  buildCommitBundle,
+  type CommitBundleInput,
+  type CommitBundleResult,
+  isGeneratedNoise,
+} from "./commit-bundle.js";
+export { classifyCommitDelta } from "./commit-converge.js";
+export {
+  type CommitMessageValidation,
+  type CommitMessageValidationInput,
+  renderCommitMessage,
+  sanitizeCommitMessage,
+  stripInventedRefs,
+  templateCommitMessage,
+  templateSubject,
+  validateCommitMessage,
+} from "./commit-message.js";
+export {
+  type CommitSafetyVerdict,
+  classifyCommitSafety,
+  findingClasses,
+} from "./commit-safety.js";
+export {
+  type CommitSkeletonInput,
+  commitTypeForPhase,
+  resolveCommitSkeleton,
+} from "./commit-skeleton.js";
+export {
+  type CommitStagingInput,
+  computeStagingPlan,
+} from "./commit-staging.js";
+export {
+  type CommitGeneration,
+  type CommitTransportPorts,
+  type CommitTransportSelection,
+  generateCommitMessage,
+  selectCommitTransport,
+} from "./commit-transport.js";
+export {
   collectorUnavailableCode,
   evaluateOwnerGateSla,
   isCollectorUnavailableFamilyCode,
@@ -39,6 +89,8 @@ export {
   toBoardData,
   validateOwnerGateSlaPolicy,
 } from "./owner-gate-sla.js";
+export { computePlanDiff, type PlanDiffInput } from "./plan-diff.js";
+export { computePlanOverlap, type PlanOverlapInput } from "./plan-overlap.js";
 export {
   globToRegExp,
   normalizeRepoPath,
@@ -46,13 +98,11 @@ export {
   scopeCoversPath,
   staticPrefix,
 } from "./plan-paths.js";
-export { computePlanDiff, type PlanDiffInput } from "./plan-diff.js";
-export { computePlanOverlap, type PlanOverlapInput } from "./plan-overlap.js";
 export {
+  type PlanValidateInput,
   planDocumentFromValidateData,
   validatePlan,
   validatePlanValue,
-  type PlanValidateInput,
 } from "./plan-validate.js";
 export {
   lintPmNotes,

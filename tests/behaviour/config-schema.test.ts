@@ -13,7 +13,7 @@ import { fileFacts } from "../fixtures/config/facts";
 describe("TC-CONFIG-008/009/011 canonical schema, partial and final", () => {
   test("production exposes the typed provider branch and shipped defaults", () => {
     expect(BOOTSTRAP_DESCRIPTOR.workingName).toEqual({ type: "string", required: true });
-    expect(Object.keys(PRODUCTION_CATALOG)).toEqual(["provider"]);
+    expect(Object.keys(PRODUCTION_CATALOG)).toEqual(["provider", "commit"]);
     expect(PRODUCTION_SCHEMA).toEqual(generateConfigSchema(PRODUCTION_CATALOG));
     const result = resolveConfig();
     expect(result.ok).toBe(true);
@@ -158,5 +158,35 @@ describe("TC-PROV-002 provider branch schema", () => {
     });
     expect(missing.ok).toBe(false);
     if (!missing.ok) expect(missing.error.code).toBe("config.value.invalid");
+  });
+});
+
+describe("TC-REGRESS-006 commit.phaseCommit branch", () => {
+  test("defaults to true and reports the defaults layer", () => {
+    const resolved = resolveConfig();
+    expect(resolved.ok).toBe(true);
+    if (resolved.ok) {
+      expect((resolved.value.values.commit as { phaseCommit: boolean }).phaseCommit).toBe(true);
+      expect(resolved.value.origins.commit?.layer).toBe("defaults");
+    }
+  });
+
+  test("a project file layer overrides the default and reports its origin", () => {
+    const resolved = resolveConfig({
+      sources: [fileFacts("project-local", { commit: { phaseCommit: false } }, 3)],
+    });
+    expect(resolved.ok).toBe(true);
+    if (resolved.ok) {
+      expect((resolved.value.values.commit as { phaseCommit: boolean }).phaseCommit).toBe(false);
+      expect(resolved.value.origins.commit?.layer).toBe("project-local");
+    }
+  });
+
+  test("an invalid value fails closed naming the layer", () => {
+    const invalid = resolveConfig({
+      sources: [fileFacts("project-local", { commit: { phaseCommit: "yes" } }, 3)],
+    });
+    expect(invalid.ok).toBe(false);
+    if (!invalid.ok) expect(invalid.error.code).toBe("config.value.invalid");
   });
 });

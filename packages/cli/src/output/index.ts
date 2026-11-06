@@ -3,5 +3,7 @@
  * Types only at scaffold.
  */
 
+export { renderCommitHuman } from "./commit-text.js";
+
 /** Placeholder marker for the CLI output tier. */
 export type CliOutputPlaceholder = { readonly __tier: "output" };

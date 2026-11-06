@@ -230,7 +230,7 @@ The feature adds no dependency, package, service, or CI job. It runs inside the 
 - **Depends on** the [result contract](feature-result-contract.md) for the envelope, the error table, classification, and exit projection.
 - **Depends on** the [pm-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) surface that hosts the plan lint target.
 - **Depends on** an embedder-injected `readDiff` port for actual-diff input and the file adapter for artifact reads.
-- **Consumed by** the scheduler (M1-S17) for overlap verdicts, tier, ready-for-development, leases, and weight; by the commit primitive (M1-S14) for declared scope context; and by the ceremony engine (M2-S3) for tier data.
+- **Consumed by** the scheduler (M1-S17) for overlap verdicts, tier, ready-for-development, leases, and weight; by the [commit primitive](feature-commit-primitive.md) (M1-S14) for declared scope context; and by the ceremony engine (M2-S3) for tier data.
 - **Risk — schema drift:** the writer and validator could diverge. Mitigation: one contracts vocabulary, write-time lint, and fixtures derived from the template shape.
 - **Risk — false parallel:** incomplete declarations could hide a real overlap. Mitigation: package/folder granularity, boundary-aware matching, a precision corpus, and a non-vacuity guard that a sequence verdict names real shared paths.
 - **Risk — legacy rot:** in-flight markdown plans could stop being readable. Mitigation: a legacy corpus and a classified transition verdict that never crashes.

@@ -11,9 +11,18 @@
  * Handlers return data or errors; the CLI edge owns streams, rendering, and
  * exit codes.
  */
-import { lintPmNotes, type PmNotesLintFinding } from "@delivery-os/core";
+import {
+  type CommitActOutcome,
+  type CommitActRequest,
+  classifyCommitDelta,
+  lintPmNotes,
+  type PmNotesLintFinding,
+  resolveCommitSkeleton,
+} from "@delivery-os/core";
 import {
   CANONICAL_PHASE_IDS,
+  type CommitIntentBasis,
+  type CommitPlanPhaseContext,
   type PhaseStateProjection,
   type PhaseTransitionOperation,
   type PhaseTransitionRecord,
@@ -61,6 +70,10 @@ export type PhaseTransitionWrite = {
   readonly timestamp: string;
   readonly fenceToken: string;
   readonly reason?: string;
+  readonly commitIntent?: "atomic" | "record-only";
+  readonly commitIntentBasis?: CommitIntentBasis;
+  /** The landed commit SHA an atomic completion persists for convergence. */
+  readonly commitSha?: string;
 };
 
 export type PhaseTransitionWriteOutcome = {
@@ -84,6 +97,47 @@ export type PhaseWriteResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly message: string };
 
+/** The durable commit evidence a re-run reads for convergence (DEC-7). */
+export type PhaseCommitEvidence = {
+  readonly recordPresent: boolean;
+  readonly recordIntent?: "atomic" | "record-only";
+  readonly recordBasis?: CommitIntentBasis;
+  readonly transitionId?: string;
+  readonly commitPresent: boolean;
+  readonly commitSha?: string;
+  /**
+   * Set when durable evidence could not be read (a torn state record). The
+   * command classifies it as a platform fault instead of treating a missing
+   * readable signal as commit-absent — the fail-open door a duplicate commit
+   * would walk through.
+   */
+  readonly readFailure?: StateFailure;
+};
+
+/** The plan-phase declaration read for the skeleton and staging scope. */
+export type PhasePlanRead = {
+  readonly planPresent: boolean;
+  readonly planPhase?: CommitPlanPhaseContext;
+};
+
+/**
+ * The injected atomic-completion seam (GH-227 F-6/F-7).
+ *
+ * The runtime edge binds the git, safety, commitlint, transport, telemetry, and
+ * clock ports; the phase command owns grammar, idempotency, staging edits, and
+ * the durable transition append.
+ */
+export type PhaseCommitExtension = {
+  readonly phaseCommit: boolean;
+  readonly readPlanPhase: (changeRef: string, phaseId: string) => PhasePlanRead;
+  readonly readEvidence: (
+    changeRef: string,
+    phaseId: string,
+  ) => PhaseCommitEvidence | Promise<PhaseCommitEvidence>;
+  readonly currentHead: () => Promise<string | undefined>;
+  readonly runAct: (request: CommitActRequest) => Promise<CommitActOutcome>;
+};
+
 /** Everything the phase surface touches; all I/O, time, and state are injected. */
 export type PhaseCommandRuntime = {
   readonly readPmNotes: (changeRef: string) => PhasePmNotesRead;
@@ -105,6 +159,13 @@ export type PhaseCommandRuntime = {
   readonly writePmNotes: (file: string, text: string) => PhaseWriteResult;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
+  /** Present when the edge wires the default-on atomic completion (GH-227). */
+  readonly commit?: PhaseCommitExtension;
+  /** Injected delivery-session facts for the shared guard (DEC-6). */
+  readonly sessionFacts?: () => {
+    readonly insideDeliverySession: boolean;
+    readonly sessionId?: string;
+  };
 };
 
 type TargetFailure = { readonly ok: false; readonly error: Record<string, unknown> };
@@ -283,11 +344,312 @@ const noOp = (
   },
 });
 
-const transitionTarget = (
+const completeWithCommit = async (
+  runtime: PhaseCommandRuntime,
+  extension: PhaseCommitExtension,
+  input: {
+    readonly changeRef: string;
+    readonly phaseId: string;
+    readonly timestamp: string;
+    readonly read: Extract<PhasePmNotesRead, { ok: true }>;
+    readonly staged: Extract<PhaseStagedEntry, { ok: true }>;
+    readonly variant: PmNotesVariant;
+    readonly registry: PhaseRegistryRead & { ok: true };
+    readonly noCommit: boolean;
+    readonly advisory: Record<string, unknown> | undefined;
+  },
+): Promise<TargetSuccess | TargetFailure> => {
+  const { changeRef, phaseId, timestamp, read, staged, variant, registry, advisory } = input;
+  const plan = extension.readPlanPhase(changeRef, phaseId);
+  const scopePaths = plan.planPhase?.declaredScopePaths ?? [];
+  const skeleton = resolveCommitSkeleton({
+    ref: changeRef,
+    refSource: "argument",
+    phaseId,
+    ...(plan.planPhase === undefined ? {} : { planPhase: plan.planPhase }),
+  });
+  const scopeSource =
+    plan.planPresent && plan.planPhase !== undefined ? "plan-phase" : "plan-absent";
+  const actScope = { paths: scopePaths, source: scopeSource } as const;
+  const evidence = await extension.readEvidence(changeRef, phaseId);
+  // Fail closed: unreadable durable evidence is a platform fault, never a
+  // silent commit-absent signal that lets a re-run manufacture a duplicate.
+  if (evidence.readFailure !== undefined) return stateFailure(evidence.readFailure);
+  const delta = classifyCommitDelta({
+    recordPresent: evidence.recordPresent,
+    ...(evidence.recordIntent === undefined ? {} : { recordIntent: evidence.recordIntent }),
+    ...(evidence.recordBasis === undefined ? {} : { recordBasis: evidence.recordBasis }),
+    ...(evidence.transitionId === undefined ? {} : { recordTransitionId: evidence.transitionId }),
+    commitPresent: evidence.commitPresent,
+    ...(evidence.commitSha === undefined ? {} : { commitSha: evidence.commitSha }),
+  });
+
+  const writeDocument = (): TargetFailure | undefined => {
+    const written = runtime.writePmNotes(read.file, staged.text);
+    return written.ok ? undefined : internalFailure(written.message);
+  };
+  const replaceProjection = (
+    transitions: readonly PhaseTransitionRecord[],
+  ): TargetFailure | undefined => {
+    const replaced = runtime.replaceProjection({
+      changeRef,
+      transitions,
+      fenceToken: runtime.newFenceToken(),
+    });
+    return replaced.ok ? undefined : stateFailure(replaced.error);
+  };
+
+  const base = {
+    changeRef,
+    phase: phaseId,
+    operation: "complete",
+    timestamp,
+    variant,
+    ...(advisory === undefined ? {} : { advisory }),
+  } as const;
+
+  const recordOnly = (basis: CommitIntentBasis): TargetSuccess | TargetFailure => {
+    const appended = runtime.appendTransition({
+      changeRef,
+      phaseId,
+      operation: "complete",
+      timestamp,
+      fenceToken: runtime.newFenceToken(),
+      commitIntent: "record-only",
+      commitIntentBasis: basis,
+    });
+    if (!appended.ok) return stateFailure(appended.error);
+    const written = writeDocument();
+    if (written !== undefined) return written;
+    const projected = replaceProjection(appended.value.transitions);
+    if (projected !== undefined) return projected;
+    return {
+      ok: true,
+      data: {
+        ...base,
+        outcome: "landed",
+        atomic: false,
+        commitSkipped: basis,
+        evidence: { outcome: "landed", basis },
+      },
+    };
+  };
+
+  if (delta.state === "record-record-only") {
+    const basis = delta.basis ?? "skipped-no-pending-work";
+    return {
+      ok: true,
+      data: {
+        ...base,
+        outcome: "no-op",
+        atomic: false,
+        commitSkipped: basis,
+        reconciliation: { completed: "intentional-no-op", basis },
+        evidence: { outcome: "no-op", basis, reconciliation: "intentional-no-op" },
+      },
+    };
+  }
+
+  if (delta.state === "both") {
+    const completedAt = registry.transitions.find(
+      (record) => record.phaseId === phaseId && record.operation === "complete",
+    )?.timestamp;
+    return {
+      ok: true,
+      data: {
+        ...base,
+        outcome: "no-op",
+        atomic: true,
+        commitSkipped: "no-op",
+        reconciliation: {
+          completed: "existing-completion",
+          ...(evidence.commitSha === undefined ? {} : { detail: evidence.commitSha }),
+        },
+        evidence: {
+          outcome: "no-op",
+          basis: "already-completed",
+          ...(completedAt === undefined ? {} : { completedAt }),
+          commitSkipped: "no-op",
+        },
+      },
+    };
+  }
+
+  if (delta.state === "commit-without-record") {
+    const appended = runtime.appendTransition({
+      changeRef,
+      phaseId,
+      operation: "complete",
+      timestamp,
+      fenceToken: runtime.newFenceToken(),
+      commitIntent: "atomic",
+      commitSha: delta.commitSha,
+    });
+    if (!appended.ok) return stateFailure(appended.error);
+    const written = writeDocument();
+    if (written !== undefined) return written;
+    const projected = replaceProjection(appended.value.transitions);
+    if (projected !== undefined) return projected;
+    return {
+      ok: true,
+      data: {
+        ...base,
+        outcome: "landed",
+        atomic: true,
+        commitSha: delta.commitSha,
+        reconciliation: { completed: "transition" },
+        evidence: { outcome: "landed", reconciliation: "transition" },
+      },
+    };
+  }
+
+  if (delta.state === "record-atomic-without-commit") {
+    const baselineHead = (await extension.currentHead()) ?? "";
+    const act = await extension.runAct({
+      mode: "phase",
+      skeleton,
+      scope: actScope,
+      ...(plan.planPhase?.summary === undefined ? {} : { planSummary: plan.planPhase.summary }),
+      requiresBody: false,
+      dryRun: false,
+      baselineHead,
+      ...(delta.transitionId === undefined ? {} : { existingTransitionId: delta.transitionId }),
+    });
+    if (act.kind === "failure") return actFailure(act);
+    if (act.kind === "no-pending-work") {
+      return {
+        ok: true,
+        data: {
+          ...base,
+          outcome: "no-op",
+          atomic: false,
+          commitSkipped: "interrupted-atomic-no-pending-work",
+          reconciliation: { completed: "intentional-no-op" },
+          evidence: { outcome: "no-op", basis: "interrupted-atomic-no-pending-work" },
+        },
+      };
+    }
+    // The record already landed; complete the document with the stored
+    // transition timestamp so the projection fold stays byte-stable.
+    const convergence = runtime.stageEntry(read.text, {
+      phaseId,
+      operation: "complete",
+      timestamp: evidence.transitionId ?? timestamp,
+    });
+    if (!convergence.ok) return internalFailure("convergence document is not parseable");
+    const writtenDoc = runtime.writePmNotes(read.file, convergence.text);
+    if (!writtenDoc.ok) return internalFailure(writtenDoc.message);
+    const projected = replaceProjection(registry.transitions);
+    if (projected !== undefined) return projected;
+    return {
+      ok: true,
+      data: {
+        ...base,
+        outcome: "landed",
+        atomic: true,
+        ...(act.commitSha === undefined ? {} : { commitSha: act.commitSha }),
+        reconciliation: { completed: "commit" },
+        evidence: { outcome: "landed", reconciliation: "commit" },
+        commit: {
+          subject: act.message.subject,
+          stagedFiles: act.staging.include.map((entry) => entry.path),
+          excluded: act.excluded,
+          messageSource: act.messageSource,
+          transport: act.transport,
+          safety: act.safety,
+          telemetry: act.telemetry,
+        },
+      },
+    };
+  }
+
+  // Neither landed: the normal path (or a record-only opt-out).
+  if (input.noCommit || !extension.phaseCommit) {
+    return recordOnly(input.noCommit ? "opt-out-flag" : "config-disabled");
+  }
+
+  const baselineHead = (await extension.currentHead()) ?? "";
+  let appendedTransitions: readonly PhaseTransitionRecord[] = registry.transitions;
+  const act = await extension.runAct({
+    mode: "phase",
+    skeleton,
+    scope: actScope,
+    ...(plan.planPhase?.summary === undefined ? {} : { planSummary: plan.planPhase.summary }),
+    requiresBody: false,
+    dryRun: false,
+    baselineHead,
+    appendTransition: async ({ commitSha }) => {
+      const appended = runtime.appendTransition({
+        changeRef,
+        phaseId,
+        operation: "complete",
+        timestamp,
+        fenceToken: runtime.newFenceToken(),
+        commitIntent: "atomic",
+        commitSha,
+      });
+      if (!appended.ok) {
+        return { ok: false, detail: appended.error.code };
+      }
+      appendedTransitions = appended.value.transitions;
+      return { ok: true, transitionId: appended.value.record.timestamp };
+    },
+  });
+  if (act.kind === "failure") return actFailure(act);
+  if (act.kind === "no-pending-work") {
+    return recordOnly("skipped-no-pending-work");
+  }
+  const written = writeDocument();
+  if (written !== undefined) return written;
+  const projected = replaceProjection(appendedTransitions);
+  if (projected !== undefined) return projected;
+  return {
+    ok: true,
+    data: {
+      ...base,
+      outcome: "landed",
+      atomic: true,
+      ...(act.commitSha === undefined ? {} : { commitSha: act.commitSha }),
+      subject: act.message.subject,
+      ...(act.message.body === undefined ? {} : { body: act.message.body }),
+      stagedFiles: act.staging.include.map((entry) => entry.path),
+      excluded: act.excluded,
+      messageSource: act.messageSource,
+      transport: act.transport,
+      safety: act.safety,
+      telemetry: act.telemetry,
+      evidence: { outcome: "landed" },
+    },
+  };
+};
+
+const actFailure = (act: Extract<CommitActOutcome, { kind: "failure" }>): TargetFailure => ({
+  ok: false,
+  error: {
+    kind: "commit",
+    code: act.code,
+    ...(act.detail === undefined ? {} : { summary: act.detail }),
+    ...(act.findings === undefined ? {} : { findings: act.findings }),
+    ...(act.excluded === undefined ? {} : { excluded: act.excluded }),
+  },
+});
+
+const transitionTarget = async (
   runtime: PhaseCommandRuntime,
   grammar: Extract<Grammar, { kind: "complete" | "reopen" }>,
-): TargetSuccess | TargetFailure => {
+  noCommit: boolean,
+): Promise<TargetSuccess | TargetFailure> => {
   const { changeRef, phaseId, kind } = grammar;
+  if (kind === "complete" && runtime.sessionFacts?.().insideDeliverySession === true) {
+    return {
+      ok: false,
+      error: {
+        kind: "commit",
+        code: "commit.session.context-refused",
+        summary: "the commit primitive is invoked from outside a delivery session",
+      },
+    };
+  }
   const read = runtime.readPmNotes(changeRef);
   if (!read.ok) return targetFailure(read) ?? internalFailure("target read");
 
@@ -304,6 +666,30 @@ const transitionTarget = (
 
   const registry = runtime.readRegistry(changeRef);
   if (!registry.ok) return stateFailure(registry.error);
+
+  if (kind === "complete" && runtime.commit !== undefined) {
+    return completeWithCommit(runtime, runtime.commit, {
+      changeRef,
+      phaseId,
+      timestamp,
+      read,
+      staged,
+      variant: verdict.variant,
+      registry,
+      noCommit,
+      advisory:
+        kind === "complete" && !requiredPhasesFor(verdict.variant).includes(phaseId)
+          ? { class: "outside-required-set", phase: phaseId, variant: verdict.variant }
+          : kind === "complete" &&
+              earlierOpenPhases(verdict.variant, phaseId, staged.value).length > 0
+            ? {
+                class: "earlier-open",
+                phases: earlierOpenPhases(verdict.variant, phaseId, staged.value),
+              }
+            : undefined,
+    });
+  }
+
   const folded = foldPhaseState(changeRef, registry.transitions);
   const completed = folded.phases[phaseId]?.completed ?? null;
 
@@ -364,19 +750,35 @@ const transitionTarget = (
 };
 
 /**
+ * Run one phase completion through the shared atomic path for the `commit
+ * --phase` surface. The caller maps the returned phase data to DM-2.
+ */
+export const runPhaseCompleteForCommit = async (
+  runtime: PhaseCommandRuntime,
+  extension: PhaseCommitExtension,
+  input: { readonly changeRef: string; readonly phaseId: string; readonly noCommit: boolean },
+): Promise<TargetSuccess | TargetFailure> =>
+  transitionTarget(
+    runtime.commit === undefined ? { ...runtime, commit: extension } : runtime,
+    { kind: "complete", changeRef: input.changeRef, phaseId: input.phaseId },
+    input.noCommit,
+  );
+
+/**
  * Build the phase command definition. `positionals.max` is the widest shape
  * (`reopen`); narrower subcommand shapes are checked by the grammar.
  */
 export const createPhaseCommandDefinition = (runtime: PhaseCommandRuntime): CommandDefinition => ({
   positionals: { max: 4 },
+  flags: ["--no-commit"],
   humanSuccess: true,
-  handler: ({ positionals }) => {
+  handler: async ({ positionals, flags }) => {
     const grammar = grammarOf(positionals);
     if ("ok" in grammar) return { error: grammar.error };
     const result =
       grammar.kind === "list"
         ? listTarget(runtime, grammar.changeRef)
-        : transitionTarget(runtime, grammar);
+        : await transitionTarget(runtime, grammar, flags["--no-commit"] === true);
     return result.ok ? { data: result.data } : { error: result.error };
   },
 });

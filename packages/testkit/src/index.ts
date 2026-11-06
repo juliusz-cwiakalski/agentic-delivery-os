@@ -5,6 +5,22 @@
 
 export { CONFORMANCE_ADAPTERS } from "./conformance/adapters.js";
 export {
+  createTempGitRepository,
+  type RepoCommandResult,
+  type TempGitRepository,
+  type TempGitRepositoryOptions,
+} from "./commit/git-repo.js";
+export {
+  createSafetyScanner,
+  createScriptedCommitlint,
+  createScriptedTransport,
+  type ScriptedCommitlint,
+  type ScriptedSafetyScanner,
+  type ScriptedTransport,
+  type ScriptedTransportStep,
+  transportAvailability,
+} from "./commit/transport-fakes.js";
+export {
   CONFORMANCE_FLOW_STATUSES,
   CONFORMANCE_LIMITS,
   CONFORMANCE_PROVIDER_STATUSES,

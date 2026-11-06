@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-commit-fixture",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 2000
+  },
+  "data": {
+    "changeRef": "GH-310",
+    "phase": "delivery",
+    "operation": "complete",
+    "timestamp": "2026-11-05T12:01:00Z",
+    "variant": "full",
+    "outcome": "landed",
+    "atomic": false,
+    "commitSkipped": "skipped-no-pending-work",
+    "evidence": {
+      "outcome": "landed",
+      "basis": "skipped-no-pending-work"
+    }
+  }
+}

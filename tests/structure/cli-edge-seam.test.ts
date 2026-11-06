@@ -350,6 +350,7 @@ const EDGE = `${CLI_DIR}/edge.ts`;
 const CORE_DIR = "packages/core/src";
 const NEW_COMMAND_FILES = [
   `${CLI_DIR}/commands/brief.ts`,
+  `${CLI_DIR}/commands/commit.ts`,
   `${CLI_DIR}/commands/db.ts`,
   `${CLI_DIR}/commands/lint.ts`,
   `${CLI_DIR}/commands/phase.ts`,
@@ -436,7 +437,8 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(edge).toContain("commands.lint = createLintCommandDefinition");
     expect(edge).toContain('from "./commands/plan.js"');
     expect(edge).toContain("commands.plan = createPlanCommandDefinition");
-    expect(edge).toContain("commands.phase = createPhaseCommandDefinition(options.phase)");
+    expect(edge).toContain("commands.phase = createPhaseCommandDefinition(committedPhaseRuntime)");
+    expect(edge).toContain("commands.commit = createCommitCommandDefinition");
     expect(edge).toContain("commands.status = createStatusCommandDefinition");
     expect(edge).toContain("commands.brief = createBriefCommandDefinition");
     expect(edge).toContain("options.brief");
@@ -489,7 +491,14 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(exported(`${CLI_DIR}/commands/db.ts`)).toEqual(["createDbCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/brief.ts`)).toEqual(["createBriefCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/lint.ts`)).toEqual(["createLintCommandDefinition"]);
-    expect(exported(`${CLI_DIR}/commands/phase.ts`)).toEqual(["createPhaseCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/commit.ts`)).toEqual([
+      "planPhaseForLifecycle",
+      "createCommitCommandDefinition",
+    ]);
+    expect(exported(`${CLI_DIR}/commands/phase.ts`)).toEqual([
+      "runPhaseCompleteForCommit",
+      "createPhaseCommandDefinition",
+    ]);
     expect(exported(`${CLI_DIR}/commands/verify.ts`)).toEqual(["createVerifyCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/verify-gates.ts`)).toEqual(["createVerifyGatesHandler"]);
     expect(exported(`${CLI_DIR}/commands/status.ts`)).toEqual([

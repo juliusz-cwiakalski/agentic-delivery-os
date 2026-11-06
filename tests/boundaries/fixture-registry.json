@@ -286,6 +286,11 @@
       "id": "runtime-node-fs-adapter-git-suffix",
       "tc": "TC-CLOSE-008",
       "path": "packages/adapters/src/git-probe/probe.ts"
+    },
+    {
+      "id": "runtime-node-fs-adapter-inference-suffix",
+      "tc": "TC-TIER-003",
+      "path": "packages/adapters/src/inference-probe/probe.ts"
     }
   ],
   "ambient-env-branding": [

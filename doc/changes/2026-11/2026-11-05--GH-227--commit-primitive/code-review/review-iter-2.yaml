@@ -1,0 +1,223 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-227
+branch: feat/GH-227/commit-primitive
+status: PASS
+summary: >-
+  Re-review after remediation phase 9 and the main-tools integration merge
+  (base 47270b37): both iteration-1 criticals are empirically fixed.
+  F-1 — readEvidence (edge.ts:383-417) now identifies the phase's landed
+  commit from the durable telemetry event bound to the transition identity
+  (phaseId + transitionId === record.timestamp, with landedAt > reopenedAt
+  when the latest transition is a reopen); this review re-ran the real-harness
+  suites green (phase-atomic 14 + commit-convergence 13 = 27 pass) including
+  TC-CONVERGE-009's reproducer — earlier-phase re-run after a later phase's
+  commit AND after a manual commit both yield row-2 no-ops with zero new
+  commits/records/telemetry/transport calls, and the orphan-at-HEAD case
+  still converges via the transition; the reopen orderings ([complete,
+  reopen] and [complete, reopen, complete]) are each handled correctly by the
+  transitionId binding plus the reopenedAt guard. F-2 — planPhaseForLifecycle
+  (commit.ts:119-145) maps lifecycle ids by plan kind (delivery → delivery
+  union, delivery_planning → planning) with the disclosed plan-absent
+  degradation for unmapped phases instead of the silent phases[0] fallback;
+  `kind` is required per delivery.plan.v1 so the mapping is total over valid
+  plans, the multi-phase fixture proves phase-2 declared untracked files
+  stage in phase-centric mode, and the degradation is spec-recorded (spec
+  v1.2 F-5 per DEC-14) and envelope-disclosed (degradedScope). All of F-3
+  through F-13 are verified resolved (fixed in code, or recorded refinements
+  per DEC-14 exactly as each finding's alternative allowed; F-7 partial and
+  disclosed). The integration merge fcd19811 is a clean additive union
+  (edge.ts: zero deletions, all commit surfaces intact; error-table 59/59
+  machine=documented=fixtures, sync re-run green by this review; the only
+  deletions elsewhere are the frozen-baseline invariant updates 58→59).
+  Docs spot-verified (pack-page envelope keys match the goldens;
+  feature-result-contract says 59; the 8000-byte probe and batched diff are
+  documented as shipped). Aggregate pnpm check re-run by this review: 3216
+  pass / 4 skip / 0 fail, boundaries and exports-parity green. Three new
+  non-blocking findings (1 medium, 1 low, 1 info), led by a residual
+  fail-open in convergence classification when the telemetry event is
+  missing — a narrow door (non-gating emission failure or torn telemetry
+  read) that can still manufacture a duplicate commit on re-run; remediation
+  phase 10 appended.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 1
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-14
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/cli/src/edge.ts:399
+    message: >-
+      Convergence classification is fail-open when the telemetry event is
+      absent: readEvidence collapses both a failed/torn telemetry read
+      (edge.ts:395-408 `telemetry.ok ? ... : undefined`; readCommitTelemetry
+      returns !ok on store read failure or a torn record,
+      commit-telemetry.ts:150-163) and a landing whose telemetry append
+      failed (commit-act.ts:342-348 — non-gating per spec F-8, disclosed as
+      `telemetry.emitted: false`) to `commitPresent: false`. A phase whose
+      commit DID land then classifies as record-atomic-without-commit, and a
+      re-run lands a DUPLICATE commit with `reconciliation: commit` whenever
+      in-scope tracked work is pending — the F-2 `delivery` union mapping
+      widens that in-scope set to every delivery-kind phase's scope — or
+      discloses the false envelope basis
+      `interrupted-atomic-no-pending-work` when nothing is pending. The
+      feature doc names the record the authoritative intent carrier, yet
+      nothing durable carries the commit sha in this state: the act knows
+      `committed.sha` BEFORE appendTransition runs (commit-act.ts:312-326),
+      so the sha is available at record-append time and is simply not
+      persisted. Precondition is an infrastructure failure (narrow window,
+      disclosed at landing time), hence medium rather than critical — but it
+      is the same harm iter-1 F-1 classified as critical, behind a rarer
+      door.
+    suggestion: >-
+      Persist the landed commitSha on the atomic transition record (extend
+      the appendTransition callback in phase.ts:568-581 to pass it; registry
+      fields stay additive per DEC-7) and let readEvidence fall back to the
+      record-bound sha plus a git ancestry check (a `merge-base
+      --is-ancestor` port) when no telemetry event exists; classify a
+      failed/torn readCommitTelemetry read as a platform fault rather than
+      commit-absent. Add a corpus case: emission failure at landing, then
+      re-run must not manufacture a commit.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-15
+    severity: low
+    confidence: high
+    category: testing
+    location: packages/cli/src/commands/phase.ts:513
+    message: >-
+      Corpus gaps around the remediation's own additions: (1) the
+      envelope-only basis `interrupted-atomic-no-pending-work`
+      (phase.ts:506-518) ships with no direct behaviour test — no suite
+      constructs record-atomic-without-commit with no pending work, the
+      string appears in no test file, and TR-9's register row still
+      enumerates only the durable trio plus `no-op`; (2) the
+      delivery_planning → planning-kind half of the lifecycle mapping has no
+      fixture (every mapping test uses delivery-kind phases); (3) the
+      plan-present-but-no-correspondence `degradedScope: "plan-absent"`
+      disclosure (commit.ts:282, 327-328) is only asserted for the
+      no-plan-artifact case (commit-command.test.ts:197-213), while
+      TC-ATOMIC-013 exercises the unmapped-phase behavior only through
+      `phase complete`, whose DM-3 envelope does not carry degradedScope
+      (spec-consistent, but the commit-surface disclosure is untested for
+      this variant).
+    suggestion: >-
+      Add corpus cases: (1) record-atomic + absent event + clean tree →
+      `commitSkipped: interrupted-atomic-no-pending-work`, zero new
+      commits/records; (2) a planning-kind plan phase exercised through
+      `delivery_planning` (declared untracked file stages); (3) `commit
+      <ref> --phase <unmapped-lifecycle-phase>` with a plan present asserts
+      `degradedScope: "plan-absent"`. Extend TR-9's row and the DM-3
+      vocabulary assertions to the fifth basis string (envelope-only
+      assertion, mirroring the `no-op` treatment).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-16
+    severity: info
+    confidence: medium
+    category: code-quality
+    location: packages/cli/src/commands/commit.ts:124
+    message: >-
+      planPhaseForLifecycle still returns phases[0] when lifecyclePhaseId is
+      undefined — unlike the removed silent fallback this one cannot
+      mis-scope staging (standalone scope is the union at commit.ts:320-323),
+      but it silently picks plan phase 1's title/summary as the standalone
+      skeleton's message context when the ledger has no current phase.
+      Cosmetic artifact staleness: the plan's tier.phases still lists [1..8]
+      after the appended phase 9 (inert declaration data per the plan schema,
+      so validation-clean, but the artifact reads stale; this review refreshes
+      it alongside the phase-10 append).
+    suggestion: >-
+      Leave a one-line comment pinning the undefined-id contract to the
+      standalone skeleton donor (or return undefined and let standalone
+      skeletons fall back to ref-only subjects); keep tier.phases aligned
+      with the declared phases going forward.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+adjudications:
+  iter1_remediation_claims:
+    verdict: CONFIRMED
+    note: >-
+      Per-finding verification against the diff and re-run suites: F-1 FIXED
+      (telemetry-identity commit presence; TC-CONVERGE-009a/b/c through the
+      real harness with real git repos and the real ledger — counts of
+      commits/records/telemetry/transport calls, not implementation details);
+      F-2 FIXED (kind-based mapping + disclosed degradation; multi-phase
+      production-shaped fixture with integer ids and per-phase scopes; kind
+      is schema-required so the mapping is total over valid plans; spec v1.2
+      records the DEC-14 refinement); F-3 FIXED (all three suggested corpus
+      cases + fixture-realism); F-4 FIXED (DM-3 v1.2 records the
+      envelope-only fifth basis; TC-ATOMIC-012 durable-equality retained;
+      residual direct-test gap recorded as F-15); F-5 FIXED (test-plan §7
+      mapping + revision 1.2 + PASS log rows); F-6 FIXED (all three spec
+      amendments verified in the v1.2 diff); F-7 FIXED-PARTIAL as recorded
+      (8000-byte open/read/close probe with per-file fallback
+      `batched.get(path) ?? await single()`; one batched tracked-file diff
+      split per path; untracked stays per-file, disclosed deviation);
+      F-8 FIXED (hint reworded to the human-review remediation; sync 59/59
+      re-run green); F-9 RECORDED (spec F-2 branch-only refinement per
+      DEC-14 — the finding's stated alternative); F-10 FIXED (only
+      `dryRun: false` remains in phase.ts); F-11 FIXED (`localeCompare(right,
+      "en")` in staging/bundle/git seam); F-12 FIXED (dry-run no-pending
+      success disclosure + test); F-13 FIXED (typed validators replacing the
+      as-casts). No finding claimed DONE was found unresolved.
+  integration_merge_resolution:
+    verdict: ACCEPTABLE
+    note: >-
+      fcd19811 resolves the 14 conflicted paths as an additive union: edge.ts
+      has zero deletions and all six commit-surface compositions intact
+      alongside the GH-229 board/owner-gate and GH-228 brief surfaces;
+      deletions elsewhere in packages/tests are the frozen-baseline invariant
+      updates (error-table length 58→59, renderer-kind list +status, barrel
+      imports); error-table-sync re-run by this review: entries=59
+      documented=59, machine/document/fixtures agree; GH-227 phase/commit
+      suites re-run green on the post-merge tree.
+  docs_reconciliation:
+    verdict: CONFIRMED
+    note: >-
+      Spot-verified claims: m1/commands/commit.md envelope key list matches
+      the golden fixtures (commit-phase-atomic.json, commit-commit-dry-run)
+      including commitSkipped/degradedScope additions; feature-result-contract
+      states 59 identities matching the machine table; feature-commit-
+      primitive documents the 8000-byte probe, the batched tracked diff, the
+      kind-based scope mapping, and the durable-evidence convergence (no HEAD
+      inference) — all matching shipped code.
+  aggregate_gates:
+    verdict: CONFIRMED
+    note: >-
+      Re-run by this review on HEAD 07861ee9: pnpm check green — 3216 pass /
+      4 skip / 0 fail across 3220 tests (305 files), depcruise 187 modules
+      clean, ambient-globals/workspace-entrypoints/secret-read-boundary/
+      exports-parity all OK; targeted suites 27 (phase-atomic+convergence),
+      10 (commit-command), 110 (tests/golden), 35 (phase regressions) green.
+      The pre-remediation privacy-release changeset drift no longer fails:
+      the integration merge brought the GH-228/GH-229 changesets into this
+      branch's tree.
+  remediation_scope_drift:
+    verdict: ACCEPTABLE
+    note: >-
+      Commit 037d2d10 touches 23 files vs phase 9's declared 14; the 9
+      outside-declared are the same legitimate classes adjudicated in
+      iteration 1 (change artifacts, barrel/index exports required by new
+      types, structure/invariant test updates pinning the new export and
+      kinds, the collation pin inside commit-staging/commit-bundle named by
+      task 9.8, and the result-contract 59-row correction forced by the
+      integration merge).
+reviewed_at: "2026-11-06T07:05:00Z"
+next_step: EXECUTE_REMEDIATION_PHASE

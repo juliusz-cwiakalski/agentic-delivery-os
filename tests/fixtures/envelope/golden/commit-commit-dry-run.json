@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-commit-fixture",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 1000
+  },
+  "data": {
+    "changeRef": "GH-310",
+    "subject": "feat(GH-310): deliver the fixture change",
+    "stagedFiles": ["src/existing.ts", "src/new-file.ts"],
+    "excluded": {
+      "forbiddenPaths": [],
+      "oversizedBinaries": [],
+      "untrackedNotStaged": [],
+      "noiseStripped": [],
+      "scopeDrift": []
+    },
+    "messageSource": "model",
+    "transport": "core-inference",
+    "atomic": false,
+    "dryRun": true,
+    "safety": {
+      "completed": true,
+      "findings": []
+    },
+    "telemetry": {
+      "emitted": false
+    }
+  }
+}

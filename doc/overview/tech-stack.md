@@ -2,13 +2,13 @@
 id: TOOLING-TECH-STACK
 status: Draft
 created: 2026-11-01
-last_updated: 2026-11-05
+last_updated: 2026-11-06
 owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, TDR-0003, TDR-0004, TDR-0006, TDR-0007]
-  related_changes: [GH-200, GH-222]
+  related_changes: [GH-200, GH-222, GH-227]
 summary: "Phase 3 evidence-based OSS tooling stack inventory, decision rationale, existing alternatives, compatibility limits, and validation risks."
 ---
 
@@ -82,8 +82,8 @@ Boundary enforcement combines actual dependencies, `exports`, manifest
 plus negative fixtures. Runtime APIs are admitted only at specific edges:
 
 - Core state driver edge, not the whole state/domain/config tree.
-- File, repository, session, legacy and credential adapters.
-- Exact provider client subpaths GitHub/GitLab/Jira and provider-quota transport.
+- File, repository, session, legacy and credential adapters, plus the dedicated git seam for branch, checkout, and commit operations.
+- Exact provider client subpaths GitHub/GitLab/Jira, the provider-quota transport, and the inference transport.
 - CLI and OpenCode integration tiers within the wider runtime/API rules.
 
 The provider-client exceptions are implemented rules; their refining

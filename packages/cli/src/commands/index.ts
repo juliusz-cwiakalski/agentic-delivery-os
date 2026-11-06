@@ -9,6 +9,8 @@ export type { BriefCommandRuntime } from "./brief.js";
 export { createBriefCommandDefinition } from "./brief.js";
 export type { CloseoutCommandRuntime } from "./closeout.js";
 export { createCloseoutCommandDefinition } from "./closeout.js";
+export type { CommitCommandRuntime, CommitContext } from "./commit.js";
+export { createCommitCommandDefinition } from "./commit.js";
 export type { ConfigCommandRuntime } from "./config.js";
 export { createConfigCommandDefinition } from "./config.js";
 export type { DbCommandRuntime } from "./db.js";
@@ -19,15 +21,18 @@ export type {
   LintRegistryRead,
 } from "./lint.js";
 export { createLintCommandDefinition } from "./lint.js";
-export type { PlanCommandRuntime } from "./plan.js";
-export { createPlanCommandDefinition } from "./plan.js";
 export type {
   PhaseCommandRuntime,
+  PhaseCommitEvidence,
+  PhaseCommitExtension,
+  PhasePlanRead,
   PhasePmNotesRead,
   PhaseRegistryRead,
   PhaseTransitionWrite,
 } from "./phase.js";
 export { createPhaseCommandDefinition } from "./phase.js";
+export type { PlanCommandRuntime } from "./plan.js";
+export { createPlanCommandDefinition } from "./plan.js";
 export type { ProviderCommandRuntime } from "./provider.js";
 export { createProviderCommandDefinition } from "./provider.js";
 export type { QueueReadyCommandRuntime } from "./queue.js";

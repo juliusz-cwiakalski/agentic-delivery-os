@@ -74,6 +74,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "watchdog.checkout-dirty",
   "watchdog.checkout-non-base",
   "watchdog.signals-absent",
+  // GH-227 pins these three commit identities exactly; they remain exact
+  // declared codes, not a pattern widening.
+  "commit.staging-blocked-untracked",
+  "commit.commitlint-failed",
+  "commit.atomic-abort",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;

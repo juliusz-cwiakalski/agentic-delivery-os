@@ -55,6 +55,42 @@
       "resolves": true
     },
     {
+      "id": "commit-staging-blocked-untracked",
+      "text": "commit.staging-blocked-untracked",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "commit-commitlint-failed",
+      "text": "commit.commitlint-failed",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "commit-safety-secret-suspected",
+      "text": "commit.safety.secret-suspected",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "commit-safety-scan-unavailable",
+      "text": "commit.safety.scan-unavailable",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "commit-atomic-abort",
+      "text": "commit.atomic-abort",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "commit-session-context-refused",
+      "text": "commit.session.context-refused",
+      "recognized": true,
+      "resolves": true
+    },
+    {
       "id": "declared-collector-family",
       "text": "status.collector.tracker.unavailable",
       "recognized": true,

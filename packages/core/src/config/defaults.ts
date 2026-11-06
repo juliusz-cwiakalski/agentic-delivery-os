@@ -33,6 +33,9 @@ export const PRODUCTION_DEFAULTS = {
     },
     chains: {},
   },
+  commit: {
+    phaseCommit: true,
+  },
 } as const;
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
