@@ -1,0 +1,1 @@
+example-product: conflicting flags "--format" and "--raw"

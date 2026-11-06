@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BRANDING-SEAM
 status: Current
 created: 2026-10-29
-last_updated: 2026-10-30
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
 summary: "The single branding seam: a pure, fail-closed resolver deriving the twelve brand values from one config-driven working name, the BrandIdentity contract in core ./contracts, reserved brand-neutral telemetry schema names, a CI-binding forbidden-literal scan anchored to a fixed corpus baseline, the distinct hashed-literal privacy registry that follows the same registry-as-authority precedent, a one-warning legacy compatibility adapter, and the documented rename drill."
 links:
-  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184"]
+  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -80,6 +80,7 @@ The derivation rules are documented authoritatively in the resolver source. Rule
 ### User and system flows
 
 - **Derivation:** A runtime-aware edge assembles the working name from configuration or the build environment plus injected environment facts, calls the resolver, and passes the resulting `BrandIdentity` to consumers. No consumer derives a name itself.
+- **Agent-identity variable:** The command audit ledger derives the claimed-identity environment-variable name from `environmentPrefix` plus the declared `AGENT_IDENTITY` suffix and reads the variable from injected environment data at the runtime-aware edge. The value is recorded as claimed attribution; an absent, empty, or whitespace-only value records no identity. The seam supplies the name root only; the state and contracts tiers never import branding.
 - **Override swap:** An operator sets `DELIVERY_OS_WORKING_NAME` in the deployment environment. The edge injects it as an environment fact; the resolver derives the full value set from the override name. No rebuild and no repository change are required.
 - **Legacy read:** A process reads a pre-freeze-prefixed environment variable or the pre-freeze config directory. The legacy adapter maps it to current names received as parameters and emits one warning for the process; with no legacy source present, it emits none.
 - **Forbidden literal attempted:** A contributor writes a seed literal outside the allowlist. The scan exits non-zero naming the file and token, and CI blocks the merge. Allowlisted locations stay green.
@@ -243,7 +244,7 @@ Tests use synthetic names only (for example `.renamed-product`, `.alt-brand`, `.
 ## Dependencies & Risks
 
 - **Authoritative decision:** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) (C-3, DEC-4, DEC-8).
-- **Consumers:** The implemented M0-S4 layered configuration consumes `ResolverInput` and derives config paths and environment layer names from branding without reshaping the contract. The implemented M0-S5 state layer consumes `stateDirectoryName` as an injected parameter. The implemented M0-S10 lint and phase commands run behind the CLI surface, which owns the injected brand identity; their handlers carry no product literal. MCP tool names are a projection of `mcpToolPrefix` plus a canonical primitive ID. The M4-S1 freeze uses the override channel, the seed-growth rule, and the drill.
+- **Consumers:** The implemented M0-S4 layered configuration consumes `ResolverInput` and derives config paths and environment layer names from branding without reshaping the contract. The implemented M0-S5 state layer consumes `stateDirectoryName` as an injected parameter; the CLI runtime-aware edge derives the production audit state directory from `stateDirectoryName` under the injected home. The implemented M0-S10 lint and phase commands run behind the CLI surface, which owns the injected brand identity; their handlers carry no product literal. The implemented command audit ledger derives the agent-identity environment-variable name from `environmentPrefix` plus the declared `AGENT_IDENTITY` suffix and reads it as injected edge data. MCP tool names are a projection of `mcpToolPrefix` plus a canonical primitive ID. The M4-S1 freeze uses the override channel, the seed-growth rule, and the drill.
 - **Corpus scope:** The single-seam guarantee covers `packages/**` and new user-facing docs. The pre-existing installed corpus migrates separately and is not claimed by this seam.
 - **Registry coupling:** Every new user-facing doc under the scanned `doc/` scope must be registered in `forbidden-literals.registry.json` in the same change; otherwise the scan fails. Registered membership is permanent for docs added after the baseline.
 - **Adjacent registry boundary:** The privacy guard's hashed-literal registry is a separate authority. It does not replace or relax the branding scan, and neither registry may hold the other's data class: the branding registry holds already-public seed tokens, while the privacy registry holds only digests of protected literals.
@@ -257,6 +258,7 @@ Tests use synthetic names only (for example `.renamed-product`, `.alt-brand`, `.
 - **Scaffold substrate:** [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md).
 - **Configuration consumer:** [Configuration Layer and Inspection](feature-config-layer.md).
 - **State consumer:** [State Layer](feature-state-layer.md).
+- **Audit consumer:** [Command Audit Ledger](feature-audit-ledger.md) — the identity-variable naming convention and claimed-identity record.
 - **PM-notes lint and phase consumer:** [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md).
 - **Adjacent hashed-literal registry:** [Privacy and No-Cloud Guards](feature-privacy-guard.md).
 - **Rename procedure:** [Rename Drill](../../guides/rename-drill.md).

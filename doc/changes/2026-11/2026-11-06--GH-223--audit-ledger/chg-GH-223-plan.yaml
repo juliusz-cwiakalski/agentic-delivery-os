@@ -1,0 +1,671 @@
+# GH-223 implementation plan — M1-S22: Command audit ledger and agent identity
+#
+# Sources (single source of truth; plan revision 2, 2026-11-06):
+#   - Spec:  ./chg-GH-223-spec.md (v1.4; 15 ACs AC-F1-1..AC-F6-1; F-1..F-6;
+#     DEC-1..DEC-8; OQ-4..OQ-21 all resolved; 13-field invocation payload incl.
+#     resultSchemaVersion; command-filter exact-match pin incl. raw-token
+#     broken invocations; Appendix B test-coverage handoff)
+#   - Test plan: ./chg-GH223-test-plan.md (50 TCs TC-GH223-001..050; 15/15 AC
+#     coverage; section 7 file<->command map; section 7.2 execution strategy)
+#
+# Plan revision log (schema carries no version field — recorded here):
+#   - rev 1 (2026-11-06): initial plan against spec v1.3 / 49 TCs.
+#   - rev 2 (2026-11-06, DoR iteration 1 remediation): P4 scope adds
+#     packages/cli/src/output/serialize.ts (the single write site owning
+#     writeOutput/serializeEnvelope — the scripted trim renderer MUST land
+#     there; rendering in index.ts would break the single-write-site invariant
+#     asserted by TC-032, and an undeclared touch would fail plan-diff
+#     classification), the CLI output barrel packages/cli/src/output/index.ts,
+#     and tests/structure/content-inventory.test.ts (pins serialize.ts
+#     exports); P1 verification adds tests/structure/port-contract-inventory.
+#     test.ts; field-set references updated to the v1.4 13-field invocation
+#     payload incl. resultSchemaVersion (P1 contracts, P1/P2 boundary
+#     declaration, P3 capture); TC-050 (command-filter exact-match on
+#     raw-token broken invocations, tests/behaviour/audit-read-command-filter
+#     .test.ts) added to Phase 2 scope/tasks/verification and the matrix;
+#     totals 49 -> 50.
+#   - rev 3 (2026-11-06, review iteration 1 amendment): records the
+#     review-iteration-1 SCOPE_DEVIATION set that landed outside declared
+#     phase scopes — tests/behaviour/production-composition.test.ts
+#     (remediation 76965e8f), tests/behaviour/audit-run-support.ts (shared
+#     helper), tests/behaviour/state-ledger.test.ts (public-port surface pin),
+#     tests/structure/inventory.json (source inventory), and the doc-sync
+#     companions doc/00-index.md, doc/overview/glossary.md,
+#     doc/quality/test-specs/test-spec-state-layer.md, and
+#     scripts/checks/forbidden-literals.registry.json (P6 declared only the
+#     four feature specs). The remediation's packages/cli/src/edge.ts change
+#     re-touches a file already declared in P3/P4. Every item is recorded in
+#     the execution log or pm-notes; this is reviewed SCOPE_DEVIATION, not a
+#     scope-rule violation.
+#
+# Format note: this document is the machine-readable plan (delivery.plan.v1).
+# Phase goals, tasks (with TC/AC traceability), per-phase verification commands,
+# per-phase commit steps, the phase->AC->TC matrix, and the phase-7 doc-sync
+# handoff notes are carried as YAML COMMENTS so the parsed document stays
+# strictly schema-conformant. `plan validate GH-223` must return `valid`.
+#
+# Tier rationale: `full` — 6 capabilities, 15 ACs, 49 automated TCs, cross-
+# package delivery (core contracts + state tier + CLI + testkit + golden
+# fixtures), medium security impact (spec front matter), autonomous delivery
+# mode (pm-notes). Lease names and weight classes are omitted: the lease/
+# weight vocabulary belongs to the downstream scheduler (M1-S17) and neither
+# spec nor test plan pins names; all phases are lease-taking by kind.
+#
+# Delivery risks pinned as explicit tasks (from PM convergence notes):
+#   - StateStorePort has NO store-managed artifact method today -> task 2.1
+#     (additive facade capability; no driver runtime API outside
+#     packages/core/src/state/driver/runtime-edge.ts; no schema bump).
+#   - Reservation chainValue must read the previous audit-domain record's
+#     chainValue INSIDE the same fence acquisition -> task 2.2 (read-then-append).
+#   - Exactly-one-record guarantee covers broken invocations and containment ->
+#     task 3.1 (capture at the TOP-LEVEL runCli outcome assembly, not per-handler;
+#     command outcome computed FIRST, audit best-effort after — DEC-8).
+#   - No hardcoded identity env-var name -> tasks 1.1/3.3 (derived from
+#     BrandIdentity.environmentPrefix + declared suffix; forbidden-literals clean).
+#   - The scripted trim renderer must extend the SINGLE write site -> task 4.1
+#     (packages/cli/src/output/serialize.ts owns writeOutput/serializeEnvelope;
+#     a renderer in index.ts would break the single-write-site invariant
+#     asserted by TC-032 — DoR iteration 1, BLOCKING finding).
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-223
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6]
+phases:
+  # ---------------------------------------------------------------------
+  # Phase 1 — Audit contracts, vocabulary, and boundary declarations
+  #
+  # Goal: land the runtime-neutral audit vocabulary as types + as-const data
+  # and the artifact-boundary declaration for BOTH audit kinds. Pure data, no
+  # runtime behavior, no error-table change (DEC-7), no schema bump (DEC-5).
+  #
+  # Tasks:
+  # - 1.1 Create packages/core/src/contracts/audit.ts: record kinds
+  #       `audit.invocation` / `audit.reservation`; payload schemas
+  #       `delivery.audit.invocation.v1` / `delivery.audit.reservation.v1`;
+  #       store-scoped key family `audit.invocations`; invocation field set
+  #       (13 fields, spec v1.4): runId, command, arguments, exitCode, timing,
+  #       resultSchemaVersion (the rendered envelope's `schemaVersion` value at
+  #       invocation time — `delivery.result.v1` at v1; explicitly DISTINCT
+  #       from the record's own payload schema id `delivery.audit.invocation.
+  #       v1`, so future envelope schema bumps stay auditable per invocation),
+  #       outcomeClass, scope, repo (absent when no target), startedAt
+  #       (integer epoch ms UTC), auditSeq, agentIdentity, chainValue;
+  #       reservation payload EXACTLY
+  #       {auditSeq, runId, chainValue} (no invocation metadata — OQ-20/MR-1);
+  #       attribution-kind marker `claimed` (only kind — no verified/auth
+  #       vocabulary); identity-variable suffix constant (variable name =
+  #       BrandIdentity.environmentPrefix + suffix, derived, never a literal);
+  #       outcome-class vocabulary consistent with the exit taxonomy.
+  #       (DM-1 v1.4, DM-3, DM-6; DEC-3, DEC-5; AC-F1-1, AC-F1-4, AC-F2-1,
+  #       AC-F2-2)
+  # - 1.2 Compose the audit artifact-boundary declaration from the reusable
+  #       factory (createArtifactBoundary): both kinds, schema identities,
+  #       required fields (13-field invocation payload incl. resultSchemaVersion
+  #       and 3-field reservation payload — v1.4), closed vocabularies, record
+  #       identity; register it in tests/fixtures/state/artifact-declarations.ts
+  #       (DEC-5, NFR-9)
+  # - 1.3 Re-export from packages/core/src/contracts/index.ts; register the new
+  #       module/exports in tests/fixtures/ports/v1-contract-inventory.json and
+  #       the content inventory executable allowance.
+  # - 1.4 Create tests/structure/audit-contract.test.ts: vocabulary and
+  #       boundary-shape assertions — TC-005 (declaration half), TC-008
+  #       (structure half), TC-013 (contract half: seam-named variable,
+  #       derived not literal), TC-035 (contract half: startedAt field).
+  #
+  # Verification:
+  #   bun test tests/structure/audit-contract.test.ts \
+  #            tests/structure/state-contract.test.ts \
+  #            tests/structure/content-inventory.test.ts \
+  #            tests/structure/port-contract-inventory.test.ts
+  #   pnpm typecheck && git diff --check
+  #
+  # Commit: feat(GH-223): declare audit record vocabulary and artifact boundary
+  # ---------------------------------------------------------------------
+  - id: 1
+    title: Audit contracts, vocabulary, and boundary declarations
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/audit.ts
+        - packages/core/src/contracts/index.ts
+        - tests/structure/audit-contract.test.ts
+        - tests/fixtures/state/artifact-declarations.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/port-contract-inventory.test.ts
+        - tests/structure/content-inventory.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/audit.ts
+        role: producer
+
+  # ---------------------------------------------------------------------
+  # Phase 2 — State-tier audit consumer: two-phase append, chain, key
+  # artifact, and bounded read surface
+  #
+  # Goal: the audit consumer composing the PUBLIC state port only —
+  # reservation-first two-phase append under ONE shared fence, keyed chain over
+  # both audit kinds, durable store-managed chaining-key artifact, and the
+  # library-only bounded/filtered read surface with the orphan-reservation
+  # finding. Additive inside delivery.state.v1; no new error-table rows.
+  #
+  # Tasks:
+  # - 2.1 DESIGN STEP (PM-flagged risk): StateStorePort has no store-managed
+  #       artifact method — add the chain-key artifact capability additively
+  #       within the state facade tier: port-type extension in
+  #       packages/core/src/contracts/state.ts, facade method in
+  #       packages/core/src/state/index.ts (the only public factory), runtime
+  #       hook in packages/core/src/state/driver/runtime-edge.ts — following
+  #       the existing artifact handling precedent for header/fence files.
+  #       Artifact `chain-key.<workspace>.json` (named member of the store
+  #       layout family, OQ-19): generated cryptographically randomly at the
+  #       runtime edge on the store's FIRST audit append, created 0600,
+  #       verified on open, read by every later process; open failures reuse
+  #       existing identities (absent on non-first open -> state.keys.missing;
+  #       corrupt -> state.store.torn family; wrong bits ->
+  #       state.permission.denied). NO driver runtime API outside
+  #       runtime-edge.ts, NO schema bump, NO new error-table rows.
+  #       (DM-5, OQ-5/OQ-16/OQ-19; AC-F4-2; NFR-4, NFR-9)
+  # - 2.2 Create packages/core/src/state/audit.ts consumer: reservation-first
+  #       two-phase append under ONE shared fence acquisition — acquireFence ->
+  #       verified readRecords INSIDE the fence (ordinal = highest existing
+  #       reservation ordinal + 1, starting at 1; read the previous
+  #       audit-domain record's chainValue in the same acquisition:
+  #       read-then-append, closeout precedent) -> append(audit.reservation)
+  #       -> append(audit.invocation) -> releaseFence. Link alternation pinned
+  #       (v1.3): reservation chains from the preceding audit-domain record of
+  #       either kind (store chain anchor when first); invocation chains from
+  #       its own reservation. Exactly-one counts invocation records only.
+  #       Interleaved non-audit kinds neither break nor participate. The
+  #       invocation record assembled here carries the 13-field v1.4 payload
+  #       (incl. resultSchemaVersion — supplied by the caller from the rendered
+  #       envelope; see task 3.2). (F-1, F-4; DEC-8, OQ-15/OQ-20; AC-F1-1,
+  #       AC-F4-1)
+  # - 2.3 Chain computation and verification over BOTH kinds: keyed hash chain
+  #       under the durable key; alteration (including recomputed unkeyed
+  #       checksums, including on ORPHANED reservations) flags as a chain break
+  #       naming the record position — never payload/checksum bytes; reported
+  #       terminal-tail repair/salvage removals (byte-contiguous, kind-agnostic)
+  #       are not breaks; the chain verifies continuously over the surviving
+  #       sequence; a last-valid-frame reservation survives as the DEC-8
+  #       finding. (F-4, DEC-4, OQ-18; AC-F4-1, AC-F4-3; NFR-3)
+  # - 2.4 Bounded, filtered read surface (library-only — DEC-6; NO CLI command):
+  #       verified reads (torn/unknown classify, never silent zeros), no fence,
+  #       no writes; scope and repo exact-match (records without repo excluded
+  #       from repo-constrained results only); inclusive [from, to] startedAt
+  #       window with an omitted side unbounded; command/outcome filters — the
+  #       command filter matches by EXACT comparison against the recorded
+  #       command token, whatever it is, including the raw first token recorded
+  #       for a broken invocation (no normalization, inference, or wildcard
+  #       behavior — spec v1.4, OQ-21, TC-050); explicit bound with in-band
+  #       truncation reporting; missing/invalid bound or filter ->
+  #       input.value.rejected (DEC-7); reservation-orphan finding folded from
+  #       verified ledger truth on every read (survives derived-document
+  #       rebuilds by construction); NO unbounded dump path.
+  #       (F-5 v1.4, DEC-7/DEC-8, OQ-21; AC-F5-1; NFR-7)
+  # - 2.5 Harness and fixtures: extend tests/fixtures/state/harness.ts with the
+  #       audit pair, reservation-orphan, key-artifact/open-failure, and
+  #       audit-ordinal helpers, plus the second-append-fault arming needed by
+  #       TC-039/043/044 (names fixed at delivery; extend StateEdgeFaultPoint in
+  #       packages/core/src/state/edge.ts only if the existing points cannot
+  #       express it); add tests/fixtures/audit/** (cases incl. time-window/
+  #       scope/repo, mutations for both kinds, lane-environment.json,
+  #       key-open-failure descriptors).
+  # - 2.6 Behaviour suites, consumer/store-driven blocks (the pure-unit halves
+  #       of test-plan 7.1 plus the store-level integration halves):
+  #       audit-ledger (unit/consumer blocks), audit-chain, audit-chain-
+  #       mutations, audit-chain-reservation, audit-chain-reservation-orphan,
+  #       audit-chain-salvage, audit-chain-cross-process, audit-salvage-
+  #       reservation, audit-key-artifact, audit-key-open-failures,
+  #       audit-key-exclusion, audit-malformed, audit-read, audit-read-refusal,
+  #       audit-read-time-window, audit-read-command-filter (v1.4, TC-050:
+  #       command-filter exact match on raw-token broken-invocation records),
+  #       audit-rebuild-orphan.
+  #       TCs verified here: TC-005 (two-phase order, fence call-order spy,
+  #       boundary refusals, field sets — 13 fields incl. resultSchemaVersion),
+  #       TC-007, TC-008 (integration half),
+  #       TC-023, TC-024, TC-025, TC-026, TC-027, TC-028, TC-029, TC-030,
+  #       TC-033 (verdict-shape half), TC-034, TC-037, TC-038, TC-040, TC-041,
+  #       TC-042, TC-045, TC-046, TC-047, TC-048, TC-049, TC-050.
+  #       NOTE: test-plan 7.1 labels several of these suites "integration
+  #       (runCli + temp store)" while their scenario details describe store/
+  #       consumer-level driving; this plan verifies them at the consumer level
+  #       in Phase 2 and adds any runCli-driven blocks in Phase 3 (files stay
+  #       in both phases' scope). Flagged to PM — not spec-blocking.
+  # - 2.7 Structure suites: create tests/structure/audit-imports.test.ts
+  #       (contract-only imports; state tier never imports branding; key
+  #       artifact uses the store-layout path) and tests/structure/
+  #       audit-surface.test.ts (no CLI audit command, no unbounded dump
+  #       export, no new runtime-API location, no driver discriminant); update
+  #       state-contract/state-imports/state-scope expectations for the new
+  #       modules and port extension.
+  #
+  # Verification (test-plan 7.2 steps 4-5, consumer-level):
+  #   bun test tests/behaviour/audit-chain.test.ts \
+  #            tests/behaviour/audit-chain-mutations.test.ts \
+  #            tests/behaviour/audit-chain-reservation.test.ts \
+  #            tests/behaviour/audit-chain-reservation-orphan.test.ts \
+  #            tests/behaviour/audit-chain-salvage.test.ts \
+  #            tests/behaviour/audit-chain-cross-process.test.ts \
+  #            tests/behaviour/audit-salvage-reservation.test.ts \
+  #            tests/behaviour/audit-key-artifact.test.ts \
+  #            tests/behaviour/audit-key-open-failures.test.ts \
+  #            tests/behaviour/audit-key-exclusion.test.ts \
+  #            tests/behaviour/audit-malformed.test.ts \
+  #            tests/behaviour/audit-read.test.ts \
+  #            tests/behaviour/audit-read-refusal.test.ts \
+  #            tests/behaviour/audit-read-time-window.test.ts \
+  #            tests/behaviour/audit-read-command-filter.test.ts \
+  #            tests/behaviour/audit-rebuild-orphan.test.ts
+  #   bun test tests/structure/audit-contract.test.ts \
+  #            tests/structure/audit-imports.test.ts \
+  #            tests/structure/audit-surface.test.ts \
+  #            tests/structure/state-contract.test.ts \
+  #            tests/structure/state-imports.test.ts \
+  #            tests/structure/state-scope.test.ts
+  #   bun run scripts/checks/error-table-sync.ts   # zero drift, no new rows
+  #   bun test tests/behaviour/state-torn.test.ts \
+  #            tests/behaviour/state-salvage.test.ts   # M0-S5/GH-222 green
+  #   pnpm typecheck && git diff --check
+  #
+  # Commit: feat(GH-223): land audit consumer with two-phase append, chain, and key artifact
+  # ---------------------------------------------------------------------
+  - id: 2
+    title: State-tier audit consumer, chain, key artifact, and read surface
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/state/audit.ts
+        - packages/core/src/state/index.ts
+        - packages/core/src/state/edge.ts
+        - packages/core/src/state/driver/runtime-edge.ts
+        - packages/core/src/contracts/state.ts
+        - tests/fixtures/state/harness.ts
+        - tests/behaviour/audit-ledger.test.ts
+        - tests/behaviour/audit-chain.test.ts
+        - tests/behaviour/audit-chain-mutations.test.ts
+        - tests/behaviour/audit-chain-reservation.test.ts
+        - tests/behaviour/audit-chain-reservation-orphan.test.ts
+        - tests/behaviour/audit-chain-salvage.test.ts
+        - tests/behaviour/audit-chain-cross-process.test.ts
+        - tests/behaviour/audit-salvage-reservation.test.ts
+        - tests/behaviour/audit-key-artifact.test.ts
+        - tests/behaviour/audit-key-open-failures.test.ts
+        - tests/behaviour/audit-key-exclusion.test.ts
+        - tests/behaviour/audit-malformed.test.ts
+        - tests/behaviour/audit-read.test.ts
+        - tests/behaviour/audit-read-refusal.test.ts
+        - tests/behaviour/audit-read-time-window.test.ts
+        - tests/behaviour/audit-read-command-filter.test.ts
+        - tests/behaviour/audit-rebuild-orphan.test.ts
+        - tests/structure/audit-imports.test.ts
+        - tests/structure/audit-surface.test.ts
+        - tests/structure/state-contract.test.ts
+        - tests/structure/state-imports.test.ts
+        - tests/structure/state-scope.test.ts
+      folders:
+        - tests/fixtures/audit
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/state.ts
+        role: producer
+
+  # ---------------------------------------------------------------------
+  # Phase 3 — CLI audit capture and agent identity
+  #
+  # Goal: every runCli invocation — success, void, classified user/platform
+  # failure, unknown/containment failure, broken invocation — produces exactly
+  # one audit.invocation record (plus its reservation) through injected
+  # dependencies, with claimed identity captured when present and arguments
+  # redacted through the single chokepoint. Audit-write failure NEVER changes
+  # the command outcome (DEC-8). The scripted trim lands separately in Phase 4
+  # so no suite is ever red mid-delivery.
+  #
+  # Tasks:
+  # - 3.1 Audit capture at the TOP-LEVEL runCli outcome assembly (not
+  #       per-handler) so the exactly-one guarantee covers every outcome class
+  #       including broken invocations (raw argv tokens preserved; no invented
+  #       command name) and containment paths. Order of operations: command
+  #       outcome computed FIRST, audit append best-effort afterwards; an audit
+  #       write failure is a classified, loud degradation on the diagnostics
+  #       stream reusing existing state identities — the outcome and exit code
+  #       are unchanged. (F-1, DEC-8; AC-F1-1, AC-F1-2; TC-001..004, 006, 009,
+  #       010; NFR-1)
+  # - 3.2 startedAt = the invocation's integer epoch-millisecond UTC start from
+  #       the injected clock (the same clock measuring timing; never ambient),
+  #       recorded exactly once; resultSchemaVersion = the rendered envelope's
+  #       `schemaVersion` value at invocation time (`delivery.result.v1`),
+  #       supplied by the capture path so the 13-field v1.4 payload is complete
+  #       (distinct from the record's own payload schema id); auditSeq pairing
+  #       through the Phase-2 consumer. (AC-F1-4; TC-035, TC-036)
+  # - 3.3 Agent identity at the runtime-aware edge (packages/cli/src/edge.ts):
+  #       variable named BrandIdentity.environmentPrefix + the declared suffix
+  #       (Phase 1 constant), read as INJECTED environment data — no ambient
+  #       process.env/Bun.env read inside the surface or state tier; presence
+  #       decided on the trimmed value (absent, empty, whitespace-only all
+  #       absent); a present value recorded verbatim plus the `claimed` marker;
+  #       nothing ever inferred from user/host/session. (F-2, DEC-3; AC-F2-1,
+  #       AC-F2-2; TC-011, TC-012, TC-013 seam half)
+  # - 3.4 Record hygiene: arguments and raw tokens reach the ledger only
+  #       through the single serialization/redaction chokepoint
+  #       (packages/cli/src/output/serialize.ts) — no secondary serialization
+  #       path for audit writes; edge-registered secrets never appear in any
+  #       record field on any outcome class; reservation payloads carry no
+  #       invocation metadata. (F-6; AC-F6-1; TC-031, TC-032)
+  # - 3.5 Extend CliDependencies (packages/cli/src/index.ts) with the injected
+  #       audit dependencies (store/consumer factory, environment record);
+  #       keep the deterministic in-process surface (no spawning, no ambient
+  #       reads); update tests/structure/cli-edge-seam.test.ts.
+  # - 3.6 Behaviour suites: create audit-outcomes, audit-identity,
+  #       audit-timestamp, audit-write-failure, audit-ordinal-gap,
+  #       audit-reservation-orphan, audit-reservation-failure, audit-redaction;
+  #       extend audit-ledger and the Phase-2 suites with their runCli
+  #       integration blocks where test-plan 7.1 requires them; install the
+  #       no-spawn guard around representative runCli cases.
+  #       TCs verified here: TC-001, TC-002, TC-003, TC-004, TC-006, TC-009,
+  #       TC-010, TC-011, TC-012, TC-013 (seam half), TC-031, TC-032 (behaviour
+  #       half), TC-035, TC-036, TC-039, TC-043, TC-044 — plus the runCli
+  #       halves of TC-005/008.
+  #
+  # Verification (test-plan 7.2 steps 1-2):
+  #   bun test tests/behaviour/audit-ledger.test.ts \
+  #            tests/behaviour/audit-outcomes.test.ts \
+  #            tests/behaviour/audit-identity.test.ts \
+  #            tests/behaviour/audit-timestamp.test.ts
+  #   bun test tests/behaviour/audit-write-failure.test.ts \
+  #            tests/behaviour/audit-malformed.test.ts \
+  #            tests/behaviour/audit-ordinal-gap.test.ts \
+  #            tests/behaviour/audit-reservation-orphan.test.ts \
+  #            tests/behaviour/audit-reservation-failure.test.ts \
+  #            tests/behaviour/audit-redaction.test.ts
+  #   bun test tests/structure/cli-edge-seam.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   pnpm typecheck && git diff --check
+  #
+  # Commit: feat(GH-223): audit every CLI invocation and capture claimed agent identity
+  # ---------------------------------------------------------------------
+  - id: 3
+    title: CLI audit capture and agent identity
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/index.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/output/serialize.ts
+        - tests/behaviour/audit-ledger.test.ts
+        - tests/behaviour/audit-outcomes.test.ts
+        - tests/behaviour/audit-identity.test.ts
+        - tests/behaviour/audit-timestamp.test.ts
+        - tests/behaviour/audit-write-failure.test.ts
+        - tests/behaviour/audit-ordinal-gap.test.ts
+        - tests/behaviour/audit-reservation-orphan.test.ts
+        - tests/behaviour/audit-reservation-failure.test.ts
+        - tests/behaviour/audit-redaction.test.ts
+        - tests/behaviour/audit-chain.test.ts
+        - tests/behaviour/audit-chain-mutations.test.ts
+        - tests/behaviour/audit-chain-reservation.test.ts
+        - tests/behaviour/audit-chain-reservation-orphan.test.ts
+        - tests/behaviour/audit-chain-salvage.test.ts
+        - tests/behaviour/audit-chain-cross-process.test.ts
+        - tests/behaviour/audit-salvage-reservation.test.ts
+        - tests/behaviour/audit-key-artifact.test.ts
+        - tests/behaviour/audit-key-open-failures.test.ts
+        - tests/behaviour/audit-key-exclusion.test.ts
+        - tests/behaviour/audit-read.test.ts
+        - tests/behaviour/audit-read-time-window.test.ts
+        - tests/behaviour/audit-malformed.test.ts
+        - tests/structure/cli-edge-seam.test.ts
+
+  # ---------------------------------------------------------------------
+  # Phase 4 — Scripted-mode trim, conformance validator, and golden fixtures
+  #
+  # Goal: land the owner-pinned scripted-mode amendment WITH its fixture model,
+  # testkit rules, and goldens in one commit (no red window): scripted --json
+  # emits one minified {"data":...} / {"error":...,"runId":...} line; errors
+  # keep runId as a top-level key; interactive output stays byte-conformant to
+  # M0-S3; the SC-M1-23 scenario passes end-to-end (audited + trimmed).
+  #
+  # Tasks:
+  # - 4.1 Mode contract and trim rendering — the renderer lands in
+  #       packages/cli/src/output/serialize.ts (the single write site owning
+  #       writeOutput/serializeEnvelope; RATIONALE: implementing the trim in
+  #       index.ts would create a second serialization path and break the
+  #       single-write-site invariant asserted by TC-032, and an undeclared
+  #       touch would fail plan-diff classification), with the mode fact
+  #       injected via packages/cli/src/index.ts + edge.ts: mode from an
+  #       injected stream-capability fact at the runtime-aware edge (never
+  #       probed ambiently); scripted --json renders exactly one minified line
+  #       — success `{"data":...}` (void = explicit `{"data":{}}`), failure the
+  #       full error-table `error` object PLUS `runId` as a top-level key —
+  #       never schemaVersion/exitCode/timing on scripted lines (status rides
+  #       the process exit code; context lives in the audit record, which
+  #       retains the envelope's schemaVersion as its `resultSchemaVersion`
+  #       field — v1.4); `--verbose` forces the full envelope in any mode;
+  #       `--pretty` affects indentation only, never re-expands the trim;
+  #       interactive mode keeps the full M0-S3 envelope byte-for-byte; text
+  #       (non---json) output untouched; no rollout flag (DEC-1, DEC-2).
+  #       (F-3 v1.4, DM-4; AC-F3-1, AC-F3-2, AC-F3-3; NFR-6)
+  # - 4.2 Testkit conformance (packages/testkit/src/result-conformance.ts +
+  #       index.ts): scripted-projection rules beside the existing envelope
+  #       rules — exactly one line, exact key set (`data`; `error`+`runId`),
+  #       trimmed tokens absent, error lines carry runId — with negative
+  #       controls; interactive rules unchanged (extra/missing keys stay
+  #       violations). (AC-F3-4; TC-021)
+  # - 4.3 Fixture model: add `mode`, `environment`, and `startTicks` to
+  #       tests/fixtures/result/envelopes/**/injected.json and `mode` to
+  #       meta.json (no chaining key in fixtures — store-managed, generated per
+  #       temp store); scripted key sets in envelope-key-set.json; the
+  #       SC-M1-23 stand-in programs/lanes-list.json.
+  # - 4.4 Golden suites: create tests/golden/envelope-scripted.test.ts
+  #       (scripted goldens per outcome class incl. broken invocations, failure
+  #       lines with top-level runId); add mode metadata to the existing
+  #       interactive goldens (envelope-success, envelope-failure,
+  #       broken-command — bytes unchanged); run redaction and timing in both
+  #       modes; every discovered case keeps its golden — no skip path,
+  #       deliberate regeneration only. (AC-F3-4; TC-014..TC-018, TC-020)
+  # - 4.5 Behaviour suites: create scripted-trim, envelope-mode, and
+  #       audit-scenario-m1-23 (SC-M1-23 inherited and extended: invocation +
+  #       reservation pair, trimmed lines, audit retains context, identity
+  #       present/absent variants). TC-014..TC-019, TC-022.
+  # - 4.6 Structure suites: create tests/structure/scripted-projection.test.ts;
+  #       extend result-contract (validator rule bijection) and result-fixtures
+  #       (fixture hygiene for the new metadata); update the content-inventory
+  #       export pin for packages/cli/src/output/serialize.ts (the scripted
+  #       renderer extends that module's surface) and the CLI output barrel
+  #       packages/cli/src/output/index.ts if the mode plumbing adds exports.
+  #       TC-020, TC-021.
+  #
+  # Verification (test-plan 7.2 step 3 + golden tier):
+  #   bun test tests/behaviour/scripted-trim.test.ts \
+  #            tests/behaviour/envelope-mode.test.ts \
+  #            tests/golden/envelope-scripted.test.ts
+  #   bun test tests/golden            # both modes, no skipped case
+  #   bun test tests/behaviour/audit-scenario-m1-23.test.ts
+  #   bun test tests/structure/scripted-projection.test.ts \
+  #            tests/structure/result-contract.test.ts \
+  #            tests/structure/result-fixtures.test.ts \
+  #            tests/structure/content-inventory.test.ts
+  #   pnpm typecheck && git diff --check
+  #
+  # Commit: feat(GH-223): activate scripted-mode trim with both-mode conformance and goldens
+  # ---------------------------------------------------------------------
+  - id: 4
+    title: Scripted-mode trim, conformance validator, and golden fixtures
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/index.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/output/serialize.ts
+        - packages/cli/src/output/index.ts
+        - packages/testkit/src/result-conformance.ts
+        - packages/testkit/src/index.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/golden/helpers.ts
+        - tests/golden/envelope-scripted.test.ts
+        - tests/golden/envelope-success.test.ts
+        - tests/golden/envelope-failure.test.ts
+        - tests/golden/broken-command.test.ts
+        - tests/golden/redaction.test.ts
+        - tests/golden/timing.test.ts
+        - tests/behaviour/scripted-trim.test.ts
+        - tests/behaviour/envelope-mode.test.ts
+        - tests/behaviour/audit-scenario-m1-23.test.ts
+        - tests/structure/scripted-projection.test.ts
+        - tests/structure/result-contract.test.ts
+        - tests/structure/result-fixtures.test.ts
+        - tests/fixtures/result/envelope-key-set.json
+        - tests/fixtures/result/programs/lanes-list.json
+      folders:
+        - tests/fixtures/result/envelopes
+    interactions:
+      - kind: contract-file
+        target: packages/testkit/src/result-conformance.ts
+        role: producer
+
+  # ---------------------------------------------------------------------
+  # Phase 5 — Invariant sweep and cross-tier contract guards
+  #
+  # Goal: the full structure/check/boundary sweep proving the negative space —
+  # no error-table drift, no new runtime-API location, no ambient reads, no
+  # product tokens, no unbounded dump — with every companion suite green.
+  #
+  # Tasks:
+  # - 5.1 Companion structure guards: envelope-contract (envelope shape and
+  #       key set remain the M0-S3 contract — no new keys) and
+  #       delivery-result-contract (result-contract types stay runtime-neutral;
+  #       audit vocabulary does not leak into the envelope).
+  # - 5.2 forbidden-literals guard (tests/checks/forbidden-literals.test.ts):
+  #       new sources and fixtures carry no hardcoded product token — including
+  #       the identity variable name, which must be derived (TC-013 scan half).
+  # - 5.3 Full invariant and check sweep (test-plan 7.2 step 6 + quality-gates
+  #       evidence): bun test tests/structure tests/boundaries; bun test
+  #       tests/checks; bun run scripts/checks/error-table-sync.ts (zero drift
+  #       — TC-033 full) and scripts/checks/exit-code-literals.ts; full
+  #       behaviour tier (all audit suites + untouched state/result consumers);
+  #       git diff --check. Any platform-conditional skip is recorded with a
+  #       reason (none expected; Windows ACL is not claimed by this run).
+  #       TC-033 (full), TC-034 (boundary halves), TC-013 (scan halves).
+  #
+  # Verification:
+  #   bun test tests/structure tests/boundaries tests/checks
+  #   bun test tests/behaviour
+  #   bun run scripts/checks/error-table-sync.ts
+  #   bun run scripts/checks/exit-code-literals.ts
+  #   git diff --check
+  #
+  # Commit: test(GH-223): complete invariant sweep and cross-tier contract guards
+  # ---------------------------------------------------------------------
+  - id: 5
+    title: Invariant sweep and cross-tier contract guards
+    kind: delivery
+    scope:
+      files:
+        - tests/checks/forbidden-literals.test.ts
+        - tests/structure/envelope-contract.test.ts
+        - tests/structure/delivery-result-contract.test.ts
+
+  # ---------------------------------------------------------------------
+  # Phase 6 — Finalize: full quality gate, changeset, and spec reconciliation
+  #
+  # Goal: the single aggregate gate green, the changeset landed, and the
+  # release/spec-reconciliation obligations declared. The doc/spec files below
+  # are @doc-syncer's lifecycle-phase-7 work on this branch (declared as SCOPE
+  # so plan diff classifies them `within`; they are NOT plan tasks — see the
+  # handoff notes at the end of this document).
+  #
+  # Tasks:
+  # - 6.1 Aggregate gate: pnpm check (lint -> format:check -> typecheck ->
+  #       test -> check:boundaries) — the single completion entry point.
+  # - 6.2 Doc-distribution guard: bash scripts/.tests/test-doc-distribution.sh
+  #       (the phase-7 spec edits on this branch carry ados_distribution
+  #       markers; the check is wired into CI and blocks merge on drift).
+  # - 6.3 Changeset: .changeset/gh-223-audit-ledger-minor.md (version_impact
+  #       minor, per the spec front matter and the changesets-group check).
+  # - 6.4 Record delivery evidence in the change folder (execution log per
+  #       phase: commands run + result summary) and verify this plan artifact:
+  #       plan validate GH-223 -> valid, readyForDevelopment=true.
+  #
+  # Verification:
+  #   pnpm check
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   bun run scripts/checks/changesets-group.ts   # exactly one changeset
+  #
+  # Commit: chore(GH-223): finalize delivery evidence and changeset
+  # (Spec reconciliation commits are authored by @doc-syncer in lifecycle
+  #  phase 7 within this phase's declared scope.)
+  # ---------------------------------------------------------------------
+  - id: 6
+    title: Finalize - full quality gate, changeset, and spec reconciliation
+    kind: delivery
+    scope:
+      folders:
+        - .changeset
+        - doc/changes/2026-11/2026-11-06--GH-223--audit-ledger
+      files:
+        - doc/spec/features/feature-result-contract.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/spec/features/feature-branding-seam.md
+        - doc/spec/features/feature-audit-ledger.md
+
+# =======================================================================
+# TRACEABILITY MATRIX — phase -> ACs -> TCs (all 15 ACs, all 50 TCs)
+#
+# | Phase | ACs delivered/verified | TC ids verified (halves marked *) |
+# |-------|------------------------|----------------------------------|
+# | 1 | AC-F1-1, AC-F1-4, AC-F2-1, AC-F2-2 (vocabulary/declaration halves); NFR-9 | TC-005*, TC-008*, TC-013*, TC-035* |
+# | 2 | AC-F1-1 (append mechanics), AC-F1-3, AC-F4-1, AC-F4-2, AC-F4-3, AC-F5-1, AC-F6-1 (composition); NFR-1, NFR-3, NFR-4, NFR-7, NFR-8, NFR-9 | TC-005, TC-007, TC-008, TC-023, TC-024, TC-025, TC-026, TC-027, TC-028, TC-029, TC-030, TC-033*, TC-034, TC-037, TC-038, TC-040, TC-041, TC-042, TC-045, TC-046, TC-047, TC-048, TC-049, TC-050 |
+# | 3 | AC-F1-1, AC-F1-2, AC-F1-4, AC-F2-1, AC-F2-2, AC-F5-1 (gap findings), AC-F6-1; NFR-1, NFR-2, NFR-5 | TC-001, TC-002, TC-003, TC-004, TC-006, TC-009, TC-010, TC-011, TC-012, TC-013*, TC-031, TC-032*, TC-035, TC-036, TC-039, TC-043, TC-044 |
+# | 4 | AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F1-4 (DM-4 mode fact), AC-F6-1 (both-mode goldens); NFR-6 | TC-014, TC-015, TC-016, TC-017, TC-018, TC-019, TC-020, TC-021, TC-022 |
+# | 5 | NFR-9 + all-AC negative-space guards | TC-013 (scan halves), TC-032 (structure half), TC-033 (full), TC-034 (boundary halves) |
+# | 6 | Release gate — no TC ids (gate evidence: pnpm check, doc-distribution, changeset) | — |
+#
+# AC completeness check (15/15): AC-F1-1 (P1,P2,P3), AC-F1-2 (P3), AC-F1-3 (P2),
+# AC-F1-4 (P1,P3,P4), AC-F2-1 (P1,P3,P4), AC-F2-2 (P1,P3,P4), AC-F3-1 (P4),
+# AC-F3-2 (P4), AC-F3-3 (P4), AC-F3-4 (P4), AC-F4-1 (P2), AC-F4-2 (P2),
+# AC-F4-3 (P2), AC-F5-1 (P2,P3), AC-F6-1 (P2,P3,P4).
+# TC completeness check (50/50): TC-001..TC-050 each appear above; split TCs
+# (005, 008, 013, 032, 033, 035) are completed across their marked phases.
+# v1.4 note: TC-050 (command-filter exact match on raw-token broken-invocation
+# records, OQ-21) verifies in Phase 2 beside TC-042; TC-001/005/014/016/022
+# assert the 13-field invocation payload incl. resultSchemaVersion.
+# =======================================================================
+
+# =======================================================================
+# PLAN-END NOTES (not tasks)
+#
+# Doc-sync handoff (lifecycle phase 7, @doc-syncer — declared as Phase 6
+# scope, never plan tasks):
+#   - doc/spec/features/feature-result-contract.md — scripted-mode rendering
+#     amendment (MANDATORY: the envelope rendering contract changes; the
+#     mode contract, --verbose/--pretty semantics, and the no-rollout-flag
+#     activation land here).
+#   - doc/spec/features/feature-audit-ledger.md — NEW feature spec for the
+#     audit-ledger feature area (always-resolve per pm-notes).
+#   - doc/spec/features/feature-state-layer.md — audit consumer, record kinds
+#     audit.invocation + audit.reservation, the chain-key.<workspace>.json row
+#     in the store-layout table, the keyed chain, and the bounded read surface.
+#   - doc/spec/features/feature-branding-seam.md — identity-variable naming
+#     convention (environmentPrefix + declared suffix; claimed-not-proven).
+#   No NEW user-facing docs requiring forbidden-literals registry registration
+#   (spec NG-7); all reconciliation happens in the existing in-repo specs above.
+#
+# Open questions (none blocking — surfaced for PM):
+#   - Test-plan 7.1 labels TC-007/023-028/030/037-048 (and the v1.4-added
+#     TC-050, "Integration" in the 5.1 index) "integration (runCli + temp
+#     store)" while several scenario details (007, 023-027, 037, 045-050)
+#     describe store/consumer-level driving. This plan verifies them at the
+#     consumer level in Phase 2 and adds runCli blocks in Phase 3 if the
+#     authored suites require them; both phases declare the shared files.
+#   - Ceremony tier: spec/test plan declare none; this plan declares `full`
+#     (rationale in the header). Escalation triggers intentionally omitted —
+#     none are pinned by spec or test plan (inert data either way).
+#   - Task 2.1 is the named design step for the StateStorePort store-managed
+#     artifact capability (PM convergence note). If delivery finds the additive
+#     facade method cannot follow the header/fence precedent without a driver
+#     change beyond runtime-edge.ts, STOP and escalate to @pm rather than
+#     widening the runtime API surface (NFR-9, DEC-5).
+#   - Tier/lease vocabulary: lease names and weight classes omitted (scheduler
+#     M1-S17 owns the vocabulary; nothing pinned by spec/test plan).
+# =======================================================================

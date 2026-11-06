@@ -1,0 +1,7 @@
+{
+  "description": "A declared lane environment (identity convention only; never the chaining key).",
+  "environment": {
+    "EXAMPLE_PRODUCT_AGENT_IDENTITY": "pm-lane-7",
+    "PATH": "/usr/local/bin:/usr/bin:/bin"
+  }
+}

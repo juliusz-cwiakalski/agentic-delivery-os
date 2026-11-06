@@ -1,4 +1,5 @@
 {
   "outcome": "success",
-  "secrets": true
+  "secrets": true,
+  "mode": "interactive"
 }

@@ -357,6 +357,18 @@ export type StateStorePort = {
    * zero byte mutation.
    */
   salvage(handle: StateFenceHandle): StateResult<StateSalvageOutcome>;
+  /**
+   * Read one store-managed artifact (the store-layout family beside the header
+   * and fence files). Absent → `state.keys.missing`; unreadable →
+   * `state.store.torn`; wrong permission bits → `state.permission.denied`.
+   */
+  readStoreArtifact(request: StateStoreArtifactReadRequest): StateResult<StateStoreArtifact>;
+  /**
+   * Read the store-managed artifact, or create it once with runtime-edge random
+   * material. An artifact absent while any `guardKinds` record exists is
+   * `state.keys.missing` — never silently regenerated.
+   */
+  ensureStoreArtifact(request: StateStoreArtifactRequest): StateResult<StateStoreArtifact>;
 };
 
 /** One append: a consumer record kind, a store-scoped key, a JSON payload. */
@@ -370,4 +382,34 @@ export type StateAppendRequest = {
 export type StateDocumentReplaceRequest = {
   readonly name: string;
   readonly content: StateJsonValue;
+};
+
+/**
+ * One store-managed artifact read (DM-5): a bare file name in the store layout.
+ * Absent, unreadable, or permission-mismatched artifacts fail classified.
+ */
+export type StateStoreArtifactReadRequest = {
+  readonly name: string;
+};
+
+/**
+ * One store-managed artifact get-or-create (DM-5). `create` receives
+ * cryptographically random hex generated at the runtime edge and returns the
+ * artifact content; `guardKinds` names the record kinds whose presence proves
+ * the artifact must already exist (absent on a non-first open →
+ * `state.keys.missing`). Nothing is generated when the artifact exists.
+ */
+export type StateStoreArtifactRequest = {
+  readonly name: string;
+  readonly randomBytes: number;
+  readonly create: (randomHex: string) => string;
+  readonly guardKinds: readonly string[];
+};
+
+/** One store-managed artifact as the port serves it. */
+export type StateStoreArtifact = {
+  readonly name: string;
+  readonly path: string;
+  readonly created: boolean;
+  readonly content: string;
 };

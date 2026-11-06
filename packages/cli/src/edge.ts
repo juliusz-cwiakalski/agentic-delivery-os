@@ -14,9 +14,9 @@ import {
   neutralEnvironmentFacts,
   nodeFileSystemFacts,
   type PmNotesFileSystemFacts,
+  parseConfigYaml,
   type RuntimePlatform,
   readCiWorkflowJobNames,
-  parseConfigYaml,
   readLocalPmContext,
   readPlanArtifact,
   readPmNotesText,
@@ -78,6 +78,9 @@ import type { BrandingInputError, ResolverInput } from "@delivery-os/core/brandi
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   type AdapterCapabilityDeclaration,
+  AUDIT_IDENTITY_VARIABLE_SUFFIX,
+  type AuditAgentIdentity,
+  type AuditInvocationFacts,
   type BrandIdentity,
   CLOSEOUT_MAX_DEPENDENTS,
   type CloseoutGitRuntime,
@@ -120,15 +123,19 @@ import {
   readProviderParkViews,
 } from "@delivery-os/core/provider";
 import {
+  appendAuditInvocation,
   appendCloseoutOutcome,
   appendOwnerGateSlaDecision,
   appendPhaseTransition,
+  createNodeStateEdge,
+  createStateStore,
   foldCloseoutHistory,
   readChangeTransitions,
   readChangeTransitionsTolerant,
   readCloseoutHistory,
   readOwnerGateSlaDecisions,
   replacePhaseProjection,
+  STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
 import { resolveAppErrorCode } from "./classify.js";
 import { type BoardCommandRuntime, createBoardCommandDefinition } from "./commands/board.js";
@@ -148,8 +155,8 @@ import {
   type LintCommandRuntime,
   type LintRegistryRead,
 } from "./commands/lint.js";
-import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
 import { createPhaseCommandDefinition, type PhaseCommandRuntime } from "./commands/phase.js";
+import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
 import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
@@ -162,9 +169,59 @@ import {
   createWatchdogCommandDefinition,
   type WatchdogCommandRuntime,
 } from "./commands/watchdog.js";
-import type { CliDependencies, CommandDefinition, CommandFlags, CommandProgram } from "./index.js";
+import type {
+  CliAuditDependencies,
+  CliDependencies,
+  CliMode,
+  CommandDefinition,
+  CommandFlags,
+  CommandProgram,
+} from "./index.js";
 
 const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
+
+/**
+ * Resolve the claimed agent identity from injected environment data (DEC-3).
+ * The variable name is derived (brand prefix + declared suffix); presence is
+ * decided on the trimmed value, while the recorded value stays verbatim.
+ */
+export const resolveAgentIdentity = (
+  environment: Readonly<Record<string, string | undefined>>,
+  environmentPrefix: string,
+): AuditAgentIdentity | undefined => {
+  const value = environment[`${environmentPrefix}${AUDIT_IDENTITY_VARIABLE_SUFFIX}`];
+  if (typeof value !== "string" || value.trim().length === 0) return undefined;
+  return { kind: "claimed", value };
+};
+
+/** Resolve the machine-output mode from an injected stream-capability fact. */
+export const resolveCliMode = (stream: { readonly isTTY?: boolean }): CliMode =>
+  stream.isTTY === true ? "interactive" : "scripted";
+
+export type CliAuditComposition = {
+  readonly store: StateStorePort;
+  readonly scope: string;
+  readonly repo?: string;
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly environmentPrefix: string;
+};
+
+/**
+ * Compose the audit seam at the runtime-aware edge: identity from injected
+ * environment data, the store-backed writer, and the invocation scope.
+ */
+export const createCliAudit = (options: CliAuditComposition): CliAuditDependencies => {
+  const identity = resolveAgentIdentity(options.environment, options.environmentPrefix);
+  return {
+    scope: options.scope,
+    ...(options.repo === undefined ? {} : { repo: options.repo }),
+    ...(identity === undefined ? {} : { identity }),
+    record: (facts: AuditInvocationFacts) => {
+      const appended = appendAuditInvocation(options.store, facts);
+      return appended.ok ? { ok: true } : { ok: false, code: appended.error.code };
+    },
+  };
+};
 
 /** Register non-empty secret values from an injected environment record. */
 export function registerEdgeSecrets(
@@ -424,16 +481,64 @@ export type EdgeOptions = {
   readonly program: CommandProgram;
   readonly environment?: Readonly<Record<string, string | undefined>>;
   readonly secretKeys?: readonly string[];
+  /** Injected stream capability fact; omitted means non-interactive. */
+  readonly isTTY?: boolean;
+  /** Injected state directory; defaults to `<home>/<stateDirectoryName>`. */
+  readonly stateDirectory?: string;
+  /** Injected home directory; defaults to the environment record's HOME. */
+  readonly homeDirectory?: string;
+  /** Injected workspace identity for the audit store. */
+  readonly workspaceId?: string;
+  /** Injected fence namespace for the audit store. */
+  readonly fenceNamespace?: string;
 };
 
-/** Assemble the production dependency set at the runtime-aware edge. */
+const trimTrailingSeparators = (path: string): string => path.replace(/[\\/]+$/u, "");
+
+const stateDirectoryFor = (options: EdgeOptions): string | undefined => {
+  if (options.stateDirectory !== undefined) return options.stateDirectory;
+  const environment = options.environment ?? {};
+  const home = options.homeDirectory ?? environment["HOME"] ?? environment["USERPROFILE"];
+  if (home === undefined || home.length === 0) return undefined;
+  return `${trimTrailingSeparators(home)}/${options.brand.stateDirectoryName}`;
+};
+
+/**
+ * Assemble the production dependency set at the runtime-aware edge. The clock
+ * is the epoch-millisecond UTC wall clock; the mode fact comes from the
+ * injected stream capability; and the audit seam composes over the state
+ * directory derived from the branding state-directory name.
+ */
 export function createProductionDependencies(options: EdgeOptions): CliDependencies {
+  const environment = options.environment ?? {};
+  const workspaceId = options.workspaceId ?? "default";
+  const stateDirectory = stateDirectoryFor(options);
+  const audit =
+    stateDirectory === undefined
+      ? undefined
+      : createCliAudit({
+          store: createStateStore(
+            {
+              level: "local",
+              workspaceId,
+              fenceNamespace: options.fenceNamespace ?? "cli-audit",
+              schemaVersion: STATE_SCHEMA_VERSION,
+              stateDirectory,
+            },
+            { driver: "jsonl", edge: createNodeStateEdge() },
+          ),
+          scope: workspaceId,
+          environment,
+          environmentPrefix: options.brand.environmentPrefix,
+        });
   return {
     brand: options.brand,
-    clock: { now: () => Math.trunc(performance.now()) },
+    clock: { now: () => Date.now() },
     newRunId: () => globalThis.crypto.randomUUID(),
-    secrets: registerEdgeSecrets(options.environment ?? {}, options.secretKeys ?? []),
+    secrets: registerEdgeSecrets(environment, options.secretKeys ?? []),
     program: options.program,
+    mode: resolveCliMode(options.isTTY === undefined ? {} : { isTTY: options.isTTY }),
+    ...(audit === undefined ? {} : { audit }),
   };
 }
 

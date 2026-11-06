@@ -66,10 +66,26 @@ export const fixtureHygieneFailures = (root: string, includeTests = true): strin
       }
     }
     if (file.endsWith("/injected.json")) {
-      const injected = JSON.parse(text) as { brand?: { binaryName?: string } };
+      const injected = JSON.parse(text) as {
+        brand?: { binaryName?: string };
+        mode?: string;
+        environment?: Record<string, string>;
+      };
       const binaryName = injected.brand?.binaryName;
       if (binaryName !== "example-product") {
         failures.push(`${file}: brand value is not the synthetic fixture`);
+      }
+      if (injected.mode !== undefined && !["interactive", "scripted"].includes(injected.mode)) {
+        failures.push(`${file}: unsupported mode`);
+      }
+      if (injected.environment !== undefined && typeof injected.environment !== "object") {
+        failures.push(`${file}: environment must be a string map`);
+      }
+    }
+    if (file.endsWith("/meta.json")) {
+      const meta = JSON.parse(text) as { mode?: string };
+      if (meta.mode !== undefined && !["interactive", "scripted"].includes(meta.mode)) {
+        failures.push(`${file}: unsupported meta mode`);
       }
     }
   }

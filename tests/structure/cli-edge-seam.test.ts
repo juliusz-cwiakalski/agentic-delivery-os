@@ -8,8 +8,15 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
-import { createConfigProgram, registerEdgeSecrets } from "../../packages/cli/src/edge";
+import {
+  createCliAudit,
+  createConfigProgram,
+  registerEdgeSecrets,
+  resolveAgentIdentity,
+  resolveCliMode,
+} from "../../packages/cli/src/edge";
 import { type CliDependencies, runCli } from "../../packages/cli/src/index";
+import { AUDIT_IDENTITY_VARIABLE_SUFFIX } from "../../packages/core/src/contracts/index";
 import { createFakeIo, NOW_MS, SYNTHETIC_DB_PATH } from "../fixtures/session-admin/harness";
 import { bufferSink, loadProgram, programFor, SYNTHETIC_BRAND } from "../golden/helpers";
 
@@ -246,6 +253,56 @@ describe("TC-RUNCLI-004 brand and environment seam", () => {
 
   test("no product token literal exists in the new CLI code", () => {
     expect(productTokenFailures(ROOT)).toEqual([]);
+  });
+});
+
+describe("TC-GH223-013 identity seam and mode fact", () => {
+  test("the identity variable name is derived from the injected prefix", () => {
+    const prefix = SYNTHETIC_BRAND.environmentPrefix;
+    expect(`${prefix}${AUDIT_IDENTITY_VARIABLE_SUFFIX}`).toBe("EXAMPLE_PRODUCT_AGENT_IDENTITY");
+    expect(resolveAgentIdentity({ EXAMPLE_PRODUCT_AGENT_IDENTITY: "pm-lane-7" }, prefix)).toEqual({
+      kind: "claimed",
+      value: "pm-lane-7",
+    });
+    expect(resolveAgentIdentity({}, prefix)).toBeUndefined();
+    expect(resolveAgentIdentity({ EXAMPLE_PRODUCT_AGENT_IDENTITY: "" }, prefix)).toBeUndefined();
+    expect(resolveAgentIdentity({ EXAMPLE_PRODUCT_AGENT_IDENTITY: "   " }, prefix)).toBeUndefined();
+  });
+
+  test("a present identity is verbatim; trimming decides presence only", () => {
+    const prefix = SYNTHETIC_BRAND.environmentPrefix;
+    expect(
+      resolveAgentIdentity({ EXAMPLE_PRODUCT_AGENT_IDENTITY: "  qa-lane-3  " }, prefix),
+    ).toEqual({ kind: "claimed", value: "  qa-lane-3  " });
+    expect(
+      resolveAgentIdentity({ OTHER_PREFIX_AGENT_IDENTITY: "pm-lane-7" }, prefix),
+    ).toBeUndefined();
+  });
+
+  test("the mode fact comes from an injected stream capability", () => {
+    expect(resolveCliMode({ isTTY: true })).toBe("interactive");
+    expect(resolveCliMode({ isTTY: false })).toBe("scripted");
+    expect(resolveCliMode({})).toBe("scripted");
+  });
+
+  test("the audit composition uses injected environment data, not process.env", () => {
+    const audit = createCliAudit({
+      store: {
+        identity: {
+          level: "local",
+          workspaceId: "workspace-a",
+          fenceNamespace: "fence-a",
+          schemaVersion: "delivery.state.v1",
+          stateDirectory: "/tmp/never-used",
+        },
+      } as never,
+      scope: "workspace-a",
+      environment: { EXAMPLE_PRODUCT_AGENT_IDENTITY: "pm-lane-7" },
+      environmentPrefix: SYNTHETIC_BRAND.environmentPrefix,
+    });
+    expect(audit.scope).toBe("workspace-a");
+    expect(audit.identity).toEqual({ kind: "claimed", value: "pm-lane-7" });
+    expect(typeof audit.record).toBe("function");
   });
 });
 

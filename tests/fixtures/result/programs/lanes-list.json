@@ -1,0 +1,9 @@
+{
+  "id": "lanes-list",
+  "command": "lanes",
+  "kind": "data",
+  "data": {
+    "lanes": [{ "id": "lane-7", "agent": "pm", "state": "active" }]
+  },
+  "positionals": { "max": 2 }
+}

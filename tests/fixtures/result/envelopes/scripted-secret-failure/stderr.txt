@@ -1,0 +1,2 @@
+example-product: input.value.rejected
+summary: the value [redacted] was rejected

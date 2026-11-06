@@ -1,4 +1,5 @@
 {
   "outcome": "unknown-failure",
-  "secrets": false
+  "secrets": false,
+  "mode": "interactive"
 }

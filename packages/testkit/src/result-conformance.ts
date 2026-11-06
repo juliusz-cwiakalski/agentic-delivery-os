@@ -25,6 +25,31 @@ export const RULES = [
 
 export type RuleId = (typeof RULES)[number]["id"];
 
+/** Scripted-projection rules (DEC-2, AC-F3-4): the trim has its own contract. */
+export const SCRIPTED_RULES = [
+  { id: "scripted.line", description: "the projection is exactly one newline-terminated line" },
+  { id: "scripted.object", description: "the line parses as a plain object" },
+  { id: "scripted.exclusivity", description: "exactly one of data or error is present" },
+  { id: "scripted.success.keys", description: "a scripted success carries exactly data" },
+  {
+    id: "scripted.failure.keys",
+    description: "a scripted failure carries exactly error and runId",
+  },
+  { id: "scripted.trimmed-absent", description: "schemaVersion, exitCode, and timing are absent" },
+  {
+    id: "scripted.error.keys",
+    description: "the error object keeps full fields and no nested runId",
+  },
+] as const;
+
+export type ScriptedRuleId = (typeof SCRIPTED_RULES)[number]["id"];
+
+export type ScriptedViolation = {
+  readonly rule: ScriptedRuleId;
+  readonly field: string;
+  readonly message: string;
+};
+
 export type Violation = {
   readonly rule: RuleId;
   readonly field: string;
@@ -241,18 +266,24 @@ export const assertEnvelopeContract = (parsed: unknown): Violation[] => {
 export type { ErrorCategory, ErrorConsequence };
 
 /** Shape of a golden case's `injected.json` (A-T3, A-T4). */
+export type GoldenMode = "interactive" | "scripted";
+
 export type GoldenInjected = {
   readonly ticks: readonly [number, number];
+  readonly startTicks?: readonly [number, number];
   readonly runId: string;
   readonly brand: BrandIdentity;
   readonly program: string;
   readonly secrets?: readonly string[];
+  readonly mode?: GoldenMode;
+  readonly environment?: Readonly<Record<string, string>>;
 };
 
 /** Shape of a golden case's `meta.json`. */
 export type GoldenMeta = {
   readonly outcome: "success" | "classified-failure" | "unknown-failure" | "broken-invocation";
   readonly secrets: boolean;
+  readonly mode?: GoldenMode;
 };
 
 /** One discovered golden case. */
@@ -302,6 +333,13 @@ export const loadGoldenCases = async (root: string): Promise<GoldenCase[]> => {
     if (typeof injected.runId !== "string" || injected.runId.length === 0) {
       throw new Error(`${id}: injected.json must declare a runId`);
     }
+    const mode = injected.mode ?? "interactive";
+    if (mode !== "interactive" && mode !== "scripted") {
+      throw new Error(`${id}: injected.json declares an unsupported mode`);
+    }
+    if (meta.mode !== undefined && meta.mode !== mode) {
+      throw new Error(`${id}: meta.json mode disagrees with injected.json`);
+    }
     const stdout = await readText(`${directory}/stdout.json`);
     const stderrFile = Bun.file(`${directory}/stderr.txt`);
     const stderr = (await stderrFile.exists()) ? await stderrFile.text() : "";
@@ -316,4 +354,131 @@ export const loadGoldenCases = async (root: string): Promise<GoldenCase[]> => {
     });
   }
   return cases.sort((left, right) => left.id.localeCompare(right.id));
+};
+
+/**
+ * Validate the scripted-mode machine projection: exactly one minified line,
+ * success `data` only, failure `error` + top-level `runId`, and no trimmed
+ * context tokens anywhere.
+ */
+export const assertScriptedProjection = (text: string): ScriptedViolation[] => {
+  const violations: ScriptedViolation[] = [];
+  const oneLine = text.endsWith("\n") && text.indexOf("\n") === text.length - 1;
+  if (!oneLine) {
+    violations.push({
+      rule: "scripted.line",
+      field: "stdout",
+      message: "scripted output must be exactly one newline-terminated line",
+    });
+  }
+  const trimmed = text.trim();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    violations.push({
+      rule: "scripted.object",
+      field: "stdout",
+      message: "the scripted line must parse as JSON",
+    });
+    return violations;
+  }
+  if (!isPlainObject(parsed)) {
+    violations.push({
+      rule: "scripted.object",
+      field: "stdout",
+      message: "the scripted line must be a plain object",
+    });
+    return violations;
+  }
+
+  const hasData = Object.hasOwn(parsed, "data");
+  const hasError = Object.hasOwn(parsed, "error");
+  if (hasData === hasError) {
+    violations.push({
+      rule: "scripted.exclusivity",
+      field: hasData ? "data" : "error",
+      message: "exactly one of data or error must be present",
+    });
+  }
+
+  for (const token of ["schemaVersion", "exitCode", "timing"]) {
+    if (Object.hasOwn(parsed, token)) {
+      violations.push({
+        rule: "scripted.trimmed-absent",
+        field: token,
+        message: `${token} must not appear on a scripted line`,
+      });
+    }
+  }
+
+  if (hasData) {
+    if (!sameKeySet(Object.keys(parsed), ["data"])) {
+      violations.push({
+        rule: "scripted.success.keys",
+        field: "stdout",
+        message: "a scripted success line carries exactly data",
+      });
+    }
+    if (Object.hasOwn(parsed, "runId")) {
+      violations.push({
+        rule: "scripted.trimmed-absent",
+        field: "runId",
+        message: "runId must not appear on a scripted success line",
+      });
+    }
+  }
+
+  if (hasError) {
+    if (!sameKeySet(Object.keys(parsed), ["error", "runId"])) {
+      violations.push({
+        rule: "scripted.failure.keys",
+        field: "stdout",
+        message: "a scripted failure line carries exactly error and top-level runId",
+      });
+    }
+    const location = parsed.runId;
+    if (!opaque(location)) {
+      violations.push({
+        rule: "scripted.failure.keys",
+        field: "runId",
+        message: "a scripted failure line carries a non-empty top-level runId",
+      });
+    }
+    const error = parsed.error;
+    if (!isPlainObject(error)) {
+      violations.push({
+        rule: "scripted.error.keys",
+        field: "error",
+        message: "error must be a plain object",
+      });
+    } else {
+      for (const key of ERROR_REQUIRED_KEYS) {
+        if (!Object.hasOwn(error, key) || error[key] === undefined) {
+          violations.push({
+            rule: "scripted.error.keys",
+            field: `error.${key}`,
+            message: `error field ${key} is missing`,
+          });
+        }
+      }
+      for (const key of Object.keys(error)) {
+        if (!ERROR_ALLOWED_KEYS.includes(key as never)) {
+          violations.push({
+            rule: "scripted.error.keys",
+            field: `error.${key}`,
+            message: `unexpected error field ${key}`,
+          });
+        }
+      }
+      if (Object.hasOwn(error, "runId")) {
+        violations.push({
+          rule: "scripted.error.keys",
+          field: "error.runId",
+          message: "runId must be top-level, not nested in error",
+        });
+      }
+    }
+  }
+  return violations;
 };

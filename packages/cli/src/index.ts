@@ -8,6 +8,8 @@
  * including broken invocations and hostile handler bodies.
  */
 import {
+  type AuditAgentIdentity,
+  type AuditInvocationFacts,
   type BrandIdentity,
   type CommandResult,
   type CommandResultError,
@@ -18,7 +20,7 @@ import {
   RESULT_SCHEMA_VERSION,
 } from "@delivery-os/core/contracts";
 import { classifyThrown, resolveAppErrorCode } from "./classify.js";
-import { type CliStreams, writeOutput } from "./output/serialize.js";
+import { type CliStreams, redact, writeOutput } from "./output/serialize.js";
 import { projectExitCode } from "./projection.js";
 
 export type { CliSink, CliStreams } from "./output/serialize.js";
@@ -63,6 +65,25 @@ export type CommandProgram = {
 /** Injected clock facts (A-T3). */
 export type CliClock = { readonly now: () => number };
 
+/** The machine-output mode fact, injected at the runtime-aware edge (DEC-2). */
+export type CliMode = "interactive" | "scripted";
+
+/** One audit write result: success, or an existing state identity on failure. */
+export type CliAuditWriteResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly code: string };
+
+/**
+ * The injected audit seam: the store-backed writer plus the invocation scope,
+ * optional repository target, and the claimed identity resolved at the edge.
+ */
+export type CliAuditDependencies = {
+  readonly scope: string;
+  readonly repo?: string;
+  readonly identity?: AuditAgentIdentity;
+  readonly record: (facts: AuditInvocationFacts) => CliAuditWriteResult;
+};
+
 /** Everything dynamic the surface needs, injected at the edge. */
 export type CliDependencies = {
   readonly brand: BrandIdentity;
@@ -70,6 +91,10 @@ export type CliDependencies = {
   readonly newRunId: () => string;
   readonly secrets: readonly string[];
   readonly program: CommandProgram;
+  /** Injected mode fact; the historical default stays interactive. */
+  readonly mode?: CliMode;
+  /** Injected audit writer; when absent the run is not audited. */
+  readonly audit?: CliAuditDependencies;
 };
 
 type Outcome =
@@ -154,8 +179,13 @@ const outcomeFromResult = (result: unknown): Outcome => {
   };
 };
 
+const GLOBAL_FLAGS: ReadonlySet<string> = new Set(["--json", "--verbose", "--pretty"]);
+
+const commandToken = (argv: readonly string[]): string =>
+  argv.find((token) => !GLOBAL_FLAGS.has(token)) ?? "";
+
 const parseInvocation = (argv: readonly string[], program: CommandProgram): ParsedInvocation => {
-  const tokens = argv.filter((token) => token !== "--json");
+  const tokens = argv.filter((token) => !GLOBAL_FLAGS.has(token));
   const command = tokens[0];
   if (command === undefined || command.startsWith("-")) {
     return { ok: false, reason: "no command supplied" };
@@ -261,6 +291,9 @@ export async function runCli(
   deps: CliDependencies,
 ): Promise<number> {
   const emitEnvelope = argv.includes("--json");
+  const verbose = argv.includes("--verbose");
+  const pretty = argv.includes("--pretty");
+  const mode: CliMode = deps.mode ?? "interactive";
   const startedAt = deps.clock.now();
   const runId = deps.newRunId();
   let outcome: Outcome;
@@ -305,17 +338,66 @@ export async function runCli(
   const finishedAt = deps.clock.now();
   const timing = { totalMs: Math.max(0, Math.trunc(finishedAt - startedAt)) };
   const envelope = buildEnvelope(outcome, runId, timing, successProjection);
-  const diagnostic = diagnosticFor(outcome, deps.brand);
+  const outcomeClass: ProjectionClass =
+    outcome.type === "success" ? successProjection : outcome.entry.projectionClass;
+
+  // The command outcome is computed FIRST; the audit write is best-effort and
+  // never changes the outcome or exit code (DEC-8).
+  const auditDiagnostic = (() => {
+    const audit = deps.audit;
+    if (audit === undefined) return undefined;
+    const identity = audit.identity;
+    const facts: AuditInvocationFacts = {
+      runId,
+      command: redact(commandToken(argv), deps.secrets),
+      arguments: redact([...argv], deps.secrets),
+      exitCode: envelope.exitCode,
+      timing,
+      resultSchemaVersion: envelope.schemaVersion,
+      outcomeClass,
+      scope: audit.scope,
+      ...(audit.repo === undefined ? {} : { repo: audit.repo }),
+      startedAt,
+      ...(identity === undefined
+        ? {}
+        : {
+            agentIdentity: {
+              kind: identity.kind,
+              value: redact(identity.value, deps.secrets),
+            },
+          }),
+    };
+    try {
+      const result = audit.record(facts);
+      return result.ok ? undefined : `${deps.brand.binaryName}: ${result.code}\n`;
+    } catch {
+      return `${deps.brand.binaryName}: state.write.failed\n`;
+    }
+  })();
+
+  const diagnostic = [diagnosticFor(outcome, deps.brand), auditDiagnostic]
+    .filter((entry): entry is string => entry !== undefined)
+    .join("");
   let exitCode = envelope.exitCode;
 
   try {
-    writeOutput(streams, envelope, diagnostic, deps.secrets, emitEnvelope, {
-      ...(humanSuccess && outcome.type === "success" ? { humanJson: outcome.data } : {}),
-      ...(humanText === undefined ? {} : { humanText }),
-      ...(outcome.type === "success" && outcome.warnings !== undefined
-        ? { warnings: outcome.warnings }
-        : {}),
-    });
+    writeOutput(
+      streams,
+      envelope,
+      diagnostic.length === 0 ? undefined : diagnostic,
+      deps.secrets,
+      emitEnvelope,
+      {
+        mode,
+        verbose,
+        pretty,
+        ...(humanSuccess && outcome.type === "success" ? { humanJson: outcome.data } : {}),
+        ...(humanText === undefined ? {} : { humanText }),
+        ...(outcome.type === "success" && outcome.warnings !== undefined
+          ? { warnings: outcome.warnings }
+          : {}),
+      },
+    );
   } catch {
     const fallback = buildEnvelope(
       internalFailure("Output serialization failed."),

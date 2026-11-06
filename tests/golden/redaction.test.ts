@@ -229,6 +229,36 @@ describe("TC-REDACT-003 no-partial-leak sweep", () => {
   });
 });
 
+describe("TC-GH223-031 scripted-mode redaction", () => {
+  const scriptedSuccess = cases.find((entry) => entry.id === "scripted-secret-success");
+  const scriptedFailure = cases.find((entry) => entry.id === "scripted-secret-failure");
+
+  test("scripted success and failure lines stay secret-free", async () => {
+    expect(scriptedSuccess).toBeDefined();
+    expect(scriptedFailure).toBeDefined();
+    if (scriptedSuccess === undefined || scriptedFailure === undefined) return;
+    for (const testCase of [scriptedSuccess, scriptedFailure]) {
+      const run = await runCase(testCase);
+      expect(run.stdout).toBe(testCase.stdout);
+      expect(markerCount(run.stdout)).toBe(0);
+      expect(markerCount(run.stderr)).toBe(0);
+      expect(markerCount(decode(run.stdout))).toBe(0);
+      for (const secret of testCase.injected.secrets ?? []) {
+        expect(run.stdout).not.toContain(secret);
+        expect(run.stderr).not.toContain(secret);
+      }
+    }
+  });
+
+  test("scripted success keeps the redaction markers at every planted position", async () => {
+    if (scriptedSuccess === undefined) return;
+    const parsed = JSON.parse((await runCase(scriptedSuccess)).stdout) as {
+      data: Record<string, unknown>;
+    };
+    expect(parsed.data.token).toBe("[redacted]");
+    expect(Object.hasOwn(parsed.data, "planted-fake-secret-0004")).toBe(false);
+  });
+});
 describe("TC-BRIEF-019 brief output passes the single redaction chokepoint", () => {
   test("a canary planted in a rendered identity never reaches either stream", async () => {
     const canary = "planted-fake-brief-canary";

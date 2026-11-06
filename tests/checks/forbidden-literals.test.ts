@@ -357,3 +357,34 @@ describe("docs-scope lifetime", () => {
     rmSync(repo.root, { recursive: true, force: true });
   });
 });
+
+describe("TC-GH223-013 audit identity seam carries no product token", () => {
+  test("the declared suffix and the new audit sources are token-free", async () => {
+    const { AUDIT_IDENTITY_VARIABLE_SUFFIX } = await import(
+      "../../packages/core/src/contracts/index"
+    );
+    expect(AUDIT_IDENTITY_VARIABLE_SUFFIX.toLowerCase()).not.toContain("ados");
+    const files = [
+      "packages/core/src/contracts/audit.ts",
+      "packages/core/src/state/audit.ts",
+      "packages/cli/src/index.ts",
+      "packages/cli/src/edge.ts",
+      "packages/cli/src/output/serialize.ts",
+      "packages/testkit/src/result-conformance.ts",
+    ];
+    for (const file of files) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      for (const seed of liveRegistry().seedLiterals) {
+        expect(text.includes(seed), `${file}: ${seed}`).toBe(false);
+      }
+    }
+  });
+
+  test("the live scan includes the new audit files with zero violations", () => {
+    const outcome = scan(ROOT);
+    const auditViolations = outcome.violations.filter((violation) =>
+      violation.file.includes("audit"),
+    );
+    expect(auditViolations).toEqual([]);
+  });
+});
