@@ -11,7 +11,11 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveBrandIdentity } from "../../packages/core/src/branding/index";
+import { createToolset } from "../../packages/mcp/src/index";
+import { exitCodeFor } from "../../packages/mcp/src/lifecycle";
+import { runProtocol } from "../../packages/mcp/src/output/protocol";
 import { scanRoot } from "../../scripts/checks/exit-code-literals";
+import { SYNTHETIC_BRAND } from "../golden/helpers";
 import { type Client, PINNED_PROTOCOL_VERSION, startClient } from "../fixtures/mcp/protocol/client";
 
 const ROOT = process.cwd();
@@ -151,6 +155,30 @@ describe("TC-MCP-011 lifecycle exit matrix", () => {
     }
   });
 
+  test("a valid-JSON non-frame (batch array) is Invalid Request and serving continues", async () => {
+    const workspace = makeWorkspace("{}\n");
+    const client = start(workspace, {
+      [`${environmentPrefix()}CONFIG`]: workspace.configPath,
+    });
+    try {
+      await withTimeout(client.initialize(PINNED_PROTOCOL_VERSION), "initialize");
+      // GAP-T3 pins unparseable bytes as the transport fault; a batch array is
+      // valid JSON, so it is a recoverable client mistake (review F-3).
+      client.writeRaw(`${JSON.stringify([{ jsonrpc: "2.0", id: 99, method: "tools/list" }])}\n`);
+      await withTimeout(client.listTools(), "tools/list after batch");
+      const frames = client
+        .stdoutLines()
+        .map((line) => JSON.parse(line) as { id?: unknown; error?: { code?: number } });
+      expect(frames.some((frame) => frame.id === null && frame.error?.code === -32600)).toBe(true);
+      const exit = await withTimeout(client.close(), "batch close");
+      expect(exit).toEqual({ code: 0, signal: null });
+      expect(client.stderrText().toLowerCase()).not.toContain("transport fault");
+      expectJsonRpcLines(client.stdoutLines());
+    } finally {
+      client.kill();
+    }
+  });
+
   test("a classified tool failure does not exit; a later status call succeeds", async () => {
     const workspace = makeWorkspace("{}\n");
     const client = start(workspace, {
@@ -278,5 +306,76 @@ describe("TC-MCP-011 lifecycle exit matrix", () => {
       const text = readFileSync(join(ROOT, file), "utf8");
       expect(text).not.toMatch(/node:diagnostics_channel|from\s+"[^"]*telemetry/);
     }
+  });
+});
+
+describe("review F-1 thrown-read containment in the serve loop", () => {
+  const responseOf = (line: string | undefined): Record<string, unknown> => {
+    if (line === undefined) throw new Error("missing protocol frame");
+    return JSON.parse(line) as Record<string, unknown>;
+  };
+
+  const contentPayload = (response: Record<string, unknown>): Record<string, unknown> => {
+    const result = response.result;
+    if (typeof result !== "object" || result === null) throw new Error("missing result");
+    const content = (result as { content?: unknown }).content;
+    if (!Array.isArray(content)) throw new Error("missing content");
+    const first = content[0] as { text?: unknown } | undefined;
+    if (typeof first?.text !== "string") throw new Error("missing text content");
+    return JSON.parse(first.text) as Record<string, unknown>;
+  };
+
+  test("a thrown read answers as a contained failure and the next call still serves", async () => {
+    const prefix = SYNTHETIC_BRAND.mcpToolPrefix;
+    const runtime = {
+      readPmNotes: (changeRef: string) => {
+        if (changeRef === "GH-THROW") throw new Error("synthetic thrown read");
+        return { ok: false as const, reason: "missing" as const };
+      },
+      readRegistry: (_changeRef: string) => {
+        throw new Error("unreachable");
+      },
+    };
+    const toolset = createToolset({ brand: SYNTHETIC_BRAND, verify: runtime });
+    const requests = [
+      JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} }),
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/call",
+        params: { name: `${prefix}verify-artifact`, arguments: { ref: "GH-THROW" } },
+      }),
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 3,
+        method: "tools/call",
+        params: { name: `${prefix}verify-artifact`, arguments: { ref: "GH-9999" } },
+      }),
+    ];
+    const written: string[] = [];
+    const outcome = await runProtocol(
+      {
+        lines: (async function* lines() {
+          for (const frame of requests) yield frame;
+        })(),
+        writeFrame: (frame) => {
+          written.push(frame);
+        },
+      },
+      {
+        brand: SYNTHETIC_BRAND,
+        toolset,
+        serverName: "mcp-lifecycle-test",
+        serverVersion: "0.0.0",
+      },
+    );
+    expect(outcome).toEqual({ kind: "clean" });
+    expect(exitCodeFor(outcome)).toBe(0);
+    expect(written).toHaveLength(3);
+    const thrownFrame = responseOf(written[1]);
+    expect((thrownFrame.result as { isError?: boolean }).isError).toBe(true);
+    expect(contentPayload(thrownFrame).code).toBe("fallback.internal");
+    expect(contentPayload(thrownFrame).code).not.toBe("input.value.rejected");
+    expect(contentPayload(responseOf(written[2])).code).toBe("lint.target.missing");
   });
 });

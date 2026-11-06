@@ -7,10 +7,12 @@
  * maps to the CLI grammar-rejection analogue `input.value.rejected`. Handlers
  * call engine functions only, never other tools. Calls are serialized in
  * arrival order (OQ-2): the read-only engines make either policy safe, and
- * serialization keeps determinism and single-frame writes.
+ * serialization keeps determinism and single-frame writes. Dispatch contains
+ * every thrown runtime value as a classified failure, mirroring `runCli`, so
+ * `callTool` never rejects for a throwing read.
  */
 import type { BrandIdentity } from "@delivery-os/core/contracts";
-import { inputRejection, type McpToolResult } from "../output/payload.js";
+import { failureFromValue, inputRejection, type McpToolResult } from "../output/payload.js";
 import { type CanonicalToolId, describeTools, type ToolDescriptor } from "./catalog.js";
 import { type GateReportToolRuntime, runGateReportTool } from "./gate-report.js";
 import { runStatusTool, type StatusToolRuntime } from "./status.js";
@@ -63,26 +65,33 @@ export const createToolset = (options: ToolsetOptions): Toolset => {
   };
 
   const dispatch = async (id: CanonicalToolId, args: unknown): Promise<McpToolResult> => {
-    switch (id) {
-      case "status": {
-        const runtime = options.status;
-        return runtime === undefined ? missingRuntime() : runStatusTool(runtime);
+    try {
+      switch (id) {
+        case "status": {
+          const runtime = options.status;
+          return runtime === undefined ? missingRuntime() : await runStatusTool(runtime);
+        }
+        case "verify-artifact": {
+          const runtime = options.verify;
+          const ref = refArgument(args);
+          if (runtime === undefined || ref === undefined) return inputRejection();
+          return await runVerifyArtifactTool(runtime, ref);
+        }
+        case "gate-report": {
+          const runtime = options.gates;
+          const ref = refArgument(args);
+          if (runtime === undefined || ref === undefined) return inputRejection();
+          return await runGateReportTool(runtime, ref);
+        }
+        default: {
+          return inputRejection();
+        }
       }
-      case "verify-artifact": {
-        const runtime = options.verify;
-        const ref = refArgument(args);
-        if (runtime === undefined || ref === undefined) return inputRejection();
-        return runVerifyArtifactTool(runtime, ref);
-      }
-      case "gate-report": {
-        const runtime = options.gates;
-        const ref = refArgument(args);
-        if (runtime === undefined || ref === undefined) return inputRejection();
-        return runGateReportTool(runtime, ref);
-      }
-      default: {
-        return inputRejection();
-      }
+    } catch (thrown) {
+      // Containment (review F-1): mirror `runCli` and `runStatusTool` so a
+      // throwing runtime read becomes a classified failure, never a rejected
+      // `callTool` promise that would reach the serve loop as an exit.
+      return failureFromValue(thrown);
     }
   };
 

@@ -1042,6 +1042,7 @@ Additional rules:
 - The Node smoke and the parity suites share the same case definitions where possible, so a new fixture automatically exercises both the in-process and process paths.
 - `tests/fixtures/mcp/regenerate.ts` is the only writer for the goldens and the tool-list snapshot. It is run explicitly, reviewed, and never called from a test body.
 - The delivery plan maps the behavior-named seams (catalog module, toolset factory, lifecycle module, serve entry) to the chosen file and export names.
+- The "Implementation status" column above was authored before delivery; §10 supersedes it. Every TC is recorded there as executed (`PASS`) or explicitly deferred, so the column is retained only as the original automation plan.
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -1088,6 +1089,7 @@ Additional rules:
 |---------|------|--------|---------|
 | 1.0 | 2026-11-06 | @test-plan-writer | Initial test plan for GH-231 (M1-S7: Minimal MCP). 21 TCs cover all 13 ACs, all 11 NFRs, DM-1..DM-4, DEC-1..DEC-7, the shared CLI/MCP parity fixtures, the Node portability smoke, the prompt-injection fixture, the read-only oracle, the license verdict, and the exit-literal reconciliation. |
 | 1.1 | 2026-11-06 | @test-plan-writer | Iteration-2 DoR remediation — TC-MCP-013 enforcement-point re-citation (gate finding, 2026-11-06). |
+| 1.2 | 2026-11-06 | @coder | Review iteration-1 remediation (plan phase 7): thrown-read containment parity cases, truthful parks composition through `readProviderParkViews`, valid-JSON non-frame handling, explicit served-name resolution, and doc completion. |
 
 ## 10. Test Execution Log
 
@@ -1114,3 +1116,18 @@ Additional rules:
 **Delivery decisions recorded.** OQ-1: minimal in-package stdio JSON-RPC 2.0, zero external dependencies. OQ-2: tool calls serialize in arrival order. OQ-T3: a declared `./serve` subpath, no `bin`. OQ-T5: the ref parameter is `ref`. OQ-T6: failures carry protocol-level `isError: true` metadata outside the JSON payload.
 
 **Spec-reconciliation obligations (phase 7, `@doc-syncer`).** Create `doc/spec/features/feature-mcp-surface.md` (`ados_distribution: internal`) with the three tools, CLI analogues, mirror-parity payload contract, `0/1/2` lifecycle exits, diagnostics-channel separation, and read-only/untrusted posture; add the surface-mapping note to `doc/spec/features/feature-result-contract.md`; verify `doc/guides/rename-drill.md` RD-8 against the committed tool-list snapshot. The doc-distribution guard is N/A in phases 1-6 because no marker-scoped document changed (`doc/guides/**`, `doc/templates/**`, `doc/00-index.md`, `doc/documentation-handbook.md`, `doc/decisions/README.md`, `doc/decisions/00-index.md`, `.ai/rules/README.md` all untouched); re-check at phase 7.
+
+### Review iteration-1 remediation (plan phase 7, 2026-11-06)
+
+| Finding | Resolution | Evidence |
+|---------|------------|----------|
+| F-1 (major) uncontained thrown reads | `createToolset` dispatch is the single containment site (`try/catch` → `failureFromValue`, mirroring `runStatusTool`/`runCli`); `callTool` never rejects for a throwing runtime read. Parity cases `verify-containment` and `gate-containment` deep-equal the CLI `fallback.internal` error; a lifecycle row proves a thrown-then-valid sequence answers in protocol and exits 0. | `bun test tests/behaviour/mcp-error-payload.test.ts tests/behaviour/mcp-verify-artifact-parity.test.ts tests/behaviour/mcp-gate-report-parity.test.ts tests/behaviour/mcp-read-parity.test.ts` — 98 pass. `mcp-lifecycle.test.ts` in-process row — PASS. Direct probe: `callTool` returned `{ ok: false, error.code: "fallback.internal" }`. |
+| F-2 (major) false parks digest | Preferred option: `./provider` added to mcp's `workspaceImports` (and the `EXPECTED_ENTRYPOINTS.mcp` pin); serve composes `readProviderParks` through `readProviderParkViews(store, nowMs)` exactly as the CLI status edge, with the same `state-unreadable` failure mapping. A hermetic serve probe reports `providers.parks: []` from the working store. | Probe under Node (built `./serve`): providers section reasons are `["provider-chain-unresolved"]` with no `state-unreadable`; `workspace-entrypoints` matrix PASS; parity/readonly/injection/Node smoke green. |
+| F-3 (medium, optional 7.4) batch frame exits 2 | Implemented: a valid-JSON non-frame (including a batch array) is answered `-32600 Invalid Request` with `id: null` and serving continues; only unparseable bytes remain the exit-2 transport fault. | `mcp-lifecycle.test.ts` row "valid-JSON non-frame (batch array)" — exit 0 with a `-32600` frame; the unparseable-frame row still exits 2. |
+| F-5 (minor) doc completion | Feature page lists provider config, parks, and the absent-override default working name; §7 status column marked superseded by §10. | Content review of `doc/spec/features/feature-mcp-surface.md`; §7 note. |
+| F-6 (low, optional 7.4) positional name resolution | Implemented: `runProtocol` resolves served names through `toolIdByName(brand, name)`; the positional `listTools()` index coupling is gone. | `pnpm typecheck`; protocol rows in `mcp-lifecycle.test.ts` and the Node smoke green. |
+| F-7 / LOW-2 (low, optional 7.4) duplicated neutral constants | Skipped: sharing the constants would touch the branding module and CLI edge outside this remediation's scope, and the rename-drill guide is unchanged. The fallback (`delivery-os` when `DELIVERY_OS_WORKING_NAME` is absent) is now documented in the feature page's serve-composition section. | Recorded skip; doc updated. |
+
+**Phase-7 gate evidence.** `pnpm typecheck` PASS (all six packages plus `tests/types`). Targeted suites PASS: 98 tests across the four parity/error suites; 31 tests across `mcp-lifecycle`, `mcp-node-smoke`, `mcp-input-validation`, and `mcp-status-parity`. Aggregate `TMPDIR=<repo>/tmp/tmpdir COREPACK_DEFAULT_TO_LATEST=0 pnpm check` PASS — lint 0 errors, format clean, typecheck clean, `bun test` 3764 pass / 4 skip / 0 fail (371 files), depcruise 203 modules / 517 dependencies with no violations, ambient-globals and workspace-entrypoints and secret-read boundaries green, exports-parity green. `git diff --check` clean.
+
+**Phase-7 scope notes.** `packages/mcp/src/output/protocol.ts` and `scripts/checks/workspace-entrypoints.ts` were touched although the phase-7 file list omitted them: task 7.4 explicitly requires the protocol change (with its pinning row), and task 7.2 explicitly requires registering the workspace-import pin, exactly the mechanical-ripple pattern review finding F-4/MIN-1 described. No production behavior outside the remediation findings changed.

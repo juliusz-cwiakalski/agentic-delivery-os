@@ -4,13 +4,16 @@
  * Newline-delimited JSON-RPC 2.0 with deterministic id echo and per-request
  * response matching. The pinned subset is `initialize`, the `initialized`
  * notification, `tools/list`, and `tools/call`; unknown methods and unknown
- * tools are protocol-level errors and serving continues. A malformed JSON frame
- * is a transport fault below the tool layer and is returned to the lifecycle.
+ * tools are protocol-level errors and serving continues. Frames that parse as
+ * JSON but are not JSON-RPC 2.0 objects (including batch arrays) are answered
+ * with `-32600 Invalid Request` and serving continues; only unparseable bytes
+ * are a transport fault below the tool layer and are returned to the lifecycle.
  *
  * Runtime-neutral: the transport lines and frame writer are injected; this
  * module imports no runtime API and writes no diagnostics.
  */
-import { CANONICAL_TOOL_IDS } from "../commands/catalog.js";
+import type { BrandIdentity } from "@delivery-os/core/contracts";
+import { toolIdByName } from "../commands/catalog.js";
 import type { Toolset } from "../commands/toolset.js";
 import type { McpToolResult } from "./payload.js";
 
@@ -25,6 +28,7 @@ export type ProtocolTransport = {
 
 /** Options for one protocol run. */
 export type ProtocolOptions = {
+  readonly brand: BrandIdentity;
   readonly toolset: Toolset;
   readonly serverName: string;
   readonly serverVersion: string;
@@ -55,17 +59,14 @@ const contentFor = (result: McpToolResult): Record<string, unknown> => {
 };
 
 const toolResult = async (
-  toolset: Toolset,
+  options: ProtocolOptions,
   name: unknown,
   args: unknown,
 ): Promise<Record<string, unknown> | undefined> => {
   if (typeof name !== "string") return undefined;
-  const tools = toolset.listTools();
-  const index = tools.findIndex((tool) => tool.name === name);
-  if (index < 0) return undefined;
-  const canonical = CANONICAL_TOOL_IDS[index];
+  const canonical = toolIdByName(options.brand, name);
   if (canonical === undefined) return undefined;
-  const result = await toolset.callTool(canonical, args);
+  const result = await options.toolset.callTool(canonical, args);
   return contentFor(result);
 };
 
@@ -93,7 +94,7 @@ const respond = async (
   }
   if (method === "tools/call") {
     const params = isRecord(message.params) ? message.params : {};
-    const content = await toolResult(options.toolset, params.name, params.arguments);
+    const content = await toolResult(options, params.name, params.arguments);
     return content === undefined
       ? errorResponse(id, -32602, "Unknown tool")
       : resultResponse(id, content);
@@ -115,7 +116,11 @@ export const runProtocol = async (
       return { kind: "transport-fault", detail: "malformed JSON frame" };
     }
     if (!isRecord(message) || message.jsonrpc !== "2.0") {
-      return { kind: "transport-fault", detail: "malformed JSON-RPC frame" };
+      // A valid-JSON non-frame (including a JSON-RPC batch array) is a client
+      // mistake, not a dead transport (review F-3): answer Invalid Request and
+      // keep serving. Only unparseable bytes exit the process.
+      transport.writeFrame(errorResponse(null, -32600, "Invalid Request"));
+      continue;
     }
     const response = await respond(message, options);
     if (response !== undefined) transport.writeFrame(response);

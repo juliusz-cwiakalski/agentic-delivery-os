@@ -44,3 +44,26 @@ describe("TC-MCP-010 no envelope leakage on success", () => {
     });
   }
 });
+
+describe("review F-1 thrown-runtime containment parity", () => {
+  const containmentCases = ALL_CASES.filter((entry) => entry.id.endsWith("-containment"));
+
+  test("every tool has a throwing-runtime parity case", () => {
+    expect(new Set(containmentCases.map((entry) => entry.tool))).toEqual(
+      new Set(["status", "verify-artifact", "gate-report"]),
+    );
+  });
+
+  for (const parityCase of containmentCases) {
+    test(`${parityCase.id}: a thrown read resolves to the CLI containment error`, async () => {
+      // `callTool` must resolve, not reject: a rejection would reach the serve
+      // loop as an unhandled crash (the review's empirical symptom).
+      await expect(parityCase.runMcp()).resolves.toBeDefined();
+      await assertFailurePair(parityCase);
+      const mcp = await parityCase.runMcp();
+      if (mcp.ok) throw new Error("expected a failure");
+      expect(mcp.error.code).toBe("fallback.internal");
+      expect(mcp.error.code).not.toBe("input.value.rejected");
+    });
+  }
+});

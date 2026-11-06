@@ -324,6 +324,44 @@ const overlayState = (state: VerifyState): void => {
   appendLandingForRef(state, VERIFY_REF, "review_fix", "complete", "2026-10-31T00:30:00Z");
 };
 
+/** One throwing read shared by both surfaces (review F-1 containment parity). */
+const throwingVerifyRuntime = (recorder: string[]) => ({
+  readPmNotes: (_changeRef: string) => {
+    recorder.push("readPmNotes");
+    throw new Error("synthetic verify containment failure");
+  },
+  readRegistry: (_changeRef: string) => {
+    recorder.push("readRegistry");
+    throw new Error("unreachable");
+  },
+});
+
+const verifyThrowingCase = (): ToolParityCase => {
+  const run = async (
+    surface: "cli" | "mcp",
+  ): Promise<{ readonly outcome: CaseOutcome; readonly reads: readonly string[] }> => {
+    const recorder: string[] = [];
+    if (surface === "cli") {
+      const result = await runVerify(throwingVerifyRuntime(recorder), ["change", VERIFY_REF]);
+      return { outcome: fromEnvelope(result.envelope), reads: recorder };
+    }
+    const result = await createToolset({
+      brand: SYNTHETIC_BRAND,
+      verify: throwingVerifyRuntime(recorder),
+    }).callTool("verify-artifact", { ref: VERIFY_REF });
+    return { outcome: fromToolResult(result), reads: recorder };
+  };
+  return {
+    id: "verify-containment",
+    tool: "verify-artifact",
+    expectation: { kind: "failure", code: "fallback.internal" },
+    runCli: async () => (await run("cli")).outcome,
+    runMcp: async () => (await run("mcp")).outcome,
+    readsCli: async () => (await run("cli")).reads,
+    readsMcp: async () => (await run("mcp")).reads,
+  };
+};
+
 export const VERIFY_CASES: readonly ToolParityCase[] = [
   verifyCase({
     id: "verify-full-finished",
@@ -388,6 +426,7 @@ export const VERIFY_CASES: readonly ToolParityCase[] = [
     afterCreate: (state) => corruptHeaderVersion(state.identity, "delivery.state.v999"),
     expectation: { kind: "failure", code: "state.schema.mismatch" },
   }),
+  verifyThrowingCase(),
 ];
 
 /* ------------------------------- gate-report ------------------------------ */
@@ -511,6 +550,44 @@ const credentialGateFacts = () => {
   return facts;
 };
 
+/** A gates runtime whose first read throws (review F-1 containment parity). */
+const throwingGatesRuntime = (recorder: string[]) => ({
+  ...gatesRuntime(),
+  readRepository: () => {
+    recorder.push("readRepository");
+    throw new Error("synthetic gates containment failure");
+  },
+});
+
+const gateThrowingCase = (): ToolParityCase => {
+  const run = async (
+    surface: "cli" | "mcp",
+  ): Promise<{ readonly outcome: CaseOutcome; readonly reads: readonly string[] }> => {
+    const recorder: string[] = [];
+    if (surface === "cli") {
+      const result = await runVerify(
+        { ...throwingVerifyRuntime(recorder), gates: throwingGatesRuntime(recorder) },
+        ["gates", GATE_REF],
+      );
+      return { outcome: fromEnvelope(result.envelope), reads: recorder };
+    }
+    const result = await createToolset({
+      brand: SYNTHETIC_BRAND,
+      gates: throwingGatesRuntime(recorder),
+    }).callTool("gate-report", { ref: GATE_REF });
+    return { outcome: fromToolResult(result), reads: recorder };
+  };
+  return {
+    id: "gate-containment",
+    tool: "gate-report",
+    expectation: { kind: "failure", code: "fallback.internal" },
+    runCli: async () => (await run("cli")).outcome,
+    runMcp: async () => (await run("mcp")).outcome,
+    readsCli: async () => (await run("cli")).reads,
+    readsMcp: async () => (await run("mcp")).reads,
+  };
+};
+
 export const GATE_CASES: readonly ToolParityCase[] = [
   gateCase("gate-all-pass", {}, { kind: "success", schemaVersion: "delivery.verify-gates.v1" }),
   gateCase(
@@ -545,6 +622,7 @@ export const GATE_CASES: readonly ToolParityCase[] = [
       code: "state.store.torn",
     },
   ),
+  gateThrowingCase(),
 ];
 
 /** Every declared parity case, grouped in catalog order. */

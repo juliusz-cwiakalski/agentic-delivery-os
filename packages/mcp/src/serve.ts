@@ -29,6 +29,7 @@ import {
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import type { BrandIdentity } from "@delivery-os/core/contracts";
 import { STATE_SCHEMA_VERSION } from "@delivery-os/core/contracts";
+import { readProviderParkViews } from "@delivery-os/core/provider";
 import {
   createNodeStateEdge,
   createStateStore,
@@ -85,7 +86,10 @@ const stateIdentity = (brand: BrandIdentity, homeDirectory: string) => ({
   stateDirectory: `${trimTrailingSeparators(homeDirectory)}/${brand.stateDirectoryName}`,
 });
 
-const buildStatusRuntime = (cwd: string): StatusToolRuntime => ({
+const buildStatusRuntime = (
+  cwd: string,
+  store: ReturnType<typeof createStateStore>,
+): StatusToolRuntime => ({
   readRepository: () => {
     const facts = readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
     const parsed = parseGitHubRemote(facts.originUrl);
@@ -106,11 +110,17 @@ const buildStatusRuntime = (cwd: string): StatusToolRuntime => ({
   readDeliveryRequests: async () => ({ ok: false, reason: "not-configured" }),
   readPipelineRuns: async () => ({ ok: false, reason: "not-configured" }),
   readProviderConfig: () => ({ ok: false, reason: "provider-chain-unresolved" }),
-  readProviderParks: () => ({
-    ok: false,
-    reason: "state-unreadable",
-    failureCode: "state.store.unknown",
-  }),
+  readProviderParks: (nowMs) => {
+    // The same verified-park fold the CLI status edge composes (review F-2):
+    // the store is already built and read successfully for verify/gates here,
+    // so the parks section reports its real state instead of a hardwired
+    // `state.store.unknown`.
+    const parks = readProviderParkViews(store, nowMs);
+    if (!parks.ok) {
+      return { ok: false, reason: "state-unreadable", failureCode: parks.error.code };
+    }
+    return { ok: true, parks: parks.value };
+  },
   readLocalContext: () =>
     readLocalPmContext({
       path: `${cwd}/.ai/local/pm-context.yaml`,
@@ -237,7 +247,7 @@ const run = async (): Promise<void> => {
   });
   const toolset = createToolset({
     brand,
-    status: buildStatusRuntime(cwd),
+    status: buildStatusRuntime(cwd, store),
     verify: buildVerifyRuntime(store, cwd),
     gates: buildGateRuntime(store, cwd),
   });
@@ -251,7 +261,7 @@ const run = async (): Promise<void> => {
           process.stdout.write(`${frame}\n`);
         },
       },
-      { toolset, serverName: brand.binaryName, serverVersion: SERVER_VERSION },
+      { brand, toolset, serverName: brand.binaryName, serverVersion: SERVER_VERSION },
     );
     runLifecycle(outcome, diagnostics);
   } finally {
