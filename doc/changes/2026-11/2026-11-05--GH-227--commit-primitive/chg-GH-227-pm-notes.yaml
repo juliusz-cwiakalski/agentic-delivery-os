@@ -10,7 +10,7 @@ phases:
   delivery: { started: "2026-11-06T01:50:00Z", completed: "2026-11-06T02:45:00Z" }
   system_spec_update: { started: "2026-11-06T03:55:00Z", completed: "2026-11-06T04:20:00Z" }
   review_fix: { started: "2026-11-06T04:25:00Z", completed: "2026-11-06T08:10:00Z" }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-11-06T08:15:00Z", completed: "2026-11-06T08:25:00Z" }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -133,6 +133,13 @@ notes:
   - text: "Review iteration 3 verdict: PASS, no remediation phase required - review_fix complete after 3 iterations (FAIL -> remediate -> PASS w/ small remediation -> remediate -> PASS clean). F-14 confirmed closed with ordering proof (commit object created before appendTransition({commitSha}); append failure resets to baseline -> both-or-neither holds); TC-CONVERGE-010 proves all three fail-safe controls through the real harness; F-15/F-16 confirmed; docs one-story verified. 4 info findings only (F-17 accepted residual unreachable under shipped code; F-18 sha-format-validation nit; F-19 opportunistic TC-CONVERGE-002 assertion; F-20 m1 commit.md exit-2 parenthetical). Reviewer re-ran full pnpm check green twice on this tree (3222 pass / 4 skip / 0 fail). Reviewer artifacts: code-review/review-iter-3.yaml (pure review artifact, no code/plan changes)"
     type: "resolved"
     date: "2026-11-06"
+  - text: "Formal quality gates GREEN on the final tree (HEAD 18f3740b, clean): aggregate pnpm check exit 0 (lint 0 errors, format 1019 files clean, typecheck+build 6 packages OK, bun test 3222 pass / 4 skip / 0 fail across 305 files, depcruise 187 modules no violations, ambient-globals + workspace-entrypoints + secret-read-boundary clean, exports-parity 5 publishables OK); doc-distribution guard no drift (81 docs); error-table-sync 59/59; forbidden-literals 0 violations; git diff --check clean. Env note: bun required PATH=$HOME/.bun/bin on the login shell (first check attempt died at bun: not found - false red)"
+    type: "resolved"
+    date: "2026-11-06"
+  - text: "Retro: subagent environments must export PATH=$HOME/.bun/bin for bun-invoking commands (the formal gate run hit bun: not found on first attempt, costing one wasted 30s+ run); worth capturing in runner agent memory or the repo's testing-strategy rules"
+    type: "retro"
+    date: "2026-11-06"
+
 
 
 
