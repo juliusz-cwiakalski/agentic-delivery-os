@@ -10,8 +10,17 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { type CliDependencies, type CommandProgram, runCli } from "../../packages/cli/src/index";
 import { redact } from "../../packages/cli/src/output/serialize";
+import { projectBrief, renderBriefHuman } from "../../packages/core/src/domain/index";
 import { loadGoldenCases } from "../../packages/testkit/src/result-conformance";
-import { briefRuntime, capSizedFacts, runBriefCli } from "../fixtures/brief/harness";
+import {
+  baseFacts,
+  briefRuntime,
+  capSizedFacts,
+  deliveryRequestRead,
+  makeDeliveryRequest,
+  REVIEWS_AVAILABLE,
+  runBriefCli,
+} from "../fixtures/brief/harness";
 import {
   bufferSink,
   GOLDEN_ROOT,
@@ -221,24 +230,24 @@ describe("TC-REDACT-003 no-partial-leak sweep", () => {
 });
 
 describe("TC-BRIEF-019 brief output passes the single redaction chokepoint", () => {
-  test("a canary planted in injected facts never reaches either stream", async () => {
+  test("a canary planted in a rendered identity never reaches either stream", async () => {
     const canary = "planted-fake-brief-canary";
-    const facts = capSizedFacts();
-    const planted = facts.localContext.ok
-      ? {
-          ...facts,
-          localContext: {
-            ...facts.localContext,
-            context: { ...facts.localContext.context, path: `/work/${canary}/pm-context.yaml` },
-          },
-        }
-      : facts;
-    expect(JSON.stringify(planted)).toContain(canary);
+    const facts = baseFacts({
+      changes: deliveryRequestRead(
+        [makeDeliveryRequest({ entityId: canary, reviewState: "approved" })],
+        REVIEWS_AVAILABLE,
+      ),
+    });
+    const payload = projectBrief(facts);
+    expect(JSON.stringify(payload)).toContain(canary);
+    expect(renderBriefHuman(payload, SYNTHETIC_BRAND)).toContain(canary);
+
     for (const argv of [["brief"], ["--json", "brief"]] as const) {
-      const run = await runBriefCli(argv, briefRuntime(planted), { secrets: [canary] });
+      const run = await runBriefCli(argv, briefRuntime(facts), { secrets: [canary] });
       expect(run.exitCode).toBe(0);
       expect(run.stdout.includes(canary), argv.join(" ")).toBe(false);
       expect(run.stderr.includes(canary), argv.join(" ")).toBe(false);
+      expect(run.stdout, argv.join(" ")).toContain("[redacted]");
     }
   });
 

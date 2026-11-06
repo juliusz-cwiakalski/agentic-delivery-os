@@ -901,16 +901,17 @@ Exactly one envelope per run. `schemaVersion` is the shipped `delivery.result.v1
 
 **Preconditions**:
 
-- Mutants are temp copies imported through a file URL, never executed against the live tree.
-- Each mutant disables exactly one named guard.
+- Mutants are temp copies of the production `packages/core/src/domain/brief.ts` source imported through a `file://` URL, never executed against the live tree.
+- Each source mutation disables exactly one named guard; the clean module must resist every prohibited observable.
+- Guards that live outside the brief domain (model/network imports, store writes, child processes, redaction) are cross-referenced to live seeded controls, and the meta-check fails if a referenced control disappears.
 
 **Steps**:
 
-1. Import each mutant and assert it produces the prohibited observable: fabricated surface state; brief-only fact; unknown-as-zero count; placeholder rendered as observed/empty; `slaState` fabrication; age defaulted to 0; ready-to-merge from an unknown review signal; ready-to-merge from a cap-omitted item; a 4th catalog entry; a `status.collector.*` identity; exit `1` on unavailability; a `Date.now()` renderer; an unbounded/silent-drop renderer; a wide projection that leaks the canary; a model/network import; a store write; a spawned child; a product literal.
-2. Assert each mutant fails the intended suite and that the failure message names the case.
-3. Assert the clean production module passes the same suite (so the meta-check is not passing on a broken module).
-4. Assert the mutant corpus covers every AC at least once; fail the meta-check when an AC has no mutant.
-5. Assert the mutant corpus file count is non-zero and the runner never writes the live tree.
+1. Load the rewritten production source from `tmp/tmpdir` and assert the clean module resists every prohibited observable: fabricated surface state; brief-only fact; degraded-as-observed surface; unknown review signal as ready-to-merge; future timestamp as an age; absent timestamp as age zero; placeholder as observed; a 4th catalog entry; unavailability as a failure; an unbounded render; a wall-clock timestamp in human text.
+2. For each source mutation, assert the mutated module produces its prohibited observable and the failure message names the case, the AC, and the intended suite (the same load-bearing assertion the intended suite makes).
+3. Assert the clean production module passes every intended assertion (so the meta-check is not passing on a broken module).
+4. Assert the corpus covers every AC at least once — source mutations plus cross-referenced seeded controls — and that every referenced control still exists under its exact test name.
+5. Assert the loader writes only under `tmp/tmpdir`, removes its temp copies, and leaves the live source byte-identical.
 
 **Expected Outcome**:
 
@@ -969,7 +970,7 @@ Exactly one envelope per run. `schemaVersion` is the shipped `delivery.result.v1
 | `tests/fixtures/brief/corpus/<case>/case.json` | Per-surface expected state, reasons, counts, ordered action ids, placeholder entries, ages, truncation | Read-only; completeness meta-checked |
 | `tests/fixtures/brief/golden/human.txt` | Byte-exact cap-sized human brief | Read-only; regenerated only by an explicit command |
 | `tests/fixtures/brief/golden/envelope.json` | Byte-exact cap-sized `--json` envelope | Read-only; same rule |
-| `tests/fixtures/brief/mutants/**` | One disabled guard per mutant, imported via `file://` in temp | Temp-copied only |
+| `tests/fixtures/brief/mutants/catalog.ts` | Source-mutation corpus (one guard-disabling transform per mutant over the production domain module) plus cross-references to live seeded controls | Temp-copied only |
 | `tests/fixtures/status/**` | Reused builders, corpus shape, matrix, negative controls, and golden helpers | Read-only; unchanged by this change |
 
 **Fixture rules.** Refs are canonical `<PREFIX>-<digits>`; entity ids are synthetic; SHAs are 40-character synthetic hashes; timestamps are ISO-8601 UTC derived from `NOW_MS`; counts are small integers or documented maxima. No fixture contains a real path, title, credential, environment value, or provider payload. The single canary is fabricated and exists only to prove the redaction boundary.
@@ -1173,6 +1174,7 @@ Notes:
 | 1.0 | 2026-11-05T00:00:00Z | Change Test Plan Writer | Initial plan: 22 TCs (`TC-BRIEF-001..022`, a new prefix). All 10 ACs and all 8 NFRs mapped with no orphan TCs. Binds the same-facts shared-truth model and claim map (§4.2), the closed placeholder catalog (§4.3), the ready-to-merge predicate (§4.4), the owner-gate age oracle (§4.5), the bound surface set (§4.6), the exhaustive failed/absent-read matrix (§4.7), the envelope/exit oracle (§4.8), the non-vacuity contract (§4.10), and the golden/corpus/mutant fixture strategy. Records three spec wording gaps (GAP-T1..T3) and the delivery-bound-spelling assumption (GAP-T4). Authored against spec v1.0; no spec, plan, pm-notes, or code file was modified. |
 | 1.1 | 2026-11-06T00:00:00Z | plan-writer | Filled the reserved "Plan phase" columns (§3.1 and §7) with the delivering phase ids from `chg-GH-228-plan.md` v1.0 (Phases 1–5 build the command and battery; Phase 8 is the @doc-syncer documentation phase delivering TC-BRIEF-022). No TC, oracle, suite target, control, or AC mapping changed; A-T8 bookkeeping only. |
 | 1.2 | 2026-11-06T12:00:00Z | Change Test Plan Writer | DoR iteration-1 test-plan touch-ups (F-2, F-3, F-6; spec v1.1 alignment). (1) F-2 reverse traceability: added TC-BRIEF-002 to the AC-F1-1 row and TC-BRIEF-016 to the AC-F6-1 row in §3.1, so the matrix matches the §5.1 Related IDs; forward coverage was already complete. (2) F-3 cross-artifact consistency: rewrote §4.6 as "Closed Render-Surface Set" per spec DM-5 and plan D2/D4 — exactly nine surface ids (six digest-section ids + `typed-questions`, `gate-sla-states`, `lane-queue-engine`), with ready-to-merge and owner-gate ages described as ranked DM-2 anchored-action groups, the blocker-questions block as the `typed-questions` placeholder surface, and `gate-sla-states` beside the owner-gate ages block; the fixed correspondence list is unchanged. (3) F-6: reordered §7.1 phase-ascending (Phase 1 → 2 → 3 → 4 → 5 → 8 → aggregate), named the phases, and stated that the §3.1/§7 `Plan phase` column is authoritative; all 22 TCs retained exactly once. (4) Consequential staleness only: marked GAP-T1, GAP-T2, and GAP-T3 resolved by spec v1.1 in §1.2, §3.4, and §8.3, because the spec now pins the two-branch age rule, DM-5, and the unavailability-rendering distinction; no oracle, assertion, or mapping changed. F-4 (placeholder render position) intentionally untouched — absorbed by the OQ-1 Phase-4 goldens. 22 TCs, 10 ACs, 8 NFRs, all suite targets, controls, and AC mappings unchanged. |
+| 1.3 | 2026-11-06T17:30:00Z | coder (Phase 7 remediation) | Review iteration 1 R-1/R-2/R-4 re-description of the delivered TC-BRIEF-021 mechanics. §5.2 now describes real source mutations of `packages/core/src/domain/brief.ts` written to `tmp/tmpdir` and imported through `file://` URLs (the GH-183 loader), one disabled guard per mutant, each firing the intended suite's prohibited observable by name; guards outside the domain are cross-referenced to six live seeded controls and the reference itself is asserted. §6.2 names the source-mutation corpus. §10 refreshes the Phase 5/brief-suite/TC-BRIEF-019/TC-BRIEF-021/aggregate rows to measured remediation results. No TC, oracle, AC mapping, or suite target changed. |
 
 ## 10. Test Execution Log
 
@@ -1182,16 +1184,16 @@ Notes:
 | Phase 2 — TC-BRIEF-004/006/007/008/009/010/016/020 (projection, anchors, placeholders, controls, corpus, performance) | 2026-11-06 | PASS | `bun test tests/behaviour/brief-{shared-truth,anchors,placeholders,negative-controls,output,corpus,performance}.test.ts`: 210 pass, 0 fail. HEAD `ea86d819`. |
 | Phase 3 — TC-BRIEF-002/003/005/017 (command, imports, read cost, determinism) | 2026-11-06 | PASS | `bun test tests/behaviour/brief-{command,read-cost,determinism}.test.ts tests/structure/brief-imports.test.ts`: 23 pass, 0 fail. HEAD `5b45791c`. |
 | Phase 4 — TC-BRIEF-011/012/013/014/015 (envelope, exits, error table, goldens) | 2026-11-06 | PASS | `bun test tests/behaviour/brief-envelope.test.ts tests/golden/brief.test.ts tests/checks/error-table-sync.test.ts tests/structure/error-table.test.ts`: 108 pass, 0 fail. HEAD `4e6d697a`. |
-| Phase 5 — TC-BRIEF-018/019/021 (read-only, redaction, mutants) | 2026-11-06 | PASS | `bun test tests/behaviour/brief-readonly.test.ts tests/golden/redaction.test.ts tests/checks/brief-mutants.test.ts`: 43 pass, 0 fail. HEAD `ed916459`. |
-| All brief suites | 2026-11-06 | PASS | `bun test tests/structure/brief tests/behaviour/brief tests/golden/brief.test.ts tests/checks/brief-mutants.test.ts`: 282 pass, 0 fail, 16 files, 4231 expect calls. |
+| Phase 5 — TC-BRIEF-018/019/021 (read-only, redaction, mutants) | 2026-11-06 | PASS | `bun test tests/behaviour/brief-readonly.test.ts tests/golden/redaction.test.ts tests/checks/brief-mutants.test.ts`: 27 pass, 0 fail, 256 expect calls (re-run after remediation at HEAD `6d3a4241`). |
+| All brief suites | 2026-11-06 | PASS | `bun test tests/structure/brief tests/behaviour/brief tests/golden/brief.test.ts tests/checks/brief-mutants.test.ts`: 266 pass, 0 fail, 16 files, 4236 expect calls (remediation HEAD `6d3a4241`). |
 | TC-BRIEF-004 — shared truth | 2026-11-06 | PASS | 140 case/surface assertions across 35 shared-fact cases (12 named cases + 23 matrix controls); surface-id and placeholder-set equality are non-vacuous. |
 | TC-BRIEF-007 — cap-omitted approved PR | 2026-11-06 | PASS | The in-cap control (`approved(8)`) produces the action set; `approved(9)` produces 8 actions, no identity `508`, and a truncation marker. |
 | TC-BRIEF-010 — negative-control matrix | 2026-11-06 | PASS | All 23 `matrixCases` rows mapped; the fully observed control renders tracker/changes/ci/providers/parked as `observed`; at-limit marker present, near-limit absent. |
 | TC-BRIEF-014/015 — goldens | 2026-11-06 | PASS | Byte equality for `human.txt` and `envelope.json`; cap-sized human 11 lines / 564 bytes (the committed file's size; corrects the earlier 641-byte transcription); machine `data` 4791 bytes; mutation/restore control and unchanged `mtimeMs` pass. |
-| TC-BRIEF-019 — redaction canary | 2026-11-06 | PASS | The canary is asserted present in the planted fixture before zero occurrences in stdout/stderr; the `writeOutput` chokepoint redacts human text. |
-| TC-BRIEF-021 — mutant corpus | 2026-11-06 | PASS | 20 mutants cover all 10 ACs; the clean payload resists every mutant and each mutant produces its prohibited observable naming its case. |
+| TC-BRIEF-019 — redaction canary | 2026-11-06 | PASS | The canary is planted in a rendered identity (an approved `makeDeliveryRequest` `entityId`) and asserted present in the pre-redaction payload and human text before zero occurrences in stdout/stderr on both streams; the `writeOutput` chokepoint control still proves `[redacted]`. |
+| TC-BRIEF-021 — source-mutation non-vacuity | 2026-11-06 | PASS | 11 source mutations (one guard disabled each) plus 6 cross-referenced seeded controls cover all 10 ACs; the clean module resists every prohibited observable and each mutated module fires it naming the case, AC, and intended suite; loader confined to `tmp/tmpdir` and live source byte-identical. |
 | TC-BRIEF-022 — documented posture | 2026-11-06 | PASS | Authored `doc/spec/features/feature-brief.md` (SPEC-BRIEF); reconciled `doc/planning/oss-tooling/milestones/m1/commands/brief.md`; registry row reads delivered and names M1-S6; status-digest spec and brief spec cross-link both ways. Commands, output, and the review checklist are recorded in §10.1. |
-| Aggregate `pnpm check` | 2026-11-06 | PASS | `TMPDIR=$PWD/tmp/tmpdir pnpm check`: 2961 pass, 4 skip, 0 fail, 274 files, 30225 expect calls (315.81 s); boundaries 161 modules / 372 deps; ambient, workspace-entrypoints, secret-read and exports-parity all green. |
+| Aggregate `pnpm check` | 2026-11-06 | PASS | `TMPDIR=$PWD/tmp/tmpdir pnpm check` after remediation: 2945 pass, 4 skip, 0 fail, 274 files, 30213 expect calls (340.70 s); boundaries 161 modules / 372 deps; exports-parity, ambient-globals, workspace-entrypoints, secret-read, lint, format and typecheck all green. |
 | `git diff --check` | 2026-11-06 | PASS | Clean (no whitespace or conflict markers) before and after the battery. |
 
 ### 10.1 TC-BRIEF-022 evidence (documented posture)

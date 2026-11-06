@@ -34,7 +34,7 @@ The exact human grammar is pinned by the committed goldens
 `tests/fixtures/brief/golden/human.txt` and `envelope.json`; regeneration is the
 explicit command `bun run tests/fixtures/brief/golden/regenerate.ts`. No
 bound-pressure conflict was observed: the cap-sized screen renders in 11 lines
-and 641 bytes, well inside 24 lines / 4096 bytes.
+and 564 bytes, well inside 24 lines / 4096 bytes.
 
 ## Required documentation changes
 

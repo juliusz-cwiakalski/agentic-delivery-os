@@ -283,8 +283,8 @@ No changes under `packages/adapters/**`, `packages/mcp/**`, `packages/opencode/*
 
 **Tasks**:
 
-- [ ] **6.1** Request the review (`/review GH-228` or `@pm`-orchestrated) covering: spec ACs vs evidence, plan-task completeness, purity/boundary discipline, no-LLM render path (AC-F6-2 review half), anchor wording (attention, never a verdict), and the ready-to-merge predicate against the queue-ready convention.
-- [ ] **6.2** Record the verdict and findings in the Execution Log; a PASS advances to Phase 8; any FAIL finding activates Phase 7.
+- [x] **6.1** Request the review (`/review GH-228` or `@pm`-orchestrated) covering: spec ACs vs evidence, plan-task completeness, purity/boundary discipline, no-LLM render path (AC-F6-2 review half), anchor wording (attention, never a verdict), and the ready-to-merge predicate against the queue-ready convention.
+- [x] **6.2** Record the verdict and findings in the Execution Log; a PASS advances to Phase 8; any FAIL finding activates Phase 7.
 
 **Acceptance Criteria**:
 
@@ -308,8 +308,8 @@ No changes under `packages/adapters/**`, `packages/mcp/**`, `packages/opencode/*
 
 **Tasks**:
 
-- [ ] **7.1** Classify each finding (contract breach / wording / test gap) and apply the minimal fix; re-run the touched suites plus `pnpm check`.
-- [ ] **7.2** If a fix changes any TC's behavior, oracle, or AC mapping, reopen the test plan per its A-T8 before landing the fix.
+- [x] **7.1** Classify each finding (contract breach / wording / test gap) and apply the minimal fix; re-run the touched suites plus `pnpm check`.
+- [x] **7.2** If a fix changes any TC's behavior, oracle, or AC mapping, reopen the test plan per its A-T8 before landing the fix.
 - [ ] **7.3** Request re-review until PASS; record each iteration in the Execution Log.
 
 **Acceptance Criteria**:
@@ -334,11 +334,11 @@ No changes under `packages/adapters/**`, `packages/mcp/**`, `packages/opencode/*
 
 **Tasks**:
 
-- [ ] **8.1** Author the current-truth feature spec `doc/spec/features/feature-brief.md` mirroring the `feature-status-digest.md` structure (architecture and codebase map, data flow, interface contracts, security/boundaries, NFRs, QA strategy) with DEC-2 posture: exit `0` on collector unavailability; no `status.collector.<id>.unavailable` identity.
-- [ ] **8.2** Reconcile the proposed man page `doc/planning/oss-tooling/milestones/m1/commands/brief.md` with shipped behavior: correct the EXIT STATUS section (drop the exit-2 "collectors unavailable" row), align the envelope example to the shipped `CommandResult` shape (`schemaVersion`, `runId`, `exitCode`, `timing.totalMs`, `data`), mark illustrative fields as illustrative.
-- [ ] **8.3** Move the `brief` row in `doc/planning/oss-tooling/cli-command-registry.md` from planned to delivered, naming M1-S6.
-- [ ] **8.4** Cross-link `doc/spec/features/feature-status-digest.md` ↔ `doc/spec/features/feature-brief.md` per DEC-4 (brief is the v0 owner-facing render surface; M1-S10 joins anchors from the same collector state; neither spec claims a contradictory posture); update the status-digest line about the `humanText` hook being consumed only by status (brief now consumes it too).
-- [ ] **8.5** Record the TC-BRIEF-022 manual evidence in test plan §10 (the §7.3 grep commands and output: no "collectors unavailable" row, no `status.collector.` identity, registry row delivered) and the review checklist items ("no LLM or model call in the brief render path"; "the ready-to-merge anchor is attention, never a merge verdict").
+- [x] **8.1** Author the current-truth feature spec `doc/spec/features/feature-brief.md` mirroring the `feature-status-digest.md` structure (architecture and codebase map, data flow, interface contracts, security/boundaries, NFRs, QA strategy) with DEC-2 posture: exit `0` on collector unavailability; no `status.collector.<id>.unavailable` identity.
+- [x] **8.2** Reconcile the proposed man page `doc/planning/oss-tooling/milestones/m1/commands/brief.md` with shipped behavior: correct the EXIT STATUS section (drop the exit-2 "collectors unavailable" row), align the envelope example to the shipped `CommandResult` shape (`schemaVersion`, `runId`, `exitCode`, `timing.totalMs`, `data`), mark illustrative fields as illustrative.
+- [x] **8.3** Move the `brief` row in `doc/planning/oss-tooling/cli-command-registry.md` from planned to delivered, naming M1-S6.
+- [x] **8.4** Cross-link `doc/spec/features/feature-status-digest.md` ↔ `doc/spec/features/feature-brief.md` per DEC-4 (brief is the v0 owner-facing render surface; M1-S10 joins anchors from the same collector state; neither spec claims a contradictory posture); update the status-digest line about the `humanText` hook being consumed only by status (brief now consumes it too).
+- [x] **8.5** Record the TC-BRIEF-022 manual evidence in test plan §10 (the §7.3 grep commands and output: no "collectors unavailable" row, no `status.collector.` identity, registry row delivered) and the review checklist items ("no LLM or model call in the brief render path"; "the ready-to-merge anchor is attention, never a merge verdict").
 
 **Acceptance Criteria**:
 
@@ -437,6 +437,7 @@ Per-AC phase coverage: AC-F1-1 → Phases 2, 3; AC-F1-2 → Phases 2, 4; AC-F2-1
 |---------|------|--------|---------|
 | 1.0 | 2026-11-06 | plan-writer | Initial plan: 9 phases (contracts → domain/fixtures → command/edge/boundaries → envelope/goldens → security/non-vacuity → review → conditional fixes → doc-sync handoff → changeset/final gates). All 22 TCs mapped to delivering phases; test-plan §3.1/§7 Plan-phase columns filled with these phase ids. Delivery Bindings D1–D12 pin delivery-bound names and modeling (anchor groups vs surface ids, age/future/evidence edges, corpus parity, changeset, goldens). |
 | 1.1 | 2026-11-06 | reviewer | Review iteration 1 (`code-review/review-iter-1.yaml`, verdict FAIL at HEAD `e4e68a42`): Phase 6 recorded Done with the FAIL verdict; Phase 7 activated with the appended Remediation Register R-1..R-5 (F-1 blocker: TC-BRIEF-021 non-vacuity mechanism not delivered as bound, deviation justification refuted; N-1 Phase-8 checkboxes done-but-unchecked; N-2 canary-reachability). No phase scope, task, TC mapping, or binding changed. |
+| 1.2 | 2026-11-06 | coder (Phase 7) | Remediation R-1..R-5 applied: source-mutation loader ported (GH-183 pattern) with 11 guard-disabling mutations and 6 asserted cross-referenced seeded controls; payload-transform catalog and string tautologies removed; canary moved to a rendered identity; Phase 8 boxes ticked; test plan re-described (v1.3) and §10 refreshed; doc-impact byte figure corrected. D1–D12 unchanged except the review-ordered mutant-mechanism rebind. Phase 7 done pending task 7.3 re-review. |
 
 ## Execution Log
 
@@ -445,29 +446,35 @@ Per-AC phase coverage: AC-F1-1 → Phases 2, 3; AC-F1-2 → Phases 2, 4; AC-F2-1
 | 1 — Core brief contracts and inventory registration | Done | 2026-11-06 | 2026-11-06 | `4243506c` | 8/8 brief-contract tests pass; catalog closed at three; inventory registered. |
 | 2 — Pure projection, human renderer, shared-fact fixtures | Done | 2026-11-06 | 2026-11-06 | `ea86d819` | 210/210 Phase-2 suites pass; shared-truth, anchors, placeholders, controls, corpus, bounds, performance green. |
 | 3 — CLI command, edge composition, read-cost, boundaries | Done | 2026-11-06 | 2026-11-06 | `5b45791c` | 23/23 Phase-3 suites pass; brief composed via `createStatusCommandRuntime`; reader member set identical to status. |
-| 4 — Envelope posture, exit projection, error table, goldens | Done | 2026-11-06 | 2026-11-06 | `4e6d697a` | 108/108 Phase-4 suites pass; goldens 11 lines / 641 bytes human, 4791 bytes machine data; error-table sync green. |
-| 5 — Read-only, redaction, credential posture, mutants | Done | 2026-11-06 | 2026-11-06 | `ed916459` | 43/43 Phase-5 suites pass; 20 mutants cover all 10 ACs; canary zero-occurrence proven non-vacuous. |
+| 4 — Envelope posture, exit projection, error table, goldens | Done | 2026-11-06 | 2026-11-06 | `4e6d697a` | 108/108 Phase-4 suites pass; goldens 11 lines / 564 bytes human, 4791 bytes machine data; error-table sync green. |
+| 5 — Read-only, redaction, credential posture, mutants | Done | 2026-11-06 | 2026-11-06 | `ed916459` | 43/43 Phase-5 suites pass at delivery; amended in Phase 7 to 27 pass / 256 expect with 11 source mutations + 6 seeded control cross-references covering all 10 ACs; canary zero-occurrence proven non-vacuous. |
 | 6 — Code Review (Analysis) | Done | 2026-11-06 | 2026-11-06 | — | Independent lifecycle review executed in `review_fix`: verdict **FAIL** (1 blocker F-1, 2 minor, 3 notes) recorded in `code-review/review-iter-1.yaml` at HEAD `e4e68a42`. All spec ACs and D1–D12 bindings verified compliant; §10 evidence claims reproduced. |
-| 7 — Post-Code Review Fixes (conditional) | Activated (iteration 1) | 2026-11-06 | — | — | Activated by the Phase-6 FAIL. Remediation register appended below (R-1..R-5 mapped to findings F-1, N-1, N-2). |
-| 8 — Documentation & Spec Synchronization | Handed off | — | — | — | Owner is `@doc-syncer`; handoff recorded in `chg-GH-228-doc-impact.md` (feature-brief spec, status cross-links, registry row, man-page exit-2 correction, `ados_distribution`). |
+| 7 — Post-Code Review Fixes (conditional) | Done (iteration 1 remediation; re-review pending) | 2026-11-06 | 2026-11-06 | phase-7 commit | R-1/R-2 replaced the payload-transform catalog with 11 real source mutations loaded from `tmp/tmpdir` via the GH-183 `file://` loader (clean resists, mutant fires naming AC + intended suite); out-of-domain guards cross-referenced to 6 live seeded controls, references asserted. R-3 ticked Phase 8. R-4 planted the canary in a rendered `entityId`. R-5: brief battery 266 pass / 4236 expect / 16 files; Phase-5 suite 27 pass / 256 expect; `pnpm check` 2945 pass, 4 skip, 0 fail (340.70 s); boundaries 161/372; worktree clean. Test plan v1.3 + §10 refreshed; doc-impact 564-byte figure corrected. Task 7.3 re-review remains. |
+| 8 — Documentation & Spec Synchronization | Done | 2026-11-06 | 2026-11-06 | `e4e68a42` | Delivered by `@doc-syncer` and verified by review iteration 1 (N-1): feature spec, man-page correction, delivered registry row, cross-links, and TC-BRIEF-022 evidence in §10.1. Tasks 8.1–8.5 ticked under R-3. |
 | 9 — Finalize and Release | Done | 2026-11-06 | 2026-11-06 | phase-9 commit | `.changeset/brief-v1-minor.md` (lockstep minor); doc-impact handoff; `TMPDIR=$PWD/tmp/tmpdir pnpm check` green (2961 pass, 4 skip, 0 fail); worktree clean after battery. |
 
-**Delivery deviation (Phase 5, TC-BRIEF-021).** The mutant corpus is a committed
-catalog (`tests/fixtures/brief/mutants/catalog.ts`) rather than `file://` temp
-copies of the production modules. An out-of-tree copy cannot resolve the
-workspace `#contracts` / `#domain/*` aliases, so the meta-check applies each
-mutant to the clean payload and a clean source module and proves the prohibited
-observable appears only in the mutant, naming the case. The live tree is never
-written; all 10 ACs have at least one mutant.
+**Delivery note (Phase 5, TC-BRIEF-021; amended by Phase 7 remediation).** The
+mutant corpus is a real source-mutation corpus: `tests/fixtures/brief/mutants/catalog.ts`
+carries guard-disabling transforms over the production
+`packages/core/src/domain/brief.ts` source, and `tests/checks/brief-mutants.test.ts`
+loads each mutated copy from `tmp/tmpdir` through `file://` URLs with rewritten
+specifiers (the GH-183 loader), imports it with a cache-busting query, and proves
+the clean module resists while the mutant fires the intended suite's prohibited
+observable. Guards that live outside the domain are cross-referenced to live
+seeded controls and the reference is asserted. The live tree is never written;
+all 10 ACs have at least one load-bearing mutant or referenced control. The
+iteration-1 committed payload-transform catalog (accepted deviation D-TC021) was
+replaced under remediation R-1/R-2; its alias-resolution justification does not
+hold (see the review record and the register below).
 
 ## Remediation Register (Phase 7 Activation — Review Iteration 1)
 
-Source: `code-review/review-iter-1.yaml` (independent `@reviewer` verdict FAIL, 2026-11-06, HEAD `e4e68a42`). Owner: `@coder` under Phase 7; re-review (task 7.3) closes the register. The deviation note above is superseded by R-1's outcome: the alias-resolution justification was refuted by review (in-repo precedent `tests/checks/closeout-mutants.test.ts` rewrites specifiers to `file://` URLs; the reviewer's probe confirmed the mechanism works for `domain/brief.ts`).
+Source: `code-review/review-iter-1.yaml` (independent `@reviewer` verdict FAIL, 2026-11-06, HEAD `e4e68a42`). Owner: `@coder` under Phase 7; re-review (task 7.3) closes the register. The remediation outcome is recorded in the delivery note above; the original alias-resolution justification for the payload-transform catalog does not hold (in-repo precedent `tests/checks/closeout-mutants.test.ts` rewrites specifiers to `file://` URLs; the reviewer's probe confirmed the mechanism works for `domain/brief.ts`).
 
-- [ ] **R-1 (F-1, blocker)** Port the GH-183 source-mutation loader into `tests/checks/brief-mutants.test.ts`: read `packages/core/src/domain/brief.ts`, rewrite `from "#contracts"` → `file://` URL of `packages/core/src/contracts/index.ts` and `from "./status.js"` → `file://` URL of `packages/core/src/domain/status.ts`, write mutated sources under `tmp/tmpdir` only (never the live tree), import via `pathToFileURL(...)?x=<seq>`, delete after. Add named source mutations for the load-bearing guards — review-signal predicate (AC-F2-1: `item.reviewState === "observed"`), age unknown/future guards (AC-F2-2), placeholder state and catalog guards (AC-F3-1), surface-state mapping (AC-F4-1), exit-0-on-unavailability projection (AC-F5-1), renderer bound/drop guard (AC-F1-2) — each asserted clean-resists / mutant-fires naming its case.
-- [ ] **R-2 (F-1, blocker)** Replace the eight tautological `tokenMutant` entries in `tests/fixtures/brief/mutants/catalog.ts` (model-import, network-import, store-write, spawned-child, product-literal, sla-state-fabrication, date-now-renderer, status-collector-identity, canary-leak, exit-one — as applicable) with source mutations where the guard lives in `brief.ts`, or cross-reference the existing seeded controls (`brief-imports.test.ts` seeded `node:http`/`openai`/`fetch` probes; `brief-readonly.test.ts` writeOutput chokepoint canary; error-table-sync temp-copy controls) so the AC-coverage meta-assertion counts only load-bearing mutants. The payload-resists scan may remain as an additional layer. If TC-BRIEF-021's oracle is permanently re-worded, reopen the test plan per its A-T8 and record the deviation properly instead of D-TC021.
-- [ ] **R-3 (N-1, minor)** Tick Phase 8 tasks 8.1–8.5 to `[x]` with a one-line Execution Log note referencing commit `e4e68a42` and test-plan §10.1 (work verified delivered by review; DoD-8 requires the boxes checked).
-- [ ] **R-4 (N-2, minor)** Add one end-to-end redaction case in `tests/golden/redaction.test.ts` planting the canary in a rendered identity (e.g., a `makeDeliveryRequest` entityId) that flows into both the envelope anchors and the human ready-to-merge line, so zero-occurrence genuinely exercises redaction through the projection.
-- [ ] **R-5 (all)** Re-run the brief battery, `pnpm check`, and `git status --porcelain` cleanliness; update test-plan §10 evidence for TC-BRIEF-019/021; then request re-review (task 7.3).
+- [x] **R-1 (F-1, blocker)** Port the GH-183 source-mutation loader into `tests/checks/brief-mutants.test.ts`: read `packages/core/src/domain/brief.ts`, rewrite `from "#contracts"` → `file://` URL of `packages/core/src/contracts/index.ts` and `from "./status.js"` → `file://` URL of `packages/core/src/domain/status.ts`, write mutated sources under `tmp/tmpdir` only (never the live tree), import via `pathToFileURL(...)?x=<seq>`, delete after. Add named source mutations for the load-bearing guards — review-signal predicate (AC-F2-1: `item.reviewState === "observed"`), age unknown/future guards (AC-F2-2), placeholder state and catalog guards (AC-F3-1), surface-state mapping (AC-F4-1), exit-0-on-unavailability projection (AC-F5-1), renderer bound/drop guard (AC-F1-2) — each asserted clean-resists / mutant-fires naming its case. **Done:** 11 source mutations load from `tmp/tmpdir` via the GH-183 loader; each names its AC, intended suite, and prohibited observable; the clean module resists all and every mutant fires.
+- [x] **R-2 (F-1, blocker)** Replace the eight tautological `tokenMutant` entries in `tests/fixtures/brief/mutants/catalog.ts` (model-import, network-import, store-write, spawned-child, product-literal, sla-state-fabrication, date-now-renderer, status-collector-identity, canary-leak, exit-one — as applicable) with source mutations where the guard lives in `brief.ts`, or cross-reference the existing seeded controls (`brief-imports.test.ts` seeded `node:http`/`openai`/`fetch` probes; `brief-readonly.test.ts` writeOutput chokepoint canary; error-table-sync temp-copy controls) so the AC-coverage meta-assertion counts only load-bearing mutants. The payload-resists scan may remain as an additional layer. If TC-BRIEF-021's oracle is permanently re-worded, reopen the test plan per its A-T8 and record the deviation properly instead of D-TC021. **Done:** the committed payload-transform catalog and all nine string-tautology entries are gone; six live seeded controls are cross-referenced for out-of-domain guards and the meta-check asserts each reference still exists; test plan §5.2/§6.2/§9 (v1.3) re-described, AC mappings unchanged.
+- [x] **R-3 (N-1, minor)** Tick Phase 8 tasks 8.1–8.5 to `[x]` with a one-line Execution Log note referencing commit `e4e68a42` and test-plan §10.1 (work verified delivered by review; DoD-8 requires the boxes checked). **Done.**
+- [x] **R-4 (N-2, minor)** Add one end-to-end redaction case in `tests/golden/redaction.test.ts` planting the canary in a rendered identity (e.g., a `makeDeliveryRequest` entityId) that flows into both the envelope anchors and the human ready-to-merge line, so zero-occurrence genuinely exercises redaction through the projection. **Done:** canary planted in an approved pull-request `entityId`, asserted present pre-redaction in payload and human text, zero occurrences on both streams, `[redacted]` present.
+- [x] **R-5 (all)** Re-run the brief battery, `pnpm check`, and `git status --porcelain` cleanliness; update test-plan §10 evidence for TC-BRIEF-019/021; then request re-review (task 7.3). **Done (except re-review):** brief battery 266 pass / 4236 expect / 16 files; Phase-5 suite 27 pass / 256 expect; `TMPDIR=$PWD/tmp/tmpdir pnpm check` 2945 pass, 4 skip, 0 fail, 274 files, 30213 expect (340.70 s); boundaries 161 modules / 372 deps; worktree clean after the battery. §10 and the doc-impact 564-byte figure refreshed. Re-review (7.3) is the remaining gate.
 
 Notes (N-3 age-rule dedup at M1-S10, N-4 degraded-with-items corpus case, N-5 doc-impact byte figure) require no v0 action; record them as deferred observations.

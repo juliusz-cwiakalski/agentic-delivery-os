@@ -118,3 +118,6 @@ notes: # { text, type, date } — type: info|decision|blocker|risk|question|reso
   - text: "Plan Phase 9 complete: lockstep minor changeset .changeset/brief-v1-minor.md, doc-impact handoff, test-plan §10 evidence, and final gate. TMPDIR=$PWD/tmp/tmpdir pnpm check: 2961 pass, 4 skip, 0 fail, 274 files; boundaries and invariant checks green; git diff --check clean."
     type: "info"
     date: "2026-11-06"
+  - text: "Plan Phase 7 remediation (review iteration 1, R-1..R-5) applied: D-TC021 is SUPERSEDED — the committed payload-transform catalog was replaced by real source mutations of packages/core/src/domain/brief.ts loaded from tmp/tmpdir via the GH-183 file:// loader; 11 guard-disabling mutants plus 6 cross-referenced live seeded controls cover all 10 ACs, clean resists and each mutant fires naming its case. R-3 ticked Phase 8; R-4 moved the redaction canary to a rendered entityId; R-5 refreshed test-plan §10 (brief battery 266 pass/4236 expect/16 files; pnpm check 2945 pass, 4 skip, 0 fail, 274 files, 30213 expect) and corrected the doc-impact byte figure. Phase 7 done; task 7.3 re-review pending."
+    type: "decision"
+    date: "2026-11-06"

@@ -1,14 +1,31 @@
 /**
- * TC-BRIEF-021 — non-vacuity meta-check: every named guard is load-bearing. The
- * clean production payload resists each prohibited observable; the mutant
- * produces it, and the failure message names the case.
+ * TC-BRIEF-021 — non-vacuity meta-check: every named guard is load-bearing.
+ *
+ * The loader ports the GH-183 pattern: it reads the production
+ * `packages/core/src/domain/brief.ts`, rewrites the `#contracts` and
+ * `./status.js` specifiers to `file://` URLs of the real modules, writes the
+ * mutated source under `tmp/tmpdir` (never the live tree), and imports it with
+ * a cache-busting query. Each source mutation disables exactly one guard; the
+ * clean module must resist its prohibited observable and the mutant must emit
+ * it, naming the case and the intended suite. Guards that live outside the
+ * brief domain are cross-referenced to the seeded controls that prove them.
  */
 import { describe, expect, test } from "bun:test";
-import { projectBrief } from "../../packages/core/src/domain/index";
-import { capSizedFacts } from "../fixtures/brief/harness";
-import { briefMutants } from "../fixtures/brief/mutants/catalog";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import {
+  type BriefDomainModule,
+  briefSeededControls,
+  briefSourceMutations,
+} from "../fixtures/brief/mutants/catalog";
 
-const clean = projectBrief(capSizedFacts());
+const ROOT = process.cwd();
+const DOMAIN_SOURCE = join(ROOT, "packages/core/src/domain/brief.ts");
+const CONTRACTS = join(ROOT, "packages/core/src/contracts/index.ts");
+const STATUS = join(ROOT, "packages/core/src/domain/status.ts");
+const TMP = join(ROOT, "tmp", "tmpdir");
+const TMP_PREFIX = "gh228-mutant";
 
 const ALL_ACS = [
   "AC-F1-1",
@@ -23,25 +40,83 @@ const ALL_ACS = [
   "AC-F6-3",
 ] as const;
 
-describe("TC-BRIEF-021 non-vacuity mutants", () => {
-  test("the mutant corpus is non-empty and covers every acceptance criterion", () => {
-    expect(briefMutants.length).toBeGreaterThan(0);
-    const covered = new Set(briefMutants.map((mutant) => mutant.ac));
+const sourceFor = (): string =>
+  readFileSync(DOMAIN_SOURCE, "utf8")
+    .split('from "#contracts"')
+    .join(`from ${JSON.stringify(pathToFileURL(CONTRACTS).href)}`)
+    .split('from "./status.js"')
+    .join(`from ${JSON.stringify(pathToFileURL(STATUS).href)}`);
+
+let sequence = 0;
+
+const loadModule = async (source: string): Promise<BriefDomainModule> => {
+  mkdirSync(TMP, { recursive: true });
+  sequence += 1;
+  const file = join(TMP, `${TMP_PREFIX}-${process.pid}-${sequence}.ts`);
+  writeFileSync(file, source);
+  try {
+    return (await import(`${pathToFileURL(file).href}?x=${sequence}`)) as BriefDomainModule;
+  } finally {
+    rmSync(file, { force: true });
+  }
+};
+
+describe("TC-BRIEF-021 source-mutation non-vacuity", () => {
+  test("the corpus is non-empty and covers every acceptance criterion", () => {
+    expect(briefSourceMutations.length).toBeGreaterThan(0);
+    expect(briefSeededControls.length).toBeGreaterThan(0);
+    const covered = new Set<string>([
+      ...briefSourceMutations.map((mutation) => mutation.ac),
+      ...briefSeededControls.map((control) => control.ac),
+    ]);
     for (const ac of ALL_ACS) expect(covered.has(ac), ac).toBe(true);
-    expect(new Set(briefMutants.map((mutant) => mutant.id)).size).toBe(briefMutants.length);
+    const sourceIds = briefSourceMutations.map((mutation) => mutation.id);
+    const controlIds = briefSeededControls.map((control) => control.id);
+    expect(new Set([...sourceIds, ...controlIds]).size).toBe(sourceIds.length + controlIds.length);
   });
 
-  for (const mutant of briefMutants) {
-    test(`${mutant.caseName} produces its prohibited observable`, () => {
-      expect(mutant.detect(clean), `${mutant.caseName}: clean payload must resist`).toBe(false);
-      const mutated = mutant.apply(clean);
-      expect(mutant.detect(mutated), `${mutant.caseName} (${mutant.ac})`).toBe(true);
-    });
-  }
-
-  test("the clean production payload passes every guard simultaneously", () => {
-    for (const mutant of briefMutants) {
-      expect(mutant.detect(clean), mutant.caseName).toBe(false);
+  test("the unchanged production source passes every intended assertion (control)", async () => {
+    const module = await loadModule(sourceFor());
+    for (const mutation of briefSourceMutations) {
+      expect(
+        mutation.fires(module),
+        `${mutation.caseName} (${mutation.ac}) [${mutation.intendedSuite}]: clean source must resist`,
+      ).toBe(false);
     }
+  });
+
+  test("each mutated production source fires its prohibited observable naming the case", async () => {
+    const cleanSource = sourceFor();
+    for (const mutation of briefSourceMutations) {
+      const mutated = mutation.mutate(cleanSource);
+      expect(mutated, `${mutation.caseName}: mutation must change the source`).not.toBe(
+        cleanSource,
+      );
+      const module = await loadModule(mutated);
+      const fired = mutation.fires(module);
+      if (!fired) {
+        throw new Error(
+          `${mutation.caseName} (${mutation.ac}) [${mutation.intendedSuite}]: ${mutation.prohibited} did not fire`,
+        );
+      }
+      expect(fired, `${mutation.caseName} (${mutation.ac})`).toBe(true);
+    }
+  });
+
+  test("every cross-referenced seeded control still exists under its test name", () => {
+    for (const control of briefSeededControls) {
+      const text = readFileSync(join(ROOT, control.file), "utf8");
+      expect(text, `${control.id} (${control.ac}): ${control.file}`).toContain(
+        `test("${control.testName}"`,
+      );
+    }
+  });
+
+  test("the loader writes only under tmp/tmpdir and never mutates the live source", async () => {
+    const before = readFileSync(DOMAIN_SOURCE, "utf8");
+    await loadModule(sourceFor());
+    expect(readFileSync(DOMAIN_SOURCE, "utf8")).toBe(before);
+    const leftovers = readdirSync(TMP).filter((entry) => entry.startsWith(TMP_PREFIX));
+    expect(leftovers).toEqual([]);
   });
 });
