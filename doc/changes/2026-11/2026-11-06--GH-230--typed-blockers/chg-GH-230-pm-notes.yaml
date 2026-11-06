@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-06T06:35:00Z", completed: "2026-11-06T09:35:00Z" }
   delivery_planning: { started: "2026-11-06T09:40:00Z", completed: "2026-11-06T10:05:00Z" }
   dor_check: { started: "2026-11-06T10:15:00Z", completed: "2026-11-06T10:30:00Z" }
-  delivery: { started: "2026-11-06T10:40:00Z", completed: null }
+  delivery: { started: "2026-11-06T10:40:00Z", completed: "2026-11-06T12:10:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -86,6 +86,12 @@ notes:
     date: "2026-11-06"
   - text: "Deviation: the checkpointed phase-2 delegation map had question/answering audiences inverted; fixed in phase 4 (contracts + fixtures + tests) to DEC-3 semantics. Deviation: the test-plan's illustrative unregistered token string used a provider token prefix that trips the privacy-literal gate; replaced with `unregistered-token-like-0000` in the fixture and the test-plan example (gate-blocking literal only)."
     type: "risk"
+    date: "2026-11-06"
+  - text: "Server restart interrupted the coder after plan phase 2 (2ca8d9de); recovery assessed actual git state via runner and resumed the same coder session with the completed-phase list — no work repeated, no conflicts, phases 3-9 delivered cleanly. Retro: on restart, always detect state from git log + worktree before re-delegating; resume the subagent session with explicit completed-phase list."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "PM validation of coder completion report: all 9 plan phases committed with per-phase evidence, pnpm check exit 0 run twice on final tree (3337 pass / 4 skip / 0 fail), all 43 TCs implemented, no incomplete tasks. Coder deviations reviewed and accepted with rationale (fallback.invocation namespace resolution for handler-level refusals; STATUS_EVIDENCE_SOURCES blockers 8->9 with deliberate golden update; list payload open+answered rows with rank only on open; .txt byte goldens; status golden regenerate script; test-plan literal privacy fix). Earlier phase 1/2 self-reported gate claims (interrupted session) superseded by the final verified full-battery runs. Phase 7 handoff targets recorded by coder: feature-blockers.md new spec; result-contract/status-digest/brief/state-layer reconciliations."
+    type: "info"
     date: "2026-11-06"
   - text: "Delivery evidence recorded per plan phase: 1=0348ece3 (contracts+error family), 2=2ca8d9de (pure domain), 3=2e31ed2f (state kinds), 4=47db4db8 (command surface), 5=128dec86 (guard/routing pinning), 6=434234f3 (answer/list/errors), 7=1fd561e2 (digest/brief), 8=b0693668 (bounds/determinism/cost/privacy/corpus/goldens/non-regression), 9=b9c5bb61 (changeset/invariants/finalize). Final aggregate: pnpm check exit 0 — 3337 pass, 4 skip, 0 fail across 324 files; lint/format/typecheck/boundaries/exports parity green; error-table-sync entries=57 documented=57; ambient/forbidden/exit-code/entrypoint checks green; git diff --check clean; tree clean. No push performed."
     type: "info"
