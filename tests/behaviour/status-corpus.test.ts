@@ -19,12 +19,15 @@ import {
   capSizedFacts,
   failedDeliveryRequestRead,
   failedPipelineRunRead,
+  failedRun,
   failedWorkItemRead,
   GITHUB_SLICE_AVAILABILITY,
   localContext,
   malformedLocalContext,
   missingLocalContext,
   parkView,
+  pipelineRunRead,
+  primaryRepository,
   providerConfig,
   providerConfigRead,
   providers,
@@ -133,6 +136,21 @@ const factsFor = (scenario: string): StatusFacts => {
       return baseFacts({
         changes: failedDeliveryRequestRead("read-failed"),
         localContext: missingLocalContext(),
+      });
+    case "four-red-runs-grouped":
+      return baseFacts({
+        repository: primaryRepository(),
+        ci: pipelineRunRead([
+          failedRun("700"),
+          failedRun("701"),
+          failedRun("702"),
+          failedRun("703"),
+        ]),
+      });
+    case "ci-read-failed-no-finding":
+      return baseFacts({
+        repository: primaryRepository(),
+        ci: failedPipelineRunRead("read-failed"),
       });
     default:
       throw new Error(`unknown corpus scenario ${scenario}`);

@@ -338,6 +338,44 @@ export const anonymousInstance = (): ExternalSystemInstance => ({
   authMethod: { mechanism: "anonymous" },
 });
 
+export const SECTION_STATES = [
+  "observed",
+  "degraded",
+  "unknown",
+  "unavailable",
+  "not-delivered",
+] as const;
+
+/** A repository checkout on the declared primary branch (CI finding scope). */
+export const primaryRepository = (
+  overrides: Partial<StatusRepositoryFacts> = {},
+): StatusRepositoryFacts => ({
+  binding: observedBinding(),
+  head: { branch: "main", sha: SHA, detached: false },
+  ...overrides,
+});
+
+export const failedRun = (entityId: string): PipelineRun =>
+  makePipelineRun({
+    entityId,
+    pipelineName: `ci-${entityId}`,
+    jobs: [{ jobName: "job", jobState: "failed" }],
+  });
+
+export const succeededRun = (entityId: string): PipelineRun =>
+  makePipelineRun({
+    entityId,
+    pipelineName: `ci-${entityId}`,
+    jobs: [{ jobName: "job", jobState: "succeeded" }],
+  });
+
+export const pendingRun = (entityId: string): PipelineRun =>
+  makePipelineRun({
+    entityId,
+    pipelineName: `ci-${entityId}`,
+    jobs: [{ jobName: "job", jobState: "running" }],
+  });
+
 export const sectionById = <T extends { readonly id: string }>(
   sections: readonly T[],
   id: string,

@@ -239,6 +239,7 @@ export const evaluateStatusFindings = (
   for (const [index, observation] of observations.entries()) {
     const definition = registry[observation.code];
     if (definition === undefined) continue;
+    if (!(STATUS_FINDING_SEVERITIES as readonly string[]).includes(definition.severity)) continue;
     const existing = groups.get(observation.code);
     if (existing === undefined) {
       groups.set(observation.code, {

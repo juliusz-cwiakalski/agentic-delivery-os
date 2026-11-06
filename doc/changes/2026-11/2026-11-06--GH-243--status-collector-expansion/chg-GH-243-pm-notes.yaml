@@ -65,3 +65,6 @@ notes:
   - text: "Plan phase 1 complete (commit 68368c1a): finding-code registry + severity set + nine-section vocabulary + DEC-16 additive types + brief surface-order decoupling + milestone mapped-signal projection. Gates green: pnpm typecheck; status-findings-contract/status-contract/status-imports/content-inventory/brief-contract; github collection/trap/trap-catalog; boundaries + ambient-globals + forbidden-literals + workspace-entrypoints; status-command/status-output/status golden. Deviation: edge.ts declares the three mapped hygiene assertion signals available (required by F-4a/DEC-14 truthfulness; additive only)."
     type: "info"
     date: "2026-11-07"
+  - text: "Plan phase 2 complete (commit 6c7ef2a1): findings layer, tri-state hygiene assertions, owner-gate ages via M1-S5, parked conditions, ready-to-merge action list, spend/blockers placeholders, summary additions, extended human grammar; single golden regeneration (digest.json + human.txt) applied once as a reviewed diff. Gates green: pnpm typecheck; 11 status behaviour/golden suites (137 tests); git diff --check."
+    type: "info"
+    date: "2026-11-07"

@@ -19,6 +19,7 @@ import {
   NOW_ISO,
   NOW_MS,
   parkView,
+  primaryRepository,
   providerConfig,
   providerConfigRead,
   providers,
@@ -217,6 +218,35 @@ describe("TC-STATUS-023 exhaustive negative controls", () => {
       expect(names.has(required)).toBe(true);
     }
     expect(controls.length).toBe(9);
+  });
+
+  test("no-evidence-no-claim holds for the CI failure modes", () => {
+    const failureModes = [
+      baseFacts({
+        repository: primaryRepository(),
+        ci: failedPipelineRunRead("read-failed"),
+      }),
+      baseFacts({ repository: repository({ head: { detached: true } }) }),
+      baseFacts({
+        repository: repository({ binding: unavailableBinding() }),
+      }),
+    ];
+    for (const facts of failureModes) {
+      const digest = aggregateStatus(facts);
+      const ci = digest.sections.find((section) => section.id === "ci");
+      expect(["unknown", "unavailable"]).toContain(ci?.state ?? "missing");
+      expect(ci?.findings ?? []).toEqual([]);
+      expect(JSON.stringify(digest)).not.toContain("ci.red-on-main");
+    }
+    const observed = aggregateStatus(baseFacts({ repository: primaryRepository() }));
+    expect(observed.sections.find((section) => section.id === "ci")?.findings ?? []).toEqual([]);
+  });
+
+  test("a failed tracker read emits no finding (the rule generalizes)", () => {
+    const facts = baseFacts({ tracker: failedWorkItemRead("read-failed") });
+    const tracker = aggregateStatus(facts).sections.find((section) => section.id === "tracker");
+    expect(tracker?.state).toBe("unknown");
+    expect(tracker?.findings ?? []).toEqual([]);
   });
 });
 
