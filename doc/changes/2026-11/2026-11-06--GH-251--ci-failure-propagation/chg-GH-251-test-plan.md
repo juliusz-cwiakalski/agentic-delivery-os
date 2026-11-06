@@ -2,7 +2,7 @@
 id: chg-GH-251-test-plan
 status: Updated
 created: 2026-11-06T17:05:00Z
-last_updated: 2026-11-06T18:10:00Z
+last_updated: 2026-11-06T19:05:00Z
 owners: [engineering]
 service: delivery infrastructure (CI shell-suite gate + file-adapter input limits)
 labels: [change, review, hardening]
@@ -997,4 +997,39 @@ Populated during delivery (phases 6 and 9) and at PR creation (phase 11). One ro
 
 | TC ID | Run Date | Result | Notes / Evidence |
 |-------|----------|--------|------------------|
-| — | — | Not yet executed | Test planning complete; delivery populates this table. |
+| TC-CIPROP-001..007, TC-CIPROP-012 | 2026-11-06 | PASS | `bash scripts/.tests/test-bash-suite-aggregation.sh` — 8/8 (runner contract, discovery parity, unrunnable-is-failure, workflow wiring). |
+| TC-CIPROP-008..011 | 2026-11-06 | PASS | `bash scripts/.tests/test-bash-suite-aggregation-modes.sh` — green propagation path, always-zero and selective-runner counterfactuals, restored-runner non-vacuity, hermetic status/checksum equality, 0 s bounded runtime. |
+| TC-CIPROP-013 | Pending PR run | PENDING | Green `bash-tests` run to be recorded at lifecycle phase 11 (run URL, job name, commit SHA, control verdict lines) per DEC-6. Not fabricated locally. |
+| TC-CIPROP-014 | 2026-11-06 | PASS | `bun test tests/checks/ci-checks.test.ts` 35/35; `ci-topology`, `ci-bindingness`, `ci-supply-chain`, `script-surface` all exit 0. |
+| TC-CIPROP-015 | 2026-11-06 | PASS | DEC-7 fixtures A-E and disabled-allowance non-vacuity inside the same 35/35 `ci-checks` run; live tree green under the allowance. |
+| TC-UTF8LIMIT-001..003 | 2026-11-06 | PASS | `bun test tests/behaviour/config-parser.test.ts tests/behaviour/pm-notes-source-limits.test.ts` — 25/25; 3 sites x 5 boundary classes, exact identities, accepted-at-limit equivalence. |
+| TC-UTF8LIMIT-004 | 2026-11-06 | PASS | Same 25/25 run: every fixture self-verifies `Buffer.byteLength`/`text.length`; completeness count 15; unreachable targets throw. |
+| TC-UTF8LIMIT-005 | 2026-11-06 | PASS | Deep-equality over-limit objects at all three sites; `bun run scripts/checks/error-table-sync.ts` green (60 entries). |
+| TC-UTF8LIMIT-006 | 2026-11-06 | PASS | Accepted classes deep-equal their unpadded twins; stage text preserves padding verbatim. |
+| TC-UTF8LIMIT-007 | 2026-11-06 | PASS | `bun test tests/structure/source-limit-purity.test.ts` 4/4; `pnpm check:boundaries` green (203 modules). |
+| TC-UTF8LIMIT-008 | 2026-11-06 | PASS | `bun test tests/behaviour/pm-notes-corpus.test.ts tests/behaviour/phase-transitions.test.ts tests/behaviour/phase-idempotency.test.ts tests/behaviour/phase-envelope.test.ts tests/behaviour/phase-rejections.test.ts` — 51/51, no assertion rewrites. |
+| TC-DOC-001 | 2026-11-06 | PASS | Phase-4 baseline CI section and FSE-04/FSE-05/FSE-08 rows updated; fse-audit FSE-04/FSE-05 updated; `bash-tests` comment states the runner contract with no `set -e` fail-fast claim. |
+| TC-SCOPE-001 | 2026-11-06 | PASS | Full diff classified below; `packages/core/src/domain/verify-gates.ts` untouched; no error-table change; `MAX_SOURCE_BYTES` name/value unchanged; `scripts/install.sh` arrays untouched; ci-topology is the only invariant change. |
+| TC-QUAL-001 | 2026-11-06 | PASS | `pnpm check` exit 0 (3799 tests, 4 skip, 0 fail); `bash scripts/run-bash-suites.sh` 24/24 exit 0; `git diff --check` clean; `bash -n` clean; `shellcheck -S error` 0.10.0 clean on the runner and both suites. |
+
+**Scope classification (TC-SCOPE-001):** runner (`scripts/run-bash-suites.sh`);
+control and runner tests (`scripts/.tests/test-bash-suite-aggregation.sh`,
+`scripts/.tests/test-bash-suite-aggregation-modes.sh`); workflow `bash-tests`
+job (`.github/workflows/ci.yml`); DEC-7 allowance and fixtures
+(`scripts/checks/ci-topology.ts`, `tests/checks/ci-checks.test.ts`,
+`tests/checks/privacy-ci-wiring.test.ts`); parser
+files (`packages/adapters/src/file/yaml-parser.ts`,
+`packages/adapters/src/file/pm-notes-parser.ts`); parser tests
+(`tests/behaviour/config-parser.test.ts`,
+`tests/behaviour/pm-notes-source-limits.test.ts`,
+`tests/fixtures/source-limits/harness.ts`,
+`tests/structure/source-limit-purity.test.ts`); documentation
+(`doc/inception/analysis/phase-4-quality-baseline.md`,
+`doc/inception/analysis/fse-audit.md`); changeset
+(`.changeset/gh-251-ci-failure-propagation-patch.md`); change artifacts. Nothing
+unclassified.
+
+**Spec-reconciliation handoff (phase 7, not delivery):** NFR-TOOL-005 gap line;
+scaffold toolchain feature page "bash jobs remain byte-unchanged" sentence;
+config-layer parser-limit wording; Q15/Q19 pointers if required; and the DEC-7
+invariant allowance for reviewer visibility (RSK-7).

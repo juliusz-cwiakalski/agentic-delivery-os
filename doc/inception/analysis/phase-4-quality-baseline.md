@@ -103,11 +103,11 @@ Each row extends the corresponding FSE-01..10 finding, not a replacement verdict
 | Explicit typing / [FSE-01](fse-audit.md#fse-01-explicit-typing) | [TS rules](../../../.ai/rules/typescript.md) require narrowing unknown input, absent optional fields and reasoned escapes; [compiler config](../../../tsconfig.base.json) enforces strict flags. | existing; typecheck not-reverified; third-party declarations excluded by skipLibCheck. |
 | SRP modules / [FSE-02](fse-audit.md#fse-02-single-responsibility-modules) | Six [package manifests](../../../packages/cli/package.json), pure policy/injected edges and [boundary config](../../../.dependency-cruiser.cjs) encode separation. | existing; shared composition remains declaration-only, not an operational root. Cohesion concerns remain review candidates, not proven violations. |
 | Conventions over configuration / [FSE-03](fse-audit.md#fse-03-conventions-over-configuration) | One lockfile/pinned tools, common package scripts, `bun:test`, separate tools/scripts naming; [installer rules](../../../.ai/rules/installer.md) complement [Bash rules](../../../.ai/rules/bash.md). | existing; TS prose omits delivered provider runtime exceptions and testing prose omits parts of the current script chain. Follow checker truth, route prose repair separately. |
-| Semantic naming / [FSE-04](fse-audit.md#fse-04-semantic-names) | [UL draft](../../overview/ubiquitous-language.md) separates primitives, commands, engines, model classes, leases and readiness meanings. | draft, not completed graduation; YAML byte-named/string-length mismatch remains OPEN-Q15. |
-| Automated tests / [FSE-05](fse-audit.md#fse-05-automated-tests) | Test tiers and negative controls below are configured; shell CI uses `find -exec` without aggregating child failure. | existing tests, not-reverified suites; confirmed shell failure-propagation gap below. No live/pilot claim. |
+| Semantic naming / [FSE-04](fse-audit.md#fse-04-semantic-names) | [UL draft](../../overview/ubiquitous-language.md) separates primitives, commands, engines, model classes, leases and readiness meanings. | draft, not completed graduation; the YAML byte-named source limit is now byte-enforced with boundary tests (GH-251). |
+| Automated tests / [FSE-05](fse-audit.md#fse-05-automated-tests) | Test tiers and negative controls below are configured; shell CI now aggregates child statuses through `scripts/run-bash-suites.sh` and proves propagation with a committed negative control. | existing tests; GH-251 repaired the shell failure-propagation gap below and the full local runner set passed 24/24 on 2026-11-06. No live/pilot claim. |
 | Linters/formatters / [FSE-06](fse-audit.md#fse-06-linters-and-formatters) | [Biome](../../../biome.json) owns workspace style, excludes dist/node_modules/tmp and selected fixtures; overview Markdown is outside includes. | existing; docs need separate checks. ShellCheck CI gates errors, not all warnings; shfmt is a rule, not an inspected CI gate. |
 | Readable history / [FSE-07](fse-audit.md#fse-07-readable-git-history) | [CI](../../../.github/workflows/ci.yml) runs commitlint against PR and integration ranges. | existing configuration; historical audit not repeated. A subject/closed issue cannot prove behavior or approval. |
-| Contextual comments / [FSE-08](fse-audit.md#fse-08-contextual-comments) | Config-source comments explain eligibility-before-read; CLI edge explains injected branding and acquisition ownership. | existing sampled rationale; whole-tree freshness not-reverified. CI's shell fail-fast comment contradicts observed command semantics. |
+| Contextual comments / [FSE-08](fse-audit.md#fse-08-contextual-comments) | Config-source comments explain eligibility-before-read; CLI edge explains injected branding and acquisition ownership. | existing sampled rationale; whole-tree freshness not-reverified. CI's shell-suite comment now matches the runner aggregation contract (GH-251). |
 | Supportable stack / [FSE-09](fse-audit.md#fse-09-popular-supportable-stack) | Bun/pnpm pins, Linux CI, packed export checks and dependency audits exist. No dedicated contributor setup or env template found. | existing mechanisms; setup, offline completeness, Windows/macOS and maintenance costs not-reverified. |
 | AI rules / [FSE-10](fse-audit.md#fse-10-ai-instructions-and-rules) | Canonical `.opencode/` sources generate the plugin mirror; CI checks generated parity. Memory is advisory untrusted data. | existing ownership; no prompt regeneration here, no compliance inference from instruction presence. |
 
@@ -153,17 +153,24 @@ Linux jobs do not establish a cross-platform support matrix. TS actions are
 SHA-pinned; some legacy action references remain mutable. All job results are
 not-reverified here.
 
-**Concrete new gap:** `bash-tests` invokes each suite through `find ... -exec
-bash {} \;`. A nonzero child makes that predicate false but does not make a
-successful traversal fail. Outer `set -e` therefore does not reliably stop/fail
-this job on a failed suite, despite its comment. Read-only control on the
-existing root manifest, `find package.json -exec false {} \;`, returned **0**.
-This verifies command semantics, not an actual failed repository suite. Suite
-failures can be hidden in this job; separately invoked guard jobs are not thereby
-proven broken. Proposed follow-up: aggregate each child status explicitly and
-test a deliberately failing suite in a synthetic tree. No workflow was changed;
+**Concrete gap (repaired by GH-251):** `bash-tests` previously invoked each
+suite through `find ... -exec bash {} \;`. A nonzero child made that predicate
+false but did not make a successful traversal fail, so outer `set -e` did not
+reliably fail this job on a failed suite, despite its comment. The read-only
+control on the existing root manifest, `find package.json -exec false {} \;`,
+returned **0**, verifying the command semantics. GH-251 replaced this path with
+`scripts/run-bash-suites.sh`: the runner discovers the same suite scope, executes
+every discovered suite once, aggregates each child's exit status, names every
+failing suite, and fails the job if and only if a suite fails or cannot run. A
+committed self-verifying negative control plants a deliberately failing
+synthetic suite and asserts the runner exits non-zero, so every green run
+demonstrates propagation. The `bash-tests` comment now states this contract. The
+repair is covered by the runner contract suite, the negative control, and the
+DEC-7 non-vacuity fixtures; the original
 [OPEN-Q19](../open-questions/phase-4-open-questions.md#open-q19-shell-suite-ci-failure-propagation)
-asks for routing, not permission to weaken controls.
+record remains as the historical finding and is reconciled during the
+system-spec update phase. Separately invoked guard jobs are not thereby proven
+broken.
 
 ## Development, installation and environment baseline
 
