@@ -124,6 +124,13 @@ notes:
   - text: "Retro: backlog-ranking assumed per-repo single-flight near-linear delivery, but GH-227/228/229 worktrees delivered concurrently and upstream merged serially - each change pays a 14-file integration at merge time. Real token cost of parallel delivery: integration conflicts on shared tables/indexes/docs recur per change. Candidate for retro pipeline (M1-S8) rather than process change now"
     type: "retro"
     date: "2026-11-06"
+  - text: "Review iteration 2 verdict: PASS with remediation phase 10 ADDED (fail-safety + corpus). All 13 iter-1 findings verified resolved: F-1 critical confirmed fixed via telemetry transition-identity binding (reviewer re-ran real-harness suites: 27 pass incl. the exact reproducer, reopen orderings hold), F-2 critical confirmed fixed (kind-based mapping total over valid plans, plan-absent degradation spec-recorded v1.2/DEC-14), integration merge clean additive union (edge.ts zero deletions, 59/59 sync green), aggregate pnpm check 3216/4skip/0fail. New findings: F-14 medium - convergence fail-open when telemetry event missing (landed sha knowable at record-append but not persisted -> duplicate-commit risk on re-run; fix: persist sha on the record at append, per DEC-7 durable-evidence principle); F-15 low - corpus gaps (interrupted-atomic-no-pending-work basis, delivery_planning->planning mapping half, plan-present degradedScope variant); F-16 info - residual benign phases[0] donor + stale tier.phases (refreshed). Reviewer artifacts: code-review/review-iter-2.yaml + plan phase 10 appended"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Delivery reopened for remediation iteration 2 (plan phase 10): F-14 fail-safety fix + F-15 corpus additions, then review iteration 3 before quality gates"
+    type: "info"
+    date: "2026-11-06"
+
 
 
   - text: "Plan phase 1 complete: commit 77479da1 - commit domain contracts, six commit error rows, and the commit.phaseCommit config key. Gate: core build regenerated the config artifacts; structure/config/checks suite 136 pass; ERROR_TABLE 58 rows with 58 documented rows; error-table-sync OK."

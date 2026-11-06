@@ -2,7 +2,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-227
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -246,6 +246,33 @@ phases:
       - "9.6 [F-6, low] Apply the three DoR-carried spec amendments: section 8.1 phase-complete exit-1 list gains commit.commitlint-failed; NFR-1 acknowledges the retry's second call; DM-3 labels state/commitSha/atomic as new additive fields."
       - "9.7 [F-8, low] Reword the commit.safety.secret-suspected remediationHint to the human-review remediation (drop the session-refused copy-paste); keep it material-free and re-sync the documented row."
       - "9.8 [F-7, F-9..F-13, info/low polish, opportunistic] Bound readTree (batched diff or numstat-first selection; 8 KB binary probe instead of full-file readFileSync); record or implement the change-folder ref fallback per DEC-14; remove the dead dryRun branches in completeWithCommit; make dry-run --phase no-pending-work a success disclosure instead of staging-blocked failure; replace the unvalidated as-casts in the DM-2 mapping with a typed or validated shape; optionally pin collation for path ordering."
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/phase-atomic.test.ts tests/behaviour/commit-convergence.test.ts tests/behaviour/commit-command.test.ts tests/golden/commit-envelope.test.ts"
+      - "pnpm check"
+  - id: 10
+    title: "Code Review Remediation (Iteration 2): telemetry-absence fail-safety and corpus completion"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/edge.ts
+        - packages/cli/src/commands/phase.ts
+        - packages/cli/src/commands/commit.ts
+        - packages/core/src/domain/commit-act.ts
+        - packages/core/src/contracts/commit.ts
+        - packages/core/src/contracts/registry.ts
+        - packages/adapters/src/git/commit.ts
+        - tests/behaviour/phase-atomic.test.ts
+        - tests/behaviour/commit-convergence.test.ts
+        - tests/behaviour/commit-command.test.ts
+        - doc/spec/features/feature-commit-primitive.md
+        - doc/changes/2026-11/2026-11-05--GH-227--commit-primitive/chg-GH-227-spec.md
+        - doc/changes/2026-11/2026-11-05--GH-227--commit-primitive/chg-GH-227-test-plan.md
+    summary: "fix(GH-227): code review remediation iteration 2 - telemetry-absence fail-safety and corpus completion"
+    tasks:
+      - "10.1 [F-14, medium] Make convergence fail-safe when the telemetry event is absent: persist the landed commitSha on the atomic transition record (the act knows committed.sha before appendTransition, commit-act.ts:312-326; registry fields stay additive per DEC-7) and let readEvidence (edge.ts:383-417) fall back to the record-bound sha plus a git ancestry check (a merge-base --is-ancestor port on the git seam) when no telemetry event exists; classify a failed or torn readCommitTelemetry read as a platform fault instead of commit-absent. Add a corpus case: emission failure at landing, then re-run must not manufacture a duplicate commit. Re-sync the feature doc's convergence paragraph. [AC: AC-F7-3, NFR-6, DEC-7]"
+      - "10.2 [F-15, low] Corpus completion: (1) record-atomic-without-commit with no pending work asserts commitSkipped interrupted-atomic-no-pending-work with zero new commits/records; (2) a planning-kind plan phase exercised through delivery_planning (declared untracked file stages in phase-centric mode); (3) commit <ref> --phase <unmapped-lifecycle-phase> with a plan present asserts degradedScope plan-absent. Add the fifth basis string to TR-9's register row and the DM-3 vocabulary assertions (envelope-only assertion, mirroring no-op)."
+      - "10.3 [F-16, info] Pin the undefined-lifecycle-id contract in planPhaseForLifecycle with a one-line comment (standalone skeleton donor only; staging scope is the union) or return undefined and let standalone skeletons fall back to ref-only subjects."
     testGate:
       - "pnpm typecheck"
       - "bun test tests/behaviour/phase-atomic.test.ts tests/behaviour/commit-convergence.test.ts tests/behaviour/commit-command.test.ts tests/golden/commit-envelope.test.ts"
