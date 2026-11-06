@@ -91,6 +91,8 @@
     "src/state/merge.ts",
     "src/state/owner-gate-sla.ts",
     "src/state/registry.ts",
+    "src/state/retro-registry.ts",
+    "src/state/retro-sidecar.ts",
     "src/state/storage-error.ts"
   ],
   "adapters": [

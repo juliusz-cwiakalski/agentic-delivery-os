@@ -270,6 +270,13 @@ export const RETRO_PAYLOAD_SCHEMAS = {
   memoryAudit: "delivery.retro.memory-audit.v1",
 } as const;
 
+/** The declared payload schema ids an evidence record may carry (E-02). */
+export const RETRO_EVIDENCE_PAYLOAD_SCHEMA_IDS = [
+  RETRO_EVIDENCE_PAYLOAD_SCHEMA,
+  "delivery.audit.invocation.v1",
+  ...Object.values(RETRO_PAYLOAD_SCHEMAS),
+] as const;
+
 /** The store-layout evidence artifact name for a workspace. */
 export const retroEvidenceArtifactName = (workspaceId: string): string =>
   `${RETRO_EVIDENCE_ARTIFACT_PREFIX}${encodeURIComponent(workspaceId)}${RETRO_EVIDENCE_ARTIFACT_SUFFIX}`;
@@ -296,6 +303,19 @@ export const retroEvidenceLockPath = (stateDirectory: string, workspaceId: strin
 export type RetroClaimedIdentity = {
   readonly kind: "claimed";
   readonly value: string;
+};
+
+/** One evidence append request: the consumer computes the chain value. */
+export type RetroEvidenceDraft = {
+  readonly traceId: string;
+  readonly level: RetroLevelName;
+  readonly source: RetroEvidenceSource;
+  readonly windowStart: number;
+  readonly windowEnd: number;
+  readonly collectedAt: number;
+  readonly collectorIdentity?: RetroClaimedIdentity;
+  readonly payloadRefs: readonly string[];
+  readonly payloadSchemaId: string;
 };
 
 /** One append-only evidence record (DM-2, EVT-1). */
