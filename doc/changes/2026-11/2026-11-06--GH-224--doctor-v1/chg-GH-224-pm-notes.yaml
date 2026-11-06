@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-06T04:55:00Z", completed: "2026-11-06T07:05:00Z" }
   delivery_planning: { started: "2026-11-06T06:20:00Z", completed: "2026-11-06T07:15:00Z" }
   dor_check: { started: "2026-11-06T06:50:00Z", completed: "2026-11-06T07:30:00Z" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-11-06T07:35:00Z", completed: "2026-11-06T08:20:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -28,6 +28,18 @@ open_questions:
 blockers: []
 notes:
   - text: "Ticket carried stale 'review' label with no PR and no delivery artifacts; reconciled to 'planning' at intake per .ai/agent/pm-instructions.md workflow states mapping."
+    type: "info"
+    date: "2026-11-06"
+  - text: "DELIVERY INTERRUPTED + RECOVERED: server restart aborted the coder session mid-phase-5. Git-state assessment: phases 1-4 committed (20a64ebd contracts+httpStatus fold, ccccce60 domain, 58225905 command); phase-5 test matrix on disk uncommitted (20 untracked test/fixture files + 4 modified invariant tests); phases 6-7 not started; branch 9 ahead / 3 behind origin/main-tools (incoming: GH-229 owner-gate SLA board delivery 47270b37, memory consolidation fc9c0853, PDR-0003 acceptance e75b29a2). Predicted merge conflicts concentrated in shared registry seams (error-table + corpora, cli-edge-seam eight/nine-declarer list, content/error-table inventories, edge.ts semantic). Resume order: finish+commit phase 5, merge --no-commit, resolve unions, gates, phases 6-7."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Retro: phase-boundary commits are the recovery anchors — because phases 1-4 were committed per phase before the crash, recovery cost was limited to re-verifying one phase's on-disk work instead of re-implementing it. The phase-3 httpStatus work was folded into the phase-1 commit (subject documents it) — acceptable deviation, but it means the original per-phase commit map no longer matches 1:1; coders should preserve the plan's commit boundaries even when adjacent phases touch the same files, for exactly this recovery scenario."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "Plan-phase ledger (phase id -> commit -> result): [1] contracts -> 20a64ebd -> error-table-sync 54/54, suites green; [2] domain -> ccccce60 -> doctor aggregation suites green; [3] adapters httpStatus -> folded into 20a64ebd (subject documents the fold) -> trap+http-status suites green; [4] CLI -> 58225905 -> command/edge suites green; [merge] main-tools -> 8acc2ca1 -> 11 conflict files resolved union semantics, pnpm check green post-merge; [5] verification battery -> 0a9acf5b -> doctor suite 154 pass/0 fail; [6] closeout -> bde57957 -> man-page reconciled, changeset verified (already in ccccce60); [7] docs -> de9b2339 -> doc-distribution exit 0. Final cumulative pnpm check at de9b2339: exit 0, 3306 pass / 4 skip / 0 fail, 311 files. Coverage: 21/21 ACs, 31/31 TCs."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Delivery deviations (all accepted): [a] phase-3 work folded into phase-1 commit 20a64ebd (documented in subject); [b] .changeset/doctor-v1-minor.md landed with ccccce60, phase 6 verified instead of duplicating; [c] gate-driven scope additions: biome.json golden-formatter override, forbidden-literals.registry.json registration of the new feature spec; [d] per-area fixture folders replaced by inline worlds/case tables (tests/fixtures/doctor/{matrix,http-status,golden} retained), coverage unchanged; [e] mid-delivery GH-229 board landing changed the delivered humanText declarer set from eight+ninth to TEN — spec updated to v1.3 stating the delivered truth; current-truth docs already stated ten."
     type: "info"
     date: "2026-11-06"
   - text: "GitHub MCP server could not authenticate for write operations this session (reads worked unauthenticated). All tracker writes routed through gh CLI via @runner instead; label reconciliation change+planning completed successfully."
