@@ -1,0 +1,191 @@
+# GH-230 implementation plan — machine-readable projection (delivery.plan.v1).
+# The companion execution document is chg-GH-230-plan.md (same phases, tasks,
+# AC/TC links, verification commands). When both plan files exist, this YAML
+# document is the authoritative artifact for `plan validate` (GH-226 format).
+schemaVersion: delivery.plan.v1
+workItemRef: GH-230
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  escalationTriggers:
+    - "error-table-sync gate red after Phase 1 (exact four-code allowlist failed)"
+    - "a pinned spec or test-plan reading requires change (reopens the test plan per A-T2)"
+    - "board or any command outside the two declared status/brief exceptions drifts byte-stable output"
+    - "TDR-0009 security-residual owner veto or GAP-15 identifier-extension rejection at PR review"
+    - "an existing digest/brief consumer breaks outside the declared closed-set evolution"
+defaultLeases:
+  - "packages/core/**"
+  - "packages/cli/**"
+  - "tests/**"
+  - "scripts/checks/**"
+  - "doc/spec/features/**"
+  - ".changeset/**"
+  - "doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/**"
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Blockers contract vocabulary and the four-row error family with the exact two-segment allowlist"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/blockers.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - scripts/checks/error-table-sync.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/blockers-contract.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/structure/inventory.json
+        - doc/spec/features/feature-result-contract.md
+      folders:
+        - tests/fixtures/result/code-corpora
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/blockers.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+  - id: 2
+    title: "Pure blockers domain: validation, layered credential guard, audience routing, shared ranking, laneResume projection, renderers"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/blockers.ts
+        - packages/core/src/domain/index.ts
+        - tests/structure/blockers-imports.test.ts
+        - tests/structure/blockers-contract.test.ts
+        - tests/behaviour/blockers-ranking.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/blockers/matrix
+        - tests/fixtures/blockers/policy
+        - tests/fixtures/blockers/identity
+        - tests/fixtures/blockers/capabilities
+        - tests/fixtures/blockers/ranking
+        - tests/fixtures/blockers/credentials
+        - tests/fixtures/blockers/bounds
+  - id: 3
+    title: "State record kinds: EVT-1/EVT-2 blocker question and answer records over the injected port"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/state/blockers.ts
+        - packages/core/src/state/index.ts
+        - tests/behaviour/blockers-records.test.ts
+        - tests/structure/blockers-imports.test.ts
+        - tests/fixtures/state/harness.ts
+        - tests/structure/inventory.json
+  - id: 4
+    title: "blockers command surface: list, answer, publish — grammar, edge composition, in-process harness, publish/records/types integration"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/commands/blockers.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/index.ts
+        - tests/structure/blockers-cli-seam.test.ts
+        - tests/fixtures/blockers/harness.ts
+        - tests/behaviour/blockers-publish.test.ts
+        - tests/behaviour/blockers-records.test.ts
+        - tests/behaviour/blockers-record-integrity.test.ts
+        - tests/behaviour/blockers-types.test.ts
+        - tests/behaviour/blockers-answer-channels.test.ts
+        - tests/behaviour/blockers-options.test.ts
+        - tests/structure/inventory.json
+  - id: 5
+    title: "Credential-guard and audience-routing behaviour: layered guard, identifier fields, TDR-0009 controls, delegation, identity"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/blockers-credential.test.ts
+        - tests/behaviour/blockers-credential-shape.test.ts
+        - tests/behaviour/blockers-credential-negative-controls.test.ts
+        - tests/behaviour/blockers-credential-identifiers.test.ts
+        - tests/behaviour/blockers-audience.test.ts
+        - tests/behaviour/blockers-identity.test.ts
+        - tests/behaviour/blockers-delegation.test.ts
+        - packages/core/src/domain/blockers.ts
+        - packages/cli/src/commands/blockers.ts
+        - packages/cli/src/edge.ts
+      folders:
+        - tests/fixtures/blockers/credentials
+        - tests/fixtures/blockers/policy
+        - tests/fixtures/blockers/identity
+  - id: 6
+    title: "Answer-as-data and the laneResume projection, list and error surfaces"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/blockers-lane-resume.test.ts
+        - tests/behaviour/blockers-list.test.ts
+        - tests/behaviour/blockers-errors.test.ts
+        - packages/core/src/domain/blockers.ts
+        - packages/core/src/state/blockers.ts
+        - packages/cli/src/commands/blockers.ts
+      folders:
+        - tests/fixtures/blockers/capabilities
+  - id: 7
+    title: "Digest and brief integration: the atomic typed-questions section, mirror, placeholder retirement, third anchor"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/status.ts
+        - packages/core/src/contracts/brief.ts
+        - packages/core/src/domain/status.ts
+        - packages/core/src/domain/brief.ts
+        - packages/cli/src/commands/status.ts
+        - packages/cli/src/commands/brief.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/blockers-shared-ranking.test.ts
+        - tests/behaviour/blockers-ranking.test.ts
+        - tests/behaviour/blockers-digest.test.ts
+        - tests/behaviour/blockers-brief.test.ts
+        - tests/structure/status-contract.test.ts
+        - tests/structure/brief-contract.test.ts
+        - tests/structure/brief-imports.test.ts
+        - tests/golden/status-digest.test.ts
+        - tests/golden/brief.test.ts
+      folders:
+        - tests/fixtures/status
+        - tests/fixtures/brief
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/status.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/brief.ts
+        role: producer
+  - id: 8
+    title: "Bounds, determinism, read cost, performance, privacy, non-regression, corpus, goldens"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/blockers-bounds.test.ts
+        - tests/behaviour/blockers-determinism.test.ts
+        - tests/behaviour/blockers-read-cost.test.ts
+        - tests/behaviour/blockers-performance.test.ts
+        - tests/behaviour/blockers-privacy.test.ts
+        - tests/behaviour/blockers-nonregression.test.ts
+        - tests/behaviour/blockers-corpus.test.ts
+        - tests/golden/blockers.test.ts
+        - packages/core/src/domain/blockers.ts
+        - packages/core/src/domain/status.ts
+        - packages/core/src/domain/brief.ts
+        - packages/core/src/state/blockers.ts
+        - packages/cli/src/commands/blockers.ts
+      folders:
+        - tests/fixtures/blockers/bounds
+        - tests/fixtures/blockers/privacy
+        - tests/fixtures/blockers/corpus
+        - tests/fixtures/blockers/golden
+  - id: 9
+    title: "Finalize: changeset, docs-adjacent repo invariants, spec-reconciliation handoff, aggregate gates"
+    kind: delivery
+    scope:
+      files:
+        - .changeset/gh-230-typed-blockers-minor.md
+        - tests/behaviour/blockers-nonregression.test.ts
+      folders:
+        - doc/changes/2026-11/2026-11-06--GH-230--typed-blockers
