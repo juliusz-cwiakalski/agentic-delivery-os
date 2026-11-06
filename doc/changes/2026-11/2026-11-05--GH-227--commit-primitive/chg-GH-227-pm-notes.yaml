@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-11-05T23:32:00Z", completed: "2026-11-05T23:33:00Z" }
   specification: { started: "2026-11-05T23:34:00Z", completed: "2026-11-05T23:58:00Z" }
   test_planning: { started: "2026-11-05T23:48:00Z", completed: "2026-11-06T00:05:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-11-06T00:06:00Z", completed: "2026-11-06T00:20:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -52,3 +52,6 @@ notes:
   - text: "Test plan iteration 2 complete: 70 cases (added TC-ATOMIC-012 durable intent same-append, TC-CONVERGE-008 evidence discrimination + negative control), 23/23 AC coverage incl. new AC-F7-4, zero TODOs; TC-CONVERGE-007 and TC-ATOMIC-002 fully specified over all three bases; OQ-T1 and OQ-T2 moved to resolved log; four non-blocking OQs (T3..T6) remain; risk TR-9 (basis-string drift) added"
     type: "resolved"
     date: "2026-11-05"
+  - text: "Delivery plan complete: chg-GH-227-plan.yaml in machine-readable delivery.plan.v1 schema (GH-226 schema; no legacy .md plan exists so YAML precedence is trivially satisfied), 8 phases, union traceability covers all 23 ACs + 70 TCs, per-phase testGates with scoped bun test and full pnpm check only at phase 8; validatePlanValue returned 0 errors on the real artifact. Dogfood decision: @committer throughout (task 8.6) — DEC-6 session-context guard refuses in-session invocation, so the primitive is not used to land its own delivery commits. No spec/test-plan inconsistencies; delivery decisions recorded in-plan for OQ-1/OQ-T3/T4/T5/T6 (headless one-shot stays CLI-level; input.value.rejected reuse; body-required criterion >1 declared scope area; concrete evidence shapes). Note: schema ignores unknown phase keys, so per-phase summary/tasks/testGate blocks are valid inert extras the commit skeleton will read directly"
+    type: "info"
+    date: "2026-11-06"
