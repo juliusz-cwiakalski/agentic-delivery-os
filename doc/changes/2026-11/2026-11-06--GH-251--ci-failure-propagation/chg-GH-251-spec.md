@@ -38,6 +38,8 @@ This change delivers two engineering repairs routed from the inception open-ques
 
 Repair 1 (OPEN-Q19): the CI workflow's shell-suite job (`bash-tests`) invokes each suite through a `find -exec` invocation whose `-exec` predicate does not aggregate child exit codes, so a failing shell suite can leave the job green despite the outer `set -e` and the job comment claiming otherwise. The aggregation is replaced with explicit child-status handling — realized as a small suite-aggregation runner invoked by the workflow, per the ticket's named option set — plus a committed, self-verifying negative control that plants a deliberately failing synthetic suite and proves the runner exits non-zero. That control runs in the PR's green CI run, which becomes the demonstration evidence that a synthetic failing suite fails the job.
 
+Because the CI-topology invariant check enforces an additions-only rule on the CI workflow file — it diffs the workflow against the base branch and fails on every removed line — any compliant repair of the `bash-tests` run block would otherwise be rejected by the very gate that guards the workflow. Repair 1 therefore includes a narrowly scoped, negative-fixture-guarded allowance in that invariant (DEC-7, F-8): the job stays, its execution block and comment are replaced, and the invariant's protection everywhere else is untouched.
+
 Repair 2 (OPEN-Q15, engineering part): the YAML configuration parser and the pm-notes document parser compare `text.length` (UTF-16 code units) against the byte-named source-size limit constant (`MAX_SOURCE_BYTES`, 1048576), so the limit is not byte-enforced under multibyte UTF-8. Per spec truth (NFR-TOOL-005 names byte enforcement as the reconciliation direction) and the fail-closed repo culture, the limit becomes byte-accurate: UTF-8 byte length is enforced, the byte-named contract and the limit value are preserved, error identities are unchanged, and multibyte boundary tests (exactly-at-limit, one-over, one-under, char-count-equal-but-bytes-over, all-ASCII) pin the exact boundary.
 
 Finally, the phase-4 quality baseline note (and its FSE-05 audit row) is updated to reflect the repair landing, and the incorrect job comment is corrected — documentation truth, not narration.
@@ -109,6 +111,7 @@ Because the CI shell-suite job aggregates child suite outcomes through a `find -
 | F-5 | Byte-accurate source-size limit in the pm-notes document parser (both check sites) | Same-class repair in the second adapter; the ticket scopes exactly these two parsers. |
 | F-6 | Multibyte + boundary test coverage | Ticket acceptance criterion 3: name-accurate behavior must be pinned at the exact boundary, including the multibyte cases where chars and bytes diverge. |
 | F-7 | Documentation truth reconciliation | Ticket task 4: the baseline note must reflect the repair; the job comment must stop claiming a property the old invocation never had. |
+| F-8 | Scoped ci-topology invariant allowance (DEC-7) | The additions-only invariant rule would make any compliant `bash-tests` repair unshippable and force the false GH-124 comment to stay; the change-scoped allowance makes the owner-authorized repair landable without generalizing. |
 
 ### 5.1 Capability Details
 
@@ -119,6 +122,7 @@ Because the CI shell-suite job aggregates child suite outcomes through a `find -
 - **F-5 — pm-notes parser byte accuracy.** Both source-size check sites in the pm-notes document parser behave identically to F-4: byte-accurate, fail-closed, existing error identities unchanged.
 - **F-6 — Boundary coverage.** Both parsers' suites carry, for every check site, the five boundary fixture classes: exactly-at-limit in bytes (accepted), one byte over (rejected), one byte under (accepted), char-count-equal-but-bytes-over multibyte content (rejected — the proof that bytes, not code units, decide), and all-ASCII content at the limit (accepted — ASCII behavior is unchanged versus today).
 - **F-7 — Documentation truth.** The phase-4 quality baseline note and its FSE-05 audit row are updated to record the repair as landed (the finding becomes a resolved gap with the repair described). The job comment is corrected to state the actual aggregation contract. The remaining known doc reconciliation points are registered for the system-spec update phase (Appendix C) rather than expanded in this change.
+- **F-8 — Scoped ci-topology allowance.** The CI-topology invariant check (run in the binding `ts-invariants` job and the aggregate check) enforces an additions-only rule on the CI workflow file: every removed line fails the check. Its stated intent (per its governing test header, TC-SCAFFOLD-023) is "binding TS jobs beside a byte-unchanged bash stack" — but this repair must remove the `bash-tests` job's broken execution block and its incorrect comment, so the invariant gains a narrowly scoped, change-scoped allowance: removed workflow lines are ignored **only** when they belong to the `bash-tests` job's execution block (its `run:` step content) or that job's comment lines. Removals anywhere else in the workflow remain fatal, and job-presence enforcement (the bash/ts job-id loops) stays fatal — deleting or renaming any job still fails. The allowance is non-vacuous by construction: committed negative fixtures prove it does not generalize (a removed line outside the `bash-tests` execution block still fails; removing the whole `bash-tests` job still fails).
 
 ## 6. USER & SYSTEM FLOWS
 
@@ -151,6 +155,7 @@ Flow 3: Parser bounded input, multibyte near the limit
 - The aggregation repair in the CI workflow's shell-suite job, including correction of the job's incorrect comment.
 - The suite-aggregation runner and its contract (discovery scope unchanged; explicit child-status aggregation; non-zero exit on any failure).
 - The committed synthetic failing-suite negative control, self-verifying, wired into CI.
+- A narrowly scoped, change-scoped allowance in the CI-topology invariant check (DEC-7, F-8) — removed `bash-tests` execution-block and comment lines only — plus committed negative fixtures proving the allowance does not generalize.
 - Byte-accurate UTF-8 source-size enforcement in the two file-source adapters — the YAML configuration parser (one check site) and the pm-notes document parser (two check sites) — with the limit value, byte-named constant, and error identities unchanged.
 - Multibyte and boundary test coverage for both parsers and every check site (five fixture classes per F-6).
 - Update of the phase-4 quality baseline note and its FSE-05 audit row to reflect the repair landing.
@@ -163,6 +168,7 @@ Flow 3: Parser bounded input, multibyte near the limit
 - [OUT] The same-class chars-vs-bytes instance on the verify-gates summary limit constant — flagged for a future ticket; explicitly excluded by acceptance criterion 4.
 - [OUT] Any change to error identities, the limit value, parser grammar/features, or renaming the limit to characters.
 - [OUT] Changes to the binding `ts-*` jobs, doc-distribution/guard jobs, or any other workflow job.
+- [OUT] Changes to any repository invariant check beyond the DEC-7 scoped ci-topology allowance (CI bindingness, commitlint, boundary and purity checks stay untouched).
 - [OUT] Rewriting existing suites or changing their semantics beyond what the control and boundary fixtures require.
 - [OUT] Broadening the suite discovery scope or touching suite execution semantics (timeouts, parallelism) beyond aggregation.
 
@@ -207,9 +213,9 @@ Deliberately tightening in two bounded places. (1) Parsers: multibyte-heavy sour
 | NFR-3 | Byte accuracy: limit decisions are made on UTF-8 byte length, matching reference byte counts on all boundary fixtures | 0 divergences across the five fixture classes of F-6 |
 | NFR-4 | Fail-closed rejection with stable identity: over-limit sources are rejected with today's error identities; no new or changed error codes | 0 identity changes across all limit fixtures |
 | NFR-5 | Existing-suite integrity: all existing suites pass under the new aggregation, and the discovery scope is unchanged | 100% pass; 0 suites missed or double-executed |
-| NFR-6 | Workflow invariant integrity: CI topology, CI bindingness invariants, and commitlint remain green against the modified workflow | 0 violations per PR |
+| NFR-6 | Workflow invariant integrity: CI topology (under its DEC-7 scoped allowance), CI bindingness invariants, and commitlint remain green against the modified workflow | 0 violations per PR; 0 allowance generalizations — all non-vacuity negative fixtures green |
 | NFR-7 | Purity: the byte-length computation is runtime-neutral and pure — no runtime-specific imports, no ambient-global reads | 0 violations per boundary/purity checks |
-| NFR-8 | Scope confinement: behavior changes limited to the two repairs (aggregation + control; the two parsers' limit checks) | 0 out-of-scope behavior changes per review |
+| NFR-8 | Scope confinement: behavior changes limited to the two repairs (aggregation + control, including the DEC-7 scoped ci-topology allowance; the two parsers' limit checks) | 0 out-of-scope behavior changes per review |
 | NFR-9 | Runtime budget: the negative control and runner add bounded overhead to the job | control ≤ 60 s; runner aggregation overhead ≤ 5% of job wall time |
 | NFR-10 | Diagnosability: on failure, the job log names every failing suite | 100% of failure scenarios name the failing suite(s) |
 
@@ -229,6 +235,7 @@ Deliberately tightening in two bounded places. (1) Parsers: multibyte-heavy sour
 | RSK-4 | Extracting the runner changes suite discovery or ordering semantics versus today's invocation (missed or duplicated suites) | M | M | Discovery scope pinned as unchanged (F-1, NFR-5); acceptance requires all existing suites pass under the new aggregation; the control exercises discovery of a failing suite | L |
 | RSK-5 | Documentation drift: the baseline note, the feature page's "byte-unchanged and authoritative" sentence, and parser-limit wording contradict the landed reality | L | H | Known reconciliation points pre-registered for the system-spec update phase (Appendix C); the baseline note and job comment are updated in this change (F-7) | L — residual items are doc-syncer-owned, listed, and bounded |
 | RSK-6 | Scope creep into the adjacent verify-gates same-class instance or the OPEN-Q15 human part | L | L | Hard scope bounds with [OUT] pins, AC-G6-1 confinement criterion, and DEC-5 routing the adjacent instance to a future ticket | L |
+| RSK-7 | The ci-topology allowance sets precedent for weakening repository invariants (a bounded relaxation of a standing control) | M | L | Minimal scope by construction: one job's execution block and its comment lines only; job-presence enforcement and all other workflow removals stay fatal; negative fixtures prove non-generalization (AC-F8-1); recorded as change-scoped DEC-7 and explicitly flagged for reviewer attention at the open-PR human gate | L–M — the precedent concern is on the record and reviewer-gated |
 
 ## 12. ASSUMPTIONS
 
@@ -237,14 +244,14 @@ Deliberately tightening in two bounded places. (1) Parsers: multibyte-heavy sour
 - The pure-TS code-point→UTF-8 byte-length pattern in the core domain is a valid reference for the parser repair under the workspace purity rules; reuse via import or local replication is a delivery-planning choice, not a spec question.
 - Over-limit rejection error identities (`config.file.malformed` and the pm-notes analogues) are stable and remain unchanged by this repair.
 - The negative control follows the committed self-verifying negative-mode precedent (doc-distribution-modes, delivery-mutation-sandbox, deliver-ticket-result-tuples-modes style) and the ticket's allowance of "behind a flag or a separate workflow step".
-- The workflow invariant checks (CI topology, bindingness) and commitlint continue to run against the modified workflow, so structural regressions are caught in-CI.
+- The workflow invariant checks (CI topology, bindingness) and commitlint continue to run against the modified workflow — ci-topology under its DEC-7 scoped allowance — so structural regressions are still caught in-CI.
 - The verify-gates summary limit constant is genuinely the same defect class; this is recorded but not verified or repaired here (DEC-5).
 
 ## 13. DEPENDENCIES
 
 | Direction | Item | Notes |
 |-----------|------|-------|
-| Depends on | CI workflow (shell-suite job `bash-tests`) and gate battery | The repaired job must coexist with binding `ts-*` jobs and guard jobs; topology/bindingness invariants and commitlint gate the workflow shape. |
+| Depends on | CI workflow (shell-suite job `bash-tests`) and gate battery | The repaired job must coexist with binding `ts-*` jobs and guard jobs; topology/bindingness invariants and commitlint gate the workflow shape (ci-topology under its DEC-7 scoped allowance). |
 | Depends on | File-source adapters (YAML configuration parser; pm-notes document parser) | The three limit check sites are the repair surface; consumers and error identities stay stable. |
 | Depends on | Core UTF-8 byte-length pattern (queue-ready) | Reference pattern for pure, runtime-neutral byte accounting. |
 | Depends on | Negative-control precedent scripts | Design template for the self-verifying synthetic control. |
@@ -270,6 +277,7 @@ None at specification time — the planning session closed with no open question
 | DEC-4 | Error identities are unchanged by the limit repair | The repair changes measurement accuracy, not failure taxonomy; new codes would be scope creep beyond acceptance criterion 4 | 2026-11-06 |
 | DEC-5 | The verify-gates summary-limit same-class instance is out of scope and routed to a future owner-routed ticket | Ticket scopes exactly the two adapter parsers and forbids extra behavior change; the instance is recorded (assumption + [OUT] pin) so it is not lost | 2026-11-06 |
 | DEC-6 | AC-1 verification shape pinned: the committed negative control executing in the PR's green CI run is the demonstration evidence (CI run link recorded at delivery); an optional red demonstration run on the branch during delivery may supplement it | PM interpretation note; the green-run control proves propagation on every future run and satisfies "demonstrably fails the CI job" without requiring a permanently red workflow | 2026-11-06 |
+| DEC-7 | Change-scoped allowance in the CI-topology invariant check: removed CI-workflow lines are ignored **only** when they belong to the `bash-tests` job's execution block (its `run:` step content) or that job's comment lines; removals anywhere else in the workflow remain fatal, and job-presence enforcement (the bash/ts job-id loops) stays fatal — deleting or renaming any job still fails; non-vacuity is proven by committed negative fixtures (removal outside the execution block still fails; whole-job removal still fails) | The invariant's intent (per its governing test header, TC-SCAFFOLD-023: "binding TS jobs beside a byte-unchanged bash stack") is preserved — but this repair *strengthens* a bash job, and a literal additions-only reading makes the owner-authorized repair unshippable and would force the false GH-124 comment to stay. The exception is minimal, scoped to one job's execution block, negative-fixture-guarded, and reviewed at the open-PR human gate. Precedent concern: this is a bounded relaxation of a repository invariant, explicitly flagged for reviewer attention (RSK-7) | 2026-11-06 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
@@ -283,7 +291,9 @@ None at specification time — the planning session closed with no open question
 | Adapter parser test suites | Updated — multibyte and boundary fixtures added (F-6). |
 | Core domain (UTF-8 byte-length pattern) | Unchanged — consumed as the reference pattern; import vs replicate decided at delivery by purity rules. |
 | Binding `ts-*` jobs, doc-distribution/guard jobs, other workflow jobs | Unchanged — must remain green (NFR-6). |
-| Repository-invariant checks (CI topology, bindingness) and commitlint | Unchanged — run against the modified workflow as standing gates. |
+| CI-topology invariant check | Updated — gains the DEC-7 scoped allowance (`bash-tests` execution-block and comment removals only); still runs against the modified workflow as a standing gate. |
+| CI-topology invariant negative fixtures | New — committed fixtures proving the allowance does not generalize (F-8, AC-F8-1). |
+| CI-bindingness invariant and commitlint | Unchanged — run against the modified workflow as standing gates. |
 | Phase-4 quality baseline analysis (CI finding section; FSE-05 audit row) | Updated — in this change, per ticket task 4 (F-7). |
 | System spec: NFR-TOOL-005 gap line; scaffold toolchain feature page sentence; config-layer parser-limit wording | Reconciliation points registered for the system-spec update phase (Appendix C). |
 | Verify-gates summary limit | Unchanged — explicitly out of scope (DEC-5); flagged for a future ticket. |
@@ -299,12 +309,13 @@ None at specification time — the planning session closed with no open question
 | AC-F5-1 | **Given** the same boundary fixture set applied at both source-size check sites of the pm-notes document parser, **when** the checks run, **then** identical byte-accurate, fail-closed behavior holds with today's error identities at both sites. | F-5, NFR-3, NFR-4 |
 | AC-F6-1 | **Given** the parser suites, **when** they are inspected and executed, **then** boundary coverage exists for both parsers, every check site, and all five fixture classes of F-6, and every boundary case asserts the decision (accept/reject) and the error identity explicitly. | F-6, NFR-3 |
 | AC-F7-1 | **Given** the landed change, **when** the phase-4 quality baseline note, its FSE-05 audit row, and the job comment are read, **then** the note and row record the finding as repaired (repair described, gap closed), and the comment states the actual aggregation contract with no false claim about `set -e` failing the job on a failing suite. | F-7 |
-| AC-G6-1 | **Given** the full change diff and the green gate battery (existing suites, boundary and purity checks, workflow invariants, commitlint), **when** the change is reviewed, **then** behavior changes are confined to the two repairs — aggregation plus control, and the two parsers' limit checks — with zero changes to error identities, the limit value, other parsers or engines, other workflow jobs, and the verify-gates summary limit untouched. | NFR-6, NFR-8, DEC-5 |
+| AC-F8-1 | **Given** the negative fixture set for the ci-topology allowance, **when** the invariant check runs against the modified workflow, **then** removed lines are ignored only when they belong to the `bash-tests` job's execution block (its `run:` step content) or that job's comment lines; a removed line anywhere else in the workflow still fails the check; removing or renaming the whole `bash-tests` job — or any bash/ts job id — still fails; and the fixtures prove the allowance does not generalize. | F-8, NFR-6, DEC-7 |
+| AC-G6-1 | **Given** the full change diff and the green gate battery (existing suites, boundary and purity checks, workflow invariants under the DEC-7 allowance, commitlint), **when** the change is reviewed, **then** behavior changes are confined to the two repairs — aggregation plus control, explicitly including the narrow DEC-7 ci-topology allowance and its non-vacuity negative fixtures as part of repair 1's landing, and the two parsers' limit checks — with zero changes to error identities, the limit value, other parsers or engines, other workflow jobs, any other invariant check, and the verify-gates summary limit untouched. | NFR-6, NFR-8, DEC-5, DEC-7 |
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
 
 - Delivered through the standard 11-phase lifecycle on the prepared fix branch targeting `main-tools`; a single, self-contained repair change, reversible by one revert.
-- C-8 alignment: this change strictly strengthens a running gate (a gate that could lie green becomes truthful); no gate is weakened, relaxed, or skipped anywhere in the delivery.
+- C-8 alignment: this change strictly strengthens a running gate (a gate that could lie green becomes truthful); no gate is weakened, relaxed, or skipped anywhere in the delivery. The DEC-7 ci-topology allowance — a bounded relaxation of a repository invariant — is explicitly placed on the open-PR human review agenda (RSK-7).
 - The negative control becomes a standing CI obligation from the first green run onward: every future CI run re-proves failure propagation, so regressions in the runner or its workflow wiring surface immediately.
 - Communication: the corrected job comment and the updated phase-4 baseline note are the in-repo record; no external announcement is needed (internal audience, unpublished packages).
 - At system-spec update (phase 7), the doc-syncer reconciles the registered points in Appendix C — including the scaffold toolchain feature page sentence asserting the bash jobs are "byte-unchanged and authoritative", which this change makes stale by design.
@@ -326,12 +337,14 @@ N/A — no persisted data, schema, or seed data is involved. The negative contro
 - **Negative control as control evidence**: following the repository's committed negative-control discipline, the propagation property is continuously proven rather than asserted; the job comment now documents the real contract instead of an incorrect one.
 - **No new attack surface**: no new input channels, no new parsers, no changed trust boundaries; untrusted sources remain bounded by the same limit value, now measured accurately.
 - **Scope confinement as a security property**: the adjacent verify-gates same-class gap is deliberately not touched here (AC-G6-1), avoiding unreviewed behavior change while keeping the defect on the record (DEC-5).
+- **Invariant relaxation governance**: the ci-topology allowance (DEC-7) is a bounded relaxation of a standing repository control — minimal by construction (one job's execution block and its comment lines), non-vacuous via negative fixtures (AC-F8-1), and explicitly flagged for reviewer attention at the open-PR human gate.
 
 ## 22. MAINTENANCE & OPERATIONS IMPACT
 
 - New standing obligation: the negative control must keep passing. Runner and workflow changes co-evolve with the control; any change to the runner's contract (DM-2) without updating the control is a review-blocking gap.
 - Parser boundary fixtures are coupled to the limit value: if 1048576 ever changes, the five fixture classes must be regenerated — the suites make this an explicit, mechanical update.
 - The runner is ordinary repository automation with its own self-test; it follows the existing script/test conventions and adds no new operational burden beyond keeping the control green in CI.
+- The DEC-7 allowance is coupled to the `bash-tests` job identity: a future rename, split, or restructure of that job (or of its execution block) must revisit the allowance scope and its negative fixtures, or the invariant's protection silently drifts.
 - Operations: none new — CI continues to run the same job set; the repaired job's failure output is more diagnosable (failing suites named, NFR-10).
 - Future work registered, not owed here: the verify-gates byte-limit ticket (DEC-5) and the broader delivery-infra hardening pool items (NG-7).
 
@@ -390,12 +403,14 @@ Both keep: the byte-named constant and its 1048576 value, the existing error ide
 | ADR-0003 C-8 (running gates never weaken) | The repair strictly strengthens the shell-suite backstop; no gate is relaxed; the negative control makes the strengthened property continuously verified. |
 | NFR-TOOL-005 (bounded input) | The documented gap is closed in the named direction: byte enforcement, fail-closed, byte-named contract preserved; boundary tests become the evidence the gap line demanded. |
 | Repo negative-control discipline | The synthetic failing-suite control follows the committed negative-mode precedent and is exercised in every CI run. |
+| Invariant intent (TC-SCAFFOLD-023 header: "binding TS jobs beside a byte-unchanged bash stack") | Preserved: the job set and the binding `ts-*` jobs are untouched; the bash stack is strengthened, not weakened; the DEC-7 exception is minimal, negative-fixture-guarded, and reviewer-gated at the open PR. |
 
 ## 25. DOCUMENT HISTORY
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-06 | @spec-writer | Initial specification for GH-251 (shell-suite CI failure propagation + input-limit UTF-8 boundary naming). |
+| 1.1 | 2026-11-06 | @spec-writer | Iteration-2 amendment (spec reopened by PM after test-plan gap): DEC-7 scoped ci-topology allowance with non-vacuity negative fixtures — F-8, AC-F8-1, RSK-7 added; NFR-6, NFR-8, AC-G6-1, summary, scope, dependencies, components, rollout, security, maintenance, and Appendix D aligned. |
 
 ---
 
