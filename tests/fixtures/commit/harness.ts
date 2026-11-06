@@ -9,25 +9,31 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  nodePmNotesFileSystemFacts,
   parseConfigYaml,
   stagePmNotesPhaseEntry,
-} from "../../packages/adapters/src/file";
-import { createGitCommitSeam } from "../../packages/adapters/src/git";
-import { createPhaseCommandDefinition } from "../../packages/cli/src/commands/phase";
-import type { CommandDefinition } from "../../packages/cli/src/index";
-import { type CliDependencies, runCli } from "../../packages/cli/src/index";
+} from "../../../packages/adapters/src/file";
+import { createGitCommitSeam } from "../../../packages/adapters/src/git";
+import {
+  createCommitCommandRuntime,
+  createPhaseCommitExtension,
+} from "../../../packages/cli/src/edge";
+import { createCommitCommandDefinition } from "../../../packages/cli/src/commands/commit";
+import { createPhaseCommandDefinition } from "../../../packages/cli/src/commands/phase";
+import type { CommandDefinition } from "../../../packages/cli/src/index";
+import { type CliDependencies, runCli } from "../../../packages/cli/src/index";
 import type {
   CommitSafetyOutcome,
   CommitSessionFacts,
   CommitTransportAvailability,
   StateStoreIdentity,
   StateStorePort,
-} from "../../packages/core/src/contracts/index";
+} from "../../../packages/core/src/contracts/index";
 import {
   appendPhaseTransition,
   readChangeTransitions,
   replacePhaseProjection,
-} from "../../packages/core/src/state/index";
+} from "../../../packages/core/src/state/index";
 import {
   createScriptedCommitlint,
   createScriptedTransport,
@@ -38,9 +44,9 @@ import {
   type ScriptedTransport,
   type TempGitRepository,
   transportAvailability,
-} from "../../packages/testkit/commit";
+} from "../../../packages/testkit/src/commit/index";
 import { ledgerLines, ledgerPath, makeIdentity, openStore, removeRoot } from "../state/harness";
-import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
+import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
 
 export const COMMIT_REF = "GH-310";
 export const COMMIT_CHANGE_DIRECTORY = "doc/changes/2026-11/2026-11-05--GH-310--commit-fixture";
@@ -63,6 +69,7 @@ phases:
 
 export const COMMIT_NOTES_YAML = `change_id: GH-310
 title: "commit fixture"
+delivery_mode: interactive
 phases:
   clarify_scope: { started: "2026-11-05T01:00:00Z", completed: "2026-11-05T01:10:00Z" }
   specification: { started: "2026-11-05T01:11:00Z", completed: "2026-11-05T01:20:00Z" }
@@ -122,6 +129,10 @@ export type CommitHarnessOptions = {
   readonly availability?: Partial<CommitTransportAvailability>;
   readonly sessionFacts?: Partial<CommitSessionFacts>;
   readonly phaseCommit?: boolean;
+  /** `null` makes ref resolution fail; omitted resolves the fixture ref. */
+  readonly resolvedRef?:
+    | { readonly ref: string; readonly refSource: "argument" | "branch" | "change-folder" }
+    | null;
 };
 
 export type CommitHarness = {
@@ -141,6 +152,8 @@ export type CommitHarness = {
   readonly sessionFacts: CommitSessionFacts;
   readonly availability: CommitTransportAvailability;
   readonly phaseDefinition: CommandDefinition;
+  readonly commitDefinition: CommandDefinition;
+  runCommit(args: readonly string[], options?: { readonly json?: boolean }): Promise<CommitRun>;
   runPhase(args: readonly string[], options?: { readonly json?: boolean }): Promise<CommitRun>;
   runDefinition(
     definition: CommandDefinition,
@@ -193,6 +206,10 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
     `${COMMIT_CHANGE_DIRECTORY}/chg-${COMMIT_REF}-pm-notes.yaml`,
     options.notesYaml ?? COMMIT_NOTES_YAML,
   );
+  // The change artifacts are committed so they are tracked and clean: the
+  // commit staging set must see authored work, never the fixture's own docs.
+  repo.run(["add", "-A", "--", "doc"]);
+  repo.run(["commit", "--no-verify", "--no-gpg-sign", "-m", "docs: seed change artifacts"]);
 
   const stateRoot = join(repo.root, "state");
   const identity = makeIdentity(stateRoot, { workspaceId: "commit-fixture" });
@@ -252,8 +269,48 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
     },
     nowIso: () => clock.nextIso(),
     newFenceToken,
+    sessionFacts: () => sessionFacts,
   };
-  const phaseDefinition = createPhaseCommandDefinition(facts);
+  const extension = createPhaseCommitExtension({
+    store,
+    changesDirectory: join(repo.root, "doc", "changes"),
+    fs: nodePmNotesFileSystemFacts(),
+    git,
+    safety: { scan: safety.scan },
+    commitlint,
+    transports: { coreInference: coreTransport, harnessOneShot: harnessTransport },
+    availability,
+    sessionFacts: () => sessionFacts,
+    phaseCommit: options.phaseCommit ?? true,
+    nowIso: () => clock.nextIso(),
+    newFenceToken,
+  });
+  const phaseRuntimeWithCommit = { ...facts, commit: extension };
+  const phaseAtomicDefinition = createPhaseCommandDefinition(phaseRuntimeWithCommit);
+  const commitDefinition = createCommitCommandDefinition(
+    createCommitCommandRuntime(
+      {
+        store,
+        changesDirectory: join(repo.root, "doc", "changes"),
+        fs: nodePmNotesFileSystemFacts(),
+        git,
+        safety: { scan: safety.scan },
+        commitlint,
+        transports: { coreInference: coreTransport, harnessOneShot: harnessTransport },
+        availability,
+        sessionFacts: () => sessionFacts,
+        phaseCommit: options.phaseCommit ?? true,
+        nowIso: () => clock.nextIso(),
+        newFenceToken,
+        ...(options.resolvedRef === undefined
+          ? { resolveRef: async () => ({ ref: COMMIT_REF, refSource: "branch" as const }) }
+          : options.resolvedRef === null
+            ? { resolveRef: async () => undefined }
+            : { resolveRef: async () => options.resolvedRef ?? undefined }),
+      },
+      { runtime: phaseRuntimeWithCommit, extension },
+    ),
+  );
 
   const runDefinition = async (
     definition: CommandDefinition,
@@ -322,8 +379,11 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
       sessionFacts = value;
     },
     availability,
-    phaseDefinition,
-    runPhase: (args, runOptions) => runDefinition(phaseDefinition, "phase", args, runOptions),
+    phaseDefinition: phaseAtomicDefinition,
+    commitDefinition,
+    runPhase: (args, runOptions) =>
+      runDefinition(phaseAtomicDefinition, "phase", args, runOptions),
+    runCommit: (args, runOptions) => runDefinition(commitDefinition, "commit", args, runOptions),
     runDefinition,
     transitionPayloads: () =>
       allLedgerRecords()

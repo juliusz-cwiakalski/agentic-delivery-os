@@ -55,6 +55,14 @@ const payloadFor = (record: CommitTelemetryRecord): StateJsonValue => ({
   },
   landedAt: record.landedAt,
   ...(record.transitionId === undefined ? {} : { transitionId: record.transitionId }),
+  ...(record.failover === undefined
+    ? {}
+    : {
+        failover: record.failover.map((entry) => ({
+          transport: entry.transport,
+          reason: entry.reason,
+        })),
+      }),
 });
 
 const recordFrom = (
@@ -91,6 +99,24 @@ const recordFrom = (
   if (Object.hasOwn(value, "transitionId") && !isNonEmptyString(value.transitionId)) {
     return torn(location);
   }
+  const rawFailover = value.failover;
+  const failover = Array.isArray(rawFailover)
+    ? rawFailover.flatMap((entry) => {
+        if (!isRecord(entry)) return [];
+        if (
+          typeof entry.transport !== "string" ||
+          !(COMMIT_TRANSPORTS as readonly string[]).includes(entry.transport) ||
+          typeof entry.reason !== "string"
+        ) {
+          return [];
+        }
+        return [{ transport: entry.transport as CommitTelemetryRecord["transport"], reason: entry.reason }];
+      })
+    : undefined;
+  if (rawFailover !== undefined && !Array.isArray(rawFailover)) return torn(location);
+  if (Array.isArray(rawFailover) && (failover === undefined || failover.length !== rawFailover.length)) {
+    return torn(location);
+  }
   return ok({
     schemaId: COMMIT_TELEMETRY_SCHEMA_ID,
     changeRef: value.changeRef,
@@ -104,6 +130,7 @@ const recordFrom = (
     },
     landedAt: value.landedAt,
     ...(transitionId === undefined ? {} : { transitionId }),
+    ...(failover === undefined ? {} : { failover }),
   });
 };
 

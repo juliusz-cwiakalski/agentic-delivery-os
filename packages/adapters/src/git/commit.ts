@@ -142,7 +142,7 @@ export const createGitCommitSeam = (options: GitCommitSeamOptions = {}): CommitG
       git(["rev-parse", "HEAD"]),
       git(["rev-list", "--count", "HEAD"]),
       git(["log", "-5", "--format=%s"]),
-      git(["status", "--porcelain=v1", "-z"]),
+      git(["status", "--porcelain=v1", "-z", "--untracked-files=all"]),
     ]);
     const branch = branchResult.stdout.trim();
     const head = headResult.stdout.trim();

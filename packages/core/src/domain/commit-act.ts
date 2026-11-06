@@ -337,6 +337,7 @@ export const runCommitAct = async (
     tokenSpend: resolved.tokenSpend,
     landedAt: ports.nowIso(),
     ...(transitionId === undefined ? {} : { transitionId }),
+    ...(resolved.failover.length === 0 ? {} : { failover: resolved.failover }),
   };
   const emitted = await ports.appendTelemetry(telemetryRecord);
   return {

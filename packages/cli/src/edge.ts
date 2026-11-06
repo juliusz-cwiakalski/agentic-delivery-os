@@ -25,6 +25,7 @@ import {
 } from "@delivery-os/adapters/file";
 import {
   createGitBranchSeam,
+  createGitCommitSeam,
   createWatchdogGitSeam,
   type GitBranchSeam,
   type GitBranchSeamOptions,
@@ -50,6 +51,13 @@ import {
   createSessionAdmin,
   createSessionStore,
   type OpencodeSessionIo,
+} from "@delivery-os/adapters/session";
+import {
+  createCommitlintProbe,
+  createSecretScanner,
+} from "@delivery-os/adapters/file";
+import {
+  createDeliverySessionFacts,
 } from "@delivery-os/adapters/session";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
@@ -91,6 +99,13 @@ import {
   type CloseoutWriteOutcome,
   type ConfigFailure,
   type CredentialPort,
+  type CommitGitPort,
+  type CommitPlanPhaseContext,
+  type CommitSafetyPort,
+  type CommitSessionFacts,
+  type CommitTelemetryRecord,
+  type CommitTransportAvailability,
+  type CommitlintPort,
   type DeliveryRequest,
   type ExternalSystemInstance,
   OWNER_GATE_SLA_POLICY,
@@ -123,8 +138,14 @@ import {
   readProviderParkViews,
 } from "@delivery-os/core/provider";
 import {
+  type CommitActRequest,
+  type CommitTransportPorts,
+  runCommitAct,
+} from "@delivery-os/core";
+import {
   appendAuditInvocation,
   appendCloseoutOutcome,
+  appendCommitTelemetry,
   appendOwnerGateSlaDecision,
   appendPhaseTransition,
   createNodeStateEdge,
@@ -133,6 +154,7 @@ import {
   readChangeTransitions,
   readChangeTransitionsTolerant,
   readCloseoutHistory,
+  readCommitTelemetry,
   readOwnerGateSlaDecisions,
   replacePhaseProjection,
   STATE_SCHEMA_VERSION,
@@ -155,8 +177,18 @@ import {
   type LintCommandRuntime,
   type LintRegistryRead,
 } from "./commands/lint.js";
-import { createPhaseCommandDefinition, type PhaseCommandRuntime } from "./commands/phase.js";
+import {
+  type CommitCommandRuntime,
+  createCommitCommandDefinition,
+} from "./commands/commit.js";
 import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
+import {
+  createPhaseCommandDefinition,
+  type PhaseCommandRuntime,
+  type PhaseCommitEvidence,
+  type PhaseCommitExtension,
+  type PhasePlanRead,
+} from "./commands/phase.js";
 import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
@@ -301,6 +333,222 @@ export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCo
   },
   nowIso: options.nowIso,
   newFenceToken: options.newFenceToken,
+});
+
+/**
+ * The commit surface composition seams (GH-227 F-1..F-5). Every I/O, time,
+ * transport, scanner, commitlint, and session fact is injected.
+ */
+export type CommitRuntimeOptions = {
+  readonly store: StateStorePort;
+  readonly changesDirectory: string;
+  readonly fs: PmNotesFileSystemFacts;
+  readonly git: CommitGitPort;
+  readonly safety: CommitSafetyPort;
+  readonly commitlint: CommitlintPort;
+  readonly transports: CommitTransportPorts;
+  readonly availability: CommitTransportAvailability;
+  readonly sessionFacts: CommitSessionFacts | (() => CommitSessionFacts);
+  readonly phaseCommit: boolean;
+  readonly nowIso: () => string;
+  readonly newFenceToken: () => string;
+  readonly resolveRef?: () => Promise<
+    { readonly ref: string; readonly refSource: "branch" | "change-folder" } | undefined
+  >;
+};
+
+const scopePathsOf = (scope: unknown): readonly string[] => {
+  if (typeof scope !== "object" || scope === null || Array.isArray(scope)) return [];
+  const record = scope as Record<string, unknown>;
+  const paths: string[] = [];
+  for (const key of ["files", "packages", "folders"]) {
+    const values = record[key];
+    if (!Array.isArray(values)) continue;
+    for (const value of values) if (typeof value === "string") paths.push(value);
+  }
+  return paths;
+};
+
+const planPhasesOf = (values: Record<string, unknown>): readonly CommitPlanPhaseContext[] => {
+  const phases = values.phases;
+  if (!Array.isArray(phases)) return [];
+  const contexts: CommitPlanPhaseContext[] = [];
+  for (const phase of phases) {
+    if (typeof phase !== "object" || phase === null || Array.isArray(phase)) continue;
+    const record = phase as Record<string, unknown>;
+    const id = typeof record.id === "number" ? String(record.id) : undefined;
+    const title = typeof record.title === "string" ? record.title : undefined;
+    if (id === undefined || title === undefined) continue;
+    contexts.push({
+      phaseId: id,
+      title,
+      ...(typeof record.summary === "string" ? { summary: record.summary } : {}),
+      declaredScopePaths: scopePathsOf(record.scope),
+    });
+  }
+  return contexts;
+};
+
+const readPlanContext = (
+  options: Pick<CommitRuntimeOptions, "changesDirectory" | "fs">,
+  changeRef: string,
+): { readonly planPresent: boolean; readonly phases: readonly CommitPlanPhaseContext[] } => {
+  const artifact = readPlanArtifact({
+    changeRef,
+    changesDirectory: options.changesDirectory,
+    fs: options.fs,
+  });
+  if (!artifact.ok || artifact.artifact.kind !== "yaml") {
+    return { planPresent: false, phases: [] };
+  }
+  const parsed = parseConfigYaml(artifact.text, "project-committed", artifact.artifact.path);
+  return parsed.ok
+    ? { planPresent: true, phases: planPhasesOf(parsed.facts.values) }
+    : { planPresent: true, phases: [] };
+};
+
+const currentPhaseOf = (
+  store: StateStorePort,
+  changeRef: string,
+): string | undefined => {
+  const read = readChangeTransitionsTolerant(store, changeRef);
+  if (!read.ok) return undefined;
+  const latest = [...read.value.transitions]
+    .reverse()
+    .find((record) => record.operation === "complete");
+  return latest?.phaseId;
+};
+
+const commitActPorts = (
+  options: CommitRuntimeOptions,
+): Parameters<typeof runCommitAct>[1] => ({
+  git: options.git,
+  safety: options.safety,
+  commitlint: options.commitlint,
+  transports: options.transports,
+  availability: options.availability,
+  nowIso: options.nowIso,
+  appendTelemetry: async (record: CommitTelemetryRecord) => {
+    const appended = appendCommitTelemetry(options.store, options.newFenceToken(), record);
+    return appended.ok ? { ok: true } : { ok: false, detail: appended.error.code };
+  },
+});
+
+/** Compose the phase-side atomic completion extension (GH-227 F-6/F-7). */
+export const createPhaseCommitExtension = (
+  options: CommitRuntimeOptions,
+): PhaseCommitExtension => ({
+  phaseCommit: options.phaseCommit,
+  readPlanPhase: (changeRef, phaseId): PhasePlanRead => {
+    const plan = readPlanContext(options, changeRef);
+    if (!plan.planPresent) return { planPresent: false };
+    const phase =
+      plan.phases.find((entry) => entry.phaseId === phaseId) ?? plan.phases[0];
+    return phase === undefined ? { planPresent: true } : { planPresent: true, planPhase: phase };
+  },
+  readEvidence: async (changeRef, phaseId): Promise<PhaseCommitEvidence> => {
+    const read = readChangeTransitionsTolerant(options.store, changeRef);
+    const record = read.ok
+      ? [...read.value.transitions]
+          .reverse()
+          .find((entry) => entry.phaseId === phaseId && entry.operation === "complete")
+      : undefined;
+    const telemetry = readCommitTelemetry(options.store, changeRef);
+    const head = await options.git.head();
+    const event = telemetry.ok
+      ? [...telemetry.value.records]
+          .reverse()
+          .find((entry) => entry.phaseId === phaseId && entry.commitSha === head)
+      : undefined;
+    return {
+      recordPresent: record !== undefined,
+      ...(record?.commitIntent === undefined ? {} : { recordIntent: record.commitIntent }),
+      ...(record?.commitIntentBasis === undefined
+        ? {}
+        : { recordBasis: record.commitIntentBasis }),
+      ...(record?.timestamp === undefined ? {} : { transitionId: record.timestamp }),
+      commitPresent: event !== undefined,
+      ...(event?.commitSha === undefined ? {} : { commitSha: event.commitSha }),
+    };
+  },
+  currentHead: () => options.git.head(),
+  runAct: (request: CommitActRequest) => runCommitAct(request, commitActPorts(options)),
+});
+
+/**
+ * Compose the production commit seams over the delivered adapters.
+ *
+ * The git commit seam, the deterministic scanner, and the commitlint probe are
+ * the runtime-aware implementations; transports and availability remain
+ * explicit (a fresh install with no route degrades to the template).
+ */
+export type ProductionCommitRuntimeOptions = {
+  readonly store: StateStorePort;
+  readonly changesDirectory: string;
+  readonly fs: PmNotesFileSystemFacts;
+  readonly cwd: string;
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly sessionEnvironmentKeys: readonly string[];
+  readonly phaseCommit: boolean;
+  readonly nowIso: () => string;
+  readonly newFenceToken: () => string;
+  readonly transports?: CommitTransportPorts;
+  readonly availability?: CommitTransportAvailability;
+};
+
+export const createProductionCommitRuntimeOptions = (
+  options: ProductionCommitRuntimeOptions,
+): CommitRuntimeOptions => ({
+  store: options.store,
+  changesDirectory: options.changesDirectory,
+  fs: options.fs,
+  git: createGitCommitSeam({ cwd: options.cwd }),
+  safety: { scan: createSecretScanner({ cwd: options.cwd }) },
+  commitlint: createCommitlintProbe({ cwd: options.cwd }),
+  transports: options.transports ?? {},
+  availability:
+    options.availability ?? {
+      coreInference: { available: false, reason: "no-provider-route" },
+      harnessOneShot: { available: false, reason: "no-harness-credentials" },
+    },
+  sessionFacts: createDeliverySessionFacts({
+    environment: options.environment,
+    keys: options.sessionEnvironmentKeys,
+  }),
+  phaseCommit: options.phaseCommit,
+  nowIso: options.nowIso,
+  newFenceToken: options.newFenceToken,
+});
+
+/** Compose the standalone `commit` surface (GH-227 F-1..F-5). */
+export const createCommitCommandRuntime = (
+  options: CommitRuntimeOptions,
+  phase?: { readonly runtime: PhaseCommandRuntime; readonly extension: PhaseCommitExtension },
+): CommitCommandRuntime => ({
+  sessionFacts: () =>
+    typeof options.sessionFacts === "function" ? options.sessionFacts() : options.sessionFacts,
+  resolveRef:
+    options.resolveRef ??
+    (async () => {
+      const head = await options.git.readTree();
+      const match = /(?:^|\/)([A-Z][A-Z0-9]*-\d+)(?:$|\/)/.exec(head.branch);
+      return match?.[1] === undefined
+        ? undefined
+        : { ref: match[1], refSource: "branch" as const };
+    }),
+  readContext: (changeRef) => {
+    const plan = readPlanContext(options, changeRef);
+    const currentPhaseId =
+      currentPhaseOf(options.store, changeRef) ?? (plan.planPresent ? "delivery" : undefined);
+    return {
+      ...(currentPhaseId === undefined ? {} : { currentPhaseId }),
+      planPresent: plan.planPresent,
+      phases: plan.phases,
+    };
+  },
+  runAct: (request) => runCommitAct(request, commitActPorts(options)),
+  currentHead: () => options.git.head(),
+  ...(phase === undefined ? {} : { phase }),
 });
 
 /** Compose the read-only verify runtime from injected I/O and the state port. */
@@ -1252,6 +1500,7 @@ export type ConfigProgramOptions = {
   readonly lint?: LintCommandRuntime;
   readonly plan?: PlanRuntimeOptions;
   readonly phase?: PhaseCommandRuntime;
+  readonly commit?: CommitRuntimeOptions;
   readonly provider?: ProviderComposition;
   readonly verify?: VerifyCommandRuntime;
   readonly status?: StatusComposition;
@@ -1449,7 +1698,31 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
     commands.plan = createPlanCommandDefinition(createPlanCommandRuntime(options.plan));
   }
   if (options.phase !== undefined) {
-    commands.phase = createPhaseCommandDefinition(options.phase);
+    const extension =
+      options.commit === undefined ? undefined : createPhaseCommitExtension(options.commit);
+    const phaseRuntime =
+      extension === undefined ? options.phase : { ...options.phase, commit: extension };
+    const committedPhaseRuntime =
+      options.commit === undefined
+        ? phaseRuntime
+        : {
+            ...phaseRuntime,
+            sessionFacts: () => {
+              const facts = options.commit?.sessionFacts;
+              return typeof facts === "function" ? facts() : (facts ?? { insideDeliverySession: false });
+            },
+          };
+    commands.phase = createPhaseCommandDefinition(committedPhaseRuntime);
+    if (options.commit !== undefined && extension !== undefined) {
+      commands.commit = createCommitCommandDefinition(
+        createCommitCommandRuntime(options.commit, {
+          runtime: committedPhaseRuntime,
+          extension,
+        }),
+      );
+    }
+  } else if (options.commit !== undefined) {
+    commands.commit = createCommitCommandDefinition(createCommitCommandRuntime(options.commit));
   }
   if (options.provider !== undefined) {
     const provider = options.provider;

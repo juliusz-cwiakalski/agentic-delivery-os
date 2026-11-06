@@ -343,6 +343,7 @@ export type CommitTelemetryRecord = {
   readonly tokenSpend: CommitTokenSpend;
   readonly landedAt: string;
   readonly transitionId?: string;
+  readonly failover?: readonly { readonly transport: CommitTransport; readonly reason: string }[];
 };
 
 /** The telemetry ledger key prefix (one history per change ref). */
