@@ -71,6 +71,7 @@
     "src/state/artifact-boundary.ts",
     "src/state/audit.ts",
     "src/state/closeout.ts",
+    "src/state/commit-telemetry.ts",
     "src/state/driver/runtime-edge.ts",
     "src/state/driver/strategy.ts",
     "src/state/edge.ts",

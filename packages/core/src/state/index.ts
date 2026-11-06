@@ -78,6 +78,11 @@ export {
   readCloseoutHistory,
 } from "./closeout.js";
 export { createNodeStateEdge } from "./driver/runtime-edge.js";
+export {
+  appendCommitTelemetry,
+  commitTelemetryRecordKey,
+  readCommitTelemetry,
+} from "./commit-telemetry.js";
 export type {
   StateEdgeFaultPoint,
   StateIndexRow,

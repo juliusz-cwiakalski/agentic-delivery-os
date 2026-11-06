@@ -8,6 +8,7 @@
  * filesystem, or network access is declared here.
  */
 import type { StateJsonValue } from "./state.js";
+import type { StateReadEvidence } from "./state.js";
 
 /** The two durable commit intents a completion record can carry (DEC-7). */
 export const COMMIT_INTENTS = ["atomic", "record-only"] as const;
@@ -352,6 +353,7 @@ export type CommitTelemetryRead = {
   readonly changeRef: string;
   readonly records: readonly CommitTelemetryRecord[];
   readonly verifiedEmpty: boolean;
+  readonly evidence: StateReadEvidence;
 };
 
 /** The envelope success data for the `commit` surface (DM-2). */

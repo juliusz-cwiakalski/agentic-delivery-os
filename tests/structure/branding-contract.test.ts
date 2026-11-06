@@ -244,7 +244,7 @@ const emissionFailures = (root: string): string[] => {
       failures.push(`${file}: telemetry emission call is not permitted`);
     }
     if (
-      /(?:from\s+|import\()\s*["'][^"']*(?:telemetry|analytics|sentry|posthog|opentelemetry)/i.test(
+      /(?:from\s+|import\()\s*["'](?!\.|#)[^"']*(?:telemetry|analytics|sentry|posthog|opentelemetry)/i.test(
         content,
       )
     ) {

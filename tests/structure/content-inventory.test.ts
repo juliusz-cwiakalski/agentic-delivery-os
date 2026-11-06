@@ -388,6 +388,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readAuditRecords",
     "verifyAuditChain",
   ],
+  "core/src/state/commit-telemetry.ts": [
+    "appendCommitTelemetry",
+    "commitTelemetryRecordKey",
+    "readCommitTelemetry",
+  ],
   "core/src/state/closeout.ts": [
     "CLOSEOUT_OPERATION_RECORD_KEY_PREFIX",
     "appendCloseoutOutcome",
