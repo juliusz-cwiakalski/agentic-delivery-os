@@ -266,6 +266,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "verifyGatesUnknownIdentity",
   ],
   "core/src/domain/status.ts": ["aggregateStatus", "renderStatusHuman"],
+  "core/src/domain/brief.ts": ["projectBrief", "renderBriefHuman"],
   "core/src/state/index.ts": ["createStateStore"],
   "core/src/state/artifact-boundary.ts": ["createArtifactBoundary"],
   "core/src/state/closeout.ts": [
@@ -325,6 +326,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createWatchdogCommandDefinition",
   ],
   "cli/src/commands/status.ts": ["collectStatusFacts", "createStatusCommandDefinition"],
+  "cli/src/commands/brief.ts": ["createBriefCommandDefinition"],
   "cli/src/commands/lint.ts": ["createLintCommandDefinition"],
   "cli/src/commands/phase.ts": ["createPhaseCommandDefinition"],
   "cli/src/commands/plan.ts": ["createPlanCommandDefinition"],
@@ -486,6 +488,14 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "VERIFY_GATES_SOURCE_OUTCOMES",
     "VERIFY_GATES_VERDICTS",
     "VERIFY_GATES_WORKFLOW_MAX_BYTES",
+  ],
+  "core/src/contracts/brief.ts": [
+    "BRIEF_ANCHOR_GROUPS",
+    "BRIEF_PLACEHOLDER_CATALOG",
+    "BRIEF_PLACEHOLDER_SURFACE_IDS",
+    "BRIEF_PLACEHOLDER_TITLES",
+    "BRIEF_SCHEMA_VERSION",
+    "BRIEF_SURFACE_ORDER",
   ],
   "core/src/contracts/status.ts": [
     "STATUS_CI_RESULTS",

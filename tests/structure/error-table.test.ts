@@ -1021,3 +1021,26 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
     expect(entries.filter((entry) => entry.domainKind === "closeout")).toHaveLength(4);
   });
 });
+
+describe("TC-BRIEF-013 brief adds no error identity", () => {
+  test("no brief or status code and no brief domain kind exists", () => {
+    expect(entries.some((entry) => entry.code.startsWith("brief."))).toBe(false);
+    expect(entries.some((entry) => entry.code.startsWith("status."))).toBe(false);
+    expect((DOMAIN_KINDS as readonly string[]).includes("brief")).toBe(false);
+  });
+
+  test("the brief source modules reference only existing identities", () => {
+    const codes = new Set<string>(entries.map((entry) => entry.code));
+    for (const file of [
+      "packages/core/src/contracts/brief.ts",
+      "packages/core/src/domain/brief.ts",
+      "packages/cli/src/commands/brief.ts",
+    ]) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      expect(text.includes("status.collector.")).toBe(false);
+      for (const match of text.matchAll(/\b(?:brief|status)\.[a-z][a-z0-9_.]*/g)) {
+        expect(codes.has(match[0]), match[0]).toBe(false);
+      }
+    }
+  });
+});

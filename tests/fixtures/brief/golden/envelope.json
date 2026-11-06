@@ -1,0 +1,211 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-brief-fixture",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "schemaVersion": "delivery.brief.v1",
+    "generatedAt": "2026-10-31T00:00:00Z",
+    "repository": {
+      "state": "observed",
+      "host": "github.com",
+      "owner": "owner-placeholder",
+      "name": "project-placeholder",
+      "remoteName": "origin"
+    },
+    "surfaces": [
+      {
+        "id": "tracker",
+        "title": "Tracker",
+        "state": "observed",
+        "counts": {
+          "observed": 24,
+          "unknown": 8,
+          "total": 32,
+          "omitted": 16
+        },
+        "truncated": true,
+        "reason": "observed"
+      },
+      {
+        "id": "changes-and-prs",
+        "title": "Changes and pull requests",
+        "state": "observed",
+        "counts": {
+          "observed": 8,
+          "unknown": 0,
+          "total": 8,
+          "omitted": 0
+        },
+        "truncated": false,
+        "reason": "observed"
+      },
+      {
+        "id": "ci",
+        "title": "CI",
+        "state": "observed",
+        "counts": {
+          "observed": 8,
+          "unknown": 0,
+          "total": 8,
+          "omitted": 0
+        },
+        "truncated": false,
+        "reason": "observed"
+      },
+      {
+        "id": "lanes-or-queue",
+        "title": "Lanes or queue",
+        "state": "not-delivered",
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "truncated": false,
+        "reason": "engine-not-delivered"
+      },
+      {
+        "id": "providers",
+        "title": "Providers",
+        "state": "observed",
+        "counts": {
+          "observed": 16,
+          "unknown": 0,
+          "total": 16,
+          "omitted": 0
+        },
+        "truncated": false,
+        "reason": "observed"
+      },
+      {
+        "id": "parked-work",
+        "title": "Parked work",
+        "state": "observed",
+        "counts": {
+          "observed": 8,
+          "unknown": 0,
+          "total": 8,
+          "omitted": 0
+        },
+        "truncated": false,
+        "reason": "observed"
+      },
+      {
+        "id": "typed-questions",
+        "title": "Blocker questions",
+        "state": "not-delivered",
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "truncated": false
+      },
+      {
+        "id": "gate-sla-states",
+        "title": "Gate SLA states",
+        "state": "not-delivered",
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "truncated": false
+      },
+      {
+        "id": "lane-queue-engine",
+        "title": "Lane/queue engine",
+        "state": "not-delivered",
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "truncated": false
+      }
+    ],
+    "anchors": [
+      {
+        "group": "ready-to-merge",
+        "state": "observed",
+        "items": [],
+        "truncated": false,
+        "omitted": 0
+      },
+      {
+        "group": "owner-gate-ages",
+        "state": "observed",
+        "items": [
+          {
+            "identity": "GH-100",
+            "state": "observed",
+            "evidence": {
+              "kind": "owner-hand-back",
+              "ageState": "observed",
+              "ageDays": 1
+            }
+          },
+          {
+            "identity": "GH-101",
+            "state": "observed",
+            "evidence": {
+              "kind": "owner-hand-back",
+              "ageState": "observed",
+              "ageDays": 1
+            }
+          },
+          {
+            "identity": "GH-102",
+            "state": "observed",
+            "evidence": {
+              "kind": "owner-hand-back",
+              "ageState": "observed",
+              "ageDays": 1
+            }
+          },
+          {
+            "identity": "GH-103",
+            "state": "observed",
+            "evidence": {
+              "kind": "owner-hand-back",
+              "ageState": "observed",
+              "ageDays": 1
+            }
+          }
+        ],
+        "truncated": false,
+        "omitted": 0
+      }
+    ],
+    "placeholders": [
+      {
+        "capability": "typed-questions",
+        "owningStory": "M1-S16",
+        "state": "not-delivered"
+      },
+      {
+        "capability": "gate-sla-states",
+        "owningStory": "M1-S5",
+        "state": "not-delivered"
+      },
+      {
+        "capability": "lane-queue-engine",
+        "owningStory": "M1-S17",
+        "state": "not-delivered"
+      }
+    ],
+    "truncation": [
+      {
+        "target": "tracker",
+        "omitted": 16
+      }
+    ]
+  }
+}

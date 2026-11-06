@@ -1,0 +1,217 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-228
+branch: feat/GH-228/brief-render-only
+head_sha: 7964d56148cc1f5ee8174467a7365ddea1766981
+status: PASS
+summary: >-
+  Re-review after remediation iteration 1 (commits 6d3a4241, 7595be05, 7964d561). The blocker F-1
+  is genuinely resolved, not papered over: `tests/checks/brief-mutants.test.ts` now ports the
+  GH-183 loader verbatim (specifier rewrite to `file://` URLs, temp copies under `tmp/tmpdir`,
+  cache-busting import, `finally` deletion), and `tests/fixtures/brief/mutants/catalog.ts` was
+  rebuilt as 11 real one-guard source mutations of the production `domain/brief.ts` — every
+  string-tautology entry and the payload-transform catalog are gone. I verified adversarially:
+  every mutation needle is live (`replaceOnce` throws on drift — probed empirically), the
+  clean module resists all eleven prohibited observables while each mutant fires it naming
+  case, AC, and intended suite, the six out-of-domain guards are cross-referenced to live
+  seeded controls whose exact test names are asserted to exist, the loader leaves the live
+  source byte-identical with zero temp leftovers (checked on disk after my run), and each
+  `fires` faithfully encodes the named suite's own assertion. The non-vacuity guarantee of test
+  plan §4.10 item 3 now holds: a silently disabled guard in the production module fails a
+  committed suite. N-1 (Phase-8 boxes) and N-2 (canary reachability — now a rendered
+  `entityId`, asserted present pre-redaction in payload and human text, zero occurrences plus
+  `[redacted]` post-run) are resolved; N-5 is fixed; N-3/N-4 remain deferred exactly as
+  classified. The aggregate gate was adjudicated with first-party evidence (option a): after
+  root-causing one 2944/4/1 reading as self-interference between two concurrent full batteries
+  git-switching in the same checkout, two solo runs and the recovered background aggregate all
+  report 2945 pass / 4 skip / 0 fail at HEAD 7964d561, with boundaries, ambient, entrypoints,
+  secret-read, exports-parity, lint (warnings-only), format, typecheck, and doc-distribution
+  all green, and the tree clean after every run. Two new info-level notes (stale §5.2 canary
+  wording; intendedSuite labels as documentation) do not block. Recommend PROCEED to quality
+  gates, dod_check, and PR.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+findings:
+  - id: N-6
+    severity: info
+    classification: note
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-05--GH-228--brief-render-only/chg-GH-228-test-plan.md:849
+    message: >-
+      The flagged cosmetic item, judged non-blocking. TC-BRIEF-019's §5.2 Preconditions still
+      enumerate the planned canary placements ("a workspace path, a PM-context path, and a
+      provider evidence detail") while the delivered canary lives in a rendered approved-PR
+      `entityId`. The binding oracle in that same sentence — the canary "can be made to appear
+      in a reachable artifact" — is satisfied more strongly than planned: the identity is
+      literally rendered pre-redaction in both the payload anchors and the human ready-to-merge
+      line and asserted present before absence (tests/golden/redaction.test.ts:233-249). §6.2
+      and §10 accurately describe the delivered placement, so no reader is misled about what
+      ships; only the v1.0-era enumeration is stale.
+    suggestion: >-
+      At the next natural test-plan touch, reword the precondition to "a rendered identity (e.g.
+      an approved pull-request entityId), a workspace path, or a provider evidence detail". No
+      v0 action; does not affect TC-BRIEF-019's pass.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: N-7
+    severity: info
+    classification: note
+    confidence: high
+    category: test-quality
+    location: tests/fixtures/brief/mutants/catalog.ts:42
+    message: >-
+      The `intendedSuite` label on each source mutation is documentation, not a mechanically
+      verified reference (unlike the seeded controls, whose exact test names the meta-check
+      asserts exist). I hand-verified each label's claim that the named suite would fail on the
+      mutant (shared-truth's `toEqual([...BRIEF_SURFACE_ORDER])` catches a tenth surface;
+      negative-controls' matrix parity catches degraded-as-observed; anchors' strict-equality
+      evidence checks catch the review-signal and age mutants; placeholders' catalog equality
+      catches the fourth entry; envelope's exit assertions catch a throwing handler). The one
+      optimistic label is `unbounded-renderer` → brief-output: that suite has no over-bound
+      fixture, but the guard is still load-bearing because the meta-check's own clean control
+      re-runs `fires()` over the committed `overBoundFacts` world every run, so a broken
+      `bound()` fails brief-mutants itself.
+    suggestion: >-
+      Optionally have the meta-check assert each intendedSuite file exists (a one-line
+      existsSync), keeping labels anchored to real paths. No v0 action; the §4.10 guarantee
+      does not depend on the labels.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+finding_resolution:
+  F-1:
+    verdict: resolved
+    evidence: >-
+      tests/checks/brief-mutants.test.ts:43-62 ports the GH-183 loader exactly (rewrite
+      'from "#contracts"' → file:// contracts/index.ts, 'from "./status.js"' → file://
+      domain/status.ts; temp under tmp/tmpdir; pathToFileURL + "?x=<seq>"; rmSync in finally),
+      with a hygiene test (:115-121) asserting the live source is byte-identical and no
+      gh228-mutant leftovers remain — I confirmed zero leftovers on disk after my run.
+      tests/fixtures/brief/mutants/catalog.ts:118-278 rebuilds the corpus as 11 single-guard
+      source mutations covering AC-F1-1 (fabricated-surface-state, brief-only-fact), AC-F4-1
+      (surface-state-mapping), AC-F2-1 (review-signal-predicate — the exact guard my
+      iteration-1 probe broke), AC-F2-2 (age-future-guard, unknown-as-zero-age), AC-F3-1
+      (placeholder-as-observed, fourth-catalog-entry), AC-F5-1 (unavailability-throws, carrying
+      the rejected status.collector.* identity), AC-F1-2 (unbounded-renderer over a committed
+      over-bound world), AC-F6-1 (date-now-renderer). replaceOnce (:57-60) throws on a missing
+      needle — probed empirically with a bogus source ("mutation needle not found") — and the
+      meta-check additionally asserts mutate(source) !== source, so production refactors that
+      invalidate a mutation fail the suite loudly. The clean control asserts fires===false for
+      all eleven on the unmutated module; the mutant test asserts fires===true with errors
+      naming case, AC, and intended suite (:78-104). All nine string-tautology entries and the
+      payload-transform catalog are gone (diff e4e68a42..7595be05 rewrites catalog.ts wholesale;
+      grep finds no tokenMutant). Six out-of-domain guards (model/network imports, store write,
+      child process, redaction chokepoint, end-to-end redaction) are cross-referenced to live
+      seeded controls whose exact test names are asserted against the current tree (:106-113) —
+      I verified each referenced test exists from iteration 1. AC coverage 10/10 asserted from
+      mutations + controls combined (:65-76). Suite: 5 pass / 0 fail / 54 expect. Judgment: the
+      §4.10 item-3 guarantee now holds — mutated production modules produce the prohibited
+      observable and a silently disabled guard in domain/brief.ts fails a committed suite.
+  N-1:
+    verdict: resolved
+    evidence: >-
+      Plan 8.1-8.5 ticked to [x] (diff e4e68a42..7595be05, plan lines 337-341); Phase 8 Execution
+      Log row now "Done" citing commit e4e68a42 and review iteration-1 verification; Phase 6/7.1/
+      7.2 also ticked with 7.3 (this re-review) the only open task. DoD-8's all-boxes condition
+      can now pass at dod_check.
+  N-2:
+    verdict: resolved
+    evidence: >-
+      tests/golden/redaction.test.ts:233-253: canary planted as the entityId of an approved
+      makeDeliveryRequest — structurally renderable; asserted present pre-redaction in
+      JSON.stringify(payload) AND renderBriefHuman(payload, SYNTHETIC_BRAND); then zero
+      occurrences in stdout/stderr for both modes with "[redacted]" asserted present, proving
+      substitution rather than non-arrival. The writeOutput chokepoint control in
+      brief-readonly.test.ts:250-270 is kept and cross-referenced as a seeded control. Suite:
+      16 pass / 0 fail.
+  N-3:
+    verdict: deferred-as-classified
+    evidence: >-
+      deriveAge still re-implements the digest's module-private parse-and-floor rule; deferred
+      to M1-S10 per iteration-1 note severity (bounded by TC-BRIEF-008's independent oracle).
+      Recorded in the plan's deferred-observations line.
+  N-4:
+    verdict: deferred-as-classified
+    evidence: >-
+      Degraded-tracker + observed-family-with-items corner remains unpinned; conformant under
+      D4's state-level reading; revisit with M1-S5/M1-S10. Recorded in the plan's
+      deferred-observations line.
+  N-5:
+    verdict: resolved
+    evidence: "doc-impact handoff corrected 641 → 564 bytes (chg-GH-228-doc-impact.md:37, verified in diff)."
+remediation_quality:
+  no_production_changes: >-
+    git diff e4e68a42..HEAD touches exactly nine files: the two mutant files, redaction.test.ts,
+    the plan/test-plan/pm-notes/doc-impact change artifacts, and feature-brief.md's one QA row.
+    No packages/** production file changed — correct for a test-quality finding.
+  bookkeeping_honesty: >-
+    The remediated §10 rows re-measure instead of preserving stale numbers (Phase-5 suite 27
+    pass; all-brief 266 pass / 4236 expect — both reproduced exactly by my runs), the deviation
+    note was rewritten to state the original justification does not hold, D-TC021 is marked
+    superseded in pm-notes, and test plan v1.3 re-opens per A-T8 with a revision-log row. The
+    lower counts vs iteration 1 (282→266) reflect removal of the tautology tests — a correct
+    decrease, not gate weakening.
+regression_check:
+  brief_battery: "266 pass / 0 fail / 16 files / 4236 expect — exact match to the refreshed §10 row (structure 2 + behaviour 12 + golden 1 + checks 1 files)."
+  prior_green_surface_unchanged: "shared-truth, anchors, placeholders, negative-controls, output, corpus, performance, command, read-cost, determinism, envelope, goldens, contract, imports, readonly, error-table suites all re-ran green; no assertion weakened anywhere in the remediation diff."
+  gates: "error-table-sync, exit-code-literals, forbidden-literals (incl. feature-brief.md registry row), secret-read-boundary, ambient, workspace-entrypoints green inside the aggregate; doc-distribution re-run green by me (81 docs, no drift) covering the one doc file touched after the recorded battery."
+  tree_hygiene: "branch feat/GH-228/brief-render-only at 7964d561, git status --porcelain empty after every run; zero gh228-mutant leftovers in tmp/tmpdir."
+gate_adjudication:
+  chosen: option-a-first-party
+  rationale: >-
+    The prior session's background aggregate was orphaned, so I re-ran the full gate myself and
+    adjudicated one conflicting reading with evidence. (1) My first foreground run reported
+    2944 pass / 4 skip / 1 fail — but it overlapped the still-executing background battery from
+    the ended session, and both batteries switch git branches in the same checkout (the
+    branch-switch churn is visible in both logs), a guaranteed interference source for the
+    git-based suites. (2) The recovered background `pnpm check` — lint (33 warnings / 5 infos,
+    exit 0), format:check, build, typecheck, test 2945/4/0 (446.67s), depcruise 161 modules /
+    372 deps, ambient, workspace-entrypoints, secret-read (4 allowlisted), exports-parity —
+    completed green at the same HEAD. (3) Two subsequent solo runs with nothing else running:
+    a grep-filtered run with zero "(fail)" lines, then a summary run of 2945 pass / 4 skip /
+    0 fail / 274 files / 30213 expect (351.63s), identical to the recorded §10 aggregate row.
+    Verdict: the single failure was environmental self-interference, not a code defect; three
+    independent non-interfered runs agree. Option-b corroboration: 7595be05 → 7964d561 changes
+    only pm-notes and the feature-brief.md QA row, and I re-ran the doc-sensitive
+    doc-distribution guard green myself.
+verification_evidence:
+  commands_run:
+    - "git diff e4e68a42..HEAD --stat → 9 files, no production code; git diff 7595be05 7964d561 --stat → pm-notes + feature-brief.md only"
+    - "bun test tests/checks/brief-mutants.test.ts → 5 pass / 0 fail / 54 expect; ls tmp/tmpdir | grep -c gh228-mutant → 0"
+    - "bun test tests/golden/redaction.test.ts → 16 pass / 0 fail"
+    - "bun test tests/structure/brief tests/behaviour/brief tests/golden/brief.test.ts tests/checks/brief-mutants.test.ts → 266 pass / 0 fail / 16 files / 4236 expect (matches refreshed §10)"
+    - "TMPDIR=$PWD/tmp/tmpdir pnpm test (solo) → 2945 pass / 4 skip / 0 fail / 274 files / 30213 expect [351.63s]"
+    - "bash scripts/.tests/test-doc-distribution.sh → OK, 81 in-scope docs, no drift"
+    - "git status --porcelain → empty after all runs"
+  independent_probes:
+    - "Needle-liveness: imported briefSourceMutations and called the review-signal-predicate mutate() on a needle-free source → threw 'mutation needle not found: item.reviewState === \"observed\",' — production refactors that invalidate a mutation fail the suite loudly."
+    - "Aggregate interference root-cause: overlapped dual batteries (one orphaned background, one foreground) both performing the git branch-switch churn visible in their logs; solo re-runs clean. Repo state verified intact afterward (correct branch/HEAD, clean tree)."
+  code_reading:
+    - "brief-mutants.test.ts and mutants/catalog.ts read in full: 11 mutations each disable exactly one guard with a unique live needle; fires() encodings hand-checked against the intended suites' own assertions (see N-7 for the one optimistic label); six seeded-control cross-references verified against the files they name."
+plan_task_audit:
+  OPEN_TASKS: "7.3 (request re-review until PASS) — closed by this iteration's PASS verdict; tick and record in the Execution Log"
+  DONE_BUT_UNCHECKED: none
+  CHECKED_BUT_MISSING: none
+  bindings_D1_D12: "Unchanged by remediation except the review-ordered TC-BRIEF-021 mechanism rebind, re-opened properly via test plan v1.3 (A-T8) with a revision-log row; no production file touched."
+reviewed_at: 2026-11-06T19:10:00Z
+next_step: PROCEED
