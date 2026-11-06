@@ -5,9 +5,9 @@ branch: feat/GH-223/audit-ledger
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-06T00:10:00Z", completed: "2026-11-06T00:12:30Z" }
-  specification: { started: "2026-11-06T00:13:00Z", completed: null }
-  test_planning: { started: "2026-11-06T00:27:00Z", completed: null }
-  delivery_planning: { started: "2026-11-06T02:35:00Z", completed: null }
+  specification: { started: "2026-11-06T00:13:00Z", completed: "2026-11-06T03:17:00Z" }
+  test_planning: { started: "2026-11-06T00:27:00Z", completed: "2026-11-06T03:22:00Z" }
+  delivery_planning: { started: "2026-11-06T02:35:00Z", completed: "2026-11-06T03:35:00Z" }
   dor_check: { started: "2026-11-06T02:56:00Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -76,6 +76,9 @@ notes:
     date: "2026-11-06"
   - text: "Retro 5: the DoR gate earned its cost — it caught a ticket-vs-artifact contradiction (retention of schemaVersion) that BOTH the test-plan realism pass and my PM validation missed, because we checked the artifacts against each other but not hard enough against the ticket's exact words ('the audit record retains them'). Process takeaway: ticket-AC literal-wording checks belong in the artifact-authors' return criteria, and the F-vs-DM sweep must cover EVERY payload enumeration (invocation, reservation, error) after any payload change, not just the one being edited."
     type: retro
+    date: "2026-11-06"
+  - text: "DOR REMEDIATION COMPLETE (2026-11-06T03:36Z): spec v1.4 (13-field invocation payload with resultSchemaVersion + envelope-schemaVersion distinctness pinned in F-3/DM-1/DEC-5/glossary; command-filter exact-match pin F-5/OQ-21; two-payload consistency sweep matrix returned — invocation 13 fields at 10 sites, reservation 3 fields at 10 sites), test plan reconciled (TC-001/005/014/016/022 assert 13 fields; new TC-050 command-filter exact-match incl. raw-token broken invocations; frontmatter implementation_plan link fixed; stale v1.2 ref fixed; 50 TCs, 15/15 ACs covered, CONVERGED), plan rev 2 (P4 scope += output/serialize.ts + output barrel + content-inventory test with single-write-site rationale; P1 verification += port-contract-inventory test; 13-field refs in tasks 1.1/1.2/2.2/3.2/4.1; TC-050 mapped to P2; matrix 50/50; plan validate -> valid, readyForDevelopment=true, zero errors). Ready for DoR iteration 2."
+    type: info
     date: "2026-11-06"
   - text: "ARTIFACT CHAIN CONVERGED (2026-11-06T02:30Z): spec v1.3 (commit a0109171, 15 ACs) + test plan 49 TCs covering 15/15 ACs, zero TODO/NEW-GAP/MR markers, TC-049 unblocked. Test-plan-writer verdict: CONVERGED, no remaining blocking gaps; mechanism-realism pass confirmed all TCs achievable through public port semantics. Iteration history: spec v1.0 -> TP(2 gaps) -> v1.1 -> TP(1 gap) -> v1.2 -> TP(1 gap MR-1) -> v1.3 -> TP(CONVERGED). Carrying note for delivery planning: StateStorePort lacks a store-managed artifact method — coder must add chain-key artifact capability additively within the state facade tier (no new driver runtime API)."
     type: info

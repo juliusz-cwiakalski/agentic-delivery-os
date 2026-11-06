@@ -7,10 +7,10 @@ owners: ["engineering"]
 service: delivery-os
 labels: ["m1", "audit", "state-layer", "cli"]
 version_impact: minor
-summary: "Traceable coverage for GH-223 command audit ledger and agent identity (spec v1.3): exactly one audit.invocation record per invocation across every outcome class (reservations are a distinct internal kind and never counted), the reservation-first two-phase append with a durable per-store auditSeq, a three-field reservation payload {auditSeq, runId, chainValue}, both failure modes (orphan reservation vs failed reservation), and a continuous chain over reservation and invocation records, durable store-managed chain-key.<workspace>.json with pinned open-failure identities, UTC epoch-millisecond startedAt with inclusive [from,to] time-window filters and unbounded omitted sides, claimed-identity capture with the explicit claimed marker, owner-pinned scripted-output trim with top-level runId on failure lines, bounded filtered reads with fold-from-ledger orphan findings, redaction-chokepoint hygiene, and classified audit-write degradation that never changes the command outcome."
+summary: "Traceable coverage for GH-223 command audit ledger and agent identity (spec v1.4): exactly one audit.invocation record per invocation across every outcome class (reservations are a distinct internal kind and never counted), the reservation-first two-phase append with a durable per-store auditSeq, a three-field reservation payload {auditSeq, runId, chainValue}, a 13-field invocation payload including resultSchemaVersion, both failure modes (orphan reservation vs failed reservation), and a continuous chain over reservation and invocation records, durable store-managed chain-key.<workspace>.json with pinned open-failure identities, UTC epoch-millisecond startedAt with inclusive [from,to] time-window filters and unbounded omitted sides, claimed-identity capture with the explicit claimed marker, owner-pinned scripted-output trim with top-level runId on failure lines, bounded filtered reads with fold-from-ledger orphan findings, redaction-chokepoint hygiene, and classified audit-write degradation that never changes the command outcome."
 links:
   change_spec: ./chg-GH-223-spec.md
-  implementation_plan: null
+  implementation_plan: ./chg-GH-223-plan.yaml
   testing_strategy: .ai/rules/testing-strategy.md
 ---
 
@@ -18,7 +18,7 @@ links:
 
 ## 1. Scope and Objectives
 
-This plan protects the delivery engine's new history guarantee: every command invocation through the command surface leaves exactly one durable `audit.invocation` record carrying runId, command, redacted arguments, exit code, timing, outcome class, `scope`, `repo`, `startedAt` (integer epoch milliseconds UTC from the injected clock), `auditSeq` (consumed by its durable `audit.reservation`), and claimed identity when present. The reservation-first two-phase append is the mechanism that makes ordinal consumption durable; reservations are a distinct internal kind, never counted as invocation records. The plan also protects the owner-pinned scripted-output amendment (one minified `{"data":...}`/`{"error":...}` line, with `runId` as a top-level key of failure lines), the continuous chain over both audit kinds with a durable `chain-key.<workspace>.json` artifact (including its pinned open-failure identities), the bounded/filtered read surface (inclusive `startedAt` time window, exact scope/repo filters, in-band truncation and reservation-orphan findings), and the redaction chokepoint that must guard record content exactly as it guards output streams.
+This plan protects the delivery engine's new history guarantee: every command invocation through the command surface leaves exactly one durable `audit.invocation` record carrying runId, command, redacted arguments, exit code, timing, outcome class, `scope`, `repo`, `startedAt` (integer epoch milliseconds UTC from the injected clock), `auditSeq` (consumed by its durable `audit.reservation`), and claimed identity when present. The reservation-first two-phase append is the mechanism that makes ordinal consumption durable; reservations are a distinct internal kind, never counted as invocation records. The plan also protects the owner-pinned scripted-output amendment (one minified `{"data":...}`/`{"error":...}` line, with `runId` as a top-level key of failure lines), the continuous chain over both audit kinds with a durable `chain-key.<workspace>.json` artifact (including its pinned open-failure identities), the bounded/filtered read surface (inclusive `startedAt` time window, exact scope/repo/command filters, in-band truncation and reservation-orphan findings), and the redaction chokepoint that must guard record content exactly as it guards output streams.
 
 The data and security risks this plan primarily guards are: missing or duplicate invocation records that make history untrustworthy; an ordinal consumed with no durable evidence because the reservation or invocation half failed; unredacted secrets persisted forever; inferred identities presented as if claimed; a trim that silently drops context with no ledger to hold it; a chaining key that is regenerated per process, is missing/corrupt, or false-flags earlier records; a chain that false-flags legitimate salvage or fails to flag a recomputed-checksum edit to either kind; an unbounded dump that exposes every historical command line; and an audit-write failure that either corrupts or misreports the command's own outcome.
 
@@ -27,8 +27,8 @@ Regressions protected: the M0-S3 envelope contract in interactive mode, error-ta
 ### 1.1 In Scope
 
 - Exactly-one `audit.invocation` semantics for success, void success, classified failure (user and platform), unknown failure, and broken invocation (unknown command/flag, missing flag value, conflicting flags); reservations are a distinct internal kind and are never counted.
-- Reservation-first two-phase append under one shared-fence acquisition: one `audit.reservation` (`delivery.audit.reservation.v1`, payload `{auditSeq, runId, chainValue}`, with no invocation metadata, immediately before one `audit.invocation` (`delivery.audit.invocation.v1`) carrying the same `auditSeq`; ordinal allocation from verified ledger truth (highest reservation ordinal + 1); both failure modes — orphan reservation (gap evidence) and failed reservation (nothing consumed, no gap claimed).
-- Full v1.2 invocation field set: `runId`, `command`, `arguments`, `exitCode`, `timing`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`; envelope-context retention; additive composition inside `delivery.state.v1` under the store-scoped key `audit.invocations`.
+- Reservation-first two-phase append under one shared-fence acquisition: one `audit.reservation` (`delivery.audit.reservation.v1`, payload `{auditSeq, runId, chainValue}`, with no invocation metadata) immediately before one `audit.invocation` (`delivery.audit.invocation.v1`) carrying the same `auditSeq`; ordinal allocation from verified ledger truth (highest reservation ordinal + 1); both failure modes — orphan reservation (gap evidence) and failed reservation (nothing consumed, no gap claimed).
+- Full v1.4 invocation field set (13 fields): `runId`, `command`, `arguments`, `exitCode`, `timing`, `resultSchemaVersion`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`; `resultSchemaVersion` carries the rendered envelope's `schemaVersion` value at invocation time (`delivery.result.v1`) and is DISTINCT from the record's own payload schema id `delivery.audit.invocation.v1`; additive composition inside `delivery.state.v1` under the store-scoped key `audit.invocations`.
 - `startedAt` as integer epoch milliseconds UTC from the injected clock (the same clock that measures `timing`), recorded exactly once per invocation and distinct on re-runs; never an ambient clock read.
 - `auditSeq` as the durable per-store ordinal consumed by its reservation; identical in the reservation and invocation frames; monotonic across interleaved non-audit kinds; in-band reservation-orphan findings after a failed invocation append; no gap when the reservation itself fails.
 - Idempotent re-runs producing a second invocation record under a new runId with its own reservation, a distinct `startedAt`, and a later `auditSeq`; no deduplication or overwrite.
@@ -37,7 +37,7 @@ Regressions protected: the M0-S3 envelope contract in interactive mode, error-ta
 - Golden fixtures and testkit conformance validator extended to both modes, preserving the no-case-without-golden rule and the no-skip path; the scripted failure key set is `error` + top-level `runId`.
 - Keyed hash chaining over the continuous audit-domain sequence covering BOTH `audit.reservation` and `audit.invocation` records: durable `chain-key.<workspace>.json` created once on the first audit append, `0600`, verified on open, reused across later edges/processes; clean verification, interleaved non-audit kinds, alteration detection for both kinds including recomputed unkeyed checksums, position-naming evidence, key exclusion from ledger record payloads/configuration/ambient environment/lane environments, chain anchoring, and continuity across terminal-tail repair and guided salvage.
 - Key-artifact open-failure identities: absent on a non-first open → `state.keys.missing`; corrupt/unparsable → the `state.store.torn` family; wrong permission bits → `state.permission.denied`; no new error-table rows.
-- Bounded, filtered read surface: exact-match `scope` and `repo` filters (repo-null records excluded from repo-constrained results only), inclusive `[from, to]` `startedAt` time window with an omitted side unbounded, command/outcome filters, explicit bound, in-band truncation, in-band reservation-orphan findings folded from verified ledger truth, `input.value.rejected` refusal for missing/invalid bounds or filters, verified reads, no fence acquisition, no writes, torn/unknown classification without silent zeros.
+- Bounded, filtered read surface: exact-match `scope`, `repo`, and command filters (command matches the recorded token exactly, including raw first tokens for broken invocations; repo-null records excluded from repo-constrained results only), inclusive `[from, to]` `startedAt` time window with an omitted side unbounded, outcome-class filter, explicit bound, in-band truncation, in-band reservation-orphan findings folded from verified ledger truth, `input.value.rejected` refusal for missing/invalid bounds or filters, verified reads, no fence acquisition, no writes, torn/unknown classification without silent zeros.
 - Redaction-chokepoint hygiene for record content across all outcome classes, including an edge-registered secret embedded in arguments and in the identity value; unregistered values remain outside the guarantee; reservation payloads carry no arguments/outcome/identity.
 - Audit-write failure semantics: classified, loud diagnostics degradation that never changes the command's outcome or exit code; reservation-orphan evidence when the invocation append fails; nothing consumed and no gap claimed when the reservation append fails; no partial frame.
 - No new error-table rows and no error-table drift; no new CLI audit command; tier and boundary conformance; no new runtime-API location for the key artifact.
@@ -54,11 +54,11 @@ Regressions protected: the M0-S3 envelope contract in interactive mode, error-ta
 - [OUT] Windows ACL execution. Permission assertions (including the key artifact's 0600) remain POSIX-only; no Linux run claims Windows verification.
 - [OUT] Performance/load characteristics of audit reads or chain verification.
 - **Forward contract:** stream outputs (a future `--watch`) stay line-delimited in every mode (F-3/DEC-2). No stream command ships in this story, so only the current single-invocation line discipline is asserted; the multi-event stream rule is inherited by the later command that introduces it.
-- **v1.3 convergence note:** spec v1.2 resolved the five iteration-3 gaps (OQ-15..OQ-19); spec v1.3 resolves the iteration-4 MR-1 by adding `chainValue` to the reservation payload (`{auditSeq, runId, chainValue}`) and pinning link alternation. No open OQ item remains and no blocking gap remains; see §8.3/§8.4.
+- **v1.4 convergence note:** spec v1.2 resolved the five iteration-3 gaps (OQ-15..OQ-19); spec v1.3 resolved MR-1 by adding `chainValue` to the reservation payload (`{auditSeq, runId, chainValue}`); spec v1.4 adds `resultSchemaVersion` as the 13th invocation field and pins exact-match command filtering (OQ-21). No open OQ item remains and no blocking gap remains; see §8.3/§8.4.
 
 ## 2. References
 
-- **Change specification (v1.2)**: [chg-GH-223-spec.md](./chg-GH-223-spec.md) — capabilities F-1..F-6, AC-F1-1..AC-F6-1 (15 ACs), NFR-1..NFR-9, EVT-1/EVT-2, DM-1..DM-6, DEC-1..DEC-8, OQ-4..OQ-19 resolutions, Appendix B test-plan handoff.
+- **Change specification (v1.4)**: [chg-GH-223-spec.md](./chg-GH-223-spec.md) — capabilities F-1..F-6, AC-F1-1..AC-F6-1 (15 ACs), NFR-1..NFR-9, EVT-1/EVT-2, DM-1..DM-6, DEC-1..DEC-8, OQ-4..OQ-21 resolutions, Appendix B test-plan handoff.
 - **Change PM notes**: [chg-GH-223-pm-notes.yaml](./chg-GH-223-pm-notes.yaml) — scope resolution (consume-only identity), dependency verification, doc-sync obligations.
 - **Seeded milestone scenario**: [doc/planning/oss-tooling/milestones/m1/test-scenarios.md](../../../planning/oss-tooling/milestones/m1/test-scenarios.md) — SC-M1-23 (stable id; inherited and extended here).
 - **Current system truth — result contract**: [doc/spec/features/feature-result-contract.md](../../../spec/features/feature-result-contract.md) — envelope field contract, exit projection, redaction chokepoint, golden/conformance tooling, containment.
@@ -77,20 +77,20 @@ Regressions protected: the M0-S3 envelope contract in interactive mode, error-ta
 
 | AC ID | Description | TC ID(s) | Status |
 |-------|-------------|----------|--------|
-| AC-F1-1 | Exactly one `audit.invocation` record per invocation in any outcome class, carrying runId, command (raw tokens for broken invocations), arguments, exit code, timing, outcome class, `scope`, `repo` (when targeted), integer-epoch-ms `startedAt`, the `auditSeq` consumed by its durable reservation, and claimed identity when provided; envelope context retained; reservations are a distinct internal kind and are never counted as invocation records | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-005, TC-GH223-008, TC-GH223-009, TC-GH223-010, TC-GH223-022, TC-GH223-035, TC-GH223-036, TC-GH223-039, TC-GH223-043, TC-GH223-044 | Covered |
+| AC-F1-1 | Exactly one `audit.invocation` record per invocation in any outcome class, carrying runId, command (raw tokens for broken invocations), arguments, exit code, timing, `resultSchemaVersion` (the rendered envelope's `schemaVersion`, distinct from the record payload schema id), outcome class, `scope`, `repo` (when targeted), integer-epoch-ms `startedAt`, the `auditSeq` consumed by its durable reservation, claimed identity when provided, and `chainValue`; reservations are a distinct internal kind and are never counted as invocation records | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-005, TC-GH223-008, TC-GH223-009, TC-GH223-010, TC-GH223-022, TC-GH223-035, TC-GH223-036, TC-GH223-039, TC-GH223-043, TC-GH223-044 | Covered |
 | AC-F1-2 | Identical re-run appends a second invocation record with a new runId; no deduplication or overwrite; the second run has its own reservation, a distinct `startedAt`, and a later `auditSeq` | TC-GH223-006, TC-GH223-022, TC-GH223-036 | Covered |
 | AC-F1-3 | Malformed audit entry classifies as an existing state identity; pre-existing records remain verified-readable and unchanged; no silent byte drop; explicit salvage preserves the damaged region as evidence; retention forever | TC-GH223-007 | Covered |
 | AC-F1-4 | `startedAt` is the invocation's integer epoch-millisecond UTC start taken from the injected clock (never ambient), recorded exactly once per invocation; a re-run records its own distinct `startedAt` | TC-GH223-035, TC-GH223-036, TC-GH223-041 | Covered |
 | AC-F2-1 | Seam-named identity variable present with a non-empty trimmed value → value captured verbatim with the explicit attribution-kind marker `claimed`, recorded as claimed not proven | TC-GH223-011, TC-GH223-013, TC-GH223-022 | Covered |
 | AC-F2-2 | Identity variable absent, empty, or whitespace-only → no identity and nothing inferred from user, host, session, or any other signal | TC-GH223-012, TC-GH223-022 | Covered |
-| AC-F3-1 | Scripted `--json` success → exactly one minified `{"data":...}` line with no schemaVersion, runId, or timing; audit retains them; process exit code carries status | TC-GH223-014, TC-GH223-015, TC-GH223-022 | Covered |
-| AC-F3-2 | Scripted `--json` failure → exactly one minified line carrying the full `error` object plus `runId` as a top-level key; audit retains schemaVersion, runId, timing | TC-GH223-016, TC-GH223-017, TC-GH223-022 | Covered |
+| AC-F3-1 | Scripted `--json` success → exactly one minified `{"data":...}` line with no schemaVersion, runId, or timing; the audit record retains them, with the envelope schemaVersion retained as `resultSchemaVersion`; process exit code carries status | TC-GH223-014, TC-GH223-015, TC-GH223-022 | Covered |
+| AC-F3-2 | Scripted `--json` failure → exactly one minified line carrying the full `error` object plus `runId` as a top-level key; the audit record retains schemaVersion (as `resultSchemaVersion`), runId, and timing | TC-GH223-016, TC-GH223-017, TC-GH223-022 | Covered |
 | AC-F3-3 | Interactive terminal keeps the full M0-S3 envelope unchanged; documented override forces the full envelope in either mode; pretty flag affects indentation only | TC-GH223-018, TC-GH223-019 | Covered |
 | AC-F3-4 | Golden and conformance suites extended to both modes; interactive cases use envelope rules; scripted cases use scripted-projection rules (including top-level runId on failure); every case keeps its golden with no skip path | TC-GH223-020, TC-GH223-021 | Covered |
 | AC-F4-1 | Altered audit-domain record (reservation or invocation, including an orphaned reservation edited with a recomputed unkeyed checksum) flagged as a chain break naming record position, never payload/checksum bytes; undetectable alteration unachievable within trust model | TC-GH223-024, TC-GH223-025, TC-GH223-033, TC-GH223-045, TC-GH223-049 | Covered |
 | AC-F4-2 | Chaining key appears nowhere in lane environment, ledger record payloads, configuration, ambient environment, or any record field; exists only as durable store-managed `chain-key.<workspace>.json` (`0600`) plus runtime-edge-injected data; earlier-process records verify from a later process with zero false chain-break flags; pinned open failures reuse existing identities | TC-GH223-026, TC-GH223-037, TC-GH223-038, TC-GH223-047 | Covered |
 | AC-F4-3 | After terminal-tail repair or guided salvage (byte-contiguous, kind-agnostic removal of trailing invocations AND reservations wholesale), chain verifies continuously over the surviving audit-domain sequence; reported removal is not a break; next record chains from the last surviving one; a last-valid-frame reservation survives as the DEC-8 finding | TC-GH223-027, TC-GH223-048 | Covered |
-| AC-F5-1 | Bounded, filtered read returns verified matching records within the bound (exact `scope`/`repo`, inclusive `[from, to]` `startedAt` window with unbounded omitted side, command/outcome class), reports truncation in-band, reports any reservation with no matching invocation as the in-band skipped-ordinal finding, refuses missing/invalid bounds or filters with `input.value.rejected`, acquires no fence, writes nothing, classifies torn/unknown without silent zeros, no unbounded dump path | TC-GH223-028, TC-GH223-029, TC-GH223-030, TC-GH223-034, TC-GH223-039, TC-GH223-040, TC-GH223-041, TC-GH223-042, TC-GH223-043, TC-GH223-046 | Covered |
+| AC-F5-1 | Bounded, filtered read returns verified matching records within the bound (exact `scope`/`repo`/command, inclusive `[from, to]` `startedAt` window with unbounded omitted side, outcome class), reports truncation in-band, reports any reservation with no matching invocation as the in-band skipped-ordinal finding, refuses missing/invalid bounds or filters with `input.value.rejected`, acquires no fence, writes nothing, classifies torn/unknown without silent zeros, no unbounded dump path | TC-GH223-028, TC-GH223-029, TC-GH223-030, TC-GH223-034, TC-GH223-039, TC-GH223-040, TC-GH223-041, TC-GH223-042, TC-GH223-043, TC-GH223-046, TC-GH223-050 | Covered |
 | AC-F6-1 | Edge-registered secret values, including one in command arguments, never appear in any record field on any outcome class; arguments reach the ledger only through the redaction chokepoint; reservation payloads carry no arguments/outcome/identity; unregistered values are outside the guarantee | TC-GH223-031, TC-GH223-032 | Covered |
 
 Every acceptance criterion has at least one automated case. All 15 ACs (including AC-F1-4) are represented, with v1.2's reservation-orphan, failed-reservation, both-kind chain, rebuild, key-open-failure, and surviving-tail scenarios added. AC-F4-1 is fully covered, including the orphan-reservation alteration case (TC-GH223-049).
@@ -99,9 +99,9 @@ Every acceptance criterion has at least one automated case. All 15 ACs (includin
 
 | Interface ID | Description | TC ID(s) | Status |
 |--------------|-------------|----------|--------|
-| EVT-1 | Audit invocation record: `audit.invocation` / `delivery.audit.invocation.v1` under `audit.invocations`, appended second in the reservation-first two-phase append under the shared audit fence; carries the full v1.3 field set and chain value; never secrets/chaining key/evidence bytes | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-005, TC-GH223-006, TC-GH223-007, TC-GH223-008, TC-GH223-022, TC-GH223-035, TC-GH223-036, TC-GH223-039, TC-GH223-043, TC-GH223-044, TC-GH223-048 | Covered |
+| EVT-1 | Audit invocation record: `audit.invocation` / `delivery.audit.invocation.v1` under `audit.invocations`, appended second in the reservation-first two-phase append under the shared audit fence; carries the full v1.4 13-field set (including `resultSchemaVersion`) and chain value; never secrets/chaining key/evidence bytes | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-005, TC-GH223-006, TC-GH223-007, TC-GH223-008, TC-GH223-022, TC-GH223-035, TC-GH223-036, TC-GH223-039, TC-GH223-043, TC-GH223-044, TC-GH223-048 | Covered |
 | EVT-2 | Audit reservation record: `audit.reservation` / `delivery.audit.reservation.v1` under the same key family, appended first under the shared audit fence; payload `{auditSeq, runId, chainValue}` (no invocation metadata); a chain participant; an orphan is the DEC-8 finding | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-005, TC-GH223-006, TC-GH223-007, TC-GH223-008, TC-GH223-022, TC-GH223-039, TC-GH223-043, TC-GH223-044, TC-GH223-048, TC-GH223-049 | Covered |
-| DM-1 | Audit invocation record kind: `audit.invocation`, schema `delivery.audit.invocation.v1`, key `audit.invocations`, fields `runId`, `command`, `arguments`, `exitCode`, `timing`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`; validated by one boundary declaring both audit kinds | TC-GH223-005, TC-GH223-008, TC-GH223-034, TC-GH223-035, TC-GH223-036 | Covered |
+| DM-1 | Audit invocation record kind: `audit.invocation`, schema `delivery.audit.invocation.v1`, key `audit.invocations`, 13 fields `runId`, `command`, `arguments`, `exitCode`, `timing`, `resultSchemaVersion` (rendered envelope schemaVersion; distinct from the payload schema id), `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`; validated by one boundary declaring both audit kinds | TC-GH223-005, TC-GH223-008, TC-GH223-034, TC-GH223-035, TC-GH223-036 | Covered |
 | DM-2 | Chain value covering the previous audit-domain record (reservation or invocation) and the new record's audited content; verification recomputes over the verified sequence; key never stored in a record | TC-GH223-023, TC-GH223-024, TC-GH223-025, TC-GH223-026, TC-GH223-027, TC-GH223-037, TC-GH223-038, TC-GH223-045, TC-GH223-049 | Covered |
 | DM-3 | Claimed identity field: verbatim seam-named variable value plus the explicit `claimed` marker when the trimmed value is non-empty; absent, empty, and whitespace-only are absent; attribution only | TC-GH223-011, TC-GH223-012, TC-GH223-013, TC-GH223-022 | Covered |
 | DM-4 | Stream-capability mode fact injected at the runtime-aware edge and consumed by the mode contract; part of golden-fixture injected facts | TC-GH223-018, TC-GH223-019, TC-GH223-020 | Covered |
@@ -118,7 +118,7 @@ Every acceptance criterion has at least one automated case. All 15 ACs (includin
 | NFR-4 | Chaining key never enters lane environments, ledger record payloads, configuration, ambient environment, or any record field; durable `chain-key.<workspace>.json` spans processes without false flags; open failures reuse existing identities | TC-GH223-026, TC-GH223-037, TC-GH223-038, TC-GH223-047 | Covered |
 | NFR-5 | Identity captured verbatim when present (non-empty after trimming); 0 inferred identities; 0 empty-valued identity fields when absent, empty, or whitespace-only | TC-GH223-011, TC-GH223-012, TC-GH223-013, TC-GH223-022 | Covered |
 | NFR-6 | Scripted success lines carry exactly `data`; scripted failure lines carry `error` with full fields plus top-level `runId`; exactly one line per invocation; interactive envelopes byte-conform | TC-GH223-014, TC-GH223-015, TC-GH223-016, TC-GH223-017, TC-GH223-018, TC-GH223-019, TC-GH223-020, TC-GH223-021, TC-GH223-022 | Covered |
-| NFR-7 | Every read query honors its declared bound, reports truncation in-band, and refuses missing/invalid bounds or filters; 0 unbounded dump paths | TC-GH223-028, TC-GH223-029, TC-GH223-030, TC-GH223-040, TC-GH223-041, TC-GH223-042 | Covered |
+| NFR-7 | Every read query honors its declared bound, reports truncation in-band, and refuses missing/invalid bounds or filters; 0 unbounded dump paths | TC-GH223-028, TC-GH223-029, TC-GH223-030, TC-GH223-040, TC-GH223-041, TC-GH223-042, TC-GH223-050 | Covered |
 | NFR-8 | Malformed entries classify without silent loss; salvage removes trailing records and reservations wholesale; a last-valid-frame reservation survives as evidence; retention forever; no prune/delete/compaction path | TC-GH223-007, TC-GH223-027, TC-GH223-048 | Covered |
 | NFR-9 | Contracts runtime-neutral; audit consumer composes the public state port only; state tier never imports branding; key artifact uses the store-layout path, not a new runtime-API location; no driver discriminant; error-table sync untouched | TC-GH223-008, TC-GH223-013, TC-GH223-033, TC-GH223-034, TC-GH223-037, TC-GH223-047 | Covered |
 
@@ -128,7 +128,7 @@ Every acceptance criterion has at least one automated case. All 15 ACs (includin
 All cases are automated `bun:test` suites under `tests/**/*.test.ts`; no case is manual. The repository maps `packages/**` changes to `bun test tests/structure tests/behaviour`, the boundary suite, golden suites, and `pnpm typecheck`; the audit ledger touches all of those layers.
 
 - **Pure unit tier** — runtime-neutral modules driven directly with in-memory values and byte strings: invocation/reservation record assembly (including `startedAt` integer-epoch-ms conversion and `auditSeq` pairing), payload validation against the exact `delivery.audit.invocation.v1` and `delivery.audit.reservation.v1` vocabularies, chain-link computation and verification over a mixed reservation/invocation sequence, filter matching (scope/repo/inclusive time window), bound/truncation arithmetic, reservation-orphan detection, and the scripted-projection validator. No filesystem, no CLI.
-- **Integration tier (in-process surface + temp store)** — `runCli` with buffer streams, injected clock/run-id/environment/mode/secrets and an audit write port built over a real temporary state directory with the production node edge wrapped by `createTestEdge`. This is where the two-phase append under one fence acquisition, exactly-one invocation counting, timestamp/ordinal capture, identity capture, trim rendering against the ledger, both-kind chain verification, durable key creation/reuse and open failures, cross-edge verification, salvage continuity, read-surface behaviour including time-window/repo filters and reservation-orphan findings, and both audit-write failure modes are exercised. Cross-process continuity is modeled by reopening the same temp store with a fresh store/edge instance.
+- **Integration tier (in-process surface + temp store)** — `runCli` with buffer streams, injected clock/run-id/environment/mode/secrets and an audit write port built over a real temporary state directory with the production node edge wrapped by `createTestEdge`. This is where the two-phase append under one fence acquisition, exactly-one invocation counting, timestamp/ordinal capture, identity capture, trim rendering against the ledger, both-kind chain verification, durable key creation/reuse and open failures, cross-edge verification, salvage continuity, read-surface behaviour including time-window/repo/command-exact filters and reservation-orphan findings, and both audit-write failure modes are exercised. Cross-process continuity is modeled by reopening the same temp store with a fresh store/edge instance.
 - **Golden tier** — `tests/golden/**` byte-for-byte cases, now carrying a mode fact and an audit store per run. Interactive cases retain the existing M0-S3 goldens as interactive cases; scripted cases add per-outcome-class goldens, with failure lines carrying top-level `runId`. Every discovered case requires its golden; there is no skip or auto-accept path.
 - **Structure / contract / boundary tier** — `tests/structure/**`, `tests/checks/**`, `tests/boundaries/**`: exact audit-kind/schema/key declarations for both kinds, the `chain-key.<workspace>.json` store-layout path, tier imports, absence of a CLI audit command, absence of an unbounded dump export, key-artifact permissions/exclusion/open-failure identities, no ambient clock/environment reads, and error-table non-drift.
 - **Static/diff** — `git diff --check` plus the existing naming/path and forbidden-literal scans.
@@ -190,6 +190,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 | TC-GH223-047 | Key-artifact open failures reuse existing state identities | Negative | Integration + Contract | Automated | Critical | AC-F4-2, NFR-9 |
 | TC-GH223-048 | Surviving-tail reservation after salvage remains the DEC-8 finding | Corner Case | Integration | Automated | Critical | AC-F4-3, AC-F5-1 |
 | TC-GH223-049 | Altered orphan reservation is flagged as a chain break with position | Negative | Integration | Automated | Critical | AC-F4-1 |
+| TC-GH223-050 | Command filter exact-matches raw-token broken invocations | Edge Case | Integration | Automated | High | AC-F5-1 |
 
 ### 5.2 Scenario Details
 
@@ -219,13 +220,13 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 4. Read the store's verified records; group by kind and by runId.
 5. For each run, assert the two-frame sequence: one `audit.reservation` immediately followed by one `audit.invocation`, sharing the same `auditSeq`.
 6. Assert the invocation count is exactly one per run (reservations are not counted); assert the reservation payload key set is exactly `{auditSeq, runId, chainValue}`.
-7. Inspect each invocation: runId, command, arguments, exit code, timing, outcome class, `scope`, `repo`, `startedAt`, `auditSeq`, identity presence, and chain presence.
+7. Inspect each invocation's exact 13-field set: `runId`, `command`, `arguments`, `exitCode`, `timing`, `resultSchemaVersion`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`.
 
 **Expected Outcome**:
 
 - Each of the three invocations produced exactly one `audit.invocation` record and exactly one `audit.reservation` record; no invocation produced zero or two invocation records.
 - Each reservation immediately precedes its invocation and both carry the same `auditSeq` (`1`, `2`, `3` in invocation order); the reservation payload contains `auditSeq`, `runId`, and `chainValue`; it contains no invocation metadata.
-- The invocation records carry runId, the resolved command name, the full argv arguments, exit code `0`, `timing.totalMs` equal to the tick delta, outcome class `success`, the store/workspace `scope`, `startedAt` equal to the invocation's start tick as an integer epoch-millisecond UTC value, and the envelope's schemaVersion (retained as context).
+- The invocation records carry the exact 13-field set: runId, the resolved command name, the full argv arguments, exit code `0`, `timing.totalMs` equal to the tick delta, `resultSchemaVersion` equal to the rendered envelope's `schemaVersion` (`delivery.result.v1`) and explicitly distinct from the record's payload schema id `delivery.audit.invocation.v1`, outcome class `success`, the store/workspace `scope`, `startedAt` equal to the invocation's start tick as an integer epoch-millisecond UTC value, `auditSeq`, `agentIdentity` when present, and `chainValue`.
 - The text-mode invocation is audited exactly like the `--json` invocation; auditing is not tied to the machine channel.
 - No record contains the chaining key. Each audit-domain record's own chain value and the store's framing checksum are present as required; no evidence text leaks payload or checksum bytes beyond the audited arguments.
 
@@ -344,7 +345,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Preconditions**:
 
-- The delivered audit vocabulary exposed as runtime-neutral data: `audit.invocation` / `delivery.audit.invocation.v1` with fields `runId`, `command`, `arguments`, `exitCode`, `timing`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`; `audit.reservation` / `delivery.audit.reservation.v1` with fields `auditSeq`, `runId`, `chainValue` (and no invocation metadata); both under the `audit.invocations` key family.
+- The delivered audit vocabulary exposed as runtime-neutral data: `audit.invocation` / `delivery.audit.invocation.v1` with 13 fields `runId`, `command`, `arguments`, `exitCode`, `timing`, `resultSchemaVersion`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`; `audit.reservation` / `delivery.audit.reservation.v1` with fields `auditSeq`, `runId`, `chainValue` (and no invocation metadata); both under the `audit.invocations` key family.
 - A store identity with a workspace `scope` and a synthetic `repo` target.
 - A synthetic command that declares a repository target; injected clock start tick `5000`.
 - A call-order spy wrapping the public port (records `acquireFence`, `readRecords`, `append`, `releaseFence` order).
@@ -360,7 +361,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 **Expected Outcome**:
 
-- The invocation record carries the exact field set: `runId`, `command`/raw tokens, redacted `arguments`, `exitCode`, `timing`, `outcomeClass`, `scope`, `repo` when targeted, integer-epoch-ms `startedAt`, `auditSeq`, `agentIdentity` when present, and `chainValue`.
+- The invocation record carries the exact 13-field set: `runId`, `command`/raw tokens, redacted `arguments`, `exitCode`, `timing`, `resultSchemaVersion` (the rendered envelope's schemaVersion, distinct from the payload schema id), `outcomeClass`, `scope`, `repo` when targeted, integer-epoch-ms `startedAt`, `auditSeq`, `agentIdentity` when present, and `chainValue`.
 - The reservation record carries `auditSeq`, `runId`, and `chainValue`; it contains no arguments, outcome, identity, or any other invocation metadata. The production assembly emits exactly the three keys; additionally attempt a boundary write with an extra `arguments` field and record whether the delivered boundary refuses it (invocation metadata is not permitted).
 - Both kinds are stored under the `audit.invocations` key family; the reservation immediately precedes the invocation and both carry the same ordinal.
 - Link alternation holds: reservation → preceding audit-domain record (or anchor), invocation → its reservation; the first audit-domain record chains from the store chain anchor.
@@ -679,14 +680,14 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 2. Assert stdout is exactly one line ending in a newline.
 3. Parse the line and assert its key set is exactly `data`.
 4. Assert the line contains none of `schemaVersion`, `runId`, `exitCode`, or `timing`, and no pretty indentation.
-5. Assert the process exit code is `0` and the audit record retains all four trimmed context fields.
+5. Assert the process exit code is `0`; assert the audit record retains the trimmed context fields, with the envelope's `schemaVersion` retained as the record's `resultSchemaVersion` field (not as the payload schema id `delivery.audit.invocation.v1`).
 
 **Expected Outcome**:
 
 - Stdout is one minified `{"data":{...}}` line, byte-identical to the golden.
 - The key set is exactly `data`; the trimmed tokens are absent, and the line has no newline inside it.
 - Status is carried by the process exit code, not the line.
-- The audit record for the same run carries the trimmed fields (schemaVersion, runId, timing, exit code), the v1.2 `startedAt`/`auditSeq` fields, and the invocation facts; the result `data` payload is not required in the record, and the runId correlates the line to the record.
+- The audit record for the same run carries the exact 13-field invocation payload (`runId`, `command`, `arguments`, `exitCode`, `timing`, `resultSchemaVersion`, `outcomeClass`, `scope`, `repo`, `startedAt`, `auditSeq`, `agentIdentity`, `chainValue`): the trimmed context fields are retained as `resultSchemaVersion` (envelope `schemaVersion`, `delivery.result.v1`), `runId`, and `timing`/`exitCode`; `resultSchemaVersion` is distinct from the payload schema id `delivery.audit.invocation.v1`. The result `data` payload is not required in the record, and the runId correlates the line to the record.
 - The no-spawn guard records zero violations.
 
 ---
@@ -749,7 +750,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 - One minified line per invocation with top-level keys `error` and `runId`, byte-identical to its golden.
 - Full error-table fields are preserved in `error`, and `runId` is a top-level correlation key that agents can extract without descending into the error object.
-- The trimmed context fields are absent from the line and retained in the audit record.
+- The trimmed context fields are absent from the line and retained in the audit record, with the envelope schemaVersion retained as `resultSchemaVersion` (distinct from the payload schema id).
 - The exit code remains the machine-readable status projection.
 
 **Notes / Clarifications**:
@@ -942,7 +943,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 1. Run `lanes list --json` through the in-process surface with the lane environment.
 2. Assert stdout is one minified `{"data":...}` line without schemaVersion, runId, or timing, and the exit code is `0`.
-3. Read the audit records; assert exactly one `audit.invocation` and one immediately preceding `audit.reservation` with the same `auditSeq`, plus runId, command, redacted args, exit, timing, integer-epoch-ms `startedAt`, and `agentIdentity` with the `claimed` marker. Assert the reservation payload is exactly `{auditSeq, runId, chainValue}` with no invocation metadata.
+3. Read the audit records; assert exactly one `audit.invocation` and one immediately preceding `audit.reservation` with the same `auditSeq`, plus runId, command, redacted args, exit, timing, `resultSchemaVersion` (the rendered envelope schemaVersion, distinct from the payload schema id), integer-epoch-ms `startedAt`, and `agentIdentity` with the `claimed` marker. Assert the reservation payload is exactly `{auditSeq, runId, chainValue}` with no invocation metadata.
 4. Re-run the identical invocation with a new run id and a later start tick; assert a second invocation/reservation pair with a new runId, a distinct `startedAt`, and the next `auditSeq`.
 5. Run a failing variant and assert the error line has top-level `runId` and full error fields; assert the failing invocation still has its reservation.
 6. Run a variant without the identity variable, and separately with an empty/whitespace-only value; assert the invocation carries no identity and no inference, and the reservation carries none either.
@@ -1959,6 +1960,45 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 
 ---
 
+#### TC-GH223-050 - Command filter exact-matches raw-token broken invocations
+
+**Scenario Type**: Edge Case
+**Impact Level**: Important
+**Priority**: High
+**Related IDs**: F-5, AC-F5-1, NFR-7; OQ-21
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/audit-read-command-filter.test.ts` (new)
+**Tags**: @backend, @audit, @read-surface, @filters
+
+**Preconditions**:
+
+- A temp store with invocation records for successful commands `status` and `status-extra`.
+- Broken-invocation records whose recorded `command` is the raw first token: `--wat` (leading-dash token) and `unknown-cmd` (unknown command).
+- A read-surface fixture declaring a command filter and a bound.
+
+**Steps**:
+
+1. Query `command = "status"`; assert only the `status` record returns, not `status-extra`.
+2. Query `command = "status-extra"`; assert only that record returns.
+3. Query `command = "stat"` (prefix) and `command = "Status"` (case difference); assert each returns no records, proving exact match with no normalization or wildcard.
+4. Query `command = "--wat"`; assert the broken-invocation record whose recorded raw first token is `--wat` returns.
+5. Query `command = "unknown-cmd"`; assert that broken-invocation record returns.
+6. Compose the command filter with a `scope` filter and a bound; assert the filters compose and truncation stays in-band.
+
+**Expected Outcome**:
+
+- The command filter matches the recorded command token exactly; no prefix, case folding, inference, or wildcard behavior.
+- Raw first tokens recorded for broken invocations are filterable by their recorded token, including a leading `-`.
+- No non-matching invocation, reservation, or non-audit record leaks into the result.
+- The filter composes with `scope` and the bound; truncation is reported in-band.
+
+**Notes / Clarifications**:
+
+- OQ-21 is resolved in spec v1.4: command filtering is exact against the recorded token, including raw-token broken invocations.
+
+---
+
 ### 5.3 Seeded Scenario Inheritance (SC-M1-23)
 
 The milestone pack's SC-M1-23 ("every invocation audited; scripted output trimmed") is the seeded scenario for M1-S22 and is inherited, not restated as a new scenario id. Its Given/When/Then maps to TC-GH223-022, which is the end-to-end case (scripted `lanes list --json` through a lane shell carrying the identity convention; exactly one `audit.invocation` plus its preceding `audit.reservation` with the same ordinal; one minified `{"data":...}` line; the failure line keeps `runId` as a top-level key; identity present with the `claimed` marker and absent-never-inferred; re-run yields a second pair with a new runId and distinct integer-epoch-ms timestamp/ordinal; no edge-registered secret in either record). The scenario's assertion families are extended by the rest of this plan:
@@ -1966,14 +2006,14 @@ The milestone pack's SC-M1-23 ("every invocation audited; scripted output trimme
 | SC-M1-23 assertion family | Inheriting / extending TCs |
 |---------------------------|----------------------------|
 | Exactly one `audit.invocation` per invocation (reservations never counted) | TC-GH223-001, TC-GH223-002, TC-GH223-003, TC-GH223-004, TC-GH223-022 |
-| Record carries runId, command, redacted args, exit, timing, integer-epoch-ms `startedAt`, `auditSeq`, identity | TC-GH223-005, TC-GH223-011, TC-GH223-022, TC-GH223-035, TC-GH223-036 |
+| Record carries runId, command, redacted args, exit, timing, `resultSchemaVersion`, integer-epoch-ms `startedAt`, `auditSeq`, identity | TC-GH223-001, TC-GH223-005, TC-GH223-011, TC-GH223-014, TC-GH223-022, TC-GH223-035, TC-GH223-036 |
 | Scripted success is one minified `{"data":...}` line without schemaVersion/runId/timing | TC-GH223-014, TC-GH223-015, TC-GH223-022 |
 | Error line keeps runId as a top-level key | TC-GH223-016, TC-GH223-017, TC-GH223-022 |
 | Identity captured when present with the `claimed` marker | TC-GH223-011, TC-GH223-013, TC-GH223-022 |
 | Absent, empty, and whitespace-only identity are never inferred | TC-GH223-012, TC-GH223-022 |
 | Re-run produces a second pair with a new runId, distinct `startedAt`, and later `auditSeq` | TC-GH223-006, TC-GH223-022, TC-GH223-036 |
 | No edge-registered secret patterns in either record | TC-GH223-031, TC-GH223-032, TC-GH223-022 |
-| Extensions beyond the seeded text: all outcome classes, interactive/override modes, golden/conformance both modes, two-phase reservation/ordinal failure modes, both-kind chain, durable key/open failures, rebuild durability, salvage-tail reservation, bounded reads with time-window/scope/repo/refusal | TC-GH223-007..010, TC-GH223-018..021, TC-GH223-023..034, TC-GH223-037..048 |
+| Extensions beyond the seeded text: all outcome classes, interactive/override modes, golden/conformance both modes, two-phase reservation/ordinal failure modes, both-kind chain, durable key/open failures, rebuild durability, salvage-tail reservation, bounded reads with time-window/scope/repo/command-exact/refusal | TC-GH223-007..010, TC-GH223-018..021, TC-GH223-023..034, TC-GH223-037..050 |
 
 Rules honored here:
 
@@ -2050,6 +2090,7 @@ Rules honored here:
 | TC-GH223-047 | `tests/behaviour/audit-key-open-failures.test.ts`, `tests/fixtures/state/harness.ts` | `bun test tests/behaviour/audit-key-open-failures.test.ts` | New |
 | TC-GH223-048 | `tests/behaviour/audit-salvage-reservation.test.ts` | `bun test tests/behaviour/audit-salvage-reservation.test.ts` | New |
 | TC-GH223-049 | `tests/behaviour/audit-chain-reservation-orphan.test.ts` | `bun test tests/behaviour/audit-chain-reservation-orphan.test.ts` | New |
+| TC-GH223-050 | `tests/behaviour/audit-read-command-filter.test.ts` | `bun test tests/behaviour/audit-read-command-filter.test.ts` | New |
 
 Companion suites touched by new exports, fixtures, or mode metadata but carrying no new case ids:
 
@@ -2082,7 +2123,7 @@ Fixture/corpus updates required (delivery-blocking, no new TC ids):
 ### 7.1 Unit vs Integration Split
 
 - **Pure unit**: the invocation/reservation assembly and payload validation half of TC-GH223-005; the integer-epoch-ms `startedAt` half of TC-GH223-035; the both-kind chain-link computation and verification half of TC-GH223-023; reservation-orphan detection, filter matching (scope/repo/inclusive time window), and bound/truncation arithmetic in TC-GH223-028, TC-GH223-039, TC-GH223-041, TC-GH223-042, TC-GH223-043, TC-GH223-046; the scripted-projection validator in TC-GH223-021.
-- **Integration (in-process `runCli` + temp store)**: TC-GH223-001..004, 006, 007, 009..012, 014..019, 022..028, 030..032, 035..048.
+- **Integration (in-process `runCli` + temp store)**: TC-GH223-001..004, 006, 007, 009..012, 014..019, 022..028, 030..032, 035..050.
 - **Golden**: TC-GH223-014..018, 020 (and the existing cases updated by 016/017).
 - **Structure / contract / check / boundary**: TC-GH223-008, 013, 020, 021, 029, 032, 033, 034, 037, 040, 047.
 
@@ -2094,7 +2135,7 @@ During delivery (fail fast, narrow first):
 2. `bun test tests/behaviour/audit-write-failure.test.ts tests/behaviour/audit-malformed.test.ts tests/behaviour/audit-ordinal-gap.test.ts tests/behaviour/audit-reservation-orphan.test.ts tests/behaviour/audit-reservation-failure.test.ts`
 3. `bun test tests/behaviour/scripted-trim.test.ts tests/behaviour/envelope-mode.test.ts tests/golden/envelope-scripted.test.ts`
 4. `bun test tests/behaviour/audit-chain.test.ts tests/behaviour/audit-chain-mutations.test.ts tests/behaviour/audit-chain-salvage.test.ts tests/behaviour/audit-chain-reservation.test.ts tests/behaviour/audit-salvage-reservation.test.ts tests/behaviour/audit-key-exclusion.test.ts tests/behaviour/audit-key-artifact.test.ts tests/behaviour/audit-key-open-failures.test.ts tests/behaviour/audit-chain-cross-process.test.ts`
-5. `bun test tests/behaviour/audit-read.test.ts tests/behaviour/audit-read-refusal.test.ts tests/behaviour/audit-read-time-window.test.ts tests/behaviour/audit-rebuild-orphan.test.ts tests/behaviour/audit-redaction.test.ts tests/behaviour/audit-scenario-m1-23.test.ts`
+5. `bun test tests/behaviour/audit-read.test.ts tests/behaviour/audit-read-refusal.test.ts tests/behaviour/audit-read-time-window.test.ts tests/behaviour/audit-read-command-filter.test.ts tests/behaviour/audit-rebuild-orphan.test.ts tests/behaviour/audit-redaction.test.ts tests/behaviour/audit-scenario-m1-23.test.ts`
 6. `bun test tests/structure/audit-contract.test.ts tests/structure/audit-imports.test.ts tests/structure/audit-surface.test.ts tests/structure/scripted-projection.test.ts`
 
 In the `quality_gates` phase (phase 9), the required evidence is:
@@ -2159,7 +2200,7 @@ In the `quality_gates` phase (phase 9), the required evidence is:
 | OQ-T1 | OQ-4: `runId` is a top-level key of the minified failure line, beside `error` | TC-GH223-016/017/021/022 assert the top-level key set `error` + `runId` and reject a nested-only runId |
 | OQ-T2 | OQ-5: durable store-managed chaining-key artifact (DM-5), persisted `0600`, read by later processes; per-process key rejected | TC-GH223-026/037/038/047 cover exclusion, creation, cross-process verification, and open failures |
 | OQ-T3 | OQ-6: missing/invalid bound or filter refuses with the existing `input.value.rejected` | TC-GH223-028/040 assert the refusal |
-| OQ-T4 | OQ-7: `audit.invocation` / `delivery.audit.invocation.v1` / `audit.invocations` / field names pinned | TC-GH223-005/008/034 use the exact vocabulary |
+| OQ-T4 / OQ-7 | OQ-7: `audit.invocation` / `delivery.audit.invocation.v1` / `audit.invocations` / 13 field names pinned, including `resultSchemaVersion` (v1.4) distinct from the payload schema id | TC-GH223-001/005/008/014/034 use the exact vocabulary |
 | OQ-T5 | OQ-8: `startedAt` added; new AC-F1-4; time-window filter operates on it | TC-GH223-035/036/041 |
 | OQ-T6 / OQ-15 | OQ-9 and OQ-15: DEC-8 rewritten to the reservation-first two-phase append; durable `auditSeq` from verified ledger truth; both failure modes specified | TC-GH223-039/043/044/046 reworked/added; TC-010 remains the shared-fence failure case |
 | OQ-T7 | OQ-10: `agentIdentity` carries the verbatim value plus the explicit `claimed` marker | TC-GH223-011/013 |
@@ -2172,8 +2213,9 @@ In the `quality_gates` phase (phase 9), the required evidence is:
 | OQ-18 | OQ-18: salvage removes trailing records and reservations wholesale; a last-valid-frame reservation survives as the DEC-8 finding | TC-GH223-027/048 |
 | OQ-19 | OQ-19: key artifact is `chain-key.<workspace>.json` in the store-layout family, through the port's store-managed artifact path | TC-GH223-034/037/047 |
 | OQ-20 / MR-1 | OQ-20 (v1.3): the reservation payload gains `chainValue` as a third field (`{auditSeq, runId, chainValue}`); link alternation pinned (reservation chains from the preceding audit-domain record, invocation from its reservation, first from the anchor) | TC-GH223-043/045/049; TC-005/023 assert link alternation |
+| OQ-21 | OQ-21 (v1.4): command filter matches the recorded command token exactly, including raw first tokens for broken invocations | TC-GH223-028/050 |
 
-**No open OQ item remains.** The former v1.1 gaps are closed by spec v1.2, and OQ-20/MR-1 is closed by spec v1.3: the reservation carries its own `chainValue`, so an altered orphan reservation is detectable. The mechanism-realism review in §8.4 confirms all cases are achievable through the public port and injected CLI dependencies.
+**No open OQ item remains.** The former v1.1 gaps are closed by spec v1.2, OQ-20/MR-1 is closed by spec v1.3, and OQ-21 is closed by spec v1.4: the reservation carries its own `chainValue`, and command filtering is exact against the recorded token. The mechanism-realism review in §8.4 confirms all cases are achievable through the public port and injected CLI dependencies.
 
 ### 8.4 Mechanism-Realism Review (v1.3 convergence)
 
@@ -2182,9 +2224,11 @@ In the `quality_gates` phase (phase 9), the required evidence is:
 | Two appends under one fence acquisition | The public port accepts multiple `append(handle, …)` calls under one `StateFenceHandle`; the audit consumer acquires once and releases after both frames. | TC-GH223-001/005/039/043/044 |
 | Ordinal allocation from verified ledger truth | `readRecords` can be called inside the fence; the consumer computes `max(existing reservation ordinal) + 1` before appending. | TC-GH223-005/006/039/043/044 |
 | Reservation payload: no invocation metadata | The reservation is assembled with exactly `{auditSeq, runId, chainValue}`; no arguments, outcome, identity, or other invocation metadata is passed to it. | TC-GH223-002/003/004/005/022/043 |
+| Invocation payload: 13 fields | The invocation is assembled with exactly the 13 fields including `resultSchemaVersion`; `resultSchemaVersion` is the rendered envelope's schemaVersion, not the payload schema id. | TC-GH223-001/005/014/016/022 |
 | Exactly-one counts invocation records only | The read/assert helpers group by kind; reservations are excluded from the invocation count. | TC-GH223-001/002/003/004/022 |
 | Both-kind continuous chain, link alternation | The chain walks the verified audit-domain sequence in ledger order; each reservation chains from the preceding audit-domain record (of either kind), each invocation chains from its reservation, and the first record chains from the anchor. Orphan reservations remain alteration-detected by their own `chainValue`. | TC-GH223-023/024/025/045/049 |
 | Orphan fold from ledger | The read surface matches reservations to invocations by runId; a missing invocation is an in-band finding; no derived document carries ordinal truth. | TC-GH223-039/043/046 |
+| Command filter exact match | The filter compares the query value with the recorded command token verbatim; raw first tokens for broken invocations are filterable; no prefix/case/wildcard normalization. | TC-GH223-028/050 |
 | Failed reservation consumes nothing | The ordinal is allocated from ledger truth before the append; if the reservation append fails, the next allocation sees the same max and reuses the ordinal. | TC-GH223-044 |
 | Durable key artifact path/open failures | The key is a `chain-key.<workspace>.json` store-layout member created/read through the store-managed path; absent/corrupt/wrong-bits reuse existing identities. | TC-GH223-037/047; TC-034 guards the path |
 | Cross-process verification | Fresh store/edge instances over the same temp root read the same durable key and verify earlier records; no process is spawned. | TC-GH223-038 |
@@ -2197,6 +2241,7 @@ In the `quality_gates` phase (phase 9), the required evidence is:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-06 | @test-plan-writer | Initial plan: 34 story-local cases (`TC-GH223-*`) covering the then-current AC set (AC-F1-1..AC-F6-1), EVT-1, DM-1..4, NFR-1..9, and the inherited SC-M1-23 seeded scenario; both output modes, chain tamper-evidence/salvage continuity, bounded reads, and audit-write degradation. Records two spec gaps for PM: OQ-T5 (time-window filter without a timestamp) and OQ-T6 (sequence-gap detection). |
+| 1.4 | 2026-11-06 | @test-plan-writer | Reconcile to spec v1.4: 13-field invocation payload with `resultSchemaVersion` (rendered envelope schemaVersion, distinct from `delivery.audit.invocation.v1`) asserted by TC-001/005/014/016/022; exact-match command filter for raw-token broken invocations added as TC-GH223-050; `implementation_plan` link points at `./chg-GH-223-plan.yaml`; spec reference updated to v1.4; summary payload count 12→13. 50 cases, 15 ACs. |
 | 1.3 | 2026-11-06 | @test-plan-writer | Reconcile to spec v1.3 (commit `a0109171`): reservation payload is `{auditSeq, runId, chainValue}`; MR-1/OQ-20 resolved; TC-GH223-049 unblocked and fully specified for altered orphan reservations; TC-043 rephrased to no-invocation-metadata with `chainValue` permitted/required; TC-005/023 assert link alternation (reservation → preceding audit-domain record or anchor, invocation → its reservation); AC-F4-1 and NFR-3 return to Covered; all prior gap markers remain cleared. 49 cases, 15 ACs. |
 | 1.2 | 2026-11-06 | @test-plan-writer | (Superseded by 1.3.) Reconcile to spec v1.2 (commit `47408a3e`): add TC-GH223-043..049 (49 cases total, 15 ACs; TC-049 blocked by MR-1 at that revision) for the reservation-orphan scenario, failed-reservation scenario, altered-reservation chain break, rebuild-preserves-gap, key-artifact open failures, and surviving-tail reservation. Update TC-001..008/022 for the reservation-first two-phase append (two frames, identical `auditSeq`, reservation payload `{auditSeq, runId}` only, exactly-one invocation counting); update TC-023..027/045 for the continuous chain over both kinds; rework TC-039 to the two failure modes; add the three key open-failure identities to TC-037/047; pin integer-epoch-ms `startedAt` and inclusive/unbounded time windows in TC-035/041; pin wholesale salvage/kind-agnostic removal in TC-027/048; reference `chain-key.<workspace>.json` in TC-034/037/047. Remove all v1.1 gap markers (resolved by OQ-15..19), add the mechanism-realism review (§8.4), and record the new blocking gap MR-1 (reservation chain-value storage for orphan reservations) in §8.3; full convergence is not claimed. |
 | 1.1 | 2026-11-06 | @test-plan-writer | Reconcile to spec v1.1 (commit `94036965`): add AC-F1-4 and TC-GH223-035..042 (42 cases total, 15 ACs); add `startedAt`/`auditSeq` to the record field set; rework DEC-8 to the shared-fence, skipped-ordinal model (TC-010/039); add durable store-managed key artifact, `0600` permissions, and cross-process verification (TC-037/038); update `runId` to a top-level failure-line key (TC-016/017/021/022); make the time-window filter over `startedAt` real and add `input.value.rejected` refusal (TC-028/040/041); pin the exact vocabulary and exact scope/repo filters (TC-005/008/034/042); update identity to the `claimed` marker and empty/whitespace-absent rules (TC-011/012/013); mark OQ-T1..T11 resolved; record the v1.1 gap set (ordinal allocation durability plus four non-blocking pins). |
@@ -2207,4 +2252,4 @@ Populated during execution. Each row records the TC id, run date, result, and th
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
-| — | — | — | Not yet executed (plan reconciled to spec v1.3; 49 cases proposed, all unblocked). |
+| — | — | — | Not yet executed (plan reconciled to spec v1.4; 50 cases proposed, all unblocked). |
