@@ -8,7 +8,7 @@ phases:
   specification: { started: "2026-11-06T00:13:00Z", completed: "2026-11-06T03:17:00Z" }
   test_planning: { started: "2026-11-06T00:27:00Z", completed: "2026-11-06T03:22:00Z" }
   delivery_planning: { started: "2026-11-06T02:35:00Z", completed: "2026-11-06T03:35:00Z" }
-  dor_check: { started: "2026-11-06T02:56:00Z", completed: null }
+  dor_check: { started: "2026-11-06T02:56:00Z", completed: "2026-11-06T03:46:00Z" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -78,6 +78,9 @@ notes:
     type: retro
     date: "2026-11-06"
   - text: "DOR REMEDIATION COMPLETE (2026-11-06T03:36Z): spec v1.4 (13-field invocation payload with resultSchemaVersion + envelope-schemaVersion distinctness pinned in F-3/DM-1/DEC-5/glossary; command-filter exact-match pin F-5/OQ-21; two-payload consistency sweep matrix returned — invocation 13 fields at 10 sites, reservation 3 fields at 10 sites), test plan reconciled (TC-001/005/014/016/022 assert 13 fields; new TC-050 command-filter exact-match incl. raw-token broken invocations; frontmatter implementation_plan link fixed; stale v1.2 ref fixed; 50 TCs, 15/15 ACs covered, CONVERGED), plan rev 2 (P4 scope += output/serialize.ts + output barrel + content-inventory test with single-write-site rationale; P1 verification += port-contract-inventory test; 13-field refs in tasks 1.1/1.2/2.2/3.2/4.1; TC-050 mapped to P2; matrix 50/50; plan validate -> valid, readyForDevelopment=true, zero errors). Ready for DoR iteration 2."
+    type: info
+    date: "2026-11-06"
+  - text: "DOR GATE 2 = READY (2026-11-06T03:45Z, verdict artifact readiness-review/readiness-iter-2.md): 10/10 facets PASS. Both iteration-1 blocking findings verified genuinely closed (resultSchemaVersion present at every enumeration site, zero stale 12-field mentions; P4 scope structurally declares serialize.ts + barrel + content-inventory). New-contradiction sweep clean (13-field counts, TC-050 wired end-to-end, matrix 50/50, 15/15 ACs). Regression check clean. Remaining nits all non-blocking: F-5 write-nothing wording (persistent, reconciled by TR-12/TC-028/TC-046 — optional doc-sync touch-up in phase 7), F-1 raw-argv-tokens vs OQ-21 raw-first-token wording, section 5.3 extensions row omits TC-050, AC-F5-1 parenthetical. dor_check completed; delivery may start."
     type: info
     date: "2026-11-06"
   - text: "ARTIFACT CHAIN CONVERGED (2026-11-06T02:30Z): spec v1.3 (commit a0109171, 15 ACs) + test plan 49 TCs covering 15/15 ACs, zero TODO/NEW-GAP/MR markers, TC-049 unblocked. Test-plan-writer verdict: CONVERGED, no remaining blocking gaps; mechanism-realism pass confirmed all TCs achievable through public port semantics. Iteration history: spec v1.0 -> TP(2 gaps) -> v1.1 -> TP(1 gap) -> v1.2 -> TP(1 gap MR-1) -> v1.3 -> TP(CONVERGED). Carrying note for delivery planning: StateStorePort lacks a store-managed artifact method — coder must add chain-key artifact capability additively within the state facade tier (no new driver runtime API)."
