@@ -52,11 +52,29 @@ export const ALL_AVAILABLE: StatusTrackerAvailability = {
   hygiene: "available",
 };
 
+/** All four families plus the three named hygiene assertion signals declared available. */
+export const ASSERTIONS_AVAILABLE: StatusTrackerAvailability = {
+  ...ALL_AVAILABLE,
+  epicMembership: "available",
+  storyPoints: "available",
+  inSprint: "available",
+};
+
+/** Epic and story-point signals declared; the in-sprint signal is undeclared. */
+export const MIXED_ASSERTIONS: StatusTrackerAvailability = {
+  ...ALL_AVAILABLE,
+  epicMembership: "available",
+  storyPoints: "available",
+};
+
 export const GITHUB_SLICE_AVAILABILITY: StatusTrackerAvailability = {
   ownerHandBacks: "available",
   blockedDependencies: "unavailable",
   stalls: "available",
   hygiene: "available",
+  epicMembership: "available",
+  storyPoints: "available",
+  inSprint: "available",
 };
 
 export const REVIEWS_AVAILABLE = {
@@ -106,6 +124,7 @@ export type WorkItemInput = {
   readonly assignee?: string;
   readonly relations?: readonly WorkItemRelation[];
   readonly updatedAt?: string;
+  readonly milestone?: string;
 };
 
 export const makeWorkItem = (input: WorkItemInput): WorkItem => ({
@@ -117,6 +136,7 @@ export const makeWorkItem = (input: WorkItemInput): WorkItem => ({
   },
   labels: input.labels ?? [],
   ...(input.assignee === undefined ? {} : { assignee: input.assignee }),
+  ...(input.milestone === undefined ? {} : { milestone: input.milestone }),
   relations: input.relations ?? [],
   ...(input.updatedAt === undefined ? {} : { updatedAt: input.updatedAt }),
 });

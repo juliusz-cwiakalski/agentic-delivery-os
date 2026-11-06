@@ -1552,6 +1552,9 @@ export const createStatusCommandRuntime = (
         blockedDependencies: "unavailable",
         stalls: "available",
         hygiene: "available",
+        epicMembership: "available",
+        storyPoints: "available",
+        inSprint: "available",
       },
     };
   };

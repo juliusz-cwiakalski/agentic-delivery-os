@@ -6,6 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { createEnvironmentCredentialPort } from "../../../packages/adapters/src/credentials/index";
 import { createGitHubClient } from "../../../packages/adapters/src/github/client";
+import { normalizeGithubIssue } from "../../../packages/adapters/src/github/normalize";
 import type { ExternalSystemInstance } from "../../../packages/core/src/contracts/index";
 import { fixtureBrand } from "../../fixtures/credentials/cases";
 import {
@@ -329,5 +330,56 @@ describe("TC-DOCTOR-031 GH-PAYLOAD-HTTP-STATUS trap coverage", () => {
     expect(GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations).not.toContain(
       "doctor-read" as never,
     );
+  });
+});
+
+describe("TC-ATT-004 mapped milestone provenance", () => {
+  const context = { systemName: "github" } as const;
+  const baseIssue = {
+    number: 700,
+    title: "Issue",
+    state: "open",
+    labels: [{ name: "epic:payments" }, { name: "points:5" }],
+    updated_at: "2026-10-30T00:00:00Z",
+  };
+
+  test("a present milestone title maps additively onto the work-item view", () => {
+    const result = requireValue(
+      normalizeGithubIssue({ ...baseIssue, milestone: { title: "Sprint 12" } }, context),
+      "milestone present",
+    );
+    expect(result.milestone).toBe("Sprint 12");
+    expect(result.labels).toEqual(["epic:payments", "points:5"]);
+    expect(result.updatedAt).toBe("2026-10-30T00:00:00Z");
+  });
+
+  test("an absent or null milestone leaves the field absent, never fabricated", () => {
+    const absent = requireValue(normalizeGithubIssue(baseIssue, context), "milestone absent");
+    expect("milestone" in absent).toBe(false);
+    const nullMilestone = requireValue(
+      normalizeGithubIssue({ ...baseIssue, milestone: null }, context),
+      "milestone null",
+    );
+    expect("milestone" in nullMilestone).toBe(false);
+    const malformed = requireValue(
+      normalizeGithubIssue({ ...baseIssue, milestone: "Sprint 12" }, context),
+      "milestone malformed",
+    );
+    expect("milestone" in malformed).toBe(false);
+  });
+
+  test("the page shape is unchanged by the additive mapping", async () => {
+    const body = [
+      { ...baseIssue, milestone: { title: "Sprint 12" } },
+      { ...baseIssue, number: 701 },
+    ];
+    const transport = createFixtureTransport([{ url: issuesUrl(100), body }]);
+    const client = createGitHubClient({ instance, credentials, repository, transport });
+    const result = requireValue(await client.listWorkItems(100), "milestone page");
+    expect(result.pageItemCount).toBe(2);
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0]?.milestone).toBe("Sprint 12");
+    expect("milestone" in (result.items[1] ?? {})).toBe(false);
+    expect(transport.requests).toHaveLength(1);
   });
 });
