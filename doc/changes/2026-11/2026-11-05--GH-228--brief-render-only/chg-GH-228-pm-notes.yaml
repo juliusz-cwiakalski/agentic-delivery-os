@@ -10,8 +10,8 @@ phases:
   delivery: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T12:00:00Z" }
   system_spec_update: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
   review_fix: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
+  quality_gates: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
+  dod_check: { started: "2026-11-06T12:00:00Z", completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions: # { text, date }
   - text: "DEC-5 confirmed (spec): spend summary (M1-S19) NOT surfaced in brief v0 — placeholder catalog closed at exactly three entries (typed-questions, gate-sla-states, lane-queue-engine); clarify-scope note expecting 4 placeholders is superseded by the spec's anchor-scope binding."
@@ -95,6 +95,15 @@ notes: # { text, type, date } — type: info|decision|blocker|risk|question|reso
     type: "resolved"
     date: "2026-11-06"
   - text: "Review iteration 2: PASS (code-review/review-iter-2.yaml), 0 blocking findings, 2 info notes. Remediation verified adversarially: file:// source-mutation loader ports the GH-183 pattern verbatim (temp copies deleted in finally, byte-identity hygiene check confirms no leftovers); 11 one-guard mutations of domain/brief.ts are live (needle drift throws); clean module resists all prohibited observables; each mutant fires naming case/AC/intended suite; fires encodes the named suite's own assertion; 6 cross-referenced seeded controls asserted present. N-1/N-2/N-5 resolved; N-3/N-4 deferred as classified; TC-BRIEF-019 precondition wording is a non-blocking note (binding oracle satisfied more strongly than planned). Aggregate gate evidence: reviewer ran first-party solo battery — 2945 pass / 4 skip / 0 fail at HEAD 7964d561 (266/0 brief battery reproduces §10); a transient 2944/4/1 was adjudicated as self-interference between concurrent git-using runs in one checkout."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Quality gates iteration 1: aggregate pnpm check FAILED — 2944 pass / 4 skip / 1 fail: tests/checks/forbidden-literals.test.ts 'docs-scope lifetime > registered membership survives merge and successor commits' hit the hard 5000ms timeout inside the 274-file parallel suite (371s wall). Flake evidence: passes in isolation (20/20, 6.54s); passed at both earlier HEADs today (coder battery, reviewer solo run); no assertion failure — pure timeout in a git-spawning fixture test; the real repo state was untouched by the test. Targeted gates green: doc-distribution (81 docs, no drift), error-table-sync (52/52), forbidden-literals (102 docs registered). Pre-flight HEAD 9d1db1b1 unchanged post-run. Action: clean sequential re-run before any fix delegation; escalate to @fixer only if it reproduces."
+    type: "risk"
+    date: "2026-11-06"
+  - text: "Quality gates iteration 2: flake REFUTED — forbidden-literals timeout did not recur in the clean sequential re-run; it is classified load-induced (hard 5s budget for a git-spawning fixture test under the 274-file parallel suite). New DETERMINISTIC failure found instead: TC-LINT-007 (tests/behaviour/pm-notes-corpus.test.ts) lint.notes.malformed — the orchestrator's uncommitted quality_gates phase-stamp edit had left duplicate type/date keys in a pm-notes note block; reproduced 1:1 in isolation. Fixed by removing the orphaned keys; targeted re-verify then final aggregate re-run. Root cause is the same PM edit-tool append mistake documented in retro notes — the repo's own pm-notes corpus lint is the guard that caught it."
+    type: "risk"
+    date: "2026-11-06"
+  - text: "Quality gates PASSED (lifecycle phase 9 complete): after the pm-notes key fix, targeted pm-notes corpus 17/17 and full aggregate TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 — 2945 pass / 4 skip / 0 fail across 2949 tests / 274 files (385s), lint 0 errors (33 pre-existing warnings), format clean 942 files, typecheck 6 packages, boundaries clean (161 modules/372 deps), ambient/entrypoints/secret-read/exports-parity green. HEAD 9d1db1b1 unchanged; worktree clean except this pm-notes file. Flake from iteration 1 remains classified load-induced (did not recur in 2 subsequent clean runs; recorded as a repo-level observation, not a GH-228 defect)."
     type: "info"
     date: "2026-11-06"
   - text: "Retro: the reviewer session returned its final message while an orphaned background battery was still running, so the verdict artifact was never written and required a follow-up nudge; the same concurrent runs switched branches in one checkout and produced a transient false test failure. Lessons: delegates must not wait on background jobs past session end (finalize with completed evidence or run gates in the foreground); and gates that use git or a shared checkout must run strictly sequentially in this environment."
