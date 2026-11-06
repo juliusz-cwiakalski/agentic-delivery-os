@@ -6,6 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { createHarnessOneShotTransport } from "../../packages/adapters/src/session/commit-one-shot";
+import { withCommitHarness } from "../fixtures/commit/harness";
 import {
   COMMIT_REF,
   commitDataOf,
@@ -14,7 +15,6 @@ import {
   telemetryPayloads,
   validMessage,
 } from "./commit-support";
-import { withCommitHarness } from "../fixtures/commit/harness";
 
 const SEED = { "README.md": "# fixture\n", "src/existing.ts": "export const v = 1;\n" } as const;
 
@@ -173,7 +173,9 @@ describe("TC-TRANSPORT-004 failover is classified in the emitted event", () => {
         expect(commitDataOf(run).transport).toBe("harness-one-shot");
         const event = telemetryPayloads(harness)[0];
         expect(event?.transport).toBe("harness-one-shot");
-        expect(event?.failover).toEqual([{ transport: "core-inference", reason: "provider.outage" }]);
+        expect(event?.failover).toEqual([
+          { transport: "core-inference", reason: "provider.outage" },
+        ]);
       },
       {
         seedFiles: SEED,

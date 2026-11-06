@@ -110,11 +110,19 @@ const recordFrom = (
         ) {
           return [];
         }
-        return [{ transport: entry.transport as CommitTelemetryRecord["transport"], reason: entry.reason }];
+        return [
+          {
+            transport: entry.transport as CommitTelemetryRecord["transport"],
+            reason: entry.reason,
+          },
+        ];
       })
     : undefined;
   if (rawFailover !== undefined && !Array.isArray(rawFailover)) return torn(location);
-  if (Array.isArray(rawFailover) && (failover === undefined || failover.length !== rawFailover.length)) {
+  if (
+    Array.isArray(rawFailover) &&
+    (failover === undefined || failover.length !== rawFailover.length)
+  ) {
     return torn(location);
   }
   return ok({

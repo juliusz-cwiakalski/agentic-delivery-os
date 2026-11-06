@@ -14,7 +14,9 @@ export const renderCommitHuman = (data: CommitEnvelopeData): string => {
   const lines = [
     ...(data.dryRun === true ? ["dry run (nothing changed)"] : []),
     `subject: ${data.subject}`,
-    ...(data.body === undefined ? [] : ["body:", ...data.body.split("\n").map((line) => `  ${line}`)]),
+    ...(data.body === undefined
+      ? []
+      : ["body:", ...data.body.split("\n").map((line) => `  ${line}`)]),
     ...linesFor("staged", data.stagedFiles),
     ...linesFor("excluded (forbidden)", data.excluded.forbiddenPaths),
     ...linesFor("excluded (oversized binaries)", data.excluded.oversizedBinaries),

@@ -12,10 +12,10 @@ import {
   COMMIT_MAX_BODY_CHARS,
   COMMIT_MAX_SUBJECT_CHARS,
   COMMIT_TYPES,
+  type CommitlintOutcome,
   type CommitMessageDraft,
   type CommitSkeleton,
   type CommitType,
-  type CommitlintOutcome,
 } from "#contracts";
 
 const TRACKER_REF = /\b[A-Z][A-Z0-9]*-\d+\b/g;
@@ -25,7 +25,10 @@ const collapse = (value: string): string => value.replace(/\s+/g, " ").trim();
 
 /** Remove fabricated tracker refs, keeping only the resolved ref. */
 export const stripInventedRefs = (text: string, ref: string): string =>
-  text.replace(TRACKER_REF, (candidate) => (candidate === ref ? candidate : "")).replace(/\s{2,}/g, " ").trim();
+  text
+    .replace(TRACKER_REF, (candidate) => (candidate === ref ? candidate : ""))
+    .replace(/\s{2,}/g, " ")
+    .trim();
 
 /** Sanitize a model draft in place-free fashion: never silently changes type. */
 export const sanitizeCommitMessage = (
@@ -102,7 +105,9 @@ export const validateCommitMessage = (
       errors.push(`type must be the computed "${skeleton.type}", not "${header.type}"`);
     }
     if (header.scope !== skeleton.scope) {
-      errors.push(`scope must be the resolved ref "${skeleton.scope}", not "${header.scope ?? ""}"`);
+      errors.push(
+        `scope must be the resolved ref "${skeleton.scope}", not "${header.scope ?? ""}"`,
+      );
     }
     if (header.breaking !== draft.breaking) {
       errors.push("breaking marker must match the message's breaking flag");
@@ -118,7 +123,9 @@ export const validateCommitMessage = (
   const refs = `${subject}\n${draft.body ?? ""}`.match(TRACKER_REF) ?? [];
   const invented = refs.filter((candidate) => candidate !== skeleton.ref);
   if (invented.length > 0) {
-    errors.push(`invented tracker references are not allowed: ${[...new Set(invented)].join(", ")}`);
+    errors.push(
+      `invented tracker references are not allowed: ${[...new Set(invented)].join(", ")}`,
+    );
   }
   if (input.commitlint?.status === "invalid") {
     errors.push(...input.commitlint.errors);

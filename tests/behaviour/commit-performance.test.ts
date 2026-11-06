@@ -3,8 +3,8 @@
  * No network, no sleep; p95 over 20 samples with one warm-up.
  */
 import { describe, expect, test } from "bun:test";
-import { seedDirtyTree, validMessage } from "./commit-support";
 import { withCommitHarness } from "../fixtures/commit/harness";
+import { seedDirtyTree, validMessage } from "./commit-support";
 
 const SEED = { "README.md": "# fixture\n", "src/existing.ts": "export const v = 1;\n" } as const;
 

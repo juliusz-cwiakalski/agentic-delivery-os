@@ -2022,4 +2022,17 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
-| — | — | — | Populated during delivery and quality gates. |
+| TC-TABLE-005..007 | 2026-11-06 | PASS | `bun test tests/structure tests/checks`; error-table-sync 58 rows / 58 documented / 6 commit codes. |
+| TC-TIER-001..003 | 2026-11-06 | PASS | `bun test tests/structure tests/boundaries`; contracts data-only, domain imports contracts/intra-domain, inference runtime edge exact path with negative fixture. |
+| TC-COMMIT-001..006, TC-MSG-004 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-command.test.ts` (10 tests). |
+| TC-COMMIT-004, TC-ATOMIC-011 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-session-guard.test.ts` (2 tests). |
+| TC-MSG-001..010 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-message.test.ts` (9 tests). |
+| TC-TRANSPORT-001..006 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-transport.test.ts` (9 tests). |
+| TC-SAFETY-001..010 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-safety.test.ts` (11 tests). |
+| TC-ATOMIC-001..012 | 2026-11-06 | PASS | `bun test tests/behaviour/phase-atomic.test.ts` (11 tests); SC-M1-12 inherited verbatim. |
+| TC-CONVERGE-001..008 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-convergence.test.ts` (10 tests); all four durable states and all three record-only bases. |
+| TC-TELEM-001..004 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-telemetry.test.ts` (6 tests); metadata-only, non-gating, zero events on non-landed outcomes. |
+| TC-REGRESS-004..008 | 2026-11-06 | PASS | Existing phase suites unchanged (52 tests); config defaults regenerated; latency bounds under their thresholds. |
+| TC-ENV-001..003 | 2026-11-06 | PASS | `bun test tests/golden/commit-envelope.test.ts` (9 tests); normalized committed goldens plus six failure projections. |
+| Aggregate | 2026-11-06 | PASS | `pnpm check` green with `TMPDIR=$PWD/tmp/tmpdir`; `bash scripts/.tests/test-doc-distribution.sh` green; `git diff --check` clean. |
+| Plan diff (observational) | 2026-11-06 | FINDINGS | `plan diff GH-227` against `main-tools`: 51 within / 8 outside-declared / 5 undeclared-missing. Outside: pre-existing change artifacts plus barrel/index exports required by the new modules and the error-table-sync false-positive fix; undeclared-missing are plan-declared-but-unmodified paths (derived schema, untracked changeset at diff time). No phase skipped and no scope silently dropped. |

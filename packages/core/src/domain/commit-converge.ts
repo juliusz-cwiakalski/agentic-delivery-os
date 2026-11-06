@@ -13,7 +13,9 @@ export const classifyCommitDelta = (evidence: CommitDurableEvidence): CommitDelt
   if (!evidence.recordPresent && !evidence.commitPresent) return { state: "neither" };
   if (evidence.recordPresent && !evidence.commitPresent) {
     const transitionId =
-      evidence.recordTransitionId === undefined ? {} : { transitionId: evidence.recordTransitionId };
+      evidence.recordTransitionId === undefined
+        ? {}
+        : { transitionId: evidence.recordTransitionId };
     if (evidence.recordIntent === "atomic") {
       return { state: "record-atomic-without-commit", ...transitionId };
     }

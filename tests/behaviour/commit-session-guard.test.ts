@@ -3,17 +3,18 @@
  * refuses every commit-capable invocation before any port is constructed.
  */
 import { describe, expect, test } from "bun:test";
+import { withCommitHarness } from "../fixtures/commit/harness";
 import {
   COMMIT_REF,
   commitCount,
   errorCodeOf,
+  errorOf,
   head,
   ledgerLineCount,
   seedDirtyTree,
   status,
   validMessage,
 } from "./commit-support";
-import { withCommitHarness } from "../fixtures/commit/harness";
 
 const SEED = { "README.md": "# fixture\n", "src/existing.ts": "export const v = 1;\n" } as const;
 const SESSION = { insideDeliverySession: true, sessionId: "ses_fixture" } as const;
@@ -34,9 +35,11 @@ describe("TC-COMMIT-004 session-context refusal on the commit surface", () => {
           const run = await harness.runCommit(args);
           expect(run.exitCode).toBe(1);
           expect(errorCodeOf(run)).toBe("commit.session.context-refused");
-          expect((run.envelope?.error as { retryable?: boolean }).retryable).toBe(false);
-          expect((run.envelope?.error as { consequence?: string }).consequence).toBe("not_landed");
-          expect((run.envelope?.error as { category?: string }).category).toBe("user");
+          expect(errorOf(run)).toMatchObject({
+            category: "user",
+            retryable: false,
+            consequence: "not_landed",
+          });
         }
         expect(status(harness)).toBe(beforeStatus);
         expect(head(harness)).toBe(beforeHead);

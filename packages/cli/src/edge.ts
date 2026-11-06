@@ -10,6 +10,8 @@
 import { readFileSync } from "node:fs";
 import {
   acquireFileConfig,
+  createCommitlintProbe,
+  createSecretScanner,
   type FileSystemFacts,
   neutralEnvironmentFacts,
   nodeFileSystemFacts,
@@ -48,22 +50,18 @@ import {
   readRepositoryFacts,
 } from "@delivery-os/adapters/repo";
 import {
+  createDeliverySessionFacts,
   createSessionAdmin,
   createSessionStore,
   type OpencodeSessionIo,
-} from "@delivery-os/adapters/session";
-import {
-  createCommitlintProbe,
-  createSecretScanner,
-} from "@delivery-os/adapters/file";
-import {
-  createDeliverySessionFacts,
 } from "@delivery-os/adapters/session";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
   buildCloseoutPlan,
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
+  type CommitActRequest,
+  type CommitTransportPorts,
   catalogPaths,
   classifyPruneCandidate,
   computeDbCutoffMs,
@@ -73,6 +71,7 @@ import {
   resolveCloseoutBaseRef,
   resolveConfig,
   runCloseout,
+  runCommitAct,
   selectPruneCandidates,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
@@ -97,15 +96,15 @@ import {
   type CloseoutReverseDependentObservation,
   type CloseoutStateRuntime,
   type CloseoutWriteOutcome,
-  type ConfigFailure,
-  type CredentialPort,
   type CommitGitPort,
+  type CommitlintPort,
   type CommitPlanPhaseContext,
   type CommitSafetyPort,
   type CommitSessionFacts,
   type CommitTelemetryRecord,
   type CommitTransportAvailability,
-  type CommitlintPort,
+  type ConfigFailure,
+  type CredentialPort,
   type DeliveryRequest,
   type ExternalSystemInstance,
   OWNER_GATE_SLA_POLICY,
@@ -139,11 +138,6 @@ import {
   readProviderParkViews,
 } from "@delivery-os/core/provider";
 import {
-  type CommitActRequest,
-  type CommitTransportPorts,
-  runCommitAct,
-} from "@delivery-os/core";
-import {
   appendAuditInvocation,
   appendCloseoutOutcome,
   appendCommitTelemetry,
@@ -167,6 +161,11 @@ import {
   createCloseoutCommandDefinition,
 } from "./commands/closeout.js";
 import {
+  type CommitCommandRuntime,
+  createCommitCommandDefinition,
+  planPhaseForLifecycle,
+} from "./commands/commit.js";
+import {
   type ConfigCommandRuntime,
   type ConfigResolvedSnapshot,
   createConfigCommandDefinition,
@@ -178,17 +177,13 @@ import {
   type LintRegistryRead,
 } from "./commands/lint.js";
 import {
-  type CommitCommandRuntime,
-  createCommitCommandDefinition,
-} from "./commands/commit.js";
-import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
-import {
   createPhaseCommandDefinition,
   type PhaseCommandRuntime,
   type PhaseCommitEvidence,
   type PhaseCommitExtension,
   type PhasePlanRead,
 } from "./commands/phase.js";
+import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
 import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
@@ -379,11 +374,13 @@ const planPhasesOf = (values: Record<string, unknown>): readonly CommitPlanPhase
     const id = typeof record.id === "number" ? String(record.id) : undefined;
     const title = typeof record.title === "string" ? record.title : undefined;
     if (id === undefined || title === undefined) continue;
+    const kind = record.kind === "planning" || record.kind === "delivery" ? record.kind : undefined;
     contexts.push({
       phaseId: id,
       title,
       ...(typeof record.summary === "string" ? { summary: record.summary } : {}),
       declaredScopePaths: scopePathsOf(record.scope),
+      ...(kind === undefined ? {} : { kind }),
     });
   }
   return contexts;
@@ -407,10 +404,7 @@ const readPlanContext = (
     : { planPresent: true, phases: [] };
 };
 
-const currentPhaseOf = (
-  store: StateStorePort,
-  changeRef: string,
-): string | undefined => {
+const currentPhaseOf = (store: StateStorePort, changeRef: string): string | undefined => {
   const read = readChangeTransitionsTolerant(store, changeRef);
   if (!read.ok) return undefined;
   const latest = [...read.value.transitions]
@@ -419,9 +413,7 @@ const currentPhaseOf = (
   return latest?.phaseId;
 };
 
-const commitActPorts = (
-  options: CommitRuntimeOptions,
-): Parameters<typeof runCommitAct>[1] => ({
+const commitActPorts = (options: CommitRuntimeOptions): Parameters<typeof runCommitAct>[1] => ({
   git: options.git,
   safety: options.safety,
   commitlint: options.commitlint,
@@ -440,46 +432,67 @@ export const createPhaseCommitExtension = (
 ): PhaseCommitExtension => ({
   phaseCommit: options.phaseCommit,
   readPlanPhase: (changeRef, phaseId): PhasePlanRead => {
-    const plan = readPlanContext(options, changeRef);
-    if (!plan.planPresent) return { planPresent: false };
-    const phase =
-      plan.phases.find((entry) => entry.phaseId === phaseId) ?? plan.phases[0];
+    const planContext = readPlanContext(options, changeRef);
+    if (!planContext.planPresent) return { planPresent: false };
+    const phase = planPhaseForLifecycle(planContext.phases, phaseId);
     return phase === undefined ? { planPresent: true } : { planPresent: true, planPhase: phase };
   },
   readEvidence: async (changeRef, phaseId): Promise<PhaseCommitEvidence> => {
     const read = readChangeTransitionsTolerant(options.store, changeRef);
+    if (!read.ok) {
+      return { recordPresent: false, commitPresent: false, readFailure: read.error };
+    }
     let record: PhaseTransitionRecord | undefined;
     let latest: PhaseTransitionRecord | undefined;
-    if (read.ok) {
-      for (const entry of read.value.transitions) {
-        if (entry.phaseId !== phaseId) continue;
-        latest = entry;
-        record = entry.operation === "complete" ? entry : undefined;
-      }
+    for (const entry of read.value.transitions) {
+      if (entry.phaseId !== phaseId) continue;
+      latest = entry;
+      record = entry.operation === "complete" ? entry : undefined;
     }
     const reopenedAt = latest?.operation === "reopen" ? latest.timestamp : undefined;
     const telemetry = readCommitTelemetry(options.store, changeRef);
-    const head = await options.git.head();
+    // Commit presence is durable evidence, not a HEAD position: a later commit
+    // moving HEAD must not degrade an earlier phase's landed commit to absent.
+    // The telemetry event is bound to the record by its transition identity and
+    // corroborates; the record's own `commitSha` is the primary evidence,
+    // because telemetry emission is non-gating and may be absent or torn.
     const event = telemetry.ok
       ? [...telemetry.value.records]
           .reverse()
           .find(
             (entry) =>
               entry.phaseId === phaseId &&
-              entry.commitSha === head &&
               (reopenedAt === undefined || entry.landedAt > reopenedAt) &&
               (record === undefined || entry.transitionId === record.timestamp),
           )
       : undefined;
+    const recordSha = record?.commitSha;
+    const recordCommitPresent =
+      recordSha !== undefined && (await options.git.commitExists(recordSha));
+    const commitPresent = event !== undefined || recordCommitPresent;
+    if (!commitPresent && !telemetry.ok && record?.commitIntent !== "record-only") {
+      // Unreadable telemetry with no record-bound commit to corroborate: the
+      // durable state cannot classify commit presence. Refuse instead of
+      // reading a missing signal as commit-absent.
+      return {
+        recordPresent: record !== undefined,
+        ...(record?.commitIntent === undefined ? {} : { recordIntent: record.commitIntent }),
+        ...(record?.commitIntentBasis === undefined
+          ? {}
+          : { recordBasis: record.commitIntentBasis }),
+        ...(record?.timestamp === undefined ? {} : { transitionId: record.timestamp }),
+        commitPresent: false,
+        readFailure: telemetry.error,
+      };
+    }
+    const commitSha = event?.commitSha ?? recordSha;
     return {
       recordPresent: record !== undefined,
       ...(record?.commitIntent === undefined ? {} : { recordIntent: record.commitIntent }),
-      ...(record?.commitIntentBasis === undefined
-        ? {}
-        : { recordBasis: record.commitIntentBasis }),
+      ...(record?.commitIntentBasis === undefined ? {} : { recordBasis: record.commitIntentBasis }),
       ...(record?.timestamp === undefined ? {} : { transitionId: record.timestamp }),
-      commitPresent: event !== undefined,
-      ...(event?.commitSha === undefined ? {} : { commitSha: event.commitSha }),
+      commitPresent,
+      ...(commitSha === undefined ? {} : { commitSha }),
     };
   },
   currentHead: () => options.git.head(),
@@ -517,11 +530,10 @@ export const createProductionCommitRuntimeOptions = (
   safety: { scan: createSecretScanner({ cwd: options.cwd }) },
   commitlint: createCommitlintProbe({ cwd: options.cwd }),
   transports: options.transports ?? {},
-  availability:
-    options.availability ?? {
-      coreInference: { available: false, reason: "no-provider-route" },
-      harnessOneShot: { available: false, reason: "no-harness-credentials" },
-    },
+  availability: options.availability ?? {
+    coreInference: { available: false, reason: "no-provider-route" },
+    harnessOneShot: { available: false, reason: "no-harness-credentials" },
+  },
   sessionFacts: createDeliverySessionFacts({
     environment: options.environment,
     keys: options.sessionEnvironmentKeys,
@@ -543,9 +555,7 @@ export const createCommitCommandRuntime = (
     (async () => {
       const head = await options.git.readTree();
       const match = /(?:^|\/)([A-Z][A-Z0-9]*-\d+)(?:$|\/)/.exec(head.branch);
-      return match?.[1] === undefined
-        ? undefined
-        : { ref: match[1], refSource: "branch" as const };
+      return match?.[1] === undefined ? undefined : { ref: match[1], refSource: "branch" as const };
     }),
   readContext: (changeRef) => {
     const plan = readPlanContext(options, changeRef);
@@ -1720,7 +1730,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
             ...phaseRuntime,
             sessionFacts: () => {
               const facts = options.commit?.sessionFacts;
-              return typeof facts === "function" ? facts() : (facts ?? { insideDeliverySession: false });
+              return typeof facts === "function"
+                ? facts()
+                : (facts ?? { insideDeliverySession: false });
             },
           };
     commands.phase = createPhaseCommandDefinition(committedPhaseRuntime);

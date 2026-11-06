@@ -154,16 +154,8 @@
     "src/output/serialize.ts",
     "src/projection.ts"
   ],
-  "mcp": [
-    "src/commands/index.ts",
-    "src/index.ts",
-    "src/output/index.ts"
-  ],
-  "opencode": [
-    "src/commands/index.ts",
-    "src/index.ts",
-    "src/output/index.ts"
-  ],
+  "mcp": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
   "testkit": [
     "src/commit/git-repo.ts",
     "src/commit/index.ts",

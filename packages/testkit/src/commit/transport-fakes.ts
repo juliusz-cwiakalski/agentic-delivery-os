@@ -6,6 +6,8 @@
  * has no network access, and never invokes a real model.
  */
 import type {
+  CommitlintOutcome,
+  CommitlintPort,
   CommitMessageDraft,
   CommitSafetyFinding,
   CommitSafetyOutcome,
@@ -14,8 +16,6 @@ import type {
   CommitTransportOutcome,
   CommitTransportPort,
   CommitTransportRequest,
-  CommitlintOutcome,
-  CommitlintPort,
 } from "@delivery-os/core/contracts";
 
 /** One scripted transport step. */
@@ -60,7 +60,12 @@ export const createScriptedTransport = (
         return { ok: false, transport: "core-inference", code: "script-exhausted" };
       }
       if (step.kind === "throw") {
-        return { ok: false, transport: "core-inference", code: "script-throw", ...(step.detail === undefined ? {} : { detail: step.detail }) };
+        return {
+          ok: false,
+          transport: "core-inference",
+          code: "script-throw",
+          ...(step.detail === undefined ? {} : { detail: step.detail }),
+        };
       }
       if (step.kind === "failure") {
         return {

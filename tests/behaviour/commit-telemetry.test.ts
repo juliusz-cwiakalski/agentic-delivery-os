@@ -4,6 +4,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { readCommitTelemetry } from "../../packages/core/src/state/index";
+import { withCommitHarness } from "../fixtures/commit/harness";
 import {
   COMMIT_REF,
   commitCount,
@@ -15,7 +16,6 @@ import {
   transitionPayloads,
   validMessage,
 } from "./commit-support";
-import { withCommitHarness } from "../fixtures/commit/harness";
 
 const SEED = { "README.md": "# fixture\n", "src/existing.ts": "export const v = 1;\n" } as const;
 const DM1_KEYS = new Set([
@@ -102,7 +102,9 @@ describe("TC-TELEM-003 no event on any non-landed outcome", () => {
   test("refusal, STOP, staging-blocked, scan-unavailable, abort, no-op, no-pending", async () => {
     const cases: Array<{
       readonly label: string;
-      readonly run: (harness: import("../fixtures/commit/harness").CommitHarness) => Promise<unknown>;
+      readonly run: (
+        harness: import("../fixtures/commit/harness").CommitHarness,
+      ) => Promise<unknown>;
       readonly setup: (harness: import("../fixtures/commit/harness").CommitHarness) => void;
     }> = [
       {

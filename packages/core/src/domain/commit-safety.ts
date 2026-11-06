@@ -33,9 +33,8 @@ export type CommitSafetyVerdict =
     };
 
 /** The finding classes named in an output; material is never included. */
-export const findingClasses = (
-  findings: readonly CommitSafetyFinding[],
-): readonly string[] => [...new Set(findings.map((finding) => finding.class))].sort();
+export const findingClasses = (findings: readonly CommitSafetyFinding[]): readonly string[] =>
+  [...new Set(findings.map((finding) => finding.class))].sort();
 
 /** Classify a scanner outcome without ever carrying the material. */
 export const classifyCommitSafety = (outcome: CommitSafetyOutcome): CommitSafetyVerdict => {

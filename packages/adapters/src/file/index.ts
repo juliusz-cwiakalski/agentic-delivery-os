@@ -2,7 +2,15 @@
  * `@delivery-os/adapters/file` — file I/O adapter subpath.
  * Supplies line-preserving configuration facts and platform file acquisition.
  */
-export { readCiWorkflowJobNames, type CiWorkflowJobNamesRead } from "./ci-workflow.js";
+export { type CiWorkflowJobNamesRead, readCiWorkflowJobNames } from "./ci-workflow.js";
+export {
+  COMMITLINT_CONFIG_FILES,
+  type CommitlintProbeChildResult,
+  type CommitlintProbeOptions,
+  type CommitlintProbeRunner,
+  createCommitlintProbe,
+  hasCommitlintConfig,
+} from "./commitlint.js";
 export {
   acquireFileConfig,
   type FileAcquisitionInput,
@@ -12,6 +20,10 @@ export {
   type RuntimePlatform,
   runtimePlatform,
 } from "./config-source.js";
+export {
+  type PlanArtifactRequest,
+  readPlanArtifact,
+} from "./plan-artifact.js";
 export { readLocalPmContext } from "./pm-context.js";
 export {
   nodePmNotesFileSystemFacts,
@@ -28,25 +40,13 @@ export {
   stagePmNotesPhaseEntry,
 } from "./pm-notes-parser.js";
 export {
-  type PlanArtifactRequest,
-  readPlanArtifact,
-} from "./plan-artifact.js";
-export {
-  type ParsedConfig,
-  parseConfigYaml,
-  parserHostSwitchBlocked,
-} from "./yaml-parser.js";
-export {
   createSecretScanner,
   SECRET_CONTENT_PATTERNS,
   SECRET_FILENAME_PATTERNS,
   type SecretScannerOptions,
 } from "./secret-scan.js";
 export {
-  COMMITLINT_CONFIG_FILES,
-  createCommitlintProbe,
-  hasCommitlintConfig,
-  type CommitlintProbeChildResult,
-  type CommitlintProbeOptions,
-  type CommitlintProbeRunner,
-} from "./commitlint.js";
+  type ParsedConfig,
+  parseConfigYaml,
+  parserHostSwitchBlocked,
+} from "./yaml-parser.js";

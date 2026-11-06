@@ -205,9 +205,7 @@ export const createGitCommitSeam = (options: GitCommitSeamOptions = {}): CommitG
         "--no-gpg-sign",
         "-m",
         message.subject,
-        ...(message.body === undefined || message.body.length === 0
-          ? []
-          : ["-m", message.body]),
+        ...(message.body === undefined || message.body.length === 0 ? [] : ["-m", message.body]),
       ];
       const result = await git(args);
       if (result.status !== 0) {

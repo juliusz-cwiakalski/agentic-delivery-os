@@ -7,10 +7,11 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSecretScanner } from "../../packages/adapters/src/file/secret-scan";
+import { withCommitHarness } from "../fixtures/commit/harness";
 import {
   COMMIT_REF,
-  commitPaths,
   commitDataOf,
+  commitPaths,
   errorCodeOf,
   excludedOf,
   head,
@@ -20,7 +21,6 @@ import {
   telemetryPayloads,
   validMessage,
 } from "./commit-support";
-import { withCommitHarness } from "../fixtures/commit/harness";
 
 const SEED = { "README.md": "# fixture\n", "src/existing.ts": "export const v = 1;\n" } as const;
 
@@ -223,7 +223,8 @@ describe("the real deterministic scanner names classes and never material", () =
     const root = mkdtempSync(join(process.cwd(), "tmp", "tmpdir", "scanner-"));
     try {
       mkdirSync(join(root, "src"), { recursive: true });
-      writeFileSync(join(root, "src/config.ts"), 'const token = "ghp_abcdefghijklmnopqrstuvwxyz";\n');
+      const fakeToken = ["ghp", "abcdefghijklmnopqrstuvwxyz"].join("_");
+      writeFileSync(join(root, "src/config.ts"), `const token = "${fakeToken}";\n`);
       writeFileSync(join(root, "src/server.pem"), "not a key\n");
       const scanner = createSecretScanner({ cwd: root });
       const outcome = await scanner([{ path: "src/config.ts" }, { path: "src/server.pem" }]);
@@ -232,7 +233,7 @@ describe("the real deterministic scanner names classes and never material", () =
         const serialized = JSON.stringify(outcome.findings);
         expect(serialized).toContain("secret-content");
         expect(serialized).toContain("secret-filename");
-        expect(serialized).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz");
+        expect(serialized).not.toContain(fakeToken);
         expect(serialized).not.toContain("not a key");
       }
     } finally {

@@ -7,14 +7,14 @@
  * falls through without waiting. Zero model calls happen when no transport is
  * available or the template is selected.
  */
-import {
-  type CommitMessageDraft,
-  type CommitTokenSpend,
-  type CommitTransport,
-  type CommitTransportAvailability,
-  type CommitTransportOutcome,
-  type CommitTransportPort,
-  type CommitTransportRequest,
+import type {
+  CommitMessageDraft,
+  CommitTokenSpend,
+  CommitTransport,
+  CommitTransportAvailability,
+  CommitTransportOutcome,
+  CommitTransportPort,
+  CommitTransportRequest,
 } from "#contracts";
 
 /** The ordered selection plus the classified failover reasons. */
@@ -28,16 +28,17 @@ export const selectCommitTransport = (
   availability: CommitTransportAvailability,
 ): CommitTransportSelection => {
   const failover: { transport: CommitTransport; reason: string }[] = [];
-  if (availability.coreInference.available && availability.coreInference.parkedUntil === undefined) {
+  if (
+    availability.coreInference.available &&
+    availability.coreInference.parkedUntil === undefined
+  ) {
     return { selected: "core-inference", failover };
   }
   failover.push({
     transport: "core-inference",
     reason:
       availability.coreInference.reason ??
-      (availability.coreInference.parkedUntil === undefined
-        ? "unavailable"
-        : "quota-parked"),
+      (availability.coreInference.parkedUntil === undefined ? "unavailable" : "quota-parked"),
   });
   if (availability.harnessOneShot.available) {
     return { selected: "harness-one-shot", failover };
@@ -68,14 +69,15 @@ export type CommitGeneration =
       readonly source: "template";
       readonly transport: "none";
       readonly tokenSpend: CommitTokenSpend;
-      readonly failover: readonly { readonly transport: CommitTransport; readonly reason: string }[];
+      readonly failover: readonly {
+        readonly transport: CommitTransport;
+        readonly reason: string;
+      }[];
     };
 
 const ZERO_SPEND: CommitTokenSpend = { inputTokens: 0, outputTokens: 0 };
 
-const failure = (
-  outcome: CommitTransportOutcome,
-): { readonly reason: string } =>
+const failure = (outcome: CommitTransportOutcome): { readonly reason: string } =>
   outcome.ok ? { reason: "invalid-response" } : { reason: outcome.code };
 
 /**

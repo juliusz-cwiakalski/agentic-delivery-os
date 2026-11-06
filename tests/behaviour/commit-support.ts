@@ -7,11 +7,11 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { CommitEnvelopeData, CommitMessageDraft } from "../../packages/core/src/contracts/index";
-import {
-  appendCommitTelemetry,
-  appendPhaseTransition,
-} from "../../packages/core/src/state/index";
+import type {
+  CommitEnvelopeData,
+  CommitMessageDraft,
+} from "../../packages/core/src/contracts/index";
+import { appendCommitTelemetry, appendPhaseTransition } from "../../packages/core/src/state/index";
 import type { CommitHarness, CommitRun } from "../fixtures/commit/harness";
 import { COMMIT_REF } from "../fixtures/commit/harness";
 
@@ -58,10 +58,14 @@ export const seedDirtyTree = (
     readonly untracked?: Readonly<Record<string, string>>;
   } = {},
 ): void => {
-  for (const [path, content] of Object.entries(input.tracked ?? { "src/existing.ts": "export const v = 2;\n" })) {
+  for (const [path, content] of Object.entries(
+    input.tracked ?? { "src/existing.ts": "export const v = 2;\n" },
+  )) {
     harness.repo.write(path, content);
   }
-  for (const [path, content] of Object.entries(input.untracked ?? { "src/new-file.ts": "export const n = 1;\n" })) {
+  for (const [path, content] of Object.entries(
+    input.untracked ?? { "src/new-file.ts": "export const n = 1;\n" },
+  )) {
     harness.repo.write(path, content);
   }
 };

@@ -14,9 +14,11 @@ import {
   type CommitEnvelopeData,
   type CommitErrorCode,
   type CommitGitPort,
+  type CommitlintPort,
   type CommitMessageDraft,
   type CommitMessageSource,
   type CommitSafetyPort,
+  type CommitScopeSource,
   type CommitSkeleton,
   type CommitStagingPlan,
   type CommitTelemetryRecord,
@@ -24,8 +26,6 @@ import {
   type CommitTransport,
   type CommitTransportAvailability,
   type CommitTransportRequest,
-  type CommitlintPort,
-  type CommitScopeSource,
 } from "#contracts";
 import { buildCommitBundle } from "./commit-bundle.js";
 import {
@@ -36,7 +36,7 @@ import {
 } from "./commit-message.js";
 import { classifyCommitSafety, findingClasses } from "./commit-safety.js";
 import { computeStagingPlan } from "./commit-staging.js";
-import { generateCommitMessage, type CommitTransportPorts } from "./commit-transport.js";
+import { type CommitTransportPorts, generateCommitMessage } from "./commit-transport.js";
 
 /** The staging scope the act computes against. */
 export type CommitActScope = {
@@ -57,7 +57,8 @@ export type CommitActRequest = {
   readonly existingTransitionId?: string;
   /** The phase record append; its failure aborts the whole act. */
   readonly appendTransition?: () => Promise<
-    { readonly ok: true; readonly transitionId: string } | { readonly ok: false; readonly detail: string }
+    | { readonly ok: true; readonly transitionId: string }
+    | { readonly ok: false; readonly detail: string }
   >;
 };
 
@@ -68,9 +69,9 @@ export type CommitActPorts = {
   readonly commitlint: CommitlintPort;
   readonly transports: CommitTransportPorts;
   readonly availability: CommitTransportAvailability;
-  readonly appendTelemetry: (record: CommitTelemetryRecord) => Promise<
-    { readonly ok: true } | { readonly ok: false; readonly detail: string }
-  >;
+  readonly appendTelemetry: (
+    record: CommitTelemetryRecord,
+  ) => Promise<{ readonly ok: true } | { readonly ok: false; readonly detail: string }>;
   readonly nowIso: () => string;
 };
 
@@ -150,7 +151,10 @@ const resolveMessage = async (
       readonly source: CommitMessageSource;
       readonly transport: CommitTransport;
       readonly tokenSpend: CommitTokenSpend;
-      readonly failover: readonly { readonly transport: CommitTransport; readonly reason: string }[];
+      readonly failover: readonly {
+        readonly transport: CommitTransport;
+        readonly reason: string;
+      }[];
     }
   | {
       readonly ok: false;
@@ -277,13 +281,7 @@ export const runCommitAct = async (
   });
   const excluded = excludedOf(staging, bundleResult.noiseStripped);
   const topPath = staging.include[0]?.path;
-  const resolved = await resolveMessage(
-    request,
-    ports,
-    bundleResult.bundle,
-    staging,
-    topPath,
-  );
+  const resolved = await resolveMessage(request, ports, bundleResult.bundle, staging, topPath);
   if (!resolved.ok) {
     return { kind: "failure", code: resolved.code, detail: resolved.detail, excluded };
   }
@@ -347,9 +345,7 @@ export const runCommitAct = async (
     ...successBase,
     commitSha: committed.sha,
     ...(transitionId === undefined ? {} : { transitionId }),
-    telemetry: emitted.ok
-      ? { emitted: true }
-      : { emitted: false, detail: emitted.detail },
+    telemetry: emitted.ok ? { emitted: true } : { emitted: false, detail: emitted.detail },
   };
 };
 

@@ -13,9 +13,9 @@ import {
   PHASE_TRANSITION_KIND,
   type PhaseStateProjection,
   type PhaseStateProjectionEntry,
-  type PhaseTransitionOperation,
   type PhaseTransitionCommitIntent,
   type PhaseTransitionCommitIntentBasis,
+  type PhaseTransitionOperation,
   type PhaseTransitionRecord,
   REGISTRY_SCHEMA_VERSION,
   type StateAppendOutcome,
@@ -187,8 +187,16 @@ const transitionFrom = (value: unknown): PhaseTransitionRecord | string => {
     (key) => !Object.hasOwn(value, key),
   );
   if (missing.length > 0) return `transitions[].${missing[0] as string}`;
-  const { changeRef, phaseId, operation, timestamp, outcome, reason, commitIntent, commitIntentBasis } =
-    value;
+  const {
+    changeRef,
+    phaseId,
+    operation,
+    timestamp,
+    outcome,
+    reason,
+    commitIntent,
+    commitIntentBasis,
+  } = value;
   if (typeof changeRef !== "string" || changeRef.length === 0) return "transitions[].changeRef";
   if (typeof phaseId !== "string" || phaseId.length === 0) return "transitions[].phaseId";
   if (operation !== "complete" && operation !== "reopen") return "transitions[].operation";
@@ -196,11 +204,7 @@ const transitionFrom = (value: unknown): PhaseTransitionRecord | string => {
   if (outcome !== "landed") return "transitions[].outcome";
   if (reason !== undefined && typeof reason !== "string") return "transitions[].reason";
   if (reason !== undefined && operation !== "reopen") return "transitions[].reason";
-  if (
-    commitIntent !== undefined &&
-    commitIntent !== "atomic" &&
-    commitIntent !== "record-only"
-  ) {
+  if (commitIntent !== undefined && commitIntent !== "atomic" && commitIntent !== "record-only") {
     return "transitions[].commitIntent";
   }
   if (

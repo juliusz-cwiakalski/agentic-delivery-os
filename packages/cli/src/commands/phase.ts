@@ -11,7 +11,14 @@
  * Handlers return data or errors; the CLI edge owns streams, rendering, and
  * exit codes.
  */
-import { lintPmNotes, type PmNotesLintFinding } from "@delivery-os/core";
+import {
+  type CommitActOutcome,
+  type CommitActRequest,
+  classifyCommitDelta,
+  lintPmNotes,
+  type PmNotesLintFinding,
+  resolveCommitSkeleton,
+} from "@delivery-os/core";
 import {
   CANONICAL_PHASE_IDS,
   type CommitIntentBasis,
@@ -27,12 +34,6 @@ import {
   type StateReadEvidence,
   type StateResult,
 } from "@delivery-os/core/contracts";
-import {
-  classifyCommitDelta,
-  type CommitActOutcome,
-  type CommitActRequest,
-  resolveCommitSkeleton,
-} from "@delivery-os/core";
 import { foldPhaseState } from "@delivery-os/core/state";
 import type { CommandDefinition } from "../index.js";
 
@@ -152,7 +153,10 @@ export type PhaseCommandRuntime = {
   /** Present when the edge wires the default-on atomic completion (GH-227). */
   readonly commit?: PhaseCommitExtension;
   /** Injected delivery-session facts for the shared guard (DEC-6). */
-  readonly sessionFacts?: () => { readonly insideDeliverySession: boolean; readonly sessionId?: string };
+  readonly sessionFacts?: () => {
+    readonly insideDeliverySession: boolean;
+    readonly sessionId?: string;
+  };
 };
 
 type TargetFailure = { readonly ok: false; readonly error: Record<string, unknown> };
@@ -392,9 +396,7 @@ const completeWithCommit = async (
     ...(advisory === undefined ? {} : { advisory }),
   } as const;
 
-  const recordOnly = (
-    basis: CommitIntentBasis,
-  ): TargetSuccess | TargetFailure => {
+  const recordOnly = (basis: CommitIntentBasis): TargetSuccess | TargetFailure => {
     if (input.dryRun) {
       return {
         ok: true,
@@ -525,9 +527,7 @@ const completeWithCommit = async (
       requiresBody: false,
       dryRun: input.dryRun,
       baselineHead,
-      ...(delta.transitionId === undefined
-        ? {}
-        : { existingTransitionId: delta.transitionId }),
+      ...(delta.transitionId === undefined ? {} : { existingTransitionId: delta.transitionId }),
     });
     if (act.kind === "failure") return actFailure(act);
     if (act.kind === "no-pending-work") {

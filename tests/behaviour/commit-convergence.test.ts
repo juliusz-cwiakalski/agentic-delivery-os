@@ -4,6 +4,7 @@
  * interruption) and re-run twice for stability.
  */
 import { describe, expect, test } from "bun:test";
+import { type CommitHarness, withCommitHarness } from "../fixtures/commit/harness";
 import {
   appendCompletionRecord,
   appendTelemetryRecord,
@@ -16,7 +17,6 @@ import {
   transitionPayloads,
   validMessage,
 } from "./commit-support";
-import { withCommitHarness, type CommitHarness } from "../fixtures/commit/harness";
 
 const SEED = { "README.md": "# fixture\n", "src/existing.ts": "export const v = 1;\n" } as const;
 
@@ -28,7 +28,13 @@ const dirty = (harness: CommitHarness): void => {
 const preCommit = (harness: CommitHarness): string => {
   dirty(harness);
   harness.repo.run(["add", "-A", "--", "src"]);
-  harness.repo.run(["commit", "--no-verify", "--no-gpg-sign", "-m", `feat(${COMMIT_REF}): pre-landed`]);
+  harness.repo.run([
+    "commit",
+    "--no-verify",
+    "--no-gpg-sign",
+    "-m",
+    `feat(${COMMIT_REF}): pre-landed`,
+  ]);
   return harness.repo.head();
 };
 
@@ -175,12 +181,7 @@ describe("TC-CONVERGE-008 intent discrimination is evidence-driven, not mode-gue
         appendCompletionRecord(harness, { intent: "atomic" });
         const beforeCommits = commitCount(harness);
         harness.coreTransport.push({ kind: "success", message: validMessage() });
-        const run = await harness.runPhase([
-          "complete",
-          COMMIT_REF,
-          "delivery",
-          "--no-commit",
-        ]);
+        const run = await harness.runPhase(["complete", COMMIT_REF, "delivery", "--no-commit"]);
         expect(run.exitCode).toBe(0);
         expect(commitCount(harness)).toBe(beforeCommits + 1);
         expect(transitionPayloads(harness)).toHaveLength(1);

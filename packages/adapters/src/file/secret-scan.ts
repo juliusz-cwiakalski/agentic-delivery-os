@@ -101,7 +101,11 @@ export const createSecretScanner = (
         }
       } catch (error) {
         if (!isMissingFile(error)) {
-          return { ok: false, code: "commit.safety.scan-unavailable", detail: "content read failed" };
+          return {
+            ok: false,
+            code: "commit.safety.scan-unavailable",
+            detail: "content read failed",
+          };
         }
       }
     }

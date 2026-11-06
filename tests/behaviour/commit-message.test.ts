@@ -4,6 +4,7 @@
  * template fallback.
  */
 import { describe, expect, test } from "bun:test";
+import { withCommitHarness } from "../fixtures/commit/harness";
 import {
   COMMIT_REF,
   commitDataOf,
@@ -13,7 +14,6 @@ import {
   telemetryPayloads,
   validMessage,
 } from "./commit-support";
-import { withCommitHarness } from "../fixtures/commit/harness";
 
 const SEED = { "README.md": "# fixture\n", "src/existing.ts": "export const v = 1;\n" } as const;
 
@@ -45,7 +45,10 @@ describe("TC-MSG-001 deterministic skeleton", () => {
 describe("TC-MSG-002 generated noise stripped and diff budget capped", () => {
   test("noise paths never reach the bundle and over-cap files stay metadata-only", async () => {
     const files: Record<string, string> = { "README.md": "# fixture\n" };
-    const ordinary = Array.from({ length: 30 }, (_, index) => `src/f${String(index).padStart(2, "0")}.ts`);
+    const ordinary = Array.from(
+      { length: 30 },
+      (_, index) => `src/f${String(index).padStart(2, "0")}.ts`,
+    );
     for (const path of ordinary) files[path] = "export const v = 1;\n";
     files["pnpm-lock.yaml"] = "lockfileVersion: 1\n";
     files["dist/app.min.js"] = "var a=1;\n";
@@ -69,9 +72,11 @@ describe("TC-MSG-002 generated noise stripped and diff budget capped", () => {
         expect(paths).not.toContain("vendor/lib.js");
         expect(paths).toContain("assets/large.txt");
         expect(paths).toEqual([...paths].sort());
-        expect(request.bundle.files.find((file) => file.path === "assets/large.txt")).toMatchObject({
-          overCap: true,
-        });
+        expect(request.bundle.files.find((file) => file.path === "assets/large.txt")).toMatchObject(
+          {
+            overCap: true,
+          },
+        );
         expect(request.bundle.totalInputChars).toBeLessThanOrEqual(8000);
         const excluded = commitDataOf(run).excluded;
         expect(excluded.noiseStripped).toEqual([

@@ -210,10 +210,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "DB_CHECKPOINT_TIMEOUT_MS",
   ],
   "core/src/domain/sha256.ts": ["sha256Hex"],
-  "core/src/domain/commit-skeleton.ts": [
-    "commitTypeForPhase",
-    "resolveCommitSkeleton",
-  ],
+  "core/src/domain/commit-skeleton.ts": ["commitTypeForPhase", "resolveCommitSkeleton"],
   "core/src/domain/commit-bundle.ts": ["buildCommitBundle", "isGeneratedNoise"],
   "core/src/domain/commit-staging.ts": ["computeStagingPlan"],
   "core/src/domain/commit-safety.ts": ["classifyCommitSafety", "findingClasses"],
@@ -711,10 +708,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "adapters/src/git/commit.ts": ["createGitCommitSeam", "parsePorcelainStatus"],
   "adapters/src/inference/index.ts": ["COMMIT_MESSAGE_SCHEMA", "createInferenceTransport"],
-  "adapters/src/session/commit-one-shot.ts": [
-    "createHarnessOneShotTransport",
-    "readOneShotPrompt",
-  ],
+  "adapters/src/session/commit-one-shot.ts": ["createHarnessOneShotTransport", "readOneShotPrompt"],
   "adapters/src/session/delivery-session-facts.ts": ["createDeliverySessionFacts"],
   "adapters/src/file/secret-scan.ts": [
     "createSecretScanner",

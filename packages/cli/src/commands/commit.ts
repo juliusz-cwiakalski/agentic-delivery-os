@@ -7,6 +7,13 @@
  * runtime, and returns DM-2 data. `--phase` exercises the same atomic
  * record-plus-commit primitive as `phase complete`.
  */
+
+import {
+  type CommitActOutcome,
+  type CommitActRequest,
+  type CommitTransportPorts,
+  resolveCommitSkeleton,
+} from "@delivery-os/core";
 import {
   CANONICAL_PHASE_IDS,
   type CommitEnvelopeData,
@@ -17,16 +24,10 @@ import {
   type CommitTransportAvailability,
   type StateJsonValue,
 } from "@delivery-os/core/contracts";
-import {
-  resolveCommitSkeleton,
-  type CommitActOutcome,
-  type CommitActRequest,
-  type CommitTransportPorts,
-} from "@delivery-os/core";
 import type { CommandDefinition } from "../index.js";
 import {
-  type PhaseCommitExtension,
   type PhaseCommandRuntime,
+  type PhaseCommitExtension,
   runPhaseCompleteForCommit,
 } from "./phase.js";
 
@@ -74,27 +75,27 @@ const exclusionsOf = (act: Extract<CommitActOutcome, { kind: "landed" | "dry-run
   act.excluded;
 
 /** The DM-2 success data for a landed or dry-run act. */
-const dataFor = (input: {
+const dataFor = (source: {
   readonly changeRef: string;
   readonly act: Extract<CommitActOutcome, { kind: "landed" | "dry-run" }>;
   readonly atomic: boolean;
   readonly ledgerTransition?: StateJsonValue;
   readonly degradedScope?: boolean;
 }): CommitEnvelopeData => ({
-  changeRef: input.changeRef,
-  subject: input.act.message.subject,
-  ...(input.act.message.body === undefined ? {} : { body: input.act.message.body }),
-  stagedFiles: input.act.staging.include.map((entry) => entry.path),
-  excluded: exclusionsOf(input.act),
-  ...(input.act.commitSha === undefined ? {} : { commitSha: input.act.commitSha }),
-  messageSource: input.act.messageSource,
-  transport: input.act.transport,
-  atomic: input.atomic,
-  ...(input.ledgerTransition === undefined ? {} : { ledgerTransition: input.ledgerTransition }),
-  ...(input.act.kind === "dry-run" ? { dryRun: true } : {}),
-  safety: input.act.safety,
-  telemetry: input.act.telemetry,
-  ...(input.degradedScope === true ? { degradedScope: "plan-absent" } : {}),
+  changeRef: source.changeRef,
+  subject: source.act.message.subject,
+  ...(source.act.message.body === undefined ? {} : { body: source.act.message.body }),
+  stagedFiles: source.act.staging.include.map((entry) => entry.path),
+  excluded: exclusionsOf(source.act),
+  ...(source.act.commitSha === undefined ? {} : { commitSha: source.act.commitSha }),
+  messageSource: source.act.messageSource,
+  transport: source.act.transport,
+  atomic: source.atomic,
+  ...(source.ledgerTransition === undefined ? {} : { ledgerTransition: source.ledgerTransition }),
+  ...(source.act.kind === "dry-run" ? { dryRun: true } : {}),
+  safety: source.act.safety,
+  telemetry: source.act.telemetry,
+  ...(source.degradedScope === true ? { degradedScope: "plan-absent" } : {}),
 });
 
 const phaseContextOf = (
@@ -106,7 +107,9 @@ const phaseContextOf = (
     : (context.phases.find((entry) => entry.phaseId === phaseId) ?? context.phases[0]);
 
 /** Build the commit command definition over the injected runtime. */
-export const createCommitCommandDefinition = (runtime: CommitCommandRuntime): CommandDefinition => ({
+export const createCommitCommandDefinition = (
+  runtime: CommitCommandRuntime,
+): CommandDefinition => ({
   positionals: { max: 1 },
   flags: ["--dry-run"],
   requiresValue: ["--phase"],
@@ -169,7 +172,8 @@ export const createCommitCommandDefinition = (runtime: CommitCommandRuntime): Co
               scopeDrift: [],
             },
             ...(typeof data.commitSha === "string" ? { commitSha: data.commitSha } : {}),
-            messageSource: (data.messageSource as CommitEnvelopeData["messageSource"]) ?? "template",
+            messageSource:
+              (data.messageSource as CommitEnvelopeData["messageSource"]) ?? "template",
             transport: (data.transport as CommitTransport) ?? "none",
             atomic: true,
             ledgerTransition: {

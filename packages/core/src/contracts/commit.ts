@@ -7,8 +7,7 @@
  * generated behind the transport seam. No clock, randomness, environment,
  * filesystem, or network access is declared here.
  */
-import type { StateJsonValue } from "./state.js";
-import type { StateReadEvidence } from "./state.js";
+import type { StateJsonValue, StateReadEvidence } from "./state.js";
 
 /** The two durable commit intents a completion record can carry (DEC-7). */
 export const COMMIT_INTENTS = ["atomic", "record-only"] as const;
@@ -311,14 +310,20 @@ export type CommitTransportPort = {
 export type CommitGitPort = {
   readonly readTree: () => Promise<CommitTreeFacts>;
   readonly stage: (paths: readonly string[]) => Promise<boolean>;
-  readonly commit: (message: CommitMessageDraft) => Promise<{ readonly ok: true; sha: string } | { readonly ok: false; readonly detail: string }>;
+  readonly commit: (
+    message: CommitMessageDraft,
+  ) => Promise<
+    { readonly ok: true; sha: string } | { readonly ok: false; readonly detail: string }
+  >;
   readonly head: () => Promise<string | undefined>;
   readonly resetTo: (sha: string) => Promise<boolean>;
 };
 
 /** The safety port; unavailable is a classified fail-closed result. */
 export type CommitSafetyPort = {
-  readonly scan: (files: readonly { readonly path: string; readonly content?: string }[]) => Promise<CommitSafetyOutcome>;
+  readonly scan: (
+    files: readonly { readonly path: string; readonly content?: string }[],
+  ) => Promise<CommitSafetyOutcome>;
 };
 
 /** The commitlint port (repository rules win; absent degrades). */
@@ -386,16 +391,9 @@ export type PhaseCommitData = {
   readonly commitSha?: string;
   readonly atomic: boolean;
   /** `no-op` is envelope-only and never written to a durable record. */
-  readonly commitSkipped?:
-    | CommitIntentBasis
-    | "no-op"
-    | "interrupted-atomic-no-pending-work";
+  readonly commitSkipped?: CommitIntentBasis | "no-op" | "interrupted-atomic-no-pending-work";
   readonly reconciliation?: {
-    readonly completed:
-      | "commit"
-      | "transition"
-      | "intentional-no-op"
-      | "existing-completion";
+    readonly completed: "commit" | "transition" | "intentional-no-op" | "existing-completion";
     readonly basis?: CommitIntentBasis;
     readonly detail?: string;
   };

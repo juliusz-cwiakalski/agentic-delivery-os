@@ -14,12 +14,12 @@ import {
   stagePmNotesPhaseEntry,
 } from "../../../packages/adapters/src/file";
 import { createGitCommitSeam } from "../../../packages/adapters/src/git";
+import { createCommitCommandDefinition } from "../../../packages/cli/src/commands/commit";
+import { createPhaseCommandDefinition } from "../../../packages/cli/src/commands/phase";
 import {
   createCommitCommandRuntime,
   createPhaseCommitExtension,
 } from "../../../packages/cli/src/edge";
-import { createCommitCommandDefinition } from "../../../packages/cli/src/commands/commit";
-import { createPhaseCommandDefinition } from "../../../packages/cli/src/commands/phase";
 import type { CommandDefinition } from "../../../packages/cli/src/index";
 import { type CliDependencies, runCli } from "../../../packages/cli/src/index";
 import type {
@@ -35,9 +35,9 @@ import {
   replacePhaseProjection,
 } from "../../../packages/core/src/state/index";
 import {
+  createSafetyScanner,
   createScriptedCommitlint,
   createScriptedTransport,
-  createSafetyScanner,
   createTempGitRepository,
   type ScriptedCommitlint,
   type ScriptedSafetyScanner,
@@ -45,8 +45,8 @@ import {
   type TempGitRepository,
   transportAvailability,
 } from "../../../packages/testkit/src/commit/index";
-import { ledgerLines, ledgerPath, makeIdentity, openStore, removeRoot } from "../state/harness";
 import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
+import { ledgerLines, ledgerPath, makeIdentity, openStore, removeRoot } from "../state/harness";
 
 export const COMMIT_REF = "GH-310";
 export const COMMIT_CHANGE_DIRECTORY = "doc/changes/2026-11/2026-11-05--GH-310--commit-fixture";
@@ -130,9 +130,10 @@ export type CommitHarnessOptions = {
   readonly sessionFacts?: Partial<CommitSessionFacts>;
   readonly phaseCommit?: boolean;
   /** `null` makes ref resolution fail; omitted resolves the fixture ref. */
-  readonly resolvedRef?:
-    | { readonly ref: string; readonly refSource: "argument" | "branch" | "change-folder" }
-    | null;
+  readonly resolvedRef?: {
+    readonly ref: string;
+    readonly refSource: "argument" | "branch" | "change-folder";
+  } | null;
 };
 
 export type CommitHarnessFaults = {
@@ -277,8 +278,14 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
         return { ok: false as const, reason: "missing" as const };
       }
     },
-    stageEntry: (text: string, edit: { readonly phaseId: string; readonly operation: "complete" | "reopen"; readonly timestamp: string }) =>
-      stagePmNotesPhaseEntry(text, edit),
+    stageEntry: (
+      text: string,
+      edit: {
+        readonly phaseId: string;
+        readonly operation: "complete" | "reopen";
+        readonly timestamp: string;
+      },
+    ) => stagePmNotesPhaseEntry(text, edit),
     readRegistry: (changeRef: string) => {
       const read = readChangeTransitionsTolerant(store, changeRef);
       if (!read.ok) return { ok: false as const, error: read.error };
@@ -426,8 +433,7 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
     faults,
     phaseDefinition: phaseAtomicDefinition,
     commitDefinition,
-    runPhase: (args, runOptions) =>
-      runDefinition(phaseAtomicDefinition, "phase", args, runOptions),
+    runPhase: (args, runOptions) => runDefinition(phaseAtomicDefinition, "phase", args, runOptions),
     runCommit: (args, runOptions) => runDefinition(commitDefinition, "commit", args, runOptions),
     runDefinition,
     transitionPayloads: () =>

@@ -4,6 +4,7 @@
  * state ledger, not only the envelope.
  */
 import { describe, expect, test } from "bun:test";
+import { withCommitHarness } from "../fixtures/commit/harness";
 import {
   COMMIT_REF,
   commitCount,
@@ -21,7 +22,6 @@ import {
   transitionPayloads,
   validMessage,
 } from "./commit-support";
-import { withCommitHarness } from "../fixtures/commit/harness";
 
 const SEED = { "README.md": "# fixture\n", "src/existing.ts": "export const v = 1;\n" } as const;
 

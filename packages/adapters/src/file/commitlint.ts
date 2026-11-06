@@ -11,9 +11,9 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
-  CommitMessageDraft,
   CommitlintOutcome,
   CommitlintPort,
+  CommitMessageDraft,
 } from "@delivery-os/core/contracts";
 
 /** One bounded commitlint probe result. */

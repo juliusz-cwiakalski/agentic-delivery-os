@@ -15,10 +15,7 @@
     "atomic": true,
     "commitSha": "<sha>",
     "subject": "feat(GH-310): deliver the fixture change",
-    "stagedFiles": [
-      "src/existing.ts",
-      "src/new-file.ts"
-    ],
+    "stagedFiles": ["src/existing.ts", "src/new-file.ts"],
     "excluded": {
       "forbiddenPaths": [],
       "oversizedBinaries": [],

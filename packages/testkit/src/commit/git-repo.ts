@@ -7,7 +7,15 @@
  * deterministic seed commit. The builder never touches the live workspace.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -113,14 +121,27 @@ export const createTempGitRepository = (
   const read = (relative: string): string => readFileSync(join(root, relative), "utf8");
   const exists = (relative: string): boolean => existsSync(join(root, relative));
 
-  for (const [relative, content] of Object.entries(options.seedFiles ?? {})) write(relative, content);
+  for (const [relative, content] of Object.entries(options.seedFiles ?? {}))
+    write(relative, content);
   if (options.seedFiles !== undefined && Object.keys(options.seedFiles).length > 0) {
     git(["add", "-A"]);
-    git(["commit", "--no-verify", "--no-gpg-sign", "-m", options.seedCommitMessage ?? "chore: seed"]);
+    git([
+      "commit",
+      "--no-verify",
+      "--no-gpg-sign",
+      "-m",
+      options.seedCommitMessage ?? "chore: seed",
+    ]);
   } else if (options.seedFiles === undefined) {
     write("README.md", "# fixture\n");
     git(["add", "-A"]);
-    git(["commit", "--no-verify", "--no-gpg-sign", "-m", options.seedCommitMessage ?? "chore: seed"]);
+    git([
+      "commit",
+      "--no-verify",
+      "--no-gpg-sign",
+      "-m",
+      options.seedCommitMessage ?? "chore: seed",
+    ]);
   }
 
   return {
@@ -135,13 +156,13 @@ export const createTempGitRepository = (
     head: () => git(["rev-parse", "HEAD"]).stdout.trim(),
     commitCount: () => Number.parseInt(git(["rev-list", "--count", "HEAD"]).stdout.trim(), 10),
     logSubjects: () =>
-      git(["log", "--format=%s"]).stdout
-        .split("\n")
+      git(["log", "--format=%s"])
+        .stdout.split("\n")
         .map((line) => line.trim())
         .filter((line) => line.length > 0),
     stagedPaths: () =>
-      git(["diff", "--cached", "--name-only"]).stdout
-        .split("\n")
+      git(["diff", "--cached", "--name-only"])
+        .stdout.split("\n")
         .map((line) => line.trim())
         .filter((line) => line.length > 0)
         .sort(),

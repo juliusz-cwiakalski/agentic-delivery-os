@@ -3,6 +3,7 @@
  * the clean-abort contract, and the one-record-per-landing invariant.
  */
 import { describe, expect, test } from "bun:test";
+import { withCommitHarness } from "../fixtures/commit/harness";
 import {
   COMMIT_REF,
   commitCount,
@@ -15,7 +16,6 @@ import {
   transitionPayloads,
   validMessage,
 } from "./commit-support";
-import { withCommitHarness } from "../fixtures/commit/harness";
 
 const SEED = { "README.md": "# fixture\n", "src/existing.ts": "export const v = 1;\n" } as const;
 
@@ -65,12 +65,7 @@ describe("TC-ATOMIC-002 SC-M1-12 --no-commit records the transition alone", () =
         pending(harness);
         const beforeHead = head(harness);
         const beforeCommits = commitCount(harness);
-        const run = await harness.runPhase([
-          "complete",
-          COMMIT_REF,
-          "delivery",
-          "--no-commit",
-        ]);
+        const run = await harness.runPhase(["complete", COMMIT_REF, "delivery", "--no-commit"]);
         expect(run.exitCode).toBe(0);
         expect(dataOf(run).commitSkipped).toBe("opt-out-flag");
         expect(head(harness)).toBe(beforeHead);
@@ -296,7 +291,13 @@ describe("TC-ATOMIC-010/012 exactly one record with the durable intent", () => {
     }> = [
       { label: "atomic", phaseCommit: true, noCommit: false, dirty: true },
       { label: "opt-out", phaseCommit: true, noCommit: true, dirty: true, basis: "opt-out-flag" },
-      { label: "config", phaseCommit: false, noCommit: false, dirty: true, basis: "config-disabled" },
+      {
+        label: "config",
+        phaseCommit: false,
+        noCommit: false,
+        dirty: true,
+        basis: "config-disabled",
+      },
       {
         label: "no-pending",
         phaseCommit: true,

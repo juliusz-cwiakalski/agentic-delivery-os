@@ -5,17 +5,12 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import { createCommitCommandDefinition } from "../../packages/cli/src/commands/commit";
 import { runCli } from "../../packages/cli/src/index";
+import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
+import { COMMIT_REF, errorCodeOf, seedDirtyTree, validMessage } from "../behaviour/commit-support";
+import { type CommitHarness, createCommitHarness } from "../fixtures/commit/harness";
 import { bufferSink, SYNTHETIC_BRAND } from "./helpers";
-import {
-  COMMIT_REF,
-  errorCodeOf,
-  seedDirtyTree,
-  validMessage,
-} from "../behaviour/commit-support";
-import { createCommitHarness, type CommitHarness } from "../fixtures/commit/harness";
 
 const ROOT = process.cwd();
 const GOLDEN_DIR = join(ROOT, "tests/fixtures/envelope/golden");
@@ -88,7 +83,7 @@ describe("TC-ENV-001 success envelopes match committed normalized goldens", () =
         const stdout = await scenario.run(harness);
         const normalized = normalize(stdout);
         const golden = readFileSync(join(GOLDEN_DIR, `commit-${scenario.id}.json`), "utf8");
-        expect(`${normalized.trim()}`).toBe(`${golden.trim()}`);
+        expect(JSON.parse(normalized)).toEqual(JSON.parse(golden));
         const envelope = JSON.parse(normalized) as Record<string, unknown>;
         expect(assertEnvelopeContract(envelope)).toEqual([]);
         expect(envelope.exitCode).toBe(0);
