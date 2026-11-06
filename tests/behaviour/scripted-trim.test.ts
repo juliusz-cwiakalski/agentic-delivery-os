@@ -57,7 +57,7 @@ describe("TC-GH223-014/015 scripted success and void", () => {
     }
   });
 
-  test('void success renders exactly {"data":{}}', async () => {
+  test('TC-GH223-015 void success renders exactly {"data":{}}', async () => {
     const fixture = makeAuditStore("scripted-void");
     try {
       const run = await runAudited(fixture, {

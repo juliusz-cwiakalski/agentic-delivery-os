@@ -83,7 +83,7 @@ describe("TC-GH223-014/015 scripted success and void", () => {
     });
   }
 
-  test('void success renders exactly {"data":{}}', async () => {
+  test('TC-GH223-015 void success renders exactly {"data":{}}', async () => {
     const run = await runCase(byId("scripted-success-void"));
     expect(run.stdout).toBe('{"data":{}}\n');
     expect(JSON.parse(run.stdout)).toEqual({ data: {} });
