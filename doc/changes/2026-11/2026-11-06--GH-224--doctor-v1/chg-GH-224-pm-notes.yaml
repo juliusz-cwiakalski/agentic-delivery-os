@@ -9,8 +9,8 @@ phases:
   dor_check: { started: "2026-11-06T06:50:00Z", completed: "2026-11-06T07:30:00Z" }
   delivery: { started: "2026-11-06T07:35:00Z", completed: "2026-11-06T08:20:00Z" }
   system_spec_update: { started: "2026-11-06T08:25:00Z", completed: "2026-11-06T08:45:00Z" }
-  review_fix: { started: null, completed: null }
-  quality_gates: { started: null, completed: null }
+  review_fix: { started: "2026-11-06T08:50:00Z", completed: "2026-11-06T09:10:00Z" }
+  quality_gates: { started: "2026-11-06T09:10:00Z", completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -55,6 +55,9 @@ notes:
     type: "info"
     date: "2026-11-06"
   - text: "DOR CHECK iteration 2: READY (10/10 facets PASS; verdict artifact readiness-review/readiness-iter-2.md). All four iteration-1 findings verified resolved against diffs and delivered tree; YAML re-validated (valid/readyForDevelopment true). Advisory nit deferred to next test-plan touch: §2 enumerates DEC-1..DEC-10 (spec has 12) and cites spec v1.1 (now v1.2) — zero behavioral impact, body covers DEC-11/12 via A-T6/A-T11/A-T12."
+    type: "info"
+    date: "2026-11-06"
+  - text: "REVIEW iteration 1: PASS (record code-review/review-iter-1.yaml). Findings 0c/0h/0m/2l/3i; plan ALL_TASKS_DONE; no coverage gaps. Low findings remediated pre-gates: QUAL-1 localeCompare ICU-sensitive ordering replaced with codepoint comparison (compareParkOrder mechanism; determinism NFR-6 hazard eliminated), QUAL-2 isCredentialRejection now consumes DOCTOR_CREDENTIAL_REJECTION_STATUSES (single-home) — commit bdcaf4d6, doctor suites 260+28 green, typecheck green. Info findings recorded not actioned: INFO-3 readWorkTree forward-composition seam (documented truthfully; awaits future bin story), INFO-4 chainResolvable defensive re-implementation (accepted D2/D3 tension), INFO-5 two sandbox test failures reproduce on origin/main-tools (environmental, not regressions)."
     type: "info"
     date: "2026-11-06"
   - text: "Retro: the 'second consumer' claim is the second instance of the same failure class as the DEC-11 reopen — a factual assertion about delivered code (hook consumer set) that survived artifact authoring because it was not verified against the tree. Standing rule for spec/plan authors on this repo: every claim of the form 'delivered X has property Y / X is the only/first/second Z' must be checked against the delivered code or tests before it enters an artifact."
