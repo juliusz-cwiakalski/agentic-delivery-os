@@ -1,0 +1,47 @@
+change_id: GH-251
+title: "hardening: shell-suite CI failure propagation (OPEN-Q19) + input-limit UTF-8 boundary naming (OPEN-Q15)"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-06T16:40:00Z", completed: "2026-11-06T16:45:00Z" }
+  specification: { started: "2026-11-06T16:46:00Z", completed: "2026-11-06T16:55:00Z" }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "Parser limit reconciliation direction: enforce UTF-8 bytes (byte-accurate MAX_SOURCE_BYTES), not rename-to-chars. Driver: doc/spec/nonfunctional.md NFR-TOOL-005 spec truth says 'UTF-8 byte enforcement needs reconciliation'; fail-closed repo culture; preserves the byte-named contract. Final wording/implementation owned by spec-writer within ticket latitude."
+    date: "2026-11-06"
+  - text: "Synthetic failing-suite control to follow the repo's committed negative-mode self-test precedent (test-doc-distribution-modes.sh, test-delivery-mutation-sandbox.sh, test-deliver-ticket-result-tuples-modes.sh): prove propagation inside a green job via a self-verifying control against the same aggregation runner the workflow uses. Ticket explicitly allows 'behind a flag or a separate workflow step'. Exact verification shape owned by spec-writer/test-plan-writer."
+    date: "2026-11-06"
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: GH-251 OPEN (change+review labels, unassigned, no comments), no PR open or merged, local branch fix/GH-251/ci-failure-propagation at origin/main-tools tip 622a612e with zero commits, clean worktree, no change artifacts. Fresh delivery."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Scope confirmed complete and consistent with spec truth: ticket has context/tasks/AC/out-of-scope; NFR-TOOL-005 (doc/spec/nonfunctional.md) documents the parser limit gap and names byte enforcement as the reconciliation direction; phase-4-quality-baseline.md documents the CI find-exec finding; ADR-0003 C-8 already requires binding gates. No STOP needed."
+    type: "info"
+    date: "2026-11-06"
+  - text: "CI finding verified in .github/workflows/ci.yml bash-tests job (lines ~139-149): 'find ... -print -exec bash {} \\;' under 'set -e' does not aggregate child exit codes; the job's GH-124 comment wrongly claims set -e fails the job on first failing suite. Comment must be corrected as part of the repair."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Parser check sites in scope: yaml-parser.ts line 79 (one site), pm-notes-parser.ts lines 167 and 228 (two sites). All compare text.length (UTF-16 code units) against MAX_SOURCE_BYTES. Error codes (config.file.malformed etc.) unchanged by the repair."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Adjacent same-class instance OUT of scope: packages/core/src/domain/verify-gates.ts lines 1256/1261 compare .length against VERIFY_GATES_MAX_SUMMARY_BYTES (same chars-vs-bytes class). Ticket scopes exactly two adapter files and AC-4 forbids extra behavior change. Flagged for a future human-routed ticket; NOT included here."
+    type: "risk"
+    date: "2026-11-06"
+  - text: "Pure-TS UTF-8 byte length pattern already exists in packages/core/src/domain/queue-ready.ts ('UTF-8 byte length computed from code points, with no TextEncoder, Buffer') - reuse/replicate that approach for the parser repair per typescript purity rules."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Known doc impacts for phase 7: (1) ci.yml GH-124 comment correction; (2) doc/inception/analysis/phase-4-quality-baseline.md CI finding section + FSE-05 row (ticket task 4); (3) doc/spec/nonfunctional.md NFR-TOOL-005 gap line resolution; (4) feature-monorepo-scaffold-toolchain.md CI topology/bindingness wording if a runner script + negative control are added; (5) feature-config-layer.md parser-limit wording if changed; (6) open-question-reconciliation.md Q15/Q19 rows are an analysis snapshot - reconcile pointers only if doc-syncer deems required."
+    type: "info"
+    date: "2026-11-06"
+  - text: "AC-1 wording ('demonstrably fails the CI job, evidence: CI run link') interpreted as: committed negative control wired into CI proves propagation inside the PR's green run; optionally a red demonstration run on the branch during delivery. Spec-writer to pin the exact verification shape."
+    type: "decision"
+    date: "2026-11-06"
