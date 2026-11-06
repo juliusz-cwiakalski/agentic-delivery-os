@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-06T04:25:00Z", completed: "2026-11-06T08:10:00Z" }
   quality_gates: { started: "2026-11-06T08:15:00Z", completed: "2026-11-06T08:25:00Z" }
   dod_check: { started: "2026-11-06T08:30:00Z", completed: "2026-11-06T08:35:00Z" }
-  pr_creation: { started: "2026-11-06T08:40:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-11-06T08:40:00Z", completed: "2026-11-06T08:45:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/253" }
 decisions:
   - text: "delivery_mode=interactive (direct user dispatch; not the scripts/opencode-session.sh autonomous entry point)"
     date: "2026-11-05"
@@ -191,5 +191,8 @@ notes:
     type: "info"
     date: "2026-11-06"
   - text: "Plan phase 10 complete (code review remediation iter 2): commit 70f1cd52 - F-14 fail-open window closed with durable sha-on-record convergence evidence and fail-closed unreadable-evidence classification; F-15 corpus gaps closed (TC-CONVERGE-010 + TC-ATOMIC-014..016); F-16 comment pin. Docs reconciled in the same commit: spec v1.3 (DEC-7/F-7/record contract), feature-commit-primitive, feature-pm-notes-lint-and-phase-transitions, feature-state-layer, both M1 pack pages, test plan v1.3. Gate: targeted convergence/atomic 33 pass; focused commit/phase/golden suites 56 pass; structure/boundaries/checks 979 pass; final `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 - 3222 pass / 4 skip / 0 fail across 305 files, boundaries/exports-parity green; doc-distribution guard 81 docs green; git diff --check clean. No @reviewer invocation per instruction."
+    type: "info"
+    date: "2026-11-06"
+  - text: "pr_creation complete: PR #253 opened against main-tools (non-draft) at https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/253. Branch feat/GH-227/commit-primitive pushed to origin; description headlines the default-on atomic phase completion with both opt-outs, the new commit command, and the four-state convergence contract. Tracker write path: gh CLI (github-mcp rejects writes). Issue referenced, not auto-closed; merge is left to the owner/CEO."
     type: "info"
     date: "2026-11-06"
