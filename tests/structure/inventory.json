@@ -165,8 +165,11 @@
     "src/commands/toolset.ts",
     "src/commands/verify-artifact.ts",
     "src/index.ts",
+    "src/lifecycle.ts",
     "src/output/index.ts",
-    "src/output/payload.ts"
+    "src/output/payload.ts",
+    "src/output/protocol.ts",
+    "src/serve.ts"
   ],
   "opencode": [
     "src/commands/index.ts",

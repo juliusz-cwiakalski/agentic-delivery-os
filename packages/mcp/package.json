@@ -10,7 +10,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./serve": {
+      "types": "./dist/serve.d.ts",
+      "default": "./dist/serve.js"
     }
+  },
+  "engines": {
+    "node": ">=20"
   },
   "imports": {
     "#commands/*": "./src/commands/*.ts",

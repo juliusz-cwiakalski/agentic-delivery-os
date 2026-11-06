@@ -48,8 +48,8 @@ describe("TC-SECRET-001 planted violations fire", () => {
     expect(validate(ROOT)).toEqual([]);
   });
 
-  test("the allowlist is exactly four entries with one credential-material entry", () => {
-    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+  test("the allowlist is exactly five entries with one credential-material entry", () => {
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(5);
     expect(
       SECRET_READ_ALLOWLIST.filter((entry) => entry.class === "credential-material"),
     ).toHaveLength(1);
@@ -58,7 +58,7 @@ describe("TC-SECRET-001 planted violations fire", () => {
 
   test("the testkit conformance source is not allowlisted", () => {
     expect(SECRET_READ_ALLOWLIST.some((entry) => entry.path.includes("testkit"))).toBe(false);
-    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(5);
     expect(
       SECRET_READ_ALLOWLIST.filter((entry) => entry.class === "credential-material"),
     ).toHaveLength(1);
@@ -252,9 +252,50 @@ describe("TC-SECRET-004 non-vacuity and fixture coverage", () => {
   });
 });
 
+describe("TC-MCP-018 mcp serve allowlist scope", () => {
+  test("the mcp serve entry is the only allowlisted mcp path", () => {
+    const mcp = SECRET_READ_ALLOWLIST.filter((entry) => entry.path.startsWith("packages/mcp/"));
+    expect(mcp).toHaveLength(1);
+    expect(mcp[0]?.path).toBe("packages/mcp/src/serve.ts");
+    expect(mcp[0]?.kind).toBe("file");
+    expect(mcp[0]?.class).toBe("configuration-environment-source");
+  });
+
+  test("an ambient env read in a non-serve mcp file fails by name (control)", () => {
+    const root = mkdtempSync(join(tmpdir(), "mcp-secret-"));
+    try {
+      mkdirSync(join(root, "packages/mcp/src/commands"), { recursive: true });
+      writeFileSync(
+        join(root, "packages/mcp/src/commands/status.ts"),
+        "export const leak = (): string | undefined => process.env.FIXTURE_SECRET;\n",
+      );
+      const violations = scan(root);
+      expect(
+        violations.some((violation) => violation.file === "packages/mcp/src/commands/status.ts"),
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("the allowlisted serve startup read stays clean", () => {
+    const root = mkdtempSync(join(tmpdir(), "mcp-serve-secret-"));
+    try {
+      mkdirSync(join(root, "packages/mcp/src"), { recursive: true });
+      writeFileSync(
+        join(root, "packages/mcp/src/serve.ts"),
+        "export const environment = { ...process.env };\n",
+      );
+      expect(scan(root)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("TC-DOCTOR-023 doctor adds no secret-read surface", () => {
-  test("the allowlist stays exactly four entries with one credential-material entry", () => {
-    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+  test("the allowlist stays exactly five entries with one credential-material entry", () => {
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(5);
     expect(
       SECRET_READ_ALLOWLIST.filter((entry) => entry.class === "credential-material"),
     ).toHaveLength(1);

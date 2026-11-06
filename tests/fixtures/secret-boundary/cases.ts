@@ -202,6 +202,7 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
       "packages/adapters/src/legacy/index.ts": "export const legacy = process.env.LEGACY;\n",
       "packages/core/src/state/driver/runtime-edge.ts":
         "export const windowsUser = process.env.USERNAME ?? process.env.USER;\n",
+      "packages/mcp/src/serve.ts": "export const environment = { ...process.env };\n",
     },
     assertFile: "packages/adapters/src/credentials/index.ts",
   },

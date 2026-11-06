@@ -15,7 +15,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { SCOPE_LABEL, scanRoot } from "../../scripts/checks/exit-code-literals";
+import { MCP_LIFECYCLE, SCOPE_LABEL, scanRoot } from "../../scripts/checks/exit-code-literals";
 
 const ROOT = process.cwd();
 const PROJECTION = "packages/cli/src/projection.ts";
@@ -118,7 +118,40 @@ describe("TC-EXIT-002 forbidden forms", () => {
     expect(report.failures).toEqual([]);
   });
 
-  test("process.exit anywhere in the surface fails", () => {
+  test("(e) process.exit(3) in the MCP lifecycle module fails naming the literal", () => {
+    const root = makeTempRoot();
+    writeFile(root, MCP_LIFECYCLE, "process.exit(3);\n");
+    const report = scanRoot(root);
+    const text = messages(report.failures);
+    expect(text).toContain(MCP_LIFECYCLE);
+    expect(text).toContain("outside {0,1,2}");
+  });
+
+  test("(f) process.exit(0) in a non-lifecycle MCP module still fails", () => {
+    const root = makeTempRoot();
+    writeFile(root, "packages/mcp/src/commands/probe.ts", "process.exit(0);\n");
+    const report = scanRoot(root);
+    expect(messages(report.failures)).toContain("process.exit(...) is forbidden");
+  });
+
+  test("(g) a numeric exitCode literal in an MCP module still fails", () => {
+    const root = makeTempRoot();
+    writeFile(
+      root,
+      "packages/mcp/src/commands/probe.ts",
+      "export const value = { exitCode: 2 };\n",
+    );
+    const report = scanRoot(root);
+    expect(messages(report.failures)).toContain("exitCode literal 2");
+  });
+
+  test("(h) the lifecycle module may use only 0, 1, and 2", () => {
+    const root = makeTempRoot();
+    writeFile(root, MCP_LIFECYCLE, "process.exit(0);\nprocess.exit(1);\nprocess.exit(2);\n");
+    expect(scanRoot(root).failures).toEqual([]);
+  });
+
+  test("process.exit anywhere else in the surface fails", () => {
     const root = makeTempRoot();
     appendFile(root, PROJECTION, "\nprocess.exit(0);\n");
     const report = scanRoot(root);

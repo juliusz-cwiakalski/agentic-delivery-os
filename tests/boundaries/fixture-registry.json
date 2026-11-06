@@ -233,6 +233,11 @@
   ],
   "runtime-apis-confinement": [
     {
+      "id": "runtime-node-fs-mcp-non-serve",
+      "tc": "TC-MCP-018",
+      "path": "packages/mcp/src/commands/probe.ts"
+    },
+    {
       "id": "runtime-node-fs-domain",
       "tc": "TC-SCAFFOLD-014",
       "path": "packages/core/src/domain/probe.ts"

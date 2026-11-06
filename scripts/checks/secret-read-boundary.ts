@@ -27,7 +27,7 @@ export type AllowlistEntry = {
   readonly reason: string;
 };
 
-/** The enumerated v1 allowlist: one credential implementation and three readers. */
+/** The enumerated v1 allowlist: one credential implementation and four configuration readers. */
 export const SECRET_READ_ALLOWLIST: readonly AllowlistEntry[] = [
   {
     kind: "directory",
@@ -52,6 +52,14 @@ export const SECRET_READ_ALLOWLIST: readonly AllowlistEntry[] = [
     path: "packages/adapters/src/legacy/index.ts",
     class: "configuration-environment-source",
     reason: "Pre-existing legacy-name adapter environment reader.",
+  },
+  {
+    kind: "file",
+    path: "packages/mcp/src/serve.ts",
+    class: "configuration-environment-source",
+    reason:
+      "The mcp serve composition root reads the startup configuration environment exactly once " +
+      "(brand identity and configuration discovery), mirroring the cli edge's startup sourcing.",
   },
 ];
 

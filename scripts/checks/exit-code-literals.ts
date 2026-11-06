@@ -1,9 +1,15 @@
 /**
- * Exit-code literal invariant (F-4, NFR-7, §4.6).
+ * Exit-code literal invariant (F-4, NFR-7, §4.6; GH-231 DEC-6).
  *
- * Forbidden outside the single projection module: numeric assignments to an
+ * Forbidden outside the declared exit sites: numeric assignments to an
  * `exitCode` property and `process.exit(n)` anywhere in the delivered surface.
- * Inside the projection module, only the digits 0, 1, and 2 are permitted.
+ * Two sites are permitted:
+ * - the CLI projection module, where only the digits 0, 1, and 2 are allowed;
+ * - the MCP lifecycle module, the single transport lifecycle owner, where an
+ *   exit call or `exitCode` assignment may use only 0, 1, or 2 and any other
+ *   numeric exit literal fails. This grants the mcp surface the lifecycle
+ *   vocabulary, never the CLI projection role.
+ *
  * `tests/**` is out of scan scope and the report says so explicitly.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -17,6 +23,8 @@ export type ExitLiteralReport = {
 };
 
 const PROJECTION = "packages/cli/src/projection.ts";
+/** GH-231: the one additional permitted exit site (transport lifecycle only). */
+export const MCP_LIFECYCLE = "packages/mcp/src/lifecycle.ts";
 const SURFACE_DIRS = [
   "packages/cli/src",
   "packages/core/src",
@@ -25,6 +33,7 @@ const SURFACE_DIRS = [
   "packages/opencode/src",
 ];
 const ALLOWED_PROJECTION_DIGITS = new Set(["0", "1", "2"]);
+const ALLOWED_LIFECYCLE_DIGITS = new Set(["0", "1", "2"]);
 export const SCOPE_LABEL = "packages/*/src/** (tests/** excluded by design)";
 
 const listFiles = (root: string, relativeDir: string): string[] => {
@@ -52,6 +61,12 @@ const propertyName = (name: ts.PropertyName): string => {
   return name.getText();
 };
 
+const lifecycleExitLiteral = (node: ts.Expression | undefined): string | undefined =>
+  node !== undefined && ts.isNumericLiteral(node) ? node.text : undefined;
+
+const isAllowedLifecycleExit = (literal: string | undefined): boolean =>
+  literal === undefined || ALLOWED_LIFECYCLE_DIGITS.has(literal);
+
 /** Scan a root (the live tree or a mutated temp copy) for exit-code literals. */
 export const scanRoot = (root: string): ExitLiteralReport => {
   const failures: string[] = [];
@@ -67,14 +82,33 @@ export const scanRoot = (root: string): ExitLiteralReport => {
           owner.text === "process" &&
           node.expression.name.text === "exit"
         ) {
-          failures.push(`${file}:${lineOf(source, node)} process.exit(...) is forbidden`);
+          if (file === MCP_LIFECYCLE) {
+            const literal = lifecycleExitLiteral(node.arguments[0]);
+            if (!isAllowedLifecycleExit(literal)) {
+              failures.push(
+                `${file}:${lineOf(source, node)} lifecycle exit literal ${literal} is outside {0,1,2}`,
+              );
+            }
+          } else {
+            failures.push(`${file}:${lineOf(source, node)} process.exit(...) is forbidden`);
+          }
         }
       }
       if (ts.isPropertyAssignment(node) && propertyName(node.name) === "exitCode") {
-        if (ts.isNumericLiteral(node.initializer) && file !== PROJECTION) {
-          failures.push(
-            `${file}:${lineOf(source, node)} exitCode literal ${node.initializer.text}`,
-          );
+        if (ts.isNumericLiteral(node.initializer)) {
+          if (file === PROJECTION) {
+            // The projection digits are checked by the numeric-literal rule below.
+          } else if (file === MCP_LIFECYCLE) {
+            if (!ALLOWED_LIFECYCLE_DIGITS.has(node.initializer.text)) {
+              failures.push(
+                `${file}:${lineOf(source, node)} lifecycle exitCode literal ${node.initializer.text} is outside {0,1,2}`,
+              );
+            }
+          } else {
+            failures.push(
+              `${file}:${lineOf(source, node)} exitCode literal ${node.initializer.text}`,
+            );
+          }
         }
       }
       if (
@@ -82,10 +116,21 @@ export const scanRoot = (root: string): ExitLiteralReport => {
         ts.isIdentifier(node.name) &&
         node.name.text === "exitCode" &&
         node.initializer !== undefined &&
-        ts.isNumericLiteral(node.initializer) &&
-        file !== PROJECTION
+        ts.isNumericLiteral(node.initializer)
       ) {
-        failures.push(`${file}:${lineOf(source, node)} exitCode literal ${node.initializer.text}`);
+        if (file === PROJECTION) {
+          // Covered by the projection numeric-literal rule below.
+        } else if (file === MCP_LIFECYCLE) {
+          if (!ALLOWED_LIFECYCLE_DIGITS.has(node.initializer.text)) {
+            failures.push(
+              `${file}:${lineOf(source, node)} lifecycle exitCode literal ${node.initializer.text} is outside {0,1,2}`,
+            );
+          }
+        } else {
+          failures.push(
+            `${file}:${lineOf(source, node)} exitCode literal ${node.initializer.text}`,
+          );
+        }
       }
       if (file === PROJECTION && ts.isNumericLiteral(node)) {
         if (!ALLOWED_PROJECTION_DIGITS.has(node.text)) {

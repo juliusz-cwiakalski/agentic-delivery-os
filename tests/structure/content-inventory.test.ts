@@ -823,6 +823,9 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "mcp/src/commands/toolset.ts": ["createToolset"],
   "mcp/src/commands/verify-artifact.ts": ["runVerifyArtifactTool"],
   "mcp/src/output/payload.ts": ["failureFromValue", "inputRejection"],
+  "mcp/src/output/protocol.ts": ["runProtocol"],
+  "mcp/src/lifecycle.ts": ["exitCodeFor", "runLifecycle"],
+  "mcp/src/serve.ts": ["serve"],
   "adapters/src/github/client.ts": ["createGitHubClient"],
   "adapters/src/github/index.ts": ["createGitHubClient", "GITHUB_ADAPTER_CONTRACT"],
   "adapters/src/github/normalize.ts": [
