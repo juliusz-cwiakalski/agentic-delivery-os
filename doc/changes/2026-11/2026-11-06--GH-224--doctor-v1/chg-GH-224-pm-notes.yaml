@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-06T08:50:00Z", completed: "2026-11-06T09:10:00Z" }
   quality_gates: { started: "2026-11-06T09:10:00Z", completed: "2026-11-06T09:40:00Z" }
   dod_check: { started: "2026-11-06T09:45:00Z", completed: "2026-11-06T09:50:00Z" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-11-06T09:55:00Z", completed: "2026-11-06T10:05:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/254" }
 decisions:
   - text: "Doctor outcome modeling follows the verify-change precedent: any failing check yields a classified error envelope (exit 1) whose deterministic summary names EACH failing check with its fix hint; all-checks-ok yields a success data envelope (exit 0) with structured checks; platform-classified store failures project exit 2. Result-contract evolution (data-bearing failure envelope, as sketched in the pack example) is ruled out: the result contract's NFR forbids failure envelopes carrying data and forbids exit overrides outside the projection module. The pack convention explicitly defers such proposals to story delivery."
     date: "2026-11-06"
