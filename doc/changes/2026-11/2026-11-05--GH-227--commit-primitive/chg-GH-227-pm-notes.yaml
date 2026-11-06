@@ -3,8 +3,8 @@ title: "M1-S14: Commit primitive and phase-transition commits"
 delivery_mode: interactive
 phases:
   clarify_scope: { started: "2026-11-05T23:32:00Z", completed: "2026-11-05T23:33:00Z" }
-  specification: { started: "2026-11-05T23:34:00Z", completed: "2026-11-05T23:47:00Z" }
-  test_planning: { started: null, completed: null }
+  specification: { started: "2026-11-05T23:34:00Z", completed: "2026-11-05T23:58:00Z" }
+  test_planning: { started: "2026-11-05T23:48:00Z", completed: "2026-11-05T23:58:00Z" }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
@@ -39,4 +39,13 @@ notes:
     date: "2026-11-05"
   - text: "Spec delivered and PM-validated: 22 ACs (all Given/When/Then, traceable to F-/EVT-/DM-/NFR-), six-row commit error domain, SC-M1-12 pinned verbatim as AC-F6-1/2; all six PM-flagged edge cases resolved in-spec (DEC-5..DEC-15), no blocking open questions (OQ-1 harness headless mode, OQ-2 template-share governance deferred, non-blocking). Refinements vs pack proposals: commit.atomic-abort -> platform/exit 2; template fallback is success evidence not an error row; staging precision DEC-15 (tracked outside scope staged with drift disclosure, untracked only inside declared scope)"
     type: "info"
+    date: "2026-11-05"
+  - text: "Test plan iter-1 delivered: 68 cases, 22/22 AC coverage, SC-M1-12 inherited verbatim (TC-ATOMIC-001/002), real temp git repos + port fakes, no network. One BLOCKING gap flagged (OQ-T1): spec DEC-7 convergence semantics do not define how a re-run distinguishes an intentional record-only completion (--no-commit / config-disabled) from an interrupted atomic completion that must converge (AC-F7-1); TC-CONVERGE-007 and TC-ATOMIC-002 post-opt-out assertion blocked on it"
+    type: "risk"
+    date: "2026-11-05"
+  - text: "Reopen-on-gap: specification reopened (iteration 2) to resolve OQ-T1 in DEC-7 durable-evidence semantics; test_planning re-amendment to follow once spec lands. Non-blocking OQ-T2..T6 stay with the test plan as documented open questions"
+    type: "info"
+    date: "2026-11-05"
+  - text: "Specification iteration 2 complete: DEC-7 amended with durable commitIntent (atomic|record-only) + commitIntentBasis (opt-out-flag|config-disabled|skipped-no-pending-work) landing in the SAME ledger append as the transition record; new AC-F7-4 (re-run over record-only is a no-op citing stored basis); AC-F7-1 narrowed to intent=atomic; AC-F6-2/3/4 pinned to the exact basis strings; envelope commitSkipped vocabulary aligned (no-op is envelope-only). OQ-T1 marked resolved in section 14; spec at version 1.1"
+    type: "resolved"
     date: "2026-11-05"
