@@ -662,7 +662,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, and `status`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, and `doctor`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -676,7 +676,8 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(3);
-    expect(entries).toHaveLength(59);
+    expect(entries.filter((entry) => entry.domainKind === "doctor")).toHaveLength(1);
+    expect(entries).toHaveLength(60);
   });
 });
 
@@ -752,7 +753,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(59);
+    expect(entries).toHaveLength(60);
     expect(db).toHaveLength(4);
   });
 
@@ -968,7 +969,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(59);
+    expect(entries).toHaveLength(60);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1182,5 +1183,64 @@ describe("TC-BRIEF-013 brief adds no error identity", () => {
         expect(codes.has(match[0]), match[0]).toBe(false);
       }
     }
+  });
+});
+
+describe("TC-DOCTOR-020 the doctor kind has exactly one row and leaves the table intact", () => {
+  const DOCTOR_HINT = "Resolve each named failing check using its fix hint, then re-run doctor.";
+  const DOCTOR_SUMMARY = "One or more wiring checks failed.";
+
+  test("doctor is declared exactly once and carries exactly one row", () => {
+    expect((DOMAIN_KINDS as readonly string[]).filter((kind) => kind === "doctor")).toHaveLength(1);
+    const doctor = entries.filter((entry) => entry.domainKind === "doctor");
+    expect(doctor).toHaveLength(1);
+    expect(doctor[0]).toEqual({
+      code: "doctor.check.failed",
+      domainKind: "doctor",
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      remediationHint: DOCTOR_HINT,
+      projectionClass: "user-validation",
+      summary: DOCTOR_SUMMARY,
+    });
+  });
+
+  test("the doctor row round-trips through returned and thrown classification", () => {
+    const row = classifyDomainKind("doctor", "doctor.check.failed");
+    expect(row.projectionClass).toBe("user-validation");
+    expect(resolveAppErrorCode("doctor.check.failed")).toEqual({ ok: true, entry: row });
+    expect(classifyThrown({ kind: "doctor", code: "doctor.check.failed" })).toEqual(row);
+    expect(classifyThrown({ kind: "doctor", code: "doctor.check.failed", summary: "x" })).toEqual(
+      row,
+    );
+    expect(() => classifyDomainKind("doctor", "state.store.torn")).toThrow();
+    expect(() => classifyDomainKind("doctor", "doctor.check.repo.unreachable")).toThrow();
+  });
+
+  test("a check-level cause is never promoted to an error identity", () => {
+    const codes = new Set<string>(entries.map((entry) => entry.code));
+    for (const condition of [
+      "doctor.check.repo.unreachable",
+      "doctor.check.tracker.unreachable",
+      "doctor.check.provider.unreachable",
+      "doctor.check.state.unreachable",
+      "doctor.check.ci.unreachable",
+    ]) {
+      expect(codes.has(condition)).toBe(false);
+    }
+  });
+
+  test("the documented doctor row appears exactly once and matches column-for-column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    const row = `| doctor.check.failed | doctor | user | false | not_landed | ${DOCTOR_HINT} | user-validation | ${DOCTOR_SUMMARY} |`;
+    expect(doc.split(row).length - 1).toBe(1);
+    expect(doc).toContain("`watchdog`, `commit`, `status`, and `doctor`");
+  });
+
+  test("fallback remains the reserved two-segment namespace", () => {
+    expect(FALLBACK_INTERNAL_CODE).toBe("fallback.internal");
+    expect(FALLBACK_INVOCATION_CODE).toBe("fallback.invocation");
+    expect(entries.filter((entry) => entry.domainKind === "fallback")).toHaveLength(2);
   });
 });

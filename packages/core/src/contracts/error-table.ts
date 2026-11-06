@@ -23,6 +23,7 @@ export const DOMAIN_KINDS = [
   "watchdog",
   "commit",
   "status",
+  "doctor",
 ] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -674,5 +675,15 @@ export const ERROR_TABLE = [
       "Restore access to the named collector source and re-run the board; the board withheld its gates rather than display a partial picture.",
     projectionClass: "platform-provider",
     summary: "The named board collector is unavailable.",
+  },
+  {
+    code: "doctor.check.failed",
+    domainKind: "doctor",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Resolve each named failing check using its fix hint, then re-run doctor.",
+    projectionClass: "user-validation",
+    summary: "One or more wiring checks failed.",
   },
 ] as const satisfies readonly ErrorTableEntry[];
