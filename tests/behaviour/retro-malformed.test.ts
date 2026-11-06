@@ -208,3 +208,59 @@ describe("TC-RETRO-034 zero crashes and zero loss across the matrix", () => {
     }
   });
 });
+
+describe("TC-RETRO-030 / 031 domain halves", () => {
+  test("collect and report classify a malformed sidecar entry with preserved facts", async () => {
+    const { collectRetro, reportRetro } = await import("../../packages/core/src/domain/retro");
+    const { collectDeps, reportDeps } = await import("../fixtures/retro/harness");
+    const fixture = makeRetroDir("mal-domain-sidecar");
+    fixture.scriptDeliveryChanges([
+      {
+        changeRef: "GH-232",
+        completedAt: "2026-11-06T12:00:00Z",
+        transitions: [],
+      },
+    ]);
+    appendEvidence(fixture);
+    appendEvidence(fixture);
+    mutateContent(fixture, 1, (record) => {
+      delete record.traceId;
+    });
+    const collect = collectRetro(collectDeps(fixture));
+    expect(collect.ok).toBe(false);
+    if (!collect.ok) {
+      expect(collect.error.code).toBe("retro.evidence.malformed-entry");
+      expect(JSON.stringify(collect.error)).toContain("firstFlaggedPosition");
+      expect(JSON.stringify(collect.error)).toContain("entriesPreserved");
+    }
+    const report = reportRetro(reportDeps(fixture));
+    expect(report.ok).toBe(false);
+    if (!report.ok) {
+      expect(report.error.code).toBe("retro.evidence.malformed-entry");
+      expect(report.partial ?? "").toContain("ev-0002");
+    }
+  });
+
+  test("collect and report classify a malformed registry entry without crashing", async () => {
+    const { collectRetro, reportRetro } = await import("../../packages/core/src/domain/retro");
+    const { collectDeps, reportDeps } = await import("../fixtures/retro/harness");
+    const fixture = makeRetroDir("mal-domain-registry");
+    expect(seedRetroRegistry(fixture.store, "seed").ok).toBe(true);
+    const acquired = fixture.store.acquireFence("malformed");
+    expect(acquired.ok).toBe(true);
+    if (acquired.ok) {
+      fixture.store.append(acquired.value.handle, {
+        kind: RETRO_LEVEL_RECORD_KIND,
+        recordKey: `${RETRO_LEVEL_RECORD_KEY_PREFIX}:broken`,
+        payload: { schemaId: "delivery.retro.level.v1", name: "broken" },
+      });
+      fixture.store.releaseFence(acquired.value.handle);
+    }
+    const collect = collectRetro(collectDeps(fixture));
+    expect(collect.ok).toBe(false);
+    if (!collect.ok) expect(collect.error.code).toBe("retro.evidence.malformed-entry");
+    const report = reportRetro(reportDeps(fixture));
+    expect(report.ok).toBe(false);
+    if (!report.ok) expect(report.error.code).toBe("retro.evidence.malformed-entry");
+  });
+});

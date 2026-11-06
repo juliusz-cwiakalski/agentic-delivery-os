@@ -61,6 +61,7 @@
     "src/domain/plan-validate.ts",
     "src/domain/pm-notes-lint.ts",
     "src/domain/queue-ready.ts",
+    "src/domain/retro.ts",
     "src/domain/session-admin.ts",
     "src/domain/sha256.ts",
     "src/domain/status.ts",

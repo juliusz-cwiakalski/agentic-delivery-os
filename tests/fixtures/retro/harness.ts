@@ -18,6 +18,7 @@ import {
   type AuditReadQuery,
   type AuditReservationOrphanFinding,
   type PhaseTransitionRecord,
+  type RetroChangeFacts,
   RETRO_CANONICAL_FIELD_ORDER,
   RETRO_CHAIN_ANCHOR,
   RETRO_CHAIN_KEY_PAYLOAD_SCHEMA,
@@ -59,16 +60,11 @@ export type RetroFixture = {
   readonly stateFamilyReads: readonly string[];
   scriptNotes(changeRef: string, notes: RetroNotesRead): void;
   readonly noteReads: readonly string[];
-  scriptDeliveryChanges(
-    changes: readonly { readonly changeRef: string; readonly completedAt?: string }[],
-  ): void;
+  scriptDeliveryChanges(changes: readonly RetroChangeFacts[]): void;
   readonly readAuditLedgerQuery: (query: AuditReadQuery) => AuditReadOutcome;
   readonly readStateFamilies: (changeRef: string) => RetroStateFamilies;
   readonly readNotes: (changeRef: string) => RetroNotesRead;
-  readonly readDeliveryChanges: () => readonly {
-    readonly changeRef: string;
-    readonly completedAt?: string;
-  }[];
+  readonly readDeliveryChanges: () => readonly RetroChangeFacts[];
 };
 
 const counters = { trace: 0, run: 0 };
@@ -180,7 +176,7 @@ export const makeRetroDir = (label = "retro"): RetroFixture => {
   const stateFamilyReads: string[] = [];
   const notes = new Map<string, RetroNotesRead>();
   const noteReads: string[] = [];
-  let changes: readonly { readonly changeRef: string; readonly completedAt?: string }[] = [];
+  let changes: readonly RetroChangeFacts[] = [];
 
   return {
     root,
@@ -380,4 +376,72 @@ export const seedAuditKey = (fixture: RetroFixture): string => {
 export const appendAudit = (fixture: RetroFixture, facts: AuditInvocationFacts): void => {
   const appended = appendAuditInvocation(fixture.store, facts);
   if (!appended.ok) throw new Error(`audit append failed: ${appended.error.code}`);
+};
+
+export type RetroDepsOverrides = Partial<
+  import("../../../packages/core/src/domain/retro").RetroCollectDeps
+>;
+
+let fenceCounter = 0;
+
+/** Build the injected collection seams over the fixture. */
+export const collectDeps = (
+  fixture: RetroFixture,
+  overrides: RetroDepsOverrides = {},
+): import("../../../packages/core/src/domain/retro").RetroCollectDeps => ({
+  sidecar: fixture.sidecar,
+  store: fixture.store,
+  collectors: {
+    readAuditLedger: (query) => ({ ok: true, value: fixture.readAuditLedgerQuery(query) }),
+    readStateFamilies: fixture.readStateFamilies,
+    readNotes: fixture.readNotes,
+  },
+  readChanges: fixture.readDeliveryChanges,
+  clock: { nowMs: () => NOW_MS },
+  newTraceId,
+  newRunId,
+  newFenceToken: () => {
+    fenceCounter += 1;
+    return `fence-${String(fenceCounter)}`;
+  },
+  level: "change",
+  ...overrides,
+});
+
+/** Build the injected report seams over the fixture. */
+export const reportDeps = (
+  fixture: RetroFixture,
+  overrides: Partial<import("../../../packages/core/src/domain/retro").RetroReportDeps> = {},
+): import("../../../packages/core/src/domain/retro").RetroReportDeps => ({
+  sidecar: fixture.sidecar,
+  store: fixture.store,
+  level: "change",
+  ...overrides,
+});
+
+/** Build the injected export seams with an in-memory destination. */
+export const exportDeps = (
+  fixture: RetroFixture,
+  destination = "/temp/export.json",
+  limit = 10,
+  overrides: Partial<import("../../../packages/core/src/domain/retro").RetroExportDeps> = {},
+): {
+  readonly deps: import("../../../packages/core/src/domain/retro").RetroExportDeps;
+  readonly written: { readonly destination?: string; readonly content?: string };
+} => {
+  const written: { destination?: string; content?: string } = {};
+  return {
+    written,
+    deps: {
+      sidecar: fixture.sidecar,
+      level: "change",
+      destination,
+      limit,
+      write: (target, content) => {
+        written.destination = target;
+        written.content = content;
+      },
+      ...overrides,
+    },
+  };
 };
