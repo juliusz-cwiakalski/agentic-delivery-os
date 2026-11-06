@@ -5,7 +5,7 @@ created: 2026-11-01
 last_updated: 2026-11-06
 owners: [engineering]
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-228, GH-229]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -102,6 +102,7 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 | [Board](features/feature-owner-gate-sla.md#non-functional-requirements) | Pure evaluation/ranking/rendering within 50 ms; one bounded tracker read, at most one decision-history read, and one fence plus one append per newly defaulted gate. | `tests/behaviour/board-performance.test.ts`, `board-read-cost.test.ts`. |
 | [Provider](features/feature-provider-engine.md#non-functional-requirements) | Pure evaluation of 100 entries within 50 ms, excluding transport; configurable quota timeout defaults to 15000 ms, sleep cap to 24 completed sleeps. | Provider behavior and evidence-bounds suites; these are not end-to-end command deadlines. |
 | [Privacy](features/feature-privacy-guard.md#non-functional-requirements) | Scan within 60 s for up to 50 MiB on CI reference runner; emitter within 10 ms per 2048-byte envelope; at most 32 hashed lengths. | `tests/checks/privacy-performance.test.ts`; production empty classes limit what a clean scan demonstrates. |
+| [Commit](features/feature-commit-primitive.md#non-functional-requirements) | Dry-run p95 under 2 s and template-fallback p95 under 5 s; one constrained model call per attempt; a model-transport commit is bounded by the provider call. | `tests/behaviour/commit-performance.test.ts` samples the dry-run and template paths; the model-transport bound is not a CI deadline. |
 | [Session admin](features/feature-session-database-admin.md#non-functional-requirements) | Reference size/list/selection/recheck/live-check/500-candidate apply: at most 30 s/10 s/30 s/250 ms each/10 s/180 s total. | Fake-I/O suites and separately recorded non-CI reference smoke; no host performance rerun here. |
 
 - Session constants separately bound a query/delete to 30000 ms and checkpoint to

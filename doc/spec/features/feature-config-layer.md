@@ -2,12 +2,12 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-10-31
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227"]
   related_decisions: ["ADR-0003", "TDR-0003"]
 ---
 
@@ -72,7 +72,7 @@ One trusted draft-07 schema is generated from the typed catalog. A recursively r
 - Top-level `x-` keys are allowed in files as vendor data but do not create environment or CLI mappings.
 - Unknown ordinary keys fail `config.key.unknown`; invalid types, directive shapes and disallowed null fail `config.value.invalid`.
 - Explicit null requires catalog permission.
-- The ordinary production catalog declares the typed `provider` branch. Its dynamic-name maps (`provider.credentials`, `provider.entries`, `provider.chains`) use the additive `record` field kind: every child name is arbitrary and every child value is validated against the declared shape, while fixed branches keep exact unknown-key discipline.
+- The ordinary production catalog declares the typed `provider` and `commit` branches. The provider branch's dynamic-name maps (`provider.credentials`, `provider.entries`, `provider.chains`) use the additive `record` field kind: every child name is arbitrary and every child value is validated against the declared shape, while fixed branches keep exact unknown-key discipline.
 - `workingName` is the separate required bootstrap descriptor, supplied before discovery and never a mutable config key.
 - Typed extension catalogs exercise the same production resolver for required, nullable, defaulted, deprecated, nested, list, secret and machine-path fields. They are not production settings.
 
@@ -90,6 +90,14 @@ The shipped defaults declare one concrete subscription descriptor, `provider.ent
 The full field contract, evaluation semantics, and defaults are documented in [Provider Engine](feature-provider-engine.md); provider semantic-validation failures surface as `provider.chain.invalid` or `provider.chain.empty` from the provider engine, while schema-level configuration failures remain the configuration layer's classified errors.
 
 The status digest consumes the resolved provider branch through the ordinary configuration resolver: `provider.defaultChain`, `provider.chains`, and `provider.entries`. It adds no configuration key, no tracker, VCS, CI, or repository-addressing branch, and no status-specific cap or threshold setting. Status reads the branch and never writes configuration; repository addressing comes from the checkout's `origin` remote. The consumer contract is in [Status Digest](feature-status-digest.md).
+
+### Commit catalog branch
+
+The commit branch is the second ordinary production setting. It declares one key:
+
+- `commit.phaseCommit`: a boolean, defaulting to `true`, that decides whether `phase complete` lands the ledger transition and the conventional commit atomically for the project. Setting it to `false` records the transition alone with the durable basis `config-disabled`; the per-call `--no-commit` flag never overrides an explicit project disable.
+
+The consumer contract, including the per-call opt-out and the convergence evidence, is in [Commit Primitive](feature-commit-primitive.md).
 
 ### Merge, reset, warnings and origins
 
@@ -133,7 +141,7 @@ The machine table in [Result Contract and Error Table](feature-result-contract.m
 | Path | Responsibility |
 |---|---|
 | `packages/core/src/contracts/config.ts` | Plain JSON-compatible facts, layers, origins, skips, warnings and failure identity |
-| `packages/core/src/config/catalog.ts` | Typed catalog, bootstrap descriptor, the production `provider` branch, and the `record` field kind for dynamic-name maps |
+| `packages/core/src/config/catalog.ts` | Typed catalog, bootstrap descriptor, the production `provider` and `commit` branches, and the `record` field kind for dynamic-name maps |
 | `packages/core/src/config/schema.ts` | Trusted schema generation, partial/final compilation and safe invalid-key detection |
 | `packages/core/src/config/defaults.ts` | Typed default extraction and the shipped overridable provider defaults |
 | `packages/core/src/config/resolver.ts` | Pure seven-layer validation, merge, reset, restrictions, warnings and origins |
@@ -175,7 +183,7 @@ The core build emits `config.schema.json`, `defaults-positions.json` and `schema
 
 ### Cost and limitations
 
-Configuration adds the proposed Ajv and YAML runtime dependencies recorded in the dependency registry; owner license/TDR review gates merge/adoption. The provider branch is the only ordinary production catalog currently declared; its Z.AI descriptor and credential reference ship as overridable defaults, and no chain is enabled. File interpolation, credential resolution through configuration, and sidecar behavior are not available here; credential resolution is the separate port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
+Configuration adds the proposed Ajv and YAML runtime dependencies recorded in the dependency registry; owner license/TDR review gates merge/adoption. The `provider` and `commit` branches are the ordinary production catalogs currently declared; the provider branch's Z.AI descriptor and credential reference ship as overridable defaults with no chain enabled, and the commit branch ships `commit.phaseCommit` defaulting to `true`. File interpolation, credential resolution through configuration, and sidecar behavior are not available here; credential resolution is the separate port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 
 ## Quality Assurance Strategy
 
@@ -200,6 +208,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 - **Consumed by** the provider engine ([Provider Engine](feature-provider-engine.md)) for descriptors, credential references, chains, and shipped defaults.
 - **Consumed by** the status digest ([Status Digest](feature-status-digest.md)) for the resolved provider branch only; status adds no keys.
 - **Consumed by** the queue-ready ready-set ([Queue Ready](feature-queue-ready.md)) for the resolved provider branch only; it adds no keys and no queue-readiness settings.
+- **Consumed by** the commit primitive ([Commit Primitive](feature-commit-primitive.md)) for the resolved `commit.phaseCommit` key that decides whether a phase completion lands its commit atomically.
 - **Separate capability:** credential resolution is the port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); keyring sources and sidecar transport remain later capabilities, and state storage is the separate [State Layer](feature-state-layer.md).
 
 ## Glossary & References

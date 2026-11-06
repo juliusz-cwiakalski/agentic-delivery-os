@@ -1,7 +1,7 @@
 # commit(1)
 
-Status: M1 planned (M1-S14; design per concepts/automated-commit.md).
-Proposed contract.
+Status: M1-S14 shipped (GH-227); M1 milestone planned. Delivered
+contract.
 
 ## NAME
 
@@ -11,44 +11,81 @@ plus change context.
 ## SYNOPSIS
 
 ```
-<binary> commit <ref> [--phase <phase>] [--dry-run]
+<binary> commit [<ref>] [--phase <phase>] [--dry-run]
 ```
 
 ## DESCRIPTION
 
-Deterministic skeleton plus one constrained model call for the language
-parts (subject; body only when it earns its place); inference transports
-behind a seam; marked template fallback when no model is available.
-Staging is precise (never untracked strays; privacy-scanned). On phase
-completions the ledger transition and the commit land atomically **by
-default** (`--no-commit` opts out per call; config disables per
-project): the PM's ledger transitions and the coder's plan-phase
-completions trigger the commit automatically, with no agent iteration
-spent on the commit act. Never runs inside a delivery session.
+Computes the verifiable parts of the message (ref, type, scope, breaking
+default) deterministically and asks for the language part with exactly
+one constrained model call. Inference transports sit behind a seam and are
+tried in order: core-owned inference through the provider route, then a
+headless harness one-shot in a temporary empty project context, then a
+deterministic template marked `messageSource: template`. A repository with
+no configured transport still lands a marked template commit.
+
+Staging is precise: tracked pending work is staged and scope drift is
+disclosed; untracked files are staged only inside the declared plan scope;
+untracked material outside every declared scope is a stray and is never
+staged. The deterministic safety pass (secret scan on content and
+filenames, forbidden-path exclusions, binary size guard) runs before any
+transport is selected and before anything is staged, and it fails closed.
+
+The command never runs inside a delivery session. Use it from a plain
+shell, a script, or a subagent boundary.
+
+`phase complete` is the transition-centric entry to the same atomic act: it
+lands the ledger transition and the conventional commit together or
+neither by default (`--no-commit` records the transition alone; the
+project key `commit.phaseCommit: false` disables the commit per project).
+See [phase.md](phase.md).
 
 ## OPTIONS
 
-- `<ref>` - change reference for context (ref, current phase, plan
-  phase).
-- `--phase <phase>` - atomic record-plus-commit for the completed
-  phase's pending work.
-- `--dry-run` - print the computed message and staging set, change
-  nothing.
+- `[<ref>]` - change reference for context. Omitted, the ref is resolved
+  from the checkout (the branch name carries it); an unresolvable ref is
+  `input.value.rejected`.
+- `--phase <phase>` - atomic record-plus-commit for that phase's pending
+  work, using the phase's declared plan scope; combines with `--dry-run`.
+- `--dry-run` - print the computed message and staging set, including
+  exclusions; stage nothing, commit nothing, append no ledger record, emit
+  no telemetry.
 
 ## OUTPUT
 
-Text: `subject=`, `staged=` count and file list, `ledger=` transition,
-`commit=` SHA. Envelope `data`: `subject`, `body`, `stagedFiles`,
-`ledgerTransition`, `commitSha`, `atomic` (true when phase mode).
+Text: `subject:`, optional `body:`, `staged:`, the four exclusion groups
+(`forbidden`, `oversized binaries`, `stray, untracked`, `generated
+noise`), `scope drift (staged, tracked)`, `message source:`, `transport:`,
+`commit:`, `atomic completion: true` when phase mode, and `telemetry
+emission: not recorded` when the event could not be appended. A dry run
+starts with `dry run (nothing changed)`.
+
+Envelope `data`: `changeRef`, `subject`, optional `body`, `stagedFiles`,
+`excluded` (`forbiddenPaths`, `oversizedBinaries`, `untrackedNotStaged`,
+`noiseStripped`, `scopeDrift`), optional `commitSha`, `messageSource`
+(`model` | `template`), `transport` (`core-inference` | `harness-one-shot`
+| `none`), `atomic` (true in phase mode), optional `ledgerTransition`
+(`{ phase, timestamp }` from a compiled completion, or `{ phase,
+noOp: true }` when the phase-completion path is not composed or on a dry
+run), optional `dryRun`, `safety` (`completed`, `findings`), `telemetry`
+(`emitted`, optional `detail`), and optional `degradedScope:
+"plan-absent"` when no plan artifact supplied the scope.
+
+A phase-mode completion that lands the transition alone (nothing stageable
+is pending) or is an already-completed no-op returns success with no
+`commitSha`; `atomic` stays true in phase mode and `ledgerTransition` cites
+the phase.
 
 ## EXIT STATUS
 
-0 committed (or dry-run ok); 1 staging blocked, commitlint failure,
-atomic abort (neither landed); 2 platform faults.
+0 committed (or dry-run ok, or the phase completion landed its transition
+alone); 1 staging blocked, commitlint failure, safety STOP (suspected
+secret), session-context refusal; 2 platform fault (safety scan
+unavailable, atomic abort with neither side landed).
 
 ## EXAMPLES
 
-Atomic phase completion (SC-M1-12):
+Atomic phase completion:
 
 ```
 $ <binary> commit GH-310 --phase delivery --json
@@ -58,16 +95,27 @@ $ <binary> commit GH-310 --phase delivery --json
   "exitCode": 0,
   "timing": { "started": "2026-11-18T12:41:07Z", "durationMs": 3100 },
   "data": {
+    "changeRef": "GH-310",
     "subject": "feat(GH-310): scheduler lease acquisition and hand-off",
-    "body": null,
     "stagedFiles": [
-      "packages/core/src/scheduler/lease.ts",
       "packages/core/src/scheduler/handoff.ts",
-      "packages/core/src/scheduler/index.ts"
+      "packages/core/src/scheduler/index.ts",
+      "packages/core/src/scheduler/lease.ts"
     ],
-    "ledgerTransition": "delivery:complete",
+    "excluded": {
+      "forbiddenPaths": [],
+      "oversizedBinaries": [],
+      "untrackedNotStaged": ["tmp/scratch-notes.md"],
+      "noiseStripped": [],
+      "scopeDrift": []
+    },
     "commitSha": "7c31e9a",
-    "atomic": true
+    "messageSource": "model",
+    "transport": "core-inference",
+    "atomic": true,
+    "ledgerTransition": { "phase": "delivery", "timestamp": "2026-11-18T12:41:07Z" },
+    "safety": { "completed": true, "findings": [] },
+    "telemetry": { "emitted": true }
   }
 }
 ```
@@ -76,14 +124,24 @@ Dry-run from a script (minified by auto; stray file visible, unstaged):
 
 ```
 $ <binary> commit GH-310 --dry-run --json | cat
-{"schemaVersion":1,"runId":"r_01J8ZMAZ7C","exitCode":0,"timing":{"started":"2026-11-18T12:43:55Z","durationMs":820},"data":{"subject":"feat(GH-310): scheduler lease acquisition and hand-off","stagedFiles":["packages/core/src/scheduler/lease.ts"],"untrackedNotStaged":["tmp/scratch-notes.md"],"atomic":false,"dryRun":true}}
+{"schemaVersion":1,"runId":"r_01J8ZMAZ7C","exitCode":0,"timing":{"started":"2026-11-18T12:43:55Z","durationMs":820},"data":{"changeRef":"GH-310","subject":"feat(GH-310): scheduler lease acquisition and hand-off","stagedFiles":["packages/core/src/scheduler/lease.ts"],"excluded":{"forbiddenPaths":[],"oversizedBinaries":[],"untrackedNotStaged":["tmp/scratch-notes.md"],"noiseStripped":[],"scopeDrift":[]},"messageSource":"model","transport":"core-inference","atomic":false,"dryRun":true,"safety":{"completed":true,"findings":[]},"telemetry":{"emitted":false}}}
+```
+
+No inference transport configured; the template lands, visibly marked:
+
+```
+$ <binary> commit GH-310 --json | cat
+{"schemaVersion":1,"runId":"r_01J8ZMB43D","exitCode":0,"timing":{"started":"2026-11-18T12:45:12Z","durationMs":1600},"data":{"changeRef":"GH-310","subject":"feat(GH-310): scheduler lease acquisition and hand-off","stagedFiles":["packages/core/src/scheduler/lease.ts"],"excluded":{"forbiddenPaths":[],"oversizedBinaries":[],"untrackedNotStaged":[],"noiseStripped":[],"scopeDrift":[]},"commitSha":"9d10b7c","messageSource":"template","transport":"none","atomic":false,"safety":{"completed":true,"findings":[]},"telemetry":{"emitted":true}}}
 ```
 
 ## ERRORS
 
 `commit.staging-blocked-untracked`, `commit.commitlint-failed`,
-`commit.atomic-abort` (neither landed; classified),
-`commit.model-unavailable-template-fallback` (marked on the commit).
+`commit.safety.secret-suspected`, `commit.safety.scan-unavailable`,
+`commit.atomic-abort` (neither side landed; classified),
+`commit.session.context-refused`. A template fallback is success evidence
+(`messageSource: template`), never an error. Broken grammar resolves
+through `input.value.rejected`.
 
 ## SEE ALSO
 
