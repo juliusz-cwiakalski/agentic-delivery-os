@@ -2,11 +2,12 @@
 id: TOOLING-INCEPTION-PHASE-4-QUALITY
 status: Draft
 created: 2026-11-02
-last_updated: 2026-11-02
+last_updated: 2026-11-06
 owners: [bootstrapper]
 document_classification: working-analysis
+ados_distribution: internal
 links:
-  related_changes: [GH-200]
+  related_changes: [GH-200, GH-251]
 summary: "Actual conventions, CI, security and development-environment audit with bounded Phase 4 findings."
 ---
 
@@ -161,7 +162,8 @@ control on the existing root manifest, `find package.json -exec false {} \;`,
 returned **0**, verifying the command semantics. GH-251 replaced this path with
 `scripts/run-bash-suites.sh`: the runner discovers the same suite scope, executes
 every discovered suite once, aggregates each child's exit status, names every
-failing suite, and fails the job if and only if a suite fails or cannot run. A
+failing suite, and fails the job if and only if suite discovery fails or a
+discovered suite fails or cannot run. A
 committed self-verifying negative control plants a deliberately failing
 synthetic suite and asserts the runner exits non-zero, so every green run
 demonstrates propagation. The `bash-tests` comment now states this contract. The

@@ -203,7 +203,7 @@ The audit is invoked by the binding `ts-license-audit` CI job, which remains the
 
 ### CI coexistence
 
-The bash jobs remain authoritative. `bash-tests` executes every discovered CI-safe suite through `scripts/run-bash-suites.sh`, which runs each suite once, aggregates child exit statuses, names every failing suite, and fails the job if and only if at least one suite fails or cannot run. The committed self-verifying negative control `scripts/.tests/test-bash-suite-aggregation-modes.sh` plants a deliberately failing synthetic suite and proves the runner exits non-zero inside every green run. Sixteen additive `ts-*` jobs run beside the bash jobs as binding gates:
+The bash jobs remain authoritative. `bash-tests` executes every discovered CI-safe suite through `scripts/run-bash-suites.sh`, which fails closed if suite discovery itself errors, then runs each discovered suite once, aggregates child exit statuses, names every failing suite, and fails the job if and only if discovery fails or at least one discovered suite fails or cannot run; a successful discovery that matches no suites exits zero. The committed self-verifying negative control `scripts/.tests/test-bash-suite-aggregation-modes.sh` plants a deliberately failing synthetic suite and proves the runner exits non-zero inside every green run. Sixteen additive `ts-*` jobs run beside the bash jobs as binding gates:
 
 `ts-fresh-clone`, `ts-invariants`, `ts-typecheck`, `ts-lint`, `ts-format`, `ts-test`, `ts-boundaries`, `ts-build`, `ts-exports`, `ts-pins`, `ts-publish-guard`, `ts-license-audit`, `ts-vuln`, `ts-aggregate`, `ts-commitlint`, `ts-forbidden-literals`.
 
@@ -215,7 +215,7 @@ All `ts-*` jobs check out full history (`fetch-depth: 0`), so jobs that read a r
 
 No gate uses `continue-on-error`, `|| true`, `set +e`, or an `exit 0` wrap; `scripts/checks/ci-bindingness.ts` rejects those constructs. Actions are SHA-pinned, permissions are job-scoped, and the vulnerability gate fails on any high or critical advisory.
 
-`scripts/checks/ci-topology.ts` keeps the additions-only rule for `ci.yml` with one scoped allowance: removed lines are admitted only inside the `bash-tests` job's execution block (its `run:` step content) or that job's comment lines. Removals anywhere else remain fatal, and the bash/ts job-presence checks still fail on a deleted or renamed job. Committed negative fixtures in `tests/checks/ci-checks.test.ts` prove the allowance does not generalize; the job set itself is unchanged.
+`scripts/checks/ci-topology.ts` keeps the additions-only rule for `ci.yml` with one scoped allowance: removed lines are admitted only inside the `bash-tests` job block — any `run:` step body in that job or any comment line in that block, including a trailing comment immediately above the next job key. Removals anywhere else remain fatal, and the bash/ts job-presence checks still fail on a deleted or renamed job. Committed negative fixtures in `tests/checks/ci-checks.test.ts` prove the allowance does not generalize; the job set itself is unchanged.
 
 ## Technical Architecture & Codebase Map
 

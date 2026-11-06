@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: "2026-11-06T18:14:00Z", completed: "2026-11-06T18:30:00Z" }
   dor_check: { started: "2026-11-06T18:32:00Z", completed: "2026-11-06T18:45:00Z" }
   delivery: { started: "2026-11-06T18:47:00Z", completed: "2026-11-06T18:55:00Z" }
-  system_spec_update: { started: "2026-11-06T18:57:00Z", completed: "2026-11-06T19:05:00Z" }
+  system_spec_update: { started: "2026-11-06T18:57:00Z", completed: "2026-11-06T19:25:00Z" }
   review_fix: { started: "2026-11-06T19:10:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -97,6 +97,9 @@ notes:
     date: "2026-11-06"
   - text: "RETRO: F-2 empirically confirms the original CI bug was hiding a real pre-existing suite failure in CI (the text-to-image yq-fallback branch cannot pass in the CI environment). The repair's value is now demonstrated by its own first green run being contingent on fixing that latent failure. Lesson: after fixing a swallowed-failure gate, expect previously-hidden failures to surface; budget a remediation iteration for them."
     type: "retro"
+    date: "2026-11-06"
+  - text: "SYSTEM_SPEC_UPDATE RE-RUN after remediation (phase 7 iteration 2): scaffold-toolchain runner paragraph updated to the exhaustive failure-mode truth (discovery fail-closed clause + zero-match success case); DEC-7 allowance wording aligned to the true pinned footprint (any run: body in the job, any comment line in the block incl. trailing comment above next job key); phase-4 baseline CI finding aligned; fse-audit FSE-05 confirmed non-contradicted; text-to-image fallback confirmed consistent with owning docs (no edit). Residual source-owned item (ci.yml comment omitting discovery-failure path) fixed by coder in 687e0a03. Doc-distribution guard green."
+    type: "info"
     date: "2026-11-06"
   - text: "Plan phase 5 (review iteration 1 remediation; commit hash recorded in the delivery completion report because a commit cannot contain its own hash): 5.1 fail-closed discovery in scripts/run-bash-suites.sh captures find's status and aborts with 'suite discovery failed' before running any suite, pinned by TC-CIPROP-006b (chmod-000 directory); 5.2 test-only text-to-image fallback assertion now asserts the actual key=value contract and exercises the branch via an awk-only PATH subshell — 105/105 both with and without yq on PATH; 5.3 DEC-7 fixtures F/G pin the comment-above-next-job and Install-jq run-body footprint, each non-vacuous when allowBashTestsExecutionBlockRemovals is disabled; 5.4 artifact truth: implementation_plan set, GAP-1 resolved-by-plan, §10 changeset name corrected to -minor.md, privacy-release.test.ts classified, spec/test-plan version_impact aligned to minor. Gates: contract suite 9/9 PASS, modes PASS, ci-checks 37/37 PASS, ci-topology/ci-bindingness exit 0, shellcheck -S error clean on all four scripts, pnpm check exit 0 (4028 pass / 4 skip / 0 fail; boundaries + exports parity green), full runner 24/24 PASS exit 0, git diff --check clean."
     type: "info"
