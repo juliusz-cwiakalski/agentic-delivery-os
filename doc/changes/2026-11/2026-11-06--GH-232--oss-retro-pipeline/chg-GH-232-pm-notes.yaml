@@ -3,8 +3,8 @@ title: "M1-S8: OSS retro pipeline"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T17:20:00Z" }
-  specification: { started: "2026-11-06T17:22:00Z", completed: "2026-11-06T17:45:00Z" }
-  test_planning: { started: "2026-11-06T17:50:00Z", completed: null }
+  specification: { started: "2026-11-06T17:22:00Z", completed: "2026-11-06T18:15:00Z" }
+  test_planning: { started: "2026-11-06T17:50:00Z", completed: "2026-11-06T18:30:00Z" }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
@@ -17,11 +17,11 @@ decisions:
   - text: "TDR-0009 authored for the retro evidence sidecar keyed-chain construction (HMAC-style keyed chain, distinct store-managed key artifact, claimed collector identity, tamper-evidence scope) — resolves spec OQ-1; status Proposed, human acceptance reserved at PR review per R2 rigor."
     date: "2026-11-06"
 open_questions:
-  - text: "GAP-T3/OQ-T1 (spec reopen): AC-F4-2/DEC-7 require permission violations to exit 2, but delivered state.permission.denied projects exit 1 (user-validation) — contradiction with NG-10 (never change delivered rows). Spec must amend the taxonomy to follow the state row's own projection."
+  - text: "RESOLVED 2026-11-06 (GAP-T3/OQ-T1): spec v1.1 pins per-identity store-level projections — torn/missing-key exit 2, permission violations carry state.permission.denied delivered projection (exit 1, user-validation); NG-10 honored. Test plan §4.5 asserts both exits (TC-013/033)."
     date: "2026-11-06"
-  - text: "GAP-T4/OQ-T2 (spec reopen): AC-F7-1 export requires destination/limit/refusals but the locked command surface (retro collect|report [--level]) has no export invocation and spec section 8.5 forbids new flags/subcommands. Spec must pin export as a bounded library/engine surface with CLI exposure deferred."
+  - text: "RESOLVED 2026-11-06 (GAP-T4/OQ-T2): export pinned as bounded engine/library surface; no CLI invocation exists or is added; refusal identity input.value.rejected exit 1 before any write; CLI exposure deferred to M2-S3 via NG-1 amendment. Test plan TC-049/050 assert at engine boundary."
     date: "2026-11-06"
-  - text: "GAP-T5/OQ-T3 (spec reopen): AC-F6-1 pipeline-truth triggers (zero-collector, broken-audit-verdict) assert non-clean exit but no identity/exit is pinned. Spec must pin identities/exits for every pipeline-truth trigger (extend DEC-11 row set as needed)."
+  - text: "RESOLVED 2026-11-06 (GAP-T5/OQ-T3): broken audit-verdict reuses retro.evidence.tamper-flagged (exit 1); zero-collector run gets new row retro.truth.vacuous-run (exit 1); DEC-11 now exactly four rows with round-trip documentation. Test plan §4.7/§4.8/TC-042/TC-045 pin both."
     date: "2026-11-06"
 blockers: []
 notes:
@@ -56,5 +56,8 @@ notes:
     type: retro
     date: "2026-11-06"
   - text: "Reopen root cause: spec pinned exit codes and surface contracts beyond what the delivered state-layer rows and the locked CLI surface support. Lesson for spec authoring: cross-check every asserted exit code against the actual error-table projectionClass, and every AC's invocation path against the locked command surface, before finalizing."
+    type: retro
+    date: "2026-11-06"
+  - text: "specification iteration 2 completed: spec v1.1 with 33 surgical edits (per-identity exit taxonomy, export as engine surface with M2-S3 CLI deferral, retro.truth.vacuous-run fourth error row); test plan v1.1 reconciled — 64 TCs stable, 14 detail blocks updated, zero TODO markers remaining except explicitly delivery-bound items (OQ-T6/T7/T8, GAP-T1); programmatic verification green (64/64/64 set-difference check, 16/16 AC mapping, no binding-AC weakening). The reopen loop worked as designed: one cycle, no scope loss."
     type: retro
     date: "2026-11-06"
