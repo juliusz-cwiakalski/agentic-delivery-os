@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: "2026-11-06T20:15:00Z", completed: "2026-11-06T20:35:00Z" }
   review_fix: { started: "2026-11-06T20:40:00Z", completed: "2026-11-06T21:15:00Z" }
   quality_gates: { started: "2026-11-06T21:20:00Z", completed: "2026-11-06T21:50:00Z" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-11-06T21:55:00Z", completed: "2026-11-06T22:00:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "TDR-0009 authored for the retro evidence sidecar keyed-chain construction (HMAC-style keyed chain, distinct store-managed key artifact, claimed collector identity, tamper-evidence scope) — resolves spec OQ-1; status Proposed, human acceptance reserved at PR review per R2 rigor."
@@ -131,6 +131,9 @@ notes:
     date: "2026-11-06"
   - text: "Timestamp backfill at DoD prep: specification/test_planning completion timestamps were lost during the DoR reopen cycle (iteration 3 resets) and delivery during the review-remediation reopen; the underlying work verifiably completed (spec v1.2 + test plan v1.2 amendments, remediation commit cf4475d6 verified by review iteration 2 PASS). Backfilled: specification 2026-11-06T20:00Z (post-v1.2 amendments), test_planning 2026-11-06T20:06Z (post-v1.2 alignment), delivery 2026-11-06T21:10Z (post-remediation PASS). RETRO lesson for PM: when reopening a phase, add a reminder note to re-close it — reopen/resume pairs must always be symmetric."
     type: retro
+    date: "2026-11-06"
+  - text: "DoD check PASS (2026-11-06T22:00Z). (1) Phase completeness: 9/9 deliverable phases recorded complete in pm-notes with timestamps (dod_check, pr_creation are the current/final phases). (2) Plan completion: YAML plan phases 1-6 plus remediation phase 7 each carry a pm-notes entry with plan-phase id, commit hash (7349b22e, 4dc50ba6, e9dfdca5, bc2a2e6e, b81e88d1, 8b2c8421, cf4475d6 + merge d79148fe) and test result; reviewer independently verified ALL_TASKS_DONE across phases 1-7. (3) AC satisfaction: 16/16 spec ACs verified — binding AC 1 by the delivered byte-equality oracle (TC-RETRO-032, mutants can fail it), binding AC 2 by the six-class tamper mutation suite, both independently re-verified by review iteration 2 PASS. (4) Current-truth docs: doc-syncer reported zero residual gaps on both runs; doc-distribution guard green; feature-retro-pipeline.md authored and reconciled. (5) Quality gates: all 10 green. Verdict: ready for PR creation."
+    type: info
     date: "2026-11-06"
   - text: "Reviewed deviation resolution (F-5 / PIN-4 single store): the retro registry rides the delivery state store rather than a distinct store instance. RETRO_REGISTRY_FENCE_NAMESPACE is now live on registry fence tokens, and the doctor aggregation no longer adds retro.recordCount (the shared ledger's base count already includes retro artifacts, so summing double-counted them). Integrity is unaffected: the registry carries levels/runs/triggers, not evidence."
     type: info
