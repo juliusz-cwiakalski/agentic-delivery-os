@@ -196,6 +196,10 @@ export const guardStore = (
       mutation("repairTornTail");
       return inner.repairTornTail();
     },
+    salvage: (handle) => {
+      mutation("salvage");
+      return inner.salvage(handle);
+    },
   };
   return { store, recorder };
 };

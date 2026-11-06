@@ -236,7 +236,8 @@ export const ERROR_TABLE = [
     category: "platform",
     retryable: false,
     consequence: "not_landed",
-    remediationHint: "Inspect or restore the named state store; never treat it as empty.",
+    remediationHint:
+      "Inspect the named state store and use the explicit salvage operation as a separate step to truncate a torn tail; never treat the store as empty.",
     projectionClass: "platform-provider",
     summary: "The state store is torn.",
   },
@@ -289,9 +290,31 @@ export const ERROR_TABLE = [
     retryable: true,
     consequence: "not_landed",
     remediationHint:
-      "Resolve the underlying storage error and retry; the failed write or rebuild did not land, the ledger remains durable truth, and the index stays disposable.",
+      "Resolve the underlying storage error other than exhaustion and retry; the failed write or rebuild did not land, the ledger remains durable truth, and the index stays disposable.",
     projectionClass: "platform-provider",
     summary: "A state write or index rebuild did not land.",
+  },
+  {
+    code: "state.storage.exhausted",
+    domainKind: "state",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Free storage space on the named state path and retry; the write did not land and the ledger remains at its last valid frame.",
+    projectionClass: "platform-provider",
+    summary: "The storage backing the state store is exhausted.",
+  },
+  {
+    code: "state.store.unknown",
+    domainKind: "state",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare the record kind and payload schema at the validated boundary, or use a compatible tool version, then retry.",
+    projectionClass: "platform-provider",
+    summary: "A record kind or payload schema is not declared at the validated boundary.",
   },
   {
     code: "state.level.unsupported",

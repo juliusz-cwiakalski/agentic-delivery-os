@@ -23,36 +23,51 @@ import {
   type StateEdgeFaultPoint,
   type StateRuntimeEdge,
 } from "../../../packages/core/src/state/index";
+import { storageExhaustionFailure } from "../../../packages/core/src/state/storage-error";
 
 export type TestFault = { readonly point: StateEdgeFaultPoint };
 
 export type TestEdge = StateRuntimeEdge & {
   readonly raised: StateEdgeFaultPoint[];
   arm(points: readonly StateEdgeFaultPoint[]): void;
+  /** Arms the ASM-3 pre-commit points to raise the exhaustion-shaped failure. */
+  armExhaustion(points: readonly StateEdgeFaultPoint[]): void;
   disarm(): void;
 };
 
 export type TestClock = { value: number };
 
 export const createTestEdge = (
-  options: { readonly faults?: readonly StateEdgeFaultPoint[]; readonly clock?: TestClock } = {},
+  options: {
+    readonly faults?: readonly StateEdgeFaultPoint[];
+    readonly exhaustion?: readonly StateEdgeFaultPoint[];
+    readonly clock?: TestClock;
+  } = {},
 ): TestEdge => {
   const base = createNodeStateEdge();
   let armed = new Set<StateEdgeFaultPoint>(options.faults ?? []);
+  let exhaustion = new Set<StateEdgeFaultPoint>(options.exhaustion ?? []);
   const raised: StateEdgeFaultPoint[] = [];
   return {
     ...base,
     now: () => (options.clock === undefined ? base.now() : options.clock.value),
     raiseFault: (point) => {
       raised.push(point);
+      if (exhaustion.has(point)) throw storageExhaustionFailure("ENOSPC");
       if (armed.has(point)) throw { point } satisfies TestFault;
     },
     raised,
     arm: (points) => {
       armed = new Set(points);
+      exhaustion = new Set();
+    },
+    armExhaustion: (points) => {
+      armed = new Set();
+      exhaustion = new Set(points);
     },
     disarm: () => {
       armed = new Set();
+      exhaustion = new Set();
     },
   };
 };
@@ -135,6 +150,51 @@ export const withinFence = (
   if (!acquired.ok) throw new Error(`acquire failed: ${acquired.error.code}`);
   try {
     body(acquired.value.handle);
+  } finally {
+    store.releaseFence(acquired.value.handle);
+  }
+};
+
+/** The quarantine directory a store owns (outside documents/index namespaces). */
+export const quarantineDirectory = (identity: StateStoreIdentity): string =>
+  `${identity.stateDirectory}/quarantine.${encodeURIComponent(identity.workspaceId)}`;
+
+/** The quarantine artifacts a store currently holds, sorted by name. */
+export const quarantineFiles = (identity: StateStoreIdentity): string[] => {
+  const directory = quarantineDirectory(identity);
+  return existsSync(directory) ? readdirSync(directory).sort() : [];
+};
+
+/** One quarantine artifact path by name. */
+export const quarantinePath = (identity: StateStoreIdentity, name: string): string =>
+  `${quarantineDirectory(identity)}/${name}`;
+
+/** The ledger's raw bytes (a capture for byte-identity comparisons). */
+export const ledgerBytes = (identity: StateStoreIdentity): Buffer =>
+  readFileSync(ledgerPath(identity));
+
+/** SHA-256 over the ledger's exact bytes (byte-identity evidence). */
+export const ledgerDigest = (identity: StateStoreIdentity): string =>
+  createHash("sha256")
+    .update(readFileSync(ledgerPath(identity)))
+    .digest("hex");
+
+/** The exact post-tear bytes: everything after the given byte offset. */
+export const tailBytesAfter = (
+  identity: StateStoreIdentity,
+  byteOffset: number,
+  captured?: Buffer,
+): Buffer => (captured ?? ledgerBytes(identity)).subarray(byteOffset);
+
+/** Run the explicit salvage operation under a freshly acquired fence. */
+export const salvageTail = (
+  store: StateStorePort,
+  token = "salvage-writer",
+): ReturnType<StateStorePort["salvage"]> => {
+  const acquired = store.acquireFence(token);
+  if (!acquired.ok) return acquired;
+  try {
+    return store.salvage(acquired.value.handle);
   } finally {
     store.releaseFence(acquired.value.handle);
   }

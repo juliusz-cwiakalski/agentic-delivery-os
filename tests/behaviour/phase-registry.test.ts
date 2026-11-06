@@ -4,7 +4,7 @@
  * history, a rebuildable derived projection, and classified read safety.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { StateStoreIdentity, StateStorePort } from "../../packages/core/src/contracts/index";
 import {
@@ -14,10 +14,12 @@ import {
   phaseStateDocumentName,
   phaseTransitionRecordKey,
   readChangeTransitions,
+  readChangeTransitionsTolerant,
   rebuildPhaseProjection,
   replacePhaseProjection,
 } from "../../packages/core/src/state/index";
 import {
+  digestPaths,
   ledgerLines,
   ledgerPath,
   makeIdentity,
@@ -295,7 +297,16 @@ describe("TC-PHASE-007 registry read safety", () => {
         harness.store.append(acquired.value.handle, {
           kind: "phase.transition",
           recordKey: "phase.transitions:GH-999",
-          payload: { changeRef: "GH-999" },
+          // A conforming sibling landing: the absent GH-179 record is the
+          // boundary's key-set miss, not a malformed-sibling classification.
+          payload: {
+            changeRef: "GH-999",
+            phaseId: "delivery",
+            operation: "complete",
+            timestamp: "2026-10-31T09:00:00Z",
+            outcome: "landed",
+            transitions: [],
+          },
         });
       } finally {
         harness.store.releaseFence(acquired.value.handle);
@@ -391,6 +402,174 @@ describe("TC-PHASE-007 registry read safety", () => {
       expect(read.ok).toBe(false);
       if (read.ok) return;
       expect(JSON.stringify(read.error)).not.toContain(CANARY);
+    });
+  });
+});
+
+const directoryDigest = (root: string): string => {
+  const paths: string[] = [];
+  const walk = (relative: string): void => {
+    for (const entry of readdirSync(join(root, relative), { withFileTypes: true })) {
+      const next = `${relative}/${entry.name}`;
+      if (entry.isDirectory()) walk(next);
+      else paths.push(join(root, next));
+    }
+  };
+  if (existsSync(root)) walk("");
+  return digestPaths(paths.sort());
+};
+
+const projectionFile = (root: string, ref = REF): string =>
+  join(root, `documents.${encodeURIComponent("registry")}`, phaseStateDocumentName(ref));
+
+/**
+ * TC-GH222-023 — the delivery registry reads and writes through the validated
+ * `phase.transition` boundary: valid-store behaviour is unchanged, torn stays a
+ * classified failure (never an empty history, never `present: false`), an absent
+ * per-change record stays explicit no-evidence, and no read mutates the ledger,
+ * the index, or a derived document.
+ */
+describe("TC-GH222-023 delivery registry validated boundary", () => {
+  test("valid-store reads, folds, and projection replaces are unchanged", () => {
+    withHarness((harness) => {
+      const first = mustLand(harness, "delivery", "complete", "2026-10-31T09:00:00Z");
+      expect(first.transitions).toHaveLength(1);
+      mustLand(harness, "delivery", "reopen", "2026-10-31T09:10:00Z", "");
+      const read = readChangeTransitions(harness.store, REF);
+      expect(read.ok).toBe(true);
+      if (!read.ok) return;
+      expect(read.value.verifiedEmpty).toBe(false);
+      expect(read.value.transitions).toHaveLength(2);
+      // Falsy/empty values return exactly; the empty reopen reason is not dropped.
+      expect(read.value.transitions[1]?.reason).toBe("");
+      expect(read.value.evidence.recordCount).toBe(2);
+      expect(read.value.evidence.rebuild).toBeUndefined();
+      expect(read.value.evidence.repair).toBeUndefined();
+
+      const folded = foldPhaseState(REF, read.value.transitions);
+      expect(folded.phases.delivery).toEqual({
+        started: "2026-10-31T09:00:00Z",
+        completed: null,
+      });
+
+      const replaced = replacePhaseProjection(harness.store, {
+        changeRef: REF,
+        transitions: read.value.transitions,
+        fenceToken: token(harness),
+      });
+      expect(replaced.ok).toBe(true);
+      expect(projectionContent(harness.store)).toEqual(folded);
+      const rebuilt = rebuildPhaseProjection(harness.store, {
+        changeRef: REF,
+        fenceToken: token(harness),
+      });
+      expect(rebuilt.ok).toBe(true);
+      if (rebuilt.ok) {
+        expect(rebuilt.value.projection).toEqual(folded);
+        expect(rebuilt.value.evidence.rebuild).toBeUndefined();
+        expect(rebuilt.value.evidence.repair).toBeUndefined();
+      }
+    });
+  });
+
+  test("a torn store classifies torn through both reads and produces nothing", () => {
+    const root = makeTempRoot("registry-torn-boundary");
+    try {
+      const identity = makeIdentity(root, { workspaceId: "registry" });
+      const { store } = openStore(identity);
+      const harness: Harness = { root, identity, store, tokens: { next: 1 } };
+      mustLand(harness, "delivery", "complete", "2026-10-31T09:00:00Z");
+      const history = readChangeTransitions(store, REF);
+      if (!history.ok) throw new Error(history.error.code);
+      const seeded = replacePhaseProjection(store, {
+        changeRef: REF,
+        transitions: history.value.transitions,
+        fenceToken: "projection-writer",
+      });
+      expect(seeded.ok).toBe(true);
+      const documentBefore = readFileSync(projectionFile(root), "utf8");
+      const ledgerBefore = readFileSync(ledgerPath(identity), "utf8");
+      const directoryBefore = directoryDigest(root);
+
+      mutateLedger(identity, (lines) => ["{not-framed", ...lines.slice(1)]);
+
+      const strict = readChangeTransitions(store, REF);
+      expect(strict.ok).toBe(false);
+      if (!strict.ok) {
+        expect(strict.error.code).toBe("state.store.torn");
+        expect(strict.error.location.path).toBe(ledgerPath(identity));
+        expect(JSON.stringify(strict)).not.toContain(CANARY);
+      }
+      const tolerant = readChangeTransitionsTolerant(store, REF);
+      expect(tolerant.ok).toBe(false);
+      if (!tolerant.ok) expect(tolerant.error.code).toBe("state.store.torn");
+
+      // Never an empty history and never `present: false` for torn bytes; no
+      // projection is produced or replaced.
+      expect(JSON.stringify(strict)).not.toContain("present");
+      expect(JSON.stringify(tolerant)).not.toContain('"present":false');
+      expect(readFileSync(projectionFile(root), "utf8")).toBe(documentBefore);
+      expect(readFileSync(ledgerPath(identity), "utf8")).not.toBe(ledgerBefore);
+      expect(directoryDigest(root)).not.toBe(directoryBefore);
+      expect(readdirSync(join(root, `documents.${encodeURIComponent("registry")}`))).toEqual([
+        phaseStateDocumentName(REF),
+      ]);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("an absent per-change record is explicit no-evidence, distinct from torn", () => {
+    withHarness((harness) => {
+      mustLand(harness, "delivery", "complete", "2026-10-31T09:00:00Z");
+      const tolerant = readChangeTransitionsTolerant(harness.store, REF);
+      expect(tolerant.ok).toBe(true);
+      if (tolerant.ok) {
+        expect(tolerant.value.present).toBe(true);
+        expect(tolerant.value.transitions).toHaveLength(1);
+      }
+      const absent = readChangeTransitionsTolerant(harness.store, "GH-999");
+      expect(absent.ok).toBe(true);
+      if (absent.ok) {
+        expect(absent.value.present).toBe(false);
+        expect(absent.value.verifiedEmpty).toBe(false);
+        expect(absent.value.transitions).toEqual([]);
+      }
+      const strictAbsent = readChangeTransitions(harness.store, "GH-999");
+      expect(strictAbsent.ok).toBe(false);
+      if (!strictAbsent.ok) {
+        expect(strictAbsent.error.code).toBe("state.keys.missing");
+        expect(strictAbsent.error.location.missingKeys).toEqual([
+          phaseTransitionRecordKey("GH-999"),
+        ]);
+      }
+    });
+  });
+
+  test("registry reads mutate neither the ledger nor a derived document", () => {
+    withHarness((harness) => {
+      mustLand(harness, "delivery", "complete", "2026-10-31T09:00:00Z");
+      const read = readChangeTransitions(harness.store, REF);
+      if (!read.ok) throw new Error(read.error.code);
+      const replaced = replacePhaseProjection(harness.store, {
+        changeRef: REF,
+        transitions: read.value.transitions,
+        fenceToken: token(harness),
+      });
+      if (!replaced.ok) throw new Error(replaced.error.code);
+      const ledgerBefore = readFileSync(ledgerPath(harness.identity), "utf8");
+      const documentBefore = readFileSync(projectionFile(harness.root), "utf8");
+      const directoryBefore = directoryDigest(harness.root);
+
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        expect(readChangeTransitions(harness.store, REF).ok).toBe(true);
+        expect(readChangeTransitionsTolerant(harness.store, REF).ok).toBe(true);
+        expect(harness.store.read({ requiredKeys: [] }).ok).toBe(true);
+      }
+
+      expect(readFileSync(ledgerPath(harness.identity), "utf8")).toBe(ledgerBefore);
+      expect(readFileSync(projectionFile(harness.root), "utf8")).toBe(documentBefore);
+      expect(directoryDigest(harness.root)).toBe(directoryBefore);
     });
   });
 });

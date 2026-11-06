@@ -10,10 +10,16 @@ import { join } from "node:path";
 import {
   ERROR_TABLE,
   type ErrorTableEntry,
+  STATE_ARTIFACT_FIELD_TYPES,
+  STATE_BOUNDARY_VERDICTS,
   STATE_LEVELS,
+  STATE_SALVAGE_PAYLOAD_SCHEMA,
+  STATE_SALVAGE_RECORD_KEY,
+  STATE_SALVAGE_RECORD_KIND,
   type StateStoreIdentity,
 } from "../../packages/core/src/contracts/index";
 import {
+  createArtifactBoundary,
   createStateStore,
   type StateEdgeFaultPoint,
   type StateRuntimeEdge,
@@ -140,6 +146,52 @@ describe("TC-STATE-001 injected identity and zero derivation", () => {
     expect(
       readFileSync(join(process.cwd(), "packages/core/src/state/index.ts"), "utf8"),
     ).not.toContain("identity: StateStoreIdentity =");
+  });
+});
+
+describe("TC-GH222-001 contract surface: salvage and artifact-boundary declarations", () => {
+  test("the new vocabulary is declared in the single contracts home", () => {
+    const text = readFileSync(join(process.cwd(), "packages/core/src/contracts/state.ts"), "utf8");
+    for (const declaration of [
+      "export const STATE_SALVAGE_RECORD_KIND",
+      "export const STATE_SALVAGE_PAYLOAD_SCHEMA",
+      "export const STATE_SALVAGE_RECORD_KEY",
+      "export const STATE_BOUNDARY_VERDICTS",
+      "export const STATE_ARTIFACT_FIELD_TYPES",
+      "export type StateSalvageReport",
+      "export type StateSalvageOutcome",
+      "export type StateSalvageRecord",
+      "export type StateArtifactBoundaryDeclaration",
+      "export type StateArtifactKindDeclaration",
+      "export type StateArtifactField",
+      "export type StateArtifactVocabulary",
+      "export type StateArtifactRecord",
+      "export type StateArtifactRead",
+    ]) {
+      expect(text, declaration).toContain(declaration);
+    }
+  });
+
+  test("the public subpath serves the data with no runtime API behind it", () => {
+    expect(STATE_SALVAGE_RECORD_KIND).toBe("state.salvage");
+    expect(STATE_SALVAGE_PAYLOAD_SCHEMA).toBe("delivery.state.salvage.v1");
+    expect(STATE_SALVAGE_RECORD_KEY).toBe("state.salvage");
+    expect([...STATE_BOUNDARY_VERDICTS]).toEqual(["valid", "verified-empty", "torn", "unknown"]);
+    expect([...STATE_ARTIFACT_FIELD_TYPES]).toEqual([
+      "string",
+      "number",
+      "boolean",
+      "object",
+      "array",
+      "null",
+    ]);
+    expect(typeof createArtifactBoundary).toBe("function");
+  });
+
+  test("salvage and artifact declarations are additive within the current schema version", () => {
+    const text = readFileSync(join(process.cwd(), "packages/core/src/contracts/state.ts"), "utf8");
+    expect(text).toContain('export const STATE_SCHEMA_VERSION = "delivery.state.v1" as const;');
+    expect(text).not.toContain("delivery.state.v2");
   });
 });
 

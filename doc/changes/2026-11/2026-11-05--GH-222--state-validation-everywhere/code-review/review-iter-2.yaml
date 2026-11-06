@@ -1,0 +1,132 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-222
+branch: feat/GH-222/state-validation
+status: PASS
+summary: >-
+  Re-review after remediation iteration 1 and the origin/main-tools sync merge.
+  F-1 is closed correctly and completely: analyzeTear's truncated-tail branch now
+  verifies the complete-lines prefix, a torn prefix classifies mid-record at the
+  prefix's first-break position so salvage (and the same-way-guarded
+  repairTornTail) refuses state.store.torn with whole-ledger byte identity, no
+  quarantine artifact, and no salvage record BEFORE any write; a clean prefix
+  keeps terminal behavior bit-for-bit (identical truncation point, removedBytes,
+  report shape); a schema-mismatch prefix returns undefined so both callers
+  refuse with zero mutation, consistent with DEC-5 case 5's refusal posture and
+  with the coarse truncated-tail verdict every read of that store reports. The
+  recursion is provably terminating (a prefix always ends with LF, and
+  verifyLedger reports truncated-tail only without a trailing LF, so the
+  recursive call always takes the non-recursive branch). F-2 is closed: the
+  tautological Set-of-literals assertion is replaced by four outcomes produced
+  by real operations asserted by exact array equality. Non-vacuity was
+  independently reproduced by this review: restoring only the pre-fix ledger.ts
+  in a throwaway worktree makes the TC-GH222-011 combined-shape regression fail
+  exactly on the byte-identity assertion. The main-tools merge (5eb4a1e1,
+  GH-221 watchdog rows) introduced no regression: the 9 state rows are intact in
+  both error tables, the oracles were recomputed to the union (baseline+12,
+  length 46, state count still exact at 9), the sync check exits 0, and the full
+  behaviour tier is green at HEAD (1501 pass / 4 platform skips / 0 fail;
+  error-table suites 105 pass). Invariant sweep on the delta is clean:
+  boundaries pass, STATE_SCHEMA_VERSION unchanged, no CLI or retro/ceremony
+  leakage, reads remain byte-side-effect-free, evidence model unchanged.
+  Plan Phase 7 tasks 7.1-7.4 are all checked with evidence matching the code,
+  the revision log records both the reviewer append (1.1) and coder execution
+  (1.2), and AC traceability still holds 9/9 Covered. Four residual info-level
+  observations are recorded; none block.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/state/ledger.ts:236
+    message: >-
+      Residual observation (non-blocking): when the complete-lines prefix's
+      schema version mismatches and the tail is truncated, the refusal evidence
+      reports the coarse truncated-tail position (the tail's line count via
+      verification.position) rather than the schema break's record position.
+      The classification code (state.store.torn) matches the coarse verdict
+      every read of that doubly-damaged store reports (verifyLedger's
+      missing-LF check precedes any schema check), and zero byte mutation
+      holds; the mismatch surfaces as state.schema.mismatch only after the tail
+      is repaired, which is a coherent classification order.
+    suggestion: >-
+      No action in this change. If a future story touches analyzeTear, consider
+      surfacing the prefix schema-break position in the refusal evidence.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-05--GH-222--state-validation-everywhere/chg-GH-222-test-plan.md:485
+    message: >-
+      Residual observation (non-blocking): the test plan's TC-GH222-011 detail
+      section (preconditions and steps) was not extended to name the combined
+      mid-record + truncated-tail variant added by the remediation; the variant
+      is documented in plan Phase 7 task 7.2 and in the quality test-spec
+      scenario (doc/quality/test-specs/test-spec-state-layer.md, "including a
+      tear whose first break is mid-record and whose final frame is also
+      truncated"), so coverage is documented, but the story test plan's own
+      revision log (section 9) has no entry for the extension.
+    suggestion: >-
+      No action in this change. For future remediation that extends an existing
+      TC's shape matrix, add a one-line revision entry to the test plan's
+      section 9 log.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-05--GH-222--state-validation-everywhere/chg-GH-222-pm-notes.yaml
+    message: >-
+      Residual observation (non-blocking): the working tree carries uncommitted
+      doc-sync changes (pm-notes remediation_result + merge note, quality
+      test-spec combined-shape and repair-refusal scenarios, feature-spec
+      refusal wording for terminal-tail repair and guided salvage). Their
+      content was verified consistent with the delivered code and the merged
+      error-table union; they must ride the next commit so the reconciled
+      system spec matches the remediated behavior at PR time.
+    suggestion: >-
+      Commit the pending doc-sync changes together via /commit (the expected
+      pipeline step after this review).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: performance
+    location: packages/core/src/state/registry.ts:236
+    message: >-
+      Carried over from iteration 1 F-3 (info, agreed no action): registry
+      read/append paths scan and re-verify the ledger 2-3 times per operation.
+      Unchanged by the remediation and the merge; acceptable at current
+      local-registry sizes with no governing NFR.
+    suggestion: >-
+      No action in this change. Revisit only if a future story touches these
+      paths.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-05T23:02:32Z
+next_step: PROCEED

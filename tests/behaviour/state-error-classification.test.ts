@@ -1,7 +1,8 @@
 /**
- * TC-STATE-018 (trigger half) and TC-STATE-020 — all seven state codes are driven
- * through their real triggers, every write-path failure reports `not_landed`,
- * and error locations never carry payload or checksum content.
+ * TC-STATE-018 (trigger half), TC-STATE-020, and TC-GH222-018 (trigger sweep) —
+ * all nine state codes are driven through their real triggers, every write-path
+ * failure reports `not_landed`, and error locations never carry payload or
+ * checksum content.
  */
 import { describe, expect, test } from "bun:test";
 import { chmodSync, writeFileSync } from "node:fs";
@@ -12,6 +13,7 @@ import {
   type ErrorTableEntry,
   type StateResult,
 } from "../../packages/core/src/contracts/index";
+import { createArtifactBoundary } from "../../packages/core/src/state/index";
 import {
   createTestEdge,
   ledgerPath,
@@ -32,6 +34,8 @@ const STATE_CODES = [
   "state.lock.busy",
   "state.permission.denied",
   "state.write.failed",
+  "state.storage.exhausted",
+  "state.store.unknown",
   "state.level.unsupported",
 ] as const;
 
@@ -62,8 +66,11 @@ const observeFailure = (
   };
 };
 
-describe("TC-STATE-018 seven codes through real triggers", () => {
-  test("the table declares exactly the seven codes with not_landed", () => {
+describe("TC-STATE-018 nine codes through real triggers", () => {
+  test("the table declares exactly the nine codes with not_landed", () => {
+    expect(
+      (ERROR_TABLE as readonly ErrorTableEntry[]).filter((entry) => entry.domainKind === "state"),
+    ).toHaveLength(9);
     for (const code of STATE_CODES) {
       const entry = entryFor(code);
       expect(entry.domainKind).toBe("state");
@@ -199,6 +206,68 @@ describe("TC-STATE-018 seven codes through real triggers", () => {
       expect(classifyThrown({ kind: "state", code: read.code }).projectionClass).toBe(
         "user-validation",
       );
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("storage.exhausted comes from an ENOSPC-family write failure and lands nothing", () => {
+    const root = makeTempRoot("classify-storage");
+    try {
+      const identity = makeIdentity(root);
+      const { store, edge } = openStore(identity);
+      const acquired = store.acquireFence("exhausted-writer");
+      expect(acquired.ok).toBe(true);
+      if (!acquired.ok) return;
+      edge.armExhaustion(["append-before-flush"]);
+      const appended = store.append(acquired.value.handle, {
+        kind: "park",
+        recordKey: "k",
+        payload: CANARY,
+      });
+      const failure = observeFailure(appended);
+      expect(failure.code).toBe("state.storage.exhausted");
+      expect(failure.consequence).toBe("not_landed");
+      expect(edge.raised).toContain("append-before-flush");
+      sweep(failure.rendered);
+      expect(classifyThrown({ kind: "state", code: failure.code }).category).toBe("transient");
+      expect(classifyThrown({ kind: "state", code: failure.code }).retryable).toBe(true);
+      edge.disarm();
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("store.unknown comes from a boundary write refusal and lands nothing", () => {
+    const root = makeTempRoot("classify-unknown");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      const boundary = createArtifactBoundary(store, {
+        recordKeyPrefix: "classification.records:",
+        kinds: [
+          {
+            kind: "classification.kind",
+            payloadSchema: "delivery.classification.kind.v1",
+            identityField: "recordId",
+            fields: [{ name: "recordId", type: "string", required: true }],
+          },
+        ],
+      });
+      const acquired = store.acquireFence("boundary-writer");
+      expect(acquired.ok).toBe(true);
+      if (!acquired.ok) return;
+      const refused = boundary.append(acquired.value.handle, {
+        kind: "classification.kind",
+        recordKey: "classification.records:r1",
+        payload: { schemaId: "delivery.classification.kind.v1" },
+      });
+      const failure = observeFailure(refused);
+      expect(failure.code).toBe("state.store.unknown");
+      expect(failure.consequence).toBe("not_landed");
+      sweep(failure.rendered);
+      expect(classifyThrown({ kind: "state", code: failure.code }).retryable).toBe(false);
+      store.releaseFence(acquired.value.handle);
     } finally {
       removeRoot(root);
     }

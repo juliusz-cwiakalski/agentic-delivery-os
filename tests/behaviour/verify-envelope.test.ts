@@ -183,7 +183,14 @@ const buildStateFailure = (kind: "torn" | "schema" | "keys"): VerifyState => {
     corruptLedger(state, (records) => {
       const latest = records[records.length - 1];
       if (latest === undefined) throw new Error("missing record");
-      delete (latest.payload as Record<string, unknown>).transitions;
+      // A nested transition entry loses its declared phase id: the registry's
+      // key-set assertion (not the boundary schema) classifies this.
+      const transitions = (latest.payload as Record<string, unknown>).transitions as
+        | Record<string, unknown>[]
+        | undefined;
+      const first = transitions?.[0];
+      if (first === undefined) throw new Error("missing transition");
+      delete first.phaseId;
       resealLedgerRecord(latest);
     });
   }

@@ -54,13 +54,15 @@
     "src/provider/peak.ts",
     "src/provider/quota.ts",
     "src/provider/validate.ts",
+    "src/state/artifact-boundary.ts",
     "src/state/closeout.ts",
     "src/state/driver/runtime-edge.ts",
     "src/state/driver/strategy.ts",
     "src/state/edge.ts",
     "src/state/index.ts",
     "src/state/ledger.ts",
-    "src/state/registry.ts"
+    "src/state/registry.ts",
+    "src/state/storage-error.ts"
   ],
   "adapters": [
     "src/azure/index.ts",

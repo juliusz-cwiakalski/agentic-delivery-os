@@ -198,3 +198,85 @@ describe("TC-STATE-024 read/write evidence contract", () => {
     }).toThrow();
   });
 });
+
+/**
+ * TC-GH222-005 — the four verdicts are distinct: verified-empty is explicit and
+ * never shaped like a torn failure, falsy values return exactly (the
+ * `state-keys` regression pointer), and an absent store satisfies only an empty
+ * key-set declaration.
+ */
+describe("TC-GH222-005 evidence hygiene and verdict distinctness", () => {
+  test("verified-empty is pairwise distinct from a torn failure", () => {
+    const root = makeTempRoot("gh222-evidence-distinct");
+    try {
+      const absent = makeIdentity(`${root}/absent`, { workspaceId: "absent" });
+      const empty = openStore(absent).store.read({ requiredKeys: [] });
+      expect(empty.ok).toBe(true);
+      if (!empty.ok) return;
+      expect(empty.value.evidence.verifiedEmpty).toBe(true);
+      expect(empty.value.evidence.recordCount).toBe(0);
+
+      const torn = makeIdentity(`${root}/torn`, { workspaceId: "torn" });
+      const { store } = openStore(torn);
+      withinFence(store, "writer", (handle) => {
+        store.append(handle, { kind: "park", recordKey: "k", payload: CANARY });
+      });
+      writeFileSync(ledgerPath(torn), `${ledgerText(torn)}partial-frame`);
+      const failure = store.read({ requiredKeys: [] });
+      expect(failure.ok).toBe(false);
+      if (failure.ok) return;
+      expect(failure.error.code).toBe("state.store.torn");
+      // A torn failure carries no verified-empty evidence at all (never `true`).
+      const rendered = JSON.stringify(failure);
+      expect(rendered).not.toContain("verifiedEmpty");
+      expect(rendered).not.toContain("recordCount");
+      sweep(rendered, CANARY);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("falsy values return exactly; no read path substitutes a default", () => {
+    const root = makeTempRoot("gh222-evidence-falsy");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      const entries = [
+        ["zero", 0],
+        ["empty", ""],
+        ["no", false],
+        ["nothing", null],
+        ["list", []],
+        ["object", {}],
+      ] as const;
+      withinFence(store, "writer", (handle) => {
+        for (const [key, payload] of entries) {
+          store.append(handle, { kind: "park", recordKey: key, payload });
+        }
+      });
+      const read = store.read({ requiredKeys: entries.map(([key]) => key) });
+      expect(read.ok).toBe(true);
+      if (read.ok) expect(read.value.values).toEqual(Object.fromEntries(entries));
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("an absent store fails state.keys.missing for a non-empty declaration", () => {
+    const root = makeTempRoot("gh222-evidence-keys");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      const read = store.read({ requiredKeys: ["k1", "k2"] });
+      expect(read.ok).toBe(false);
+      if (read.ok) return;
+      expect(read.error.code).toBe("state.keys.missing");
+      expect(read.error.location.missingKeys).toEqual(["k1", "k2"]);
+      const rendered = JSON.stringify(read.error);
+      expect(rendered).not.toContain("verifiedEmpty");
+      expect(rendered).not.toContain(CANARY);
+    } finally {
+      removeRoot(root);
+    }
+  });
+});

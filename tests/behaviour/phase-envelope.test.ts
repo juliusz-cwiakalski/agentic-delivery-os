@@ -292,6 +292,11 @@ describe("TC-PHASE-008 exit projection matrix", () => {
               kind: "phase.transition",
               recordKey: phaseTransitionRecordKey(PHASE_REF),
               payload: {
+                changeRef: PHASE_REF,
+                phaseId: "delivery",
+                operation: "complete",
+                timestamp: "2026-10-31T10:00:00Z",
+                outcome: "landed",
                 transitions: [
                   {
                     changeRef: PHASE_REF,

@@ -31,6 +31,11 @@ import type {
   StatePlatform,
   StateRuntimeEdge,
 } from "../edge.js";
+import {
+  isStorageExhaustion,
+  storageExhaustionFailure,
+  storageFailureCode,
+} from "./../storage-error.js";
 
 const require = createRequire(import.meta.url);
 
@@ -115,6 +120,23 @@ const verifyMode = (path: string, kind: StatePathKind): boolean => {
   return (statSync(path).mode & 0o777) === expected;
 };
 
+/**
+ * Run one storage write and re-raise an ENOSPC-family failure in the
+ * distinguishable exhaustion form, so the facade can classify it as
+ * `state.storage.exhausted` instead of `state.write.failed` (GH-222 F-5).
+ */
+const writeGuarded = <T>(write: () => T): T => {
+  try {
+    return write();
+  } catch (error) {
+    const code = storageFailureCode(error);
+    if (code !== undefined && isStorageExhaustion(error)) {
+      throw storageExhaustionFailure(code);
+    }
+    throw error;
+  }
+};
+
 /** The production edge: real filesystem, real clock, real SQLite binding. */
 export const createNodeStateEdge = (): StateRuntimeEdge => ({
   platform,
@@ -122,17 +144,19 @@ export const createNodeStateEdge = (): StateRuntimeEdge => ({
   exists: (path) => existsSync(path),
   readText: (path) => readFileSync(path, "utf8"),
   writeFile: (path, text) => {
-    writeFileSync(path, text);
+    writeGuarded(() => writeFileSync(path, text));
     ensureMode(path, "file");
   },
   appendFile: (path, text) => {
-    const descriptor = openSync(path, "a");
-    try {
-      writeSync(descriptor, text);
-      fsyncSync(descriptor);
-    } finally {
-      closeSync(descriptor);
-    }
+    writeGuarded(() => {
+      const descriptor = openSync(path, "a");
+      try {
+        writeSync(descriptor, text);
+        fsyncSync(descriptor);
+      } finally {
+        closeSync(descriptor);
+      }
+    });
     ensureMode(path, "file");
   },
   createExclusiveFile: (path, text) => {
@@ -153,7 +177,7 @@ export const createNodeStateEdge = (): StateRuntimeEdge => ({
     return true;
   },
   removeFile: (path) => rmSync(path, { force: true }),
-  truncateFile: (path, length) => truncateSync(path, length),
+  truncateFile: (path, length) => writeGuarded(() => truncateSync(path, length)),
   ensureDirectory: (path) => {
     mkdirSync(path, { recursive: true, mode: 0o700 });
     ensureMode(path, "directory");
@@ -161,20 +185,22 @@ export const createNodeStateEdge = (): StateRuntimeEdge => ({
   listDirectory: (path) => (existsSync(path) ? readdirSync(path) : []),
   applyPermissions: (path, kind) => ensureMode(path, kind),
   verifyPermissions: (path, kind) => verifyMode(path, kind),
-  writeTemporaryFile: (path, content) => {
-    writeFileSync(path, content, { mode: 0o600 });
-    ensureMode(path, "file");
-    const descriptor = openSync(path, "r");
-    try {
-      fsyncSync(descriptor);
-    } finally {
-      closeSync(descriptor);
-    }
-  },
-  renameFile: (from, to) => {
-    renameSync(from, to);
-    ensureMode(to, "file");
-  },
+  writeTemporaryFile: (path, content) =>
+    writeGuarded(() => {
+      writeFileSync(path, content, { mode: 0o600 });
+      ensureMode(path, "file");
+      const descriptor = openSync(path, "r");
+      try {
+        fsyncSync(descriptor);
+      } finally {
+        closeSync(descriptor);
+      }
+    }),
+  renameFile: (from, to) =>
+    writeGuarded(() => {
+      renameSync(from, to);
+      ensureMode(to, "file");
+    }),
   raiseFault: (_point: StateEdgeFaultPoint) => {
     // Production never injects faults.
   },
@@ -203,27 +229,28 @@ export const createNodeStateEdge = (): StateRuntimeEdge => ({
       database.close();
     }
   },
-  indexWrite: (path, rows) => {
-    const temporary = `${path}.tmp`;
-    rmSync(temporary, { force: true });
-    const database = openDatabase(temporary);
-    if (database === undefined) throw new Error("no sqlite binding");
-    try {
-      database.exec(INDEX_TABLE);
-      database.exec("BEGIN");
-      const insert = database.prepare(
-        "INSERT INTO records (sequence, key, kind, checksum, payload) VALUES (?, ?, ?, ?, ?)",
-      );
-      for (const row of rows) {
-        insert.run(row.sequence, row.key, row.kind, row.checksum, row.payload);
+  indexWrite: (path, rows) =>
+    writeGuarded(() => {
+      const temporary = `${path}.tmp`;
+      rmSync(temporary, { force: true });
+      const database = openDatabase(temporary);
+      if (database === undefined) throw new Error("no sqlite binding");
+      try {
+        database.exec(INDEX_TABLE);
+        database.exec("BEGIN");
+        const insert = database.prepare(
+          "INSERT INTO records (sequence, key, kind, checksum, payload) VALUES (?, ?, ?, ?, ?)",
+        );
+        for (const row of rows) {
+          insert.run(row.sequence, row.key, row.kind, row.checksum, row.payload);
+        }
+        database.exec("COMMIT");
+      } finally {
+        database.close();
       }
-      database.exec("COMMIT");
-    } finally {
-      database.close();
-    }
-    ensureMode(temporary, "file");
-    renameSync(temporary, path);
-    ensureMode(path, "file");
-  },
+      ensureMode(temporary, "file");
+      renameSync(temporary, path);
+      ensureMode(path, "file");
+    }),
   indexRemove: (path) => rmSync(path, { force: true }),
 });

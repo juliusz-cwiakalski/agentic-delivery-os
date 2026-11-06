@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The read-only `verify change <ref>` surface: ledger-only verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
 links:
-  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-221"]
+  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
@@ -105,7 +105,7 @@ The eleven tokens are the bash-era delivery summary vocabulary, adopted verbatim
 | `blocked` | Blocked label present | Reserved: tracker evidence | none | `success` | `0` |
 | `pr-open` | Open PR resolved for the branch/ref | Reserved: PR evidence | none | `success` | `0` |
 | `pr-open-unverified` | Open PR but its URL could not be resolved | Reserved: PR evidence | none | `success` | `0` |
-| `failed` | Classification or delivery failure | Document-conformance failure, user-category `state.*` failure, or handler grammar rejection | the pinned identity | `user-validation` | `1` |
+| `failed` | Classification or delivery failure | Document-conformance failure, non-platform-category `state.*` failure, or handler grammar rejection | the pinned identity | `user-validation` | `1` |
 | `finished` | Complete artifact ledger | All required phases of the declared variant completed after overlay | success envelope | `success` | `0` |
 | `max-restarts` | Restart budget exhausted | Reserved: dispatch/session evidence | none | `user-validation` | `1` |
 | `state-unverified` | Delivery state could not be verified | Platform-category registry/store failure | the specific `state.*` identity | `platform-provider` | `2` |
@@ -162,6 +162,7 @@ Reused identities, unchanged:
 | `state.store.torn` | `state-unverified` | `2` | Store verification failed. |
 | `state.schema.mismatch` | `state-unverified` | `2` | Store schema is unsupported. |
 | `state.keys.missing` | `state-unverified` | `2` | Corrupt transition payload or another key-set assertion failure; an absent per-change record is no evidence, not this error. |
+| `state.store.unknown` | `state-unverified` | `2` | An undeclared record kind or payload schema at the validated registry boundary; never a silent zero. |
 | `state.permission.denied` | `failed` | `1` | Read permission failure; user-fixable. |
 | `state.level.unsupported` | `failed` | `1` | Declared level has no implementation; total classification path. |
 | `fallback.internal` | no token | `2` | Only for genuinely unclassifiable failures; never for a documented class. |
@@ -210,7 +211,7 @@ The decision order is total and deterministic:
 2. Handler grammar failures resolve as `input.value.rejected` before any read.
 3. Target absence and document-conformance failures (parse, keys, value types, unknown variant) are terminal before any registry read.
 4. A required-phase-presence finding is recorded and the registry read proceeds, because a landed transition may account for a stale document entry.
-5. Registry read failures are decided next: platform-category failures classify `state-unverified`; user-category failures classify `failed`.
+5. Registry read failures are decided next: platform-category failures classify `state-unverified`; every other category classifies `failed`.
 6. The overlay completes the per-phase merge. If required phases remain missing, absence selects `lint.phases.incomplete`; otherwise a declared-but-incomplete phase selects `verify.ledger.incomplete`. Both are `partial`.
 7. An empty missing set produces the `finished` success envelope.
 

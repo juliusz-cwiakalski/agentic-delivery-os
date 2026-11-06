@@ -17,6 +17,8 @@ import {
   type PhaseTransitionRecord,
   REGISTRY_SCHEMA_VERSION,
   type StateAppendOutcome,
+  type StateArtifactBoundaryDeclaration,
+  type StateArtifactRecord,
   type StateDocumentReport,
   type StateFailure,
   type StateJsonValue,
@@ -25,6 +27,7 @@ import {
   type StateSafeLocation,
   type StateStorePort,
 } from "#contracts";
+import { createArtifactBoundary } from "./artifact-boundary.js";
 
 /** The registry's declared record-key prefix (one in-flight history per change). */
 export const PHASE_TRANSITION_RECORD_KEY_PREFIX = "phase.transitions:" as const;
@@ -36,6 +39,34 @@ export const phaseTransitionRecordKey = (changeRef: string): string =>
 /** The derived projection document name for a change (PIN-3). */
 export const phaseStateDocumentName = (changeRef: string): string =>
   `${PHASE_STATE_DOCUMENT_PREFIX}${changeRef}${PHASE_STATE_DOCUMENT_SUFFIX}`;
+
+/**
+ * The registry's declared boundary (GH-222 F-1, DM-4): `phase.transition` is the
+ * only kind the registry owns under its key prefix, with the transition payload
+ * schema, the change-ref identity, and the closed operation/outcome vocabularies.
+ */
+export const PHASE_TRANSITION_BOUNDARY: StateArtifactBoundaryDeclaration = {
+  recordKeyPrefix: PHASE_TRANSITION_RECORD_KEY_PREFIX,
+  kinds: [
+    {
+      kind: PHASE_TRANSITION_KIND,
+      identityField: "changeRef",
+      fields: [
+        { name: "changeRef", type: "string", required: true },
+        { name: "phaseId", type: "string", required: true },
+        { name: "operation", type: "string", required: true },
+        { name: "timestamp", type: "string", required: true },
+        { name: "outcome", type: "string", required: true },
+        { name: "reason", type: "string", required: false },
+        { name: "transitions", type: "array", required: true },
+      ],
+      vocabularies: [
+        { field: "operation", values: ["complete", "reopen"] },
+        { field: "outcome", values: ["landed"] },
+      ],
+    },
+  ],
+};
 
 /** One fenced landing request; `reason` is reopen-only (C-5). */
 export type PhaseTransitionRequest = {
@@ -178,6 +209,21 @@ const parseTransitions = (
 };
 
 /**
+ * The latest verified artifact for one store-scoped key: the ledger is
+ * append-only, so the last record carrying a key is that key's current value.
+ */
+const latestArtifactFor = (
+  artifacts: readonly StateArtifactRecord[],
+  recordKey: string,
+): StateArtifactRecord | undefined => {
+  let latest: StateArtifactRecord | undefined;
+  for (const artifact of artifacts) {
+    if (artifact.recordKey === recordKey) latest = artifact;
+  }
+  return latest;
+};
+
+/**
  * Read one change's verified `phase.transition` history (AC-L5).
  *
  * An absent registry is an explicit verified-empty outcome; a torn, schema, or
@@ -198,11 +244,19 @@ export const readChangeTransitions = (
     });
   }
   const recordKey = phaseTransitionRecordKey(changeRef);
-  const read = store.read({ requiredKeys: [recordKey] });
+  const read = createArtifactBoundary(store, PHASE_TRANSITION_BOUNDARY).read();
   if (!read.ok) return read;
-  const parsed = parseTransitions(read.value.values[recordKey], {
+  const artifact = latestArtifactFor(read.value.artifacts, recordKey);
+  if (artifact === undefined) {
+    return fail("state.keys.missing", {
+      path: read.value.evidence.storePath,
+      record: read.value.evidence.recordCount,
+      missingKeys: [recordKey],
+    });
+  }
+  const parsed = parseTransitions(artifact.payload, {
     path: read.value.evidence.storePath,
-    record: read.value.evidence.recordCount,
+    record: artifact.sequence,
   });
   if (!parsed.ok) return parsed;
   return ok({
@@ -237,12 +291,10 @@ export const readChangeTransitionsTolerant = (
     });
   }
   const recordKey = phaseTransitionRecordKey(changeRef);
-  const read = store.read({ requiredKeys: [recordKey] });
-  if (!read.ok) {
-    const absentRecord =
-      read.error.code === "state.keys.missing" &&
-      (read.error.location.missingKeys ?? []).includes(recordKey);
-    if (!absentRecord) return read;
+  const read = createArtifactBoundary(store, PHASE_TRANSITION_BOUNDARY).read();
+  if (!read.ok) return read;
+  const artifact = latestArtifactFor(read.value.artifacts, recordKey);
+  if (artifact === undefined) {
     return ok({
       changeRef,
       present: false,
@@ -251,9 +303,9 @@ export const readChangeTransitionsTolerant = (
       evidence: probe.value.evidence,
     });
   }
-  const parsed = parseTransitions(read.value.values[recordKey], {
+  const parsed = parseTransitions(artifact.payload, {
     path: read.value.evidence.storePath,
-    record: read.value.evidence.recordCount,
+    record: artifact.sequence,
   });
   if (!parsed.ok) return parsed;
   return ok({
@@ -319,7 +371,9 @@ export const appendPhaseTransition = (
       : {}),
   };
   const transitions = [...current.value.transitions, record];
-  const appended = store.append(handle, {
+  // Writes are validated at the registry boundary (F-1, DM-4): a nonconforming
+  // transition payload never reaches the ledger.
+  const appended = createArtifactBoundary(store, PHASE_TRANSITION_BOUNDARY).append(handle, {
     kind: PHASE_TRANSITION_KIND,
     recordKey: phaseTransitionRecordKey(request.changeRef),
     payload: payloadFor(record, transitions),

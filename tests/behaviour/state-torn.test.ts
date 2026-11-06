@@ -5,9 +5,14 @@
  * asserts its own precondition before the read.
  */
 import { describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
-import type { StateStorePort } from "../../packages/core/src/contracts/index";
-import { STATE_SCHEMA_VERSION } from "../../packages/core/src/contracts/index";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  ERROR_TABLE,
+  type ErrorTableEntry,
+  STATE_SCHEMA_VERSION,
+  type StateStorePort,
+} from "../../packages/core/src/contracts/index";
+import { analyzeTear, buildRecord, verifyLedger } from "../../packages/core/src/state/ledger";
 import {
   ledgerPath,
   ledgerText,
@@ -325,6 +330,31 @@ describe("TC-STATE-010 terminal repair versus mid-record refusal", () => {
     }
   });
 
+  test("repair refuses a mid-record break combined with a truncated tail", () => {
+    const root = makeTempRoot("repair-refusal-combined");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      seed(store);
+      const broken = mutateRecord(ledgerText(identity), 0, (record) => {
+        record.payload = "planted-payload-corrupt";
+      });
+      // The coarse verdict is `truncated-tail`; the first break is record 1.
+      writeFileSync(ledgerPath(identity), `${broken}{"schemaVersion":"delivery.state.v1"`);
+      const before = ledgerText(identity);
+      const repair = store.repairTornTail();
+      expect(repair.ok).toBe(false);
+      if (!repair.ok) {
+        expect(repair.error.code).toBe("state.store.torn");
+        expect(repair.error.location.record).toBe(1);
+      }
+      // Truncating at the last newline would keep the broken line: refused whole.
+      expect(ledgerText(identity)).toBe(before);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
   test("the auto-repair control would discard non-terminal data", () => {
     const root = makeTempRoot("repair-control");
     try {
@@ -341,6 +371,130 @@ describe("TC-STATE-010 terminal repair versus mid-record refusal", () => {
       // keeps the bytes unchanged instead.
       expect(autoRepaired).not.toBe(corrupt);
       expect(ledgerText(identity)).toBe(corrupt);
+    } finally {
+      removeRoot(root);
+    }
+  });
+});
+
+const guidanceFor = (code: string): string =>
+  (ERROR_TABLE as readonly ErrorTableEntry[]).find((entry) => entry.code === code)
+    ?.remediationHint ?? "";
+
+/**
+ * TC-GH222-001/002/003 — every enumerated tear class reaches every read path
+ * before any value returns: classified torn, path and position only, guidance
+ * that points at the explicit salvage operation, and zero byte mutation. The
+ * indexed kind classifies identically (no driver-discriminated behaviour).
+ */
+describe("TC-GH222-001/002/003 classification at every read boundary", () => {
+  const cases: Array<[string, (text: string) => string]> = [
+    [
+      "framing",
+      (text) => {
+        const lines = text.split("\n");
+        lines[1] = "{not-framed";
+        return lines.join("\n");
+      },
+    ],
+    ["truncated-tail", (text) => text.slice(0, -4)],
+    [
+      "sequence-gap",
+      (text) =>
+        mutateRecord(text, 1, (record) => {
+          record.sequence = Number(record.sequence) + 2;
+        }),
+    ],
+    [
+      "sequence-duplicate",
+      (text) =>
+        mutateRecord(text, 2, (record) => {
+          record.sequence = 2;
+        }),
+    ],
+    [
+      "sequence-reset",
+      (text) =>
+        mutateRecord(text, 2, (record) => {
+          record.sequence = 1;
+        }),
+    ],
+    [
+      "checksum",
+      (text) =>
+        mutateRecord(text, 0, (record) => {
+          record.payload = "planted-payload-flipped";
+        }),
+    ],
+  ];
+
+  for (const [variant, mutate] of cases) {
+    test(`${variant}: read, readRecords, and checkIntegrity classify torn and change no bytes`, () => {
+      const root = makeTempRoot("gh222-torn");
+      try {
+        const identity = makeIdentity(root, { workspaceId: "gh222" });
+        // The indexed kind proves the classification is driver-neutral.
+        const { store } = openStore(identity, { driver: "sqlite" });
+        seed(store);
+        const intact = ledgerText(identity);
+        const mutated = mutate(intact);
+        expect(mutated, `${variant} mutation must change the ledger`).not.toBe(intact);
+        writeFileSync(ledgerPath(identity), mutated);
+        const ledgerBefore = readFileSync(ledgerPath(identity));
+        const listingBefore = readdirSync(root).sort();
+
+        for (const attempt of [
+          store.read({ requiredKeys: ["key-1"] }),
+          store.readRecords(),
+          store.checkIntegrity(),
+        ]) {
+          expect(attempt.ok).toBe(false);
+          if (attempt.ok) continue;
+          expect(attempt.error.code).toBe("state.store.torn");
+          expect(attempt.error.consequence).toBe("not_landed");
+          expect(attempt.error.location.path).toContain("ledger.");
+          expect(typeof attempt.error.location.record).toBe("number");
+          expect(Object.hasOwn(attempt, "value")).toBe(false);
+          const rendered = JSON.stringify(attempt.error);
+          expect(rendered).not.toContain("planted-payload-");
+          expect(rendered).not.toContain("checksum");
+          expect(guidanceFor(attempt.error.code)).toContain("salvage");
+          expect(guidanceFor(attempt.error.code)).toContain("explicit");
+        }
+
+        expect(readFileSync(ledgerPath(identity)).equals(ledgerBefore)).toBe(true);
+        expect(readdirSync(root).sort()).toEqual(listingBefore);
+      } finally {
+        removeRoot(root);
+      }
+    });
+  }
+
+  test("checksum mismatch: the pure verification names the position and echoes no checksum", () => {
+    const record = buildRecord("park", "key-1", 1, "planted-payload-pure", STATE_SCHEMA_VERSION);
+    const tampered = { ...record, payload: "planted-payload-flipped" };
+    const text = `${JSON.stringify(tampered)}\n`;
+    const verification = verifyLedger(text);
+    expect(verification).toEqual({ status: "torn", variant: "checksum", position: 1 });
+    expect(JSON.stringify(verification)).not.toContain(record.checksum);
+    expect(JSON.stringify(verification)).not.toContain("planted-payload-");
+    expect(analyzeTear(text)).toMatchObject({ topology: "terminal", position: 1 });
+  });
+
+  test("the torn-read control would otherwise serve a partial prefix", () => {
+    const root = makeTempRoot("gh222-torn-control");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      seed(store);
+      const text = ledgerText(identity).slice(0, -4);
+      // A scan that stopped at the last newline would serve three records and
+      // call the store empty-tailed; the production read must fail instead.
+      const naivePrefixRecords = text.split("\n").filter((line) => line !== "").length;
+      expect(naivePrefixRecords).toBe(3);
+      writeFileSync(ledgerPath(identity), text);
+      const read = store.readRecords();
+      expect(read.ok).toBe(false);
     } finally {
       removeRoot(root);
     }

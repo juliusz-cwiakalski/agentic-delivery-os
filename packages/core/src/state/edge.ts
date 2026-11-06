@@ -18,7 +18,11 @@ export type StateEdgeFaultPoint =
   | "replace-after-rename"
   | "fence-after-acquire"
   | "fence-after-recovery"
-  | "index-rebuild-write";
+  | "index-rebuild-write"
+  /** Pre-commit point: the salvage quarantine artifact is about to be persisted. */
+  | "salvage-quarantine-write"
+  /** Pre-commit point: the salvage ledger truncate-and-append is about to land. */
+  | "salvage-ledger-write";
 
 /** The platform family the edge enforces permissions for (spec OQ-2). */
 export type StatePlatform = "posix" | "win32";

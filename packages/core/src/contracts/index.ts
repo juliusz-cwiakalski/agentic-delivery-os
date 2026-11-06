@@ -502,14 +502,28 @@ export {
   type SessionSummary,
   type SizeData,
 } from "./session.js";
-// The state layer's driver-neutral store vocabulary (GH-174 D1, DM-1..DM-5).
+// The state layer's driver-neutral store vocabulary (GH-174 D1, DM-1..DM-5;
+// GH-222 adds salvage and artifact-boundary declarations).
 // Runtime-neutral: types and the single `as const` schema-version home only.
 export {
+  STATE_ARTIFACT_FIELD_TYPES,
+  STATE_BOUNDARY_VERDICTS,
   STATE_DRIVER_KINDS,
   STATE_LEVELS,
+  STATE_SALVAGE_PAYLOAD_SCHEMA,
+  STATE_SALVAGE_RECORD_KEY,
+  STATE_SALVAGE_RECORD_KIND,
   STATE_SCHEMA_VERSION,
   type StateAppendOutcome,
   type StateAppendRequest,
+  type StateArtifactBoundaryDeclaration,
+  type StateArtifactField,
+  type StateArtifactFieldType,
+  type StateArtifactKindDeclaration,
+  type StateArtifactRead,
+  type StateArtifactRecord,
+  type StateArtifactVocabulary,
+  type StateBoundaryVerdict,
   type StateDocumentReplaceRequest,
   type StateDocumentReport,
   type StateDriverKind,
@@ -531,6 +545,9 @@ export {
   type StateRepairOutcome,
   type StateResult,
   type StateSafeLocation,
+  type StateSalvageOutcome,
+  type StateSalvageRecord,
+  type StateSalvageReport,
   type StateSchemaVersion,
   type StateStoreIdentity,
   type StateStorePort,

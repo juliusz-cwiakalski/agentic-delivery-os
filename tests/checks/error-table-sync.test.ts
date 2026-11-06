@@ -383,7 +383,7 @@ describe("TC-SYNC-005 identity hygiene and level separation", () => {
 });
 
 const ROW_STATE_TORN =
-  "| state.store.torn | state | platform | false | not_landed | Inspect or restore the named state store; never treat it as empty. | platform-provider | The state store is torn. |";
+  "| state.store.torn | state | platform | false | not_landed | Inspect the named state store and use the explicit salvage operation as a separate step to truncate a torn tail; never treat the store as empty. | platform-provider | The state store is torn. |";
 const ROW_STATE_LOCK =
   "| state.lock.busy | state | transient | true | not_landed | Wait for the current writer to release the state fence, then acquire and retry. | platform-provider | The state store is locked by another writer. |";
 
@@ -451,6 +451,100 @@ describe("TC-STATE-019 state rows synchronize in both directions", () => {
   test("the unchanged copy remains green (control)", async () => {
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
+  });
+});
+
+const ROW_STATE_WRITE_FAILED =
+  "| state.write.failed | state | transient | true | not_landed | Resolve the underlying storage error other than exhaustion and retry; the failed write or rebuild did not land, the ledger remains durable truth, and the index stays disposable. | platform-provider | A state write or index rebuild did not land. |";
+const ROW_STATE_EXHAUSTED =
+  "| state.storage.exhausted | state | transient | true | not_landed | Free storage space on the named state path and retry; the write did not land and the ledger remains at its last valid frame. | platform-provider | The storage backing the state store is exhausted. |";
+const ROW_STATE_UNKNOWN =
+  "| state.store.unknown | state | platform | false | not_landed | Declare the record kind and payload schema at the validated boundary, or use a compatible tool version, then retry. | platform-provider | A record kind or payload schema is not declared at the validated boundary. |";
+
+describe("TC-STATE-019 (GH-222) additive and refined state rows are non-vacuous", () => {
+  test("both tables declare the two additive rows and the refined remediations", async () => {
+    expect((await runSyncCheck({ root: ROOT })).failures).toEqual([]);
+    const doc = readFile(ROOT, DOC);
+    for (const row of [ROW_STATE_EXHAUSTED, ROW_STATE_UNKNOWN, ROW_STATE_WRITE_FAILED]) {
+      expect(doc.split(row).length - 1, row).toBe(1);
+    }
+    expect(doc).toContain(ROW_STATE_TORN);
+
+    const entries = ERROR_TABLE as readonly ErrorTableEntry[];
+    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
+    const exhausted = entries.find((entry) => entry.code === "state.storage.exhausted");
+    expect(exhausted).toMatchObject({
+      domainKind: "state",
+      category: "transient",
+      retryable: true,
+      consequence: "not_landed",
+      projectionClass: "platform-provider",
+    });
+    expect(exhausted?.remediationHint).toContain("storage space");
+    const unknown = entries.find((entry) => entry.code === "state.store.unknown");
+    expect(unknown).toMatchObject({
+      domainKind: "state",
+      category: "platform",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "platform-provider",
+    });
+    expect(unknown?.remediationHint).toContain("boundary");
+  });
+
+  test("dropping a new row from either side fails naming the drift direction", async () => {
+    const documentedOnly = makeTempRoot();
+    editFile(documentedOnly, DOC, removeDocRow(ROW_STATE_UNKNOWN));
+    expect(messages((await runSyncCheck({ root: documentedOnly })).failures)).toContain(
+      "source entry state.store.unknown is undocumented",
+    );
+
+    const machineOnly = makeTempRoot();
+    editFile(machineOnly, TABLE, (text) =>
+      text.replace(/\n? {2}\{\n {4}code: "state\.storage\.exhausted",[\s\S]*?\n {2}\},/, ""),
+    );
+    expect(messages((await runSyncCheck({ root: machineOnly })).failures)).toContain(
+      "documented code state.storage.exhausted has no source entry",
+    );
+  });
+
+  test("a one-sided remediation change on either refined row fails by field", async () => {
+    const writeFailed = makeTempRoot();
+    editFile(writeFailed, DOC, (text) =>
+      text.replace(
+        ROW_STATE_WRITE_FAILED,
+        ROW_STATE_WRITE_FAILED.replace("other than exhaustion", "after exhaustion"),
+      ),
+    );
+    expect(messages((await runSyncCheck({ root: writeFailed })).failures)).toContain(
+      "state.write.failed hint mismatch",
+    );
+
+    const torn = makeTempRoot();
+    editFile(torn, DOC, (text) =>
+      text.replace(
+        ROW_STATE_TORN,
+        ROW_STATE_TORN.replace("explicit salvage operation", "explicit repair operation"),
+      ),
+    );
+    expect(messages((await runSyncCheck({ root: torn })).failures)).toContain(
+      "state.store.torn hint mismatch",
+    );
+  });
+
+  test("a phantom state.store.unknown-schema row fails by name and the baseline stays green", async () => {
+    const root = makeTempRoot();
+    editFile(
+      root,
+      DOC,
+      insertDocRow(
+        "| state.store.unknown-schema | state | platform | false | not_landed | Retry. | platform-provider | Phantom. |",
+      ),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "documented code state.store.unknown-schema has no source entry",
+    );
+    expect((await runSyncCheck({ root: ROOT })).failures).toEqual([]);
   });
 });
 
@@ -582,10 +676,14 @@ const ROW_VERIFY =
   "| verify.ledger.incomplete | verify | user | false | not_landed | Complete the named required phases of the declared variant through the phase command, or correct the declaration, then re-run verify. | user-validation | The declared variant's required phases are not all completed. |";
 
 /**
- * Frozen oracle of every row except the verify row (full column set). GH-180
- * pinned the four db rows here when it added them, so the frozen baseline plus
- * the single verify row still equals the live table; a changed baseline row
- * fails naming it.
+ * Frozen oracle of every row except the rows added after the baseline was
+ * frozen (full column set). GH-180 pinned the four db rows here when it added
+ * them. The eighteen later rows are the three verify rows, the four closeout
+ * rows, the lint-document-unreadable row, the two GH-222 state rows
+ * (`state.storage.exhausted`, `state.store.unknown`), the three GH-221 watchdog
+ * lane-safety rows, and the five GH-226 machine-readable delivery-plan rows, so
+ * the frozen baseline plus those eighteen later rows equals the live table; a
+ * changed baseline row fails naming it.
  */
 const BASELINE_ROWS: ReadonlyArray<
   readonly [string, string, string, boolean, string, string, string, string]
@@ -776,7 +874,7 @@ const BASELINE_ROWS: ReadonlyArray<
     "platform",
     false,
     "not_landed",
-    "Inspect or restore the named state store; never treat it as empty.",
+    "Inspect the named state store and use the explicit salvage operation as a separate step to truncate a torn tail; never treat the store as empty.",
     "platform-provider",
     "The state store is torn.",
   ],
@@ -826,7 +924,7 @@ const BASELINE_ROWS: ReadonlyArray<
     "transient",
     true,
     "not_landed",
-    "Resolve the underlying storage error and retry; the failed write or rebuild did not land, the ledger remains durable truth, and the index stays disposable.",
+    "Resolve the underlying storage error other than exhaustion and retry; the failed write or rebuild did not land, the ledger remains durable truth, and the index stays disposable.",
     "platform-provider",
     "A state write or index rebuild did not land.",
   ],
@@ -959,8 +1057,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 16) {
-    failures.push(`table length ${live.length} != baseline + 16 (${BASELINE_ROWS.length + 16})`);
+  if (live.length !== BASELINE_ROWS.length + 18) {
+    failures.push(`table length ${live.length} != baseline + 18 (${BASELINE_ROWS.length + 18})`);
   }
   return failures;
 };
@@ -979,7 +1077,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       provider: 5,
       input: 1,
       config: 10,
-      state: 7,
+      state: 9,
       lint: 6,
       plan: 5,
       verify: 3,
@@ -1032,7 +1130,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 16,
+      BASELINE_ROWS.length + 18,
     );
   });
 
@@ -1055,7 +1153,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 16);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 18);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);

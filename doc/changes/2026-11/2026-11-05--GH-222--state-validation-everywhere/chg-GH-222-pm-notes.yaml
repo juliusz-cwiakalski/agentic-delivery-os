@@ -1,0 +1,126 @@
+change_id: GH-222
+title: "M1-S2: State validation everywhere"
+slug: state-validation-everywhere
+delivery_mode: autonomous
+tracker:
+  platform: github
+  owner: juliusz-cwiakalski
+  repo: agentic-delivery-os
+  url: https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/222
+  milestone: "M1: Delivery engine and autonomous dispatch"
+branch: feat/GH-222/state-validation
+phases:
+  clarify_scope: { started: "2026-11-05T19:50:00Z", completed: "2026-11-05T19:55:00Z" }
+  specification:
+    started: "2026-11-05T19:58:00Z"
+    iterations:
+      - iteration: 1
+        result: "chg-GH-222-spec.md v1.0 authored; 5 ticket ACs traced; 3 OQs flagged (CLI surface, salvage scope, error-code identity)"
+        date: "2026-11-05"
+      - iteration: 2
+        result: "v1.1 amendment: OQ-1 resolved library-only (DEC-4 confirmed); OQ-2 resolved terminal-tail-only (DEC-2 amended, AC-F3-3 added); OQ-3 pinned in-spec as DEC-5 — new rows state.storage.exhausted + state.store.unknown, refined state.write.failed remediation, salvage/quarantine failures reuse existing rows (7 -> 9 code rows, bidirectional sync binding)"
+        date: "2026-11-05"
+      - iteration: 3
+        result: "v1.2 amendment (DoR remediation): §7.1/§8.5/§16/§22 now declare BOTH text-only remediation refinements (state.write.failed + state.store.torn); DEC-5 extended to all four dispositions with the guardrail that the salvage pointer lives in guidance text, not read evidence; OQ table all-Resolved"
+        date: "2026-11-05"
+    completed: "2026-11-05T20:45:00Z"
+  test_planning: { started: "2026-11-05T20:12:00Z", completed: "2026-11-05T20:18:00Z" }
+  delivery_planning: { started: "2026-11-05T20:22:00Z", completed: "2026-11-05T20:28:00Z" }
+  dor_check:
+    started: "2026-11-05T20:32:00Z"
+    completed: "2026-11-05T20:52:00Z"
+    iterations:
+      - iteration: 1
+        verdict: NOT_READY
+        artifact: readiness-review/readiness-iter-1.md
+        facets: "8/10 PASS; cross_artifact_consistency + decision_capture FAIL"
+        findings: "[major] spec §7.1/§8.5 declare state.write.failed as the only refined remediation row while §22/TC-GH222-001/TC-GH222-010/plan-1.3 also require a text-only refinement of state.store.torn guidance; [major, same root] DEC-5 records three dispositions but the change makes four; [minor] plan task 1.7 under-describes three toHaveLength(7) sites in tests/structure/error-table.test.ts; [nit] plan wording on torn remediation."
+        reopen: specification
+        date: "2026-11-05"
+      - iteration: 2
+        verdict: READY
+        artifact: readiness-review/readiness-iter-2.md
+        facets: "10/10 PASS; both blocking findings resolved; no new inconsistencies; non-blocking stale-summary minors in untouched plan/test-plan carried as adjudicated context"
+        residual_risks: "mechanism-first adoption bet (M1-S8/M2-S3); m1 pack state.store.unknown-schema naming drift (superseded by DEC-5); AC-F5-1 ledger-first reading; OQ-T2/T3 execution-log recording; SQLite skips-as-skips; stale plan/test-plan frontmatter summaries treated as non-operative"
+        date: "2026-11-05"
+  delivery: { started: "2026-11-05T20:55:00Z", completed: "2026-11-05T22:55:00Z" }
+  system_spec_update: { started: "2026-11-05T22:58:00Z", completed: "2026-11-05T23:10:00Z" }
+  review_fix:
+    started: "2026-11-05T23:18:00Z"
+    completed: "2026-11-06T00:05:00Z"
+    iterations:
+      - iteration: 1
+        status: FAIL
+        artifact: code-review/review-iter-1.yaml
+        findings: "F-1 HIGH correctness (packages/core/src/state/ledger.ts:221): analyzeTear truncated-tail shortcut skips verifying complete lines before the final newline; combined mid-record + truncated-tail ledger lets salvage truncate at last newline (keeping the broken line), append the salvage record, write quarantine, then fail post-commit verification claiming not_landed after mutating bytes — empirically reproduced on HEAD; violates AC-F3-3/DEC-2. F-2 LOW test-quality: tautological pairwise-distinct assertion in state-unknown.test.ts:141. F-3 INFO performance: registry reads scan ledger 2-3x per operation — note only, no NFR governs; future stories."
+        remediation: "Reviewer appended plan Phase 7 (tasks 7.1-7.4): fix complete-lines verification in truncated-tail branch classifying mid-record; regression-test combined tear shape; behavioral or removed distinctness assertion; M0-S5 repairTornTail shares the coarse-variant root (pre-existing, outside this change's ACs — follow-up surfaces to human, no autonomous ticket)"
+        reopen: delivery
+        remediation_result: "Delivered by coder in commit 0934fff9 (Phase 7 tasks 7.1-7.4 all done, plan revision 1.2): analyzeTear now verifies the complete-lines prefix (torn prefix -> mid-record refusal before ANY write; schema-mismatch prefix -> undefined/unsalvageable, zero mutation; clean prefix -> unchanged terminal salvage); repairTornTail guarded the same way per plan 7.1 permission (pure-terminal contract unchanged, verified by existing TC-STATE-010 + new combined-shape refusal regression); F-2 replaced with behavioral distinctness across four real operations; non-vacuity proven by mutation (reverting ledger.ts fails byte-identity assertion). Behaviour tier 1442 pass / 0 fail post-remediation."
+        date: "2026-11-05"
+      - iteration: 2
+        status: PASS
+        artifact: code-review/review-iter-2.yaml
+        findings: "0 blocking. F-1 and F-2 verified closed (reviewer independently reproduced the non-vacuity mutation); merge with main-tools introduced no regressions (state count exact at 9, oracles honest, 1501 behaviour pass / 0 fail); invariants clean; plan Phases 1-7 all done; AC traceability 9/9. Four non-blocking info residuals: schema-mismatch-prefix refusal evidence reports coarse tail position; test-plan §9 lacks a one-line entry for the TC-GH222-011 combined-shape extension; uncommitted doc-sync doc fixes ride the next commit; F-3 perf note carried (no action)."
+        date: "2026-11-06"
+  quality_gates: { started: "2026-11-06T00:12:00Z", completed: "2026-11-06T00:20:00Z" }
+  dod_check: { started: "2026-11-06T00:22:00Z", completed: "2026-11-06T00:23:00Z" }
+  pr_creation:
+    started: "2026-11-06T00:25:00Z"
+    completed: "2026-11-06T00:40:00Z"
+    url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/246"
+decisions:
+  - text: "OQ-1 RESOLVED (PM): GH-222 ships a library-only state-tier surface — no user-facing CLI command. Backlog (canonical for scope per milestones/README) names no command; current feature-state-layer spec ships no command surface; all 5 ticket ACs are testable at the library boundary. The m1 contracts pack 'state' command entry stays a proposed milestone-end artifact for the later operate-family CLI line; spec DEC-4 confirmed."
+    date: "2026-11-05"
+  - text: "OQ-2 RESOLVED (PM): salvage is terminal-tail-only. Pinned ticket decision + AC3 cover torn tails; mid-record (non-terminal) corruption keeps the M0-S5 refuse-and-classify model with zero byte mutation; the salvage operation invoked on a mid-record tear fails classified without changing any bytes. Extending salvage to mid-record would be scope invention and erode the changes-nothing safety invariant."
+    date: "2026-11-05"
+  - text: "Tracker write auth unavailable for GitHub MCP (update_issue fails 'Requires authentication'; reads OK). Label sync per workflow-state mapping deferred to PR phase via gh CLI. Delivery not blocked."
+    date: "2026-11-05"
+  - text: "Retro/ceremony coverage is mechanism-first: M1-S2 ships reusable boundary validation (schema checks + classification) and artifact contracts so the retro registry (M1-S8) and ceremony artifacts (M2-S3) are born validated; it does not implement those pipelines. Rationale: backlog ranking rank 22 places M1-S2 before M1-S8 (rank 32) and M2-S3; AC2 is satisfied by validated boundaries exercised on artifact kinds, and the backlog goal line states 'validation mechanism lands early so every later registry is born validated'. PM-decided to unblock; spec-writer pins the exact artifact contract; DoR gate verifies."
+    date: "2026-11-05"
+  - text: "Salvage trigger is an explicit, guided operation: reads classify torn state with repair guidance (per m1/contracts.md state entry 'torn or unknown reads classified with repair guidance, never silent zeros'); the salvage operation truncates to the last valid frame, writes a classified salvage record, and quarantines post-tear data. This preserves the M0-S5 'no automatic repair' invariant while adding salvage. Pinned ticket decision fixes the mechanism (truncate + classified salvage record + quarantine), not the trigger; spec-writer finalizes. PM-decided to unblock."
+    date: "2026-11-05"
+open_questions: []
+blockers:
+  - text: "GitHub MCP tracker WRITE calls fail with 'Requires authentication' (update_issue probe; reads work). Label sync to the workflow-state mapping (remove premature batch 'review' label, add 'planning') is deferred; retry via gh CLI at PR-creation phase. Does not block the local delivery lifecycle."
+    date: "2026-11-05"
+    resolved_date: null
+notes:
+  - text: "Rebase sync (operator-directed, post-PR): branch rebased onto origin/main-tools 29777038 (S13/GH-226 plan schema merged after our sync) to clear PR #246 mergeStateStatus DIRTY. Conflict surface was 7 files, not the 4 predicted: the 4 predicted (pm-notes-lint doc, result-contract doc, error-table-sync.test, error-table.test) PLUS 3 trivial frontmatter attribution unions (glossary, verify-taxonomy, nonfunctional: related_changes GH-221 vs GH-222 vs GH-226) — resolved under the operator's UNION rule (keep both sides, no side drops the other's). Union totals from the auto-merged machine table: 52 entries (state 9, plan 5, lint 6, watchdog 3, verify 3, closeout 4, db 4, config 10, provider 5, input 1, fallback 2); BASELINE_ROWS +18 at every oracle site; 2 stale oracles also fixed (50->52, state 7->9). Default rebase dropped merge 5eb4a1e1 from the todo (21 linear commits); rerere recorded 5 resolution shapes. Verified: error-table-sync 52/52 exit 0; error-table suites 105 pass; pnpm check all stages (2673 pass / 4 skips / 0 fail); pm-notes corpus 17/17. Result: force-push-with-lease follows; PR head re-confirmed; no scope change."
+    type: info
+    date: "2026-11-06"
+  - text: "Resume-sync merge with origin/main-tools (dispatch duty): GH-221 watchdog/lane contracts landed in parallel; merge conflicted on the shared error-table surface (6 files, 10 hunks) — resolved as a pure union by coder (merge commit 5eb4a1e1): 9 state rows + 3 watchdog rows = 46 entries, oracles recomputed from the resolved table (BASELINE_ROWS +12, toHaveLength 46, state count 7->9), both features' suites green (behaviour 1501 pass / 0 fail), privacy-release green again, forbidden-literals and doc-distribution clean, check:boundaries clean. Process note for parallel-delivery batches: error-table oracles encode exact totals, so every batch member touching the tables must expect a semantic (not textual) merge."
+    type: info
+    date: "2026-11-05"
+  - text: "RETRO: the tear-topology test matrix covered each tear class individually but not the COMBINED shape (mid-record break + truncated tail) — the one combination where truncation-at-last-newline is unsound — and it shipped through spec v1.2, test plan (23 TCs), DoR gate, and implementation before the adversarial review reproduced it on HEAD. Improvement: for parsing/classification layers, enumerate pairwise combinations of detection classes in the test matrix, prioritizing shapes where a cheap shortcut (last-newline truncation) can alias a harder class (mid-record). Related retro: a tautological assertion (Set of 4 literals, size 4) also slipped through plan authoring and implementation — reviewers and DoR should sample-verify assertion substance, not just presence."
+    type: retro
+    date: "2026-11-05"
+  - text: "RETRO: closing the specification phase, PM appended a second `completed` key to the phase block instead of editing the existing inline field — a duplicate YAML key that turned tests/behaviour/pm-notes-corpus.test.ts red at the coder's final gate and blocked pnpm check. Fixed by removing the stale line; targeted re-run green (17/17). Improvement: when closing a phase recorded with the inline { started, completed } shape, edit that line in place; after ANY pm-notes structural edit, run the pm-notes corpus test before handing off."
+    type: retro
+    date: "2026-11-05"
+  - text: "Delivery completed: coder executed all 6 plan phases with per-phase commits 0684212d/2ba51d72/fac0e764/d09cf619/5d854030/65d52957, green phase-boundary verification, 23/23 TC coverage, all 9 spec ACs demonstrated. Disclosed deviations: extra fixture/golden repins in Phase 1 (kept enumerating suites green); opt-in armExhaustion harness seam preserving M0-S5 generic-fault contracts; salvage on clean ledger = reported no-op (TC-GH222-024 candidate); top-level phase.transition payload field loss now classifies state.store.unknown (AC-F1-1) with GH-179 regression fixtures updated; one Phase-3 boundary-escape test repaired in Phase 5. Pre-existing env quirk (not this change): hermetic-clone test needs TMPDIR=./tmp/tmpdir on this host; CI unaffected."
+    type: info
+    date: "2026-11-05"
+  - text: "System docs reconciled by doc-syncer (9 files): feature-state-layer.md brought current (nine codes, salvage semantics incl. clean-ledger no-op and restored terminal-tail-repair bullet, artifact-boundary stand-ins, quality-assurance section); feature-result-contract.md traceability; pm-notes-lint registry consumer; verify-change identity mapping (+state.store.unknown); nonfunctional NFR-TOOL-004; glossary + tech-stack; NEW enduring test spec doc/quality/test-specs/test-spec-state-layer.md (+ forbidden-literals corpus registration). Checks: error-table-sync OK (43/43), forbidden-literals 0 violations, doc-distribution no drift, links clean. Residual (accepted, outside current truth): m1 pack still names proposed state.store.unknown-schema + planned state CLI — planned-state pack artifacts per conventions; reconcile in the later operate-family CLI story (recorded in readiness-iter-2 as accepted residual)."
+    type: info
+    date: "2026-11-05"
+  - text: "RETRO: the v1.1 spec introduced an internal contradiction (§8.5 'refines only state.write.failed' vs §22 requiring torn-read guidance to mention salvage) that passed both spec-writer authoring and PM validation, and was caught only by the adversarial DoR gate (1 gate iteration spent). Improvement: when an artifact asserts an exclusive claim ('only refined row', 'no other changes'), author and validator must cross-check every section that touches the same subject (here: §22 maintenance notes and the test cases naming torn guidance) before declaring the artifact complete."
+    type: retro
+    date: "2026-11-05"
+  - text: "State detection: issue open, labels change+review (review label pre-set by batch creation; no PR exists, no change artifacts existed, branch was at main-tools SHA 440829e — treated as fresh delivery, not resume). Remote main-tools tip == local HEAD, so no resume-sync merge was needed."
+    type: info
+    date: "2026-11-05"
+  - text: "Dependency M0-S5 (GH-174, state layer) is closed/delivered. Unblocked stories: M1-S17, M1-S8 (not in scope here). Ticket's m1/README.md reference resolves to milestones/README.md (pack conventions) — minor path discrepancy, not blocking."
+    type: info
+    date: "2026-11-05"
+  - text: "Cross-check vs doc/spec/features/feature-state-layer.md (current truth): M0-S5 already delivers schema-versioned JSONL ledger, torn-state detection (state.store.torn), verified-empty vs torn distinction, key-set assertions (never silent zero), sqlite index rebuilt from ledger (AC4 base), atomic replace, explicit terminal-tail repair. M1-S2 gaps: (1) salvage-to-last-valid-frame with classified salvage record + quarantine of post-tear bytes (changes/extends bounded-repair model); (2) disk-full classified fail-closed, never a partial write (new); (3) boundary validation generalization across delivery registry, retro registry, ceremony artifacts (new mechanism + contracts); (4) index rebuild provable from log alone (verify/extend incl. salvage path)."
+    type: info
+    date: "2026-11-05"
+  - text: "Doc impacts for phase 7 (doc-syncer): doc/spec/features/feature-state-layer.md (salvage, disk-full, boundary validation, quarantine, possibly new codes); doc/spec/features/feature-result-contract.md error table if new state.* codes are added (bidirectional sync check is binding); m1 contracts/test-scenario packs per pack conventions only if the story refines the proposed state contract."
+    type: risk
+    date: "2026-11-05"
+  - text: "Test plan authored: 23 story-local cases TC-GH222-001..023, 9/9 spec ACs covered bidirectionally (verified mechanically by the author), NFR-1..7 and EVT/DM interfaces mapped; inherits milestone pattern per m1/test-scenarios.md coverage rule; execution maps to tests/behaviour + tests/checks suites; phase-9 evidence pinned to pnpm check + bun test. Non-blocking notes: fault-point names for salvage write steps fixed at delivery (seam requirement binding); exhaustion injected at pre-commit points only."
+    type: info
+    date: "2026-11-05"
+  - text: "Implementation plan authored: 6 phases (contracts/error tables -> tear topology + exhaustion seam -> salvage/quarantine -> boundary validation + artifact contracts -> registry wiring + nine-code sweep -> gates/changeset), tests land alongside implementation, every phase ends green with per-phase verification + commit; 23/23 TCs mapped (TC-GH222-018 deliberately spans phases 1+5); all 9 ACs covered. Plan flags one non-blocking spec nuance: state.store.torn remediation text also needs a text-only refinement (guidance must mention salvage) — resolved in Phase 1 under the same both-tables sync discipline; submitted to DoR gate for adjudication."
+    type: info
+    date: "2026-11-05"

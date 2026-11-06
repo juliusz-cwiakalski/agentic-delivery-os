@@ -7,7 +7,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The implemented M0-S10 surface: pm-notes schema and variant conformance through a read-only lint command with named targets, the phase command family as the only schema-validated write path for phase state with a nine-row idempotency matrix, delivery-registry transition records and a derived phase-state projection over the state layer, the pinned evidence vocabulary, the five pm-notes lint error rows, and the variant-era corpus boundary with an explicit exclusion manifest."
 links:
-  related_changes: ["GH-177", "GH-178", "GH-179", "GH-226"]
+  related_changes: ["GH-177", "GH-178", "GH-179", "GH-222", "GH-226"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -42,7 +42,7 @@ The command takes one change ref and additive target flags:
 | Invocation | Target | Outcome |
 |---|---|---|
 | `lint <ref>` (or `--pm-notes`) | pm-notes | Missing file → `lint.target.missing`; otherwise the first family finding. |
-| `lint <ref> --registry` | delivery registry | Absent store → explicit verified-empty pass; torn/schema/key-set → classified `state.*`. |
+| `lint <ref> --registry` | delivery registry | Absent store → explicit verified-empty pass; torn, schema-mismatch, unknown kind/schema, or key-set failure → classified `state.*`. |
 | `lint <ref> --pm-notes --registry` | both | pm-notes first, then registry; the first failure is the verdict. |
 | `lint plan <ref>` | machine-readable delivery plan | Cannot be combined with `--pm-notes` or `--registry`; reports per-document `valid`/`invalid`/`unreadable` verdicts with locations. |
 
@@ -71,6 +71,8 @@ A landing writes only the target entry's `started`/`completed`; comments, extra 
 ### Delivery registry and derived projection
 
 Every landing appends exactly one ledger record of kind `phase.transition` under the per-change record key `phase.transitions:<REF>`. The record's payload carries the landing's change ref, phase id, operation (`complete` or `reopen`), timestamp, outcome, and reopen-only reason, together with the full verified history for that change; a verified read returns the last record for the key, so the whole history arrives without an unverified scan. No-op transitions append nothing, and the ledger is append-only.
+
+The registry declares one validated artifact boundary under its record-key prefix: `phase.transition` with its payload schema, the change-ref identity, the required fields, and the closed operation/outcome vocabularies. Reads validate every owned record before returning history, and landings validate before the append, so a nonconforming transition never reaches the ledger. A top-level payload missing a declared field classifies `state.store.unknown`; a malformed nested transition entry remains `state.keys.missing`; an undeclared record kind under the prefix is `state.store.unknown`. Every refusal is `not_landed` and leaves the ledger byte-identical.
 
 The per-change phase state is a derived document named `phase-state.<REF>.json` with shape `{ schemaVersion, changeRef, phases }`, where each phase entry is `{ started, completed }`. It is a pure fold of verified transition records: a completion sets the first-completion start and the latest completion, a reopen clears `completed` while keeping the recorded start, and no timestamp or non-fold field is stored, so a rebuild is byte-stable. The ledger is truth; the projection is disposable and atomically replaced.
 
