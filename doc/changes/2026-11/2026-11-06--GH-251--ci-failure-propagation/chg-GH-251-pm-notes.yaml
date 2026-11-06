@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: "2026-11-06T18:14:00Z", completed: "2026-11-06T18:30:00Z" }
   dor_check: { started: "2026-11-06T18:32:00Z", completed: "2026-11-06T18:45:00Z" }
   delivery: { started: "2026-11-06T18:47:00Z", completed: "2026-11-06T18:55:00Z" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-11-06T18:57:00Z", completed: "2026-11-06T19:05:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -85,4 +85,7 @@ notes:
     date: "2026-11-06"
   - text: "RETRO (environment): pnpm check false-fails under bash -lc when bun is not on PATH; working invocation needs PATH=\"$HOME/.bun/bin:$PATH\" (tmp/tmpdir/bin holds only shellcheck+yq) and TMPDIR=\"$PWD/tmp/tmpdir\" for the two host-sensitive tests (packed-state, ci-baseline-parity). Record for future runner sessions on this host."
     type: "retro"
+    date: "2026-11-06"
+  - text: "SYSTEM_SPEC_UPDATE COMPLETED, no gaps: 5 current-truth docs reconciled (nonfunctional.md NFR-TOOL-005 gap resolved with 3x5 boundary wording; monorepo-scaffold-toolchain 'byte-unchanged' sentence replaced with runner-based aggregation + DEC-7 allowance truth; config-layer bounded-input statement added; privacy-guard CI-wiring row aligned to DEC-7; branding-seam 'byte-unchanged' claim scoped); doc-distribution guard green; in-change phase-4/FSE edits verified consistent; inception analysis snapshots intentionally left as historical records (no current-truth doc contradicts the implementation)."
+    type: "info"
     date: "2026-11-06"
