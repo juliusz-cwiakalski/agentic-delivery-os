@@ -178,3 +178,29 @@ phases:
       - "pnpm check"
       - "bun run scripts/checks/license-audit.ts && bun run scripts/checks/vulnerability-gate.ts"
       - "git diff --check"
+  - id: 7
+    title: "Code Review Remediation (Iteration 1)"
+    kind: delivery
+    scope:
+      files:
+        - packages/mcp/src/commands/toolset.ts
+        - packages/mcp/src/commands/verify-artifact.ts
+        - packages/mcp/src/commands/gate-report.ts
+        - packages/mcp/src/serve.ts
+        - packages/mcp/package.json
+        - tests/fixtures/mcp/parity/cases.ts
+        - tests/behaviour/mcp-error-payload.test.ts
+        - tests/behaviour/mcp-lifecycle.test.ts
+        - tests/fixtures/mcp/protocol/client.ts
+        - doc/spec/features/feature-mcp-surface.md
+        - doc/changes/2026-11/2026-11-06--GH-231--minimal-mcp/chg-GH-231-test-plan.md
+    summary: "fix(GH-231): review iteration 1 - thrown-error containment, truthful parks section"
+    tasks:
+      - "7.1 Containment (review F-1, major): a thrown error inside a verify-artifact or gate-report runtime read must become a classified tool failure, never a rejected callTool promise or a server crash. Wrap the toolset dispatch (packages/mcp/src/commands/toolset.ts dispatch - the single site) or both handlers in try/catch returning failureFromValue(thrown), mirroring runStatusTool; the exported callTool contract (Promise<McpToolResult>) must not reject for a thrown read. Add throwing-runtime parity cases for verify-artifact and gate-report (mirror of status-containment: a readPmNotes/readRepository that throws) asserting deep equality with the CLI fallback.internal error object and the full contracted field set, and a lifecycle row where a throwing-then-valid sequence keeps the server serving with exit 0. [AC-F5-3 thrown-error path; G-5; NFR-6; review F-1]"
+      - "7.2 Truthful parks section (review F-2, major): the serve composition's readProviderParks must stop hardwiring state-unreadable/state.store.unknown while the same process reads the store successfully for verify/gates. Preferred: add \"./provider\" to packages/mcp/package.json workspaceImports (registering any pin that asserts the declared import set) and compose readProviderParks from the already-built store via readProviderParkViews exactly as the CLI edge does (packages/cli/src/edge.ts:1370-1376), keeping the store read-only. Alternative if the boundary registration is rejected: keep local-only composition but return a truthful not-configured reason and record the UQ-7 drift reason in the feature page and the test-plan execution log. Either option must leave the parity suites, the readonly/injection oracles, and the Node smoke green (the smoke's pinned parks expectation updates to the truthful outcome). [F-2 truthful sections; spec 8.4; plan 3.4 same read paths; UQ-7; review F-2]"
+      - "7.3 Doc completion (review F-5, minor): the feature page's serve-composition inventory lists provider config and parks explicitly (consistent with 7.2's chosen option and stating the default working-name fallback when DELIVERY_OS_WORKING_NAME is absent); the test-plan section 7 implementation-status column is updated (or annotated that section 10 supersedes it after delivery). [review F-5, F-7 doc half]"
+      - "7.4 Optional, non-blocking (review F-3/F-6/F-7): a valid-JSON non-frame (including a JSON-RPC batch array) answered with -32600 Invalid Request and continued serving instead of a transport-fault exit, with a protocol-suite row pinning the choice; the protocol dispatcher resolving served names through toolIdByName instead of positional index; the neutral override/default working-name constants shared or enumerated in the rename drill. Skip any of these without re-review - record the skip in the execution log. [review F-3, F-6, F-7]"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/mcp-error-payload.test.ts tests/behaviour/mcp-input-validation.test.ts tests/behaviour/mcp-read-parity.test.ts tests/behaviour/mcp-lifecycle.test.ts tests/behaviour/mcp-node-smoke.test.ts"
+      - "pnpm check"

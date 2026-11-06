@@ -7,9 +7,9 @@ phases:
   test_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   delivery_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   dor_check: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
-  delivery: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  delivery: { started: "2026-11-06T00:00:00Z", completed: null }
   system_spec_update: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-06T00:00:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -39,6 +39,12 @@ notes:
     date: "2026-11-06"
   - text: "Delivery phase complete (COMPLETED_ALL): 6 phase commits af4f53ea (toolset), fe9ce0cd (parity oracles), f891cc46 (protocol/serve/lifecycle), b9c98b4a (lifecycle/Node smoke/CI wiring), a3044c2d (injection/readonly/mutants), bf1a885a (aggregate gates/changeset). All testGates green per phase; final pnpm check exit 0 (3750 pass, 4 skip, 0 fail); commitlint green after every commit; scans: exit-literals 167 files, secret-read 179 files/5 allowlist entries, mcp import scan 12 files, forbidden-literals 0 violations; lifecycle exits {0,1,2} observed; parity cases status 6 / verify-artifact 10 / gate-report 5 (above floors). 7 justified deviations reported by coder - review attention points: (a) relative .js import specifiers instead of #commands/#output aliases (Node dist resolution), (b) phase-6 remediation touched files outside declared list (biome.json formatter exemption for generated fixtures; pre-existing pin updates in import/board/live suites, state-scope, verify-imports tests), (c) serve.ts defaults working name to delivery-os (forbidden-literal scan 0 violations - scan is authority). plan diff not runnable (no production bin); scope reconciled via git diff vs declared scopes. Phase-7 obligations recorded in test-plan section 10: author feature-mcp-surface.md (ados_distribution: internal), surface-mapping note in feature-result-contract.md, rename-drill RD-8 verification, doc-distribution guard re-check."
     type: "info"
+    date: "2026-11-06"
+  - text: "Review iteration 1 verdict FAIL (0c/2h/3m/2l/3i; artifacts code-review/review-iter-1.yaml + review/review-iter-1.md). Reviewer re-ran suites (158 tests green) and probed serve empirically. All 5 PM attention points verified SOUND (relative .js imports, phase-6 out-of-scope pin updates, delivery-os default name, generatedAt normalization, forbidden-literals registration). Two BLOCKING highs: (1) containment gap - thrown runtime error in verify-artifact/gate-report rejects callTool and crashes server exit 1 (verify-artifact.ts:64 no try/catch; contrast status.ts:95-99, cli/index.ts:339-351) violating G-5/AC-F5-3 on that path; (2) falsely degraded parks section - serve.ts:109-113 hardwires state.store.unknown while cli/edge.ts:1370-1376 reads the same store successfully (readProviderParkViews in core/provider outside mcp declared workspaceImports) - untruthful digest, unrecorded UQ-7 drift. Remediation phase 7 appended to plan (7.1 containment + throwing-runtime parity cases, 7.2 parks composition-or-recorded-drift, 7.3 doc completion, 7.4 optional minors; plan re-validated valid/ready). Plan gap noted: SCOPE_DEVIATION phase 6 touched 12 vs 3 declared (all ripple changes verified correct; root cause phase-3 scope omitted invariant pin files). Minors/lows: no throwing-runtime parity cases for verify/gates (F-1), batch-frame lifecycle unpinned (F-3), batch-frame exit 2 on valid JSON-RPC array probe."
+    type: "risk"
+    date: "2026-11-06"
+  - text: "Retro: phase-3 scope omitted the invariant pin files that phase-3's own boundary reconciliation would ripple into (exit-literals pins in import/board/live suites, state-scope, verify-imports), forcing phase 6 to touch 12 files vs 3 declared. Lesson for plan authors: when a task reconciles a shared invariant check, add the check's test/pin files to that phase's scope up front."
+    type: "retro"
     date: "2026-11-06"
   - text: "Tracker write note: github-mcp lacks write auth (update_issue failed 'Requires authentication'); gh CLI authenticated as juliusz-cwiakalski with repo scope — all tracker writes and PR creation go through gh CLI via @runner. Labels synced: review (stale, no PR) removed, planning added; final set change+planning."
     type: "info"
