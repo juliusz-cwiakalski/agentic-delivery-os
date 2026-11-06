@@ -103,3 +103,6 @@ notes:
   - text: "Plan phase 8 delivery decision (task 8.6): @committer landed every phase commit, including this final phase. Dogfooding the primitive is rejected because the DEC-6 session-context guard refuses invocation from inside this session-driven delivery; real-repository commit validation is covered by the behaviour suites' temp repositories (GAP-7), and agent adoption is the separate NG-1 follow-up."
     type: "info"
     date: "2026-11-06"
+  - text: "Plan phase 8 complete: commit cc222c8e - lockstep minor changeset, aggregate gate evidence recorded in the test plan, plan-phase completion evidence in pm-notes, and the final formatting/check cleanup. Gate: pnpm check green (2773 tests, 4 skipped; lint/format/typecheck tests boundaries exports-parity); bash scripts/.tests/test-doc-distribution.sh green; git diff --check clean; error-table-sync 58/58; forbidden-literals and privacy-literals green. Spec-reconciliation obligations remain declared for the lifecycle system_spec_update phase (@doc-syncer): new feature-commit-primitive spec, phase-transitions feature reconciliation, M1 pack pages, CLI registry row, and the four delivery decisions OQ-1/OQ-T3/OQ-T4/OQ-T6."
+    type: "info"
+    date: "2026-11-06"
