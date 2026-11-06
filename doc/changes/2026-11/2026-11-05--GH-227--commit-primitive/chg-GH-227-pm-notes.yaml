@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: "2026-11-06T03:55:00Z", completed: "2026-11-06T04:20:00Z" }
   review_fix: { started: "2026-11-06T04:25:00Z", completed: "2026-11-06T08:10:00Z" }
   quality_gates: { started: "2026-11-06T08:15:00Z", completed: "2026-11-06T08:25:00Z" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-11-06T08:30:00Z", completed: "2026-11-06T08:35:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "delivery_mode=interactive (direct user dispatch; not the scripts/opencode-session.sh autonomous entry point)"
@@ -139,6 +139,10 @@ notes:
   - text: "Retro: subagent environments must export PATH=$HOME/.bun/bin for bun-invoking commands (the formal gate run hit bun: not found on first attempt, costing one wasted 30s+ run); worth capturing in runner agent memory or the repo's testing-strategy rules"
     type: "retro"
     date: "2026-11-06"
+  - text: "DoD check PASSED: (1) pm-notes has all phases 1-9 completed with timestamps, blockers empty, no unresolved open questions; (2) plan completion - every declared plan phase (1-10) has a pm-notes entry naming phase id + commit hash + test result (1-8 delivery commits 77479da1..cc222c8e; 9 = 037d2d10; 10 = 70f1cd52); (3) all 23 spec ACs satisfied - test plan v1.3 coverage complete incl. TC-ATOMIC-014..016 + TC-CONVERGE-010, aggregate 3222 pass / 0 fail, SC-M1-12 verbatim green, ticket's four ACs each verified (message-from-tree+context; atomic-by-default + --no-commit; strays never staged; re-run converges); (4) current-truth docs complete - three doc-syncer passes with zero residual gaps, guards green (59/59 sync, 0 literal violations, 81 docs no drift); (5) review closed at iter-3 PASS. Reopen count: zero. Proceeding to pr_creation"
+    type: "resolved"
+    date: "2026-11-06"
+
 
 
 
