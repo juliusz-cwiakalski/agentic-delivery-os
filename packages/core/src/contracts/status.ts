@@ -526,6 +526,7 @@ export type StatusParkedWorkEntry = {
   readonly changeFolder?: string;
   readonly reason?: string;
   readonly parkedAt?: string;
+  readonly condition?: string;
 };
 
 /** The local PM-context read result (DM-10). */

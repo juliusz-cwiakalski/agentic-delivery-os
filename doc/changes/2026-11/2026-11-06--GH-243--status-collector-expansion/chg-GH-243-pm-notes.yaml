@@ -62,3 +62,6 @@ notes:
   - text: "DoR verdict READY (iteration 1, no override): 10/10 facets PASS, 0 critical/0 major/1 minor/4 nit. Notable adversarial verifications: golden regeneration exactly once (phase 2); D-3 brief decoupling confirmed a real latent defect the plan catches; no TC reshaping. Minor advisory (stale GAP-1 text in test plan) deferred to next plan revision; spec nits fold into phase-7 doc-sync. Record: readiness-review/readiness-iter-1.md in change folder."
     type: "decision"
     date: "2026-11-07"
+  - text: "Plan phase 1 complete (commit 68368c1a): finding-code registry + severity set + nine-section vocabulary + DEC-16 additive types + brief surface-order decoupling + milestone mapped-signal projection. Gates green: pnpm typecheck; status-findings-contract/status-contract/status-imports/content-inventory/brief-contract; github collection/trap/trap-catalog; boundaries + ambient-globals + forbidden-literals + workspace-entrypoints; status-command/status-output/status golden. Deviation: edge.ts declares the three mapped hygiene assertion signals available (required by F-4a/DEC-14 truthfulness; additive only)."
+    type: "info"
+    date: "2026-11-07"

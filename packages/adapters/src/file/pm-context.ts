@@ -60,7 +60,15 @@ const projectParkedEntry = (
   const changeFolder = readString(value, "change_folder");
   const reason = readString(value, "reason");
   const parkedAt = readString(value, "parkedAt");
-  if (!workItemRef.ok || !branch.ok || !changeFolder.ok || !reason.ok || !parkedAt.ok) {
+  const condition = readString(value, "condition");
+  if (
+    !workItemRef.ok ||
+    !branch.ok ||
+    !changeFolder.ok ||
+    !reason.ok ||
+    !parkedAt.ok ||
+    !condition.ok
+  ) {
     return { ok: false };
   }
   return {
@@ -71,6 +79,7 @@ const projectParkedEntry = (
       ...(changeFolder.value === undefined ? {} : { changeFolder: changeFolder.value }),
       ...(reason.value === undefined ? {} : { reason: reason.value }),
       ...(parkedAt.value === undefined ? {} : { parkedAt: parkedAt.value }),
+      ...(condition.value === undefined ? {} : { condition: condition.value }),
     },
   };
 };

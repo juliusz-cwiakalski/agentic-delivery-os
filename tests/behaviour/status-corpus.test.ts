@@ -158,6 +158,11 @@ const orderedIds = (section: StatusSection): readonly string[] => {
       ];
     case "parked-work":
       return (section.items ?? []).map((item) => item.workItemRef ?? "(unknown)");
+    case "ready-to-merge":
+      return (section.items ?? []).map((item) => ("ref" in item ? item.ref : "(unknown)"));
+    case "spend":
+    case "blockers":
+      return [];
     default:
       return [];
   }
@@ -210,6 +215,9 @@ const SECTION_STATE_MATRIX: Readonly<Record<StatusSectionId, readonly string[]>>
   "lanes-or-queue": ["not-delivered"],
   providers: ["observed", "degraded", "unknown", "unavailable"],
   "parked-work": ["observed", "unknown", "unavailable"],
+  "ready-to-merge": ["observed", "unknown", "unavailable"],
+  spend: ["not-delivered"],
+  blockers: ["not-delivered"],
 };
 
 const REQUIRED_CONTROLS = [

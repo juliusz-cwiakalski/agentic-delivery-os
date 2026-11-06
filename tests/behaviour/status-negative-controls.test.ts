@@ -125,7 +125,7 @@ describe("TC-STATUS-023 exhaustive negative controls", () => {
   for (const control of controls) {
     test(control.name, () => {
       const digest = aggregateStatus(control.facts);
-      expect(digest.sections).toHaveLength(6);
+      expect(digest.sections).toHaveLength(9);
       expect(section(control.facts, "lanes-or-queue").state).toBe("not-delivered");
       const entry = section(control.facts, control.sectionId);
       expect(entry.state).toBe(control.state);

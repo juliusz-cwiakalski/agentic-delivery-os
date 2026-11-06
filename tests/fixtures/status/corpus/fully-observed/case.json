@@ -117,6 +117,42 @@
           "GH-807"
         ],
         "truncated": false
+      },
+      "ready-to-merge": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 8,
+          "unknown": 0,
+          "total": 8,
+          "omitted": 0
+        },
+        "orderedIds": ["500", "501", "502", "503", "504", "505", "506", "507"],
+        "truncated": false
+      },
+      "spend": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "blockers": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
       }
     }
   }

@@ -191,7 +191,7 @@ export {
   selectPruneCandidates,
 } from "./session-admin.js";
 export { sha256Hex } from "./sha256.js";
-export { aggregateStatus, renderStatusHuman } from "./status.js";
+export { aggregateStatus, evaluateStatusFindings, renderStatusHuman } from "./status.js";
 export {
   classifyVerifyChange,
   classifyVerifyDocument,

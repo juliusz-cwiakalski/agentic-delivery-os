@@ -167,17 +167,19 @@ describe("TC-STATUS-005 machine envelope and 64 KiB bound", () => {
       [
         "actionable",
         "degraded",
+        "findingsTotal",
         "notDelivered",
         "observed",
+        "placeholderSectionCount",
         "sections",
         "unavailable",
         "unknown",
       ].sort(),
     );
-    expect(data.summary.sections).toBe(6);
+    expect(data.summary.sections).toBe(9);
     expect(JSON.stringify(data).length).toBeLessThanOrEqual(65536);
     const expectedKeys: Record<string, string[]> = {
-      tracker: ["counts", "evidence", "families", "id", "state", "title", "truncated"],
+      tracker: ["counts", "evidence", "families", "findings", "id", "state", "title", "truncated"],
       "changes-and-prs": [
         "activeChange",
         "counts",
@@ -190,6 +192,7 @@ describe("TC-STATUS-005 machine envelope and 64 KiB bound", () => {
       ],
       ci: ["commit", "counts", "evidence", "id", "result", "runs", "state", "title", "truncated"],
       "lanes-or-queue": [
+        "attentionStates",
         "capability",
         "counts",
         "evidence",
@@ -213,6 +216,31 @@ describe("TC-STATUS-005 machine envelope and 64 KiB bound", () => {
         "truncated",
       ],
       "parked-work": ["counts", "evidence", "id", "items", "source", "state", "title", "truncated"],
+      "ready-to-merge": ["counts", "evidence", "id", "items", "state", "title", "truncated"],
+      spend: [
+        "capability",
+        "counts",
+        "evidence",
+        "expectedStory",
+        "id",
+        "items",
+        "note",
+        "state",
+        "title",
+        "truncated",
+      ],
+      blockers: [
+        "capability",
+        "counts",
+        "evidence",
+        "expectedStory",
+        "id",
+        "items",
+        "note",
+        "state",
+        "title",
+        "truncated",
+      ],
     };
     for (const [id, keys] of Object.entries(expectedKeys)) {
       expect(Object.keys(section(data, id)).sort()).toEqual([...keys].sort());
@@ -274,8 +302,12 @@ describe("TC-STATUS-006 human digest grammar and bounds", () => {
     expect(lines.some((line) => line.startsWith("lanes      not-delivered"))).toBe(true);
     expect(lines.some((line) => line.startsWith("providers"))).toBe(true);
     expect(lines.some((line) => line.startsWith("parked"))).toBe(true);
-    expect(lines.length).toBeLessThanOrEqual(24);
-    expect(Buffer.byteLength(run.stdout, "utf8")).toBeLessThanOrEqual(4096);
+    expect(lines.some((line) => line.startsWith("ready"))).toBe(true);
+    expect(lines.some((line) => line.startsWith("spend"))).toBe(true);
+    expect(lines.some((line) => line.startsWith("blockers"))).toBe(true);
+    expect(lines.some((line) => line.startsWith("attention"))).toBe(true);
+    expect(lines.length).toBeLessThanOrEqual(32);
+    expect(Buffer.byteLength(run.stdout, "utf8")).toBeLessThanOrEqual(6144);
     expect(run.stdout).toContain("+1");
     expect(run.stdout).not.toContain("planted-status-title-canary");
     expect(run.stdout).not.toContain("planted-status-notes-canary");
@@ -473,7 +505,7 @@ describe("TC-STATUS-007 caps, omitted, truncation, and ordering", () => {
     expect(identity(reversed)).toEqual(identity(forward));
     const forwardData = forward.data;
     if (isRecord(forwardData) && Array.isArray(forwardData.sections)) {
-      expect(forwardData.sections).toHaveLength(6);
+      expect(forwardData.sections).toHaveLength(9);
     }
   });
 });
