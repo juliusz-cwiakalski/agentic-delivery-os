@@ -5,7 +5,7 @@ branch: feat/GH-223/audit-ledger
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-06T00:10:00Z", completed: "2026-11-06T00:12:30Z" }
-  specification: { started: "2026-11-06T00:13:00Z", completed: "2026-11-06T00:26:00Z" }
+  specification: { started: "2026-11-06T00:13:00Z", completed: "2026-11-06T00:45:00Z" }
   test_planning: { started: "2026-11-06T00:27:00Z", completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -36,6 +36,9 @@ notes:
     type: risk
     date: "2026-11-06"
   - text: "REOPEN loop (specification reopened, iteration 2): test-plan-writer found 2 blocking spec gaps — OQ-T5 audit record lacks a timestamp field so the AC-F5-1 time-window filter is unimplementable (PM decided: add startedAt from the injected clock); OQ-T6 DEC-8 'sequence discontinuity' detection unachievable as written because the state port derives next sequence from verified ledger length (PM decided: audit-consumer ordinal assigned under the audit fence, gaps detectable on read). 10 non-blocking OQs (T1-T4, T7-T11) delegated to spec-writer for in-spec resolution within ticket pins. Test plan iteration 1 (34 TCs) authored but reconciliation pending after spec fix."
+    type: info
+    date: "2026-11-06"
+  - text: "Spec v1.1 (specification iteration 2 complete): OQ-T5 fixed via new AC-F1-4 (startedAt from injected clock, exactly-once); OQ-T6 fixed via narrowed DEC-8 (audit consumer assigns monotonic auditSeq under the shared audit fence; skipped ordinals are in-band read findings, state port untouched); OQ-T2 resolved with durable store-managed chaining-key artifact (0600, through the public port) so cross-process chain verification never false-flags; OQ-T1/T3/T4/T7/T8/T9/T10/T11 resolved (record kind audit.invocation, schema delivery.audit.invocation.v1, key audit.invocations). AC set now 15 (14 prior + AC-F1-4)."
     type: info
     date: "2026-11-06"
   - text: "Retro: the reopened-specification loop cost one extra spec+test-plan iteration. Root cause: initial spec authoring optimized for ticket ACs and missed derived requirements (timestamp for filters, mechanism realism against the state port). Improvement candidate: artifact authors should run a 'mechanism-realism' self-check against the public ports their design composes before returning (test-plan-writer effectively did this). The reopen-on-gap gate caught it before delivery — no code rework."
