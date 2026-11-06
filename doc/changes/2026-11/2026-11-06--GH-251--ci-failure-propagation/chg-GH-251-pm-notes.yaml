@@ -10,7 +10,7 @@ phases:
   delivery: { started: "2026-11-06T18:47:00Z", completed: "2026-11-06T18:55:00Z" }
   system_spec_update: { started: "2026-11-06T18:57:00Z", completed: "2026-11-06T19:25:00Z" }
   review_fix: { started: "2026-11-06T19:10:00Z", completed: "2026-11-06T19:40:00Z" }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-11-06T19:42:00Z", completed: "2026-11-06T19:48:00Z" }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -103,6 +103,9 @@ notes:
     date: "2026-11-06"
   - text: "REVIEW PASS (iteration 2): Status=PASS, 0 new findings, all 4 iteration-1 findings verified fixed empirically at the original reproduction sites (F-1 probe rerun: runner exits 1 naming discovery failure; F-2: 105/105 in both yq-present/absent variants; F-3: fixtures F/G non-vacuous; F-4 confirmed in diff). Spec compliance PASS, plan compliance PASS, Phase 5 execution CONFIRMED COMPLETE. Prior ACCEPTED deviation rulings stand; RSK-7 upgraded to 'sound, footprint now deliberately pinned'. Artifact code-review/review-iter-2.yaml. Reviewer obligations routed to pr_creation: TC-CIPROP-013 evidence capture + first real bash-tests run as live F-2 confirmation + RSK-7 standing-footprint sentence in the PR description."
     type: "resolved"
+    date: "2026-11-06"
+  - text: "QUALITY_GATES COMPLETED (final battery on remediated tree, HEAD e759421f): pnpm check 4028 pass / 4 skip / 0 fail; bash suites 24/24; text-to-image unit 105/105; ci-checks 37/37; parser boundary + purity 29/29; ci-topology (7 bash + 16 TS jobs) / ci-bindingness / error-table-sync (70=70) / script-surface all exit 0; shellcheck -S error zero diagnostics on all three new scripts; commitlint 18 commits in range 0 violations; worktree clean of gate artifacts (all logs under gitignored tmp/)."
+    type: "info"
     date: "2026-11-06"
   - text: "Plan phase 5 (review iteration 1 remediation; commit hash recorded in the delivery completion report because a commit cannot contain its own hash): 5.1 fail-closed discovery in scripts/run-bash-suites.sh captures find's status and aborts with 'suite discovery failed' before running any suite, pinned by TC-CIPROP-006b (chmod-000 directory); 5.2 test-only text-to-image fallback assertion now asserts the actual key=value contract and exercises the branch via an awk-only PATH subshell — 105/105 both with and without yq on PATH; 5.3 DEC-7 fixtures F/G pin the comment-above-next-job and Install-jq run-body footprint, each non-vacuous when allowBashTestsExecutionBlockRemovals is disabled; 5.4 artifact truth: implementation_plan set, GAP-1 resolved-by-plan, §10 changeset name corrected to -minor.md, privacy-release.test.ts classified, spec/test-plan version_impact aligned to minor. Gates: contract suite 9/9 PASS, modes PASS, ci-checks 37/37 PASS, ci-topology/ci-bindingness exit 0, shellcheck -S error clean on all four scripts, pnpm check exit 0 (4028 pass / 4 skip / 0 fail; boundaries + exports parity green), full runner 24/24 PASS exit 0, git diff --check clean."
     type: "info"
