@@ -59,6 +59,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "watchdog.checkout-dirty",
   "watchdog.checkout-non-base",
   "watchdog.signals-absent",
+  // GH-227 pins these three commit identities exactly; they remain exact
+  // declared codes, not a pattern widening.
+  "commit.staging-blocked-untracked",
+  "commit.commitlint-failed",
+  "commit.atomic-abort",
 ]);
 
 const isValidCode = (code: string): boolean =>
@@ -657,7 +662,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, and `status`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, and `status`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -671,7 +676,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(3);
-    expect(entries).toHaveLength(53);
+    expect(entries).toHaveLength(59);
   });
 });
 
@@ -747,7 +752,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(53);
+    expect(entries).toHaveLength(59);
     expect(db).toHaveLength(4);
   });
 
@@ -963,7 +968,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(53);
+    expect(entries).toHaveLength(59);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1022,6 +1027,132 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
     expect(entries.filter((entry) => entry.domainKind === "verify")).toHaveLength(3);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "closeout")).toHaveLength(4);
+  });
+});
+
+const COMMIT_ROWS = [
+  [
+    "commit.staging-blocked-untracked",
+    "user",
+    false,
+    "not_landed",
+    "Stage or remove the pending material outside the declared scope, or expand the change scope, then retry the commit.",
+    "user-validation",
+    "Nothing stageable remains for the requested commit.",
+  ],
+  [
+    "commit.commitlint-failed",
+    "user",
+    false,
+    "not_landed",
+    "Reconcile the repository commitlint configuration with the commit type table (or correct the message), then retry.",
+    "user-validation",
+    "Neither the generated message nor the deterministic template satisfied commitlint.",
+  ],
+  [
+    "commit.safety.secret-suspected",
+    "user",
+    false,
+    "not_landed",
+    "Review the named finding class and path, remove or gitignore the suspected material, then retry; never blind-retry.",
+    "user-validation",
+    "The secret scan flagged candidate content or a filename on suspicion.",
+  ],
+  [
+    "commit.safety.scan-unavailable",
+    "platform",
+    true,
+    "not_landed",
+    "Restore the deterministic safety scanner and retry; nothing was staged or committed.",
+    "platform-provider",
+    "The deterministic safety scan could not run.",
+  ],
+  [
+    "commit.atomic-abort",
+    "platform",
+    true,
+    "not_landed",
+    "Retry the completion; the clean abort restored both the ledger and the commit to neither-landed, and a re-run converges.",
+    "platform-provider",
+    "The atomic phase completion aborted and restored both sides.",
+  ],
+  [
+    "commit.session.context-refused",
+    "user",
+    false,
+    "not_landed",
+    "Invoke the commit primitive from outside the delivery session (agents invoke it from a plain shell or subagent boundary).",
+    "user-validation",
+    "The commit primitive refused to run inside a delivery session.",
+  ],
+] as const;
+
+describe("TC-TABLE-005 the commit kind declares exactly six rows", () => {
+  test("the commit kind carries the six pinned identities and classifications", () => {
+    expect(DOMAIN_KINDS).toContain("commit");
+    const commit = entries.filter((entry) => entry.domainKind === "commit");
+    expect(commit.map((entry) => entry.code)).toEqual(COMMIT_ROWS.map(([code]) => code));
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of COMMIT_ROWS) {
+      expect(classifyDomainKind("commit", code)).toMatchObject({
+        code,
+        domainKind: "commit",
+        category,
+        retryable,
+        consequence,
+        remediationHint: hint,
+        projectionClass,
+        summary,
+      });
+      expect(resolveAppErrorCode(code)).toEqual({
+        ok: true,
+        entry: classifyDomainKind("commit", code),
+      });
+      expect(classifyThrown({ kind: "commit", code })).toEqual(classifyDomainKind("commit", code));
+      expect(String(hint).length).toBeGreaterThan(0);
+    }
+    expect(commit).toHaveLength(6);
+    expect(entries.some((entry) => entry.code.includes("template-fallback"))).toBe(false);
+  });
+
+  test("kind-only commit is ambiguous and contains; wrong codes contain", () => {
+    expect(() => classifyDomainKind("commit")).toThrow();
+    expect(classifyThrown({ kind: "commit" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    expect(classifyThrown({ kind: "commit", code: "state.store.torn" }).code).toBe(
+      FALLBACK_INTERNAL_CODE,
+    );
+    expect(() => classifyDomainKind("commit", "input.value.rejected")).toThrow();
+  });
+
+  test("the documented commit rows agree exactly once and match every column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of COMMIT_ROWS) {
+      const row = `| ${code} | commit | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
+    expect(doc).toContain("`commit` kind carries exactly the six commit-primitive identities");
+  });
+
+  test("template fallback is success evidence, never a failure identity", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    expect(doc).toContain("template fallback is success evidence");
+    const commit = entries.filter((entry) => entry.domainKind === "commit");
+    expect(commit.every((entry) => entry.category !== "success")).toBe(true);
   });
 });
 

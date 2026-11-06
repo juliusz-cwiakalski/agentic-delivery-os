@@ -122,6 +122,12 @@ export const PRODUCTION_CATALOG = {
       chains: { type: "record", value: PROVIDER_CHAIN_VALUE },
     },
   },
+  commit: {
+    type: "object",
+    fields: {
+      phaseCommit: { type: "boolean" },
+    },
+  },
 } as const satisfies ConfigCatalog;
 
 export const fieldAt = (

@@ -21,6 +21,7 @@ export const DOMAIN_KINDS = [
   "closeout",
   "plan",
   "watchdog",
+  "commit",
   "status",
 ] as const;
 
@@ -596,6 +597,72 @@ export const ERROR_TABLE = [
       "Restore the declared progress-signal sources, then retry; without them the answer is unknown.",
     projectionClass: "platform-provider",
     summary: "No liveness signal sources are available; the answer is unknown.",
+  },
+  {
+    code: "commit.staging-blocked-untracked",
+    domainKind: "commit",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Stage or remove the pending material outside the declared scope, or expand the change scope, then retry the commit.",
+    projectionClass: "user-validation",
+    summary: "Nothing stageable remains for the requested commit.",
+  },
+  {
+    code: "commit.commitlint-failed",
+    domainKind: "commit",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Reconcile the repository commitlint configuration with the commit type table (or correct the message), then retry.",
+    projectionClass: "user-validation",
+    summary: "Neither the generated message nor the deterministic template satisfied commitlint.",
+  },
+  {
+    code: "commit.safety.secret-suspected",
+    domainKind: "commit",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Review the named finding class and path, remove or gitignore the suspected material, then retry; never blind-retry.",
+    projectionClass: "user-validation",
+    summary: "The secret scan flagged candidate content or a filename on suspicion.",
+  },
+  {
+    code: "commit.safety.scan-unavailable",
+    domainKind: "commit",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Restore the deterministic safety scanner and retry; nothing was staged or committed.",
+    projectionClass: "platform-provider",
+    summary: "The deterministic safety scan could not run.",
+  },
+  {
+    code: "commit.atomic-abort",
+    domainKind: "commit",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Retry the completion; the clean abort restored both the ledger and the commit to neither-landed, and a re-run converges.",
+    projectionClass: "platform-provider",
+    summary: "The atomic phase completion aborted and restored both sides.",
+  },
+  {
+    code: "commit.session.context-refused",
+    domainKind: "commit",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Invoke the commit primitive from outside the delivery session (agents invoke it from a plain shell or subagent boundary).",
+    projectionClass: "user-validation",
+    summary: "The commit primitive refused to run inside a delivery session.",
   },
   {
     code: "status.collector.tracker.unavailable",

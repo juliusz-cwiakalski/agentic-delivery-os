@@ -12,6 +12,7 @@
     "src/contracts/audit.ts",
     "src/contracts/brief.ts",
     "src/contracts/closeout.ts",
+    "src/contracts/commit.ts",
     "src/contracts/config.ts",
     "src/contracts/credentials.ts",
     "src/contracts/delivery-result.ts",

@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-05T23:48:00Z", completed: "2026-11-06T00:05:00Z" }
   delivery_planning: { started: "2026-11-06T00:06:00Z", completed: "2026-11-06T00:20:00Z" }
   dor_check: { started: "2026-11-06T00:21:00Z", completed: "2026-11-06T00:33:00Z" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-11-06T01:50:00Z", completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -60,4 +60,19 @@ notes:
     date: "2026-11-06"
   - text: "DoR non-blocking findings carried into review_fix phase for opportunistic fixes: (1) spec lacks consolidated DoD block per house style; (2) DM-3 mislabels state/commitSha/atomic as 'existing' vs GH-179 envelope (they are new additive fields); (3) section 8.1 phase-complete exit-1 list omits commit.commitlint-failed; (4) NFR-1 'exactly one model call' should acknowledge the retry path's second call (TC-MSG-006). Nit: ticket's 'PM/coder transitions trigger commits automatically' is unreachable in-session until NG-1 agent adoption (expected; primitive ships first)"
     type: "info"
+    date: "2026-11-06"
+  - text: "Resume sync before delivery: origin/main-tools advanced by c6699302 (GH-222 state validation, PR #246 merged); merged cleanly into the branch (merge commit fba3380e, 56 files, zero conflicts, GH-227 doc artifacts untouched)"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Post-merge gates: green modulo one PROVEN-environmental failure - tests/checks/ci-baseline-parity.test.ts uses git clone --local (hardlinks) from ext4 repo to tmpfs /tmp and cannot cross devices; direct rerun with TMPDIR on the repo filesystem passes. lint/format/typecheck/build/boundaries/exports all PASS; 2672 tests pass. Runner suggestion for a possible future ticket (owner decision, NOT created per ticket policy): make ci-baseline-parity use a repo-local scratch dir instead of os.tmpdir()"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Delivery caveat handed to @coder: the plan was authored pre-merge against pre-GH-222 contracts; GH-222 changed packages/core/src/contracts/**, packages/core/src/state/**, tests/structure/inventory.json - coder must reconcile plan phase 1/3 contract assumptions (registry PhaseTransitionRecord, state-layer types) against the post-GH-222 versions"
+    type: "risk"
+    date: "2026-11-06"
+  - text: "github-mcp server rejects writes (Requires authentication) while reads work; gh CLI authenticated with repo scope and works - tracker label transition done via gh (change, in-progress; stale review removed). @pr-manager must use the gh CLI path, not github-mcp, for PR creation"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Retro: runner invocation for this repo should set TMPDIR to a repo-local dir (e.g. ./tmp/tmpdir) from the start - the default /tmp is tmpfs and breaks git clone --local hardlink tests (~6 min of gate time spent diagnosing a false red)"
+    type: "retro"
     date: "2026-11-06"

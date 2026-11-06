@@ -14,6 +14,8 @@ import {
   type PhaseStateProjection,
   type PhaseStateProjectionEntry,
   type PhaseTransitionOperation,
+  type PhaseTransitionCommitIntent,
+  type PhaseTransitionCommitIntentBasis,
   type PhaseTransitionRecord,
   REGISTRY_SCHEMA_VERSION,
   type StateAppendOutcome,
@@ -58,11 +60,18 @@ export const PHASE_TRANSITION_BOUNDARY: StateArtifactBoundaryDeclaration = {
         { name: "timestamp", type: "string", required: true },
         { name: "outcome", type: "string", required: true },
         { name: "reason", type: "string", required: false },
+        { name: "commitIntent", type: "string", required: false },
+        { name: "commitIntentBasis", type: "string", required: false },
         { name: "transitions", type: "array", required: true },
       ],
       vocabularies: [
         { field: "operation", values: ["complete", "reopen"] },
         { field: "outcome", values: ["landed"] },
+        { field: "commitIntent", values: ["atomic", "record-only"] },
+        {
+          field: "commitIntentBasis",
+          values: ["opt-out-flag", "config-disabled", "skipped-no-pending-work"],
+        },
       ],
     },
   ],
@@ -76,6 +85,8 @@ export type PhaseTransitionRequest = {
   readonly timestamp: string;
   readonly fenceToken: string;
   readonly reason?: string;
+  readonly commitIntent?: PhaseTransitionCommitIntent;
+  readonly commitIntentBasis?: PhaseTransitionCommitIntentBasis;
 };
 
 /** A verified per-change read: history plus the state layer's evidence. */
@@ -140,6 +151,10 @@ const payloadFor = (
   timestamp: record.timestamp,
   outcome: record.outcome,
   ...(record.reason === undefined ? {} : { reason: record.reason }),
+  ...(record.commitIntent === undefined ? {} : { commitIntent: record.commitIntent }),
+  ...(record.commitIntentBasis === undefined
+    ? {}
+    : { commitIntentBasis: record.commitIntentBasis }),
   transitions: transitions.map((entry) => ({
     changeRef: entry.changeRef,
     phaseId: entry.phaseId,
@@ -147,6 +162,10 @@ const payloadFor = (
     timestamp: entry.timestamp,
     outcome: entry.outcome,
     ...(entry.reason === undefined ? {} : { reason: entry.reason }),
+    ...(entry.commitIntent === undefined ? {} : { commitIntent: entry.commitIntent }),
+    ...(entry.commitIntentBasis === undefined
+      ? {}
+      : { commitIntentBasis: entry.commitIntentBasis }),
   })),
 });
 
@@ -168,7 +187,8 @@ const transitionFrom = (value: unknown): PhaseTransitionRecord | string => {
     (key) => !Object.hasOwn(value, key),
   );
   if (missing.length > 0) return `transitions[].${missing[0] as string}`;
-  const { changeRef, phaseId, operation, timestamp, outcome, reason } = value;
+  const { changeRef, phaseId, operation, timestamp, outcome, reason, commitIntent, commitIntentBasis } =
+    value;
   if (typeof changeRef !== "string" || changeRef.length === 0) return "transitions[].changeRef";
   if (typeof phaseId !== "string" || phaseId.length === 0) return "transitions[].phaseId";
   if (operation !== "complete" && operation !== "reopen") return "transitions[].operation";
@@ -176,6 +196,24 @@ const transitionFrom = (value: unknown): PhaseTransitionRecord | string => {
   if (outcome !== "landed") return "transitions[].outcome";
   if (reason !== undefined && typeof reason !== "string") return "transitions[].reason";
   if (reason !== undefined && operation !== "reopen") return "transitions[].reason";
+  if (
+    commitIntent !== undefined &&
+    commitIntent !== "atomic" &&
+    commitIntent !== "record-only"
+  ) {
+    return "transitions[].commitIntent";
+  }
+  if (
+    commitIntentBasis !== undefined &&
+    commitIntentBasis !== "opt-out-flag" &&
+    commitIntentBasis !== "config-disabled" &&
+    commitIntentBasis !== "skipped-no-pending-work"
+  ) {
+    return "transitions[].commitIntentBasis";
+  }
+  if (commitIntentBasis !== undefined && commitIntent !== "record-only") {
+    return "transitions[].commitIntentBasis";
+  }
   return {
     changeRef,
     phaseId,
@@ -183,6 +221,8 @@ const transitionFrom = (value: unknown): PhaseTransitionRecord | string => {
     timestamp,
     outcome,
     ...(reason === undefined ? {} : { reason }),
+    ...(commitIntent === undefined ? {} : { commitIntent }),
+    ...(commitIntentBasis === undefined ? {} : { commitIntentBasis }),
   };
 };
 
@@ -369,6 +409,10 @@ export const appendPhaseTransition = (
     ...(request.operation === "reopen" && request.reason !== undefined
       ? { reason: request.reason }
       : {}),
+    ...(request.commitIntent === undefined ? {} : { commitIntent: request.commitIntent }),
+    ...(request.commitIntentBasis === undefined
+      ? {}
+      : { commitIntentBasis: request.commitIntentBasis }),
   };
   const transitions = [...current.value.transitions, record];
   // Writes are validated at the registry boundary (F-1, DM-4): a nonconforming
