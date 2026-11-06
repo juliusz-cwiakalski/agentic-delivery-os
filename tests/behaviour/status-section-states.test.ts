@@ -13,9 +13,11 @@ import {
 } from "../../packages/core/src/contracts/index";
 import { aggregateStatus } from "../../packages/core/src/domain/index";
 import {
+  ASSERTIONS_AVAILABLE,
   baseFacts,
   failedPipelineRunRead,
   failedWorkItemRead,
+  MIXED_ASSERTIONS,
   pipelineRunRead,
   sectionById,
   workItemRead,
@@ -265,5 +267,49 @@ describe("TC-STATUS-004 Appendix A derivation matrix", () => {
     expect(sectionOf(failed, "ci").state).toBe("unknown");
     const ciRestored = aggregateStatus(baseFacts({ ci: pipelineRunRead([]) }));
     expect(sectionOf(ciRestored, "ci").state).toBe("observed");
+  });
+
+  test("undeclared assertion signals do not degrade the tracker section", () => {
+    const facts = baseFacts({
+      tracker: workItemRead(
+        [
+          {
+            identity: { systemName: "github", entityId: "1" },
+            title: "Item",
+            status: { nativeStatus: "open", deliveryState: "ready" },
+            labels: ["epic:x", "points:1"],
+            milestone: "Sprint 1",
+            relations: [],
+          },
+        ],
+        ASSERTIONS_AVAILABLE,
+      ),
+    });
+    const tracker = sectionOf(aggregateStatus(facts), "tracker");
+    expect(tracker.state).toBe("observed");
+    const hygiene = tracker.families?.find((family) => family.family === "hygiene");
+    expect(hygiene?.assertions).toHaveLength(3);
+  });
+
+  test("a mixed assertion declaration keeps declared expectations independent", () => {
+    const facts = baseFacts({
+      tracker: workItemRead(
+        [
+          {
+            identity: { systemName: "github", entityId: "1" },
+            title: "Item",
+            status: { nativeStatus: "open", deliveryState: "ready" },
+            labels: ["epic:x"],
+            relations: [],
+          },
+        ],
+        MIXED_ASSERTIONS,
+      ),
+    });
+    const tracker = sectionOf(aggregateStatus(facts), "tracker");
+    expect(tracker.state).toBe("observed");
+    const assertions = tracker.families?.find((family) => family.family === "hygiene")?.assertions;
+    expect(assertions?.find((entry) => entry.assertion === "epic-membership")?.unknown).toBe(0);
+    expect(assertions?.find((entry) => entry.assertion === "in-sprint")?.unknown).toBe(1);
   });
 });

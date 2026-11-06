@@ -1,0 +1,116 @@
+{
+  "name": "hygiene-satisfied-arm",
+  "scenario": "hygiene-satisfied-arm",
+  "expected": {
+    "sections": {
+      "tracker": {
+        "state": "observed",
+        "reasons": ["observed-empty", "observed", "item-signal-absent"],
+        "counts": {
+          "observed": 0,
+          "unknown": 3,
+          "total": 3,
+          "omitted": 0
+        },
+        "orderedIds": ["stalls:1", "stalls:2", "stalls:3"],
+        "truncated": false
+      },
+      "changes-and-prs": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "ci": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "lanes-or-queue": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "providers": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 1,
+          "unknown": 0,
+          "total": 1,
+          "omitted": 0
+        },
+        "orderedIds": ["entry:primary"],
+        "truncated": false
+      },
+      "parked-work": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "ready-to-merge": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "spend": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      },
+      "blockers": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false
+      }
+    }
+  }
+}

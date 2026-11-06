@@ -14,6 +14,8 @@ import type {
 } from "../../packages/core/src/contracts/index";
 import { aggregateStatus } from "../../packages/core/src/domain/index";
 import {
+  ALL_AVAILABLE,
+  ASSERTIONS_AVAILABLE,
   activeChange,
   baseFacts,
   capSizedFacts,
@@ -23,6 +25,7 @@ import {
   failedWorkItemRead,
   GITHUB_SLICE_AVAILABILITY,
   localContext,
+  makeWorkItem,
   malformedLocalContext,
   missingLocalContext,
   parkView,
@@ -151,6 +154,144 @@ const factsFor = (scenario: string): StatusFacts => {
       return baseFacts({
         repository: primaryRepository(),
         ci: failedPipelineRunRead("read-failed"),
+      });
+    case "hygiene-assertions-tri-state":
+      return baseFacts({
+        tracker: workItemRead(
+          [
+            makeWorkItem({
+              entityId: "1",
+              title: "Missing title",
+              labels: ["epic:x", "points:3"],
+              milestone: "Sprint 1",
+            }),
+            makeWorkItem({
+              entityId: "2",
+              title: "No epic",
+              labels: ["bug", "points:2"],
+              milestone: "Sprint 1",
+            }),
+            makeWorkItem({
+              entityId: "3",
+              title: "No points",
+              labels: ["epic:x"],
+              milestone: "Sprint 1",
+            }),
+            makeWorkItem({ entityId: "4", title: "No sprint", labels: ["epic:x", "points:1"] }),
+            makeWorkItem({
+              entityId: "5",
+              title: "All good",
+              labels: ["epic", "points:0"],
+              milestone: "Sprint 1",
+            }),
+            makeWorkItem({ entityId: "6", title: "Closed", labels: [], deliveryState: "done" }),
+          ],
+          ASSERTIONS_AVAILABLE,
+        ),
+      });
+    case "hygiene-absence-violation":
+      return baseFacts({
+        tracker: workItemRead(
+          [
+            makeWorkItem({
+              entityId: "1",
+              title: "No epic",
+              labels: ["points:1"],
+              milestone: "Sprint 1",
+            }),
+            makeWorkItem({
+              entityId: "2",
+              title: "No points",
+              labels: ["epic:x"],
+              milestone: "Sprint 1",
+            }),
+            makeWorkItem({ entityId: "3", title: "No sprint", labels: ["epic:x", "points:1"] }),
+            makeWorkItem({
+              entityId: "4",
+              title: "Conforming",
+              labels: ["epic:x", "points:2"],
+              milestone: "Sprint 1",
+            }),
+          ],
+          ASSERTIONS_AVAILABLE,
+        ),
+      });
+    case "hygiene-satisfied-arm":
+      return baseFacts({
+        tracker: workItemRead(
+          [
+            makeWorkItem({
+              entityId: "1",
+              title: "Epic token",
+              labels: ["epic", "points:1"],
+              milestone: "Sprint 1",
+            }),
+            makeWorkItem({
+              entityId: "2",
+              title: "Epic prefix",
+              labels: ["epic:payments", "points:0"],
+              milestone: "Sprint 1",
+            }),
+            makeWorkItem({
+              entityId: "3",
+              title: "Points",
+              labels: ["epic:x", "points:42"],
+              milestone: "Sprint 1",
+            }),
+          ],
+          ASSERTIONS_AVAILABLE,
+        ),
+      });
+    case "hygiene-all-unknown":
+      return baseFacts({
+        tracker: workItemRead(
+          [
+            makeWorkItem({
+              entityId: "1",
+              title: "No epic",
+              labels: ["bug"],
+              milestone: "Sprint 1",
+            }),
+            makeWorkItem({
+              entityId: "2",
+              title: "No points",
+              labels: ["epic:x"],
+              milestone: "Sprint 1",
+            }),
+          ],
+          ALL_AVAILABLE,
+        ),
+      });
+    case "owner-gate-unknown-age-escalated":
+      return baseFacts({
+        tracker: workItemRead(
+          [makeWorkItem({ entityId: "GH-1", labels: ["hand-back"] })],
+          ALL_AVAILABLE,
+        ),
+      });
+    case "parked-condition-present":
+      return baseFacts({
+        localContext: localContext({
+          parkedChanges: [
+            {
+              workItemRef: "GH-1",
+              condition: "waiting for review",
+              parkedAt: "2026-10-30T00:00:00Z",
+            },
+          ],
+        }),
+      });
+    case "parked-stale-no-condition-grouped":
+      return baseFacts({
+        localContext: localContext({
+          parkedChanges: [
+            { workItemRef: "GH-1", reason: "waiting" },
+            { workItemRef: "GH-2", reason: "waiting" },
+            { branch: "feat/GH-3/x", changeFolder: "doc/GH-3", reason: "waiting" },
+            { workItemRef: "GH-4", condition: "waiting for design" },
+            { workItemRef: "GH-5", parkedAt: "2026-09-01T00:00:00Z", reason: "waiting" },
+          ],
+        }),
       });
     default:
       throw new Error(`unknown corpus scenario ${scenario}`);

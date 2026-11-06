@@ -68,3 +68,6 @@ notes:
   - text: "Plan phase 2 complete (commit 6c7ef2a1): findings layer, tri-state hygiene assertions, owner-gate ages via M1-S5, parked conditions, ready-to-merge action list, spend/blockers placeholders, summary additions, extended human grammar; single golden regeneration (digest.json + human.txt) applied once as a reviewed diff. Gates green: pnpm typecheck; 11 status behaviour/golden suites (137 tests); git diff --check."
     type: "info"
     date: "2026-11-07"
+  - text: "Plan phase 3 complete (commit ecad21a4): findings behaviour pinned — grouping (four red primary-branch runs → one count-4 finding), member/findings caps, total rank key with permutation twins, registry-coded existing findings, and no-evidence-no-claim. Gates green: five phase-3 suites (62 tests), findings suite rerun-each 2, pnpm typecheck."
+    type: "info"
+    date: "2026-11-07"
