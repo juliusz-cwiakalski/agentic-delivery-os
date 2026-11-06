@@ -127,9 +127,10 @@ jobs:
       # suites with the same scope and exclusions this job used before — tmp/,
       # *e2e-providers*, *e2e-suite*, *performance*, now applied inside the
       # runner — executes every discovered suite, and aggregates each child's
-      # exit status. The job fails if and only if at least one suite fails or
-      # cannot run, and the runner names every failing suite. jq is required by
-      # several suites.
+      # exit status. The job fails if suite discovery itself fails, or if any
+      # discovered suite fails or cannot run; a successful discovery that
+      # matches no suites passes. The runner names every failing suite. jq is
+      # required by several suites.
       #
       # Exclusions — tests that require paid/external APIs and are documented as
       # NOT for CI/CD (see their own headers). They are invoked manually or via
