@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-06T17:50:00Z", completed: null }
   delivery_planning: { started: "2026-11-06T18:35:00Z", completed: "2026-11-06T19:00:00Z" }
   dor_check: { started: "2026-11-06T19:05:00Z", completed: "2026-11-06T19:50:00Z" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-11-06T19:12:00Z", completed: "2026-11-06T20:10:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -76,6 +76,27 @@ notes:
     type: risk
     date: "2026-11-06"
   - text: "DoR iteration 2 verdict: READY (readiness-review/readiness-iter-2.md, 10/10 facets PASS, 0 blocking). All 6 iteration-1 findings verified genuinely resolved with citations; independent verification: plan-validate valid/readyForDevelopment=true via production runCli path, 16/16 AC + 64/64 TC set-difference clean, binding ACs live-read verbatim from tracker, deps confirmed closed. Two accepted non-blocking nits recorded for phase-8 attention: test-plan 'revision 1' label drift (plan is revision 2, 3 places), spec AC-F9-1 Linked column omits DM-9."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 1 (Retro contracts, level declarations, four error rows): commit 7349b22e. Verification: 166 tests pass across retro-contract, error-table, port-contract-inventory, content-inventory, error-table-sync; error-table-sync CLI green 74/74 rows; pnpm typecheck green. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 2 (State tier: sidecar, keyed chain, registry store): commit 4dc50ba6. Verification: 40 tests pass across 8 retro behaviour suites; 78 structure/state tests pass; pnpm typecheck green. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 3 (Domain engine: collect, truth checks, report, export): commit e9dfdca5. Verification: 38 domain/behaviour/check tests pass, later expanded to 98 passing retro tests; pnpm typecheck green. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 4 (CLI surface, edge composition, doctor visibility): commit bc2a2e6e. Verification: 44 tests pass across retro-levels, retro-output, cli-edge-seam, doctor-state; full retro set 98 pass; pnpm typecheck green. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 5 (Invariant checks, imports guard, ops suites, CI wiring): commit b81e88d1. Verification: 154 retro tests pass (27 files); retro-render-purity and retro-key-containment CLIs exit 0; full behaviour suite 2700 pass / 4 skip / 0 fail. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 6 (Aggregate gate and changeset): commit 8b2c8421. Verification: pnpm check exit 0 (lint, format, typecheck, full test, boundaries, exports parity); doc-distribution guard green (81 docs); changesets-group green; plan YAML validates 0 errors / 6 phases. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "Delivery completed: all 6 plan phases executed and committed; 64/64 TC coverage mapped to suites; TC-063 golden-envelope coverage in retro-output against committed golden cases. Documented deviations, all justified: (1) intentional layering refactor — domain engine consumes contracts-declared RetroSidecarPort/RetroRegistryPort instead of importing state-tier modules (dependency-cruiser compliance); (2) contract additions spread across phase 1/2/4 commits as consumers required them, no scope widened; (3) plan task 6.4 execution log intentionally not written — execution contract forbids modifying doc/changes/** and .ai/local/**; (4) plan task 4.6 — dedicated CLI integration coverage in retro-levels/retro-output/cli-edge-seam instead of redundant runCli blocks in every suite; (5) pre-existing environment-only failures (ci-baseline-parity TMPDIR cross-filesystem, packed-state corepack hermetic-home) — pnpm check green with TMPDIR=$PWD/tmp/tmpdir; the earlier @delivery-os/core/contracts module risk did NOT reproduce after pnpm build (pretest builds dist)."
     type: info
     date: "2026-11-06"
   - text: "Delivery plan authored by @plan-writer: chg-GH-232-plan.yaml (canonical machine-readable YAML format per current plan contract — legacy .md would be schema-invalid; YAML wins when both exist), 6 phases / 36 tasks, tier full, 64/64 TCs mapped, 16/16 ACs traceable, no STOP. Delivery-bound items pinned as PIN-1..10 (HMAC-SHA-256 via node:crypto, 64-hex links, artifact spellings, target ordering OQ-T6, level map OQ-T7, NFR-7 CI measurement OQ-T8, export limit 1000, memory-audit cadence weekly-flagged-reviewable)."
