@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-STATUS-DIGEST
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The read-only status command and its bounded delivery.status.v1 digest: six fixed sections in order, a closed five-value section state, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, the declared lanes-or-queue gap, providers read from configuration and the verified park fold, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
+summary: "The read-only status command and its bounded delivery.status.v1 digest: nine fixed sections in order, a closed five-value section state, a closed finding-code registry with grouped ranked findings, tri-state hygiene assertions, owner-gate ages, parked conditions, a ready-to-merge action list, declared lane attention-state vocabulary, named spend/blockers placeholders, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, providers read from configuration and the verified park fold, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and extended human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224"]
+  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006"]
   contracts:
     - "packages/core/src/contracts/status.ts"
@@ -18,13 +18,13 @@ links:
 
 ## Overview
 
-The status command is the read-only first call of a delivery session. It returns one bounded digest of the delivery world instead of requiring the coordinator to probe the tracker, pull requests, CI, lanes, providers, and parked work by hand. The digest is `delivery.status.v1`: a schema version, an injected `generatedAt`, an origin-derived repository binding, summary counts, and exactly six sections in a fixed order.
+The status command is the read-only first call of a delivery session. It returns one bounded digest of the delivery world instead of requiring the coordinator to probe the tracker, pull requests, CI, lanes, providers, and parked work by hand. The digest is `delivery.status.v1`: a schema version, an injected `generatedAt`, an origin-derived repository binding, summary counts, and exactly nine sections in a fixed order.
 
-Each section carries one state from the closed set `observed`, `degraded`, `unknown`, `unavailable`, and `not-delivered`; a bounded evidence record naming its sources and reasons; uniform counts; a ranked, capped item surface; and an explicit truncation marker. A section state describes the quality and completeness of its evidence, never a global all-clear. A failed, absent, unattempted, or unresolved read is digest data, not a command failure: every successful run returns all six sections, and only parser or containment failures produce an error envelope.
+Each section carries one state from the closed set `observed`, `degraded`, `unknown`, `unavailable`, and `not-delivered`; a bounded evidence record naming its sources and reasons; uniform counts; a ranked, capped item surface; and an explicit truncation marker. Every section may also carry grouped, registry-coded `findings[]` describing the attention state of its observed evidence. A section state describes the quality and completeness of its evidence, never a global all-clear. A failed, absent, unattempted, or unresolved read is digest data, not a command failure: every successful run returns all nine sections, and only parser or containment failures produce an error envelope.
 
 The machine mode is the standard `CommandResult` envelope whose `data` is the full digest. Human mode is a deterministic, bounded digest rendered from the same data. Status performs zero writes, fences, state mutations, network writes, or child processes. It adds no error-table row, no configuration key, and no state-schema change; it introduces no new package, subpath, or runtime-API location. Closeout is a separate mutating surface: status does not import or compose the closeout engine, the git branch/checkout seam, or provider write operations, and its read-only guarantees are unchanged.
 
-The separate read-only ready-set command that consumes these inputs is specified in [Queue Ready](feature-queue-ready.md); it is a distinct command and does not change the status digest. The owner-facing one-screen projection of the same collector state is specified in [Brief](feature-brief.md); it is a distinct read-only command that consumes these facts without adding a status section, schema, or read. The read-only pre-flight diagnostic is specified in [Doctor](feature-doctor.md); it is a distinct additional consumer of the `origin`-derived binding, the bounded single-page reads, the verified park fold, and the human-renderer hook, and it changes no status section, schema, or read. The surrounding contracts are described in [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md). Package tiers and runtime confinement follow [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); tracker absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md).
+The separate read-only ready-set command that consumes these inputs is specified in [Queue Ready](feature-queue-ready.md); it is a distinct command and does not change the status digest. The status digest's M1-S10 ready-to-merge section reuses the same merge-ready/review-pending classification and deterministic rank keys read-only, with zero new reads; the queue-ready command's own payload, ranking, and cap are unchanged. The owner-facing one-screen projection of the same collector state is specified in [Brief](feature-brief.md); it is a distinct read-only command that consumes these facts without adding a status section, schema, or read, and its nine-surface catalog is its own literal contract. The read-only pre-flight diagnostic is specified in [Doctor](feature-doctor.md); it is a distinct additional consumer of the `origin`-derived binding, the bounded single-page reads, the verified park fold, and the human-renderer hook, and it changes no status section, schema, or read. The surrounding contracts are described in [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md). Package tiers and runtime confinement follow [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); tracker absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md).
 
 ## Business Context
 
@@ -37,11 +37,12 @@ The separate read-only ready-set command that consumes these inputs is specified
 ### Goals
 
 - Provide one read-only `status` command with no command-specific flags beyond the global machine-output switch.
-- Return exactly six named sections in fixed order, each with a closed state, bounded evidence, counts, ranked items, and truncation.
+- Return exactly nine named sections in fixed order, each with a closed state, bounded evidence, counts, ranked items, and truncation.
 - Never turn a failed, absent, unattempted, or unresolved read into an observed, clear, green, available, or zero claim.
 - Answer the four tracker families from normalized work-item data.
 - Report changes and pull requests, CI, providers, and parked work from declared sources with explicit degradation.
 - Report the lanes-or-queue section as a declared capability gap, never as an empty queue.
+- Cover attention state with stable finding codes: grouped, deduplicated, deterministically ranked findings; a ready-to-merge action list; tri-state hygiene assertions; owner-gate ages; and parked re-entry conditions.
 - Keep output deterministic, bounded, brand-neutral, read-only, and within the existing tiers, error table, configuration schema, and secret-read boundary.
 
 ## User Experience & Functionality
@@ -52,7 +53,7 @@ The command is exactly `status`, composed where the other top-level commands are
 
 The command handler owns no stream writes and chooses no exit code. It reads the injected sources, assembles the digest, and returns it; the CLI edge renders the human text or the machine envelope. The optional human-text renderer hook on the command-definition contract is invoked by the CLI edge in human mode. Ten command declarers provide the hook: `board`, `brief`, `closeout`, `db`, `doctor`, `plan`, `queue`, `status`, `verify`, and `watchdog`; the CLI-edge seam test pins that exact set. Status is one of them, and doctor is an additional read-only consumer of the same seam, not a new hook.
 
-### Six sections and five states
+### Nine sections and five states
 
 The section ids and order are fixed:
 
@@ -64,6 +65,9 @@ The section ids and order are fixed:
 | 4 | `lanes-or-queue` | Lanes or queue | None; declared capability gap |
 | 5 | `providers` | Providers | Provider configuration plus the verified park fold |
 | 6 | `parked-work` | Parked work | Local PM context's `parked_changes` |
+| 7 | `ready-to-merge` | Ready to merge | The existing open pull-request read plus the CI classification |
+| 8 | `spend` | Spend | None; named placeholder until M1-S19 |
+| 9 | `blockers` | Blockers | None; named placeholder until M1-S16 |
 
 Every section has exactly one state:
 
@@ -73,7 +77,7 @@ Every section has exactly one state:
 | `degraded` | Some required evidence is present and some is missing, failed, or declared unavailable. The digest is partial but truthful. |
 | `unknown` | No usable evidence remains for the section; it is never a clear or zero claim. |
 | `unavailable` | The section's source is known to be absent or not configured, such as no repository binding, no declared provider chain, or no local PM context. |
-| `not-delivered` | The capability itself does not exist in this release; used only by the lanes-or-queue section. |
+| `not-delivered` | The capability itself does not exist in this release; used by the lanes-or-queue section and the spend and blockers placeholders. |
 
 Item-level unknown is distinct from a section state. An observed section may contain items whose review state, activity timestamp, or dependency target is unknown; those signals are counted and never fabricated.
 
@@ -98,12 +102,15 @@ Declared bounds:
 | `STATUS_MAX_PIPELINE_RUNS` | 8 | CI run cap |
 | `STATUS_MAX_OPEN_PULL_REQUESTS` | 8 | Pull-request cap |
 | `STATUS_MAX_PARKED_CHANGES` | 8 | Parked-work cap |
+| `STATUS_MAX_FINDINGS_PER_SECTION` | 8 | Per-section grouped-findings cap; defensive headroom |
+| `STATUS_MAX_FINDING_MEMBERS` | 8 | Per-finding member-identity cap |
+| `STATUS_MAX_READY_ITEMS` | 8 | Ready-to-merge action-list cap |
 | `STATUS_SOURCE_ITEM_LIMIT` | 100 | One bounded issues or pull-requests page |
 | `STATUS_SOURCE_PIPELINE_LIMIT` | 20 | One bounded check-runs page, sent as `per_page` |
 | `STATUS_MAX_TITLE_CHARS` | 120 | Item title cap |
-| `STATUS_MAX_DETAIL_CHARS` | 160 | Safe evidence or reason detail cap |
-| `STATUS_MAX_HUMAN_LINES` | 24 | Human digest line cap |
-| `STATUS_MAX_HUMAN_BYTES` | 4096 | Human digest byte cap |
+| `STATUS_MAX_DETAIL_CHARS` | 160 | Safe evidence, reason, or parked-condition detail cap |
+| `STATUS_MAX_HUMAN_LINES` | 32 | Human digest line cap; defensive headroom (worst case 11 lines) |
+| `STATUS_MAX_HUMAN_BYTES` | 6144 | Human digest byte cap; the operative bound |
 | `STATUS_MAX_MACHINE_BYTES` | 65536 | Byte cap on the serialized `data` digest; the envelope total is recorded but not separately capped |
 | `STATUS_STALL_THRESHOLD_DAYS` | 14 | Declared stall threshold |
 | `STATUS_OWNER_ATTENTION_LABELS` | `hand-back`, `human-input-needed` | Declared owner-attention labels |
@@ -122,6 +129,9 @@ The matrix is normative. Item-level unknowns do not by themselves turn an observ
 | lanes-or-queue | Never | Never | Never | Never | Always |
 | providers | Provider config read succeeded, a default chain is declared, and the park fold succeeded | Config and entries observed but the park fold failed | Config read failed, config invalid, or the declared chain does not resolve to declared entries | No declared default chain | Never |
 | parked-work | PM context read succeeded and `parked_changes` is an array, including empty | Never (single required read) | PM context malformed or wrong shape | PM context absent | Never |
+| ready-to-merge | Pull-request list read succeeded with review signals available, including verified-empty | Review signals unavailable on any rendered item, or a partial source failure | Pull-request read failed or no usable evidence | No repository binding | Never |
+| spend | Never | Never | Never | Never | Always |
+| blockers | Never | Never | Never | Never | Always |
 
 Providers resolve by fixed precedence: `unknown` first, then `unavailable`, then `degraded`, then `observed`. A failed or invalid config read, or a declared chain that does not resolve, yields `unknown` even when no default chain is declared. Otherwise an absent default chain yields `unavailable` even when the park fold also failed. Otherwise a park-fold failure yields `degraded`; otherwise the section is `observed`.
 
@@ -129,12 +139,38 @@ Providers resolve by fixed precedence: `unknown` first, then `unavailable`, then
 
 The tracker collector consumes normalized work items and a declared per-family signal availability. It evaluates only open items, meaning delivery state is neither `done` nor `canceled`. Families appear in the fixed order `ownerHandBacks`, `blockedDependencies`, `stalls`, and `hygiene`. Each family has its own state (`observed` or `unavailable`), its own counts, and at most four ranked items. A family's counts aggregate its fully ranked list before the four-item cap, so an unknown item is counted even when omitted from the rendered list. The tracker section has no common `items` list: the four family lists are its only item surface, so a tracker section may render up to four families of four items. The section's counts aggregate the families, its `omitted` is the family sum, and its `truncated` is true when any family dropped items or the source at-limit signal applies.
 
-- **Owner hand-backs:** An open item carrying a declared owner-attention label, matched case-insensitively. `assignee` is not used because the normalized field is optional and absence means the provider did not supply the signal, not that no assignee exists ([ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md)).
+- **Owner hand-backs:** An open item carrying a declared owner-attention label, matched case-insensitively. `assignee` is not used because the normalized field is optional and absence means the provider did not supply the signal, not that no assignee exists ([ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md)). Each rendered hand-back carries additive `age`, `ageUnknownReason`, and `slaState` fields projected from the M1-S5 evaluator over the injected clock and the imported policy; unknown age uses the two declared markers and escalates, never `0` or `fresh`.
 - **Blocked dependencies:** An open item with a `blocked-by` relation. A target observed as `done` or `canceled` does not leave the item blocked; a target observed as not done leaves it blocked with `dependencyState: open`; a target not observed leaves it blocked with `dependencyState: unknown`, never resolved. When the tracker source declares relations unavailable, the family is `unavailable` with `signal-unavailable`, never an observed empty family.
 - **Stalls:** An open item with a parseable provider-native `updatedAt` older than the 14-day threshold is listed as `stalled` with its age. An item at or under the threshold is active and is not listed. An item with absent or invalid `updatedAt` is listed as `unknown` activity. The clock is injected, and no timestamp is derived from comments, ordering, or the current time ([ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md)).
-- **Ticket hygiene:** Conformance over mapped normalized data only. Findings are `missing-title` for a blank or empty title and `missing-labels` for an empty label set. Comment conformance is not evaluated because absent comments mean unknown; unmapped custom-field conformance is not evaluated because no named consumer requires it.
+- **Ticket hygiene:** Conformance over mapped normalized data only. Findings are `missing-title` for a blank or empty title and `missing-labels` for an empty label set. The hygiene family also exposes the three named assertions `epic-membership`, `story-points`, and `in-sprint` with additive tri-state counts (`violations`, `unknown`, `satisfied`). Each assertion is gated by a declared per-assertion availability that travels with the tracker read; within a declared available signal, an item carrying no conforming value is a violation (absence-as-violation), while an undeclared signal is all-unknown with `signal-unavailable` and never a violation. Epic membership maps a label equal to `epic` or prefixed `epic:`; story points maps a `points:` label with a parseable non-negative integer; in-sprint maps a present, non-empty milestone. Comment conformance is not evaluated because absent comments mean unknown; unmapped custom-field conformance is not evaluated because no named consumer requires it.
 
 Tracker ranks are deterministic. Owner hand-backs order by label group, then oldest `updatedAt`, then reference. Blocked dependencies order by `unknown` before `open`, then reference. Stalls order oldest stalled first, then unknown-activity reference. Hygiene orders by finding count, then reference.
+
+### Findings layer
+
+Every section may carry an additive optional `findings[]` array. A finding is `{ code, severity, count, members[], evidenceRef }`:
+
+- `code` is a member of the closed ten-code registry in `packages/core/src/contracts/status.ts`; `severity` is the registry default from the closed set `high`, `medium`, `low`.
+- `count` is the exact number of coalesced observations. `members` holds at most eight unique identity values in the section's fixed rank order; `evidenceRef` is the first member. A repeated identity appears once while `count` stays exact.
+- Findings rank by severity, then count descending, then code ascending, then first occurrence. A per-section cap of eight is defensive headroom: with the shipped registry the reachable maximum is seven in the tracker and one each in CI and parked work.
+- Findings are observed-evidence claims (no-evidence-no-claim): a failed, unresolved, unavailable, or not-delivered section emits no finding; the section state and evidence reasons carry the failure.
+- The shipped codes are `ci.red-on-main`, `tracker.owner-gate-escalated`, `tracker.stalled-ticket`, `tracker.hygiene.missing-title`, `tracker.hygiene.missing-labels`, `tracker.hygiene.epic-membership`, `tracker.hygiene.story-points`, `tracker.hygiene.in-sprint`, `lane.idle-no-reason` (dormant), and `parked.stale-no-condition`. Four failed runs on the declared primary branch coalesce into one `ci.red-on-main` finding with `count: 4`.
+
+The section `truncated` flag declares a member or findings-cap drop; `counts.omitted` keeps its shipped meaning of ranked items the render cap dropped and is never inflated by member drops.
+
+### Ready-to-merge
+
+The `ready-to-merge` section is the ranked action list. It reuses the queue-ready classification over the existing open pull-request read: an item whose review signal is observed and whose delivery state is `approved` is `merge-ready`; every other open pull request is `review-pending`, including unknown review state. Items rank `merge-ready` first, then numeric-aware ref, then source ref, then target ref, and cap at eight. The section state follows the declared derivation row and is never `not-delivered`. Review signals unavailable degrades the section and renders `merge-ready ?`; a verified-empty list is an observed zero. Each item is `{ ref, class, sourceRef, targetRef, reviewState, ciResult }` and cites observed collector evidence only; it never issues a merge verdict.
+
+### Lanes vocabulary and placeholders
+
+The `lanes-or-queue` section remains exactly the shipped declared gap (capability `queue-lane-engine`, expected story `M2-S1`, reason `engine-not-delivered`) and gains only the additive declared attention-state vocabulary `delivering`, `idle-with-reason`, `idle-no-reason`. No per-lane state is fabricated and the dormant `lane.idle-no-reason` code is never emitted before the lane engine lands.
+
+`spend` (capability `spend-summary`, expected story `M1-S19`) and `blockers` (capability `typed-blockers`, expected story `M1-S16`) are named `not-delivered` placeholders with zero items and counts. Their human lines are pinned: `spend summary arrives with M1-S19` and `typed blockers arrive with M1-S16`. They are removed only by their delivering stories.
+
+### Parked conditions
+
+A parked entry that records a condition projects it as an additive optional `condition` on the parked item, bounded by `STATUS_MAX_DETAIL_CHARS` multibyte-safely; entries without a condition render none. A parked entry with unknown age and no recorded condition contributes to the grouped `parked.stale-no-condition` finding. Free-form notes and undeclared local-context keys never project.
 
 ### Changes and pull requests
 
@@ -186,9 +222,9 @@ No affected section is ever `observed` under the guard. Restoring a credential-r
 
 ### Machine envelope and human digest
 
-`status --json` writes exactly one standard `CommandResult` envelope. Its `data` is the full `delivery.status.v1` digest: `schemaVersion`, `generatedAt`, `repository`, `summary`, and the six sections. The serialized `data` digest is at most 65 536 bytes; the total envelope size is recorded but not separately hard-capped. A success envelope carries no `error` key.
+`status --json` writes exactly one standard `CommandResult` envelope. Its `data` is the full `delivery.status.v1` digest: `schemaVersion`, `generatedAt`, `repository`, `summary`, and the nine sections. The serialized `data` digest is at most 65 536 bytes; the total envelope size is recorded but not separately hard-capped. A success envelope carries no `error` key.
 
-`summary` counts the six sections by state and reports `actionable` as the sum of the rendered item arrays of every section whose state is `observed` or `degraded`. Tracker family items are counted individually; rendered pull requests, CI runs, provider entries, provider parks, and parked-work items are counted. Sections in `unknown`, `unavailable`, or `not-delivered` contribute zero.
+`summary` counts the nine sections by state and reports `actionable` as the sum of the rendered item arrays of sections 1-6 whose state is `observed` or `degraded`. Tracker family items are counted individually; rendered pull requests, CI runs, provider entries, provider parks, and parked-work items are counted. The ready-to-merge action list and the placeholders contribute zero to `actionable`, so the shipped count is unchanged for identical facts. Two additive summary counts are present: `findingsTotal` (the number of grouped findings across observed and degraded sections) and `placeholderSectionCount` (exactly 2: `spend` and `blockers`; the lanes declared-gap section is excluded).
 
 Human mode renders the same digest deterministically:
 
@@ -202,7 +238,23 @@ providers  <state>  chain <name|none|unknown> | active parks <n|?> | <entries|?>
 parked     <state>  <n|?> parked changes (git-ignored local state)
 ```
 
-The header is optional and appears only when the repository binding is observed and the commit SHA is resolved. There is exactly one line per section in fixed order, and every line names its state. The digest never invents a zero for an unread source: `PRs ?` appears when the pull-request source was not read successfully, and review state is then `unknown`; otherwise review state is `unavailable` when a declared delivery signal is unavailable or any rendered pull request has an unknown review signal, and `observed` when those signals are present. `active parks ?` appears unless the provider section is `observed` and the park source was read successfully; `entries ?` appears when the provider section is `unknown`; `parked ?` appears when the local context was not observed. Truncation is marked with `+N` when items were omitted or `+more` for a source-at-limit signal. The digest is at most 24 lines and 4096 bytes, contains no raw provider payloads, no item titles, no secrets, and no LLM-generated prose, performs no extra reads, and contains no timestamps.
+The header is optional and appears only when the repository binding is observed and the commit SHA is resolved. There is exactly one line per section in the fixed nine-section order, then the attention rollup line. The exact grammar is:
+
+```
+<binary> status <owner>/<name> @ <branch|detached> <sha7>
+tracker    <state>  hand-backs <n> | gates <n|?> escalated | blocked <state> | stalls <n> (<u> unknown) | hygiene <n> (<a> unknown)
+changes    <state>  active <ref|none|unknown> | PRs <n|?> (review state <unavailable|observed|unknown>)
+ci         <state>  <failed|pending|succeeded|canceled|none-reported|unknown> (<failed>/<total> jobs)
+lanes      not-delivered  no queue or lane engine in this release
+providers  <state>  chain <name|none|unknown> | active parks <n|?> | <entries|?> entries
+parked     <state>  <n|?> parked changes (git-ignored local state)
+ready      <state>  <n|?> ready-to-merge (merge-ready <m|?>)
+spend      not-delivered  spend summary arrives with M1-S19
+blockers   not-delivered  typed blockers arrive with M1-S16
+attention  <n> findings (<code>×<count>[, <code>×<count>][, <code>×<count>][+N])
+```
+
+`gates <n>` counts hand-backs whose `slaState` is `escalated` or `default-applied`; `gates ?` appears only when the owner-hand-back family is unavailable. The attention line previews at most three severity-ordered groups, then `+N` counts grouped findings beyond the preview, never raw observations; it renders `attention  0 findings ()` when there are none. Truncation is marked with `+N` when items were omitted or `+more` for a source-at-limit signal. The digest never invents a zero for an unread source: `PRs ?` appears when the pull-request source was not read successfully, and review state is then `unknown`; `merge-ready ?` appears unless review signals are observed. The digest is at most 32 lines (defensive headroom; the structural worst case is 11 lines) and 6144 UTF-8 bytes (the operative enforced bound), contains no raw provider payloads, no item titles, no secrets, and no LLM-generated prose, performs no extra reads, and contains no timestamps.
 
 ### Error identity reuse
 
@@ -217,7 +269,7 @@ Evidence reuses existing identities only. `failureCode` is an existing `config.*
 | Path | Responsibility |
 |---|---|
 | `packages/core/src/contracts/status.ts` | The complete `delivery.status.v1` vocabulary: section ids, states, reasons, source ids, outcomes, families, item shapes, counts, evidence, repository binding, bounds, rank data, and digest types. Types and `as const` data only. |
-| `packages/core/src/domain/status.ts` | The pure aggregator and human renderer: six section builders, state derivation, evidence assembly, ranking, capping, truncation, summary counts, and deterministic grammar over injected facts. No I/O, clock, randomness, or ambient environment. |
+| `packages/core/src/domain/status.ts` | The pure aggregator and human renderer: nine section builders, state derivation, evidence assembly, the findings layer, tri-state hygiene assertions, owner-gate projection, ranking, capping, truncation, summary counts, and the extended deterministic grammar over injected facts. No I/O, clock, randomness, or ambient environment. |
 | `packages/core/src/contracts/index.ts` | Re-exports the status vocabulary through the shared contracts subpath. |
 | `packages/core/src/domain/index.ts` | Re-exports `aggregateStatus` and `renderStatusHuman`. |
 | `packages/cli/src/commands/status.ts` | The `status` command definition over injected readers; no stream writes and no exit-code choice. |
@@ -234,7 +286,7 @@ Evidence reuses existing identities only. `failureCode` is an existing `config.*
 1. The CLI edge resolves the brand and the repository binding from `origin`.
 2. When the binding is observed, the edge reads one bounded issues page, one bounded pull-request page, and one bounded check-runs page for the checkout SHA. When it is not observed, it injects classified unavailable reads instead of inventing a target.
 3. The edge reads the resolved provider configuration and folds the verified provider park views, then reads the local PM context.
-4. The pure aggregator derives the six section states, ranks and caps the item surfaces, assembles bounded evidence, and returns the digest.
+4. The pure aggregator derives the nine section states, ranks and caps the item surfaces, groups findings, evaluates hygiene assertions and gate ages, assembles bounded evidence, and returns the digest.
 5. Machine mode wraps the digest in the existing envelope; human mode renders the deterministic digest from the same data.
 
 ### API and interface contracts
@@ -265,11 +317,11 @@ The status contracts and domain import only the shared contracts and their own m
 
 | Concern | Current guarantee |
 |---|---|
-| Section totality | Exactly six sections in fixed order; one state from the five-value set per section; evidence, counts, items, and truncation present on every section; zero missing or extra sections. |
+| Section totality | Exactly nine sections in fixed order; one state from the five-value set per section; evidence, counts, items, findings, and truncation present on every section; zero missing and zero extra sections. |
 | Non-verdict guarantee | Failed, absent, unattempted, or unresolved reads never render as observed, clear, green, available, or zero; active parks are never available; no-run CI is never succeeded; the queue is never an observed empty queue. |
-| Bounds | Serialized `data` digest at most 65 536 bytes; human digest at most 24 lines and 4096 bytes; every cap enforced; every dropped or limit-truncated case marked. |
+| Bounds | Serialized `data` digest at most 65 536 bytes; human digest at most 32 lines and 6144 bytes; every cap enforced; every dropped or limit-truncated case marked. |
 | Read-only and determinism | Zero writes, fence acquisitions, state mutations, network writes, or child processes; identical injected inputs produce identical digest and human bytes. |
-| Output contract | `--json` produces exactly one valid envelope; human mode produces exactly six section lines plus an optional header; rendering performs zero extra reads. |
+| Output contract | `--json` produces exactly one valid envelope; human mode produces exactly nine section lines plus the attention rollup and optional header; rendering performs zero extra reads. |
 | Error-table stability | Zero new rows or domain kinds; zero documented-table drift; the sync check stays green. |
 | Boundaries and branding | Zero new runtime-API locations or secret-read allowlist entries; zero product literals; structure, boundary, ambient, and literal gates stay green. |
 | Performance and read cost | Pure aggregation over cap-sized inputs completes within 50 ms on the reference environment; at most three network reads, one logical park-fold read, and one configuration resolve per invocation; zero retries or loops. |
@@ -280,17 +332,17 @@ The status contracts and domain import only the shared contracts and their own m
 
 | Level | Scope | Evidence |
 |---|---|---|
-| Structure | Contract vocabulary, declared constants and bounds, data-only contracts, pure domain imports, command import discipline, error-identity reuse, no product literals, inventory registration | `tests/structure/status-contract.test.ts`, `tests/structure/status-imports.test.ts`, `tests/structure/content-inventory.test.ts`, `tests/structure/inventory.json` |
-| Behaviour | Command surface, six-section totality, Appendix A state derivation, tracker families, changes and CI classification, lanes gap, providers and parks, parked work, repository binding, negative controls, read-only execution, determinism | `tests/behaviour/status-command.test.ts`, `status-section-states.test.ts`, `status-tracker.test.ts`, `status-changes-ci.test.ts`, `status-providers-parked.test.ts`, `status-repository.test.ts`, `status-negative-controls.test.ts`, `status-readonly-determinism.test.ts` |
+| Structure | Contract vocabulary, finding-code registry, declared constants and bounds, data-only contracts, pure domain imports, command import discipline, error-identity reuse, no product literals, inventory registration | `tests/structure/status-contract.test.ts`, `tests/structure/status-findings-contract.test.ts`, `tests/structure/status-imports.test.ts`, `tests/structure/content-inventory.test.ts`, `tests/structure/inventory.json` |
+| Behaviour | Command surface, nine-section totality, Appendix A state derivation, tracker families and tri-state hygiene assertions, changes and CI classification, lanes gap and vocabulary, providers and parks, parked work and conditions, owner-gate ages, ready-to-merge action list, placeholders, findings grouping and caps, repository binding, negative controls, evidence hygiene, read-only execution, determinism | `tests/behaviour/status-command.test.ts`, `status-section-states.test.ts`, `status-tracker.test.ts`, `status-changes-ci.test.ts`, `status-providers-parked.test.ts`, `status-repository.test.ts`, `status-findings.test.ts`, `status-findings-bounds.test.ts`, `status-hygiene.test.ts`, `status-owner-gate-age.test.ts`, `status-parked-conditions.test.ts`, `status-ready-to-merge.test.ts`, `status-placeholders.test.ts`, `status-negative-controls.test.ts`, `status-readonly-determinism.test.ts` |
 | Output and golden | Machine envelope and 64 KiB bound, human grammar and bounds, caps and truncation, golden bytes | `tests/behaviour/status-output.test.ts`, `tests/golden/status-digest.test.ts` with `tests/fixtures/status/golden/**` |
 | Corpus and performance | Committed fixture corpus for every section and state edge; injected-clock cap behaviour; three network reads, one park fold, one config resolve; 50 ms aggregation bound | `tests/behaviour/status-corpus.test.ts` with `tests/fixtures/status/corpus/**`, `tests/behaviour/status-performance.test.ts` |
 | Provider read side | Bounded issue and pull-request list pages, at-limit raw page size, absent relations and review signals, check-runs page limit, trap replay and firing negative controls | `tests/behaviour/providers/github-collection.test.ts`, `tests/behaviour/providers/github-trap.test.ts`, `tests/structure/trap-catalog.test.ts` |
 | Live smoke | Opt-in structural assertions against a real repository | `tests/behaviour/status-live.test.ts` |
 | Aggregate | The whole workspace | `pnpm check` |
 
-The fixture model is explicit. Each committed corpus case under `tests/fixtures/status/corpus/**` declares, for every section, the expected state, reasons, counts, ordered item identities, and truncation flag. The corpus covers fully observed data, the GitHub tracker-degraded slice, failed issues/pull-request/check-run reads, a missing credential, an unresolved SHA, an unresolved repository binding, a torn park store, a missing default chain, an unresolved declared chain, a missing PM context, a malformed PM context, an active provider park, and a failed pull-request read with an absent PM context. A completeness meta-check requires every section and every state in the derivation matrix plus the named AC-F9-1 controls, and corrupted states, counts, identities, or truncation flags fail by case name. The shared harness under `tests/fixtures/status/harness.ts` supplies the injected facts and read results. The golden digest and human text under `tests/fixtures/status/golden/**` pin byte-identical output and are never rewritten by the suite.
+The fixture model is explicit. Each committed corpus case under `tests/fixtures/status/corpus/**` declares, for every section, the expected state, reasons, counts, ordered item identities, grouped findings tuples, hygiene tri-state counts, and truncation flag. The corpus covers fully observed data, the GitHub tracker-degraded slice, failed issues/pull-request/check-run reads, a missing credential, an unresolved SHA, an unresolved repository binding, a torn park store, a missing default chain, an unresolved declared chain, a missing PM context, a malformed PM context, an active provider park, four red primary-branch runs grouped into one finding, a failed CI read with no finding, the four hygiene arms (tri-state, absence, satisfied, all-unknown), observed and unknown owner-gate ages, parked conditions present and stale-grouped, the lanes vocabulary, the spend/blockers placeholders, ready-to-merge observed and degraded, and the all-caps machine-bound case. A completeness meta-check requires every section, every state in the derivation matrix, the named case classes, and the named AC-F9-1 controls; corrupted states, counts, identities, findings tuples, hygiene counts, or truncation flags fail by case name. The shared harness under `tests/fixtures/status/harness.ts` and the scenario map under `tests/fixtures/status/scenarios.ts` supply the injected facts and read results. The golden digest and human text under `tests/fixtures/status/golden/**` pin byte-identical output and are never rewritten by the suite.
 
-The live smoke is opt-in and outside the aggregate check. It runs only when a test-only switch under `tests/**` is enabled together with a resolvable GitHub credential. It asserts structural invariants only: six sections in order, evidence present, bounds, no secrets, the queue section not delivered, no provider entry `available`, and no observed-with-zero section after a failed read. It never pins volatile item counts. The switch literal lives only in the test tree; any production edge that exposes it derives the name from the injected brand environment prefix. A bounded, secret-free live evidence artifact may be attached to the pull request but is not committed by default.
+The live smoke is opt-in and outside the aggregate check. It runs only when a test-only switch under `tests/**` is enabled together with a resolvable GitHub credential. It asserts structural invariants only: nine sections in order, evidence present, bounds, no secrets, the lanes/spend/blockers sections not delivered, the declared lane vocabulary without any per-lane state or dormant code, every finding registry-coded with a registry severity, no finding from a failed read, no provider entry `available`, and no observed-with-zero section after a failed read. It never pins volatile item counts. The switch literal lives only in the test tree; any production edge that exposes it derives the name from the injected brand environment prefix. A bounded, secret-free live evidence artifact may be attached to the pull request but is not committed by default.
 
 ## Operational & Support
 
@@ -336,14 +388,27 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 
 | Term | Definition |
 |---|---|
-| Status digest | The bounded `delivery.status.v1` payload: six sections, states, evidence, counts, ranked items, and truncation markers. |
+| Status digest | The bounded `delivery.status.v1` payload: nine sections, states, evidence, counts, ranked items, findings, and truncation markers. |
+| Finding | A grouped attention item: a registry code, severity, exact count, bounded identity members, and representative evidence. |
+| Finding code | A stable symbolic identifier from the closed contract-data registry (`<surface>.<finding>`), referenced by agents and tests instead of re-derived. |
+| Severity | The closed attention weight `high`, `medium`, `low`, declared per code in the registry. |
+| Grouping | Per-section coalescing of same-code observations into one finding with an exact count and bounded member list. |
+| Action list | The ready-to-merge section's ranked item surface: merge-ready first, deterministic rank keys, capped. |
+| Hygiene assertion | A named mapped-data conformance check (`epic-membership`, `story-points`, `in-sprint`) with tri-state violation/unknown/satisfied counts. |
+| Absence-as-violation | Within a declared, available signal, an item with no conforming value violates the assertion. |
+| Mapped-signal availability | The declared per-assertion statement, traveling with the tracker read, that a hygiene signal is mapped and evaluable. |
+| No-evidence-no-claim | A failed or unresolved read emits no finding for its section; the section state and evidence reasons carry the failure. |
+| Unknown age | A declared marker for an absent or unparseable activity timestamp; the gate escalates and age is never fabricated. |
+| Placeholder section | A named `not-delivered` section declaring a capability and its expected delivering story (`spend` → M1-S19, `blockers` → M1-S16). |
+| Dormant code | A registry code declared but untriggerable until its delivering story lands (`lane.idle-no-reason` until M1-S17). |
+| Attention rollup | The final bounded human line previewing up to three severity-ordered finding groups, then `+N`. |
 | Section state | One of `observed`, `degraded`, `unknown`, `unavailable`, `not-delivered`; describes evidence quality and availability, not a global all-clear. |
 | Evidence record | The bounded sources, outcomes, reasons, and failure codes or classes that justify a section or item state; never raw provider payloads. |
 | Observed | Every required source read for the section succeeded; item-level unknown signals may still exist and are counted. |
 | Degraded | Some required evidence is present and some is missing, failed, or unavailable; the digest is partial but truthful. |
 | Unknown | No usable evidence remains for the section or signal; never a clear or zero claim. |
 | Unavailable | The section's source is known to be absent or not configured. |
-| Not-delivered | The capability itself does not exist in this release; used only by the queue section. |
+| Not-delivered | The capability itself does not exist in this release; used by the lanes section and the spend and blockers placeholders. |
 | Item-level unknown | A signal on an individual item is absent or unavailable; it is counted and never fabricated. |
 | Source availability | The declared per-family and per-signal statement of what the bound adapter supplies, which decides whether a family or item signal is observed or unavailable. |
 | Owner hand-back | An open work item carrying a declared owner-attention label; absent assignee is not used as a signal. |

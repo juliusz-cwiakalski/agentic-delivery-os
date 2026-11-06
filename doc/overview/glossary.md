@@ -3,14 +3,14 @@ ados_distribution: internal
 id: GLOSSARY
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008", "TDR-0009"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-226", "GH-227", "GH-228", "GH-229", "GH-223", "GH-231", "GH-225", "GH-232"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, provider-client-seed, status-digest, queue-readiness, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, and merge/verify-deploy terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-226", "GH-227", "GH-228", "GH-229", "GH-223", "GH-231", "GH-225", "GH-232", "GH-243"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, provider-client-seed, status-digest and attention-state, queue-readiness, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, and merge/verify-deploy terms used across the repository."
 ---
 
 # Glossary
@@ -235,7 +235,13 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Identity bridge | The provider-agnostic rule matching a canonical ref to an observed provider-native identity: exact canonical match first, then an unambiguous all-digit suffix bridge, never substring, prefix-only, or numeric coercion. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
 | value-clamped | The payload-level marker that a provider-derived payload value or collection was shortened or reduced to its declared cap; verdict-neutral and accompanied by payload `truncated`. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
 | Engine not run | The fixed `queue ready` evidence reason stating that configuration and parks were read but the provider engine was never executed. | Queue readiness | [feature-queue-ready.md](../spec/features/feature-queue-ready.md) |
-| Status digest | The bounded `delivery.status.v1` payload returned by the read-only status command: six fixed sections, states, evidence, counts, ranked items, and truncation markers. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Status digest | The bounded `delivery.status.v1` payload returned by the read-only status command: nine fixed sections, states, evidence, counts, ranked items, grouped findings, and truncation markers. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Finding code | A stable symbolic identifier from the closed status finding-code registry (`<surface>.<finding>`) that lets agents act on a grouped attention item without re-deriving its meaning. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Grouping | Per-section coalescing of same-code observations into one finding with an exact count and a bounded list of unique identity members; four red primary-branch CI runs are one job. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Hygiene assertion | A named conformance check over mapped normalized tracker data (`epic-membership`, `story-points`, `in-sprint`) with tri-state violation/unknown/satisfied counts; item-level absence inside a declared available signal is a violation. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| No-evidence-no-claim | The rule that a failed or unresolved read emits no finding for its section; the section state and evidence reasons carry the failure instead. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Placeholder section | A named `not-delivered` digest section declaring a capability and its expected delivering story (`spend` → M1-S19, `blockers` → M1-S16). | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
+| Dormant code | A finding code declared in the closed registry but untriggerable until its delivering story lands (`lane.idle-no-reason` until M1-S17). | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Section state | One of `observed`, `degraded`, `unknown`, `unavailable`, `not-delivered`; describes the quality and availability of a section's evidence, never a global all-clear. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Evidence record | The bounded sources, outcomes, reasons, and failure codes or classes that justify a section or item state; never raw provider payloads. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |
 | Observed | Every required source read for a section succeeded, including verified-empty and provider-asserted empty results. Item-level unknown signals may still exist and are counted. | Status | [feature-status-digest.md](../spec/features/feature-status-digest.md) |

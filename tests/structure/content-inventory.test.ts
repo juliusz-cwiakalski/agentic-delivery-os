@@ -593,11 +593,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "projectDeployReport",
     "renderStepEvidence",
   ],
-  "core/src/domain/status.ts": [
-    "aggregateStatus",
-    "evaluateStatusFindings",
-    "renderStatusHuman",
-  ],
+  "core/src/domain/status.ts": ["aggregateStatus", "evaluateStatusFindings", "renderStatusHuman"],
   "core/src/domain/brief.ts": ["projectBrief", "renderBriefHuman"],
   "core/src/state/index.ts": ["createStateStore"],
   "core/src/state/artifact-boundary.ts": ["createArtifactBoundary"],

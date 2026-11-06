@@ -426,3 +426,20 @@ phases:
 #   3. stable finding codes -> P1 registry, P3 corpus-wide sweep
 #   4. ranked ready-to-merge action list -> P2 wiring, P5 behaviour
 # ---------------------------------------------------------------------------
+#
+# EXECUTION LOG (2026-11-07, delivery executor):
+#   Phase 1: 68368c1a  Phase 2: 6c7ef2a1  Phase 3: ecad21a4  Phase 4: f5abbf39
+#   Phase 5: f13ea4f8  Phase 6: 4badf039  Phase 7: this commit
+#   Single golden regeneration: Phase 2 (tests/fixtures/status/golden/*), reviewed
+#   as the DEC-16 allowlist + three section objects + declared human delta.
+#   Aggregate: pnpm check green (4370 pass / 4 skip / 0 fail); doc-distribution
+#   guard green; git diff --check clean. TC-ATT-040 remains opt-in and skipped.
+#   Delivery decisions D-1..D-9 were followed. Deviations recorded in pm-notes:
+#   (a) edge.ts declares the three mapped hygiene signals available (F-4a/
+#       DEC-14 truthfulness; additive, no read change);
+#   (b) owner-review gates cannot reach default-applied because the digest
+#       injects no decision records (D-4); the state is representable and is
+#       never fabricated;
+#   (c) per-item partial review-unknown is not representable because the PR
+#       read declares review availability section-wide (existing contract).
+# ---------------------------------------------------------------------------

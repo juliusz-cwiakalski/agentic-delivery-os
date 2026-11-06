@@ -106,6 +106,6 @@ describe("TC-BRIEF-006 output bounds and ordering", () => {
     expect(renderBriefHuman(projectBrief(baseFacts()), SYNTHETIC_BRAND)).toBe(
       renderBriefHuman(projectBrief(baseFacts()), SYNTHETIC_BRAND),
     );
-    expect(aggregateStatus(baseFacts()).sections).toHaveLength(6);
+    expect(aggregateStatus(baseFacts()).sections).toHaveLength(9);
   });
 });

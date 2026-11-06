@@ -62,6 +62,26 @@
           "state": "observed"
         },
         {
+          "assertions": [
+            {
+              "assertion": "epic-membership",
+              "satisfied": 0,
+              "unknown": 0,
+              "violations": 0
+            },
+            {
+              "assertion": "story-points",
+              "satisfied": 0,
+              "unknown": 0,
+              "violations": 0
+            },
+            {
+              "assertion": "in-sprint",
+              "satisfied": 0,
+              "unknown": 0,
+              "violations": 0
+            }
+          ],
           "counts": {
             "observed": 0,
             "omitted": 0,
@@ -141,6 +161,11 @@
       "truncated": false
     },
     {
+      "attentionStates": [
+        "delivering",
+        "idle-with-reason",
+        "idle-no-reason"
+      ],
       "capability": "queue-lane-engine",
       "counts": {
         "observed": 0,
@@ -241,14 +266,94 @@
       "state": "unavailable",
       "title": "Parked work",
       "truncated": false
+    },
+    {
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed-empty"
+        ],
+        "sources": [
+          {
+            "outcome": "observed-empty",
+            "source": "changes"
+          }
+        ]
+      },
+      "id": "ready-to-merge",
+      "items": [],
+      "state": "observed",
+      "title": "Ready to merge",
+      "truncated": false
+    },
+    {
+      "capability": "spend-summary",
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "engine-not-delivered"
+        ],
+        "sources": [
+          {
+            "outcome": "not-delivered",
+            "source": "queue-engine"
+          }
+        ]
+      },
+      "expectedStory": "M1-S19",
+      "id": "spend",
+      "items": [],
+      "note": "spend summary arrives with M1-S19",
+      "state": "not-delivered",
+      "title": "Spend",
+      "truncated": false
+    },
+    {
+      "capability": "typed-blockers",
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "engine-not-delivered"
+        ],
+        "sources": [
+          {
+            "outcome": "not-delivered",
+            "source": "queue-engine"
+          }
+        ]
+      },
+      "expectedStory": "M1-S16",
+      "id": "blockers",
+      "items": [],
+      "note": "typed blockers arrive with M1-S16",
+      "state": "not-delivered",
+      "title": "Blockers",
+      "truncated": false
     }
   ],
   "summary": {
     "actionable": 1,
     "degraded": 1,
-    "notDelivered": 1,
-    "observed": 3,
-    "sections": 6,
+    "findingsTotal": 0,
+    "notDelivered": 3,
+    "observed": 4,
+    "placeholderSectionCount": 2,
+    "sections": 9,
     "unavailable": 1,
     "unknown": 0
   }
