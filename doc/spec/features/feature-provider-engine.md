@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-PROVIDER-ENGINE
 status: Current
 created: 2026-10-31
-last_updated: 2026-10-31
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
 summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with eight skip reasons, UTC peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider error identities, and the pure-core / provider-quota adapter boundaries."
 links:
-  related_changes: ["GH-182", "GH-175", "GH-176"]
+  related_changes: ["GH-182", "GH-175", "GH-176", "GH-224"]
   related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007"]
   contracts:
     - "packages/core/src/contracts/provider.ts"
@@ -197,6 +197,12 @@ The `queue ready` ready-set (M0-S7) is a second read-only consumer of the same p
 
 Consequently the condition reports an active chain park as `unsatisfied` with the bounded cause and expiry, an active provider park or all parked entries as `unsatisfied`, and an enabled unparked entry as `satisfied` with "no active park"; it never claims `available` and its evidence always carries the fixed `engine-not-run` companion. A provider-config read failure is mapped by the read's own reason (`config-invalid` or `provider-chain-unresolved`), and a park-fold failure is `state-unreadable`. The ready-set contract is specified in [Queue Ready](feature-queue-ready.md).
 
+### Doctor consumer
+
+The read-only `doctor` diagnostic is a third read-only consumer of the provider vocabulary. Its provider check reads the resolved provider configuration, structurally resolves the declared default chain against the declared entries, resolves enabled entries' credential references for presence through the credential port, and reads active parks and persisted announcements from the verified state fold shared with the state check. It never calls `resolve`, `quota`, or `parks list`, never fetches quota, never injects the quota transport, never evaluates a peak or quota condition, and never writes a park or announcement.
+
+Consequently a configuration-resolution failure (`config-invalid` with its classified `config.*` code) and a provider-branch validation failure (`provider-chain-unresolved` with `config.value.invalid`) fail the provider check without aborting the run; an undeclared default chain and an unresolvable credential reference also fail it. Active parks with cause `credential-missing` or `credential-rejected` fail it with a credential-refresh hint. The five wiring-neutral causes — `peak-window`, `quota-exhausted`, `provider-outage`, `chain-exhausted`, and `reevaluation-cap` — appear in the bounded detail with cause, expiry, and a `provider quota --provider <name>` directive without flipping the verdict. `reevaluation-cap` is wiring-neutral because the engine's self-expiring loop-cap pause is a capacity condition, not a configuration or credential defect. The doctor contract is specified in [Doctor](feature-doctor.md).
+
 ### Error taxonomy
 
 The provider kind carries five error identities, classified by exact code:
@@ -317,7 +323,8 @@ Adding a provider is a descriptor plus a credential reference, not a code branch
 - **Depends on** the credential port and runtime confinement ([feature-adapter-ports.md](feature-adapter-ports.md), [feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)).
 - **Consumed by** the status digest ([feature-status-digest.md](feature-status-digest.md)) for the declared configuration branch and verified park views only; status never runs the engine or fetches quota.
 - **Consumed by** the queue-ready ready-set ([Queue Ready](feature-queue-ready.md)) for the declared chain and verified park vocabulary only; queue ready never runs the engine or fetches quota.
-- **Consumed by** later doctor, spend, ceremony, and spawn surfaces for the park and announcement vocabulary.
+- **Consumed by** the doctor diagnostic ([Doctor](feature-doctor.md)) for the declared configuration branch, structural chain resolution, credential references, verified park views, announcement vocabulary, and park causes only; doctor never runs the engine or fetches quota.
+- **Consumed by** later spend, ceremony, and spawn surfaces for the park and announcement vocabulary.
 - **Risk — fail-loud pauses change operator expectations:** each pause carries a cause and resume time, and a peak park never substitutes paid capacity.
 - **Risk — quota response drift:** every malformed class is announced and parked or classified, never treated as clear.
 - **Risk — ledger growth:** deterministic generation and identity dedupe plus bounded evidence limit record growth; the projection is rebuildable.

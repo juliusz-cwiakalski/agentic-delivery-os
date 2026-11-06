@@ -21,6 +21,7 @@ ados_distribution: redistributable
 | [Queue Ready](spec/features/feature-queue-ready.md) | The read-only ready set: six tri-state readiness conditions, close classification and ranking, identity resolution, bounds, and evidence model |
 | [Owner-Gate SLA](spec/features/feature-owner-gate-sla.md) | The owner-gate aging and escalation contract: 24 h escalation, 72 h default-on-expiry, the recorded decision ledger, never-silence, and the render-once `board` surface |
 | [Command Audit Ledger](spec/features/feature-audit-ledger.md) | The append-only, keyed-chain invocation record: two additive state kinds, the store-managed chaining key, bounded filtered reads, and claimed agent identity |
+| [Doctor](spec/features/feature-doctor.md) | The read-only pre-flight diagnostic: five checks in fixed order, closed verdicts, bounded evidence and hints, `doctor.check.failed`, and stable exit `0`/`1`/`2` |
 | [Machine-Readable Plan Schema](spec/features/feature-plan-schema.md) | The `delivery.plan.v1` YAML plan, the `plan validate`/`diff`/`overlap` verdicts, the `lint plan` target, and the legacy markdown transition |
 | [Commit Primitive](spec/features/feature-commit-primitive.md) | The `commit` command, default-on atomic record-plus-commit on phase completion, precise staging and safety, the transport seam with a marked template fallback, convergence, and commit telemetry |
 | [Verify Change and Exit Taxonomy](spec/features/feature-verify-change-and-exit-taxonomy.md) | Read-only ledger verification, the delivery-result enum, and the CLI exit taxonomy |

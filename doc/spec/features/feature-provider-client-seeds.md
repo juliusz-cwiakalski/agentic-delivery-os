@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-PROVIDER-CLIENT-SEEDS
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-01
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered provider clients behind the primitive ports: GitLab, Jira, and GitHub clients in the adapters package's per-provider subpaths, with normalized primitive views, honest capability/gap declarations, the GitHub and Jira closeout write slices, GitLab merged-head reads with writes still gapped, offline trap catalogs proven against sanitized hand-authored synthetic fixtures, credential-port-exclusive auth, declared custom-field and merge-status mappings, uniform absence semantics, bounded collection and reverse-dependent reads, and the reviewed runtime-API confinement admission."
+summary: "The delivered provider clients behind the primitive ports: GitLab, Jira, and GitHub clients in the adapters package's per-provider subpaths, with normalized primitive views, honest capability/gap declarations, the GitHub and Jira closeout write slices, GitLab merged-head reads with writes still gapped, offline trap catalogs proven against sanitized hand-authored synthetic fixtures, credential-port-exclusive auth, declared custom-field and merge-status mappings, uniform absence semantics, bounded collection and reverse-dependent reads, the optional structured httpStatus on adapter-local read failures, and the reviewed runtime-API confinement admission."
 links:
-  related_changes: ["GH-188", "GH-175", "GH-176", "GH-183", "GH-189", "GH-178"]
+  related_changes: ["GH-188", "GH-175", "GH-176", "GH-183", "GH-189", "GH-178", "GH-224"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "TDR-0008"]
 ---
 
@@ -108,6 +108,8 @@ Each client resolves the instance's declared credential reference through the in
 
 An unresolvable credential surfaces the synchronized `config.credential.missing` failure (domain kind `config`, category `user`, retryable `false`, consequence `not_landed`, projection class `user-validation`). Provider payload and transport failures surface as the adapter-local `provider.payload.invalid` read failure with a detail string, never as a silent flattening or a raw provider error; these failures are not new error-table rows. An HTTP 404 instead surfaces as the additive adapter-local `provider.not-found` read failure with a detail string and no error-table row; the verify gates map that definitive absence per read rather than treating it as a generic read failure.
 
+Both adapter-local failure types carry an optional structured numeric `httpStatus`. The GitHub read slice supplies it on every non-2xx response, so a rejected credential is classifiable from structured data rather than prose; transport failures and absent responses omit it, and the Jira and GitLab slices leave the field absent. The field is secret-free, additive, and never promoted to an error-table identity: `provider.payload.invalid` remains the only payload-failure identity, `provider.not-found` remains the definitive-absence read result, and no consumer parses the failure's prose detail for classification.
+
 ### Flows
 
 1. **Read:** A consumer constructs an `ExternalSystemInstance`; the seed resolves its credential reference through the credential port; the injected transport issues the request; normalization returns a primitive view or a classified failure.
@@ -139,7 +141,7 @@ An unresolvable credential surfaces the synchronized `config.credential.missing`
 | `packages/adapters/src/github/normalize.ts` | Pull-request (including optional `headSha`), check-run, issue, merged-list, dependency, thread-resolution, and discriminated work-item observation normalization. |
 | `packages/adapters/src/github/review-state.ts` | Declared review-decision and issue-status tables. |
 | `packages/adapters/src/github/capabilities.ts` | The GitHub `AdapterContract` capability declaration. |
-| `packages/adapters/src/io/provider-transport.ts` | The shared injectable transport seam: request/response types (`GET`, `POST`, `PATCH`, `PUT`, `DELETE`, optional serialized body, optional timeout), read/write result types, and the reified payload and 404 failures. Imported by the seeds through their relative `../io/` path; not a public subpath. |
+| `packages/adapters/src/io/provider-transport.ts` | The shared injectable transport seam: request/response types (`GET`, `POST`, `PATCH`, `PUT`, `DELETE`, optional serialized body, optional timeout), read/write result types, and the reified payload and 404 failures carrying an optional structured `httpStatus`. Imported by the seeds through their relative `../io/` path; not a public subpath. |
 | `tests/fixtures/providers/traps/{jira,gitlab,github}.traps.json` | The trap catalogs as four-field data entries with provenance. |
 | `tests/fixtures/providers/{jira,gitlab,github}/**` | The sanitized hand-authored synthetic fixtures referenced by trap entries. |
 | `tests/behaviour/providers/trap-harness.ts` | Catalog loading, schema validation, bidirectional coverage, and replay keyed by trap name. |
@@ -150,15 +152,16 @@ An unresolvable credential surfaces the synchronized `config.credential.missing`
 | Element | Value / rule |
 |---------|--------------|
 | Trap-catalog entry | Exactly four fields: `trapName`, `providerBehavior`, `expectedNormalizedOutcome`, `fixtureReference` (one reference or a non-empty list). |
-| Trap-catalog coverage | GitLab 3 entries, Jira 5 entries, GitHub 21 entries; every entry has a matching assertion and every assertion has an entry. |
+| Trap-catalog coverage | GitLab 3 entries, Jira 7 entries, GitHub 25 entries; every entry has a matching assertion and every assertion has an entry. |
 | Fixture reference | A repository-relative `path` or `path#/json-pointer`, so references survive fixture re-authoring. |
 | Fixture provenance | Every fixture and catalog carries a `provenance` marker naming its synthetic origin and date. |
-| Fixture set | 25 committed JSON fixtures under the provider fixture area, including four GitHub list fixtures. |
+| Fixture set | 56 committed JSON fixtures across the provider fixture areas, including four GitHub list fixtures. |
 | GitHub collection reads | One bounded page per read: `state=open`, the declared `per_page` limit, and updated-descending sort. Issue-list pull-request objects are filtered before normalization while the raw page size is preserved; the pull-request list reports refs, draft, and state only. |
 | Check-runs page limit | One bounded page at the caller's limit, no pagination; status reads at `per_page=STATUS_SOURCE_PIPELINE_LIMIT` (20) and verify gates at `VERIFY_GATES_CI_RUN_LIMIT` (100). The client returns the raw page size with the normalized runs. |
 | GitHub gate facts | `sourceHeadSha` from `head.sha`; `commitCount` from `commits`; `changedFileCount` from `changed_files`; `mergeableState` by fixed precedence with `unknown` as the fallback. Absence is unknown, never mergeable or non-empty. |
 | GitHub 404 read result | HTTP 404 is the additive adapter-local `provider.not-found`; every other non-2xx stays `provider.payload.invalid`. No error-table row is added. |
-| GitHub gate and absence traps | `GITHUB-PR-LIST-REVIEW-DEFAULT`, `GITHUB-PR-MERGEABLE-NULL`, `GITHUB-PR-MERGEABLE-DIRTY`, `GITHUB-PR-MERGEABLE-BLOCKED`, `GITHUB-PR-HEAD-SHA-ABSENT`, `GITHUB-PR-COMMIT-SURFACE-ABSENT`, `GITHUB-PR-ZERO-COMMITS`, `GITHUB-CHECKRUN-EMPTY`, `GITHUB-CHECKRUN-ALL-SKIPPED`, `GITHUB-CHECKRUN-PAGE-LIMIT`, `GITHUB-ISSUE-COMMENTS-ABSENT`, `GITHUB-PR-LIST-404`, `GITHUB-PR-DETAIL-404`, `GITHUB-CHECKRUN-404`, and `GITHUB-ISSUE-404`; each has a catalog entry, a payload, and a replay assertion. |
+| Adapter-local read-failure status | `ProviderPayloadFailure` and `ProviderNotFoundFailure` carry an optional numeric `httpStatus` supplied by the GitHub read slice on every non-2xx response. Transport failures omit it, and the Jira and GitLab slices leave it absent. The field is secret-free, never parsed from prose, never promoted to an error-table identity, and adds no row. |
+| GitHub gate and absence traps | `GITHUB-PR-LIST-REVIEW-DEFAULT`, `GITHUB-PR-MERGEABLE-NULL`, `GITHUB-PR-MERGEABLE-DIRTY`, `GITHUB-PR-MERGEABLE-BLOCKED`, `GITHUB-PR-HEAD-SHA-ABSENT`, `GITHUB-PR-COMMIT-SURFACE-ABSENT`, `GITHUB-PR-ZERO-COMMITS`, `GITHUB-CHECKRUN-EMPTY`, `GITHUB-CHECKRUN-ALL-SKIPPED`, `GITHUB-CHECKRUN-PAGE-LIMIT`, `GITHUB-ISSUE-COMMENTS-ABSENT`, `GITHUB-PR-LIST-404`, `GITHUB-PR-DETAIL-404`, `GITHUB-CHECKRUN-404`, `GITHUB-ISSUE-404`, and `GH-PAYLOAD-HTTP-STATUS`; each has a catalog entry, a payload, and a replay assertion. `GH-PAYLOAD-HTTP-STATUS` cites `tests/fixtures/providers/github/read-failure-statuses.json`, whose conflicting prose proves classification reads only the structured status. |
 | Jira custom-field mappings | `customfield_10020` (`select`, `team:` prefix) and `customfield_10021` (`number`, `story-points:` prefix). |
 | Jira workflow states | Six native statuses mapped to the closed delivery-alias set. |
 | GitLab merge-status rules | A declared table over the observed native values, with a terminal flag and an open-state review mapping per row. |
@@ -178,9 +181,9 @@ An unresolvable credential surfaces the synchronized `config.credential.missing`
 - **`createGitHubClient({ instance, credentials, repository, transport? })`** returns `{ readWorkItem, readDeliveryRequest, readPipelineRun, listWorkItems, listDeliveryRequests, readWorkItemObservation, findMergedDeliveryRequest, listBlockedByDependents, writeWorkItem, transitionWorkItem, resolveDeliveryThread }`, with the same observation return types as Jira for the work-item and reverse-dependent reads.
 - **`readPipelineRun(commitSha, limit?)`** reads one check-runs page, defaulting `limit` to `STATUS_SOURCE_PIPELINE_LIMIT`, and returns `{ items, pageItemCount }`; `listWorkItems(limit)` and `listDeliveryRequests(limit)` each read one bounded page and return `{ items, pageItemCount }`.
 - **`ProviderTransport.send(request)`** sends a request with `url`, a closed method, headers, an optional serialized body, and an optional timeout, and returns a provider response with a status and an untrusted body; tests inject a fixture transport, and production defaults to native `fetch` inside each provider subpath.
-- **`ProviderReadResult<T>`** is either `{ ok: true, value }` or a `CredentialResolutionFailure` or `ProviderPayloadFailure` (`provider.payload.invalid` with a detail). **`ProviderWriteResult<T>`** has the same success/failure shape for writes.
+- **`ProviderReadResult<T>`** is either `{ ok: true, value }` or a `CredentialResolutionFailure` or `ProviderPayloadFailure` (`provider.payload.invalid` with a detail and an optional structured `httpStatus`). **`ProviderWriteResult<T>`** has the same success/failure shape for writes.
 - **`CloseoutReadObservation<T>` / `CloseoutReverseDependentObservation<T>`** — the closeout read discriminators. The work-item observation is `observed` (with optional `signals`) / `not-found` / `unavailable` / `invalid`; the reverse-dependent observation adds `no-surface`. They refine reads only and change neither `ProviderReadResult` nor the closed operation set.
-- **`ProviderReadResult<T>`** is either `{ ok: true, value }` or a `CredentialResolutionFailure`, a `ProviderPayloadFailure` (`provider.payload.invalid` with a detail), or a `ProviderNotFoundFailure` (`provider.not-found` with a detail).
+- **`ProviderReadResult<T>`** is either `{ ok: true, value }` or a `CredentialResolutionFailure`, a `ProviderPayloadFailure` (`provider.payload.invalid` with a detail and an optional structured `httpStatus`), or a `ProviderNotFoundFailure` (`provider.not-found` with a detail and an optional structured `httpStatus`).
 
 All three subpath surfaces export only the client factory, its core-built input/return types, and the adapter contract. The GitHub subpath exports five names: `createGitHubClient`, `GithubClient`, `GithubClientOptions`, `GithubRepositoryRef`, and `GITHUB_ADAPTER_CONTRACT`. The shared transport module is internal, imported relatively; the package's `#io/*` alias remains an internal import map, not a published export.
 
@@ -215,7 +218,7 @@ Shared adapter support modules under `src/io/` are imported by the provider seed
 | Fixture hygiene | 0 secrets, tokens, private identifiers, personal data, or non-example provider hosts in committed fixtures; placeholders and references are stable. |
 | Credential centralization | Exactly 4 secret-read allowlist entries; 0 ambient environment reads in client code; planted violations still fire. |
 | Confinement exactness | Only `github`, `gitlab`, and `jira` are admitted as provider I/O subpaths; `registry`, `azure`, and `ci` remain non-I/O and fail runtime-import negative controls. |
-| Error visibility | Credential failures carry `config.credential.missing`; payload failures carry `provider.payload.invalid` with a detail; an HTTP 404 carries `provider.not-found` with a detail; no failure is silently flattened. |
+| Error visibility | Credential failures carry `config.credential.missing`; payload failures carry `provider.payload.invalid` with a detail; an HTTP 404 carries `provider.not-found` with a detail; a received non-2xx response carries a structured numeric `httpStatus` and a transport failure omits it; no failure is silently flattened and no prose is parsed for classification. |
 
 ## Quality Assurance Strategy
 
@@ -250,7 +253,7 @@ Four surfaces grow deliberately: trap catalogs (new quirks join as four-field en
 - **Depends on** the monorepo scaffold for package tiers, subpath exports, boundary enforcement, and the aggregate check.
 - **Depends on** the adapter ports for the primitive contracts, capability/gap mechanism, credential port, and secret-read boundary.
 - **Depends on** the result contract for failure identity and the redaction chokepoint, and on the configuration and branding layers for injected environment facts and brand-neutral credential source keys.
-- **Consumed by** the status collector (including its bounded GitHub collection reads), verify-change gates, the [closeout transaction](feature-closeout.md) (including closeout reads and writes), the [adapter conformance suite](feature-adapter-conformance.md), and the full GitHub adapter.
+- **Consumed by** the status collector (including its bounded GitHub collection reads), verify-change gates, the [closeout transaction](feature-closeout.md) (including closeout reads and writes), the [doctor diagnostic](feature-doctor.md) (bounded tracker and CI reads plus structured read-failure status), the [adapter conformance suite](feature-adapter-conformance.md), and the full GitHub adapter.
 - **Risk — fixture drift:** hand-authored fixtures can diverge from live provider behavior. Mitigation: dated provenance, stable references, and the scheduled read-only live revalidation delivered by the [adapter conformance suite](feature-adapter-conformance.md).
 - **Risk — fixture drift:** hand-authored fixtures can diverge from live provider behavior. Mitigation: dated provenance, stable references, and scheduled live revalidation in the conformance suite.
 - **Risk — sanitization miss:** a committed fixture could leak a secret or personal data. Mitigation: declared placeholders, example-only hosts, a committed sanitization audit, and a planted-secret canary.
@@ -280,4 +283,4 @@ Four surfaces grow deliberately: trap catalogs (new quirks join as four-field en
 
 See also: [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Adapter Conformance Suite](feature-adapter-conformance.md), [Closeout Transaction](feature-closeout.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Result Contract and Error Table](feature-result-contract.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md), [TDR-0008](../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md).
 
-**Change records:** `doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/` (the client seeds), `doc/changes/2026-10/2026-10-31--GH-175--status-v1/` (the bounded collection reads and trap-catalog extension), and `doc/changes/2026-11/2026-11-01--GH-183--closeout-v1-branch-cleanup/` (the closeout write slices, merged head, reverse-dependent reads, and discriminated read observations), and `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/` (GitHub gate facts and 404 absence traps).
+**Change records:** `doc/changes/2026-10/2026-10-31--GH-188--client-seeds-trap-catalogs/` (the client seeds), `doc/changes/2026-10/2026-10-31--GH-175--status-v1/` (the bounded collection reads and trap-catalog extension), and `doc/changes/2026-11/2026-11-01--GH-183--closeout-v1-branch-cleanup/` (the closeout write slices, merged head, reverse-dependent reads, and discriminated read observations), `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/` (GitHub gate facts and 404 absence traps), and `doc/changes/2026-11/2026-11-06--GH-224--doctor-v1/` (the structured read-failure `httpStatus` and the `GH-PAYLOAD-HTTP-STATUS` trap).
