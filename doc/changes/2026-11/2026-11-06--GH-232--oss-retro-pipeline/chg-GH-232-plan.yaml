@@ -1,19 +1,34 @@
 # GH-232 implementation plan — M1-S8: OSS retro pipeline
 #
-# Sources (single source of truth; plan revision 1, 2026-11-06):
-#   - Spec:  ./chg-GH-232-spec.md (v1.1; 16 ACs AC-F1-1..AC-F9-1; F-1..F-10;
-#     DEC-1..DEC-13; OQ-1..OQ-7 all resolved; four-row `retro` error set incl.
-#     retro.truth.vacuous-run; per-identity store-level exit taxonomy DEC-7;
-#     export as engine/library surface only; Appendix B test-coverage handoff)
-#   - Test plan: ./chg-GH-232-test-plan.md (v1.1; 64 TCs TC-RETRO-001..064;
+# Sources (single source of truth; plan revision 2, 2026-11-06):
+#   - Spec:  ./chg-GH-232-spec.md (v1.2; 16 ACs AC-F1-1..AC-F9-1; F-1..F-10;
+#     DEC-1..DEC-14; DM-1..DM-9; OQ-1..OQ-7 all resolved; four-row `retro`
+#     error set incl. retro.truth.vacuous-run; per-identity store-level exit
+#     taxonomy DEC-7; export as engine/library surface only; DEC-14 pins the
+#     no-eligible-target collect as an explicit exit-0 `no-target` success;
+#     DM-9/§7.1/§16 pin the registry's three record kinds; Appendix B
+#     test-coverage handoff)
+#   - Test plan: ./chg-GH-232-test-plan.md (v1.2; 64 TCs TC-RETRO-001..064;
 #     16/16 AC coverage; §3.5 suite legend; §4.3 normative table; §4.4-4.5
-#     mutation/shape matrices; §4.6 level matrix; §4.7 truth matrix; §4.8 exit
-#     oracle; §7.1 execution order; §7.2 CI mapping; §7.3 evidence commands)
+#     mutation/shape matrices; §4.6 level matrix; §4.7 truth matrix incl. the
+#     N-01 no-target row; §4.8 exit oracle incl. the exit-0 `no-target` row;
+#     §7.1 execution order; §7.2 CI mapping; §7.3 evidence commands)
 #   - Decision: ../../../../doc/decisions/TDR-0009-retro-evidence-sidecar-
 #     keyed-chain-construction.md (ALT-2: HMAC-style keyed chain, distinct
 #     store-managed key, claimed identity; C-1..C-7; TO-CONFIRM primitive/
 #     digest/encoding/key-filename pins are plan-time — pinned below)
 #   - Ticket: GH-232 (open; binding AC 1 + binding AC 2 verbatim in spec §17)
+#
+# Plan revision 2 (2026-11-06, DoR readiness-iter-1 remediation): PIN-5
+# provenance now cites spec v1.2 DEC-14/AC-F6-1 (the spec adopted this plan's
+# semantics — provenance made explicit); PIN-4 aligned to the v1.2 three-kind
+# registry pin (spec DM-9; test plan A-T5 corrected); PIN-10 records the pack
+# example vocabulary supersession; tasks 3.1/3.2 re-worded to the spec's
+# no-target/vacuous-run outcome language; phases 2 and 3 drop consumer
+# interactions whose target sits outside their own scope (schema rule: an
+# interaction target must be a path inside the declaring phase's scope — the
+# cross-phase consumption stays documented in the phase prose and in Phase 1's
+# producer interaction). No phase, scope-entry, task, or traceability change.
 #
 # Format note: this document is the machine-readable plan (delivery.plan.v1).
 # Phase goals, tasks (with TC/AC traceability), per-phase verification commands,
@@ -58,17 +73,30 @@
 #         `retro.run` (`delivery.retro.run.v1`, identity `runId`), and
 #         `retro.trigger` (`delivery.retro.trigger.v1`, identity `name`; hosts
 #         the periodic memory-audit trigger per DEC-10) — under key prefixes
-#         `retro.levels` / `retro.runs` / `retro.triggers`. A-T5 named two
-#         kinds; the trigger kind is the honest third (TC-RETRO-060 asserts the
-#         trigger lives in the registry; boundary properties, not kind count,
-#         are the contract).
+#         `retro.levels` / `retro.runs` / `retro.triggers`. Source of truth:
+#         spec v1.2 pins exactly these three additive record kinds (§7.1, §16,
+#         DM-9) and test plan v1.2 corrected A-T5 to three kinds, so the kind
+#         count is spec-pinned, not plan-invented; this pin's remaining
+#         delivery-bound detail is the spelling — schema ids, identity fields,
+#         key prefixes — landed as declared contract constants
+#         (TC-RETRO-060 asserts the trigger lives in the registry; boundary
+#         properties, not kind count, are the contract).
 #   PIN-5 Target ordering (OQ-T6 / A-T3): RETRO_TARGET_ORDER = completion
 #         timestamp DESC, then change ref ASC. "Completed change" = a change
 #         whose latest phase.transition is `complete` for its terminal
 #         lifecycle phase (pr_creation) with no later `reopen`; in-flight
-#         changes are never selected; no eligible target -> explicit no-target
-#         SUCCESS (exit 0) with explicit no-target evidence naming the empty
-#         selection — the null-retro analogue; never a fabricated scope.
+#         changes are never selected. No-eligible-target end — SOURCE OF
+#         TRUTH: spec v1.2 DEC-14 / AC-F6-1, which canonically adopted this
+#         plan's semantics: `retro collect` with every completed change
+#         already collected at the level executes no collection run (no
+#         collector invocations, no sidecar appends, no registry run record)
+#         and completes as an explicit SUCCESS (exit 0) whose `data` carries
+#         the collection summary with the explicit `no-target` outcome naming
+#         the empty selection and its reason — the null-retro analogue; never
+#         a fabricated scope. `retro.truth.vacuous-run` (exit 1) is scoped to
+#         a collection run that EXECUTED and produced zero collector records
+#         (DEC-14; test plan v1.2 §4.7 N-01 vs C-05, §4.8 no-target row), so
+#         the two outcomes cannot collide.
 #   PIN-6 Level->owning-story map (OQ-T7 / A-T6): session / incident / window /
 #         project -> "M2-S3 (ceremony runner)" — M2-S3 schedules retro levels
 #         and owns the close stage (spec §13, backlog M2-S3 AC); M2-S10 co-owns
@@ -92,6 +120,19 @@
 #   PIN-10 Finding-kind vocabulary: ["retro-note", "collector-finding",
 #         "truth-check", "tamper-flag", "malformed-entry", "verified-empty"];
 #         follow-through verdicts ["verified", "unverified", "unknown"].
+#         Vocabulary supersession (DoR readiness-iter-1 finding 4): the M1
+#         pack commands/retro.md OUTPUT example is ILLUSTRATIVE — its finding
+#         kind "win" and follow-through verdict "done" are superseded by these
+#         closed vocabularies, the delivery-time refinement of the spec's
+#         pinned fold sources (spec §5.1 F-5/F-6 with §8.3 DM-6 and DEC-9:
+#         findings fold only from recorded pm-notes retro notes, mechanical
+#         collector findings, pipeline-truth findings, tamper/malformation
+#         flags, and explicit verified-empty evidence; follow-through is a
+#         read-fold carrying verification verdicts) — per the pack's own
+#         convention that every M1 contract is a proposal refined at story
+#         delivery (contracts.md preamble; retro.md status "Proposed
+#         contract"). Recorded here so phase-7 doc-sync reconciles the pack
+#         example deliberately.
 # =====================================================================
 #
 # Delivery risks pinned as explicit tasks:
@@ -343,10 +384,10 @@ phases:
         - tests/structure/inventory.json
       folders:
         - tests/fixtures/retro
-    interactions:
-      - kind: contract-file
-        target: packages/core/src/contracts/retro.ts
-        role: consumer
+    # Cross-phase contract consumption (contracts/retro.ts, produced in
+    # Phase 1) is documented in the phase prose above; the schema requires an
+    # interaction target to sit inside the declaring phase's own scope, so no
+    # consumer interaction is declared here.
 
   # ---------------------------------------------------------------------
   # Phase 3 — Domain engine: collectors, pipeline-truth checks, report and
@@ -362,8 +403,12 @@ phases:
   # - 3.1 Create packages/core/src/domain/retro.ts — collect engine: target
   #       selection per PIN-5 (RETRO_TARGET_ORDER, completed-derivation from
   #       the phase.transition record family, in-flight never selected,
-  #       already-collected scope -> addendum never a rewrite, no eligible
-  #       target -> explicit no-target success); GET-only collectors in the
+  #       already-collected scope -> addendum never a rewrite; no eligible
+  #       target -> no collection run executes and the command completes as
+  #       the explicit exit-0 `no-target` success per DEC-14: `data` carries
+  #       the collection summary with the `no-target` outcome naming the empty
+  #       selection and its reason, zero collector invocations, zero sidecar
+  #       appends, zero registry run records); GET-only collectors in the
   #       declared order — (a) audit ledger via the bounded read surface
   #       (positive limit, declared filters, recorded query), (b) state record
   #       families (phase transitions, closeout outcome records, commit
@@ -374,8 +419,8 @@ phases:
   #       VERBATIM; evidence appends through the Phase-2 sidecar seam (trace
   #       ids from the injected factory, watermarks, claimed identity,
   #       redaction chokepoint); one additive validated run record per run.
-  #       (F-1; DEC-5, DEC-9, DEC-13; AC-F1-1, AC-F1-2; TC-RETRO-015, 016,
-  #       017, 018; NFR-4, NFR-5)
+  #       (F-1; DEC-5, DEC-9, DEC-13, DEC-14; AC-F1-1, AC-F1-2; TC-RETRO-015,
+  #       016, 017, 018; NFR-4, NFR-5)
   # - 3.2 The five pipeline-truth checks as named, individually disableable
   #       functions (DEC-6): C-01 skipped ordinals surfaced as findings, never
   #       dropped; C-02 broken consumed audit verdict -> finding naming the
@@ -383,12 +428,14 @@ phases:
   #       (exit 1); C-03 every evidenceRefs entry resolves or is flagged
   #       (dangling never trusted); C-04a/b expected-activity-absent (completed
   #       change with zero audit invocations in window; closed change with no
-  #       closeout outcome record) is a finding; C-05 zero-collector run ->
-  #       retro.truth.vacuous-run (exit 1), never silent success; verified-
-  #       empty is explicit evidence naming the producing check; findings are
-  #       never fabricated; null retro is a success.
-  #       (F-6; DEC-6, DEC-8, DEC-11; AC-F6-1, AC-F5-2; TC-RETRO-041..048;
-  #       NFR-1)
+  #       closeout outcome record) is a finding; C-05 a collection run that
+  #       EXECUTED and produced zero collector records -> retro.truth.
+  #       vacuous-run (exit 1), never silent success and never the no-target
+  #       outcome — N-01 executes no run, so the two cannot collide (DEC-14);
+  #       verified-empty is explicit evidence naming the producing check;
+  #       findings are never fabricated; null retro is a success.
+  #       (F-6; DEC-6, DEC-8, DEC-11, DEC-14; AC-F6-1, AC-F5-2;
+  #       TC-RETRO-041..048; NFR-1)
   # - 3.3 Report fold: verified sidecar read + registry run-record fold of the
   #       level's most recent collected scope; machine data EXACTLY the four
   #       keys {level, findings[], followThrough[], evidenceRefs[]} with the
@@ -477,10 +524,9 @@ phases:
         - tests/structure/inventory.json
       folders:
         - tests/fixtures/retro/truth-mutants
-    interactions:
-      - kind: contract-file
-        target: packages/core/src/contracts/retro.ts
-        role: consumer
+    # Same as Phase 2: consumes contracts/retro.ts (Phase 1 producer) per the
+    # prose above; no consumer interaction declared — the interaction target
+    # would sit outside this phase's own scope.
 
   # ---------------------------------------------------------------------
   # Phase 4 — CLI surface: retro command family, edge composition, and doctor
@@ -773,21 +819,27 @@ phases:
 #   - PIN-9 memory-audit cadence "weekly": consistent with the documented
 #     "periodic" audit; a plan-time value the reviewer may adjust — it is
 #     registry data, not surface, so adjusting it later is a data change.
-#   - PIN-5 no-eligible-target semantics: exit 0 with explicit no-target
-#     evidence (the null-retro analogue). The test plan requires "an explicit
-#     no-target outcome (never a fabricated scope)" without pinning the exit;
-#     this pin keeps it a success consistent with AC-F5-2 and distinct from
-#     C-05 vacuous-run (which fires when a target WAS selected and zero
-#     collectors ran).
+#   - PIN-5 no-eligible-target semantics: RESOLVED — spec v1.2 DEC-14 /
+#     AC-F6-1 canonically adopted this plan's semantics (explicit exit-0
+#     `no-target` success whose `data` carries the collection summary naming
+#     the empty selection and its reason; no collector invocations, no sidecar
+#     appends, no registry run record; `retro.truth.vacuous-run` scoped to a
+#     collection run that executed and produced zero collector records), and
+#     test plan v1.2 mirrors it (§4.7 N-01 beside C-05, §4.8 exit-0 no-target
+#     row, TC-RETRO-015 step 4, TC-RETRO-045 distinctness step). The remaining
+#     delivery-bound detail is the RETRO_TARGET_ORDER constant spelling
+#     (OQ-T6 / A-T3 determinism pin).
 #   - PIN-8 RETRO_EXPORT_MAX_LIMIT = 1000 and the finding-kind vocabulary
 #     (PIN-10): plan-time constants; tests read the declared constants.
 #   - Tier/lease vocabulary: lease names and weight classes omitted (the
 #     scheduler owns the vocabulary; nothing pinned by spec or test plan).
-#   - Spec/test-plan consistency: verified — the three iteration-1 gaps
-#     (GAP-T3/T4/T5) are closed by spec v1.1 and the test plan's assertions
-#     are live; no TODO assertion remains; the only open items were
-#     delivery-bound (OQ-T6/T7/T8, GAP-T1) and are pinned above (PIN-5..7)
-#     and by this plan's existence (GAP-T1).
+#   - Spec/test-plan consistency: verified against spec v1.2 + test plan v1.2
+#     — the iteration-1 gaps (GAP-T3/T4/T5) are closed by spec v1.1; the DoR
+#     readiness-iter-1 forks are closed by v1.2 (DEC-14 no-target oracle;
+#     DM-9 three-kind registry with A-T5 corrected); GAP-T1 is resolved by
+#     this plan's existence (test plan v1.2 links it); no TODO assertion
+#     remains; the only open items are delivery-bound (OQ-T6/T7/T8, GAP-T2,
+#     GAP-T8) and pinned above (PIN-1..PIN-10).
 #   - Scope deviation policy: any file touched outside a phase's declared
 #     scope is recorded in the execution log and pm-notes as reviewed
 #     SCOPE_DEVIATION (the GH-223 rev-3 precedent), never silently widened.

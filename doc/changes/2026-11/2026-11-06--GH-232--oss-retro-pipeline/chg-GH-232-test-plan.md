@@ -7,10 +7,10 @@ owners: [engineering]
 service: "delivery-os learning plane (retro evidence pipeline)"
 labels: [m1, retro, learning-plane, state-layer, cli]
 version_impact: minor
-summary: "Traceable verification of M1-S8: an independent append-only evidence sidecar written only by the collector under one fence, with collector trace ids, collection watermarks, claimed identity, and a keyed (HMAC-style) chain over a distinct store-managed chaining key that never enters lane environments, records, output, or configuration; verified reads on every pass; the full tamper mutation matrix (content edit, deletion, reorder, tail truncate-and-reappend, recomputed unkeyed checksum, key-artifact substitution) flagged with position and trace id, zero false verified verdicts, and cross-process continuity without false breaks; entry-level malformation classified in-band with partial output preserved and byte-identical valid-entry output, store-level damage classified through existing state identities with each row's own delivered projection (framing tear, unreadable file, and missing key exit 2; permission violation exit 1), and zero uncaught crashes; the `change` level collector over GET-only delivered sources (audit ledger with skipped ordinals and chain verdict carried verbatim, state record families, pm-notes retro notes) with addenda-not-rewrites; the level report data shape `{level, findings[], followThrough[], evidenceRefs[]}` with mechanical fold-only findings, an explicit verified-empty versus vacuous-green distinction, null-retro-is-success, and zero model calls in collect/report; the five pipeline-truth checks each with a triggerable negative fixture and a check-removal mutation, with the two blocking triggers pinned (broken consumed audit-ledger verdict as `retro.evidence.tamper-flagged`, exit 1; zero-collector run as `retro.truth.vacuous-run`, exit 1); the hardened R1–R6 level registry with classified refusals for declared-but-unimplemented levels; the periodic memory-audit trigger registered with runs recorded as evidence; the bounded export engine surface with chain verdict, engine-boundary `input.value.rejected` refusals, and no CLI invocation (CLI exposure deferred to M2-S3); the four `retro` error rows with bidirectional documented sync and the DEC-11 projection-class pin; and tier, boundary, determinism, redaction, and boundedness conformance."
+summary: "Traceable verification of M1-S8: an independent append-only evidence sidecar written only by the collector under one fence, with collector trace ids, collection watermarks, claimed identity, and a keyed (HMAC-style) chain over a distinct store-managed chaining key that never enters lane environments, records, output, or configuration; verified reads on every pass; the full tamper mutation matrix (content edit, deletion, reorder, tail truncate-and-reappend, recomputed unkeyed checksum, key-artifact substitution) flagged with position and trace id, zero false verified verdicts, and cross-process continuity without false breaks; entry-level malformation classified in-band with partial output preserved and byte-identical valid-entry output, store-level damage classified through existing state identities with each row's own delivered projection (framing tear, unreadable file, and missing key exit 2; permission violation exit 1), and zero uncaught crashes; the `change` level collector over GET-only delivered sources (audit ledger with skipped ordinals and chain verdict carried verbatim, state record families, pm-notes retro notes) with addenda-not-rewrites; the level report data shape `{level, findings[], followThrough[], evidenceRefs[]}` with mechanical fold-only findings, an explicit verified-empty versus vacuous-green distinction, null-retro-is-success, and zero model calls in collect/report; the five pipeline-truth checks each with a triggerable negative fixture and a check-removal mutation, with the two blocking triggers pinned (broken consumed audit-ledger verdict as `retro.evidence.tamper-flagged`, exit 1; zero-collector run as `retro.truth.vacuous-run`, exit 1; a no-eligible-target collect as an explicit exit-0 `no-target` success, distinct from vacuous-run); the hardened R1–R6 level registry with classified refusals for declared-but-unimplemented levels; the periodic memory-audit trigger registered with runs recorded as evidence; the bounded export engine surface with chain verdict, engine-boundary `input.value.rejected` refusals, and no CLI invocation (CLI exposure deferred to M2-S3); the four `retro` error rows with bidirectional documented sync and the DEC-11 projection-class pin; and tier, boundary, determinism, redaction, and boundedness conformance."
 links:
   change_spec: ./chg-GH-232-spec.md
-  implementation_plan: null
+  implementation_plan: ./chg-GH-232-plan.yaml
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
@@ -20,7 +20,7 @@ links:
 
 This plan protects the change's single load-bearing guarantee: retrospective evidence is **collector-truth that delivery agents cannot alter undetectably**. Three properties carry that guarantee and each is tested independently so that weakening one cannot pass behind the others. First, **independence**: the evidence sidecar is a separate append-only artifact family outside the delivery state store, addressed only by the collector write seam, with a distinct store-managed chaining key. Second, **detection**: every read walks the sidecar, recomputes the keyed link from the chaining key, the previous link, and the canonical record content, and reports every mismatch with its position and trace id; records alone — including a recomputed unkeyed checksum — never verify. Third, **honest failure**: malformed entries classify in-band with valid output preserved byte-for-byte, store damage fails closed with the state identities, and no classified read mutates a store or crashes a run.
 
-The plan is built around five binding mechanisms: a **two-store fixture harness** (temp state directory, synthetic sidecar, synthetic retro registry, synthetic delivery registry, and an injected `AuditRead` result) that makes every source fold scriptable and every byte observable; an **adversary model** that mutates sidecar bytes directly on disk, exactly as a same-user delivery agent outside the lane environment could; a **non-vacuity contract** in which every negative, absence, refusal, tamper verdict, and truth-check finding is paired with a live control and a detection-disabled mutant that must fail the suite; a **byte-equality oracle** that compares preserved valid-entry output against the equivalent clean run instead of trusting counts; and a **traceability matrix** binding all 16 acceptance criteria, 2 event kinds, 8 data-model elements, and 10 NFRs to named suites. It is a design and verification map, not an execution claim: no builds or suites were run while authoring it.
+The plan is built around five binding mechanisms: a **two-store fixture harness** (temp state directory, synthetic sidecar, synthetic retro registry, synthetic delivery registry, and an injected `AuditRead` result) that makes every source fold scriptable and every byte observable; an **adversary model** that mutates sidecar bytes directly on disk, exactly as a same-user delivery agent outside the lane environment could; a **non-vacuity contract** in which every negative, absence, refusal, tamper verdict, and truth-check finding is paired with a live control and a detection-disabled mutant that must fail the suite; a **byte-equality oracle** that compares preserved valid-entry output against the equivalent clean run instead of trusting counts; and a **traceability matrix** binding all 16 acceptance criteria, 2 event kinds, 9 data-model elements, and 10 NFRs to named suites. It is a design and verification map, not an execution claim: no builds or suites were run while authoring it.
 
 ### 1.1 In Scope
 
@@ -31,11 +31,11 @@ The plan is built around five binding mechanisms: a **two-store fixture harness*
 - Shape-crash guards over both the sidecar and the retro registry: the 24-case entry-level matrix (four malformation classes at three positions in two stores), partial output preserved with byte-identical valid-entry content, the bounded partial-run facts, the error-only envelope, and the five-case store-level matrix classified through each state identity's own delivered projection — framing tear, sequence discontinuity, and unreadable file as `state.store.torn` (exit 2), missing key material on a non-first open as `state.keys.missing` (exit 2), and permission violation as `state.permission.denied` with its delivered `user-validation` projection (exit 1) — both exits asserted (F-4, AC-F4-1, AC-F4-2, DEC-7, NFR-1).
 - Collection at the implemented `change` level: automatic target selection (most recent completed change not yet collected at the level), GET-only collection over the audit ledger through its bounded read surface, the delivered state-store record families, and pm-notes typed retro notes; skipped-ordinal findings and the full audit chain verdict carried verbatim; run records with counts and consumed verdicts; addenda on re-collection (F-1, AC-F1-1, AC-F1-2, DM-5, EVT-2).
 - Reporting: the exact `{level, findings[], followThrough[], evidenceRefs[]}` machine `data`, mechanical fold-only findings each linked to evidence refs, the follow-through read-fold with artifact-verified markers, an explicit empty report for verified-empty folds, determinism, and zero model calls (F-5, AC-F5-1, AC-F5-2, DM-6, NFR-6).
-- The five pipeline-truth checks, each with a triggerable negative fixture, the verified-empty versus vacuous-green distinction, and a check-removal mutation that must fail the suite; the two blocking triggers pinned to their identities and exits — a broken consumed audit-ledger chain verdict fails `retro.evidence.tamper-flagged` (exit 1, finding naming the audit domain) and a zero-collector collection fails `retro.truth.vacuous-run` (exit 1) (F-6, AC-F6-1, DEC-6, DEC-8, DEC-11).
+- The five pipeline-truth checks, each with a triggerable negative fixture, the verified-empty versus vacuous-green distinction, and a check-removal mutation that must fail the suite; the two blocking triggers pinned to their identities and exits — a broken consumed audit-ledger chain verdict fails `retro.evidence.tamper-flagged` (exit 1, finding naming the audit domain) and a zero-collector collection run fails `retro.truth.vacuous-run` (exit 1) — plus the distinct no-eligible-target outcome: an all-collected workspace executes no collection run and completes as an explicit exit-0 `no-target` success whose `data` summary names the empty selection and its reason (F-6, AC-F6-1, DEC-6, DEC-8, DEC-11, DEC-14).
 - The bounded evidence export **engine/library surface** (no CLI invocation exists in the locked command surface and none is added): explicit destination supplied by the engine consumer, required positive-integer limit, deterministic bundle with trace ids, watermarks and the full chain verdict, in-band truncation, redaction, `input.value.rejected` (exit 1) refusals before any write, and no mutation of sidecar or registry; CLI exposure defers to the ceremony-runner story (M2-S3) and is out of scope here (F-7, AC-F7-1, DM-7, NFR-5, NFR-10, NG-1).
-- The hardened level registry: R1–R6 declared with scope kind, trigger declaration, and the closed `implemented`/`declared` status; `change` implemented; the four-verdict boundary matrix; unknown and declared-but-unimplemented refusals with owning-story hints; and `state check` visibility (F-8, AC-F8-1, AC-F1-3, DM-1).
-- The periodic memory-audit trigger registration and its runs recorded as evidence with trace ids, queryable through `retro report`, with no new memory-audit command (F-9, AC-F9-1).
-- The four `retro` error identities — `retro.evidence.malformed-entry`, `retro.evidence.tamper-flagged`, `retro.truth.vacuous-run`, `retro.evidence.denied` — exact-code classification, the DEC-11 projection-class pin (exit-1 rows carry `user-validation` even where the category is `platform`; `retro.evidence.denied` keeps `platform-provider`), store-identity reuse with each row's delivered projection, and bidirectional documented-table sync with zero drift (F-10, DM-8, NFR-8).
+- The hardened level registry as a validated store boundary: R1–R6 declared with scope kind, trigger declaration, and the closed `implemented`/`declared` status; `change` implemented; three additive validated record kinds — `retro.level`, `retro.run`, and `retro.trigger` (DM-1, DM-5, DM-9); the four-verdict boundary matrix; unknown and declared-but-unimplemented refusals with owning-story hints; and `state check` visibility (F-8, AC-F8-1, AC-F1-3, DM-1).
+- The periodic memory-audit trigger registration as a `retro.trigger` entry (DM-9, hosted per DEC-10) and its runs recorded as evidence with trace ids, queryable through `retro report`, with no new memory-audit command (F-9, AC-F9-1).
+- The four `retro` error identities — `retro.evidence.malformed-entry`, `retro.evidence.tamper-flagged`, `retro.truth.vacuous-run`, `retro.evidence.denied` — exact-code classification, the DEC-11 projection-class pin (exit-1 rows carry `user-validation` even where the category is `platform`; `retro.evidence.denied` keeps `platform-provider`), store-identity reuse with each row's delivered projection, and bidirectional documented-table sync with zero drift (F-10, DM-8, NFR-8). The no-eligible-target collect is the opposite end of the same taxonomy: exit 0 via `success` with no error identity, never `retro.truth.vacuous-run` (DEC-14).
 - Tier, boundary, runtime-confinement, forbidden-literal, hermeticity, performance/bounded-work, and redaction conformance for every file this change introduces (NFR-3, NFR-6, NFR-7, NFR-9, NFR-10).
 
 ### 1.2 Out of Scope & Known Gaps
@@ -46,19 +46,22 @@ The plan is built around five binding mechanisms: a **two-store fixture harness*
 - [OUT] A new memory-audit command or a reimplementation of the memory consolidation procedure (spec NG-8); retention, pruning, compaction, or expiry for the sidecar (spec NG-9); and any change to the envelope contract, exit taxonomy, existing error-table rows, or the audit ledger and its construction (spec NG-10).
 - [OUT] Real process spawning, real network, real host state, real user state directories, or real cryptographic key material in committed fixtures. Cross-process continuity is modelled by reopening the same temp store with a fresh store/edge instance (the GH-223 precedent), not by spawning.
 - [OUT] Windows ACL execution. Permission assertions (state directory `0700`, sidecar and key `0600`) are POSIX-only; no Linux run claims Windows verification.
-- [GAP-T1 — delivery-bound, non-blocking: implementation plan not yet authored] `chg-GH-232-plan.yaml` does not exist at authoring time. This plan binds behaviour, assertions, identities, and AC mapping; delivery planning maps phases onto these TCs and may not reshape them. Suite file names below follow the repository's `retro-*` convention; delivery may add helpers but must preserve each TC's behaviour and oracle.
+- [GAP-T1 — resolved: implementation plan authored 2026-11-06] `chg-GH-232-plan.yaml` (revision 1) now exists and is linked in the front matter; the suite inventory and phase mapping live there. This plan still binds behaviour, assertions, identities, and AC mapping: delivery planning maps phases onto these TCs and may not reshape them. Suite file names below follow the repository's `retro-*` convention; delivery may add helpers but must preserve each TC's behaviour and oracle. The plan's delivery-bound pins (PIN-1..PIN-10) settle OQ-T6/T7/T8 at delivery time without changing any TC oracle.
 - [GAP-T2 — delivery-bound, non-blocking: NFR-7 is not reliably CI-verifiable] The thresholds (collect ≤ 30 s, report ≤ 10 s, export ≤ 10 s on a 10,000-record sidecar, and the audit read within its own documented bounds) depend on runner capacity. The CI oracle is **bounded work** (query/append counts, one chain walk per read, bounded per-record work, declared timeouts) plus a soft local budget. A non-CI reference measurement on a generated 10,000-record sidecar is recorded in §10 and never reported as a passing threshold; NFR-7 remains a target (TC-RETRO-061, tracked as OQ-T8 in §8.3).
-- **Resolved at spec iteration 2 (v1.1)** — retained for traceability; no TODO assertion remains:
+- **Resolved at spec iteration 2 (v1.1) and iteration 3 (v1.2)** — retained for traceability; no TODO assertion remains:
   - **GAP-T3 → OQ-T1 (resolved)**: the spec (OQ-5, DEC-7, F-4, AC-F4-2) now pins **per-identity projections** for store-level damage: framing tear, sequence discontinuity, unreadable file, and missing key material on a non-first open classify `state.store.torn` / `state.keys.missing` at exit **2**, while a permission violation carries `state.permission.denied`'s delivered `user-validation` projection at exit **1**. Delivered rows are reused unchanged (NG-10), and binding AC 1 is untouched. TC-RETRO-013 and TC-RETRO-033 assert both exits; §4.5 and §4.8 record them.
   - **GAP-T4 → OQ-T2 (resolved)**: the spec (OQ-6, G-8, F-7, AC-F7-1, §8.5, NG-1 amendment) pins export as a **bounded engine/library surface** with refusals reusing `input.value.rejected` (exit 1) before any write; CLI exposure defers to M2-S3 and no CLI export invocation, flag, or registry entry exists. TC-RETRO-049..052 are library-level cases asserting the engine contract and the engine-boundary refusals.
   - **GAP-T5 → OQ-T3 (resolved)**: the spec (OQ-7, DEC-11 amended to four rows, F-6, AC-F6-1) pins the two blocking truth triggers: a broken consumed audit-ledger chain verdict fails `retro.evidence.tamper-flagged` (exit **1**, finding naming the audit domain) and a zero-collector collection fails the new row `retro.truth.vacuous-run` (exit **1**). TC-RETRO-042 and TC-RETRO-045 assert both.
   - **GAP-T6 → OQ-T4 (resolved)**: DEC-11 now pins the projection class explicitly — the exit-1 `retro` rows carry `user-validation` even where `category: platform` (that is what reaches exit 1), and `retro.evidence.denied` keeps `platform-provider` (exit 2). §4.8 records the pin as a contract statement, not an assumption.
   - **GAP-T7 → OQ-T5 (resolved)**: AC-F5-1 is reworded to match DM-6 — machine `data` is exactly the four keys `{level, findings[], followThrough[], evidenceRefs[]}`, and the report schema identity `delivery.retro.report.v1` is a declared contract constant, not an in-`data` field. A-T4, TC-RETRO-035 and TC-RETRO-063 assert it.
-- [GAP-T8 — delivery-bound, non-blocking: exact artifact and record spellings] OQ-2 defers the sidecar artifact family and key-artifact file names, and the spec does not name the retro registry record kinds, payload schema ids, or store-scoped keys. The plan refers to the sidecar chaining key as `chain-key.retro.<workspace>.json` for readability; tests assert the **declared contract constant**, the distinctness from `chain-key.<workspace>.json`, and the validated-boundary properties (kind, payload schema, identity field, required fields, closed vocabularies), not a hardcoded filename (A-T2, A-T5). The same applies to the level→owning-story hint map (A-T6); these spellings and the target-ordering constant are tracked as non-blocking delivery-bound items in §8.3 (OQ-T6, OQ-T7).
+  - **Resolved at v1.2 — no-eligible-target oracle (DoR readiness-iter-1 finding 1)**: DEC-14 pins the empty-selection end. `retro collect` with every completed change already collected at the level executes no collection run (no collector invocations, no sidecar appends, no registry run record) and completes as an explicit success at exit **0**, whose `data` carries the collection summary with the explicit `no-target` outcome naming the empty selection and its reason. `retro.truth.vacuous-run` (exit **1**) is scoped to a collection run that **executed** and produced zero collector records, so the two outcomes cannot collide. §4.7 records N-01 beside C-05 as distinct outcomes, §4.8 adds the no-target row to the exit oracle, and TC-RETRO-015 step 4 pins identity and exit (spec Appendix B).
+  - **Resolved at v1.2 — retro registry record kinds (DoR readiness-iter-1 finding 2)**: the retro registry is pinned as exactly three additive validated record kinds — `retro.level` (DM-1), `retro.run` (DM-5) and `retro.trigger` (DM-9, hosting the periodic memory-audit trigger per DEC-10). A-T5, §3.2 (DM-9), §3.5 and TC-RETRO-057/060 assert the three-kind boundary; the kind count is no longer delivery-bound.
+- [GAP-T8 — delivery-bound, non-blocking: exact artifact and record spellings] OQ-2 defers the sidecar artifact family and key-artifact file names, and payload schema ids and store-scoped keys remain delivery-bound. Spec v1.2 now names the three retro registry record kinds — `retro.level`, `retro.run`, `retro.trigger` (DM-1, DM-5, DM-9) — so the kind count and kind strings are spec-pinned, not delivery-bound. The plan refers to the sidecar chaining key as `chain-key.retro.<workspace>.json` for readability only; tests assert the **declared contract constant**, the distinctness from `chain-key.<workspace>.json`, and the validated-boundary properties (kind, payload schema, identity field, required fields, closed vocabularies), not a hardcoded filename (A-T2, A-T5). The same applies to the level→owning-story hint map (A-T6); these spellings and the target-ordering constant are pinned by the plan as PIN-4/PIN-5/PIN-6 and tracked as non-blocking delivery-bound items in §8.3 (OQ-T6, OQ-T7).
 
 ## 2. References
 
-- **Change specification (v1.1, iteration 2)**: [chg-GH-232-spec.md](./chg-GH-232-spec.md) — 16 ACs (AC-F1-1..3, AC-F2-1..4, AC-F3-1, AC-F4-1..2, AC-F5-1..2, AC-F6-1, AC-F7-1, AC-F8-1, AC-F9-1), F-1..F-10, EVT-1/EVT-2, DM-1..DM-8, NFR-1..NFR-10, DEC-1..DEC-13, RSK-1..RSK-8, §14 OQ-1..OQ-7, Appendix B test-plan handoff. The v1.1 amendments consumed here: DEC-7/F-4/AC-F4-2 per-identity store-level projections (permission violations exit 1 via the delivered `state.permission.denied` row), G-8/F-7/AC-F7-1/§8.5/NG-1 export as a bounded engine/library surface with CLI exposure deferred to M2-S3, DEC-11/F-10/DM-8/AC-F6-1/NFR-8 the four-row `retro` set with the `retro.truth.vacuous-run` row and the projection-class pin, and the AC-F5-1/DM-6 versioned-shape wording.
+- **Change specification (v1.2, iteration 3)**: [chg-GH-232-spec.md](./chg-GH-232-spec.md) — 16 ACs (AC-F1-1..3, AC-F2-1..4, AC-F3-1, AC-F4-1..2, AC-F5-1..2, AC-F6-1, AC-F7-1, AC-F8-1, AC-F9-1), F-1..F-10, EVT-1/EVT-2, DM-1..DM-9, NFR-1..NFR-10, DEC-1..DEC-14, RSK-1..RSK-8, §14 OQ-1..OQ-7, Appendix B test-plan handoff. The v1.1 amendments consumed here: DEC-7/F-4/AC-F4-2 per-identity store-level projections (permission violations exit 1 via the delivered `state.permission.denied` row), G-8/F-7/AC-F7-1/§8.5/NG-1 export as a bounded engine/library surface with CLI exposure deferred to M2-S3, DEC-11/F-10/DM-8/AC-F6-1/NFR-8 the four-row `retro` set with the `retro.truth.vacuous-run` row and the projection-class pin, and the AC-F5-1/DM-6 versioned-shape wording. The v1.2 amendments consumed here: DEC-14/G-5/F-1/F-6 checks 4–5/F-10/AC-F6-1/Appendix B/glossary pin the no-eligible-target collect as an explicit exit-0 `no-target` success, distinct from the zero-record `retro.truth.vacuous-run` refusal (exit 1); DM-9/§7.1 pin the retro registry as three additive validated record kinds (`retro.level`, `retro.run`, `retro.trigger`).
+- **Implementation plan**: [chg-GH-232-plan.yaml](./chg-GH-232-plan.yaml) — revision 1 (2026-11-06); phases and tasks trace to all 64 TCs, and its delivery-bound pins PIN-1..PIN-10 settle the items this plan tracked as OQ-T6/T7/T8 (chain primitive, registry store with three record kinds, target ordering, level→owning-story map, NFR-7 measurement, export cap, memory-audit cadence, closed finding-kind vocabulary). The pins do not reshape any TC oracle.
 - **Decision record**: [TDR-0009](../../../decisions/TDR-0009-retro-evidence-sidecar-keyed-chain-construction.md) — keyed-chain construction, distinct chaining key, tamper-evidence scope, cross-process continuity, key-open-failure identities (C-1..C-7), loss-of-key semantics, and the wholesale-deletion consequence.
 - **PM record**: [chg-GH-232-pm-notes.yaml](./chg-GH-232-pm-notes.yaml) — scope reading, dependency verification, doc-impact list, and the recorded audit-invertibility design tension.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — layers, module-to-test mapping, invariant authoring, `pnpm check` aggregate, and permanent-suite rules.
@@ -92,18 +95,18 @@ The plan is built around five binding mechanisms: a **two-store fixture harness*
 | AC-F4-2 | The full shape-crash-guard matrix produces valid-entry output byte-identical to the clean run, the bounded partial-run facts in the error summary, an error-only envelope; store-level damage classifies through each state identity's own delivered projection — framing tear, sequence discontinuity, and unreadable file as `state.store.torn` (exit 2), missing key material as `state.keys.missing` (exit 2), permission violation as `state.permission.denied` with its delivered `user-validation` projection (exit 1) — every case fail-closed with explicit salvage as the only recovery | TC-RETRO-013, TC-RETRO-032, TC-RETRO-033, TC-RETRO-034, TC-RETRO-063 | Covered — both exits asserted (§4.5, §4.8) |
 | AC-F5-1 | A clean report renders exactly the four-key `data` shape `{level, findings[], followThrough[], evidenceRefs[]}` at exit 0 — the schema identity `delivery.retro.report.v1` is a declared contract constant, not an in-`data` field — findings fold only from recorded evidence and mechanical checks, each evidence-linked; follow-through folds only recorded entries with artifact-verified markers; zero model calls; byte-identical replays | TC-RETRO-001, TC-RETRO-003, TC-RETRO-006, TC-RETRO-035, TC-RETRO-036, TC-RETRO-038, TC-RETRO-039, TC-RETRO-040, TC-RETRO-063 | Covered |
 | AC-F5-2 | A verified-empty fold with passing truth checks renders an explicit empty report at exit 0; no finding is fabricated to justify the run | TC-RETRO-037, TC-RETRO-046, TC-RETRO-048 | Covered |
-| AC-F6-1 | Each of the five triggers surfaces as an explicit named finding; the two blocking triggers additionally fail classified — broken audit-ledger chain verdict as `retro.evidence.tamper-flagged` (exit 1, finding naming the audit domain) and zero-collector run as `retro.truth.vacuous-run` (exit 1); verified-empty is explicit evidence naming its check; no fabrication; every check has a triggerable negative fixture; removing or disabling a check fails the suite | TC-RETRO-017, TC-RETRO-041, TC-RETRO-042, TC-RETRO-043, TC-RETRO-044, TC-RETRO-045, TC-RETRO-046, TC-RETRO-047, TC-RETRO-048 | Covered — identities and exits pinned (§4.7, §4.8) |
+| AC-F6-1 | Each of the five triggers surfaces as an explicit named finding; the two blocking triggers additionally fail classified — broken audit-ledger chain verdict as `retro.evidence.tamper-flagged` (exit 1, finding naming the audit domain) and a collection run that executed with zero collector records as `retro.truth.vacuous-run` (exit 1); a no-eligible-target collect executes no run and completes as an explicit exit-0 success whose `data` summary carries the `no-target` outcome naming the empty selection and its reason — distinct from vacuous-run (DEC-14); verified-empty is explicit evidence naming its check; no fabrication; every check has a triggerable negative fixture; removing or disabling a check fails the suite | TC-RETRO-015, TC-RETRO-017, TC-RETRO-041, TC-RETRO-042, TC-RETRO-043, TC-RETRO-044, TC-RETRO-045, TC-RETRO-046, TC-RETRO-047, TC-RETRO-048 | Covered — identities, exits and the no-target/vacuous-run distinction pinned (§4.7, §4.8) |
 | AC-F7-1 | The export **engine** invoked through its bounded library surface with an explicit destination and a required limit produces a bounded deterministic bundle (selected records with trace ids and watermarks plus the full chain verdict) with in-band truncation, redaction applied, and no store mutation; a request without an explicit destination or with an invalid limit refuses classified `input.value.rejected` (exit 1) before any write; no unbounded path exists; no CLI export invocation, flag, or registry entry exists (CLI exposure defers to M2-S3) | TC-RETRO-049, TC-RETRO-050, TC-RETRO-051, TC-RETRO-052 | Covered at the engine boundary — refusals pinned |
 | AC-F8-1 | R1–R6 are declared with the closed status vocabulary; reads and writes classify valid/verified-empty/torn/unknown distinctly with repair guidance and never a silent zero; a malformed registry entry classifies without crashing; `state check` reports the retro registry verdict | TC-RETRO-001, TC-RETRO-007, TC-RETRO-031, TC-RETRO-055, TC-RETRO-056, TC-RETRO-057 | Covered |
 | AC-F9-1 | The registered periodic memory-audit trigger with its declared cadence records its run as evidence (trigger identity, window, outcome refs, trace ids), queryable through `retro report`, while the procedure stays in the memory consolidation skill and no new command exists | TC-RETRO-060 | Covered |
 
-All 16 acceptance criteria map to at least one automated case, and no AC carries a TODO marker. Both binding ticket ACs are covered by dedicated matrices, not by a single smoke case: binding AC 1 by the 24-case entry-level matrix plus the five-case store-level matrix (asserting both pinned exits) and the byte-equality oracle (TC-RETRO-030..034), binding AC 2 by the six-class mutation matrix plus the recomputed-checksum proof and the completeness meta-check (TC-RETRO-021..029). The three iteration-1 reporting gaps (GAP-T3/T4/T5) were closed by spec v1.1 and their assertions are now live; GAP-T6 and GAP-T7 were likewise pinned by the amended DEC-11 and AC-F5-1. Only non-blocking, delivery-bound notes (GAP-T1/T2/T8) remain, listed in §1.2 and §8.3.
+All 16 acceptance criteria map to at least one automated case, and no AC carries a TODO marker. Both binding ticket ACs are covered by dedicated matrices, not by a single smoke case: binding AC 1 by the 24-case entry-level matrix plus the five-case store-level matrix (asserting both pinned exits) and the byte-equality oracle (TC-RETRO-030..034), binding AC 2 by the six-class mutation matrix plus the recomputed-checksum proof and the completeness meta-check (TC-RETRO-021..029). The three iteration-1 reporting gaps (GAP-T3/T4/T5) were closed by spec v1.1 and their assertions are now live; GAP-T6 and GAP-T7 were likewise pinned by the amended DEC-11 and AC-F5-1. Spec v1.2 closed the DoR readiness-iter-1 fork — the no-target/vacuous-run distinction (DEC-14, TC-RETRO-015, §4.7 N-01, §4.8) and the three-kind retro registry (DM-9, A-T5) — and the implementation plan now exists, so GAP-T1 is resolved. Only non-blocking, delivery-bound notes (GAP-T2/T8, pinned as plan PIN-1..PIN-10) remain, listed in §1.2 and §8.3.
 
-**Capability coverage** (no capability unlinked): F-1 → TC-RETRO-009, 015, 016, 017, 018, 019; F-2 → TC-RETRO-008, 010, 011, 012, 013, 026, 053, 054; F-3 → TC-RETRO-014, 020..027, 028, 039; F-4 → TC-RETRO-030..034, 063; F-5 → TC-RETRO-035, 036, 037, 038, 040, 063; F-6 → TC-RETRO-017, 041..048; F-7 → TC-RETRO-049..052; F-8 → TC-RETRO-001, 007, 055, 056, 057, 058, 059; F-9 → TC-RETRO-060; F-10 → TC-RETRO-004, 005, 013, 030, 032, 033, 042, 045, 053, 063.
+**Capability coverage** (no capability unlinked): F-1 → TC-RETRO-009, 015, 016, 017, 018, 019; F-2 → TC-RETRO-008, 010, 011, 012, 013, 026, 053, 054; F-3 → TC-RETRO-014, 020..027, 028, 039; F-4 → TC-RETRO-030..034, 063; F-5 → TC-RETRO-035, 036, 037, 038, 040, 063; F-6 → TC-RETRO-015, 017, 041..048; F-7 → TC-RETRO-049..052; F-8 → TC-RETRO-001, 007, 055, 056, 057, 058, 059; F-9 → TC-RETRO-060; F-10 → TC-RETRO-004, 005, 013, 030, 032, 033, 042, 045, 053, 063.
 
 ### 3.2 Interface Coverage (EVT-#, DM-#)
 
-The spec declares no `API-#` (no network surface; §8.1) and exactly two event kinds.
+The spec declares no `API-#` (no network surface; §8.1) and exactly two event kinds; the data model has nine elements (DM-1..DM-9).
 
 | Interface | Element | TC ID(s) | Observable assertion |
 |-----------|---------|----------|----------------------|
@@ -117,6 +120,7 @@ The spec declares no `API-#` (no network surface; §8.1) and exactly two event k
 | DM-6 | Report data shape | TC-RETRO-035, TC-RETRO-036, TC-RETRO-037 | Exactly the four `data` keys; the schema identity `delivery.retro.report.v1` is a contract constant and never a `data` field; finding entries carry kind, text and evidence refs; follow-through carries action, verdict and a verified artifact reference only when checked |
 | DM-7 | Export bundle shape | TC-RETRO-049, TC-RETRO-051, TC-RETRO-052 | Declared export schema identity; selected records with trace ids and watermarks; full chain verdict; bounded with in-band truncation |
 | DM-8 | Retro error identities | TC-RETRO-004, TC-RETRO-005, TC-RETRO-030, TC-RETRO-042, TC-RETRO-045, TC-RETRO-053 | Exactly four `retro` rows; exact-code resolution; kind-only `retro` never used; exit-1 rows carry the pinned `user-validation` projection; documented table identical in both directions |
+| DM-9 | Retro trigger entries (`retro.trigger`) | TC-RETRO-001, TC-RETRO-057, TC-RETRO-060 | The third additive validated kind beside `retro.level` and `retro.run`: trigger identity, declared cadence and owning binding; hosts the periodic memory-audit trigger per DEC-10; validated at the boundary like the other two kinds |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
@@ -135,7 +139,7 @@ The spec declares no `API-#` (no network surface; §8.1) and exactly two event k
 
 ### 3.4 Gap Check (coverage-matrix integrity)
 
-- **Uncovered ACs**: none. No AC carries a pinned-outcome TODO: the three iteration-1 gaps were closed by spec v1.1 and their assertions are live in TC-RETRO-013/033 (both store-level exits), TC-RETRO-049/050 (engine-boundary export refusals) and TC-RETRO-042/045 (both blocking truth triggers). What remains is non-blocking and delivery-bound, not a coverage hole: GAP-T1 (implementation plan authored at phase 4), GAP-T2 / OQ-T8 (NFR-7 measured on the CI runner), and GAP-T8 / OQ-T6+OQ-T7 (exact artifact and record spellings, target-ordering constant, owning-story map).
+- **Uncovered ACs**: none. No AC carries a pinned-outcome TODO: the three iteration-1 gaps were closed by spec v1.1 and their assertions are live in TC-RETRO-013/033 (both store-level exits), TC-RETRO-049/050 (engine-boundary export refusals) and TC-RETRO-042/045 (both blocking truth triggers); spec v1.2 closed the no-target fork in TC-RETRO-015 (§4.7 N-01, §4.8) and pinned the three registry kinds (DM-9). What remains is non-blocking and delivery-bound, not a coverage hole: GAP-T2 / OQ-T8 (NFR-7 measured on the CI runner) and GAP-T8 / OQ-T6+OQ-T7 (artifact spellings, target-ordering constant, owning-story map), all pinned as plan PIN-1..PIN-10. GAP-T1 is resolved — the implementation plan exists.
 - **Orphan TCs**: none. Every one of the 64 TCs names at least one AC, form, or NFR in §5.1 and §5.2.
 - **Uncovered NFRs**: none. NFR-7's CI-verifiable bounded-work half is covered; its wall-clock thresholds are explicitly reference-only and delivery-bound (GAP-T2 / OQ-T8).
 - **Intentional duplicate coverage**: AC-F2-3 spans nine TCs because each alteration class is a distinct failure mode with a distinct fixture and oracle; AC-F4-1 spans four because the sidecar and registry are different boundaries and the byte-equality oracle is a separate property; AC-F5-1 spans nine because shape, fold provenance, follow-through, determinism, verified read, registry folding, envelope, and render purity fail independently; AC-F8-1 spans six because declaration, refusal, verdict matrix, malformed entry, doctor visibility, and record shapes are separate boundaries.
@@ -188,6 +192,7 @@ Legend: `x` = the suite asserts the requirement. Suite columns: `RCT` = `tests/s
 | DM-6 |  |  |  |  |  |  |  |  |  | x |  |  |  |  |  | x |
 | DM-7 |  |  |  |  |  |  |  |  |  |  |  | x |  |  |  | x |
 | DM-8 |  |  |  | x |  |  |  | x |  |  |  |  | x |  |  | x |
+| DM-9 | x |  |  |  |  |  |  |  | x |  |  |  | x |  |  | x |
 | NFR-1 |  |  |  |  |  |  |  | x | x |  |  |  |  |  |  | x |
 | NFR-2 |  |  |  |  |  |  | x |  |  |  |  |  |  |  |  | x |
 | NFR-3 |  |  | x |  |  | x | x |  |  |  |  |  |  |  | x | x |
@@ -249,7 +254,7 @@ This table is binding: a TC is complete only when every column is satisfied. `Le
 
 | TC | AC / NFR | Level / suite | Fixture / fake | Steps (compact) | Oracle | Exit / observable | Non-vacuity control |
 |----|----------|---------------|----------------|-----------------|--------|-------------------|---------------------|
-| TC-RETRO-001 | AC-F5-1, AC-F8-1, DM-1..DM-8, EVT-1/2, NFR-9 | Contract / `retro-contract` | New contracts modules; AST scan | Parse the contracts; assert declaration-only; assert the closed level, status, finding-kind, follow-through-verdict, mode, and error-kind vocabularies; assert record/verdict/report/export shapes and the four retro codes | Zero executable statements; exact closed sets; six levels; four codes; distinct export/report schema constants | Exports load; no I/O member | A seeded function body, a widened vocabulary, or a fifth level in a temp copy fails |
+| TC-RETRO-001 | AC-F5-1, AC-F8-1, DM-1..DM-9, EVT-1/2, NFR-9 | Contract / `retro-contract` | New contracts modules; AST scan | Parse the contracts; assert declaration-only; assert the closed level, status, finding-kind, follow-through-verdict, mode, and error-kind vocabularies; assert record/verdict/report/export shapes, the three registry record kinds (`retro.level`, `retro.run`, `retro.trigger`) and the four retro codes | Zero executable statements; exact closed sets; six levels; three registry kinds; four codes; distinct export/report schema constants | Exports load; no I/O member | A seeded function body, a widened vocabulary, a fifth level, or an added/missing registry kind in a temp copy fails |
 | TC-RETRO-002 | NFR-9, AC-F2-1, AC-F5-1 | Static / `retro-imports` + boundaries | New source files; boundary harness; forbidden literals; content inventory | Scan imports and runtime conditionals; assert contracts data-only and core domain pure; assert production I/O only at the admitted state/collector seam; assert no new package/subpath/dependency; assert inventory and forbidden literals updated | Zero `node:*`/`bun:*` in contracts and domain; 0 new runtime-API locations; 0 forbidden literals; inventory complete | Suite green | Seeded `node:fs` in contracts, a new runtime import, and a seeded forbidden literal all fail |
 | TC-RETRO-003 | AC-F5-1, NFR-9, RSK-6 | Static / `retro-render-purity` + checks | `scripts/checks/retro-render-purity.ts`; temp mutant copies | Assert collect/report/export folds import no inference adapter, provider client, model identifier, `fetch`, or ambient clock; run the invariant check with and without a planted model import | 0 model/inference/network imports in the render path; check exit 0 on the tree | Check exit 0; mutation test fails on the planted import | Planted inference import and a planted `fetch` each fail the check |
 | TC-RETRO-004 | AC-F2-3, AC-F2-4, AC-F4-1, AC-F6-1, DM-8, NFR-8 | Contract / `error-table` + behaviour | `ERROR_TABLE`, `DOMAIN_KINDS`, trigger paths | Assert `retro` in `DOMAIN_KINDS` and exactly four `retro` rows with exact code/category/retryable/consequence/projection/summary/remediation; drive each through its trigger; assert kind-only throws and contains via `fallback.internal`; assert store conditions reuse state rows | 4/4 exact rows; malformed/tamper/vacuous-run exit 1; denied exit 2; no fifth row | Codes reachable; envelopes carry the row fields | Removing one row, or switching a projection class to `platform-provider`, fails |
@@ -263,7 +268,7 @@ This table is binding: a TC is complete only when every column is satisfied. `Le
 | TC-RETRO-012 | AC-F2-2, NFR-3, TDR-0009 C-5 | Integration / `retro-chain-cross-process` | Two store/edge instances over one temp dir | Write records with instance A; verify and append with instance B; assert zero breaks and a continuing chain; repeat with the key read through a fresh edge | 0 false breaks; chain continues | Exit 0; verdict verified | A per-process key mutant produces false breaks and fails |
 | TC-RETRO-013 | AC-F2-2, AC-F4-2, NFR-8, TDR-0009 C-6 | Integration + Contract / `retro-key-artifact` | Key absent, corrupt, wrong-schema, `0644` | Assert absent on non-first open is `state.keys.missing`, exit 2; corrupt/wrong-schema is `state.store.torn`, exit 2; wrong bits is `state.permission.denied` with its delivered `user-validation` projection, exit 1; assert no new rows and no re-projection | Exact identities; 0 silent regeneration; no new or altered rows | Exit 2 for keys.missing/store.torn; exit 1 for permission | Each case paired with a valid-key control; a projection-class swap mutant fails |
 | TC-RETRO-014 | AC-F3-1, AC-F4-2, TDR-0009 | Integration / `retro-chain-salvage` | Sidecar plus key deleted; empty store | Delete the whole sidecar and key; run report; assert the outcome is a store condition (unreachable or verified-empty), never a chain break and never a false verified verdict; assert the diagnosis names the missing key/store | Store-level classification; no break claim | Exit 2 (or explicit verified-empty when the store is absent by policy) | The same fixture with a surviving key and one partial deletion yields a break; both directions asserted |
-| TC-RETRO-015 | AC-F1-1, AC-F1-3 | Integration / `retro-collect` | Delivery registry with three completed and one incomplete change; one already collected | Run collect with omitted level; assert the selected scope is the most recent completed change not yet collected; assert deterministic ordering (completion desc, ref asc — A-T3); assert an in-flight change is never selected; assert an already-collected scope yields an addendum | Exact selected ref; deterministic tiebreak; no in-flight selection | Exit 0 | A newest-any-state mutant and a re-collect-rewrite mutant both fail |
+| TC-RETRO-015 | AC-F1-1, AC-F1-3, AC-F6-1 | Integration / `retro-collect` | Delivery registry with three completed and one incomplete change; one already collected; an all-collected variant | Run collect with omitted level; assert the selected scope is the most recent completed change not yet collected; assert deterministic ordering (completion desc, ref asc — A-T3); assert an in-flight change is never selected; assert an already-collected scope yields an addendum; with every completed change already collected, assert the explicit `no-target` success at exit 0 — `data` carries the collection summary naming the empty selection and its reason, with zero collector invocations, zero sidecar appends, zero registry run records, and no `retro.truth.vacuous-run` classification | Exact selected ref; deterministic tiebreak; no in-flight selection; no-target is exit-0 `data` (never an exit-1 error) and distinct from the zero-record vacuous-run | Exit 0 (collection and no-target) | A newest-any-state mutant, a re-collect-rewrite mutant, and a no-target-classified-as-vacuous mutant all fail |
 | TC-RETRO-016 | AC-F1-1, NFR-4 | Integration / `retro-collect` | Scripted audit read, state families, notes; byte snapshots | Run collect; assert the audit read used the bounded surface with a positive limit and only declared filters; assert the three source families were read once each, GET-only; assert every source fixture byte-identical after the run | GET-only; bounded; 0 source mutations | Exit 0 | A write-to-source mutant and a second-read mutant fail |
 | TC-RETRO-017 | AC-F1-2, AC-F6-1, NFR-5 | Integration / `retro-collect` + `retro-truth-checks` | Audit read with two orphans and a broken verdict; truncation flag | Run collect; assert both skipped-ordinal findings and the full chain verdict (verified, records, breaks, orphans) are carried into evidence and the run record verbatim; assert none is dropped or rewritten; assert a truncated audit read is reported in-band | Findings and verdict byte-equal to input; truncation reported | Exit 1 (`retro.evidence.tamper-flagged`) for the broken-verdict fixture; the clean control exits 0 | Dropping one orphan or summarising the verdict in a mutant fails |
 | TC-RETRO-018 | AC-F1-1, EVT-2, DM-5, NFR-4 | Integration / `retro-collect` | Two consecutive runs | Run collect twice; assert one additive run record per run with run id, level, mode, scope, counts (collected/malformed/skipped-source), consumed verdicts and truth verdict; assert the records validate at the boundary and interleave safely with sidecar records | One record per run; exact fields; additive | Exit 0 | A rewrite-instead-of-append mutant fails |
@@ -292,8 +297,8 @@ This table is binding: a TC is complete only when every column is satisfied. `Le
 | TC-RETRO-041 | AC-F6-1 | Integration / `retro-truth-checks` | Audit read with two orphans | Run collect and report; assert each orphan surfaces as a named finding with evidence refs and appears in the run record's truth verdict; assert none is dropped | 2/2 findings; linked; never dropped | Exit 0 (findings present) | A drops-orphans mutant fails |
 | TC-RETRO-042 | AC-F6-1, AC-F2-3, DM-8, NFR-8 | Integration / `retro-truth-checks` | Audit read with `chain.verified: false` | Run collect and report; assert a named finding carries the broken verdict and names the audit domain; assert the command fails `retro.evidence.tamper-flagged` at exit 1; assert the run record is not clean | Finding present; audit domain named; identity and exit pinned | Exit 1 (`retro.evidence.tamper-flagged`) | A clean-verdict control; an ignore-broken-verdict mutant and a projection-swap mutant both fail |
 | TC-RETRO-043 | AC-F6-1 | Integration / `retro-truth-checks` | Report fold referencing a removed trace id | Run report; assert the dangling ref is a finding, is not served as a trusted ref, and the evidence ref list distinguishes unresolved refs | Dangling ref flagged | Exit 0 (finding present) | A resolver-that-fabricates mutant fails |
-| TC-RETRO-044 | AC-F6-1 | Integration / `retro-truth-checks` | Completed change with zero audit records; closed change with no closeout record; quiet legitimate change | Run collect/report per fixture; assert both expected-activity-absent variants are findings, and the legitimate quiet case yields verified-empty instead | Findings vs verified-empty distinction | Exit 0 (findings present) | A conflating mutant (finding on the quiet case, or silence on the active case) fails |
-| TC-RETRO-045 | AC-F6-1, DM-8, NFR-8 | Integration / `retro-truth-checks` | Source set non-empty; collector call log empty | Run collect; assert the zero-collector run is a finding and never a silent success; assert the command fails `retro.truth.vacuous-run` at exit 1 with the run record carrying the truth verdict | Finding present; category `user`, `user-validation`; no silent success | Exit 1 (`retro.truth.vacuous-run`) | A one-collector control is clean; a silent-success mutant and a row-omission mutant fail |
+| TC-RETRO-044 | AC-F6-1 | Integration / `retro-truth-checks` | Completed change with zero audit records; closed change with no closeout record; declared-quiet scope (neither completed nor closed, so the C-04 expectation rule derives no activity) | Run collect/report per fixture; assert both expected-activity-absent variants are findings, and the declared-quiet scope yields verified-empty instead | Findings vs verified-empty distinction, derived from the C-04 predicate | Exit 0 (findings present) | A conflating mutant (finding on the declared-quiet scope, or silence on the active case) fails |
+| TC-RETRO-045 | AC-F6-1, DM-8, NFR-8 | Integration / `retro-truth-checks` | A target selected and the run executed; source set non-empty; collector call log empty; paired all-collected no-target fixture | Run collect; assert the zero-collector run is a finding and never a silent success; assert the command fails `retro.truth.vacuous-run` at exit 1 with the run record carrying the truth verdict; assert the all-collected fixture returns the distinct exit-0 `no-target` success and neither outcome is derived from the other (DEC-14) | Finding present; category `user`, `user-validation`; no silent success; no-target/vacuous-run distinct | Exit 1 (`retro.truth.vacuous-run`) vs exit 0 (`no-target`) | A one-collector control is clean; a silent-success mutant, a row-omission mutant and a conflating mutant fail |
 | TC-RETRO-046 | AC-F5-2, AC-F6-1 | Integration / `retro-truth-checks` | Three legitimately empty sources; one with activity | Run report; assert explicit verified-empty evidence names each check that produced it; assert the active source is not labelled verified-empty; assert no finding is fabricated | Explicit verified-empty; no vacuum | Exit 0 | A vacuous-silence mutant (empty findings with no verified-empty evidence) fails |
 | TC-RETRO-047 | AC-F6-1, RSK-4 | Integration / `retro-truth-check-mutants` | Five temp mutant copies, one check disabled each | Run the suite against each mutant; assert each mutant produces the prohibited observable (dropped finding, silent clean exit, fabricated verified-empty) and the suite fails | 5/5 mutants caught | Suite fails per mutant | The unmutated control passes |
 | TC-RETRO-048 | AC-F5-2, AC-F6-1 | Integration / `retro-truth-checks` | Quiet fixture; single-trigger fixtures (one per trigger) | Assert findings count equals the number of triggered checks exactly, and the quiet fixture yields zero findings plus explicit verified-empty entries | Exact finding-to-trigger correspondence; no fabrication | Exit 0 | A fabricating mutant and a dropping mutant both fail |
@@ -305,10 +310,10 @@ This table is binding: a TC is complete only when every column is satisfied. `Le
 | TC-RETRO-054 | AC-F2-1, AC-F2-4, DM-2, EVT-1 | Integration / `retro-denied` | Identity present, absent, whitespace-only | Assert a present identity is recorded verbatim with the `claimed` marker; assert absent/blank records no identity and infers none; assert identity is never consulted as an authorization input (a delivery-agent-shaped value still succeeds through the collector seam and is still refused outside it) | Claimed attribution; no inference; no authorization semantics | Exit 0 / 2 by seam | A verification-of-identity mutant fails |
 | TC-RETRO-055 | AC-F8-1, NFR-1 | Integration / `retro-registry` | Valid, empty, torn, unknown fixtures | Assert distinct verdicts valid/verified-empty/torn/unknown with repair guidance and never a silent zero; assert a write with a bad kind/schema/missing field/closed-vocabulary violation is refused `state.store.unknown` `not_landed` and appends nothing | Four distinct verdicts; classified write refusal | Exit 2 by class (read verdict is data) | Each verdict paired with a valid control; a zero-defaulting mutant fails |
 | TC-RETRO-056 | AC-F8-1 | Integration / `doctor-state` | Doctor with a retro registry fact: valid-empty, torn, unknown, permission | Run doctor; assert the state check includes the retro registry store, reports `ok` for verified-empty and the `store-torn`/`store-unknown`/`store-unreadable` reasons with fix hints otherwise; assert the overall verdict follows the existing rules | Retro registry visible in `state check` | Doctor exit 0 / 1 by verdict | A doctor mutant omitting the retro store fails |
-| TC-RETRO-057 | AC-F8-1, DM-1, DM-5, EVT-2 | Contract + Integration / `retro-registry` | Seeded level and run records | Assert exact level-entry fields (name, scope kind, trigger, status) and run-record fields (run id, level, mode, scope, counts, consumed verdicts, truth verdict); assert both kinds are additive, interleave with other kinds safely, and validate at the boundary | Exact field sets; additive | Success | A missing-field or widened-field mutant fails |
+| TC-RETRO-057 | AC-F8-1, DM-1, DM-5, DM-9, EVT-2 | Contract + Integration / `retro-registry` | Seeded level, run and trigger records | Assert exact level-entry fields (name, scope kind, trigger, status), run-record fields (run id, level, mode, scope, counts, consumed verdicts, truth verdict) and trigger-entry fields (identity, declared cadence, owning binding); assert all three kinds are additive, interleave with each other safely, and validate at the boundary | Exact field sets for the three kinds; additive | Success | A missing-field or widened-field mutant fails |
 | TC-RETRO-058 | AC-F1-3, DM-1 | Integration / `retro-levels` | Level matrix §4.6; declared-only level fixtures; I/O spy | Run each refusal; assert `input.value.rejected`, exit 1, zero reads/appends, and a remediation hint containing the declared owning story for the level; assert the hint map covers all five declared-only levels | 5/5 hints; 0 I/O | Exit 1 | The `change` control runs; an empty-hint mutant fails |
 | TC-RETRO-059 | AC-F1-3 | Integration / `retro-levels` | Omitted level; explicit level; extra positional; `--ref`; missing value | Assert omitted defaults to `change` for collect and report; assert `--level change` is equivalent; assert an extra positional or missing value is `input.value.rejected`; assert `--ref` is `fallback.invocation` (locked surface); assert `--json` is accepted globally | Default honoured; locked surface enforced | Exit 0 / 1 | A hidden-`--ref` mutant and an ignored-extra-positional mutant fail |
-| TC-RETRO-060 | AC-F9-1, DM-1, EVT-1 | Integration / `retro-memory-audit` | Registry with the memory-audit trigger; one recorded run | Assert the trigger is registered with a declared cadence; append a run through the collector seam; assert the run evidence carries trigger identity, window, outcome refs and trace ids and is queryable through report; assert no memory-audit command exists in the command surface or edge composition; assert the procedure is not reimplemented (no skill body copied into source) | Trigger registered; run evidenced; no new command | Exit 0 | A missing-trigger and a new-command mutant both fail |
+| TC-RETRO-060 | AC-F9-1, DM-1, DM-9, EVT-1 | Integration / `retro-memory-audit` | Registry with the memory-audit `retro.trigger` entry; one recorded run | Assert the trigger is registered as a `retro.trigger` entry (DM-9) with a declared cadence and owning binding; append a run through the collector seam; assert the run evidence carries trigger identity, window, outcome refs and trace ids and is queryable through report; assert no memory-audit command exists in the command surface or edge composition; assert the procedure is not reimplemented (no skill body copied into source) | Trigger registered as a validated trigger entry; run evidenced; no new command | Exit 0 | A missing-trigger and a new-command mutant both fail |
 | TC-RETRO-061 | NFR-7, NFR-5 | Performance / `retro-performance` | Generated 10,000-record sidecar; query/append counters; soft budget | Assert one chain walk per read, bounded appends per collection, a positive audit-read limit, declared timeouts present, and per-record work linear; measure collect/report/export against the soft local budget and record the non-CI reference in §10 | Bounded work; reference numbers recorded, not gated | Exit 0 | A per-record extra-read mutant breaks the count invariance |
 | TC-RETRO-062 | NFR-6, NFR-3, NFR-9 | Static + Integration / `retro-hermetic` | Suite files; committed fixtures; path scanner | Scan the retro suites for spawns, network, `$HOME`, ambient clock/env, real state paths, and writes outside temp roots; scan committed fixtures and goldens for key-shaped literals and real paths; assert a positive scan scope | 0 real dependencies; 0 key literals outside the allowlist | Suite green | A planted spawn and a planted key-shaped literal both fail |
 | TC-RETRO-063 | AC-F4-2, AC-F5-1, F-10 | Integration / `retro-output` | Every success and failure class; both modes; goldens | Assert exactly one envelope per run; `data` XOR `error`; exact envelope keys; exit projection 0/1/2 per §4.8; scripted one-line discipline; human partial output before the diagnostic on exit 1 | Envelope/exit matrix exact | 0/1/2 by class | data+error, wrong-exit, and context-on-scripted-line mutants fail |
@@ -382,12 +387,15 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 | C-01 | Skipped ordinals surfaced | Audit read with two orphan reservations | 2 named findings with evidence refs, carried into the run record | Audit read with zero orphans yields no C-01 finding |
 | C-02 | Audit chain verdict carried | Audit read with `verified: false` and one break | Named finding carrying the verdict and naming the audit domain; the command fails `retro.evidence.tamper-flagged` (exit 1); never a clean truth verdict | Verified audit read yields no C-02 finding |
 | C-03 | Evidence refs resolve | Report fold references a removed trace id | Dangling-ref finding; ref never served as trusted | All refs present yields no finding |
-| C-04a | Expected activity absent (audit) | Completed change, zero audit invocations in window | Finding, not clean silence | Same change with one invocation yields no finding |
-| C-04b | Expected activity absent (closeout) | Closed change with no closeout outcome record | Finding, not clean silence | Closed change with one closeout record yields no finding |
-| C-05 | Zero collectors | Non-empty declared source set, empty collector call log | Finding, never silent success; the collection fails `retro.truth.vacuous-run` (exit 1) | One collector run yields no finding; the verified-empty V-01 case stays distinct |
+| C-04a | Expected activity absent (audit) | Completed change whose collection run executed, zero audit invocations in window | Finding, not clean silence (evaluated only within a run that executed) | Same change with one invocation yields no finding |
+| C-04b | Expected activity absent (closeout) | Closed change whose collection run executed, no closeout outcome record | Finding, not clean silence | Closed change with one closeout record yields no finding |
+| C-05 | Zero collectors (run executed) | A target scope was selected and the collection run executed; non-empty declared source set; collector call log empty | Finding, never silent success; the collection fails `retro.truth.vacuous-run` (exit 1) | One collector run yields no finding; the verified-empty V-01 case and the no-target N-01 case stay distinct |
+| N-01 | No eligible target (no run) | Every completed change already collected at the level; no uncollected target remains | **Explicit `no-target` success**: exit 0; `data` carries the collection summary with the explicit `no-target` outcome naming the empty selection and its reason; zero collector invocations, zero sidecar appends, zero registry run records; never `retro.truth.vacuous-run` (DEC-14) | A workspace with one uncollected completed change runs collection normally (C-01..C-05 evaluate); the empty-selection fixture is paired with that non-empty control |
 | V-01 | Verified-empty is explicit | Three legitimately empty sources | Explicit verified-empty evidence naming each check; zero findings | A quiet window with expected activity produces C-04, not V-01 |
 
-**Blocking versus non-blocking.** C-01, C-03, C-04a and C-04b are findings rendered in a successful (`data`) report at exit 0. C-02 and C-05 are blocking: the command fails with the pinned identity (exit 1), so the machine envelope carries `error` only and the finding travels in the run record, the evidence, and the error summary's bounded facts (DEC-12). A test must not expect `data.findings` on a blocking trigger.
+**Blocking versus non-blocking.** C-01, C-03, C-04a and C-04b are findings rendered in a successful (`data`) report at exit 0. C-02 and C-05 are blocking: the command fails with the pinned identity (exit 1), so the machine envelope carries `error` only and the finding travels in the run record, the evidence, and the error summary's bounded facts (DEC-12). A test must not expect `data.findings` on a blocking trigger. **N-01 is neither a finding nor a failure:** no collection run executes, so the command completes at exit 0 with `data` carrying the collection summary and the explicit `no-target` outcome; the envelope carries `data`, never `error`.
+
+**No-target versus zero-record run (DEC-14, spec Appendix B).** These are two distinct pinned outcomes and the suite must assert them as such, not as variants of one another. N-01 is a collect that resolved an **empty** target selection, executed **no** run, and succeeded explicitly at exit 0 with `data` naming the empty selection and its reason. C-05 is a collect that selected a target and **executed** a run which recorded zero collector records, and whose new-work path fails `retro.truth.vacuous-run` at exit 1 with an `error` envelope. TC-RETRO-015 pins N-01's exit and `data` shape; TC-RETRO-045 pins C-05's identity and exit; TC-RETRO-048 keeps trigger-to-finding correspondence exact. A mutant that classifies N-01 as vacuous, or C-05 as a `no-target` success, fails the suite.
 
 ### 4.8 Exit and Identity Oracle
 
@@ -395,7 +403,7 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 |---|---|---|---|---|---|---|---|
 | Malformed evidence entry, sidecar or registry | `retro.evidence.malformed-entry` | platform | false | not_landed | user-validation | 1 | 030, 031, 032, 034 |
 | Sidecar chain break, key substitution, or broken consumed audit-ledger verdict | `retro.evidence.tamper-flagged` | platform | false | not_landed | user-validation | 1 | 021..027, 039, 042 |
-| Zero-collector collection (truth validation) | `retro.truth.vacuous-run` | user | false | not_landed | user-validation | 1 | 045, 048 |
+| Zero-collector collection run (truth validation; the run executed) | `retro.truth.vacuous-run` | user | false | not_landed | user-validation | 1 | 045, 048 |
 | Write outside the collector seam or from a delivery-agent context | `retro.evidence.denied` | platform | false | not_landed | platform-provider | 2 | 053 |
 | Torn or unreadable sidecar/store | `state.store.torn` | platform | false | not_landed | platform-provider | 2 | 033 |
 | Missing key on a non-first open | `state.keys.missing` | platform | false | not_landed | platform-provider | 2 | 013, 033 |
@@ -403,9 +411,12 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 | Unknown or declared-but-unimplemented level; invalid or missing value; invalid export request | `input.value.rejected` | user | false | not_landed | user-validation | 1 | 050, 058, 059 |
 | Undeclared flag (`--ref`) or fused flag | `fallback.invocation` | user | false | unknown | user-validation | 1 | 059 |
 | Unclassifiable handler failure, kind-only `retro` | `fallback.internal` | platform | false | unknown | platform-provider | 2 | 004 |
+| No eligible uncollected target — explicit `no-target` outcome, no collection run | — (no error identity; the outcome is carried as `no-target` in `data`) | — | — | — | success | 0 | 015 |
 | Success | — | — | — | — | success | 0 | 035, 037, 049 |
 
 **Projection-class pin (DEC-11, spec v1.1).** Exit is a pure function of the projection class (`success` 0, `user-validation` 1, `platform-provider` 2). The three exit-1 `retro` rows carry `user-validation` even where the category is `platform` — that is what reaches exit 1 — and `retro.evidence.denied` keeps `platform-provider` (exit 2); `retro.truth.vacuous-run` is category `user` with the same `user-validation` class. Store-level rows keep their delivered projections untouched (NG-10): `state.store.torn` and `state.keys.missing` exit 2, `state.permission.denied` exits 1. An invalid or incomplete export request reuses the existing `input.value.rejected` row at exit 1; no new row is created for export. `retro.evidence.tamper-flagged` classifies two triggers — a detected sidecar chain break or key substitution (F-3), and a broken consumed audit-ledger chain verdict surfaced by the truth checks (F-6), the latter naming the audit domain, never the sidecar.
+
+**No-target versus vacuous-run pin (DEC-14, spec v1.2).** Two exit outcomes must never be interchanged. `retro collect` with no eligible uncollected target executes **no** collection run (no collector invocations, no sidecar appends, no registry run record) and returns the `no-target` **success** row above: exit 0, `data` only, the collection summary naming the empty selection and its reason, and no error identity. A collection run that **executed** and produced zero collector records returns `retro.truth.vacuous-run`: exit 1, `error` only, category `user`, `user-validation`, `not_landed`. Because the vacuous-run check requires a run that happened, the two conditions are mutually exclusive by construction; a test that derives one from the other (for example, treating an empty selection as a zero-collector run) contradicts AC-F6-1 and Appendix B and fails.
 
 ### 4.9 Prohibited Test Dependencies (explicit)
 
@@ -423,7 +434,7 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 
 | TC ID | Title | Type | Tier | Automation | Priority | AC Coverage |
 |-------|-------|------|------|------------|----------|-------------|
-| TC-RETRO-001 | Contract vocabulary, closed vocabularies and data-only shapes | Contract | Contract | Automated | Critical | AC-F5-1, AC-F8-1, DM-1..DM-8, EVT-1/2 |
+| TC-RETRO-001 | Contract vocabulary, closed vocabularies and data-only shapes | Contract | Contract | Automated | Critical | AC-F5-1, AC-F8-1, DM-1..DM-9, EVT-1/2 |
 | TC-RETRO-002 | Tier, boundary, runtime confinement and inventory | Regression | Static | Automated | Critical | NFR-9, AC-F2-1, AC-F5-1 |
 | TC-RETRO-003 | No model calls or network in the collect/report/export render path | Regression | Static + Check | Automated | Critical | AC-F5-1, NFR-9, RSK-6 |
 | TC-RETRO-004 | Four `retro` error identities, triggers, projections and containment | Regression | Contract + Integration | Automated | Critical | AC-F2-3, AC-F2-4, AC-F4-1, AC-F6-1, DM-8, NFR-8 |
@@ -437,7 +448,7 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 | TC-RETRO-012 | Cross-process verification with zero false chain breaks | Happy Path | Integration | Automated | Critical | AC-F2-2, NFR-3 |
 | TC-RETRO-013 | Key-open failures reuse the existing state identities | Negative | Integration + Contract | Automated | Critical | AC-F2-2, AC-F4-2, NFR-8 |
 | TC-RETRO-014 | Wholesale sidecar destruction is a store condition, not a chain break | Corner Case | Integration | Automated | Important | AC-F3-1, AC-F4-2 |
-| TC-RETRO-015 | `change`-level automatic target selection | Happy Path | Integration | Automated | Critical | AC-F1-1, AC-F1-3 |
+| TC-RETRO-015 | `change`-level automatic target selection and the explicit no-target outcome | Happy Path | Integration | Automated | Critical | AC-F1-1, AC-F1-3, AC-F6-1 |
 | TC-RETRO-016 | GET-only collection over the three delivered source families | Regression | Integration | Automated | Critical | AC-F1-1, NFR-4 |
 | TC-RETRO-017 | Audit skipped ordinals and chain verdict carried verbatim | Happy Path | Integration | Automated | Critical | AC-F1-2, AC-F6-1, NFR-5 |
 | TC-RETRO-018 | Additive, validated retro run records | Happy Path | Integration | Automated | Critical | AC-F1-1, EVT-2, DM-5 |
@@ -479,10 +490,10 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 | TC-RETRO-054 | Claimed collector identity: attribution, never authentication | Happy Path | Integration | Automated | High | AC-F2-1, AC-F2-4, DM-2 |
 | TC-RETRO-055 | Registry boundary verdict matrix and classified write refusal | Negative | Integration | Automated | Critical | AC-F8-1, NFR-1 |
 | TC-RETRO-056 | `state check` reports the retro registry store verdict | Happy Path | Integration | Automated | Critical | AC-F8-1 |
-| TC-RETRO-057 | Registry level and run record shapes are validated and additive | Contract | Contract + Integration | Automated | High | AC-F8-1, DM-1, DM-5, EVT-2 |
+| TC-RETRO-057 | Registry level, run and trigger record shapes are validated and additive | Contract | Contract + Integration | Automated | High | AC-F8-1, DM-1, DM-5, DM-9, EVT-2 |
 | TC-RETRO-058 | Level refusal matrix with owning-story hints and zero I/O | Negative | Integration | Automated | Critical | AC-F1-3, DM-1 |
 | TC-RETRO-059 | Omitted level defaults to `change`; the locked surface is enforced | Happy Path | Integration | Automated | Critical | AC-F1-3 |
-| TC-RETRO-060 | The periodic memory-audit trigger is registered and its run is evidence | Happy Path | Integration | Automated | High | AC-F9-1, DM-1, EVT-1 |
+| TC-RETRO-060 | The periodic memory-audit trigger is registered as a `retro.trigger` entry and its run is evidence | Happy Path | Integration | Automated | High | AC-F9-1, DM-1, DM-9, EVT-1 |
 | TC-RETRO-061 | Bounded work and the non-CI performance reference on 10,000 records | Performance | Performance | Automated | Medium | NFR-7, NFR-5 |
 | TC-RETRO-062 | Hermeticity, no ambient reads, and fixture key hygiene | Regression | Static + Integration | Automated | Critical | NFR-6, NFR-3, NFR-9 |
 | TC-RETRO-063 | Envelope, exit projection and partial-output rendering | Regression | Integration + Golden | Automated | Critical | AC-F4-2, AC-F5-1, F-10 |
@@ -497,7 +508,7 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-5, F-8, F-10, DM-1, DM-2, DM-3, DM-4, DM-5, DM-6, DM-7, DM-8, EVT-1, EVT-2, AC-F5-1, AC-F8-1, NFR-9
+**Related IDs**: F-5, F-8, F-9, F-10, DM-1, DM-2, DM-3, DM-4, DM-5, DM-6, DM-7, DM-8, DM-9, EVT-1, EVT-2, AC-F5-1, AC-F8-1, NFR-9
 **Test Type(s)**: Contract, Static
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/retro-contract.test.ts`; `packages/core/src/contracts/retro.ts`
@@ -513,7 +524,7 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 1. Parse the module and assert every top-level statement is a type alias, interface, `import type`, `export`, or an `as const` declaration; assert zero executable statements, function bodies, `new`, or calls.
 2. Assert the declared level set is exactly the six concepts-doc levels with `change` mapped to R1, and that the implementation-status vocabulary is exactly `implemented` and `declared`.
 3. Assert the closed vocabularies exist and are non-empty: modes (`collect`, `report`), finding kinds, follow-through verdicts, chain-verdict shape keys, export/report schema identity constants.
-4. Assert the record-shape declarations carry the spec field sets: sidecar record (`traceId`, `level`, `source`, window bounds, `collectedAt`, claimed identity, payload refs, payload schema id, `chainValue`), run record, chain verdict, report data, export bundle.
+4. Assert the record-shape declarations carry the spec field sets: sidecar record (`traceId`, `level`, `source`, window bounds, `collectedAt`, claimed identity, payload refs, payload schema id, `chainValue`), run record, chain verdict, report data, export bundle, and the three registry kinds (`retro.level`, `retro.run`, `retro.trigger`) with the trigger entry's identity, declared cadence and owning binding.
 5. Assert the four retro error codes are declared exactly once and the audit read outcome type is consumed, not redefined.
 
 **Expected Outcome**:
@@ -910,12 +921,12 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 
 - Whole-store destruction is a store-level condition; partial deletion is a chain break; the distinction is observable and honest.
 
-#### TC-RETRO-015 - `change`-level automatic target selection
+#### TC-RETRO-015 - `change`-level automatic target selection and the explicit no-target outcome
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-1, F-8, AC-F1-1, AC-F1-3, DEC-5
+**Related IDs**: F-1, F-6, F-8, AC-F1-1, AC-F1-3, AC-F6-1, DEC-5, DEC-14
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/retro-collect.test.ts`
@@ -924,6 +935,7 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 **Preconditions**:
 
 - A delivery registry fixture with three completed changes (distinct completion times), one in-flight change, and one completed change already collected at `change`.
+- An all-collected variant in which every completed change is already collected at `change`.
 - A fixed injected clock.
 
 **Steps**:
@@ -931,16 +943,17 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 1. Run collect with omitted `--level`; assert the selected scope is the most recent completed, not-yet-collected change.
 2. Assert ordering is deterministic: completion timestamp descending, then ref ascending on a tie (A-T3); run twice and assert the same selection.
 3. Assert the in-flight change is never selected even when it is the newest record.
-4. Mark the selected scope collected and re-run; assert the next-most-recent uncollected change is selected or, when none remains, an explicit no-target outcome (never a fabricated scope).
+4. Mark the selected scope collected and re-run; assert the next-most-recent uncollected change is selected. Then, with every completed change already collected, run collect again and assert the pinned no-target expectation: exit **0** with a `data` envelope (never `error`); `data` carries the collection summary with the explicit `no-target` outcome naming the empty selection and its reason; zero collector invocations, zero sidecar bytes appended, zero registry run records; and never `retro.truth.vacuous-run` (DEC-14).
 5. Assert no ref argument is consulted; the invocation carries only `--level` and `--json`.
 
 **Expected Outcome**:
 
 - Deterministic, state-driven target selection that never selects an in-flight change and never invents a scope.
+- An all-collected workspace returns the pinned `no-target` success at exit 0 — `data` only, no run evidence — distinct from a zero-collector run.
 
 **Notes / Clarifications**:
 
-- A newest-any-state mutant and a re-collect-rewrite mutant must fail. The tiebreak is a plan-time determinism pin (A-T3) because the spec does not pin ordering.
+- A newest-any-state mutant, a re-collect-rewrite mutant, and a no-target-classified-as-vacuous mutant must fail. The tiebreak is a plan-time determinism pin (A-T3, plan PIN-5) because the spec does not pin ordering; the no-target outcome itself is spec-pinned (DEC-14, AC-F6-1).
 
 #### TC-RETRO-016 - GET-only collection over the three delivered source families
 
@@ -1726,7 +1739,7 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-1, F-5, F-6, AC-F6-1
+**Related IDs**: F-1, F-5, F-6, AC-F6-1, DEC-14
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/retro-truth-checks.test.ts`
@@ -1734,21 +1747,22 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 
 **Preconditions**:
 
-- Fixture A: a completed change whose collection window contains zero audit invocations.
+- Fixture A: a completed change whose collection window contains zero audit invocations (a collection run that executed).
 - Fixture B: a closed change with no closeout outcome record.
-- Fixture C: a legitimately quiet change with no expected activity (verified-empty).
+- Fixture C — declared-quiet: a source/window for which the pinned C-04 predicate derives **no expected activity** because the scope is neither completed nor closed under F-6's rule (an in-flight change, or a window outside any change scope). "Declared-quiet" means the expectation is absent by rule, not that an expected-active source returned zero records (that is the finding case) and not that a run executed with zero collector records (that is C-05 vacuous-run).
 
 **Steps**:
 
 1. Run collect/report on A; assert a named C-04 finding naming the absent audit activity and its window.
 2. Run B; assert a named C-04 finding naming the absent closeout record.
-3. Run C; assert no C-04 finding and explicit verified-empty evidence naming the check.
+3. Run C; assert no C-04 finding and explicit verified-empty evidence naming the check; assert the predicate reported "no expectation for this scope" rather than "zero records on an expected-active source".
 4. Assert a change with one invocation and one closeout record yields no C-04 finding (paired control).
-5. Run a mutant that treats a zero-count window as verified-empty without checking expectation; assert A and B fail.
+5. Run a mutant that treats a zero-count window as verified-empty without consulting the expectation rule; assert A and B fail.
+6. Assert C's outcome is not `retro.truth.vacuous-run` (no run executed on an expected-active source) and that an executed run with zero collector records on expected-active sources resolves to C-05, never to C-04 or verified-empty.
 
 **Expected Outcome**:
 
-- Expected activity absent is loud; genuine quiet is verified-empty; the distinction is observable.
+- Expected activity absent is loud; a declared-quiet scope where the rule derives no expectation is verified-empty; a zero-record executed run is the distinct C-05 vacuous-run. All three are observable and mutually exclusive.
 
 #### TC-RETRO-045 - Truth check C-05: a zero-collector run refuses as `retro.truth.vacuous-run`
 
@@ -1763,7 +1777,8 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 
 **Preconditions**:
 
-- A declared non-empty source set with a collector call log showing zero executed collectors (all collectors skipped for a non-classified reason).
+- A declared non-empty source set with a collector call log showing zero executed collectors (all collectors skipped for a non-classified reason) after a target scope was selected.
+- A paired all-collected fixture (no eligible uncollected target) that must never be classified as C-05.
 - A control with one executed collector.
 
 **Steps**:
@@ -1773,14 +1788,17 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 3. Assert the report surfaces the finding.
 4. Assert the collection fails `retro.truth.vacuous-run` (category `user`, `user-validation`, `not_landed`) at exit 1; assert the run record records the non-clean truth verdict and the envelope carries the classified error.
 5. Run the one-collector control; assert zero C-05 findings.
+6. Assert distinctness from the no-target outcome: run collect with every completed change already collected; assert exit 0, a `data` envelope carrying the collection summary with the explicit `no-target` outcome naming the empty selection and its reason, zero collector invocations, zero sidecar appends, and zero registry run records — and no `retro.truth.vacuous-run`. Assert the two fixtures differ in identity, exit and `data`/`error` shape, and that neither outcome is derived from the other (DEC-14, spec Appendix B).
 
 **Expected Outcome**:
 
 - A pipeline that ran nothing cannot read as clean: the collection refuses `retro.truth.vacuous-run` at exit 1 and the finding is explicit and evidenced.
+- The no-eligible-target case is the opposite pinned outcome — an explicit exit-0 `no-target` success with no run — and the suite proves the two are distinct.
 
 **Notes / Clarifications**:
 
 - DEC-11's vacuous-run row is a truth-validation refusal, not malformation and not tamper. A mutant that returns exit 0, or one that classifies the zero-collector case as malformation, fails the suite.
+- C-05 requires a run that actually executed. A mutant that classifies the all-collected no-target fixture as `retro.truth.vacuous-run` (or maps the zero-collector run onto a `no-target` success) fails TC-RETRO-045/015 (DEC-14).
 
 #### TC-RETRO-046 - Verified-empty is explicit and distinct from vacuous green
 
@@ -2095,12 +2113,12 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 
 - `state check` reports the retro registry verdict with the existing vocabulary and hints.
 
-#### TC-RETRO-057 - Registry level and run record shapes are validated and additive
+#### TC-RETRO-057 - Registry level, run and trigger record shapes are validated and additive
 
 **Scenario Type**: Contract
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: F-8, DM-1, DM-5, EVT-2, AC-F8-1
+**Related IDs**: F-8, DM-1, DM-5, DM-9, EVT-2, AC-F8-1
 **Test Type(s)**: Contract, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/retro-registry.test.ts`, `tests/structure/retro-contract.test.ts`
@@ -2109,13 +2127,13 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 **Preconditions**:
 
 - The declared boundary declaration for the retro registry.
-- A seeded registry with levels and runs interleaved with other store kinds.
+- A seeded registry with levels, runs and trigger entries interleaved with other store kinds.
 
 **Steps**:
 
-1. Assert the boundary declares the level and run kinds with their schema ids, identity fields, required fields, and closed vocabularies.
-2. Assert a level entry's exact field set and a run record's exact field set.
-3. Assert both kinds are additive and interleave safely; assert reading them does not disturb other kinds.
+1. Assert the boundary declares the three kinds (`retro.level`, `retro.run`, `retro.trigger`) with their schema ids, identity fields, required fields, and closed vocabularies.
+2. Assert a level entry's, a run record's and a trigger entry's exact field sets; the trigger entry carries trigger identity, declared cadence and owning binding (DM-9).
+3. Assert all three kinds are additive and interleave safely; assert reading them does not disturb other kinds.
 4. Assert a payload with an extra undeclared field is refused or preserved as unknown per the state contract, never silently accepted.
 5. Run a missing-field and a widened-field mutant; assert both fail.
 
@@ -2184,12 +2202,12 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 
 - The omission default is load-bearing; the locked surface is exact; no new flags are accepted.
 
-#### TC-RETRO-060 - The periodic memory-audit trigger is registered and its run is evidence
+#### TC-RETRO-060 - The periodic memory-audit trigger is registered as a `retro.trigger` entry and its run is evidence
 
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: F-9, DM-1, EVT-1, AC-F9-1
+**Related IDs**: F-9, DM-1, DM-9, EVT-1, AC-F9-1
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/retro-memory-audit.test.ts`
@@ -2197,12 +2215,12 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 
 **Preconditions**:
 
-- A registry fixture including the periodic memory-audit trigger with a declared cadence.
+- A registry fixture including the periodic memory-audit trigger as a `retro.trigger` entry with a declared cadence and owning binding.
 - A recorded audit run fixture with trigger identity, window, outcome refs, and trace ids.
 
 **Steps**:
 
-1. Assert the trigger is registered in the level/trigger registry with a declared cadence drawn from the declared vocabulary.
+1. Assert the trigger is registered as a `retro.trigger` entry (DM-9) in the retro registry with a declared cadence drawn from the declared vocabulary and an owning binding.
 2. Append a run through the collector seam; assert the evidence carries trigger identity, window bounds, outcome refs, and trace ids.
 3. Run `retro report`; assert the run is queryable like any other evidence and appears in `evidenceRefs`.
 4. Assert no memory-audit command exists in the command surface, the commands index, or the edge composition.
@@ -2379,7 +2397,7 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 - The retro contracts, sidecar consumer, key lifecycle, chain verification, collectors, truth checks, registry consumer, report/export folds, command definition, and edge composition exist.
 - The four `retro` rows exist in both the machine table and the documented table.
 - The two-store harness and the fixture modules above exist.
-- The spec v1.1 pins are in force: per-identity store-level projections, engine-boundary export refusals, the two blocking truth identities, and the four-key report `data`; no TODO assertion remains.
+- The spec v1.2 pins are in force: per-identity store-level projections, engine-boundary export refusals, the two blocking truth identities, the explicit exit-0 `no-target` success distinct from `retro.truth.vacuous-run`, the three retro-registry record kinds, and the four-key report `data`; no TODO assertion remains.
 
 **Exit (before the change is proposed)**
 
@@ -2393,7 +2411,7 @@ There is deliberately **no `retro export` row**: the locked surface carries no e
 
 ## 7. Automation Plan and Implementation Mapping
 
-All TCs are automated. No case is manual; the only non-CI activity is the NFR-7 reference measurement of TC-RETRO-061, which is recorded and never used as a pass gate. File names follow the repository's `retro-*` convention (A-T1, GAP-T1).
+All TCs are automated. No case is manual; the only non-CI activity is the NFR-7 reference measurement of TC-RETRO-061, which is recorded and never used as a pass gate. File names follow the repository's `retro-*` convention (A-T1); the suite inventory is mapped in `chg-GH-232-plan.yaml`.
 
 | TC ID | Test file / artefact | Execution command | Control / mutation | Status |
 |-------|----------------------|-------------------|--------------------|--------|
@@ -2411,7 +2429,7 @@ All TCs are automated. No case is manual; the only non-CI activity is the NFR-7 
 | TC-RETRO-012 | `tests/behaviour/retro-chain-cross-process.test.ts` | `bun test tests/behaviour/retro-chain-cross-process.test.ts` | per-process key mutant | To Implement |
 | TC-RETRO-013 | `tests/behaviour/retro-key-artifact.test.ts`; `tests/structure/error-table.test.ts` | corresponding `bun test` | valid-key control; no-new-row assertion | To Implement |
 | TC-RETRO-014 | `tests/behaviour/retro-chain-salvage.test.ts` | `bun test tests/behaviour/retro-chain-salvage.test.ts` | whole deletion vs middle deletion pair | To Implement |
-| TC-RETRO-015 | `tests/behaviour/retro-collect.test.ts` | `bun test tests/behaviour/retro-collect.test.ts` | newest-any-state mutant; re-collect rewrite mutant | To Implement |
+| TC-RETRO-015 | `tests/behaviour/retro-collect.test.ts` | `bun test tests/behaviour/retro-collect.test.ts` | newest-any-state mutant; re-collect rewrite mutant; no-target-classified-as-vacuous mutant | To Implement |
 | TC-RETRO-016 | same | same | write-to-source and second-read mutants | To Implement |
 | TC-RETRO-017 | `tests/behaviour/retro-collect.test.ts`; `tests/behaviour/retro-truth-checks.test.ts` | corresponding `bun test` | drops-one-orphan mutant | To Implement |
 | TC-RETRO-018 | `tests/behaviour/retro-collect.test.ts`; `tests/behaviour/retro-registry.test.ts` | corresponding `bun test` | rewrite-instead-of-append mutant | To Implement |
@@ -2440,8 +2458,8 @@ All TCs are automated. No case is manual; the only non-CI activity is the NFR-7 
 | TC-RETRO-041 | `tests/behaviour/retro-truth-checks.test.ts`; `tests/fixtures/retro/truth.json` | `bun test tests/behaviour/retro-truth-checks.test.ts` | drops-orphans mutant | To Implement |
 | TC-RETRO-042 | same | same | clean-verdict control; ignore-broken-verdict and projection-swap mutants | To Implement |
 | TC-RETRO-043 | same | same | fabricating-resolver mutant | To Implement |
-| TC-RETRO-044 | same | same | conflating mutant; quiet and active controls | To Implement |
-| TC-RETRO-045 | same | same | silent-success, row-omission and malformed-reuse mutants; one-collector control | To Implement |
+| TC-RETRO-044 | same | same | conflating mutant; declared-quiet and active controls | To Implement |
+| TC-RETRO-045 | same | same | silent-success, row-omission and malformed-reuse mutants; no-target-vs-vacuous distinctness; one-collector control | To Implement |
 | TC-RETRO-046 | same | same | vacuous-silence mutant | To Implement |
 | TC-RETRO-047 | `tests/checks/retro-truth-check-mutants.test.ts`; `tests/fixtures/retro/truth-mutants/**` | `bun test tests/checks/retro-truth-check-mutants.test.ts` | five disabled-check mutants | To Implement |
 | TC-RETRO-048 | `tests/behaviour/retro-truth-checks.test.ts` | same | boilerplate-finding mutant | To Implement |
@@ -2519,21 +2537,22 @@ git diff --check
 | TR-6 | Fixtures leak real key material or real paths into the committed tree | M | The containment and hermeticity checks with planted controls (TC-RETRO-011, TC-RETRO-062) |
 | TR-7 | NFR-7 thresholds are unstable in CI and become flaky | M | Bounded-work oracle plus a recorded non-CI reference (TC-RETRO-061, GAP-T2) |
 | TR-8 | The export surface is implemented as a hidden CLI flag or an unbounded dump to make the AC pass | H | The surface is library-only: TC-RETRO-049 asserts no export entry, verb or flag in the command definitions, registry or edge composition; TC-RETRO-050 asserts no implicit destination, no unbounded variant, and `input.value.rejected` (exit 1) before any write |
+| TR-9 | The no-target success and the zero-collector vacuous-run collapse into one outcome, so a reachable empty-selection state reads as a failure (or a real vacuous run reads as success) | H | §4.7 pins N-01 beside C-05, §4.8 pins the exit-0 `no-target` row against the `retro.truth.vacuous-run` row, and TC-RETRO-015/045 assert the outcomes as mutually exclusive; a conflating mutant fails (DEC-14) |
 
 ### 8.2 Assumptions
 
 - A-T1: All cases run in process with injected dependencies and a temp root; no suite spawns, uses the network, or touches host/user state. Cross-process continuity is modelled by a second store/edge instance over the same temp directory.
-- A-T2: Exact sidecar artifact family names, key-artifact filename, registry record kinds, payload schema ids, and store keys are delivery-bound (spec OQ-2, GAP-T8). Tests assert the declared contract constants and the distinctness requirement; the plan's readable name `chain-key.retro.<workspace>.json` is not itself an assertion.
-- A-T3: `change`-level target ordering is completion timestamp descending, then change ref ascending. This is a determinism pin, not a spec requirement; delivery must declare it as a contract constant and the test must read it (delivery-bound: OQ-T6).
+- A-T2: Exact sidecar artifact family names, key-artifact filename, payload schema ids, and store keys remain delivery-bound (spec OQ-2, GAP-T8). The three retro-registry record kinds are spec-pinned (`retro.level`, `retro.run`, `retro.trigger` — DM-1/DM-5/DM-9), so tests assert them as declared constants. Tests assert the declared contract constants and the distinctness requirement; the plan's readable name `chain-key.retro.<workspace>.json` is not itself an assertion.
+- A-T3: `change`-level target ordering is completion timestamp descending, then change ref ascending. This is a determinism pin, not a spec requirement; delivery declares it as a contract constant (plan PIN-5) and the test reads it (delivery-bound: OQ-T6). The empty-selection end of the rule is no longer an assumption — DEC-14 pins it as the explicit exit-0 `no-target` outcome.
 - A-T4: The report `data` key set is exactly `level`, `findings`, `followThrough`, `evidenceRefs`; the report schema identity is a declared constant used by tests, goldens, and docs, not an in-`data` field (AC-F5-1 v1.1, DM-6).
-- A-T5: The retro registry is a validated store boundary in the state layer with two record kinds (level and run) and the four-verdict matrix; the exact kind/schema strings are delivery-bound but the boundary properties are not.
-- A-T6: A declared level→owning-story map covers the five declared-only levels; tests assert completeness and hint shape, not invented story ids (delivery-bound: OQ-T7).
+- A-T5: The retro registry is a validated store boundary in the state layer with exactly three additive validated record kinds — `retro.level` (DM-1), `retro.run` (DM-5) and `retro.trigger` (DM-9) — plus the four-verdict matrix. The kind count and kind strings are spec-pinned; payload schema ids and the remaining boundary property strings are delivery-bound (plan PIN-4), but the boundary properties themselves are not.
+- A-T6: A declared level→owning-story map covers the five declared-only levels; tests assert completeness and hint shape, not invented story ids (delivery-bound: OQ-T7, plan PIN-6).
 - A-T7: The synthetic 32-byte key in `tests/fixtures/retro/key-artifact.json` is the single allowlisted key literal and is not production material.
 - A-T8: The chain anchor, canonical content ordering, and link field are declared in contracts; tests read the constants rather than restating them.
 
 ### 8.3 Open Questions and Recorded Gaps
 
-Resolved items are retained for traceability. **No TODO assertion remains in this plan.** The only open items are non-blocking and delivery-bound: OQ-T6, OQ-T7, OQ-T8, and the plan-existence note GAP-T1 in §1.2.
+Resolved items are retained for traceability. **No TODO assertion remains in this plan.** GAP-T1 is resolved — the implementation plan now exists (`chg-GH-232-plan.yaml`) — and the remaining open items are non-blocking, delivery-bound, and pinned as plan PIN-1..PIN-10: OQ-T6, OQ-T7 and OQ-T8.
 
 | ID | Question / gap | Status | Owner | Resolution in this plan |
 |----|----------------|--------|-------|--------------------------|
@@ -2542,10 +2561,10 @@ Resolved items are retained for traceability. **No TODO assertion remains in thi
 | OQ-T3 | The zero-collector and broken-audit-verdict triggers "block a clean exit with the classified evidence", but no identity or exit was declared for either. | **Resolved** — spec v1.1 (OQ-7, DEC-11 four rows, F-6, AC-F6-1): broken verdict → `retro.evidence.tamper-flagged` (exit 1); zero collectors → `retro.truth.vacuous-run` (exit 1) | PM + spec-writer | TC-RETRO-042/045 and §4.7/§4.8 assert the identities and exits; GAP-T5 closed |
 | OQ-T4 | DEC-11 pinned two exit-1 rows as `category: platform`; the projection map admits exit 1 only through `user-validation`. Confirm a platform-category row may carry that class. | **Resolved** — spec v1.1 (DEC-11 projection-class pin) | @readiness-reviewer / plan-writer | Pinned in §4.8 and TC-RETRO-004/005; a projection-class swap mutant fails; GAP-T6 closed |
 | OQ-T5 | AC-F5-1 said "exactly the versioned" four-field shape while DM-6 called it a versioned shape. Is an in-`data` version marker required? | **Resolved** — spec v1.1 (AC-F5-1 reword): four keys in `data`; `delivery.retro.report.v1` is a contract constant, not a `data` field | PM + plan-writer | A-T4, TC-RETRO-035 and TC-RETRO-063 assert the four-key set and the constant's absence from `data`; GAP-T7 closed |
-| OQ-T6 | `change`-level target ordering is not pinned by the spec. Is completion timestamp descending with a ref-ascending tiebreak acceptable? | Open — non-blocking, **delivery-bound** (A-T3) | plan-writer / delivery | A-T3 pins it; TC-RETRO-015 asserts determinism once delivery declares the constant. No AC coverage is weakened |
-| OQ-T7 | The level→owning-story map for declared-only levels is not in the spec. Who owns each level's implementation? | Open — non-blocking, **delivery-bound** (A-T6) | plan-writer / delivery | A-T6 requires a declared map; TC-RETRO-058 asserts completeness and hint shape, not invented ids. No AC coverage is weakened |
-| OQ-T8 | NFR-7 wall-clock thresholds cannot be gated reliably in CI. Is bounded work plus a recorded reference acceptable? | Open — non-blocking, **delivery-bound / CI-bound** (GAP-T2) | PM / delivery | TC-RETRO-061 asserts bounded work in CI and records the reference; NFR-7 remains a target. No AC coverage is weakened |
-| GAP-T1 | The implementation plan does not exist yet; the concrete suite inventory is authored at phase 4. | Open — non-blocking, **delivery-bound** | @plan-writer | Suite names follow the `retro-*` convention; delivery may add helpers but must preserve each TC's behaviour and oracle |
+| OQ-T6 | `change`-level target ordering is not pinned by the spec. Is completion timestamp descending with a ref-ascending tiebreak acceptable? | **Pinned in plan PIN-5** — non-blocking, delivery-bound (A-T3) | plan-writer / delivery | Plan PIN-5 declares `RETRO_TARGET_ORDER`; TC-RETRO-015 asserts determinism by reading the constant. No AC coverage is weakened |
+| OQ-T7 | The level→owning-story map for declared-only levels is not in the spec. Who owns each level's implementation? | **Pinned in plan PIN-6** — non-blocking, delivery-bound (A-T6) | plan-writer / delivery | Plan PIN-6 declares `RETRO_LEVEL_OWNING_STORIES`; TC-RETRO-058 asserts completeness and hint shape, not invented ids. No AC coverage is weakened |
+| OQ-T8 | NFR-7 wall-clock thresholds cannot be gated reliably in CI. Is bounded work plus a recorded reference acceptable? | **Pinned in plan PIN-7** — non-blocking, delivery-bound / CI-bound (GAP-T2) | PM / delivery | Plan PIN-7 pins bounded-work gating plus a recorded reference; TC-RETRO-061 asserts the bounded work in CI and records the reference; NFR-7 remains a target. No AC coverage is weakened |
+| GAP-T1 | The implementation plan does not exist yet; the concrete suite inventory is authored at phase 4. | **Resolved** — plan authored 2026-11-06 (`chg-GH-232-plan.yaml`, revision 1) | @plan-writer | Retained for traceability only. The plan is linked in the front matter and maps phases to all 64 TCs; suite names follow the `retro-*` convention and delivery may add helpers but must preserve each TC's behaviour and oracle |
 
 ## 9. Plan Revision Log
 
@@ -2553,6 +2572,7 @@ Resolved items are retained for traceability. **No TODO assertion remains in thi
 |---------|------|--------|---------|
 | 1.0 | 2026-11-06 | @test-plan-writer | Initial test plan: 64 TCs covering 16 ACs, both binding ticket ACs by dedicated matrices, EVT-1/EVT-2, DM-1..DM-8, NFR-1..NFR-10, the tamper mutation matrix, the shape-crash-guard matrix, the level-refusal and truth-trigger matrices, the exit/identity oracle, and three blocking gaps (GAP-T3/T4/T5) recorded rather than faked |
 | 1.1 | 2026-11-06 | @test-plan-writer | Reconciled to spec v1.1 (iteration 2): closed GAP-T3 / OQ-T1 by asserting both per-identity store-level exits (TC-RETRO-013, TC-RETRO-033; §4.5, §4.8); converted the export cases to engine/library-boundary cases with `input.value.rejected` (exit 1) refusals and no CLI path (TC-RETRO-049..052; GAP-T4 / OQ-T2); pinned the two blocking truth identities `retro.evidence.tamper-flagged` and `retro.truth.vacuous-run` (TC-RETRO-042, TC-RETRO-045; §4.7; GAP-T5 / OQ-T3); folded DEC-11's projection-class pin into §4.8 (OQ-T4) and AC-F5-1's four-key/contract-constant pin into TC-RETRO-035/TC-RETRO-063 (OQ-T5); extended the `retro` error-row coverage from three to four (TC-RETRO-004/005, DM-8, NFR-8). No TC ID was added, removed or renumbered — 64 TCs remain; zero TODO assertions remain; the only open items are delivery-bound (OQ-T6/T7/T8, GAP-T1) |
+| 1.2 | 2026-11-06 | @test-plan-writer | Reconciled to spec v1.2 (iteration 3) and DoR readiness-iter-1: pinned the no-eligible-target oracle — §4.7 gains N-01 beside C-05, §4.8 gains the exit-0 `no-target` row plus the no-target/vacuous-run distinctness pin, and TC-RETRO-015 step 4 asserts exit 0, `data` shape, zero appends/run records and exclusion of `retro.truth.vacuous-run` (DEC-14, AC-F6-1, Appendix B); TC-RETRO-045 gains the cross-outcome distinctness step. Corrected A-T5 and the registry coverage from two kinds to three (`retro.level`, `retro.run`, `retro.trigger`), added DM-9 to §3.2/§3.5 and to TC-RETRO-001/057/060. Defined TC-RETRO-044 fixture C as a declared-quiet scope where the C-04 predicate derives no expectation (neither completed nor closed), distinct from vacuous. Stale pointers closed: front-matter `implementation_plan` now links `./chg-GH-232-plan.yaml`, GAP-T1 marked resolved, OQ-T6/T7/T8 recorded as pinned by plan PIN-5..PIN-7. No TC ID was added, removed or renumbered — 64 TCs remain; 16/16 ACs covered; zero non-negated TODO assertions remain |
 
 ## 10. Test Execution Log
 
@@ -2562,7 +2582,7 @@ Resolved items are retained for traceability. **No TODO assertion remains in thi
 | TC-RETRO-008..019 | — | Not run | Awaiting delivery |
 | TC-RETRO-020..029 (binding AC 2) | — | Not run | Mutation matrix must be 6/6 plus the completeness meta-check |
 | TC-RETRO-030..034 (binding AC 1) | — | Not run | 24/24 entry-level and 5/5 store-level; both exits asserted (S-01..S-04 exit 2, S-05 exit 1) |
-| TC-RETRO-035..048 | — | Not run | Report and pipeline truth; C-02 → `retro.evidence.tamper-flagged` and C-05 → `retro.truth.vacuous-run` pinned |
+| TC-RETRO-035..048 | — | Not run | Report and pipeline truth; C-02 → `retro.evidence.tamper-flagged` and C-05 → `retro.truth.vacuous-run` pinned; N-01 `no-target` is an exit-0 `data` success, distinct from C-05 (DEC-14) |
 | TC-RETRO-049..052 | — | Not run | Engine-boundary contract; no CLI export path exists (CLI exposure deferred to M2-S3) |
 | TC-RETRO-053..064 | — | Not run | Surfaces, registry, doctor, performance, hermeticity, output, privacy |
 | NFR-7 reference measurement | — | Not run | Non-CI; record sidecar size, host, command and timings; never a pass gate |

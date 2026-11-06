@@ -16,6 +16,8 @@ phases:
 decisions:
   - text: "TDR-0009 authored for the retro evidence sidecar keyed-chain construction (HMAC-style keyed chain, distinct store-managed key artifact, claimed collector identity, tamper-evidence scope) — resolves spec OQ-1; status Proposed, human acceptance reserved at PR review per R2 rigor."
     date: "2026-11-06"
+  - text: "DoR-remediation decision direction: no-eligible-target is an explicit exit-0 success (no collection ran, so vacuous-run cannot apply; matches concepts-doc idempotency: scope keys make reruns idempotent), while retro.truth.vacuous-run requires a run that actually happened and produced zero records; C-05 scoped to executed runs. Adopted into spec v1.2 as DEC-14."
+    date: "2026-11-06"
 open_questions:
   - text: "RESOLVED 2026-11-06 (GAP-T3/OQ-T1): spec v1.1 pins per-identity store-level projections — torn/missing-key exit 2, permission violations carry state.permission.denied delivered projection (exit 1, user-validation); NG-10 honored. Test plan §4.5 asserts both exits (TC-013/033)."
     date: "2026-11-06"
@@ -64,8 +66,14 @@ notes:
   - text: "DoR iteration 1 verdict: NOT_READY (readiness-review/readiness-iter-1.md, 8/10 facets PASS). Blocking finding (major): no-eligible-target oracle fork — spec G-5/F-6(5)/AC-F6-1 say zero-collector collection always fails retro.truth.vacuous-run exit 1, but plan PIN-5 pins exit-0 no-target success for the all-collected path, inventing a precondition absent from spec; test plan has no oracle row and TC-015 step 4 unpinned. Non-blocking: (2) registry-kind count inconsistent (spec says two kinds, F-9/PIN-4 need three incl. retro.trigger); (3) TDR-0009 item 5 stale 'three rows'; nits: PIN-10 vocabulary supersession unrecorded, test-plan stale implementation_plan:null/GAP-T1, TC-044 fixture C category undefined. REMEDIATION: specification reopened (iteration 3), test_planning and delivery_planning touched up after; dor_check stays open for iteration 2."
     type: retro
     date: "2026-11-06"
-  - text: "PM decision direction for the fork: adopt plan PIN-5 semantics into the spec — no-eligible-target is an explicit exit-0 success (no collection ran, so vacuous-run cannot apply; matches concepts-doc idempotency: scope keys make reruns idempotent), while retro.truth.vacuous-run requires a run that actually happened and produced zero records. C-05 scoped accordingly."
-    type: decision
+  - text: "DoR iteration 1 remediation completed: spec v1.2 (DEC-14 no-target outcome pinned, three-kind registry consistency, C-05 scoped to executed runs), test plan v1.2 (N-01 oracle row, TC-015 step 4 pinned, TC-045 distinctness step, TC-044 fixture C defined, A-T5 three kinds, GAP-T1 resolved), plan revision 2 (PIN-5 cites DEC-14, PIN-10 supersession note, PIN-4 provenance cleaned). TDR-0009 item 5 corrected to four rows by decision-advisor."
+    type: info
+    date: "2026-11-06"
+  - text: "RETRO (important): chg-GH-232-plan.yaml as committed at ca6011a5 FAILED plan-validate (2 schema errors: phases 2/3 declared consumer interactions on contracts/retro.ts outside their phase scope). Caught only because PM demanded validation during the DoR touch-up. Lesson: plan-writer must run the plan-validate invariant as part of authoring verification, before the phase commit, every time. The fix (removing the two invalid interaction blocks) is in this remediation commit; plan now validates readyForDevelopment=true."
+    type: retro
+    date: "2026-11-06"
+  - text: "Risk note for quality_gates phase: bun test currently fails in this checkout with a pre-existing module-resolution error (Cannot find module '@delivery-os/core/contracts' from packages/cli/src/classify.ts) reproducing identically on untouched suites — environmental or upstream, not caused by this change (branch has zero code commits vs main-tools). Verify against a pristine main-tools checkout before blaming GH-232 work."
+    type: risk
     date: "2026-11-06"
   - text: "Delivery plan authored by @plan-writer: chg-GH-232-plan.yaml (canonical machine-readable YAML format per current plan contract — legacy .md would be schema-invalid; YAML wins when both exist), 6 phases / 36 tasks, tier full, 64/64 TCs mapped, 16/16 ACs traceable, no STOP. Delivery-bound items pinned as PIN-1..10 (HMAC-SHA-256 via node:crypto, 64-hex links, artifact spellings, target ordering OQ-T6, level map OQ-T7, NFR-7 CI measurement OQ-T8, export limit 1000, memory-audit cadence weekly-flagged-reviewable)."
     type: info
