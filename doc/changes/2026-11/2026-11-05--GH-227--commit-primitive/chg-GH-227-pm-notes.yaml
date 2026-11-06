@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-05T23:48:00Z", completed: "2026-11-06T00:05:00Z" }
   delivery_planning: { started: "2026-11-06T00:06:00Z", completed: "2026-11-06T00:20:00Z" }
   dor_check: { started: "2026-11-06T00:21:00Z", completed: "2026-11-06T00:33:00Z" }
-  delivery: { started: "2026-11-06T01:50:00Z", completed: null }
+  delivery: { started: "2026-11-06T01:50:00Z", completed: "2026-11-06T02:45:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -76,6 +76,37 @@ notes:
   - text: "Retro: runner invocation for this repo should set TMPDIR to a repo-local dir (e.g. ./tmp/tmpdir) from the start - the default /tmp is tmpfs and breaks git clone --local hardlink tests (~6 min of gate time spent diagnosing a false red)"
     type: "retro"
     date: "2026-11-06"
+  - text: "Plan phase 1 landed: commit 77479da1 - contracts (commit.ts data-only, six error rows, config key, sync-bound doc rows); testGate: core build OK, 136 pass / 0 fail, error-table-sync 58/58 OK"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan phase 2 landed: commit b8d009c2 - pure commit domain (skeleton/bundle/staging/safety/message/transport/converge/act); testGate: typecheck OK, 565 pass / 0 fail, phase regressions 17 pass"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan phase 3 landed: commit a33362c5 - state telemetry record kind (delivery.commit.telemetry.v1) + intent-carrying single-append transition; testGate: typecheck OK, 453 pass / 0 fail"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan phase 4 landed: commit 1ac1ce75 - adapters + inference network edge (depcruise exact-path entry + negative fixture) + harness one-shot + session facts + secret scan + commitlint probe; testGate: typecheck OK, boundaries OK (175 modules), 137 pass / 0 fail"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan phase 5 landed: commit 9d2af753 - testkit ./commit subpath (transport fakes, temp-repo builder) + in-process harness; testGate: typecheck OK, 17 pass, testkit-exclusion OK"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan phase 6 landed: commit 7f21fe19 - CLI commit command (session guard, DM-2/DM-3 envelope, text output, edge composition); testGate: typecheck OK, 41 pass / 0 fail"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan phase 7 landed: commit 72f71a07 - phase complete atomic default + --no-commit, convergence, telemetry, golden envelopes, matrix rows 1/2/3 + reopen regression; testGate: 29+52+9 pass, full behaviour suite 1662 pass / 4 skip / 0 fail"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan phase 8 landed: commit cc222c8e - aggregate gates + changeset + forbidden-literals registration + plan diff reconciliation; testGate: full pnpm check GREEN (2769 pass / 4 skip / 0 fail across 270 files; boundaries + exports-parity OK), doc-distribution guard OK (81 docs), git diff --check clean. Evidence commit eb2a8927 (phase 8 completion records)"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Delivery deviations recorded by @coder (all reasonable, none spec-contradicting): (1) post-GH-222 additive reconciliation - commitIntent/commitIntentBasis optional fields, telemetry via state port (closeout precedent), tolerant read in appendPhaseTransition; (2) PhaseCommandRuntime.commit optional in type, always wired in production composition (legacy test harness stays transition-only); (3) three commit codes kept two-segment in the reserved set, no pattern widening; (4) git status porcelain v1 -z --untracked-files=all for per-file stray/forbidden precision; (5) plan scope drift observational (51 within / 8 outside = pre-existing change artifacts + barrel exports; plan YAML not rewritten, recorded in test plan section 10); (6) phase 8 biome format-only sweep of earlier files, goldens compared as parsed JSON; (7) transports implemented+tested but default CLI composition leaves transports explicit (fresh install degrades to template - adoption/open item, not a test gap)"
+    type: "info"
+    date: "2026-11-06"
+  - text: "Doc-syncer obligations declared by coder for phase 7: new doc/spec/features/feature-commit-primitive.md; reconcile feature-pm-notes-lint-and-phase-transitions.md (atomic default); refine m1 pack pages commit.md + phase.md; CLI command-registry row; git-adapter charter note; record delivery decisions OQ-1/OQ-T5, OQ-T3, OQ-T4, OQ-T6; register new docs in forbidden-literals registry; PR description must headline the default-on atomic behavior change"
+    type: "info"
+    date: "2026-11-06"
+
   - text: "Plan phase 1 complete: commit 77479da1 - commit domain contracts, six commit error rows, and the commit.phaseCommit config key. Gate: core build regenerated the config artifacts; structure/config/checks suite 136 pass; ERROR_TABLE 58 rows with 58 documented rows; error-table-sync OK."
     type: "info"
     date: "2026-11-06"
