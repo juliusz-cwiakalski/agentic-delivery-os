@@ -1,0 +1,176 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-231
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6]
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Pure MCP toolset: branding-projected catalog, payload contract, three engine-mirroring tools"
+    kind: delivery
+    scope:
+      files:
+        - packages/mcp/src/index.ts
+        - packages/mcp/src/commands/index.ts
+        - packages/mcp/src/commands/catalog.ts
+        - packages/mcp/src/commands/toolset.ts
+        - packages/mcp/src/commands/status.ts
+        - packages/mcp/src/commands/verify-artifact.ts
+        - packages/mcp/src/commands/gate-report.ts
+        - packages/mcp/src/output/index.ts
+        - packages/mcp/src/output/payload.ts
+        - tests/structure/mcp-contract.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/types/mcp-payload.type-test.ts
+        - tests/fixtures/mcp/tool-list.snapshot.json
+        - tests/fixtures/mcp/regenerate.ts
+    interactions:
+      - kind: contract-file
+        target: packages/mcp/src/commands/catalog.ts
+        role: producer
+      - kind: contract-file
+        target: packages/mcp/src/output/payload.ts
+        role: producer
+    summary: "feat(GH-231): pure MCP toolset - catalog, payload contract, three engine tools"
+    tasks:
+      - "1.1 packages/mcp/src/commands/catalog.ts: the closed `as const` canonical primitive-ID list exactly [status, verify-artifact, gate-report] (no fourth entry) and the descriptor projection - name is BrandIdentity.mcpToolPrefix plus the primitive ID, descriptions are static, secret-free, brand-free beyond the prefix, the status schema declares no required parameter, and the two ref tools declare exactly one required string parameter (delivery-bound name `ref`, OQ-T5 decision recorded in the execution log) with additionalProperties: false. No batch, write, apply, mutate, merge, delete, or commit descriptor name or parameter anywhere. [F-2/F-3/F-4/F-6; AC-F1-2, AC-F6-1; DEC-3, DEC-5; TC: TC-MCP-001 steps 1-3, TC-MCP-015 steps 1-3]"
+      - "1.2 packages/mcp/src/output/payload.ts: the payload contract - success payloads are the engine data types by reference from @delivery-os/core/contracts (StatusDigest, verify-change success data, VerifyGatesReport; never a locally re-declared shape); failure payloads are exactly the CLI CommandResultError field set (code, category, retryable, consequence, remediationHint, plus summary if and only if the CLI carries one), shaped from the shared core ERROR_TABLE with the CLI classification-chain semantics mirrored against core contracts data (kind/code resolution, fallback.internal containment only at that explicit step; the CLI suite stays the live-oracle drift guard because the chain itself is cli-owned and cannot be imported); RESULT_SCHEMA_VERSION never emitted, no exitCode/runId/timing key at any depth, no data/error wrapper. [F-5; DM-1..DM-4; DEC-4; AC-F5-1; NFR-2, NFR-3; TC: TC-MCP-002 steps 1-4]"
+      - "1.3 packages/mcp/src/commands/toolset.ts: the pure toolset seam over injected runtimes - createToolset accepts the same runtime shapes the corresponding CLI command definitions take (status readers, verify readPmNotes/readRegistry, gates runtime) and exposes listTools() and callTool(id, args) returning a discriminated result (success carries data, failure carries the contracted error fields). Boundary validation happens exactly once here: missing, empty, or non-string ref maps to input.value.rejected with the full field set (DEC-7); a whitespace-only ref passes through to the engine (CLI grammar parity, TC-MCP-009 step 4); unknown tool id fails against the closed catalog; handlers call engine functions only, never other tools. Delivery decision OQ-2 (recorded in the execution log): serialize tool calls one at a time in arrival order - read-only engines make either policy safe, determinism (NFR-8) and single-frame writes favor serialize, and GAP-T2 deliberately pins no policy. [F-7 boundary half; AC-F5-2; DEC-7; TC: TC-MCP-009 toolset-level steps, TC-MCP-016 step 7]"
+      - "1.4 packages/mcp/src/commands/status.ts: mirror the CLI status handler orchestration exactly over the injected StatusCommandRuntime - same read order as the CLI collector (repository binding gate, then work items, delivery requests, pipeline runs, then provider config, parks, local context, injected nowIso/nowMs); success data is aggregateStatus(facts) from @delivery-os/core; degraded, unavailable, and not-delivered sections stay digest data (ok: true), only containment-class failures fail the tool. [F-2; AC-F2-1 engine half; NFR-11; TC: TC-MCP-003 enabler, TC-MCP-004]"
+      - "1.5 packages/mcp/src/commands/verify-artifact.ts: mirror the CLI verify-change handler - readPmNotes absent target yields lint.target.missing; classifyVerifyDocument over the read outcome yields lint.notes.malformed / lint.variant.unknown / lint.phases.incomplete; readRegistry plus classifyVerifyChange yields the success data (variant, outcome, phase evidence) or verify.ledger.incomplete and the platform-class state.* identities - all through payload.ts with identical codes and fields. [F-3; AC-F3-1 engine half; TC: TC-MCP-005, TC-MCP-006]"
+      - "1.6 packages/mcp/src/commands/gate-report.ts: mirror the CLI verify-gates handler over the injected gates runtime - build the same facts, evaluateVerifyGates, return the delivery.verify-gates.v1 report (five cited verdicts in fixed order) or verify.gates.failed / verify.gates.unavailable / the first unknown gate's classified identity. [F-4; AC-F4-1 engine half; TC: TC-MCP-007]"
+      - "1.7 Replace the scaffold placeholders: McpSurfacePlaceholder, McpCommandsPlaceholder, McpOutputPlaceholder give way to the real tier exports; src/index.ts re-exports only the pure seams (catalog, toolset, payload types) with zero runtime APIs; intra-package imports use the declared #commands/* and #output/* aliases; no package.json export or dependency change in this phase (protocol and the ./serve entry land in phase 3). Register every new file in tests/structure/inventory.json and add the per-file executable allowances in tests/structure/content-inventory.test.ts. [Spec 8.5 additive scaffold replacement; TC: TC-MCP-019 step 1 registration half]"
+      - "1.8 tests/structure/mcp-contract.test.ts (TC-MCP-001: catalog closure, descriptor projection under SYNTHETIC_BRAND and a second synthetic brand, registration-site AST scan over packages/mcp/src/** with a seeded fourth-tool control), tests/types/mcp-payload.type-test.ts (payload types by reference; the toolset runtime exposes no write, fence, commit, apply, merge, or delete member), and tests/fixtures/mcp/tool-list.snapshot.json with tests/fixtures/mcp/regenerate.ts as the only writer (explicit --write, opened read-only in tests with mtime asserted). [AC-F1-2, AC-F5-1 type half, AC-F6-1, AC-F7-2 type half; NFR-5; TC: TC-MCP-001, TC-MCP-002 type half, TC-MCP-015, TC-MCP-017 type half, TC-MCP-020 catalog and branding mutants]"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/structure/mcp-contract.test.ts tests/structure/content-inventory.test.ts tests/structure/error-table.test.ts tests/structure/delivery-result-contract.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts"
+  - id: 2
+    title: "Shared CLI/MCP parity oracles, error-payload suites, and boundary-input suites"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/mcp-status-parity.test.ts
+        - tests/behaviour/mcp-verify-artifact-parity.test.ts
+        - tests/behaviour/mcp-gate-report-parity.test.ts
+        - tests/behaviour/mcp-error-payload.test.ts
+        - tests/behaviour/mcp-input-validation.test.ts
+        - tests/behaviour/mcp-read-parity.test.ts
+      folders:
+        - tests/fixtures/mcp/parity
+        - tests/fixtures/mcp/golden
+    summary: "test(GH-231): shared CLI/MCP parity oracles and boundary-input suites"
+    tasks:
+      - "2.1 tests/fixtures/mcp/parity/{cases,harness,canonical}.ts over the existing harnesses (tests/fixtures/status/harness.ts, tests/behaviour/verify-support.ts, tests/fixtures/verify-gates/cases/**): one fact bundle per case handed to both surfaces - the CLI oracle runs in process (runStatusCli, runVerify, the shared runCli with the verify definition; never a spawned CLI) and the MCP side calls the pure toolset seam. Canonical JSON is recursive key-sort + JSON.stringify; a case declares inputs, runtime factory, expected kind, and the expected code where the spec names one - never a hand-written expected data object. Committed goldens under tests/fixtures/mcp/golden/{status,verify-artifact,gate-report}/ are generated from the CLI oracle by regenerate.ts and reviewed. Case floors asserted before iterating: status at least 5 (observed, degraded, unavailable, not-delivered, cap-sized via capSizedFacts), verify-artifact at least 8, gate-report at least 4. [Test plan 4.2 oracle; NFR-1, NFR-8, NFR-11; TC: TC-MCP-003..008 fixtures]"
+      - "2.2 mcp-status-parity.test.ts: success parity for every status case (canonical JSON equality CLI-vs-tool and vs golden, digest schemaVersion delivery.status.v1, six fixed-order sections, closed state vocabulary, declared bounds, equal canonical byte length, zero envelope keys) with degraded/unavailable/not-delivered all ok: true; plus the containment-failure case in mcp-error-payload.test.ts (deep-equal error object, CLI containment identity not input.value.rejected, summary iff the CLI carries one). [AC-F2-1, AC-F5-1; NFR-1, NFR-2, NFR-11; TC: TC-MCP-003, TC-MCP-004]"
+      - "2.3 mcp-verify-artifact-parity.test.ts: full, LITE (absent and null completion), and partial-with-registry-overlay successes; failure matrix over materializeAbsentTarget, tests/fixtures/verify/{classification,malformed}/**, withOpenPhase, and an untrustworthy-registry case - every failure deep-equals the CLI envelope error, the code equals the case's declared expected code and the CLI's code, the six identities are represented and distinct. [AC-F3-1, AC-F5-1; NFR-1, NFR-2; TC: TC-MCP-005, TC-MCP-006]"
+      - "2.4 mcp-gate-report-parity.test.ts: all-pass report equality (delivery.verify-gates.v1, five cited verdicts, fixed order) over tests/fixtures/verify-gates/cases/**; failure parity for verify.gates.failed, verify.gates.unavailable, and the first-unknown-gate classified identity; no fabricated pass verdict in a failure payload. [AC-F4-1, AC-F5-1; NFR-1, NFR-2; TC: TC-MCP-007]"
+      - "2.5 mcp-read-parity.test.ts: ordered read-member sequences identical across surfaces with recorders reset between cases (an MCP-only read fails parity); replay twice with fresh runtimes yields byte-identical canonical JSON on both surfaces and equals the golden; two independent cases run concurrently with Promise.all each equal their sequential baseline without asserting an interleaving order (GAP-T2); payload canonical byte length equals the CLI data length and never exceeds it. [AC-F2-1, AC-F3-1, AC-F4-1; NFR-1, NFR-3, NFR-8, NFR-11; TC: TC-MCP-008]"
+      - "2.6 mcp-input-validation.test.ts at the toolset level: the argument matrix ({}, empty string, 42, null, array, object) yields input.value.rejected with the full contracted field set and no throw for both ref tools; whitespace-only ref follows the CLI into the engine failure (a stricter MCP-only regex is a parity failure); path-shaped and newline/hostile refs pass through as opaque strings with no read outside the fixture change root; a valid call after each invalid call succeeds. The process-level steps (server does not exit, no transport fault) are completed by the phase 4 lifecycle and smoke suites against the spawned server. [AC-F5-2; DEC-7; NFR-2; TC: TC-MCP-009]"
+      - "2.7 Non-vacuity pairing inside every suite per test plan 4.9: each golden comparison carries a mutation control (change one field, assert inequality, restore, assert equality), each negative sits beside a live control (missing ref beside a valid ref), and success payloads are asserted before failure payloads. Goldens and the snapshot are opened read-only with mtimeMs asserted unchanged. [TC: TC-MCP-020 pairing rule; NFR-2]"
+    testGate:
+      - "bun test tests/behaviour/mcp-status-parity.test.ts tests/behaviour/mcp-verify-artifact-parity.test.ts tests/behaviour/mcp-gate-report-parity.test.ts"
+      - "bun test tests/behaviour/mcp-error-payload.test.ts tests/behaviour/mcp-input-validation.test.ts tests/behaviour/mcp-read-parity.test.ts"
+      - "pnpm typecheck"
+  - id: 3
+    title: "In-package stdio protocol, serve entry and lifecycle exits, boundary and exit-literal reconciliation"
+    kind: delivery
+    scope:
+      files:
+        - packages/mcp/src/output/protocol.ts
+        - packages/mcp/src/lifecycle.ts
+        - packages/mcp/src/serve.ts
+        - packages/mcp/src/index.ts
+        - packages/mcp/package.json
+        - .dependency-cruiser.cjs
+        - scripts/checks/exit-code-literals.ts
+        - tests/checks/exit-code-literals.test.ts
+        - tests/structure/mcp-imports.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/subpaths.test.ts
+      packages:
+        - tests/boundaries/**
+    interactions:
+      - kind: contract-file
+        target: packages/mcp/src/output/protocol.ts
+        role: producer
+    summary: "feat(GH-231): in-package stdio protocol, serve entry, lifecycle exits, boundary reconciliation"
+    tasks:
+      - "3.1 OQ-1 resolution (delivery decision, recorded in the execution log; no human gate per spec section 14): a minimal in-package stdio JSON-RPC 2.0 implementation - zero external dependencies. Tradeoff: the pinned protocol subset (initialize, initialized notification, tools/list, tools/call, unknown-method and unknown-tool errors, malformed-frame classification) is small, stable, and fully specified by the test plan 4.5 oracle; the in-package branch keeps NFR-9/AC-F1-4 trivially green (no registry verdict, no lockfile change, no vulnerability surface), avoids SDK content-wrapper drift between the toolset seam and the wire (R-T1), and keeps byte-exact replay (NFR-8); RSK-1 names this path as the approved fallback. Cost: the repo owns protocol correctness - mitigated by the protocol oracle suite and the Node smoke; adopting the official MCP SDK in a later story is an ordinary C-2-gated dependency change, and ADR-0003 confines the protocol implementation to the mcp package either way. [OQ-1; RSK-1; AC-F1-4; NFR-9; TC: TC-MCP-014 in-package branch, step 4]"
+      - "3.2 packages/mcp/src/output/protocol.ts: newline-delimited JSON-RPC 2.0 over stdio with deterministic id echo and per-request response matching; the initialize result carries a pinned protocol version, server info, and an empty capabilities object (no batch capability); tools/list returns the catalog descriptors; tools/call dispatches to the toolset serialized single-flight (OQ-2) and marks failures with protocol-level isError: true metadata outside the JSON payload (OQ-T6 decision; the JSON content carries only the contracted fields); unknown method or tool yields a protocol-level error response and the server keeps serving; a malformed JSON frame is classified as a framing fault below the tool layer and routed to the lifecycle as a transport fault; every byte written to the transport channel is a JSON-RPC frame (diagnostics never touch it). [F-1, F-5; AC-F1-2, AC-F5-3 protocol half; DEC-4; NFR-10; TC: TC-MCP-012 wire contract, TC-MCP-011 framing classification]"
+      - "3.3 packages/mcp/src/lifecycle.ts: the single exit owner in packages/mcp/src/** - clean stop exits 0, a configuration error exits 1 with the diagnostic written only to the diagnostics channel (transport channel untouched, stdout empty on a pre-handshake configuration error), a transport fault exits 2; every numeric exit literal in that module is 0, 1, or 2; no tool outcome ever reaches an exit site (a failed tool call is answered in-protocol and serving continues). Exact log wording is delivery-bound; the contract is the code vocabulary, the channel separation, and non-empty diagnostics on the fault paths. [F-1; DEC-1, DEC-6; AC-F1-1 module half; NFR-6, NFR-10; TC: TC-MCP-011, TC-MCP-018]"
+      - "3.4 packages/mcp/src/serve.ts plus the manifest: the Node-hosted serve entry as the mcp composition root - resolve brand identity once at startup from the injected environment record through the branding seam (the branding-derived config selector; the smoke's synthetic selector follows the environmentPrefix pattern), compose the three engine runtimes through @delivery-os/core and the adapter subpaths exactly as the cli edge composes them (same read paths, no cli import, no audit writer, no git seam, no projection - read-only by composition), wire the protocol over process stdio using node: builtins, and delegate every exit to lifecycle.ts. Declare the ./serve subpath export in packages/mcp/package.json (OQ-T3 decision: a declared subpath, the package root stays the typed pure surface; the smoke resolves the entry from the manifest exports, never a deep src or guessed dist path) with a declared Node floor of 20. No bin field, no installer registration, no publishConfig, no .mcpb - nothing user-installable ships (DEC-2). [F-1; DEC-1, DEC-2; AC-F1-3 entry half, AC-F1-4 manifest half; NFR-4; TC: TC-MCP-013 entry resolution, TC-MCP-014 steps 5-6, TC-MCP-019 subpath half]"
+      - "3.5 Boundary and invariant reconciliation (DEC-6, RSK-7): scripts/checks/exit-code-literals.ts learns the MCP lifecycle module as the one additional permitted exit site - process.exit or process.exitCode there only, every numeric literal checked against {0,1,2}, the CLI projection rule and its digits unchanged; extend tests/checks/exit-code-literals.test.ts with the mutation rows (process.exit(3) in the lifecycle module fails by name, an exit in any other mcp module fails, an exitCode numeric literal elsewhere fails, the CLI projection digits outside {0,1,2} still fail). Extend .dependency-cruiser.cjs runtime-apis-confinement with the reason-bearing exact-path allowlist entry for the mcp serve entry (the ADR-0005 C-2 pattern: one composition-root path may use node: builtins for stdio and the one startup environment read, mirroring the cli allowance) and add the failing negative fixture (a node: import in a non-serve mcp module fails) to tests/boundaries with the fixture-coverage meta-check green. [AC-F1-1, AC-F5-3; NFR-3, NFR-6; DEC-6; TC: TC-MCP-018 all steps]"
+      - "3.6 tests/structure/mcp-imports.test.ts: AST scans over packages/mcp/src/** with non-zero file-count floors and seeded temp-copy controls - zero imports of @delivery-os/cli, any path into packages/cli, or the projection module; zero exitCode, runId, or timing object literals outside the reconciled allowances; zero bun: specifiers and Bun.* calls anywhere; zero node: imports and process reads outside serve.ts (the tool modules and protocol stay runtime-neutral); zero node:child_process imports and spawn/exec/execFile/fork call expressions. Run the full boundary battery: pnpm check:boundaries (depcruise matrix, ambient-globals, workspace-entrypoints, secret-read) and bun test tests/boundaries with the matrix-mcp-importer and surface-projection-cli-only fixtures green. [AC-F5-3; NFR-3, NFR-4; TC: TC-MCP-010 steps 3-4, TC-MCP-013 step 5, TC-MCP-017 steps 5-6]"
+      - "3.7 Register protocol.ts, lifecycle.ts, and serve.ts in tests/structure/inventory.json with their executable allowances in content-inventory.test.ts; update tests/structure/subpaths.test.ts for the ./serve export; keep exports parity and the workspace-entrypoints expectations green (the declared workspaceImports set already covers everything the surface consumes; no boundary-matrix widening). [TC: TC-MCP-019 step 1; spec section 12 assumptions]"
+    testGate:
+      - "pnpm typecheck"
+      - "pnpm check:boundaries"
+      - "bun test tests/boundaries tests/checks/exit-code-literals.test.ts tests/structure/mcp-imports.test.ts"
+      - "bun run scripts/checks/exit-code-literals.ts"
+  - id: 4
+    title: "Lifecycle matrix, protocol discovery, Node portability smoke, and CI Node wiring"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/mcp-lifecycle.test.ts
+        - tests/behaviour/mcp-node-smoke.test.ts
+        - tests/fixtures/mcp/protocol/client.ts
+        - tests/fixtures/mcp/node/network-guard.mjs
+        - tests/checks/mcp-ci-parity.test.ts
+        - .github/workflows/ci.yml
+    summary: "test(GH-231): lifecycle, Node smoke, protocol suites, CI Node wiring"
+    tasks:
+      - "4.1 tests/fixtures/mcp/protocol/client.ts: the newline-delimited JSON-RPC 2.0 test client - deterministic ids, per-request timeouts that fail naming the unanswered method, initialize with a pinned protocol version and empty capabilities, tools/list only after the initialize result and the initialized notification, and JSON parsing of every tools/call content. [Test plan 4.5.1; TC: TC-MCP-012, TC-MCP-013]"
+      - "4.2 tests/behaviour/mcp-lifecycle.test.ts: the 4.4 exit matrix against the spawned built entry in a hermetic mkdtemp workspace (own HOME, XDG_CONFIG_HOME, config path, working name) - clean stop exits 0 with signal null and JSON-RPC-only stdout; the branding-derived config selector pointed at malformed or unresolvable configuration exits 1 with empty stdout and a named stderr diagnostic; a malformed JSON frame after a valid handshake exits 2 with every pre-fault stdout line parsing as JSON-RPC; a classified verify-artifact failure (lint.target.missing on a missing target) followed by a successful status call exits 0 with the tool code absent from stderr; an unknown method then tools/list exits 0; the repeated clean-stop row keeps every observed exit in {0,1,2}; hard per-process timeout with the child killed in finally; the lifecycle module asserted as the only exit site (with TC-MCP-018); no telemetry import or emission. [AC-F1-1; NFR-6, NFR-10; DEC-1, DEC-6; TC: TC-MCP-011, TC-MCP-010 step 5]"
+      - "4.3 tests/fixtures/mcp/node/network-guard.mjs and tests/behaviour/mcp-node-smoke.test.ts: the Node portability smoke - assert and record node --version against the declared floor and fail loudly when absent or too old; spawn the built ./serve entry resolved from packages/mcp/package.json exports under Node with the test-only network-guard preload installed via --import (or --require on earlier Node 20) that throws on fetch and node:http/https/net connections, failing closed when the guard cannot be installed; complete initialize, tools/list (exactly three branding-projected names, stable across repeats, no batch or fourth tool), and one call per tool with the pinned hermetic outcomes (status digest with truthful unavailable sections, lint.target.missing for verify-artifact, verify.gates.failed for gate-report on the same missing target with a pre-initialized read-only state root and empty verified registry); close and assert exit 0; run the same script under Bun when the built entry executes there and assert canonical JSON payload identity across the two runs (recording the reason and continuing when it cannot); assert the guard was installed and no guarded call occurred. [AC-F1-3; NFR-4, NFR-8; GAP-T1, GAP-T3; TC: TC-MCP-012, TC-MCP-013, TC-MCP-010 wire half]"
+      - "4.4 CI wiring: .github/workflows/ci.yml ts-test job gains an explicit node --version step (or a pinned actions/setup-node step) so the runner Node is declared rather than ambient; tests/checks/mcp-ci-parity.test.ts asserts the wiring by reading the workflow (ts-test runs pnpm test which discovers the MCP suites, and Node is provided and recorded); bun run scripts/checks/ci-topology.ts, ci-bindingness.ts, and ci-supply-chain.ts stay green. [AC-F1-3, AC-F1-4; NFR-4, NFR-9; TC: TC-MCP-019 steps 2-3]"
+      - "4.5 Complete the process-level TC-MCP-009 steps through the spawned server: an unexpected status argument does not crash the server (observed identity recorded in the execution log, no over-pinned code), and after each invalid input a valid call succeeds with the server never exiting. [AC-F5-2; TC: TC-MCP-009 steps 3 and 6]"
+    testGate:
+      - "bun test tests/behaviour/mcp-lifecycle.test.ts tests/behaviour/mcp-node-smoke.test.ts tests/checks/mcp-ci-parity.test.ts"
+      - "bun run scripts/checks/ci-topology.ts && bun run scripts/checks/ci-bindingness.ts && bun run scripts/checks/ci-supply-chain.ts"
+      - "pnpm typecheck"
+  - id: 5
+    title: "Prompt-injection inertness, read-only guarantee, and non-vacuity mutants"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/mcp-injection.test.ts
+        - tests/behaviour/mcp-readonly.test.ts
+        - tests/checks/mcp-mutants.test.ts
+      folders:
+        - tests/fixtures/mcp/injection
+        - tests/fixtures/mcp/mutants
+    summary: "test(GH-231): injection inertness, read-only guarantee, non-vacuity mutants"
+    tasks:
+      - "5.1 tests/fixtures/mcp/injection/** plus tests/behaviour/mcp-injection.test.ts: plant the unique canary and hostile instruction text only in fields the engines render within their declared bounds (a tracker work-item title for status, a CI trace evidence or job-name string for status and gate-report, a hostile change-ref string echoed by the verify and gates engines, a hostile workflow/job name in gate evidence), each verified by the positive control before inertness is asserted; then assert the canary appears in the payload as inert string data, never in tools/list, descriptions, schemas, or stderr, the read recorder log equals the clean baseline (no extra read), the read-only oracle holds, the only callTool site is the dispatcher, and a subsequent normal call to another tool returns its normal payload; the negative control (canary removed) proves the assertion is not vacuous. [F-7; AC-F7-1; NFR-10; RSK-2; TC: TC-MCP-016]"
+      - "5.2 tests/behaviour/mcp-readonly.test.ts: wrap every state store in guardStore with throwOnMutation: true across the full three-tool success-and-failure sequence; snapshot the temp workspace tree (relative paths, content hashes, mtimes) before and after and assert identity; assert no audit record or audit document exists (no audit writer composed); AST-scan packages/mcp/src/** for node:child_process imports and Bun.spawn/spawn(/exec(/execFile(/fork( call expressions with a non-zero file count and a seeded control; assert the composition root imports no @delivery-os/adapters/git seam and calls none of createGitBranchSeam, createGitCommitSeam, createWatchdogGitSeam, or createCommitlintProbe, with a seeded control; capture git status --porcelain before and after and assert unchanged. [F-7; AC-F7-2; NFR-7; TC: TC-MCP-017]"
+      - "5.3 tests/checks/mcp-mutants.test.ts over tests/fixtures/mcp/mutants/**: the seven mutant families each fail by name through temp copies imported via file URLs - the payload-leakage mutant (exitCode: 2 in a copied payload adapter), the parity mutant (one changed field), the catalog mutant (a fourth tool), the lifecycle mutants (process.exit(3) in the lifecycle module; an exit in a non-lifecycle module), the branding mutant (a seeded product literal), the injection mutant (a handler that acts on the canary), and the read-only mutant (a write member or a store.append call) - with the live modules still passing; if a mutant passes, the meta-check fails. [TC: TC-MCP-020; test plan 4.9 for every negative and parity guard; NFR-1..NFR-11 meta coverage]"
+    testGate:
+      - "bun test tests/behaviour/mcp-injection.test.ts tests/behaviour/mcp-readonly.test.ts tests/checks/mcp-mutants.test.ts"
+      - "pnpm typecheck"
+  - id: 6
+    title: "Finalize: aggregate gates, supply chain, changeset, release and spec-reconciliation obligations"
+    kind: delivery
+    scope:
+      files:
+        - .changeset/gh-231-minimal-mcp-minor.md
+        - doc/changes/2026-11/2026-11-06--GH-231--minimal-mcp/chg-GH-231-test-plan.md
+        - doc/changes/2026-11/2026-11-06--GH-231--minimal-mcp/chg-GH-231-plan.yaml
+    summary: "chore(GH-231): aggregate gates, changeset, and release obligations"
+    tasks:
+      - "6.1 Aggregate gates green end-to-end: pnpm check (lint, format, typecheck, tests, boundaries, exports parity); bun run scripts/checks/exit-code-literals.ts, forbidden-literals.ts, and error-table-sync.ts; git diff --check; the forbidden-literal scan reports zero violations over packages/mcp/** with a non-zero file count (the packageTree scope already covers it - no registry change needed because no user-facing doc ships in the delivery phases). [NFR-3, NFR-5; TC: TC-MCP-019 step 6, TC-MCP-015 step 4]"
+      - "6.2 Supply chain on the in-package branch: bun run scripts/checks/license-audit.ts and vulnerability-gate.ts green with zero high or critical findings; packages/mcp/package.json carries zero direct external dependencies (workspace-only) and the protocol implementation is confined to packages/mcp/src; manifest-privacy and publish-guard green (private: true, no publishConfig, no .mcpb, no scripts/install.sh entry); bun test tests/checks/license-audit.test.ts and license-ci-binding.test.ts green. [AC-F1-4; NFR-9; DEC-2; TC: TC-MCP-014, TC-MCP-019 step 4]"
+      - "6.3 Doc-distribution guard verification: confirm no marker-scoped document (doc/guides/**, doc/templates/**, doc/00-index.md, doc/documentation-handbook.md, doc/decisions/README.md, doc/decisions/00-index.md, .ai/rules/README.md) was modified by phases 1-5 - list the checked paths and record N/A per TC-MCP-019 step 5; documentation lands at the lifecycle system_spec_update phase via @doc-syncer, so scripts/.tests/test-doc-distribution.sh is recorded not-run for the delivery phases and re-checked at phase 7. [TC: TC-MCP-019 step 5, TC-MCP-021 conditional step 6]"
+      - "6.4 Add the lockstep changeset .changeset/gh-231-minimal-mcp-minor.md for the minor version impact. [Release obligation; spec front matter version_impact: minor]"
+      - "6.5 Record gate evidence in the test-plan execution log (section 10) - commands run, Bun and Node versions (including the smoke's Node version), case counts per parity suite against the floors, scan file counts, and the lifecycle exit codes observed - and run plan diff GH-231 for the declared-versus-actual scope reconciliation of this plan. [Testing-strategy evidence obligation; test plan section 10]"
+      - "6.6 Spec-reconciliation obligations declared for the system_spec_update phase (@doc-syncer, lifecycle phase 7, not in the delivery phases): author the first doc/spec/features/feature-mcp-surface.md (ados_distribution: internal; the three tools and their CLI analogues, the mirror-parity payload contract, the 0/1/2 lifecycle vocabulary, diagnostics-channel separation, the read-only and untrusted-content posture; no batch, mutating, daemon, .mcpb, publication, or installer claim); add the surface-mapping note to doc/spec/features/feature-result-contract.md (MCP tool results carry the CLI data shapes and error fields; envelope rendering and the {0,1,2} exit projection stay CLI-side); verify doc/guides/rename-drill.md RD-8 stays consistent with the committed tool-list snapshot; record the delivery decisions OQ-1 (in-package protocol), OQ-2 (serialize), OQ-T3 (./serve subpath, no bin), OQ-T5 (parameter name ref), and OQ-T6 (isError metadata outside the JSON payload) in the execution record. [TC: TC-MCP-021; spec section 16 Documentation row, section 18]"
+      - "6.7 Commit discipline for every phase commit through @committer: conventional subjects (feat/test/chore(GH-231): ...), body and footer lines at most 100 characters (CI commitlint enforces the width), and a clean tree with no stray files at each phase boundary (git status plus pnpm check). [PM constraint; repo commitlint configuration]"
+    testGate:
+      - "pnpm check"
+      - "bun run scripts/checks/license-audit.ts && bun run scripts/checks/vulnerability-gate.ts"
+      - "git diff --check"

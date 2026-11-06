@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   specification: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   test_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -24,6 +24,12 @@ notes:
     date: "2026-11-06"
   - text: "Test planning phase complete: chg-GH-231-test-plan.md authored (1098 lines, 21 TCs tracing to all 13 ACs + 11 NFRs). Notable oracles: shared CLI<->MCP parity harness (CLI in-process as live oracle, no process spawning), payload-leakage oracle (exact error field set; no exitCode/runId/timing at any depth; schemaVersion nuance pinned: delivery.status.v1/delivery.verify-gates.v1 allowed, delivery.result.v1 forbidden), lifecycle exit matrix {0,1,2} with stderr diagnostics only, Node portability smoke with network guard, injection/read-only oracle. TC-MCP-021 pins phase-7 docs: new feature-mcp-surface.md + feature-result-contract.md update — matches pm-notes doc-impact risk."
     type: "info"
+    date: "2026-11-06"
+  - text: "Delivery planning phase complete: chg-GH-231-plan.yaml authored in machine-readable delivery.plan.v1 format (NOT legacy .md — test plan front matter links the .yaml path; YAML wins per repo convention, a .md plan would fail dor_check as legacy-markdown). 6 delivery phases, each green + single-commit sized; all 21 TC-MCP-* and 13 ACs covered by tasks; OQ-1 resolved: in-package minimal stdio JSON-RPC 2.0 (zero new deps, no license-registry/lockfile churn; SDK adoption later is an ordinary C-2-gated change); OQ-2: serialize tool calls single-flight in arrival order. PM-verified facts pinned: dependency-cruiser excludes packages/mcp from runtime-apis-confinement (phase 3 adds reason-bearing serve-entry allowance), exit-code-literals check needs DEC-6 reconciliation (lifecycle module as sole {0,1,2} site outside CLI), inventory.json + content-inventory allowances are hand-maintained (registration tasks included), ci.yml ts-test lacks a Node step (phase 4 adds it). TC-MCP-021 (docs) deliberately deferred to phase-7 doc-syncer per test-plan GAP-T5."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Commit hygiene retro: first checkpoint commit (spec) failed repo commitlint body-max-line-length 100 in CI-enforced range lint (origin/main-tools..HEAD); fixed by local message-only reword (d03b7120 -> 8c1f16f5, tree-identical). Lesson: committer instructions for this repo must pin body/footer lines <=100 chars up front. Test-plan checkpoint authored compliant on first try."
+    type: "retro"
     date: "2026-11-06"
   - text: "Tracker write note: github-mcp lacks write auth (update_issue failed 'Requires authentication'); gh CLI authenticated as juliusz-cwiakalski with repo scope — all tracker writes and PR creation go through gh CLI via @runner. Labels synced: review (stale, no PR) removed, planning added; final set change+planning."
     type: "info"
