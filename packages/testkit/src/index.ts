@@ -20,7 +20,6 @@ export {
   type ScriptedTransportStep,
   transportAvailability,
 } from "./commit/transport-fakes.js";
-export { CONFORMANCE_ADAPTERS } from "./conformance/adapters.js";
 export {
   CONFORMANCE_FLOW_STATUSES,
   CONFORMANCE_LIMITS,
