@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
   quality_gates: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
   dod_check: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
-  pr_creation: { started: "2026-11-06T12:00:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/247" }
 decisions: # { text, date }
   - text: "DEC-5 confirmed (spec): spend summary (M1-S19) NOT surfaced in brief v0 — placeholder catalog closed at exactly three entries (typed-questions, gate-sla-states, lane-queue-engine); clarify-scope note expecting 4 placeholders is superseded by the spec's anchor-scope binding."
     date: "2026-11-06"
