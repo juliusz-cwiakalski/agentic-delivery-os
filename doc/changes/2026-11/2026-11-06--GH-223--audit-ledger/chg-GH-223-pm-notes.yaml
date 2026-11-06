@@ -5,10 +5,10 @@ branch: feat/GH-223/audit-ledger
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-06T00:10:00Z", completed: "2026-11-06T00:12:30Z" }
-  specification: { started: "2026-11-06T00:13:00Z", completed: "2026-11-06T02:25:00Z" }
-  test_planning: { started: "2026-11-06T00:27:00Z", completed: "2026-11-06T02:30:00Z" }
-  delivery_planning: { started: "2026-11-06T02:35:00Z", completed: "2026-11-06T02:52:00Z" }
-  dor_check: { started: null, completed: null }
+  specification: { started: "2026-11-06T00:13:00Z", completed: null }
+  test_planning: { started: "2026-11-06T00:27:00Z", completed: null }
+  delivery_planning: { started: "2026-11-06T02:35:00Z", completed: null }
+  dor_check: { started: "2026-11-06T02:56:00Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -16,6 +16,8 @@ phases:
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
+  - text: "PM-decided (DoR iteration 1 remediation, finding 1): audit invocation payload gains resultSchemaVersion carrying the rendered envelope's schemaVersion value (currently delivery.result.v1) — ticket AC3 'the audit record retains them [schemaVersion, runId, timing]' is then literally satisfied and future envelope schema bumps stay auditable. Payload becomes 13 fields. Also pinned while in this loop (reviewer non-blocking): command filter matches the recorded command token exactly, so a raw-token broken-invocation record is filterable by its recorded token."
+    date: "2026-11-06"
   - text: "PM-decided (reopened specification, iteration 4): MR-1 resolved — reservation payload gains chainValue as a third field ({auditSeq, runId, chainValue}). The iteration-3 'minimal fields' direction meant no invocation metadata (no args/outcome/identity), never exclusion of integrity fields; ticket-pinned tamper evidence (DEC-4) must cover every audit-domain record including orphan reservations, which are exactly the failure evidence. Invocation chainValue chains from the reservation's chainValue (reservation = previous link)."
     date: "2026-11-06"
   - text: "PM-decided (reopened specification, iteration 3): NEW-GAP-1 auditSeq durability resolved via RESERVATION-FIRST two-phase append — an additive audit.reservation record kind (carrying the consumed ordinal + runId) is appended inside the shared audit fence BEFORE the invocation record; a reservation lacking its invocation record in a verified read IS the in-band omission finding; reservations are ledger truth so derived-document rebuilds preserve gaps; hash chain covers both kinds; 'exactly one audit.invocation record per completed invocation' AC unchanged. Also pin: NEW-GAP-2 key-artifact open failures reuse existing state identities (missing on non-first open -> state.keys.missing; corrupt format -> state.store.torn family; wrong permission -> state.permission.denied), no new rows; NEW-GAP-3 startedAt = integer epoch milliseconds UTC, inclusive window bounds; NEW-GAP-4 terminal-tail salvage removes trailing records+reservations wholesale so no orphaned-tail reservation survives (document the invariant); NEW-GAP-5 pin the store-managed key-artifact path/API constant through the public port."
@@ -67,6 +69,12 @@ notes:
     type: info
     date: "2026-11-06"
   - text: "Retro 4: fourth reopen, but the gap class shrank each round (field-set omission -> mechanism durability -> internal consistency), and v1.2's mechanisms all passed the mandated realism certification — MR-1 is a consistency miss between F-4 and DM-6, a different and smaller class. Convergence is real; the residual risk is consistency across sections when a mechanism changes multiple touchpoints. Iteration-4 delegation therefore demands an explicit cross-section consistency sweep (F-x vs DM-x vs EVT-x vs AC-x vs Appendix B) as part of the return."
+    type: retro
+    date: "2026-11-06"
+  - text: "DOR GATE 1 = NOT_READY (2026-11-06T03:05Z, reviewer session recorded doc/changes/2026-11/2026-11-06--GH-223--audit-ledger/readiness-review/readiness-iter-1.md): 7 PASS / 3 FAIL (spec_completeness, cross_artifact_consistency, plan_code_area_coverage). Blocking 1 [critical] schemaVersion-retention contradiction: AC-F3-1/2+G-3+F-3+DEC-1 and TC-001/TC-014 say the audit record retains the envelope schemaVersion, but the pinned 12-field payload has no such field (same F-vs-DM class as MR-1; the v1.3 sweep covered only the reservation payload) -> specification reopened. Blocking 2 [major] P4 scope omits packages/cli/src/output/serialize.ts (the single write site owning writeOutput/serializeEnvelope; rendering in index.ts would break the single-write-site invariant TC-032; undeclared touch fails plan-diff) -> delivery_planning reopened. Non-blocking on record: TP frontmatter implementation_plan null link; P1 verification omits port-contract-inventory test; F-5 write-nothing vs rebuild-on-read (reconciled by TR-12); command-filter semantics for raw-token broken-invocation records (pinned via decision this loop). Reviewer confirmed mechanism realism against actual code this time (port, boundary factory, fault point, salvage, runCli startedAt). PM decisions recorded: resultSchemaVersion field (13-field payload) + command-filter pin. Phases specification/test_planning/delivery_planning reopened (completed=null) for the remediation loop; test_planning reopened for the consequential TC-001/TC-014 touch-up."
+    type: info
+    date: "2026-11-06"
+  - text: "Retro 5: the DoR gate earned its cost — it caught a ticket-vs-artifact contradiction (retention of schemaVersion) that BOTH the test-plan realism pass and my PM validation missed, because we checked the artifacts against each other but not hard enough against the ticket's exact words ('the audit record retains them'). Process takeaway: ticket-AC literal-wording checks belong in the artifact-authors' return criteria, and the F-vs-DM sweep must cover EVERY payload enumeration (invocation, reservation, error) after any payload change, not just the one being edited."
     type: retro
     date: "2026-11-06"
   - text: "ARTIFACT CHAIN CONVERGED (2026-11-06T02:30Z): spec v1.3 (commit a0109171, 15 ACs) + test plan 49 TCs covering 15/15 ACs, zero TODO/NEW-GAP/MR markers, TC-049 unblocked. Test-plan-writer verdict: CONVERGED, no remaining blocking gaps; mechanism-realism pass confirmed all TCs achievable through public port semantics. Iteration history: spec v1.0 -> TP(2 gaps) -> v1.1 -> TP(1 gap) -> v1.2 -> TP(1 gap MR-1) -> v1.3 -> TP(CONVERGED). Carrying note for delivery planning: StateStorePort lacks a store-managed artifact method — coder must add chain-key artifact capability additively within the state facade tier (no new driver runtime API)."
