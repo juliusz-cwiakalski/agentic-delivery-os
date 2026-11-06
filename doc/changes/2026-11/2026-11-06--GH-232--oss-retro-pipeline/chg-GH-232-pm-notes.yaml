@@ -1,0 +1,46 @@
+change_id: GH-232
+title: "M1-S8: OSS retro pipeline"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T17:20:00Z" }
+  specification: { started: "2026-11-06T17:22:00Z", completed: "2026-11-06T17:45:00Z" }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: issue GH-232 open (labels change+review, milestone M1); no open PR anywhere in repo; no PR ever for branch feat/GH-232/oss-retro-pipeline; no remote branch; local branch existed at origin/main-tools HEAD (0 ahead/0 behind), clean worktree. Classified as fresh start, not resume; no main-tools sync merge needed (already level)."
+    type: info
+    date: "2026-11-06"
+  - text: "Dependencies verified delivered: M0-S5 GH-174 closed, M1-S2 GH-222 closed (tracker)."
+    type: info
+    date: "2026-11-06"
+  - text: "Scope cross-check vs system spec and design baseline: command surface retro collect|report [--level] consistent across man-page.md, contracts.md, commands/retro.md, journeys.md; architecture places retro pipeline in learning plane with AUD(M1-S22)-->RT and CP(M1-S12)-->RT edges; M1-S2 state validation contract already names the retro registry as a validated store; audit ledger read surface was explicitly built for retro consumers (bounded, filtered, skipped-ordinal findings)."
+    type: info
+    date: "2026-11-06"
+  - text: "Design tension for spec/decision phase: audit-ledger keyed chain uses invertible FNV-1a-64 where same-user forgery resistance rests on 0600 file permissions (documented honestly in SPEC-AUDIT-LEDGER), while the pinned GH-232 decision requires a chaining key that never enters lane environments so a delivery agent cannot alter evidence undetectably. Evidence sidecar likely needs a non-invertible keyed construction (e.g. HMAC) with key material outside lane reach. This is a technical decision grounded in the pinned ticket decision, not a human-input blocker."
+    type: risk
+    date: "2026-11-06"
+  - text: "Scope reading recorded: 'home of the periodic memory audit' = the retro pipeline hosts/registers the periodic memory audit trigger; the audit procedure itself lives in the existing memory consolidation skill (AGENTS.md). Spec must pin this boundary."
+    type: info
+    date: "2026-11-06"
+  - text: "Doc impacts for phase 7 (system_spec_update): author doc/spec/features/feature-retro-pipeline.md (first-spec-only, none exists today) with ados_distribution marker; reconcile feature-state-layer.md (retro registry store) and feature-audit-ledger.md (retro consumer); glossary entry if new terms introduced. M1 pack docs are planning docs refined at delivery per milestones/README conventions, not current-truth."
+    type: info
+    date: "2026-11-06"
+  - text: "Tracker label realigned: 'review' was stale (no PR exists); replaced with 'planning' at planning start per pm-instructions workflow-state mapping. No comment left on ticket (nothing value-adding to record; requirements are complete)."
+    type: info
+    date: "2026-11-06"
+  - text: "clarify_scope completed without human questions: ticket has binding pinned decisions, testable AC, delivered dependencies, and consistent design baseline. Proceeding to artifact generation."
+    type: info
+    date: "2026-11-06"
+  - text: "Spec authored by @spec-writer: chg-GH-232-spec.md (496 lines, 16 ACs, 13 decisions, 3 decision-record candidates). PM validation passed: both binding ticket ACs quoted verbatim inside AC-F2-3/AC-F3-1 (tamper detection) and AC-F4-1/AC-F4-2 (malformed-entry survival); exit-0/1/2 contract reconciled via DEC-7 two-level taxonomy; no STOP-worthy contradictions found. OQ-1 raised: DEC-1/2/4 keyed-chain construction recommended as one TDR — will delegate to @decision-advisor before test planning."
+    type: info
+    date: "2026-11-06"
