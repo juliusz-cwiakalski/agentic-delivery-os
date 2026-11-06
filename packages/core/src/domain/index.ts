@@ -87,6 +87,69 @@ export {
   runIsolatedDoctorCheck,
 } from "./doctor.js";
 export {
+  evaluateMergeFreshness,
+  isStaleAge,
+  type MergeFreshnessEvaluation,
+  type MergeFreshnessVoidingReason,
+  type MergeGateSetDelta,
+  type MergeVerificationStateReason,
+  mergeDefaultFreshnessSeconds,
+  mergeFreshnessBoundMs,
+  mergeGateSetDelta,
+  mergeVerificationAgeMs,
+} from "./merge-freshness.js";
+export {
+  batteryGateEntries,
+  declaredGateSetOf,
+  enforcedMergeGateEntries,
+  type MergeEffectiveGateSet,
+  type MergeGateSetFailure,
+  mergeGateSetIdentity,
+  mergeSurfaceEntries,
+  resolveMergeGateSet,
+  resolveMergeGateSetFromConfig,
+} from "./merge-gate-set.js";
+export {
+  classifyTrackerTransition,
+  evaluateRequiredJobGate,
+  failedJobNames,
+  type MergePosture,
+  type MergeTrackerTransition,
+  newRedJobs,
+  ownerAttentionLabels,
+  postureOf,
+  type RequiredJobEvaluation,
+  recordedFailedJobs,
+} from "./merge-probe.js";
+export {
+  defaultFreshnessSeconds,
+  gateSetFromValues,
+  internalMergeFailure,
+  type MergeCheckRunPage,
+  type MergeFailure,
+  type MergeFailureEvidence,
+  type MergeLandResult,
+  type MergeRead,
+  type MergeRefreshResult,
+  type MergeRequestDetailRead,
+  type MergeTransactionConfig,
+  type MergeTransactionOutcome,
+  type MergeTransactionPorts,
+  type MergeWorkItemRead,
+  mergeBaseRef,
+  mergePostLandingStepIds,
+  policyRowForClass,
+  renderMergeFailure,
+  runMergeTransaction,
+} from "./merge-transaction.js";
+export {
+  authorizeMergeWaiver,
+  type MergeWaiverRefusalReason,
+  type MergeWaiverVerdict,
+  newestWaiverByGate,
+  recordedWaiverAuthorizer,
+} from "./merge-waiver.js";
+export {
   collectorUnavailableCode,
   evaluateOwnerGateSla,
   isCollectorUnavailableFamilyCode,
@@ -145,6 +208,14 @@ export {
   type VerifyRegistryEvidence,
 } from "./verify-change.js";
 export {
+  artifactMatches,
+  deployDecisiveEvidence,
+  evaluateDeploy,
+  projectDeployReport,
+  renderStepEvidence,
+} from "./verify-deploy.js";
+export {
+  evaluateDeclaredBattery,
   evaluateVerifyGates,
   isFullHexSha,
   renderVerifyGatesFailureSummary,

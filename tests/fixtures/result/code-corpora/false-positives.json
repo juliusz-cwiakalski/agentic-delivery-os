@@ -65,6 +65,18 @@
       "text": "vendor.collector.tracker.unavailable",
       "recognized": false,
       "resolves": false
+    },
+    {
+      "id": "merge-gate-family-undeclared-id",
+      "text": "merge.gate.workspace-tests.failed",
+      "recognized": true,
+      "resolves": false
+    },
+    {
+      "id": "merge-gate-family-empty-id",
+      "text": "merge.gate..failed",
+      "recognized": false,
+      "resolves": false
     }
   ]
 }

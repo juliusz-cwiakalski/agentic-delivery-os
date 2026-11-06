@@ -18,6 +18,7 @@ import {
 import { createVerifyCommandDefinition } from "../../packages/cli/src/commands/verify";
 import type { VerifyGatesCommandRuntime } from "../../packages/cli/src/commands/verify-gates";
 import { baseFacts } from "../fixtures/verify-gates/cases/facts";
+import { resolveMergeGateSet } from "../../packages/core/src/domain/merge-gate-set";
 
 const ROOT = process.cwd();
 
@@ -46,6 +47,14 @@ const gatesRuntime = (): VerifyGatesCommandRuntime => {
     readDeliveryRequestDetail: async () => facts.deliveryRequestDetail,
     readCheckRuns: async () => facts.checkRuns,
     readWorkItem: async () => facts.workItem,
+    readGateSet: () => {
+      const resolved = resolveMergeGateSet(undefined);
+      return resolved.ok
+        ? { ok: true as const, value: resolved.value }
+        : { ok: false as const, code: resolved.failure.code, detail: resolved.failure.detail };
+    },
+    appendVerification: () => ({ ok: true as const }),
+    nowMs: () => Date.parse("2026-11-06T12:00:00Z"),
   };
 };
 

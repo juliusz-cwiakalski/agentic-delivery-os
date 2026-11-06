@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DELIVERY-LIFECYCLE
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-05
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
 summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, variant-aware read-only ledger verification at finalization, and phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed)."
 links:
-  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226"]
+  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225"]
   guides:
     - "doc/guides/change-lifecycle.md"
     - "doc/guides/definition-of-ready.md"
@@ -155,4 +155,4 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 
 ## Merge-gate stage
 
-`dod_check` verifies ledger and acceptance completeness; `verify change` verifies the ledger only; [`verify gates`](feature-verify-gates.md) evaluates the five M0 merge gates read-only. Human review/approval and the actual merge remain external.
+`dod_check` verifies ledger and acceptance completeness; `verify change` verifies the ledger only; [`verify gates`](feature-verify-gates.md) evaluates the config-declared merge battery and appends its verification record; the [`merge` transaction](feature-merge-verify-deploy.md) lands only over a fresh verification; human review and approval remain external.

@@ -108,6 +108,45 @@ const PROVIDER_CHAIN_VALUE = {
 } as const satisfies CatalogField;
 
 /**
+ * One declared gate entry (GH-225 DM-4). The closed recipe vocabulary and the
+ * mandatory-built-in / reserved-id rules are semantic and validated by the
+ * merge domain; this schema pins the entry shape.
+ */
+const MERGE_GATE_ENTRY = {
+  type: "object",
+  required: true,
+  fields: {
+    id: { type: "string", required: true },
+    recipe: { type: "string", required: true },
+    surface: { type: "string", required: true },
+    class: { type: "string" },
+    job: { type: "string" },
+  },
+} as const satisfies CatalogField;
+
+/** The typed `merge` branch (GH-225 F-1, F-2, F-6). */
+const MERGE_BRANCH = {
+  type: "object",
+  fields: {
+    "gate-freshness": { type: "number" },
+    gates: {
+      type: "object",
+      fields: {
+        schemaVersion: { type: "string", required: true },
+        entries: { type: "array", items: MERGE_GATE_ENTRY, required: true },
+      },
+    },
+    "deploy-expectations": {
+      type: "object",
+      fields: {
+        steps: { type: "array", items: { type: "string" } },
+        artifacts: { type: "array", items: { type: "string" } },
+      },
+    },
+  },
+} as const satisfies CatalogField;
+
+/**
  * The production catalog. `provider` is a typed branch (GH-182 F-1); its
  * dynamic-name maps use the additive record field kind (PD-F), while every
  * fixed branch keeps exact unknown-key discipline.
@@ -128,6 +167,7 @@ export const PRODUCTION_CATALOG = {
       phaseCommit: { type: "boolean" },
     },
   },
+  merge: MERGE_BRANCH,
 } as const satisfies ConfigCatalog;
 
 export const fieldAt = (

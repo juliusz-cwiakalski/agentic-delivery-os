@@ -91,6 +91,24 @@ export type {
   StateRuntimeEdge,
 } from "./edge.js";
 export {
+  appendMergeGateVerification,
+  appendMergeTransaction,
+  appendMergeWaiver,
+  MERGE_GATE_VERIFICATION_RECORD_KEY_PREFIX,
+  MERGE_TRANSACTION_RECORD_KEY_PREFIX,
+  MERGE_WAIVER_RECORD_KEY_PREFIX,
+  type MergeStateAppend,
+  type MergeStateRead,
+  type MergeStateReadReason,
+  mergeGateVerificationRecordKey,
+  mergeTransactionRecordKey,
+  mergeWaiverRecordKey,
+  readAllMergeWaivers,
+  readMergeGateVerifications,
+  readMergeTransactions,
+  readMergeWaivers,
+} from "./merge.js";
+export {
   appendOwnerGateSlaDecision,
   OWNER_GATE_SLA_DECISION_RECORD_KEY_PREFIX,
   type OwnerGateSlaDecisionAppendOutcome,

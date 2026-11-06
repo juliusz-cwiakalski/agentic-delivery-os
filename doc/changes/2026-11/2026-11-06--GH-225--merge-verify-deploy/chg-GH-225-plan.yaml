@@ -1,0 +1,370 @@
+# GH-225 implementation plan — M1-S4: Merge and verify-deploy engine
+#
+# Sources (single source of truth):
+#   - Spec:  ./chg-GH-225-spec.md (v1.1; F-1..F-8; 18 ACs AC-F1-1..AC-F8-3;
+#     NFR-1..9; EVT-1..3; DM-1..5; DEC-1..DEC-13; Appendix C amendment record —
+#     the test plan's sixteen gap readings GAP-1..GAP-16 adopted as spec truth)
+#   - Test plan: ./chg-GH-225-test-plan.md (49 TCs: TC-MERGE-001..039,
+#     TC-DEPLOY-001..010; 35 suite files; binding in-process harness §4.1;
+#     non-vacuity contract §4.2; execution order §7)
+#
+# GAP-1/A-T2 mapping obligation: all 49 TCs are mapped onto Phases 1–7 below
+# without reshaping any TC's behaviour, records, reasons, exits, bounds,
+# assertions, or AC/NFR/SC mapping. Per-phase `coverage` entries carry the
+# mapping; TCs whose structure half and behaviour half land in different phases
+# are marked with the completing phase. Spec v1.1 and the test plan were
+# cross-checked: zero inconsistencies found (DEC-13 adopted every gap reading;
+# nothing here deviates — a real deviation would reopen the test plan, not ship).
+#
+# Delivery decisions recorded by this plan (the items the spec/test plan leave
+# delivery-bound; recorded against the spec per the GAP-7/OQ discipline):
+#   - Waiver declaration grammar (GAP-7/OQ-T6): `--waive <gate-id>` plus
+#     `--waived-by <principal>` on the merge surface. Behaviour (declaration
+#     names gate and authorizer; verification precedes recording), record
+#     content, ordering, and refusal identities are pinned, not rebound.
+#   - Deploy expectation source (GAP-3/OQ-T2): configuration-declared expected
+#     steps and artifact patterns as a third key of the typed `merge` config
+#     branch (`merge.deploy-expectations`); the provider-declared fact serves
+#     where the delivered provider facts expose it; no declared expectation is
+#     fail-closed never-`verified`.
+#   - Dry-run envelope reporting (GAP-5/OQ-T4): the pre-existing record's
+#     envelope is NOT additionally reported (minimal pinned reading, unasserted).
+#   - No-force assertion technique (GAP-14/OQ-T12): the git merge seam's
+#     operation union declares no force variant (structure assertion), plus a
+#     production-surface scan with a mandatory failing control fixture; a
+#     control-less pass is vacuous.
+#   - Platform-fault identity reuse (GAP-8/OQ-T7): provider/state faults inside
+#     `merge`/`verify deploy` reuse declared existing platform/state rows; no
+#     new fault row is added to either new code family.
+#   - Observational scope additions (review F-6): `packages/cli/src/classify.ts`
+#     (the runtime family recognizer used by the task-1.4 sync check),
+#     `packages/cli/src/output/deploy-text.ts` (the phase-5 deploy surface),
+#     `biome.json` (formatter exclusion for the new goldens), and the phase-7
+#     doc reconciliation breadth beyond `scope.files` (`change-lifecycle.md`,
+#     `definition-of-done.md`, ubiquitous-language, architecture-overview,
+#     `nonfunctional.md`, and four extra feature specs). All are legitimate and
+#     recorded here so plan-diff reconciliation is explicit.
+#
+# Tier rationale: `full` — 8 capabilities, 18 ACs, 49 automated TCs,
+# cross-package delivery (core contracts + config + state + domain, adapters
+# github/git, CLI command surface), high security impact (spec front matter).
+# All phases are delivery kind; the plan-level defaultLeases/defaultWeightClass
+# apply. Per-phase completion artifacts: one Conventional Commit per phase (the
+# `summary` key, landed via @committer's atomic land-and-record) plus the
+# `testGate` commands passing; typed doneArtifacts slots are declared on the
+# final phase where the evidence exists.
+#
+# Invariants carried by every phase (spec §21, NFR-6, GAP-14): the five
+# built-in gate ids stay reserved and mandatory in any declared set; verify
+# gates verdict bytes stay golden-identical despite the EVT-1 append; no daemon
+# merge path exists; the merge command is the only landing producer; no
+# force-capable operation exists anywhere in the mutation vocabulary; branding
+# seam (binary name from config, no product literals); secrets/payloads/titles/
+# bodies/log lines never in output or records; bounded reads/writes per NFR-2/3/4.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-225
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7]
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Merge and verify-deploy contracts, config branch, state record kinds, and the eleven error rows"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/merge.ts
+        - packages/core/src/contracts/verify-deploy.ts
+        - packages/core/src/contracts/owner-gate-sla.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/config/catalog.ts
+        - packages/core/src/config/defaults.ts
+        - packages/core/src/config/schema.ts
+        - packages/core/src/state/merge.ts
+        - packages/core/src/state/index.ts
+        - scripts/checks/error-table-sync.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/structure/merge-contract.test.ts
+        - tests/structure/verify-deploy-contract.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/owner-gate-sla-contract.test.ts
+        - tests/structure/inventory.json
+        - tests/checks/error-table-sync.test.ts
+        - tests/behaviour/config-schema.test.ts
+      folders:
+        - tests/fixtures/result/code-corpora
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/merge.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/verify-deploy.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/owner-gate-sla.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/config/catalog.ts
+        role: producer
+    summary: "feat(GH-225): merge and verify-deploy contracts, config branch, record kinds, error rows"
+    tasks:
+      - "1.1 Author packages/core/src/contracts/merge.ts data-only (as const + types): the five reserved built-in gate ids in shipped order (lifecycle-finalization, ci-green, push-parity, owner-gate, squash-preflight) plus the default declared set adding the merge-surface tracker-freshness entry (DEC-2); the closed versioned recipe vocabulary (five built-in recipes plus declarative recipes over existing repository/provider facts); surface applicability battery|merge|both; optional class binding; the closed gate-set schema-version set; freshness contract data (key merge.gate-freshness, default 1800 s, declared >= comparator making at-bound stale); declared-set identity (schema version + entry-id sequence); the additive record vocab DM-1..3 (delivery.merge.gate-verification.v1 / delivery.merge.waiver.v1 / delivery.merge.transaction.v1 and their record kinds) with closed payload types (ref, head SHA, verification time, gate-set identity, per-gate verdicts with bounded citations, tracker posture snapshot; gate id, class, authorizer principal, authorization time, bounded reason; result, squash SHA, landing evidence, refresh attempts, waiver references, post-landing step statuses); transaction result vocabulary; the mutation-operation vocabulary declaring no force variant (GAP-14); evidence/name-list caps per NFR-4. [AC: DM-1..DM-5 contracts halves; TC: TC-MERGE-001, TC-MERGE-031 contracts-tier half]"
+      - "1.2 Author packages/core/src/contracts/verify-deploy.ts data-only: the verdict enum exactly [verified, unknown, failed]; the reason enum exactly [pipeline-created-never-ran, status-stale] plus the failed-step naming rule; the one declared bidirectional reason-to-identity map (absent-evidence unknown including created-never-ran keeping its reason to verify.deploy.trace-missing; status-stale to verify.deploy.status-stale; failed-step to verify.deploy.trace-failed; no fourth row, no fourth reason, every row reachable, every reason mapping to exactly one row — GAP-2/GAP-16); the expectation-set shapes (expected steps, artifact patterns — field spellings delivery-bound per GAP-15); the deploy-trace shapes (executed steps with outcomes, produced artifacts; no log bodies); target-resolution and step/artifact bounds per NFR-3/NFR-4. [AC: AC-F6-2 vocabulary, NFR-8; TC: TC-DEPLOY-007]"
+      - "1.3 Extend packages/core/src/contracts/owner-gate-sla.ts with the per-class waiver-authorization policy (DM-5, DEC-11): never-merge classes are owner-authored with the owner principal provider-resolved, never claimed or inferred; the PDR-0003 two-row kind/class map, vocabulary, and SLA thresholds are consumed unchanged (NG-7). [AC: AC-F4-1 data half; TC: TC-MERGE-017 contract-data half]"
+      - "1.4 Error rows and sync: add exactly eight merge rows to error-table.ts — the family merge.gate.<gate-id>.failed, merge.gates-stale, merge.waiver-unauthorized, merge.owner-gate-override-without-waiver, merge.rebase-conflict, merge.transaction-aborted (user, not_landed, exit 1; transaction-aborted retryable true), merge.state-unverified (platform, exit 2), merge.landing-unverified (platform, consequence unknown, exit 2) — and the three verify rows verify.deploy.trace-missing, verify.deploy.status-stale, verify.deploy.trace-failed (user, not_landed, exit 1); DOMAIN_KINDS grows by exactly one kind (merge) with no code reused as a failureClass; every field/exit pin per spec Appendix C (DEC-7/DEC-13). Extend scripts/checks/error-table-sync.ts with the narrow family recognizer whose slot validator accepts any id present in the effective declared gate set (registry-validated) and rejects empty, malformed, or undeclared ids — no pattern widening (GAP-13); add the documented rows to doc/spec/features/feature-result-contract.md (the binding sync surface, in-change contract-sync) and the corpus true/false-positive rows under tests/fixtures/result/code-corpora. [AC: AC-F2-2, AC-F2-3, NFR-8; TC: TC-MERGE-014, TC-DEPLOY-007 step 6]"
+      - "1.5 Config branch: add the typed merge branch to catalog/defaults/schema — merge.gate-freshness (number, seconds, default 1800, per-value origins) and merge.gates (schema-versioned declared set: id with reserved built-ins, recipe from the closed vocabulary, applicability, optional class binding; list-replacement semantics; classified validation refusing omitted built-ins, reserved-id redefinition, unsupported versions, malformed entries — DEC-9/GAP-9) plus merge.deploy-expectations (the GAP-3 delivery decision: configuration-declared expected deploy steps and artifact patterns, absent-tolerant). Regenerate defaults-positions via the core build; extend tests/behaviour/config-schema.test.ts for the three keys with origin and classified-validation coverage. [AC: AC-F1-2 config-resolution half; TC: TC-MERGE-003 config half, NFR-5 bound datum]"
+      - "1.6 Author packages/core/src/state/merge.ts over the injected StateStorePort (state/owner-gate-sla.ts precedent): the three additive record kinds with fenced appends verified post-append, newest-record verified reads, presence-tolerant verified-empty evidence, payload validation rejecting wrong-kind/missing/extra fields, torn-state classification — no schema bump, no existing record kind touched (EVT-1..3, DM-1..3, NFR-7). Export from state/index.ts."
+      - "1.7 Structure suites and registration: create tests/structure/merge-contract.test.ts (data-only detector, per-datum deep-copy mutation controls: rename a built-in id, drop tracker-freshness, third surface, undeclared recipe, default bound, comparator inversion, out-of-set schema version) and tests/structure/verify-deploy-contract.test.ts (vocabulary, map bidirectional completeness, projection mutations, inventory registration); update error-table.test.ts and owner-gate-sla-contract.test.ts (authorization-policy datum mutations); register every new module in tests/structure/inventory.json. [AC: NFR-8; TC: TC-MERGE-001, TC-MERGE-004 structure half, TC-MERGE-014, TC-MERGE-017 data half, TC-DEPLOY-007, TC-MERGE-031 contracts half]"
+    coverage:
+      - "TC-MERGE-001 (complete)"
+      - "TC-MERGE-014 (complete)"
+      - "TC-DEPLOY-007 (complete)"
+      - "TC-MERGE-004 (structure half; behaviour half completes in Phase 3)"
+      - "TC-MERGE-017 (contract-data half; behaviour half completes in Phase 4)"
+      - "TC-MERGE-031 (contracts-tier half; domain half completes in Phase 2)"
+    testGate:
+      - "pnpm --filter @delivery-os/core build (regenerates defaults-positions)"
+      - "bun test tests/structure/merge-contract.test.ts tests/structure/verify-deploy-contract.test.ts tests/structure/error-table.test.ts tests/structure/owner-gate-sla-contract.test.ts tests/structure/content-inventory.test.ts tests/behaviour/config-schema.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts && bun test tests/checks/error-table-sync.test.ts"
+  - id: 2
+    title: "Pure merge and deploy domain: gate-set resolution, freshness envelope, waiver authorization, probe, transaction, trace evaluation"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/merge-gate-set.ts
+        - packages/core/src/domain/merge-freshness.ts
+        - packages/core/src/domain/merge-waiver.ts
+        - packages/core/src/domain/merge-probe.ts
+        - packages/core/src/domain/merge-transaction.ts
+        - packages/core/src/domain/verify-deploy.ts
+        - packages/core/src/domain/verify-gates.ts
+        - packages/core/src/domain/index.ts
+        - tests/structure/merge-imports.test.ts
+        - tests/structure/inventory.json
+    summary: "feat(GH-225): pure merge/deploy domain engines over injected facts and ports"
+    tasks:
+      - "2.1 domain/merge-gate-set.ts: pure declared-set resolution and validation — absent merge.gates yields exactly the shipped default set (five battery entries in shipped order plus merge-surface tracker-freshness); a declared set replaces wholesale and must contain every built-in (omission is a classified configuration failure naming the entry); built-in ids are reserved (a reusing entry must declare the shipped recipe and applicability — GAP-9); unsupported schema versions and malformed entries are refused; applicability projection yields the battery set and the merge set independently; the effective identity (schema version + entry ids) is the F-2 binding datum. No gate-id/recipe literals in the module. [AC: AC-F1-2, F-1; TC: TC-MERGE-002/003/004 domain halves (behaviour completes Phase 3)]"
+      - "2.2 domain/merge-freshness.ts: pure envelope evaluation over the verification record — record exists (absent/torn/unreadable/schema-incompatible maps to the state-unverified class, exit 2, DEC-8); age = injected now minus recorded verification time against the declared bound with the declared comparator (at-bound stale, NFR-5); recorded head SHA equals current head; recorded gate-set identity equals the effective one, with SHA-mismatch and set-delta voiding reasons distinguishable in evidence; envelope violation refuses merge.gates-stale primary with any probe observation as additional inline evidence (GAP-6 precedence); identical recorded evidence fields whether the refusal rides the envelope or the gate row. [AC: AC-F2-1, AC-F2-3, DEC-3; TC: TC-MERGE-007..011 domain halves]"
+      - "2.3 domain/merge-waiver.ts: pure waiver authorization — waivable-class check (its class declared in the classification, DM-5); authorizer verification against the class's declared policy (never-merge classes: the provider-resolved owner principal); unresolvable principals never authorize (fail-closed, RSK-4); classification into merge.waiver-unauthorized (naming gate, class, authorizer) vs merge.owner-gate-override-without-waiver vs authorized; deterministic per (record, class policy) — NFR-9. [AC: AC-F5-1, AC-F5-2 evaluation halves; TC: TC-MERGE-018/019/021 domain halves]"
+      - "2.4 domain/merge-probe.ts: pure classification of the post-verification observations — tracker posture transition into an owner-gated state with the transition and its age relative to the verification time (the owner-gate scan cited), a newly failing check-run on the verified head SHA with the job id inline, and the different-SHA non-evidence case; fresh verification plus violation refuses the gate row (merge.gate.ci-green.failed / merge.gate.tracker-freshness.failed) while a violated envelope keeps merge.gates-stale primary (GAP-6). [AC: AC-F3-1; TC: TC-MERGE-015/016 domain halves]"
+      - "2.5 domain/merge-transaction.ts: the pure transaction composition over injected ports (state records, git seam, provider readers, clock) — freshness envelope, one bounded probe (one work-item read, one check-run page, one request-detail read), waiver verify-then-record before any landing mutation, exactly one rebase-refresh attempt on a behind-base request (conflict refuses merge.rebase-conflict naming paths; success voids the SHA-bound verification and refuses merge.gates-stale with the old-to-new SHA transition — DEC-6), the squash landing with landing verification (SHA on base, request merged), post-landing steps (branch deletion, closeout-ready recording) with per-step status that never flips a verified landing and is never silent, merge.landing-unverified consequence unknown (exit 2, re-run re-verifies, never re-lands — GAP-10), clean pre-mutation abort as merge.transaction-aborted (retryable, GAP-11), idempotent replay of a recorded contained landing (exit 0, recorded squash SHA, no second landing — DEC-12), dry-run mode (evaluates the merge-applicable battery, appends exactly one verification record, zero mutations, no waiver record, no transaction record, never result=merged or squash= — GAP-5/GAP-12). [AC: AC-F7-1, AC-F7-2, AC-F8-1, AC-F8-2 evaluation halves; TC: TC-MERGE-022..029 domain halves]"
+      - "2.6 domain/verify-deploy.ts: pure trace evaluation — deterministic target resolution with a declared tie rule; verified only when the declared expectation set's steps executed successfully and the artifacts are present in the trace evidence; a status field standing alone or contradicting the trace is disqualified (status-stale); zero executed steps on an existing pipeline is pipeline-created-never-ran; failed steps read failed with the step named; the reason-to-identity map from contracts is the only identity source (no prose identity — GAP-16); no declared expectation set degrades to unknown, never verified (GAP-3); bounded step/artifact projection with explicit truncation marks. [AC: AC-F6-1..3 evaluation halves; TC: TC-DEPLOY-001..006 domain halves]"
+      - "2.7 domain/verify-gates.ts: consume the declared registry — evaluate the battery-applicable entries of the resolved set in declared order, citing a repo-declared gate exactly like a built-in (same citation/evidence shape); with the default set the verdicts, citations, ordering, and shapes are byte-identical to the shipped five-gate battery (RSK-2, backward compatibility). [AC: AC-F1-1 evaluation half; TC: TC-MERGE-002/004 domain halves]"
+      - "2.8 domain/index.ts re-exports; create tests/structure/merge-imports.test.ts — AST purity (no I/O, clock, randomness, environment, filesystem, network, child process over the new domain modules with runtime sentinels), domain imports #contracts only, no new runtime-API location/package/subpath (ADR-0003 tiers), inventory registration, import-direction negative fixture. [AC: NFR-1, NFR-6; TC: TC-MERGE-031 complete]"
+    coverage:
+      - "TC-MERGE-031 (completes: domain purity, tier discipline)"
+      - "TC-MERGE-017 (import-identity half lands with Phase 4 behaviour)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/structure/merge-imports.test.ts tests/structure/content-inventory.test.ts"
+      - "bun test tests/boundaries && bun run scripts/checks/ambient-globals.ts && bun run scripts/checks/workspace-entrypoints.ts"
+  - id: 3
+    title: "Merge surface: git seam, verify-gates recording, merge command, dry-run, and the core behaviour suites"
+    kind: delivery
+    scope:
+      files:
+        - packages/adapters/src/git/merge.ts
+        - packages/adapters/src/git/index.ts
+        - packages/cli/src/commands/merge.ts
+        - packages/cli/src/commands/verify-gates.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/output/merge-text.ts
+        - packages/cli/src/output/index.ts
+        - packages/cli/src/edge.ts
+        - tests/fixtures/verify-gates/cases/harness.ts
+        - tests/fixtures/merge/harness.ts
+        - tests/behaviour/merge-gate-set.test.ts
+        - tests/behaviour/merge-verification-record.test.ts
+        - tests/behaviour/merge-freshness.test.ts
+        - tests/behaviour/merge-refusal-surface.test.ts
+        - tests/behaviour/merge-dry-run.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/merge/gate-sets
+        - tests/fixtures/merge/verification-records
+        - tests/fixtures/merge/config
+    summary: "feat(GH-225): merge command surface with verify-gates verification recording"
+    tasks:
+      - "3.1 Author packages/adapters/src/git/merge.ts — the bounded git merge seam over the injected child-runner pattern (git/commit.ts precedent): local bounded reads (head resolution, base containment), exactly one rebase attempt, the squash-landing mutation, landing-verification reads, branch deletion through the existing declared seam; the operation union declares no force variant (GAP-14 structural half); fixed argv, no shell interpolation, no network, no remotes; export via git/index.ts. [AC: F-7/F-8 mutation halves; TC: TC-MERGE-022/023/024 adapter halves]"
+      - "3.2 Author packages/cli/src/commands/merge.ts — createMergeCommandDefinition(runtime) with grammar merge <ref> [--dry-run] plus the delivery-bound waiver declaration flags --waive <gate-id> and --waived-by <principal> (GAP-7 delivery decision, recorded in the plan header); the handler is I/O-free over the injected runtime (gate registry from config, state records, git seam, provider readers, owner principal, clock, audit identity), returns data or exactly one classified failure from the eleven declared rows / reused platform-state rows (GAP-8), never writes a stream, never chooses an exit digit; output/merge-text.ts renders the deterministic text surface — result=merged with squash= on success, result=refused naming the failed gate or condition with inline evidence (age, bound, SHAs, transition age, conflicting paths, job id) and a remediation hint on every refusal, continuity keys preserved, human bounds enforced; the merge-applicable battery gates refuse through the family row merge.gate.<gate-id>.failed. [AC: AC-F2-2, DEC-4; TC: TC-MERGE-012, TC-MERGE-013, TC-MERGE-028 command halves]"
+      - "3.3 Extend packages/cli/src/commands/verify-gates.ts and the edge composition: after every full declared-battery evaluation append exactly one EVT-1 gate-verification record through the Phase-1 state module (fenced, verified post-append; append failure is a classified state failure, never a verdict change — RSK-2); verdicts, citations, ordering, and human output remain byte-identical (read-only to read-plus-record, the one declared shipped-behaviour change); verify change appends nothing; the verify-gates test harness gains a temp state store. [AC: AC-F2-4 writer half; TC: TC-MERGE-005, TC-MERGE-006, TC-MERGE-038 harness half]"
+      - "3.4 Compose the merge runtime in packages/cli/src/edge.ts — declared gate set and freshness bound from the config layer with origins, the state record module, the git merge seam, the delivered provider readers (work item, check-run page, request detail), the provider-resolved owner principal, the audit seam with claimed identity, and the injected clock; register the merge command beside the existing commands; branding seam only (binary name from the injected brand). [AC: NFR-2, NFR-6 edge confinement; TC: TC-MERGE-031 edge half]"
+      - "3.5 Author tests/fixtures/merge/harness.ts — the binding §4.1 in-process harness: runCli over injected brand/clock/run-id/configuration snapshot/gate set/provider readers/principal/state store (tests/fixtures/state/harness.ts)/git adapter (temp repos via the commit harness pattern)/audit seam/streams, every reader recording invocation count and order, guardStore mutation recorder, the throwing fetch network guard, fixed run ids (run-merge-fixture) and clock (2026-11-06T12:00:00Z) for byte comparisons; committed gate-set/verification-record/config fixtures. [Test plan §4.1, §4.2; enabler for every merge TC]"
+      - "3.6 Behaviour suites: merge-gate-set.test.ts (TC-MERGE-002 — custom workspace-tests gate cited like a built-in on both surfaces, failing it refuses merge.gate.workspace-tests.failed, the no-source-change production scan with its hard-coded-id control, restored pass control; TC-MERGE-003 — omitted built-in, reserved-id override, unsupported version, malformed entry each a classified configuration failure with zero reads/appends/mutations and the paired valid control; TC-MERGE-004 — battery/merge/both applicability matrix, tracker-freshness never on the battery surface, surface mutation flips visibility); merge-verification-record.test.ts (TC-MERGE-005 — exactly one fenced EVT-1 append with the closed payload, byte-prefix history, newest-record consumption, dry-run records too; TC-MERGE-006 — fence/permission/append/post-verify faults classified, verdict bytes untouched, verified-empty afterwards, later merge refuses state-unverified); merge-freshness.test.ts (TC-MERGE-007 fresh control lands; TC-MERGE-008 31 m stale with age/bound/new-red-job inline and merge.gates-stale primary; TC-MERGE-009 at-bound stale, T-1 ms fresh, comparator mutation, clock jump; TC-MERGE-010 SHA and set-identity voiding with distinguishable reasons; TC-MERGE-011 absent/torn/unreadable/schema-incompatible/wrong-ref state-unverified at exit 2 with the stale-exit-1 contrast); merge-refusal-surface.test.ts (TC-MERGE-012 all eight refusal families with named condition, inline evidence, remediation, continuity keys, squash= only on success; TC-MERGE-013 scripted error+runId no data, agent trim, the pack data-shape negative assertion); merge-dry-run.test.ts (TC-MERGE-028 — pass/fail dry runs, exactly one record, zero mutations, no result=merged/squash=, authorization reported but no waiver recorded, the dry-run-then-merge operator loop). Every case follows the §4.2 non-vacuity contract (durable delta + call log + paired controls). [AC: AC-F1-1, AC-F1-2, AC-F2-1..4, DEC-4; TC: TC-MERGE-002, TC-MERGE-003, TC-MERGE-004 complete, TC-MERGE-005..013, TC-MERGE-028]"
+      - "3.7 Register the new command, output, and adapter modules in tests/structure/inventory.json; the existing verify-gates suites and goldens stay green with the harness change. [TC: TC-MERGE-038 non-regression half]"
+    coverage:
+      - "TC-MERGE-002, TC-MERGE-003, TC-MERGE-004 (completes), TC-MERGE-005, TC-MERGE-006, TC-MERGE-007, TC-MERGE-008, TC-MERGE-009, TC-MERGE-010, TC-MERGE-011, TC-MERGE-012, TC-MERGE-013, TC-MERGE-028"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/merge-gate-set.test.ts tests/behaviour/merge-verification-record.test.ts tests/behaviour/merge-freshness.test.ts tests/behaviour/merge-refusal-surface.test.ts tests/behaviour/merge-dry-run.test.ts"
+      - "bun test tests/behaviour/verify-gates-lifecycle.test.ts tests/behaviour/verify-gates-output.test.ts tests/behaviour/verify-gates-read-budget.test.ts tests/behaviour/verify-gates-corpus.test.ts && bun test tests/golden/verify-gates.test.ts"
+  - id: 4
+    title: "Transaction pinning: probe, classification, waivers, board GAP-9 flip, rebase, landing, convergence"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/edge.ts
+        - tests/behaviour/merge-probe.test.ts
+        - tests/behaviour/merge-classification.test.ts
+        - tests/behaviour/merge-waivers.test.ts
+        - tests/behaviour/board-waiver-recording.test.ts
+        - tests/behaviour/merge-rebase.test.ts
+        - tests/behaviour/merge-landing.test.ts
+        - tests/behaviour/merge-convergence.test.ts
+      folders:
+        - tests/fixtures/merge/probes
+        - tests/fixtures/merge/policy
+        - tests/fixtures/merge/waivers
+        - tests/fixtures/merge/git
+        - tests/fixtures/board
+    summary: "test(GH-225): pin probe, waivers, board waiver recording, rebase, landing, convergence"
+    tasks:
+      - "4.1 Close the GH-229 GAP-9 seam in packages/cli/src/edge.ts: the board collector reads recorded waiver records (newest per gate id per change ref through the Phase-1 state module) and maps a gate with a recorded waiver to kind waiver with waivedBy equal to the recorded authorizer principal; a gate without a recorded waiver stays kind owner-review with waivedBy null (no synthesis); the board payload schema is unchanged — the flip is data population; the SLA's unwaived escalation posture is untouched (RSK-6). [AC: AC-F4-1 board half; TC: TC-MERGE-020]"
+      - "4.2 Author tests/behaviour/merge-probe.test.ts — TC-MERGE-015: 2 m verification plus an owner-attention flip refuses merge.gate.tracker-freshness.failed with the transition and its age and the owner-gate scan cited, exactly one work-item read, unchanged-posture control lands, the label-present-at-verification non-transition control; TC-MERGE-016: fresh verification plus a new red job on the head refuses merge.gate.ci-green.failed with the job id inline, the different-SHA control proceeds, the stale-plus-red-job variant asserts the merge.gates-stale precedence both ways (GAP-6); TC-MERGE-032: exact read counts per scenario (one verification read, one work-item read, one check-run page, one request-detail read, bounded git reads; zero retries/pagination; mutation reads only on declared paths) with the deliberate-second-read liveness control. [AC: AC-F3-1, NFR-2; TC: TC-MERGE-015, TC-MERGE-016, TC-MERGE-032]"
+      - "4.3 Author tests/behaviour/merge-classification.test.ts — the classification readable as declared data (owner-review yields never-merge and owner-authored authorization; waiver yields defaultability), the structure assertion that merge-time authorization reads the same exported policy object (import identity, no duplicated kind/class literal), the temp-policy mutations that flip the observed outcome (authorizable-by-any flips refusal to pass; removed class binding is a classified failure, never a default), vocabulary consumed unchanged from GH-229. [AC: AC-F4-1 complete; TC: TC-MERGE-017 completes]"
+      - "4.4 Author tests/behaviour/merge-waivers.test.ts — TC-MERGE-018: authorized waiver record appended before the first git mutation (ordering recorder), gate passes under it, transaction record references it, record persists across a later refusal, byte-identical authorization on repeat; TC-MERGE-019: unauthorized/unresolvable/non-waivable variants refuse merge.waiver-unauthorized naming gate/class/authorizer, verified-empty no-record assertion, audit captures the attempt, principal rendered as identity reference, fail-closed when the identity read throws; TC-MERGE-021: owner-gate failure with no declaration refuses merge.owner-gate-override-without-waiver naming the override path, mutually exclusive with waiver-unauthorized, declaration-added control lands. [AC: AC-F5-1, AC-F5-2 complete; TC: TC-MERGE-018, TC-MERGE-019, TC-MERGE-021]"
+      - "4.5 Author tests/behaviour/board-waiver-recording.test.ts over board fixtures plus a temp state root — gate X collected as waiver-kind with the recorded waivedBy, gate Y stays owner-review with null, payload schema unchanged, unwaived never-merge escalation unchanged, waiver record never authorizes a merge by itself, remove-the-record mutation returns waivedBy to null. [AC: AC-F4-1 consumer half; TC: TC-MERGE-020]"
+      - "4.6 Author tests/behaviour/merge-rebase.test.ts over real temporary git repositories (commit-harness pattern, deterministic identity/dates, no remotes) — TC-MERGE-022: conflict refuses merge.rebase-conflict naming both conflicting paths with the +N mark over the cap, exactly one attempt per invocation, no force variant in the operation union, no rewritten history beyond the aborted refresh, durable delta unchanged, retryable after resolution; TC-MERGE-023: successful refresh changes the head, refuses merge.gates-stale with the old-to-new SHA transition and the re-run-verify-gates remediation, no squash/deletion, the re-verify-then-merge control lands, the attempt and outcome carried in transaction evidence. [AC: AC-F7-1, AC-F7-2 complete; TC: TC-MERGE-022, TC-MERGE-023]"
+      - "4.7 Author tests/behaviour/merge-landing.test.ts and tests/behaviour/merge-convergence.test.ts — TC-MERGE-024: exit 0 result=merged squash=, base advanced by exactly one single-parent squash commit (parent/count/tree assertions), landing verified (SHA reachable, request merged), post-landing steps declared with per-step status, exactly one transaction record with the closed payload; TC-MERGE-025: the three unverifiable-landing variants exit 2 merge.landing-unverified consequence unknown, never success, re-run re-verifies and converges; TC-MERGE-029: cleanup failures (deletion, closeout append, both) never flip the verified landing and are never silent, re-run keeps the failure declared; TC-MERGE-026: pre-mutation faults (fence, git refusal, audit reservation) abort clean as merge.transaction-aborted retryable not_landed with nothing landed and a converging re-run; TC-MERGE-027: replay of a recorded contained landing exits 0 with the same squash SHA, zero git mutations, no duplicate records, new runId audited, SHA-not-contained control reads landing-unverified. [AC: AC-F8-1, AC-F8-2 complete; TC: TC-MERGE-024, TC-MERGE-025, TC-MERGE-026, TC-MERGE-027, TC-MERGE-029]"
+    coverage:
+      - "TC-MERGE-015, TC-MERGE-016, TC-MERGE-017 (completes), TC-MERGE-018, TC-MERGE-019, TC-MERGE-020, TC-MERGE-021, TC-MERGE-022, TC-MERGE-023, TC-MERGE-024, TC-MERGE-025, TC-MERGE-026, TC-MERGE-027, TC-MERGE-029, TC-MERGE-032"
+    testGate:
+      - "bun test tests/behaviour/merge-probe.test.ts tests/behaviour/merge-classification.test.ts tests/behaviour/merge-waivers.test.ts tests/behaviour/board-waiver-recording.test.ts"
+      - "bun test tests/behaviour/merge-rebase.test.ts tests/behaviour/merge-landing.test.ts tests/behaviour/merge-convergence.test.ts"
+      - "bun test tests/behaviour/board-defaults.test.ts tests/behaviour/board-never-silence.test.ts && bun test tests/golden/board-grid.test.ts (GH-229 non-regression)"
+  - id: 5
+    title: "Verify deploy surface: trace adapter, third verify subcommand, and deploy behaviour suites"
+    kind: delivery
+    scope:
+      files:
+        - packages/adapters/src/github/deploy-trace.ts
+        - packages/adapters/src/github/index.ts
+        - packages/cli/src/commands/verify-deploy.ts
+        - packages/cli/src/commands/verify.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/verify-deploy-verdicts.test.ts
+        - tests/behaviour/verify-deploy-read-budget.test.ts
+        - tests/behaviour/verify-deploy-bounds.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/verify-deploy
+    summary: "feat(GH-225): verify deploy subcommand reading the job execution trace"
+    tasks:
+      - "5.1 Author packages/adapters/src/github/deploy-trace.ts — the new bounded provider read kind behind the existing github client/ports: the deploy-job execution trace (executed steps with outcomes, produced artifacts), one bounded read per invocation, zero retries/pagination, no log bodies, no trigger/re-run/schedule/cancel capability on the surface (NG-5 asserted as absent capability); export via github/index.ts. [AC: NFR-3 adapter half; TC: TC-DEPLOY-001/008/009 adapter halves]"
+      - "5.2 Author packages/cli/src/commands/verify-deploy.ts and extend packages/cli/src/commands/verify.ts — the third verify subcommand beside change and gates: deterministic target resolution with the declared tie/ambiguity rule, one bounded trace read, the expectation set from the declared source (merge.deploy-expectations configuration or the provider-declared fact where exposed — the GAP-3 delivery decision), the verified/unknown/failed verdict taxonomy through the declared reason-to-identity map, negative verdicts as classified errors at exit 1 (identity verify.deploy.*, runId, no data sibling, text verdict= continuity — GAP-4/GAP-16), trace-read platform faults reusing a declared existing platform/state row at exit 2 (GAP-8); the handler returns data or one classified failure, never writes a stream. [AC: AC-F6-1..3 command halves; TC: TC-DEPLOY-001..007 command halves]"
+      - "5.3 Compose the deploy runtime in packages/cli/src/edge.ts — the trace adapter over the github client, the expectation source, the audit seam, the injected clock and brand; register the subcommand. [AC: NFR-3; TC: TC-DEPLOY-008]"
+      - "5.4 Author the deploy behaviour suites over traces fixtures — verify-deploy-verdicts.test.ts: TC-DEPLOY-001 (declared steps executed and artifacts in trace evidence yield verified exit 0 with the trace summary, artifact-absent-but-status-success control); TC-DEPLOY-002 (created-never-ran reads unknown with reason pipeline-created-never-ran at verify.deploy.trace-missing, exit 1, never green even with a success status field, zero-step trace shown); TC-DEPLOY-003 (standalone/contradicting/empty-trace status variants all status-stale unknown, status never overrides or upgrades); TC-DEPLOY-004 (failed step named at verify.deploy.trace-failed, honest partial evidence, disjoint from unknown); TC-DEPLOY-005 (no trace records / never-created target / no declared expectation — all trace-missing unknown fail-closed, disjoint from the read fault); TC-DEPLOY-006 (transport/credential/5xx/malformed faults exit 2 with a declared existing platform row, no verdict datum, disjoint from unknown). verify-deploy-read-budget.test.ts: TC-DEPLOY-008 (deterministic target across runs, one bounded trace read, zero trigger operations asserted structurally and by recorder, no-target classified outcome, deliberate-second-read control). verify-deploy-bounds.test.ts: TC-DEPLOY-009 (under/at/over-cap step and artifact lists with explicit +N marks, machine and human bounds, decisive evidence never truncated, log-body canary absent, cap mutation control). [AC: AC-F6-1..3 complete, NFR-3/NFR-4; TC: TC-DEPLOY-001..006, TC-DEPLOY-008, TC-DEPLOY-009]"
+      - "5.5 Register the new adapter and command modules in tests/structure/inventory.json; config-contract and registry-imports structure suites stay green. [AC: NFR-8 registration]"
+    coverage:
+      - "TC-DEPLOY-001, TC-DEPLOY-002, TC-DEPLOY-003, TC-DEPLOY-004, TC-DEPLOY-005, TC-DEPLOY-006, TC-DEPLOY-008, TC-DEPLOY-009"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/verify-deploy-verdicts.test.ts tests/behaviour/verify-deploy-read-budget.test.ts tests/behaviour/verify-deploy-bounds.test.ts"
+      - "bun test tests/behaviour/verify-change-classification.test.ts tests/behaviour/verify-gates-surface.test.ts (verify surface non-regression)"
+  - id: 6
+    title: "Invariants and pinning: coordinator boundary, bounds, privacy, determinism, goldens, non-regression, no-live checks"
+    kind: delivery
+    scope:
+      files:
+        - .dependency-cruiser.cjs
+        - tests/behaviour/merge-coordinator-boundary.test.ts
+        - tests/behaviour/merge-bounds.test.ts
+        - tests/behaviour/merge-privacy.test.ts
+        - tests/behaviour/merge-determinism.test.ts
+        - tests/golden/merge.test.ts
+        - tests/golden/verify-deploy.test.ts
+        - tests/checks/merge-deploy-no-live-calls.test.ts
+        - tests/checks/secret-read-boundary.test.ts
+      folders:
+        - tests/boundaries
+        - tests/fixtures/merge/bounds
+        - tests/fixtures/merge/privacy
+        - tests/fixtures/merge/golden
+        - tests/fixtures/verify-deploy/golden
+        - tests/fixtures/verify-deploy/bounds
+    summary: "test(GH-225): pin coordinator boundary, bounds, privacy, determinism, goldens, no-live"
+    tasks:
+      - "6.1 Author tests/behaviour/merge-coordinator-boundary.test.ts with the boundary fixtures — no daemon/dispatch module imports or composes the merge mutation surface (boundary rule plus import-scan assertion, negative fixture that adds a daemon-to-merge edge and must fail, positive CLI control producing the landing); the merge command is the only landing producer (call-site scan outside the command/transaction composition); every invocation audited with runId, command, redacted args, exit, timing, claimed identity present and absent-without-inference, second-record new runId, no secret pattern; extend the boundary rules/fixtures under tests/boundaries and .dependency-cruiser.cjs only as needed for the new edges. [AC: AC-F8-3, NFR-6; TC: TC-MERGE-030]"
+      - "6.2 Author the pinning suites — tests/behaviour/merge-bounds.test.ts (TC-MERGE-033: machine data <= 65 536 bytes and human summary <= 24 lines / 4 096 bytes on under/at/over-cap and hostile-length and multibyte fixtures, every drop/clamp marked +N, decisive evidence rendered first, cap mutation control); tests/behaviour/merge-privacy.test.ts (TC-MERGE-034: planted-merge-* canaries in title/body/comment/payload/log-body/credential absent from stdout/stderr/envelope/records/audit/human output, allowed identity fields present, waiver reason through the redaction chokepoint, allowlist count unchanged — extends tests/checks/secret-read-boundary.test.ts); tests/behaviour/merge-determinism.test.ts (TC-MERGE-035: 20-run byte equality on success and four refusal fixtures, permutation invariance, changed-fact control, TTY parity, run-id-only variation). [AC: NFR-1, NFR-4, sections 20/21; TC: TC-MERGE-033, TC-MERGE-034, TC-MERGE-035]"
+      - "6.3 Author the golden suites — tests/golden/merge.test.ts (TC-MERGE-036: SC-M1-01 success data and human bytes with assertEnvelopeContract; TC-MERGE-037: the six refusal goldens stale/gate-failure/tracker-freshness/waiver-unauthorized/override-without-waiver/rebase-conflict in text, scripted, and agent-trimmed forms with the three pinned stale evidence facts and the transition-plus-age tracker facts, golden mutation controls, read-only goldens); tests/golden/verify-deploy.test.ts (TC-DEPLOY-010: verified/created-never-ran/status-stale/failed/trace-missing goldens, trim keeps runId and code, 20-run determinism, changed-fact control). [AC: AC-F8-1, AC-F2-2, AC-F6-1/2 golden halves, NFR-1; TC: TC-MERGE-036, TC-MERGE-037, TC-DEPLOY-010]"
+      - "6.4 Verify-gates non-regression (TC-MERGE-038): the pre-change goldens under tests/fixtures/verify-gates/golden remain the oracle and are not regenerated; the only observable delta is exactly one appended EVT-1 record per full battery evaluation (ledger before/after) and none from verify change; ordering, citations, and verdicts unchanged across the existing structure/contract suites and corpus; the no-live suite still passes for the updated harness. [AC: RSK-2, section 8.5; TC: TC-MERGE-038 complete]"
+      - "6.5 Author tests/checks/merge-deploy-no-live-calls.test.ts — static scan of every merge/deploy production module and default harness for live-call constructs (fetch, http(s) clients, network-reaching child processes), the throwing fetch guard installed with a zero-call counter on all success and refusal fixtures, the deliberate-call positive control proving the guard live, the new modules added to the scanned module list, the deploy trace read through the injected provider port with no retry/pagination capability. [AC: NFR-2, NFR-3; TC: TC-MERGE-039]"
+    coverage:
+      - "TC-MERGE-030, TC-MERGE-033, TC-MERGE-034, TC-MERGE-035, TC-MERGE-036, TC-MERGE-037, TC-MERGE-038, TC-MERGE-039, TC-DEPLOY-010"
+    testGate:
+      - "bun test tests/behaviour/merge-coordinator-boundary.test.ts tests/behaviour/merge-bounds.test.ts tests/behaviour/merge-privacy.test.ts tests/behaviour/merge-determinism.test.ts"
+      - "bun test tests/golden/merge.test.ts tests/golden/verify-deploy.test.ts tests/golden/verify-gates.test.ts"
+      - "bun test tests/checks/merge-deploy-no-live-calls.test.ts tests/checks/secret-read-boundary.test.ts tests/checks/verify-gates-no-live-calls.test.ts && bun test tests/boundaries"
+  - id: 7
+    title: "Finalize and release: changeset, aggregate gates, and the spec-reconciliation handoff"
+    kind: delivery
+    scope:
+      files:
+        - .changeset/gh-225-merge-verify-deploy-minor.md
+        - scripts/checks/forbidden-literals.registry.json
+        - doc/spec/features/feature-merge-verify-deploy.md
+        - doc/spec/features/feature-verify-gates.md
+        - doc/spec/features/feature-owner-gate-sla.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/overview/glossary.md
+        - doc/00-index.md
+        - doc/quality/test-specs/test-spec-merge-verify-deploy.md
+        - doc/planning/oss-tooling/milestones/m1/test-scenarios.md
+        - doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/chg-GH-225-test-plan.md
+        - doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/chg-GH-225-plan.yaml
+    doneArtifacts:
+      pipelineId: "GitHub Actions ts-* matrix green on the GH-225 PR targeting main-tools"
+      trackerTransition: "GH-225 dod_check pass; PR opened against main-tools at lifecycle phase 11"
+    summary: "chore(GH-225): finalize merge and verify-deploy delivery with changeset and spec reconciliation"
+    tasks:
+      - "7.1 Aggregate gates green end-to-end: pnpm check (lint, format, typecheck, tests, boundaries, exports parity), git diff --check, git status --porcelain (clean-tree assertion), bash scripts/.tests/test-doc-distribution.sh (no redistributable doc changed; run to prove the guard untouched), and the full test-plan section 7 evidence command list; run plan diff GH-225 for the observational declared-versus-actual scope reconciliation of this plan. [AC: all TCs aggregate row; testing-strategy evidence obligation]"
+      - "7.2 Add the lockstep minor changeset .changeset/gh-225-merge-verify-deploy-minor.md covering the fixed group bump triggered by the @delivery-os/core + @delivery-os/adapters + @delivery-os/cli changes (version_impact minor; gh-229-owner-gate-sla-minor.md naming precedent); no dependency additions, so no license-registry verdict is needed. [Release obligation]"
+      - "7.3 Register the doc-syncer-authored current-truth doc in scripts/checks/forbidden-literals.registry.json as it lands in this PR and keep the branding/privacy gates green — no product or binary literal in the new modules or docs. [AC: branding seam, NFR-8]"
+      - "7.4 Spec-reconciliation handoff (lifecycle phase 7, @doc-syncer-owned, landed in this PR before merge — documentation work, not code): author doc/spec/features/feature-merge-verify-deploy.md (new current-truth feature spec, always-resolve in-change); update doc/spec/features/feature-verify-gates.md (gate set config-declared; the recording write; merge no longer external); doc/spec/features/feature-owner-gate-sla.md (inertness boundary flipped; waiver recording real; GAP-9 closed, not to be re-flagged); doc/spec/features/feature-config-layer.md (the merge branch and its keys); doc/spec/features/feature-state-layer.md (three additive record kinds and their consumers); doc/spec/features/feature-result-contract.md (merge domain kind, verify.deploy.* rows, family row, grown table — prose beyond the Phase-1 sync rows); doc/overview/glossary.md and doc/00-index.md (new terms and feature index); doc/quality/test-specs/test-spec-merge-verify-deploy.md (nonfunctional bounds); doc/planning/oss-tooling/milestones/m1/test-scenarios.md (SC-M1-05 seed row reconciliation — the data.verdict wire spelling superseded by the classified-error shape with observable semantics preserved, a recorded reconciliation per GAP-4, plus the SC-M1-01..05 delivered status). The command-registry rows for merge and verify deploy already exist as planning truth (verified) and need only delivered-state reconciliation by @doc-syncer. [Spec section 18 phase-7 obligation list]"
+      - "7.5 Record gate evidence in the test plan execution log (chg-GH-225-test-plan.md section 10) — every command from section 7 run and recorded; never record unrun results as passing. [Testing-strategy evidence obligation]"
+      - "7.6 PR readiness checklist: all 18 ACs traceable to green TCs, all 9 NFRs measured (determinism, budgets, bounds, state-write discipline, idempotency), the verify-gates golden non-regression recorded, the no-force and coordinator-only invariants recorded, error-table sync green in both directions, exactly one changeset present, PR targets main-tools; the eleven new error rows and the GAP-6/GAP-10/GAP-11 pins surface in the PR description for reviewer verification. [AC: DoD checklist]"
+    coverage:
+      - "All 49 TCs gate through the aggregate battery (no new TC; phase 7 is release and reconciliation)"
+    testGate:
+      - "pnpm check"
+      - "bash scripts/.tests/test-doc-distribution.sh"
+      - "git diff --check && git status --porcelain"
+  - id: 8
+    title: "Code Review Remediation (Iteration 1)"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/commands/verify-deploy.ts
+        - packages/core/src/domain/merge-transaction.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/commands/verify-gates.ts
+        - tests/behaviour/verify-deploy-bounds.test.ts
+        - tests/behaviour/verify-deploy-verdicts.test.ts
+        - tests/behaviour/merge-convergence.test.ts
+        - tests/behaviour/config-schema.test.ts
+        - doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/chg-GH-225-test-plan.md
+        - doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/chg-GH-225-plan.yaml
+    summary: "fix(GH-225): bound deploy refusal evidence, classify swallowed appends and invalid freshness, reconcile TC-DEPLOY-003(d) with spec GAP-2"
+    tasks:
+      - "8.1 [F-4, blocking] Reconcile TC-DEPLOY-003 with spec v1.1 (DEC-10/GAP-2, review adjudication): in chg-GH-225-test-plan.md scope the status-stale assertion of TC-DEPLOY-003 to variants (a)-(c) and record variant (d) (green status + zero-step trace) as `pipeline-created-never-ran` at `verify.deploy.trace-missing` with identity pinning delegated to TC-DEPLOY-002; adjust step 4 wording accordingly; in tests/behaviour/verify-deploy-verdicts.test.ts optionally tighten the variant (d) assertion to equality with a comment naming the adjudication. No production-code change."
+      - "8.2 [F-1, blocking] Bound the deploy refusal evidence (NFR-4): in packages/cli/src/commands/verify-deploy.ts refusalSummary, cap the artifacts line at DEPLOY_MAX_ARTIFACTS names with DEPLOY_MAX_NAME_CHARS per-name clamping and an explicit +N omission mark (mirror renderStepEvidence), and clamp missing-steps names; extend tests/behaviour/verify-deploy-bounds.test.ts with an over-cap refusal fixture asserting the 24-line/4096-byte human bounds and the +N mark on a negative verdict."
+      - "8.3 [F-2, blocking] Classify swallowed transaction-record appends (NFR-7): in packages/core/src/domain/merge-transaction.ts check the appendTransaction results at the record-less convergence replay (~line 421) and the landing-unverified record (~line 708); keep the verdict unchanged but surface the append-failure code as declared evidence (a failed post-landing step or refusal detail) — never silent; extend tests/behaviour/merge-convergence.test.ts with fault-injection cases proving the verdict is unchanged, the failure is declared, and a re-run converges without a second landing."
+      - "8.4 [F-3, blocking] Close the plan task 1.5 remainder: classify an invalid merge.gate-freshness (non-number/non-finite/negative) as a configuration failure in packages/cli/src/edge.ts readConfig (or add min-0 validation in the catalog branch) instead of silently defaulting to 1800; extend tests/behaviour/config-schema.test.ts with per-key origin and classified-validation coverage for merge.gate-freshness, merge.gates, and merge.deploy-expectations."
+      - "8.5 [F-5, advisory] Remove dead code: the unused waiver read + `void newestWaiverByGate(...)` in merge-transaction.ts (~line 589) unless consumed, the identical branches of failureFor, and the labelCount no-op spread in packages/cli/src/commands/verify-gates.ts."
+      - "8.6 [F-6, advisory] Record the observational scope additions (packages/cli/src/classify.ts, packages/cli/src/output/deploy-text.ts, biome.json, and the doc-reconciliation breadth beyond phase-7 scope.files) in this plan header's delivery-decisions note so plan-diff reconciliation names them."
+    coverage:
+      - "No new TC; F-1/F-2/F-3 tasks extend TC-DEPLOY-009, TC-MERGE-025/027-adjacent convergence cases, and TC-MERGE-003/NFR-5 config coverage respectively; F-4 is artifact reconciliation (GAP-1 discipline)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/verify-deploy-bounds.test.ts tests/behaviour/verify-deploy-verdicts.test.ts tests/behaviour/merge-convergence.test.ts tests/behaviour/config-schema.test.ts"
+      - "pnpm check"

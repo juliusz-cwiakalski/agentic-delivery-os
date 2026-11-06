@@ -1,0 +1,5 @@
+example-product: merge.gate.tracker-freshness.failed
+summary: result=refused; condition=merge.gate.tracker-freshness.failed
+gate=tracker-freshness
+owner-transition=-->hand-back age=1m
+remediation=Resolve the named merge-applicable gate evidence and re-run `verify gates`, then retry the merge.

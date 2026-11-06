@@ -8,7 +8,7 @@ area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, ADR-0010]
-  related_changes: [GH-200, GH-229, GH-224, GH-231]
+  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -92,12 +92,12 @@ No typed daemon or background scheduler is established by `packages/`.
 |---|---|
 | `core/src/contracts/` | Data-only ports, normalized primitives, schemas, capability declarations and error vocabulary shared across packages. |
 | `core/src/config/`, `branding/` | Pure layered resolution with provenance; pure brand identity resolution. Exported through core root and `./branding`, respectively. |
-| `core/src/domain/` | PM-notes lint, change verification, five-gate evaluation, closeout transaction policy, status aggregation, queue-ready, owner-gate SLA evaluation, doctor diagnostics, and session-admin policy. |
+| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, owner-gate SLA evaluation, doctor diagnostics, and session-admin policy. |
 | `core/src/provider/` | Availability chain, quota/peak evaluation, expiring parks and announcements through injected ports. No model selection or session spawn. |
 | `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections. Runtime APIs confined to `state/driver/`. |
 | `core/src/app/`, core `createRuntime` | Application tier is a type placeholder; `createRuntime` is an `export declare` signature, not a callable composition implementation. |
 | `cli/src/index.ts`, `edge.ts`, `commands/` | In-process parser/result boundary; config acquisition and optional command registration; thin handlers plus bounded status collectors. |
-| `adapters/src/github/`, `gitlab/`, `jira/` | Normalized reads plus supported GitHub/Jira closeout writes. GitLab retains declared write gaps and no work-item read. GitHub reads feed status and gate composition. |
+| `adapters/src/github/`, `gitlab/`, `jira/` | Normalized reads plus supported GitHub/Jira closeout writes. GitLab retains declared write gaps and no work-item read. GitHub reads feed status and gate composition, and the bounded deploy-job trace read feeds `verify deploy`. |
 | `adapters/src/git/` | Fixed-argv local process edge; protected-ref checks, merged-head equality, checkout/foreign-worktree safety and delete-time recheck. |
 | `adapters/src/file/`, `repo/`, `legacy/` | YAML/config and pm-notes acquisition/staging, repository facts, legacy-name mapping. |
 | `adapters/src/credentials/`, `provider-quota/` | Credential-reference resolution and injectable quota HTTP transport. Factories exist, but production host mounting is not established. |
@@ -123,8 +123,10 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   and [queue-ready](../spec/features/feature-queue-ready.md).
 - `board` is a bounded, render-once owner-gate aging grid: 24 h escalation,
   72 h default-on-expiry, declared collector unavailability, and at most eight
-  ranked gates. Every tracker-observed gate maps to `owner-review` in v0, so real
-  data escalates without auto-defaulting, and a rendered board exits zero while an
+  ranked gates. An unwaived tracker-observed gate maps to `owner-review` and
+  escalates without auto-defaulting; a gate with a recorded authorized
+  `owner-gate` waiver is collected as `waiver`-kind with its recorded authorizer
+  and follows the defaultable path. A rendered board exits zero while an
   unavailable collector exits two. See the
   [owner-gate SLA](../spec/features/feature-owner-gate-sla.md).
 - `doctor` is a bounded, read-only pre-flight diagnostic over `repo`, `tracker`,
@@ -135,11 +137,15 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   cannot complete outside per-check execution exits two. See the
   [doctor](../spec/features/feature-doctor.md).
 - `verify change <ref>` classifies ledger/document completeness, not merge readiness.
-  `verify gates <ref>` evaluates CI, push parity, squash surface, address completion
-  and lifecycle gates. Both are delivered by integrated PR #217; see the
-  [handler](../../packages/cli/src/commands/verify.ts) and
-  [gate contract](../spec/features/feature-verify-gates.md). CI workflow expectations
-  and unknown/missing evidence remain explicit; a green observation is not authority.
+  `verify gates <ref>` evaluates the config-declared battery (CI, push parity,
+  squash surface, address completion, lifecycle, and any declared battery gate)
+  and appends one gate-verification record. `verify deploy <ref>` reads the deploy
+  job trace once and renders a verified/unknown/failed verdict. See the
+  [handler](../../packages/cli/src/commands/verify.ts),
+  [gate contract](../spec/features/feature-verify-gates.md), and
+  [merge/verify-deploy contract](../spec/features/feature-merge-verify-deploy.md).
+  CI workflow expectations and unknown/missing evidence remain explicit; a green
+  observation is not authority.
 - The MCP surface is one local Node-hosted stdio JSON-RPC 2.0 process owned by
   `packages/mcp`. It serves exactly three read-only, branding-projected tools —
   `status`, `verify-artifact`, and `gate-report` — and returns the same core data
@@ -148,6 +154,13 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   error), and `2` (transport fault); tool outcomes never select an exit. The
   package declares no `bin` and no installer registration. See the
   [MCP surface](../spec/features/feature-mcp-surface.md).
+- `merge <ref>` is the landing transaction: the freshness envelope over the newest
+  recorded verification, one bounded post-verification probe, waiver
+  authorization against the declared class policy, one rebase-refresh with no
+  force path, one squash landing, and landing verification recorded as a
+  `merge.transaction` record. It is the only landing producer; a re-run replays a
+  recorded landing instead of landing twice. See
+  [merge and verify deploy](../spec/features/feature-merge-verify-deploy.md).
 - [Closeout](../spec/features/feature-closeout.md) is integrated: seven-step
   transaction, plan by default, writes only with `--apply`, ref validation before
   reads. `createCloseoutComposition` in CLI edge bridges raw provider clients,
@@ -209,6 +222,7 @@ These are existing decision criteria, not a new package-splitting decision.
 | Edge to provider | `createProviderEngine(deps).resolve({config, chainName?, persist?})` | Typed decision/park/announcement; state failures remain visible. |
 | Status collector to GitHub | `listWorkItems(limit)`, `listDeliveryRequests(limit)`, `readPipelineRun(sha, limit?)` | `ProviderReadResult<T>`: normalized value or credential/payload failure, mapped into status availability. |
 | Closeout to provider/git/state | Eight declared provider operations including `resolve-delivery-thread`; capability-qualified GitHub/Jira writes and local git cleanup | Classified provider/state/safety failure with consequence; unsupported operations remain gaps. No general comments, remote branch cleanup or merge execution inferred. |
+| Merge transaction to provider/git/state | One verification read, one work-item read, one check-run page and one request-detail read per invocation; the declared mutation union carries one rebase-refresh, one squash landing, and post-landing cleanup | Classified `merge.*` or state identity with exit projection; no force variant exists and the merge command is the only landing producer. |
 | Consumer to state | `read({requiredKeys})`, `append(handle, request)`, `replaceDocument(handle, request)` | `StateResult<T>`; verified-empty differs from torn/missing required keys. Writes require acquired fence handle. |
 | Session caller to adapter | `SessionStorePort` reads; `SessionAdminPort` prune/reboot with explicit `apply` | Classified `db.*` errors; metadata-only output, no transcript or raw command output. |
 | Handler to CLI | `{data}` or `{error}`; `runCli(argv, streams, deps): Promise<number>` | Declared kind/code to error table; malformed/unclassifiable values become `fallback.internal`. |

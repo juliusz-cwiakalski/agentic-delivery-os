@@ -1,0 +1,4 @@
+example-product: merge.rebase-conflict
+summary: result=refused; condition=merge.rebase-conflict
+conflicting-paths=packages/core/src/a.ts,packages/core/src/b.ts
+remediation=Resolve the named conflicting paths, re-run `verify gates`, then retry the merge; no force path exists.

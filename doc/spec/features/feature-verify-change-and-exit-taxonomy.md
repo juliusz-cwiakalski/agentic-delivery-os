@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-VERIFY-CHANGE-AND-EXIT-TAXONOMY
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-05
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
-summary: "The read-only `verify change <ref>` surface: ledger-only verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
+summary: "The `verify` command family: ledger-only `verify change` verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, the verify.gates.* and verify.deploy.* rows of the sibling verify surfaces, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
 links:
-  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221"]
+  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
@@ -40,20 +40,21 @@ The surface consumes the [pm-notes lint and phase-transition](feature-pm-notes-l
 ### Goals & Success Metrics
 
 - **Primary goal:** Verify a delivered change against its declared variant's phase ledger and classify the delivery result tuple in one read-only call.
-- **KPIs:** Incomplete, malformed, missing-target, and unverifiable fixtures produce exit `0` zero times; incomplete verdicts name every missing required phase in required-set order; the token set and order equal the bash usage enum (11/11, 0 drift); every token has exactly one taxonomy row; verify performs zero writes, fences, network calls, and process spawns; replay over identical inputs is byte-identical.
+- **KPIs:** Incomplete, malformed, missing-target, and unverifiable fixtures produce exit `0` zero times; incomplete verdicts name every missing required phase in required-set order; the token set and order equal the bash usage enum (11/11, 0 drift); every token has exactly one taxonomy row; `verify change` performs zero writes, fences, network calls, and process spawns, `verify gates` adds exactly one gate-verification record, and `verify deploy` performs one bounded trace read and writes nothing; replay over identical inputs is byte-identical.
 
 ## User Experience & Functionality
 
 ### Command surface
 
-`verify` is a top-level command with exactly two subcommands, `change` and `gates`, each followed by exactly one change ref. There are no command-specific flags; `--json` is the existing global machine-output flag and gains no new behavior. `verify change` remains ledger-only and network-free; `verify gates` consumes the structured `VerifyLedgerEvaluation` and performs read-only provider reads ([Verify Gates](feature-verify-gates.md)).
+`verify` is a top-level command with three subcommands, `change`, `gates`, and `deploy`, each followed by exactly one change ref. There are no command-specific flags; `--json` is the existing global machine-output flag and gains no new behavior. `verify change` is ledger-only and network-free; `verify gates` consumes the structured `VerifyLedgerEvaluation`, performs bounded provider reads, and appends one gate-verification record ([Verify Gates](feature-verify-gates.md)); `verify deploy` reads the deploy job trace once ([Merge and Verify Deploy](feature-merge-verify-deploy.md)).
 
 | Invocation | Outcome |
 |---|---|
 | `verify change GH-177` | Verify that change; human diagnostics on failure. |
 | `verify change GH-177 --json` | Verify that change; exactly one machine envelope on stdout. |
 | `verify` / `verify change` / `verify other GH-177` | Handler grammar rejection: `input.value.rejected`, exit `1`, no reads. |
-| `verify gates GH-178` | Evaluate the five M0 merge gates read-only; see [Verify Gates](feature-verify-gates.md). |
+| `verify gates GH-178` | Evaluate the config-declared battery and append its verification record; see [Verify Gates](feature-verify-gates.md). |
+| `verify deploy GH-305` | Read the deploy job trace once and render the `verified` \| `unknown` \| `failed` verdict; see [Merge and Verify Deploy](feature-merge-verify-deploy.md). |
 | `verify change GH-177 extra` / unknown flag | Parser rejection before the handler: `fallback.invocation`, exit `1`, no reads. |
 
 The handler owns no stream writes and no exit codes: it returns `data` or `error`, and the CLI edge renders the envelope and projects the exit. The command reads, in order, the pm-notes target, the pure lint rules, and the registry evidence; it never mutates a target. A ref that does not resolve to a pm-notes document, including one outside the `<PREFIX>-<digits>` shape, is `lint.target.missing`.
@@ -143,7 +144,7 @@ Envelope exclusivity is preserved: `finished` is the only token rendered as succ
 
 ### Error identities
 
-One additive row joins the error table under the `verify` domain kind. `verify` is a declared domain kind beside `provider`, `input`, `config`, `state`, `lint`, `db`, `closeout`, and `watchdog`; the reserved `fallback` namespace is unchanged. The same kind also carries the two verify-gates rows, `verify.gates.failed` and `verify.gates.unavailable`, documented in [Verify Gates](feature-verify-gates.md) and the [result contract](feature-result-contract.md).
+One additive row joins the error table under the `verify` domain kind. `verify` is a declared domain kind beside `provider`, `input`, `config`, `state`, `lint`, `db`, `closeout`, `watchdog`, and `merge`; the reserved `fallback` namespace is unchanged. The same kind also carries the two verify-gates rows, `verify.gates.failed` and `verify.gates.unavailable`, documented in [Verify Gates](feature-verify-gates.md), and the three verify-deploy rows, `verify.deploy.trace-missing`, `verify.deploy.status-stale`, and `verify.deploy.trace-failed`, documented in [Merge and Verify Deploy](feature-merge-verify-deploy.md) and the [result contract](feature-result-contract.md).
 
 | Code | Domain kind | Category | Retryable | Consequence | Projection class | Token | Summary |
 |---|---|---|---|---|---|---|---|

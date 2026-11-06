@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { createGitMergeSeam } from "@delivery-os/adapters/git";
+import { createMergeCommandRuntime } from "../../packages/cli/src/edge";
+import type { ConfigValue } from "../../packages/core/src/contracts/config";
 import {
   BOOTSTRAP_DESCRIPTOR,
   type ConfigCatalog,
@@ -7,13 +10,18 @@ import {
   PRODUCTION_SCHEMA,
   resolveConfig,
 } from "../../packages/core/src/index";
+import {
+  createNodeStateEdge,
+  createStateStore,
+  STATE_SCHEMA_VERSION,
+} from "../../packages/core/src/state/index";
 import { FIXTURE_CATALOG } from "../fixtures/config/catalog";
 import { fileFacts } from "../fixtures/config/facts";
 
 describe("TC-CONFIG-008/009/011 canonical schema, partial and final", () => {
   test("production exposes the typed provider branch and shipped defaults", () => {
     expect(BOOTSTRAP_DESCRIPTOR.workingName).toEqual({ type: "string", required: true });
-    expect(Object.keys(PRODUCTION_CATALOG)).toEqual(["provider", "commit"]);
+    expect(Object.keys(PRODUCTION_CATALOG)).toEqual(["provider", "commit", "merge"]);
     expect(PRODUCTION_SCHEMA).toEqual(generateConfigSchema(PRODUCTION_CATALOG));
     const result = resolveConfig();
     expect(result.ok).toBe(true);
@@ -188,5 +196,124 @@ describe("TC-REGRESS-006 commit.phaseCommit branch", () => {
     });
     expect(invalid.ok).toBe(false);
     if (!invalid.ok) expect(invalid.error.code).toBe("config.value.invalid");
+  });
+});
+
+describe("TC-MERGE-003 merge config branch origin and classified validation", () => {
+  const mergeRuntime = (values: Readonly<Record<string, unknown>>) =>
+    createMergeCommandRuntime({
+      store: createStateStore(
+        {
+          level: "local",
+          workspaceId: "config-unit",
+          fenceNamespace: "config-unit",
+          schemaVersion: STATE_SCHEMA_VERSION,
+          stateDirectory: "tmp/tmpdir/config-merge-unit",
+        },
+        { driver: "jsonl", edge: createNodeStateEdge() },
+      ),
+      git: createGitMergeSeam(),
+      values: () => values,
+      readWorkItem: async () => ({ ok: false as const, code: "provider.outage" }),
+      readCheckRuns: async () => ({ ok: false as const, code: "provider.outage" }),
+      readRequestDetail: async () => ({ ok: false as const, code: "provider.outage" }),
+      nowIso: () => "2026-11-06T12:00:00Z",
+      nowMs: () => 0,
+      newFenceToken: () => "config-unit-fence",
+    });
+
+  test("the three merge keys report their per-key file origin", () => {
+    const resolved = resolveConfig({
+      sources: [
+        fileFacts(
+          "project-local",
+          {
+            merge: {
+              "gate-freshness": 600,
+              gates: {
+                schemaVersion: "delivery.merge.gates.v1",
+                entries: [{ id: "ci-green", recipe: "required-ci-job", surface: "merge" }],
+              },
+              "deploy-expectations": { steps: ["build"], artifacts: ["app@*"] },
+            },
+          },
+          7,
+        ),
+      ],
+    });
+    expect(resolved.ok).toBe(true);
+    if (resolved.ok) {
+      for (const key of [
+        "merge.gate-freshness",
+        "merge.gates",
+        "merge.deploy-expectations",
+      ] as const) {
+        expect(resolved.value.origins[key]).toMatchObject({
+          layer: "project-local",
+          file: "fixtures/project-local.yaml",
+          line: 7,
+        });
+      }
+      expect(resolved.value.origins["merge.gates.schemaVersion"]?.layer).toBe("project-local");
+      expect(resolved.value.origins["merge.deploy-expectations.steps[0]"]?.layer).toBe(
+        "project-local",
+      );
+      expect(resolved.value.values.merge).toMatchObject({
+        "gate-freshness": 600,
+        "deploy-expectations": { steps: ["build"], artifacts: ["app@*"] },
+      });
+    }
+  });
+
+  test("the shipped freshness default reports the defaults origin", () => {
+    const resolved = resolveConfig();
+    expect(resolved.ok).toBe(true);
+    if (resolved.ok) {
+      expect(resolved.value.origins["merge.gate-freshness"]).toMatchObject({ layer: "defaults" });
+      expect(resolved.value.values.merge).toMatchObject({ "gate-freshness": 1800 });
+    }
+  });
+
+  test("an invalid merge.gate-freshness is a classified config failure, never a silent default", () => {
+    for (const invalid of ["soon", -1, Number.POSITIVE_INFINITY, Number.NaN]) {
+      const read = mergeRuntime({ merge: { "gate-freshness": invalid } }).readConfig("GH-301");
+      expect(read).toMatchObject({ ok: false, code: "config.value.invalid" });
+    }
+    const validZero = mergeRuntime({ merge: { "gate-freshness": 0 } }).readConfig("GH-301");
+    expect(validZero.ok).toBe(true);
+    if (validZero.ok) expect(validZero.config.freshnessBoundSeconds).toBe(0);
+    const absent = mergeRuntime({}).readConfig("GH-301");
+    expect(absent.ok).toBe(true);
+    if (absent.ok) expect(absent.config.freshnessBoundSeconds).toBe(1800);
+  });
+
+  test("an invalid merge.gates declaration is a classified config failure", () => {
+    const invalid = mergeRuntime({
+      merge: { gates: { schemaVersion: "delivery.merge.gates.v1", entries: [] } },
+    }).readConfig("GH-301");
+    expect(invalid).toMatchObject({ ok: false, code: "config.value.invalid" });
+  });
+
+  test("malformed merge.gates and merge.deploy-expectations shapes fail closed at resolve", () => {
+    const invalidValues: readonly Record<string, ConfigValue>[] = [
+      {
+        merge: {
+          gates: {
+            schemaVersion: "delivery.merge.gates.v1",
+            entries: [{ id: "ci-green", surface: "merge" }],
+          },
+        },
+      },
+      { merge: { gates: { schemaVersion: 12, entries: [] } } },
+      { merge: { "deploy-expectations": { steps: "build" } } },
+      { merge: { "deploy-expectations": { artifacts: [12] } } },
+    ];
+    for (const values of invalidValues) {
+      const resolved = resolveConfig({
+        sources: [fileFacts("project-local", values, 9)],
+      });
+      expect(resolved.ok).toBe(false);
+      if (!resolved.ok) expect(resolved.error.code).toBe("config.value.invalid");
+    }
   });
 });

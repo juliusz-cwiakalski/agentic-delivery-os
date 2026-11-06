@@ -5,7 +5,7 @@ created: 2026-11-01
 last_updated: 2026-11-06
 owners: [engineering]
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -42,7 +42,8 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 
 - Quality attribute: reliability and diagnosability. Applies: result envelopes,
   status, brief, queue-ready, verify-change, provider reads, the watchdog probes, the
-  owner-gate board, and the doctor pre-flight diagnostic.
+  owner-gate board, the doctor pre-flight diagnostic, the merge transaction, and the
+  verify-deploy verdict.
 - Requirement/status: existing. Missing, failed, or unavailable evidence must not
   become a clear/ready/zero claim. Command success is not delivery success.
 - Evidence/test: [result](features/feature-result-contract.md),
@@ -51,16 +52,20 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   [verify](features/feature-verify-change-and-exit-taxonomy.md),
   [owner-gate SLA](features/feature-owner-gate-sla.md),
   [doctor](features/feature-doctor.md),
+  [merge and verify deploy](features/feature-merge-verify-deploy.md),
   [watchdog](features/feature-watchdog-lane-contracts.md);
   `packages/core/src/domain/ci-result.ts`, `tests/behaviour/status-negative-controls.test.ts`,
   `tests/behaviour/queue-ready-negative-controls.test.ts`,
   `tests/behaviour/watchdog-liveness.test.ts`.
 - Limits: CI observes one checkout-head page, not every required PR-head job;
   `merge-ready` is an approval-based close class, not merge authorization.
-  Change-ledger verification is separate from implemented `verify gates`:
-  [five-gate contract](features/feature-verify-gates.md) observes CI, push parity,
+  Change-ledger verification is separate from the `verify gates` battery:
+  [battery contract](features/feature-verify-gates.md) observes CI, push parity,
   squash surface, the owner gate, and lifecycle. The owner gate checks the work
   item's hand-back and human-input-needed labels; no gate asserts completion.
+  The merge transaction accepts only a fresh recorded verification plus its
+  bounded probe; `verify deploy` accepts only trace evidence, so a created-but-
+  never-run pipeline and a status without a trace are `unknown`, never green.
   Unknown evidence is not green. The watchdog liveness probe classifies absent
   signal sources as `watchdog.signals-absent` and emits no guessed verdict. The
   doctor diagnostic applies the same rule per check: a failed or unattempted read
@@ -72,7 +77,8 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 ### NFR-TOOL-002: Stable machine output and bounded read digests
 
 - Quality attribute: interoperability and resource boundedness. Applies: CLI
-  envelope, status, brief, queue-ready, board, and doctor renderers. Status: existing.
+  envelope, status, brief, queue-ready, board, verify gates, merge, verify deploy,
+  and doctor renderers. Status: existing.
 - Requirement: one valid `CommandResult` under `--json`, exactly one of data/error,
   classified containment, deterministic ordering, and visible truncation.
 - Canonical budgets: [status](features/feature-status-digest.md#evidence-counts-truncation-and-bounds)
@@ -83,15 +89,21 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   rendered gates at 8, human output at 24 lines/4096 UTF-8 bytes, and serialized
   data at 65536 UTF-8 bytes; [doctor](features/feature-doctor.md#bounds-and-read-limits)
   caps human output at 24 lines/4096 bytes and serialized data at 65536 bytes, with
-  200-character detail and hint caps and one bounded page per wiring read. These
-  are data caps, not a universal total-envelope cap. Brief reuses the status human
-  and machine caps by reference and declares no parallel numeric bound.
+  200-character detail and hint caps and one bounded page per wiring read. The
+  [merge transaction](features/feature-merge-verify-deploy.md#invariants) caps the
+  human summary at 24 lines/4096 bytes and machine data at 65536 bytes, and
+  `verify deploy` uses the same caps with 50-step/50-artifact evidence lists and
+  explicit `+N` marks. These are data caps, not a universal total-envelope cap.
+  Brief reuses the status human and machine caps by reference and declares no
+  parallel numeric bound.
 - Queue-ready accepts 1..8 candidates of at most 64 canonical characters; its
   per-field caps and renderer-only reverse-rank drops remain feature-specific.
-- Evidence/test: `packages/core/src/contracts/status.ts`, `queue-ready.ts`,
-  `brief.ts`, `owner-gate-sla.ts`, `doctor.ts`; `tests/behaviour/status-output.test.ts`,
+- Evidence/test: `packages/core/src/contracts/status.ts`,
+  `queue-ready.ts`, `brief.ts`, `owner-gate-sla.ts`, `doctor.ts`, `merge.ts`,
+  `verify-deploy.ts`; `tests/behaviour/status-output.test.ts`,
   `queue-ready-output.test.ts`, `brief-output.test.ts`, `board-output.test.ts`,
-  `doctor-output.test.ts`, golden suites.
+  `doctor-output.test.ts`, `merge-bounds.test.ts`, `verify-deploy-bounds.test.ts`,
+  golden suites.
 - Owner/trigger: engineering/reviewer; payload or renderer changes (XC-007).
 
 ### NFR-TOOL-003: Scoped performance and read cost
@@ -109,6 +121,7 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 | [Queue-ready](features/feature-queue-ready.md#non-functional-requirements) | Pure evaluation/ranking/rendering contract within 50 ms; same three outbound reads, one park fold/config/local-context read. | `tests/behaviour/queue-ready-performance.test.ts` samples evaluator latency and injected read counts; independent renderer timing not established here. |
 | [Board](features/feature-owner-gate-sla.md#non-functional-requirements) | Pure evaluation/ranking/rendering within 50 ms; one bounded tracker read, at most one decision-history read, and one fence plus one append per newly defaulted gate. | `tests/behaviour/board-performance.test.ts`, `board-read-cost.test.ts`. |
 | [Doctor](features/feature-doctor.md#non-functional-requirements) | Pure cap-sized aggregation within 50 ms; at most two single-page network reads (tracker and CI), one configuration resolve, one shared verified ledger read; no pagination, retry, or write. | `tests/behaviour/doctor-performance.test.ts` samples the median of 21 runs after warm-ups; `doctor-network-posture.test.ts` pins the read budget and shared-source read-once posture. |
+| [Merge and verify deploy](features/feature-merge-verify-deploy.md#invariants) | Pure freshness, waiver, and deploy-verdict evaluation; `merge` performs one verification read, one work-item read, one check-run page, one request-detail read, and only the declared git mutations; `verify deploy` performs one bounded trace read; the freshness bound defaults to 1800 s with at-bound stale. | `tests/behaviour/merge-probe.test.ts`, `merge-determinism.test.ts`, `verify-deploy-read-budget.test.ts`, `merge-bounds.test.ts`, `verify-deploy-bounds.test.ts`. |
 | [Provider](features/feature-provider-engine.md#non-functional-requirements) | Pure evaluation of 100 entries within 50 ms, excluding transport; configurable quota timeout defaults to 15000 ms, sleep cap to 24 completed sleeps. | Provider behavior and evidence-bounds suites; these are not end-to-end command deadlines. |
 | [Privacy](features/feature-privacy-guard.md#non-functional-requirements) | Scan within 60 s for up to 50 MiB on CI reference runner; emitter within 10 ms per 2048-byte envelope; at most 32 hashed lengths. | `tests/checks/privacy-performance.test.ts`; production empty classes limit what a clean scan demonstrates. |
 | [Commit](features/feature-commit-primitive.md#non-functional-requirements) | Dry-run p95 under 2 s and template-fallback p95 under 5 s; one constrained model call per attempt; a model-transport commit is bounded by the provider call. | `tests/behaviour/commit-performance.test.ts` samples the dry-run and template paths; the model-transport bound is not a CI deadline. |
@@ -122,11 +135,14 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 ### NFR-TOOL-004: Durable local state and fenced writes
 
 - Quality attribute: integrity and recoverability. Applies: ledger, derived indexes,
-  phase transitions, provider park persistence. Requirement/status: existing.
+  phase transitions, provider park persistence, and the merge-domain records
+  (gate verification, waiver, transaction). Requirement/status: existing.
 - [State](features/feature-state-layer.md) requires verified ledger truth, explicit
   verified-empty evidence, key-set assertions, torn and unknown classification,
   reusable artifact-boundary validation, fenced writes, explicit stale-lock recovery,
-  and atomic derived-document replacement.
+  and atomic derived-document replacement. The three merge-domain record kinds are
+  additive within `delivery.state.v1`, and an append failure never leaves a
+  consumable half-verification.
 - Read/index strategy does not change truth; only the two explicit terminal-tail
   operations remove ledger bytes, and guided salvage quarantines the removed bytes
   instead of discarding them. Mid-stream corruption is not silently repaired, and

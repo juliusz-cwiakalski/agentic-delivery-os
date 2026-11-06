@@ -1,0 +1,195 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-225
+branch: feat/GH-225/merge-verify-deploy
+status: FAIL
+summary: >-
+  The GH-225 delivery is substantively strong: all 8 ticket ACs are implemented in real code
+  paths (freshness envelope with record/SHA/set-identity voiding and at-bound-stale comparator;
+  classified refusals at exit 1 with inline evidence; trace-derived deploy verdicts;
+  config-declared gate registry with mandatory reserved built-ins; post-verification tracker
+  probe; classification-as-data with fail-closed waiver authorization verified before recording;
+  single rebase-refresh with classified conflict and a structurally force-free, argv-array git
+  seam); the required VerifyGatesSummary.gates/VerifyGateRecord.id widening preserves default
+  bytes (pre-change goldens re-run green in this review), 188 targeted tests re-run green, and
+  the no-force/no-live assertions carry their mandatory failing controls. Four medium
+  conformance gaps block PASS: the deploy refusal path renders the artifacts evidence line
+  unbounded (NFR-4 "no unbounded dump path"), two transaction-record appends swallow fenced
+  failures (NFR-7 "0 silent partial records"), plan task 1.5's config-layer origin/validation
+  coverage is under-delivered and an invalid merge.gate-freshness silently defaults to 1800
+  instead of classifying, and the test plan's TC-DEPLOY-003(d) line still contradicts spec
+  v1.1 DEC-10/GAP-2 (the adjudicated reading is correct in code; the artifact must be
+  reconciled). Three advisory items (dead code, undeclared-but-legitimate scope additions,
+  post-landing branch deletion notes) do not block.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 4
+  low: 2
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+publication: null
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/verify-deploy.ts:113
+    message: >-
+      The deploy refusal summary joins ALL trace artifact names with no count cap, per-name
+      clamp, or +N mark (`artifacts=${...join(",")}`; missing-steps names are likewise unclamped),
+      while steps are bounded via renderStepEvidence. normalizeDeployTrace
+      (packages/adapters/src/github/deploy-trace.ts) does not bound the payload either, and
+      diagnosticFor (packages/cli/src/index.ts:287) prints error.summary verbatim — so a large
+      provider trace produces an unbounded human failure dump. This violates NFR-4 ("All bounds
+      enforced and marked; no unbounded dump path") and the feature doc's Invariants claim;
+      TC-DEPLOY-009 asserts bounds only on the verified path.
+    suggestion: >-
+      In refusalSummary, slice artifact names to DEPLOY_MAX_ARTIFACTS with DEPLOY_MAX_NAME_CHARS
+      per-name clamping and an explicit +N omission mark (mirror renderStepEvidence), clamp
+      missing-steps names, and extend TC-DEPLOY-009 with an over-cap refusal fixture asserting
+      the 24-line/4096-byte human bounds and the +N mark on a negative verdict.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/merge-transaction.ts:421
+    message: >-
+      Two appendTransaction results are swallowed — the record-less convergence replay (line 421)
+      and the landing-unverified outcome record (line 708). A failed fenced append on these paths
+      is neither classified nor surfaced, violating NFR-7 ("a failed append is a classified
+      failure"; "0 silent partial records"). The landing-unverified record is exactly what
+      GAP-10's "a re-run re-verifies rather than re-lands" depends on: if its append silently
+      fails and a later request-detail read does not yet show merged, a re-run can attempt a
+      second landing.
+    suggestion: >-
+      Check both results; keep the verdict (merged / landing-unverified respectively) but never
+      silently: surface the append-failure code as declared evidence (a failed post-landing step
+      or the refusal detail), and pin the behaviour with a fault-injection test on both paths
+      (append fails -> verdict unchanged, failure declared, re-run converges without re-landing).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/edge.ts:853
+    message: >-
+      Plan task 1.5 promised config-schema coverage "for the three keys with origin and
+      classified-validation coverage"; tests/behaviour/config-schema.test.ts gained only the
+      catalog-key assertion, and merge.gate-freshness / merge.deploy-expectations have no
+      origin or classified-validation coverage. Additionally, readConfig silently defaults a
+      non-number, non-finite, or negative gate-freshness to 1800 — a safety-relevant bound is
+      "silently interpreted" (the config branch's own classified-validation discipline, and the
+      spec's never-silently-interpreted posture).
+    suggestion: >-
+      Classify an invalid merge.gate-freshness (non-number/non-finite/negative) as a
+      configuration failure in readConfig (or add min-0 validation in the catalog branch), and
+      extend config-schema tests with per-key origin evidence and invalid-value classification
+      for merge.gate-freshness, merge.gates, and merge.deploy-expectations.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/chg-GH-225-test-plan.md:1467
+    message: >-
+      Adjudication of the recorded deviation: the implemented reading IS correct per spec truth —
+      a zero-executed-step pipeline (including the green-status variant) reads unknown with
+      reason pipeline-created-never-ran at verify.deploy.trace-missing (DEC-10, GAP-2 as adopted
+      by DEC-13/Appendix C, AC-F6-2, SC-M1-05), and TC-DEPLOY-002 pins exactly that identity for
+      the identical input. The loosened assertion in tests/behaviour/verify-deploy-verdicts.test.ts
+      (accepts either identity) is acceptable as shipped because TC-DEPLOY-002 closes the identity
+      for the same fixture — no coverage hole. However TC-DEPLOY-003's own text (variant (d)
+      precondition, step 1 "variants (a)-(d)", step 4 "never upgrades an empty trace") still
+      asserts status-stale for (d) and thereby contradicts spec v1.1 and the test plan's own
+      section 1.2 GAP-2 reading; the artifact set must be self-consistent.
+    suggestion: >-
+      Amend TC-DEPLOY-003: scope the status-stale assertion to variants (a)-(c); record variant
+      (d) as pipeline-created-never-ran at verify.deploy.trace-missing per GAP-2 with identity
+      pinning delegated to TC-DEPLOY-002; adjust step 4 wording ("never upgrades" stays, the
+      identity does not). Optionally tighten the test to equality with a comment naming this
+      adjudication.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/merge-transaction.ts:589
+    message: >-
+      Dead code in the delivery: line 589 reads the waiver ledger then discards it
+      (`void newestWaiverByGate(waivers.records)`) — a read outside the declared NFR-2 budget
+      whose value is unused; failureFor (line 775) has two identical branches; the verify-gates
+      command builds `...(labelCount === undefined ? {} : {})` — a no-op spread around a computed
+      but unused value.
+    suggestion: >-
+      Remove the unused waiver read (or consume it if intended), collapse failureFor, and delete
+      the labelCount no-op spread in packages/cli/src/commands/verify-gates.ts.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/chg-GH-225-plan.yaml:66
+    message: >-
+      Files changed outside any declared phase scope without an explicit recorded-deviation
+      entry: packages/cli/src/classify.ts (runtime family recognizer — task 1.4's intent on an
+      undeclared path), packages/cli/src/output/deploy-text.ts (phase-5 surface, undeclared),
+      biome.json (formatter exclusion for the new goldens), and the doc reconciliation breadth
+      beyond phase-7 scope.files (change-lifecycle.md, definition-of-done.md, ubiquitous-language,
+      architecture-overview, nonfunctional.md, four extra feature specs). All are legitimate and
+      mostly covered by pm-notes deviations (2)/(4) and the doc-reconciliation note, but the
+      plan-level reconciliation record should name them.
+    suggestion: >-
+      Record the observational scope additions in the plan header's delivery-decisions/deviations
+      note (or the pm-notes deviation list) so plan-diff reconciliation is explicit; no code
+      change required.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/git/merge.ts:218
+    message: >-
+      Post-landing branch deletion uses `git branch -D` (force-delete form). This matches the
+      existing seam precedent (git/index.ts:223), is the only working form after a squash
+      (branch commits are never base ancestors, so `-d` would refuse), is not a force path in
+      the F-7/GAP-14 sense (no push, no history rewrite, no conflict bypass; protected refs
+      guarded), and GAP-14's scan targets push/reset/force constructs. The seam supports an
+      optional expectedHead compare-and-delete that the edge does not pass.
+    suggestion: >-
+      Optional hardening only: pass expectedHead (the pre-landing branch head) from the edge
+      composition so deletion is compare-and-delete; no action required for compliance.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-06T14:15:40Z
+next_step: EXECUTE_REMEDIATION_PHASE

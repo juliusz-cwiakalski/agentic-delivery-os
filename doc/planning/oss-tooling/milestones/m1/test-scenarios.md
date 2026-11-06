@@ -70,7 +70,11 @@ Given: deploy pipeline created but zero jobs ran.
 When: `<binary> verify deploy GH-305`
 Then: verdict unknown with the job trace showing zero steps; never
 green.
-Assert: data.verdict == unknown; exit 1 with classified finding.
+Assert: the classified `verify.deploy.trace-missing` error carries `runId`
+and no `data` sibling; text mode prints `verdict=unknown` with reason
+`pipeline-created-never-ran` and the zero-step trace; exit 1. (The earlier
+`data.verdict == unknown` wire spelling is superseded by the classified-error
+shape at GH-225 while the observable semantics are preserved verbatim.)
 
 ## B. Plans and scheduling
 

@@ -1,0 +1,7 @@
+example-product: verify.deploy.status-stale
+summary: verdict=unknown; reason=status-stale
+evidence=no-trace
+status=success (disqualified as evidence)
+expectation=configuration:steps=build,publish,smoke:artifacts=registry:app@9f21c0e
+missing-steps=build,publish,smoke
+remediation=Read the deploy job's execution trace; a status field alone is not evidence.
