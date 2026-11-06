@@ -124,3 +124,49 @@ export {
   type WatchdogRestorationPlan,
   watchdogPreservedRefName,
 } from "./watchdog.js";
+export { commitTypeForPhase, resolveCommitSkeleton, type CommitSkeletonInput } from "./commit-skeleton.js";
+export {
+  buildCommitBundle,
+  isGeneratedNoise,
+  type CommitBundleInput,
+  type CommitBundleResult,
+} from "./commit-bundle.js";
+export {
+  computeStagingPlan,
+  type CommitStagingInput,
+} from "./commit-staging.js";
+export {
+  classifyCommitSafety,
+  findingClasses,
+  type CommitSafetyVerdict,
+} from "./commit-safety.js";
+export {
+  renderCommitMessage,
+  sanitizeCommitMessage,
+  stripInventedRefs,
+  templateCommitMessage,
+  templateSubject,
+  validateCommitMessage,
+  type CommitMessageValidation,
+  type CommitMessageValidationInput,
+} from "./commit-message.js";
+export {
+  generateCommitMessage,
+  selectCommitTransport,
+  type CommitGeneration,
+  type CommitTransportPorts,
+  type CommitTransportSelection,
+} from "./commit-transport.js";
+export { classifyCommitDelta } from "./commit-converge.js";
+export {
+  messageText,
+  runCommitAct,
+  type CommitActFailure,
+  type CommitActNoPending,
+  type CommitActOutcome,
+  type CommitActPorts,
+  type CommitActRequest,
+  type CommitActScope,
+  type CommitActSuccess,
+  type CommitExcluded,
+} from "./commit-act.js";

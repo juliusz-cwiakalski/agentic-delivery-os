@@ -76,7 +76,7 @@ export const COMMIT_PHASE_TYPES: Readonly<Record<string, CommitType>> = {
 };
 
 /** The documented default for a phase absent from the table (never invented). */
-export const COMMIT_DEFAULT_TYPE: CommitType = "chore";
+export const COMMIT_DEFAULT_TYPE = "chore" as const;
 
 /** Constrained-output defaults (DEC-2, NFR-2). */
 export const COMMIT_MAX_SUBJECT_CHARS = 72;
@@ -276,6 +276,8 @@ export type CommitTransportRequest = {
   readonly temperature: number;
   readonly maxOutputTokens: number;
   readonly schemaId: "delivery.commit.message.v1";
+  /** Validation errors fed back into the single retry (DEC-4). */
+  readonly validationErrors?: readonly string[];
 };
 
 /** Token spend for the generation call; zero for template (DM-1). */
@@ -434,7 +436,7 @@ export type CommitDelta =
     }
   | {
       readonly state: "record-record-only";
-      readonly basis: CommitIntentBasis;
+      readonly basis?: CommitIntentBasis;
       readonly transitionId?: string;
     }
   | { readonly state: "commit-without-record"; readonly commitSha: string }
