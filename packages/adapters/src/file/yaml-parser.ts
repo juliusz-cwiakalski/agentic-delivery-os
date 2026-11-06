@@ -35,6 +35,24 @@ const ALLOWED_TAGS = new Set([
   `${CORE_TAG_PREFIX}map`,
 ]);
 
+/**
+ * UTF-8 byte length computed from code points: a surrogate pair is one 4-byte
+ * code point; a lone surrogate counts as the 3-byte replacement encoding. Kept
+ * local to this neutral adapter file: no TextEncoder, no Buffer, no
+ * runtime-specific imports.
+ */
+const utf8ByteLength = (value: string): number => {
+  let bytes = 0;
+  for (const character of value) {
+    const point = character.codePointAt(0) ?? 0;
+    if (point <= 0x7f) bytes += 1;
+    else if (point <= 0x7ff) bytes += 2;
+    else if (point <= 0xffff) bytes += 3;
+    else bytes += 4;
+  }
+  return bytes;
+};
+
 const malformed = (layer: ConfigFileLayer, file: string, line?: number): ParsedConfig => ({
   ok: false,
   error: {
@@ -76,7 +94,7 @@ export const parseConfigYaml = (
       error: { kind: "config", code: "config.value.invalid", layer, file },
     };
   }
-  if (text.length > MAX_SOURCE_BYTES) return malformed(layer, file);
+  if (utf8ByteLength(text) > MAX_SOURCE_BYTES) return malformed(layer, file);
 
   try {
     const lines = new LineCounter();

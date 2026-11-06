@@ -122,10 +122,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # GH-124: runs every CI-safe test-*.sh suite under tools/.tests/ and
-      # scripts/.tests/. `find -print -exec` lists each suite then executes it;
-      # `set -e` fails the job on the first failing suite. jq is required by
-      # several suites.
+      # GH-251: runs every CI-safe test-*.sh suite under tools/.tests/ and
+      # scripts/.tests/ through scripts/run-bash-suites.sh. The runner discovers
+      # suites with the same scope and exclusions this job used before — tmp/,
+      # *e2e-providers*, *e2e-suite*, *performance*, now applied inside the
+      # runner — executes every discovered suite, and aggregates each child's
+      # exit status. The job fails if suite discovery itself fails, or if any
+      # discovered suite fails or cannot run; a successful discovery that
+      # matches no suites passes. The runner names every failing suite. jq is
+      # required by several suites.
       #
       # Exclusions — tests that require paid/external APIs and are documented as
       # NOT for CI/CD (see their own headers). They are invoked manually or via
@@ -139,14 +144,7 @@ jobs:
       - name: Run all bash test suites
         run: |
           set -e
-          echo "=== Running all test suites ==="
-          find . -path '*/.tests/test-*.sh' \
-            -not -path './tmp/*' \
-            -not -name '*e2e-providers*' \
-            -not -name '*e2e-suite*' \
-            -not -name '*performance*' \
-            -print -exec bash {} \;
-          echo "=== All test suites passed ==="
+          bash scripts/run-bash-suites.sh
 
   shellcheck:
     name: Shellcheck

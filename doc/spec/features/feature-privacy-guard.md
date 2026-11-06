@@ -2,12 +2,13 @@
 id: SPEC-PRIVACY-GUARD
 status: Current
 created: 2026-10-31
-last_updated: 2026-10-31
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
+ados_distribution: internal
 summary: "The two-part privacy and no-cloud guard: a binding working-tree invariant with seven generic secret/private-shape rules and a schema-versioned hashed-literal registry, plus a required injected pure content policy at the envelope codec's single serialization point; content-free reporting, a stdin-only CI-refusing authoring mode, fixed caps, and explicit accepted residuals."
 links:
-  related_changes: ["GH-184"]
+  related_changes: ["GH-184", "GH-251"]
   related_decisions: ["ADR-0003", "TDR-0006"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
@@ -245,7 +246,7 @@ The policy builder `buildEnvelopeContentPolicy({ hash, entries })` combines the 
 | Reporting | Human and machine output, no content echo, fingerprint stability, read-only and offline behavior | `tests/checks/privacy-reporting.test.ts` |
 | Authoring | Record shape, no echo, no writes, CI refusal, no argv or environment input channel, content-free unexpected-positional rejection | `tests/checks/privacy-authoring.test.ts` |
 | Performance | Corpus timing, N/2N scaling, pattern-shape lint, emitter budget | `tests/checks/privacy-performance.test.ts` |
-| CI wiring | Invocation by name, additions-only workflow, local command, binding test execution | `tests/checks/privacy-ci-wiring.test.ts` |
+| CI wiring | Invocation by name, additions-only wiring (workflow removals confined to the documented `bash-tests` execution-block allowance), local command, binding test execution | `tests/checks/privacy-ci-wiring.test.ts` |
 | Release | Changeset shape, package set, lockfile, dependency integrity | `tests/checks/privacy-release.test.ts` |
 | Emitter policy | Field × carrier denial, validation order, totality, clean round-trip, shared-rule parity, human-content exclusion, construction-time input validation, and the single-serialization audit over `packages/`, `scripts/`, and `tools/` | `tests/behaviour/envelope-content-policy.test.ts`, `tests/types/envelope-policy.type-test.ts`, `tests/structure/envelope-contract.test.ts` |
 | Rule-module purity | Shared definition set, zero-import module, inventory registration | `tests/structure/privacy-imports.test.ts`, `tests/structure/content-inventory.test.ts` |

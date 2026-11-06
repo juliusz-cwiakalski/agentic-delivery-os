@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The single branding seam: a pure, fail-closed resolver deriving the twelve brand values from one config-driven working name, the BrandIdentity contract in core ./contracts, reserved brand-neutral telemetry schema names, a CI-binding forbidden-literal scan anchored to a fixed corpus baseline, the distinct hashed-literal privacy registry that follows the same registry-as-authority precedent, a one-warning legacy compatibility adapter, and the documented rename drill."
 links:
-  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223"]
+  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223", "GH-251"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -211,7 +211,7 @@ The privacy guard applies the same registry-as-authority, reason-bearing allowli
 - **File set:** Git-tracked plus untracked-but-not-ignored files. Ignored private corpus content never enters the scan; a newly authored doc does. `node_modules`, `dist`, `coverage`, `.git`, and `tmp` are skipped.
 - **Docs scope:** Only registered user-facing docs are content-scanned. Docs present at `corpusBaseline` are outside the content scan (the pre-existing corpus is not claimed by the seam). New docs under `doc/` outside the allowlisted `doc/changes/` and `doc/decisions/` prefixes must be registered in the same change.
 - **Failure behaviour:** Non-zero exit naming the offending file and line and token, or the membership failure. The scan never writes to the tree.
-- **CI binding:** `ts-forbidden-literals` runs the scan with full history and an explicit fetch of the recorded baseline. `ci-topology` and `ci-bindingness` reject an advisory job, a bypass construct, or a missing baseline fetch. The job joins the existing additive `ts-*` fast loop; the bash jobs remain byte-unchanged.
+- **CI binding:** `ts-forbidden-literals` runs the scan with full history and an explicit fetch of the recorded baseline. `ci-topology` and `ci-bindingness` reject an advisory job, a bypass construct, or a missing baseline fetch. The job joins the existing additive `ts-*` fast loop and changes no bash job.
 
 ## Non-Functional Requirements
 

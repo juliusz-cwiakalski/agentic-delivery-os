@@ -1,0 +1,143 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-251
+branch: fix/GH-251/ci-failure-propagation
+status: FAIL
+summary: >-
+  The two repairs land substantially as specified: the runner/workflow rewiring
+  is behaviorally proven (contract suite 8/8, negative control fully
+  self-verifying, 24/24 suites aggregated, ci-checks 35/35, invariant checks
+  green, doc guard green), the parser repair is byte-accurate at all three sites
+  with an exacting 3x5 boundary matrix and unchanged identities, and the DEC-7
+  allowance is genuinely non-vacuous (cross-job removals and job-deletion stay
+  fatal, verified live). Two high findings block PASS: (1) the runner discards
+  the find exit status via mapfile+process-substitution, so a discovery failure
+  (e.g. unreadable directory) yields exit 0 with a partial suite set — a
+  fail-open regression versus the replaced direct find invocation, empirically
+  reproduced, contradicting F-1's fail-closed clause; (2) a latent pre-existing
+  failure in tools/.tests/test-text-to-image-unit.sh (asserts `export key=value`
+  while the parse_yaml fallback emits `key=value`) executes only when yq is
+  absent from PATH — the CI job installs jq only, so the first correctly
+  propagating bash-tests run will very likely go red on it, blocking the
+  required green-run evidence (AC-F3-1/TC-CIPROP-013); it also demonstrates the
+  original defect hid real CI suite failures. Disclosed deviations (minor
+  changeset per standing TC-RELEASE-001, privacy-ci-wiring alignment,
+  privacy-release merge-base anchoring, pm-notes node:fs purity exception) were
+  independently verified as justified. DoR non-blocking findings judged
+  cosmetic; the un-folded artifact staleness is filed as one low finding.
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 0
+  low: 2
+  info: 0
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: scripts/run-bash-suites.sh:94
+    message: >-
+      discover_suites() feeds mapfile from a process substitution
+      (`mapfile -t suites < <("${FIND_EXPRESSION[@]}" -print)`), whose exit
+      status bash discards: when find itself fails (empirically reproduced with
+      a chmod-000 directory) the runner logs the ERR trap line, continues with a
+      partial suite set, and exits 0. This violates F-1/AC-F1-1/NFR-1's
+      fail-closed contract ("a suite that errors before producing a verdict is a
+      failure, never a skip") and regresses the replaced direct `find ... -exec`
+      invocation, which under set -e did fail the job when find exited non-zero.
+    suggestion: >-
+      Capture discovery status fail-closed, e.g. run find via command
+      substitution (`out="$(find ... -print)" || { log_err "suite discovery
+      failed"; exit 1; }`, guard the empty-output case before mapfile), and add
+      a contract-suite case (TC-CIPROP-006 neighbor: tree with an unreadable
+      subdirectory containing a suite; runner must exit non-zero; skip when
+      running as root).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: high
+    confidence: medium
+    category: risk
+    location: tools/.tests/test-text-to-image-unit.sh:256
+    message: >-
+      Latent pre-existing failure (suite untouched by this change):
+      test_parse_yaml_fallback asserts the fallback emits `export key=value`,
+      but tools/text-to-image parse_yaml's fallback emits `key=value`
+      (reproduced with yq off PATH: 104/105, suite exit 1). The branch only
+      executes when yq is missing; the bash-tests job installs jq only and
+      nothing in ci.yml installs yq, so the first correctly-propagating CI run
+      will very likely fail bash-tests on this suite — blocking the required
+      green-run control evidence (AC-F3-1/TC-CIPROP-013) and ticket AC-2 ("all
+      existing suites pass with the new aggregation"). It also proves the
+      original defect has been hiding a real suite failure in CI.
+    suggestion: >-
+      Test-only fix to the latent assertion (assert the fallback's actual
+      `key=value` contract, and exercise the fallback deterministically via a
+      PATH-sanitized subshell so the branch runs in every environment), recorded
+      as a disclosed AC-2-driven deviation like the existing three; verify
+      against the first real PR run before recording TC-CIPROP-013 evidence. Do
+      not install yq in the job to hide the branch.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: scripts/checks/ci-topology.ts:206
+    message: >-
+      DEC-7 allowance region is slightly broader than "the bash-tests
+      execution block": probe-verified, it admits removal of (a) every run:
+      body in the job including the Install jq step, and (b) comment lines
+      directly above the NEXT job key (e.g. a comment describing shellcheck),
+      because jobBlockRange spans to the next job and the comment scan covers
+      the whole region. No fixture pins these two edges (Fixture E covers only
+      the step-name line). Footprint stays inside the one job whose presence is
+      enforced, so this is boundary precision, not generalization.
+    suggestion: >-
+      Add two boundary fixtures (comment-above-next-job removal; non-suite
+      run-step body removal) that pin the intended classification — either as
+      allowed (documenting the true standing footprint for the RSK-7 human gate)
+      or narrow the region — and keep the readiness-review finding-2 sentence
+      (allowance persists beyond this change) on the pr_creation description
+      agenda.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-251--ci-failure-propagation/chg-GH-251-test-plan.md:13
+    message: >-
+      Change-artifact staleness not folded during phase 7 (the DoR fold-in
+      window): test-plan frontmatter still has links.implementation_plan: null
+      and GAP-1 still reads unresolved; section 10's scope classification names
+      gh-251-ci-failure-propagation-patch.md while the delivered changeset is
+      -minor.md and omits tests/checks/privacy-release.test.ts from the
+      classified set; spec and test-plan frontmatter say version_impact: patch
+      while the delivered (gate-forced) changeset is minor.
+    suggestion: >-
+      One documentation pass over the change's own artifacts: set
+      implementation_plan to ./chg-GH-251-plan.yaml and mark GAP-1
+      resolved-by-plan; correct the changeset filename and add the
+      privacy-release classification row in section 10; align version_impact
+      (or add a one-line deviation note pointing at TC-RELEASE-001).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-06T18:04:20Z
+next_step: EXECUTE_REMEDIATION_PHASE

@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { scanText as scanBindingness } from "../../scripts/checks/ci-bindingness";
-import { BASH_JOBS, TS_JOBS } from "../../scripts/checks/ci-topology";
+import { BASH_JOBS, removedLineViolations, TS_JOBS } from "../../scripts/checks/ci-topology";
 import { EXPECTED_ALLOWLIST } from "../fixtures/privacy-literals/registry";
 import { RULE_POSITIVES } from "../fixtures/privacy-literals/rules";
 import {
@@ -91,16 +91,17 @@ describe("TC-WIRE-001 binding ts-invariants invocation", () => {
     expect(jobBlock(workflowText(), "ts-invariants")).not.toContain("continue-on-error");
   });
 
-  test("the workflow diff against origin/main-tools is additions-only", () => {
+  test("workflow removals stay inside the DEC-7 bash-tests allowance", () => {
+    const base = execFileSync("git", ["show", "origin/main-tools:.github/workflows/ci.yml"], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
     const diff = execFileSync(
       "git",
       ["diff", "--unified=0", "origin/main-tools...HEAD", "--", CI_PATH],
       { cwd: ROOT, encoding: "utf8" },
     );
-    const removed = diff
-      .split("\n")
-      .filter((line) => line.startsWith("-") && !line.startsWith("---"));
-    expect(removed).toEqual([]);
+    expect(removedLineViolations(base, diff)).toEqual([]);
   });
 
   test("mutation controls are caught by name", () => {
