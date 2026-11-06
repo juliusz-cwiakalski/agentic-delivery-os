@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-06T19:05:00Z", completed: "2026-11-06T19:50:00Z" }
   delivery: { started: "2026-11-06T19:12:00Z", completed: null }
   system_spec_update: { started: "2026-11-06T20:15:00Z", completed: "2026-11-06T20:35:00Z" }
-  review_fix: { started: "2026-11-06T20:40:00Z", completed: null }
+  review_fix: { started: "2026-11-06T20:40:00Z", completed: "2026-11-06T21:15:00Z" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -111,7 +111,7 @@ notes:
   - text: "Delivery plan authored by @plan-writer: chg-GH-232-plan.yaml (canonical machine-readable YAML format per current plan contract — legacy .md would be schema-invalid; YAML wins when both exist), 6 phases / 36 tasks, tier full, 64/64 TCs mapped, 16/16 ACs traceable, no STOP. Delivery-bound items pinned as PIN-1..10 (HMAC-SHA-256 via node:crypto, 64-hex links, artifact spellings, target ordering OQ-T6, level map OQ-T7, NFR-7 CI measurement OQ-T8, export limit 1000, memory-audit cadence weekly-flagged-reviewable)."
     type: info
     date: "2026-11-06"
-  - text: "Plan phase 7 (Code Review Remediation Iteration 1) executed: tasks 7.1-7.12. Verification: 65 targeted tests pass across retro-sidecar-append, retro-malformed, retro-chain-mutations, retro-performance, retro-memory-audit, retro-export, retro-denied, retro-levels; 138 retro-suite tests pass across 25 files; retro-key-containment CLI green (130 files scanned); pnpm check green. NFR-7 reference measurement (PIN-7, 10,000-record sidecar, non-CI): read 0.061 s; collect appending 1,005 records 0.091 s (one verified read, one append); report 0.071 s; export limit 1,000 0.067 s — all well inside the restored budgets (collect <= 30 s, report <= 10 s, export <= 10 s). Result: pass."
+  - text: "Plan phase 7 (Code Review Remediation Iteration 1) executed: tasks 7.1-7.12. Commit cf4475d6 (plus baseline-sync merge d79148fe bringing GH-251 from origin/main-tools). Verification: 65 targeted tests pass across retro-sidecar-append, retro-malformed, retro-chain-mutations, retro-performance, retro-memory-audit, retro-export, retro-denied, retro-levels; 138 retro-suite tests pass across 25 files; retro-key-containment CLI green (130 files scanned); pnpm check green (4178 pass / 4 skip / 0 fail at iteration-2 re-verification). NFR-7 reference measurement (PIN-7, 10,000-record sidecar, non-CI): read 0.061 s; collect appending 1,005 records 0.091 s (one verified read, one append); report 0.071 s; export limit 1,000 0.067 s — all well inside the restored budgets (collect <= 30 s, report <= 10 s, export <= 10 s). Result: pass."
     type: info
     date: "2026-11-06"
   - text: "Reviewed SCOPE_DEVIATION (phase 7, plan policy): files outside the declared phase-7 scope were necessarily touched. (1) packages/core/src/contracts/retro.ts — RetroSidecarPort gained the additive appendBatch member the batched-append task requires (no other contract change). (2) tests/behaviour/retro-export.test.ts, retro-denied.test.ts, retro-levels.test.ts — the natural suites for the TC-049/050/054/058 mutants task 7.4 explicitly names. (3) tests/checks/retro-key-containment.test.ts — the planted non-retro-named-file mutant task 7.9 requires. (4) tests/fixtures/retro/harness.ts and tests/fixtures/retro/mutations.json live inside the declared fixtures folder. No production behaviour outside the plan tasks changed."
@@ -121,6 +121,9 @@ notes:
     type: info
     date: "2026-11-06"
   - text: "Reviewed SCOPE_DEVIATION (F-10): phase-6 doc-sync also touched doc/spec/features/feature-doctor.md, doc/spec/nonfunctional.md, doc/spec/test-spec-state-layer.md, doc/overview/architecture-overview.md, doc/overview/ubiquitous-language.md, doc/planning/oss-tooling/milestones/m1/commands/retro.md, doc/planning/oss-tooling/milestones/m1/contracts.md, and doc/decisions/00-index.md. Content verified correct (M1 pack supersession, NFR index, doctor/retro visibility); recorded here as the plan's SCOPE_DEVIATION policy requires."
+    type: info
+    date: "2026-11-06"
+  - text: "Review iteration 2 verdict: PASS (code-review/review-iter-2.yaml, 0 critical/high/medium, 3 LOW non-blocking). All 11 iteration-1 findings independently verified fixed with file:line evidence; reviewer's own probe confirmed the perf fix (1000-record collect onto 10k sidecar = 68.3 ms, reads=1/appends=1); reviewer ran pnpm check green (4178/4/0) and both retro invariant checks. Batched-append hazard review clean (fence scope, partial-write fail-closed, chain continuity, memory bounds). Three LOW findings accepted to ride the PR per reviewer sanction: (a) phase-7 pm-notes entry lacked commit hash — FIXED by PM (cf4475d6 + merge d79148fe added); (b) retro-registry.ts fence wiring missing from phase-7 scope enumeration — accepted reviewed deviation; (c) doctor no-double-count lacks a regression pin through real composition — optional, candidate for M2-S3."
     type: info
     date: "2026-11-06"
   - text: "Reviewed deviation resolution (F-5 / PIN-4 single store): the retro registry rides the delivery state store rather than a distinct store instance. RETRO_REGISTRY_FENCE_NAMESPACE is now live on registry fence tokens, and the doctor aggregation no longer adds retro.recordCount (the shared ledger's base count already includes retro artifacts, so summing double-counted them). Integrity is unaffected: the registry carries levels/runs/triggers, not evidence."
