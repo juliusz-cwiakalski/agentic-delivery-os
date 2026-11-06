@@ -147,6 +147,9 @@ directory rows for `lessons/` or `tacit/`. Each row carries a Read when hint.
 | `agents/pm/README.md` | you are pm, or need orchestration context |
 | `agents/coder/README.md` | you are coder, or need implementation context |
 | `agents/fixer/README.md` | you are fixer, or need failure-repair context |
+| `lessons/lesson-2026-001-ci-baseline-parity-tmpdir.md` | you run local gates (pnpm check, bun test) in any checkout |
+| `lessons/lesson-2026-002-github-mcp-write-auth-fallback.md` | you write to the GitHub tracker from any agent |
+| `lessons/lesson-2026-003-pm-notes-born-gate-conformant.md` | you create or edit chg-<ref>-pm-notes.yaml |
 
 Add one row for each self-created agent folder and each promoted record file as
 it lands.
