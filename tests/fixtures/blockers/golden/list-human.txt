@@ -1,0 +1,5 @@
+example-product blockers  open=2  answered=1
+  1. q-golden-1  decision-needed  audience=coordinator  lane=L5  age=2h  "closeout residue sweep: full or lite?"  options=full,lite+escalation
+  2. q-golden-2  external-wait  audience=coordinator  lane=L9  age=1h  "awaiting vendor confirmation"
+answered
+  q-golden-3  spec-ambiguity  audience=owner  lane=L2  age=3h  answered-by=owner  text "criterion two"
