@@ -7,9 +7,9 @@ phases:
   test_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   delivery_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   dor_check: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
-  delivery: { started: "2026-11-06T00:00:00Z", completed: null }
+  delivery: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   system_spec_update: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
-  review_fix: { started: "2026-11-06T00:00:00Z", completed: null }
+  review_fix: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -45,6 +45,12 @@ notes:
     date: "2026-11-06"
   - text: "Retro: phase-3 scope omitted the invariant pin files that phase-3's own boundary reconciliation would ripple into (exit-literals pins in import/board/live suites, state-scope, verify-imports), forcing phase 6 to touch 12 files vs 3 declared. Lesson for plan authors: when a task reconciles a shared invariant check, add the check's test/pin files to that phase's scope up front."
     type: "retro"
+    date: "2026-11-06"
+  - text: "Plan phase ledger (plan phase id -> commit -> test result): 1 -> af4f53ea -> typecheck + structure gate 85 PASS + error-table-sync PASS; 2 -> fe9ce0cd -> 103 parity/error/input tests PASS + typecheck; 3 -> f891cc46 -> check:boundaries PASS (203 modules) + boundary scans PASS + typecheck; 4 -> b9c98b4a -> lifecycle/Node smoke/CI parity 15 PASS + ci-checks PASS; 5 -> a3044c2d -> injection/readonly/mutants 23 PASS; 6 -> bf1a885a -> pnpm check exit 0 (3750/4/0); 7 (remediation) -> 1f1237c5 -> typecheck + parity suites 98 PASS + lifecycle/smoke/input/status 31 PASS + pnpm check exit 0 (3764/4/0). Post-remediation doc re-sync commit 7621a2bc."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Review iteration 2 verdict PASS (0c/0h/0m/1l/3i; artifacts code-review/review-iter-2.yaml + review/review-iter-2.md). Blocking highs F-1 (containment) and F-2 (truthful parks) resolved at preferred option and independently verified by reviewer's own probe runs (163 targeted tests, pnpm check 3764/4/0, 14/14 serve probes, zero state writes confirmed). F-3/F-5/F-6 also verified resolved. Remaining findings bookkeeping-level (1 low + 3 advisory: F-7/LOW-2 constants sharing, F-8 credential-aware provider reads, F-9 dead #aliases, F-10 protocol metadata edges) - documented, deferred to later stories. Review loop closed after 2 iterations (max 3)."
+    type: "info"
     date: "2026-11-06"
   - text: "Tracker write note: github-mcp lacks write auth (update_issue failed 'Requires authentication'); gh CLI authenticated as juliusz-cwiakalski with repo scope — all tracker writes and PR creation go through gh CLI via @runner. Labels synced: review (stale, no PR) removed, planning added; final set change+planning."
     type: "info"
