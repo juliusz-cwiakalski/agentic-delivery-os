@@ -72,6 +72,8 @@ export type PhaseTransitionWrite = {
   readonly reason?: string;
   readonly commitIntent?: "atomic" | "record-only";
   readonly commitIntentBasis?: CommitIntentBasis;
+  /** The landed commit SHA an atomic completion persists for convergence. */
+  readonly commitSha?: string;
 };
 
 export type PhaseTransitionWriteOutcome = {
@@ -103,6 +105,13 @@ export type PhaseCommitEvidence = {
   readonly transitionId?: string;
   readonly commitPresent: boolean;
   readonly commitSha?: string;
+  /**
+   * Set when durable evidence could not be read (a torn state record). The
+   * command classifies it as a platform fault instead of treating a missing
+   * readable signal as commit-absent — the fail-open door a duplicate commit
+   * would walk through.
+   */
+  readonly readFailure?: StateFailure;
 };
 
 /** The plan-phase declaration read for the skeleton and staging scope. */
@@ -363,6 +372,9 @@ const completeWithCommit = async (
     plan.planPresent && plan.planPhase !== undefined ? "plan-phase" : "plan-absent";
   const actScope = { paths: scopePaths, source: scopeSource } as const;
   const evidence = await extension.readEvidence(changeRef, phaseId);
+  // Fail closed: unreadable durable evidence is a platform fault, never a
+  // silent commit-absent signal that lets a re-run manufacture a duplicate.
+  if (evidence.readFailure !== undefined) return stateFailure(evidence.readFailure);
   const delta = classifyCommitDelta({
     recordPresent: evidence.recordPresent,
     ...(evidence.recordIntent === undefined ? {} : { recordIntent: evidence.recordIntent }),
@@ -471,6 +483,7 @@ const completeWithCommit = async (
       timestamp,
       fenceToken: runtime.newFenceToken(),
       commitIntent: "atomic",
+      commitSha: delta.commitSha,
     });
     if (!appended.ok) return stateFailure(appended.error);
     const written = writeDocument();
@@ -565,7 +578,7 @@ const completeWithCommit = async (
     requiresBody: false,
     dryRun: false,
     baselineHead,
-    appendTransition: async () => {
+    appendTransition: async ({ commitSha }) => {
       const appended = runtime.appendTransition({
         changeRef,
         phaseId,
@@ -573,6 +586,7 @@ const completeWithCommit = async (
         timestamp,
         fenceToken: runtime.newFenceToken(),
         commitIntent: "atomic",
+        commitSha,
       });
       if (!appended.ok) {
         return { ok: false, detail: appended.error.code };

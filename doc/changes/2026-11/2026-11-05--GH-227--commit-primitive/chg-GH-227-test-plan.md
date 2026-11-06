@@ -97,12 +97,12 @@ The proof is built around three mechanisms the specification names: the seeded s
 | AC-F6-5 | Platform fault in the atomic act → both sides restored to neither-landed, `commit.atomic-abort` exit 2, re-run converges | TC-ATOMIC-005, TC-CONVERGE-004 | Covered |
 | AC-F7-1 | Record landed with intent `atomic` / commit missing → re-run completes the missing commit, no new record, reconciliation disclosed; opt-out (`record-only`) excluded | TC-CONVERGE-001, TC-CONVERGE-005, TC-CONVERGE-006, TC-CONVERGE-008 | Covered |
 | AC-F7-2 | Commit landed / record missing → re-run appends the transition (with intent `atomic`), no re-commit, no empty commit | TC-CONVERGE-002, TC-CONVERGE-005 | Covered |
-| AC-F7-3 | Both landed (matrix row 2) → no-op success citing the existing completion, no record, no commit | TC-ATOMIC-009, TC-CONVERGE-003, TC-CONVERGE-005, TC-TELEM-003 | Covered |
+| AC-F7-3 | Both landed (matrix row 2) → no-op success citing the existing completion, no record, no commit | TC-ATOMIC-009, TC-CONVERGE-003, TC-CONVERGE-005, TC-CONVERGE-010, TC-TELEM-003 | Covered |
 | AC-F7-4 | Record landed with intent `record-only` (any stored basis) → intentional no-op convergence citing the stored basis: no commit, no new record, basis disclosed | TC-CONVERGE-007, TC-CONVERGE-008, TC-ATOMIC-002, TC-ATOMIC-003, TC-ATOMIC-004, TC-CONVERGE-006 | Covered |
 | AC-F8-1 | Exactly one telemetry event per landed commit (ref, phase, SHA, source, transport, spend, transition identity); emission failure disclosed and non-gating | TC-TELEM-001, TC-TELEM-002, TC-TELEM-003, TC-TELEM-004, TC-ATOMIC-009, TC-ATOMIC-010 | Covered |
 | AC-NFR9-1 | Every outcome under `--json` is exactly one valid result envelope with exit in `{0,1,2}` | TC-ENV-001, TC-ENV-002, TC-ENV-003 | Covered |
 
-**Capability coverage** (no capability left unlinked): F-1 → TC-COMMIT-001..006; F-2 → TC-MSG-001, TC-MSG-002, TC-COMMIT-006; F-3 → TC-MSG-003..010; F-4 → TC-TRANSPORT-001..006; F-5 → TC-SAFETY-001..010; F-6 → TC-ATOMIC-001..012; F-7 → TC-ATOMIC-006..009, TC-CONVERGE-001..008; F-8 → TC-TELEM-001..004.
+**Capability coverage** (no capability left unlinked): F-1 → TC-COMMIT-001..006; F-2 → TC-MSG-001, TC-MSG-002, TC-COMMIT-006; F-3 → TC-MSG-003..010; F-4 → TC-TRANSPORT-001..006; F-5 → TC-SAFETY-001..010; F-6 → TC-ATOMIC-001..012; F-7 → TC-ATOMIC-006..009, TC-CONVERGE-001..010; F-8 → TC-TELEM-001..004.
 
 **AC count**: 23 (22 from spec v1.0 plus AC-F7-4 from the iter-2 amendment); every AC row is `Covered`.
 
@@ -122,7 +122,7 @@ The spec declares no REST/HTTP endpoints; the interface surface is the CLI invoc
 | EVT-1 | One commit telemetry event per landed commit; non-gating; verified reads | TC-TELEM-001..004 | Covered |
 | DM-1 | `delivery.commit.telemetry.v1` payload (ref, phase, SHA, source, transport, spend, landed-at, transition identity) | TC-TELEM-001, TC-TELEM-004 | Covered |
 | DM-2 | `commit` success data (`subject`, `body?`, `stagedFiles`, `excluded`, `commitSha`, `messageSource`, `transport`, `atomic`, `ledgerTransition`, `dryRun`) | TC-COMMIT-001, TC-COMMIT-002, TC-ENV-001 | Covered |
-| DM-3 | `phase complete` data extension (`commitSkipped` vocabulary `opt-out-flag` \| `config-disabled` \| `skipped-no-pending-work` \| `no-op`, reconciliation / intentional-no-op evidence) | TC-ATOMIC-002, TC-ATOMIC-003, TC-ATOMIC-004, TC-CONVERGE-001..003, TC-CONVERGE-006, TC-CONVERGE-007, TC-ENV-001 | Covered |
+| DM-3 | `phase complete` data extension (`commitSkipped` vocabulary `opt-out-flag` \| `config-disabled` \| `skipped-no-pending-work` \| `no-op` \| `interrupted-atomic-no-pending-work`, reconciliation / intentional-no-op evidence) | TC-ATOMIC-002, TC-ATOMIC-003, TC-ATOMIC-004, TC-ATOMIC-014, TC-CONVERGE-001..003, TC-CONVERGE-006, TC-CONVERGE-007, TC-ENV-001 | Covered |
 | DM-4 | One `commit` domain kind, six rows, documented sync | TC-TABLE-005, TC-TABLE-006, TC-TABLE-007, TC-ENV-002 | Covered |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
@@ -239,6 +239,9 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 | TC-ATOMIC-011 | Session-context refusal on `phase complete` | Negative | Critical | High | AC-F1-3 |
 | TC-ATOMIC-012 | Commit intent lands in the record's own ledger append (no second write) | Corner Case | Critical | High | AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, DEC-7 |
 | TC-ATOMIC-013 | Lifecycle phase ids map to declared plan-phase scopes; no silent first-phase fallback | Corner Case | Critical | High | AC-F5-1, DEC-15 |
+| TC-ATOMIC-014 | Interrupted atomic re-run with no pending work discloses the envelope-only basis | Edge Case | Important | Medium | AC-F7-1, DM-3 |
+| TC-ATOMIC-015 | `delivery_planning` maps to planning-kind plan scope | Corner Case | Critical | High | AC-F5-1, DEC-15 |
+| TC-ATOMIC-016 | Plan-present unmapped lifecycle phase discloses `degradedScope: plan-absent` on the commit surface | Edge Case | Important | Medium | AC-F5-1, DM-2, DEC-15 |
 | TC-CONVERGE-001 | Record only → complete the missing commit, no new record | Corner Case | Critical | High | AC-F7-1 |
 | TC-CONVERGE-002 | Commit only → append the transition, no re-commit | Corner Case | Critical | High | AC-F7-2 |
 | TC-CONVERGE-003 | Both landed → no-op citing the existing completion | Regression | Critical | High | AC-F7-3 |
@@ -248,6 +251,7 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 | TC-CONVERGE-007 | Intentional record-only re-runs converge to no-op across all three bases | Edge Case | Critical | High | AC-F7-4, AC-F6-2, AC-F6-3, AC-F6-4 |
 | TC-CONVERGE-008 | Intent discrimination is evidence-driven, not mode-guessing | Corner Case | Critical | High | AC-F7-1, AC-F7-4, DEC-7 |
 | TC-CONVERGE-009 | Both-landed evidence is durable to later commits (no HEAD-position dependence) | Regression | Critical | High | AC-F7-3, NFR-6, DEC-7 |
+| TC-CONVERGE-010 | Telemetry is corroboration, never the sole commit evidence; unreadable evidence is a platform fault | Negative | Critical | High | AC-F7-1, AC-F7-3, NFR-6, DEC-7 |
 | TC-TELEM-001 | Exactly one telemetry event per landed commit with all DM-1 fields | Happy Path | Critical | High | AC-F8-1 |
 | TC-TELEM-002 | Emission failure disclosed without failing the commit | Negative | Important | High | AC-F8-1 |
 | TC-TELEM-003 | No event on refusal, abort, no-op, or no-pending-work | Negative | Critical | High | AC-F8-1, AC-F7-3 |
@@ -1316,6 +1320,71 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 - Phase-centric scope is the union of the plan phases the lifecycle phase maps to; a non-first phase's declared file is stageable.
 - No silent first-plan-phase fallback exists; an unmapped lifecycle phase uses the disclosed `plan-absent` scope.
 
+#### TC-ATOMIC-014 - Interrupted atomic re-run with no pending work discloses the envelope-only basis
+
+**Scenario Type**: Edge Case
+**Impact Level**: Important
+**Priority**: Medium
+**Related IDs**: F-6, F-7, AC-F7-1, DM-3
+**Test Type(s)**: Behaviour, Contract
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/phase-atomic.test.ts`
+**Tags**: @backend, @git, @convergence
+
+**Preconditions**:
+- Durable state: one `phase.transition` completion record with `commitIntent: atomic` and no commit; the tree has no stageable pending work; no telemetry. Constructed by direct state append.
+
+**Steps**:
+1. Run `phase complete GH-310 delivery`.
+2. Assert the envelope, the ledger, HEAD, and the transport calls.
+
+**Expected Outcome**:
+- Exit 0 with `outcome: no-op`, `commitSkipped: interrupted-atomic-no-pending-work`, and `atomic: false`.
+- Zero new commits, zero new records, zero telemetry events, and no transport call; the basis is envelope-only and never written to a record.
+
+#### TC-ATOMIC-015 - `delivery_planning` maps to planning-kind plan scope
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-1, F-2, F-5, AC-F5-1, DEC-15
+**Test Type(s)**: Integration, Contract
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/phase-atomic.test.ts`
+**Tags**: @backend, @git, @scope
+
+**Preconditions**:
+- A `delivery.plan.v1` plan whose only phase is `kind: planning` and declares an untracked file.
+
+**Steps**:
+1. Run `phase complete GH-310 delivery_planning`.
+2. Assert the staged set and the durable record.
+
+**Expected Outcome**:
+- The planning-kind phase's declared untracked file is staged in phase-centric mode; one atomic record (`phaseId: delivery_planning`) carries the landed `commitSha`; one commit lands.
+- The `delivery_planning` half of the lifecycle mapping is exercised, not only the `delivery` half.
+
+#### TC-ATOMIC-016 - Plan-present unmapped lifecycle phase discloses `degradedScope: plan-absent`
+
+**Scenario Type**: Edge Case
+**Impact Level**: Important
+**Priority**: Medium
+**Related IDs**: F-2, F-5, AC-F5-1, DM-2, DEC-15
+**Test Type(s)**: Behaviour, Contract
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/phase-atomic.test.ts`
+**Tags**: @backend, @git, @scope, @envelope
+
+**Preconditions**:
+- A plan artifact is present, but its phases are delivery-kind; a tracked file is dirty.
+
+**Steps**:
+1. Run `commit GH-310 --phase system_spec_update --dry-run`.
+
+**Expected Outcome**:
+- Exit 0 with `degradedScope: "plan-absent"` and the tracked file staged with drift disclosure; no phase's declared scope is borrowed.
+- The commit-surface disclosure is asserted for the plan-present-but-no-correspondence variant (the no-plan-artifact variant is covered by TC-COMMIT-006).
+
 #### TC-CONVERGE-001 - Record only with intent `atomic` → complete the missing commit, no new record
 
 **Scenario Type**: Corner Case
@@ -1536,6 +1605,32 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 **Expected Outcome**:
 - Commit presence is read from the durable telemetry event bound to the record's transition identity, never from HEAD position; later commits cannot degrade earlier evidence.
 - Zero manufactured commits, zero duplicate records, zero duplicate telemetry events; the commit-without-record state still detects an orphan commit at HEAD.
+
+#### TC-CONVERGE-010 - Telemetry is corroboration, never the sole commit evidence
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-7, AC-F7-1, AC-F7-3, NFR-6, DEC-7
+**Test Type(s)**: Integration, Contract
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/commit-convergence.test.ts`
+**Tags**: @backend, @git, @convergence
+
+**Preconditions**:
+- Case A: an atomic completion lands while telemetry emission fails (non-gating); the record carries the landed `commitSha`; in-scope tracked work becomes pending afterwards.
+- Case B: an atomic completion lands, then the telemetry ledger record is torn (unparseable payload), then in-scope work becomes pending.
+- Case C: a legacy atomic record without a `commitSha` plus a torn telemetry record.
+
+**Steps**:
+1. Case A: re-run `phase complete`; assert the row-2 no-op and zero new commits/records/telemetry.
+2. Case B: re-run `phase complete`; assert the record-bound SHA still proves commit presence and the run is a no-op.
+3. Case C: re-run `phase complete`; assert the unreadable evidence classifies as `state.store.torn` (exit 2) and nothing lands.
+
+**Expected Outcome**:
+- Absent or torn telemetry never reads as commit-absent when the record carries an atomic SHA and the commit object exists; no duplicate commit is manufactured.
+- With no record-bound SHA, unreadable durable evidence fails closed as a platform fault instead of manufacturing a commit.
+- Telemetry is demoted to corroboration; the atomic record is the authoritative commit-presence carrier.
 
 #### TC-TELEM-001 - Exactly one telemetry event per landed commit with all DM-1 fields
 
@@ -1991,10 +2086,10 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 | `tests/behaviour/commit-safety.test.ts` (new) | TC-SAFETY-001, TC-SAFETY-002, TC-SAFETY-003, TC-SAFETY-004, TC-SAFETY-005, TC-SAFETY-006, TC-SAFETY-007, TC-SAFETY-008, TC-SAFETY-009, TC-SAFETY-010 | To Implement | `bun test tests/behaviour/commit-safety.test.ts` |
 | `tests/behaviour/phase-atomic.test.ts` (new) | TC-ATOMIC-001, TC-ATOMIC-002, TC-ATOMIC-003, TC-ATOMIC-004, TC-ATOMIC-005, TC-ATOMIC-010, TC-ATOMIC-012 | To Implement | `bun test tests/behaviour/phase-atomic.test.ts` |
 | `tests/behaviour/phase-idempotency.test.ts` (regression only) | TC-REGRESS-004 | Existing – No Change | `bun test tests/behaviour/phase-idempotency.test.ts` |
-| `tests/behaviour/phase-atomic.test.ts` (new, owns the matrix commit dimension) | TC-ATOMIC-006, TC-ATOMIC-007, TC-ATOMIC-009, TC-ATOMIC-010, TC-ATOMIC-012, TC-ATOMIC-013 | To Implement | `bun test tests/behaviour/phase-atomic.test.ts` |
+| `tests/behaviour/phase-atomic.test.ts` (new, owns the matrix commit dimension) | TC-ATOMIC-006, TC-ATOMIC-007, TC-ATOMIC-009, TC-ATOMIC-010, TC-ATOMIC-012, TC-ATOMIC-013, TC-ATOMIC-014, TC-ATOMIC-015, TC-ATOMIC-016 | Delivered | `bun test tests/behaviour/phase-atomic.test.ts` |
 | `tests/behaviour/phase-transitions.test.ts`, `phase-rejections.test.ts` (run/update) | TC-ATOMIC-008, TC-REGRESS-004 | Existing – Update | `bun test tests/behaviour/phase-transitions.test.ts tests/behaviour/phase-rejections.test.ts` |
 | `tests/behaviour/phase-registry.test.ts`, `phase-envelope.test.ts` (run/update) | TC-REGRESS-005 | Existing – No Change / Update | `bun test tests/behaviour/phase-registry.test.ts tests/behaviour/phase-envelope.test.ts` |
-| `tests/behaviour/commit-convergence.test.ts` (new) | TC-CONVERGE-001, TC-CONVERGE-002, TC-CONVERGE-003, TC-CONVERGE-004, TC-CONVERGE-005, TC-CONVERGE-006, TC-CONVERGE-007, TC-CONVERGE-008 | To Implement | `bun test tests/behaviour/commit-convergence.test.ts` |
+| `tests/behaviour/commit-convergence.test.ts` (new) | TC-CONVERGE-001, TC-CONVERGE-002, TC-CONVERGE-003, TC-CONVERGE-004, TC-CONVERGE-005, TC-CONVERGE-006, TC-CONVERGE-007, TC-CONVERGE-008, TC-CONVERGE-009, TC-CONVERGE-010 | Delivered | `bun test tests/behaviour/commit-convergence.test.ts` |
 | `tests/behaviour/commit-telemetry.test.ts` (new) | TC-TELEM-001, TC-TELEM-002, TC-TELEM-003, TC-TELEM-004 | To Implement | `bun test tests/behaviour/commit-telemetry.test.ts` |
 | `tests/golden/commit-envelope.test.ts` (new) + `tests/fixtures/envelope/golden/commit-*.json` | TC-ENV-001, TC-ENV-002, TC-ENV-003 | To Implement | `bun test tests/golden/commit-envelope.test.ts` |
 | `tests/structure/commit-contract.test.ts` (new) | TC-TIER-001 | To Implement | `bun test tests/structure/commit-contract.test.ts` |
@@ -2036,7 +2131,7 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 | TR-6 | Golden churn from envelope additions | Low | Add committed goldens deliberately; normalize paths/timestamps/brand; regenerate explicitly; review diffs. |
 | TR-7 | Inventory/registry updates forgotten (new files, new contracts exports, new doc) | Medium | TC-TIER-001/003 and TC-REGRESS-007 fail by name when a new file/export/doc is unregistered. |
 | TR-8 | Security assertion becomes vacuous (pattern not present, redaction disabled) | High | Use the committed secret corpus; assert the pattern matches in a control fixture; assert the material is absent from all outputs; TC-SAFETY-004/005 run with redaction on. |
-| TR-9 | Envelope `commitSkipped` vocabulary drifts from the durable `commitIntentBasis` strings | Medium | TC-ATOMIC-012 asserts string equality between the record basis and the envelope value; TC-ENV-001 pins the DM-3 key/vocabulary; `no-op` is asserted to be envelope-only. |
+| TR-9 | Envelope `commitSkipped` vocabulary drifts from the durable `commitIntentBasis` strings | Medium | TC-ATOMIC-012 asserts string equality between the record basis and the envelope value; TC-ENV-001 pins the DM-3 key/vocabulary; TC-ATOMIC-014 asserts the fifth basis string `interrupted-atomic-no-pending-work` is disclosed envelope-only; `no-op` is asserted to be envelope-only. |
 
 ### 8.2 Assumptions
 
@@ -2070,6 +2165,7 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 | 1.0 | 2026-11-06 | test-plan-writer | Initial plan: 68 scenarios covering all 22 ACs, SC-M1-12 inherited verbatim, convergence matrix, safety ordering, transport seam, telemetry, error-table sync, tier purity, and phase-family regressions; OQ-T1 flagged as blocking. |
 | 1.1 | 2026-11-05 | test-plan-writer | Amendment for spec iter 2 (reason: OQ-T1 resolution). Added durable commit-intent coverage (`commitIntent`/`commitIntentBasis`, same ledger append) via TC-ATOMIC-012; unblocked and fully specified TC-CONVERGE-007 (all three record-only bases) and the TC-ATOMIC-002 re-run assertion; added TC-CONVERGE-008 (atomic-vs-record-only evidence discrimination); added AC-F7-4 to the matrix (23 ACs, 70 scenarios); sharpened AC-F7-1 to atomic intent; moved OQ-T1/OQ-T2 to the resolved log; updated DM-3, NFR-6, index, automation mapping, and risks. No existing test case was renumbered. |
 | 1.2 | 2026-11-06 | coder | Review-remediation amendment. Added TC-ATOMIC-013 (lifecycle-to-plan-phase scope mapping over a production-shaped multi-phase plan) and TC-CONVERGE-009 (both-landed evidence durable to later commits and manual HEAD moves); relocated the matrix commit-dimension tests from `phase-idempotency.test.ts` to `phase-atomic.test.ts` and marked `phase-idempotency` regression-only. |
+| 1.3 | 2026-11-06 | coder | Review iteration 2 remediation. Added TC-CONVERGE-010 (record-bound SHA primary, telemetry corroboration, unreadable evidence as platform fault — F-14) and the F-15 corpus cases TC-ATOMIC-014 (envelope-only `interrupted-atomic-no-pending-work`), TC-ATOMIC-015 (`delivery_planning` planning-kind mapping), TC-ATOMIC-016 (plan-present `degradedScope` on the commit surface). DM-3 and TR-9 now pin the fifth basis string. |
 
 ## 10. Test Execution Log
 
@@ -2089,4 +2185,5 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 | TC-ENV-001..003 | 2026-11-06 | PASS | `bun test tests/golden/commit-envelope.test.ts` (9 tests); normalized committed goldens plus six failure projections. |
 | Aggregate | 2026-11-06 | PASS | `pnpm check` green with `TMPDIR=$PWD/tmp/tmpdir`; `bash scripts/.tests/test-doc-distribution.sh` green; `git diff --check` clean. |
 | Review remediation (phase 9) | 2026-11-06 | PASS (except pre-existing base drift) | `pnpm test`: 2774 pass / 4 skip / 1 fail across 270 files; the only failure is `tests/checks/privacy-release.test.ts:150` (two changesets present on `origin/main-tools` but absent from the branch merge-base — stale-base drift, unrelated to this change). `pnpm typecheck`, lint, format, `pnpm check:boundaries`, and `exports-parity` green; `bash scripts/.tests/test-doc-distribution.sh` green; `git diff --check` clean; error-table-sync 58/58. Targeted retests: phase-atomic 14, commit-convergence 13, commit-command + golden 46 total, regression suites 87. |
+| Review remediation iter 2 (phase 10) | 2026-11-06 | PASS | F-14: `phase-atomic` 17 + `commit-convergence` 16 = 33 pass; TC-CONVERGE-010 proves a failed telemetry emission followed by pending work yields a row-2 no-op with zero new commits/records/telemetry, a torn telemetry record cannot degrade a record-bound SHA, and a torn read with no record-bound SHA exits 2 `state.store.torn`. F-15: TC-ATOMIC-014..016 pass. Focused commit/phase/golden suites 56 pass; `tests/structure tests/boundaries tests/checks` 979 pass. Aggregate `pnpm check` (with `TMPDIR=$PWD/tmp/tmpdir`) green: 3222 pass / 4 skip / 0 fail across 305 files; boundaries, ambient-globals, workspace-entrypoints, secret-read-boundary, and exports-parity green; error-table-sync unchanged. |
 | Plan diff (observational) | 2026-11-06 | FINDINGS | `plan diff GH-227` against `main-tools`: 51 within / 8 outside-declared / 5 undeclared-missing. Outside: pre-existing change artifacts plus barrel/index exports required by the new modules and the error-table-sync false-positive fix; undeclared-missing are plan-declared-but-unmodified paths (derived schema, untracked changeset at diff time). No phase skipped and no scope silently dropped. |

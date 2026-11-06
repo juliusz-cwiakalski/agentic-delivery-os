@@ -55,8 +55,14 @@ export type CommitActRequest = {
   readonly baselineHead: string;
   /** Present when an existing transition is the durable identity (convergence). */
   readonly existingTransitionId?: string;
-  /** The phase record append; its failure aborts the whole act. */
-  readonly appendTransition?: () => Promise<
+  /**
+   * The phase record append; its failure aborts the whole act. The landed
+   * commit SHA is passed so the record itself carries durable commit evidence
+   * (the append follows commit-object creation, so the SHA is known here).
+   */
+  readonly appendTransition?: (details: {
+    readonly commitSha: string;
+  }) => Promise<
     | { readonly ok: true; readonly transitionId: string }
     | { readonly ok: false; readonly detail: string }
   >;
@@ -317,7 +323,7 @@ export const runCommitAct = async (
 
   let transitionId = request.existingTransitionId;
   if (request.appendTransition !== undefined) {
-    const appended = await request.appendTransition();
+    const appended = await request.appendTransition({ commitSha: committed.sha });
     if (!appended.ok) {
       await ports.git.resetTo(request.baselineHead);
       return { kind: "failure", code: "commit.atomic-abort", detail: appended.detail, excluded };

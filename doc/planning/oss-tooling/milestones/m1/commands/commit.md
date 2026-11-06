@@ -39,9 +39,11 @@ shell, a script, or a subagent boundary.
 
 `phase complete` is the transition-centric entry to the same atomic act: it
 lands the ledger transition and the conventional commit together or
-neither by default (`--no-commit` records the transition alone; the
-project key `commit.phaseCommit: false` disables the commit per project).
-See [phase.md](phase.md).
+neither by default, and the atomic record carries the landed commit SHA so
+a re-run proves commit presence from the record itself, with telemetry as
+corroboration (`--no-commit` records the transition alone; the project key
+`commit.phaseCommit: false` disables the commit per project). See
+[phase.md](phase.md).
 
 ## OPTIONS
 

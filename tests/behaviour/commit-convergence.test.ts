@@ -4,6 +4,7 @@
  * interruption) and re-run twice for stability.
  */
 import { describe, expect, test } from "bun:test";
+import { commitTelemetryRecordKey } from "../../packages/core/src/state/index";
 import { type CommitHarness, withCommitHarness } from "../fixtures/commit/harness";
 import {
   appendCompletionRecord,
@@ -11,6 +12,7 @@ import {
   COMMIT_REF,
   commitCount,
   dataOf,
+  errorCodeOf,
   head,
   telemetryPayloads,
   transitionPayloads,
@@ -279,6 +281,99 @@ describe("TC-CONVERGE-009 both-landed evidence is durable to later commits", () 
         expect(run.exitCode).toBe(0);
         expect(dataOf(run).reconciliation).toMatchObject({ completed: "transition" });
         expect(commitCount(harness)).toBe(commits);
+      },
+      { seedFiles: SEED },
+    );
+  });
+});
+
+/** Append one telemetry ledger record with a torn (unparseable) payload. */
+const corruptTelemetry = (harness: CommitHarness): void => {
+  const acquired = harness.store.acquireFence("corrupt-telemetry");
+  if (!acquired.ok) throw new Error("could not acquire the corrupting fence");
+  const appended = harness.store.append(acquired.value.handle, {
+    kind: "commit.telemetry",
+    recordKey: commitTelemetryRecordKey(COMMIT_REF),
+    payload: {},
+  });
+  harness.store.releaseFence(acquired.value.handle);
+  if (!appended.ok) throw new Error("could not append the torn telemetry record");
+};
+
+describe("TC-CONVERGE-010 telemetry is corroboration, never the sole commit evidence", () => {
+  test("a landing whose telemetry emission failed re-runs as a no-op with pending work", async () => {
+    await withCommitHarness(
+      async (harness) => {
+        dirty(harness);
+        harness.faults.telemetryAppend = true;
+        harness.coreTransport.push({ kind: "success", message: validMessage() });
+        const landed = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
+        expect(landed.exitCode).toBe(0);
+        expect(dataOf(landed).outcome).toBe("landed");
+        expect((dataOf(landed).telemetry as { emitted: boolean }).emitted).toBe(false);
+        const landedSha = head(harness);
+        const records = transitionPayloads(harness);
+        expect(records).toHaveLength(1);
+        // The record itself carries the landed SHA at append time (DEC-7).
+        expect(records[0]).toMatchObject({ commitIntent: "atomic", commitSha: landedSha });
+        expect(telemetryPayloads(harness)).toEqual([]);
+
+        // Pending in-scope work appears after the landed completion.
+        harness.faults.telemetryAppend = false;
+        harness.repo.write("src/existing.ts", "export const v = 3;\n");
+        const commits = commitCount(harness);
+        const reRun = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
+        expect(reRun.exitCode).toBe(0);
+        expect(dataOf(reRun).outcome).toBe("no-op");
+        expect(dataOf(reRun).commitSkipped).toBe("no-op");
+        // Fail-safety: no duplicate commit, no second record, no telemetry.
+        expect(commitCount(harness)).toBe(commits);
+        expect(head(harness)).toBe(landedSha);
+        expect(transitionPayloads(harness)).toHaveLength(1);
+        expect(telemetryPayloads(harness)).toEqual([]);
+      },
+      { seedFiles: SEED },
+    );
+  });
+
+  test("a torn telemetry record cannot degrade a record-bound SHA to commit-absent", async () => {
+    await withCommitHarness(
+      async (harness) => {
+        dirty(harness);
+        harness.coreTransport.push({ kind: "success", message: validMessage() });
+        const landed = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
+        expect(landed.exitCode).toBe(0);
+        const landedSha = head(harness);
+        corruptTelemetry(harness);
+
+        harness.repo.write("src/existing.ts", "export const v = 3;\n");
+        const commits = commitCount(harness);
+        const reRun = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
+        expect(reRun.exitCode).toBe(0);
+        expect(dataOf(reRun).outcome).toBe("no-op");
+        expect(commitCount(harness)).toBe(commits);
+        expect(head(harness)).toBe(landedSha);
+        expect(transitionPayloads(harness)).toHaveLength(1);
+      },
+      { seedFiles: SEED },
+    );
+  });
+
+  test("a torn telemetry record with no record-bound SHA is a platform fault", async () => {
+    await withCommitHarness(
+      async (harness) => {
+        dirty(harness);
+        appendCompletionRecord(harness, { intent: "atomic" });
+        corruptTelemetry(harness);
+        const commits = commitCount(harness);
+        const before = head(harness);
+        const run = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
+        expect(run.exitCode).toBe(2);
+        expect(errorCodeOf(run)).toBe("state.store.torn");
+        // Fail-closed: nothing landed, no duplicate commit manufactured.
+        expect(commitCount(harness)).toBe(commits);
+        expect(head(harness)).toBe(before);
+        expect(transitionPayloads(harness)).toHaveLength(1);
       },
       { seedFiles: SEED },
     );

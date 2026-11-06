@@ -276,5 +276,10 @@ export const createGitCommitSeam = (options: GitCommitSeamOptions = {}): CommitG
       const result = await git(["reset", "--mixed", sha]);
       return result.status === 0;
     },
+    commitExists: async (sha) => {
+      if (!SAFE_SHA.test(sha)) return false;
+      const result = await git(["cat-file", "-e", `${sha}^{commit}`]);
+      return result.status === 0;
+    },
   };
 };

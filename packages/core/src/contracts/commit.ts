@@ -323,6 +323,8 @@ export type CommitGitPort = {
   >;
   readonly head: () => Promise<string | undefined>;
   readonly resetTo: (sha: string) => Promise<boolean>;
+  /** Whether the named commit object exists locally (convergence corroboration). */
+  readonly commitExists: (sha: string) => Promise<boolean>;
 };
 
 /** The safety port; unavailable is a classified fail-closed result. */

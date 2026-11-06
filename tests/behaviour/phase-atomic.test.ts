@@ -5,6 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import { COMMIT_MULTI_PHASE_PLAN_YAML, withCommitHarness } from "../fixtures/commit/harness";
 import {
+  appendCompletionRecord,
   COMMIT_REF,
   commitCount,
   dataOf,
@@ -18,6 +19,22 @@ import {
 } from "./commit-support";
 
 const SEED = { "README.md": "# fixture\n", "src/existing.ts": "export const v = 1;\n" } as const;
+
+/** A production-shaped plan whose only phase is planning-kind. */
+const PLANNING_PLAN_YAML = `schemaVersion: delivery.plan.v1
+workItemRef: GH-310
+tier:
+  name: full
+  phases: [4]
+phases:
+  - id: 4
+    title: "Planning"
+    kind: planning
+    scope:
+      files:
+        - src/planning-note.ts
+    summary: "plan the fixture change"
+`;
 
 const pending = (harness: import("../fixtures/commit/harness").CommitHarness): void => {
   harness.repo.write("src/existing.ts", "export const v = 2;\n");
@@ -394,6 +411,75 @@ describe("TC-ATOMIC-013 lifecycle phase ids map to declared plan-phase scopes", 
         expect(commitCount(harness)).toBe(beforeCommits);
         expect(telemetryPayloads(harness)).toEqual([]);
         expect(status(harness)).toContain("?? src/two.ts");
+      },
+      { seedFiles: SEED, planYaml: COMMIT_MULTI_PHASE_PLAN_YAML },
+    );
+  });
+});
+
+describe("TC-ATOMIC-014 interrupted atomic re-run with no pending work", () => {
+  test("discloses the envelope-only basis and lands nothing", async () => {
+    await withCommitHarness(
+      async (harness) => {
+        appendCompletionRecord(harness, { intent: "atomic" });
+        const beforeHead = head(harness);
+        const beforeCommits = commitCount(harness);
+        const run = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
+        expect(run.exitCode).toBe(0);
+        expect(dataOf(run)).toMatchObject({
+          outcome: "no-op",
+          atomic: false,
+          commitSkipped: "interrupted-atomic-no-pending-work",
+        });
+        expect(commitCount(harness)).toBe(beforeCommits);
+        expect(head(harness)).toBe(beforeHead);
+        expect(transitionPayloads(harness)).toHaveLength(1);
+        expect(telemetryPayloads(harness)).toEqual([]);
+        expect(harness.coreTransport.calls).toHaveLength(0);
+      },
+      { seedFiles: SEED },
+    );
+  });
+});
+
+describe("TC-ATOMIC-015 delivery_planning maps to planning-kind plan scope", () => {
+  test("a declared untracked planning file stages in phase-centric mode", async () => {
+    await withCommitHarness(
+      async (harness) => {
+        harness.repo.write("src/planning-note.ts", "export const plan = 1;\n");
+        const beforeCommits = commitCount(harness);
+        harness.coreTransport.push({ kind: "success", message: validMessage() });
+        const run = await harness.runPhase(["complete", COMMIT_REF, "delivery_planning"]);
+        expect(run.exitCode).toBe(0);
+        expect(dataOf(run)).toMatchObject({ outcome: "landed", atomic: true });
+        expect(dataOf(run).stagedFiles).toEqual(["src/planning-note.ts"]);
+        expect(commitCount(harness)).toBe(beforeCommits + 1);
+        expect(transitionPayloads(harness)[0]).toMatchObject({
+          phaseId: "delivery_planning",
+          commitIntent: "atomic",
+          commitSha: head(harness),
+        });
+      },
+      { seedFiles: SEED, planYaml: PLANNING_PLAN_YAML },
+    );
+  });
+});
+
+describe("TC-ATOMIC-016 plan-present degraded scope on the commit surface", () => {
+  test("an unmapped lifecycle phase with a plan present discloses plan-absent", async () => {
+    await withCommitHarness(
+      async (harness) => {
+        harness.repo.write("src/existing.ts", "export const v = 2;\n");
+        harness.coreTransport.push({ kind: "success", message: validMessage() });
+        const run = await harness.runCommit([
+          "--dry-run",
+          COMMIT_REF,
+          "--phase",
+          "system_spec_update",
+        ]);
+        expect(run.exitCode).toBe(0);
+        expect(dataOf(run).degradedScope).toBe("plan-absent");
+        expect(dataOf(run).stagedFiles).toEqual(["src/existing.ts"]);
       },
       { seedFiles: SEED, planYaml: COMMIT_MULTI_PHASE_PLAN_YAML },
     );

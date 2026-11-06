@@ -62,6 +62,7 @@ export const PHASE_TRANSITION_BOUNDARY: StateArtifactBoundaryDeclaration = {
         { name: "reason", type: "string", required: false },
         { name: "commitIntent", type: "string", required: false },
         { name: "commitIntentBasis", type: "string", required: false },
+        { name: "commitSha", type: "string", required: false },
         { name: "transitions", type: "array", required: true },
       ],
       vocabularies: [
@@ -87,6 +88,7 @@ export type PhaseTransitionRequest = {
   readonly reason?: string;
   readonly commitIntent?: PhaseTransitionCommitIntent;
   readonly commitIntentBasis?: PhaseTransitionCommitIntentBasis;
+  readonly commitSha?: string;
 };
 
 /** A verified per-change read: history plus the state layer's evidence. */
@@ -155,6 +157,7 @@ const payloadFor = (
   ...(record.commitIntentBasis === undefined
     ? {}
     : { commitIntentBasis: record.commitIntentBasis }),
+  ...(record.commitSha === undefined ? {} : { commitSha: record.commitSha }),
   transitions: transitions.map((entry) => ({
     changeRef: entry.changeRef,
     phaseId: entry.phaseId,
@@ -166,6 +169,7 @@ const payloadFor = (
     ...(entry.commitIntentBasis === undefined
       ? {}
       : { commitIntentBasis: entry.commitIntentBasis }),
+    ...(entry.commitSha === undefined ? {} : { commitSha: entry.commitSha }),
   })),
 });
 
@@ -196,6 +200,7 @@ const transitionFrom = (value: unknown): PhaseTransitionRecord | string => {
     reason,
     commitIntent,
     commitIntentBasis,
+    commitSha,
   } = value;
   if (typeof changeRef !== "string" || changeRef.length === 0) return "transitions[].changeRef";
   if (typeof phaseId !== "string" || phaseId.length === 0) return "transitions[].phaseId";
@@ -218,6 +223,12 @@ const transitionFrom = (value: unknown): PhaseTransitionRecord | string => {
   if (commitIntentBasis !== undefined && commitIntent !== "record-only") {
     return "transitions[].commitIntentBasis";
   }
+  if (commitSha !== undefined && (typeof commitSha !== "string" || commitSha.length === 0)) {
+    return "transitions[].commitSha";
+  }
+  if (commitSha !== undefined && commitIntent !== "atomic") {
+    return "transitions[].commitSha";
+  }
   return {
     changeRef,
     phaseId,
@@ -227,6 +238,7 @@ const transitionFrom = (value: unknown): PhaseTransitionRecord | string => {
     ...(reason === undefined ? {} : { reason }),
     ...(commitIntent === undefined ? {} : { commitIntent }),
     ...(commitIntentBasis === undefined ? {} : { commitIntentBasis }),
+    ...(commitSha === undefined ? {} : { commitSha }),
   };
 };
 
@@ -396,6 +408,14 @@ export const appendPhaseTransition = (
   store: StateStorePort,
   request: PhaseTransitionRequest,
 ): StateResult<PhaseTransitionAppendOutcome> => {
+  // A commit SHA belongs to an atomic completion; reject the coupling violation
+  // before anything is written, exactly as reads validate it.
+  if (request.commitSha !== undefined && request.commitIntent !== "atomic") {
+    return fail("state.store.unknown", {
+      path: phaseTransitionRecordKey(request.changeRef),
+      missingKeys: ["commitIntent"],
+    });
+  }
   const acquired = store.acquireFence(request.fenceToken);
   if (!acquired.ok) return acquired;
   const handle = acquired.value.handle;
@@ -417,6 +437,7 @@ export const appendPhaseTransition = (
     ...(request.commitIntentBasis === undefined
       ? {}
       : { commitIntentBasis: request.commitIntentBasis }),
+    ...(request.commitSha === undefined ? {} : { commitSha: request.commitSha }),
   };
   const transitions = [...current.value.transitions, record];
   // Writes are validated at the registry boundary (F-1, DM-4): a nonconforming

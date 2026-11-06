@@ -34,9 +34,11 @@ transition alone for that call, and the project key
 completion with no stageable pending work lands the transition alone; an
 already-completed phase is a no-op that appends nothing and creates no
 commit. A re-run after an interruption converges on the durable
-(record, commit) delta: it completes exactly the missing side, never
-duplicates a record, and never manufactures a commit. See
-[commit.md](commit.md).
+(record, commit) delta — the atomic record's own `commitSha` plus the
+commit object, or the matching telemetry event, prove the commit side;
+unreadable durable evidence is a platform fault, never commit-absent: it
+completes exactly the missing side, never duplicates a record, and never
+manufactures a commit. See [commit.md](commit.md).
 
 The completion refuses to run inside a delivery session
 (`commit.session.context-refused`), with or without `--no-commit`; `list`

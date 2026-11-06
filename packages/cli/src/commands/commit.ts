@@ -121,6 +121,8 @@ export const planPhaseForLifecycle = (
   lifecyclePhaseId: string | undefined,
 ): CommitPlanPhaseContext | undefined => {
   if (phases.length === 0) return undefined;
+  // Undefined id = standalone skeleton donor only: staging scope is the union
+  // of every phase, so this first phase supplies message context, not scope.
   if (lifecyclePhaseId === undefined) return phases[0];
   const exact = phases.find((entry) => entry.phaseId === lifecyclePhaseId);
   if (exact !== undefined) return exact;
