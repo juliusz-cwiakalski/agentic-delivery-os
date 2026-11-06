@@ -64,6 +64,14 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "commit.staging-blocked-untracked",
   "commit.commitlint-failed",
   "commit.atomic-abort",
+  // GH-225 pins the merge identities exactly; they are two-segment codes.
+  "merge.gates-stale",
+  "merge.waiver-unauthorized",
+  "merge.owner-gate-override-without-waiver",
+  "merge.rebase-conflict",
+  "merge.state-unverified",
+  "merge.landing-unverified",
+  "merge.transaction-aborted",
 ]);
 
 const isValidCode = (code: string): boolean =>
@@ -602,7 +610,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
   test("verify is a declared single-row kind with the exact C-8 fields", () => {
     expect(DOMAIN_KINDS).toContain("verify");
     const verify = entries.filter((entry) => entry.domainKind === "verify");
-    expect(verify).toHaveLength(3);
+    expect(verify).toHaveLength(6);
     expect(verify[0]).toMatchObject({
       code: "verify.ledger.incomplete",
       domainKind: "verify",
@@ -662,7 +670,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, and `doctor`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `doctor`, and `merge`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -677,7 +685,8 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(3);
     expect(entries.filter((entry) => entry.domainKind === "doctor")).toHaveLength(1);
-    expect(entries).toHaveLength(60);
+    expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
+    expect(entries).toHaveLength(70);
   });
 });
 
@@ -753,7 +762,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(60);
+    expect(entries).toHaveLength(70);
     expect(db).toHaveLength(4);
   });
 
@@ -969,7 +978,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(60);
+    expect(entries).toHaveLength(70);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1025,7 +1034,8 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
-    expect(entries.filter((entry) => entry.domainKind === "verify")).toHaveLength(3);
+    expect(entries.filter((entry) => entry.domainKind === "verify")).toHaveLength(6);
+    expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "closeout")).toHaveLength(4);
   });
@@ -1235,7 +1245,7 @@ describe("TC-DOCTOR-020 the doctor kind has exactly one row and leaves the table
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| doctor.check.failed | doctor | user | false | not_landed | ${DOCTOR_HINT} | user-validation | ${DOCTOR_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("`watchdog`, `commit`, `status`, and `doctor`");
+    expect(doc).toContain("`status`, `doctor`, and `merge`");
   });
 
   test("fallback remains the reserved two-segment namespace", () => {

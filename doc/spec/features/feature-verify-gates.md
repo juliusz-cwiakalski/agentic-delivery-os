@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-VERIFY-GATES
 status: Current
 created: 2026-10-31
-last_updated: 2026-10-31
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
-summary: "The read-only verify gates surface: five M0 merge gates in fixed order, cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the two verify.gates.* error rows, and read-only composition."
+summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the appended EVT-1 gate-verification record with byte-identical verdicts, and the two verify.gates.* error rows."
 links:
-  related_changes: ["GH-178"]
+  related_changes: ["GH-178", "GH-225"]
   related_decisions: ["ADR-0003", "ADR-0006", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/verify-gates.ts"
@@ -18,33 +18,37 @@ links:
 
 ## Overview
 
-`verify gates <changeRef>` is the read-only M0 merge battery. It evaluates
-exactly five gates in a fixed order — `lifecycle-finalization`, `ci-green`,
-`push-parity`, `owner-gate`, and `squash-preflight` — and returns one cited
-verdict (`pass`, `fail`, or `unknown`) per gate. The overall result is `pass`
-only when all five pass; any `fail` is definitive; `unknown` is never a pass.
-All five gates are evaluated without short-circuit, so every report is
-complete.
+`verify gates <changeRef>` is the M0 merge battery. It evaluates the effective
+declared battery — by default the five built-in gates in shipped order:
+`lifecycle-finalization`, `ci-green`, `push-parity`, `owner-gate`, and
+`squash-preflight` — and returns one cited verdict (`pass`, `fail`, or
+`unknown`) per gate. A declared `battery` or `both` entry is evaluated and
+cited exactly like a built-in, and a `merge`-only entry never appears on the
+battery. The overall result is `pass` only when every evaluated gate passes;
+any `fail` is definitive; `unknown` is never a pass. The battery is evaluated
+without short-circuit, so every report is complete.
 
-The command performs no write, fence, merge, auto-merge, provider mutation, or
-child process. It performs bounded local reads (ledger, repository HEAD/branch,
-CI workflow) and at most one bounded page or item per provider source: one
-open-PR page, one matched detail read, one check-run page, and one work-item
-read. The report schema is `delivery.verify-gates.v1`; the envelope schema
-remains `delivery.result.v1`.
+The command performs no merge, auto-merge, provider mutation, or child
+process. It performs bounded local reads (ledger, repository HEAD/branch, CI
+workflow) and at most one bounded page or item per provider source: one open-PR
+page, one matched detail read, one check-run page, and one work-item read. It
+appends exactly one fenced gate-verification record per full battery evaluation
+and nothing else. The report schema is `delivery.verify-gates.v1`; the envelope
+schema remains `delivery.result.v1`.
 
 ## Command surface
 
 | Invocation | Outcome |
 |---|---|
-| `verify gates GH-178` | Evaluate the five gates; a success prints the deterministic six-line human report; a failure prints the bounded gate summary. |
+| `verify gates GH-178` | Evaluate the declared battery (default five gates); a success prints the deterministic six-line human report; a failure prints the bounded gate summary. |
 | `verify gates GH-178 --json` | Exactly one machine envelope on stdout; on success `data` is the full `delivery.verify-gates.v1` report, on failure there is no `data`. |
 | `verify gates` / `verify gates GH-178 extra` / unknown flag | Rejected before any read: a missing or empty ref is `input.value.rejected`; a third positional or unknown flag is `fallback.invocation`. |
 
-`verify` remains one top-level command with two subcommands, `change` and
-`gates`, each followed by exactly one change ref and no command-specific
-flags. `verify change` stays ledger-only and network-free; its output is
-unchanged.
+`verify` is one top-level command with three subcommands, `change`, `gates`,
+and `deploy`, each followed by exactly one change ref and no command-specific
+flags. `verify change` stays ledger-only and network-free; `verify gates`
+evaluates the declared battery; `verify deploy` reads the deploy job trace as
+specified in [Merge and Verify Deploy](feature-merge-verify-deploy.md).
 
 ## Gate rules
 
@@ -137,7 +141,8 @@ The read budget is bounded per source: one local ledger read (pm-notes plus
 the verified registry), one local repository HEAD/branch read, one local
 CI-workflow read, at most one bounded open-PR page, one resolved detail read,
 one check-run page, and one work-item read per invocation. There are no
-retries, no pagination, and no writes.
+retries and no pagination. The only write is one appended gate-verification
+record per full battery evaluation.
 
 ## Quality evidence
 
@@ -157,8 +162,10 @@ structural invariants only and runs only under `VERIFY_GATES_LIVE=1`.
 The owner gate's declared signal is labels; comment-based owner asks are not
 read (ADR-0006). The CI gate detects job display-name presence only; matrix
 expansion, suite-to-job mapping, and job-level `if` conditions are deferred.
-Review approval, unresolved threads, branch protection, worktree cleanliness,
-and merge execution remain external.
+Review approval, unresolved threads, branch protection, and worktree
+cleanliness remain outside this surface. Merge execution is the merge
+transaction's surface, specified in
+[Merge and Verify Deploy](feature-merge-verify-deploy.md).
 
 ## Related
 
@@ -167,10 +174,30 @@ and merge execution remain external.
 - [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md)
 - [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md)
 - [Result Contract and Error Table](feature-result-contract.md)
+- [Merge and Verify Deploy](feature-merge-verify-deploy.md)
 - [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md)
 - [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md)
 - [TDR-0005 — Delivery Result Enum and CLI Exit Taxonomy](../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md)
 - [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md)
 - [ADR-0006 — Work-Item Custom Fields and Comment-Omission Representation](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md)
 
-**Change record:** `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/`.
+**Change record:** `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/`; `doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/`.
+
+## Config-declared gate set and verification record
+
+The gate set is config-declared versioned data (`merge.gates`) shared with
+`merge`. An absent declaration yields the shipped five built-in entries in
+shipped order plus the merge-only `tracker-freshness` entry, so the default
+report keeps the shipped five-gate output. A repo-declared `battery`/`both`
+entry is evaluated and cited exactly like a built-in; `merge`-only entries never
+appear on the battery. The five built-in ids stay reserved and mandatory in any
+declared set.
+
+Every full battery evaluation appends exactly one fenced, post-append-verified
+EVT-1 gate-verification record (`merge.gate-verification`) carrying the change
+ref, head SHA, verification time, declared gate-set identity, per-gate verdicts
+with citations, and the tracker posture. Verdicts, citations, ordering, and
+human bytes are pinned byte-identically by goldens; the append is the only
+output effect. An append failure is a classified state failure, never a verdict
+change. `merge` consumes the record. See
+[Merge and Verify Deploy](feature-merge-verify-deploy.md).

@@ -1,4 +1,4 @@
 {
   "baseline": ["fallback.invocation", "fallback.internal"],
-  "allowed": ["closeout.write.failed"]
+  "allowed": ["closeout.write.failed", "merge.landing-unverified"]
 }

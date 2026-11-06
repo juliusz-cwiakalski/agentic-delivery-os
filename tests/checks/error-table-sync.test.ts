@@ -1071,8 +1071,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 26) {
-    failures.push(`table length ${live.length} != baseline + 26 (${BASELINE_ROWS.length + 26})`);
+  if (live.length !== BASELINE_ROWS.length + 36) {
+    failures.push(`table length ${live.length} != baseline + 36 (${BASELINE_ROWS.length + 36})`);
   }
   return failures;
 };
@@ -1081,7 +1081,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
   test("the live table is exactly the frozen baseline plus the one verify row", () => {
     expect(baselineViolations(ERROR_TABLE as readonly ErrorTableEntry[])).toEqual([]);
     const live = ERROR_TABLE as readonly ErrorTableEntry[];
-    expect(live.filter((entry) => entry.domainKind === "verify")).toHaveLength(3);
+    expect(live.filter((entry) => entry.domainKind === "verify")).toHaveLength(6);
     expect(
       live.filter((entry) => entry.code === "verify.ledger.incomplete")[0]?.projectionClass,
     ).toBe("user-validation");
@@ -1094,11 +1094,13 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       state: 9,
       lint: 6,
       plan: 5,
-      verify: 3,
+      verify: 6,
       closeout: 4,
       watchdog: 3,
       commit: 6,
       status: 1,
+      doctor: 1,
+      merge: 7,
     });
   });
 
@@ -1146,7 +1148,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 26,
+      BASELINE_ROWS.length + 36,
     );
   });
 
@@ -1169,7 +1171,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 26);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 36);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);

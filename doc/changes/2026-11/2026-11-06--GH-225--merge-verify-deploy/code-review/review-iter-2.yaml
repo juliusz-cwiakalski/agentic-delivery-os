@@ -1,0 +1,61 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-225
+branch: feat/GH-225/merge-verify-deploy
+status: PASS
+summary: >-
+  Re-review after remediation Phase 8 (commit 0a3eb6ab): all four blocking findings from
+  iteration 1 are genuinely closed in code, tests, and artifacts — not papered over. F-1: refusal
+  evidence lists are per-name clamped, count-capped, and +N-marked via nameListText, with the
+  24-line/4096-byte terminal caps mirroring the accepted verified-path bound() idiom, and the new
+  over-cap refusal fixtures assert exactly the demanded bounds and marks. F-2: both previously
+  swallowed appendTransaction results are declared (record-less replay keeps merged with
+  closeout-ready failed, mirroring the pre-existing main-path idiom; landing-unverified keeps
+  exit 2 with record-append-failed:<code> in the detail), and the new fault-injection tests pin
+  verdict/exit unchanged plus re-run convergence without a second landing (GAP-10). F-3: an
+  invalid declared merge.gate-freshness now fails closed as registry-synced config.value.invalid
+  while the absent key still reports the 1800 defaults origin; per-key origin and
+  classified-validation coverage added for all three merge keys. F-4: TC-DEPLOY-003 is now
+  internally consistent (status-stale scoped to variants (a)-(c); variant (d) recorded as
+  pipeline-created-never-ran at verify.deploy.trace-missing per GAP-2, matching section 1.2,
+  the summary row, AC-F6-2, and the equality-tightened test with its adjudication comment).
+  F-5/F-6 advisory items are also closed (dead code removed with newestWaiverByGate retaining
+  legitimate consumers; observational scope additions recorded in the plan header). No
+  regressions found: this review re-ran the four touched suites (51/51), adjacent
+  merge/verify-gates suites (79/79), and structure + corpus goldens (601/601) all green under
+  the recorded TMPDIR contract. The uncommitted doc/spec/features/feature-config-layer.md edit
+  is accurate against the code (classified gate-freshness refusal, deploy-expectations shape
+  validation, per-key origin) and should ride the upcoming commit. One informational note on
+  terminal-cap semantics; no remediation phase required.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/verify-deploy.ts:132
+    message: >-
+      The terminal 24-line/4096-byte caps in refusalSummary (and the pre-existing bound() in
+      packages/cli/src/output/deploy-text.ts) truncate without a +N mark. This is consistent:
+      the line cap cannot fire structurally (the summary has at most ~9 lines), NFR-4's marking
+      clause reads on evidence name/path lists (which are all +N-marked), and the byte cap is a
+      defense-in-depth backstop identical to the verified-path idiom accepted in iteration 1.
+      No action required; recorded so the terminal-cap semantics are explicit.
+    suggestion: >-
+      Optional future polish only: when the terminal byte cap fires, replace the tail with a
+      bounded omission marker; not required for NFR-4 compliance as written.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-06T14:59:20Z
+next_step: PROCEED

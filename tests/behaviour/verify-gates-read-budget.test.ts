@@ -55,6 +55,7 @@ const createBudgetRuntime = (facts?: ReturnType<typeof baseFacts>): BudgetRuntim
     };
 
   const recordedGates: VerifyGatesCommandRuntime = {
+    ...gates,
     readLifecycle: record("readLifecycle", (changeRef: string) => {
       const read = readChangeTransitionsTolerant(guarded.store, changeRef);
       return {

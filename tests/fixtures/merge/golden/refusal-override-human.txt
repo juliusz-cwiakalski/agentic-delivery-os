@@ -1,0 +1,6 @@
+example-product: merge.owner-gate-override-without-waiver
+summary: result=refused; condition=merge.owner-gate-override-without-waiver
+gate=owner-gate
+override=--waive owner-gate --waived-by <principal>
+evidence=owner-gate-present
+remediation=Declare an authorized override naming the owner-gate and its authorizer, or resolve the owner-gated state, then retry.

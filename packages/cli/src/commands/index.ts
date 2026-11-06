@@ -23,6 +23,8 @@ export type {
   LintRegistryRead,
 } from "./lint.js";
 export { createLintCommandDefinition } from "./lint.js";
+export type { MergeCommandRuntime, MergeConfigRead } from "./merge.js";
+export { createMergeCommandDefinition, isDryRunReport, isMergeReport } from "./merge.js";
 export type {
   PhaseCommandRuntime,
   PhaseCommitEvidence,
@@ -47,6 +49,12 @@ export type {
   VerifyRegistryRead,
 } from "./verify.js";
 export { createVerifyCommandDefinition } from "./verify.js";
+export type {
+  DeployResolveOutcome,
+  DeployTraceOutcome,
+  VerifyDeployRuntime,
+} from "./verify-deploy.js";
+export { createVerifyDeployHandler, isDeployReport } from "./verify-deploy.js";
 export type { VerifyGatesCommandRuntime } from "./verify-gates.js";
 export type { WatchdogCommandRuntime } from "./watchdog.js";
 export { createWatchdogCommandDefinition } from "./watchdog.js";

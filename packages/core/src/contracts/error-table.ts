@@ -24,6 +24,7 @@ export const DOMAIN_KINDS = [
   "commit",
   "status",
   "doctor",
+  "merge",
 ] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -46,6 +47,45 @@ export type ErrorTableEntry = {
   readonly projectionClass: ProjectionClass;
   readonly summary?: string;
 };
+
+/**
+ * One declared family row (NFR-8, GAP-13).
+ *
+ * The family declares the shared class fields once; `template` is the
+ * documented template code and `slotPrefix`/`slotSuffix` bound the open slot.
+ * A family instance resolves to the family's declared fields with its own code
+ * preserved. The slot is validated by the declared-gate-set recognizer, never
+ * by a generic pattern widening.
+ */
+export type ErrorTableFamily = {
+  readonly template: string;
+  readonly domainKind: ErrorTableDomainKind;
+  readonly category: ErrorCategory;
+  readonly retryable: boolean;
+  readonly consequence: ErrorConsequence;
+  readonly remediationHint: string;
+  readonly projectionClass: ProjectionClass;
+  readonly summary?: string;
+  readonly slotPrefix: string;
+  readonly slotSuffix: string;
+};
+
+/** The one declared open-slot family: `merge.gate.<gate-id>.failed` (DEC-7). */
+export const ERROR_TABLE_FAMILIES = [
+  {
+    template: "merge.gate.<gate-id>.failed",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Resolve the named merge-applicable gate evidence and re-run `verify gates`, then retry the merge.",
+    projectionClass: "user-validation",
+    summary: "A merge-applicable gate did not pass.",
+    slotPrefix: "merge.gate.",
+    slotSuffix: ".failed",
+  },
+] as const satisfies readonly ErrorTableFamily[];
 
 /**
  * The single machine-readable declaration. Ordered fallback entries first, then
@@ -675,6 +715,116 @@ export const ERROR_TABLE = [
       "Restore access to the named collector source and re-run the board; the board withheld its gates rather than display a partial picture.",
     projectionClass: "platform-provider",
     summary: "The named board collector is unavailable.",
+  },
+  {
+    code: "merge.gates-stale",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Re-run `verify gates` for the current head, then retry the merge; the recorded verification is no longer valid evidence.",
+    projectionClass: "user-validation",
+    summary: "The recorded gate verification is stale or voided.",
+  },
+  {
+    code: "merge.waiver-unauthorized",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare the override with an authorizer authorized for the gate class, then retry; no waiver was recorded.",
+    projectionClass: "user-validation",
+    summary: "The declared waiver authorizer is not authorized for the gate class.",
+  },
+  {
+    code: "merge.owner-gate-override-without-waiver",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare an authorized override naming the owner-gate and its authorizer, or resolve the owner-gated state, then retry.",
+    projectionClass: "user-validation",
+    summary: "The owner gate failed and no override declaration was supplied.",
+  },
+  {
+    code: "merge.rebase-conflict",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Resolve the named conflicting paths, re-run `verify gates`, then retry the merge; no force path exists.",
+    projectionClass: "user-validation",
+    summary: "The single rebase-refresh attempt conflicted.",
+  },
+  {
+    code: "merge.state-unverified",
+    domainKind: "merge",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Produce a gate verification with `verify gates` and retry; the verification state is absent, torn, or incompatible.",
+    projectionClass: "platform-provider",
+    summary: "No consumable gate-verification state exists for the change.",
+  },
+  {
+    code: "merge.landing-unverified",
+    domainKind: "merge",
+    category: "platform",
+    retryable: false,
+    consequence: "unknown",
+    remediationHint:
+      "Re-run the merge to re-verify the landing; do not blind-retry or manually duplicate the merge.",
+    projectionClass: "platform-provider",
+    summary: "The landing mutation fired but its landed state is not established.",
+  },
+  {
+    code: "merge.transaction-aborted",
+    domainKind: "merge",
+    category: "user",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Clear the named pre-mutation condition and retry; nothing landed and a re-run converges.",
+    projectionClass: "user-validation",
+    summary: "The transaction aborted cleanly before any landing mutation.",
+  },
+  {
+    code: "verify.deploy.trace-missing",
+    domainKind: "verify",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Produce a deploy trace whose declared steps executed and artifacts exist, then re-run `verify deploy`.",
+    projectionClass: "user-validation",
+    summary: "The deploy verdict is unknown because executed-step evidence is absent.",
+  },
+  {
+    code: "verify.deploy.status-stale",
+    domainKind: "verify",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Read the deploy job's execution trace; a status field alone is not evidence. Re-run when the trace is current.",
+    projectionClass: "user-validation",
+    summary: "The deploy status field is disqualified as evidence.",
+  },
+  {
+    code: "verify.deploy.trace-failed",
+    domainKind: "verify",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Resolve the named failing deploy step and re-run the deployment, then re-run `verify deploy`.",
+    projectionClass: "user-validation",
+    summary: "The deploy trace shows a failed step.",
   },
   {
     code: "doctor.check.failed",

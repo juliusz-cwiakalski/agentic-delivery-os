@@ -20,6 +20,12 @@ import type {
   VerifyGatesReport,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition, CommandHandler } from "../index.js";
+import {
+  createVerifyDeployHandler,
+  isDeployReport,
+  renderDeployHuman,
+  type VerifyDeployRuntime,
+} from "./verify-deploy.js";
 import { createVerifyGatesHandler, type VerifyGatesCommandRuntime } from "./verify-gates.js";
 
 /** A pm-notes target read at the edge: values, absence, or a safe parse failure. */
@@ -50,6 +56,8 @@ export type VerifyCommandRuntime = {
   readonly readRegistry: (changeRef: string) => VerifyRegistryRead;
   /** The gates reads; absent means the `gates` subcommand is not composed. */
   readonly gates?: VerifyGatesCommandRuntime;
+  /** The deploy reads; absent means the `deploy` subcommand is not composed. */
+  readonly deploy?: VerifyDeployRuntime;
 };
 
 type VerifyFailure = { readonly ok: false; readonly error: Record<string, unknown> };
@@ -63,7 +71,7 @@ const failure = (
   summary: string,
 ): VerifyFailure => ({ ok: false, error: { kind, code, summary } });
 
-type VerifySubcommand = "change" | "gates";
+type VerifySubcommand = "change" | "gates" | "deploy";
 
 type ParsedVerifyGrammar = {
   readonly subcommand: VerifySubcommand;
@@ -76,7 +84,7 @@ const parseGrammar = (positionals: readonly string[]): ParsedVerifyGrammar | Ver
   const changeRef = positionals[1];
   if (
     positionals.length !== 2 ||
-    (subcommand !== "change" && subcommand !== "gates") ||
+    (subcommand !== "change" && subcommand !== "gates" && subcommand !== "deploy") ||
     changeRef === undefined ||
     changeRef.length === 0
   ) {
@@ -107,6 +115,9 @@ const changeHandler =
 const gatesHandlerFor = (runtime: VerifyCommandRuntime): CommandHandler | undefined =>
   runtime.gates === undefined ? undefined : createVerifyGatesHandler(runtime.gates);
 
+const deployHandlerFor = (runtime: VerifyCommandRuntime): CommandHandler | undefined =>
+  runtime.deploy === undefined ? undefined : createVerifyDeployHandler(runtime.deploy);
+
 const isGatesReport = (data: unknown): data is VerifyGatesReport =>
   typeof data === "object" &&
   data !== null &&
@@ -121,12 +132,17 @@ const isGatesReport = (data: unknown): data is VerifyGatesReport =>
  */
 export const createVerifyCommandDefinition = (runtime: VerifyCommandRuntime): CommandDefinition => {
   const gatesHandler = gatesHandlerFor(runtime);
+  const deployHandler = deployHandlerFor(runtime);
   return {
     flags: [],
     positionals: { max: 2 },
     humanSuccess: true,
     humanText: (data, brand) =>
-      isGatesReport(data) ? renderVerifyGatesHuman(data, brand) : undefined,
+      isGatesReport(data)
+        ? renderVerifyGatesHuman(data, brand)
+        : isDeployReport(data)
+          ? renderDeployHuman(data, brand)
+          : undefined,
     handler: (invocation) => {
       const grammar = parseGrammar(invocation.positionals);
       if ("ok" in grammar && grammar.ok === false) {
@@ -137,6 +153,11 @@ export const createVerifyCommandDefinition = (runtime: VerifyCommandRuntime): Co
         return gatesHandler === undefined
           ? { error: failure("input", "input.value.rejected", GRAMMAR_SUMMARY).error }
           : gatesHandler(invocation);
+      }
+      if (grammar.subcommand === "deploy") {
+        return deployHandler === undefined
+          ? { error: failure("input", "input.value.rejected", GRAMMAR_SUMMARY).error }
+          : deployHandler(invocation);
       }
       const result = changeHandler(runtime)(grammar.changeRef);
       return result.ok ? { data: result.data } : { error: result.error };

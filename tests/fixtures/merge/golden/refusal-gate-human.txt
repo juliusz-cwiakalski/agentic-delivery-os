@@ -1,0 +1,6 @@
+example-product: merge.gate.workspace-tests.failed
+summary: result=refused; condition=merge.gate.workspace-tests.failed
+gate=workspace-tests
+new-red-jobs=workspace-tests
+evidence=ci-failed
+remediation=Resolve the named merge-applicable gate evidence and re-run `verify gates`, then retry the merge.

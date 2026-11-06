@@ -32,6 +32,17 @@ export type OwnerGateKind = (typeof OWNER_GATE_KINDS)[number];
 export const OWNER_GATE_CLASSES = ["owner-review", "waiver"] as const;
 export type OwnerGateClass = (typeof OWNER_GATE_CLASSES)[number];
 
+/**
+ * The closed per-class waiver-authorization policy (F-4, DM-5, DEC-11).
+ *
+ * Never-merge classes are owner-authored: only the provider-resolved owner
+ * principal authorizes an override. Defaultable classes admit any resolvable
+ * declared principal. The vocabulary is consumed by the merge transaction; no
+ * consumer re-derives it.
+ */
+export const OWNER_GATE_WAIVER_AUTHORIZATIONS = ["owner-authored", "defaultable"] as const;
+export type OwnerGateWaiverAuthorization = (typeof OWNER_GATE_WAIVER_AUTHORIZATIONS)[number];
+
 /** The single shipped pre-agreed default (PDR-0003, DEC-10). */
 export const OWNER_GATE_SLA_DEFAULTS = ["owner-review-first"] as const;
 export type OwnerGateSlaDefault = (typeof OWNER_GATE_SLA_DEFAULTS)[number];
@@ -94,6 +105,7 @@ export type OwnerGateSlaPolicyRow = {
   readonly neverMerge: boolean;
   readonly defaultable: boolean;
   readonly default: OwnerGateSlaDefault | null;
+  readonly waiverAuthorization: OwnerGateWaiverAuthorization;
 };
 
 /** The PDR-0003 two-row map: owner-review never-merge/non-defaultable; waiver defaultable. */
@@ -104,6 +116,7 @@ export const OWNER_GATE_SLA_POLICY_ROWS = [
     neverMerge: true,
     defaultable: false,
     default: null,
+    waiverAuthorization: "owner-authored",
   },
   {
     kind: "waiver",
@@ -111,6 +124,7 @@ export const OWNER_GATE_SLA_POLICY_ROWS = [
     neverMerge: false,
     defaultable: true,
     default: "owner-review-first",
+    waiverAuthorization: "defaultable",
   },
 ] as const satisfies readonly OwnerGateSlaPolicyRow[];
 

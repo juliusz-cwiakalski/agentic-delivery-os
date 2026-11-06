@@ -6,24 +6,28 @@
  * writes a stream or chooses an exit code; grammar validation happens before any
  * call. `verify change` remains on its own untouched handler path.
  */
+
+import type { MergeEffectiveGateSet } from "@delivery-os/core";
 import {
   classifyVerifyDocument,
   EvaluateVerifyChange,
-  evaluateVerifyGates,
+  evaluateDeclaredBattery,
   isFullHexSha,
   renderVerifyGatesFailureSummary,
   resolveOpenPr,
-  verifyGatesUnknownIdentity,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
   type VerifyGatesFacts,
   type VerifyGatesOpenPrPage,
   type VerifyGatesReadResult,
   type VerifyGatesRepositoryFacts,
-  type VerifyGatesWorkItem,
   type VerifyGatesWorkflowFacts,
+  type VerifyGatesWorkItem,
+  verifyGatesUnknownIdentity,
 } from "@delivery-os/core";
 import {
+  MERGE_GATE_VERIFICATION_SCHEMA,
+  type MergeGateVerificationRecord,
   type PhaseTransitionRecord,
   type PmNotesParseFailure,
   type StateFailure,
@@ -74,6 +78,16 @@ export type VerifyGatesCommandRuntime = {
     limit: number,
   ) => Promise<VerifyGatesReadResult<VerifyGatesCheckRunPage>>;
   readonly readWorkItem: (changeRef: string) => Promise<VerifyGatesReadResult<VerifyGatesWorkItem>>;
+  /** The resolved declared gate set (or a classified configuration failure). */
+  readonly readGateSet: () =>
+    | { readonly ok: true; readonly value: MergeEffectiveGateSet }
+    | { readonly ok: false; readonly code: string; readonly detail?: string };
+  /** Append exactly one fenced verification record (EVT-1). */
+  readonly appendVerification: (
+    record: MergeGateVerificationRecord,
+  ) => { readonly ok: true } | { readonly ok: false; readonly code: string };
+  /** The injected clock in epoch milliseconds (EVT-1 verification time). */
+  readonly nowMs: () => number;
 };
 
 type VerifyGatesFailure = { readonly ok: false; readonly error: Record<string, unknown> };
@@ -209,6 +223,14 @@ export const createVerifyGatesHandler = (runtime: VerifyGatesCommandRuntime): Co
     ) {
       return failure("input", "input.value.rejected", GRAMMAR_SUMMARY);
     }
+    const gateSet = runtime.readGateSet();
+    if (!gateSet.ok) {
+      return failure(
+        "config",
+        gateSet.code,
+        `result=failed; condition=${gateSet.code}${gateSet.detail === undefined ? "" : `; evidence=${gateSet.detail}`}`,
+      );
+    }
     const repository = runtime.readRepository();
     const evaluation = lifecycleEvaluation(runtime, ref);
     const workflow = runtime.readWorkflow();
@@ -220,7 +242,25 @@ export const createVerifyGatesHandler = (runtime: VerifyGatesCommandRuntime): Co
       workflow,
       ...provider,
     };
-    const evaluated = evaluateVerifyGates(facts);
+    const evaluated = evaluateDeclaredBattery(facts, gateSet.value.batteryEntries);
+    const ownerGate = evaluated.gates.find((gate) => gate.id === "owner-gate");
+    const ownerNames = ownerGate?.citation.names.find((list) => list.kind === "owner-labels");
+    const record: MergeGateVerificationRecord = {
+      schema: MERGE_GATE_VERIFICATION_SCHEMA,
+      changeRef: ref,
+      headSha: repository.head.sha ?? "",
+      verifiedAt: new Date(runtime.nowMs()).toISOString(),
+      gateSet: { schemaVersion: gateSet.value.schemaVersion, ids: gateSet.value.ids },
+      gates: evaluated.gates,
+      trackerPosture: {
+        labels: [],
+        ownerLabels: ownerNames?.values ?? [],
+      },
+    };
+    const appended = runtime.appendVerification(record);
+    if (!appended.ok) {
+      return failure("state", appended.code, `result=error; condition=${appended.code}`);
+    }
     if (evaluated.overall === "pass") {
       const data: Record<string, unknown> = {
         schemaVersion: VERIFY_GATES_SCHEMA_VERSION,

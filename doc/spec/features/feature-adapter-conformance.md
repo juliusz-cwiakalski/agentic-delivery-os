@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os provider adapters
 summary: "The provider-agnostic adapter conformance suite: one three-flow registry over the eight closed adapter operations, capability-gated execution with explicit declared-gap skips, production write execution in the mock tier, deterministic exact-URL mock tenants, structural and runtime coverage gates, the delivery.conformance.v1 artifact, and a scheduled read-only live evidence tier."
 links:
-  related_changes: ["GH-189", "GH-183", "GH-231"]
+  related_changes: ["GH-189", "GH-183", "GH-231", "GH-225"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0008"]
 ---
 
@@ -30,7 +30,7 @@ The registry is exactly three flows and thirteen ordered steps. Flow and step id
 | `comment-provenance` | read-comments, carrier-roundtrip | `read-work-item`, `write-comment` |
 | `label-semantics` | read-labels, replace, sweep | `read-work-item`, `write-work-item` |
 
-Together the registry represents all eight closed adapter operations. Merge, deploy-trace, pipeline-trace, and dedicated transition-mapping flows remain deferred.
+Together the registry represents all eight closed adapter operations. Merge and the deploy-trace read sit outside the three-flow registry; pipeline-trace and dedicated transition-mapping flows remain deferred. See [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md) for the bounded deploy-trace read and [Merge and Verify Deploy](feature-merge-verify-deploy.md) for its consumer.
 
 ## Adapter registry
 

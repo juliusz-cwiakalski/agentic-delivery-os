@@ -22,7 +22,7 @@ The Definition of Done is the **post-implementation acceptance gate** (`dod_chec
 |--------|-------|
 | Phase | 10. `dod_check` |
 | Owner | `@reviewer` (audit via `/review`) → `@pm` (final check) |
-| Commands | `/review <ref>` (phase 8 `review_fix`), `verify change <ref>` (read-only ledger verdict), then `@pm` runs the final `dod_check`; `verify gates <ref>` supplies the read-only M0 merge evidence |
+| Commands | `/review <ref>` (phase 8 `review_fix`), `verify change <ref>` (read-only ledger verdict), then `@pm` runs the final `dod_check`; `verify gates <ref>` supplies the recorded merge-battery evidence |
 | Inputs | `chg-<ref>-spec.md` (incl. the change's DoD + AC) + `chg-<ref>-plan.yaml` (every declared plan phase complete, evidenced by a per-phase `notes:` entry in `chg-<ref>-pm-notes.yaml` naming the plan phase id, commit hash, and test result; a legacy markdown plan is read through the transition path and audited via task checkboxes) + `chg-<ref>-test-plan.md` + implementation + `chg-<ref>-pm-notes.yaml` |
 | Output | `DONE` (proceed to PR) or a reopened phase with a remediation task |
 
@@ -35,7 +35,7 @@ DoD is applied in two layers during verification:
 
 The final `dod_check` (phase 10, run by `@pm`) then confirms the whole checklist holds before `pr_creation`.
 
-Finalization is variant-aware. `verify change <ref>` reads the declared `full` or `lite` variant and its required phase set, merges the pm-notes declaration with the verified delivery-registry history, and reports whether the ledger is complete. An incomplete or unverifiable ledger is a non-zero failure naming the missing phases; only a fully completed declared variant yields `finished` and exit `0`. The command is read-only and does not substitute for the merge gates: run `verify gates <ref>` for lifecycle, CI, push parity, owner-label, and squash-preflight evidence. Human review/approval and the actual merge remain external.
+Finalization is variant-aware. `verify change <ref>` reads the declared `full` or `lite` variant and its required phase set, merges the pm-notes declaration with the verified delivery-registry history, and reports whether the ledger is complete. An incomplete or unverifiable ledger is a non-zero failure naming the missing phases; only a fully completed declared variant yields `finished` and exit `0`. The command is read-only and does not substitute for the merge gates: run `verify gates <ref>` for lifecycle, CI, push parity, owner-label, and squash-preflight evidence. Human review and approval remain external; landing is the merge transaction's surface.
 
 Two phase vocabularies are distinct here. **Lifecycle phases** (`clarify_scope`..`pr_creation`) are tracked in the pm-notes `phases:` map and the delivery registry the `phase` command writes. **Plan phases** (the numbered `phases[]` of `chg-<ref>-plan.yaml`) are evidenced by per-phase pm-notes `notes:` entries naming the plan phase id, commit hash, and test result. `verify change` judges lifecycle phases; plan-phase completion is judged from the pm-notes notes entries. Declared plan scope is never mutated to record progress.
 
