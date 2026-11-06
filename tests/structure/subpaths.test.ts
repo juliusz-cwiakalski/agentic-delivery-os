@@ -40,7 +40,7 @@ const EXPECTED: Record<string, Record<string, string>> = {
   cli: { ".": "src/index.ts" },
   mcp: { ".": "src/index.ts" },
   opencode: { ".": "src/index.ts" },
-  testkit: { ".": "src/index.ts" },
+  testkit: { ".": "src/index.ts", "./commit": "src/commit/index.ts" },
 };
 
 const manifestOf = (packageName: string): Record<string, unknown> =>

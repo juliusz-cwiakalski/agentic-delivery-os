@@ -81,3 +81,19 @@ export {
   RULES,
   SCRIPTED_RULES,
 } from "./result-conformance.js";
+export {
+  createSafetyScanner,
+  createScriptedCommitlint,
+  createScriptedTransport,
+  transportAvailability,
+  type ScriptedCommitlint,
+  type ScriptedSafetyScanner,
+  type ScriptedTransport,
+  type ScriptedTransportStep,
+} from "./commit/transport-fakes.js";
+export {
+  createTempGitRepository,
+  type RepoCommandResult,
+  type TempGitRepository,
+  type TempGitRepositoryOptions,
+} from "./commit/git-repo.js";

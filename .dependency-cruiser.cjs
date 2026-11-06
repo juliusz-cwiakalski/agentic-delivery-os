@@ -234,6 +234,10 @@ module.exports = {
           // network-I/O edge for the commit primitive's one constrained call.
           // Exact path only.
           "^packages/adapters/src/inference/",
+          // GH-227: the dev-only testkit commit harness builds real temporary
+          // git repositories; it is excluded from every production graph.
+          // Exact path only.
+          "^packages/testkit/src/commit/",
           "^packages/cli/",
           "^packages/opencode/",
         ],

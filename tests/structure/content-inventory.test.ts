@@ -508,6 +508,13 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "assertScriptedProjection",
     "loadGoldenCases",
   ],
+  "testkit/src/commit/transport-fakes.ts": [
+    "createSafetyScanner",
+    "createScriptedCommitlint",
+    "createScriptedTransport",
+    "transportAvailability",
+  ],
+  "testkit/src/commit/git-repo.ts": ["createTempGitRepository"],
   "testkit/src/conformance/artifact.ts": [
     "CONFORMANCE_FLOW_STATUSES",
     "CONFORMANCE_LIMITS",

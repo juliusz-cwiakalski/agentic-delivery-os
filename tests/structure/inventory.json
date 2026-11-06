@@ -163,6 +163,9 @@
     "src/output/index.ts"
   ],
   "testkit": [
+    "src/commit/git-repo.ts",
+    "src/commit/index.ts",
+    "src/commit/transport-fakes.ts",
     "src/conformance/adapters.ts",
     "src/conformance/artifact.ts",
     "src/conformance/coverage.ts",
