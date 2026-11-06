@@ -3,7 +3,7 @@ title: "M1-S7: Minimal MCP"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
-  specification: { started: "2026-11-06T00:00:00Z", completed: null }
+  specification: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   test_planning: { started: "2026-11-06T00:00:00Z", completed: null }
   delivery_planning: { started: "2026-11-06T00:00:00Z", completed: null }
   dor_check: { started: "2026-11-06T00:00:00Z", completed: null }
