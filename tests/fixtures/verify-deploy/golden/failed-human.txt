@@ -1,0 +1,8 @@
+example-product: verify.deploy.trace-failed
+summary: verdict=failed
+evidence=steps=3
+expectation=configuration:steps=build,publish,smoke:artifacts=registry:app@9f21c0e
+failed-step=smoke
+observed=build=succeeded,publish=succeeded,smoke=failed
+artifacts=registry:app@9f21c0e
+remediation=Resolve the named failing deploy step and re-run the deployment.

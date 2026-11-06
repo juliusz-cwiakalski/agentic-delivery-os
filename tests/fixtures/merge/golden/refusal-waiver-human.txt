@@ -1,0 +1,7 @@
+example-product: merge.waiver-unauthorized
+summary: result=refused; condition=merge.waiver-unauthorized
+gate=owner-gate
+class=owner-review
+authorizer=someone-else
+evidence=unauthorized-principal
+remediation=Declare the override with an authorizer authorized for the gate class, then retry; no waiver was recorded.

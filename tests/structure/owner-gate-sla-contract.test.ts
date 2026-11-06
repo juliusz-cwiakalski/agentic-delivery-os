@@ -46,6 +46,7 @@ type MutablePolicy = {
     neverMerge: boolean;
     defaultable: boolean;
     default: string | null;
+    waiverAuthorization: string;
   }>;
 };
 
@@ -71,6 +72,7 @@ const comparePolicy = (policy: MutablePolicy): Failure[] => {
       neverMerge: true,
       defaultable: false,
       default: null,
+      waiverAuthorization: "owner-authored",
     },
     {
       kind: "waiver",
@@ -78,6 +80,7 @@ const comparePolicy = (policy: MutablePolicy): Failure[] => {
       neverMerge: false,
       defaultable: true,
       default: "owner-review-first",
+      waiverAuthorization: "defaultable",
     },
   ]);
   const defaults = policy.rows.flatMap((row) => (row.default === null ? [] : [row.default]));
@@ -141,6 +144,7 @@ describe("TC-SLA-001 policy contract data pinned", () => {
         neverMerge: true,
         defaultable: false,
         default: null,
+        waiverAuthorization: "owner-authored",
       },
       {
         kind: "waiver",
@@ -148,6 +152,7 @@ describe("TC-SLA-001 policy contract data pinned", () => {
         neverMerge: false,
         defaultable: true,
         default: "owner-review-first",
+        waiverAuthorization: "defaultable",
       },
     ]);
     expect([...OWNER_GATE_SLA_DEFAULTS]).toEqual(["owner-review-first"]);
@@ -270,5 +275,22 @@ describe("TC-SLA-001 policy contract data pinned", () => {
 
     const droppedAudience = OWNER_GATE_SLA_AUDIENCES.filter((value) => value !== "coordinator");
     expect(droppedAudience).not.toEqual([...OWNER_GATE_SLA_AUDIENCES]);
+  });
+});
+
+describe("TC-MERGE-017 contract-data half — per-class waiver authorization", () => {
+  test("never-merge classes are owner-authored and defaultable classes admit declared principals", () => {
+    const ownerReview = OWNER_GATE_SLA_POLICY.rows.find((row) => row.class === "owner-review");
+    const waiver = OWNER_GATE_SLA_POLICY.rows.find((row) => row.class === "waiver");
+    expect(ownerReview?.waiverAuthorization).toBe("owner-authored");
+    expect(ownerReview?.neverMerge).toBe(true);
+    expect(waiver?.waiverAuthorization).toBe("defaultable");
+  });
+
+  test("flipping the authorization datum is detected by name", () => {
+    const policy = clonePolicy();
+    policy.rows[0] = { ...policy.rows[0], waiverAuthorization: "defaultable" } as never;
+    const failures = comparePolicy(policy);
+    expect(failures.some((line) => line.startsWith("OWNER_GATE_SLA_POLICY.rows"))).toBe(true);
   });
 });

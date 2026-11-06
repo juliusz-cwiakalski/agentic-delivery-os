@@ -6,9 +6,9 @@ created: 2026-11-06
 last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
-summary: "The owner-gate SLA: the shared owner-gate population and its provider-native age clock, the pinned 24 h escalation and 72 h default-on-expiry thresholds with `>=` boundary semantics, the three-value `slaState` with declared unknown age, the PDR-0003 two-row policy-as-data default map (owner-review never-merge and non-defaultable, waiver defaulting to owner-review-first), the append-only idempotent EVT-1 decision record, structural never-merge protection, never-silence declared collector unavailability, the render-once board command with its deterministic rank key, bounds, and truncation marks, the owner/coordinator audience seam, and the v0 production-inertness boundary while every observed gate maps to owner-review."
+summary: "The owner-gate SLA: the shared owner-gate population and its provider-native age clock, the pinned 24 h escalation and 72 h default-on-expiry thresholds with `>=` boundary semantics, the three-value `slaState` with declared unknown age, the PDR-0003 two-row policy-as-data default map (owner-review never-merge and non-defaultable, waiver defaulting to owner-review-first), the per-class waiver-authorization policy consumed by the merge transaction, the append-only idempotent EVT-1 decision record, recorded merge waivers folded into gate kind and `waivedBy`, structural never-merge protection, never-silence declared collector unavailability, the render-once board command with its deterministic rank key, bounds, and truncation marks, and the owner/coordinator audience seam."
 links:
-  related_changes: ["GH-229"]
+  related_changes: ["GH-229", "GH-225"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "PDR-0003"]
   contracts:
     - "packages/core/src/contracts/owner-gate-sla.ts"
@@ -20,11 +20,11 @@ links:
 
 An owner gate is an open work item carrying a declared owner-attention label (`hand-back` or `human-input-needed`, case-insensitive). The owner-gate SLA gives that gate a deterministic lifecycle: its age is computed from the provider-native activity timestamp, escalation becomes visible at 24 hours, and a gate that crosses 72 hours receives exactly one pre-agreed default when its kind declares one and is allowed to proceed — otherwise it stays escalated and visible. Silence is not a state. A gate is rendered as `fresh`, `escalated`, or `default-applied`, and every default application is persisted as an append-only decision record.
 
-The mechanism is `delivery.board.v1` plus the owner-gate policy contract data. Thresholds, the two-kind/two-class vocabulary, the default map, the SLA states, the unknown-age markers, the audience dimension, the collector-id set, and the render bounds are contract data, not configuration keys. The pure evaluator consumes injected facts (clock, gate facts, policy, decision history) and produces the bounded gate projection and the decisions the edge must persist. The `board` command is the SLA surface: it reads the tracker collector once, evaluates, renders the aging grid or one `CommandResult` envelope, and appends at most one decision record per newly defaulted gate. The command is render-once; it declares no command-specific flags (`--json` is the global machine-output switch) and never starts a timer, loop, or daemon.
+The mechanism is `delivery.board.v1` plus the owner-gate policy contract data. Thresholds, the two-kind/two-class vocabulary, the default map, the per-class waiver-authorization policy, the SLA states, the unknown-age markers, the audience dimension, the collector-id set, and the render bounds are contract data, not configuration keys. The pure evaluator consumes injected facts (clock, gate facts, policy, decision history) and produces the bounded gate projection and the decisions the edge must persist. The `board` command is the SLA surface: it reads the tracker collector once, evaluates, renders the aging grid or one `CommandResult` envelope, and appends at most one decision record per newly defaulted gate. The command is render-once; it declares no command-specific flags (`--json` is the global machine-output switch) and never starts a timer, loop, or daemon.
 
 The escalation mechanism carries an explicit audience dimension, `owner` or `coordinator`. The owner audience is the one the board renders in this release. The typed blocker channel is the planned coordinator-audience consumer of the same aging, threshold, and escalation mechanism; the seam adds no blocker-channel behavior to the board or the owner projection.
 
-Two boundaries are part of the current contract. The gate-kind mapping that makes a real tracker gate reachable as a defaultable `waiver` gate is not delivered: every tracker-observed gate maps to kind `owner-review`, so against real data the SLA permanently escalates and never auto-defaults. The full defaulting path, the decision record, and `waivedBy` rendering are exercisable through injected evaluator facts and command runtimes. The classification is also the reconciliation point for the merge and verify-deploy story: the owner-review↔never-merge mapping is the recorded PDR-0003 assumption until that story reconciles and extends the vocabulary.
+The tracker collector maps an observed owner-attention item to kind `owner-review` and `waivedBy: null` unless a recorded authorized `owner-gate` waiver exists for the item's change ref; that waiver is collected as kind `waiver` with its recorded authorizer. The `owner-review` row is never-merge and non-defaultable, so an unwaived real gate stays fresh under 24 h, escalates from 24 h, and remains escalated past 72 h with no default application. A `waiver`-kind gate is defaultable and follows the 72 h default-on-expiry path with one persisted decision record. The classification map also carries the per-class waiver-authorization policy that the merge transaction consumes as its override authority; the owner-review↔never-merge mapping remains the PDR-0003 assumption.
 
 The surrounding contracts are described in [Status Digest](feature-status-digest.md), [Queue Ready](feature-queue-ready.md), [Verify Gates](feature-verify-gates.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), and [Configuration Layer and Inspection](feature-config-layer.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); activity-timestamp absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md); the default map is recorded in [PDR-0003](../../decisions/PDR-0003-owner-gate-sla-default-map.md).
 
@@ -90,7 +90,7 @@ When a defaultable gate crosses the expiry threshold and no record exists for it
 
 The state layer persists each record as the additive record kind `owner-gate.decision` under the store-scoped key `owner-gate.decisions:<gateId>`. The first application per gate id is authoritative. `readOwnerGateSlaDecisions` is a presence-tolerant verified read: an absent key set is verified-empty evidence, while a wrong record kind under the decision prefix, a malformed payload, or two records for one gate id is a classified `state.store.torn` — never a zeroed history. `appendOwnerGateSlaDecision` reads the history, returns the existing record without a fence when the gate already has one, otherwise acquires one fence, re-reads, appends only the new record, re-reads for coverage, and requires the verified record count to have increased by exactly one. A distinct gate id is never suppressed by another gate's record. Re-evaluation after application is a no-op that honors the existing record.
 
-A default application is a recorded decision, never a merge. It names the gate's proceed posture; the merge transaction remains an explicit coordinator action, and `waivedBy` is populated only by a collector-supplied waiver authorizer — never by a default application.
+A default application is a recorded decision, never a merge. It names the gate's proceed posture; the merge transaction remains an explicit coordinator action, and `waivedBy` carries the authorizer of a recorded waiver — never a default application artifact.
 
 ### Never-silence: declared unavailability, unknown age, truncation
 
@@ -121,7 +121,7 @@ The machine `data` payload is `{ schemaVersion: "delivery.board.v1", audience, g
 | `ageUnknownReason` | `activity-timestamp-absent` \| `activity-timestamp-unparseable` (optional) | Present only when `age` is `null` |
 | `slaState` | `fresh` \| `escalated` \| `default-applied` | SLA posture |
 | `default` | `owner-review-first` \| null | The applied or recorded default, else `null` |
-| `waivedBy` | string \| null | Waiver authorizer supplied by the collector, never a default artifact |
+| `waivedBy` | string \| null | The recorded waiver's authorizer, folded by the collector; never a default artifact |
 
 The human grid is deterministic and TTY-independent:
 
@@ -150,9 +150,13 @@ Every drop is marked: the payload sets `truncated` and counts `omitted`, the hum
 
 The evaluator input and evaluation output each carry `audience` from the closed set `owner` | `coordinator`, and the board renders the owner audience. Aging, threshold comparison, state derivation, ranking, and the decision projection contain no owner-specific label, surface, routing, or blocker-channel assumption. A coordinator-audience consumer can consume the same contract with a different fact bundle; it does not require a change to the aging mechanism.
 
-### v0 production posture
+### Production posture
 
-The tracker edge maps every observed owner-attention item to kind `owner-review`. That row is never-merge and non-defaultable, so real-data behavior is: fresh under 24 h, escalated from 24 h, and permanently escalated past 72 h with no default application and no decision record. That is the intended never-silence posture, not a defect. The full default path is exercised over injected facts: a `waiver` gate at or past 72 h becomes `default-applied` with `owner-review-first` and one persisted record. `waivedBy` renders only when a collector supplies a waiver authorizer. Real-data defaulting activates when the gate-kind mapping and waiver recording land in the merge and verify-deploy story, which also reconciles the PDR-0003 classification.
+The tracker collector maps every observed owner-attention item to kind `owner-review` with `waivedBy: null` unless a recorded authorized waiver exists for the item's change ref. The board collector folds a recorded waiver whose gate id is `owner-gate`; a waiver for any other gate leaves the item as an unwaived `owner-review` gate. The board payload schema is unchanged and no authorizer is synthesized. An unwaived gate is never-merge and non-defaultable, so its real-data behavior is: fresh under 24 h, escalated from 24 h, and permanently escalated past 72 h with no default application and no decision record. That is the intended never-silence posture, not a defect. A waiver-kind gate at or past 72 h becomes `default-applied` with `owner-review-first` and one persisted decision record, so real-data defaulting is reachable exactly through recorded waivers.
+
+### Waiver authority and recording
+
+The per-class policy map carries its waiver-authorization datum: `owner-review` is `owner-authored` (only the provider-resolved owner principal authorizes an override) and `waiver` is `defaultable`. The merge transaction consumes this declared map as its authority for every override decision; the two-row vocabulary and the SLA thresholds stay as declared. An authorized override is appended as a `merge.waiver` record before any landing mutation; an unauthorized declaration records no waiver while the audit ledger still captures the attempt. See [Merge and Verify Deploy](feature-merge-verify-deploy.md).
 
 ## Technical Architecture & Codebase Map
 
@@ -164,14 +168,14 @@ The tracker edge maps every observed owner-attention item to kind `owner-review`
 | `packages/core/src/domain/owner-gate-sla.ts` | The pure evaluator and renderer: age parsing, threshold crossing, default eligibility, decision projection, policy validation, deterministic ranking and capping, field clamping, the human grid, the family-code formatter, and the family-code recognizer. No I/O, clock, randomness, or ambient environment. |
 | `packages/core/src/state/owner-gate-sla.ts` | The `owner-gate.decision` ledger over the injected state port: validated record payloads, presence-tolerant verified history read, idempotent fenced append, and coverage verification. |
 | `packages/cli/src/commands/board.ts` | The `board` command definition over injected collectors, policy, decision read/append, and clock; all-or-nothing collection, conditional history read, decision append, and no stream writes or exit-code choice. |
-| `packages/cli/src/edge.ts` | The board composition: `createBoardCommandRuntime` wires the GitHub tracker read, the open/owner-attention filters, the `owner-review` v0 mapping, the state ledger, and injected clock/fence factories; registration occurs only when a board composition is supplied. |
+| `packages/cli/src/edge.ts` | The board composition: `createBoardCommandRuntime` wires the GitHub tracker read, the open/owner-attention filters, the recorded-waiver fold (kind and `waivedBy`), the state ledger, and injected clock/fence factories; registration occurs only when a board composition is supplied. |
 | `packages/cli/src/classify.ts` | The runtime family recognizer that resolves any declared `status.collector.<id>.unavailable` shape to the documented status entry while the sync check enforces the closed collector-id set. |
 | `packages/core/src/contracts/error-table.ts` | The single `status.collector.tracker.unavailable` row that anchors the family's identity and remediation. |
 | `packages/cli/src/index.ts` | The optional pure `humanText` hook the board uses to render the aging grid. |
 
 ### Data flow
 
-1. The edge composes the board runtime with one required collector (`tracker`), the shipped policy, the state ledger's decision read/append, and injected time and fence factories.
+1. The edge composes the board runtime with one required collector (`tracker`), the shipped policy, the state ledger's decision read/append and recorded-waiver read, and injected time and fence factories.
 2. The handler reads every collector once. A failure returns the declared family error; nothing is evaluated and no partial board is rendered.
 3. The handler evaluates the collected gates against an empty decision history. Only when some gate is eligible for a default does it read the verified decision history.
 4. It re-evaluates with the history, appends each newly projected decision through the fenced, idempotent ledger append, and returns the bounded `data` payload.
@@ -204,7 +208,7 @@ The decision record kind is additive inside `delivery.state.v1`. No existing rec
 - **Authority boundary:** the SLA never self-authorizes a merge. Automatic proceed decisions are limited to defaultable, non-never-merge kinds; expiry alone is never sufficient authority to override a never-merge class. A recorded waiver by an authorized principal remains the deliberate override path.
 - **Recorded decisions:** every automatic proceed is persisted with gate, kind, ref, default, time, threshold, and clock-source evidence, so later audit can reconstruct what the tool decided and when.
 - **State integrity:** the decision ledger rides the append-only ledger, fence, permission, and torn-state discipline. A torn, wrong-kind, malformed, or duplicated history fails closed and is never served as truth.
-- **Conditional decision-history read:** the decision history is consulted only when a gate is currently default-eligible, so a gate with an existing applied default whose current observed age falls below the expiry threshold (for example after a clock regression or label churn) renders from current eligibility rather than the recorded decision and a torn decision ledger is not detected on a run with no eligible gate, while with the delivered v0 tracker mapping (all real gates `owner-review`, non-defaultable) no real-data run is eligible, making this boundary reachable only over injected or factory facts until the merge story delivers gate-kind mapping.
+- **Conditional decision-history read:** the decision history is consulted only when a gate is currently default-eligible, so a gate with an existing applied default whose current observed age falls below the expiry threshold (for example after a clock regression or label churn) renders from current eligibility rather than the recorded decision and a torn decision ledger is not detected on a run with no eligible gate. An unwaived real gate is `owner-review` and non-defaultable, so a real-data run is eligible only when a recorded waiver is folded in as a `waiver`-kind gate.
 - **Read-mostly posture:** collectors are read-only. The only mutation is the recorded, idempotent decision append; a board run with no eligible gate performs no history read, fence, or append.
 - **Privacy:** gate ids, kinds, refs, ages, SLA states, policy values, and waiver authorizers only — no credentials, raw provider payloads, titles, bodies, comments, or free-form content enter the payload, record, or grid.
 - **Brand neutrality:** no product or binary literal is committed. The human grid uses the injected brand binary name.
@@ -215,7 +219,7 @@ The decision record kind is additive inside `delivery.state.v1`. No existing rec
 | Concern | Current guarantee |
 |---|---|
 | Determinism | Identical injected collector facts, clock, policy, and decision history produce byte-identical machine and human output; no run-to-run drift. |
-| Read cost | One tracker collector read per invocation at the existing budget (`STATUS_SOURCE_ITEM_LIMIT`, 100), no pagination, no retries, no new request kinds; at most one verified decision-history read and, per newly defaulted gate, one fence and one append. |
+| Read cost | One tracker collector read per invocation at the existing budget (`STATUS_SOURCE_ITEM_LIMIT`, 100), no pagination, no retries, no new request kinds; one merge-waiver ledger read per tracker read; at most one verified decision-history read and, per newly defaulted gate, one fence and one append. |
 | Latency | Pure evaluation, ranking, and rendering complete within 50 ms on the reference environment over the capped gate set. |
 | Bounds | At most 8 rendered gates; machine `data` at most 65 536 UTF-8 bytes; human grid at most 24 lines / 4 096 UTF-8 bytes; per-field caps enforced; every drop or clamp marked. |
 | Precision | Thresholds are evaluated against the injected clock on every invocation with the declared `>=` comparator; escalation at exactly 24 h, expiry at exactly 72 h; no background timer. |
@@ -270,7 +274,7 @@ One invocation performs one bounded tracker list read and, only when a default i
 - **Risk — collector unavailability read as no gates:** mitigated by the declared family identity, exit `2`, all-or-nothing withholding, and negative-control tests.
 - **Risk — unknown-age gates quietly escape the SLA:** mitigated by declared unknown age, escalated visibility, and ineligibility for defaults.
 - **Risk — the audience seam is foreclosed:** mitigated by an explicit audience dimension in the contract and structure tests that reject owner-specific assumptions.
-- **Risk — real-data defaulting is mistaken for delivered:** mitigated by the v0 production-posture statement and the default path being exercised over injected facts only.
+- **Risk — real-data defaulting is mistaken for delivered:** mitigated by the production-posture statement, the waiver-kind mapping being visible in the collector and its tests, and the default path remaining policy-gated by a recorded waiver.
 
 ## Glossary & References
 
@@ -292,4 +296,4 @@ One invocation performs one bounded tracker list read and, only when a default i
 
 See also: [Status Digest](feature-status-digest.md), [Queue Ready](feature-queue-ready.md), [Verify Gates](feature-verify-gates.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [PDR-0003](../../decisions/PDR-0003-owner-gate-sla-default-map.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), and the [repository glossary](../../overview/glossary.md).
 
-**Change record:** `doc/changes/2026-11/2026-11-06--GH-229--owner-gate-sla/`.
+**Change record:** `doc/changes/2026-11/2026-11-06--GH-229--owner-gate-sla/`; `doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/`.

@@ -1,0 +1,11 @@
+example-product verify deploy GH-305  verified
+verdict=verified
+change=GH-305
+job=deploy-44833 pipeline=deploy head=9f21c0e
+expectation=configuration steps=3 artifacts=1
+steps=3
+step build succeeded
+step publish succeeded
+step smoke succeeded
+artifacts=1
+artifact registry:app@9f21c0e

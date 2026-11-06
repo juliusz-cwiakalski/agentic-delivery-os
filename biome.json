@@ -98,7 +98,11 @@
       }
     },
     {
-      "includes": ["tests/fixtures/mcp/**/*.json"],
+      "includes": [
+        "tests/fixtures/mcp/**/*.json",
+        "tests/fixtures/merge/golden/**",
+        "tests/fixtures/verify-deploy/golden/**"
+      ],
       "formatter": {
         "enabled": false
       }

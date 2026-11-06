@@ -7,7 +7,7 @@ owners: [engineering]
 area: domain
 document_classification: working-analysis
 links:
-  related_changes: [GH-200, GH-231]
+  related_changes: [GH-200, GH-231, GH-225]
 summary: "Thin tooling vocabulary relationship map and disambiguation draft for Gate 4."
 ---
 
@@ -77,10 +77,10 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
   change` checks ledger/document completeness. CI observations have bounded
   checkout-head coverage, not proof of every required PR-head job. `merge-ready`
   is an observed approval-based close class, not merge permission; `verify gates`
-  is the delivered read-only five-gate evaluation (dispatched from the `verify`
-  command; contract in the verify-gates feature spec) and never authorizes a
-  merge. Human gates and artifact evidence remain separate from any command's
-  exit code.
+  is the config-declared merge battery (dispatched from the `verify` command;
+  contract in the verify-gates feature spec), and `merge` lands only over a fresh
+  recorded verification. Neither authorizes a merge by itself. Human gates and
+  artifact evidence remain separate from any command's exit code.
 - **Dual-run / strangler:** dual-run compares replacement behavior while the
   shell retains authority until explicit per-engine cutover evidence; strangler
   is the broader engine-by-engine migration with wrappers and late retirement.

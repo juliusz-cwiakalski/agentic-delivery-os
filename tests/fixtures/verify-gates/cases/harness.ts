@@ -2,10 +2,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
-import { createVerifyCommandDefinition } from "../../../../packages/cli/src/commands/verify";
 import type { VerifyCommandRuntime } from "../../../../packages/cli/src/commands/verify";
+import { createVerifyCommandDefinition } from "../../../../packages/cli/src/commands/verify";
 import type { VerifyGatesCommandRuntime } from "../../../../packages/cli/src/commands/verify-gates";
 import { type CliDependencies, runCli } from "../../../../packages/cli/src/index";
+import { resolveMergeGateSet } from "../../../../packages/core/src/domain/merge-gate-set";
 import { bufferSink, SYNTHETIC_BRAND } from "../../../golden/helpers";
 import { baseFacts, type VerifyGatesFacts } from "./facts";
 
@@ -19,6 +20,9 @@ export const pmNotesValue = (): unknown => parse(pmNotesText()) as unknown;
 export type RuntimeOverrides = {
   readonly facts?: Partial<VerifyGatesFacts>;
   readonly registryFailure?: { readonly code: string };
+  readonly gateSet?: VerifyGatesCommandRuntime["readGateSet"];
+  readonly appendVerification?: VerifyGatesCommandRuntime["appendVerification"];
+  readonly nowMs?: () => number;
 };
 
 export const gatesRuntime = (overrides: RuntimeOverrides = {}): VerifyGatesCommandRuntime => {
@@ -51,6 +55,16 @@ export const gatesRuntime = (overrides: RuntimeOverrides = {}): VerifyGatesComma
     readDeliveryRequestDetail: async () => facts.deliveryRequestDetail,
     readCheckRuns: async () => facts.checkRuns,
     readWorkItem: async () => facts.workItem,
+    readGateSet:
+      overrides.gateSet ??
+      (() => {
+        const resolved = resolveMergeGateSet(undefined);
+        return resolved.ok
+          ? { ok: true as const, value: resolved.value }
+          : { ok: false as const, code: resolved.failure.code, detail: resolved.failure.detail };
+      }),
+    appendVerification: overrides.appendVerification ?? (() => ({ ok: true })),
+    nowMs: overrides.nowMs ?? (() => Date.parse("2026-11-06T12:00:00Z")),
   };
 };
 

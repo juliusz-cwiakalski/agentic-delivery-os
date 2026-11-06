@@ -1,0 +1,7 @@
+example-product: verify.deploy.trace-missing
+summary: verdict=unknown; reason=pipeline-created-never-ran
+evidence=steps=0
+status=success (disqualified as evidence)
+expectation=configuration:steps=build,publish,smoke:artifacts=registry:app@9f21c0e
+missing-steps=build,publish,smoke
+remediation=Produce a deploy trace whose declared steps executed and artifacts exist.

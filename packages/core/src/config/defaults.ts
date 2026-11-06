@@ -36,6 +36,9 @@ export const PRODUCTION_DEFAULTS = {
   commit: {
     phaseCommit: true,
   },
+  merge: {
+    "gate-freshness": 1800,
+  },
 } as const;
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>

@@ -33,10 +33,18 @@ const EXPECTED_SURFACE: Readonly<Record<Provider, readonly string[]>> = {
   gitlab: ["createGitLabClient", "GITLAB_ADAPTER_CONTRACT", "GitLabClient", "GitLabClientOptions"],
   github: [
     "createGitHubClient",
+    "createGitHubDeployTraceReader",
+    "DeployTraceRepository",
     "GITHUB_ADAPTER_CONTRACT",
     "GithubClient",
     "GithubClientOptions",
+    "GithubDeployArtifact",
+    "GithubDeployStep",
+    "GithubDeployTrace",
+    "GithubDeployTraceOptions",
+    "GithubDeployTraceReader",
     "GithubRepositoryRef",
+    "normalizeDeployTrace",
   ],
 };
 

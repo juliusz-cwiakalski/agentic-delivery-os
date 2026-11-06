@@ -97,6 +97,30 @@
       "resolves": true
     },
     {
+      "id": "merge-gate-family-declared",
+      "text": "merge.gate.ci-green.failed",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "merge-gates-stale",
+      "text": "merge.gates-stale",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "merge-waiver-unauthorized",
+      "text": "merge.waiver-unauthorized",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "verify-deploy-trace-missing",
+      "text": "verify.deploy.trace-missing",
+      "recognized": true,
+      "resolves": true
+    },
+    {
       "id": "doctor-check-failed",
       "text": "doctor.check.failed",
       "recognized": true,

@@ -1,0 +1,14 @@
+example-product merge GH-301  merged
+result=merged
+change=GH-301
+squash=b1b2c3d
+landing=sha-on-base:yes request-state=merged
+refresh=attempts=0 outcome=not-attempted
+waivers=-
+post-landing=branch-deletion:ok,closeout-ready:ok
+gates=5/5 passed
+gate lifecycle-finalization pass reason=lifecycle-complete
+gate ci-green pass reason=ci-green
+gate push-parity pass reason=parity-matched
+gate owner-gate pass reason=owner-gate-absent
+gate squash-preflight pass reason=squash-ready

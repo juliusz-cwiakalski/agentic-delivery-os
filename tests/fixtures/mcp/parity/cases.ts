@@ -467,6 +467,14 @@ const recordedGatesRuntime = (
       recorder.push("readWorkItem");
       return base.readWorkItem(ref);
     },
+    // The declared-battery seam (GH-225): the CLI `verify gates` handler reads the
+    // resolved gate set, stamps the EVT-1 record with the injected clock, and
+    // appends it. These members are not recorded: MCP `gate-report` composes the
+    // frozen five-gate evaluator and never touches them, so recording would break
+    // the shared read-sequence parity and the CLI read-budget pin.
+    readGateSet: () => base.readGateSet(),
+    appendVerification: (record) => base.appendVerification(record),
+    nowMs: () => base.nowMs(),
   };
 };
 

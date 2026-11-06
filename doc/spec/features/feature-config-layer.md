@@ -5,9 +5,9 @@ created: 2026-10-30
 last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225"]
   related_decisions: ["ADR-0003", "TDR-0003"]
 ---
 
@@ -15,7 +15,7 @@ links:
 
 ## Overview
 
-Configuration resolves from seven ordered layers into one validated, traceable tree. Resolution is pure in `@delivery-os/core`; acquisition of files, platform locations, repository roots, environment facts and legacy names lives behind the existing adapters and the runtime-aware CLI edge. The production ordinary catalog declares the typed `provider` branch; no other ordinary production settings are declared, so unrelated configuration resolves to `{}` until a consumer declares typed settings.
+Configuration resolves from seven ordered layers into one validated, traceable tree. Resolution is pure in `@delivery-os/core`; acquisition of files, platform locations, repository roots, environment facts and legacy names lives behind the existing adapters and the runtime-aware CLI edge. The production ordinary catalog declares the typed `provider`, `commit`, and `merge` branches; unrelated configuration resolves to `{}` until a consumer declares typed settings.
 
 Every source is validated before it is merged, every effective value can report where it came from, and inspection through the `config` command uses the same serialization and redaction boundary as every other command. Configuration cannot rename the frozen brand identity, supply a credential from a repository file, or silently interpolate environment values into files.
 
@@ -72,7 +72,7 @@ One trusted draft-07 schema is generated from the typed catalog. A recursively r
 - Top-level `x-` keys are allowed in files as vendor data but do not create environment or CLI mappings.
 - Unknown ordinary keys fail `config.key.unknown`; invalid types, directive shapes and disallowed null fail `config.value.invalid`.
 - Explicit null requires catalog permission.
-- The ordinary production catalog declares the typed `provider` and `commit` branches. The provider branch's dynamic-name maps (`provider.credentials`, `provider.entries`, `provider.chains`) use the additive `record` field kind: every child name is arbitrary and every child value is validated against the declared shape, while fixed branches keep exact unknown-key discipline.
+- The ordinary production catalog declares the typed `provider`, `commit`, and `merge` branches. The provider branch's dynamic-name maps (`provider.credentials`, `provider.entries`, `provider.chains`) use the additive `record` field kind: every child name is arbitrary and every child value is validated against the declared shape, while fixed branches keep exact unknown-key discipline.
 - `workingName` is the separate required bootstrap descriptor, supplied before discovery and never a mutable config key.
 - Typed extension catalogs exercise the same production resolver for required, nullable, defaulted, deprecated, nested, list, secret and machine-path fields. They are not production settings.
 
@@ -224,3 +224,16 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 | Selected file | The `--config`/environment/legacy file occupying project-committed priority. |
 
 See also: [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
+
+## The merge configuration branch
+
+The production catalog declares a typed `merge` branch:
+
+| Key | Shape | Default | Semantics |
+|---|---|---|---|
+| `merge.gate-freshness` | number (seconds) | `1800` | The declared verification-age bound; at-bound is stale (`>=`). A declared value that is not a finite non-negative number is refused `config.value.invalid`; the default applies only when the key is absent. |
+| `merge.gates` | `{ schemaVersion, entries[] }` | absent | A schema-versioned declared gate set. An entry declares `id`, `recipe`, `surface`, optional `class`, and optional `job`. Declared sets replace the default wholesale and are validated semantically: unsupported versions, omitted built-ins, reserved-id redefinitions, duplicates, malformed entries, and extra fields are refused as `config.value.invalid`. |
+| `merge.deploy-expectations` | `{ steps?, artifacts? }` | absent | The declared deploy expectation set for `verify deploy`; absent means the verdict can never be `verified`. A shape that is not an object, or whose present `steps` and `artifacts` are not string lists, is refused `config.value.invalid`. |
+
+Every merge key reports its own per-value origin evidence, and a declared list replaces the earlier list. See
+[Merge and Verify Deploy](feature-merge-verify-deploy.md).

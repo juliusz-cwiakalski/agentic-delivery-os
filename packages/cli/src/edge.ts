@@ -31,9 +31,11 @@ import {
   createWatchdogGitSeam,
   type GitBranchSeam,
   type GitBranchSeamOptions,
+  type GitMergeSeam,
 } from "@delivery-os/adapters/git";
 import {
   createGitHubClient,
+  createGitHubDeployTraceReader,
   GITHUB_ADAPTER_CONTRACT,
   type GithubClient,
   type GithubClientOptions,
@@ -67,9 +69,12 @@ import {
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
   isLiveDbSession,
+  type MergeTransactionPorts,
+  newestWaiverByGate,
   PRODUCTION_CATALOG,
   resolveCloseoutBaseRef,
   resolveConfig,
+  resolveMergeGateSet,
   runCloseout,
   runCommitAct,
   selectPruneCandidates,
@@ -151,14 +156,21 @@ import {
   appendAuditInvocation,
   appendCloseoutOutcome,
   appendCommitTelemetry,
+  appendMergeGateVerification,
+  appendMergeTransaction,
+  appendMergeWaiver,
   appendOwnerGateSlaDecision,
   appendPhaseTransition,
   createNodeStateEdge,
   createStateStore,
   foldCloseoutHistory,
+  readAllMergeWaivers,
   readChangeTransitionsTolerant,
   readCloseoutHistory,
   readCommitTelemetry,
+  readMergeGateVerifications,
+  readMergeTransactions,
+  readMergeWaivers,
   readOwnerGateSlaDecisions,
   replacePhaseProjection,
   STATE_SCHEMA_VERSION,
@@ -187,6 +199,7 @@ import {
   type LintCommandRuntime,
   type LintRegistryRead,
 } from "./commands/lint.js";
+import { createMergeCommandDefinition, type MergeCommandRuntime } from "./commands/merge.js";
 import {
   createPhaseCommandDefinition,
   type PhaseCommandRuntime,
@@ -202,6 +215,7 @@ import {
 import { createQueueReadyCommandDefinition } from "./commands/queue.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
+import type { VerifyDeployRuntime } from "./commands/verify-deploy.js";
 import type { VerifyGatesCommandRuntime } from "./commands/verify-gates.js";
 import {
   createWatchdogCommandDefinition,
@@ -624,6 +638,12 @@ export type VerifyGatesRuntimeOptions = {
     readonly credentials: CredentialPort;
     readonly transport: StatusTransport;
   };
+  /** The resolved declared gate set; absent yields the shipped default. */
+  readonly readGateSet?: VerifyGatesCommandRuntime["readGateSet"];
+  /** The EVT-1 append seam; absent leaves the evaluation unrecorded. */
+  readonly appendVerification?: VerifyGatesCommandRuntime["appendVerification"];
+  /** The injected clock in epoch milliseconds. */
+  readonly nowMs?: () => number;
 };
 
 type ProviderFailureLike = { readonly ok: false; readonly code: string };
@@ -752,6 +772,203 @@ export const createVerifyGatesCommandRuntime = (
       const result = await clientFor(target).readWorkItem(Number(issueNumber));
       if (!result.ok) return providerReadFailure(result);
       return { ok: true, value: { item: result.value } };
+    },
+    readGateSet:
+      options.readGateSet ??
+      (() => {
+        const resolved = resolveMergeGateSet(undefined);
+        return resolved.ok
+          ? { ok: true as const, value: resolved.value }
+          : { ok: false as const, code: resolved.failure.code, detail: resolved.failure.detail };
+      }),
+    appendVerification: options.appendVerification ?? (() => ({ ok: true as const })),
+    nowMs: options.nowMs ?? (() => Date.now()),
+  };
+};
+
+/** The injected seams for the merge command composition (GH-225 F-1..F-8). */
+export type MergeCommandComposition = {
+  readonly store: StateStorePort;
+  readonly git: GitMergeSeam;
+  readonly values: () => Readonly<Record<string, unknown>>;
+  readonly readWorkItem: (
+    changeRef: string,
+  ) => Promise<
+    { readonly ok: true; readonly item: WorkItem } | { readonly ok: false; readonly code: string }
+  >;
+  readonly readCheckRuns: (sha: string) => Promise<
+    | {
+        readonly ok: true;
+        readonly items: readonly import("@delivery-os/core/contracts").PipelineRun[];
+        readonly pageItemCount: number;
+        readonly sha?: string;
+      }
+    | { readonly ok: false; readonly code: string }
+  >;
+  readonly readRequestDetail: () => Promise<
+    | { readonly ok: true; readonly request: DeliveryRequest }
+    | { readonly ok: false; readonly code: string }
+  >;
+  readonly ownerPrincipal?: string;
+  readonly baseRef?: string;
+  readonly branch?: string;
+  readonly nowIso: () => string;
+  readonly nowMs: () => number;
+  readonly newFenceToken: () => string;
+};
+
+/**
+ * Compose the merge command runtime: the declared configuration, the three
+ * merge ledgers, the bounded provider reads, and the git mutation seam.
+ */
+export const createMergeCommandRuntime = (
+  composition: MergeCommandComposition,
+): MergeCommandRuntime => {
+  const policy = OWNER_GATE_SLA_POLICY;
+  return {
+    readConfig: () => {
+      const values = composition.values();
+      const merge = values.merge;
+      const rawGates =
+        typeof merge === "object" && merge !== null && !Array.isArray(merge)
+          ? (merge as Record<string, unknown>).gates
+          : undefined;
+      const resolved = resolveMergeGateSet(rawGates);
+      if (!resolved.ok) {
+        return {
+          ok: false as const,
+          code: resolved.failure.code,
+          detail: resolved.failure.detail,
+        };
+      }
+      const freshness =
+        typeof merge === "object" && merge !== null && !Array.isArray(merge)
+          ? (merge as Record<string, unknown>)["gate-freshness"]
+          : undefined;
+      // A safety-relevant bound is never silently interpreted: an invalid
+      // declared freshness fails closed as a classified configuration failure.
+      if (
+        freshness !== undefined &&
+        (typeof freshness !== "number" || !Number.isFinite(freshness) || freshness < 0)
+      ) {
+        return {
+          ok: false as const,
+          code: "config.value.invalid",
+          detail: "merge.gate-freshness must be a finite non-negative number of seconds",
+        };
+      }
+      return {
+        ok: true as const,
+        config: {
+          gateSet: resolved.value,
+          freshnessBoundSeconds: typeof freshness === "number" ? freshness : 1800,
+          comparator: policy.comparator,
+          policy,
+          ...(composition.ownerPrincipal === undefined
+            ? {}
+            : { ownerPrincipal: composition.ownerPrincipal }),
+          baseRef: composition.baseRef ?? "main-tools",
+          ...(composition.branch === undefined ? {} : { branch: composition.branch }),
+        },
+      };
+    },
+    createPorts: (changeRef): MergeTransactionPorts => ({
+      nowIso: composition.nowIso,
+      nowMs: composition.nowMs,
+      readVerification: () => readMergeGateVerifications(composition.store, changeRef),
+      readTransactions: () => readMergeTransactions(composition.store, changeRef),
+      readWaivers: () => readMergeWaivers(composition.store, changeRef),
+      appendVerification: (record) => {
+        const result = appendMergeGateVerification(composition.store, {
+          record,
+          fenceToken: composition.newFenceToken(),
+        });
+        return result.ok ? { ok: true } : { ok: false, code: result.error.code };
+      },
+      appendWaiver: (record) => {
+        const result = appendMergeWaiver(composition.store, {
+          record,
+          fenceToken: composition.newFenceToken(),
+        });
+        return result.ok ? { ok: true } : { ok: false, code: result.error.code };
+      },
+      appendTransaction: (record) => {
+        const result = appendMergeTransaction(composition.store, {
+          record,
+          fenceToken: composition.newFenceToken(),
+        });
+        return result.ok ? { ok: true } : { ok: false, code: result.error.code };
+      },
+      readWorkItem: () => composition.readWorkItem(changeRef),
+      readCheckRuns: async (sha) => {
+        const read = await composition.readCheckRuns(sha);
+        return read.ok
+          ? {
+              ok: true as const,
+              value: {
+                items: read.items,
+                pageItemCount: read.pageItemCount,
+                ...(read.sha === undefined ? {} : { sha: read.sha }),
+              },
+            }
+          : read;
+      },
+      readRequestDetail: () => composition.readRequestDetail(),
+      readHead: () => composition.git.head(),
+      readBaseContainment: (sha) =>
+        composition.git.isContained(sha, composition.baseRef ?? "main-tools"),
+      refresh: async () =>
+        composition.branch === undefined
+          ? { outcome: "failed" as const, code: "branch-unresolved" }
+          : composition.git.refresh({
+              branch: composition.branch,
+              baseRef: composition.baseRef ?? "main-tools",
+            }),
+      land: async (input) =>
+        composition.branch === undefined
+          ? { ok: false as const, code: "branch-unresolved" }
+          : composition.git.squashLand({
+              branch: composition.branch,
+              baseRef: input.baseRef,
+              message: `merge(${changeRef}): squash ${composition.branch}`,
+            }),
+      deleteBranch: async (input) =>
+        input.branch === undefined
+          ? "failed"
+          : composition.git.deleteBranch({ branch: input.branch }),
+    }),
+  };
+};
+
+/** The injected seams for the `verify deploy` composition (GH-225 F-6). */
+export type VerifyDeployComposition = {
+  readonly resolve: VerifyDeployRuntime["resolve"];
+  readonly github: {
+    readonly instance: ExternalSystemInstance;
+    readonly credentials: CredentialPort;
+    readonly transport: StatusTransport;
+    readonly repository: { readonly owner: string; readonly name: string };
+  };
+};
+
+/**
+ * Compose the deploy runtime: deterministic target resolution plus one bounded
+ * trace read behind the GitHub transport. No trigger capability is composed.
+ */
+export const createVerifyDeployCommandRuntime = (
+  composition: VerifyDeployComposition,
+): VerifyDeployRuntime => {
+  const reader = createGitHubDeployTraceReader({
+    instance: composition.github.instance,
+    credentials: composition.github.credentials,
+    repository: composition.github.repository,
+    transport: composition.github.transport,
+  });
+  return {
+    resolve: composition.resolve,
+    readTrace: async (target) => {
+      const result = await reader.readDeployTrace(target.jobId, target.pipelineName);
+      return result.ok ? { ok: true, trace: result.value } : { ok: false, code: result.code };
     },
   };
 };
@@ -1712,14 +1929,43 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     if (!result.ok) {
       return { ok: false, collector: "tracker", reason: "failed", code: collectorCode };
     }
+    // The GH-229 GAP-9 flip: a recorded authorized waiver for the item's change
+    // ref is collected as waiver-kind with its recorded authorizer. A gate
+    // without a recorded waiver stays owner-review with `waivedBy: null` (no
+    // synthesis); the board payload schema is unchanged.
+    const waiverRead = readAllMergeWaivers(composition.store);
+    const waiversByGate = waiverRead.ok ? newestWaiverByGate(waiverRead.records) : new Map();
+    const waiverFor = (entityId: string) => {
+      const numeric =
+        /^[A-Za-z]+-([0-9]+)$/.exec(entityId)?.[1] ??
+        (/^[0-9]+$/.test(entityId) ? entityId : undefined);
+      for (const waiver of waiversByGate.values()) {
+        if (waiver.gateId !== "owner-gate") continue;
+        const changeNumeric = /^[A-Za-z]+-([0-9]+)$/.exec(waiver.changeRef)?.[1];
+        if (changeNumeric !== undefined && changeNumeric === numeric) return waiver;
+        if (waiver.changeRef === entityId) return waiver;
+      }
+      return undefined;
+    };
     const gates = result.value.items
       .filter((item) => openItem(item) && ownerAttention(item))
-      .map((item) => ({
-        id: `${item.identity.entityId}:owner-review`,
-        kind: "owner-review",
-        ref: item.identity.entityId,
-        ...(item.updatedAt === undefined ? {} : { activityAt: item.updatedAt }),
-      }));
+      .map((item) => {
+        const waiver = waiverFor(item.identity.entityId);
+        return waiver === undefined
+          ? {
+              id: `${item.identity.entityId}:owner-review`,
+              kind: "owner-review",
+              ref: item.identity.entityId,
+              ...(item.updatedAt === undefined ? {} : { activityAt: item.updatedAt }),
+            }
+          : {
+              id: `${item.identity.entityId}:waiver`,
+              kind: "waiver",
+              ref: item.identity.entityId,
+              waivedBy: waiver.authorizer,
+              ...(item.updatedAt === undefined ? {} : { activityAt: item.updatedAt }),
+            };
+      });
     return {
       ok: true,
       collector: "tracker",
@@ -1768,6 +2014,7 @@ export type ConfigProgramOptions = {
   readonly closeout?: CloseoutComposition;
   readonly watchdog?: WatchdogComposition;
   readonly board?: BoardComposition;
+  readonly merge?: MergeCommandRuntime;
 };
 
 export type ConfigProgramResult =
@@ -2083,6 +2330,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.board !== undefined) {
     commands.board = createBoardCommandDefinition(createBoardCommandRuntime(options.board));
+  }
+  if (options.merge !== undefined) {
+    commands.merge = createMergeCommandDefinition(options.merge);
   }
   return {
     ok: true,

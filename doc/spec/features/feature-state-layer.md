@@ -5,9 +5,9 @@ created: 2026-10-30
 last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
-summary: "The implemented state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, rebuild from the ledger alone including a post-salvage ledger, classified torn/unknown detection with verified-empty evidence, explicit guided terminal-tail salvage with quarantine, reusable validated artifact-boundary contracts, store-managed artifact read/get-or-create with runtime-edge random material, fail-closed storage exhaustion, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, the provider park/announcement record kinds with the rebuildable provider-parks.json projection, the additive closeout.operation outcome ledger, the additive commit.telemetry event ledger, the additive owner-gate.decision default-application ledger, and the additive audit reservation/invocation kinds with a keyed chain and bounded read surface."
+summary: "The implemented state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, rebuild from the ledger alone including a post-salvage ledger, classified torn/unknown detection with verified-empty evidence, explicit guided terminal-tail salvage with quarantine, reusable validated artifact-boundary contracts, store-managed artifact read/get-or-create with runtime-edge random material, fail-closed storage exhaustion, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, the provider park/announcement record kinds with the rebuildable provider-parks.json projection, the additive closeout.operation outcome ledger, the additive commit.telemetry event ledger, the additive owner-gate.decision default-application ledger, the additive audit reservation/invocation kinds with a keyed chain and bounded read surface, and the additive merge-domain gate-verification, waiver, and transaction kinds."
 links:
-  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224"]
+  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224", "GH-225"]
   related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
 ---
 
@@ -19,7 +19,7 @@ The state layer is the durable local substrate later verification reads through.
 
 The append-only, schema-versioned JSONL ledger is the single durable truth. The declared driver kinds select only the read/index strategy over that same ledger: `jsonl` reads by verified scan, `sqlite` maintains a disposable derived index that is rebuilt from verified ledger truth whenever it is missing, corrupt, or divergent. No operation, result, or type on the public port discriminates by driver kind.
 
-The layer ships no command surface and no configuration read. Its durable consumers append through the fenced port and read through verified reads: the delivery registry writes `phase.transition` records and replaces the per-change phase-state document as a rebuildable fold of verified records; verify change reads transition history; the provider engine writes park and announcement records; closeout writes `closeout.operation` outcome records and reads them to converge on re-run; the commit primitive writes `commit.telemetry` events and reads them as convergence corroboration (the atomic transition record carries the landed SHA as primary evidence); the command audit ledger writes a reservation and an invocation record per audited command invocation under one shared fence and reads a keyed chain and bounded history; the owner-gate SLA writes `owner-gate.decision` default-application records and reads them to stay idempotent; and the status digest, the queue-ready ready-set, and the doctor diagnostic read the verified provider park fold without writing anything. Store identity, paths, clock, and platform arrive as injected parameters; the state tier never imports branding and never derives a name.
+The layer ships no command surface and no configuration read. Its durable consumers append through the fenced port and read through verified reads: the delivery registry writes `phase.transition` records and replaces the per-change phase-state document as a rebuildable fold of verified records; verify change reads transition history; the provider engine writes park and announcement records; closeout writes `closeout.operation` outcome records and reads them to converge on re-run; the commit primitive writes `commit.telemetry` events and reads them as convergence corroboration (the atomic transition record carries the landed SHA as primary evidence); the command audit ledger writes a reservation and an invocation record per audited command invocation under one shared fence and reads a keyed chain and bounded history; the owner-gate SLA writes `owner-gate.decision` default-application records and reads them to stay idempotent; the merge transaction writes and reads the `merge.gate-verification`, `merge.waiver`, and `merge.transaction` records, and the board reads recorded waivers as gate evidence; and the status digest, the queue-ready ready-set, and the doctor diagnostic read the verified provider park fold without writing anything. Store identity, paths, clock, and platform arrive as injected parameters; the state tier never imports branding and never derives a name.
 
 ## Business Context
 
@@ -207,3 +207,18 @@ Fault injection is a fixture contract: `tests/fixtures/state/harness.ts` supplie
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — tier and runtime-API boundaries.
 - [Branding seam](feature-branding-seam.md) — `stateDirectoryName` is consumed as an injected parameter, never imported here.
 - [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0004](../../decisions/TDR-0004-state-storage-engine.md).
+
+## Merge-domain record kinds
+
+Three additive record kinds join `delivery.state.v1` with no schema-version bump:
+
+| Kind | Payload schema | Writer | Consumer |
+|---|---|---|---|
+| `merge.gate-verification` | `delivery.merge.gate-verification.v1` | Each full merge evaluation: `verify gates` over the battery and `merge --dry-run` over the merge-applicable set | The merge freshness envelope and probe |
+| `merge.waiver` | `delivery.merge.waiver.v1` | The merge transaction on an authorized override, before any landing mutation | Merge authorization, the board's waiver-kind mapping, audit reads |
+| `merge.transaction` | `delivery.merge.transaction.v1` | The merge transaction at landing (and at replayed already-merged detection) | Landing verification on re-run, closeout readiness, audit reads |
+
+Every append is fenced and verified post-append; a wrong kind, malformed
+payload, or schema-incompatible record under a merge prefix is classified and
+never served as truth. Existing record kinds, reads, and boundaries are
+untouched. See [Merge and Verify Deploy](feature-merge-verify-deploy.md).
