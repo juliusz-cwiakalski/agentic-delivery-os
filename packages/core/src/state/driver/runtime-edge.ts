@@ -24,7 +24,7 @@ import {
   writeSync,
 } from "node:fs";
 import { createRequire } from "node:module";
-
+import { RETRO_APPEND_TIMEOUT_MS, RETRO_READ_TIMEOUT_MS, type RetroSidecarIo } from "#contracts";
 import type {
   StateEdgeFaultPoint,
   StateIndexRow,
@@ -32,11 +32,6 @@ import type {
   StatePlatform,
   StateRuntimeEdge,
 } from "../edge.js";
-import {
-  RETRO_APPEND_TIMEOUT_MS,
-  RETRO_READ_TIMEOUT_MS,
-  type RetroSidecarIo,
-} from "#contracts";
 import {
   isStorageExhaustion,
   storageExhaustionFailure,

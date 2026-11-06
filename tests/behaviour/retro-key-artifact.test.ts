@@ -5,8 +5,8 @@
 import { describe, expect, test } from "bun:test";
 import { statSync } from "node:fs";
 import {
-  auditChainKeyArtifactName,
   AUDIT_CHAIN_KEY_PAYLOAD_SCHEMA,
+  auditChainKeyArtifactName,
 } from "../../packages/core/src/contracts/index";
 import {
   appendEvidence,

@@ -4,7 +4,13 @@
  */
 import { describe, expect, test } from "bun:test";
 import { ERROR_TABLE, type ErrorTableEntry } from "../../packages/core/src/contracts/index";
-import { auditOutcome, auditRecord, makeRetroDir, runRetro, transitionRecord } from "../fixtures/retro/harness";
+import {
+  auditOutcome,
+  auditRecord,
+  makeRetroDir,
+  runRetro,
+  transitionRecord,
+} from "../fixtures/retro/harness";
 
 const codeOf = (error: unknown): string | undefined => {
   if (typeof error !== "object" || error === null) return undefined;
@@ -18,9 +24,7 @@ const seedCollected = async (label: string) => {
     {
       changeRef: "GH-232",
       completedAt: "2026-11-06T12:00:00Z",
-      transitions: [
-        transitionRecord({ changeRef: "GH-232", timestamp: "2026-11-06T12:00:00Z" }),
-      ],
+      transitions: [transitionRecord({ changeRef: "GH-232", timestamp: "2026-11-06T12:00:00Z" })],
     },
   ]);
   fixture.scriptAudit(auditOutcome({ records: [auditRecord()] }));
@@ -58,7 +62,10 @@ describe("TC-RETRO-058 level refusal matrix", () => {
   });
 
   test("missing value and extra positional refuse; --ref is fallback.invocation", async () => {
-    const missing = await runRetro(["retro", "collect", "--level", "--json"], makeRetroDir("level-missing"));
+    const missing = await runRetro(
+      ["retro", "collect", "--level", "--json"],
+      makeRetroDir("level-missing"),
+    );
     expect(missing.exitCode).toBe(1);
     expect(codeOf(missing.error)).toBe("input.value.rejected");
 
@@ -95,7 +102,10 @@ describe("TC-RETRO-058 level refusal matrix", () => {
     expect(result.exitCode).toBe(0);
     expect(result.data).toMatchObject({ level: "change", outcome: "collected" });
 
-    const exportAttempt = await runRetro(["retro", "export", "--json"], makeRetroDir("level-export"));
+    const exportAttempt = await runRetro(
+      ["retro", "export", "--json"],
+      makeRetroDir("level-export"),
+    );
     expect(exportAttempt.exitCode).toBe(1);
     expect(codeOf(exportAttempt.error)).toBe("input.value.rejected");
     const table = ERROR_TABLE as readonly ErrorTableEntry[];

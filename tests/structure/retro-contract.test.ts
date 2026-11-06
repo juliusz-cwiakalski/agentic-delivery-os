@@ -124,9 +124,9 @@ describe("TC-RETRO-001 contract vocabulary and data-only shapes", () => {
     expect(RETRO_LEVELS).toHaveLength(6);
     expect(RETRO_LEVELS.map((level) => level.name)).toEqual([...RETRO_LEVEL_NAMES]);
     expect(RETRO_LEVELS.map((level) => level.id)).toEqual(["R1", "R2", "R3", "R4", "R5", "R6"]);
-    expect(RETRO_LEVELS.filter((level) => level.status === "implemented").map((l) => l.name)).toEqual(
-      ["change"],
-    );
+    expect(
+      RETRO_LEVELS.filter((level) => level.status === "implemented").map((l) => l.name),
+    ).toEqual(["change"]);
     expect([...RETRO_IMPLEMENTED_LEVELS]).toEqual(["change"]);
     expect(RETRO_DEFAULT_LEVEL).toBe("change");
     for (const level of RETRO_LEVELS) {

@@ -10,27 +10,32 @@ import {
   type RetroChangeFacts,
   type RetroRunRecord,
 } from "../../packages/core/src/contracts/index";
+import { collectRetro } from "../../packages/core/src/domain/retro";
 import {
   readRetroRegistry,
   readRetroRuns,
   recordRetroRun,
 } from "../../packages/core/src/state/index";
-import { collectRetro } from "../../packages/core/src/domain/retro";
 import {
   auditOutcome,
   auditRecord,
   collectDeps,
   makeRetroDir,
+  type RetroFixture,
   readSidecarBytes,
   sidecarLines,
   transitionRecord,
-  type RetroFixture,
 } from "../fixtures/retro/harness";
 
 const change = (changeRef: string, completedAt?: string): RetroChangeFacts => ({
   changeRef,
   ...(completedAt === undefined ? {} : { completedAt }),
-  transitions: [transitionRecord({ changeRef, ...(completedAt === undefined ? {} : { timestamp: completedAt }) })],
+  transitions: [
+    transitionRecord({
+      changeRef,
+      ...(completedAt === undefined ? {} : { timestamp: completedAt }),
+    }),
+  ],
 });
 
 const run = (scope: string): RetroRunRecord => ({

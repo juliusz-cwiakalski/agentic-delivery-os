@@ -6,7 +6,14 @@
  * scriptable, and the adversary helpers mutate sidecar bytes directly on disk
  * exactly as a same-user delivery agent could.
  */
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -18,11 +25,11 @@ import {
   type AuditReadQuery,
   type AuditReservationOrphanFinding,
   type PhaseTransitionRecord,
-  type RetroChangeFacts,
   RETRO_CANONICAL_FIELD_ORDER,
   RETRO_CHAIN_ANCHOR,
   RETRO_CHAIN_KEY_PAYLOAD_SCHEMA,
   RETRO_EVIDENCE_PAYLOAD_SCHEMA,
+  type RetroChangeFacts,
   type RetroEvidenceDraft,
   type RetroEvidenceRecord,
   type RetroLevelName,
@@ -38,6 +45,10 @@ import {
   createRetroSidecar,
   ensureAuditChainKey,
   type RetroSidecar,
+  readRetroRegistry,
+  readRetroRuns,
+  recordRetroRun,
+  seedRetroRegistry,
 } from "../../../packages/core/src/state/index";
 import { createTestEdge, makeIdentity, openStore, type TestEdge } from "../state/harness";
 
@@ -245,7 +256,9 @@ export const appendEvidence = (
 export const sidecarLines = (fixture: RetroFixture): string[] => {
   const path = retroEvidencePath(fixture.stateDirectory, fixture.workspaceId);
   if (!existsSync(path)) return [];
-  return readFileSync(path, "utf8").split("\n").filter((line) => line !== "");
+  return readFileSync(path, "utf8")
+    .split("\n")
+    .filter((line) => line !== "");
 };
 
 export const writeSidecarLines = (fixture: RetroFixture, lines: readonly string[]): void => {
@@ -390,7 +403,12 @@ export const collectDeps = (
   overrides: RetroDepsOverrides = {},
 ): import("../../../packages/core/src/domain/retro").RetroCollectDeps => ({
   sidecar: fixture.sidecar,
-  store: fixture.store,
+  registry: {
+    read: () => readRetroRegistry(fixture.store),
+    runs: (read) => readRetroRuns(read),
+    recordRun: (run, token) => recordRetroRun(fixture.store, run, token),
+    seed: (token) => seedRetroRegistry(fixture.store, token),
+  },
   collectors: {
     readAuditLedger: (query) => ({ ok: true, value: fixture.readAuditLedgerQuery(query) }),
     readStateFamilies: (changeRef) => ({
@@ -417,7 +435,12 @@ export const reportDeps = (
   overrides: Partial<import("../../../packages/core/src/domain/retro").RetroReportDeps> = {},
 ): import("../../../packages/core/src/domain/retro").RetroReportDeps => ({
   sidecar: fixture.sidecar,
-  store: fixture.store,
+  registry: {
+    read: () => readRetroRegistry(fixture.store),
+    runs: (read) => readRetroRuns(read),
+    recordRun: (run, token) => recordRetroRun(fixture.store, run, token),
+    seed: (token) => seedRetroRegistry(fixture.store, token),
+  },
   level: "change",
   ...overrides,
 });
@@ -460,9 +483,7 @@ export type RetroRunResult = {
 
 export type RetroRunOptions = {
   readonly collect?: RetroDepsOverrides;
-  readonly report?: Partial<
-    import("../../../packages/core/src/domain/retro").RetroReportDeps
-  >;
+  readonly report?: Partial<import("../../../packages/core/src/domain/retro").RetroReportDeps>;
   readonly target?: string;
   readonly secrets?: readonly string[];
   readonly mode?: "interactive" | "scripted";
@@ -475,15 +496,12 @@ export const runRetro = async (
   fixture: RetroFixture,
   options: RetroRunOptions = {},
 ): Promise<RetroRunResult> => {
-  const [
-    { createRetroCommandDefinition },
-    { runCli },
-    { bufferSink, SYNTHETIC_BRAND },
-  ] = await Promise.all([
-    import("../../../packages/cli/src/commands/retro"),
-    import("../../../packages/cli/src/index"),
-    import("../../golden/helpers"),
-  ]);
+  const [{ createRetroCommandDefinition }, { runCli }, { bufferSink, SYNTHETIC_BRAND }] =
+    await Promise.all([
+      import("../../../packages/cli/src/commands/retro"),
+      import("../../../packages/cli/src/index"),
+      import("../../golden/helpers"),
+    ]);
   const runtime: import("@delivery-os/core/contracts").RetroCommandRuntime = {
     collect: (input) =>
       import("../../../packages/core/src/domain/retro").then(({ collectRetro }) =>

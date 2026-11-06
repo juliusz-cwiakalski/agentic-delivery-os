@@ -5,9 +5,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { RetroTruthCheckId } from "../../packages/core/src/contracts/index";
 import { evaluateRetroTruthChecks } from "../../packages/core/src/domain/retro";
 import { auditOutcome, auditRecord } from "../fixtures/retro/harness";
-import type { RetroTruthCheckId } from "../../packages/core/src/contracts/index";
 
 type Mutant = {
   readonly id: string;
@@ -51,7 +51,10 @@ describe("TC-RETRO-047 truth-check mutants", () => {
     for (const mutant of mutants) {
       const mutated = evaluateRetroTruthChecks(triggered, { disabled: mutant.disabled });
       if (mutant.expected === "all") {
-        expect(mutated.checks.every((check) => check.outcome === "passed"), mutant.id).toBe(true);
+        expect(
+          mutated.checks.every((check) => check.outcome === "passed"),
+          mutant.id,
+        ).toBe(true);
         expect(mutated.clean, mutant.id).toBe(true);
         expect(mutated.blocking, mutant.id).toBe(null);
         continue;

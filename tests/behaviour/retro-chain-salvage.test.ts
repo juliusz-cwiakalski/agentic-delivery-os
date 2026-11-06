@@ -8,8 +8,8 @@ import {
   appendEvidence,
   makeRetroDir,
   mutateDelete,
-  readKeyArtifact,
   type RetroFixture,
+  readKeyArtifact,
   sidecarLines,
 } from "../fixtures/retro/harness";
 

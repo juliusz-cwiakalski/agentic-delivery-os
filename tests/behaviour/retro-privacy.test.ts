@@ -3,7 +3,11 @@
  * export bundles; the single serialization path is the only route out.
  */
 import { describe, expect, test } from "bun:test";
-import { collectRetro, exportRetroEvidence, reportRetro } from "../../packages/core/src/domain/retro";
+import {
+  collectRetro,
+  exportRetroEvidence,
+  reportRetro,
+} from "../../packages/core/src/domain/retro";
 import {
   auditOutcome,
   auditRecord,

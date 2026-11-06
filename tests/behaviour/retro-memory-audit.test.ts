@@ -11,21 +11,20 @@ import {
   RETRO_MEMORY_AUDIT_TRIGGER_NAME,
   type RetroRunRecord,
 } from "../../packages/core/src/contracts/index";
+import { recordMemoryAuditRun, reportRetro } from "../../packages/core/src/domain/retro";
 import {
   readRetroRegistry,
-  readRetroRuns,
   readRetroTriggers,
   recordRetroRun,
   seedRetroRegistry,
 } from "../../packages/core/src/state/index";
 import {
   makeRetroDir,
-  newTraceId,
   NOW_MS,
-  reportDeps,
+  newTraceId,
   type RetroFixture,
+  reportDeps,
 } from "../fixtures/retro/harness";
-import { recordMemoryAuditRun, reportRetro } from "../../packages/core/src/domain/retro";
 
 const auditRun = (runId: string): RetroRunRecord => ({
   schemaId: "delivery.retro.run.v1",
@@ -102,10 +101,7 @@ describe("TC-RETRO-060 memory-audit trigger and run evidence", () => {
   test("no memory-audit command and no procedure body exist", () => {
     const commandFiles = readdirSync(join(process.cwd(), "packages/cli/src/commands"));
     expect(commandFiles.includes("memory-audit.ts")).toBe(false);
-    const index = readFileSync(
-      join(process.cwd(), "packages/cli/src/commands/index.ts"),
-      "utf8",
-    );
+    const index = readFileSync(join(process.cwd(), "packages/cli/src/commands/index.ts"), "utf8");
     expect(index).not.toContain("memory-audit");
     const sourceFiles = readdirSync(join(process.cwd(), "packages/core/src/domain")).filter(
       (name) => name.endsWith(".ts"),

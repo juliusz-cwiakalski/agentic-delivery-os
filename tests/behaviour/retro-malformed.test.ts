@@ -21,9 +21,9 @@ import {
   corruptKeyArtifact,
   makeRetroDir,
   mutateContent,
+  type RetroFixture,
   readSidecarBytes,
   removeKeyArtifact,
-  type RetroFixture,
   sidecarLines,
   writeSidecarLines,
 } from "../fixtures/retro/harness";

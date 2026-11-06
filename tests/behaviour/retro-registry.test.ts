@@ -31,9 +31,7 @@ const runRecord = (overrides: Partial<RetroRunRecord> = {}): RetroRunRecord => (
   mode: "collect",
   scope: "GH-232",
   counts: { collected: 3, malformed: 0, skippedSource: 0 },
-  consumed: [
-    { source: "audit-ledger", verified: true, records: 1, truncated: false },
-  ],
+  consumed: [{ source: "audit-ledger", verified: true, records: 1, truncated: false }],
   truth: { clean: true, blocking: null, checks: [] },
   ...overrides,
 });
@@ -66,9 +64,9 @@ describe("TC-RETRO-007 level declaration registry", () => {
       "project",
       "fleet",
     ]);
-    expect(levels.filter((level) => level.status === "implemented").map((level) => level.name)).toEqual(
-      ["change"],
-    );
+    expect(
+      levels.filter((level) => level.status === "implemented").map((level) => level.name),
+    ).toEqual(["change"]);
     const triggers = readRetroTriggers(read.value);
     expect(triggers).toHaveLength(1);
     expect(triggers[0]).toMatchObject({

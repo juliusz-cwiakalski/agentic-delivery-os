@@ -10,6 +10,9 @@
  */
 import {
   AUDIT_INVOCATION_PAYLOAD_SCHEMA,
+  type AuditReadFailure,
+  type AuditReadOutcome,
+  RETRO_AUDIT_READ_LIMIT,
   RETRO_CHAIN_ANCHOR,
   RETRO_DEFAULT_LEVEL,
   RETRO_EVIDENCE_PAYLOAD_SCHEMA,
@@ -21,15 +24,12 @@ import {
   RETRO_NO_TARGET_REASON,
   RETRO_PAYLOAD_SCHEMAS,
   RETRO_REPORT_SCHEMA,
-  RETRO_AUDIT_READ_LIMIT,
   RETRO_TARGET_ORDER,
   RETRO_TRUTH_CHECKS,
-  type AuditReadFailure,
-  type AuditReadOutcome,
   type RetroChangeFacts,
   type RetroClaimedIdentity,
-  type RetroCollectSummary,
   type RetroCollectorRead,
+  type RetroCollectSummary,
   type RetroCommandOutcome,
   type RetroConsumedVerdict,
   type RetroEvidenceDraft,
@@ -40,28 +40,22 @@ import {
   type RetroFinding,
   type RetroFollowThroughEntry,
   type RetroLevelName,
+  type RetroRegistryPort,
   type RetroReportData,
   type RetroRunCounts,
   type RetroRunRecord,
+  type RetroSidecarPort,
   type RetroTargetSelection,
   type RetroTruthCheckId,
   type RetroTruthCheckOutcome,
   type RetroTruthVerdict,
   type StateFailureCode,
-  type StateStorePort,
 } from "#contracts";
-import type { RetroSidecar } from "../state/retro-sidecar.js";
-import {
-  readRetroRegistry,
-  readRetroRuns,
-  recordRetroRun,
-  seedRetroRegistry,
-} from "../state/retro-registry.js";
 
 /** The injected seams for one collection run. */
 export type RetroCollectDeps = {
-  readonly sidecar: RetroSidecar;
-  readonly store: StateStorePort;
+  readonly sidecar: RetroSidecarPort;
+  readonly registry: RetroRegistryPort;
   readonly collectors: RetroCollectorRead;
   readonly readChanges: () => readonly RetroChangeFacts[];
   readonly clock: { readonly nowMs: () => number };
@@ -82,8 +76,8 @@ export type RetroCollectDeps = {
 
 /** The injected seams for one report fold. */
 export type RetroReportDeps = {
-  readonly sidecar: RetroSidecar;
-  readonly store: StateStorePort;
+  readonly sidecar: RetroSidecarPort;
+  readonly registry: RetroRegistryPort;
   readonly level: RetroLevelName;
   readonly verifyArtifact?: (artifactRef: string) => boolean;
   readonly extraReferencedTraceIds?: readonly string[];
@@ -91,7 +85,7 @@ export type RetroReportDeps = {
 
 /** The injected seams for the export engine surface. */
 export type RetroExportDeps = {
-  readonly sidecar: RetroSidecar;
+  readonly sidecar: RetroSidecarPort;
   readonly level: RetroLevelName;
   readonly destination: string;
   readonly limit: number;
@@ -153,9 +147,8 @@ const validateLevel = (
   };
 };
 
-const completedChanges = (
-  changes: readonly RetroChangeFacts[],
-): readonly RetroChangeFacts[] => changes.filter((change) => change.completedAt !== undefined);
+const completedChanges = (changes: readonly RetroChangeFacts[]): readonly RetroChangeFacts[] =>
+  changes.filter((change) => change.completedAt !== undefined);
 
 const collectibleFor = (
   changes: readonly RetroChangeFacts[],
@@ -294,9 +287,7 @@ export const evaluateRetroTruthChecks = (
   );
 
   if (!input.completed) {
-    checks.push(
-      checkOutcome("C-04", "verified-empty", [], []),
-    );
+    checks.push(checkOutcome("C-04", "verified-empty", [], []));
   } else {
     const auditRecords = input.audit?.records.length ?? 0;
     const findings: string[] = [];
@@ -328,8 +319,9 @@ export const evaluateRetroTruthChecks = (
         : checkOutcome("C-05", "passed", [], []),
   );
 
-  const blockingCheck = checks.find((check) => check.id === "C-02" && check.outcome === "blocked")
-    ?? checks.find((check) => check.id === "C-05" && check.outcome === "blocked");
+  const blockingCheck =
+    checks.find((check) => check.id === "C-02" && check.outcome === "blocked") ??
+    checks.find((check) => check.id === "C-05" && check.outcome === "blocked");
   const blocking =
     blockingCheck?.id === "C-02"
       ? "retro.evidence.tamper-flagged"
@@ -345,7 +337,11 @@ export const evaluateRetroTruthChecks = (
 const collectorRecords = (
   audit: AuditReadOutcome,
   families: {
-    readonly transitions: readonly { readonly phaseId: string; readonly operation: string; readonly timestamp: string }[];
+    readonly transitions: readonly {
+      readonly phaseId: string;
+      readonly operation: string;
+      readonly timestamp: string;
+    }[];
     readonly closeouts: readonly unknown[];
     readonly telemetry: readonly unknown[];
   },
@@ -443,7 +439,11 @@ const collectorRecords = (
         level,
         "phase-transitions",
         RETRO_PAYLOAD_SCHEMAS.phaseTransition,
-        [`phase:${transition.phaseId}`, `operation:${transition.operation}`, `at:${transition.timestamp}`],
+        [
+          `phase:${transition.phaseId}`,
+          `operation:${transition.operation}`,
+          `at:${transition.timestamp}`,
+        ],
         window,
         collectedAt,
         identity,
@@ -585,7 +585,11 @@ const appendAll = (
   level: RetroLevelName,
   window: { readonly start: number; readonly end: number },
   collectedAt: number,
-): { readonly records: readonly RetroEvidenceRecord[]; readonly error?: RetroFailure; readonly partial?: string } => {
+): {
+  readonly records: readonly RetroEvidenceRecord[];
+  readonly error?: RetroFailure;
+  readonly partial?: string;
+} => {
   const records: RetroEvidenceRecord[] = [];
   for (const draft of drafts) {
     const traceId = deps.newTraceId();
@@ -619,7 +623,12 @@ const findingDrafts = (
           draftId({
             source: "pm-notes",
             payloadSchemaId: RETRO_PAYLOAD_SCHEMAS.finding,
-            payloadRefs: [`run:${runId}`, "finding:truth-check", `text:${text}`, ...check.evidenceRefs.map((ref) => `ref:${ref}`)],
+            payloadRefs: [
+              `run:${runId}`,
+              "finding:truth-check",
+              `text:${text}`,
+              ...check.evidenceRefs.map((ref) => `ref:${ref}`),
+            ],
             windowStart: window.start,
             windowEnd: window.end,
             collectedAt,
@@ -644,7 +653,7 @@ export const collectRetro = (deps: RetroCollectDeps): RetroCommandOutcome => {
     };
   }
 
-  const read = readRetroRegistry(deps.store);
+  const read = deps.registry.read();
   if (!read.ok) return { ok: false, error: read.error };
   if (read.value.malformed.length > 0) {
     const first = read.value.malformed[0];
@@ -664,11 +673,12 @@ export const collectRetro = (deps: RetroCollectDeps): RetroCommandOutcome => {
       },
     };
   }
-  const runs = readRetroRuns(read.value);
+  const runs = deps.registry.runs(read.value);
   const changes = deps.readChanges();
-  const explicit = deps.target === undefined
-    ? undefined
-    : completedChanges(changes).find((change) => change.changeRef === deps.target);
+  const explicit =
+    deps.target === undefined
+      ? undefined
+      : completedChanges(changes).find((change) => change.changeRef === deps.target);
   if (deps.target !== undefined && explicit === undefined) {
     return { ok: false, error: inputFailure(`No completed change named "${deps.target}".`).error };
   }
@@ -683,23 +693,28 @@ export const collectRetro = (deps: RetroCollectDeps): RetroCommandOutcome => {
     return { ok: true, data: summary };
   }
 
-  const seeded = seedRetroRegistry(deps.store, deps.newFenceToken());
+  const seeded = deps.registry.seed(deps.newFenceToken());
   if (!seeded.ok) return { ok: false, error: seeded.error };
 
   const nowMs = deps.clock.nowMs();
   const window = windowFor(target, nowMs);
-  const sources = deps.sources ?? ["audit-ledger", "phase-transitions", "closeout-outcomes", "commit-telemetry", "pm-notes"];
+  const sources = deps.sources ?? [
+    "audit-ledger",
+    "phase-transitions",
+    "closeout-outcomes",
+    "commit-telemetry",
+    "pm-notes",
+  ];
   const runId = deps.newRunId();
   const collectedAt = nowMs;
 
-  const auditRead =
-    sources.includes("audit-ledger")
-      ? deps.collectors.readAuditLedger({
-          limit: RETRO_AUDIT_READ_LIMIT,
-          from: window.start,
-          to: window.end,
-        })
-      : undefined;
+  const auditRead = sources.includes("audit-ledger")
+    ? deps.collectors.readAuditLedger({
+        limit: RETRO_AUDIT_READ_LIMIT,
+        from: window.start,
+        to: window.end,
+      })
+    : undefined;
   if (auditRead !== undefined && !auditRead.ok) {
     return { ok: false, error: fromAuditFailure(auditRead.error) };
   }
@@ -762,21 +777,23 @@ export const collectRetro = (deps: RetroCollectDeps): RetroCommandOutcome => {
   const followThroughDrafts =
     deps.readFollowThrough === undefined
       ? []
-      : deps.readFollowThrough(target.changeRef).map((entry) =>
-          draftFor(
-            runId,
-            deps.level,
-            "pm-notes",
-            RETRO_PAYLOAD_SCHEMAS.followThrough,
-            [
-              `action:${entry.action}`,
-              ...(entry.artifactRef === undefined ? [] : [`artifact:${entry.artifactRef}`]),
-            ],
-            { start: window.start, end: window.end },
-            collectedAt,
-            deps.identity,
-          ),
-        );
+      : deps
+          .readFollowThrough(target.changeRef)
+          .map((entry) =>
+            draftFor(
+              runId,
+              deps.level,
+              "pm-notes",
+              RETRO_PAYLOAD_SCHEMAS.followThrough,
+              [
+                `action:${entry.action}`,
+                ...(entry.artifactRef === undefined ? [] : [`artifact:${entry.artifactRef}`]),
+              ],
+              { start: window.start, end: window.end },
+              collectedAt,
+              deps.identity,
+            ),
+          );
 
   const allDrafts = [
     ...baseDrafts.drafts,
@@ -799,7 +816,17 @@ export const collectRetro = (deps: RetroCollectDeps): RetroCommandOutcome => {
       collectedAt,
     ),
   ];
-  const appended = appendAll(deps, allDrafts, deps.level, window, collectedAt);
+  const appended = appendAll(
+    deps,
+    allDrafts.map((draft) =>
+      deps.redact === undefined
+        ? draft
+        : { ...draft, payloadRefs: draft.payloadRefs.map((ref) => deps.redact?.(ref) ?? ref) },
+    ),
+    deps.level,
+    window,
+    collectedAt,
+  );
   if (appended.error !== undefined) {
     return {
       ok: false,
@@ -823,7 +850,7 @@ export const collectRetro = (deps: RetroCollectDeps): RetroCommandOutcome => {
     consumed: baseDrafts.consumed,
     truth,
   };
-  const recorded = recordRetroRun(deps.store, run, deps.newFenceToken());
+  const recorded = deps.registry.recordRun(run, deps.newFenceToken());
   if (!recorded.ok) return { ok: false, error: recorded.error };
 
   const partial = `preserved evidence records: ${appended.records.map((record) => record.traceId).join(", ")}`;
@@ -894,7 +921,11 @@ const findingsOf = (records: readonly RetroEvidenceRecord[]): readonly RetroFind
     const refs = record.payloadRefs
       .filter((ref) => ref.startsWith("ref:"))
       .map((ref) => ref.slice("ref:".length));
-    findings.push({ kind: kind as RetroFinding["kind"], text, evidenceRefs: [record.traceId, ...refs] });
+    findings.push({
+      kind: kind as RetroFinding["kind"],
+      text,
+      evidenceRefs: [record.traceId, ...refs],
+    });
   }
   return findings;
 };
@@ -970,7 +1001,7 @@ export const reportRetro = (deps: RetroReportDeps): RetroCommandOutcome => {
     };
   }
 
-  const registry = readRetroRegistry(deps.store);
+  const registry = deps.registry.read();
   if (!registry.ok) return { ok: false, error: registry.error };
   if (registry.value.malformed.length > 0) {
     const first = registry.value.malformed[0];
@@ -990,7 +1021,7 @@ export const reportRetro = (deps: RetroReportDeps): RetroCommandOutcome => {
       },
     };
   }
-  const runs = readRetroRuns(registry.value).filter((run) => run.level === deps.level);
+  const runs = deps.registry.runs(registry.value).filter((run) => run.level === deps.level);
   const run = runs[runs.length - 1];
   if (run === undefined) return { ok: true, data: emptyReport(deps.level) };
 
@@ -1011,7 +1042,15 @@ export const reportRetro = (deps: RetroReportDeps): RetroCommandOutcome => {
           })),
         ];
   const sortedFindings = [...withDangling].sort((left, right) =>
-    left.kind === right.kind ? (left.text < right.text ? -1 : left.text > right.text ? 1 : 0) : left.kind < right.kind ? -1 : 1,
+    left.kind === right.kind
+      ? left.text < right.text
+        ? -1
+        : left.text > right.text
+          ? 1
+          : 0
+      : left.kind < right.kind
+        ? -1
+        : 1,
   );
   const followThrough = [...followThroughOf(selected, deps.verifyArtifact)].sort((left, right) =>
     left.action < right.action ? -1 : left.action > right.action ? 1 : 0,
@@ -1036,11 +1075,7 @@ export const exportRetroEvidence = (deps: RetroExportDeps): RetroExportOutcome =
   if (typeof deps.destination !== "string" || deps.destination.length === 0) {
     return { ok: false, error: inputFailure("an explicit export destination is required").error };
   }
-  if (
-    !Number.isInteger(deps.limit) ||
-    deps.limit < 1 ||
-    deps.limit > RETRO_EXPORT_MAX_LIMIT
-  ) {
+  if (!Number.isInteger(deps.limit) || deps.limit < 1 || deps.limit > RETRO_EXPORT_MAX_LIMIT) {
     return {
       ok: false,
       error: inputFailure(
@@ -1109,7 +1144,10 @@ export const exportRetroEvidence = (deps: RetroExportDeps): RetroExportOutcome =
 };
 
 /** Structural refusal for a write attempted outside the collector seam. */
-export const attemptOutOfSeamEvidenceWrite = (): { readonly ok: false; readonly error: RetroFailure } => ({
+export const attemptOutOfSeamEvidenceWrite = (): {
+  readonly ok: false;
+  readonly error: RetroFailure;
+} => ({
   ok: false,
   error: {
     kind: "retro",
@@ -1123,7 +1161,7 @@ export const attemptOutOfSeamEvidenceWrite = (): { readonly ok: false; readonly 
 /** Record a memory-audit run through the collector seam as evidence (F-9). */
 export const recordMemoryAuditRun = (
   deps: {
-    readonly sidecar: RetroSidecar;
+    readonly sidecar: RetroSidecarPort;
     readonly newTraceId: () => string;
     readonly newFenceToken: () => string;
     readonly clock: { readonly nowMs: () => number };

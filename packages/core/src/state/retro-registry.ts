@@ -8,10 +8,13 @@
  * identities. Writes are validated at the boundary and appended under a fence.
  */
 import {
-  RETRO_LEVELS,
+  RETRO_LEVEL_IDS,
+  RETRO_LEVEL_NAMES,
   RETRO_LEVEL_PAYLOAD_SCHEMA,
   RETRO_LEVEL_RECORD_KEY_PREFIX,
   RETRO_LEVEL_RECORD_KIND,
+  RETRO_LEVEL_STATUSES,
+  RETRO_LEVELS,
   RETRO_MEMORY_AUDIT_TRIGGER_CADENCE,
   RETRO_MEMORY_AUDIT_TRIGGER_NAME,
   RETRO_MODES,
@@ -19,18 +22,16 @@ import {
   RETRO_RUN_PAYLOAD_SCHEMA,
   RETRO_RUN_RECORD_KEY_PREFIX,
   RETRO_RUN_RECORD_KIND,
+  RETRO_SCOPE_KINDS,
+  RETRO_TRIGGER_KINDS,
   RETRO_TRIGGER_PAYLOAD_SCHEMA,
   RETRO_TRIGGER_RECORD_KEY_PREFIX,
   RETRO_TRIGGER_RECORD_KIND,
-  RETRO_SCOPE_KINDS,
-  RETRO_TRIGGER_KINDS,
-  RETRO_LEVEL_IDS,
-  RETRO_LEVEL_NAMES,
-  RETRO_LEVEL_STATUSES,
   type RetroConsumedVerdict,
   type RetroEntryMalformation,
   type RetroEvidenceSource,
   type RetroLevelRecord,
+  type RetroRegistryRead,
   type RetroRunRecord,
   type RetroTriggerRecord,
   type RetroTruthCheckOutcome,
@@ -41,19 +42,13 @@ import {
   type StateArtifactRecord,
   type StateFenceHandle,
   type StateJsonValue,
-  type StateReadEvidence,
   type StateResult,
   type StateStorePort,
 } from "#contracts";
 import { createArtifactBoundary } from "./artifact-boundary.js";
 
 /** A verified registry read with entry-level malformations in band. */
-export type RetroRegistryRead = {
-  readonly verdict: "valid" | "verified-empty";
-  readonly artifacts: readonly StateArtifactRecord[];
-  readonly malformed: readonly RetroEntryMalformation[];
-  readonly evidence: StateReadEvidence;
-};
+export type { RetroRegistryRead } from "#contracts";
 
 const ok = <T>(value: T): StateResult<T> => ({ ok: true, value });
 
@@ -451,59 +446,57 @@ export const recordRetroRun = (
     fenceToken,
   });
 
-/** Additive, idempotent seed of the six levels and the memory-audit trigger. */export const seedRetroRegistry = (
-  store: StateStorePort,
-  fenceToken: string,
-): StateResult<readonly StateAppendOutcome[]> => {
-  const read = readRetroRegistry(store);
-  if (!read.ok) return read;
-  const existingLevels = new Set(readRetroLevels(read.value).map((level) => level.name));
-  const existingTriggers = new Set(readRetroTriggers(read.value).map((trigger) => trigger.name));
-  const requests: StateAppendRequest[] = [];
-  for (const level of RETRO_LEVELS) {
-    if (existingLevels.has(level.name)) continue;
-    requests.push({
-      kind: RETRO_LEVEL_RECORD_KIND,
-      recordKey: registryRecordKey(RETRO_LEVEL_RECORD_KEY_PREFIX, level.name),
-      payload: levelPayload({
-        schemaId: RETRO_LEVEL_PAYLOAD_SCHEMA,
-        name: level.name,
-        levelId: level.id,
-        scopeKind: level.scopeKind,
-        trigger: level.trigger,
-        status: level.status,
-      }),
-    });
-  }
-  if (!existingTriggers.has(RETRO_MEMORY_AUDIT_TRIGGER_NAME)) {
-    const trigger = publicTrigger();
-    requests.push({
-      kind: RETRO_TRIGGER_RECORD_KIND,
-      recordKey: registryRecordKey(
-        RETRO_TRIGGER_RECORD_KEY_PREFIX,
-        RETRO_MEMORY_AUDIT_TRIGGER_NAME,
-      ),
-      payload: {
-        schemaId: trigger.schemaId,
-        name: trigger.name,
-        kind: trigger.kind,
-        cadence: trigger.cadence,
-        owningBinding: trigger.owningBinding,
-      },
-    });
-  }
-  if (requests.length === 0) return ok([]);
-  const acquired = store.acquireFence(fenceToken);
-  if (!acquired.ok) return acquired;
-  const appended: StateAppendOutcome[] = [];
-  try {
-    for (const request of requests) {
-      const result = appendValidated(store, acquired.value.handle, request);
-      if (!result.ok) return result;
-      appended.push(result.value);
+/** Additive, idempotent seed of the six levels and the memory-audit trigger. */ export const seedRetroRegistry =
+  (store: StateStorePort, fenceToken: string): StateResult<readonly StateAppendOutcome[]> => {
+    const read = readRetroRegistry(store);
+    if (!read.ok) return read;
+    const existingLevels = new Set(readRetroLevels(read.value).map((level) => level.name));
+    const existingTriggers = new Set(readRetroTriggers(read.value).map((trigger) => trigger.name));
+    const requests: StateAppendRequest[] = [];
+    for (const level of RETRO_LEVELS) {
+      if (existingLevels.has(level.name)) continue;
+      requests.push({
+        kind: RETRO_LEVEL_RECORD_KIND,
+        recordKey: registryRecordKey(RETRO_LEVEL_RECORD_KEY_PREFIX, level.name),
+        payload: levelPayload({
+          schemaId: RETRO_LEVEL_PAYLOAD_SCHEMA,
+          name: level.name,
+          levelId: level.id,
+          scopeKind: level.scopeKind,
+          trigger: level.trigger,
+          status: level.status,
+        }),
+      });
     }
-    return ok(appended);
-  } finally {
-    store.releaseFence(acquired.value.handle);
-  }
-};
+    if (!existingTriggers.has(RETRO_MEMORY_AUDIT_TRIGGER_NAME)) {
+      const trigger = publicTrigger();
+      requests.push({
+        kind: RETRO_TRIGGER_RECORD_KIND,
+        recordKey: registryRecordKey(
+          RETRO_TRIGGER_RECORD_KEY_PREFIX,
+          RETRO_MEMORY_AUDIT_TRIGGER_NAME,
+        ),
+        payload: {
+          schemaId: trigger.schemaId,
+          name: trigger.name,
+          kind: trigger.kind,
+          cadence: trigger.cadence,
+          owningBinding: trigger.owningBinding,
+        },
+      });
+    }
+    if (requests.length === 0) return ok([]);
+    const acquired = store.acquireFence(fenceToken);
+    if (!acquired.ok) return acquired;
+    const appended: StateAppendOutcome[] = [];
+    try {
+      for (const request of requests) {
+        const result = appendValidated(store, acquired.value.handle, request);
+        if (!result.ok) return result;
+        appended.push(result.value);
+      }
+      return ok(appended);
+    } finally {
+      store.releaseFence(acquired.value.handle);
+    }
+  };

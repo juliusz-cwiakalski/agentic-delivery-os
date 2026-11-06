@@ -25,7 +25,9 @@ describe("TC-RETRO-003 render purity", () => {
   });
 
   test("a planted inference import fails naming the file", () => {
-    const directory = probe('import { createInferenceTransport } from "@delivery-os/adapters/inference";\n');
+    const directory = probe(
+      'import { createInferenceTransport } from "@delivery-os/adapters/inference";\n',
+    );
     const report = checkRetroRenderPurity({ root: directory, files: ["probe.ts"] });
     expect(report.failures.some((failure) => failure.includes("probe.ts"))).toBe(true);
     expect(report.failures.some((failure) => failure.includes("inference"))).toBe(true);

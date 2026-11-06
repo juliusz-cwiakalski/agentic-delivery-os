@@ -66,7 +66,14 @@ describe("TC-RETRO-002 tier and runtime confinement", () => {
       "packages/core/src/domain/retro.ts",
     ]) {
       const text = textOf(file);
-      for (const marker of ["Date.now", "Math.random", "process.", "Bun.", "fetch(", "setTimeout("]) {
+      for (const marker of [
+        "Date.now",
+        "Math.random",
+        "process.",
+        "Bun.",
+        "fetch(",
+        "setTimeout(",
+      ]) {
         expect(text.includes(marker), `${file}: ${marker}`).toBe(false);
       }
     }

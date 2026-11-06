@@ -4,21 +4,21 @@
  * zero-collector distinction.
  */
 import { describe, expect, test } from "bun:test";
-import { readRetroRegistry, readRetroRuns } from "../../packages/core/src/state/index";
 import {
   collectRetro,
   evaluateRetroTruthChecks,
   reportRetro,
 } from "../../packages/core/src/domain/retro";
+import { readRetroRegistry, readRetroRuns } from "../../packages/core/src/state/index";
 import {
   auditOutcome,
   auditRecord,
   collectDeps,
   makeRetroDir,
+  type RetroFixture,
   reportDeps,
   sidecarLines,
   transitionRecord,
-  type RetroFixture,
 } from "../fixtures/retro/harness";
 
 const change = (ref: string, completedAt: string) => ({
@@ -64,9 +64,9 @@ describe("TC-RETRO-041 C-01 skipped ordinals", () => {
     const report = reportRetro(reportDeps(fixture));
     expect(report.ok).toBe(true);
     if (report.ok && "findings" in report.data) {
-      expect(
-        report.data.findings.filter((finding) => finding.kind === "truth-check").length,
-      ).toBe(2);
+      expect(report.data.findings.filter((finding) => finding.kind === "truth-check").length).toBe(
+        2,
+      );
     }
   });
 
@@ -109,9 +109,9 @@ describe("TC-RETRO-043 C-03 dangling evidence refs", () => {
     const report = reportRetro(reportDeps(fixture, { extraReferencedTraceIds: ["ev-missing"] }));
     expect(report.ok).toBe(true);
     if (!report.ok || !("findings" in report.data)) return;
-    expect(report.data.findings.some((finding) => finding.text.includes("dangling evidence ref"))).toBe(
-      true,
-    );
+    expect(
+      report.data.findings.some((finding) => finding.text.includes("dangling evidence ref")),
+    ).toBe(true);
     expect(report.data.evidenceRefs).not.toContain("ev-missing");
   });
 });
@@ -204,7 +204,9 @@ describe("TC-RETRO-046 verified-empty is explicit", () => {
     const result = collectRetro(collectDeps(fixture));
     expect(result.ok).toBe(true);
     const lines = sidecarLines(fixture)
-      .map((line) => JSON.parse(line) as { payloadSchemaId?: string; payloadRefs?: readonly string[] })
+      .map(
+        (line) => JSON.parse(line) as { payloadSchemaId?: string; payloadRefs?: readonly string[] },
+      )
       .filter((record) => record.payloadSchemaId === "delivery.retro.verified-empty.v1");
     expect(lines.length).toBeGreaterThan(0);
     expect(lines.some((record) => record.payloadRefs?.includes("source:pm-notes"))).toBe(true);

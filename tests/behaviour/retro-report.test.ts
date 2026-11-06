@@ -11,10 +11,9 @@ import {
   collectDeps,
   makeRetroDir,
   mutateContent,
-  reportDeps,
-  sidecarLines,
-  transitionRecord,
   type RetroFixture,
+  reportDeps,
+  transitionRecord,
 } from "../fixtures/retro/harness";
 
 const change = (ref: string, completedAt: string) => ({
@@ -57,12 +56,19 @@ describe("TC-RETRO-035 report data shape and provenance", () => {
     expect(report.data.level).toBe("change");
     const sidecar = fixture.sidecar.read();
     expect(sidecar.ok).toBe(true);
-    const known = sidecar.ok ? new Set(sidecar.value.records.map((record) => record.traceId)) : new Set();
+    const known = sidecar.ok
+      ? new Set(sidecar.value.records.map((record) => record.traceId))
+      : new Set();
     for (const ref of report.data.evidenceRefs) expect(known.has(ref)).toBe(true);
     for (const finding of report.data.findings) {
-      expect(["retro-note", "collector-finding", "truth-check", "tamper-flag", "malformed-entry", "verified-empty"]).toContain(
-        finding.kind,
-      );
+      expect([
+        "retro-note",
+        "collector-finding",
+        "truth-check",
+        "tamper-flag",
+        "malformed-entry",
+        "verified-empty",
+      ]).toContain(finding.kind);
       expect(finding.evidenceRefs.length).toBeGreaterThan(0);
       for (const ref of finding.evidenceRefs) {
         if (ref.startsWith("ev-")) expect(known.has(ref)).toBe(true);

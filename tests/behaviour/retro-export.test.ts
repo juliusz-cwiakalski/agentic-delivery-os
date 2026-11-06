@@ -3,11 +3,11 @@
  * truncation, refusals before any write, redaction, and zero mutation.
  */
 import { describe, expect, test } from "bun:test";
-import { exportRetroEvidence } from "../../packages/core/src/domain/retro";
 import {
   RETRO_EXPORT_MAX_LIMIT,
   RETRO_EXPORT_SCHEMA,
 } from "../../packages/core/src/contracts/index";
+import { exportRetroEvidence } from "../../packages/core/src/domain/retro";
 import {
   appendEvidence,
   exportDeps,

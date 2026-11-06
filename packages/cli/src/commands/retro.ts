@@ -8,11 +8,11 @@
  * classifies undeclared flags (`--ref`) as `fallback.invocation`.
  */
 import {
+  type BrandIdentity,
   RETRO_DEFAULT_LEVEL,
   RETRO_IMPLEMENTED_LEVELS,
   RETRO_LEVEL_NAMES,
   RETRO_LEVEL_OWNING_STORIES,
-  type BrandIdentity,
   type RetroCollectSummary,
   type RetroCommandData,
   type RetroCommandOutcome,
@@ -120,9 +120,7 @@ export const createRetroCommandDefinition = (runtime: RetroCommandRuntime): Comm
       }
       index += 1;
       if (!isDeclaredLevel(value)) {
-        return reject(
-          `unknown level "${value}"; declared levels: ${RETRO_LEVEL_NAMES.join(", ")}`,
-        );
+        return reject(`unknown level "${value}"; declared levels: ${RETRO_LEVEL_NAMES.join(", ")}`);
       }
       if (!isImplemented(value)) {
         return reject(
@@ -132,9 +130,7 @@ export const createRetroCommandDefinition = (runtime: RetroCommandRuntime): Comm
       level = value;
     }
     const outcome =
-      subcommand === "collect"
-        ? await runtime.collect({ level })
-        : await runtime.report({ level });
+      subcommand === "collect" ? await runtime.collect({ level }) : await runtime.report({ level });
     return outcomeToHandler(outcome);
   },
 });

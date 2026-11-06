@@ -20,9 +20,7 @@ describe("TC-RETRO-038 report determinism", () => {
       {
         changeRef: "GH-232",
         completedAt: "2026-11-06T12:00:00Z",
-        transitions: [
-          transitionRecord({ changeRef: "GH-232", timestamp: "2026-11-06T12:00:00Z" }),
-        ],
+        transitions: [transitionRecord({ changeRef: "GH-232", timestamp: "2026-11-06T12:00:00Z" })],
       },
     ]);
     fixture.scriptAudit(

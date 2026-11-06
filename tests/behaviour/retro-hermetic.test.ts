@@ -24,7 +24,6 @@ const FORBIDDEN = [
 ] as const;
 
 const listFiles = (relative: string): string[] => {
-  const directory = join(ROOT, relative);
   const results: string[] = [];
   const walk = (current: string): void => {
     for (const entry of readdirSync(join(ROOT, current), { withFileTypes: true })) {

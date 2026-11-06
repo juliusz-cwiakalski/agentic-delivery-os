@@ -8,12 +8,16 @@
  * clock, randomness, environment, or filesystem access lives here.
  */
 import type { AuditReadOutcome, AuditReadQuery, AuditReadResult } from "./audit.js";
-import type { PhaseTransitionRecord } from "./registry.js";
 import type { Result } from "./index.js";
+import type { PhaseTransitionRecord } from "./registry.js";
 import type {
+  StateAppendOutcome,
   StateArtifactBoundaryDeclaration,
+  StateArtifactRecord,
   StateFailureCode,
   StateJsonValue,
+  StateReadEvidence,
+  StateResult,
   StateSafeLocation,
 } from "./state.js";
 
@@ -251,10 +255,7 @@ export const RETRO_CANONICAL_FIELD_ORDER = [
 ] as const;
 
 /** The complete stored evidence field set (the chain value is appended last). */
-export const RETRO_EVIDENCE_FIELDS = [
-  ...RETRO_CANONICAL_FIELD_ORDER,
-  "chainValue",
-] as const;
+export const RETRO_EVIDENCE_FIELDS = [...RETRO_CANONICAL_FIELD_ORDER, "chainValue"] as const;
 
 /** The source payload schema identities carried by evidence records (DM-2). */
 export const RETRO_PAYLOAD_SCHEMAS = {
@@ -447,6 +448,37 @@ export type RetroRunRecord = {
   readonly counts: RetroRunCounts;
   readonly consumed: readonly RetroConsumedVerdict[];
   readonly truth: RetroTruthVerdict;
+};
+
+/** A verified registry read with entry-level malformations in band. */
+export type RetroRegistryRead = {
+  readonly verdict: "valid" | "verified-empty";
+  readonly artifacts: readonly StateArtifactRecord[];
+  readonly malformed: readonly RetroEntryMalformation[];
+  readonly evidence: StateReadEvidence;
+};
+
+/** The sidecar port the domain engine consumes (implemented in the state tier). */
+export type RetroSidecarPort = {
+  readonly evidencePath: string;
+  readonly keyPath: string;
+  readonly lockPath: string;
+  append(
+    draft: RetroEvidenceDraft,
+    options?: { readonly fenceToken?: string },
+  ): RetroResult<RetroEvidenceRecord>;
+  read(options?: { readonly reportedRemovals?: readonly number[] }): RetroResult<RetroSidecarRead>;
+  verify(options?: {
+    readonly reportedRemovals?: readonly number[];
+  }): RetroResult<RetroChainVerdict>;
+};
+
+/** The registry port the domain engine consumes (implemented in the state tier). */
+export type RetroRegistryPort = {
+  read(): RetroResult<RetroRegistryRead>;
+  runs(read: RetroRegistryRead): readonly RetroRunRecord[];
+  recordRun(run: RetroRunRecord, fenceToken: string): StateResult<StateAppendOutcome>;
+  seed(fenceToken: string): StateResult<readonly StateAppendOutcome[]>;
 };
 
 /**

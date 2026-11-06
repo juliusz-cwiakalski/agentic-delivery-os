@@ -17,9 +17,6 @@ import {
   RETRO_EVIDENCE_PAYLOAD_SCHEMA_IDS,
   RETRO_EVIDENCE_SOURCES,
   RETRO_LEVEL_NAMES,
-  retroChainKeyPath,
-  retroEvidenceLockPath,
-  retroEvidencePath,
   type RetroChainBreak,
   type RetroChainVerdict,
   type RetroClaimedIdentity,
@@ -33,6 +30,9 @@ import {
   type RetroResult,
   type RetroSidecarIo,
   type RetroSidecarRead,
+  retroChainKeyPath,
+  retroEvidenceLockPath,
+  retroEvidencePath,
   type StateFailureCode,
   type StateSafeLocation,
 } from "#contracts";
@@ -47,7 +47,9 @@ export type RetroSidecar = {
     options?: { readonly fenceToken?: string },
   ): RetroResult<RetroEvidenceRecord>;
   read(options?: { readonly reportedRemovals?: readonly number[] }): RetroResult<RetroSidecarRead>;
-  verify(options?: { readonly reportedRemovals?: readonly number[] }): RetroResult<RetroChainVerdict>;
+  verify(options?: {
+    readonly reportedRemovals?: readonly number[];
+  }): RetroResult<RetroChainVerdict>;
 };
 
 type ParsedLine =
@@ -66,7 +68,10 @@ const stateFailure = (code: StateFailureCode, location: StateSafeLocation): Retr
   error: { kind: "state", code, consequence: "not_landed", location },
 });
 
-const retroFailure = (code: RetroErrorCode, location?: RetroFailureLocation): RetroResult<never> => ({
+const retroFailure = (
+  code: RetroErrorCode,
+  location?: RetroFailureLocation,
+): RetroResult<never> => ({
   ok: false,
   error: {
     kind: "retro",
@@ -99,7 +104,8 @@ const isClaimedIdentity = (value: unknown): value is RetroClaimedIdentity =>
   isRecord(value) && value.kind === "claimed" && typeof value.value === "string";
 
 const isDeclaredSchema = (value: unknown): value is string =>
-  typeof value === "string" && (RETRO_EVIDENCE_PAYLOAD_SCHEMA_IDS as readonly string[]).includes(value);
+  typeof value === "string" &&
+  (RETRO_EVIDENCE_PAYLOAD_SCHEMA_IDS as readonly string[]).includes(value);
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
@@ -137,7 +143,9 @@ const recordWithoutChain = (
   windowStart: record.windowStart,
   windowEnd: record.windowEnd,
   collectedAt: record.collectedAt,
-  ...(record.collectorIdentity === undefined ? {} : { collectorIdentity: record.collectorIdentity }),
+  ...(record.collectorIdentity === undefined
+    ? {}
+    : { collectorIdentity: record.collectorIdentity }),
   payloadRefs: record.payloadRefs,
   payloadSchemaId: record.payloadSchemaId,
 });

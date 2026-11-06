@@ -9,11 +9,7 @@ import { appendEvidence, makeRetroDir } from "../fixtures/retro/harness";
 describe("TC-RETRO-020 clean keyed chain", () => {
   test("a clean three-record sidecar verifies with the anchor and no breaks", () => {
     const fixture = makeRetroDir("chain-clean");
-    const records = [
-      appendEvidence(fixture),
-      appendEvidence(fixture),
-      appendEvidence(fixture),
-    ];
+    const records = [appendEvidence(fixture), appendEvidence(fixture), appendEvidence(fixture)];
     const verdict = fixture.sidecar.verify();
     expect(verdict.ok).toBe(true);
     if (!verdict.ok) return;

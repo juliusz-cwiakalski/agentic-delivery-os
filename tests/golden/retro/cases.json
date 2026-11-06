@@ -16,7 +16,10 @@
       "id": "report-success",
       "scenario": "report",
       "argv": ["retro", "report", "--json"],
-      "expected": { "exitCode": 0, "dataKeys": ["evidenceRefs", "findings", "followThrough", "level"] }
+      "expected": {
+        "exitCode": 0,
+        "dataKeys": ["evidenceRefs", "findings", "followThrough", "level"]
+      }
     },
     {
       "id": "invalid-level",

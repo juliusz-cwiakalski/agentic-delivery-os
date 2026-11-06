@@ -15,7 +15,9 @@ import {
 import { createRetroSidecar } from "../../packages/core/src/state/index";
 import { makeRetroDir, NOW_MS, sidecarLines } from "../fixtures/retro/harness";
 
-const counterIo = (io: RetroSidecarIo): { io: RetroSidecarIo; reads: number[]; appends: number[] } => {
+const counterIo = (
+  io: RetroSidecarIo,
+): { io: RetroSidecarIo; reads: number[]; appends: number[] } => {
   const reads: number[] = [];
   const appends: number[] = [];
   return {

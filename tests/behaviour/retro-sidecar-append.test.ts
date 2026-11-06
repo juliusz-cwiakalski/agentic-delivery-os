@@ -32,9 +32,7 @@ describe("TC-RETRO-008 sidecar record shape", () => {
       expect(record.collectedAt).toBe(NOW_MS);
       expect(Array.isArray(record.payloadRefs)).toBe(true);
       expect(record.payloadSchemaId.length).toBeGreaterThan(0);
-      expect(record.chainValue).toMatch(
-        new RegExp(`^[0-9a-f]{${RETRO_CHAIN_VALUE_HEX_LENGTH}}$`),
-      );
+      expect(record.chainValue).toMatch(new RegExp(`^[0-9a-f]{${RETRO_CHAIN_VALUE_HEX_LENGTH}}$`));
     }
     expect(read.value.chain.verified).toBe(true);
     expect(read.value.chain.records).toBe(2);

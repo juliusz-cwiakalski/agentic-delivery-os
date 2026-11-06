@@ -16,10 +16,10 @@ import {
   mutateReorder,
   mutateTruncateReappend,
   mutateUnkeyedRecompute,
+  type RetroFixture,
   readKeyArtifact,
   sidecarLines,
   substituteKey,
-  type RetroFixture,
 } from "../fixtures/retro/harness";
 
 const seedThree = (label: string): RetroFixture => {

@@ -73,10 +73,10 @@ import {
   type MergeTransactionPorts,
   newestWaiverByGate,
   PRODUCTION_CATALOG,
+  reportRetro,
   resolveCloseoutBaseRef,
   resolveConfig,
   resolveMergeGateSet,
-  reportRetro,
   runCloseout,
   runCommitAct,
   selectPruneCandidates,
@@ -178,8 +178,11 @@ import {
   readMergeWaivers,
   readOwnerGateSlaDecisions,
   readRetroRegistry,
+  readRetroRuns,
+  recordRetroRun,
   replacePhaseProjection,
   STATE_SCHEMA_VERSION,
+  seedRetroRegistry,
 } from "@delivery-os/core/state";
 import { resolveAppErrorCode } from "./classify.js";
 import { type BoardCommandRuntime, createBoardCommandDefinition } from "./commands/board.js";
@@ -1002,7 +1005,7 @@ const trimTrailingSeparators = (path: string): string => path.replace(/[\\/]+$/u
 const stateDirectoryFor = (options: EdgeOptions): string | undefined => {
   if (options.stateDirectory !== undefined) return options.stateDirectory;
   const environment = options.environment ?? {};
-  const home = options.homeDirectory ?? environment["HOME"] ?? environment["USERPROFILE"];
+  const home = options.homeDirectory ?? environment.HOME ?? environment.USERPROFILE;
   if (home === undefined || home.length === 0) return undefined;
   return `${trimTrailingSeparators(home)}/${options.brand.stateDirectoryName}`;
 };
@@ -1839,7 +1842,12 @@ export const createDoctorCommandRuntime = (
         ok: true,
         verifiedEmpty: base.verifiedEmpty && retro.verifiedEmpty,
         recordCount: base.recordCount + retro.recordCount,
-        stores: [...(base.stores ?? []), ...(retro.stores ?? [{ name: "retro-registry", verdict: retro.verifiedEmpty ? "verified-empty" : "valid" }])],
+        stores: [
+          ...(base.stores ?? []),
+          ...(retro.stores ?? [
+            { name: "retro-registry", verdict: retro.verifiedEmpty ? "verified-empty" : "valid" },
+          ]),
+        ],
       };
     },
     nowIso: options.clock.nowIso,
@@ -2391,6 +2399,8 @@ export type RetroCompositionOptions = {
   readonly collectors?: import("@delivery-os/core/contracts").RetroCollectorRead;
   readonly readChanges?: () => readonly import("@delivery-os/core/contracts").RetroChangeFacts[];
   readonly verifyArtifact?: (artifactRef: string) => boolean;
+  /** The single redaction transform applied before evidence lands. */
+  readonly redact?: (text: string) => string;
 };
 
 const retroChangeFactsFrom = (
@@ -2518,7 +2528,12 @@ export const createRetroCommandRuntime = (
     collect: (input) =>
       collectRetro({
         sidecar,
-        store: options.store,
+        registry: {
+          read: () => readRetroRegistry(options.store),
+          runs: (read) => readRetroRuns(read),
+          recordRun: (run, token) => recordRetroRun(options.store, run, token),
+          seed: (token) => seedRetroRegistry(options.store, token),
+        },
         collectors,
         readChanges: options.readChanges ?? (() => retroChangeFactsFrom(options.store)),
         clock: { nowMs: options.clock.nowMs },
@@ -2529,15 +2544,19 @@ export const createRetroCommandRuntime = (
         ...(input.changeRef === undefined ? {} : { target: input.changeRef }),
         ...(options.identity === undefined ? {} : { identity: options.identity }),
         ...(options.context === undefined ? {} : { context: options.context }),
+        ...(options.redact === undefined ? {} : { redact: options.redact }),
       }),
     report: (input) =>
       reportRetro({
         sidecar,
-        store: options.store,
+        registry: {
+          read: () => readRetroRegistry(options.store),
+          runs: (read) => readRetroRuns(read),
+          recordRun: (run, token) => recordRetroRun(options.store, run, token),
+          seed: (token) => seedRetroRegistry(options.store, token),
+        },
         level: input.level,
-        ...(options.verifyArtifact === undefined
-          ? {}
-          : { verifyArtifact: options.verifyArtifact }),
+        ...(options.verifyArtifact === undefined ? {} : { verifyArtifact: options.verifyArtifact }),
       }),
   };
 };

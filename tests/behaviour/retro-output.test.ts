@@ -5,17 +5,17 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { recordRetroRun } from "../../packages/core/src/state/index";
 import {
   appendEvidence,
   auditOutcome,
   auditRecord,
   makeRetroDir,
   mutateContent,
+  type RetroFixture,
   runRetro,
   transitionRecord,
-  type RetroFixture,
 } from "../fixtures/retro/harness";
-import { recordRetroRun } from "../../packages/core/src/state/index";
 
 type GoldenCase = {
   readonly id: string;
@@ -30,9 +30,9 @@ type GoldenCase = {
 };
 
 const cases = (
-  JSON.parse(
-    readFileSync(join(process.cwd(), "tests/golden/retro/cases.json"), "utf8"),
-  ) as { cases: GoldenCase[] }
+  JSON.parse(readFileSync(join(process.cwd(), "tests/golden/retro/cases.json"), "utf8")) as {
+    cases: GoldenCase[];
+  }
 ).cases;
 
 const codeOf = (error: unknown): string | undefined => {
@@ -47,9 +47,7 @@ const seed = (label: string, scenario: string): RetroFixture => {
     {
       changeRef: "GH-232",
       completedAt: "2026-11-06T12:00:00Z",
-      transitions: [
-        transitionRecord({ changeRef: "GH-232", timestamp: "2026-11-06T12:00:00Z" }),
-      ],
+      transitions: [transitionRecord({ changeRef: "GH-232", timestamp: "2026-11-06T12:00:00Z" })],
     },
   ]);
   fixture.scriptAudit(auditOutcome({ records: [auditRecord()] }));
@@ -98,7 +96,9 @@ describe("TC-RETRO-063 envelope and exit matrix", () => {
     for (const golden of cases) {
       const fixture = seed(`output-${golden.id}`, golden.scenario);
       const result = await runRetro(golden.argv, fixture, {
-        ...(golden.scenario === "denied" ? { collect: { context: "delivery-agent" as const } } : {}),
+        ...(golden.scenario === "denied"
+          ? { collect: { context: "delivery-agent" as const } }
+          : {}),
       });
       expect(result.exitCode, golden.id).toBe(golden.expected.exitCode);
       const parsed = JSON.parse(result.stdout) as Record<string, unknown>;

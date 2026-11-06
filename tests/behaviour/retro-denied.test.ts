@@ -4,10 +4,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { ERROR_TABLE, type ErrorTableEntry } from "../../packages/core/src/contracts/index";
-import {
-  attemptOutOfSeamEvidenceWrite,
-  collectRetro,
-} from "../../packages/core/src/domain/retro";
+import { attemptOutOfSeamEvidenceWrite, collectRetro } from "../../packages/core/src/domain/retro";
 import {
   auditOutcome,
   auditRecord,
@@ -76,9 +73,7 @@ describe("TC-RETRO-054 claimed collector identity", () => {
   test("a present identity is recorded verbatim with the claimed marker", () => {
     const fixture = seed("identity-present");
     expect(
-      collectRetro(
-        collectDeps(fixture, { identity: { kind: "claimed", value: "qa-lane-7" } }),
-      ).ok,
+      collectRetro(collectDeps(fixture, { identity: { kind: "claimed", value: "qa-lane-7" } })).ok,
     ).toBe(true);
     const identities = sidecarLines(fixture)
       .map((line) => JSON.parse(line) as { collectorIdentity?: unknown })
