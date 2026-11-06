@@ -27,10 +27,14 @@ other name literal.
 | RD-5 | Run the forbidden-literal test. | `bun run scripts/checks/forbidden-literals.ts` |
 | RD-6 | Build the binary. | `pnpm build` |
 | RD-7 | Run the package publish dry-run. | `pnpm -r publish --dry-run --no-git-checks` |
-| RD-8 | Capture the MCP tool-list snapshot from the built runtime and compare it with the frozen snapshot. | MCP tool-list snapshot diff |
+| RD-8 | Compare the frozen MCP tool-list snapshot with the branding projection: the committed fixture stays unchanged, and a second brand changes only the served-name prefix while catalog order, descriptions, and schemas stay fixed. | `bun test tests/structure/mcp-contract.test.ts`; regenerate only with `bun run tests/fixtures/mcp/regenerate.ts --write` and review the fixture diff |
 | RD-9 | Capture the OpenCode tool-list snapshot from the host integration and compare it with the frozen snapshot. | OpenCode tool-list snapshot diff |
 | RD-10 | Assert rename survival: the root `.gitignore` still matches the renamed project-local config path, and every root workspace file is name-free or derived from branding. | `git check-ignore -q "$CONFIG_DIR/config.local.yaml"` plus a review of the root workspace files |
 | RD-11 | Record the run and its result in the change that triggers the drill. | Execution obligation |
+
+## MCP tool-list snapshot (RD-8)
+
+The frozen artifact is `tests/fixtures/mcp/tool-list.snapshot.json`. It is the canonical-JSON projection of the three tool descriptors under the fixed synthetic test brand, in catalog order: each descriptor carries the served name (`mcpToolPrefix` plus the canonical tool ID), the static description, and the closed input schema. `tests/structure/mcp-contract.test.ts` owns the comparison, asserts that the fixture's mtime is unchanged, and proves a second brand changes only the prefix while canonical IDs, order, descriptions, and schemas stay fixed. `tests/fixtures/mcp/regenerate.ts --write` is its only writer. A branding change must leave the frozen fixture unchanged; a diff is a failed drill.
 
 ## Rename-survival assertions (RD-10)
 

@@ -8,8 +8,8 @@ area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-226", "GH-227", "GH-228", "GH-229", "GH-223"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, adapter-port, provider-client-seed, status-digest, queue-readiness, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, and brief-render terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-226", "GH-227", "GH-228", "GH-229", "GH-223", "GH-231"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, adapter-port, provider-client-seed, status-digest, queue-readiness, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, and MCP-surface terms used across the repository."
 ---
 
 # Glossary
@@ -276,6 +276,10 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Per-check isolation | The containment boundary around each doctor check: a throw, rejection, or malformed result becomes that check's `unreachable` verdict and never crashes, aborts, or escapes the run. | Doctor | [feature-doctor.md](../spec/features/feature-doctor.md) |
 | Wiring-neutral park | An active provider park whose cause is capacity, environment, or loop-cap; doctor reports it in detail with cause, expiry, and a `provider quota` directive but never flips the verdict. | Doctor | [feature-doctor.md](../spec/features/feature-doctor.md) |
 | Failure summary | The deterministic one-line `doctor.check.failed` summary naming every failing check with its verdict and fix hint in fixed area order. | Doctor | [feature-doctor.md](../spec/features/feature-doctor.md) |
+| MCP surface | The local, read-only tool interface in `packages/mcp`: one Node-hosted stdio JSON-RPC 2.0 server with exactly three branding-projected tools. It is a surface over proven engines, not a second engine or a second result contract. | MCP | [feature-mcp-surface.md](../spec/features/feature-mcp-surface.md) |
+| Canonical tool ID | The stable, brand-neutral identity of an MCP tool (`status`, `verify-artifact`, `gate-report`). The served name is the branding `mcpToolPrefix` plus this ID. | MCP | [feature-mcp-surface.md](../spec/features/feature-mcp-surface.md) |
+| Mirror parity | The rule that an MCP tool returns the same engine `data` shape on success and the same stable error identity and field set on failure as the CLI for the same inputs. Drift requires a recorded reason. | MCP | [feature-mcp-surface.md](../spec/features/feature-mcp-surface.md) |
+| Lifecycle exit | The MCP serve process's transport outcome code: `0` clean stop, `1` configuration error, `2` transport fault. Tool outcomes never select a lifecycle exit. | MCP | [feature-mcp-surface.md](../spec/features/feature-mcp-surface.md) |
 
 ## Acronyms
 
@@ -312,6 +316,7 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Queue Ready](../spec/features/feature-queue-ready.md)
 - [Owner-Gate SLA](../spec/features/feature-owner-gate-sla.md)
 - [Doctor](../spec/features/feature-doctor.md)
+- [MCP Surface](../spec/features/feature-mcp-surface.md)
 - [PM-Notes Lint and Phase Transitions](../spec/features/feature-pm-notes-lint-and-phase-transitions.md)
 - [Commit Primitive](../spec/features/feature-commit-primitive.md)
 - [Verify Change and Exit Taxonomy](../spec/features/feature-verify-change-and-exit-taxonomy.md)
