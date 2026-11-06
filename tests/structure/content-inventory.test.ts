@@ -817,6 +817,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "jiraNormalizationContext",
   ],
   "adapters/src/github/capabilities.ts": ["GITHUB_ADAPTER_CONTRACT"],
+  "mcp/src/commands/catalog.ts": ["CANONICAL_TOOL_IDS", "describeTools", "toolIdByName"],
+  "mcp/src/commands/gate-report.ts": ["runGateReportTool"],
+  "mcp/src/commands/status.ts": ["runStatusTool"],
+  "mcp/src/commands/toolset.ts": ["createToolset"],
+  "mcp/src/commands/verify-artifact.ts": ["runVerifyArtifactTool"],
+  "mcp/src/output/payload.ts": ["failureFromValue", "inputRejection"],
   "adapters/src/github/client.ts": ["createGitHubClient"],
   "adapters/src/github/index.ts": ["createGitHubClient", "GITHUB_ADAPTER_CONTRACT"],
   "adapters/src/github/normalize.ts": [
