@@ -1,0 +1,142 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-doctor-fixture",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 4
+  },
+  "data": {
+    "schemaVersion": "delivery.doctor.v1",
+    "generatedAt": "2026-11-18T10:20:00Z",
+    "repository": {
+      "state": "observed",
+      "host": "github.com",
+      "owner": "example-owner",
+      "name": "example-repo"
+    },
+    "checks": [
+      {
+        "area": "repo",
+        "verdict": "ok",
+        "detail": "clean work tree on feat/GH-224/doctor-v1 at 1111111",
+        "evidence": {
+          "sources": [
+            {
+              "source": "checkout",
+              "outcome": "read"
+            },
+            {
+              "source": "remote-binding",
+              "outcome": "read"
+            }
+          ],
+          "reasons": [
+            "observed"
+          ]
+        }
+      },
+      {
+        "area": "tracker",
+        "verdict": "ok",
+        "detail": "tracker read succeeded (3 items)",
+        "evidence": {
+          "sources": [
+            {
+              "source": "remote-binding",
+              "outcome": "read"
+            },
+            {
+              "source": "credential",
+              "outcome": "read"
+            },
+            {
+              "source": "tracker-read",
+              "outcome": "read"
+            }
+          ],
+          "reasons": [
+            "observed"
+          ]
+        }
+      },
+      {
+        "area": "provider",
+        "verdict": "ok",
+        "detail": "provider chain and credentials resolve; no active park",
+        "evidence": {
+          "sources": [
+            {
+              "source": "provider-config",
+              "outcome": "read"
+            },
+            {
+              "source": "provider-credential",
+              "outcome": "read"
+            },
+            {
+              "source": "provider-parks",
+              "outcome": "read"
+            },
+            {
+              "source": "provider-announcements",
+              "outcome": "observed-empty"
+            }
+          ],
+          "reasons": [
+            "observed"
+          ]
+        }
+      },
+      {
+        "area": "state",
+        "verdict": "ok",
+        "detail": "state stores verified (4 records)",
+        "evidence": {
+          "sources": [
+            {
+              "source": "state-stores",
+              "outcome": "read"
+            }
+          ],
+          "reasons": [
+            "observed"
+          ]
+        }
+      },
+      {
+        "area": "ci",
+        "verdict": "ok",
+        "detail": "CI read succeeded (2 check runs)",
+        "evidence": {
+          "sources": [
+            {
+              "source": "remote-binding",
+              "outcome": "read"
+            },
+            {
+              "source": "credential",
+              "outcome": "read"
+            },
+            {
+              "source": "commit",
+              "outcome": "read"
+            },
+            {
+              "source": "ci-read",
+              "outcome": "read"
+            }
+          ],
+          "reasons": [
+            "observed"
+          ]
+        }
+      }
+    ],
+    "summary": {
+      "total": 5,
+      "ok": 5,
+      "fail": 0,
+      "unreachable": 0
+    }
+  }
+}

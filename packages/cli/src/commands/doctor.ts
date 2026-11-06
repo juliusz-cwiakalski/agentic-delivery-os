@@ -133,11 +133,12 @@ export const createDoctorCommandDefinition = (
     const config = await readProviderConfig();
     const credentials: DoctorProviderCredentialPresence[] = [];
     if (config.ok) {
-      for (const entry of Object.values(config.config.entries).sort((left, right) =>
+      const { entries, credentials: declaredCredentials } = config.config;
+      for (const entry of Object.values(entries).sort((left, right) =>
         left.name.localeCompare(right.name),
       )) {
         if (!entry.enabled || entry.quota === undefined) continue;
-        const declared = config.config.credentials[entry.quota.credentialRef];
+        const declared = declaredCredentials[entry.quota.credentialRef];
         if (declared === undefined) continue;
         const reference: CredentialReference = {
           referenceName: entry.quota.credentialRef,

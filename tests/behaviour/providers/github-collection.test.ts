@@ -256,3 +256,78 @@ describe("GH-178 collection 404 absence", () => {
     expect(transport.requests).toHaveLength(1);
   });
 });
+
+const TRAP_CATALOG = "tests/fixtures/providers/traps/github.traps.json";
+const READ_FAILURE_FIXTURE = "tests/fixtures/providers/github/read-failure-statuses.json";
+
+describe("TC-DOCTOR-031 GH-PAYLOAD-HTTP-STATUS trap coverage", () => {
+  const catalog = readJson(TRAP_CATALOG) as {
+    readonly entries: readonly Record<string, unknown>[];
+  };
+
+  test("exactly one four-field entry points at the committed read-failure fixture", () => {
+    const matches = catalog.entries.filter((entry) => entry.trapName === "GH-PAYLOAD-HTTP-STATUS");
+    expect(matches).toHaveLength(1);
+    const entry = matches[0];
+    if (entry === undefined) throw new Error("trap entry missing");
+    expect(Object.keys(entry).sort()).toEqual([
+      "expectedNormalizedOutcome",
+      "fixtureReference",
+      "providerBehavior",
+      "trapName",
+    ]);
+    expect(entry.fixtureReference).toBe(READ_FAILURE_FIXTURE);
+    expect(String(entry.providerBehavior).length).toBeGreaterThan(0);
+    expect(String(entry.expectedNormalizedOutcome)).toContain("httpStatus");
+  });
+
+  test("the fixture carries the 401/403/404/500/503, timeout, transport, and absent shapes", () => {
+    const fixture = readJson(READ_FAILURE_FIXTURE) as {
+      readonly responses: Record<string, { readonly status: number | null }>;
+    };
+    expect(Object.keys(fixture.responses).sort()).toEqual([
+      "401",
+      "403",
+      "404",
+      "500",
+      "503",
+      "absent",
+      "timeout",
+      "transport",
+    ]);
+    for (const key of ["401", "403", "404", "500", "503"]) {
+      expect(fixture.responses[key]?.status).toBe(Number(key));
+    }
+    expect(fixture.responses.timeout?.status).toBeNull();
+    expect(fixture.responses.transport?.status).toBeNull();
+  });
+
+  test("the read slice supplies the structured status and keeps the closed operation set", async () => {
+    const statuses: Array<[number, string]> = [
+      [401, "provider.payload.invalid"],
+      [403, "provider.payload.invalid"],
+      [500, "provider.payload.invalid"],
+      [503, "provider.payload.invalid"],
+      [404, "provider.not-found"],
+    ];
+    for (const [status, identity] of statuses) {
+      const transport = createFixtureTransport([{ url: issuesUrl(50), body: {}, status }]);
+      const client = createGitHubClient({ instance, credentials, repository, transport });
+      const result = await client.listWorkItems(50);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.code).toBe(identity);
+        expect((result as { readonly httpStatus?: number }).httpStatus).toBe(status);
+      }
+      expect(transport.requests).toHaveLength(1);
+      expect(transport.requests[0]?.method).toBe("GET");
+    }
+    const { ADAPTER_OPERATIONS } = await import("../../../packages/core/src/contracts/index");
+    const { GITHUB_ADAPTER_CONTRACT } = await import("../../../packages/adapters/src/github/index");
+    expect(ADAPTER_OPERATIONS).toHaveLength(8);
+    expect(ADAPTER_OPERATIONS).not.toContain("doctor-read");
+    expect(GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations).not.toContain(
+      "doctor-read" as never,
+    );
+  });
+});
