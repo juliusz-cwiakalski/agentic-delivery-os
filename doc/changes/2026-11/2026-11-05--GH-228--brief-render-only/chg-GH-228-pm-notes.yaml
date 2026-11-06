@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   delivery: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T12:00:00Z" }
   system_spec_update: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
-  review_fix: { started: "2026-11-06T12:00:00Z", completed: null }
+  review_fix: { started: "2026-11-06T12:00:00Z", completed: "2026-11-06T12:00:00Z" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -93,6 +93,12 @@ notes: # { text, type, date } — type: info|decision|blocker|risk|question|reso
     date: "2026-11-06"
   - text: "Review remediation complete (commit 7595be05): R-1 done (file:// source-mutation loader ported from closeout precedent; 11 real source mutations of domain/brief.ts, each proven fires(clean)=false and fires(mutant)=true with failure naming case/AC/intended suite); R-2 done (all string tautologies removed; 6 out-of-domain guards cross-referenced to live seeded controls with dangling-reference assertion); R-3 done (plan Phase 8 boxes ticked); R-4 done (canary in renderable approved entityId, asserted pre-redaction in payload+human line, zero occurrences post-redaction); R-5 done (battery green 2945 pass/4 skip/0 fail; §10 refreshed; 641→564 byte figure fixed). D-TC021 superseded. Doc re-sync: feature-brief.md non-vacuity row reconciled to delivered mechanics; guards green; no current-truth gaps. Out-of-scope note: test-plan §5.2 TC-BRIEF-019 precondition wording still describes old canary placement — cosmetic, flagged for reviewer."
     type: "resolved"
+    date: "2026-11-06"
+  - text: "Review iteration 2: PASS (code-review/review-iter-2.yaml), 0 blocking findings, 2 info notes. Remediation verified adversarially: file:// source-mutation loader ports the GH-183 pattern verbatim (temp copies deleted in finally, byte-identity hygiene check confirms no leftovers); 11 one-guard mutations of domain/brief.ts are live (needle drift throws); clean module resists all prohibited observables; each mutant fires naming case/AC/intended suite; fires encodes the named suite's own assertion; 6 cross-referenced seeded controls asserted present. N-1/N-2/N-5 resolved; N-3/N-4 deferred as classified; TC-BRIEF-019 precondition wording is a non-blocking note (binding oracle satisfied more strongly than planned). Aggregate gate evidence: reviewer ran first-party solo battery — 2945 pass / 4 skip / 0 fail at HEAD 7964d561 (266/0 brief battery reproduces §10); a transient 2944/4/1 was adjudicated as self-interference between concurrent git-using runs in one checkout."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Retro: the reviewer session returned its final message while an orphaned background battery was still running, so the verdict artifact was never written and required a follow-up nudge; the same concurrent runs switched branches in one checkout and produced a transient false test failure. Lessons: delegates must not wait on background jobs past session end (finalize with completed evidence or run gates in the foreground); and gates that use git or a shared checkout must run strictly sequentially in this environment."
+    type: "retro"
     date: "2026-11-06"
   - text: "Retro: the accepted D-TC021 deviation claimed file:// source mutation was impossible; the reviewer refuted it empirically against an existing repo precedent (closeout-mutants loader) in one probe. Lesson: when a delegate claims a bound approach is technically impossible, require the claim to be checked against repo precedent (grep for an existing implementation) before accepting the deviation — the accepted-alternative must meet the same guarantee, not a weaker one."
     type: "retro"
