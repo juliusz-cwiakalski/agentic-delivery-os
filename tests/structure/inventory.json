@@ -9,6 +9,7 @@
     "src/config/resolver.ts",
     "src/config/schema.ts",
     "src/contracts/adapter-capabilities.ts",
+    "src/contracts/audit.ts",
     "src/contracts/brief.ts",
     "src/contracts/closeout.ts",
     "src/contracts/config.ts",
@@ -30,8 +31,8 @@
     "src/contracts/status.ts",
     "src/contracts/verify-gates.ts",
     "src/contracts/watchdog.ts",
-    "src/domain/ci-result.ts",
     "src/domain/brief.ts",
+    "src/domain/ci-result.ts",
     "src/domain/closeout.ts",
     "src/domain/index.ts",
     "src/domain/owner-gate-sla.ts",
@@ -134,8 +135,16 @@
     "src/output/serialize.ts",
     "src/projection.ts"
   ],
-  "mcp": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
-  "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "mcp": [
+    "src/commands/index.ts",
+    "src/index.ts",
+    "src/output/index.ts"
+  ],
+  "opencode": [
+    "src/commands/index.ts",
+    "src/index.ts",
+    "src/output/index.ts"
+  ],
   "testkit": [
     "src/conformance/adapters.ts",
     "src/conformance/artifact.ts",

@@ -576,6 +576,47 @@ export {
   type SessionSummary,
   type SizeData,
 } from "./session.js";
+// The command audit-ledger vocabulary (GH-223 F-1..F-6, DM-1..DM-6): record
+// kinds, payload schemas, the store-scoped key, field sets, outcome classes,
+// the claimed-identity marker, and the chaining-key artifact naming rule.
+export {
+  AUDIT_ATTRIBUTION_KINDS,
+  AUDIT_BOUNDARY_DECLARATION,
+  AUDIT_CHAIN_ANCHOR,
+  AUDIT_CHAIN_KEY_ARTIFACT_PREFIX,
+  AUDIT_CHAIN_KEY_ARTIFACT_SUFFIX,
+  AUDIT_CHAIN_KEY_BYTES,
+  AUDIT_CHAIN_KEY_PAYLOAD_SCHEMA,
+  AUDIT_CHAIN_VALUE_HEX_LENGTH,
+  AUDIT_IDENTITY_VARIABLE_SUFFIX,
+  AUDIT_INVOCATION_FIELDS,
+  AUDIT_INVOCATION_PAYLOAD_SCHEMA,
+  AUDIT_INVOCATION_RECORD_KIND,
+  AUDIT_OUTCOME_CLASSES,
+  AUDIT_RECORD_KEY,
+  AUDIT_RECORD_KEY_PREFIX,
+  AUDIT_RESERVATION_FIELDS,
+  AUDIT_RESERVATION_PAYLOAD_SCHEMA,
+  AUDIT_RESERVATION_RECORD_KIND,
+  type AuditAgentIdentity,
+  type AuditAttributionKind,
+  type AuditChainBreak,
+  type AuditChainVerdict,
+  type AuditInvocationFacts,
+  type AuditInvocationRecord,
+  type AuditOutcomeClass,
+  type AuditReadFailure,
+  type AuditReadOutcome,
+  type AuditReadQuery,
+  type AuditReadRefusal,
+  type AuditReadResult,
+  type AuditReservationOrphanFinding,
+  type AuditReservationRecord,
+  auditChainKeyArtifactName,
+  auditIdentityVariableName,
+  isAuditRecordKind,
+} from "./audit.js";
+
 // The state layer's driver-neutral store vocabulary (GH-174 D1, DM-1..DM-5;
 // GH-222 adds salvage and artifact-boundary declarations).
 // Runtime-neutral: types and the single `as const` schema-version home only.
