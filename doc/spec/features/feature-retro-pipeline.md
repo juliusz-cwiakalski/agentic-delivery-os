@@ -23,7 +23,7 @@ links:
 
 The retro evidence pipeline turns on-demand retrospectives into a mechanical fold over collector-truth evidence. Its command surface is exactly `retro collect [--level <name>]` and `retro report [--level <name>] [--json]`; an omitted level defaults to `change`. Collection reads delivered GET-only sources, appends each collected item to an independent evidence sidecar, runs the pipeline-truth checks, and records the run in the retro registry. Reporting folds verified evidence and registry run records into the level report `{level, findings[], followThrough[], evidenceRefs[]}`. Both paths are deterministic and perform zero model calls.
 
-Evidence lives in an **independent evidence sidecar**: an append-only JSONL artifact family in the state directory, structurally outside the delivery state store's ledger. Only the collector write seam appends, each append holding one collector fence across its verified pre-append read, link computation, and write. Every record carries a collector-assigned `ev-` trace id, the level, the source, explicit collection-window bounds, the injected-clock collection timestamp, an optional claimed collector identity, payload references, the payload schema id, and a keyed chain link. There is no update, delete, reorder, or compaction path.
+Evidence lives in an **independent evidence sidecar**: an append-only JSONL artifact family in the state directory, structurally outside the delivery state store's ledger. Only the collector write seam appends; each write — a single-record append or one run-level batch — holds one collector fence across its verified pre-append read, link computation, and write. Every record carries a collector-assigned `ev-` trace id, the level, the source, explicit collection-window bounds, the injected-clock collection timestamp, an optional claimed collector identity, payload references, the payload schema id, and a keyed chain link. There is no update, delete, reorder, or compaction path.
 
 The chain is a distinct keyed construction from the cryptographic keyed-hash family: HMAC-SHA-256 over the sidecar chaining key, the previous link (or the chain anchor), and canonically ordered record content. The 32-byte key is generated once at the runtime edge and persisted as `chain-key.retro.<workspace>.json`, `0600`, with its own bytes separate from the audit ledger's chain key. Every later process reads the same artifact, so verification spans processes without false breaks. A recomputed link that diverges from the stored link is a chain break naming the record position and trace id; altered records are never served as verified findings.
 
@@ -81,11 +81,11 @@ One collection invocation covers one level and one target scope. The collectors 
 | `pm-notes` | The target change's typed `retro` notes | One record per note |
 | `memory-audit` | Recorded through the separate memory-audit seam, not the default collect fold | One record per recorded outcome reference |
 
-For every source, an empty fold appends an explicit `delivery.retro.verified-empty.v1` record naming the check that produced the verdict, so verified-empty is evidence rather than silence. The audit-ledger fold additionally carries skipped-ordinal findings and the chain verdict verbatim; neither is dropped.
+For every source, an empty fold appends an explicit `delivery.retro.verified-empty.v1` record naming the check that produced the verdict, so verified-empty is evidence rather than silence. The audit-ledger fold additionally carries skipped-ordinal findings and the chain verdict verbatim; neither is dropped. A consumed audit-read failure classifies through the delivered failure taxonomy: an input failure becomes `input.value.rejected`, a state failure keeps its delivered state code, and a state code outside the delivered state failure vocabulary classifies as `state.store.unknown` with `not_landed` rather than passing through unvalidated.
 
 Target selection implements the `change` level: among changes whose last phase transition is a completed `pr_creation`, the most recent completion not already collected at the level is selected, ordered by completion descending and then change ref ascending. Re-collecting an already-collected scope is not selected again; a caller-supplied target that is not completed refuses `input.value.rejected`. The run id, trace ids, and fence tokens are injected factories.
 
-Each appended record carries the target run id as a `run:<runId>` payload ref. The collection then appends one validated `retro.run` registry record with `mode: "collect"`, the target scope, counts (`collected`, `malformed`, `skippedSource`), the consumed sources' verdicts, and the pipeline-truth verdict. Evidence is appended before the run record, and the run record is written even when a blocking truth check later fails.
+Each appended record carries the target run id as a `run:<runId>` payload ref. All evidence drafts for the run land in one fenced batch — one verified read and one append — after which the collection appends one validated `retro.run` registry record with `mode: "collect"`, the target scope, counts (`collected`, `malformed`, `skippedSource`), the consumed sources' verdicts, and the pipeline-truth verdict. Evidence is appended before the run record, and the run record is written even when a blocking truth check later fails.
 
 The collector identity is an injected claimed identity: when present it is recorded as `{ kind: "claimed", value }` without trimming and passes the redaction chokepoint. It is attribution only, never verified and never an authorization input. The CLI composition does not infer it from user, host, or session signals.
 
@@ -108,7 +108,7 @@ The sidecar is the artifact family `retro-evidence.<workspace>.jsonl` in the sta
 
 The declared payload schemas are `delivery.retro.evidence.v1`, `delivery.audit.invocation.v1`, and the retro source schemas `delivery.retro.phase-transition.v1`, `delivery.retro.closeout-outcome.v1`, `delivery.retro.commit-telemetry.v1`, `delivery.retro.retro-note.v1`, `delivery.retro.finding.v1`, `delivery.retro.verified-empty.v1`, `delivery.retro.audit-orphan.v1`, `delivery.retro.audit-chain.v1`, `delivery.retro.follow-through.v1`, and `delivery.retro.memory-audit.v1`.
 
-Appends are serialized by one collector fence file, `retro-evidence.<workspace>.lock`. Each append acquires the fence, performs a verified read of the current sidecar, refuses a malformed entry or a broken chain, refuses a duplicate trace id, ensures the chaining key exists, computes the link, appends one LF-terminated JSON line, applies `0600`, and releases the fence. A busy fence is `state.lock.busy`; a write failure is `state.write.failed`; a permission violation is `state.permission.denied`. Retention is forever.
+Appends are serialized by one collector fence file, `retro-evidence.<workspace>.lock`. A single-record append acquires the fence, performs a verified read of the current sidecar, refuses a malformed entry or a broken chain, refuses a duplicate trace id, ensures the chaining key exists, computes the link, appends one LF-terminated JSON line, applies `0600`, and releases the fence. `appendBatch` applies the same admission once for a run's drafts: one fence acquisition, one verified read, duplicate checks across both stored and batch trace ids, all link computations in memory, and one append that writes every record line. Collection uses the batch path; single-record append remains for other callers. A busy fence is `state.lock.busy`; a write failure is `state.write.failed`; a permission violation is `state.permission.denied`. Retention is forever.
 
 ### Keyed chain and key artifact
 
@@ -155,7 +155,7 @@ The successful `data` is exactly four keys:
 
 The report shape's schema identity `delivery.retro.report.v1` is a declared contract constant, not an in-data field.
 
-Finding kinds come from the closed vocabulary `retro-note`, `collector-finding`, `truth-check`, `tamper-flag`, `malformed-entry`, and `verified-empty`. The delivered fold emits `retro-note` from pm-notes records and `truth-check` from recorded truth-check findings; a recorded finding whose kind is in the closed vocabulary folds through with its evidence refs. A dangling referenced trace id is rendered as a `truth-check` finding and never enters `evidenceRefs`.
+Finding kinds come from the closed vocabulary `retro-note`, `collector-finding`, `truth-check`, `tamper-flag`, `malformed-entry`, and `verified-empty`. The delivered fold emits `retro-note` from pm-notes records and `truth-check` from recorded truth-check findings; a recorded finding whose kind is in the closed vocabulary folds through with its evidence refs. Every folded finding's evidence refs are validated on the production fold against the known sidecar trace-id set, including consumer-supplied refs; a dangling referenced trace id is rendered as a `truth-check` finding and never enters `evidenceRefs`.
 
 Follow-through verdicts are `verified` when the optional artifact verifier accepts the reference, `unverified` when an artifact reference is present but not verified, and `unknown` when no artifact reference exists. Entries fold only when a follow-through reader is injected; they are never invented, and an empty fold is an explicit empty array.
 
@@ -199,7 +199,7 @@ The retro registry is a validated boundary over the public state port with exact
 
 The boundary validates kind, payload schema, identity, required fields, and closed vocabularies; a nonconforming write refuses `state.store.unknown` with `not_landed`. Reads classify valid versus verified-empty and report entry-level malformations in band; torn and unknown stores propagate their state identities.
 
-Collection seeds the registry additively and idempotently by identity: the six level records and the `memory-audit` trigger are written only when absent, under one fence. Re-seeding appends nothing already present.
+Collection seeds the registry additively and idempotently by identity: the six level records and the `memory-audit` trigger are written only when absent, under one fence. Re-seeding appends nothing already present. Registry appends and seeds acquire fences under the declared `retro-registry` fence namespace.
 
 | Level | Name | Scope kind | Trigger | Status |
 |---|---|---|---|---|
@@ -233,7 +233,7 @@ The serialized bundle passes the redaction chokepoint. The export never mutates 
 
 ### Doctor visibility
 
-The doctor `state` check reads the retro registry through the same verified boundary (when the retro read is composed) and contributes a `retro-registry` store verdict to the state-stores evidence. A verified-empty registry counts as verified-empty; a valid registry contributes its record count; a torn or unknown registry fails the check with its classified reason; a malformed registry entry classifies as `store-unknown`. The check acquires no fence, writes nothing, and never repairs or salvages.
+The doctor `state` check reads the retro registry through the same verified boundary (when the retro read is composed) and contributes a `retro-registry` store verdict to the state-stores evidence. A verified-empty registry counts as verified-empty; a valid registry reports `valid`, and because the registry shares the delivery ledger its artifacts are already included in the shared record count rather than summed again; a torn or unknown registry fails the check with its classified reason; a malformed registry entry classifies as `store-unknown`. The check acquires no fence, writes nothing, and never repairs or salvages.
 
 ## Technical Architecture & Codebase Map
 
@@ -285,7 +285,7 @@ function attemptOutOfSeamEvidenceWrite(): { readonly ok: false; readonly error: 
 
 ### API and interface contracts
 
-- `RetroSidecarPort` exposes `append(draft, { fenceToken? })`, `read({ reportedRemovals? })`, and `verify({ reportedRemovals? })`; it exposes no update, delete, reorder, or compaction member.
+- `RetroSidecarPort` exposes `append(draft, { fenceToken? })`, `appendBatch(drafts, { fenceToken? })`, `read({ reportedRemovals? })`, and `verify({ reportedRemovals? })`; it exposes no update, delete, reorder, or compaction member.
 - `RetroRegistryPort` exposes `read()`, `runs(read)`, `recordRun(run, fenceToken)`, and `seed(fenceToken)`.
 - `RetroCollectorRead` is injected: `readAuditLedger(query)`, `readStateFamilies(changeRef)`, and `readNotes(changeRef)`. The composition supplies the delivered implementations; tests inject deterministic fakes.
 - `RetroCommandRuntime` exposes `collect({ level, changeRef? })` and `report({ level })`; the CLI command definition consumes it and returns `data` or a classified `error` with an optional partial string.
@@ -331,12 +331,12 @@ The pipeline is exercised through automated `bun:test` suites and the two invari
 | Level | Suites | Scope |
 |---|---|---|
 | Behaviour — collection and selection | `retro-collect`, `retro-levels` | Target selection and ordering, no-target success, omitted-level default, declared-only refusals with owning-story hints, the locked surface, GET-only bounded reads, and additive run records. |
-| Behaviour — sidecar and chain | `retro-sidecar-append`, `retro-chain`, `retro-chain-mutations`, `retro-chain-salvage`, `retro-chain-cross-process`, `retro-key-artifact`, `retro-malformed` | Append shape and permissions, clean and mutated chain verification, salvage continuity, cross-process key continuity, key open failures, and entry-level malformation preservation. |
+| Behaviour — sidecar and chain | `retro-sidecar-append`, `retro-chain`, `retro-chain-mutations`, `retro-chain-salvage`, `retro-chain-cross-process`, `retro-key-artifact`, `retro-malformed` | Single and batched append shape, one-read/one-append batch counts, permissions, clean and mutated chain verification, salvage continuity, cross-process key continuity, key open failures, and entry-level malformation preservation. |
 | Behaviour — truth checks | `retro-truth-checks` | Each of the five checks with a negative fixture, blocking identities, verified-empty explicitness, and the no-target versus zero-collector distinction. |
 | Behaviour — report and export | `retro-report`, `retro-export` | Four-key data shape, provenance, follow-through verdicts, dangling refs, null retro, scope selection, tamper refusal, limit bounds, truncation, and write refusal. |
 | Behaviour — envelope and exit | `retro-output` | The golden exit/envelope matrix, `data` XOR `error`, one-line scripted output, and human partial output before the diagnostic. |
 | Behaviour — denied and memory audit | `retro-denied`, `retro-memory-audit` | Out-of-seam and delivery-agent refusals, memory-audit evidence recording, and trigger identity. |
-| Performance | `retro-performance` | Bounded collect/report/export over the declared 10,000-record ceiling. |
+| Performance | `retro-performance` | One verified sidecar read and one batched append per collection run at 10 and 10,000 records, plus bounded collect/report/export over the declared 10,000-record ceiling. |
 | Structure and contract | `tests/structure/retro-*`, `tests/checks/*` | Vocabulary constants, boundary declaration, imports, no export command, render-path purity, key containment, and error-table sync. |
 | Doctor integration | `doctor-state` | The `retro-registry` verdict composition and its ok/verified-empty/torn/unknown cases. |
 
@@ -358,7 +358,7 @@ Retention follows the state layer: forever. The sidecar grows one record per col
 
 ### Cost
 
-The pipeline adds no network, provider, or telemetry cost. The recurring cost is local storage, one fenced append per evidence record, and the deterministic fold. Collection is human- and agent-scale; the bounded reads cap the work.
+The pipeline adds no network, provider, or telemetry cost. The recurring cost is local storage, one fenced batch append per collection run (one write for all its evidence drafts), and the deterministic fold. Collection is human- and agent-scale; the bounded reads cap the work.
 
 ## Dependencies & Risks
 
