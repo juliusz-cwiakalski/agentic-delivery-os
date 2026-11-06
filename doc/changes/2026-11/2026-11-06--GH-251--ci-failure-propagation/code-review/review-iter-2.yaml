@@ -1,0 +1,47 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-251
+branch: fix/GH-251/ci-failure-propagation
+status: PASS
+summary: >-
+  Re-review after remediation iteration 1 (commits b0cca404, 687e0a03,
+  d632de86, d46f2c3a). All four iteration-1 findings are verified fixed at
+  their original reproduction sites, empirically: F-1 — the runner now captures
+  find's exit status via command substitution and exits 1 with "suite discovery
+  failed" on the exact chmod-000 probe that previously yielded a false green;
+  the empty-output guard preserves zero-suite success (exit 0, explicit
+  summary); TC-CIPROP-006b pins the property in every non-root CI run, so a
+  silent regression to the process-substitution shape is no longer possible.
+  F-2 — the text-to-image fallback test is test-only, asserts the actual
+  key=value contract via exact equality, and exercises the branch through an
+  awk-only PATH subshell that cannot resolve yq; 105/105 in both yq-present and
+  CI-like yq-absent PATH variants. F-3 — fixtures F/G pin the two DEC-7 boundary
+  edges (comment above next job key; Install-jq run body) as documented
+  footprint and each fails under allowBashTestsExecutionBlockRemovals: false;
+  the scaffold feature page now states the true pinned footprint, aligning
+  implementation, fixtures, and the RSK-7 human-gate record. F-4 —
+  implementation_plan link, GAP-1 resolution, minor changeset name,
+  privacy-release classification, and version_impact alignment all landed.
+  Re-verified on the remediated tree: contract suite 9/9, control PASS,
+  ci-checks 37/37, privacy suites 25/25, purity suite green, full runner 24/24
+  exit 0, ci-topology/ci-bindingness/ci-supply-chain/script-surface exit 0,
+  error-table/ambient-globals green, doc-distribution guard no drift (81 docs),
+  pnpm check 4028 pass / 4 skip / 0 fail, git diff --check clean. All four
+  iteration-1 ACCEPTED deviation rulings stand unchanged (the four files were
+  not touched by remediation except ci.yml's comment, which stays inside the
+  DEC-7 allowance and keeps privacy-ci-wiring green). No new findings. Remaining
+  obligation by design: record TC-CIPROP-013 CI-run evidence at pr_creation
+  (DEC-6); the first PR run also serves as the live confirmation of F-2's fix
+  in the real CI environment.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings: []
+reviewed_at: 2026-11-06T19:40:00Z
+next_step: PROCEED
