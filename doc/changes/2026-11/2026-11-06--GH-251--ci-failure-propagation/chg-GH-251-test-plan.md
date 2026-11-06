@@ -2,7 +2,7 @@
 id: chg-GH-251-test-plan
 status: Updated
 created: 2026-11-06T17:05:00Z
-last_updated: 2026-11-06T19:05:00Z
+last_updated: 2026-11-06T19:35:00Z
 owners: [engineering]
 service: delivery infrastructure (CI shell-suite gate + file-adapter input limits)
 labels: [change, review, hardening]
@@ -47,7 +47,7 @@ This plan protects two claims that are currently false, and it protects them the
 - [OUT] Any change to binding `ts-*` jobs, guard jobs, or other workflow jobs (NG-5).
 - [OUT] Rewriting existing suites or changing suite semantics; discovery scope broadening; timeouts/parallelism (NG-6).
 - [OUT] Broader CI hardening (mutable legacy action references, etc.) (NG-7).
-- [GAP-1 — RESOLVED BY PLAN] `chg-GH-251-plan.yaml` exists and maps the 26 TCs onto delivery phases 1–5, including the runner path (`scripts/run-bash-suites.sh`), control path (`scripts/.tests/test-bash-suite-aggregation-modes.sh`), and byte-length helper anchors in the two parser files. It does not reshape any pinned outcome, identity, discovery rule, or traceability.
+- [GAP-1 — RESOLVED BY PLAN] `chg-GH-251-plan.yaml` exists and maps the 26 TCs onto delivery phases 1–5, including the runner path (`scripts/run-bash-suites.sh`), control path (`scripts/.tests/test-bash-suite-aggregation-modes.sh`), and byte-length helper anchors in the two parser files. It does not reshape any pinned outcome, identity, discovery rule, or traceability. All 26 TCs now carry execution evidence in §10, including AC-F3-1's PR CI evidence (TC-CIPROP-013, COMPLETED).
 - [GAP-2 — CI topology additions-only invariant versus the required workflow replacement — RESOLVED IN SPEC v1.1] This was the plan's verified blocker: `scripts/checks/ci-topology.ts` failed on *any* removed `.github/workflows/ci.yml` line versus `origin/main-tools`, and the incorrect job comment is itself a removed line. Spec v1.1 resolves it upstream with the change-scoped allowance DEC-7 (F-8, AC-F8-1, NFR-6 reworded, RSK-7 registered): removals are ignored only in the `bash-tests` execution block (`run:` step content) and that job's comment lines, while removals elsewhere and bash/ts job-presence enforcement stay fatal, proved non-vacuous by committed negative fixtures. The resolution matches what this plan proposed; TC-CIPROP-015 pins the fixture set and TC-CIPROP-014 keeps the standing gates honest.
 - [GAP-3 — runner invocation seam for the control is delivery-bound] The control must invoke "the same runner the workflow invokes" against a synthetic tree. Either the control copies the runner into a temp tree preserving its root-resolution layout (the `test-delivery-mutation-sandbox.sh` precedent) or the runner accepts a scoped root. Both satisfy F-3; the plan pins the observable outcome, not the seam (OQ-2).
 - [GAP-4 — byte-length helper location is delivery-bound] Reuse-via-import of the core code-point→UTF-8 pattern or local replication is delivery latitude (F-4, §14). TC-UTF8LIMIT-007 anchors on the file named in the §7 mapping.
@@ -922,7 +922,7 @@ This plan protects two claims that are currently false, and it protects them the
 | TC-CIPROP-010 | same | same | `git status` + checksum before/after; `trap` cleanup | To Implement |
 | TC-CIPROP-011 | same | same | Synthetic root with exactly one planted suite | To Implement |
 | TC-CIPROP-012 | `scripts/.tests/test-bash-suite-aggregation.sh` (static section) | `bash scripts/.tests/test-bash-suite-aggregation.sh` | Reads `.github/workflows/ci.yml` and the runner path | To Implement |
-| TC-CIPROP-013 | No new file — CI evidence recorded in §10 | PR run → `bash-tests` job log | GitHub Actions | Manual/CI evidence |
+| TC-CIPROP-013 | No new file — CI evidence recorded in §10 | PR run → `bash-tests` job log | GitHub Actions | Completed — CI evidence in §10 |
 | TC-CIPROP-014 | No new file — `scripts/checks/ci-topology.ts` gains the DEC-7 scoped allowance; existing checks and their mutation tests | `bun run scripts/checks/ci-topology.ts && bun run scripts/checks/ci-bindingness.ts && bun run scripts/checks/ci-supply-chain.ts && bun run scripts/checks/script-surface.ts`; `bun test tests/checks/ci-checks.test.ts` | `origin/main-tools` present | Existing — Update |
 | TC-CIPROP-015 | `tests/checks/ci-checks.test.ts` (new allowance fixtures) | `bun test tests/checks/ci-checks.test.ts` | Committed base/head workflow texts (or a git-backed temp tree) | To Implement |
 | TC-UTF8LIMIT-001 | `tests/behaviour/config-parser.test.ts` (update) | `bun test tests/behaviour/config-parser.test.ts` | Generated boundary fixtures | Existing — Update |
@@ -990,6 +990,7 @@ This plan protects two claims that are currently false, and it protects them the
 |---------|------|--------|---------|
 | 1.0 | 2026-11-06 | @test-plan-writer | Initial test plan for GH-251. 25 TCs: 14 for failure-propagation (runner contract, negative control, workflow wiring, CI evidence, invariants), 8 for byte-accurate input limits (three sites × five boundary classes plus self-verification, identity stability, parse equivalence, purity, existing-suite regression), 3 for documentation truth, scope confinement, and the local gate battery. Records GAP-2/OQ-1: the CI topology additions-only invariant fails on the required `ci.yml` removal (verified by probe), blocking delivery planning. |
 | 1.1 | 2026-11-06 | @test-plan-writer | Reconcile to spec v1.1 (open-item resolution): OQ-1 and GAP-2 closed upstream by the change-scoped DEC-7 allowance (F-8, AC-F8-1, NFR-6 reworded, RSK-7); new TC-CIPROP-015 pins the non-vacuity negative-fixture set (allowance fires; removal outside the execution block fails; whole-job removal fails; bash/ts job-id loops fatal; boundary precision; non-vacuity by disabled allowance), TC-CIPROP-014 notes/status updated; AC-F8-1 added to §3.1 (9 ACs, all covered) and F-8 to the capability map; NFR-6/NFR-8 coverage rows, §4 invariant layer, §7 mapping, scope classification (TC-SCOPE-001), and the risk table (TR-1 rewritten, TR-11 added for RSK-7) updated; counts 25→26 TCs. |
+| 1.2 | 2026-11-06 | @test-plan-writer | Record AC-F3-1 / DEC-6 evidence at plan task 4.4: TC-CIPROP-013 flipped to COMPLETED from the PR #257 green `bash-tests` run (job 128105591655, head `e7b5bcaa`), with canonical run URLs (normalized from the pr-manager report), the 7/7 control verdict lines verbatim, 24/24 suite aggregate, and the temp-child-log caveat; §7 status flipped to Completed; GAP-1 notes execution evidence complete. All 26 TCs now have §10 evidence. |
 
 ## 10. Test Execution Log
 
@@ -999,7 +1000,7 @@ Populated during delivery (phases 6 and 9) and at PR creation (phase 11). One ro
 |-------|----------|--------|------------------|
 | TC-CIPROP-001..007, TC-CIPROP-012 | 2026-11-06 | PASS | `bash scripts/.tests/test-bash-suite-aggregation.sh` — 8/8 (runner contract, discovery parity, unrunnable-is-failure, workflow wiring). |
 | TC-CIPROP-008..011 | 2026-11-06 | PASS | `bash scripts/.tests/test-bash-suite-aggregation-modes.sh` — green propagation path, always-zero and selective-runner counterfactuals, restored-runner non-vacuity, hermetic status/checksum equality, 0 s bounded runtime. |
-| TC-CIPROP-013 | Pending PR run | PENDING | Green `bash-tests` run to be recorded at lifecycle phase 11 (run URL, job name, commit SHA, control verdict lines) per DEC-6. Not fabricated locally. |
+| TC-CIPROP-013 | 2026-11-06 | PASS — COMPLETED | PR #257 green `bash-tests` job (id 128105591655) at head `e7b5bcaa`; control verdicts 7/7 `[PASS]`; 24 suites discovered / 24 passed / 0 failed. Full run URLs, job fields, verbatim verdict lines, and the temp-log caveat in the AC-F3-1 / DEC-6 evidence block below. |
 | TC-CIPROP-014 | 2026-11-06 | PASS | `bun test tests/checks/ci-checks.test.ts` 35/35; `ci-topology`, `ci-bindingness`, `ci-supply-chain`, `script-surface` all exit 0. |
 | TC-CIPROP-015 | 2026-11-06 | PASS | DEC-7 fixtures A-E and disabled-allowance non-vacuity inside the same 35/35 `ci-checks` run; live tree green under the allowance. |
 | TC-UTF8LIMIT-001..003 | 2026-11-06 | PASS | `bun test tests/behaviour/config-parser.test.ts tests/behaviour/pm-notes-source-limits.test.ts` — 25/25; 3 sites x 5 boundary classes, exact identities, accepted-at-limit equivalence. |
@@ -1011,6 +1012,28 @@ Populated during delivery (phases 6 and 9) and at PR creation (phase 11). One ro
 | TC-DOC-001 | 2026-11-06 | PASS | Phase-4 baseline CI section and FSE-04/FSE-05/FSE-08 rows updated; fse-audit FSE-04/FSE-05 updated; `bash-tests` comment states the runner contract with no `set -e` fail-fast claim. |
 | TC-SCOPE-001 | 2026-11-06 | PASS | Full diff classified below; `packages/core/src/domain/verify-gates.ts` untouched; no error-table change; `MAX_SOURCE_BYTES` name/value unchanged; `scripts/install.sh` arrays untouched; ci-topology is the only invariant change. |
 | TC-QUAL-001 | 2026-11-06 | PASS | `pnpm check` exit 0 (3799 tests, 4 skip, 0 fail); `bash scripts/run-bash-suites.sh` 24/24 exit 0; `git diff --check` clean; `bash -n` clean; `shellcheck -S error` 0.10.0 clean on the runner and both suites. |
+
+**AC-F3-1 / DEC-6 evidence (TC-CIPROP-013 — COMPLETED):**
+
+- **PR:** #257 — https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/257 (base `main-tools`).
+- **PR CI run:** completed / success, all 23 jobs green — https://github.com/juliusz-cwiakalski/agentic-delivery-os/actions/runs/42279824959 (URL normalized from pr-manager report; run id 42279824959 is the stable identifier).
+- **Companion push-event run:** https://github.com/juliusz-cwiakalski/agentic-delivery-os/actions/runs/42279710912 (URL normalized from pr-manager report; run id 42279710912 is the stable identifier).
+- **Head SHA:** `e7b5bcaa57e612f2924c2391396cffc07ec85e44`.
+- **Job:** "Bash test suites" (`bash-tests`), job id `128105591655` — verdict success.
+- **Aggregate:** discovered 24 suites; 24 passed; 0 failed. This is the first real `bash-tests` run to pass 24/24, live confirmation of the F-2 remediation — the suite that previously could not pass in CI now passes.
+- **Control verdict lines (verbatim from the job log):**
+
+```
+(bash-suite-aggregation-control)[PASS] green path: propagation demonstrated and verdict printed
+(bash-suite-aggregation-control)[PASS] counterfactual: an always-zero runner makes the control fail
+(bash-suite-aggregation-control)[PASS] counterfactual: a runner green on the planted suite makes the control fail
+(bash-suite-aggregation-control)[PASS] counterfactual: the restored real runner makes the control pass
+(bash-suite-aggregation-control)[PASS] hermetic: worktree status and checksums identical, no leaked marker
+(bash-suite-aggregation-control)[PASS] bounded runtime: 0s (limit 60s)
+(bash-suite-aggregation-control)[PASS] negative control passed
+```
+
+- **Caveat:** the planted suite's `[FAIL]` line lives only in the control's temp child log (echoed on failure); the green-path assertion certifies propagation, and the two counterfactual stubs prove the control cannot pass if the runner goes green on the planted suite.
 
 **Scope classification (TC-SCOPE-001):** runner (`scripts/run-bash-suites.sh`);
 control and runner tests (`scripts/.tests/test-bash-suite-aggregation.sh`,
