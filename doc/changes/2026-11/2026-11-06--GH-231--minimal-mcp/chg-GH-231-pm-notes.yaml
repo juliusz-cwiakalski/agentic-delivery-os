@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   review_fix: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   quality_gates: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions: []
 open_questions:
@@ -50,6 +50,9 @@ notes:
     type: "info"
     date: "2026-11-06"
   - text: "Review iteration 2 verdict PASS (0c/0h/0m/1l/3i; artifacts code-review/review-iter-2.yaml + review/review-iter-2.md). Blocking highs F-1 (containment) and F-2 (truthful parks) resolved at preferred option and independently verified by reviewer's own probe runs (163 targeted tests, pnpm check 3764/4/0, 14/14 serve probes, zero state writes confirmed). F-3/F-5/F-6 also verified resolved. Remaining findings bookkeeping-level (1 low + 3 advisory: F-7/LOW-2 constants sharing, F-8 credential-aware provider reads, F-9 dead #aliases, F-10 protocol metadata edges) - documented, deferred to later stories. Review loop closed after 2 iterations (max 3)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "DoD check PASS: (1) pm-notes phases 1-9 recorded with completion timestamps; (2) plan ledger covers all 7 declared plan phases with commit hashes + test results; (3) all 13 spec ACs + 21 TCs implemented and independently verified (review iter-2 PASS); (4) current-truth docs complete, doc-syncer reports no residual gaps after both passes; (5) quality gates GREEN at abb10dd4^ (e5ac2386). Ready for PR creation against main-tools."
     type: "info"
     date: "2026-11-06"
   - text: "Tracker write note: github-mcp lacks write auth (update_issue failed 'Requires authentication'); gh CLI authenticated as juliusz-cwiakalski with repo scope — all tracker writes and PR creation go through gh CLI via @runner. Labels synced: review (stale, no PR) removed, planning added; final set change+planning."
