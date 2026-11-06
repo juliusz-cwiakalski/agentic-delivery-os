@@ -4,10 +4,16 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  STATUS_HUMAN_CLAMP_MARKER,
+  STATUS_MAX_HUMAN_BYTES,
+  STATUS_MAX_HUMAN_LINES,
   STATUS_MAX_TITLE_CHARS,
   STATUS_SOURCE_ITEM_LIMIT,
   STATUS_SOURCE_PIPELINE_LIMIT,
+  type StatusDigest,
+  type StatusFinding,
 } from "../../packages/core/src/contracts/index";
+import { aggregateStatus, renderStatusHuman } from "../../packages/core/src/domain/index";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import {
   ALL_AVAILABLE,
@@ -507,5 +513,222 @@ describe("TC-STATUS-007 caps, omitted, truncation, and ordering", () => {
     if (isRecord(forwardData) && Array.isArray(forwardData.sections)) {
       expect(forwardData.sections).toHaveLength(9);
     }
+  });
+});
+
+const digestWithFindings = (findings: readonly StatusFinding[]): StatusDigest => {
+  const digest = aggregateStatus(baseFacts());
+  return {
+    ...digest,
+    sections: digest.sections.map((section) =>
+      section.id === "tracker" ? { ...section, findings } : section,
+    ),
+  };
+};
+
+const finding = (
+  code: string,
+  count: number,
+  severity: StatusFinding["severity"] = "low",
+): StatusFinding => ({
+  code: code as StatusFinding["code"],
+  severity,
+  count,
+  members: ["member-1"],
+  evidenceRef: "member-1",
+});
+
+const attentionOf = (digest: StatusDigest): string => {
+  const line = renderStatusHuman(digest, SYNTHETIC_BRAND)
+    .split("\n")
+    .find((entry) => entry.startsWith("attention"));
+  return line ?? "missing";
+};
+
+describe("TC-ATT-026 extended human grammar", () => {
+  test("the exact line order is header, nine sections, attention", () => {
+    const human = renderStatusHuman(aggregateStatus(baseFacts()), SYNTHETIC_BRAND);
+    const labels = human
+      .split("\n")
+      .filter((line) => line.length > 0)
+      .map((line) => (line.startsWith(SYNTHETIC_BRAND.binaryName) ? "header" : line.split(" ")[0]));
+    expect(labels).toEqual([
+      "header",
+      "tracker",
+      "changes",
+      "ci",
+      "lanes",
+      "providers",
+      "parked",
+      "ready",
+      "spend",
+      "blockers",
+      "attention",
+    ]);
+  });
+
+  test("the header is absent without an observed binding", () => {
+    const facts = baseFacts({
+      repository: {
+        binding: { state: "unavailable", reason: "addressing-unresolved" },
+        head: { detached: true },
+      },
+    });
+    const human = renderStatusHuman(aggregateStatus(facts), SYNTHETIC_BRAND);
+    expect(human.startsWith("tracker")).toBe(true);
+    expect(human).not.toContain(SYNTHETIC_BRAND.binaryName);
+  });
+
+  test("the tracker line carries the gates and assertion-unknown fragments", () => {
+    const human = renderStatusHuman(aggregateStatus(baseFacts()), SYNTHETIC_BRAND);
+    expect(human).toContain("gates 0 escalated");
+    expect(human).toContain("hygiene 0 (0 unknown)");
+  });
+
+  test("the five unchanged lines are byte-identical to the shipped grammar", () => {
+    const human = renderStatusHuman(aggregateStatus(baseFacts()), SYNTHETIC_BRAND);
+    expect(human).toContain("changes    observed  active GH-175 | PRs 0 (review state observed)");
+    expect(human).toContain("ci         observed  none-reported (0/0 jobs)");
+    expect(human).toContain("lanes      not-delivered  no queue or lane engine in this release");
+    expect(human).toContain("providers  observed  chain primary | active parks 0 | 1 entries");
+    expect(human).toContain("parked     observed  0 parked changes (git-ignored local state)");
+  });
+
+  test("the ready, spend, blockers, and attention lines are pinned", () => {
+    const human = renderStatusHuman(aggregateStatus(baseFacts()), SYNTHETIC_BRAND);
+    expect(human).toContain("ready      observed  0 ready-to-merge (merge-ready 0)");
+    expect(human).toContain("spend      not-delivered  spend summary arrives with M1-S19");
+    expect(human).toContain("blockers   not-delivered  typed blockers arrive with M1-S16");
+    expect(human).toContain("attention  0 findings ()");
+  });
+
+  test("rendering derives from the digest only and writes nothing", () => {
+    const digest = digestWithFindings([finding("tracker.stalled-ticket", 2, "medium")]);
+    expect(attentionOf(digest)).toBe("attention  1 findings (tracker.stalled-ticket×2)");
+    const restored = digestWithFindings([]);
+    expect(attentionOf(restored)).toBe("attention  0 findings ()");
+  });
+});
+
+describe("TC-ATT-027 attention rollup", () => {
+  test("zero, one, two, and three groups preview without +N", () => {
+    const groups: Array<[StatusFinding[], string]> = [
+      [[], "attention  0 findings ()"],
+      [
+        [finding("tracker.hygiene.missing-title", 1)],
+        "attention  1 findings (tracker.hygiene.missing-title×1)",
+      ],
+      [
+        [
+          finding("tracker.hygiene.missing-title", 1),
+          finding("tracker.stalled-ticket", 2, "medium"),
+        ],
+        "attention  2 findings (tracker.stalled-ticket×2, tracker.hygiene.missing-title×1)",
+      ],
+      [
+        [
+          finding("tracker.hygiene.missing-title", 1),
+          finding("tracker.stalled-ticket", 2, "medium"),
+          finding("ci.red-on-main", 4, "high"),
+        ],
+        "attention  3 findings (ci.red-on-main×4, tracker.stalled-ticket×2, tracker.hygiene.missing-title×1)",
+      ],
+    ];
+    for (const [findings, expected] of groups) {
+      expect(attentionOf(digestWithFindings(findings))).toBe(expected);
+    }
+  });
+
+  test("four, six, and nine groups preview three and append +N of grouped findings", () => {
+    const codes = [
+      "ci.red-on-main",
+      "tracker.owner-gate-escalated",
+      "tracker.stalled-ticket",
+      "tracker.hygiene.missing-title",
+      "tracker.hygiene.missing-labels",
+      "tracker.hygiene.epic-membership",
+      "tracker.hygiene.story-points",
+      "tracker.hygiene.in-sprint",
+      "parked.stale-no-condition",
+    ] as const;
+    for (const count of [4, 6, 9]) {
+      const findings = codes.slice(0, count).map((code, index) => finding(code, index + 1));
+      const line = attentionOf(digestWithFindings(findings));
+      expect(line.startsWith(`attention  ${count} findings (`)).toBe(true);
+      expect(line).toMatch(/\+\d+\)$/);
+      const match = /\+(\d+)\)$/.exec(line);
+      expect(Number(match?.[1])).toBe(count - 3);
+    }
+  });
+
+  test("multi-count groups count groups, never observations", () => {
+    const line = attentionOf(
+      digestWithFindings([
+        finding("tracker.hygiene.missing-title", 20),
+        finding("tracker.hygiene.missing-labels", 3),
+        finding("tracker.stalled-ticket", 2, "medium"),
+        finding("ci.red-on-main", 1, "high"),
+      ]),
+    );
+    expect(line).toBe(
+      "attention  4 findings (ci.red-on-main×1, tracker.stalled-ticket×2, tracker.hygiene.missing-title×20+1)",
+    );
+    expect(line).not.toContain("+26");
+    expect(line).not.toContain("+22");
+  });
+
+  test("the preview is severity-ordered and permutation-invariant", () => {
+    const forward = digestWithFindings([
+      finding("tracker.hygiene.missing-title", 20),
+      finding("tracker.stalled-ticket", 2, "medium"),
+      finding("ci.red-on-main", 1, "high"),
+      finding("tracker.hygiene.missing-labels", 3),
+    ]);
+    const reversed = digestWithFindings([
+      finding("tracker.hygiene.missing-labels", 3),
+      finding("ci.red-on-main", 1, "high"),
+      finding("tracker.stalled-ticket", 2, "medium"),
+      finding("tracker.hygiene.missing-title", 20),
+    ]);
+    expect(attentionOf(reversed)).toBe(attentionOf(forward));
+  });
+
+  test("the rollup lists no member identity", () => {
+    const human = renderStatusHuman(
+      digestWithFindings([finding("ci.red-on-main", 4, "high")]),
+      SYNTHETIC_BRAND,
+    );
+    expect(human).not.toContain("member-1");
+  });
+});
+
+describe("TC-ATT-028 human bounds", () => {
+  test("the structural worst case is 11 lines under the 32-line defensive cap", () => {
+    const human = renderStatusHuman(aggregateStatus(baseFacts()), SYNTHETIC_BRAND);
+    expect(human.split("\n").filter((line) => line.length > 0)).toHaveLength(11);
+    expect(STATUS_MAX_HUMAN_LINES).toBe(32);
+    expect(STATUS_MAX_HUMAN_BYTES).toBe(6144);
+  });
+
+  test("the 6144-byte cap is the operative bound and clamps with the declared marker", () => {
+    const digest = aggregateStatus(baseFacts());
+    const withLongChain: StatusDigest = {
+      ...digest,
+      sections: digest.sections.map((section) =>
+        section.id === "providers"
+          ? { ...section, chain: { state: "declared", name: "x".repeat(7000), entries: [] } }
+          : section,
+      ),
+    };
+    const human = renderStatusHuman(withLongChain, SYNTHETIC_BRAND);
+    expect(Buffer.byteLength(human, "utf8")).toBeLessThanOrEqual(STATUS_MAX_HUMAN_BYTES);
+    expect(human.endsWith(STATUS_HUMAN_CLAMP_MARKER)).toBe(true);
+  });
+
+  test("the retired 24/4096 bounds no longer bind", () => {
+    expect(STATUS_MAX_HUMAN_LINES).not.toBe(24);
+    expect(STATUS_MAX_HUMAN_BYTES).not.toBe(4096);
+    const human = renderStatusHuman(aggregateStatus(baseFacts()), SYNTHETIC_BRAND);
+    expect(human).not.toMatch(/\+\n$/);
   });
 });

@@ -19,12 +19,14 @@ import {
   activeChange,
   baseFacts,
   capSizedFacts,
+  deliveryRequestRead,
   failedDeliveryRequestRead,
   failedPipelineRunRead,
   failedRun,
   failedWorkItemRead,
   GITHUB_SLICE_AVAILABILITY,
   localContext,
+  makeDeliveryRequest,
   makeWorkItem,
   malformedLocalContext,
   missingLocalContext,
@@ -35,6 +37,8 @@ import {
   providerConfigRead,
   providers,
   repository,
+  REVIEWS_AVAILABLE,
+  REVIEWS_UNAVAILABLE,
   unavailableBinding,
   workItemRead,
 } from "../fixtures/status/harness";
@@ -293,6 +297,33 @@ const factsFor = (scenario: string): StatusFacts => {
           ],
         }),
       });
+    case "lanes-not-delivered-vocabulary":
+    case "placeholders-not-delivered":
+    case "no-findings-attention-zero":
+      return baseFacts();
+    case "mixed-attention-ranked":
+      return capSizedFacts();
+    case "ready-merge-ready-ranked":
+      return baseFacts({
+        changes: deliveryRequestRead(
+          [
+            makeDeliveryRequest({ entityId: "501", reviewState: "approved" }),
+            makeDeliveryRequest({ entityId: "502", reviewState: "open" }),
+            makeDeliveryRequest({ entityId: "503", reviewState: "draft" }),
+          ],
+          REVIEWS_AVAILABLE,
+        ),
+      });
+    case "ready-review-unknown-degraded":
+      return baseFacts({
+        changes: deliveryRequestRead(
+          [
+            makeDeliveryRequest({ entityId: "501", reviewState: "approved" }),
+            makeDeliveryRequest({ entityId: "502", reviewState: "open" }),
+          ],
+          REVIEWS_UNAVAILABLE,
+        ),
+      });
     default:
       throw new Error(`unknown corpus scenario ${scenario}`);
   }
@@ -374,7 +405,7 @@ const SECTION_STATE_MATRIX: Readonly<Record<StatusSectionId, readonly string[]>>
   "lanes-or-queue": ["not-delivered"],
   providers: ["observed", "degraded", "unknown", "unavailable"],
   "parked-work": ["observed", "unknown", "unavailable"],
-  "ready-to-merge": ["observed", "unknown", "unavailable"],
+  "ready-to-merge": ["observed", "degraded", "unknown", "unavailable"],
   spend: ["not-delivered"],
   blockers: ["not-delivered"],
 };

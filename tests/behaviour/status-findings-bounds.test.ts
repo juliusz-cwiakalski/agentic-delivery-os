@@ -18,10 +18,13 @@ import { aggregateStatus, evaluateStatusFindings } from "../../packages/core/src
 import {
   ASSERTIONS_AVAILABLE,
   baseFacts,
+  deliveryRequestRead,
   failedRun,
+  makeDeliveryRequest,
   makeWorkItem,
   pipelineRunRead,
   primaryRepository,
+  REVIEWS_AVAILABLE,
   sectionById,
   workItemRead,
 } from "../fixtures/status/harness";
@@ -236,5 +239,79 @@ describe("TC-ATT-008 defensive findings cap", () => {
     expect(source).not.toContain("test.code-");
     expect(contracts).not.toContain("test.code-");
     expect(Object.keys(STATUS_FINDING_REGISTRY)).toHaveLength(10);
+  });
+});
+
+describe("TC-ATT-025 ready-to-merge item cap and truncation", () => {
+  const readyFacts = (count: number, approvedAt?: number) =>
+    baseFacts({
+      changes: deliveryRequestRead(
+        Array.from({ length: count }, (_, index) =>
+          makeDeliveryRequest({
+            entityId: String(100 + index),
+            reviewState: index === approvedAt ? "approved" : "open",
+          }),
+        ),
+        REVIEWS_AVAILABLE,
+      ),
+    });
+
+  const readySection = (facts: StatusFacts) =>
+    sectionById(aggregateStatus(facts).sections, "ready-to-merge");
+
+  test("7 and 8 items are under cap; 9 and 12 drop with omitted", () => {
+    for (const count of [7, 8]) {
+      const section = readySection(readyFacts(count));
+      expect(section.items).toHaveLength(count);
+      expect(section.truncated).toBe(false);
+      expect(section.counts.omitted).toBe(0);
+    }
+    for (const count of [9, 12]) {
+      const section = readySection(readyFacts(count));
+      expect(section.items).toHaveLength(8);
+      expect(section.truncated).toBe(true);
+      expect(section.counts.omitted).toBe(count - 8);
+    }
+  });
+
+  test("a merge-ready item last in source order is never dropped for review-pending", () => {
+    const section = readySection(readyFacts(12, 8));
+    const items = (section.items ?? []) as Array<{ ref: string; class: string }>;
+    expect(items[0]).toMatchObject({ ref: "108", class: "merge-ready" });
+    expect(items.filter((item) => item.class === "merge-ready")).toHaveLength(1);
+    expect(items.map((item) => item.ref)).toEqual([
+      "108",
+      "100",
+      "101",
+      "102",
+      "103",
+      "104",
+      "105",
+      "106",
+    ]);
+  });
+
+  test("nine merge-ready items disclose the drop through omitted", () => {
+    const facts = baseFacts({
+      changes: deliveryRequestRead(
+        Array.from({ length: 9 }, (_, index) =>
+          makeDeliveryRequest({
+            entityId: String(200 + index),
+            reviewState: "approved",
+          }),
+        ),
+        REVIEWS_AVAILABLE,
+      ),
+    });
+    const section = readySection(facts);
+    expect(section.items).toHaveLength(8);
+    expect(section.counts.omitted).toBe(1);
+    expect(section.truncated).toBe(true);
+  });
+
+  test("truncation is deterministic across repeats", () => {
+    const first = readySection(readyFacts(12, 8));
+    const second = readySection(readyFacts(12, 8));
+    expect(second).toEqual(first);
   });
 });

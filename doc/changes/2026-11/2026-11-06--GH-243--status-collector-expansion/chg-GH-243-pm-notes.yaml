@@ -71,3 +71,6 @@ notes:
   - text: "Plan phase 3 complete (commit ecad21a4): findings behaviour pinned — grouping (four red primary-branch runs → one count-4 finding), member/findings caps, total rank key with permutation twins, registry-coded existing findings, and no-evidence-no-claim. Gates green: five phase-3 suites (62 tests), findings suite rerun-each 2, pnpm typecheck."
     type: "info"
     date: "2026-11-07"
+  - text: "Plan phase 4 complete (commit f5abbf39): tri-state hygiene assertions (epic-membership/story-points/in-sprint), absence-as-violation with the declared-availability gate, owner-gate ages via the M1-S5 evaluator and the two unknown-age markers, and parked conditions plus parked.stale-no-condition grouping. Gates green: five phase-4 suites (104 tests), board non-regression (15 tests), pnpm typecheck. Deviation: the digest injects no decision records (D-4), so owner-review gates can only be fresh/escalated; default-applied remains unreachable and is never fabricated."
+    type: "info"
+    date: "2026-11-07"
