@@ -33,6 +33,7 @@
     "src/contracts/watchdog.ts",
     "src/domain/ci-result.ts",
     "src/domain/brief.ts",
+    "src/domain/blockers.ts",
     "src/domain/closeout.ts",
     "src/domain/index.ts",
     "src/domain/owner-gate-sla.ts",

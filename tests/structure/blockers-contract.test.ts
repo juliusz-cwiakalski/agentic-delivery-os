@@ -42,6 +42,16 @@ import {
   STATUS_MAX_ITEMS_PER_SECTION,
   STATUS_MAX_MACHINE_BYTES,
 } from "../../packages/core/src/contracts/index";
+import {
+  resolveBlockerDelegation,
+  validateBlockerDelegationPolicy,
+} from "../../packages/core/src/domain/blockers";
+import {
+  coordinatorOwnerAllowed,
+  missingCoordinatorOwner,
+  shippedPolicy,
+  withFifthRow,
+} from "../fixtures/blockers/policy";
 
 const ROOT = process.cwd();
 const CONTRACT = "packages/core/src/contracts/blockers.ts";
@@ -308,18 +318,36 @@ describe("TC-BLK-001 blocker vocabulary is pinned as data", () => {
         "BLOCKER_SESSION_REENTRY_BY_MODE",
         (s) => ((s.reentry as Record<string, boolean>)["boundary-note"] = true),
       ],
-      ["BLOCKER_DEFAULT_AUDIENCE", (s) => ((s as { defaultAudience: string }).defaultAudience = "owner")],
-      ["BLOCKER_VARIABLE_NAME_PATTERN", (s) => ((s as { namePattern: string }).namePattern = "^.*$")],
+      [
+        "BLOCKER_DEFAULT_AUDIENCE",
+        (s) => ((s as { defaultAudience: string }).defaultAudience = "owner"),
+      ],
+      [
+        "BLOCKER_VARIABLE_NAME_PATTERN",
+        (s) => ((s as { namePattern: string }).namePattern = "^.*$"),
+      ],
       ["BLOCKER_MAX_QUESTION_CHARS", (s) => ((s.caps as Record<string, number>).question = 121)],
-      ["BLOCKER_QUESTION_PAYLOAD_SCHEMA", (s) => ((s as { questionSchema: string }).questionSchema = "delivery.blocker.question.v2")],
-      ["BLOCKER_ANSWER_RECORD_KIND", (s) => ((s as { answerKind: string }).answerKind = "blocker.response")],
+      [
+        "BLOCKER_QUESTION_PAYLOAD_SCHEMA",
+        (s) => ((s as { questionSchema: string }).questionSchema = "delivery.blocker.question.v2"),
+      ],
+      [
+        "BLOCKER_ANSWER_RECORD_KIND",
+        (s) => ((s as { answerKind: string }).answerKind = "blocker.response"),
+      ],
       ["BLOCKERS_ERROR_CODES", (s) => (s.errors as string[]).push("blockers.extra-code")],
-      ["BLOCKER_CALLER_AUDIENCE_SUFFIX", (s) => ((s as { callerSuffix: string }).callerSuffix = "AUDIENCE")],
+      [
+        "BLOCKER_CALLER_AUDIENCE_SUFFIX",
+        (s) => ((s as { callerSuffix: string }).callerSuffix = "AUDIENCE"),
+      ],
     ];
     for (const [name, mutate] of cases) {
       const snapshot = clone(live());
       mutate(snapshot);
-      expect(audit(snapshot).some((line) => line.startsWith(name)), name).toBe(true);
+      expect(
+        audit(snapshot).some((line) => line.startsWith(name)),
+        name,
+      ).toBe(true);
     }
   });
 });
@@ -351,9 +379,9 @@ describe("TC-BLK-002 delegation policy-as-data is closed and mutation-live", () 
   test("removing a row and adding a fifth key are detected as drift", () => {
     const removed = clone(live());
     (removed.policy as unknown[]).pop();
-    expect(
-      audit(removed).some((line) => line.startsWith("BLOCKER_DELEGATION_POLICY_ROWS")),
-    ).toBe(true);
+    expect(audit(removed).some((line) => line.startsWith("BLOCKER_DELEGATION_POLICY_ROWS"))).toBe(
+      true,
+    );
 
     const extra = clone(live());
     (extra.policy as unknown[]).push({
@@ -394,5 +422,55 @@ describe("TC-BLK-003 contracts are declaration-only and inventory-registered", (
     const index = readFileSync(join(ROOT, "packages/core/src/contracts/index.ts"), "utf8");
     expect(index).toContain('from "./blockers.js"');
     expect(BLOCKER_QUESTION_TYPES).toHaveLength(4);
+  });
+});
+
+describe("TC-BLK-002 delegation resolver reads the injected map", () => {
+  test("the shipped map allows owner->coordinator and same-audience answers", () => {
+    const policy = shippedPolicy();
+    expect(resolveBlockerDelegation(policy, "owner", "owner")).toEqual({
+      allowed: true,
+      policy: "allowed",
+      declared: true,
+    });
+    expect(resolveBlockerDelegation(policy, "owner", "coordinator")).toEqual({
+      allowed: true,
+      policy: "allowed",
+      declared: true,
+    });
+    expect(resolveBlockerDelegation(policy, "coordinator", "coordinator")).toEqual({
+      allowed: true,
+      policy: "allowed",
+      declared: true,
+    });
+    expect(resolveBlockerDelegation(policy, "coordinator", "owner")).toEqual({
+      allowed: false,
+      policy: "none",
+      declared: true,
+    });
+  });
+
+  test("flipping the refusal is live; a missing row is a declared refusal", () => {
+    expect(resolveBlockerDelegation(coordinatorOwnerAllowed(), "coordinator", "owner")).toEqual({
+      allowed: true,
+      policy: "allowed",
+      declared: true,
+    });
+    expect(resolveBlockerDelegation(missingCoordinatorOwner(), "coordinator", "owner")).toEqual({
+      allowed: false,
+      policy: "none",
+      declared: false,
+    });
+    expect(validateBlockerDelegationPolicy(missingCoordinatorOwner())).toContain(
+      "missing-combination",
+    );
+    expect(validateBlockerDelegationPolicy(withFifthRow())).toContain("duplicate-combination");
+    expect(validateBlockerDelegationPolicy(shippedPolicy())).toEqual([]);
+  });
+
+  test("the production map remains unchanged after mutation controls", () => {
+    const before = JSON.stringify(BLOCKER_DELEGATION_POLICY_ROWS);
+    resolveBlockerDelegation(coordinatorOwnerAllowed(), "coordinator", "owner");
+    expect(JSON.stringify(BLOCKER_DELEGATION_POLICY_ROWS)).toBe(before);
   });
 });

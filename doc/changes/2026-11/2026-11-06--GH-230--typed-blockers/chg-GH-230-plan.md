@@ -500,7 +500,7 @@ Coverage cross-check: all 21 ACs (AC-F1-1..AC-F7-3), all 7 NFRs, EVT-1/EVT-2, DM
 | Phase | Status | Started | Completed | Commit | Notes |
 |-------|--------|---------|-----------|--------|-------|
 | 1 — contracts + error family | Completed | 2026-11-06 | 2026-11-06 | (phase commit) | Contract vocabulary pinned as data; four-row `blockers` family + one new domain kind; exact four-code `RESERVED_TWO_SEGMENT_CODES` in both owners (no wildcard); documented S2 rows; corpora + near-miss controls. Green: `bun run scripts/checks/error-table-sync.ts`, `bun test tests/structure/blockers-contract.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts`, `pnpm typecheck`. |
-| 2 — pure domain | Not started | — | — | — | |
+| 2 — pure domain | Completed | 2026-11-06 | 2026-11-06 | (phase commit) | Validation (type -> audience -> content/options), layered credential guard (content + lane/ref; layer 2 path-scoped), audience/delegation resolvers, the one shared ranking, laneResume projection, list/answer/publish projections and human renderers. Fixtures (matrix/policy/identity/capabilities/ranking/credentials/bounds). Green: `bun test tests/structure/blockers-imports.test.ts tests/structure/blockers-contract.test.ts tests/behaviour/blockers-ranking.test.ts`; `pnpm typecheck`. |
 | 3 — state record kinds | Not started | — | — | — | |
 | 4 — command surface | Not started | — | — | — | |
 | 5 — guard + routing pinning | Not started | — | — | — | |

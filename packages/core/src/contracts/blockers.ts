@@ -81,7 +81,8 @@ export type BlockerDeclaredResumeMode = (typeof BLOCKER_DECLARED_RESUME_MODES)[n
 export const BLOCKER_DEFAULT_RESUME_MODE = "boundary-note" as const satisfies BlockerResumeMode;
 
 /** The acknowledged fallback when resume injection is absent (DEC-5). */
-export const BLOCKER_FALLBACK_RESUME_MODE = "resume-prompt-reentry" as const satisfies BlockerResumeMode;
+export const BLOCKER_FALLBACK_RESUME_MODE =
+  "resume-prompt-reentry" as const satisfies BlockerResumeMode;
 
 /** The pinned re-entry posture: true only for the fallback (DM-3). */
 export const BLOCKER_SESSION_REENTRY_BY_MODE: Readonly<Record<BlockerResumeMode, boolean>> = {
@@ -238,8 +239,8 @@ export type BlockerQuestionView = {
   readonly options: readonly string[];
   readonly askedAt: string;
   readonly age: number;
-  readonly rank: number;
-  readonly status: "open" | "answered";
+  readonly rank?: number;
+  readonly status: "open";
 };
 
 /** The resolved answered record in the list's resolved group (GAP-6). */
@@ -262,11 +263,13 @@ export type BlockerAnsweredView = {
   };
 };
 
+/** One rendered list row: an open ranked question or a resolved answer. */
+export type BlockerListQuestion = BlockerQuestionView | BlockerAnsweredView;
+
 /** The bounded `blockers list` machine payload (F-7, DM-1). */
 export type BlockerListData = {
   readonly schemaVersion: typeof BLOCKERS_SCHEMA_VERSION;
-  readonly questions: readonly BlockerQuestionView[];
-  readonly answered: readonly BlockerAnsweredView[];
+  readonly questions: readonly BlockerListQuestion[];
   readonly truncated: boolean;
   readonly omitted: number;
 };

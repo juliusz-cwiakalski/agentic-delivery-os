@@ -48,3 +48,6 @@ notes:
   - text: "Plan phase 1 complete (contracts vocabulary + four-row blockers error family): exact four-code RESERVED_TWO_SEGMENT_CODES added in scripts/checks/error-table-sync.ts and tests/structure/error-table.test.ts; +1 domain kind / +4 rows; documented S2 rows; corpora true/false positives; blockers-contract structure suite. Evidence: bun run scripts/checks/error-table-sync.ts OK (entries=57 documented=57); bun test blockers-contract/error-table/error-table-sync green; pnpm typecheck exit 0."
     type: "info"
     date: "2026-11-06"
+  - text: "Plan phase 2 complete (pure blockers domain): validation order type->audience->content/options; layered credential guard (registered values on question/options/answer/lane/ref; name-shape only on credential-missing question text; no pattern layer); resolveAnsweringAudience (absent/unrecognized -> owner); delegation policy-as-data resolver (missing row = declared refusal, no audience literal branch); one shared rankBlockerQuestions (priority -> oldest -> id; answered resolved after open); projectBlockerLaneResume (declared modes vs resume-prompt-reentry fallback with prefillCost); list/answer/publish projections; human renderers. Fixtures under tests/fixtures/blockers/**. Evidence: blockers-imports + blockers-contract + blockers-ranking green; pnpm typecheck exit 0."
+    type: "info"
+    date: "2026-11-06"
