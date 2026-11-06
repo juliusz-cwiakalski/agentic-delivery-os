@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-06T18:32:00Z", completed: "2026-11-06T18:45:00Z" }
   delivery: { started: "2026-11-06T18:47:00Z", completed: "2026-11-06T18:55:00Z" }
   system_spec_update: { started: "2026-11-06T18:57:00Z", completed: "2026-11-06T19:05:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-06T19:10:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -88,4 +88,13 @@ notes:
     date: "2026-11-06"
   - text: "SYSTEM_SPEC_UPDATE COMPLETED, no gaps: 5 current-truth docs reconciled (nonfunctional.md NFR-TOOL-005 gap resolved with 3x5 boundary wording; monorepo-scaffold-toolchain 'byte-unchanged' sentence replaced with runner-based aggregation + DEC-7 allowance truth; config-layer bounded-input statement added; privacy-guard CI-wiring row aligned to DEC-7; branding-seam 'byte-unchanged' claim scoped); doc-distribution guard green; in-change phase-4/FSE edits verified consistent; inception analysis snapshots intentionally left as historical records (no current-truth doc contradicts the implementation)."
     type: "info"
+    date: "2026-11-06"
+  - text: "REVIEW FAIL (iteration 1): Status=FAIL, 4 findings (0 critical / 2 high / 0 medium / 2 low); plan compliance PASS, spec compliance FAIL on F-1. F-1 HIGH: scripts/run-bash-suites.sh:94 mapfile-from-process-substitution discards find's exit status — chmod-000-dir probe reproduced a discovery-error false green, violating F-1/AC-F1-1/NFR-1 fail-closed. F-2 HIGH: PRE-EXISTING latent failure tools/.tests/test-text-to-image-unit.sh:256 (yq-fallback branch asserts 'export key=value' but parse_yaml emits 'key=value'; reproduced 104/105 exit 1 with yq off PATH; CI installs jq only, so the first correctly-propagating CI run would fail on it) — blocks AC-F3-1 evidence and ticket AC-2; test-only fix justified by ticket AC-2. F-3 LOW: DEC-7 allowance boundary edges unpinned (comments above next job; Install-jq run body). F-4 LOW: change-artifact truth (test-plan frontmatter implementation_plan/GAP-1/changeset name/classified set/version_impact). All 4 disclosed deviations ACCEPTED; RSK-7 ruled SOUND (minimal, non-vacuous, evasion-resistant) with precision note. Remediation Phase 5 appended to chg-GH-251-plan.yaml by reviewer; review artifact code-review/review-iter-1.yaml written. DELIVERY REOPENED for remediation iteration 1."
+    type: "risk"
+    date: "2026-11-06"
+  - text: "RETRO: the runner's discovery path had the exact lie-green class the change exists to kill — the contract suite proved suite-failure propagation but not discovery-failure propagation; AC-F1-1's 'cannot be executed' clause was tested for suites (TC-CIPROP-006) but not for find itself. Lesson: when a fix replaces a command invocation wholesale, probe the replacement's error paths of the replaced command too (find erroring, not just suites failing). Caught by reviewer's adversarial probe, not by the committed negative control."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "RETRO: F-2 empirically confirms the original CI bug was hiding a real pre-existing suite failure in CI (the text-to-image yq-fallback branch cannot pass in the CI environment). The repair's value is now demonstrated by its own first green run being contingent on fixing that latent failure. Lesson: after fixing a swallowed-failure gate, expect previously-hidden failures to surface; budget a remediation iteration for them."
+    type: "retro"
     date: "2026-11-06"

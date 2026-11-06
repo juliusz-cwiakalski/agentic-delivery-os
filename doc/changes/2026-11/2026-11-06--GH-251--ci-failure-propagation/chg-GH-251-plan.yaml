@@ -106,3 +106,27 @@ phases:
       - "bash scripts/run-bash-suites.sh"
       - "git diff --check"
       - "git diff --name-only origin/main-tools...HEAD"
+  - id: 5
+    title: "Code Review Remediation (Iteration 1)"
+    kind: delivery
+    scope:
+      files:
+        - scripts/run-bash-suites.sh
+        - scripts/.tests/test-bash-suite-aggregation.sh
+        - tools/.tests/test-text-to-image-unit.sh
+        - tests/checks/ci-checks.test.ts
+        - doc/changes/2026-11/2026-11-06--GH-251--ci-failure-propagation/chg-GH-251-test-plan.md
+        - doc/changes/2026-11/2026-11-06--GH-251--ci-failure-propagation/chg-GH-251-spec.md
+    summary: "fix(GH-251): review iteration 1 — fail-closed runner discovery, latent suite fix, DEC-7 boundary fixtures, artifact truth pass"
+    tasks:
+      - "5.1 [F-1, high] scripts/run-bash-suites.sh discover_suites(): make discovery fail-closed — the mapfile-from-process-substitution shape discards find's exit status (empirically reproduced: unreadable directory → ERR trap logs, runner continues with a partial suite set and exits 0, violating F-1/AC-F1-1/NFR-1 fail-closed and regressing the replaced direct find invocation which did fail the job on find error). Capture the discovery status (e.g. command substitution with an explicit nonzero-exit branch logging 'suite discovery failed' and exiting EXIT_FAILURE; guard the empty-output case before splitting) and add a contract-suite case in scripts/.tests/test-bash-suite-aggregation.sh: a tree containing a chmod-000 subdirectory with a suite inside plus a passing suite; assert the runner exits non-zero naming the discovery failure (skip the case when running as root). Keep discovery scope, ordering, and all existing TC-CIPROP-001..012 behavior unchanged. [F-1, F-2; AC-F1-1; NFR-1; TC-CIPROP-006 neighbor]"
+      - "5.2 [F-2, high] tools/.tests/test-text-to-image-unit.sh test_parse_yaml_fallback (line ~256): fix the latent pre-existing assertion — it expects 'export key=value' while tools/text-to-image parse_yaml's fallback emits 'key=value' (reproduced with yq off PATH: 104/105, suite exit 1). Test-only change: assert the fallback's actual contract, and exercise the fallback deterministically (invoke parse_yaml in a PATH-sanitized subshell so the branch runs in every environment, keeping the yq-available branch as-is where applicable). This is a disclosed deviation beyond the two repairs, justified by ticket AC-2 ('all existing suites pass with the new aggregation') — the CI bash-tests job installs jq only, so the first correctly-propagating run would otherwise fail on this suite and block the TC-CIPROP-013/AC-F3-1 green-run evidence. Record the deviation in pm-notes; do NOT install yq in the job to hide the branch. Verify against the first real PR run before recording TC-CIPROP-013. [AC-2 ticket; NFR-5; TC-QUAL-001]"
+      - "5.3 [F-3, low] tests/checks/ci-checks.test.ts: add two DEC-7 boundary-precision fixtures (probe-verified gaps in the current set): (a) a comment line directly above the NEXT job key after bash-tests is currently classified into the bash-tests region and removable — pin the intended classification; (b) a non-suite-execution run-step body inside bash-tests (the Install jq run line) is currently allowed — pin it. Either pin both as allowed (documenting the true standing regional footprint for the RSK-7 human gate, extending the Fixture-A non-vacuity set accordingly) or narrow jobBlockRange/runBlockLineNumbers; whichever is chosen, the fixtures must fail under allowBashTestsExecutionBlockRemovals: false. Route the standing-footprint sentence (readiness finding 2) to the pr_creation description obligation. [F-8; AC-F8-1; NFR-6; RSK-7]"
+      - "5.4 [F-4, low] Change-artifact truth pass: chg-GH-251-test-plan.md — set frontmatter links.implementation_plan to ./chg-GH-251-plan.yaml, mark section 1.2 GAP-1 resolved-by-plan, correct the section 10 scope-classification changeset name to gh-251-ci-failure-propagation-minor.md, and add tests/checks/privacy-release.test.ts (merge-base anchoring) to the classified set; chg-GH-251-spec.md and test-plan frontmatter — align version_impact with the delivered minor changeset (or add a one-line deviation note citing TC-RELEASE-001). Documentation-only; no code. [DoR findings 1-2 fold-in; TC-SCOPE-001 consistency]"
+    testGate:
+      - "bash scripts/.tests/test-bash-suite-aggregation.sh"
+      - "bash scripts/.tests/test-bash-suite-aggregation-modes.sh"
+      - "bash tools/.tests/test-text-to-image-unit.sh"
+      - "bash scripts/run-bash-suites.sh"
+      - "bun test tests/checks/ci-checks.test.ts"
+      - "pnpm check"
