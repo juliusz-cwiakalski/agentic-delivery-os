@@ -1,9 +1,9 @@
 ---
 id: PDR-0003
 decision_type: pdr
-status: Proposed
+status: Accepted
 created: 2026-11-06
-decision_date: null
+decision_date: 2026-11-06
 last_updated: 2026-11-06
 summary: "The initial owner-gate SLA default map: exactly two gate kinds (owner-review, waiver); owner-review is never-merge and carries NO pre-agreed default (perpetual visible escalation); waiver is defaultable with the single v0 default owner-review-first; any extension is an owner-signed policy-data change."
 owners:
@@ -303,3 +303,10 @@ No accepted-risk exceptions are recorded (no `negotiable: yes` constraint is vio
 - Related decisions: ADR-0004 (activity-timestamp semantics — the age clock), ADR-0006 (absence-not-fabrication discipline)
 - Process authority: `doc/guides/decision-making.md` §6 (bounded AI authority — R2 records are not AI-Accepted), `.ai/agent/decision-instructions.md` (status lifecycle, per-type numbering)
 - Precedent for the Proposed-until-PR pattern: PDR-0002 (final acceptance rides the change's PR review)
+
+## Acceptance
+
+Accepted by the owner on 2026-11-06 (owner inbox ratification thread,
+`.ai/local/owner/inbox/2026-11-06--ceo--post-merge-ratification-and-two-small-items.md`):
+"PRD-0003 is ok." Delivery had already merged with PR #248 under the
+PM unblock delegation; acceptance ratifies the default map as recorded.
