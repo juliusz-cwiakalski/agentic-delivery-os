@@ -56,10 +56,10 @@ Commit: `c83aa0a6` — `test(GH-223): complete invariant sweep and cross-tier co
   - 1 failure was `state-ledger.test.ts` pinning the exact public port surface; the
     additive `readStoreArtifact`/`ensureStoreArtifact` capability was added to the
     expected surface.
-  - `privacy-release.test.ts` and `ci-baseline-parity.test.ts` remain environment/
-    sequencing dependent: the changeset test requires the Phase 6 changeset commit;
-    the baseline-parity test uses `git clone --local` into the OS temp dir and fails
-    cross-device here, passing with `TMPDIR=<repo>/tmp/tmpdir`.
+  - `privacy-release.test.ts` needed the Phase 6 changeset and a base refresh;
+    `ci-baseline-parity.test.ts` uses `git clone --local` into the OS temp dir and
+    fails cross-device here, passing with `TMPDIR=<repo>/tmp/tmpdir`. Both are green
+    in the Phase 6 aggregate run.
 - `bun test tests/behaviour` — 1694 pass, 4 skipped, 1 fail (`state-ledger` port
   surface, fixed as above); re-run of the touched file is green.
 - `bun run scripts/checks/error-table-sync.ts` — 0 drift.
@@ -69,12 +69,25 @@ Commit: `c83aa0a6` — `test(GH-223): complete invariant sweep and cross-tier co
 
 ## Phase 6 — finalize
 
-Commit: this phase's commit (changeset + this log).
+Commit: `2dc30291` — `chore(GH-223): finalize delivery evidence and changeset`
+Merge: `aa4ca9ee` — `Merge branch 'main-tools' into feat/GH-223/audit-ledger`
+(the branch was cut from `c6699302`; the base had advanced to `47270b37`, so the
+base was merged before the aggregate gate to keep the release-diff checks honest).
 
-- `pnpm check` — recorded below after the changeset commit.
+- `pnpm check` (with `TMPDIR=<repo>/tmp/tmpdir`) — **exit 0**: lint, format,
+  typecheck, 3276 tests passing / 4 skipped / 0 failing across 326 files,
+  boundaries (`no dependency violations`), ambient-globals, workspace-entrypoints,
+  secret-read-boundary, and exports parity all green.
 - `bash scripts/.tests/test-doc-distribution.sh` — no drift (81 in-scope docs).
 - `bun run scripts/checks/changesets-group.ts` — exactly one fixed group of five;
   testkit excluded.
+- `bun test tests/checks/privacy-release.test.ts` — 7 pass, 0 fail (after the
+  base merge restored the two pre-existing changesets).
+
+There is no executable `plan validate` entrypoint in this checkout (the `plan`
+command ships as an injected in-process runtime); the plan YAML was kept
+untouched and schema-shaped, and the DoR gate validated it before delivery.
+
 
 ## Deviations from the plan
 
@@ -103,5 +116,11 @@ Commit: this phase's commit (changeset + this log).
    historical M0-S3 goldens remain byte-identical; scripted mode is injected at the
    edge and exercised by the new suites.
 7. **CI baseline parity locally** requires `TMPDIR` inside the repository because
-   `git clone --local` hardlinks across devices; the aggregate gate below is run with
+   `git clone --local` hardlinks across devices; the aggregate gate is run with
    `TMPDIR=<repo>/tmp/tmpdir`.
+8. **Base refresh before the final gate.** The branch was cut from `c6699302`
+   while `main-tools` had advanced to `47270b37` (GH-228/GH-229). A merge was
+   required for the release-diff invariant (pre-existing changesets byte-identical)
+   to hold; the four textual conflicts (`contracts/index.ts`, port inventory,
+   golden redaction suite, source inventory) were resolved by keeping both sides
+   and regenerating the two inventories from the live tree.
