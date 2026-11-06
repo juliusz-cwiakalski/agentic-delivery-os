@@ -45,6 +45,7 @@ export {
   serializeProductionSchema,
 } from "./config/index.js";
 export {
+  aggregateDoctorReport,
   aggregateStatus,
   boundCloseoutData,
   buildCloseoutPlan,
@@ -95,6 +96,7 @@ export {
   evaluateWatchdogPreflight,
   findingClasses,
   foldCloseoutOutcomes,
+  formatDoctorFailureSummary,
   formatVerifySummary,
   generateCommitMessage,
   globToRegExp,
@@ -124,6 +126,7 @@ export {
   renderBoardHuman,
   renderBriefHuman,
   renderCloseoutHuman,
+  renderDoctorHuman,
   renderQueueReadyHuman,
   renderSessionAdminHuman,
   renderStatusHuman,
@@ -134,6 +137,7 @@ export {
   resolveOpenPr,
   runCloseout,
   runCommitAct,
+  runIsolatedDoctorCheck,
   sanitizeCommitMessage,
   scopeCoversPath,
   selectCommitTransport,

@@ -81,6 +81,12 @@ export {
   selectCommitTransport,
 } from "./commit-transport.js";
 export {
+  aggregateDoctorReport,
+  formatDoctorFailureSummary,
+  renderDoctorHuman,
+  runIsolatedDoctorCheck,
+} from "./doctor.js";
+export {
   collectorUnavailableCode,
   evaluateOwnerGateSla,
   isCollectorUnavailableFamilyCode,

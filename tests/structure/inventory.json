@@ -44,6 +44,7 @@
     "src/domain/commit-skeleton.ts",
     "src/domain/commit-staging.ts",
     "src/domain/commit-transport.ts",
+    "src/domain/doctor.ts",
     "src/domain/index.ts",
     "src/domain/owner-gate-sla.ts",
     "src/domain/plan-diff.ts",

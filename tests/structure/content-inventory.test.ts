@@ -249,6 +249,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/domain/commit-transport.ts": ["generateCommitMessage", "selectCommitTransport"],
   "core/src/domain/commit-converge.ts": ["classifyCommitDelta"],
   "core/src/domain/commit-act.ts": ["messageText", "runCommitAct"],
+  "core/src/domain/doctor.ts": [
+    "aggregateDoctorReport",
+    "formatDoctorFailureSummary",
+    "renderDoctorHuman",
+    "runIsolatedDoctorCheck",
+  ],
   "core/src/domain/closeout.ts": [
     "boundCloseoutData",
     "buildCloseoutPlan",
