@@ -22,6 +22,7 @@ export const DOMAIN_KINDS = [
   "plan",
   "watchdog",
   "status",
+  "blockers",
 ] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -607,5 +608,49 @@ export const ERROR_TABLE = [
       "Restore access to the named collector source and re-run the board; the board withheld its gates rather than display a partial picture.",
     projectionClass: "platform-provider",
     summary: "The named board collector is unavailable.",
+  },
+  {
+    code: "blockers.invalid-type",
+    domainKind: "blockers",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Use one of the declared question types (decision-needed, spec-ambiguity, credential-missing, external-wait) and retry.",
+    projectionClass: "user-validation",
+    summary: "The question type is not in the closed blocker vocabulary.",
+  },
+  {
+    code: "blockers.unknown-id",
+    domainKind: "blockers",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Check the question id with `blockers list` and answer an existing open question.",
+    projectionClass: "user-validation",
+    summary: "The named question id does not exist in the store.",
+  },
+  {
+    code: "blockers.credential-value-rejected",
+    domainKind: "blockers",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Credential questions carry the variable name only; the value comes from the environment.",
+    projectionClass: "user-validation",
+    summary: "A credential value was supplied to the blocker channel.",
+  },
+  {
+    code: "blockers.audience-mismatch",
+    domainKind: "blockers",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Answer from the question's audience (or an identity the delegation policy allows); the shipped policy refuses coordinator answering an owner-audience question (delegation policy: none).",
+    projectionClass: "user-validation",
+    summary: "The answerer may not answer this question's audience.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

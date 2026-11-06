@@ -68,12 +68,17 @@ const FALLBACK_CODES = new Set(["fallback.invocation", "fallback.internal"]);
 // GH-182/GH-221: the specs pin the two-segment `provider.outage` identity and
 // the three lane-safety `watchdog.*` identities exactly; they remain exact
 // declared codes (not a pattern widening), and every other failure identity
-// keeps the three-segment minimum.
+// keeps the three-segment minimum. GH-230 pins the four closed `blockers.*`
+// user-validation identities the same way: exact codes, no family wildcard.
 const RESERVED_TWO_SEGMENT_CODES = new Set([
   "provider.outage",
   "watchdog.checkout-dirty",
   "watchdog.checkout-non-base",
   "watchdog.signals-absent",
+  "blockers.invalid-type",
+  "blockers.unknown-id",
+  "blockers.credential-value-rejected",
+  "blockers.audience-mismatch",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;

@@ -9,6 +9,7 @@
     "src/config/resolver.ts",
     "src/config/schema.ts",
     "src/contracts/adapter-capabilities.ts",
+    "src/contracts/blockers.ts",
     "src/contracts/brief.ts",
     "src/contracts/closeout.ts",
     "src/contracts/config.ts",

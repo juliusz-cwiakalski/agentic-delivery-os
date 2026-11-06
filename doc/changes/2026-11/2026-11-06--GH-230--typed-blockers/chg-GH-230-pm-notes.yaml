@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-06T06:35:00Z", completed: "2026-11-06T09:35:00Z" }
   delivery_planning: { started: "2026-11-06T09:40:00Z", completed: "2026-11-06T10:05:00Z" }
   dor_check: { started: "2026-11-06T10:15:00Z", completed: "2026-11-06T10:30:00Z" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-11-06T10:40:00Z", completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -43,5 +43,8 @@ notes:
     type: "decision"
     date: "2026-11-06"
   - text: "DoR gate PASSED (iteration 1, zero blocking findings): plan machine-validated (readyForDevelopment true, 0 errors), all 5 ticket ACs + 4 pinned decisions unre-derived, seeded scenarios pinned exact (SC-M1-13->TC-BLK-025, SC-M1-24->TC-BLK-022), 21 ACs x 43 TCs bidirectional traceability, GAP-17 allowlist pinned early (Phase 1 task 1.4), no scope creep (daemon/dispatch/wake out with zero-call assertions). Verdict artifact: readiness-review/readiness-iter-1.md. Advisory notes recorded there (SC-M1-13 laneResume reading, DEC-10 shared-machinery reading, delivery-bound spellings confirmed by goldens)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Plan phase 1 complete (contracts vocabulary + four-row blockers error family): exact four-code RESERVED_TWO_SEGMENT_CODES added in scripts/checks/error-table-sync.ts and tests/structure/error-table.test.ts; +1 domain kind / +4 rows; documented S2 rows; corpora true/false positives; blockers-contract structure suite. Evidence: bun run scripts/checks/error-table-sync.ts OK (entries=57 documented=57); bun test blockers-contract/error-table/error-table-sync green; pnpm typecheck exit 0."
     type: "info"
     date: "2026-11-06"

@@ -1068,8 +1068,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 19) {
-    failures.push(`table length ${live.length} != baseline + 19 (${BASELINE_ROWS.length + 19})`);
+  if (live.length !== BASELINE_ROWS.length + 23) {
+    failures.push(`table length ${live.length} != baseline + 23 (${BASELINE_ROWS.length + 23})`);
   }
   return failures;
 };
@@ -1141,7 +1141,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 19,
+      BASELINE_ROWS.length + 23,
     );
   });
 
@@ -1164,7 +1164,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 19);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 23);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1386,5 +1386,64 @@ describe("TC-BRIEF-013 brief rows stay absent and the sync check stays green", (
     );
     const text = messages((await runSyncCheck({ root })).failures);
     expect(text).toContain("documented code brief.phantom.row has no source entry");
+  });
+});
+
+const ROW_BLOCKERS_EXTRA =
+  "| blockers.extra-code | blockers | user | false | not_landed | Extra row. | user-validation | An extra blocker row. |";
+
+describe("TC-BLK-007 blockers family mutations fail by name", () => {
+  test("an undocumented documented blockers row fails", async () => {
+    const root = makeTempRoot();
+    editFile(root, DOC, insertDocRow(ROW_BLOCKERS_EXTRA));
+    expect(messages((await runSyncCheck({ root })).failures)).toContain("blockers.extra-code");
+  });
+
+  test("a fifth machine blockers row fails by its code", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, (text) =>
+      text.replace(
+        /(\n\s*\{\n\s*code: "blockers\.audience-mismatch",[\s\S]*?\n\s*\},)/,
+        `$1\n  {
+    code: "blockers.extra-code.row",
+    domainKind: "blockers",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Extra.",
+    projectionClass: "user-validation",
+    summary: "Extra.",
+  },`,
+      ),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "source entry blockers.extra-code.row is undocumented",
+    );
+  });
+
+  test("changing a blockers row's category fails naming the code", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, (text) =>
+      text.replace(
+        /code: "blockers\.audience-mismatch",\n(\s*)domainKind: "blockers",\n(\s*)category: "user"/,
+        'code: "blockers.audience-mismatch",\n$1domainKind: "blockers",\n$2category: "platform"',
+      ),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "blockers.audience-mismatch",
+    );
+  });
+
+  test("removing the documented audience-mismatch row fails naming the source entry", async () => {
+    const root = makeTempRoot();
+    editFile(root, DOC, (text) => text.replace(/^\| blockers\.audience-mismatch \|.*\n/m, ""));
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "source entry blockers.audience-mismatch is undocumented",
+    );
+  });
+
+  test("the unchanged copy remains green (control)", async () => {
+    const root = makeTempRoot();
+    expect((await runSyncCheck({ root })).failures).toEqual([]);
   });
 });
