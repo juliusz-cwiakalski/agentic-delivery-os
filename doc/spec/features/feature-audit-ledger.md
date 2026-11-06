@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The command audit ledger: two additive state record kinds (a reservation append followed by the invocation record) written under one shared fence with a durable per-store ordinal, a keyed tamper-evident chain over both kinds backed by the store-managed chain-key.<workspace>.json artifact, a bounded filtered library read surface that reports skipped-ordinal findings in-band, the claimed agent-identity convention named through the branding seam, and audit-write failure semantics that never change a command outcome."
 links:
-  related_changes: ["GH-223"]
+  related_changes: ["GH-223", "GH-232"]
   related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/audit.ts"
@@ -282,7 +282,7 @@ The ledger adds no network, provider, or telemetry cost. The recurring cost is l
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for the public port, additive kinds, artifact boundaries, verified reads, fences, salvage, evidence, and forever retention.
 - **Depends on** the branding seam ([feature-branding-seam.md](feature-branding-seam.md)) for `environmentPrefix`, the naming root of the identity variable.
 - **Consumed by** the scripted-mode rendering contract in [feature-result-contract.md](feature-result-contract.md): the trim is safe because the record retains the context fields.
-- **Named for future consumers:** the retro pipeline and spend/exit evidence read audit history through the bounded surface. No such consumer ships with this feature.
+- **Consumed by** the retro evidence pipeline ([feature-retro-pipeline.md](feature-retro-pipeline.md)): `retro collect` reads audit history through the bounded surface and carries every skipped-ordinal finding and the full chain verdict into its evidence verbatim.
 - **Risk — key loss:** losing the key artifact prevents verification and continuation. Mitigation: the artifact is a store-managed file under the state directory's permissions; rotation and backup/restore are deferred.
 - **Risk — claimed identity mistaken for authentication:** the record always carries the `claimed` marker, and identity is never an authorization input.
 - **Risk — unbounded history dump:** the read surface requires a limit and exposes no dump export; structure tests pin the absence.
@@ -309,6 +309,7 @@ The ledger adds no network, provider, or telemetry cost. The recurring cost is l
 
 - [Result Contract and Error Table](feature-result-contract.md) — the envelope, error table, mode-aware rendering, and redaction chokepoint.
 - [State Layer](feature-state-layer.md) — the store, additive record kinds, artifact boundary, store-managed artifacts, fences, salvage, and retention.
+- [Retro Evidence Pipeline](feature-retro-pipeline.md) — the first consumer of the bounded read surface; carries skipped-ordinal findings and the chain verdict into retro evidence.
 - [Branding Seam and Working Name](feature-branding-seam.md) — `environmentPrefix`, the naming root of the identity variable.
 - [Glossary](../../overview/glossary.md) — repository-wide terms.
 - [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0004](../../decisions/TDR-0004-state-storage-engine.md), [TDR-0005](../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md).

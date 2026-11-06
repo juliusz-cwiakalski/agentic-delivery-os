@@ -1,11 +1,12 @@
 ---
+ados_distribution: internal
 id: SPEC-TOOLING-NONFUNCTIONAL
 status: Proposed
 created: 2026-11-01
 last_updated: 2026-11-06
 owners: [engineering]
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-232]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -42,8 +43,8 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 
 - Quality attribute: reliability and diagnosability. Applies: result envelopes,
   status, brief, queue-ready, verify-change, provider reads, the watchdog probes, the
-  owner-gate board, the doctor pre-flight diagnostic, the merge transaction, and the
-  verify-deploy verdict.
+  owner-gate board, the doctor pre-flight diagnostic, the merge transaction, the
+  verify-deploy verdict, and the retro evidence pipeline.
 - Requirement/status: existing. Missing, failed, or unavailable evidence must not
   become a clear/ready/zero claim. Command success is not delivery success.
 - Evidence/test: [result](features/feature-result-contract.md),
@@ -71,14 +72,17 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   doctor diagnostic applies the same rule per check: a failed or unattempted read
   is never `ok` (it is `unreachable`, or `fail` where the condition catalog
   declares an observed defect), and every non-ok verdict carries a bounded detail
-  and a fix hint.
+  and a fix hint. The retro pipeline applies the same rule: a malformed entry
+  classifies with partial output preserved, a chain break is tamper evidence, a
+  zero-collector run is refused as vacuous, and a no-eligible-target collect is an
+  explicit checked-empty success rather than a fabricated run.
 - Owner/trigger: reviewer with PM; every new evidence consumer (RSK-002/003, XC-001).
 
 ### NFR-TOOL-002: Stable machine output and bounded read digests
 
 - Quality attribute: interoperability and resource boundedness. Applies: CLI
   envelope, status, brief, queue-ready, board, verify gates, merge, verify deploy,
-  and doctor renderers. Status: existing.
+  doctor renderers, and retro collect/report renderers. Status: existing.
 - Requirement: one valid `CommandResult` under `--json`, exactly one of data/error,
   classified containment, deterministic ordering, and visible truncation.
 - Canonical budgets: [status](features/feature-status-digest.md#evidence-counts-truncation-and-bounds)
@@ -93,9 +97,11 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   [merge transaction](features/feature-merge-verify-deploy.md#invariants) caps the
   human summary at 24 lines/4096 bytes and machine data at 65536 bytes, and
   `verify deploy` uses the same caps with 50-step/50-artifact evidence lists and
-  explicit `+N` marks. These are data caps, not a universal total-envelope cap.
-  Brief reuses the status human and machine caps by reference and declares no
-  parallel numeric bound.
+  explicit `+N` marks. [Retro](features/feature-retro-pipeline.md#non-functional-requirements)
+  bounds the audit collector read at 1000 records and export at a caller limit from
+  1 to 1000 with in-band truncation; report data is the four-key shape. These are
+  data caps, not a universal total-envelope cap. Brief reuses the status human and
+  machine caps by reference and declares no parallel numeric bound.
 - Queue-ready accepts 1..8 candidates of at most 64 canonical characters; its
   per-field caps and renderer-only reverse-rank drops remain feature-specific.
 - Evidence/test: `packages/core/src/contracts/status.ts`,
@@ -110,7 +116,7 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 
 - Quality attribute: performance efficiency. Applies: status/queue-ready pure
   policy, the owner-gate board, the doctor diagnostic, provider evaluation, privacy
-  scan/policy, session administration.
+  scan/policy, session administration, and the retro pipeline folds.
 - Requirement/status: existing feature budgets only; no universal latency SLO.
   Reference-environment results are not promises for every platform or network.
 
@@ -122,6 +128,7 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 | [Board](features/feature-owner-gate-sla.md#non-functional-requirements) | Pure evaluation/ranking/rendering within 50 ms; one bounded tracker read, at most one decision-history read, and one fence plus one append per newly defaulted gate. | `tests/behaviour/board-performance.test.ts`, `board-read-cost.test.ts`. |
 | [Doctor](features/feature-doctor.md#non-functional-requirements) | Pure cap-sized aggregation within 50 ms; at most two single-page network reads (tracker and CI), one configuration resolve, one shared verified ledger read; no pagination, retry, or write. | `tests/behaviour/doctor-performance.test.ts` samples the median of 21 runs after warm-ups; `doctor-network-posture.test.ts` pins the read budget and shared-source read-once posture. |
 | [Merge and verify deploy](features/feature-merge-verify-deploy.md#invariants) | Pure freshness, waiver, and deploy-verdict evaluation; `merge` performs one verification read, one work-item read, one check-run page, one request-detail read, and only the declared git mutations; `verify deploy` performs one bounded trace read; the freshness bound defaults to 1800 s with at-bound stale. | `tests/behaviour/merge-probe.test.ts`, `merge-determinism.test.ts`, `verify-deploy-read-budget.test.ts`, `merge-bounds.test.ts`, `verify-deploy-bounds.test.ts`. |
+| [Retro](features/feature-retro-pipeline.md#non-functional-requirements) | Pure deterministic collect/report/export folds; the audit collector reads at limit 1000; collect/report/export are bounded over a 10,000-record sidecar with full chain verification; read and append budgets are 10000 ms and 30000 ms; export is capped at 1000 records with in-band truncation. | `tests/behaviour/retro-performance.test.ts`, `retro-collect.test.ts`, `retro-export.test.ts`. |
 | [Provider](features/feature-provider-engine.md#non-functional-requirements) | Pure evaluation of 100 entries within 50 ms, excluding transport; configurable quota timeout defaults to 15000 ms, sleep cap to 24 completed sleeps. | Provider behavior and evidence-bounds suites; these are not end-to-end command deadlines. |
 | [Privacy](features/feature-privacy-guard.md#non-functional-requirements) | Scan within 60 s for up to 50 MiB on CI reference runner; emitter within 10 ms per 2048-byte envelope; at most 32 hashed lengths. | `tests/checks/privacy-performance.test.ts`; production empty classes limit what a clean scan demonstrates. |
 | [Commit](features/feature-commit-primitive.md#non-functional-requirements) | Dry-run p95 under 2 s and template-fallback p95 under 5 s; one constrained model call per attempt; a model-transport commit is bounded by the provider call. | `tests/behaviour/commit-performance.test.ts` samples the dry-run and template paths; the model-transport bound is not a CI deadline. |
@@ -135,14 +142,18 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 ### NFR-TOOL-004: Durable local state and fenced writes
 
 - Quality attribute: integrity and recoverability. Applies: ledger, derived indexes,
-  phase transitions, provider park persistence, and the merge-domain records
-  (gate verification, waiver, transaction). Requirement/status: existing.
+  phase transitions, provider park persistence, the retro registry, the evidence
+  sidecar, and the merge-domain records (gate verification, waiver, transaction).
+  Requirement/status: existing.
 - [State](features/feature-state-layer.md) requires verified ledger truth, explicit
   verified-empty evidence, key-set assertions, torn and unknown classification,
   reusable artifact-boundary validation, fenced writes, explicit stale-lock recovery,
   and atomic derived-document replacement. The three merge-domain record kinds are
   additive within `delivery.state.v1`, and an append failure never leaves a
-  consumable half-verification.
+  consumable half-verification. The retro registry's three record kinds use the
+  same boundary validation and fenced writes; the evidence sidecar is a separate
+  collector-fenced, keyed-chain artifact family outside the store's salvage path
+  ([retro](features/feature-retro-pipeline.md)).
 - Read/index strategy does not change truth; only the two explicit terminal-tail
   operations remove ledger bytes, and guided salvage quarantines the removed bytes
   instead of discarding them. Mid-stream corruption is not silently repaired, and
@@ -164,13 +175,19 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 ### NFR-TOOL-005: Credentials, redaction, and bounded input
 
 - Quality attribute: security/confidentiality. Applies: config acquisition, credential
-  port, CLI serialization, provider HTTP. Requirement/status: existing scoped controls.
+  port, CLI serialization, provider HTTP, and retro evidence/report/export redaction.
+  Requirement/status: existing scoped controls.
 - [Config](features/feature-config-layer.md) rejects non-environment catalog secrets,
   disallowed machine-path sources, unknown keys, interpolation, and poisoned skipped
   sources. CI disables workstation layers unless explicitly enabled.
 - [Result](features/feature-result-contract.md) redacts edge-registered non-empty
   secret values through `packages/cli/src/output/serialize.ts`; unregistered or
   transformed secret material is not a general detection guarantee.
+- The [retro pipeline](features/feature-retro-pipeline.md) passes evidence,
+  findings, reports, and export bundles through the same redaction chokepoint and
+  keeps the sidecar chaining key out of records, output, configuration, and lane
+  environments. The key-containment invariant scans key-shaped literals in source,
+  fixtures, and goldens.
 - Evidence/test: config restrictions/parser suites, result goldens, credential and
   `tests/checks/secret-read-boundary.test.ts` negative controls.
 - Gap: YAML parser limits nodes/depth/aliases to 2048/64/100, but its 1048576

@@ -351,9 +351,23 @@ resolve/quota/parks as shipped with named self-expiring parks.
 
 ### `retro` (M1-S8, proposed)
 
-- Outputs: retro levels on demand; evidence from the append-only
-  sidecar a delivery agent cannot write; survives malformed entries
-  without data loss.
+- Inputs: `collect|report`; `--level <name>` (default `change`); global `--json`.
+  Declared levels are R1-R6; only `change` is implemented, and the other
+  declared names refuse with their owning-story hint.
+- Outputs: collect returns `data` with `level`, `outcome`
+  (`collected` | `no-target`), `selection`, `counts`, and for a collected run
+  `runId` and `truth`; report returns exactly `level`, `findings[]`,
+  `followThrough[]`, and `evidenceRefs[]`. Evidence lives in the independent
+  append-only keyed-chain sidecar; the validated registry declares levels,
+  records collection runs, and hosts the memory-audit trigger.
+- Exit: 0 collected, reported, or explicit `no-target`; 1 malformed entry,
+  tamper flag, vacuous run, or input/permission refusal; 2 unreachable
+  evidence store or a write refused outside the collector seam.
+- Scenarios: a malformed entry classifies with valid entries preserved;
+  altered evidence flags a chain break and is never served as verified;
+  a no-eligible-target collect is an explicit success while an executed
+  zero-collector run is `retro.truth.vacuous-run`; a clean empty fold is a
+  null-retro success. Export is a bounded library surface, not a CLI verb.
 
 ## Surfaces
 

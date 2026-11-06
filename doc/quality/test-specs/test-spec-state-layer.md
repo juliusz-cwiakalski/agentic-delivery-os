@@ -1,4 +1,5 @@
 ---
+ados_distribution: internal
 id: TEST-SPEC-STATE-LAYER
 status: Current
 created: 2026-11-05
@@ -6,7 +7,7 @@ last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-174", "GH-222", "GH-227", "GH-223"]
+  related_changes: ["GH-174", "GH-222", "GH-227", "GH-223", "GH-232"]
   feature_spec: doc/spec/features/feature-state-layer.md
 ---
 
@@ -18,10 +19,10 @@ The state-layer suite protects one property: a store either yields verified trut
 
 ## Test Scope
 
-- Components under test: the state facade (`packages/core/src/state/index.ts`), the ledger verification and tear-topology helpers (`state/ledger.ts`), the runtime-neutral storage-error classification (`state/storage-error.ts`), the reusable artifact boundary (`state/artifact-boundary.ts`), the delivery registry consumer (`state/registry.ts`), the closeout ledger (`state/closeout.ts`), the commit telemetry ledger (`state/commit-telemetry.ts`), the audit consumer (`state/audit.ts`), the runtime edge (`state/driver/runtime-edge.ts`), and the two read strategies (`state/driver/strategy.ts`).
-- Contracts under test: the driver-neutral state vocabulary in `packages/core/src/contracts/state.ts`, the audit vocabulary in `packages/core/src/contracts/audit.ts`, and the nine `state` rows in `packages/core/src/contracts/error-table.ts`, synchronized with the documented table in [the result contract](../../spec/features/feature-result-contract.md).
-- Integration points: the registry projection and presence-tolerant read, the provider park fold, closeout history, the owner-gate decision ledger, the commit telemetry history and its convergence use, the audit reservation/invocation ledger with its keyed chain and store-managed key artifact, and the error-table sync check that binds machine and documented rows.
-- Exclusions: there is no command surface, so no end-to-end tier applies. Real disk exhaustion, backup/restore, migration, prune/compaction, retro-registry behavior, and ceremony-runner behavior are out of scope. Windows ACL execution is platform-conditional and is not claimed by a Linux run. Salvage, rebuild, and classification performance is not measured.
+- Components under test: the state facade (`packages/core/src/state/index.ts`), the ledger verification and tear-topology helpers (`state/ledger.ts`), the runtime-neutral storage-error classification (`state/storage-error.ts`), the reusable artifact boundary (`state/artifact-boundary.ts`), the delivery registry consumer (`state/registry.ts`), the closeout ledger (`state/closeout.ts`), the commit telemetry ledger (`state/commit-telemetry.ts`), the audit consumer (`state/audit.ts`), the retro registry consumer (`state/retro-registry.ts`), the evidence sidecar consumer (`state/retro-sidecar.ts`), the runtime edge (`state/driver/runtime-edge.ts`), and the two read strategies (`state/driver/strategy.ts`).
+- Contracts under test: the driver-neutral state vocabulary in `packages/core/src/contracts/state.ts`, the audit vocabulary in `packages/core/src/contracts/audit.ts`, the retro vocabulary in `packages/core/src/contracts/retro.ts`, and the nine `state` rows in `packages/core/src/contracts/error-table.ts`, synchronized with the documented table in [the result contract](../../spec/features/feature-result-contract.md).
+- Integration points: the registry projection and presence-tolerant read, the provider park fold, closeout history, the owner-gate decision ledger, the commit telemetry history and its convergence use, the audit reservation/invocation ledger with its keyed chain and store-managed key artifact, the retro registry's three kinds, the independent evidence sidecar with its own key and fence, and the error-table sync check that binds machine and documented rows.
+- Exclusions: there is no command surface, so no end-to-end tier applies. Real disk exhaustion, backup/restore, migration, prune/compaction, retro report/export behavior, and ceremony-runner behavior are out of scope; retro-domain suites are indexed by [the retro feature spec](../../spec/features/feature-retro-pipeline.md#quality-assurance-strategy). Windows ACL execution is platform-conditional and is not claimed by a Linux run. Salvage, rebuild, and classification performance is not measured.
 
 ## Test Levels
 
@@ -50,6 +51,7 @@ Every integration store lives under a per-test temporary root and is driven thro
 - `audit-ledger.test.ts`, `audit-outcomes.test.ts`, `audit-timestamp.test.ts`, `audit-identity.test.ts`, `audit-write-failure.test.ts`, `audit-ordinal-gap.test.ts`, `audit-reservation-orphan.test.ts`, `audit-reservation-failure.test.ts`, `audit-malformed.test.ts`, `audit-rebuild-orphan.test.ts`, `audit-redaction.test.ts`, `audit-scenario-m1-23.test.ts` — the audit consumer's two-phase append, exactly-one invocation record per outcome class, durable ordinal and skipped-ordinal findings, timestamp and claimed-identity capture, classified write degradation, malformed-entry classification, redaction, and the seeded end-to-end scenario.
 - `audit-chain.test.ts`, `audit-chain-reservation.test.ts`, `audit-chain-reservation-orphan.test.ts`, `audit-chain-mutations.test.ts`, `audit-chain-salvage.test.ts`, `audit-key-artifact.test.ts`, `audit-key-exclusion.test.ts`, `audit-key-open-failures.test.ts`, `audit-chain-cross-process.test.ts`, `audit-salvage-reservation.test.ts` — clean and mutated chain verification over both kinds, salvage continuity, the store-managed key artifact, key exclusion, open-failure identities, and cross-process continuity.
 - `audit-read.test.ts`, `audit-read-refusal.test.ts`, `audit-read-time-window.test.ts`, `audit-read-command-filter.test.ts`, `audit-rebuild-orphan.test.ts` — exact filters, inclusive time windows, mandatory bounds and in-band truncation, refusal identity, torn/unknown classification, and raw-token command matching.
+- `retro-registry.test.ts`, `retro-sidecar-append.test.ts`, `retro-chain.test.ts`, `retro-chain-mutations.test.ts`, `retro-chain-salvage.test.ts`, `retro-chain-cross-process.test.ts`, `retro-key-artifact.test.ts`, `retro-malformed.test.ts` — the retro registry's three-kind boundary validation and additive seed, collector-fenced sidecar appends and permissions, clean and mutated chain verification, key creation/reuse/open failures, cross-process continuity, salvage continuity, and entry-level malformation preservation.
 
 ### Contract, Structure, and Boundary Tests
 
@@ -84,7 +86,7 @@ None apply: the state tier is a local library surface with no command, and all a
 ### Scenario: Boundary validation
 
 - **Given** a declared artifact boundary, **when** records are read or written, **then** the verdict is one of valid, verified-empty, torn, or unknown, and a nonconforming write is refused `not_landed` with the ledger byte-identical and no default filled in.
-- **And** the same declaration applied to a second kind needs no code change, and no retro or ceremony runtime exists.
+- **And** the same declaration applied to a second kind needs no code change; the retro registry declares three kinds under its own prefix, while ceremony-runtime behavior remains absent.
 
 ### Scenario: Guided salvage
 

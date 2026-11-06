@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: "2026-11-06T18:35:00Z", completed: "2026-11-06T19:00:00Z" }
   dor_check: { started: "2026-11-06T19:05:00Z", completed: "2026-11-06T19:50:00Z" }
   delivery: { started: "2026-11-06T19:12:00Z", completed: "2026-11-06T20:10:00Z" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-11-06T20:15:00Z", completed: "2026-11-06T20:35:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -94,6 +94,9 @@ notes:
     type: info
     date: "2026-11-06"
   - text: "Plan phase 6 (Aggregate gate and changeset): commit 8b2c8421. Verification: pnpm check exit 0 (lint, format, typecheck, full test, boundaries, exports parity); doc-distribution guard green (81 docs); changesets-group green; plan YAML validates 0 errors / 6 phases. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "system_spec_update completed with zero residual gaps: authored doc/spec/features/feature-retro-pipeline.md (first-spec-only, unconditional resolution per pm-instructions); reconciled feature-state-layer, feature-audit-ledger, feature-result-contract, feature-doctor, nonfunctional, test-spec-state-layer, glossary (18 retro terms), architecture-overview, ubiquitous-language, 00-index; refined the M1 pack retro command/contract pages to delivered surface; registered the new spec in forbidden-literals.registry.json (GH-224/GH-225 precedent for doc-registration metadata). Verification: doc-distribution PASS (81 docs), error-table-sync 74/74, forbidden-literals 5/5 clean, privacy-literals clean, stale-claim sweep clean, links resolve."
     type: info
     date: "2026-11-06"
   - text: "Delivery completed: all 6 plan phases executed and committed; 64/64 TC coverage mapped to suites; TC-063 golden-envelope coverage in retro-output against committed golden cases. Documented deviations, all justified: (1) intentional layering refactor — domain engine consumes contracts-declared RetroSidecarPort/RetroRegistryPort instead of importing state-tier modules (dependency-cruiser compliance); (2) contract additions spread across phase 1/2/4 commits as consumers required them, no scope widened; (3) plan task 6.4 execution log intentionally not written — execution contract forbids modifying doc/changes/** and .ai/local/**; (4) plan task 4.6 — dedicated CLI integration coverage in retro-levels/retro-output/cli-edge-seam instead of redundant runCli blocks in every suite; (5) pre-existing environment-only failures (ci-baseline-parity TMPDIR cross-filesystem, packed-state corepack hermetic-home) — pnpm check green with TMPDIR=$PWD/tmp/tmpdir; the earlier @delivery-os/core/contracts module risk did NOT reproduce after pnpm build (pretest builds dist)."
