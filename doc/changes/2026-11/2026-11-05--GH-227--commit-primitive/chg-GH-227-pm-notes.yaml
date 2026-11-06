@@ -115,6 +115,16 @@ notes:
   - text: "Retro: both critical review catches are fixture-realism failures, not coverage-matrix failures - the test plan mapped 23/23 ACs and the suites were green, yet single-phase plan fixtures and HEAD-at-re-run timing masked F-1/F-2 (the repo's own GH-170 single-phase-fixture lesson repeating). Future test-plan authoring should require at least one multi-phase plan fixture and re-run-after-later-commits scenarios for any convergence/idempotency semantics; coverage matrices must assert fixture realism, not just AC mapping"
     type: "retro"
     date: "2026-11-06"
+  - text: "Remediation iteration 1 complete: plan phase 9 tasks 9.1-9.8 all DONE (commits 037d2d10 fix + 5eb222db evidence); both criticals fixed - F-1 convergence now identifies the phase commit from the durable telemetry event bound to the transition identity (HEAD only for act baseline), F-2 planPhaseForLifecycle maps lifecycle ids to declared plan-phase kinds with disclosed plan-absent degradation (no silent phases[0] fallback); new multi-phase fixture + 6 scenarios incl. re-run-after-later-commits now pass; targeted 14+13+46 pass, regressions 87 pass; F-9 recorded as DEC-14 refinement rather than implemented; F-7 partial (tracked-file batched diff, untracked stays per-file - index mutation avoided)"
+    type: "resolved"
+    date: "2026-11-06"
+  - text: "Second upstream advance detected during remediation gate: origin/main-tools gained 47270b37 (GH-229 owner-gate SLA) + 055319e8 (GH-228 brief v0) - parallel worktree deliveries merged upstream while GH-227 was in flight. privacy-release.test.ts compares against origin tip so it now fails on two upstream-only changesets (integration signal, not a GH-227 defect). merge-tree shows 14 conflicted paths (error-table, edge seam, glossary, feature docs, core indexes + invariant tests) - both-sides-additive pattern, resolvable; delivery reopened for integration iteration (coder resolves, not committer)"
+    type: "risk"
+    date: "2026-11-06"
+  - text: "Retro: backlog-ranking assumed per-repo single-flight near-linear delivery, but GH-227/228/229 worktrees delivered concurrently and upstream merged serially - each change pays a 14-file integration at merge time. Real token cost of parallel delivery: integration conflicts on shared tables/indexes/docs recur per change. Candidate for retro pipeline (M1-S8) rather than process change now"
+    type: "retro"
+    date: "2026-11-06"
+
 
   - text: "Plan phase 1 complete: commit 77479da1 - commit domain contracts, six commit error rows, and the commit.phaseCommit config key. Gate: core build regenerated the config artifacts; structure/config/checks suite 136 pass; ERROR_TABLE 58 rows with 58 documented rows; error-table-sync OK."
     type: "info"
