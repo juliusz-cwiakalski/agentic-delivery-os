@@ -1,0 +1,17 @@
+{
+  "id": "bounds-over-cap",
+  "class": "bounds",
+  "generated": {
+    "count": 12,
+    "refPrefix": "GH-16",
+    "ageStepMs": 3600000
+  },
+  "expect": {
+    "exitCode": 0,
+    "gateCount": 8,
+    "records": 0,
+    "truncated": true,
+    "omitted": 4,
+    "gates": []
+  }
+}

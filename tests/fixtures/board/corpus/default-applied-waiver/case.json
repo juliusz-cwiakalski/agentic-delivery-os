@@ -1,0 +1,27 @@
+{
+  "id": "default-applied-waiver",
+  "class": "default-applied",
+  "gates": [
+    {
+      "id": "GH-1503:waiver",
+      "kind": "waiver",
+      "ref": "GH-1503",
+      "ageMs": 259200000
+    }
+  ],
+  "expect": {
+    "exitCode": 0,
+    "gateCount": 1,
+    "records": 1,
+    "truncated": false,
+    "omitted": 0,
+    "gates": [
+      {
+        "id": "GH-1503:waiver",
+        "slaState": "default-applied",
+        "default": "owner-review-first",
+        "waivedBy": null
+      }
+    ]
+  }
+}

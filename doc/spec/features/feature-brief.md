@@ -134,7 +134,7 @@ All bounds are consumed by reference from the status contract: `STATUS_MAX_HUMAN
 
 ### Error identity reuse and collector unavailability
 
-The brief adds no error-table row and no domain kind. Section and placeholder failures are payload data, not command failures. Collector unavailability renders at exit `0` with the affected surface naming its own evidence state (state word plus reason). This is distinct from the closed placeholder catalog, which stays at exactly three unbuilt capabilities. Only existing containment identities can fail the command: `fallback.invocation` projects to exit `1`, and `fallback.internal` projects to exit `2`. No `status.collector.<id>.unavailable` identity exists in the error table, the payload, the evidence, or the documentation.
+The brief adds no error-table row and no domain kind. Section and placeholder failures are payload data, not command failures. Collector unavailability renders at exit `0` with the affected surface naming its own evidence state (state word plus reason). This is distinct from the closed placeholder catalog, which stays at exactly three unbuilt capabilities. Only existing containment identities can fail the command: `fallback.invocation` projects to exit `1`, and `fallback.internal` projects to exit `2`. No `status.collector.<id>.unavailable` identity exists in the brief payload, the evidence, or the brief documentation; the closed family itself is the board's declared status-domain identity (see [Owner-Gate SLA](feature-owner-gate-sla.md)) and never appears in brief output.
 
 ## Technical Architecture & Codebase Map
 
@@ -259,7 +259,7 @@ The brief's current rules are fixed by these decisions; each row states the rule
 | ID | Current rule |
 |---|---|
 | DEC-1 | The brief renders from the same collector state as the status digest with zero brief-specific reads. |
-| DEC-2 | Collector unavailability is digest data at exit `0`: the affected surface names its own evidence state, distinct from the unbuilt-capability catalog; only `fallback.invocation` (`1`) and `fallback.internal` (`2`) can fail; no `status.collector.<id>.unavailable` identity and no error-table row exist. |
+| DEC-2 | Collector unavailability is digest data at exit `0`: the affected surface names its own evidence state, distinct from the unbuilt-capability catalog; only `fallback.invocation` (`1`) and `fallback.internal` (`2`) can fail; the brief adds no error-table row and carries no `status.collector.<id>.unavailable` identity in its payload, evidence, or documentation (the family itself is the board's declared status-domain identity). |
 | DEC-3 | The render path contains no LLM or model call. |
 | DEC-4 | The brief is the v0 owner-facing render surface; M1-S10 joins the same anchors to the status digest from the same collector state, and the two specs stay non-contradictory. |
 | DEC-5 | The v0 anchor set is exactly ready-to-merge, blocker questions (placeholder), and owner-gate ages; spend is not surfaced. |

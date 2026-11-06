@@ -23,6 +23,7 @@ All decision records for this repository, ordered by type and number.
 | ODR-0001 | ODR | Classify doc/templates/*.yaml register templates as redistributable | Accepted | 2026-06-25 | Juliusz Ćwiąkalski |
 | PDR-0001 | PDR | Tribal Knowledge Extraction Taxonomy | Accepted | 2026-06-27 | Juliusz Ćwiąkalski |
 | PDR-0002 | PDR | Mode-Aware Spec-Coverage Resolution for Autonomous Delivery | Proposed | 2026-07-02 | Juliusz Ćwiąkalski |
+| [PDR-0003](PDR-0003-owner-gate-sla-default-map.md) | PDR | Owner-Gate SLA Initial Default Map | Proposed | 2026-11-06 | Juliusz Ćwiąkalski |
 | TDR-0001 | TDR | @bootstrapper Inception Sub-Mode Prompt Structure | Proposed | 2026-06-27 | Juliusz Ćwiąkalski |
 | TDR-0002 | TDR | Pre-Iteration Hook Contract — Lifecycle, Failure Semantics, Distribution, and Testability | Accepted | 2026-07-16 | Juliusz Ćwiąkalski |
 | [TDR-0003](TDR-0003-config-parser-schema-and-acquisition.md) | TDR | Config Parser, Schema, and Acquisition | Proposed | 2026-10-30 | Juliusz Ćwiąkalski |

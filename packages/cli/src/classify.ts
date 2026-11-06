@@ -6,6 +6,8 @@
  * `fallback.internal` only at this explicit step.
  */
 import {
+  BOARD_COLLECTOR_ERROR_PREFIX,
+  BOARD_COLLECTOR_ERROR_SUFFIX,
   DOMAIN_KINDS,
   ERROR_TABLE,
   type ErrorTableEntry,
@@ -22,9 +24,32 @@ const isDeclaredKind = (kind: string): kind is (typeof DOMAIN_KINDS)[number] =>
 const entryForCode = (code: string): ErrorTableEntry | undefined =>
   (ERROR_TABLE as readonly ErrorTableEntry[]).find((entry) => entry.code === code);
 
+const COLLECTOR_ID_PATTERN = /^[a-z][a-z0-9-]*$/;
+
+/**
+ * The declared `status.collector.<id>.unavailable` family (GAP-3, DEC-7).
+ *
+ * Only the declared prefix/suffix pair and a non-empty collector-id slot are
+ * admitted; the family never widens to another namespace or suffix. The
+ * documented closed id set is enforced by the sync check, while the runtime
+ * admits the same family shape so an injected collector id stays nameable.
+ */
+const collectorFamilyEntry = (code: string, kind?: string): ErrorTableEntry | undefined => {
+  if (kind !== undefined && kind !== "status") return undefined;
+  if (!code.startsWith(BOARD_COLLECTOR_ERROR_PREFIX)) return undefined;
+  if (!code.endsWith(BOARD_COLLECTOR_ERROR_SUFFIX)) return undefined;
+  const id = code.slice(
+    BOARD_COLLECTOR_ERROR_PREFIX.length,
+    code.length - BOARD_COLLECTOR_ERROR_SUFFIX.length,
+  );
+  if (!COLLECTOR_ID_PATTERN.test(id)) return undefined;
+  const base = entryForCode("status.collector.tracker.unavailable");
+  return base === undefined ? undefined : { ...base, code };
+};
+
 /** Resolve a code to exactly one entry; "not found" is distinct from containment. */
 export function resolveAppErrorCode(code: string): CodeResolution {
-  const entry = entryForCode(code);
+  const entry = entryForCode(code) ?? collectorFamilyEntry(code);
   return entry === undefined ? { ok: false, reason: "unresolvable" } : { ok: true, entry };
 }
 

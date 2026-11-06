@@ -70,6 +70,14 @@ export type {
   StateRuntimeEdge,
 } from "./edge.js";
 export {
+  appendOwnerGateSlaDecision,
+  OWNER_GATE_SLA_DECISION_RECORD_KEY_PREFIX,
+  type OwnerGateSlaDecisionAppendOutcome,
+  type OwnerGateSlaDecisionsRead,
+  ownerGateSlaDecisionRecordKey,
+  readOwnerGateSlaDecisions,
+} from "./owner-gate-sla.js";
+export {
   appendPhaseTransition,
   foldPhaseState,
   PHASE_TRANSITION_RECORD_KEY_PREFIX,

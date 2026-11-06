@@ -53,6 +53,12 @@
       "text": "HTTP_404",
       "recognized": false,
       "resolves": false
+    },
+    {
+      "id": "foreign-collector-family-shape",
+      "text": "vendor.collector.tracker.unavailable",
+      "recognized": false,
+      "resolves": false
     }
   ]
 }

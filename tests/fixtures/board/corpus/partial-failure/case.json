@@ -1,0 +1,31 @@
+{
+  "id": "partial-failure",
+  "class": "partial-failure",
+  "collectors": [
+    {
+      "id": "tracker",
+      "outcome": "available"
+    },
+    {
+      "id": "coordination",
+      "outcome": "failed"
+    }
+  ],
+  "gates": [
+    {
+      "id": "GH-1508:owner-review",
+      "kind": "owner-review",
+      "ref": "GH-1508",
+      "ageMs": 93600000
+    }
+  ],
+  "expect": {
+    "exitCode": 2,
+    "gateCount": 0,
+    "records": 0,
+    "truncated": false,
+    "omitted": 0,
+    "errorCode": "status.collector.coordination.unavailable",
+    "gates": []
+  }
+}

@@ -17,6 +17,7 @@
     "src/contracts/envelope.ts",
     "src/contracts/error-table.ts",
     "src/contracts/index.ts",
+    "src/contracts/owner-gate-sla.ts",
     "src/contracts/plan.ts",
     "src/contracts/pm-notes.ts",
     "src/contracts/ports.ts",
@@ -33,6 +34,7 @@
     "src/domain/brief.ts",
     "src/domain/closeout.ts",
     "src/domain/index.ts",
+    "src/domain/owner-gate-sla.ts",
     "src/domain/plan-diff.ts",
     "src/domain/plan-overlap.ts",
     "src/domain/plan-paths.ts",
@@ -63,6 +65,7 @@
     "src/state/edge.ts",
     "src/state/index.ts",
     "src/state/ledger.ts",
+    "src/state/owner-gate-sla.ts",
     "src/state/registry.ts",
     "src/state/storage-error.ts"
   ],
@@ -109,6 +112,7 @@
   ],
   "cli": [
     "src/classify.ts",
+    "src/commands/board.ts",
     "src/commands/brief.ts",
     "src/commands/closeout.ts",
     "src/commands/config.ts",

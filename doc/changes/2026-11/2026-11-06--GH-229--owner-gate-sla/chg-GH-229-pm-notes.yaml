@@ -1,0 +1,96 @@
+change_id: GH-229
+title: "M1-S5: Owner-gate SLA"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  specification: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  test_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  delivery_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  dor_check:
+    started: "2026-11-06T00:00:00Z"
+    completed: "2026-11-06T00:00:00Z"
+    iterations:
+      - { iteration: 1, verdict: "NOT_READY", date: "2026-11-06", artifact: "readiness-review/readiness-iter-1.md", reopened: [specification, test_planning] }
+      - { iteration: 2, verdict: "READY", date: "2026-11-06", artifact: "readiness-review/readiness-iter-2.md", reopened: [] }
+  delivery: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T23:00:00Z" }
+  system_spec_update: { started: "2026-11-06T23:10:00Z", completed: "2026-11-06T23:30:00Z" }
+  review_fix:
+    started: "2026-11-06T23:35:00Z"
+    completed: "2026-11-06T23:45:00Z"
+    iterations:
+      - { iteration: 1, verdict: "PASS", date: "2026-11-06", artifact: "code-review/review-iter-1.yaml", findings: "4 advisory (2 low, 2 info), 0 remediation-required" }
+  quality_gates:
+    started: "2026-11-06T23:50:00Z"
+    completed: "2026-11-06T23:59:00Z"
+    iterations:
+      - { iteration: 1, verdict: "FAIL", date: "2026-11-06", finding: "TC-VERIFY-019: tests/structure/error-table.test.ts:656-658 pins the pre-GH-229 declared-kinds prose string (ending 'plan, and watchdog') while feature-result-contract.md:51 + DOMAIN_KINDS now include 'status' (11 members, 53 rows) - docs reconciliation added the kind without updating the invariant; remediation via @fixer" }
+      - { iteration: 2, verdict: "PASS", date: "2026-11-06", artifact: "tmp/run-logs-runner/2026-11-06/035850-aggregate-pnpm-check.log", result: "pnpm check green (2842 pass / 4 skip / 0 fail, boundaries clean, exports-parity 5/5); error-table-sync 53/53; forbidden-literals 0 violations; doc-distribution no drift; one-line fix: declaredKinds string aligned with doc" }
+  dod_check:
+    started: "2026-11-07T00:00:00Z"
+    completed: "2026-11-07T00:00:00Z"
+    notes:
+      - "All 9 prior phases completed with timestamps; all 12 spec ACs reviewer-verified (review-iter-1 PASS); all 30 TCs green; plan tasks all checked except task 6.4's PR-description item, which is the orchestrator's phase-11 deliverable (PDR-0003 policy-map diff surfaced to @pr-manager) - tracked through pr_creation, not a gap; current-truth docs reconciled with zero residual gaps (doc-syncer); gates green (iter 2)."
+  pr_creation: { started: "2026-11-07T00:05:00Z", completed: "2026-11-07T00:12:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/248" }
+decisions:
+  - text: "Spec DEC-1: SLA age clock = provider-native activity timestamp (ADR-0004), absent/unparseable = age unknown, never fabricated"
+    date: "2026-11-06"
+  - text: "Spec DEC-2: SLA thresholds/gate vocabulary/default map are contract data (policy-as-data), no new config keys"
+    date: "2026-11-06"
+  - text: "Spec DEC-3: default application = recorded append-only decision event (EVT-1) in state layer, idempotent, never a merge execution"
+    date: "2026-11-06"
+  - text: "Spec DEC-4/DEC-5: audience seam (owner|coordinator) from day one; board v0 is the M1-S5 surface (planning-pack-resolved)"
+    date: "2026-11-06"
+  - text: "OQ-1 resolved via PDR-0003 (DEC-10): initial default map = owner-review (never-merge, non-defaultable, escalates indefinitely) + waiver (default owner-review-first, never authorizes merge); closed two-kind vocabulary; extension owner-signed; record Proposed until owner ratifies at PR review"
+    date: "2026-11-06"
+  - text: "OQ-2 resolved (DEC-8): three-value slaState enum unchanged; unknown-age gates render escalated with age null + declared marker/reason (absent vs unparseable)"
+    date: "2026-11-06"
+  - text: "OQ-3 resolved (DEC-9): board v0 render-once; --watch deferred to resident-daemon story (planning-pack deviation documented)"
+    date: "2026-11-06"
+open_questions: []
+blockers:
+  - text: "DoR iteration 1 NOT_READY: (1) test_planning TC-SLA-018 fixture '2 d' contradicts pinned 72 h expiry - re-date fixture to >=72 h and record pack worked-example inconsistency; (2) spec F-5/SS2.1/SS13 misstates never-merge classification as delivered by verify-gates/merge story - delivered verify-gates is binary owner-gate, M1-S4 (GH-225) OPEN, this change CREATES the classification - reword to 'creates, M1-S4 reconciles'; (3) spec must state v0 production-inertness of 72 h default (delivered tracker slice maps every real gate to kind owner-review, so defaults/EVT-1/waivedBy fire only on injected facts until M1-S4) - add SS12 observability assumption, qualify F-3/SS4.1/SS18. Minor: Appendix A worked-example caveats (2 d age; waivedBy on default-applied vs DEC-10), rank-key/truncation elevation into F-7/DM-1, SS16 registry row 'Updated'->verify-only."
+    date: "2026-11-06"
+    resolved_date: "2026-11-06"
+notes:
+  - text: "PR #248 created (base main-tools explicit, head feat/GH-229/owner-gate-sla, open, not merged - merge authority: owner/CEO). Post-creation drift sync: origin/main-tools advanced again (GH-228 brief v0, 055319e8); 9 mechanical union conflicts + 1 hidden semantic collision resolved (GH-228 TC-BRIEF-013 asserted 'no status.* error-table identity', invalidated by the deliberately declared status.collector.<id>.unavailable family; narrowed to 'exactly the declared BOARD_COLLECTOR_IDS family' - tightened, no brief guarantee weakened; brief spec + man page global claims reworded to current truth with cross-links). Merge d3a4c796 + reconciliation 290958c8, pushed d28243c7..290958c8. Final gates: pnpm check green (3114 pass / 0 fail), error-table-sync 53/53, forbidden-literals 0, doc-distribution no drift. PR mergeable: MERGEABLE, mergeStateStatus BLOCKED (awaiting human approval - normal owner gate). Plan task 6.4 satisfied: PDR-0003 policy-map diff surfaced in PR description for owner ratification."
+    type: "info"
+    date: "2026-11-07"
+  - text: "Retro: two mid-flight main-tools advances (GH-222+GH-226 during delivery; GH-228 after PR creation) in a single-ticket session - the M1 batch is landing stories in parallel across per-ticket clones. Cross-story semantic collisions hide in world-assumption invariants (TC-BRIEF-013 'no status.* codes') that git unions cannot catch; fleet coordinator should serialize merges to main-tools per PR window or run a post-merge CI check on the PR branch before human handoff. Error-table arithmetic also drifted twice (+11 -> +19 -> recount) - consider contract-data counts derived at check time instead of hand-pinned literals."
+    type: "retro"
+    date: "2026-11-07"
+  - text: "Review iter 1 PASS (all 12 ACs verified against delivered truth; all 4 delivery deviations judged acceptable). Advisory disposition: finding 1 (conditional history read - defaulted gate with regressed clock renders from eligibility; torn ledger undeclared when no eligible gate) resolved via reviewer option (b): boundary notes added to feature-owner-gate-sla.md + feature-state-layer.md; option (a) (unconditional read, TC-SLA-026 0->1) carried as PR-review advisory for the human - v0 real data never eligible (owner-review non-defaultable) so unreachable until M1-S4. Findings 2 fixed (plan revision-log 1.1 row). Findings 3 (shippedPolicy equality pin) and 4 (edge.ts hardcoded family code) carried as info-level PR advisories - no post-PASS test churn."
+    type: "decision"
+    date: "2026-11-06"
+  - text: "Mid-delivery main-tools drift: origin/main-tools advanced by GH-222 (state validation) + GH-226 (plan schema) while delivery ran; branch fell 2 behind / 13 ahead. Resume-sync merge brought 6 additive conflicts (result-contract doc rows, domain/package barrel exports, error-table arithmetic +11/+18 -> recomputed +19 = 53 rows total, inventory lists) - all unioned by @fixer, merge commit 8e84cd96, full battery green (2842 pass / 4 skip / 0 fail, typecheck/lint/format green, error-table-sync 53/53, TC-RELEASE-001 green)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Retro: per-ticket clones start 0/0 vs main-tools but do not track upstream drift during delivery; the drift surfaced only via TC-RELEASE-001 (changeset parity vs origin) at the end of a 6-phase delivery. Improvement: the fleet coordinator should re-check origin/main-tools freshness before PR creation (or run the parity gate mid-delivery) so merge conflicts resolve against fewer, fresher commits; bare `bun test` without prior pnpm build also fails confusingly on stale dist (pre-existing hazard, canonical path is pnpm check)."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "DoR iter 1: 6 PASS / 4 FAIL facets (per verdict artifact; chat summary miscounted 7/3); reopen specification + test_planning (never delivery_planning); board-vs-brief scope and PDR-0003 uniqueness reading explicitly verified clean; GAP readings no silent weakening. Retro: the pack's own worked example (board.md '2 d' age) conflicts with the pinned 72 h threshold and seeded a contradictory TC fixture - planning-pack examples are illustrative, thresholds authoritative; future spec authors should flag worked-example-vs-pinned-number conflicts at authoring time, not at DoR."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "State detection: issue open (labels change+review), no remote branch feat/GH-229/owner-gate-sla, no open/closed/merged PR, no local artifacts -> brand-new delivery. 'review' label stale; replaced with 'planning' per lifecycle mapping."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Scope: owner gates age under SLA - 24h stale-review escalation, 72h default-on-expiry, one pre-agreed default per gate, silence impossible. Escalation mechanism audience-parameterized for reuse by M1-S16 typed blocker channel (one mechanism, two audiences: owner + coordinator)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Dependency M0-S6 status v1 (GH-175) CLOSED 2026-10-31 - satisfied. Downstream: M1-S16 (GH-230) depends on this change; M2-S4 board (full fleet grid) shares this state source."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Surface sequencing resolved by planning pack (not a gap): board v0 IS the M1-S5 SLA surface (m1/commands/board.md 'Status: M1 planned (M1-S5)'); brief (GH-228, open) consumes aging[] in M1-S6; full fleet grid in M2-S4. AC requires aging-into-escalation/proceed, not the brief surface."
+    type: "decision"
+    date: "2026-11-06"
+  - text: "Design anchors: slaState enum fresh|escalated|default-applied (board.md contract); gates[] carries id, kind (owner-review, waiver, ...), ref, age, slaState, default, waivedBy; errors status.collector.<id>.unavailable; exit 0 rendered / 2 collectors unavailable."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Current-truth reuse: owner hand-back facts from tracker collector (STATUS_OWNER_ATTENTION_LABELS = hand-back, human-input-needed; feature-status-digest.md); owner-gate definition matches feature-queue-ready.md + feature-verify-gates.md; thresholds-as-contract-data pattern precedent (status digest caps/thresholds in core contracts); CommandResult envelope rendering stays in CLI (ADR-0003)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Doc impacts: new feature spec expected (feature-owner-gate-sla.md) at phase 7 (first-spec-only always-resolve per pm-instructions); closeout spec explicitly excludes owner-gate SLA mechanics (feature-closeout.md line 55) so no closeout edit expected; command registry + m1 planning pack already declare board."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Delivery phases 1-6 executed. Local aggregate evidence: format/typecheck/boundaries/exports-parity PASS; tests 2682 pass / 1 fail where the sole failure is TC-RELEASE-001's pre-existing changeset diff against a stale origin/main-tools (branch is two commits behind GH-222/GH-226; a PR merge checkout resolves it). ci-baseline-parity needs a same-device TMPDIR locally."
+    type: "info"
+    date: "2026-11-06"

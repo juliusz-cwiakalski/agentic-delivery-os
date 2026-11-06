@@ -1,0 +1,27 @@
+{
+  "id": "never-merge-no-default",
+  "class": "never-merge",
+  "gates": [
+    {
+      "id": "GH-1506:owner-review",
+      "kind": "owner-review",
+      "ref": "GH-1506",
+      "ageMs": 604800000
+    }
+  ],
+  "expect": {
+    "exitCode": 0,
+    "gateCount": 1,
+    "records": 0,
+    "truncated": false,
+    "omitted": 0,
+    "gates": [
+      {
+        "id": "GH-1506:owner-review",
+        "slaState": "escalated",
+        "default": null,
+        "waivedBy": null
+      }
+    ]
+  }
+}

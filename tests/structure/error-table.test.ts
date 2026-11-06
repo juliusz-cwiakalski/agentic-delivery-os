@@ -14,6 +14,9 @@ import {
   resolveAppErrorCode,
 } from "../../packages/cli/src/classify";
 import {
+  BOARD_COLLECTOR_ERROR_PREFIX,
+  BOARD_COLLECTOR_ERROR_SUFFIX,
+  BOARD_COLLECTOR_IDS,
   DOMAIN_KINDS,
   ERROR_TABLE,
   type ErrorTableEntry,
@@ -654,7 +657,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, and `watchdog`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, and `status`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -668,7 +671,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(3);
-    expect(entries).toHaveLength(52);
+    expect(entries).toHaveLength(53);
   });
 });
 
@@ -744,7 +747,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(52);
+    expect(entries).toHaveLength(53);
     expect(db).toHaveLength(4);
   });
 
@@ -960,7 +963,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(52);
+    expect(entries).toHaveLength(53);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1023,9 +1026,15 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
 });
 
 describe("TC-BRIEF-013 brief adds no error identity", () => {
-  test("no brief or status code and no brief domain kind exists", () => {
+  test("no brief code, no brief domain kind, and no undeclared status code exists", () => {
     expect(entries.some((entry) => entry.code.startsWith("brief."))).toBe(false);
-    expect(entries.some((entry) => entry.code.startsWith("status."))).toBe(false);
+    expect(
+      entries.filter((entry) => entry.code.startsWith("status.")).map((entry) => entry.code),
+    ).toEqual(
+      BOARD_COLLECTOR_IDS.map(
+        (id) => `${BOARD_COLLECTOR_ERROR_PREFIX}${id}${BOARD_COLLECTOR_ERROR_SUFFIX}`,
+      ),
+    );
     expect((DOMAIN_KINDS as readonly string[]).includes("brief")).toBe(false);
   });
 

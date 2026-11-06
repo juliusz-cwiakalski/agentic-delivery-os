@@ -90,6 +90,8 @@ import {
   type CredentialPort,
   type DeliveryRequest,
   type ExternalSystemInstance,
+  OWNER_GATE_SLA_POLICY,
+  type OwnerGateCollectorRead,
   PHASE_STATE_DOCUMENT_PREFIX,
   PHASE_STATE_DOCUMENT_SUFFIX,
   type PlanDiffPort,
@@ -97,6 +99,8 @@ import {
   type ProviderSleep,
   type QuotaTransport,
   type Result,
+  STATUS_OWNER_ATTENTION_LABELS,
+  STATUS_SOURCE_ITEM_LIMIT,
   type StateStorePort,
   type StatusLocalContextRead,
   type StatusParkRead,
@@ -117,14 +121,17 @@ import {
 } from "@delivery-os/core/provider";
 import {
   appendCloseoutOutcome,
+  appendOwnerGateSlaDecision,
   appendPhaseTransition,
   foldCloseoutHistory,
   readChangeTransitions,
   readChangeTransitionsTolerant,
   readCloseoutHistory,
+  readOwnerGateSlaDecisions,
   replacePhaseProjection,
 } from "@delivery-os/core/state";
 import { resolveAppErrorCode } from "./classify.js";
+import { type BoardCommandRuntime, createBoardCommandDefinition } from "./commands/board.js";
 import { createBriefCommandDefinition } from "./commands/brief.js";
 import {
   type CloseoutCommandRuntime,
@@ -1034,6 +1041,97 @@ export const createWatchdogCommandRuntime = (
   signalSources: composition.signalSources ?? [],
 });
 
+/**
+ * The board composition seams (GH-229 D4): the real GitHub tracker read, the
+ * state store, and injected time/id factories. The v0 mapping assigns every
+ * observed owner-attention item to kind `owner-review`; waiver-kind gates become
+ * reachable when the waiver-recording surface lands (GAP-9).
+ */
+export type BoardComposition = {
+  readonly store: StateStorePort;
+  readonly repository: { readonly cwd: string; readonly io: RepositoryIo };
+  readonly github: {
+    readonly instance: ExternalSystemInstance;
+    readonly credentials: CredentialPort;
+    readonly transport: StatusTransport;
+  };
+  readonly nowIso: () => string;
+  readonly nowMs: () => number;
+  readonly newFenceToken: () => string;
+};
+
+const ownerAttention = (item: WorkItem): boolean =>
+  STATUS_OWNER_ATTENTION_LABELS.some((label) =>
+    item.labels.some((candidate) => candidate.toLowerCase() === label.toLowerCase()),
+  );
+
+const openItem = (item: WorkItem): boolean =>
+  item.status.deliveryState !== "done" && item.status.deliveryState !== "canceled";
+
+/** Compose the board runtime over the real tracker read and the state ledger. */
+export const createBoardCommandRuntime = (composition: BoardComposition): BoardCommandRuntime => {
+  const instance = composition.github.instance;
+  const admitted =
+    instance.systemKind === "vcs" && instance.authMethod.mechanism === "credential-reference";
+  const collectorCode = "status.collector.tracker.unavailable";
+
+  const readTracker = async (): Promise<OwnerGateCollectorRead> => {
+    if (!admitted) {
+      return {
+        ok: false,
+        collector: "tracker",
+        reason: "credential-unavailable",
+        code: collectorCode,
+      };
+    }
+    const facts = readRepositoryFacts({
+      cwd: composition.repository.cwd,
+      io: composition.repository.io,
+    });
+    const parsed = parseGitHubRemote(facts.originUrl);
+    if (!parsed.ok) {
+      return { ok: false, collector: "tracker", reason: "not-configured", code: collectorCode };
+    }
+    const client = createGitHubClient({
+      instance,
+      credentials: composition.github.credentials,
+      repository: { owner: parsed.owner, name: parsed.name },
+      transport: composition.github.transport,
+    });
+    const result = await client.listWorkItems(STATUS_SOURCE_ITEM_LIMIT);
+    if (!result.ok) {
+      return { ok: false, collector: "tracker", reason: "failed", code: collectorCode };
+    }
+    const gates = result.value.items
+      .filter((item) => openItem(item) && ownerAttention(item))
+      .map((item) => ({
+        id: `${item.identity.entityId}:owner-review`,
+        kind: "owner-review",
+        ref: item.identity.entityId,
+        ...(item.updatedAt === undefined ? {} : { activityAt: item.updatedAt }),
+      }));
+    return {
+      ok: true,
+      collector: "tracker",
+      gates,
+      pageItemCount: result.value.pageItemCount,
+    };
+  };
+
+  return {
+    collectors: [{ id: "tracker", read: readTracker }],
+    policy: OWNER_GATE_SLA_POLICY,
+    readDecisions: () => readOwnerGateSlaDecisions(composition.store),
+    appendDecision: (decision) =>
+      appendOwnerGateSlaDecision(composition.store, {
+        decision,
+        fenceToken: composition.newFenceToken(),
+      }),
+    nowIso: composition.nowIso,
+    nowMs: composition.nowMs,
+  };
+};
+
 export type ConfigProgramOptions = {
   readonly workingName: string;
   readonly environment: Readonly<Record<string, string | undefined>>;
@@ -1057,6 +1155,7 @@ export type ConfigProgramOptions = {
   readonly db?: DbComposition;
   readonly closeout?: CloseoutComposition;
   readonly watchdog?: WatchdogComposition;
+  readonly board?: BoardComposition;
 };
 
 export type ConfigProgramResult =
@@ -1337,6 +1436,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
     commands.watchdog = createWatchdogCommandDefinition(
       createWatchdogCommandRuntime(options.watchdog),
     );
+  }
+  if (options.board !== undefined) {
+    commands.board = createBoardCommandDefinition(createBoardCommandRuntime(options.board));
   }
   return {
     ok: true,

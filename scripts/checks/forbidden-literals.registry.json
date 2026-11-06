@@ -150,6 +150,7 @@
     "doc/spec/features/feature-closeout.md",
     "doc/spec/features/feature-config-layer.md",
     "doc/spec/features/feature-measurement-baseline.md",
+    "doc/spec/features/feature-owner-gate-sla.md",
     "doc/spec/features/feature-plan-schema.md",
     "doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md",
     "doc/spec/features/feature-privacy-guard.md",

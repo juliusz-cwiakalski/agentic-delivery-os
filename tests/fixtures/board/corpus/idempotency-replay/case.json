@@ -1,0 +1,28 @@
+{
+  "id": "idempotency-replay",
+  "class": "idempotency-replay",
+  "replays": 2,
+  "gates": [
+    {
+      "id": "GH-1507:waiver",
+      "kind": "waiver",
+      "ref": "GH-1507",
+      "ageMs": 262800000
+    }
+  ],
+  "expect": {
+    "exitCode": 0,
+    "gateCount": 1,
+    "records": 1,
+    "truncated": false,
+    "omitted": 0,
+    "gates": [
+      {
+        "id": "GH-1507:waiver",
+        "slaState": "default-applied",
+        "default": "owner-review-first",
+        "waivedBy": null
+      }
+    ]
+  }
+}

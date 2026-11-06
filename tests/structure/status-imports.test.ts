@@ -259,7 +259,9 @@ describe("TC-STATUS-026 contracts/domain tier discipline", () => {
     ]) {
       expect(codes.has(code as never), code).toBe(true);
     }
-    expect([...codes].some((code) => code.startsWith("status."))).toBe(false);
+    expect([...codes].filter((code) => code.startsWith("status."))).toEqual([
+      "status.collector.tracker.unavailable",
+    ]);
   });
 
   test("a product literal fails the brand scan", () => {

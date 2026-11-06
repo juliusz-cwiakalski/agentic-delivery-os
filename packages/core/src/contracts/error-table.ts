@@ -21,6 +21,7 @@ export const DOMAIN_KINDS = [
   "closeout",
   "plan",
   "watchdog",
+  "status",
 ] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -595,5 +596,16 @@ export const ERROR_TABLE = [
       "Restore the declared progress-signal sources, then retry; without them the answer is unknown.",
     projectionClass: "platform-provider",
     summary: "No liveness signal sources are available; the answer is unknown.",
+  },
+  {
+    code: "status.collector.tracker.unavailable",
+    domainKind: "status",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Restore access to the named collector source and re-run the board; the board withheld its gates rather than display a partial picture.",
+    projectionClass: "platform-provider",
+    summary: "The named board collector is unavailable.",
   },
 ] as const satisfies readonly ErrorTableEntry[];
