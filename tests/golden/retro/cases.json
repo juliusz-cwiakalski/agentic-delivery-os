@@ -1,0 +1,52 @@
+{
+  "cases": [
+    {
+      "id": "collect-success",
+      "scenario": "collect",
+      "argv": ["retro", "collect", "--json"],
+      "expected": { "exitCode": 0, "outcome": "collected" }
+    },
+    {
+      "id": "collect-no-target",
+      "scenario": "no-target",
+      "argv": ["retro", "collect", "--json"],
+      "expected": { "exitCode": 0, "outcome": "no-target" }
+    },
+    {
+      "id": "report-success",
+      "scenario": "report",
+      "argv": ["retro", "report", "--json"],
+      "expected": { "exitCode": 0, "dataKeys": ["evidenceRefs", "findings", "followThrough", "level"] }
+    },
+    {
+      "id": "invalid-level",
+      "scenario": "collect",
+      "argv": ["retro", "collect", "--level", "session", "--json"],
+      "expected": { "exitCode": 1, "errorCode": "input.value.rejected" }
+    },
+    {
+      "id": "unknown-flag",
+      "scenario": "collect",
+      "argv": ["retro", "collect", "--ref", "GH-232", "--json"],
+      "expected": { "exitCode": 1, "errorCode": "fallback.invocation" }
+    },
+    {
+      "id": "malformed-report",
+      "scenario": "malformed",
+      "argv": ["retro", "report", "--json"],
+      "expected": { "exitCode": 1, "errorCode": "retro.evidence.malformed-entry" }
+    },
+    {
+      "id": "tamper-report",
+      "scenario": "tamper",
+      "argv": ["retro", "report", "--json"],
+      "expected": { "exitCode": 1, "errorCode": "retro.evidence.tamper-flagged" }
+    },
+    {
+      "id": "denied-collect",
+      "scenario": "denied",
+      "argv": ["retro", "collect", "--json"],
+      "expected": { "exitCode": 2, "errorCode": "retro.evidence.denied" }
+    }
+  ]
+}

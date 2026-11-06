@@ -66,6 +66,7 @@ import {
   type CommitTransportPorts,
   catalogPaths,
   classifyPruneCandidate,
+  collectRetro,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
   isLiveDbSession,
@@ -75,6 +76,7 @@ import {
   resolveCloseoutBaseRef,
   resolveConfig,
   resolveMergeGateSet,
+  reportRetro,
   runCloseout,
   runCommitAct,
   selectPruneCandidates,
@@ -161,10 +163,13 @@ import {
   appendMergeWaiver,
   appendOwnerGateSlaDecision,
   appendPhaseTransition,
+  createNodeRetroSidecarIo,
   createNodeStateEdge,
+  createRetroSidecar,
   createStateStore,
   foldCloseoutHistory,
   readAllMergeWaivers,
+  readAuditLedger,
   readChangeTransitionsTolerant,
   readCloseoutHistory,
   readCommitTelemetry,
@@ -172,6 +177,7 @@ import {
   readMergeTransactions,
   readMergeWaivers,
   readOwnerGateSlaDecisions,
+  readRetroRegistry,
   replacePhaseProjection,
   STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
@@ -213,6 +219,7 @@ import {
   type ProviderCommandRuntime,
 } from "./commands/provider.js";
 import { createQueueReadyCommandDefinition } from "./commands/queue.js";
+import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
 import type { VerifyDeployRuntime } from "./commands/verify-deploy.js";
@@ -1610,6 +1617,8 @@ export type DoctorComposition = {
   readonly environmentPrefix: string;
   /** The injected local work-tree fact (doctor spawns no process). */
   readonly readWorkTree: () => { readonly readable: boolean; readonly clean: boolean };
+  /** The additive retro registry store fact (GH-232 F-8). */
+  readonly readRetroState?: () => DoctorStateStoresRead;
 };
 
 type DoctorLedgerSnapshot =
@@ -1812,10 +1821,25 @@ export const createDoctorCommandRuntime = (
           failureCode: read.error.code,
         };
       }
-      return {
+      const base: DoctorStateStoresRead = {
         ok: true,
         verifiedEmpty: read.value.evidence?.verifiedEmpty ?? false,
         recordCount: read.value.evidence?.recordCount ?? 0,
+        stores: [
+          {
+            name: "delivery",
+            verdict: read.value.evidence?.verifiedEmpty === true ? "verified-empty" : "valid",
+          },
+        ],
+      };
+      const retro = options.readRetroState?.();
+      if (retro === undefined) return base;
+      if (!retro.ok) return retro;
+      return {
+        ok: true,
+        verifiedEmpty: base.verifiedEmpty && retro.verifiedEmpty,
+        recordCount: base.recordCount + retro.recordCount,
+        stores: [...(base.stores ?? []), ...(retro.stores ?? [{ name: "retro-registry", verdict: retro.verifiedEmpty ? "verified-empty" : "valid" }])],
       };
     },
     nowIso: options.clock.nowIso,
@@ -2015,6 +2039,7 @@ export type ConfigProgramOptions = {
   readonly watchdog?: WatchdogComposition;
   readonly board?: BoardComposition;
   readonly merge?: MergeCommandRuntime;
+  readonly retro?: RetroCompositionOptions;
 };
 
 export type ConfigProgramResult =
@@ -2334,10 +2359,210 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   if (options.merge !== undefined) {
     commands.merge = createMergeCommandDefinition(options.merge);
   }
+  if (options.retro !== undefined) {
+    commands.retro = createRetroCommandDefinition(createRetroCommandRuntime(options.retro));
+  }
   return {
     ok: true,
     brand,
     program: { commands },
     secrets,
+  };
+};
+
+/**
+ * The retro composition seams (GH-232 F-1/F-5/F-8): the delivery state store,
+ * the sidecar runtime edge, the GET-only collector readers, the clock, and the
+ * injected id factories. The export engine surface is deliberately NOT composed
+ * into any command or flag (NG-1 amendment).
+ */
+export type RetroCompositionOptions = {
+  readonly store: StateStorePort;
+  readonly stateDirectory: string;
+  readonly workspaceId: string;
+  readonly changesDirectory: string;
+  readonly fs: PmNotesFileSystemFacts;
+  readonly clock: { readonly nowMs: () => number; readonly nowIso: () => string };
+  readonly newRunId: () => string;
+  readonly newTraceId: () => string;
+  readonly newFenceToken: () => string;
+  readonly identity?: import("@delivery-os/core/contracts").RetroClaimedIdentity;
+  readonly context?: "collector" | "delivery-agent";
+  readonly collectors?: import("@delivery-os/core/contracts").RetroCollectorRead;
+  readonly readChanges?: () => readonly import("@delivery-os/core/contracts").RetroChangeFacts[];
+  readonly verifyArtifact?: (artifactRef: string) => boolean;
+};
+
+const retroChangeFactsFrom = (
+  store: StateStorePort,
+): readonly import("@delivery-os/core/contracts").RetroChangeFacts[] => {
+  const records = store.readRecords();
+  if (!records.ok) return [];
+  const latest = new Map<string, import("@delivery-os/core/contracts").PhaseTransitionRecord[]>();
+  for (const record of records.value.records) {
+    if (record.kind !== "phase.transition") continue;
+    const payload = record.payload;
+    if (typeof payload !== "object" || payload === null || Array.isArray(payload)) continue;
+    const source = payload as Record<string, unknown>;
+    const changeRef = source.changeRef;
+    const transitions = source.transitions;
+    if (typeof changeRef !== "string" || !Array.isArray(transitions)) continue;
+    const parsed: import("@delivery-os/core/contracts").PhaseTransitionRecord[] = [];
+    for (const entry of transitions) {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
+      const candidate = entry as Record<string, unknown>;
+      if (
+        typeof candidate.changeRef !== "string" ||
+        typeof candidate.phaseId !== "string" ||
+        (candidate.operation !== "complete" && candidate.operation !== "reopen") ||
+        typeof candidate.timestamp !== "string" ||
+        candidate.outcome !== "landed"
+      ) {
+        continue;
+      }
+      parsed.push({
+        changeRef: candidate.changeRef,
+        phaseId: candidate.phaseId,
+        operation: candidate.operation,
+        timestamp: candidate.timestamp,
+        outcome: "landed",
+      });
+    }
+    latest.set(changeRef, parsed);
+  }
+  const changes: import("@delivery-os/core/contracts").RetroChangeFacts[] = [];
+  for (const [changeRef, transitions] of latest) {
+    const last = transitions[transitions.length - 1];
+    const completed =
+      last !== undefined && last.phaseId === "pr_creation" && last.operation === "complete";
+    changes.push({
+      changeRef,
+      ...(completed ? { completedAt: last.timestamp } : {}),
+      transitions,
+    });
+  }
+  return changes;
+};
+
+const retroNotesFrom = (
+  options: RetroCompositionOptions,
+  changeRef: string,
+): import("@delivery-os/core/contracts").RetroNotesReadResult => {
+  const read = readPmNotesText({
+    changeRef,
+    changesDirectory: options.changesDirectory,
+    fs: options.fs,
+  });
+  if (!read.ok) return { ok: true, value: { retroNotes: [] } };
+  const document = read.value;
+  if (typeof document !== "object" || document === null || Array.isArray(document)) {
+    return { ok: true, value: { retroNotes: [] } };
+  }
+  const notes = (document as Record<string, unknown>).notes;
+  if (!Array.isArray(notes)) return { ok: true, value: { retroNotes: [] } };
+  const retroNotes: string[] = [];
+  for (const entry of notes) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
+    const candidate = entry as Record<string, unknown>;
+    if (candidate.type !== "retro" || typeof candidate.text !== "string") continue;
+    retroNotes.push(candidate.text);
+  }
+  return { ok: true, value: { retroNotes } };
+};
+
+const retroStateFamiliesFrom = (
+  store: StateStorePort,
+  changeRef: string,
+): import("@delivery-os/core/contracts").RetroStateFamiliesRead => {
+  const transitions = readChangeTransitionsTolerant(store, changeRef);
+  if (!transitions.ok) return { ok: false, error: transitions.error };
+  const closeouts = readCloseoutHistory(store, changeRef);
+  if (!closeouts.ok) return { ok: false, error: closeouts.error };
+  const telemetry = readCommitTelemetry(store, changeRef);
+  if (!telemetry.ok) return { ok: false, error: telemetry.error };
+  return {
+    ok: true,
+    value: {
+      transitions: transitions.value.transitions,
+      closeouts: closeouts.value.map((record) => ({
+        operationId: record.operationId,
+        outcome: record.outcome,
+        timestamp: record.timestamp,
+      })),
+      telemetry: telemetry.value.records.map((record) => ({
+        ...(record.phaseId === undefined ? {} : { phaseId: record.phaseId }),
+        commitSha: record.commitSha,
+        landedAt: record.landedAt,
+      })),
+    },
+  };
+};
+
+/** Compose the retro command runtime from injected seams. */
+export const createRetroCommandRuntime = (
+  options: RetroCompositionOptions,
+): import("@delivery-os/core/contracts").RetroCommandRuntime => {
+  const sidecar = createRetroSidecar(
+    createNodeRetroSidecarIo({
+      stateDirectory: options.stateDirectory,
+      workspaceId: options.workspaceId,
+    }),
+  );
+  const collectors: import("@delivery-os/core/contracts").RetroCollectorRead =
+    options.collectors ?? {
+      readAuditLedger: (query) => readAuditLedger(options.store, query),
+      readStateFamilies: (changeRef) => retroStateFamiliesFrom(options.store, changeRef),
+      readNotes: (changeRef) => retroNotesFrom(options, changeRef),
+    };
+  return {
+    collect: (input) =>
+      collectRetro({
+        sidecar,
+        store: options.store,
+        collectors,
+        readChanges: options.readChanges ?? (() => retroChangeFactsFrom(options.store)),
+        clock: { nowMs: options.clock.nowMs },
+        newTraceId: options.newTraceId,
+        newRunId: options.newRunId,
+        newFenceToken: options.newFenceToken,
+        level: input.level,
+        ...(input.changeRef === undefined ? {} : { target: input.changeRef }),
+        ...(options.identity === undefined ? {} : { identity: options.identity }),
+        ...(options.context === undefined ? {} : { context: options.context }),
+      }),
+    report: (input) =>
+      reportRetro({
+        sidecar,
+        store: options.store,
+        level: input.level,
+        ...(options.verifyArtifact === undefined
+          ? {}
+          : { verifyArtifact: options.verifyArtifact }),
+      }),
+  };
+};
+
+/** Read the retro registry store verdict for the doctor `state check` (TC-056). */
+export const readRetroRegistryState = (store: StateStorePort): DoctorStateStoresRead => {
+  const read = readRetroRegistry(store);
+  if (!read.ok) {
+    return {
+      ok: false,
+      reason: doctorStateReason(read.error.code),
+      failureCode: read.error.code,
+    };
+  }
+  if (read.value.malformed.length > 0) {
+    return {
+      ok: false,
+      reason: "store-unknown",
+      failureCode: "state.store.unknown",
+    };
+  }
+  return {
+    ok: true,
+    verifiedEmpty: read.value.verdict === "verified-empty",
+    recordCount: read.value.artifacts.length,
+    stores: [{ name: "retro-registry", verdict: read.value.verdict }],
   };
 };

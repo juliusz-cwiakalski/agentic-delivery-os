@@ -644,11 +644,21 @@ export type RetroNotesRead = {
   readonly retroNotes: readonly string[];
 };
 
+/** A state-family read result: values or a classified failure. */
+export type RetroStateFamiliesRead =
+  | { readonly ok: true; readonly value: RetroStateFamilies }
+  | { readonly ok: false; readonly error: RetroFailure };
+
+/** A retro-notes read result: values or a classified failure. */
+export type RetroNotesReadResult =
+  | { readonly ok: true; readonly value: RetroNotesRead }
+  | { readonly ok: false; readonly error: RetroFailure };
+
 /** The collector's GET-only read seam; every function is injected. */
 export type RetroCollectorRead = {
   readAuditLedger(query: AuditReadQuery): AuditReadResult<AuditReadOutcome>;
-  readStateFamilies(changeRef: string): RetroStateFamilies;
-  readNotes(changeRef: string): RetroNotesRead;
+  readStateFamilies(changeRef: string): RetroStateFamiliesRead;
+  readNotes(changeRef: string): RetroNotesReadResult;
 };
 
 /** A completed-change fact used for automatic target selection (DEC-5). */

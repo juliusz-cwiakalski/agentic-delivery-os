@@ -708,12 +708,16 @@ export const collectRetro = (deps: RetroCollectDeps): RetroCommandOutcome => {
     sources.includes("phase-transitions") ||
     sources.includes("closeout-outcomes") ||
     sources.includes("commit-telemetry");
-  const families = needsFamilies
+  const familiesRead = needsFamilies
     ? deps.collectors.readStateFamilies(target.changeRef)
-    : { transitions: [], closeouts: [], telemetry: [] };
-  const notes = sources.includes("pm-notes")
+    : { ok: true as const, value: { transitions: [], closeouts: [], telemetry: [] } };
+  if (!familiesRead.ok) return { ok: false, error: familiesRead.error };
+  const families = familiesRead.value;
+  const notesRead = sources.includes("pm-notes")
     ? deps.collectors.readNotes(target.changeRef)
-    : { retroNotes: [] };
+    : { ok: true as const, value: { retroNotes: [] } };
+  if (!notesRead.ok) return { ok: false, error: notesRead.error };
+  const notes = notesRead.value;
 
   const baseDrafts = collectorRecords(
     audit ??

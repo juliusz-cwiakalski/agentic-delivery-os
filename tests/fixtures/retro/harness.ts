@@ -393,8 +393,11 @@ export const collectDeps = (
   store: fixture.store,
   collectors: {
     readAuditLedger: (query) => ({ ok: true, value: fixture.readAuditLedgerQuery(query) }),
-    readStateFamilies: fixture.readStateFamilies,
-    readNotes: fixture.readNotes,
+    readStateFamilies: (changeRef) => ({
+      ok: true,
+      value: fixture.readStateFamilies(changeRef),
+    }),
+    readNotes: (changeRef) => ({ ok: true, value: fixture.readNotes(changeRef) }),
   },
   readChanges: fixture.readDeliveryChanges,
   clock: { nowMs: () => NOW_MS },
@@ -444,4 +447,82 @@ export const exportDeps = (
       ...overrides,
     },
   };
+};
+
+/** One in-process retro invocation's observable output. */
+export type RetroRunResult = {
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly data?: unknown;
+  readonly error?: unknown;
+};
+
+export type RetroRunOptions = {
+  readonly collect?: RetroDepsOverrides;
+  readonly report?: Partial<
+    import("../../../packages/core/src/domain/retro").RetroReportDeps
+  >;
+  readonly target?: string;
+  readonly secrets?: readonly string[];
+  readonly mode?: "interactive" | "scripted";
+  readonly ticks?: readonly [number, number];
+};
+
+/** Run `retro <subcommand>` in process through the delivered runCli surface. */
+export const runRetro = async (
+  argv: readonly string[],
+  fixture: RetroFixture,
+  options: RetroRunOptions = {},
+): Promise<RetroRunResult> => {
+  const [
+    { createRetroCommandDefinition },
+    { runCli },
+    { bufferSink, SYNTHETIC_BRAND },
+  ] = await Promise.all([
+    import("../../../packages/cli/src/commands/retro"),
+    import("../../../packages/cli/src/index"),
+    import("../../golden/helpers"),
+  ]);
+  const runtime: import("@delivery-os/core/contracts").RetroCommandRuntime = {
+    collect: (input) =>
+      import("../../../packages/core/src/domain/retro").then(({ collectRetro }) =>
+        collectRetro(
+          collectDeps(fixture, {
+            ...options.collect,
+            level: input.level,
+            ...(options.target === undefined ? {} : { target: options.target }),
+          }),
+        ),
+      ),
+    report: (input) =>
+      import("../../../packages/core/src/domain/retro").then(({ reportRetro }) =>
+        reportRetro(reportDeps(fixture, { ...options.report, level: input.level })),
+      ),
+  };
+  const stdout = bufferSink();
+  const stderr = bufferSink();
+  const ticks = options.ticks ?? [1000, 1004];
+  let tick = 0;
+  const exitCode = await runCli(
+    argv,
+    { stdout, stderr },
+    {
+      brand: SYNTHETIC_BRAND,
+      clock: { now: () => ticks[Math.min(tick++, 1)] ?? ticks[0] },
+      newRunId: () => newRunId(),
+      secrets: options.secrets ?? [],
+      program: { commands: { retro: createRetroCommandDefinition(runtime) } },
+      mode: options.mode ?? "scripted",
+    },
+  );
+  let data: unknown;
+  let error: unknown;
+  const trimmed = stdout.value.trim();
+  if (trimmed.startsWith("{")) {
+    const parsed = JSON.parse(trimmed) as { data?: unknown; error?: unknown };
+    data = parsed.data;
+    error = parsed.error;
+  }
+  return { exitCode, stdout: stdout.value, stderr: stderr.value, data, error };
 };

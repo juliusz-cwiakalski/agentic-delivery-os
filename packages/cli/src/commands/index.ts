@@ -41,6 +41,8 @@ export type { ProviderCommandRuntime } from "./provider.js";
 export { createProviderCommandDefinition } from "./provider.js";
 export type { QueueReadyCommandRuntime } from "./queue.js";
 export { createQueueReadyCommandDefinition } from "./queue.js";
+export type { RetroCommandRuntime } from "./retro.js";
+export { createRetroCommandDefinition } from "./retro.js";
 export type { StatusCommandRuntime } from "./status.js";
 export { createStatusCommandDefinition } from "./status.js";
 export type {

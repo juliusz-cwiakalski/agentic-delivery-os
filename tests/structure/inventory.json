@@ -161,6 +161,7 @@
     "src/commands/plan.ts",
     "src/commands/provider.ts",
     "src/commands/queue.ts",
+    "src/commands/retro.ts",
     "src/commands/status.ts",
     "src/commands/verify-deploy.ts",
     "src/commands/verify-gates.ts",
