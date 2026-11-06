@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-11-06T22:20:00Z", completed: "2026-11-06T22:35:00Z" }
   specification: { started: "2026-11-06T22:35:00Z", completed: "2026-11-06T23:40:00Z" }
   test_planning: { started: "2026-11-06T23:10:00Z", completed: "2026-11-06T23:55:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-11-06T23:55:00Z", completed: "2026-11-07T00:25:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -53,3 +53,6 @@ notes:
   - text: "test_planning re-opened for reconciliation: plan iteration 1 pinned supplied-but-non-conforming triggers (its GAP-3 reading) which the corrected spec reversed to absence-as-violation; plan must be reconciled to spec v1.1."
     type: "info"
     date: "2026-11-06"
+  - text: "Implementation plan authored (chg-GH-243-plan.yaml, YAML format per recent siblings): 7 phases, 42/42 TCs mapped one-to-one, 23/23 ACs traceable, repo validatePlan verdict valid/readyForDevelopment. Golden regeneration happens exactly once (phase 2, the only byte-changing phase). Cross-check findings resolved as plan decisions D-1..D-9: BRIEF_SURFACE_ORDER auto-derivation decoupled to literal nine-id list (prevents silent brief catalog growth); STATUS_MAX_FINDINGS_PER_SECTION canonical naming; zero CLI-edge changes needed (all new surfaces derive in aggregateStatus from injected facts, preserving 3/1/1 read budget); additive milestone normalization lands in ports.ts + normalizeGithubIssue."
+    type: "decision"
+    date: "2026-11-07"
