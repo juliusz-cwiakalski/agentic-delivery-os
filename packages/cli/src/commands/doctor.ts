@@ -135,7 +135,7 @@ export const createDoctorCommandDefinition = (
     if (config.ok) {
       const { entries, credentials: declaredCredentials } = config.config;
       for (const entry of Object.values(entries).sort((left, right) =>
-        left.name.localeCompare(right.name),
+        left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
       )) {
         if (!entry.enabled || entry.quota === undefined) continue;
         const declared = declaredCredentials[entry.quota.credentialRef];

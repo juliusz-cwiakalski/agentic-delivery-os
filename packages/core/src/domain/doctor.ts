@@ -13,6 +13,7 @@ import {
   type BrandIdentity,
   DOCTOR_AREAS,
   DOCTOR_CONDITION_CATALOG,
+  DOCTOR_CREDENTIAL_REJECTION_STATUSES,
   DOCTOR_EVIDENCE_SOURCES,
   DOCTOR_MAX_DETAIL_CHARS,
   DOCTOR_MAX_EVIDENCE_REASONS,
@@ -239,7 +240,10 @@ const repoCheck = (
 
 const isCredentialRejection = (read: DoctorWiringRead): boolean => {
   if (read.ok) return false;
-  return read.httpStatus === 401 || read.httpStatus === 403;
+  return (
+    read.httpStatus !== undefined &&
+    DOCTOR_CREDENTIAL_REJECTION_STATUSES.some((status) => status === read.httpStatus)
+  );
 };
 
 const credentialFailureCode = (credential: DoctorCredentialPresence): string | undefined =>
