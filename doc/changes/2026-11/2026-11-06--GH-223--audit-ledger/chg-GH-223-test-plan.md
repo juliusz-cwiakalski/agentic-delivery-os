@@ -601,7 +601,7 @@ Determinism rules: no process spawning, no real clock, no ambient environment re
 **Preconditions**:
 
 - Three environments: (a) identity variable absent; (b) identity variable present but an empty string; (c) identity variable present but whitespace-only.
-- An injected user/home/host/session fact set that would make inference possible if the implementation tried (`USER=operator`, hostname, `SESSION_ID`, `PWD`).
+- An injected user, home, host, and session fact set that would make inference possible if the implementation tried (`USER=operator`, hostname, `SESSION_ID`, `PWD`).
 
 **Steps**:
 

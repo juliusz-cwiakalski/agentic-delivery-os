@@ -414,3 +414,21 @@ describe("TC-VERIFY-018 documented C-4 table agreement", () => {
     );
   });
 });
+
+describe("TC-GH223-034 audit vocabulary stays out of the result contract", () => {
+  test("the delivery-result contract carries no audit fields or identities", () => {
+    const text = readFileSync(join(ROOT, "packages/core/src/contracts/result.ts"), "utf8");
+    expect(text).not.toContain("audit.");
+    expect(text).not.toContain("agentIdentity");
+    expect(text).not.toContain("chainValue");
+    expect(text).not.toContain("auditSeq");
+    expect(DELIVERY_RESULT_TOKENS).not.toContain("audit.invocation");
+  });
+
+  test("the result contract remains runtime-neutral", () => {
+    const text = readFileSync(join(ROOT, "packages/core/src/contracts/result.ts"), "utf8");
+    expect(text).not.toContain("Date.now");
+    expect(text).not.toContain("Math.random");
+    expect(text).not.toContain("process.env");
+  });
+});
