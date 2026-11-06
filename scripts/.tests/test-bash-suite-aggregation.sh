@@ -259,6 +259,30 @@ tc_006_unrunnable() {
 }
 
 # ---------------------------------------------------------------------------
+# TC-CIPROP-006 neighbor — unreadable directory fails discovery closed.
+# ---------------------------------------------------------------------------
+tc_006b_discovery_failure() {
+  if [[ "$(id -u)" == "0" ]]; then
+    printf '[INFO] %s skipping discovery-failure case (running as root)\n' "${TAG}"
+    return 0
+  fi
+
+  mkdir -p "${TREE}/blocked/.tests" "${TREE}/ok/.tests"
+  make_suite "${TREE}/blocked/.tests/test-hidden.sh" 'exit 0'
+  make_suite "${TREE}/ok/.tests/test-visible.sh" 'exit 0'
+  chmod 000 "${TREE}/blocked"
+
+  local rc=0 out=""
+  out="$(run_runner_in "${TREE}" 2>&1)" || rc=$?
+  chmod 755 "${TREE}/blocked"
+
+  assert_ne 0 "${rc}" "a discovery failure must fail the runner"
+  assert_contains "${out}" 'suite discovery failed' "discovery failure is named"
+  assert_not_contains "${out}" '[PASS] ./ok/.tests/test-visible.sh' \
+    "no suite may run after a discovery failure"
+}
+
+# ---------------------------------------------------------------------------
 # TC-CIPROP-007 — zero discovered suites exits zero with an explicit summary.
 # ---------------------------------------------------------------------------
 tc_007_zero_suites() {
@@ -317,6 +341,8 @@ main() {
   run_case "TC-CIPROP-004 every suite runs exactly once after a failure" tc_004_exactly_once
   run_case "TC-CIPROP-005 discovery matches today's find expression" tc_005_discovery_parity
   run_case "TC-CIPROP-006 an unrunnable suite counts as a failure" tc_006_unrunnable
+  run_case "TC-CIPROP-006b an unreadable directory fails discovery closed" \
+    tc_006b_discovery_failure
   run_case "TC-CIPROP-007 zero suites exits zero" tc_007_zero_suites
   run_case "TC-CIPROP-012 bash-tests invokes the runner and states the contract" \
     tc_012_workflow_wiring

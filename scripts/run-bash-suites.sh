@@ -90,8 +90,19 @@ EOF
 # DOMAIN
 # ============================================================================
 discover_suites() {
+  local output="" rc=0
+  # Fail closed: process substitution would discard find's exit status, so a
+  # discovery error (e.g. an unreadable directory) must abort before any suite
+  # runs instead of silently aggregating a partial set.
+  output="$("${FIND_EXPRESSION[@]}" -print)" || rc=$?
+  if (( rc != 0 )); then
+    log_err "suite discovery failed: find exited ${rc}"
+    exit "${EXIT_FAILURE}"
+  fi
   local -a suites=()
-  mapfile -t suites < <("${FIND_EXPRESSION[@]}" -print)
+  if [[ -n "${output}" ]]; then
+    mapfile -t suites <<< "${output}"
+  fi
   SUITES=("${suites[@]}")
 }
 

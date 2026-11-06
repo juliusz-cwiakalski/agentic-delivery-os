@@ -6,11 +6,11 @@ last_updated: 2026-11-06T19:05:00Z
 owners: [engineering]
 service: delivery infrastructure (CI shell-suite gate + file-adapter input limits)
 labels: [change, review, hardening]
-version_impact: patch
+version_impact: minor
 summary: "Prove the two GH-251 repairs rather than assert them: a suite-aggregation runner that fails the CI shell-suite job iff any discovered suite fails or cannot run (proved by a committed, self-verifying negative control that also fails if the runner is made green on a failing suite), and byte-accurate UTF-8 enforcement of the 1048576-byte source limit at all three parser check sites (one YAML configuration check site, two pm-notes document check sites) with five boundary fixture classes per site, unchanged error identities, and zero behavior change beyond the two repairs (including the DEC-7 scoped ci-topology allowance, pinned by non-vacuity negative fixtures). 26 named TCs cover all 9 acceptance criteria, DM-1/DM-2, and all 10 NFRs; quality-gate evidence is captured locally (pnpm check, bash suites) and in the PR's green CI run."
 links:
   change_spec: ./chg-GH-251-spec.md
-  implementation_plan: null
+  implementation_plan: ./chg-GH-251-plan.yaml
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
@@ -47,7 +47,7 @@ This plan protects two claims that are currently false, and it protects them the
 - [OUT] Any change to binding `ts-*` jobs, guard jobs, or other workflow jobs (NG-5).
 - [OUT] Rewriting existing suites or changing suite semantics; discovery scope broadening; timeouts/parallelism (NG-6).
 - [OUT] Broader CI hardening (mutable legacy action references, etc.) (NG-7).
-- [GAP-1 — implementation plan not yet authored] `chg-GH-251-plan.yaml` does not exist at test-planning time (`links.implementation_plan: null`). Delivery planning must map all 26 TCs onto phases and name the delivery-bound artifacts (runner path, control path, byte-length helper location) recorded in §7. It must not reshape any pinned outcome, identity, discovery rule, or traceability.
+- [GAP-1 — RESOLVED BY PLAN] `chg-GH-251-plan.yaml` exists and maps the 26 TCs onto delivery phases 1–5, including the runner path (`scripts/run-bash-suites.sh`), control path (`scripts/.tests/test-bash-suite-aggregation-modes.sh`), and byte-length helper anchors in the two parser files. It does not reshape any pinned outcome, identity, discovery rule, or traceability.
 - [GAP-2 — CI topology additions-only invariant versus the required workflow replacement — RESOLVED IN SPEC v1.1] This was the plan's verified blocker: `scripts/checks/ci-topology.ts` failed on *any* removed `.github/workflows/ci.yml` line versus `origin/main-tools`, and the incorrect job comment is itself a removed line. Spec v1.1 resolves it upstream with the change-scoped allowance DEC-7 (F-8, AC-F8-1, NFR-6 reworded, RSK-7 registered): removals are ignored only in the `bash-tests` execution block (`run:` step content) and that job's comment lines, while removals elsewhere and bash/ts job-presence enforcement stay fatal, proved non-vacuous by committed negative fixtures. The resolution matches what this plan proposed; TC-CIPROP-015 pins the fixture set and TC-CIPROP-014 keeps the standing gates honest.
 - [GAP-3 — runner invocation seam for the control is delivery-bound] The control must invoke "the same runner the workflow invokes" against a synthetic tree. Either the control copies the runner into a temp tree preserving its root-resolution layout (the `test-delivery-mutation-sandbox.sh` precedent) or the runner accepts a scoped root. Both satisfy F-3; the plan pins the observable outcome, not the seam (OQ-2).
 - [GAP-4 — byte-length helper location is delivery-bound] Reuse-via-import of the core code-point→UTF-8 pattern or local replication is delivery latitude (F-4, §14). TC-UTF8LIMIT-007 anchors on the file named in the §7 mapping.
@@ -1017,7 +1017,8 @@ control and runner tests (`scripts/.tests/test-bash-suite-aggregation.sh`,
 `scripts/.tests/test-bash-suite-aggregation-modes.sh`); workflow `bash-tests`
 job (`.github/workflows/ci.yml`); DEC-7 allowance and fixtures
 (`scripts/checks/ci-topology.ts`, `tests/checks/ci-checks.test.ts`,
-`tests/checks/privacy-ci-wiring.test.ts`); parser
+`tests/checks/privacy-ci-wiring.test.ts`,
+`tests/checks/privacy-release.test.ts`); parser
 files (`packages/adapters/src/file/yaml-parser.ts`,
 `packages/adapters/src/file/pm-notes-parser.ts`); parser tests
 (`tests/behaviour/config-parser.test.ts`,
@@ -1026,7 +1027,7 @@ files (`packages/adapters/src/file/yaml-parser.ts`,
 `tests/structure/source-limit-purity.test.ts`); documentation
 (`doc/inception/analysis/phase-4-quality-baseline.md`,
 `doc/inception/analysis/fse-audit.md`); changeset
-(`.changeset/gh-251-ci-failure-propagation-patch.md`); change artifacts. Nothing
+(`.changeset/gh-251-ci-failure-propagation-minor.md`); change artifacts. Nothing
 unclassified.
 
 **Spec-reconciliation handoff (phase 7, not delivery):** NFR-TOOL-005 gap line;

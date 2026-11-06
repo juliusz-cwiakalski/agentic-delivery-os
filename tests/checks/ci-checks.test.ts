@@ -329,6 +329,7 @@ jobs:
             -print -exec bash {} \\;
           echo "=== All test suites passed ==="
 
+  # A comment describing the next job, directly above its key.
   result-tuple-guard:
     name: Result tuple guard
     runs-on: ubuntu-latest
@@ -496,6 +497,30 @@ describe("DEC-7 scoped ci-topology allowance", () => {
       unifiedDiff(BASE_REPAIR_WORKFLOW, head),
     );
     expect(violations.some((message) => message.includes("Run all bash test suites"))).toBe(true);
+  });
+
+  test("fixture F: a comment directly above the next job key is part of the footprint", () => {
+    const comment = "  # A comment describing the next job, directly above its key.\n";
+    const head = BASE_REPAIR_WORKFLOW.replace(comment, "");
+    const diff = unifiedDiff(BASE_REPAIR_WORKFLOW, head);
+    expect(removedLineViolations(BASE_REPAIR_WORKFLOW, diff)).toEqual([]);
+    const disabled = removedLineViolations(BASE_REPAIR_WORKFLOW, diff, {
+      allowBashTestsExecutionBlockRemovals: false,
+    });
+    expect(disabled.some((message) => message.includes("A comment describing the next job"))).toBe(
+      true,
+    );
+  });
+
+  test("fixture G: the Install jq run body is part of the footprint", () => {
+    const installLine = "        run: sudo apt-get update && sudo apt-get install -y jq\n";
+    const head = HEAD_REPAIR_WORKFLOW.replace(installLine, "");
+    const diff = unifiedDiff(BASE_REPAIR_WORKFLOW, head);
+    expect(removedLineViolations(BASE_REPAIR_WORKFLOW, diff)).toEqual([]);
+    const disabled = removedLineViolations(BASE_REPAIR_WORKFLOW, diff, {
+      allowBashTestsExecutionBlockRemovals: false,
+    });
+    expect(disabled.some((message) => message.includes("sudo apt-get"))).toBe(true);
   });
 
   test("live tree stays green under the allowance and exposes no bypass flag", () => {

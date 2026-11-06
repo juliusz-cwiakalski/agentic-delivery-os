@@ -8,7 +8,7 @@ change:
   owners: [engineering]
   service: delivery infrastructure (CI shell-suite gate + file-adapter input limits)
   labels: [change, review, hardening]
-  version_impact: patch
+  version_impact: minor
   audience: internal
   security_impact: low
   risk_level: medium
