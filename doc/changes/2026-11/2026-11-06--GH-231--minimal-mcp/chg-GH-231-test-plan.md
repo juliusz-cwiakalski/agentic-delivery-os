@@ -1,9 +1,9 @@
 ---
 id: chg-GH-231-test-plan
-status: Proposed
-version: 1.0
+status: Updated
+version: 1.1
 created: 2026-11-06T00:00:00Z
-last_updated: 2026-11-06T00:00:00Z
+last_updated: 2026-11-06T12:31:54Z
 owners: [engineering]
 service: delivery-os MCP surface
 labels: [change, planning]
@@ -153,7 +153,7 @@ The spec declares no REST/HTTP endpoint (API-#) and no event/message identifier 
 | Layer | Runner / invocation | Location | Covers |
 |-------|--------------------|----------|--------|
 | Contract and catalog | `bun test tests/structure/mcp-contract.test.ts` | `tests/structure/mcp-contract.test.ts`; the MCP catalog module | TC-MCP-001, TC-MCP-002, TC-MCP-015 |
-| Import, purity, boundary | `bun test tests/structure/mcp-imports.test.ts tests/boundaries`; `pnpm check:boundaries`; `bun run scripts/checks/{ambient-globals,workspace-entrypoints}.ts` | `tests/structure/mcp-imports.test.ts`, `.dependency-cruiser.cjs`, `tests/boundaries/**` | TC-MCP-010, TC-MCP-013, TC-MCP-017, TC-MCP-018 |
+| Import, purity, boundary | `bun test tests/structure/mcp-imports.test.ts tests/boundaries`; `pnpm check:boundaries` (dependency-cruiser `runtime-apis-confinement` with the exact-path serve allowance, workspace-entrypoints, secret-read boundary); `bun run scripts/checks/ambient-globals.ts` (core regression only — its scan scope is `packages/core`) | `tests/structure/mcp-imports.test.ts`, `.dependency-cruiser.cjs`, `scripts/checks/secret-read-boundary.ts`, `tests/boundaries/**` | TC-MCP-010, TC-MCP-013, TC-MCP-017, TC-MCP-018 |
 | Type contract | `pnpm typecheck` | `tests/types/mcp-payload.type-test.ts` | TC-MCP-002, TC-MCP-010, TC-MCP-011 |
 | Status parity | `bun test tests/behaviour/mcp-status-parity.test.ts` | `tests/fixtures/mcp/parity/**` over `tests/fixtures/status/harness.ts` | TC-MCP-003, TC-MCP-004 |
 | Verify-artifact parity | `bun test tests/behaviour/mcp-verify-artifact-parity.test.ts` | over `tests/behaviour/verify-support.ts` | TC-MCP-005, TC-MCP-006 |
@@ -258,7 +258,7 @@ Additional rules:
 - **Built entry only.** The smoke runs after `pnpm build` (the `pretest` lifecycle already builds). The test resolves the declared serve entry from `packages/mcp/package.json` exports (or the declared `bin`), never a deep `/src/` or guessed `/dist/` path.
 - **Hermetic workspace.** The smoke creates a temp repository with a minimal config file, a temp `HOME`/`XDG_CONFIG_HOME`, a pre-initialized read-only state root, no remote, and no credentials. The working name is synthetic. The state root is prepared with the existing state harness before the server starts, with an empty verified registry, so the gate-report lifecycle gate is a definitive fail rather than a `state.*` unknown. Fixture setup may write before the spawn; the read-only assertions cover the tool-call window. The expected outcomes are pinned: `status` succeeds with a digest whose unavailable sections are truthful data; `verify-artifact` returns the classified `lint.target.missing` failure for a missing target; `gate-report` returns the classified `verify.gates.failed` failure because the lifecycle gate is a definitive fail. Provider-backed success is covered by the injected parity suites (GAP-T1).
 - **Network guard.** The Node run installs a test-only preload that throws on `fetch` and on `node:http`/`node:https`/`node:net` connection attempts. Use the preload mechanism available in the installed Node major (for example `--import` on Node 20.6+ or `--require` on earlier Node 20); the test fails closed if the guard cannot be installed. The smoke must pass with the guard installed. The guard is a test fixture, not shipped code.
-- **No runtime-specific imports.** `packages/mcp/src/**` contains no `bun:` specifier and no `Bun.*` call. Tool modules contain no `node:*` import, no `process` read, and no ambient global. The serve edge is the composition root: it may use `node:` builtins for stdio and may read the environment once at startup to resolve configuration, exactly as the CLI edge does. NFR-4's ambient-global prohibition applies to the neutral tool modules, not to that single startup read.
+- **No runtime-specific imports (mcp-scoped enforcement).** The assertion is enforced by the boundary checks, not by the smoke: the dependency-cruiser `runtime-apis-confinement` rule with its reason-bearing exact-path allowance for the serve entry (the only mcp path that may use `node:` builtins for stdio and the single startup configuration-environment read), the `tests/structure/mcp-imports.test.ts` AST floors over `packages/mcp/src/**` (zero `bun:` specifiers, zero `Bun.*` calls, zero `node:*` imports and `process` reads outside `serve.ts`, non-zero file count), and the `scripts/checks/secret-read-boundary.ts` allowlist entry `configuration-environment-source` scoped to the serve root. The serve edge is the composition root; NFR-4's ambient-global prohibition applies to the neutral tool modules, not to those two documented serve-root allowances. `scripts/checks/ambient-globals.ts` scans `packages/core` only and is a core regression check, not mcp-surface coverage.
 
 ### 4.7 Injection and Read-Only Oracle (binding for AC-F7-1, AC-F7-2, NFR-7, NFR-10)
 
@@ -709,7 +709,7 @@ Additional rules:
 **Related IDs**: F-1, F-6, AC-F1-3, NFR-4, NFR-8, DEC-1
 **Test Type(s)**: Integration, Contract, Smoke
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/mcp-node-smoke.test.ts`; `tests/fixtures/mcp/node/network-guard.mjs`
+**Target Layer / Location**: `tests/behaviour/mcp-node-smoke.test.ts`; `tests/fixtures/mcp/node/network-guard.mjs`; `tests/structure/mcp-imports.test.ts`; `.dependency-cruiser.cjs`; `scripts/checks/secret-read-boundary.ts`
 **Tags**: @backend, @portability
 
 **Preconditions**:
@@ -724,13 +724,13 @@ Additional rules:
 2. Spawn the entry under Node with the test-only network-guard preload. Complete initialize, `tools/list`, and one call per tool. Assert the three payloads parse, pass the leakage oracle, and match the pinned hermetic expectations: a status digest; `lint.target.missing` for `verify-artifact`; and `verify.gates.failed` for `gate-report` on the same missing target.
 3. Close the channel; assert exit `0`.
 4. Spawn the same entry under Bun with the same script when the built entry is executable there; assert the canonical JSON of the three payloads equals the Node run. If the entry cannot execute under Bun, record the reason and continue; the Node run remains the AC-F1-3 requirement, and the in-process Bun suites remain the Bun-side proof.
-5. Scan `packages/mcp/src/**`: zero `bun:` specifiers and zero `Bun.*` calls; tool modules contain no `node:*` import, no `process` read, and no ambient global. The serve edge may use `node:` builtins for stdio and configuration only.
-6. Run `bun run scripts/checks/ambient-globals.ts` and `bun run scripts/checks/workspace-entrypoints.ts`; assert green.
+5. The mcp import/purity AST scan (`tests/structure/mcp-imports.test.ts`, non-zero file-count floors) asserts over `packages/mcp/src/**`: zero `bun:` specifiers and zero `Bun.*` calls; tool modules contain no `node:*` import, no `process` read, and no ambient global. The serve edge may use `node:` builtins for stdio and the single startup configuration-environment read only, through its reason-bearing depcruise exact-path allowance and secret-read allowlist entry.
+6. Assert runtime-neutrality through the mcp-scoped enforcement points: `pnpm check:boundaries` green, including the dependency-cruiser `runtime-apis-confinement` rule (its reason-bearing exact-path allowance admits only the serve entry's Node stdio edge and its single startup configuration-environment read) and the `scripts/checks/secret-read-boundary.ts` allowlist entry `configuration-environment-source` scoped to the serve root; `bun test tests/structure/mcp-imports.test.ts` green with its non-zero file-count AST floors over `packages/mcp/src/**`; `bun run scripts/checks/workspace-entrypoints.ts` green. Run `bun run scripts/checks/ambient-globals.ts` as a core regression check only: its scan scope is `packages/core`, so it is not mcp-surface coverage.
 7. Assert the network guard was installed and no guarded call occurred; a seeded `fetch` in a temp copy of a tool module must fail the guard or the import scan by name (TC-MCP-020).
 
 **Expected Outcome**:
 
-- The serve entry and all three tools run under Node, produce payloads identical to the Bun path, and contain no runtime-specific import or ambient-global read.
+- The serve entry and all three tools run under Node, produce payloads identical to the Bun path, and contain no runtime-specific import or ambient-global read outside the serve root's two documented allowances (the Node stdio transport edge and the single startup configuration-environment read), which the depcruise rule and secret-read allowlist scope to the serve path only.
 
 **Notes / Clarifications**:
 
@@ -1026,7 +1026,7 @@ Additional rules:
 | TC-MCP-010 | `tests/structure/mcp-imports.test.ts`, `tests/behaviour/mcp-error-payload.test.ts`, `tests/behaviour/mcp-node-smoke.test.ts` | `bun test tests/structure/mcp-imports.test.ts tests/behaviour/mcp-error-payload.test.ts tests/behaviour/mcp-node-smoke.test.ts`; `pnpm check:boundaries` | To Implement |
 | TC-MCP-011 | `tests/behaviour/mcp-lifecycle.test.ts` | `bun test tests/behaviour/mcp-lifecycle.test.ts` | To Implement |
 | TC-MCP-012 | `tests/behaviour/mcp-node-smoke.test.ts`; `tests/fixtures/mcp/protocol/client.ts` | `bun test tests/behaviour/mcp-node-smoke.test.ts` | To Implement |
-| TC-MCP-013 | `tests/behaviour/mcp-node-smoke.test.ts`; `tests/fixtures/mcp/node/network-guard.mjs` | `bun test tests/behaviour/mcp-node-smoke.test.ts` | To Implement |
+| TC-MCP-013 | `tests/behaviour/mcp-node-smoke.test.ts`; `tests/fixtures/mcp/node/network-guard.mjs`; `tests/structure/mcp-imports.test.ts`; `.dependency-cruiser.cjs`; `scripts/checks/secret-read-boundary.ts` | `bun test tests/behaviour/mcp-node-smoke.test.ts tests/structure/mcp-imports.test.ts`; `pnpm check:boundaries` | To Implement |
 | TC-MCP-014 | `tests/checks/license-audit.test.ts` (existing), `doc/legal/dependency-licenses.yaml` (update if a dependency is added) | `bun run scripts/checks/license-audit.ts`; `bun run scripts/checks/vulnerability-gate.ts`; `bun test tests/checks/license-audit.test.ts` | Existing – Update only if a dependency is added |
 | TC-MCP-015 | `tests/structure/mcp-contract.test.ts`; `tests/fixtures/mcp/tool-list.snapshot.json` | `bun test tests/structure/mcp-contract.test.ts`; `bun run scripts/checks/forbidden-literals.ts` | To Implement |
 | TC-MCP-016 | `tests/behaviour/mcp-injection.test.ts`; `tests/fixtures/mcp/injection/**` | `bun test tests/behaviour/mcp-injection.test.ts` | To Implement |
@@ -1087,6 +1087,7 @@ Additional rules:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-06 | @test-plan-writer | Initial test plan for GH-231 (M1-S7: Minimal MCP). 21 TCs cover all 13 ACs, all 11 NFRs, DM-1..DM-4, DEC-1..DEC-7, the shared CLI/MCP parity fixtures, the Node portability smoke, the prompt-injection fixture, the read-only oracle, the license verdict, and the exit-literal reconciliation. |
+| 1.1 | 2026-11-06 | @test-plan-writer | Iteration-2 DoR remediation — TC-MCP-013 enforcement-point re-citation (gate finding, 2026-11-06). |
 
 ## 10. Test Execution Log
 
