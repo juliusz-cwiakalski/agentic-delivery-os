@@ -491,7 +491,10 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(exported(`${CLI_DIR}/commands/db.ts`)).toEqual(["createDbCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/brief.ts`)).toEqual(["createBriefCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/lint.ts`)).toEqual(["createLintCommandDefinition"]);
-    expect(exported(`${CLI_DIR}/commands/commit.ts`)).toEqual(["createCommitCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/commit.ts`)).toEqual([
+      "planPhaseForLifecycle",
+      "createCommitCommandDefinition",
+    ]);
     expect(exported(`${CLI_DIR}/commands/phase.ts`)).toEqual([
       "runPhaseCompleteForCommit",
       "createPhaseCommandDefinition",

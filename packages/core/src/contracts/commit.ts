@@ -152,12 +152,18 @@ export type CommitFileStatus = (typeof COMMIT_FILE_STATUSES)[number];
 export const COMMIT_SCOPE_SOURCES = ["plan-phase", "plan-union", "plan-absent"] as const;
 export type CommitScopeSource = (typeof COMMIT_SCOPE_SOURCES)[number];
 
+/** The plan phase kinds `delivery.plan.v1` declares (the lifecycle mapping input). */
+export const COMMIT_PLAN_PHASE_KINDS = ["planning", "delivery"] as const;
+export type CommitPlanPhaseKind = (typeof COMMIT_PLAN_PHASE_KINDS)[number];
+
 /** A computed plan-phase declaration used by the skeleton and staging scope. */
 export type CommitPlanPhaseContext = {
   readonly phaseId: string;
   readonly title: string;
   readonly summary?: string;
   readonly declaredScopePaths: readonly string[];
+  /** The declared plan kind, when the plan artifact declares it. */
+  readonly kind?: CommitPlanPhaseKind;
 };
 
 /** The deterministic message skeleton: every verifiable part (F-2). */
@@ -381,6 +387,8 @@ export type CommitEnvelopeData = {
   readonly atomic: boolean;
   readonly ledgerTransition?: StateJsonValue;
   readonly dryRun?: boolean;
+  /** Dry-run phase-mode disclosure: the act would land the transition alone. */
+  readonly commitSkipped?: "skipped-no-pending-work";
   readonly safety: { readonly completed: boolean; readonly findings: readonly string[] };
   readonly telemetry: { readonly emitted: boolean; readonly detail?: string };
   readonly degradedScope?: "plan-absent";

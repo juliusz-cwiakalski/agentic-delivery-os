@@ -3,14 +3,14 @@
  * the clean-abort contract, and the one-record-per-landing invariant.
  */
 import { describe, expect, test } from "bun:test";
-import { withCommitHarness } from "../fixtures/commit/harness";
+import { COMMIT_MULTI_PHASE_PLAN_YAML, withCommitHarness } from "../fixtures/commit/harness";
 import {
   COMMIT_REF,
   commitCount,
   dataOf,
   errorCodeOf,
+  excludedOf,
   head,
-  seedDirtyTree,
   status,
   telemetryPayloads,
   transitionPayloads,
@@ -329,5 +329,73 @@ describe("TC-ATOMIC-010/012 exactly one record with the durable intent", () => {
         { seedFiles: SEED, phaseCommit: entry.phaseCommit },
       );
     }
+  });
+});
+
+describe("TC-ATOMIC-013 lifecycle phase ids map to declared plan-phase scopes", () => {
+  test("a non-first-phase declared untracked file is stageable in phase-centric mode", async () => {
+    await withCommitHarness(
+      async (harness) => {
+        harness.repo.write("src/two.ts", "export const two = 2;\n");
+        const dry = await harness.runCommit(["--dry-run", COMMIT_REF, "--phase", "delivery"]);
+        expect(dry.exitCode).toBe(0);
+        expect(dataOf(dry).stagedFiles).toEqual(["src/two.ts"]);
+        expect(excludedOf(dry).untrackedNotStaged).toEqual([]);
+
+        const beforeCommits = commitCount(harness);
+        harness.coreTransport.push({ kind: "success", message: validMessage() });
+        const run = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
+        expect(run.exitCode).toBe(0);
+        expect(dataOf(run)).toMatchObject({ outcome: "landed", atomic: true });
+        expect(dataOf(run).commitSkipped).toBeUndefined();
+        expect(commitCount(harness)).toBe(beforeCommits + 1);
+        expect(transitionPayloads(harness)[0]).toMatchObject({
+          phaseId: "delivery",
+          commitIntent: "atomic",
+        });
+      },
+      { seedFiles: SEED, planYaml: COMMIT_MULTI_PHASE_PLAN_YAML },
+    );
+  });
+
+  test("a phase-mode dry run previews no-pending-work as success, not a staging refusal", async () => {
+    await withCommitHarness(
+      async (harness) => {
+        const beforeHead = head(harness);
+        const beforeCommits = commitCount(harness);
+        const run = await harness.runCommit(["--dry-run", COMMIT_REF, "--phase", "delivery"]);
+        expect(run.exitCode).toBe(0);
+        expect(dataOf(run)).toMatchObject({
+          stagedFiles: [],
+          dryRun: true,
+          commitSkipped: "skipped-no-pending-work",
+        });
+        expect(head(harness)).toBe(beforeHead);
+        expect(commitCount(harness)).toBe(beforeCommits);
+        expect(telemetryPayloads(harness)).toEqual([]);
+        expect(transitionPayloads(harness)).toEqual([]);
+      },
+      { seedFiles: SEED, planYaml: COMMIT_MULTI_PHASE_PLAN_YAML },
+    );
+  });
+
+  test("a lifecycle phase without a plan-phase correspondence degrades instead of impersonating phase 1", async () => {
+    await withCommitHarness(
+      async (harness) => {
+        harness.repo.write("src/two.ts", "export const two = 2;\n");
+        const beforeCommits = commitCount(harness);
+        const run = await harness.runPhase(["complete", COMMIT_REF, "review_fix"]);
+        expect(run.exitCode).toBe(0);
+        expect(dataOf(run)).toMatchObject({
+          outcome: "landed",
+          atomic: false,
+          commitSkipped: "skipped-no-pending-work",
+        });
+        expect(commitCount(harness)).toBe(beforeCommits);
+        expect(telemetryPayloads(harness)).toEqual([]);
+        expect(status(harness)).toContain("?? src/two.ts");
+      },
+      { seedFiles: SEED, planYaml: COMMIT_MULTI_PHASE_PLAN_YAML },
+    );
   });
 });

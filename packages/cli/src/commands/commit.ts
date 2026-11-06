@@ -13,14 +13,15 @@ import {
   type CommitActRequest,
   type CommitTransportPorts,
   resolveCommitSkeleton,
+  templateCommitMessage,
 } from "@delivery-os/core";
 import {
   CANONICAL_PHASE_IDS,
   type CommitEnvelopeData,
   type CommitPlanPhaseContext,
+  type CommitPlanPhaseKind,
   type CommitRefSource,
   type CommitSessionFacts,
-  type CommitTransport,
   type CommitTransportAvailability,
   type StateJsonValue,
 } from "@delivery-os/core/contracts";
@@ -98,13 +99,143 @@ const dataFor = (source: {
   ...(source.degradedScope === true ? { degradedScope: "plan-absent" } : {}),
 });
 
+/**
+ * The lifecycle vocabulary and the plan schema's phase kinds are different
+ * namespaces. `delivery` covers the plan's delivery phases and
+ * `delivery_planning` its planning phases; every other lifecycle phase has no
+ * declared plan-phase correspondence and therefore degrades honestly instead
+ * of impersonating a plan phase.
+ */
+const LIFECYCLE_PLAN_KINDS: Readonly<Record<string, readonly CommitPlanPhaseKind[]>> = {
+  delivery: ["delivery"],
+  delivery_planning: ["planning"],
+};
+
+/**
+ * Resolve the plan-phase declaration for a lifecycle phase. Multiple matching
+ * delivery phases contribute their union scope; a numeric phase id still
+ * matches by identity for embedded callers.
+ */
+export const planPhaseForLifecycle = (
+  phases: readonly CommitPlanPhaseContext[],
+  lifecyclePhaseId: string | undefined,
+): CommitPlanPhaseContext | undefined => {
+  if (phases.length === 0) return undefined;
+  if (lifecyclePhaseId === undefined) return phases[0];
+  const exact = phases.find((entry) => entry.phaseId === lifecyclePhaseId);
+  if (exact !== undefined) return exact;
+  const kinds = LIFECYCLE_PLAN_KINDS[lifecyclePhaseId];
+  if (kinds === undefined) return undefined;
+  const matching = phases.filter((entry) => entry.kind !== undefined && kinds.includes(entry.kind));
+  if (matching.length === 0) return undefined;
+  if (matching.length === 1) return matching[0];
+  const [kind] = kinds;
+  const firstSummary = matching[0]?.summary;
+  const summary =
+    firstSummary !== undefined && matching.every((entry) => entry.summary === firstSummary)
+      ? firstSummary
+      : undefined;
+  return {
+    phaseId: lifecyclePhaseId,
+    title: lifecyclePhaseId,
+    ...(summary === undefined ? {} : { summary }),
+    declaredScopePaths: [...new Set(matching.flatMap((entry) => entry.declaredScopePaths))].sort(),
+    ...(kind === undefined ? {} : { kind }),
+  };
+};
+
 const phaseContextOf = (
   context: CommitContext,
   phaseId: string | undefined,
-): CommitPlanPhaseContext | undefined =>
-  phaseId === undefined
-    ? context.phases[0]
-    : (context.phases.find((entry) => entry.phaseId === phaseId) ?? context.phases[0]);
+): CommitPlanPhaseContext | undefined => planPhaseForLifecycle(context.phases, phaseId);
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isStringArray = (value: unknown): value is readonly string[] =>
+  Array.isArray(value) && value.every((entry) => typeof entry === "string");
+
+const isMessageSource = (value: unknown): value is CommitEnvelopeData["messageSource"] =>
+  value === "model" || value === "template";
+
+const isTransport = (value: unknown): value is CommitEnvelopeData["transport"] =>
+  value === "core-inference" || value === "harness-one-shot" || value === "none";
+
+const excludedFrom = (value: unknown): CommitEnvelopeData["excluded"] | undefined => {
+  if (!isRecord(value)) return undefined;
+  const { forbiddenPaths, oversizedBinaries, untrackedNotStaged, noiseStripped, scopeDrift } =
+    value;
+  if (
+    !isStringArray(forbiddenPaths) ||
+    !isStringArray(oversizedBinaries) ||
+    !isStringArray(untrackedNotStaged) ||
+    !isStringArray(noiseStripped) ||
+    !isStringArray(scopeDrift)
+  ) {
+    return undefined;
+  }
+  return { forbiddenPaths, oversizedBinaries, untrackedNotStaged, noiseStripped, scopeDrift };
+};
+
+const safetyFrom = (value: unknown): CommitEnvelopeData["safety"] | undefined => {
+  if (!isRecord(value)) return undefined;
+  if (typeof value.completed !== "boolean" || !isStringArray(value.findings)) return undefined;
+  return { completed: value.completed, findings: value.findings };
+};
+
+const telemetryFrom = (value: unknown): CommitEnvelopeData["telemetry"] | undefined => {
+  if (!isRecord(value)) return undefined;
+  if (typeof value.emitted !== "boolean") return undefined;
+  if (value.detail !== undefined && typeof value.detail !== "string") return undefined;
+  return {
+    emitted: value.emitted,
+    ...(typeof value.detail === "string" ? { detail: value.detail } : {}),
+  };
+};
+
+const internalFailure = (summary: string): { readonly error: Record<string, unknown> } => ({
+  error: { kind: "fallback", summary },
+});
+
+/** Validate the phase completion's landed data into the DM-2 envelope shape. */
+const envelopeFromPhase = (
+  changeRef: string,
+  phase: string,
+  data: Record<string, unknown>,
+): CommitEnvelopeData | undefined => {
+  if (typeof data.subject !== "string" || !isStringArray(data.stagedFiles)) return undefined;
+  const excluded = excludedFrom(data.excluded);
+  const messageSource = isMessageSource(data.messageSource) ? data.messageSource : undefined;
+  const transport = isTransport(data.transport) ? data.transport : undefined;
+  const safety = safetyFrom(data.safety);
+  const telemetry = telemetryFrom(data.telemetry);
+  if (
+    excluded === undefined ||
+    messageSource === undefined ||
+    transport === undefined ||
+    safety === undefined ||
+    telemetry === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    changeRef,
+    subject: data.subject,
+    ...(typeof data.body === "string" ? { body: data.body } : {}),
+    stagedFiles: data.stagedFiles,
+    excluded,
+    ...(typeof data.commitSha === "string" ? { commitSha: data.commitSha } : {}),
+    messageSource,
+    transport,
+    atomic: true,
+    ledgerTransition: {
+      phase,
+      timestamp: typeof data.timestamp === "string" ? data.timestamp : "",
+    },
+    safety,
+    telemetry,
+  };
+};
 
 /** Build the commit command definition over the injected runtime. */
 export const createCommitCommandDefinition = (
@@ -147,7 +278,8 @@ export const createCommitCommandDefinition = (
     const context = await runtime.readContext(changeRef);
     const phaseId = phaseIdFlag ?? context.currentPhaseId;
     const planPhase = phaseContextOf(context, phaseId);
-    const degradedScope = !context.planPresent;
+    const phaseCentric = phaseIdFlag !== undefined;
+    const degradedScope = !context.planPresent || (phaseCentric && planPhase === undefined);
 
     if (phaseIdFlag !== undefined && runtime.phase !== undefined && !dryRun) {
       const completed = await runPhaseCompleteForCommit(
@@ -157,36 +289,11 @@ export const createCommitCommandDefinition = (
       );
       if (!completed.ok) return { error: completed.error };
       const data = completed.data;
-      if (data.outcome === "landed" && typeof data.subject === "string") {
-        return {
-          data: {
-            changeRef,
-            subject: data.subject,
-            ...(typeof data.body === "string" ? { body: data.body } : {}),
-            stagedFiles: Array.isArray(data.stagedFiles) ? data.stagedFiles : [],
-            excluded: (data.excluded as CommitEnvelopeData["excluded"]) ?? {
-              forbiddenPaths: [],
-              oversizedBinaries: [],
-              untrackedNotStaged: [],
-              noiseStripped: [],
-              scopeDrift: [],
-            },
-            ...(typeof data.commitSha === "string" ? { commitSha: data.commitSha } : {}),
-            messageSource:
-              (data.messageSource as CommitEnvelopeData["messageSource"]) ?? "template",
-            transport: (data.transport as CommitTransport) ?? "none",
-            atomic: true,
-            ledgerTransition: {
-              phase: phaseIdFlag,
-              timestamp: typeof data.timestamp === "string" ? data.timestamp : "",
-            },
-            safety: (data.safety as CommitEnvelopeData["safety"]) ?? {
-              completed: true,
-              findings: [],
-            },
-            telemetry: (data.telemetry as CommitEnvelopeData["telemetry"]) ?? { emitted: false },
-          } satisfies CommitEnvelopeData,
-        };
+      if (data.outcome === "landed") {
+        const envelope = envelopeFromPhase(changeRef, phaseIdFlag, data);
+        return envelope === undefined
+          ? internalFailure("phase completion returned malformed success data")
+          : { data: envelope };
       }
       return {
         data: {
@@ -214,14 +321,13 @@ export const createCommitCommandDefinition = (
       phaseIdFlag === undefined
         ? context.phases.flatMap((entry) => entry.declaredScopePaths)
         : (planPhase?.declaredScopePaths ?? []);
-    const scopeSource =
-      phaseIdFlag === undefined
-        ? context.planPresent
-          ? "plan-union"
-          : "plan-absent"
-        : context.planPresent
-          ? "plan-phase"
-          : "plan-absent";
+    const scopeSource = !context.planPresent
+      ? "plan-absent"
+      : phaseCentric
+        ? planPhase === undefined
+          ? "plan-absent"
+          : "plan-phase"
+        : "plan-union";
     const skeleton = resolveCommitSkeleton({
       ref: changeRef,
       refSource: resolved.refSource,
@@ -245,6 +351,26 @@ export const createCommitCommandDefinition = (
       });
     }
     if (act.kind === "no-pending-work") {
+      if (dryRun && phaseIdFlag !== undefined) {
+        const preview = templateCommitMessage({ skeleton });
+        return {
+          data: {
+            changeRef,
+            subject: preview.subject,
+            stagedFiles: [],
+            excluded: act.excluded,
+            messageSource: "template",
+            transport: "none",
+            atomic: true,
+            ledgerTransition: { phase: phaseIdFlag, noOp: true },
+            dryRun: true,
+            commitSkipped: "skipped-no-pending-work",
+            safety: { completed: true, findings: [] },
+            telemetry: { emitted: false },
+            ...(degradedScope ? { degradedScope: "plan-absent" } : {}),
+          } satisfies CommitEnvelopeData,
+        };
+      }
       return commitFailure("commit.staging-blocked-untracked", undefined, {
         excluded: act.excluded,
       });

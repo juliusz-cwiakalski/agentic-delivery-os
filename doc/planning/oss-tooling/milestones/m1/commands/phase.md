@@ -26,7 +26,9 @@ nothing.
 
 A completion lands the ledger transition and the conventional commit
 atomically **by default** — both land or neither — computed from the
-working tree and the phase's declared plan scope. `--no-commit` records the
+working tree and the plan scope the lifecycle phase maps to (`delivery`
+covers every delivery-kind plan phase; a lifecycle phase with no plan-phase
+correspondence degrades to `plan-absent`). `--no-commit` records the
 transition alone for that call, and the project key
 `commit.phaseCommit: false` disables the commit for the project. A
 completion with no stageable pending work lands the transition alone; an

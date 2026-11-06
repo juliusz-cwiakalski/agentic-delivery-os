@@ -347,7 +347,6 @@ const completeWithCommit = async (
     readonly variant: PmNotesVariant;
     readonly registry: PhaseRegistryRead & { ok: true };
     readonly noCommit: boolean;
-    readonly dryRun: boolean;
     readonly advisory: Record<string, unknown> | undefined;
   },
 ): Promise<TargetSuccess | TargetFailure> => {
@@ -360,7 +359,8 @@ const completeWithCommit = async (
     phaseId,
     ...(plan.planPhase === undefined ? {} : { planPhase: plan.planPhase }),
   });
-  const scopeSource = plan.planPresent ? "plan-phase" : "plan-absent";
+  const scopeSource =
+    plan.planPresent && plan.planPhase !== undefined ? "plan-phase" : "plan-absent";
   const actScope = { paths: scopePaths, source: scopeSource } as const;
   const evidence = await extension.readEvidence(changeRef, phaseId);
   const delta = classifyCommitDelta({
@@ -397,19 +397,6 @@ const completeWithCommit = async (
   } as const;
 
   const recordOnly = (basis: CommitIntentBasis): TargetSuccess | TargetFailure => {
-    if (input.dryRun) {
-      return {
-        ok: true,
-        data: {
-          ...base,
-          outcome: "landed",
-          atomic: false,
-          commitSkipped: basis,
-          dryRun: true,
-          evidence: { outcome: "landed", basis },
-        },
-      };
-    }
     const appended = runtime.appendTransition({
       changeRef,
       phaseId,
@@ -477,20 +464,6 @@ const completeWithCommit = async (
   }
 
   if (delta.state === "commit-without-record") {
-    if (input.dryRun) {
-      return {
-        ok: true,
-        data: {
-          ...base,
-          outcome: "landed",
-          atomic: true,
-          commitSha: delta.commitSha,
-          reconciliation: { completed: "transition" },
-          dryRun: true,
-          evidence: { outcome: "landed", reconciliation: "transition" },
-        },
-      };
-    }
     const appended = runtime.appendTransition({
       changeRef,
       phaseId,
@@ -525,7 +498,7 @@ const completeWithCommit = async (
       scope: actScope,
       ...(plan.planPhase?.summary === undefined ? {} : { planSummary: plan.planPhase.summary }),
       requiresBody: false,
-      dryRun: input.dryRun,
+      dryRun: false,
       baselineHead,
       ...(delta.transitionId === undefined ? {} : { existingTransitionId: delta.transitionId }),
     });
@@ -543,20 +516,18 @@ const completeWithCommit = async (
         },
       };
     }
-    if (!input.dryRun) {
-      // The record already landed; complete the document with the stored
-      // transition timestamp so the projection fold stays byte-stable.
-      const convergence = runtime.stageEntry(read.text, {
-        phaseId,
-        operation: "complete",
-        timestamp: evidence.transitionId ?? timestamp,
-      });
-      if (!convergence.ok) return internalFailure("convergence document is not parseable");
-      const writtenDoc = runtime.writePmNotes(read.file, convergence.text);
-      if (!writtenDoc.ok) return internalFailure(writtenDoc.message);
-      const projected = replaceProjection(registry.transitions);
-      if (projected !== undefined) return projected;
-    }
+    // The record already landed; complete the document with the stored
+    // transition timestamp so the projection fold stays byte-stable.
+    const convergence = runtime.stageEntry(read.text, {
+      phaseId,
+      operation: "complete",
+      timestamp: evidence.transitionId ?? timestamp,
+    });
+    if (!convergence.ok) return internalFailure("convergence document is not parseable");
+    const writtenDoc = runtime.writePmNotes(read.file, convergence.text);
+    if (!writtenDoc.ok) return internalFailure(writtenDoc.message);
+    const projected = replaceProjection(registry.transitions);
+    if (projected !== undefined) return projected;
     return {
       ok: true,
       data: {
@@ -565,7 +536,6 @@ const completeWithCommit = async (
         atomic: true,
         ...(act.commitSha === undefined ? {} : { commitSha: act.commitSha }),
         reconciliation: { completed: "commit" },
-        ...(input.dryRun ? { dryRun: true } : {}),
         evidence: { outcome: "landed", reconciliation: "commit" },
         commit: {
           subject: act.message.subject,
@@ -593,7 +563,7 @@ const completeWithCommit = async (
     scope: actScope,
     ...(plan.planPhase?.summary === undefined ? {} : { planSummary: plan.planPhase.summary }),
     requiresBody: false,
-    dryRun: input.dryRun,
+    dryRun: false,
     baselineHead,
     appendTransition: async () => {
       const appended = runtime.appendTransition({
@@ -614,24 +584,6 @@ const completeWithCommit = async (
   if (act.kind === "failure") return actFailure(act);
   if (act.kind === "no-pending-work") {
     return recordOnly("skipped-no-pending-work");
-  }
-  if (input.dryRun) {
-    return {
-      ok: true,
-      data: {
-        ...base,
-        outcome: "landed",
-        atomic: true,
-        dryRun: true,
-        subject: act.message.subject,
-        ...(act.message.body === undefined ? {} : { body: act.message.body }),
-        stagedFiles: act.staging.include.map((entry) => entry.path),
-        excluded: act.excluded,
-        messageSource: act.messageSource,
-        transport: act.transport,
-        evidence: { outcome: "landed" },
-      },
-    };
   }
   const written = writeDocument();
   if (written !== undefined) return written;
@@ -711,7 +663,6 @@ const transitionTarget = async (
       variant: verdict.variant,
       registry,
       noCommit,
-      dryRun: false,
       advisory:
         kind === "complete" && !requiredPhasesFor(verdict.variant).includes(phaseId)
           ? { class: "outside-required-set", phase: phaseId, variant: verdict.variant }

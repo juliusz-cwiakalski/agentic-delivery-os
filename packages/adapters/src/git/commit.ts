@@ -6,7 +6,7 @@
  * reports facts, never throws across its port.
  */
 import { execFile } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
+import { closeSync, openSync, readSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   COMMIT_DIFF_PER_FILE_CAP,
@@ -105,12 +105,40 @@ export const parsePorcelainStatus = (stdout: string): PorcelainEntry[] => {
 };
 
 const isBinaryContent = (path: string): boolean => {
+  let descriptor: number | undefined;
   try {
-    const buffer = readFileSync(path);
-    return buffer.subarray(0, BINARY_PROBE_BYTES).includes(0);
+    descriptor = openSync(path, "r");
+    const buffer = new Uint8Array(BINARY_PROBE_BYTES);
+    const bytes = readSync(descriptor, buffer, 0, BINARY_PROBE_BYTES, 0);
+    return buffer.subarray(0, bytes).includes(0);
   } catch {
     return false;
+  } finally {
+    if (descriptor !== undefined) {
+      try {
+        closeSync(descriptor);
+      } catch {
+        // The descriptor is already gone; the probe answer stands.
+      }
+    }
   }
+};
+
+/** Split one multi-path `git diff` into per-path chunks by their headers. */
+const splitDiffByPath = (stdout: string): Map<string, string> => {
+  const chunks = new Map<string, string>();
+  for (const part of stdout.split(/^(?=diff --git )/m)) {
+    if (!part.startsWith("diff --git ")) continue;
+    const headerEnd = part.indexOf("\n");
+    const header = headerEnd < 0 ? part : part.slice(0, headerEnd);
+    const marker = " b/";
+    const middle = header.lastIndexOf(marker);
+    if (middle < 0) continue;
+    const path = header.slice(middle + marker.length);
+    if (path.length === 0 || chunks.has(path)) continue;
+    chunks.set(path, part);
+  }
+  return chunks;
 };
 
 const fileSize = (path: string): number => {
@@ -152,24 +180,45 @@ export const createGitCommitSeam = (options: GitCommitSeamOptions = {}): CommitG
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
     const entries = parsePorcelainStatus(statusResult.stdout);
-    const files: CommitCandidateFile[] = [];
-    for (const entry of entries) {
+    const candidates = entries.map((entry) => {
       const absolutePath = absolute(entry.path);
-      const binary = isBinaryContent(absolutePath);
-      const sizeBytes = fileSize(absolutePath);
-      const tracked = entry.code !== "??";
+      return {
+        entry,
+        tracked: entry.code !== "??",
+        binary: isBinaryContent(absolutePath),
+        sizeBytes: fileSize(absolutePath),
+      };
+    });
+    const trackedDiffPaths = candidates
+      .filter((candidate) => candidate.tracked && !candidate.binary)
+      .map((candidate) => candidate.entry.path);
+    const batched =
+      trackedDiffPaths.length > 1
+        ? splitDiffByPath(
+            (await git(["diff", "--no-color", "--unified=3", "--", ...trackedDiffPaths])).stdout,
+          )
+        : new Map<string, string>();
+    const files: CommitCandidateFile[] = [];
+    for (const candidate of candidates) {
+      const { entry, tracked, binary, sizeBytes } = candidate;
       let diffText: string | undefined;
       let overCap = false;
       if (!binary) {
-        const diff = await git(
-          tracked
-            ? ["diff", "--no-color", "--unified=3", "--", entry.path]
-            : ["diff", "--no-color", "--no-index", "--", "/dev/null", entry.path],
-        );
-        if (diff.stdout.length > COMMIT_DIFF_PER_FILE_CAP) {
+        const single = async (): Promise<string> =>
+          (
+            await git(
+              tracked
+                ? ["diff", "--no-color", "--unified=3", "--", entry.path]
+                : ["diff", "--no-color", "--no-index", "--", "/dev/null", entry.path],
+            )
+          ).stdout;
+        const diffTextCandidate = tracked
+          ? (batched.get(entry.path) ?? (await single()))
+          : await single();
+        if (diffTextCandidate.length > COMMIT_DIFF_PER_FILE_CAP) {
           overCap = true;
-        } else if (diff.stdout.length > 0) {
-          diffText = diff.stdout;
+        } else if (diffTextCandidate.length > 0) {
+          diffText = diffTextCandidate;
         }
       }
       files.push({
@@ -184,7 +233,7 @@ export const createGitCommitSeam = (options: GitCommitSeamOptions = {}): CommitG
     }
     return {
       branch: branch.length === 0 ? "HEAD" : branch,
-      files: files.sort((left, right) => left.path.localeCompare(right.path)),
+      files: files.sort((left, right) => left.path.localeCompare(right.path, "en")),
       lastCommitSubjects,
       head,
       commitCount: Number.isFinite(commitCount) ? commitCount : 0,

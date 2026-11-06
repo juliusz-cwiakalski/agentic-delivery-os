@@ -144,7 +144,8 @@ The spec declares no REST/HTTP endpoints; the interface surface is the CLI invoc
 | Regression area | Existing suite | TC ID(s) | Status |
 |-----------------|----------------|----------|--------|
 | Matrix rows 4–9, grammar-before-state, advisories, absent-phase entry creation | `tests/behaviour/phase-transitions.test.ts`, `phase-rejections.test.ts` | TC-REGRESS-004 | Covered |
-| Row 2 / row 5 no-op with three-way delta (exit, ledger count, document bytes) | `tests/behaviour/phase-idempotency.test.ts` | TC-ATOMIC-009, TC-REGRESS-004 | Covered |
+| Row 2 / row 5 no-op with three-way delta (exit, ledger count, document bytes) | `tests/behaviour/phase-idempotency.test.ts` | TC-REGRESS-004 | Covered (regression only) |
+| Matrix rows 1/2/3 with the commit dimension | `tests/behaviour/phase-atomic.test.ts` | TC-ATOMIC-006, TC-ATOMIC-007, TC-ATOMIC-009 | Covered |
 | `phase list` projection, verified registry reads, read-only path | `tests/behaviour/phase-registry.test.ts`, `phase-envelope.test.ts` | TC-REGRESS-005 | Covered |
 | Configuration catalog and shipped defaults | `tests/behaviour/config-schema.test.ts`, `tests/checks/config-default-positions.test.ts` | TC-REGRESS-006 | Covered |
 | Branding forbidden literals, privacy guards, doc distribution markers | `tests/checks/forbidden-literals.test.ts`, `privacy-*.test.ts`, `scripts/.tests/test-doc-distribution.sh` | TC-REGRESS-007 | Covered |
@@ -155,7 +156,7 @@ The spec declares no REST/HTTP endpoints; the interface surface is the CLI invoc
 | Layer | Runner / invocation | Location | Covers |
 |-------|--------------------|----------|--------|
 | Structure / contract | `bun test tests/structure` | `tests/structure/commit-contract.test.ts`, `commit-imports.test.ts` (new); `error-table.test.ts`, `content-inventory.test.ts`, `port-contract-inventory.test.ts` (updated) | TC-TIER-001..003, TC-TABLE-005, TC-TABLE-007 |
-| Behaviour (in-process CLI + real temp git repo) | `bun test tests/behaviour` | `tests/behaviour/commit-command.test.ts`, `commit-message.test.ts`, `commit-transport.test.ts`, `commit-safety.test.ts`, `commit-convergence.test.ts`, `commit-telemetry.test.ts`, `commit-session-guard.test.ts`, `commit-performance.test.ts` (new); `phase-atomic.test.ts` (new); `phase-idempotency.test.ts`, `phase-transitions.test.ts`, `phase-envelope.test.ts` (updated) | TC-COMMIT-*, TC-MSG-*, TC-TRANSPORT-*, TC-SAFETY-*, TC-ATOMIC-*, TC-CONVERGE-*, TC-TELEM-*, TC-REGRESS-004..006, TC-REGRESS-008 |
+| Behaviour (in-process CLI + real temp git repo) | `bun test tests/behaviour` | `tests/behaviour/commit-command.test.ts`, `commit-message.test.ts`, `commit-transport.test.ts`, `commit-safety.test.ts`, `commit-convergence.test.ts`, `commit-telemetry.test.ts`, `commit-session-guard.test.ts`, `commit-performance.test.ts` (new); `phase-atomic.test.ts` (new, owns the matrix commit dimension); `phase-idempotency.test.ts` (regression only), `phase-transitions.test.ts`, `phase-envelope.test.ts` (run) | TC-COMMIT-*, TC-MSG-*, TC-TRANSPORT-*, TC-SAFETY-*, TC-ATOMIC-*, TC-CONVERGE-*, TC-TELEM-*, TC-REGRESS-004..006, TC-REGRESS-008 |
 | Golden / envelope | `bun test tests/golden` | `tests/golden/commit-envelope.test.ts` (new) + `tests/fixtures/envelope/golden/commit-*.json` | TC-ENV-001..003 |
 | Checks / mutation | `bun run scripts/checks/error-table-sync.ts`; `bun test tests/checks` | `tests/checks/error-table-sync.test.ts` (updated); `forbidden-literals.test.ts` (registry updated); `config-default-positions.test.ts` (updated) | TC-TABLE-006, TC-REGRESS-006, TC-REGRESS-007 |
 | Boundary / purity | `pnpm check:boundaries`; `bun test tests/boundaries tests/structure`; `bun run scripts/checks/{ambient-globals,workspace-entrypoints,exports-parity}.ts` | existing boundary harness; new import detectors | TC-TIER-001..003 |
@@ -237,6 +238,7 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 | TC-ATOMIC-010 | Atomic landing appends exactly one transition record with durable `atomic` intent | Corner Case | Critical | High | AC-F6-1, NFR-6 |
 | TC-ATOMIC-011 | Session-context refusal on `phase complete` | Negative | Critical | High | AC-F1-3 |
 | TC-ATOMIC-012 | Commit intent lands in the record's own ledger append (no second write) | Corner Case | Critical | High | AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, DEC-7 |
+| TC-ATOMIC-013 | Lifecycle phase ids map to declared plan-phase scopes; no silent first-phase fallback | Corner Case | Critical | High | AC-F5-1, DEC-15 |
 | TC-CONVERGE-001 | Record only → complete the missing commit, no new record | Corner Case | Critical | High | AC-F7-1 |
 | TC-CONVERGE-002 | Commit only → append the transition, no re-commit | Corner Case | Critical | High | AC-F7-2 |
 | TC-CONVERGE-003 | Both landed → no-op citing the existing completion | Regression | Critical | High | AC-F7-3 |
@@ -245,6 +247,7 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 | TC-CONVERGE-006 | Record only with no pending work: intentional no-op, no empty commit | Edge Case | Important | Medium | AC-F7-4, AC-F6-3 |
 | TC-CONVERGE-007 | Intentional record-only re-runs converge to no-op across all three bases | Edge Case | Critical | High | AC-F7-4, AC-F6-2, AC-F6-3, AC-F6-4 |
 | TC-CONVERGE-008 | Intent discrimination is evidence-driven, not mode-guessing | Corner Case | Critical | High | AC-F7-1, AC-F7-4, DEC-7 |
+| TC-CONVERGE-009 | Both-landed evidence is durable to later commits (no HEAD-position dependence) | Regression | Critical | High | AC-F7-3, NFR-6, DEC-7 |
 | TC-TELEM-001 | Exactly one telemetry event per landed commit with all DM-1 fields | Happy Path | Critical | High | AC-F8-1 |
 | TC-TELEM-002 | Emission failure disclosed without failing the commit | Negative | Important | High | AC-F8-1 |
 | TC-TELEM-003 | No event on refusal, abort, no-op, or no-pending-work | Negative | Critical | High | AC-F8-1, AC-F7-3 |
@@ -1143,7 +1146,7 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 **Related IDs**: F-6, F-7, AC-F6-1, AC-F7-3
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/phase-idempotency.test.ts` (update), `phase-support.ts`
+**Target Layer / Location**: `tests/behaviour/phase-atomic.test.ts`
 **Tags**: @backend, @git
 
 **Preconditions**:
@@ -1164,7 +1167,7 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 **Related IDs**: F-6, F-7, AC-F6-1
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/phase-idempotency.test.ts` (update)
+**Target Layer / Location**: `tests/behaviour/phase-atomic.test.ts`
 **Tags**: @backend, @git
 
 **Preconditions**:
@@ -1207,7 +1210,7 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 **Related IDs**: F-7, AC-F7-3, AC-F8-1, DEC-8
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/phase-idempotency.test.ts` (update)
+**Target Layer / Location**: `tests/behaviour/phase-atomic.test.ts`
 **Tags**: @backend, @git
 
 **Preconditions**:
@@ -1289,6 +1292,29 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 - Atomic completions carry `commitIntent: atomic` with no basis; record-only completions carry exactly one of `opt-out-flag`, `config-disabled`, `skipped-no-pending-work`.
 - The durable basis and the envelope `commitSkipped` vocabulary are identical strings (no drift); `no-op` is envelope-only and never written to a record.
 - The second-append control shows the invariant is non-vacuous (a two-line delta would fail the assertion).
+
+#### TC-ATOMIC-013 - Lifecycle phase ids map to declared plan-phase scopes
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-1, F-2, F-5, AC-F5-1, DEC-15
+**Test Type(s)**: Integration, Contract
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/phase-atomic.test.ts`
+**Tags**: @backend, @git, @scope
+
+**Preconditions**:
+- A production-shaped multi-phase `delivery.plan.v1` plan with integer phase ids and distinct declared scopes; the target file is an untracked file declared by a non-first plan phase.
+
+**Steps**:
+1. Run `commit --phase delivery --dry-run`; assert the declared untracked file is staged and not disclosed as a stray.
+2. Run `phase complete delivery`; assert one atomic record and one commit land.
+3. Run a lifecycle phase with no plan-phase correspondence over the same tree; assert it degrades instead of staging a declared file from an unrelated plan phase.
+
+**Expected Outcome**:
+- Phase-centric scope is the union of the plan phases the lifecycle phase maps to; a non-first phase's declared file is stageable.
+- No silent first-plan-phase fallback exists; an unmapped lifecycle phase uses the disclosed `plan-absent` scope.
 
 #### TC-CONVERGE-001 - Record only with intent `atomic` → complete the missing commit, no new record
 
@@ -1485,6 +1511,31 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 - The outcome is identical when the invocation mode is flipped, proving the discrimination is evidence-driven (record intent), not mode-guessing; the stale projection is never consulted.
 - State A is never treated as `record-only` merely because a commit is absent; the stored `atomic` marker forces the convergence path.
 - Negative control (the other direction): State B is not treated as `atomic` merely because the phase is completed and a commit is missing; only the stored `record-only` intent prevents the commit.
+
+#### TC-CONVERGE-009 - Both-landed evidence is durable to later commits
+
+**Scenario Type**: Regression
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-7, AC-F7-3, NFR-6, DEC-7
+**Test Type(s)**: Integration, Contract
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/commit-convergence.test.ts`
+**Tags**: @backend, @git, @convergence
+
+**Preconditions**:
+- An earlier lifecycle phase completes atomically (record + commit + telemetry).
+- A later phase's atomic completion — or a manual commit — moves HEAD, so the earlier phase's commit is no longer HEAD.
+- Dirty tracked work is present before the re-run.
+
+**Steps**:
+1. Re-run the earlier phase's `phase complete`.
+2. Assert the row-2 no-op and the absence of any new commit, record, or telemetry event.
+3. Control: an orphan commit at HEAD with no record still converges by appending the transition without re-committing.
+
+**Expected Outcome**:
+- Commit presence is read from the durable telemetry event bound to the record's transition identity, never from HEAD position; later commits cannot degrade earlier evidence.
+- Zero manufactured commits, zero duplicate records, zero duplicate telemetry events; the commit-without-record state still detects an orphan commit at HEAD.
 
 #### TC-TELEM-001 - Exactly one telemetry event per landed commit with all DM-1 fields
 
@@ -1939,7 +1990,8 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 | `tests/behaviour/commit-transport.test.ts` (new) | TC-TRANSPORT-001, TC-TRANSPORT-002, TC-TRANSPORT-003, TC-TRANSPORT-004, TC-TRANSPORT-005, TC-TRANSPORT-006 | To Implement | `bun test tests/behaviour/commit-transport.test.ts` |
 | `tests/behaviour/commit-safety.test.ts` (new) | TC-SAFETY-001, TC-SAFETY-002, TC-SAFETY-003, TC-SAFETY-004, TC-SAFETY-005, TC-SAFETY-006, TC-SAFETY-007, TC-SAFETY-008, TC-SAFETY-009, TC-SAFETY-010 | To Implement | `bun test tests/behaviour/commit-safety.test.ts` |
 | `tests/behaviour/phase-atomic.test.ts` (new) | TC-ATOMIC-001, TC-ATOMIC-002, TC-ATOMIC-003, TC-ATOMIC-004, TC-ATOMIC-005, TC-ATOMIC-010, TC-ATOMIC-012 | To Implement | `bun test tests/behaviour/phase-atomic.test.ts` |
-| `tests/behaviour/phase-idempotency.test.ts` (update) | TC-ATOMIC-006, TC-ATOMIC-007, TC-ATOMIC-009, TC-REGRESS-004 | Existing – Update | `bun test tests/behaviour/phase-idempotency.test.ts` |
+| `tests/behaviour/phase-idempotency.test.ts` (regression only) | TC-REGRESS-004 | Existing – No Change | `bun test tests/behaviour/phase-idempotency.test.ts` |
+| `tests/behaviour/phase-atomic.test.ts` (new, owns the matrix commit dimension) | TC-ATOMIC-006, TC-ATOMIC-007, TC-ATOMIC-009, TC-ATOMIC-010, TC-ATOMIC-012, TC-ATOMIC-013 | To Implement | `bun test tests/behaviour/phase-atomic.test.ts` |
 | `tests/behaviour/phase-transitions.test.ts`, `phase-rejections.test.ts` (run/update) | TC-ATOMIC-008, TC-REGRESS-004 | Existing – Update | `bun test tests/behaviour/phase-transitions.test.ts tests/behaviour/phase-rejections.test.ts` |
 | `tests/behaviour/phase-registry.test.ts`, `phase-envelope.test.ts` (run/update) | TC-REGRESS-005 | Existing – No Change / Update | `bun test tests/behaviour/phase-registry.test.ts tests/behaviour/phase-envelope.test.ts` |
 | `tests/behaviour/commit-convergence.test.ts` (new) | TC-CONVERGE-001, TC-CONVERGE-002, TC-CONVERGE-003, TC-CONVERGE-004, TC-CONVERGE-005, TC-CONVERGE-006, TC-CONVERGE-007, TC-CONVERGE-008 | To Implement | `bun test tests/behaviour/commit-convergence.test.ts` |
@@ -2017,6 +2069,7 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 |---------|------|--------|---------|
 | 1.0 | 2026-11-06 | test-plan-writer | Initial plan: 68 scenarios covering all 22 ACs, SC-M1-12 inherited verbatim, convergence matrix, safety ordering, transport seam, telemetry, error-table sync, tier purity, and phase-family regressions; OQ-T1 flagged as blocking. |
 | 1.1 | 2026-11-05 | test-plan-writer | Amendment for spec iter 2 (reason: OQ-T1 resolution). Added durable commit-intent coverage (`commitIntent`/`commitIntentBasis`, same ledger append) via TC-ATOMIC-012; unblocked and fully specified TC-CONVERGE-007 (all three record-only bases) and the TC-ATOMIC-002 re-run assertion; added TC-CONVERGE-008 (atomic-vs-record-only evidence discrimination); added AC-F7-4 to the matrix (23 ACs, 70 scenarios); sharpened AC-F7-1 to atomic intent; moved OQ-T1/OQ-T2 to the resolved log; updated DM-3, NFR-6, index, automation mapping, and risks. No existing test case was renumbered. |
+| 1.2 | 2026-11-06 | coder | Review-remediation amendment. Added TC-ATOMIC-013 (lifecycle-to-plan-phase scope mapping over a production-shaped multi-phase plan) and TC-CONVERGE-009 (both-landed evidence durable to later commits and manual HEAD moves); relocated the matrix commit-dimension tests from `phase-idempotency.test.ts` to `phase-atomic.test.ts` and marked `phase-idempotency` regression-only. |
 
 ## 10. Test Execution Log
 
@@ -2029,10 +2082,11 @@ Every negative, no-op, and STOP scenario pairs its fixture with a restored or va
 | TC-MSG-001..010 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-message.test.ts` (9 tests). |
 | TC-TRANSPORT-001..006 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-transport.test.ts` (9 tests). |
 | TC-SAFETY-001..010 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-safety.test.ts` (11 tests). |
-| TC-ATOMIC-001..012 | 2026-11-06 | PASS | `bun test tests/behaviour/phase-atomic.test.ts` (11 tests); SC-M1-12 inherited verbatim. |
-| TC-CONVERGE-001..008 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-convergence.test.ts` (10 tests); all four durable states and all three record-only bases. |
+| TC-ATOMIC-001..013 | 2026-11-06 | PASS | `bun test tests/behaviour/phase-atomic.test.ts` (14 tests); SC-M1-12 inherited verbatim; TC-ATOMIC-013 covers the multi-phase lifecycle-to-plan mapping and the dry-run no-pending disclosure. |
+| TC-CONVERGE-001..009 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-convergence.test.ts` (13 tests); all four durable states, all three record-only bases, and TC-CONVERGE-009 (later commits/manual HEAD moves cannot manufacture a duplicate, orphan-at-HEAD still detects commit-without-record). |
 | TC-TELEM-001..004 | 2026-11-06 | PASS | `bun test tests/behaviour/commit-telemetry.test.ts` (6 tests); metadata-only, non-gating, zero events on non-landed outcomes. |
 | TC-REGRESS-004..008 | 2026-11-06 | PASS | Existing phase suites unchanged (52 tests); config defaults regenerated; latency bounds under their thresholds. |
 | TC-ENV-001..003 | 2026-11-06 | PASS | `bun test tests/golden/commit-envelope.test.ts` (9 tests); normalized committed goldens plus six failure projections. |
 | Aggregate | 2026-11-06 | PASS | `pnpm check` green with `TMPDIR=$PWD/tmp/tmpdir`; `bash scripts/.tests/test-doc-distribution.sh` green; `git diff --check` clean. |
+| Review remediation (phase 9) | 2026-11-06 | PASS (except pre-existing base drift) | `pnpm test`: 2774 pass / 4 skip / 1 fail across 270 files; the only failure is `tests/checks/privacy-release.test.ts:150` (two changesets present on `origin/main-tools` but absent from the branch merge-base — stale-base drift, unrelated to this change). `pnpm typecheck`, lint, format, `pnpm check:boundaries`, and `exports-parity` green; `bash scripts/.tests/test-doc-distribution.sh` green; `git diff --check` clean; error-table-sync 58/58. Targeted retests: phase-atomic 14, commit-convergence 13, commit-command + golden 46 total, regression suites 87. |
 | Plan diff (observational) | 2026-11-06 | FINDINGS | `plan diff GH-227` against `main-tools`: 51 within / 8 outside-declared / 5 undeclared-missing. Outside: pre-existing change artifacts plus barrel/index exports required by the new modules and the error-table-sync false-positive fix; undeclared-missing are plan-declared-but-unmodified paths (derived schema, untracked changeset at diff time). No phase skipped and no scope silently dropped. |

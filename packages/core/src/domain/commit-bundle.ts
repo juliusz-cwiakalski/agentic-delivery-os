@@ -95,8 +95,8 @@ export const buildCommitBundle = (input: CommitBundleInput): CommitBundleResult 
     files.push({ ...metadata, diffText });
   }
 
-  files.sort((left, right) => left.path.localeCompare(right.path));
-  noiseStripped.sort((left, right) => left.localeCompare(right));
+  files.sort((left, right) => left.path.localeCompare(right.path, "en"));
+  noiseStripped.sort((left, right) => left.localeCompare(right, "en"));
   return {
     bundle: {
       skeleton: input.skeleton,

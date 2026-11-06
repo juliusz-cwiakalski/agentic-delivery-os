@@ -25,9 +25,12 @@ deterministic template marked `messageSource: template`. A repository with
 no configured transport still lands a marked template commit.
 
 Staging is precise: tracked pending work is staged and scope drift is
-disclosed; untracked files are staged only inside the declared plan scope;
-untracked material outside every declared scope is a stray and is never
-staged. The deterministic safety pass (secret scan on content and
+disclosed; untracked files are staged only inside the declared plan scope
+(the plan phases the lifecycle phase maps to — `delivery` covers every
+delivery-kind phase, `delivery_planning` the planning-kind phases; a
+lifecycle phase with no correspondence degrades to `plan-absent` instead
+of borrowing another phase's scope); untracked material outside every
+declared scope is a stray and is never staged. The deterministic safety pass (secret scan on content and
 filenames, forbidden-path exclusions, binary size guard) runs before any
 transport is selected and before anything is staged, and it fails closed.
 
@@ -46,7 +49,8 @@ See [phase.md](phase.md).
   from the checkout (the branch name carries it); an unresolvable ref is
   `input.value.rejected`.
 - `--phase <phase>` - atomic record-plus-commit for that phase's pending
-  work, using the phase's declared plan scope; combines with `--dry-run`.
+  work, using the plan scope the lifecycle phase maps to; combines with
+  `--dry-run`.
 - `--dry-run` - print the computed message and staging set, including
   exclusions; stage nothing, commit nothing, append no ledger record, emit
   no telemetry.
@@ -67,9 +71,11 @@ Envelope `data`: `changeRef`, `subject`, optional `body`, `stagedFiles`,
 | `none`), `atomic` (true in phase mode), optional `ledgerTransition`
 (`{ phase, timestamp }` from a compiled completion, or `{ phase,
 noOp: true }` when the phase-completion path is not composed or on a dry
-run), optional `dryRun`, `safety` (`completed`, `findings`), `telemetry`
-(`emitted`, optional `detail`), and optional `degradedScope:
-"plan-absent"` when no plan artifact supplied the scope.
+run), optional `dryRun`, optional `commitSkipped:
+"skipped-no-pending-work"` on a phase-mode dry run with nothing stageable,
+`safety` (`completed`, `findings`), `telemetry` (`emitted`, optional
+`detail`), and optional `degradedScope: "plan-absent"` when no plan
+artifact or no lifecycle-to-plan-phase correspondence supplied the scope.
 
 A phase-mode completion that lands the transition alone (nothing stageable
 is pending) or is an already-completed no-op returns success with no

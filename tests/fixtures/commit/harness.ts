@@ -6,7 +6,7 @@
  * `git` (and the commitlint adapter probe in its own suite). Transport,
  * safety, commitlint, and session facts are injected fakes.
  */
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   nodePmNotesFileSystemFacts,
@@ -65,6 +65,33 @@ phases:
         - src/new-file.ts
         - src/existing.ts
     summary: "deliver the fixture change"
+`;
+
+/**
+ * Production-shaped multi-phase plan (integer ids, per-phase scopes). The
+ * lifecycle phase `delivery` maps to both delivery-kind plan phases, so a
+ * declared new file of phase 2 stays stageable in phase-centric mode.
+ */
+export const COMMIT_MULTI_PHASE_PLAN_YAML = `schemaVersion: delivery.plan.v1
+workItemRef: GH-310
+tier:
+  name: full
+  phases: [1, 2]
+phases:
+  - id: 1
+    title: "Contracts"
+    kind: delivery
+    scope:
+      files:
+        - src/one.ts
+    summary: "phase one contracts"
+  - id: 2
+    title: "CLI surface"
+    kind: delivery
+    scope:
+      files:
+        - src/two.ts
+    summary: "phase two cli"
 `;
 
 export const COMMIT_NOTES_YAML = `change_id: GH-310

@@ -12,7 +12,6 @@ import {
   commitCount,
   dataOf,
   head,
-  seedDirtyTree,
   telemetryPayloads,
   transitionPayloads,
   validMessage,
@@ -201,6 +200,85 @@ describe("TC-CONVERGE-008 intent discrimination is evidence-driven, not mode-gue
         expect(commitCount(harness)).toBe(beforeCommits);
         expect(harness.coreTransport.calls).toHaveLength(0);
         expect(transitionPayloads(harness)).toHaveLength(1);
+      },
+      { seedFiles: SEED },
+    );
+  });
+});
+
+describe("TC-CONVERGE-009 both-landed evidence is durable to later commits", () => {
+  test("a later phase's atomic commit moving HEAD does not degrade the earlier phase", async () => {
+    await withCommitHarness(
+      async (harness) => {
+        harness.repo.write("src/existing.ts", "specification work\n");
+        harness.coreTransport.push({ kind: "success", message: validMessage() });
+        const first = await harness.runPhase(["complete", COMMIT_REF, "specification"]);
+        expect(first.exitCode).toBe(0);
+        expect(dataOf(first).outcome).toBe("landed");
+
+        harness.repo.write("src/existing.ts", "delivery work\n");
+        harness.coreTransport.push({ kind: "success", message: validMessage() });
+        const second = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
+        expect(second.exitCode).toBe(0);
+        expect(dataOf(second).outcome).toBe("landed");
+        expect(head(harness)).toBe(dataOf(second).commitSha);
+
+        const commits = commitCount(harness);
+        const records = transitionPayloads(harness).length;
+        const telemetry = telemetryPayloads(harness).length;
+        const calls = harness.coreTransport.calls.length;
+
+        harness.repo.write("src/existing.ts", "must not land\n");
+        const reRun = await harness.runPhase(["complete", COMMIT_REF, "specification"]);
+        expect(reRun.exitCode).toBe(0);
+        expect(dataOf(reRun)).toMatchObject({
+          outcome: "no-op",
+          commitSkipped: "no-op",
+          reconciliation: { completed: "existing-completion" },
+        });
+        expect(commitCount(harness)).toBe(commits);
+        expect(transitionPayloads(harness)).toHaveLength(records);
+        expect(telemetryPayloads(harness)).toHaveLength(telemetry);
+        expect(harness.coreTransport.calls.length).toBe(calls);
+      },
+      { seedFiles: SEED },
+    );
+  });
+
+  test("a manual commit moving HEAD does not manufacture a duplicate commit", async () => {
+    await withCommitHarness(
+      async (harness) => {
+        harness.repo.write("src/existing.ts", "specification work\n");
+        harness.coreTransport.push({ kind: "success", message: validMessage() });
+        const first = await harness.runPhase(["complete", COMMIT_REF, "specification"]);
+        expect(first.exitCode).toBe(0);
+
+        harness.repo.write("src/existing.ts", "manual follow-up\n");
+        harness.repo.run(["add", "-A", "--", "src"]);
+        harness.repo.run(["commit", "--no-verify", "--no-gpg-sign", "-m", "chore: follow-up"]);
+
+        const commits = commitCount(harness);
+        harness.repo.write("src/existing.ts", "must not land\n");
+        const reRun = await harness.runPhase(["complete", COMMIT_REF, "specification"]);
+        expect(reRun.exitCode).toBe(0);
+        expect(dataOf(reRun).outcome).toBe("no-op");
+        expect(commitCount(harness)).toBe(commits);
+      },
+      { seedFiles: SEED },
+    );
+  });
+
+  test("commit-without-record is still detected when the orphan commit is at HEAD", async () => {
+    await withCommitHarness(
+      async (harness) => {
+        const sha = preCommit(harness);
+        appendTelemetryRecord(harness, { commitSha: sha });
+        expect(head(harness)).toBe(sha);
+        const commits = commitCount(harness);
+        const run = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
+        expect(run.exitCode).toBe(0);
+        expect(dataOf(run).reconciliation).toMatchObject({ completed: "transition" });
+        expect(commitCount(harness)).toBe(commits);
       },
       { seedFiles: SEED },
     );

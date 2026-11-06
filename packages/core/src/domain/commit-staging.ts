@@ -35,7 +35,7 @@ const scopeCovers = (declaredPaths: readonly string[], path: string): boolean =>
   declaredPaths.some((declared) => packageCovers(declared, path));
 
 const sortedUnique = (values: readonly string[]): readonly string[] =>
-  [...new Set(values)].sort((left, right) => left.localeCompare(right));
+  [...new Set(values)].sort((left, right) => left.localeCompare(right, "en"));
 
 /** Compute the staging set and every disclosure from the working-tree facts. */
 export const computeStagingPlan = (input: CommitStagingInput): CommitStagingPlan => {
@@ -69,8 +69,8 @@ export const computeStagingPlan = (input: CommitStagingInput): CommitStagingPlan
   }
 
   return {
-    include: include.sort((left, right) => left.path.localeCompare(right.path)),
-    excluded: excluded.sort((left, right) => left.path.localeCompare(right.path)),
+    include: include.sort((left, right) => left.path.localeCompare(right.path, "en")),
+    excluded: excluded.sort((left, right) => left.path.localeCompare(right.path, "en")),
     scopeDrift: sortedUnique(scopeDrift),
     untrackedNotStaged: sortedUnique(untrackedNotStaged),
     scopeSource: input.scopeSource,
