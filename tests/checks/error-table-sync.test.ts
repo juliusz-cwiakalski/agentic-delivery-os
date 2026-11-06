@@ -20,6 +20,7 @@ import {
   collectorIdOfFamilyCode,
   isDeclaredCollectorFamilyCode,
   runSyncCheck,
+  scanReferences,
 } from "../../scripts/checks/error-table-sync";
 
 const ROOT = process.cwd();
@@ -693,8 +694,9 @@ const ROW_VERIFY =
  * rows, the lint-document-unreadable row, the two GH-222 state rows
  * (`state.storage.exhausted`, `state.store.unknown`), the three GH-221 watchdog
  * lane-safety rows, the five GH-226 machine-readable delivery-plan rows, the
- * six GH-227 commit-primitive rows, and the GH-228/GH-229 status collector row,
- * so the frozen baseline plus those twenty-five later rows equals the live
+ * six GH-227 commit-primitive rows, the GH-228/GH-229 status collector row,
+ * and the GH-224 doctor row,
+ * so the frozen baseline plus those twenty-six later rows equals the live
  * table; a changed baseline row fails naming it.
  */
 const BASELINE_ROWS: ReadonlyArray<
@@ -1069,8 +1071,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 25) {
-    failures.push(`table length ${live.length} != baseline + 25 (${BASELINE_ROWS.length + 25})`);
+  if (live.length !== BASELINE_ROWS.length + 26) {
+    failures.push(`table length ${live.length} != baseline + 26 (${BASELINE_ROWS.length + 26})`);
   }
   return failures;
 };
@@ -1144,7 +1146,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 25,
+      BASELINE_ROWS.length + 26,
     );
   });
 
@@ -1167,7 +1169,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 25);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 26);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1389,5 +1391,105 @@ describe("TC-BRIEF-013 brief rows stay absent and the sync check stays green", (
     );
     const text = messages((await runSyncCheck({ root })).failures);
     expect(text).toContain("documented code brief.phantom.row has no source entry");
+  });
+});
+
+const ROW_DOCTOR =
+  "| doctor.check.failed | doctor | user | false | not_landed | Resolve each named failing check using its fix hint, then re-run doctor. | user-validation | One or more wiring checks failed. |";
+
+describe("TC-DOCTOR-020 doctor row and corpora stay in two-way sync", () => {
+  test("the delivered doctor row is documented once and both corpora directions pass", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    expect(readFile(ROOT, DOC).split(ROW_DOCTOR).length - 1).toBe(1);
+    const truePositives = JSON.parse(readFile(ROOT, `${CORPUS}/true-positives.json`)) as {
+      readonly rows: readonly { readonly text: string; readonly recognized: boolean }[];
+    };
+    const falsePositives = JSON.parse(readFile(ROOT, `${CORPUS}/false-positives.json`)) as {
+      readonly rows: readonly { readonly text: string; readonly recognized: boolean }[];
+    };
+    expect(
+      truePositives.rows.some((row) => row.text === "doctor.check.failed" && row.recognized),
+    ).toBe(true);
+    expect(
+      falsePositives.rows.some(
+        (row) => row.text === "doctor.check.repo.unreachable" && !row.recognized,
+      ),
+    ).toBe(true);
+  });
+
+  test("removing the machine doctor row fails naming the documented code", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, (text) =>
+      text.replace(/\n? {2}\{\n {4}code: "doctor\.check\.failed",[\s\S]*?\n {2}\},/, ""),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "documented code doctor.check.failed has no source entry",
+    );
+  });
+
+  test("changing a doctor field fails naming the field", async () => {
+    const root = makeTempRoot();
+    editFile(root, DOC, (text) =>
+      text.replace(ROW_DOCTOR, ROW_DOCTOR.replace("| user | false |", "| platform | false |")),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "doctor.check.failed category mismatch",
+    );
+  });
+
+  test("removing the documented doctor row fails naming the source entry", async () => {
+    const root = makeTempRoot();
+    editFile(root, DOC, removeDocRow(ROW_DOCTOR));
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "source entry doctor.check.failed is undocumented",
+    );
+  });
+
+  test("adding an undocumented second doctor row fails naming the documented code", async () => {
+    const root = makeTempRoot();
+    editFile(
+      root,
+      DOC,
+      insertDocRow(
+        "| doctor.check.extra | doctor | user | false | not_landed | Retry. | user-validation | Phantom. |",
+      ),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "documented code doctor.check.extra has no source entry",
+    );
+  });
+
+  test("the unchanged copy remains green (control)", async () => {
+    const root = makeTempRoot();
+    expect((await runSyncCheck({ root })).failures).toEqual([]);
+  });
+
+  test("a doctor check-level cause is never recognized as an identity", () => {
+    const references = scanReferences("doctor.check.repo.unreachable", ["doctor"]);
+    expect(references.length).toBeGreaterThan(0);
+    expect(references.every((reference) => !reference.recognized)).toBe(true);
+  });
+
+  test("a check-level cause added as a table row fails by name", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, (text) =>
+      text.replace(
+        "] as const satisfies readonly ErrorTableEntry[];",
+        `  {
+    code: "doctor.check.repo.unreachable",
+    domainKind: "doctor",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "x",
+    projectionClass: "user-validation",
+  },
+] as const satisfies readonly ErrorTableEntry[];`,
+      ),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "doctor.check.repo.unreachable: a doctor check-level cause must not become an error-table identity",
+    );
   });
 });

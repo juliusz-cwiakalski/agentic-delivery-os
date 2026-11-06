@@ -49,6 +49,7 @@ const PR_GATE_FACTS = `${FIXTURES}/pr-gate-facts.json`;
 const CHECKRUN_TRAPS = `${FIXTURES}/checkrun-traps.json`;
 const CHECKRUN_PAGE_LIMIT = `${FIXTURES}/checkrun-page-limit.json`;
 const ISSUE_COMMENTS_ABSENT = `${FIXTURES}/issue-comments-absent.json`;
+const READ_FAILURE_STATUSES = `${FIXTURES}/read-failure-statuses.json`;
 const SHA_A = "1111111111111111111111111111111111111111";
 const SHA_B = "2222222222222222222222222222222222222222";
 
@@ -503,6 +504,52 @@ const absenceCheck = async (
   if (!result.ok) expect((result as { code?: string }).code).toBe("provider.not-found");
 };
 
+const httpStatusTrapCheck = async (): Promise<void> => {
+  const shapes = recordField(readJson(READ_FAILURE_STATUSES), "responses");
+  for (const [key, expectedStatus] of [
+    ["401", 401],
+    ["403", 403],
+    ["500", 500],
+    ["503", 503],
+  ] as const) {
+    const shape = recordField(shapes, key);
+    const client = clientFor([{ url: issueUrl(178), body: {}, status: expectedStatus }]);
+    const result = await client.readWorkItem(178);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("provider.payload.invalid");
+      expect((result as { readonly httpStatus?: number }).httpStatus).toBe(expectedStatus);
+      expect(JSON.stringify(result)).not.toContain(String(shape.prose ?? ""));
+    }
+  }
+  const notFound = await clientFor([{ url: issueUrl(178), body: {}, status: 404 }]).readWorkItem(
+    178,
+  );
+  expect(notFound.ok).toBe(false);
+  if (!notFound.ok) {
+    expect(notFound.code).toBe("provider.not-found");
+    expect((notFound as { readonly httpStatus?: number }).httpStatus).toBe(404);
+  }
+  const transport = createFixtureTransport([]);
+  const throwing = createGitHubClient({
+    instance,
+    credentials,
+    repository,
+    transport: {
+      send: async () => {
+        throw new TypeError("synthetic transport failure");
+      },
+    },
+  });
+  const transportFailure = await throwing.readWorkItem(178);
+  expect(transportFailure.ok).toBe(false);
+  if (!transportFailure.ok) {
+    expect(transportFailure.code).toBe("provider.payload.invalid");
+    expect((transportFailure as { readonly httpStatus?: number }).httpStatus).toBeUndefined();
+  }
+  expect(transport.requests).toEqual([]);
+};
+
 const defaultAssertions: TrapAssertions = {
   "GH-REVIEW-STATE": async () => {
     await reviewStateCheck(defaultPullReader);
@@ -545,6 +592,7 @@ const defaultAssertions: TrapAssertions = {
   "GITHUB-PR-DETAIL-404": () => absenceCheck((client) => client.readDeliveryRequest(178)),
   "GITHUB-CHECKRUN-404": () => absenceCheck((client) => client.readPipelineRun(SHA_A)),
   "GITHUB-ISSUE-404": () => absenceCheck((client) => client.readWorkItem(178)),
+  "GH-PAYLOAD-HTTP-STATUS": httpStatusTrapCheck,
 };
 
 const runWithGuard = async (options: Omit<TrapRunOptions, "provider">): Promise<TrapRun> => {
@@ -587,6 +635,7 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       "GITHUB-PR-DETAIL-404",
       "GITHUB-CHECKRUN-404",
       "GITHUB-ISSUE-404",
+      "GH-PAYLOAD-HTTP-STATUS",
     ]);
   });
 

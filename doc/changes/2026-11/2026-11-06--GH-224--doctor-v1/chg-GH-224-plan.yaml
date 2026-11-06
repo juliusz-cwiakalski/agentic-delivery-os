@@ -1,0 +1,139 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-224
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7]
+phases:
+  - id: 1
+    title: "Doctor contracts, additive error row, and structured httpStatus read field"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/doctor.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/index.ts
+        - packages/adapters/src/io/provider-transport.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/fixtures/result/code-corpora/true-positives.json
+        - tests/fixtures/result/code-corpora/false-positives.json
+        - tests/fixtures/providers/traps/github.traps.json
+        - tests/fixtures/providers/github/read-failure-statuses.json
+        - tests/structure/doctor-contract.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/trap-catalog.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/structure/inventory.json
+        - tests/fixtures/ports/v1-contract-inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/doctor.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/io/provider-transport.ts
+        role: producer
+  - id: 2
+    title: "Pure doctor aggregation, per-check isolation container, and the domain matrix"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/doctor.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/doctor-report.test.ts
+        - tests/structure/doctor-imports.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/doctor/harness.ts
+      folders:
+        - tests/fixtures/doctor/matrix
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/doctor.ts
+        role: producer
+  - id: 3
+    title: "GitHub read-slice httpStatus supply with trap coverage"
+    kind: delivery
+    scope:
+      files:
+        - packages/adapters/src/github/client.ts
+        - tests/behaviour/doctor-github-http-status.test.ts
+        - tests/behaviour/providers/github-collection.test.ts
+        - tests/structure/trap-catalog.test.ts
+      folders:
+        - tests/fixtures/doctor/http-status
+  - id: 4
+    title: "Doctor command, runtime composition, and human renderer"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/commands/doctor.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/doctor-command.test.ts
+        - tests/fixtures/doctor/harness.ts
+        - tests/structure/cli-edge-seam.test.ts
+        - tests/structure/doctor-imports.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+  - id: 5
+    title: "Verification battery: matrix, per-check behaviour, isolation, outcomes, controls, posture, bounds, goldens, performance"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/doctor-repo.test.ts
+        - tests/behaviour/doctor-tracker.test.ts
+        - tests/behaviour/doctor-provider.test.ts
+        - tests/behaviour/doctor-state.test.ts
+        - tests/behaviour/doctor-ci.test.ts
+        - tests/behaviour/doctor-isolation.test.ts
+        - tests/behaviour/doctor-outcome.test.ts
+        - tests/behaviour/doctor-output.test.ts
+        - tests/behaviour/doctor-negative-controls.test.ts
+        - tests/behaviour/doctor-readonly-determinism.test.ts
+        - tests/behaviour/doctor-network-posture.test.ts
+        - tests/behaviour/doctor-performance.test.ts
+        - tests/behaviour/doctor-report.test.ts
+        - tests/golden/doctor-output.test.ts
+        - tests/checks/secret-read-boundary.test.ts
+        - tests/checks/forbidden-literals.test.ts
+        - tests/checks/exit-code-literals.test.ts
+        - tests/structure/doctor-imports.test.ts
+      folders:
+        - tests/fixtures/doctor/repo
+        - tests/fixtures/doctor/tracker
+        - tests/fixtures/doctor/ci
+        - tests/fixtures/doctor/provider
+        - tests/fixtures/doctor/outcomes
+        - tests/fixtures/doctor/bounds
+        - tests/fixtures/doctor/negative-controls
+        - tests/fixtures/doctor/isolation
+        - tests/fixtures/doctor/golden
+  - id: 6
+    title: "Planning-pack reconciliation, changeset, doc-impact handoff, and final battery"
+    kind: delivery
+    scope:
+      files:
+        - doc/planning/oss-tooling/milestones/m1/man-page.md
+        - .changeset/doctor-v1-minor.md
+        - doc/changes/2026-11/2026-11-06--GH-224--doctor-v1/chg-GH-224-doc-impact.md
+        - doc/changes/2026-11/2026-11-06--GH-224--doctor-v1/chg-GH-224-test-plan.md
+  - id: 7
+    title: "Documentation and spec reconciliation (doc-syncer)"
+    kind: delivery
+    scope:
+      files:
+        - doc/spec/features/feature-doctor.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/spec/features/feature-provider-client-seeds.md
+        - doc/spec/features/feature-status-digest.md
+        - doc/spec/features/feature-provider-engine.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/overview/glossary.md
+        - doc/00-index.md

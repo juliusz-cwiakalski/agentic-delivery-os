@@ -50,6 +50,12 @@ export type CommandDefinition = {
   readonly humanSuccess?: boolean;
   readonly humanText?: (data: unknown, brand: BrandIdentity) => string | undefined;
   /**
+   * Render a failure-path human report from the raw handler error value. The
+   * value is never copied into the envelope; only the rendered text reaches the
+   * human stream, alongside the standard diagnostic.
+   */
+  readonly humanFailureText?: (error: unknown, brand: BrandIdentity) => string | undefined;
+  /**
    * Project a successful handler's verdict data onto an exit class. A negative
    * verdict is still a success envelope (data present); only the exit number
    * comes from this projection. Handlers never choose an exit literal.
@@ -108,6 +114,7 @@ type Outcome =
       readonly entry: ErrorTableEntry;
       readonly summary?: string;
       readonly message?: string;
+      readonly value?: unknown;
     };
 
 type ParsedInvocation =
@@ -144,7 +151,9 @@ const failureOutcome = (entry: ErrorTableEntry, value?: unknown): Outcome => {
       (typeof value.code === "string" && value.code.startsWith("config.")));
   const summary =
     configShaped || entry.domainKind === "config" ? undefined : explicitSummary(value);
-  return summary === undefined ? { type: "failure", entry } : { type: "failure", entry, summary };
+  return summary === undefined
+    ? { type: "failure", entry, ...(value === undefined ? {} : { value }) }
+    : { type: "failure", entry, summary, ...(value === undefined ? {} : { value }) };
 };
 
 const invocationFailure = (reason: string): Outcome => ({
@@ -329,6 +338,13 @@ export async function runCli(
         }
       } catch (thrown) {
         outcome = failureOutcome(classifyThrown(thrown), thrown);
+      }
+      if (
+        outcome.type === "failure" &&
+        definition.humanFailureText !== undefined &&
+        !emitEnvelope
+      ) {
+        humanText = definition.humanFailureText(outcome.value, deps.brand);
       }
     }
   } catch (thrown) {

@@ -8,7 +8,7 @@ area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, ADR-0010]
-  related_changes: [GH-200, GH-229]
+  related_changes: [GH-200, GH-229, GH-224]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -91,7 +91,7 @@ No typed daemon or background scheduler is established by `packages/`.
 |---|---|
 | `core/src/contracts/` | Data-only ports, normalized primitives, schemas, capability declarations and error vocabulary shared across packages. |
 | `core/src/config/`, `branding/` | Pure layered resolution with provenance; pure brand identity resolution. Exported through core root and `./branding`, respectively. |
-| `core/src/domain/` | PM-notes lint, change verification, five-gate evaluation, closeout transaction policy, status aggregation, queue-ready, owner-gate SLA evaluation, and session-admin policy. |
+| `core/src/domain/` | PM-notes lint, change verification, five-gate evaluation, closeout transaction policy, status aggregation, queue-ready, owner-gate SLA evaluation, doctor diagnostics, and session-admin policy. |
 | `core/src/provider/` | Availability chain, quota/peak evaluation, expiring parks and announcements through injected ports. No model selection or session spawn. |
 | `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections. Runtime APIs confined to `state/driver/`. |
 | `core/src/app/`, core `createRuntime` | Application tier is a type placeholder; `createRuntime` is an `export declare` signature, not a callable composition implementation. |
@@ -124,6 +124,13 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   data escalates without auto-defaulting, and a rendered board exits zero while an
   unavailable collector exits two. See the
   [owner-gate SLA](../spec/features/feature-owner-gate-sla.md).
+- `doctor` is a bounded, read-only pre-flight diagnostic over `repo`, `tracker`,
+  `provider`, `state`, and `ci`, in that fixed order. It performs at most two
+  single-page network reads, never repairs, never fetches quota, and never runs
+  the provider engine; an all-ok run exits zero with the `delivery.doctor.v1`
+  report, any non-ok check exits one under `doctor.check.failed`, and a run that
+  cannot complete outside per-check execution exits two. See the
+  [doctor](../spec/features/feature-doctor.md).
 - `verify change <ref>` classifies ledger/document completeness, not merge readiness.
   `verify gates <ref>` evaluates CI, push parity, squash surface, address completion
   and lifecycle gates. Both are delivered by integrated PR #217; see the

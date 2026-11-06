@@ -489,6 +489,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       "createCloseoutCommandDefinition",
     ]);
     expect(exported(`${CLI_DIR}/commands/db.ts`)).toEqual(["createDbCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/doctor.ts`)).toEqual(["createDoctorCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/brief.ts`)).toEqual(["createBriefCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/lint.ts`)).toEqual(["createLintCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/commit.ts`)).toEqual([
@@ -508,7 +509,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(exported(`${CLI_DIR}/commands/queue.ts`)).toEqual(["createQueueReadyCommandDefinition"]);
   });
 
-  test("only board, brief, closeout, db, plan, queue, status, verify, and watchdog declare the optional human-text renderer", () => {
+  test("only board, brief, closeout, db, doctor, plan, queue, status, verify, and watchdog declare the optional human-text renderer", () => {
     const declarers = listTypeScriptFiles(ROOT, `${CLI_DIR}/commands`).filter((file) =>
       readFileSync(join(ROOT, file), "utf8").includes("humanText"),
     );
@@ -517,6 +518,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       `${CLI_DIR}/commands/brief.ts`,
       `${CLI_DIR}/commands/closeout.ts`,
       `${CLI_DIR}/commands/db.ts`,
+      `${CLI_DIR}/commands/doctor.ts`,
       `${CLI_DIR}/commands/plan.ts`,
       `${CLI_DIR}/commands/queue.ts`,
       `${CLI_DIR}/commands/status.ts`,

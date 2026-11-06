@@ -1,0 +1,143 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-224
+branch: feat/GH-224/doctor-v1
+status: PASS
+summary: >-
+  First review of GH-224 (M1-S3 doctor v1) against spec v1.3 (21 ACs), the
+  dual-format plan (7 phases, 31 TCs), repo rules, and code-quality heuristics,
+  with read-only verification (targeted bun suites, invariant checks, doc
+  guard). All 21 ACs are implemented as specified: five checks in fixed order,
+  closed verdicts, unconditional catalog hints, exit 0/1/2 via the projection,
+  per-check isolation, <=2 single-page reads at limits 50/20, quota/engine/write
+  abstinence, DEC-11 structured httpStatus classification (401/403 only), the
+  22-value DM-6 reason set byte-exact, Appendix B goldens byte-identical, all
+  DM-8 bounds live, exactly one doctor.check.failed row in a 54/54 synchronized
+  table, and tier/brand discipline green across every gate. The mid-delivery
+  main-tools merge (8acc2ca1) union resolutions verified complete and correct
+  (both error rows, both corpora, ten-declarer humanText seam, status-imports
+  exact list, 54 documented identities), and the post-doc-sync current-truth
+  docs contain no stale claims. No critical, high, or medium findings; two
+  low-severity code-quality items and three informational notes are recorded
+  with concrete suggestions.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 3
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: medium
+    category: quality
+    location: packages/cli/src/commands/doctor.ts:138
+    message: >-
+      [QUAL-1] collectProvider orders enabled provider entries with
+      localeCompare, a locale/ICU-sensitive comparison. The first credential
+      defect in that order decides the reported detail, hint, and failure-summary
+      entry, so identical configuration can render different output on hosts
+      with different ICU data (the domain's compareParkOrder correctly uses
+      codepoint comparison for the same reason).
+    suggestion: >-
+      Replace `left.name.localeCompare(right.name)` with the codepoint
+      comparison used by compareParkOrder (left < right ? -1 : left > right ? 1
+      : 0) so defect selection is environment-independent, matching NFR-6's
+      determinism intent.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: quality
+    location: packages/core/src/domain/doctor.ts:240
+    message: >-
+      [QUAL-2] isCredentialRejection hardcodes `httpStatus === 401 ||
+      httpStatus === 403` while the contract constant
+      DOCTOR_CREDENTIAL_REJECTION_STATUSES ([401, 403]) exists solely for this
+      classification. D2's single-vocabulary-home discipline requires the domain
+      to consume the declared constant; a future edit to the contract value
+      would silently not change the domain behaviour.
+    suggestion: >-
+      Import DOCTOR_CREDENTIAL_REJECTION_STATUSES in domain/doctor.ts and derive
+      the check from it (read.httpStatus !== undefined &&
+      (DOCTOR_CREDENTIAL_REJECTION_STATUSES as readonly number[]).includes(read.httpStatus)).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: quality
+    location: packages/cli/src/edge.ts:1021
+    message: >-
+      [INFO-3] The repo check's readable/clean work-tree fact arrives through
+      the injected readWorkTree seam, but no delivered no-spawn surface can
+      supply it: the repository adapter exposes root/HEAD/origin metadata only,
+      and the only delivered cleanliness read (git.isClean, git status
+      --porcelain) spawns a child process, which the doctor posture forbids.
+      Truthfully documented (feature-doctor.md names the injected local
+      work-tree fact) and harmless today because no production bin composition
+      exists for any command yet.
+    suggestion: >-
+      Record the forward-composition decision for the future bin story: either
+      admit one bounded `git status` spawn at the edge for the repo check or add
+      a no-spawn work-tree fact read via an explicit contract change. No action
+      in this change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: medium
+    category: quality
+    location: packages/core/src/domain/doctor.ts:466
+    message: >-
+      [INFO-4] The domain re-implements a subset of the delivered pure provider
+      validator (chainResolvable checks entry existence only) because D3
+      confines domain/doctor.ts to #contracts imports. In the composed flow the
+      edge's tolerant provider-config read already runs the full validator, so
+      the domain path is defensive-only and cannot realistically contradict it;
+      the duplication is a mild drift risk if the validator's relational rules
+      grow.
+    suggestion: >-
+      Acceptable D2/D3 tension for v1. If the validator's relational rules ever
+      diverge from chainResolvable, prefer supplying the structural resolution
+      as an injected edge fact rather than widening the domain's re-implementation.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/checks/packed-state.test.ts:153
+    message: >-
+      [INFO-5] Two suites fail in this review sandbox (packed-state TC-STATE-021
+      MODULE_NOT_FOUND under Node, ci-baseline-parity git clone cross-device
+      hardlink against /tmp). Both reproduce identically on origin/main-tools
+      (verified in a base worktree), so they are pre-existing environmental
+      failures, not GH-224 regressions; the delivery environment recorded 3306
+      pass / 4 skip / 0 fail.
+    suggestion: >-
+      No change action. Re-run in the delivery/CI environment where both suites
+      pass before relying on local totals from this sandbox.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-06T07:57:55Z
+next_step: PROCEED

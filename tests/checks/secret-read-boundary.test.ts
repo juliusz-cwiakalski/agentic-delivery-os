@@ -251,3 +251,34 @@ describe("TC-SECRET-004 non-vacuity and fixture coverage", () => {
     expect(registry).toContain("validateFixtureCoverage");
   });
 });
+
+describe("TC-DOCTOR-023 doctor adds no secret-read surface", () => {
+  test("the allowlist stays exactly four entries with one credential-material entry", () => {
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+    expect(
+      SECRET_READ_ALLOWLIST.filter((entry) => entry.class === "credential-material"),
+    ).toHaveLength(1);
+    for (const entry of SECRET_READ_ALLOWLIST) {
+      expect(entry.path).not.toContain("doctor");
+    }
+  });
+
+  test("the doctor modules are clean under the live scanner", () => {
+    const violations = scan(ROOT).filter((violation) => violation.file.includes("doctor"));
+    expect(violations).toEqual([]);
+  });
+
+  test("a planted ambient read in a doctor file fails by name (control)", () => {
+    const root = mkdtempSync(join(tmpdir(), "doctor-secret-"));
+    try {
+      mkdirSync(join(root, "packages/core/src/contracts"), { recursive: true });
+      writeFileSync(
+        join(root, "packages/core/src/contracts/doctor.ts"),
+        "export const leak = (): string | undefined => process.env.FIXTURE_SECRET;\n",
+      );
+      expect(scan(root).some((violation) => violation.file.includes("doctor.ts"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

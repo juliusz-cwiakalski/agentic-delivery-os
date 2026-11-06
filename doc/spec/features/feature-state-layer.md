@@ -7,7 +7,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The implemented state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, rebuild from the ledger alone including a post-salvage ledger, classified torn/unknown detection with verified-empty evidence, explicit guided terminal-tail salvage with quarantine, reusable validated artifact-boundary contracts, store-managed artifact read/get-or-create with runtime-edge random material, fail-closed storage exhaustion, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, the provider park/announcement record kinds with the rebuildable provider-parks.json projection, the additive closeout.operation outcome ledger, the additive commit.telemetry event ledger, the additive owner-gate.decision default-application ledger, and the additive audit reservation/invocation kinds with a keyed chain and bounded read surface."
 links:
-  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223"]
+  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224"]
   related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
 ---
 
@@ -19,7 +19,7 @@ The state layer is the durable local substrate later verification reads through.
 
 The append-only, schema-versioned JSONL ledger is the single durable truth. The declared driver kinds select only the read/index strategy over that same ledger: `jsonl` reads by verified scan, `sqlite` maintains a disposable derived index that is rebuilt from verified ledger truth whenever it is missing, corrupt, or divergent. No operation, result, or type on the public port discriminates by driver kind.
 
-The layer ships no command surface and no configuration read. Its durable consumers append through the fenced port and read through verified reads: the delivery registry writes `phase.transition` records and replaces the per-change phase-state document as a rebuildable fold of verified records; verify change reads transition history; the provider engine writes park and announcement records; closeout writes `closeout.operation` outcome records and reads them to converge on re-run; the commit primitive writes `commit.telemetry` events and reads them as convergence corroboration (the atomic transition record carries the landed SHA as primary evidence); the command audit ledger writes a reservation and an invocation record per audited command invocation under one shared fence and reads a keyed chain and bounded history; the owner-gate SLA writes `owner-gate.decision` default-application records and reads them to stay idempotent; and the status digest and the queue-ready ready-set read the verified provider park fold without writing anything. Store identity, paths, clock, and platform arrive as injected parameters; the state tier never imports branding and never derives a name.
+The layer ships no command surface and no configuration read. Its durable consumers append through the fenced port and read through verified reads: the delivery registry writes `phase.transition` records and replaces the per-change phase-state document as a rebuildable fold of verified records; verify change reads transition history; the provider engine writes park and announcement records; closeout writes `closeout.operation` outcome records and reads them to converge on re-run; the commit primitive writes `commit.telemetry` events and reads them as convergence corroboration (the atomic transition record carries the landed SHA as primary evidence); the command audit ledger writes a reservation and an invocation record per audited command invocation under one shared fence and reads a keyed chain and bounded history; the owner-gate SLA writes `owner-gate.decision` default-application records and reads them to stay idempotent; and the status digest, the queue-ready ready-set, and the doctor diagnostic read the verified provider park fold without writing anything. Store identity, paths, clock, and platform arrive as injected parameters; the state tier never imports branding and never derives a name.
 
 ## Business Context
 
@@ -118,6 +118,12 @@ Verify change is a read-only consumer of the state layer. It reads the registry'
 
 The derived `phase-state.<REF>.json` projection is not evidence for verification: verify folds the verified ledger directly, so a stale or missing projection cannot change the verdict. Verification never mutates the ledger, the header, the index, or a derived document. Its consumer contract is in [verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md).
 
+### Doctor consumer
+
+The `doctor` diagnostic is a read-only consumer of the state layer through the same verified provider-ledger read the engine and status use. One verified read per run serves both the provider check's park/announcement fold and the state check's store verdict; the fold applies read-time expiry and never treats the persisted `provider-parks.json` projection as truth. Doctor acquires no fence, appends no record, replaces no derived document, and never repairs, salvages, migrates, or clears a park.
+
+Store failures become classified diagnostic evidence rather than a command abort. A torn store, schema mismatch, permission failure, or undeclared record kind fails the state check with the delivered remediation guidance as its fix hint; a store read failure outside those classifications makes the state check `unreachable`, and an unreadable provider fold makes the provider check `unreachable` with `state-unreadable` — never a "no parks" claim. The state contract is specified in [Doctor](feature-doctor.md).
+
 ## Technical Architecture & Codebase Map
 
 - `packages/core/src/contracts/state.ts` — driver-neutral vocabulary: identity, record envelope, salvage record and salvage evidence, artifact-boundary declarations, store-managed artifact read/get-or-create requests and results, fence handle, evidence, failure, and the single `STATE_SCHEMA_VERSION` home. Types and data only.
@@ -194,6 +200,7 @@ Fault injection is a fixture contract: `tests/fixtures/state/harness.ts` supplie
 - [Commit primitive](feature-commit-primitive.md) — the `commit.telemetry` record kind, non-gating emission, and the durable evidence convergence reads.
 - [Status digest](feature-status-digest.md) — the read-only verified park-fold consumer.
 - [Queue ready](feature-queue-ready.md) — the read-only ready-set consumer of the verified park fold.
+- [Doctor](feature-doctor.md) — the read-only diagnostic consumer that shares one verified provider-ledger read between its provider and state checks.
 - [Owner-gate SLA](feature-owner-gate-sla.md) — the `owner-gate.decision` default-application ledger and the board consumer.
 - [Command audit ledger](feature-audit-ledger.md) — the reservation/invocation record kinds, the keyed chain and its store-managed key artifact, and the bounded read surface.
 - [Verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md) — the read-only verification consumer and the delivery-result exit taxonomy.

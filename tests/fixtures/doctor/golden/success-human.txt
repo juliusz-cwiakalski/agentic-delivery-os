@@ -1,0 +1,6 @@
+example-product doctor example-owner/example-repo
+repo     ok          clean work tree on feat/GH-224/doctor-v1 at 1111111
+tracker  ok          tracker read succeeded (3 items)
+provider ok          provider chain and credentials resolve; no active park
+state    ok          state stores verified (4 records)
+ci       ok          CI read succeeded (2 check runs)

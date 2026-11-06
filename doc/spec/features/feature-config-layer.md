@@ -7,7 +7,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224"]
   related_decisions: ["ADR-0003", "TDR-0003"]
 ---
 
@@ -209,6 +209,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 - **Consumed by** the status digest ([Status Digest](feature-status-digest.md)) for the resolved provider branch only; status adds no keys.
 - **Consumed by** the queue-ready ready-set ([Queue Ready](feature-queue-ready.md)) for the resolved provider branch only; it adds no keys and no queue-readiness settings.
 - **Consumed by** the commit primitive ([Commit Primitive](feature-commit-primitive.md)) for the resolved `commit.phaseCommit` key that decides whether a phase completion lands its commit atomically.
+- **Consumed by** the doctor diagnostic ([Doctor](feature-doctor.md)) for the resolved provider branch only, read tolerantly so a resolution failure becomes provider-check evidence; doctor adds no keys and no doctor configuration branch.
 - **Separate capability:** credential resolution is the port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); keyring sources and sidecar transport remain later capabilities, and state storage is the separate [State Layer](feature-state-layer.md).
 
 ## Glossary & References

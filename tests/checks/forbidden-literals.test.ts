@@ -388,3 +388,16 @@ describe("TC-GH223-013 audit identity seam carries no product token", () => {
     expect(auditViolations).toEqual([]);
   });
 });
+
+describe("TC-DOCTOR-023 doctor source carries no product literal", () => {
+  test("the doctor modules carry no seed literal", () => {
+    for (const source of [
+      "packages/core/src/contracts/doctor.ts",
+      "packages/core/src/domain/doctor.ts",
+      "packages/cli/src/commands/doctor.ts",
+    ]) {
+      expect(matchSeedLiteral(readFileSync(join(ROOT, source), "utf8"), ["ados"])).toBeFalsy();
+      expect(matchSeedLiteral(readFileSync(join(ROOT, source), "utf8"), ["ADOS_"])).toBeFalsy();
+    }
+  });
+});

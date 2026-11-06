@@ -55,6 +55,12 @@
       "resolves": false
     },
     {
+      "id": "doctor-check-condition",
+      "text": "doctor.check.repo.unreachable",
+      "recognized": false,
+      "resolves": false
+    },
+    {
       "id": "foreign-collector-family-shape",
       "text": "vendor.collector.tracker.unavailable",
       "recognized": false,

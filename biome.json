@@ -40,6 +40,12 @@
       }
     },
     {
+      "includes": ["tests/fixtures/doctor/golden/**"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
       "includes": ["tests/fixtures/**"],
       "linter": {
         "rules": {

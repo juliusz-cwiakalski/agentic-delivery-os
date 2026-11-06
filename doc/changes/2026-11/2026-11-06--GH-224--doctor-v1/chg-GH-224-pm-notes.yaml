@@ -1,0 +1,95 @@
+change_id: GH-224
+title: "M1-S3: doctor v1"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-06T04:20:00Z", completed: "2026-11-06T04:40:00Z" }
+  specification: { started: "2026-11-06T04:40:00Z", completed: "2026-11-06T07:10:00Z" }
+  test_planning: { started: "2026-11-06T04:55:00Z", completed: "2026-11-06T07:05:00Z" }
+  delivery_planning: { started: "2026-11-06T06:20:00Z", completed: "2026-11-06T07:15:00Z" }
+  dor_check: { started: "2026-11-06T06:50:00Z", completed: "2026-11-06T07:30:00Z" }
+  delivery: { started: "2026-11-06T07:35:00Z", completed: "2026-11-06T08:20:00Z" }
+  system_spec_update: { started: "2026-11-06T08:25:00Z", completed: "2026-11-06T08:45:00Z" }
+  review_fix: { started: "2026-11-06T08:50:00Z", completed: "2026-11-06T09:10:00Z" }
+  quality_gates: { started: "2026-11-06T09:10:00Z", completed: "2026-11-06T09:40:00Z" }
+  dod_check: { started: "2026-11-06T09:45:00Z", completed: "2026-11-06T09:50:00Z" }
+  pr_creation: { started: "2026-11-06T09:55:00Z", completed: "2026-11-06T10:05:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/254" }
+decisions:
+  - text: "Doctor outcome modeling follows the verify-change precedent: any failing check yields a classified error envelope (exit 1) whose deterministic summary names EACH failing check with its fix hint; all-checks-ok yields a success data envelope (exit 0) with structured checks; platform-classified store failures project exit 2. Result-contract evolution (data-bearing failure envelope, as sketched in the pack example) is ruled out: the result contract's NFR forbids failure envelopes carrying data and forbids exit overrides outside the projection module. The pack convention explicitly defers such proposals to story delivery."
+    date: "2026-11-06"
+  - text: "Plan format: dual delivery — chg-GH-224-plan.yaml (delivery.plan.v1, tooling-primary, validatePlan verdict valid/readyForDevelopment=true) plus chg-GH-224-plan.md (task-level narrative per GH-175/182 structure) because delivery.plan.v1 cannot carry task/TC/ledger detail; YAML wins on conflict per repo rule."
+    date: "2026-11-06"
+  - text: "Delivery-bound values pinned by plan: DOCTOR_TRACKER_READ_LIMIT=50 / DOCTOR_CI_READ_LIMIT=20 (status precedents); 23-entry hint catalog with Appendix B strings verbatim; NFR-7 50ms = median of 21 aggregator runs with expensive-control non-vacuity; doc-distribution guard in phase 6+7 gates, new feature spec declares ados_distribution: internal."
+    date: "2026-11-06"
+  - text: "Spec DEC-6 provider park semantics: capacity/time parks (peak, quota-exhausted, outage, chain-exhausted) are wiring-neutral detail with a provider-quota directive; only credential-caused parks fail the check. Rationale: exit stability — routine peak parks must not train operators to ignore exit 1."
+    date: "2026-11-06"
+open_questions:
+  - text: "Delivery-bound constants to pin at delivery planning/implementation: numeric per-source read limits (plan asserts declared positive integers; OQ-T4), hint wording beyond the two Appendix B goldens (catalog templates; OQ-T6), doc-distribution marker verification if any redistributable doc changes (OQ-T7), 50 ms aggregation tolerance measurement in CI (OQ-T9). Seed-gap OQ-T8 recorded: no doctor-scoped SC-M1 scenario existed; story-local TCs cover it."
+    date: "2026-11-06"
+blockers: []
+notes:
+  - text: "Ticket carried stale 'review' label with no PR and no delivery artifacts; reconciled to 'planning' at intake per .ai/agent/pm-instructions.md workflow states mapping."
+    type: "info"
+    date: "2026-11-06"
+  - text: "DELIVERY INTERRUPTED + RECOVERED: server restart aborted the coder session mid-phase-5. Git-state assessment: phases 1-4 committed (20a64ebd contracts+httpStatus fold, ccccce60 domain, 58225905 command); phase-5 test matrix on disk uncommitted (20 untracked test/fixture files + 4 modified invariant tests); phases 6-7 not started; branch 9 ahead / 3 behind origin/main-tools (incoming: GH-229 owner-gate SLA board delivery 47270b37, memory consolidation fc9c0853, PDR-0003 acceptance e75b29a2). Predicted merge conflicts concentrated in shared registry seams (error-table + corpora, cli-edge-seam eight/nine-declarer list, content/error-table inventories, edge.ts semantic). Resume order: finish+commit phase 5, merge --no-commit, resolve unions, gates, phases 6-7."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Retro: phase-boundary commits are the recovery anchors — because phases 1-4 were committed per phase before the crash, recovery cost was limited to re-verifying one phase's on-disk work instead of re-implementing it. The phase-3 httpStatus work was folded into the phase-1 commit (subject documents it) — acceptable deviation, but it means the original per-phase commit map no longer matches 1:1; coders should preserve the plan's commit boundaries even when adjacent phases touch the same files, for exactly this recovery scenario."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "Plan-phase ledger (phase id -> commit -> result; hashes are post-REPLAY truth after the 5e3f49a1 refresh, see refresh note): [1] contracts -> 647a35b1 -> error-table-sync 60/60 (union: 2 fallback, 5 provider, 1 input, 10 config, 9 state, 6 lint, 3 verify, 4 db, 4 closeout, 5 plan, 3 watchdog, 6 commit, 1 status, 1 doctor); [2] domain -> 2ac55b74 -> aggregation suites green; [3] adapters httpStatus -> folded into 647a35b1 -> trap+http-status suites green; [4] CLI -> 43306c88 -> command/edge suites green, ten-declarer seam verified; [5] verification battery -> c3266389 -> doctor suite 154 pass/0 fail; [6] closeout -> 872aae26 -> man-page reconciled, changeset verified; [7] docs -> 88c6a7fb -> doc-distribution exit 0. Final cumulative pnpm check at 9e4d9985: exit 0, 3582 pass / 4 skip / 0 fail, 357 files. Coverage: 21/21 ACs, 31/31 TCs."
+    type: "info"
+    date: "2026-11-06"
+  - text: "QUALITY GATES: 6/6 PASS at final HEAD 342d5ed4. [1] pnpm check exit 0 — 3306 pass/4 skip/0 fail, 311 files, 32946 expects; lint 0 errors (34 pre-existing warnings, none in doctor files); exports-parity 5 publishables OK. [2] commitlint range sweep 17/17 clean — required a message-only rewrite of commit 58225905 (two body lines >100 chars; pre-restart coder commit); rebase-with-merges conflicted at merge replay, so the rewrite was applied as a verified commit-tree rebuild (tree fd1dd0f4 byte-identical before/after, topology + parents preserved, all descendant hashes changed; backup branch backup/gh224-pre-reword kept at 1e5d7c6f). [3] git diff --check clean. [4] doc-distribution guard PASS (81 docs). [5] doctor suites PASS (170 tests + 35 post-rewrite spot check). [6] check:boundaries PASS (168 modules, 394 deps, 0 violations). Environmental caveats resolved: packed-state and ci-baseline-parity pass at HEAD with correct TMPDIR/COREPACK env (prior failures were EXDEV + corepack-home, not code)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Retro: unpushed-branch history hygiene is cheaper before merge than after — the commitlint body-length violation was introduced by the pre-restart coder commit and only surfaced at gate time; range commitlint belongs in the coder's per-phase verification so violations are caught at commit creation, not at gates. The rewrite cost was contained because (a) the branch was unpushed and (b) tree-identity verification (same content hash) proved the rewrite metadata-only."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "BRANCH REFRESH (post-PR reb onto advanced main-tools): main-tools advanced to 5e3f49a1 with merged PRs #252 (M1-S22 audit ledger, 79704d70) and #253 (M1-S14 commit primitive, 5e3f49a1). Rebased feat/GH-224/doctor-v1 linearly (old merge 047ed304 dropped; 19 commits replayed; 0 merge commits in result). UNION resolutions kept all sides: error-table now 60 identities (doctor 1 + commit 6 + audit/status machinery upstream), all command registrations and exports coexist, cli-edge-seam humanText declarer set re-verified from code (board, brief, closeout, db, doctor, plan, queue, status, verify, watchdog — audit/commit add none). Gates at new tip 9e4d9985: pnpm check exit 0 (3582/0/4, 357 files incl. sibling suites), commitlint 19/19, error-table-sync 60/60, doctor 170 + audit 118 + commit 83 suite passes, doc-distribution exit 0, boundaries 193 modules/471 deps clean, status-imports green, doctor source files byte-identical to pre-replay (verified vs backup/gh224-pre-replay). Hash chain updated (e.g. contracts 20a64ebd -> 647a35b1, CLI 303e3a2e -> 43306c88, docs 0c9cdaf6 -> 88c6a7fb); old backup/gh224-pre-reword deleted per instruction; backup/gh224-pre-replay kept at 6c19730b until merge confirmation."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Delivery deviations (all accepted): [a] phase-3 work folded into phase-1 commit 20a64ebd (documented in subject); [b] .changeset/doctor-v1-minor.md landed with ccccce60, phase 6 verified instead of duplicating; [c] gate-driven scope additions: biome.json golden-formatter override, forbidden-literals.registry.json registration of the new feature spec; [d] per-area fixture folders replaced by inline worlds/case tables (tests/fixtures/doctor/{matrix,http-status,golden} retained), coverage unchanged; [e] mid-delivery GH-229 board landing changed the delivered humanText declarer set from eight+ninth to TEN — spec updated to v1.3 stating the delivered truth; current-truth docs already stated ten."
+    type: "info"
+    date: "2026-11-06"
+  - text: "GitHub MCP server could not authenticate for write operations this session (reads worked unauthenticated). All tracker writes routed through gh CLI via @runner instead; label reconciliation change+planning completed successfully."
+    type: "info"
+    date: "2026-11-06"
+  - text: "SPECIFICATION REOPENED (iteration 2) by test-plan author's GAP-4/OQ-T3 plus OQ-T10/T11/T2: AC-F4-1 requires distinguishing auth rejection from transport failure but the delivered read contract may fold them; CI auth rejection missing from Appendix A; reevaluation-cap park disposition unstated; provider-config-unreadable-at-check-scope undefined. Retro: the spec pinned the check outcomes but did not verify each pinned distinction against the delivered read-result types during initial authorship; future specs should verify every observable distinction in the ACs against delivered code truth at authoring time."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "RESOLVED: specification v1.1 closed all four reopen gaps — DEC-11 (additive optional structured httpStatus on the adapter payload failure; 401/403 = credential-rejected fail, others unreachable; no new error row; one trap-catalog entry + fixture), CI row aligned, reevaluation-cap wiring-neutral, ambiguous provider-config condition removed and replaced by the two delivered tolerant-read failure reasons (DEC-12; corrects v1.0's abort assumption). AC count unchanged at 21; test plan reconciled to 31 TCs, 21/21 ACs, no contradicting gaps."
+    type: "resolved"
+    date: "2026-11-06"
+  - text: "DOR CHECK iteration 1: NOT_READY (facets 9 PASS / 1 FAIL; pause required: no; verdict artifact readiness-review/readiness-iter-1.md). Findings: [major] plan task 4.4 + line 133 claim doctor is the 'second consumer' of the humanText hook — delivered cli-edge-seam test pins EIGHT declarers (brief, closeout, db, plan, queue, status, verify, watchdog); doctor is the ninth; [minor] spec F-10/§8.5/§16 carry the same false 'second consumer after status' fact; [nit] test-plan front matter implementation_plan: null stale; [nit] plan phase 5 lists tests/fixtures/doctor/http-status as new though phase 3 creates it. REOPENED: specification (iteration 3, wording), test_planning (iteration 2, front matter), delivery_planning (iteration 2, findings 1+4). Gate re-runs after remediation."
+    type: "info"
+    date: "2026-11-06"
+  - text: "DOR CHECK iteration 2: READY (10/10 facets PASS; verdict artifact readiness-review/readiness-iter-2.md). All four iteration-1 findings verified resolved against diffs and delivered tree; YAML re-validated (valid/readyForDevelopment true). Advisory nit deferred to next test-plan touch: §2 enumerates DEC-1..DEC-10 (spec has 12) and cites spec v1.1 (now v1.2) — zero behavioral impact, body covers DEC-11/12 via A-T6/A-T11/A-T12."
+    type: "info"
+    date: "2026-11-06"
+  - text: "REVIEW iteration 1: PASS (record code-review/review-iter-1.yaml). Findings 0c/0h/0m/2l/3i; plan ALL_TASKS_DONE; no coverage gaps. Low findings remediated pre-gates: QUAL-1 localeCompare ICU-sensitive ordering replaced with codepoint comparison (compareParkOrder mechanism; determinism NFR-6 hazard eliminated), QUAL-2 isCredentialRejection now consumes DOCTOR_CREDENTIAL_REJECTION_STATUSES (single-home) — commit 378438c7 (was bdcaf4d6), doctor suites 260+28 green, typecheck green. Info findings recorded not actioned: INFO-3 readWorkTree forward-composition seam (documented truthfully; awaits future bin story), INFO-4 chainResolvable defensive re-implementation (accepted D2/D3 tension), INFO-5 two sandbox test failures reproduce on origin/main-tools (environmental, not regressions)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "DoD CHECK PASS: all 9 prior phases completed with timestamps; YAML plan 7/7 phases + merge carry ledger entries (phase id, post-rewrite commit hash, test result); 21/21 ACs satisfied per review iteration 1 (live-gate verified); 31/31 TCs delivered; current-truth docs complete (doc-syncer residual NONE, reviewer verified feature-doctor.md accuracy); quality gates 6/6 PASS at HEAD 342d5ed4; no open blockers. Note: the open_questions entry recording delivery-bound constants is historical — all four were pinned in the plan (D5/D6/D12/D13) and delivered."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Retro: the 'second consumer' claim is the second instance of the same failure class as the DEC-11 reopen — a factual assertion about delivered code (hook consumer set) that survived artifact authoring because it was not verified against the tree. Standing rule for spec/plan authors on this repo: every claim of the form 'delivered X has property Y / X is the only/first/second Z' must be checked against the delivered code or tests before it enters an artifact."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "Dependencies verified merged to main-tools: M0-S6 status v1 (GH-175, PR #209) and M0-S13 provider v1 (GH-182, PR #202), both 2026-10-31. Ticket unblocked."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Ticket cites doc/planning/oss-tooling/milestones/m1/README.md for pack conventions; actual conventions live at doc/planning/oss-tooling/milestones/README.md (one level up). Minor doc drift, non-blocking (content exists and was used)."
+    type: "risk"
+    date: "2026-11-06"
+  - text: "Pack internal drift: man-page.md shows 'doctor [--fix-hints]' while commands/doctor.md shows '[--json]'. Fix hints are unconditional per the pinned decision, so a --fix-hints flag is redundant; --json follows the standard machine-output convention. Spec-writer reconciles."
+    type: "risk"
+    date: "2026-11-06"
+  - text: "Doctor must never crash: per-check isolation required — a check whose sources are unreadable becomes an unreachable/failing verdict with a hint (pack: doctor.check.<area>.unreachable, fail with hint), never aborts the run; fallback.internal containment applies only outside per-check execution."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Doctor is a read-only diagnostic: diagnoses and prescribes, never repairs (command registry: 'diagnose and prescribe'); no --fix surface, no mutation, no state writes. Provider checks must not burn quota: doctor reads wiring evidence (config chain, parks, announcements) and directs the operator to provider quota via the fix hint rather than executing live quota evaluation."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Evidence vocabulary should follow the closed-evidence-state discipline of status digest/queue ready: an unobserved, failed, or unattempted read is never an 'ok' verdict (never a false all-clear). Pack's binary ok/fail verdict proposal is refined at story delivery per pack conventions."
+    type: "info"
+    date: "2026-11-06"

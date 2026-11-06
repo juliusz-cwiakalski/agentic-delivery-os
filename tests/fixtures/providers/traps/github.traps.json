@@ -145,6 +145,12 @@
       "providerBehavior": "A work-item HTTP 404 is ticket-unresolved with source absent.",
       "expectedNormalizedOutcome": "A work-item HTTP 404 is ticket-unresolved with source absent.",
       "fixtureReference": "tests/fixtures/providers/github/absence-404.json#/issue"
+    },
+    {
+      "trapName": "GH-PAYLOAD-HTTP-STATUS",
+      "providerBehavior": "Non-2xx GitHub read responses fold into the adapter-local failure types whose only discriminant used to be the prose detail string.",
+      "expectedNormalizedOutcome": "The read slice carries the structured numeric httpStatus on every non-2xx response and omits it on transport failures; the field is secret-free, the adapter-local identity is unchanged, and no prose is copied into it.",
+      "fixtureReference": "tests/fixtures/providers/github/read-failure-statuses.json"
     }
   ]
 }

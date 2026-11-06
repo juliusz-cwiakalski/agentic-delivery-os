@@ -125,3 +125,34 @@ describe("TC-EXIT-002 forbidden forms", () => {
     expect(messages(report.failures)).toContain("process.exit(...) is forbidden");
   });
 });
+
+describe("TC-DOCTOR-017 doctor source contains no exit literal", () => {
+  test("the live scan reports no doctor exit literal", () => {
+    const report = scanRoot(ROOT);
+    expect(report.failures.filter((failure) => failure.includes("doctor"))).toEqual([]);
+    const sources = [
+      "packages/cli/src/commands/doctor.ts",
+      "packages/core/src/domain/doctor.ts",
+      "packages/core/src/contracts/doctor.ts",
+    ];
+    for (const source of sources) {
+      const text = readFileSync(join(ROOT, source), "utf8");
+      expect(text).not.toContain("process.exit");
+      expect(text).not.toMatch(/return\s+[012]\s*;/);
+    }
+  });
+
+  test("a call-site override fails the scan (control)", () => {
+    const root = mkdtempSync(join(tmpdir(), "doctor-exit-"));
+    try {
+      mkdirSync(join(root, "packages/cli/src/commands"), { recursive: true });
+      writeFileSync(
+        join(root, "packages/cli/src/commands/doctor.ts"),
+        "export const run = (): void => process.exit(0);\n",
+      );
+      expect(scanRoot(root).failures.some((failure) => failure.includes("doctor"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

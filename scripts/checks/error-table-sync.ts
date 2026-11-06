@@ -111,6 +111,14 @@ const listFiles = (root: string, relativeDir: string, extensions: readonly strin
 const lineAt = (text: string, index: number): number => text.slice(0, index).split("\n").length;
 
 /**
+ * A doctor check-level cause (`doctor.check.<area>.unreachable`) is diagnostic
+ * check data named by the doctor contract, never an error-table identity
+ * (GH-224 F-11: check-level causes remain evidence, not identities). It is
+ * therefore not a recognized code reference in either corpus direction.
+ */
+const DOCTOR_CHECK_CONDITION_PATTERN = /^doctor\.check\.[a-z][a-z0-9-]*\.unreachable$/;
+
+/**
  * The declared `status.collector.<id>.unavailable` family (GAP-3, DEC-7).
  *
  * The recognizer is deliberately narrow: it admits only the declared prefix and
@@ -138,7 +146,9 @@ export const scanReferences = (text: string, domainKinds: readonly string[]): Re
   for (const match of text.matchAll(CODE_PATTERN)) {
     const code = match[0];
     const namespace = code.split(".")[0] ?? "";
-    const recognized = namespace === "fallback" || domainKinds.includes(namespace);
+    const recognized =
+      !DOCTOR_CHECK_CONDITION_PATTERN.test(code) &&
+      (namespace === "fallback" || domainKinds.includes(namespace));
     references.push({ code, line: lineAt(text, match.index ?? 0), recognized });
   }
   for (const match of text.matchAll(TWO_SEGMENT_PATTERN)) {
@@ -422,6 +432,13 @@ export const runSyncCheck = async (options: SyncOptions): Promise<SyncResult> =>
     const validation = validateEntries(entries, domainKinds);
     failures.push(...validation.failures);
     codes = validation.codes;
+    for (const code of codes) {
+      if (DOCTOR_CHECK_CONDITION_PATTERN.test(code)) {
+        failures.push(
+          `${code}: a doctor check-level cause must not become an error-table identity`,
+        );
+      }
+    }
   } catch (error) {
     failures.push(`${TABLE_MODULE}: cannot load the machine-readable table (${String(error)})`);
   }
