@@ -1,0 +1,38 @@
+change_id: GH-230
+title: "M1-S16: Typed blocker and question channel"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-06T05:20:00Z", completed: "2026-11-06T05:45:00Z" }
+  specification: { started: "2026-11-06T05:50:00Z", completed: "2026-11-06T06:25:00Z" }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "Scope boundary from ticket pinned decisions (binding, not re-derived): GH-230 delivers the typed question channel (publish/list/answer as state records), audience routing with confused-deputy guard, credential name-only guard, digest+brief ranking integration, and laneResume mode recording conditioned on the harness adapter resume-injection capability flag. Application actors (daemon M1-S18, coordinator loop M1-S23, dispatch --resume) are downstream consumers; v0 application path is exercisable over injected facts, mirroring the GH-229 v0-posture precedent."
+    date: "2026-11-06"
+  - text: "Error family is the superset pinned by SC-M1-24 + blockers man page: blockers.invalid-type, blockers.unknown-id, blockers.credential-value-rejected, blockers.audience-mismatch (audience-mismatch exit 1 per scenario; contracts.md naming two codes is non-exhaustive)."
+    date: "2026-11-06"
+open_questions: []
+blockers: []
+notes:
+  - text: "Fresh delivery: branch feat/GH-230/typed-blockers pre-created at origin/main-tools tip 47270b37 (0 own commits), worktree clean, no prior artifacts. Issue labels 'change'+'review' were premature (no PR existed); review label corrected to planning state at delivery start."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Dependencies verified delivered: M0-S5 (GH-174 state layer, dod PASS 2026-10-30, doc/spec/features/feature-state-layer.md) and M1-S5 (GH-229 owner-gate SLA, PR #248 merged 2026-11-06 into main-tools, doc/spec/features/feature-owner-gate-sla.md)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Doc risk: no dedicated blocker/question-channel feature spec exists in doc/spec/features/ (blocker mentions are incidental in 7 specs). Phase 7 must author feature-typed-blockers.md first-spec per always-resolve policy."
+    type: "risk"
+    date: "2026-11-06"
+  - text: "clarify_scope complete: design baseline coherent (contracts.md §blockers L209-231, commands/blockers.md man page, interactions.md Session C, SC-M1-13 + SC-M1-24, backlog M1-S16 L717-746). Ticket pinned decisions are binding and complete — no human questions required, proceeding to artifact generation. Integration points: status digest and brief render blockers as named placeholders until M1-S16 (backlog.md L497/L569) — this change replaces them; error-table gains the blockers.* family rows; cli-command-registry needs the blockers row."
+    type: "info"
+    date: "2026-11-06"
+  - text: "OQ-1 (credential-detection boundary) resolved via TDR-0009 (doc/decisions/TDR-0009-blockers-credential-guard-pattern-deferral.md, status Proposed): guard stays two-layer (registered-secret match everywhere + name-shape on credential-missing questions), no pattern layer; unregistered-value residual documented with revisit triggers M1-S20/M1-S22/shared-pattern-seam/incident. Spec reopened for correction fold-in: OQ-1 closure, links.decisions += TDR-0009, AC-F3-3 wording tightened to registered-value match, RSK-2 residual reference."
+    type: "decision"
+    date: "2026-11-06"
