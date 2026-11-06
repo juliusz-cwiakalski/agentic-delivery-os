@@ -8,7 +8,7 @@ area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, ADR-0010]
-  related_changes: [GH-200, GH-229, GH-224]
+  related_changes: [GH-200, GH-229, GH-224, GH-231]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -77,7 +77,8 @@ flowchart TB
     Shell --> Checkout
   end
   IO --> APIs["External provider APIs / local OpenCode CLI"]
-  Future["Planned MCP server and typed OpenCode surface"] -.-> Core
+  MCP["Local MCP stdio server: status, verify-artifact, gate-report"] --> Core
+  Future["Typed OpenCode surface"] -.-> Core
 ```
 
 Boxes inside the workstation describe runtime responsibilities, not independent
@@ -103,11 +104,13 @@ No typed daemon or background scheduler is established by `packages/`.
 | `adapters/src/session/` | OpenCode CLI-backed metadata reads, dry-run-first prune and guarded checkpoint through separate read/admin ports. |
 | `adapters/src/io/` | Internal metadata codec, content policy, privacy rules and transport types; not a public package export. |
 | `adapters/src/azure/`, `ci/`, `registry/`, `host/` | Type-only placeholders; provider clients implement some CI reads without making `./ci` runnable. |
-| `mcp/src/index.ts`, `opencode/src/index.ts` | Type-only entry exports. Neither a runnable MCP server nor a typed native-tool plugin. |
+| `mcp/src/` | Closed three-tool catalog, pure toolset seam and payload adapter, the in-package stdio JSON-RPC 2.0 protocol, the lifecycle exit owner, and the Node-hosted `./serve` composition root. The three read-only tools mirror the status, verify-change, and verify-gates engines. |
+| `opencode/src/index.ts` | Type-only entry exports; no typed native-tool plugin. |
 | `testkit/src/` | Dev-only envelope assertions and capability-aware conformance; real client factories over mocked transport, scheduled live read-only tier. |
 
 Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packages/cli/src/edge.ts),
 [adapter exports](../../packages/adapters/package.json), [MCP entry](../../packages/mcp/src/index.ts),
+[MCP serve entry](../../packages/mcp/src/serve.ts),
 [OpenCode entry](../../packages/opencode/src/index.ts), [testkit](../../packages/testkit/src/index.ts).
 
 ### Shipped versus planned behavior
@@ -137,6 +140,14 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   [handler](../../packages/cli/src/commands/verify.ts) and
   [gate contract](../spec/features/feature-verify-gates.md). CI workflow expectations
   and unknown/missing evidence remain explicit; a green observation is not authority.
+- The MCP surface is one local Node-hosted stdio JSON-RPC 2.0 process owned by
+  `packages/mcp`. It serves exactly three read-only, branding-projected tools —
+  `status`, `verify-artifact`, and `gate-report` — and returns the same core data
+  shapes and error-table field set as the CLI, with no envelope or exit-code field
+  in a tool payload. Server lifecycle exits are `0` (clean stop), `1` (configuration
+  error), and `2` (transport fault); tool outcomes never select an exit. The
+  package declares no `bin` and no installer registration. See the
+  [MCP surface](../spec/features/feature-mcp-surface.md).
 - [Closeout](../spec/features/feature-closeout.md) is integrated: seven-step
   transaction, plan by default, writes only with `--apply`, ref validation before
   reads. `createCloseoutComposition` in CLI edge bridges raw provider clients,
@@ -161,8 +172,8 @@ deep `src`/`dist` imports. [Manifests](../../packages/cli/package.json),
 |---|---|
 | core | No other production workspace package. Internal tiers follow the rules below. |
 | adapters | Core `./contracts` only; not core root, `./state`, `./branding` or `./provider`. |
-| CLI | Core `.`, `./contracts`, `./state`, `./branding`, `./provider`; declared adapter subpaths. |
-| MCP, OpenCode | Core `.`, `./contracts`, `./state`, `./branding`; declared adapter subpaths. Their manifests do not declare core `./provider`. |
+| CLI, MCP | Core `.`, `./contracts`, `./state`, `./branding`, `./provider`; declared adapter subpaths. |
+| OpenCode | Core `.`, `./contracts`, `./state`, `./branding`; declared adapter subpaths. |
 | testkit | Core `.` and `./contracts`, declared adapter subpaths, as development dependencies; no surfaces. |
 | production source | Never testkit. CLI, MCP and OpenCode never import each other. |
 
@@ -281,7 +292,7 @@ ratification. This overview creates no decisions and does not infer acceptance.
 |---|---|
 | Exports, import permissions, handler grammar | High: inspected source/manifests and boundary checks. Allowed import is not proof of a runtime implementation. |
 | Local state mechanics | High for code reconstruction; medium for operational durability/performance. Real Windows ACL evidence remains outstanding; portability is not a macOS/Windows test matrix. |
-| Production composition and cross-surface parity | High confidence in identified absences; low confidence in end-to-end readiness. Shared root, binary mounting, MCP and typed plugin execution remain unproven. |
+| Production composition and cross-surface parity | High confidence in identified absences; low confidence in end-to-end readiness. Shared root and binary mounting remain unproven; the MCP server executes under Node in the portability smoke, while typed host-plugin execution remains unproven. |
 | Provider/live mutation and milestone outcomes | High for inspected supported GitHub/Jira write mechanics and mock conformance; low for live outcomes. Live conformance remains read-only, not live-write parity or pilot evidence. |
 
 **Pre-mortem, hypothetical:** growing history makes every verified read and

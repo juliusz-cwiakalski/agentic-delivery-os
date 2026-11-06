@@ -1,0 +1,277 @@
+{
+  "changeRef": "GH-178",
+  "gates": [
+    {
+      "citation": {
+        "counts": [
+          {
+            "name": "required",
+            "value": 11
+          },
+          {
+            "name": "completed",
+            "value": 11
+          },
+          {
+            "name": "missing",
+            "value": 0
+          },
+          {
+            "name": "registryRecords",
+            "value": 12
+          },
+          {
+            "name": "registryTransitions",
+            "value": 0
+          },
+          {
+            "name": "overlaid",
+            "value": 0
+          }
+        ],
+        "identity": {
+          "changeRef": "GH-178"
+        },
+        "names": [
+          {
+            "kind": "missing-phases",
+            "omitted": 0,
+            "values": []
+          }
+        ],
+        "reasons": [
+          "lifecycle-complete"
+        ],
+        "sources": [
+          {
+            "name": "pm-notes",
+            "outcome": "read"
+          },
+          {
+            "name": "delivery-registry",
+            "outcome": "read"
+          }
+        ]
+      },
+      "id": "lifecycle-finalization",
+      "reason": "lifecycle-complete",
+      "verdict": "pass"
+    },
+    {
+      "citation": {
+        "counts": [
+          {
+            "name": "expected",
+            "value": 23
+          },
+          {
+            "name": "runs",
+            "value": 23
+          },
+          {
+            "name": "succeeded",
+            "value": 23
+          },
+          {
+            "name": "failed",
+            "value": 0
+          },
+          {
+            "name": "pending",
+            "value": 0
+          },
+          {
+            "name": "skipped",
+            "value": 0
+          },
+          {
+            "name": "canceled",
+            "value": 0
+          },
+          {
+            "name": "missing",
+            "value": 0
+          }
+        ],
+        "identity": {
+          "changeRef": "GH-178",
+          "deliveryRequest": "178",
+          "headSha": "1111111111111111111111111111111111111111"
+        },
+        "names": [
+          {
+            "kind": "missing-jobs",
+            "omitted": 0,
+            "values": []
+          },
+          {
+            "kind": "failed-jobs",
+            "omitted": 0,
+            "values": []
+          },
+          {
+            "kind": "pending-jobs",
+            "omitted": 0,
+            "values": []
+          }
+        ],
+        "reasons": [
+          "ci-green"
+        ],
+        "sources": [
+          {
+            "name": "repository-ci-workflow",
+            "outcome": "read"
+          },
+          {
+            "name": "github-delivery-request-detail",
+            "outcome": "read"
+          },
+          {
+            "name": "github-check-runs",
+            "outcome": "read"
+          }
+        ]
+      },
+      "id": "ci-green",
+      "reason": "ci-green",
+      "verdict": "pass"
+    },
+    {
+      "citation": {
+        "counts": [
+          {
+            "name": "compared",
+            "value": 1
+          },
+          {
+            "name": "matched",
+            "value": 1
+          }
+        ],
+        "identity": {
+          "baseRef": "main-tools",
+          "branch": "feat/GH-178/verify-gates-v1",
+          "changeRef": "GH-178",
+          "deliveryRequest": "178",
+          "headSha": "1111111111111111111111111111111111111111",
+          "localSha": "1111111111111111111111111111111111111111"
+        },
+        "names": [],
+        "reasons": [
+          "parity-matched"
+        ],
+        "sources": [
+          {
+            "name": "repository-head",
+            "outcome": "read"
+          },
+          {
+            "name": "github-delivery-request-list",
+            "outcome": "read"
+          },
+          {
+            "name": "github-delivery-request-detail",
+            "outcome": "read"
+          }
+        ]
+      },
+      "id": "push-parity",
+      "reason": "parity-matched",
+      "verdict": "pass"
+    },
+    {
+      "citation": {
+        "counts": [
+          {
+            "name": "labels",
+            "value": 3
+          },
+          {
+            "name": "ownerLabels",
+            "value": 0
+          }
+        ],
+        "identity": {
+          "changeRef": "GH-178",
+          "workItem": "GH-178"
+        },
+        "names": [
+          {
+            "kind": "owner-labels",
+            "omitted": 0,
+            "values": []
+          }
+        ],
+        "reasons": [
+          "owner-gate-absent"
+        ],
+        "sources": [
+          {
+            "name": "github-work-item",
+            "outcome": "read"
+          }
+        ]
+      },
+      "id": "owner-gate",
+      "reason": "owner-gate-absent",
+      "verdict": "pass"
+    },
+    {
+      "citation": {
+        "counts": [
+          {
+            "name": "commits",
+            "value": 3
+          },
+          {
+            "name": "changedFiles",
+            "value": 7
+          }
+        ],
+        "identity": {
+          "baseRef": "main-tools",
+          "branch": "feat/GH-178/verify-gates-v1",
+          "changeRef": "GH-178",
+          "deliveryRequest": "178",
+          "headSha": "1111111111111111111111111111111111111111"
+        },
+        "names": [
+          {
+            "kind": "squash-signals",
+            "omitted": 0,
+            "values": [
+              "draft=false",
+              "mergeable=mergeable"
+            ]
+          }
+        ],
+        "reasons": [
+          "squash-ready"
+        ],
+        "sources": [
+          {
+            "name": "github-delivery-request-list",
+            "outcome": "read"
+          },
+          {
+            "name": "github-delivery-request-detail",
+            "outcome": "read"
+          }
+        ]
+      },
+      "id": "squash-preflight",
+      "reason": "squash-ready",
+      "verdict": "pass"
+    }
+  ],
+  "overall": "pass",
+  "schemaVersion": "delivery.verify-gates.v1",
+  "summary": {
+    "failed": 0,
+    "gates": 5,
+    "passed": 5,
+    "unknown": 0
+  },
+  "target": "gates"
+}

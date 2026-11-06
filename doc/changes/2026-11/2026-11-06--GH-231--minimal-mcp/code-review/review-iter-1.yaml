@@ -1,0 +1,220 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-231
+branch: feat/GH-231/minimal-mcp
+status: FAIL
+summary: >-
+  The minimal MCP surface is delivered with unusually strong verification: the closed three-tool
+  catalog, mirror-parity payload contract, in-package stdio protocol, {0,1,2} lifecycle, Node smoke,
+  injection inertness, and read-only guarantee are all implemented, and every declared suite plus the
+  invariant checks (exit-literals 167 files, secret-read 179 files/5 entries, forbidden-literals 0
+  violations) was re-run green during this review. All five PM attention points (a)-(e) were verified
+  sound rather than merely claimed. Two major findings block: (1) a thrown error inside a
+  verify-artifact or gate-report runtime read escapes uncontained - empirically proven - rejects the
+  exported callTool contract, crashes the serve process with an unhandled rejection (exit 1 colliding
+  with the configuration-error meaning), and diverges from the CLI's runCli containment, violating
+  G-5/AC-F5-3's continued-serving guarantee on that path; (2) serve.ts hardwires the status parks
+  section to state-unreadable/state.store.unknown although it composes a working store that
+  verify-artifact and gate-report read successfully in the same process, an untruthful digest section
+  (F-2), a plan-3.4 same-read-paths deviation, and unrecorded UQ-7 drift (readProviderParkViews is
+  exported from core/provider, which mcp's declared workspaceImports exclude). Remaining findings are
+  minor or advisory. A remediation phase (7) has been appended to the plan.
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 3
+  low: 2
+  info: 3
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/mcp/src/commands/verify-artifact.ts:64
+    message: >-
+      A thrown error from a runtime read (readPmNotes/readRegistry at verify-artifact.ts:64,74 and
+      gate-report.ts:195-198) is not contained: runVerifyArtifactTool and runGateReportTool have no
+      try/catch, so callTool rejects instead of returning a classified failure. Verified empirically
+      (probe: readPmNotes throwing rejects with the raw error). In the serve process the rejection
+      propagates through runProtocol to the exported serve promise and crashes the server via
+      unhandled rejection with exit 1 - colliding with the configuration-error lifecycle meaning and
+      violating G-5/AC-F5-3 ("a failed tool call never terminates the server"). This is asymmetric
+      within the surface (runStatusTool contains at status.ts:95-99 via failureFromValue) and against
+      the CLI, whose runCli contains every thrown value (packages/cli/src/index.ts:339-351,
+      failureOutcome(classifyThrown(thrown))). The exported createToolset seam is a public contract
+      whose callTool is declared Promise<McpToolResult>.
+    suggestion: >-
+      Wrap the toolset dispatch (toolset.ts dispatch, single site) or each of the two handlers in
+      try/catch returning failureFromValue(thrown), mirroring runStatusTool. Add throwing-runtime
+      parity cases for verify-artifact and gate-report (mirror of the status-containment case)
+      asserting deep equality with the CLI fallback.internal error, and a lifecycle row proving the
+      server keeps serving after a thrown read. Adapters are largely total today, so reachability is
+      low, but the containment layer is the runCli analogue the surface is missing.
+    suppressed: false
+  - id: F-2
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/mcp/src/serve.ts:109
+    message: >-
+      The serve composition hardwires readProviderParks to {ok:false, reason:"state-unreadable",
+      failureCode:"state.store.unknown"} even though it composes a working state store (serve.ts:234)
+      that verify-artifact and gate-report read successfully in the same session. The CLI composes
+      real parks from the store (packages/cli/src/edge.ts:1370-1376 via readProviderParkViews). The
+      digest therefore reports a falsely degraded parks section - contradicting the spec's truthful
+      section principle (F-2: "a degraded or unavailable section is truthful digest content") and
+      spec 8.4 ("same bounded-read ... rules as the CLI"), deviating from plan task 3.4 ("same read
+      paths ... exactly as the cli edge composes them"). Parks is local state, not a
+      credential-backed provider read, so the GAP-T1 hermetic-smoke justification does not cover it.
+      The drift is also unrecorded (UQ-7 requires a recorded reason), and the feature doc's
+      composition inventory omits parks from both the wired and the unavailable lists. Root cause:
+      readProviderParkViews is exported from @delivery-os/core/provider, which mcp's declared
+      workspaceImports ([., ./contracts, ./state, ./branding]) exclude.
+    suggestion: >-
+      Preferred: add "./provider" to packages/mcp/package.json workspaceImports (with any pin-test
+      registration) and compose readProviderParks from the already-built store exactly as the CLI
+      edge does. Alternative if boundary churn is rejected: keep local-only composition but return a
+      truthful not-configured reason instead of state.store.unknown, and record the UQ-7 drift reason
+      in the feature spec page and the execution log. Either way the feature doc's composition
+      inventory must list parks (and provider config) explicitly.
+    suppressed: false
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/mcp/src/output/protocol.ts:117
+    message: >-
+      A valid JSON frame that is not a JSON-RPC 2.0 object - including a JSON-RPC batch array - is
+      classified as a transport fault and exits the process with code 2 (verified empirically: batch
+      frame after handshake -> exit 2, "malformed JSON-RPC frame" on stderr). GAP-T3 pins only
+      malformed JSON as the fault trigger; extending the fault class to valid-JSON frame-shape
+      violations makes a recoverable client mistake fatal while an unknown method keeps serving,
+      which is asymmetric, and a host SDK that emits one batch frame kills the session with a
+      misleading diagnosis.
+    suggestion: >-
+      For frames that parse as JSON but are not jsonrpc-2.0 objects, answer -32600 Invalid Request
+      (id null) and keep serving; reserve the transport-fault exit 2 for unparseable bytes. Add a
+      protocol-suite row pinning the chosen behavior so it is deliberate.
+    suppressed: false
+  - id: F-4
+    severity: medium
+    confidence: medium
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-231--minimal-mcp/chg-GH-231-plan.yaml:160
+    message: >-
+      Phase 6's commit (bf1a885a) touched 12 files against a 3-file declared scope: seven
+      secret-read-allowlist length pins (board-privacy, live-entrypoint, brief/doctor/queue-ready/
+      session-admin/status-imports tests), biome.json's fixture formatter exemption, the state-scope
+      consumer registration, and the depcruise runtime-allowlist pin in verify-imports. All nine
+      changes were verified correct and each pin still enforces exactly what it enforced (length
+      tripwires at 5, exact-equality depcruise pin, positive clean-case for the serve allowance), but
+      eight of them are the mechanical ripple of phase 3's invariant change that task 3.8's text
+      ("every allowlist length pin becomes toHaveLength(5)") already mandated - the phase-3 file
+      scope simply omitted the pin files, so the reconciliation surfaced only at the phase-6
+      aggregate gate.
+    suggestion: >-
+      Accept the phase-6 remediation as done (changes verified sound). Process fix for future plans:
+      when a phase changes a shared invariant registry, include every file that pins that registry in
+      the same phase's scope list, so the reconciliation lands with the change, not at the aggregate
+      gate.
+    suppressed: false
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: documentation
+    location: doc/spec/features/feature-mcp-surface.md:89
+    message: >-
+      The feature page's serve-composition inventory is incomplete: provider config and parks appear
+      in neither the wired-local-evidence list nor the injected-unavailable list, so the page does
+      not describe the shipped composition for those two sections (and, per F-2, parks is actually
+      misreported). Additionally the test plan's section 7 "Implementation status" column still reads
+      "To Implement" for every TC while section 10 records all TCs executed and PASS.
+    suggestion: >-
+      Complete the composition inventory (provider config, parks - consistent with the F-2 fix), and
+      update the section 7 status column (or add a one-line note that section 10 supersedes it after
+      delivery).
+    suppressed: false
+  - id: F-6
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/mcp/src/output/protocol.ts:66
+    message: >-
+      toolResult resolves a served name to its canonical id positionally - findIndex over
+      listTools() then CANONICAL_TOOL_IDS[index] - creating an implicit ordering coupling between
+      describeTools' map order and the catalog array. Correct today (describeTools maps over
+      CANONICAL_TOOL_IDS), but a future reordering (for example sorting descriptors by name) would
+      silently dispatch the wrong tool while every other check stays green.
+    suggestion: >-
+      Resolve through catalog.ts's toolIdByName(brand, name) (thread the brand or the resolved id
+      through the Toolset, or carry the canonical id on the descriptor) so the mapping is explicit
+      rather than positional.
+    suppressed: false
+  - id: F-7
+    severity: low
+    confidence: high
+    category: documentation
+    location: packages/mcp/src/serve.ts:44
+    message: >-
+      DEFAULT_WORKING_NAME "delivery-os" (serve.ts:44) and WORKING_NAME_OVERRIDE
+      "DELIVERY_OS_WORKING_NAME" (serve.ts:47) duplicate constants that also live in the CLI edge
+      (NEUTRAL_OVERRIDE_NAME, edge.ts:219) and parallel branding's neutral scope constants. The
+      forbidden-literal scan passes and is the authority ("delivery-os" is neutral workspace scope,
+      not a forbidden seed), so this is not a firewall violation - but a permanent rename now needs
+      to touch multiple hardcoded sites that no drill step enumerates (RD-8/RD-10 do not cover the
+      serve default), and the feature page does not state the fallback behavior when the override is
+      absent.
+    suggestion: >-
+      Consider exporting the neutral override name (and a default working-name constant) from the
+      branding module so cli and mcp share one site, or add a rename-drill step enumerating the
+      serve-root defaults; document the default in the feature page's composition section either way.
+    suppressed: false
+  - id: F-8
+    severity: info
+    confidence: high
+    category: documentation
+    location: packages/mcp/src/serve.ts:105
+    message: >-
+      The serve composition injects all credential-backed provider reads (tracker, delivery
+      requests, pipeline runs, PRs, check runs, work item) as unavailable. This is recorded and
+      accepted (GAP-T1, feature page, smoke pinned outcomes); noting it so the provider-backed
+      parity gap is a conscious M1 posture rather than an oversight.
+    suggestion: >-
+      No action this change; a later story should compose the credential-aware provider reads for
+      full serve-level CLI parity.
+    suppressed: false
+  - id: F-9
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/mcp/package.json:22
+    message: >-
+      The declared #commands/* and #output/* import aliases (mapping to ./src/*.ts) are now dead
+      configuration - nothing imports through them and the delivered modules use relative .js
+      specifiers (the Node-dist-valid form, matching the CLI convention). The deviation from plan
+      task 1.7's alias wording is sound: the aliases as declared cannot resolve under Node dist.
+      Identical dead residue pre-exists in packages/cli/package.json, so this is scaffold cleanup,
+      not a regression introduced here.
+    suggestion: >-
+      Optionally remove the dead imports blocks for mcp and cli in a later housekeeping change, or
+      repoint them at dist; out of scope for GH-231.
+    suppressed: false
+  - id: F-10
+    severity: info
+    confidence: medium
+    category: documentation
+    location: packages/mcp/src/output/protocol.ts:98
+    message: >-
+      Two protocol-metadata edges are unpinned by tests and mildly unusual under JSON-RPC 2.0: an
+      unknown tool uses -32602 (JSON-RPC reserves it for invalid params), and an initialize frame
+      sent as a notification still receives an id-null response. Neither affects the payload
+      contract (OQ-T6 keeps isError outside the JSON), and no AC covers them.
+    suggestion: >-
+      If touched again, use -32601 for unknown tools and skip responses to notifications; pin the
+      choices in the protocol suite.
+    suppressed: false
+reviewed_at: 2026-11-06T00:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

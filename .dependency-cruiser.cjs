@@ -238,6 +238,10 @@ module.exports = {
           // git repositories; it is excluded from every production graph.
           // Exact path only.
           "^packages/testkit/src/commit/",
+          // GH-231: the mcp serve composition root is the one Node stdio edge
+          // and the single startup configuration-environment read. Exact path
+          // only; every other mcp module stays runtime-neutral.
+          "^packages/mcp/src/serve\\.ts$",
           "^packages/cli/",
           "^packages/opencode/",
         ],

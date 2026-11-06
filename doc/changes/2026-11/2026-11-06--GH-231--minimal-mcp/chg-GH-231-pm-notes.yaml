@@ -1,0 +1,75 @@
+change_id: GH-231
+title: "M1-S7: Minimal MCP"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  specification: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  test_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  delivery_planning: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  dor_check: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  delivery: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  system_spec_update: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  review_fix: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  quality_gates: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  dod_check: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z" }
+  pr_creation: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T00:00:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/256" }
+decisions: []
+open_questions:
+  - text: "MCP artifact/entry form (Bun-compiled binary vs Node-hosted process vs CLI subcommand `mcp serve`): ADR-0003 marks both runtime forms acceptable (TO-CONFIRM row resolved to 'both acceptable'); concrete form is an implementation decision for the spec within pinned constraints — not a human blocker."
+    date: "2026-11-06"
+blockers: []
+notes:
+  - text: "Specification phase complete: chg-GH-231-spec.md authored (444 lines, 25 sections, 13 ACs). Key spec decisions: DEC-1 artifact form = Node-hosted stdio server entry owned by packages/mcp (CLI subcommand rejected: boundary matrix forbids cli<->mcp imports; second Bun binary rejected: contradicts thin-surface/private-until-freeze); DEC-2 C-7 install registration NOT triggered this change (defers to publication change). Tools: status/verify-artifact/gate-report via branding mcpToolPrefix + canonical primitive IDs. Mirror parity fixtures shared CLI<->MCP; no exit-code/envelope keys in tool payloads; server exits {0,1,2}."
+    type: "decision"
+    date: "2026-11-06"
+  - text: "Test planning phase complete: chg-GH-231-test-plan.md authored (1098 lines, 21 TCs tracing to all 13 ACs + 11 NFRs). Notable oracles: shared CLI<->MCP parity harness (CLI in-process as live oracle, no process spawning), payload-leakage oracle (exact error field set; no exitCode/runId/timing at any depth; schemaVersion nuance pinned: delivery.status.v1/delivery.verify-gates.v1 allowed, delivery.result.v1 forbidden), lifecycle exit matrix {0,1,2} with stderr diagnostics only, Node portability smoke with network guard, injection/read-only oracle. TC-MCP-021 pins phase-7 docs: new feature-mcp-surface.md + feature-result-contract.md update — matches pm-notes doc-impact risk."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Delivery planning phase complete: chg-GH-231-plan.yaml authored in machine-readable delivery.plan.v1 format (NOT legacy .md — test plan front matter links the .yaml path; YAML wins per repo convention, a .md plan would fail dor_check as legacy-markdown). 6 delivery phases, each green + single-commit sized; all 21 TC-MCP-* and 13 ACs covered by tasks; OQ-1 resolved: in-package minimal stdio JSON-RPC 2.0 (zero new deps, no license-registry/lockfile churn; SDK adoption later is an ordinary C-2-gated change); OQ-2: serialize tool calls single-flight in arrival order. PM-verified facts pinned: dependency-cruiser excludes packages/mcp from runtime-apis-confinement (phase 3 adds reason-bearing serve-entry allowance), exit-code-literals check needs DEC-6 reconciliation (lifecycle module as sole {0,1,2} site outside CLI), inventory.json + content-inventory allowances are hand-maintained (registration tasks included), ci.yml ts-test lacks a Node step (phase 4 adds it). TC-MCP-021 (docs) deliberately deferred to phase-7 doc-syncer per test-plan GAP-T5."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Commit hygiene retro: first checkpoint commit (spec) failed repo commitlint body-max-line-length 100 in CI-enforced range lint (origin/main-tools..HEAD); fixed by local message-only reword (d03b7120 -> 8c1f16f5, tree-identical). Lesson: committer instructions for this repo must pin body/footer lines <=100 chars up front. Test-plan checkpoint authored compliant on first try."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "DoR iteration 2 verdict READY (10/10 PASS, verdict artifact readiness-review/readiness-iter-2.md). All iteration-1 findings verified resolved against sources; task 3.5<->3.8 coherence explicitly verified (exit-literals learns lifecycle.ts as sole exit site; depcruise+secret-read allowances serve.ts-only; together they force the correct implementation shape). Two advisory findings folded into plan before delivery: phase-3 testGate now also runs tests/checks/secret-read-boundary.test.ts; task 3.6 wording clarified (prohibition targets env-record reads/node:process imports, not process.exit/stdin/stdout member accesses)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "DoR iteration 1 verdict NOT_READY (7 PASS / 3 FAIL: plan_coverage, plan_code_area_coverage, cross_artifact_consistency). Verdict artifact: readiness-review/readiness-iter-1.md. Reopened phases: specification (NFR-4/AC-F1-3 absolute wording makes AC-F1-3 unsatisfiable given DEC-1; needs serve-composition-root carve-out matching plan 3.4/3.5 and test-plan 4.6/8.2), delivery_planning (MAJOR: phase-3 scope must add scripts/checks/secret-read-boundary.ts + tests/checks/secret-read-boundary.test.ts with a task extending SECRET_READ_ALLOWLIST with reason-bearing configuration-environment-source entry for the serve root and updating the toHaveLength(4) pin — else phase-3 test gate cannot pass), test_planning (nit: TC-MCP-013 cites ambient-globals.ts, core-only scan, vacuous for mcp — re-cite depcruise rule + mcp-imports AST floors). Remediation: mechanical, no human input; re-run gate as iteration 2 (max 3)."
+    type: "risk"
+    date: "2026-11-06"
+  - text: "Delivery phase complete (COMPLETED_ALL): 6 phase commits af4f53ea (toolset), fe9ce0cd (parity oracles), f891cc46 (protocol/serve/lifecycle), b9c98b4a (lifecycle/Node smoke/CI wiring), a3044c2d (injection/readonly/mutants), bf1a885a (aggregate gates/changeset). All testGates green per phase; final pnpm check exit 0 (3750 pass, 4 skip, 0 fail); commitlint green after every commit; scans: exit-literals 167 files, secret-read 179 files/5 allowlist entries, mcp import scan 12 files, forbidden-literals 0 violations; lifecycle exits {0,1,2} observed; parity cases status 6 / verify-artifact 10 / gate-report 5 (above floors). 7 justified deviations reported by coder - review attention points: (a) relative .js import specifiers instead of #commands/#output aliases (Node dist resolution), (b) phase-6 remediation touched files outside declared list (biome.json formatter exemption for generated fixtures; pre-existing pin updates in import/board/live suites, state-scope, verify-imports tests), (c) serve.ts defaults working name to delivery-os (forbidden-literal scan 0 violations - scan is authority). plan diff not runnable (no production bin); scope reconciled via git diff vs declared scopes. Phase-7 obligations recorded in test-plan section 10: author feature-mcp-surface.md (ados_distribution: internal), surface-mapping note in feature-result-contract.md, rename-drill RD-8 verification, doc-distribution guard re-check."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Review iteration 1 verdict FAIL (0c/2h/3m/2l/3i; artifacts code-review/review-iter-1.yaml + review/review-iter-1.md). Reviewer re-ran suites (158 tests green) and probed serve empirically. All 5 PM attention points verified SOUND (relative .js imports, phase-6 out-of-scope pin updates, delivery-os default name, generatedAt normalization, forbidden-literals registration). Two BLOCKING highs: (1) containment gap - thrown runtime error in verify-artifact/gate-report rejects callTool and crashes server exit 1 (verify-artifact.ts:64 no try/catch; contrast status.ts:95-99, cli/index.ts:339-351) violating G-5/AC-F5-3 on that path; (2) falsely degraded parks section - serve.ts:109-113 hardwires state.store.unknown while cli/edge.ts:1370-1376 reads the same store successfully (readProviderParkViews in core/provider outside mcp declared workspaceImports) - untruthful digest, unrecorded UQ-7 drift. Remediation phase 7 appended to plan (7.1 containment + throwing-runtime parity cases, 7.2 parks composition-or-recorded-drift, 7.3 doc completion, 7.4 optional minors; plan re-validated valid/ready). Plan gap noted: SCOPE_DEVIATION phase 6 touched 12 vs 3 declared (all ripple changes verified correct; root cause phase-3 scope omitted invariant pin files). Minors/lows: no throwing-runtime parity cases for verify/gates (F-1), batch-frame lifecycle unpinned (F-3), batch-frame exit 2 on valid JSON-RPC array probe."
+    type: "risk"
+    date: "2026-11-06"
+  - text: "Retro: phase-3 scope omitted the invariant pin files that phase-3's own boundary reconciliation would ripple into (exit-literals pins in import/board/live suites, state-scope, verify-imports), forcing phase 6 to touch 12 files vs 3 declared. Lesson for plan authors: when a task reconciles a shared invariant check, add the check's test/pin files to that phase's scope up front."
+    type: "retro"
+    date: "2026-11-06"
+  - text: "Plan phase ledger (plan phase id -> commit -> test result): 1 -> af4f53ea -> typecheck + structure gate 85 PASS + error-table-sync PASS; 2 -> fe9ce0cd -> 103 parity/error/input tests PASS + typecheck; 3 -> f891cc46 -> check:boundaries PASS (203 modules) + boundary scans PASS + typecheck; 4 -> b9c98b4a -> lifecycle/Node smoke/CI parity 15 PASS + ci-checks PASS; 5 -> a3044c2d -> injection/readonly/mutants 23 PASS; 6 -> bf1a885a -> pnpm check exit 0 (3750/4/0); 7 (remediation) -> 1f1237c5 -> typecheck + parity suites 98 PASS + lifecycle/smoke/input/status 31 PASS + pnpm check exit 0 (3764/4/0). Post-remediation doc re-sync commit 7621a2bc."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Review iteration 2 verdict PASS (0c/0h/0m/1l/3i; artifacts code-review/review-iter-2.yaml + review/review-iter-2.md). Blocking highs F-1 (containment) and F-2 (truthful parks) resolved at preferred option and independently verified by reviewer's own probe runs (163 targeted tests, pnpm check 3764/4/0, 14/14 serve probes, zero state writes confirmed). F-3/F-5/F-6 also verified resolved. Remaining findings bookkeeping-level (1 low + 3 advisory: F-7/LOW-2 constants sharing, F-8 credential-aware provider reads, F-9 dead #aliases, F-10 protocol metadata edges) - documented, deferred to later stories. Review loop closed after 2 iterations (max 3)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "DoD check PASS: (1) pm-notes phases 1-9 recorded with completion timestamps; (2) plan ledger covers all 7 declared plan phases with commit hashes + test results; (3) all 13 spec ACs + 21 TCs implemented and independently verified (review iter-2 PASS); (4) current-truth docs complete, doc-syncer reports no residual gaps after both passes; (5) quality gates GREEN at abb10dd4^ (e5ac2386). Ready for PR creation against main-tools."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Tracker write note: github-mcp lacks write auth (update_issue failed 'Requires authentication'); gh CLI authenticated as juliusz-cwiakalski with repo scope — all tracker writes and PR creation go through gh CLI via @runner. Labels synced: review (stale, no PR) removed, planning added; final set change+planning."
+    type: "info"
+    date: "2026-11-06"
+  - text: "State detection: issue open (labels change+review), no PR in any state for feat/GH-231/minimal-mcp, worktree branch identical to main-tools tip 0ec6fd87 with 0 commits, clean tree. Fresh start, no resume sync needed."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Stale 'review' label on the issue with no PR in existence; removing it and setting 'planning' per workflow-state mapping while planning starts."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Scope verified consistent: mirrored engines shipped (status M0-S6, verify-change M0-S8, verify-gates M0-S9 in packages/core domain+contracts; CLI commands wired). packages/mcp is a types-only scaffold with commands/output tiers. Design baseline doc/planning/oss-tooling/milestones/m1/commands/mcp.md pins tools status/verify-artifact/gate-report, no batch, server exit codes 0 clean/1 config/2 transport; tool payloads carry CLI data shapes and error-table fields; process exit codes never propagate (ADR-0003 UQ-7, DEC-10 error-table-primary)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Binding constraints from ADR-0003 for this change: C-3 naming firewall (tool names must not hardcode product name), C-9 runtime neutrality (mcp surface must run under Node in the portability smoke; no bun:/node: in core domain), C-10 (MCP inputs/descriptions/content untrusted, prompt-injection fixture required; tools here are read-only so no mutation-authorization surface), C-7 (install registration only if shipped as a user-installable artifact this change)."
+    type: "info"
+    date: "2026-11-06"
+  - text: "Doc impacts for phase 7: no MCP spec exists — doc-syncer must first-spec doc/spec/features/feature-mcp-surface.md (always-resolve). Check whether feature-result-contract.md / envelope spec pages need a surface-mapping note (MCP tool results carry CLI data shapes; envelope rendering stays CLI-side). Any new doc under doc/ needs ados_distribution marker per pm-instructions."
+    type: "risk"
+    date: "2026-11-06"

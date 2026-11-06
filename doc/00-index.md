@@ -28,6 +28,7 @@ ados_distribution: redistributable
 | [Closeout Transaction](spec/features/feature-closeout.md) | The dry-run-by-default seven-step post-merge transaction, idempotency ledger, provider writes and gaps, review-thread resolution, and squash-safe local branch cleanup |
 | [Watchdog and Lane Contracts](spec/features/feature-watchdog-lane-contracts.md) | The check-only `preflight`/`teardown`/`liveness` family, restoration and memory-preservation semantics, and the contract-first liveness answer |
 | [Verify Gates](spec/features/feature-verify-gates.md) | The five-gate read-only M0 merge battery and its cited verdicts |
+| [MCP Surface](spec/features/feature-mcp-surface.md) | The minimal read-only MCP server: three branding-projected tools mirroring status, verify-change, and verify-gates, payload parity without envelope or exit-code leakage, and `0`/`1`/`2` lifecycle exits |
 | [Measurement Baseline](spec/features/feature-measurement-baseline.md) | The committed bash-era measurement baseline: schema, `MET-` metrics, status semantics, source traceability, window, and comparison protocol |
 | [Documentation Handbook](documentation-handbook.md) | How docs work — structure, conventions, workflow |
 

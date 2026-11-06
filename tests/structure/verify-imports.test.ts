@@ -620,6 +620,7 @@ const RUNTIME_ALLOWLIST = [
   "^packages/adapters/src/git/",
   "^packages/adapters/src/inference/",
   "^packages/testkit/src/commit/",
+  "^packages/mcp/src/serve\\.ts$",
   "^packages/cli/",
   "^packages/opencode/",
 ];

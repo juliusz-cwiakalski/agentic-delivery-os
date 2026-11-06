@@ -1,0 +1,46 @@
+[
+  {
+    "description": "Read the bounded delivery status digest: repository binding, tracker items, delivery requests, pipeline runs, provider state, and local parked work. Read-only.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "name": "example-product_status"
+  },
+  {
+    "description": "Read the change's pm-notes declaration and phase ledger and return the verify-change verdict or a classified failure. Read-only.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "description": "The tracker work-item reference of the change to inspect, for example GH-123.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "type": "object"
+    },
+    "name": "example-product_verify-artifact"
+  },
+  {
+    "description": "Read the five merge-gate verdicts for a change reference: lifecycle finalization, CI, push parity, owner gate, and squash preflight. Read-only.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "description": "The tracker work-item reference of the change to inspect, for example GH-123.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "type": "object"
+    },
+    "name": "example-product_gate-report"
+  }
+]

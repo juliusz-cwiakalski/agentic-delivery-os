@@ -2,12 +2,12 @@
 id: TOOLING-UBIQUITOUS-LANGUAGE
 status: Draft
 created: 2026-11-02
-last_updated: 2026-11-02
+last_updated: 2026-11-06
 owners: [engineering]
 area: domain
 document_classification: working-analysis
 links:
-  related_changes: [GH-200]
+  related_changes: [GH-200, GH-231]
 summary: "Thin tooling vocabulary relationship map and disambiguation draft for Gate 4."
 ---
 
@@ -49,7 +49,8 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
   compose primitives into policy; commands expose scoped invocations; CLI, MCP
   and host integrations are surfaces. A command name is not a primitive name.
   The catalogue owns exact names; current handlers, not planned registry rows,
-  establish executable grammar. Typed MCP/host packages remain placeholders.
+  establish executable grammar. The MCP package serves three read-only tools over
+  a local stdio server; the typed host package remains a placeholder.
 - **Harness / session:** the harness is the execution host; a session is one
   hosted execution. Plugin availability does not prove equivalent typed dispatch,
   spawn/resume or supervision across hosts. See the harness concept above.

@@ -8,7 +8,7 @@ area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, TDR-0003, TDR-0004, TDR-0006, TDR-0007]
-  related_changes: [GH-200, GH-222, GH-227]
+  related_changes: [GH-200, GH-222, GH-227, GH-231]
 summary: "Phase 3 evidence-based OSS tooling stack inventory, decision rationale, existing alternatives, compatibility limits, and validation risks."
 ---
 
@@ -65,17 +65,21 @@ Source manifests: [core](../../packages/core/package.json),
 [adapters](../../packages/adapters/package.json), [CLI](../../packages/cli/package.json).
 No MCP SDK or host-plugin peer is declared in the
 [MCP](../../packages/mcp/package.json) or [OpenCode](../../packages/opencode/package.json)
-manifests. Their entries export placeholder types only. Planned library names
-in ADRs are not installed dependencies or runnable surface evidence.
+manifests. The MCP package implements the pinned stdio JSON-RPC 2.0 subset
+in-package with zero external dependencies; the OpenCode entry exports
+placeholder types only. Planned library names in ADRs are not installed
+dependencies or runnable surface evidence.
 
 ## Workspace and runtime boundaries
 
 Six packages share version `0.0.0` and are all `private: true`. Core owns
 contracts, domain/config/provider rules, branding and state through separate
-exports. Adapters depend only on core contracts. CLI can consume the declared
-core/provider and adapter subpaths; MCP/OpenCode have narrower declared core
-imports and no implementation. Testkit consumes core/adapters only as dev
-dependencies and never enters production source or the publish set.
+exports. Adapters depend only on core contracts. CLI and MCP can consume the
+declared core root/provider set and adapter subpaths; OpenCode has narrower
+declared core imports. The MCP package ships a local stdio server
+implementation, and the OpenCode entry remains a declaration. Testkit consumes
+core/adapters only as dev dependencies and never enters production source or
+the publish set.
 
 Boundary enforcement combines actual dependencies, `exports`, manifest
 `workspaceImports`, dependency-cruiser, entrypoint and ambient-global checks,
@@ -84,7 +88,7 @@ plus negative fixtures. Runtime APIs are admitted only at specific edges:
 - Core state driver edge, not the whole state/domain/config tree.
 - File, repository, session, legacy and credential adapters, plus the dedicated git seam for branch, checkout, and commit operations.
 - Exact provider client subpaths GitHub/GitLab/Jira, the provider-quota transport, and the inference transport.
-- CLI and OpenCode integration tiers within the wider runtime/API rules.
+- CLI and OpenCode integration tiers, and the exact `packages/mcp/src/serve.ts` stdio edge, within the wider runtime/API rules.
 
 The provider-client exceptions are implemented rules; their refining
 [ADR-0005](../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md)

@@ -317,7 +317,7 @@ describe("TC-DOCTOR-022 doctor tier discipline (core halves)", () => {
   });
 
   test("the secret-read allowlist stays at four and names no doctor file", () => {
-    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(5);
     const paths = SECRET_READ_ALLOWLIST.map((entry) => entry.path);
     for (const doctorFile of [CONTRACT, DOMAIN]) {
       expect(paths.some((path) => path.includes(doctorFile.replace("packages/", "")))).toBe(false);

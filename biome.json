@@ -96,6 +96,12 @@
       "formatter": {
         "enabled": false
       }
+    },
+    {
+      "includes": ["tests/fixtures/mcp/**/*.json"],
+      "formatter": {
+        "enabled": false
+      }
     }
   ]
 }

@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-CLOSEOUT
 status: Current
 created: 2026-11-01
-last_updated: 2026-11-05
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
 summary: "The delivered closeout transaction: a dry-run-by-default `closeout <workItemRef>` command, the deterministic seven-step plan, SHA-256 operation identities and the append-only `closeout.operation` ledger over the real JSONL state driver, a production CLI composition over the real provider clients, git seam, and state store, GitHub and Jira writes with declared GitLab gaps, review-thread resolution, the owed-flip sweep, checkout restore, squash-safe local branch cleanup, the discriminated work-item read observation and the separate reverse-dependent no-surface vocabulary, provider-asserted label/relation availability signals, bounded output measured in UTF-8 bytes, and the four `closeout` error identities."
 links:
-  related_changes: ["GH-183", "GH-221"]
+  related_changes: ["GH-183", "GH-221", "GH-231"]
   related_decisions: ["TDR-0008", "ODR-0003", "ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
   contracts:
     - "packages/core/src/contracts/closeout.ts"
@@ -336,7 +336,7 @@ The plan and output are bounded contract data. The durable record is one append-
 
 - **Mutation is opt-in.** Dry-run is the default; `--apply` is the only mutation switch. Plan mode performs zero provider writes, git mutations, state appends, and fence acquisitions.
 - **Bounded write scope.** Writes target only the observed work item, its direct dependents, declared labels, the assignee clear, the merged request's named threads, and the matching local branch. There is no wildcard label rewrite, arbitrary comment write, or remote deletion.
-- **Credential discipline.** Every provider call resolves through the credential port. The secret-read boundary allowlist remains four entries; closeout adds none.
+- **Credential discipline.** Every provider call resolves through the credential port. The secret-read boundary allowlist gains no entry from closeout.
 - **Branch safety.** Deletion requires the full squash-safety predicate, merged-head equality re-checked at delete time, protected-ref checks with direct seam rejection, dirty-worktree and foreign-worktree checks, and a successful checkout restore when required. Unsafe states produce zero destructive action.
 - **Idempotency.** Deterministic identities and terminal-outcome reuse prevent duplicate writes; failed writes are safe to retry because every operation is idempotent by construction.
 - **Capability honesty.** Unsupported operations are declared gaps with valid reasons and can never be reported as success.

@@ -152,6 +152,7 @@
     "doc/spec/features/feature-commit-primitive.md",
     "doc/spec/features/feature-config-layer.md",
     "doc/spec/features/feature-doctor.md",
+    "doc/spec/features/feature-mcp-surface.md",
     "doc/spec/features/feature-measurement-baseline.md",
     "doc/spec/features/feature-owner-gate-sla.md",
     "doc/spec/features/feature-plan-schema.md",

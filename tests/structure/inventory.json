@@ -157,7 +157,20 @@
     "src/output/serialize.ts",
     "src/projection.ts"
   ],
-  "mcp": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "mcp": [
+    "src/commands/catalog.ts",
+    "src/commands/gate-report.ts",
+    "src/commands/index.ts",
+    "src/commands/status.ts",
+    "src/commands/toolset.ts",
+    "src/commands/verify-artifact.ts",
+    "src/index.ts",
+    "src/lifecycle.ts",
+    "src/output/index.ts",
+    "src/output/payload.ts",
+    "src/output/protocol.ts",
+    "src/serve.ts"
+  ],
   "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
   "testkit": [
     "src/commit/git-repo.ts",

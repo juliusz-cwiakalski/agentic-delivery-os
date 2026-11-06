@@ -103,6 +103,7 @@ export const STATE_CONSUMERS = [
   "packages/cli/src/commands/board.ts",
   "packages/cli/src/commands/phase.ts",
   "packages/cli/src/edge.ts",
+  "packages/mcp/src/serve.ts",
 ] as const;
 
 export const stateConsumerFiles = (root: string): string[] => {

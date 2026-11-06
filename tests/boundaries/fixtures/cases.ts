@@ -564,6 +564,21 @@ export const RULE_CASES: RuleCase[] = [
     "packages/core/src/state/probe.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
+  dep(
+    "runtime-node-fs-mcp-non-serve",
+    "TC-MCP-018",
+    "runtime-apis-confinement",
+    ["mcp"],
+    "packages/mcp/src/commands/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  clean(
+    "runtime-control-mcp-serve",
+    "TC-MCP-018",
+    ["mcp"],
+    "packages/mcp/src/serve.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
   clean(
     "runtime-control-state-driver",
     "TC-STATE-022",

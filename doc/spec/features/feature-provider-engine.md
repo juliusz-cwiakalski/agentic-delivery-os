@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with eight skip reasons, UTC peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider error identities, and the pure-core / provider-quota adapter boundaries."
 links:
-  related_changes: ["GH-182", "GH-175", "GH-176", "GH-224"]
+  related_changes: ["GH-182", "GH-175", "GH-176", "GH-224", "GH-231"]
   related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007"]
   contracts:
     - "packages/core/src/contracts/provider.ts"
@@ -256,7 +256,7 @@ Persistence occurs only in a mutating `resolve` with a state store. It acquires 
 ### Boundaries and runtime neutrality
 
 - The `provider` core subpath is part of the ambient neutral set: no runtime imports, ambient globals, clock, randomness, filesystem, network, or environment access. Policy receives facts through injected seams.
-- The `provider-quota` adapters subpath is the single admitted runtime-API edge for the quota request. It is an exact, reason-bearing entry in the runtime-API confinement rule; it is not a secret-read allowlist entry, and the secret-read allowlist remains at four entries.
+- The `provider-quota` adapters subpath is the single admitted runtime-API edge for the quota request. It is an exact, reason-bearing entry in the runtime-API confinement rule; it is not a secret-read allowlist entry, and the secret-read boundary admits no entry from this subpath.
 - The host/binary composition injects the production credential port and quota transport; the CLI composition edge accepts the injected provider composition and wires its ports into the engine. Tests inject fakes. No production module imports the credential-port or quota-transport factories yet, and the CLI edge does not construct them.
 - The state layer owns ledger framing, fences, verified reads, and atomic document replacement; the provider engine only supplies record payloads and the fold.
 - Model-profile selection, harness spawn, non-UTC timezones, background timers, spend reporting, and MCP/OpenCode provider surfaces are outside this feature.

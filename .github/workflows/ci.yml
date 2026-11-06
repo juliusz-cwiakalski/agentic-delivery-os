@@ -309,6 +309,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Fetch base branch for the topology check
         run: git fetch --no-tags origin main-tools
+      - name: Record the Node version used by the MCP smoke
+        run: node --version
       - run: pnpm test
 
   ts-boundaries:
