@@ -765,6 +765,61 @@ const deriveCheck = (facts: DoctorAreaFacts, inputs: DoctorCheckInputs): DoctorC
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isReadFacts = (value: unknown): boolean => {
+  if (!isObject(value) || typeof value.ok !== "boolean") return false;
+  if (value.ok) return typeof value.pageItemCount === "number";
+  return typeof value.reason === "string";
+};
+
+const isCredentialFacts = (value: unknown): boolean =>
+  isObject(value) && typeof value.ok === "boolean";
+
+const isAreaFactsShape = (facts: unknown, area: DoctorArea): boolean => {
+  if (!isObject(facts) || facts.area !== area) return false;
+  switch (area) {
+    case "repo": {
+      const checkout = facts.checkout;
+      return (
+        isObject(checkout) &&
+        typeof checkout.readable === "boolean" &&
+        typeof checkout.clean === "boolean" &&
+        typeof checkout.detached === "boolean" &&
+        isObject(checkout.binding) &&
+        typeof checkout.binding.state === "string"
+      );
+    }
+    case "tracker": {
+      const tracker = facts.tracker;
+      if (!isObject(tracker) || !isCredentialFacts(tracker.credential)) return false;
+      return tracker.read === undefined || isReadFacts(tracker.read);
+    }
+    case "provider": {
+      const provider = facts.provider;
+      if (!isObject(provider)) return false;
+      if (!isObject(provider.config) || typeof provider.config.ok !== "boolean") return false;
+      if (!Array.isArray(provider.credentials)) return false;
+      return isObject(provider.fold) && typeof provider.fold.ok === "boolean";
+    }
+    case "state": {
+      const state = facts.state;
+      if (!isObject(state) || typeof state.ok !== "boolean") return false;
+      if (state.ok) {
+        return typeof state.verifiedEmpty === "boolean" && typeof state.recordCount === "number";
+      }
+      return typeof state.reason === "string";
+    }
+    case "ci": {
+      const ci = facts.ci;
+      if (!isObject(ci) || !isCredentialFacts(ci.credential)) return false;
+      if (!isObject(ci.commit) || typeof ci.commit.resolved !== "boolean") return false;
+      return ci.read === undefined || isReadFacts(ci.read);
+    }
+  }
+};
+
 const isMalformedResult = (value: unknown, area: DoctorArea): boolean => {
   if (!isRecord(value)) return true;
   if (value.area !== area) return true;
@@ -775,9 +830,7 @@ const isMalformedResult = (value: unknown, area: DoctorArea): boolean => {
     );
   }
   if (value.contained !== false) return true;
-  const facts = value.facts;
-  if (!isRecord(facts)) return true;
-  return facts.area !== area;
+  return !isAreaFactsShape(value.facts, area);
 };
 
 /**

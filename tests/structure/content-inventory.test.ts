@@ -473,6 +473,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/commands/closeout.ts": ["createCloseoutCommandDefinition"],
   "cli/src/commands/db.ts": ["createDbCommandDefinition"],
   "cli/src/commands/board.ts": ["createBoardCommandDefinition"],
+  "cli/src/commands/doctor.ts": ["createDoctorCommandDefinition"],
   "cli/src/commands/index.ts": [
     "createBoardCommandDefinition",
     "createCloseoutCommandDefinition",
@@ -508,6 +509,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createCloseoutStateRuntime",
     "createDbCommandRuntime",
     "createCommitCommandRuntime",
+    "createDoctorCommandRuntime",
     "createPhaseCommitExtension",
     "createPhaseCommandRuntime",
     "createPlanCommandRuntime",

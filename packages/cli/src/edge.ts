@@ -106,6 +106,13 @@ import {
   type ConfigFailure,
   type CredentialPort,
   type DeliveryRequest,
+  type DoctorCheckoutFacts,
+  type DoctorCommitResolution,
+  type DoctorCredentialPresence,
+  type DoctorParkFoldRead,
+  type DoctorProviderCredentialPresence,
+  type DoctorStateStoresRead,
+  type DoctorWiringRead,
   type ExternalSystemInstance,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
@@ -113,7 +120,9 @@ import {
   PHASE_STATE_DOCUMENT_SUFFIX,
   type PhaseTransitionRecord,
   type PlanDiffPort,
+  type ProviderAnnouncementRecord,
   type ProviderClock,
+  type ProviderParkRecord,
   type ProviderSleep,
   type QuotaTransport,
   type Result,
@@ -135,6 +144,7 @@ import {
 import {
   createProviderEngine,
   parseAndValidateProviderConfiguration,
+  readProviderLedger,
   readProviderParkViews,
 } from "@delivery-os/core/provider";
 import {
@@ -171,6 +181,7 @@ import {
   createConfigCommandDefinition,
 } from "./commands/config.js";
 import { createDbCommandDefinition, type DbCommandRuntime } from "./commands/db.js";
+import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
 import {
   createLintCommandDefinition,
   type LintCommandRuntime,
@@ -1370,6 +1381,231 @@ export const createStatusCommandRuntime = (
   };
 };
 
+/** The doctor composition seams; the provider resolver is supplied by the edge. */
+export type DoctorComposition = {
+  readonly store: StateStorePort;
+  readonly credentials: CredentialPort;
+  readonly transport: StatusTransport;
+  readonly repository: { readonly cwd: string; readonly io: RepositoryIo };
+  readonly clock: { readonly nowMs: () => number; readonly nowIso: () => string };
+  readonly github: { readonly instance: ExternalSystemInstance };
+  /** The brand environment prefix used only to name declared source keys. */
+  readonly environmentPrefix: string;
+  /** The injected local work-tree fact (doctor spawns no process). */
+  readonly readWorkTree: () => { readonly readable: boolean; readonly clean: boolean };
+};
+
+type DoctorLedgerSnapshot =
+  | {
+      readonly ok: true;
+      readonly value: {
+        readonly parks: readonly ProviderParkRecord[];
+        readonly announcements: readonly ProviderAnnouncementRecord[];
+        readonly evidence?: { readonly verifiedEmpty: boolean; readonly recordCount: number };
+      };
+    }
+  | { readonly ok: false; readonly error: { readonly code: string } };
+
+const doctorStateReason = (
+  code: string,
+): "store-torn" | "store-schema-mismatch" | "store-unreadable" | "store-unknown" | "unreadable" => {
+  switch (code) {
+    case "state.store.torn":
+      return "store-torn";
+    case "state.schema.mismatch":
+      return "store-schema-mismatch";
+    case "state.permission.denied":
+      return "store-unreadable";
+    case "state.store.unknown":
+      return "store-unknown";
+    default:
+      return "unreadable";
+  }
+};
+
+const doctorWiringRead = (result: { readonly ok: boolean }): DoctorWiringRead => {
+  if (result.ok) {
+    const page = (result as { readonly value?: { readonly pageItemCount?: number } }).value;
+    return { ok: true, pageItemCount: page?.pageItemCount ?? 0 };
+  }
+  const failure = result as {
+    readonly code?: string;
+    readonly failureClass?: string;
+    readonly httpStatus?: number;
+  };
+  if (failure.code === "config.credential.missing") {
+    return {
+      ok: false,
+      reason: "credential-unavailable",
+      failureCode: "config.credential.missing",
+    };
+  }
+  return {
+    ok: false,
+    reason: "read-failed",
+    ...(failure.code === undefined ? {} : { failureClass: failure.code }),
+    ...(failure.httpStatus === undefined ? {} : { httpStatus: failure.httpStatus }),
+  };
+};
+
+/** Compose the doctor runtime, enforcing the credential-reference guard first. */
+export const createDoctorCommandRuntime = (
+  options: DoctorComposition,
+  resolveProviderConfig: () => StatusProviderConfigRead,
+): DoctorCommandRuntime => {
+  const instance = options.github.instance;
+  const admitted =
+    instance.systemKind === "vcs" && instance.authMethod.mechanism === "credential-reference";
+  const reference =
+    instance.authMethod.mechanism === "credential-reference"
+      ? instance.authMethod.reference
+      : undefined;
+  const envVar =
+    reference === undefined
+      ? undefined
+      : reference.sourceKey.style === "literal"
+        ? reference.sourceKey.name
+        : `${options.environmentPrefix}${reference.sourceKey.suffix}`;
+  const credentialRefusal: DoctorCredentialPresence = {
+    ok: false,
+    failureCode: "config.credential.missing",
+    ...(envVar === undefined ? {} : { envVar }),
+  };
+  let factsCache: ReturnType<typeof readRepositoryFacts> | undefined;
+  let ledgerCache: DoctorLedgerSnapshot | undefined;
+
+  const repositoryFacts = (): ReturnType<typeof readRepositoryFacts> =>
+    (factsCache ??= readRepositoryFacts({
+      cwd: options.repository.cwd,
+      io: options.repository.io,
+    }));
+
+  const ledger = (): NonNullable<typeof ledgerCache> => {
+    if (ledgerCache === undefined) {
+      const read = readProviderLedger(options.store);
+      ledgerCache = read.ok
+        ? {
+            ok: true,
+            value: {
+              parks: read.value.parks,
+              announcements: read.value.announcements,
+              ...(read.value.evidence === undefined ? {} : { evidence: read.value.evidence }),
+            },
+          }
+        : { ok: false, error: { code: read.error.code } };
+    }
+    return ledgerCache;
+  };
+
+  const clientFor = (target: { readonly owner: string; readonly name: string }) =>
+    createGitHubClient({
+      instance,
+      credentials: options.credentials,
+      repository: target,
+      transport: options.transport,
+    });
+
+  const readRepository = (): DoctorCheckoutFacts => {
+    const facts = repositoryFacts();
+    const workTree = options.readWorkTree();
+    const parsed = parseGitHubRemote(facts.originUrl);
+    const binding = parsed.ok
+      ? {
+          state: "observed" as const,
+          host: "github.com" as const,
+          owner: parsed.owner,
+          name: parsed.name,
+        }
+      : { state: "unavailable" as const, reason: "remote-unresolvable" as const };
+    return {
+      readable: facts.root !== undefined && workTree.readable,
+      clean: workTree.clean,
+      ...(facts.head.branch === undefined ? {} : { branch: facts.head.branch }),
+      ...(facts.head.sha === undefined ? {} : { sha: facts.head.sha }),
+      detached: facts.head.detached,
+      binding,
+    };
+  };
+
+  return {
+    readRepository,
+    resolveTrackerCredential: (): DoctorCredentialPresence => {
+      if (!admitted || reference === undefined) return credentialRefusal;
+      return options.credentials.resolve(reference).ok ? { ok: true } : credentialRefusal;
+    },
+    readTrackerPage: async (target, limit) => {
+      if (!admitted)
+        return {
+          ok: false,
+          reason: "credential-unavailable",
+          failureCode: "config.credential.missing",
+        };
+      return doctorWiringRead(await clientFor(target).listWorkItems(limit));
+    },
+    resolveHeadCommit: (): DoctorCommitResolution => {
+      const head = repositoryFacts().head;
+      return {
+        resolved: head.sha !== undefined && !head.detached,
+        ...(head.branch === undefined ? {} : { branch: head.branch }),
+        ...(head.sha === undefined ? {} : { sha: head.sha }),
+        detached: head.detached,
+      };
+    },
+    readCheckRuns: async (sha, limit) => {
+      if (!admitted)
+        return {
+          ok: false,
+          reason: "credential-unavailable",
+          failureCode: "config.credential.missing",
+        };
+      const facts = repositoryFacts();
+      const parsed = parseGitHubRemote(facts.originUrl);
+      if (!parsed.ok) return { ok: false, reason: "read-failed" };
+      return doctorWiringRead(
+        await clientFor({ owner: parsed.owner, name: parsed.name }).readPipelineRun(sha, limit),
+      );
+    },
+    readProviderConfig: resolveProviderConfig,
+    resolveProviderCredential: (input): DoctorProviderCredentialPresence => ({
+      providerName: input.providerName,
+      sourceKey: input.sourceKey,
+      ok: options.credentials.resolve(input.reference).ok,
+    }),
+    readParkFold: (): DoctorParkFoldRead => {
+      const read = ledger();
+      if (!read.ok) {
+        return {
+          ok: false,
+          reason: "state-unreadable",
+          failureCode: read.error.code,
+        };
+      }
+      return {
+        ok: true,
+        parks: read.value.parks,
+        announcements: read.value.announcements,
+      };
+    },
+    readStateStores: (): DoctorStateStoresRead => {
+      const read = ledger();
+      if (!read.ok) {
+        return {
+          ok: false,
+          reason: doctorStateReason(read.error.code),
+          failureCode: read.error.code,
+        };
+      }
+      return {
+        ok: true,
+        verifiedEmpty: read.value.evidence?.verifiedEmpty ?? false,
+        recordCount: read.value.evidence?.recordCount ?? 0,
+      };
+    },
+    nowIso: options.clock.nowIso,
+    nowMs: options.clock.nowMs,
+  };
+};
+
 /** The injected I/O for the plan command family (GH-226). */
 export type PlanRuntimeOptions = {
   readonly changesDirectory: string;
@@ -1527,6 +1763,7 @@ export type ConfigProgramOptions = {
   readonly status?: StatusComposition;
   readonly brief?: StatusComposition;
   readonly queueReady?: StatusComposition;
+  readonly doctor?: DoctorComposition;
   readonly db?: DbComposition;
   readonly closeout?: CloseoutComposition;
   readonly watchdog?: WatchdogComposition;
@@ -1824,6 +2061,12 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.verify !== undefined) {
     commands.verify = createVerifyCommandDefinition(options.verify);
+  }
+  if (options.doctor !== undefined) {
+    commands.doctor = createDoctorCommandDefinition(
+      createDoctorCommandRuntime(options.doctor, resolveProviderConfig),
+      brand.environmentPrefix,
+    );
   }
   if (options.db !== undefined) {
     commands.db = createDbCommandDefinition(createDbCommandRuntime(options.db));

@@ -331,3 +331,36 @@ describe("TC-DOCTOR-022 doctor tier discipline (core halves)", () => {
     expect(brandLiteralViolations("const x = 'delivery';", "probe.ts")).toEqual([]);
   });
 });
+
+describe("TC-DOCTOR-022 doctor command tier (command half)", () => {
+  test("the command imports only core/contracts and local types", () => {
+    expect(commandCoreOnly(readFileSync(join(ROOT, COMMAND), "utf8"))).toEqual([]);
+  });
+
+  test("an adapter import in the command fails by name", () => {
+    const mutated = `import "@delivery-os/adapters/github";\n${readFileSync(join(ROOT, COMMAND), "utf8")}`;
+    expect(
+      commandCoreOnly(mutated).some((line) => line.includes("@delivery-os/adapters/github")),
+    ).toBe(true);
+  });
+
+  test("the command exports one definition factory and no exit or write path", () => {
+    const text = readFileSync(join(ROOT, COMMAND), "utf8");
+    expect(exportedNames(text)).toEqual(["createDoctorCommandDefinition"]);
+    expect(text).not.toContain("process.exit");
+    expect(text).not.toContain(".write(");
+  });
+
+  test("no product literal appears in the doctor command", () => {
+    expect(brandLiteralViolations(readFileSync(join(ROOT, COMMAND), "utf8"), COMMAND)).toEqual([]);
+  });
+
+  test("the CLI edge composes doctor over the injected runtime", () => {
+    const edge = readFileSync(join(ROOT, "packages/cli/src/edge.ts"), "utf8");
+    expect(edge).toContain("createDoctorCommandRuntime");
+    expect(edge).toContain("commands.doctor = createDoctorCommandDefinition");
+    expect(edge).toContain("readProviderLedger");
+    expect(edge).toContain("readRepositoryFacts");
+    expect(edge).toContain("parseGitHubRemote");
+  });
+});

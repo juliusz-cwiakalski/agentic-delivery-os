@@ -4,6 +4,9 @@
  * Builds injected fact worlds and `DoctorCheckInputs` with a fixed clock, run
  * id, and synthetic brand. No process spawn, no ambient read, no network.
  */
+
+import { createDoctorCommandDefinition } from "../../../packages/cli/src/commands/doctor";
+import { type CommandDefinition, runCli } from "../../../packages/cli/src/index";
 import {
   type DoctorCheckInputs,
   type DoctorCheckoutFacts,
@@ -24,6 +27,7 @@ import {
   type ProviderConfiguration,
   type ProviderParkRecord,
 } from "../../../packages/core/src/contracts/index";
+import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
 
 export const FIXED_NOW = "2026-11-18T10:20:00Z";
 export const FIXED_NOW_MS = Date.parse(FIXED_NOW);
@@ -241,4 +245,180 @@ export const doctorWorld = (world: DoctorWorld = {}): DoctorCheckInputs => {
       contained.has(result.area) ? containedResult(result.area) : result,
     ),
   };
+};
+
+/* ------------------------- CLI invocation helpers ------------------------- */
+
+export type DoctorReadCounts = {
+  repo: number;
+  credential: number;
+  tracker: number;
+  head: number;
+  ci: number;
+  providerConfig: number;
+  providerCredential: number;
+  fold: number;
+  state: number;
+};
+
+export type DoctorReadLimits = {
+  tracker?: number;
+  ci?: number;
+};
+
+export type FakeDoctorRuntime = {
+  readonly runtime: import("../../../packages/cli/src/commands/doctor").DoctorCommandRuntime;
+  readonly counts: DoctorReadCounts;
+  readonly limits: DoctorReadLimits;
+  /** The internal report, recovered from the failure path when data is absent. */
+  readonly report: Record<string, unknown> | undefined;
+};
+
+export const zeroCounts = (): DoctorReadCounts => ({
+  repo: 0,
+  credential: 0,
+  tracker: 0,
+  head: 0,
+  ci: 0,
+  providerConfig: 0,
+  providerCredential: 0,
+  fold: 0,
+  state: 0,
+});
+
+/** Build an injected doctor runtime from one fixture world, counting reads. */
+export const fakeDoctorRuntime = (
+  world: DoctorWorld = {},
+  options: { readonly throwOn?: keyof DoctorReadCounts } = {},
+): FakeDoctorRuntime => {
+  const counts = zeroCounts();
+  const limits: DoctorReadLimits = {};
+  const checkout = { ...checkoutOk(world.checkout) };
+  const tracker = { credential: CREDENTIAL_OK, read: READ_OK(), ...world.tracker };
+  const providerConfig = world.provider?.config ?? providerConfigOk();
+  const credentials = world.provider?.credentials ?? PROVIDER_CREDENTIALS_OK;
+  const fold = world.provider?.fold ?? FOLD_OK;
+  const state = world.state ?? STATE_OK;
+  const ci = {
+    credential: tracker.credential,
+    commit: COMMIT_OK,
+    read: READ_OK(2),
+    ...world.ci,
+  };
+  const guard = <T>(name: keyof DoctorReadCounts, read: () => T): T => {
+    counts[name] += 1;
+    if (options.throwOn === name) throw new Error(`injected ${name} failure`);
+    return read();
+  };
+  const runtime: import("../../../packages/cli/src/commands/doctor").DoctorCommandRuntime = {
+    readRepository: () => guard("repo", () => checkout),
+    resolveTrackerCredential: () => guard("credential", () => tracker.credential),
+    readTrackerPage: async (_target, limit) => {
+      limits.tracker = limit;
+      return guard("tracker", () => tracker.read ?? READ_OK());
+    },
+    resolveHeadCommit: () => guard("head", () => ci.commit),
+    readCheckRuns: async (_sha, limit) => {
+      limits.ci = limit;
+      return guard("ci", () => ci.read ?? READ_OK(2));
+    },
+    readProviderConfig: () => guard("providerConfig", () => providerConfig),
+    resolveProviderCredential: (input) =>
+      guard("providerCredential", () => {
+        const found = credentials.find((entry) => entry.providerName === input.providerName);
+        return found ?? { providerName: input.providerName, sourceKey: input.sourceKey, ok: true };
+      }),
+    readParkFold: () => guard("fold", () => fold),
+    readStateStores: () => guard("state", () => state),
+    nowIso: () => FIXED_NOW,
+    nowMs: () => FIXED_NOW_MS,
+  };
+  return { runtime, counts, limits };
+};
+
+export const doctorProgram = (runtime: FakeDoctorRuntime["runtime"]): CommandDefinition =>
+  createDoctorCommandDefinition(runtime, "EXAMPLE_PRODUCT_");
+
+export type DoctorCliRun = {
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly counts: DoctorReadCounts;
+  readonly limits: DoctorReadLimits;
+  /** The internal report, recovered from the failure path when data is absent. */
+  readonly report: Record<string, unknown> | undefined;
+};
+
+/** Run `doctor` in process through the delivered `runCli` surface. */
+export const runDoctorCli = async (
+  argv: readonly string[],
+  world: DoctorWorld = {},
+  options: { readonly throwOn?: keyof DoctorReadCounts } = {},
+): Promise<DoctorCliRun> => {
+  const { runtime, counts, limits } = fakeDoctorRuntime(world, options);
+  const stdout = bufferSink();
+  const stderr = bufferSink();
+  let tick = 0;
+  const exitCode = await runCli(
+    argv,
+    { stdout, stderr },
+    {
+      brand: SYNTHETIC_BRAND,
+      clock: { now: () => FIXED_TICKS[Math.min(tick++, 1)] ?? FIXED_TICKS[0] },
+      newRunId: () => RUN_ID,
+      secrets: ["planted-doctor-secret-canary"],
+      program: { commands: { doctor: doctorProgram(runtime) } },
+    },
+  );
+  let report: Record<string, unknown> | undefined;
+  const parsed: unknown = stdout.value.trimStart().startsWith("{")
+    ? JSON.parse(stdout.value.trim())
+    : undefined;
+  if (typeof parsed === "object" && parsed !== null && "data" in parsed) {
+    report = (parsed as { readonly data?: Record<string, unknown> }).data;
+  } else if (typeof parsed === "object" && parsed !== null && argv.includes("--json")) {
+    const second = fakeDoctorRuntime(world, options);
+    const result = await doctorProgram(second.runtime).handler({
+      command: "doctor",
+      flags: {},
+      argv: ["doctor"],
+      positionals: [],
+      brand: SYNTHETIC_BRAND,
+    });
+    if (typeof result === "object" && result !== null && "data" in result) {
+      report = (result as { readonly data?: Record<string, unknown> }).data;
+    } else if (typeof result === "object" && result !== null && "error" in result) {
+      const failure = (result as { readonly error?: { readonly report?: Record<string, unknown> } })
+        .error;
+      report = failure?.report;
+    }
+  }
+  return { exitCode, stdout: stdout.value, stderr: stderr.value, counts, limits, report };
+};
+
+export const parseEnvelope = (stdout: string): Record<string, unknown> => {
+  const trimmed = stdout.trim();
+  return JSON.parse(trimmed) as Record<string, unknown>;
+};
+
+/** Run `doctor` against an arbitrary injected runtime (isolation injections). */
+export const runCliWithRuntime = async (
+  argv: readonly string[],
+  runtime: FakeDoctorRuntime["runtime"],
+): Promise<{ readonly exitCode: number; readonly stdout: string; readonly stderr: string }> => {
+  const stdout = bufferSink();
+  const stderr = bufferSink();
+  let tick = 0;
+  const exitCode = await runCli(
+    argv,
+    { stdout, stderr },
+    {
+      brand: SYNTHETIC_BRAND,
+      clock: { now: () => FIXED_TICKS[Math.min(tick++, 1)] ?? FIXED_TICKS[0] },
+      newRunId: () => RUN_ID,
+      secrets: ["planted-doctor-secret-canary"],
+      program: { commands: { doctor: doctorProgram(runtime) } },
+    },
+  );
+  return { exitCode, stdout: stdout.value, stderr: stderr.value };
 };
