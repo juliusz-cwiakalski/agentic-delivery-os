@@ -416,6 +416,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/commands/watchdog.ts": ["createWatchdogCommandDefinition", "renderWatchdogHuman"],
   "cli/src/commands/verify-gates.ts": ["createVerifyGatesHandler"],
   "cli/src/edge.ts": [
+    "createCliAudit",
     "createProductionDependencies",
     "registerEdgeSecrets",
     "readShippedDefaultsManifest",
@@ -432,6 +433,8 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createVerifyCommandRuntime",
     "createVerifyGatesCommandRuntime",
     "createWatchdogCommandRuntime",
+    "resolveAgentIdentity",
+    "resolveCliMode",
   ],
   "cli/src/index.ts": ["runCli"],
   "cli/src/output/plan-text.ts": [

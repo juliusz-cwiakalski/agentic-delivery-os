@@ -53,6 +53,12 @@ const writeText = (stream: CliSink, text: string): void => {
 };
 
 export type WriteOutputOptions = {
+  /** The injected machine-output mode fact (DEC-2). */
+  readonly mode?: "interactive" | "scripted";
+  /** The documented full-envelope override. */
+  readonly verbose?: boolean;
+  /** Indentation-only flag (never re-expands the scripted trim). */
+  readonly pretty?: boolean;
   /** Opt-in human success JSON; machine mode always uses the envelope instead. */
   readonly humanJson?: unknown;
   /** Opt-in pre-rendered human text; takes precedence over `humanJson`. */

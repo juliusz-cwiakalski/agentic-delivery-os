@@ -36,6 +36,7 @@ import {
   reservationPayloadsOf,
   seedAuditPairs,
 } from "../fixtures/state/harness";
+import { programFor, runAudited } from "./audit-run-support";
 
 const invocationKeys = (payload: Record<string, unknown>): string[] => Object.keys(payload);
 
@@ -310,6 +311,39 @@ describe("TC-GH223-008 additive kinds interleave safely", () => {
       expect(read.ok).toBe(true);
       if (read.ok) expect(read.value.records.map((record) => record.runId)).toHaveLength(3);
       expect(auditRecordsOf(fixture.store)).toHaveLength(6);
+    } finally {
+      removeRoot(fixture.root);
+    }
+  });
+});
+
+describe("TC-GH223-005/008 runCli halves", () => {
+  test("a runCli invocation reaches the ledger with the same field set", async () => {
+    const fixture = makeAuditStore("runcli-fields");
+    try {
+      const run = await runAudited(fixture, {
+        argv: ["--json", "status"],
+        program: programFor("success"),
+        runId: "run-runcli-fields",
+        ticks: [5000, 5013],
+        repo: "repo-1",
+      });
+      expect(run.exitCode).toBe(0);
+      const pairs = auditPairsOf(fixture.store);
+      expect(pairs).toHaveLength(1);
+      const invocation = pairs[0]?.invocation;
+      expect(invocation?.auditSeq).toBe(1);
+      expect(invocation?.startedAt).toBe(5000);
+      expect(invocation?.resultSchemaVersion).toBe("delivery.result.v1");
+      expect(invocation?.outcomeClass).toBe("success");
+      expect(invocation?.scope).toBe("workspace-a");
+      expect(invocation?.repo).toBe("repo-1");
+      expect(Object.keys(pairs[0]?.reservation ?? {})).toEqual([
+        "schemaId",
+        "auditSeq",
+        "runId",
+        "chainValue",
+      ]);
     } finally {
       removeRoot(fixture.root);
     }

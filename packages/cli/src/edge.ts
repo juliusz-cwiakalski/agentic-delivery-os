@@ -14,9 +14,9 @@ import {
   neutralEnvironmentFacts,
   nodeFileSystemFacts,
   type PmNotesFileSystemFacts,
+  parseConfigYaml,
   type RuntimePlatform,
   readCiWorkflowJobNames,
-  parseConfigYaml,
   readLocalPmContext,
   readPlanArtifact,
   readPmNotesText,
@@ -78,6 +78,9 @@ import type { BrandingInputError, ResolverInput } from "@delivery-os/core/brandi
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   type AdapterCapabilityDeclaration,
+  AUDIT_IDENTITY_VARIABLE_SUFFIX,
+  type AuditAgentIdentity,
+  type AuditInvocationFacts,
   type BrandIdentity,
   CLOSEOUT_MAX_DEPENDENTS,
   type CloseoutGitRuntime,
@@ -120,6 +123,7 @@ import {
   readProviderParkViews,
 } from "@delivery-os/core/provider";
 import {
+  appendAuditInvocation,
   appendCloseoutOutcome,
   appendOwnerGateSlaDecision,
   appendPhaseTransition,
@@ -148,8 +152,8 @@ import {
   type LintCommandRuntime,
   type LintRegistryRead,
 } from "./commands/lint.js";
-import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
 import { createPhaseCommandDefinition, type PhaseCommandRuntime } from "./commands/phase.js";
+import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
 import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
@@ -162,9 +166,59 @@ import {
   createWatchdogCommandDefinition,
   type WatchdogCommandRuntime,
 } from "./commands/watchdog.js";
-import type { CliDependencies, CommandDefinition, CommandFlags, CommandProgram } from "./index.js";
+import type {
+  CliAuditDependencies,
+  CliDependencies,
+  CliMode,
+  CommandDefinition,
+  CommandFlags,
+  CommandProgram,
+} from "./index.js";
 
 const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
+
+/**
+ * Resolve the claimed agent identity from injected environment data (DEC-3).
+ * The variable name is derived (brand prefix + declared suffix); presence is
+ * decided on the trimmed value, while the recorded value stays verbatim.
+ */
+export const resolveAgentIdentity = (
+  environment: Readonly<Record<string, string | undefined>>,
+  environmentPrefix: string,
+): AuditAgentIdentity | undefined => {
+  const value = environment[`${environmentPrefix}${AUDIT_IDENTITY_VARIABLE_SUFFIX}`];
+  if (typeof value !== "string" || value.trim().length === 0) return undefined;
+  return { kind: "claimed", value };
+};
+
+/** Resolve the machine-output mode from an injected stream-capability fact. */
+export const resolveCliMode = (stream: { readonly isTTY?: boolean }): CliMode =>
+  stream.isTTY === true ? "interactive" : "scripted";
+
+export type CliAuditComposition = {
+  readonly store: StateStorePort;
+  readonly scope: string;
+  readonly repo?: string;
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly environmentPrefix: string;
+};
+
+/**
+ * Compose the audit seam at the runtime-aware edge: identity from injected
+ * environment data, the store-backed writer, and the invocation scope.
+ */
+export const createCliAudit = (options: CliAuditComposition): CliAuditDependencies => {
+  const identity = resolveAgentIdentity(options.environment, options.environmentPrefix);
+  return {
+    scope: options.scope,
+    ...(options.repo === undefined ? {} : { repo: options.repo }),
+    ...(identity === undefined ? {} : { identity }),
+    record: (facts: AuditInvocationFacts) => {
+      const appended = appendAuditInvocation(options.store, facts);
+      return appended.ok ? { ok: true } : { ok: false, code: appended.error.code };
+    },
+  };
+};
 
 /** Register non-empty secret values from an injected environment record. */
 export function registerEdgeSecrets(
