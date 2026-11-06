@@ -670,7 +670,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `doctor`, and `merge`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `doctor`, `merge`, and `retro`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -686,7 +686,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(3);
     expect(entries.filter((entry) => entry.domainKind === "doctor")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
-    expect(entries).toHaveLength(70);
+    expect(entries).toHaveLength(74);
   });
 });
 
@@ -762,7 +762,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(70);
+    expect(entries).toHaveLength(74);
     expect(db).toHaveLength(4);
   });
 
@@ -978,7 +978,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(70);
+    expect(entries).toHaveLength(74);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1245,12 +1245,132 @@ describe("TC-DOCTOR-020 the doctor kind has exactly one row and leaves the table
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| doctor.check.failed | doctor | user | false | not_landed | ${DOCTOR_HINT} | user-validation | ${DOCTOR_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("`status`, `doctor`, and `merge`");
+    expect(doc).toContain("`doctor`, `merge`, and `retro`");
   });
 
   test("fallback remains the reserved two-segment namespace", () => {
     expect(FALLBACK_INTERNAL_CODE).toBe("fallback.internal");
     expect(FALLBACK_INVOCATION_CODE).toBe("fallback.invocation");
     expect(entries.filter((entry) => entry.domainKind === "fallback")).toHaveLength(2);
+  });
+});
+
+const RETRO_ROWS = [
+  [
+    "retro.evidence.malformed-entry",
+    "platform",
+    false,
+    "not_landed",
+    "Inspect the named evidence position and repair or explicitly salvage the affected artifact, then re-run the retro command; valid entries were preserved.",
+    "user-validation",
+    "An evidence entry is malformed and was classified in band.",
+  ],
+  [
+    "retro.evidence.tamper-flagged",
+    "platform",
+    false,
+    "not_landed",
+    "Inspect the named domain and record positions; do not trust altered evidence. Restore the unaltered artifact or record an explicit salvage before re-running.",
+    "user-validation",
+    "A keyed evidence chain failed verification.",
+  ],
+  [
+    "retro.truth.vacuous-run",
+    "user",
+    false,
+    "not_landed",
+    "Verify the declared collector sources and their windows, then re-run retro collect; a collection that executes must produce collector records.",
+    "user-validation",
+    "A collection run executed and produced no collector records.",
+  ],
+  [
+    "retro.evidence.denied",
+    "platform",
+    false,
+    "not_landed",
+    "Write evidence only through the collector seam; the sidecar is collector-owned and the attempted write did not land.",
+    "platform-provider",
+    "A write outside the collector seam was refused.",
+  ],
+] as const;
+
+describe("TC-RETRO-004 four retro identities round-trip and contain", () => {
+  test("retro is a declared multi-row kind with exactly the four pinned rows", () => {
+    expect(DOMAIN_KINDS).toContain("retro");
+    const retro = entries.filter((entry) => entry.domainKind === "retro");
+    expect(retro).toHaveLength(4);
+    expect(retro.map((entry) => entry.code)).toEqual(RETRO_ROWS.map(([code]) => code));
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of RETRO_ROWS) {
+      expect(classifyDomainKind("retro", code)).toMatchObject({
+        code,
+        domainKind: "retro",
+        category,
+        retryable,
+        consequence,
+        projectionClass,
+        remediationHint: hint,
+        summary,
+      });
+      expect(resolveAppErrorCode(code)).toEqual({
+        ok: true,
+        entry: classifyDomainKind("retro", code),
+      });
+      expect(classifyThrown({ kind: "retro", code })).toEqual(classifyDomainKind("retro", code));
+      expect(classifyThrown({ kind: "retro", code, summary: "UNTRUSTED-CANARY" })).toEqual(
+        classifyDomainKind("retro", code),
+      );
+    }
+    expect(retro.find((entry) => entry.code === "retro.evidence.denied")?.projectionClass).toBe(
+      "platform-provider",
+    );
+  });
+
+  test("kind-only retro is ambiguous and contains; wrong, unknown, missing and non-string codes contain", () => {
+    expect(() => classifyDomainKind("retro")).toThrow();
+    expect(classifyThrown({ kind: "retro" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    for (const failure of [
+      { kind: "retro", code: "retro.other.unknown" },
+      { kind: "retro", code: "state.store.torn" },
+      { kind: "retro" },
+      { kind: "retro", code: 42 },
+      { kind: "retro", code: null },
+      { kind: "state", code: "retro.evidence.denied" },
+    ]) {
+      expect(classifyThrown(failure).code).toBe(FALLBACK_INTERNAL_CODE);
+    }
+    expect(() => classifyDomainKind("retro", "input.value.rejected")).toThrow();
+  });
+
+  test("the documented retro rows agree exactly once and match every column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of RETRO_ROWS) {
+      const row = `| ${code} | retro | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
+    expect(doc).toContain("`retro`");
+  });
+
+  test("store-level conditions still resolve through existing state rows and no fifth retro row exists", () => {
+    expect(resolveAppErrorCode("state.store.torn").ok).toBe(true);
+    expect(resolveAppErrorCode("state.keys.missing").ok).toBe(true);
+    expect(resolveAppErrorCode("state.permission.denied").ok).toBe(true);
+    expect(entries.filter((entry) => entry.domainKind === "retro")).toHaveLength(4);
+    expect(entries.filter((entry) => entry.code.startsWith("retro."))).toHaveLength(4);
   });
 });

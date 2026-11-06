@@ -1,4 +1,5 @@
 ---
+ados_distribution: internal
 id: TOOLING-ARCHITECTURE-OVERVIEW
 status: Draft
 created: 2026-11-01
@@ -7,8 +8,8 @@ owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
-  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, ADR-0010]
-  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225]
+  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, ADR-0010]
+  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-232]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -92,9 +93,9 @@ No typed daemon or background scheduler is established by `packages/`.
 |---|---|
 | `core/src/contracts/` | Data-only ports, normalized primitives, schemas, capability declarations and error vocabulary shared across packages. |
 | `core/src/config/`, `branding/` | Pure layered resolution with provenance; pure brand identity resolution. Exported through core root and `./branding`, respectively. |
-| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, owner-gate SLA evaluation, doctor diagnostics, and session-admin policy. |
+| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, owner-gate SLA evaluation, doctor diagnostics, session-admin policy, and the deterministic retro evidence pipeline (collection, truth checks, report/export folds). |
 | `core/src/provider/` | Availability chain, quota/peak evaluation, expiring parks and announcements through injected ports. No model selection or session spawn. |
-| `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections. Runtime APIs confined to `state/driver/`. |
+| `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections, the retro registry consumer, and the independent evidence sidecar consumer. Runtime APIs confined to `state/driver/`. |
 | `core/src/app/`, core `createRuntime` | Application tier is a type placeholder; `createRuntime` is an `export declare` signature, not a callable composition implementation. |
 | `cli/src/index.ts`, `edge.ts`, `commands/` | In-process parser/result boundary; config acquisition and optional command registration; thin handlers plus bounded status collectors. |
 | `adapters/src/github/`, `gitlab/`, `jira/` | Normalized reads plus supported GitHub/Jira closeout writes. GitLab retains declared write gaps and no work-item read. GitHub reads feed status and gate composition, and the bounded deploy-job trace read feeds `verify deploy`. |
@@ -161,6 +162,15 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   `merge.transaction` record. It is the only landing producer; a re-run replays a
   recorded landing instead of landing twice. See
   [merge and verify deploy](../spec/features/feature-merge-verify-deploy.md).
+- `retro collect|report [--level <name>]` is the learning-plane evidence pipeline.
+  Collection folds delivered GET-only sources into an independent append-only,
+  HMAC-SHA-256 keyed-chain sidecar outside the delivery state store, records the
+  run in the validated retro registry, and evaluates five pipeline-truth checks.
+  Reporting folds verified evidence into `{level, findings[], followThrough[],
+  evidenceRefs[]}` with zero model calls. Only `change` (R1) is implemented; the
+  other declared levels refuse with their owning story. A no-eligible-target
+  collect is an explicit exit-0 success; export is a bounded library surface with
+  no CLI verb. See the [retro evidence pipeline](../spec/features/feature-retro-pipeline.md).
 - [Closeout](../spec/features/feature-closeout.md) is integrated: seven-step
   transaction, plan by default, writes only with `--apply`, ref validation before
   reads. `createCloseoutComposition` in CLI edge bridges raw provider clients,
@@ -255,9 +265,13 @@ Contract homes: [config](../../packages/core/src/config/resolver.ts),
    Closeout records verified `closeout.operation` history with deterministic
    operation identities and fenced appends. First terminal outcomes are reused;
    failed outcomes may retry. This is a persistent outcome/replay substrate, not
-   a separately invented write-ahead-intent protocol. See
-   [ledger](../../packages/core/src/state/closeout.ts) and
-   [engine](../../packages/core/src/domain/closeout.ts). Real-local git/store plus
+   a separately invented write-ahead-intent protocol. The retro registry is a
+   validated state boundary with three additive kinds; the evidence sidecar is a
+   separate collector-fenced, keyed-chain artifact family outside the store, so
+   state salvage cannot mask evidence tampering. See
+   [ledger](../../packages/core/src/state/closeout.ts),
+   [engine](../../packages/core/src/domain/closeout.ts), and
+   [retro](../../packages/core/src/domain/retro.ts). Real-local git/store plus
    mocked-provider integration tests exist; they were inspected, not rerun here.
 6. CLI handlers return data/errors without writing streams. The surface owns
    classification, redaction and one JSON envelope under `--json`. Exactly one of
@@ -294,7 +308,8 @@ rules passing does not establish project-specific literal coverage.
 [ADR-0007](../decisions/ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md),
 [TDR-0004](../decisions/TDR-0004-state-storage-engine.md),
 [TDR-0005](../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md),
-[TDR-0006](../decisions/TDR-0006-privacy-and-no-cloud-guard-mechanics.md) and
+[TDR-0006](../decisions/TDR-0006-privacy-and-no-cloud-guard-mechanics.md),
+[TDR-0009](../decisions/TDR-0009-retro-evidence-sidecar-keyed-chain-construction.md) and
 [ADR-0010](../decisions/ADR-0010-session-admin-port-mutating-contract.md) remain Proposed
 despite implemented mechanics. Existing harness/release/naming records remain in
 the [decision register](../decisions/00-register.md); their separate audit owns

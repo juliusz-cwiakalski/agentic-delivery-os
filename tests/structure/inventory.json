@@ -29,6 +29,7 @@
     "src/contracts/queue-ready.ts",
     "src/contracts/registry.ts",
     "src/contracts/result.ts",
+    "src/contracts/retro.ts",
     "src/contracts/session.ts",
     "src/contracts/state.ts",
     "src/contracts/status.ts",
@@ -60,6 +61,7 @@
     "src/domain/plan-validate.ts",
     "src/domain/pm-notes-lint.ts",
     "src/domain/queue-ready.ts",
+    "src/domain/retro.ts",
     "src/domain/session-admin.ts",
     "src/domain/sha256.ts",
     "src/domain/status.ts",
@@ -90,6 +92,8 @@
     "src/state/merge.ts",
     "src/state/owner-gate-sla.ts",
     "src/state/registry.ts",
+    "src/state/retro-registry.ts",
+    "src/state/retro-sidecar.ts",
     "src/state/storage-error.ts"
   ],
   "adapters": [
@@ -157,6 +161,7 @@
     "src/commands/plan.ts",
     "src/commands/provider.ts",
     "src/commands/queue.ts",
+    "src/commands/retro.ts",
     "src/commands/status.ts",
     "src/commands/verify-deploy.ts",
     "src/commands/verify-gates.ts",

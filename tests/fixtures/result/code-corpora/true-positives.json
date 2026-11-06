@@ -125,6 +125,30 @@
       "text": "doctor.check.failed",
       "recognized": true,
       "resolves": true
+    },
+    {
+      "id": "retro-malformed-entry",
+      "text": "retro.evidence.malformed-entry",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "retro-tamper-flagged",
+      "text": "retro.evidence.tamper-flagged",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "retro-vacuous-run",
+      "text": "retro.truth.vacuous-run",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "retro-denied",
+      "text": "retro.evidence.denied",
+      "recognized": true,
+      "resolves": true
     }
   ]
 }

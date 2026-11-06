@@ -71,6 +71,17 @@ export {
   verifyAuditChain,
 } from "./audit.js";
 export {
+  appendRetroRegistryRecord,
+  readRetroLevels,
+  readRetroRegistry,
+  readRetroRuns,
+  readRetroTriggers,
+  recordRetroRun,
+  type RetroRegistryRead,
+  seedRetroRegistry,
+} from "./retro-registry.js";
+export { createRetroSidecar, type RetroSidecar } from "./retro-sidecar.js";
+export {
   appendCloseoutOutcome,
   CLOSEOUT_OPERATION_RECORD_KEY_PREFIX,
   closeoutOperationRecordKey,
@@ -82,7 +93,7 @@ export {
   commitTelemetryRecordKey,
   readCommitTelemetry,
 } from "./commit-telemetry.js";
-export { createNodeStateEdge } from "./driver/runtime-edge.js";
+export { createNodeRetroSidecarIo, createNodeStateEdge } from "./driver/runtime-edge.js";
 export type {
   StateEdgeFaultPoint,
   StateIndexRow,

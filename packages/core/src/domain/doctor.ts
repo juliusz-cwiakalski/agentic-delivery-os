@@ -680,12 +680,12 @@ const providerCheck = (provider: DoctorProviderFacts, nowMs: number): DoctorChec
 
 const stateCheck = (state: DoctorStateStoresRead): DoctorCheck => {
   if (state.ok) {
+    const stores = state.stores ?? [];
+    const names = stores.map((store) => `${store.name}:${store.verdict}`).join(", ");
     return check(
       "state",
       "ok",
-      state.verifiedEmpty
-        ? "state stores verified empty"
-        : `state stores verified (${String(state.recordCount)} records)`,
+      `${state.verifiedEmpty ? "state stores verified empty" : `state stores verified (${String(state.recordCount)} records)`}${names.length === 0 ? "" : ` [${names}]`}`,
       buildEvidence(
         [{ source: "state-stores", outcome: state.verifiedEmpty ? "observed-empty" : "read" }],
         [state.verifiedEmpty ? "observed-empty" : "observed"],

@@ -16,47 +16,70 @@ Status: M1 planned (M1-S8). Proposed contract.
 ## DESCRIPTION
 
 Runs retro levels on demand per concepts/retrospectives.md. Evidence
-comes from the independent sidecar (a collector identity delivery
-agents cannot write; append-only; pipeline-truth checks). Output
-survives a malformed entry without data loss.
+comes from the independent sidecar: a separate append-only artifact
+family a delivery agent cannot write, keyed-chain verified on every
+read, with collector trace ids, collection windows, and pipeline-truth
+checks. Malformed entries classify in-band with every valid entry
+preserved. The validated retro registry declares levels R1-R6; only
+`change` (R1) is implemented, and an omitted `--level` defaults to it.
+A declared-but-unimplemented level refuses with a hint naming its
+owning story. A collect with no eligible uncollected target is an
+explicit exit-0 `no-target` success, not a vacuous run.
+
+Evidence export is a bounded library/engine surface in M1; the command
+surface carries no export verb.
 
 ## OUTPUT
 
-Text: level report. Envelope `data`: `level`, `findings[]`,
-`followThrough[]` (artifact-verified), `evidenceRefs[]`.
+Collect `data`: `level`, `outcome` (`collected` | `no-target`),
+`selection`, `counts`, and (for a collected run) `runId` and `truth`.
+Report `data`: exactly `level`, `findings[]`, `followThrough[]`, and
+`evidenceRefs[]`. Findings carry `kind`, `text`, and evidence refs;
+follow-through entries carry `action`, `verdict` (`verified` |
+`unverified` | `unknown`), and an optional artifact ref.
 
 ## EXIT STATUS
 
-0 collected or reported; 1 malformed evidence entry (classified,
-partial output preserved); 2 evidence store unreachable.
+0 collected, reported, or an explicit `no-target` collect; 1 malformed
+evidence entry, a detected chain break (sidecar or consumed audit
+domain), a vacuous run, or an input/permission refusal; 2 evidence
+store unreachable (torn store, missing key material) or a write refused
+outside the collector seam.
 
 ## EXAMPLES
 
 ```
 $ <binary> retro report --level change --json
 {
-  "schemaVersion": 1,
+  "schemaVersion": "delivery.result.v1",
   "runId": "r_01J8ZY6A3X",
   "exitCode": 0,
-  "timing": { "started": "2026-11-18T11:10:00Z", "durationMs": 950 },
+  "timing": { "totalMs": 950 },
   "data": {
     "level": "change",
     "findings": [
-      { "kind": "win", "text": "atomic phase commits eliminated hand-crafted messages" }
+      { "kind": "retro-note", "text": "atomic phase commits eliminated hand-crafted messages", "evidenceRefs": ["ev-2211"] },
+      { "kind": "truth-check", "text": "dangling evidence ref ev-2263", "evidenceRefs": [] }
     ],
     "followThrough": [
-      { "action": "port park-exactness check to docs", "verdict": "done", "artifact": "PR 344" }
+      { "action": "port park-exactness check to docs", "verdict": "verified", "artifactRef": "PR 344" }
     ],
-    "evidenceRefs": ["ev-2211", "ev-2263"]
+    "evidenceRefs": ["ev-2211", "ev-2214"]
   }
 }
 ```
 
 ## ERRORS
 
-`retro.evidence.malformed-entry` (classified; no data loss),
-`retro.evidence.denied` (delivery-agent identity refused).
+`retro.evidence.malformed-entry` (classified in-band; valid entries
+preserved), `retro.evidence.tamper-flagged` (a keyed chain failed
+verification; altered records are never served as verified),
+`retro.truth.vacuous-run` (the collection executed and produced zero
+collector records), `retro.evidence.denied` (a write outside the
+collector seam was refused). Store-level damage reuses the existing
+`state.store.torn`, `state.keys.missing`, and `state.permission.denied`
+rows with their delivered projections.
 
 ## SEE ALSO
 
-[closeout.md](closeout.md), [spend.md](spend.md)
+[closeout.md](closeout.md), [spend.md](spend.md), [state.md](state.md)

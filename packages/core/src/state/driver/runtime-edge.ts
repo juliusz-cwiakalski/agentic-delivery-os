@@ -6,7 +6,7 @@
  * the runtime-provided SQLite binding. Tests inject their own edge.
  */
 import { execFileSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import {
   chmodSync,
   closeSync,
@@ -24,7 +24,7 @@ import {
   writeSync,
 } from "node:fs";
 import { createRequire } from "node:module";
-
+import { RETRO_APPEND_TIMEOUT_MS, RETRO_READ_TIMEOUT_MS, type RetroSidecarIo } from "#contracts";
 import type {
   StateEdgeFaultPoint,
   StateIndexRow,
@@ -256,3 +256,41 @@ export const createNodeStateEdge = (): StateRuntimeEdge => ({
     }),
   indexRemove: (path) => rmSync(path, { force: true }),
 });
+
+/**
+ * The retro sidecar's runtime edge (GH-232 PIN-1..PIN-3, TDR-0009 C-7).
+ *
+ * The only new runtime-API surface of the change: filesystem primitives,
+ * permission checks, cryptographic randomness, and the HMAC-SHA-256 keyed hash.
+ * It lives beside the state driver edge and is composed by the CLI edge.
+ */
+export const createNodeRetroSidecarIo = (options: {
+  readonly stateDirectory: string;
+  readonly workspaceId: string;
+  readonly readTimeoutMs?: number;
+  readonly appendTimeoutMs?: number;
+}): RetroSidecarIo => {
+  const edge = createNodeStateEdge();
+  return {
+    stateDirectory: options.stateDirectory,
+    workspaceId: options.workspaceId,
+    readTimeoutMs: options.readTimeoutMs ?? RETRO_READ_TIMEOUT_MS,
+    appendTimeoutMs: options.appendTimeoutMs ?? RETRO_APPEND_TIMEOUT_MS,
+    exists: (path) => edge.exists(path),
+    readText: (path) => edge.readText(path),
+    createExclusive: (path, text) => edge.createExclusiveFile(path, text),
+    writeText: (path, text) => edge.writeFile(path, text),
+    appendText: (path, text) => edge.appendFile(path, text),
+    removeFile: (path) => edge.removeFile(path),
+    ensureDirectory: (path) => edge.ensureDirectory(path),
+    verifyPermissions: (path, kind) => edge.verifyPermissions(path, kind),
+    applyPermissions: (path, kind) => edge.applyPermissions(path, kind),
+    randomHex: (bytes) => edge.randomHex(bytes),
+    keyedHash: (keyHex, previousLink, content) =>
+      createHmac("sha256", Buffer.from(keyHex, "hex"))
+        .update(previousLink)
+        .update("\u0000")
+        .update(content)
+        .digest("hex"),
+  };
+};

@@ -442,9 +442,20 @@ export type DoctorProviderFacts = {
   readonly fold: DoctorParkFoldRead;
 };
 
+/** One additive per-store fact in the state check (GH-232 F-8). */
+export type DoctorStateStoreFact = {
+  readonly name: string;
+  readonly verdict: "valid" | "verified-empty";
+};
+
 /** The verified state-store read (F-6). */
 export type DoctorStateStoresRead =
-  | { readonly ok: true; readonly verifiedEmpty: boolean; readonly recordCount: number }
+  | {
+      readonly ok: true;
+      readonly verifiedEmpty: boolean;
+      readonly recordCount: number;
+      readonly stores?: readonly DoctorStateStoreFact[];
+    }
   | {
       readonly ok: false;
       readonly reason:

@@ -1,4 +1,5 @@
 ---
+ados_distribution: internal
 id: TOOLING-UBIQUITOUS-LANGUAGE
 status: Draft
 created: 2026-11-02
@@ -7,7 +8,7 @@ owners: [engineering]
 area: domain
 document_classification: working-analysis
 links:
-  related_changes: [GH-200, GH-231, GH-225]
+  related_changes: [GH-200, GH-231, GH-225, GH-232]
 summary: "Thin tooling vocabulary relationship map and disambiguation draft for Gate 4."
 ---
 
@@ -40,6 +41,7 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
 | External-system integration | Adapter ports translate provider dialects into shared vocabulary; supported operations and gaps are explicit. | [Adapter ports](../spec/features/feature-adapter-ports.md), [client seeds](../spec/features/feature-provider-client-seeds.md) |
 | AI provider availability | Supplies eligibility, parks and announcements to callers; future model policy consumes availability rather than redefining it. | [Provider engine](../spec/features/feature-provider-engine.md), [model profiles](../planning/concepts/model-profiles.md) |
 | Local operational state | Supplies verified ledger evidence and rebuildable projections to consumers; it does not own upstream session content. | [State layer](../spec/features/feature-state-layer.md), [session administration](../spec/features/feature-session-database-admin.md) |
+| Learning evidence and retrospection | Folds collector-truth evidence into level reports; the independent sidecar owns evidence integrity while the validated registry owns level and run data. | [Retro evidence pipeline](../spec/features/feature-retro-pipeline.md), [audit ledger](../spec/features/feature-audit-ledger.md) |
 | Harness execution and surfaces | A host runs sessions; a surface exposes capabilities. Typed dispatch parity is planned, distinct from existing prompt/plugin distribution. | [Harness adapters](../planning/concepts/harness-adapters.md), [primitive surface](../planning/concepts/agent-primitive-surface.md) |
 
 ## Disambiguation at boundaries
@@ -73,6 +75,12 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
   indexing and derived documents are rebuildable. The upstream session database
   is a separate administration target, not that ledger. Session checkpointing
   does not restart the host. Metadata-only administration is not transcript access.
+- **Delivery ledger / evidence sidecar:** the delivery state store's ledger is
+  operational truth with fencing, salvage, and derived documents; the retro
+  evidence sidecar is a separate collector-write-only artifact family with its
+  own key and fence, outside the store's salvage path. A state-store repair never
+  repairs evidence. Both carry claimed attribution, but the sidecar's keyed chain
+  is tamper evidence, not authentication or prevention.
 - **Verification completeness / CI readiness / merge authorization:** `verify
   change` checks ledger/document completeness. CI observations have bounded
   checkout-head coverage, not proof of every required PR-head job. `merge-ready`

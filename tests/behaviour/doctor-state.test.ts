@@ -92,3 +92,80 @@ describe("TC-DOCTOR-011 state check", () => {
     expect(stateOf(restored.report).verdict).toBe("ok");
   });
 });
+
+describe("TC-RETRO-056 state check names the retro registry store", () => {
+  test("the state detail names the delivery and retro registry stores", async () => {
+    const run = await runDoctorCli(["doctor", "--json"], {
+      state: {
+        ok: true,
+        verifiedEmpty: false,
+        recordCount: 7,
+        stores: [
+          { name: "delivery", verdict: "valid" },
+          { name: "retro-registry", verdict: "valid" },
+        ],
+      },
+    });
+    const check = stateOf(run.report);
+    expect(check.verdict).toBe("ok");
+    expect(String(check.detail)).toContain("retro-registry");
+  });
+
+  test("the retro registry read composes an ok/verified-empty, torn, and unknown verdict", async () => {
+    const { readRetroRegistryState } = await import("../../packages/cli/src/edge");
+    const emptyStore = {
+      readRecords: () => ({
+        ok: true,
+        value: {
+          records: [],
+          evidence: { storePath: "s", verification: [], verifiedEmpty: true, recordCount: 0 },
+        },
+      }),
+    } as never;
+    expect(readRetroRegistryState(emptyStore)).toMatchObject({
+      ok: true,
+      verifiedEmpty: true,
+      stores: [{ name: "retro-registry", verdict: "verified-empty" }],
+    });
+
+    const tornStore = {
+      readRecords: () => ({
+        ok: false,
+        error: {
+          kind: "state",
+          code: "state.store.torn",
+          consequence: "not_landed",
+          location: { path: "s" },
+        },
+      }),
+    } as never;
+    expect(readRetroRegistryState(tornStore)).toMatchObject({
+      ok: false,
+      reason: "store-torn",
+      failureCode: "state.store.torn",
+    });
+
+    const unknownStore = {
+      readRecords: () => ({
+        ok: true,
+        value: {
+          records: [
+            {
+              schemaVersion: "delivery.state.v1",
+              kind: "retro.level",
+              key: "retro.levels:broken",
+              sequence: 1,
+              checksum: "0".repeat(16),
+              payload: { schemaId: "delivery.retro.level.v1", name: "broken" },
+            },
+          ],
+          evidence: { storePath: "s", verification: [], verifiedEmpty: false, recordCount: 1 },
+        },
+      }),
+    } as never;
+    expect(readRetroRegistryState(unknownStore)).toMatchObject({
+      ok: false,
+      reason: "store-unknown",
+    });
+  });
+});
