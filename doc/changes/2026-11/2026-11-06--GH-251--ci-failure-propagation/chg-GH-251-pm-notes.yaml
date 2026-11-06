@@ -65,3 +65,6 @@ notes:
   - text: "Plan phase 1 (917a22a1): suite-aggregation runner, runner contract suite (TC-CIPROP-001..007), and committed negative control (TC-CIPROP-008..011) delivered; contract 7/7 PASS, control PASS (green path, both counterfactuals, restored-runner non-vacuity, hermetic, bounded), bash -n clean, full runner 24/24 PASS exit 0. TC-CIPROP-012 deliberately deferred to phase 2 so every interim commit stays green. DoR nit folded in: both new suites are discovered by the runner and test-all.sh (executable bit + .tests/ name) and pass under the runner itself, satisfying TC-CIPROP-005 set-equality."
     type: "info"
     date: "2026-11-06"
+  - text: "Plan phase 2 (04db1c9d): bash-tests rewired to scripts/run-bash-suites.sh, job comment corrected to the real aggregation contract, DEC-7 scoped ci-topology allowance with negative fixtures A-E and disabled-allowance non-vacuity landed; gates: ci-checks 35/35 PASS, ci-topology/ci-bindingness/ci-supply-chain/script-surface exit 0, contract suite 8/8 PASS (TC-CIPROP-012 now included), full runner 24/24 PASS exit 0, git diff --check clean."
+    type: "info"
+    date: "2026-11-06"

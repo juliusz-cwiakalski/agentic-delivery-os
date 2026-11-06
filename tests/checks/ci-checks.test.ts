@@ -21,8 +21,8 @@ import {
 } from "../../scripts/checks/ci-supply-chain";
 import {
   BASH_JOBS,
-  TS_JOBS,
   removedLineViolations,
+  TS_JOBS,
   validate as validateTopology,
 } from "../../scripts/checks/ci-topology";
 import { runSyncCheck } from "../../scripts/checks/error-table-sync";
@@ -433,7 +433,10 @@ describe("DEC-7 scoped ci-topology allowance", () => {
       "        run: bun run scripts/checks/ci-topology.ts\n",
       "",
     );
-    const violations = removedLineViolations(BASE_REPAIR_WORKFLOW, unifiedDiff(BASE_REPAIR_WORKFLOW, head));
+    const violations = removedLineViolations(
+      BASE_REPAIR_WORKFLOW,
+      unifiedDiff(BASE_REPAIR_WORKFLOW, head),
+    );
     expect(violations).toHaveLength(1);
     expect(violations[0]).toContain("ci-topology.ts");
   });

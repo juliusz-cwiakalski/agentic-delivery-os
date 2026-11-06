@@ -8,6 +8,13 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseConfigYaml } from "@delivery-os/adapters/file";
 import { type ConfigCatalog, resolveConfig } from "@delivery-os/core";
+import {
+  BOUNDARY_CLASSES,
+  buildConfigSource,
+  CONFIG_PREFIX,
+  LIMIT_BYTES,
+  utf8Bytes,
+} from "../fixtures/source-limits/harness";
 
 const ROOT = process.cwd();
 const FIXTURES = join(ROOT, "tests/fixtures/config/yaml");
@@ -176,5 +183,48 @@ describe("TC-CONFIG-021 actual host switches block before parsing", () => {
       expect(allowed.stdout).toContain('"ok":true');
       expect(allowed.stdout).toContain("PARSER-CANARY");
     }
+  });
+});
+
+describe("TC-UTF8LIMIT-001 YAML check site boundary matrix", () => {
+  const FILE = "fixtures/config-source-limit.yaml";
+  const unpadded = parseConfigYaml(CONFIG_PREFIX, "system", FILE);
+
+  test("the unpadded twin parses", () => {
+    expect(unpadded.ok).toBe(true);
+  });
+
+  for (const boundary of BOUNDARY_CLASSES) {
+    test(`${boundary.label} ${boundary.expectOk ? "accepted" : "rejected"}`, () => {
+      const text = buildConfigSource(boundary.targetBytes, boundary.unit);
+      expect(utf8Bytes(text)).toBe(boundary.targetBytes);
+      if (boundary.discriminatesCodeUnits) {
+        expect(text.length).toBeLessThanOrEqual(LIMIT_BYTES);
+        expect(utf8Bytes(text)).toBeGreaterThan(LIMIT_BYTES);
+      }
+      const parsed = parseConfigYaml(text, "system", FILE);
+      if (boundary.expectOk) {
+        expect(parsed).toEqual(unpadded);
+      } else {
+        expect(parsed).toEqual({
+          ok: false,
+          error: {
+            kind: "config",
+            code: "config.file.malformed",
+            layer: "system",
+            file: FILE,
+          },
+        });
+        if (!parsed.ok) {
+          expect(parsed.error).not.toHaveProperty("line");
+          expect(parsed.error.code).not.toMatch(/size|limit/i);
+        }
+      }
+    });
+  }
+
+  test("the builder throws instead of producing a near-miss", () => {
+    expect(() => buildConfigSource(0, "three")).toThrow();
+    expect(() => buildConfigSource(utf8Bytes(CONFIG_PREFIX) - 1, "three")).toThrow();
   });
 });
