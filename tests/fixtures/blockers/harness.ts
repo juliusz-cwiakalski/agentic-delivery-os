@@ -40,12 +40,16 @@ export const FIXED_NOW_ISO = "2026-11-06T12:00:00Z";
 export const FIXED_NOW_MS = Date.parse(FIXED_NOW_ISO);
 export const RUN_ID = "run-blockers-fixture";
 
-export type SessionSpy = BlockerSessionPort & { readonly calls: string[] };
+export type SessionSpy = BlockerSessionPort & {
+  readonly calls: string[];
+  readonly id: string;
+};
 
 export const createSessionSpy = (): SessionSpy => {
   const calls: string[] = [];
   return {
     calls,
+    id: "sess-1",
     spawn: () => {
       calls.push("spawn");
     },
