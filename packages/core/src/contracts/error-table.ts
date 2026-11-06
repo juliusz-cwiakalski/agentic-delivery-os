@@ -25,6 +25,7 @@ export const DOMAIN_KINDS = [
   "status",
   "doctor",
   "merge",
+  "retro",
 ] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -835,5 +836,49 @@ export const ERROR_TABLE = [
     remediationHint: "Resolve each named failing check using its fix hint, then re-run doctor.",
     projectionClass: "user-validation",
     summary: "One or more wiring checks failed.",
+  },
+  {
+    code: "retro.evidence.malformed-entry",
+    domainKind: "retro",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the named evidence position and repair or explicitly salvage the affected artifact, then re-run the retro command; valid entries were preserved.",
+    projectionClass: "user-validation",
+    summary: "An evidence entry is malformed and was classified in band.",
+  },
+  {
+    code: "retro.evidence.tamper-flagged",
+    domainKind: "retro",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the named domain and record positions; do not trust altered evidence. Restore the unaltered artifact or record an explicit salvage before re-running.",
+    projectionClass: "user-validation",
+    summary: "A keyed evidence chain failed verification.",
+  },
+  {
+    code: "retro.truth.vacuous-run",
+    domainKind: "retro",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Verify the declared collector sources and their windows, then re-run retro collect; a collection that executes must produce collector records.",
+    projectionClass: "user-validation",
+    summary: "A collection run executed and produced no collector records.",
+  },
+  {
+    code: "retro.evidence.denied",
+    domainKind: "retro",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Write evidence only through the collector seam; the sidecar is collector-owned and the attempted write did not land.",
+    projectionClass: "platform-provider",
+    summary: "A write outside the collector seam was refused.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

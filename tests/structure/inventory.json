@@ -29,6 +29,7 @@
     "src/contracts/queue-ready.ts",
     "src/contracts/registry.ts",
     "src/contracts/result.ts",
+    "src/contracts/retro.ts",
     "src/contracts/session.ts",
     "src/contracts/state.ts",
     "src/contracts/status.ts",
@@ -186,7 +187,11 @@
     "src/output/protocol.ts",
     "src/serve.ts"
   ],
-  "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "opencode": [
+    "src/commands/index.ts",
+    "src/index.ts",
+    "src/output/index.ts"
+  ],
   "testkit": [
     "src/commit/git-repo.ts",
     "src/commit/index.ts",

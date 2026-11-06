@@ -1071,8 +1071,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 36) {
-    failures.push(`table length ${live.length} != baseline + 36 (${BASELINE_ROWS.length + 36})`);
+  if (live.length !== BASELINE_ROWS.length + 40) {
+    failures.push(`table length ${live.length} != baseline + 40 (${BASELINE_ROWS.length + 40})`);
   }
   return failures;
 };
@@ -1148,7 +1148,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 36,
+      BASELINE_ROWS.length + 40,
     );
   });
 
@@ -1171,7 +1171,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 36);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 40);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1492,6 +1492,73 @@ describe("TC-DOCTOR-020 doctor row and corpora stay in two-way sync", () => {
     );
     expect(messages((await runSyncCheck({ root })).failures)).toContain(
       "doctor.check.repo.unreachable: a doctor check-level cause must not become an error-table identity",
+    );
+  });
+});
+
+const RETRO_ROWS = [
+  "| retro.evidence.malformed-entry | retro | platform | false | not_landed | Inspect the named evidence position and repair or explicitly salvage the affected artifact, then re-run the retro command; valid entries were preserved. | user-validation | An evidence entry is malformed and was classified in band. |",
+  "| retro.evidence.tamper-flagged | retro | platform | false | not_landed | Inspect the named domain and record positions; do not trust altered evidence. Restore the unaltered artifact or record an explicit salvage before re-running. | user-validation | A keyed evidence chain failed verification. |",
+  "| retro.truth.vacuous-run | retro | user | false | not_landed | Verify the declared collector sources and their windows, then re-run retro collect; a collection that executes must produce collector records. | user-validation | A collection run executed and produced no collector records. |",
+  "| retro.evidence.denied | retro | platform | false | not_landed | Write evidence only through the collector seam; the sidecar is collector-owned and the attempted write did not land. | platform-provider | A write outside the collector seam was refused. |",
+] as const;
+
+describe("TC-RETRO-005 retro rows synchronize in both directions", () => {
+  test("the four rows round-trip exactly once and the unchanged control is green", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    const doc = readFile(ROOT, DOC);
+    for (const row of RETRO_ROWS) {
+      expect(doc.split(row).length - 1, row).toBe(1);
+    }
+    expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
+  });
+
+  test("machine-only drift names the undocumented source entry", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, replaceTableCode("retro.evidence.denied", "retro.evidence.refused"));
+    const failures = messages((await runSyncCheck({ root })).failures);
+    expect(failures).toContain("documented code retro.evidence.denied has no source entry");
+    expect(failures).toContain("source entry retro.evidence.refused is undocumented");
+  });
+
+  test("documentation-only drift and column drift fail by name", async () => {
+    const missing = makeTempRoot();
+    editFile(missing, DOC, removeDocRow(RETRO_ROWS[0]));
+    expect(messages((await runSyncCheck({ root: missing })).failures)).toContain(
+      "source entry retro.evidence.malformed-entry is undocumented",
+    );
+
+    const phantom = makeTempRoot();
+    editFile(
+      phantom,
+      DOC,
+      insertDocRow(
+        "| retro.evidence.phantom | retro | platform | false | not_landed | Retry. | user-validation | Phantom. |",
+      ),
+    );
+    expect(messages((await runSyncCheck({ root: phantom })).failures)).toContain(
+      "documented code retro.evidence.phantom has no source entry",
+    );
+
+    const altered = makeTempRoot();
+    editFile(altered, DOC, (text) =>
+      text.replace(RETRO_ROWS[1], RETRO_ROWS[1].replace("| platform |", "| user |")),
+    );
+    expect(messages((await runSyncCheck({ root: altered })).failures)).toContain(
+      "retro.evidence.tamper-flagged category mismatch",
+    );
+  });
+
+  test("removing retro from DOMAIN_KINDS fails naming the undeclared namespace", async () => {
+    const root = makeTempRoot();
+    editFile(
+      root,
+      TABLE,
+      replaceDomainKinds(["provider", "input", "config", "state", "lint", "verify", "db"]),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "undeclared namespace retro",
     );
   });
 });
