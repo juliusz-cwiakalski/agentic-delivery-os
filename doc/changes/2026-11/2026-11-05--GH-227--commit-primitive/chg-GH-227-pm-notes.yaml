@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-06T00:21:00Z", completed: "2026-11-06T00:33:00Z" }
   delivery: { started: "2026-11-06T01:50:00Z", completed: "2026-11-06T02:45:00Z" }
   system_spec_update: { started: "2026-11-06T03:55:00Z", completed: "2026-11-06T04:20:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-06T04:25:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -108,6 +108,12 @@ notes:
     date: "2026-11-06"
   - text: "system_spec_update complete (doc-syncer SUCCESS, PM-verified against git status): authored feature-commit-primitive.md (29.8KB, real module map); reconciled 15 docs incl. phase-transitions spec (atomic default section), result-contract (commit kind), state-layer (commit.telemetry), config-layer (commit.phaseCommit), adapter-ports + scaffold charters (git seam + inference edge), m1 pack pages commit.md/phase.md (planned -> delivered), cli-command-registry, glossary (10 terms), doc index, nonfunctional NFR row; forbidden-literals.registry.json +1. Guards green: error-table-sync 58/58, forbidden-literals 102 docs 0 violations, doc-distribution 81 docs, envelope goldens 9/9, git diff --check clean. Residual gaps: none; spec coverage: none outstanding. Delivery decisions recorded in change spec DEC log + plan entries per GH-226 precedent (no doc/decisions record - no sibling precedent for in-story decisions)"
     type: "info"
+    date: "2026-11-06"
+  - text: "Review iteration 1 verdict: FAIL - 13 findings (2 critical / 1 high / 1 medium / 5 low / 4 info), artifact at code-review/review-iter-1.yaml, remediation Phase 9 (tasks 9.1-9.8, gated) appended to plan by reviewer; plan status ALL_TASKS_DONE for phases 1-8, scope drift 51/8/5 adjudicated legitimate; all 7 recorded coder deviations adjudicated acceptable. F-1 (critical, edge.ts:384): convergence evidence requires phase commit == current HEAD, so re-running an earlier phase's complete after later commits land misclassifies both-landed as interrupted-atomic and manufactures a duplicate commit + duplicate telemetry (violates AC-F7-3/NFR-6/DEC-7) - row-2 test passed only because it re-ran while still HEAD. F-2 (critical, edge.ts:367): phase-centric scope lookup matches lifecycle names against integer plan-phase ids, structurally never matches in a valid multi-phase plan, silently falling back to plan phase 1 scope - declared untracked files of other phases become strays and completions can durably record the false basis skipped-no-pending-work (defeats DEC-15). F-3 (high): convergence-corpus test blind spot. Remediation: reopen delivery (iteration 2) to execute plan phase 9"
+    type: "risk"
+    date: "2026-11-06"
+  - text: "Retro: both critical review catches are fixture-realism failures, not coverage-matrix failures - the test plan mapped 23/23 ACs and the suites were green, yet single-phase plan fixtures and HEAD-at-re-run timing masked F-1/F-2 (the repo's own GH-170 single-phase-fixture lesson repeating). Future test-plan authoring should require at least one multi-phase plan fixture and re-run-after-later-commits scenarios for any convergence/idempotency semantics; coverage matrices must assert fixture realism, not just AC mapping"
+    type: "retro"
     date: "2026-11-06"
 
   - text: "Plan phase 1 complete: commit 77479da1 - commit domain contracts, six commit error rows, and the commit.phaseCommit config key. Gate: core build regenerated the config artifacts; structure/config/checks suite 136 pass; ERROR_TABLE 58 rows with 58 documented rows; error-table-sync OK."

@@ -217,3 +217,36 @@ phases:
       - "pnpm check"
       - "bash scripts/.tests/test-doc-distribution.sh"
       - "git diff --check"
+  - id: 9
+    title: "Code Review Remediation (Iteration 1)"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/edge.ts
+        - packages/cli/src/commands/commit.ts
+        - packages/cli/src/commands/phase.ts
+        - packages/core/src/contracts/commit.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/adapters/src/git/commit.ts
+        - tests/behaviour/phase-atomic.test.ts
+        - tests/behaviour/commit-convergence.test.ts
+        - tests/fixtures/commit/harness.ts
+        - doc/spec/features/feature-commit-primitive.md
+        - doc/planning/oss-tooling/milestones/m1/commands/commit.md
+        - doc/planning/oss-tooling/milestones/m1/commands/phase.md
+        - doc/changes/2026-11/2026-11-05--GH-227--commit-primitive/chg-GH-227-spec.md
+        - doc/changes/2026-11/2026-11-05--GH-227--commit-primitive/chg-GH-227-test-plan.md
+    summary: "fix(GH-227): code review remediation - convergence evidence and phase-scope mapping"
+    tasks:
+      - "9.1 [F-1, critical] Fix readEvidence commit-presence detection (packages/cli/src/edge.ts): drop the `entry.commitSha === head` equality for the both-landed discrimination; classify the commit present from the durable event alone (phaseId match + transitionId === record.timestamp + landedAt > reopenedAt when reopened). Head/ancestry may only disambiguate the commit-without-record state (add a containsCommit/merge-base--is-ancestor capability to the git port if needed instead of equality). Re-sync feature-commit-primitive.md's convergence paragraph (line 111) and the phase pack page with the corrected semantics. [AC: AC-F7-3, NFR-6, DEC-7]"
+      - "9.2 [F-2, critical] Fix the phase-centric plan-scope mapping (packages/cli/src/edge.ts readPlanPhase + packages/cli/src/commands/commit.ts phaseContextOf): replace the silent `?? phases[0]` fallback with an explicit lifecycle-to-plan-phase correspondence (union of delivery-kind plan phases for delivery, or an explicit schema mapping) or a disclosed degraded scope source when no plan phase corresponds; the phase's declared new files outside plan phase 1 must be stageable in phase-centric mode. Re-sync m1/commands/commit.md (line 49 'the phase's declared plan scope') and the feature doc. [AC: AC-F5-1, DEC-15, F-1/F-2]"
+      - "9.3 [F-3, high] Extend the convergence/matrix corpus: earlier-phase re-run after a later phase's atomic commit moved HEAD (expect no-op, no new commit, no new telemetry event); earlier-phase re-run after a manual commit with dirty tracked work (expect no manufactured commit); commit-without-record still detected when the orphan commit is at head. Drive through the real harness and ledger, and add a >=2-phase production-shaped fixture plan asserting non-first-phase declared untracked files are staged in phase-centric mode (kills the single-phase fixture mask). [AC: NFR-6]"
+      - "9.4 [F-4, medium] Record the DM-3 commitSkipped refinement (interrupted-atomic-no-pending-work, envelope-only) against the spec per DEC-14, or fold it into no-op with reconciliation detail; keep TC-ATOMIC-012/TR-9 equality coverage."
+      - "9.5 [F-5, low] Update the test-plan section 7 automation mapping (phase-idempotency is regression-only; TC-ATOMIC-006..009 live in phase-atomic.test.ts) and name the relocated suites in the plan-diff note."
+      - "9.6 [F-6, low] Apply the three DoR-carried spec amendments: section 8.1 phase-complete exit-1 list gains commit.commitlint-failed; NFR-1 acknowledges the retry's second call; DM-3 labels state/commitSha/atomic as new additive fields."
+      - "9.7 [F-8, low] Reword the commit.safety.secret-suspected remediationHint to the human-review remediation (drop the session-refused copy-paste); keep it material-free and re-sync the documented row."
+      - "9.8 [F-7, F-9..F-13, info/low polish, opportunistic] Bound readTree (batched diff or numstat-first selection; 8 KB binary probe instead of full-file readFileSync); record or implement the change-folder ref fallback per DEC-14; remove the dead dryRun branches in completeWithCommit; make dry-run --phase no-pending-work a success disclosure instead of staging-blocked failure; replace the unvalidated as-casts in the DM-2 mapping with a typed or validated shape; optionally pin collation for path ordering."
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/phase-atomic.test.ts tests/behaviour/commit-convergence.test.ts tests/behaviour/commit-command.test.ts tests/golden/commit-envelope.test.ts"
+      - "pnpm check"
