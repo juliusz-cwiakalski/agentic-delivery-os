@@ -13,7 +13,9 @@ phases:
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
-decisions: []
+decisions:
+  - text: "TDR-0009 authored for the retro evidence sidecar keyed-chain construction (HMAC-style keyed chain, distinct store-managed key artifact, claimed collector identity, tamper-evidence scope) — resolves spec OQ-1; status Proposed, human acceptance reserved at PR review per R2 rigor."
+    date: "2026-11-06"
 open_questions: []
 blockers: []
 notes:

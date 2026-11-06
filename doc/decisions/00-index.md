@@ -32,3 +32,4 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0005](TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md) | TDR | Delivery Result Enum and CLI Exit Taxonomy | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [TDR-0007](TDR-0007-license-gate-compound-spdx-expression-evaluation.md) | TDR | License Gate Compound SPDX Expression Evaluation | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [TDR-0008](TDR-0008-additive-adapter-contract-extensions-closeout-v1.md) | TDR | Additive Adapter-Contract Extensions for Closeout v1 (`DeliveryRequest.headSha` and `resolve-delivery-thread`) | Proposed | 2026-11-01 | Juliusz Ćwiąkalski |
+| [TDR-0009](TDR-0009-retro-evidence-sidecar-keyed-chain-construction.md) | TDR | Retro Evidence Sidecar — Keyed-Chain Construction, Distinct Chaining Key, and Claimed Collector Identity | Proposed | 2026-11-06 | Juliusz Ćwiąkalski |
