@@ -40,6 +40,12 @@
       }
     },
     {
+      "includes": ["tests/fixtures/doctor/golden/**"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
       "includes": ["tests/fixtures/**"],
       "linter": {
         "rules": {
@@ -87,6 +93,28 @@
     },
     {
       "includes": ["tests/fixtures/plan/queue-ready/**"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": [
+        "tests/fixtures/mcp/**/*.json",
+        "tests/fixtures/merge/golden/**",
+        "tests/fixtures/verify-deploy/golden/**"
+      ],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": ["tests/fixtures/economics/golden/**"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": ["tests/fixtures/watchdog/golden/**"],
       "formatter": {
         "enabled": false
       }

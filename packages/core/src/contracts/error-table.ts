@@ -21,8 +21,14 @@ export const DOMAIN_KINDS = [
   "closeout",
   "plan",
   "watchdog",
+  "commit",
   "status",
   "blockers",
+  "doctor",
+  "merge",
+  "harness",
+  "retro",
+  "dispatch",
 ] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -45,6 +51,45 @@ export type ErrorTableEntry = {
   readonly projectionClass: ProjectionClass;
   readonly summary?: string;
 };
+
+/**
+ * One declared family row (NFR-8, GAP-13).
+ *
+ * The family declares the shared class fields once; `template` is the
+ * documented template code and `slotPrefix`/`slotSuffix` bound the open slot.
+ * A family instance resolves to the family's declared fields with its own code
+ * preserved. The slot is validated by the declared-gate-set recognizer, never
+ * by a generic pattern widening.
+ */
+export type ErrorTableFamily = {
+  readonly template: string;
+  readonly domainKind: ErrorTableDomainKind;
+  readonly category: ErrorCategory;
+  readonly retryable: boolean;
+  readonly consequence: ErrorConsequence;
+  readonly remediationHint: string;
+  readonly projectionClass: ProjectionClass;
+  readonly summary?: string;
+  readonly slotPrefix: string;
+  readonly slotSuffix: string;
+};
+
+/** The one declared open-slot family: `merge.gate.<gate-id>.failed` (DEC-7). */
+export const ERROR_TABLE_FAMILIES = [
+  {
+    template: "merge.gate.<gate-id>.failed",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Resolve the named merge-applicable gate evidence and re-run `verify gates`, then retry the merge.",
+    projectionClass: "user-validation",
+    summary: "A merge-applicable gate did not pass.",
+    slotPrefix: "merge.gate.",
+    slotSuffix: ".failed",
+  },
+] as const satisfies readonly ErrorTableFamily[];
 
 /**
  * The single machine-readable declaration. Ordered fallback entries first, then
@@ -121,6 +166,94 @@ export const ERROR_TABLE = [
     remediationHint: "Correct the named chain entries, ordering, or references and retry.",
     projectionClass: "user-validation",
     summary: "The provider chain is invalid.",
+  },
+  {
+    code: "provider.profile.absent",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare provider profiles and a preference chain in configuration, then retry; no model is invented when nothing is declared.",
+    projectionClass: "user-validation",
+    summary: "No provider profile or preference chain is declared.",
+  },
+  {
+    code: "provider.profile.invalid",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Correct the named profile, tier, seat, chain entry, or pacing value and retry; the profile configuration is validated fail-closed.",
+    projectionClass: "user-validation",
+    summary: "The provider profile configuration is invalid.",
+  },
+  {
+    code: "provider.profile.capability-denied",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Assign a seat whose declared capability matches the task (for example vision-capable) and retry; the gate reads declared descriptors only.",
+    projectionClass: "user-validation",
+    summary: "A profile seat was refused by the hard capability gate.",
+  },
+  {
+    code: "provider.profile.unavailable",
+    domainKind: "provider",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Wait for a named provider condition to clear or declare another eligible profile, then retry; the decision is parked with reasons.",
+    projectionClass: "platform-provider",
+    summary: "No provider profile is eligible under the current conditions.",
+  },
+  {
+    code: "provider.env-record.unauthorized",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Use a model-environment name that matches the configured allowlist and retry; the record was rejected as a whole.",
+    projectionClass: "user-validation",
+    summary: "The env record names a variable outside the allowlist.",
+  },
+  {
+    code: "provider.env-record.duplicate",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Remove the duplicated env-record name and retry; the record was rejected as a whole.",
+    projectionClass: "user-validation",
+    summary: "The env record declares a name more than once.",
+  },
+  {
+    code: "provider.env-record.malformed",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Correct the env-record header, line grammar, name shape, or final line feed and retry; the record was rejected as a whole.",
+    projectionClass: "user-validation",
+    summary: "The env record does not conform to the data-v1 grammar.",
+  },
+  {
+    code: "provider.env-record.oversized",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Reduce the env-record file, line, or record count below the configured limits and retry.",
+    projectionClass: "user-validation",
+    summary: "The env record exceeds a configured size limit.",
   },
   {
     code: "input.value.rejected",
@@ -599,6 +732,83 @@ export const ERROR_TABLE = [
     summary: "No liveness signal sources are available; the answer is unknown.",
   },
   {
+    code: "watchdog.liveness-stalled",
+    domainKind: "watchdog",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the corroborated stall evidence, then apply the budget-governed restart response for the lane.",
+    projectionClass: "user-validation",
+    summary: "The lane is stalled and fully corroborated by the declared progress signals.",
+  },
+  {
+    code: "commit.staging-blocked-untracked",
+    domainKind: "commit",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Stage or remove the pending material outside the declared scope, or expand the change scope, then retry the commit.",
+    projectionClass: "user-validation",
+    summary: "Nothing stageable remains for the requested commit.",
+  },
+  {
+    code: "commit.commitlint-failed",
+    domainKind: "commit",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Reconcile the repository commitlint configuration with the commit type table (or correct the message), then retry.",
+    projectionClass: "user-validation",
+    summary: "Neither the generated message nor the deterministic template satisfied commitlint.",
+  },
+  {
+    code: "commit.safety.secret-suspected",
+    domainKind: "commit",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Review the named finding class and path, remove or gitignore the suspected material, then retry; never blind-retry.",
+    projectionClass: "user-validation",
+    summary: "The secret scan flagged candidate content or a filename on suspicion.",
+  },
+  {
+    code: "commit.safety.scan-unavailable",
+    domainKind: "commit",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Restore the deterministic safety scanner and retry; nothing was staged or committed.",
+    projectionClass: "platform-provider",
+    summary: "The deterministic safety scan could not run.",
+  },
+  {
+    code: "commit.atomic-abort",
+    domainKind: "commit",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Retry the completion; the clean abort restored both the ledger and the commit to neither-landed, and a re-run converges.",
+    projectionClass: "platform-provider",
+    summary: "The atomic phase completion aborted and restored both sides.",
+  },
+  {
+    code: "commit.session.context-refused",
+    domainKind: "commit",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Invoke the commit primitive from outside the delivery session (agents invoke it from a plain shell or subagent boundary).",
+    projectionClass: "user-validation",
+    summary: "The commit primitive refused to run inside a delivery session.",
+  },
+  {
     code: "status.collector.tracker.unavailable",
     domainKind: "status",
     category: "platform",
@@ -608,6 +818,291 @@ export const ERROR_TABLE = [
       "Restore access to the named collector source and re-run the board; the board withheld its gates rather than display a partial picture.",
     projectionClass: "platform-provider",
     summary: "The named board collector is unavailable.",
+  },
+  {
+    code: "merge.gates-stale",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Re-run `verify gates` for the current head, then retry the merge; the recorded verification is no longer valid evidence.",
+    projectionClass: "user-validation",
+    summary: "The recorded gate verification is stale or voided.",
+  },
+  {
+    code: "merge.waiver-unauthorized",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare the override with an authorizer authorized for the gate class, then retry; no waiver was recorded.",
+    projectionClass: "user-validation",
+    summary: "The declared waiver authorizer is not authorized for the gate class.",
+  },
+  {
+    code: "merge.owner-gate-override-without-waiver",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare an authorized override naming the owner-gate and its authorizer, or resolve the owner-gated state, then retry.",
+    projectionClass: "user-validation",
+    summary: "The owner gate failed and no override declaration was supplied.",
+  },
+  {
+    code: "merge.rebase-conflict",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Resolve the named conflicting paths, re-run `verify gates`, then retry the merge; no force path exists.",
+    projectionClass: "user-validation",
+    summary: "The single rebase-refresh attempt conflicted.",
+  },
+  {
+    code: "merge.state-unverified",
+    domainKind: "merge",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Produce a gate verification with `verify gates` and retry; the verification state is absent, torn, or incompatible.",
+    projectionClass: "platform-provider",
+    summary: "No consumable gate-verification state exists for the change.",
+  },
+  {
+    code: "merge.landing-unverified",
+    domainKind: "merge",
+    category: "platform",
+    retryable: false,
+    consequence: "unknown",
+    remediationHint:
+      "Re-run the merge to re-verify the landing; do not blind-retry or manually duplicate the merge.",
+    projectionClass: "platform-provider",
+    summary: "The landing mutation fired but its landed state is not established.",
+  },
+  {
+    code: "merge.transaction-aborted",
+    domainKind: "merge",
+    category: "user",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Clear the named pre-mutation condition and retry; nothing landed and a re-run converges.",
+    projectionClass: "user-validation",
+    summary: "The transaction aborted cleanly before any landing mutation.",
+  },
+  {
+    code: "verify.deploy.trace-missing",
+    domainKind: "verify",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Produce a deploy trace whose declared steps executed and artifacts exist, then re-run `verify deploy`.",
+    projectionClass: "user-validation",
+    summary: "The deploy verdict is unknown because executed-step evidence is absent.",
+  },
+  {
+    code: "verify.deploy.status-stale",
+    domainKind: "verify",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Read the deploy job's execution trace; a status field alone is not evidence. Re-run when the trace is current.",
+    projectionClass: "user-validation",
+    summary: "The deploy status field is disqualified as evidence.",
+  },
+  {
+    code: "verify.deploy.trace-failed",
+    domainKind: "verify",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Resolve the named failing deploy step and re-run the deployment, then re-run `verify deploy`.",
+    projectionClass: "user-validation",
+    summary: "The deploy trace shows a failed step.",
+  },
+  {
+    code: "doctor.check.failed",
+    domainKind: "doctor",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint: "Resolve each named failing check using its fix hint, then re-run doctor.",
+    projectionClass: "user-validation",
+    summary: "One or more wiring checks failed.",
+  },
+  {
+    code: "harness.spawn.invalid-output",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the harness machine-readable output for the named parse failure, correct the invocation, and retry.",
+    projectionClass: "user-validation",
+    summary: "The harness spawn output was not machine-readable.",
+  },
+  {
+    code: "harness.spawn.refused",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Read the harness refusal reason, correct the invocation or declared environment, and retry.",
+    projectionClass: "user-validation",
+    summary: "The harness refused to start a session.",
+  },
+  {
+    code: "harness.spawn.variable-missing",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare the named variable in the parent environment or remove it from the allowlist, then retry.",
+    projectionClass: "user-validation",
+    summary: "A declared spawn-environment variable is absent.",
+  },
+  {
+    code: "harness.session.unknown",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Use the existing session identity from the original spawn; never resume a fabricated or stale id.",
+    projectionClass: "user-validation",
+    summary: "The named session does not exist.",
+  },
+  {
+    code: "harness.capability.gap",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Select a harness that declares the capability or use the declared consumer-side fallback.",
+    projectionClass: "user-validation",
+    summary: "The selected harness declares the requested capability as a gap.",
+  },
+  {
+    code: "harness.listing.invalid-output",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the harness listing output for the named parse failure and correct the invocation.",
+    projectionClass: "user-validation",
+    summary: "The harness session-listing output was not machine-readable.",
+  },
+  {
+    code: "harness.telemetry.unattributable",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Map the session tree root to a work item before extraction, then re-run the capture.",
+    projectionClass: "user-validation",
+    summary: "A session tree root cannot be attributed to a work item.",
+  },
+  {
+    code: "harness.telemetry.invalid-identity",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair the malformed session identity in the harness store before extracting telemetry.",
+    projectionClass: "user-validation",
+    summary: "A session record carries no valid identity.",
+  },
+  {
+    code: "harness.telemetry.extraction-failed",
+    domainKind: "harness",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Verify the configured harness store location and read permissions, then re-run the closeout capture.",
+    projectionClass: "platform-provider",
+    summary: "The harness store could not be read for telemetry extraction.",
+  },
+  {
+    code: "retro.evidence.malformed-entry",
+    domainKind: "retro",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the named evidence position and repair or explicitly salvage the affected artifact, then re-run the retro command; valid entries were preserved.",
+    projectionClass: "user-validation",
+    summary: "An evidence entry is malformed and was classified in band.",
+  },
+  {
+    code: "retro.evidence.tamper-flagged",
+    domainKind: "retro",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the named domain and record positions; do not trust altered evidence. Restore the unaltered artifact or record an explicit salvage before re-running.",
+    projectionClass: "user-validation",
+    summary: "A keyed evidence chain failed verification.",
+  },
+  {
+    code: "retro.truth.vacuous-run",
+    domainKind: "retro",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Verify the declared collector sources and their windows, then re-run retro collect; a collection that executes must produce collector records.",
+    projectionClass: "user-validation",
+    summary: "A collection run executed and produced no collector records.",
+  },
+  {
+    code: "retro.evidence.denied",
+    domainKind: "retro",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Write evidence only through the collector seam; the sidecar is collector-owned and the attempted write did not land.",
+    projectionClass: "platform-provider",
+    summary: "A write outside the collector seam was refused.",
+  },
+  {
+    code: "dispatch.restart-budget-exceeded",
+    domainKind: "dispatch",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Request a fresh restart budget through the coordinator or operator, then retry the resume.",
+    projectionClass: "user-validation",
+    summary: "The delivery's restart budget is exhausted.",
+  },
+  {
+    code: "dispatch.resume-uneconomical",
+    domainKind: "dispatch",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Change the harness capability to attach-and-continue, or re-evaluate and accept the prefill re-pay cost, then retry the resume.",
+    projectionClass: "user-validation",
+    summary: "The resume path would re-pay prefill and is uneconomical.",
   },
   {
     code: "blockers.invalid-type",

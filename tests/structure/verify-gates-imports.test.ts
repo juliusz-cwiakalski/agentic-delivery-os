@@ -77,7 +77,7 @@ describe("TC-VGATES-002 contracts data-only and domain purity", () => {
   test("the domain imports only contracts and the verify-change domain module", () => {
     const source = parse(DOMAIN);
     for (const specifier of specifiers(source)) {
-      expect(["#contracts", "./verify-change.js"]).toContain(specifier);
+      expect(["#contracts", "./verify-change.js", "./merge-probe.js"]).toContain(specifier);
     }
   });
 

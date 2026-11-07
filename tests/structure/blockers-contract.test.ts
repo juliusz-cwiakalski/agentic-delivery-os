@@ -169,8 +169,8 @@ const audit = (snapshot: ContractSnapshot): string[] => {
   eq("BLOCKER_MAX_ANSWER_CHARS", snapshot.caps.answer, 160);
   eq("BLOCKERS_MAX_QUESTIONS", snapshot.caps.renderQuestions, 8);
   eq("BLOCKERS_MAX_MACHINE_BYTES", snapshot.caps.machineBytes, 65536);
-  eq("BLOCKERS_MAX_HUMAN_LINES", snapshot.caps.humanLines, 24);
-  eq("BLOCKERS_MAX_HUMAN_BYTES", snapshot.caps.humanBytes, 4096);
+  eq("BLOCKERS_MAX_HUMAN_LINES", snapshot.caps.humanLines, 32);
+  eq("BLOCKERS_MAX_HUMAN_BYTES", snapshot.caps.humanBytes, 6144);
   eq("BLOCKER_QUESTION_RECORD_KIND", snapshot.questionKind, "blocker.question");
   eq("BLOCKER_ANSWER_RECORD_KIND", snapshot.answerKind, "blocker.answer");
   eq("BLOCKER_QUESTION_PAYLOAD_SCHEMA", snapshot.questionSchema, "delivery.blocker.question.v1");

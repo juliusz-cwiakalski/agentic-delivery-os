@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 1,
+  "timing": {
+    "totalMs": 0
+  },
+  "error": {
+    "code": "watchdog.liveness-stalled",
+    "category": "user",
+    "retryable": false,
+    "consequence": "not_landed",
+    "remediationHint": "Inspect the corroborated stall evidence, then apply the budget-governed restart response for the lane.",
+    "summary": "reason=watchdog.liveness-stalled; heartbeatAgeMs=400000; tokenDelta=0; traffic=0; stallBoundMs=300000"
+  }
+}

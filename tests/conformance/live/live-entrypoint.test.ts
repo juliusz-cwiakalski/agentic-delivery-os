@@ -523,7 +523,7 @@ describe("TC-CONF-024 config reader and credential-port exclusivity", () => {
       return text.includes("tests/conformance/live") || text.includes("CONFORMANCE_LIVE_");
     });
     expect(offenders).toEqual([]);
-    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(5);
   });
 });
 

@@ -1,0 +1,501 @@
+# GH-233 implementation plan — M1-S11: Harness adapters and dispatch portability
+#
+# Sources (single source of truth):
+#   - Spec:  ./chg-GH-233-spec.md (v1.1; F-1..F-8; 12 ACs AC-F1-1..AC-F8-3;
+#     NFR-1..9; EVT-1; DM-1..DM-4; DEC-1..DEC-10; RSK-1..RSK-8; §14 open
+#     questions with pinned resolution mechanisms; §18 delivery order)
+#   - Test plan: ./chg-GH-233-test-plan.md (v1.2; 33 TCs TC-HARN-001..033;
+#     binding oracles §4.1–§4.9; named gaps GAP-T1..T7; OQ-T1..T8)
+#   - ADR-0008 (harness adapter contract, DC-1..DC-5, C-1..C-5) and
+#     TDR-0005 (delivery-result taxonomy; the dispatch-session derivation
+#     class the shared classifier emits into)
+#
+# TC-mapping obligation (spec §18): all 33 TCs are mapped onto Phases 1–9
+# below (Phase 9, appended after local review iteration 1, extends existing
+# TC rows only and adds no new TC id) without reshaping any pinned behaviour,
+# vocabulary, record, invariant, oracle, or AC/NFR/DEC mapping. TCs whose
+# structure half and behaviour half
+# land in different phases are marked in `coverage` with their completing
+# phase (GH-225 GAP-1 discipline). Spec and test plan were cross-checked:
+# zero inconsistencies found (see the return note for the one artifact-level
+# format observation — this YAML is the canonical plan; a legacy .md plan is
+# not authored).
+#
+# Delivery decisions recorded by this plan (items the spec/test plan leave
+# delivery-bound; each is a placement or spelling choice, never a behaviour
+# change — a real deviation would reopen the test plan, not ship):
+#   - OQ-T1 (error identities): invalid/unknown harness configuration reuses
+#     `config.value.invalid` (pinned by TC-HARN-003 step 4 and TC-HARN-017);
+#     an unresolvable declared credential reference surfaces the credential
+#     port's `config.credential.missing` wrapped in the classified spawn
+#     failure that names the reference (pinned by TC-HARN-013); every other
+#     harness-path classified failure (malformed machine-readable spawn
+#     output, non-zero exit / spawn refusal, unknown session on resume,
+#     unattributable or malformed-identity extraction) uses a NEW additive
+#     `harness.*` error-table family. Exact `harness.*` spellings are
+#     implementation-bound (GAP-T7); each row lands with
+#     scripts/checks/error-table-sync.ts green — the documented table row in
+#     doc/spec/features/feature-result-contract.md (the S2 surface) is added
+#     in the same commit (TC-HARN-027 step 4).
+#   - OQ-T6 (subpath layout): one `./harness` adapter subpath
+#     (packages/adapters/src/harness/**) carrying both delivery adapters, the
+#     per-harness telemetry extractors, and the SQLite loader; the host
+#     execution-environment implementation lands in the already-scaffolded
+#     `./host` subpath (packages/adapters/src/host/index.ts replaces the
+#     placeholder and is the single `node:child_process` spawn site).
+#     packages/adapters/package.json gains the `./harness` export in Phase 3.
+#   - OQ-T5 (seam mapping, test-plan §4.1 rule 9): neutral evidence type and
+#     the closed vocabularies live in packages/core/src/contracts/harness.ts;
+#     the one shared classifier is packages/core/src/domain/harness-classify.ts
+#     (imports the delivery-result taxonomy from core contracts — never
+#     re-declares it — and emits tokens of the `dispatch-session` derivation
+#     class); the telemetry payload/record-kind contract is
+#     packages/core/src/contracts/harness-telemetry.ts; build-from-declaration
+#     spawn-env construction is packages/core/src/domain/harness-spawn-env.ts;
+#     liveness neutral-shape discipline is
+#     packages/core/src/domain/harness-liveness.ts; the configured-kind
+#     registry is packages/core/src/domain/harness-registry.ts; the additive
+#     state records land in packages/core/src/state/harness-telemetry.ts; the
+#     capture point extends packages/core/src/domain/closeout.ts and
+#     packages/core/src/state/closeout.ts. Field-name spellings inside these
+#     modules stay implementation-bound; the closed key sets and semantics
+#     are pinned by the test plan.
+#   - No composition edge ships: no CLI command, MCP tool, or host wiring is
+#     added (spec §7.2 [OUT] new CLI command surfaces). TC-HARN-016 step 2/3
+#     (`the composition built the Claude adapter and not the opencode
+#     adapter`) is satisfied by the test-side composition over
+#     domain/harness-registry.ts factories driven by resolved configuration;
+#     the M1-S9 dispatch pilot is the first production composer.
+#   - Boundary reconciliation: `.dependency-cruiser.cjs` runtime-API
+#     confinement gains the harness adapter I/O subpath (exact path with
+#     reason, ADR-0005 pattern) in Phase 5 when the extractors first use
+#     node:fs/node:sqlite; `packages/adapters/src/host/` is already inside
+#     the DEC-6 adapter I/O allowance; the secret-read allowlist gains NO
+#     entry in any phase (NFR-9; TC-HARN-014 step 1).
+#   - GAP-T2 stance: the bash-era stack (scripts/opencode-session.sh,
+#     scripts/pm-liveness.sh, scripts/deliver-ticket.sh) is untouched;
+#     ported semantics are pinned by fixtures in tests/fixtures/harness/**
+#     and the bash suites run green in Phase 7 (TC-HARN-010 step 6,
+#     TC-HARN-031 step 7).
+#
+# Review-iteration-1 remediation (Phase 9, appended post-delivery):
+#   - Provenance: local review iteration 1 returned FAIL (record at
+#     ./code-review/review-iter-1.yaml). The PM-approved remediation set is
+#     F-1 (high), F-3, F-4, F-5 (medium), F-6 (low), F-10 (info, folded
+#     in), plus the F-12 plan audit note (task 9.7). Deferred with recorded
+#     reasons: F-8, F-9, F-11. Phase 9 extends existing TC rows only — no
+#     new TC id, no oracle reshaping beyond the remediation rows its tasks
+#     name.
+#   - Out of Phase 9 by design: F-2's taxonomy-token oracle alignment is a
+#     separate PM reopen of the test plan (the header's test-plan reference
+#     above is refreshed by that reopen, not here); TDR-0005 ratification
+#     and the ADR-0008 register flip are routed to @decision-advisor; the
+#     doc/spec/features/feature-harness-adapters.md touches (the Claude gap
+#     list per F-1, the F-2 disambiguation semantics, the F-7
+#     production-wiring deferral note) ride the lifecycle-phase-7 doc-sync
+#     re-run — Phase 9 only notes them (task 9.1).
+#   - F-12 audit note (scope reconciliation): Phase 6's declared scope
+#     entry packages/core/src/state/closeout.ts was never touched by the
+#     branch — only contracts/closeout.ts changed in the closeout pair; the
+#     capture runtime landed in the new packages/core/src/state/
+#     harness-telemetry.ts with fixture-side injection
+#     (tests/fixtures/closeout/harness-telemetry.ts). Recorded here
+#     alongside the existing delivery scope-additions record (pm-notes
+#     2026-11-06 deviation 4: core config/harness.ts, domain
+#     harness-capability/canonical/telemetry, adapters harness/
+#     sqlite-loader.ts, closeout extensions) so the declared-versus-actual
+#     reconciliation is symmetric in both directions.
+#
+# Tier rationale: `full` — 8 capabilities, 12 ACs, 33 automated TCs,
+# cross-package delivery (core contracts + domain + config + state, adapters
+# host/harness subpaths, testkit conformance), security_impact high (spec
+# front matter). All phases are delivery kind; plan-level
+# defaultLeases/defaultWeightClass apply. Per-phase completion artifacts: one
+# Conventional Commit per phase (the `summary` key, landed via @committer)
+# plus the `testGate` commands passing; typed doneArtifacts slots are declared
+# on the final phase where the evidence exists.
+#
+# Invariants carried by every phase (spec §21, NFR-1..9): one shared
+# harness-neutral classifier, adapters normalize only (DEC-10, NFR-8); the
+# spawn environment is exactly the declared allowlist, fail-closed both ways
+# (DEC-2, NFR-5, NFR-9); extraction is read-only, bounded, indexed
+# (DEC-5, NFR-2, NFR-3); figures degrade with warnings, never fabricate
+# (NFR-6); telemetry appends are fenced, verified, idempotent, non-gating
+# (DEC-6, NFR-7); no harness name, store path, or host literal outside
+# adapters and declared configuration (DEC-8, NFR-8); the watchdog stays
+# zero-source (DEC-9, NG-4); no dispatch engine or new command ships
+# (DEC-1, NG-1); machine output ≤ 65 536 UTF-8 bytes, human ≤ 4 096 bytes /
+# 24 lines, capped lists with explicit +N marks (NFR-4); determinism under
+# identical injected facts (NFR-1).
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-233
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Harness contract vocabulary, harness-neutral classifier, and the deny-by-default spawn-environment construction (core contracts + domain; security core first)"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/harness.ts
+        - packages/core/src/contracts/harness-telemetry.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/harness-classify.ts
+        - packages/core/src/domain/harness-spawn-env.ts
+        - packages/core/src/domain/harness-liveness.ts
+        - packages/core/src/domain/index.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/structure/harness-contract.test.ts
+        - tests/structure/harness-neutrality.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/port-contract-inventory.test.ts
+        - tests/types/harness.type-test.ts
+        - tests/behaviour/harness-spawn-env.test.ts
+        - tests/behaviour/harness-spawn-credential.test.ts
+        - tests/fixtures/harness/spawn-env.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/harness.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/harness-telemetry.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/domain/harness-classify.ts
+        role: producer
+    summary: "feat(GH-233): harness contracts, shared neutral classifier, deny-by-default spawn-env construction"
+    tasks:
+      - "1.1 packages/core/src/contracts/harness.ts — data-only contract module (no call expressions, no runtime APIs, no process/filesystem/clock; imports only ./ contract modules): the closed `as const` harness-kind vocabulary (opencode, claude-code — no third value, no wildcard), the closed operation and lifecycle-capability vocabularies (headless spawn, resume/steer injection, session introspection, telemetry extraction), the closed liveness signal-kind vocabulary (exactly session-traffic, worktree-activity, process) with the closed absence-reason set, the HarnessInstance shape (kind, observed version, capability declaration — no field can carry a derived parity claim), the HarnessSession lifecycle port shape (spawn carrying work item + prompt + execution-environment descriptor, deliver, resume/steer, collect, classify bound to the shared classifier, liveness), the adapter-normalized neutral evidence type, and the execution-environment descriptor (DM-2: execution kind host-only vocabulary, deny-by-default allowlist of declared variable names plus declared credential references — names and references only, never values). Capability declarations reuse the delivered AdapterCapabilityDeclaration/CapabilityGap model from adapter-capabilities.ts; supported and gap sets are disjoint by construction. [F-1, F-2, F-5; DM-2, DM-4; AC-F1-1; NFR-8; TC: TC-HARN-001 steps 1-6, TC-HARN-015 step 1 vocabulary half]"
+      - "1.2 packages/core/src/domain/harness-classify.ts — the ONE shared harness-neutral classifier: a pure function over the neutral evidence type only (completed, premature end, harness failure, refusal, timeout semantics), importing the delivery-result taxonomy from core contracts (never re-declaring it) and emitting tokens of the `dispatch-session` derivation class; the three-way distinction (completed / premature end / failed) is structural; no harness-kind comparison, no result-token string literal outside the taxonomy import, no I/O. [F-2; DEC-10; AC-F2-1 classifier half; NFR-1, NFR-8; TC: TC-HARN-005 steps 2, 4, 5 core half]"
+      - "1.3 packages/core/src/domain/harness-spawn-env.ts — build-from-declaration spawn-environment construction (DEC-2, the security core): a pure function receiving the descriptor, an injected parent-environment record, and the injected CredentialPort; the child environment is EXACTLY the declared set (every undeclared parent variable absent — fail-closed invariant); declared credential references resolve through resolve() at spawn (use) time only — never at construction — and their values enter only the returned environment; an unresolvable reference returns the classified failure naming the reference (credential port `config.credential.missing` wrapped per the OQ-T1 decision, zero partial environment); a missing declared non-credential variable returns the classified failure naming the variable; deterministic and byte-stable under serialization. No ambient environment access anywhere in the module. [F-5; DM-2; DEC-2; AC-F5-2 builder half; NFR-5, NFR-9; TC: TC-HARN-012 rules 1-7 at builder level, TC-HARN-013 rules 1-7 at builder level]"
+      - "1.4 packages/core/src/domain/harness-liveness.ts — the harness-agnostic liveness discipline as pure data assembly: the neutral read shape (one entry per closed kind, identical key set and order for a declared subset), sourced entries carrying value + injected observation timestamp, explicit absent entries carrying kind + closed reason (never 0, false, empty string, or an invented timestamp), the declared-subset projection rule, and the consumer-side mapping into the watchdog signal shape yielding absent keys (the watchdog module itself is NOT imported — DEC-9/NG-4 boundary). [F-2; DEC-9; AC-F2-2 shape half; NFR-6; TC: TC-HARN-006 shape assertions, TC-HARN-007 rules 1-3 shape half]"
+      - "1.5 packages/core/src/contracts/harness-telemetry.ts — the harness-neutral statistics contract (EVT-1/DM-1 vocabulary): per-session records carrying the versioned telemetry payload schema id, work-item ref, session id, harness kind + observed version, model, agent, tree root + parent chain, the five token classes (input, output, reasoning, cacheRead, cacheWrite — numeric or null-when-absent-and-warned), call counts, bounded pre-aggregated per-tool counts (DEC-7), cost (number or explicit null + warning), injected captured-at timestamp, degradation warnings from a closed reason set; the additive state record-kind name + payload-schema string + store-scoped key prefix (mirror the commit-telemetry pattern in contracts/commit.ts); the numeric caps (sessions per delivery, tools per agent, agent list, model list) with explicit truncation marks, and the machine 65 536 / human 4 096-byte / 24-line bounds reuse. Exact schema-id/kind/key spellings implementation-bound (GAP-T7/OQ-T4). [F-7, F-8; EVT-1; DM-1; DEC-3, DEC-7; AC-F8-1 vocabulary, AC-F8-2 vocabulary; NFR-4; TC: TC-HARN-021 shape fixture basis, TC-HARN-026 caps basis]"
+      - "1.6 Error rows per the OQ-T1 decision: packages/core/src/contracts/error-table.ts gains the additive `harness.*` family (spawn output unparseable, spawn refused/non-zero exit, unknown session on resume, unattributable extraction, malformed session identity — spellings implementation-bound); the documented S2 table row set in doc/spec/features/feature-result-contract.md is extended in the SAME commit; `config.value.invalid` and `config.credential.missing` reuse is asserted, not duplicated. [AC-F5-2 identity half; TC: TC-HARN-027 step 4 add rows branch]"
+      - "1.7 Test suites: tests/structure/harness-contract.test.ts (TC-HARN-001: closed vocabularies, duplicate/wildcard absence, disjoint+exhaustive declaration check runnable over shipped declarations, data-only module scan, contract-tier import scan) and tests/types/harness.type-test.ts (capability literal outside the closed set fails typecheck; widened string not assignable; absent gap not readable as support; neutral evidence as the only classifier input). tests/behaviour/harness-spawn-env.test.ts + tests/behaviour/harness-spawn-credential.test.ts over tests/fixtures/harness/spawn-env.ts (the §4.3 fixture: two declared model-routing variables, declared work path + path variable, declared credential source key, ≥3 undeclared variables incl. SYNTHETIC_UNDECLARED_TOKEN, HOME, a PATH variant, unique canaries): sorted-key-set equality with the declared list, Object.hasOwn absence per undeclared key, canary nowhere in env or serialized evidence, no empty-string/undefined/null masquerade, use-time resolution (construct, change fake material, spawn, observe second material, resolve called once at spawn), fail-closed on unresolvable reference (named, zero invocations, no partial env, decoy parent value unused) and on missing declared variable (RSK-3), deep equality + byte-identical canonical serialization on replay. tests/structure/harness-neutrality.test.ts core rows: exactly one classifier definition under packages/core/src/** (a second module fails the scan), classifier imports only contracts/pure domain, spawn-env builder contains zero ambient environment reads (non-zero file-count floor). [TC: TC-HARN-001 full, TC-HARN-012, TC-HARN-013, TC-HARN-005 steps 1-2 core half, TC-HARN-014 step 2 core half, TC-HARN-015 step 1 half; test-plan §4.3 rules 1-7, §4.9 rules 1-3]"
+      - "1.8 Register every new file in tests/structure/inventory.json with executable allowances in content-inventory.test.ts and the contract-surface fixtures of port-contract-inventory.test.ts; run the error-table suite and sync check. [TC: TC-HARN-027 inventory half, TC-HARN-031 registration half]"
+    coverage:
+      - "TC-HARN-001 (full), TC-HARN-012 (builder-level oracle; session-port observation completes in Phase 3), TC-HARN-013 (builder-level; session-port completion in Phase 3), TC-HARN-005 (core half: one classifier, type tests; adapter-scan half completes in Phase 3), TC-HARN-014 (core spawn-builder scan half; adapter-path scan completes in Phase 3), TC-HARN-015 (vocabulary half; seam half completes in Phase 3)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/structure/harness-contract.test.ts tests/structure/harness-neutrality.test.ts tests/structure/error-table.test.ts tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts"
+      - "bun test tests/behaviour/harness-spawn-env.test.ts tests/behaviour/harness-spawn-credential.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts"
+  - id: 2
+    title: "Harness configuration branch and instance registry (core config tier + pure registry; config-driven selection)"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/config/catalog.ts
+        - packages/core/src/config/defaults.ts
+        - packages/core/src/config/schema.ts
+        - packages/core/src/domain/harness-registry.ts
+        - packages/core/src/domain/index.ts
+        - tests/behaviour/harness-config.test.ts
+        - tests/structure/harness-contract.test.ts
+      folders:
+        - tests/fixtures/harness/config
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/config/catalog.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/domain/harness-registry.ts
+        role: producer
+    summary: "feat(GH-233): typed harness configuration branch and configured-kind instance registry"
+    tasks:
+      - "2.1 The typed `harness` branch in packages/core/src/config/catalog.ts beside `provider`/`commit`/`merge` (GH-225 branch pattern): selected harness kind, per-harness settings including store locations, and the declared environment allowlist (variable names + credential references; a literal VALUE in an allowlist entry is rejected by the existing secret-forbidden/forbidden-value identity — TC-HARN-017 step 3); exact unknown-key discipline per fixed branch. defaults.ts ships the absent-branch defaults (opencode, host execution, default store locations, default allowlist) with `defaults` origin — declaring nothing keeps today's behavior (DM-3, DEC-8). schema.ts carries whatever field-kind declaration the branch needs (GH-225 precedent). [F-6; DM-3; DEC-8; AC-F5-1, AC-F5-3 config half]"
+      - "2.2 packages/core/src/domain/harness-registry.ts — the pure configured-kind registry: maps a resolved harness kind to an injected adapter factory, exactly two registrations (opencode, claude-code) and no unregistered kind in the closed vocabulary (registry/vocabulary drift is a failure); the version probe is an injected dependency (observed version is data, never a literal; a failing probe yields an explicitly unknown version plus a warning, never a fabricated one); an unknown kind classifies `config.value.invalid` naming the configuration path and offending value with no adapter constructed and no opencode fallback. [F-1, F-6; DM-3, DM-4; DEC-8; AC-F5-1, AC-F1-1; TC: TC-HARN-003 steps 2-6]"
+      - "2.3 tests/fixtures/harness/config/** — committed YAML fixtures: empty/default, opencode-selected, claude-selected, custom + bind-mount-style store paths, and one fixture per invalid case (unknown kind, wrong-typed store location, empty string, invalid path shape, allowlist literal value, unknown branch key). [TC: TC-HARN-016 fixtures, TC-HARN-017 fixtures, TC-HARN-018 fixtures]"
+      - "2.4 tests/behaviour/harness-config.test.ts: defaults resolution with per-key `defaults` origin and byte-identity with the shipped default fixture (TC-HARN-016 steps 1, 6); claude-selected then opencode-selected resolution through the SAME code path with the test-side composition building the selected adapter factory and not the other (no code change between selections — the OQ no-composition-edge decision; steps 2-3, 5); catalogPaths(PRODUCTION_CATALOG) contains the harness branch paths and the inspection surface exposes origins (step 4). [F-6; DM-3; AC-F5-1; DEC-8; TC: TC-HARN-016 full, TC-HARN-003 resolution half]"
+      - "2.5 tests/behaviour/harness-config.test.ts negative rows: unknown kind → `config.value.invalid` naming path + value, no adapter constructed; wrong type / empty / invalid path shape per field → `config.value.invalid` with path + origin; allowlist literal value → rejected by the existing forbidden-value identity; unknown branch key → `config.key.unknown`; every identity is a member of ERROR_TABLE; a failed resolution never returns a partial harness config and never silently defaults. [F-6; DM-3; AC-F5-1; TC: TC-HARN-017 full]"
+      - "2.6 tests/behaviour/harness-config.test.ts store-location rows: configured store path A reaches the injected opencode store seam with no default fallback; the configured Claude Code session directory reaches the injected file reader; branch removal yields the default store location with `defaults` origin. The bind-mount-style extraction row lands in Phase 5 (TC-HARN-018 completing half). [F-6, F-7; DM-3; DEC-8; AC-F5-3; TC: TC-HARN-018 steps 1, 3, 5]"
+    coverage:
+      - "TC-HARN-003 (full), TC-HARN-016 (full), TC-HARN-017 (full), TC-HARN-018 (config half; bind-mount extraction half completes in Phase 5)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/harness-config.test.ts tests/behaviour/config-schema.test.ts tests/structure/harness-contract.test.ts"
+  - id: 3
+    title: "opencode delivery adapter, host execution-environment implementation, and spawn-path boundary reconciliation (adapters)"
+    kind: delivery
+    scope:
+      files:
+        - packages/adapters/src/harness/index.ts
+        - packages/adapters/src/harness/opencode.ts
+        - packages/adapters/src/host/index.ts
+        - packages/adapters/package.json
+        - scripts/checks/workspace-entrypoints.ts
+        - tests/behaviour/harness-opencode-session.test.ts
+        - tests/behaviour/harness-spawn-env.test.ts
+        - tests/behaviour/harness-spawn-credential.test.ts
+        - tests/structure/harness-imports.test.ts
+        - tests/structure/harness-neutrality.test.ts
+        - tests/structure/harness-contract.test.ts
+        - tests/structure/subpaths.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/harness
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/harness/opencode.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/host/index.ts
+        role: producer
+    summary: "feat(GH-233): opencode delivery adapter behind the harness port, host execution environment, boundary reconciliation"
+    tasks:
+      - "3.1 packages/adapters/src/host/index.ts — the host execution-environment implementation (replaces the scaffold placeholder; the ONLY production implementation of the descriptor kind): receives the command, args, the constructed spawn environment, cwd, and timeout; executes via `node:child_process` (the single spawn site in the delivery — TC-HARN-014/028 assert confinement); returns classified success/failure data carrying the observed status; never reads ambient environment (the environment arrives as data). packages/adapters/src/harness/** receives the executor as an injected dependency shaped like the delivered HarnessOneShotRunner ({file, args, {cwd, env, timeout}} — test-plan §4.1 rule 2; extend only if the opencode prompt delivery needs a stdin payload, recording the extension in the execution log). [F-5; DM-2; DEC-8; AC-F5-3 host half; TC: TC-HARN-015 steps 1-2, 5]"
+      - "3.2 packages/adapters/src/harness/opencode.ts — the opencode delivery adapter behind HarnessSession: spawn with machine-readable output flag (prompt delivered as data, byte-identical; session id parsed from output; tree root = session id mapped to the work-item ref; handle carries no result token and no raw payload beyond declared evidence); malformed output → classified spawn failure naming the parse failure with no fabricated id; non-zero exit → classified failure carrying the observed status in evidence, no throw, no undeclared retry; resume/steer attaches the existing session id with the steering payload delivered verbatim as data (`--`/metacharacters never interpreted; unknown session → classified failure; a declared resume gap returns before any invocation); liveness sourcing (session traffic via the injected store read surface, process signals) normalized into the neutral shape with undeclared kinds as explicit absences; premature end normalized to the neutral evidence shape and classified through the shared classifier. The adapter declares its full capability set (spawn, resume/steer, introspection, extraction, sourced liveness kinds) and never classifies with its own logic. Ports today's scripted semantics as fixtures (GAP-T2) — no bash script is executed or modified. [F-3, F-2, F-5; DEC-10; AC-F3-1; RSK-1; TC: TC-HARN-002 step 1 + step 6 opencode rows, TC-HARN-008 full, TC-HARN-009 full, TC-HARN-010 full]"
+      - "3.3 packages/adapters/src/harness/index.ts + packages/adapters/package.json: the `./harness` subpath export (OQ-T6 decision) re-exporting the opencode adapter, the adapter factory shapes for the registry, and (from Phase 5) the extractors; intra-package imports via the declared `#` aliases; the host subpath export switches from placeholder to the host execution implementation; scripts/checks/workspace-entrypoints.ts entrypoint pins updated for the new declared surface. [TC: TC-HARN-031 steps 1-2 subpath half]"
+      - "3.4 tests/behaviour/harness-opencode-session.test.ts over tests/fixtures/harness/harness-io.ts (injected runner + injected store/read seams recording every invocation; fixture header documents the bash-era behaviour mapping it pins — spawn/resume/list, keys-env credentials replaced by the descriptor): spawn happy path (one invocation, configured command, machine-readable flag, declared work dir, descriptor-built env, bounded timeout; prompt byte-identical; handle fields; no token), malformed output, non-zero exit, no second spawn; resume keeps the root (mapping-writer spy zero calls), verbatim steering payload, unknown session classified, declared-gap double returns pre-invocation; completed / premature-end / non-zero triple with the shared-classifier tokens (positive controls); mid-session liveness from injected facts with the undeclared worktree kind an explicit absence. [F-3; AC-F3-1; GAP-T2; TC: TC-HARN-008, TC-HARN-009, TC-HARN-010 full]"
+      - "3.5 Completing halves in the Phase-1 suites: harness-spawn-env.test.ts and harness-spawn-credential.test.ts gain the session-port spawn case — the opencode adapter constructed over the recording runner, §4.3 fixture parent env, descriptor applied through the port; the observed env at the runner is exactly the declared set and the credential resolved at use time through the port (the oracle now observes the production spawn path end-to-end). tests/structure/harness-imports.test.ts (new suite): zero `process.env`/`Bun.env`/`Deno.env`/computed ambient reads in packages/adapters/src/harness/** and the spawn path (non-zero file floor); `node:child_process` appears ONLY in packages/adapters/src/host/index.ts; the parent environment record enters only as an argument (AST assertion). tests/structure/harness-neutrality.test.ts adapter rows: adapter sources import no classifier module, no delivery-result token literal, no harness-kind comparison; the session `classify` member is the shared bound reference supplied by composition. [AC-F5-2 session half; NFR-8, NFR-9; TC: TC-HARN-012/013 completing, TC-HARN-014 steps 1-3 full, TC-HARN-005 steps 1+3 adapter half, TC-HARN-015 steps 2-4 seam half]"
+      - "3.6 tests/structure/harness-contract.test.ts: the exhaustive-declaration row for the opencode adapter (supported + gaps = closed sets, disjoint; liveness sources a subset of the closed kinds) and the consumer-facing capability helper (resume asked on a gap-double returns a machine-readable gap, no unclassified throw). [F-1; DM-4; AC-F1-1; TC: TC-HARN-002 steps 3-5 helper rows via the gap double, step 1 opencode half]"
+    coverage:
+      - "TC-HARN-002 (opencode half; Claude Code half completes in Phase 4), TC-HARN-008 (full), TC-HARN-009 (full), TC-HARN-010 (full), TC-HARN-012 (completes: session-port observation), TC-HARN-013 (completes), TC-HARN-014 (completes: adapter-path scan, child_process confinement, boundary check unchanged), TC-HARN-005 (completes: adapter-normalize-only scan), TC-HARN-015 (completes: host-only implementation, injected descriptor double), TC-HARN-033 (full: opencode session-listing capability — declared capability, fixture-pinned bash-era list behaviour, discovery over injected I/O without a new root)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/harness-opencode-session.test.ts tests/behaviour/harness-spawn-env.test.ts tests/behaviour/harness-spawn-credential.test.ts"
+      - "bun test tests/structure/harness-imports.test.ts tests/structure/harness-neutrality.test.ts tests/structure/harness-contract.test.ts tests/structure/subpaths.test.ts"
+      - "bun run scripts/checks/secret-read-boundary.ts && bun run scripts/checks/workspace-entrypoints.ts"
+  - id: 4
+    title: "Claude Code delivery adapter, harness conformance registry, and the identical-classification + liveness proofs (testkit)"
+    kind: delivery
+    scope:
+      files:
+        - packages/adapters/src/harness/claude.ts
+        - packages/adapters/src/harness/index.ts
+        - packages/testkit/src/conformance/harness.ts
+        - packages/testkit/src/index.ts
+        - tests/conformance/harness-classification.test.ts
+        - tests/conformance/harness-liveness.test.ts
+        - tests/behaviour/harness-claude-session.test.ts
+        - tests/structure/conformance-coverage.test.ts
+        - tests/structure/harness-contract.test.ts
+      folders:
+        - tests/fixtures/harness/scenarios
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/harness/claude.ts
+        role: producer
+      - kind: contract-file
+        target: packages/testkit/src/conformance/harness.ts
+        role: producer
+    summary: "feat(GH-233): Claude Code headless adapter, harness conformance registry, identical-classification proof"
+    tasks:
+      - "4.1 packages/adapters/src/harness/claude.ts — the Claude Code delivery adapter: headless spawn (non-interactive flag set, prompt as data, descriptor-built env applied — exactness proven by the Phase-3-extended spawn-env suites), collect and classify through the shared classifier only; resume/steer injection is an EXPLICIT declared gap returned before any invocation (the resume-prompt-reentry fallback is a later consumer decision — the gap carries no fallback instruction, DEC-4); liveness sourcing limited to the kinds the headless inventory affords — every other kind a declared absent value (the §14 OQ-1 mechanism: the declaration encodes the delivery-time discovery, tests assert the mechanism never a guessed inventory, GAP-T5); optional-field absence degrades with a warning and still classifies; a missing required completion marker classifies premature end rather than throwing. [F-4; DEC-4, DEC-9; AC-F4-1, AC-F1-1; RSK-1; TC: TC-HARN-011 full, TC-HARN-002 Claude rows]"
+      - "4.2 packages/testkit/src/conformance/harness.ts — the harness conformance registry beside the provider registry (reuse the capability-gating + coverage-gate pattern from conformance/{adapters,runner,coverage}.ts; import the delivery-result token type from core contracts, never re-declare): lists exactly the two shipped harnesses; per registration the capability declaration, a spawn/collect builder over injected I/O, and the supported scenario ids; the coverage meta-check fails a registered harness with no classification case and fails a closed-vocabulary kind that is not registered. tests/structure/conformance-coverage.test.ts extended accordingly. [F-1, F-2; DEC-1, DEC-10; TC: TC-HARN-004 step 8, TC-HARN-003 step 6 registry-count cross-check]"
+      - "4.3 tests/fixtures/harness/scenarios/classification.ts + tests/conformance/harness-classification.test.ts — the §4.2 identical-classification oracle: case floor of six scenarios (completed success, tool-level failure, premature end, harness-reported failure, spawn refusal, timeout), each adapter supplying every scenario; per scenario the two raw harness I/O shapes are DELIBERATELY different (asserted non-equal so identity of input cannot explain identity of output); per scenario both adapters spawn/collect/normalize → the one shared classifier → tokens equal each other and the declared expected token; premature end asserted on BOTH adapters with one positive control per outcome; the evidence key set is the neutral shape (no harness-specific key, no token inside evidence); both adapter instances' classify is the same bound reference and the adapter modules export no token or verdict; replay with fresh fakes yields identical tokens and canonical evidence (NFR-1); the meta-check self-test via a synthetic registry copy. [F-2, F-3, F-4; DEC-1, DEC-10; AC-F2-1; NFR-1, NFR-8; TC: TC-HARN-004 full]"
+      - "4.4 tests/fixtures/harness/scenarios/liveness.ts + tests/conformance/harness-liveness.test.ts — the §4.4 liveness oracle: per adapter a read with every declared kind sourced maps into the neutral shape (identical key set and order across adapters for the same subset; values equal the injected facts; no extra store/file read — recorder clean); an undeclared kind yields the explicit absent entry with a closed reason, present not omitted; same injected clock on both adapters yields identical timestamps; replay byte-identical. All-absent case: three absent entries, no 0/false/empty/invented timestamp, the watchdog-shape mapping yields absent keys and the watchdog declared-shape check refuses (watchdog stays zero-source — AST scan both directions, existing watchdog suites re-run green). [F-2; DEC-9; AC-F2-2; NG-4; NFR-6; TC: TC-HARN-006 full, TC-HARN-007 full]"
+      - "4.5 tests/behaviour/harness-claude-session.test.ts over the shared harness-io fixtures: headless invocation args, prompt as data, completed token, premature-end token equal to the opencode token (cross-reference TC-HARN-004), resume request returns the declared gap with zero runner invocations and no fallback executed, only declared liveness kinds sourced, no undeclared shell-out in the invocation log, optional-field drift degrades with a warning and still classifies. [F-4; DEC-4; AC-F4-1, AC-F1-1, AC-F2-1, AC-F2-2; TC: TC-HARN-011 full]"
+      - "4.6 tests/structure/harness-contract.test.ts completes TC-HARN-002: the Claude declaration (resume/steer absent from supported, present in gaps with a closed reason; every unsourced liveness kind represented, not omitted), the consumer helper returns the machine-readable gap naming harness kind + capability without throwing, every gap reason from the closed set, no adapter declares an operation outside the closed vocabulary, and the gap carries no executable fallback instruction. [F-1, F-4; DM-4; DEC-4; AC-F1-1, AC-F4-1; RSK-1; TC: TC-HARN-002 completes]"
+    coverage:
+      - "TC-HARN-002 (completes), TC-HARN-004 (full), TC-HARN-006 (full), TC-HARN-007 (full), TC-HARN-011 (full)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/conformance/harness-classification.test.ts tests/conformance/harness-liveness.test.ts tests/structure/conformance-coverage.test.ts"
+      - "bun test tests/behaviour/harness-claude-session.test.ts tests/structure/harness-contract.test.ts"
+  - id: 5
+    title: "Read-only telemetry extraction (opencode session store + Claude Code local files), harness-neutral shape, drift discipline, and the harness runtime-API boundary"
+    kind: delivery
+    scope:
+      files:
+        - packages/adapters/src/harness/telemetry-opencode.ts
+        - packages/adapters/src/harness/telemetry-claude.ts
+        - packages/adapters/src/harness/sqlite-loader.ts
+        - packages/adapters/src/harness/index.ts
+        - .dependency-cruiser.cjs
+        - tests/behaviour/harness-telemetry-opencode.test.ts
+        - tests/behaviour/harness-telemetry-claude.test.ts
+        - tests/behaviour/harness-telemetry-shape.test.ts
+        - tests/behaviour/harness-telemetry-drift.test.ts
+        - tests/behaviour/harness-config.test.ts
+      folders:
+        - tests/fixtures/harness/opencode-store
+        - tests/fixtures/harness/claude-code
+      packages:
+        - tests/boundaries/**
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/harness/telemetry-opencode.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/harness/telemetry-claude.ts
+        role: producer
+    summary: "feat(GH-233): read-only harness telemetry extraction, neutral statistics shape, drift discipline"
+    tasks:
+      - "5.1 packages/adapters/src/harness/sqlite-loader.ts + telemetry-opencode.ts — the opencode extractor over an injected store access seam ({openReadOnly, query, close} recording every statement and open option; production implementation uses the workspace SQLite loader pattern — bun:sqlite falling back to node:sqlite, mirroring packages/core/src/state/driver/runtime-edge.ts): connection opened read-only with the query-only pragma set before the first SELECT; bounded indexed queries only (every statement LIMIT-bounded, filtered on session id / parent id / time — no full scans of message or part tables, no retries, no pagination); parent-recursion session-tree aggregation with the declared session cap + explicit truncation marks; tree roots correlated to work-item refs; one §4.6 neutral record per session; missing store / unreadable store → classified degraded/failed capture outcome, never a crash. Query access is strictly the injected seam — engines never read harness stores (DEC-5, ADR-0008 C-5). [F-7; DEC-5; AC-F7-1; NFR-2, NFR-3; TC: TC-HARN-019 full]"
+      - "5.2 packages/adapters/src/harness/telemetry-claude.ts — the Claude Code extractor over an injected file reader (records every path and byte range; production uses node:fs reads only): read-only file parsing of transcripts + usage records bounded by the declared per-file byte cap and line cap with explicit truncation marks and omitted counts; malformed lines degrade with a warning naming line/file and capture continues; missing file → classified failed/degraded outcome; metadata only — a privacy canary planted in transcript content appears nowhere in the output (§20); no shell-out (invocation log carries no command). [F-7; DEC-5; AC-F7-1; NFR-2, NFR-3; §20; TC: TC-HARN-020 full]"
+      - "5.3 Boundary reconciliation (ADR-0005 exact-path + reason pattern): .dependency-cruiser.cjs runtime-apis-confinement gains the harness adapter I/O subpath allowance (exact path `^packages/adapters/src/harness/` with a comment naming node:fs/node:sqlite extraction reads); add the failing negative fixture under tests/boundaries proving runtime APIs in a non-allowed adapters path still fail; fixture-coverage meta-check green; `packages/adapters/src/host/` needs NO new entry (already DEC-6-allowed). [NFR-8; AC-F5-3 boundary half; TC: TC-HARN-028 step 3 allowance half, TC-HARN-031 boundary half]"
+      - "5.4 tests/fixtures/harness/opencode-store/build.ts — the deterministic synthetic store builder (temp directory only, never a committed binary; root session mapped to the work item, two child agent sessions, messages/parts with all token classes, tool parts, two model ids, a planted privacy canary in place of message bodies) and tests/behaviour/harness-telemetry-opencode.test.ts — the §4.5 oracle: read-only open + query-only pragma before first SELECT (statement log order asserted); INSERT and DELETE through the seam both reject with classified data; file hashes + mtimes unchanged, no -wal/-shm/journal/lock file, no checkpoint; fresh writer connection (busy_timeout = 0, BEGIN IMMEDIATE, insert, commit) succeeds without retry after extraction closes (GAP-T3 proxy); statement count equals the expected constant; EXPLAIN QUERY PLAN shows no SCAN of message/part tables and an index-backed tree filter; cap + 3 sessions → capped read, truncated + omitted count marked, statement count does not grow; missing/unreadable store classified. [F-7; DEC-5; AC-F7-1; NFR-2, NFR-3; GAP-T3; TC: TC-HARN-019 full]"
+      - "5.5 tests/fixtures/harness/claude-code/** (committed synthetic JSONL/usage records with the privacy canary) and tests/behaviour/harness-telemetry-claude.test.ts — the §4.5 Claude rules: read-only opens, no write/rename/delete recorded, sizes + mtimes unchanged, no new file; output key set pinned to the neutral shape (no free-form field, canary nowhere); per-file byte/line caps with truncation marks + omitted counts on the oversized fixture; malformed line warns and continues; missing file classified; no shell-out. [F-7; DEC-5; AC-F7-1; NFR-2, NFR-3; §20; TC: TC-HARN-020 full]"
+      - "5.6 tests/behaviour/harness-telemetry-shape.test.ts over semantically equivalent opencode + Claude fixtures (one root, two child agents, two models, tool usage on each): identical output shape from both extractors (key set, types, nesting — only values differ); exactly the five token classes, call counts, bounded per-tool counts; per-session agent + model identity not collapsed; one record per session with unique ids, no aggregate record repeating counters; tree root + parent chain + work-item ref on every record with children attributed to the root's work item; harness kind + observed version present and matching the declaration; no prompt/message/transcript/diff/tool-output content (canary scan); telemetry schema id distinct from state/command schemas; replay byte-identical. [F-7; EVT-1; DM-1; AC-F8-1 extraction half; DEC-3; NFR-1; TC: TC-HARN-021 full]"
+      - "5.7 tests/behaviour/harness-telemetry-drift.test.ts — the §4.6 degradation matrix over both stores: pinned full fixture (zero warnings, all classes numeric — positive control); optional column/field absent (captured, field null/absent, exactly one warning naming it, extraction did not depend on the column); non-numeric optional value (warn + degrade, never coerced); missing cost (null + warning, never 0, never an estimate); drifted observed version (warning naming expected + observed, capture completes); orphan session tree (failed outcome for that session, classified + disclosed, no fabricated ref); malformed required identity (classified failure, no record, no placeholder id); closed warning vocabulary, zero fabricated figures across all cases. [F-7, F-8; AC-F8-2; NFR-6; RSK-2; DEC-6; TC: TC-HARN-022 full]"
+      - "5.8 TC-HARN-018 completing half in tests/behaviour/harness-config.test.ts + the opencode extractor suite: a bind-mount-style temp path B outside the repository containing the synthetic store — extraction succeeds against B, no repository-relative assumption; no store path literal outside config defaults and adapters; no homedir()/HOME read in the spawn or extraction path (injected data only). [F-6, F-7; DM-3; DEC-8; AC-F5-3; TC: TC-HARN-018 completes]"
+    coverage:
+      - "TC-HARN-019 (full), TC-HARN-020 (full), TC-HARN-021 (full), TC-HARN-022 (full), TC-HARN-018 (completes: bind-mount extraction half)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/harness-telemetry-opencode.test.ts tests/behaviour/harness-telemetry-claude.test.ts tests/behaviour/harness-telemetry-shape.test.ts tests/behaviour/harness-telemetry-drift.test.ts tests/behaviour/harness-config.test.ts"
+      - "pnpm check:boundaries && bun test tests/boundaries"
+  - id: 6
+    title: "Closeout telemetry capture point, additive state records, output bounds, and state-additivity reconciliation"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/state/harness-telemetry.ts
+        - packages/core/src/state/index.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/core/src/state/closeout.ts
+        - tests/behaviour/harness-closeout-capture.test.ts
+        - tests/behaviour/harness-closeout-idempotency.test.ts
+        - tests/behaviour/harness-closeout-nongating.test.ts
+        - tests/behaviour/harness-output-bounds.test.ts
+        - tests/fixtures/closeout/harness.ts
+        - tests/structure/harness-contract.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/port-contract-inventory.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/state/harness-telemetry.ts
+        role: producer
+    summary: "feat(GH-233): closeout telemetry capture, additive fenced state records, bounded telemetry output"
+    tasks:
+      - "6.1 packages/core/src/state/harness-telemetry.ts — the additive record append inside the EXISTING state schema (no STATE_SCHEMA_VERSION bump, no migration, no modified kind — mirror commit-telemetry): appends one payload per captured session under the store-scoped key per work item using the contracts/harness-telemetry.ts kind + payload schema + key prefix; every append is fenced (acquire/release order recorded) and verified post-append (read-back before success); the uniqueness key is (work item, run, session) — a re-run appends nothing for already-captured sessions; a failed append is classified, never silent, and never consumable as captured statistics. [F-8; EVT-1; DM-1; DEC-3; NFR-7; AC-F8-1 durability half, AC-F8-3 idempotency half]"
+      - "6.2 The capture point in packages/core/src/domain/closeout.ts + packages/core/src/state/closeout.ts — the closeout runtime gains an INJECTED telemetry capture capability (extend tests/fixtures/closeout/harness.ts, never fork the fact model, R-T6): at closeout, extract through the adapter capability and append via 6.1; capture outcomes (captured / degraded / failed counts + warning reasons) are durably disclosed through the existing closeout operation-record discipline — NO second event kind (OQ-T8 decision: an additive payload on the existing operation record, spelling implementation-bound); capture is NON-GATING — an extraction or append failure changes no closeout step outcome, summary, or command verdict, and writes no zero-valued record (no zero tokens, no null session id, no fabricated cost); a pre-change delivery reads telemetry as absent, not zero. [F-8; DEC-6; AC-F8-3 full, AC-F8-1 capture half; NFR-7; TC: TC-HARN-023 steps 1-5, TC-HARN-025 full]"
+      - "6.3 tests/behaviour/harness-closeout-capture.test.ts over the extended closeout harness + a real temp state store (tests/fixtures/state/harness.ts) with a three-session telemetry fixture: after closeout, the public state read API shows telemetry records under the store-scoped key, one payload per session, pinned telemetry schema id; payloads carry tokens by class, calls, tool counts, agent, model, harness kind/version, run id, work-item ref, tree root, parent chain; append fenced + verified (recorded order); state schema version unchanged, no migration artifact; log-only readback — unlink the temp store AND make the extractor throw, re-read the log: every statistic still present, extractor zero calls; per-class sums equal the fixture values; joinable by work item + run id. [F-8; EVT-1; DM-1; DEC-3; NFR-7; AC-F8-1 full; TC: TC-HARN-023 full]"
+      - "6.4 tests/behaviour/harness-closeout-idempotency.test.ts: run 1 record set frozen; re-run → zero new records, byte-identical payloads, unique session ids; third run identical; convergence — failed capture (zero records, failed disclosure) then success (N records) then success (still N), monotonic without duplicates; one new session → exactly one new record, no duplicates of existing; existing closeout idempotency suites stay green (deterministic operation identity reused). [F-8; DEC-6; NFR-7; AC-F8-3; TC: TC-HARN-024 full]"
+      - "6.5 tests/behaviour/harness-closeout-nongating.test.ts with failure injectors (extractor throws, store missing, fenced append fails): every step outcome + summary + command verdict equal the baseline; capture outcome classified and durably disclosed with failed/degraded counts + reasons, readable from the log after the run; degraded drift case appends records AND keeps the outcome equal to baseline; no partial readable record on append failure; disclosure rides the operation record (no second event kind); no zero-valued record on any failure path. [F-8; DEC-6; NFR-7; AC-F8-3; TC: TC-HARN-025 full]"
+      - "6.6 tests/behaviour/harness-output-bounds.test.ts over cap-sized fixtures (session cap + 3, tools above the per-agent cap, agents and models above their caps): session records capped with explicit omitted count or +N mark, no unbounded dump; tool counts capped per agent with +N and deterministic stable key order; agent/model list caps identical; serialized machine payload ≤ 65 536 UTF-8 bytes with the measured value recorded and replay-equal; human disclosure ≤ 4 096 bytes / 24 lines with the counts line fitting; a would-exceed payload truncates with a mark (positive control) in deterministic order. [F-7, F-8; DEC-7; NFR-4; TC: TC-HARN-026 full]"
+      - "6.7 State additivity and contract reconciliation (TC-HARN-027): tests/structure/harness-contract.test.ts rows — state schema version unchanged, every pre-existing record kind present and unmodified, the new telemetry kind additive + payload-schema-versioned, the telemetry schema id distinct from state/machine/command schema ids; content-inventory + port-contract-inventory fixtures updated for the new state module and exports; error-table rows reconciled (the Phase-1 family: doc, table, and inventory agree); existing state-* and closeout-* behaviour suites run unchanged and green; no migration/backfill artifact. [DM-1; EVT-1; §8.5, §19; TC: TC-HARN-027 full]"
+    coverage:
+      - "TC-HARN-023 (full), TC-HARN-024 (full), TC-HARN-025 (full), TC-HARN-026 (full), TC-HARN-027 (full)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/harness-closeout-capture.test.ts tests/behaviour/harness-closeout-idempotency.test.ts tests/behaviour/harness-closeout-nongating.test.ts tests/behaviour/harness-output-bounds.test.ts"
+      - "bun test tests/behaviour"
+      - "bun run scripts/checks/error-table-sync.ts"
+  - id: 7
+    title: "Neutrality and secret-boundary battery, non-vacuity mutants, determinism goldens, wiring and CI parity, bash-era non-regression"
+    kind: delivery
+    scope:
+      files:
+        - tests/structure/harness-neutrality.test.ts
+        - tests/structure/harness-imports.test.ts
+        - tests/checks/harness-mutants.test.ts
+        - tests/checks/harness-determinism.test.ts
+        - tests/checks/harness-ci-parity.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/subpaths.test.ts
+        - tests/structure/inventory.json
+        - .github/workflows/ci.yml
+      folders:
+        - tests/fixtures/harness/mutants
+        - tests/fixtures/harness/golden
+    summary: "test(GH-233): neutrality battery, guard mutants, determinism goldens, wiring and CI parity"
+    tasks:
+      - "7.1 Final neutrality battery in tests/structure/harness-neutrality.test.ts + tests/structure/harness-imports.test.ts (the §4.8 oracle over the complete tree, non-zero file-count floors everywhere): zero harness-name literals in packages/core/src/{contracts,domain,app,state,config} outside the closed vocabulary and the config catalog default; zero imports of @delivery-os/adapters/* in core; the harness subpath imports only core contracts + allowed node builtins (never cli/mcp/opencode); `node:child_process` only in packages/adapters/src/host/index.ts with the boundary fixture proving the rule; no ambient environment reads on the spawn path or adapters beyond the existing credential directory and the enumerated configuration-environment readers (secret-read allowlist gains no entry — credential-material class still exactly the credentials directory); classifier and session port contain no harness-kind comparison and no result-token literal; forbidden-literal and ambient-globals scans green with non-zero scope counts; seeded `opencode` literal in a copied core domain module fails by name (mutation control, §4.9). [NFR-8, NFR-9; AC-F5-1, AC-F5-3; DEC-5, DEC-8; RSK-6; TC: TC-HARN-028 full, TC-HARN-014 full-battery row]"
+      - "7.2 tests/checks/harness-mutants.test.ts over tests/fixtures/harness/mutants/** — the §4.9/TC-HARN-029 named-guard families, each a temp copy of one production module with one guard disabled, imported via file URLs, each failing its corresponding suite BY NAME while the live modules pass: spawn-env spread mutant (parent spread + declared; TC-HARN-012 fails naming the leaked key), credential fallback mutant (parent value on port failure; TC-HARN-013), ambient read mutant (process.env in a copied spawn module; TC-HARN-014 naming file + line), adapter classify mutant (adapter-local divergent token; TC-HARN-004/005 naming adapter + scenario), liveness zero mutant (absent kind defaulted to 0; TC-HARN-007 naming the kind), extractor write mutant (INSERT or dropped pragma; TC-HARN-019 naming the statement), full-scan mutant (LIMIT/indexed filter removed; TC-HARN-019 naming the query), cost-zero mutant (missing cost as 0; TC-HARN-022 naming cost), drift hard-fail mutant (throw on absent optional field; TC-HARN-022 naming the field), duplicate-capture mutant (idempotency check skipped; TC-HARN-024 naming the duplicated session), gating mutant (closeout aborts on capture failure; TC-HARN-025 naming the changed step), silent-default mutant (opencode fallback for an invalid kind; TC-HARN-017 naming the path), truncation mutant (+N mark removed; TC-HARN-026 naming the omitted count), harness literal mutant (opencode seeded in core domain; TC-HARN-028 naming the file). A passing mutant fails the meta-check. [All ACs; NFR-1..NFR-9; TC: TC-HARN-029 full]"
+      - "7.3 tests/checks/harness-determinism.test.ts + tests/fixtures/harness/golden/** with the explicit regenerate script (the only writer, --write reviewed; goldens opened read-only with mtimeMs asserted unchanged): produce every golden output (classification evidence, liveness shape, telemetry payloads) twice with fresh fakes — canonical JSON byte equality; insertion-order-only change in input map members leaves canonical output identical (stable ordering rule); injected clock shifted by a fixed delta shifts timestamps deterministically with identical structure; each golden comparison paired with a one-field mutation asserting inequality, then restore asserting equality (no self-fulfilling golden). [NFR-1; AC-F2-1 determinism half; TC: TC-HARN-030 full]"
+      - "7.4 Wiring and CI parity: tests/structure/subpaths.test.ts asserts the declared ./harness and ./host exports (no bin, no publishConfig, no installer registration); tests/structure/inventory.json + content-inventory.test.ts final registration with no orphan file; scripts/checks/workspace-entrypoints.ts green over the declared surface; tests/checks/harness-ci-parity.test.ts asserts the ts-test job runs pnpm test (discovering the harness suites) and the invariant jobs cover the new scans — ci-topology, ci-bindingness, ci-supply-chain green; .github/workflows/ci.yml touched ONLY if wiring is missing; no dependency is added (license/vulnerability gates recorded N/A-new). [AC-F5-1 wiring half; NFR-8; §18; TC: TC-HARN-031 steps 1-6]"
+      - "7.5 Bash-era non-regression: no bash script changed across the branch (diff-verified); bash scripts/.tests/test-opencode-session.sh and bash scripts/.tests/test-pm-liveness.sh green — the scripted stack remains the authoritative executor until the M1-S9 dual-run handover (§8.5). [§8.5; GAP-T2; TC: TC-HARN-031 step 7, TC-HARN-010 step 6]"
+    coverage:
+      - "TC-HARN-028 (full), TC-HARN-029 (full), TC-HARN-030 (full), TC-HARN-031 (full)"
+    testGate:
+      - "bun test tests/structure/harness-neutrality.test.ts tests/structure/harness-imports.test.ts tests/checks/harness-mutants.test.ts tests/checks/harness-determinism.test.ts tests/checks/harness-ci-parity.test.ts"
+      - "pnpm check:boundaries && bun run scripts/checks/secret-read-boundary.ts && bun run scripts/checks/forbidden-literals.ts && bun run scripts/checks/ambient-globals.ts && bun run scripts/checks/workspace-entrypoints.ts"
+      - "bash scripts/.tests/test-opencode-session.sh && bash scripts/.tests/test-pm-liveness.sh"
+  - id: 8
+    title: "Finalize and release: changeset, aggregate gates, evidence log, and the spec-reconciliation handoff"
+    kind: delivery
+    scope:
+      files:
+        - .changeset/gh-233-harness-adapters-minor.md
+        - doc/spec/features/feature-harness-adapters.md
+        - doc/spec/features/feature-adapter-ports.md
+        - doc/spec/features/feature-adapter-conformance.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-closeout.md
+        - doc/spec/features/feature-watchdog-lane-contracts.md
+        - doc/spec/nonfunctional.md
+        - doc/overview/architecture-overview.md
+        - doc/overview/glossary.md
+        - doc/planning/concepts/agent-primitive-surface.md
+        - doc/changes/2026-11/2026-11-06--GH-233--harness-adapters/chg-GH-233-test-plan.md
+        - doc/changes/2026-11/2026-11-06--GH-233--harness-adapters/chg-GH-233-plan.yaml
+    doneArtifacts:
+      pipelineId: "GitHub Actions ts-* matrix green on the GH-233 PR targeting main-tools"
+      trackerTransition: "GH-233 dod_check pass; PR opened against main-tools at lifecycle phase 11"
+    summary: "chore(GH-233): finalize harness adapter delivery with changeset, gates, spec-reconciliation handoff"
+    tasks:
+      - "8.1 Aggregate gates green end-to-end: pnpm check (lint, format, typecheck, tests, boundaries, exports parity), git diff --check, git status --porcelain (clean-tree assertion at the phase boundary), bun run scripts/checks/license-audit.ts + vulnerability-gate.ts green with zero new dependencies; run plan diff GH-233 for the declared-versus-actual scope reconciliation of this plan (observational additions, if any, are recorded in the execution log per the GH-225 discipline). [Testing-strategy evidence obligation; TC: TC-HARN-031 step 6 aggregate row]"
+      - "8.2 Add the single lockstep changeset .changeset/gh-233-harness-adapters-minor.md for the fixed-group minor bump triggered by the @delivery-os/core + @delivery-os/adapters changes (version_impact: minor per spec front matter; testkit is private and not listed; gh-225-merge-verify-deploy-minor.md naming precedent). Exactly one changeset file for this change. [Release obligation]"
+      - "8.3 Spec-reconciliation handoff — declared as scope, executed at lifecycle phase 7 by @doc-syncer (documentation work, not code; lands in this PR before merge): author doc/spec/features/feature-harness-adapters.md (frontmatter ados_distribution: internal; the port surface, both adapters with declared gaps, the deny-by-default spawn environment, the liveness surface, read-only extraction, the closeout capture discipline; NO out-of-scope claim — no dispatch engine, no plugin generation, no container executor, no spend projection, no new CLI command); reconcile the neighbors per spec §18/TC-HARN-032: feature-adapter-ports.md (harness ports join the port family; ADR-0008 implementation pointer), feature-adapter-conformance.md (the harness conformance registry), feature-state-layer.md (the additive telemetry record kind and its consumers), feature-config-layer.md (the harness branch), feature-closeout.md (the telemetry non-goal flips: closeout now captures harness telemetry, non-gating), feature-watchdog-lane-contracts.md (signal sourcing arrives via adapters; economics stay M1-S15), doc/spec/nonfunctional.md (extraction read budgets, bounded reads, payload bounds), doc/overview/architecture-overview.md + doc/overview/glossary.md (indexes and the new terms), doc/planning/concepts/agent-primitive-surface.md (the primitive catalogue's harness rows point at the delivered port and adapters). [Spec §18 phase-7 obligation list; TC: TC-HARN-032 — manual, lifecycle phase 7]"
+      - "8.4 Doc-distribution guard: confirm no marker-scoped document (doc/guides/**, doc/templates/**, doc/documentation-handbook.md, doc/00-index.md, doc/decisions/README.md, doc/decisions/00-index.md, .ai/rules/README.md) was modified by Phases 1-7 — list the checked paths and record N/A per TC-HARN-031 step 5 / TC-HARN-032 step 7; doc/spec/** changes ride the phase-7 handoff, so scripts/.tests/test-doc-distribution.sh is recorded not-run for the delivery phases and re-checked when the handoff lands. [TC: TC-HARN-032 step 7]"
+      - "8.5 Record gate evidence in the test-plan execution log (chg-GH-233-test-plan.md §10): commands run, Bun/pnpm versions, conformance case counts against the six-scenario floor, extraction statement counts + query-plan observations, measured machine/human byte sizes, the spawn-env key-set diff (expected empty), store file hashes before/after, the writer-probe outcome, the mutant family results (14 families), and the aggregate pnpm check result; record the delivery-time discoveries per their §14 mechanisms (the Claude Code headless liveness/optional-field inventory as declared, and the concrete default allowlist key set with origin evidence); never record unrun results as passing. [Testing-strategy evidence obligation; spec §14]"
+      - "8.6 PR readiness checklist: all 12 ACs traceable to green TCs (ticket AC 1 → AC-F2-1; 2 → AC-F2-2; 3 → AC-F5-1; 4 → AC-F5-2; 5 → AC-F8-1), all 9 NFRs measured, DoR/DoD cite DEC-1 and the GAP-T1..T7 records rather than literal ticket wording (pm-notes decision), the deny-by-default invariant and the secret-boundary non-extension surface in the PR description for reviewer verification, exactly one changeset, PR targets main-tools. [DoD checklist; pm-notes 2026-11-06 decision note]"
+    coverage:
+      - "All 33 TCs gate through the aggregate battery (no new TC in this phase); TC-HARN-032 is the lifecycle-phase-7 manual documentation check executed with the 8.3 handoff"
+    testGate:
+      - "pnpm check"
+      - "bun run scripts/checks/license-audit.ts && bun run scripts/checks/vulnerability-gate.ts"
+      - "git diff --check && git status --porcelain"
+  - id: 9
+    title: "Review-iteration-1 remediation: truthful Claude capability declaration, per-group opencode telemetry records, behaviorally real guard mutants, pinned node:child_process allowlist, drift-warning dedupe"
+    kind: delivery
+    scope:
+      files:
+        - packages/adapters/src/harness/claude.ts
+        - packages/adapters/src/harness/telemetry-opencode.ts
+        - packages/core/src/state/harness-telemetry.ts
+        - tests/behaviour/harness-claude-session.test.ts
+        - tests/behaviour/harness-closeout-capture.test.ts
+        - tests/behaviour/harness-closeout-idempotency.test.ts
+        - tests/behaviour/harness-telemetry-drift.test.ts
+        - tests/behaviour/harness-telemetry-opencode.test.ts
+        - tests/behaviour/harness-telemetry-shape.test.ts
+        - tests/checks/harness-mutants.test.ts
+        - tests/fixtures/closeout/harness-telemetry.ts
+        - tests/fixtures/harness/opencode-store/build.ts
+        - tests/structure/harness-contract.test.ts
+        - tests/structure/harness-imports.test.ts
+        - tests/structure/harness-neutrality.test.ts
+      packages:
+        - tests/boundaries/**
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/harness/claude.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/harness/telemetry-opencode.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "review iteration 2 re-review records PASS with F-1/F-3/F-4/F-5/F-6/F-10 verified closed at their original sites (code-review/review-iter-2.yaml; iteration budget 3, this closes iteration 1's remediation)"
+    summary: "fix(GH-233): review-iteration-1 remediation — truthful Claude deliver gap, per-(session, agent, model) telemetry records, real mutant families, pinned child_process allowlist, warning dedupe"
+    tasks:
+      - "9.1 packages/adapters/src/harness/claude.ts — make the shipped Claude capability declaration truthful (review F-1, high): remove `deliver` from CLAUDE_CAPABILITIES.supportedOperations (leaving spawn/collect) and add the explicit gap record { capability: \"deliver\", reason: \"headless-mode-limitation\" } (DEC-4 headless posture); the port's deliver() returns the machine-readable gap naming the `deliver` capability — mirroring resume()'s gap naming `resume`; the current gap(\"claude-code\", \"steer\") spelling is part of the false-parity confusion — with zero runner invocations and no fallback executed. tests/structure/harness-contract.test.ts gains the matching TC-HARN-002 rows: supportedOperations excludes deliver, declaredGaps contains the deliver gap with the closed reason, harnessCapabilityViolations over the shipped declaration stays empty. tests/behaviour/harness-claude-session.test.ts gains the behaviour case pinning deliver → harness.capability.gap naming claude-code + deliver with an empty invocation log — the mirror of the resume-gap case. Doc note only, no doc edit in this phase: doc/spec/features/feature-harness-adapters.md's Claude gap list gains the deliver gap in the lifecycle-phase-7 doc-sync re-run (recorded obligation, see the remediation header note). [F-1; DEC-4; DM-4; AC-F1-1, AC-F4-1; RSK-1; TC: extends TC-HARN-002, TC-HARN-011]"
+      - "9.2 packages/adapters/src/harness/telemetry-opencode.ts — per-group session aggregates (review F-3, medium): the per-session aggregate keeps GROUP BY agent, model but emits one telemetry record per (session, agent, model) group (the spec F-7 per-session/per-agent/per-model reading) instead of the top-group-only LIMIT 1 row; bounds discipline holds — the query stays LIMIT-bounded by the declared group cap, a would-exceed group set truncates with explicit marks + omitted count (mirroring the tool truncation marks), zero silent drops, and a group with invalid identity still classifies per the §4.6 drift rules. tests/fixtures/harness/opencode-store/build.ts gains a variant with two (agent, model) groups in one session; tests/behaviour/harness-telemetry-opencode.test.ts pins both records (per-group tokens/calls/tool counts, both groups attributed to the root's work item, no drop warning under cap); tests/behaviour/harness-telemetry-shape.test.ts extends the identity-not-collapsed row to intra-session group diversity and pins the one-record-per-(session, agent, model) identity with unique ids across groups; tests/behaviour/harness-telemetry-drift.test.ts keeps the §4.6 matrix green over the two-group fixture. Conditional ripple, recorded in the execution log if taken: when per-group records make the (work item, run, session) state append key ambiguous, extend packages/core/src/state/harness-telemetry.ts additively to carry the group identity and pin it with a two-group session row in tests/behaviour/harness-closeout-capture.test.ts + tests/behaviour/harness-closeout-idempotency.test.ts over tests/fixtures/closeout/harness-telemetry.ts (both group records captured on one session; idempotent re-run appends nothing). [F-3; EVT-1; DM-1; AC-F8-1; NFR-6; RSK-5; TC: extends TC-HARN-019, TC-HARN-021, TC-HARN-022]"
+      - "9.3 tests/checks/harness-mutants.test.ts + tests/structure/harness-neutrality.test.ts (+ tests/structure/harness-imports.test.ts where the ambient scan lives) — make the ambient-read, adapter-classify, and harness-literal mutant families behaviorally real (review F-4, medium): extract the scan/check logic into callable functions (exported checkers over a file list or single path) and invoke them against the written mutant paths — loadMutant rewrites the real production file in place, so the extracted checkers must return the mutant while it is in place: the ambient-read mutant (process.env appended to the copied spawn module) is returned by the ambient-read checker naming file + line; the adapter-classify mutant (divergent token appended to the opencode adapter) is returned by the adapter normalize-only checker naming adapter + token; the harness-literal mutant (seeded \"opencode\" in the copied core domain module) is returned by the harness-literal checker naming the file. Delete the self-fulfilling string-check rows (each family currently only re-checks its own transform output) and the synthetic inline violations-array mirror row in harness-neutrality.test.ts; a mutant its checker cannot fail fails the meta-check. The eleven behaviorally-real families stay green unchanged. [F-4; NFR-8; TC: extends TC-HARN-028, re-pinning the TC-HARN-014 and TC-HARN-004/005 family rows these three mutants fail by name]"
+      - "9.4 tests/structure/harness-imports.test.ts — pin the exact node:child_process allowlist (review F-5, medium): widen the site scan from the adapters tree to the workspace package trees and assert the observed site set EQUALS the declared set — the nine pre-existing sites packages/adapters/src/git/commit.ts, packages/adapters/src/git/index.ts, packages/adapters/src/git/merge.ts, packages/adapters/src/git/watchdog.ts, packages/adapters/src/file/commitlint.ts, packages/adapters/src/session/commit-one-shot.ts, packages/adapters/src/session/index.ts, packages/core/src/state/driver/runtime-edge.ts, packages/testkit/src/commit/git-repo.ts, plus this change's single new site packages/adapters/src/host/index.ts (the real observed set enumerated from the current tree) — so additions AND removals both fail by name; fix the stale header comment claiming the two pre-existing session-admin transports are the only other delivered sites; reference or extend the tests/boundaries negative fixture (a node:child_process import in a non-allowed adapters path failing the checker) to cover the adapters tree. [F-5; DEC-8; NFR-8; TC: extends TC-HARN-014, TC-HARN-028]"
+      - "9.5 packages/adapters/src/harness/telemetry-opencode.ts — warning dedupe (review F-6, low): remove the redundant direct optional-field-absent warning pushes for input_tokens/output_tokens (tokenFor already emits the single naming warning for an absent column), so an absent optional token column yields exactly one warning for all five token classes; extend the §4.6 drift fixture (via the opencode-store builder variants) to drop input_tokens or output_tokens and assert exactly one naming warning per dropped column. [F-6; NFR-6; TC: extends TC-HARN-022]"
+      - "9.6 tests/structure/harness-contract.test.ts — derive the claudeDeclaration() demo fixture from the shipped CLAUDE_CAPABILITIES (spread + mutate the one field under drift test) instead of the stale hand-copy that still declares telemetry-extraction as an adapter-not-implemented gap and lifecycleCapabilities [headless-spawn] only; the drift-rejection demos keep their meaning and can no longer drift from the shipped declaration. [F-10; TC: extends TC-HARN-002 drift-rejection demo rows]"
+      - "9.7 Plan audit-trail record (review F-12, info; no code action): Phase 6's declared scope entry packages/core/src/state/closeout.ts was never touched by the branch — only contracts/closeout.ts changed in the closeout pair; the capture runtime landed in the new packages/core/src/state/harness-telemetry.ts with fixture-side injection (tests/fixtures/closeout/harness-telemetry.ts). Recorded in the plan header alongside the existing delivery scope-additions record (pm-notes 2026-11-06 deviation 4) so the declared-versus-actual reconciliation is symmetric; `plan diff GH-233` at the phase boundary is the reconciliation check. [F-12; audit note only]"
+    coverage:
+      - "Remediation extends existing TC rows only — no new TC id: TC-HARN-002 (Claude deliver gap rows + derived demo fixture), TC-HARN-011 (deliver → gap behaviour case), TC-HARN-019/021/022 (per-(session, agent, model) group records, two-group fixture, input/output drift warnings), TC-HARN-028 (behaviorally real ambient-read/adapter-classify/harness-literal mutants; pinned node:child_process allowlist with TC-HARN-014). F-2's oracle alignment is the PM's separate test-plan reopen — Phase 9 touches no test-plan row, the spec, or pm-notes"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/harness-claude-session.test.ts tests/behaviour/harness-telemetry-opencode.test.ts tests/behaviour/harness-telemetry-shape.test.ts tests/behaviour/harness-telemetry-drift.test.ts"
+      - "bun test tests/structure/harness-contract.test.ts tests/structure/harness-imports.test.ts tests/structure/harness-neutrality.test.ts tests/checks/harness-mutants.test.ts"
+      - "bun test tests/behaviour && pnpm check:boundaries && bun test tests/boundaries"

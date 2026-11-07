@@ -1,0 +1,4 @@
+harness:
+  environment:
+    - name: SYNTHETIC_CANARY_VARIABLE
+      value: synthetic-canary-value-7f3

@@ -215,6 +215,9 @@ module.exports = {
         pathNot: [
           "^packages/core/src/state/driver/",
           "^packages/adapters/src/(repo|file|host|session|legacy|credentials)/",
+          // GH-233 — the harness adapter I/O subpath: read-only telemetry
+          // extraction (node:fs reads, read-only SQLite). Exact path only.
+          "^packages/adapters/src/harness/",
           // ADR-0005 C-2 — `github` provider client subpath: GitHub REST reads
           // for the minimal status/verify input slice (GH-188).
           "^packages/adapters/src/github/",
@@ -226,10 +229,25 @@ module.exports = {
           "^packages/adapters/src/jira/",
           // ADR-0005 (GH-182): the provider quota transport is the one declared
           // network-I/O edge for the quota-aware routing engine. Exact path only.
+          // GH-234: the coding-plan, DeepSeek-balance, and OpenAI-usage
+          // snapshot normalizers live inside this same exact-path edge; their
+          // text mapping is pure and adds no runtime surface.
           "^packages/adapters/src/provider-quota/",
           // ADR-0005 (GH-183): the dedicated git branch/checkout seam is the
           // only spawn surface for closeout local branch operations. Exact path.
           "^packages/adapters/src/git/",
+          // ADR-0005 C-2 (GH-227): the inference transport is the declared
+          // network-I/O edge for the commit primitive's one constrained call.
+          // Exact path only.
+          "^packages/adapters/src/inference/",
+          // GH-227: the dev-only testkit commit harness builds real temporary
+          // git repositories; it is excluded from every production graph.
+          // Exact path only.
+          "^packages/testkit/src/commit/",
+          // GH-231: the mcp serve composition root is the one Node stdio edge
+          // and the single startup configuration-environment read. Exact path
+          // only; every other mcp module stays runtime-neutral.
+          "^packages/mcp/src/serve\\.ts$",
           "^packages/cli/",
           "^packages/opencode/",
         ],

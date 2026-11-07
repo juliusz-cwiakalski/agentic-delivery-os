@@ -12,6 +12,7 @@ import {
   type DeliveryRequest,
   ERROR_TABLE,
   type ErrorTableEntry,
+  type MergeGateEntry,
   type OpenPrResolution,
   type PipelineRun,
   STATUS_OWNER_ATTENTION_LABELS,
@@ -41,6 +42,7 @@ import {
   type VerifyGateVerdict,
   type WorkItem,
 } from "#contracts";
+import { evaluateRequiredJobGate, ownerAttentionLabels } from "./merge-probe.js";
 import type { VerifyLedgerEvaluation } from "./verify-change.js";
 
 const EMPTY_IDENTITY = (changeRef: string): VerifyGateIdentity => ({ changeRef });
@@ -299,7 +301,7 @@ const citation = (
 });
 
 const gate = (
-  id: VerifyGateId,
+  id: string,
   verdict: VerifyGateVerdict,
   reason: VerifyGateReason,
   citationValue: VerifyGateCitation,
@@ -1185,7 +1187,7 @@ const ownerGate = (facts: VerifyGatesFacts): VerifyGateRecord => {
 };
 
 const summarize = (gates: readonly VerifyGateRecord[]): VerifyGatesSummary => ({
-  gates: 5,
+  gates: gates.length,
   passed: gates.filter((entry) => entry.verdict === "pass").length,
   failed: gates.filter((entry) => entry.verdict === "fail").length,
   unknown: gates.filter((entry) => entry.verdict === "unknown").length,
@@ -1210,7 +1212,7 @@ export const evaluateVerifyGates = (facts: VerifyGatesFacts): VerifyGatesEvaluat
   return { overall: overallOf(gates), summary: summarize(gates), gates };
 };
 
-const referenceFor = (gateId: VerifyGateId, citationValue: VerifyGateCitation): string => {
+const referenceFor = (gateId: string, citationValue: VerifyGateCitation): string => {
   const identity = citationValue.identity;
   const raw =
     gateId === "lifecycle-finalization" || gateId === "owner-gate"
@@ -1249,7 +1251,7 @@ const gateSummaryLine = (entry: VerifyGateRecord, valueBudget?: number): string 
 /** Render the bounded deterministic failure summary (Appendix D). */
 export const renderVerifyGatesFailureSummary = (evaluation: VerifyGatesEvaluation): string => {
   const result = evaluation.overall === "fail" ? "fail" : "unknown";
-  const header = `result=${result}; gates=${evaluation.summary.passed}/5 passed, ${evaluation.summary.failed} failed, ${evaluation.summary.unknown} unknown`;
+  const header = `result=${result}; gates=${evaluation.summary.passed}/${evaluation.summary.gates} passed, ${evaluation.summary.failed} failed, ${evaluation.summary.unknown} unknown`;
   const render = (valueBudget?: number): string =>
     [header, ...evaluation.gates.map((entry) => gateSummaryLine(entry, valueBudget))].join("\n");
   const full = render();
@@ -1293,12 +1295,14 @@ const humanLineFor = (entry: VerifyGateRecord): string => {
           ?.slice("mergeable=".length) ?? "unknown";
       return `${entry.id}  ${entry.verdict}  [github-delivery-request-list+github-delivery-request-detail]  pr=${citationValue.identity.deliveryRequest ?? "-"} base=${citationValue.identity.baseRef ?? "-"} draft=${draft ? "yes" : "no"} mergeable=${mergeable} commits=${countValue("commits") ?? "-"} files=${countValue("changedFiles") ?? "-"}`;
     }
+    default:
+      return `${entry.id}  ${entry.verdict}  [${citationValue.sources.map((source) => source.name).join("+")}]  ref=${referenceFor(entry.id, citationValue)} counts=${countsSegment(citationValue)} names=${namesSegment(citationValue)}`;
   }
 };
 
 /** Render exactly six deterministic human success lines (Appendix E). */
 export const renderVerifyGatesHuman = (report: VerifyGatesReport, brand: BrandIdentity): string => {
-  const header = `${brand.binaryName} verify gates ${report.changeRef}  pass  5/5`;
+  const header = `${brand.binaryName} verify gates ${report.changeRef}  pass  ${report.summary.passed}/${report.summary.gates}`;
   return `${[header, ...report.gates.map((entry) => humanLineFor(entry))].join("\n")}\n`;
 };
 
@@ -1317,4 +1321,105 @@ export const verifyGatesUnknownIdentity = (
     }
   }
   return undefined;
+};
+
+/**
+ * Evaluate the battery projection of a declared gate set (GH-225 F-1).
+ *
+ * The five built-in entries reuse the shipped evaluator; a repo-declared
+ * `required-ci-job` or `tracker-freshness` entry is evaluated from the same
+ * facts and cited in the same shape. Declared order is the report order, so the
+ * default set reproduces the shipped five-gate bytes exactly.
+ */
+export const evaluateDeclaredBattery = (
+  facts: VerifyGatesFacts,
+  entries: readonly MergeGateEntry[],
+): VerifyGatesEvaluation => {
+  const builtIn = evaluateVerifyGates(facts);
+  const builtInById = new Map(builtIn.gates.map((entry) => [entry.id, entry]));
+  const records: VerifyGateRecord[] = entries.map((entry) => {
+    const existing = builtInById.get(entry.id);
+    if (existing !== undefined) return existing;
+    return evaluateDeclaredEntry(facts, entry);
+  });
+  return { overall: overallOf(records), summary: summarize(records), gates: records };
+};
+
+const declaredFailureReason = (
+  read: VerifyGatesReadFailure | VerifyGatesAbsence | VerifyGatesNotAttempted,
+): VerifyGateReason => (read.reason === "not-found" ? "read-failed" : failureReason(read));
+
+const declaredIdentity = (facts: VerifyGatesFacts): VerifyGateIdentity => {
+  const detail = facts.deliveryRequestDetail;
+  const headSha = detail.ok ? detail.value.request.sourceHeadSha : undefined;
+  return {
+    changeRef: facts.changeRef,
+    ...(headSha === undefined ? {} : { headSha }),
+  };
+};
+
+const evaluateDeclaredEntry = (
+  facts: VerifyGatesFacts,
+  entry: MergeGateEntry,
+): VerifyGateRecord => {
+  const identity = declaredIdentity(facts);
+  const checkRuns = facts.checkRuns;
+  if (entry.recipe === "required-ci-job") {
+    const jobName = entry.job ?? entry.id;
+    if (!checkRuns.ok) {
+      const reason = declaredFailureReason(checkRuns);
+      return gate(
+        entry.id,
+        "unknown",
+        reason,
+        citation([sourceOf("github-check-runs", checkRuns)], identity, [], [], [reason]),
+      );
+    }
+    const evaluationValue = evaluateRequiredJobGate({
+      jobName,
+      runs: checkRuns.value.items,
+      pageSha: identity.headSha,
+      headSha: identity.headSha ?? "",
+    });
+    return gate(
+      entry.id,
+      evaluationValue.verdict,
+      evaluationValue.reason,
+      citation(
+        [readSource("github-check-runs", checkRuns.value.items.length === 0)],
+        identity,
+        evaluationValue.counts,
+        evaluationValue.names,
+        [evaluationValue.reason],
+      ),
+    );
+  }
+  if (entry.recipe === "tracker-freshness") {
+    const workItem = facts.workItem;
+    if (!workItem.ok) {
+      const reason = declaredFailureReason(workItem);
+      return gate(
+        entry.id,
+        "unknown",
+        reason,
+        citation([sourceOf("github-work-item", workItem)], identity, [], [], [reason]),
+      );
+    }
+    const labels = workItem.value.item.labels;
+    const ownerLabels = ownerAttentionLabels(labels);
+    const present = ownerLabels.length > 0;
+    return gate(
+      entry.id,
+      present ? "fail" : "pass",
+      present ? "owner-gate-present" : "owner-gate-absent",
+      citation(
+        [readSource("github-work-item")],
+        { ...identity, workItem: facts.changeRef },
+        [count("labels", labels.length), count("ownerLabels", ownerLabels.length)],
+        [nameList("owner-labels", ownerLabels)],
+        [present ? "owner-gate-present" : "owner-gate-absent"],
+      ),
+    );
+  }
+  return gate(entry.id, "unknown", "read-failed", citation([], identity, [], [], ["read-failed"]));
 };

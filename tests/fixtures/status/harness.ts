@@ -55,11 +55,29 @@ export const ALL_AVAILABLE: StatusTrackerAvailability = {
   hygiene: "available",
 };
 
+/** All four families plus the three named hygiene assertion signals declared available. */
+export const ASSERTIONS_AVAILABLE: StatusTrackerAvailability = {
+  ...ALL_AVAILABLE,
+  epicMembership: "available",
+  storyPoints: "available",
+  inSprint: "available",
+};
+
+/** Epic and story-point signals declared; the in-sprint signal is undeclared. */
+export const MIXED_ASSERTIONS: StatusTrackerAvailability = {
+  ...ALL_AVAILABLE,
+  epicMembership: "available",
+  storyPoints: "available",
+};
+
 export const GITHUB_SLICE_AVAILABILITY: StatusTrackerAvailability = {
   ownerHandBacks: "available",
   blockedDependencies: "unavailable",
   stalls: "available",
   hygiene: "available",
+  epicMembership: "available",
+  storyPoints: "available",
+  inSprint: "available",
 };
 
 export const REVIEWS_AVAILABLE = {
@@ -109,6 +127,7 @@ export type WorkItemInput = {
   readonly assignee?: string;
   readonly relations?: readonly WorkItemRelation[];
   readonly updatedAt?: string;
+  readonly milestone?: string;
 };
 
 export const makeWorkItem = (input: WorkItemInput): WorkItem => ({
@@ -120,6 +139,7 @@ export const makeWorkItem = (input: WorkItemInput): WorkItem => ({
   },
   labels: input.labels ?? [],
   ...(input.assignee === undefined ? {} : { assignee: input.assignee }),
+  ...(input.milestone === undefined ? {} : { milestone: input.milestone }),
   relations: input.relations ?? [],
   ...(input.updatedAt === undefined ? {} : { updatedAt: input.updatedAt }),
 });
@@ -338,6 +358,44 @@ export const anonymousInstance = (): ExternalSystemInstance => ({
   authMethod: { mechanism: "anonymous" },
 });
 
+export const SECTION_STATES = [
+  "observed",
+  "degraded",
+  "unknown",
+  "unavailable",
+  "not-delivered",
+] as const;
+
+/** A repository checkout on the declared primary branch (CI finding scope). */
+export const primaryRepository = (
+  overrides: Partial<StatusRepositoryFacts> = {},
+): StatusRepositoryFacts => ({
+  binding: observedBinding(),
+  head: { branch: "main", sha: SHA, detached: false },
+  ...overrides,
+});
+
+export const failedRun = (entityId: string): PipelineRun =>
+  makePipelineRun({
+    entityId,
+    pipelineName: `ci-${entityId}`,
+    jobs: [{ jobName: "job", jobState: "failed" }],
+  });
+
+export const succeededRun = (entityId: string): PipelineRun =>
+  makePipelineRun({
+    entityId,
+    pipelineName: `ci-${entityId}`,
+    jobs: [{ jobName: "job", jobState: "succeeded" }],
+  });
+
+export const pendingRun = (entityId: string): PipelineRun =>
+  makePipelineRun({
+    entityId,
+    pipelineName: `ci-${entityId}`,
+    jobs: [{ jobName: "job", jobState: "running" }],
+  });
+
 export const sectionById = <T extends { readonly id: string }>(
   sections: readonly T[],
   id: string,
@@ -525,6 +583,106 @@ export const capSizedFacts = (): StatusFacts => {
         reason: "waiting",
         parkedAt: `2026-10-0${index + 1}T00:00:00Z`,
       })),
+    }),
+  });
+};
+
+/** An all-caps fact set: every declared surface populated at its limit (TC-ATT-029). */
+export const allCapsFacts = (): StatusFacts => {
+  const providerNames = Array.from({ length: 8 }, (_, index) => `provider-${index}`);
+  const maxNote = "n".repeat(160);
+  return baseFacts({
+    repository: primaryRepository(),
+    tracker: workItemRead(
+      [
+        ...Array.from({ length: 8 }, (_, index) =>
+          makeWorkItem({
+            entityId: `GH-${100 + index}`,
+            title: `Hand back ${index}`,
+            labels: ["hand-back", "epic:x", "points:1"],
+            milestone: "Sprint 1",
+            updatedAt: "2026-09-01T00:00:00Z",
+          }),
+        ),
+        ...Array.from({ length: 8 }, (_, index) =>
+          makeWorkItem({
+            entityId: `GH-${200 + index}`,
+            title: `Blocked ${index}`,
+            labels: ["epic:x", "points:1"],
+            milestone: "Sprint 1",
+            relations: [blockedBy("missing")],
+          }),
+        ),
+        ...Array.from({ length: 8 }, (_, index) =>
+          makeWorkItem({
+            entityId: `GH-${300 + index}`,
+            title: `Stalled ${index}`,
+            labels: ["epic:x", "points:1"],
+            milestone: "Sprint 1",
+            updatedAt: "2026-09-01T00:00:00Z",
+          }),
+        ),
+        ...Array.from({ length: 8 }, (_, index) =>
+          makeWorkItem({
+            entityId: `GH-${400 + index}`,
+            title: "",
+            labels: [],
+          }),
+        ),
+      ],
+      ASSERTIONS_AVAILABLE,
+    ),
+    changes: deliveryRequestRead(
+      Array.from({ length: 8 }, (_, index) =>
+        makeDeliveryRequest({
+          entityId: String(500 + index),
+          reviewState: "approved",
+        }),
+      ),
+      REVIEWS_AVAILABLE,
+    ),
+    ci: pipelineRunRead(Array.from({ length: 8 }, (_, index) => failedRun(String(700 + index)))),
+    providers: providers({
+      config: providerConfigRead(
+        providerConfig({
+          defaultChain: "primary",
+          entries: Object.fromEntries(
+            providerNames.map((name) => [name, { name, class: "subscription", enabled: true }]),
+          ),
+          chains: {
+            primary: { name: "primary", entries: providerNames, allowPaidFallback: false },
+          },
+        }),
+      ),
+      parks: {
+        ok: true,
+        parks: Array.from({ length: 8 }, (_, index) =>
+          parkView({
+            name: `provider:provider-${index}`,
+            subjectName: `provider-${index}`,
+            expiresAt: `2026-11-0${index + 1}T00:00:00Z`,
+          }),
+        ),
+      },
+    }),
+    localContext: localContext({
+      activeChange: activeChange(),
+      parkedChanges: [
+        ...Array.from({ length: 8 }, (_, index) => ({
+          workItemRef: `GH-${800 + index}`,
+          branch: `feat/GH-${800 + index}/parked`,
+          changeFolder: `doc/changes/2026-10/GH-${800 + index}`,
+          reason: "waiting",
+        })),
+        ...Array.from({ length: 8 }, (_, index) => ({
+          workItemRef: `GH-${900 + index}`,
+          branch: `feat/GH-${900 + index}/parked`,
+          changeFolder: `doc/changes/2026-10/GH-${900 + index}`,
+          reason: "waiting",
+          parkedAt: "2026-10-01T00:00:00Z",
+          condition: maxNote,
+        })),
+      ],
     }),
   });
 };

@@ -685,3 +685,23 @@ describe("TC-CONF-005 structural non-vacuity floors", () => {
     }
   });
 });
+
+describe("TC-HARN-004 harness conformance registry coverage", () => {
+  test("the harness registry lists exactly the two shipped kinds with every scenario", async () => {
+    const {
+      HARNESS_CONFORMANCE_REGISTRY,
+      HARNESS_CONFORMANCE_SCENARIOS,
+      harnessConformanceViolations,
+    } = await import("../../packages/testkit/src/conformance/harness");
+    expect(harnessConformanceViolations(HARNESS_CONFORMANCE_REGISTRY)).toEqual([]);
+    expect(HARNESS_CONFORMANCE_REGISTRY.map((entry) => entry.kind).sort()).toEqual([
+      "claude-code",
+      "opencode",
+    ]);
+    for (const entry of HARNESS_CONFORMANCE_REGISTRY) {
+      for (const scenario of HARNESS_CONFORMANCE_SCENARIOS) {
+        expect(entry.scenarios).toContain(scenario);
+      }
+    }
+  });
+});

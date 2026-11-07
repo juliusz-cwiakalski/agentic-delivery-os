@@ -75,7 +75,7 @@ describe("TC-STATUS-032 opt-in live smoke", () => {
 
   const liveTest = test.skipIf(!LIVE || TOKEN === undefined || TOKEN.length === 0);
 
-  liveTest("the live repository returns the structural six-section contract", async () => {
+  liveTest("the live repository returns the structural nine-section contract", async () => {
     const store = openLiveStore();
     try {
       const runtime = createStatusCommandRuntime(
@@ -90,6 +90,8 @@ describe("TC-STATUS-032 opt-in live smoke", () => {
             id: string;
             state: string;
             evidence: { reasons: string[] };
+            findings?: Array<{ code: string; severity: string }>;
+            attentionStates?: string[];
             entries?: Array<{ availability: string }>;
           }>;
         };
@@ -101,22 +103,49 @@ describe("TC-STATUS-032 opt-in live smoke", () => {
         "lanes-or-queue",
         "providers",
         "parked-work",
+        "ready-to-merge",
+        "spend",
+        "typed-questions",
       ]);
+      const stateOf = (id: string): string =>
+        envelope.data.sections.find((entry) => entry.id === id)?.state ?? "missing";
+      expect(stateOf("lanes-or-queue")).toBe("not-delivered");
+      expect(stateOf("spend")).toBe("not-delivered");
+      expect(stateOf("typed-questions")).not.toBe("not-delivered");
+      expect(stateOf("ready-to-merge")).not.toBe("not-delivered");
+      const lanes = envelope.data.sections.find((entry) => entry.id === "lanes-or-queue");
+      expect(lanes?.attentionStates).toEqual(["delivering", "idle-with-reason", "idle-no-reason"]);
       for (const section of envelope.data.sections) {
         expect(section.evidence.reasons.length).toBeGreaterThan(0);
+        for (const finding of section.findings ?? []) {
+          expect(["high", "medium", "low"]).toContain(finding.severity);
+          expect(finding.code).toMatch(/^[a-z][a-z.-]*$/);
+        }
       }
-      expect(envelope.data.sections.find((entry) => entry.id === "lanes-or-queue")?.state).toBe(
-        "not-delivered",
-      );
       for (const section of envelope.data.sections) {
         for (const entry of section.entries ?? []) expect(entry.availability).not.toBe("available");
       }
+      expect(JSON.stringify(envelope.data)).not.toContain("lane.idle-no-reason");
       expect(JSON.stringify(envelope.data).length).toBeLessThanOrEqual(65536);
       const human = await runStatusCli(["status"], runtime);
-      expect(human.stdout.split("\n").filter((line) => line.length > 0).length).toBeLessThanOrEqual(
-        24,
-      );
-      expect(Buffer.byteLength(human.stdout, "utf8")).toBeLessThanOrEqual(4096);
+      const lines = human.stdout.split("\n").filter((line) => line.length > 0);
+      expect(lines.length).toBeLessThanOrEqual(32);
+      expect(Buffer.byteLength(human.stdout, "utf8")).toBeLessThanOrEqual(6144);
+      for (const label of [
+        "tracker",
+        "changes",
+        "ci",
+        "lanes",
+        "providers",
+        "parked",
+        "ready",
+        "spend",
+        "questions",
+        "attention",
+      ]) {
+        expect(lines.some((line) => line.startsWith(label))).toBe(true);
+      }
+      expect(human.stdout).not.toContain("lane.idle-no-reason");
       for (const secret of [TOKEN ?? ""]) {
         if (secret.length > 0) expect(human.stdout).not.toContain(secret);
       }

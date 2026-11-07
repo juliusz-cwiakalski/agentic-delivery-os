@@ -233,6 +233,11 @@
   ],
   "runtime-apis-confinement": [
     {
+      "id": "runtime-node-fs-mcp-non-serve",
+      "tc": "TC-MCP-018",
+      "path": "packages/mcp/src/commands/probe.ts"
+    },
+    {
       "id": "runtime-node-fs-domain",
       "tc": "TC-SCAFFOLD-014",
       "path": "packages/core/src/domain/probe.ts"
@@ -250,6 +255,11 @@
     {
       "id": "runtime-node-fs-adapter-registry",
       "tc": "TC-SCAFFOLD-014",
+      "path": "packages/adapters/src/registry/probe.ts"
+    },
+    {
+      "id": "runtime-child-process-adapter-registry",
+      "tc": "TC-HARN-014",
       "path": "packages/adapters/src/registry/probe.ts"
     },
     {
@@ -286,6 +296,11 @@
       "id": "runtime-node-fs-adapter-git-suffix",
       "tc": "TC-CLOSE-008",
       "path": "packages/adapters/src/git-probe/probe.ts"
+    },
+    {
+      "id": "runtime-node-fs-adapter-inference-suffix",
+      "tc": "TC-TIER-003",
+      "path": "packages/adapters/src/inference-probe/probe.ts"
     }
   ],
   "ambient-env-branding": [

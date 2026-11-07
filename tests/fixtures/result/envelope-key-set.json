@@ -2,5 +2,7 @@
   "schemaVersion": "delivery.result.v1",
   "successKeys": ["schemaVersion", "runId", "exitCode", "timing", "data"],
   "failureKeys": ["schemaVersion", "runId", "exitCode", "timing", "error"],
-  "errorKeys": ["code", "category", "retryable", "consequence", "remediationHint", "summary"]
+  "errorKeys": ["code", "category", "retryable", "consequence", "remediationHint", "summary"],
+  "scriptedSuccessKeys": ["data"],
+  "scriptedFailureKeys": ["error", "runId"]
 }

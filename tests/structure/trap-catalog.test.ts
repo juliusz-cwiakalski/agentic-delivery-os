@@ -57,6 +57,7 @@ const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
     "GITHUB-PR-DETAIL-404",
     "GITHUB-CHECKRUN-404",
     "GITHUB-ISSUE-404",
+    "GH-PAYLOAD-HTTP-STATUS",
   ],
 };
 

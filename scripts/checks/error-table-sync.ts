@@ -16,6 +16,16 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  ERROR_TABLE_FAMILIES,
+  type ErrorTableFamily,
+} from "../../packages/core/src/contracts/error-table.js";
+import {
+  MERGE_BUILTIN_GATE_IDS,
+  MERGE_GATE_ERROR_PREFIX,
+  MERGE_GATE_ERROR_SUFFIX,
+  MERGE_GATE_ERROR_TEMPLATE,
+} from "../../packages/core/src/contracts/merge.js";
+import {
   BOARD_COLLECTOR_ERROR_PREFIX,
   BOARD_COLLECTOR_ERROR_SUFFIX,
   BOARD_COLLECTOR_IDS,
@@ -51,6 +61,37 @@ export type SyncOptions = {
   readonly includeCorpus?: boolean;
 };
 
+const MERGE_DECLARED_GATE_IDS: readonly string[] = [...MERGE_BUILTIN_GATE_IDS, "tracker-freshness"];
+
+/**
+ * The declared `merge.gate.<gate-id>.failed` family (GAP-13, NFR-8).
+ *
+ * The recognizer is deliberately narrow: only the declared prefix/suffix pair
+ * and a lowercase id slot are admitted, and the slot must name an id in the
+ * supplied effective gate registry (the shipped default set here). There is no
+ * generic `merge.*` widening and no template/empty id.
+ */
+export const mergeGateIdOfFamilyCode = (code: string): string | undefined => {
+  if (!code.startsWith(MERGE_GATE_ERROR_PREFIX)) return undefined;
+  if (!code.endsWith(MERGE_GATE_ERROR_SUFFIX)) return undefined;
+  const id = code.slice(
+    MERGE_GATE_ERROR_PREFIX.length,
+    code.length - MERGE_GATE_ERROR_SUFFIX.length,
+  );
+  return /^[a-z][a-z0-9-]*$/.test(id) ? id : undefined;
+};
+
+export const isDeclaredMergeGateFamilyCode = (
+  code: string,
+  declaredIds: readonly string[] = MERGE_DECLARED_GATE_IDS,
+): boolean => {
+  const id = mergeGateIdOfFamilyCode(code);
+  return id !== undefined && declaredIds.includes(id);
+};
+
+const familyForTemplate = (code: string): ErrorTableFamily | undefined =>
+  (ERROR_TABLE_FAMILIES as readonly ErrorTableFamily[]).find((family) => family.template === code);
+
 const TABLE_MODULE = "packages/core/src/contracts/error-table.ts";
 const DOC_PATH = "doc/spec/features/feature-result-contract.md";
 const CORPUS_DIR = "tests/fixtures/result/code-corpora";
@@ -79,6 +120,24 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "blockers.unknown-id",
   "blockers.credential-value-rejected",
   "blockers.audience-mismatch",
+  // GH-235 pins the sourced-stall and dispatch economics identities exactly;
+  // they remain exact declared codes, not a pattern widening.
+  "watchdog.liveness-stalled",
+  "dispatch.restart-budget-exceeded",
+  "dispatch.resume-uneconomical",
+  // GH-227 pins these three commit identities exactly; they remain exact
+  // declared codes, not a pattern widening.
+  "commit.staging-blocked-untracked",
+  "commit.commitlint-failed",
+  "commit.atomic-abort",
+  // GH-225 pins the merge identities exactly; they are two-segment codes.
+  "merge.gates-stale",
+  "merge.waiver-unauthorized",
+  "merge.owner-gate-override-without-waiver",
+  "merge.rebase-conflict",
+  "merge.state-unverified",
+  "merge.landing-unverified",
+  "merge.transaction-aborted",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;
@@ -111,6 +170,14 @@ const listFiles = (root: string, relativeDir: string, extensions: readonly strin
 const lineAt = (text: string, index: number): number => text.slice(0, index).split("\n").length;
 
 /**
+ * A doctor check-level cause (`doctor.check.<area>.unreachable`) is diagnostic
+ * check data named by the doctor contract, never an error-table identity
+ * (GH-224 F-11: check-level causes remain evidence, not identities). It is
+ * therefore not a recognized code reference in either corpus direction.
+ */
+const DOCTOR_CHECK_CONDITION_PATTERN = /^doctor\.check\.[a-z][a-z0-9-]*\.unreachable$/;
+
+/**
  * The declared `status.collector.<id>.unavailable` family (GAP-3, DEC-7).
  *
  * The recognizer is deliberately narrow: it admits only the declared prefix and
@@ -138,7 +205,9 @@ export const scanReferences = (text: string, domainKinds: readonly string[]): Re
   for (const match of text.matchAll(CODE_PATTERN)) {
     const code = match[0];
     const namespace = code.split(".")[0] ?? "";
-    const recognized = namespace === "fallback" || domainKinds.includes(namespace);
+    const recognized =
+      !DOCTOR_CHECK_CONDITION_PATTERN.test(code) &&
+      (namespace === "fallback" || domainKinds.includes(namespace));
     references.push({ code, line: lineAt(text, match.index ?? 0), recognized });
   }
   for (const match of text.matchAll(TWO_SEGMENT_PATTERN)) {
@@ -164,16 +233,28 @@ let importCounter = 0;
 
 const readTable = async (
   root: string,
-): Promise<{ domainKinds: readonly string[]; entries: readonly TableEntry[] }> => {
+): Promise<{
+  domainKinds: readonly string[];
+  entries: readonly TableEntry[];
+  families: readonly ErrorTableFamily[];
+}> => {
   const path = join(root, TABLE_MODULE);
   if (!existsSync(path)) throw new Error(`${TABLE_MODULE} is missing`);
   const module = (await import(`${pathToFileURL(path).href}?v=${importCounter++}`)) as {
     DOMAIN_KINDS?: readonly string[];
     ERROR_TABLE?: readonly TableEntry[];
+    ERROR_TABLE_FAMILIES?: readonly ErrorTableFamily[];
   };
   if (!Array.isArray(module.DOMAIN_KINDS)) throw new Error("DOMAIN_KINDS is not declared");
   if (!Array.isArray(module.ERROR_TABLE)) throw new Error("ERROR_TABLE is not declared");
-  return { domainKinds: module.DOMAIN_KINDS, entries: module.ERROR_TABLE };
+  if (!Array.isArray(module.ERROR_TABLE_FAMILIES)) {
+    throw new Error("ERROR_TABLE_FAMILIES is not declared");
+  }
+  return {
+    domainKinds: module.DOMAIN_KINDS,
+    entries: module.ERROR_TABLE,
+    families: module.ERROR_TABLE_FAMILIES,
+  };
 };
 
 const validateEntries = (
@@ -228,6 +309,35 @@ const validateEntries = (
   return { failures, codes };
 };
 
+const validateFamilies = (
+  families: readonly ErrorTableFamily[],
+  domainKinds: readonly string[],
+): { failures: string[]; templates: Set<string> } => {
+  const failures: string[] = [];
+  const templates = new Set<string>();
+  families.forEach((family, index) => {
+    const label = `family[${index}] ${family.template ?? "<missing template>"}`;
+    if (family.template !== MERGE_GATE_ERROR_TEMPLATE) {
+      failures.push(`${label}: only ${MERGE_GATE_ERROR_TEMPLATE} is declared`);
+    }
+    if (family.slotPrefix !== MERGE_GATE_ERROR_PREFIX) {
+      failures.push(`${label}: slot prefix is not the declared family prefix`);
+    }
+    if (family.slotSuffix !== MERGE_GATE_ERROR_SUFFIX) {
+      failures.push(`${label}: slot suffix is not the declared family suffix`);
+    }
+    if (!domainKinds.includes(family.domainKind)) {
+      failures.push(`${label}: undeclared namespace ${family.domainKind}`);
+    }
+    if (typeof family.remediationHint !== "string" || family.remediationHint.length === 0) {
+      failures.push(`${label}: remediationHint is empty`);
+    }
+    if (templates.has(family.template)) failures.push(`${label}: duplicate family template`);
+    templates.add(family.template);
+  });
+  return { failures, templates };
+};
+
 const parseRow = (line: string): string[] => {
   const trimmed = line.trim();
   const cells = trimmed.split("|");
@@ -240,6 +350,7 @@ const validateDocumentedTable = (
   root: string,
   entries: readonly TableEntry[],
   codes: Set<string>,
+  families: readonly ErrorTableFamily[],
 ): { failures: string[]; documentedRows: number } => {
   const failures: string[] = [];
   const path = join(root, DOC_PATH);
@@ -283,7 +394,8 @@ const validateDocumentedTable = (
   let documentedRows = 0;
   for (const line of tableLines.slice(2)) {
     const cells = parseRow(line);
-    documentedRows += 1;
+    const family = familyForTemplate(cells[0] ?? "");
+    if (family === undefined) documentedRows += 1;
     if (cells.length !== REQUIRED_COLUMNS.length) {
       failures.push(
         `${DOC_PATH}: row has ${cells.length} columns (expected ${REQUIRED_COLUMNS.length})`,
@@ -292,7 +404,7 @@ const validateDocumentedTable = (
     }
     const [code, domainKind, category, retryable, consequence, hint, projectionClass, summary] =
       cells as [string, string, string, string, string, string, string, string];
-    const entry = entries.find((candidate) => candidate.code === code);
+    const entry = family ?? entries.find((candidate) => candidate.code === code);
     if (entry === undefined) {
       failures.push(`${DOC_PATH}: documented code ${code} has no source entry`);
       continue;
@@ -313,6 +425,11 @@ const validateDocumentedTable = (
   }
   for (const code of codes) {
     if (!seen.has(code)) failures.push(`${DOC_PATH}: source entry ${code} is undocumented`);
+  }
+  for (const family of families) {
+    if (!seen.has(family.template)) {
+      failures.push(`${DOC_PATH}: family ${family.template} is undocumented`);
+    }
   }
   return { failures, documentedRows };
 };
@@ -350,9 +467,21 @@ const validateCorpus = (
       );
       const actualRecognized = recognized.length > 0;
       const actualResolves =
-        actualRecognized && recognized.every((reference) => codes.has(reference.code));
+        actualRecognized &&
+        recognized.every(
+          (reference) =>
+            codes.has(reference.code) ||
+            isDeclaredMergeGateFamilyCode(reference.code) ||
+            isDeclaredCollectorFamilyCode(reference.code),
+        );
       for (const reference of recognized) {
-        if (!codes.has(reference.code)) {
+        const familyShape = mergeGateIdOfFamilyCode(reference.code) !== undefined;
+        if (
+          !codes.has(reference.code) &&
+          !familyShape &&
+          !isDeclaredMergeGateFamilyCode(reference.code) &&
+          !isDeclaredCollectorFamilyCode(reference.code)
+        ) {
           failures.push(`${label}: recognized code ${reference.code} has no table entry`);
         }
       }
@@ -396,12 +525,27 @@ const validateScan = (
       }
       recognizedCount += 1;
       if (!codes.has(reference.code) && !ADAPTER_LOCAL_CODES.has(reference.code)) {
-        const family =
+        const collectorFamily =
           isDeclaredCollectorFamilyCode(reference.code) ||
           (reference.code.startsWith(BOARD_COLLECTOR_ERROR_PREFIX) &&
             reference.code.endsWith(BOARD_COLLECTOR_ERROR_SUFFIX));
+        if (collectorFamily) {
+          if (!isDeclaredCollectorFamilyCode(reference.code)) {
+            failures.push(
+              `${file}:${reference.line} ${surface}: recognized collector-family code ${reference.code} has no table entry`,
+            );
+          }
+          continue;
+        }
+        if (isDeclaredMergeGateFamilyCode(reference.code)) continue;
+        if (mergeGateIdOfFamilyCode(reference.code) !== undefined) {
+          failures.push(
+            `${file}:${reference.line} ${surface}: recognized merge-gate-family code ${reference.code} has no table entry`,
+          );
+          continue;
+        }
         failures.push(
-          `${file}:${reference.line} ${surface}: recognized ${family ? "collector-family " : ""}code ${reference.code} has no table entry`,
+          `${file}:${reference.line} ${surface}: recognized code ${reference.code} has no table entry`,
         );
       }
     }
@@ -414,14 +558,25 @@ export const runSyncCheck = async (options: SyncOptions): Promise<SyncResult> =>
   const failures: string[] = [];
   let domainKinds: readonly string[] = [];
   let entries: readonly TableEntry[] = [];
+  let families: readonly ErrorTableFamily[] = [];
   let codes = new Set<string>();
   try {
     const table = await readTable(options.root);
     domainKinds = table.domainKinds;
     entries = table.entries;
+    families = table.families;
     const validation = validateEntries(entries, domainKinds);
     failures.push(...validation.failures);
     codes = validation.codes;
+    const familyValidation = validateFamilies(families, domainKinds);
+    failures.push(...familyValidation.failures);
+    for (const code of codes) {
+      if (DOCTOR_CHECK_CONDITION_PATTERN.test(code)) {
+        failures.push(
+          `${code}: a doctor check-level cause must not become an error-table identity`,
+        );
+      }
+    }
   } catch (error) {
     failures.push(`${TABLE_MODULE}: cannot load the machine-readable table (${String(error)})`);
   }
@@ -452,7 +607,7 @@ export const runSyncCheck = async (options: SyncOptions): Promise<SyncResult> =>
   );
   failures.push(...s3.failures);
 
-  const documented = validateDocumentedTable(options.root, entries, codes);
+  const documented = validateDocumentedTable(options.root, entries, codes, families);
   failures.push(...documented.failures);
 
   let corpusRows = 0;

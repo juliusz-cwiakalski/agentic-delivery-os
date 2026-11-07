@@ -1,0 +1,12 @@
+{
+  "outcome": "switched",
+  "profile": "deepseek",
+  "tier": "powerful",
+  "rung": "conserve",
+  "agentOverrides": { "reviewer": "coder" },
+  "eligibility": [
+    { "profile": "mixed", "verdict": "ineligible" },
+    { "profile": "deepseek", "verdict": "eligible" }
+  ],
+  "envRecord": { "recordFormat": "data-v1" }
+}

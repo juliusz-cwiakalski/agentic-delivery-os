@@ -1,0 +1,1 @@
+doctor check failures (2/5) — repo (fail): commit or discard the uncommitted changes, then re-run doctor; tracker (unreachable): restore tracker reachability, then re-run doctor

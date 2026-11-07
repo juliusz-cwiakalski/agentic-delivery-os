@@ -1,5 +1,8 @@
 {
-  "ticks": [3000, 3007],
+  "ticks": [
+    3000,
+    3007
+  ],
   "runId": "run-fixture-0003",
   "brand": {
     "productName": "example-product",
@@ -15,5 +18,6 @@
     "releaseAssetPrefix": "example-product-",
     "installPath": "~/.example-product/bin/example-product"
   },
-  "program": "classified-user"
+  "program": "classified-user",
+  "mode": "interactive"
 }

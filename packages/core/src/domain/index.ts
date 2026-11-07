@@ -61,6 +61,177 @@ export {
   summarizeCloseout,
 } from "./closeout.js";
 export {
+  type CommitActFailure,
+  type CommitActNoPending,
+  type CommitActOutcome,
+  type CommitActPorts,
+  type CommitActRequest,
+  type CommitActScope,
+  type CommitActSuccess,
+  type CommitExcluded,
+  messageText,
+  runCommitAct,
+} from "./commit-act.js";
+export {
+  buildCommitBundle,
+  type CommitBundleInput,
+  type CommitBundleResult,
+  isGeneratedNoise,
+} from "./commit-bundle.js";
+export { classifyCommitDelta } from "./commit-converge.js";
+export {
+  type CommitMessageValidation,
+  type CommitMessageValidationInput,
+  renderCommitMessage,
+  sanitizeCommitMessage,
+  stripInventedRefs,
+  templateCommitMessage,
+  templateSubject,
+  validateCommitMessage,
+} from "./commit-message.js";
+export {
+  type CommitSafetyVerdict,
+  classifyCommitSafety,
+  findingClasses,
+} from "./commit-safety.js";
+export {
+  type CommitSkeletonInput,
+  commitTypeForPhase,
+  resolveCommitSkeleton,
+} from "./commit-skeleton.js";
+export {
+  type CommitStagingInput,
+  computeStagingPlan,
+} from "./commit-staging.js";
+export {
+  type CommitGeneration,
+  type CommitTransportPorts,
+  type CommitTransportSelection,
+  generateCommitMessage,
+  selectCommitTransport,
+} from "./commit-transport.js";
+export {
+  aggregateDoctorReport,
+  formatDoctorFailureSummary,
+  renderDoctorHuman,
+  runIsolatedDoctorCheck,
+} from "./doctor.js";
+export { canonicalHarnessJson } from "./harness-canonical.js";
+export {
+  type HarnessCapabilityInspection,
+  harnessCapabilityViolations,
+  inspectHarnessCapability,
+} from "./harness-capability.js";
+export {
+  type RestartBudgetGateInput,
+  evaluateRestartBudget,
+  foldRestartRecords,
+} from "./economics-budget.js";
+export {
+  economicsReferenceFor,
+  formatBudgetEvidence,
+  formatCapabilityGapEvidence,
+  formatIncompleteEvidence,
+  formatRefusalCorpus,
+  formatStallEvidence,
+  formatUneconomicalEvidence,
+  formatUnevaluableEvidence,
+  type RefusalCorpus,
+  parseRefusalCorpus,
+} from "./economics-evidence.js";
+export {
+  type ResumeEconomicsDeps,
+  createOneShotResumeComposition,
+  createSupervisedResumeComposition,
+  evaluateResumeEconomics,
+  isEconomicalRepay,
+} from "./economics-resume.js";
+export {
+  deriveEconomicsView,
+  latestUniqueProgressTokens,
+} from "./economics-view.js";
+export { classifyHarnessEvidence } from "./harness-classify.js";
+export {
+  assembleHarnessLiveness,
+  createHarnessLivenessSignalSource,
+  createSourcedWatchdogSignalSource,
+  harnessLivenessToWatchdogSignals,
+} from "./harness-liveness.js";
+export {
+  type HarnessAdapterRegistration,
+  type HarnessVersionProbe,
+  harnessRegistryViolations,
+  resolveHarnessInstance,
+} from "./harness-registry.js";
+export { buildHarnessSpawnEnvironment } from "./harness-spawn-env.js";
+export {
+  boundHarnessTelemetryCapture,
+  renderHarnessTelemetryHuman,
+} from "./harness-telemetry.js";
+export {
+  evaluateMergeFreshness,
+  isStaleAge,
+  type MergeFreshnessEvaluation,
+  type MergeFreshnessVoidingReason,
+  type MergeGateSetDelta,
+  type MergeVerificationStateReason,
+  mergeDefaultFreshnessSeconds,
+  mergeFreshnessBoundMs,
+  mergeGateSetDelta,
+  mergeVerificationAgeMs,
+} from "./merge-freshness.js";
+export {
+  batteryGateEntries,
+  declaredGateSetOf,
+  enforcedMergeGateEntries,
+  type MergeEffectiveGateSet,
+  type MergeGateSetFailure,
+  mergeGateSetIdentity,
+  mergeSurfaceEntries,
+  resolveMergeGateSet,
+  resolveMergeGateSetFromConfig,
+} from "./merge-gate-set.js";
+export {
+  classifyTrackerTransition,
+  evaluateRequiredJobGate,
+  failedJobNames,
+  type MergePosture,
+  type MergeTrackerTransition,
+  newRedJobs,
+  ownerAttentionLabels,
+  postureOf,
+  type RequiredJobEvaluation,
+  recordedFailedJobs,
+} from "./merge-probe.js";
+export {
+  defaultFreshnessSeconds,
+  gateSetFromValues,
+  internalMergeFailure,
+  type MergeCheckRunPage,
+  type MergeFailure,
+  type MergeFailureEvidence,
+  type MergeLandResult,
+  type MergeRead,
+  type MergeRefreshResult,
+  type MergeRequestDetailRead,
+  type MergeTransactionConfig,
+  type MergeTransactionOutcome,
+  type MergeTransactionPorts,
+  type MergeWorkItemRead,
+  mergeBaseRef,
+  mergePostLandingStepIds,
+  policyRowForClass,
+  renderMergeFailure,
+  runMergeTransaction,
+} from "./merge-transaction.js";
+export {
+  authorizeMergeWaiver,
+  type MergeWaiverRefusalReason,
+  type MergeWaiverVerdict,
+  newestWaiverByGate,
+  recordedWaiverAuthorizer,
+} from "./merge-waiver.js";
+export {
   collectorUnavailableCode,
   evaluateOwnerGateSla,
   isCollectorUnavailableFamilyCode,
@@ -69,6 +240,8 @@ export {
   toBoardData,
   validateOwnerGateSlaPolicy,
 } from "./owner-gate-sla.js";
+export { computePlanDiff, type PlanDiffInput } from "./plan-diff.js";
+export { computePlanOverlap, type PlanOverlapInput } from "./plan-overlap.js";
 export {
   globToRegExp,
   normalizeRepoPath,
@@ -76,13 +249,11 @@ export {
   scopeCoversPath,
   staticPrefix,
 } from "./plan-paths.js";
-export { computePlanDiff, type PlanDiffInput } from "./plan-diff.js";
-export { computePlanOverlap, type PlanOverlapInput } from "./plan-overlap.js";
 export {
+  type PlanValidateInput,
   planDocumentFromValidateData,
   validatePlan,
   validatePlanValue,
-  type PlanValidateInput,
 } from "./plan-validate.js";
 export {
   lintPmNotes,
@@ -102,7 +273,7 @@ export {
   selectPruneCandidates,
 } from "./session-admin.js";
 export { sha256Hex } from "./sha256.js";
-export { aggregateStatus, renderStatusHuman } from "./status.js";
+export { aggregateStatus, evaluateStatusFindings, renderStatusHuman } from "./status.js";
 export {
   classifyVerifyChange,
   classifyVerifyDocument,
@@ -119,6 +290,14 @@ export {
   type VerifyRegistryEvidence,
 } from "./verify-change.js";
 export {
+  artifactMatches,
+  deployDecisiveEvidence,
+  evaluateDeploy,
+  projectDeployReport,
+  renderStepEvidence,
+} from "./verify-deploy.js";
+export {
+  evaluateDeclaredBattery,
   evaluateVerifyGates,
   isFullHexSha,
   renderVerifyGatesFailureSummary,
@@ -154,3 +333,26 @@ export {
   type WatchdogRestorationPlan,
   watchdogPreservedRefName,
 } from "./watchdog.js";
+export {
+  attemptOutOfSeamEvidenceWrite,
+  collectRetro,
+  evaluateRetroTruthChecks,
+  exportRetroEvidence,
+  isImplementedRetroLevel,
+  recordMemoryAuditRun,
+  reportRetro,
+  RETRO_ENGINE_CHAIN_ANCHOR,
+  RETRO_ENGINE_DEFAULT_LEVEL,
+  RETRO_ENGINE_EVIDENCE_SCHEMA,
+  RETRO_ENGINE_REPORT_SCHEMA,
+  RETRO_ENGINE_TRUTH_CHECKS,
+  RETRO_TARGET_SELECTION_ORDER,
+  type RetroCollectDeps,
+  type RetroExportDeps,
+  type RetroExportOutcome,
+  type RetroReportDeps,
+  type RetroTruthCheckInput,
+  type RetroTruthCheckOptions,
+  retroLevelRefusalHint,
+  selectRetroTarget,
+} from "./retro.js";

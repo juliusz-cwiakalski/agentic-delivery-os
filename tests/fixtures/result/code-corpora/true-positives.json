@@ -55,8 +55,116 @@
       "resolves": true
     },
     {
+      "id": "commit-staging-blocked-untracked",
+      "text": "commit.staging-blocked-untracked",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "commit-commitlint-failed",
+      "text": "commit.commitlint-failed",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "commit-safety-secret-suspected",
+      "text": "commit.safety.secret-suspected",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "commit-safety-scan-unavailable",
+      "text": "commit.safety.scan-unavailable",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "commit-atomic-abort",
+      "text": "commit.atomic-abort",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "commit-session-context-refused",
+      "text": "commit.session.context-refused",
+      "recognized": true,
+      "resolves": true
+    },
+    {
       "id": "declared-collector-family",
       "text": "status.collector.tracker.unavailable",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "merge-gate-family-declared",
+      "text": "merge.gate.ci-green.failed",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "merge-gates-stale",
+      "text": "merge.gates-stale",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "merge-waiver-unauthorized",
+      "text": "merge.waiver-unauthorized",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "verify-deploy-trace-missing",
+      "text": "verify.deploy.trace-missing",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "doctor-check-failed",
+      "text": "doctor.check.failed",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "retro-malformed-entry",
+      "text": "retro.evidence.malformed-entry",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "retro-tamper-flagged",
+      "text": "retro.evidence.tamper-flagged",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "retro-vacuous-run",
+      "text": "retro.truth.vacuous-run",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "retro-denied",
+      "text": "retro.evidence.denied",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "econ-watchdog-stalled",
+      "text": "watchdog.liveness-stalled",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "econ-dispatch-budget",
+      "text": "dispatch.restart-budget-exceeded",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "econ-dispatch-uneconomical",
+      "text": "dispatch.resume-uneconomical",
       "recognized": true,
       "resolves": true
     },

@@ -109,6 +109,115 @@ type Workflow = {
   jobs?: Record<string, unknown>;
 };
 
+export type RemovedLinePolicy = {
+  /**
+   * Test-only seam for the DEC-7 non-vacuity fixtures. Production callers use
+   * the default (allowance enabled); the pure function stays the only place
+   * that knows the classification rule.
+   */
+  readonly allowBashTestsExecutionBlockRemovals?: boolean;
+};
+
+type RemovedLine = {
+  readonly line: number;
+  readonly text: string;
+};
+
+const parseRemovedLines = (diffText: string): RemovedLine[] => {
+  const removed: RemovedLine[] = [];
+  let oldLine = 0;
+  for (const line of diffText.split("\n")) {
+    const hunk = /^@@ -(\d+)(?:,\d+)? \+\d+(?:,\d+)? @@/.exec(line);
+    if (hunk) {
+      oldLine = Number(hunk[1]);
+      continue;
+    }
+    if (line.startsWith("---") || line.startsWith("+++")) continue;
+    if (line.startsWith("-")) {
+      removed.push({ line: oldLine, text: line.slice(1) });
+      oldLine += 1;
+    } else if (line.startsWith("+")) {
+      // Added lines do not consume a base line.
+    } else if (line.startsWith(" ")) {
+      oldLine += 1;
+    }
+  }
+  return removed;
+};
+
+const jobBlockRange = (
+  lines: readonly string[],
+  jobId: string,
+): { readonly start: number; readonly end: number } | undefined => {
+  const start = lines.findIndex((line) => line === `  ${jobId}:`);
+  if (start < 0) return undefined;
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (/^ {2}[a-z0-9-]+:\s*$/.test(lines[index] as string)) {
+      end = index;
+      break;
+    }
+  }
+  return { start, end };
+};
+
+const runBlockLineNumbers = (
+  lines: readonly string[],
+  range: { readonly start: number; readonly end: number },
+): Set<number> => {
+  const allowed = new Set<number>();
+  for (let index = range.start; index < range.end; index += 1) {
+    const match = /^(\s*)run:\s*(.*)$/.exec(lines[index] as string);
+    if (!match) continue;
+    const indent = (match[1] ?? "").length;
+    allowed.add(index + 1);
+    const inline = (match[2] ?? "").trim();
+    if (inline.length > 0 && inline !== "|" && inline !== ">") continue;
+    for (let body = index + 1; body < range.end; body += 1) {
+      const line = lines[body] as string;
+      if (line.trim().length === 0) {
+        allowed.add(body + 1);
+        continue;
+      }
+      const bodyIndent = line.length - line.trimStart().length;
+      if (bodyIndent <= indent) break;
+      allowed.add(body + 1);
+    }
+  }
+  return allowed;
+};
+
+/**
+ * DEC-7: a removed ci.yml line is ignored only when it belongs to the
+ * bash-tests job's execution block (a `run:` step body) or that job's comment
+ * lines. Everything else stays fatal, so the allowance cannot generalize.
+ */
+export const removedLineViolations = (
+  baseText: string,
+  diffText: string,
+  policy: RemovedLinePolicy = {},
+): string[] => {
+  const allow = policy.allowBashTestsExecutionBlockRemovals ?? true;
+  const allowed = new Set<number>();
+  if (allow) {
+    const baseLines = baseText.split("\n");
+    const range = jobBlockRange(baseLines, "bash-tests");
+    if (range !== undefined) {
+      for (let index = range.start; index < range.end; index += 1) {
+        if ((baseLines[index] as string).trimStart().startsWith("#")) allowed.add(index + 1);
+      }
+      for (const line of runBlockLineNumbers(baseLines, range)) allowed.add(line);
+    }
+  }
+
+  const violations: string[] = [];
+  for (const removed of parseRemovedLines(diffText)) {
+    if (allowed.has(removed.line)) continue;
+    violations.push(`ci.yml removes a base line (additions only): -${removed.text}`);
+  }
+  return violations;
+};
+
 const includesDeliveryBranch = (patterns: string[]): boolean =>
   patterns.some(
     (pattern) =>
@@ -150,16 +259,21 @@ export const validate = (root: string): string[] => {
   if (base.status !== 0) {
     failures.push("origin/main-tools is unavailable; fetch the base branch before this check");
   } else {
+    const baseFile = spawnSync("git", ["show", "origin/main-tools:.github/workflows/ci.yml"], {
+      cwd: root,
+      encoding: "utf8",
+    });
     const diff = spawnSync(
       "git",
       ["diff", "--unified=0", "origin/main-tools...HEAD", "--", ".github/workflows/ci.yml"],
       { cwd: root, encoding: "utf8" },
     );
-    const removed = (diff.stdout ?? "")
-      .split("\n")
-      .filter((line) => line.startsWith("-") && !line.startsWith("---"));
-    for (const line of removed) {
-      failures.push(`ci.yml removes a base line (additions only): ${line}`);
+    if (baseFile.status !== 0) {
+      failures.push(
+        "origin/main-tools:.github/workflows/ci.yml is unavailable; fetch the base branch before this check",
+      );
+    } else {
+      failures.push(...removedLineViolations(baseFile.stdout ?? "", diff.stdout ?? ""));
     }
   }
 

@@ -1,0 +1,13 @@
+{
+  "description": "Key-artifact open-failure fixtures (TC-GH223-047); identities reuse existing rows.",
+  "cases": [
+    { "id": "absent-non-first-open", "mutation": "remove", "expectedCode": "state.keys.missing" },
+    { "id": "corrupt-artifact", "mutation": "corrupt", "expectedCode": "state.store.torn" },
+    {
+      "id": "wrong-permission-bits",
+      "mutation": "chmod",
+      "expectedCode": "state.permission.denied"
+    },
+    { "id": "first-append-creates", "mutation": "none", "expectedCode": "created" }
+  ]
+}

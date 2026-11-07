@@ -1,0 +1,38 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-06",
+  "note": "Synthetic non-2xx and transport read-failure shapes for the GH-PAYLOAD-HTTP-STATUS trap. The prose detail deliberately conflicts with the structured status so classification can only come from the numeric field.",
+  "responses": {
+    "401": {
+      "status": 401,
+      "prose": "server error"
+    },
+    "403": {
+      "status": 403,
+      "prose": "temporary upstream failure"
+    },
+    "404": {
+      "status": 404,
+      "code": "provider.not-found"
+    },
+    "500": {
+      "status": 500,
+      "prose": "unauthorized"
+    },
+    "503": {
+      "status": 503,
+      "prose": "bad credentials"
+    },
+    "timeout": {
+      "status": null,
+      "failureName": "TimeoutError"
+    },
+    "transport": {
+      "status": null,
+      "failureName": "TypeError"
+    },
+    "absent": {
+      "status": null,
+      "prose": "401 Unauthorized"
+    }
+  }
+}

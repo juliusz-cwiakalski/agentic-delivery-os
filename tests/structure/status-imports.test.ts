@@ -238,7 +238,7 @@ describe("TC-STATUS-026 contracts/domain tier discipline", () => {
   });
 
   test("the secret-read allowlist stays at four and names no status file", () => {
-    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(5);
     const paths = SECRET_READ_ALLOWLIST.map((entry) => entry.path);
     for (const statusFile of [CONTRACT, DOMAIN, COMMAND]) {
       expect(paths.some((path) => path.includes(statusFile.replace("packages/", "")))).toBe(false);

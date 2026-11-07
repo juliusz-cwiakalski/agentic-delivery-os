@@ -1,0 +1,50 @@
+{
+  "description": "Read-surface matrix: scope, repo, outcome, command, and time window (TC-GH223-028/041/042/050).",
+  "records": [
+    {
+      "runId": "run-read-01",
+      "command": "status",
+      "outcomeClass": "success",
+      "scope": "workspace-a",
+      "repo": "repo-1",
+      "startedAt": 1000
+    },
+    {
+      "runId": "run-read-02",
+      "command": "status-extra",
+      "outcomeClass": "user-validation",
+      "scope": "workspace-a",
+      "startedAt": 2000
+    },
+    {
+      "runId": "run-read-03",
+      "command": "db",
+      "outcomeClass": "platform-provider",
+      "scope": "workspace-b",
+      "repo": "repo-2",
+      "startedAt": 3000
+    },
+    {
+      "runId": "run-read-04",
+      "command": "status",
+      "outcomeClass": "success",
+      "scope": "workspace-a",
+      "repo": "repo-2",
+      "startedAt": 4000
+    },
+    {
+      "runId": "run-read-05",
+      "command": "--wat",
+      "outcomeClass": "user-validation",
+      "scope": "workspace-a",
+      "startedAt": 5000
+    },
+    {
+      "runId": "run-read-06",
+      "command": "unknown-cmd",
+      "outcomeClass": "user-validation",
+      "scope": "workspace-a",
+      "startedAt": 6000
+    }
+  ]
+}

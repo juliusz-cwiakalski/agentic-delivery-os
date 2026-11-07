@@ -95,8 +95,8 @@ describe("TC-BRIEF-001 contract surface and closed catalog", () => {
   });
 
   test("the bounds are the status values consumed by reference", () => {
-    expect(STATUS_MAX_HUMAN_LINES).toBe(24);
-    expect(STATUS_MAX_HUMAN_BYTES).toBe(4096);
+    expect(STATUS_MAX_HUMAN_LINES).toBe(32);
+    expect(STATUS_MAX_HUMAN_BYTES).toBe(6144);
     expect(STATUS_MAX_MACHINE_BYTES).toBe(65536);
     const contract = readFileSync(join(ROOT, CONTRACT), "utf8");
     const domain = readFileSync(join(ROOT, DOMAIN), "utf8");

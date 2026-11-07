@@ -613,11 +613,15 @@ const DEPCRUISE_RULES = [
 const RUNTIME_ALLOWLIST = [
   "^packages/core/src/state/driver/",
   "^packages/adapters/src/(repo|file|host|session|legacy|credentials)/",
+  "^packages/adapters/src/harness/",
   "^packages/adapters/src/github/",
   "^packages/adapters/src/gitlab/",
   "^packages/adapters/src/jira/",
   "^packages/adapters/src/provider-quota/",
   "^packages/adapters/src/git/",
+  "^packages/adapters/src/inference/",
+  "^packages/testkit/src/commit/",
+  "^packages/mcp/src/serve\\.ts$",
   "^packages/cli/",
   "^packages/opencode/",
 ];

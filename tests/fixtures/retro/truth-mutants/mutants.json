@@ -1,0 +1,14 @@
+{
+  "mutants": [
+    { "id": "disable-c01", "disabled": ["C-01"], "expected": "C-01" },
+    { "id": "disable-c02", "disabled": ["C-02"], "expected": "C-02" },
+    { "id": "disable-c03", "disabled": ["C-03"], "expected": "C-03" },
+    { "id": "disable-c04", "disabled": ["C-04"], "expected": "C-04" },
+    { "id": "disable-c05", "disabled": ["C-05"], "expected": "C-05" },
+    {
+      "id": "disable-all",
+      "disabled": ["C-01", "C-02", "C-03", "C-04", "C-05"],
+      "expected": "all"
+    }
+  ]
+}

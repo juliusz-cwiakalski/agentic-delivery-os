@@ -1,0 +1,454 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-227
+branch: feat/GH-227/commit-primitive
+status: FAIL
+summary: >-
+  The delivery is broad, disciplined, and largely spec-faithful: all 8 plan
+  phases landed with per-phase commits and gate evidence, the six error rows
+  match DM-4/DEC-5/DEC-10 exactly, contracts are data-only and the domain pure,
+  the fail-closed scanner, session guard, injection-resistant parsing, budget
+  caps, and opt-out/commitlint/template chain all verify correct, and this
+  review re-ran the key suites green (30 pass across phase-atomic,
+  commit-convergence, and the golden envelopes; 58 pass across commit
+  structure/error-table suites). The FAIL verdict rests on two empirically
+  reproduced correctness defects in the production composition that the
+  single-phase test fixture cannot see (the repo's own GH-170 lesson): (F-1)
+  convergence evidence requires the phase's telemetry commitSha to equal the
+  CURRENT head, so once any later commit lands, re-running an earlier phase's
+  `phase complete` misclassifies both-landed as interrupted-atomic and
+  MANUFACTURES a duplicate commit with false reconciliation evidence and a
+  duplicate telemetry event (violates AC-F7-3, NFR-6, DEC-7, Appendix B row 3);
+  (F-2) the phase-centric plan-scope lookup matches lifecycle phase names
+  against integer plan-phase ids, which can never match in a valid
+  delivery.plan.v1 plan, silently falling back to plan phase 1's scope —
+  declared untracked files of every other phase are classified strays and a
+  completion with only such work durably records the FALSE basis
+  `skipped-no-pending-work` (violates DEC-15/AC-F5-1 scope semantics and
+  F-1/F-2). Remaining findings are a convergence-corpus blind spot (F-3),
+  an unrecorded DM-3 vocabulary extension (F-4), and low/info polish.
+severity_breakdown:
+  critical: 2
+  high: 1
+  medium: 1
+  low: 5
+  info: 4
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: critical
+    confidence: high
+    category: correctness
+    location: packages/cli/src/edge.ts:384
+    message: >-
+      `readEvidence` classifies the commit as present only when a telemetry
+      event satisfies `entry.commitSha === head` (edge.ts:384-394). Once ANY
+      later commit lands — the next phase's atomic completion, the normal
+      11-phase sequence, or any manual commit — every earlier phase's durable
+      commit no longer equals head, so its evidence degrades to
+      "commit absent". A re-run of that earlier phase's `phase complete` then
+      classifies `both` as `record-atomic-without-commit` (phase.ts:520) and
+      runs the act: with tracked pending work present (always staged per
+      DEC-15) it LANDS A NEW COMMIT for the already-completed phase with false
+      `reconciliation: completed: "commit"` evidence and a SECOND telemetry
+      event reusing the same transitionId; with no pending work it discloses
+      the false basis `commitSkipped: interrupted-atomic-no-pending-work`.
+      Empirically reproduced by this review (tmp/code-review/GH-227/
+      probe-convergence2.ts): after delivery+specification complete atomically,
+      re-running `phase complete GH-310 delivery` produced commit 377f0773
+      "feat(GH-310): deliver the fixture change" — a duplicate of the phase's
+      already-landed commit — plus a duplicate telemetry event, exit 0,
+      reported as a successful reconciliation. Violates AC-F7-3 (matrix row 2:
+      no-op, no record, no commit), NFR-6 (convergence total, 0 violations),
+      DEC-7 ("both → no-op citing the existing completion, no commit"), and
+      Appendix B row 3. No duplicate ledger record occurs (that half holds).
+    suggestion: >-
+      Detect commit presence from the durable event alone: phaseId match +
+      transitionId === record.timestamp + (landedAt > reopenedAt when
+      reopened) — drop the `commitSha === head` equality, or keep head only to
+      disambiguate the commit-without-record state (where the just-landed
+      commit IS head) and verify ancestry (e.g. a `containsCommit(sha)` git
+      port via `merge-base --is-ancestor`) instead of equality when a record
+      exists. Add corpus cases per F-3. The delivered feature doc (line 111)
+      documents the head-matching as shipped behavior and must be re-synced
+      with the fix.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: critical
+    confidence: high
+    category: correctness
+    location: packages/cli/src/edge.ts:367
+    message: >-
+      The phase↔plan-phase scope lookup can never match in production.
+      `readPlanPhase` (edge.ts:363-369) and `phaseContextOf`
+      (packages/cli/src/commands/commit.ts:101-107) search
+      `planContext.phases.find(entry => entry.phaseId === phaseId)` where
+      phaseId is a canonical LIFECYCLE name from the CLI grammar
+      (delivery, specification, …; the only ids `phase complete` and
+      `commit --phase` accept), but valid delivery.plan.v1 plan phase ids are
+      POSITIVE INTEGERS (feature-plan-schema.md: "id … Positive integer"), and
+      planPhasesOf (edge.ts:305) accepts only numeric ids. The lookup
+      therefore always falls back to `?? planContext.phases[0]` — plan phase
+      1's declared scope and summary for EVERY phase-centric invocation —
+      silently (scopeSource still reports "plan-phase"). Empirically
+      reproduced (tmp/code-review/GH-227/probe-plan-scope.ts): with a
+      two-phase plan declaring src/two.ts in phase 2, `commit GH-310 --phase
+      delivery --dry-run` refuses with `commit.staging-blocked-untracked`
+      (exit 1) treating the DECLARED file as a stray, while standalone
+      `commit GH-310 --dry-run` (union scope) correctly stages it;
+      `phase complete GH-310 delivery` lands record-only with the durable
+      basis `skipped-no-pending-work` despite declared pending work — false
+      durable evidence. In production multi-phase plans (like this change's
+      own 8-phase plan) phase-centric mode can never stage declared new files
+      outside phase 1's scope, defeating DEC-15's declared-new-file guarantee
+      and the F-1/F-2 scope contract. The behaviour tests pass only because
+      the fixture plan (tests/fixtures/commit/harness.ts:54-68) has exactly one
+      phase, where phases[0] is accidentally correct — the GH-170
+      fixture-vs-production anti-pattern named in this repo's own review
+      checklist. The pack page (m1/commands/commit.md:49: "using the phase's
+      declared plan scope") also no longer matches delivered behavior.
+    suggestion: >-
+      Define the lifecycle→plan-phase correspondence explicitly instead of the
+      silent first-phase fallback: either (a) map lifecycle phases to the
+      union/selection of delivery-kind plan phases (e.g. `delivery` → all
+      delivery-kind phases; `system_spec_update` → none, disclosed), (b) extend
+      the plan schema with an explicit lifecycle mapping, or (c) when no plan
+      phase matches, disclose a degraded scope source instead of impersonating
+      phase 1. Add a behaviour test with a ≥2-phase production-shaped plan
+      asserting declared untracked files of a non-first phase are staged in
+      phase-centric mode. Re-sync the pack page and feature doc once fixed.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: high
+    confidence: high
+    category: testing
+    location: tests/behaviour/phase-atomic.test.ts:195
+    message: >-
+      The convergence and matrix corpus never exercises a re-run after HEAD
+      has moved: the row-2 test (phase-atomic.test.ts:195-216) re-runs
+      immediately after row 1, while the phase's commit is still HEAD, and
+      commit-convergence.test.ts constructs durable states directly with the
+      commit at head. That is exactly the blind spot that hides F-1 — the
+      state every real delivery enters as soon as the NEXT phase completes.
+      The spec's own test-plan TR-5 mitigation ("construct single-side durable
+      states directly") is in force, but no case constructs the both-landed
+      state with a newer commit on top, which is a durable-evidence state, not
+      an interruption window.
+    suggestion: >-
+      Add corpus cases: (1) earlier-phase re-run after a later phase's atomic
+      commit moved HEAD (expect no-op, no new commit, no new telemetry event);
+      (2) earlier-phase re-run after a MANUAL commit moved HEAD with dirty
+      tracked work (expect no manufactured commit); (3) commit-without-record
+      detection still works when the orphan commit is at head. Drive them
+      through the real harness (real git repo, real telemetry ledger), not by
+      fabricating evidence objects.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/contracts/commit.ts:394
+    message: >-
+      DM-3 declares a closed commitSkipped vocabulary — "opt-out-flag |
+      config-disabled | skipped-no-pending-work | no-op; the first three are
+      exactly the durable commitIntentBasis strings — one vocabulary, no
+      drift" — and test-plan risk TR-9 guards basis-string drift. The delivery
+      adds a fifth envelope string `interrupted-atomic-no-pending-work`
+      (contracts commit.ts:394, phase.ts:540, pack page phase.md:67, feature
+      doc line 116) for the record-atomic-without-commit + no-pending-work
+      convergence case. It is envelope-only (never durable) and documented in
+      the delivered docs, but the extension was not recorded against the spec
+      per DEC-14 ("delivery-time refinements … recorded"), so spec DM-3 and
+      the delivered vocabulary now disagree. Note the string also fires
+      falsely in the F-1 head-moved scenario.
+    suggestion: >-
+      Record the DM-3 refinement against the spec (one-line amendment per
+      DEC-14: the fifth envelope-only basis and when it fires), or fold the
+      case into `no-op` with reconciliation detail. Keep TR-9's equality
+      assertion covering it.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-05--GH-227--commit-primitive/chg-GH-227-test-plan.md:1942
+    message: >-
+      Plan phase 7 scope and the test-plan automation mapping (section 7) name
+      `tests/behaviour/phase-idempotency.test.ts` (update) as the home of
+      TC-ATOMIC-006/007/009/TC-REGRESS-004, but that file was not touched by
+      this change (last modified by GH-179; zero occurrences of commit/atomic)
+      — the matrix-row commit-dimension tests landed in the new
+      `phase-atomic.test.ts` instead. Coverage exists, but the declared
+      mapping is stale: an auditor following section 7 or the plan's phase-7
+      scope finds an unchanged file. The plan-diff record counted the file
+      among undeclared-missing without naming it (pm-notes names only
+      config/schema.ts and the changeset).
+    suggestion: >-
+      Update the test-plan section 7 mapping rows (phase-idempotency → "no
+      change, regression only"; matrix rows → phase-atomic.test.ts) and note
+      the relocation in the plan-diff entry, so artifact and reality agree for
+      the re-review.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-05--GH-227--commit-primitive/chg-GH-227-spec.md:200
+    message: >-
+      The four DoR-carried minor spec fixes that pm-notes said would be taken
+      opportunistically in review_fix were not applied: (a) section 8.1's
+      `phase complete` exit-1 list still omits `commit.commitlint-failed`;
+      (b) NFR-1 still says "exactly one model call" without acknowledging the
+      DEC-4 retry's second call (the delivered feature doc words it correctly:
+      "a failed attempt is retried once"); (c) DM-3 still labels
+      state/commitSha/atomic as "existing fields" when they are new additive
+      fields vs the GH-179 envelope.
+    suggestion: >-
+      Apply the three one-line spec amendments in the remediation phase (or
+      record them as accepted-as-is with a pm-notes note), so the spec matches
+      delivered truth before PR.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: low
+    confidence: medium
+    category: performance
+    location: packages/adapters/src/git/commit.ts:107
+    message: >-
+      `readTree` spawns one `git diff` child per pending file (N+1 fan-out,
+      each with a 30 s timeout budget) and `isBinaryContent` reads the ENTIRE
+      file via readFileSync just to probe the first 8 000 bytes — a large text
+      file (or many pending files) is fully loaded into memory and costs one
+      spawn each. Diff budgets are enforced later in the bundle
+      (commit-bundle.ts) but nothing bounds the tree-read stage, threatening
+      NFR-3's dry-run ≤ 2 s p95 on big trees (the performance suite measures
+      a small fixture tree only).
+    suggestion: >-
+      Bound the read stage: batch the diff (one `git diff -U3 -- <paths>` call
+      or numstat-first selection with per-file diff only for the top-N
+      candidates), and make the binary probe a bounded read (open + read 8 KB
+      instead of readFileSync of the whole file).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-8
+    severity: low
+    confidence: high
+    category: error-contract
+    location: packages/core/src/contracts/error-table.ts:614
+    message: >-
+      The `commit.safety.secret-suspected` remediationHint ends "…and invoke
+      the commit again from outside the delivery session" — copy-pasted from
+      the session-refused row. For a secret STOP the caller is not in a
+      session; the hint's last clause is misleading and contradicts the row's
+      own summary ("human review required") and the non-retryable pin.
+    suggestion: >-
+      Reword to "Review the named finding class and path, remove or gitignore
+      the suspected material, then retry; never blind-retry." Keep it free of
+      material. Sync the documented row via the existing sync check.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-9
+    severity: low
+    confidence: medium
+    category: spec-compliance
+    location: packages/cli/src/edge.ts:459
+    message: >-
+      Spec F-2/section 12 pin the ref resolution order "branch, then change
+      folder", and contracts include the `change-folder` ref source, but the
+      production `resolveRef` default (edge.ts:459-465) implements branch-only
+      — inside a change folder on an unresolvable branch the command fails
+      with "no work item ref is resolvable" instead of trying the folder. The
+      feature doc documents the delivered behavior honestly ("derives it from
+      the branch name"), but the delta is unrecorded against the spec per
+      DEC-14.
+    suggestion: >-
+      Either implement the change-folder fallback (resolve the ref from the
+      nearest doc/changes/** folder name containing the cwd/plan artifact) or
+      record the single-source refinement against the spec per DEC-14.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-10
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/phase.ts:400
+    message: >-
+      The `dryRun` branches inside `completeWithCommit` (lines 400-411,
+      480-493, 528, 618-635) are unreachable: `transitionTarget` always passes
+      dryRun false and `runPhaseCompleteForCommit` has no dry-run parameter;
+      `commit --phase X --dry-run` takes the direct-act path in commit.ts
+      instead. Dead code that suggests a phase-complete dry-run exists.
+    suggestion: >-
+      Remove the dead branches or thread an explicit dry-run input if a future
+      surface needs it; do not leave half-wired paths in the atomic completion.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-11
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/commit-staging.ts:38
+    message: >-
+      Path ordering uses default-locale `localeCompare` (staging, bundle, git
+      seam), which is ambient-locale sensitive (case ordering differs between
+      ICU and C collation), while the feature doc claims "No path, ordering, or
+      byte depends on a clock, the environment, or the locale" (NFR-4
+      determinism). Matches the pre-existing sibling convention
+      (closeout.ts, watchdog.ts), so cosmetic in practice; CI and the testkit
+      pin LC_ALL=C.
+    suggestion: >-
+      For the documented claim, either pass an explicit collation
+      (`localeCompare(right, "en")`) or compare codepoints; or soften the doc
+      claim. No behavior change expected under pinned locales.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-12
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/cli/src/commands/commit.ts:247
+    message: >-
+      `commit <ref> --phase X --dry-run` maps a no-pending-work act to FAILURE
+      `commit.staging-blocked-untracked` (exit 1), while the same tree under
+      the non-dry `--phase` path lands transition-only SUCCESS with
+      commitSkipped disclosure. A dry run should preview the real outcome, not
+      invert it to a failure.
+    suggestion: >-
+      In dry-run phase mode, return a success envelope disclosing the
+      would-be `commitSkipped: skipped-no-pending-work` outcome (or at minimum
+      the empty staging set) instead of the refusal.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-13
+    severity: info
+    confidence: high
+    category: code-quality
+    location: packages/cli/src/commands/commit.ts:167
+    message: >-
+      The DM-2 mapping over `runPhaseCompleteForCommit` results uses
+      unvalidated `as` casts on `Record<string, unknown>` fields
+      (`data.messageSource as CommitEnvelopeData["messageSource"]` etc. with
+      `?? "template"` defaults). The values are construction-site known, but
+      the weak TargetSuccess typing invites drift silently suppressed by the
+      fallbacks (a missing messageSource would render as "template" without
+      any signal). .ai/rules/typescript.md forbids unjustified `as`.
+    suggestion: >-
+      Widen the shared success type (a typed PhaseCompleteData) or validate
+      the handful of fields explicitly; drop the silent `??` defaults in favor
+      of shape assertions.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+adjudications:
+  deviation_two_segment_reserved_codes:
+    verdict: ACCEPTABLE
+    note: >-
+      Verified: error-table-sync.ts RESERVED_TWO_SEGMENT_CODES pins
+      commit.staging-blocked-untracked, commit.commitlint-failed,
+      commit.atomic-abort as exact declared codes with a GH-227 comment; no
+      pattern widening; sync check 58/58 green (re-run by this review).
+  deviation_optional_commit_extension:
+    verdict: ACCEPTABLE
+    note: >-
+      PhaseCommandRuntime.commit is optional but createConfigProgram always
+      wires the extension + sessionFacts when commit options exist
+      (edge.ts:1486-1514); the legacy transition-only harness keeps GH-179
+      suites meaningful as regressions.
+  deviation_porcelain_v1:
+    verdict: ACCEPTABLE
+    note: >-
+      `--porcelain=v1 -z --untracked-files=all` preserves per-file stray/
+      forbidden precision (renames consume two NUL fields — handled in
+      parsePorcelainStatus); the feature doc documents the exact invocation.
+  deviation_transports_explicit_template_default:
+    verdict: ACCEPTABLE
+    note: >-
+      The shipped default composition declares no available transport and
+      degrades to the marked template — spec section 12 assumption verbatim;
+      transports are implemented, depcruiser-declared (exact-path entry with
+      negative fixture), and behaviour-tested via fakes. Out-of-the-box model
+      messages are an adoption item (NG-1), not a defect.
+  deviation_goldens_parsed_json:
+    verdict: ACCEPTABLE
+    note: >-
+      Goldens compare JSON.parse(actual) vs JSON.parse(golden) with sha
+      normalization and assertEnvelopeContract — key-order independence
+      without weakening field assertions.
+  deviation_biome_sweep_in_phase_8:
+    verdict: ACCEPTABLE
+    note: Format-only sweep recorded in the phase-8 commit; no semantic edits.
+  deviation_plan_scope_drift_51_8_5:
+    verdict: ACCEPTABLE
+    note: >-
+      The 8 outside-declared paths are pre-existing change artifacts, barrel/
+      index exports required by the new modules, and the error-table-sync
+      fix — legitimate necessities, not scope creep. The 5 undeclared-missing
+      include the unmodified phase suites whose updates were relocated
+      (covered as F-5, coverage exists in phase-atomic.test.ts).
+  deviation_dogfooding_rejected:
+    verdict: ACCEPTABLE
+    note: >-
+      Task 8.6's @committer choice is consistent with DEC-6: the session guard
+      would refuse in-session primitive use; agent adoption is the separate
+      NG-1 change. Real-repository commit behavior is still exercised by the
+      behaviour suites' temp repos.
+  verified_positive_claims:
+    verdict: CONFIRMED
+    note: >-
+      Re-run by this review: phase-atomic + commit-convergence + golden
+      envelopes 30 pass; commit structure/error-table suites 58 pass; error
+      rows match DM-4/DEC-5/DEC-10 classifications and exit projections;
+      contracts data-only; branding literals clean in new modules; no
+      hand-added license headers; delivery commits conventional; changeset
+      present; feature-doc module map paths all exist; session guard wired
+      first in both surfaces; scanner fail-closed and STOP classes carry
+      class+path only; SAFE_SHA guards resetTo; `--` pathspec separation and
+      fixed-argv execFile throughout; bundle budgets enforced (per-file cap,
+      top-N, total input).
+reviewed_at: "2026-11-06T06:10:00Z"
+next_step: EXECUTE_REMEDIATION_PHASE

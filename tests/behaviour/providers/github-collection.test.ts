@@ -6,6 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { createEnvironmentCredentialPort } from "../../../packages/adapters/src/credentials/index";
 import { createGitHubClient } from "../../../packages/adapters/src/github/client";
+import { normalizeGithubIssue } from "../../../packages/adapters/src/github/normalize";
 import type { ExternalSystemInstance } from "../../../packages/core/src/contracts/index";
 import { fixtureBrand } from "../../fixtures/credentials/cases";
 import {
@@ -253,6 +254,132 @@ describe("GH-178 collection 404 absence", () => {
     const result = await client.listDeliveryRequests(100);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("provider.not-found");
+    expect(transport.requests).toHaveLength(1);
+  });
+});
+
+const TRAP_CATALOG = "tests/fixtures/providers/traps/github.traps.json";
+const READ_FAILURE_FIXTURE = "tests/fixtures/providers/github/read-failure-statuses.json";
+
+describe("TC-DOCTOR-031 GH-PAYLOAD-HTTP-STATUS trap coverage", () => {
+  const catalog = readJson(TRAP_CATALOG) as {
+    readonly entries: readonly Record<string, unknown>[];
+  };
+
+  test("exactly one four-field entry points at the committed read-failure fixture", () => {
+    const matches = catalog.entries.filter((entry) => entry.trapName === "GH-PAYLOAD-HTTP-STATUS");
+    expect(matches).toHaveLength(1);
+    const entry = matches[0];
+    if (entry === undefined) throw new Error("trap entry missing");
+    expect(Object.keys(entry).sort()).toEqual([
+      "expectedNormalizedOutcome",
+      "fixtureReference",
+      "providerBehavior",
+      "trapName",
+    ]);
+    expect(entry.fixtureReference).toBe(READ_FAILURE_FIXTURE);
+    expect(String(entry.providerBehavior).length).toBeGreaterThan(0);
+    expect(String(entry.expectedNormalizedOutcome)).toContain("httpStatus");
+  });
+
+  test("the fixture carries the 401/403/404/500/503, timeout, transport, and absent shapes", () => {
+    const fixture = readJson(READ_FAILURE_FIXTURE) as {
+      readonly responses: Record<string, { readonly status: number | null }>;
+    };
+    expect(Object.keys(fixture.responses).sort()).toEqual([
+      "401",
+      "403",
+      "404",
+      "500",
+      "503",
+      "absent",
+      "timeout",
+      "transport",
+    ]);
+    for (const key of ["401", "403", "404", "500", "503"]) {
+      expect(fixture.responses[key]?.status).toBe(Number(key));
+    }
+    expect(fixture.responses.timeout?.status).toBeNull();
+    expect(fixture.responses.transport?.status).toBeNull();
+  });
+
+  test("the read slice supplies the structured status and keeps the closed operation set", async () => {
+    const statuses: Array<[number, string]> = [
+      [401, "provider.payload.invalid"],
+      [403, "provider.payload.invalid"],
+      [500, "provider.payload.invalid"],
+      [503, "provider.payload.invalid"],
+      [404, "provider.not-found"],
+    ];
+    for (const [status, identity] of statuses) {
+      const transport = createFixtureTransport([{ url: issuesUrl(50), body: {}, status }]);
+      const client = createGitHubClient({ instance, credentials, repository, transport });
+      const result = await client.listWorkItems(50);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.code).toBe(identity);
+        expect((result as { readonly httpStatus?: number }).httpStatus).toBe(status);
+      }
+      expect(transport.requests).toHaveLength(1);
+      expect(transport.requests[0]?.method).toBe("GET");
+    }
+    const { ADAPTER_OPERATIONS } = await import("../../../packages/core/src/contracts/index");
+    const { GITHUB_ADAPTER_CONTRACT } = await import("../../../packages/adapters/src/github/index");
+    expect(ADAPTER_OPERATIONS).toHaveLength(8);
+    expect(ADAPTER_OPERATIONS).not.toContain("doctor-read");
+    expect(GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations).not.toContain(
+      "doctor-read" as never,
+    );
+  });
+});
+
+describe("TC-ATT-004 mapped milestone provenance", () => {
+  const context = { systemName: "github" } as const;
+  const baseIssue = {
+    number: 700,
+    title: "Issue",
+    state: "open",
+    labels: [{ name: "epic:payments" }, { name: "points:5" }],
+    updated_at: "2026-10-30T00:00:00Z",
+  };
+
+  test("a present milestone title maps additively onto the work-item view", () => {
+    const result = requireValue(
+      normalizeGithubIssue({ ...baseIssue, milestone: { title: "Sprint 12" } }, context),
+      "milestone present",
+    );
+    expect(result.milestone).toBe("Sprint 12");
+    expect(result.labels).toEqual(["epic:payments", "points:5"]);
+    expect(result.updatedAt).toBe("2026-10-30T00:00:00Z");
+  });
+
+  test("an absent or null milestone leaves the field absent, never fabricated", () => {
+    const absent = requireValue(normalizeGithubIssue(baseIssue, context), "milestone absent");
+    expect("milestone" in absent).toBe(false);
+    const nullMilestone = requireValue(
+      normalizeGithubIssue({ ...baseIssue, milestone: null }, context),
+      "milestone null",
+    );
+    expect("milestone" in nullMilestone).toBe(false);
+    const malformed = requireValue(
+      normalizeGithubIssue({ ...baseIssue, milestone: "Sprint 12" }, context),
+      "milestone malformed",
+    );
+    expect("milestone" in malformed).toBe(false);
+  });
+
+  test("the page shape is unchanged by the additive mapping", async () => {
+    const body = [
+      { ...baseIssue, milestone: { title: "Sprint 12" } },
+      { ...baseIssue, number: 701 },
+    ];
+    const transport = createFixtureTransport([{ url: issuesUrl(100), body }]);
+    const client = createGitHubClient({ instance, credentials, repository, transport });
+    const result = requireValue(await client.listWorkItems(100), "milestone page");
+    expect(result.pageItemCount).toBe(2);
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0]?.milestone).toBe("Sprint 12");
+    expect("milestone" in (result.items[1] ?? {})).toBe(false);
     expect(transport.requests).toHaveLength(1);
   });
 });

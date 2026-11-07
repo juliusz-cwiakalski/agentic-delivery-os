@@ -18,11 +18,13 @@ const ADAPTER_SUBPATHS = [
   "./repo",
   "./file",
   "./host",
+  "./harness",
   "./session",
   "./legacy",
   "./credentials",
   "./provider-quota",
   "./git",
+  "./inference",
 ];
 
 const EXPECTED: Record<string, Record<string, string>> = {
@@ -37,9 +39,9 @@ const EXPECTED: Record<string, Record<string, string>> = {
     ADAPTER_SUBPATHS.map((subpath) => [subpath, `src/${subpath.slice(2)}/index.ts`]),
   ),
   cli: { ".": "src/index.ts" },
-  mcp: { ".": "src/index.ts" },
+  mcp: { ".": "src/index.ts", "./serve": "src/serve.ts" },
   opencode: { ".": "src/index.ts" },
-  testkit: { ".": "src/index.ts" },
+  testkit: { ".": "src/index.ts", "./commit": "src/commit/index.ts" },
 };
 
 const manifestOf = (packageName: string): Record<string, unknown> =>
@@ -116,9 +118,13 @@ test("every declared subpath dynamically imports through its package name", asyn
     return;
   }
   const failures: string[] = [];
+  // The MCP serve entry is a process entry with a module-load side effect; it is
+  // resolved from the manifest but never imported by this library-parity suite.
+  const sideEffectEntries = new Set(["mcp:./serve"]);
   for (const [packageName, expected] of Object.entries(EXPECTED)) {
     const name = String(manifestOf(packageName).name);
     for (const subpath of Object.keys(expected)) {
+      if (sideEffectEntries.has(`${packageName}:${subpath}`)) continue;
       const specifier = subpath === "." ? name : `${name}/${subpath.slice(2)}`;
       try {
         await import(specifier);
@@ -128,4 +134,13 @@ test("every declared subpath dynamically imports through its package name", asyn
     }
   }
   expect(failures).toEqual([]);
+});
+
+test("the MCP serve subpath resolves to a built entry from the manifest", () => {
+  const exportsMap = (manifestOf("mcp").exports ?? {}) as Record<string, ExportsEntry>;
+  const entry = exportsMap["./serve"];
+  expect(entry?.default).toBe("./dist/serve.js");
+  if (distIsBuilt()) {
+    expect(existsSync(join(ROOT, "packages/mcp/dist/serve.js"))).toBe(true);
+  }
 });

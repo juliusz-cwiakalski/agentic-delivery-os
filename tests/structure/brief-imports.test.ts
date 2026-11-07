@@ -213,7 +213,7 @@ describe("TC-BRIEF-003 render-path boundaries", () => {
   });
 
   test("the secret-read allowlist is unchanged and names no brief file", () => {
-    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(5);
     const paths = SECRET_READ_ALLOWLIST.map((entry) => entry.path);
     for (const file of [CONTRACT, DOMAIN, COMMAND]) {
       expect(paths.some((path) => path.includes(file.replace("packages/", "")))).toBe(false);

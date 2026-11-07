@@ -191,10 +191,10 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
     try {
       const response = await transport.send(request);
       if (response.status === 404) {
-        return providerNotFoundFailure("GitHub returned HTTP 404");
+        return providerNotFoundFailure("GitHub returned HTTP 404", response.status);
       }
       if (response.status < 200 || response.status >= 300) {
-        return providerPayloadFailure(`GitHub returned HTTP ${response.status}`);
+        return providerPayloadFailure(`GitHub returned HTTP ${response.status}`, response.status);
       }
       return { ok: true, value: response.body };
     } catch (error: unknown) {
@@ -224,7 +224,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
     try {
       const response = await transport.send(request);
       if (response.status < 200 || response.status >= 300) {
-        return providerPayloadFailure(`GitHub returned HTTP ${response.status}`);
+        return providerPayloadFailure(`GitHub returned HTTP ${response.status}`, response.status);
       }
       return { ok: true, value: response.body };
     } catch (error: unknown) {

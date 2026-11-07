@@ -16,6 +16,7 @@ const ADAPTER_SUBPATHS = [
   "./repo",
   "./file",
   "./host",
+  "./harness",
   "./session",
   "./legacy",
   "./credentials",
@@ -31,7 +32,7 @@ export const EXPECTED_ENTRYPOINTS: Record<string, Record<string, string[]>> = {
     "@delivery-os/adapters": ADAPTER_SUBPATHS,
   },
   mcp: {
-    "@delivery-os/core": [".", "./contracts", "./state", "./branding"],
+    "@delivery-os/core": [".", "./contracts", "./state", "./branding", "./provider"],
     "@delivery-os/adapters": ADAPTER_SUBPATHS,
   },
   opencode: {

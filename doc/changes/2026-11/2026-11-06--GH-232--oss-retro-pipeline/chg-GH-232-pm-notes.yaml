@@ -1,0 +1,140 @@
+change_id: GH-232
+title: "M1-S8: OSS retro pipeline"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-06T00:00:00Z", completed: "2026-11-06T17:20:00Z" }
+  specification: { started: "2026-11-06T17:22:00Z", completed: "2026-11-06T20:00:00Z" }
+  test_planning: { started: "2026-11-06T17:50:00Z", completed: "2026-11-06T20:06:00Z" }
+  delivery_planning: { started: "2026-11-06T18:35:00Z", completed: "2026-11-06T19:00:00Z" }
+  dor_check: { started: "2026-11-06T19:05:00Z", completed: "2026-11-06T19:50:00Z" }
+  delivery: { started: "2026-11-06T19:12:00Z", completed: "2026-11-06T21:10:00Z" }
+  system_spec_update: { started: "2026-11-06T20:15:00Z", completed: "2026-11-06T20:35:00Z" }
+  review_fix: { started: "2026-11-06T20:40:00Z", completed: "2026-11-06T21:15:00Z" }
+  quality_gates: { started: "2026-11-06T21:20:00Z", completed: "2026-11-06T21:50:00Z" }
+  dod_check: { started: "2026-11-06T21:55:00Z", completed: "2026-11-06T22:00:00Z" }
+  pr_creation: { started: "2026-11-06T22:05:00Z", completed: "2026-11-06T22:25:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/258" }
+decisions:
+  - text: "TDR-0009 authored for the retro evidence sidecar keyed-chain construction (HMAC-style keyed chain, distinct store-managed key artifact, claimed collector identity, tamper-evidence scope) — resolves spec OQ-1; status Proposed, human acceptance reserved at PR review per R2 rigor."
+    date: "2026-11-06"
+  - text: "DoR-remediation decision direction: no-eligible-target is an explicit exit-0 success (no collection ran, so vacuous-run cannot apply; matches concepts-doc idempotency: scope keys make reruns idempotent), while retro.truth.vacuous-run requires a run that actually happened and produced zero records; C-05 scoped to executed runs. Adopted into spec v1.2 as DEC-14."
+    date: "2026-11-06"
+open_questions:
+  - text: "RESOLVED 2026-11-06 (GAP-T3/OQ-T1): spec v1.1 pins per-identity store-level projections — torn/missing-key exit 2, permission violations carry state.permission.denied delivered projection (exit 1, user-validation); NG-10 honored. Test plan §4.5 asserts both exits (TC-013/033)."
+    date: "2026-11-06"
+  - text: "RESOLVED 2026-11-06 (GAP-T4/OQ-T2): export pinned as bounded engine/library surface; no CLI invocation exists or is added; refusal identity input.value.rejected exit 1 before any write; CLI exposure deferred to M2-S3 via NG-1 amendment. Test plan TC-049/050 assert at engine boundary."
+    date: "2026-11-06"
+  - text: "RESOLVED 2026-11-06 (GAP-T5/OQ-T3): broken audit-verdict reuses retro.evidence.tamper-flagged (exit 1); zero-collector run gets new row retro.truth.vacuous-run (exit 1); DEC-11 now exactly four rows with round-trip documentation. Test plan §4.7/§4.8/TC-042/TC-045 pin both."
+    date: "2026-11-06"
+blockers: []
+notes:
+  - text: "State detection: issue GH-232 open (labels change+review, milestone M1); no open PR anywhere in repo; no PR ever for branch feat/GH-232/oss-retro-pipeline; no remote branch; local branch existed at origin/main-tools HEAD (0 ahead/0 behind), clean worktree. Classified as fresh start, not resume; no main-tools sync merge needed (already level)."
+    type: info
+    date: "2026-11-06"
+  - text: "Dependencies verified delivered: M0-S5 GH-174 closed, M1-S2 GH-222 closed (tracker)."
+    type: info
+    date: "2026-11-06"
+  - text: "Scope cross-check vs system spec and design baseline: command surface retro collect|report [--level] consistent across man-page.md, contracts.md, commands/retro.md, journeys.md; architecture places retro pipeline in learning plane with AUD(M1-S22)-->RT and CP(M1-S12)-->RT edges; M1-S2 state validation contract already names the retro registry as a validated store; audit ledger read surface was explicitly built for retro consumers (bounded, filtered, skipped-ordinal findings)."
+    type: info
+    date: "2026-11-06"
+  - text: "Design tension for spec/decision phase: audit-ledger keyed chain uses invertible FNV-1a-64 where same-user forgery resistance rests on 0600 file permissions (documented honestly in SPEC-AUDIT-LEDGER), while the pinned GH-232 decision requires a chaining key that never enters lane environments so a delivery agent cannot alter evidence undetectably. Evidence sidecar likely needs a non-invertible keyed construction (e.g. HMAC) with key material outside lane reach. This is a technical decision grounded in the pinned ticket decision, not a human-input blocker."
+    type: risk
+    date: "2026-11-06"
+  - text: "Scope reading recorded: 'home of the periodic memory audit' = the retro pipeline hosts/registers the periodic memory audit trigger; the audit procedure itself lives in the existing memory consolidation skill (AGENTS.md). Spec must pin this boundary."
+    type: info
+    date: "2026-11-06"
+  - text: "Doc impacts for phase 7 (system_spec_update): author doc/spec/features/feature-retro-pipeline.md (first-spec-only, none exists today) with ados_distribution marker; reconcile feature-state-layer.md (retro registry store) and feature-audit-ledger.md (retro consumer); glossary entry if new terms introduced. M1 pack docs are planning docs refined at delivery per milestones/README conventions, not current-truth."
+    type: info
+    date: "2026-11-06"
+  - text: "Tracker label realigned: 'review' was stale (no PR exists); replaced with 'planning' at planning start per pm-instructions workflow-state mapping. No comment left on ticket (nothing value-adding to record; requirements are complete)."
+    type: info
+    date: "2026-11-06"
+  - text: "clarify_scope completed without human questions: ticket has binding pinned decisions, testable AC, delivered dependencies, and consistent design baseline. Proceeding to artifact generation."
+    type: info
+    date: "2026-11-06"
+  - text: "Spec authored by @spec-writer: chg-GH-232-spec.md (496 lines, 16 ACs, 13 decisions, 3 decision-record candidates). PM validation passed: both binding ticket ACs quoted verbatim inside AC-F2-3/AC-F3-1 (tamper detection) and AC-F4-1/AC-F4-2 (malformed-entry survival); exit-0/1/2 contract reconciled via DEC-7 two-level taxonomy; no STOP-worthy contradictions found. OQ-1 raised: DEC-1/2/4 keyed-chain construction recommended as one TDR — will delegate to @decision-advisor before test planning."
+    type: info
+    date: "2026-11-06"
+  - text: "test_planning iteration 1: 64 TCs authored, 16/16 ACs mapped, but test-plan-writer flagged 3 blocking spec gaps (GAP-T3 permission-exit contradiction, GAP-T4 export has no invoking surface, GAP-T5 unpinned truth-trigger identities) plus 5 non-blocking notes. Verdict: NOT coverable as specced. Action: specification phase REOPENED (iteration 2), test plan kept as Proposed with TODO markers; commit checkpoint before re-delegation per phase-transition policy."
+    type: retro
+    date: "2026-11-06"
+  - text: "Reopen root cause: spec pinned exit codes and surface contracts beyond what the delivered state-layer rows and the locked CLI surface support. Lesson for spec authoring: cross-check every asserted exit code against the actual error-table projectionClass, and every AC's invocation path against the locked command surface, before finalizing."
+    type: retro
+    date: "2026-11-06"
+  - text: "specification iteration 2 completed: spec v1.1 with 33 surgical edits (per-identity exit taxonomy, export as engine surface with M2-S3 CLI deferral, retro.truth.vacuous-run fourth error row); test plan v1.1 reconciled — 64 TCs stable, 14 detail blocks updated, zero TODO markers remaining except explicitly delivery-bound items (OQ-T6/T7/T8, GAP-T1); programmatic verification green (64/64/64 set-difference check, 16/16 AC mapping, no binding-AC weakening). The reopen loop worked as designed: one cycle, no scope loss."
+    type: retro
+    date: "2026-11-06"
+  - text: "DoR iteration 1 verdict: NOT_READY (readiness-review/readiness-iter-1.md, 8/10 facets PASS). Blocking finding (major): no-eligible-target oracle fork — spec G-5/F-6(5)/AC-F6-1 say zero-collector collection always fails retro.truth.vacuous-run exit 1, but plan PIN-5 pins exit-0 no-target success for the all-collected path, inventing a precondition absent from spec; test plan has no oracle row and TC-015 step 4 unpinned. Non-blocking: (2) registry-kind count inconsistent (spec says two kinds, F-9/PIN-4 need three incl. retro.trigger); (3) TDR-0009 item 5 stale 'three rows'; nits: PIN-10 vocabulary supersession unrecorded, test-plan stale implementation_plan:null/GAP-T1, TC-044 fixture C category undefined. REMEDIATION: specification reopened (iteration 3), test_planning and delivery_planning touched up after; dor_check stays open for iteration 2."
+    type: retro
+    date: "2026-11-06"
+  - text: "DoR iteration 1 remediation completed: spec v1.2 (DEC-14 no-target outcome pinned, three-kind registry consistency, C-05 scoped to executed runs), test plan v1.2 (N-01 oracle row, TC-015 step 4 pinned, TC-045 distinctness step, TC-044 fixture C defined, A-T5 three kinds, GAP-T1 resolved), plan revision 2 (PIN-5 cites DEC-14, PIN-10 supersession note, PIN-4 provenance cleaned). TDR-0009 item 5 corrected to four rows by decision-advisor."
+    type: info
+    date: "2026-11-06"
+  - text: "RETRO (important): chg-GH-232-plan.yaml as committed at ca6011a5 FAILED plan-validate (2 schema errors: phases 2/3 declared consumer interactions on contracts/retro.ts outside their phase scope). Caught only because PM demanded validation during the DoR touch-up. Lesson: plan-writer must run the plan-validate invariant as part of authoring verification, before the phase commit, every time. The fix (removing the two invalid interaction blocks) is in this remediation commit; plan now validates readyForDevelopment=true."
+    type: retro
+    date: "2026-11-06"
+  - text: "Risk note for quality_gates phase: bun test currently fails in this checkout with a pre-existing module-resolution error (Cannot find module '@delivery-os/core/contracts' from packages/cli/src/classify.ts) reproducing identically on untouched suites — environmental or upstream, not caused by this change (branch has zero code commits vs main-tools). Verify against a pristine main-tools checkout before blaming GH-232 work."
+    type: risk
+    date: "2026-11-06"
+  - text: "DoR iteration 2 verdict: READY (readiness-review/readiness-iter-2.md, 10/10 facets PASS, 0 blocking). All 6 iteration-1 findings verified genuinely resolved with citations; independent verification: plan-validate valid/readyForDevelopment=true via production runCli path, 16/16 AC + 64/64 TC set-difference clean, binding ACs live-read verbatim from tracker, deps confirmed closed. Two accepted non-blocking nits recorded for phase-8 attention: test-plan 'revision 1' label drift (plan is revision 2, 3 places), spec AC-F9-1 Linked column omits DM-9."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 1 (Retro contracts, level declarations, four error rows): commit 7349b22e. Verification: 166 tests pass across retro-contract, error-table, port-contract-inventory, content-inventory, error-table-sync; error-table-sync CLI green 74/74 rows; pnpm typecheck green. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 2 (State tier: sidecar, keyed chain, registry store): commit 4dc50ba6. Verification: 40 tests pass across 8 retro behaviour suites; 78 structure/state tests pass; pnpm typecheck green. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 3 (Domain engine: collect, truth checks, report, export): commit e9dfdca5. Verification: 38 domain/behaviour/check tests pass, later expanded to 98 passing retro tests; pnpm typecheck green. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 4 (CLI surface, edge composition, doctor visibility): commit bc2a2e6e. Verification: 44 tests pass across retro-levels, retro-output, cli-edge-seam, doctor-state; full retro set 98 pass; pnpm typecheck green. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 5 (Invariant checks, imports guard, ops suites, CI wiring): commit b81e88d1. Verification: 154 retro tests pass (27 files); retro-render-purity and retro-key-containment CLIs exit 0; full behaviour suite 2700 pass / 4 skip / 0 fail. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 6 (Aggregate gate and changeset): commit 8b2c8421. Verification: pnpm check exit 0 (lint, format, typecheck, full test, boundaries, exports parity); doc-distribution guard green (81 docs); changesets-group green; plan YAML validates 0 errors / 6 phases. Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "system_spec_update completed with zero residual gaps: authored doc/spec/features/feature-retro-pipeline.md (first-spec-only, unconditional resolution per pm-instructions); reconciled feature-state-layer, feature-audit-ledger, feature-result-contract, feature-doctor, nonfunctional, test-spec-state-layer, glossary (18 retro terms), architecture-overview, ubiquitous-language, 00-index; refined the M1 pack retro command/contract pages to delivered surface; registered the new spec in forbidden-literals.registry.json (GH-224/GH-225 precedent for doc-registration metadata). Verification: doc-distribution PASS (81 docs), error-table-sync 74/74, forbidden-literals 5/5 clean, privacy-literals clean, stale-claim sweep clean, links resolve."
+    type: info
+    date: "2026-11-06"
+  - text: "Review iteration 1 verdict: FAIL (code-review/review-iter-1.yaml, 14 findings: 0 critical / 2 high / 4 medium / 5 low / 3 info). Blocking: [high] NFR-7 collect budget breached — O(n*m) append amplification, 1005-record collect on 10k sidecar took 56.9s vs <=30s budget (per-record append re-reads/re-HMACs whole sidecar under its own fence, contradicting DEC-13); fix = batched append under one fence + record NFR-7 reference numbers + restore budgets in feature spec. [high] TC-RETRO-032 (binding AC 1 byte-equality oracle) missing; 24-case matrix reduced to ~9; section 4.2/4.3 mutants absent — coder's 64/64 coverage claim overstated. Required non-blocking: Error() throw across engine seam (domain/retro.ts:1200); unvalidated StateFailureCode cast (domain/retro.ts:110); registry single-store vs PIN-4 + dead fence vocabulary + doctor double-count; tautological TC-029 meta-test. Low: key-containment path filter gap; both DoR nits persist; feature-spec marker internal vs plan-pin redistributable; doc-sync out-of-scope files unrecorded; C-03 check injection-only. Reviewer appended remediation Phase 7 (12 tasks) to plan, validates readyForDevelopment=true. DELIVERY REOPENED for remediation; review_fix stays open."
+    type: retro
+    date: "2026-11-06"
+  - text: "RETRO: coder's completion report claimed 64/64 TC coverage but reviewer found TC-RETRO-032 undelivered and matrix/mutant reductions unrecorded. Lesson: per-phase completion reports must include per-TC evidence (suite file + case name), not summary claims; PM should spot-check at least the binding-AC TCs against actual test files before accepting a delivery report."
+    type: retro
+    date: "2026-11-06"
+  - text: "Delivery completed: all 6 plan phases executed and committed; 64/64 TC coverage mapped to suites; TC-063 golden-envelope coverage in retro-output against committed golden cases. Documented deviations, all justified: (1) intentional layering refactor — domain engine consumes contracts-declared RetroSidecarPort/RetroRegistryPort instead of importing state-tier modules (dependency-cruiser compliance); (2) contract additions spread across phase 1/2/4 commits as consumers required them, no scope widened; (3) plan task 6.4 execution log intentionally not written — execution contract forbids modifying doc/changes/** and .ai/local/**; (4) plan task 4.6 — dedicated CLI integration coverage in retro-levels/retro-output/cli-edge-seam instead of redundant runCli blocks in every suite; (5) pre-existing environment-only failures (ci-baseline-parity TMPDIR cross-filesystem, packed-state corepack hermetic-home) — pnpm check green with TMPDIR=$PWD/tmp/tmpdir; the earlier @delivery-os/core/contracts module risk did NOT reproduce after pnpm build (pretest builds dist)."
+    type: info
+    date: "2026-11-06"
+  - text: "Delivery plan authored by @plan-writer: chg-GH-232-plan.yaml (canonical machine-readable YAML format per current plan contract — legacy .md would be schema-invalid; YAML wins when both exist), 6 phases / 36 tasks, tier full, 64/64 TCs mapped, 16/16 ACs traceable, no STOP. Delivery-bound items pinned as PIN-1..10 (HMAC-SHA-256 via node:crypto, 64-hex links, artifact spellings, target ordering OQ-T6, level map OQ-T7, NFR-7 CI measurement OQ-T8, export limit 1000, memory-audit cadence weekly-flagged-reviewable)."
+    type: info
+    date: "2026-11-06"
+  - text: "Plan phase 7 (Code Review Remediation Iteration 1) executed: tasks 7.1-7.12. Commit cf4475d6 (plus baseline-sync merge d79148fe bringing GH-251 from origin/main-tools). Verification: 65 targeted tests pass across retro-sidecar-append, retro-malformed, retro-chain-mutations, retro-performance, retro-memory-audit, retro-export, retro-denied, retro-levels; 138 retro-suite tests pass across 25 files; retro-key-containment CLI green (130 files scanned); pnpm check green (4178 pass / 4 skip / 0 fail at iteration-2 re-verification). NFR-7 reference measurement (PIN-7, 10,000-record sidecar, non-CI): read 0.061 s; collect appending 1,005 records 0.091 s (one verified read, one append); report 0.071 s; export limit 1,000 0.067 s — all well inside the restored budgets (collect <= 30 s, report <= 10 s, export <= 10 s). Result: pass."
+    type: info
+    date: "2026-11-06"
+  - text: "Reviewed SCOPE_DEVIATION (phase 7, plan policy): files outside the declared phase-7 scope were necessarily touched. (1) packages/core/src/contracts/retro.ts — RetroSidecarPort gained the additive appendBatch member the batched-append task requires (no other contract change). (2) tests/behaviour/retro-export.test.ts, retro-denied.test.ts, retro-levels.test.ts — the natural suites for the TC-049/050/054/058 mutants task 7.4 explicitly names. (3) tests/checks/retro-key-containment.test.ts — the planted non-retro-named-file mutant task 7.9 requires. (4) tests/fixtures/retro/harness.ts and tests/fixtures/retro/mutations.json live inside the declared fixtures folder. No production behaviour outside the plan tasks changed."
+    type: info
+    date: "2026-11-06"
+  - text: "Reviewed deviation (F-9): doc/spec/features/feature-retro-pipeline.md keeps ados_distribution: internal (sibling-consistent; doc-distribution guard green). This deliberately supersedes the plan's doc-sync handoff note that asked for redistributable; the local install set intentionally excludes the feature spec until the public release."
+    type: info
+    date: "2026-11-06"
+  - text: "Reviewed SCOPE_DEVIATION (F-10): phase-6 doc-sync also touched doc/spec/features/feature-doctor.md, doc/spec/nonfunctional.md, doc/spec/test-spec-state-layer.md, doc/overview/architecture-overview.md, doc/overview/ubiquitous-language.md, doc/planning/oss-tooling/milestones/m1/commands/retro.md, doc/planning/oss-tooling/milestones/m1/contracts.md, and doc/decisions/00-index.md. Content verified correct (M1 pack supersession, NFR index, doctor/retro visibility); recorded here as the plan's SCOPE_DEVIATION policy requires."
+    type: info
+    date: "2026-11-06"
+  - text: "Review iteration 2 verdict: PASS (code-review/review-iter-2.yaml, 0 critical/high/medium, 3 LOW non-blocking). All 11 iteration-1 findings independently verified fixed with file:line evidence; reviewer's own probe confirmed the perf fix (1000-record collect onto 10k sidecar = 68.3 ms, reads=1/appends=1); reviewer ran pnpm check green (4178/4/0) and both retro invariant checks. Batched-append hazard review clean (fence scope, partial-write fail-closed, chain continuity, memory bounds). Three LOW findings accepted to ride the PR per reviewer sanction: (a) phase-7 pm-notes entry lacked commit hash — FIXED by PM (cf4475d6 + merge d79148fe added); (b) retro-registry.ts fence wiring missing from phase-7 scope enumeration — accepted reviewed deviation; (c) doctor no-double-count lacks a regression pin through real composition — optional, candidate for M2-S3."
+    type: info
+    date: "2026-11-06"
+  - text: "Quality gates completed: ALL 10 gates PASS. pnpm build green (6 packages); pnpm check green with TMPDIR workaround: 4178 pass / 4 skip / 0 fail across 4182 tests in 423 files (39828 expect calls), boundaries clean (223 modules, 590 deps), exports parity green; error-table-sync 74/74; retro-key-containment 130 files clean; retro-render-purity clean; forbidden-literals 0 violations (5/5 scope classes); privacy-literals 0 violations; doc-distribution no drift (81 docs); 21/21 commits Conventional (13 docs, 4 feat, 2 chore, 1 test, 1 fix); git diff --check clean. Known environment-only suites (ci-baseline-parity, packed-state) pass under TMPDIR=$PWD/tmp/tmpdir."
+    type: info
+    date: "2026-11-06"
+  - text: "Timestamp backfill at DoD prep: specification/test_planning completion timestamps were lost during the DoR reopen cycle (iteration 3 resets) and delivery during the review-remediation reopen; the underlying work verifiably completed (spec v1.2 + test plan v1.2 amendments, remediation commit cf4475d6 verified by review iteration 2 PASS). Backfilled: specification 2026-11-06T20:00Z (post-v1.2 amendments), test_planning 2026-11-06T20:06Z (post-v1.2 alignment), delivery 2026-11-06T21:10Z (post-remediation PASS). RETRO lesson for PM: when reopening a phase, add a reminder note to re-close it — reopen/resume pairs must always be symmetric."
+    type: retro
+    date: "2026-11-06"
+  - text: "DoD check PASS (2026-11-06T22:00Z). (1) Phase completeness: 9/9 deliverable phases recorded complete in pm-notes with timestamps (dod_check, pr_creation are the current/final phases). (2) Plan completion: YAML plan phases 1-6 plus remediation phase 7 each carry a pm-notes entry with plan-phase id, commit hash (7349b22e, 4dc50ba6, e9dfdca5, bc2a2e6e, b81e88d1, 8b2c8421, cf4475d6 + merge d79148fe) and test result; reviewer independently verified ALL_TASKS_DONE across phases 1-7. (3) AC satisfaction: 16/16 spec ACs verified — binding AC 1 by the delivered byte-equality oracle (TC-RETRO-032, mutants can fail it), binding AC 2 by the six-class tamper mutation suite, both independently re-verified by review iteration 2 PASS. (4) Current-truth docs: doc-syncer reported zero residual gaps on both runs; doc-distribution guard green; feature-retro-pipeline.md authored and reconciled. (5) Quality gates: all 10 green. Verdict: ready for PR creation."
+    type: info
+    date: "2026-11-06"
+  - text: "Reviewed deviation resolution (F-5 / PIN-4 single store): the retro registry rides the delivery state store rather than a distinct store instance. RETRO_REGISTRY_FENCE_NAMESPACE is now live on registry fence tokens, and the doctor aggregation no longer adds retro.recordCount (the shared ledger's base count already includes retro artifacts, so summing double-counted them). Integrity is unaffected: the registry carries levels/runs/triggers, not evidence."
+    type: info
+    date: "2026-11-06"

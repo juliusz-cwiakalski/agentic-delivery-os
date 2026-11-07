@@ -1,0 +1,5 @@
+example-product: verify.deploy.trace-missing
+summary: verdict=unknown; reason=pipeline-created-never-ran
+evidence=no-trace
+expectation=none
+remediation=Produce a deploy trace whose declared steps executed and artifacts exist.

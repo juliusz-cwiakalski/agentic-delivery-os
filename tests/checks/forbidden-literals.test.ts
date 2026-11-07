@@ -357,3 +357,114 @@ describe("docs-scope lifetime", () => {
     rmSync(repo.root, { recursive: true, force: true });
   });
 });
+
+describe("TC-GH223-013 audit identity seam carries no product token", () => {
+  test("the declared suffix and the new audit sources are token-free", async () => {
+    const { AUDIT_IDENTITY_VARIABLE_SUFFIX } = await import(
+      "../../packages/core/src/contracts/index"
+    );
+    expect(AUDIT_IDENTITY_VARIABLE_SUFFIX.toLowerCase()).not.toContain("ados");
+    const files = [
+      "packages/core/src/contracts/audit.ts",
+      "packages/core/src/state/audit.ts",
+      "packages/cli/src/index.ts",
+      "packages/cli/src/edge.ts",
+      "packages/cli/src/output/serialize.ts",
+      "packages/testkit/src/result-conformance.ts",
+    ];
+    for (const file of files) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      for (const seed of liveRegistry().seedLiterals) {
+        expect(text.includes(seed), `${file}: ${seed}`).toBe(false);
+      }
+    }
+  });
+
+  test("the live scan includes the new audit files with zero violations", () => {
+    const outcome = scan(ROOT);
+    const auditViolations = outcome.violations.filter((violation) =>
+      violation.file.includes("audit"),
+    );
+    expect(auditViolations).toEqual([]);
+  });
+});
+
+describe("TC-DOCTOR-023 doctor source carries no product literal", () => {
+  test("the doctor modules carry no seed literal", () => {
+    for (const source of [
+      "packages/core/src/contracts/doctor.ts",
+      "packages/core/src/domain/doctor.ts",
+      "packages/cli/src/commands/doctor.ts",
+    ]) {
+      expect(matchSeedLiteral(readFileSync(join(ROOT, source), "utf8"), ["ados"])).toBeFalsy();
+      expect(matchSeedLiteral(readFileSync(join(ROOT, source), "utf8"), ["ADOS_"])).toBeFalsy();
+    }
+  });
+});
+
+describe("TC-ECON-084 the economics surface is brand- and privacy-conformant", () => {
+  const ECONOMICS_MODULES = [
+    "packages/core/src/contracts/economics.ts",
+    "packages/core/src/domain/economics-budget.ts",
+    "packages/core/src/domain/economics-resume.ts",
+    "packages/core/src/domain/economics-view.ts",
+    "packages/core/src/domain/economics-evidence.ts",
+    "packages/core/src/state/economics.ts",
+    "packages/core/src/config/catalog.ts",
+  ];
+
+  test("the seed-literal matcher finds no product literal in any new module", () => {
+    for (const file of ECONOMICS_MODULES) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      expect(matchSeedLiteral(text, liveRegistry().seedLiterals), file).toBeUndefined();
+    }
+  });
+
+  test("a seeded product literal in a new module fails naming file and token", () => {
+    const repo = createTempRepo();
+    writeRegistry(repo.root, seededRegistry(repo.baseline));
+    writeFiles(repo.root, {
+      "packages/core/src/domain/economics-probe.ts": "// ados\n",
+    });
+    const outcome = scan(repo.root);
+    expect(violationsFor(outcome, "packages/core/src/domain/economics-probe.ts")).toContain("ados");
+    rmSync(repo.root, { recursive: true, force: true });
+  });
+
+  test("the live scan includes the economics modules with zero violations", () => {
+    const outcome = scan(ROOT);
+    expect(outcome.violations).toEqual([]);
+    for (const file of ECONOMICS_MODULES) {
+      expect(outcome.violations.filter((violation) => violation.file === file)).toEqual([]);
+    }
+  });
+
+  test("refusal and record payloads carry counts and refs only, never a content canary", async () => {
+    const { formatStallEvidence, formatBudgetEvidence, formatUneconomicalEvidence } = await import(
+      "../../packages/core/src/domain/index"
+    );
+    const corpus = [
+      formatStallEvidence({
+        reason: "watchdog.liveness-stalled",
+        heartbeatAgeMs: 400_000,
+        tokenDelta: 0,
+        traffic: 0,
+        stallBoundMs: 300_000,
+      }),
+      formatBudgetEvidence({
+        reason: "dispatch.restart-budget-exceeded",
+        restarts: 3,
+        workItemRef: "GH-235",
+      }),
+      formatUneconomicalEvidence({
+        reason: "dispatch.resume-uneconomical",
+        repayTokens: 900,
+        workItemRef: "GH-235",
+      }),
+    ].join("\n");
+    for (const canary of ["PROMPT-CANARY", "transcript", "sk-live-", "ghp_"]) {
+      expect(corpus).not.toContain(canary);
+    }
+    expect(corpus).toContain("economics/GH-235");
+  });
+});

@@ -1,0 +1,167 @@
+{
+  "name": "hygiene-assertions-tri-state",
+  "scenario": "hygiene-assertions-tri-state",
+  "expected": {
+    "sections": {
+      "tracker": {
+        "state": "observed",
+        "reasons": ["observed-empty", "observed", "item-signal-absent", "source-truncated"],
+        "counts": {
+          "observed": 0,
+          "unknown": 5,
+          "total": 5,
+          "omitted": 1
+        },
+        "orderedIds": ["stalls:1", "stalls:2", "stalls:3", "stalls:4"],
+        "truncated": true,
+        "findings": [
+          {
+            "code": "tracker.hygiene.epic-membership",
+            "severity": "low",
+            "count": 1,
+            "members": ["2"],
+            "evidenceRef": "2"
+          },
+          {
+            "code": "tracker.hygiene.in-sprint",
+            "severity": "low",
+            "count": 1,
+            "members": ["4"],
+            "evidenceRef": "4"
+          },
+          {
+            "code": "tracker.hygiene.story-points",
+            "severity": "low",
+            "count": 1,
+            "members": ["3"],
+            "evidenceRef": "3"
+          }
+        ],
+        "assertions": [
+          {
+            "assertion": "epic-membership",
+            "violations": 1,
+            "unknown": 0,
+            "satisfied": 4
+          },
+          {
+            "assertion": "story-points",
+            "violations": 1,
+            "unknown": 0,
+            "satisfied": 4
+          },
+          {
+            "assertion": "in-sprint",
+            "violations": 1,
+            "unknown": 0,
+            "satisfied": 4
+          }
+        ]
+      },
+      "changes-and-prs": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "ci": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "lanes-or-queue": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "providers": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 1,
+          "unknown": 0,
+          "total": 1,
+          "omitted": 0
+        },
+        "orderedIds": ["entry:primary"],
+        "truncated": false,
+        "findings": []
+      },
+      "parked-work": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "ready-to-merge": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "spend": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "typed-questions": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      }
+    }
+  }
+}

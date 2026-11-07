@@ -11,7 +11,7 @@ tier:
     - "error-table-sync gate red after Phase 1 (exact four-code allowlist failed)"
     - "a pinned spec or test-plan reading requires change (reopens the test plan per A-T2)"
     - "board or any command outside the two declared status/brief exceptions drifts byte-stable output"
-    - "TDR-0009 security-residual owner veto or GAP-15 identifier-extension rejection at PR review"
+    - "TDR-0011 security-residual owner veto or GAP-15 identifier-extension rejection at PR review"
     - "an existing digest/brief consumer breaks outside the declared closed-set evolution"
 defaultLeases:
   - "packages/core/**"
@@ -95,7 +95,7 @@ phases:
         - tests/behaviour/blockers-options.test.ts
         - tests/structure/inventory.json
   - id: 5
-    title: "Credential-guard and audience-routing behaviour: layered guard, identifier fields, TDR-0009 controls, delegation, identity"
+    title: "Credential-guard and audience-routing behaviour: layered guard, identifier fields, TDR-0011 controls, delegation, identity"
     kind: delivery
     scope:
       files:

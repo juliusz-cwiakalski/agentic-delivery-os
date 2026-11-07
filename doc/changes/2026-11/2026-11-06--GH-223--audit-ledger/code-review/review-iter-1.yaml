@@ -1,0 +1,291 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-223
+branch: feat/GH-223/audit-ledger
+base: 47270b37
+status: PASS
+summary: >-
+  First review of GH-223 (audit ledger + agent identity), post-delivery and
+  post-remediation, against spec v1.4 (15 ACs), plan rev 2 (6 phases), the
+  50-TC test plan, and code-quality heuristics. The delivered scope is
+  faithful to the spec: reservation-first two-phase append under the shared
+  fence (verified: the store fence is a single per-workspace lock file, so the
+  `audit-<runId>` token is a label, not a second fence), durable ordinal from
+  verified ledger truth with cross-process continuity, keyed chain over both
+  audit kinds incl. orphaned reservations with recomputed-checksum tamper
+  coverage, bounded/filtered library read surface with in-band truncation and
+  orphan findings, chokepoint-only redaction of command/arguments/identity,
+  scripted trim at the single write site with both-mode goldens, and a real
+  production composition (epoch-ms clock, mode resolution, state-backed audit
+  seam) proven by tests. All 50 TC ids are cited in test code with strong,
+  non-vacuous assertions (fault injection, negative controls, meta-tests);
+  error-table sync is 53/53 zero drift (re-run independently); the doc-synced
+  feature-audit-ledger.md matches code truth including every accepted
+  deviation. Findings are non-blocking: one major design concern (the FNV-1a
+  keyed chain is forgeable from public ledger data alone, voiding the
+  cryptographic contribution NFR-4's narrative implies — though within the
+  pinned single-user trust model an HMAC would be equally forgeable, so no AC
+  is violated), plus minor items on the un-amended AC-F2-1 verbatim wording,
+  undeclared plan-scope files from remediation/doc-sync, the containment-path
+  exit-code divergence in the audit record, and the PM-accepted silent
+  home-less omission branch.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 4
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: security
+    location: packages/core/src/state/audit.ts:130-139
+    message: >-
+      The "keyed" chain link is two passes of FNV-1a-64 with the key hex
+      prepended. FNV-1a's step h = (h XOR b) * PRIME mod 2^64 is exactly
+      invertible (the odd prime has an inverse mod 2^64), so from one observed
+      record (content + chainValue are both readable through the read surface)
+      anyone can recover the internal state after the key prefix and forge
+      valid chain values for altered or appended records without ever reading
+      chain-key.<workspace>.json. The key's exclusion from lanes (NFR-4,
+      AC-F4-2) is therefore cryptographically inert: forgery-resistance equals
+      the unkeyed case, resting solely on file-permission honesty. Within the
+      pinned single-user trust model (RSK-3 concedes same-user processes read
+      state artifacts, so an HMAC would also be forgeable in-model) no AC is
+      violated and the mutation suite passes by construction — but the
+      spec/doc narrative that key secrecy is load-bearing tamper-evidence is
+      stronger than what the primitive delivers.
+    suggestion: >-
+      Either replace the link primitive with a sync MAC (e.g. HMAC over a
+      pure-JS SHA-256 in the runtime-neutral tier, keeping auditChainValue
+      sync; widen AUDIT_CHAIN_VALUE_HEX_LENGTH and the "32 lowercase hex"
+      statement in feature-audit-ledger.md), or add one precise sentence to
+      feature-audit-ledger.md stating that within the pinned model the chain
+      is an integrity marker and forgery-resistance rests on the state
+      directory's least-privilege permissions, not on key secrecy. Recommend
+      the PM queue the hardening variant as a follow-up story rather than
+      blocking this one.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/index.ts:366
+    message: >-
+      The claimed identity value passes redact() before recording (PM decision:
+      AC-F6-1 secret exclusion takes precedence over AC-F2-1 verbatim capture).
+      The precedence is documented in feature-audit-ledger.md ("still passes
+      the redaction chokepoint") but chg-GH-223-spec.md v1.4 AC-F2-1 still pins
+      "captured verbatim (unmodified)" unconditionally, so the change spec —
+      the contract this review audits — lags the delivered, PM-accepted
+      behavior in the corner case where a registered secret appears inside the
+      identity value.
+    suggestion: >-
+      Add a one-clause precedence note to AC-F2-1/F-2 (or a document-history
+      row) recording that edge-registered secret values are redacted from the
+      identity value per F-6, mirroring the feature-spec wording. Spec-text
+      amendment only; no code change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-223--audit-ledger/chg-GH-223-plan.yaml
+    message: >-
+      Files landed outside declared phase scopes: tests/behaviour/
+      production-composition.test.ts (remediation 76965e8f; the delivery phase
+      was reopened but the plan stayed at rev 2 with no remediation scope
+      entry), tests/behaviour/audit-run-support.ts (shared helper, undeclared
+      anywhere), tests/behaviour/state-ledger.test.ts and
+      tests/structure/inventory.json (execution-log deviations 3-4), and the
+      phase-7 doc-sync companions doc/00-index.md, doc/overview/glossary.md,
+      doc/quality/test-specs/test-spec-state-layer.md, and
+      scripts/checks/forbidden-literals.registry.json (P6 scope declared only
+      the four feature specs). Every item is recorded in the execution log or
+      pm-notes, so this is plan-hygiene drift, not silent scope expansion.
+    suggestion: >-
+      Append a rev-3 revision-log comment to chg-GH-223-plan.yaml recording the
+      remediation-phase scope addition (production-composition.test.ts,
+      audit-run-support.ts, edge.ts re-touch) and the doc-sync companion set,
+      so `plan diff` classification stays machine-true for the audit trail.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/index.ts:346-416
+    message: >-
+      The audit record is written from the original envelope before output
+      rendering (correct per DEC-8 ordering), but if writeOutput throws, the
+      containment fallback returns fallback.internal's exit code 1 while the
+      already-written audit record keeps the original exitCode/outcomeClass
+      (e.g. 0/success). The durable trail then misstates the invocation's
+      actual exit on that narrow path (hostile/broken injected streams, EPIPE).
+      Exactly-one is unaffected; re-auditing would violate it, so the
+      divergence is an accepted consequence of the pinned ordering.
+    suggestion: >-
+      Either document the containment-path divergence in
+      feature-audit-ledger.md (one sentence beside the audit-write failure
+      semantics), or, if deemed worth it later, fold the actually-returned exit
+      code into the record by computing the fallback before the audit write
+      only when serialization is known-broken. Documentation touch preferred;
+      no code change required now.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/edge.ts:516-518
+    message: >-
+      PM-accepted judgment call, independently reviewed: when neither
+      stateDirectory nor HOME/USERPROFILE resolves, the production composition
+      omits the audit seam and the invocation runs silently unaudited (no
+      record, no diagnostic). Ticket AC1's "every invocation" is qualified by
+      the spec's own KPI ("whose audit write succeeded") and feature-audit-ledger
+      documents the branch as composition-time DEC-8 posture, so this is not an
+      AC violation — but the silence is the weak half: spec §10 makes audit
+      failures loud, and a composition-time skip is undetectable by operators.
+    suggestion: >-
+      Acceptable to ship as-is given the deferred queue/daemon workspace-identity
+      stories. Recommend a follow-up (or a one-line spec/doc amendment) making
+      the omitted-audit condition observable — e.g. a composition-time fact the
+      surface renders once on the diagnostics stream — before lanes run in
+      home-less environments.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: performance
+    location: packages/core/src/state/audit.ts:401-431
+    message: >-
+      readAuditLedger materializes and verifies the entire audit domain on
+      every query (boundary.read -> store.readRecords parses the whole JSONL),
+      then filters in memory; the limit bounds only the returned slice. This
+      matches the accepted human/agent-scale cost model (the same scale that
+      accepted two fenced appends per invocation) and the state port offers no
+      bounded-scan primitive to compose instead.
+    suggestion: >-
+      No action now. When the retro pipeline (M1-S8) becomes a real consumer,
+      add a port-level bounded scan or index-backed projection so per-query
+      cost stops growing with ledger size.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/output/serialize.ts:69-82
+    message: >-
+      --pretty is parsed as a global flag and forwarded in WriteOutputOptions
+      but never consumed by the renderer (interactive output is already
+      2-space indented; scripted must never re-expand). The PM recorded this
+      as an accepted latent flag; observable behavior matches the documented
+      "indentation-only, never re-expands the trim" contract vacuously.
+    suggestion: >-
+      Keep as documented latent semantics, or drop the flag from the parser
+      until it does something, to avoid implying an effect that does not
+      exist. Cosmetic; no action required for this change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+verified_without_findings:
+  - >-
+    Fence discipline: the state fence is one lock file per workspace
+    (fence.<workspace>.lock); acquireFence fails busy regardless of token, so
+    the per-runId token is a label and both audit appends serialize under the
+    one shared fence; releaseFence runs in a finally block.
+  - >-
+    Ordinal durability: allocated inside the fence from the highest verified
+    reservation ordinal + 1; TC-038 proves continuation across reopened store
+    instances (auditSeq 4 after 3 pairs, key reused, 8 records verified).
+  - >-
+    Chain coverage: link alternation reservation->invocation with anchor first;
+    verification content excludes only chainValue and matched the assembly
+    content for both kinds (RunTiming is exactly {totalMs}, so no payload/
+    content drift); cascading breaks use the stored link, non-string links
+    fall back to the recomputed one.
+  - >-
+    Tamper suite: mutateAuditRecord recomputes the unkeyed checksum
+    (independentChecksum), so the pinned recomputed-checksum tamper class —
+    including the orphaned reservation (TC-049) — is genuinely exercised, with
+    a clean control and both-kind coverage.
+  - >-
+    Redaction: command, arguments, and identity value are redacted at facts
+    assembly through the serialize.ts chokepoint; TC-032 both halves pin no
+    secondary serialization path; reservation payloads carry no invocation
+    metadata.
+  - >-
+    Read surface: mandatory positive-integer limit (missing/invalid ->
+    input.value.rejected), exact scope/repo/command/outcome matching with
+    repo-absent exclusion only under repo constraint, inclusive [from,to]
+    startedAt window with omitted sides unbounded, in-band matched/truncated,
+    chain verdict over the whole domain, no unbounded dump export (structure
+    test includes a detector meta-test), library-only (no CLI command).
+  - >-
+    Scripted trim: single write site serializeScriptedLine emits exactly
+    {"data":...} / {"error":...,"runId":...} minified lines; --verbose forces
+    the full envelope; goldens exist per outcome class including broken
+    invocations; testkit SCRIPTED_RULES with negative controls; interactive
+    goldens byte-identical (mode default interactive preserved them).
+  - >-
+    Tier boundaries: audit consumer imports only #contracts and
+    ./artifact-boundary.js; contracts runtime-neutral; no branding in the
+    state tier; randomHex lives only in driver/runtime-edge.ts (node:crypto);
+    no driver discriminant; exit-code literals check clean; error-table-sync
+    re-run independently: 53/53, zero drift, no new rows.
+  - >-
+    Production composition remediation verified real: epoch-ms Date.now clock,
+    isTTY-omitted-means-scripted mode resolution, home-derived
+    <home>/<stateDirectoryName> store, claimed identity capture, DEC-8
+    degradation with the state identity on stderr, no process-relative clock
+    (production-composition.test.ts, 6 tests).
+  - >-
+    Traceability: all 50 TC ids cited in test code (verified by grep);
+    15/15 ACs delivered; per-phase completion evidence in pm-notes with
+    commits and test results for phases 1-6 plus phase-7 doc-sync and the
+    remediation reopen; plan validate claim noted as not executable in this
+    checkout (execution log records the reason).
+  - >-
+    Aggregate gate: pnpm check exit 0 claim reproduced modulo two documented
+    environment quirks — ci-baseline-parity needs TMPDIR inside the repo
+    (execution-log deviation 8; passes with it), and the watchdog subprocess
+    suites are load-sensitive (they pass serially; my initial overlapping runs
+    contended). No GH-223-related failure found in any run.
+plan_status: ALL_TASKS_DONE
+plan_gaps:
+  - SCOPE_DEVIATION
+  - note: >-
+      OPEN_PHASES: none; EVIDENCE_MISSING: none. SCOPE_DEVIATION limited to
+      documented remediation/doc-sync companions (finding F-3).
+test_coverage_gaps: none
+reviewed_at: "2026-11-06T00:00:00Z"
+next_step: PROCEED

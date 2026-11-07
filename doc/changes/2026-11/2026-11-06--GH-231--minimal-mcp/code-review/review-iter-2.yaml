@@ -1,0 +1,96 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-231
+branch: feat/GH-231/minimal-mcp
+status: PASS
+summary: >-
+  Iteration-2 re-review after remediation commit 1f1237c5 and doc re-sync 7621a2bc. Both blocking
+  findings are resolved and independently verified. F-1: the toolset dispatch is now the single
+  containment site with correct await placement, mirroring the CLI classifyThrown chain (declared
+  kinds resolve, everything else falls back.internal), so callTool never rejects and a thrown read
+  answers in-protocol with the server continuing to exit 0 - proven by the new throwing-runtime
+  parity cases (deep CLI equality through the full parity battery, re-run green), the lifecycle
+  thrown-then-valid row, and the error-payload containment describe. F-2: serve composes parks
+  through readProviderParkViews over the already-built store, character-identical to the CLI edge
+  fold, with ./provider declared in workspaceImports and EXPECTED_ENTRYPOINTS; reviewer probes
+  against the built entry show a healthy store yields truthful parks (no hardwired
+  state.store.unknown anywhere), a corrupt store propagates the real failure code, and serve
+  writes zero state files. F-3, F-5, and F-6 are also resolved (-32600 with id null for valid-JSON
+  non-frames including batch arrays with continued serving and exit 0, unparseable bytes still
+  exit 2 per GAP-T3; complete and engine-accurate composition inventory; toolIdByName name
+  resolution). No regressions found: containment does not swallow classified identities, parks
+  composition adds no writes or boundary widening, the exit vocabulary {0,1,2} is intact, and all
+  invariant checks pass under the reviewer's own runs. Remaining findings are bookkeeping-level.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 3
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-231--minimal-mcp/chg-GH-231-test-plan.md:1119
+    message: >-
+      The phase-7 completion evidence in test-plan section 10 records commands, counts, and
+      per-finding resolutions, but never names the remediation commit hashes (1f1237c5 fix,
+      7621a2bc doc re-sync), and pm-notes has no phase-7 completion note - breaking the
+      per-phase evidence pattern established by phases 1-6 (pm-notes names all six delivery
+      commits). EVIDENCE_MISSING in the weak sense: the commits are trivially recoverable from
+      git and the gate results are recorded.
+    suggestion: >-
+      Append the commit hashes to the section-10 phase-7 gate-evidence paragraph, or have @pm add
+      a one-line pm-notes completion note naming plan phase 7, commit 1f1237c5 (+ 7621a2bc), and
+      the aggregate result. No code change; fold into the dod_check bookkeeping.
+    suppressed: false
+  - id: F-2
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-231--minimal-mcp/chg-GH-231-plan.yaml:184
+    message: >-
+      Phase 7's declared file list again omitted task-mandated files: task 7.4 requires the
+      protocol.ts change and task 7.2 requires registering the workspace-entrypoints pin, but
+      neither file is in the phase-7 scope list (and the two declared handler files,
+      verify-artifact.ts and gate-report.ts, were legitimately untouched because task 7.1 allowed
+      the single dispatch site). The deviation is self-recorded in the section-10 phase-7 scope
+      notes - the same authoring pattern as iteration-1 MIN-1, whose process lesson is already
+      captured in the pm-notes retro.
+    suggestion: >-
+      No action this change. Plan authors: when a task names a file, add it to the same phase's
+      scope list (the MIN-1 lesson, now demonstrated twice).
+    suppressed: false
+  - id: F-3
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/mcp/src/output/protocol.ts:99
+    message: >-
+      Carry-over of iteration-1 F-10, unchanged and still advisory: an unknown tool uses -32602
+      (JSON-RPC reserves it for invalid params) and an initialize frame sent as a notification
+      still receives an id-null response. Contract-neutral (OQ-T6 keeps isError outside the JSON),
+      unpinned by tests, covered by no AC.
+    suggestion: >-
+      If the protocol module is touched again, use -32601 for unknown tools, skip responses to
+      notifications, and pin both choices in the protocol suite.
+    suppressed: false
+  - id: F-4
+    severity: info
+    confidence: high
+    category: documentation
+    location: packages/mcp/package.json:22
+    message: >-
+      Carry-over of iteration-1 F-9, unchanged: the declared #commands/* and #output/* import
+      aliases remain dead configuration in mcp (and identically pre-existing in cli); delivered
+      modules use relative .js specifiers, the Node-dist-valid form.
+    suggestion: >-
+      Optional housekeeping change to remove or repoint the dead imports blocks for mcp and cli;
+      out of scope for GH-231.
+    suppressed: false
+reviewed_at: 2026-11-06T16:40:00Z
+next_step: PROCEED

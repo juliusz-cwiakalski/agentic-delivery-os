@@ -91,7 +91,7 @@ const absentAgeFacts = () => baseFacts({ tracker: workItemRead([handBack("GH-102
 /** A world whose single approved ready line exceeds the 4096-byte human bound. */
 const overBoundFacts = () =>
   baseFacts({
-    changes: approved(8, (index) => `PR-${index}-${"X".repeat(600)}`),
+    changes: approved(8, (index) => `PR-${index}-${"X".repeat(1200)}`),
   });
 
 const humanLines = (text: string): number =>

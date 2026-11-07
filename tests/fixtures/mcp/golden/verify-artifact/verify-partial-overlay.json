@@ -1,0 +1,48 @@
+{
+  "changeRef": "GH-177",
+  "completedPhases": [
+    "clarify_scope",
+    "specification",
+    "test_planning",
+    "delivery_planning",
+    "dor_check",
+    "delivery",
+    "system_spec_update",
+    "review_fix",
+    "quality_gates",
+    "dod_check",
+    "pr_creation"
+  ],
+  "evidence": {
+    "declaration": {
+      "completedCount": 10,
+      "requiredCount": 11
+    },
+    "registry": {
+      "overlaidPhases": [
+        "review_fix"
+      ],
+      "present": true,
+      "recordCount": 1,
+      "transitionCount": 1,
+      "verifiedEmpty": false
+    }
+  },
+  "missingPhases": [],
+  "requiredPhases": [
+    "clarify_scope",
+    "specification",
+    "test_planning",
+    "delivery_planning",
+    "dor_check",
+    "delivery",
+    "system_spec_update",
+    "review_fix",
+    "quality_gates",
+    "dod_check",
+    "pr_creation"
+  ],
+  "result": "finished",
+  "target": "change",
+  "variant": "full"
+}

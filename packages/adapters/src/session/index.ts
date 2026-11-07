@@ -711,3 +711,15 @@ export const createSessionAdmin = (
     reboot: (input) => readReboot(io, input, policy),
   };
 };
+
+export {
+  type CommitOneShotOptions,
+  createHarnessOneShotTransport,
+  type HarnessOneShotResult,
+  type HarnessOneShotRunner,
+  readOneShotPrompt,
+} from "./commit-one-shot.js";
+export {
+  createDeliverySessionFacts,
+  type DeliverySessionFactsInput,
+} from "./delivery-session-facts.js";

@@ -1,5 +1,8 @@
 {
-  "ticks": [11000, 11007],
+  "ticks": [
+    11000,
+    11007
+  ],
   "runId": "run-fixture-0011",
   "brand": {
     "productName": "example-product",
@@ -16,5 +19,8 @@
     "installPath": "~/.example-product/bin/example-product"
   },
   "program": "secret-failure",
-  "secrets": ["planted-fake-secret-0006"]
+  "secrets": [
+    "planted-fake-secret-0006"
+  ],
+  "mode": "interactive"
 }

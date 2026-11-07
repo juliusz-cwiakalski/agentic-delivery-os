@@ -63,6 +63,23 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "blockers.unknown-id",
   "blockers.credential-value-rejected",
   "blockers.audience-mismatch",
+  // GH-235 pins the sourced-stall and dispatch economics identities exactly.
+  "watchdog.liveness-stalled",
+  "dispatch.restart-budget-exceeded",
+  "dispatch.resume-uneconomical",
+  // GH-227 pins these three commit identities exactly; they remain exact
+  // declared codes, not a pattern widening.
+  "commit.staging-blocked-untracked",
+  "commit.commitlint-failed",
+  "commit.atomic-abort",
+  // GH-225 pins the merge identities exactly; they are two-segment codes.
+  "merge.gates-stale",
+  "merge.waiver-unauthorized",
+  "merge.owner-gate-override-without-waiver",
+  "merge.rebase-conflict",
+  "merge.state-unverified",
+  "merge.landing-unverified",
+  "merge.transaction-aborted",
 ]);
 
 const isValidCode = (code: string): boolean =>
@@ -556,10 +573,82 @@ const PROVIDER_ROWS = [
     "user-validation",
     "The provider chain is invalid.",
   ],
+  [
+    "provider.profile.absent",
+    "user",
+    false,
+    "not_landed",
+    "Declare provider profiles and a preference chain in configuration, then retry; no model is invented when nothing is declared.",
+    "user-validation",
+    "No provider profile or preference chain is declared.",
+  ],
+  [
+    "provider.profile.invalid",
+    "user",
+    false,
+    "not_landed",
+    "Correct the named profile, tier, seat, chain entry, or pacing value and retry; the profile configuration is validated fail-closed.",
+    "user-validation",
+    "The provider profile configuration is invalid.",
+  ],
+  [
+    "provider.profile.capability-denied",
+    "user",
+    false,
+    "not_landed",
+    "Assign a seat whose declared capability matches the task (for example vision-capable) and retry; the gate reads declared descriptors only.",
+    "user-validation",
+    "A profile seat was refused by the hard capability gate.",
+  ],
+  [
+    "provider.profile.unavailable",
+    "transient",
+    true,
+    "not_landed",
+    "Wait for a named provider condition to clear or declare another eligible profile, then retry; the decision is parked with reasons.",
+    "platform-provider",
+    "No provider profile is eligible under the current conditions.",
+  ],
+  [
+    "provider.env-record.unauthorized",
+    "user",
+    false,
+    "not_landed",
+    "Use a model-environment name that matches the configured allowlist and retry; the record was rejected as a whole.",
+    "user-validation",
+    "The env record names a variable outside the allowlist.",
+  ],
+  [
+    "provider.env-record.duplicate",
+    "user",
+    false,
+    "not_landed",
+    "Remove the duplicated env-record name and retry; the record was rejected as a whole.",
+    "user-validation",
+    "The env record declares a name more than once.",
+  ],
+  [
+    "provider.env-record.malformed",
+    "user",
+    false,
+    "not_landed",
+    "Correct the env-record header, line grammar, name shape, or final line feed and retry; the record was rejected as a whole.",
+    "user-validation",
+    "The env record does not conform to the data-v1 grammar.",
+  ],
+  [
+    "provider.env-record.oversized",
+    "user",
+    false,
+    "not_landed",
+    "Reduce the env-record file, line, or record count below the configured limits and retry.",
+    "user-validation",
+    "The env record exceeds a configured size limit.",
+  ],
 ] as const;
 
 describe("TC-PROV-045 provider rows are exact and synced", () => {
-  test("the five provider rows carry their declared fields", () => {
+  test("the thirteen provider rows carry their declared fields", () => {
     const provider = entries.filter((entry) => entry.domainKind === "provider");
     expect(provider.map((entry) => entry.code)).toEqual(PROVIDER_ROWS.map(([code]) => code));
     for (const [
@@ -601,7 +690,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
   test("verify is a declared single-row kind with the exact C-8 fields", () => {
     expect(DOMAIN_KINDS).toContain("verify");
     const verify = entries.filter((entry) => entry.domainKind === "verify");
-    expect(verify).toHaveLength(3);
+    expect(verify).toHaveLength(6);
     expect(verify[0]).toMatchObject({
       code: "verify.ledger.incomplete",
       domainKind: "verify",
@@ -661,21 +750,24 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `status`, and `blockers`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, and `dispatch`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
   });
 
   test("existing kinds keep their rows and the provider, verify, and db additions are present", () => {
-    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(5);
+    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(13);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
-    expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(3);
-    expect(entries).toHaveLength(57);
+    expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
+    expect(entries.filter((entry) => entry.domainKind === "doctor")).toHaveLength(1);
+    expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
+    expect(entries.filter((entry) => entry.domainKind === "blockers")).toHaveLength(4);
+    expect(entries).toHaveLength(98);
   });
 });
 
@@ -751,7 +843,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(57);
+    expect(entries).toHaveLength(98);
     expect(db).toHaveLength(4);
   });
 
@@ -938,13 +1030,22 @@ const WATCHDOG_ROWS = [
     "platform-provider",
     "No liveness signal sources are available; the answer is unknown.",
   ],
+  [
+    "watchdog.liveness-stalled",
+    "user",
+    false,
+    "not_landed",
+    "Inspect the corroborated stall evidence, then apply the budget-governed restart response for the lane.",
+    "user-validation",
+    "The lane is stalled and fully corroborated by the declared progress signals.",
+  ],
 ] as const;
 
-describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-trips", () => {
-  test("watchdog is a declared multi-row kind with exactly the three pinned identities", () => {
+describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trips", () => {
+  test("watchdog is a declared multi-row kind with exactly the four pinned identities", () => {
     expect(DOMAIN_KINDS).toContain("watchdog");
     const watchdog = entries.filter((entry) => entry.domainKind === "watchdog");
-    expect(watchdog).toHaveLength(3);
+    expect(watchdog).toHaveLength(4);
     expect(watchdog.map((entry) => entry.code)).toEqual(WATCHDOG_ROWS.map(([code]) => code));
     for (const [
       code,
@@ -967,7 +1068,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(57);
+    expect(entries).toHaveLength(98);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -979,6 +1080,9 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
     );
     expect(classifyDomainKind("watchdog", "watchdog.signals-absent").projectionClass).toBe(
       "platform-provider",
+    );
+    expect(classifyDomainKind("watchdog", "watchdog.liveness-stalled").projectionClass).toBe(
+      "user-validation",
     );
   });
 
@@ -1014,18 +1118,145 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
       const row = `| ${code} | watchdog | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
       expect(doc.split(row).length - 1, code).toBe(1);
     }
-    expect(doc).toContain("`watchdog` kind carries exactly the three lane-safety identities");
+    expect(doc).toContain("`watchdog` kind carries exactly the four lane-safety identities");
   });
 
   test("pre-existing provider, input, config, state, lint, verify, db and closeout rows are unchanged", () => {
-    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(5);
+    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(13);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
-    expect(entries.filter((entry) => entry.domainKind === "verify")).toHaveLength(3);
+    expect(entries.filter((entry) => entry.domainKind === "verify")).toHaveLength(6);
+    expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "closeout")).toHaveLength(4);
+  });
+});
+
+const COMMIT_ROWS = [
+  [
+    "commit.staging-blocked-untracked",
+    "user",
+    false,
+    "not_landed",
+    "Stage or remove the pending material outside the declared scope, or expand the change scope, then retry the commit.",
+    "user-validation",
+    "Nothing stageable remains for the requested commit.",
+  ],
+  [
+    "commit.commitlint-failed",
+    "user",
+    false,
+    "not_landed",
+    "Reconcile the repository commitlint configuration with the commit type table (or correct the message), then retry.",
+    "user-validation",
+    "Neither the generated message nor the deterministic template satisfied commitlint.",
+  ],
+  [
+    "commit.safety.secret-suspected",
+    "user",
+    false,
+    "not_landed",
+    "Review the named finding class and path, remove or gitignore the suspected material, then retry; never blind-retry.",
+    "user-validation",
+    "The secret scan flagged candidate content or a filename on suspicion.",
+  ],
+  [
+    "commit.safety.scan-unavailable",
+    "platform",
+    true,
+    "not_landed",
+    "Restore the deterministic safety scanner and retry; nothing was staged or committed.",
+    "platform-provider",
+    "The deterministic safety scan could not run.",
+  ],
+  [
+    "commit.atomic-abort",
+    "platform",
+    true,
+    "not_landed",
+    "Retry the completion; the clean abort restored both the ledger and the commit to neither-landed, and a re-run converges.",
+    "platform-provider",
+    "The atomic phase completion aborted and restored both sides.",
+  ],
+  [
+    "commit.session.context-refused",
+    "user",
+    false,
+    "not_landed",
+    "Invoke the commit primitive from outside the delivery session (agents invoke it from a plain shell or subagent boundary).",
+    "user-validation",
+    "The commit primitive refused to run inside a delivery session.",
+  ],
+] as const;
+
+describe("TC-TABLE-005 the commit kind declares exactly six rows", () => {
+  test("the commit kind carries the six pinned identities and classifications", () => {
+    expect(DOMAIN_KINDS).toContain("commit");
+    const commit = entries.filter((entry) => entry.domainKind === "commit");
+    expect(commit.map((entry) => entry.code)).toEqual(COMMIT_ROWS.map(([code]) => code));
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of COMMIT_ROWS) {
+      expect(classifyDomainKind("commit", code)).toMatchObject({
+        code,
+        domainKind: "commit",
+        category,
+        retryable,
+        consequence,
+        remediationHint: hint,
+        projectionClass,
+        summary,
+      });
+      expect(resolveAppErrorCode(code)).toEqual({
+        ok: true,
+        entry: classifyDomainKind("commit", code),
+      });
+      expect(classifyThrown({ kind: "commit", code })).toEqual(classifyDomainKind("commit", code));
+      expect(String(hint).length).toBeGreaterThan(0);
+    }
+    expect(commit).toHaveLength(6);
+    expect(entries.some((entry) => entry.code.includes("template-fallback"))).toBe(false);
+  });
+
+  test("kind-only commit is ambiguous and contains; wrong codes contain", () => {
+    expect(() => classifyDomainKind("commit")).toThrow();
+    expect(classifyThrown({ kind: "commit" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    expect(classifyThrown({ kind: "commit", code: "state.store.torn" }).code).toBe(
+      FALLBACK_INTERNAL_CODE,
+    );
+    expect(() => classifyDomainKind("commit", "input.value.rejected")).toThrow();
+  });
+
+  test("the documented commit rows agree exactly once and match every column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of COMMIT_ROWS) {
+      const row = `| ${code} | commit | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
+    expect(doc).toContain("`commit` kind carries exactly the six commit-primitive identities");
+  });
+
+  test("template fallback is success evidence, never a failure identity", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    expect(doc).toContain("template fallback is success evidence");
+    const commit = entries.filter((entry) => entry.domainKind === "commit");
+    expect(commit.every((entry) => entry.category !== "success")).toBe(true);
   });
 });
 
@@ -1120,6 +1351,316 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(8);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(21);
+  });
+});
+
+describe("TC-DOCTOR-020 the doctor kind has exactly one row and leaves the table intact", () => {
+  const DOCTOR_HINT = "Resolve each named failing check using its fix hint, then re-run doctor.";
+  const DOCTOR_SUMMARY = "One or more wiring checks failed.";
+
+  test("doctor is declared exactly once and carries exactly one row", () => {
+    expect((DOMAIN_KINDS as readonly string[]).filter((kind) => kind === "doctor")).toHaveLength(1);
+    const doctor = entries.filter((entry) => entry.domainKind === "doctor");
+    expect(doctor).toHaveLength(1);
+    expect(doctor[0]).toEqual({
+      code: "doctor.check.failed",
+      domainKind: "doctor",
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      remediationHint: DOCTOR_HINT,
+      projectionClass: "user-validation",
+      summary: DOCTOR_SUMMARY,
+    });
+  });
+
+  test("the doctor row round-trips through returned and thrown classification", () => {
+    const row = classifyDomainKind("doctor", "doctor.check.failed");
+    expect(row.projectionClass).toBe("user-validation");
+    expect(resolveAppErrorCode("doctor.check.failed")).toEqual({ ok: true, entry: row });
+    expect(classifyThrown({ kind: "doctor", code: "doctor.check.failed" })).toEqual(row);
+    expect(classifyThrown({ kind: "doctor", code: "doctor.check.failed", summary: "x" })).toEqual(
+      row,
+    );
+    expect(() => classifyDomainKind("doctor", "state.store.torn")).toThrow();
+    expect(() => classifyDomainKind("doctor", "doctor.check.repo.unreachable")).toThrow();
+  });
+
+  test("a check-level cause is never promoted to an error identity", () => {
+    const codes = new Set<string>(entries.map((entry) => entry.code));
+    for (const condition of [
+      "doctor.check.repo.unreachable",
+      "doctor.check.tracker.unreachable",
+      "doctor.check.provider.unreachable",
+      "doctor.check.state.unreachable",
+      "doctor.check.ci.unreachable",
+    ]) {
+      expect(codes.has(condition)).toBe(false);
+    }
+  });
+
+  test("the documented doctor row appears exactly once and matches column-for-column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    const row = `| doctor.check.failed | doctor | user | false | not_landed | ${DOCTOR_HINT} | user-validation | ${DOCTOR_SUMMARY} |`;
+    expect(doc.split(row).length - 1).toBe(1);
+    expect(doc).toContain(
+      "`status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, and `dispatch`",
+    );
+  });
+
+  test("fallback remains the reserved two-segment namespace", () => {
+    expect(FALLBACK_INTERNAL_CODE).toBe("fallback.internal");
+    expect(FALLBACK_INVOCATION_CODE).toBe("fallback.invocation");
+    expect(entries.filter((entry) => entry.domainKind === "fallback")).toHaveLength(2);
+  });
+});
+
+const RETRO_ROWS = [
+  [
+    "retro.evidence.malformed-entry",
+    "platform",
+    false,
+    "not_landed",
+    "Inspect the named evidence position and repair or explicitly salvage the affected artifact, then re-run the retro command; valid entries were preserved.",
+    "user-validation",
+    "An evidence entry is malformed and was classified in band.",
+  ],
+  [
+    "retro.evidence.tamper-flagged",
+    "platform",
+    false,
+    "not_landed",
+    "Inspect the named domain and record positions; do not trust altered evidence. Restore the unaltered artifact or record an explicit salvage before re-running.",
+    "user-validation",
+    "A keyed evidence chain failed verification.",
+  ],
+  [
+    "retro.truth.vacuous-run",
+    "user",
+    false,
+    "not_landed",
+    "Verify the declared collector sources and their windows, then re-run retro collect; a collection that executes must produce collector records.",
+    "user-validation",
+    "A collection run executed and produced no collector records.",
+  ],
+  [
+    "retro.evidence.denied",
+    "platform",
+    false,
+    "not_landed",
+    "Write evidence only through the collector seam; the sidecar is collector-owned and the attempted write did not land.",
+    "platform-provider",
+    "A write outside the collector seam was refused.",
+  ],
+] as const;
+
+describe("TC-RETRO-004 four retro identities round-trip and contain", () => {
+  test("retro is a declared multi-row kind with exactly the four pinned rows", () => {
+    expect(DOMAIN_KINDS).toContain("retro");
+    const retro = entries.filter((entry) => entry.domainKind === "retro");
+    expect(retro).toHaveLength(4);
+    expect(retro.map((entry) => entry.code)).toEqual(RETRO_ROWS.map(([code]) => code));
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of RETRO_ROWS) {
+      expect(classifyDomainKind("retro", code)).toMatchObject({
+        code,
+        domainKind: "retro",
+        category,
+        retryable,
+        consequence,
+        projectionClass,
+        remediationHint: hint,
+        summary,
+      });
+      expect(resolveAppErrorCode(code)).toEqual({
+        ok: true,
+        entry: classifyDomainKind("retro", code),
+      });
+      expect(classifyThrown({ kind: "retro", code })).toEqual(classifyDomainKind("retro", code));
+      expect(classifyThrown({ kind: "retro", code, summary: "UNTRUSTED-CANARY" })).toEqual(
+        classifyDomainKind("retro", code),
+      );
+    }
+    expect(retro.find((entry) => entry.code === "retro.evidence.denied")?.projectionClass).toBe(
+      "platform-provider",
+    );
+  });
+
+  test("kind-only retro is ambiguous and contains; wrong, unknown, missing and non-string codes contain", () => {
+    expect(() => classifyDomainKind("retro")).toThrow();
+    expect(classifyThrown({ kind: "retro" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    for (const failure of [
+      { kind: "retro", code: "retro.other.unknown" },
+      { kind: "retro", code: "state.store.torn" },
+      { kind: "retro" },
+      { kind: "retro", code: 42 },
+      { kind: "retro", code: null },
+      { kind: "state", code: "retro.evidence.denied" },
+    ]) {
+      expect(classifyThrown(failure).code).toBe(FALLBACK_INTERNAL_CODE);
+    }
+    expect(() => classifyDomainKind("retro", "input.value.rejected")).toThrow();
+  });
+
+  test("the documented retro rows agree exactly once and match every column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of RETRO_ROWS) {
+      const row = `| ${code} | retro | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
+    expect(doc).toContain("`retro`");
+  });
+
+  test("store-level conditions still resolve through existing state rows and no fifth retro row exists", () => {
+    expect(resolveAppErrorCode("state.store.torn").ok).toBe(true);
+    expect(resolveAppErrorCode("state.keys.missing").ok).toBe(true);
+    expect(resolveAppErrorCode("state.permission.denied").ok).toBe(true);
+    expect(entries.filter((entry) => entry.domainKind === "retro")).toHaveLength(4);
+    expect(entries.filter((entry) => entry.code.startsWith("retro."))).toHaveLength(4);
+  });
+});
+
+const DISPATCH_ROWS = [
+  [
+    "dispatch.restart-budget-exceeded",
+    "user",
+    false,
+    "not_landed",
+    "Request a fresh restart budget through the coordinator or operator, then retry the resume.",
+    "user-validation",
+    "The delivery's restart budget is exhausted.",
+  ],
+  [
+    "dispatch.resume-uneconomical",
+    "user",
+    false,
+    "not_landed",
+    "Change the harness capability to attach-and-continue, or re-evaluate and accept the prefill re-pay cost, then retry the resume.",
+    "user-validation",
+    "The resume path would re-pay prefill and is uneconomical.",
+  ],
+] as const;
+
+describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (three economics additions)", () => {
+  test("dispatch is the appended declared kind with exactly the two pinned identities in order", () => {
+    expect(DOMAIN_KINDS).toContain("dispatch");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 1]).toBe("dispatch");
+    const dispatch = entries.filter((entry) => entry.domainKind === "dispatch");
+    expect(dispatch.map((entry) => entry.code)).toEqual(DISPATCH_ROWS.map(([code]) => code));
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of DISPATCH_ROWS) {
+      expect(classifyDomainKind("dispatch", code)).toEqual({
+        code,
+        domainKind: "dispatch",
+        category,
+        retryable,
+        consequence,
+        remediationHint: hint,
+        projectionClass,
+        summary,
+      });
+      expect(String(hint).length).toBeGreaterThan(0);
+    }
+  });
+
+  test("every new row projects user-validation and no new platform-provider row exists", () => {
+    for (const [code] of DISPATCH_ROWS) {
+      expect(classifyDomainKind("dispatch", code).projectionClass).toBe("user-validation");
+    }
+    expect(classifyDomainKind("watchdog", "watchdog.liveness-stalled").projectionClass).toBe(
+      "user-validation",
+    );
+    const newCodes = [
+      "dispatch.restart-budget-exceeded",
+      "dispatch.resume-uneconomical",
+      "watchdog.liveness-stalled",
+    ];
+    for (const code of newCodes) {
+      const resolved = resolveAppErrorCode(code);
+      expect(resolved.ok).toBe(true);
+      if (resolved.ok) {
+        expect(resolved.entry.projectionClass).not.toBe("platform-provider");
+        expect(resolved.entry.consequence).not.toBe("unknown");
+      }
+    }
+  });
+
+  test("dispatch codes round-trip and contain invalid shapes", () => {
+    for (const [code] of DISPATCH_ROWS) {
+      const row = classifyDomainKind("dispatch", code);
+      expect(resolveAppErrorCode(code)).toEqual({ ok: true, entry: row });
+      expect(classifyThrown({ kind: "dispatch", code })).toEqual(row);
+      expect(classifyThrown({ kind: "dispatch", code, summary: "UNTRUSTED-CANARY" })).toEqual(row);
+    }
+    expect(() => classifyDomainKind("dispatch")).toThrow();
+    expect(classifyThrown({ kind: "dispatch" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    expect(classifyThrown({ kind: "dispatch", code: "state.store.torn" }).code).toBe(
+      FALLBACK_INTERNAL_CODE,
+    );
+    expect(classifyThrown({ kind: "watchdog", code: "dispatch.resume-uneconomical" }).code).toBe(
+      FALLBACK_INTERNAL_CODE,
+    );
+  });
+
+  test("the documented dispatch rows agree exactly once and match every column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of DISPATCH_ROWS) {
+      const row = `| ${code} | dispatch | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
+    expect(doc).toContain("`dispatch` kind carries exactly the two economics identities");
+  });
+
+  test("the three economics additions land and the delivered rows stay byte-identical", () => {
+    expect(entries).toHaveLength(98);
+    expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(2);
+    expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
+    // The delivered watchdog rows retain their exact declared columns.
+    expect(entries.filter((entry) => entry.domainKind === "watchdog").slice(0, 3)).toEqual(
+      WATCHDOG_ROWS.slice(0, 3).map(
+        ([code, category, retryable, consequence, hint, projectionClass, summary]) => ({
+          code,
+          domainKind: "watchdog",
+          category,
+          retryable,
+          consequence,
+          remediationHint: hint,
+          projectionClass,
+          summary,
+        }),
+      ),
+    );
+    expect(ALLOWLIST.allowed.some((code) => code.startsWith("dispatch."))).toBe(false);
   });
 });

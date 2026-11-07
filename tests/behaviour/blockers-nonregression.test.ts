@@ -51,8 +51,8 @@ describe("TC-BLK-041 non-regression and declared evolution", () => {
     const firstSix = (digest: ReturnType<typeof aggregateStatus>) =>
       JSON.stringify(digest.sections.filter((section) => section.id !== "typed-questions"));
     expect(firstSix(withQuestion)).toBe(firstSix(empty));
-    expect(withQuestion.sections).toHaveLength(7);
-    expect(empty.sections).toHaveLength(7);
+    expect(withQuestion.sections).toHaveLength(9);
+    expect(empty.sections).toHaveLength(9);
     expect(withQuestion.sections.map((section) => section.id)).toEqual([...STATUS_SECTION_ORDER]);
   });
 
@@ -72,11 +72,11 @@ describe("TC-BLK-041 non-regression and declared evolution", () => {
     expect(anchors(withQuestion)).toBe(anchors(empty));
   });
 
-  test("the status golden has seven sections with the six existing ids relative-stable", () => {
+  test("the status golden has nine sections with the six shipped ids relative-stable", () => {
     const golden = JSON.parse(
       readFileSync(join(ROOT, "tests/fixtures/status/golden/digest.json"), "utf8"),
     ) as { data: { sections: { id: string }[] } };
-    expect(golden.data.sections).toHaveLength(7);
+    expect(golden.data.sections).toHaveLength(9);
     expect(golden.data.sections.map((section) => section.id)).toEqual([...STATUS_SECTION_ORDER]);
     expect(STATUS_SECTION_TITLES["typed-questions"]).toBe("Typed questions");
   });
@@ -112,8 +112,8 @@ describe("TC-BLK-041 non-regression and declared evolution", () => {
     expect(boardRuntime.includes("owner-gate->question")).toBe(false);
   });
 
-  test("the TDR-0009 accepted residual is documented", () => {
-    const path = join(ROOT, "doc/decisions/TDR-0009-blockers-credential-guard-pattern-deferral.md");
+  test("the TDR-0011 accepted residual is documented", () => {
+    const path = join(ROOT, "doc/decisions/TDR-0011-blockers-credential-guard-pattern-deferral.md");
     expect(existsSync(path)).toBe(true);
     const text = readFileSync(path, "utf8");
     expect(text.toLowerCase()).toContain("residual");

@@ -1,0 +1,153 @@
+{
+  "name": "four-red-runs-grouped",
+  "scenario": "four-red-runs-grouped",
+  "expected": {
+    "sections": {
+      "tracker": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": [],
+        "assertions": [
+          {
+            "assertion": "epic-membership",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 0
+          },
+          {
+            "assertion": "story-points",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 0
+          },
+          {
+            "assertion": "in-sprint",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 0
+          }
+        ]
+      },
+      "changes-and-prs": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "ci": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 4,
+          "unknown": 0,
+          "total": 4,
+          "omitted": 0
+        },
+        "orderedIds": ["703", "702", "701", "700"],
+        "truncated": false,
+        "findings": [
+          {
+            "code": "ci.red-on-main",
+            "severity": "high",
+            "count": 4,
+            "members": ["703", "702", "701", "700"],
+            "evidenceRef": "703"
+          }
+        ]
+      },
+      "lanes-or-queue": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "providers": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 1,
+          "unknown": 0,
+          "total": 1,
+          "omitted": 0
+        },
+        "orderedIds": ["entry:primary"],
+        "truncated": false,
+        "findings": []
+      },
+      "parked-work": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "ready-to-merge": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "spend": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "typed-questions": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      }
+    }
+  }
+}

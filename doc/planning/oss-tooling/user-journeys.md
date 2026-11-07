@@ -48,7 +48,7 @@ Success is artifacts, never exit codes.
 
 | Step | Actor | Command (target) | Milestone | Interim path (bash stack) | Pain addressed |
 |---|---|---|---|---|---|
-| 1. Session bootstrap | Coordinator | `ados status` (six collectors: tracker, changes and PRs, CI, lanes or queue, providers, parked work) | M0-S6 | Scripted probing, raw tracker and PR reads | Largest measured token lever; the first call of every session |
+| 1. Session bootstrap | Coordinator | `ados status` (nine-section attention-state digest: tracker, changes and PRs, CI, lanes or queue, providers, parked work, ready-to-merge, spend, blockers) | M0-S6; M1-S10 expansion | Scripted probing, raw tracker and PR reads | Largest measured token lever; the first call of every session |
 | 2. Pick the next change | Coordinator | `ados queue ready` (read-only ready-set per ticket; close items rank above new starts) | M0-S7 | Manual dependency and repo-free checks | Idle lanes beside a full queue; closing beats opening |
 | 3. Understand the ticket | Lifecycle agent | Tracker read through the adapter | M0 (lifecycle session exists today) | unchanged | - |
 | 4. Deliver the change | Lifecycle session | `ados dispatch` (one delivery per repo, single-flight, spawns and supervises the lifecycle session through the harness adapter) | M1-S9 dual-run and handover; full loop M1-S17/M1-S18 | deliver-ticket.sh | Exit-zero false success and lying liveness, the most-documented defect family |

@@ -1,0 +1,944 @@
+# GH-232 implementation plan — M1-S8: OSS retro pipeline
+#
+# Sources (single source of truth; plan revision 2, 2026-11-06):
+#   - Spec:  ./chg-GH-232-spec.md (v1.2; 16 ACs AC-F1-1..AC-F9-1; F-1..F-10;
+#     DEC-1..DEC-14; DM-1..DM-9; OQ-1..OQ-7 all resolved; four-row `retro`
+#     error set incl. retro.truth.vacuous-run; per-identity store-level exit
+#     taxonomy DEC-7; export as engine/library surface only; DEC-14 pins the
+#     no-eligible-target collect as an explicit exit-0 `no-target` success;
+#     DM-9/§7.1/§16 pin the registry's three record kinds; Appendix B
+#     test-coverage handoff)
+#   - Test plan: ./chg-GH-232-test-plan.md (v1.2; 64 TCs TC-RETRO-001..064;
+#     16/16 AC coverage; §3.5 suite legend; §4.3 normative table; §4.4-4.5
+#     mutation/shape matrices; §4.6 level matrix; §4.7 truth matrix incl. the
+#     N-01 no-target row; §4.8 exit oracle incl. the exit-0 `no-target` row;
+#     §7.1 execution order; §7.2 CI mapping; §7.3 evidence commands)
+#   - Decision: ../../../../doc/decisions/TDR-0009-retro-evidence-sidecar-
+#     keyed-chain-construction.md (ALT-2: HMAC-style keyed chain, distinct
+#     store-managed key, claimed identity; C-1..C-7; TO-CONFIRM primitive/
+#     digest/encoding/key-filename pins are plan-time — pinned below)
+#   - Ticket: GH-232 (open; binding AC 1 + binding AC 2 verbatim in spec §17)
+#
+# Plan revision 2 (2026-11-06, DoR readiness-iter-1 remediation): PIN-5
+# provenance now cites spec v1.2 DEC-14/AC-F6-1 (the spec adopted this plan's
+# semantics — provenance made explicit); PIN-4 aligned to the v1.2 three-kind
+# registry pin (spec DM-9; test plan A-T5 corrected); PIN-10 records the pack
+# example vocabulary supersession; tasks 3.1/3.2 re-worded to the spec's
+# no-target/vacuous-run outcome language; phases 2 and 3 drop consumer
+# interactions whose target sits outside their own scope (schema rule: an
+# interaction target must be a path inside the declaring phase's scope — the
+# cross-phase consumption stays documented in the phase prose and in Phase 1's
+# producer interaction). No phase, scope-entry, task, or traceability change.
+#
+# Format note: this document is the machine-readable plan (delivery.plan.v1).
+# Phase goals, tasks (with TC/AC traceability), per-phase verification commands,
+# per-phase commit steps, the phase->AC->TC matrix, and the phase-7 doc-sync
+# handoff notes are carried as YAML COMMENTS so the parsed document stays
+# strictly schema-conformant. `plan validate GH-232` must return `valid`.
+#
+# Tier rationale: `full` — 10 capabilities, 16 ACs, 64 automated TCs, cross-
+# package delivery (core contracts + state tier + domain engine + CLI +
+# invariant checks + golden fixtures), medium security impact (spec front
+# matter), autonomous delivery mode (pm-notes). Lease names and weight classes
+# are omitted: the lease/weight vocabulary belongs to the downstream scheduler
+# and neither spec nor test plan pins names; all phases are lease-taking by
+# kind.
+#
+# =====================================================================
+# DELIVERY-BOUND PINS (resolved here; test plan OQ-T6/T7/T8, GAP-T8, and
+# TDR-0009 TO-CONFIRM items — every value below lands as a declared contract
+# constant so tests read the constant, never a hardcoded string):
+#
+#   PIN-1 Chain primitive (TDR-0009 TO-CONFIRM 1+2, C-7): HMAC-SHA-256 via
+#         node:crypto (`createHmac` + `randomBytes`) at the core state driver
+#         runtime edge — the admitted runtime-API location; NO new third-party
+#         dependency. Digest 256-bit, hex-encoded: RETRO_CHAIN_VALUE_HEX_LENGTH
+#         = 64. Key: RETRO_CHAIN_KEY_BYTES = 32 random bytes, generated once at
+#         the runtime edge on first append, persisted 0600.
+#   PIN-2 Canonical encoding: the sidecar record serialized as UTF-8 JSON over
+#         the declared field order RETRO_CANONICAL_FIELD_ORDER with the record's
+#         own chainValue EXCLUDED; link = HMAC(key, prevLink || anchor,
+#         canonicalContent); first record chains from RETRO_CHAIN_ANCHOR
+#         ("retro.chain.anchor.v1").
+#   PIN-3 Artifact spellings (spec OQ-2): sidecar ledger
+#         `retro-evidence.<workspace>.jsonl`, chaining-key artifact
+#         `chain-key.retro.<workspace>.json` (payload schema
+#         `delivery.retro.chain-key.v1`; distinct path AND bytes from the audit
+#         `chain-key.<workspace>.json`), collector fence file
+#         `retro-evidence.lock` — all beside the delivery state store layout in
+#         the state directory.
+#   PIN-4 Retro registry store: its own validated store via the public state
+#         port (fence namespace `retro-registry`), three additive record kinds —
+#         `retro.level` (`delivery.retro.level.v1`, identity `name`),
+#         `retro.run` (`delivery.retro.run.v1`, identity `runId`), and
+#         `retro.trigger` (`delivery.retro.trigger.v1`, identity `name`; hosts
+#         the periodic memory-audit trigger per DEC-10) — under key prefixes
+#         `retro.levels` / `retro.runs` / `retro.triggers`. Source of truth:
+#         spec v1.2 pins exactly these three additive record kinds (§7.1, §16,
+#         DM-9) and test plan v1.2 corrected A-T5 to three kinds, so the kind
+#         count is spec-pinned, not plan-invented; this pin's remaining
+#         delivery-bound detail is the spelling — schema ids, identity fields,
+#         key prefixes — landed as declared contract constants
+#         (TC-RETRO-060 asserts the trigger lives in the registry; boundary
+#         properties, not kind count, are the contract).
+#   PIN-5 Target ordering (OQ-T6 / A-T3): RETRO_TARGET_ORDER = completion
+#         timestamp DESC, then change ref ASC. "Completed change" = a change
+#         whose latest phase.transition is `complete` for its terminal
+#         lifecycle phase (pr_creation) with no later `reopen`; in-flight
+#         changes are never selected. No-eligible-target end — SOURCE OF
+#         TRUTH: spec v1.2 DEC-14 / AC-F6-1, which canonically adopted this
+#         plan's semantics: `retro collect` with every completed change
+#         already collected at the level executes no collection run (no
+#         collector invocations, no sidecar appends, no registry run record)
+#         and completes as an explicit SUCCESS (exit 0) whose `data` carries
+#         the collection summary with the explicit `no-target` outcome naming
+#         the empty selection and its reason — the null-retro analogue; never
+#         a fabricated scope. `retro.truth.vacuous-run` (exit 1) is scoped to
+#         a collection run that EXECUTED and produced zero collector records
+#         (DEC-14; test plan v1.2 §4.7 N-01 vs C-05, §4.8 no-target row), so
+#         the two outcomes cannot collide.
+#   PIN-6 Level->owning-story map (OQ-T7 / A-T6): session / incident / window /
+#         project -> "M2-S3 (ceremony runner)" — M2-S3 schedules retro levels
+#         and owns the close stage (spec §13, backlog M2-S3 AC); M2-S10 co-owns
+#         the R4+ follow-through gate; fleet -> "post-M4 fleet retro
+#         (unscheduled)" per spec §7.3 / concepts doc. Declared as
+#         RETRO_LEVEL_OWNING_STORIES contract data.
+#   PIN-7 NFR-7 measurement (OQ-T8 / GAP-T2): CI gates BOUNDED WORK only —
+#         call-count invariance (10-record vs 10,000-record sidecar: one chain
+#         walk per read; appends == collected items; export reads <= limit plus
+#         one verdict pass; positive audit-read limit) and declared timeout
+#         constants (RETRO_READ_TIMEOUT_MS = 10000, RETRO_APPEND_TIMEOUT_MS =
+#         30000 per the NFR-7 budgets) referenced at the admitted I/O seams.
+#         The 10,000-record wall-clock numbers are recorded ONCE in the change
+#         execution log as a non-CI reference — never a pass gate.
+#   PIN-8 Export bound: RETRO_EXPORT_MAX_LIMIT = 1000 (TC-RETRO-050 asserts an
+#         over-cap refusal); no optional-limit overload, no "all records" mode.
+#   PIN-9 Memory-audit cadence: trigger kind "schedule", cadence "weekly" from
+#         the declared cadence vocabulary — a plan-time value consistent with
+#         the documented "periodic" memory audit; on-demand invocation only in
+#         M1-S8 (scheduled invocation arrives with M2-S3).
+#   PIN-10 Finding-kind vocabulary: ["retro-note", "collector-finding",
+#         "truth-check", "tamper-flag", "malformed-entry", "verified-empty"];
+#         follow-through verdicts ["verified", "unverified", "unknown"].
+#         Vocabulary supersession (DoR readiness-iter-1 finding 4): the M1
+#         pack commands/retro.md OUTPUT example is ILLUSTRATIVE — its finding
+#         kind "win" and follow-through verdict "done" are superseded by these
+#         closed vocabularies, the delivery-time refinement of the spec's
+#         pinned fold sources (spec §5.1 F-5/F-6 with §8.3 DM-6 and DEC-9:
+#         findings fold only from recorded pm-notes retro notes, mechanical
+#         collector findings, pipeline-truth findings, tamper/malformation
+#         flags, and explicit verified-empty evidence; follow-through is a
+#         read-fold carrying verification verdicts) — per the pack's own
+#         convention that every M1 contract is a proposal refined at story
+#         delivery (contracts.md preamble; retro.md status "Proposed
+#         contract"). Recorded here so phase-7 doc-sync reconciles the pack
+#         example deliberately.
+# =====================================================================
+#
+# Delivery risks pinned as explicit tasks:
+#   - The sidecar is OUTSIDE the store port (DEC-3): its file I/O and crypto
+#     live at the core state driver runtime edge (the admitted location,
+#     extending the GH-223 audit-key precedent) behind a contracts-declared
+#     RetroSidecarIo port injected into the pure consumer — task 2.1/2.2. A new
+#     adapters subpath was considered and rejected: it would need a new
+#     .dependency-cruiser.cjs rule plus failing fixtures with zero precedent;
+#     NO new boundary rule is required by this change.
+#   - The state tier imports ./contracts only (ADR-0003): the domain engine
+#     (collect/report/export folds) consumes contracts-declared runtime port
+#     types; the CLI edge composes the state-tier consumers into them — the
+#     closeout/commit precedent (tasks 3.1, 4.2).
+#   - The documented error table is BINDING (bidirectional sync): the four
+#     `retro` rows land in doc/spec/features/feature-result-contract.md in the
+#     SAME phase as the machine rows (task 1.3), or error-table-sync fails at
+#     the first commit. The remaining spec narrative is phase-7 doc-sync work.
+#   - The locked surface has no export verb (NG-1 amendment): the export
+#     surface ships as a core engine function only; TC-RETRO-049 step 6 and
+#     TC-RETRO-060 step 4 assert the CLI registry and edge composition carry NO
+#     export entry, flag, or memory-audit command (tasks 3.5, 4.1, 4.2).
+#   - `--ref` must classify fallback.invocation (L-12) while value/positional
+#     errors classify input.value.rejected (L-10/L-11): the command definition
+#     declares `--level` as a parser-level flag and parses VALUES in the
+#     handler — the exact db.ts pattern (task 4.1).
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-232
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7]
+phases:
+  # ---------------------------------------------------------------------
+  # Phase 1 — Retro contracts, level declarations, and the four error rows
+  #
+  # Goal: land the runtime-neutral retro vocabulary as types + as-const data
+  # (levels, record shapes, chain constants, schema identities, port types)
+  # and the four `retro` error-table rows in BOTH tables. Pure data, no
+  # runtime behavior, no envelope change, no existing row touched (NG-10).
+  #
+  # Tasks:
+  # - 1.1 Create packages/core/src/contracts/retro.ts (declaration-only):
+  #       levels R1-R6 with scope kinds + trigger declarations (concepts-doc
+  #       hybrid model: kind schedule|event|lifecycle + cadence), closed
+  #       status vocabulary [implemented, declared] with only `change`
+  #       implemented, RETRO_LEVEL_OWNING_STORIES (PIN-6), modes
+  #       [collect, report], finding-kind and follow-through verdict
+  #       vocabularies (PIN-10), sidecar record shape (traceId `ev-` prefixed,
+  #       level, source, windowStart/windowEnd, collectedAt epoch ms, claimed
+  #       identity value+`claimed` marker per the M1-S22 convention,
+  #       payloadRefs, payloadSchemaId, chainValue) with
+  #       RETRO_CANONICAL_FIELD_ORDER, chain constants (anchor, hex length 64,
+  #       key bytes 32, key payload schema, artifact-name helpers per PIN-1..3),
+  #       chain verdict shape (verified, records, breaks with position+traceId,
+  #       anchor, affected domain), run record shape (runId, level, mode, scope,
+  #       counts collected/malformed/skipped-source, consumed verdicts, truth
+  #       verdict), registry boundary data (three kinds per PIN-4), report data
+  #       shape with RETRO_REPORT_SCHEMA "delivery.retro.report.v1" and export
+  #       shape with RETRO_EXPORT_SCHEMA "delivery.retro.export.v1" (contract
+  #       constants, NEVER in-`data` fields — A-T4), RETRO_TARGET_ORDER (PIN-5),
+  #       timeout constants (PIN-7), RETRO_EXPORT_MAX_LIMIT (PIN-8), and the
+  #       data-only port types the tiers below consume (RetroSidecarIo,
+  #       RetroCollectorRead, RetroCommandRuntime).
+  #       (DM-1..DM-8, EVT-1/EVT-2, DEC-5; AC-F5-1, AC-F8-1; TC-RETRO-001,
+  #       TC-RETRO-007 contract half, TC-RETRO-057 contract half; NFR-9)
+  # - 1.2 Error table: add `retro` to DOMAIN_KINDS and exactly four rows per
+  #       DEC-11 — retro.evidence.malformed-entry (platform / user-validation /
+  #       not_landed / exit 1), retro.evidence.tamper-flagged (same class
+  #       fields / exit 1; classifies BOTH the sidecar chain break and the
+  #       broken consumed audit-ledger verdict, the finding naming the affected
+  #       domain), retro.truth.vacuous-run (user / user-validation / exit 1),
+  #       retro.evidence.denied (platform / platform-provider / exit 2); each
+  #       with summary + remediation hint; kind-only `retro` resolution never
+  #       used (exact-code only); no fifth row, no existing row changed.
+  #       (F-10, DM-8, DEC-11; AC-F2-3, AC-F2-4, AC-F4-1, AC-F6-1; NFR-8;
+  #       TC-RETRO-004 contract half)
+  # - 1.3 Documented-table companion (binding sync): add the same four rows to
+  #       the documented table in doc/spec/features/feature-result-contract.md
+  #       with matching columns — the sync check must be green from this
+  #       commit; the file already carries its distribution marker.
+  #       (NFR-8; TC-RETRO-005)
+  # - 1.4 Re-exports and inventories: contracts/index.ts barrel; register the
+  #       module in tests/fixtures/ports/v1-contract-inventory.json (+
+  #       port-contract-inventory expectations), tests/structure/inventory.json
+  #       content inventory, and the retro registry boundary declaration in
+  #       tests/fixtures/state/artifact-declarations.ts.
+  # - 1.5 Create tests/structure/retro-contract.test.ts (declaration-only AST
+  #       scan, closed vocabularies, six levels / one implemented, four codes,
+  #       distinct report/export schema constants, consumed-not-redefined
+  #       AuditReadOutcome); update tests/structure/error-table.test.ts (four
+  #       exact rows, projection classes read from the row, kind-only
+  #       containment) and tests/checks/error-table-sync.test.ts (4/4
+  #       round-trip, drift in both directions, fail-closed on empty).
+  #       (TC-RETRO-001, TC-RETRO-004 contract half, TC-RETRO-005, TC-RETRO-007
+  #       contract half, TC-RETRO-057 contract half)
+  #
+  # Verification:
+  #   bun test tests/structure/retro-contract.test.ts \
+  #            tests/structure/error-table.test.ts \
+  #            tests/structure/port-contract-inventory.test.ts \
+  #            tests/structure/content-inventory.test.ts
+  #   bun test tests/checks/error-table-sync.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   pnpm typecheck && git diff --check
+  #
+  # Commit: feat(GH-232): declare retro vocabulary, level registry data, and four error rows
+  # ---------------------------------------------------------------------
+  - id: 1
+    title: Retro contracts, level declarations, and the four error rows
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/retro.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/structure/retro-contract.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/fixtures/state/artifact-declarations.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/port-contract-inventory.test.ts
+        - tests/structure/inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/retro.ts
+        role: producer
+
+  # ---------------------------------------------------------------------
+  # Phase 2 — State tier: sidecar consumer, chaining key, chain verification,
+  # and the retro registry store
+  #
+  # Goal: the pure sidecar consumer (append under one collector fence, keyed
+  # chain per TDR-0009 ALT-2, verified reads, key lifecycle) and the retro
+  # registry store consumer, both composing injected seams only; runtime APIs
+  # land solely at the driver runtime edge. The tamper mutation matrix, key
+  # lifecycle, cross-process continuity, and the store-boundary halves of the
+  # shape-crash guards verify here at consumer level.
+  #
+  # Tasks:
+  # - 2.1 Runtime-edge seams (packages/core/src/state/driver/runtime-edge.ts):
+  #       node:crypto randomBytes(32) key generation + createHmac("sha256")
+  #       keyed hash + the sidecar artifact-family file I/O (read, append,
+  #       ensure-key 0600, fence acquire/release) behind the contracts-declared
+  #       RetroSidecarIo port; timeout constants (PIN-7) referenced here. This
+  #       is the ONLY new runtime-API surface of the change and it stays inside
+  #       the admitted driver-edge location (TDR-0009 C-7; NFR-9).
+  # - 2.2 Create packages/core/src/state/retro-sidecar.ts (pure, injected I/O):
+  #       ensure-key guarded get-or-create (generated once at first append,
+  #       created 0600, verified on open, read by every later process, never
+  #       silently regenerated while guarded records exist; open failures reuse
+  #       state.keys.missing / state.store.torn / state.permission.denied —
+  #       C-6); ONE collector fence covering the verified pre-append read, the
+  #       link computation, and the appends (DEC-13; busy -> state.lock.busy
+  #       classified, no interleaved link); link = HMAC-SHA-256(key, prevLink
+  #       || anchor, canonicalContent) with the record's own chainValue
+  #       excluded (PIN-1/2); verified read on EVERY path (walk, recompute,
+  #       compare; multiple breaks all reported naming position + trace id;
+  #       never payload/checksum/key bytes; verification continues over the
+  #       sequence; reported explicit-salvage removals distinguished from
+  #       breaks; key-artifact substitution -> verification failure naming the
+  #       affected domain); NO update/delete/reorder/compact member — the
+  #       surface exposes only the collector seam (structural denial hook for
+  #       Phase 3's retro.evidence.denied).
+  #       (F-2, F-3; DEC-1/2/3/8/13; AC-F2-1, AC-F2-2, AC-F2-3, AC-F3-1;
+  #       NFR-2, NFR-3, NFR-4; TC-RETRO-008, 009, 010, 012, 013, 019, 020..029)
+  # - 2.3 Create packages/core/src/state/retro-registry.ts: the registry store
+  #       consumer over the PUBLIC state port — boundary from the reusable
+  #       factory (three kinds per PIN-4: schemas, identity fields, required
+  #       fields, closed vocabularies); verified reads classifying
+  #       valid/verified-empty/torn/unknown distinctly with repair guidance and
+  #       never a silent zero; invalid writes refused state.store.unknown
+  #       not_landed appending nothing; additive appends under the registry
+  #       store fence; idempotent additive seed of the six level entries and
+  #       the memory-audit trigger (kind schedule, cadence weekly — PIN-9) from
+  #       the Phase-1 declarations.
+  #       (F-8, F-9 registry half; DM-1, DM-5; AC-F8-1, AC-F9-1 registry half;
+  #       TC-RETRO-007 registry half, 031, 055, 057 registry half)
+  # - 2.4 Harness and fixtures: tests/fixtures/retro/harness.ts (makeRetroDir,
+  #       writeSidecar/readSidecarBytes/appendSidecarRecord,
+  #       writeRegistry/readRegistryBytes/writeLevels, scriptAuditRead,
+  #       scriptStateFamilies, scriptNotes, runRetro, named mutation helpers
+  #       mutateContent/Delete/Reorder/TruncateReappend/UnkeyedRecompute/
+  #       substituteKey, fence hook — test plan 4.1); fixtures
+  #       key-artifact.json (the single synthetic allowlisted 32-byte key),
+  #       mutations.json (M-01..M-06 registry), malformed.json (E-01..E-04 +
+  #       S-01..S-05), lane-environment.json (declared lane variables only).
+  # - 2.5 Behaviour suites at consumer level: retro-sidecar-append (record
+  #       shape/trace ids/no mutation surface; addenda byte-prefix; fence
+  #       serialization + unfenced reads), retro-key-artifact (lifecycle,
+  #       distinctness from the audit key, containment runtime half, key-open
+  #       failures with both exits per the delivered projections),
+  #       retro-chain (clean verdict/anchor/participation), retro-chain-
+  #       mutations (M-01..M-06 + completeness meta-test + the unkeyed-verifier
+  #       mutant proving the keyed construction is load-bearing),
+  #       retro-chain-cross-process (two instances, zero false breaks),
+  #       retro-chain-salvage (reported removal != break; wholesale deletion =
+  #       store condition), retro-malformed (store-boundary classification
+  #       halves for both stores), retro-registry (verdict matrix, shapes,
+  #       additive interleave).
+  #       TCs verified here: TC-RETRO-007 (registry half), 008, 009, 010, 011
+  #       (runtime half), 012, 013, 014, 019, 020..029, 030..034 (boundary
+  #       halves), 055, 057 (registry half).
+  # - 2.6 Structure updates: state-contract / state-imports / state-scope
+  #       expectations for the two new state modules and the runtime-edge
+  #       extension; inventory registration.
+  #
+  # Verification (test-plan 7.3 commands, consumer level):
+  #   bun test tests/behaviour/retro-sidecar-append.test.ts \
+  #            tests/behaviour/retro-key-artifact.test.ts \
+  #            tests/behaviour/retro-chain.test.ts \
+  #            tests/behaviour/retro-chain-mutations.test.ts \
+  #            tests/behaviour/retro-chain-cross-process.test.ts \
+  #            tests/behaviour/retro-chain-salvage.test.ts \
+  #            tests/behaviour/retro-malformed.test.ts \
+  #            tests/behaviour/retro-registry.test.ts
+  #   bun test tests/structure/state-contract.test.ts \
+  #            tests/structure/state-imports.test.ts \
+  #            tests/structure/state-scope.test.ts \
+  #            tests/structure/retro-contract.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   bun test tests/behaviour/state-torn.test.ts tests/behaviour/state-salvage.test.ts
+  #   pnpm typecheck && git diff --check
+  #
+  # Commit: feat(GH-232): land evidence sidecar consumer, keyed chain, and retro registry store
+  # ---------------------------------------------------------------------
+  - id: 2
+    title: State tier - sidecar consumer, chaining key, chain, registry store
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/state/retro-sidecar.ts
+        - packages/core/src/state/retro-registry.ts
+        - packages/core/src/state/driver/runtime-edge.ts
+        - packages/core/src/state/index.ts
+        - tests/fixtures/retro/harness.ts
+        - tests/behaviour/retro-sidecar-append.test.ts
+        - tests/behaviour/retro-key-artifact.test.ts
+        - tests/behaviour/retro-chain.test.ts
+        - tests/behaviour/retro-chain-mutations.test.ts
+        - tests/behaviour/retro-chain-cross-process.test.ts
+        - tests/behaviour/retro-chain-salvage.test.ts
+        - tests/behaviour/retro-malformed.test.ts
+        - tests/behaviour/retro-registry.test.ts
+        - tests/structure/state-contract.test.ts
+        - tests/structure/state-imports.test.ts
+        - tests/structure/state-scope.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/retro
+    # Cross-phase contract consumption (contracts/retro.ts, produced in
+    # Phase 1) is documented in the phase prose above; the schema requires an
+    # interaction target to sit inside the declaring phase's own scope, so no
+    # consumer interaction is declared here.
+
+  # ---------------------------------------------------------------------
+  # Phase 3 — Domain engine: collectors, pipeline-truth checks, report and
+  # export folds
+  #
+  # Goal: the pure learning-plane engine over contracts-declared runtime ports
+  # — `change`-level collection over GET-only delivered sources, the five
+  # pipeline-truth checks, the report fold, the export engine surface, the
+  # denied seam, and the engine-level shape-crash-guard completion. Zero model
+  # calls, zero ambient reads; every fold deterministic.
+  #
+  # Tasks:
+  # - 3.1 Create packages/core/src/domain/retro.ts — collect engine: target
+  #       selection per PIN-5 (RETRO_TARGET_ORDER, completed-derivation from
+  #       the phase.transition record family, in-flight never selected,
+  #       already-collected scope -> addendum never a rewrite; no eligible
+  #       target -> no collection run executes and the command completes as
+  #       the explicit exit-0 `no-target` success per DEC-14: `data` carries
+  #       the collection summary with the `no-target` outcome naming the empty
+  #       selection and its reason, zero collector invocations, zero sidecar
+  #       appends, zero registry run records); GET-only collectors in the
+  #       declared order — (a) audit ledger via the bounded read surface
+  #       (positive limit, declared filters, recorded query), (b) state record
+  #       families (phase transitions, closeout outcome records, commit
+  #       telemetry events), (c) pm-notes typed `retro` notes through the
+  #       existing read surface — each read once, sources byte-unchanged,
+  #       absent source counted skipped-source with a reason; skipped-ordinal
+  #       findings and the full audit chain verdict carried into evidence
+  #       VERBATIM; evidence appends through the Phase-2 sidecar seam (trace
+  #       ids from the injected factory, watermarks, claimed identity,
+  #       redaction chokepoint); one additive validated run record per run.
+  #       (F-1; DEC-5, DEC-9, DEC-13, DEC-14; AC-F1-1, AC-F1-2; TC-RETRO-015,
+  #       016, 017, 018; NFR-4, NFR-5)
+  # - 3.2 The five pipeline-truth checks as named, individually disableable
+  #       functions (DEC-6): C-01 skipped ordinals surfaced as findings, never
+  #       dropped; C-02 broken consumed audit verdict -> finding naming the
+  #       AUDIT domain, blocks clean exit as retro.evidence.tamper-flagged
+  #       (exit 1); C-03 every evidenceRefs entry resolves or is flagged
+  #       (dangling never trusted); C-04a/b expected-activity-absent (completed
+  #       change with zero audit invocations in window; closed change with no
+  #       closeout outcome record) is a finding; C-05 a collection run that
+  #       EXECUTED and produced zero collector records -> retro.truth.
+  #       vacuous-run (exit 1), never silent success and never the no-target
+  #       outcome — N-01 executes no run, so the two cannot collide (DEC-14);
+  #       verified-empty is explicit evidence naming the producing check;
+  #       findings are never fabricated; null retro is a success.
+  #       (F-6; DEC-6, DEC-8, DEC-11, DEC-14; AC-F6-1, AC-F5-2;
+  #       TC-RETRO-041..048; NFR-1)
+  # - 3.3 Report fold: verified sidecar read + registry run-record fold of the
+  #       level's most recent collected scope; machine data EXACTLY the four
+  #       keys {level, findings[], followThrough[], evidenceRefs[]} with the
+  #       schema identity as a contract constant outside data; findings fold
+  #       only from recorded evidence and mechanical checks, each evidence-
+  #       linked; followThrough is a read-fold of recorded entries with
+  #       verified/unverified markers only where a delivered surface verified
+  #       the artifact; empty fold is an explicit []; deterministic under
+  #       injected clock/ids/brand.
+  #       (F-5; DEC-9; AC-F5-1, AC-F5-2; TC-RETRO-035, 036, 037, 040; NFR-6)
+  # - 3.4 Shape-crash guards at the fold level (DEC-7/DEC-12): entry-level
+  #       malformation classifies in-band as retro.evidence.malformed-entry
+  #       (exit 1) naming position (never payload bytes), every valid entry
+  #       still processed and rendered byte-identically to the clean run,
+  #       stores unchanged; bounded partial-run facts (entries processed,
+  #       entries preserved, first flagged position) in the error summary;
+  #       error-only machine envelope (never data+error); store-level damage
+  #       reuses the state identities with each row's own delivered
+  #       projection; explicit salvage the only recovery.
+  #       (F-4; AC-F4-1, AC-F4-2; TC-RETRO-030..034 engine halves; NFR-1)
+  # - 3.5 Export ENGINE surface (library only — NO CLI invocation, flag, or
+  #       registry entry ever exists; NG-1 amendment): bounded deterministic
+  #       bundle (selected records with trace ids and watermarks + the full
+  #       chain verdict, RETRO_EXPORT_SCHEMA) written to an explicit injected
+  #       destination; required positive-integer limit <= RETRO_EXPORT_MAX_
+  #       LIMIT; missing destination / missing / 0 / negative / non-integer /
+  #       over-cap limit -> input.value.rejected (exit 1) BEFORE any write; no
+  #       default destination, no unbounded variant; in-band truncation at the
+  #       exact boundary; redaction chokepoint; sidecar and registry unmutated.
+  #       (F-7; AC-F7-1; TC-RETRO-049, 050, 051, 052; NFR-5, NFR-10)
+  # - 3.6 retro.evidence.denied + claimed identity: a write attempted outside
+  #       the collector seam or from a delivery-agent context is refused
+  #       structurally (exit 2, not_landed, sidecar byte-identical) with the
+  #       honest wording (write-path ownership + claimed-identity marking, not
+  #       authentication; no credential consulted); identity recorded verbatim
+  #       with the `claimed` marker when present, absent/blank -> none, never
+  #       inferred, never an authorization input.
+  #       (F-2, F-10; DEC-4; AC-F2-4; TC-RETRO-053, 054; NFR-4)
+  # - 3.7 Memory-audit run-as-evidence (F-9): recording a trigger run through
+  #       the collector seam (trigger identity, window, outcome refs, trace
+  #       ids) as evidence — on-demand only in M1-S8; the procedure stays in
+  #       the memory consolidation skill (no skill body in source).
+  #       (AC-F9-1 evidence half; TC-RETRO-060 evidence half)
+  # - 3.8 Fixtures truth.json / report.json / export.json / identity.json;
+  #       behaviour suites retro-collect, retro-truth-checks, retro-report,
+  #       retro-report-determinism, retro-export, retro-denied; complete the
+  #       retro-malformed engine halves; checks suite
+  #       retro-truth-check-mutants + tests/fixtures/retro/truth-mutants/**
+  #       (five one-check-disabled mutants + all-disabled, each caught).
+  #       TCs verified here: TC-RETRO-015..018, 030..034 (engine halves),
+  #       035..054.
+  # - 3.9 Core root barrel: re-export the engine surface from
+  #       packages/core/src/index.ts so engine consumers (M2-S3 ceremony
+  #       runner) import from @delivery-os/core.
+  #
+  # Verification:
+  #   bun test tests/behaviour/retro-collect.test.ts \
+  #            tests/behaviour/retro-truth-checks.test.ts \
+  #            tests/behaviour/retro-report.test.ts \
+  #            tests/behaviour/retro-report-determinism.test.ts \
+  #            tests/behaviour/retro-export.test.ts \
+  #            tests/behaviour/retro-denied.test.ts \
+  #            tests/behaviour/retro-malformed.test.ts
+  #   bun test tests/checks/retro-truth-check-mutants.test.ts
+  #   bun test tests/structure/retro-contract.test.ts
+  #   pnpm typecheck && git diff --check
+  #
+  # Commit: feat(GH-232): retro collect engine, truth checks, report and export folds
+  # ---------------------------------------------------------------------
+  - id: 3
+    title: Domain engine - collectors, truth checks, report and export folds
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/retro.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/retro-collect.test.ts
+        - tests/behaviour/retro-truth-checks.test.ts
+        - tests/behaviour/retro-report.test.ts
+        - tests/behaviour/retro-report-determinism.test.ts
+        - tests/behaviour/retro-export.test.ts
+        - tests/behaviour/retro-denied.test.ts
+        - tests/behaviour/retro-malformed.test.ts
+        - tests/checks/retro-truth-check-mutants.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/retro/truth-mutants
+    # Same as Phase 2: consumes contracts/retro.ts (Phase 1 producer) per the
+    # prose above; no consumer interaction declared — the interaction target
+    # would sit outside this phase's own scope.
+
+  # ---------------------------------------------------------------------
+  # Phase 4 — CLI surface: retro command family, edge composition, and doctor
+  # state visibility
+  #
+  # Goal: the locked `retro collect|report [--level <name>]` surface composed
+  # only at the CLI edge (composition-only registration, edge-owned rendering
+  # and exit projection), the doctor `state check` seeing the retro registry
+  # store, and the runCli integration halves of the earlier suites. No export
+  # verb, flag, or memory-audit command exists anywhere (asserted).
+  #
+  # Tasks:
+  # - 4.1 Create packages/cli/src/commands/retro.ts — createRetroCommand-
+  #       Definition(runtime) following the db.ts pattern: definition flags
+  #       ["--level"] and positionals {max: 8} so an undeclared flag (e.g.
+  #       --ref) classifies fallback.invocation at the shared parser (L-12)
+  #       while the handler owns subcommand + value grammar: missing/unknown
+  #       subcommand -> input.value.rejected (L-14); --level value validated
+  #       against the declared set BEFORE any I/O — omitted defaults to
+  #       `change`, unknown or case-mismatched name -> input.value.rejected
+  #       (L-09), declared-but-unimplemented -> input.value.rejected with the
+  #       owning-story hint (L-04..L-08); missing value / extra positional ->
+  #       input.value.rejected (L-10/L-11); --json accepted globally, no other
+  #       flags; no stream write, no exit decision; humanText renders the level
+  #       report and humanFailureText renders the preserved partial output
+  #       BEFORE the diagnostic (DEC-12).
+  #       (F-1, F-5, F-8; AC-F1-3, AC-F5-1; TC-RETRO-058, 059; NFR-9)
+  # - 4.2 Edge composition (packages/cli/src/edge.ts): createRetroCommand-
+  #       Runtime wiring the injected seams — sidecar consumer + registry
+  #       consumer (Phase 2), readAuditLedger + record-family readers +
+  #       pm-notes reader, claimed identity (M1-S22 convention), clock, trace-
+  #       id factory, brand; the retro composition is optional: absent
+  #       composition leaves `retro` unregistered exactly like the established
+  #       optional commands; export and memory-audit surfaces are NOT composed
+  #       into any command, flag, or registry entry.
+  #       (AC-F1-3, AC-F5-1; TC-RETRO-006; NFR-9)
+  # - 4.3 Doctor state-check visibility: additive per-store facts in
+  #       packages/core/src/contracts/doctor.ts (data-only; no new doctor
+  #       reason vocabulary) + the readStateStores composition in edge.ts so
+  #       `state check` names the retro registry store and reports
+  #       ok/observed-empty for verified-empty and the existing store-torn /
+  #       store-unknown / store-unreadable reasons with fix hints otherwise;
+  #       update tests/behaviour/doctor-state.test.ts.
+  #       (F-8; AC-F8-1; TC-RETRO-056)
+  # - 4.4 Update tests/structure/cli-edge-seam.test.ts (TC-RETRO-006): without
+  #       composition `retro report` -> fallback.invocation exit 1; with
+  #       composition registered and running; handler performs no stream write
+  #       and chooses no exit; `retro` joins the exact optional human-text
+  #       renderer declared set (extended, never weakened); always-on
+  #       registration mutant fails.
+  # - 4.5 Surface suites + goldens: retro-levels.test.ts with fixtures
+  #       levels.json (L-01..L-14 matrix incl. zero-I/O refusals and the
+  #       five-hint map); retro-memory-audit.test.ts (trigger registered with
+  #       declared cadence, run appended as evidence, queryable through
+  #       report, no memory-audit command in the surface/index/edge, no
+  #       procedure body in source); retro-output.test.ts + tests/golden/
+  #       retro/** (envelope/exit matrix 0/1/2 per the 4.8 oracle, data XOR
+  #       error, scripted one-line discipline, human partial output before the
+  #       diagnostic; both modes; no case without a golden).
+  #       (TC-RETRO-058, 059, 060, 063)
+  # - 4.6 runCli integration blocks for the suites whose scenario details
+  #       drive the command (files already green from P2/P3; extend in place):
+  #       retro-sidecar-append, retro-collect, retro-report,
+  #       retro-report-determinism, retro-malformed, retro-chain-mutations,
+  #       retro-truth-checks.
+  #
+  # Verification:
+  #   bun test tests/behaviour/retro-levels.test.ts \
+  #            tests/behaviour/retro-memory-audit.test.ts \
+  #            tests/behaviour/retro-output.test.ts \
+  #            tests/behaviour/doctor-state.test.ts
+  #   bun test tests/structure/cli-edge-seam.test.ts
+  #   bun test tests/behaviour/retro-sidecar-append.test.ts \
+  #            tests/behaviour/retro-collect.test.ts \
+  #            tests/behaviour/retro-report.test.ts \
+  #            tests/behaviour/retro-report-determinism.test.ts \
+  #            tests/behaviour/retro-malformed.test.ts \
+  #            tests/behaviour/retro-chain-mutations.test.ts \
+  #            tests/behaviour/retro-truth-checks.test.ts
+  #   bun test tests/golden
+  #   bun run scripts/checks/error-table-sync.ts
+  #   pnpm typecheck && git diff --check
+  #
+  # Commit: feat(GH-232): register retro command family with edge composition and doctor visibility
+  # ---------------------------------------------------------------------
+  - id: 4
+    title: CLI surface - retro command family, edge composition, doctor visibility
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/commands/retro.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/edge.ts
+        - packages/core/src/contracts/doctor.ts
+        - tests/structure/cli-edge-seam.test.ts
+        - tests/behaviour/retro-levels.test.ts
+        - tests/behaviour/retro-memory-audit.test.ts
+        - tests/behaviour/retro-output.test.ts
+        - tests/behaviour/doctor-state.test.ts
+        - tests/behaviour/retro-sidecar-append.test.ts
+        - tests/behaviour/retro-collect.test.ts
+        - tests/behaviour/retro-report.test.ts
+        - tests/behaviour/retro-report-determinism.test.ts
+        - tests/behaviour/retro-malformed.test.ts
+        - tests/behaviour/retro-chain-mutations.test.ts
+        - tests/behaviour/retro-truth-checks.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/retro
+        - tests/golden/retro
+
+  # ---------------------------------------------------------------------
+  # Phase 5 — Invariant checks and repository alignment
+  #
+  # Goal: the two new invariant checks wired into the gate battery, the
+  # imports/inventory/boundary sweep proving the negative space, and the ops
+  # suites (hermeticity, privacy, bounded-work performance). The full tier
+  # sweep is green here.
+  #
+  # Tasks:
+  # - 5.1 Create scripts/checks/retro-render-purity.ts + tests/checks/
+  #       retro-render-purity.test.ts: zero imports of inference adapters,
+  #       provider clients, model identifiers, fetch/HTTP modules, or ambient
+  #       clock reads across the collect/report/export render path (collector
+  #       folds, truth checks, report assembly, export serialization, command
+  #       handler); positive scanned-file count (non-vacuity floor); planted
+  #       inference import / fetch / Date.now mutants each fail naming the
+  #       file. (TC-RETRO-003; AC-F5-1; NFR-9; RSK-6)
+  # - 5.2 Create scripts/checks/retro-key-containment.ts + tests/checks/
+  #       retro-key-containment.test.ts: key-shaped-literal scan over source,
+  #       committed fixtures, and goldens with tests/fixtures/retro/
+  #       key-artifact.json as the SINGLE allowlisted exception; planted key
+  #       occurrences in a record fixture and an output golden fail; positive
+  #       scan scope. (TC-RETRO-011 static half; AC-F2-2; NFR-3)
+  # - 5.3 Create tests/structure/retro-imports.test.ts (TC-RETRO-002 full):
+  #       contracts data-only (no node:*/bun:*/process/fetch/timers), domain
+  #       folds pure, runtime APIs only at the admitted driver-edge/CLI
+  #       locations among this change's files, collector seam receives
+  #       injected readers, no new package/subpath/dependency,
+  #       workspace-entrypoints + exit-code-literals green, content inventory
+  #       complete, forbidden literals absent, brand injected; boundary
+  #       fixture-coverage meta-check unchanged and green.
+  # - 5.4 Ops suites: retro-hermetic.test.ts (TC-RETRO-062 — no spawns/
+  #       network/$HOME/ambient reads/writes outside temp roots; fixture key
+  #       hygiene), retro-privacy.test.ts (TC-RETRO-064 — registered-secret
+  #       canary zero survivors across records/findings/report/bundle/
+  #       diagnostics, single serialization path), retro-performance.test.ts
+  #       (TC-RETRO-061 — bounded-work call-count invariance 10 vs 10,000
+  #       records, declared timeouts referenced at the I/O seams, per-record
+  #       extra-read mutant fails; record the non-CI 10,000-record reference
+  #       numbers in the change execution log per PIN-7 — never a gate).
+  # - 5.5 CI wiring: add scripts/checks/retro-render-purity.ts and
+  #       scripts/checks/retro-key-containment.ts to the scripts/checks job
+  #       list in .github/workflows/ci.yml (test plan 7.2: ts-invariants
+  #       direct invocation); ci-topology / ci-bindingness / boundary-ci-parity
+  #       stay green; touch scripts/checks/forbidden-literals.registry.json
+  #       ONLY if a new operator-facing literal requires registration (none
+  #       expected — command names are not product literals).
+  # - 5.6 Full sweep: bun test tests/structure tests/boundaries tests/checks;
+  #       bun test tests/behaviour; git diff --check; then pnpm check.
+  #
+  # Verification:
+  #   bun run scripts/checks/retro-render-purity.ts
+  #   bun run scripts/checks/retro-key-containment.ts
+  #   bun test tests/checks/retro-render-purity.test.ts \
+  #            tests/checks/retro-key-containment.test.ts
+  #   bun test tests/structure tests/boundaries tests/checks
+  #   bun test tests/behaviour
+  #   git diff --check && pnpm check
+  #
+  # Commit: test(GH-232): retro invariant checks, imports guard, and repository alignment
+  # ---------------------------------------------------------------------
+  - id: 5
+    title: Invariant checks and repository alignment
+    kind: delivery
+    scope:
+      files:
+        - scripts/checks/retro-render-purity.ts
+        - scripts/checks/retro-key-containment.ts
+        - scripts/checks/forbidden-literals.registry.json
+        - tests/checks/retro-render-purity.test.ts
+        - tests/checks/retro-key-containment.test.ts
+        - tests/structure/retro-imports.test.ts
+        - tests/behaviour/retro-hermetic.test.ts
+        - tests/behaviour/retro-privacy.test.ts
+        - tests/behaviour/retro-performance.test.ts
+        - .github/workflows/ci.yml
+
+  # ---------------------------------------------------------------------
+  # Phase 6 — Finalize: aggregate gate, changeset, and spec reconciliation
+  #
+  # Goal: the single aggregate gate green, the lockstep changeset landed, and
+  # the release/spec-reconciliation obligations declared. The doc/spec files
+  # below are @doc-syncer's lifecycle-phase-7 work on this branch (declared as
+  # SCOPE so plan diff classifies them `within`; they are NOT plan tasks — see
+  # the handoff notes at the end of this document). The four documented error
+  # rows already landed in Phase 1 with their machine twins.
+  #
+  # Tasks:
+  # - 6.1 Aggregate gate: pnpm check (lint -> format:check -> typecheck ->
+  #       test -> check:boundaries) — the single completion entry point.
+  # - 6.2 Doc-distribution guard: bash scripts/.tests/test-doc-distribution.sh
+  #       (the new feature-retro-pipeline spec MUST declare ados_distribution;
+  #       the guard blocks merge on drift).
+  # - 6.3 Changeset: .changeset/gh-232-oss-retro-pipeline-minor.md — minor,
+  #       lockstep across all six packages per the repo changesets-group
+  #       precedent (spec version_impact: minor).
+  # - 6.4 Record delivery evidence in the change folder (per-phase execution
+  #       log: commands + results, plus the non-CI NFR-7 reference numbers of
+  #       TC-RETRO-061) and verify this plan artifact: plan validate GH-232 ->
+  #       valid, readyForDevelopment=true.
+  #
+  # Verification:
+  #   pnpm check
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   bun run scripts/checks/changesets-group.ts
+  #
+  # Commit: chore(GH-232): finalize delivery evidence and changeset
+  # (Spec reconciliation commits are authored by @doc-syncer in lifecycle
+  #  phase 7 within this phase's declared scope.)
+  # ---------------------------------------------------------------------
+  - id: 6
+    title: Finalize - aggregate gate, changeset, and spec reconciliation
+    kind: delivery
+    scope:
+      folders:
+        - .changeset
+        - doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline
+      files:
+        - doc/spec/features/feature-retro-pipeline.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/spec/features/feature-audit-ledger.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/overview/glossary.md
+        - doc/00-index.md
+
+  # ---------------------------------------------------------------------
+  # Phase 7 — Code Review Remediation (Iteration 1)
+  #
+  # Appended by @reviewer after the phase-8 local review (FAIL, 2 blocking
+  # findings; see code-review/review-iter-1.yaml, F-1..F-14). Blocking: F-1
+  # (NFR-7 collect budget breach, O(n*m) per-record append) and F-2 (missing
+  # TC-RETRO-032 byte-equality oracle + reduced 24-case matrix + undelivered
+  # §4.2/§4.3 mutants). Non-blocking but required: F-3..F-6, F-7..F-11.
+  # Info findings F-12..F-14 need no code change this change.
+  #
+  # Tasks:
+  # - 7.1 (F-1, blocking) Batched sidecar append under one fence: extend the
+  #       sidecar consumer (packages/core/src/state/retro-sidecar.ts) with an
+  #       additive batched append member — ONE fence acquire covering the
+  #       verified pre-append read, all link computations, and ONE appendText
+  #       of all lines (DEC-13's run-level fence intent) — and switch
+  #       collectRetro's appendAll (domain/retro.ts) to it, keeping per-record
+  #       append for single-record callers. Record the NFR-7 wall-clock
+  #       reference numbers (collect/report/export over a 10,000-record
+  #       sidecar) in pm-notes per PIN-7, and add a bounded-work regression
+  #       test asserting ONE full read per batched collection run (10-record
+  #       vs 10,000-record sidecar invariance now includes collect).
+  # - 7.2 (F-1, blocking) Restore the per-command NFR-7 budgets in
+  #       doc/spec/features/feature-retro-pipeline.md (performance row) —
+  #       collect/report/export wall-clock budgets at the 10,000-record
+  #       ceiling — replacing the timeout-constant restatement; keep the
+  #       timeout constants as declared seam data.
+  # - 7.3 (F-2, blocking) Deliver TC-RETRO-032 in tests/behaviour/
+  #       retro-malformed.test.ts: run report on a clean fixture and the
+  #       equivalent one-malformed-entry fixture, strip the flag/diagnostic,
+  #       assert preserved valid-entry output byte-identical to the clean
+  #       run; add the drops-last-valid-entry and data+error mutants.
+  # - 7.4 (F-2, blocking) Complete the §4.5 24-case entry-level matrix (four
+  #       malformation classes x first/middle/last position x both stores)
+  #       and the §4.3 per-TC mutants: TC-030 crash-or-drop mutant, TC-031
+  #       ignore-malformed mutant, TC-033 repaired-store control per store-
+  #       level case, TC-049 mutate-on-export + registry-entry mutants,
+  #       TC-050 default-destination mutant, TC-054 identity-verification
+  #       mutant, TC-058 empty-hint mutant — or record an explicit reviewed
+  #       reduction in the test plan if a mutant is technically infeasible.
+  # - 7.5 (F-3) recordMemoryAuditRun returns RetroResult (no throw across the
+  #       engine seam); update retro-memory-audit.test.ts.
+  # - 7.6 (F-4) Validate the audit failure code against the state failure
+  #       vocabulary (or narrow AuditReadFailure.code in the audit contract)
+  #       so domain/retro.ts carries no unvalidated `as StateFailureCode`.
+  # - 7.7 (F-5) Registry store boundary: either compose a distinct store
+  #       instance for the retro registry at the CLI edge and use
+  #       RETRO_REGISTRY_FENCE_NAMESPACE for registry appends, or record the
+  #       single-store decision as a reviewed deviation, remove/use the dead
+  #       constant, and fix the doctor record-count double counting in
+  #       edge.ts readStateStores.
+  # - 7.8 (F-6) Replace the tautological TC-RETRO-029 meta-test with a
+  #       fixture-derived completeness check (each declared mutation class
+  #       must have a matching suite block/mutation helper).
+  # - 7.9 (F-7) Widen retro-key-containment scanning to all files under the
+  #       declared roots (or document the retro-path filter) and add a
+  #       planted mutant in a non-retro-named file.
+  # - 7.10 (F-8) Fix the two DoR nits: test-plan "revision 1" labels (3
+  #       places) -> revision 2; spec AC-F9-1 Linked column += DM-9.
+  # - 7.11 (F-9, F-10) Record the ados_distribution marker choice and the
+  #       doc-sync out-of-scope files as reviewed deviations in pm-notes.
+  # - 7.12 (F-11) Make C-03 live on the production fold: reportRetro
+  #       validates folded finding evidenceRefs against the known trace-id
+  #       set and flags dangling refs.
+  #
+  # Verification:
+  #   bun test tests/behaviour/retro-sidecar-append.test.ts \
+  #            tests/behaviour/retro-malformed.test.ts \
+  #            tests/behaviour/retro-chain-mutations.test.ts \
+  #            tests/behaviour/retro-performance.test.ts \
+  #            tests/behaviour/retro-memory-audit.test.ts
+  #   bun run scripts/checks/retro-key-containment.ts
+  #   bun run tmp/gh232-review/collect-probe.ts  (or equivalent 10k probe:
+  #   collect at the 10,000-record ceiling must land well inside 30 s)
+  #   pnpm check
+  #
+  # Commit: fix(GH-232): remediate review iteration 1 (batched appends, byte oracle, seam contracts)
+  # ---------------------------------------------------------------------
+  - id: 7
+    title: Code Review Remediation (Iteration 1)
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/state/retro-sidecar.ts
+        - packages/core/src/domain/retro.ts
+        - packages/cli/src/edge.ts
+        - scripts/checks/retro-key-containment.ts
+        - doc/spec/features/feature-retro-pipeline.md
+        - tests/behaviour/retro-sidecar-append.test.ts
+        - tests/behaviour/retro-malformed.test.ts
+        - tests/behaviour/retro-chain-mutations.test.ts
+        - tests/behaviour/retro-performance.test.ts
+        - tests/behaviour/retro-memory-audit.test.ts
+        - doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/chg-GH-232-spec.md
+        - doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/chg-GH-232-test-plan.md
+      folders:
+        - tests/fixtures/retro
+
+# =======================================================================
+# TRACEABILITY MATRIX — phase -> ACs -> TCs (all 16 ACs, all 64 TCs;
+# split TCs marked * are completed across their marked phases)
+#
+# | Phase | ACs delivered/verified | TC ids verified |
+# |-------|------------------------|-----------------|
+# | 1 | AC-F1-3 (vocabulary half), AC-F5-1 (shape-constant half), AC-F8-1 (declaration half); NFR-8 | TC-001, TC-004*, TC-005, TC-007*, TC-057* |
+# | 2 | AC-F2-1, AC-F2-2 (lifecycle half), AC-F2-3 (binding AC 2 matrix), AC-F3-1, AC-F4-1 (boundary halves), AC-F4-2 (store-level half), AC-F8-1 (boundary half), AC-F9-1 (registry half); NFR-1..NFR-4 | TC-007*, TC-008, TC-009, TC-010, TC-011*, TC-012, TC-013, TC-014, TC-019, TC-020..TC-029, TC-030*..TC-034*, TC-055, TC-057* |
+# | 3 | AC-F1-1, AC-F1-2, AC-F2-4, AC-F4-1/AC-F4-2 (engine halves incl. binding AC 1 full matrix), AC-F5-1, AC-F5-2, AC-F6-1, AC-F7-1, AC-F9-1 (evidence half); NFR-1, NFR-5, NFR-6, NFR-10 | TC-015..TC-018, TC-030*..TC-034*, TC-035..TC-054 |
+# | 4 | AC-F1-3 (CLI half), AC-F5-1 (envelope/golden half), AC-F8-1 (state check), AC-F9-1 (queryable, no-command); NFR-9 | TC-006, TC-056, TC-058, TC-059, TC-060, TC-063 + runCli halves of TC-008/009/015..018/021/030..034/035..040/042 |
+# | 5 | NFR-3 (containment half), NFR-6, NFR-7, NFR-9, NFR-10 + all-AC negative-space guards | TC-002, TC-003, TC-011*, TC-061, TC-062, TC-064 |
+# | 6 | Release gate — no TC ids (gate evidence: pnpm check, doc-distribution, changeset, plan validate) | — |
+#
+# AC completeness check (16/16): AC-F1-1 (P3), AC-F1-2 (P3), AC-F1-3 (P1,P4),
+# AC-F2-1 (P1,P2), AC-F2-2 (P2,P5), AC-F2-3 (P2 — binding AC 2, 6/6 mutation
+# classes + meta-check), AC-F2-4 (P3), AC-F3-1 (P2), AC-F4-1 (P2,P3 — binding
+# AC 1, 24/24 entry-level), AC-F4-2 (P2,P3 — 5/5 store-level, both exits),
+# AC-F5-1 (P1,P3,P4,P5), AC-F5-2 (P3), AC-F6-1 (P3), AC-F7-1 (P3), AC-F8-1
+# (P1,P2,P4), AC-F9-1 (P2,P3,P4).
+# TC completeness check (64/64): TC-001..TC-064 each appear above; split TCs
+# (004, 007, 011, 030..034, 057) are completed across their marked phases.
+# Both binding ticket ACs are demonstrated by dedicated matrices, not smoke
+# cases: binding AC 1 by TC-030..034 (+ the byte-equality oracle), binding
+# AC 2 by TC-021..029 (+ the unkeyed-verifier mutant and completeness
+# meta-check).
+# =======================================================================
+
+# =======================================================================
+# PLAN-END NOTES (not tasks)
+#
+# Doc-sync handoff (lifecycle phase 7, @doc-syncer — declared as Phase 6
+# scope, never plan tasks):
+#   - doc/spec/features/feature-retro-pipeline.md — NEW first-spec-only
+#     feature spec for the retro pipeline; MUST declare ados_distribution
+#     (redistributable) in its front matter (doc-distribution guard blocks
+#     merge on drift).
+#   - doc/spec/features/feature-state-layer.md — retro registry store boundary
+#     (kinds, verdicts, `state check` visibility) and the sidecar artifact
+#     family + chaining-key rows in the store-layout table.
+#   - doc/spec/features/feature-audit-ledger.md — the named retro consumer of
+#     the bounded read surface now exists (first consumer).
+#   - doc/spec/features/feature-result-contract.md — narrative reconciliation
+#     for the `retro` domain kind (the four rows themselves landed in Phase 1
+#     as the binding sync companion).
+#   - doc/overview/glossary.md + doc/00-index.md — the spec's §23 glossary
+#     terms (evidence sidecar, trace id, collection window, collector
+#     identity, chain break, keyed-chain construction, shape-crash guard,
+#     entry-level malformation, store-level damage, pipeline-truth check,
+#     vacuous green, verified-empty, null retro, level registry, addendum,
+#     follow-through read-fold, evidence export) and the feature-spec index
+#     entry.
+#
+# Open questions (none blocking — reviewable pins surfaced for PM/DoR):
+#   - PIN-9 memory-audit cadence "weekly": consistent with the documented
+#     "periodic" audit; a plan-time value the reviewer may adjust — it is
+#     registry data, not surface, so adjusting it later is a data change.
+#   - PIN-5 no-eligible-target semantics: RESOLVED — spec v1.2 DEC-14 /
+#     AC-F6-1 canonically adopted this plan's semantics (explicit exit-0
+#     `no-target` success whose `data` carries the collection summary naming
+#     the empty selection and its reason; no collector invocations, no sidecar
+#     appends, no registry run record; `retro.truth.vacuous-run` scoped to a
+#     collection run that executed and produced zero collector records), and
+#     test plan v1.2 mirrors it (§4.7 N-01 beside C-05, §4.8 exit-0 no-target
+#     row, TC-RETRO-015 step 4, TC-RETRO-045 distinctness step). The remaining
+#     delivery-bound detail is the RETRO_TARGET_ORDER constant spelling
+#     (OQ-T6 / A-T3 determinism pin).
+#   - PIN-8 RETRO_EXPORT_MAX_LIMIT = 1000 and the finding-kind vocabulary
+#     (PIN-10): plan-time constants; tests read the declared constants.
+#   - Tier/lease vocabulary: lease names and weight classes omitted (the
+#     scheduler owns the vocabulary; nothing pinned by spec or test plan).
+#   - Spec/test-plan consistency: verified against spec v1.2 + test plan v1.2
+#     — the iteration-1 gaps (GAP-T3/T4/T5) are closed by spec v1.1; the DoR
+#     readiness-iter-1 forks are closed by v1.2 (DEC-14 no-target oracle;
+#     DM-9 three-kind registry with A-T5 corrected); GAP-T1 is resolved by
+#     this plan's existence (test plan v1.2 links it); no TODO assertion
+#     remains; the only open items are delivery-bound (OQ-T6/T7/T8, GAP-T2,
+#     GAP-T8) and pinned above (PIN-1..PIN-10).
+#   - Scope deviation policy: any file touched outside a phase's declared
+#     scope is recorded in the execution log and pm-notes as reviewed
+#     SCOPE_DEVIATION (the GH-223 rev-3 precedent), never silently widened.
+# =======================================================================

@@ -47,6 +47,10 @@
       "types": "./dist/host/index.d.ts",
       "default": "./dist/host/index.js"
     },
+    "./harness": {
+      "types": "./dist/harness/index.d.ts",
+      "default": "./dist/harness/index.js"
+    },
     "./session": {
       "types": "./dist/session/index.d.ts",
       "default": "./dist/session/index.js"
@@ -62,6 +66,10 @@
     "./provider-quota": {
       "types": "./dist/provider-quota/index.d.ts",
       "default": "./dist/provider-quota/index.js"
+    },
+    "./inference": {
+      "types": "./dist/inference/index.d.ts",
+      "default": "./dist/inference/index.js"
     }
   },
   "imports": {
@@ -74,7 +82,8 @@
     "#io/*": "./src/io/*.ts",
     "#registry": "./src/registry/index.ts",
     "#credentials/*": "./src/credentials/*.ts",
-    "#provider-quota/*": "./src/provider-quota/*.ts"
+    "#provider-quota/*": "./src/provider-quota/*.ts",
+    "#inference/*": "./src/inference/*.ts"
   },
   "workspaceImports": {
     "@delivery-os/core": [

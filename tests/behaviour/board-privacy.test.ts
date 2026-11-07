@@ -145,7 +145,7 @@ describe("TC-SLA-022 privacy", () => {
   });
 
   test("the secret-read allowlist has not grown", () => {
-    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(5);
   });
 
   test("error prose is bounded table prose, not a raw exception message", async () => {

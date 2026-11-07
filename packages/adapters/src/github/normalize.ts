@@ -289,6 +289,11 @@ export const normalizeGithubIssue = (
       : undefined;
 
   const updatedAt = stringField(payload, "updated_at");
+  const milestoneContainer = payload.milestone;
+  const milestone =
+    isRecord(milestoneContainer) && stringField(milestoneContainer, "title") !== undefined
+      ? stringField(milestoneContainer, "title")
+      : undefined;
 
   return {
     ok: true,
@@ -298,6 +303,7 @@ export const normalizeGithubIssue = (
       status: { nativeStatus, deliveryState },
       labels,
       ...(assignee !== undefined ? { assignee } : {}),
+      ...(milestone !== undefined ? { milestone } : {}),
       relations: relationsFrom(payload, context.systemName),
       ...(updatedAt !== undefined ? { updatedAt } : {}),
     },

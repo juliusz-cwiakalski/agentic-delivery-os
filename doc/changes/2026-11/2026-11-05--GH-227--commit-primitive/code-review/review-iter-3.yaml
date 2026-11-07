@@ -1,0 +1,213 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-227
+branch: feat/GH-227/commit-primitive
+status: PASS
+summary: >-
+  Focused re-review after remediation phase 10 (commits 70f1cd52, 190bd342,
+  607166e7; base af6f3921): all three iteration-2 findings are verified closed
+  and no merge-blocking regression was introduced. F-14 — the atomic completion
+  record now persists the landed SHA at append time with correct ordering
+  (commit-act.ts: the commit object is created at ~line 316 and
+  appendTransition({commitSha}) at 326; an append failure resets to
+  baselineHead, so both-or-neither atomicity is unchanged); readEvidence
+  (edge.ts:385-437) treats the record-bound SHA plus git commitExists as the
+  primary commit-presence evidence, demotes the non-gating telemetry event to
+  corroboration, and classifies an unreadable telemetry read with no
+  record-bound SHA as a platform fault (stateFailure state.store.torn, exit 2)
+  that also propagates through the commit --phase surface via
+  runPhaseCompleteForCommit; the registry field is additive optional with
+  boundary declaration, read validation (non-empty string, atomic-only
+  coupling at state/registry.ts:226-231), and a pre-write coupling guard
+  (state/registry.ts:413-418); the projection fold never reads commitSha and
+  payload conditional spreads keep legacy record bytes unchanged. TC-CONVERGE-010
+  proves all three controls through the real harness (emission-fault landing +
+  pending in-scope work on re-run is a row-2 no-op with zero new
+  commits/records/telemetry and the record carrying commitSha at append time;
+  a torn telemetry record cannot degrade a record-bound SHA; a legacy sha-less
+  atomic record plus torn telemetry exits 2 with nothing landed), the
+  commit-without-record reconciliation append persists the known SHA
+  (phase.ts:483), and the iter-1 F-1 scenarios (TC-CONVERGE-009a/b/c) re-ran
+  green. F-15 — TC-ATOMIC-014 asserts the envelope-only
+  interrupted-atomic-no-pending-work basis with zero new
+  commits/records/telemetry and zero transport calls; TC-ATOMIC-015 exercises
+  the delivery_planning -> planning-kind mapping through a production-shaped
+  planning plan (declared untracked file stages, record carries commitSha);
+  TC-ATOMIC-016 asserts the plan-present degradedScope plan-absent disclosure
+  on the commit surface; TR-9's row, the DM-3 contract type, and the phase
+  pack page now pin the fifth basis string. F-16 — resolved as the pinned
+  contract (commit.ts:124-125 comment; tier.phases refreshed to 1-10). Docs
+  tell one story across spec v1.3, feature-commit-primitive.md,
+  feature-state-layer.md, the glossary, and both m1 pack pages
+  (primary-evidence / corroboration / platform-fault wording plus the five
+  basis strings). Gates re-run by this review: targeted phase-atomic +
+  commit-convergence 33 pass, commit-command + golden + phase-idempotency 24
+  pass, structure + boundaries 605 pass, pnpm typecheck green, and the full
+  aggregate pnpm check green twice (3222 pass / 4 skip / 0 fail across 305
+  files; depcruise 187 modules clean; ambient-globals, workspace-entrypoints,
+  secret-read-boundary, exports-parity OK). Four new findings, all
+  informational (accepted residual, validation-depth and error-code nits, one
+  assertion gap, one doc enumeration nit) — none block merge; no remediation
+  phase appended.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-17
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/edge.ts:416
+    message: >-
+      Residual (accepted): a sha-less atomic completion record whose telemetry
+      emission failed while the telemetry store itself reads fine still
+      classifies commit-absent (the guard at edge.ts:416 fires only when the
+      telemetry READ fails), so a re-run with pending in-scope work would land
+      a duplicate commit. Under the shipped code this is unreachable — every
+      atomic append passes the SHA (normal path and reconciliation), so a
+      sha-less atomic record exists only as pre-change or synthetic state, and
+      the primitive ships in this very change, so no pre-change production
+      records can exist. Strictly narrower than F-14's door; recorded so the
+      residual is a documented decision rather than an unknown.
+    suggestion: >-
+      Optionally note the residual in feature-commit-primitive.md's convergence
+      section (sha-less atomic records are not produced by this version) or
+      leave as-is; no code change required.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-18
+    severity: info
+    confidence: high
+    category: code-quality
+    location: packages/core/src/state/registry.ts:226
+    message: >-
+      Validation depth and error-code nits on the new field: commitSha is
+      validated only as a non-empty string (state/registry.ts:226-231) with no
+      hex/length format check, unlike the git seam's SAFE_SHA guard
+      (adapters/git/commit.ts:48,275) — commitExists safely rejects malformed
+      values, so there is no injection or crash surface, only a consistency
+      gap for hand-crafted ledger data; and the pre-write coupling guard
+      (state/registry.ts:413-418) reports state.store.unknown, whose
+      documented meaning is an undeclared record kind or payload schema,
+      slightly stretched for a request coupling violation (unreachable in
+      practice; defense in depth).
+    suggestion: >-
+      If touched again, validate commitSha with the same SAFE_SHA shape as the
+      git seam and consider a more precise failure classification for the
+      write-side guard; no action required for merge.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-19
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/behaviour/commit-convergence.test.ts:79
+    message: >-
+      TC-CONVERGE-002 (commit-without-record reconciliation) asserts the
+      reconciled record carries commitIntent atomic but not
+      commitSha === <orphan sha>, so the new every-atomic-record-carries-its-SHA
+      invariant is unverified on the reconciliation path (it is asserted for
+      the normal path by TC-CONVERGE-010 and TC-ATOMIC-015). The code does
+      persist it (phase.ts:483); a third run would still converge via the
+      telemetry event if it did not, so the gap masks no user-visible failure.
+    suggestion: >-
+      Add one line to TC-CONVERGE-002:
+      expect(transitionPayloads(harness)[0]).toMatchObject({ commitSha: sha });
+      opportunistic, not blocking.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-20
+    severity: info
+    confidence: medium
+    category: documentation
+    location: doc/planning/oss-tooling/milestones/m1/commands/commit.md:91
+    message: >-
+      The pack page's EXIT STATUS parenthetical for exit 2 enumerates only
+      safety-scan-unavailable and atomic abort; the remediation adds a third
+      trigger surfaced through this command family (unreadable convergence
+      evidence -> state.store.torn). The generic "platform fault" wording and
+      the authoritative error-table row cover it, so this is an enumeration
+      nit, not a contradiction.
+    suggestion: >-
+      Optionally extend the parenthetical to "..., unreadable convergence
+      evidence (state-domain platform fault)"; no action required for merge.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+adjudications:
+  iter2_remediation_claims:
+    verdict: CONFIRMED
+    note: >-
+      Per-finding verification against the diff and re-run suites: F-14 FIXED
+      (sha-on-record with correct commit-before-append ordering and
+      both-or-neither abort intact; primary-evidence/corroboration/platform-fault
+      classification in readEvidence; additive registry field with boundary
+      declaration and read/write coupling validation; TC-CONVERGE-010's three
+      controls — emission fault, torn telemetry with record-bound SHA, legacy
+      sha-less record — all assert the right outcomes through the real harness;
+      commit-without-record reconciliation persists the SHA; fold byte-stability
+      preserved and the iter-1 F-1 scenarios still pass). F-15 FIXED (all three
+      corpus cases exist and assert the right outcomes: TC-ATOMIC-014 envelope
+      + zero side effects, TC-ATOMIC-015 planning-kind staging with sha-on-
+      record, TC-ATOMIC-016 plan-present degradedScope on the DM-2 envelope;
+      TR-9 row and DM-3 vocabulary pin the fifth basis string). F-16 FIXED as
+      the pinned-contract alternative (commit.ts:124-125; tier.phases aligned
+      1-10). No claim was found unresolved.
+  remediation_scope_drift:
+    verdict: ACCEPTABLE
+    note: >-
+      70f1cd52 touches 17 files vs phase 10's declared 15. The
+      outside-declared files are the same legitimate classes adjudicated in
+      iterations 1-2: packages/core/src/state/registry.ts is the required
+      write path for the new field (phase 10 declared only the contracts
+      twin); the docs set (glossary, feature-pm-notes, feature-state-layer,
+      both m1 pack pages) is the phase's own re-sync obligation executed as
+      one commit; the pm-notes edit is evidence. Declared
+      tests/behaviour/commit-command.test.ts is untouched because TC-ATOMIC-016
+      landed in phase-atomic.test.ts beside its fixture plan.
+  aggregate_gates:
+    verdict: CONFIRMED
+    note: >-
+      Re-run by this review on HEAD 607166e7: targeted phase-atomic +
+      commit-convergence 33 pass (includes TC-CONVERGE-009a/b/c and
+      TC-CONVERGE-010), commit-command + commit-envelope golden +
+      phase-idempotency 24 pass, structure + boundaries 605 pass (new field
+      and commitExists port accepted by the invariants), pnpm typecheck green,
+      and the full TMPDIR=$PWD/tmp/tmpdir pnpm check completed green twice
+      (before and after a session restart): 3222 pass / 4 skip / 0 fail across
+      305 files, depcruise 187 modules clean, ambient-globals /
+      workspace-entrypoints / secret-read-boundary / exports-parity all OK.
+      Worktree clean at review close.
+  docs_reconciliation:
+    verdict: CONFIRMED
+    note: >-
+      Spec v1.3 records the DEC-7/F-7/record-contract refinement (revision row
+      1.3); 607166e7 aligns the five commit-surface docs with the code: the
+      glossary convergence and phase.transition entries, the
+      feature-commit-primitive convergence paragraph and four-state table
+      (record-bound SHA primary, telemetry corroboration, platform fault),
+      feature-state-layer's consumer sentence, and both m1 pack pages now
+      carry the same primary-evidence wording; the five commitSkipped basis
+      strings are enumerated consistently in the DM-3 contract type
+      (contracts/commit.ts:404), feature-pm-notes line 77, and the phase pack
+      page; the m1 commit page documents sha-on-record with telemetry as
+      corroboration. Only the F-20 enumeration nit remains.
+reviewed_at: "2026-11-06T09:40:00Z"
+next_step: PROCEED

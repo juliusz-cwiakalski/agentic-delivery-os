@@ -8,19 +8,36 @@
 import {
   type BrandIdentity,
   type DeliveryRequest,
+  OWNER_GATE_SLA_POLICY,
+  type OwnerGateFact,
+  type OwnerGateSlaState,
+  type OwnerGateUnknownAgeReason,
   type PipelineRun,
+  STATUS_FINDING_REGISTRY,
+  STATUS_FINDING_SEVERITIES,
+  STATUS_HUMAN_CLAMP_MARKER,
+  STATUS_HYGIENE_ASSERTIONS,
+  STATUS_HYGIENE_LABEL_CONVENTIONS,
+  STATUS_LANE_ATTENTION_STATES,
   STATUS_MAX_DETAIL_CHARS,
   STATUS_MAX_EVIDENCE_SOURCES,
+  STATUS_MAX_FINDING_MEMBERS,
+  STATUS_MAX_FINDINGS_PER_SECTION,
+  STATUS_MAX_HUMAN_BYTES,
+  STATUS_MAX_HUMAN_LINES,
   STATUS_MAX_ITEMS_PER_SECTION,
   STATUS_MAX_OPEN_PULL_REQUESTS,
   STATUS_MAX_PARKED_CHANGES,
   STATUS_MAX_PIPELINE_RUNS,
   STATUS_MAX_PROVIDER_ENTRIES,
   STATUS_MAX_PROVIDER_PARKS,
+  STATUS_MAX_READY_ITEMS,
   STATUS_MAX_REASONS,
   STATUS_MAX_TITLE_CHARS,
   STATUS_MAX_TRACKER_FAMILY_ITEMS,
   STATUS_OWNER_ATTENTION_LABELS,
+  STATUS_PLACEHOLDER_SECTION_IDS,
+  STATUS_PRIMARY_BRANCH,
   STATUS_SCHEMA_VERSION,
   STATUS_SECTION_TITLES,
   STATUS_SOURCE_ITEM_LIMIT,
@@ -37,19 +54,25 @@ import {
   type StatusEvidenceReason,
   type StatusEvidenceSource,
   type StatusFacts,
+  type StatusFinding,
+  type StatusFindingSeverity,
+  type StatusHygieneAssertion,
   type StatusHygieneFinding,
   type StatusLocalContextRead,
   type StatusParkedWorkEntry,
   type StatusParkedWorkItem,
   type StatusPipelineRunRead,
+  type StatusPlaceholderSectionId,
   type StatusProviderConfigRead,
   type StatusProviderEntry,
   type StatusProviderPark,
   type StatusPullRequestItem,
   type StatusReadFailure,
+  type StatusReadyItem,
   type StatusRepositoryBinding,
   type StatusSection,
   type StatusSectionState,
+  type StatusTrackerAvailability,
   type StatusTrackerFamily,
   type StatusTrackerFamilyId,
   type StatusTrackerItem,
@@ -58,18 +81,38 @@ import {
 } from "#contracts";
 import { rankBlockerQuestions } from "./blockers.js";
 import { classifyPipelineRuns } from "./ci-result.js";
+import { evaluateOwnerGateSla } from "./owner-gate-sla.js";
 
 const DAY_MS = 86_400_000;
 
 const clampTitle = (title: string): string =>
   title.length > STATUS_MAX_TITLE_CHARS ? title.slice(0, STATUS_MAX_TITLE_CHARS) : title;
 
-const clampDetail = (detail: string | undefined): string | undefined =>
-  detail === undefined
-    ? undefined
-    : detail.length > STATUS_MAX_DETAIL_CHARS
-      ? detail.slice(0, STATUS_MAX_DETAIL_CHARS)
-      : detail;
+const utf8Bytes = (value: string): number => {
+  let bytes = 0;
+  for (const character of value) {
+    const point = character.codePointAt(0) ?? 0;
+    if (point <= 0x7f) bytes += 1;
+    else if (point <= 0x7ff) bytes += 2;
+    else if (point <= 0xffff) bytes += 3;
+    else bytes += 4;
+  }
+  return bytes;
+};
+
+const clampDetail = (detail: string | undefined): string | undefined => {
+  if (detail === undefined) return undefined;
+  if (utf8Bytes(detail) <= STATUS_MAX_DETAIL_CHARS) return detail;
+  let bytes = 0;
+  let result = "";
+  for (const point of detail) {
+    const size = utf8Bytes(point);
+    if (bytes + size > STATUS_MAX_DETAIL_CHARS) break;
+    bytes += size;
+    result += point;
+  }
+  return result;
+};
 
 /** Ascending Unicode code-point comparison on normalized strings. */
 const compareText = (left: string, right: string): number => {
@@ -133,6 +176,121 @@ const countOf = (
 ): StatusCounts => ({ observed, unknown, total, omitted });
 
 const zeroCounts = (): StatusCounts => countOf(0, 0, 0, 0);
+
+/* ------------------------------ findings layer ----------------------------- */
+
+/** One raw observation before grouping: a registry code and an identity member. */
+export type StatusFindingObservation = {
+  readonly code: string;
+  readonly member: string;
+};
+
+/** The injectable registry seam: the shipped registry is the default (D-2). */
+export type StatusFindingRegistryLike = Readonly<
+  Record<string, { readonly severity: StatusFindingSeverity }>
+>;
+
+/** The injectable cap seam used by the defensive cap proof (DEC-15). */
+export type StatusFindingLimits = {
+  readonly findings: number;
+  readonly members: number;
+};
+
+/** The grouped findings plus whether a declared drop occurred (DM-4, D-7). */
+export type StatusFindingsEvaluation = {
+  readonly findings: readonly StatusFinding[];
+  readonly truncated: boolean;
+};
+
+type FindingGroup = {
+  readonly code: string;
+  readonly severity: StatusFindingSeverity;
+  readonly firstIndex: number;
+  count: number;
+  readonly uniqueMembers: string[];
+};
+
+const severityRank = (severity: StatusFindingSeverity): number =>
+  STATUS_FINDING_SEVERITIES.indexOf(severity);
+
+const compareFindings = (left: FindingGroup, right: FindingGroup): number => {
+  const severity = severityRank(left.severity) - severityRank(right.severity);
+  if (severity !== 0) return severity;
+  if (left.count !== right.count) return right.count - left.count;
+  const code = compareText(left.code, right.code);
+  if (code !== 0) return code;
+  return left.firstIndex - right.firstIndex;
+};
+
+/**
+ * Group registry-coded observations into bounded, ranked findings.
+ *
+ * The layer is pure and accepts its registry and caps so the defensive cap can
+ * be exercised at this seam (DEC-15). Members are unique identities in first
+ * observation order (the section's fixed rank order); `count` is the exact
+ * observation total and may exceed `members.length` when identities repeat.
+ */
+export const evaluateStatusFindings = (
+  observations: readonly StatusFindingObservation[],
+  registry: StatusFindingRegistryLike = STATUS_FINDING_REGISTRY,
+  limits: StatusFindingLimits = {
+    findings: STATUS_MAX_FINDINGS_PER_SECTION,
+    members: STATUS_MAX_FINDING_MEMBERS,
+  },
+): StatusFindingsEvaluation => {
+  const groups = new Map<string, FindingGroup>();
+  for (const [index, observation] of observations.entries()) {
+    const definition = registry[observation.code];
+    if (definition === undefined) continue;
+    if (!(STATUS_FINDING_SEVERITIES as readonly string[]).includes(definition.severity)) continue;
+    const existing = groups.get(observation.code);
+    if (existing === undefined) {
+      groups.set(observation.code, {
+        code: observation.code,
+        severity: definition.severity,
+        firstIndex: index,
+        count: 1,
+        uniqueMembers: [observation.member],
+      });
+      continue;
+    }
+    existing.count += 1;
+    if (!existing.uniqueMembers.includes(observation.member)) {
+      existing.uniqueMembers.push(observation.member);
+    }
+  }
+  const all = [...groups.values()];
+  let truncated = all.some((group) => group.uniqueMembers.length > limits.members);
+  all.sort(compareFindings);
+  const retained = all.slice(0, Math.max(0, limits.findings));
+  if (retained.length < all.length) truncated = true;
+  return {
+    findings: retained.map((group) => {
+      const members = group.uniqueMembers.slice(0, Math.max(0, limits.members));
+      return {
+        code: group.code as StatusFinding["code"],
+        severity: group.severity,
+        count: group.count,
+        members,
+        evidenceRef: members[0] ?? "",
+      };
+    }),
+    truncated,
+  };
+};
+
+const withFindings = (
+  section: StatusSection,
+  observations: readonly StatusFindingObservation[],
+): StatusSection => {
+  const evaluation = evaluateStatusFindings(observations);
+  if (evaluation.findings.length === 0 && !evaluation.truncated) return section;
+  return {
+    ...section,
+    ...(evaluation.findings.length === 0 ? {} : { findings: evaluation.findings }),
+    truncated: section.truncated || evaluation.truncated,
+  };
+};
 
 type EvidenceSourceEntry = {
   readonly source: StatusEvidenceSource;
@@ -246,7 +404,83 @@ const familyCounts = (
 
 const capped = <T>(ranked: readonly T[], limit: number): readonly T[] => ranked.slice(0, limit);
 
-const ownerHandBacksFamily = (items: readonly WorkItem[], available: boolean): FamilyResult => {
+const ownerHandBackMatching = (items: readonly WorkItem[]): readonly WorkItem[] =>
+  items.filter(
+    (item) =>
+      isOpen(item) &&
+      item.labels.some((label) =>
+        STATUS_OWNER_ATTENTION_LABELS.some(
+          (attention) => attention.toLowerCase() === label.toLowerCase(),
+        ),
+      ),
+  );
+
+const ownerHandBackGroupOf = (item: WorkItem): number => {
+  const labelCount: number = STATUS_OWNER_ATTENTION_LABELS.length;
+  let group = labelCount;
+  for (const [index, attention] of STATUS_OWNER_ATTENTION_LABELS.entries()) {
+    if (item.labels.some((label) => label.toLowerCase() === attention.toLowerCase())) {
+      group = Math.min(group, index);
+    }
+  }
+  return group;
+};
+
+const rankOwnerHandBacks = (items: readonly WorkItem[]): readonly WorkItem[] =>
+  [...ownerHandBackMatching(items)].sort((left, right) => {
+    const group = ownerHandBackGroupOf(left) - ownerHandBackGroupOf(right);
+    if (group !== 0) return group;
+    const leftAt = parseInstant(left.updatedAt) ?? Number.POSITIVE_INFINITY;
+    const rightAt = parseInstant(right.updatedAt) ?? Number.POSITIVE_INFINITY;
+    if (leftAt !== rightAt) return leftAt < rightAt ? -1 : 1;
+    return compareText(refOf(left), refOf(right));
+  });
+
+type OwnerGateProjection = {
+  readonly age: number | null;
+  readonly ageUnknownReason?: OwnerGateUnknownAgeReason;
+  readonly slaState: OwnerGateSlaState;
+};
+
+/**
+ * Project one hand-back through the delivered M1-S5 evaluator (D-4): the same
+ * policy is imported by reference, the audience is the coordinator, no existing
+ * decision record is injected, and `decisionsToApply` is discarded.
+ */
+const projectOwnerGate = (item: WorkItem, nowMs: number, nowIso: string): OwnerGateProjection => {
+  const fact: OwnerGateFact = {
+    id: refOf(item),
+    kind: "owner-review",
+    ref: refOf(item),
+    ...(item.updatedAt === undefined ? {} : { activityAt: item.updatedAt }),
+  };
+  const evaluation = evaluateOwnerGateSla({
+    audience: "coordinator",
+    nowMs,
+    nowIso,
+    policy: OWNER_GATE_SLA_POLICY,
+    gates: [fact],
+    decisions: [],
+  });
+  const record = evaluation.gates[0];
+  if (record === undefined) {
+    return { age: null, ageUnknownReason: "activity-timestamp-absent", slaState: "escalated" };
+  }
+  return {
+    age: record.age,
+    ...(record.ageUnknownReason === undefined ? {} : { ageUnknownReason: record.ageUnknownReason }),
+    slaState: record.slaState,
+  };
+};
+
+const gateIsEscalated = (projection: OwnerGateProjection): boolean =>
+  projection.slaState === "escalated" || projection.slaState === "default-applied";
+
+const ownerHandBacksFamily = (
+  items: readonly WorkItem[],
+  available: boolean,
+  projections: ReadonlyMap<string, OwnerGateProjection>,
+): FamilyResult => {
   if (!available) {
     return {
       family: {
@@ -259,51 +493,35 @@ const ownerHandBacksFamily = (items: readonly WorkItem[], available: boolean): F
       reasons: ["signal-unavailable"],
     };
   }
-  const matching = items.filter(
-    (item) =>
-      isOpen(item) &&
-      item.labels.some((label) =>
-        STATUS_OWNER_ATTENTION_LABELS.some(
-          (attention) => attention.toLowerCase() === label.toLowerCase(),
-        ),
-      ),
-  );
-  const groupOf = (item: WorkItem): number => {
-    const labelCount: number = STATUS_OWNER_ATTENTION_LABELS.length;
-    let group = labelCount;
-    for (const [index, attention] of STATUS_OWNER_ATTENTION_LABELS.entries()) {
-      if (item.labels.some((label) => label.toLowerCase() === attention.toLowerCase())) {
-        group = Math.min(group, index);
-      }
-    }
-    return group;
-  };
-  const ranked = [...matching].sort((left, right) => {
-    const group = groupOf(left) - groupOf(right);
-    if (group !== 0) return group;
-    const leftAt = parseInstant(left.updatedAt) ?? Number.POSITIVE_INFINITY;
-    const rightAt = parseInstant(right.updatedAt) ?? Number.POSITIVE_INFINITY;
-    if (leftAt !== rightAt) return leftAt < rightAt ? -1 : 1;
-    return compareText(refOf(left), refOf(right));
-  });
-  const mapped = ranked.map(
-    (item): StatusTrackerItem => ({
+  const ranked = rankOwnerHandBacks(items);
+  const mapped = ranked.map((item): StatusTrackerItem => {
+    const projection = projections.get(refOf(item));
+    return {
       workItemRef: refOf(item),
       title: clampTitle(item.title),
       family: "ownerHandBacks",
       itemState: "observed",
       labels: [...item.labels],
-    }),
-  );
+      ...(projection === undefined
+        ? {}
+        : {
+            age: projection.age,
+            ...(projection.ageUnknownReason === undefined
+              ? {}
+              : { ageUnknownReason: projection.ageUnknownReason }),
+            slaState: projection.slaState,
+          }),
+    };
+  });
   const rendered = capped(mapped, STATUS_MAX_TRACKER_FAMILY_ITEMS);
   return {
     family: {
       family: "ownerHandBacks",
       state: "observed",
-      counts: familyCounts(mapped, rendered.length, matching.length),
+      counts: familyCounts(mapped, rendered.length, ranked.length),
       items: rendered,
     },
-    reasons: matching.length === 0 ? ["observed-empty"] : ["observed"],
+    reasons: ranked.length === 0 ? ["observed-empty"] : ["observed"],
   };
 };
 
@@ -374,6 +592,40 @@ const blockedDependenciesFamily = (
   };
 };
 
+type StalledEntry = {
+  readonly item: WorkItem;
+  readonly activity: "stalled" | "unknown";
+  readonly ageDays?: number;
+};
+
+const rankStalledEntries = (items: readonly WorkItem[], nowMs: number): readonly StalledEntry[] => {
+  const entries: StalledEntry[] = [];
+  for (const item of items) {
+    if (!isOpen(item)) continue;
+    if (item.updatedAt === undefined) {
+      entries.push({ item, activity: "unknown" });
+      continue;
+    }
+    const updatedAt = parseInstant(item.updatedAt);
+    if (updatedAt === undefined) {
+      entries.push({ item, activity: "unknown" });
+      continue;
+    }
+    const ageDays = Math.floor((nowMs - updatedAt) / DAY_MS);
+    if (ageDays > STATUS_STALL_THRESHOLD_DAYS) {
+      entries.push({ item, activity: "stalled", ageDays });
+    }
+  }
+  return [...entries].sort((left, right) => {
+    if (left.activity !== right.activity) return left.activity === "stalled" ? -1 : 1;
+    if (left.activity === "stalled" && right.activity === "stalled") {
+      const age = (right.ageDays ?? 0) - (left.ageDays ?? 0);
+      if (age !== 0) return age;
+    }
+    return compareText(refOf(left.item), refOf(right.item));
+  });
+};
+
 const stallsFamily = (
   items: readonly WorkItem[],
   available: boolean,
@@ -391,35 +643,7 @@ const stallsFamily = (
       reasons: ["signal-unavailable"],
     };
   }
-  const entries: {
-    readonly item: WorkItem;
-    readonly activity: "stalled" | "unknown";
-    readonly ageDays?: number;
-  }[] = [];
-  for (const item of items) {
-    if (!isOpen(item)) continue;
-    if (item.updatedAt === undefined) {
-      entries.push({ item, activity: "unknown" });
-      continue;
-    }
-    const updatedAt = parseInstant(item.updatedAt);
-    if (updatedAt === undefined) {
-      entries.push({ item, activity: "unknown" });
-      continue;
-    }
-    const ageDays = Math.floor((nowMs - updatedAt) / DAY_MS);
-    if (ageDays > STATUS_STALL_THRESHOLD_DAYS) {
-      entries.push({ item, activity: "stalled", ageDays });
-    }
-  }
-  const ranked = [...entries].sort((left, right) => {
-    if (left.activity !== right.activity) return left.activity === "stalled" ? -1 : 1;
-    if (left.activity === "stalled" && right.activity === "stalled") {
-      const age = (right.ageDays ?? 0) - (left.ageDays ?? 0);
-      if (age !== 0) return age;
-    }
-    return compareText(refOf(left.item), refOf(right.item));
-  });
+  const ranked = rankStalledEntries(items, nowMs);
   const mapped = ranked.map(
     (entry): StatusTrackerItem => ({
       workItemRef: refOf(entry.item),
@@ -435,14 +659,117 @@ const stallsFamily = (
     family: {
       family: "stalls",
       state: "observed",
-      counts: familyCounts(mapped, rendered.length, entries.length),
+      counts: familyCounts(mapped, rendered.length, ranked.length),
       items: rendered,
     },
-    reasons: entries.length === 0 ? ["observed-empty"] : ["observed"],
+    reasons: ranked.length === 0 ? ["observed-empty"] : ["observed"],
   };
 };
 
-const hygieneFamily = (items: readonly WorkItem[], available: boolean): FamilyResult => {
+const hygieneEntryFindings = (item: WorkItem): readonly StatusHygieneFinding[] => {
+  const findings: StatusHygieneFinding[] = [];
+  if (item.title.trim().length === 0) findings.push("missing-title");
+  if (item.labels.length === 0) findings.push("missing-labels");
+  return findings;
+};
+
+const compareHygieneItems = (left: WorkItem, right: WorkItem): number => {
+  const count = hygieneEntryFindings(right).length - hygieneEntryFindings(left).length;
+  if (count !== 0) return count;
+  return compareText(refOf(left), refOf(right));
+};
+
+const rankHygieneEntries = (
+  items: readonly WorkItem[],
+): readonly { readonly item: WorkItem; readonly findings: readonly StatusHygieneFinding[] }[] =>
+  items
+    .filter(isOpen)
+    .map((item) => ({ item, findings: hygieneEntryFindings(item) }))
+    .filter((entry) => entry.findings.length > 0)
+    .sort((left, right) => compareHygieneItems(left.item, right.item));
+
+const conformsEpic = (item: WorkItem): boolean => {
+  const token = STATUS_HYGIENE_LABEL_CONVENTIONS.epicToken.toLowerCase();
+  const prefix = STATUS_HYGIENE_LABEL_CONVENTIONS.epicPrefix.toLowerCase();
+  return item.labels.some((label) => {
+    const lower = label.toLowerCase();
+    return lower === token || lower.startsWith(prefix);
+  });
+};
+
+const conformsStoryPoints = (item: WorkItem): boolean => {
+  const prefix = STATUS_HYGIENE_LABEL_CONVENTIONS.storyPointsPrefix.toLowerCase();
+  return item.labels.some((label) => {
+    if (!label.toLowerCase().startsWith(prefix)) return false;
+    return /^\d+$/.test(label.slice(prefix.length).trim());
+  });
+};
+
+const conformsInSprint = (item: WorkItem): boolean =>
+  item.milestone !== undefined && item.milestone.trim().length > 0;
+
+const assertionConforms = (assertion: string, item: WorkItem): boolean => {
+  switch (assertion) {
+    case "epic-membership":
+      return conformsEpic(item);
+    case "story-points":
+      return conformsStoryPoints(item);
+    case "in-sprint":
+      return conformsInSprint(item);
+    default:
+      return false;
+  }
+};
+
+const assertionAvailability = (
+  availability: StatusTrackerAvailability,
+  assertion: string,
+): boolean => {
+  const signal =
+    assertion === "epic-membership"
+      ? availability.epicMembership
+      : assertion === "story-points"
+        ? availability.storyPoints
+        : availability.inSprint;
+  return signal === "available";
+};
+
+type HygieneAssertionEvaluation = {
+  readonly assertions: readonly StatusHygieneAssertion[];
+  readonly observations: readonly StatusFindingObservation[];
+};
+
+const evaluateHygieneAssertions = (
+  items: readonly WorkItem[],
+  availability: StatusTrackerAvailability,
+): HygieneAssertionEvaluation => {
+  const open = items.filter(isOpen);
+  const assertions: StatusHygieneAssertion[] = [];
+  const observations: StatusFindingObservation[] = [];
+  for (const assertion of STATUS_HYGIENE_ASSERTIONS) {
+    if (!assertionAvailability(availability, assertion)) {
+      assertions.push({ assertion, violations: 0, unknown: open.length, satisfied: 0 });
+      continue;
+    }
+    const violating: WorkItem[] = [];
+    let satisfied = 0;
+    for (const item of open) {
+      if (assertionConforms(assertion, item)) satisfied += 1;
+      else violating.push(item);
+    }
+    assertions.push({ assertion, violations: violating.length, unknown: 0, satisfied });
+    for (const item of [...violating].sort(compareHygieneItems)) {
+      observations.push({ code: `tracker.hygiene.${assertion}`, member: refOf(item) });
+    }
+  }
+  return { assertions, observations };
+};
+
+const hygieneFamily = (
+  items: readonly WorkItem[],
+  available: boolean,
+  assertions: readonly StatusHygieneAssertion[] | undefined,
+): FamilyResult => {
   if (!available) {
     return {
       family: {
@@ -455,20 +782,7 @@ const hygieneFamily = (items: readonly WorkItem[], available: boolean): FamilyRe
       reasons: ["signal-unavailable"],
     };
   }
-  const entries: { readonly item: WorkItem; readonly findings: readonly StatusHygieneFinding[] }[] =
-    [];
-  for (const item of items) {
-    if (!isOpen(item)) continue;
-    const findings: StatusHygieneFinding[] = [];
-    if (item.title.trim().length === 0) findings.push("missing-title");
-    if (item.labels.length === 0) findings.push("missing-labels");
-    if (findings.length > 0) entries.push({ item, findings });
-  }
-  const ranked = [...entries].sort((left, right) => {
-    const count = right.findings.length - left.findings.length;
-    if (count !== 0) return count;
-    return compareText(refOf(left.item), refOf(right.item));
-  });
+  const ranked = rankHygieneEntries(items);
   const mapped = ranked.map(
     (entry): StatusTrackerItem => ({
       workItemRef: refOf(entry.item),
@@ -483,10 +797,11 @@ const hygieneFamily = (items: readonly WorkItem[], available: boolean): FamilyRe
     family: {
       family: "hygiene",
       state: "observed",
-      counts: familyCounts(mapped, rendered.length, entries.length),
+      counts: familyCounts(mapped, rendered.length, ranked.length),
       items: rendered,
+      ...(assertions === undefined ? {} : { assertions }),
     },
-    reasons: entries.length === 0 ? ["observed-empty"] : ["observed"],
+    reasons: ranked.length === 0 ? ["observed-empty"] : ["observed"],
   };
 };
 
@@ -551,11 +866,23 @@ const trackerSection = (facts: StatusFacts): StatusSection => {
   const read = facts.tracker;
   const items = allItems(read);
   const availability = read.availability;
+  const handBacks = availability.ownerHandBacks === "available" ? rankOwnerHandBacks(items) : [];
+  const gateProjections = new Map<string, OwnerGateProjection>();
+  for (const item of handBacks) {
+    gateProjections.set(refOf(item), projectOwnerGate(item, facts.nowMs, facts.nowIso));
+  }
+  const hygieneAssertions =
+    availability.hygiene === "available"
+      ? evaluateHygieneAssertions(items, availability)
+      : undefined;
+  const stallRanked =
+    availability.stalls === "available" ? rankStalledEntries(items, facts.nowMs) : [];
+  const hygieneRanked = availability.hygiene === "available" ? rankHygieneEntries(items) : [];
   const familyResults = [
-    ownerHandBacksFamily(items, availability.ownerHandBacks === "available"),
+    ownerHandBacksFamily(items, availability.ownerHandBacks === "available", gateProjections),
     blockedDependenciesFamily(items, availability.blockedDependencies === "available"),
     stallsFamily(items, availability.stalls === "available", facts.nowMs),
-    hygieneFamily(items, availability.hygiene === "available"),
+    hygieneFamily(items, availability.hygiene === "available", hygieneAssertions?.assertions),
   ];
   const families = familyResults.map((result) => result.family);
   const counts = aggregateFamilies(families);
@@ -573,7 +900,27 @@ const trackerSection = (facts: StatusFacts): StatusSection => {
   if (counts.unknown > 0) reasons.push("item-signal-absent");
   if (truncated) reasons.push("source-truncated");
   if (counts.total === 0 && reasons.length === 0) reasons.push("observed-empty");
-  return {
+
+  const observations: StatusFindingObservation[] = [];
+  for (const item of handBacks) {
+    const projection = gateProjections.get(refOf(item));
+    if (projection !== undefined && gateIsEscalated(projection)) {
+      observations.push({ code: "tracker.owner-gate-escalated", member: refOf(item) });
+    }
+  }
+  for (const entry of stallRanked) {
+    if (entry.activity === "stalled") {
+      observations.push({ code: "tracker.stalled-ticket", member: refOf(entry.item) });
+    }
+  }
+  for (const entry of hygieneRanked) {
+    for (const finding of entry.findings) {
+      observations.push({ code: `tracker.hygiene.${finding}`, member: refOf(entry.item) });
+    }
+  }
+  if (hygieneAssertions !== undefined) observations.push(...hygieneAssertions.observations);
+
+  const section: StatusSection = {
     ...sectionBase({
       id: "tracker",
       state,
@@ -589,6 +936,7 @@ const trackerSection = (facts: StatusFacts): StatusSection => {
     }),
     families,
   };
+  return withFindings(section, observations);
 };
 
 /* --------------------------------- changes -------------------------------- */
@@ -772,6 +1120,18 @@ const compareRuns = (left: PipelineRun, right: PipelineRun): number => {
   return compareText(left.pipelineName, right.pipelineName);
 };
 
+const ciRedOnMainObservations = (facts: StatusFacts): readonly StatusFindingObservation[] => {
+  if (facts.repository.binding.state !== "observed") return [];
+  const head = facts.repository.head;
+  if (head.sha === undefined || head.branch !== STATUS_PRIMARY_BRANCH) return [];
+  const read = facts.ci;
+  if (!read.ok) return [];
+  return [...read.items]
+    .sort(compareRuns)
+    .filter((run) => run.jobs.some((entry) => entry.jobState === "failed"))
+    .map((run) => ({ code: "ci.red-on-main", member: run.identity.entityId }));
+};
+
 const ciSection = (facts: StatusFacts): StatusSection => {
   const bindingFailure = bindingReason(facts.repository.binding);
   const head = facts.repository.head;
@@ -832,23 +1192,26 @@ const ciSection = (facts: StatusFacts): StatusSection => {
   const result = classifyPipelineRuns(read.items);
   const reasons: StatusEvidenceReason[] = [result === "none" ? "observed-empty" : "observed"];
   if (truncated) reasons.push("source-truncated");
-  return {
-    ...sectionBase({
-      id: "ci",
-      state: "observed",
-      counts: countOf(read.items.length, 0, read.items.length, omitted),
-      truncated,
-      sources: [
-        read.items.length === 0
-          ? { source: "ci", outcome: "observed-empty" }
-          : { source: "ci", outcome: "read" },
-      ],
-      reasons,
-    }),
-    commit,
-    result,
-    runs: rendered,
-  };
+  return withFindings(
+    {
+      ...sectionBase({
+        id: "ci",
+        state: "observed",
+        counts: countOf(read.items.length, 0, read.items.length, omitted),
+        truncated,
+        sources: [
+          read.items.length === 0
+            ? { source: "ci", outcome: "observed-empty" }
+            : { source: "ci", outcome: "read" },
+        ],
+        reasons,
+      }),
+      commit,
+      result,
+      runs: rendered,
+    },
+    ciRedOnMainObservations(facts),
+  );
 };
 
 /* ---------------------------------- lanes --------------------------------- */
@@ -866,6 +1229,7 @@ const lanesSection = (): StatusSection => ({
   expectedStory: "M2-S1",
   note: "no queue or lane engine exists in this release",
   items: [],
+  attentionStates: [...STATUS_LANE_ATTENTION_STATES],
 });
 
 /* -------------------------------- providers ------------------------------- */
@@ -1077,6 +1441,13 @@ const compareParked = (left: StatusParkedWorkEntry, right: StatusParkedWorkEntry
   return compareText(left.reason ?? "", right.reason ?? "");
 };
 
+const parkedIdentity = (entry: StatusParkedWorkEntry): string =>
+  entry.workItemRef ??
+  `parked:${entry.changeFolder ?? "-"}|${entry.branch ?? "-"}|${entry.reason ?? "-"}`;
+
+const parkedHasCondition = (entry: StatusParkedWorkEntry): boolean =>
+  entry.condition !== undefined && entry.condition.trim().length > 0;
+
 const parkedSection = (facts: StatusFacts): StatusSection => {
   const local = facts.localContext;
   if (!local.ok) {
@@ -1112,6 +1483,7 @@ const parkedSection = (facts: StatusFacts): StatusSection => {
     const ageDays =
       parkedAt === undefined ? undefined : Math.floor((facts.nowMs - parkedAt) / DAY_MS);
     const reason = entry.reason === undefined ? undefined : clampDetail(entry.reason);
+    const condition = entry.condition === undefined ? undefined : clampDetail(entry.condition);
     return {
       ...(entry.workItemRef === undefined ? {} : { workItemRef: entry.workItemRef }),
       ...(entry.branch === undefined ? {} : { branch: entry.branch }),
@@ -1119,6 +1491,7 @@ const parkedSection = (facts: StatusFacts): StatusSection => {
       ...(reason === undefined ? {} : { reason }),
       ...(entry.parkedAt === undefined ? {} : { parkedAt: entry.parkedAt }),
       ...(ageDays === undefined ? {} : { ageDays }),
+      ...(condition === undefined ? {} : { condition }),
       itemState: entry.workItemRef === undefined ? "unknown" : "observed",
     };
   });
@@ -1128,26 +1501,130 @@ const parkedSection = (facts: StatusFacts): StatusSection => {
   const reasons: StatusEvidenceReason[] = [entries.length === 0 ? "observed-empty" : "observed"];
   if (unknown > 0) reasons.push("item-signal-absent");
   if (truncated) reasons.push("source-truncated");
+  const observations: StatusFindingObservation[] = [];
+  for (const entry of ranked) {
+    const ageKnown = parseInstant(entry.parkedAt) !== undefined;
+    if (!ageKnown && !parkedHasCondition(entry)) {
+      observations.push({ code: "parked.stale-no-condition", member: parkedIdentity(entry) });
+    }
+  }
+  return withFindings(
+    {
+      ...sectionBase({
+        id: "parked-work",
+        state: "observed",
+        counts: countOf(items.length - unknown, unknown, entries.length, omitted),
+        truncated,
+        sources: [
+          entries.length === 0
+            ? { source: "local-context", outcome: "observed-empty" }
+            : { source: "local-context", outcome: "read" },
+        ],
+        reasons,
+      }),
+      source: {
+        kind: "local-pm-context",
+        path: local.context.path,
+        tracked: false,
+        gitIgnored: true,
+      },
+      items,
+    },
+    observations,
+  );
+};
+
+/* ---------------------------- ready-to-merge ----------------------------- */
+
+const ciResultOf = (facts: StatusFacts): StatusCiResult => {
+  if (facts.repository.binding.state !== "observed") return "unknown";
+  if (facts.repository.head.sha === undefined) return "unknown";
+  const read = facts.ci;
+  return read.ok ? classifyPipelineRuns(read.items) : "unknown";
+};
+
+const compareReadyItems = (left: StatusReadyItem, right: StatusReadyItem): number => {
+  const leftRank = left.class === "merge-ready" ? 0 : 1;
+  const rightRank = right.class === "merge-ready" ? 0 : 1;
+  if (leftRank !== rightRank) return leftRank - rightRank;
+  const ref = compareIdentity(left.ref, right.ref);
+  if (ref !== 0) return ref;
+  const source = compareText(left.sourceRef, right.sourceRef);
+  if (source !== 0) return source;
+  return compareText(left.targetRef, right.targetRef);
+};
+
+const readyToMergeSection = (facts: StatusFacts): StatusSection => {
+  const bindingFailure = bindingReason(facts.repository.binding);
+  if (bindingFailure !== undefined) {
+    return {
+      ...sectionBase({
+        id: "ready-to-merge",
+        state: "unavailable",
+        counts: zeroCounts(),
+        truncated: false,
+        sources: [{ source: "repository-binding", outcome: "not-configured" }],
+        reasons: [bindingFailure],
+      }),
+      items: [],
+    };
+  }
+  const read = facts.changes;
+  if (!read.ok) {
+    const reason = reasonForReadFailure(read);
+    return {
+      ...sectionBase({
+        id: "ready-to-merge",
+        state: "unknown",
+        counts: zeroCounts(),
+        truncated: false,
+        sources: [readFailureSource("changes", read)],
+        reasons: [reason],
+      }),
+      items: [],
+    };
+  }
+  const reviewAvailable = read.availability.reviewState === "available";
+  const ciResult = ciResultOf(facts);
+  const open = read.items.filter(
+    (request) => request.reviewState !== "merged" && request.reviewState !== "closed",
+  );
+  const mapped: StatusReadyItem[] = open.map((request) => ({
+    ref: request.identity.entityId,
+    class: reviewAvailable && request.reviewState === "approved" ? "merge-ready" : "review-pending",
+    sourceRef: request.sourceRef,
+    targetRef: request.targetRef,
+    reviewState: reviewAvailable ? "observed" : "unknown",
+    ciResult,
+  }));
+  const ranked = [...mapped].sort(compareReadyItems);
+  const rendered = capped(ranked, STATUS_MAX_READY_ITEMS);
+  const omitted = mapped.length - rendered.length;
+  const truncated = omitted > 0 || read.pageItemCount >= STATUS_SOURCE_ITEM_LIMIT;
+  const observed = rendered.filter((item) => item.reviewState === "observed").length;
+  const counts = countOf(observed, rendered.length - observed, mapped.length, omitted);
+  const reasons: StatusEvidenceReason[] = [];
+  if (reviewAvailable) {
+    reasons.push(mapped.length === 0 ? "observed-empty" : "observed");
+  } else {
+    reasons.push("signal-unavailable", "partial-evidence");
+  }
+  if (truncated) reasons.push("source-truncated");
   return {
     ...sectionBase({
-      id: "parked-work",
-      state: "observed",
-      counts: countOf(items.length - unknown, unknown, entries.length, omitted),
+      id: "ready-to-merge",
+      state: reviewAvailable ? "observed" : "degraded",
+      counts,
       truncated,
       sources: [
-        entries.length === 0
-          ? { source: "local-context", outcome: "observed-empty" }
-          : { source: "local-context", outcome: "read" },
+        {
+          source: "changes",
+          outcome: mapped.length === 0 ? "observed-empty" : "read",
+        },
       ],
       reasons,
     }),
-    source: {
-      kind: "local-pm-context",
-      path: local.context.path,
-      tracked: false,
-      gitIgnored: true,
-    },
-    items,
+    items: rendered,
   };
 };
 
@@ -1213,6 +1690,28 @@ const typedQuestionsSection = (facts: StatusFacts): StatusSection => {
   };
 };
 
+/* ------------------------------- placeholders ----------------------------- */
+
+const placeholderSection = (
+  id: StatusPlaceholderSectionId,
+  capability: string,
+  expectedStory: string,
+  note: string,
+): StatusSection => ({
+  ...sectionBase({
+    id,
+    state: "not-delivered",
+    counts: zeroCounts(),
+    truncated: false,
+    sources: [{ source: "queue-engine", outcome: "not-delivered" }],
+    reasons: ["engine-not-delivered"],
+  }),
+  capability,
+  expectedStory,
+  note,
+  items: [],
+});
+
 /* -------------------------------- assembly -------------------------------- */
 
 const summaryOf = (sections: readonly StatusSection[]): StatusDigest["summary"] => {
@@ -1223,6 +1722,8 @@ const summaryOf = (sections: readonly StatusSection[]): StatusDigest["summary"] 
     unavailable: 0,
     notDelivered: 0,
     actionable: 0,
+    findingsTotal: 0,
+    placeholderSectionCount: 0,
   };
   for (const section of sections) {
     switch (section.state) {
@@ -1244,7 +1745,11 @@ const summaryOf = (sections: readonly StatusSection[]): StatusDigest["summary"] 
       default:
         break;
     }
+    if ((STATUS_PLACEHOLDER_SECTION_IDS as readonly string[]).includes(section.id)) {
+      counts.placeholderSectionCount += 1;
+    }
     if (section.state === "observed" || section.state === "degraded") {
+      counts.findingsTotal += section.findings?.length ?? 0;
       counts.actionable +=
         (section.families ?? []).reduce((sum, family) => sum + family.items.length, 0) +
         (section.pullRequests?.length ?? 0) +
@@ -1267,6 +1772,8 @@ export const aggregateStatus = (facts: StatusFacts): StatusDigest => {
     lanesSection(),
     providersSection(facts),
     parkedSection(facts),
+    readyToMergeSection(facts),
+    placeholderSection("spend", "spend-summary", "M1-S19", "spend summary arrives with M1-S19"),
     typedQuestionsSection(facts),
   ];
   return {
@@ -1302,6 +1809,54 @@ const sourceKnown = (section: StatusSection, source: StatusEvidenceSource): bool
       entry.source === source && (entry.outcome === "read" || entry.outcome === "observed-empty"),
   );
 
+const attentionEntries = (
+  digest: StatusDigest,
+): readonly { readonly finding: StatusFinding; readonly sectionIndex: number }[] => {
+  const entries: { finding: StatusFinding; sectionIndex: number }[] = [];
+  for (const [sectionIndex, section] of digest.sections.entries()) {
+    if (section.state !== "observed" && section.state !== "degraded") continue;
+    for (const finding of section.findings ?? []) entries.push({ finding, sectionIndex });
+  }
+  return entries.sort((left, right) => {
+    const severity = severityRank(left.finding.severity) - severityRank(right.finding.severity);
+    if (severity !== 0) return severity;
+    if (left.finding.count !== right.finding.count) return right.finding.count - left.finding.count;
+    const code = compareText(left.finding.code, right.finding.code);
+    if (code !== 0) return code;
+    return left.sectionIndex - right.sectionIndex;
+  });
+};
+
+const attentionLine = (digest: StatusDigest): string => {
+  const entries = attentionEntries(digest);
+  if (entries.length === 0) return "attention  0 findings ()";
+  const preview = entries.slice(0, 3);
+  const groups = preview.map((entry) => `${entry.finding.code}×${entry.finding.count}`).join(", ");
+  const omitted = entries.length - preview.length;
+  return `attention  ${entries.length} findings (${groups}${omitted > 0 ? `+${omitted}` : ""})`;
+};
+
+const clampHuman = (text: string): string => {
+  const lines = text.split("\n");
+  let result = text;
+  const contentLines = lines.filter((line) => line.length > 0).length;
+  if (contentLines > STATUS_MAX_HUMAN_LINES) {
+    const kept = lines.slice(0, STATUS_MAX_HUMAN_LINES);
+    result = `${kept.join("\n")}${STATUS_HUMAN_CLAMP_MARKER}\n`;
+  }
+  if (utf8Bytes(result) <= STATUS_MAX_HUMAN_BYTES) return result;
+  const limit = STATUS_MAX_HUMAN_BYTES - utf8Bytes(STATUS_HUMAN_CLAMP_MARKER);
+  let bytes = 0;
+  let truncated = "";
+  for (const point of result) {
+    const size = utf8Bytes(point);
+    if (bytes + size > limit) break;
+    bytes += size;
+    truncated += point;
+  }
+  return `${truncated}${STATUS_HUMAN_CLAMP_MARKER}`;
+};
+
 /** Render the deterministic human digest from the digest and injected brand. */
 export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): string => {
   const lines: string[] = [];
@@ -1319,8 +1874,19 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
   const stalls = tracker === undefined ? undefined : familyOf(tracker, "stalls");
   const hygiene = tracker === undefined ? undefined : familyOf(tracker, "hygiene");
   if (tracker !== undefined) {
+    const gates =
+      ownerHandBacks?.state === "observed"
+        ? String(
+            tracker.findings?.find((finding) => finding.code === "tracker.owner-gate-escalated")
+              ?.count ?? 0,
+          )
+        : "?";
+    const assertionUnknown = (hygiene?.assertions ?? []).reduce(
+      (sum, assertion) => sum + assertion.unknown,
+      0,
+    );
     lines.push(
-      `tracker    ${tracker.state}  hand-backs ${ownerHandBacks?.counts.total ?? 0} | blocked ${blocked?.state ?? "unavailable"} | stalls ${stalls?.counts.total ?? 0} (${stalls?.counts.unknown ?? 0} unknown) | hygiene ${hygiene?.counts.total ?? 0}${truncationSuffix(tracker)}`,
+      `tracker    ${tracker.state}  hand-backs ${ownerHandBacks?.counts.total ?? 0} | gates ${gates} escalated | blocked ${blocked?.state ?? "unavailable"} | stalls ${stalls?.counts.total ?? 0} (${stalls?.counts.unknown ?? 0} unknown) | hygiene ${hygiene?.counts.total ?? 0} (${assertionUnknown} unknown)${truncationSuffix(tracker)}`,
     );
   }
 
@@ -1388,6 +1954,27 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
     );
   }
 
+  const ready = digest.sections.find((section) => section.id === "ready-to-merge");
+  if (ready !== undefined) {
+    const count =
+      ready.state === "observed" || ready.state === "degraded"
+        ? String(ready.items?.length ?? 0)
+        : "?";
+    const mergeReady =
+      ready.state === "observed"
+        ? String(
+            (ready.items ?? []).filter((item) => "class" in item && item.class === "merge-ready")
+              .length,
+          )
+        : "?";
+    lines.push(
+      `ready      ${ready.state}  ${count} ready-to-merge (merge-ready ${mergeReady})${truncationSuffix(ready)}`,
+    );
+  }
+
+  const spend = digest.sections.find((section) => section.id === "spend");
+  lines.push(`spend      not-delivered  ${spend?.note ?? "spend summary arrives with M1-S19"}`);
+
   const typed = digest.sections.find((section) => section.id === "typed-questions");
   if (typed !== undefined) {
     const count = typed.state === "observed" ? String(typed.questions?.length ?? 0) : "?";
@@ -1398,5 +1985,7 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
     lines.push(`questions  ${typed.state}  ${count} open${reason}${truncationSuffix(typed)}`);
   }
 
-  return `${lines.join("\n")}\n`;
+  lines.push(attentionLine(digest));
+
+  return clampHuman(`${lines.join("\n")}\n`);
 };

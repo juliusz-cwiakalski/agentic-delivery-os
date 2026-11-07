@@ -521,6 +521,17 @@ export const RULE_CASES: RuleCase[] = [
     "packages/adapters/src/registry/probe.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
+  // GH-233 (F-5): a node:child_process import outside the declared spawn
+  // allowlist fails the confinement rule, which is the boundary counterpart of
+  // the exact site-set equality in tests/structure/harness-imports.test.ts.
+  dep(
+    "runtime-child-process-adapter-registry",
+    "TC-HARN-014",
+    "runtime-apis-confinement",
+    ["adapters"],
+    "packages/adapters/src/registry/probe.ts",
+    'import { execFile } from "node:child_process";\nexport const value = execFile;\n',
+  ),
   dep(
     "runtime-node-fs-adapter-io",
     "TC-SCAFFOLD-014",
@@ -562,6 +573,21 @@ export const RULE_CASES: RuleCase[] = [
     "runtime-apis-confinement",
     ["core"],
     "packages/core/src/state/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  dep(
+    "runtime-node-fs-mcp-non-serve",
+    "TC-MCP-018",
+    "runtime-apis-confinement",
+    ["mcp"],
+    "packages/mcp/src/commands/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  clean(
+    "runtime-control-mcp-serve",
+    "TC-MCP-018",
+    ["mcp"],
+    "packages/mcp/src/serve.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
   clean(
@@ -607,6 +633,23 @@ export const RULE_CASES: RuleCase[] = [
     "TC-PROV-006",
     ["adapters"],
     "packages/adapters/src/provider-quota/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  // ADR-0005 C-2 (GH-227): the inference transport is an exact-path,
+  // reason-bearing runtime-I/O entry; a sibling path stays denied.
+  clean(
+    "runtime-control-commit-inference",
+    "TC-TIER-003",
+    ["adapters"],
+    "packages/adapters/src/inference/probe.ts",
+    'import fs from "node:fs";\nexport const value = fs;\n',
+  ),
+  dep(
+    "runtime-node-fs-adapter-inference-suffix",
+    "TC-TIER-003",
+    "runtime-apis-confinement",
+    ["adapters"],
+    "packages/adapters/src/inference-probe/probe.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
   dep(

@@ -386,3 +386,10 @@ test("TC-POLICY-002 every in-repo call site supplies a policy", () => {
     ).some((failure) => failure.includes("omits the required policy")),
   ).toBe(true);
 });
+
+test("TC-GH223-034 audit vocabulary does not leak into the content envelope", () => {
+  const text = readFileSync(join(ROOT, "packages/core/src/contracts/envelope.ts"), "utf8");
+  expect(text).not.toContain("audit.");
+  expect(text).not.toContain("agentIdentity");
+  expect(text).not.toContain("chainValue");
+});

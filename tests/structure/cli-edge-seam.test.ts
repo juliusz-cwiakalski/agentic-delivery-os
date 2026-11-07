@@ -8,8 +8,15 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
-import { createConfigProgram, registerEdgeSecrets } from "../../packages/cli/src/edge";
+import {
+  createCliAudit,
+  createConfigProgram,
+  registerEdgeSecrets,
+  resolveAgentIdentity,
+  resolveCliMode,
+} from "../../packages/cli/src/edge";
 import { type CliDependencies, runCli } from "../../packages/cli/src/index";
+import { AUDIT_IDENTITY_VARIABLE_SUFFIX } from "../../packages/core/src/contracts/index";
 import { createFakeIo, NOW_MS, SYNTHETIC_DB_PATH } from "../fixtures/session-admin/harness";
 import { bufferSink, loadProgram, programFor, SYNTHETIC_BRAND } from "../golden/helpers";
 
@@ -249,6 +256,56 @@ describe("TC-RUNCLI-004 brand and environment seam", () => {
   });
 });
 
+describe("TC-GH223-013 identity seam and mode fact", () => {
+  test("the identity variable name is derived from the injected prefix", () => {
+    const prefix = SYNTHETIC_BRAND.environmentPrefix;
+    expect(`${prefix}${AUDIT_IDENTITY_VARIABLE_SUFFIX}`).toBe("EXAMPLE_PRODUCT_AGENT_IDENTITY");
+    expect(resolveAgentIdentity({ EXAMPLE_PRODUCT_AGENT_IDENTITY: "pm-lane-7" }, prefix)).toEqual({
+      kind: "claimed",
+      value: "pm-lane-7",
+    });
+    expect(resolveAgentIdentity({}, prefix)).toBeUndefined();
+    expect(resolveAgentIdentity({ EXAMPLE_PRODUCT_AGENT_IDENTITY: "" }, prefix)).toBeUndefined();
+    expect(resolveAgentIdentity({ EXAMPLE_PRODUCT_AGENT_IDENTITY: "   " }, prefix)).toBeUndefined();
+  });
+
+  test("a present identity is verbatim; trimming decides presence only", () => {
+    const prefix = SYNTHETIC_BRAND.environmentPrefix;
+    expect(
+      resolveAgentIdentity({ EXAMPLE_PRODUCT_AGENT_IDENTITY: "  qa-lane-3  " }, prefix),
+    ).toEqual({ kind: "claimed", value: "  qa-lane-3  " });
+    expect(
+      resolveAgentIdentity({ OTHER_PREFIX_AGENT_IDENTITY: "pm-lane-7" }, prefix),
+    ).toBeUndefined();
+  });
+
+  test("the mode fact comes from an injected stream capability", () => {
+    expect(resolveCliMode({ isTTY: true })).toBe("interactive");
+    expect(resolveCliMode({ isTTY: false })).toBe("scripted");
+    expect(resolveCliMode({})).toBe("scripted");
+  });
+
+  test("the audit composition uses injected environment data, not process.env", () => {
+    const audit = createCliAudit({
+      store: {
+        identity: {
+          level: "local",
+          workspaceId: "workspace-a",
+          fenceNamespace: "fence-a",
+          schemaVersion: "delivery.state.v1",
+          stateDirectory: "/tmp/never-used",
+        },
+      } as never,
+      scope: "workspace-a",
+      environment: { EXAMPLE_PRODUCT_AGENT_IDENTITY: "pm-lane-7" },
+      environmentPrefix: SYNTHETIC_BRAND.environmentPrefix,
+    });
+    expect(audit.scope).toBe("workspace-a");
+    expect(audit.identity).toEqual({ kind: "claimed", value: "pm-lane-7" });
+    expect(typeof audit.record).toBe("function");
+  });
+});
+
 describe("TC-REDACT-004 single serialization chokepoint", () => {
   test("only the surface entry imports the serializer", () => {
     expect(serializerImporters(ROOT)).toEqual([`${CLI_DIR}/index.ts`]);
@@ -293,10 +350,12 @@ const EDGE = `${CLI_DIR}/edge.ts`;
 const CORE_DIR = "packages/core/src";
 const NEW_COMMAND_FILES = [
   `${CLI_DIR}/commands/brief.ts`,
+  `${CLI_DIR}/commands/commit.ts`,
   `${CLI_DIR}/commands/db.ts`,
   `${CLI_DIR}/commands/lint.ts`,
   `${CLI_DIR}/commands/phase.ts`,
   `${CLI_DIR}/commands/queue.ts`,
+  `${CLI_DIR}/commands/retro.ts`,
   `${CLI_DIR}/commands/status.ts`,
   `${CLI_DIR}/commands/verify.ts`,
   `${CLI_DIR}/commands/verify-gates.ts`,
@@ -368,6 +427,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(index).toContain('export { createPhaseCommandDefinition } from "./phase.js"');
     expect(index).toContain('export { createStatusCommandDefinition } from "./status.js"');
     expect(index).toContain('export { createQueueReadyCommandDefinition } from "./queue.js"');
+    expect(index).toContain('export { createRetroCommandDefinition } from "./retro.js"');
     expect(index).toContain('export { createVerifyCommandDefinition } from "./verify.js"');
   });
 
@@ -379,7 +439,8 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(edge).toContain("commands.lint = createLintCommandDefinition");
     expect(edge).toContain('from "./commands/plan.js"');
     expect(edge).toContain("commands.plan = createPlanCommandDefinition");
-    expect(edge).toContain("commands.phase = createPhaseCommandDefinition(options.phase)");
+    expect(edge).toContain("commands.phase = createPhaseCommandDefinition(committedPhaseRuntime)");
+    expect(edge).toContain("commands.commit = createCommitCommandDefinition");
     expect(edge).toContain("commands.status = createStatusCommandDefinition");
     expect(edge).toContain("commands.brief = createBriefCommandDefinition");
     expect(edge).toContain("options.brief");
@@ -395,6 +456,10 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(edge).toContain("createStatusCommandRuntime");
     expect(edge).toContain("createVerifyCommandRuntime");
     expect(edge).toContain("readChangeTransitionsTolerant");
+    expect(edge).toContain('from "./commands/retro.js"');
+    expect(edge).toContain("createRetroCommandRuntime");
+    expect(edge).toContain("commands.retro = createRetroCommandDefinition");
+    expect(edge).toContain("options.retro !== undefined");
   });
 
   test("the adapters parser is composed at the CLI edge, never by core", () => {
@@ -433,9 +498,17 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       "createCloseoutCommandDefinition",
     ]);
     expect(exported(`${CLI_DIR}/commands/db.ts`)).toEqual(["createDbCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/doctor.ts`)).toEqual(["createDoctorCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/brief.ts`)).toEqual(["createBriefCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/lint.ts`)).toEqual(["createLintCommandDefinition"]);
-    expect(exported(`${CLI_DIR}/commands/phase.ts`)).toEqual(["createPhaseCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/commit.ts`)).toEqual([
+      "planPhaseForLifecycle",
+      "createCommitCommandDefinition",
+    ]);
+    expect(exported(`${CLI_DIR}/commands/phase.ts`)).toEqual([
+      "runPhaseCompleteForCommit",
+      "createPhaseCommandDefinition",
+    ]);
     expect(exported(`${CLI_DIR}/commands/verify.ts`)).toEqual(["createVerifyCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/verify-gates.ts`)).toEqual(["createVerifyGatesHandler"]);
     expect(exported(`${CLI_DIR}/commands/status.ts`)).toEqual([
@@ -443,9 +516,10 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       "createStatusCommandDefinition",
     ]);
     expect(exported(`${CLI_DIR}/commands/queue.ts`)).toEqual(["createQueueReadyCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/retro.ts`)).toEqual(["createRetroCommandDefinition"]);
   });
 
-  test("only blockers, board, brief, closeout, db, plan, queue, status, verify, and watchdog declare the optional human-text renderer", () => {
+  test("only blockers, board, brief, closeout, db, doctor, merge, plan, provider, queue, retro, status, verify, and watchdog declare the optional human-text renderer", () => {
     const declarers = listTypeScriptFiles(ROOT, `${CLI_DIR}/commands`).filter((file) =>
       readFileSync(join(ROOT, file), "utf8").includes("humanText"),
     );
@@ -455,8 +529,12 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       `${CLI_DIR}/commands/brief.ts`,
       `${CLI_DIR}/commands/closeout.ts`,
       `${CLI_DIR}/commands/db.ts`,
+      `${CLI_DIR}/commands/doctor.ts`,
+      `${CLI_DIR}/commands/merge.ts`,
       `${CLI_DIR}/commands/plan.ts`,
+      `${CLI_DIR}/commands/provider.ts`,
       `${CLI_DIR}/commands/queue.ts`,
+      `${CLI_DIR}/commands/retro.ts`,
       `${CLI_DIR}/commands/status.ts`,
       `${CLI_DIR}/commands/verify.ts`,
       `${CLI_DIR}/commands/watchdog.ts`,
@@ -536,5 +614,115 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     } finally {
       // temp tree is intentionally left for the OS to reap
     }
+  });
+});
+
+describe("TC-RETRO-006 composition-only retro registration", () => {
+  const baseOptions = {
+    workingName: "synthetic",
+    environment: {},
+    cwd: "/work",
+    homeDirectory: "/home/synthetic",
+    platform: "linux" as const,
+    fs: { exists: () => false, readText: () => "" },
+    repositoryIo: { exists: () => false, isFile: () => false, readText: () => "" },
+  };
+
+  test("retro is absent without composition and runs when composed", async () => {
+    const absent = createConfigProgram(baseOptions);
+    expect(absent.ok).toBe(true);
+    if (!absent.ok) return;
+    expect(absent.program.commands.retro).toBeUndefined();
+    const absentExit = await runCli(
+      ["retro", "report", "--json"],
+      { stdout: bufferSink(), stderr: bufferSink() },
+      {
+        brand: absent.brand,
+        clock: { now: () => 100 },
+        newRunId: () => "run-retro-absent",
+        secrets: [],
+        program: absent.program,
+      },
+    );
+    expect(absentExit).toBe(1);
+
+    const stateDirectory = mkdtempSync(join(tmpdir(), "retro-seam-"));
+    const store = {
+      readRecords: () => ({
+        ok: true,
+        value: {
+          records: [],
+          evidence: {
+            storePath: stateDirectory,
+            verification: [],
+            verifiedEmpty: true,
+            recordCount: 0,
+          },
+        },
+      }),
+    } as never;
+    const present = createConfigProgram({
+      ...baseOptions,
+      retro: {
+        store,
+        stateDirectory,
+        workspaceId: "workspace-a",
+        changesDirectory: "/work/doc/changes",
+        fs: { exists: () => false, readText: () => "" },
+        clock: { nowMs: () => 100, nowIso: () => "2026-11-06T12:00:00Z" },
+        newRunId: () => "run-retro-present",
+        newTraceId: () => "ev-0001",
+        newFenceToken: () => "fence-retro",
+        collectors: {
+          readAuditLedger: () => ({
+            ok: true,
+            value: {
+              verifiedEmpty: true,
+              records: [],
+              matched: 0,
+              truncated: false,
+              chain: {
+                verified: true,
+                records: 0,
+                breaks: [],
+                orphans: [],
+                storePath: "audit",
+              },
+              storePath: "audit",
+            },
+          }),
+          readStateFamilies: () => ({
+            ok: true,
+            value: { transitions: [], closeouts: [], telemetry: [] },
+          }),
+          readNotes: () => ({ ok: true, value: { retroNotes: [] } }),
+        },
+        readChanges: () => [],
+      },
+    });
+    expect(present.ok).toBe(true);
+    if (!present.ok) return;
+    expect(present.program.commands.retro).toBeDefined();
+    const stdout = bufferSink();
+    const stderr = bufferSink();
+    const presentExit = await runCli(
+      ["retro", "report", "--json"],
+      { stdout, stderr },
+      {
+        brand: present.brand,
+        clock: { now: () => 100 },
+        newRunId: () => "run-retro-present-cli",
+        secrets: [],
+        program: present.program,
+      },
+    );
+    expect(presentExit).toBe(0);
+    expect(JSON.parse(stdout.value)).toMatchObject({ data: { level: "change", findings: [] } });
+  });
+
+  test("retro commands perform no stream write and choose no exit", () => {
+    const source = readFileSync(join(ROOT, `${CLI_DIR}/commands/retro.ts`), "utf8");
+    expect(source.includes('from "node:fs"')).toBe(false);
+    expect(source.includes("process.")).toBe(false);
   });
 });

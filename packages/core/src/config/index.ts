@@ -8,9 +8,17 @@ export {
   type CatalogField,
   type ConfigCatalog,
   catalogPaths,
+  LANE_BRANCH,
+  type LaneSettings,
   PRODUCTION_CATALOG,
+  resolveLaneSettings,
 } from "./catalog.js";
 export { defaultsFor, PRODUCTION_DEFAULTS } from "./defaults.js";
+export {
+  type HarnessEnvironmentSetting,
+  type HarnessSettings,
+  resolveHarnessSettings,
+} from "./harness.js";
 export { originLabel } from "./provenance.js";
 export {
   type DefaultPositionManifest,

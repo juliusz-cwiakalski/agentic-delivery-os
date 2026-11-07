@@ -67,3 +67,22 @@ describe("TC-RESULT-004 timing on all four paths", () => {
     }
   });
 });
+
+describe("TC-GH223-014 scripted lines carry no timing", () => {
+  test("a scripted success line has no timing, schemaVersion, or runId", async () => {
+    const testCase = cases.find((entry) => entry.id === "scripted-success-data");
+    if (testCase === undefined) throw new Error("scripted-success-data is missing");
+    const run = await runCase(testCase);
+    expect(run.stdout).not.toContain("timing");
+    expect(run.stdout).not.toContain("schemaVersion");
+    expect(run.stdout).not.toContain("runId");
+    expect(run.stdout.trimEnd().split("\n")).toHaveLength(1);
+  });
+
+  test("interactive lines still carry timing", async () => {
+    const testCase = cases.find((entry) => entry.id === "success-data");
+    if (testCase === undefined) throw new Error("success-data is missing");
+    const envelope = envelopeOf((await runCase(testCase)).stdout);
+    expect(envelope.timing).toBeDefined();
+  });
+});

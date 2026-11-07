@@ -1,0 +1,81 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-235
+branch: feat/GH-235/session-lifecycle-economics
+status: PASS
+summary: >-
+  Iteration-2 re-review confirms the remediation and the main-tools sync are
+  sound. All six iteration-1 findings are resolved or accepted: F-1 the resume
+  classifier now reads records and runs the budget gate before the
+  evidence-completeness checks, so a past-budget delivery with unreadable or
+  missing token facts is refused with dispatch.restart-budget-exceeded and its
+  terminal exhaustion record lands (proved by a new past-budget x
+  missing-evidence precedence cell); F-2 ensureExhaustionRecord's outcome is
+  captured and surfaced additively as terminalAppendError (new fail-closed
+  fixture asserts state.write.failed); F-3 the prefill fixture now wires
+  entry.signals.traffic into a session-traffic sourced reading and asserts the
+  projected traffic; F-4 the plan's four-deliberate-update note now reconciles
+  updates (i)-(vi) plus the biome.json golden overrides; F-6 the duplicate
+  EconomicsResumeInput.runId is removed (type-test rejects it); F-5 remains an
+  accepted low. The sync-resolved artifacts are consistent: error-table.ts has
+  exactly 94 rows (91 upstream + 3 GH-235: watchdog.liveness-stalled,
+  dispatch.restart-budget-exceeded, dispatch.resume-uneconomical; no
+  dispatch.session.spawn-failed), error-table.test.ts asserts exactly 94 (never
+  a floor) and error-table-sync.test.ts pins BASELINE_ROWS.length + 60;
+  v1-contract-inventory.json has one harness.ts key (52 exports), economics.ts
+  appended (68) and provider-profile.ts preserved (55); feature-result-contract.md
+  documents 94 rows (13 provider, 4 watchdog, 2 dispatch). DEC-4/6/7/8/9 hold
+  (corroboration unchanged, no CPU key, budget-before-evidence + attach-continue,
+  HARNESS_LIVENESS_KINDS exactly three, error key set unchanged) and AC coverage
+  (13 ACs / 37 TCs) holds. No conflict markers or unmerged paths remain. The full
+  suite passes (4947 pass / 4 skip) except one environment-only failure in the
+  unchanged ci-baseline-parity test, which needs /tmp on the same filesystem as
+  the workspace: git clone --local fails with "Invalid cross-device link" because
+  /tmp is tmpfs; the test passes with a same-device TMPDIR, so it is unrelated to
+  this change. Verdict: PASS; no code remediation required.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: info
+    confidence: high
+    category: documentation
+    location: tests/checks/error-table-sync.test.ts:699
+    message: >-
+      The BASELINE_ROWS docstring still says "the frozen baseline plus those
+      twenty-six later rows equals the live table", but the assertion now pins
+      BASELINE_ROWS.length + 60 (= 94). The prose is pre-existing (identical in
+      the merge-base before both GH-234 and GH-235) and GH-234's provider-profile
+      rows made it stale; this change only repointed the arithmetic +57 -> +60.
+      Informational, inherited, and out of scope for GH-235.
+    suggestion: >-
+      Optional cleanup when convenient: update the docstring to state
+      "baseline plus the sixty later rows" (or describe the GH-234/GH-235
+      additions), keeping the exact BASELINE_ROWS.length + 60 assertion.
+    suppressed: false
+  - id: F-2
+    severity: info
+    confidence: high
+    category: style
+    location: packages/core/src/domain/economics-resume.ts:13
+    message: >-
+      `biome check` reports the import/export blocks in economics-resume.ts and in
+      economics-budget-failclosed.test.ts, economics-liveness-prefill.test.ts and
+      economics-resume-precedence.test.ts as not organized (assist/source/
+      organizeImports). This is NOT part of the repository gate: CI runs
+      `pnpm lint` (biome lint) and `pnpm format:check` (biome format), both of
+      which pass, and `pnpm check` does not run `biome check`. No behavioural
+      impact.
+    suggestion: >-
+      Optional: run `biome check --write` on the four files if the team wants the
+      organize-imports assist clean; otherwise no action is required.
+    suppressed: false
+reviewed_at: 2026-11-07T08:31:00Z
+next_step: PROCEED

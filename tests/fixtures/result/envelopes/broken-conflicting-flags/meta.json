@@ -1,4 +1,5 @@
 {
   "outcome": "broken-invocation",
-  "secrets": false
+  "secrets": false,
+  "mode": "interactive"
 }

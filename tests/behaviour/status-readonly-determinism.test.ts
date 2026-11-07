@@ -237,4 +237,78 @@ describe("TC-STATUS-025 determinism and byte-identical replay", () => {
       }
     }
   });
+
+  test("50 runs in one process produce exactly one hash for each mode", async () => {
+    const jsonHashes = new Set<string>();
+    const humanHashes = new Set<string>();
+    for (let index = 0; index < 50; index += 1) {
+      const json = await runStatusCli(["--json", "status"], statusRuntime(baseFacts()));
+      jsonHashes.add(json.stdout);
+      const human = await runStatusCli(["status"], statusRuntime(baseFacts()));
+      humanHashes.add(human.stdout);
+    }
+    expect(jsonHashes.size).toBe(1);
+    expect(humanHashes.size).toBe(1);
+  });
+
+  test("permutation twins produce identical sections", async () => {
+    const facts = baseFacts({
+      tracker: {
+        ok: true,
+        items: [
+          {
+            identity: { systemName: "github", entityId: "GH-1" },
+            title: "Hand back",
+            status: { nativeStatus: "open", deliveryState: "ready" },
+            labels: ["hand-back"],
+            relations: [],
+          },
+          {
+            identity: { systemName: "github", entityId: "GH-2" },
+            title: "Stalled",
+            status: { nativeStatus: "open", deliveryState: "ready" },
+            labels: ["epic:x", "points:1"],
+            milestone: "Sprint",
+            relations: [],
+            updatedAt: "2026-09-01T00:00:00Z",
+          },
+        ],
+        pageItemCount: 2,
+        availability: {
+          ownerHandBacks: "available",
+          blockedDependencies: "available",
+          stalls: "available",
+          hygiene: "available",
+          epicMembership: "available",
+          storyPoints: "available",
+          inSprint: "available",
+        },
+      },
+    });
+    if (!facts.tracker.ok) throw new Error("tracker must be observed");
+    const reversed = baseFacts({
+      tracker: { ...facts.tracker, items: [...facts.tracker.items].reverse() },
+    });
+    const forwardRun = await runStatusCli(["--json", "status"], statusRuntime(facts));
+    const reversedRun = await runStatusCli(["--json", "status"], statusRuntime(reversed));
+    const sections = (text: string): unknown => {
+      const envelope = JSON.parse(text) as { data: { sections: unknown } };
+      return envelope.data.sections;
+    };
+    expect(sections(reversedRun.stdout)).toEqual(sections(forwardRun.stdout));
+  });
+
+  test("TZ changes never alter the rendered bytes", async () => {
+    const original = process.env.TZ;
+    try {
+      process.env.TZ = "UTC";
+      const utc = await runStatusCli(["--json", "status"], statusRuntime(baseFacts()));
+      process.env.TZ = "Pacific/Kiritimati";
+      const other = await runStatusCli(["--json", "status"], statusRuntime(baseFacts()));
+      expect(other.stdout).toBe(utc.stdout);
+    } finally {
+      if (original === undefined) delete process.env.TZ;
+      else process.env.TZ = original;
+    }
+  });
 });

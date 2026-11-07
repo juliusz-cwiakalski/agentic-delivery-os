@@ -11,6 +11,8 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import {
   acquireFileConfig,
+  createCommitlintProbe,
+  createSecretScanner,
   type FileSystemFacts,
   neutralEnvironmentFacts,
   nodeFileSystemFacts,
@@ -26,12 +28,15 @@ import {
 } from "@delivery-os/adapters/file";
 import {
   createGitBranchSeam,
+  createGitCommitSeam,
   createWatchdogGitSeam,
   type GitBranchSeam,
   type GitBranchSeamOptions,
+  type GitMergeSeam,
 } from "@delivery-os/adapters/git";
 import {
   createGitHubClient,
+  createGitHubDeployTraceReader,
   GITHUB_ADAPTER_CONTRACT,
   type GithubClient,
   type GithubClientOptions,
@@ -48,6 +53,7 @@ import {
   readRepositoryFacts,
 } from "@delivery-os/adapters/repo";
 import {
+  createDeliverySessionFacts,
   createSessionAdmin,
   createSessionStore,
   type OpencodeSessionIo,
@@ -58,15 +64,24 @@ import {
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
   callerAudienceVariableName,
+  type CommitActRequest,
+  type CommitTransportPorts,
   catalogPaths,
   classifyPruneCandidate,
+  collectRetro,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
+  createSourcedWatchdogSignalSource,
   isLiveDbSession,
+  type MergeTransactionPorts,
+  newestWaiverByGate,
   PRODUCTION_CATALOG,
+  reportRetro,
   resolveCloseoutBaseRef,
   resolveConfig,
+  resolveMergeGateSet,
   runCloseout,
+  runCommitAct,
   selectPruneCandidates,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
@@ -80,6 +95,9 @@ import type { BrandingInputError, ResolverInput } from "@delivery-os/core/brandi
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   type AdapterCapabilityDeclaration,
+  AUDIT_IDENTITY_VARIABLE_SUFFIX,
+  type AuditAgentIdentity,
+  type AuditInvocationFacts,
   BLOCKER_DELEGATION_POLICY,
   type BlockerCapabilityFact,
   type BlockerDelegationPolicy,
@@ -91,16 +109,34 @@ import {
   type CloseoutReverseDependentObservation,
   type CloseoutStateRuntime,
   type CloseoutWriteOutcome,
+  type CommitGitPort,
+  type CommitlintPort,
+  type CommitPlanPhaseContext,
+  type CommitSafetyPort,
+  type CommitSessionFacts,
+  type CommitTelemetryRecord,
+  type CommitTransportAvailability,
   type ConfigFailure,
   type CredentialPort,
   type DeliveryRequest,
+  type DoctorCheckoutFacts,
+  type DoctorCommitResolution,
+  type DoctorCredentialPresence,
+  type DoctorParkFoldRead,
+  type DoctorProviderCredentialPresence,
+  type DoctorStateStoresRead,
+  type DoctorWiringRead,
   type ExternalSystemInstance,
+  type HarnessLivenessFacts,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
   PHASE_STATE_DOCUMENT_PREFIX,
   PHASE_STATE_DOCUMENT_SUFFIX,
+  type PhaseTransitionRecord,
   type PlanDiffPort,
+  type ProviderAnnouncementRecord,
   type ProviderClock,
+  type ProviderParkRecord,
   type ProviderSleep,
   type QuotaTransport,
   type Result,
@@ -121,23 +157,53 @@ import {
   type WorkItem,
 } from "@delivery-os/core/contracts";
 import {
+  createProfileProbePort,
   createProviderEngine,
+  createProviderWatchStatus,
+  evaluatePeakWindow,
+  evaluateProfileLifecycle,
+  parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
+  persistProfileTarget,
+  readProfileTarget,
+  readProviderLedger,
   readProviderParkViews,
+  resolveProfileForSpawn,
+  selectProfile,
 } from "@delivery-os/core/provider";
+import { createProviderWatchMappings } from "@delivery-os/adapters/provider-quota";
 import {
+  appendAuditInvocation,
   appendBlockerAnswer,
   appendBlockerQuestion,
   appendCloseoutOutcome,
+  appendCommitTelemetry,
+  appendMergeGateVerification,
+  appendMergeTransaction,
+  appendMergeWaiver,
   appendOwnerGateSlaDecision,
   appendPhaseTransition,
+  createNodeRetroSidecarIo,
+  createNodeStateEdge,
+  createRetroSidecar,
+  createStateStore,
   foldCloseoutHistory,
+  readAllMergeWaivers,
+  readAuditLedger,
   readBlockerLedger,
-  readChangeTransitions,
   readChangeTransitionsTolerant,
   readCloseoutHistory,
+  readCommitTelemetry,
+  readMergeGateVerifications,
+  readMergeTransactions,
+  readMergeWaivers,
   readOwnerGateSlaDecisions,
+  readRetroRegistry,
+  readRetroRuns,
+  recordRetroRun,
   replacePhaseProjection,
+  STATE_SCHEMA_VERSION,
+  seedRetroRegistry,
 } from "@delivery-os/core/state";
 import { resolveAppErrorCode } from "./classify.js";
 import {
@@ -151,33 +217,98 @@ import {
   createCloseoutCommandDefinition,
 } from "./commands/closeout.js";
 import {
+  type CommitCommandRuntime,
+  createCommitCommandDefinition,
+  planPhaseForLifecycle,
+} from "./commands/commit.js";
+import {
   type ConfigCommandRuntime,
   type ConfigResolvedSnapshot,
   createConfigCommandDefinition,
 } from "./commands/config.js";
 import { createDbCommandDefinition, type DbCommandRuntime } from "./commands/db.js";
+import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
 import {
   createLintCommandDefinition,
   type LintCommandRuntime,
   type LintRegistryRead,
 } from "./commands/lint.js";
-import { createPhaseCommandDefinition, type PhaseCommandRuntime } from "./commands/phase.js";
+import { createMergeCommandDefinition, type MergeCommandRuntime } from "./commands/merge.js";
+import {
+  createPhaseCommandDefinition,
+  type PhaseCommandRuntime,
+  type PhaseCommitEvidence,
+  type PhaseCommitExtension,
+  type PhasePlanRead,
+} from "./commands/phase.js";
 import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
 import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
 } from "./commands/provider.js";
 import { createQueueReadyCommandDefinition } from "./commands/queue.js";
+import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
+import type { VerifyDeployRuntime } from "./commands/verify-deploy.js";
 import type { VerifyGatesCommandRuntime } from "./commands/verify-gates.js";
 import {
   createWatchdogCommandDefinition,
   type WatchdogCommandRuntime,
 } from "./commands/watchdog.js";
-import type { CliDependencies, CommandDefinition, CommandFlags, CommandProgram } from "./index.js";
+import type {
+  CliAuditDependencies,
+  CliDependencies,
+  CliMode,
+  CommandDefinition,
+  CommandFlags,
+  CommandProgram,
+} from "./index.js";
 
 const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
+
+/**
+ * Resolve the claimed agent identity from injected environment data (DEC-3).
+ * The variable name is derived (brand prefix + declared suffix); presence is
+ * decided on the trimmed value, while the recorded value stays verbatim.
+ */
+export const resolveAgentIdentity = (
+  environment: Readonly<Record<string, string | undefined>>,
+  environmentPrefix: string,
+): AuditAgentIdentity | undefined => {
+  const value = environment[`${environmentPrefix}${AUDIT_IDENTITY_VARIABLE_SUFFIX}`];
+  if (typeof value !== "string" || value.trim().length === 0) return undefined;
+  return { kind: "claimed", value };
+};
+
+/** Resolve the machine-output mode from an injected stream-capability fact. */
+export const resolveCliMode = (stream: { readonly isTTY?: boolean }): CliMode =>
+  stream.isTTY === true ? "interactive" : "scripted";
+
+export type CliAuditComposition = {
+  readonly store: StateStorePort;
+  readonly scope: string;
+  readonly repo?: string;
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly environmentPrefix: string;
+};
+
+/**
+ * Compose the audit seam at the runtime-aware edge: identity from injected
+ * environment data, the store-backed writer, and the invocation scope.
+ */
+export const createCliAudit = (options: CliAuditComposition): CliAuditDependencies => {
+  const identity = resolveAgentIdentity(options.environment, options.environmentPrefix);
+  return {
+    scope: options.scope,
+    ...(options.repo === undefined ? {} : { repo: options.repo }),
+    ...(identity === undefined ? {} : { identity }),
+    record: (facts: AuditInvocationFacts) => {
+      const appended = appendAuditInvocation(options.store, facts);
+      return appended.ok ? { ok: true } : { ok: false, code: appended.error.code };
+    },
+  };
+};
 
 /** Register non-empty secret values from an injected environment record. */
 export function registerEdgeSecrets(
@@ -236,7 +367,7 @@ export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCo
     }),
   stageEntry: (text, edit) => stagePmNotesPhaseEntry(text, edit),
   readRegistry: (changeRef) => {
-    const read = readChangeTransitions(options.store, changeRef);
+    const read = readChangeTransitionsTolerant(options.store, changeRef);
     if (!read.ok) return { ok: false, error: read.error };
     return {
       ok: true,
@@ -257,6 +388,248 @@ export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCo
   },
   nowIso: options.nowIso,
   newFenceToken: options.newFenceToken,
+});
+
+/**
+ * The commit surface composition seams (GH-227 F-1..F-5). Every I/O, time,
+ * transport, scanner, commitlint, and session fact is injected.
+ */
+export type CommitRuntimeOptions = {
+  readonly store: StateStorePort;
+  readonly changesDirectory: string;
+  readonly fs: PmNotesFileSystemFacts;
+  readonly git: CommitGitPort;
+  readonly safety: CommitSafetyPort;
+  readonly commitlint: CommitlintPort;
+  readonly transports: CommitTransportPorts;
+  readonly availability: CommitTransportAvailability;
+  readonly sessionFacts: CommitSessionFacts | (() => CommitSessionFacts);
+  readonly phaseCommit: boolean;
+  readonly nowIso: () => string;
+  readonly newFenceToken: () => string;
+  readonly resolveRef?: () => Promise<
+    { readonly ref: string; readonly refSource: "branch" | "change-folder" } | undefined
+  >;
+};
+
+const scopePathsOf = (scope: unknown): readonly string[] => {
+  if (typeof scope !== "object" || scope === null || Array.isArray(scope)) return [];
+  const record = scope as Record<string, unknown>;
+  const paths: string[] = [];
+  for (const key of ["files", "packages", "folders"]) {
+    const values = record[key];
+    if (!Array.isArray(values)) continue;
+    for (const value of values) if (typeof value === "string") paths.push(value);
+  }
+  return paths;
+};
+
+const planPhasesOf = (values: Record<string, unknown>): readonly CommitPlanPhaseContext[] => {
+  const phases = values.phases;
+  if (!Array.isArray(phases)) return [];
+  const contexts: CommitPlanPhaseContext[] = [];
+  for (const phase of phases) {
+    if (typeof phase !== "object" || phase === null || Array.isArray(phase)) continue;
+    const record = phase as Record<string, unknown>;
+    const id = typeof record.id === "number" ? String(record.id) : undefined;
+    const title = typeof record.title === "string" ? record.title : undefined;
+    if (id === undefined || title === undefined) continue;
+    const kind = record.kind === "planning" || record.kind === "delivery" ? record.kind : undefined;
+    contexts.push({
+      phaseId: id,
+      title,
+      ...(typeof record.summary === "string" ? { summary: record.summary } : {}),
+      declaredScopePaths: scopePathsOf(record.scope),
+      ...(kind === undefined ? {} : { kind }),
+    });
+  }
+  return contexts;
+};
+
+const readPlanContext = (
+  options: Pick<CommitRuntimeOptions, "changesDirectory" | "fs">,
+  changeRef: string,
+): { readonly planPresent: boolean; readonly phases: readonly CommitPlanPhaseContext[] } => {
+  const artifact = readPlanArtifact({
+    changeRef,
+    changesDirectory: options.changesDirectory,
+    fs: options.fs,
+  });
+  if (!artifact.ok || artifact.artifact.kind !== "yaml") {
+    return { planPresent: false, phases: [] };
+  }
+  const parsed = parseConfigYaml(artifact.text, "project-committed", artifact.artifact.path);
+  return parsed.ok
+    ? { planPresent: true, phases: planPhasesOf(parsed.facts.values) }
+    : { planPresent: true, phases: [] };
+};
+
+const currentPhaseOf = (store: StateStorePort, changeRef: string): string | undefined => {
+  const read = readChangeTransitionsTolerant(store, changeRef);
+  if (!read.ok) return undefined;
+  const latest = [...read.value.transitions]
+    .reverse()
+    .find((record) => record.operation === "complete");
+  return latest?.phaseId;
+};
+
+const commitActPorts = (options: CommitRuntimeOptions): Parameters<typeof runCommitAct>[1] => ({
+  git: options.git,
+  safety: options.safety,
+  commitlint: options.commitlint,
+  transports: options.transports,
+  availability: options.availability,
+  nowIso: options.nowIso,
+  appendTelemetry: async (record: CommitTelemetryRecord) => {
+    const appended = appendCommitTelemetry(options.store, options.newFenceToken(), record);
+    return appended.ok ? { ok: true } : { ok: false, detail: appended.error.code };
+  },
+});
+
+/** Compose the phase-side atomic completion extension (GH-227 F-6/F-7). */
+export const createPhaseCommitExtension = (
+  options: CommitRuntimeOptions,
+): PhaseCommitExtension => ({
+  phaseCommit: options.phaseCommit,
+  readPlanPhase: (changeRef, phaseId): PhasePlanRead => {
+    const planContext = readPlanContext(options, changeRef);
+    if (!planContext.planPresent) return { planPresent: false };
+    const phase = planPhaseForLifecycle(planContext.phases, phaseId);
+    return phase === undefined ? { planPresent: true } : { planPresent: true, planPhase: phase };
+  },
+  readEvidence: async (changeRef, phaseId): Promise<PhaseCommitEvidence> => {
+    const read = readChangeTransitionsTolerant(options.store, changeRef);
+    if (!read.ok) {
+      return { recordPresent: false, commitPresent: false, readFailure: read.error };
+    }
+    let record: PhaseTransitionRecord | undefined;
+    let latest: PhaseTransitionRecord | undefined;
+    for (const entry of read.value.transitions) {
+      if (entry.phaseId !== phaseId) continue;
+      latest = entry;
+      record = entry.operation === "complete" ? entry : undefined;
+    }
+    const reopenedAt = latest?.operation === "reopen" ? latest.timestamp : undefined;
+    const telemetry = readCommitTelemetry(options.store, changeRef);
+    // Commit presence is durable evidence, not a HEAD position: a later commit
+    // moving HEAD must not degrade an earlier phase's landed commit to absent.
+    // The telemetry event is bound to the record by its transition identity and
+    // corroborates; the record's own `commitSha` is the primary evidence,
+    // because telemetry emission is non-gating and may be absent or torn.
+    const event = telemetry.ok
+      ? [...telemetry.value.records]
+          .reverse()
+          .find(
+            (entry) =>
+              entry.phaseId === phaseId &&
+              (reopenedAt === undefined || entry.landedAt > reopenedAt) &&
+              (record === undefined || entry.transitionId === record.timestamp),
+          )
+      : undefined;
+    const recordSha = record?.commitSha;
+    const recordCommitPresent =
+      recordSha !== undefined && (await options.git.commitExists(recordSha));
+    const commitPresent = event !== undefined || recordCommitPresent;
+    if (!commitPresent && !telemetry.ok && record?.commitIntent !== "record-only") {
+      // Unreadable telemetry with no record-bound commit to corroborate: the
+      // durable state cannot classify commit presence. Refuse instead of
+      // reading a missing signal as commit-absent.
+      return {
+        recordPresent: record !== undefined,
+        ...(record?.commitIntent === undefined ? {} : { recordIntent: record.commitIntent }),
+        ...(record?.commitIntentBasis === undefined
+          ? {}
+          : { recordBasis: record.commitIntentBasis }),
+        ...(record?.timestamp === undefined ? {} : { transitionId: record.timestamp }),
+        commitPresent: false,
+        readFailure: telemetry.error,
+      };
+    }
+    const commitSha = event?.commitSha ?? recordSha;
+    return {
+      recordPresent: record !== undefined,
+      ...(record?.commitIntent === undefined ? {} : { recordIntent: record.commitIntent }),
+      ...(record?.commitIntentBasis === undefined ? {} : { recordBasis: record.commitIntentBasis }),
+      ...(record?.timestamp === undefined ? {} : { transitionId: record.timestamp }),
+      commitPresent,
+      ...(commitSha === undefined ? {} : { commitSha }),
+    };
+  },
+  currentHead: () => options.git.head(),
+  runAct: (request: CommitActRequest) => runCommitAct(request, commitActPorts(options)),
+});
+
+/**
+ * Compose the production commit seams over the delivered adapters.
+ *
+ * The git commit seam, the deterministic scanner, and the commitlint probe are
+ * the runtime-aware implementations; transports and availability remain
+ * explicit (a fresh install with no route degrades to the template).
+ */
+export type ProductionCommitRuntimeOptions = {
+  readonly store: StateStorePort;
+  readonly changesDirectory: string;
+  readonly fs: PmNotesFileSystemFacts;
+  readonly cwd: string;
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly sessionEnvironmentKeys: readonly string[];
+  readonly phaseCommit: boolean;
+  readonly nowIso: () => string;
+  readonly newFenceToken: () => string;
+  readonly transports?: CommitTransportPorts;
+  readonly availability?: CommitTransportAvailability;
+};
+
+export const createProductionCommitRuntimeOptions = (
+  options: ProductionCommitRuntimeOptions,
+): CommitRuntimeOptions => ({
+  store: options.store,
+  changesDirectory: options.changesDirectory,
+  fs: options.fs,
+  git: createGitCommitSeam({ cwd: options.cwd }),
+  safety: { scan: createSecretScanner({ cwd: options.cwd }) },
+  commitlint: createCommitlintProbe({ cwd: options.cwd }),
+  transports: options.transports ?? {},
+  availability: options.availability ?? {
+    coreInference: { available: false, reason: "no-provider-route" },
+    harnessOneShot: { available: false, reason: "no-harness-credentials" },
+  },
+  sessionFacts: createDeliverySessionFacts({
+    environment: options.environment,
+    keys: options.sessionEnvironmentKeys,
+  }),
+  phaseCommit: options.phaseCommit,
+  nowIso: options.nowIso,
+  newFenceToken: options.newFenceToken,
+});
+
+/** Compose the standalone `commit` surface (GH-227 F-1..F-5). */
+export const createCommitCommandRuntime = (
+  options: CommitRuntimeOptions,
+  phase?: { readonly runtime: PhaseCommandRuntime; readonly extension: PhaseCommitExtension },
+): CommitCommandRuntime => ({
+  sessionFacts: () =>
+    typeof options.sessionFacts === "function" ? options.sessionFacts() : options.sessionFacts,
+  resolveRef:
+    options.resolveRef ??
+    (async () => {
+      const head = await options.git.readTree();
+      const match = /(?:^|\/)([A-Z][A-Z0-9]*-\d+)(?:$|\/)/.exec(head.branch);
+      return match?.[1] === undefined ? undefined : { ref: match[1], refSource: "branch" as const };
+    }),
+  readContext: (changeRef) => {
+    const plan = readPlanContext(options, changeRef);
+    const currentPhaseId =
+      currentPhaseOf(options.store, changeRef) ?? (plan.planPresent ? "delivery" : undefined);
+    return {
+      ...(currentPhaseId === undefined ? {} : { currentPhaseId }),
+      planPresent: plan.planPresent,
+      phases: plan.phases,
+    };
+  },
+  runAct: (request) => runCommitAct(request, commitActPorts(options)),
+  currentHead: () => options.git.head(),
+  ...(phase === undefined ? {} : { phase }),
 });
 
 /** Compose the read-only verify runtime from injected I/O and the state port. */
@@ -300,6 +673,12 @@ export type VerifyGatesRuntimeOptions = {
     readonly credentials: CredentialPort;
     readonly transport: StatusTransport;
   };
+  /** The resolved declared gate set; absent yields the shipped default. */
+  readonly readGateSet?: VerifyGatesCommandRuntime["readGateSet"];
+  /** The EVT-1 append seam; absent leaves the evaluation unrecorded. */
+  readonly appendVerification?: VerifyGatesCommandRuntime["appendVerification"];
+  /** The injected clock in epoch milliseconds. */
+  readonly nowMs?: () => number;
 };
 
 type ProviderFailureLike = { readonly ok: false; readonly code: string };
@@ -429,6 +808,203 @@ export const createVerifyGatesCommandRuntime = (
       if (!result.ok) return providerReadFailure(result);
       return { ok: true, value: { item: result.value } };
     },
+    readGateSet:
+      options.readGateSet ??
+      (() => {
+        const resolved = resolveMergeGateSet(undefined);
+        return resolved.ok
+          ? { ok: true as const, value: resolved.value }
+          : { ok: false as const, code: resolved.failure.code, detail: resolved.failure.detail };
+      }),
+    appendVerification: options.appendVerification ?? (() => ({ ok: true as const })),
+    nowMs: options.nowMs ?? (() => Date.now()),
+  };
+};
+
+/** The injected seams for the merge command composition (GH-225 F-1..F-8). */
+export type MergeCommandComposition = {
+  readonly store: StateStorePort;
+  readonly git: GitMergeSeam;
+  readonly values: () => Readonly<Record<string, unknown>>;
+  readonly readWorkItem: (
+    changeRef: string,
+  ) => Promise<
+    { readonly ok: true; readonly item: WorkItem } | { readonly ok: false; readonly code: string }
+  >;
+  readonly readCheckRuns: (sha: string) => Promise<
+    | {
+        readonly ok: true;
+        readonly items: readonly import("@delivery-os/core/contracts").PipelineRun[];
+        readonly pageItemCount: number;
+        readonly sha?: string;
+      }
+    | { readonly ok: false; readonly code: string }
+  >;
+  readonly readRequestDetail: () => Promise<
+    | { readonly ok: true; readonly request: DeliveryRequest }
+    | { readonly ok: false; readonly code: string }
+  >;
+  readonly ownerPrincipal?: string;
+  readonly baseRef?: string;
+  readonly branch?: string;
+  readonly nowIso: () => string;
+  readonly nowMs: () => number;
+  readonly newFenceToken: () => string;
+};
+
+/**
+ * Compose the merge command runtime: the declared configuration, the three
+ * merge ledgers, the bounded provider reads, and the git mutation seam.
+ */
+export const createMergeCommandRuntime = (
+  composition: MergeCommandComposition,
+): MergeCommandRuntime => {
+  const policy = OWNER_GATE_SLA_POLICY;
+  return {
+    readConfig: () => {
+      const values = composition.values();
+      const merge = values.merge;
+      const rawGates =
+        typeof merge === "object" && merge !== null && !Array.isArray(merge)
+          ? (merge as Record<string, unknown>).gates
+          : undefined;
+      const resolved = resolveMergeGateSet(rawGates);
+      if (!resolved.ok) {
+        return {
+          ok: false as const,
+          code: resolved.failure.code,
+          detail: resolved.failure.detail,
+        };
+      }
+      const freshness =
+        typeof merge === "object" && merge !== null && !Array.isArray(merge)
+          ? (merge as Record<string, unknown>)["gate-freshness"]
+          : undefined;
+      // A safety-relevant bound is never silently interpreted: an invalid
+      // declared freshness fails closed as a classified configuration failure.
+      if (
+        freshness !== undefined &&
+        (typeof freshness !== "number" || !Number.isFinite(freshness) || freshness < 0)
+      ) {
+        return {
+          ok: false as const,
+          code: "config.value.invalid",
+          detail: "merge.gate-freshness must be a finite non-negative number of seconds",
+        };
+      }
+      return {
+        ok: true as const,
+        config: {
+          gateSet: resolved.value,
+          freshnessBoundSeconds: typeof freshness === "number" ? freshness : 1800,
+          comparator: policy.comparator,
+          policy,
+          ...(composition.ownerPrincipal === undefined
+            ? {}
+            : { ownerPrincipal: composition.ownerPrincipal }),
+          baseRef: composition.baseRef ?? "main-tools",
+          ...(composition.branch === undefined ? {} : { branch: composition.branch }),
+        },
+      };
+    },
+    createPorts: (changeRef): MergeTransactionPorts => ({
+      nowIso: composition.nowIso,
+      nowMs: composition.nowMs,
+      readVerification: () => readMergeGateVerifications(composition.store, changeRef),
+      readTransactions: () => readMergeTransactions(composition.store, changeRef),
+      readWaivers: () => readMergeWaivers(composition.store, changeRef),
+      appendVerification: (record) => {
+        const result = appendMergeGateVerification(composition.store, {
+          record,
+          fenceToken: composition.newFenceToken(),
+        });
+        return result.ok ? { ok: true } : { ok: false, code: result.error.code };
+      },
+      appendWaiver: (record) => {
+        const result = appendMergeWaiver(composition.store, {
+          record,
+          fenceToken: composition.newFenceToken(),
+        });
+        return result.ok ? { ok: true } : { ok: false, code: result.error.code };
+      },
+      appendTransaction: (record) => {
+        const result = appendMergeTransaction(composition.store, {
+          record,
+          fenceToken: composition.newFenceToken(),
+        });
+        return result.ok ? { ok: true } : { ok: false, code: result.error.code };
+      },
+      readWorkItem: () => composition.readWorkItem(changeRef),
+      readCheckRuns: async (sha) => {
+        const read = await composition.readCheckRuns(sha);
+        return read.ok
+          ? {
+              ok: true as const,
+              value: {
+                items: read.items,
+                pageItemCount: read.pageItemCount,
+                ...(read.sha === undefined ? {} : { sha: read.sha }),
+              },
+            }
+          : read;
+      },
+      readRequestDetail: () => composition.readRequestDetail(),
+      readHead: () => composition.git.head(),
+      readBaseContainment: (sha) =>
+        composition.git.isContained(sha, composition.baseRef ?? "main-tools"),
+      refresh: async () =>
+        composition.branch === undefined
+          ? { outcome: "failed" as const, code: "branch-unresolved" }
+          : composition.git.refresh({
+              branch: composition.branch,
+              baseRef: composition.baseRef ?? "main-tools",
+            }),
+      land: async (input) =>
+        composition.branch === undefined
+          ? { ok: false as const, code: "branch-unresolved" }
+          : composition.git.squashLand({
+              branch: composition.branch,
+              baseRef: input.baseRef,
+              message: `merge(${changeRef}): squash ${composition.branch}`,
+            }),
+      deleteBranch: async (input) =>
+        input.branch === undefined
+          ? "failed"
+          : composition.git.deleteBranch({ branch: input.branch }),
+    }),
+  };
+};
+
+/** The injected seams for the `verify deploy` composition (GH-225 F-6). */
+export type VerifyDeployComposition = {
+  readonly resolve: VerifyDeployRuntime["resolve"];
+  readonly github: {
+    readonly instance: ExternalSystemInstance;
+    readonly credentials: CredentialPort;
+    readonly transport: StatusTransport;
+    readonly repository: { readonly owner: string; readonly name: string };
+  };
+};
+
+/**
+ * Compose the deploy runtime: deterministic target resolution plus one bounded
+ * trace read behind the GitHub transport. No trigger capability is composed.
+ */
+export const createVerifyDeployCommandRuntime = (
+  composition: VerifyDeployComposition,
+): VerifyDeployRuntime => {
+  const reader = createGitHubDeployTraceReader({
+    instance: composition.github.instance,
+    credentials: composition.github.credentials,
+    repository: composition.github.repository,
+    transport: composition.github.transport,
+  });
+  return {
+    resolve: composition.resolve,
+    readTrace: async (target) => {
+      const result = await reader.readDeployTrace(target.jobId, target.pipelineName);
+      return result.ok ? { ok: true, trace: result.value } : { ok: false, code: result.code };
+    },
   };
 };
 
@@ -437,16 +1013,64 @@ export type EdgeOptions = {
   readonly program: CommandProgram;
   readonly environment?: Readonly<Record<string, string | undefined>>;
   readonly secretKeys?: readonly string[];
+  /** Injected stream capability fact; omitted means non-interactive. */
+  readonly isTTY?: boolean;
+  /** Injected state directory; defaults to `<home>/<stateDirectoryName>`. */
+  readonly stateDirectory?: string;
+  /** Injected home directory; defaults to the environment record's HOME. */
+  readonly homeDirectory?: string;
+  /** Injected workspace identity for the audit store. */
+  readonly workspaceId?: string;
+  /** Injected fence namespace for the audit store. */
+  readonly fenceNamespace?: string;
 };
 
-/** Assemble the production dependency set at the runtime-aware edge. */
+const trimTrailingSeparators = (path: string): string => path.replace(/[\\/]+$/u, "");
+
+const stateDirectoryFor = (options: EdgeOptions): string | undefined => {
+  if (options.stateDirectory !== undefined) return options.stateDirectory;
+  const environment = options.environment ?? {};
+  const home = options.homeDirectory ?? environment.HOME ?? environment.USERPROFILE;
+  if (home === undefined || home.length === 0) return undefined;
+  return `${trimTrailingSeparators(home)}/${options.brand.stateDirectoryName}`;
+};
+
+/**
+ * Assemble the production dependency set at the runtime-aware edge. The clock
+ * is the epoch-millisecond UTC wall clock; the mode fact comes from the
+ * injected stream capability; and the audit seam composes over the state
+ * directory derived from the branding state-directory name.
+ */
 export function createProductionDependencies(options: EdgeOptions): CliDependencies {
+  const environment = options.environment ?? {};
+  const workspaceId = options.workspaceId ?? "default";
+  const stateDirectory = stateDirectoryFor(options);
+  const audit =
+    stateDirectory === undefined
+      ? undefined
+      : createCliAudit({
+          store: createStateStore(
+            {
+              level: "local",
+              workspaceId,
+              fenceNamespace: options.fenceNamespace ?? "cli-audit",
+              schemaVersion: STATE_SCHEMA_VERSION,
+              stateDirectory,
+            },
+            { driver: "jsonl", edge: createNodeStateEdge() },
+          ),
+          scope: workspaceId,
+          environment,
+          environmentPrefix: options.brand.environmentPrefix,
+        });
   return {
     brand: options.brand,
-    clock: { now: () => Math.trunc(performance.now()) },
+    clock: { now: () => Date.now() },
     newRunId: () => globalThis.crypto.randomUUID(),
-    secrets: registerEdgeSecrets(options.environment ?? {}, options.secretKeys ?? []),
+    secrets: registerEdgeSecrets(environment, options.secretKeys ?? []),
     program: options.program,
+    mode: resolveCliMode(options.isTTY === undefined ? {} : { isTTY: options.isTTY }),
+    ...(audit === undefined ? {} : { audit }),
   };
 }
 
@@ -953,6 +1577,9 @@ export const createStatusCommandRuntime = (
         blockedDependencies: "unavailable",
         stalls: "available",
         hygiene: "available",
+        epicMembership: "available",
+        storyPoints: "available",
+        inSprint: "available",
       },
     };
   };
@@ -1015,6 +1642,256 @@ export const createStatusCommandRuntime = (
   };
 };
 
+/** The doctor composition seams; the provider resolver is supplied by the edge. */
+export type DoctorComposition = {
+  readonly store: StateStorePort;
+  readonly credentials: CredentialPort;
+  readonly transport: StatusTransport;
+  readonly repository: { readonly cwd: string; readonly io: RepositoryIo };
+  readonly clock: { readonly nowMs: () => number; readonly nowIso: () => string };
+  readonly github: { readonly instance: ExternalSystemInstance };
+  /** The brand environment prefix used only to name declared source keys. */
+  readonly environmentPrefix: string;
+  /** The injected local work-tree fact (doctor spawns no process). */
+  readonly readWorkTree: () => { readonly readable: boolean; readonly clean: boolean };
+  /** The additive retro registry store fact (GH-232 F-8). */
+  readonly readRetroState?: () => DoctorStateStoresRead;
+};
+
+type DoctorLedgerSnapshot =
+  | {
+      readonly ok: true;
+      readonly value: {
+        readonly parks: readonly ProviderParkRecord[];
+        readonly announcements: readonly ProviderAnnouncementRecord[];
+        readonly evidence?: { readonly verifiedEmpty: boolean; readonly recordCount: number };
+      };
+    }
+  | { readonly ok: false; readonly error: { readonly code: string } };
+
+const doctorStateReason = (
+  code: string,
+): "store-torn" | "store-schema-mismatch" | "store-unreadable" | "store-unknown" | "unreadable" => {
+  switch (code) {
+    case "state.store.torn":
+      return "store-torn";
+    case "state.schema.mismatch":
+      return "store-schema-mismatch";
+    case "state.permission.denied":
+      return "store-unreadable";
+    case "state.store.unknown":
+      return "store-unknown";
+    default:
+      return "unreadable";
+  }
+};
+
+const doctorWiringRead = (result: { readonly ok: boolean }): DoctorWiringRead => {
+  if (result.ok) {
+    const page = (result as { readonly value?: { readonly pageItemCount?: number } }).value;
+    return { ok: true, pageItemCount: page?.pageItemCount ?? 0 };
+  }
+  const failure = result as {
+    readonly code?: string;
+    readonly failureClass?: string;
+    readonly httpStatus?: number;
+  };
+  if (failure.code === "config.credential.missing") {
+    return {
+      ok: false,
+      reason: "credential-unavailable",
+      failureCode: "config.credential.missing",
+    };
+  }
+  return {
+    ok: false,
+    reason: "read-failed",
+    ...(failure.code === undefined ? {} : { failureClass: failure.code }),
+    ...(failure.httpStatus === undefined ? {} : { httpStatus: failure.httpStatus }),
+  };
+};
+
+/** Compose the doctor runtime, enforcing the credential-reference guard first. */
+export const createDoctorCommandRuntime = (
+  options: DoctorComposition,
+  resolveProviderConfig: () => StatusProviderConfigRead,
+): DoctorCommandRuntime => {
+  const instance = options.github.instance;
+  const admitted =
+    instance.systemKind === "vcs" && instance.authMethod.mechanism === "credential-reference";
+  const reference =
+    instance.authMethod.mechanism === "credential-reference"
+      ? instance.authMethod.reference
+      : undefined;
+  const envVar =
+    reference === undefined
+      ? undefined
+      : reference.sourceKey.style === "literal"
+        ? reference.sourceKey.name
+        : `${options.environmentPrefix}${reference.sourceKey.suffix}`;
+  const credentialRefusal: DoctorCredentialPresence = {
+    ok: false,
+    failureCode: "config.credential.missing",
+    ...(envVar === undefined ? {} : { envVar }),
+  };
+  let factsCache: ReturnType<typeof readRepositoryFacts> | undefined;
+  let ledgerCache: DoctorLedgerSnapshot | undefined;
+
+  const repositoryFacts = (): ReturnType<typeof readRepositoryFacts> =>
+    (factsCache ??= readRepositoryFacts({
+      cwd: options.repository.cwd,
+      io: options.repository.io,
+    }));
+
+  const ledger = (): NonNullable<typeof ledgerCache> => {
+    if (ledgerCache === undefined) {
+      const read = readProviderLedger(options.store);
+      ledgerCache = read.ok
+        ? {
+            ok: true,
+            value: {
+              parks: read.value.parks,
+              announcements: read.value.announcements,
+              ...(read.value.evidence === undefined ? {} : { evidence: read.value.evidence }),
+            },
+          }
+        : { ok: false, error: { code: read.error.code } };
+    }
+    return ledgerCache;
+  };
+
+  const clientFor = (target: { readonly owner: string; readonly name: string }) =>
+    createGitHubClient({
+      instance,
+      credentials: options.credentials,
+      repository: target,
+      transport: options.transport,
+    });
+
+  const readRepository = (): DoctorCheckoutFacts => {
+    const facts = repositoryFacts();
+    const workTree = options.readWorkTree();
+    const parsed = parseGitHubRemote(facts.originUrl);
+    const binding = parsed.ok
+      ? {
+          state: "observed" as const,
+          host: "github.com" as const,
+          owner: parsed.owner,
+          name: parsed.name,
+        }
+      : { state: "unavailable" as const, reason: "remote-unresolvable" as const };
+    return {
+      readable: facts.root !== undefined && workTree.readable,
+      clean: workTree.clean,
+      ...(facts.head.branch === undefined ? {} : { branch: facts.head.branch }),
+      ...(facts.head.sha === undefined ? {} : { sha: facts.head.sha }),
+      detached: facts.head.detached,
+      binding,
+    };
+  };
+
+  return {
+    readRepository,
+    resolveTrackerCredential: (): DoctorCredentialPresence => {
+      if (!admitted || reference === undefined) return credentialRefusal;
+      return options.credentials.resolve(reference).ok ? { ok: true } : credentialRefusal;
+    },
+    readTrackerPage: async (target, limit) => {
+      if (!admitted)
+        return {
+          ok: false,
+          reason: "credential-unavailable",
+          failureCode: "config.credential.missing",
+        };
+      return doctorWiringRead(await clientFor(target).listWorkItems(limit));
+    },
+    resolveHeadCommit: (): DoctorCommitResolution => {
+      const head = repositoryFacts().head;
+      return {
+        resolved: head.sha !== undefined && !head.detached,
+        ...(head.branch === undefined ? {} : { branch: head.branch }),
+        ...(head.sha === undefined ? {} : { sha: head.sha }),
+        detached: head.detached,
+      };
+    },
+    readCheckRuns: async (sha, limit) => {
+      if (!admitted)
+        return {
+          ok: false,
+          reason: "credential-unavailable",
+          failureCode: "config.credential.missing",
+        };
+      const facts = repositoryFacts();
+      const parsed = parseGitHubRemote(facts.originUrl);
+      if (!parsed.ok) return { ok: false, reason: "read-failed" };
+      return doctorWiringRead(
+        await clientFor({ owner: parsed.owner, name: parsed.name }).readPipelineRun(sha, limit),
+      );
+    },
+    readProviderConfig: resolveProviderConfig,
+    resolveProviderCredential: (input): DoctorProviderCredentialPresence => ({
+      providerName: input.providerName,
+      sourceKey: input.sourceKey,
+      ok: options.credentials.resolve(input.reference).ok,
+    }),
+    readParkFold: (): DoctorParkFoldRead => {
+      const read = ledger();
+      if (!read.ok) {
+        return {
+          ok: false,
+          reason: "state-unreadable",
+          failureCode: read.error.code,
+        };
+      }
+      return {
+        ok: true,
+        parks: read.value.parks,
+        announcements: read.value.announcements,
+      };
+    },
+    readStateStores: (): DoctorStateStoresRead => {
+      const read = ledger();
+      if (!read.ok) {
+        return {
+          ok: false,
+          reason: doctorStateReason(read.error.code),
+          failureCode: read.error.code,
+        };
+      }
+      const base: DoctorStateStoresRead = {
+        ok: true,
+        verifiedEmpty: read.value.evidence?.verifiedEmpty ?? false,
+        recordCount: read.value.evidence?.recordCount ?? 0,
+        stores: [
+          {
+            name: "delivery",
+            verdict: read.value.evidence?.verifiedEmpty === true ? "verified-empty" : "valid",
+          },
+        ],
+      };
+      const retro = options.readRetroState?.();
+      if (retro === undefined) return base;
+      if (!retro.ok) return retro;
+      return {
+        ok: true,
+        verifiedEmpty: base.verifiedEmpty && retro.verifiedEmpty,
+        // The retro registry shares the delivery ledger (the reviewed PIN-4
+        // single-store decision); `base.recordCount` already includes the retro
+        // artifacts, so adding `retro.recordCount` would double-count them.
+        recordCount: base.recordCount,
+        stores: [
+          ...(base.stores ?? []),
+          ...(retro.stores ?? [
+            { name: "retro-registry", verdict: retro.verifiedEmpty ? "verified-empty" : "valid" },
+          ]),
+        ],
+      };
+    },
+    nowIso: options.clock.nowIso,
+    nowMs: options.clock.nowMs,
+  };
+};
+
 /** The injected I/O for the plan command family (GH-226). */
 export type PlanRuntimeOptions = {
   readonly changesDirectory: string;
@@ -1040,24 +1917,36 @@ export const createPlanCommandRuntime = (options: PlanRuntimeOptions): PlanComma
   },
 });
 
-/** The watchdog composition seams; production M1-S1 wires zero signal sources. */
+/** The watchdog composition seams. */
 export type WatchdogComposition = {
   readonly readLane: (lane: string) => WatchdogLaneRead;
   readonly git?: WatchdogGitPort;
   readonly signalSources?: readonly WatchdogSignalSource[];
+  /**
+   * The adapter-sourced liveness facts read seam (GH-235 F-1). When supplied,
+   * the runtime composes the sourced-signal bridge into the delivered probe
+   * seam; when omitted, no signal source is declared and liveness stays
+   * `watchdog.signals-absent`.
+   */
+  readonly readSourcedSignals?: (lane: string) => HarnessLivenessFacts | undefined;
 };
 
 /**
  * Compose the watchdog runtime: the injected lane reader, the bounded git seam
- * (a production seam by default), and the declared signal sources (none in
- * production M1-S1, so liveness always classifies absent).
+ * (a production seam by default), and the declared signal sources. A supplied
+ * `readSourcedSignals` composes the adapter-sourced bridge, so a sourced lane
+ * reaches `progressing`/`stalled` instead of always answering absent.
  */
 export const createWatchdogCommandRuntime = (
   composition: WatchdogComposition,
 ): WatchdogCommandRuntime => ({
   readLane: composition.readLane,
   git: composition.git ?? createWatchdogGitSeam(),
-  signalSources: composition.signalSources ?? [],
+  signalSources:
+    composition.signalSources ??
+    (composition.readSourcedSignals === undefined
+      ? []
+      : [createSourcedWatchdogSignalSource(composition.readSourcedSignals)]),
 });
 
 /**
@@ -1121,14 +2010,43 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     if (!result.ok) {
       return { ok: false, collector: "tracker", reason: "failed", code: collectorCode };
     }
+    // The GH-229 GAP-9 flip: a recorded authorized waiver for the item's change
+    // ref is collected as waiver-kind with its recorded authorizer. A gate
+    // without a recorded waiver stays owner-review with `waivedBy: null` (no
+    // synthesis); the board payload schema is unchanged.
+    const waiverRead = readAllMergeWaivers(composition.store);
+    const waiversByGate = waiverRead.ok ? newestWaiverByGate(waiverRead.records) : new Map();
+    const waiverFor = (entityId: string) => {
+      const numeric =
+        /^[A-Za-z]+-([0-9]+)$/.exec(entityId)?.[1] ??
+        (/^[0-9]+$/.test(entityId) ? entityId : undefined);
+      for (const waiver of waiversByGate.values()) {
+        if (waiver.gateId !== "owner-gate") continue;
+        const changeNumeric = /^[A-Za-z]+-([0-9]+)$/.exec(waiver.changeRef)?.[1];
+        if (changeNumeric !== undefined && changeNumeric === numeric) return waiver;
+        if (waiver.changeRef === entityId) return waiver;
+      }
+      return undefined;
+    };
     const gates = result.value.items
       .filter((item) => openItem(item) && ownerAttention(item))
-      .map((item) => ({
-        id: `${item.identity.entityId}:owner-review`,
-        kind: "owner-review",
-        ref: item.identity.entityId,
-        ...(item.updatedAt === undefined ? {} : { activityAt: item.updatedAt }),
-      }));
+      .map((item) => {
+        const waiver = waiverFor(item.identity.entityId);
+        return waiver === undefined
+          ? {
+              id: `${item.identity.entityId}:owner-review`,
+              kind: "owner-review",
+              ref: item.identity.entityId,
+              ...(item.updatedAt === undefined ? {} : { activityAt: item.updatedAt }),
+            }
+          : {
+              id: `${item.identity.entityId}:waiver`,
+              kind: "waiver",
+              ref: item.identity.entityId,
+              waivedBy: waiver.authorizer,
+              ...(item.updatedAt === undefined ? {} : { activityAt: item.updatedAt }),
+            };
+      });
     return {
       ok: true,
       collector: "tracker",
@@ -1211,16 +2129,20 @@ export type ConfigProgramOptions = {
   readonly lint?: LintCommandRuntime;
   readonly plan?: PlanRuntimeOptions;
   readonly phase?: PhaseCommandRuntime;
+  readonly commit?: CommitRuntimeOptions;
   readonly provider?: ProviderComposition;
   readonly verify?: VerifyCommandRuntime;
   readonly status?: StatusComposition;
   readonly brief?: StatusComposition;
   readonly queueReady?: StatusComposition;
+  readonly doctor?: DoctorComposition;
   readonly db?: DbComposition;
   readonly closeout?: CloseoutComposition;
   readonly watchdog?: WatchdogComposition;
   readonly board?: BoardComposition;
   readonly blockers?: BlockersComposition;
+  readonly merge?: MergeCommandRuntime;
+  readonly retro?: RetroCompositionOptions;
 };
 
 export type ConfigProgramResult =
@@ -1409,7 +2331,33 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
     commands.plan = createPlanCommandDefinition(createPlanCommandRuntime(options.plan));
   }
   if (options.phase !== undefined) {
-    commands.phase = createPhaseCommandDefinition(options.phase);
+    const extension =
+      options.commit === undefined ? undefined : createPhaseCommitExtension(options.commit);
+    const phaseRuntime =
+      extension === undefined ? options.phase : { ...options.phase, commit: extension };
+    const committedPhaseRuntime =
+      options.commit === undefined
+        ? phaseRuntime
+        : {
+            ...phaseRuntime,
+            sessionFacts: () => {
+              const facts = options.commit?.sessionFacts;
+              return typeof facts === "function"
+                ? facts()
+                : (facts ?? { insideDeliverySession: false });
+            },
+          };
+    commands.phase = createPhaseCommandDefinition(committedPhaseRuntime);
+    if (options.commit !== undefined && extension !== undefined) {
+      commands.commit = createCommitCommandDefinition(
+        createCommitCommandRuntime(options.commit, {
+          runtime: committedPhaseRuntime,
+          extension,
+        }),
+      );
+    }
+  } else if (options.commit !== undefined) {
+    commands.commit = createCommitCommandDefinition(createCommitCommandRuntime(options.commit));
   }
   if (options.provider !== undefined) {
     const provider = options.provider;
@@ -1428,9 +2376,35 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
         if (!parsed.ok) {
           return { ok: false, code: parsed.error.code, summary: parsed.error.detail };
         }
+        let profileScope:
+          | { readonly name: string; readonly providers: readonly string[] }
+          | undefined;
+        if (input.profile !== undefined) {
+          const profileParsed = parseAndValidateProfileConfiguration(
+            snapshot.value.config.values,
+            parsed.config,
+          );
+          if (!profileParsed.ok) {
+            return {
+              ok: false,
+              code: profileParsed.error.code,
+              summary: profileParsed.error.detail,
+            };
+          }
+          const profile = profileParsed.config.profiles[input.profile];
+          if (profile === undefined) {
+            return {
+              ok: false,
+              code: "provider.profile.invalid",
+              summary: `profile ${input.profile} is not declared`,
+            };
+          }
+          profileScope = { name: profile.name, providers: profile.providers };
+        }
         return engine.resolve({
           config: parsed.config,
           ...(input.chainName === undefined ? {} : { chainName: input.chainName }),
+          ...(profileScope === undefined ? {} : { profile: profileScope }),
           persist: true,
         });
       },
@@ -1453,6 +2427,205 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
         });
       },
       parks: (input) => engine.parks(input),
+      profileResolve: async (input) => {
+        const snapshot = resolve({});
+        if (!snapshot.ok) {
+          return {
+            ok: false,
+            code: snapshot.error.code,
+            summary: `configuration rejected (${snapshot.error.code})`,
+          };
+        }
+        const providerParsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
+        if (!providerParsed.ok) {
+          return {
+            ok: false,
+            code: providerParsed.error.code,
+            summary: providerParsed.error.detail,
+          };
+        }
+        const profileParsed = parseAndValidateProfileConfiguration(
+          snapshot.value.config.values,
+          providerParsed.config,
+        );
+        if (!profileParsed.ok) {
+          return {
+            ok: false,
+            code: profileParsed.error.code,
+            summary: profileParsed.error.detail,
+          };
+        }
+        const nowMs = provider.clock.nowMs();
+        const probe = createProfileProbePort((providerName) => {
+          const descriptor = providerParsed.config.entries[providerName];
+          if (descriptor === undefined) {
+            return {
+              available: false,
+              condition: "provider-outage",
+              blockers: [
+                {
+                  kind: "condition",
+                  value: "provider-outage",
+                  detail: `provider ${providerName} is not declared`,
+                },
+              ],
+              source: `provider ${providerName}: undeclared`,
+            };
+          }
+          if (!descriptor.enabled) {
+            return {
+              available: false,
+              condition: "disabled",
+              blockers: [
+                {
+                  kind: "condition",
+                  value: "disabled",
+                  detail: `provider ${providerName} is disabled`,
+                },
+              ],
+              source: `provider ${providerName}: disabled`,
+            };
+          }
+          if (descriptor.peak !== undefined) {
+            const peak = evaluatePeakWindow(descriptor.peak, nowMs);
+            if (peak.status === "parked") {
+              return {
+                available: false,
+                condition: "peak-window",
+                blockers: [
+                  {
+                    kind: "condition",
+                    value: "peak-window",
+                    detail: `provider ${providerName}: peak window active`,
+                  },
+                ],
+                source: `provider ${providerName}: peak window`,
+              };
+            }
+          }
+          return {
+            available: true,
+            condition: "clear",
+            blockers: [],
+            source: `provider ${providerName}: clear`,
+          };
+        });
+        const selection = selectProfile({
+          profiles: profileParsed.config,
+          probe,
+          nowMs,
+          ...(input.agent === undefined ? {} : { agent: input.agent }),
+        });
+        if (!selection.ok) return selection;
+        const baseProfileName = profileParsed.config.preferenceChain?.base;
+        const baseProfile =
+          baseProfileName === undefined
+            ? undefined
+            : profileParsed.config.profiles[baseProfileName];
+        let lifecycleProvider: string | undefined;
+        if (baseProfile !== undefined) {
+          for (const providerName of baseProfile.providers) {
+            if (!probe.probe(providerName).available) {
+              lifecycleProvider = providerName;
+              break;
+            }
+          }
+        }
+        const persisted = readProfileTarget(provider.stateStore);
+        if (!persisted.ok) {
+          return {
+            ok: false,
+            code: persisted.error.code,
+            summary: `profile target read failed (${persisted.error.code})`,
+          };
+        }
+        const lifecycle = evaluateProfileLifecycle({
+          profiles: profileParsed.config,
+          selection,
+          ...(persisted.value === undefined ? {} : { persisted: persisted.value }),
+          nowMs,
+          ...(lifecycleProvider === undefined ? {} : { providerName: lifecycleProvider }),
+        });
+        if (lifecycle.append && lifecycle.target !== undefined) {
+          const written = persistProfileTarget({
+            store: provider.stateStore,
+            fenceToken: provider.newFenceToken(),
+            record: lifecycle.target,
+          });
+          if (!written.ok) {
+            return {
+              ok: false,
+              code: written.error.code,
+              summary: `profile target write failed (${written.error.code})`,
+            };
+          }
+        }
+        if (!lifecycle.selection.ok) return lifecycle.selection;
+        if (input.forSpawn === true) {
+          const outcome = resolveProfileForSpawn({
+            profiles: profileParsed.config,
+            probe,
+            nowMs,
+            namePrefix: input.namePrefix ?? "",
+            ...(input.agent === undefined ? {} : { agent: input.agent }),
+            ...(profileParsed.config.envRecord === undefined
+              ? {}
+              : { policy: profileParsed.config.envRecord }),
+            selection: lifecycle.selection,
+          });
+          if (!outcome.ok) {
+            return {
+              ok: false,
+              code: outcome.code,
+              summary: outcome.summary,
+              eligibility: outcome.eligibility,
+              events: outcome.events,
+            };
+          }
+          return outcome.selection;
+        }
+        return lifecycle.selection;
+      },
+      watchStatus: async (input) => {
+        const snapshot = resolve({});
+        if (!snapshot.ok) {
+          return {
+            ok: false,
+            code: snapshot.error.code,
+            summary: `configuration rejected (${snapshot.error.code})`,
+          };
+        }
+        const providerParsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
+        if (!providerParsed.ok) {
+          return {
+            ok: false,
+            code: providerParsed.error.code,
+            summary: providerParsed.error.detail,
+          };
+        }
+        const profileParsed = parseAndValidateProfileConfiguration(
+          snapshot.value.config.values,
+          providerParsed.config,
+        );
+        if (!profileParsed.ok) {
+          return {
+            ok: false,
+            code: profileParsed.error.code,
+            summary: profileParsed.error.detail,
+          };
+        }
+        const reader = createProviderWatchStatus({
+          clock: provider.clock,
+          credentialPort: provider.credentialPort,
+          transport: provider.transport,
+          mappings: createProviderWatchMappings(),
+        });
+        return reader.status({
+          targets: profileParsed.config.watch ?? {},
+          credentials: providerParsed.config.credentials,
+          ...(input.providerName === undefined ? {} : { providerName: input.providerName }),
+        });
+      },
     };
     commands.provider = createProviderCommandDefinition(providerRuntime);
   }
@@ -1489,6 +2662,12 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   if (options.verify !== undefined) {
     commands.verify = createVerifyCommandDefinition(options.verify);
   }
+  if (options.doctor !== undefined) {
+    commands.doctor = createDoctorCommandDefinition(
+      createDoctorCommandRuntime(options.doctor, resolveProviderConfig),
+      brand.environmentPrefix,
+    );
+  }
   if (options.db !== undefined) {
     commands.db = createDbCommandDefinition(createDbCommandRuntime(options.db));
   }
@@ -1510,10 +2689,224 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
       createBlockersCommandRuntime(options.blockers, brand, secrets, options.environment),
     );
   }
+  if (options.merge !== undefined) {
+    commands.merge = createMergeCommandDefinition(options.merge);
+  }
+  if (options.retro !== undefined) {
+    commands.retro = createRetroCommandDefinition(createRetroCommandRuntime(options.retro));
+  }
   return {
     ok: true,
     brand,
     program: { commands },
     secrets,
+  };
+};
+
+/**
+ * The retro composition seams (GH-232 F-1/F-5/F-8): the delivery state store,
+ * the sidecar runtime edge, the GET-only collector readers, the clock, and the
+ * injected id factories. The export engine surface is deliberately NOT composed
+ * into any command or flag (NG-1 amendment).
+ */
+export type RetroCompositionOptions = {
+  readonly store: StateStorePort;
+  readonly stateDirectory: string;
+  readonly workspaceId: string;
+  readonly changesDirectory: string;
+  readonly fs: PmNotesFileSystemFacts;
+  readonly clock: { readonly nowMs: () => number; readonly nowIso: () => string };
+  readonly newRunId: () => string;
+  readonly newTraceId: () => string;
+  readonly newFenceToken: () => string;
+  readonly identity?: import("@delivery-os/core/contracts").RetroClaimedIdentity;
+  readonly context?: "collector" | "delivery-agent";
+  readonly collectors?: import("@delivery-os/core/contracts").RetroCollectorRead;
+  readonly readChanges?: () => readonly import("@delivery-os/core/contracts").RetroChangeFacts[];
+  readonly verifyArtifact?: (artifactRef: string) => boolean;
+  /** The single redaction transform applied before evidence lands. */
+  readonly redact?: (text: string) => string;
+};
+
+const retroChangeFactsFrom = (
+  store: StateStorePort,
+): readonly import("@delivery-os/core/contracts").RetroChangeFacts[] => {
+  const records = store.readRecords();
+  if (!records.ok) return [];
+  const latest = new Map<string, import("@delivery-os/core/contracts").PhaseTransitionRecord[]>();
+  for (const record of records.value.records) {
+    if (record.kind !== "phase.transition") continue;
+    const payload = record.payload;
+    if (typeof payload !== "object" || payload === null || Array.isArray(payload)) continue;
+    const source = payload as Record<string, unknown>;
+    const changeRef = source.changeRef;
+    const transitions = source.transitions;
+    if (typeof changeRef !== "string" || !Array.isArray(transitions)) continue;
+    const parsed: import("@delivery-os/core/contracts").PhaseTransitionRecord[] = [];
+    for (const entry of transitions) {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
+      const candidate = entry as Record<string, unknown>;
+      if (
+        typeof candidate.changeRef !== "string" ||
+        typeof candidate.phaseId !== "string" ||
+        (candidate.operation !== "complete" && candidate.operation !== "reopen") ||
+        typeof candidate.timestamp !== "string" ||
+        candidate.outcome !== "landed"
+      ) {
+        continue;
+      }
+      parsed.push({
+        changeRef: candidate.changeRef,
+        phaseId: candidate.phaseId,
+        operation: candidate.operation,
+        timestamp: candidate.timestamp,
+        outcome: "landed",
+      });
+    }
+    latest.set(changeRef, parsed);
+  }
+  const changes: import("@delivery-os/core/contracts").RetroChangeFacts[] = [];
+  for (const [changeRef, transitions] of latest) {
+    const last = transitions[transitions.length - 1];
+    const completed =
+      last !== undefined && last.phaseId === "pr_creation" && last.operation === "complete";
+    changes.push({
+      changeRef,
+      ...(completed ? { completedAt: last.timestamp } : {}),
+      transitions,
+    });
+  }
+  return changes;
+};
+
+const retroNotesFrom = (
+  options: RetroCompositionOptions,
+  changeRef: string,
+): import("@delivery-os/core/contracts").RetroNotesReadResult => {
+  const read = readPmNotesText({
+    changeRef,
+    changesDirectory: options.changesDirectory,
+    fs: options.fs,
+  });
+  if (!read.ok) return { ok: true, value: { retroNotes: [] } };
+  const document = read.value;
+  if (typeof document !== "object" || document === null || Array.isArray(document)) {
+    return { ok: true, value: { retroNotes: [] } };
+  }
+  const notes = (document as Record<string, unknown>).notes;
+  if (!Array.isArray(notes)) return { ok: true, value: { retroNotes: [] } };
+  const retroNotes: string[] = [];
+  for (const entry of notes) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
+    const candidate = entry as Record<string, unknown>;
+    if (candidate.type !== "retro" || typeof candidate.text !== "string") continue;
+    retroNotes.push(candidate.text);
+  }
+  return { ok: true, value: { retroNotes } };
+};
+
+const retroStateFamiliesFrom = (
+  store: StateStorePort,
+  changeRef: string,
+): import("@delivery-os/core/contracts").RetroStateFamiliesRead => {
+  const transitions = readChangeTransitionsTolerant(store, changeRef);
+  if (!transitions.ok) return { ok: false, error: transitions.error };
+  const closeouts = readCloseoutHistory(store, changeRef);
+  if (!closeouts.ok) return { ok: false, error: closeouts.error };
+  const telemetry = readCommitTelemetry(store, changeRef);
+  if (!telemetry.ok) return { ok: false, error: telemetry.error };
+  return {
+    ok: true,
+    value: {
+      transitions: transitions.value.transitions,
+      closeouts: closeouts.value.map((record) => ({
+        operationId: record.operationId,
+        outcome: record.outcome,
+        timestamp: record.timestamp,
+      })),
+      telemetry: telemetry.value.records.map((record) => ({
+        ...(record.phaseId === undefined ? {} : { phaseId: record.phaseId }),
+        commitSha: record.commitSha,
+        landedAt: record.landedAt,
+      })),
+    },
+  };
+};
+
+/** Compose the retro command runtime from injected seams. */
+export const createRetroCommandRuntime = (
+  options: RetroCompositionOptions,
+): import("@delivery-os/core/contracts").RetroCommandRuntime => {
+  const sidecar = createRetroSidecar(
+    createNodeRetroSidecarIo({
+      stateDirectory: options.stateDirectory,
+      workspaceId: options.workspaceId,
+    }),
+  );
+  const collectors: import("@delivery-os/core/contracts").RetroCollectorRead =
+    options.collectors ?? {
+      readAuditLedger: (query) => readAuditLedger(options.store, query),
+      readStateFamilies: (changeRef) => retroStateFamiliesFrom(options.store, changeRef),
+      readNotes: (changeRef) => retroNotesFrom(options, changeRef),
+    };
+  return {
+    collect: (input) =>
+      collectRetro({
+        sidecar,
+        registry: {
+          read: () => readRetroRegistry(options.store),
+          runs: (read) => readRetroRuns(read),
+          recordRun: (run, token) => recordRetroRun(options.store, run, token),
+          seed: (token) => seedRetroRegistry(options.store, token),
+        },
+        collectors,
+        readChanges: options.readChanges ?? (() => retroChangeFactsFrom(options.store)),
+        clock: { nowMs: options.clock.nowMs },
+        newTraceId: options.newTraceId,
+        newRunId: options.newRunId,
+        newFenceToken: options.newFenceToken,
+        level: input.level,
+        ...(input.changeRef === undefined ? {} : { target: input.changeRef }),
+        ...(options.identity === undefined ? {} : { identity: options.identity }),
+        ...(options.context === undefined ? {} : { context: options.context }),
+        ...(options.redact === undefined ? {} : { redact: options.redact }),
+      }),
+    report: (input) =>
+      reportRetro({
+        sidecar,
+        registry: {
+          read: () => readRetroRegistry(options.store),
+          runs: (read) => readRetroRuns(read),
+          recordRun: (run, token) => recordRetroRun(options.store, run, token),
+          seed: (token) => seedRetroRegistry(options.store, token),
+        },
+        level: input.level,
+        ...(options.verifyArtifact === undefined ? {} : { verifyArtifact: options.verifyArtifact }),
+      }),
+  };
+};
+
+/** Read the retro registry store verdict for the doctor `state check` (TC-056). */
+export const readRetroRegistryState = (store: StateStorePort): DoctorStateStoresRead => {
+  const read = readRetroRegistry(store);
+  if (!read.ok) {
+    return {
+      ok: false,
+      reason: doctorStateReason(read.error.code),
+      failureCode: read.error.code,
+    };
+  }
+  if (read.value.malformed.length > 0) {
+    return {
+      ok: false,
+      reason: "store-unknown",
+      failureCode: "state.store.unknown",
+    };
+  }
+  return {
+    ok: true,
+    verifiedEmpty: read.value.verdict === "verified-empty",
+    recordCount: read.value.artifacts.length,
+    stores: [{ name: "retro-registry", verdict: read.value.verdict }],
   };
 };

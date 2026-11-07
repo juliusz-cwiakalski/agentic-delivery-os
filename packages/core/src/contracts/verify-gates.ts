@@ -7,7 +7,7 @@
  * battery cannot drift.
  */
 import type { DeliveryRequest } from "./ports.js";
-import { STATUS_CI_RESULTS, STATUS_OWNER_ATTENTION_LABELS } from "./status.js";
+import type { STATUS_CI_RESULTS, STATUS_OWNER_ATTENTION_LABELS } from "./status.js";
 
 /** Fixed gate order (DM-2). */
 export const VERIFY_GATES_GATE_ORDER = [
@@ -308,9 +308,9 @@ export type VerifyGateCitation = {
   readonly reasons: readonly VerifyGateReason[];
 };
 
-/** One gate record. */
+/** One gate record. A repo-declared id is carried as a string (AC-F1-1). */
 export type VerifyGateRecord = {
-  readonly id: VerifyGateId;
+  readonly id: string;
   readonly verdict: VerifyGateVerdict;
   readonly reason: VerifyGateReason;
   readonly citation: VerifyGateCitation;
@@ -318,7 +318,7 @@ export type VerifyGateRecord = {
 
 /** Report summary counts. */
 export type VerifyGatesSummary = {
-  readonly gates: 5;
+  readonly gates: number;
   readonly passed: number;
   readonly failed: number;
   readonly unknown: number;

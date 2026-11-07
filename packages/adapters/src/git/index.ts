@@ -292,6 +292,22 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
 };
 
 export {
+  type CommitChildRunner,
+  type CommitChildRunnerResult,
+  createGitCommitSeam,
+  type GitCommitSeamOptions,
+} from "./commit.js";
+export {
+  createGitMergeSeam,
+  type GitMergeSeam,
+  type GitMergeSeamOptions,
+  MERGE_SEAM_OPERATIONS,
+  type MergeChildRunner,
+  type MergeChildRunnerResult,
+  type MergeGitLandResult,
+  type MergeGitRefreshResult,
+} from "./merge.js";
+export {
   createWatchdogGitSeam,
   parseWatchdogStatus,
   type WatchdogGitSeam,

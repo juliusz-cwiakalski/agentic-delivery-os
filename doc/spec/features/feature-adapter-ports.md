@@ -3,16 +3,18 @@ ados_distribution: internal
 id: SPEC-ADAPTER-PORTS
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-01
+last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
-summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the additive optional DeliveryRequest.headSha merged-head identity, the four optional verify-gates facts, and resolve-delivery-thread operation, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
+summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the additive HarnessInstance/HarnessSession/execution-environment port family, the additive optional DeliveryRequest.headSha merged-head identity, the four optional verify-gates facts, and resolve-delivery-thread operation, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, the dedicated git seam covering branch, checkout, precise staging, and commit-object creation, the declared inference network edge behind the commit primitive's transport seam, the bounded GitHub deploy-job trace read behind the existing ports, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0010", "TDR-0005", "TDR-0008"]
+  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227", "GH-231", "GH-225", "GH-233"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "ADR-0010", "TDR-0005", "TDR-0008"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
     - "packages/core/src/contracts/session.ts"
+    - "packages/core/src/contracts/harness.ts"
+    - "packages/core/src/contracts/harness-telemetry.ts"
 ---
 
 # Feature: Adapter Ports, Credential Resolution, and Embedded Metadata
@@ -51,7 +53,7 @@ The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feat
 
 ### Primitive port set
 
-The v1 port set is bounded to the catalogue's adapter-interaction rows typed at M0. No other catalogue primitive is typed here; harness, queue/scheduling, state/audit, and non-adapter context primitives belong to their owning stories.
+The v1 port set is bounded to the catalogue's adapter-interaction rows typed at M0. The harness port family joins the delivered set as an additive layer: `HarnessInstance` (configured kind, observed version, capability declaration), `HarnessSession` (spawn, deliver, resume/steer, collect, classify, harness-agnostic liveness, and bounded session listing), and `HarnessExecutionEnvironmentDescriptor` (host execution, work directory, and the declared deny-by-default environment allowlist of names and credential references only). These are specified in [Harness Adapters](feature-harness-adapters.md); queue/scheduling, state/audit, and non-adapter context primitives belong to their owning stories. Harnesses use the same capability/gap posture as providers: an unlisted capability is a declared gap, never implied parity.
 
 | Port | Contract |
 |------|----------|
@@ -103,6 +105,12 @@ The shared injectable provider transport used by the client subpaths is widened 
 
 The closeout reads refine the discriminated observation without changing the adapter contract. A work-item observation may carry `signals` for label and relation availability: `observed` for a provider-supplied container (including an empty array) and `unavailable` when the container is omitted. The bounded reverse-dependent read uses `CloseoutReverseDependentObservation`, whose closed set adds `no-surface` so an absent surface is a provider-level gap distinct from a currently `unavailable` signal. Both are read-observation refinements: they add no closed operation, primitive-port field, or schema-version bump.
 
+### Bounded deploy-trace read
+
+`verify deploy` consumes a provider job-trace read through the existing `./github` adapter subpath: `createGitHubDeployTraceReader({ instance, credentials, repository, transport, timeoutMs? })` returns `readDeployTrace(jobId, pipelineName?)`. One invocation issues exactly one `GET /repos/{owner}/{name}/actions/jobs/{jobId}` through the shared injected transport with the existing per-request timeout (default: the 30 s closeout operation timeout). The read has no retry, no pagination, and no trigger, re-run, schedule, or cancel capability; credentials resolve through `CredentialPort` and are never cached.
+
+The normalized `GithubDeployTrace` is a closed, provider-neutral shape: `jobId`, `pipelineName`, optional `headSha` and `status`, `located`, and the executed `steps` (name plus `succeeded` \| `failed` \| `skipped` \| `unknown`) and produced `artifacts`. Log bodies never cross the boundary. A 404 is the adapter-local not-found read result; a non-2xx response or a transport failure is `provider.payload.invalid`. The read kind adds no primitive port, no closed adapter operation, and no schema-version bump: it is an adapter read behind the existing ports, consumed by the verify-deploy engine documented in [Merge and Verify Deploy](feature-merge-verify-deploy.md).
+
 ### Credential resolution
 
 `CredentialPort` exposes one operation, `resolve(reference)`, and no implementation-mode surface. A `CredentialReference` carries its own declarative source-key mapping:
@@ -124,7 +132,7 @@ A missing or unresolvable reference parks the provider with cause `credential-mi
 
 `scripts/checks/secret-read-boundary.ts` is an AST invariant over every workspace package production source (`packages/<pkg>/src/**` TypeScript, excluding `dist` and `node_modules`). It names the rule, file, and line for each ambient environment access outside an enumerated allowlist and is fail-closed and non-vacuous: an empty scope fails, and every allowlisted path must exist with a reason.
 
-The v1 allowlist has exactly four entries:
+The v1 allowlist has exactly five entries:
 
 | Kind | Path | Class | Why |
 |------|------|-------|-----|
@@ -132,6 +140,7 @@ The v1 allowlist has exactly four entries:
 | file | `packages/core/src/state/driver/runtime-edge.ts` | `configuration-environment-source` | The state driver's Windows owner-identity resolution for icacls ACL verification. |
 | file | `packages/adapters/src/file/yaml-parser.ts` | `configuration-environment-source` | The file-tier parser host-switch guard. |
 | file | `packages/adapters/src/legacy/index.ts` | `configuration-environment-source` | The legacy-name adapter environment reader. |
+| file | `packages/mcp/src/serve.ts` | `configuration-environment-source` | The MCP serve composition root's one startup configuration-environment read. |
 
 Exactly one entry may carry the `credential-material` class, and it must be the credential implementation directory. Wildcards, prefixes, absolute paths, trailing separators, duplicate paths, and reasonless entries fail registry validation. Allowlist growth is a reviewed change. The provider engine adds no entry: its core policy and CLI command read no ambient environment, and its quota transport receives credential material as data.
 
@@ -212,9 +221,15 @@ An unresolvable credential carries the synchronized error-table row `config.cred
 | `packages/core/src/contracts/session.ts` | `delivery.session-admin.v1` vocabulary, bounds, item/result shapes, read-only `SessionStorePort`, and mutating `SessionAdminPort`; types and `as const` data only. |
 | `packages/core/src/domain/session-admin.ts` | Pure session-admin policy: cutoff, live boundary, cold/live/leaf predicate, ordering, capping, and deterministic human rendering. |
 | `packages/adapters/src/session/index.ts` | Production `OpencodeSessionIo` and the `SessionStorePort` / `SessionAdminPort` implementations over the opencode CLI. |
-| `packages/adapters/src/git/index.ts` | The dedicated branch/checkout seam: fixed-argv, no-shell, local-only child processes with a bounded timeout; checkout facts, branch reads, worktree and cleanliness checks, checkout restore, and local branch deletion. It is separate from the read-only repository metadata reader. |
+| `packages/adapters/src/git/index.ts` | The dedicated git seam: fixed-argv, no-shell, local-only child processes with a bounded timeout; checkout facts, branch reads, worktree and cleanliness checks, checkout restore, local branch deletion, plus the commit operations — porcelain status with per-file facts, budget-capped diffs, pathspec staging, commit-object creation, head reads, and a mixed reset for clean abort. It is separate from the read-only repository metadata reader. |
+| `packages/adapters/src/inference/index.ts` | The core-owned inference transport and the declared network-I/O edge for the commit primitive: schema-constrained message generation over the shared provider HTTP transport with credentials resolved through the credential port, classified failures, and token-spend extraction. It never reads the environment, caches a credential, or calls fetch directly. |
+| `packages/adapters/src/file/secret-scan.ts` | The deterministic secret scanner over content and filename patterns plus the forbidden-path and binary size guards; findings carry class and path only, and a read failure reports the scan as unavailable. |
+| `packages/adapters/src/file/commitlint.ts` | Repository commitlint discovery and the bounded `--edit` probe; absent configuration reports `absent` so validation degrades to the deterministic checks. |
+| `packages/adapters/src/session/commit-one-shot.ts` | The harness one-shot transport: a temporary empty project directory, a prompt file as the only input, a sanitized environment, a bounded headless invocation, and temp removal including on failure. |
+| `packages/adapters/src/session/delivery-session-facts.ts` | Edge-injected delivery-session facts over declared environment keys; a non-empty declared key marks an active session. |
 | `packages/core/src/contracts/index.ts` | The `core ./contracts` export surface for the ports, capability, closeout, credential, envelope, and session-admin contracts. |
 | `packages/adapters/src/credentials/index.ts` | Environment-backed credential port, injected-environment factory, production process-environment wrapper, and source-key derivation. |
+| `packages/adapters/src/github/deploy-trace.ts` | The bounded deploy-job trace read: one `GET /actions/jobs/{jobId}` over the injected transport and credential port, closed normalization of steps and artifacts (no log bodies), and classified not-found/payload failures; no trigger, retry, or pagination capability. |
 | `packages/adapters/src/io/envelope-codec.ts` | Pure envelope codec: serialize, parse, strip, closed-payload validation, required content-policy evaluation, raw-carrier escape hatch, and carrier constants. |
 | `packages/adapters/src/io/privacy-rules.ts` | Pure, dependency-free privacy rule definitions, suppression classes, normalization, matchers, caps, and identifier fingerprint. |
 | `packages/adapters/src/io/envelope-content-policy.ts` | Pure policy builder combining shared generic rules with injected hashed entries and hash. |
@@ -257,7 +272,7 @@ Version policy: v1 is the only schema version, so any version string outside the
 - Secret material is reachable only through the credential port. The environment-backed implementation is the sole `credential-material` allowlist entry.
 - The session-database ports remain metadata-only: identifiers, counts, byte sizes, timestamps, booleans, and the runtime-resolved store path; no titles, prompts, message bodies, part data, credentials, environment values, or command arguments. The ADR-0003 C-11 privacy sign-off is required before the `db` administration engine ships and remains an owner merge gate.
 - The session adapter adds no secret-read allowlist entry and reads no ambient environment; the executable and environment are injected through the composition.
-- The secret-read boundary closes the ambient channel that runtime-API confinement does not cover. Runtime-API confinement admits the `core` state driver edge (`packages/core/src/state/driver/`), the adapters I/O subpaths `repo`, `file`, `host`, `session`, `legacy`, and `credentials`, the provider client subpaths `github`, `gitlab`, and `jira`, the provider quota transport `provider-quota`, and the dedicated git branch/checkout seam `git`, all as exact, reason-bearing entries per the ADR-0005 reviewed-allowance precedent; it also admits the `cli` build and `opencode` host integration. The provider core tier is runtime-neutral, the provider registry subpath and the remaining adapter subpaths stay non-I/O, the git seam is local-process-only and contacts no network, and the credential subpath is the only one that may resolve secret material.
+- The secret-read boundary closes the ambient channel that runtime-API confinement does not cover. Runtime-API confinement admits the `core` state driver edge (`packages/core/src/state/driver/`), the adapters I/O subpaths `repo`, `file`, `host`, `session`, `legacy`, and `credentials`, the provider client subpaths `github`, `gitlab`, and `jira`, the provider quota transport `provider-quota`, the inference transport `inference`, and the dedicated git seam `git`, all as exact, reason-bearing entries per the ADR-0005 reviewed-allowance precedent; it also admits the `cli` build and `opencode` host integration. The provider core tier is runtime-neutral, the provider registry subpath and the remaining adapter subpaths stay non-I/O, the git seam is local-process-only and contacts no network, the inference subpath is the declared network edge for the commit primitive's one constrained call, and the credential subpath is the only one that may resolve secret material.
 - Resolved material never enters diagnostics, logs, error payloads, or metadata; the existing redaction chokepoint governs any surfaced payload.
 - The envelope payload is closed, compact, size-bounded, and secret-free; carrier markers and namespaces use brand-neutral constants with no committed product token.
 - Every serialized envelope is scanned by the required content policy over the exact embedded JSON. The policy and hash are injected pure inputs; a denial fails closed with a rule or entry id only and produces no carrier. The shared rule definitions and the hashed-literal registry are documented in [Privacy and No-Cloud Guards](feature-privacy-guard.md).
@@ -346,3 +361,4 @@ See also: [Session Database Administration](feature-session-database-admin.md), 
 
 ## Related
 - [Verify Gates](feature-verify-gates.md) consumes the optional `DeliveryRequest` gate facts; absence is unknown.
+- [Harness Adapters](feature-harness-adapters.md) joins the port family with `HarnessInstance`, `HarnessSession`, and the execution-environment descriptor; [ADR-0008](../../decisions/ADR-0008-harness-adapter-contract.md) is the binding contract.

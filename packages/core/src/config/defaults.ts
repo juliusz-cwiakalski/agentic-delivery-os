@@ -32,6 +32,38 @@ export const PRODUCTION_DEFAULTS = {
       },
     },
     chains: {},
+    // GH-234 DEC-9: the profile-model branch ships empty. No tier, profile,
+    // preference chain, rung, goal priority, or threshold is invented.
+    profiles: {},
+  },
+  commit: {
+    phaseCommit: true,
+  },
+  merge: {
+    "gate-freshness": 1800,
+  },
+  harness: {
+    kind: "opencode",
+    execution: {
+      kind: "host",
+    },
+    stores: {
+      opencode: {
+        databasePath: ".local/state/opencode/opencode.db",
+      },
+      "claude-code": {
+        sessionDirectory: ".local/state/claude-code",
+      },
+    },
+    environment: [
+      { name: "HARNESS_MODEL" },
+      { name: "HARNESS_SMALL_MODEL" },
+      { name: "DELIVERY_WORK_PATH" },
+    ],
+  },
+  lane: {
+    "liveness-interval": 30000,
+    "restart-budget": 3,
   },
 } as const;
 

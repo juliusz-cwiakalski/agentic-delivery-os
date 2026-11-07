@@ -1,0 +1,46 @@
+{
+  "classes": [
+    {
+      "id": "M-01",
+      "class": "content-edit",
+      "tc": "TC-RETRO-021",
+      "helper": "mutateContent",
+      "suiteMarker": "TC-RETRO-021 M-01 content edit"
+    },
+    {
+      "id": "M-02",
+      "class": "deletion",
+      "tc": "TC-RETRO-022",
+      "helper": "mutateDelete",
+      "suiteMarker": "TC-RETRO-022 M-02 deletion"
+    },
+    {
+      "id": "M-03",
+      "class": "reorder",
+      "tc": "TC-RETRO-023",
+      "helper": "mutateReorder",
+      "suiteMarker": "TC-RETRO-023 M-03 reorder"
+    },
+    {
+      "id": "M-04",
+      "class": "truncate-reappend",
+      "tc": "TC-RETRO-024",
+      "helper": "mutateTruncateReappend",
+      "suiteMarker": "TC-RETRO-024 M-04 tail truncate-and-reappend"
+    },
+    {
+      "id": "M-05",
+      "class": "unkeyed-recompute",
+      "tc": "TC-RETRO-025",
+      "helper": "mutateUnkeyedRecompute",
+      "suiteMarker": "TC-RETRO-025 M-05 recomputed unkeyed link"
+    },
+    {
+      "id": "M-06",
+      "class": "key-substitution",
+      "tc": "TC-RETRO-026",
+      "helper": "substituteKey",
+      "suiteMarker": "TC-RETRO-026 M-06 key-artifact substitution"
+    }
+  ]
+}

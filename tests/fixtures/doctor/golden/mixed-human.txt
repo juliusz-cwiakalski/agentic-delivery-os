@@ -1,0 +1,9 @@
+example-product doctor example-owner/example-repo
+repo     fail        working tree has uncommitted changes on feat/GH-224/doctor-v1
+tracker  ok          tracker read succeeded (3 items)
+provider ok          provider chain and credentials resolve; no active park
+state    ok          state stores verified (4 records)
+ci       ok          CI read succeeded (2 check runs)
+  hint: commit or discard the uncommitted changes, then re-run doctor
+example-product: doctor.check.failed
+summary: doctor check failures (1/5) — repo (fail): commit or discard the uncommitted changes, then re-run doctor

@@ -13,9 +13,11 @@ import {
 } from "../../packages/core/src/contracts/index";
 import { aggregateStatus } from "../../packages/core/src/domain/index";
 import {
+  ASSERTIONS_AVAILABLE,
   baseFacts,
   failedPipelineRunRead,
   failedWorkItemRead,
+  MIXED_ASSERTIONS,
   pipelineRunRead,
   sectionById,
   workItemRead,
@@ -38,7 +40,7 @@ const shapeFailures = (value: unknown): string[] => {
   if (!isRecord(value)) return ["digest is not an object"];
   const sections = value.sections;
   if (!Array.isArray(sections)) return ["sections is not an array"];
-  if (sections.length !== 7) failures.push(`sections length ${sections.length} != 7`);
+  if (sections.length !== 9) failures.push(`sections length ${sections.length} != 9`);
   const ids = sections.map((section) => (isRecord(section) ? section.id : undefined));
   if (JSON.stringify(ids) !== JSON.stringify(STATUS_SECTION_ORDER)) {
     failures.push(`section ids ${JSON.stringify(ids)} != ${JSON.stringify(STATUS_SECTION_ORDER)}`);
@@ -110,6 +112,31 @@ const shapeFailures = (value: unknown): string[] => {
       if (!Array.isArray(section.items) || section.items.length !== 0) {
         failures.push(`${id}: items must be empty`);
       }
+      if (
+        JSON.stringify(section.attentionStates) !==
+        JSON.stringify(["delivering", "idle-with-reason", "idle-no-reason"])
+      ) {
+        failures.push(`${id}: attentionStates vocabulary wrong`);
+      }
+    }
+    if (id === "ready-to-merge") {
+      if (!Array.isArray(section.items)) failures.push(`${id}: items missing`);
+      if (section.state === "not-delivered") failures.push(`${id}: must never be not-delivered`);
+      if (section.state === "observed" && section.items?.some((item) => !("class" in item))) {
+        failures.push(`${id}: observed items must carry the ready class`);
+      }
+    }
+    if (id === "spend") {
+      if (section.state !== "not-delivered") failures.push(`${id}: must be not-delivered`);
+      if (typeof section.capability !== "string") failures.push(`${id}: capability missing`);
+      if (typeof section.expectedStory !== "string") failures.push(`${id}: expectedStory missing`);
+      if (typeof section.note !== "string" || section.note.length === 0) {
+        failures.push(`${id}: note missing`);
+      }
+      if (!Array.isArray(section.items) || section.items.length !== 0) {
+        failures.push(`${id}: items must be empty`);
+      }
+      if (section.counts.total !== 0) failures.push(`${id}: counts must be zero`);
     }
     if (id === "providers") {
       if (!isRecord(section.chain)) failures.push(`${id}: chain missing`);
@@ -240,5 +267,49 @@ describe("TC-STATUS-004 Appendix A derivation matrix", () => {
     expect(sectionOf(failed, "ci").state).toBe("unknown");
     const ciRestored = aggregateStatus(baseFacts({ ci: pipelineRunRead([]) }));
     expect(sectionOf(ciRestored, "ci").state).toBe("observed");
+  });
+
+  test("undeclared assertion signals do not degrade the tracker section", () => {
+    const facts = baseFacts({
+      tracker: workItemRead(
+        [
+          {
+            identity: { systemName: "github", entityId: "1" },
+            title: "Item",
+            status: { nativeStatus: "open", deliveryState: "ready" },
+            labels: ["epic:x", "points:1"],
+            milestone: "Sprint 1",
+            relations: [],
+          },
+        ],
+        ASSERTIONS_AVAILABLE,
+      ),
+    });
+    const tracker = sectionOf(aggregateStatus(facts), "tracker");
+    expect(tracker.state).toBe("observed");
+    const hygiene = tracker.families?.find((family) => family.family === "hygiene");
+    expect(hygiene?.assertions).toHaveLength(3);
+  });
+
+  test("a mixed assertion declaration keeps declared expectations independent", () => {
+    const facts = baseFacts({
+      tracker: workItemRead(
+        [
+          {
+            identity: { systemName: "github", entityId: "1" },
+            title: "Item",
+            status: { nativeStatus: "open", deliveryState: "ready" },
+            labels: ["epic:x"],
+            relations: [],
+          },
+        ],
+        MIXED_ASSERTIONS,
+      ),
+    });
+    const tracker = sectionOf(aggregateStatus(facts), "tracker");
+    expect(tracker.state).toBe("observed");
+    const assertions = tracker.families?.find((family) => family.family === "hygiene")?.assertions;
+    expect(assertions?.find((entry) => entry.assertion === "epic-membership")?.unknown).toBe(0);
+    expect(assertions?.find((entry) => entry.assertion === "in-sprint")?.unknown).toBe(1);
   });
 });

@@ -1,0 +1,349 @@
+{
+  "generatedAt": "2026-10-31T00:00:00Z",
+  "repository": {
+    "reason": "addressing-unresolved",
+    "state": "unavailable"
+  },
+  "schemaVersion": "delivery.status.v1",
+  "sections": [
+    {
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "addressing-unresolved"
+        ],
+        "sources": [
+          {
+            "outcome": "not-configured",
+            "source": "repository-binding"
+          },
+          {
+            "outcome": "not-configured",
+            "source": "tracker"
+          }
+        ]
+      },
+      "families": [
+        {
+          "counts": {
+            "observed": 0,
+            "omitted": 0,
+            "total": 0,
+            "unknown": 0
+          },
+          "family": "ownerHandBacks",
+          "items": [],
+          "reason": "addressing-unresolved",
+          "state": "unavailable"
+        },
+        {
+          "counts": {
+            "observed": 0,
+            "omitted": 0,
+            "total": 0,
+            "unknown": 0
+          },
+          "family": "blockedDependencies",
+          "items": [],
+          "reason": "addressing-unresolved",
+          "state": "unavailable"
+        },
+        {
+          "counts": {
+            "observed": 0,
+            "omitted": 0,
+            "total": 0,
+            "unknown": 0
+          },
+          "family": "stalls",
+          "items": [],
+          "reason": "addressing-unresolved",
+          "state": "unavailable"
+        },
+        {
+          "counts": {
+            "observed": 0,
+            "omitted": 0,
+            "total": 0,
+            "unknown": 0
+          },
+          "family": "hygiene",
+          "items": [],
+          "reason": "addressing-unresolved",
+          "state": "unavailable"
+        }
+      ],
+      "id": "tracker",
+      "state": "unavailable",
+      "title": "Tracker",
+      "truncated": false
+    },
+    {
+      "activeChange": {
+        "branch": "feat/GH-175/status-v1",
+        "changeFolder": "doc/changes/2026-10/2026-10-31--GH-175--status-v1",
+        "state": "observed",
+        "workItemRef": "GH-175"
+      },
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "addressing-unresolved",
+          "source-unavailable",
+          "partial-evidence"
+        ],
+        "sources": [
+          {
+            "outcome": "not-configured",
+            "source": "repository-binding"
+          },
+          {
+            "outcome": "read",
+            "source": "local-context"
+          },
+          {
+            "outcome": "not-configured",
+            "source": "changes"
+          }
+        ]
+      },
+      "id": "changes-and-prs",
+      "pullRequests": [],
+      "state": "degraded",
+      "title": "Changes and pull requests",
+      "truncated": false
+    },
+    {
+      "commit": {
+        "branch": "feat/GH-175/status-v1",
+        "sha": "1111111111111111111111111111111111111111"
+      },
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "addressing-unresolved"
+        ],
+        "sources": [
+          {
+            "outcome": "not-configured",
+            "source": "repository-binding"
+          }
+        ]
+      },
+      "id": "ci",
+      "result": "unknown",
+      "runs": [],
+      "state": "unavailable",
+      "title": "CI",
+      "truncated": false
+    },
+    {
+      "attentionStates": [
+        "delivering",
+        "idle-with-reason",
+        "idle-no-reason"
+      ],
+      "capability": "queue-lane-engine",
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "engine-not-delivered"
+        ],
+        "sources": [
+          {
+            "outcome": "not-delivered",
+            "source": "queue-engine"
+          }
+        ]
+      },
+      "expectedStory": "M2-S1",
+      "id": "lanes-or-queue",
+      "items": [],
+      "note": "no queue or lane engine exists in this release",
+      "state": "not-delivered",
+      "title": "Lanes or queue",
+      "truncated": false
+    },
+    {
+      "chain": {
+        "entries": [
+          "primary"
+        ],
+        "name": "primary",
+        "state": "declared"
+      },
+      "counts": {
+        "observed": 1,
+        "omitted": 0,
+        "total": 1,
+        "unknown": 0
+      },
+      "entries": [
+        {
+          "availability": "unverified",
+          "class": "subscription",
+          "enabled": true,
+          "name": "primary",
+          "peakDeclared": false,
+          "quotaDeclared": false
+        }
+      ],
+      "evidence": {
+        "reasons": [
+          "observed"
+        ],
+        "sources": [
+          {
+            "outcome": "read",
+            "source": "provider-config"
+          },
+          {
+            "outcome": "observed-empty",
+            "source": "provider-parks"
+          }
+        ]
+      },
+      "id": "providers",
+      "parks": [],
+      "state": "observed",
+      "title": "Providers",
+      "truncated": false
+    },
+    {
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed-empty"
+        ],
+        "sources": [
+          {
+            "outcome": "observed-empty",
+            "source": "local-context"
+          }
+        ]
+      },
+      "id": "parked-work",
+      "items": [],
+      "source": {
+        "gitIgnored": true,
+        "kind": "local-pm-context",
+        "path": "/home/user/.ai/local/pm-context.yaml",
+        "tracked": false
+      },
+      "state": "observed",
+      "title": "Parked work",
+      "truncated": false
+    },
+    {
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "addressing-unresolved"
+        ],
+        "sources": [
+          {
+            "outcome": "not-configured",
+            "source": "repository-binding"
+          }
+        ]
+      },
+      "id": "ready-to-merge",
+      "items": [],
+      "state": "unavailable",
+      "title": "Ready to merge",
+      "truncated": false
+    },
+    {
+      "capability": "spend-summary",
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "engine-not-delivered"
+        ],
+        "sources": [
+          {
+            "outcome": "not-delivered",
+            "source": "queue-engine"
+          }
+        ]
+      },
+      "expectedStory": "M1-S19",
+      "id": "spend",
+      "items": [],
+      "note": "spend summary arrives with M1-S19",
+      "state": "not-delivered",
+      "title": "Spend",
+      "truncated": false
+    },
+    {
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed-empty"
+        ],
+        "sources": [
+          {
+            "outcome": "observed-empty",
+            "source": "blockers"
+          }
+        ]
+      },
+      "id": "typed-questions",
+      "questions": [],
+      "state": "observed",
+      "title": "Typed questions",
+      "truncated": false
+    }
+  ],
+  "summary": {
+    "actionable": 1,
+    "degraded": 1,
+    "findingsTotal": 0,
+    "notDelivered": 2,
+    "observed": 3,
+    "placeholderSectionCount": 1,
+    "sections": 9,
+    "unavailable": 3,
+    "unknown": 0
+  }
+}

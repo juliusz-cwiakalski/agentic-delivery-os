@@ -167,19 +167,25 @@ exit-code projection; secret redaction; bounded output.
 
 ## See family
 
-### `status` (M0-S6 shipped; M1-S10 proposed expansion)
+### `status` (M0-S6 shipped; M1-S10 attention-state expansion shipped)
 
-- Inputs: `--repo <path>` repeated; `--watch` (bounded live stream through
-  the daemon control socket; degrades to state polling in a declared
-  degraded mode when the daemon is down); `--json`.
-- Outputs (expansion): grouped, ranked digest with stable finding codes;
-  new sections: attention-state (lanes delivering vs idle-with-reason),
-  ready-to-merge action list, parked items with conditions, owner-gate
-  ages, spend summary (placeholder until M1-S19), typed questions
-  (placeholder until M1-S16); partial collection reported in-band.
-- Scenarios: four red CI findings on mains render as one grouped job;
-  every finding carries a finding code; blockers surface within one
-  collection cycle.
+- Inputs: `--repo <path>` repeated; `--json`. `--watch` (bounded live
+  stream through the daemon control socket; degrades to state polling in a
+  declared degraded mode when the daemon is down) is planned with the
+  daemon story M1-S18, not delivered by M1-S10.
+- Outputs (delivered expansion): nine fixed sections in order (tracker,
+  changes and PRs, CI, lanes or queue, providers, parked work,
+  ready-to-merge, spend, blockers); grouped, ranked findings with stable
+  registry codes; tri-state hygiene assertions (epic membership, story
+  points, in-sprint); owner-gate ages; parked items with conditions; a
+  merge-ready-first ready-to-merge action list; the declared lane
+  attention-state vocabulary while the lanes section reports its existing
+  not-delivered gap; spend (until M1-S19) and typed blockers (until
+  M1-S16) as named not-delivered placeholders; partial collection
+  reported in-band.
+- Scenarios: four red CI findings on the primary branch render as one
+  grouped job; every finding carries a finding code; ready-to-merge ranks
+  as an action list; blockers surface within one collection cycle.
 
 ### `queue` (M1-S17, proposed)
 
@@ -351,9 +357,23 @@ resolve/quota/parks as shipped with named self-expiring parks.
 
 ### `retro` (M1-S8, proposed)
 
-- Outputs: retro levels on demand; evidence from the append-only
-  sidecar a delivery agent cannot write; survives malformed entries
-  without data loss.
+- Inputs: `collect|report`; `--level <name>` (default `change`); global `--json`.
+  Declared levels are R1-R6; only `change` is implemented, and the other
+  declared names refuse with their owning-story hint.
+- Outputs: collect returns `data` with `level`, `outcome`
+  (`collected` | `no-target`), `selection`, `counts`, and for a collected run
+  `runId` and `truth`; report returns exactly `level`, `findings[]`,
+  `followThrough[]`, and `evidenceRefs[]`. Evidence lives in the independent
+  append-only keyed-chain sidecar; the validated registry declares levels,
+  records collection runs, and hosts the memory-audit trigger.
+- Exit: 0 collected, reported, or explicit `no-target`; 1 malformed entry,
+  tamper flag, vacuous run, or input/permission refusal; 2 unreachable
+  evidence store or a write refused outside the collector seam.
+- Scenarios: a malformed entry classifies with valid entries preserved;
+  altered evidence flags a chain break and is never served as verified;
+  a no-eligible-target collect is an explicit success while an executed
+  zero-collector run is `retro.truth.vacuous-run`; a clean empty fold is a
+  null-retro success. Export is a bounded library surface, not a CLI verb.
 
 ## Surfaces
 

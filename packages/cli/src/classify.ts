@@ -10,9 +10,13 @@ import {
   BOARD_COLLECTOR_ERROR_SUFFIX,
   DOMAIN_KINDS,
   ERROR_TABLE,
+  ERROR_TABLE_FAMILIES,
   type ErrorTableEntry,
+  type ErrorTableFamily,
   FALLBACK_INTERNAL_CODE,
   FALLBACK_INVOCATION_CODE,
+  MERGE_GATE_ERROR_PREFIX,
+  MERGE_GATE_ERROR_SUFFIX,
 } from "@delivery-os/core/contracts";
 
 export type CodeResolution =
@@ -48,9 +52,48 @@ const collectorFamilyEntry = (code: string, kind?: string): ErrorTableEntry | un
   return base === undefined ? undefined : { ...base, code };
 };
 
+const MERGE_GATE_ID_PATTERN = /^[a-z][a-z0-9-]*$/;
+
+const mergeGateFamily = (): ErrorTableFamily | undefined =>
+  (ERROR_TABLE_FAMILIES as readonly ErrorTableFamily[]).find(
+    (family) => family.slotPrefix === MERGE_GATE_ERROR_PREFIX,
+  );
+
+/**
+ * The declared `merge.gate.<gate-id>.failed` family (DEC-7, GAP-13, NFR-8).
+ *
+ * The runtime admits the declared prefix/suffix pair and a well-formed gate-id
+ * slot. Registry membership is validated where the effective declared gate set
+ * is resolved: the transaction only ever emits a code for an id it resolved
+ * from the registry, and the sync check proves the documented/static cases. No
+ * other namespace or suffix is admitted.
+ */
+const mergeGateFamilyEntry = (code: string, kind?: string): ErrorTableEntry | undefined => {
+  if (kind !== undefined && kind !== "merge") return undefined;
+  if (!code.startsWith(MERGE_GATE_ERROR_PREFIX)) return undefined;
+  if (!code.endsWith(MERGE_GATE_ERROR_SUFFIX)) return undefined;
+  const id = code.slice(
+    MERGE_GATE_ERROR_PREFIX.length,
+    code.length - MERGE_GATE_ERROR_SUFFIX.length,
+  );
+  if (!MERGE_GATE_ID_PATTERN.test(id)) return undefined;
+  const family = mergeGateFamily();
+  if (family === undefined) return undefined;
+  return {
+    code,
+    domainKind: family.domainKind,
+    category: family.category,
+    retryable: family.retryable,
+    consequence: family.consequence,
+    remediationHint: family.remediationHint,
+    projectionClass: family.projectionClass,
+    ...(family.summary === undefined ? {} : { summary: family.summary }),
+  };
+};
+
 /** Resolve a code to exactly one entry; "not found" is distinct from containment. */
 export function resolveAppErrorCode(code: string): CodeResolution {
-  const entry = entryForCode(code) ?? collectorFamilyEntry(code);
+  const entry = entryForCode(code) ?? collectorFamilyEntry(code) ?? mergeGateFamilyEntry(code);
   return entry === undefined ? { ok: false, reason: "unresolvable" } : { ok: true, entry };
 }
 

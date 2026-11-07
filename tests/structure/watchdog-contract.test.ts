@@ -9,7 +9,11 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
-import { WATCHDOG_SIGNAL_KEYS, WATCHDOG_VERDICTS } from "../../packages/core/src/contracts/index";
+import {
+  WATCHDOG_ERROR_CODES,
+  WATCHDOG_SIGNAL_KEYS,
+  WATCHDOG_VERDICTS,
+} from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();
 const CONTRACT = "packages/core/src/contracts/watchdog.ts";
@@ -161,6 +165,15 @@ describe("TC-WATCHDOG-001 the contract data has one data-only home", () => {
     expect(singleVocabularyHomeFailures(ROOT)).toEqual([]);
   });
 
+  test("the watchdog error codes are exactly the three delivered plus the sourced-stall identity", () => {
+    expect(WATCHDOG_ERROR_CODES).toEqual([
+      "watchdog.checkout-dirty",
+      "watchdog.checkout-non-base",
+      "watchdog.signals-absent",
+      "watchdog.liveness-stalled",
+    ]);
+  });
+
   test("the signals shape declares exactly the three progress keys and no CPU field", () => {
     expect(WATCHDOG_SIGNAL_KEYS).toEqual(["heartbeatAgeMs", "tokenDelta", "traffic"]);
     expect(signalShapeViolations(WATCHDOG_SIGNAL_KEYS)).toEqual([]);
@@ -194,17 +207,16 @@ describe("TC-WATCHDOG-041 the verdict vocabulary is exact and contract-only", ()
     expect(text).toContain("export type WatchdogVerdict = (typeof WATCHDOG_VERDICTS)[number];");
   });
 
-  test("the declared vocabulary is reserved for M1-S15 and no M1-S1 command surface declares it", () => {
-    // `stalled` and `progressing` are declared contract values whose
-    // signal-backed reachability arrives with M1-S15; M1-S1 emits neither.
+  test("the declared vocabulary is reachable through the sourced command surface", () => {
+    // GH-235: sourced signals make progressing/stalled reachable. The flip is a
+    // sourcing plus stalled-projection change; corroboration is unchanged.
     expect(WATCHDOG_VERDICTS).toContain("stalled");
     expect(WATCHDOG_VERDICTS).toContain("progressing");
-    const commandDirectory = join(ROOT, "packages/cli/src/commands");
-    for (const file of listTypeScript(commandDirectory)) {
-      const text = readFileSync(file, "utf8");
-      expect(text, file).not.toContain('"stalled"');
-      expect(text, file).not.toContain('"progressing"');
-    }
+    const command = readFileSync(join(ROOT, "packages/cli/src/commands/watchdog.ts"), "utf8");
+    expect(command).toContain('"stalled"');
+    expect(command).toContain("watchdog.liveness-stalled");
+    const edge = readFileSync(join(ROOT, "packages/cli/src/edge.ts"), "utf8");
+    expect(edge).toContain("createSourcedWatchdogSignalSource");
     expect(singleVocabularyHomeFailures(ROOT)).toEqual([]);
   });
 

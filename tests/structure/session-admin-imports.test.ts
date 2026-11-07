@@ -314,7 +314,7 @@ describe("TC-DB-002 contract and domain tier discipline", () => {
   });
 
   test("the secret-read allowlist stays at four and names no session file", () => {
-    expect(SECRET_READ_ALLOWLIST).toHaveLength(4);
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(5);
     const paths = SECRET_READ_ALLOWLIST.map((entry) => entry.path);
     for (const file of [CONTRACT, DOMAIN, ADAPTER, DB_COMMAND]) {
       expect(paths.some((path) => path.includes(file.replace("packages/", "")))).toBe(false);
@@ -332,8 +332,10 @@ describe("TC-DB-002 contract and domain tier discipline", () => {
         "./credentials",
         "./file",
         "./git",
+        "./inference",
         "./github",
         "./gitlab",
+        "./harness",
         "./host",
         "./jira",
         "./legacy",

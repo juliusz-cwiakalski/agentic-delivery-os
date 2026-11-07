@@ -4,6 +4,23 @@
  */
 
 export {
+  createTempGitRepository,
+  type RepoCommandResult,
+  type TempGitRepository,
+  type TempGitRepositoryOptions,
+} from "./commit/git-repo.js";
+export {
+  createSafetyScanner,
+  createScriptedCommitlint,
+  createScriptedTransport,
+  type ScriptedCommitlint,
+  type ScriptedSafetyScanner,
+  type ScriptedTransport,
+  type ScriptedTransportStep,
+  transportAvailability,
+} from "./commit/transport-fakes.js";
+export { CONFORMANCE_ADAPTERS } from "./conformance/adapters.js";
+export {
   CONFORMANCE_FLOW_STATUSES,
   CONFORMANCE_LIMITS,
   CONFORMANCE_PROVIDER_STATUSES,
@@ -17,16 +34,24 @@ export {
   toConformanceArtifact,
   validateConformanceArtifact,
 } from "./conformance/artifact.js";
-export { CONFORMANCE_ADAPTERS } from "./conformance/adapters.js";
 export {
   LIVE_READ_OPERATIONS,
   runtimeCoverageViolations,
   structuralCoverageViolations,
 } from "./conformance/coverage.js";
 export { CONFORMANCE_FLOWS, findFlow } from "./conformance/flows.js";
+export {
+  HARNESS_CONFORMANCE_REGISTRY,
+  HARNESS_CONFORMANCE_SCENARIOS,
+  type HarnessConformanceDeps,
+  type HarnessConformanceIo,
+  type HarnessConformanceRegistration,
+  type HarnessConformanceScenarioId,
+  harnessConformanceViolations,
+} from "./conformance/harness.js";
+export type { MockTenantTransport } from "./conformance/mock-tenant.js";
 export { createMockTenantTransport, decodeMockTenant } from "./conformance/mock-tenant.js";
 export { runConformance } from "./conformance/runner.js";
-export type { MockTenantTransport } from "./conformance/mock-tenant.js";
 export type {
   ConformanceAdapterClient,
   ConformanceAdapterRead,
@@ -69,4 +94,15 @@ export type {
   MockTenantRoute,
   RunConformanceInput,
 } from "./conformance/types.js";
-export { assertEnvelopeContract } from "./result-conformance.js";
+export type {
+  RuleId,
+  ScriptedRuleId,
+  ScriptedViolation,
+  Violation,
+} from "./result-conformance.js";
+export {
+  assertEnvelopeContract,
+  assertScriptedProjection,
+  RULES,
+  SCRIPTED_RULES,
+} from "./result-conformance.js";

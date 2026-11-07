@@ -13,7 +13,29 @@ import type {
   StateResult,
   StateStorePort,
 } from "../../../packages/core/src/contracts/index";
+import {
+  AUDIT_BOUNDARY_DECLARATION as AUDIT_DECLARATION,
+  RETRO_REGISTRY_BOUNDARY_DECLARATION as RETRO_DECLARATION,
+} from "../../../packages/core/src/contracts/index";
 import type { StateArtifactBoundary } from "../../../packages/core/src/state/index";
+import { createArtifactBoundary } from "../../../packages/core/src/state/index";
+
+/** The GH-223 audit artifact boundary: both audit kinds under one key family. */
+export const AUDIT_BOUNDARY_DECLARATION = AUDIT_DECLARATION;
+
+/**
+ * The GH-232 retro registry boundary: the three additive validated record
+ * kinds (`retro.level`, `retro.run`, `retro.trigger`) under the retro prefix.
+ */
+export const RETRO_REGISTRY_BOUNDARY_DECLARATION = RETRO_DECLARATION;
+
+/** Compose the retro registry boundary over a store (the production path). */
+export const createRetroRegistryBoundaryFor = (store: StateStorePort): StateArtifactBoundary =>
+  createArtifactBoundary(store, RETRO_REGISTRY_BOUNDARY_DECLARATION);
+
+/** Compose the audit boundary over a store (the production factory path). */
+export const createAuditBoundaryFor = (store: StateStorePort): StateArtifactBoundary =>
+  createArtifactBoundary(store, AUDIT_BOUNDARY_DECLARATION);
 
 /** A retro-registry stand-in kind: required identity, required vocabulary. */
 export const RETRO_FINDING_KIND: StateArtifactKindDeclaration = {

@@ -61,7 +61,7 @@ per project).
 
 | Command (first delivered) | Usage |
 |---|---|
-| `status` (M0-S6, M1-S10) | `<binary> status [--repo <path>]... [--watch] [--json]` |
+| `status` (M0-S6, M1-S10) | `<binary> status [--repo <path>]... [--json]` |
 | `queue ready` (M0-S7) | `<binary> queue ready <ref>... (1..8 refs)` |
 | `queue` (M1-S17) | `<binary> queue [list\|plan\|add\|prioritize\|dep]` |
 | `lanes` (M1-S17) | `<binary> lanes [list\|show <lane>]` |
@@ -85,7 +85,7 @@ per project).
 | `phase` (M0-S10) | `<binary> phase list\|complete\|reopen <ref> [<phase>] [--reason <s>]` |
 | `db` (M0-S11) | `<binary> db size\|list\|prune\|reboot [--dry-run]` |
 | `watchdog` (M1-S1) | `<binary> watchdog preflight\|teardown\|liveness <lane>` |
-| `doctor` (M1-S3) | `<binary> doctor [--fix-hints]` |
+| `doctor` (M1-S3) | `<binary> doctor [--json]` |
 | `daemon start` (M1-S18) | `<binary> daemon start [--foreground]\|stop\|status [--live]\|install\|uninstall` |
 | `repos` | not delivered until M3-S6; bash utilities remain |
 

@@ -7,7 +7,7 @@ status: FAIL
 summary: >-
   The change is functionally complete and spec-faithful: all 21 ACs verified against
   code and tests (SC-M1-24 and SC-M1-13 pinned exactly), the four ticket-pinned decisions
-  delivered unre-derived (verified against the live ticket), the TDR-0009 two-layer guard
+  delivered unre-derived (verified against the live ticket), the TDR-0011 two-layer guard
   boundary honored with real negative controls, the v0 applied:false / laneResume posture
   correct with zero-call session assertions, byte-stability limited to exactly the two
   declared status/brief exceptions, the error-table gate green at 57/57 (re-run by this

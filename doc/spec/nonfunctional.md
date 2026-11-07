@@ -2,10 +2,11 @@
 id: SPEC-TOOLING-NONFUNCTIONAL
 status: Proposed
 created: 2026-11-01
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: [engineering]
+ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-228, GH-229, GH-230]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -19,7 +20,7 @@ promote new targets to accepted policy. Numerical budgets remain canonical in th
 linked feature specs and contract constants; this index does not override them.
 An inconsistency requires reconciliation at the owning feature, not a silent choice.
 
-Scope is single-operator local tooling and delivered CLI/core/adapter surfaces.
+Scope is single-operator local tooling and delivered CLI/core/adapter/MCP surfaces.
 Full MCP/host parity, shared state, dispatch takeover, and release readiness are not
 established here. Missing documentation profile means engineering-repo behavior.
 Phase 2 approval carries OPEN-Q7 through OPEN-Q11 forward. Existing Proposed ADRs
@@ -33,15 +34,17 @@ Owners below are proposed accountable roles, not new assignments or tracker edit
 
 OPEN-Q20 reconciliation baseline: integrated `main-tools` `5330809`, including
 closeout PR #215 and verify-gates recovery PR #217. Shared `createRuntime` is
-declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholders.
+declaration-only; CLI has no `bin`; the MCP package serves three read-only tools
+over local stdio; the typed OpenCode entry remains a placeholder.
 
 ## Existing contract index
 
 ### NFR-TOOL-001: Truthful evidence and failure semantics
 
 - Quality attribute: reliability and diagnosability. Applies: result envelopes,
-  status, brief, queue-ready, verify-change, provider reads, the watchdog probes,
-  the owner-gate board, and the typed blocker channel.
+  status, brief, queue-ready, verify-change, provider reads, the watchdog probes, the
+  owner-gate board, the typed blocker channel, the doctor pre-flight diagnostic, the
+  merge transaction, the verify-deploy verdict, and the retro evidence pipeline.
 - Requirement/status: existing. Missing, failed, or unavailable evidence must not
   become a clear/ready/zero claim. Command success is not delivery success.
 - Evidence/test: [result](features/feature-result-contract.md),
@@ -49,38 +52,66 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
   [ready-set](features/feature-queue-ready.md),
   [verify](features/feature-verify-change-and-exit-taxonomy.md),
   [owner-gate SLA](features/feature-owner-gate-sla.md),
+  [doctor](features/feature-doctor.md),
+  [merge and verify deploy](features/feature-merge-verify-deploy.md),
   [blockers](features/feature-blockers.md),
-  [watchdog](features/feature-watchdog-lane-contracts.md);
+  [watchdog](features/feature-watchdog-lane-contracts.md),
+  [session lifecycle economics](features/feature-session-lifecycle-economics.md);
   `packages/core/src/domain/ci-result.ts`, `tests/behaviour/status-negative-controls.test.ts`,
   `tests/behaviour/queue-ready-negative-controls.test.ts`,
   `tests/behaviour/blockers-digest.test.ts`,
   `tests/behaviour/watchdog-liveness.test.ts`.
 - Limits: CI observes one checkout-head page, not every required PR-head job;
   `merge-ready` is an approval-based close class, not merge authorization.
-  Change-ledger verification is separate from implemented `verify gates`:
-  [five-gate contract](features/feature-verify-gates.md) observes CI, push parity,
+  Change-ledger verification is separate from the `verify gates` battery:
+  [battery contract](features/feature-verify-gates.md) observes CI, push parity,
   squash surface, the owner gate, and lifecycle. The owner gate checks the work
   item's hand-back and human-input-needed labels; no gate asserts completion.
+  The merge transaction accepts only a fresh recorded verification plus its
+  bounded probe; `verify deploy` accepts only trace evidence, so a created-but-
+  never-run pipeline and a status without a trace are `unknown`, never green.
   Unknown evidence is not green. The watchdog liveness probe classifies absent
-  signal sources as `watchdog.signals-absent` and emits no guessed verdict.
-  A failed or torn blocker-ledger read makes the digest `typed-questions` section
-  `unknown` with `state-unreadable` evidence and zero fabricated questions; the
-  command still exits `0`.
+  signal sources as `watchdog.signals-absent` and emits no guessed verdict; a
+  corroborated stall is the classified refusal `watchdog.liveness-stalled`, and
+  session lifecycle economics carries bounded refusal evidence and degrades a
+  missing figure to null with a warning rather than a fabricated zero. The
+  doctor diagnostic applies the same rule per check: a failed or unattempted read
+  is never `ok` (it is `unreachable`, or `fail` where the condition catalog
+  declares an observed defect), and every non-ok verdict carries a bounded detail
+  and a fix hint. The retro pipeline applies the same rule: a malformed entry
+  classifies with partial output preserved, a chain break is tamper evidence, a
+  zero-collector run is refused as vacuous, and a no-eligible-target collect is an
+  explicit checked-empty success rather than a fabricated run. A failed or torn
+  blocker-ledger read makes the digest `typed-questions` section `unknown` with
+  `state-unreadable` evidence and zero fabricated questions; the command still
+  exits `0`.
 - Owner/trigger: reviewer with PM; every new evidence consumer (RSK-002/003, XC-001).
 
 ### NFR-TOOL-002: Stable machine output and bounded read digests
 
 - Quality attribute: interoperability and resource boundedness. Applies: CLI
-  envelope, status, brief, queue-ready, board, and blockers renderers. Status: existing.
+  envelope, status, brief, queue-ready, board, verify gates, merge, verify deploy,
+  doctor and blockers renderers, and retro collect/report renderers. Status: existing.
 - Requirement: one valid `CommandResult` under `--json`, exactly one of data/error,
   classified containment, deterministic ordering, and visible truncation.
 - Canonical budgets: [status](features/feature-status-digest.md#evidence-counts-truncation-and-bounds)
-  caps human output at 24 lines/4096 bytes and serialized data at 65536 bytes;
+  caps human output at 32 lines/6144 bytes and serialized data at 65536 bytes;
   [queue-ready](features/feature-queue-ready.md#reasons-bounds-and-truncation) caps
   human output at 16 lines/4096 UTF-8 bytes and serialized data at 65536 UTF-8 bytes;
   [board](features/feature-owner-gate-sla.md#ranking-bounds-and-truncation) caps
   rendered gates at 8, human output at 24 lines/4096 UTF-8 bytes, and serialized
-  data at 65536 UTF-8 bytes. These are data caps, not a universal total-envelope cap.
+  data at 65536 UTF-8 bytes; [doctor](features/feature-doctor.md#bounds-and-read-limits)
+  caps human output at 24 lines/4096 bytes and serialized data at 65536 bytes, with
+  200-character detail and hint caps and one bounded page per wiring read. The
+  [merge transaction](features/feature-merge-verify-deploy.md#invariants) caps the
+  human summary at 24 lines/4096 bytes and machine data at 65536 bytes, and
+  `verify deploy` uses the same caps with 50-step/50-artifact evidence lists and
+  explicit `+N` marks. [Retro](features/feature-retro-pipeline.md#non-functional-requirements)
+  bounds the audit collector read at 1000 records and export at a caller limit from
+  1 to 1000 with in-band truncation; report data is the four-key shape.
+  [Session lifecycle economics](features/feature-session-lifecycle-economics.md)
+  caps every refusal-evidence corpus at 512 UTF-8 bytes with stable
+  `key=value` keys. These are data caps, not a universal total-envelope cap.
   [blockers](features/feature-blockers.md#bounds-and-truncation) caps rendered
   questions at 8 per surface, question text at 120 characters, options at 4×60,
   free-text answers at 160, human output at 24 lines/4096 UTF-8 bytes, and
@@ -89,17 +120,20 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
   numeric bound.
 - Queue-ready accepts 1..8 candidates of at most 64 canonical characters; its
   per-field caps and renderer-only reverse-rank drops remain feature-specific.
-- Evidence/test: `packages/core/src/contracts/status.ts`, `queue-ready.ts`,
-  `brief.ts`, `owner-gate-sla.ts`, `blockers.ts`; `tests/behaviour/status-output.test.ts`,
+- Evidence/test: `packages/core/src/contracts/status.ts`,
+  `queue-ready.ts`, `brief.ts`, `owner-gate-sla.ts`, `doctor.ts`, `merge.ts`,
+  `verify-deploy.ts`, `blockers.ts`; `tests/behaviour/status-output.test.ts`,
   `queue-ready-output.test.ts`, `brief-output.test.ts`, `board-output.test.ts`,
+  `doctor-output.test.ts`, `merge-bounds.test.ts`, `verify-deploy-bounds.test.ts`,
   `blockers-bounds.test.ts`, golden suites.
 - Owner/trigger: engineering/reviewer; payload or renderer changes (XC-007).
 
 ### NFR-TOOL-003: Scoped performance and read cost
 
 - Quality attribute: performance efficiency. Applies: status/queue-ready pure
-  policy, the owner-gate board, the typed blocker channel, provider evaluation,
-  privacy scan/policy, session administration.
+  policy, the owner-gate board, the typed blocker channel, the doctor diagnostic,
+  provider evaluation, privacy scan/policy, session administration, and the retro
+  pipeline folds.
 - Requirement/status: existing feature budgets only; no universal latency SLO.
   Reference-environment results are not promises for every platform or network.
 
@@ -110,8 +144,14 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 | [Queue-ready](features/feature-queue-ready.md#non-functional-requirements) | Pure evaluation/ranking/rendering contract within 50 ms; same three outbound reads, one park fold/config/local-context read. | `tests/behaviour/queue-ready-performance.test.ts` samples evaluator latency and injected read counts; independent renderer timing not established here. |
 | [Board](features/feature-owner-gate-sla.md#non-functional-requirements) | Pure evaluation/ranking/rendering within 50 ms; one bounded tracker read, at most one decision-history read, and one fence plus one append per newly defaulted gate. | `tests/behaviour/board-performance.test.ts`, `board-read-cost.test.ts`. |
 | [Blockers](features/feature-blockers.md#non-functional-requirements) | Pure validation/guard/ranking/rendering within 50 ms; one verified blocker-ledger read per list, digest, or brief invocation; one business read plus one fence, append, and coverage read per publish or answer; zero outbound requests. | `tests/behaviour/blockers-performance.test.ts`, `blockers-read-cost.test.ts`. |
+| [Harness Adapters](features/feature-harness-adapters.md) | Read-only harness-store extraction: query-only pragma before the first read, bounded indexed queries with no message/part scans, capped sessions, per-session agent/model groups, tools, agents, and models with explicit marks or warnings, machine payload at most 65 536 UTF-8 bytes, human disclosure at most 4 096 bytes / 24 lines; identical injected facts yield byte-identical output. | `tests/behaviour/harness-telemetry-*.test.ts`, `harness-output-bounds.test.ts`, `tests/checks/harness-determinism.test.ts` pin the read budget and byte bounds. |
+| [Session lifecycle economics](features/feature-session-lifecycle-economics.md) | Pure deterministic budget, resume, evidence, and view folds with no clock or ambient read; the view derives from durable records alone with zero harness-store queries and zero writes. | `tests/checks/economics-determinism.test.ts`, `tests/behaviour/economics-view.test.ts` pin replay identity and the zero-query read posture. |
+| [Doctor](features/feature-doctor.md#non-functional-requirements) | Pure cap-sized aggregation within 50 ms; at most two single-page network reads (tracker and CI), one configuration resolve, one shared verified ledger read; no pagination, retry, or write. | `tests/behaviour/doctor-performance.test.ts` samples the median of 21 runs after warm-ups; `doctor-network-posture.test.ts` pins the read budget and shared-source read-once posture. |
+| [Merge and verify deploy](features/feature-merge-verify-deploy.md#invariants) | Pure freshness, waiver, and deploy-verdict evaluation; `merge` performs one verification read, one work-item read, one check-run page, one request-detail read, and only the declared git mutations; `verify deploy` performs one bounded trace read; the freshness bound defaults to 1800 s with at-bound stale. | `tests/behaviour/merge-probe.test.ts`, `merge-determinism.test.ts`, `verify-deploy-read-budget.test.ts`, `merge-bounds.test.ts`, `verify-deploy-bounds.test.ts`. |
+| [Retro](features/feature-retro-pipeline.md#non-functional-requirements) | Pure deterministic collect/report/export folds; the audit collector reads at limit 1000; collect ≤ 30 s, report ≤ 10 s, and export ≤ 10 s over a 10,000-record sidecar with full chain verification; CI gates bounded work instead of wall clock (one chain walk per read, one batched append per collection run), and the 10000 ms read / 30000 ms append seam constants are seam data rather than command budgets; export is capped at 1000 records with in-band truncation. | `tests/behaviour/retro-performance.test.ts`, `retro-collect.test.ts`, `retro-export.test.ts`. |
 | [Provider](features/feature-provider-engine.md#non-functional-requirements) | Pure evaluation of 100 entries within 50 ms, excluding transport; configurable quota timeout defaults to 15000 ms, sleep cap to 24 completed sleeps. | Provider behavior and evidence-bounds suites; these are not end-to-end command deadlines. |
 | [Privacy](features/feature-privacy-guard.md#non-functional-requirements) | Scan within 60 s for up to 50 MiB on CI reference runner; emitter within 10 ms per 2048-byte envelope; at most 32 hashed lengths. | `tests/checks/privacy-performance.test.ts`; production empty classes limit what a clean scan demonstrates. |
+| [Commit](features/feature-commit-primitive.md#non-functional-requirements) | Dry-run p95 under 2 s and template-fallback p95 under 5 s; one constrained model call per attempt; a model-transport commit is bounded by the provider call. | `tests/behaviour/commit-performance.test.ts` samples the dry-run and template paths; the model-transport bound is not a CI deadline. |
 | [Session admin](features/feature-session-database-admin.md#non-functional-requirements) | Reference size/list/selection/recheck/live-check/500-candidate apply: at most 30 s/10 s/30 s/250 ms each/10 s/180 s total. | Fake-I/O suites and separately recorded non-CI reference smoke; no host performance rerun here. |
 
 - Session constants separately bound a query/delete to 30000 ms and checkpoint to
@@ -122,12 +162,19 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 ### NFR-TOOL-004: Durable local state and fenced writes
 
 - Quality attribute: integrity and recoverability. Applies: ledger, derived indexes,
-  phase transitions, provider park persistence, owner-gate decisions, and blocker
-  question/answer records. Requirement/status: existing.
+  phase transitions, provider park persistence, owner-gate decisions, blocker
+  question/answer records, the retro registry, the evidence sidecar, and the
+  merge-domain records (gate verification, waiver, transaction). Requirement/status:
+  existing.
 - [State](features/feature-state-layer.md) requires verified ledger truth, explicit
   verified-empty evidence, key-set assertions, torn and unknown classification,
   reusable artifact-boundary validation, fenced writes, explicit stale-lock recovery,
-  and atomic derived-document replacement.
+  and atomic derived-document replacement. The three merge-domain record kinds are
+  additive within `delivery.state.v1`, and an append failure never leaves a
+  consumable half-verification. The retro registry's three record kinds use the
+  same boundary validation and fenced writes; the evidence sidecar is a separate
+  collector-fenced, keyed-chain artifact family outside the store's salvage path
+  ([retro](features/feature-retro-pipeline.md)).
 - Read/index strategy does not change truth; only the two explicit terminal-tail
   operations remove ledger bytes, and guided salvage quarantines the removed bytes
   instead of discarding them. Mid-stream corruption is not silently repaired, and
@@ -149,7 +196,8 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 ### NFR-TOOL-005: Credentials, redaction, and bounded input
 
 - Quality attribute: security/confidentiality. Applies: config acquisition, credential
-  port, CLI serialization, provider HTTP. Requirement/status: existing scoped controls.
+  port, CLI serialization, provider HTTP, and retro evidence/report/export redaction.
+  Requirement/status: existing scoped controls.
 - [Config](features/feature-config-layer.md) rejects non-environment catalog secrets,
   disallowed machine-path sources, unknown keys, interpolation, and poisoned skipped
   sources. CI disables workstation layers unless explicitly enabled.
@@ -161,13 +209,38 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
   before any record lands, and restricts `credential-missing` question text to the
   declared variable-name shape. No token-shape pattern layer exists; values never
   registered in the environment record remain the accepted residual recorded in
-  [TDR-0009](../decisions/TDR-0009-blockers-credential-guard-pattern-deferral.md).
+  [TDR-0011](../decisions/TDR-0011-blockers-credential-guard-pattern-deferral.md).
+- [Harness](features/feature-harness-adapters.md) builds the spawned child
+  environment from the declared allowlist alone: undeclared parent variables are
+  absent, credential references resolve through the credential port at use time,
+  and an unresolvable reference fails closed naming the reference. The spawn path
+  adds no ambient-environment read and no secret-read allowlist entry;
+  `harness.spawn.variable-missing` classifies a declared-but-absent variable and a
+  credential-port failure keeps `config.credential.missing` unchanged. The host
+  runner is the harness seam's one child-process site and a pinned entry in the
+  exact repository-wide `node:child_process` allowlist.
+- The [retro pipeline](features/feature-retro-pipeline.md) passes evidence,
+  findings, reports, and export bundles through the same redaction chokepoint and
+  keeps the sidecar chaining key out of records, output, configuration, and lane
+  environments. The key-containment invariant scans key-shaped literals in source,
+  fixtures, and goldens.
 - Evidence/test: config restrictions/parser suites, result goldens, credential and
-  `tests/checks/secret-read-boundary.test.ts` negative controls,
-  `tests/behaviour/blockers-credential*.test.ts`.
-- Gap: YAML parser limits nodes/depth/aliases to 2048/64/100, but its 1048576
-  byte-named source constant compares `text.length`. UTF-8 byte enforcement needs
-  reconciliation; do not claim it from the name alone.
+  `tests/checks/secret-read-boundary.test.ts` negative controls;
+  `tests/behaviour/blockers-credential*.test.ts`;
+  `tests/behaviour/config-parser.test.ts` and
+  `tests/behaviour/pm-notes-source-limits.test.ts` pin the source-size boundary;
+  `tests/behaviour/harness-spawn-env.test.ts` and
+  `harness-spawn-credential.test.ts` pin the deny-by-default spawn environment and
+  use-time credential resolution; `tests/structure/harness-imports.test.ts` pins
+  the exact `node:child_process` site set and the non-allowlisted-path boundary
+  control.
+- Bounded input: the YAML parser limits nodes/depth/aliases to 2048/64/100 and
+  enforces its 1048576-byte source limit as true UTF-8 byte length at the YAML
+  check site and both pm-notes parser check sites, fail-closed and with the
+  existing error identities. Boundary tests pin exactly-at-limit, one byte over,
+  one byte under, code-unit-at-limit-but-bytes-over, and all-ASCII content at all
+  three sites (3 sites × 5 fixture classes). This is a bounded-input control
+  proven by tests, not a security certification.
 - Owner/trigger: engineering/security reviewer; parser, credential, transport, or
   output changes (RSK-006, XC-004). No blanket security certification is implied.
 
@@ -202,8 +275,15 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
   coverage, exact-URL mock replay, explicit skips, and bounded artifacts (262144
   bytes). Mock conformance executes supported production writes; at least one
   executing step per adapter is not all-flow or live write coverage.
+- [Harness conformance](features/feature-harness-adapters.md) registers exactly the
+  two shipped harnesses, each covering the six-scenario classification floor
+  through the one shared classifier plus a liveness read over injected facts; the
+  coverage meta-check fails an unregistered closed-vocabulary kind or a missing
+  scenario.
 - Evidence/test: `tests/conformance/mock-conformance.test.ts`,
-  `broken-adapter-control.test.ts`, `tests/structure/conformance-coverage.test.ts`.
+  `broken-adapter-control.test.ts`, `tests/structure/conformance-coverage.test.ts`,
+  `tests/conformance/harness-classification.test.ts`,
+  `harness-liveness.test.ts`, `tests/structure/harness-neutrality.test.ts`.
 - Live v1 is GET-only, zero mutations/created artifacts, and scheduled evidence,
   not a merge gate. Not-configured exit zero is not a successful configured run.
 - Owner/trigger: adapter engineering/reviewer; capability or provider-shape change
@@ -223,6 +303,10 @@ declaration-only; CLI has no `bin`; typed MCP/OpenCode entries remain placeholde
 - [Session admin](features/feature-session-database-admin.md) defaults to dry-run;
   apply uses cold/non-live/leaf selection, immediate rechecks, official deletes,
   partial-failure accounting, and one live-gated checkpoint without host restart.
+- [Session lifecycle economics](features/feature-session-lifecycle-economics.md)
+  bounds restarts per delivery through one durable admission gate. Exhaustion is a
+  classified terminal state with a history reference, identical on supervised-style
+  and one-shot-style paths; the surface never spawns, kills, steers, or supervises.
 - Bounds: list at most 100, prune at most 500; human 40 lines/8192 bytes, data
   524288 bytes. Liveness is activity within 15 minutes, not a PID/lock guarantee.
 - Evidence/test: provider parks tests; `tests/behaviour/session-admin-prune.test.ts`,

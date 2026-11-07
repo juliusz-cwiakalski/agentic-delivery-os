@@ -44,6 +44,12 @@
       "typeText": "readonly WorkItemComment[]"
     },
     {
+      "name": "milestone",
+      "optional": true,
+      "readonly": true,
+      "typeText": "string"
+    },
+    {
       "name": "updatedAt",
       "optional": true,
       "readonly": true,

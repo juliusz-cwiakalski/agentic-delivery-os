@@ -1,0 +1,7 @@
+example-product: merge.gates-stale
+summary: result=refused; condition=merge.gates-stale
+verification-age=31m bound=30m
+recorded-sha=9f21c0e current-sha=9f21c0e
+new-red-jobs=CI / test (18)
+gate-set-delta=added:- removed:-
+remediation=Re-run `verify gates` for the current head, then retry the merge; the recorded verification is no longer valid evidence.

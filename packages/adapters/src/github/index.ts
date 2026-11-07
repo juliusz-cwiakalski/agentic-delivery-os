@@ -12,3 +12,13 @@ export {
   type GithubClientOptions,
   type GithubRepositoryRef,
 } from "./client.js";
+export {
+  createGitHubDeployTraceReader,
+  type DeployTraceRepository,
+  type GithubDeployArtifact,
+  type GithubDeployStep,
+  type GithubDeployTrace,
+  type GithubDeployTraceOptions,
+  type GithubDeployTraceReader,
+  normalizeDeployTrace,
+} from "./deploy-trace.js";

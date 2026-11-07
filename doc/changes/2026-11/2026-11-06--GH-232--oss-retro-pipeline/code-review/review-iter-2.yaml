@@ -1,0 +1,112 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-232
+branch: feat/GH-232/oss-retro-pipeline
+status: PASS
+summary: >-
+  All eleven required iteration-1 findings (F-1..F-11) are genuinely fixed and
+  independently re-verified with my own runs, not just the remediation
+  commit's claims. The two blockers are resolved at the root: collect now
+  lands a whole run through appendBatch under ONE fence with ONE verified
+  read and ONE append (my probe: 1,000-record collect onto a 10,000-record
+  sidecar in 68.3 ms with reads=1/appends=1, versus 56.9 s before; the
+  bounded-work regression test pins the counts at both 10 and 10,000 records,
+  the NFR-7 reference numbers are recorded in pm-notes, and the live
+  per-command budgets are restored in the feature spec), and the TC-RETRO-032
+  byte-equality oracle is delivered with both mutants beside a complete
+  24-case entry-level matrix (TC-030 x12 sidecar, TC-031 x12 registry, TC-034
+  asserting 24 classified / 24 preserved / 0 crashes) plus every per-TC mutant
+  the test plan pinned (TC-030/031/033/049/050/054/058). The non-blocking
+  fixes hold up: no throw across the memory-audit seam, a validated state
+  failure-code vocabulary with a regression test, a live retro-registry fence
+  namespace with the doctor double-count removed, a fixture-driven
+  bidirectional mutation meta-test, a source-wide key-containment scan (130
+  files, planted non-retro mutant), both DoR nits closed, all three
+  deviations recorded, and C-03 live on the production fold. Core guarantees
+  re-verified independently: binding AC 1 oracle runs and provably fails on
+  dropped-record and data+error mutants; binding AC 2 six-class tamper matrix
+  green with a co-deletion-robust meta-test; CLI surface locked to
+  collect|report (no export verb/flag); error-table round-trip green.
+  Quality gates: pnpm build green; TMPDIR=$PWD/tmp/tmpdir pnpm check green
+  (4178 pass / 4 skip / 0 fail across 423 files, depcruise clean, ambient
+  globals / workspace entrypoints / secret-read boundary / exports parity
+  all OK); both retro invariant checks green (key-containment 130 files,
+  render-purity 4 files); 227 retro-family tests green under my own runs.
+  Three new LOW findings are recorded — two evidence-record one-liners and
+  one missing regression pin — none blocking, all suitable to ride the PR or
+  fold into M2-S3 without reopening delivery.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 3
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/chg-GH-232-pm-notes.yaml:114
+    message: >-
+      The phase-7 completion entry omits the commit hash (cf4475d6); every
+      phase 1-6 entry names its commit ("commit 7349b22e" etc.). Test results
+      and the PIN-7 reference measurement are present, so only the hash half
+      of the completion-evidence contract is missing.
+    suggestion: >-
+      Amend the phase-7 pm-notes entry to name commit cf4475d6 (and d79148fe /
+      dfd5668c for the baseline merge and doc re-sync), matching the phase 1-6
+      evidence format. One-line pm-notes edit; can ride the PR.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: packages/core/src/state/retro-registry.ts:364
+    message: >-
+      The remediation touched packages/core/src/state/retro-registry.ts (the
+      registryFenceToken namespacing that task 7.7 mandates), but the file is
+      in neither the phase-7 scope.files declaration nor the four-group
+      SCOPE_DEVIATION enumeration in pm-notes (which covers contracts/retro.ts,
+      three test suites, the key-containment test, and the fixtures folder).
+      The edit itself is task-required and behaviorally correct; only the
+      record is incomplete.
+    suggestion: >-
+      Append retro-registry.ts to the reviewed-SCOPE_DEVIATION entry in
+      pm-notes (one line: "retro-registry.ts — the RETRO_REGISTRY_FENCE_NAMESPACE
+      wiring task 7.7 names"). No code change needed.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: test-gap
+    location: packages/cli/src/edge.ts:1847
+    message: >-
+      The doctor no-double-count fix (recordCount: base.recordCount with the
+      shared-ledger rationale) has no regression test through real
+      composition: the doctor suites inject fakes above readStateStores, so
+      re-introducing "base.recordCount + retro.recordCount" would not fail
+      any test. The fix is verified correct by inspection and the spec
+      re-sync documents it; only the pin is missing.
+    suggestion: >-
+      Add one test composing the real CLI edge over a shared store seeded
+      with retro artifacts and asserting the aggregated recordCount equals
+      the ledger's own count (not the sum). Suitable for M2-S3 composition
+      work or as a PR rider.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: "2026-11-06T21:30:00Z"
+next_step: PROCEED

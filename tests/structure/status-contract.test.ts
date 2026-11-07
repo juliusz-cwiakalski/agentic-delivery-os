@@ -10,12 +10,21 @@ import type { StatusProviderEntry } from "../../packages/core/src/contracts/inde
 import {
   STATUS_CI_RESULTS,
   STATUS_DEPENDENCY_STATES,
+  STATUS_DORMANT_FINDING_CODES,
   STATUS_EVIDENCE_OUTCOMES,
   STATUS_EVIDENCE_REASONS,
   STATUS_EVIDENCE_SOURCES,
+  STATUS_FINDING_CODES,
+  STATUS_FINDING_SEVERITIES,
+  STATUS_HUMAN_CLAMP_MARKER,
+  STATUS_HYGIENE_ASSERTIONS,
   STATUS_HYGIENE_FINDINGS,
+  STATUS_HYGIENE_LABEL_CONVENTIONS,
+  STATUS_LANE_ATTENTION_STATES,
   STATUS_MAX_DETAIL_CHARS,
   STATUS_MAX_EVIDENCE_SOURCES,
+  STATUS_MAX_FINDING_MEMBERS,
+  STATUS_MAX_FINDINGS_PER_SECTION,
   STATUS_MAX_HUMAN_BYTES,
   STATUS_MAX_HUMAN_LINES,
   STATUS_MAX_ITEMS_PER_SECTION,
@@ -25,14 +34,21 @@ import {
   STATUS_MAX_PIPELINE_RUNS,
   STATUS_MAX_PROVIDER_ENTRIES,
   STATUS_MAX_PROVIDER_PARKS,
+  STATUS_MAX_READY_ITEMS,
   STATUS_MAX_REASONS,
   STATUS_MAX_TITLE_CHARS,
   STATUS_MAX_TRACKER_FAMILY_ITEMS,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_PARKED_ITEM_STATES,
+  STATUS_PLACEHOLDER_SECTION_IDS,
+  STATUS_PRIMARY_BRANCH,
   STATUS_PROVIDER_AVAILABILITY,
   STATUS_PROVIDER_CHAIN_STATES,
+  STATUS_READY_CLASSES,
+  STATUS_READY_TO_MERGE_STATES,
   STATUS_SCHEMA_VERSION,
+  STATUS_SECTION_DERIVATION,
+  STATUS_SECTION_KINDS,
   STATUS_SECTION_ORDER,
   STATUS_SECTION_STATES,
   STATUS_SECTION_TITLES,
@@ -111,6 +127,9 @@ export const liveSnapshot = (): ConstantSnapshot => ({
     STATUS_MAX_PIPELINE_RUNS,
     STATUS_MAX_OPEN_PULL_REQUESTS,
     STATUS_MAX_PARKED_CHANGES,
+    STATUS_MAX_FINDINGS_PER_SECTION,
+    STATUS_MAX_FINDING_MEMBERS,
+    STATUS_MAX_READY_ITEMS,
     STATUS_SOURCE_ITEM_LIMIT,
     STATUS_SOURCE_PIPELINE_LIMIT,
     STATUS_MAX_TITLE_CHARS,
@@ -139,8 +158,11 @@ const EXPECTED_CAPS: Readonly<Record<string, number>> = {
   STATUS_SOURCE_PIPELINE_LIMIT: 20,
   STATUS_MAX_TITLE_CHARS: 120,
   STATUS_MAX_DETAIL_CHARS: 160,
-  STATUS_MAX_HUMAN_LINES: 24,
-  STATUS_MAX_HUMAN_BYTES: 4096,
+  STATUS_MAX_FINDINGS_PER_SECTION: 8,
+  STATUS_MAX_FINDING_MEMBERS: 8,
+  STATUS_MAX_READY_ITEMS: 8,
+  STATUS_MAX_HUMAN_LINES: 32,
+  STATUS_MAX_HUMAN_BYTES: 6144,
   STATUS_MAX_MACHINE_BYTES: 65536,
   STATUS_STALL_THRESHOLD_DAYS: 14,
 };
@@ -152,6 +174,8 @@ const EXPECTED_ORDER = [
   "lanes-or-queue",
   "providers",
   "parked-work",
+  "ready-to-merge",
+  "spend",
   "typed-questions",
 ];
 const EXPECTED_STATES = ["observed", "degraded", "unknown", "unavailable", "not-delivered"];
@@ -163,6 +187,8 @@ const EXPECTED_TITLES: Record<string, string> = {
   "lanes-or-queue": "Lanes or queue",
   providers: "Providers",
   "parked-work": "Parked work",
+  "ready-to-merge": "Ready to merge",
+  spend: "Spend",
   "typed-questions": "Typed questions",
 };
 
@@ -210,6 +236,62 @@ const compareSnapshot = (candidate: ConstantSnapshot): string[] => {
   ]);
   eq("STATUS_PROVIDER_AVAILABILITY", STATUS_PROVIDER_AVAILABILITY, ["parked", "unverified"]);
   eq("STATUS_PARKED_ITEM_STATES", STATUS_PARKED_ITEM_STATES, ["observed", "unknown"]);
+  eq("STATUS_FINDING_CODES", STATUS_FINDING_CODES, [
+    "ci.red-on-main",
+    "tracker.owner-gate-escalated",
+    "tracker.stalled-ticket",
+    "tracker.hygiene.missing-title",
+    "tracker.hygiene.missing-labels",
+    "tracker.hygiene.epic-membership",
+    "tracker.hygiene.story-points",
+    "tracker.hygiene.in-sprint",
+    "lane.idle-no-reason",
+    "parked.stale-no-condition",
+  ]);
+  eq("STATUS_FINDING_SEVERITIES", STATUS_FINDING_SEVERITIES, ["high", "medium", "low"]);
+  eq("STATUS_HYGIENE_ASSERTIONS", STATUS_HYGIENE_ASSERTIONS, [
+    "epic-membership",
+    "story-points",
+    "in-sprint",
+  ]);
+  eq("STATUS_LANE_ATTENTION_STATES", STATUS_LANE_ATTENTION_STATES, [
+    "delivering",
+    "idle-with-reason",
+    "idle-no-reason",
+  ]);
+  eq("STATUS_READY_CLASSES", STATUS_READY_CLASSES, ["merge-ready", "review-pending"]);
+  eq("STATUS_READY_TO_MERGE_STATES", STATUS_READY_TO_MERGE_STATES, [
+    "observed",
+    "degraded",
+    "unknown",
+    "unavailable",
+  ]);
+  eq("STATUS_PLACEHOLDER_SECTION_IDS", STATUS_PLACEHOLDER_SECTION_IDS, ["spend"]);
+  eq("STATUS_PRIMARY_BRANCH", STATUS_PRIMARY_BRANCH, "main");
+  eq("STATUS_HUMAN_CLAMP_MARKER", STATUS_HUMAN_CLAMP_MARKER, "+");
+  eq("STATUS_DORMANT_FINDING_CODES", STATUS_DORMANT_FINDING_CODES, ["lane.idle-no-reason"]);
+  eq("STATUS_HYGIENE_LABEL_CONVENTIONS", STATUS_HYGIENE_LABEL_CONVENTIONS, {
+    epicToken: "epic",
+    epicPrefix: "epic:",
+    storyPointsPrefix: "points:",
+  });
+  eq("STATUS_SECTION_KINDS", STATUS_SECTION_KINDS, {
+    tracker: "collector",
+    "changes-and-prs": "collector",
+    ci: "collector",
+    "lanes-or-queue": "declared-gap",
+    providers: "collector",
+    "parked-work": "collector",
+    "ready-to-merge": "collector",
+    spend: "placeholder",
+    "typed-questions": "collector",
+  });
+  eq("STATUS_SECTION_DERIVATION.ready-to-merge", STATUS_SECTION_DERIVATION["ready-to-merge"], [
+    "observed",
+    "degraded",
+    "unknown",
+    "unavailable",
+  ]);
   return failures;
 };
 
@@ -242,7 +324,7 @@ const dataOnlyViolations = (text: string, label = CONTRACT): string[] => {
 describe("TC-STATUS-008 declared constants bind Appendix C", () => {
   test("the live constants equal the Appendix C vocabulary and bounds", () => {
     expect(compareSnapshot(liveSnapshot())).toEqual([]);
-    expect(STATUS_SECTION_ORDER).toHaveLength(7);
+    expect(STATUS_SECTION_ORDER).toHaveLength(9);
     expect(STATUS_EVIDENCE_REASONS).toHaveLength(20);
     expect(STATUS_EVIDENCE_SOURCES).toHaveLength(9);
   });
@@ -330,5 +412,58 @@ describe("TC-STATUS-008 declared constants bind Appendix C", () => {
     const snapshot = cloneSnapshot(liveSnapshot());
     const failures = compareSnapshot({ ...snapshot, schema: "delivery.status.v2" });
     expect(failures.some((line) => line.startsWith("STATUS_SCHEMA_VERSION"))).toBe(true);
+  });
+
+  test("the first six section ids equal the shipped pre-change order", () => {
+    expect(STATUS_SECTION_ORDER.slice(0, 6)).toEqual([
+      "tracker",
+      "changes-and-prs",
+      "ci",
+      "lanes-or-queue",
+      "providers",
+      "parked-work",
+    ]);
+    expect(new Set(STATUS_SECTION_ORDER).size).toBe(9);
+  });
+
+  test("the new bounds and raised human bounds bind Appendix B exactly", () => {
+    expect(STATUS_MAX_FINDINGS_PER_SECTION).toBe(8);
+    expect(STATUS_MAX_FINDING_MEMBERS).toBe(8);
+    expect(STATUS_MAX_READY_ITEMS).toBe(8);
+    expect(STATUS_MAX_HUMAN_LINES).toBe(32);
+    expect(STATUS_MAX_HUMAN_BYTES).toBe(6144);
+    expect(STATUS_MAX_MACHINE_BYTES).toBe(65536);
+  });
+
+  test("the retired human bounds no longer bind anywhere in the status tree", () => {
+    for (const file of [
+      "packages/core/src/contracts/status.ts",
+      "packages/core/src/domain/status.ts",
+      "packages/cli/src/commands/status.ts",
+    ]) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      expect(text).not.toContain("STATUS_MAX_HUMAN_LINES = 24");
+      expect(text).not.toContain("STATUS_MAX_HUMAN_BYTES = 4096");
+    }
+  });
+
+  test("every new bound fails by constant name under a mutation", () => {
+    const snapshot = cloneSnapshot(liveSnapshot());
+    for (const [name, values] of [
+      ["STATUS_MAX_FINDINGS_PER_SECTION", [7, 9]],
+      ["STATUS_MAX_FINDING_MEMBERS", [7, 9]],
+      ["STATUS_MAX_READY_ITEMS", [7, 9]],
+      ["STATUS_MAX_HUMAN_LINES", [31, 33]],
+      ["STATUS_MAX_HUMAN_BYTES", [6143, 6145]],
+      ["STATUS_MAX_MACHINE_BYTES", [65535, 65537]],
+    ] as const) {
+      for (const value of values) {
+        const failures = compareSnapshot({
+          ...snapshot,
+          caps: { ...snapshot.caps, [name]: value },
+        });
+        expect(failures.some((line) => line.startsWith(name))).toBe(true);
+      }
+    }
   });
 });

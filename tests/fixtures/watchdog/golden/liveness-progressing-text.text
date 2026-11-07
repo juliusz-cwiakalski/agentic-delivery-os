@@ -1,0 +1,4 @@
+stdout:
+example-product watchdog liveness lane-1: progressing
+evidence: declared progress signals observed: heartbeatAgeMs, tokenDelta, traffic
+stderr:

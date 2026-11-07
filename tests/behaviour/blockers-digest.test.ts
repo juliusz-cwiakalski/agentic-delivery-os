@@ -1,6 +1,6 @@
 /**
  * TC-BLK-031/033 — the digest `typed-questions` section: fields, age, rank,
- * seven-section order, the payload-only pickup predicate, and the
+ * nine-section order, the payload-only pickup predicate, and the
  * failed-read degradation to `unknown` + `state-unreadable` at exit 0.
  */
 import { describe, expect, test } from "bun:test";
@@ -93,11 +93,11 @@ describe("TC-BLK-031 digest typed-questions section", () => {
     expect(advancedItems[0]?.age).toBe(4 * 3_600_000);
   });
 
-  test("the section order is seven with the six existing ids relative-stable", async () => {
+  test("the section order is nine with the six shipped ids relative-stable", async () => {
     const { envelope } = await statusOf(blockersRead([], []));
     const data = envelope.data as Record<string, unknown>;
     const sections = data.sections as Record<string, unknown>[];
-    expect(STATUS_SECTION_ORDER).toHaveLength(7);
+    expect(STATUS_SECTION_ORDER).toHaveLength(9);
     expect(sections.map((section) => section.id)).toEqual([...STATUS_SECTION_ORDER]);
     expect(sections.map((section) => section.id).slice(0, 6)).toEqual([
       "tracker",
@@ -107,7 +107,7 @@ describe("TC-BLK-031 digest typed-questions section", () => {
       "providers",
       "parked-work",
     ]);
-    expect((data.summary as Record<string, unknown>).sections).toBe(7);
+    expect((data.summary as Record<string, unknown>).sections).toBe(9);
   });
 
   test("the pickup predicate is determinable from the payload alone", async () => {

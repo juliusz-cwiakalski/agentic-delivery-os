@@ -1,5 +1,8 @@
 {
-  "ticks": [2000, 2004],
+  "ticks": [
+    2000,
+    2004
+  ],
   "runId": "run-fixture-0002",
   "brand": {
     "productName": "example-product",
@@ -15,5 +18,6 @@
     "releaseAssetPrefix": "example-product-",
     "installPath": "~/.example-product/bin/example-product"
   },
-  "program": "ok-void"
+  "program": "ok-void",
+  "mode": "interactive"
 }

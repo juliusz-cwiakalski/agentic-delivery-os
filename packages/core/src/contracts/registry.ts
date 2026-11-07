@@ -18,9 +18,23 @@ export type PhaseTransitionOperation = "complete" | "reopen";
 /** Only landings are recorded; no-op transitions append nothing. */
 export type PhaseTransitionOutcome = "landed";
 
+/** The durable commit intent a completion record carries (GH-227 DEC-7). */
+export type PhaseTransitionCommitIntent = "atomic" | "record-only";
+
+/** The record-only basis vocabulary; identical to the envelope strings. */
+export type PhaseTransitionCommitIntentBasis =
+  | "opt-out-flag"
+  | "config-disabled"
+  | "skipped-no-pending-work";
+
 /**
  * The `phase.transition` payload. `reason` is present on reopen records only;
- * `timestamp` is the injected clock's ISO-8601 value.
+ * `timestamp` is the injected clock's ISO-8601 value. A completion record also
+ * carries its durable commit intent and, when record-only, its basis (DEC-7);
+ * an atomic completion additionally carries the landed commit's SHA, known at
+ * append time because the commit object precedes the record. All of it lands in
+ * the record's own append, never a second write, so convergence evidence never
+ * depends on the non-gating telemetry emission.
  */
 export type PhaseTransitionRecord = {
   readonly changeRef: string;
@@ -29,6 +43,9 @@ export type PhaseTransitionRecord = {
   readonly timestamp: string;
   readonly outcome: PhaseTransitionOutcome;
   readonly reason?: string;
+  readonly commitIntent?: PhaseTransitionCommitIntent;
+  readonly commitIntentBasis?: PhaseTransitionCommitIntentBasis;
+  readonly commitSha?: string;
 };
 
 /** One folded phase entry in the derived per-change projection. */
