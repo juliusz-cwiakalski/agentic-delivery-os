@@ -326,7 +326,7 @@ export const isCredentialNameShaped = (
  * Layer 1 refuses a registered secret value on every content path and on the
  * `lane`/`ref` identifier fields (AC-F3-1, AC-F3-4). Layer 2 applies only to a
  * `credential-missing` question text and requires the declared name shape
- * (AC-F3-2). No token-shape pattern scan exists anywhere (TDR-0011).
+ * (AC-F3-2). No token-shape pattern scan exists anywhere (TDR-0012).
  */
 export const evaluateBlockerGuard = (
   request: BlockerGuardRequest,

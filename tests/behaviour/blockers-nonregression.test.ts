@@ -112,8 +112,8 @@ describe("TC-BLK-041 non-regression and declared evolution", () => {
     expect(boardRuntime.includes("owner-gate->question")).toBe(false);
   });
 
-  test("the TDR-0011 accepted residual is documented", () => {
-    const path = join(ROOT, "doc/decisions/TDR-0011-blockers-credential-guard-pattern-deferral.md");
+  test("the TDR-0012 accepted residual is documented", () => {
+    const path = join(ROOT, "doc/decisions/TDR-0012-blockers-credential-guard-pattern-deferral.md");
     expect(existsSync(path)).toBe(true);
     const text = readFileSync(path, "utf8");
     expect(text.toLowerCase()).toContain("residual");

@@ -8,6 +8,7 @@
  */
 import { aggregateStatus } from "@delivery-os/core";
 import {
+  type SpendDigestSection,
   STATUS_SOURCE_ITEM_LIMIT,
   STATUS_SOURCE_PIPELINE_LIMIT,
   type StatusBlockersRead,
@@ -39,6 +40,8 @@ export type StatusToolRuntime = {
   readonly readProviderParks: (nowMs: number) => StatusParkRead;
   readonly readLocalContext: () => StatusLocalContextRead;
   readonly readBlockers: () => StatusBlockersRead;
+  /** The spend read projection; absent means the verified-empty observation. */
+  readonly readSpend?: () => SpendDigestSection;
   readonly nowIso: () => string;
   readonly nowMs: () => number;
 };
@@ -88,6 +91,7 @@ const collectStatusFacts = async (runtime: StatusToolRuntime) => {
     },
     localContext: runtime.readLocalContext(),
     blockers: runtime.readBlockers(),
+    spend: runtime.readSpend?.() ?? { state: "observed", captured: false },
   };
 };
 

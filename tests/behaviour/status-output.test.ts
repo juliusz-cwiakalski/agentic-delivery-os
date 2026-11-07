@@ -226,18 +226,7 @@ describe("TC-STATUS-005 machine envelope and 64 KiB bound", () => {
       ],
       "parked-work": ["counts", "evidence", "id", "items", "source", "state", "title", "truncated"],
       "ready-to-merge": ["counts", "evidence", "id", "items", "state", "title", "truncated"],
-      spend: [
-        "capability",
-        "counts",
-        "evidence",
-        "expectedStory",
-        "id",
-        "items",
-        "note",
-        "state",
-        "title",
-        "truncated",
-      ],
+      spend: ["counts", "evidence", "id", "items", "note", "spend", "state", "title", "truncated"],
       "typed-questions": ["counts", "evidence", "id", "questions", "state", "title", "truncated"],
     };
     for (const [id, keys] of Object.entries(expectedKeys)) {
@@ -589,7 +578,7 @@ describe("TC-ATT-026 extended human grammar", () => {
   test("the ready, spend, questions, and attention lines are pinned", () => {
     const human = renderStatusHuman(aggregateStatus(baseFacts()), SYNTHETIC_BRAND);
     expect(human).toContain("ready      observed  0 ready-to-merge (merge-ready 0)");
-    expect(human).toContain("spend      not-delivered  spend summary arrives with M1-S19");
+    expect(human).toContain("spend      observed  no captured telemetry (absence of capture)");
     expect(human).toContain("questions  observed  0 open");
     expect(human).toContain("attention  0 findings ()");
   });

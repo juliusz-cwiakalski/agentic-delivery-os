@@ -1,5 +1,5 @@
 /**
- * TC-BLK-020 — TDR-0011's executable residual: unregistered token-like prose on
+ * TC-BLK-020 — TDR-0012's executable residual: unregistered token-like prose on
  * non-credential-missing paths is accepted (no shape refusal), while registered
  * values are refused by layer 1 and value-shaped credential-missing questions
  * are refused by layer 2. No generic pattern layer exists.
@@ -18,7 +18,7 @@ import { makeQuestion } from "../fixtures/blockers/records";
 const ROOT = process.cwd();
 const DOMAIN = "packages/core/src/domain/blockers.ts";
 
-describe("TC-BLK-020 TDR-0011 negative controls", () => {
+describe("TC-BLK-020 TDR-0012 negative controls", () => {
   test("unregistered token-like prose is accepted on spec-ambiguity, options, and answers", async () => {
     const harness = createBlockersHarness({
       secrets: secrets(),

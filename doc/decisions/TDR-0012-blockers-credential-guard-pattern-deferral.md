@@ -1,10 +1,10 @@
 ---
-id: TDR-0011
+id: TDR-0012
 decision_type: tdr
 status: Proposed
 created: 2026-11-06
 decision_date: null
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 summary: "The GH-230 blockers channel credential guard stays at the two declared layers — registered-secret-value refusal on every content path plus the variable-name shape on credential-missing question text — with no token-shape pattern layer; the unregistered-value residual on other content paths is a documented accepted risk, and pattern-based detection is deferred to a system-level shared content policy with named revisit triggers."
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os typed blocker and question channel (blockers CLI, M1-S16)
@@ -59,7 +59,7 @@ links:
   roadmap_items: []
 ---
 
-# TDR-0011: Blockers Credential Guard Boundary — Registered Values and Name-Shape Only; Pattern Layer Deferred
+# TDR-0012: Blockers Credential Guard Boundary — Registered Values and Name-Shape Only; Pattern Layer Deferred
 
 ## Context
 
@@ -239,9 +239,9 @@ The unregistered-value residual is **not** a constraint violation: the ticket's 
 
 ## Implementation Plan
 
-1. `@spec-writer` closes OQ-1 in the change spec referencing TDR-0011: DEC-2 unchanged (layers 1+2 as written), §7.3's deferred row now pointing at this record, and the AC-F3-3 wording tightened per the unresolved question above.
+1. `@spec-writer` closes OQ-1 in the change spec referencing TDR-0012: DEC-2 unchanged (layers 1+2 as written), §7.3's deferred row now pointing at this record, and the AC-F3-3 wording tightened per the unresolved question above.
 2. `@coder` delivers the guard per the spec: layer 1 + layer 2 only, with AC-F3-1/2/3 fixtures and the RSK-2 negative controls; no pattern machinery.
-3. `@doc-syncer` records the accepted residual and revisit triggers in the channel's feature spec; the change spec's `links.decisions` gains `TDR-0011`.
+3. `@doc-syncer` records the accepted residual and revisit triggers in the channel's feature spec; the change spec's `links.decisions` gains `TDR-0012`.
 4. If a revisit trigger fires: open a superseding decision choosing ALT-3 (preferred) or ALT-1; adoption lands as contract data under the privacy-guard rule-governance discipline — rule definitions and enabled-set edit in one reviewed PR, with a measured false-positive corpus against real channel prose before the first refusal ships.
 
 ## Verification Criteria

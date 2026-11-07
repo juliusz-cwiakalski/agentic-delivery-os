@@ -37,6 +37,7 @@
     "src/contracts/result.ts",
     "src/contracts/retro.ts",
     "src/contracts/session.ts",
+    "src/contracts/spend.ts",
     "src/contracts/state.ts",
     "src/contracts/status.ts",
     "src/contracts/verify-deploy.ts",
@@ -82,6 +83,8 @@
     "src/domain/retro.ts",
     "src/domain/session-admin.ts",
     "src/domain/sha256.ts",
+    "src/domain/spend-text.ts",
+    "src/domain/spend.ts",
     "src/domain/status.ts",
     "src/domain/verify-change.ts",
     "src/domain/verify-deploy.ts",
@@ -119,6 +122,7 @@
     "src/state/registry.ts",
     "src/state/retro-registry.ts",
     "src/state/retro-sidecar.ts",
+    "src/state/spend-reads.ts",
     "src/state/storage-error.ts"
   ],
   "adapters": [
@@ -197,6 +201,7 @@
     "src/commands/provider.ts",
     "src/commands/queue.ts",
     "src/commands/retro.ts",
+    "src/commands/spend.ts",
     "src/commands/status.ts",
     "src/commands/verify-deploy.ts",
     "src/commands/verify-gates.ts",

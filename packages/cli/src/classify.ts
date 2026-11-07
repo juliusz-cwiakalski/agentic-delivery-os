@@ -13,6 +13,7 @@ import {
   ERROR_TABLE_FAMILIES,
   type ErrorTableEntry,
   type ErrorTableFamily,
+  EXACT_CODE_DOMAIN_KINDS,
   FALLBACK_INTERNAL_CODE,
   FALLBACK_INVOCATION_CODE,
   MERGE_GATE_ERROR_PREFIX,
@@ -25,6 +26,9 @@ export type CodeResolution =
 
 const isDeclaredKind = (kind: string): kind is (typeof DOMAIN_KINDS)[number] =>
   (DOMAIN_KINDS as readonly string[]).includes(kind);
+
+const isExactCodeKind = (kind: string): boolean =>
+  (EXACT_CODE_DOMAIN_KINDS as readonly string[]).includes(kind);
 
 const entryForCode = (code: string): ErrorTableEntry | undefined =>
   (ERROR_TABLE as readonly ErrorTableEntry[]).find((entry) => entry.code === code);
@@ -114,6 +118,7 @@ export function classifyDomainKind(kind: string, code?: string): ErrorTableEntry
     }
     return resolved.entry;
   }
+  if (isExactCodeKind(kind)) throw new Error(`ambiguous or missing domain kind: ${kind}`);
   const matches = (ERROR_TABLE as readonly ErrorTableEntry[]).filter(
     (candidate) => candidate.domainKind === kind,
   );

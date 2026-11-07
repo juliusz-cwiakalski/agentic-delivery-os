@@ -440,7 +440,11 @@ describe("TC-ATT-035 expanded new-section negative controls", () => {
     const human = digest.sections.length;
     expect(human).toBe(9);
     expect(JSON.stringify(digest)).not.toContain("merge-ready 0");
-    expect(digest.sections.find((entry) => entry.id === "spend")?.state).toBe("not-delivered");
+    // Spend stays an observed section: absence of capture is not a failure and
+    // never a zero-spend claim (GH-236 DEC-8).
+    const spend = digest.sections.find((entry) => entry.id === "spend");
+    expect(spend?.state).toBe("observed");
+    expect(spend?.spend).toMatchObject({ state: "observed", captured: false });
     expect(digest.sections.find((entry) => entry.id === "typed-questions")?.state).toBe("observed");
   });
 

@@ -12,6 +12,7 @@ import type { BlockerLedgerView, BlockerQuestionView } from "./blockers.js";
 import type { OwnerGateSlaState, OwnerGateUnknownAgeReason } from "./owner-gate-sla.js";
 import type { DeliveryRequest, PipelineRun, WorkItem } from "./ports.js";
 import type { ProviderConfiguration, ProviderParkView } from "./provider.js";
+import type { SpendDigestSection } from "./spend.js";
 
 /** The nine section ids in their fixed order (DM-3, DEC-1; DEC-6 of GH-230). */
 export const STATUS_SECTION_ORDER = [
@@ -36,13 +37,19 @@ export const STATUS_SECTION_KINDS = {
   providers: "collector",
   "parked-work": "collector",
   "ready-to-merge": "collector",
-  spend: "placeholder",
+  spend: "collector",
   "typed-questions": "collector",
 } as const;
 export type StatusSectionKind = (typeof STATUS_SECTION_KINDS)[StatusSectionId];
 
-/** The one delivered placeholder section id (DM-12, DEC-17; blockers delivered by GH-230). */
-export const STATUS_PLACEHOLDER_SECTION_IDS = ["spend"] as const;
+/**
+ * The placeholder section ids (DM-12, DEC-17).
+ *
+ * Vacant: typed questions shipped with GH-230 and spend with GH-236, so every
+ * section is a collector or the declared lanes gap. `placeholderSectionCount`
+ * therefore reports exactly 0 for the shipped nine-section digest.
+ */
+export const STATUS_PLACEHOLDER_SECTION_IDS = [] as const;
 export type StatusPlaceholderSectionId = (typeof STATUS_PLACEHOLDER_SECTION_IDS)[number];
 
 /** The declared per-section state-derivation rows (Appendix C, TC-ATT-024). */
@@ -56,7 +63,7 @@ export const STATUS_SECTION_DERIVATION: Readonly<
   providers: ["observed", "degraded", "unknown", "unavailable"],
   "parked-work": ["observed", "unknown", "unavailable"],
   "ready-to-merge": ["observed", "degraded", "unknown", "unavailable"],
-  spend: ["not-delivered"],
+  spend: ["observed", "unknown"],
   "typed-questions": ["observed", "unknown"],
 };
 
@@ -218,7 +225,7 @@ export const STATUS_SECTION_STATES = [
 ] as const;
 export type StatusSectionState = (typeof STATUS_SECTION_STATES)[number];
 
-/** The nine evidence source ids (DM-4). */
+/** The ten evidence source ids (DM-4; GH-230 added `blockers`, GH-236 added `state-log`). */
 export const STATUS_EVIDENCE_SOURCES = [
   "tracker",
   "changes",
@@ -229,6 +236,7 @@ export const STATUS_EVIDENCE_SOURCES = [
   "local-context",
   "repository-binding",
   "blockers",
+  "state-log",
 ] as const;
 export type StatusEvidenceSource = (typeof STATUS_EVIDENCE_SOURCES)[number];
 
@@ -574,6 +582,8 @@ export type StatusFacts = {
   readonly providers: StatusProviderFacts;
   readonly localContext: StatusLocalContextRead;
   readonly blockers: StatusBlockersRead;
+  /** The spend read projection fed by the same fold the command consumes. */
+  readonly spend: SpendDigestSection;
 };
 
 /** The active-change item shape inside the changes section. */
@@ -734,6 +744,8 @@ export type StatusSection = {
   readonly findings?: readonly StatusFinding[];
   readonly attentionStates?: readonly StatusLaneAttentionState[];
   readonly questions?: readonly StatusTypedQuestionItem[];
+  /** The spend section's observed or unknown projection (GH-236 DM-6). */
+  readonly spend?: SpendDigestSection;
 };
 
 /** The digest summary counts (DM-1, DM-12). */

@@ -91,7 +91,8 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 
 - Quality attribute: interoperability and resource boundedness. Applies: CLI
   envelope, status, brief, queue-ready, board, verify gates, merge, verify deploy,
-  doctor and blockers renderers, and retro collect/report renderers. Status: existing.
+  doctor, blockers, and spend renderers, and retro collect/report renderers. Status:
+  existing.
 - Requirement: one valid `CommandResult` under `--json`, exactly one of data/error,
   classified containment, deterministic ordering, and visible truncation.
 - Canonical budgets: [status](features/feature-status-digest.md#evidence-counts-truncation-and-bounds)
@@ -106,7 +107,11 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   [merge transaction](features/feature-merge-verify-deploy.md#invariants) caps the
   human summary at 24 lines/4096 bytes and machine data at 65536 bytes, and
   `verify deploy` uses the same caps with 50-step/50-artifact evidence lists and
-  explicit `+N` marks. [Retro](features/feature-retro-pipeline.md#non-functional-requirements)
+  explicit `+N` marks. [Spend](features/feature-spend.md#output-contract-and-bounds)
+  caps the machine payload at 65536 bytes and the human digest at 200 lines/16384
+  bytes, dropping trailing `perAgent[]`, then `perPhase[]`, then event entries with
+  a recorded marker while totals, restarts, ratio, and `progressRun` are never
+  truncated. [Retro](features/feature-retro-pipeline.md#non-functional-requirements)
   bounds the audit collector read at 1000 records and export at a caller limit from
   1 to 1000 with in-band truncation; report data is the four-key shape.
   [Session lifecycle economics](features/feature-session-lifecycle-economics.md)
@@ -132,8 +137,8 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 
 - Quality attribute: performance efficiency. Applies: status/queue-ready pure
   policy, the owner-gate board, the typed blocker channel, the doctor diagnostic,
-  provider evaluation, privacy scan/policy, session administration, and the retro
-  pipeline folds.
+  provider evaluation, privacy scan/policy, session administration, the spend fold,
+  and the retro pipeline folds.
 - Requirement/status: existing feature budgets only; no universal latency SLO.
   Reference-environment results are not promises for every platform or network.
 
@@ -149,6 +154,7 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 | [Doctor](features/feature-doctor.md#non-functional-requirements) | Pure cap-sized aggregation within 50 ms; at most two single-page network reads (tracker and CI), one configuration resolve, one shared verified ledger read; no pagination, retry, or write. | `tests/behaviour/doctor-performance.test.ts` samples the median of 21 runs after warm-ups; `doctor-network-posture.test.ts` pins the read budget and shared-source read-once posture. |
 | [Merge and verify deploy](features/feature-merge-verify-deploy.md#invariants) | Pure freshness, waiver, and deploy-verdict evaluation; `merge` performs one verification read, one work-item read, one check-run page, one request-detail read, and only the declared git mutations; `verify deploy` performs one bounded trace read; the freshness bound defaults to 1800 s with at-bound stale. | `tests/behaviour/merge-probe.test.ts`, `merge-determinism.test.ts`, `verify-deploy-read-budget.test.ts`, `merge-bounds.test.ts`, `verify-deploy-bounds.test.ts`. |
 | [Retro](features/feature-retro-pipeline.md#non-functional-requirements) | Pure deterministic collect/report/export folds; the audit collector reads at limit 1000; collect ≤ 30 s, report ≤ 10 s, and export ≤ 10 s over a 10,000-record sidecar with full chain verification; CI gates bounded work instead of wall clock (one chain walk per read, one batched append per collection run), and the 10000 ms read / 30000 ms append seam constants are seam data rather than command budgets; export is capped at 1000 records with in-band truncation. | `tests/behaviour/retro-performance.test.ts`, `retro-collect.test.ts`, `retro-export.test.ts`. |
+| [Spend](features/feature-spend.md#non-functional-requirements) | Pure deterministic fold over one ref's telemetry and transition records: p95 ≤ 500 ms at 1,000 captured records and ≤ 2 s at 10,000 in the reference environment; CI gates the bounded work (one verified read per telemetry family, one transition read, one fold, no per-record re-read). | `tests/behaviour/spend-performance.test.ts`, `spend-readonly.test.ts`. |
 | [Provider](features/feature-provider-engine.md#non-functional-requirements) | Pure evaluation of 100 entries within 50 ms, excluding transport; configurable quota timeout defaults to 15000 ms, sleep cap to 24 completed sleeps. | Provider behavior and evidence-bounds suites; these are not end-to-end command deadlines. |
 | [Privacy](features/feature-privacy-guard.md#non-functional-requirements) | Scan within 60 s for up to 50 MiB on CI reference runner; emitter within 10 ms per 2048-byte envelope; at most 32 hashed lengths. | `tests/checks/privacy-performance.test.ts`; production empty classes limit what a clean scan demonstrates. |
 | [Commit](features/feature-commit-primitive.md#non-functional-requirements) | Dry-run p95 under 2 s and template-fallback p95 under 5 s; one constrained model call per attempt; a model-transport commit is bounded by the provider call. | `tests/behaviour/commit-performance.test.ts` samples the dry-run and template paths; the model-transport bound is not a CI deadline. |
@@ -163,9 +169,9 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 
 - Quality attribute: integrity and recoverability. Applies: ledger, derived indexes,
   phase transitions, provider park persistence, owner-gate decisions, blocker
-  question/answer records, the retro registry, the evidence sidecar, and the
-  merge-domain records (gate verification, waiver, transaction). Requirement/status:
-  existing.
+  question/answer records, the retro registry, the evidence sidecar, the spend read
+  side's telemetry reads, and the merge-domain records (gate verification, waiver,
+  transaction). Requirement/status: existing.
 - [State](features/feature-state-layer.md) requires verified ledger truth, explicit
   verified-empty evidence, key-set assertions, torn and unknown classification,
   reusable artifact-boundary validation, fenced writes, explicit stale-lock recovery,
@@ -174,7 +180,10 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   consumable half-verification. The retro registry's three record kinds use the
   same boundary validation and fenced writes; the evidence sidecar is a separate
   collector-fenced, keyed-chain artifact family outside the store's salvage path
-  ([retro](features/feature-retro-pipeline.md)).
+  ([retro](features/feature-retro-pipeline.md)). The [spend read side](features/feature-spend.md)
+  is a verified read-only consumer of the telemetry and transition records: it
+  acquires no fence, appends nothing, and keeps every store-damage class on its
+  delivered `state.*` identity.
 - Read/index strategy does not change truth; only the two explicit terminal-tail
   operations remove ledger bytes, and guided salvage quarantines the removed bytes
   instead of discarding them. Mid-stream corruption is not silently repaired, and
@@ -196,7 +205,7 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 ### NFR-TOOL-005: Credentials, redaction, and bounded input
 
 - Quality attribute: security/confidentiality. Applies: config acquisition, credential
-  port, CLI serialization, provider HTTP, and retro evidence/report/export redaction.
+  port, CLI serialization, provider HTTP, spend rendering, and retro evidence/report/export redaction.
   Requirement/status: existing scoped controls.
 - [Config](features/feature-config-layer.md) rejects non-environment catalog secrets,
   disallowed machine-path sources, unknown keys, interpolation, and poisoned skipped
@@ -209,7 +218,7 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   before any record lands, and restricts `credential-missing` question text to the
   declared variable-name shape. No token-shape pattern layer exists; values never
   registered in the environment record remain the accepted residual recorded in
-  [TDR-0011](../decisions/TDR-0011-blockers-credential-guard-pattern-deferral.md).
+  [TDR-0012](../decisions/TDR-0012-blockers-credential-guard-pattern-deferral.md).
 - [Harness](features/feature-harness-adapters.md) builds the spawned child
   environment from the declared allowlist alone: undeclared parent variables are
   absent, credential references resolve through the credential port at use time,
@@ -224,6 +233,11 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   keeps the sidecar chaining key out of records, output, configuration, and lane
   environments. The key-containment invariant scans key-shaped literals in source,
   fixtures, and goldens.
+- The [spend read side](features/feature-spend.md#security-and-boundaries) emits
+  aggregate counts, refs, phase ids, agent/model names, run ids, and windows only;
+  it renders no prompt text, message bodies, transcripts, diffs, tool output, or
+  credential material, and passes both human and machine output through the same
+  redaction chokepoint.
 - Evidence/test: config restrictions/parser suites, result goldens, credential and
   `tests/checks/secret-read-boundary.test.ts` negative controls;
   `tests/behaviour/blockers-credential*.test.ts`;

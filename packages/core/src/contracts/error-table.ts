@@ -28,8 +28,19 @@ export const DOMAIN_KINDS = [
   "merge",
   "harness",
   "retro",
+  "spend",
   "dispatch",
 ] as const;
+
+/**
+ * The domain kinds whose single row is selectable by exact code only.
+ *
+ * A kind-only discriminant for these kinds is contained by `fallback.internal`
+ * rather than resolved to the kind's only row, so a malformed failure object
+ * can never masquerade as the declared identity.
+ */
+export const EXACT_CODE_DOMAIN_KINDS = ["spend"] as const;
+export type ExactCodeDomainKind = (typeof EXACT_CODE_DOMAIN_KINDS)[number];
 
 /** Reserved containment code for broken invocations and unknown commands. */
 export const FALLBACK_INVOCATION_CODE = "fallback.invocation" as const;
@@ -1081,6 +1092,17 @@ export const ERROR_TABLE = [
       "Write evidence only through the collector seam; the sidecar is collector-owned and the attempted write did not land.",
     projectionClass: "platform-provider",
     summary: "A write outside the collector seam was refused.",
+  },
+  {
+    code: "spend.telemetry-absent",
+    domainKind: "spend",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Capture harness telemetry (session-group and capture-outcome records) for the selected work item at closeout, then re-run spend.",
+    projectionClass: "user-validation",
+    summary: "No captured harness telemetry exists for the selected work item.",
   },
   {
     code: "dispatch.restart-budget-exceeded",

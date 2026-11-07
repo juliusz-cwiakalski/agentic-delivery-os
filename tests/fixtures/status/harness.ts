@@ -309,6 +309,44 @@ export const missingLocalContext = (
   path,
 });
 
+/** The verified-empty spend observation every base digest carries by default. */
+export const verifiedEmptySpend = (): StatusFacts["spend"] => ({
+  state: "observed",
+  captured: false,
+});
+
+/** A captured spend projection with all five classes observed. */
+export const capturedSpend = (
+  overrides: Partial<{
+    input: number;
+    output: number;
+    reasoning: number;
+    cacheRead: number;
+    cacheWrite: number;
+    restarts: number;
+    ratio: number | null;
+  }> = {},
+): StatusFacts["spend"] => ({
+  state: "observed",
+  captured: true,
+  tokensByClass: {
+    input: overrides.input ?? 1_000,
+    output: overrides.output ?? 400,
+    reasoning: overrides.reasoning ?? 50,
+    cacheRead: overrides.cacheRead ?? 20,
+    cacheWrite: overrides.cacheWrite ?? 10,
+  },
+  restarts: overrides.restarts ?? 1,
+  ratio: overrides.ratio === undefined ? 2 : overrides.ratio,
+});
+
+/** A failed spend read carried as digest data. */
+export const failedSpend = (failureCode = "state.store.torn"): StatusFacts["spend"] => ({
+  state: "unknown",
+  reason: "state-unreadable",
+  failureCode,
+});
+
 export const baseFacts = (overrides: Partial<StatusFacts> = {}): StatusFacts => ({
   nowIso: NOW_ISO,
   nowMs: NOW_MS,
@@ -319,6 +357,7 @@ export const baseFacts = (overrides: Partial<StatusFacts> = {}): StatusFacts => 
   providers: providers(),
   localContext: localContext({ activeChange: activeChange() }),
   blockers: blockersRead(),
+  spend: verifiedEmptySpend(),
   ...overrides,
 });
 
@@ -447,6 +486,10 @@ export const statusRuntime = (
   readBlockers: () => {
     recorder.calls.push("readBlockers");
     return facts.blockers;
+  },
+  readSpend: () => {
+    recorder.calls.push("readSpend");
+    return facts.spend;
   },
   nowIso: () => {
     recorder.calls.push("nowIso");

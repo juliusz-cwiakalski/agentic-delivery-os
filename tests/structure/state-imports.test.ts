@@ -144,3 +144,38 @@ describe("TC-STATE-022 state-tier imports and runtime confinement", () => {
     expect(driverControl).toContain("packages/core/src/state/driver/probe.ts");
   });
 });
+
+describe("TC-SPEND-008 the spend read module stays inside the state tier", () => {
+  test("the spend read consumer is scanned and imports only contracts and own modules", () => {
+    expect(stateFiles()).toContain("packages/core/src/state/spend-reads.ts");
+    const source = readFileSync(join(ROOT, "packages/core/src/state/spend-reads.ts"), "utf8");
+    expect(forbiddenStateImports(source, "packages/core/src/state/spend-reads.ts")).toEqual([]);
+  });
+
+  test("the read module exposes no write, fence, or salvage member", () => {
+    const source = readFileSync(join(ROOT, "packages/core/src/state/spend-reads.ts"), "utf8");
+    for (const member of [
+      ".acquireFence(",
+      ".releaseFence(",
+      ".append(",
+      ".salvage(",
+      ".replaceDocument(",
+    ]) {
+      expect(source.includes(member), member).toBe(false);
+    }
+  });
+
+  test("an adapter or harness import planted in the read module is flagged", () => {
+    const violations = forbiddenStateImports(
+      [
+        'import { createHarnessStore } from "@delivery-os/adapters/harness";',
+        'import { readFileSync } from "node:fs";',
+      ].join("\n"),
+      "packages/core/src/state/spend-reads.ts",
+    );
+    expect(violations).toEqual([
+      "packages/core/src/state/spend-reads.ts: @delivery-os/adapters/harness",
+      "packages/core/src/state/spend-reads.ts: node:fs",
+    ]);
+  });
+});

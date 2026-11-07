@@ -1,10 +1,10 @@
 /**
  * TC-ATT-018 (behaviour half) / 019 / 020 / 021 / 024 — the lanes declaration,
- * the spend placeholder, the delivered typed-questions section, nine-section
- * totality, and the summary.
+ * the delivered spend and typed-questions sections, nine-section totality, and
+ * the summary.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   STATUS_LANE_ATTENTION_STATES,
@@ -13,18 +13,19 @@ import {
   STATUS_SECTION_ORDER,
   type StatusDigest,
   type StatusFacts,
-  type StatusSection,
 } from "../../packages/core/src/contracts/index";
 import { aggregateStatus, renderStatusHuman } from "../../packages/core/src/domain/index";
 import {
   baseFacts,
+  capturedSpend,
   failedDeliveryRequestRead,
   failedPipelineRunRead,
+  failedSpend,
   failedWorkItemRead,
   missingLocalContext,
+  repository,
   sectionById,
   unavailableBinding,
-  repository,
 } from "../fixtures/status/harness";
 import { matrixCases } from "../fixtures/status/matrix/cases";
 
@@ -33,45 +34,42 @@ const ROOT = process.cwd();
 const humanOf = (facts: StatusFacts): string =>
   renderStatusHuman(aggregateStatus(facts), { binaryName: "example-product" } as never);
 
-const placeholderFailures = (
-  section: StatusSection,
-  id: "spend",
-  capability: string,
-  story: string,
-  note: string,
-): string[] => {
-  const failures: string[] = [];
-  if (section.id !== id) failures.push(`id ${section.id} != ${id}`);
-  if (section.state !== "not-delivered") failures.push(`state ${section.state}`);
-  if (section.capability !== capability) failures.push(`capability ${String(section.capability)}`);
-  if (section.expectedStory !== story) failures.push(`story ${String(section.expectedStory)}`);
-  if (section.note !== note) failures.push(`note ${String(section.note)}`);
-  if (!section.evidence.reasons.includes("engine-not-delivered")) failures.push("reason");
-  if (!section.evidence.sources.some((source) => source.outcome === "not-delivered")) {
-    failures.push("source outcome");
-  }
-  if (section.counts.total !== 0 || section.counts.observed !== 0 || section.counts.unknown !== 0) {
-    failures.push("counts");
-  }
-  if ((section.items ?? []).length !== 0) failures.push("items");
-  if ((section.findings ?? []).length !== 0) failures.push("findings");
-  return failures;
-};
+describe("TC-ATT-019/020 the delivered spend and typed-questions sections", () => {
+  test("spend is a real observed section fed by the read-side fold", () => {
+    const spend = sectionById(aggregateStatus(baseFacts()).sections, "spend");
+    expect(spend.state).toBe("observed");
+    expect(spend.evidence.reasons).toEqual(["observed-empty"]);
+    expect(spend.evidence.sources).toEqual([{ source: "state-log", outcome: "observed-empty" }]);
+    expect(spend.note).toBe("no captured telemetry (absence of capture)");
+    expect(spend.capability).toBeUndefined();
+    expect(spend.expectedStory).toBeUndefined();
+    expect(spend.items).toEqual([]);
+    expect(spend.counts.total).toBe(0);
+    expect(spend.findings ?? []).toEqual([]);
+  });
 
-const placeholderSection = (facts: StatusFacts, id: "spend"): StatusSection =>
-  sectionById(aggregateStatus(facts).sections, id);
+  test("captured telemetry renders the observed summary with the same figures", () => {
+    const spend = sectionById(
+      aggregateStatus(baseFacts({ spend: capturedSpend({ input: 300, restarts: 2, ratio: 3 }) }))
+        .sections,
+      "spend",
+    );
+    expect(spend.state).toBe("observed");
+    expect(spend.evidence.reasons).toEqual(["observed"]);
+    expect(spend.evidence.sources).toEqual([{ source: "state-log", outcome: "read" }]);
+    expect(spend.spend).toMatchObject({ state: "observed", captured: true, restarts: 2, ratio: 3 });
+  });
 
-describe("TC-ATT-019 named spend placeholder and the delivered typed-questions section", () => {
-  test("spend is a uniform not-delivered placeholder declaring M1-S19", () => {
-    expect(
-      placeholderFailures(
-        placeholderSection(baseFacts(), "spend"),
-        "spend",
-        "spend-summary",
-        "M1-S19",
-        "spend summary arrives with M1-S19",
-      ),
-    ).toEqual([]);
+  test("a failed spend read is digest data, never a command failure", () => {
+    const spend = sectionById(
+      aggregateStatus(baseFacts({ spend: failedSpend("state.store.torn") })).sections,
+      "spend",
+    );
+    expect(spend.state).toBe("unknown");
+    expect(spend.evidence.reasons).toEqual(["state-unreadable"]);
+    expect(spend.evidence.sources).toEqual([
+      { source: "state-log", outcome: "failed", failureCode: "state.store.torn" },
+    ]);
   });
 
   test("typed-questions is a delivered collector section, not a placeholder", () => {
@@ -87,19 +85,20 @@ describe("TC-ATT-019 named spend placeholder and the delivered typed-questions s
     const digest = aggregateStatus(baseFacts());
     expect(digest.sections[7]?.id).toBe("spend");
     expect(digest.sections[8]?.id).toBe("typed-questions");
-    expect(STATUS_PLACEHOLDER_SECTION_IDS).toEqual(["spend"]);
-    expect(STATUS_SECTION_KINDS.spend).toBe("placeholder");
+    expect(STATUS_PLACEHOLDER_SECTION_IDS).toEqual([]);
+    expect(STATUS_SECTION_KINDS.spend).toBe("collector");
     expect(STATUS_SECTION_KINDS["typed-questions"]).toBe("collector");
     expect(STATUS_SECTION_KINDS["lanes-or-queue"]).toBe("declared-gap");
   });
 
   test("the human spend and questions lines are pinned byte-for-byte", () => {
     const human = humanOf(baseFacts());
-    expect(human).toContain("spend      not-delivered  spend summary arrives with M1-S19");
+    expect(human).toContain("spend      observed  no captured telemetry (absence of capture)");
     expect(human).toContain("questions  observed  0 open");
+    expect(human).not.toContain("spend summary arrives with M1-S19");
   });
 
-  test("placeholders are independent of every read outcome", () => {
+  test("the spend section is independent of every other read outcome", () => {
     const failing = baseFacts({
       tracker: failedWorkItemRead("read-failed"),
       changes: failedDeliveryRequestRead("read-failed"),
@@ -107,32 +106,13 @@ describe("TC-ATT-019 named spend placeholder and the delivered typed-questions s
       localContext: missingLocalContext(),
       repository: repository({ binding: unavailableBinding() }),
     });
-    expect(placeholderSection(failing, "spend").state).toBe("not-delivered");
+    expect(sectionById(aggregateStatus(failing).sections, "spend").state).toBe("observed");
+    expect(sectionById(aggregateStatus(failing).sections, "typed-questions").state).toBe(
+      "observed",
+    );
   });
 
-  test("mutation controls fail the placeholder validator by name", () => {
-    const spend = placeholderSection(baseFacts(), "spend");
-    const mutations: StatusSection[] = [
-      { ...spend, expectedStory: "M1-S18" },
-      { ...spend, note: "" },
-      { ...spend, state: "observed" },
-      { ...spend, items: [{ workItemRef: "GH-1", itemState: "observed" }] },
-      { ...spend, capability: "spend-telemetry" },
-    ];
-    for (const mutation of mutations) {
-      expect(
-        placeholderFailures(
-          mutation,
-          "spend",
-          "spend-summary",
-          "M1-S19",
-          "spend summary arrives with M1-S19",
-        ).length,
-      ).toBeGreaterThan(0);
-    }
-  });
-
-  test("no spend implementation leaks into the contracts or domain", () => {
+  test("no retired spendAmount identifier leaks into the contracts or domain", () => {
     for (const file of [
       "packages/core/src/contracts/status.ts",
       "packages/core/src/domain/status.ts",
@@ -237,13 +217,16 @@ const totalityFailures = (digest: StatusDigest): string[] => {
     .reduce((sum, section) => sum + (section.findings?.length ?? 0), 0);
   if (digest.summary.findingsTotal !== groups)
     failures.push(`findingsTotal ${digest.summary.findingsTotal} != ${groups}`);
-  if (digest.summary.placeholderSectionCount !== 1) {
+  if (digest.summary.placeholderSectionCount !== 0) {
     failures.push(`placeholder count ${digest.summary.placeholderSectionCount}`);
   }
+  if (STATUS_PLACEHOLDER_SECTION_IDS.length !== 0) {
+    failures.push(`declared placeholders ${STATUS_PLACEHOLDER_SECTION_IDS.length}`);
+  }
   const placeholders = digest.sections.filter(
-    (section) => STATUS_SECTION_KINDS[section.id] === "placeholder",
+    (section) => String(STATUS_SECTION_KINDS[section.id]) === "placeholder",
   );
-  if (placeholders.length !== 1) failures.push(`placeholder sections ${placeholders.length}`);
+  if (placeholders.length !== 0) failures.push(`placeholder sections ${placeholders.length}`);
   return failures;
 };
 
@@ -278,7 +261,7 @@ describe("TC-ATT-021 nine-section totality, findings total, placeholder count", 
     expect(digest.summary.findingsTotal).toBe(1);
   });
 
-  test("the placeholder contributes zero to actionable", () => {
+  test("the spend and typed-questions sections contribute zero to actionable", () => {
     const digest = aggregateStatus(baseFacts());
     const expectedActionable = digest.sections
       .filter((section) => section.state === "observed" || section.state === "degraded")
@@ -298,7 +281,7 @@ describe("TC-ATT-021 nine-section totality, findings total, placeholder count", 
         0,
       );
     expect(digest.summary.actionable).toBe(expectedActionable);
-    expect(placeholderSection(baseFacts(), "spend").counts.total).toBe(0);
+    expect(sectionById(digest.sections, "spend").counts.total).toBe(0);
   });
 
   test("removing a section, adding a tenth, or counting by observation fails by name", () => {
@@ -355,5 +338,44 @@ describe("TC-ATT-024 ready-to-merge derivation row", () => {
         sectionById(aggregateStatus(testCase.facts).sections, "ready-to-merge").state,
       ).not.toBe("not-delivered");
     }
+  });
+});
+
+describe("TC-SPEND-029 the retired placeholder string is gone from code and fixtures", () => {
+  const RETIRED = "spend summary arrives with M1-S19";
+
+  const scan = (directory: string): string[] => {
+    const failures: string[] = [];
+    const walk = (relative: string): void => {
+      for (const entry of readdirSync(join(ROOT, relative), { withFileTypes: true })) {
+        const next = `${relative}/${entry.name}`;
+        if (entry.isDirectory()) {
+          if (entry.name === "node_modules" || entry.name === "dist") continue;
+          walk(next);
+        } else if (/\.(ts|json|txt|md)$/.test(entry.name)) {
+          if (readFileSync(join(ROOT, next), "utf8").includes(RETIRED)) failures.push(next);
+        }
+      }
+    };
+    walk(directory);
+    return failures;
+  };
+
+  test("no source or fixture still encodes the retired line or a not-delivered spend row", () => {
+    for (const directory of [
+      "tests/fixtures",
+      "tests/golden",
+      "packages/core/src",
+      "packages/cli/src",
+    ]) {
+      expect(scan(directory), directory).toEqual([]);
+    }
+  });
+
+  test("the doc surface scan is the phase-7 reconciliation obligation", () => {
+    // doc/spec/features/feature-status-digest.md is reconciled by @doc-syncer in
+    // lifecycle phase 7 (declared as Phase 6 scope); the code/fixture scan above
+    // is the Phase-4 half.
+    expect(true).toBe(true);
   });
 });

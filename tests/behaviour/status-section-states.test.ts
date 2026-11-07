@@ -127,11 +127,15 @@ const shapeFailures = (value: unknown): string[] => {
       }
     }
     if (id === "spend") {
-      if (section.state !== "not-delivered") failures.push(`${id}: must be not-delivered`);
-      if (typeof section.capability !== "string") failures.push(`${id}: capability missing`);
-      if (typeof section.expectedStory !== "string") failures.push(`${id}: expectedStory missing`);
-      if (typeof section.note !== "string" || section.note.length === 0) {
-        failures.push(`${id}: note missing`);
+      if (section.state === "not-delivered") failures.push(`${id}: must never be not-delivered`);
+      if (!isRecord(section.spend)) failures.push(`${id}: spend projection missing`);
+      else if (section.spend.state !== section.state) {
+        failures.push(`${id}: spend projection state mismatch`);
+      }
+      if (section.state === "unknown" && section.spend?.state === "unknown") {
+        if (typeof section.spend.failureCode !== "string") {
+          failures.push(`${id}: unknown spend must carry the state failure code`);
+        }
       }
       if (!Array.isArray(section.items) || section.items.length !== 0) {
         failures.push(`${id}: items must be empty`);

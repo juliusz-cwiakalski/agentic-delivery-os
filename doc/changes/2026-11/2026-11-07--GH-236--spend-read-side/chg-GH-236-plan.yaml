@@ -1,0 +1,883 @@
+# GH-236 implementation plan — M1-S19: Spend read side and resume amplification
+#
+# Sources (single source of truth; plan revision 1, 2026-11-07):
+#   - Spec:  ./chg-GH-236-spec.md (v1.1; 19 ACs AC-F1-1..AC-F8-3; F-1..F-8;
+#     DEC-1..DEC-11; DM-1..DM-6; NFR-1..NFR-7; OQ-1..OQ-4 resolved; one new
+#     error row spend.telemetry-absent (user / non-retryable / not_landed /
+#     user-validation -> exit 1); envelope data schema delivery.spend.v1 with
+#     amplification {ratio, progressRun, events[]} per DM-1/DM-3/DEC-11;
+#     generalized zero-progress null rule covering paid = 0 /\ progress = 0;
+#     digest section 8 flip per DM-6/DEC-8 with placeholderSectionCount 2 -> 1)
+#   - Test plan: ./chg-GH-236-test-plan.md (v1.1; 34 TCs TC-SPEND-001..034;
+#     19/19 AC coverage; §3 coverage maps; §4.3 amplification oracle matrix
+#     A-01..A-11; §4.4 phase-attribution matrix P-01..P-14; §4.5 read/absence/
+#     damage matrix R-01..R-10; §4.6 exit oracle; §4.7 CLI matrix L-01..L-15;
+#     §4.9 test-plan pins TP-DEC-1..9; §1.2 delivery-bound GAP-2/GAP-3/GAP-6;
+#     §7 automation mapping is the file/command inventory below)
+#   - Decision: ../../../../doc/decisions/TDR-0011-spend-resume-amplification-
+#     v0-formula.md (amended 2026-11-07 per spec DEC-11: additive nullable
+#     progressRun; null rule generalized; C-6 stability discipline applies to
+#     the whole block; its Implementation Plan items 1/3 name the contract
+#     field lists and the fixture set incl. the degenerate all-null case)
+#   - Ticket: GH-236 (binding AC 1 -> AC-F2-1; binding AC 2 -> AC-F5-1 +
+#     AC-F5-2; both verbatim and unweakened in spec §17/Appendix A)
+#
+# Format note: this document is the machine-readable plan (delivery.plan.v1).
+# Phase goals, tasks (with TC/AC traceability), per-phase verification
+# commands, per-phase commit steps, the phase->AC->TC matrix, and the phase-7
+# doc-sync handoff notes are carried as YAML COMMENTS so the parsed document
+# stays strictly schema-conformant. `plan validate GH-236` must return `valid`.
+#
+# Tier rationale: `full` — 8 capabilities, 19 ACs, 34 automated TCs, cross-
+# package delivery (core contracts + state read consumer + domain fold +
+# CLI command + status-digest flip + invariant suites + golden fixtures),
+# security_impact low / risk medium (spec front matter), autonomous delivery
+# mode (pm-notes). Lease names and weight classes are omitted: the lease/
+# weight vocabulary belongs to the downstream scheduler and neither spec nor
+# test plan pins names; every phase below is lease-taking by kind.
+#
+# EXECUTION CONTRACT (binding for every task):
+#   - No task touches doc/changes/** or .ai/local/** — the change-folder
+#     execution log and pm-notes phase bookkeeping are @pm-owned; per-phase
+#     evidence (commands + results, plus the PIN-10 non-CI performance
+#     reference numbers) is REPORTED to @pm, never written by the coder.
+#   - doc/spec/** reconciliation is lifecycle-phase-7 @doc-syncer work on this
+#     branch, declared as Phase 6 SCOPE below (so plan diff classifies it
+#     `within`) and NEVER as coder tasks. The single exception that lands with
+#     the code is the documented error-table companion row in Phase 1 — the
+#     bidirectional error-table-sync gate is binding from the first commit
+#     (the GH-232 lesson). The forbidden-literals registry registration for
+#     the future feature-spend spec is @doc-syncer's, excluded here.
+#   - One commit per phase, conventional-commit messages pinned per phase.
+#   - Scope deviation policy: any file touched outside a phase's declared
+#     scope is reported to @pm as a reviewed SCOPE_DEVIATION and recorded in
+#     pm-notes (the GH-223 rev-3 precedent), never silently widened.
+#
+# =====================================================================
+# DELIVERY-BOUND PINS (test plan TP-DEC-2..9 + GAP-2/GAP-3/GAP-6 resolved
+# here; every value lands as a declared contract constant so tests read the
+# constant, never a hardcoded string):
+#
+#   PIN-1 Data schema identity (TP-DEC-9): SPEND_DATA_SCHEMA_ID =
+#         "delivery.spend.v1" declared once in contracts/spend.ts — a contract
+#         constant, NEVER a `data` field; `data` carries exactly the six keys
+#         tokensByClass / perPhase[] / perAgent[] / restarts / amplification /
+#         degradation inside the unchanged delivery.result.v1 envelope.
+#   PIN-2 Output bounds (spec NFR-1, not delivery-bound): SPEND_MAX_MACHINE_
+#         BYTES = 65_536; SPEND_MAX_HUMAN_BYTES = 16_384; SPEND_MAX_HUMAN_
+#         LINES = 200; all measured in UTF-8 bytes. NO separate perAgent[]/
+#         perPhase[] entry cap exists — the byte/line bound is the operative
+#         cap and truncation drops from the declared tail (PIN-3). The spec
+#         pins no entry count and inventing one would be a new contract.
+#   PIN-3 Roll-up ordering and truncation tail (TP-DEC-5 / GAP-6 / OQ-T5):
+#         perAgent[] ordered by tokens DESC, then agent ASC, then model ASC;
+#         perPhase[] ordered by window start ASC, then phase id ASC, with the
+#         `unknown` window last. Truncation drops trailing perAgent[] entries
+#         first, then perPhase[], and records SPEND_TRUNCATION_MARKER in the
+#         truncated channel (envelope metadata and a human digest line) with
+#         the dropped counts — NEVER as a new `data` key (DM-1 exactness).
+#         Declared as one contracts constant set; TC-SPEND-021/003 assert
+#         through the constant so a reviewed re-ordering updates one constant
+#         and the goldens together.
+#   PIN-4 Boundary attribution (TP-DEC-2 / OQ-T3): a record whose capturedAt
+#         equals a `complete` stamp attributes to the completing phase (window
+#         end inclusive); at a `reopen` stamp, to the reopened phase (window
+#         start inclusive); when a `complete` and a `reopen` share a stamp the
+#         `reopen` wins (the phase is open at that instant). Matrix P-03/P-05.
+#   PIN-5 Share and phase-entry shape (TP-DEC-3/TP-DEC-4): share = floor(phase
+#         tokens * 100 / total tokens); total tokens 0 -> every share 0;
+#         shares may not sum to 100; exactly one perPhase[] entry per phase id
+#         aggregating all of that phase's windows (complete->reopen->complete
+#         is one entry). Spec DEC-9 pins the integer-percentage rule.
+#   PIN-6 `--phase` scoping (TP-DEC-6 / OQ-T4): the filter selects the
+#         phase-attributed record subset — ONE selection, ONE fold — so
+#         tokensByClass, calls, perAgent[], perPhase[] AND the amplification
+#         block derive from the subset; an out-of-vocabulary value refuses
+#         input.value.rejected before any read; a canonical phase whose window
+#         holds no records returns spend.telemetry-absent naming the phase.
+#   PIN-7 Transitions readability (TP-DEC-7 / OQ-T7): an unreadable/corrupt
+#         transitions payload classifies through its delivered state identity
+#         (exit 2) — never a silent `unknown` attribution; only an ABSENT
+#         transition history falls back to the named `unknown` window.
+#   PIN-8 Degradation population (TP-DEC-8 / OQ-T6): degradation counts
+#         warnings from BOTH telemetry families (session-group records and
+#         capture-outcome records) so a capture-outcome `session-capture-
+#         failed` can never vanish; `records` counts the telemetry records
+#         bearing warnings; byReason keys are exactly HARNESS_WARNING_REASONS.
+#   PIN-9 Honesty-limit prose (GAP-3 / OQ-T2-resolved companion): the four
+#         disclosure obligations are declared ONCE as SPEND_DISCLOSURES
+#         contract data — (a) run duplication is proven while semantic
+#         duplication is not; (b) runs that never reached closeout capture are
+#         invisible; (c) restart counts share that capture-reached evidence
+#         basis; (d) a zero-token progress run reports no ratio and names the
+#         run in amplification.progressRun (paid > 0 or paid = 0). The human
+#         amplification section renders them verbatim; goldens pin the bytes;
+#         a reviewed rewording updates the constant and its golden together.
+#   PIN-10 NFR-4 measurement (GAP-2): CI gates BOUNDED WORK only — read-count
+#         invariance at 1,000 vs 10,000 records (exactly one verified read per
+#         telemetry family plus one transitions read per invocation; no
+#         per-record re-read; zero network; linear fold over bounded input; no
+#         pagination crawl). The p95 wall-clock targets (<= 500 ms at 1,000
+#         records; <= 2 s at 10,000) are measured ONCE locally and REPORTED to
+#         @pm for the execution log as a non-CI reference — never a CI gate.
+#   PIN-11 Grammar constants (DEC-6): SPEND_WORK_ITEM_REF_PATTERN =
+#         "^[A-Z][A-Z0-9]*-[0-9]+$" — the closeout precedent, case-sensitive,
+#         no folding — declared in contracts so the test asserts the constant,
+#         not a copied regex; the `--phase` vocabulary is CANONICAL_PHASE_IDS
+#         reused by reference (never re-declared); the parser-level declared
+#         flags are exactly ["--ref", "--phase", "--amplification"] with
+#         values consumed in the handler (the retro/db pattern), so an
+#         undeclared flag classifies fallback.invocation at the shared parser
+#         (L-11) while missing values, bad shapes, and unexpected positionals
+#         classify input.value.rejected in the handler (L-04..L-10) — and
+#         `--json` stays a global flag the handler never inspects.
+#   PIN-12 State read surface (no new record kinds, no schema change, no
+#         fence): additive readHarnessCaptureOutcomes(store, workItemRef) in
+#         state/harness-telemetry.ts — verified, prefix-scoped to
+#         HARNESS_TELEMETRY_CAPTURE_KEY_PREFIX, wrong-kind/malformed ->
+#         state.store.torn naming the record position — plus a new
+#         state/spend-reads.ts composing readHarnessTelemetry +
+#         readHarnessCaptureOutcomes + readChangeTransitionsTolerant into one
+#         classified SpendLedgerRead. Read-only by construction: no append/
+#         fence/salvage member, and NO harness adapter, session reader, or
+#         provider client is imported anywhere in the spend path (structural,
+#         asserted by TC-SPEND-002/006/032).
+#
+# Delivery risks pinned as explicit tasks:
+#   - The documented error table is BINDING (bidirectional sync): the
+#     spend.telemetry-absent row lands in doc/spec/features/
+#     feature-result-contract.md in the SAME phase as the machine row (task
+#     1.3), or error-table-sync fails at the first commit.
+#   - The digest flip is ONE commit (task 4.3/4.4): contracts/status.ts kind
+#     vocabulary, placeholder ids, derivation row, evidence source `state-log`
+#     AND domain/status.ts section 8 + human line + placeholderSectionCount
+#     land together with the corpus/golden regeneration, so the pinned digest
+#     invariants never contradict the rendered output mid-change (spec §8.5,
+#     RSK-4).
+#   - Read-only discipline is structural, not conventional: the spend path
+#     acquires no fence, writes nothing, spawns nothing, resolves no
+#     credential — verified by byte-snapshot suites (TC-SPEND-032) and the
+#     imports guard (TC-SPEND-002). state.lock.busy is unreachable from spend.
+#   - Digest and command share ONE fold (spec §1, DM-6): the status digest
+#     consumes the Phase-3 fold through the same injected store seam — a
+#     second aggregation inside domain/status.ts is a review-blocking defect
+#     (TC-SPEND-030 parity + single-fold spy).
+#   - Help surface: the CLI grammar is locked (AC-F6-1 — no flag outside the
+#     locked set), so there is NO `--help` flag; the man-page-grade help and
+#     examples are delivered on the documented surfaces (M1 pack man-page.md /
+#     commands/spend.md, reconciled with feature-spend.md in phase 7). The
+#     test plan's TC-031 step 1 "or the documented help path" is the operative
+#     reading; no CLI flag is added for help.
+#   - NO new boundary rule, package, subpath, or dependency: spend consumes
+#     delivered primitives only; the existing gate battery (depcruise,
+#     ambient-globals, exit-code-literals, forbidden-literals,
+#     workspace-entrypoints, content inventory) covers the negative space —
+#     no new scripts/checks/*.ts invariant is required by this change.
+# =====================================================================
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-236
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6]
+phases:
+  # ---------------------------------------------------------------------
+  # Phase 1 — Contracts: delivery.spend.v1 vocabulary and the spend error row
+  #
+  # Goal: land the runtime-neutral spend vocabulary as types + as-const data
+  # and the ONE new error-table row in BOTH tables. Pure data, no runtime
+  # behavior, no envelope change, no existing row touched (DEC-7/DM-5).
+  #
+  # Tasks:
+  # - 1.1 Create packages/core/src/contracts/spend.ts (declaration-only):
+  #       SPEND_DATA_SCHEMA_ID "delivery.spend.v1" (PIN-1); the SpendReport
+  #       data shape with EXACTLY the six keys — tokensByClass typed over the
+  #       five HARNESS_TOKEN_CLASSES reused by reference (DEC-2), perPhase[]
+  #       {phase, calls, tokens, share} (one entry per phase id, PIN-5),
+  #       perAgent[] {agent, model, calls, tokens}, restarts (integer >= 0),
+  #       amplification {ratio: number | null, progressRun: string | null,
+  #       events[]} with events {cause, window, tokensWasted} and the closed
+  #       single-entry cause vocabulary ["restart-loop prefill re-pay"]
+  #       (DM-1/DM-3/DEC-11: progressRun carries the progress run's identity
+  #       exactly when it contributed zero tokens — the ratio-null case,
+  #       covering paid > 0 and paid = 0 — null whenever progress > 0), and
+  #       degradation {records, byReason} keyed over HARNESS_WARNING_REASONS
+  #       (PIN-8); bounds constants SPEND_MAX_MACHINE_BYTES/HUMAN_BYTES/
+  #       HUMAN_LINES (PIN-2); ordering + truncation constants (PIN-3);
+  #       SPEND_DISCLOSURES (PIN-9); SPEND_WORK_ITEM_REF_PATTERN (PIN-11);
+  #       the SpendPhaseId type aliasing CANONICAL_PHASE_IDS by reference;
+  #       the SpendCommandRuntime/SpendLedgerRead port types the lower tiers
+  #       consume; the SpendDigestSection projection type for the Phase-4
+  #       digest flip. No cost/currency/paid/progress key exists anywhere
+  #       (NG-7, DM-1 exactness).
+  #       (F-1, F-5, F-6; DM-1, DM-3; DEC-2, DEC-9, DEC-11; AC-F1-1 shape,
+  #       AC-F5-3 shape, AC-F6-2 shape; TC-SPEND-001)
+  # - 1.2 Error table: add `spend` to DOMAIN_KINDS and exactly ONE row per
+  #       DM-5/DEC-7 — spend.telemetry-absent (category user, retryable
+  #       false, consequence not_landed, remediation pointing at capture
+  #       prerequisites, projection user-validation -> exit 1, summary naming
+  #       the selection semantics); kind-only `spend` resolution never used
+  #       (exact-code only); no second row; every delivered row byte-identical
+  #       (snapshot-asserted so no delivered projection silently moves).
+  #       (F-7, DM-5, DEC-7; AC-F7-1, AC-F2-2 identity; NFR-6;
+  #       TC-SPEND-009 contract half)
+  # - 1.3 Documented-table companion (binding sync): add the same row to
+  #       doc/spec/features/feature-result-contract.md with matching columns —
+  #       error-table-sync must be green from this commit (the file already
+  #       carries its distribution marker; this is the one permitted doc/spec
+  #       touch inside delivery, per the EXECUTION CONTRACT).
+  #       (NFR-6; TC-SPEND-009 sync half)
+  # - 1.4 Re-exports and inventories: contracts/index.ts barrel; register the
+  #       module in tests/structure/inventory.json (content inventory) and
+  #       tests/fixtures/ports/v1-contract-inventory.json (+ the port-contract
+  #       inventory expectations) for the new port types.
+  # - 1.5 Create tests/structure/spend-contract.test.ts (declaration-only AST
+  #       scan; exact six-key data shape; token classes reused by reference;
+  #       closed cause/disclosure/boundary vocabularies; progressRun null
+  #       rules; no cost/paid/progress key; one error code); update
+  #       tests/structure/error-table.test.ts (one exact row, projection read
+  #       from the row, kind-only containment through fallback.internal,
+  #       delivered rows unchanged) and tests/checks/error-table-sync.test.ts
+  #       (1/1 round-trip, drift both directions, fail-closed on empty).
+  #       (TC-SPEND-001, TC-SPEND-009)
+  #
+  # Verification:
+  #   bun test tests/structure/spend-contract.test.ts \
+  #            tests/structure/error-table.test.ts \
+  #            tests/structure/port-contract-inventory.test.ts \
+  #            tests/structure/content-inventory.test.ts
+  #   bun test tests/checks/error-table-sync.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   pnpm typecheck && git diff --check
+  #
+  # Commit: feat(GH-236): declare delivery.spend.v1 vocabulary and the telemetry-absent error row
+  # ---------------------------------------------------------------------
+  - id: 1
+    title: Contracts - spend vocabulary and the spend.telemetry-absent row
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/spend.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/structure/spend-contract.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/structure/inventory.json
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/port-contract-inventory.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/spend.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+
+  # ---------------------------------------------------------------------
+  # Phase 2 — State read consumer: verified, ref-scoped, read-only
+  #
+  # Goal: the state-tier read surface spend consumes — an additive
+  # per-ref capture-outcome listing read beside the delivered per-run read,
+  # and one classified SpendLedgerRead composing both telemetry families plus
+  # the ref's transition history. No new record kinds, no schema change, no
+  # fence, no write; the read/absence/damage matrix R-01..R-10 and the
+  # log-only read contract are proven here at consumer level (the runCli
+  # halves of the same suites extend in Phase 4).
+  #
+  # Tasks:
+  # - 2.1 Additive listing read (PIN-12): extend
+  #       packages/core/src/state/harness-telemetry.ts with
+  #       readHarnessCaptureOutcomes(store, workItemRef) — verified
+  #       readRecords() pass, records filtered to
+  #       HARNESS_TELEMETRY_CAPTURE_KEY_PREFIX for the ref, wrong record kind
+  #       or malformed payload under the prefix -> state.store.torn naming
+  #       path + sequence; presence-tolerant (absent key -> empty list with
+  #       verifiedEmpty evidence); zero writes, zero fences.
+  #       (F-2; DM-4; AC-F2-3; NFR-3; TC-SPEND-008 consumer half)
+  # - 2.2 Create packages/core/src/state/spend-reads.ts: compose
+  #       readHarnessTelemetry + readHarnessCaptureOutcomes +
+  #       readChangeTransitionsTolerant into ONE classified SpendLedgerRead
+  #       for the ref — verified-empty store OR absent per-ref records in
+  #       BOTH families -> explicit verified-empty evidence (the
+  #       spend.telemetry-absent basis; a capture-outcome-only store is
+  #       PRESENT, per test plan §8.2); torn/schema/unknown-kind ->
+  #       the delivered state identities, never a zeroed sum; unreadable
+  #       transitions classify (PIN-7) while absent transitions return the
+  #       explicit no-transitions fact for the Phase-3 `unknown` fallback;
+  #       the run-identity union inputs (session-group runIds + capture
+  #       outcome runIds) ride the read result. Per-ref exact-key scoping —
+  #       other refs' records are never read by key (R-03).
+  #       (F-2, F-3, F-4; DEC-1, DEC-4 basis, DEC-5 basis; AC-F2-1 read
+  #       half, AC-F2-3, AC-F3-2 basis; NFR-3, NFR-7; TC-SPEND-006 consumer
+  #       half, TC-SPEND-008)
+  # - 2.3 Fixtures (test plan §6/§7 deliverables): tests/fixtures/spend/
+  #       harness.ts — temp-store seeding through the DELIVERED append path
+  #       (appendHarnessTelemetry / appendHarnessCaptureOutcome / registry
+  #       transitions), the recording state port and the throwing
+  #       harness-adapter/composer spy, injected clock NOW_MS / run-id
+  #       factory / SYNTHETIC_BRAND, non-time-sortable run ids;
+  #       transitions.ts (P-01..P-14 histories as literal
+  #       PhaseTransitionRecord arrays); cases.ts (A-01..A-11, R-01..R-10
+  #       case definitions with hand-summed expected constants).
+  # - 2.4 Behaviour suites at consumer level:
+  #       spend-read-contract.test.ts — the recorded read set is exactly the
+  #       two families + transitions for the ref; adapter spy zero calls on
+  #       every path including the absence path; other-ref isolation;
+  #       no provider/credential/network module reachable.
+  #       spend-store-damage.test.ts — R-04..R-09 at the read seam: exact
+  #       delivered identities (state.store.torn / state.schema.mismatch /
+  #       state.store.unknown / state.permission.denied), path + record
+  #       position only, never payload bytes or partial sums; repaired-store
+  #       control per case; corrupt transitions classify (PIN-7) while the
+  #       no-transitions control succeeds.
+  #       (TC-SPEND-006, TC-SPEND-008 — runCli halves extend in Phase 4)
+  # - 2.5 Structure updates: state-contract / state-imports expectations for
+  #       the new state module and the additive read; inventory registration.
+  #
+  # Verification:
+  #   bun test tests/behaviour/spend-read-contract.test.ts \
+  #            tests/behaviour/spend-store-damage.test.ts
+  #   bun test tests/structure/state-contract.test.ts \
+  #            tests/structure/state-imports.test.ts \
+  #            tests/structure/spend-contract.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   pnpm typecheck && git diff --check
+  #
+  # Commit: feat(GH-236): verified ref-scoped state read consumer for harness telemetry
+  # ---------------------------------------------------------------------
+  - id: 2
+    title: State read consumer - verified, ref-scoped, read-only
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/state/harness-telemetry.ts
+        - packages/core/src/state/spend-reads.ts
+        - packages/core/src/state/index.ts
+        - tests/fixtures/spend/harness.ts
+        - tests/fixtures/spend/transitions.ts
+        - tests/fixtures/spend/cases.ts
+        - tests/behaviour/spend-read-contract.test.ts
+        - tests/behaviour/spend-store-damage.test.ts
+        - tests/structure/state-contract.test.ts
+        - tests/structure/state-imports.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/spend
+    # Consumes contracts/spend.ts and the delivered telemetry/registry read
+    # primitives (Phase-1 producer + delivered surfaces) per the prose above;
+    # the schema requires an interaction target to sit inside the declaring
+    # phase's own scope, so no consumer interaction is declared here.
+
+  # ---------------------------------------------------------------------
+  # Phase 3 — Domain engine: the pure spend fold, attribution, amplification,
+  # and the bounded human renderer
+  #
+  # Goal: the deterministic read-side engine over SpendLedgerRead — token
+  # aggregation with degradation disclosure, capture-time phase attribution,
+  # the run-identity union, the TDR-0011 amplification formula with
+  # progressRun and the generalized null rule, the honesty disclosures, the
+  # bounded human renderer, and the engine-level halves of bounds, determinism,
+  # privacy and bounded work. Zero model calls, zero ambient reads, one fold.
+  #
+  # Tasks:
+  # - 3.1 Create packages/core/src/domain/spend.ts — the pure fold:
+  #       (a) tokensByClass: five-class sums over all captured session-group
+  #       records, non-null classes only, never fabricated to zero; calls;
+  #       (b) perAgent[] grouped by (agent, model) across ALL runs, ordered
+  #       per PIN-3; (c) perPhase[] by capture-time attribution over the
+  #       transition windows (DM-2/DEC-4): complete closes / reopen reopens,
+  #       captured-at selection, terminal attribution after the final
+  #       transition, pre-first-transition records to the first transitioned
+  #       phase, PIN-4 boundary semantics, one entry per phase id (PIN-5),
+  #       floor(share), total-0 -> share 0, absent transitions -> the single
+  #       named `unknown` window; (d) restarts = max(0, N-1) over the union of
+  #       run identities across BOTH families (DM-4/DEC-5); (e) amplification
+  #       exactly per TDR-0011 as amended (DM-3/DEC-3/DEC-11): paid = the
+  #       five-class sum over all captured records; the progress run = the
+  #       latest record-bearing run (captured-at DESC, run-id ASC tie-break —
+  #       no run-id format property assumed); ratio = paid / progress; a
+  #       zero-token progress run (paid > 0 OR paid = 0 with every class
+  #       null) reports ratio null with progressRun naming that run, null
+  #       whenever progress > 0, and null/null only when no record-bearing
+  #       run exists (A-11); ONE event per earlier record-bearing run with
+  #       positive spend — cause "restart-loop prefill re-pay", window
+  #       [previous record-bearing run's capturedAt || earliest transition
+  #       timestamp || point] -> this run's capturedAt, tokensWasted = that
+  #       run's spend — sorted by window start then run id, the progress run
+  #       never raising an event; a capture-outcome-only run counts toward
+  #       restarts, adds zero paid, raises no event; (f) degradation per
+  #       PIN-8 (both families, closed reason vocabulary). Determinism: no
+  #       clock, no randomness, permutation-invariant output (A-10).
+  #       (F-1, F-3, F-4, F-5; DEC-2..DEC-5, DEC-11; AC-F1-1, AC-F3-1,
+  #       AC-F3-2, AC-F4-1, AC-F5-1 (binding AC 2 anchor), AC-F5-2 (binding
+  #       AC 2 events), AC-F5-3; TC-SPEND-003, 004, 010, 011, 013, 014, 015,
+  #       016, 017, 019, 033)
+  # - 3.2 Selection and absence semantics: the fold entry point takes the
+  #       resolved selection (ref + optional phase per PIN-6) and returns
+  #       either the report data or the classified spend.telemetry-absent
+  #       basis (verified-empty store, absent per-ref records, or an empty
+  #       canonical phase window — naming the selection); cost is never
+  #       aggregated and never rendered (NG-7); a records-exist all-null
+  #       fold is a SUCCESS report, never absence (A-05).
+  #       (F-1, F-2, F-7; AC-F1-2, AC-F2-2 basis, AC-F3-3 fold half;
+  #       TC-SPEND-005, 012)
+  # - 3.3 Create packages/core/src/domain/spend-text.ts — the bounded human
+  #       renderer: deterministic digest lines for totals, per-phase (naming
+  #       the `unknown` fallback), per-agent roll-ups, restarts, the
+  #       amplification section (ratio, per-event cause/window/tokensWasted,
+  #       the zero-progress run naming, and the SPEND_DISCLOSURES lines
+  #       verbatim per PIN-9), the degradation disclosure, and the PIN-3
+  #       truncation marker; bounds enforced HERE (PIN-2) with tail-drop
+  #       truncation of perAgent[] then perPhase[]; statistics and identity
+  #       references only (NFR-5) through the delivered redaction chokepoint
+  #       convention; `--amplification` adds the amplification section —
+  #       the machine envelope always carries the amplification block
+  #       (DEC-9).
+  #       (F-6; DEC-9; AC-F6-2 renderer half, AC-F6-3, AC-F5-3 disclosure;
+  #       NFR-1, NFR-2, NFR-5; TC-SPEND-018, 021, 022, 023)
+  # - 3.4 Behaviour suites (engine level, injected runtimes; runCli halves
+  #       extend in Phase 4): spend-breakdown (hand-summed oracle, roll-ups,
+  #       permutation invariance), spend-degradation (null-class exclusion +
+  #       byReason incl. capture-outcome warnings), spend-cost-omission
+  #       (numeric-cost fixture renders no currency and changes no total),
+  #       spend-phase-attribution (P-01..P-06, P-08..P-10), spend-phase-
+  #       fallback (P-07), spend-phase-filter (P-12..P-14 + zero-read
+  #       refusals), spend-restarts, spend-run-substrate (A-06..A-08, the
+  #       events<=restarts invariant), spend-amplification-healthy (A-01
+  #       exact 1), spend-amplification-events (A-02 windows/tokensWasted/
+  #       ordering), spend-amplification-determinism (A-03 tie-break both
+  #       insertion orders, throwing ambient stubs, model-seam spy),
+  #       spend-amplification-null (A-04, A-05, A-11 with progressRun
+  #       assertions per test plan §4.3), spend-disclosure (constants +
+  #       golden render), spend-bounds (under/at/over cap, tail-drop, marker,
+  #       never truncating tokensByClass/restarts/ratio), spend-determinism
+  #       (byte-identical replays both modes at engine level), spend-privacy
+  #       (canary zero survivors), spend-performance (PIN-10 bounded work:
+  #       read-count invariance 1,000 vs 10,000, linear fold, zero network;
+  #       wall-clock reference REPORTED to @pm, never gated).
+  #       (TC-SPEND-003, 004, 005, 010, 011, 012, 013, 014, 015, 016, 017,
+  #       018, 019, 021, 022, 023, 024, 033)
+  # - 3.5 Goldens: tests/golden/spend.test.ts + tests/golden/fixtures/spend/**
+  #       — human and machine goldens for A-01, A-02, a degraded fixture and
+  #       an over-cap render; generated deliberately ONCE in this change,
+  #       reviewed, byte-compared, never rewritten by the suite.
+  # - 3.6 Core barrel: re-export the fold and renderer from
+  #       packages/core/src/domain/index.ts and packages/core/src/index.ts so
+  #       the CLI edge and the status digest consume @delivery-os/core.
+  #
+  # Verification:
+  #   bun test tests/behaviour/spend-breakdown.test.ts \
+  #            tests/behaviour/spend-degradation.test.ts \
+  #            tests/behaviour/spend-cost-omission.test.ts \
+  #            tests/behaviour/spend-phase-attribution.test.ts \
+  #            tests/behaviour/spend-phase-fallback.test.ts \
+  #            tests/behaviour/spend-phase-filter.test.ts \
+  #            tests/behaviour/spend-restarts.test.ts \
+  #            tests/behaviour/spend-run-substrate.test.ts \
+  #            tests/behaviour/spend-amplification-healthy.test.ts \
+  #            tests/behaviour/spend-amplification-events.test.ts \
+  #            tests/behaviour/spend-amplification-determinism.test.ts \
+  #            tests/behaviour/spend-amplification-null.test.ts \
+  #            tests/behaviour/spend-disclosure.test.ts
+  #   bun test tests/behaviour/spend-bounds.test.ts \
+  #            tests/behaviour/spend-determinism.test.ts \
+  #            tests/behaviour/spend-privacy.test.ts \
+  #            tests/behaviour/spend-performance.test.ts
+  #   bun test tests/golden/spend.test.ts
+  #   pnpm typecheck && git diff --check
+  #
+  # Commit: feat(GH-236): pure spend fold, capture-time attribution, and amplification per TDR-0011
+  # ---------------------------------------------------------------------
+  - id: 3
+    title: Domain engine - spend fold, attribution, amplification, renderer
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/spend.ts
+        - packages/core/src/domain/spend-text.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/spend-breakdown.test.ts
+        - tests/behaviour/spend-degradation.test.ts
+        - tests/behaviour/spend-cost-omission.test.ts
+        - tests/behaviour/spend-phase-attribution.test.ts
+        - tests/behaviour/spend-phase-fallback.test.ts
+        - tests/behaviour/spend-phase-filter.test.ts
+        - tests/behaviour/spend-restarts.test.ts
+        - tests/behaviour/spend-run-substrate.test.ts
+        - tests/behaviour/spend-amplification-healthy.test.ts
+        - tests/behaviour/spend-amplification-events.test.ts
+        - tests/behaviour/spend-amplification-determinism.test.ts
+        - tests/behaviour/spend-amplification-null.test.ts
+        - tests/behaviour/spend-disclosure.test.ts
+        - tests/behaviour/spend-bounds.test.ts
+        - tests/behaviour/spend-determinism.test.ts
+        - tests/behaviour/spend-privacy.test.ts
+        - tests/behaviour/spend-performance.test.ts
+        - tests/golden/spend.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/golden/fixtures/spend
+
+  # ---------------------------------------------------------------------
+  # Phase 4 — CLI surface and the status-digest section 8 flip
+  #
+  # Goal: the locked `spend` command composed only at the CLI edge
+  # (composition-only registration, edge-owned rendering and exit
+  # projection), the digest flip in ONE commit with its corpus/golden
+  # regeneration, and the runCli integration halves of the earlier suites.
+  # No new flag, no spawn, no fence, no MCP surface (NG-5).
+  #
+  # Tasks:
+  # - 4.1 Create packages/cli/src/commands/spend.ts —
+  #       createSpendCommandDefinition(runtime) per the db/retro pattern
+  #       (PIN-11): definition flags ["--ref", "--phase", "--amplification"],
+  #       positionals {max: 8}; the handler owns the value grammar BEFORE any
+  #       read — `--ref` validated against SPEND_WORK_ITEM_REF_PATTERN
+  #       (case-sensitive, no folding), `--phase` against CANONICAL_PHASE_IDS,
+  #       missing value / `--`-prefixed value / unexpected positional ->
+  #       input.value.rejected (L-04..L-10); omitted `--ref` resolves the
+  #       active change ref through the injected local-context read, an
+  #       unresolvable context refusing input.value.rejected naming the
+  #       missing context BEFORE any store read (DEC-6); `--amplification`
+  #       boolean; `--json` global and never inspected; no stream write, no
+  #       exit decision; humanText renders the Phase-3 digest, humanFailureText
+  #       renders the telemetry-absent and state diagnostics with the
+  #       remediation hint. An undeclared flag classifies fallback.invocation
+  #       at the shared parser (L-11).
+  #       (F-6; DEC-6, DEC-9; AC-F6-1, AC-F2-2, AC-F3-3; TC-SPEND-025, 026)
+  # - 4.2 Edge composition (packages/cli/src/edge.ts + commands/index.ts):
+  #       SpendComposition wiring the injected seams — state store (Phase-2
+  #       read consumer), local-context read, clock, run-id factory, brand,
+  #       and the audit seam composed unchanged (an audit-write failure is a
+  #       classified diagnostic that never changes the outcome or exit code,
+  #       spec §10); the spend composition is OPTIONAL like the established
+  #       optional commands (absent composition leaves `spend` unregistered).
+  #       Read-only composition: no fence token, no append, no spawn, no
+  #       credential resolution anywhere in the wiring.
+  #       (F-2, F-6; AC-F2-1, AC-F6-1; NFR-3; TC-SPEND-006 runCli half,
+  #       TC-SPEND-032)
+  # - 4.3 Status-digest contracts flip (packages/core/src/contracts/status.ts,
+  #       ONE commit with 4.4): STATUS_SECTION_KINDS.spend -> collector kind,
+  #       STATUS_PLACEHOLDER_SECTION_IDS -> exactly ["blockers"],
+  #       STATUS_SECTION_DERIVATION.spend -> the observed mapping
+  #       (observed/unknown/unavailable per DM-6 — never not-delivered), one
+  #       additive evidence source id "state-log" in STATUS_EVIDENCE_SOURCES,
+  #       and the additive SpendDigestSection facts type (Phase-1 projection
+  #       type) on StatusFacts — the spend read result rides the SAME
+  #       injected store seam the status composition already owns.
+  #       (F-8; DM-6, DEC-8; AC-F8-1..3 contracts half)
+  # - 4.4 Digest domain flip (packages/core/src/domain/status.ts): section 8
+  #       fed by the PHASE-3 FOLD through the injected spend facts — captured
+  #       telemetry -> observed with token-class totals, restarts and the
+  #       amplification ratio; verified-empty -> observed with zero counts and
+  #       a human line naming absence of capture (never a zero-spend claim);
+  #       failed read -> digest data with state unknown, reason
+  #       state-unreadable, and the state failure code as failureCode — all
+  #       nine sections render and the digest exits 0; the pinned line "spend
+  #       summary arrives with M1-S19" is removed everywhere;
+  #       placeholderSectionCount becomes exactly 1 (blockers); spend
+  #       contributes zero to actionable; NO second aggregation path (the
+  #       parity spy and the single-fold import scan make a duplicate fold a
+  #       failure, TC-SPEND-030); regenerate the status corpus cases and
+  #       goldens deliberately ONCE in this commit (tests/fixtures/status/
+  #       corpus/**, tests/fixtures/status/golden/**, tests/golden/
+  #       status-digest.test.ts) and extend the completeness meta-check with
+  #       the spend section's new derivation states.
+  #       (F-8; DM-6, DEC-8, DEC-10; AC-F8-1, AC-F8-2, AC-F8-3;
+  #       TC-SPEND-027, 028, 029, 030; RSK-4)
+  # - 4.5 Behaviour suites: spend-envelope (six-key data, delivery.spend.v1
+  #       as declared constant only, --json forces the envelope,
+  #       --amplification human-only with the block always present and shaped
+  #       {ratio, progressRun, events}, data XOR error, scripted one-line,
+  #       failure error-only), spend-absent (classified outcome with
+  #       selection naming + remediation, positive control), spend-grammar
+  #       (L-01..L-15), spend-ref-resolution (explicit/default/unresolvable,
+  #       zero-read refusals), spend-readonly (byte-snapshot state
+  #       unchanged on every success and failure path, fence spy zero,
+  #       child-process/network/credential spies zero, audit-seam composition
+  #       and the audit-failure-diagnostic case), status-spend-section,
+  #       status-spend-degraded, status-spend-parity (one fold, two
+  #       surfaces), status-placeholders + status-corpus updates, brief
+  #       non-regression (run only — the brief payload is unchanged, DEC-10).
+  #       (TC-SPEND-007, 020, 025, 026, 027, 028, 029, 030, 032)
+  # - 4.6 Structure updates: cli-edge-seam.test.ts (composition-only
+  #       registration, optional-renderer set extended exactly, handler
+  #       render-free and exit-free, always-on-registration mutant fails);
+  #       runCli integration blocks added to the Phase-2/3 suites whose
+  #       scenario details drive the command (spend-read-contract,
+  #       spend-store-damage, spend-breakdown, spend-phase-filter,
+  #       spend-amplification-null, spend-determinism — files already green,
+  #       extended in place).
+  #
+  # Verification:
+  #   bun test tests/behaviour/spend-envelope.test.ts \
+  #            tests/behaviour/spend-absent.test.ts \
+  #            tests/behaviour/spend-grammar.test.ts \
+  #            tests/behaviour/spend-ref-resolution.test.ts \
+  #            tests/behaviour/spend-readonly.test.ts
+  #   bun test tests/behaviour/status-spend-section.test.ts \
+  #            tests/behaviour/status-spend-degraded.test.ts \
+  #            tests/behaviour/status-spend-parity.test.ts \
+  #            tests/behaviour/status-placeholders.test.ts \
+  #            tests/behaviour/status-corpus.test.ts
+  #   bun test tests/behaviour/brief-placeholders.test.ts \
+  #            tests/behaviour/brief-shared-truth.test.ts
+  #   bun test tests/structure/cli-edge-seam.test.ts tests/golden
+  #   bun test tests/behaviour/spend-read-contract.test.ts \
+  #            tests/behaviour/spend-store-damage.test.ts \
+  #            tests/behaviour/spend-breakdown.test.ts \
+  #            tests/behaviour/spend-phase-filter.test.ts \
+  #            tests/behaviour/spend-amplification-null.test.ts \
+  #            tests/behaviour/spend-determinism.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   pnpm typecheck && git diff --check
+  #
+  # Commit: feat(GH-236): register read-only spend command and flip digest section 8 to observed
+  # ---------------------------------------------------------------------
+  - id: 4
+    title: CLI surface and status-digest section 8 flip
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/commands/spend.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/edge.ts
+        - packages/core/src/contracts/status.ts
+        - packages/core/src/domain/status.ts
+        - tests/structure/cli-edge-seam.test.ts
+        - tests/behaviour/spend-envelope.test.ts
+        - tests/behaviour/spend-absent.test.ts
+        - tests/behaviour/spend-grammar.test.ts
+        - tests/behaviour/spend-ref-resolution.test.ts
+        - tests/behaviour/spend-readonly.test.ts
+        - tests/behaviour/status-spend-section.test.ts
+        - tests/behaviour/status-spend-degraded.test.ts
+        - tests/behaviour/status-spend-parity.test.ts
+        - tests/behaviour/status-placeholders.test.ts
+        - tests/behaviour/status-corpus.test.ts
+        - tests/golden/status-digest.test.ts
+        - tests/behaviour/spend-read-contract.test.ts
+        - tests/behaviour/spend-store-damage.test.ts
+        - tests/behaviour/spend-breakdown.test.ts
+        - tests/behaviour/spend-phase-filter.test.ts
+        - tests/behaviour/spend-amplification-null.test.ts
+        - tests/behaviour/spend-determinism.test.ts
+        - tests/behaviour/brief-placeholders.test.ts
+        - tests/behaviour/brief-shared-truth.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/status
+
+  # ---------------------------------------------------------------------
+  # Phase 5 — Invariant and boundary guards: the negative space
+  #
+  # Goal: prove what spend must NEVER do — no runtime API in contracts, no
+  # harness/provider/model/network import in the path, no ambient clock, no
+  # exit literal outside the projection module, no forbidden literal, no
+  # inventory drift — and prove every pinned oracle load-bearing through the
+  # mutant meta-suite. No new scripts/checks/*.ts invariant is required: the
+  # delivered battery covers the negative space (see the risk note above).
+  #
+  # Tasks:
+  # - 5.1 Create tests/structure/spend-imports.test.ts (TC-SPEND-002):
+  #       contracts/spend.ts and domain/spend*.ts import only contracts/
+  #       domain/own modules — zero node:*/bun:*/process/fetch/timers, zero
+  #       adapter/harness/provider/inference imports, zero model identifiers;
+  #       the fold receives records as arguments; production I/O only at the
+  #       injected CLI-edge seams; no new package/subpath/dependency;
+  #       workspace-entrypoints green; content inventory complete; planted
+  #       controls (node:fs in a contracts temp copy, a harness-adapter
+  #       import in the fold, a forged inventory entry) each fail.
+  # - 5.2 Run the delivered invariant battery over the change and keep it
+  #       green without touching it: ambient-globals, exit-code-literals
+  #       (zero literals outside the CLI projection module — NFR-6),
+  #       forbidden-literals (no product/binary literal; brand injected),
+  #       privacy-literals registry untouched, depcruise boundaries + the
+  #       fixture-coverage meta-check, doc-distribution guard untouched (no
+  #       redistributable doc is added in this phase).
+  # - 5.3 Create tests/checks/spend-mutants.test.ts + tests/fixtures/spend/
+  #       mutants/** (TC-SPEND-034): the twelve disabling mutants of the
+  #       §4.2 non-vacuity contract — M-01 null-class zero fabrication,
+  #       M-02 session-only restarts union, M-03 progress-run event,
+  #       M-04 dropped event, M-05 run-id-only event sort, M-06 ratio clamp,
+  #       M-07 harness-adapter probe, M-08 silent/head truncation, M-09
+  #       zero-spend claim from a failed digest read, M-10 fence+write,
+  #       M-11 case-insensitive ref, M-12 progressRun omission — each
+  #       imported as a temp mutant copy (the tests/golden/redaction.test.ts
+  #       file-URL pattern), each producing its prohibited observable while
+  #       the unmutated control passes; the mutant-count registry makes a
+  #       removed mutant fail the meta-check.
+  # - 5.4 Full sweep: bun test tests/structure tests/boundaries tests/checks;
+  #       bun test tests/behaviour tests/golden; git diff --check.
+  #
+  # Verification:
+  #   bun test tests/structure/spend-imports.test.ts tests/checks/spend-mutants.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   bun run scripts/checks/exit-code-literals.ts
+  #   bun run scripts/checks/forbidden-literals.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   bun test tests/structure tests/boundaries tests/checks
+  #   bun test tests/behaviour tests/golden
+  #   git diff --check
+  #
+  # Commit: test(GH-236): spend imports guard and mutant-sensitivity meta-suite
+  # ---------------------------------------------------------------------
+  - id: 5
+    title: Invariant and boundary guards - the negative space
+    kind: delivery
+    scope:
+      files:
+        - tests/structure/spend-imports.test.ts
+        - tests/checks/spend-mutants.test.ts
+      folders:
+        - tests/fixtures/spend/mutants
+
+  # ---------------------------------------------------------------------
+  # Phase 6 — Finalize: aggregate gate, changeset, release and
+  # spec-reconciliation obligations
+  #
+  # Goal: the single aggregate gate green, the lockstep changeset landed, and
+  # the phase-7 spec-reconciliation obligations declared as scope. The
+  # doc/spec and pack files below are @doc-syncer's lifecycle-phase-7 work on
+  # this branch (declared as SCOPE so plan diff classifies them `within`;
+  # they are NOT coder tasks — see the handoff notes at the end). The
+  # documented error row already landed in Phase 1 with its machine twin.
+  #
+  # Tasks:
+  # - 6.1 Aggregate gate: pnpm check (lint -> format:check -> typecheck ->
+  #       test -> check:boundaries) — the single completion entry point.
+  # - 6.2 Changeset: .changeset/gh-236-spend-read-side-minor.md — minor,
+  #       lockstep across the five publishables per the changesets-group
+  #       precedent (spec version_impact: minor; testkit never versioned).
+  # - 6.3 Documentation reconciliation confirmation (TC-SPEND-031): with @doc-syncer's phase-7 output on this branch,
+  #       confirm the reconciliation checklist — the new feature-spend.md
+  #       declaring ados_distribution; the man-page pack and commands/spend.md
+  #       reconciled to the pinned contract per spec Appendix B (five classes,
+  #       degradation block, share semantics, progressRun null/naming rule,
+  #       --amplification human-only scope, exit taxonomy, honesty limits);
+  #       the state-layer consumer list, status-digest contracts (section
+  #       table, derivation matrix, placeholder catalog, corpus case list),
+  #       glossary/index, and the forbidden-literals registry registration;
+  #       the documented help path carries the locked synopsis + examples
+  #       (no CLI --help flag exists — see the risk note). Run
+  #       bash scripts/.tests/test-doc-distribution.sh (blocks merge on
+  #       drift) and record the manual verification evidence with @pm.
+  # - 6.4 Traceability confirmation: report to @pm the 34/34 TC and 19/19 AC
+  #       inventory against the matrix below, both binding ACs named, the
+  #       PIN-10 non-CI performance reference numbers, and this artifact's
+  #       own validation: plan validate GH-236 -> valid,
+  #       readyForDevelopment = true.
+  #
+  # Verification:
+  #   pnpm check
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   bun run scripts/checks/changesets-group.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #
+  # Commit: chore(GH-236): finalize spend read side with changeset and gate evidence
+  # (Spec reconciliation commits are authored by @doc-syncer in lifecycle
+  #  phase 7 within this phase's declared scope.)
+  # ---------------------------------------------------------------------
+  - id: 6
+    title: Finalize - aggregate gate, changeset, spec reconciliation
+    kind: delivery
+    scope:
+      folders:
+        - .changeset
+      files:
+        - doc/spec/features/feature-spend.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/spec/features/feature-status-digest.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/spec/features/feature-harness-adapters.md
+        - doc/overview/glossary.md
+        - doc/00-index.md
+        - doc/planning/oss-tooling/milestones/m1/man-page.md
+        - doc/planning/oss-tooling/milestones/m1/commands/spend.md
+        - scripts/checks/forbidden-literals.registry.json
+
+# =======================================================================
+# TRACEABILITY MATRIX — phase -> ACs -> TCs (all 19 ACs, all 34 TCs; each
+# TC appears in EXACTLY ONE phase's verification scope — the phase whose
+# commit completes it; earlier phases verify named halves in prose only):
+#
+# | Phase | ACs delivered/verified | TC ids verified |
+# |-------|------------------------|-----------------|
+# | 1 | AC-F5-3 (block-shape half), AC-F6-2 (shape half), AC-F7-1; NFR-6 | TC-SPEND-001, TC-SPEND-009 |
+# | 2 | AC-F2-1 (read-contract half), AC-F2-3 (full R-04..R-09 matrix) | TC-SPEND-006, TC-SPEND-008 |
+# | 3 | AC-F1-1, AC-F1-2, AC-F2-1 (fold half — BINDING AC 1), AC-F3-1, AC-F3-2, AC-F3-3, AC-F4-1, AC-F5-1 (BINDING AC 2 anchor), AC-F5-2 (BINDING AC 2 events), AC-F5-3, AC-F6-3; NFR-1, NFR-2, NFR-4 (bounded work), NFR-5, NFR-7 | TC-SPEND-003, 004, 005, 010, 011, 012, 013, 014, 015, 016, 017, 018, 019, 021, 022, 023, 024, 033 |
+# | 4 | AC-F2-2, AC-F6-1, AC-F6-2 (envelope/mode half), AC-F8-1, AC-F8-2, AC-F8-3; NFR-3 runtime half | TC-SPEND-007, 020, 025, 026, 027, 028, 029, 030, 032 |
+# | 5 | NFR-3 static half, NFR-6 + the negative-space guards over every AC | TC-SPEND-002, TC-SPEND-034 |
+# | 6 | Release gate + AC-F5-3/AC-F8-1 documentation halves | TC-SPEND-031 (with @doc-syncer phase-7 output within this phase's declared scope) |
+#
+# AC completeness check (19/19): AC-F1-1 (P3), AC-F1-2 (P3), AC-F2-1 (P2,P3
+# — BINDING AC 1: the fold arithmetic plus the recorded-read proof plus the
+# P4/P5 read-only posture), AC-F2-2 (P4), AC-F2-3 (P2), AC-F3-1 (P3),
+# AC-F3-2 (P3), AC-F3-3 (P3), AC-F4-1 (P3), AC-F5-1 (P3 — BINDING AC 2),
+# AC-F5-2 (P3 — BINDING AC 2), AC-F5-3 (P1,P3,P6), AC-F6-1 (P4), AC-F6-2
+# (P1,P4), AC-F6-3 (P3), AC-F7-1 (P1), AC-F8-1 (P4,P6), AC-F8-2 (P4),
+# AC-F8-3 (P4).
+# TC completeness check (34/34): TC-SPEND-001..034 each appear exactly once
+# above (001/009 -> P1; 006/008 -> P2; 003/004/005/010..019/021..024/033 ->
+# P3; 007/020/025..030/032 -> P4; 002/034 -> P5; 031 -> P6).
+# Both binding ticket ACs are demonstrated by dedicated matrices, not smoke
+# cases: binding AC 1 by TC-SPEND-003 + TC-SPEND-006 + TC-SPEND-032 with the
+# zero-harness-read spy; binding AC 2 by the A-01..A-11 oracle matrix
+# (TC-SPEND-014..017) with the twelve-mutant meta-case (TC-SPEND-034).
+# =======================================================================
+
+# =======================================================================
+# PLAN-END NOTES (not tasks)
+#
+# Doc-sync handoff (lifecycle phase 7, @doc-syncer — declared as Phase 6
+# scope, never coder tasks):
+#   - doc/spec/features/feature-spend.md — NEW first-spec-only feature page
+#     for the spend read side; MUST declare ados_distribution
+#     (redistributable) in its front matter (the doc-distribution guard
+#     blocks merge on drift).
+#   - doc/spec/features/feature-state-layer.md — the spend read consumer
+#     joins the state-layer consumer list (read-only; no schema, record, or
+#     boundary change) and readHarnessCaptureOutcomes beside the per-run read.
+#   - doc/spec/features/feature-harness-adapters.md — the read side now
+#     exists as the first consumer of the captured telemetry families
+#     (composer still absent until GH-240).
+#   - doc/spec/features/feature-result-contract.md — narrative
+#     reconciliation for the `spend` domain kind (the row itself landed in
+#     Phase 1 as the binding sync companion).
+#   - doc/spec/features/feature-status-digest.md — section table row 8, the
+#     observed/unknown/unavailable derivation row, placeholder catalog
+#     reduced to `blockers`, placeholderSectionCount 1, the `state-log`
+#     evidence source, and the corpus case list.
+#   - doc/planning/oss-tooling/milestones/m1/{man-page.md,commands/spend.md}
+#     — reconciled to the pinned contract per spec Appendix B (the seven
+#     enumerated deltas incl. progressRun and the five-class/degradation/
+#     share pins).
+#   - doc/overview/glossary.md + doc/00-index.md — the spec's §23 glossary
+#     terms (spend read side, token class, capture window, phase window,
+#     capture-time attribution, telemetry-absent, restart, progress run,
+#     amplification event, Learn family, state-log) and the feature index.
+#   - scripts/checks/forbidden-literals.registry.json — any new
+#     operator-facing literal from the feature page registers here
+#     (@doc-syncer-owned; excluded from coder scope).
+#
+# Open questions (none blocking — every test-plan OQ is pinned or resolved):
+#   - OQ-T1/OQ-T2: RESOLVED by spec v1.1 (DM-3/AC-F5-3/Appendix C; DEC-11
+#     progressRun) and mirrored by TDR-0011's amendment; the plan asserts
+#     the machine surface (Phase 1/3 tasks; A-04/A-05/A-11).
+#   - OQ-T3..OQ-T7: pinned here as PIN-4/PIN-6/PIN-3/PIN-8/PIN-7 — plan-time
+#     readings awaiting @readiness-reviewer confirmation at dor_check; a
+#     different reading changes the named TC expectations and the pin, never
+#     silently.
+#   - GAP-2/GAP-3/GAP-6: delivery-bound by design and pinned as PIN-10/
+#     PIN-9/PIN-3 with owning tasks 3.4 (performance reference -> @pm), 3.3/
+#     3.5 (disclosure constants + goldens), 3.1/3.3 (ordering + truncation).
+#   - Spec/test-plan consistency: verified against spec v1.1 + test plan v1.1
+#     — 19/19 ACs, 34/34 TCs, no TODO assertion; the only wording note
+#     (test plan TC-031's "--help" reading) is resolved by the locked-grammar
+#     pin above: help ships on the documented surfaces, not a CLI flag.
+#   - Tier/lease vocabulary: lease names and weight classes omitted (the
+#     scheduler owns the vocabulary; nothing pinned by spec or test plan).
+# =======================================================================

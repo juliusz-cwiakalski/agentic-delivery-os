@@ -1,0 +1,70 @@
+{
+  "tokensByClass": {
+    "input": 11200000,
+    "output": 0,
+    "reasoning": 0,
+    "cacheRead": 0,
+    "cacheWrite": 0
+  },
+  "perPhase": [
+    {
+      "phase": "clarify_scope",
+      "calls": 4,
+      "tokens": 11200000,
+      "share": 100
+    }
+  ],
+  "perAgent": [
+    {
+      "agent": "planner",
+      "model": "sonnet",
+      "calls": 4,
+      "tokens": 11200000
+    }
+  ],
+  "restarts": 3,
+  "amplification": {
+    "ratio": 9.333333333333334,
+    "progressRun": null,
+    "events": [
+      {
+        "cause": "restart-loop prefill re-pay",
+        "window": {
+          "start": "2026-11-01T10:00:00.000Z",
+          "end": "2026-11-01T11:00:00.000Z"
+        },
+        "tokensWasted": 5000000
+      },
+      {
+        "cause": "restart-loop prefill re-pay",
+        "window": {
+          "start": "2026-11-01T11:00:00.000Z",
+          "end": "2026-11-01T12:00:00.000Z"
+        },
+        "tokensWasted": 3000000
+      },
+      {
+        "cause": "restart-loop prefill re-pay",
+        "window": {
+          "start": "2026-11-01T12:00:00.000Z",
+          "end": "2026-11-01T13:00:00.000Z"
+        },
+        "tokensWasted": 2000000
+      }
+    ]
+  },
+  "degradation": {
+    "records": 0,
+    "byReason": {
+      "optional-field-absent": 0,
+      "non-numeric-value": 0,
+      "cost-missing": 0,
+      "version-drift": 0,
+      "malformed-line": 0,
+      "truncated": 0,
+      "session-capture-failed": 0,
+      "unattributable-session": 0,
+      "invalid-session-identity": 0
+    }
+  }
+}

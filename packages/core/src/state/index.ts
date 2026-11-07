@@ -84,17 +84,6 @@ export {
   verifyAuditChain,
 } from "./audit.js";
 export {
-  appendRetroRegistryRecord,
-  readRetroLevels,
-  readRetroRegistry,
-  readRetroRuns,
-  readRetroTriggers,
-  recordRetroRun,
-  type RetroRegistryRead,
-  seedRetroRegistry,
-} from "./retro-registry.js";
-export { createRetroSidecar, type RetroSidecar } from "./retro-sidecar.js";
-export {
   appendCloseoutOutcome,
   CLOSEOUT_OPERATION_RECORD_KEY_PREFIX,
   closeoutOperationRecordKey,
@@ -128,6 +117,7 @@ export {
   harnessTelemetryCaptureKey,
   harnessTelemetryRecordKey,
   readHarnessCaptureOutcome,
+  readHarnessCaptureOutcomes,
   readHarnessTelemetry,
 } from "./harness-telemetry.js";
 export {
@@ -173,6 +163,18 @@ export {
   rebuildPhaseProjection,
   replacePhaseProjection,
 } from "./registry.js";
+export {
+  appendRetroRegistryRecord,
+  type RetroRegistryRead,
+  readRetroLevels,
+  readRetroRegistry,
+  readRetroRuns,
+  readRetroTriggers,
+  recordRetroRun,
+  seedRetroRegistry,
+} from "./retro-registry.js";
+export { createRetroSidecar, type RetroSidecar } from "./retro-sidecar.js";
+export { readSpendLedger } from "./spend-reads.js";
 
 /** Options for opening a store: the driver kind and the injected edge. */
 export type StateStoreOptions = {

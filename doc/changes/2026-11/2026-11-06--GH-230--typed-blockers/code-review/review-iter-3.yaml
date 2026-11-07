@@ -32,7 +32,7 @@ summary: >-
   (ref undefined) would still trip the ref guard and mask the mutation. The
   focused suite is green (11 pass, 0 fail). No production code changed in the
   delta, so every iteration-1/iteration-2 functional conclusion (all 21 ACs, the
-  four pinned decisions, TDR-0011 boundary, byte-stability, error-table 98/98)
+  four pinned decisions, TDR-0012 boundary, byte-stability, error-table 98/98)
   stands unchanged. No findings remain.
 severity_breakdown:
   critical: 0

@@ -1,0 +1,17 @@
+spend
+tokens     input 140 | output 20 | reasoning 0 | cacheRead 0 | cacheWrite 0
+calls      3
+agents
+- planner/sonnet: 2 calls, 120 tokens
+- coder/opus: 1 calls, 40 tokens
+phases     capture-time windows (phase.transition)
+- unknown: 3 calls, 160 tokens (100%) (no phase evidence; attribution fallback)
+restarts   0 (runs that reached closeout capture)
+limits
+- run duplication is proven; semantic duplication is not
+- runs that never reached closeout capture are invisible to this report
+- restart counts share that capture-reached evidence basis
+- a zero-token progress run reports no ratio and is named in amplification.progressRun (paid > 0 or paid = 0)
+ratio      1 (paid 160 / progress 160)
+events     none (no superseded record-bearing run)
+degradation 3 record(s) with warnings (optional-field-absent=1, non-numeric-value=1, session-capture-failed=1)

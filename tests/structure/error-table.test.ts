@@ -80,6 +80,8 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "merge.state-unverified",
   "merge.landing-unverified",
   "merge.transaction-aborted",
+  // GH-236 pins the spend read-side identity exactly; it is a two-segment code.
+  "spend.telemetry-absent",
 ]);
 
 const isValidCode = (code: string): boolean =>
@@ -750,7 +752,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, and `dispatch`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, `spend`, and `dispatch`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -767,7 +769,8 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "doctor")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "blockers")).toHaveLength(4);
-    expect(entries).toHaveLength(98);
+    expect(entries.filter((entry) => entry.domainKind === "spend")).toHaveLength(1);
+    expect(entries).toHaveLength(99);
   });
 });
 
@@ -843,7 +846,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(98);
+    expect(entries).toHaveLength(99);
     expect(db).toHaveLength(4);
   });
 
@@ -1068,7 +1071,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(98);
+    expect(entries).toHaveLength(99);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1351,7 +1354,7 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(21);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(22);
   });
 });
 
@@ -1405,7 +1408,7 @@ describe("TC-DOCTOR-020 the doctor kind has exactly one row and leaves the table
     const row = `| doctor.check.failed | doctor | user | false | not_landed | ${DOCTOR_HINT} | user-validation | ${DOCTOR_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     expect(doc).toContain(
-      "`status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, and `dispatch`",
+      "`status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, `spend`, and `dispatch`",
     );
   });
 
@@ -1643,7 +1646,7 @@ describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(98);
+    expect(entries).toHaveLength(99);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1662,5 +1665,83 @@ describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (
       ),
     );
     expect(ALLOWLIST.allowed.some((code) => code.startsWith("dispatch."))).toBe(false);
+  });
+});
+
+const SPEND_HINT =
+  "Capture harness telemetry (session-group and capture-outcome records) for the selected work item at closeout, then re-run spend.";
+const SPEND_SUMMARY = "No captured harness telemetry exists for the selected work item.";
+
+describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
+  const spend = entries.filter((entry) => entry.domainKind === "spend");
+
+  test("spend declares exactly one row with the pinned identity", () => {
+    expect(DOMAIN_KINDS).toContain("spend");
+    expect(spend).toHaveLength(1);
+    expect(spend[0]).toEqual({
+      code: "spend.telemetry-absent",
+      domainKind: "spend",
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      remediationHint: SPEND_HINT,
+      projectionClass: "user-validation",
+      summary: SPEND_SUMMARY,
+    });
+    expect(spend[0]?.projectionClass).toBe("user-validation");
+  });
+
+  test("the row round-trips through returned and thrown classification", () => {
+    const row = classifyDomainKind("spend", "spend.telemetry-absent");
+    expect(resolveAppErrorCode("spend.telemetry-absent")).toEqual({ ok: true, entry: row });
+    expect(classifyThrown({ kind: "spend", code: "spend.telemetry-absent" })).toEqual(row);
+    expect(
+      classifyThrown({ kind: "spend", code: "spend.telemetry-absent", summary: "GH-236" }),
+    ).toEqual(row);
+  });
+
+  test("kind-only spend is exact-code only and contains; wrong codes contain", () => {
+    expect(() => classifyDomainKind("spend")).toThrow();
+    expect(classifyThrown({ kind: "spend" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    for (const failure of [
+      { kind: "spend", code: "spend.other.unknown" },
+      { kind: "spend", code: "state.store.torn" },
+      { kind: "state", code: "spend.telemetry-absent" },
+      { kind: "spend", code: 42 },
+      { kind: "spend", code: null },
+    ]) {
+      expect(classifyThrown(failure).code).toBe(FALLBACK_INTERNAL_CODE);
+    }
+    expect(() => classifyDomainKind("spend", "input.value.rejected")).toThrow();
+  });
+
+  test("no delivered row is re-projected by the spend addition", () => {
+    const delivered = entries.filter((entry) => entry.domainKind !== "spend");
+    expect(delivered).toHaveLength(98);
+    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
+    expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
+    expect(resolveAppErrorCode("state.store.torn")).toEqual({
+      ok: true,
+      entry: classifyDomainKind("state", "state.store.torn"),
+    });
+    expect(classifyDomainKind("state", "state.store.torn").projectionClass).toBe(
+      "platform-provider",
+    );
+    expect(classifyDomainKind("state", "state.permission.denied").projectionClass).toBe(
+      "user-validation",
+    );
+  });
+
+  test("the documented spend row agrees exactly once and matches every column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
+    expect(doc.split(row).length - 1).toBe(1);
+    expect(doc).toContain("99 identities");
+  });
+
+  test("the documented table is complete in both directions", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const entry of spend) expect(doc).toContain(`| ${entry.code} |`);
+    expect(doc.split("| spend.telemetry-absent |").length - 1).toBe(1);
   });
 });

@@ -201,14 +201,14 @@ describe("TC-STATUS-002 non-observed sections still succeed", () => {
     if (!isRecord(data) || !isRecord(data.summary)) throw new Error("data summary missing");
     expect(data.summary).toEqual({
       sections: 9,
-      observed: 1,
+      observed: 2,
       degraded: 2,
       unknown: 2,
       unavailable: 2,
-      notDelivered: 2,
+      notDelivered: 1,
       actionable: 0,
       findingsTotal: 0,
-      placeholderSectionCount: 1,
+      placeholderSectionCount: 0,
     });
     expect(section(data, "tracker").state).toBe("unknown");
     expect(section(data, "ci").state).toBe("unknown");
@@ -217,7 +217,7 @@ describe("TC-STATUS-002 non-observed sections still succeed", () => {
     expect(section(data, "parked-work").state).toBe("unavailable");
     expect(section(data, "lanes-or-queue").state).toBe("not-delivered");
     expect(section(data, "ready-to-merge").state).toBe("degraded");
-    expect(section(data, "spend").state).toBe("not-delivered");
+    expect(section(data, "spend").state).toBe("observed");
     expect(section(data, "typed-questions").state).toBe("observed");
   });
 

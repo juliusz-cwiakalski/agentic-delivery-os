@@ -19,7 +19,7 @@ summary: >-
   decisions re-judge correct against GH-243's delivered contract: GH-243 NG-5 and
   its placeholder lifecycle ("M1-S16 removes the blockers placeholder") make
   replacing the blockers placeholder with typed-questions at section 9 the correct
-  reading, not a dropped behavior; TDR-0011 renumbering is complete (no GH-230
+  reading, not a dropped behavior; TDR-0012 renumbering is complete (no GH-230
   TDR-0009 residue); merged-truth literals verify against code (error-table-sync
   entries=98 documented=98, RESERVED_TWO_SEGMENT_CODES=21, corpora 32/17,
   bounds 32/6144, nine sections, summary observed7/notDelivered2/placeholder1);
