@@ -82,3 +82,9 @@ notes:
   - text: "Plan phase 6 complete: CEO J1 loop via status/blockers answer/verify change/phase list/merge/closeout/queue plan; review and writer roles stay pure and commit through the primitive; PR manager never merges; retained/retired fixture and coordinator suite added; Claude plugin regenerated. Commit 9e39741b. Tests: role/coordinator/blocker adoption 81 pass; build-claude-plugin 16/16; biome clean."
     type: info
     date: "2026-11-07"
+  - text: "Plan phase 7 complete: AGENTS.md, guides, M1 man page, and all prompt-required command reference pages reconciled to the commit primitive, phase family, typed blockers, retained bash, session-guard reversal, staging scope, and plan summary; entrypoint page added; doc-conformance scope: docs added. Commit 1e9168fb. Tests: doc-conformance 6 pass (scope: docs 3 pass); biome clean. Necessary defect fix d2644ee4 makes the template commit subject conventional."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 8 complete: full PSCAN rule set over every agent/command with mutants and repeat runs; help/guide coverage matrix and mutants; reference-page parity; prompt and fixture secret scans; key=value/plan/verify goldens; scans wired into pnpm check and the CI aggregate job. Commit 41c7e38d. Tests: 93 phase-8 tests pass; scanners clean; retained bash suites 54 pass; plugin 16/16; typecheck and biome green."
+    type: info
+    date: "2026-11-07"
