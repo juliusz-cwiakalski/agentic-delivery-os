@@ -86,6 +86,25 @@ export {
   renderDoctorHuman,
   runIsolatedDoctorCheck,
 } from "./doctor.js";
+export { canonicalHarnessJson } from "./harness-canonical.js";
+export {
+  type HarnessCapabilityInspection,
+  harnessCapabilityViolations,
+  inspectHarnessCapability,
+} from "./harness-capability.js";
+export { classifyHarnessEvidence } from "./harness-classify.js";
+export { assembleHarnessLiveness, harnessLivenessToWatchdogSignals } from "./harness-liveness.js";
+export {
+  type HarnessAdapterRegistration,
+  type HarnessVersionProbe,
+  harnessRegistryViolations,
+  resolveHarnessInstance,
+} from "./harness-registry.js";
+export { buildHarnessSpawnEnvironment } from "./harness-spawn-env.js";
+export {
+  boundHarnessTelemetryCapture,
+  renderHarnessTelemetryHuman,
+} from "./harness-telemetry.js";
 export {
   evaluateMergeFreshness,
   isStaleAge,

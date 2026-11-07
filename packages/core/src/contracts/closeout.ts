@@ -10,6 +10,7 @@
  * data: it adds no core primitive-port field and no closed adapter operation.
  */
 import type { AdapterCapabilityDeclaration, CapabilityGapReason } from "./adapter-capabilities.js";
+import type { HarnessTelemetryWarning, HarnessTruncation } from "./harness-telemetry.js";
 import type { DeliveryRequest, ProviderQualifiedIdentity, WorkItem } from "./ports.js";
 import type {
   StateAppendOutcome,
@@ -338,6 +339,15 @@ export type CloseoutPlan = {
   readonly summary: CloseoutSummary;
 };
 
+/** The additive telemetry-capture disclosure on the closeout output (GH-233). */
+export type CloseoutTelemetryDisclosure = {
+  readonly captured: number;
+  readonly degraded: number;
+  readonly failed: number;
+  readonly warnings: readonly HarnessTelemetryWarning[];
+  readonly sessionTruncation?: HarnessTruncation;
+};
+
 /** The bounded `delivery.closeout.v1` machine payload (F-13). */
 export type CloseoutData = {
   readonly schemaId: typeof CLOSEOUT_SCHEMA_ID;
@@ -349,6 +359,8 @@ export type CloseoutData = {
   readonly steps: readonly CloseoutStep[];
   readonly summary: CloseoutSummary;
   readonly ledgerKey?: string;
+  /** Non-gating telemetry capture disclosure; absent when no capture ran. */
+  readonly telemetryCapture?: CloseoutTelemetryDisclosure;
 };
 
 /** One appended `closeout.operation` ledger record (EVT-1, DM-4). */

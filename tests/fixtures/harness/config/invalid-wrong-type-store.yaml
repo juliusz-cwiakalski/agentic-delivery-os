@@ -1,0 +1,4 @@
+harness:
+  stores:
+    opencode:
+      databasePath: 42

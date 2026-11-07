@@ -189,6 +189,83 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "OWNER_GATE_WAIVER_AUTHORIZATIONS",
   ],
   "core/src/contracts/adapter-capabilities.ts": ["ADAPTER_OPERATIONS", "CARRIER_KINDS"],
+  "core/src/contracts/harness.ts": [
+    "HARNESS_CLASSIFICATION_TOKENS",
+    "HARNESS_EXECUTION_KINDS",
+    "HARNESS_FAILURE_CODES",
+    "HARNESS_GAP_REASONS",
+    "HARNESS_KINDS",
+    "HARNESS_LIFECYCLE_CAPABILITIES",
+    "HARNESS_LIVENESS_ABSENCE_REASONS",
+    "HARNESS_LIVENESS_KINDS",
+    "HARNESS_OPERATIONS",
+    "HARNESS_OUTCOMES",
+    "HARNESS_VERSION_WARNINGS",
+  ],
+  "core/src/contracts/harness-telemetry.ts": [
+    "HARNESS_MAX_AGENTS",
+    "HARNESS_MAX_FILE_BYTES",
+    "HARNESS_MAX_FILE_LINES",
+    "HARNESS_MAX_MODELS",
+    "HARNESS_MAX_SESSIONS",
+    "HARNESS_MAX_TOOLS_PER_AGENT",
+    "HARNESS_TELEMETRY_CAPTURE_KEY_PREFIX",
+    "HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID",
+    "HARNESS_TELEMETRY_MAX_HUMAN_BYTES",
+    "HARNESS_TELEMETRY_MAX_HUMAN_LINES",
+    "HARNESS_TELEMETRY_MAX_MACHINE_BYTES",
+    "HARNESS_TELEMETRY_RECORD_KEY_PREFIX",
+    "HARNESS_TELEMETRY_RECORD_KIND",
+    "HARNESS_TELEMETRY_SCHEMA_ID",
+    "HARNESS_TOKEN_CLASSES",
+    "HARNESS_WARNING_REASONS",
+  ],
+  "core/src/domain/harness-canonical.ts": ["canonicalHarnessJson"],
+  "core/src/domain/harness-capability.ts": [
+    "harnessCapabilityViolations",
+    "inspectHarnessCapability",
+  ],
+  "core/src/domain/harness-classify.ts": ["classifyHarnessEvidence"],
+  "core/src/domain/harness-liveness.ts": [
+    "assembleHarnessLiveness",
+    "harnessLivenessToWatchdogSignals",
+  ],
+  "core/src/domain/harness-spawn-env.ts": ["buildHarnessSpawnEnvironment"],
+  "core/src/domain/harness-telemetry.ts": [
+    "boundHarnessTelemetryCapture",
+    "renderHarnessTelemetryHuman",
+  ],
+  "core/src/state/harness-telemetry.ts": [
+    "appendHarnessCaptureOutcome",
+    "appendHarnessTelemetry",
+    "harnessTelemetryCaptureKey",
+    "harnessTelemetryRecordKey",
+    "readHarnessCaptureOutcome",
+    "readHarnessTelemetry",
+  ],
+  "adapters/src/host/index.ts": ["createHostSpawnRunner"],
+  "adapters/src/harness/opencode.ts": [
+    "OPENCODE_CAPABILITIES",
+    "createOpencodeInstance",
+    "createOpencodeSession",
+  ],
+  "adapters/src/harness/claude.ts": [
+    "CLAUDE_CAPABILITIES",
+    "createClaudeInstance",
+    "createClaudeSession",
+  ],
+  "adapters/src/harness/sqlite-loader.ts": [
+    "attemptWrite",
+    "createBunSqliteStoreOpener",
+    "openHarnessStoreReadOnly",
+  ],
+  "adapters/src/harness/telemetry-claude.ts": [
+    "createClaudeTelemetryExtractor",
+    "createNodeFileReader",
+  ],
+  "adapters/src/harness/telemetry-opencode.ts": ["createOpencodeTelemetryExtractor"],
+  "core/src/domain/harness-registry.ts": ["harnessRegistryViolations", "resolveHarnessInstance"],
+  "core/src/config/harness.ts": ["resolveHarnessSettings"],
   "core/src/contracts/closeout.ts": [
     "BLOCKED_LABEL",
     "CHANGE_LABEL",
@@ -798,6 +875,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "testkit/src/conformance/flows.ts": ["CONFORMANCE_FLOWS", "findFlow"],
   "testkit/src/conformance/adapters.ts": ["CONFORMANCE_ADAPTERS"],
+  "testkit/src/conformance/harness.ts": [
+    "HARNESS_CONFORMANCE_REGISTRY",
+    "HARNESS_CONFORMANCE_SCENARIOS",
+    "harnessConformanceViolations",
+  ],
   "testkit/src/conformance/mock-tenant.ts": ["createMockTenantTransport", "decodeMockTenant"],
   "testkit/src/conformance/runner.ts": ["runConformance"],
   "testkit/src/conformance/coverage.ts": [
@@ -1292,7 +1374,12 @@ test("a second executable export in branding fails", () => {
  * runtime home for a built-in SQLite binding (GH-174 TDR-0004); every other
  * file and every third-party engine dependency stays forbidden.
  */
-const RUNTIME_ENGINE_ALLOWED = ["core/src/state/driver/runtime-edge.ts"];
+const RUNTIME_ENGINE_ALLOWED = [
+  "core/src/state/driver/runtime-edge.ts",
+  // GH-233: the harness telemetry loader mirrors the state driver binding
+  // pattern (Bun built-in first, Node built-in fallback), read-only only.
+  "adapters/src/harness/sqlite-loader.ts",
+];
 const FORBIDDEN_DEPENDENCY = /sqlite|confluence|@opencode-ai\/|cliffy|^commander$|^yargs$/i;
 const FORBIDDEN_MARKERS = [
   "node:sqlite",

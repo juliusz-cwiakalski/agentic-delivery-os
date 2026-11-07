@@ -1,10 +1,10 @@
 ---
 id: ADR-0008
 decision_type: adr
-status: Proposed
+status: Accepted
 created: 2026-10-31
-decision_date: null
-last_updated: 2026-10-31
+decision_date: 2026-10-31
+last_updated: 2026-11-07
 summary: "Harnesses are a provider domain behind the same primitive port surface as trackers, VCS, and CI: HarnessInstance with capability flags, HarnessSession lifecycle (spawn, deliver, resume/steer, collect, classify, harness-agnostic liveness), a one-way sync-verified HarnessPluginSurface, and closeout telemetry extraction; dispatch selects a harness by configuration, capability gaps are declared, and no harness-specific logic lives in engines."
 owners:
   - "Juliusz Ćwiąkalski"
@@ -262,3 +262,7 @@ The chosen alternative satisfies all constraints C-1 through C-5: harness logic 
 - [ADR-0003](ADR-0003-oss-monorepo-structure.md) — DEC-6 provider-agnostic ports; runtime-neutral core.
 - [ADR-0007](ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md) — pure-core/injected-I/O placement precedent.
 - [ADR-0005](ADR-0005-runtime-confinement-provider-client-subpaths.md) — reviewed I/O-subpath allowance precedent.
+
+## Acceptance
+
+Accepted via the M0-S17 delivery: GH-186's PR #207 (squash commit `b31ec475`) was merged to `main-tools` by the owner on 2026-10-31, carrying the owner's PR-review acceptance of this record. The register status flip is routed from the GH-233 DoR gate; the record body above is unchanged.

@@ -102,6 +102,14 @@ export type {
   StateRuntimeEdge,
 } from "./edge.js";
 export {
+  appendHarnessCaptureOutcome,
+  appendHarnessTelemetry,
+  harnessTelemetryCaptureKey,
+  harnessTelemetryRecordKey,
+  readHarnessCaptureOutcome,
+  readHarnessTelemetry,
+} from "./harness-telemetry.js";
+export {
   appendMergeGateVerification,
   appendMergeTransaction,
   appendMergeWaiver,

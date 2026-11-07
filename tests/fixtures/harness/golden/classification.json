@@ -1,0 +1,74 @@
+[
+  {
+    "evidence": {
+      "completionMarker": true,
+      "exitStatus": 0,
+      "failureReported": false,
+      "spawnRefused": false,
+      "timedOut": false,
+      "toolFailure": false
+    },
+    "id": "completed",
+    "token": "finished"
+  },
+  {
+    "evidence": {
+      "completionMarker": true,
+      "exitStatus": 0,
+      "failureReported": false,
+      "spawnRefused": false,
+      "timedOut": false,
+      "toolFailure": true
+    },
+    "id": "tool-failure",
+    "token": "partial"
+  },
+  {
+    "evidence": {
+      "completionMarker": false,
+      "exitStatus": 0,
+      "failureReported": false,
+      "spawnRefused": false,
+      "timedOut": false,
+      "toolFailure": false
+    },
+    "id": "premature-end",
+    "token": "partial"
+  },
+  {
+    "evidence": {
+      "completionMarker": false,
+      "exitStatus": 0,
+      "failureReported": true,
+      "spawnRefused": false,
+      "timedOut": false,
+      "toolFailure": false
+    },
+    "id": "harness-failure",
+    "token": "failed"
+  },
+  {
+    "evidence": {
+      "completionMarker": false,
+      "exitStatus": 0,
+      "failureReported": false,
+      "spawnRefused": true,
+      "timedOut": false,
+      "toolFailure": false
+    },
+    "id": "spawn-refusal",
+    "token": "noop-lane-permission"
+  },
+  {
+    "evidence": {
+      "completionMarker": true,
+      "exitStatus": 0,
+      "failureReported": false,
+      "spawnRefused": false,
+      "timedOut": true,
+      "toolFailure": false
+    },
+    "id": "timeout",
+    "token": "max-restarts"
+  }
+]

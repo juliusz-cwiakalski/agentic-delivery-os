@@ -25,6 +25,7 @@ export const DOMAIN_KINDS = [
   "status",
   "doctor",
   "merge",
+  "harness",
   "retro",
 ] as const;
 
@@ -836,6 +837,105 @@ export const ERROR_TABLE = [
     remediationHint: "Resolve each named failing check using its fix hint, then re-run doctor.",
     projectionClass: "user-validation",
     summary: "One or more wiring checks failed.",
+  },
+  {
+    code: "harness.spawn.invalid-output",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the harness machine-readable output for the named parse failure, correct the invocation, and retry.",
+    projectionClass: "user-validation",
+    summary: "The harness spawn output was not machine-readable.",
+  },
+  {
+    code: "harness.spawn.refused",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Read the harness refusal reason, correct the invocation or declared environment, and retry.",
+    projectionClass: "user-validation",
+    summary: "The harness refused to start a session.",
+  },
+  {
+    code: "harness.spawn.variable-missing",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare the named variable in the parent environment or remove it from the allowlist, then retry.",
+    projectionClass: "user-validation",
+    summary: "A declared spawn-environment variable is absent.",
+  },
+  {
+    code: "harness.session.unknown",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Use the existing session identity from the original spawn; never resume a fabricated or stale id.",
+    projectionClass: "user-validation",
+    summary: "The named session does not exist.",
+  },
+  {
+    code: "harness.capability.gap",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Select a harness that declares the capability or use the declared consumer-side fallback.",
+    projectionClass: "user-validation",
+    summary: "The selected harness declares the requested capability as a gap.",
+  },
+  {
+    code: "harness.listing.invalid-output",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the harness listing output for the named parse failure and correct the invocation.",
+    projectionClass: "user-validation",
+    summary: "The harness session-listing output was not machine-readable.",
+  },
+  {
+    code: "harness.telemetry.unattributable",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Map the session tree root to a work item before extraction, then re-run the capture.",
+    projectionClass: "user-validation",
+    summary: "A session tree root cannot be attributed to a work item.",
+  },
+  {
+    code: "harness.telemetry.invalid-identity",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair the malformed session identity in the harness store before extracting telemetry.",
+    projectionClass: "user-validation",
+    summary: "A session record carries no valid identity.",
+  },
+  {
+    code: "harness.telemetry.extraction-failed",
+    domainKind: "harness",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Verify the configured harness store location and read permissions, then re-run the closeout capture.",
+    projectionClass: "platform-provider",
+    summary: "The harness store could not be read for telemetry extraction.",
   },
   {
     code: "retro.evidence.malformed-entry",

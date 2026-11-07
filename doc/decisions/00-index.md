@@ -17,7 +17,7 @@ All decision records for this repository, ordered by type and number.
 | ADR-0005 | ADR | Runtime-API Confinement for Provider Client Subpaths | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | ADR-0006 | ADR | WorkItem Custom-Field Mapping and Comment-Omission Representation (v1) | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [ADR-0007](ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md) | ADR | Provider Engine v1: Placement, Fail-Loud Availability, Parks, and Cost Policy | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
-| [ADR-0008](ADR-0008-harness-adapter-contract.md) | ADR | Harness Adapter Contract | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
+| [ADR-0008](ADR-0008-harness-adapter-contract.md) | ADR | Harness Adapter Contract | Accepted | 2026-10-31 | Juliusz Ćwiąkalski |
 | [ADR-0009](ADR-0009-release-model-v1.md) | ADR | Release Model v1 | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [ADR-0010](ADR-0010-session-admin-port-mutating-contract.md) | ADR | Separate Mutating `SessionAdminPort` from the Read-Only `SessionStore` (ADR-0003 Reconciliation) | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | ODR-0001 | ODR | Classify doc/templates/*.yaml register templates as redistributable | Accepted | 2026-06-25 | Juliusz Ćwiąkalski |
@@ -33,3 +33,4 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0007](TDR-0007-license-gate-compound-spdx-expression-evaluation.md) | TDR | License Gate Compound SPDX Expression Evaluation | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [TDR-0008](TDR-0008-additive-adapter-contract-extensions-closeout-v1.md) | TDR | Additive Adapter-Contract Extensions for Closeout v1 (`DeliveryRequest.headSha` and `resolve-delivery-thread`) | Proposed | 2026-11-01 | Juliusz Ćwiąkalski |
 | [TDR-0009](TDR-0009-retro-evidence-sidecar-keyed-chain-construction.md) | TDR | Retro Evidence Sidecar — Keyed-Chain Construction, Distinct Chaining Key, and Claimed Collector Identity | Proposed | 2026-11-06 | Juliusz Ćwiąkalski |
+| [TDR-0010](TDR-0010-dispatch-session-classification-token-projection.md) | TDR | Dispatch-Session Classification Token Projection (TDR-0005 Addendum) | Proposed | 2026-11-07 | Juliusz Ćwiąkalski |

@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-VERIFY-CHANGE-AND-EXIT-TAXONOMY
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
 summary: "The `verify` command family: ledger-only `verify change` verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, the verify.gates.* and verify.deploy.* rows of the sibling verify surfaces, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
 links:
-  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225"]
+  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225", "GH-233"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
@@ -25,7 +25,7 @@ The command is ledger-only and read-only. It performs no mutation, acquires no f
 
 The pure evaluation is `EvaluateVerifyChange` → `VerifyLedgerEvaluation`, which returns the variant, outcome, required/completed/missing phases, declaration counts, and registry evidence on every outcome. The delivered `classifyVerifyChange` remains a behavior-preserving wrapper that maps that structured evaluation to the delivery-result tuple and summary, so `verify change` output is unchanged. The verify-gates lifecycle gate consumes `VerifyLedgerEvaluation` directly rather than parsing a summary.
 
-The delivery-result vocabulary is `as const` data in `core ./contracts`. Each of the eleven tokens carries exactly one projection class and one derivation class, so the typed CLI and the bash-era delivery summary can be compared token-for-token. Seven tokens whose derivation needs tracker, PR, or dispatch/session evidence are declared and reserved; this surface reaches `finished`, `partial`, `failed`, and `state-unverified`.
+The delivery-result vocabulary is `as const` data in `core ./contracts`. Each of the eleven tokens carries exactly one projection class and one derivation class, so the typed CLI and the bash-era delivery summary can be compared token-for-token. Seven tokens whose derivation needs tracker, PR, or dispatch/session evidence are declared and reserved; this surface reaches `finished`, `partial`, `failed`, and `state-unverified`. The delivered harness-neutral classifier is a separate consumer of existing taxonomy rows across the `verify` and `dispatch-session` classes at the adapter/port boundary; it adds no token and does not widen this surface's reachable set.
 
 The surface consumes the [pm-notes lint and phase-transition](feature-pm-notes-lint-and-phase-transitions.md) rules and registry, the [state layer](feature-state-layer.md) verified-read substrate, and the [result contract](feature-result-contract.md) envelope, error table, classification chain, and `{0, 1, 2}` exit projection. The `state-unverified` projection decision is recorded in [TDR-0005](../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md).
 
@@ -111,10 +111,12 @@ The eleven tokens are the bash-era delivery summary vocabulary, adopted verbatim
 | `max-restarts` | Restart budget exhausted | Reserved: dispatch/session evidence | none | `user-validation` | `1` |
 | `state-unverified` | Delivery state could not be verified | Platform-category registry/store failure | the specific `state.*` identity | `platform-provider` | `2` |
 | `partial` | Incomplete artifact ledger | Required phase absent after overlay, or declared but not completed | `lint.phases.incomplete` or `verify.ledger.incomplete` | `user-validation` | `1` |
-| `noop-lane-permission` | Headless permission auto-reject, no work landed | Reserved: dispatch/session and lane-log evidence | none | `user-validation` | `1` |
+| `noop-lane-permission` | Headless permission auto-reject or harness spawn refusal, no work landed | Reserved: dispatch/session and lane-log evidence | none | `user-validation` | `1` |
 | `noop-lane-nothing-to-do` | Nothing was attempted in the lane | Reserved: tracker/dispatch evidence | none | `success` | `0` |
 
 Pinned derivation mapping: `verify` derives `finished`, `partial`, `failed`, and `state-unverified`; `tracker-pr` derives `merged`, `blocked`, `pr-open`, and `pr-open-unverified`; `dispatch-session` derives `max-restarts`, `noop-lane-permission`, and `noop-lane-nothing-to-do`. Reserving a token never makes it reachable, so a tracker-derived success cannot leak into a ledger-only verdict.
+
+At the adapter/port boundary, the harness-neutral classifier projects its closed outcomes onto existing taxonomy rows: a spawn refusal projects `noop-lane-permission`, a timeout projects `max-restarts`, completion projects `finished` (or `partial` on a tool failure), premature end projects `partial`, and a failure projects `failed`. These are the shared taxonomy tokens; there is no dispatch-session-class completion token. The projection is lossy on the token alone: premature end and a completed run with a reported tool failure both project `partial`, so the harness outcome field is authoritative for disambiguation. From the harness path, `noop-lane-permission` means the spawn was refused before a session existed, not a lane-permission policy verdict. The mapping is declared once in the harness contracts and the derivation class is read from this taxonomy; adapters normalize evidence and never classify. The harness surface is described in [Harness Adapters](feature-harness-adapters.md).
 
 `finished` means the declared variant's ledger is complete. It is a necessary, not sufficient, condition for merge: commit, CI, push-parity, owner-gate, and squash-preflight evidence are the separate responsibilities of [Verify Gates](feature-verify-gates.md), so a complete ledger never substitutes for merge gates.
 
@@ -322,6 +324,7 @@ See also:
 - [Result contract and error table](feature-result-contract.md) — envelope, error table, classification chain, exit projection, documented-table sync.
 - [PM-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) — schema, variants, lint identities, registry and fold.
 - [State layer](feature-state-layer.md) — verified reads, fences, torn-state detection, and derived documents.
+- [Harness adapters](feature-harness-adapters.md) — the harness-neutral classifier that projects onto the `verify` and `dispatch-session` taxonomy rows at the adapter/port boundary.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — package tiers, boundary matrices, and the aggregate check.
 - [Change lifecycle guide](../../guides/change-lifecycle.md) — canonical eleven phases and the variant rule.
 - [TDR-0005 — Delivery Result Enum and CLI Exit Taxonomy](../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md) — token parity, projection binding, and the `state-unverified` divergence.

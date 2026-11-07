@@ -6,10 +6,10 @@ last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251"]
-  related_decisions: ["ADR-0003", "TDR-0003"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233"]
+  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003"]
 ---
 
 # Feature: Configuration Layer and Inspection
@@ -142,9 +142,10 @@ The machine table in [Result Contract and Error Table](feature-result-contract.m
 | Path | Responsibility |
 |---|---|
 | `packages/core/src/contracts/config.ts` | Plain JSON-compatible facts, layers, origins, skips, warnings and failure identity |
-| `packages/core/src/config/catalog.ts` | Typed catalog, bootstrap descriptor, the production `provider` and `commit` branches, and the `record` field kind for dynamic-name maps |
+| `packages/core/src/config/catalog.ts` | Typed catalog, bootstrap descriptor, the production `provider`, `commit`, `merge`, and `harness` branches, and the `record` field kind for dynamic-name maps |
+| `packages/core/src/config/harness.ts` | Pure validation and projection of the resolved `harness` branch into typed settings (kind, execution kind, store paths, environment allowlist) with configuration-path origin evidence |
 | `packages/core/src/config/schema.ts` | Trusted schema generation, partial/final compilation and safe invalid-key detection |
-| `packages/core/src/config/defaults.ts` | Typed default extraction and the shipped overridable provider defaults |
+| `packages/core/src/config/defaults.ts` | Typed default extraction and the shipped overridable defaults, including the `harness` branch |
 | `packages/core/src/config/resolver.ts` | Pure seven-layer validation, merge, reset, restrictions, warnings and origins |
 | `packages/core/src/config/provenance.ts` | Origin replacement, descendant removal and display grammar |
 | `packages/adapters/src/file/yaml-parser.ts` | YAML 1.2 one-document parsing, bounds, positions and safe diagnostics |
@@ -239,3 +240,29 @@ The production catalog declares a typed `merge` branch:
 
 Every merge key reports its own per-value origin evidence, and a declared list replaces the earlier list. See
 [Merge and Verify Deploy](feature-merge-verify-deploy.md).
+
+## The harness configuration branch
+
+The production catalog declares a typed `harness` branch. It carries harness
+selection, execution environment, store locations, and the declared
+deny-by-default environment allowlist.
+
+| Key | Shape | Default | Semantics |
+|---|---|---|---|
+| `harness.kind` | string | `opencode` | Selected harness; the closed set is `opencode` and `claude-code`. An unknown value is `config.value.invalid` naming `harness.kind`; no adapter is constructed and no kind is silently defaulted. |
+| `harness.execution.kind` | string | `host` | Execution-environment kind; the closed set is `host`. An unknown value is `config.value.invalid` naming `harness.execution.kind`. |
+| `harness.stores.opencode.databasePath` | string | `.local/state/opencode/opencode.db` | Read-only opencode session-store location. A non-string or empty path is `config.value.invalid`. |
+| `harness.stores.claude-code.sessionDirectory` | string | `.local/state/claude-code` | Read-only Claude Code session-file directory. A non-string or empty path is `config.value.invalid`. |
+| `harness.environment` | array of `{ name, credentialRef? }` | `HARNESS_MODEL`, `HARNESS_SMALL_MODEL`, `DELIVERY_WORK_PATH` names only | The complete child-environment allowlist. Each entry carries a variable name and an optional credential reference; a literal `value` field is rejected by `config.secret.forbidden`, and extra keys are `config.value.invalid`. |
+
+An absent branch resolves to the shipped defaults with `defaults` origins. A
+declared branch validates against the closed kinds and store-path rules; an
+unknown branch key fails exact-key discipline. Credential references resolve
+through the credential port at use time and never carry secret material in
+configuration. The configured-kind registry separately validates that exactly
+the two shipped harness kinds are registered, so a vocabulary drift fails
+instead of defaulting. See [Harness Adapters](feature-harness-adapters.md).
+
+## Related
+
+- [Harness Adapters](feature-harness-adapters.md) adds the typed `harness` branch (selected kind, execution kind, store locations, deny-by-default environment allowlist); a literal value in an allowlist entry is rejected by `config.secret.forbidden`.

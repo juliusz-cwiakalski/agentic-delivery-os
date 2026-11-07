@@ -1,0 +1,265 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-233
+branch: feat/GH-233/harness-adapters
+status: FAIL
+summary: >-
+  The harness seam is delivered with a strong security and contract core, all re-verified green during
+  this review: the deny-by-default spawn-env builder is fail-closed both ways with use-time
+  credential-port resolution (TC-HARN-012/013 green, mutants real); the one shared classifier with the
+  identical-classification proof holds structurally (same bound reference, adapters normalize only);
+  extraction is read-only (query_only pragma before first SELECT, read-only open, no write/lock
+  statements), bounded, and index-filtered; closeout capture is fenced, verified, idempotent by
+  (work item, run, session), and non-gating; the config branch rejects literal allowlist values with
+  the secret-forbidden identity; error-table sync, secret-read boundary (212 files, 5 entries
+  unchanged), neutrality scans, changeset singularity, bash non-regression (zero .sh changes), and the
+  doc-distribution guard all pass. One high finding blocks: the Claude adapter's shipped capability
+  declaration lists `deliver` as supported while the port method returns a capability gap naming
+  `steer` - an untruthful declaration that violates AC-F1-1/DoD-1 (degradation visible before spawn)
+  and is uncovered by any test. The medium findings: the recorded taxonomy-token deviation (verify-class
+  tokens, premature-end/tool-failure collapse to `partial`, refused->noop-lane-permission) was never
+  propagated to test-plan section 4.2, whose oracle still pins dispatch-session-class tokens; the
+  opencode per-session aggregate `GROUP BY agent, model ... LIMIT 1` silently drops all but the top
+  (agent, model) group with no warning or truncation mark; 3 of the 14 named non-vacuity mutant
+  families are themselves vacuous self-text-checks (DoD-12 claims every named mutant fails by name);
+  and the child_process confinement test does not pin the allowed site list the pm-notes deviation
+  says it names. Remaining findings are low or informational.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 4
+  low: 1
+  info: 6
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/adapters/src/harness/claude.ts:30
+    message: >-
+      CLAUDE_CAPABILITIES.supportedOperations lists "deliver" as supported, but the port's
+      implementation returns a capability gap (`deliver: async () => gap("claude-code", "steer")` at
+      claude.ts:196) - and the gap names "steer", not "deliver". This is exactly the false-parity
+      defect AC-F1-1/DoD-1 exist to prevent: a consumer inspecting the declaration before spawn
+      (RSK-1's mitigation) believes deliver works, then discovers mid-delivery that it is a gap.
+      The harnessCapabilityViolations check passes because supported-union-gaps is still exhaustive
+      and disjoint; no test calls deliver on the Claude port (tests/behaviour/harness-claude-session.test.ts
+      and the conformance scenarios exercise spawn/collect/classify/resume only), and
+      doc/spec/features/feature-harness-adapters.md mirrors the untruthful declaration. The first
+      production consumer (M1-S9) drives the declared lifecycle spawn -> deliver -> collect and would
+      hit the gap at runtime.
+    suggestion: >-
+      Remove "deliver" from CLAUDE_CAPABILITIES.supportedOperations and add an explicit gap record
+      { capability: "deliver", reason: "headless-mode-limitation" } (consistent with DEC-4's headless
+      posture), or implement deliver as the headless re-run if that lifecycle reading is chosen - one
+      of declaration or behavior must move. Update the feature doc's Claude gap list, add the matching
+      gap row to the TC-HARN-002 structure test, and add a behaviour case pinning deliver -> gap with
+      zero runner invocations (mirror of the resume-gap case).
+    suppressed: false
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/contracts/harness.ts:154
+    message: >-
+      The recorded taxonomy-token deviation is real and consistently implemented and documented in the
+      feature specs, but it contradicts three pinned artifacts: spec F-2 ("emits the delivery-result
+      taxonomy's dispatch-session-class tokens"), plan task 1.2 ("emitting tokens of the
+      `dispatch-session` derivation class"), and test-plan section 4.2 line 184 ("the expected
+      delivery-result token from the dispatch-session derivation class") - the shipped mapping emits
+      verify-class tokens (finished/partial/failed) for three of five outcomes. The plan header's own
+      rule says "a real deviation would reopen the test plan, not ship"; the test plan was not
+      reopened, so its binding oracle is now false. Additionally the projection is lossy in two
+      unreviewed ways: premature-end and completed-with-tool-failure both project `partial` (tokens
+      alone cannot distinguish a dead session from a completed-but-flawed one; only the separate
+      `outcome` field disambiguates), and refused -> noop-lane-permission reassigns a lane-permission
+      meaning to a spawn refusal, which retro/spend consumers (GH-236/M1-S8) will misread.
+    suggestion: >-
+      Amend the test plan (section 4.2 oracle wording, plus the scenario expected-token notes) via the
+      deviation-record mechanism so the artifacts agree with the delivered projection, and route the
+      outcome-to-token projection to @decision-advisor for TDR-0005 ratification - cross-derivation-class
+      token reuse with collapsed meanings is a taxonomy-owner decision, not a delivery spelling.
+      Document explicitly that the `outcome` field is required to disambiguate `partial`-projected
+      results, and that `noop-lane-permission` from the harness path means spawn-refused.
+    suppressed: false
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/harness/telemetry-opencode.ts:207
+    message: >-
+      The per-session aggregate query groups by (agent, model) but takes only the first row
+      ("ORDER BY calls DESC, agent ASC LIMIT ?" with LIMIT 1, telemetry-opencode.ts:197-210). A
+      session whose messages span multiple (agent, model) groups - the case the GROUP BY itself
+      anticipates - silently loses every group except the top one: tokens, calls, and tool usage of
+      the dropped groups vanish with no warning, no truncation mark, and no failed-session entry.
+      This contradicts NFR-6's zero-silent-degradation discipline, RSK-5's visible-undercount
+      posture, and AC-F8-1's "per agent and per model" completeness. No fixture covers it: every
+      session in tests/fixtures/harness/opencode-store/build.ts has exactly one (agent, model)
+      group, and the shape test's "identity not collapsed" row asserts only cross-session diversity.
+    suggestion: >-
+      Either emit one record per (session, agent, model) group - the spec F-7 "per session, per
+      agent, per model" reading - or keep the top-group record and disclose the drop (warning plus
+      omitted-group count, mirroring the tool truncation marks). Add a fixture variant with two
+      (agent, model) groups in one session and pin whichever behavior is chosen.
+    suppressed: false
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: test-efficacy
+    location: tests/checks/harness-mutants.test.ts:130
+    message: >-
+      Three of the fourteen named non-vacuity mutant families are themselves vacuous:
+      `ambient-read` (lines 130-138) and `adapter-classify` (lines 140-147) write the mutant file but
+      then only string-check their own transform output, and `harness-literal` (lines 479-486)
+      re-checks that the text it just prepended is present - none imports the mutant and runs the
+      guard that should fail, so none can ever fail. The mirror "seeded harness literal" row in
+      tests/structure/harness-neutrality.test.ts:208-213 constructs a synthetic violations array
+      inline and asserts it contains a hardcoded name - equally unfailable. Plan task 7.2 and DoD-12
+      require "every named non-vacuity mutant fails by name"; these three cannot, so the claim is
+      partially unproven (the other eleven mutant families are behaviorally real and verified).
+    suggestion: >-
+      Extract the neutrality/import scans into callable functions over a file list and invoke them
+      against the written mutant paths inside the mutant tests (the mutant files land inside the
+      scanned directories and prefixes, so the scans would flag them by name), or assert the scan
+      module's exported checker returns the mutant path. Delete the self-fulfilling rows.
+    suppressed: false
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: test-efficacy
+    location: tests/structure/harness-imports.test.ts:67
+    message: >-
+      The child_process confinement test asserts only that packages/adapters/src/host/index.ts is a
+      site and that no packages/adapters/src/harness/** file is one. The pm-notes recorded deviation
+      (2) states the pre-existing sites are "named in the structure test", and the test's own comment
+      claims "the two pre-existing session-admin transports are the only other delivered sites" - but
+      the repository has nine pre-existing sites (git/commit, git/index, git/merge, git/watchdog,
+      file/commitlint, session/commit-one-shot, session/index, core state driver, testkit commit
+      repo) and none are enumerated. A new node:child_process import in any other adapters subpath
+      would pass the test silently, weakening TC-HARN-014/028's confinement guarantee below what the
+      deviation record and plan task 3.5 describe.
+    suggestion: >-
+      Pin the exact allowlist of files permitted to import node:child_process (assert the observed
+      site set equals the declared set, so additions and removals both fail by name), and fix the
+      stale comment. A negative-fixture row (a temp file with a child_process import in a non-allowed
+      adapters path failing the checker) already exists in tests/boundaries - reference it from this
+      suite or extend it to cover the adapters tree.
+    suppressed: false
+  - id: F-6
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/harness/telemetry-opencode.ts:238
+    message: >-
+      An absent input_tokens or output_tokens column produces TWO identical "optional-field-absent"
+      warnings per record: lines 238-240 push the warning directly, then tokenFor (lines 228-230)
+      pushes it again for the same field. This violates the section 4.6 oracle "exactly one warning
+      naming it" for two of the five token classes. It is untested because the no-optional-column
+      fixture drops only reasoning_tokens.
+    suggestion: >-
+      Delete the redundant direct pushes at lines 238-240 (tokenFor already handles the absent case)
+      or centralize the warning in one place; extend the drift fixture/test to drop input_tokens or
+      output_tokens and assert exactly one naming warning.
+    suppressed: false
+  - id: F-7
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/edge.ts:478
+    message: >-
+      No production composition injects CloseoutTelemetryRuntime into runCloseout - the CLI closeout
+      edge still composes only commit telemetry, so real closeouts capture no harness telemetry after
+      this change; ticket AC 5 / G-5 hold at the injected-fixture tier (TC-HARN-023/024/025). This is
+      the recorded no-composition-edge posture (plan header decision; GH-240/M1-S12 is the wired
+      consumer; feature doc states the apply path "accepts an injected telemetry capability"), so it
+      is noted for visibility, not as a defect.
+    suggestion: >-
+      Make the deferral explicit in the feature doc's closeout section ("no production composer wires
+      the capability until GH-240") so readers do not expect captured records from real closeouts
+      before that story lands.
+    suppressed: false
+  - id: F-8
+    severity: info
+    confidence: high
+    category: performance
+    location: packages/adapters/src/harness/telemetry-claude.ts:57
+    message: >-
+      The production file reader reads the entire file (readFileSync) before the byte cap slices it,
+      so the declared per-file bound caps what is parsed, not what is read - a pathologically large
+      transcript is fully loaded into memory first. The cap also compares JS string length (UTF-16
+      code units) against a byte-named budget. Local trusted files keep the impact low.
+    suggestion: >-
+      If ever hardened: open with a read budget (fs.read with a size limit) or stat-check the size
+      against the cap before reading, and treat a would-exceed file as truncated-with-warning without
+      the full read.
+    suppressed: false
+  - id: F-9
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/adapters/src/host/index.ts:48
+    message: >-
+      Three minor runner semantics: (a) `timedOut = timedOut || signal === "SIGTERM"` conflates the
+      runner's own timeout kill with any external SIGTERM, so an externally-killed harness is
+      classified as timed-out (projecting to max-restarts); (b) stderr truncation drops chunks with no
+      "[output truncated]" marker while stdout gets one; (c) the output bound counts UTF-16 code
+      units, not bytes, against the 16 MiB budget. All are inside the injected-runner tier with no
+      production composer yet.
+    suggestion: >-
+      When the runner is next touched: track timeout via the timer flag only, mark stderr truncation
+      symmetrically, and size the bound in bytes (Buffer.byteLength) for accuracy.
+    suppressed: false
+  - id: F-10
+    severity: info
+    confidence: high
+    category: test-efficacy
+    location: tests/structure/harness-contract.test.ts:38
+    message: >-
+      The local claudeDeclaration() fixture at lines 38-53 has drifted from the shipped
+      CLAUDE_CAPABILITIES: the fixture still declares telemetry-extraction as a gap
+      ("adapter-not-implemented", the Phase-4 state before the extractor landed) and lifecycle
+      capabilities ["headless-spawn"] only, while the shipped declaration supports
+      telemetry-extraction. The shipped declaration is validated directly at line 209, so this is
+      only a stale hand-copy used for the drift-rejection demos - but a future editor could
+      "fix" the fixture or copy from it, reintroducing confusion.
+    suggestion: >-
+      Derive the demo fixture from CLAUDE_CAPABILITIES (spread and mutate one field) instead of
+      hand-copying it, or add a comment stating it is a synthetic shape, not the shipped declaration.
+    suppressed: false
+  - id: F-11
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/adapters/src/harness/telemetry-opencode.ts:137
+    message: >-
+      The orphan and invalid-identity scans are store-wide, not delivery-scoped: every parentless
+      session without a work_item_ref in the shared store - including sessions spawned outside the
+      harness port, whose telemetry is NG-10-deferred - is reported as a failedSession of whichever
+      delivery captures, inflating that delivery's failed count with sessions that are not its own.
+      Bounded (LIMIT maxSessions+1), disclosed, and non-fabricating, so informational.
+    suggestion: >-
+      Scope the orphan disclosure to the capturing delivery (e.g., only trees reachable from the
+      work item's roots) or report out-of-port orphans as a store-level disclosure field rather than
+      per-delivery failedSessions.
+    suppressed: false
+  - id: F-12
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-233--harness-adapters/chg-GH-233-plan.yaml:329
+    message: >-
+      Phase 6's declared scope includes packages/core/src/state/closeout.ts, which the branch never
+      touches (only contracts/closeout.ts changed); the capture runtime instead landed in the new
+      state/harness-telemetry.ts with fixture-side injection (tests/fixtures/closeout/harness-telemetry.ts).
+      Benign scope superset - the reconciled scope additions in the pm-notes cover the reverse
+      direction - recorded here for the plan-diff audit trail.
+    suggestion: >-
+      No code action; when the plan is next touched, note the unused scope entry alongside the
+      recorded scope additions.
+    suppressed: false
+reviewed_at: 2026-11-06T23:09:07Z
+next_step: CALL_CODER

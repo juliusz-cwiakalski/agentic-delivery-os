@@ -215,6 +215,9 @@ module.exports = {
         pathNot: [
           "^packages/core/src/state/driver/",
           "^packages/adapters/src/(repo|file|host|session|legacy|credentials)/",
+          // GH-233 — the harness adapter I/O subpath: read-only telemetry
+          // extraction (node:fs reads, read-only SQLite). Exact path only.
+          "^packages/adapters/src/harness/",
           // ADR-0005 C-2 — `github` provider client subpath: GitHub REST reads
           // for the minimal status/verify input slice (GH-188).
           "^packages/adapters/src/github/",

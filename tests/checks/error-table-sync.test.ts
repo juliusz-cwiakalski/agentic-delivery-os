@@ -1071,8 +1071,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 40) {
-    failures.push(`table length ${live.length} != baseline + 40 (${BASELINE_ROWS.length + 40})`);
+  if (live.length !== BASELINE_ROWS.length + 49) {
+    failures.push(`table length ${live.length} != baseline + 49 (${BASELINE_ROWS.length + 49})`);
   }
   return failures;
 };
@@ -1101,6 +1101,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       status: 1,
       doctor: 1,
       merge: 7,
+      harness: 9,
     });
   });
 
@@ -1148,7 +1149,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 40,
+      BASELINE_ROWS.length + 49,
     );
   });
 
@@ -1171,7 +1172,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 40);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 49);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);

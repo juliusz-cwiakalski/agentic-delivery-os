@@ -139,3 +139,7 @@ New story candidates (not yet in the backlog): adapter policy layer v1
   [adapter-ports spec](../../spec/features/feature-adapter-ports.md) for the
   v1 contract.
 - Minimum capability floor an adapter must meet to be supported at all.
+
+## Related
+
+- The harness rows are delivered by [Harness Adapters](../spec/features/feature-harness-adapters.md): `HarnessInstance` and `HarnessSession` are implemented, `HarnessPluginSurface` remains a later contract surface.

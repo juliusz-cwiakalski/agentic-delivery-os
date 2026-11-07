@@ -8,7 +8,7 @@ owners: [engineering]
 area: domain
 document_classification: working-analysis
 links:
-  related_changes: [GH-200, GH-231, GH-225, GH-232]
+  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232]
 summary: "Thin tooling vocabulary relationship map and disambiguation draft for Gate 4."
 ---
 
@@ -42,7 +42,7 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
 | AI provider availability | Supplies eligibility, parks and announcements to callers; future model policy consumes availability rather than redefining it. | [Provider engine](../spec/features/feature-provider-engine.md), [model profiles](../planning/concepts/model-profiles.md) |
 | Local operational state | Supplies verified ledger evidence and rebuildable projections to consumers; it does not own upstream session content. | [State layer](../spec/features/feature-state-layer.md), [session administration](../spec/features/feature-session-database-admin.md) |
 | Learning evidence and retrospection | Folds collector-truth evidence into level reports; the independent sidecar owns evidence integrity while the validated registry owns level and run data. | [Retro evidence pipeline](../spec/features/feature-retro-pipeline.md), [audit ledger](../spec/features/feature-audit-ledger.md) |
-| Harness execution and surfaces | A host runs sessions; a surface exposes capabilities. Typed dispatch parity is planned, distinct from existing prompt/plugin distribution. | [Harness adapters](../planning/concepts/harness-adapters.md), [primitive surface](../planning/concepts/agent-primitive-surface.md) |
+| Harness execution and surfaces | A host runs sessions; a surface exposes capabilities. Typed cross-harness adapter parity is delivered at the port boundary; the dispatch engine is planned, distinct from existing prompt/plugin distribution. | [Harness adapters](../spec/features/feature-harness-adapters.md), [primitive surface](../planning/concepts/agent-primitive-surface.md) |
 
 ## Disambiguation at boundaries
 
@@ -54,8 +54,9 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
   establish executable grammar. The MCP package serves three read-only tools over
   a local stdio server; the typed host package remains a placeholder.
 - **Harness / session:** the harness is the execution host; a session is one
-  hosted execution. Plugin availability does not prove equivalent typed dispatch,
-  spawn/resume or supervision across hosts. See the harness concept above.
+  hosted execution. Typed spawn and classification parity are delivered at the
+  adapter boundary; resume/steer and liveness gaps are declared per adapter, and
+  configuration-driven dispatch remains planned. See the harness concept above.
 - **Model profile / profile class:** a profile is a named agent-to-model mapping;
   a class groups profiles by task difficulty. Class working names are not profiles
   or newly frozen names. Model policy is planned. Current provider v1 evaluates

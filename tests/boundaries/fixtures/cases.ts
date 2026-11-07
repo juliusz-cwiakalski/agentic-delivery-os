@@ -521,6 +521,17 @@ export const RULE_CASES: RuleCase[] = [
     "packages/adapters/src/registry/probe.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
+  // GH-233 (F-5): a node:child_process import outside the declared spawn
+  // allowlist fails the confinement rule, which is the boundary counterpart of
+  // the exact site-set equality in tests/structure/harness-imports.test.ts.
+  dep(
+    "runtime-child-process-adapter-registry",
+    "TC-HARN-014",
+    "runtime-apis-confinement",
+    ["adapters"],
+    "packages/adapters/src/registry/probe.ts",
+    'import { execFile } from "node:child_process";\nexport const value = execFile;\n',
+  ),
   dep(
     "runtime-node-fs-adapter-io",
     "TC-SCAFFOLD-014",

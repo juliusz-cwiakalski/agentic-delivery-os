@@ -22,20 +22,21 @@
       "./contracts"
     ],
     "@delivery-os/adapters": [
-      "./gitlab",
-      "./jira",
-      "./github",
       "./azure",
       "./ci",
+      "./credentials",
+      "./file",
+      "./git",
+      "./github",
+      "./gitlab",
+      "./harness",
+      "./host",
+      "./jira",
+      "./legacy",
+      "./provider-quota",
       "./registry",
       "./repo",
-      "./file",
-      "./host",
-      "./session",
-      "./legacy",
-      "./credentials",
-      "./provider-quota",
-      "./git"
+      "./session"
     ]
   },
   "scripts": {

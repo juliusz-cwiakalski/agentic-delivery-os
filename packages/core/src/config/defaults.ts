@@ -39,6 +39,25 @@ export const PRODUCTION_DEFAULTS = {
   merge: {
     "gate-freshness": 1800,
   },
+  harness: {
+    kind: "opencode",
+    execution: {
+      kind: "host",
+    },
+    stores: {
+      opencode: {
+        databasePath: ".local/state/opencode/opencode.db",
+      },
+      "claude-code": {
+        sessionDirectory: ".local/state/claude-code",
+      },
+    },
+    environment: [
+      { name: "HARNESS_MODEL" },
+      { name: "HARNESS_SMALL_MODEL" },
+      { name: "DELIVERY_WORK_PATH" },
+    ],
+  },
 } as const;
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>

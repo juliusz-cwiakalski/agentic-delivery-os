@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-CLOSEOUT
 status: Current
 created: 2026-11-01
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered closeout transaction: a dry-run-by-default `closeout <workItemRef>` command, the deterministic seven-step plan, SHA-256 operation identities and the append-only `closeout.operation` ledger over the real JSONL state driver, a production CLI composition over the real provider clients, git seam, and state store, GitHub and Jira writes with declared GitLab gaps, review-thread resolution, the owed-flip sweep, checkout restore, squash-safe local branch cleanup, the discriminated work-item read observation and the separate reverse-dependent no-surface vocabulary, provider-asserted label/relation availability signals, bounded output measured in UTF-8 bytes, and the four `closeout` error identities."
+summary: "The delivered closeout transaction: a dry-run-by-default `closeout <workItemRef>` command, the deterministic seven-step plan, SHA-256 operation identities and the append-only `closeout.operation` ledger over the real JSONL state driver, a production CLI composition over the real provider clients, git seam, and state store, GitHub and Jira writes with declared GitLab gaps, review-thread resolution, the owed-flip sweep, checkout restore, squash-safe local branch cleanup, the discriminated work-item read observation and the separate reverse-dependent no-surface vocabulary, provider-asserted label/relation availability signals, bounded output measured in UTF-8 bytes, the four `closeout` error identities, and the non-gating, idempotent harness telemetry capture point with bounded disclosure."
 links:
-  related_changes: ["GH-183", "GH-221", "GH-231"]
-  related_decisions: ["TDR-0008", "ODR-0003", "ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006"]
+  related_changes: ["GH-183", "GH-221", "GH-231", "GH-233"]
+  related_decisions: ["TDR-0008", "ODR-0003", "ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008"]
   contracts:
     - "packages/core/src/contracts/closeout.ts"
     - "packages/core/src/contracts/ports.ts"
@@ -43,7 +43,7 @@ Provider writes are delivered for GitHub and Jira. GitLab remains a read slice w
 
 ### 2.3 Non-Goals
 
-- Harness session telemetry capture at closeout (M1-S11); closeout reads no session store or harness statistics.
+- Telemetry capture outside closeout (phase boundaries, session end) and backfill of historical sessions; capture is a closeout-time operation only.
 - Remote branch deletion, remote ref cleanup, force push, or history rewrite.
 - GitLab write operations; GitLab writes and the work-item read remain declared gaps.
 - The full GitHub adapter, full issue lifecycle, releases, and operations beyond closeout (M3-S3).
@@ -205,6 +205,30 @@ Plan mode uses `would-apply`, `satisfied`, `skipped-gap`, `skipped-noop`, and `w
 
 Output is bounded at 64 KiB machine payload, 200 human lines, and 16 KiB human text, with every byte bound measured as UTF-8 bytes (multibyte characters count by encoded length, not UTF-16 code units), and deterministic truncation that drops trailing operations/evidence first and records the marker. Output never contains comment bodies, titles, raw provider payloads, credentials, environment values, command arguments, or free-form prose. Evidence names operations, provider targets, counts, refs, label names, outcomes, and classified reasons only. The single serialization redaction chokepoint covers machine and human output.
 
+#### Harness session telemetry capture
+
+When a telemetry capability is injected, apply mode runs it after the terminal
+steps and before the applied payload is returned. The capability exposes two
+operations: `extract` reads the configured harness store read-only and returns
+one harness-neutral capture shape of one record per captured session group;
+`append` writes the additive `harness.telemetry` records through the fenced state
+port. The applied payload carries an optional `telemetryCapture` disclosure with
+captured, degraded, and failed counts, closed warning reasons (a group truncation
+surfaces as a `truncated` warning carrying the omitted-group and cap counts), and
+the session truncation mark when one applies.
+
+Capture is non-gating. An extraction or append failure changes no step outcome,
+summary, or command verdict; the failure is disclosed in the counts and warning
+reasons, and the closeout result is otherwise unchanged. A failed capture writes
+no zero-valued record. Session-group capture is idempotent by (work item, run,
+session, agent, model) and the capture outcome by (work item, run): a re-run
+appends nothing already captured. Plan mode performs no
+extraction and no telemetry append, preserving its zero-write, zero-append, and
+zero-fence contract. No production composer injects the capability yet; GH-240
+(M1-S12) wires it, so a real closeout run captures no harness records until then.
+The extraction and record contract is specified in
+[Harness Adapters](feature-harness-adapters.md) and [State Layer](feature-state-layer.md).
+
 #### Failure identities and exit projection
 
 The feature adds one domain kind, `closeout`, and four rows to the existing error table. It reuses the existing projection classes and introduces no exit literals outside the CLI projection.
@@ -226,7 +250,7 @@ The git branch/checkout seam is a dedicated adapter I/O subpath behind a port. I
 
 **Plan (default).** Resolve config, provider instance, read credentials, work item, merged request, base ref, and local branch; read persisted closeout history through a verified read; compute the seven-step plan and canonical arguments; evaluate the checkout and branch safety predicates; render the plan; exit 0 with zero writes, git mutations, state appends, or fence acquisitions.
 
-**Apply.** Acquire the single-writer fence; read history and fold terminal outcomes; execute the ordered operations, reusing terminal outcomes and appending each outcome; provider steps run in order, then checkout restore, then squash-safe branch cleanup; release the fence; render the applied summary and exit 0.
+**Apply.** Acquire the single-writer fence; read history and fold terminal outcomes; execute the ordered operations, reusing terminal outcomes and appending each outcome; provider steps run in order, then checkout restore, then squash-safe branch cleanup; release the fence; when a telemetry capability is injected, extract the harness session statistics and append the telemetry records without changing any step outcome; render the applied summary and exit 0.
 
 **Re-run after restart.** Recover or acquire the fence; read history; reuse every terminal outcome; re-observe provider state only where no terminal outcome exists or a prior outcome failed; perform zero duplicate mutations; render converging terminal outcomes.
 
@@ -300,7 +324,7 @@ createCloseoutCommandRuntime(composition): CloseoutCommandRuntime
 
 ### 4.4 Data Architecture
 
-The plan and output are bounded contract data. The durable record is one append-only `closeout.operation` record per attempted terminal operation under the store-scoped key `closeout.operations:<workItemRef>`; the payload schema is `delivery.closeout.operation.v1`. Each append payload is exactly one operation record; a verified read collects every ledger record under the key and folds the event history. The first terminal outcome per operation identity is authoritative; a failed record is retained but not terminal. No schema-version bump, migration, or derived document is introduced.
+The plan and output are bounded contract data. The durable record is one append-only `closeout.operation` record per attempted terminal operation under the store-scoped key `closeout.operations:<workItemRef>`; the payload schema is `delivery.closeout.operation.v1`. Each append payload is exactly one operation record; a verified read collects every ledger record under the key and folds the event history. The first terminal outcome per operation identity is authoritative; a failed record is retained but not terminal. The injected telemetry capability writes additive `harness.telemetry` records under the store-scoped record key per work item (one record per captured session group) and the capture key per run; those records are statistics and identity references only, and the closeout transaction itself introduces no schema-version bump, migration, or derived document.
 
 | Constant | Value | Rule |
 |---|---|---|
@@ -328,6 +352,8 @@ The plan and output are bounded contract data. The durable record is one append-
 - **`CloseoutStateRuntime`** — fence acquisition/release, append, and verified history read over the real `StateStorePort` ledger.
 - **`createCloseoutComposition(options)`** — builds the production composition from a raw provider source (`github`, `jira`, `gitlab`, or `declared`), an existing or constructible `GitBranchSeam`, and a `StateStorePort`; its `planFacts` performs the read orchestration once, then the engine plans and applies over the bridge runtimes.
 - **`createCloseoutStateRuntime(store)`** — bridges the fenced store to `appendCloseoutOutcome` and `readCloseoutHistory`.
+- **`CloseoutTelemetryRuntime`** — the optional injected, non-gating telemetry capability. `extract({ workItemRef, runId })` returns a `HarnessResult<HarnessTelemetryCapture>`; `append(capture)` returns a state result carrying the appended and skipped counts.
+- **`CloseoutTelemetryDisclosure`** — the bounded applied-payload disclosure under `telemetryCapture`: captured, degraded, and failed counts, closed warning reasons, and an optional session truncation mark.
 - **`createCloseoutCommandRuntime(composition)`** — composes the pure plan and apply orchestrator over injected plan facts and runtimes.
 
 ## 5. Non-Functional Requirements
@@ -341,7 +367,7 @@ The plan and output are bounded contract data. The durable record is one append-
 - **Idempotency.** Deterministic identities and terminal-outcome reuse prevent duplicate writes; failed writes are safe to retry because every operation is idempotent by construction.
 - **Capability honesty.** Unsupported operations are declared gaps with valid reasons and can never be reported as success.
 - **Runtime confinement.** The git seam is one exact, reason-bearing adapter I/O entry; the read-only repository reader remains no-spawn.
-- **No session-content exposure.** Closeout reads no session database or harness store.
+- **No session-content exposure.** Telemetry capture reads the configured harness store read-only (query-only pragma before the first opencode read, file reads for Claude Code) and emits numeric statistics and identity references only. No prompt, message body, transcript, diff, tool output, or credential material enters a record or the output, and closeout performs no administration on a live session store.
 - **Output redaction.** The single serialization chokepoint covers machine and human output; evidence is bounded and contains no comment bodies, titles, raw payloads, secrets, environment values, or command arguments.
 
 ### 5.2 Performance & Scalability
@@ -380,11 +406,11 @@ The battery is offline and hermetic: no live provider credentials, network calls
 
 ### 7.1 Configuration
 
-Closeout adds no configuration key. The v1 integration base is the compiled constant `main-tools`; the merged request's target ref takes precedence and is the normal path for installed projects. Adding a configuration key is a recorded revisit trigger. The lifecycle label disposition, protected-ref set, caps, outcomes, and operation vocabulary are compiled contract data. Provider addressing and credentials come from the existing configured instance and credential port.
+Closeout adds no configuration key. The v1 integration base is the compiled constant `main-tools`; the merged request's target ref takes precedence and is the normal path for installed projects. Adding a configuration key is a recorded revisit trigger. The lifecycle label disposition, protected-ref set, caps, outcomes, and operation vocabulary are compiled contract data. Provider addressing and credentials come from the existing configured instance and credential port. Harness telemetry capture consumes the typed `harness` branch for store locations and the deny-by-default environment allowlist; closeout adds no key of its own.
 
 ### 7.2 Observability
 
-The append-only `closeout.operation` ledger is the durable audit trail; a verified read reconstructs the transaction history. The command reports counts by outcome, the ordered gap list with reasons, truncation markers, the resolved base, and the selected delivery request. Evidence names only refs, provider entity identities, label names, operation names, counts, booleans, and classified failure codes/classes. Human mode renders a deterministic digest; failure diagnostics go to the error stream with the classified identity. No telemetry is sent to a network sink.
+The append-only `closeout.operation` ledger is the durable audit trail; a verified read reconstructs the transaction history. The command reports counts by outcome, the ordered gap list with reasons, truncation markers, the resolved base, and the selected delivery request. When capture runs, the applied payload also discloses captured, degraded, and failed session counts, closed warning reasons, and any session truncation mark; those counts never alter a step outcome or verdict. Evidence names only refs, provider entity identities, label names, operation names, counts, booleans, and classified failure codes/classes. Human mode renders a deterministic digest; failure diagnostics go to the error stream with the classified identity. No telemetry is sent to a network sink.
 
 ### 7.3 Cost & Infrastructure
 
@@ -396,6 +422,7 @@ Closeout adds no runtime dependency, service, daemon, or scheduled job. It reuse
 - **Depends on** the provider client seeds ([Provider Client Seeds](feature-provider-client-seeds.md)) for GitHub, Jira, and GitLab reads and the GitHub/Jira write slices.
 - **Depends on** the state layer ([State Layer](feature-state-layer.md)) for the append-only ledger, verified reads, and fences.
 - **Depends on** the result contract ([Result Contract](feature-result-contract.md)) for the envelope, classification chain, error table, and redaction.
+- **Depends on** the harness adapter seam ([Harness Adapters](feature-harness-adapters.md)) for the injected telemetry capability, read-only extraction, and the additive `harness.telemetry` record shape; capture is optional and non-gating.
 - **Depends on** the adapter conformance suite ([Adapter Conformance](feature-adapter-conformance.md)) for the eight-operation registry and write execution.
 - **Consumed by** coordinators and delivery agents performing post-merge closeout; the later capsule-completion and closeout-promotion story consumes the delivered transaction.
 - **Risk — provider write semantics diverge:** mitigated by offline write fixtures, trap catalogs, declared gaps, and capability-gated conformance.
@@ -424,3 +451,8 @@ Closeout adds no runtime dependency, service, daemon, or scheduled job. It reuse
 See also: [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Conformance Suite](feature-adapter-conformance.md), [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [repository glossary](../../overview/glossary.md), [TDR-0008](../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 **Change record:** `doc/changes/2026-11/2026-11-01--GH-183--closeout-v1-branch-cleanup/`.
+
+## Related
+
+- [Harness Adapters](feature-harness-adapters.md) provides the non-gating, idempotent telemetry capture point after the terminal steps: extraction reads the harness store read-only and the additive `harness.telemetry` records carry numeric statistics only; capture outcomes are disclosed in the bounded output and never change a step, summary, or verdict.
+- [Result Contract and Error Table](feature-result-contract.md) owns the `harness` error family raised by the adapters and the delivery-result token projection used by classification.

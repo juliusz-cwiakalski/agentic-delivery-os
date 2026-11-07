@@ -1,0 +1,7 @@
+harness:
+  kind: opencode
+  stores:
+    opencode:
+      databasePath: /bind-mount/synthetic-store/opencode.db
+    claude-code:
+      sessionDirectory: /bind-mount/synthetic-sessions
