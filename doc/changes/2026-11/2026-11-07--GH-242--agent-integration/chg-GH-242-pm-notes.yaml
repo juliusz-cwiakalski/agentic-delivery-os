@@ -67,3 +67,9 @@ notes:
   - text: "Plan phase 1 complete: executable entrypoint, root/command help and version, fallback.internal composition honesty, static help coverage inventory. Commit 9b6fdbfc. Tests: 150 pass / 0 fail across the phase-1 suites; forbidden-literals 27 pass; install 55/55; pnpm typecheck green."
     type: info
     date: "2026-11-07"
+  - text: "Plan phase 2 complete: delivery-session guard reversal and commit.session.context-refused retirement (commit domain six rows to five; machine table, documented table, corpora, fixtures, and sync check aligned); harness one-shot isolation retained. Commit 771acc8a. Tests: 219 pass / 0 fail across the phase-2 suites; error-table-sync entries=104 documented=104; pnpm typecheck green."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 3 complete: completion stages plan scope union the change folder, plan-absent standalone commit stages the change folder, the pm-notes transition is written before the commit act with pre-write restore on failure, and the legacy post-commit window converges without a second commit. Commit 6d743956. Tests: 358 pass / 0 fail across commit/phase/pm-notes suites; phase-3 suites 37 pass; doc-conformance scope: behavior-spec 3 pass; pnpm typecheck green."
+    type: info
+    date: "2026-11-07"
