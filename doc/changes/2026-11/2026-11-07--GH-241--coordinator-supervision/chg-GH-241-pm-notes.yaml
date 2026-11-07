@@ -4,8 +4,8 @@ delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-07T11:55:00Z", completed: "2026-11-07T12:04:00Z" }
   specification: { started: "2026-11-07T12:05:00Z", completed: "2026-11-07T12:58:27Z" }
-  test_planning: { started: "2026-11-07T12:36:00Z", completed: null }
-  delivery_planning: { started: null, completed: null }
+  test_planning: { started: "2026-11-07T12:36:00Z", completed: "2026-11-07T13:15:27Z" }
+  delivery_planning: { started: "2026-11-07T13:16:00Z", completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -56,4 +56,7 @@ notes:
     date: "2026-11-07"
   - text: "Specification iteration 2 complete (43 ACs, 13 DECs preserved): AC-F1-2 now applies only to an uncontended state dir; resume ownership is pinned (harness resume absent -> spawn-fresh session-interrupted with no error; harness spawn gap -> delivered harness identity exit 1; process alive/kill gap -> coordinator.process.capability-gap exit 2; progress absent -> unknown class); reserved-slot predicate is payload-only (`decision-needed` + owner + lane=coordinator + `<coordinatorId>#<budgetEpochId>`); only `woken` persists and consumes the one-wake budget while delivery-failed/answered-before-wake/no-pickup are tick results; `coordinator.stuck.reason` is a closed field; new `coordinator.fence` record (EVT-7, DM-11) carries acquisition/release/stale-takeover evidence; exact error-table allowlist addition corrected to exactly two two-segment codes (`coordinator.already-running`, `coordinator.restart-budget-exhausted`, set 22→24; table 99→105) because the other four coordinator identities are already three-segment."
     type: "decision"
+    date: "2026-11-07"
+  - text: "test_planning iteration 2 complete: test plan v1.1 has 66 TCs, 43/43 AC coverage with no orphans, Scenario Index/Details/Automation Plan all 66, SC-M1-25 clause map preserved, no remaining spec gaps. Added TCs for the coordinator.fence record and the closed stuck reason; wake/capability/reserved-slot/allowlist TCs updated to the pinned contracts. Only GAP-T1 (implementation plan absent) remains as a delivery-planning input."
+    type: "info"
     date: "2026-11-07"
