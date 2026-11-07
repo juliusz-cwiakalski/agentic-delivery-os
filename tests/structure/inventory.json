@@ -89,6 +89,7 @@
     "src/provider/loop.ts",
     "src/provider/parks.ts",
     "src/provider/peak.ts",
+    "src/provider/profile.ts",
     "src/provider/quota.ts",
     "src/provider/validate.ts",
     "src/state/artifact-boundary.ts",

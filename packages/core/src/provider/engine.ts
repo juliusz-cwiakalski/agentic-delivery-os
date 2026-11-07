@@ -10,6 +10,8 @@ import type {
   CombinedProviderCondition,
   CredentialPort,
   CredentialReference,
+  ProfileProbePort,
+  ProfileProviderAvailability,
   ProviderAnnouncementRecord,
   ProviderChain,
   ProviderClock,
@@ -52,6 +54,37 @@ export type ProviderEngineDependencies = {
   readonly stateStore?: StateStorePort;
   readonly newFenceToken?: () => string;
 };
+
+/**
+ * The profile-probe seam over the engine v1 condition vocabulary (GH-234 F-4).
+ *
+ * The caller supplies the availability verdict per provider (the engine's
+ * condition evaluation or a fixed fact set); memoization per resolution pass is
+ * the selection engine's responsibility, so a shared provider is probed once.
+ */
+export const createProfileProbePort = (
+  evaluate: (providerName: string) => ProfileProviderAvailability,
+): ProfileProbePort => ({ probe: evaluate });
+
+/** A fixed-facts probe seam for replay/idempotence suites. */
+export const createProviderFactsProbe = (
+  facts: Readonly<Record<string, ProfileProviderAvailability>>,
+): ProfileProbePort =>
+  createProfileProbePort(
+    (providerName) =>
+      facts[providerName] ?? {
+        available: false,
+        condition: "provider-outage",
+        blockers: [
+          {
+            kind: "condition",
+            value: "provider-outage",
+            detail: `provider ${providerName} has no supplied availability fact`,
+          },
+        ],
+        source: `provider ${providerName}: no fact`,
+      },
+  );
 
 export type ProviderEngine = {
   readonly resolve: (input: ProviderResolveInput) => Promise<ProviderResolveResult>;

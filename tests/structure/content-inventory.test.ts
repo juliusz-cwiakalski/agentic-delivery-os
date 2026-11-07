@@ -942,7 +942,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "severityForAnnouncementCode",
   ],
   "core/src/provider/chain.ts": ["resolveProviderChain"],
-  "core/src/provider/engine.ts": ["createProviderEngine"],
+  "core/src/provider/engine.ts": [
+    "createProfileProbePort",
+    "createProviderEngine",
+    "createProviderFactsProbe",
+  ],
   "core/src/provider/conditions.ts": ["combineProviderConditions"],
   "core/src/provider/parks.ts": [
     "announcementEvidence",
@@ -964,6 +968,15 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readProviderParkViews",
   ],
   "core/src/provider/peak.ts": ["evaluatePeakWindow", "utcSecondsOfDay"],
+  "core/src/provider/profile.ts": [
+    "createProfileEvent",
+    "familyDiversityAllowed",
+    "profileEventIdentity",
+    "projectProfileEvidence",
+    "scoreProfileTask",
+    "selectProfile",
+    "targetSeatName",
+  ],
   "core/src/provider/loop.ts": ["runProviderLoop"],
   "core/src/provider/quota.ts": [
     "classifyQuotaTransport",

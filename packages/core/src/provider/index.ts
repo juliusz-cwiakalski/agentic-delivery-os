@@ -19,12 +19,28 @@ export {
 } from "./chain.js";
 export { combineProviderConditions } from "./conditions.js";
 export {
+  createProfileProbePort,
   createProviderEngine,
+  createProviderFactsProbe,
   type ProviderEngine,
   type ProviderEngineDependencies,
   type ProviderQuotaInput,
   type ProviderResolveInput,
 } from "./engine.js";
+export {
+  createProfileEvent,
+  familyDiversityAllowed,
+  profileEventIdentity,
+  projectProfileEvidence,
+  scoreProfileTask,
+  selectProfile,
+  targetSeatName,
+  type ProfileEventInput,
+  type ProfileHeuristicPolicy,
+  type ProfileSelectionInput,
+  type ProfileSelectionOptions,
+  type ProfileTaskFacts,
+} from "./profile.js";
 export { type ProviderLoopInput, type ProviderLoopResult, runProviderLoop } from "./loop.js";
 export {
   type AnnouncementInput,

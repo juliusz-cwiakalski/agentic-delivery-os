@@ -58,3 +58,6 @@ notes:
   - text: "Plan phase 2 complete (phase-1 commit cb8c4285): typed provider.profiles catalog branch (tiers/profiles/seats/preferenceChain/pacing/watch/envRecord) using record field kinds, shipped empty by DEFAULT (DEC-9), and pure fail-closed parse/validate in provider/validate.ts (unknown refs, duplicate chain/priority, closed pacingClass/capability, 0..100 thresholds, watch credential refs). Gates green: pnpm typecheck; provider-profile-config 18 pass, config-schema/provider-contract 21 pass, packed-config/config-default-positions 9 pass; content-inventory 6 pass."
     type: "info"
     date: "2026-11-07"
+  - text: "Plan phase 3 complete (phase-2 commit a79bdb9f): pure selection engine (capability gate first, declared-order eligibility, lazy per-pass memoized probes, probe failure never availability, one deterministic selection/ineligible event), declarative heuristic scoring helper with policy supplied as data, and the probe seam over the engine condition vocabulary. Fixtures for selection/probes/legacy groups 1-2. Gates green: pnpm typecheck; selection/probes/legacy suites 42 pass / 0 fail (NFR-6 measured under 50ms)."
+    type: "info"
+    date: "2026-11-07"
