@@ -3,10 +3,10 @@ ados_distribution: internal
 id: SPEC-PROVIDER-ENGINE
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with eight skip reasons, UTC peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider error identities, and the pure-core / provider-quota adapter boundaries."
+summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with eight skip reasons, UTC peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider-engine error identities, and the pure-core / provider-quota adapter boundaries."
 links:
   related_changes: ["GH-182", "GH-234", "GH-175", "GH-176", "GH-224", "GH-231"]
   related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007"]
@@ -206,7 +206,7 @@ Consequently a configuration-resolution failure (`config-invalid` with its class
 
 ### Error taxonomy
 
-The provider kind carries five error identities, classified by exact code:
+The provider kind carries five provider-engine error identities, classified by exact code:
 
 | Code | Category | Retryable | Projection |
 |------|----------|-----------|------------|
@@ -216,7 +216,7 @@ The provider kind carries five error identities, classified by exact code:
 | `provider.chain.empty` | user | false | user-validation (exit 1) |
 | `provider.chain.invalid` | user | false | user-validation (exit 1) |
 
-`provider.outage` covers quota transport, non-auth HTTP, and malformed-response failures, a chain that cannot supply a future resume time for a reason other than an indeterminate quota verdict, and a failed state write. A `quota` failure to resolve a credential uses the `config`-kind identity `config.credential.missing` (user, non-retryable, user-validation). Because the provider kind has more than one row, a provider failure must carry an exact declared code; an unclassified, undeclared, or wrong-kind provider failure is contained as `fallback.internal`, never mapped to the first provider row. Announcement codes are a separate closed vocabulary, not error-table rows. The machine and documented tables are synchronized in both directions.
+`provider.outage` covers quota transport, non-auth HTTP, and malformed-response failures, a chain that cannot supply a future resume time for a reason other than an indeterminate quota verdict, and a failed state write. A `quota` failure to resolve a credential uses the `config`-kind identity `config.credential.missing` (user, non-retryable, user-validation). Because the provider kind has more than one row, a provider failure must carry an exact declared code; an unclassified, undeclared, or wrong-kind provider failure is contained as `fallback.internal`, never mapped to the first provider row. Announcement codes are a separate closed vocabulary, not error-table rows. The machine and documented tables are synchronized in both directions. The profile-selection and `data-v1` env-record families add eight further provider-kind identities documented in [Provider Profiles and Watching](feature-provider-profiles.md).
 
 ## Technical Architecture & Codebase Map
 
@@ -240,10 +240,10 @@ Pure provider policy lives in the runtime-neutral `@delivery-os/core/provider` s
 | `packages/core/src/provider/engine.ts` | Engine composition over injected seams: `resolve`, `quota`, and `parks`. |
 | `packages/core/src/provider/index.ts` | Public pure provider-engine surface. |
 | `packages/adapters/src/provider-quota/index.ts` | Injectable quota transport and native-fetch production wrapper: bounded GET, `redirect: manual`, in-memory bearer header, no storage. |
-| `packages/cli/src/commands/provider.ts` | Grammar and handlers for `resolve`, `quota`, and `parks list`. |
+| `packages/cli/src/commands/provider.ts` | Grammar and handlers for `resolve`, `quota`, and `parks list`; the same command file hosts the provider-family profile and watch subcommands specified in [Provider Profiles and Watching](feature-provider-profiles.md). |
 | `packages/cli/src/edge.ts` | Wires an injected provider composition (clock, credential port, quota transport, sleep seam, and state store) into the engine for the provider command. |
 | `packages/core/src/config/catalog.ts` / `defaults.ts` | Provider catalog branch and shipped overridable defaults. |
-| `packages/core/src/contracts/error-table.ts` | The five provider rows and exact-code provider classification. |
+| `packages/core/src/contracts/error-table.ts` | The five provider-engine rows and exact-code provider classification. |
 
 ### Data architecture
 
@@ -260,7 +260,7 @@ Persistence occurs only in a mutating `resolve` with a state store. It acquires 
 - The `provider-quota` adapters subpath is the single admitted runtime-API edge for the quota request. It is an exact, reason-bearing entry in the runtime-API confinement rule; it is not a secret-read allowlist entry, and the secret-read boundary admits no entry from this subpath.
 - The host/binary composition injects the production credential port and quota transport; the CLI composition edge accepts the injected provider composition and wires its ports into the engine. Tests inject fakes. No production module imports the credential-port or quota-transport factories yet, and the CLI edge does not construct them.
 - The state layer owns ledger framing, fences, verified reads, and atomic document replacement; the provider engine only supplies record payloads and the fold.
-- Model-profile selection, harness spawn, non-UTC timezones, background timers, spend reporting, and MCP/OpenCode provider surfaces are outside this feature.
+- Model-profile selection (specified in [Provider Profiles and Watching](feature-provider-profiles.md)), harness spawn, non-UTC timezones, background timers, spend reporting, and MCP/OpenCode provider surfaces are outside this feature.
 
 ### API and interface contracts
 
@@ -283,7 +283,7 @@ The quota transport contract is one `send` call receiving the endpoint, method `
 | Bounded evidence | Park and announcement evidence is at most 1024 serialized bytes and 20 fields, drawn only from the closed allowlists (8 park fields; 8 base plus 3 announcement fields); announcement evidence is projected through the 11-field allowlist at runtime, so non-allowlisted keys are dropped. |
 | Idempotence | Re-evaluating an unchanged park generation appends zero duplicate records; repeated `parks list` has zero side effects; repeated `quota` performs zero state writes. |
 | Expiry correctness | A park is inactive exactly at `expiresAt`; TTL and chain parks have an expiry strictly after creation; no park is created with a past or absent expiry. |
-| Error-table synchronization | The five provider rows agree between the machine table and the documented table in both directions; provider classification is exact-code and total with `fallback.internal` containment. |
+| Error-table synchronization | The five provider-engine rows agree between the machine table and the documented table in both directions; provider classification is exact-code and total with `fallback.internal` containment. |
 | Evaluation cost | Pure evaluation of 100 provider entries completes within 50 ms on the reference environment, excluding quota transport time. |
 
 ## Quality Assurance Strategy
@@ -318,7 +318,7 @@ Adding a provider is a descriptor plus a credential reference, not a code branch
 
 ## Dependencies & Risks
 
-- **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, the five provider identities, exact-code classification, exit projection, and the redaction chokepoint.
+- **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, the five provider-engine identities, exact-code classification, exit projection, and the redaction chokepoint.
 - **Depends on** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for the typed catalog, layered resolution, provenance, and shipped defaults.
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for the append-only ledger, fences, verified reads, and atomic derived-document replacement.
 - **Depends on** the credential port and runtime confinement ([feature-adapter-ports.md](feature-adapter-ports.md), [feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)).
@@ -351,6 +351,6 @@ Adding a provider is a descriptor plus a credential reference, not a code branch
 | Blocked lane | A delivery or queue readiness failure, distinct from a provider park, which always carries a resume time. |
 | Provider parks projection | The rebuildable derived document `provider-parks.json`, folded by park name from verified `provider.park` ledger records. |
 
-See also: [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [provider conditions and parks guide](../../guides/provider-conditions-and-parks.md), the [repository glossary](../../overview/glossary.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md), and [ADR-0007](../../decisions/ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md).
+See also: [Provider Profiles and Watching](feature-provider-profiles.md), [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [provider conditions and parks guide](../../guides/provider-conditions-and-parks.md), the [repository glossary](../../overview/glossary.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md), and [ADR-0007](../../decisions/ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md).
 
 **Change record:** `doc/changes/2026-10/2026-10-31--GH-182--provider-v1/`.
