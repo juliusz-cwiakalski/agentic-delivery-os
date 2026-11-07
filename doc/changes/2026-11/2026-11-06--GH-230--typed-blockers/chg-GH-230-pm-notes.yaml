@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-06T13:05:00Z", completed: "2026-11-07T10:45:00Z" }
   quality_gates: { started: "2026-11-07T10:50:00Z", completed: "2026-11-07T12:05:00Z" }
   dod_check: { started: "2026-11-07T12:10:00Z", completed: "2026-11-07T12:20:00Z" }
-  pr_creation: { started: "2026-11-07T12:25:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-11-07T12:25:00Z", completed: "2026-11-07T12:45:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/264" }
 decisions:
   - text: "Scope boundary from ticket pinned decisions (binding, not re-derived): GH-230 delivers the typed question channel (publish/list/answer as state records), audience routing with confused-deputy guard, credential name-only guard, digest+brief ranking integration, and laneResume mode recording conditioned on the harness adapter resume-injection capability flag. Application actors (daemon M1-S18, coordinator loop M1-S23, dispatch --resume) are downstream consumers; v0 application path is exercisable over injected facts, mirroring the GH-229 v0-posture precedent."
     date: "2026-11-06"
