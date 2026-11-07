@@ -7,7 +7,8 @@ written `<binary>` per the pack conventions
 working name and the naming audit, lives in
 [../../cli-command-registry.md](../../cli-command-registry.md). After M1
 the bash stack remains installed as fallback with deprecation pointers
-(removal is M4-S5).
+(removal is M4-S5). `deliver-ticket.sh` and `ceo-loop.sh` remain retained
+primary entry points.
 
 ## NAME
 
@@ -23,7 +24,13 @@ the bash stack remains installed as fallback with deprecation pointers
 
 ## DESCRIPTION
 
-One command-line surface over a shared typed core. Turns tickets into
+One command-line surface over a shared typed core. The executable is a
+non-installed Bun bin with a `main`/composition entry; it is not added to the
+installer. Root `--help` and `--version` are self-description only: zero state,
+network, git, or configuration reads and zero writes. The entrypoint composes
+exactly the prompt-required commands; an uncomposed invocation fails closed
+through `fallback.internal` (platform, exit 2). See
+[commands/entrypoint.md](commands/entrypoint.md). Turns tickets into
 reviewed, tested, merged deliveries and manages the surrounding delivery
 factory: attention digests, truth engines, machine-readable plans, the
 queue and lanes, the resident dispatch daemon, provider routing, merge
@@ -49,13 +56,19 @@ stable key=value summary, the replacement emits the same shape.
 | `verify change` (M0-S8) | `<binary> verify change <ref>` |
 | `verify gates` (M0-S9) | `<binary> verify gates <ref>` |
 | `verify deploy` (M1-S4) | `<binary> verify deploy <ref>` |
-| `merge` (M1-S4) | `<binary> merge <ref> [--dry-run]` |
+| `merge` (M1-S4) | `<binary> merge <ref> [--dry-run]` — the lifecycle merge path |
 | `closeout` (M0-S14, M1-S12) | `<binary> closeout <ref> [--apply]` |
 
 `phase complete <ref> <phase>` (M0-S10, M1-S14) performs the
 record-plus-commit atomically for the completed phase's pending work by
 default (`--no-commit` records the transition alone; config disables
-per project).
+per project). The completion runs inside a delivery session. Its staging set
+is the mapped plan-phase scope union the change folder; a plan-absent
+standalone commit may stage the change folder; unrelated strays are never
+staged. The pm-notes transition is written before the commit act and the
+pre-write bytes are restored if the act fails. The commit domain is five rows.
+`plan validate` accepts and echoes an optional non-empty `phases[].summary`;
+omission stays valid.
 
 ### See
 

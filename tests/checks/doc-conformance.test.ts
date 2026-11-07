@@ -128,3 +128,117 @@ describe("TC-DOCREC-004 scope: behavior-spec phrase-table rows", () => {
     expect(detected).toBe(true);
   });
 });
+
+const DOC_REQUIREMENTS: readonly {
+  readonly page: string;
+  readonly required: readonly string[];
+  readonly stale?: readonly string[];
+}[] = [
+  {
+    page: "AGENTS.md",
+    required: [
+      "commit` primitive",
+      "phase complete",
+      "phase list",
+      "blockers publish",
+      "deliver-ticket.sh",
+      "ceo-loop.sh",
+    ],
+  },
+  {
+    page: "doc/guides/change-lifecycle.md",
+    required: [
+      "commit` primitive",
+      "phase complete",
+      "phase reopen",
+      "typed blocker",
+      "deliver-ticket.sh",
+      "ceo-loop.sh",
+    ],
+    stale: [
+      "all commits route through `@committer`",
+      "No agent prompt other than `@committer` performs a direct `git commit`",
+    ],
+  },
+  {
+    page: "doc/guides/unified-change-convention-tracker-agnostic-specification.md",
+    required: ["phase complete", "phase reopen", "pm-notes `notes:`", "PR URL"],
+  },
+  {
+    page: "doc/guides/delivery-modes.md",
+    required: ["merge` primitive", "deliver-ticket.sh", "ceo-loop.sh", "retained"],
+    stale: ["squash-merge (`gh pr merge --squash` on GitHub, `glab mr merge"],
+  },
+  {
+    page: "doc/guides/autonomous-batch-delivery.md",
+    required: ["retained", "merge` primitive"],
+  },
+  {
+    page: "doc/planning/concepts/automated-commit.md",
+    required: ["commit` command", "phase complete", "plan-phase"],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m1/man-page.md",
+    required: [
+      "--version",
+      "entrypoint",
+      "delivery session",
+      "five rows",
+      "phases[].summary",
+      "retained",
+    ],
+  },
+];
+
+const PROMPT_REQUIRED_PAGES = [
+  "entrypoint",
+  "status",
+  "brief",
+  "queue",
+  "lanes",
+  "blockers",
+  "phase",
+  "commit",
+  "lint",
+  "plan",
+  "verify-change",
+  "verify-gates",
+  "verify-deploy",
+  "merge",
+  "closeout",
+  "spend",
+  "retro",
+] as const;
+
+describe("TC-DOCREC-002 scope: docs guides, man page, and reference pages", () => {
+  test("every reconciled guide carries its required current-truth phrases", () => {
+    const failures: string[] = [];
+    for (const requirement of DOC_REQUIREMENTS) {
+      const text = read(requirement.page);
+      for (const phrase of requirement.required) {
+        if (!text.toLowerCase().includes(phrase.toLowerCase())) {
+          failures.push(`${requirement.page}: missing ${phrase}`);
+        }
+      }
+      for (const phrase of requirement.stale ?? []) {
+        if (text.includes(phrase)) failures.push(`${requirement.page}: stale ${phrase}`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test("every prompt-required command reference page documents --help", () => {
+    const failures: string[] = [];
+    for (const page of PROMPT_REQUIRED_PAGES) {
+      const text = read(`doc/planning/oss-tooling/milestones/m1/commands/${page}.md`);
+      if (!text.includes("--help")) failures.push(`${page}: missing --help`);
+      if (!text.includes("--version")) failures.push(`${page}: missing --version`);
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test("the docs scope is non-vacuous: a missing phrase is detected", () => {
+    const text = read("AGENTS.md").replaceAll("phase complete", "");
+    expect(text.toLowerCase().includes("phase complete")).toBe(false);
+  });
+});

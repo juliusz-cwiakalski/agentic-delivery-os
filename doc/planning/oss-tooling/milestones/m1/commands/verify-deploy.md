@@ -67,3 +67,12 @@ $ <binary> verify deploy GH-305 --json | cat
 ## SEE ALSO
 
 [verify-gates.md](verify-gates.md), [merge.md](merge.md)
+
+## HELP
+
+`<binary> verify-deploy --help` prints usage, options, at least one example, exit codes,
+and a see-also pointer. Root `<binary> --help` and `<binary> --version` are
+self-description only: zero state, network, git, or configuration reads and
+zero writes. The executable is a non-installed Bun bin; see the
+[man page](../man-page.md).
+

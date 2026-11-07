@@ -40,9 +40,9 @@ unreadable durable evidence is a platform fault, never commit-absent: it
 completes exactly the missing side, never duplicates a record, and never
 manufactures a commit. See [commit.md](commit.md).
 
-The completion refuses to run inside a delivery session
-(`commit.session.context-refused`), with or without `--no-commit`; `list`
-and `reopen` are unaffected.
+The completion runs inside a delivery session, with or without
+`--no-commit`; `list` and `reopen` are unaffected. The completion carries no
+session refusal.
 
 ## OPTIONS
 
@@ -133,14 +133,29 @@ $ <binary> phase complete GH-310 delivery --json | cat
 Re-run of a completion that recorded the transition alone: an intentional
 no-op that cites the stored basis and creates no commit.
 
+## STAGING AND ORDERING
+
+A completion stages the mapped plan-phase scope union the change folder; a
+lifecycle phase without a plan-phase correspondence contributes only the
+change folder. The pm-notes transition is written before the commit act and
+the pre-write bytes are restored if the act fails.
+
 ## ERRORS
 
 `input.value.rejected`, `lint.*` (post-transition document conformance),
 `state.*` (ledger failures), `commit.staging-blocked-untracked`,
 `commit.commitlint-failed`, `commit.safety.secret-suspected`,
-`commit.safety.scan-unavailable`, `commit.atomic-abort`,
-`commit.session.context-refused`.
+`commit.safety.scan-unavailable`, `commit.atomic-abort`.
 
 ## SEE ALSO
 
 [commit.md](commit.md), [lint.md](lint.md), [verify-change.md](verify-change.md)
+
+## HELP
+
+`<binary> phase --help` prints usage, options, at least one example, exit codes,
+and a see-also pointer. Root `<binary> --help` and `<binary> --version` are
+self-description only: zero state, network, git, or configuration reads and
+zero writes. The executable is a non-installed Bun bin; see the
+[man page](../man-page.md).
+

@@ -119,3 +119,12 @@ $ <binary> plan validate GH-309 --json | cat
 ## SEE ALSO
 
 [lint.md](lint.md), [queue.md](queue.md), [commit.md](commit.md)
+
+## HELP
+
+`<binary> plan --help` prints usage, options, at least one example, exit codes,
+and a see-also pointer. Root `<binary> --help` and `<binary> --version` are
+self-description only: zero state, network, git, or configuration reads and
+zero writes. The executable is a non-installed Bun bin; see the
+[man page](../man-page.md).
+

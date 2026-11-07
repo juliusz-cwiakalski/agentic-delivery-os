@@ -24,7 +24,7 @@ real commits.
 
 ## Motivation
 
-- The commit process is agent-managed today (`@committer` subagent):
+- The commit process is a typed primitive today (the `commit` command, with the thin `@committer` as an executor):
   a large system prompt plus a tool loop of 8-12 git round-trips with
   diff output echoing through context every turn — roughly 15-50k
   tokens per commit, plus dispatch overhead from the calling session,

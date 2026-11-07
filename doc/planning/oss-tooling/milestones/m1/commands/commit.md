@@ -142,15 +142,31 @@ $ <binary> commit GH-310 --json | cat
 {"schemaVersion":1,"runId":"r_01J8ZMB43D","exitCode":0,"timing":{"started":"2026-11-18T12:45:12Z","durationMs":1600},"data":{"changeRef":"GH-310","subject":"feat(GH-310): scheduler lease acquisition and hand-off","stagedFiles":["packages/core/src/scheduler/lease.ts"],"excluded":{"forbiddenPaths":[],"oversizedBinaries":[],"untrackedNotStaged":[],"noiseStripped":[],"scopeDrift":[]},"commitSha":"9d10b7c","messageSource":"template","transport":"none","atomic":false,"safety":{"completed":true,"findings":[]},"telemetry":{"emitted":true}}}
 ```
 
+## STAGING AND ORDERING
+
+The staging set is the mapped plan-phase scope union the change folder; a
+plan-absent standalone commit may stage the change folder; unrelated strays
+are never staged. For an atomic completion the pm-notes transition is written
+before the commit act and the pre-write bytes are restored if the act fails.
+
 ## ERRORS
 
 `commit.staging-blocked-untracked`, `commit.commitlint-failed`,
 `commit.safety.secret-suspected`, `commit.safety.scan-unavailable`,
-`commit.atomic-abort` (neither side landed; classified),
-`commit.session.context-refused`. A template fallback is success evidence
+`commit.atomic-abort` (neither side landed; classified). The commit surface
+runs inside a delivery session. A template fallback is success evidence
 (`messageSource: template`), never an error. Broken grammar resolves
 through `input.value.rejected`.
 
 ## SEE ALSO
 
 [phase.md](phase.md), [plan.md](plan.md)
+
+## HELP
+
+`<binary> commit --help` prints usage, options, at least one example, exit codes,
+and a see-also pointer. Root `<binary> --help` and `<binary> --version` are
+self-description only: zero state, network, git, or configuration reads and
+zero writes. The executable is a non-installed Bun bin; see the
+[man page](../man-page.md).
+

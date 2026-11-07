@@ -38,12 +38,14 @@ Every change flows through 11 phases. `@pm` orchestrates; phases are gated but c
 | 3. test_planning | `@test-plan-writer` | Create `chg-<ref>-test-plan.md` (traceable to AC) |
 | 4. delivery_planning | `@plan-writer` | Create `chg-<ref>-plan.md` (phased tasks) |
 | 5. dor_check | `@readiness-reviewer` | Adversarially critique spec+test-plan+plan vs ticket before delivery (DoR gate) |
-| 6. delivery | `@coder` | Execute plan phases, commit per phase |
+| 6. delivery | `@coder` | Execute plan phases, `commit` per plan phase, `phase complete` at the boundary |
 | 7. system_spec_update | `@doc-syncer` | Reconcile `doc/spec/**` with implementation |
 | 8. review_fix | `@reviewer` | Audit vs spec/plan; if FAIL → `@coder` remediates → re-review |
 | 9. quality_gates | `@runner` | Build/test/lint; if failures → `@fixer` → re-run |
 | 10. dod_check | `@pm` | Verify all AC met, all plan tasks done |
-| 11. pr_creation | `@pr-manager` | Create PR, assign to human, STOP |
+| 11. pr_creation | `@pr-manager` | Create PR, record its URL as a pm-notes `notes:` entry, STOP |
+
+Lifecycle commits route through the `commit` primitive (directly or through the thin `@committer`). Phase state is written only through the `phase` family: `phase list`, `phase complete`, `phase reopen`; never hand-edit timestamps, and record the PR URL as a pm-notes `notes:` entry. Typed blockers are published with `blockers publish`. `deliver-ticket.sh` and `ceo-loop.sh` remain retained primary entry points.
 
 Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 
@@ -65,7 +67,7 @@ Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 - `test-plan-writer` — author test plans with traceable coverage
 
 ### Implementation
-- `coder` — execute plan phases; delegates to `@designer`, `@decision-advisor`, `@committer`, `@runner`
+- `coder` — execute plan phases; commits through the `commit` primitive and runs `phase complete <ref> delivery` at the lifecycle boundary; delegates to `@designer`, `@decision-advisor`, `@runner`
 - `designer` — visual design and UI implementation
 - `editor` — content rewrites and translations
 
@@ -79,7 +81,7 @@ Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 ### Documentation & release
 - `doc-syncer` — reconcile system docs with completed changes
 - `meeting-organizer` — prepare agendas and summarize meeting docs
-- `committer` — create one Conventional Commit
+- `committer` — thin executor of the `commit` primitive; never stages or composes a message itself
 - `pr-manager` — create/update PR/MR; enrich with ticket context via MCP
 
 ### Specialized
