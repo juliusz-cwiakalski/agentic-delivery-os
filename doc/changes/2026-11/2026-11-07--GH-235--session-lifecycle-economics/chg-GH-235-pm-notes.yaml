@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: "2026-11-07T06:00:00Z", completed: "2026-11-07T06:30:00Z" }
   dor_check: { started: "2026-11-07T06:45:00Z", completed: "2026-11-07T07:30:00Z", verdict: "READY", iteration: 1, blocking_findings: 0, advisory_findings: 5 }
   delivery: { started: "2026-11-07T08:00:00Z", completed: "2026-11-07T12:30:00Z" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-11-07T13:00:00Z", completed: "2026-11-07T14:00:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -67,6 +67,9 @@ notes:
     date: "2026-11-07"
   - text: "Delivery deviations accepted (PM-validated): (1) 3 new error-table rows not 4 — test-plan wording conflation; WATCHDOG codes 3->4 is the 4/4 binding; reconciled in evidence log, review to verify. (2) exit digits typed once in contracts ECONOMICS_EXIT_*. (3) observational index exports/inventory/fixtures. (4) production sourcing seam = injected readSourcedSignals fact seam at edge (lane->session fact acquisition stays with M1-S9 dispatch per NG-4). (5) QUALITY-GATES NOTE: pnpm check here requires TMPDIR inside the repo (TMPDIR=$PWD/tmp/tmpdir) or ci-baseline-parity fails on cross-device hardlink in git clone --local"
     type: "risk"
+    date: "2026-11-07"
+  - text: "System spec update complete: NEW feature-session-lifecycle-economics.md (first-spec authoring, always-resolve rule); UPDATED watchdog-lane-contracts (sourced signals, GAP-T2 resolved, reachability flip), harness-adapters (sourcedSignals carriage, out-of-scope note), result-contract (4 watchdog + 2 dispatch rows, 86=86 verified), config-layer (lane branch), state-layer (2 record kinds), verify-change-exit-taxonomy (restart-budget-exceeded vs max-restarts disambiguation), monorepo-scaffold, nonfunctional, glossary, architecture-overview, 00-index. Stale-phrase sweep clean, 0 missing links, doc-distribution guard PASS. Zero residual gaps"
+    type: "info"
     date: "2026-11-07"
   - text: "Git state: branch fresh fork of origin/main-tools at a69b555e (GH-233 / M1-S11 delivery); 0 commits ahead, 0 behind, clean worktree; no resume sync needed"
     type: "info"

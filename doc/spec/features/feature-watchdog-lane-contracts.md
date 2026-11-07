@@ -3,15 +3,17 @@ ados_distribution: internal
 id: SPEC-WATCHDOG-LANE-CONTRACTS
 status: Current
 created: 2026-11-05
-last_updated: 2026-11-05
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The M1-S1 watchdog check family: `watchdog preflight <lane>` refuses dirty or non-base checkouts with named evidence and mutates nothing, `watchdog teardown <lane>` restores the lane's base checkout on every caller-invoked exit path and reports each action while verifying that agent-memory publications are committed or preserved (never discarded), and `watchdog liveness <lane>` ships contract-first with the verdict vocabulary, the declared signals shape, and the `watchdog.signals-absent` classification for absent sources (unknown, never guessed; CPU is never the only signal). A `watchdog` domain kind joins the closed error-table union with exactly three identities, every probe projects through the v1 envelope and the `{0, 1, 2}` exit taxonomy, and the surface checks rather than runs."
+summary: "The watchdog check family: `watchdog preflight <lane>` refuses dirty or non-base checkouts with named evidence and mutates nothing, `watchdog teardown <lane>` restores the lane's base checkout on every caller-invoked exit path and reports each action while verifying that agent-memory publications are committed or preserved (never discarded), and `watchdog liveness <lane>` evaluates adapter-sourced heartbeat age, session traffic, and token delta through the neutral harness-liveness bridge: a fully corroborated stall is the classified refusal `watchdog.liveness-stalled` at exit `1`, `progressing` is a success verdict at exit `0`, and genuinely absent sources keep `watchdog.signals-absent` at exit `2` (unknown, never guessed; CPU is never a signal). A `watchdog` domain kind joins the closed error-table union with exactly four identities, every probe projects through the v1 envelope and the `{0, 1, 2}` exit taxonomy, and the surface checks rather than runs."
 links:
-  related_changes: ["GH-221"]
+  related_changes: ["GH-221", "GH-235"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/watchdog.ts"
+    - "packages/core/src/contracts/harness.ts"
+    - "packages/core/src/contracts/economics.ts"
     - "packages/core/src/contracts/error-table.ts"
     - "packages/core/src/contracts/result.ts"
 ---
@@ -30,7 +32,7 @@ links:
 | `<binary> watchdog teardown <lane>` | Caller-invoked restoration | `ok` with a restoration report (exit `0`) or a classified failure |
 | `<binary> watchdog liveness <lane>` | Liveness contract probe | A sourced verdict (exit `0`/`1`) or `watchdog.signals-absent` (exit `2`) |
 
-Liveness is contract-first in M1-S1. The production edge wires **zero** signal sources, so every production liveness run classifies `watchdog.signals-absent` and emits no verdict. The verdict vocabulary additionally declares `stalled` and `progressing` as contract values whose signal-backed reachability arrives with M1-S15 (SC-M1-14).
+Liveness evaluates adapter-sourced progress facts. The watchdog composition accepts an injected `readSourcedSignals` seam; when supplied, it assembles the neutral harness-liveness report and projects the declared signal keys, so a sourced lane reaches `stalled` or `progressing`. When no source is supplied, or a harness declares its liveness kinds as gaps, the probe classifies `watchdog.signals-absent` and emits no verdict.
 
 ## 2. Business Context
 
@@ -84,19 +86,22 @@ Restoration failures are classified through existing identities (`input.value.re
 
 ### 3.4 Liveness (F-4)
 
-`watchdog liveness <lane>` evaluates the declared progress-signal shape `heartbeatAgeMs`, `tokenDelta`, `traffic`. The input type declares no CPU field, so a CPU-only reading can never satisfy the shape and can never classify `stalled`. `stalled` additionally requires corroboration: a heartbeat age at or beyond the declared bound together with `tokenDelta: 0` and `traffic: 0`. Any partial or progressing reading classifies `progressing`.
+`watchdog liveness <lane>` evaluates the declared progress-signal shape `heartbeatAgeMs`, `tokenDelta`, `traffic`. The adapter-sourced composition assembles the neutral harness liveness report and projects its entries: `heartbeat-age` to `heartbeatAgeMs` (milliseconds), `session-traffic` to `traffic`, and `token-delta` to `tokenDelta`. The delivered exact-three liveness-kind vocabulary (`session-traffic`, `worktree-activity`, `process`) is unchanged; heartbeat age and token delta are additive sourced-signal kinds carried beside it. An unsourced signal contributes no key and is never coerced to zero. The opencode adapter declares session traffic and process as liveness sources and heartbeat age and token delta as sourced-signal sources; worktree activity remains a declared opencode gap, and Claude Code declares every liveness kind and both sourced signals as gaps.
 
-Absent declared signal values classify as the absent outcome, which the command boundary maps to `watchdog.signals-absent` with exit `2`. No verdict key or value appears in that payload; the evidence-bearing summary states that the answer is unknown. The pure classifier implements the corroboration rule; the shipped composition wires zero signal sources, so no liveness run through the production edge reaches `stalled` or `progressing` until M1-S15 supplies them.
+The input type declares no CPU field, so a CPU-only reading can never satisfy the shape and can never classify a verdict; no CPU-derived value enters the projection or the evaluation. `stalled` requires corroboration: a heartbeat age at or beyond `WATCHDOG_STALL_HEARTBEAT_MS` (300000 ms) together with `tokenDelta: 0` and `traffic: 0`. Any partial or progressing reading classifies `progressing`, so a prefilling or resuming session with rising token delta or traffic never reads as stalled.
+
+`progressing` is a success verdict (`data.verdict`, exit `0`). A fully corroborated `stalled` is a classified refusal: `watchdog.liveness-stalled` on a failure envelope, exit `1`, no `data.verdict`, with the corroborating values carried as a bounded `key=value` corpus on the existing failure fields (`reason`, `heartbeatAgeMs`, `tokenDelta`, `traffic`, `stallBoundMs`). Absent declared signal values classify as the absent outcome, which the command boundary maps to `watchdog.signals-absent` with exit `2`; no verdict key or value appears in that payload and the evidence-bearing summary states that the answer is unknown.
 
 ### 3.5 Error-table binding (F-5)
 
-The `watchdog` domain kind joins the closed union with exactly three identities, appended after the existing rows:
+The `watchdog` domain kind joins the closed union with exactly four identities, appended after the existing rows:
 
 | Code | Category | Retryable | Consequence | Projection class | Exit |
 |---|---|---|---|---|---|
 | `watchdog.checkout-dirty` | `user` | `false` | `not_landed` | `user-validation` | `1` |
 | `watchdog.checkout-non-base` | `user` | `false` | `not_landed` | `user-validation` | `1` |
 | `watchdog.signals-absent` | `platform` | `true` | `not_landed` | `platform-provider` | `2` |
+| `watchdog.liveness-stalled` | `user` | `false` | `not_landed` | `user-validation` | `1` |
 
 The machine rows, their documented rows in [Result Contract and Error Table](feature-result-contract.md), and the true-positive corpus rows are bound in both directions by `error-table-sync`. No existing row changes.
 
@@ -106,18 +111,18 @@ The surface never dispatches a lane, spawns a session, kills a process, restarts
 
 ## 4. Verdict and Exit Matrix
 
-| Outcome | Verdict | Exit | Identity | Reachable in M1-S1 |
+| Outcome | Verdict | Exit | Identity | Reachable |
 |---|---|---|---|---|
 | Clean on-base checkout admitted | `ok` | `0` | — | Yes |
 | Teardown restored, publications verified | `ok` | `0` | — | Yes |
 | Dirty checkout | `refused` | `1` | `watchdog.checkout-dirty` | Yes |
 | Off-base checkout | `refused` | `1` | `watchdog.checkout-non-base` | Yes |
-| Stall (signal-corroborated) | `stalled` | `1` | — | No through the production edge — the classifier is delivered; sources arrive with M1-S15 |
-| Progressing (signal-corroborated) | `progressing` | `0` | — | No through the production edge — the classifier is delivered; sources arrive with M1-S15 |
+| Stall (signal-corroborated) | `stalled` | `1` | `watchdog.liveness-stalled` | Yes through the adapter-sourced composition |
+| Progressing (signal-corroborated) | `progressing` | `0` | — | Yes through the adapter-sourced composition |
 | No signal sources | none emitted | `2` | `watchdog.signals-absent` | Yes |
 | Grammar / invocation failure | none emitted | `1` | `input.value.rejected` / `fallback.invocation` | Yes |
 
-Refusal rows show the conceptual verdict `refused`; on the wire the machine representation is the refusal identity on a failure envelope with no `data.verdict`, per the exclusive `data`/`error` contract. A sourced `stalled` outcome has no declared error identity; M1-S15 must decide its machine representation (GAP-T2).
+Refusal rows show the conceptual verdict `refused`; on the wire the machine representation is the refusal identity on a failure envelope with no `data.verdict`, per the exclusive `data`/`error` contract. A sourced stall is the classified refusal `watchdog.liveness-stalled`; `progressing` remains a success payload, and `watchdog.signals-absent` remains the exit-`2` unknown answer.
 
 ## 5. Contract Data and Interfaces
 
@@ -128,23 +133,24 @@ Refusal rows show the conceptual verdict `refused`; on the wire the machine repr
 - `WATCHDOG_SIGNAL_KEYS` / `WatchdogSignals` — `heartbeatAgeMs`, `tokenDelta`, `traffic`; no CPU field.
 - `WATCHDOG_STALL_HEARTBEAT_MS` — the declared stall-corroboration bound (300000 ms).
 - `WATCHDOG_PROBES` / `WatchdogProbe` — `preflight`, `teardown`, `liveness`.
-- `WATCHDOG_ERROR_CODES` — the three identities.
+- `WATCHDOG_ERROR_CODES` — the four identities.
 - `WatchdogLaneRecord`, `WatchdogLaneRead`, `WatchdogGitPort`, `WatchdogGitFacts`, `WatchdogWorktreeEntry`, `WatchdogMemoryFact`, `WatchdogSignalSource`.
 - `WatchdogRestorationAction` (kind, observation, evidence), `WatchdogMemoryPublication` (path, status, evidence), `WATCHDOG_RESTORATION_ACTION_KINDS`, `WATCHDOG_MEMORY_STATUSES`.
 - `WatchdogVerdictData` (schema version, probe, lane, verdict, signals, evidence) and `WatchdogTeardownData` (verdict data plus `actions` and `memory`).
 
-The domain tier `packages/core/src/domain/watchdog.ts` is runtime-neutral and exposes the pure classification, restoration planning, liveness classification, signal merging, and data builders. The bounded git seam `packages/adapters/src/git/watchdog.ts` implements `WatchdogGitPort` inside the existing `@delivery-os/adapters/git` subpath with fixed argv, no shell, no network, bounded timeouts, and `SIGKILL`. The command module composes all three; the edge registers the family behind an optional `watchdog` composition that requires an injected lane reader, defaults to a production git seam, and wires zero signal sources.
+The domain tier `packages/core/src/domain/watchdog.ts` is runtime-neutral and exposes the pure classification, restoration planning, liveness classification, signal merging, and data builders. The neutral liveness assembly and bridge in `packages/core/src/domain/harness-liveness.ts` project adapter-sourced facts into the declared signal shape. The bounded git seam `packages/adapters/src/git/watchdog.ts` implements `WatchdogGitPort` inside the existing `@delivery-os/adapters/git` subpath with fixed argv, no shell, no network, bounded timeouts, and `SIGKILL`. The command module composes all three; the edge registers the family behind an optional `watchdog` composition that requires an injected lane reader, defaults to a production git seam, and composes the declared signal sources. A supplied `readSourcedSignals(lane)` seam wires the adapter-sourced bridge; an omitted seam declares no source and keeps the absent answer.
 
 ## 6. Non-Functional Behavior
 
-- **Evidence totality.** Every refusal, restoration action, memory entry, and verdict carries non-empty evidence. Failure evidence rides the failure summary; success evidence rides `data.evidence`.
+- **Evidence totality.** Every refusal, restoration action, memory entry, and verdict carries non-empty evidence. Failure evidence rides the failure summary; success evidence rides `data.evidence`. A corroborated stall carries the bounded signal corpus on the failure fields.
 - **Determinism.** Identical lane and checkout facts replay to identical verdict, evidence, action order, and exit. Evidence names branch names, refs, paths, and codes (and commit hashes for preserved commits); the test normalizer replaces only the temporary repository root and the volatile `runId`/`timing`.
+- **No CPU signal.** The signal shape has no CPU field, the bridge projects no CPU fact, and a CPU-only reading cannot classify a verdict.
 - **Offline.** Every behaviour test uses a real temporary repository (`mkdtemp`, `git init -b main`, fixed author, real `git worktree`), injected clock/brand/run-id, and buffer sinks. A fixture guard rejects any root equal to the live workspace.
 
 ## 7. Boundaries and Deferred Work
 
-- Real progress-signal ingestion and sourced `stalled`/`progressing` outcomes are M1-S15 (SC-M1-14).
-- Daemon consumption (M1-S18), supervise (M2-S2), the `lanes` surface, scheduling, dispatch, restart budgeting, and session kill are out of scope.
+- Adapter-level progress-signal sourcing, the sourced stall identity, restart budgeting, resume economics, and amplification derivation are delivered and documented in [Session Lifecycle Economics](feature-session-lifecycle-economics.md). The watchdog family consumes the sourced signal facts; it does not perform harness-store queries, restart a session, or evaluate economics.
+- Daemon consumption, supervise, the `lanes` surface, scheduling, dispatch, and session kill are out of scope. The watchdog surface checks and restores; it never dispatches a lane, spawns a session, kills a process, restarts, or supervises.
 - The lane record arrives through the injected reader; no state-layer import, contract change, or stored-record migration is involved. The v1 envelope, `{0, 1, 2}` projection, and branding seam are reused unchanged.
 - Lane-branch deletion and closeout branch cleanup remain the delivered `closeout` surface.
 
@@ -153,11 +159,10 @@ The domain tier `packages/core/src/domain/watchdog.ts` is runtime-neutral and ex
 - Change artifacts: `doc/changes/2026-11/2026-11-05--GH-221--watchdog-lane-contracts/` (spec, test plan, plan).
 - Binding check: `scripts/checks/error-table-sync.ts`; documented rows in [Result Contract and Error Table](feature-result-contract.md).
 - Test levels:
-  - Structure (`tests/structure/watchdog-contract.test.ts`, `watchdog-imports.test.ts`): exact verdict/signal/probe vocabularies, one-home constants, the three error identities, and tier/import boundaries.
-  - Behaviour (`tests/behaviour/watchdog-*.test.ts`): real temporary repositories for preflight admission/refusal, teardown restoration and memory preservation, liveness absence and corroboration, envelope/exit projection, grammar reuse, and the checks-not-runner assertion.
-  - Golden (`tests/golden/watchdog-output.test.ts`): committed normalized envelopes for admission, refusal, teardown, and signals-absent, with only the temporary repository root and volatile `runId`/`timing` normalized.
-  - Fixtures (`tests/fixtures/watchdog/`): a shared temporary-repository harness whose guard rejects any root equal to the live workspace.
-- Totals: 35 test cases cover 14/14 acceptance criteria.
+  - Structure (`tests/structure/watchdog-contract.test.ts`, `watchdog-imports.test.ts`, `economics-contract.test.ts`): exact verdict/signal/probe vocabularies, one-home constants, the four error identities, the exact-three harness liveness kinds with additive sourced-signal kinds, and tier/import boundaries.
+  - Behaviour (`tests/behaviour/watchdog-*.test.ts`, `economics-liveness-*.test.ts`, `economics-envelope.test.ts`): real temporary repositories for preflight admission/refusal, teardown restoration and memory preservation, sourced and absent liveness, the prefill matrix, the corroboration matrix, the stall identity, and envelope/exit projection.
+  - Golden (`tests/golden/watchdog-output.test.ts`): committed normalized envelopes for admission, refusal, teardown, progressing, stalled, and signals-absent, with only the temporary repository root and volatile `runId`/`timing` normalized.
+  - Fixtures (`tests/fixtures/watchdog/`, `tests/fixtures/economics/`): a shared temporary-repository harness whose guard rejects any root equal to the live workspace, plus liveness sourcing and economics fixtures.
 
 ## 9. Glossary
 
@@ -169,12 +174,15 @@ The domain tier `packages/core/src/domain/watchdog.ts` is runtime-neutral and ex
 | Foreign commit | A commit on a checkout that is not the lane's declared base; refused at preflight. |
 | Memory publication | An agent-memory write under `.ai/memory`; reported `committed` or `preserved` at teardown. |
 | Signals-absent | The classified "unknown" answer when no declared signal source is available; never a guessed verdict. |
-| Prefill | The early phase of a (re)started session; must never read as stalled. |
+| Sourced signal | A heartbeat-age or token-delta observation carried beside the exact-three harness liveness kinds and projected into the watchdog signal shape when a source exists. |
+| Corroborated stall | The only `stalled` combination: heartbeat age at or beyond the bound, zero token delta, and zero traffic. |
+| Prefill | The early phase of a (re)started session; a rising token delta or traffic classifies `progressing`, never `stalled`. |
 
-See also: [Result Contract and Error Table](feature-result-contract.md), [State Layer](feature-state-layer.md), [Branding Seam and Working Name](feature-branding-seam.md), [Closeout Transaction](feature-closeout.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+See also: [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [Result Contract and Error Table](feature-result-contract.md), [State Layer](feature-state-layer.md), [Branding Seam and Working Name](feature-branding-seam.md), [Closeout Transaction](feature-closeout.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
-**Change record:** `doc/changes/2026-11/2026-11-05--GH-221--watchdog-lane-contracts/`.
+**Change record:** `doc/changes/2026-11/2026-11-05--GH-221--watchdog-lane-contracts/`; sourced liveness and the stall identity: `doc/changes/2026-11/2026-11-07--GH-235--session-lifecycle-economics/`.
 
 ## Related
 
-- [Harness Adapters](feature-harness-adapters.md) provides the adapter-level liveness signal surface (session traffic, worktree activity, process) with declared absences; the watchdog stays zero-source and economics remain M1-S15.
+- [Harness Adapters](feature-harness-adapters.md) provides the adapter-level liveness signal surface (session traffic, worktree activity, process) and the additive sourced-signal declarations; the watchdog composes those facts and leaves absent sources at the exit-`2` unknown answer.
+- [Session Lifecycle Economics](feature-session-lifecycle-economics.md) documents the restart budget, resume economics, amplification derivation, and the outcome/identity/exit matrix that includes this family's stall refusal.

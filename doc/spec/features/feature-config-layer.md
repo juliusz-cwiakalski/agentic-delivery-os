@@ -2,13 +2,13 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist), the typed lane branch (liveness interval and restart budget), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-235"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003"]
 ---
 
@@ -16,7 +16,7 @@ links:
 
 ## Overview
 
-Configuration resolves from seven ordered layers into one validated, traceable tree. Resolution is pure in `@delivery-os/core`; acquisition of files, platform locations, repository roots, environment facts and legacy names lives behind the existing adapters and the runtime-aware CLI edge. The production ordinary catalog declares the typed `provider`, `commit`, and `merge` branches; unrelated configuration resolves to `{}` until a consumer declares typed settings.
+Configuration resolves from seven ordered layers into one validated, traceable tree. Resolution is pure in `@delivery-os/core`; acquisition of files, platform locations, repository roots, environment facts and legacy names lives behind the existing adapters and the runtime-aware CLI edge. The production ordinary catalog declares the typed `provider`, `commit`, `merge`, `harness`, and `lane` branches; unrelated configuration resolves to `{}` until a consumer declares typed settings.
 
 Every source is validated before it is merged, every effective value can report where it came from, and inspection through the `config` command uses the same serialization and redaction boundary as every other command. Configuration cannot rename the frozen brand identity, supply a credential from a repository file, or silently interpolate environment values into files.
 
@@ -73,7 +73,7 @@ One trusted draft-07 schema is generated from the typed catalog. A recursively r
 - Top-level `x-` keys are allowed in files as vendor data but do not create environment or CLI mappings.
 - Unknown ordinary keys fail `config.key.unknown`; invalid types, directive shapes and disallowed null fail `config.value.invalid`.
 - Explicit null requires catalog permission.
-- The ordinary production catalog declares the typed `provider`, `commit`, and `merge` branches. The provider branch's dynamic-name maps (`provider.credentials`, `provider.entries`, `provider.chains`) use the additive `record` field kind: every child name is arbitrary and every child value is validated against the declared shape, while fixed branches keep exact unknown-key discipline.
+- The ordinary production catalog declares the typed `provider`, `commit`, `merge`, `harness`, and `lane` branches. The provider branch's dynamic-name maps (`provider.credentials`, `provider.entries`, `provider.chains`) use the additive `record` field kind: every child name is arbitrary and every child value is validated against the declared shape, while fixed branches keep exact unknown-key discipline.
 - `workingName` is the separate required bootstrap descriptor, supplied before discovery and never a mutable config key.
 - Typed extension catalogs exercise the same production resolver for required, nullable, defaulted, deprecated, nested, list, secret and machine-path fields. They are not production settings.
 
@@ -142,10 +142,10 @@ The machine table in [Result Contract and Error Table](feature-result-contract.m
 | Path | Responsibility |
 |---|---|
 | `packages/core/src/contracts/config.ts` | Plain JSON-compatible facts, layers, origins, skips, warnings and failure identity |
-| `packages/core/src/config/catalog.ts` | Typed catalog, bootstrap descriptor, the production `provider`, `commit`, `merge`, and `harness` branches, and the `record` field kind for dynamic-name maps |
+| `packages/core/src/config/catalog.ts` | Typed catalog, bootstrap descriptor, the production `provider`, `commit`, `merge`, `harness`, and `lane` branches, the `record` field kind for dynamic-name maps, and the lane-branch projection into typed settings |
 | `packages/core/src/config/harness.ts` | Pure validation and projection of the resolved `harness` branch into typed settings (kind, execution kind, store paths, environment allowlist) with configuration-path origin evidence |
 | `packages/core/src/config/schema.ts` | Trusted schema generation, partial/final compilation and safe invalid-key detection |
-| `packages/core/src/config/defaults.ts` | Typed default extraction and the shipped overridable defaults, including the `harness` branch |
+| `packages/core/src/config/defaults.ts` | Typed default extraction and the shipped overridable defaults, including the `harness` and `lane` branches |
 | `packages/core/src/config/resolver.ts` | Pure seven-layer validation, merge, reset, restrictions, warnings and origins |
 | `packages/core/src/config/provenance.ts` | Origin replacement, descendant removal and display grammar |
 | `packages/adapters/src/file/yaml-parser.ts` | YAML 1.2 one-document parsing, bounds, positions and safe diagnostics |
@@ -186,13 +186,13 @@ The core build emits `config.schema.json`, `defaults-positions.json` and `schema
 
 ### Cost and limitations
 
-Configuration adds the proposed Ajv and YAML runtime dependencies recorded in the dependency registry; owner license/TDR review gates merge/adoption. The `provider` and `commit` branches are the ordinary production catalogs currently declared; the provider branch's Z.AI descriptor and credential reference ship as overridable defaults with no chain enabled, and the commit branch ships `commit.phaseCommit` defaulting to `true`. File interpolation, credential resolution through configuration, and sidecar behavior are not available here; credential resolution is the separate port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
+Configuration adds the proposed Ajv and YAML runtime dependencies recorded in the dependency registry; owner license/TDR review gates merge/adoption. The `provider`, `commit`, `merge`, `harness`, and `lane` branches are the ordinary production catalogs currently declared; the provider branch's Z.AI descriptor and credential reference ship as overridable defaults with no chain enabled, the commit branch ships `commit.phaseCommit` defaulting to `true`, and the lane branch ships the `30000` ms cadence and `3` restart bound. File interpolation, credential resolution through configuration, and sidecar behavior are not available here; credential resolution is the separate port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md).
 
 ## Quality Assurance Strategy
 
 | Level | Scope | Evidence |
 |---|---|---|
-| Behaviour | Seven winners, merge/reset, schema, restrictions, provenance, parser, sources, legacy | `tests/behaviour/config-*.test.ts`, `tests/behaviour/legacy-adapter.test.ts` |
+| Behaviour | Seven winners, merge/reset, schema, restrictions, provenance, parser, sources, legacy, lane defaults and validation | `tests/behaviour/config-*.test.ts`, `tests/behaviour/legacy-adapter.test.ts`, `tests/behaviour/economics-budget-config.test.ts` |
 | CLI/golden | Basic/debug/get, human and machine payloads, redaction and canaries | `tests/behaviour/config-cli.test.ts`, `tests/golden/config-output.test.ts` |
 | Structure | Inventory, root API, no public config subpath, import confinement | `tests/structure/config-contract.test.ts`, `tests/structure/content-inventory.test.ts`, `tests/boundaries/**` |
 | Checks | Default/schema artifact parity, error rows, license closure | `tests/checks/config-default-positions.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/checks/license-audit.test.ts` |
@@ -225,8 +225,9 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 | Effective tree | The validated tree after all layers and resets, excluding bootstrap and directives. |
 | Origin | The winning source label for an effective leaf or collection. |
 | Selected file | The `--config`/environment/legacy file occupying project-committed priority. |
+| Lane branch | The typed `lane.liveness-interval` and `lane.restart-budget` policy data with shipped defaults and existing configuration identities. |
 
-See also: [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
+See also: [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
 
 ## The merge configuration branch
 
@@ -263,6 +264,25 @@ configuration. The configured-kind registry separately validates that exactly
 the two shipped harness kinds are registered, so a vocabulary drift fails
 instead of defaulting. See [Harness Adapters](feature-harness-adapters.md).
 
+## The lane configuration branch
+
+The production catalog declares a typed `lane` branch. It carries the lane
+liveness cadence and the per-delivery restart bound as policy data.
+
+| Key | Shape | Default | Semantics |
+|---|---|---|---|
+| `lane.liveness-interval` | integer milliseconds | `30000` | The lane liveness evaluation cadence. The value must be an integer greater than `0`; a non-integer, zero, or negative value is `config.value.invalid` naming the key. |
+| `lane.restart-budget` | integer restarts per delivery | `3` | The per-delivery restart bound. The value must be an integer greater than or equal to `0`; `0` is the valid admit-no-restarts policy. A non-integer or negative value is `config.value.invalid` naming the key. |
+
+An absent `lane` branch resolves to both shipped defaults with `defaults`
+origins. An unknown key under `lane` fails `config.key.unknown`; invalid input
+never silently falls back to the default. Each default is declared once in the
+defaults layer. The values are policy data: resolving the branch starts no
+scheduler, and the restart gate reads the bound at evaluation time rather than
+capturing it at construction. See
+[Session Lifecycle Economics](feature-session-lifecycle-economics.md).
+
 ## Related
 
 - [Harness Adapters](feature-harness-adapters.md) adds the typed `harness` branch (selected kind, execution kind, store locations, deny-by-default environment allowlist); a literal value in an allowlist entry is rejected by `config.secret.forbidden`.
+- [Session Lifecycle Economics](feature-session-lifecycle-economics.md) documents the `lane` branch (liveness interval and restart budget) and consumes the resolved values as policy data.

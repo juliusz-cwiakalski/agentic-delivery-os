@@ -6,7 +6,7 @@ last_updated: 2026-11-07
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-235]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -54,7 +54,8 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   [owner-gate SLA](features/feature-owner-gate-sla.md),
   [doctor](features/feature-doctor.md),
   [merge and verify deploy](features/feature-merge-verify-deploy.md),
-  [watchdog](features/feature-watchdog-lane-contracts.md);
+  [watchdog](features/feature-watchdog-lane-contracts.md),
+  [session lifecycle economics](features/feature-session-lifecycle-economics.md);
   `packages/core/src/domain/ci-result.ts`, `tests/behaviour/status-negative-controls.test.ts`,
   `tests/behaviour/queue-ready-negative-controls.test.ts`,
   `tests/behaviour/watchdog-liveness.test.ts`.
@@ -68,7 +69,10 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   bounded probe; `verify deploy` accepts only trace evidence, so a created-but-
   never-run pipeline and a status without a trace are `unknown`, never green.
   Unknown evidence is not green. The watchdog liveness probe classifies absent
-  signal sources as `watchdog.signals-absent` and emits no guessed verdict. The
+  signal sources as `watchdog.signals-absent` and emits no guessed verdict; a
+  corroborated stall is the classified refusal `watchdog.liveness-stalled`, and
+  session lifecycle economics carries bounded refusal evidence and degrades a
+  missing figure to null with a warning rather than a fabricated zero. The
   doctor diagnostic applies the same rule per check: a failed or unattempted read
   is never `ok` (it is `unreachable`, or `fail` where the condition catalog
   declares an observed defect), and every non-ok verdict carries a bounded detail
@@ -99,9 +103,12 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   `verify deploy` uses the same caps with 50-step/50-artifact evidence lists and
   explicit `+N` marks. [Retro](features/feature-retro-pipeline.md#non-functional-requirements)
   bounds the audit collector read at 1000 records and export at a caller limit from
-  1 to 1000 with in-band truncation; report data is the four-key shape. These are
-  data caps, not a universal total-envelope cap. Brief reuses the status human and
-  machine caps by reference and declares no parallel numeric bound.
+  1 to 1000 with in-band truncation; report data is the four-key shape.
+  [Session lifecycle economics](features/feature-session-lifecycle-economics.md)
+  caps every refusal-evidence corpus at 512 UTF-8 bytes with stable
+  `key=value` keys. These are data caps, not a universal total-envelope cap. Brief
+  reuses the status human and machine caps by reference and declares no parallel
+  numeric bound.
 - Queue-ready accepts 1..8 candidates of at most 64 canonical characters; its
   per-field caps and renderer-only reverse-rank drops remain feature-specific.
 - Evidence/test: `packages/core/src/contracts/status.ts`,
@@ -127,6 +134,7 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 | [Queue-ready](features/feature-queue-ready.md#non-functional-requirements) | Pure evaluation/ranking/rendering contract within 50 ms; same three outbound reads, one park fold/config/local-context read. | `tests/behaviour/queue-ready-performance.test.ts` samples evaluator latency and injected read counts; independent renderer timing not established here. |
 | [Board](features/feature-owner-gate-sla.md#non-functional-requirements) | Pure evaluation/ranking/rendering within 50 ms; one bounded tracker read, at most one decision-history read, and one fence plus one append per newly defaulted gate. | `tests/behaviour/board-performance.test.ts`, `board-read-cost.test.ts`. |
 | [Harness Adapters](features/feature-harness-adapters.md) | Read-only harness-store extraction: query-only pragma before the first read, bounded indexed queries with no message/part scans, capped sessions, per-session agent/model groups, tools, agents, and models with explicit marks or warnings, machine payload at most 65 536 UTF-8 bytes, human disclosure at most 4 096 bytes / 24 lines; identical injected facts yield byte-identical output. | `tests/behaviour/harness-telemetry-*.test.ts`, `harness-output-bounds.test.ts`, `tests/checks/harness-determinism.test.ts` pin the read budget and byte bounds. |
+| [Session lifecycle economics](features/feature-session-lifecycle-economics.md) | Pure deterministic budget, resume, evidence, and view folds with no clock or ambient read; the view derives from durable records alone with zero harness-store queries and zero writes. | `tests/checks/economics-determinism.test.ts`, `tests/behaviour/economics-view.test.ts` pin replay identity and the zero-query read posture. |
 | [Doctor](features/feature-doctor.md#non-functional-requirements) | Pure cap-sized aggregation within 50 ms; at most two single-page network reads (tracker and CI), one configuration resolve, one shared verified ledger read; no pagination, retry, or write. | `tests/behaviour/doctor-performance.test.ts` samples the median of 21 runs after warm-ups; `doctor-network-posture.test.ts` pins the read budget and shared-source read-once posture. |
 | [Merge and verify deploy](features/feature-merge-verify-deploy.md#invariants) | Pure freshness, waiver, and deploy-verdict evaluation; `merge` performs one verification read, one work-item read, one check-run page, one request-detail read, and only the declared git mutations; `verify deploy` performs one bounded trace read; the freshness bound defaults to 1800 s with at-bound stale. | `tests/behaviour/merge-probe.test.ts`, `merge-determinism.test.ts`, `verify-deploy-read-budget.test.ts`, `merge-bounds.test.ts`, `verify-deploy-bounds.test.ts`. |
 | [Retro](features/feature-retro-pipeline.md#non-functional-requirements) | Pure deterministic collect/report/export folds; the audit collector reads at limit 1000; collect ≤ 30 s, report ≤ 10 s, and export ≤ 10 s over a 10,000-record sidecar with full chain verification; CI gates bounded work instead of wall clock (one chain walk per read, one batched append per collection run), and the 10000 ms read / 30000 ms append seam constants are seam data rather than command budgets; export is capped at 1000 records with in-band truncation. | `tests/behaviour/retro-performance.test.ts`, `retro-collect.test.ts`, `retro-export.test.ts`. |
@@ -272,6 +280,10 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 - [Session admin](features/feature-session-database-admin.md) defaults to dry-run;
   apply uses cold/non-live/leaf selection, immediate rechecks, official deletes,
   partial-failure accounting, and one live-gated checkpoint without host restart.
+- [Session lifecycle economics](features/feature-session-lifecycle-economics.md)
+  bounds restarts per delivery through one durable admission gate. Exhaustion is a
+  classified terminal state with a history reference, identical on supervised-style
+  and one-shot-style paths; the surface never spawns, kills, steers, or supervises.
 - Bounds: list at most 100, prune at most 500; human 40 lines/8192 bytes, data
   524288 bytes. Liveness is activity within 15 minutes, not a PID/lock guarantee.
 - Evidence/test: provider parks tests; `tests/behaviour/session-admin-prune.test.ts`,
