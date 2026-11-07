@@ -94,7 +94,7 @@ per project).
 | Command (first delivered) | Usage |
 |---|---|
 | `retro` (M1-S8) | `<binary> retro collect\|report [--level <name>]` |
-| `spend` (M1-S19) | `<binary> spend [--ref <ref>] [--phase <phase>] [--amplification]` |
+| `spend` (M1-S19) | `<binary> spend [--ref <ref>] [--phase <phase>] [--amplification] [--json]` |
 
 ### Surfaces
 

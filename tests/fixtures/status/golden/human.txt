@@ -6,6 +6,6 @@ lanes      not-delivered  no queue or lane engine in this release
 providers  observed  chain primary | active parks 8 | 8 entries
 parked     observed  8 parked changes (git-ignored local state)
 ready      observed  8 ready-to-merge (merge-ready 0)
-spend      not-delivered  spend summary arrives with M1-S19
+spend      observed  no captured telemetry (absence of capture)
 blockers   not-delivered  typed blockers arrive with M1-S16
 attention  3 findings (tracker.owner-gate-escalated×4, tracker.stalled-ticket×4, tracker.hygiene.missing-labels×12)

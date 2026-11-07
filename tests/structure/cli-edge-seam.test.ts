@@ -356,6 +356,7 @@ const NEW_COMMAND_FILES = [
   `${CLI_DIR}/commands/phase.ts`,
   `${CLI_DIR}/commands/queue.ts`,
   `${CLI_DIR}/commands/retro.ts`,
+  `${CLI_DIR}/commands/spend.ts`,
   `${CLI_DIR}/commands/status.ts`,
   `${CLI_DIR}/commands/verify.ts`,
   `${CLI_DIR}/commands/verify-gates.ts`,
@@ -460,6 +461,9 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(edge).toContain("createRetroCommandRuntime");
     expect(edge).toContain("commands.retro = createRetroCommandDefinition");
     expect(edge).toContain("options.retro !== undefined");
+    expect(edge).toContain('from "./commands/spend.js"');
+    expect(edge).toContain("commands.spend = createSpendCommandDefinition");
+    expect(edge).toContain("options.spend !== undefined");
   });
 
   test("the adapters parser is composed at the CLI edge, never by core", () => {
@@ -514,9 +518,10 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     ]);
     expect(exported(`${CLI_DIR}/commands/queue.ts`)).toEqual(["createQueueReadyCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/retro.ts`)).toEqual(["createRetroCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/spend.ts`)).toEqual(["createSpendCommandDefinition"]);
   });
 
-  test("only board, brief, closeout, db, doctor, merge, plan, provider, queue, retro, status, verify, and watchdog declare the optional human-text renderer", () => {
+  test("only board, brief, closeout, db, doctor, merge, plan, provider, queue, retro, spend, status, verify, and watchdog declare the optional human-text renderer", () => {
     const declarers = listTypeScriptFiles(ROOT, `${CLI_DIR}/commands`).filter((file) =>
       readFileSync(join(ROOT, file), "utf8").includes("humanText"),
     );
@@ -531,10 +536,23 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       `${CLI_DIR}/commands/provider.ts`,
       `${CLI_DIR}/commands/queue.ts`,
       `${CLI_DIR}/commands/retro.ts`,
+      `${CLI_DIR}/commands/spend.ts`,
       `${CLI_DIR}/commands/status.ts`,
       `${CLI_DIR}/commands/verify.ts`,
       `${CLI_DIR}/commands/watchdog.ts`,
     ]);
+  });
+
+  test("spend is registered only when the read-only composition is supplied", () => {
+    const edge = readFileSync(join(ROOT, EDGE), "utf8");
+    expect(edge).toContain("if (options.spend !== undefined)");
+    expect(edge).toContain("createSpendCommandRuntime(options.spend)");
+    const factory = edge.slice(edge.indexOf("export const createSpendCommandRuntime"));
+    expect(factory).toContain("readSpendLedger");
+    expect(factory).toContain("computeSpendReport");
+    expect(factory).not.toContain("acquireFence");
+    expect(factory).not.toContain("store.append");
+    expect(factory).not.toContain("resolveCredential");
   });
 
   test("db is registered only when the composition is supplied", async () => {

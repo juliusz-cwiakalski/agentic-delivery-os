@@ -93,9 +93,9 @@ No typed daemon or background scheduler is established by `packages/`.
 |---|---|
 | `core/src/contracts/` | Data-only ports, normalized primitives, schemas, capability declarations and error vocabulary shared across packages. |
 | `core/src/config/`, `branding/` | Pure layered resolution with provenance; pure brand identity resolution. Exported through core root and `./branding`, respectively. |
-| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, owner-gate SLA evaluation, doctor diagnostics, session-admin policy, harness classification, capability, registry, spawn-environment, liveness, canonicalization, and telemetry policy, the session lifecycle economics budget/resume/view/evidence folds, and the deterministic retro evidence pipeline (collection, truth checks, report/export folds). |
+| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, owner-gate SLA evaluation, doctor diagnostics, session-admin policy, harness classification, capability, registry, spawn-environment, liveness, canonicalization, telemetry policy, the spend read-side fold (five-class totals, phase attribution, restarts, resume amplification), the session lifecycle economics budget/resume/view/evidence folds, and the deterministic retro evidence pipeline (collection, truth checks, report/export folds). |
 | `core/src/provider/` | Availability chain, quota/peak evaluation, model-profile selection and pacing policy, `data-v1` env-record validation, expiring parks and announcements through injected ports. No session spawn. |
-| `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections, the economics restart/exhaustion ledger and view fold, the retro registry consumer, and the independent evidence sidecar consumer. Runtime APIs confined to `state/driver/`. |
+| `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections, the economics restart/exhaustion ledger and view fold, the spend telemetry read consumer, the retro registry consumer, and the independent evidence sidecar consumer. Runtime APIs confined to `state/driver/`. |
 | `core/src/app/`, core `createRuntime` | Application tier is a type placeholder; `createRuntime` is an `export declare` signature, not a callable composition implementation. |
 | `cli/src/index.ts`, `edge.ts`, `commands/` | In-process parser/result boundary; config acquisition and optional command registration; thin handlers plus bounded status collectors. |
 | `adapters/src/github/`, `gitlab/`, `jira/` | Normalized reads plus supported GitHub/Jira closeout writes. GitLab retains declared write gaps and no work-item read. GitHub reads feed status and gate composition, and the bounded deploy-job trace read feeds `verify deploy`. |
@@ -176,6 +176,13 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   other declared levels refuse with their owning story. A no-eligible-target
   collect is an explicit exit-0 success; export is a bounded library surface with
   no CLI verb. See the [retro evidence pipeline](../spec/features/feature-retro-pipeline.md).
+- `spend [--ref <ref>] [--phase <phase>] [--amplification]` is the read-only
+  learning-plane spend fold over closeout-captured `harness.telemetry` records and
+  `phase.transition` history. It reports five-class token totals, calls,
+  per-agent/model roll-ups, capture-time per-phase attribution, restart counts, and
+  the resume-amplification block with named `restart-loop prefill re-pay` events;
+  telemetry-absent is `spend.telemetry-absent` (exit 1). No harness re-query, no
+  state writes, no cost aggregation. See the [spend read side](../spec/features/feature-spend.md).
 - [Closeout](../spec/features/feature-closeout.md) is integrated: seven-step
   transaction, plan by default, writes only with `--apply`, ref validation before
   reads. `createCloseoutComposition` in CLI edge bridges raw provider clients,

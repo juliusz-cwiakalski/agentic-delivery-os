@@ -1,0 +1,208 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-236
+branch: feat/GH-236/spend-read-side
+status: PASS
+summary: >-
+  Iteration 1 (first review): PASS. All 19/19 spec ACs are delivered and
+  anchored by non-vacuous tests (binding AC1 by spend-read-contract +
+  spend-readonly zero-harness-read spies; binding AC2 by the A-01..A-11
+  amplification oracle and the 12-mutant meta-suite). The error contract is
+  exactly one new row (spend.telemetry-absent, user / non-retryable /
+  not_landed / user-validation -> exit 1) with machine and documented tables in
+  agreement (error-table-sync: entries=95 documented=95); the envelope data
+  carries exactly the six pinned keys with amplification {ratio, progressRun,
+  events}; amplification matches TDR-0011 as amended (healthy exactly 1,
+  superseded-run events with window/tokensWasted, null/progressRun rules incl.
+  paid=0 degenerate and capture-outcome-only null/null); output is deterministic
+  and bounded (64 KiB / 16 KiB / 200 lines) with an honest truncation marker
+  including the events tail; the spend path is read-only/structural (no fence,
+  write, spawn, credential, harness/provider import). Local verification:
+  171/171 spend tests, 801/801 status/brief/structure/checks suites, 1573/1574
+  structure/boundaries/checks/golden (the single failure is the environmental
+  ci-baseline-parity hermetic-clone test failing on a cross-device hardlink in
+  this sandbox, unrelated to GH-236); pnpm typecheck clean; biome lint/format
+  clean; depcruise clean; error-table-sync, ambient-globals, exit-code-literals,
+  forbidden-literals, workspace-entrypoints, changesets-group, doc-distribution
+  guards clean; commitlint clean over c4f6cd63..HEAD including the merge
+  subject. Plan compliance: PASS (30 tasks / 6 phases; PIN-1..12 honored;
+  documented AC half of TC-SPEND-031 confirmed — retired placeholder line absent
+  from delivered surfaces, feature-spend.md + man-page/commands spend carry the
+  pinned contract and examples). PM-flagged dispositions: (1) PIN-3 events-tail
+  extension is acceptable — deterministic tail-drop with a counting marker,
+  totals/restarts/ratio/progressRun never truncated, permitted by TC-SPEND-021
+  step 5 and required to hold the 64 KiB bound; it is covered by spend-bounds
+  ("event-heavy loop ... declares the event tail drop"). (2) All nine recorded
+  scope deviations are acceptable: classify.ts EXACT_CODE_DOMAIN_KINDS, the
+  error-table-sync two-segment recognizer, the content-inventory allowance map,
+  the cli/commands/status.ts injection seam, the MCP status readSpend mirror, the
+  RSK-4 fixture churn, the spend fixture extensions, the PIN-3 extension, and the
+  permitted Phase-1 documented-row companion are each necessary, minimal, and
+  do not widen delivered behavior for other commands/kinds. (3) Merge 70125be0
+  is internally consistent: error-table.ts base->HEAD is additive spend-only
+  (GH-234 provider/env-record and GH-235 watchdog/dispatch rows intact; 95 -> 95
+  since base already held 94+spend), inventories and forbidden-literals registry
+  consistent, no exports dropped (exports-parity/typecheck green). (4) TC-SPEND-031
+  documentation half is closed (feature-spend.md present, ados_distribution
+  internal matching all 40 feature specs, retired line absent outside change
+  artifacts/tests). (5) MCP parity deviation is acceptable: StatusFacts.spend is
+  required, the shipped MCP serve supplies no spend read so its status digest
+  reports verified-empty (observed, captured:false); no digest-parity invariant
+  exists and NG-5 (no MCP spend tool/projection) holds — documented in
+  feature-status-digest.md and feature-mcp-surface.md. No critical/high/medium
+  findings; four low and four info advisory findings follow. Next step: PROCEED.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 4
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/spend-text.ts:88-96
+    message: >-
+      Under event truncation the human amplification decomposition becomes
+      internally inconsistent. `amplificationLines` recomputes `wasted` from the
+      mutable `events` array and prints `progress = paid - wasted`; when the
+      machine report already dropped events (or the human renderer pops events
+      to stay within 16 KiB), `wasted` undercounts, so the printed
+      "(paid P / progress Q)" does not satisfy P/Q == the printed ratio, even
+      though `amplification.ratio` is the true value.
+    suggestion: >-
+      Compute the progress denominator from the pre-truncation data (carry the
+      untruncated events total or progress into the renderer), or omit the
+      paid/progress parenthetical and render only the ratio when any events were
+      omitted, appending the truncation note.
+    suppressed: false
+  - id: F-2
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/status.ts:1857
+    message: >-
+      `spendHumanLine` renders every non-observed-empty spend section as
+      `spend      unknown  state-unreadable (<code>)`. The edge's
+      `spendDigestFor` emits `reason: local-context-missing` when no active
+      change ref resolves (packages/cli/src/edge.ts:1651-1652), so a normal
+      no-active-context status prints "state-unreadable
+      (local-context-missing)", conflating a missing context with an unreadable
+      store. The machine projection (`reason`) is correct; only the human wording
+      is inaccurate. The projection-undefined fallback also prints
+      "state-unreadable (state-unreadable)".
+    suggestion: >-
+      Branch the human line on `projection.reason` (e.g.
+      `unknown  local-context-missing` vs `unknown  state-unreadable (<code>)`),
+      and give the projection-undefined fallback a neutral wording.
+    suppressed: false
+  - id: F-3
+    severity: low
+    confidence: high
+    category: code-quality
+    location: packages/core/src/domain/spend.ts:240-282
+    message: >-
+      The declared contract constants PIN-3/PIN-5 intend to be the single source
+      of truth for ordering and truncation, but `SPEND_AGENT_ORDER`,
+      `SPEND_PHASE_ORDER`, and `SPEND_TRUNCATION_TARGETS`
+      (packages/core/src/contracts/spend.ts:64-70) are never consumed by the fold
+      or the bounder. `perAgentOf`/`perPhaseOf` sort keys and `boundReport`'s
+      agents->phases->events tail are hardcoded, so a lone change to a constant
+      silently no longer describes behavior (drift is only caught because tests
+      separately pin both the constant literal and the behavior).
+    suggestion: >-
+      Either drive the sort comparators and the truncation tail from the
+      constants (or a small helper derived from them), or document the constants
+      explicitly as test pins rather than runtime sources.
+    suppressed: false
+  - id: F-4
+    severity: low
+    confidence: medium
+    category: testing
+    location: packages/cli/src/edge.ts:1639-1657
+    message: >-
+      The status-digest spend composition seam (`spendDigestFor`) is not
+      exercised end-to-end against a real store. The digest behaviour tests
+      inject `SpendDigestSection` facts directly (status-spend-section/-degraded),
+      and status-spend-degraded's "the digest degrades" case uses injected
+      `failedSpend(...)`; the actual mapping from a torn/captured/local-context-
+      missing store through `createStatusCommandRuntime().readSpend` to the
+      rendered digest is only structurally asserted (cli-edge-seam) and
+      read-count asserted (brief-read-cost), not behaviour-asserted.
+    suggestion: >-
+      Add one status-through-edge case seeding a real torn store and an active
+      change context (and one verified-empty positive control) asserting the
+      rendered digest section is unknown/state-unreadable at exit 0 — closing
+      AC-F8-2 at the composition seam.
+    suppressed: false
+  - id: F-5
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: packages/mcp/src/commands/status.ts:91
+    message: >-
+      The shipped MCP status composition supplies no spend read, so its digest
+      always reports spend observed / captured:false even when the CLI (which
+      composes `readSpend`) shows captured telemetry for the same store. This is
+      intentional and documented (feature-status-digest.md, feature-mcp-surface.md)
+      and honours NG-5 (no MCP spend tool/projection), but CLI-vs-MCP digests can
+      diverge on spend for downstream MCP consumers.
+    suggestion: >-
+      No code change required for GH-236. Note for M1-S12/GH-240 or M2-S6 that an
+      MCP consumer should treat the shipped verified-empty spend observation as
+      non-authoritative rather than as a zero-spend claim.
+    suppressed: false
+  - id: F-6
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-07--GH-236--spend-read-side/chg-GH-236-spec.md:230
+    message: >-
+      Change-spec NFR-1 (v1.2) names truncation only for `perAgent[]` then
+      `perPhase[]`. The delivered `events` tail (deviation 8) is required to keep
+      the 64 KiB machine bound for long restart loops, is permitted by
+      TC-SPEND-021 step 5 (drop only with the marker; totals/restarts/ratio
+      never dropped), and is correctly documented in the delivered system docs
+      (feature-spend.md, nonfunctional.md). Only the frozen change-spec NFR-1
+      text does not name the events tail.
+    suggestion: >-
+      No blocking action. If the change spec is reopened for any reason, extend
+      NFR-1 to name the events tail; the canonical system spec is authoritative
+      and already accurate.
+    suppressed: false
+  - id: F-7
+    severity: info
+    confidence: medium
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-07--GH-236--spend-read-side/chg-GH-236-pm-notes.yaml:95
+    message: >-
+      PIN-10 requires the NFR-4 wall-clock reference numbers (p95 <= 500 ms at
+      1,000 records; <= 2 s at 10,000) to be measured once locally and reported
+      to @pm for the execution log. The delivery note records the aggregate
+      gate result but not these reference numbers; the CI half (read-count
+      invariance / bounded work) is present in spend-performance.test.ts.
+    suggestion: >-
+      Record the measured reference numbers in pm-notes (or state explicitly that
+      they were reported out-of-band) so the PIN-10 evidence obligation is
+      visible in the artifact.
+    suppressed: false
+  - id: F-8
+    severity: info
+    confidence: high
+    category: code-quality
+    location: packages/core/src/domain/spend-text.ts:21-25
+    message: >-
+      `SpendHumanOptions.brand` is accepted by `renderSpendHuman` but never read
+      on the success path; the brand is only used in the failure text in
+      cli/commands/spend.ts. The unused option field is a minor smell and could
+      mislead a reader into expecting a branded human header.
+    suggestion: >-
+      Drop `brand` from `SpendHumanOptions` (keep it on the failure renderer), or
+      use `brand.binaryName` in the success header if a branded line is intended.
+    suppressed: false
+reviewed_at: 2026-11-07T10:05:00Z
+next_step: PROCEED

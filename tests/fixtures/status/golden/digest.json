@@ -17,14 +17,14 @@
     },
     "summary": {
       "sections": 9,
-      "observed": 6,
+      "observed": 7,
       "degraded": 0,
       "unknown": 0,
       "unavailable": 0,
-      "notDelivered": 3,
+      "notDelivered": 2,
       "actionable": 56,
       "findingsTotal": 3,
-      "placeholderSectionCount": 2
+      "placeholderSectionCount": 1
     },
     "sections": [
       {
@@ -969,16 +969,16 @@
       {
         "id": "spend",
         "title": "Spend",
-        "state": "not-delivered",
+        "state": "observed",
         "evidence": {
           "sources": [
             {
-              "source": "queue-engine",
-              "outcome": "not-delivered"
+              "source": "state-log",
+              "outcome": "observed-empty"
             }
           ],
           "reasons": [
-            "engine-not-delivered"
+            "observed-empty"
           ]
         },
         "counts": {
@@ -988,9 +988,11 @@
           "omitted": 0
         },
         "truncated": false,
-        "capability": "spend-summary",
-        "expectedStory": "M1-S19",
-        "note": "spend summary arrives with M1-S19",
+        "spend": {
+          "state": "observed",
+          "captured": false
+        },
+        "note": "no captured telemetry (absence of capture)",
         "items": []
       },
       {

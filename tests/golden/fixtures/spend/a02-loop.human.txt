@@ -1,0 +1,19 @@
+spend
+tokens     input 11200000 | output 0 | reasoning 0 | cacheRead 0 | cacheWrite 0
+calls      4
+agents
+- planner/sonnet: 4 calls, 11200000 tokens
+phases     capture-time windows (phase.transition)
+- clarify_scope: 4 calls, 11200000 tokens (100%)
+restarts   3 (runs that reached closeout capture)
+limits
+- run duplication is proven; semantic duplication is not
+- runs that never reached closeout capture are invisible to this report
+- restart counts share that capture-reached evidence basis
+- a zero-token progress run reports no ratio and is named in amplification.progressRun (paid > 0 or paid = 0)
+ratio      9.333 (paid 11200000 / progress 1200000)
+events     3
+- restart-loop prefill re-pay [2026-11-01T10:00:00.000Z -> 2026-11-01T11:00:00.000Z] 5000000 tokens wasted
+- restart-loop prefill re-pay [2026-11-01T11:00:00.000Z -> 2026-11-01T12:00:00.000Z] 3000000 tokens wasted
+- restart-loop prefill re-pay [2026-11-01T12:00:00.000Z -> 2026-11-01T13:00:00.000Z] 2000000 tokens wasted
+degradation 0 record(s) with warnings

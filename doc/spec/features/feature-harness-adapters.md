@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (spawn, resume/steer, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the unchanged exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group; and the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output."
 links:
-  related_changes: ["GH-233", "GH-234", "GH-235"]
+  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236"]
   related_decisions: ["ADR-0008", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/harness.ts"
@@ -217,7 +217,10 @@ No dispatch engine or dispatch command (M1-S9), no plugin generation (M3-S1), no
 containerized executor implementation, no spend projection or retro pipeline
 (M1-S19/M1-S8), no model-profile selection or pacing (specified in
 [Provider Profiles and Watching](feature-provider-profiles.md)), and no new CLI
-command surface. The watchdog consumes the adapter-sourced liveness facts; the
+command surface. The spend read side is delivered separately and consumes the
+captured `harness.telemetry` records from the state ledger without re-querying a
+harness store; this seam keeps its extraction, capture, and composer boundary
+unchanged. The watchdog consumes the adapter-sourced liveness facts; the
 session lifecycle economics surface — restart budget, resume economics,
 amplification derivation, and the sourced stall identity — is documented in
 [Session Lifecycle Economics](feature-session-lifecycle-economics.md).
@@ -247,6 +250,8 @@ Worktree-activity sourcing and Claude Code liveness remain declared gaps.
 - [Adapter Conformance Suite](feature-adapter-conformance.md) — the harness
   conformance registry.
 - [State Layer](feature-state-layer.md) — the additive telemetry record kind.
+- [Spend Read Side](feature-spend.md) — the read-only consumer of the captured
+  telemetry records.
 - [Configuration Layer and Inspection](feature-config-layer.md) — the harness
   branch.
 - [Closeout Transaction](feature-closeout.md) — the capture point.

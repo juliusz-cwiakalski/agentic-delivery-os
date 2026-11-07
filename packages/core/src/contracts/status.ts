@@ -11,6 +11,7 @@
 import type { OwnerGateSlaState, OwnerGateUnknownAgeReason } from "./owner-gate-sla.js";
 import type { DeliveryRequest, PipelineRun, WorkItem } from "./ports.js";
 import type { ProviderConfiguration, ProviderParkView } from "./provider.js";
+import type { SpendDigestSection } from "./spend.js";
 
 /** The nine section ids in their fixed order (DM-3, DEC-1). */
 export const STATUS_SECTION_ORDER = [
@@ -35,13 +36,13 @@ export const STATUS_SECTION_KINDS = {
   providers: "collector",
   "parked-work": "collector",
   "ready-to-merge": "collector",
-  spend: "placeholder",
+  spend: "collector",
   blockers: "placeholder",
 } as const;
 export type StatusSectionKind = (typeof STATUS_SECTION_KINDS)[StatusSectionId];
 
-/** The two delivered placeholder section ids (DM-12, DEC-17). */
-export const STATUS_PLACEHOLDER_SECTION_IDS = ["spend", "blockers"] as const;
+/** The one remaining placeholder section id (DM-12, DEC-17; GH-236 flipped spend). */
+export const STATUS_PLACEHOLDER_SECTION_IDS = ["blockers"] as const;
 export type StatusPlaceholderSectionId = (typeof STATUS_PLACEHOLDER_SECTION_IDS)[number];
 
 /** The declared per-section state-derivation rows (Appendix C, TC-ATT-024). */
@@ -55,7 +56,7 @@ export const STATUS_SECTION_DERIVATION: Readonly<
   providers: ["observed", "degraded", "unknown", "unavailable"],
   "parked-work": ["observed", "unknown", "unavailable"],
   "ready-to-merge": ["observed", "degraded", "unknown", "unavailable"],
-  spend: ["not-delivered"],
+  spend: ["observed", "unknown"],
   blockers: ["not-delivered"],
 };
 
@@ -227,6 +228,7 @@ export const STATUS_EVIDENCE_SOURCES = [
   "provider-parks",
   "local-context",
   "repository-binding",
+  "state-log",
 ] as const;
 export type StatusEvidenceSource = (typeof STATUS_EVIDENCE_SOURCES)[number];
 
@@ -556,6 +558,8 @@ export type StatusFacts = {
   readonly ci: StatusPipelineRunRead;
   readonly providers: StatusProviderFacts;
   readonly localContext: StatusLocalContextRead;
+  /** The spend read projection fed by the same fold the command consumes. */
+  readonly spend: SpendDigestSection;
 };
 
 /** The active-change item shape inside the changes section. */
@@ -715,6 +719,8 @@ export type StatusSection = {
   readonly items?: readonly StatusSectionItem[];
   readonly findings?: readonly StatusFinding[];
   readonly attentionStates?: readonly StatusLaneAttentionState[];
+  /** The spend section's observed or unknown projection (GH-236 DM-6). */
+  readonly spend?: SpendDigestSection;
 };
 
 /** The digest summary counts (DM-1, DM-12). */
