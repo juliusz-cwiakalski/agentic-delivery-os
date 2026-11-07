@@ -121,7 +121,12 @@ export {
   latestUniqueProgressTokens,
 } from "./economics-view.js";
 export { classifyHarnessEvidence } from "./harness-classify.js";
-export { assembleHarnessLiveness, harnessLivenessToWatchdogSignals } from "./harness-liveness.js";
+export {
+  assembleHarnessLiveness,
+  createHarnessLivenessSignalSource,
+  createSourcedWatchdogSignalSource,
+  harnessLivenessToWatchdogSignals,
+} from "./harness-liveness.js";
 export {
   type HarnessAdapterRegistration,
   type HarnessVersionProbe,

@@ -424,6 +424,7 @@ export {
   type HarnessLivenessAbsenceReason,
   type HarnessLivenessAbsentReading,
   type HarnessLivenessAssembler,
+  type HarnessLivenessFacts,
   type HarnessLivenessKind,
   type HarnessLivenessReading,
   type HarnessLivenessReport,

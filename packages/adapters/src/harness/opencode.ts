@@ -9,6 +9,7 @@
  * shared bound reference injected by composition.
  */
 import {
+  ECONOMICS_SOURCED_SIGNAL_KINDS,
   HARNESS_LIFECYCLE_CAPABILITIES,
   HARNESS_LIVENESS_KINDS,
   HARNESS_MAX_SESSIONS,
@@ -31,6 +32,7 @@ import {
   type HarnessSpawnInput,
   type HarnessSpawnRunner,
   type HarnessVersionWarning,
+  type EconomicsSourcedSignalReading,
 } from "@delivery-os/core/contracts";
 
 /** The opencode capability declaration (F-1, DM-4). */
@@ -39,6 +41,7 @@ export const OPENCODE_CAPABILITIES: HarnessCapabilityDeclaration = {
   lifecycleCapabilities: [...HARNESS_LIFECYCLE_CAPABILITIES],
   livenessSources: ["session-traffic", "process"],
   declaredGaps: [{ capability: "worktree-activity", reason: "provider-unsupported" }],
+  sourcedSignalSources: ["heartbeat-age", "token-delta"],
 };
 
 /** Build the configured opencode instance (injected observed version). */
@@ -65,6 +68,8 @@ export type OpencodeHarnessOptions = {
   readonly resumeArgs?: readonly string[];
   readonly listArgs?: readonly string[];
   readonly livenessFacts?: readonly HarnessLivenessSourcedReading[];
+  /** Injected sourced-signal facts (GH-235 D-3); read-only, never re-queried. */
+  readonly sourcedSignals?: readonly EconomicsSourcedSignalReading[];
   readonly capabilities?: HarnessCapabilityDeclaration;
 };
 
@@ -258,9 +263,23 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
           "harness-unsupported",
         ]),
       ) as Partial<Record<HarnessLivenessKind, "harness-unsupported" | "not-observed">>;
+      const declaredSourcedSignals = capabilities.sourcedSignalSources ?? [];
+      const sourcedSignalFacts = (options.sourcedSignals ?? []).filter(
+        (fact) => fact.status === "sourced" && declaredSourcedSignals.includes(fact.kind),
+      );
+      const sourcedSignalAbsenceReasons = Object.fromEntries(
+        ECONOMICS_SOURCED_SIGNAL_KINDS.filter((kind) => !declaredSourcedSignals.includes(kind)).map(
+          (kind) => [kind, "harness-unsupported"],
+        ),
+      ) as Partial<Record<(typeof ECONOMICS_SOURCED_SIGNAL_KINDS)[number], "harness-unsupported" | "not-observed">>;
       return {
         ok: true,
-        value: options.assembleLiveness({ sourced, absenceReasons }),
+        value: options.assembleLiveness({
+          sourced,
+          absenceReasons,
+          sourcedSignalFacts,
+          sourcedSignalAbsenceReasons,
+        }),
       };
     },
     listSessions: async (input: HarnessListInput) => {

@@ -225,6 +225,15 @@ export type HarnessLivenessAbsentReading = {
 
 export type HarnessLivenessReading = HarnessLivenessSourcedReading | HarnessLivenessAbsentReading;
 
+/**
+ * The adapter-sourced liveness facts seam (GH-235 D-3): the delivered liveness
+ * readings plus the additive sourced-signal facts, both read-only.
+ */
+export type HarnessLivenessFacts = {
+  readonly readings: readonly HarnessLivenessSourcedReading[];
+  readonly sourcedSignals?: readonly EconomicsSourcedSignalReading[];
+};
+
 /** The neutral liveness report: one entry per closed kind, in closed order. */
 export type HarnessLivenessReport = {
   readonly readings: readonly HarnessLivenessReading[];

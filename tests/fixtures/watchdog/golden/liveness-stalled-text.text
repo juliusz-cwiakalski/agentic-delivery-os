@@ -1,0 +1,4 @@
+stdout:
+stderr:
+example-product: watchdog.liveness-stalled
+summary: reason=watchdog.liveness-stalled; heartbeatAgeMs=400000; tokenDelta=0; traffic=0; stallBoundMs=300000
