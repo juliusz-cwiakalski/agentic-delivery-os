@@ -34,3 +34,4 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0008](TDR-0008-additive-adapter-contract-extensions-closeout-v1.md) | TDR | Additive Adapter-Contract Extensions for Closeout v1 (`DeliveryRequest.headSha` and `resolve-delivery-thread`) | Proposed | 2026-11-01 | Juliusz Ćwiąkalski |
 | [TDR-0009](TDR-0009-retro-evidence-sidecar-keyed-chain-construction.md) | TDR | Retro Evidence Sidecar — Keyed-Chain Construction, Distinct Chaining Key, and Claimed Collector Identity | Proposed | 2026-11-06 | Juliusz Ćwiąkalski |
 | [TDR-0010](TDR-0010-dispatch-session-classification-token-projection.md) | TDR | Dispatch-Session Classification Token Projection (TDR-0005 Addendum) | Proposed | 2026-11-07 | Juliusz Ćwiąkalski |
+| [TDR-0011](TDR-0011-spend-resume-amplification-v0-formula.md) | TDR | Spend v0 Resume Amplification — Run-Identity Ratio, Latest-Run Progress, and Named Re-Pay Events | Proposed | 2026-11-07 | Juliusz Ćwiąkalski |

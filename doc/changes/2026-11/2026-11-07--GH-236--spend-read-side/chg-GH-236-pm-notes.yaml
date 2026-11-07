@@ -16,6 +16,8 @@ phases:
 decisions:
   - text: "OQ-1 (spec): PM-decided to author a standalone TDR for the amplification formula (spec DEC-3) via @decision-advisor before test planning — AC-bearing, consumed later by M1-S21 routing and M2-S6 alarms; GH-232/TDR-0009 precedent."
     date: "2026-11-07"
+  - text: "OQ-1 RESOLVED: TDR-0011 (doc/decisions/TDR-0011-spend-resume-amplification-v0-formula.md) authored at rigor R2, status Proposed, owner acceptance reserved at PR review (TDR-0009 precedent). Chosen ALT-2: run-identity ratio, latest-record-bearing-run progress, per-run named events; rejected ALT-1 naive aggregate (no attributable surface for M2-S6) and ALT-3 charitable denominator (hides waste in exactly the crashed-loop shape). Constraints C-1..C-6 pin log-only derivability, healthy=1, determinism (capturedAt desc / runId asc), honesty limits, and delivery.spend.v1 amplification-block stability."
+    date: "2026-11-07"
 open_questions: []
 blockers: []
 notes:
@@ -62,5 +64,11 @@ notes:
     type: info
     date: "2026-11-07"
   - text: "RETRO: my clarify_scope planning summary claimed 'brief prints a placeholder spend summary' (inferred from m1 pack docs) — spec-writer disproved this against delivered truth: the brief deliberately has no spend surface (its own DEC-5), only the status digest section 8 placeholder flips in this change. Lesson: pack planning docs describe intent, not delivered truth; cross-check integration claims against delivered feature specs (feature-brief.md) before handing them downstream as facts."
+    type: retro
+    date: "2026-11-07"
+  - text: "Handoff item for phase 7 (doc-syncer): add TDR-0011 to the spec's links.related_decisions (decision-advisor request); owner acceptance of TDR-0011 must be reserved at PR review alongside binding ACs."
+    type: info
+    date: "2026-11-07"
+  - text: "Specification checkpoint committed as c8262434 (message-only amend f8d24f1f->c8262434 to fix commitlint body-max-line-length; tree hash unchanged). Retro: keep commit bodies pre-wrapped at <=100 chars when briefing @committer; CI commitlint is the authority, the local hook is warn-only."
     type: retro
     date: "2026-11-07"
