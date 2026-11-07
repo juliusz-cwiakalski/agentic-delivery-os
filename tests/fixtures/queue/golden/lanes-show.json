@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-ready-fixture",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "schemaVersion": "delivery.lanes.v1",
+    "lanes": [
+      {
+        "id": "GH-320",
+        "ref": "GH-320",
+        "state": "delivering",
+        "lease": "lease-GH-320",
+        "leaseScope": "repo-exclusive",
+        "restarts": 1,
+        "amplification": 2,
+        "weightClass": "standard"
+      }
+    ],
+    "findings": [],
+    "degraded": [
+      "daemon-unreachable"
+    ],
+    "truncated": false,
+    "counts": {
+      "lanes": 1,
+      "delivering": 1,
+      "idle": 0,
+      "parked": 0,
+      "failed": 0
+    }
+  }
+}

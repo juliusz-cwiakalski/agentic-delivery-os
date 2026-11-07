@@ -759,6 +759,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "evaluateDeployGate",
     "producerLanding",
   ],
+  "core/src/domain/queue-lanes.ts": ["foldLanes", "renderLanesHuman", "selectLane"],
   "core/src/domain/queue-lease.ts": [
     "DEFAULT_LEASE_SCOPE",
     "claimScope",
@@ -1036,6 +1037,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createCommitCommandDefinition",
     "createConfigCommandDefinition",
     "createDbCommandDefinition",
+    "createLanesCommandDefinition",
     "createLintCommandDefinition",
     "createPhaseCommandDefinition",
     "createPlanCommandDefinition",
@@ -1050,6 +1052,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/commands/plan.ts": ["createPlanCommandDefinition"],
   "cli/src/commands/provider.ts": ["createProviderCommandDefinition"],
   "cli/src/commands/queue.ts": ["createQueueReadyCommandDefinition"],
+  "cli/src/commands/lanes.ts": ["createLanesCommandDefinition"],
   "cli/src/commands/retro.ts": ["createRetroCommandDefinition"],
   "cli/src/commands/spend.ts": ["createSpendCommandDefinition"],
   "cli/src/commands/verify.ts": ["createVerifyCommandDefinition"],

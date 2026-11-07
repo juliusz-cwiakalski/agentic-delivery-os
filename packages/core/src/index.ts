@@ -392,3 +392,13 @@ export {
   type QueueParkContext,
   type QueueParkPass,
 } from "./domain/index.js";
+
+// The lane observation fold (GH-237 F-11): a pure projection over entries,
+// leases, parks, and economics with a closed state and bounded idle reason.
+export {
+  foldLanes,
+  renderLanesHuman,
+  selectLane,
+  type QueueLaneEconomics,
+  type QueueLaneFoldInput,
+} from "./domain/index.js";

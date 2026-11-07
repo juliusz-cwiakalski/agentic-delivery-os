@@ -529,3 +529,21 @@ describe("TC-VOCAB-001 lease/park/incident round-trip through the ledgers", () =
     }
   });
 });
+
+describe("TC-LANES-006 / TC-VOCAB-003 lane vocabulary and collector resolution", () => {
+  test("lane states are exactly six and no stored lane record kind exists", () => {
+    expect([...QUEUE_LANE_STATES]).toEqual(closedSets.laneStates);
+    expect(QUEUE_LANE_STATES).toHaveLength(6);
+    const kinds = QUEUE_RECORD_DECLARATIONS.map((declaration) => declaration.kind);
+    expect(kinds.some((kind) => kind.includes("lane"))).toBe(false);
+  });
+
+  test("the lanes collector id resolves through the declared family", () => {
+    const row = ERROR_TABLE.find((entry) => entry.code === "status.collector.lanes.unavailable");
+    expect(row).toMatchObject({
+      domainKind: "status",
+      category: "platform",
+      projectionClass: "platform-provider",
+    });
+  });
+});

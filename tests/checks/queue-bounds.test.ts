@@ -95,3 +95,20 @@ describe("TC-SCHED-011 structural bounds", () => {
     }
   });
 });
+
+describe("TC-LANES-006 lane bound", () => {
+  test("the lane count is bounded at 200 with an explicit truncation marker", async () => {
+    const { foldLanes } = await import("../../packages/core/src/domain/index");
+    const facts = makeFacts(
+      Array.from({ length: 250 }, (_, index) => ({
+        ref: `GH-${3000 + index}`,
+        repository: `github.com/owner/repo-${String(index % 40)}`,
+      })),
+    );
+    const schedule = computeQueueSchedule(facts, { next: 20 });
+    const lanes = foldLanes({ schedule, economics: {}, degraded: [] });
+    expect(lanes.lanes.length).toBeLessThanOrEqual(200);
+    expect(lanes.truncated).toBe(true);
+    expect(lanes.counts.lanes).toBe(lanes.lanes.length);
+  });
+});

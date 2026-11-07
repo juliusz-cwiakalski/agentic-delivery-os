@@ -433,3 +433,10 @@ export {
   type QueueParkContext,
   type QueueParkPass,
 } from "./queue-park.js";
+export {
+  foldLanes,
+  renderLanesHuman,
+  selectLane,
+  type QueueLaneEconomics,
+  type QueueLaneFoldInput,
+} from "./queue-lanes.js";

@@ -23,6 +23,8 @@ export type {
   LintRegistryRead,
 } from "./lint.js";
 export { createLintCommandDefinition } from "./lint.js";
+export type { LanesCommandRuntime, LanesRuntimeRead } from "./lanes.js";
+export { createLanesCommandDefinition } from "./lanes.js";
 export type { MergeCommandRuntime, MergeConfigRead } from "./merge.js";
 export { createMergeCommandDefinition, isDryRunReport, isMergeReport } from "./merge.js";
 export type {
