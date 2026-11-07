@@ -15,7 +15,11 @@
     "atomic": true,
     "commitSha": "<sha>",
     "subject": "feat(GH-310): deliver the fixture change",
-    "stagedFiles": ["src/existing.ts", "src/new-file.ts"],
+    "stagedFiles": [
+      "doc/changes/2026-11/2026-11-05--GH-310--commit-fixture/chg-GH-310-pm-notes.yaml",
+      "src/existing.ts",
+      "src/new-file.ts"
+    ],
     "excluded": {
       "forbiddenPaths": [],
       "oversizedBinaries": [],
@@ -34,6 +38,7 @@
     },
     "evidence": {
       "outcome": "landed"
-    }
+    },
+    "body": "Complete the fixture delivery phase."
   }
 }
