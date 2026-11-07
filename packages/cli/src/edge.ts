@@ -60,6 +60,21 @@ import {
 } from "@delivery-os/adapters/session";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
+  addQueueDependency,
+  claimQueueLease,
+  declareQueueEntry,
+  prioritizeQueueEntry,
+  readActiveLeases,
+  readQueueFold,
+  readQueueParkPass,
+  recoverQueueParks,
+  releaseQueueLease,
+  type QueueIntentFailure,
+  type QueueIntentOutcome,
+  type QueueIntentResult,
+  type QueueLeaseFailure,
+} from "@delivery-os/core";
+import {
   buildCloseoutPlan,
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
@@ -70,20 +85,36 @@ import {
   collectRetro,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
+  computeQueueSchedule,
   computeSpendReport,
   createSourcedWatchdogSignalSource,
+  defaultParkRecheckMs,
+  evaluateClaimPreconditions,
+  foldLanes,
+  isHeldByWeight,
   isLiveDbSession,
   type MergeTransactionPorts,
   newestWaiverByGate,
+  parkConditionForCause,
   PRODUCTION_CATALOG,
   reportRetro,
   resolveCloseoutBaseRef,
   resolveConfig,
   resolveMergeGateSet,
+  resolveQueueSettings,
+  resolveQueueWeight,
   runCloseout,
   runCommitAct,
   selectPruneCandidates,
   spendDigestSection,
+  type QueueCloseFact,
+  type QueueCiFact,
+  type QueueDeployFacts,
+  type QueueLaneEconomics,
+  type QueuePlanFact,
+  type QueueProviderFact,
+  type QueueSchedulerFacts,
+  type QueueWorkItemFact,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
   type VerifyGatesOpenPrPage,
@@ -153,6 +184,7 @@ import {
   type WatchdogLaneRead,
   type WatchdogSignalSource,
   type WorkItem,
+  type QueueDegradationReason,
 } from "@delivery-os/core/contracts";
 import {
   createProfileProbePort,
@@ -238,6 +270,15 @@ import {
   type ProviderCommandRuntime,
 } from "./commands/provider.js";
 import { createQueueReadyCommandDefinition } from "./commands/queue.js";
+import {
+  createQueueCommandDefinition,
+  type QueueCommandRuntime,
+  type QueueReadyCommandRuntime,
+  type QueueRuntimeFailure,
+  type QueueRuntimeMutation,
+  type QueueRuntimeSchedule,
+} from "./commands/queue.js";
+import { createLanesCommandDefinition } from "./commands/lanes.js";
 import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
@@ -2107,6 +2148,8 @@ export type ConfigProgramOptions = {
   readonly status?: StatusComposition;
   readonly brief?: StatusComposition;
   readonly queueReady?: StatusComposition;
+  readonly queue?: QueueComposition;
+  readonly lanes?: QueueComposition;
   readonly doctor?: DoctorComposition;
   readonly db?: DbComposition;
   readonly closeout?: CloseoutComposition;
@@ -2626,10 +2669,33 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
       createStatusCommandRuntime(options.brief, resolveProviderConfig),
     );
   }
-  if (options.queueReady !== undefined) {
+  if (options.queue !== undefined) {
+    const readyRuntime =
+      options.queueReady === undefined
+        ? undefined
+        : createStatusCommandRuntime(options.queueReady, resolveProviderConfig);
+    const resolvedSettings = (() => {
+      const snapshot = resolve({});
+      if (!snapshot.ok) return undefined;
+      const settings = resolveQueueSettings(snapshot.value.config.values, snapshot.value.config.origins);
+      return settings.ok ? settings.value : undefined;
+    })();
+    commands.queue = createQueueCommandDefinition(
+      createQueueCommandRuntime({
+        ...options.queue,
+        ...(options.queue.settings === undefined && resolvedSettings !== undefined
+          ? { settings: resolvedSettings }
+          : {}),
+        ...(readyRuntime === undefined ? {} : { readyRuntime }),
+      }),
+    );
+  } else if (options.queueReady !== undefined) {
     commands.queue = createQueueReadyCommandDefinition(
       createStatusCommandRuntime(options.queueReady, resolveProviderConfig),
     );
+  }
+  if (options.lanes !== undefined) {
+    commands.lanes = createLanesCommandDefinition(createLanesCommandRuntime(options.lanes));
   }
   if (options.verify !== undefined) {
     commands.verify = createVerifyCommandDefinition(options.verify);
@@ -2923,5 +2989,435 @@ export const createSpendCommandRuntime = (
     return folded.warnings.length === 0
       ? { ok: true, data: folded.data }
       : { ok: true, data: folded.data, warnings: folded.warnings };
+  },
+});
+
+/* ------------------------- scheduling engine edge ------------------------- */
+
+/** The injected non-store facts a scheduling pass consumes. */
+export type QueueFactSource = {
+  readonly plans: Readonly<Record<string, QueuePlanFact>>;
+  readonly workItems: Readonly<Record<string, QueueWorkItemFact>>;
+  readonly ci: Readonly<Record<string, QueueCiFact>>;
+  readonly provider: QueueProviderFact;
+  readonly close: Readonly<Record<string, QueueCloseFact>>;
+  readonly deploy: QueueDeployFacts;
+};
+
+/** The scheduling-engine composition seams supplied by the caller. */
+export type QueueComposition = {
+  readonly store: StateStorePort;
+  readonly facts: QueueFactSource;
+  readonly settings?: {
+    readonly leaseTtlMs: number;
+    readonly parkRecheckMs: Readonly<Record<string, number>>;
+  };
+  readonly repositoryBinding?: {
+    readonly repository?: string;
+    readonly repositoryRoot?: string;
+  };
+  readonly runner?: string;
+  readonly nowIso: () => string;
+  readonly nowMs: () => number;
+  readonly newFenceToken: () => string;
+  readonly degraded?: readonly QueueDegradationReason[];
+  readonly economics?: Readonly<Record<string, QueueLaneEconomics>>;
+  readonly readyRuntime?: QueueReadyCommandRuntime;
+};
+
+type QueueBuilt =
+  | { readonly ok: true; readonly facts: QueueSchedulerFacts; readonly parkRecords: readonly unknown[] }
+  | QueueRuntimeFailure;
+
+const queueStateFailure = (code: string): QueueRuntimeFailure => ({
+  ok: false,
+  kind: "state",
+  code,
+  summary: `state read failed (${code})`,
+});
+
+const buildQueueFacts = (
+  composition: QueueComposition,
+  parkContext: { readonly providerAvailable: boolean; readonly leaseHeldRepositories: readonly string[] },
+): QueueBuilt => {
+  const nowMs = composition.nowMs();
+  const nowIso = composition.nowIso();
+  const fold = readQueueFold(composition.store);
+  if (!fold.ok) return queueStateFailure(fold.code);
+  const active = readActiveLeases(composition.store, nowMs);
+  if (!active.ok) return queueStateFailure(active.code);
+  const parks = readQueueParkPass(composition.store, nowMs, parkContext);
+  if (!parks.ok) return queueStateFailure(parks.code);
+  return {
+    ok: true,
+    facts: {
+      nowIso,
+      nowMs,
+      fold: fold.value,
+      plans: composition.facts.plans,
+      workItems: composition.facts.workItems,
+      ci: composition.facts.ci,
+      provider: composition.facts.provider,
+      leases: active.active,
+      parkEvaluations: parks.pass.evaluations,
+      parkRecords: parks.pass.records,
+      close: composition.facts.close,
+      deploy: composition.facts.deploy,
+      runner: composition.runner ?? "runner-a",
+    },
+    parkRecords: parks.pass.records,
+  };
+};
+
+const parkContextFor = (composition: QueueComposition): {
+  readonly providerAvailable: boolean;
+  readonly leaseHeldRepositories: readonly string[];
+} => {
+  const active = readActiveLeases(composition.store, composition.nowMs());
+  return {
+    providerAvailable: composition.facts.provider.state === "available",
+    leaseHeldRepositories: active.ok ? active.active.map((lease) => lease.repository) : [],
+  };
+};
+
+const recoverParksForMutation = (composition: QueueComposition): QueueRuntimeFailure | undefined => {
+  const active = readActiveLeases(composition.store, composition.nowMs());
+  if (!active.ok) return queueStateFailure(active.code);
+  const context = parkContextFor(composition);
+  const recovered = recoverQueueParks(composition.store, {
+    nowIso: composition.nowIso(),
+    nowMs: composition.nowMs(),
+    context,
+    fenceToken: composition.newFenceToken(),
+  });
+  if (recovered.ok) return undefined;
+  return mapQueueFailure(recovered);
+};
+
+const mapQueueFailure = (
+  failure:
+    | QueueIntentFailure
+    | QueueLeaseFailure
+    | { readonly ok: false; readonly kind: string; readonly code: string; readonly reason?: string; readonly detail?: string; readonly path?: readonly string[]; readonly conflict?: { readonly holder: string; readonly leaseId: string } },
+): QueueRuntimeFailure => {
+  if (failure.kind === "state") {
+    return { ok: false, kind: "state", code: failure.code, summary: `state failure (${failure.code})` };
+  }
+  if (failure.kind === "input") {
+    return {
+      ok: false,
+      kind: "input",
+      code: failure.code,
+      summary: "detail" in failure ? failure.detail : "input rejected",
+    };
+  }
+  if (failure.code === "queue.dependency-cycle") {
+    return {
+      ok: false,
+      kind: "queue",
+      code: failure.code,
+      summary: `existing path: ${(failure.path ?? []).join(" -> ")}`,
+    };
+  }
+  if (failure.code === "queue.lease-conflict") {
+    const conflict = "conflict" in failure ? failure.conflict : undefined;
+    return {
+      ok: false,
+      kind: "queue",
+      code: failure.code,
+      summary:
+        "detail" in failure && failure.detail !== undefined
+          ? failure.detail
+          : conflict === undefined
+            ? "lease conflict"
+            : `holder:${conflict.holder}; lease:${conflict.leaseId}`,
+    };
+  }
+  if (failure.code === "queue.precondition.unmet") {
+    return {
+      ok: false,
+      kind: "queue",
+      code: failure.code,
+      summary: `reason=${(failure as { reason?: string }).reason ?? "unmet"}${(failure as { detail?: string }).detail === undefined ? "" : `; ${(failure as { detail?: string }).detail}`}`,
+    };
+  }
+  if (failure.code === "queue.park-condition-stuck") {
+    return { ok: false, kind: "queue", code: failure.code, summary: "park condition cleared without recovery" };
+  }
+  return {
+    ok: false,
+    kind: "queue",
+    code: failure.code,
+    summary: (failure as { detail?: string }).detail ?? failure.code,
+  };
+};
+
+const claimLeaseProjection = (lease: {
+  readonly leaseId: string;
+  readonly scope: "repo-exclusive" | "worktree";
+  readonly repository: string;
+  readonly holder: string;
+  readonly ref: string;
+  readonly runner: string;
+  readonly weightClass: "standard" | "heavy";
+  readonly acquiredAt: string;
+  readonly heartbeatAt: string;
+  readonly ttlMs: number;
+  readonly takeover?: { readonly leaseId: string };
+}) => ({
+  leaseId: lease.leaseId,
+  scope: lease.scope,
+  repository: lease.repository,
+  holder: lease.holder,
+  ref: lease.ref,
+  runner: lease.runner,
+  weightClass: lease.weightClass,
+  acquiredAt: lease.acquiredAt,
+  heartbeatAt: lease.heartbeatAt,
+  ttlMs: lease.ttlMs,
+  ...(lease.takeover === undefined ? {} : { takeoverOf: lease.takeover.leaseId }),
+});
+
+const mutationOutcome = (
+  result: QueueIntentOutcome,
+  degraded: readonly QueueDegradationReason[],
+): QueueRuntimeMutation => ({
+  ok: true,
+  ref: result.entry.ref,
+  entry: result.fold.entries.find((entry) => entry.ref === result.entry.ref) ?? {
+    ref: result.entry.ref,
+    ...(result.entry.repository === undefined ? {} : { repository: result.entry.repository }),
+    priority: result.entry.priority,
+    edges: result.edges,
+    weightClass: "standard",
+    rankClass: "new-start",
+    recordedAt: result.entry.recordedAt,
+  },
+  edges: result.edges,
+  result: result.result,
+  degraded,
+});
+
+/** Compose the full queue command runtime from the injected state and facts. */
+export const createQueueCommandRuntime = (
+  composition: QueueComposition,
+): QueueCommandRuntime => {
+  const degraded = composition.degraded ?? (["daemon-unreachable"] as const);
+  const readSchedule = (next: number): QueueRuntimeSchedule => {
+    const built = buildQueueFacts(composition, parkContextFor(composition));
+    if (!built.ok) return built;
+    return {
+      ok: true,
+      schedule: computeQueueSchedule(built.facts, { next }),
+      degraded,
+    };
+  };
+  const mutate = (
+    operation: () => QueueIntentResult,
+  ): QueueRuntimeMutation => {
+    const recovered = recoverParksForMutation(composition);
+    if (recovered !== undefined) return recovered;
+    const result = operation();
+    if (!result.ok) return mapQueueFailure(result);
+    return mutationOutcome(result.value, degraded);
+  };
+  return {
+    readSchedule,
+    add: (input) =>
+      mutate(() =>
+        declareQueueEntry(composition.store, {
+          ref: input.ref,
+          ...(composition.repositoryBinding?.repository === undefined
+            ? {}
+            : { repository: composition.repositoryBinding.repository }),
+          ...(composition.repositoryBinding?.repositoryRoot === undefined
+            ? {}
+            : { repositoryRoot: composition.repositoryBinding.repositoryRoot }),
+          ...(input.priority === undefined ? {} : { priority: input.priority }),
+          ...(input.deps === undefined ? {} : { edges: input.deps }),
+          recordedAt: composition.nowIso(),
+          fenceToken: composition.newFenceToken(),
+        }),
+      ),
+    prioritize: (input) =>
+      mutate(() =>
+        prioritizeQueueEntry(composition.store, {
+          ref: input.ref,
+          priority: input.priority,
+          recordedAt: composition.nowIso(),
+          fenceToken: composition.newFenceToken(),
+        }),
+      ),
+    dep: (input) =>
+      mutate(() =>
+        addQueueDependency(composition.store, {
+          ref: input.ref,
+          onRef: input.onRef,
+          recordedAt: composition.nowIso(),
+          fenceToken: composition.newFenceToken(),
+        }),
+      ),
+    claim: (input) => {
+      const recovered = recoverParksForMutation(composition);
+      if (recovered !== undefined) return recovered;
+      const built = buildQueueFacts(composition, parkContextFor(composition));
+      if (!built.ok) return built;
+      const schedule = computeQueueSchedule(built.facts, { next: 20 });
+      const selected =
+        input.ref ??
+        schedule.nextActions.find((action) => action.preemption === undefined)?.ref;
+      if (selected === undefined) {
+        return {
+          ok: false,
+          kind: "queue",
+          code: "queue.precondition.unmet",
+          summary: "reason=no-eligible-action",
+        };
+      }
+      const entry = schedule.entries.find((candidate) => candidate.ref === selected);
+      if (entry === undefined) {
+        return {
+          ok: false,
+          kind: "queue",
+          code: "queue.entry.unobserved",
+          summary: `entry ${selected} is not observed`,
+        };
+      }
+      const outranking = schedule.nextActions.find(
+        (action) =>
+          action.preemption === undefined &&
+          action.repository === entry.repository &&
+          action.ref !== selected,
+      );
+      const weight = resolveQueueWeight(built.facts.plans[selected]);
+      const heavyLease = isHeldByWeight(
+        weight,
+        built.facts.leases,
+        built.facts.runner,
+        selected,
+      );
+      const precheck = evaluateClaimPreconditions(built.facts, selected, {
+        ...(outranking === undefined ? {} : { outrankedBy: outranking.ref }),
+        ...(heavyLease === undefined ? {} : { weightHeldBy: heavyLease.ref }),
+      });
+      const claimed = claimQueueLease(composition.store, {
+        ref: selected,
+        holder: input.holder,
+        runner: built.facts.runner,
+        weightClass: weight.weightClass,
+        ...(composition.settings === undefined ? {} : { ttlMs: composition.settings.leaseTtlMs }),
+        nowIso: composition.nowIso(),
+        nowMs: composition.nowMs(),
+        fenceToken: composition.newFenceToken(),
+        precheck: () => precheck,
+      });
+      if (!claimed.ok) return mapQueueFailure(claimed);
+      const action =
+        schedule.nextActions.find((candidate) => candidate.ref === selected) ?? {
+          ref: selected,
+          ...(entry.repository === undefined ? {} : { repository: entry.repository }),
+          rankClass: entry.rankClass,
+          reason: "close-first" as const,
+          priority: entry.priority,
+          weightClass: entry.weightClass,
+          weightClassSource: entry.weightClassSource,
+          lease: { state: "free" as const },
+          blocking: [],
+        };
+      return {
+        ok: true,
+        result: claimed.value.result,
+        selectedRef: selected,
+        lease: claimLeaseProjection(claimed.value.lease),
+        action,
+        degraded,
+      };
+    },
+    release: (input) => {
+      const park =
+        input.parkCause === undefined
+          ? undefined
+          : {
+              cause: input.parkCause,
+              condition: parkConditionForCause(input.parkCause, {
+                expiresAt: composition.nowIso(),
+              }),
+              recheckMs:
+                composition.settings?.parkRecheckMs[
+                  input.parkCause === "preempted-for-close-item"
+                    ? "preemption"
+                    : input.parkCause
+                ] ?? defaultParkRecheckMs(
+                  input.parkCause === "preempted-for-close-item"
+                    ? "preemption"
+                    : input.parkCause,
+                ),
+            };
+      const released = releaseQueueLease(composition.store, {
+        ref: input.ref,
+        ...(input.holder === undefined ? {} : { holder: input.holder }),
+        ...(park === undefined ? {} : { park }),
+        nowIso: composition.nowIso(),
+        nowMs: composition.nowMs(),
+        fenceToken: composition.newFenceToken(),
+      });
+      if (!released.ok) return mapQueueFailure(released);
+      const parkRecord = released.value.park;
+      return {
+        ok: true,
+        result: released.value.result,
+        ...(released.value.lease === undefined
+          ? {}
+          : { lease: claimLeaseProjection(released.value.lease) }),
+        ...(parkRecord === undefined
+          ? {}
+          : {
+              park: {
+                ref: parkRecord.ref,
+                cause: parkRecord.cause,
+                conditionType: parkRecord.conditionType,
+                recheckMs: parkRecord.recheckMs,
+                ...(parkRecord.condition.type === "provider-window"
+                  ? { expiresAt: parkRecord.condition.expiresAt }
+                  : {}),
+                lastEvaluatedAt: parkRecord.evaluatedAt,
+                ...(parkRecord.clearObservedAt === undefined
+                  ? {}
+                  : { clearObservedAt: parkRecord.clearObservedAt }),
+                recoveryState: parkRecord.recoveryState,
+                ...(parkRecord.clearedAt === undefined ? {} : { clearedAt: parkRecord.clearedAt }),
+              },
+            }),
+        degraded,
+      };
+    },
+    ...(composition.readyRuntime === undefined
+      ? {}
+      : { readyDefinition: createQueueReadyCommandDefinition(composition.readyRuntime) }),
+  };
+};
+
+/** Compose the lanes command runtime from the same scheduling seams. */
+export const createLanesCommandRuntime = (
+  composition: QueueComposition,
+): import("./commands/lanes.js").LanesCommandRuntime => ({
+  readLanes: () => {
+    const built = buildQueueFacts(composition, parkContextFor(composition));
+    if (!built.ok) {
+      return {
+        ok: false,
+        code: "status.collector.lanes.unavailable",
+        summary: `queue store is unreadable (${built.code})`,
+      };
+    }
+    const schedule = computeQueueSchedule(built.facts, { next: 20 });
+    return {
+      ok: true,
+      data: foldLanes({
+        schedule,
+        economics: composition.economics ?? {},
+        degraded: composition.degraded ?? (["daemon-unreachable"] as const),
+      }),
+    };
   },
 });

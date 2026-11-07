@@ -82,7 +82,7 @@ import {
   readQueueParks,
   recoverQueueParks,
   releaseQueueLease,
-} from "../../packages/core/src/state/index";
+} from "../../packages/core/src/app/index";
 import { makeAuditStore } from "../fixtures/state/harness";
 
 const ROOT = process.cwd();

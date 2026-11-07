@@ -25,7 +25,7 @@ import {
   readQueueParkPass,
   readQueueParks,
   recoverQueueParks,
-} from "../../packages/core/src/state/index";
+} from "../../packages/core/src/app/index";
 import { makeAuditStore } from "../fixtures/state/harness";
 import { makeFacts, REPO_A } from "../fixtures/queue/schedule/harness";
 

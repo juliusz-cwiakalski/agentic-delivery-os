@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-edge",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "schemaVersion": "delivery.queue.v1",
+    "entries": [
+      {
+        "ref": "GH-310",
+        "repository": "github.com/owner/repo-alpha",
+        "state": "ready",
+        "rankClass": "merge-ready",
+        "priority": 100,
+        "weightClass": "standard",
+        "weightClassSource": "absent",
+        "deps": [],
+        "blocking": []
+      },
+      {
+        "ref": "GH-320",
+        "repository": "github.com/owner/repo-alpha",
+        "state": "held",
+        "rankClass": "new-start",
+        "priority": 100,
+        "weightClass": "standard",
+        "weightClassSource": "absent",
+        "deps": [],
+        "blocking": [
+          {
+            "reason": "repo-claimed-in-pass",
+            "detail": "repo:github.com/owner/repo-alpha"
+          }
+        ]
+      }
+    ],
+    "leases": [],
+    "weights": [],
+    "parks": [],
+    "findings": [],
+    "degraded": [
+      "daemon-unreachable"
+    ],
+    "truncated": false,
+    "counts": {
+      "entries": 2,
+      "ready": 1,
+      "held": 1,
+      "parked": 0,
+      "leases": 0,
+      "parks": 0
+    },
+    "nextActions": [
+      {
+        "ref": "GH-310",
+        "repository": "github.com/owner/repo-alpha",
+        "rankClass": "merge-ready",
+        "reason": "close-first",
+        "priority": 100,
+        "weightClass": "standard",
+        "weightClassSource": "absent",
+        "lease": {
+          "state": "free"
+        },
+        "blocking": []
+      }
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 {
   "core": [
     "src/app/index.ts",
+    "src/app/queue.ts",
     "src/branding/index.ts",
     "src/config/catalog.ts",
     "src/config/defaults.ts",
@@ -126,7 +127,6 @@
     "src/state/ledger.ts",
     "src/state/merge.ts",
     "src/state/owner-gate-sla.ts",
-    "src/state/queue.ts",
     "src/state/registry.ts",
     "src/state/retro-registry.ts",
     "src/state/retro-sidecar.ts",

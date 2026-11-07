@@ -42,7 +42,20 @@ export { createPlanCommandDefinition } from "./plan.js";
 export type { ProviderCommandRuntime } from "./provider.js";
 export { createProviderCommandDefinition } from "./provider.js";
 export type { QueueReadyCommandRuntime } from "./queue.js";
-export { createQueueReadyCommandDefinition } from "./queue.js";
+export type {
+  QueueCommandRuntime,
+  QueueRuntimeClaim,
+  QueueRuntimeFailure,
+  QueueRuntimeMutation,
+  QueueRuntimeRelease,
+  QueueRuntimeSchedule,
+} from "./queue.js";
+export {
+  createQueueCommandDefinition,
+  createQueueReadyCommandDefinition,
+  toQueuePlanData,
+  toQueueReadData,
+} from "./queue.js";
 export type { RetroCommandRuntime } from "./retro.js";
 export { createRetroCommandDefinition } from "./retro.js";
 export type { SpendCommandRuntime } from "./spend.js";

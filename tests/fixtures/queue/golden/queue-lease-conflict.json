@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-edge",
+  "exitCode": 1,
+  "timing": {
+    "totalMs": 10
+  },
+  "error": {
+    "code": "queue.lease-conflict",
+    "category": "transient",
+    "retryable": true,
+    "consequence": "not_landed",
+    "remediationHint": "Wait for the named holder to release the repository lease or for its heartbeat age to reach the lease TTL, then retry; the live lease was not taken over.",
+    "summary": "holder:holder-a; lease:github.com/owner/repo-alpha#holder-a@2026-11-07T10:00:00.000Z; heartbeatAgeMs:0; earliestTakeoverAt:2026-11-07T10:01:30.000Z"
+  }
+}

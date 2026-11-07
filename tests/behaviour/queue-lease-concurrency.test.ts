@@ -7,7 +7,7 @@ import { describe, expect, test } from "bun:test";
 import {
   declareQueueEntry,
   readActiveLeases,
-} from "../../packages/core/src/state/index";
+} from "../../packages/core/src/app/index";
 import { makeAuditStore } from "../fixtures/state/harness";
 import {
   holders,

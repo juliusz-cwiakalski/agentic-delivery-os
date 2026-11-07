@@ -440,3 +440,4 @@ export {
   type QueueLaneEconomics,
   type QueueLaneFoldInput,
 } from "./queue-lanes.js";
+export { renderQueueHuman, type QueueHumanData } from "./queue-precedence.js";

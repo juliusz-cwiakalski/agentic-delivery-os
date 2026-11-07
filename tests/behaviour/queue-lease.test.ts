@@ -23,7 +23,7 @@ import {
   readQueueLeases,
   readQueueParks,
   releaseQueueLease,
-} from "../../packages/core/src/state/index";
+} from "../../packages/core/src/app/index";
 import { armAppendFailure, makeAuditStore } from "../fixtures/state/harness";
 import {
   makeFacts,

@@ -565,3 +565,58 @@ export const computeQueueSchedule = (
 /** Whether a blocking reason is in the declared closed vocabulary. */
 export const isDeclaredBlockingReason = (reason: string): boolean =>
   (QUEUE_BLOCKING_REASONS as readonly string[]).includes(reason) || reason.startsWith("parked:");
+
+/** The minimal union the human renderer accepts across the queue surfaces. */
+export type QueueHumanData =
+  | import("#contracts").QueueListData
+  | import("#contracts").QueuePlanData
+  | import("#contracts").QueueMutationData
+  | import("#contracts").QueueClaimData
+  | import("#contracts").QueueReleaseData;
+
+const capHuman = (lines: readonly string[]): string => {
+  const kept = lines.slice(0, 40);
+  if (lines.length > 40) kept.push("+more");
+  const text = `${kept.join("\n")}\n`;
+  return text.length <= 8_192 ? text : `${text.slice(0, 8_191)}+`;
+};
+
+/**
+ * Deterministic human text for the queue family. When defined, the key=value
+ * summary (`result=`, `ref=`, `lease=`, `next=`, `degraded=`) prints before any
+ * human detail.
+ */
+export const renderQueueHuman = (data: QueueHumanData): string => {
+  if ("nextActions" in data) {
+    const lines = [
+      `next=${data.nextActions.length}; entries=${data.counts.entries}; leases=${data.counts.leases}; parks=${data.counts.parks}; degraded=${data.degraded.join(",") || "none"}`,
+      ...data.nextActions.map(
+        (action, index) =>
+          `${index + 1}. ${action.ref} ${action.rankClass} ${action.reason}${action.preemption === undefined ? "" : " preemption"}`,
+      ),
+    ];
+    return capHuman(lines);
+  }
+  if ("entries" in data) {
+    return capHuman([
+      `entries=${data.counts.entries}; leases=${data.counts.leases}; parks=${data.counts.parks}; degraded=${data.degraded.join(",") || "none"}`,
+      ...data.entries.map((entry) => `${entry.ref} ${entry.state} ${entry.rankClass}`),
+    ]);
+  }
+  if ("selectedRef" in data) {
+    return capHuman([
+      `result=${data.result}; ref=${data.selectedRef}; lease=${data.lease.leaseId}; degraded=${data.degraded.join(",") || "none"}`,
+    ]);
+  }
+  if ("ref" in data) {
+    return capHuman([
+      `result=${data.result}; ref=${data.ref}; degraded=${data.degraded.join(",") || "none"}`,
+    ]);
+  }
+  if ("result" in data) {
+    return capHuman([
+      `result=${data.result}; lease=${data.lease?.leaseId ?? "none"}; degraded=${data.degraded.join(",") || "none"}`,
+    ]);
+  }
+  return "result=ok\n";
+};

@@ -31,8 +31,8 @@ import type {
   QueueLeaseRecord,
   QueueWeightClass,
 } from "../../../../packages/core/src/contracts/index";
-import type { QueueClaimResult } from "../../../../packages/core/src/state/queue";
-import { claimQueueLease } from "../../../../packages/core/src/state/queue";
+import type { QueueClaimResult } from "../../../../packages/core/src/app/queue";
+import { claimQueueLease } from "../../../../packages/core/src/app/queue";
 
 export const NOW_ISO = "2026-11-07T10:00:00Z";
 export const NOW_MS = Date.parse(NOW_ISO);

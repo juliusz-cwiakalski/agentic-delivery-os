@@ -339,3 +339,12 @@ describe("TC-PROFILE-021 provider-profile work adds zero secret-read allowlist e
     expect(validate(ROOT)).toEqual([]);
   });
 });
+
+describe("TC-VOCAB-006 (GH-237) the queue engine adds no secret-read allowlist entry", () => {
+  test("no scheduling module is allowlisted and the live scan remains clean", () => {
+    expect(SECRET_READ_ALLOWLIST.some((entry) => entry.path.includes("queue"))).toBe(false);
+    expect(SECRET_READ_ALLOWLIST.some((entry) => entry.path.includes("lanes"))).toBe(false);
+    expect(scan(ROOT)).toEqual([]);
+    expect(validate(ROOT)).toEqual([]);
+  });
+});

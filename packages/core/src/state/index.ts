@@ -134,31 +134,6 @@ export {
   readOwnerGateSlaDecisions,
 } from "./owner-gate-sla.js";
 export {
-  addQueueDependency,
-  declareQueueEntry,
-  normalizedQueueEdges,
-  prioritizeQueueEntry,
-  type QueueGraphEdge,
-  type QueueGraphFold,
-  type QueueIntentFailure,
-  type QueueIntentOutcome,
-  type QueueIntentResult,
-  type QueueLedgerRead,
-  type QueueReadReason,
-  queueDependencyRecordKey,
-  queueEntryRecordKey,
-  queueGraphDocumentPath,
-  queueIncidentRecordKey,
-  queueLeaseRecordKey,
-  queueParkRecordKey,
-  readQueueDependencies,
-  readQueueEntries,
-  readQueueFold,
-  readQueueIncidents,
-  readQueueLeases,
-  readQueueParks,
-} from "./queue.js";
-export {
   appendPhaseTransition,
   foldPhaseState,
   PHASE_TRANSITION_RECORD_KEY_PREFIX,
@@ -865,22 +840,3 @@ export const createStateStore = (
     },
   };
 };
-export {
-  claimQueueLease,
-  leaseRecordHeartbeatAgeMs,
-  readActiveLeases,
-  releaseQueueLease,
-  type QueueActiveLeaseRead,
-  type QueueClaimOutcome,
-  type QueueClaimResult,
-  type QueueLeaseFailure,
-  type QueueReleaseOutcome,
-  type QueueReleaseResult,
-} from "./queue.js";
-export {
-  readQueueParkPass,
-  recoverQueueParks,
-  type QueueParkRead,
-  type QueueParkRecoveryOutcome,
-  type QueueParkRecoveryResult,
-} from "./queue.js";
