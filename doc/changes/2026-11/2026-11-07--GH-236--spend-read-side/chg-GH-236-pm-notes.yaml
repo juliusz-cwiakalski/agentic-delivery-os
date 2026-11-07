@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: "2026-11-07T06:35:00Z", completed: "2026-11-07T07:00:00Z" }
   review_fix: { started: "2026-11-07T07:05:00Z", completed: "2026-11-07T09:15:00Z" }
   quality_gates: { started: "2026-11-07T09:20:00Z", completed: "2026-11-07T10:50:00Z" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-11-07T10:55:00Z", completed: "2026-11-07T11:05:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "OQ-1 (spec): PM-decided to author a standalone TDR for the amplification formula (spec DEC-3) via @decision-advisor before test planning — AC-bearing, consumed later by M1-S21 routing and M2-S6 alarms; GH-232/TDR-0009 precedent."
@@ -129,6 +129,9 @@ notes:
     type: info
     date: "2026-11-07"
   - text: "Quality gates (phase 9) after review PASS at HEAD 57979a5d: TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 — 5150 pass / 4 skip / 0 fail across 526 files, 47047 expects, depcruise 262 modules clean, ambient-globals/workspace-entrypoints/secret-read-boundary/exports-parity (5/5) OK, biome 0 errors (48 warnings + 12 infos only). Standalone: doc-distribution no drift (81 docs), error-table-sync entries=95 documented=95 OK, forbidden-literals 5/5 scope classes 0 violations, privacy-literals 2686 files 0 violations. Commitlint clean over c4f6cd63..HEAD (16 commits). Branch 0 behind / 16 ahead. Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "DoD check: PASS. (1) All lifecycle phases recorded with completion timestamps except pr_creation (in progress by definition). (2) Plan completion: 6/6 plan phases have evidence notes naming phase id, commit hash, and test result; plan validate readyForDevelopment=true at review. (3) ACs: reviewer independently confirmed 19/19 satisfied including both binding ticket ACs (AC-F2-1 via TC-003/006/032; AC-F5-1/2 via TC-014/015/016/017/034). (4) Current-truth docs: doc-syncer zero residual gaps; reviewer spot-checked feature-spend.md vs code; TC-SPEND-031 doc half closed. (5) No open blockers; advisory F-1..F-8 are non-blocking. Gates valid at the proposed commit (only doc-artifact commits after the gate run)."
     type: info
     date: "2026-11-07"
   - text: "Specification checkpoint committed as c8262434 (message-only amend f8d24f1f->c8262434 to fix commitlint body-max-line-length; tree hash unchanged). Retro: keep commit bodies pre-wrapped at <=100 chars when briefing @committer; CI commitlint is the authority, the local hook is warn-only."
