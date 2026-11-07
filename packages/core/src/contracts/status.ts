@@ -218,7 +218,7 @@ export const STATUS_SECTION_STATES = [
 ] as const;
 export type StatusSectionState = (typeof STATUS_SECTION_STATES)[number];
 
-/** The eight evidence source ids (DM-4). */
+/** The nine evidence source ids (DM-4). */
 export const STATUS_EVIDENCE_SOURCES = [
   "tracker",
   "changes",

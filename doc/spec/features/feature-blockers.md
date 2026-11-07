@@ -141,7 +141,7 @@ The declared pickup predicate is payload-determinable: an open question carrying
 <binary> blockers list [--open]
 ```
 
-The default list renders all records: open questions ranked first, then a visibly separate resolved group of answered questions. `--open` restricts the payload to open questions. The machine payload is:
+The default list renders all records: open questions ranked first, then a visibly separate resolved group of answered questions. `--open` restricts the payload to open questions; because that filter is a projection choice rather than a bound drop, filter-excluded answered rows do not contribute to `omitted` or set `truncated`. The machine payload is:
 
 ```
 {
@@ -226,7 +226,7 @@ An empty ranked group renders `blocker-questions  <state>  none` and a truncatio
 | Human render | 32 lines / 6 144 UTF-8 bytes (`BLOCKERS_MAX_HUMAN_LINES`, `BLOCKERS_MAX_HUMAN_BYTES`) |
 | Rendered `lane` / `ref` | 160 characters each, clamped with a trailing `+` |
 
-The list renders at most eight rows across open and answered together; open questions keep their ranks before the cap, so a low-priority answered row is dropped before a high-priority open one. The digest and the brief render at most eight open questions and report the omitted count. The machine projection drops trailing rows and increments `omitted` if the assembled payload would exceed its byte cap, setting `truncated`. The human render drops trailing body lines only after the header and marks the exact omitted count; no drop or clamp is silent.
+The list renders at most eight rows across open and answered together; open questions keep their ranks before the cap, so a low-priority answered row is dropped before a high-priority open one. With `--open`, only open rows participate: the cap and `omitted` count open-only drops, and answered rows filtered out by the flag are never reported as omitted. The digest and the brief render at most eight open questions and report the omitted count. The machine projection drops trailing rows and increments `omitted` if the assembled payload would exceed its byte cap, setting `truncated`. The human render drops trailing body lines only after the header and marks the exact omitted count; no drop or clamp is silent.
 
 ### v0 recorded-versus-applied posture
 

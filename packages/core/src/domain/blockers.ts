@@ -607,9 +607,12 @@ export const buildBlockerListData = (
   );
   const renderedOpen = ranking.open.slice(0, BLOCKERS_MAX_QUESTIONS);
   const capacity = Math.max(0, BLOCKERS_MAX_QUESTIONS - renderedOpen.length);
+  // `--open` filters answered rows out of the payload; it does not drop them
+  // for a bound, so they never contribute to the omitted/truncated count.
   const renderedAnswered = options.openOnly === true ? [] : ranking.answered.slice(0, capacity);
-  let omitted =
-    ranking.open.length - renderedOpen.length + ranking.answered.length - renderedAnswered.length;
+  const answeredOmitted =
+    options.openOnly === true ? 0 : ranking.answered.length - renderedAnswered.length;
+  let omitted = ranking.open.length - renderedOpen.length + answeredOmitted;
   let rows: readonly (BlockerQuestionView | BlockerAnsweredView)[] = [
     ...renderedOpen,
     ...renderedAnswered,

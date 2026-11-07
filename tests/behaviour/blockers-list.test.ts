@@ -121,6 +121,69 @@ describe("TC-BLK-034 list surface", () => {
     }
   });
 
+  test("--open does not count filter-excluded answered rows as omitted or truncated", async () => {
+    const harness = createBlockersHarness(population());
+    try {
+      const open = await harness.run(["list", "--open"]);
+      expect(open.exitCode).toBe(0);
+      expect(open.data?.truncated).toBe(false);
+      expect(open.data?.omitted).toBe(0);
+      const human = await harness.run(["list", "--open"], { json: false });
+      expect(human.exitCode).toBe(0);
+      expect(human.stdout).not.toContain("omitted");
+      expect(human.stdout).toContain("answered=0");
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  test("--open counts only open rows dropped by the eight-row cap", async () => {
+    const openQuestions = Array.from({ length: 10 }, (_, index) =>
+      makeQuestion({
+        id: `q-${index + 1}`,
+        type: "spec-ambiguity",
+        audience: "owner",
+        askedAt: at(index + 1),
+        options: [],
+      }),
+    );
+    const answeredQuestions = Array.from({ length: 3 }, (_, index) =>
+      makeQuestion({
+        id: `qa-${index + 1}`,
+        type: "spec-ambiguity",
+        audience: "owner",
+        askedAt: at(index + 20),
+        options: [],
+      }),
+    );
+    const harness = createBlockersHarness({
+      seedQuestions: [...openQuestions, ...answeredQuestions],
+      seedAnswers: answeredQuestions.map((question) =>
+        makeAnswer({ questionId: question.id, answeringAudience: "owner", text: "resolved" }),
+      ),
+    });
+    try {
+      const all = await harness.run(["list"]);
+      const open = await harness.run(["list", "--open"]);
+      expect(all.exitCode).toBe(0);
+      expect(open.exitCode).toBe(0);
+      // Default: two open rows over the cap plus all three answered rows are dropped.
+      expect(all.data?.omitted).toBe(5);
+      expect(all.data?.truncated).toBe(true);
+      // --open: only the two open rows over the cap are omitted.
+      expect(open.data?.omitted).toBe(2);
+      expect(open.data?.truncated).toBe(true);
+      const openRows = open.data?.questions;
+      if (!Array.isArray(openRows)) throw new Error("--open must return a questions array");
+      expect(openRows).toHaveLength(8);
+      const human = await harness.run(["list", "--open"], { json: false });
+      expect(human.stdout).toContain("+2 more questions omitted");
+      expect(human.stdout).not.toContain("+5 more questions omitted");
+    } finally {
+      harness.cleanup();
+    }
+  });
+
   test("human mode renders one ranked line per question with a separate answered group", async () => {
     const harness = createBlockersHarness(population());
     try {

@@ -105,6 +105,50 @@ describe("TC-BLK-011 corruption classification", () => {
     }
   });
 
+  test("an unparseable askedAt fails closed as torn instead of serving age 0", async () => {
+    const harness = createBlockersHarness();
+    try {
+      rawAppend(harness.state.store, {
+        kind: "blocker.question",
+        recordKey: "blockers.questions:q-bad-time",
+        payload: { ...malformedQuestion(), id: "q-bad-time", askedAt: "not-an-instant" },
+      });
+      const run = await harness.run(["list"]);
+      expect(run.exitCode).toBe(2);
+      expect(run.envelope?.error).toMatchObject({ code: "state.store.torn" });
+      expect(run.data).toBeUndefined();
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  test("an unparseable answeredAt fails closed as torn", async () => {
+    const harness = createBlockersHarness();
+    try {
+      rawAppend(harness.state.store, {
+        kind: "blocker.question",
+        recordKey: "blockers.questions:q-1",
+        payload: {
+          ...malformedQuestion(),
+          id: "q-1",
+          audience: "owner",
+          ref: null,
+        },
+      });
+      rawAppend(harness.state.store, {
+        kind: "blocker.answer",
+        recordKey: "blockers.answers:q-1",
+        payload: { ...answerPayload("q-1"), answeredAt: "not-an-instant" },
+      });
+      const run = await harness.run(["list"]);
+      expect(run.exitCode).toBe(2);
+      expect(run.envelope?.error).toMatchObject({ code: "state.store.torn" });
+      expect(run.data).toBeUndefined();
+    } finally {
+      harness.cleanup();
+    }
+  });
+
   test("publish and answer on a torn store exit 2 and append nothing", async () => {
     const harness = createBlockersHarness();
     try {

@@ -120,6 +120,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
 
+/** A declared timestamp field must be a parseable instant before it is served. */
+const isParseableInstant = (value: string): boolean => Number.isFinite(Date.parse(value));
+
 const hasOnlyKeys = (
   value: Readonly<Record<string, unknown>>,
   allowed: readonly string[],
@@ -246,6 +249,7 @@ const questionFrom = (
   if (!isNonEmptyString(value.lane)) return fail("state.store.unknown", location);
   if (!isNonEmptyString(value.question)) return fail("state.store.unknown", location);
   if (!isNonEmptyString(value.askedAt)) return fail("state.store.unknown", location);
+  if (!isParseableInstant(value.askedAt)) return fail("state.store.torn", location);
   if (value.ref !== null && typeof value.ref !== "string")
     return fail("state.store.torn", location);
   if (!Array.isArray(value.options) || value.options.some((option) => typeof option !== "string")) {
@@ -276,6 +280,7 @@ const answerFrom = (
   if (hasChoice && typeof value.choice !== "string") return fail("state.store.torn", location);
   if (hasText && typeof value.text !== "string") return fail("state.store.torn", location);
   if (!isNonEmptyString(value.answeredAt)) return fail("state.store.unknown", location);
+  if (!isParseableInstant(value.answeredAt)) return fail("state.store.torn", location);
   if (value.applied !== false) return fail("state.store.torn", location);
   const resume = laneResumeFrom(value.laneResume, location);
   if (!resume.ok) return resume;

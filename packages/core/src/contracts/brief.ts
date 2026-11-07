@@ -2,7 +2,7 @@
  * The `delivery.brief.v1` vocabulary (GH-228 F-2..F-4, DM-1..DM-5).
  *
  * Runtime-neutral by construction: types and `as const` data only. The closed
- * surface set, the closed three-entry placeholder catalog, and the anchor model
+ * surface set, the closed two-entry placeholder catalog, and the anchor model
  * are declared once here; the pure projection and renderer consume them. Every
  * digest section state, count, truncation, and evidence reference is imported
  * from `./status.js`; no parallel vocabulary or numeric bound is declared.
