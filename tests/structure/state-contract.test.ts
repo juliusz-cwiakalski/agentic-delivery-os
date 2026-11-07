@@ -21,6 +21,7 @@ import {
 import {
   createArtifactBoundary,
   createStateStore,
+  readSpendLedger,
   type StateEdgeFaultPoint,
   type StateRuntimeEdge,
 } from "../../packages/core/src/state/index";
@@ -270,6 +271,34 @@ describe("TC-STATE-003 levels and unsupported rejection", () => {
       if (fence.ok) control.releaseFence(fence.value.handle);
       // The control created the directory; the production store above must not.
       expect(existsSync(root)).toBe(true);
+    } finally {
+      removeRoot(root);
+    }
+  });
+});
+
+describe("TC-SPEND-008 additive state read surface", () => {
+  test("the state barrel exports the additive capture listing and the composed spend read", async () => {
+    const state = await import("../../packages/core/src/state/index");
+    expect(typeof (state as Record<string, unknown>).readHarnessCaptureOutcomes).toBe("function");
+    expect(typeof (state as Record<string, unknown>).readSpendLedger).toBe("function");
+  });
+
+  test("the composed read records path and position evidence and never a zero sum", () => {
+    const root = makeTempRoot("spend-read-evidence");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      const read = readSpendLedger(store, "GH-236");
+      expect(read.ok).toBe(true);
+      if (!read.ok) return;
+      expect(read.value.verifiedEmpty).toBe(true);
+      expect(read.value.records).toEqual([]);
+      expect(read.value.outcomes).toEqual([]);
+      expect(read.value.transitions).toEqual([]);
+      expect(read.value.transitionsPresent).toBe(false);
+      expect(read.value.evidence.storePath.length).toBeGreaterThan(0);
+      expect(read.value.evidence.recordCount).toBe(0);
     } finally {
       removeRoot(root);
     }

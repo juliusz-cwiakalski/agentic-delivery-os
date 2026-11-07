@@ -192,6 +192,47 @@ export const readHarnessTelemetry = (
   });
 };
 
+/**
+ * Read one delivery's verified capture-outcome records (PIN-12).
+ *
+ * Presence-tolerant and additive beside the per-run read: the store is verified
+ * once, then every record whose key sits under the ref-scoped capture prefix is
+ * parsed. A wrong record kind or a malformed payload under the prefix is the
+ * delivered `state.store.torn` identity naming the path and sequence; an absent
+ * family is an empty list with the verified-empty evidence. Nothing is written
+ * and no fence is acquired.
+ */
+export const readHarnessCaptureOutcomes = (
+  store: StateStorePort,
+  workItemRef: string,
+): StateResult<{
+  readonly records: readonly HarnessCaptureOutcomeRecord[];
+  readonly verifiedEmpty: boolean;
+  readonly evidence: { readonly storePath: string };
+}> => {
+  const verified = store.readRecords();
+  if (!verified.ok) return verified;
+  const prefix = `${HARNESS_TELEMETRY_CAPTURE_KEY_PREFIX}${workItemRef}:`;
+  const records: HarnessCaptureOutcomeRecord[] = [];
+  for (const ledgerRecord of verified.value.records) {
+    if (!ledgerRecord.key.startsWith(prefix)) continue;
+    if (ledgerRecord.kind !== HARNESS_TELEMETRY_RECORD_KIND) {
+      return torn({ path: verified.value.evidence.storePath, record: ledgerRecord.sequence });
+    }
+    const parsed = recordFromCapture(ledgerRecord.payload, {
+      path: verified.value.evidence.storePath,
+      record: ledgerRecord.sequence,
+    });
+    if (!parsed.ok) return parsed;
+    records.push(parsed.value);
+  }
+  return ok({
+    records,
+    verifiedEmpty: verified.value.evidence.verifiedEmpty,
+    evidence: { storePath: verified.value.evidence.storePath },
+  });
+};
+
 /** Read one delivery run's verified capture outcome. */
 export const readHarnessCaptureOutcome = (
   store: StateStorePort,

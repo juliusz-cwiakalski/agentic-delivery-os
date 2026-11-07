@@ -106,6 +106,7 @@
     "src/state/registry.ts",
     "src/state/retro-registry.ts",
     "src/state/retro-sidecar.ts",
+    "src/state/spend-reads.ts",
     "src/state/storage-error.ts"
   ],
   "adapters": [

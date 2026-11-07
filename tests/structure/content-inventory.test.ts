@@ -693,6 +693,16 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/domain/brief.ts": ["projectBrief", "renderBriefHuman"],
   "core/src/state/index.ts": ["createStateStore"],
+  "core/src/state/spend-reads.ts": ["readSpendLedger"],
+  "core/src/state/harness-telemetry.ts": [
+    "appendHarnessCaptureOutcome",
+    "appendHarnessTelemetry",
+    "harnessTelemetryCaptureKey",
+    "harnessTelemetryRecordKey",
+    "readHarnessCaptureOutcome",
+    "readHarnessCaptureOutcomes",
+    "readHarnessTelemetry",
+  ],
   "core/src/state/artifact-boundary.ts": ["createArtifactBoundary"],
   "core/src/state/audit.ts": [
     "appendAuditInvocation",
