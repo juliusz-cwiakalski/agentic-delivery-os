@@ -67,3 +67,6 @@ notes:
   - text: "Plan phase 5 complete (phase-4 commit 3a8fce74): three pure watch normalizers inside packages/adapters/src/provider-quota/ (coding-plan weekly+rolling, DeepSeek balance-vs-floor, OpenAI usage windows) with committed fixtures, the mapping-kind registration factory, and a core read-only watch status reader (credential-port-only one-time handoff, transport failure=outage, malformed never clear, zero state writes, --provider filter). Legacy group 5 added. Gates green: pnpm typecheck; watch-mappings/watch-status/legacy/quota-evaluation/content-inventory 74 pass; pnpm check:boundaries (no violations, secret-read-boundary 5 allowlisted unchanged)."
     type: "info"
     date: "2026-11-07"
+  - text: "Plan phase 6 complete (phase-5 commit 704693ec): provider CLI gains `profile resolve [--agent] [--for-spawn]`, `watch status [--provider]`, and `resolve --profile`, with Appendix C envelope data, exit conventions (0 resolved/read, 1 classified misconfiguration, 2 all-refused via exitProjection), human continuity lines, and classified invalid grammar with zero runtime calls. Goldens for profile-resolve and watch-status committed. Gates green: pnpm typecheck; provider-profile-cli/goldens 27 pass, existing provider-cli + resolve/quota/parks goldens 14 pass."
+    type: "info"
+    date: "2026-11-07"
