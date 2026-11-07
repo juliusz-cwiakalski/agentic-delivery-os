@@ -33,7 +33,6 @@ const depsFor = (
 
 const input = {
   workItemRef: "GH-235",
-  runId: "run-capability",
   reason: "session-interrupted" as const,
   evidence: sessionEvidence(),
 };

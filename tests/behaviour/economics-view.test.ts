@@ -77,7 +77,6 @@ describe("TC-ECON-060 per-delivery economics derives from durable records alone"
     seedRestarts(created.store, 3);
     created.supervised.attempt({
       workItemRef: "GH-235",
-      runId: "run-view",
       reason: "session-interrupted",
       evidence: runtimeEvidence(),
     });

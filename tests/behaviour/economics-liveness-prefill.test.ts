@@ -5,7 +5,7 @@
  * spawn, or lane mutation.
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import type { EconomicsSourcedSignalReading } from "../../packages/core/src/contracts/index";
+import type { HarnessLivenessFacts } from "../../packages/core/src/contracts/index";
 import { createSourcedWatchdogSignalSource } from "../../packages/core/src/domain/index";
 import { PREFILL_CASES } from "../fixtures/economics/cases";
 import { mutationCalls, runWatchdogCli, runnerSideEffectCalls } from "../fixtures/watchdog/harness";
@@ -25,19 +25,27 @@ const repo = (): WatchdogTempRepository => {
   return created;
 };
 
+const OBSERVED_AT = "2026-11-07T00:00:09Z";
+
 const factsFor = (
   heartbeatAgeMs: number,
   tokenDelta = 0,
-  traffic = 0,
-): readonly EconomicsSourcedSignalReading[] => [
-  {
-    kind: "heartbeat-age",
-    status: "sourced",
-    value: heartbeatAgeMs,
-    observedAt: "2026-11-07T00:00:09Z",
-  },
-  { kind: "token-delta", status: "sourced", value: tokenDelta, observedAt: "2026-11-07T00:00:09Z" },
-];
+  traffic?: number,
+): HarnessLivenessFacts => ({
+  readings:
+    traffic === undefined
+      ? []
+      : [{ kind: "session-traffic", status: "sourced", value: traffic, observedAt: OBSERVED_AT }],
+  sourcedSignals: [
+    {
+      kind: "heartbeat-age",
+      status: "sourced",
+      value: heartbeatAgeMs,
+      observedAt: OBSERVED_AT,
+    },
+    { kind: "token-delta", status: "sourced", value: tokenDelta, observedAt: OBSERVED_AT },
+  ],
+});
 
 describe("TC-ECON-020 a large prefilling or resuming session is never stalled", () => {
   test("the committed matrix meets the floor of three sizes x three durations x four shapes", () => {
@@ -53,13 +61,11 @@ describe("TC-ECON-020 a large prefilling or resuming session is never stalled", 
       const facts = factsFor(
         entry.signals.heartbeatAgeMs,
         entry.signals.tokenDelta ?? 0,
-        entry.signals.traffic ?? 0,
+        entry.signals.traffic,
       );
       const run = await runWatchdogCli(["watchdog", "liveness", "lane-1", "--json"], {
         repo: shared,
-        signalSources: [
-          createSourcedWatchdogSignalSource(() => ({ readings: [], sourcedSignals: facts })),
-        ],
+        signalSources: [createSourcedWatchdogSignalSource(() => facts)],
       });
       const envelope = JSON.parse(run.stdout) as {
         data?: { verdict?: string; signals?: Record<string, number> };
@@ -69,6 +75,7 @@ describe("TC-ECON-020 a large prefilling or resuming session is never stalled", 
       expect(envelope.error, entry.id).toBeUndefined();
       expect(envelope.data?.verdict, entry.id).toBe("progressing");
       expect(Object.keys(envelope.data?.signals ?? {}).length, entry.id).toBeGreaterThan(0);
+      expect(envelope.data?.signals?.traffic, entry.id).toBe(entry.signals.traffic);
       expect(runnerSideEffectCalls(run.runtimeCalls), entry.id).toEqual([]);
       expect(mutationCalls(run.runtimeCalls), entry.id).toEqual([]);
       expect(
@@ -85,13 +92,11 @@ describe("TC-ECON-020 a large prefilling or resuming session is never stalled", 
       const facts = factsFor(
         entry.signals.heartbeatAgeMs,
         entry.signals.tokenDelta ?? 0,
-        entry.signals.traffic ?? 0,
+        entry.signals.traffic,
       );
-      const signals = createSourcedWatchdogSignalSource(() => ({
-        readings: [],
-        sourcedSignals: facts,
-      }))("lane-1");
+      const signals = createSourcedWatchdogSignalSource(() => facts)("lane-1");
       expect(signals?.heartbeatAgeMs ?? 0).toBeGreaterThanOrEqual(300_000);
+      expect(signals?.traffic, entry.id).toBe(entry.signals.traffic);
       expect((signals?.tokenDelta ?? 0) > 0 || (signals?.traffic ?? 0) > 0).toBe(true);
     }
   });

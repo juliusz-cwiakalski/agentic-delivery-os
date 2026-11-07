@@ -19,7 +19,6 @@ afterEach(() => {
 
 const input = (repayTokens: number, observed: number, sessionId = "ses_fixture_1") => ({
   workItemRef: "GH-235",
-  runId: "run-uneconomical",
   reason: "session-interrupted" as const,
   evidence: runtimeEvidence({
     sessionId,

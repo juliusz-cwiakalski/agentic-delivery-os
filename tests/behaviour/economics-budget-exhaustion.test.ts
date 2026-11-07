@@ -25,7 +25,6 @@ afterEach(() => {
 
 const input = () => ({
   workItemRef: "GH-235",
-  runId: "run-exhaustion",
   reason: "session-interrupted" as const,
   evidence: runtimeEvidence(),
 });

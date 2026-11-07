@@ -26,7 +26,6 @@ afterEach(() => {
 
 const input = (overrides: { repayTokens?: number; observed?: number } = {}) => ({
   workItemRef: "GH-235",
-  runId: "run-no-execution",
   reason: "session-interrupted" as const,
   evidence: runtimeEvidence({
     ...(overrides.repayTokens === undefined

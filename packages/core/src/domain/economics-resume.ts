@@ -7,7 +7,8 @@
  * to the SAME imported gate function, so a single seam decides restarts, and no
  * composition declares a spawn, kill, steer, or restart-execution capability.
  * Precedence (DEC-7): a past-budget attempt is always refused with the budget
- * reason, evaluated before economics, so exactly one identity is emitted.
+ * reason, evaluated before evidence completeness and economics, so exactly one
+ * identity is emitted.
  */
 import {
   ECONOMICS_EXHAUSTION_OPTIONS,
@@ -131,8 +132,9 @@ const exhaustionRecordFor = (
 
 /**
  * Classify one resume attempt. Exactly one decision leaves this function; the
- * budget gate is evaluated first, so an exhausted delivery can never reach the
- * economics branch.
+ * capability checks run first (attach-continue consumes no ordinal), then the
+ * budget gate, so an exhausted delivery can never reach the
+ * evidence-completeness or economics branches.
  */
 export const evaluateResumeEconomics = (
   deps: ResumeEconomicsDeps,
@@ -150,17 +152,6 @@ export const evaluateResumeEconomics = (
       ordinalConsumed: false,
       evidence: `attach-and-continue used for session ${input.evidence.sessionId}; prefill not re-paid`,
     };
-  }
-
-  if (input.evidence.tokensReadable === false) {
-    return refuseIncomplete(input, "token-facts", "the session token facts are unreadable");
-  }
-  if (input.evidence.costReadable === false) {
-    return refuseIncomplete(input, "cost", "the session cost figure is unreadable");
-  }
-  const repay = repayTotalOf(input);
-  if (repay === undefined) {
-    return refuseIncomplete(input, "repayTokens", "the prefill re-pay token fact is missing");
   }
 
   const recordsRead = deps.store.readDeliveryRecords(input.workItemRef);
@@ -196,15 +187,35 @@ export const evaluateResumeEconomics = (
   }
   if (gate.outcome === "refuse-budget") {
     // D-10: the first refusal that observes exhaustion appends the single
-    // terminal record; later refusals re-read the same terminal truth.
-    deps.store.ensureExhaustionRecord(exhaustionRecordFor(deps, input, gate.count));
+    // terminal record; later refusals re-read the same terminal truth. The
+    // budget gate precedes the evidence-completeness checks (DEC-7): a
+    // past-budget delivery is refused with the budget reason even when its
+    // session token facts are unreadable or missing.
+    const terminal = deps.store.ensureExhaustionRecord(
+      exhaustionRecordFor(deps, input, gate.count),
+    );
     return {
       outcome: "refuse",
       code: "dispatch.restart-budget-exceeded",
       exitCode: ECONOMICS_EXIT_REFUSAL,
       reason: "the delivery's restart budget is exhausted; the restart is refused before any spawn",
       corpus: gate.corpus,
+      // AC-F4-2/AC-F4-4 durability guard: a failed terminal append is
+      // surfaced additively instead of being swallowed, so callers can never
+      // read the refusal as a durable escalation record.
+      ...(terminal.ok ? {} : { terminalAppendError: terminal.code }),
     };
+  }
+
+  if (input.evidence.tokensReadable === false) {
+    return refuseIncomplete(input, "token-facts", "the session token facts are unreadable");
+  }
+  if (input.evidence.costReadable === false) {
+    return refuseIncomplete(input, "cost", "the session cost figure is unreadable");
+  }
+  const repay = repayTotalOf(input);
+  if (repay === undefined) {
+    return refuseIncomplete(input, "repayTokens", "the prefill re-pay token fact is missing");
   }
 
   if (

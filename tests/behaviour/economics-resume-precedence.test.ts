@@ -7,6 +7,7 @@ import { describe, expect, test } from "bun:test";
 import type {
   EconomicsResumeCapabilityDeclaration,
   EconomicsResumeDecision,
+  EconomicsSessionEvidence,
 } from "../../packages/core/src/contracts/index";
 import {
   createOneShotResumeComposition,
@@ -42,7 +43,6 @@ const attempt = (
 ): EconomicsResumeDecision =>
   evaluateResumeEconomics(deps, {
     workItemRef: "GH-235",
-    runId: "run-precedence",
     reason: "session-interrupted",
     evidence: sessionEvidence({
       repayTokens: { inputTokens: cell.repayTokens, outputTokens: 0 },
@@ -78,7 +78,6 @@ describe("TC-ECON-042 the four precedence cells through one resume entry point",
       });
       const decision = evaluateResumeEconomics(depsFor(store, 3), {
         workItemRef: "GH-235",
-        runId: "run-precedence",
         reason: "session-interrupted",
         evidence: sessionEvidence({
           repayTokens: { inputTokens: repayTokens, outputTokens: 0 },
@@ -92,6 +91,35 @@ describe("TC-ECON-042 the four precedence cells through one resume entry point",
       expect(decision.corpus).not.toContain("dispatch.resume-uneconomical");
       expect(store.state.appends).toBe(0);
       expect(store.state.exhaustionAppends).toBe(1);
+    }
+  });
+
+  test("a past-budget attempt with incomplete evidence keeps the budget identity and records terminal truth", () => {
+    const evidenceVariants: readonly EconomicsSessionEvidence[] = [
+      sessionEvidence({ tokensReadable: false }),
+      sessionEvidence({ costReadable: false }),
+      { sessionId: "ses_fixture_1", treeRoot: "ses_fixture_1", tokensReadable: true },
+    ];
+    for (const evidence of evidenceVariants) {
+      const store = createMemoryResumeStore({
+        restarts: [1, 2, 3].map((ordinal) => restartRecord({ ordinal })),
+      });
+      const decision = evaluateResumeEconomics(depsFor(store, 3), {
+        workItemRef: "GH-235",
+        reason: "session-interrupted",
+        evidence,
+      });
+      expect(decision.outcome).toBe("refuse");
+      if (decision.outcome !== "refuse") continue;
+      expect(decision.code).toBe("dispatch.restart-budget-exceeded");
+      expect(decision.exitCode).toBe(1);
+      expect(decision.corpus).toContain("reason=dispatch.restart-budget-exceeded");
+      expect(decision.corpus).not.toContain("extraction-failed");
+      expect(decision.terminalAppendError).toBeUndefined();
+      expect(store.state.exhaustionAppends).toBe(1);
+      expect(store.state.terminal?.reason).toBe("dispatch.restart-budget-exceeded");
+      expect(store.state.appends).toBe(0);
+      expect(store.state.restarts).toHaveLength(3);
     }
   });
 
@@ -126,7 +154,6 @@ describe("TC-ECON-042 the four precedence cells through one resume entry point",
       const oneShotStore = createMemoryResumeStore({ restarts: records });
       const input = {
         workItemRef: "GH-235",
-        runId: "run-precedence",
         reason: "session-interrupted" as const,
         evidence: sessionEvidence({
           repayTokens: { inputTokens: cell.repayTokens, outputTokens: 0 },

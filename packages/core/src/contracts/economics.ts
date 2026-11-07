@@ -427,6 +427,12 @@ export type EconomicsResumeDecision =
       readonly exitCode: typeof ECONOMICS_EXIT_REFUSAL;
       readonly reason: string;
       readonly corpus: string;
+      /**
+       * Additive durability guard (AC-F4-2, AC-F4-4): present only when the
+       * terminal escalation record did not land, naming the classified append
+       * failure. The refusal identity and exit are unchanged.
+       */
+      readonly terminalAppendError?: EconomicsRecordFailureCode | "state.write.failed";
     }
   | {
       readonly outcome: "unevaluable";
@@ -447,10 +453,14 @@ export type EconomicsResumeComposition = {
   readonly attempt: (input: EconomicsResumeInput) => EconomicsResumeDecision;
 };
 
-/** One resume attempt's injected input (no execution, no ambient fact). */
+/**
+ * One resume attempt's injected input (no execution, no ambient fact).
+ *
+ * The run identity lives only on the composition deps (`ResumeEconomicsDeps.runId`),
+ * so one run has one identity source.
+ */
 export type EconomicsResumeInput = {
   readonly workItemRef: string;
-  readonly runId: string;
   readonly reason: EconomicsRestartReason;
   readonly evidence: EconomicsSessionEvidence;
 };

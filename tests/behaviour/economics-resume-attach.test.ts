@@ -19,7 +19,6 @@ afterEach(() => {
 
 const input = (sessionId = "ses_fixture_1") => ({
   workItemRef: "GH-235",
-  runId: "run-attach",
   reason: "session-interrupted" as const,
   evidence: runtimeEvidence({ sessionId, treeRoot: `${sessionId}-root` }),
 });

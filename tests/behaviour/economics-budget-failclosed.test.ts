@@ -27,7 +27,6 @@ afterEach(() => {
 
 const input = () => ({
   workItemRef: "GH-235",
-  runId: "run-failclosed",
   reason: "session-interrupted" as const,
   evidence: runtimeEvidence(),
 });
@@ -158,6 +157,39 @@ describe("TC-ECON-055 the budget gate is fail-closed on unevaluable state", () =
     if (gate.outcome !== "unevaluable") return;
     expect(gate.code).toBe("state.permission.denied");
     expect(gate.exitCode).toBe(1);
+  });
+
+  test("a failed terminal append is surfaced on the refusal instead of being swallowed", () => {
+    const restarts: readonly EconomicsRestartRecord[] = [1, 2, 3].map((ordinal) => ({
+      schemaId: "delivery.economics.restart.v1" as const,
+      workItemRef: "GH-235",
+      runId: "run-failclosed",
+      sessionId: `ses_fixture_${ordinal}`,
+      ordinal,
+      reason: "session-interrupted" as const,
+      repayTokens: { inputTokens: 100, outputTokens: 0 },
+      observedUniqueProgressTokens: 400,
+      recordedAt: "2026-11-07T00:00:01Z",
+    }));
+    const failingEnsure: EconomicsResumeStorePort = {
+      readDeliveryRecords: () => ({
+        ok: true,
+        workItemRef: "GH-235",
+        restarts,
+        verifiedEmpty: false,
+      }),
+      appendRestartEvent: () => {
+        throw new Error("must not append");
+      },
+      ensureExhaustionRecord: () => ({ ok: false, code: "state.write.failed" }),
+    };
+    const decision = compositionFor(failingEnsure).attempt(input());
+    expect(decision.outcome).toBe("refuse");
+    if (decision.outcome !== "refuse") return;
+    expect(decision.code).toBe("dispatch.restart-budget-exceeded");
+    expect(decision.exitCode).toBe(1);
+    expect(decision.corpus).toContain("reason=dispatch.restart-budget-exceeded");
+    expect(decision.terminalAppendError).toBe("state.write.failed");
   });
 
   test("the treats-unreadable-as-empty mutant fails: it admits where the gate refuses", () => {

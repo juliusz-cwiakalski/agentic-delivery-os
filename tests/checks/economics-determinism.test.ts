@@ -42,7 +42,6 @@ const runtime = (label: string): EconomicsRuntime => {
 
 const input = () => ({
   workItemRef: "GH-235",
-  runId: "run-determinism",
   reason: "session-interrupted" as const,
   evidence: runtimeEvidence(),
 });

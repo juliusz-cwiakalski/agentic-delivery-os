@@ -13,6 +13,8 @@ import type {
   EconomicsWarningKind,
   EconomicsRestartReason,
   EconomicsRestartRecord,
+  EconomicsResumeDecision,
+  EconomicsResumeInput,
   EconomicsSourcedSignalKind,
   EconomicsView,
   HarnessLivenessReport,
@@ -156,3 +158,31 @@ export {
   unknownWarning,
   warningKind,
 };
+
+// --- Phase 8 remediation: one run identity source (review F-6). ---
+
+const resumeInput: EconomicsResumeInput = {
+  workItemRef: "GH-235",
+  reason: restartReason,
+  evidence: { sessionId: "ses_fixture_1", treeRoot: "ses_fixture_1" },
+};
+
+const inputWithRunId: EconomicsResumeInput = {
+  workItemRef: "GH-235",
+  // @ts-expect-error — the run identity lives only on the composition deps, never the input.
+  runId: "run-1",
+  reason: restartReason,
+  evidence: { sessionId: "ses_fixture_1", treeRoot: "ses_fixture_1" },
+};
+
+const refuseWithRawAppendError: EconomicsResumeDecision = {
+  outcome: "refuse",
+  code: "dispatch.restart-budget-exceeded",
+  exitCode: 1,
+  reason: "budget exhausted",
+  corpus: "reason=dispatch.restart-budget-exceeded",
+  // @ts-expect-error — the additive durability guard names only a classified append failure.
+  terminalAppendError: "kaboom",
+};
+
+export { inputWithRunId, refuseWithRawAppendError, resumeInput };
