@@ -1,13 +1,13 @@
 ---
 id: chg-GH-236-test-plan
-status: Proposed
+status: Updated
 created: 2026-11-07T09:00:00Z
-last_updated: 2026-11-07T09:00:00Z
+last_updated: 2026-11-07T11:30:00Z
 owners: [engineering]
 service: "delivery-os learning plane (spend read side)"
 labels: [m1, spend, learning-plane, state-layer, cli, status-digest]
 version_impact: minor
-summary: "Traceable verification of M1-S19: the `spend` v0 read side as a deterministic, read-only fold over the closeout-captured event log — five token classes (null excluded, degradation by closed reason, never fabricated to zero), calls, per-agent/model roll-ups, per-phase capture-time attribution from `phase.transition` windows with terminal attribution and the named `unknown` fallback, per-delivery restarts as max(0, N−1) over the union of run identities across both telemetry families, and the resume-amplification metric pinned by TDR-0011 (paid = five-class sum over all captured records, progress = the latest record-bearing run by captured-at descending with run-id ascending tie-break, healthy single run exactly 1, one named `restart-loop prefill re-pay` event per superseded positive-spend run with its window and `tokensWasted`, zero-progress null rule, honesty limits in the report's own terms); telemetry-absent as the first-class classified outcome (exit 1) while delivered state identities keep their own projections (torn/schema/unknown exit 2, permission-denied exit 1); the exact `delivery.spend.v1` data key set, mode emphasis flags, bounded deterministic rendering and byte-identical replays with zero harness-store reads; and the status-digest section 8 flip (spend observed, placeholder line removed, `placeholderSectionCount` 2→1, `state-log` evidence source, verified-empty and `state-unreadable` projections) fed by the same fold, with the brief unchanged."
+summary: "Traceable verification of M1-S19: the `spend` v0 read side as a deterministic, read-only fold over the closeout-captured event log — five token classes (null excluded, degradation by closed reason, never fabricated to zero), calls, per-agent/model roll-ups, per-phase capture-time attribution from `phase.transition` windows with terminal attribution and the named `unknown` fallback, per-delivery restarts as max(0, N−1) over the union of run identities across both telemetry families, and the resume-amplification metric pinned by TDR-0011 as amended by spec v1.1 DEC-11 (paid = five-class sum over all captured records, progress = the latest record-bearing run by captured-at descending with run-id ascending tie-break, healthy single run exactly 1, one named `restart-loop prefill re-pay` event per superseded positive-spend run with its window and `tokensWasted`, the generalized zero-progress null rule covering paid > 0 and paid = 0, machine-readable naming of the zero-token progress run via the additive nullable `amplification.progressRun` plus the human digest, honesty limits in the report's own terms); telemetry-absent as the first-class classified outcome (exit 1) while delivered state identities keep their own projections (torn/schema/unknown exit 2, permission-denied exit 1); the exact `delivery.spend.v1` data key set, mode emphasis flags, bounded deterministic rendering and byte-identical replays with zero harness-store reads; and the status-digest section 8 flip (spend observed, placeholder line removed, `placeholderSectionCount` 2→1, `state-log` evidence source, verified-empty and `state-unreadable` projections) fed by the same fold, with the brief unchanged."
 links:
   change_spec: ./chg-GH-236-spec.md
   implementation_plan: ./chg-GH-236-plan.yaml
@@ -24,7 +24,7 @@ This change turns an append-only statistics log into two answers the operator ca
 
 **Second, the arithmetic must be pinned, not plausible.** Per-ticket sums exclude null classes and disclose degradation by closed reason; per-phase attribution is capture-time over transition windows with the terminal and `unknown` rules; restarts count the union of run identities; and amplification implements exactly the TDR-0011 formula. Every numeric oracle is computed independently from the fixture definition (hand-summed constants), never by reusing the production fold, and every formula pin has a named mutant that must fail the suite.
 
-**Third, the surfaces must stay honest and bounded.** A healthy single-run delivery reads exactly 1; a restart loop yields one named, windowed, quantified event per superseded run; a zero-progress run yields `ratio: null`; the honesty limits are rendered in the report's own terms; telemetry-absent is `spend.telemetry-absent` at exit 1; store damage keeps its delivered exits; output is byte-identical on replay, bounded, and carries statistics and identity references only. The digest flip lands in the same change so the pinned `placeholderSectionCount` invariant never contradicts the rendered output.
+**Third, the surfaces must stay honest and bounded.** A healthy single-run delivery reads exactly 1; a restart loop yields one named, windowed, quantified event per superseded run; a zero-token progress run yields `ratio: null` and is named machine-readably in `amplification.progressRun` (and in the human digest), including the degenerate all-null case where paid is also zero; the honesty limits are rendered in the report's own terms; telemetry-absent is `spend.telemetry-absent` at exit 1; store damage keeps its delivered exits; output is byte-identical on replay, bounded, and carries statistics and identity references only. The digest flip lands in the same change so the pinned `placeholderSectionCount` invariant never contradicts the rendered output.
 
 This is a design and verification map, not an execution claim: no suites were run while authoring it.
 
@@ -40,7 +40,7 @@ This is a design and verification map, not an execution claim: no suites were ru
 - Per-phase attribution: ordered windows folded from `phase.transition` (`complete` closes, `reopen` reopens), captured-at selection, terminal attribution after the final transition, records before the first transition to the first transitioned phase, one aggregation entry per phase id, integer floored `share` (F-3, AC-F3-1, DM-2, DEC-4).
 - The named `unknown` attribution fallback when the ref has no transitions, named in both the machine phase entry and the human digest (F-3, AC-F3-2, DM-2).
 - Restarts as `max(0, N−1)` over the union of run identities across session-group records and capture-outcome records, with the capture-reached evidence basis disclosed (F-4, AC-F4-1, AC-F5-3, DM-4, DEC-5).
-- Resume amplification exactly per TDR-0011: paid = five-class sum over all captured records; progress = the latest record-bearing captured run (captured-at descending, run-id ascending tie-break); healthy single positive-spend run = exactly 1; one named `restart-loop prefill re-pay` event per earlier record-bearing run with positive spend, carrying the derived window and `tokensWasted`; deterministic event ordering; closed single-entry cause vocabulary; zero-progress null rule; the degenerate all-zero case; the honesty limits (F-5, AC-F5-1, AC-F5-2, AC-F5-3, DM-3, DEC-3, TDR-0011 C-2..C-5).
+- Resume amplification exactly per TDR-0011 as amended by spec v1.1 DEC-11: paid = five-class sum over all captured records; progress = the latest record-bearing captured run (captured-at descending, run-id ascending tie-break); healthy single positive-spend run = exactly 1; one named `restart-loop prefill re-pay` event per earlier record-bearing run with positive spend, carrying the derived window and `tokensWasted`; deterministic event ordering; closed single-entry cause vocabulary; the generalized zero-progress null rule (paid > 0 or paid = 0 with every class null) reporting `ratio: null` and naming the progress run machine-readably in the additive nullable `amplification.progressRun` (null whenever progress > 0) and in the human digest; the honesty limits (F-5, AC-F5-1, AC-F5-2, AC-F5-3, DM-1, DM-3, DEC-3, DEC-11, TDR-0011 C-2..C-6).
 - Consistency between the two run-identity readouts: superseded record-bearing runs ≤ restarts; a capture-outcome-only run counts toward restarts, contributes zero paid tokens, and raises no event (F-4, F-5, AC-F4-1, AC-F5-3, DM-3, DM-4, TDR-0011 boundary pin).
 - Output contract: the standard CommandResult envelope (`delivery.result.v1`), `data` under the declared `delivery.spend.v1` schema constant with exactly the six pinned keys, `--json` forcing the envelope, `--amplification` scoping only the human amplification section, interactive/scripted rendering unchanged (F-6, AC-F6-2, DM-1, DEC-9).
 - Bounded, deterministic output: machine ≤ 64 KiB; human ≤ 200 lines and ≤ 16 KiB; all bounds in UTF-8 bytes; deterministic truncation dropping trailing `perAgent[]`/`perPhase[]` entries with a recorded marker; byte-identical repeat renders; zero model calls; zero ambient clock/randomness in the render path (F-6, AC-F6-3, NFR-1, NFR-2).
@@ -68,14 +68,15 @@ This is a design and verification map, not an execution claim: no suites were ru
 - [GAP-1 — implementation-plan mapping — PENDING] `chg-GH-236-plan.yaml` is authored in `delivery_planning` (phase 4) and does not exist yet. It must map all `TC-SPEND-001..034` onto phases without reshaping any TC's behaviour, oracle, identity, exit, bound, or AC/NFR mapping. Any later plan that changes a pinned contract reopens this test plan.
 - [GAP-2 — delivery-bound, non-blocking: NFR-4 is runner-dependent] The p95 ≤ 500 ms at 1,000 records and ≤ 2 s at 10,000 records thresholds depend on runner capacity. The CI oracle is **bounded work** (one verified ledger read per family per invocation, one fold, no per-record re-reads, no network) plus a soft local budget; a generated-fixture reference measurement is recorded in §10 and never reported as a passing threshold.
 - [GAP-3 — delivery-bound, non-blocking: exact honesty-limit prose] Spec F-5 / AC-F5-3 / TDR-0011 C-5 require the report to state the limits, but the exact strings are not spec-pinned. This plan asserts the *obligations* through one declared contract constant set rendered verbatim in the amplification section; the prose itself is delivery-bound and is pinned together with its golden (TC-SPEND-018).
-- [GAP-4 — spec-shape tension, non-blocking: the zero-progress run identity has no machine field] AC-F5-3 requires reporting `ratio: null` "naming the run", but DM-1 pins `amplification` to exactly `{ratio, events[]}` and `events[]` carries only superseded positive-spend runs. The machine envelope therefore has no field for the progress run's identity, so this plan asserts `ratio: null` in machine data and the run naming in the human report (the report's own terms), and records it as OQ-T2. Asserting an invented machine key would contradict DM-1; if machine consumers must see the identity, DM-1 needs a reviewed amendment (reopens specification, not this plan).
-- [GAP-5 — degenerate case pinned here per TDR-0011 delegation] TDR-0011's unresolved question defers the `paid = 0 ∧ progress = 0` case to plan/test-plan time inside the degradation disclosure. TP-DEC-1 below pins it (`ratio: null`, progress run named, degradation disclosure, never 1 and never a failure); no formula change is made and AC-F5-1's exact-1 anchor is scoped to a positive-spend single run.
+- **Resolved at spec v1.1 (iteration 2, DEC-11) — no open gap remains:**
+  - **GAP-4 resolved → machine-readable progress-run naming.** The earlier shape tension (AC-F5-3 required "naming the run" while DM-1 pinned `amplification` to `{ratio, events[]}`) is closed by the additive nullable field `amplification.progressRun`: the progress run's identity exactly when it contributed zero tokens (the `ratio: null` case), null whenever progress > 0. The six top-level `data` keys are unchanged and the pinned block keeps `ratio` and `events[]` intact for consumers. The plan now asserts the machine surface in `--json` plus the human digest (TC-SPEND-001, 014, 015, 017, 019, 020). The rejected human-only alternative is recorded in spec DEC-11; no invented key remains anywhere in this plan.
+  - **GAP-5 resolved → the degenerate case is spec-backed.** What this plan pinned as TP-DEC-1 is now pinned upstream: DM-3 generalizes the zero-progress null rule to cover paid > 0 **and** paid = 0 with every captured token class null (disclosed via `degradation`), and Appendix C carries the degenerate worked shape (`ratio: null`, `progressRun` naming the run, `degradation` disclosing the all-null records). The expectations are unchanged — `ratio: null`, progress run named, degradation disclosure, never 1, never 0, never a failure — only their citations move from plan-time delegation to spec clauses.
 - [GAP-6 — delivery-bound, non-blocking: roll-up ordering and truncation tail] DM-1/NFR-1 require deterministic ordering and tail-drop truncation but do not pin the roll-up sort keys. TP-DEC-5 pins total orders and the invariant set (total, permutation-invariant, truncation from the declared tail, marker recorded); the exact keys are declared once in contracts and asserted through that constant, so a reviewed re-ordering updates one constant and the goldens together.
 
 ## 2. References
 
-- **Change specification**: [chg-GH-236-spec.md](./chg-GH-236-spec.md) — 19 ACs (AC-F1-1..2, AC-F2-1..3, AC-F3-1..3, AC-F4-1, AC-F5-1..3, AC-F6-1..3, AC-F7-1, AC-F8-1..3), F-1..F-8, DM-1..DM-6, NFR-1..NFR-7, DEC-1..DEC-10, RSK-1..RSK-7, §14 OQ-1..OQ-4, Appendix A (ticket traceability), Appendix B (man-page deltas), Appendix C (worked amplification shape).
-- **Decision record (formula oracle)**: [TDR-0011](../../../decisions/TDR-0011-spend-resume-amplification-v0-formula.md) — paid/progress/ratio pins, run-id tie-break, zero-progress null rule, named-event window construction and ordering, honesty limits, the restarts boundary pin, and the delegated degenerate case (Unresolved Questions).
+- **Change specification (v1.1, iteration 2)**: [chg-GH-236-spec.md](./chg-GH-236-spec.md) — 19 ACs (AC-F1-1..2, AC-F2-1..3, AC-F3-1..3, AC-F4-1, AC-F5-1..3, AC-F6-1..3, AC-F7-1, AC-F8-1..3), F-1..F-8, DM-1..DM-6, NFR-1..NFR-7, DEC-1..DEC-11, RSK-1..RSK-7, §14 OQ-1..OQ-4, Appendix A (ticket traceability), Appendix B (man-page deltas), Appendix C (worked amplification shape including the degenerate all-null case). The v1.1 amendment consumed here: DM-1/DM-3/AC-F5-3/DEC-11/F-5 add the nullable `amplification.progressRun`, generalize the zero-progress null rule to paid = 0 ∧ progress = 0, and record the rejected human-only alternative; OQ-1 is marked resolved by TDR-0011.
+- **Decision record (formula oracle)**: [TDR-0011](../../../decisions/TDR-0011-spend-resume-amplification-v0-formula.md) — paid/progress/ratio pins, run-id tie-break, zero-progress null rule, named-event window construction and ordering, honesty limits, the restarts boundary pin, the stability contract, and its 2026-11-07 **Amendment (A-1..A-5)** adding the nullable `progressRun` and generalizing the null rule. The amendment agrees with spec DEC-11 in substance; the spec remains the change-scoped authority this plan pins against.
 - **Ticket**: GH-236 — M1-S19: Spend read side and resume amplification. Binding AC 1 → AC-F2-1 (+AC-F1-1, AC-F6-2); binding AC 2 → AC-F5-1 + AC-F5-2 (+AC-F5-3).
 - **PM record**: [chg-GH-236-pm-notes.yaml](./chg-GH-236-pm-notes.yaml).
 - **Implementation plan**: `./chg-GH-236-plan.yaml` — authored in phase 4; not yet present (GAP-1).
@@ -107,7 +108,7 @@ This is a design and verification map, not an execution claim: no suites were ru
 | AC-F4-1 | `restarts` = N−1 floored at zero over the union of run identities across both families; the agent/model roll-up spans all runs | TC-SPEND-013, TC-SPEND-019 | Covered |
 | AC-F5-1 | **Binding AC 2 (healthy anchor)** — a delivery with exactly one record-bearing positive-spend run reads exactly 1 (paid = progress) | TC-SPEND-014, TC-SPEND-016 | Covered |
 | AC-F5-2 | **Binding AC 2 (events)** — each superseded record-bearing run with positive spend flags one named `restart-loop prefill re-pay` event with its derived window and `tokensWasted`, sorted deterministically | TC-SPEND-015, TC-SPEND-016 | Covered |
-| AC-F5-3 | Ratio = paid ÷ progress with progress the latest record-bearing run; a zero-token progress run with paid > 0 reports `ratio: null` naming the run; the report proves run duplication only, never semantic duplication; restarts' capture-reached basis is disclosed | TC-SPEND-017, TC-SPEND-018, TC-SPEND-019 | Covered |
+| AC-F5-3 | Ratio = paid ÷ progress with progress the latest record-bearing run; a zero-token progress run — paid > 0 **or** paid = 0 with every class null — reports `ratio: null`, names the run machine-readably in `amplification.progressRun` (null when progress > 0) and in the human digest; the report proves run duplication only, never semantic duplication; restarts' capture-reached basis is disclosed | TC-SPEND-001, TC-SPEND-017, TC-SPEND-018, TC-SPEND-019, TC-SPEND-020 | Covered — block shape (`ratio`, `progressRun`, `events[]`), machine and human naming asserted |
 | AC-F6-1 | Malformed ref shape or an omitted ref with no resolvable active context refuses `input.value.rejected` before any read; no flag outside the locked set is accepted | TC-SPEND-025, TC-SPEND-026 | Covered |
 | AC-F6-2 | Machine output is the CommandResult envelope whose `data` carries `delivery.spend.v1` with exactly the pinned keys; `--json` forces the envelope; `--amplification` adds the human section while the envelope always carries amplification; delivered rendering unchanged | TC-SPEND-020 | Covered |
 | AC-F6-3 | Identical store content, injected clock and injected run-id render byte-identically in either mode, with zero model calls in the render path | TC-SPEND-022 | Covered |
@@ -121,11 +122,11 @@ This is a design and verification map, not an execution claim: no suites were ru
 | Ticket AC | Covered by | How the plan proves it |
 |---|---|---|
 | "a closed change reports its spend breakdown from the event log without re-querying harness stores" | TC-SPEND-003, TC-SPEND-006, TC-SPEND-020, TC-SPEND-032 | Fold arithmetic on a seeded store with every total hand-summed from the fixture; a recording read seam and an adapter/harness-store spy proving zero reads and zero writes on the whole invocation; the exact envelope key set |
-| "the resume-amplification metric reads approximately 1 for a healthy delivery and flags amplification events by name" | TC-SPEND-014, TC-SPEND-015, TC-SPEND-016, TC-SPEND-017, TC-SPEND-034 | Exact-1 anchor on a single-run fixture; one named, windowed, quantified event per superseded run with deterministic ordering; tie-break and permutation oracles; the null rule; six disabling mutants that must fail the suite |
+| "the resume-amplification metric reads approximately 1 for a healthy delivery and flags amplification events by name" | TC-SPEND-014, TC-SPEND-015, TC-SPEND-016, TC-SPEND-017, TC-SPEND-034 | Exact-1 anchor on a single-run fixture; one named, windowed, quantified event per superseded run with deterministic ordering; tie-break and permutation oracles; the `ratio: null` + `progressRun` naming rule for zero-token progress runs; six disabling mutants that must fail the suite |
 
 **Capability coverage** (no capability unlinked): F-1 → TC-SPEND-003, 004, 005; F-2 → TC-SPEND-006, 007, 008; F-3 → TC-SPEND-010, 011, 012; F-4 → TC-SPEND-003, 013, 019; F-5 → TC-SPEND-014, 015, 016, 017, 018, 019; F-6 → TC-SPEND-020, 021, 022, 025, 026; F-7 → TC-SPEND-009, 007, 008; F-8 → TC-SPEND-027, 028, 029, 030.
 
-All 19 acceptance criteria map to at least one automated case and none carries a TODO. Both binding ticket ACs are covered by dedicated matrices rather than a smoke case: binding AC 1 by the fold arithmetic plus the recorded-read/absence-of-probe proof (TC-SPEND-003, 006, 032) and binding AC 2 by the amplification oracle matrix A-01..A-10 (TC-SPEND-014..019) with the mutant meta-case (TC-SPEND-034).
+All 19 acceptance criteria map to at least one automated case and none carries a TODO. Both binding ticket ACs are covered by dedicated matrices rather than a smoke case: binding AC 1 by the fold arithmetic plus the recorded-read/absence-of-probe proof (TC-SPEND-003, 006, 032) and binding AC 2 by the amplification oracle matrix A-01..A-11 (TC-SPEND-014..019) with the mutant meta-case (TC-SPEND-034).
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -133,9 +134,9 @@ The specification declares no HTTP endpoint (§8.1), no event or message (§8.2)
 
 | Interface / data model | Description | TC ID(s) | Status |
 |------------------------|-------------|----------|--------|
-| DM-1 — Spend report data shape (`delivery.spend.v1`) | Exactly `tokensByClass`, `perPhase[]`, `perAgent[]`, `restarts`, `amplification`, `degradation`, inside the `delivery.result.v1` envelope; schema id is a declared constant, never a `data` key | TC-SPEND-001, TC-SPEND-003, TC-SPEND-004, TC-SPEND-020, TC-SPEND-021 | Covered |
+| DM-1 — Spend report data shape (`delivery.spend.v1`) | Exactly `tokensByClass`, `perPhase[]`, `perAgent[]`, `restarts`, `amplification` (`ratio`, `progressRun`, `events[]`), `degradation`, inside the `delivery.result.v1` envelope; schema id is a declared constant, never a `data` key | TC-SPEND-001, TC-SPEND-003, TC-SPEND-004, TC-SPEND-020, TC-SPEND-021 | Covered |
 | DM-2 — Per-phase attribution basis | Ordered windows from `phase.transition` (complete closes, reopen reopens), captured-at selection, terminal attribution, first-phase fallback, `unknown` when absent | TC-SPEND-010, TC-SPEND-011, TC-SPEND-012 | Covered |
-| DM-3 — Amplification definition (v0) | Paid/progress/ratio, tie-break, zero-progress null, named events with window and tokensWasted, deterministic sort, closed single-entry cause | TC-SPEND-001, TC-SPEND-014, TC-SPEND-015, TC-SPEND-016, TC-SPEND-017, TC-SPEND-019 | Covered |
+| DM-3 — Amplification definition (v0) | Paid/progress/ratio, tie-break, the generalized zero-progress null rule with machine-readable `progressRun` naming, named events with window and tokensWasted, deterministic sort, closed single-entry cause | TC-SPEND-001, TC-SPEND-014, TC-SPEND-015, TC-SPEND-016, TC-SPEND-017, TC-SPEND-019 | Covered |
 | DM-4 — Restart count definition | `max(0, N−1)` over the union of run identities across both families; capture-reached evidence basis disclosed | TC-SPEND-013, TC-SPEND-018, TC-SPEND-019 | Covered |
 | DM-5 — Error-table delta | New `spend` domain kind with exactly one row (`spend.telemetry-absent`, user, non-retryable, `not_landed`, `user-validation` → 1); all other outcomes unchanged | TC-SPEND-007, TC-SPEND-008, TC-SPEND-009, TC-SPEND-012, TC-SPEND-025, TC-SPEND-026 | Covered |
 | DM-6 — Status digest delta | Section 8 real section with state, counts, evidence (`state-log`; `read`/`observed-empty`/`failed`), bounded summary; placeholder line removed; `placeholderSectionCount` 1; derivation row updated; brief unchanged | TC-SPEND-027, TC-SPEND-028, TC-SPEND-029, TC-SPEND-030 | Covered |
@@ -158,6 +159,7 @@ The specification declares no HTTP endpoint (§8.1), no event or message (§8.2)
 - **Orphan TCs**: none. Every TC names at least one AC, DM, or NFR in §5.1 and §5.2.
 - **Uncovered NFRs**: none. NFR-4's wall-clock half is explicitly reference-only (GAP-2); its CI-verifiable bounded-work half is asserted.
 - **Uncovered DMs**: none (DM-1..DM-6 all mapped).
+- **Gap status**: GAP-4 and GAP-5 are resolved by spec v1.1 (DEC-11, DM-3, Appendix C) and their assertions are live (TC-SPEND-001/017/020); GAP-2 (NFR-4 measurement), GAP-3 (exact disclosure prose) and GAP-6 (roll-up ordering keys) remain delivery-bound and non-blocking, each with a named oracle and owner. No AC or assertion carries a TODO.
 - **Intentional duplicate coverage**: AC-F1-1 spans three TCs because the arithmetic, the degradation accounting, and the capture-family warning retention are separate failure modes; AC-F2-1 spans three because the fold, the absence-of-probe, and the runtime read-only posture fail independently; AC-F5-1/2 span the healthy anchor, the event matrix, the tie-break, and the permutation oracle because a formula can be right on one fixture and wrong on another; AC-F8-1 spans two because the section content and the single-fold parity are distinct guarantees.
 - **Spec-named behaviour bound to an existing AC/NFR** (no dedicated AC by design):
 
@@ -210,23 +212,23 @@ The specification declares no HTTP endpoint (§8.1), no event or message (§8.2)
 5. **Bounds are measured, never assumed.** Byte bounds are measured on the serialized UTF-8 bytes with a positive measured length asserted first (non-vacuity floor), and line bounds by counting rendered lines.
 6. **No assertion depends on a moving base.** Every assertion reads the current tree, a committed fixture, or an isolated temp copy; no `git diff` against `origin/main-tools` appears in the permanent suite (testing strategy §4).
 
-### 4.3 Amplification Oracle Matrix (binding for AC-F5-1, AC-F5-2, AC-F5-3 and TDR-0011)
+### 4.3 Amplification Oracle Matrix (binding for AC-F5-1, AC-F5-2, AC-F5-3 and TDR-0011 as amended by DEC-11)
 
-All token figures are fixture-definition constants; the test recomputes them independently. `paid` is the five-class sum over all captured session-group records for the ref; `progress` is the latest record-bearing run's sum. Run ids in tie fixtures are opaque and not time-sortable.
+All token figures are fixture-definition constants; the test recomputes them independently. `paid` is the five-class sum over all captured session-group records for the ref; `progress` is the latest record-bearing run's sum. Run ids in tie fixtures are opaque and not time-sortable. `progressRun` is the progress run's identity exactly when it contributed zero tokens (the `ratio: null` case, covering paid > 0 and paid = 0) and `null` whenever progress > 0 (DM-1, DM-3, DEC-11). The capture-outcome-only boundary (A-11) has **no record-bearing run at all**, so `progressRun` is `null` there: it is the one case where `ratio: null` and `progressRun: null` coincide, and it sits outside AC-F5-3's scope, which presupposes a progress run.
 
-| ID | Fixture shape | Paid | Progress run / tokens | Ratio | Events | Restarts | Asserts |
-|---|---|---|---|---|---|---|---|
-| A-01 | One record-bearing run `R1`, 3 groups, five-class sum 185 | 185 | `R1` / 185 | exactly `1` | `[]` | 0 | Healthy anchor is exact, not approximate (AC-F5-1); no fabricated event |
-| A-02 | Four record-bearing runs `R1..R4` = 5,000,000 / 3,000,000 / 2,000,000 / 1,200,000 | 11,200,000 | `R4` / 1,200,000 | `11.2M ÷ 1.2M` (≈ 9.333…) | 3, for `R1`, `R2`, `R3` | 3 | One event per superseded positive-spend run; windows and `tokensWasted` exact; deterministic sort (AC-F5-2) |
-| A-03 | Two runs with identical `capturedAt`; ids `run-alpha`, `run-zeta` (and reversed insertion order) | per fixture | `run-alpha` (ascending run-id tie-break) | per fixture | the other run | 1 | Tie-break is captured-at desc, run-id **asc** — a descending-tie-break mutant changes the progress run and fails (TDR C-4) |
-| A-04 | `R1` = 400 tokens; `R2` (latest) present with all five classes zero | 400 | `R2` / 0 | `null` | 1, for `R1` | 1 | Zero-progress null rule; the run is named in the human report; events and null coexist (AC-F5-3) |
-| A-05 | Two runs, every class null or zero across both (records exist) | 0 | latest run / 0 | `null` (TP-DEC-1) | `[]` | 1 | Degenerate `paid = 0 ∧ progress = 0` is a success report, never `telemetry-absent`, never 1, never a crash (GAP-5) |
-| A-06 | Session runs `R1`, `R2`; a capture outcome for `R3` with no records | `R1+R2` | `R2` | per fixture | 1, for `R1` | 2 | Capture-outcome-only run counts toward restarts, adds zero paid, raises no event (TDR boundary pin) |
-| A-07 | `R1` positive, `R2` all-zero, `R3` latest positive | `R1+R3` | `R3` | per fixture | 1, for `R1` only | 2 | A superseded run with zero spend raises no event |
-| A-08 | One run identity present in both families (same `runId`) | per fixture | that run | 1 | `[]` | 0 | Union de-duplicates identities; N is a set size, not a record count |
-| A-09 | Store with no captured records for the ref | — | — | — | — | — | `spend.telemetry-absent`, exit 1 — not `ratio: 1`, not zeros (TC-SPEND-007) |
-| A-10 | A-02 records appended in a shuffled order (same stamps and ids) | 11,200,000 | `R4` | same as A-02 | same as A-02 | 3 | Permutation invariance; byte-identical output |
-| A-11 | Capture-outcome record only (one run identity, no session-group records) | 0 | none (no record-bearing run) | `null` | `[]` | 0 | Presence is decided by the family pair; no invented progress run; `null` rather than 1 or a failure |
+| ID | Fixture shape | Paid | Progress run / tokens | Ratio | `progressRun` | Events | Restarts | Asserts |
+|---|---|---|---|---|---|---|---|---|
+| A-01 | One record-bearing run `R1`, 3 groups, five-class sum 185 | 185 | `R1` / 185 | exactly `1` | `null` | `[]` | 0 | Healthy anchor is exact, not approximate (AC-F5-1); no fabricated event; null naming because progress > 0 |
+| A-02 | Four record-bearing runs `R1..R4` = 5,000,000 / 3,000,000 / 2,000,000 / 1,200,000 | 11,200,000 | `R4` / 1,200,000 | `11.2M ÷ 1.2M` (≈ 9.333…) | `null` | 3, for `R1`, `R2`, `R3` | 3 | One event per superseded positive-spend run; windows and `tokensWasted` exact; deterministic sort (AC-F5-2) |
+| A-03 | Two runs with identical `capturedAt`; ids `run-alpha`, `run-zeta` (and reversed insertion order) | per fixture | `run-alpha` (ascending run-id tie-break) | per fixture | `null` | the other run | 1 | Tie-break is captured-at desc, run-id **asc** — a descending-tie-break mutant changes the progress run and fails (TDR C-4) |
+| A-04 | `R1` = 400 tokens; `R2` (latest) present with all five classes zero | 400 | `R2` / 0 | `null` | `R2` | 1, for `R1` | 1 | Zero-progress null rule names the run **machine-readably** (`progressRun`) and in the human digest; events and null coexist (AC-F5-3, DEC-11) |
+| A-05 | Two runs `R1`, `R2`, every class null or zero across both (records exist) | 0 | `R2` / 0 | `null` | `R2` | `[]` | 1 | Degenerate `paid = 0 ∧ progress = 0` is a success report, never `telemetry-absent`, never 1, never a crash; named run plus `degradation` disclosure (DM-3, AC-F5-3, Appendix C) |
+| A-06 | Session runs `R1`, `R2`; a capture outcome for `R3` with no records | `R1+R2` | `R2` | per fixture | `null` | 1, for `R1` | 2 | Capture-outcome-only run counts toward restarts, adds zero paid, raises no event (TDR boundary pin) |
+| A-07 | `R1` positive, `R2` all-zero, `R3` latest positive | `R1+R3` | `R3` | per fixture | `null` | 1, for `R1` only | 2 | A superseded run with zero spend raises no event |
+| A-08 | One run identity present in both families (same `runId`) | per fixture | that run | 1 | `null` | `[]` | 0 | Union de-duplicates identities; N is a set size, not a record count |
+| A-09 | Store with no captured records for the ref | — | — | — | — | — | — | `spend.telemetry-absent`, exit 1 — not `ratio: 1`, not zeros (TC-SPEND-007) |
+| A-10 | A-02 records appended in a shuffled order (same stamps and ids) | 11,200,000 | `R4` | same as A-02 | `null` | same as A-02 | 3 | Permutation invariance; byte-identical output |
+| A-11 | Capture-outcome record only (one run identity, no session-group records) | 0 | none (no record-bearing run) | `null` | `null` | `[]` | 0 | Presence is decided by the family pair; no progress run exists so nothing is named; `null` ratio rather than 1 or a failure |
 
 **Window construction oracle (A-02, per TDR-0011 pin 4).** For an event on run *k*: `window.start` = the previous record-bearing run's `capturedAt`; for the first record-bearing run `window.start` = the earliest `phase.transition` timestamp, or the run's own `capturedAt` (a point window) when no transitions exist; `window.end` = run *k*'s `capturedAt`. `tokensWasted` = run *k*'s five-class sum. `cause` is exactly `restart-loop prefill re-pay`. Events sort by `window.start` then run id. The progress run never raises an event.
 
@@ -277,7 +279,7 @@ All token figures are fixture-definition constants; the test recomputes them ind
 | Torn store / wrong kind / malformed payload | `state.store.torn` | platform | false | not_landed | platform-provider | 2 | 008 |
 | Unsupported store schema | `state.schema.mismatch` | platform | false | not_landed | platform-provider | 2 | 008 |
 | Unknown store condition | `state.store.unknown` | platform | false | not_landed | platform-provider | 2 | 008 |
-| Success (reported, including the degenerate all-zero report) | — | — | — | — | success | 0 | 003..006, 010..024 |
+| Success (reported, including the degenerate all-zero report whose `amplification` carries `ratio: null` and a named `progressRun`) | — | — | — | — | success | 0 | 003..006, 010..024 |
 | Unclassifiable handler failure / kind-only `spend` | `fallback.internal` | platform | false | unknown | platform-provider | 2 | 009 |
 
 **Invariants.** Exit is a pure function of the projection class (`success` 0, `user-validation` 1, `platform-provider` 2). The one new row is the only new row; no delivered row's category, consequence, or projection changes (DEC-7). `spend.telemetry-absent` is never reused for store damage, and store damage is never re-projected. Machine consumers branch on the code, never the exit alone; both the machine table and the documented table carry exactly this row.
@@ -316,7 +318,7 @@ All token figures are fixture-definition constants; the test recomputes them ind
 
 | Pin | Statement | Basis | Confirmation |
 |---|---|---|---|
-| TP-DEC-1 | `paid = 0 ∧ progress = 0` (records exist, every class null/zero) reports `ratio: null`, names the zero-progress run, and discloses the degraded records in `degradation`; never `1`, never `0`, never a failure. AC-F5-1's exact-1 anchor is scoped to a single **positive-spend** record-bearing run. | TDR-0011 Unresolved Questions delegates this case to test-plan time; null is the only value that does not claim health from zero evidence | OQ-T1 (§8.3) |
+| TP-DEC-1 | `paid = 0 ∧ progress = 0` (records exist, every class null/zero) reports `ratio: null`, names the progress run in `amplification.progressRun` and in the human digest, and discloses the all-null records in `degradation`; never `1`, never `0`, never a failure. AC-F5-1's exact-1 anchor is scoped to a single **positive-spend** record-bearing run. | Spec v1.1 DM-3 + AC-F5-3 + Appendix C (degenerate worked shape); TDR-0011 addendum mirrors it | Spec-backed — OQ-T1 resolved |
 | TP-DEC-2 | Boundary attribution: a record at a `complete` stamp belongs to the completing phase; at a `reopen` stamp, to the reopened phase; when both share a stamp, the `reopen` wins. | DM-2 window semantics + NFR-2 determinism | OQ-T3 |
 | TP-DEC-3 | `share` = floor(phase tokens × 100 ÷ total tokens); total tokens 0 → every share 0. Shares may not sum to 100. | DEC-9 integer percentages | — |
 | TP-DEC-4 | One `perPhase[]` entry per phase id, aggregating all its windows (a `complete → reopen → complete` phase is one entry). | DM-1 entry shape names a phase, not a window | — |
@@ -393,7 +395,7 @@ All token figures are fixture-definition constants; the test recomputes them ind
 2. Assert the data contract declares exactly the six keys `tokensByClass`, `perPhase[]`, `perAgent[]`, `restarts`, `amplification`, `degradation`, and that `delivery.spend.v1` is a declared constant rather than a `data` field (TP-DEC-9).
 3. Assert `tokensByClass` is typed over the five delivered classes **reused by reference** from `HARNESS_TOKEN_CLASSES` — not re-declared — so class drift is impossible.
 4. Assert `perPhase[]` entries carry `phase`, `calls`, `tokens`, `share`; `perAgent[]` entries carry `agent`, `model`, `calls`, `tokens`; `degradation` carries `records` and `byReason` keyed over the closed `HARNESS_WARNING_REASONS`; `restarts` is a non-negative integer.
-5. Assert `amplification` is `{ratio: number | null, events[]}` with events `{cause, window, tokensWasted}` and the cause vocabulary is exactly `["restart-loop prefill re-pay"]`.
+5. Assert `amplification` is exactly `{ratio: number | null, progressRun: string | null, events[]}` with events `{cause, window, tokensWasted}`, the cause vocabulary exactly `["restart-loop prefill re-pay"]`, and `progressRun` documented as the progress run's identity exactly when it contributed zero tokens (null whenever progress > 0) — the additive v1.1 field (DM-1, DM-3, DEC-11).
 6. Assert no `cost`, `currency`, `paid`, `progress`, `schemaVersion`, or free-form prose key exists in the data shape (DM-1 exactness + NG-7).
 7. Assert the one new error code `spend.telemetry-absent` is declared once and that no other spend code exists.
 
@@ -810,7 +812,7 @@ All token figures are fixture-definition constants; the test recomputes them ind
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-5, AC-F5-1, DM-3, DEC-3, TDR-0011 C-2
+**Related IDs**: F-5, AC-F5-1, DM-3, DEC-3, DEC-11, TDR-0011 C-2
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/spend-amplification-healthy.test.ts`
@@ -824,11 +826,12 @@ All token figures are fixture-definition constants; the test recomputes them ind
 **Steps**:
 
 1. Run `spend --ref GH-236 --amplification`; assert `amplification.ratio === 1` exactly (strict equality, not a tolerance).
-2. Assert `amplification.events` is an empty array (the progress run never raises an event).
-3. Assert `restarts === 0` on the same fixture.
-4. Assert the human amplification section renders the ratio as 1 and states that no superseded runs exist.
-5. Run the A-02 control and assert the ratio is greater than 1 with three events, proving the exact-1 result is not a constant.
-6. Compute `paid` and `progress` independently from the fixture constants and assert `ratio === paid / progress`.
+2. Assert `amplification.progressRun === null` — progress > 0 means nothing is named (DM-1, DEC-11).
+3. Assert `amplification.events` is an empty array (the progress run never raises an event).
+4. Assert `restarts === 0` on the same fixture.
+5. Assert the human amplification section renders the ratio as 1 and states that no superseded runs exist.
+6. Run the A-02 control and assert the ratio is greater than 1 with three events and `progressRun === null`, proving the exact-1 result is not a constant.
+7. Compute `paid` and `progress` independently from the fixture constants and assert `ratio === paid / progress`.
 
 **Expected Outcome**:
 
@@ -842,7 +845,7 @@ All token figures are fixture-definition constants; the test recomputes them ind
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-5, AC-F5-2, DM-3, DEC-3, TDR-0011 C-3
+**Related IDs**: F-5, AC-F5-2, DM-3, DEC-3, DEC-11, TDR-0011 C-3
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/spend-amplification-events.test.ts`
@@ -860,8 +863,9 @@ All token figures are fixture-definition constants; the test recomputes them ind
 3. Assert each event's `window.start`/`window.end`: `R1` starts at the earliest transition `T0` and ends at `R1.capturedAt`; `R2` starts at `R1.capturedAt` and ends at `R2.capturedAt`; `R3` starts at `R2.capturedAt` and ends at `R3.capturedAt`.
 4. Assert `tokensWasted` equals each run's independently hand-summed spend (5,000,000 / 3,000,000 / 2,000,000) and that the sum of `tokensWasted` equals `paid − progress`.
 5. Assert the event order is by `window.start` then run id; assert a reversed-insertion fixture yields the identical array.
-6. Assert the no-transition variant produces point windows for the first event and the same event count, and that the report succeeds.
-7. Assert the human `--amplification` section names each event with its window and wasted tokens, and that the machine envelope carries the same events without the flag.
+6. Assert `progressRun === null` on the same report — progress is positive, so no run is named; assert the null is not omitted from the block.
+7. Assert the no-transition variant produces point windows for the first event and the same event count, and that the report succeeds.
+8. Assert the human `--amplification` section names each event with its window and wasted tokens, and that the machine envelope carries the same events without the flag.
 
 **Expected Outcome**:
 
@@ -889,7 +893,7 @@ All token figures are fixture-definition constants; the test recomputes them ind
 **Steps**:
 
 1. Run the report on both insertion orders; assert the progress run is the same one and that it is the lexicographically **smallest** run id among equal stamps (captured-at descending, run-id ascending).
-2. Assert the resulting ratio, event list and windows are identical across the two insertion orders.
+2. Assert the resulting ratio, `progressRun` and event list are identical across the two insertion orders, and that `progressRun` is `null` because the progress run carries positive spend.
 3. Shuffle the record array (A-10) and assert byte-identical output.
 4. Install throwing stubs for `Date.now`, `new Date()`, `Math.random`, and a model-seam spy; re-run and assert unchanged output and zero model calls.
 5. Assert the run-id tie-break never depends on a run-id format property: use ids where a time-sortable assumption would pick a different run.
@@ -907,7 +911,7 @@ All token figures are fixture-definition constants; the test recomputes them ind
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-5, AC-F5-3, DM-3, TDR-0011 C-5, Unresolved Questions
+**Related IDs**: F-5, AC-F5-3, DM-1, DM-3, DEC-11, TDR-0011 C-5
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/spend-amplification-null.test.ts`
@@ -916,28 +920,29 @@ All token figures are fixture-definition constants; the test recomputes them ind
 **Preconditions**:
 
 - Fixture A-04: `R1` = 400 tokens, `R2` (latest) present with all five classes zero.
-- Fixture A-05: both runs all-null/zero (the degenerate case, TP-DEC-1).
-- A capture-outcome-only fixture (run identity present, no session-group records).
+- Fixture A-05: both runs all-null/zero (the degenerate case; DM-3, AC-F5-3, Appendix C).
+- Fixture A-11: a capture-outcome-only store (run identity present, no session-group records).
 - The A-01 healthy control.
 
 **Steps**:
 
-1. Run A-04; assert `amplification.ratio === null` (strictly null, never `0`, `Infinity`, `NaN`, `1`, or a JSON `null`-as-string).
-2. Assert the zero-progress run `R2` is named in the human report and that the naming includes its run id; assert `R1`'s event is still present with `tokensWasted` 400.
-3. Assert the machine `data` carries exactly `{ratio, events[]}` — no invented progress-run key (DM-1, GAP-4).
-4. Run A-05; assert `ratio === null`, `events` empty, exit 0, and that `degradation` discloses the zero/null class records.
-5. Assert A-05 is **not** `spend.telemetry-absent` (records exist) and not a failure.
-6. Run the capture-outcome-only fixture (no session-group records, one run identity): assert `ratio === null`, `events` empty, no progress run named because no record-bearing run exists, `restarts === 0`, and the report succeeds (presence is decided by the telemetry family pair, not by spend-bearing records alone).
-7. Assert the report states the null rule (a zero-token progress run with positive paid reports no ratio) in its own terms alongside the other honesty limits (TC-SPEND-018).
+1. Run A-04 with `--json`; assert `amplification.ratio === null` (strictly null, never `0`, `Infinity`, `NaN`, `1`, or a JSON `null`-as-string).
+2. Assert `amplification.progressRun === "R2"` — the exact run identity, not null and not omitted — and that `events` carries exactly one event for `R1` with `tokensWasted` 400, so the null ratio and the event coexist.
+3. Assert the human digest names the same zero-progress run identity `R2`, so machine and human naming agree.
+4. Assert the `amplification` object has exactly the keys `ratio`, `progressRun`, `events`, and that no other progress-run field exists (DM-1 exactness; DEC-11 adds exactly one additive field).
+5. Run A-05; assert `ratio === null`, `progressRun === "R2"` (the latest record-bearing run), `events` empty, exit 0, and that `degradation` discloses the all-null class records — the all-null worked shape of Appendix C.
+6. Assert A-05 is **not** `spend.telemetry-absent` (records exist) and not a failure.
+7. Run A-11 (capture-outcome only): assert `ratio === null`, `progressRun === null` because no record-bearing run exists, `events` empty, `restarts === 0`, and the report succeeds; assert this null-ratio/null-name combination is distinguishable from A-04/A-05's null-ratio/named-run pair.
+8. Assert the report states the generalized null rule — a zero-token progress run reports no ratio whether paid > 0 or paid = 0 — in its own terms alongside the other honesty limits (TC-SPEND-018).
 
 **Expected Outcome**:
 
-- `ratio: null` with the run named and the null rule stated; no division artefact ever reaches output; the degenerate case is a successful, degraded report.
-- A mutant that returns `0`, `1`, or throws on zero progress fails.
+- `ratio: null` with `progressRun` naming the zero-token progress run machine-readably and the same identity in the human digest, for both paid > 0 and paid = 0; no division artefact ever reaches output; the no-progress-run boundary is null/null and still a successful report.
+- A mutant that omits `progressRun`, returns `0`, `1`, or throws on zero progress fails.
 
 **Notes / Clarifications**:
 
-- TP-DEC-1 applies the TDR-0011 delegation: the all-zero case is null, not the AC-F5-1 healthy anchor, because a zero-token run produces no health evidence. AC-F5-1's exact-1 is asserted only for a positive-spend single run (TC-SPEND-014).
+- TP-DEC-1's expectations are unchanged but now cite spec v1.1 DM-3 + AC-F5-3 + Appendix C rather than plan-time delegation: the all-zero case is `null` with a named run and a `degradation` disclosure, not the AC-F5-1 healthy anchor, because a zero-token run produces no health evidence. AC-F5-1's exact-1 is asserted only for a positive-spend single run (TC-SPEND-014).
 
 ---
 
@@ -946,7 +951,7 @@ All token figures are fixture-definition constants; the test recomputes them ind
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-5, AC-F5-3, AC-F4-1, DM-3, DM-4, TDR-0011 C-5, RSK-1, RSK-3
+**Related IDs**: F-5, AC-F5-3, AC-F4-1, DM-1, DM-3, DM-4, DEC-11, TDR-0011 C-5, RSK-1, RSK-3
 **Test Type(s)**: Integration, Golden
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/spend-disclosure.test.ts`, `tests/golden/spend.test.ts`, `tests/golden/fixtures/spend/**`
@@ -959,9 +964,9 @@ All token figures are fixture-definition constants; the test recomputes them ind
 
 **Steps**:
 
-1. Assert the contract declares one disclosure statement per obligation: run duplication is proven while semantic duplication is not; runs that never reached closeout capture are invisible; restart counts share that capture-reached basis; a zero-token progress run reports no ratio.
+1. Assert the contract declares one disclosure statement per obligation: run duplication is proven while semantic duplication is not; runs that never reached closeout capture are invisible; restart counts share that capture-reached basis; a zero-token progress run reports no ratio and names the run in `amplification.progressRun` (paid > 0 or paid = 0).
 2. Run the amplified report; assert the human amplification section renders every declared statement verbatim (byte-compared against the golden), and that the statements appear on the healthy report too (the contract is not conditional on amplification).
-3. Assert the machine `amplification` block contains no semantic-duplication claim, no content-overlap field, and no wording suggesting re-read proof (DM-1 exactness).
+3. Assert the machine `amplification` block carries exactly `ratio`, `progressRun`, `events` and contains no semantic-duplication claim, no content-overlap field, and no wording suggesting re-read proof (DM-1 exactness; `progressRun` is an identity reference, never a duplication claim).
 4. Delete one statement from a temp mutant copy of the constants and assert the suite fails naming the missing obligation.
 5. Assert the documented surface (feature page / man page) carries the same statements, so the report and the docs do not drift (TC-SPEND-031).
 6. Assert `RSK-1`-style over-interpretation is blocked: the cause string names the mechanism (`prefill re-pay`) and the disclosure says "run duplication", never "work duplication".
@@ -982,7 +987,7 @@ All token figures are fixture-definition constants; the test recomputes them ind
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4, F-5, AC-F4-1, AC-F5-3, DM-3, DM-4, TDR-0011 boundary pin
+**Related IDs**: F-4, F-5, AC-F4-1, AC-F5-3, DM-3, DM-4, DEC-11, TDR-0011 boundary pin
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/spend-run-substrate.test.ts`
@@ -995,11 +1000,12 @@ All token figures are fixture-definition constants; the test recomputes them ind
 **Steps**:
 
 1. For every fixture, assert the invariant `count(events) ≤ restarts` and, when all runs carry positive spend, `count(events) = restarts`.
-2. Run A-06; assert `restarts` counts the capture-outcome-only run while the event list omits it and `paid` is unchanged by it.
-3. Run A-07; assert a zero-spend superseded run raises no event but still counts toward restarts, so the two readouts diverge exactly as pinned.
-4. Run A-08; assert the duplicate identity counts once in restarts and once in progress selection.
-5. Assert the report discloses both bases in the same words: restarts count runs that reached closeout capture; amplification decomposes only record-bearing runs.
-6. Assert the invariants hold for the A-02 loop and the A-01 healthy case.
+2. Run A-06; assert `restarts` counts the capture-outcome-only run while the event list omits it and `paid` is unchanged by it; assert `progressRun === null` (the progress run carries positive spend).
+3. Run A-07; assert a zero-spend superseded run raises no event but still counts toward restarts, so the two readouts diverge exactly as pinned; assert `progressRun === null`.
+4. Run A-08; assert the duplicate identity counts once in restarts and once in progress selection; assert `progressRun === null`.
+5. Assert a capture-outcome-only run never appears as `progressRun`'s value (it holds no captured tokens, so it cannot be the progress run), and that `progressRun` is never derived from `restarts`.
+6. Assert the report discloses both bases in the same words: restarts count runs that reached closeout capture; amplification decomposes only record-bearing runs.
+7. Assert the invariants hold for the A-02 loop and the A-01 healthy case.
 
 **Expected Outcome**:
 
@@ -1013,7 +1019,7 @@ All token figures are fixture-definition constants; the test recomputes them ind
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-6, AC-F6-2, DM-1, DEC-9
+**Related IDs**: F-5, F-6, AC-F5-3, AC-F6-2, DM-1, DM-3, DEC-9, DEC-11
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/spend-envelope.test.ts`
@@ -1028,14 +1034,15 @@ All token figures are fixture-definition constants; the test recomputes them ind
 1. Run the report in human mode; assert the output is the human digest, and that `--json` forces the envelope with no human text.
 2. Assert the envelope carries `schemaVersion: "delivery.result.v1"`, exactly one of `data`/`error`, and the standard envelope metadata keys.
 3. Assert `data` has exactly the six pinned keys, deep-equal to the expected values, and that `delivery.spend.v1` appears only as the declared constant (not as a `data` key).
-4. Assert `--amplification` changes only the human digest (adds the amplification section); assert the envelope's `amplification` block is present and identical with and without the flag.
+4. Assert `--amplification` changes only the human digest (adds the amplification section); assert the envelope's `amplification` block is present, identical with and without the flag, and shaped exactly `{ratio, progressRun, events}` with `progressRun` present as `null` or a run id.
 5. Assert scripted mode renders one line with no context banner and interactive mode renders the digest, per the delivered result contract.
-6. Assert a failure renders an error-only envelope with the classified code and that no partial `data` accompanies it.
+6. Assert a zero-progress fixture in `--json` mode carries `ratio: null` **and** a non-null `progressRun`, proving the machine naming survives the mode boundary.
+7. Assert a failure renders an error-only envelope with the classified code and that no partial `data` accompanies it.
 
 **Expected Outcome**:
 
-- The envelope and `data` shape are exact; the emphasis flag is human-only; mode rendering is inherited unchanged.
-- Mutants that omit `amplification` without the flag, add a seventh `data` key, or emit both `data` and `error` fail.
+- The envelope and `data` shape are exact; the emphasis flag is human-only; mode rendering is inherited unchanged; the machine naming survives `--json`.
+- Mutants that omit `amplification` without the flag, omit `progressRun`, add a seventh `data` key, or emit both `data` and `error` fail.
 
 ---
 
@@ -1378,7 +1385,7 @@ All token figures are fixture-definition constants; the test recomputes them ind
 **Steps**:
 
 1. Static-check `--help`: exact synopsis, at least one example, the amplification contract, and the telemetry-absent remediation hint.
-2. Static-check the feature page against the pinned contract: five classes (not three), the `degradation` block, `share` semantics (integer floored, may not sum to 100), the `--amplification` human-only scope, the exit taxonomy, and the honesty limits.
+2. Static-check the feature page against the pinned contract: five classes (not three), the `degradation` block, `share` semantics (integer floored, may not sum to 100), the `--amplification` human-only scope, the amplification block shape `{ratio, progressRun, events[]}` with the `progressRun` null/naming rule, the generalized zero-progress null rule, the exit taxonomy, and the honesty limits.
 3. Static-check the result-contract page carries the one new row with its projection class, and the status-digest page carries the new section 8 row, removal of the placeholder catalog entry, `placeholderSectionCount` 1, and the `state-log` source.
 4. Assert the man-page pack carries no contradictory claim (three classes, cost aggregation, alarms/burn rate, or a `--watch`-style flag) and record the Appendix B delta reconciliation as review evidence.
 5. Assert the glossary/index entries and the branding forbidden-literal registry are updated and that no product/binary literal is hardcoded.
@@ -1587,13 +1594,14 @@ All token figures are fixture-definition constants; the test recomputes them ind
 - The canonical eleven-phase vocabulary is stable for `--phase` validation.
 - The digest's active-change ref resolution is reused, not redefined (spec §12).
 - Run ids are opaque with no time-sortability property; ordering comes from captured-at plus a run-id tie-break.
+- A capture-outcome-only store (a succeeded capture with zero captured sessions) is a success envelope with at least one record but **no record-bearing run**; its `ratio` is `null` and its `progressRun` is `null` because there is no progress run to name. TDR-0011 amendment A-1's parenthetical that "a record-bearing progress run always exists" is an overstatement for this boundary and must not be encoded as a non-null `progressRun` assertion; AC-F5-3's naming duty presupposes a progress run and is unaffected.
 
 ### 8.3 Open Questions
 
 | ID | Question | Blocking? | Owner / effect |
 |----|----------|-----------|----------------|
-| OQ-T1 | Is TP-DEC-1 (all-zero paid and progress → `ratio: null`) the accepted reading, given AC-F5-1's "exactly one record-bearing run reads exactly 1"? | No — pinned defensibly and scoped to positive spend | `@readiness-reviewer` confirms; a different reading needs a spec sentence and changes TC-SPEND-017 only |
-| OQ-T2 | AC-F5-3 says the zero-progress run is "named", but DM-1 pins `amplification` to `{ratio, events[]}` with events only for superseded positive-spend runs, so the **machine** envelope cannot name the progress run. Is human-channel naming sufficient, or should DM-1 gain a progress-run field? | No for delivery of the human channel; yes if machine consumers need it | Spec owner decides; machine naming requires a DM-1 amendment (reopens specification) and this plan would add the machine assertion |
+| OQ-T1 | Is TP-DEC-1 (all-zero paid and progress → `ratio: null`) the accepted reading, given AC-F5-1's "exactly one record-bearing run reads exactly 1"? | Resolved — no longer blocking | Spec v1.1 DM-3 + AC-F5-3 + Appendix C pin the generalized null rule and the degenerate worked shape; TP-DEC-1's expectations are unchanged and now spec-backed. AC-F5-1's exact-1 remains scoped to a positive-spend single run. |
+| OQ-T2 | AC-F5-3 says the zero-progress run is "named", but DM-1 pinned `amplification` to `{ratio, events[]}`, so the machine envelope could not name the progress run. Human-only naming, or a machine field? | Resolved — no longer blocking | Spec v1.1 DEC-11 adds the additive nullable `amplification.progressRun` (the run identity exactly when it contributed zero tokens; null when progress > 0) and records the human-only alternative as rejected. TC-SPEND-001/014/015/017/019/020 assert the machine surface; TC-SPEND-017 also asserts the human digest naming. TDR-0011's addendum mirrors the field. |
 | OQ-T3 | TP-DEC-2 boundary semantics (record exactly on a `complete`/`reopen` stamp; shared stamp → reopen wins) are not literally pinned by DM-2. Confirm or replace. | No | `@readiness-reviewer`/`@plan-writer` confirm; TC-SPEND-010's P-03/P-05 rows carry the pin |
 | OQ-T4 | TP-DEC-6: does `--phase` scope the amplification block as well as the totals? F-3 says "restricts the report", AC-F3-3 says "scoped selection"; DM-3 says nothing about phase scoping. | No — pinned as one scoped fold | Confirm at readiness; a global-amplification choice changes TC-SPEND-012 step 1 only |
 | OQ-T5 | TP-DEC-5 ordering keys for `perAgent[]`/`perPhase[]` and the truncation tail are delivery-bound. Confirm the proposed total orders. | No | `@plan-writer` pins them as plan constants; TC-SPEND-021/003 assert through that constant |
@@ -1605,6 +1613,7 @@ All token figures are fixture-definition constants; the test recomputes them ind
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-07 | test-plan-writer (DeepSeek V4.1 Flash) | Initial plan from GH-236 spec (19 ACs, DM-1..DM-6, NFR-1..NFR-7), TDR-0011, delivered testing strategy, and the GH-232/GH-243 plan conventions. 34 TCs; amplification oracle matrix A-01..A-10; phase attribution matrix P-01..P-14; read/absence/damage matrix R-01..R-10; exit oracle; CLI matrix L-01..L-15; nine test-plan pins; six delivery-bound gaps recorded with owners. |
+| 1.1 | 2026-11-07 | test-plan-writer (DeepSeek V4.1 Flash) | Reconciled to spec v1.1 (iteration 2, OQ-T2 resolved): the amplification block is now `{ratio, progressRun, events[]}` with the additive nullable `progressRun` (set exactly on the zero-token progress run, null when progress > 0) per DM-1/DM-3/DEC-11; AC-F5-3 assertions split into machine (`progressRun` in `--json`) and human-digest naming; TP-DEC-1 re-anchored from TDR-0011 delegation to DM-3/AC-F5-3/Appendix C with unchanged expectations (ratio null, named run, degradation disclosure, never 1, never a failure). Sections touched: front matter (status Updated, summary), §1 (narrative, in-scope bullet), §1.2 (GAP-4/GAP-5 marked resolved), §2 (spec v1.1, DEC-11, TDR addendum), §3.1 (AC-F5-3 row, ticket traceability), §3.2 (DM-1, DM-3), §3.4 (gap status), §4.3 (matrix A-01..A-11 gains a `progressRun` column and the no-record-bearing-run boundary note), §4.6 (success row), §4.9 (TP-DEC-1 basis), §5.2 (TC-SPEND-001, 014, 015, 016, 017, 018, 019, 020, 031), §8.2 (capture-outcome-only `progressRun` boundary), §8.3 (OQ-T1/OQ-T2 resolved), §9. No TC id, priority, matrix row, exit row or mutant was added or removed; coverage remains 19/19. |
 
 ## 10. Test Execution Log
 

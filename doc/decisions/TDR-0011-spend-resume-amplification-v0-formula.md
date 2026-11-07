@@ -5,7 +5,7 @@ status: Proposed
 created: 2026-11-07
 decision_date: null
 last_updated: 2026-11-07
-summary: "The spend v0 resume-amplification metric is a deterministic run-identity ratio over the closeout-captured event log: paid = the five-class token sum over all captured records for the ref; progress = the token sum of the latest record-bearing captured run (captured-at descending, run-id ascending tie-break); ratio = paid ÷ progress with a zero-progress null rule; one closed-vocabulary `restart-loop prefill re-pay` event per superseded record-bearing run carrying its window and tokensWasted; a healthy single-run delivery reads exactly 1 — with the honesty limits (run duplication proven, semantic duplication not; pre-closeout runs invisible) stated in the report's own terms."
+summary: "The spend v0 resume-amplification metric is a deterministic run-identity ratio over the closeout-captured event log: paid = the five-class token sum over all captured records for the ref; progress = the token sum of the latest record-bearing captured run (captured-at descending, run-id ascending tie-break); ratio = paid ÷ progress with a zero-progress null rule; one closed-vocabulary `restart-loop prefill re-pay` event per superseded record-bearing run carrying its window and tokensWasted; a healthy single-run delivery reads exactly 1 — with the honesty limits (run duplication proven, semantic duplication not; pre-closeout runs invisible) stated in the report's own terms. Amended 2026-11-07 (GH-236 spec v1.1 DEC-11): the amplification block gains the additive nullable `progressRun` field and the null rule covers paid = 0 ∧ progress = 0."
 owners:
   - "Juliusz Ćwiąkalski"
 service: "delivery-os learning plane (spend read side)"
@@ -27,6 +27,7 @@ governance:
   decider: "Juliusz Ćwiąkalski (human acceptance pending at GH-236 PR review)"
   contributors:
     - "@spec-writer (GH-236 DEC-3/DM-3, AC-F5-1..3, OQ-1 framing)"
+    - "@spec-writer (GH-236 v1.1 DEC-11 amendment instruction)"
     - "@decision-advisor (analysis and record)"
   reviewers:
     - "@readiness-reviewer"
@@ -82,7 +83,7 @@ links:
 - **FACT:** Ticket GH-236 (M1-S19) pins the constraints this record formalizes: log-only reads with no harness re-query and no capture change (spec DEC-1), and binding AC 2 — "the resume-amplification metric reads approximately 1 for a healthy delivery and flags amplification events by name" — which rides directly on this decision (spec §17, AC-F5-1/AC-F5-2/AC-F5-3, Appendix A).
 - **FACT:** The operator-requirements corpus names the waste classes this metric exists to surface: R5 — "Largest single token-waste class: resume loops re-paying prefill roughly ten times" — and R9 — "Per-ticket spend accounting, early: waste cannot be minimized if it cannot be seen" — with M1-S19 ranked early precisely so "waste classes become visible the moment telemetry exists" (`doc/planning/oss-tooling/operator-requirements-2026-11.md` §1/§2 tables; `doc/planning/oss-tooling/backlog-ranking.md`, read 2026-11-07).
 - **FACT:** The GH-236 spec pins the formula as DEC-3 (with DM-3 as the contract row) and OQ-1 recommends exactly this standalone TDR because the definition is AC-bearing, novel, and consumed downstream by M1-S21 (model-profile routing consumes the amplification signal) and M2-S6 (alarms and burn rates; blocked until M1-S19 lands) — the GH-232 → TDR-0009 precedent for decision-worthy, cross-story, AC-oracle-stabilizing definitions.
-- **Scope note:** this record covers spec DEC-3 (the amplification formula) and its boundary with DEC-5 (restart counting). Per-phase attribution (DEC-4), ref resolution (DEC-6), error identity (DEC-7), the digest flip (DEC-8/DEC-6), output-contract emphasis flags (DEC-9), and the brief boundary (DEC-10) stay change-scoped in the spec's decision log; none is precedent-diverging.
+- **Scope note:** this record covers spec DEC-3 (the amplification formula), its boundary with DEC-5 (restart counting), and — per the amendment of 2026-11-07 — the spec v1.1 DEC-11 additive refinement of the amplification block (see the Amendment section under Decision). Per-phase attribution (DEC-4), ref resolution (DEC-6), error identity (DEC-7), the digest flip (DEC-8/DEC-6), output-contract emphasis flags (DEC-9), and the brief boundary (DEC-10) stay change-scoped in the spec's decision log; none is precedent-diverging.
 - **Branding note:** the event cause string is a machine vocabulary value rendered in both surfaces; operator-facing naming introduced by this work goes through the branding seam and the forbidden-literal registry per the spec's §16 obligations. Nothing here names a product or binary literal.
 
 ## Problem Framing (Clarified)
@@ -103,8 +104,8 @@ The root cause is not arithmetic — it is **proxy selection under an evidence-b
 | C-2 | Healthy ≈1 semantics: a delivery with exactly one record-bearing captured run reads **exactly 1** (paid = progress), deterministically. | Binding ticket AC 2 (spec AC-F5-1, DEC-3) | AC-F5-1 fixture test | no |
 | C-3 | Named events: each superseded record-bearing run with positive spend flags exactly one named event carrying `cause`, derived `window`, and `tokensWasted` = that run's spend, sorted deterministically. | Binding ticket AC 2 (spec AC-F5-2, DM-3) | AC-F5-2 fixture tests | no |
 | C-4 | Determinism / no-clock: byte-identical output for identical store content and injected clock/run-id; run ordering by captured-at descending with run-id ascending tie-break; no wall-clock reads in the computation; no run-id format property (time-sortability) assumed. | Spec NFR-2, §12 assumptions | NFR-2 double-render tests; review | no |
-| C-5 | Honesty limits carried in-contract: the report itself states that run duplication is proven while semantic duplication is not, that runs never reaching closeout capture are invisible, and the zero-progress null rule (a zero-token progress run with paid > 0 reports `ratio: null` naming the run). | Spec F-5, AC-F5-3, RSK-1 | AC-F5-3 tests; review of rendered output | no |
-| C-6 | Stable machine surface: the amplification block (`ratio`, `events[]`) is always present in the `delivery.spend.v1` envelope regardless of human emphasis flags; M1-S21 and M2-S6 consume the envelope, and formula changes ride a reviewed change — never a silent redefinition. | Spec DEC-9, §13 consumed-by, §22 | Contract tests; review | no |
+| C-5 | Honesty limits carried in-contract: the report itself states that run duplication is proven while semantic duplication is not, that runs never reaching closeout capture are invisible, and the zero-progress null rule (a zero-token progress run reports `ratio: null` naming the run — *amended 2026-11-07, GH-236 v1.1 DEC-11: generalized from "with paid > 0" to also cover paid = 0 ∧ progress = 0*). | Spec F-5, AC-F5-3, RSK-1; amendment source GH-236 v1.1 DEC-11 | AC-F5-3 tests; review of rendered output | no |
+| C-6 | Stable machine surface: the amplification block (`ratio`, `events[]`, and — *added 2026-11-07, GH-236 v1.1 DEC-11* — the nullable `progressRun` run-id-or-null field) is always present in the `delivery.spend.v1` envelope regardless of human emphasis flags; M1-S21 and M2-S6 consume the envelope, and formula changes ride a reviewed change — never a silent redefinition; the reviewed-change discipline applies to `progressRun` as it does to the rest of the block. | Spec DEC-9, §13 consumed-by, §22; amendment source GH-236 v1.1 DEC-11 | Contract tests; review | no |
 
 Table stakes (every alternative below satisfies these by being a pure fold over verified reads, so they eliminate nothing): read-only/zero-writes and zero fence acquisitions (NFR-3); privacy of output — statistics and identity references only (NFR-5); no new third-party dependency (ADR-0003 tier rules); bounded deterministic rendering (NFR-1).
 
@@ -138,7 +139,7 @@ Table stakes (every alternative below satisfies these by being a pure fold over 
 | For a closed (delivered) change, the latest record-bearing run's captured spend represents one complete pass over all durable context — the sessions that produced the landed result — so it is the defensible unique-progress proxy. | ASSUMPTION | GH-236 spec DEC-3 rationale ("by construction for a closed change") | A final run capturing only a slice of live sessions (bulk held by earlier runs) makes progress an underestimate and the ratio inflate without any restart loop; reopen-then-reclose deliveries misattribute deliberate rework. Revisit trigger 1. | Medium-High |
 | Session-group granularity means a run's spend is exactly the sum of that run's records (opencode: one record per (session, agent, model) group; Claude Code: one per session). | FACT | `feature-harness-adapters.md` §5 | Per-run aggregation would need a different unit; formula unchanged in shape. | High |
 | Real multi-run distributions and resume shapes (how often loops resume the same sessions vs abandon them; reopen-reclose frequency). | TO-CONFIRM | Unobservable until GH-240 wires production capture | The latest-run proxy's real-world fit is unvalidated; v0 honesty rests on fixtures plus disclosed limits. | — |
-| Frequency with which a zero-token progress run co-occurs with paid > 0, and the degenerate paid = 0 ∧ progress = 0 case. | TO-CONFIRM | Fixture-constructed only today | The pinned null rule covers paid > 0; the degenerate case needs a plan-time pin inside the degradation disclosure (Unresolved Questions). | — |
+| Frequency with which a zero-token progress run co-occurs with paid > 0, and the degenerate paid = 0 ∧ progress = 0 case. *Update 2026-11-07: the degenerate case is now pinned by the Amendment (GH-236 v1.1 DEC-11); the real-world frequency observation remains open until GH-240.* | TO-CONFIRM | Fixture-constructed only today | The null rule (as amended) covers every zero-token progress run; only the real-world frequency stays open. | — |
 
 ## Mental Models & Techniques Used
 
@@ -218,7 +219,7 @@ Legend: ✅ = passes · ❌ = fails · ⚠️ = passes only via an accepted-risk
 - **Recommendation (tied to drivers):** Adopt ALT-2. The spec is the source of truth; the following pins restate GH-236 DEC-3 / DM-3 exactly, and this record must not diverge from them:
   1. **Paid (numerator).** `paid` = the five-class token sum over **all** captured records for the ref. A record's null token class is excluded from sums and never fabricated to zero; degraded records are disclosed in the `degradation` block (DM-1, DEC-2). Cost is never aggregated (NG-7).
   2. **Progress run (denominator).** The progress run is the **latest record-bearing captured run**, ordered by captured-at descending with run-id ascending tie-break (no run-id format property assumed); `progress` = that run's token sum under the same class rules.
-  3. **Ratio and zero-progress rule.** `ratio` = paid ÷ progress. A delivery with exactly one record-bearing run reads **exactly 1** (paid = progress — the binding AC's "approximately 1" anchor, delivered as an exact deterministic value). A zero-token progress run with paid > 0 reports `ratio: null` with the zero-progress run named.
+  3. **Ratio and zero-progress rule.** `ratio` = paid ÷ progress. A delivery with exactly one record-bearing run reads **exactly 1** (paid = progress — the binding AC's "approximately 1" anchor, delivered as an exact deterministic value). **[Amended 2026-11-07 — spec GH-236 v1.1 DEC-11; supersedes the original "with paid > 0" scope:]** a zero-token progress run reports `ratio: null` — covering both paid > 0 and the degenerate paid = 0 ∧ progress = 0 case (every captured token class null, disclosed in the envelope's `degradation` block) — and the block carries `progressRun` naming that run in every null case where a record-bearing progress run exists; with no record-bearing run (capture-outcome-only store), `ratio` is `null` and `progressRun` is `null` (see the Amendment section below).
   4. **Named events.** One event per earlier record-bearing run with positive spend: `cause` = `restart-loop prefill re-pay` (a closed vocabulary with exactly this one v0 entry), `window` = `[previous record-bearing run's captured-at ‖ earliest transition timestamp ‖ point] → this run's captured-at` (the first run's window starts at the earliest transition timestamp; with no transitions it degenerates to a point), `tokensWasted` = that run's spend. Events sort by window start, then run id.
   5. **Honesty limits carried in the report's own terms.** The report states: run duplication is proven, semantic duplication is not; runs that never reached closeout capture are invisible; restart counts' capture-reached evidence basis is disclosed (AC-F5-3, RSK-1/RSK-3 mitigation).
   6. **Surface.** The machine envelope always carries the amplification block regardless of `--amplification`, which governs only the human digest section (DEC-9).
@@ -233,6 +234,22 @@ Legend: ✅ = passes · ❌ = fails · ⚠️ = passes only via an accepted-risk
 ### Constraint Compliance Attestation
 
 The chosen alternative (ALT-2) satisfies every constraint C-1 through C-6. No accepted-risk exceptions are taken. The honesty limits (semantic duplication unproven; pre-closeout runs invisible; latest-run completeness assumption) are disclosed limitations recorded under Trade-offs & Consequences and stated in the report's own output per C-5 — they are the boundary of the claim, not violations of it.
+
+## Amendment (2026-11-07) — Spec GH-236 v1.1 DEC-11
+
+> **Nature:** an additive refinement within this same decision — **not** a supersession. Source decision: GH-236 change spec v1.1, DEC-11 (applied verbatim in substance on `@spec-writer`'s instruction). The chosen alternative (ALT-2), the options matrix, the decision drivers, and the constraint set are unchanged apart from the two operative changes below and the noted C-6 applicability extension. Status remains `Proposed`; acceptance still rides GH-236 PR review.
+
+**A-1 — Additive `progressRun` field.** The `delivery.spend.v1` amplification block gains one additive nullable field, `progressRun` (run-id-or-null), carrying the progress run's identity exactly when the progress run contributed zero tokens — the `ratio: null` case in which a progress run exists. It is `null` whenever progress > 0, and `null` when no record-bearing run exists. Grounding: a success envelope always carries at least one record — the no-records case is the classified `spend.telemetry-absent` outcome — but that guarantee is about record presence across **either** family (session-group or capture-outcome), not session-group presence: a capture-outcome-only store succeeds with zero captured session groups, hence no record-bearing run and no progress run to name. `progressRun` is therefore non-null exactly when `ratio` is `null` **and** a record-bearing progress run exists; when no record-bearing run exists, `ratio` is `null` and `progressRun` is `null` (spec v1.1 DM-3; test plan v1.1 §4.3/§8.2, TC-SPEND-019).
+
+**A-2 — Null rule generalized.** The zero-progress null rule generalizes from "zero-token progress run with paid > 0" to cover paid = 0 ∧ progress = 0 (every captured token class null, disclosed in the envelope's `degradation` block). Governing statement: `ratio` is `null` whenever the progress run contributes zero tokens, whatever `paid` is.
+
+**A-3 — Unchanged.** The block's pinned fields `ratio` (number-or-null) and `events[]` (`{cause, window, tokensWasted}`) are unchanged; there is no formula change, no cause-vocabulary change, and no event-rule change — pins 1, 2, 4, and 5 stand exactly as written, as do the DEC-5 restart boundary and every honesty limit.
+
+**A-4 — C-6 applicability.** The stability contract's reviewed-change discipline applies to `progressRun` as it does to the rest of the block: changes ride a reviewed change plus a record addendum or supersession — never a silent redefinition.
+
+**A-5 — Rejected alternative (on record per spec DEC-11).** Human-only run naming — naming the zero-progress run in the human digest only, keeping the machine block at `{ratio, events[]}`. Rejected because the machine-mode guarantee is AC-derived (AC-F5-3 requires the null case to name the run, and the envelope is the report's machine mode) and M2-S6 alarms consume run identities machine-readably.
+
+**Editorial integration.** This amendment is marked in place at: the front-matter summary, the Context scope note, C-5 and C-6, the Evidence table's degenerate-case row, Decision pin 3, the Downstream stability contract, Unresolved Questions (item resolved), Implementation Plan items 1 and 3, and Verification Criteria (two added metrics).
 
 ## Trade-offs & Consequences
 
@@ -255,7 +272,7 @@ The chosen alternative (ALT-2) satisfies every constraint C-1 through C-6. No ac
 
 ### Downstream stability contract
 
-`delivery.spend.v1`'s amplification block (`ratio`, `events[]`) is the pinned machine surface. M1-S21 and M2-S6 consume the envelope, never the human digest. Any change to the formula, the cause vocabulary, or the null rule rides a reviewed change plus a decision-record addendum or supersession — never a silent redefinition (GH-236 spec §22 names the formula a contract surface).
+`delivery.spend.v1`'s amplification block (`ratio`, `events[]`, and the additive `progressRun` — *amendment of 2026-11-07, GH-236 v1.1 DEC-11*) is the pinned machine surface. M1-S21 and M2-S6 consume the envelope, never the human digest. Any change to the formula, the cause vocabulary, the null rule, or `progressRun` (*per the amendment's C-6 applicability*) rides a reviewed change plus a decision-record addendum or supersession — never a silent redefinition (GH-236 spec §22 names the formula a contract surface).
 
 ### What M2-S6 may add without reopening this record
 
@@ -263,15 +280,15 @@ Alarm thresholds on the ratio; burn-rate normalization; additional closed causes
 
 ### Unresolved Questions
 
-- [ ] The degenerate case paid = 0 ∧ progress = 0 (records exist but every class is null/zero) is not separately pinned by the zero-progress rule, which covers paid > 0; resolve at plan/test-plan time inside the existing degradation disclosure — no formula change anticipated (owner: `@plan-writer` / `@coder`, GH-236).
+- [x] The degenerate case paid = 0 ∧ progress = 0 (records exist but every class is null/zero) is not separately pinned by the zero-progress rule, which covers paid > 0; resolve at plan/test-plan time inside the existing degradation disclosure — no formula change anticipated (owner: `@plan-writer` / `@coder`, GH-236). **Resolved 2026-11-07 by the Amendment (GH-236 v1.1 DEC-11): the null rule now covers this case, disclosed via `degradation`, with `progressRun` naming the run.**
 - [ ] Real-world validation of the latest-run-is-progress assumption once GH-240 wires the production composer; the first retro compares fixture expectations against real multi-run histories (owner: Juliusz Ćwiąkalski; revisit trigger 1).
 - [ ] Reopen-reclose frequency, and whether a distinct rework cause is warranted before M2-S6 thresholds lock in (owner: `@decision-advisor` with M2-S6 planning; revisit trigger 4).
 
 ## Implementation Plan
 
-1. **Contracts:** the `delivery.spend.v1` data shape including the amplification block (`ratio` number-or-null, `events[]` of `{cause, window, tokensWasted}`) as types and `as const` data only, composing the delivered harness-telemetry vocabulary; no runtime API.
+1. **Contracts:** the `delivery.spend.v1` data shape including the amplification block (`ratio` number-or-null, `events[]` of `{cause, window, tokensWasted}`, and `progressRun` run-id-or-null — *added by the 2026-11-07 amendment, GH-236 v1.1 DEC-11*) as types and `as const` data only, composing the delivered harness-telemetry vocabulary; no runtime API.
 2. **Fold:** a pure deterministic read-side computation over verified reads of both `harness.telemetry` families plus `phase.transition` history; ordering keys captured-at / run-id; no clock, network, or model calls anywhere in the path (NFR-2/NFR-3).
-3. **Fixtures:** single-run healthy (ratio exactly 1, empty events), multi-run loop (per-run events, windows, deterministic sort), zero-progress null case, degraded-record exclusion, no-transition window fallback, and telemetry-absent classification — the AC-F5 evidence set.
+3. **Fixtures:** single-run healthy (ratio exactly 1, empty events), multi-run loop (per-run events, windows, deterministic sort), zero-progress null case, degraded-record exclusion, no-transition window fallback, and telemetry-absent classification — the AC-F5 evidence set; *added by the 2026-11-07 amendment: the degenerate paid = 0 ∧ progress = 0 fixture (ratio null, `progressRun` naming the run, `degradation` disclosure) and the `progressRun`-null-when-progress > 0 assertion.*
 4. **Error identity and exits:** the single pinned `spend.telemetry-absent` row and its exit projection per DM-5/DEC-7; no other rows move.
 5. **Digest flip:** status digest section 8 fed by the same fold per DM-6, landing in the same change so pinned invariants never contradict output.
 6. **Docs:** phase-7 system-spec update authors the spend feature page; this record joins the change spec's `links.decisions`; the man-page pack reconciles to the pinned contract (spec Appendix B).
@@ -282,6 +299,8 @@ Alarm thresholds on the ratio; burn-rate normalization; additional closed causes
 - Metric: healthy single-run fixture → ratio exactly 1, events empty — Target: 100% — Window: GH-236 CI (AC-F5-1).
 - Metric: multi-run fixture → one event per superseded record-bearing run with exact cause/window/tokensWasted and deterministic sort — Target: 100% — Window: GH-236 CI (AC-F5-2).
 - Metric: zero-progress fixture → `ratio: null` with the run named — Target: 100% — Window: GH-236 CI (AC-F5-3).
+- Metric: `progressRun` field — carries the progress run's identity exactly when `ratio` is `null` **and** a record-bearing progress run exists; `null` whenever progress > 0 or no record-bearing run exists — Target: 100% — Window: GH-236 CI (*Amendment 2026-11-07, GH-236 v1.1 DEC-11; TC-SPEND-019*).
+- Metric: degenerate fixture (every captured class null; paid = 0 ∧ progress = 0) → `ratio: null`, `progressRun` naming the run, `degradation` disclosing the null classes — Target: 100% — Window: GH-236 CI (*Amendment 2026-11-07, GH-236 v1.1 DEC-11*).
 - Metric: honesty-limit statements rendered in-band on successful amplification reports — Target: 100% — Window: GH-236 CI + review (AC-F5-3, RSK-1).
 - Metric: byte-identical repeat renders in both modes with zero model calls — Target: 100% — Window: GH-236 CI (NFR-2).
 - Metric: harness-store reads on any invocation path — Target: 0 — Window: GH-236 CI (AC-F2-1, C-1).
