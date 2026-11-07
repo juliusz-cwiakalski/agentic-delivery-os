@@ -1,0 +1,47 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-230
+branch: feat/GH-230/typed-blockers
+status: PASS
+summary: >-
+  Final re-review of the iteration-2 remediation delta (commit 4d55412d ->
+  0d5d04ec; base main-tools merge-base c4f6cd63). The delta touches exactly two
+  files, +12/-7, and both open findings are resolved correctly. F-1 (doc truth):
+  feature-blockers.md now states typed-questions is "the ninth fixed section ...
+  after spend" (line 184), the human line renders "after the spend line" (194),
+  and the four remaining "seventh section" mentions became "the ninth section"
+  (256, 269, 371, 377). This matches delivered truth: STATUS_SECTION_ORDER[8] is
+  typed-questions, after spend[7] (contracts/status.ts:17-27); the human renderer
+  emits the "questions" line after the "spend" line (domain/status.ts:1975-1985;
+  golden human.txt shows spend then questions); and feature-status-digest.md
+  declares nine fixed sections with typed-questions as section 9. A full sweep of
+  feature-blockers.md finds zero residual pre-merge numbering, and the retained
+  "seven digest sections" and "six context surfaces" claims are verified correct
+  against delivered brief behavior (BRIEF_SURFACE_ORDER holds 9 = 7 digest
+  surfaces + 2 placeholders per contracts/brief.ts:44-55; renderBriefHuman emits
+  the 3 anchors, the gate-sla-states line, then the 6 context surfaces per
+  domain/brief.ts:384-416; feature-brief.md states the same 7+2 composition), so
+  no new inconsistency was introduced. F-2 (test isolation): the unparseable
+  askedAt case now carries ref: null alongside askedAt "not-an-instant"; because
+  questionFrom validates askedAt parseability (state/blockers.ts:252) before the
+  ref-null-or-string guard (253), and the payload's every other field is valid
+  and within QUESTION_KEYS, the case now fails closed solely on the askedAt parse
+  guard — deleting that guard yields a fully valid record that is served (exit 0)
+  and the assertion expect(exitCode).toBe(2) fails, whereas the pre-fix payload
+  (ref undefined) would still trip the ref guard and mask the mutation. The
+  focused suite is green (11 pass, 0 fail). No production code changed in the
+  delta, so every iteration-1/iteration-2 functional conclusion (all 21 ACs, the
+  four pinned decisions, TDR-0011 boundary, byte-stability, error-table 98/98)
+  stands unchanged. No findings remain.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings: []
+reviewed_at: 2026-11-07T10:36:44Z
+next_step: PROCEED
