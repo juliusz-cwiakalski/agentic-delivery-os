@@ -1,9 +1,9 @@
 ---
 id: chg-GH-235-test-plan
 status: Proposed
-version: 1.0
+version: 1.1
 created: 2026-11-07T00:00:00Z
-last_updated: 2026-11-07T00:00:00Z
+last_updated: 2026-11-07T12:00:00Z
 owners: [engineering]
 service: delivery-os session lifecycle core (liveness signal sourcing, restart budget, resume economics)
 labels: [change, m1]
@@ -25,13 +25,13 @@ This document is a verification map, not an execution claim: no command was run 
 
 ### 1.1 In Scope
 
-- Adapter-level sourcing of heartbeat age, session traffic, and token delta, the neutral liveness assembly, and the watchdog bridge that projects all three declared keys with absent keys staying absent (F-1; DM-1; AC-F1-1).
+- Adapter-level sourcing of heartbeat age, session traffic, and token delta, the neutral liveness assembly, and the watchdog bridge that projects all three declared keys with absent keys staying absent; the delivered closed liveness-kind vocabulary stays exactly `session-traffic | worktree-activity | process`, with heartbeat age and token delta sourced under an additive closed sourced-signal-kind vocabulary owned by this change (F-1; DM-1; AC-F1-1; DEC-8).
 - Preserved source-less classification: declared-gap harnesses and source-less lanes answer `watchdog.signals-absent`, exit `2`, no verdict, never a guessed or CPU-substituted reading (F-1; AC-F1-2; NFR-2).
 - The prefill/resume safety matrix and the full corroboration matrix, including boundary values of the declared stall bound, every partial reading, and evidence on every verdict (F-2; DM-1; AC-F2-1, AC-F2-2; NFR-1, NFR-7; DEC-4; SC-M1-14).
-- Resume economics: capability-driven attach-and-continue without re-pay and without an ordinal, and within-budget uneconomical refusal with `dispatch.resume-uneconomical`, exit `1`, and named re-pay evidence (F-3; AC-F3-1, AC-F3-2; DEC-7).
-- The durable restart budget: one restart event per admitted restart with ordinal, reason, session identity, and re-pay delta; survival across a process boundary; a fail-closed gate; refusal before any spawn past the bound with `dispatch.restart-budget-exceeded`, exit `1`, history-bearing evidence, and a durable terminal exhaustion record (F-4; DM-2, DM-3; AC-F4-1..AC-F4-4; NFR-3, NFR-4; DEC-2, DEC-3).
+- Resume economics: capability-driven attach-and-continue without re-pay and without an ordinal, and within-budget uneconomical refusal with `dispatch.resume-uneconomical`, exit `1`, and named re-pay evidence as a deterministic key=value corpus on the existing failure fields (F-3; AC-F3-1, AC-F3-2; DEC-7, DEC-9).
+- The durable restart budget: one restart event per admitted restart with ordinal, reason, session identity, and re-pay delta; survival across a process boundary; a fail-closed gate; refusal before any spawn past the bound with `dispatch.restart-budget-exceeded`, exit `1`, a deterministic key=value reason/history-reference corpus on the existing failure fields, and a durable terminal exhaustion record that is the resolvable full-history carrier (F-4; DM-2, DM-3; AC-F4-1..AC-F4-4; NFR-3, NFR-4; DEC-2, DEC-3, DEC-9).
 - Identical consumption by a daemon-style supervised composition and a one-shot resume composition, with zero divergence in identity, evidence, exit, and spawn count (AC-F4-3; RSK-3).
-- The sourced stalled identity: `watchdog.liveness-stalled` on a failure envelope, no `data.verdict`, exit `1`, signals in evidence; `progressing` success at exit `0`; `signals-absent` unchanged at exit `2` (F-5; DM-5; AC-F5-1; DEC-1; GAP-T2 resolution).
+- The sourced stalled identity: `watchdog.liveness-stalled` on a failure envelope, no `data.verdict`, exit `1`, with the corroborating signals carried as a deterministic key=value corpus on the existing failure fields; `progressing` success at exit `0`; `signals-absent` unchanged at exit `2` (F-5; DM-5; AC-F5-1; DEC-1, DEC-9; GAP-T2 resolved as DEC-1 on the identity side and DEC-9 on the envelope side).
 - Per-delivery economics derivation from durable records alone: restart count, ordered history, resume-amplification signal, no harness re-query, null-with-warning degradation (F-6; DM-4; AC-F6-1; NFR-5).
 - Lane configuration: `lane.liveness-interval` default `30000` ms and `lane.restart-budget` default `3`, origin provenance, and existing validation identities for unknown keys, wrong types, and invalid values (F-7; DM-6; AC-F7-1; DEC-5).
 - The closed surface: the `dispatch` domain kind with exactly its two economics identities, the fourth `watchdog` row, the declared outcome/identity/exit matrix, exactly one valid exclusive envelope per invocation, and two-way documentation binding (DM-5; AC-F5-1, AC-F4-2, AC-F3-2; NFR-6..NFR-8).
@@ -49,16 +49,16 @@ This document is a verification map, not an execution claim: no command was run 
 - [OUT] Worktree-activity as a fourth corroborating source and any Claude Code capability expansion — NG-7. Declared gaps stay gaps; absent sources classify unknown.
 - [OUT] State schema-version bumps, migrations, changes to the watchdog stall bound, verdict vocabulary, or signal keys — NG-8. A test asserts the schema version and these vocabularies are **unchanged**.
 - [OUT] Bash-era stack parity or script changes — §7.2. No bash script is modified.
-- [GAP-T1 — the harness liveness kind vocabulary is not the watchdog signal vocabulary, and the spec does not say which side grows] DM-1 says the neutral report carries sourced heartbeat-age and token-delta entries "alongside session traffic (closed kinds, explicit absence reasons)", while the delivered `HARNESS_LIVENESS_KINDS` is exactly `session-traffic | worktree-activity | process` and both the conformance suite and GH-233's plan assert exactly three kinds. Extending that closed vocabulary is an additive harness-contract change this spec does not list as a decision; deriving heartbeat age and token delta from sourced traffic plus token statistics avoids it. This plan therefore asserts the **observable contract** — the watchdog keys are populated from adapter facts, an unsourced key stays absent, no CPU key exists, and the declared vocabulary has one home — and treats the choice as a delivery decision (OQ-T1). Delivery must reconcile the existing exact-three assertions deliberately; it must never loosen them to a floor.
-- [GAP-T2 — structured failure evidence must fit the exclusive v1 envelope] The delivered `CommandResultError` carries `code`, `category`, `retryable`, `consequence`, `remediationHint`, and an optional `summary` — there is no structured evidence field, and §8.5/NG-8 keep the envelope shape untouched. AC-F2-2 ("carries the signals as evidence"), AC-F3-2 ("names the reason and the re-pay"), and AC-F4-2 ("reason and full restart history") therefore need one of: a bounded machine-parseable evidence string on the failure side, or a resolvable history reference to the durable record (§8.2's exhaustion record is explicitly a "history reference"). Tests assert the **property** — the exact identity, a non-empty evidence payload that names the reason and exposes the numeric facts, and a history reference that resolves to the full durable history — and leave the carrier delivery-bound. OQ-T2 records the decision; no test asserts a new envelope field.
+- [GAP-T1 — CLOSED by DEC-8: the delivered liveness-kind vocabulary is unchanged and the sourced signals get their own vocabulary] `HARNESS_LIVENESS_KINDS` stays exactly `session-traffic | worktree-activity | process`; heartbeat age and token delta are sourced as new **signal sources** under a new additive, closed **sourced-signal-kind** vocabulary owned by this change, carried additively in the neutral liveness report beside the existing kinds and projected into the declared watchdog signal keys. GH-233's exact-three assertions therefore stay intact and are **asserted, never loosened**. The plan asserts: the delivered kind union is still exactly three, the additive sourced-signal-kind union has one home and is closed, the neutral report carries both sets without collision, and the projection populates only the declared watchdog keys.
+- [GAP-T2 — CLOSED by DEC-1 (identity) and DEC-9 (envelope carriage)] The sourced stalled outcome's identity is `watchdog.liveness-stalled` (DEC-1). Refusal evidence for all three refusals rides as a bounded, deterministic key=value corpus inside the existing failure fields (`summary`/evidence string), with the durable state records as the resolvable full-history carrier; no structured evidence field is added to the frozen error shape (DEC-9). The plan asserts corpus **parseability and determinism** (stable key order/keys, bounded, machine-consumable) and **reference resolvability** (the reference resolves to the full durable history), and asserts the error object's key set is unchanged.
 - [GAP-T3 — "never killed" is an absence, not an action] There is no kill capability in this codebase and this change adds none (NG-6). "No kill" is therefore proven by three observable facts rather than one: no spawn/kill/steer port exists on the evaluated surface, zero such invocations are recorded across every fixture, and no restart event or lane-state mutation occurs on a `progressing` classification. A mutant that invokes a spawn port on a progressing or refusal path is the non-vacuity control (TC-ECON-022, TC-ECON-081).
 - [GAP-T4 — process-boundary durability is asserted at the store boundary, not with a second OS process unless delivery adds one] TC-ECON-051 reads the same temp store root through a **fresh store handle** after the writing handle is closed, which proves durability across process lifetime and cache. If delivery can spawn a bounded child process cheaply, the same assertions strengthen; the plan does not require it (no sleeps, no flake surface).
-- [GAP-T5 — delivery-bound names] Module paths, export names, record-kind strings, store-key spellings, payload-schema identifiers, the amplification flag name, and the evidence carrier's exact spelling are delivery-bound. Behaviour, identities, exits, closed vocabularies, ordering rules, and AC traceability are not. A test that cannot resolve a seam must fail naming the missing contract, never silently skip.
+- [GAP-T5 — delivery-bound names] Module paths, export names, record-kind strings, store-key spellings, payload-schema identifiers, the amplification flag name, and the key spellings of the refusal evidence corpus are delivery-bound. Behaviour, identities, exits, closed vocabularies, ordering rules, corpus parseability, and AC traceability are not. A test that cannot resolve a seam must fail naming the missing contract, never silently skip.
 - [GAP-T6 — implementation plan not yet authored] `chg-GH-235-plan.yaml` does not exist at test-planning time (`links.implementation_plan: null`). Delivery planning must map phases onto these TCs; it must not reshape identities, exits, corroboration, precedence, or traceability.
 
 ## 2. References
 
-- **Change specification**: [chg-GH-235-spec.md](./chg-GH-235-spec.md) — F-1..F-7, 13 ACs (AC-F1-1..AC-F7-1), DM-1..DM-6, NFR-1..NFR-9, RSK-1..RSK-6, DEC-1..DEC-7, §6 flows 1–4, §8.1 outcome/identity/exit matrix, §8.2 record kinds, §21 security highlights, Appendix B.
+- **Change specification**: [chg-GH-235-spec.md](./chg-GH-235-spec.md) — F-1..F-7, 13 ACs (AC-F1-1..AC-F7-1), DM-1..DM-6, NFR-1..NFR-9, RSK-1..RSK-6, DEC-1..DEC-9, §6 flows 1–4, §8.1 outcome/identity/exit matrix, §8.2 record kinds and refusal-evidence carriage, §21 security highlights, Appendix B.
 - **PM record**: [chg-GH-235-pm-notes.yaml](./chg-GH-235-pm-notes.yaml) — context only: the SC-M1-15 scope split, delivered dependencies, and the anticipated documentation impacts. The spec is the source of truth.
 - **Seed scenarios**: [test-scenarios.md](../../../planning/oss-tooling/milestones/m1/test-scenarios.md) — SC-M1-14 (primary TC-ECON-020; extended by 021, 022) and SC-M1-15 (economics half: TC-ECON-052, extended by 053, 054). SC-M1-15's queue-marking, typed-question, digest-ranking, and one-collection-cycle assertions are M1-S16/S17/S18 and are excluded here.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — `bun:test` under `tests/**/*.test.ts`; fixtures never named `*.test.ts`; `tests/{structure,types,behaviour,conformance,golden,checks,boundaries}`; permanent suites assert the current tree, never a moving base branch; goldens regenerate only by an explicit command; `pnpm check` is the aggregate gate.
@@ -109,7 +109,7 @@ The spec declares no REST/HTTP endpoint (API-#): the interface is the v1 envelop
 
 | Element | TC ID(s) | Observable assertion |
 |---------|----------|----------------------|
-| DM-1 sourced signal carriage | TC-ECON-010, TC-ECON-011, TC-ECON-012 | Neutral report carries one entry per declared kind with explicit absence reasons; the watchdog bridge projects all three declared keys; absent keys stay absent, never `0`; no CPU key exists |
+| DM-1 sourced signal carriage | TC-ECON-010, TC-ECON-011, TC-ECON-012 | Delivered liveness kinds stay exactly three; the additive closed sourced-signal kinds carry heartbeat age and token delta beside them; the watchdog bridge projects all three declared keys; absent keys stay absent, never `0`; no CPU key exists (DEC-8) |
 | DM-2 restart event record | TC-ECON-050, TC-ECON-051, TC-ECON-060 | One additive record per admitted restart with work item, run, session identity, ordinal, classified reason, prefill re-pay delta, timestamps; fenced verified append; verified read; no schema bump |
 | DM-3 budget exhaustion record | TC-ECON-052, TC-ECON-054, TC-ECON-062 | One terminal per-delivery record with the classified reason and a restart-history reference; terminal marker and escalation-consumer fields present as data |
 | DM-4 per-delivery economics view | TC-ECON-060, TC-ECON-061, TC-ECON-062 | Restart count, ordered history, amplification signal; rebuildable from records alone; declared field names (`restarts`, `resumeAmplification`); null-with-warning degradation |
@@ -137,9 +137,9 @@ The spec declares no REST/HTTP endpoint (API-#): the interface is the v1 envelop
 - **Uncovered ACs**: none (13/13 in §3.1). **Orphan TCs**: none; every TC names at least one AC or NFR in §5.1 and §5.2.
 - **SC-M1-14 (prefilling session never reads as stalled)** is inherited verbatim in its two observable assertions — "no restart event" and "the lane state remains delivering" — by TC-ECON-020, extended by the corroboration matrix (021) and by the no-kill/no-spawn structural proof (022).
 - **SC-M1-15 (budget exhaustion escalates, never silently requeues)** is inherited on the economics half only: "restart 3/3", "no fourth spawn", "terminal, classified reason, restart history" are TC-ECON-052/053/054. The other half — "queue entry marked failed", "typed question raised within one collection cycle with options", "blockers list shows the question", "digest ranks it" — is M1-S17/S18 and M1-S16, and is explicitly not claimed here. Divergence discovered later is a defect; this split mirrors the spec's SC-M1-15 ownership note.
-- **Partially testable, with the boundary recorded**: AC-F2-1's "no kill" is an absence proven by port absence, zero invocations, and zero state mutation (GAP-T3); AC-F4-1's "survives a process boundary" is proven at the closed-and-reopened store boundary (GAP-T4); AC-F3-2's "measured or expected re-pay" is asserted as a numeric fact present in evidence, not a fixed formula; AC-F6-1's amplification is asserted by ordering/monotonicity and the null rule, with the exact formula delivery-bound (OQ-T2); DM-1's carriage is asserted at the projected watchdog shape, with the neutral-vocabulary growth left to delivery (GAP-T1).
+- **Partially testable, with the boundary recorded**: AC-F2-1's "no kill" is an absence proven by port absence, zero invocations, and zero state mutation (GAP-T3); AC-F4-1's "survives a process boundary" is proven at the closed-and-reopened store boundary (GAP-T4); AC-F3-2's "measured or expected re-pay" is asserted as a numeric key=value fact in the corpus, not a fixed formula; AC-F6-1's amplification is asserted by ordering/monotonicity and the null rule, with the exact formula delivery-bound (OQ-T3); DM-1's carriage is asserted at the projected watchdog shape over the additive sourced-signal kinds, with the delivered exact-three liveness kinds asserted unchanged (DEC-8).
 - **Intentional duplicate coverage**: AC-F5-1 spans eight TCs because the declared matrix, the table rows, the documentation binding, the three-way behaviour, the goldens, the envelope matrix, and the regression flip fail independently. AC-F4-1 spans four because recording, durability, reconstruction, and config-driven bounding fail independently. AC-F3-2 spans four because the refusal, precedence, fail-closed capability rule, and envelope validity fail independently.
-- **Regression half**: the delivered `watchdog-*`, `harness-*`, `config-*`, `state-*`, `error-table`, and `tests/boundaries` suites run in TC-ECON-082. Five existing assertions are **deliberately updated** by this change, and only these five: (i) `WATCHDOG_ERROR_CODES` exactly-three → exactly-four; (ii) the error-table total row count → the new exact total; (iii) GH-221's "no M1-S1 runtime path produces `stalled` or `progressing`" → reachability assertions (the flip is this change's purpose); (iv) the harness liveness "exactly three kinds" assertion → reconciled per GAP-T1; (v) watchdog liveness fixtures that expected `signals-absent` on a now-sourced lane. All other existing test files must remain unchanged; that is a review obligation, not a permanent tree assertion.
+- **Regression half**: the delivered `watchdog-*`, `harness-*`, `config-*`, `state-*`, `error-table`, and `tests/boundaries` suites run in TC-ECON-082. Four existing assertions are **deliberately updated** by this change, and only these four: (i) `WATCHDOG_ERROR_CODES` exactly-three → exactly-four; (ii) the error-table total row count → the new exact total; (iii) GH-221's "no M1-S1 runtime path produces `stalled` or `progressing`" → reachability assertions (the flip is this change's purpose); (iv) watchdog liveness fixtures that expected `signals-absent` on a now-sourced lane. The harness liveness exact-three-kind assertions are **not** updated or loosened: DEC-8 keeps `HARNESS_LIVENESS_KINDS` unchanged and the additive sourced-signal-kind vocabulary lives beside it. All other existing test files must remain unchanged; that is a review obligation, not a permanent tree assertion.
 
 ## 4. Test Types and Layers
 
@@ -235,24 +235,27 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 - The four new error codes are declared.
 
 **Steps**:
-1. Import the closed vocabularies: restart reasons, the two record-kind identifiers, the economics view field names, the amplification flag names, and the two configuration key paths.
+1. Import the closed vocabularies: restart reasons, the two record-kind identifiers, the economics view field names, the amplification flag names, the additive sourced-signal kinds, and the two configuration key paths.
 2. Assert each vocabulary is a single `as const` declaration that drives both the runtime list and the union type, with no duplicate or extra member.
-3. Assert the view field names include `restarts` and `resumeAmplification` exactly, matching the names the dispatch envelope declares in the milestone contract; assert the history field is declared and ordered by ordinal.
-4. Assert `WATCHDOG_SIGNAL_KEYS` remains exactly `heartbeatAgeMs`, `tokenDelta`, `traffic` and that no contract type declares a CPU field.
-5. Assert `WATCHDOG_ERROR_CODES` is exactly the three delivered codes plus `watchdog.liveness-stalled`, in append order.
-6. Scan every file under `packages/` for a redeclaration of any of these vocabularies; assert none.
-7. Run the structure layer's AST data-only detector over the module: only type/interface/import/export/`as const` declarations, no runtime imports; a temp-copy mutant injecting `import "node:fs"` or an executable statement fails naming the file and kind.
-8. Assert `STATE_SCHEMA_VERSION` is unchanged and the new record kinds are additive string constants, not a schema version.
+3. Assert the additive sourced-signal-kind vocabulary is closed, one-home, non-empty, and disjoint from `HARNESS_LIVENESS_KINDS`; assert `HARNESS_LIVENESS_KINDS` is still exactly `session-traffic`, `worktree-activity`, `process` in that order (DEC-8) — this assertion is never loosened to a floor or a superset.
+4. Assert the view field names include `restarts` and `resumeAmplification` exactly, matching the names the dispatch envelope declares in the milestone contract; assert the history field is declared and ordered by ordinal.
+5. Assert `WATCHDOG_SIGNAL_KEYS` remains exactly `heartbeatAgeMs`, `tokenDelta`, `traffic` and that no contract type declares a CPU field.
+6. Assert `WATCHDOG_ERROR_CODES` is exactly the three delivered codes plus `watchdog.liveness-stalled`, in append order.
+7. Scan every file under `packages/` for a redeclaration of any of these vocabularies; assert none, including no second sourced-signal-kind home.
+8. Run the structure layer's AST data-only detector over the module: only type/interface/import/export/`as const` declarations, no runtime imports; a temp-copy mutant injecting `import "node:fs"` or an executable statement fails naming the file and kind.
+9. Assert `STATE_SCHEMA_VERSION` is unchanged and the new record kinds are additive string constants, not a schema version.
 
 **Expected Outcome**:
 - Every closed vocabulary has exactly one data-only home and the union cannot drift from the runtime list.
+- The delivered liveness-kind union is still exactly three kinds while the additive sourced-signal kinds have their own closed, one-home union (DEC-8).
 - No CPU key exists anywhere in contract types; the watchdog signal key set is unchanged.
 - The contract module is data-only and runtime-neutral; the mutation probe proves the detector is non-vacuous.
 - No schema-version change is introduced by the record kinds.
 
 **Notes / Clarifications**:
-- Record-kind strings, store-key spellings, and the amplification flag spelling are delivery-bound (GAP-T5); the test reads them from the contract and asserts one-home and closedness, not a guessed literal.
+- Record-kind strings, store-key spellings, the amplification flag spelling, and the sourced-signal-kind spellings are delivery-bound (GAP-T5); the test reads them from the contract and asserts one-home and closedness, not a guessed literal.
 - The `restarts` / `resumeAmplification` names are pinned because the dispatch envelope declares them; the emission surface is M1-S9 (NG-4).
+- DEC-8 closes the vocabulary question: growing `HARNESS_LIVENESS_KINDS` is explicitly not the chosen model, so the exact-three assertion is a positive requirement of this plan.
 
 #### TC-ECON-002 - Tier boundaries and the adapter seam hold for the economics surface
 
@@ -389,24 +392,27 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 
 **Preconditions**:
 - The adapter declaration states its sourced liveness kinds; injected facts exist for each declared kind.
-- The watchdog bridge and the neutral assembly are reachable from the test.
+- The additive sourced-signal-kind vocabulary (DEC-8) is declared and the watchdog bridge and neutral assembly are reachable from the test.
 
 **Steps**:
 1. Inject a heartbeat-age fact, a session-traffic fact, and a token-delta fact (where declared) with fixed observation times; run the adapter's liveness read.
-2. Assert the neutral report carries exactly one entry per declared kind in closed order; each sourced entry carries the injected value and the injected observation time.
-3. Project the report through the watchdog bridge; assert `heartbeatAgeMs`, `tokenDelta`, and `traffic` equal the injected facts under the declared unit mapping.
-4. Assert the projected key set is a subset of `WATCHDOG_SIGNAL_KEYS`; an undeclared or unsourced kind yields an **absent** key, never `0`, `false`, `""`, or an invented timestamp.
-5. Assert the projection performs no second store or file read: the recording harness seam shows zero additional reads.
-6. Run `watchdog liveness --json` with sourced signal sources wired; assert the populated keys reach the emitted payload and the verdict is `progressing` or `stalled` per the corroboration rule — never `signals-absent`.
-7. Replay the read with fresh fakes and identical facts; assert byte-identical canonical output.
+2. Assert the neutral report still carries exactly one entry per delivered liveness kind in closed order (`session-traffic`, `worktree-activity`, `process`) — the exact-three shape is unchanged (DEC-8).
+3. Assert the neutral report additionally carries the sourced-signal entries under the additive closed sourced-signal-kind vocabulary, beside the delivered kinds, with each sourced entry carrying the injected value and the injected observation time; assert the two sets do not collide and no delivered kind is re-typed as a sourced-signal kind.
+4. Project the report through the watchdog bridge; assert `heartbeatAgeMs`, `tokenDelta`, and `traffic` equal the injected facts under the declared unit mapping.
+5. Assert the projected key set is a subset of `WATCHDOG_SIGNAL_KEYS`; an undeclared or unsourced signal yields an **absent** key, never `0`, `false`, `""`, or an invented timestamp.
+6. Assert the projection performs no second store or file read: the recording harness seam shows zero additional reads.
+7. Run `watchdog liveness --json` with sourced signal sources wired; assert the populated keys reach the emitted payload and the verdict is `progressing` or `stalled` per the corroboration rule — never `signals-absent`.
+8. Replay the read with fresh fakes and identical facts; assert byte-identical canonical output.
 
 **Expected Outcome**:
 - All three declared keys are populated from adapter facts where sources exist; unsourced keys stay absent.
+- The delivered liveness-kind union is still exactly three entries and the additive sourced-signal kinds have their own closed home (DEC-8); no existing kind assertion is loosened.
 - The zone between "absent" and "zero" is preserved end to end, so the classifier can still answer unknown.
 - Sourcing is a projection of adapter facts, not a re-read.
 
 **Notes / Clarifications**:
-- Whether the neutral kind vocabulary grows or heartbeat/token-delta derive from traffic plus token statistics is a delivery decision (GAP-T1, OQ-T1). Where the declaration is authoritative, the test reads it; it never hardcodes a per-harness expectation and never loosens the existing vocabulary assertions to a floor.
+- DEC-8 closes the vocabulary question: option (a) is pinned, so this test asserts the delivered exact-three kinds **unchanged** and the additive sourced-signal vocabulary as a separate closed set. The suite must not be rewritten to accept a superset of liveness kinds.
+- Where the adapter declaration is authoritative for which operations a harness supports, the test reads it; it never hardcodes a per-harness expectation.
 
 #### TC-ECON-011 - A source-less lane keeps the classified unknown answer
 
@@ -513,7 +519,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 3. Assert every other present-signal combination classifies `progressing`, including at-bound-with-nonzero-delta, at-bound-with-zero-traffic-but-absent-token-delta, and two-of-three corroboration.
 4. Assert an absent heartbeat never stalls even when delta and traffic are both `0`, and that an absent signal is never coerced to `0`.
 5. Assert boundary behaviour at `bound - 1`, `bound`, and `bound + 1`.
-6. Assert every `stalled` outcome carries non-empty, machine-readable evidence naming the three corroborating values.
+6. Assert every `stalled` outcome carries a non-empty, bounded, deterministic key=value corpus naming the three corroborating values (DEC-9), with stable keys across runs and no prose-only evidence.
 7. Assert the classifier stays pure and deterministic: same input twice → identical outcome and evidence.
 8. Non-vacuity: drop each criterion in turn (traffic, token delta, bound comparison) in temp-copy mutants; each mutant flips at least one matrix row and is caught.
 
@@ -567,17 +573,18 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 2. Assert exactly one JSON document is emitted; assert it is the failure side (`error` present, `data` absent).
 3. Assert `error.code === "watchdog.liveness-stalled"`, exit `1`, and the documented category/retryable/consequence/remediation hint.
 4. Assert no `verdict` key exists anywhere in the payload and no verdict value is serialized as the outcome.
-5. Assert the evidence payload is non-empty, names the stall reason, and exposes the three corroborating signal values in machine-readable form.
-6. Run text mode; assert the same identity and the same evidence tokens are rendered, with the injected brand name and no envelope JSON.
-7. Assert the outcome resolves in `ERROR_TABLE`; assert it is not `fallback.internal` and not `watchdog.signals-absent`.
-8. Run the progressing control (exit `0`) and the absent control (exit `2`) to prove the identity is specific.
+5. Assert the failure fields carry a non-empty, bounded, deterministic key=value corpus naming the stall reason and the three corroborating signal values (DEC-9); assert the corpus parses with stable keys and reproduces identically on replay.
+6. Assert the error object's key set is unchanged (`code`, `category`, `retryable`, `consequence`, `remediationHint`, optional `summary`) — no structured evidence field is added (DEC-9).
+7. Run text mode; assert the same identity and the same evidence tokens are rendered, with the injected brand name and no envelope JSON.
+8. Assert the outcome resolves in `ERROR_TABLE`; assert it is not `fallback.internal` and not `watchdog.signals-absent`.
+9. Run the progressing control (exit `0`) and the absent control (exit `2`) to prove the identity is specific.
 
 **Expected Outcome**:
-- A sourced stall has exactly one machine representation at exit `1` with signals in evidence and no success payload — GAP-T2 resolved as DEC-1.
+- A sourced stall has exactly one machine representation at exit `1` with a key=value signal corpus on the existing failure fields and no success payload — GAP-T2 resolved as DEC-1 (identity) and DEC-9 (envelope carriage).
 - The three liveness outcomes are distinguishable by identity and exit alone.
 
 **Notes / Clarifications**:
-- Evidence carriage follows GAP-T2: the failure side carries a bounded evidence payload, and a history/reference pattern is permitted; no new envelope field is assumed.
+- DEC-9 pins the carrier: a bounded deterministic key=value corpus inside the existing failure fields, with the durable §8.2 records as the resolvable full-history carrier. A prose-only summary is insufficient; a new error field is out of scope and fails this TC.
 - The current handler builds `stalled` as success data; this TC is the behavioural flip's assertion.
 
 #### TC-ECON-031 - Progressing stays exit `0` and signals-absent stays exit `2`
@@ -651,11 +658,12 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 2. Assert stdout parses as exactly one JSON document with no trailing content and exactly one `schemaVersion` occurrence.
 3. Assert the four mandatory fields (`schemaVersion`, `runId`, `exitCode`, `timing`) are present.
 4. Assert exactly one of `data`/`error` is present and the other is absent.
-5. Assert failure errors carry code, category, retryable, consequence, remediation hint, and a non-empty evidence-bearing summary or evidence payload; assert success data is non-undefined.
+5. Assert failure errors carry code, category, retryable, consequence, remediation hint, and a non-empty bounded key=value evidence corpus on the existing failure fields (DEC-9); assert success data is non-undefined.
 6. Assert the envelope `exitCode` equals the numeric return value and the set over the matrix is a subset of `{0, 1, 2}`.
 7. Assert exit `0` appears only for success classes, exit `1` only for refusals, exit `2` only for source/availability-unavailable classes.
 8. Assert no stderr envelope under `--json`.
-9. Assert every refusal outcome carries evidence naming its reason; a failure with empty evidence fails.
+9. Assert every refusal outcome carries a parseable key=value corpus naming its reason, with a stable key set across runs; a failure with empty or prose-only evidence fails.
+10. Assert the error object's key set is unchanged across the matrix — no structured evidence field is added (DEC-9).
 
 **Expected Outcome**:
 - One valid exclusive envelope per invocation across every new outcome; zero double payloads, zero empty payloads, zero missing mandatory fields.
@@ -711,7 +719,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 1. Record the budget view and the session evidence.
 2. Invoke the resume path.
 3. Assert the outcome is `dispatch.resume-uneconomical` on a failure envelope, exit `1`.
-4. Assert the evidence names the reason and the measured or expected prefill re-pay as a numeric token figure; assert the reason token is from the closed reason vocabulary.
+4. Assert the failure fields carry a deterministic key=value corpus naming the reason and the measured or expected prefill re-pay as a numeric token figure (DEC-9); assert the reason token is from the closed reason vocabulary and the corpus parses with stable keys.
 5. Assert zero spawns and zero prompt re-entry invocations.
 6. Assert no restart event appended and the restart count unchanged.
 7. Assert the refusal is a recorded decision, not a destructive act: session identity and existing records are unchanged.
@@ -851,7 +859,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 1. Attempt restart 4.
 2. Assert the attempt is refused **before any spawn**: the spawn log is empty and the gate is evaluated before any execution step.
 3. Assert the outcome is `dispatch.restart-budget-exceeded` on a failure envelope, exit `1`.
-4. Assert the evidence names the classified reason, the restart count, and the full restart history (or a reference that resolves to the full durable history).
+4. Assert the failure fields carry a bounded deterministic key=value corpus naming the classified reason, the restart count, and a record reference that resolves to the full durable restart history (DEC-9); parse the corpus and resolve the reference, asserting the resolved history is complete and ordered.
 5. Assert a terminal exhaustion record is appended durably with the classified reason and the history reference; read it back.
 6. Assert no restart-event record is appended for the refused attempt and the count stays `3`.
 7. Assert no silent requeue: zero queue-mutation calls and zero spawn calls; nothing in this change marks the entry or re-enters.
@@ -859,12 +867,12 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 9. Control: a 2-of-3 attempt is admitted and appends ordinal `3` — the refusal is not unconditional.
 
 **Expected Outcome**:
-- Restart N+1 past budget is refused loudly with a classified reason, full history, and a durable terminal record; no fourth spawn on any path.
+- Restart N+1 past budget is refused loudly with a classified reason, a key=value reason/count/history-reference corpus, and a durable terminal record that resolves to the full history; no fourth spawn on any path.
 - SC-M1-15's economics assertions hold: "no fourth spawn", "terminal, classified reason, restart history".
 
 **Notes / Clarifications**:
 - Queue marking (M1-S17), typed question (M1-S16), and one-collection-cycle delivery (M1-S18) are out of scope; this TC asserts the data they consume (TC-ECON-054), never their behaviour.
-- Evidence carriage follows GAP-T2: a bounded evidence payload plus a resolvable history reference is sufficient; no envelope schema change is assumed.
+- DEC-9 pins the carriage: a bounded deterministic key=value corpus in the existing failure fields plus the durable record as the resolvable full-history carrier; the frozen error shape gains no structured field.
 
 #### TC-ECON-053 - Every resume path consumes the exhaustion identically
 
@@ -910,7 +918,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 
 **Steps**:
 1. Read the terminal record and assert it is marked terminal for the delivery.
-2. Assert it carries the classified reason (`dispatch.restart-budget-exceeded`) and a restart-history reference that resolves to the full ordered history.
+2. Assert it carries the classified reason (`dispatch.restart-budget-exceeded`) and a restart-history reference that resolves to the full ordered history; assert the refusal corpus's reference is the same resolvable reference (DEC-9).
 3. Assert the consumer-field set is present as data: the fields a queue failure marking needs (delivery identity, terminal state, reason), the fields a typed question needs (reason, restart count, available options as declared data), and the fields a collection-cycle delivery needs (delivery/run identity, reason, timestamp). Assert the field contract is declared in the contracts tier, not inferred from prose.
 4. Assert the record contains no prompt text, transcript, or credential material.
 5. Run a post-exhaustion replay (re-read the state and re-run any resume evaluation); assert zero spawns, zero automatic re-entry, and no queue mutation performed by this change.
@@ -1036,7 +1044,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 - The signal is computed from records, never from a guess or a live session.
 
 **Notes / Clarifications**:
-- The exact formula and the flag threshold are under-specified by the spec ("tokens paid across restarts versus unique progress, approximately 1 for healthy deliveries"); the test asserts the declared ordering, monotonicity, flag naming, and null rule (OQ-T2). Delivery may not weaken these properties.
+- The exact formula and the flag threshold are under-specified by the spec ("tokens paid across restarts versus unique progress, approximately 1 for healthy deliveries"); the test asserts the declared ordering, monotonicity, flag naming, and null rule (OQ-T3). Delivery may not weaken these properties.
 
 #### TC-ECON-062 - Missing economics figures degrade to null with a warning
 
@@ -1212,7 +1220,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 **Tags**: @backend, @regression
 
 **Preconditions**:
-- The delivered suites are present and unchanged except for the five deliberate updates listed below.
+- The delivered suites are present and unchanged except for the four deliberate updates listed below.
 
 **Steps**:
 1. Run the delivered watchdog suites: contract, imports, preflight, teardown, memory, liveness, envelope, exit, checks-not-runner, determinism, and goldens. Assert green.
@@ -1220,13 +1228,14 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 3. Run the config, state, error-table, envelope, and exit-projection suites. Assert green.
 4. Run `bun test tests/boundaries` and `pnpm check:boundaries`. Assert green with no rule change.
 5. Assert signals-absent still exits `2` with no verdict (TC-ECON-011 overlap is intentional: the regression suite must independently hold).
-6. Assert the five deliberate updates are exactly: (i) `WATCHDOG_ERROR_CODES` exactly-three → exactly-four; (ii) the error-table exact total → the new exact total; (iii) GH-221's "no runtime path produces `stalled`/`progressing`" → reachability assertions; (iv) the harness liveness exact-kind-count assertion reconciled per GAP-T1; (v) watchdog liveness fixtures that expected `signals-absent` on a now-sourced lane.
-7. Assert no assertion was weakened to a floor (`toBeGreaterThan`) or deleted rather than replaced.
-8. Review-time obligation (not a permanent suite): confirm with `git diff --name-only` that no other existing test file changed.
+6. Assert the four deliberate updates are exactly: (i) `WATCHDOG_ERROR_CODES` exactly-three → exactly-four; (ii) the error-table exact total → the new exact total; (iii) GH-221's "no runtime path produces `stalled`/`progressing`" → reachability assertions; (iv) watchdog liveness fixtures that expected `signals-absent` on a now-sourced lane.
+7. Assert the harness liveness exact-three-kind assertions are **unchanged**: `HARNESS_LIVENESS_KINDS` is still exactly three kinds and the additive sourced-signal kinds live in their own union (DEC-8). A diff that widens the liveness-kind assertion fails this TC.
+8. Assert no assertion was weakened to a floor (`toBeGreaterThan`) or deleted rather than replaced.
+9. Review-time obligation (not a permanent suite): confirm with `git diff --name-only` that no other existing test file changed.
 
 **Expected Outcome**:
 - The additive change alters no delivered behaviour beyond the intended liveness flip.
-- The five updates are explicit, exact, and reviewed; no coverage is silently lost.
+- The four updates are explicit, exact, and reviewed; the harness liveness exact-three assertions are untouched, and no coverage is silently lost.
 
 #### TC-ECON-083 - Documentation and inventory reconcile with the delivered surface
 
@@ -1243,7 +1252,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 - Delivery is complete and the documentation-sync phase runs.
 
 **Steps**:
-1. Assert `feature-watchdog-lane-contracts.md` states sourced signals, the `stalled`/`progressing` reachability flip, and GAP-T2's resolution as DEC-1.
+1. Assert `feature-watchdog-lane-contracts.md` states sourced signals, the `stalled`/`progressing` reachability flip, GAP-T2's identity resolution as DEC-1, the unchanged exact-three liveness kinds with the additive sourced-signal kinds (DEC-8), and the key=value refusal-evidence carriage (DEC-9).
 2. Assert `feature-harness-adapters.md` updates its out-of-scope note so liveness sourcing is no longer described as pending.
 3. Assert `feature-result-contract.md` carries the new `dispatch` kind and the four rows, byte-matching the table (TC-ECON-004 proves the mechanical half).
 4. Assert `feature-config-layer.md` documents `lane.liveness-interval` (30 s) and `lane.restart-budget` (3).
@@ -1351,7 +1360,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 | TC-ECON-072 | `tests/behaviour/economics-budget-config.test.ts` | `bun test tests/behaviour/economics-budget-config.test.ts` | Budget `0/1/3/5` fixtures; hardcoded-bound mutant | To Implement |
 | TC-ECON-080 | `tests/checks/economics-determinism.test.ts`; `tests/fixtures/economics/golden/` | `bun test tests/checks/economics-determinism.test.ts` | Two identical stores; injected clock/run-id/brand | To Implement |
 | TC-ECON-081 | `tests/checks/economics-mutants.test.ts`; `tests/fixtures/economics/mutants/**` | `bun test tests/checks/economics-mutants.test.ts` | Eight isolated mutants | To Implement |
-| TC-ECON-082 | existing `tests/{structure,behaviour,golden,conformance,boundaries}` suites | `bun test tests/structure tests/behaviour tests/golden tests/conformance`; `bun test tests/boundaries` | Unchanged suites plus the five documented updates | Existing – Update |
+| TC-ECON-082 | existing `tests/{structure,behaviour,golden,conformance,boundaries}` suites | `bun test tests/structure tests/behaviour tests/golden tests/conformance`; `bun test tests/boundaries` | Unchanged suites plus the four documented updates | Existing – Update |
 | TC-ECON-083 | `doc/spec/features/*`, new feature spec, `tests/structure/inventory.json` | Manual review; `bash scripts/.tests/test-doc-distribution.sh` if marker-scoped docs change; `git diff --check` | — | Manual Only (phase 7) |
 | TC-ECON-084 | `tests/structure/economics-imports.test.ts`; `tests/checks/forbidden-literals.test.ts` | `bun test tests/structure/economics-imports.test.ts tests/checks/forbidden-literals.test.ts`; `pnpm check:forbidden-literals` | Seed-literal matcher; synthetic brand; temp-copy mutants | To Implement |
 
@@ -1370,7 +1379,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 3. Conformance: `bun test tests/conformance/harness-liveness.test.ts tests/structure/conformance-coverage.test.ts`.
 4. Boundaries: `bun test tests/boundaries` (expected no rule change; a rule change without a negative fixture fails the meta-check).
 5. Aggregate: `pnpm check` (lint → format:check → typecheck → test → check:boundaries → exports parity) plus `git diff --check`.
-6. What the aggregate proves for this change: the new modules typecheck under strict flags, satisfy every layering/ambient/brand rule with no rule loosening, pass the full existing suite including the five deliberate updates, and export correctly. It does **not** prove live-harness sourcing, daemon consumption, queue marking, question delivery, spend rendering, or any out-of-scope behaviour.
+6. What the aggregate proves for this change: the new modules typecheck under strict flags, satisfy every layering/ambient/brand rule with no rule loosening, pass the full existing suite including the four deliberate updates, and export correctly. It does **not** prove live-harness sourcing, daemon consumption, queue marking, question delivery, spend rendering, or any out-of-scope behaviour.
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -1378,12 +1387,12 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 
 | ID | Risk | Impact | Mitigation |
 |----|------|--------|------------|
-| TR-1 | The neutral liveness vocabulary and the watchdog signal vocabulary are conflated, so sourcing tests pin a shape delivery must change, or delivery silently loosens GH-233's exact-three assertions. | H | GAP-T1/OQ-T1: assert the projected watchdog keys, absence semantics, no-CPU rule, and one-home; read the declared vocabulary instead of hardcoding; require the exact-count reconciliation to be deliberate and reviewed. |
+| TR-1 | The additive sourced-signal-kind vocabulary drifts (a second home, an open set, or a re-typed delivered kind), or a test loosens GH-233's exact-three liveness-kind assertion to accommodate sourcing. | H | DEC-8 pins the model: assert `HARNESS_LIVENESS_KINDS` is still exactly three, the sourced-signal union is closed/one-home/disjoint, the neutral report carries both sets without collision, and the projection admits only declared watchdog keys (TC-ECON-001, TC-ECON-010, TC-ECON-082). Exact counts stay exact. |
 | TR-2 | "Never killed" is asserted as a behavioural absence that no test can observe directly, so a passing suite proves nothing. | H | GAP-T3: three independent observations — port absence, zero recorded invocations, zero state mutation — plus a mutant that calls a spawn port on a progressing/refusal path (TC-ECON-022, TC-ECON-081). |
-| TR-3 | Structured failure evidence cannot ride the exclusive v1 envelope, so "signals in evidence" or "full history in evidence" could be satisfied by prose only. | H | GAP-T2/OQ-T2: assert machine-readable numeric facts plus a history reference that resolves to the durable record; assert no new envelope field; treat a prose-only summary as insufficient. |
+| TR-3 | The decided key=value refusal corpus drifts — unbounded, non-deterministic, unparseable, or prose-only — or its history reference does not resolve, so "signals in evidence" / "full history in evidence" degrades to a claim. | H | DEC-9 pins the carrier: assert corpus parseability with stable keys, boundedness, replay determinism, and reference resolvability to the full ordered durable history (TC-ECON-021, 030, 033, 041, 052, 054); assert the error object's key set is unchanged; a prose-only or unresolvable payload fails. |
 | TR-4 | Durability tests use a fresh handle in the same process and could pass while a real second process diverges (for example, a cached count or an unflushed append). | M | GAP-T4: close the writer handle and its edge before reopening; assert the read requires no prior in-memory state; strengthen with a bounded child process if delivery adds one cheaply. |
 | TR-5 | Cross-path parity is vacuous when both "paths" share a test helper that bypasses one production composition. | H | TC-ECON-053 requires two distinct production compositions and reference equality on the gate; the bypass mutant in TC-ECON-056/081 must be caught. |
-| TR-6 | The amplification formula is under-specified, so a test pins a guessed constant and blocks a legitimate formula refinement or masks a real regression. | M | Assert ordering, monotonicity, the healthy baseline, the loop flag's name, and the null rule; record the exact formula as OQ-T2 and never freeze a constant the spec does not state. |
+| TR-6 | The amplification formula is under-specified, so a test pins a guessed constant and blocks a legitimate formula refinement or masks a real regression. | M | Assert ordering, monotonicity, the healthy baseline, the loop flag's name, and the null rule; record the exact formula as OQ-T3 and never freeze a constant the spec does not state. |
 | TR-7 | The intended liveness flip invalidates existing assertions; a delivery that deletes or floors them silently loses coverage. | H | TC-ECON-082 enumerates exactly five permitted updates and asserts exact counts and replaced (not removed) assertions; review checks the diff. |
 | TR-8 | Two-way table sync and documented rows land in different phases, so the binding check fails late and tempts a weakened row. | M | TC-ECON-003/004 and TC-ECON-083 make the same-phase obligation explicit; the delivery order in spec §18 puts rows and documented rows first. |
 | TR-9 | Fail-closed budget classification is under-specified, so a test pins a guessed identity or accepts `fallback.internal`. | M | TC-ECON-055 asserts "classified, non-zero, never admits, never fabricates count 0" and forbids `fallback.internal`; the exact existing identity is delivery-bound. |
@@ -1399,7 +1408,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 - The restart budget counts per delivery (work item), not per session or process, so daemon-style and one-shot paths share one budget.
 - The liveness interval governs the evaluation policy datum; no scheduler exists in this change (daemon is M1-S18), so no cadence timing is asserted.
 - The economics view exposes the dispatch envelope's declared field names (`restarts`, `resumeAmplification`); emission is M1-S9's and no envelope field is added here.
-- Failure evidence rides the exclusive envelope's failure side (bounded evidence payload and/or a resolvable durable reference); no `CommandResultError` extension is assumed (GAP-T2).
+- **Failure evidence rides the frozen envelope's failure fields** as a bounded deterministic key=value corpus, with the durable state records as the resolvable full-history carrier; no `CommandResultError` extension is assumed and none is permitted (DEC-9).
 - Module paths, export names, record-kind strings, store-key spellings, and the amplification flag spelling are delivery-bound; their behaviour and closedness are pinned (GAP-T5).
 - Local `git` is not used by this change's tests except for the read-only worktree-unchanged snapshot; no lane repository fixture is needed.
 - Bun `1.4.4` is available and `bun:test` is the only runner.
@@ -1408,9 +1417,9 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 
 | ID | Question | Blocking? | Owner | Resolution path |
 |----|----------|-----------|-------|-----------------|
-| OQ-T1 | Does the neutral liveness report grow its closed kind vocabulary (e.g. heartbeat-age, token-delta) or do those two watchdog values derive from sourced traffic plus token statistics? DM-1 says "sourced heartbeat-age and token-delta entries alongside session traffic (closed kinds)", while the delivered vocabulary is exactly three kinds and both suites assert that. | No for authoring; **yes before delivery** because it changes a cross-story contract and the conformance assertions. | `@plan-writer` / `@coder` / `@decision-advisor` if it needs a record | Decide in the delivery plan; reconcile the exact-three assertions deliberately in the same phase; never loosen to a floor. TC-ECON-010 asserts the observable projection either way. |
-| OQ-T2 | What is the exact amplification formula, the healthy/tolerance boundary, the flag name, and the null rule? The spec says "tokens paid across restarts versus unique progress, approximately 1 for healthy deliveries, flagged by name where a restart loop amplified". | No | `@plan-writer` / `@coder` | Delivery declares the formula and flag name in the contracts tier; TC-ECON-061 asserts ordering, monotonicity, flag naming, and the null rule. |
-| OQ-T3 | Where does structured refusal evidence live on a failure envelope: a bounded machine-parseable evidence payload, a durable history reference, or (out of scope) a new envelope error field? | No for authoring; **yes before delivery** for AC-F2-2/AC-F3-2/AC-F4-2 to be objectively verifiable. | `@plan-writer` / `@coder` | Choose within the exclusive v1 envelope (no schema change); TC-ECON-030/033/041/052/054 assert machine-readable facts plus a resolvable history, never prose alone. |
+| OQ-T1 | **CLOSED by DEC-8.** Does the neutral liveness report grow its closed kind vocabulary, or do heartbeat age and token delta derive from other facts? | Closed — no longer blocking | `@plan-writer` / `@coder` | DEC-8 pins option (a): `HARNESS_LIVENESS_KINDS` stays exactly three; heartbeat age and token delta are sourced under a new additive closed sourced-signal-kind vocabulary owned by this change, carried beside the existing kinds and projected into the watchdog keys. TC-ECON-001/010/082 assert it; the exact-three assertion is never loosened. |
+| OQ-T2 | **CLOSED by DEC-9.** Where does structured refusal evidence live on a failure envelope: a bounded evidence payload, a durable history reference, or a new error field? | Closed — no longer blocking | `@plan-writer` / `@coder` | DEC-9 pins option (a): a bounded deterministic key=value corpus inside the existing failure fields, with the durable §8.2 records as the resolvable full-history carrier and no error-shape change. TC-ECON-021/030/033/041/052/054 assert corpus parseability and reference resolvability. |
+| OQ-T3 | What is the exact amplification formula, the healthy/tolerance boundary, the flag name, and the null rule? The spec says "tokens paid across restarts versus unique progress, approximately 1 for healthy deliveries, flagged by name where a restart loop amplified". | No | `@plan-writer` / `@coder` | Delivery declares the formula and flag name in the contracts tier; TC-ECON-061 asserts ordering, monotonicity, flag naming, and the null rule. |
 | OQ-T4 | Which existing identity classifies an unevaluable budget state (`state.store.torn`, `state.store.unknown`, or a delivered invalid-record identity)? | No | `@coder` | Reuse an existing row; TC-ECON-055 asserts "classified, non-zero, never admits" and forbids `fallback.internal`, not a specific code. |
 | OQ-T5 | Is the terminal exhaustion record one per delivery appended once, or appended per refused attempt with one current terminal state? | No | `@coder` | TC-ECON-053 asserts the terminal record remains the single terminal truth and refusals do not fork the reason; the append count is delivery-bound. |
 | OQ-T6 | Do the two new record kinds get their own store-scoped keys (per delivery) or a single shared ledger key folded by delivery? | No | `@coder` | Delivery-bound; TC-ECON-050/060 assert durability, per-delivery isolation, and derivation, not the key spelling. |
@@ -1422,6 +1431,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-07 | test-plan-writer | Initial test plan derived from `chg-GH-235-spec.md` v1.0, ticket GH-235, backlog M1-S15, seed scenarios SC-M1-14/SC-M1-15, the delivered GH-221 watchdog and GH-233 harness contracts, and `.ai/rules/testing-strategy.md`. 37 scenarios; all 13 ACs covered; SC-M1-15's escalation half mapped to M1-S16/S17/S18; GAP-T1..T6 and OQ-T1..T8 recorded. |
+| 1.1 | 2026-11-07 | test-plan-writer | Consumes spec revision 1.1: GAP-T1 closed by DEC-8 (delivered liveness kinds stay exactly three; additive closed sourced-signal-kind vocabulary owned here) and GAP-T2's envelope side closed by DEC-9 (bounded deterministic key=value refusal corpus on the existing failure fields; durable records as the resolvable full-history carrier; no error-shape change). §1.1/§1.2, DM-1, TC-001/010/021/030/033/041/052/054/061/082/083, TR-1/TR-3/TR-6, §8.2, and OQ-T1/OQ-T2 updated; the harness exact-three kind assertion removed from TC-082's deliberate-update list and now asserted unchanged; amplification formula renumbered to OQ-T3. Scenario count (37), identities, exits, and AC mapping unchanged. |
 
 ## 10. Test Execution Log
 
