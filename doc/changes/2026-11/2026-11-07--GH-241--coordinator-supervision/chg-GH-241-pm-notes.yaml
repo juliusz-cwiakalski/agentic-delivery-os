@@ -3,8 +3,8 @@ title: "M1-S23: Coordinator supervision"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-07T11:55:00Z", completed: "2026-11-07T12:04:00Z" }
-  specification: { started: "2026-11-07T12:05:00Z", completed: "2026-11-07T12:34:41Z" }
-  test_planning: { started: null, completed: null }
+  specification: { started: "2026-11-07T12:05:00Z", completed: "2026-11-07T12:58:27Z" }
+  test_planning: { started: "2026-11-07T12:36:00Z", completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
@@ -50,4 +50,10 @@ notes:
     date: "2026-11-07"
   - text: "Specification complete: chg-GH-241-spec.md has 43 ACs, 13 DECs, 10 capabilities, 15 NFRs, 12 risks, 5 event/record kinds, and full SC-M1-25 reconciliation. Decision-advisor created TDR-0013 and TDR-0014 and corrected a spec premise: the M1-S22 audit ledger is delivered, not absent; DEC-4 keeps the artifact-fingerprint proxy because an audited invocation proves invocation, not comprehension, and a wedged coordinator can re-run status. Folded in: links block, registry-only naming ruling for DEC-2, TDR references, reserved escalation slot clarified to live inside the eight-question bound (at most seven others plus the reserved question), and the DEC-4/§7.3/§13 audit wording corrected."
     type: "info"
+    date: "2026-11-07"
+  - text: "test_planning iteration 1 returned 64 TCs with 43/43 AC coverage but reopened specification on six gaps: GAP-1 (AC-F1-2 assumes a running supervisor while F-1/AC-F8-1 refuse a contended tick), GAP-2 (resume capability has three conflicting owners/identities), GAP-3 (reserved-escalation-slot predicate is not payload-precise), GAP-4 (delivery-failed wake retry conflicts with one-wake dedupe), GAP-5 (stuck reason named in AC-F3-1 but absent from the stuck-record schema), GAP-6 (stale-fence takeover evidence has no declared carrier). Also GAP-T7 incorrectly claimed only `coordinator.already-running` is two-segment; all six coordinator identities are two-segment and need exact allowlist entries. Specification reopened; test plan will be updated after the corrections."
+    type: "blocker"
+    date: "2026-11-07"
+  - text: "Specification iteration 2 complete (43 ACs, 13 DECs preserved): AC-F1-2 now applies only to an uncontended state dir; resume ownership is pinned (harness resume absent -> spawn-fresh session-interrupted with no error; harness spawn gap -> delivered harness identity exit 1; process alive/kill gap -> coordinator.process.capability-gap exit 2; progress absent -> unknown class); reserved-slot predicate is payload-only (`decision-needed` + owner + lane=coordinator + `<coordinatorId>#<budgetEpochId>`); only `woken` persists and consumes the one-wake budget while delivery-failed/answered-before-wake/no-pickup are tick results; `coordinator.stuck.reason` is a closed field; new `coordinator.fence` record (EVT-7, DM-11) carries acquisition/release/stale-takeover evidence; exact error-table allowlist addition corrected to exactly two two-segment codes (`coordinator.already-running`, `coordinator.restart-budget-exhausted`, set 22→24; table 99→105) because the other four coordinator identities are already three-segment."
+    type: "decision"
     date: "2026-11-07"
