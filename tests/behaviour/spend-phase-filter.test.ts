@@ -5,7 +5,19 @@
  */
 import { describe, expect, test } from "bun:test";
 import { computeSpendReport } from "../../packages/core/src/domain/index";
-import { foldSeed, makeSessionRecord, removeRoot, tokens } from "../fixtures/spend/harness";
+import {
+  foldSeed,
+  makeIdentity,
+  makeSessionRecord,
+  makeTempRoot,
+  openStore,
+  recordingStore,
+  removeRoot,
+  runSpendCli,
+  seedSpend,
+  spendRuntimeOver,
+  tokens,
+} from "../fixtures/spend/harness";
 import { P12, T1, T2, T3 } from "../fixtures/spend/transitions";
 
 const seed = {
@@ -107,5 +119,50 @@ describe("TC-SPEND-012 phase scoping", () => {
       expect(declared).not.toContain(value);
     }
     expect(T1 < T2 && T2 < T3).toBe(true);
+  });
+});
+
+describe("TC-SPEND-012 runCli integration half", () => {
+  test("the scoped CLI report and the out-of-vocabulary refusal", async () => {
+    const root = makeTempRoot("gh236-filter-cli");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      seedSpend(store, { transitions: seed.transitions, records: seed.records });
+      const scoped = await runSpendCli(
+        ["--json", "spend", "--ref", "GH-236", "--phase", "specification"],
+        spendRuntimeOver(store),
+      );
+      expect(scoped.exitCode).toBe(0);
+      const envelope = JSON.parse(scoped.stdout) as {
+        readonly data?: { readonly perPhase?: unknown };
+      };
+      expect(envelope.data?.perPhase).toEqual([
+        { phase: "specification", calls: 2, tokens: 300, share: 100 },
+      ]);
+
+      const log: string[] = [];
+      const refused = await runSpendCli(
+        ["--json", "spend", "--ref", "GH-236", "--phase", "deployment"],
+        spendRuntimeOver(recordingStore(store, log)),
+      );
+      expect(refused.exitCode).toBe(1);
+      const refusedEnvelope = JSON.parse(refused.stdout) as { readonly error?: { code?: string } };
+      expect(refusedEnvelope.error?.code).toBe("input.value.rejected");
+      expect(log).toEqual([]);
+
+      const empty = await runSpendCli(
+        ["--json", "spend", "--ref", "GH-236", "--phase", "quality_gates"],
+        spendRuntimeOver(store),
+      );
+      expect(empty.exitCode).toBe(1);
+      const emptyEnvelope = JSON.parse(empty.stdout) as {
+        readonly error?: { code?: string; summary?: string };
+      };
+      expect(emptyEnvelope.error?.code).toBe("spend.telemetry-absent");
+      expect(String(emptyEnvelope.error?.summary)).toContain("phase quality_gates");
+    } finally {
+      removeRoot(root);
+    }
   });
 });

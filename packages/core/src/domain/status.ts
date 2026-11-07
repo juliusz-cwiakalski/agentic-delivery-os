@@ -13,6 +13,7 @@ import {
   type OwnerGateSlaState,
   type OwnerGateUnknownAgeReason,
   type PipelineRun,
+  type SpendDigestSection,
   STATUS_FINDING_REGISTRY,
   STATUS_FINDING_SEVERITIES,
   STATUS_HUMAN_CLAMP_MARKER,
@@ -1625,10 +1626,63 @@ const readyToMergeSection = (facts: StatusFacts): StatusSection => {
   };
 };
 
+/* --------------------------------- spend ---------------------------------- */
+
+/**
+ * The spend section from the same read-side fold the command consumes (DM-6).
+ *
+ * Captured telemetry is `observed` with the summary figures; a verified-empty
+ * read is `observed` with an absence-of-capture note (never a zero-spend claim);
+ * a failed read is `unknown` carrying the state failure code as digest data.
+ */
+const spendSection = (spend: SpendDigestSection): StatusSection => {
+  if (spend.state === "unknown") {
+    return {
+      ...sectionBase({
+        id: "spend",
+        state: "unknown",
+        counts: zeroCounts(),
+        truncated: false,
+        sources: [{ source: "state-log", outcome: "failed", failureCode: spend.failureCode }],
+        reasons: [spend.reason],
+      }),
+      spend,
+      items: [],
+    };
+  }
+  if (!spend.captured) {
+    return {
+      ...sectionBase({
+        id: "spend",
+        state: "observed",
+        counts: zeroCounts(),
+        truncated: false,
+        sources: [{ source: "state-log", outcome: "observed-empty" }],
+        reasons: ["observed-empty"],
+      }),
+      spend,
+      note: "no captured telemetry (absence of capture)",
+      items: [],
+    };
+  }
+  return {
+    ...sectionBase({
+      id: "spend",
+      state: "observed",
+      counts: zeroCounts(),
+      truncated: false,
+      sources: [{ source: "state-log", outcome: "read" }],
+      reasons: ["observed"],
+    }),
+    spend,
+    items: [],
+  };
+};
+
 /* ------------------------------- placeholders ----------------------------- */
 
 const placeholderSection = (
-  id: "spend" | "blockers",
+  id: "blockers",
   capability: string,
   expectedStory: string,
   note: string,
@@ -1707,7 +1761,7 @@ export const aggregateStatus = (facts: StatusFacts): StatusDigest => {
     providersSection(facts),
     parkedSection(facts),
     readyToMergeSection(facts),
-    placeholderSection("spend", "spend-summary", "M1-S19", "spend summary arrives with M1-S19"),
+    spendSection(facts.spend),
     placeholderSection("blockers", "typed-blockers", "M1-S16", "typed blockers arrive with M1-S16"),
   ];
   return {
@@ -1789,6 +1843,25 @@ const clampHuman = (text: string): string => {
     truncated += point;
   }
   return `${truncated}${STATUS_HUMAN_CLAMP_MARKER}`;
+};
+
+const formatShareRatio = (value: number): string =>
+  Number.isInteger(value) ? String(value) : String(Math.round(value * 1000) / 1000);
+
+const spendHumanLine = (section: StatusSection): string => {
+  const projection = section.spend;
+  if (projection === undefined) {
+    return `spend      unknown  state-unreadable (state-unreadable)`;
+  }
+  if (projection.state === "unknown") {
+    return `spend      unknown  state-unreadable (${projection.failureCode})`;
+  }
+  if (!projection.captured) {
+    return "spend      observed  no captured telemetry (absence of capture)";
+  }
+  const totals = projection.tokensByClass;
+  const ratio = projection.ratio === null ? "null" : formatShareRatio(projection.ratio);
+  return `spend      observed  input ${String(totals.input)} | output ${String(totals.output)} | reasoning ${String(totals.reasoning)} | cacheRead ${String(totals.cacheRead)} | cacheWrite ${String(totals.cacheWrite)} | restarts ${String(projection.restarts)} | amplification ${ratio}`;
 };
 
 /** Render the deterministic human digest from the digest and injected brand. */
@@ -1907,7 +1980,7 @@ export const renderStatusHuman = (digest: StatusDigest, brand: BrandIdentity): s
   }
 
   const spend = digest.sections.find((section) => section.id === "spend");
-  lines.push(`spend      not-delivered  ${spend?.note ?? "spend summary arrives with M1-S19"}`);
+  if (spend !== undefined) lines.push(spendHumanLine(spend));
 
   const blockers = digest.sections.find((section) => section.id === "blockers");
   lines.push(`blockers   not-delivered  ${blockers?.note ?? "typed blockers arrive with M1-S16"}`);

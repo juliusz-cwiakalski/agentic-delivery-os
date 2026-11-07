@@ -22,6 +22,7 @@ const STATUS_MEMBERS = [
   "readProviderConfig",
   "readProviderParks",
   "readLocalContext",
+  "readSpend",
   "nowIso",
   "nowMs",
 ] as const;
@@ -47,7 +48,7 @@ describe("TC-BRIEF-005 read-cost parity", () => {
     const recorder = createStatusRecorder();
     await runBriefCli(["--json", "brief"], briefRuntime(capSizedFacts(), recorder), { recorder });
     for (const member of STATUS_MEMBERS) expect(count(recorder.calls, member), member).toBe(1);
-    expect(recorder.calls.filter((call) => call.startsWith("read")).length).toBe(7);
+    expect(recorder.calls.filter((call) => call.startsWith("read")).length).toBe(8);
   });
 
   test("the pure projection consumes no reader", () => {

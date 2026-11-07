@@ -229,15 +229,15 @@ describe("TC-ATT-018 lanes vocabulary and placeholder declarations", () => {
     expect(STATUS_HYGIENE_ASSERTIONS).toEqual(["epic-membership", "story-points", "in-sprint"]);
   });
 
-  test("the placeholder and section-kind declarations name exactly two placeholders", () => {
-    expect(STATUS_PLACEHOLDER_SECTION_IDS).toEqual(["spend", "blockers"]);
-    expect(STATUS_SECTION_KINDS.spend).toBe("placeholder");
+  test("the placeholder and section-kind declarations name exactly one placeholder", () => {
+    expect(STATUS_PLACEHOLDER_SECTION_IDS).toEqual(["blockers"]);
+    expect(STATUS_SECTION_KINDS.spend).toBe("collector");
     expect(STATUS_SECTION_KINDS.blockers).toBe("placeholder");
     expect(STATUS_SECTION_KINDS["lanes-or-queue"]).toBe("declared-gap");
     expect(STATUS_SECTION_KINDS["ready-to-merge"]).toBe("collector");
     expect(
       Object.values(STATUS_SECTION_KINDS).filter((kind) => kind === "placeholder"),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
   });
 
   test("ready classes are the closed two-value set", () => {

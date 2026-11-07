@@ -137,8 +137,8 @@
         "findings": []
       },
       "spend": {
-        "state": "not-delivered",
-        "reasons": ["engine-not-delivered"],
+        "state": "observed",
+        "reasons": ["observed-empty"],
         "counts": {
           "observed": 0,
           "unknown": 0,

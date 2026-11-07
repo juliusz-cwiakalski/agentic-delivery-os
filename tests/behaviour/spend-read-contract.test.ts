@@ -19,7 +19,9 @@ import {
   openStore,
   recordingStore,
   removeRoot,
+  runSpendCli,
   SPEND_REF,
+  spendRuntimeOver,
   tokens,
 } from "../fixtures/spend/harness";
 import { T0 } from "../fixtures/spend/transitions";
@@ -149,5 +151,40 @@ describe("TC-SPEND-006 log-only read contract", () => {
     // The absence path performs the same bounded read set.
     expect(countCalls(log, "readRecords")).toBeLessThanOrEqual(4);
     expect(countCalls(log, "readRecords")).toBeGreaterThan(0);
+  });
+});
+
+describe("TC-SPEND-006 runCli integration half", () => {
+  test("the real command reads the same families and renders a report", async () => {
+    const { root, store } = seededStore("read-cli");
+    try {
+      const log: string[] = [];
+      const run = await runSpendCli(
+        ["--json", "spend", "--ref", SPEND_REF],
+        spendRuntimeOver(recordingStore(store, log)),
+      );
+      expect(run.exitCode).toBe(0);
+      expect(countCalls(log, "readRecords")).toBeLessThanOrEqual(4);
+      expect(countCalls(log, "acquireFence")).toBe(0);
+      expect(countCalls(log, "append")).toBe(0);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("the absence path reaches the same bounded read set", async () => {
+    const { root, store } = seededStore("read-cli-absent");
+    try {
+      const log: string[] = [];
+      const run = await runSpendCli(
+        ["--json", "spend", "--ref", OTHER_REF],
+        spendRuntimeOver(recordingStore(store, log)),
+      );
+      expect(run.exitCode).toBe(0);
+      expect(countCalls(log, "readRecords")).toBeLessThanOrEqual(4);
+      expect(countCalls(log, "readRecords")).toBeGreaterThan(0);
+    } finally {
+      removeRoot(root);
+    }
   });
 });

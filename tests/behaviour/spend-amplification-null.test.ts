@@ -7,7 +7,17 @@ import { describe, expect, test } from "bun:test";
 import { SPEND_AMPLIFICATION_KEYS } from "../../packages/core/src/contracts/index";
 import { renderSpendHuman } from "../../packages/core/src/domain/index";
 import { A01, A04, A05, A11 } from "../fixtures/spend/cases";
-import { foldSeed, removeRoot, SYNTHETIC_BRAND } from "../fixtures/spend/harness";
+import {
+  foldSeed,
+  makeIdentity,
+  makeTempRoot,
+  openStore,
+  removeRoot,
+  runSpendCli,
+  SYNTHETIC_BRAND,
+  seedSpend,
+  spendRuntimeOver,
+} from "../fixtures/spend/harness";
 
 describe("TC-SPEND-017 zero-progress null rule", () => {
   test("A-04 reports a strict null ratio naming the zero-token progress run", () => {
@@ -90,6 +100,33 @@ describe("TC-SPEND-017 zero-progress null rule", () => {
       expect(fold.data.amplification.ratio).toBe(1);
     } finally {
       removeRoot(root);
+    }
+  });
+});
+
+describe("TC-SPEND-017 runCli integration half", () => {
+  test("the machine naming survives --json for both null cases", async () => {
+    for (const testCase of [A04, A11]) {
+      const root = makeTempRoot(`gh236-null-cli-${testCase.id}`);
+      try {
+        const identity = makeIdentity(root);
+        const { store } = openStore(identity);
+        seedSpend(store, testCase.seed);
+        const run = await runSpendCli(
+          ["--json", "spend", "--ref", "GH-236"],
+          spendRuntimeOver(store),
+        );
+        expect(run.exitCode).toBe(0);
+        const envelope = JSON.parse(run.stdout) as {
+          readonly data?: {
+            readonly amplification?: { readonly ratio?: unknown; readonly progressRun?: unknown };
+          };
+        };
+        expect(envelope.data?.amplification?.ratio).toBeNull();
+        expect(envelope.data?.amplification?.progressRun).toBe(testCase.progressRun);
+      } finally {
+        removeRoot(root);
+      }
     }
   });
 });

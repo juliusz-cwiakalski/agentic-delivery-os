@@ -24,7 +24,9 @@ import {
   makeTempRoot,
   openStore,
   removeRoot,
+  runSpendCli,
   SPEND_REF,
+  spendRuntimeOver,
   tokens,
   withinFence,
 } from "../fixtures/spend/harness";
@@ -206,5 +208,51 @@ describe("TC-SPEND-008 store damage at the read seam", () => {
       writeFileSync(ledgerPath(identity), intake);
       expect(readSpendLedger(openStore(identity).store, SPEND_REF).ok).toBe(true);
     });
+  });
+});
+
+describe("TC-SPEND-008 runCli integration half", () => {
+  test("a torn store classifies at exit 2 and permission at exit 1", async () => {
+    const root = makeTempRoot("gh236-damage-cli");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      appendRecords(store, [
+        makeSessionRecord({ runId: "run-R1", tokens: tokens({ input: 10 }), calls: 1 }),
+      ]);
+      const intact = readFileSync(ledgerPath(identity), "utf8");
+      const lines = intact.split("\n");
+      lines[0] = "{not-framed";
+      writeFileSync(ledgerPath(identity), lines.join("\n"));
+      const torn = await runSpendCli(
+        ["--json", "spend", "--ref", SPEND_REF],
+        spendRuntimeOver(openStore(identity).store),
+      );
+      expect(torn.exitCode).toBe(2);
+      const tornEnvelope = JSON.parse(torn.stdout) as unknown;
+      if (typeof tornEnvelope !== "object" || tornEnvelope === null) throw new Error("envelope");
+      expect((tornEnvelope as { error?: { code?: string } }).error?.code).toBe("state.store.torn");
+      expect(torn.stdout).not.toContain(CANARY);
+
+      if (POSIX) {
+        writeFileSync(ledgerPath(identity), intact);
+        chmodSync(ledgerPath(identity), 0o644);
+        const denied = await runSpendCli(
+          ["--json", "spend", "--ref", SPEND_REF],
+          spendRuntimeOver(openStore(identity).store),
+        );
+        expect(denied.exitCode).toBe(1);
+        const deniedEnvelope = JSON.parse(denied.stdout) as unknown;
+        if (typeof deniedEnvelope !== "object" || deniedEnvelope === null) {
+          throw new Error("envelope");
+        }
+        expect((deniedEnvelope as { error?: { code?: string } }).error?.code).toBe(
+          "state.permission.denied",
+        );
+        chmodSync(ledgerPath(identity), 0o600);
+      }
+    } finally {
+      removeRoot(root);
+    }
   });
 });

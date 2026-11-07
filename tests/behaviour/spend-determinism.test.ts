@@ -9,9 +9,15 @@ import { A01, A02, A10_RECORDS } from "../fixtures/spend/cases";
 import {
   createProbeSpy,
   foldSeed,
+  makeIdentity,
+  makeTempRoot,
+  openStore,
   removeRoot,
+  runSpendCli,
   type SpendSeed,
   SYNTHETIC_BRAND,
+  seedSpend,
+  spendRuntimeOver,
 } from "../fixtures/spend/harness";
 
 const render = (seed: SpendSeed, label: string): { machine: string; human: string } => {
@@ -70,6 +76,30 @@ describe("TC-SPEND-022 byte-identical replay", () => {
       if (!before.ok || !after.ok) return;
       expect(JSON.stringify(after.data)).toBe(JSON.stringify(before.data));
       expect(after.data.amplification.events).toEqual(before.data.amplification.events);
+    } finally {
+      removeRoot(root);
+    }
+  });
+});
+
+describe("TC-SPEND-022 runCli integration half", () => {
+  test("two CLI invocations on the same store emit byte-identical output", async () => {
+    const root = makeTempRoot("gh236-determinism-cli");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      seedSpend(store, A02.seed);
+      const runtime = spendRuntimeOver(store);
+      for (const argv of [
+        ["--json", "spend", "--ref", "GH-236"],
+        ["spend", "--ref", "GH-236", "--amplification"],
+      ] as const) {
+        const first = await runSpendCli(argv, runtime);
+        const second = await runSpendCli(argv, runtime);
+        expect(second.exitCode).toBe(first.exitCode);
+        expect(second.stdout).toBe(first.stdout);
+        expect(second.stderr).toBe(first.stderr);
+      }
     } finally {
       removeRoot(root);
     }

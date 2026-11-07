@@ -6,6 +6,11 @@
  * produced. Time, ids, and the brand are injected; no suite reads the ambient
  * clock, environment, network, or the live tree.
  */
+
+import { createSpendCommandDefinition } from "../../../packages/cli/src/commands/spend";
+import { createSpendCommandRuntime } from "../../../packages/cli/src/edge";
+import { type CliDependencies, runCli } from "../../../packages/cli/src/index";
+import type { SpendCommandRuntime } from "../../../packages/core/src/contracts/index";
 import {
   HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
   HARNESS_TELEMETRY_SCHEMA_ID,
@@ -25,7 +30,7 @@ import {
   appendPhaseTransition,
   readSpendLedger,
 } from "../../../packages/core/src/state/index";
-import { SYNTHETIC_BRAND } from "../../golden/helpers";
+import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
 import { makeIdentity, makeTempRoot, openStore } from "../state/harness";
 
 export {
@@ -313,4 +318,80 @@ export const foldSeed = (seed: SpendSeed, label = "case"): FoldedSeed => {
   const read = readSpendLedger(store, ref);
   const fold = read.ok ? computeSpendReport(read.value, { workItemRef: ref }) : undefined;
   return { root, read, fold };
+};
+
+/** An in-memory local PM context seam for the omitted-`--ref` path. */
+export type LocalContextSeam = {
+  readonly path: string;
+  readonly fs: {
+    readonly exists: (path: string) => boolean;
+    readonly readText: (path: string) => string;
+  };
+};
+
+export const makeLocalContext = (activeRef: string | null): LocalContextSeam => {
+  const path = "/pm-context.yaml";
+  const text =
+    activeRef === null
+      ? "parked_changes: []\n"
+      : `active_change:\n  workItemRef: ${activeRef}\n  branch: feat/${activeRef}/spend-read-side\n  change_folder: doc/changes/x\nparked_changes: []\n`;
+  return {
+    path,
+    fs: {
+      exists: (candidate) => candidate === path,
+      readText: (candidate) => {
+        if (candidate !== path) throw new Error("missing local context");
+        return text;
+      },
+    },
+  };
+};
+
+/** The real composed spend runtime over the injected store and local context. */
+export const spendRuntimeOver = (
+  store: StateStorePort,
+  activeRef: string | null = null,
+): SpendCommandRuntime =>
+  createSpendCommandRuntime({ store, localContext: makeLocalContext(activeRef) });
+
+export type SpendCliOptions = {
+  readonly runId?: string;
+  readonly mode?: "interactive" | "scripted";
+  readonly audit?: CliDependencies["audit"];
+  readonly secrets?: readonly string[];
+};
+
+export type SpendCliRun = {
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
+};
+
+/** Run the real spend command through the in-process CLI surface. */
+export const runSpendCli = async (
+  argv: readonly string[],
+  runtime: SpendCommandRuntime,
+  options: SpendCliOptions = {},
+): Promise<SpendCliRun> => {
+  const stdout = bufferSink();
+  const stderr = bufferSink();
+  const ticks = [100, 110] as const;
+  let tick = 0;
+  const deps: CliDependencies = {
+    brand: SYNTHETIC_BRAND,
+    clock: {
+      now: () => {
+        const value = ticks[Math.min(tick, 1)] as number;
+        tick += 1;
+        return value;
+      },
+    },
+    newRunId: () => options.runId ?? "run-spend-fixture",
+    secrets: options.secrets ?? [],
+    program: { commands: { spend: createSpendCommandDefinition(runtime) } },
+    ...(options.mode === undefined ? {} : { mode: options.mode }),
+    ...(options.audit === undefined ? {} : { audit: options.audit }),
+  };
+  const exitCode = await runCli(argv, { stdout, stderr }, deps);
+  return { exitCode, stdout: stdout.value, stderr: stderr.value };
 };

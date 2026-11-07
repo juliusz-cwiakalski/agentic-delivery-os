@@ -6,13 +6,19 @@ import { describe, expect, test } from "bun:test";
 import { renderSpendHuman } from "../../packages/core/src/domain/index";
 import {
   foldSeed,
+  makeIdentity,
   makeSessionRecord,
+  makeTempRoot,
+  openStore,
   removeRoot,
+  runSpendCli,
   SPEND_REF,
+  type SpendSeed,
   SYNTHETIC_BRAND,
+  seedSpend,
+  spendRuntimeOver,
   threeGroupRun,
   tokens,
-  type SpendSeed,
 } from "../fixtures/spend/harness";
 
 const EXPECTED_TOKENS = tokens({
@@ -125,6 +131,32 @@ describe("TC-SPEND-003 per-ticket breakdown", () => {
         removeRoot(second.root);
       }
       expect(SPEND_REF).toBe("GH-236");
+    } finally {
+      removeRoot(root);
+    }
+  });
+});
+
+describe("TC-SPEND-003 runCli integration half", () => {
+  test("the envelope data equals the engine fold", async () => {
+    const root = makeTempRoot("gh236-breakdown-cli");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      seedSpend(store, seed);
+      const run = await runSpendCli(
+        ["--json", "spend", "--ref", SPEND_REF],
+        spendRuntimeOver(store),
+      );
+      expect(run.exitCode).toBe(0);
+      const envelope = JSON.parse(run.stdout) as { readonly data?: unknown };
+      const folded = foldSeed(seed, "breakdown-cli-oracle");
+      try {
+        if (folded.fold === undefined || !folded.fold.ok) throw new Error("fold failed");
+        expect(envelope.data).toEqual(JSON.parse(JSON.stringify(folded.fold.data)));
+      } finally {
+        removeRoot(folded.root);
+      }
     } finally {
       removeRoot(root);
     }
