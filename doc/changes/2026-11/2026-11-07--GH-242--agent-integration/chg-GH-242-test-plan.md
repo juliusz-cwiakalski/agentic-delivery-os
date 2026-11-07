@@ -2,12 +2,12 @@
 id: chg-GH-242-test-plan
 status: Updated
 created: 2026-11-07T00:00:00Z
-last_updated: 2026-11-07T12:00:00Z
+last_updated: 2026-11-07T13:00:00Z
 owners: [engineering]
 service: delivery-os
 labels: [m1, m1-s20, agent-integration, cli, prompts, documentation]
 version_impact: minor
-summary: "Seventy scenarios verifying GH-242: the executable bin/composition and self-description surface, phase and commit adoption, session-guard reversal, lifecycle staging and bidirectional ordering convergence, typed blockers, coordinator J1 loop, plan summary alignment, prompt/doc conformance, key=value continuity, and a deterministic pilot J1 iteration."
+summary: "Seventy-two scenarios verifying GH-242: the executable bin/composition and self-description surface (uncomposed commands fail through the existing `fallback.internal` identity), phase and commit adoption, session-guard reversal, lifecycle staging and bidirectional ordering convergence, typed blockers, coordinator J1 loop, plan summary alignment, phase-owned prompt/doc/system-spec conformance against the §16.1.1 phrase table, key=value continuity, and a deterministic pilot J1 iteration with non-pilot and pilot safety scans split by owning phase."
 links:
   change_spec: ./chg-GH-242-spec.md
   implementation_plan: ./chg-GH-242-plan.yaml
@@ -24,13 +24,13 @@ The highest-risk areas are prompt drift, the deliberate reversal of the GH-227 d
 
 ### 1.1 In Scope
 
-- The production entrypoint: a non-installed Bun bin entry mapped in the `bin` manifest, a `main`/composition entry, root help/version, per-command help, working-name resolution (configuration → `DELIVERY_OS_WORKING_NAME` → neutral `delivery-os`), and an honest prompt-required composition with `state`/`mcp`/`dispatch`/daemon asserted absent.
+- The production entrypoint: a non-installed Bun bin entry mapped in the `bin` manifest, a `main`/composition entry, root help/version, per-command help, working-name resolution (configuration → `DELIVERY_OS_WORKING_NAME` → neutral `delivery-os`), and an honest prompt-required composition with `state`/`mcp`/`dispatch`/daemon asserted absent; an uncomposed invocation fails closed through the existing `fallback.internal` containment identity (platform category, `retryable: false`, `consequence: unknown`, platform-provider projection → exit `2`) with no new error-table row.
 - Removal of the delivery-session refusal from `commit` and `phase complete`, retention of the sanitized one-shot context, and retirement of `commit.session.context-refused` across the machine table, documented table, corpora, fixtures, and sync check.
 - Lifecycle completion staging (mapped plan scope union the change folder), standalone commit staging (plan union; plan-absent change folder), stray exclusion, and completion ordering convergence in **both** directions: post-commit/pre-document convergence and the reverse window (document written, commit act failed) with pre-write restore, failed-restore exit 2, and single-transition/single-commit retry.
 - `phase complete` / `phase list` / `phase reopen` adoption, the pm-notes `notes:` PR URL record, and the thin `@committer`.
 - Typed blocker adoption and the coordinator J1 sequence (`status` → `blockers answer` → `verify change`/`phase list` → `merge` → `closeout --apply` → `queue plan --next N`).
 - Optional `phases[].summary`, the no-`tasks` rule, and progress remaining in pm-notes `notes:`.
-- Prompt/doc conformance scans, help/guide coverage, retained-vs-retired bash classification, `.ados-claude/**` freshness, secret scanning, and the four omitted current-truth feature specs (`feature-delivery-lifecycle`, `feature-quality-gates-and-pr`, `feature-autonomous-delivery`, `feature-local-code-review`) with their stale/required phrases (AC-F8-5, NFR-13).
+- Prompt/doc conformance scans, help/guide coverage, retained-vs-retired bash classification, `.ados-claude/**` freshness, secret scanning, and the four omitted current-truth feature specs (`feature-delivery-lifecycle`, `feature-quality-gates-and-pr`, `feature-autonomous-delivery`, `feature-local-code-review`) together with the phase-3 behavior-spec rows (`feature-commit-primitive` ordering/staging and `feature-pm-notes-lint-and-phase-transitions` ordering/staging), each asserted against the spec's §16.1.1 stale/required phrase table (AC-F8-5, NFR-13).
 - Appendix A key=value byte-equality on `merge`, `queue`, `verify`, `plan`, and `blockers`, plus the retained `deliver-ticket.sh` and `ceo-loop.sh` summaries.
 - The deterministic pilot J1 conformance suite over real state, git, files, envelopes, and exits, with tracker/CI/PR-platform/provider stubbed and clock/id generation stubbed or deterministically injected.
 
@@ -54,14 +54,14 @@ The highest-risk areas are prompt drift, the deliberate reversal of the GH-227 d
 - `TC-ERRROW-001`, `TC-ERRROW-002`, `TC-ERRROW-003`, `TC-ERRROW-004`
 - `TC-STAGE-001` through `TC-STAGE-007`, `TC-STAGE-009`, `TC-STAGE-010`
 - `TC-PLANSUM-001` through `TC-PLANSUM-005`
-- `TC-PSCAN-001` through `TC-PSCAN-009`
+- `TC-PSCAN-001` through `TC-PSCAN-010`
 - `TC-HELP-001`, `TC-HELP-002`
-- `TC-DOCREC-001`, `TC-DOCREC-002`, `TC-DOCREC-003`
+- `TC-DOCREC-001`, `TC-DOCREC-002`, `TC-DOCREC-003`, `TC-DOCREC-004`
 - `TC-KEYVAL-001` through `TC-KEYVAL-007`
 - `TC-ADOPT-001`
 - `TC-COORD-001`, `TC-COORD-002`, `TC-COORD-003`
 - `TC-BLKADOPT-001`, `TC-BLKADOPT-002`, `TC-BLKADOPT-003`
-- `TC-PILOT-001` through `TC-PILOT-005`
+- `TC-PILOT-001` through `TC-PILOT-006`
 
 **Nice-to-have (supplemental).** These scenarios improve diagnosis, guard against over-generalization, or add a control where the AC already has primary evidence. They are tracked and expected to pass, but a failure in one of them does not by itself reopen an AC unless it exposes a real behavioral gap:
 
@@ -70,9 +70,8 @@ The highest-risk areas are prompt drift, the deliberate reversal of the GH-227 d
 - `TC-STAGE-008` — the existing exclusion control under the widened scope; it protects NFR-9 but does not add a new AC.
 - `TC-HELP-003` — reference-page parity is a quality control; `TC-HELP-001` carries the coverage AC.
 - `TC-ADOPT-002` — role purity is a supporting control for `TC-ADOPT-001` and `TC-PSCAN-002`.
-- `TC-PILOT-006` — durable-record and runtime diagnostics; the J1 AC is carried by `TC-PILOT-001` through `TC-PILOT-005`.
 
-Phase independence rule: each plan phase must be green on its own. Phase 2 proves only guard removal, the sanitized one-shot, and error-row retirement; phase 3 owns artifact/pm-notes staging and both ordering windows. Phase 4 proves the plan contract/validator/template/plan-writer plus code/template consumers; the coder/PM/run-plan prompt scan is phase 5/8. Phase 7 proves only the guides/man page/reference pages it updates; full feature-spec conformance is phase 10. Phase 8 proves the conformance scans and key=value goldens; phase 9 proves the pilot; phase 10 proves final plugin freshness, full feature-spec conformance, and the aggregate gate.
+Phase independence rule: each plan phase must be green on its own. Phase 2 proves only guard removal, the sanitized one-shot, and error-row retirement; phase 3 owns artifact/pm-notes staging, both ordering windows, and the §16.1.1 behavior-spec rows it reconciles (`feature-commit-primitive` ordering/staging and `feature-pm-notes-lint-and-phase-transitions` ordering/staging). Phase 4 proves the plan contract/validator/template/plan-writer plus code/template consumers; the coder/PM/run-plan prompt scan is phase 5/8. Phase 7 proves only the guides/man page/reference pages it updates; full feature-spec conformance is phase 10. Phase 8 proves the non-pilot conformance scans and key=value goldens, scanning `.opencode/**` and the phase-7 updated guides/man/reference pages but never `doc/spec/features/**`; phase 9 proves the pilot and re-runs the privacy/safety scan over the pilot fixtures it creates; phase 10 proves final plugin freshness, full feature-spec conformance against the §16.1.1 phrase table, and the aggregate gate.
 
 The change is delivered as one PR (DEC-15); the phase split above is sequencing, not a delivery split. The foundation phases 1–5 remain the first reviewable commits, and the pilot suite is the end-to-end gate.
 
@@ -85,7 +84,7 @@ The change is delivered as one PR (DEC-15); the phase split above is sequencing,
 - Ticket scope and AC: [backlog.md, M1-S20](../../../planning/oss-tooling/backlog.md)
 - Decision record: [TDR-0013-agent-session-commit-guard-reversal.md](../../../decisions/TDR-0013-agent-session-commit-guard-reversal.md)
 - M1 command reference pages: `doc/planning/oss-tooling/milestones/m1/commands/*.md` and `doc/planning/oss-tooling/milestones/m1/man-page.md`
-- Affected system specs: `doc/spec/features/feature-commit-primitive.md`, `feature-pm-notes-lint-and-phase-transitions.md`, `feature-plan-schema.md`, `feature-blockers.md`, `feature-status-digest.md`, `feature-brief.md`, `feature-merge-verify-deploy.md`, `feature-closeout.md`, `feature-scheduling-engine.md`, `feature-result-contract.md`, `feature-agents-and-commands.md`, plus the four omitted current-truth pages `feature-delivery-lifecycle.md`, `feature-quality-gates-and-pr.md`, `feature-autonomous-delivery.md`, and `feature-local-code-review.md` (AC-F8-5, NFR-13).
+- Affected system specs: `doc/spec/features/feature-commit-primitive.md`, `feature-pm-notes-lint-and-phase-transitions.md`, `feature-plan-schema.md`, `feature-blockers.md`, `feature-status-digest.md`, `feature-brief.md`, `feature-merge-verify-deploy.md`, `feature-closeout.md`, `feature-scheduling-engine.md`, `feature-result-contract.md`, `feature-agents-and-commands.md`, plus the four omitted current-truth pages `feature-delivery-lifecycle.md`, `feature-quality-gates-and-pr.md`, `feature-autonomous-delivery.md`, and `feature-local-code-review.md`, all asserted against the §16.1.1 stale/required phrase table (AC-F8-5, NFR-13).
 - Acceptance criteria, §17.1 Definition of Done (DoD-1..DoD-20), and Appendix C ticket-AC traceability: sections 17 and 24 of the change spec.
 - Appendix A key=value register, Appendix B retained/retired entry points, Appendix D pilot stub/real matrix: section 24 of the change spec.
 
@@ -100,12 +99,12 @@ The change is delivered as one PR (DEC-15); the phase split above is sequencing,
 | AC-F1-3 | No seed literal in `packages/**`; configured/override identity renders; neither source renders neutral `delivery-os` | TC-ENTRY-002, TC-ENTRY-007 | Covered |
 | AC-F1-4 | The bin/entrypoint is not added to the installer; installer tests unchanged | TC-ENTRY-008 | Covered |
 | AC-F1-5 | Help/version succeed with no config, project checkout, or override and render the neutral default | TC-ENTRY-005, TC-ENTRY-006 | Covered |
-| AC-F1-6 | Composition is exactly §8.1; `state`, `mcp`, `dispatch`, daemon absent; uncomposed invocation returns the classified failure | TC-ENTRY-009 | Covered |
+| AC-F1-6 | Composition is exactly §8.1; `state`, `mcp`, `dispatch`, daemon absent; an uncomposed invocation returns the existing `fallback.internal` identity (platform, `retryable: false`, `consequence: unknown`, exit 2) naming the missing composition, with no new error-table row | TC-ENTRY-009 | Covered |
 | AC-F1-7 | Non-installed Bun bin mapped in `bin` alongside `main`/composition; bin invokes the composition; absent from the installer | TC-ENTRY-010, TC-ENTRY-008 | Covered |
 | AC-F2-1 | Zero prompt instructions that write phase timestamps or `phases.pr_creation.url` | TC-PSCAN-001 | Covered |
 | AC-F2-2 | In-session phase completion lands the transition; pm-notes transition and artifacts are in the commit; no refusal | TC-SESS-002, TC-STAGE-001, TC-STAGE-003, TC-STAGE-006, TC-STAGE-007, TC-STAGE-009 | Covered |
 | AC-F2-3 | PR URL is a pm-notes `notes:` entry; `phases.pr_creation.url` is not written | TC-PSCAN-008 | Covered |
-| AC-F2-4 | Reverse window: no transition/commit, pre-write bytes restored, failed restore exits 2, retry yields one transition and one commit | TC-STAGE-009, TC-STAGE-010 | Covered |
+| AC-F2-4 | Reverse window: no transition/commit lands (HEAD and commit count unchanged; no reachable commit object; object-database absence is not asserted), pre-write bytes restored, failed restore exits 2, retry yields one transition and one commit | TC-STAGE-009, TC-STAGE-010 | Covered |
 | AC-F3-1 | Zero `git add` / `git commit` / hand-crafted commit instructions | TC-PSCAN-002, TC-ADOPT-002 | Covered |
 | AC-F3-2 | `@committer` invokes `commit`, reports the envelope, performs no direct staging/commit | TC-PSCAN-007, TC-ADOPT-001 | Covered |
 | AC-F3-3 | Completion stages mapped plan scope union change folder; unrelated strays stay unstaged | TC-STAGE-001, TC-STAGE-002, TC-STAGE-003, TC-STAGE-004 | Covered |
@@ -127,15 +126,15 @@ The change is delivered as one PR (DEC-15); the phase split above is sequencing,
 | AC-F8-2 | Every prompt typed invocation is in the allowed set and covered | TC-PSCAN-003, TC-HELP-001 | Covered |
 | AC-F8-3 | No retired bash entry point is a primary path; retained paths are classified | TC-PSCAN-004, TC-DOCREC-002 | Covered |
 | AC-F8-4 | `.ados-claude/**` regenerated and byte-current | TC-DOCREC-001 | Covered |
-| AC-F8-5 | §16.1 current-truth pages, including the four omitted feature specs, contain no stale phrase and the required replacement | TC-DOCREC-002, TC-DOCREC-003 | Covered |
+| AC-F8-5 | Every row in the §16.1.1 stale/required phrase table, including the phase-3 behavior-spec rows, the four omitted feature specs, and the generic behavioral-primitives row, contains no stale phrase and contains its required replacement | TC-DOCREC-002, TC-DOCREC-003, TC-DOCREC-004 | Covered |
 | AC-F9-1 | `merge`, `queue`, `verify`, `plan`, `blockers` key=value goldens byte-identical | TC-KEYVAL-001, TC-KEYVAL-002, TC-KEYVAL-003, TC-KEYVAL-004, TC-KEYVAL-005, TC-KEYVAL-007 | Covered |
 | AC-F9-2 | Registered keys present on replaced surfaces; retained `deliver-ticket.sh` keys unchanged | TC-KEYVAL-006, TC-KEYVAL-007 | Covered |
 | AC-F10-1 | Pilot drives status → blockers answer → merge → closeout → queue plan with expected next ref | TC-PILOT-001, TC-PILOT-002, TC-PILOT-006 | Covered |
-| AC-F10-2 | Double run byte-identical; zero outbound tracker/CI/provider/network calls | TC-PILOT-004, TC-PILOT-005 | Covered |
+| AC-F10-2 | Double run byte-identical with fixed clock/ids, no sleeps, bounded step/retry budget; zero outbound tracker/CI/provider/network calls; fixed runner timeout with no wall-clock assertion | TC-PILOT-004, TC-PILOT-005, TC-PILOT-006 | Covered |
 | AC-F10-3 | State, git, files, envelopes real; clock and ids stubbed or deterministically injected; only tracker/CI/PR-platform/provider stubbed | TC-PILOT-001, TC-PILOT-003 | Covered |
 | AC-NFR1-1 | Help/version record zero state/network/git/configuration reads and zero writes and complete inside the fixed suite timeout; timing informational | TC-ENTRY-006 | Covered |
 | AC-NFR3-1 | Conformance scans deterministic; identical counts; zero ambient reads | TC-PSCAN-005, TC-PILOT-005 | Covered |
-| AC-NFR9-1 | Zero secret-shaped findings in prompts/guides/fixtures; commit safety scan unchanged | TC-PSCAN-006, TC-PSCAN-009, TC-BLKADOPT-003 | Covered |
+| AC-NFR9-1 | Zero secret-shaped findings in prompts/guides/fixtures/pilot data; commit safety scan unchanged | TC-PSCAN-006, TC-PSCAN-009, TC-PSCAN-010, TC-BLKADOPT-003 | Covered |
 
 #### 3.1.1 Ticket AC Coverage
 
@@ -163,6 +162,7 @@ There are no new `API-#` or `EVT-#` identifiers in this change. The CLI invocati
 | Appendix B | Retained vs retired entry points | TC-PSCAN-004, TC-COORD-003 | Scan classification and retained labels |
 | Appendix D | Pilot stub/real matrix (clock and ids stubbed or deterministically injected) | TC-PILOT-003 | Port call recording versus real state/git/files/envelopes |
 | Section 8.1 | Allowed prompt-required command set, with `state`/`mcp`/`dispatch`/daemon absent | TC-ENTRY-004, TC-ENTRY-009, TC-PSCAN-003, TC-HELP-001 | Composition absence assertions, scan, and coverage matrix |
+| Error table (containment) | Existing `fallback.internal` identity for uncomposed commands; no new row | TC-ENTRY-009, TC-ERRROW-002 | Uncomposed invocation returns platform/`retryable: false`/`consequence: unknown`/exit 2 with a summary naming the missing composition; the documented-table count does not change for composition |
 | Package manifest | Non-installed Bun `bin` entry plus `main`/composition entry | TC-ENTRY-010, TC-ENTRY-008 | Manifest/tree assertion and installer-absence check |
 | Section 8.2 | Existing `phase.transition` and `commit.telemetry` records | TC-PILOT-006 | Records appended and read with expected identities |
 | Section 8.4 | Harness one-shot sanitized context | TC-SESS-004 | Temp empty directory, sanitized env, cleanup |
@@ -178,12 +178,12 @@ There are no new `API-#` or `EVT-#` identifiers in this change. The CLI invocati
 | NFR-5 | Help/guide coverage 100% | TC-HELP-001, TC-HELP-002, TC-HELP-003, TC-PSCAN-003 | Covered |
 | NFR-6 | Key=value continuity, byte-identical goldens | TC-KEYVAL-001 through TC-KEYVAL-007 | Covered |
 | NFR-7 | Pilot determinism, fixed or deterministically injected clock/ids, zero network | TC-PILOT-003, TC-PILOT-004, TC-PILOT-005 | Covered |
-| NFR-8 | Pilot runtime at or under 180 s | TC-PILOT-006 | Covered |
-| NFR-9 | No secrets in prompts/guides/fixtures; safety scan unchanged | TC-PSCAN-006, TC-PSCAN-009, TC-STAGE-008, TC-BLKADOPT-003 | Covered |
+| NFR-8 | Pilot boundedness and determinism: fixed clock/ids, no sleeps, bounded step/retry budget, zero outbound calls, byte-identical replay, fixed test-runner timeout; wall-clock duration informational only | TC-PILOT-005, TC-PILOT-006 | Covered |
+| NFR-9 | No secrets in prompts/guides/fixtures; safety scan unchanged | TC-PSCAN-006, TC-PSCAN-009, TC-PSCAN-010, TC-STAGE-008, TC-BLKADOPT-003 | Covered |
 | NFR-10 | Brand neutrality, no seed literal in `packages/**` | TC-ENTRY-002, TC-ENTRY-007 | Covered |
 | NFR-11 | Backward compatibility outside declared changes | TC-KEYVAL-001 through TC-KEYVAL-006, plus the full `pnpm check` regression | Covered |
 | NFR-12 | Generated-plugin freshness | TC-DOCREC-001 | Covered |
-| NFR-13 | Current-truth reconciliation: each §16.1 row's stale phrase absent and required replacement present | TC-DOCREC-002, TC-DOCREC-003 | Covered |
+| NFR-13 | Current-truth reconciliation: every row in the §16.1.1 stale/required phrase table (the single source for the scan) has its stale phrase absent and its required replacement present; rows outside the table carry only the §16.1 scope obligation | TC-DOCREC-002, TC-DOCREC-003, TC-DOCREC-004 | Covered |
 
 ## 4. Test Types and Layers
 
@@ -208,7 +208,7 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 | TC-ENTRY-001 | `--version` renders injected identity without side effects | Happy Path | Behaviour | High | AC-F1-1 |
 | TC-ENTRY-002 | Configured, override, and neutral-default identities render without a seed literal | Edge Case | Behaviour | High | AC-F1-3, NFR-10 |
 | TC-ENTRY-003 | Root `--help` lists families and global flags | Happy Path | Behaviour | High | AC-F1-2 |
-| TC-ENTRY-004 | Every prompt-required command and subcommand has man-page-grade help | Happy Path | Behaviour | High | AC-F1-2, AC-F8-1 |
+| TC-ENTRY-004 | Every prompt-required command and subcommand has man-page-grade help (phase-1 static help coverage) | Happy Path | Behaviour | High | AC-F1-2, AC-F8-1 |
 | TC-ENTRY-005 | Help and version succeed without config/project and render the neutral default | Edge Case | Behaviour | High | AC-F1-5 |
 | TC-ENTRY-006 | Help and version perform zero reads/writes inside the fixed timeout | Negative | Behaviour | High | AC-F1-2, AC-F1-5, AC-NFR1-1, NFR-1 |
 | TC-ENTRY-007 | No seed literal in `packages/**`; brand arrives only through the seam | Negative | Structure | High | AC-F1-3, NFR-10 |
@@ -247,13 +247,15 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 | TC-PSCAN-006 | Prompt and guide secret scan reports zero findings | Negative | Structure | High | AC-NFR9-1 |
 | TC-PSCAN-007 | `@committer` is a thin executor of `commit` | Happy Path | Structure | High | AC-F3-2 |
 | TC-PSCAN-008 | The PR URL is a pm-notes note, not phase state | Happy Path | Structure | High | AC-F2-3, DM-2 |
-| TC-PSCAN-009 | New fixtures carry no secrets and the commit safety scan is unchanged | Negative | Structure | High | AC-NFR9-1, NFR-9 |
+| TC-PSCAN-009 | Non-pilot new fixtures carry no secrets and the commit safety scan is unchanged (phase 8) | Negative | Structure | High | AC-NFR9-1, NFR-9 |
+| TC-PSCAN-010 | Pilot fixtures and suite data carry no secrets and the safety scan is unchanged (phase 9) | Negative | Structure | High | AC-NFR9-1, NFR-9 |
 | TC-HELP-001 | Help and guide coverage matrix is complete | Happy Path | Structure | High | AC-F8-1 |
 | TC-HELP-002 | A coverage-matrix mutation fails and names the missing obligation | Negative | Structure | High | AC-F8-1 |
 | TC-HELP-003 | Reference pages match the delivered help surface | Regression | Structure | Medium | AC-F8-1, AC-F1-2 |
 | TC-DOCREC-001 | Generated Claude plugin is byte-current | Regression | Integration | High | AC-F8-4 |
 | TC-DOCREC-002 | Phase-7 guides, man page, and reference pages are reconciled | Regression | Structure | High | AC-F8-3, AC-F8-5, NFR-13 |
-| TC-DOCREC-003 | Full feature-spec conformance, including the four omitted specs | Regression | Structure | High | AC-F8-5, NFR-13 |
+| TC-DOCREC-003 | Full feature-spec conformance against the complete §16.1.1 phrase table (phase 10) | Regression | Structure | High | AC-F8-5, NFR-13 |
+| TC-DOCREC-004 | Phase-3 behavior-spec phrase-table rows are reconciled (commit ordering/staging and pm-notes phase transitions) | Regression | Structure | High | AC-F8-5, NFR-13 |
 | TC-KEYVAL-001 | `merge` text is byte-identical | Regression | Golden | High | AC-F9-1 |
 | TC-KEYVAL-002 | `queue` text is byte-identical | Regression | Golden | High | AC-F9-1 |
 | TC-KEYVAL-003 | `verify` text is byte-identical | Regression | Golden | High | AC-F9-1 |
@@ -262,7 +264,7 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 | TC-KEYVAL-006 | Retained `deliver-ticket.sh` and `ceo-loop.sh` summaries are unchanged | Regression | Golden | High | AC-F9-2 |
 | TC-KEYVAL-007 | Appendix A register is complete and ordered | Negative | Golden | High | AC-F9-1, AC-F9-2 |
 | TC-ADOPT-001 | PM, coder, and command prompts use `phase` and `commit` only | Happy Path | Structure | High | AC-F3-2, AC-F2-1, AC-F3-1 |
-| TC-ADOPT-002 | Non-committing agents remain pure; callers own the commit | Negative | Structure | Medium | AC-F3-1 |
+| TC-ADOPT-002 | Pure writers stay pure; `@pr-manager` never merges and never runs raw git | Negative | Structure | Medium | AC-F3-1, F-3 |
 | TC-COORD-001 | J1 sequence is ordered and avoids raw merge/discovery | Happy Path | Structure | High | AC-F6-2 |
 | TC-COORD-002 | `pr-open` finalization uses `verify` and `merge` | Happy Path | Structure | High | AC-F6-1 |
 | TC-COORD-003 | Retained bash stays primary; `queue plan` next actions are consumed | Regression | Structure | High | AC-F6-3, AC-F6-4 |
@@ -274,9 +276,9 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 | TC-PILOT-003 | The stub/real matrix matches Appendix D | Negative | Conformance | High | AC-F10-3 |
 | TC-PILOT-004 | Zero outbound tracker, CI, PR-platform, provider, or network calls | Negative | Conformance | High | AC-F10-2 |
 | TC-PILOT-005 | Two runs replay byte-identically | Regression | Conformance | High | AC-F10-2, AC-NFR3-1 |
-| TC-PILOT-006 | Durable records, runtime bound, and cleanup hold | Happy Path | Conformance | Medium | AC-F10-1, NFR-8 |
+| TC-PILOT-006 | Durable records, deterministic bounds, and cleanup hold | Happy Path | Conformance | Medium | AC-F10-1, AC-F10-2, NFR-8 |
 
-**Scenario counts:** 70 total — ENTRY 10, SESS 5, ERRROW 4, STAGE 10, PLANSUM 5, PSCAN 9, HELP 3, DOCREC 3, KEYVAL 7, ADOPT 2, COORD 3, BLKADOPT 3, PILOT 6. Must-pass: 64; nice-to-have: 6.
+**Scenario counts:** 72 total — ENTRY 10, SESS 5, ERRROW 4, STAGE 10, PLANSUM 5, PSCAN 10, HELP 3, DOCREC 4, KEYVAL 7, ADOPT 2, COORD 3, BLKADOPT 3, PILOT 6. Must-pass: 67; nice-to-have: 5.
 
 ### 5.2 Scenario Details
 
@@ -377,21 +379,23 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 
 **Preconditions**:
 - A committed fixture, `tests/fixtures/entrypoint/programs.ts`, exports the synthetic entrypoint programs, brand identities, and every invocation tuple from spec section 8.1: root `--version`, root `--help`, and each command/subcommand help path.
+- The static coverage inventory `tests/fixtures/help-guide/coverage.json` exists in phase 1; it declares the invocation-to-help/reference-page obligation for every tuple but does not require the reference pages themselves to be reconciled yet.
 - The expected help shape is usage, options, at least one example, exit codes, and a see-also pointer.
 
 **Steps**:
 1. Iterate the fixture and invoke each tuple with `--help`.
 2. Assert the exit code and the five required sections in each output.
 3. Assert every example is syntactically accepted by the parser in a no-write dry run.
-4. Assert every see-also target exists in the reference-page inventory.
+4. Assert every see-also target maps to a row in the static `tests/fixtures/help-guide/coverage.json` inventory. Do not read or require the reconciled reference pages here; page existence and content parity are `TC-HELP-001`/`TC-HELP-003` in phases 7/8.
 
 **Expected Outcome**:
 - All tuples exit `0` and carry the five required sections.
 - Examples parse without `fallback.invocation`.
-- See-also targets resolve; no tuple is missing.
+- Every see-also target has an inventory row; no tuple is missing.
+- Phase 1 requires no phase-7/8 artifact and no reconciled reference page.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/entrypoint-help-coverage.test.ts` exits 0; the failure message names the invocation tuple and the missing section.
+- `bun test tests/behaviour/entrypoint-help-coverage.test.ts` exits 0; the failure message names the invocation tuple, the missing section, or the missing inventory row.
 
 #### TC-ENTRY-005 - Help and version succeed without config/project and render the neutral default
 
@@ -518,28 +522,29 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/entrypoint-composition.test.ts`
-**Tags**: @backend, @entrypoint
+**Tags**: @backend, @entrypoint, @error-table
 
 **Preconditions**:
 - The entrypoint composes the prompt-required subset and exposes the command registry for inspection.
-- A composition missing a required port is available in the test.
+- An invocation of a command outside the composed set is available in the test.
 - The suite runs under the repository's fixed `bun test` timeout.
 
 **Steps**:
 1. Assert the composed command set equals spec section 8.1 exactly, including subcommands.
 2. Assert `state`, `mcp`, `dispatch`, and the resident daemon are not registered, not reachable, and not claimed anywhere in the composition.
 3. Assert `tests/structure/state-scope.test.ts` still passes, proving the state layer ships no command surface.
-4. Invoke a command outside the composed set and assert the classified failure: a stable error code with its declared exit projection `2`, never a silent success and never an unclassified crash.
-5. Assert the composition resolves the working name without reading an ambient brand literal and completes inside the fixed suite timeout.
+4. Invoke a command outside the composed set and assert the **existing** `fallback.internal` containment identity: platform category, `retryable: false`, `consequence: unknown`, platform-provider projection, exit projection `2`, with a summary that names the missing composition; never a silent success and never an unclassified crash.
+5. Assert no new error-table row exists for composition, and that the machine and documented tables are unchanged by this case; the only table change in this change is the `commit.session.context-refused` retirement.
+6. Assert the composition resolves the working name without reading an ambient brand literal and completes inside the fixed suite timeout.
 
 **Expected Outcome**:
 - The prompt-required set is complete and nothing else is composed.
 - `state`, `mcp`, `dispatch`, and the daemon are absent from the registry and from prompt claims.
-- The unconfigured composition fails closed with a classified platform/configuration error and exit projection `2`, never a fake success.
+- The uncomposed invocation returns `fallback.internal` (platform, `retryable: false`, `consequence: unknown`, exit 2) with a summary naming the missing composition, introducing no new error-table row.
 - Startup resolves the working name without an ambient brand literal; wall-clock timing is informational, not an assertion.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/entrypoint-composition.test.ts tests/structure/state-scope.test.ts` exits 0; any extra/missing command, a present `state`/`mcp`/`dispatch`/daemon registration, an unclassified success, or a timeout fails the test.
+- `bun test tests/behaviour/entrypoint-composition.test.ts tests/structure/state-scope.test.ts tests/structure/error-table.test.ts` exits 0; any extra/missing command, a present `state`/`mcp`/`dispatch`/daemon registration, an unclassified success, a new composition error row, or a timeout fails the test.
 
 #### TC-ENTRY-010 - Non-installed Bun bin plus `main` composition is mapped and invokes the composition
 
@@ -759,8 +764,9 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 **Steps**:
 1. Run `bun run scripts/checks/error-table-sync.ts`.
 2. Assert the `commit` domain is described as five rows and the retired row is absent.
-3. Mutate a temp copy by re-adding the row to the doc and assert the sync check fails.
-4. Mutate a temp copy by re-adding the row to the machine table and assert the sync check fails.
+3. Assert no composition-specific error row exists: no `config.composition.unavailable` and no new `fallback.*` row. An uncomposed command uses the already-documented `fallback.internal` identity, so the only documented-table count change is the `commit`-domain retirement.
+4. Mutate a temp copy by re-adding the row to the doc and assert the sync check fails.
+5. Mutate a temp copy by re-adding the row to the machine table and assert the sync check fails.
 
 **Expected Outcome**:
 - The live tree is synced.
@@ -1071,19 +1077,19 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 
 **Steps**:
 1. For each of the four failure modes, run `phase complete GH-310 delivery` with the injection armed after the pm-notes write.
-2. Assert the completion does not report success, the ledger gains no transition, and no commit object is created.
+2. Assert the completion does not report success and the atomic contract holds: HEAD and the commit count are unchanged, no reachable commit object remains, and the ledger gains no transition. Do not assert object-database absence and do not assume no partial commit object was ever written; the observable contract is "no commit lands" and "no transition lands".
 3. Compare the pm-notes bytes with the pre-write snapshot and assert byte equality.
 4. Disarm the injection and retry the same completion.
 5. Assert the retry lands exactly one transition and exactly one commit containing the pm-notes transition and the artifacts.
 6. Re-run the successful completion once more and assert it is a stable no-op (no second commit, no duplicate transition).
 
 **Expected Outcome**:
-- Every post-document/pre-commit failure leaves the derived projection equal to the pre-write bytes, with no ledger transition and no commit.
+- Every post-document/pre-commit failure leaves the derived projection equal to the pre-write bytes, with no ledger transition and no landed commit (HEAD and commit count unchanged, no reachable commit object); object-database absence is not asserted.
 - The retry after any failed attempt produces exactly one transition and exactly one commit.
 - A third run after success does not duplicate either the transition or the commit.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/phase-completion-reverse-window.test.ts` exits 0; a leaked transition, a landed commit, a non-restored document, or a duplicate on retry fails the test.
+- `bun test tests/behaviour/phase-completion-reverse-window.test.ts` exits 0; a leaked transition, a changed HEAD/commit count, a reachable new commit, a non-restored document, or a duplicate on retry fails the test. A surviving object-database entry alone does not fail it.
 
 #### TC-STAGE-010 - A failed restoration exits 2 with a classified fault and reconciliation instruction
 
@@ -1272,6 +1278,7 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 
 **Preconditions**:
 - The inventory fixture `tests/fixtures/prompt-inventory/lifecycle.json` lists every `.opencode/agent/*.md` and `.opencode/command/*.md`.
+- The phase-8 scan scope adds the guides, man page, and reference pages reconciled in phase 7; it excludes `doc/spec/features/**`, which phase 7 must not read and phase 10 reconciles.
 - The scan grammar knows instruction-bearing lines and code blocks and excludes read-only `phase list` references.
 - A pm-notes schema example is allowed only when it is explicitly labeled read-only; a line or block that tells the agent to set a phase field is an instruction and must fail.
 
@@ -1282,15 +1289,16 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 4. Assert the read-only schema example is allowed and a write-instruction mutant fails.
 5. Mutate a temp copy with each forbidden write pattern and assert a failure naming file and rule.
 6. Re-run `tests/behaviour/phase-write-path-lint.test.ts` and assert the phase family remains the only write path.
-7. Run the same phase-state rule over the reconciled guides and system specs; historical change artifacts are excluded as records.
+7. Run the same phase-state rule over the phase-7 updated guides, man page, and reference pages updated by phase 7. Do **not** read `doc/spec/features/**` here; the system-spec phrase-table scan is `TC-DOCREC-003` in phase 10, after the feature specs are reconciled.
 
 **Expected Outcome**:
 - Zero violations on the live tree.
 - Every mutant fails; the scan reports the file and the rule.
 - Legitimate read-only phase references do not fail.
+- The phase-8 scan covers `.opencode/**` and the phase-7 updated guides/man/reference pages; the system-spec scan is deferred to phase 10.
 
 **Pass/Fail Evidence**:
-- `bun run scripts/checks/prompt-conformance.ts` exits 0; `bun test tests/checks/prompt-conformance.test.ts tests/behaviour/phase-write-path-lint.test.ts` proves every mutant fails and the phase family remains the only write path.
+- `bun run scripts/checks/prompt-conformance.ts` exits 0; `bun test tests/checks/prompt-conformance.test.ts tests/behaviour/phase-write-path-lint.test.ts` proves every mutant fails and the phase family remains the only write path. A scan failure caused by an unreconciled `doc/spec/features/**` page is out of scope for this phase.
 
 #### TC-PSCAN-002 - Zero raw `git add` / `git commit` / hand-crafted commit instructions
 
@@ -1306,18 +1314,20 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 **Preconditions**:
 - The scan distinguishes read-only git (`status`, `diff`, `log`, `rev-parse`, `branch --list`) from write operations.
 - The `@pr-manager` push and PR-creation allowances are declared in `tests/fixtures/prompt-inventory/allowlist.json`.
+- The phase-8 scan scope is `.opencode/**` plus the phase-7 updated guides/man/reference pages; `doc/spec/features/**` is excluded until phase 10.
 
 **Steps**:
 1. Scan every lifecycle prompt for `git add`, `git commit`, `git commit -F`, `git reset`, and a hand-crafted commit recipe.
 2. Assert zero write instructions while read-only git remains allowed.
 3. Mutate a temp copy with each write pattern and assert a failure.
 4. Assert the `@pr-manager` push/PR creation allowance is the only git-write allowance.
-5. Run the same raw-git rule over the reconciled guides and system specs; historical change artifacts are excluded as records, and read-only git remains allowed.
+5. Run the same raw-git rule over the phase-7 updated guides, man page, and reference pages. Do **not** read `doc/spec/features/**` here; system-spec phrase assertions are `TC-DOCREC-003` in phase 10. Historical change artifacts are excluded as records, and read-only git remains allowed.
 
 **Expected Outcome**:
-- Zero raw-git commit instructions in the lifecycle inventory and the reconciled docs.
+- Zero raw-git commit instructions in the lifecycle inventory and the phase-7 updated docs.
 - The read-only allowance remains intact.
 - Every mutation fails with the file and rule named.
+- The system-spec scan is deferred to phase 10, so phase 8 is green before reconciliation.
 
 **Pass/Fail Evidence**:
 - `bun run scripts/checks/prompt-conformance.ts` exits 0; `bun test tests/checks/prompt-conformance.test.ts` proves non-vacuity.
@@ -1497,7 +1507,7 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 **Pass/Fail Evidence**:
 - `bun test tests/checks/prompt-conformance.test.ts tests/behaviour/pm-notes-lint.test.ts` exits 0; a `phases.pr_creation.url` write fails the scan.
 
-#### TC-PSCAN-009 - New fixtures carry no secrets and the commit safety scan is unchanged
+#### TC-PSCAN-009 - Non-pilot new fixtures carry no secrets and the commit safety scan is unchanged
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
@@ -1509,22 +1519,54 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 **Tags**: @privacy, @security, @fixtures
 
 **Preconditions**:
-- The new test data exists at the canonical paths: `tests/fixtures/prompt-inventory/{lifecycle,allowed-commands,allowlist}.json`, `tests/fixtures/prompt-inventory/mutants/`, `tests/fixtures/key-register/register.json`, `tests/fixtures/help-guide/coverage.json`, `tests/fixtures/entrypoint/programs.ts`, `tests/fixtures/plan/summary/`, `tests/fixtures/pilot/`, and `tests/golden/plan/`.
+- The new non-pilot test data exists at the canonical paths created through phase 8: `tests/fixtures/prompt-inventory/{lifecycle,allowed-commands,allowlist,retained-retired}.json`, `tests/fixtures/prompt-inventory/mutants/`, `tests/fixtures/key-register/register.json`, `tests/fixtures/help-guide/coverage.json`, `tests/fixtures/entrypoint/programs.ts`, `tests/fixtures/plan/summary/`, and `tests/golden/plan/`.
+- `tests/fixtures/pilot/**` is **not** required here; the pilot fixtures are created in phase 9 and are scanned by `TC-PSCAN-010`.
 - The canary corpus covers token-, key-, and credential-shaped values.
 
 **Steps**:
-1. Run the privacy/secret scanner over every new fixture and golden path.
+1. Run the privacy/secret scanner over every new non-pilot fixture and golden path listed above.
 2. Assert zero secret-shaped findings.
-3. Insert one canary value into a temp copy of each fixture class (prompt inventory, key register, help coverage, entrypoint programs, plan summary, plan golden, pilot data) and assert each is detected.
+3. Insert one canary value into a temp copy of each non-pilot fixture class (prompt inventory, key register, help coverage, entrypoint programs, plan summary, plan golden) and assert each is detected.
 4. Re-run `tests/behaviour/commit-safety.test.ts` and assert the safety STOP/allow verdicts are unchanged.
 
 **Expected Outcome**:
-- No new fixture or golden carries a secret-shaped value.
-- Every fixture class is inside the scan scope; an unscanned class fails the test.
+- No new non-pilot fixture or golden carries a secret-shaped value.
+- Every non-pilot fixture class is inside the scan scope; an unscanned class fails the test.
 - The commit safety scan behavior is unchanged.
+- Phase 8 is green without phase-9 pilot data.
 
 **Pass/Fail Evidence**:
-- `bun test tests/checks/prompt-secret-scan.test.ts tests/checks/privacy-authoring.test.ts tests/behaviour/commit-safety.test.ts` exits 0; a canary leak, an unscanned class, or a changed safety verdict fails the test.
+- `bun test tests/checks/prompt-secret-scan.test.ts tests/checks/privacy-authoring.test.ts tests/behaviour/commit-safety.test.ts` exits 0; a canary leak, an unscanned non-pilot class, or a changed safety verdict fails the test.
+
+#### TC-PSCAN-010 - Pilot fixtures and suite data carry no secrets and the safety scan is unchanged
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: NFR-9, AC-NFR9-1, section 20
+**Test Type(s)**: Structure / Check
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/checks/prompt-secret-scan.test.ts`; `tests/checks/privacy-authoring.test.ts`; `tests/checks/pilot-privacy.test.ts` (new); `tests/behaviour/commit-safety.test.ts`
+**Tags**: @privacy, @security, @fixtures, @pilot
+
+**Preconditions**:
+- The pilot data exists at the canonical phase-9 paths: `tests/fixtures/pilot/{harness,repo,stubs,matrix}.ts`, the seeded plan/pm-notes/change-folder fixtures they create, and `tests/conformance/pilot/*.test.ts`.
+- Phase 9 creates the pilot data before this case runs; this is the pilot-data half of the split from `TC-PSCAN-009`.
+- The canary corpus covers token-, key-, and credential-shaped values.
+
+**Steps**:
+1. Run the privacy/secret scanner over every pilot fixture, seeded artifact, and pilot suite file.
+2. Assert zero secret-shaped findings in pilot data and pilot test files.
+3. Insert one canary value into a temp copy of each pilot fixture class (harness, repo seed, stubs, matrix, pilot suite) and assert each is detected.
+4. Re-run the commit safety scan over the pilot fixtures and assert the STOP/allow verdicts are unchanged.
+
+**Expected Outcome**:
+- No pilot fixture, seed, or pilot suite file carries a secret-shaped value.
+- Every pilot fixture class is inside the scan scope; an unscanned pilot class fails the test.
+- Phase 9 owns the pilot-data scan and is green only when it passes.
+
+**Pass/Fail Evidence**:
+- `bun test tests/checks/prompt-secret-scan.test.ts tests/checks/privacy-authoring.test.ts tests/checks/pilot-privacy.test.ts tests/behaviour/commit-safety.test.ts` exits 0; a canary leak, an unscanned pilot class, or a changed safety verdict fails the test.
 
 #### TC-HELP-001 - Help and guide coverage matrix is complete
 
@@ -1538,7 +1580,8 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 **Tags**: @docs, @conformance
 
 **Preconditions**:
-- The matrix fixture maps every spec-section-8.1 invocation to its help obligation and reference page path.
+- The matrix fixture `tests/fixtures/help-guide/coverage.json` (created in phase 1) maps every spec-section-8.1 invocation to its help obligation and reference page path.
+- The reference pages are updated by phase 7 before this phase-8 case runs.
 - The reference pages exist under `doc/planning/oss-tooling/milestones/m1/commands/`; the root obligation maps to `man-page.md` plus the new `commands/entrypoint.md` reference page.
 - The root/entrypoint reference page is the only new page this change must add; every other page already exists and is reconciled.
 
@@ -1596,18 +1639,21 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 
 **Preconditions**:
 - The help output for each command is captured from the entrypoint.
+- The reference pages are updated by phase 7; this case runs after those updates and asserts the reconciled pages against the phase-1 static `tests/fixtures/help-guide/coverage.json` inventory.
 - The reference pages declare options and examples.
 
 **Steps**:
 1. Extract flags and options from each `--help` output.
 2. Assert every documented flag appears in the reference page and vice versa.
 3. Assert every example in `--help` is syntactically accepted by the parser.
-4. Assert every see-also link resolves to an existing page.
+4. Assert every see-also link resolves to an existing, non-empty page, and every inventory row has a reconciled page.
+5. Assert the inventory is not read as a phase-1 substitute for page content: phase 1 proved row coverage; this case proves the updated pages match the delivered help surface.
 
 **Expected Outcome**:
 - No stale flag or missing option.
 - Examples parse without `fallback.invocation`.
-- See-also links resolve.
+- See-also links resolve and every inventory page exists and is reconciled.
+- Phase 7/8 reference-page reconciliation is proven separately from the phase-1 help-coverage fixture check.
 
 **Pass/Fail Evidence**:
 - `bun test tests/checks/reference-page-parity.test.ts` exits 0; a mismatch names the command and the flag.
@@ -1655,7 +1701,7 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 **Preconditions**:
 - The phase-7 documents are `AGENTS.md`, `doc/guides/change-lifecycle.md`, `doc/guides/unified-change-convention-tracker-agnostic-specification.md`, `doc/guides/delivery-modes.md`, `doc/guides/autonomous-batch-delivery.md`, `doc/planning/concepts/automated-commit.md`, the M1 man page, and the command reference pages updated in phase 7.
 - The stale-phrase and required-phrase lists are encoded in the parameterized doc-conformance fixtures.
-- This case deliberately does not assert the `doc/spec/features/**` pages; those belong to `TC-DOCREC-003` in phase 10.
+- This case deliberately does not assert the `doc/spec/features/**` pages; the phase-3 behavior-spec rows belong to `TC-DOCREC-004` and the full feature-spec set belongs to `TC-DOCREC-003` in phase 10.
 
 **Steps**:
 1. Scan the phase-7 document set for stale phrases: raw `git add -A`, `git commit -F`, `phases.pr_creation.url` as a write target, the session-refusal rule, and `gh pr merge` as the merge path.
@@ -1672,7 +1718,7 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 **Pass/Fail Evidence**:
 - `bun test tests/checks/doc-conformance.test.ts` (phase-7 parameter set) exits 0; the PR checklist records the manual review.
 
-#### TC-DOCREC-003 - Full feature-spec conformance, including the four omitted specs
+#### TC-DOCREC-003 - Full feature-spec conformance against the complete §16.1.1 phrase table
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -1684,28 +1730,63 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 **Tags**: @docs, @conformance
 
 **Preconditions**:
-- The full §16.1 stale/required phrase table is encoded in the parameterized doc-conformance fixtures.
-- The phase-10 feature specs are present, including the four omitted current-truth pages: `feature-delivery-lifecycle.md`, `feature-quality-gates-and-pr.md`, `feature-autonomous-delivery.md`, and `feature-local-code-review.md`.
-- The remaining feature specs named in §7.1/§16.1 are also in scope.
+- The §16.1.1 stale/required phrase table is the **single source** for the scan. The fixture encodes it row by row, with one assertion per page/phrase pair; a missing row is a coverage failure.
+- The phase-10 feature specs are present, including the four omitted current-truth pages (`feature-delivery-lifecycle.md`, `feature-quality-gates-and-pr.md`, `feature-autonomous-delivery.md`, `feature-local-code-review.md`), the phase-3 behavior-spec pages (`feature-commit-primitive.md`, `feature-pm-notes-lint-and-phase-transitions.md`), `feature-result-contract.md`, and the generic behavioral-primitives pages.
+- The §16.1 prompt/guide inventory rows are **outside** the named-phrase table and carry only their §16.1 scope obligation; this case makes no named-phrase claim about them.
 
 **Steps**:
-1. Run the full doc-conformance parameter set over every §16.1 feature-spec row.
-2. Assert each row's named stale phrase is absent.
-3. Assert each row's required replacement phrase is present, including:
-   - `feature-delivery-lifecycle`: no "all commits route through `@committer`" / "No agent prompt other than `@committer` performs a direct `git commit`"; requires lifecycle commits through `commit` and the thin `@committer`.
-   - `feature-quality-gates-and-pr`: no temp-message-file/post-hook-amend workflow; requires the primitive-backed commit path.
-   - `feature-autonomous-delivery`: no CEO `gh pr merge --squash`/`glab mr merge` authority; requires `merge` as the lifecycle merge path with the retained scripts.
-   - `feature-local-code-review`: no raw-git `/commit` path; requires the primitive-backed `commit`/thin `@committer`.
-4. Assert the five-row `commit` domain is described consistently across `feature-commit-primitive` and `feature-result-contract`.
-5. Assert no feature page claims `state`, `mcp`, `dispatch`, or the daemon as a CLI command.
+1. Iterate every row of the §16.1.1 table and assert each named stale phrase is absent and each required phrase is present, including:
+   - `feature-commit-primitive`: the old completion order and old plan-only staging are absent; the pre-write/restore order, `mapped plan-phase scope union the change folder` staging, plan-absent change-folder staging, stray exclusion, in-session execution, and `five commit rows` are present.
+   - `feature-pm-notes-lint-and-phase-transitions`: the session refusal, `the six commit.* identities`, and the completion error-identity "session refusal" are absent; in-session execution, `the five commit.* identities`, and "no session refusal" are present.
+   - `feature-result-contract`: `the six commit.* rows` and `commit.session.context-refused` are absent; `the five commit rows`, the retired-row absence, and `fallback.internal` as the documented containment identity are present.
+   - `feature-delivery-lifecycle`: the `@committer`-only commit claims are absent; `lifecycle commits route through the commit primitive`, the thin `@committer`, and `phase state is written only through the phase family` are present.
+   - `feature-quality-gates-and-pr`: the temp-message-file/post-hook-amend workflow is absent; `@committer` invokes `commit` and performs no direct staging, commit, re-stage, or amend is present.
+   - `feature-autonomous-delivery`: `gh pr merge --squash` and `glab mr merge` as the CEO merge authority are absent; `merge` as the lifecycle merge path and retained `deliver-ticket.sh`/`ceo-loop.sh` are present.
+   - `feature-local-code-review`: the raw-git `/commit` workflow is absent; the primitive-backed `commit` or thin `@committer` is present.
+   - The generic behavioral-primitives row: `git add -A`, `git commit -F`, post-hook amend, hand-edited `started`/`completed`, and `phases.pr_creation.url` written are absent; `lifecycle commits route through the commit primitive or the thin @committer`, `phase state is written only through the phase family`, and `the PR URL is a pm-notes notes: entry` are present.
+2. Assert the page set covered by the fixture equals the page set named by §16.1.1; a missing row fails as a coverage failure, not a pass.
+3. Assert every page outside the §16.1.1 table is exempt from the named-phrase assertion but still carries its §16.1 required-change obligation in the inventory.
+4. Assert no feature page claims `state`, `mcp`, `dispatch`, or the daemon as a CLI command.
 
 **Expected Outcome**:
-- Every §16.1 feature-spec row is stale-absent and required-present.
-- The four previously omitted specs are covered by named assertions.
-- No feature page contradicts the delivered behavior.
+- Every §16.1.1 phrase-table row is stale-absent and required-present.
+- The four previously omitted specs and the phase-3 behavior-spec rows are covered by named assertions.
+- No page outside the phrase table is falsely claimed as phrase-covered.
+- A missing phrase-table row fails coverage.
 
 **Pass/Fail Evidence**:
-- `bun test tests/checks/doc-conformance.test.ts` (full parameter set) exits 0; a stale phrase or a missing required phrase names the page and phrase.
+- `bun test tests/checks/doc-conformance.test.ts` (full parameter set) exits 0; a stale phrase, a missing required phrase, or a missing phrase-table row names the page and phrase.
+
+#### TC-DOCREC-004 - Phase-3 behavior-spec phrase-table rows are reconciled
+
+**Scenario Type**: Regression
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-2, F-5, AC-F8-5, NFR-13, DEC-16
+**Test Type(s)**: Structure / Check
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/checks/doc-conformance.test.ts` with the phase-3 behavior-spec parameter set (`scope: behavior-spec`); run in phase 3
+**Tags**: @docs, @conformance, @phase
+
+**Preconditions**:
+- The §16.1.1 phrase table is the single source. This case encodes exactly the two rows whose ordering/staging reconciliation phase 3 owns: `feature-commit-primitive.md` and `feature-pm-notes-lint-and-phase-transitions.md`.
+- Phase 2 has landed the session-refusal/five-row machine and documented-table changes; phase 3 lands the completion ordering/staging behavior and the matching spec text.
+- The phase-10 full run (`TC-DOCREC-003`) re-asserts the same rows, so this case is early evidence, not a substitute.
+
+**Steps**:
+1. Run the `scope: behavior-spec` parameter set over the two phase-3-owned pages.
+2. For `feature-commit-primitive`, assert all four stale phrases from the §16.1.1 row are absent: the old completion order, the old plan-only staging sentence, "refuses to run inside a delivery session", and `commit.session.context-refused`. Assert all four required phrases are present: pre-write-then-commit-with-restore, `mapped plan-phase scope union the change folder` staging with plan-absent change-folder staging and stray exclusion, in-session execution, and `five commit rows`.
+3. For `feature-pm-notes-lint-and-phase-transitions`, assert the session-refusal sentence, `the six commit.* identities`, and the completion error-identity "session refusal" are absent; assert in-session execution, `the five commit.* identities`, and "no session refusal" are present.
+4. Assert the fixture covers both rows and every named phrase; a missing page or phrase fails as a coverage failure.
+5. Assert the run does not read any other `doc/spec/features/**` page, so phase 3 stays independently green.
+
+**Expected Outcome**:
+- The two phase-3 behavior-spec rows are stale-absent and required-present.
+- The completion ordering/staging text matches the delivered behavior and the five-row commit domain.
+- Phase 3 is green without waiting for phase 10.
+
+**Pass/Fail Evidence**:
+- `bun test tests/checks/doc-conformance.test.ts -t "scope: behavior-spec"` exits 0; a stale phrase, a missing required phrase, or a missing row names the page and phrase.
 
 #### TC-KEYVAL-001 - `merge` text is byte-identical
 
@@ -1942,16 +2023,18 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 **Steps**:
 1. Assert each pure writer/reviewer prompt contains no commit trigger and no raw git.
 2. Assert the caller-orchestrator prompt owns the commit trigger.
-3. Assert `pr-manager` keeps push/PR creation but performs no merge and no commit.
-4. Mutate a temp copy with a commit step in a pure writer and assert a failure.
+3. Assert `@pr-manager` never merges (no `gh pr merge`, `glab mr merge`, or `merge` command step) and never runs raw git (`git add`, `git commit`, `git reset`, amend, or a hand-crafted commit recipe). For a dirty worktree at PR time it invokes the typed `commit` primitive, or delegates to the thin `@committer` that only invokes `commit`; it does **not** assert "no commit at all" and does not forbid the dirty-tree commit path.
+4. Assert `@pr-manager` keeps push and PR creation as its only retained git writes.
+5. Mutate a temp copy with a commit step in a pure writer and assert a failure; mutate a temp copy with a raw-git or merge step in `pr-manager` and assert a failure.
 
 **Expected Outcome**:
 - Pure writers stay pure.
 - The caller commits through `commit`.
-- `pr-manager` keeps only push/PR creation.
+- `@pr-manager` never merges and never runs raw git; a dirty worktree commits through `commit` or the thin `@committer`, and push/PR creation remain its only retained git writes.
+- A correct dirty-tree delegation to `commit` is not reported as a violation.
 
 **Pass/Fail Evidence**:
-- `bun test tests/checks/agent-role-conformance.test.ts` exits 0; the mutant fails.
+- `bun test tests/checks/agent-role-conformance.test.ts` exits 0; the mutants fail, while a dirty-tree `commit`/thin-`@committer` instruction passes.
 
 #### TC-COORD-001 - J1 sequence is ordered and avoids raw merge/discovery
 
@@ -2277,33 +2360,38 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 **Pass/Fail Evidence**:
 - `bun test tests/conformance/pilot/pilot-determinism.test.ts` exits 0; a byte diff names the first differing artifact.
 
-#### TC-PILOT-006 - Durable records, runtime bound, and cleanup hold
+#### TC-PILOT-006 - Durable records, deterministic bounds, and cleanup hold
 
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: F-10, AC-F10-1, NFR-8, section 8.2
+**Related IDs**: F-10, AC-F10-1, AC-F10-2, NFR-8, section 8.2
 **Test Type(s)**: Conformance
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/pilot/pilot-records.test.ts` and `pilot-runtime.test.ts`
-**Tags**: @conformance, @pilot, @records
+**Tags**: @conformance, @pilot, @records, @determinism
 
 **Preconditions**:
 - The pilot run from TC-PILOT-002 has completed.
+- The clock and id generator are fixed; the harness exposes the step/retry budget and a sleep guard.
+- The suite runs under the repository's fixed `bun test` timeout; duration is recorded as informational metadata only.
 
 **Steps**:
 1. Assert `phase.transition` and `commit.telemetry` records exist with the expected identities.
 2. Assert the merge, closeout, and blocker-answer records exist with the expected keys.
-3. Measure the suite wall time and assert it is at or under 180 s on the reference environment.
-4. Assert every temp repository, state directory, and bare remote is removed in teardown.
+3. Assert the deterministic pilot conditions hold: the clock and ids are fixed/identically injected for both runs, the fixed step/retry budget is not exceeded, the sleep guard records zero sleeps, and no outbound call is made (re-assert with `TC-PILOT-004`).
+4. Assert the two-run replay is byte-identical (`TC-PILOT-005`).
+5. Assert the suite completes inside the fixed test-runner timeout, and record the wall-clock duration as informational output only. Do not assert a 180 s (or any wall-clock) threshold.
+6. Assert every temp repository, state directory, and bare remote is removed in teardown.
 
 **Expected Outcome**:
 - The durable evidence is present and keyed correctly.
-- The runtime stays within the budget.
+- The deterministic conditions hold: fixed clock/ids, no sleeps, bounded step/retry budget, zero outbound calls, byte-identical replay, fixed runner timeout.
+- The recorded duration is informational and never decides pass/fail.
 - No temp artifact survives.
 
 **Pass/Fail Evidence**:
-- `bun test tests/conformance/pilot/pilot-records.test.ts tests/conformance/pilot/pilot-runtime.test.ts` exits 0; a missing record, an over-budget run, or a surviving temp root fails the test.
+- `bun test tests/conformance/pilot/pilot-records.test.ts tests/conformance/pilot/pilot-runtime.test.ts` exits 0; a missing record, a sleep, an exceeded step/retry budget, a non-identical replay, a timeout, or a surviving temp root fails the test. A duration above 180 s alone does not fail it.
 
 ## 6. Environments and Test Data
 
@@ -2314,7 +2402,7 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 - **Fixed clock and ids.** The pilot and golden suites use a fixed clock (`2026-11-07T00:00:00Z` or the existing fixture constant) and a deterministic id sequence. No `Date.now()` or random id appears in an assertion path.
 - **Sanitized environment.** The harness one-shot test passes an explicit environment record; no test mutates `process.env` for another test. Canary keys prove deny-by-default.
 - **No child process except git.** The commit/phase and pilot suites spawn the local `git` binary for real objects and landing; every other external surface is injected.
-- **CI.** The new invariant checks run with `bun run scripts/checks/*.ts` and are mutation-tested by `tests/checks/**`; the aggregate gate is `pnpm check`. The pilot suite is part of `bun test` and must stay under the 180 s budget.
+- **CI.** The new invariant checks run with `bun run scripts/checks/*.ts` and are mutation-tested by `tests/checks/**`; the aggregate gate is `pnpm check`. The pilot suite is part of `bun test`; its bounds are deterministic (fixed clock/ids, no sleeps, bounded step/retry budget, byte-identical replay) and the fixed test-runner timeout, with wall-clock duration informational only.
 - **Working directory.** Tests that inspect paths use `process.cwd()` only for read-only fixture discovery, never for writes.
 
 ### 6.2 Test Data and Fixtures Inventory
@@ -2327,7 +2415,7 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 | `tests/fixtures/prompt-inventory/allowlist.json` | New | Read-only git and `@pr-manager` push/PR-creation allowances | `tests/fixtures/forbidden-literals/true-positives.json` |
 | `tests/fixtures/prompt-inventory/retained-retired.json` | New | Appendix B classification | `scripts/checks/forbidden-literals.registry.json` |
 | `tests/fixtures/prompt-inventory/mutants/` | New | One forbidden pattern per scan rule | `tests/fixtures/forbidden-literals/true-positives.json` |
-| `tests/fixtures/help-guide/coverage.json` | New | Invocation to help and reference-page coverage mapping | `tests/fixtures/result/result-shape.json` |
+| `tests/fixtures/help-guide/coverage.json` | New (created in phase 1; static) | Invocation to help and reference-page obligation mapping; phase 1 asserts see-also rows, phase 8 asserts reconciled page existence/parity | `tests/fixtures/result/result-shape.json` |
 | `tests/fixtures/key-register/register.json` | New | Appendix A surface-to-key register | `tests/fixtures/result/envelope-key-set.json` |
 | `doc/planning/oss-tooling/milestones/m1/commands/entrypoint.md` | New | Root/entrypoint reference page for `--help`/`--version` | `doc/planning/oss-tooling/milestones/m1/man-page.md` |
 | `tests/fixtures/commit/harness.ts` | Existing, extend | In-session facts, change-folder staging, ordering recorder, reverse-window injection | `withCommitHarness` |
@@ -2347,9 +2435,10 @@ Test IDs follow the `TC-FEATURE-NNN` pattern. Each test file carries the TC IDs 
 | `tests/fixtures/pilot/repo.ts` | New | Seed change folder, plan, pm-notes, ready item | `tests/fixtures/closeout/temp-git.ts` |
 | `tests/fixtures/pilot/stubs.ts` | New | Tracker, CI, PR-platform, provider stubs with counters | `tests/fixtures/merge/harness.ts` |
 | `tests/fixtures/pilot/matrix.ts` | New | Appendix D real/stub matrix assertion data | `tests/fixtures/status/matrix` |
+| `tests/checks/pilot-privacy.test.ts` | New (phase 9) | Pilot-data privacy/secret scan and canary mutants (the pilot half of the split from `TC-PSCAN-009`) | `tests/checks/privacy-authoring.test.ts` |
 | `tests/conformance/pilot/*.test.ts` | New | Pilot J1 suite: fixture, iteration, isolation, determinism, records, runtime | `tests/conformance/**` |
 
-The fixture names above are canonical: the plan, this test plan, and the tests must use them identically. No alternative names (`matrix.json`, `roles.json`, `prompt-command-set.ts`, `tests/fixtures/plan/golden`, `tests/fixtures/plan/valid|invalid` for summary cases) are used anywhere. The privacy/secret scan and the commit safety scan re-run over every new fixture class (`TC-PSCAN-006`, `TC-PSCAN-009`).
+The fixture names above are canonical: the plan, this test plan, and the tests must use them identically. No alternative names (`matrix.json`, `roles.json`, `prompt-command-set.ts`, `tests/fixtures/plan/golden`, `tests/fixtures/plan/valid|invalid` for summary cases) are used anywhere. The privacy/secret scan is split by owning phase: `TC-PSCAN-006` and `TC-PSCAN-009` cover the prompts/guides and non-pilot fixtures in phase 8; `TC-PSCAN-010` covers the pilot fixtures and pilot suite created in phase 9. The commit safety scan re-runs in both phases.
 
 ### 6.3 Isolation and Cleanup
 
@@ -2365,12 +2454,12 @@ The fixture names above are canonical: the plan, this test plan, and the tests m
 | TC-ENTRY-001 | `tests/behaviour/entrypoint-version.test.ts` | `bun test tests/behaviour/entrypoint-version.test.ts` | To Implement | In-process entrypoint; recording state/git/network ports |
 | TC-ENTRY-002 | `tests/behaviour/entrypoint-version.test.ts` | `bun test tests/behaviour/entrypoint-version.test.ts` | To Implement | Synthetic environment record; configured/override/neutral-default cases |
 | TC-ENTRY-003 | `tests/behaviour/entrypoint-help.test.ts` | `bun test tests/behaviour/entrypoint-help.test.ts` | To Implement | Recording ports |
-| TC-ENTRY-004 | `tests/behaviour/entrypoint-help-coverage.test.ts` | `bun test tests/behaviour/entrypoint-help-coverage.test.ts` | To Implement | `tests/fixtures/entrypoint/programs.ts` command-set fixture |
+| TC-ENTRY-004 | `tests/behaviour/entrypoint-help-coverage.test.ts` | `bun test tests/behaviour/entrypoint-help-coverage.test.ts` | To Implement | `tests/fixtures/entrypoint/programs.ts` command-set fixture; static `tests/fixtures/help-guide/coverage.json` from phase 1 |
 | TC-ENTRY-005 | `tests/behaviour/entrypoint-help-isolation.test.ts` | `bun test tests/behaviour/entrypoint-help-isolation.test.ts` | To Implement | Empty temp directory |
 | TC-ENTRY-006 | `tests/behaviour/entrypoint-help-isolation.test.ts` | `bun test tests/behaviour/entrypoint-help-isolation.test.ts` | To Implement | Poisoned ports; no-spawn guard |
 | TC-ENTRY-007 | `tests/checks/forbidden-literals.test.ts` | `bun test tests/checks/forbidden-literals.test.ts` | Existing, update | Temp copy mutation |
 | TC-ENTRY-008 | `tests/structure/entrypoint-installer-absence.test.ts`; `scripts/.tests/test-install.sh` | `bun test tests/structure/entrypoint-installer-absence.test.ts && bash scripts/.tests/test-install.sh` | To Implement / Existing | Shell temp install root |
-| TC-ENTRY-009 | `tests/behaviour/entrypoint-composition.test.ts`; `tests/structure/state-scope.test.ts` | `bun test tests/behaviour/entrypoint-composition.test.ts tests/structure/state-scope.test.ts` | To Implement | Registry inspection; missing-port composition; absence assertions |
+| TC-ENTRY-009 | `tests/behaviour/entrypoint-composition.test.ts`; `tests/structure/state-scope.test.ts`; `tests/structure/error-table.test.ts` | `bun test tests/behaviour/entrypoint-composition.test.ts tests/structure/state-scope.test.ts tests/structure/error-table.test.ts` | To Implement | Registry inspection; uncomposed invocation; `fallback.internal` identity; absence assertions |
 | TC-ENTRY-010 | `tests/structure/entrypoint-bin.test.ts` | `bun test tests/structure/entrypoint-bin.test.ts` | To Implement | `packages/cli/package.json` `bin`/`main`; installer arrays |
 | TC-SESS-001 | `tests/behaviour/commit-session-adoption.test.ts` | `bun test tests/behaviour/commit-session-adoption.test.ts` | Existing, update | `withCommitHarness`; scripted transport/safety |
 | TC-SESS-002 | `tests/behaviour/phase-session-adoption.test.ts` | `bun test tests/behaviour/phase-session-adoption.test.ts` | Existing, update | `withCommitHarness`; in-session facts; phase-2 scope only (no staging assertions) |
@@ -2404,13 +2493,15 @@ The fixture names above are canonical: the plan, this test plan, and the tests m
 | TC-PSCAN-006 | `tests/checks/prompt-secret-scan.test.ts`; `tests/checks/privacy-authoring.test.ts`; `tests/behaviour/commit-safety.test.ts` | `bun test tests/checks/prompt-secret-scan.test.ts tests/checks/privacy-authoring.test.ts tests/behaviour/commit-safety.test.ts` | To Implement / Existing | Canary fixtures; new fixture inventory |
 | TC-PSCAN-007 | `tests/checks/prompt-conformance.test.ts`; `tests/behaviour/commit-command.test.ts` | `bun test tests/checks/prompt-conformance.test.ts tests/behaviour/commit-command.test.ts` | To Implement / Existing | Commit harness |
 | TC-PSCAN-008 | `tests/checks/prompt-conformance.test.ts`; `tests/behaviour/pm-notes-lint.test.ts` | `bun test tests/checks/prompt-conformance.test.ts tests/behaviour/pm-notes-lint.test.ts` | To Implement / Existing | pm-notes fixture |
-| TC-PSCAN-009 | `tests/checks/prompt-secret-scan.test.ts`; `tests/checks/privacy-authoring.test.ts`; `tests/behaviour/commit-safety.test.ts` | `bun test tests/checks/prompt-secret-scan.test.ts tests/checks/privacy-authoring.test.ts tests/behaviour/commit-safety.test.ts` | To Implement / Existing | Canary values for every new fixture class |
+| TC-PSCAN-009 | `tests/checks/prompt-secret-scan.test.ts`; `tests/checks/privacy-authoring.test.ts`; `tests/behaviour/commit-safety.test.ts` | `bun test tests/checks/prompt-secret-scan.test.ts tests/checks/privacy-authoring.test.ts tests/behaviour/commit-safety.test.ts` | To Implement / Existing | Canary values for every non-pilot fixture class; no pilot data |
+| TC-PSCAN-010 | `tests/checks/pilot-privacy.test.ts`; `tests/checks/prompt-secret-scan.test.ts`; `tests/checks/privacy-authoring.test.ts`; `tests/behaviour/commit-safety.test.ts` | `bun test tests/checks/pilot-privacy.test.ts tests/checks/prompt-secret-scan.test.ts tests/checks/privacy-authoring.test.ts tests/behaviour/commit-safety.test.ts` | To Implement | Canary values for pilot fixture classes; phase-9 pilot data |
 | TC-HELP-001 | `scripts/checks/help-guide-coverage.ts`; `tests/checks/help-guide-coverage.test.ts`; `tests/fixtures/help-guide/coverage.json` | `bun run scripts/checks/help-guide-coverage.ts && bun test tests/checks/help-guide-coverage.test.ts` | To Implement | `coverage.json` fixture |
 | TC-HELP-002 | `tests/checks/help-guide-coverage-mutants.test.ts` | `bun test tests/checks/help-guide-coverage-mutants.test.ts` | To Implement | Temp copy mutants |
 | TC-HELP-003 | `tests/checks/reference-page-parity.test.ts` | `bun test tests/checks/reference-page-parity.test.ts` | To Implement | Help output capture |
 | TC-DOCREC-001 | `scripts/.tests/test-build-claude-plugin.sh` | `bash scripts/.tests/test-build-claude-plugin.sh` | Existing, no change | Temp build copy |
 | TC-DOCREC-002 | `tests/checks/doc-conformance.test.ts` (`scope: docs`) | `bun test tests/checks/doc-conformance.test.ts` | To Implement / Manual | Phase-7 phrase fixtures |
-| TC-DOCREC-003 | `tests/checks/doc-conformance.test.ts` (`scope: full`) | `bun test tests/checks/doc-conformance.test.ts` | To Implement | Full §16.1 phrase fixtures; four omitted specs |
+| TC-DOCREC-003 | `tests/checks/doc-conformance.test.ts` (`scope: full`) | `bun test tests/checks/doc-conformance.test.ts` | To Implement | Complete §16.1.1 phrase fixtures; four omitted specs; generic row |
+| TC-DOCREC-004 | `tests/checks/doc-conformance.test.ts` (`scope: behavior-spec`) | `bun test tests/checks/doc-conformance.test.ts -t "scope: behavior-spec"` | To Implement | Phase-3 rows of the §16.1.1 phrase table |
 | TC-KEYVAL-001 | `tests/golden/merge.test.ts` | `bun test tests/golden/merge.test.ts` | Existing, update | Merge fixtures |
 | TC-KEYVAL-002 | `tests/golden/queue-list.test.ts`; `tests/golden/queue-plan.test.ts` | `bun test tests/golden/queue-list.test.ts tests/golden/queue-plan.test.ts` | Existing, update | Queue fixtures |
 | TC-KEYVAL-003 | `tests/golden/verify-gates.test.ts`; `tests/golden/verify-deploy.test.ts`; `tests/golden/verify-change.test.ts` | `bun test tests/golden/verify-*.test.ts` | Existing, update | Verify fixtures |
@@ -2431,7 +2522,7 @@ The fixture names above are canonical: the plan, this test plan, and the tests m
 | TC-PILOT-003 | `tests/conformance/pilot/pilot-isolation.test.ts` | `bun test tests/conformance/pilot/pilot-isolation.test.ts` | To Implement | Recorder ports; matrix fixture |
 | TC-PILOT-004 | `tests/conformance/pilot/pilot-isolation.test.ts` | `bun test tests/conformance/pilot/pilot-isolation.test.ts` | To Implement | No-spawn and network guards |
 | TC-PILOT-005 | `tests/conformance/pilot/pilot-determinism.test.ts` | `bun test tests/conformance/pilot/pilot-determinism.test.ts` | To Implement | Two seeded temp roots |
-| TC-PILOT-006 | `tests/conformance/pilot/pilot-records.test.ts`; `tests/conformance/pilot/pilot-runtime.test.ts` | `bun test tests/conformance/pilot` | To Implement | State records; timing |
+| TC-PILOT-006 | `tests/conformance/pilot/pilot-records.test.ts`; `tests/conformance/pilot/pilot-runtime.test.ts` | `bun test tests/conformance/pilot` | To Implement | State records; fixed clock/ids; sleep guard; step/retry budget |
 
 ### 7.1 Execution Order
 
@@ -2449,18 +2540,18 @@ Each plan phase must be independently green. The revised phase order and the tes
 
 | Plan phase | Scope | TC IDs |
 |---|---|---|
-| 1 | Executable bin/composition, root/command help, version identity, composition honesty | `TC-ENTRY-001` through `TC-ENTRY-010` |
+| 1 | Executable bin/composition, root/command help, version identity, composition honesty; creates the static coverage inventory | `TC-ENTRY-001` through `TC-ENTRY-010` |
 | 2 | Delivery-session guard reversal, sanitized one-shot, error-row retirement, TDR verification | `TC-SESS-001` through `TC-SESS-005`; `TC-ERRROW-001` through `TC-ERRROW-004` |
-| 3 | Staging scope, plan-absent staging, completion ordering, reverse-window restore, failed-restore exit 2, convergence | `TC-STAGE-001` through `TC-STAGE-010` |
+| 3 | Staging scope, plan-absent staging, completion ordering, reverse-window restore, failed-restore exit 2, convergence; reconciles the two §16.1.1 ordering/staging behavior-spec rows | `TC-STAGE-001` through `TC-STAGE-010`; `TC-DOCREC-004` |
 | 4 | Plan contract/validator/template/plan-writer and code/template consumers only | `TC-PLANSUM-001` through `TC-PLANSUM-004` |
 | 5 | Foundation prompt adoption (PM, coder, committer, commit, run-plan) | `TC-ADOPT-001`, `TC-ADOPT-002`, `TC-PLANSUM-005` (scan re-run in phase 8) |
 | 6 | Coordination prompt adoption (ceo, lanes, remaining commands) | `TC-COORD-001` through `TC-COORD-003`; `TC-BLKADOPT-001` through `TC-BLKADOPT-003` |
-| 7 | Guides, man page, and reference pages only (scoped doc conformance) | `TC-DOCREC-002`; `TC-HELP-003` supporting |
-| 8 | Prompt/doc scans, help coverage, reference parity, key=value goldens, secret/safety re-runs | `TC-PSCAN-001` through `TC-PSCAN-009`; `TC-HELP-001`, `TC-HELP-002`; `TC-KEYVAL-001` through `TC-KEYVAL-007`; `TC-PLANSUM-005` re-run |
-| 9 | Pilot J1 conformance suite | `TC-PILOT-001` through `TC-PILOT-006` |
-| 10 | Final plugin freshness, full feature-spec conformance (four omitted specs), aggregate gate, clean tree | `TC-DOCREC-001`, `TC-DOCREC-003`; full `pnpm check` re-runs every family |
+| 7 | Guides, man page, and reference pages only (scoped doc conformance); updates the pages the phase-8 coverage/parity cases verify | `TC-DOCREC-002`; `TC-HELP-003` supporting |
+| 8 | Non-pilot prompt/doc scans over `.opencode/**` and the phase-7 updated guides/man/reference pages, help coverage, reference parity, non-pilot secret/safety re-runs, key=value goldens | `TC-PSCAN-001` through `TC-PSCAN-009` (excludes `TC-PSCAN-010`); `TC-HELP-001`, `TC-HELP-002`, `TC-HELP-003`; `TC-KEYVAL-001` through `TC-KEYVAL-007`; `TC-PLANSUM-005` re-run |
+| 9 | Pilot J1 conformance suite; pilot fixture/suite privacy and safety scan after the pilot data exists | `TC-PILOT-001` through `TC-PILOT-006`; `TC-PSCAN-010` |
+| 10 | Final plugin freshness, full feature-spec conformance against the complete §16.1.1 phrase table (including the system-spec raw-git/phase-state rules), aggregate gate, clean tree | `TC-DOCREC-001`, `TC-DOCREC-003`; full `pnpm check` re-runs every family |
 
-The plan YAML must list the same fixture names and the same phase-owned test files as section 6.2 and section 7. A test declared in a phase must pass with only that phase's scope applied.
+The plan YAML must list the same fixture names and the same phase-owned test files as section 6.2 and section 7. A test declared in a phase must pass with only that phase's scope applied. In particular, phase 3's scope/test list must include the two behavior-spec pages and the `scope: behavior-spec` doc-conformance run (`TC-DOCREC-004`), phase 8 must not list pilot data, and phase 9's test list must include the pilot privacy/safety scan (`TC-PSCAN-010`).
 
 ### 7.3 Definition-of-Done Evidence Map
 
@@ -2477,14 +2568,14 @@ The spec's §17.1 DoD-1..DoD-20 map to this plan as follows. A DoD row without p
 | DoD-7 | `TC-STAGE-001` through `TC-STAGE-005`, `TC-STAGE-008` | 3 |
 | DoD-8 | `TC-STAGE-006`, `TC-STAGE-007`, `TC-STAGE-009`, `TC-STAGE-010` | 3 |
 | DoD-9 | `TC-PSCAN-002`, `TC-PSCAN-007`, `TC-ADOPT-001`, `TC-ADOPT-002` | 5, 8 |
-| DoD-10 | `TC-BLKADOPT-001` through `TC-BLKADOPT-003`, `TC-PSCAN-006`, `TC-PSCAN-009` | 6, 8 |
+| DoD-10 | `TC-BLKADOPT-001` through `TC-BLKADOPT-003`, `TC-PSCAN-006`, `TC-PSCAN-009`, `TC-PSCAN-010` | 6, 8, 9 |
 | DoD-11 | `TC-COORD-001` through `TC-COORD-003`, `TC-PILOT-002`, `TC-DOCREC-002` | 6, 7, 9 |
 | DoD-12 | `TC-PLANSUM-001` through `TC-PLANSUM-005` | 4, 5, 8 |
 | DoD-13 | `TC-HELP-001` through `TC-HELP-003`, `TC-PSCAN-003`, `TC-PSCAN-004`, `TC-DOCREC-001` | 6–8, 10 |
-| DoD-14 | `TC-DOCREC-002`, `TC-DOCREC-003` | 7, 10 |
+| DoD-14 | `TC-ERRROW-002`, `TC-DOCREC-002`, `TC-DOCREC-003`, `TC-DOCREC-004` | 2, 3, 7, 10 |
 | DoD-15 | `TC-KEYVAL-001` through `TC-KEYVAL-007` | 8 |
 | DoD-16 | `TC-PILOT-001` through `TC-PILOT-006` | 9 |
-| DoD-17 | `TC-PSCAN-005`, `TC-PSCAN-006`, `TC-PSCAN-009`, `TC-PILOT-005` | 8, 9 |
+| DoD-17 | `TC-PSCAN-005`, `TC-PSCAN-006`, `TC-PSCAN-009`, `TC-PSCAN-010`, `TC-PILOT-005` | 8, 9 |
 | DoD-18 | Every §3.1/§3.3 row Covered; execution log populated | 10 |
 | DoD-19 | Section 7.1 aggregate `pnpm check`; per-phase commands; clean tree | 10 |
 | DoD-20 | PR record and description; pm-notes risk-acceptance entry; TDR-0013 review note (manual) | 10 |
@@ -2501,11 +2592,12 @@ The spec's §17.1 DoD-1..DoD-20 map to this plan as follows. A DoD row without p
 | TR-4 | Pilot stubs diverge from real adapters | M | M | Stubs implement the delivered ports; adapter contract tests remain; the pilot asserts only the stub surfaces and a real state/git/file path |
 | TR-5 | Reference pages are missing or stale | M | M | The `coverage.json` fixture lists every required page; missing pages are added in this change; parity test compares flags |
 | TR-6 | Golden churn hides a real regression | M | L | Goldens are byte-pinned and regenerated only by an explicit command; the key-register test proves no key is silently dropped |
-| TR-7 | Conformance runtime exceeds 180 s | M | L | One pilot suite, shared fixtures, no process spawn except git; the runtime test fails over budget |
+| TR-7 | Pilot determinism or boundedness regresses (sleeps, unbounded retries, nondeterministic clock/ids) | M | L | Fixed clock/ids, sleep guard, bounded step/retry budget, byte-identical replay, and the fixed test-runner timeout; wall-clock duration is informational only |
 | TR-8 | A prompt is added after this change and drifts | M | M | The scan is wired into `pnpm check`/CI; a new prompt without an inventory row fails the scan |
 | TR-9 | The reversed completion order leaves pm-notes ahead of the ledger when the commit act fails | H | M | Pre-write snapshot + restore on each failure mode; failed restore exits 2 with a reconciliation instruction; retry converges to one transition/commit (`TC-STAGE-009`, `TC-STAGE-010`) |
-| TR-10 | A phase test depends on a later phase's files, so the phase is not independently green | H | M | The phase mapping in §7.2 keeps staging in phase 3, prompt scans in phase 5/8, scoped doc conformance in phase 7, and full feature-spec conformance in phase 10; each phase's declared command must pass alone |
+| TR-10 | A phase test depends on a later phase's files, so the phase is not independently green | H | M | §7.2 keeps staging in phase 3, non-pilot prompt/doc scans in phase 8, the pilot and pilot-data privacy scan in phase 9, and full feature-spec conformance in phase 10; phase 8 never reads `doc/spec/features/**`, and phase 9 never needs phase-8 pilot data. Each phase's declared command must pass alone |
 | TR-11 | Fixture names diverge between this test plan and the plan YAML | M | M | Section 6.2 is the single canonical list; the plan revision must use the same names; review checks the two inventories side by side |
+| TR-12 | The plan YAML's phase scope/test list lags this test plan's ownership split | M | M | Phase 3 must add the behavior-spec doc-conformance parameter set, phase 1 must own the static coverage inventory, phase 8 must drop pilot data, and phase 9 must add the pilot privacy/safety scan; the plan review gate closes these before delivery |
 
 ### 8.2 Assumptions
 
@@ -2524,9 +2616,8 @@ The spec's §17.1 DoD-1..DoD-20 map to this plan as follows. A DoD row without p
 | OQ-T1 | What exact grammar defines a "primary path" in a prompt for the retained/retired scan? | Treat numbered steps and fenced command blocks as primary; every retained mention must include the token `retained`; every retired path is forbidden in those positions. | No; the proposed grammar is deterministic and mutation-tested | engineering |
 | OQ-T2 | Does `plan validate` reject an unknown `tasks` key? | The plan does not require the key and does not assert rejection. It asserts absence is valid and no consumer or prompt reads/writes `tasks`. If the validator rejects unknown keys, that is documented separately. | No | spec/plan owner |
 | OQ-T3 | Should the pilot suite live under `tests/conformance/pilot/` or `tests/behaviour/pilot/`? | `tests/conformance/pilot/` because it is an end-to-end conformance exercise, not a unit behaviour suite. | No | engineering |
-| OQ-T4 | Is any wall-clock latency measured in CI? | No gate. The isolation suite records duration as informational metadata only; the assertion is zero reads/writes plus the fixed suite timeout. | No | engineering |
+| OQ-T4 | Is any wall-clock latency measured in CI? | No gate. The isolation and pilot suites record duration as informational metadata only; the assertions are zero reads/writes, fixed clock/ids, no sleeps, a bounded step/retry budget, byte-identical replay, and the fixed suite timeout. | No | engineering |
 | OQ-T5 | Is a built-binary smoke test required? | The structural bin/manifest assertion (`TC-ENTRY-010`) is the AC evidence; a built-artifact smoke check is supplemental and must not replace it. | No | engineering |
-| OQ-T6 | Does the plan YAML already use the canonical fixture names and the phase split in §7.2? | The test plan fixes the canonical names and phase ownership; the plan revision must align its scopes and test commands to §6.2/§7.2. Until then, the plan YAML is a residual alignment item, not a test-design gap. | No for test design; yes for the plan review gate | plan owner |
 
 ## 9. Plan Revision Log
 
@@ -2534,6 +2625,7 @@ The spec's §17.1 DoD-1..DoD-20 map to this plan as follows. A DoD row without p
 |---|---|---|---|
 | 0.1 | 2026-11-07 | test-plan-writer | Initial test plan derived from the GH-242 specification, ticket ACs, Appendix A/B/D, and the repository testing strategy. |
 | 0.2 | 2026-11-07 | test-plan-writer | DoR iteration-1 remediation. Added the reverse-window cases (TC-STAGE-009/010, AC-F2-4) and split phase-2 session adoption from phase-3 staging (TC-SESS-002). Moved the plan prompt scan to phase 5/8 (TC-PLANSUM-005) and scoped phase-4 consumers to code/template (TC-PLANSUM-003). Split doc conformance into phase-7 scoped (TC-DOCREC-002) and phase-10 full feature-spec (TC-DOCREC-003, four omitted specs, AC-F8-5/NFR-13). Canonicalized the fixture inventory and added privacy/safety re-runs (TC-PSCAN-009). Replaced the p95 gate with deterministic zero-read/zero-write plus fixed timeout (TC-ENTRY-006), promoted TC-ENTRY-009 to must-pass for AC-F1-6 with state/mcp/dispatch/daemon absence, and added TC-ENTRY-010 for AC-F1-7. Aligned ticket-AC traceability to Appendix C's six rows and used "stubbed or deterministically injected" for clock/ids. Specified the retired-row detection mechanism (TC-ERRROW-003). Total 70 TCs; all ACs covered. |
+| 0.3 | 2026-11-07 | test-plan-writer | DoR iteration-2 remediation and spec 1.2 alignment. RR-17: split the privacy/safety scan by fixture availability — TC-PSCAN-009 is phase-8 non-pilot only; new TC-PSCAN-010 owns the phase-9 pilot fixtures/suite. RR-21: TC-PSCAN-001/002 no longer read `doc/spec/features/**` in phase 8; the system-spec phrase scan moves to phase 10/TC-DOCREC-003, and the phase map states the split. RR-22: TC-DOCREC-003 now consumes the spec's §16.1.1 stale/required table exactly, including the generic behavioral-primitives row, and drops the "every §16.1 row" claim; NFR-13/AC-F8-5 wording matches. RR-23: TC-ADOPT-002 asserts `@pr-manager` never merges and never runs raw git; a dirty worktree commits via `commit` or the thin `@committer`, not "no commit at all". RR-24: TC-ENTRY-004 uses the phase-1 static `tests/fixtures/help-guide/coverage.json`; page reconciliation stays TC-HELP-001/003 in phases 7/8. RR-25: TC-PILOT-006 replaces the 180 s assertion with fixed clock/ids, no sleeps, bounded step/retry budget, byte-identical replay, zero outbound calls, and the fixed runner timeout (duration informational). RR-26: TC-STAGE-009 asserts HEAD/commit-count unchanged and no reachable commit object, not object-database absence. RR-27: removed stale OQ-T6. Added TC-DOCREC-004 for the phase-3 behavior-spec phrase-table rows (supporting the spec's phase-3 ownership). TC-ENTRY-009 now asserts the `fallback.internal` composition identity and no new error-table row. Total 72 TCs; all ACs covered. |
 
 ## 10. Test Execution Log
 
