@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "prompt.allowed-commands.v1",
+  "binary": [
+    "status",
+    "brief",
+    "queue",
+    "lanes",
+    "blockers",
+    "phase",
+    "commit",
+    "lint",
+    "plan",
+    "verify",
+    "merge",
+    "closeout",
+    "spend",
+    "retro"
+  ],
+  "retained": ["scripts/deliver-ticket.sh", "scripts/ceo-loop.sh"],
+  "readOnlyGit": ["status", "diff", "log", "rev-parse", "branch --list"],
+  "prManager": ["git push", "gh pr create", "glab mr create"]
+}

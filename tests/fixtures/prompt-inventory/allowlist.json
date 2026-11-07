@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "prompt.allowlist.v1",
+  "allowedRawGitWrites": [],
+  "allowedRawGitReads": ["status", "diff", "log", "rev-parse", "branch --list"],
+  "allowedPlatformCommands": ["gh pr create", "glab mr create", "git push"],
+  "retiredPlatformCommands": ["gh pr merge", "glab mr merge", "gh pr list"]
+}

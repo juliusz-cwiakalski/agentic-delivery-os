@@ -28,5 +28,6 @@
       "required": ["commit", "phase complete", "pm-notes"],
       "forbidden": ["commit per task"]
     }
-  ]
+  ],
+  "scanRoots": [".opencode/agent", ".opencode/command"]
 }

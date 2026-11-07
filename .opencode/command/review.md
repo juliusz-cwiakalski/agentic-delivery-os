@@ -97,7 +97,7 @@ If findings exist, append new phase to plan:
 ### Phase X: Code Review Remediation
 
 - Goal: Address code review findings.
-- Tasks:
+- Remediation items:
   - [ ] <precise fix per finding>
 - Acceptance criteria:
   - Must: All fixes implemented and validated.

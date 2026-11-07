@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "key.register.v1",
+  "surfaces": {
+    "merge": {
+      "file": "tests/fixtures/merge/golden/success-human.txt",
+      "keys": ["result=", "change=", "squash=", "landing=", "refresh=", "waivers=", "post-landing="]
+    },
+    "verify-deploy": {
+      "file": "tests/fixtures/verify-deploy/golden/verified-human.txt",
+      "keys": ["verdict=", "change=", "job=", "expectation="]
+    },
+    "blockers": {
+      "file": "tests/fixtures/blockers/golden/list-human.txt",
+      "keys": ["open=", "answered="]
+    },
+    "queue-plan": {
+      "file": "tests/fixtures/queue/golden/queue-plan.json",
+      "jsonKeys": [
+        "schemaVersion",
+        "entries",
+        "leases",
+        "weights",
+        "parks",
+        "findings",
+        "degraded",
+        "truncated",
+        "counts"
+      ]
+    },
+    "verify-change": {
+      "file": "tests/fixtures/verify-gates/golden/verify-change-human.txt",
+      "jsonKeys": ["changeRef", "target", "result", "variant", "requiredPhases"]
+    }
+  }
+}

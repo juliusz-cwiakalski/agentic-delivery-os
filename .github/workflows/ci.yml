@@ -458,6 +458,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Fetch base branch for the topology check
         run: git fetch --no-tags origin main-tools
+      - name: Run deterministic prompt and help/guide conformance scans
+        run: |
+          bun run scripts/checks/prompt-conformance.ts
+          bun run scripts/checks/help-guide-coverage.ts
       - name: Run the single aggregate check and record duration
         run: |
           start=$(date +%s)
