@@ -104,3 +104,6 @@ notes:
   - text: "retro: consumer-golden reconciliation landed in phase 7 rather than the byte-changing phase 2, leaving the aggregate red mid-delivery on those goldens (within accepted deviation, final battery green). Future plans for multi-consumer contract changes should schedule consumer golden updates inside the single byte-changing phase."
     type: "retro"
     date: "2026-11-07"
+  - text: "Plan phase 8 complete (commit d2dbd779): review remediation F-1 — assertionAvailability now selects availability.epicMembership/storyPoints/inSprint through the typed ternary and compares to \"available\", dropping the `as unknown as Readonly<Record<string, string | undefined>>` double cast and computed-key lookup. Pure refactor, zero behavior change. Gates green: status-hygiene + status-corpus + status-contract (60 pass / 0 fail), pnpm typecheck, and status-digest goldens (5 pass / 0 fail) with no golden file modified."
+    type: "info"
+    date: "2026-11-07"
