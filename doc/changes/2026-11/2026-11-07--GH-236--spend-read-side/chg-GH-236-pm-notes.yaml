@@ -1,0 +1,66 @@
+change_id: GH-236
+title: "M1-S19: Spend read side and resume amplification"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-07T02:45:00Z", completed: "2026-11-07T03:05:00Z" }
+  specification: { started: "2026-11-07T03:08:00Z", completed: "2026-11-07T03:25:00Z" }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null, url: null }
+decisions:
+  - text: "OQ-1 (spec): PM-decided to author a standalone TDR for the amplification formula (spec DEC-3) via @decision-advisor before test planning — AC-bearing, consumed later by M1-S21 routing and M2-S6 alarms; GH-232/TDR-0009 precedent."
+    date: "2026-11-07"
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: issue GH-236 open (labels change+review, milestone M1); no open PR anywhere for branch feat/GH-236/spend-read-side; no closed/merged PR ever for this ticket; no remote branch; no local change folder; fresh per-ticket worktree. Classified as fresh start, not resume; no main-tools sync merge needed. PR search matched only PR #252 (GH-223) via a substring in its body — not related."
+    type: info
+    date: "2026-11-07"
+  - text: "Dependency verified delivered: M1-S11 (GH-233 harness adapters and dispatch portability) merged to origin/main-tools as a69b555e at 2026-11-07T02:23:51Z — ~1.5h before session start. Ticket dependency satisfied; closeout-captured telemetry capture path and harness.telemetry record kind exist."
+    type: info
+    date: "2026-11-07"
+  - text: "Scope cross-check vs system spec and design baseline: spend command surface `<binary> spend [--ref <ref>] [--phase <phase>] [--amplification] [--json]` consistent across commands/spend.md, contracts.md §spend (Learn family), man-page.md, journeys.md; backlog.md M1-S19 entry matches ticket verbatim. Source data pinned: closeout-captured event log only — harness.telemetry session-group records (delivery.harness.telemetry.v1, key harness.telemetry:<workItemRef>) plus run-scoped capture-outcome records (delivery.harness.telemetry.capture.v1); NO harness re-query."
+    type: info
+    date: "2026-11-07"
+  - text: "Design resolution deferred to spec-writer (data available in the pinned event log): per-phase attribution — harness telemetry records carry no phase field; the delivery registry writes phase.transition records into the same ledger, so per-phase spend can fold phase windows over captured-at timestamps. Restart counts — capture-outcome records are per (workItemRef, runId), giving per-delivery run counts. Amplification ratio (tokens paid vs unique progress) and named events (restart-loop prefill re-pay) have no upstream primitive yet; design baseline defines the shape (ratio, events[] with cause/window/tokensWasted)."
+    type: info
+    date: "2026-11-07"
+  - text: "Captured caveat (not a blocker): no production composer injects the closeout telemetry capability yet — GH-240 (M1-S12) wires it, so real closeout runs capture no harness.telemetry records until then. spend v0 must treat telemetry-absent as the first-class classified outcome (spend.telemetry-absent, exit 1 per design baseline ERRORS/EXIT) rather than an edge case; fixture-seeded state stores prove the reporting path."
+    type: risk
+    date: "2026-11-07"
+  - text: "Token classes: harness telemetry carries five classes (input, output, reasoning, cacheRead, cacheWrite); the design-baseline example shows only three (input/cacheRead/output). Spec must reconcile to the delivered five-class vocabulary — spec-writer decision, design example is illustrative not binding."
+    type: info
+    date: "2026-11-07"
+  - text: "Cross-feature integration note: status digest currently names spend as a not-delivered gap ('until M1-S19', contracts.md line ~183, commands/status.md examples) and brief prints a placeholder spend summary. This change flips that gap to delivered — spec must decide whether status/brief consume a spend capability or the flip is registry-driven; reviewer/doc-syncer must verify no stale 'until M1-S19' claims remain."
+    type: risk
+    date: "2026-11-07"
+  - text: "Expected error contract: one new domain kind `spend` with spend.telemetry-absent (user, exit 1 per design baseline); reuses state.store.torn and state-layer identities for unreachable/torn event log (exit 2). Bidirectional error-table sync required. Exit baseline: 0 reported; 1 no telemetry for ref; 2 event log unreachable."
+    type: info
+    date: "2026-11-07"
+  - text: "Doc impacts for phase 7 (system_spec_update): author doc/spec/features/feature-spend.md (first-spec-only, none exists) with ados_distribution marker; reconcile feature-state-layer.md (spend as verified read consumer of harness.telemetry), feature-result-contract.md (new error rows), feature-status-digest.md (gap flip if in scope), glossary/index; register new spec in forbidden-literals.registry.json (GH-224/GH-225/GH-232 precedent). M1 pack docs are planning docs refined at delivery per pack conventions."
+    type: info
+    date: "2026-11-07"
+  - text: "Tracker label realigned: 'review' was stale (no PR exists); replaced with 'planning' at planning start per pm-instructions workflow-state mapping. No comment left on ticket (nothing value-adding; requirements complete with binding pinned decisions)."
+    type: info
+    date: "2026-11-07"
+  - text: "clarify_scope completed without human questions: ticket has binding pinned decisions (log-only reads; amplification ~1 healthy; alarms/burn-rate deferred to M2-S6), testable AC, delivered dependency (M1-S11), and consistent design baseline across five pack docs. Proceeding to artifact generation."
+    type: info
+    date: "2026-11-07"
+  - text: "Branch ensure complete: worktree was already on feat/GH-236/spend-read-side at a69b555e; verified base-up-to-date against freshly fetched origin/main-tools (same commit). Only untracked dirt is this change folder's pm-notes (expected PM artifact). Label swap executed via gh CLI: change+review -> change+planning."
+    type: info
+    date: "2026-11-07"
+  - text: "Auth observation for later phases: github-mcp write calls fail with 'Requires authentication' (reads work); gh CLI 2.91.0 is authenticated (repo scope, ssh). Route tracker writes and PR creation through gh CLI tooling (@pr-manager/@committer paths)."
+    type: info
+    date: "2026-11-07"
+  - text: "Spec authored by @spec-writer: chg-GH-236-spec.md (15 ACs; DEC-2..DEC-10 pinned). PM validation passed: both binding ticket ACs quoted verbatim in the traceability map (spec lines 313/424-425); error contract = exactly one new row spend.telemetry-absent (user-validation, exit 1) with delivered rows unchanged; per-phase attribution pinned as capture-time basis over phase.transition windows (DEC-4); restarts = max(0, N-1) over run identities (DEC-5); five delivered token classes reconciled against the design example's illustrative three (DEC-2)."
+    type: info
+    date: "2026-11-07"
+  - text: "RETRO: my clarify_scope planning summary claimed 'brief prints a placeholder spend summary' (inferred from m1 pack docs) — spec-writer disproved this against delivered truth: the brief deliberately has no spend surface (its own DEC-5), only the status digest section 8 placeholder flips in this change. Lesson: pack planning docs describe intent, not delivered truth; cross-check integration claims against delivered feature specs (feature-brief.md) before handing them downstream as facts."
+    type: retro
+    date: "2026-11-07"
