@@ -1,9 +1,9 @@
 ---
 id: chg-GH-235-test-plan
 status: Proposed
-version: 1.1
+version: 1.2
 created: 2026-11-07T00:00:00Z
-last_updated: 2026-11-07T12:00:00Z
+last_updated: 2026-11-07T18:00:00Z
 owners: [engineering]
 service: delivery-os session lifecycle core (liveness signal sourcing, restart budget, resume economics)
 labels: [change, m1]
@@ -99,7 +99,7 @@ All thirteen acceptance criteria map to at least one named scenario; there are n
 
 **Capability coverage** (every F-# has at least one TC): F-1 → 001, 002, 010, 011, 012; F-2 → 020, 021, 022; F-3 → 040, 041, 042, 043; F-4 → 003, 004, 050, 051, 052, 053, 054, 055, 056; F-5 → 005, 030, 031, 032, 033; F-6 → 060, 061, 062; F-7 → 070, 071, 072.
 
-**Decision coverage**: DEC-1 → 030, 031, 032, 033; DEC-2 → 003, 004, 052; DEC-3 → 050, 051, 053, 060; DEC-4 → 020, 021, 022; DEC-5 → 070, 071, 072; DEC-6 → 012, 084; DEC-7 → 040, 041, 042, 043.
+**Decision coverage**: DEC-1 → 030, 031, 032, 033; DEC-2 → 003, 004, 052; DEC-3 → 050, 051, 053, 060; DEC-4 → 020, 021, 022; DEC-5 → 070, 071, 072; DEC-6 → 012, 084; DEC-7 → 040, 041, 042, 043; DEC-8 → 001, 010, 082; DEC-9 → 021, 030, 033, 041, 052, 054.
 
 **Seed-scenario coverage**: SC-M1-14 → 020 (primary), 021, 022; SC-M1-15 economics half → 052 (primary), 053, 054. See §3.4 for the boundary.
 
@@ -1112,18 +1112,20 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 **Tags**: @backend, @config, @negative
 
 **Preconditions**:
-- A matrix of invalid configurations under `lane`.
+- A matrix of invalid configurations under `lane`, split per plan D-12: `lane.restart-budget` accepts integers `>= 0` (zero is a valid admit-no-restarts policy, covered as the positive control in TC-ECON-072); `lane.liveness-interval` accepts integers `> 0` ms.
 
 **Steps**:
-1. Run the resolver for each case: unknown key under `lane`, wrong type (string budget, float interval, boolean), invalid value (`0`, negative, non-integer budget; `0`/negative interval), and `lane` itself as a scalar.
+1. Run the resolver for each case: unknown key under `lane`; wrong type (string budget, float budget, boolean budget, string interval, float interval, boolean interval); invalid budget value (negative, non-integer); invalid interval value (`0`, negative, non-integer); and `lane` itself as a scalar.
 2. Assert each is classified through the existing configuration identities (`config.key.unknown`, `config.value.invalid` as delivered), naming the key and the accepted value.
 3. Assert no new configuration identity is added to the error table by this change.
 4. Assert invalid input never silently falls back to the default: it refuses.
 5. Assert the failures are evidence-bearing and exit per the existing projection.
-6. Assert a valid control resolves, proving the matrix is not vacuous.
+6. Assert `lane.restart-budget = 0` is **not** in the invalid matrix: it resolves validly (D-12) and its gate behaviour is asserted by TC-ECON-072.
+7. Assert a valid control resolves (non-zero bound, positive interval), proving the matrix is not vacuous.
 
 **Expected Outcome**:
 - Invalid lane configuration reuses the delivered identities exactly, with no new codes and no silent defaulting.
+- The invalid set matches D-12: negative/non-integer budget and non-positive/non-integer interval are invalid, while budget `0` is a valid configured bound.
 - Unknown-key discipline holds for the fixed branch.
 
 #### TC-ECON-072 - The budget bound is configuration-driven, never a literal
@@ -1393,7 +1395,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 | TR-4 | Durability tests use a fresh handle in the same process and could pass while a real second process diverges (for example, a cached count or an unflushed append). | M | GAP-T4: close the writer handle and its edge before reopening; assert the read requires no prior in-memory state; strengthen with a bounded child process if delivery adds one cheaply. |
 | TR-5 | Cross-path parity is vacuous when both "paths" share a test helper that bypasses one production composition. | H | TC-ECON-053 requires two distinct production compositions and reference equality on the gate; the bypass mutant in TC-ECON-056/081 must be caught. |
 | TR-6 | The amplification formula is under-specified, so a test pins a guessed constant and blocks a legitimate formula refinement or masks a real regression. | M | Assert ordering, monotonicity, the healthy baseline, the loop flag's name, and the null rule; record the exact formula as OQ-T3 and never freeze a constant the spec does not state. |
-| TR-7 | The intended liveness flip invalidates existing assertions; a delivery that deletes or floors them silently loses coverage. | H | TC-ECON-082 enumerates exactly five permitted updates and asserts exact counts and replaced (not removed) assertions; review checks the diff. |
+| TR-7 | The intended liveness flip invalidates existing assertions; a delivery that deletes or floors them silently loses coverage, or mistakes the untouched harness exact-three suite for one of the permitted updates. | H | TC-ECON-082 enumerates exactly four permitted updates (error-code count, error-table total, GH-221's unreachable-verdict note, signals-absent-on-sourced-lane fixtures), asserts the harness exact-three assertions stay unchanged (DEC-8), and requires exact counts and replaced (not removed) assertions; review checks the diff. |
 | TR-8 | Two-way table sync and documented rows land in different phases, so the binding check fails late and tempts a weakened row. | M | TC-ECON-003/004 and TC-ECON-083 make the same-phase obligation explicit; the delivery order in spec §18 puts rows and documented rows first. |
 | TR-9 | Fail-closed budget classification is under-specified, so a test pins a guessed identity or accepts `fallback.internal`. | M | TC-ECON-055 asserts "classified, non-zero, never admits, never fabricates count 0" and forbids `fallback.internal`; the exact existing identity is delivery-bound. |
 | TR-10 | A mutant lives in the live tree or a golden is rewritten as a side effect, creating a false green. | M | Mutants are temp-copy/in-memory only with a `process.cwd()` guard; goldens are read-only with `mtimeMs` asserted; regeneration is an explicit reviewed command. |
@@ -1432,6 +1434,7 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 |---------|------|--------|---------|
 | 1.0 | 2026-11-07 | test-plan-writer | Initial test plan derived from `chg-GH-235-spec.md` v1.0, ticket GH-235, backlog M1-S15, seed scenarios SC-M1-14/SC-M1-15, the delivered GH-221 watchdog and GH-233 harness contracts, and `.ai/rules/testing-strategy.md`. 37 scenarios; all 13 ACs covered; SC-M1-15's escalation half mapped to M1-S16/S17/S18; GAP-T1..T6 and OQ-T1..T8 recorded. |
 | 1.1 | 2026-11-07 | test-plan-writer | Consumes spec revision 1.1: GAP-T1 closed by DEC-8 (delivered liveness kinds stay exactly three; additive closed sourced-signal-kind vocabulary owned here) and GAP-T2's envelope side closed by DEC-9 (bounded deterministic key=value refusal corpus on the existing failure fields; durable records as the resolvable full-history carrier; no error-shape change). §1.1/§1.2, DM-1, TC-001/010/021/030/033/041/052/054/061/082/083, TR-1/TR-3/TR-6, §8.2, and OQ-T1/OQ-T2 updated; the harness exact-three kind assertion removed from TC-082's deliberate-update list and now asserted unchanged; amplification formula renumbered to OQ-T3. Scenario count (37), identities, exits, and AC mapping unchanged. |
+| 1.2 | 2026-11-07 | test-plan-writer | DoR advisory fixes: TR-7 reconciled to TC-ECON-082's four permitted updates with the harness exact-three suite asserted unchanged; TC-ECON-071 aligned to plan D-12 (budget `>= 0` — zero valid and covered by TC-ECON-072 — with negative/non-integer budget and non-positive/non-integer interval invalid); §3.1 decision coverage extended to DEC-8/DEC-9. Scenario count (37), identities, exits, and AC mapping unchanged. |
 
 ## 10. Test Execution Log
 
