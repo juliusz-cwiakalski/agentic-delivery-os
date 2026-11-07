@@ -146,6 +146,17 @@ export const ECONOMICS_CONFIG_KEYS = {
 
 export type EconomicsConfigKey = (typeof ECONOMICS_CONFIG_KEYS)[keyof typeof ECONOMICS_CONFIG_KEYS];
 
+/**
+ * The declared exit digits of the §8.1 matrix (spec Appendix B). One home, in
+ * the contracts tier; consumers project these digits through the CLI projection
+ * class rather than deriving their own.
+ */
+export const ECONOMICS_EXIT_SUCCESS = 0 as const;
+
+export const ECONOMICS_EXIT_REFUSAL = 1 as const;
+
+export const ECONOMICS_EXIT_UNAVAILABLE = 2 as const;
+
 /** The declared outcome vocabulary of the §8.1 matrix (TC-ECON-005). */
 export const ECONOMICS_OUTCOMES = [
   "progressing",
@@ -178,12 +189,17 @@ export type EconomicsOutcomeMatrixRow = {
 };
 
 export const ECONOMICS_OUTCOME_MATRIX = [
-  { outcome: "progressing", identity: null, exitCode: 0, projection: "success" },
-  { outcome: "stalled", identity: "watchdog.liveness-stalled", exitCode: 1, projection: "refusal" },
+  { outcome: "progressing", identity: null, exitCode: ECONOMICS_EXIT_SUCCESS, projection: "success" },
+  {
+    outcome: "stalled",
+    identity: "watchdog.liveness-stalled",
+    exitCode: ECONOMICS_EXIT_REFUSAL,
+    projection: "refusal",
+  },
   {
     outcome: "sources-absent",
     identity: "watchdog.signals-absent",
-    exitCode: 2,
+    exitCode: ECONOMICS_EXIT_UNAVAILABLE,
     projection: "refusal",
   },
   {
@@ -195,13 +211,13 @@ export const ECONOMICS_OUTCOME_MATRIX = [
   {
     outcome: "restart-past-budget",
     identity: "dispatch.restart-budget-exceeded",
-    exitCode: 1,
+    exitCode: ECONOMICS_EXIT_REFUSAL,
     projection: "refusal",
   },
   {
     outcome: "resume-uneconomical",
     identity: "dispatch.resume-uneconomical",
-    exitCode: 1,
+    exitCode: ECONOMICS_EXIT_REFUSAL,
     projection: "refusal",
   },
 ] as const satisfies readonly EconomicsOutcomeMatrixRow[];
@@ -334,7 +350,7 @@ export type RestartBudgetDecision =
   | {
       readonly outcome: "refuse-budget";
       readonly code: "dispatch.restart-budget-exceeded";
-      readonly exitCode: 1;
+      readonly exitCode: typeof ECONOMICS_EXIT_REFUSAL;
       readonly count: number;
       readonly historyRef: string;
       readonly corpus: string;
@@ -342,7 +358,7 @@ export type RestartBudgetDecision =
   | {
       readonly outcome: "unevaluable";
       readonly code: EconomicsRecordFailureCode;
-      readonly exitCode: 1 | 2;
+      readonly exitCode: typeof ECONOMICS_EXIT_REFUSAL | typeof ECONOMICS_EXIT_UNAVAILABLE;
       readonly corpus: string;
     };
 
@@ -372,7 +388,7 @@ export type EconomicsSessionEvidence = {
   readonly costReadable?: boolean;
 };
 
-/** The refusal identities the resume path may emit (existing rows reused). */
+/** The refusal identities the resume path may produce; existing rows are reused. */
 export const ECONOMICS_RESUME_REFUSAL_CODES = [
   "dispatch.restart-budget-exceeded",
   "dispatch.resume-uneconomical",
@@ -400,14 +416,14 @@ export type EconomicsResumeDecision =
   | {
       readonly outcome: "refuse";
       readonly code: EconomicsResumeRefusalCode;
-      readonly exitCode: 1;
+      readonly exitCode: typeof ECONOMICS_EXIT_REFUSAL;
       readonly reason: string;
       readonly corpus: string;
     }
   | {
       readonly outcome: "unevaluable";
       readonly code: EconomicsRecordFailureCode | "state.write.failed";
-      readonly exitCode: 1 | 2;
+      readonly exitCode: typeof ECONOMICS_EXIT_REFUSAL | typeof ECONOMICS_EXIT_UNAVAILABLE;
       readonly reason: string;
       readonly corpus: string;
     };

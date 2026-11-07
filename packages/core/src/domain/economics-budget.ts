@@ -8,6 +8,8 @@
  * fabricated from state that cannot be read.
  */
 import {
+  ECONOMICS_EXIT_REFUSAL,
+  ECONOMICS_EXIT_UNAVAILABLE,
   type EconomicsRecordFailureCode,
   type EconomicsRestartRecord,
   type RestartBudgetDecision,
@@ -52,8 +54,8 @@ export const foldRestartRecords = (
   return { ok: true, records: ordered };
 };
 
-const exitFor = (code: EconomicsRecordFailureCode): 1 | 2 =>
-  code === "state.permission.denied" ? 1 : 2;
+const exitFor = (code: EconomicsRecordFailureCode) =>
+  code === "state.permission.denied" ? ECONOMICS_EXIT_REFUSAL : ECONOMICS_EXIT_UNAVAILABLE;
 
 const unevaluable = (
   workItemRef: string,
@@ -83,7 +85,7 @@ export const evaluateRestartBudget = (input: RestartBudgetGateInput): RestartBud
     return {
       outcome: "refuse-budget",
       code: "dispatch.restart-budget-exceeded",
-      exitCode: 1,
+      exitCode: ECONOMICS_EXIT_REFUSAL,
       count,
       historyRef,
       corpus: formatBudgetEvidence({

@@ -11,6 +11,8 @@
  */
 import {
   ECONOMICS_EXHAUSTION_OPTIONS,
+  ECONOMICS_EXIT_REFUSAL,
+  ECONOMICS_EXIT_UNAVAILABLE,
   type EconomicsBudgetPolicyPort,
   type EconomicsExhaustionRecord,
   type EconomicsResumeCapabilityDeclaration,
@@ -47,7 +49,7 @@ const refuseCapabilityGap = (
 ): EconomicsResumeDecision => ({
   outcome: "refuse",
   code: "harness.capability.gap",
-  exitCode: 1,
+  exitCode: ECONOMICS_EXIT_REFUSAL,
   reason: `resume capability ${capability} is not declared as attach-and-continue`,
   corpus: formatCapabilityGapEvidence({
     reason: "harness.capability.gap",
@@ -63,7 +65,7 @@ const refuseIncomplete = (
 ): EconomicsResumeDecision => ({
   outcome: "refuse",
   code: "harness.telemetry.extraction-failed",
-  exitCode: 1,
+  exitCode: ECONOMICS_EXIT_REFUSAL,
   reason: `resume economics cannot be evaluated: ${detail}`,
   corpus: formatIncompleteEvidence({
     reason: "harness.telemetry.extraction-failed",
@@ -166,7 +168,10 @@ export const evaluateResumeEconomics = (
     return {
       outcome: "unevaluable",
       code: recordsRead.code,
-      exitCode: recordsRead.code === "state.permission.denied" ? 1 : 2,
+      exitCode:
+        recordsRead.code === "state.permission.denied"
+          ? ECONOMICS_EXIT_REFUSAL
+          : ECONOMICS_EXIT_UNAVAILABLE,
       reason: `the delivery's economics records are unevaluable: ${recordsRead.code}`,
       corpus: formatUnevaluableEvidence({
         reason: recordsRead.code,
@@ -196,7 +201,7 @@ export const evaluateResumeEconomics = (
     return {
       outcome: "refuse",
       code: "dispatch.restart-budget-exceeded",
-      exitCode: 1,
+      exitCode: ECONOMICS_EXIT_REFUSAL,
       reason: "the delivery's restart budget is exhausted; the restart is refused before any spawn",
       corpus: gate.corpus,
     };
@@ -211,7 +216,7 @@ export const evaluateResumeEconomics = (
     return {
       outcome: "refuse",
       code: "dispatch.resume-uneconomical",
-      exitCode: 1,
+      exitCode: ECONOMICS_EXIT_REFUSAL,
       reason: "the resume path would re-pay prefill and is uneconomical",
       corpus: formatUneconomicalEvidence({
         reason: "dispatch.resume-uneconomical",
@@ -227,7 +232,10 @@ export const evaluateResumeEconomics = (
     return {
       outcome: "unevaluable",
       code: appended.code,
-      exitCode: appended.code === "state.permission.denied" ? 1 : 2,
+      exitCode:
+        appended.code === "state.permission.denied"
+          ? ECONOMICS_EXIT_REFUSAL
+          : ECONOMICS_EXIT_UNAVAILABLE,
       reason: `the restart event did not land: ${appended.code}`,
       corpus: formatUnevaluableEvidence({
         reason: appended.code,

@@ -401,3 +401,66 @@ describe("TC-DOCTOR-023 doctor source carries no product literal", () => {
     }
   });
 });
+
+describe("TC-ECON-084 the economics surface is brand- and privacy-conformant", () => {
+  const ECONOMICS_MODULES = [
+    "packages/core/src/contracts/economics.ts",
+    "packages/core/src/domain/economics-budget.ts",
+    "packages/core/src/domain/economics-resume.ts",
+    "packages/core/src/domain/economics-view.ts",
+    "packages/core/src/domain/economics-evidence.ts",
+    "packages/core/src/state/economics.ts",
+    "packages/core/src/config/catalog.ts",
+  ];
+
+  test("the seed-literal matcher finds no product literal in any new module", () => {
+    for (const file of ECONOMICS_MODULES) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      expect(matchSeedLiteral(text, liveRegistry().seedLiterals), file).toBeUndefined();
+    }
+  });
+
+  test("a seeded product literal in a new module fails naming file and token", () => {
+    const repo = createTempRepo();
+    writeRegistry(repo.root, seededRegistry(repo.baseline));
+    writeFiles(repo.root, {
+      "packages/core/src/domain/economics-probe.ts": "// ados\n",
+    });
+    const outcome = scan(repo.root);
+    expect(violationsFor(outcome, "packages/core/src/domain/economics-probe.ts")).toContain("ados");
+    rmSync(repo.root, { recursive: true, force: true });
+  });
+
+  test("the live scan includes the economics modules with zero violations", () => {
+    const outcome = scan(ROOT);
+    expect(outcome.violations).toEqual([]);
+    for (const file of ECONOMICS_MODULES) {
+      expect(outcome.violations.filter((violation) => violation.file === file)).toEqual([]);
+    }
+  });
+
+  test("refusal and record payloads carry counts and refs only, never a content canary", async () => {
+    const { formatStallEvidence, formatBudgetEvidence, formatUneconomicalEvidence } = await import(
+      "../../packages/core/src/domain/index"
+    );
+    const corpus = [
+      formatStallEvidence({
+        reason: "watchdog.liveness-stalled",
+        heartbeatAgeMs: 400_000,
+        tokenDelta: 0,
+        traffic: 0,
+        stallBoundMs: 300_000,
+      }),
+      formatBudgetEvidence({ reason: "dispatch.restart-budget-exceeded", restarts: 3, workItemRef: "GH-235" }),
+      formatUneconomicalEvidence({
+        reason: "dispatch.resume-uneconomical",
+        repayTokens: 900,
+        workItemRef: "GH-235",
+      }),
+    ].join("\n");
+    for (const canary of ["PROMPT-CANARY", "transcript", "sk-live-", "ghp_"]) {
+      expect(corpus).not.toContain(canary);
+    }
+    expect(corpus).toContain("economics/GH-235");
+  });
+});
