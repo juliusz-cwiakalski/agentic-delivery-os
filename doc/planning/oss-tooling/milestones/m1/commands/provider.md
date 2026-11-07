@@ -1,7 +1,7 @@
 # provider(1)
 
-Status: M0 shipped (M0-S13). Shipped behavior summarized; examples
-proposed.
+Status: shipped (M0-S13 engine; M1-S21 profiles and watching). Shipped
+behavior summarized.
 
 ## NAME
 
@@ -113,8 +113,13 @@ $ <binary> provider watch status --json
 
 ## ERRORS
 
-`provider.chain-exhausted`, `provider.quota-exceeded`,
-`provider.park-active` (informational on reads).
+`provider.chain.empty`, `provider.chain.invalid`, `provider.quota.exceeded`,
+`provider.outage`, `provider.auth.rejected`; profile selection adds
+`provider.profile.absent`, `provider.profile.invalid`,
+`provider.profile.capability-denied`, `provider.profile.unavailable`; the
+env-record contract adds `provider.env-record.unauthorized`,
+`provider.env-record.duplicate`, `provider.env-record.malformed`, and
+`provider.env-record.oversized`.
 
 ## SEE ALSO
 

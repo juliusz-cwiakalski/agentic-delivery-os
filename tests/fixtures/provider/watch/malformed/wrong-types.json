@@ -1,0 +1,4 @@
+{
+  "weekly": { "usedPercent": "high" },
+  "rolling": { "usedPercent": 12 }
+}

@@ -39,11 +39,13 @@ export const buildHarnessSpawnEnvironment = (input: {
   readonly descriptor: HarnessExecutionEnvironmentDescriptor;
   readonly parentEnvironment: Readonly<Record<string, string | undefined>>;
   readonly credentials: CredentialPort;
+  /** Validated data records (GH-234): declared values take precedence. */
+  readonly record?: Readonly<Record<string, string>>;
 }): HarnessResult<Readonly<Record<string, string>>> => {
   const environment: Record<string, string> = {};
   for (const entry of input.descriptor.environment) {
     if (entry.kind === "variable") {
-      const value = input.parentEnvironment[entry.name];
+      const value = input.record?.[entry.name] ?? input.parentEnvironment[entry.name];
       if (value === undefined) {
         return failure({
           kind: "harness",

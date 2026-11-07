@@ -3,12 +3,12 @@ ados_distribution: internal
 id: TOOLING-UBIQUITOUS-LANGUAGE
 status: Draft
 created: 2026-11-02
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: [engineering]
 area: domain
 document_classification: working-analysis
 links:
-  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232]
+  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232, GH-234]
 summary: "Thin tooling vocabulary relationship map and disambiguation draft for Gate 4."
 ---
 
@@ -39,7 +39,7 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
 |---|---|---|
 | Delivery evidence and lifecycle | Consumes normalized tracker/CI observations and verified phase records; completeness does not confer permission. | [Verification](../spec/features/feature-verify-change-and-exit-taxonomy.md), [ready set](../spec/features/feature-queue-ready.md) |
 | External-system integration | Adapter ports translate provider dialects into shared vocabulary; supported operations and gaps are explicit. | [Adapter ports](../spec/features/feature-adapter-ports.md), [client seeds](../spec/features/feature-provider-client-seeds.md) |
-| AI provider availability | Supplies eligibility, parks and announcements to callers; future model policy consumes availability rather than redefining it. | [Provider engine](../spec/features/feature-provider-engine.md), [model profiles](../planning/concepts/model-profiles.md) |
+| AI provider availability | Supplies eligibility, parks and announcements to callers; model-profile selection consumes availability rather than redefining it. | [Provider engine](../spec/features/feature-provider-engine.md), [provider profiles](../spec/features/feature-provider-profiles.md) |
 | Local operational state | Supplies verified ledger evidence and rebuildable projections to consumers; it does not own upstream session content. | [State layer](../spec/features/feature-state-layer.md), [session administration](../spec/features/feature-session-database-admin.md) |
 | Learning evidence and retrospection | Folds collector-truth evidence into level reports; the independent sidecar owns evidence integrity while the validated registry owns level and run data. | [Retro evidence pipeline](../spec/features/feature-retro-pipeline.md), [audit ledger](../spec/features/feature-audit-ledger.md) |
 | Harness execution and surfaces | A host runs sessions; a surface exposes capabilities. Typed cross-harness adapter parity is delivered at the port boundary; the dispatch engine is planned, distinct from existing prompt/plugin distribution. | [Harness adapters](../spec/features/feature-harness-adapters.md), [primitive surface](../planning/concepts/agent-primitive-surface.md) |
