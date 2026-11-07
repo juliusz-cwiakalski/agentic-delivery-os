@@ -21,7 +21,13 @@ import { fileFacts } from "../fixtures/config/facts";
 describe("TC-CONFIG-008/009/011 canonical schema, partial and final", () => {
   test("production exposes the typed provider branch and shipped defaults", () => {
     expect(BOOTSTRAP_DESCRIPTOR.workingName).toEqual({ type: "string", required: true });
-    expect(Object.keys(PRODUCTION_CATALOG)).toEqual(["provider", "commit", "merge", "harness"]);
+    expect(Object.keys(PRODUCTION_CATALOG)).toEqual([
+      "provider",
+      "commit",
+      "merge",
+      "harness",
+      "lane",
+    ]);
     expect(PRODUCTION_SCHEMA).toEqual(generateConfigSchema(PRODUCTION_CATALOG));
     const result = resolveConfig();
     expect(result.ok).toBe(true);
