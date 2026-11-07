@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-07T15:15:00Z", completed: "2026-11-07T15:40:00Z", iteration: 3, verdict: READY_WITH_RISKS }
   delivery: { started: "2026-11-07T15:45:00Z", completed: "2026-11-07T18:30:00Z", iterations: 1 }
   system_spec_update: { started: "2026-11-07T18:35:00Z", completed: "2026-11-07T19:30:00Z" }
-  review_fix: { started: "2026-11-07T19:35:00Z", completed: null, iteration: 1, status: FAIL }
+  review_fix: { started: "2026-11-07T19:35:00Z", completed: "2026-11-07T20:45:00Z", iteration: 2, status: PASS }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -97,6 +97,9 @@ notes:
     type: info
     date: "2026-11-07"
   - text: "Fixed the doc-sync code gap: `queue release --until` is now valid only with `--park provider-window` (required for that cause, refused for others); lone `--until` refuses `fallback.invocation` reason `until-without-park` at exit 1 with zero writes. Verified: queue-cli 24 pass, queue regression 86 pass, typecheck 0, error-table-sync 105/105."
+    type: info
+    date: "2026-11-07"
+  - text: "Review iteration 2: PASS (0 critical/high/medium; 4 low, 1 info). All 22 iteration-1 findings verified resolved in code/tests. Accepted non-blocking residuals carried to DoD: (low) spec still says `--watch` is 'not in the accepted grammar' while it is now a declared refused flag (behavior matches AC-F11-2); (low) Appendix C reason enumeration omits the new `new-start`/`resume-parked` tokens; (low) byte-cap truncation drops rows without recomputing `counts` (untested); (low) release+compensation double-failure path unproven and its return ignored; (info) deploy-expectation port has no production adapter (same deferred composition seam as F-20). Re-ran targeted evidence: typecheck, boundaries, error-table-sync 105/105, queue/lanes and structure suites green; privacy-ci-wiring TC-WIRE-002 is a 5s default-timeout threshold (passes with --timeout 30000); ci-baseline-parity EXDEV is environmental (passes with repo-local TMPDIR)."
     type: info
     date: "2026-11-07"
   - text: "Plan Phase 9 complete: commit 89a18f47. Review iteration-1 remediation F-1..F-22: operative per-type park recheck due check and rewritten TC-PARK-006 (60 000 vs 5 000 ms); producer-bound deploy-expectation resolution from entry-recorded roots with multi-repository no-match/collision/invalid cases; resident-daemon --watch remediation hint on queue and lanes; queue ready preservation for 3-8 refs through the full family; release+park second-append compensation producing the released withdrawn-park marker; NFR-9 machine byte cap with truncationReason plus human/reason bounds; two-active-park fail-closed; command-level zero-write, real lanes purity, mixed AC-F9-1 corpus, config-resolved lease TTL; code-point comparator and truthful new-start/resume-parked reasons; real mutation-envelope state/weight; --until provider-window expiry; plan/test-plan reconciliation (F-17/F-18, N2/N3/N4); structurally-identical golden titles, deferred-composition note, refreshed queue.ts header, and the CLI park exit-2/stuck-exit-0 matrix. Gate: pnpm typecheck PASS; Phase 9 behaviour/checks/structure 169 pass; queue/lanes goldens 17 pass; queue ready 66 pass; check:boundaries 0 violations; error-table-sync entries=105 documented=105; pnpm check 5608 pass, 4 skip, 1 pre-existing environmental timing failure (TC-WIRE-002 times out at ~5.05s against its 5s limit and reproduces at ~5.05s on the pre-change baseline; ci-baseline-parity passes with TMPDIR=$PWD/tmp/tmpdir)."
