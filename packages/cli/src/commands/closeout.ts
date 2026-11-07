@@ -47,6 +47,10 @@ export const createCloseoutCommandDefinition = (
   flags: ["--apply"],
   positionals: { max: 2 },
   humanText: (data: unknown): string => (isCloseoutData(data) ? renderCloseoutHuman(data) : ""),
+  exitProjection: (data: unknown) =>
+    isCloseoutData(data) && data.mode === "applied" && (data.residue?.length ?? 0) > 0
+      ? "attention"
+      : "success",
   handler: async (invocation) => {
     if (invocation.positionals.length !== 1) {
       return reject(

@@ -8,10 +8,8 @@
  */
 import { planArtifactPath } from "@delivery-os/core/contracts";
 import type { PlanArtifactRead } from "@delivery-os/core/contracts";
+import { resolveChangeFolder } from "./change-folder.js";
 import type { PmNotesFileSystemFacts } from "./pm-notes-parser.js";
-
-const REF_PATTERN = /^[A-Z]+-[0-9]+$/;
-const MONTH_PATTERN = /^\d{4}-\d{2}$/;
 
 export type PlanArtifactRequest = {
   readonly changeRef: string;
@@ -19,27 +17,13 @@ export type PlanArtifactRequest = {
   readonly fs: PmNotesFileSystemFacts;
 };
 
-const safeList = (fs: PmNotesFileSystemFacts, path: string): readonly string[] => {
-  try {
-    return fs.listDirectory(path);
-  } catch {
-    return [];
-  }
-};
-
 const locateChangeFolder = (request: PlanArtifactRequest): string | undefined => {
-  if (!REF_PATTERN.test(request.changeRef)) return undefined;
-  const { fs, changesDirectory, changeRef } = request;
-  if (!fs.exists(changesDirectory)) return undefined;
-  for (const month of [...safeList(fs, changesDirectory)]
-    .filter((name) => MONTH_PATTERN.test(name))
-    .sort()) {
-    const monthDirectory = `${changesDirectory}/${month}`;
-    for (const folder of [...safeList(fs, monthDirectory)].sort()) {
-      if (folder.includes(`--${changeRef}--`)) return `${monthDirectory}/${folder}`;
-    }
-  }
-  return undefined;
+  const location = resolveChangeFolder({
+    changeRef: request.changeRef,
+    changesDirectory: request.changesDirectory,
+    fs: request.fs,
+  });
+  return location.ok ? location.folder : undefined;
 };
 
 /** Read one change ref's plan artifact with YAML-before-markdown precedence. */

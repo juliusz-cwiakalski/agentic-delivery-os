@@ -16,6 +16,11 @@ import type {
 } from "#contracts";
 import {
   BLOCKED_LABEL,
+  CAPSULE_CONTRACT_VERSION,
+  CAPSULE_MAX_RESIDUE_ITEMS,
+  CAPSULE_MAX_SESSIONS,
+  CAPSULE_RESIDUE_KINDS,
+  type CapsuleFileRuntime,
   CHANGE_LABEL,
   CLOSEOUT_INTEGRATION_BASE,
   CLOSEOUT_MAX_DEPENDENTS,
@@ -28,12 +33,16 @@ import {
   type CloseoutBranchFact,
   type CloseoutCanonicalArguments,
   type CloseoutCapabilityContext,
+  type CloseoutCapsuleData,
+  type CloseoutCapsuleFacts,
   type CloseoutCheckoutFacts,
   type CloseoutData,
   type CloseoutDeleteArguments,
   type CloseoutDeliverySummary,
+  type CloseoutDiffRead,
   type CloseoutEvidence,
   type CloseoutEvidenceField,
+  type CloseoutExpectedCapsuleEvent,
   type CloseoutGapReason,
   type CloseoutGitRuntime,
   type CloseoutLabelArguments,
@@ -44,27 +53,45 @@ import {
   type CloseoutOutcome,
   type CloseoutPlan,
   type CloseoutPlanOutcome,
+  type CloseoutPromotionRuntime,
   type CloseoutProviderRuntime,
   type CloseoutReadObservation,
+  type CloseoutResidueItem,
   type CloseoutRestoreArguments,
+  type CloseoutRetroFacts,
   type CloseoutReverseDependentObservation,
+  type CloseoutSessionFacts,
   type CloseoutStateRuntime,
   type CloseoutStep,
   type CloseoutStepId,
   type CloseoutSummary,
   type CloseoutTelemetryDisclosure,
+  type CloseoutTelemetryRuntime,
   type CloseoutThreadArguments,
+  type CloseoutThreadAuthorFact,
   type CloseoutTransitionArguments,
+  type CloseoutWorktreeArguments,
+  type CloseoutWorktreeFacts,
   type CloseoutWriteOutcome,
   DELIVERED_LABEL,
-  type HarnessResult,
-  type HarnessTelemetryAppendReport,
-  type HarnessTelemetryCapture,
   LIFECYCLE_LABEL_DISPOSITIONS,
   OWNER_ATTENTION_LABEL,
   PROTECTED_REF_NAMES,
-  type StateResult,
 } from "#contracts";
+import {
+  capsuleDigest,
+  capsuleEventGaps,
+  capsulePromotionCounts,
+  deriveCapsuleEventKey,
+  ingestReviewArtifacts,
+} from "./capsule.js";
+import {
+  candidateFileViolations,
+  evaluateCandidates,
+  validateCandidate,
+} from "./capsule-candidates.js";
+import { evaluateDiffSweep } from "./closeout-diff-sweep.js";
+import { evaluateThreadPolicy } from "./closeout-thread-policy.js";
 import { sha256Hex } from "./sha256.js";
 
 /** The seven step definitions in binding order (PIN-2). */
@@ -75,7 +102,12 @@ export const closeoutStepDefinitions = [
   { stepId: "owed-flip-sweep", label: "owed-flip sweep" },
   { stepId: "comment-resolution", label: "comment resolution" },
   { stepId: "checkout-restore", label: "checkout restore" },
+  { stepId: "worktree-cleanup", label: "local worktree cleanup" },
   { stepId: "branch-cleanup", label: "squash-safe local branch cleanup" },
+  { stepId: "merged-diff-sweep", label: "merged-diff owed-flip sweep" },
+  { stepId: "retro-coverage-move", label: "retro coverage move" },
+  { stepId: "session-compaction", label: "session compaction checkpoint" },
+  { stepId: "capsule", label: "close the change capsule" },
 ] as const;
 
 /** One candidate dependent with its own provider-asserted blocker observation. */
@@ -104,6 +136,26 @@ export type CloseoutPlanFacts = {
   readonly branches: readonly CloseoutBranchFact[];
   readonly checkedOutElsewhere: readonly string[];
   readonly persisted: Readonly<Record<string, CloseoutOperationRecord>>;
+  /** The read-only capsule pre-flight facts (GH-240 F-3). */
+  readonly capsule?: CloseoutCapsuleFacts;
+  /** The unresolved thread authorship facts (GH-240 F-6). */
+  readonly threadAuthorFacts?: readonly CloseoutThreadAuthorFact[];
+  /** The read-only worktree facts (GH-240 F-7). */
+  readonly worktree?: CloseoutWorktreeFacts;
+  /** The retro-coverage facts (GH-240 F-8). */
+  readonly retro?: CloseoutRetroFacts;
+  /** The session-attribution facts (GH-240 F-9). */
+  readonly sessions?: CloseoutSessionFacts;
+  /** The merged-diff facts for the plan step (GH-240 F-5). */
+  readonly diff?: {
+    readonly available: boolean;
+    readonly hits: number;
+    readonly ambiguous: number;
+    readonly ambiguousHits?: readonly {
+      readonly kind: string;
+      readonly location: string;
+    }[];
+  };
 };
 
 /** The branch-selection outcome. */
@@ -158,6 +210,7 @@ const planStep = (
     readonly reason?: string;
     readonly evidence?: CloseoutEvidence;
     readonly truncation?: CloseoutStep["truncation"];
+    readonly detail?: Readonly<Record<string, unknown>>;
   } = {},
 ): CloseoutStep => {
   const label =
@@ -170,6 +223,7 @@ const planStep = (
     operations: options.operations ?? [],
     evidence: options.evidence ?? [],
     ...(options.truncation === undefined ? {} : { truncation: options.truncation }),
+    ...(options.detail === undefined ? {} : { detail: options.detail }),
   };
 };
 
@@ -318,7 +372,13 @@ const capabilityContextFor = (
   capabilities: AdapterCapabilityDeclaration,
   operation: CloseoutOperationName,
 ): CloseoutCapabilityContext => {
-  if (operation === "restore-checkout" || operation === "delete-branch") return "supported";
+  if (
+    operation === "restore-checkout" ||
+    operation === "delete-branch" ||
+    operation === "remove-worktree"
+  ) {
+    return "supported";
+  }
   const adapterOperation =
     operation === "resolve-delivery-thread"
       ? "resolve-delivery-thread"
@@ -356,7 +416,9 @@ const operationFor = (
   args: CloseoutCanonicalArguments,
 ): CloseoutOperation => {
   const engine =
-    name === "restore-checkout" || name === "delete-branch" ? "git" : facts.provider.systemName;
+    name === "restore-checkout" || name === "delete-branch" || name === "remove-worktree"
+      ? "git"
+      : facts.provider.systemName;
   const capabilityContext = capabilityContextFor(facts.provider.capabilities, name);
   const operationId = deriveCloseoutOperationId({
     workspaceId: facts.workspaceId,
@@ -644,20 +706,36 @@ const threadStep = (facts: CloseoutPlanFacts): CloseoutStep => {
   const unresolved = [...merged.value.threads]
     .filter((thread) => !thread.resolved)
     .sort((left, right) => left.threadId.localeCompare(right.threadId));
-  const bounded = unresolved.slice(0, CLOSEOUT_MAX_THREADS);
-  const operations = bounded.map((thread) => {
-    const args: CloseoutThreadArguments = {
-      deliveryRequest: merged.value.identity,
+  // Absent or unknown authorship is human (fail closed): never resolve-all and
+  // never resolve a thread whose root author the provider did not establish.
+  const authors = new Map(
+    (facts.threadAuthorFacts ?? []).map((fact) => [fact.threadId, fact.authorKind]),
+  );
+  const policy = evaluateThreadPolicy({
+    threads: unresolved.map((thread) => ({
       threadId: thread.threadId,
-    };
-    return operationFor(facts, "resolve-delivery-thread", merged.value.identity, args);
+      authorPrincipal: "unknown",
+      authorKind: authors.get(thread.threadId) ?? "unknown",
+    })),
   });
+  const resolvable = new Set(policy.resolved);
+  const bounded = unresolved.slice(0, CLOSEOUT_MAX_THREADS);
+  const operations = bounded
+    .filter((thread) => resolvable.has(thread.threadId))
+    .map((thread) => {
+      const args: CloseoutThreadArguments = {
+        deliveryRequest: merged.value.identity,
+        threadId: thread.threadId,
+      };
+      return operationFor(facts, "resolve-delivery-thread", merged.value.identity, args);
+    });
   const truncated = unresolved.length > CLOSEOUT_MAX_THREADS;
   return planStep("comment-resolution", outcomeFor(facts.persisted, operations, "satisfied"), {
     operations,
     evidence: evidence(
       field("unresolved", unresolved.length),
       field("resolved", operations.length),
+      field("human", policy.residue.length),
     ),
     ...(truncated
       ? {
@@ -668,6 +746,120 @@ const threadStep = (facts: CloseoutPlanFacts): CloseoutStep => {
           },
         }
       : {}),
+  });
+};
+
+/** The retro-coverage plan step (GH-240 F-8). */
+const retroStep = (facts: CloseoutPlanFacts): CloseoutStep => {
+  const retro = facts.retro;
+  if (retro === undefined || !retro.available) {
+    return planStep("retro-coverage-move", "skipped-gap", {
+      reason: "retro-registry-unavailable",
+      evidence: evidence(field("registry", "unavailable")),
+      detail: { state: "unavailable" },
+    });
+  }
+  return planStep("retro-coverage-move", "would-apply", {
+    evidence: evidence(field("state", retro.collected ? "collected" : "pending")),
+    detail: { state: retro.collected ? "collected" : "pending" },
+  });
+};
+
+/** The session-compaction plan step (GH-240 F-9). */
+const compactionStep = (facts: CloseoutPlanFacts): CloseoutStep => {
+  const sessions = facts.sessions;
+  if (sessions === undefined) {
+    return planStep("session-compaction", "skipped-noop", {
+      reason: "no-sessions",
+      evidence: evidence(field("sessions", 0)),
+      detail: { state: "no-sessions" },
+    });
+  }
+  if (!sessions.available) {
+    return planStep("session-compaction", "skipped-gap", {
+      reason: "session-attribution-unavailable",
+      evidence: evidence(field("sessions", "unattributed")),
+      detail: { state: "unavailable" },
+    });
+  }
+  if (sessions.sessionIds.length === 0) {
+    return planStep("session-compaction", "skipped-noop", {
+      reason: "no-sessions",
+      evidence: evidence(field("sessions", 0)),
+      detail: { state: "no-sessions" },
+    });
+  }
+  return planStep("session-compaction", "would-apply", {
+    evidence: evidence(
+      field("sessions", sessions.sessionIds.length),
+      field("gap", "harness-compaction-unavailable"),
+    ),
+    detail: {
+      state: "checkpoint",
+      sessions: sessions.sessionIds.length,
+      gap: "harness-compaction-unavailable",
+    },
+  });
+};
+
+/** The merged-diff sweep plan step (GH-240 F-5). */
+const diffSweepStep = (facts: CloseoutPlanFacts): CloseoutStep => {
+  const diff = facts.diff;
+  if (diff === undefined || !diff.available) {
+    return planStep("merged-diff-sweep", "skipped-gap", {
+      reason: "merged-diff-unavailable",
+      evidence: evidence(field("mergedDiff", "unavailable")),
+    });
+  }
+  return planStep("merged-diff-sweep", "would-apply", {
+    evidence: evidence(field("hits", diff.hits), field("ambiguous", diff.ambiguous)),
+    detail: { hits: diff.hits, ambiguous: diff.ambiguous },
+  });
+};
+
+const worktreeStep = (facts: CloseoutPlanFacts): CloseoutStep => {
+  const worktree = facts.worktree;
+  if (worktree === undefined || !worktree.present) {
+    return planStep("worktree-cleanup", "satisfied", {
+      reason: "no-worktree",
+      evidence: evidence(field("worktree", "absent")),
+    });
+  }
+  if (!worktree.safe) {
+    return planStep("worktree-cleanup", "would-refuse", {
+      reason: "closeout.branch.unsafe",
+      evidence: evidence(
+        field("worktree", worktree.path ?? "unknown"),
+        ...(worktree.head === undefined ? [] : [field("head", worktree.head)]),
+        field("retained", 1),
+        ...(worktree.reason === undefined ? [] : [field("condition", worktree.reason)]),
+      ),
+      detail: {
+        retained: 1,
+        ...(worktree.path === undefined ? {} : { path: worktree.path }),
+        ...(worktree.reason === undefined ? {} : { condition: worktree.reason }),
+      },
+    });
+  }
+  const args: CloseoutWorktreeArguments = {
+    worktreePath: worktree.path ?? "",
+    ...(worktree.head === undefined ? {} : { expectedHead: worktree.head }),
+  };
+  const operation = operationFor(
+    facts,
+    "remove-worktree",
+    {
+      systemName: facts.provider.systemName,
+      entityId: facts.workItemRef,
+    },
+    args,
+  );
+  return planStep("worktree-cleanup", outcomeFor(facts.persisted, [operation], "satisfied"), {
+    operations: [operation],
+    evidence: evidence(
+      field("worktree", worktree.path ?? ""),
+      ...(worktree.head === undefined ? [] : [field("head", worktree.head)]),
+    ),
   });
 };
 
@@ -782,7 +974,45 @@ const branchStep = (
   });
 };
 
-/** Build the deterministic seven-step plan from pure facts (F-2). */
+/** The terminal capsule step from the read-only pre-flight facts (GH-240 F-3). */
+const capsuleStep = (facts: CloseoutPlanFacts): CloseoutStep => {
+  const capsule = facts.capsule;
+  const events = capsule?.events ?? 0;
+  const candidates = capsule?.candidates ?? 0;
+  if (capsule !== undefined && !capsule.valid) {
+    return {
+      stepId: "capsule",
+      label: "close the change capsule",
+      outcome: "would-refuse",
+      reason: "closeout.capsule-invalid",
+      operations: [],
+      evidence: [
+        field("events", events),
+        ...(capsule.refusal === undefined ? [] : [field("refusal", capsule.refusal.code)]),
+      ],
+      detail: {
+        present: capsule.present,
+        events,
+        candidates,
+        ...(capsule.refusal === undefined ? {} : { refusal: capsule.refusal }),
+      },
+    };
+  }
+  return {
+    stepId: "capsule",
+    label: "close the change capsule",
+    outcome: "would-apply",
+    operations: [],
+    evidence: [
+      field("present", capsule?.present ?? false),
+      field("events", events),
+      field("candidates", candidates),
+    ],
+    detail: { present: capsule?.present ?? false, events, candidates },
+  };
+};
+
+/** Build the deterministic plan from pure facts (F-2). */
 export const buildCloseoutPlan = (facts: CloseoutPlanFacts): CloseoutPlan => {
   const baseRef = resolveCloseoutBaseRef(facts.mergedRequest);
   const steps: CloseoutStep[] = [];
@@ -793,10 +1023,70 @@ export const buildCloseoutPlan = (facts: CloseoutPlanFacts): CloseoutPlan => {
   steps.push(threadStep(facts));
   const checkout = checkoutStep(facts, baseRef);
   steps.push(checkout);
+  steps.push(worktreeStep(facts));
   steps.push(branchStep(facts, baseRef, checkout));
-  const ordered = steps.map((step, index) => {
-    const definition = closeoutStepDefinitions[index];
-    return definition === undefined ? step : { ...step, stepId: definition.stepId };
+  steps.push(diffSweepStep(facts));
+  steps.push(retroStep(facts));
+  steps.push(compactionStep(facts));
+  steps.push(capsuleStep(facts));
+  const ordered = steps;
+  const retroResidue =
+    facts.retro === undefined || !facts.retro.available
+      ? [
+          {
+            item: "the retro registry is unavailable",
+            kind: "retro-coverage-unavailable" as const,
+            location: "retro.registry",
+          },
+        ]
+      : [];
+  const diffResidue =
+    facts.diff?.ambiguousHits?.map((hit) => ({
+      item: `ambiguous ${hit.kind} hit`,
+      kind: "ambiguous-flip-hit" as const,
+      location: hit.location,
+    })) ?? [];
+  const sessionResidue =
+    facts.sessions !== undefined &&
+    facts.sessions.sessionIds.length > 0 &&
+    !facts.sessions.available
+      ? [
+          {
+            item: "session attribution is unavailable",
+            kind: "session-attribution-gap" as const,
+            location: "session.store",
+          },
+        ]
+      : [];
+  const retainedWorktree =
+    facts.worktree?.present && !facts.worktree.safe
+      ? [
+          {
+            item: `retained worktree ${facts.worktree.path ?? "unknown"}`,
+            kind: "worktree-retained" as const,
+            location: facts.worktree.path ?? "unknown",
+          },
+        ]
+      : [];
+  const threadAuthors = new Map(
+    (facts.threadAuthorFacts ?? []).map((fact) => [fact.threadId, fact]),
+  );
+  const threadStepPlans =
+    supports(facts.provider.capabilities, "resolve-delivery-thread") &&
+    facts.mergedRequest.observation === "observed" &&
+    facts.mergedRequest.signals?.threads !== "unavailable";
+  const unresolvedThreads = threadStepPlans
+    ? facts.mergedRequest.value.threads.filter((thread) => !thread.resolved)
+    : [];
+  const policy = evaluateThreadPolicy({
+    threads: unresolvedThreads.map((thread) => {
+      const fact = threadAuthors.get(thread.threadId);
+      return {
+        threadId: thread.threadId,
+        authorPrincipal: fact?.authorPrincipal ?? "unknown",
+        authorKind: fact?.authorKind ?? "unknown",
+      };
+    }),
   });
   return {
     schemaId: CLOSEOUT_SCHEMA_ID,
@@ -807,6 +1097,31 @@ export const buildCloseoutPlan = (facts: CloseoutPlanFacts): CloseoutPlan => {
       : {}),
     steps: ordered,
     summary: summarizeCloseout(ordered),
+    ...(policy.residue.length === 0 &&
+    policy.omitted === 0 &&
+    retainedWorktree.length === 0 &&
+    retroResidue.length === 0 &&
+    sessionResidue.length === 0 &&
+    diffResidue.length === 0
+      ? {}
+      : {
+          residue: [
+            ...retainedWorktree,
+            ...retroResidue,
+            ...sessionResidue,
+            ...diffResidue,
+            ...policy.residue,
+            ...(policy.omitted === 0
+              ? []
+              : [
+                  {
+                    item: `+${policy.omitted} more items`,
+                    kind: "capsule-cap-reached" as const,
+                    location: "residue",
+                  },
+                ]),
+          ],
+        }),
   };
 };
 
@@ -855,15 +1170,6 @@ export const boundCloseoutData = (data: CloseoutData): CloseoutData => {
 };
 
 /** The apply-orchestrator input (Phase 3, F-3, D6). */
-/** The injected, non-gating telemetry capture capability (GH-233 F-8). */
-export type CloseoutTelemetryRuntime = {
-  readonly extract: (input: {
-    readonly workItemRef: string;
-    readonly runId: string;
-  }) => Promise<HarnessResult<HarnessTelemetryCapture>>;
-  readonly append: (capture: HarnessTelemetryCapture) => StateResult<HarnessTelemetryAppendReport>;
-};
-
 export type CloseoutRunInput = {
   readonly plan: CloseoutPlan;
   readonly provider: CloseoutProviderRuntime;
@@ -874,6 +1180,18 @@ export type CloseoutRunInput = {
   readonly apply: boolean;
   readonly runId?: string;
   readonly telemetry?: CloseoutTelemetryRuntime;
+  /** The append-only capsule file runtime (GH-240 F-3). */
+  readonly capsule?: CapsuleFileRuntime;
+  /** The expected capsule events derived from the durable state records (F-3). */
+  readonly capsuleExpected?: readonly CloseoutExpectedCapsuleEvent[];
+  /** The injected promotion runtime (GH-240 F-4). */
+  readonly promotion?: CloseoutPromotionRuntime;
+  /** The one bounded merged-diff read (GH-240 F-5). */
+  readonly diffRead?: CloseoutDiffRead;
+  /** The retro-coverage facts (GH-240 F-8). */
+  readonly retro?: CloseoutRetroFacts;
+  /** The session-attribution facts (GH-240 F-9). */
+  readonly sessions?: CloseoutSessionFacts;
 };
 
 /** The apply-orchestrator result: bounded data or a classified identity. */
@@ -931,6 +1249,19 @@ const executeOperation = async (
   }
   if (operation.name === "restore-checkout" && "baseRef" in args) {
     return git.restoreCheckout({ baseRef: args.baseRef });
+  }
+  if (operation.name === "remove-worktree" && "worktreePath" in args) {
+    if (git.removeWorktree === undefined) {
+      return {
+        ok: false,
+        code: "closeout.branch.unsafe",
+        detail: "worktree removal is unavailable",
+      };
+    }
+    return git.removeWorktree({
+      path: args.worktreePath,
+      ...(args.expectedHead === undefined ? {} : { expectedHead: args.expectedHead }),
+    });
   }
   if (operation.name === "delete-branch" && "branch" in args) {
     return git.deleteBranch({
@@ -1059,6 +1390,356 @@ const captureTelemetry = async (
   }
 };
 
+const residueRank = (kind: CloseoutResidueItem["kind"]): number =>
+  (CAPSULE_RESIDUE_KINDS as readonly string[]).indexOf(kind);
+
+/** Deterministic residue order: kind order, then location (F-11, NFR-1). */
+const orderResidue = (residue: readonly CloseoutResidueItem[]): readonly CloseoutResidueItem[] => {
+  const ordered = [...residue].sort((left, right) => {
+    const rank = residueRank(left.kind) - residueRank(right.kind);
+    if (rank !== 0) return rank;
+    return left.location < right.location ? -1 : left.location > right.location ? 1 : 0;
+  });
+  const seen = new Set<string>();
+  const unique = ordered.filter((item) => {
+    const key = `${item.kind}\u0000${item.location}\u0000${item.item}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (
+    unique.length <= CAPSULE_MAX_RESIDUE_ITEMS ||
+    unique.some((item) => item.kind === "capsule-cap-reached")
+  ) {
+    return unique;
+  }
+  const omitted = unique.length - CAPSULE_MAX_RESIDUE_ITEMS;
+  return [
+    ...unique.slice(0, CAPSULE_MAX_RESIDUE_ITEMS),
+    { item: `+${omitted} more items`, kind: "capsule-cap-reached", location: "residue" },
+  ];
+};
+
+/** The read-only capsule residue shared by plan and apply (F-3, F-11). */
+const capsuleResidueOf = (input: CloseoutRunInput): readonly CloseoutResidueItem[] => {
+  const runtime = input.capsule;
+  if (runtime === undefined) return [];
+  const residue: CloseoutResidueItem[] = [];
+  const reviews = runtime.listReviewArtifacts(input.plan.workItemRef);
+  const ingestion = reviews.ok
+    ? ingestReviewArtifacts(reviews.artifacts)
+    : { verdicts: [], unreadable: [] };
+  for (const artifact of ingestion.unreadable) {
+    residue.push({
+      item: `unreadable review verdict ${artifact}`,
+      kind: "review-verdict-unreadable",
+      location: artifact,
+    });
+  }
+  const read = runtime.read(input.plan.workItemRef);
+  if (read.ok) {
+    for (const gap of capsuleEventGaps(read.events, input.capsuleExpected ?? [])) {
+      residue.push({
+        item: `missing capsule event ${gap.kind}`,
+        kind: "capsule-event-gap",
+        location: gap.identity,
+      });
+    }
+  }
+  return orderResidue(residue);
+};
+
+type CapsuleStepExecution =
+  | {
+      readonly ok: true;
+      readonly step: CloseoutStep;
+      readonly capsule: CloseoutCapsuleData;
+      readonly residue: readonly CloseoutResidueItem[];
+    }
+  | { readonly ok: false; readonly code: string; readonly detail: string };
+
+/**
+ * Execute the terminal capsule step in apply mode (GH-240 F-3, DEC-4).
+ *
+ * Validates first with zero writes on damage, completes a pre-contract capsule
+ * with `capsule.opened` + `capsule.backfill-gap`, ingests readable review
+ * verdicts, records the cross-check gaps as residue, and appends exactly one
+ * terminal close.
+ */
+const executeCapsuleStep = (
+  input: CloseoutRunInput,
+  planned: CloseoutStep,
+): CapsuleStepExecution => {
+  const runtime = input.capsule;
+  if (runtime === undefined) {
+    return {
+      ok: true,
+      step: {
+        ...planned,
+        outcome: "skipped-noop",
+        reason: "capsule-runtime-absent",
+        operations: [],
+      },
+      capsule: { closed: false, events: 0, candidates: [] },
+      residue: [],
+    };
+  }
+  const workItemRef = input.plan.workItemRef;
+  const runId = input.runId ?? "closeout-run";
+  const read = runtime.read(workItemRef);
+  if (!read.ok) {
+    return { ok: false, code: "closeout.capsule-invalid", detail: read.detail };
+  }
+  const candidates = runtime.readCandidates(workItemRef);
+  if (!candidates.ok) {
+    return { ok: false, code: "closeout.capsule-invalid", detail: candidates.detail };
+  }
+  const reviews = runtime.listReviewArtifacts(workItemRef);
+  if (!reviews.ok) {
+    return { ok: false, code: "closeout.capsule-invalid", detail: reviews.detail };
+  }
+  const ingestion = ingestReviewArtifacts(reviews.artifacts);
+  runtime.ensureCandidates(workItemRef);
+  const candidateDocuments = runtime.readCandidateDocuments(workItemRef);
+  if (!candidateDocuments.ok) {
+    return { ok: false, code: "closeout.capsule-invalid", detail: candidateDocuments.detail };
+  }
+  const fileViolations = candidateFileViolations(candidateDocuments.documents);
+  if (fileViolations.length > 0) {
+    return {
+      ok: false,
+      code: "closeout.capsule-invalid",
+      detail: fileViolations
+        .map((violation) => `${violation.file}: ${violation.detail}`)
+        .join("; "),
+    };
+  }
+  const candidateIds = candidateDocuments.documents
+    .map((document) => (/\.yaml$/.test(document.file) ? document.file.slice(0, -5) : document.file))
+    .sort();
+  const decisionsById = new Map<string, number>();
+  for (const event of read.events) {
+    if (event.kind !== "capsule.promotion") continue;
+    const id = String(event.payload.id);
+    decisionsById.set(id, (decisionsById.get(id) ?? 0) + 1);
+  }
+  const multiple = candidateIds.filter((id) => (decisionsById.get(id) ?? 0) > 1);
+  if (multiple.length > 0) {
+    return {
+      ok: false,
+      code: "closeout.capsule-invalid",
+      detail: `multiple promotion decisions for ${multiple.join(", ")}`,
+    };
+  }
+  let appended = 0;
+  const append = (
+    kind: "capsule.opened" | "capsule.backfill-gap" | "review.verdict" | "capsule.promotion",
+    eventKey: string,
+    payload: Readonly<Record<string, unknown>>,
+  ): { readonly ok: boolean; readonly code?: string; readonly detail: string } => {
+    const result = runtime.append({
+      changeRef: workItemRef,
+      workspaceChangesDirectory: "",
+      writer: "closeout",
+      kind,
+      eventKey,
+      payload,
+      runId,
+      occurredAt: input.timestamp,
+    });
+    if (!result.ok) return { ok: false, code: result.code, detail: result.detail };
+    if (result.appended) appended += 1;
+    return { ok: true, detail: "" };
+  };
+  if (read.events.length === 0) {
+    const opened = append("capsule.opened", `${workItemRef}:capsule.opened`, {
+      contractVersion: CAPSULE_CONTRACT_VERSION,
+      workItemRef,
+    });
+    if (!opened.ok) {
+      return {
+        ok: false,
+        code: opened.code === "state.lock.busy" ? "state.lock.busy" : "closeout.capsule-invalid",
+        detail: opened.detail,
+      };
+    }
+    const backfill = append("capsule.backfill-gap", `${workItemRef}:capsule.backfill-gap`, {
+      state: "pre-contract",
+    });
+    if (!backfill.ok) {
+      return {
+        ok: false,
+        code: backfill.code === "state.lock.busy" ? "state.lock.busy" : "closeout.capsule-invalid",
+        detail: backfill.detail,
+      };
+    }
+  }
+  for (const verdict of ingestion.verdicts) {
+    const ingested = append("review.verdict", `${workItemRef}:review:${verdict.iteration}`, {
+      iteration: verdict.iteration,
+      verdict: verdict.verdict,
+      artifact: verdict.artifact,
+    });
+    if (!ingested.ok) {
+      return {
+        ok: false,
+        code: ingested.code === "state.lock.busy" ? "state.lock.busy" : "closeout.capsule-invalid",
+        detail: ingested.detail,
+      };
+    }
+  }
+  const promotion = input.promotion;
+  if (promotion !== undefined) {
+    const decided = new Set(
+      read.events
+        .filter((event) => event.kind === "capsule.promotion")
+        .map((event) => String(event.payload.id)),
+    );
+    const evaluation = evaluateCandidates({
+      documents: promotion.candidates,
+      memory: promotion.memory,
+      decided,
+    });
+    if (evaluation.schemaFailures.length > 0) {
+      return {
+        ok: false,
+        code: "closeout.capsule-invalid",
+        detail: evaluation.schemaFailures
+          .map((failure) => `${failure.id}: ${failure.detail}`)
+          .join("; "),
+      };
+    }
+    for (const write of evaluation.writes) {
+      const written = promotion.write(write);
+      if (!written.ok) {
+        return {
+          ok: false,
+          code:
+            written.code === "escape" ? "closeout.step.capsule.failed" : "closeout.capsule-invalid",
+          detail: written.detail,
+        };
+      }
+    }
+    for (const decision of evaluation.decisions) {
+      const appendedDecision = append(
+        "capsule.promotion",
+        `${workItemRef}:capsule.promotion:${decision.id}`,
+        decision.decision === "promoted"
+          ? {
+              id: decision.id,
+              class: decision.class,
+              decision: "promoted",
+              mode: decision.mode,
+              home: decision.home,
+              ...(decision.supersedes === undefined ? {} : { supersedes: decision.supersedes }),
+            }
+          : {
+              id: decision.id,
+              class: decision.class,
+              decision: "rejected",
+              reason: decision.reason,
+            },
+      );
+      if (!appendedDecision.ok) {
+        return {
+          ok: false,
+          code:
+            appendedDecision.code === "state.lock.busy"
+              ? "state.lock.busy"
+              : "closeout.capsule-invalid",
+          detail: appendedDecision.detail,
+        };
+      }
+    }
+  }
+  const beforeClose = runtime.read(workItemRef);
+  if (!beforeClose.ok) {
+    return { ok: false, code: "closeout.capsule-invalid", detail: beforeClose.detail };
+  }
+  const finalDecisions = new Map<string, number>();
+  for (const event of beforeClose.events) {
+    if (event.kind !== "capsule.promotion") continue;
+    const id = String(event.payload.id);
+    finalDecisions.set(id, (finalDecisions.get(id) ?? 0) + 1);
+  }
+  const undecided = candidateIds.filter((id) => (finalDecisions.get(id) ?? 0) !== 1);
+  if (undecided.length > 0) {
+    return {
+      ok: false,
+      code: "closeout.capsule-invalid",
+      detail: `every candidate needs exactly one promotion decision (${undecided.join(", ")})`,
+    };
+  }
+  const residue = orderResidue([
+    ...ingestion.unreadable.map((artifact) => ({
+      item: `unreadable review verdict ${artifact}`,
+      kind: "review-verdict-unreadable" as const,
+      location: artifact,
+    })),
+    ...capsuleEventGaps(beforeClose.events, input.capsuleExpected ?? []).map((gap) => ({
+      item: `missing capsule event ${gap.kind}`,
+      kind: "capsule-event-gap" as const,
+      location: gap.identity,
+    })),
+  ]);
+  const preContract = beforeClose.events.some((event) => event.kind === "capsule.backfill-gap");
+  const decisionCounts = capsulePromotionCounts(beforeClose.events);
+  const closed = runtime.close({
+    changeRef: workItemRef,
+    workspaceChangesDirectory: "",
+    writer: "closeout",
+    eventKey: `${workItemRef}:capsule.closed`,
+    payload: {
+      decisionCounts,
+      eventCount: beforeClose.events.length,
+      digest: capsuleDigest(beforeClose.events),
+    },
+    runId,
+    occurredAt: input.timestamp,
+  });
+  if (!closed.ok && closed.code !== "capsule.post-close") {
+    return {
+      ok: false,
+      code: closed.code === "state.lock.busy" ? "state.lock.busy" : "closeout.capsule-invalid",
+      detail: closed.detail,
+    };
+  }
+  if (closed.ok && closed.appended) appended += 1;
+  const afterClose = runtime.read(workItemRef);
+  const events = afterClose.ok ? afterClose.events : beforeClose.events;
+  const projections = events
+    .filter((event) => event.kind === "capsule.promotion")
+    .map((event) => ({
+      id: String(event.payload.id),
+      decision: event.payload.decision as "promoted" | "rejected",
+      ...(typeof event.payload.home === "string" ? { home: event.payload.home } : {}),
+      ...(typeof event.payload.reason === "string" ? { reason: event.payload.reason } : {}),
+    }));
+  const outcome: CloseoutOutcome = appended > 0 ? "applied" : "satisfied";
+  return {
+    ok: true,
+    step: {
+      ...planned,
+      outcome,
+      operations: [],
+      evidence: [
+        field("closed", true),
+        field("events", events.length),
+        field("candidates", projections.length),
+        field("gaps", residue.filter((item) => item.kind === "capsule-event-gap").length),
+      ],
+      detail: {
+        closed: true,
+        events: events.length,
+        candidates: projections.length,
+        preContract,
+      },
+    },
+    capsule: { closed: true, events: events.length, candidates: projections },
+    residue,
+  };
+};
+
 /**
  * Execute (apply) or render (plan) the deterministic transaction.
  *
@@ -1068,11 +1749,217 @@ const captureTelemetry = async (
  * a `finally`. A provider failure stops provider steps but still runs a safe
  * local restore and skips branch deletion.
  */
+/**
+ * The complete capsule pre-flight (GH-240 F-3, DEC-4; review F-2).
+ *
+ * Runs in plan and apply before any provider write, git mutation, or state
+ * append: capsule damage, candidate caps, `<id>.yaml` naming, candidate schema,
+ * one decision per candidate, and promotion path confinement.
+ */
+const capsulePreflightOf = (
+  input: CloseoutRunInput,
+): { readonly code: string; readonly detail: string } | undefined => {
+  const runtime = input.capsule;
+  if (runtime === undefined) return undefined;
+  const workItemRef = input.plan.workItemRef;
+  const read = runtime.read(workItemRef);
+  if (!read.ok) {
+    return { code: "closeout.capsule-invalid", detail: read.detail };
+  }
+  const candidates = runtime.readCandidates(workItemRef);
+  if (!candidates.ok) {
+    return { code: "closeout.capsule-invalid", detail: candidates.detail };
+  }
+  const documents = runtime.readCandidateDocuments(workItemRef);
+  if (!documents.ok) {
+    return { code: "closeout.capsule-invalid", detail: documents.detail };
+  }
+  const violations = candidateFileViolations(documents.documents);
+  if (violations.length > 0) {
+    return {
+      code: "closeout.capsule-invalid",
+      detail: violations.map((violation) => `${violation.file}: ${violation.detail}`).join("; "),
+    };
+  }
+  for (const document of documents.documents) {
+    const validated = validateCandidate(document.value);
+    if (!validated.ok) {
+      return {
+        code: "closeout.capsule-invalid",
+        detail: `${document.file}: ${validated.detail}`,
+      };
+    }
+  }
+  const decisions = new Map<string, number>();
+  for (const event of read.events) {
+    if (event.kind !== "capsule.promotion") continue;
+    const id = String(event.payload.id);
+    decisions.set(id, (decisions.get(id) ?? 0) + 1);
+  }
+  const evaluation =
+    input.promotion === undefined
+      ? undefined
+      : evaluateCandidates({
+          documents: input.promotion.candidates,
+          memory: input.promotion.memory,
+          decided: new Set(decisions.keys()),
+        });
+  const planned = new Set((evaluation?.decisions ?? []).map((decision) => decision.id));
+  const candidateIds = documents.documents
+    .map((document) => (/\.yaml$/.test(document.file) ? document.file.slice(0, -5) : document.file))
+    .sort();
+  const undecided = candidateIds.filter((id) => {
+    const count = decisions.get(id) ?? 0;
+    if (count > 1) return true;
+    return count === 0 && !planned.has(id);
+  });
+  if (undecided.length > 0) {
+    return {
+      code: "closeout.capsule-invalid",
+      detail: `every candidate needs exactly one promotion decision (${undecided.join(", ")})`,
+    };
+  }
+  if (evaluation !== undefined && evaluation.schemaFailures.length > 0) {
+    return {
+      code: "closeout.capsule-invalid",
+      detail: evaluation.schemaFailures
+        .map((failure) => `${failure.id}: ${failure.detail}`)
+        .join("; "),
+    };
+  }
+  const checked =
+    evaluation === undefined ? undefined : input.promotion?.preflight?.(evaluation.writes);
+  if (checked !== undefined && !checked.ok) {
+    return { code: "closeout.step.capsule.failed", detail: checked.detail };
+  }
+  return undefined;
+};
+
 export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunResult> => {
   const failure = targetFailure(input.plan, input.apply);
   if (failure !== undefined) return failure;
+  const preflightFailure = capsulePreflightOf(input);
+  if (input.apply && preflightFailure !== undefined) {
+    return {
+      ok: false,
+      error: {
+        kind: "closeout",
+        code: preflightFailure.code,
+        summary: preflightFailure.detail,
+      },
+    };
+  }
+  if (input.apply && input.capsule !== undefined) {
+    const capsuleRead = input.capsule.read(input.plan.workItemRef);
+    if (!capsuleRead.ok) {
+      return { ok: false, error: { kind: "closeout", code: "closeout.capsule-invalid" } };
+    }
+    if (capsuleRead.events.length === 0) {
+      // Pre-contract: record the backfill before any later step appends to it,
+      // so the terminal capsule step always finds the honest history.
+      const file = input.capsule.ensureCandidates(input.plan.workItemRef);
+      if (file.ok) {
+        input.capsule.append({
+          changeRef: input.plan.workItemRef,
+          workspaceChangesDirectory: "",
+          writer: "closeout",
+          kind: "capsule.opened",
+          eventKey: `${input.plan.workItemRef}:capsule.opened`,
+          payload: {
+            contractVersion: CAPSULE_CONTRACT_VERSION,
+            workItemRef: input.plan.workItemRef,
+          },
+          runId: input.runId ?? "closeout-run",
+          occurredAt: input.timestamp,
+        });
+        input.capsule.append({
+          changeRef: input.plan.workItemRef,
+          workspaceChangesDirectory: "",
+          writer: "closeout",
+          kind: "capsule.backfill-gap",
+          eventKey: `${input.plan.workItemRef}:capsule.backfill-gap`,
+          payload: { state: "pre-contract" },
+          runId: input.runId ?? "closeout-run",
+          occurredAt: input.timestamp,
+        });
+      }
+    }
+  }
 
   if (!input.apply) {
+    const residue = orderResidue([...(input.plan.residue ?? []), ...capsuleResidueOf(input)]);
+    let steps = input.plan.steps;
+    {
+      const read = input.capsule?.read(input.plan.workItemRef);
+      const documents = input.capsule?.readCandidateDocuments(input.plan.workItemRef);
+      const candidateDocs = documents?.ok === true ? documents.documents : [];
+      const decisions = new Map<string, number>();
+      if (read?.ok === true) {
+        for (const event of read.events) {
+          if (event.kind !== "capsule.promotion") continue;
+          const id = String(event.payload.id);
+          decisions.set(id, (decisions.get(id) ?? 0) + 1);
+        }
+      }
+      const evaluation =
+        input.promotion === undefined
+          ? undefined
+          : evaluateCandidates({
+              documents: input.promotion.candidates,
+              memory: input.promotion.memory,
+              decided: new Set(decisions.keys()),
+            });
+      const planned = new Set((evaluation?.decisions ?? []).map((decision) => decision.id));
+      const candidateIds = candidateDocs
+        .map((document) =>
+          /\.yaml$/.test(document.file) ? document.file.slice(0, -5) : document.file,
+        )
+        .sort();
+      const undecided = candidateIds.filter((id) => {
+        const count = decisions.get(id) ?? 0;
+        if (count > 1) return true;
+        return count === 0 && !planned.has(id);
+      });
+      const violations = candidateFileViolations(candidateDocs);
+      const schemaFailures = evaluation?.schemaFailures ?? [];
+      const preflight =
+        evaluation === undefined ? undefined : input.promotion?.preflight?.(evaluation.writes);
+      const refusal =
+        violations.length > 0
+          ? {
+              reason: "closeout.capsule-invalid",
+              detail: violations
+                .map((violation) => `${violation.file}: ${violation.detail}`)
+                .join("; "),
+            }
+          : schemaFailures.length > 0
+            ? {
+                reason: "closeout.capsule-invalid",
+                detail: schemaFailures
+                  .map((failure) => `${failure.id}: ${failure.detail}`)
+                  .join("; "),
+              }
+            : undecided.length > 0
+              ? {
+                  reason: "closeout.capsule-invalid",
+                  detail: `every candidate needs exactly one promotion decision (${undecided.join(", ")})`,
+                }
+              : preflight !== undefined && !preflight.ok
+                ? { reason: "closeout.step.capsule.failed", detail: preflight.detail }
+                : undefined;
+      if (refusal !== undefined) {
+        steps = input.plan.steps.map((step) =>
+          step.stepId === "capsule"
+            ? {
+                ...step,
+                outcome: "would-refuse" as const,
+                reason: refusal.reason,
+                detail: { ...(step.detail ?? {}), refusal: refusal.detail },
+              }
+            : step,
+        );
+      }
+    }
     const data: CloseoutData = {
       schemaId: CLOSEOUT_SCHEMA_ID,
       command: "closeout",
@@ -1082,9 +1969,10 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
       ...(input.plan.deliveryRequest === undefined
         ? {}
         : { deliveryRequest: input.plan.deliveryRequest }),
-      steps: input.plan.steps,
-      summary: input.plan.summary,
+      steps,
+      summary: summarizeCloseout(steps),
       ledgerKey: `closeout.operations:${input.plan.workItemRef}`,
+      ...(residue.length === 0 ? {} : { residue }),
     };
     return { ok: true, data: boundCloseoutData(data) };
   }
@@ -1102,6 +1990,9 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
   let earlierFailure = false;
   let stateFailure: { kind: string; code: string } | undefined;
   const steps: CloseoutStep[] = [];
+  let capsuleData: CloseoutCapsuleData | undefined;
+  let capsuleFailure: { readonly code: string; readonly detail: string } | undefined;
+  const capsuleResidue: CloseoutResidueItem[] = [...(input.plan.residue ?? [])];
   const mergedHeadSha = input.plan.deliveryRequest?.headSha;
 
   const append = (record: CloseoutOperationRecord): boolean => {
@@ -1138,18 +2029,204 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
         });
         continue;
       }
+      if (step.stepId === "retro-coverage-move") {
+        const retro = input.retro;
+        if (retro === undefined || !retro.available) {
+          capsuleResidue.push({
+            item: "the retro registry is unavailable",
+            kind: "retro-coverage-unavailable",
+            location: "retro.registry",
+          });
+          steps.push({ ...step, outcome: "skipped-gap", reason: "retro-registry-unavailable" });
+          continue;
+        }
+        let appended = false;
+        if (input.capsule !== undefined) {
+          const result = input.capsule.append({
+            changeRef: input.plan.workItemRef,
+            workspaceChangesDirectory: "",
+            writer: "closeout",
+            kind: "capsule.retro-coverage",
+            eventKey: `${input.plan.workItemRef}:capsule.retro-coverage:change`,
+            payload: {
+              level: "change",
+              state: retro.collected ? "collected" : "pending",
+              ...(retro.runId === undefined ? {} : { runId: retro.runId }),
+            },
+            runId: input.runId ?? "closeout-run",
+            occurredAt: input.timestamp,
+          });
+          if (!result.ok && result.code === "state.lock.busy") {
+            capsuleFailure = { code: "state.lock.busy", detail: result.detail };
+            break;
+          }
+          appended = result.ok && result.appended;
+        }
+        steps.push({
+          ...step,
+          outcome: appended ? "applied" : "satisfied",
+          detail: { state: retro.collected ? "collected" : "pending" },
+        });
+        continue;
+      }
+      if (step.stepId === "session-compaction") {
+        const sessions = input.sessions;
+        if (sessions === undefined) {
+          steps.push({ ...step, outcome: "skipped-noop", reason: "no-sessions" });
+          continue;
+        }
+        if (!sessions.available) {
+          capsuleResidue.push({
+            item: "session attribution is unavailable",
+            kind: "session-attribution-gap",
+            location: "session.store",
+          });
+          steps.push({
+            ...step,
+            outcome: "skipped-gap",
+            reason: "session-attribution-unavailable",
+          });
+          continue;
+        }
+        if (sessions.sessionIds.length === 0) {
+          steps.push({ ...step, outcome: "skipped-noop", reason: "no-sessions" });
+          continue;
+        }
+        let appended = false;
+        if (input.capsule !== undefined) {
+          const ids = sessions.sessionIds.slice(0, CAPSULE_MAX_SESSIONS);
+          const result = input.capsule.append({
+            changeRef: input.plan.workItemRef,
+            workspaceChangesDirectory: "",
+            writer: "closeout",
+            kind: "capsule.compaction-checkpoint",
+            eventKey: deriveCapsuleEventKey([
+              "capsule.compaction-checkpoint",
+              [...sessions.sessionIds].sort().join(","),
+              sessions.lastVerifiedCommit ?? "",
+            ]),
+            payload: {
+              sessions: ids,
+              sessionCount: sessions.sessionIds.length,
+              workingStateFlushed: sessions.workingStateFlushed ?? true,
+              eventLogFlushed: sessions.eventLogFlushed ?? true,
+              unresolvedQuestions: sessions.unresolvedQuestions ?? 0,
+              lastVerifiedCommit: sessions.lastVerifiedCommit ?? "",
+              gap: "harness-compaction-unavailable",
+              ...(sessions.truncated === undefined
+                ? {}
+                : { sessionTruncation: sessions.truncated }),
+            },
+            runId: input.runId ?? "closeout-run",
+            occurredAt: input.timestamp,
+          });
+          if (!result.ok && result.code === "state.lock.busy") {
+            capsuleFailure = { code: "state.lock.busy", detail: result.detail };
+            break;
+          }
+          appended = result.ok && result.appended;
+        }
+        steps.push({
+          ...step,
+          outcome: appended ? "applied" : "satisfied",
+          detail: { state: "checkpoint", gap: "harness-compaction-unavailable" },
+        });
+        continue;
+      }
+      if (step.stepId === "merged-diff-sweep") {
+        const sweep = evaluateDiffSweep({
+          ...(input.diffRead === undefined ? {} : { diff: input.diffRead }),
+          workItemRef: input.plan.workItemRef,
+        });
+        if (sweep.status === "unavailable") {
+          steps.push({
+            ...step,
+            outcome: "skipped-gap",
+            reason: "merged-diff-unavailable",
+            operations: [],
+          });
+          continue;
+        }
+        const ambiguous = sweep.hits.filter((hit) => !hit.resolved);
+        for (const hit of ambiguous) {
+          capsuleResidue.push({
+            item: `ambiguous ${hit.kind} hit`,
+            kind: "ambiguous-flip-hit",
+            location: `${hit.filePath}:${hit.line}`,
+          });
+        }
+        let added = 0;
+        if (input.capsule !== undefined) {
+          for (const hit of sweep.hits.filter((entry) => entry.resolved)) {
+            const eventKey = deriveCapsuleEventKey([
+              "closeout.step",
+              hit.filePath,
+              hit.contentHash,
+              hit.kind,
+              input.plan.workItemRef,
+            ]);
+            const appendedHit = input.capsule.append({
+              changeRef: input.plan.workItemRef,
+              workspaceChangesDirectory: "",
+              writer: "closeout",
+              kind: "closeout.step",
+              eventKey,
+              payload: {
+                stepId: "merged-diff-sweep",
+                outcome: "applied",
+                filePath: hit.filePath,
+                lineHash: hit.contentHash,
+                markerKind: hit.kind,
+                workItemRef: input.plan.workItemRef,
+              },
+              runId: input.runId ?? "closeout-run",
+              occurredAt: input.timestamp,
+            });
+            if (!appendedHit.ok && appendedHit.code === "state.lock.busy") {
+              capsuleFailure = { code: "state.lock.busy", detail: appendedHit.detail };
+              break;
+            }
+            if (appendedHit.ok && appendedHit.appended) added += 1;
+          }
+        }
+        if (capsuleFailure !== undefined) break;
+        const { reason: _planReason, ...withoutPlanReason } = step;
+        void _planReason;
+        steps.push({
+          ...withoutPlanReason,
+          outcome: added > 0 ? "applied" : "satisfied",
+          operations: [],
+          evidence: evidence(
+            field("hits", sweep.hits.length),
+            field("ambiguous", ambiguous.length),
+          ),
+          detail: { hits: sweep.hits.length, ambiguous: ambiguous.length, added },
+        });
+        continue;
+      }
+      if (step.stepId === "capsule") {
+        const executed = executeCapsuleStep(input, step);
+        if (!executed.ok) {
+          capsuleFailure = { code: executed.code, detail: executed.detail };
+          break;
+        }
+        steps.push(executed.step);
+        capsuleData = executed.capsule;
+        capsuleResidue.push(...executed.residue);
+        continue;
+      }
       if (step.outcome !== "would-apply") {
         steps.push({ ...step, outcome: PLAN_TO_APPLY[step.outcome] ?? step.outcome });
         continue;
       }
       let applied = 0;
-      let satisfied = 0;
+      let _satisfied = 0;
       let failed = 0;
       for (const operation of step.operations) {
         if (stateFailure !== undefined) break;
         const existing = persisted[operation.operationId];
         if (existing !== undefined && TERMINAL_OUTCOMES.has(existing.outcome)) {
-          satisfied += 1;
+          _satisfied += 1;
           continue;
         }
         const result = await executeOperation(operation, input.provider, input.git, mergedHeadSha);
@@ -1167,7 +2244,7 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
         }
         const outcome = operationOutcome(result);
         if (outcome === "applied") applied += 1;
-        else satisfied += 1;
+        else _satisfied += 1;
         if (!append(recordFor(operation, input.plan.workItemRef, outcome, input.timestamp))) break;
       }
       const outcome: CloseoutOutcome =
@@ -1180,6 +2257,16 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
 
   if (stateFailure !== undefined) {
     return { ok: false, error: stateFailure };
+  }
+  if (capsuleFailure !== undefined) {
+    return {
+      ok: false,
+      error: {
+        kind: capsuleFailure.code.startsWith("state.") ? "state" : "closeout",
+        code: capsuleFailure.code,
+        summary: capsuleFailure.detail,
+      },
+    };
   }
   const telemetryCapture = await captureTelemetry(input, steps);
   const data: CloseoutData = {
@@ -1195,6 +2282,8 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
     summary: summarizeCloseout(steps),
     ledgerKey: `closeout.operations:${input.plan.workItemRef}`,
     ...(telemetryCapture === undefined ? {} : { telemetryCapture }),
+    ...(capsuleData === undefined ? {} : { capsule: capsuleData }),
+    ...(capsuleResidue.length === 0 ? {} : { residue: orderResidue(capsuleResidue) }),
   };
   if (steps.some((step) => step.outcome === "failed")) {
     return {
@@ -1202,10 +2291,25 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
       error: { kind: "closeout", code: "closeout.write.failed" },
     };
   }
-  if (steps.some((step) => step.outcome === "refused")) {
+  const refused = steps.find((step) => step.outcome === "refused");
+  if (refused !== undefined) {
+    const retained = refused.detail?.retained;
+    const path = refused.detail?.path;
+    const condition = refused.detail?.condition;
+    const evidence = [
+      retained === undefined ? "" : `retained=${String(retained)}`,
+      path === undefined ? "" : `path=${String(path)}`,
+      condition === undefined ? "" : `condition=${String(condition)}`,
+    ]
+      .filter((part) => part.length > 0)
+      .join(" ");
     return {
       ok: false,
-      error: { kind: "closeout", code: "closeout.branch.unsafe" },
+      error: {
+        kind: "closeout",
+        code: "closeout.branch.unsafe",
+        summary: `${refused.stepId} refused${evidence.length === 0 ? "" : `: ${evidence}`}`,
+      },
     };
   }
   return { ok: true, data: boundCloseoutData(data) };
@@ -1233,6 +2337,18 @@ export const renderCloseoutHuman = (data: CloseoutData): string => {
       lines.push(`   - truncated (omitted ${step.truncation.omitted})`);
     }
   });
+  if (data.residue !== undefined && data.residue.length > 0) {
+    lines.push("");
+    lines.push("JUDGMENT RESIDUE");
+    for (const item of data.residue) {
+      lines.push(`- ${item.kind} ${item.item} (${item.location})`);
+    }
+  }
+  if (data.capsule !== undefined) {
+    lines.push(
+      `capsule: closed=${String(data.capsule.closed)} events=${data.capsule.events} candidates=${data.capsule.candidates.length}`,
+    );
+  }
   const counts = data.summary.counts;
   const summaryParts: string[] = [];
   for (const [key, value] of Object.entries(counts)) {

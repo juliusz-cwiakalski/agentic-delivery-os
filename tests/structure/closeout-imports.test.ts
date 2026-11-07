@@ -76,3 +76,42 @@ describe("TC-CLOSE-008 repository reader stays no-spawn", () => {
     }
   });
 });
+
+describe("TC-CAP-057 declared-vs-actual module reconciliation", () => {
+  test("the consolidated seams and provider thread facts exist", () => {
+    const closeout = readFileSync(join(ROOT, "packages/core/src/domain/closeout.ts"), "utf8");
+    for (const marker of ["retroStep", "compactionStep", "orderResidue", "capsuleResidueOf"]) {
+      expect(closeout, marker).toContain(`const ${marker}`);
+    }
+    const edge = readFileSync(join(ROOT, "packages/cli/src/edge.ts"), "utf8");
+    expect(edge).toContain("sessionsFor");
+    expect(edge).toContain("retroFor");
+    expect(edge).toContain("threadAuthorFacts");
+    const ports = readFileSync(join(ROOT, "packages/core/src/contracts/ports.ts"), "utf8");
+    expect(ports).toContain("authorLogin");
+    expect(ports).toContain("authorKind");
+    for (const file of [
+      "packages/core/src/domain/closeout-diff-sweep.ts",
+      "packages/core/src/domain/closeout-thread-policy.ts",
+      "packages/core/src/domain/closeout-worktree.ts",
+    ]) {
+      expect(readFileSync(join(ROOT, file), "utf8").length).toBeGreaterThan(0);
+    }
+  });
+
+  test("the plan records every superseded P5/P6/P8 module with its consequence", () => {
+    const plan = readFileSync(
+      join(ROOT, "doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/chg-GH-240-plan.yaml"),
+      "utf8",
+    );
+    for (const module of [
+      "closeout-retro-coverage.ts",
+      "closeout-compaction.ts",
+      "session-attribution.ts",
+      "capsule-residue.ts",
+    ]) {
+      expect(plan, module).toContain(module);
+    }
+    expect(plan).toContain("superseded by");
+  });
+});

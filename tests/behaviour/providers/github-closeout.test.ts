@@ -150,8 +150,22 @@ describe("TC-CLOSE-057 merged_at list shape", () => {
     if (result.observation === "observed") {
       expect(result.signals?.threads).toBe("observed");
       expect(result.value.threads).toEqual([
-        { threadId: "PRRT_1", resolved: true, commentCount: 2 },
-        { threadId: "PRRT_2", resolved: false, commentCount: 1 },
+        {
+          threadId: "PRRT_1",
+          resolved: true,
+          commentCount: 2,
+          authorLogin: "octocat",
+          authorKind: "human",
+          authorAssociation: "MEMBER",
+        },
+        {
+          threadId: "PRRT_2",
+          resolved: false,
+          commentCount: 1,
+          authorLogin: "dependabot[bot]",
+          authorKind: "non-human",
+          authorAssociation: "NONE",
+        },
       ]);
     }
     const graphql = transport.requests.find(

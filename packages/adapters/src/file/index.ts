@@ -21,6 +21,23 @@ export {
   runtimePlatform,
 } from "./config-source.js";
 export {
+  type CapsuleRuntimeOptions,
+  createCapsuleFileRuntime,
+  nodeCapsuleFileSystemFacts,
+} from "./capsule.js";
+export {
+  type ChangeFolderFileSystem,
+  type ChangeFolderRequest,
+  resolveChangeFolder,
+} from "./change-folder.js";
+export {
+  applyPromotionWrite,
+  checkPromotionConfinement,
+  type MemoryReadFileSystem,
+  type PromotionWriteResult,
+  readMemoryFacts,
+} from "./memory-promotion.js";
+export {
   type PlanArtifactRequest,
   readPlanArtifact,
 } from "./plan-artifact.js";

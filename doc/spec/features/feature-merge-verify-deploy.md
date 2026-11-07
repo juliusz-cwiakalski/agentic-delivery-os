@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-MERGE-VERIFY-DEPLOY
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe, owner-gate classification as merge authority, recorded authorized waivers, the single rebase-refresh with no force path, the verified squash landing with idempotent convergence and dry-run, the verify deploy trace verdict taxonomy, and the merge.* / verify.deploy.* error identities."
+summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe, owner-gate classification as merge authority, recorded authorized waivers, the single rebase-refresh with no force path, the verified squash landing with idempotent convergence and dry-run, the verify deploy trace verdict taxonomy, the recorded squash SHA and parent that anchor closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
 links:
-  related_changes: ["GH-225", "GH-237"]
+  related_changes: ["GH-225", "GH-237", "GH-240"]
   related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003"]
   contracts:
     - "packages/core/src/contracts/merge.ts"
@@ -138,6 +138,8 @@ re-verifies and never re-lands. A clean pre-mutation abort refuses
 is never silent. A recorded contained landing replays `merged` at exit 0 with the
 same squash SHA, zero git mutations, and no duplicate records.
 
+The recorded `merge.transaction` is the merged evidence anchor for closeout's read-only merged-diff sweep: the sweep reads the recorded squash SHA and its parent to obtain one bounded added-line diff. No merge contract, gate set, or mutation vocabulary changes for that consumer; closeout reads the record and performs no merge action. See [Closeout Transaction](feature-closeout.md).
+
 ## verify deploy
 
 `verify deploy <ref>` resolves the deployment target deterministically, reads the
@@ -196,7 +198,7 @@ with no pattern widening.
 
 [Verify Gates](feature-verify-gates.md) · [Owner-Gate SLA](feature-owner-gate-sla.md) ·
 [Configuration Layer](feature-config-layer.md) · [State Layer](feature-state-layer.md) ·
-[Adapter Ports](feature-adapter-ports.md) ·
+[Adapter Ports](feature-adapter-ports.md) · [Closeout Transaction](feature-closeout.md) ·
 [Result Contract and Error Table](feature-result-contract.md) · [Commit Primitive](feature-commit-primitive.md)
 
 ## Scheduling engine reconciliation (GH-237)

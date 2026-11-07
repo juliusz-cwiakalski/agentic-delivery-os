@@ -80,6 +80,8 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "merge.state-unverified",
   "merge.landing-unverified",
   "merge.transaction-aborted",
+  // GH-240 pins the capsule-invalid identity exactly; it is a two-segment code.
+  "closeout.capsule-invalid",
   // GH-236 pins the spend read-side identity exactly; it is a two-segment code.
   "spend.telemetry-absent",
   // GH-237 pins the four two-segment queue identities exactly.
@@ -775,7 +777,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "blockers")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "spend")).toHaveLength(1);
-    expect(entries).toHaveLength(105);
+    expect(entries).toHaveLength(106);
   });
 });
 
@@ -851,7 +853,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(105);
+    expect(entries).toHaveLength(106);
     expect(db).toHaveLength(4);
   });
 
@@ -931,10 +933,19 @@ const CLOSEOUT_ROWS = [
     "user-validation",
     "Branch cleanup or checkout restore was refused for safety.",
   ],
+  [
+    "closeout.capsule-invalid",
+    "user",
+    false,
+    "not_landed",
+    "Repair the capsule damage named in the evidence (torn tail, duplicate key, sequence gap, post-close line, or candidate schema failure) and retry; closeout never repairs or truncates the capsule.",
+    "user-validation",
+    "The change capsule is damaged and no promotion write landed.",
+  ],
 ] as const;
 
-describe("TC-CLOSE-003 four closeout identities round-trip and contain", () => {
-  test("closeout is a declared multi-row kind with exactly the four pinned rows", () => {
+describe("TC-CLOSE-003 five closeout identities round-trip and contain", () => {
+  test("closeout is a declared multi-row kind with exactly the five pinned rows", () => {
     expect(DOMAIN_KINDS).toContain("closeout");
     const closeout = entries.filter((entry) => entry.domainKind === "closeout");
     expect(closeout.map((entry) => entry.code)).toEqual(CLOSEOUT_ROWS.map(([code]) => code));
@@ -968,7 +979,7 @@ describe("TC-CLOSE-003 four closeout identities round-trip and contain", () => {
         classifyDomainKind("closeout", code),
       );
     }
-    expect(closeout).toHaveLength(4);
+    expect(closeout).toHaveLength(5);
   });
 
   test("kind-only closeout is ambiguous and contains; it never selects the first row", () => {
@@ -1076,7 +1087,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(105);
+    expect(entries).toHaveLength(106);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1138,7 +1149,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
     expect(entries.filter((entry) => entry.domainKind === "verify")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
-    expect(entries.filter((entry) => entry.domainKind === "closeout")).toHaveLength(4);
+    expect(entries.filter((entry) => entry.domainKind === "closeout")).toHaveLength(5);
   });
 });
 
@@ -1359,7 +1370,7 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(26);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(27);
   });
 });
 
@@ -1651,7 +1662,7 @@ describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(105);
+    expect(entries).toHaveLength(106);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1670,6 +1681,28 @@ describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (
       ),
     );
     expect(ALLOWLIST.allowed.some((code) => code.startsWith("dispatch."))).toBe(false);
+  });
+});
+
+describe("TC-CAP-053 closeout step family", () => {
+  test("every effective twelve-step slot resolves and unknown or empty slots do not", async () => {
+    const { resolveAppErrorCode } = await import("../../packages/cli/src/classify");
+    const { CLOSEOUT_STEP_IDS } = await import("../../packages/core/src/contracts/index");
+    for (const stepId of CLOSEOUT_STEP_IDS) {
+      const resolved = resolveAppErrorCode(`closeout.step.${stepId}.failed`);
+      expect(resolved.ok, stepId).toBe(true);
+      if (resolved.ok) {
+        expect(resolved.entry.domainKind).toBe("closeout");
+        expect(resolved.entry.projectionClass).toBe("user-validation");
+        expect(resolved.entry.consequence).toBe("not_landed");
+        expect(resolved.entry.retryable).toBe(false);
+        expect(resolved.entry.summary).toBe("A closeout step failed.");
+      }
+    }
+    expect(resolveAppErrorCode("closeout.step.unknown-step.failed").ok).toBe(false);
+    expect(resolveAppErrorCode("closeout.step..failed").ok).toBe(false);
+    expect(resolveAppErrorCode("closeout.step.Capsule.failed").ok).toBe(false);
+    expect(resolveAppErrorCode("closeout.step.capsule_failed").ok).toBe(false);
   });
 });
 
@@ -1722,7 +1755,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(104);
+    expect(delivered).toHaveLength(105);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1741,7 +1774,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("105 identities");
+    expect(doc).toContain("106 identities");
   });
 
   test("the documented table is complete in both directions", () => {

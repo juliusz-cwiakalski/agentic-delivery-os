@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The owner-gate SLA: the shared owner-gate population and its provider-native age clock, the pinned 24 h escalation and 72 h default-on-expiry thresholds with `>=` boundary semantics, the three-value `slaState` with declared unknown age, the PDR-0003 two-row policy-as-data default map (owner-review never-merge and non-defaultable, waiver defaulting to owner-review-first), the per-class waiver-authorization policy consumed by the merge transaction, the append-only idempotent EVT-1 decision record, recorded merge waivers folded into gate kind and `waivedBy`, structural never-merge protection, never-silence declared collector unavailability, the render-once board command with its deterministic rank key, bounds, and truncation marks, and the owner/coordinator audience seam."
 links:
-  related_changes: ["GH-229", "GH-225", "GH-230"]
+  related_changes: ["GH-229", "GH-225", "GH-230", "GH-237", "GH-240"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "PDR-0003"]
   contracts:
     - "packages/core/src/contracts/owner-gate-sla.ts"
@@ -170,7 +170,7 @@ The per-class policy map carries its waiver-authorization datum: `owner-review` 
 | `packages/cli/src/commands/board.ts` | The `board` command definition over injected collectors, policy, decision read/append, and clock; all-or-nothing collection, conditional history read, decision append, and no stream writes or exit-code choice. |
 | `packages/cli/src/edge.ts` | The board composition: `createBoardCommandRuntime` wires the GitHub tracker read, the open/owner-attention filters, the recorded-waiver fold (kind and `waivedBy`), the state ledger, and injected clock/fence factories; registration occurs only when a board composition is supplied. |
 | `packages/cli/src/classify.ts` | The runtime family recognizer that resolves any declared `status.collector.<id>.unavailable` shape to the documented status entry while the sync check enforces the closed collector-id set. |
-| `packages/core/src/contracts/error-table.ts` | The single `status.collector.tracker.unavailable` row that anchors the family's identity and remediation. |
+| `packages/core/src/contracts/error-table.ts` | The two documented family anchors, `status.collector.tracker.unavailable` and `status.collector.lanes.unavailable`, that carry the family's identity and remediation. |
 | `packages/cli/src/index.ts` | The optional pure `humanText` hook the board uses to render the aging grid. |
 
 ### Data flow
@@ -223,7 +223,7 @@ The decision record kind is additive inside `delivery.state.v1`. No existing rec
 | Latency | Pure evaluation, ranking, and rendering complete within 50 ms on the reference environment over the capped gate set. |
 | Bounds | At most 8 rendered gates; machine `data` at most 65 536 UTF-8 bytes; human grid at most 24 lines / 4 096 UTF-8 bytes; per-field caps enforced; every drop or clamp marked. |
 | Precision | Thresholds are evaluated against the injected clock on every invocation with the declared `>=` comparator; escalation at exactly 24 h, expiry at exactly 72 h; no background timer. |
-| Error identity | The only new identity is the `status.collector.<id>.unavailable` family, anchored by one documented table row; the documented table, machine table, and fixtures agree (59 rows); no other failure identity changes. |
+| Error identity | The only new identity shape is the `status.collector.<id>.unavailable` family, anchored by two documented family rows (`tracker`, `lanes`); the documented table, machine table, and fixtures agree; no other failure identity changes. |
 | Auditability and idempotency | Exactly one persisted decision record per default application; re-evaluation honors the existing record and appends nothing; a duplicated gate history is torn, never truth. |
 | Never-silence | A collector failure, unknown age, or truncation is always declared; a partial board is never rendered as an all-clear. |
 

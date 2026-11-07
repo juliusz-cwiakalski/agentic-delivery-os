@@ -239,6 +239,10 @@
         {
           "name": "resolved",
           "value": 1
+        },
+        {
+          "name": "human",
+          "value": 0
         }
       ]
     },
@@ -273,6 +277,19 @@
       ]
     },
     {
+      "stepId": "worktree-cleanup",
+      "label": "local worktree cleanup",
+      "outcome": "satisfied",
+      "reason": "no-worktree",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "worktree",
+          "value": "absent"
+        }
+      ]
+    },
+    {
       "stepId": "branch-cleanup",
       "label": "squash-safe local branch cleanup",
       "outcome": "would-apply",
@@ -301,22 +318,91 @@
           "value": "2222222222222222222222222222222222222222"
         }
       ]
+    },
+    {
+      "stepId": "merged-diff-sweep",
+      "label": "merged-diff owed-flip sweep",
+      "outcome": "skipped-gap",
+      "reason": "merged-diff-unavailable",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "mergedDiff",
+          "value": "unavailable"
+        }
+      ]
+    },
+    {
+      "stepId": "retro-coverage-move",
+      "label": "retro coverage move",
+      "outcome": "would-apply",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "state",
+          "value": "pending"
+        }
+      ],
+      "detail": {
+        "state": "pending"
+      }
+    },
+    {
+      "stepId": "session-compaction",
+      "label": "session compaction checkpoint",
+      "outcome": "skipped-noop",
+      "reason": "no-sessions",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "sessions",
+          "value": 0
+        }
+      ],
+      "detail": {
+        "state": "no-sessions"
+      }
+    },
+    {
+      "stepId": "capsule",
+      "label": "close the change capsule",
+      "outcome": "would-apply",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "present",
+          "value": false
+        },
+        {
+          "name": "events",
+          "value": 0
+        },
+        {
+          "name": "candidates",
+          "value": 0
+        }
+      ],
+      "detail": {
+        "present": false,
+        "events": 0,
+        "candidates": 0
+      }
     }
   ],
   "summary": {
     "totalOperations": 12,
     "counts": {
-      "would-apply": 6,
-      "satisfied": 1,
-      "skipped-gap": 0,
-      "skipped-noop": 0,
+      "would-apply": 8,
+      "satisfied": 2,
+      "skipped-gap": 1,
+      "skipped-noop": 1,
       "would-refuse": 0,
       "applied": 0,
       "failed": 0,
       "refused": 0
     },
-    "gaps": 0,
-    "noops": 0,
+    "gaps": 1,
+    "noops": 1,
     "failures": 0,
     "refusals": 0
   },

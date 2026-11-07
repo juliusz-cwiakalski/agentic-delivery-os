@@ -1073,8 +1073,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 71) {
-    failures.push(`table length ${live.length} != baseline + 71 (${BASELINE_ROWS.length + 71})`);
+  if (live.length !== BASELINE_ROWS.length + 72) {
+    failures.push(`table length ${live.length} != baseline + 72 (${BASELINE_ROWS.length + 72})`);
   }
   return failures;
 };
@@ -1097,7 +1097,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       lint: 6,
       plan: 5,
       verify: 6,
-      closeout: 4,
+      closeout: 5,
       watchdog: 4,
       commit: 6,
       status: 2,
@@ -1154,7 +1154,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 71,
+      BASELINE_ROWS.length + 72,
     );
   });
 
@@ -1177,7 +1177,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 71);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 72);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1650,6 +1650,18 @@ describe("TC-ECON-004 the four economics rows bind two-way to the table and corp
     expect(messages((await runSyncCheck({ root })).failures)).toContain(
       "source entry dispatch.phantom.row is undocumented",
     );
+  });
+});
+
+describe("TC-CAP-053 closeout step family recognition", () => {
+  test("only declared CLOSEOUT_STEP_IDS slots resolve", async () => {
+    const { isDeclaredCloseoutStepFamilyCode, closeoutStepIdOfFamilyCode } = await import(
+      "../../scripts/checks/error-table-sync"
+    );
+    expect(isDeclaredCloseoutStepFamilyCode("closeout.step.capsule.failed")).toBe(true);
+    expect(isDeclaredCloseoutStepFamilyCode("closeout.step.unknown-step.failed")).toBe(false);
+    expect(closeoutStepIdOfFamilyCode("closeout.step.capsule.failed")).toBe("capsule");
+    expect(closeoutStepIdOfFamilyCode("merge.gate.unit.failed")).toBeUndefined();
   });
 });
 

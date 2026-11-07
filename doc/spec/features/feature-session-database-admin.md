@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SESSION-DATABASE-ADMIN
 status: Current
 created: 2026-10-31
-last_updated: 2026-10-31
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The typed `db` command-family session-database administration surface: four closed subcommands (`size`, `list`, `prune`, `reboot`) over the opencode SQLite session store, a read-only `SessionStorePort` for size/list and a mutating `SessionAdminPort` for prune/reboot, dry-run-by-default mutation, the 15-minute activity-based live window, the 30-day default prune threshold, leaf-only candidate selection with a pre-delete TOCTOU re-check, official `opencode session delete` per candidate, one bounded WAL checkpoint on reboot, the `message`/`part` current store pin with legacy-empty `session_message`, the `db` error kind and four rows, bounded metadata-only output, and the ADR-0003 C-11 owner merge gate."
+summary: "The typed `db` command-family session-database administration surface: four closed subcommands (`size`, `list`, `prune`, `reboot`) over the opencode SQLite session store, a read-only `SessionStorePort` for size/list and a mutating `SessionAdminPort` for prune/reboot, dry-run-by-default mutation, the 15-minute activity-based live window, the 30-day default prune threshold, leaf-only candidate selection with a pre-delete TOCTOU re-check, official `opencode session delete` per candidate, one bounded WAL checkpoint on reboot, the `message`/`part` current store pin with legacy-empty `session_message`, the `db` error kind and four rows, bounded metadata-only output, the read-only session-attribution consumer used by the closeout compaction checkpoint, and the ADR-0003 C-11 owner merge gate."
 links:
-  related_changes: ["GH-180", "GH-233"]
+  related_changes: ["GH-180", "GH-233", "GH-240"]
   related_decisions: ["ADR-0003", "ADR-0010"]
   contracts:
     - "packages/core/src/contracts/session.ts"
@@ -78,6 +78,12 @@ Message count is over `message`, the current message store on the reference open
 Read-only. `list` issues exactly two read queries: one total-session count and one bounded page query. The page selects the ordered page of `session` rows and derives the three per-item aggregates in that same statement over the current `message` and `part` stores: `messageCount`, `partCount`, and `dataBytes`. `dataBytes` is a UTF-8 byte count, measured with `LENGTH(CAST(... AS BLOB))` rather than a character count, and is read as a length only, never returned as content.
 
 The page returns at most `--limit` items (default 20, max 100), ordered by `updatedAt` descending then `id` ascending, with `total`, `omitted`, and `truncated`. Each item carries exactly: `id`, optional `parentId`, `createdAt`, `updatedAt`, `messageCount`, `partCount`, `dataBytes`, `archived`, and `live`. Field sources are pinned: `createdAt = session.time_created`, `updatedAt = session.time_updated`, `parentId = session.parent_id`, and `archived = session.time_archived IS NOT NULL` (the schema has no `archived` column). `live` is computed from the injected clock against the 15-minute window. `session_message` is never read here.
+
+### Session attribution and the compaction checkpoint
+
+Closeout's `session-compaction` step is a read-only consumer of harness session attribution, not of the `db` surface. When harness settings are supplied, the production closeout composition constructs the harness-neutral extractor from the resolved settings: an opencode session is attributed through its `work_item_ref` root and a Claude Code session through the extractor's session-tree mapping. The derived bounded facts feed a `capsule.compaction-checkpoint` event carrying session identities or a counted truncation, the flushed working-state and event-log flags, the unresolved-question count, and the last verified commit; the event key derives from the sorted session-id set plus the last verified commit. It invokes no harness context-compaction API; that invocation is a declared capability gap. An empty store is `skipped-noop` with `no-sessions`; an unavailable store or a store whose sessions cannot be attributed to the delivery is `skipped-gap` with `session-attribution-unavailable` plus a `session-attribution-gap` residue, never a guessed checkpoint. Injected session facts override the derived attribution for tests.
+
+The `db` surface supplies no attribution: `db list` carries no work-item field, and no `db` subcommand or output field is added for this consumer. `size`, `list`, `prune`, and `reboot` keep their delivered grammar, fields, and behavior. The checkpoint contract is in [Change Capsule](feature-capsule.md) and [Closeout Transaction](feature-closeout.md).
 
 ### `db prune`
 
@@ -377,6 +383,6 @@ The envelope's `runId` and `timing`, the per-run counts, the explicit mode, the 
 | Metadata-only | The ADR-0003 C-11 rule that session and host inspection surfaces identifiers, counts, timestamps, and non-user paths only. |
 | Session id shape | `^[A-Za-z0-9_-]+$`; the only id form admitted before interpolation or command use. |
 
-References: [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md) (DEC-6, C-11); [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); [Result Contract and Error Table](feature-result-contract.md); [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); [State Layer](feature-state-layer.md); [Status Digest](feature-status-digest.md); [CLI command registry](../../planning/oss-tooling/cli-command-registry.md) (M0-S11); [TypeScript rules](../../../.ai/rules/typescript.md); [testing strategy](../../../.ai/rules/testing-strategy.md).
+References: [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md) (DEC-6, C-11); [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); [Result Contract and Error Table](feature-result-contract.md); [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md); [State Layer](feature-state-layer.md); [Status Digest](feature-status-digest.md); [Change Capsule](feature-capsule.md); [Closeout Transaction](feature-closeout.md); [CLI command registry](../../planning/oss-tooling/cli-command-registry.md) (M0-S11); [TypeScript rules](../../../.ai/rules/typescript.md); [testing strategy](../../../.ai/rules/testing-strategy.md).
 
-**Change record:** `doc/changes/2026-10/2026-10-31--GH-180--db-session-admin-port/`.
+**Change records:** `doc/changes/2026-10/2026-10-31--GH-180--db-session-admin-port/`, `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`.

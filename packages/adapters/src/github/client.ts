@@ -120,7 +120,7 @@ const numericEntity = (entityId: string): number | undefined => {
 };
 
 const REVIEW_THREADS_QUERY =
-  "query ReviewThreads($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { reviewThreads(first: 100) { nodes { id isResolved comments { totalCount } } } } } }";
+  "query ReviewThreads($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { reviewThreads(first: 100) { nodes { id isResolved comments(first: 1) { totalCount nodes { author { login __typename } authorAssociation } } } } } } }";
 
 const selectMerged = (requests: readonly DeliveryRequest[]): DeliveryRequest | undefined => {
   let selected: DeliveryRequest | undefined;

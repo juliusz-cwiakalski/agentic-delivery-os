@@ -177,20 +177,34 @@ describe("TC-HARN-022 drift discipline", () => {
     ).toBe(true);
   });
 
-  test("an orphan root fails visibly with no fabricated work-item ref", () => {
+  test("an orphan root is a store-scoped warning with no fabricated work-item ref", () => {
     const capture = opencode("orphan");
     expect(capture.records.some((record) => record.sessionId === "ses_orphan")).toBe(false);
     expect(
       capture.failedSessions.some((session) => session.reason === "unattributable-session"),
+    ).toBe(false);
+    expect(
+      capture.warnings.some(
+        (warning) =>
+          warning.reason === "unattributable-session" &&
+          warning.field === "store:out-of-port-orphans=1",
+      ),
     ).toBe(true);
     expect(JSON.stringify(capture)).not.toContain("fabricated");
   });
 
-  test("a malformed required identity fails visibly with no placeholder id", () => {
+  test("a malformed required identity is a bounded store warning with no placeholder id", () => {
     const capture = opencode("broken-identity");
     expect(capture.records.every((record) => record.sessionId.length > 0)).toBe(true);
     expect(
       capture.failedSessions.some((session) => session.reason === "invalid-session-identity"),
+    ).toBe(false);
+    expect(
+      capture.warnings.some(
+        (warning) =>
+          warning.reason === "invalid-session-identity" &&
+          warning.field === "store:invalid-identity=1",
+      ),
     ).toBe(true);
     const claudeCapture = claude(
       [

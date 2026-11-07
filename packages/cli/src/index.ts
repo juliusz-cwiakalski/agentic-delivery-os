@@ -379,7 +379,7 @@ export async function runCli(
       exitCode: envelope.exitCode,
       timing,
       resultSchemaVersion: envelope.schemaVersion,
-      outcomeClass,
+      outcomeClass: outcomeClass === "attention" ? "user-validation" : outcomeClass,
       scope: audit.scope,
       ...(audit.repo === undefined ? {} : { repo: audit.repo }),
       startedAt,

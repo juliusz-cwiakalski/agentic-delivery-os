@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The Learn-family spend read side: the read-only `spend [--ref <ref>] [--phase <phase>] [--amplification] [--json]` command folding the closeout-captured harness.telemetry session-group and capture-outcome records plus phase.transition history into five-class token totals, calls, per-agent/model roll-ups, capture-time per-phase attribution with the named unknown fallback, restart counts over the union of run identities, the TDR-0011 resume-amplification ratio with the additive progressRun field and named restart-loop prefill re-pay events, the closed degradation disclosure, bounded deterministic human and machine output, the single spend.telemetry-absent error row, and the status digest section 8 projection fed by the same fold."
 links:
-  related_changes: ["GH-236"]
+  related_changes: ["GH-236", "GH-240"]
   related_decisions: ["TDR-0011", "ADR-0003", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/spend.ts"
@@ -31,7 +31,7 @@ Telemetry-absent is a first-class classified outcome (`spend.telemetry-absent`, 
 
 ### Problem Statement
 
-- **Problem:** Delivery spend is invisible when it must be reconstructed by hand: per-ticket and per-phase token breakdowns, per-agent/model attribution, restart volume, and the paid-versus-progress waste signal are not answerable from the tooling, and a digest section without spend evidence is a placeholder rather than proof. Until a production capture composer is wired, every real store is telemetry-absent; a read side that treated absence as an edge case, a silent zero, or an unclassified failure would be wrong in every real invocation.
+- **Problem:** Delivery spend is invisible when it must be reconstructed by hand: per-ticket and per-phase token breakdowns, per-agent/model attribution, restart volume, and the paid-versus-progress waste signal are not answerable from the tooling, and a digest section without spend evidence is a placeholder rather than proof. Closeout constructs the harness capture from resolved settings and writes `harness.telemetry` records to the state log, while a store with no capture for the selected ref remains telemetry-absent by contract. A read side that treated absence as an edge case, a silent zero, or an unclassified failure would be wrong in every such invocation.
 - **Affected Users:** The operator and coordinator reading delivery economics, lifecycle agents consuming the report, and the later alarm/burn-rate and model-routing surfaces that consume the amplification signal.
 - **Business Impact:** The two operator waste classes this surface exists for — restart re-payment and re-run spend — become answerable from one invocation over the log alone, without harness re-query and without reconstructing numbers by hand.
 
@@ -292,7 +292,7 @@ The command writes nothing and retains nothing. Its recurring cost is the local 
 
 ## Dependencies & Risks
 
-- **Depends on** the harness adapters and closeout capture ([feature-harness-adapters.md](feature-harness-adapters.md)) for the neutral telemetry record vocabulary, five token classes, warning reasons, and the capture point. No production composer is wired yet; until then a real store is telemetry-absent by contract.
+- **Depends on** the harness adapters and closeout capture ([feature-harness-adapters.md](feature-harness-adapters.md)) for the neutral telemetry record vocabulary, five token classes, warning reasons, and the capture point. The production closeout composition constructs the capture from resolved harness settings and appends `harness.telemetry` to the state log, so a real closeout is no longer telemetry-absent; a store without capture for the selected ref remains the classified telemetry-absent outcome.
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for verified reads, presence tolerance, and classified `state.*` failures.
 - **Depends on** the delivery registry ([feature-pm-notes-lint-and-phase-transitions.md](feature-pm-notes-lint-and-phase-transitions.md)) for timestamped `phase.transition` history.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, error table, exact-code classification, exit projection, and redaction chokepoint.
@@ -300,7 +300,7 @@ The command writes nothing and retains nothing. Its recurring cost is the local 
 - **Risk — over-interpreting the ratio:** mitigated by the in-report honesty limits and the closed cause name.
 - **Risk — coarse per-phase attribution:** a record's whole spend lands on one phase under the capture-time rule; the basis and the `unknown` fallback are named, and finer attribution is deferred.
 - **Risk — restart undercount:** runs aborted before closeout capture are invisible; the evidence basis is disclosed, and lane economics later enriches restart evidence.
-- **Risk — telemetry-absent dominance until capture is wired:** absence is the first-class classified outcome, and every reporting path is proven on fixtures.
+- **Risk — telemetry-absent where capture did not run or produced no records:** absence remains the first-class classified outcome, and every reporting path is proven on fixtures.
 
 ## Glossary & References
 

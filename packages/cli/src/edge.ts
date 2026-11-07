@@ -11,8 +11,12 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import {
   acquireFileConfig,
+  applyPromotionWrite,
+  checkPromotionConfinement,
+  createCapsuleFileRuntime,
   createCommitlintProbe,
   createSecretScanner,
+  nodeCapsuleFileSystemFacts,
   type FileSystemFacts,
   neutralEnvironmentFacts,
   nodeFileSystemFacts,
@@ -21,6 +25,7 @@ import {
   type RuntimePlatform,
   readCiWorkflowJobNames,
   readLocalPmContext,
+  readMemoryFacts,
   readPlanArtifact,
   readPmNotesText,
   runtimePlatform,
@@ -54,6 +59,12 @@ import {
   readRepositoryFacts,
 } from "@delivery-os/adapters/repo";
 import {
+  createBunSqliteStoreOpener,
+  createClaudeTelemetryExtractor,
+  createNodeFileReader,
+  createOpencodeTelemetryExtractor,
+} from "@delivery-os/adapters/harness";
+import {
   createDeliverySessionFacts,
   createSessionAdmin,
   createSessionStore,
@@ -63,8 +74,11 @@ import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
   addQueueDependency,
   buildCloseoutPlan,
+  capsuleGateEventKey,
+  capsulePhaseEventKey,
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
+  type CloseoutTelemetryRuntime,
   type CommitActRequest,
   type CommitTransportPorts,
   callerAudienceVariableName,
@@ -77,14 +91,20 @@ import {
   computeQueueSchedule,
   computeSpendReport,
   createSourcedWatchdogSignalSource,
+  deriveCapsuleEventKey,
+  evaluateDiffSweep,
+  evaluateWorktreeSafety,
   declareQueueEntry,
   defaultParkRecheckMs,
   evaluateClaimPreconditions,
   foldLanes,
   isHeldByWeight,
   isLiveDbSession,
+  type HarnessSettings,
   type MergeTransactionPorts,
   newestWaiverByGate,
+  parseCapsuleEvents,
+  payloadFieldViolations,
   PRODUCTION_CATALOG,
   parkConditionForCause,
   prioritizeQueueEntry,
@@ -116,6 +136,7 @@ import {
   runCloseout,
   runCommitAct,
   selectPruneCandidates,
+  serializeCapsuleEvent,
   spendDigestSection,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
@@ -137,6 +158,16 @@ import {
   type BlockerDelegationPolicy,
   type BrandIdentity,
   CLOSEOUT_MAX_DEPENDENTS,
+  HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
+  type CapsuleFileRuntime,
+  type CapsuleFileSystemFacts,
+  type CapsuleProducerPort,
+  type CloseoutDiffRead,
+  type CloseoutExpectedCapsuleEvent,
+  type CloseoutWorktreeFacts,
+  type CloseoutPromotionRuntime,
+  type CloseoutRetroFacts,
+  type CloseoutSessionFacts,
   type CloseoutGitRuntime,
   type CloseoutProviderRuntime,
   type CloseoutReadObservation,
@@ -215,6 +246,8 @@ import {
   appendCommitTelemetry,
   appendMergeGateVerification,
   appendMergeTransaction,
+  appendHarnessCaptureOutcome,
+  appendHarnessTelemetry,
   appendMergeWaiver,
   appendOwnerGateSlaDecision,
   appendPhaseTransition,
@@ -394,6 +427,44 @@ export const createRegistryLintReader = (
   };
 };
 
+/**
+ * Compose the production capsule producer port (GH-240 F-2).
+ *
+ * Every read/write goes through the append-only file runtime; the port keeps
+ * the per-command surface non-gating and disclosure-only.
+ */
+export const createCapsuleProducerPort = (options: {
+  readonly changesDirectory: string;
+  readonly fs?: CapsuleFileSystemFacts;
+  readonly nowIso: () => string;
+  readonly runId?: () => string;
+}): CapsuleProducerPort => {
+  const runtime = createCapsuleFileRuntime({
+    changesDirectory: options.changesDirectory,
+    fs: options.fs ?? nodeCapsuleFileSystemFacts(),
+    nowIso: options.nowIso,
+    rules: {
+      parse: parseCapsuleEvents,
+      serialize: serializeCapsuleEvent,
+      payloadFieldViolations,
+      deriveEventKey: deriveCapsuleEventKey,
+    },
+  });
+  return {
+    append: (request) =>
+      runtime.append({
+        changeRef: request.changeRef,
+        workspaceChangesDirectory: options.changesDirectory,
+        writer: request.writer,
+        kind: request.kind,
+        eventKey: request.eventKey,
+        payload: request.payload,
+        runId: request.runId ?? options.runId?.() ?? "capsule-run",
+        ...(request.occurredAt === undefined ? {} : { occurredAt: request.occurredAt }),
+      }),
+  };
+};
+
 /** Compose the phase write path from injected I/O, state, and time facts. */
 export type PhaseRuntimeOptions = {
   readonly store: StateStorePort;
@@ -402,6 +473,8 @@ export type PhaseRuntimeOptions = {
   readonly writeFile: (file: string, text: string) => void;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
+  /** The non-gating capsule producer port (GH-240 F-2). */
+  readonly capsule?: CapsuleProducerPort;
 };
 
 export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCommandRuntime => ({
@@ -434,6 +507,7 @@ export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCo
   },
   nowIso: options.nowIso,
   newFenceToken: options.newFenceToken,
+  ...(options.capsule === undefined ? {} : { capsule: options.capsule }),
 });
 
 /**
@@ -456,6 +530,8 @@ export type CommitRuntimeOptions = {
   readonly resolveRef?: () => Promise<
     { readonly ref: string; readonly refSource: "branch" | "change-folder" } | undefined
   >;
+  /** The non-gating capsule producer port (GH-240 F-2). */
+  readonly capsule?: CapsuleProducerPort;
 };
 
 const scopePathsOf = (scope: unknown): readonly string[] => {
@@ -676,6 +752,7 @@ export const createCommitCommandRuntime = (
   runAct: (request) => runCommitAct(request, commitActPorts(options)),
   currentHead: () => options.git.head(),
   ...(phase === undefined ? {} : { phase }),
+  ...(options.capsule === undefined ? {} : { capsule: options.capsule }),
 });
 
 /** Compose the read-only verify runtime from injected I/O and the state port. */
@@ -725,6 +802,8 @@ export type VerifyGatesRuntimeOptions = {
   readonly appendVerification?: VerifyGatesCommandRuntime["appendVerification"];
   /** The injected clock in epoch milliseconds. */
   readonly nowMs?: () => number;
+  /** The non-gating capsule producer port (GH-240 F-2). */
+  readonly capsule?: CapsuleProducerPort;
 };
 
 type ProviderFailureLike = { readonly ok: false; readonly code: string };
@@ -864,6 +943,7 @@ export const createVerifyGatesCommandRuntime = (
       }),
     appendVerification: options.appendVerification ?? (() => ({ ok: true as const })),
     nowMs: options.nowMs ?? (() => Date.now()),
+    ...(options.capsule === undefined ? {} : { capsule: options.capsule }),
   };
 };
 
@@ -1155,6 +1235,26 @@ export type CloseoutComposition = {
   readonly state: CloseoutStateRuntime;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
+  /** The append-only capsule runtime (GH-240 F-3); absent leaves the step a gap. */
+  readonly capsule?: CapsuleFileRuntime;
+  /** The expected capsule events derived from durable state (GH-240 F-3). */
+  readonly capsuleExpected?: (workItemRef: string) => readonly CloseoutExpectedCapsuleEvent[];
+  /** The promotion runtime for one work item (GH-240 F-4). */
+  readonly promotion?: (workItemRef: string) => CloseoutPromotionRuntime;
+  /** The one bounded merged-diff read (GH-240 F-5). */
+  readonly diffRead?: CloseoutDiffRead;
+  /** The retro-coverage facts (GH-240 F-8). */
+  readonly retro?: CloseoutRetroFacts;
+  /** The session-attribution facts (GH-240 F-9). */
+  readonly sessions?: CloseoutSessionFacts;
+  /** Per-work-item session attribution from the harness store (F-9). */
+  readonly sessionsFor?: (workItemRef: string) => CloseoutSessionFacts | undefined;
+  /** Per-work-item retro coverage read from the registry (F-8). */
+  readonly retroFor?: (workItemRef: string) => CloseoutRetroFacts | undefined;
+  /** Per-work-item merged-diff read (F-5). */
+  readonly diffReadFor?: (workItemRef: string) => CloseoutDiffRead | undefined;
+  /** The non-gating harness telemetry capture capability (GH-240 F-10). */
+  readonly telemetry?: CloseoutTelemetryRuntime;
 };
 
 /** The raw provider source the closeout composition bridges to a runtime. */
@@ -1186,7 +1286,9 @@ export type CloseoutProviderSource =
 /** The raw ports the production closeout composition consumes. */
 export type CloseoutCompositionOptions = {
   readonly workspaceId: string;
-  readonly provider: CloseoutProviderSource;
+  /** A raw provider source, or an already-built runtime for composition tests. */
+  readonly provider?: CloseoutProviderSource;
+  readonly providerRuntime?: CloseoutProviderRuntime;
   /** An already-built seam, or the construction options for the real seam. */
   readonly git: GitBranchSeam | GitBranchSeamOptions;
   readonly store: StateStorePort;
@@ -1195,6 +1297,24 @@ export type CloseoutCompositionOptions = {
   readonly dependentsLimit?: number;
   readonly mergedRequestLimit?: number;
   readonly entityIdFor?: (workItemRef: string, kind: CloseoutProviderSource["kind"]) => string;
+  /** The append-only capsule runtime (GH-240 F-3). */
+  readonly capsule?: CapsuleFileRuntime;
+  /** The injected memory root for promotion home writes (GH-240 F-4). */
+  readonly memoryRoot?: string;
+  /** The retro-coverage facts (GH-240 F-8). */
+  readonly retro?: CloseoutRetroFacts;
+  /** The session-attribution facts (GH-240 F-9). */
+  readonly sessions?: CloseoutSessionFacts;
+  /** Per-work-item session attribution from the harness store (F-9). */
+  readonly sessionsFor?: (workItemRef: string) => CloseoutSessionFacts | undefined;
+  /** Per-work-item retro coverage read from the registry (F-8). */
+  readonly retroFor?: (workItemRef: string) => CloseoutRetroFacts | undefined;
+  /** Per-work-item merged-diff read (F-5). */
+  readonly diffReadFor?: (workItemRef: string) => CloseoutDiffRead | undefined;
+  /** The non-gating harness telemetry capture capability (GH-240 F-10). */
+  readonly telemetry?: CloseoutTelemetryRuntime;
+  /** The resolved harness configuration used to construct the capture capability. */
+  readonly harness?: HarnessSettings;
 };
 
 type ReadResult<T> =
@@ -1401,17 +1521,173 @@ export const createCloseoutStateRuntime = (store: StateStorePort): CloseoutState
  * reverse dependents with per-candidate relation reads, git facts, persisted
  * ledger) exactly once; the engine then plans/applies over those facts.
  */
+/** Derive the capsule events the durable state records require (F-3, D-11). */
+const capsuleExpectedEvents = (
+  store: StateStorePort,
+  workItemRef: string,
+): readonly CloseoutExpectedCapsuleEvent[] => {
+  const records = store.readRecords();
+  if (!records.ok) return [];
+  const expected: CloseoutExpectedCapsuleEvent[] = [];
+  for (const record of records.value.records) {
+    const payload = record.payload as unknown as Record<string, unknown>;
+    if (payload.changeRef !== workItemRef) continue;
+    if (record.kind === "phase.transition") {
+      const phaseId = typeof payload.phaseId === "string" ? payload.phaseId : undefined;
+      const operation = typeof payload.operation === "string" ? payload.operation : undefined;
+      if (phaseId === undefined || operation === undefined) continue;
+      const commitSha = typeof payload.commitSha === "string" ? payload.commitSha : undefined;
+      expected.push({
+        kind: "phase.transition",
+        eventKey: capsulePhaseEventKey({
+          changeRef: workItemRef,
+          phaseId,
+          operation,
+          ...(commitSha === undefined ? {} : { commitSha }),
+          ...(typeof payload.timestamp === "string" ? { transitionId: payload.timestamp } : {}),
+        }),
+        identity: `${phaseId}:${operation}`,
+      });
+      continue;
+    }
+    if (record.kind === "commit.telemetry" && typeof payload.commitSha === "string") {
+      expected.push({
+        kind: "commit.landed",
+        eventKey: payload.commitSha,
+        identity: payload.commitSha,
+      });
+      continue;
+    }
+    if (record.kind === "merge.gate-verification" && typeof payload.headSha === "string") {
+      const gateSet = payload.gateSet as { schemaVersion?: unknown; ids?: unknown } | undefined;
+      const schemaVersion =
+        typeof gateSet?.schemaVersion === "string"
+          ? gateSet.schemaVersion
+          : "delivery.merge.gates.v1";
+      const ids = Array.isArray(gateSet?.ids)
+        ? gateSet.ids.filter((id): id is string => typeof id === "string")
+        : [];
+      const identity = `${schemaVersion}:${ids.join(",")}`;
+      expected.push({
+        kind: "gate.outcome",
+        eventKey: capsuleGateEventKey(identity, payload.headSha),
+        identity: payload.headSha,
+      });
+    }
+  }
+  return expected;
+};
+
+/** The read-only capsule pre-flight facts for the plan (GH-240 F-3). */
+const capsuleFactsOf = (
+  runtime: CapsuleFileRuntime,
+  workItemRef: string,
+): NonNullable<CloseoutPlanFacts["capsule"]> => {
+  const read = runtime.read(workItemRef);
+  const candidates = runtime.readCandidates(workItemRef);
+  if (!read.ok) {
+    return {
+      present: true,
+      valid: false,
+      refusal: {
+        code: read.code,
+        detail: read.detail,
+        ...(read.line === undefined ? {} : { line: read.line }),
+      },
+      events: 0,
+      candidates: 0,
+    };
+  }
+  return {
+    present: read.events.length > 0,
+    valid: candidates.ok,
+    events: read.events.length,
+    candidates: candidates.ok ? candidates.candidates.length : 0,
+    ...(candidates.ok ? {} : { refusal: { code: candidates.code, detail: candidates.detail } }),
+  };
+};
+
+/** Construct the harness-neutral extractor from resolved configuration (F-10). */
+const closeoutHarnessExtractor = (
+  settings: HarnessSettings,
+  nowIso: () => string,
+): CloseoutTelemetryRuntime["extract"] => {
+  if (settings.kind === "claude-code") {
+    const extractor = createClaudeTelemetryExtractor({
+      directory: settings.claudeCodeSessionDirectory,
+      reader: createNodeFileReader(),
+      now: nowIso,
+    });
+    return async (input) => extractor.extract(input);
+  }
+  const extractor = createOpencodeTelemetryExtractor({
+    opener: createBunSqliteStoreOpener(),
+    storePath: settings.opencodeDatabasePath,
+    now: nowIso,
+  });
+  return async (input) => extractor.extract(input);
+};
+
+/** The latest verified commit attributed to the delivery (F-9). */
+const latestVerifiedCommit = (store: StateStorePort, workItemRef: string): string | undefined => {
+  const records = store.readRecords();
+  if (!records.ok) return undefined;
+  for (let index = records.value.records.length - 1; index >= 0; index -= 1) {
+    const record = records.value.records[index];
+    if (record?.kind !== "commit.telemetry") continue;
+    const payload = record.payload as unknown as Record<string, unknown>;
+    if (payload.changeRef === workItemRef && typeof payload.commitSha === "string") {
+      return payload.commitSha;
+    }
+  }
+  return undefined;
+};
+
+/** The recorded squash SHA of a merged delivery, if any (F-5). */
+const mergedSquashSha = (store: StateStorePort, workItemRef: string): string | undefined => {
+  const records = store.readRecords();
+  if (!records.ok) return undefined;
+  for (let index = records.value.records.length - 1; index >= 0; index -= 1) {
+    const record = records.value.records[index];
+    if (record?.kind !== "merge.transaction") continue;
+    const payload = record.payload as unknown as Record<string, unknown>;
+    if (payload.changeRef !== workItemRef || payload.result !== "merged") continue;
+    if (typeof payload.squashSha === "string") return payload.squashSha;
+  }
+  return undefined;
+};
+
 export const createCloseoutComposition = (
   options: CloseoutCompositionOptions,
 ): CloseoutComposition => {
-  const provider = bridgeCloseoutProvider(options.provider);
+  const provider =
+    options.providerRuntime ??
+    bridgeCloseoutProvider(
+      options.provider ?? {
+        kind: "declared",
+        systemName: "declared",
+        capabilities: {
+          supportedOperations: [],
+          declaredGaps: [],
+          writableCarriers: [],
+          readableCarriers: [],
+        },
+      },
+    );
   const git = gitSeamFor(options.git);
+  const extractor =
+    options.harness === undefined
+      ? undefined
+      : closeoutHarnessExtractor(options.harness, options.nowIso);
+  const diffReads = new Map<string, CloseoutDiffRead>();
+  const sessionFacts = new Map<string, CloseoutSessionFacts>();
+  const retroFacts = new Map<string, CloseoutRetroFacts>();
   const dependentsLimit = options.dependentsLimit ?? CLOSEOUT_MAX_DEPENDENTS;
   const mergedRequestLimit = options.mergedRequestLimit ?? 20;
   const entityIdFor = options.entityIdFor ?? defaultCloseoutEntityId;
 
   const planFacts = async (workItemRef: string): Promise<CloseoutPlanFacts> => {
-    const entityId = entityIdFor(workItemRef, options.provider.kind);
+    const entityId = entityIdFor(workItemRef, options.provider?.kind ?? "declared");
     const observedWorkItem = await provider.readWorkItemObservation(entityId);
     if (
       observedWorkItem.observation === "invalid" &&
@@ -1468,6 +1744,120 @@ export const createCloseoutComposition = (
       .filter((entry) => entry.elsewhere)
       .map((entry) => entry.name);
 
+    const currentWorktree =
+      git.currentWorktreePath === undefined ? undefined : await git.currentWorktreePath();
+    const worktrees = git.listWorktrees === undefined ? [] : await git.listWorktrees();
+    const deliveryWorktree =
+      deliveryBranch.length === 0
+        ? undefined
+        : worktrees.find((entry) => entry.branch === deliveryBranch);
+    let worktree: CloseoutWorktreeFacts;
+    if (deliveryWorktree === undefined) {
+      worktree = { present: false, safe: false, reason: "no-worktree" };
+    } else {
+      const worktreeClean =
+        git.isWorktreeClean === undefined
+          ? cleanWorktree
+          : await git.isWorktreeClean({ path: deliveryWorktree.path });
+      const verdict = evaluateWorktreeSafety({
+        present: true,
+        mergedObserved:
+          mergedRequest.observation === "observed" && mergedRequest.value.reviewState === "merged",
+        conventionMatch: deliveryWorktree.branch === deliveryBranch,
+        ...(deliveryWorktree.head === undefined ? {} : { localHead: deliveryWorktree.head }),
+        ...(mergedHeadSha === undefined ? {} : { mergedHeadSha }),
+        clean: worktreeClean,
+        isCurrent: currentWorktree !== undefined && deliveryWorktree.path === currentWorktree,
+        locked: deliveryWorktree.locked,
+        foreign:
+          deliveryWorktree.branch === undefined || deliveryWorktree.branch !== deliveryBranch,
+        restoreSucceeded: baseRefExists,
+        earlierFailure: false,
+      });
+      worktree = {
+        present: true,
+        safe: verdict.safe,
+        ...(verdict.reason === undefined ? {} : { reason: verdict.reason }),
+        path: deliveryWorktree.path,
+        ...(deliveryWorktree.head === undefined ? {} : { head: deliveryWorktree.head }),
+        ...(deliveryWorktree.branch === undefined ? {} : { branch: deliveryWorktree.branch }),
+      };
+    }
+
+    // A safe delivery worktree is removed before branch cleanup, so it no
+    // longer holds the branch when the branch predicate is evaluated.
+    const effectiveCheckedOutElsewhere = checkedOutElsewhere.filter(
+      (name) => !(worktree.safe && name === deliveryBranch),
+    );
+
+    const squashSha = mergedSquashSha(options.store, workItemRef);
+    let diff: CloseoutPlanFacts["diff"];
+    if (squashSha !== undefined && git.readMergedDiff !== undefined) {
+      const read = await git.readMergedDiff({ squashSha });
+      if (read !== undefined) {
+        const diffRead: CloseoutDiffRead = {
+          text: read.text,
+          files: read.files,
+          squashSha,
+          parentSha: `${squashSha}^`,
+        };
+        diffReads.set(workItemRef, diffRead);
+        const sweep = evaluateDiffSweep({ diff: diffRead, workItemRef });
+        const ambiguousHits = sweep.hits
+          .filter((hit) => !hit.resolved)
+          .map((hit) => ({
+            kind: hit.kind,
+            location: `${hit.filePath}:${hit.line}`,
+          }));
+        diff = {
+          available: true,
+          hits: sweep.hits.length,
+          ambiguous: ambiguousHits.length,
+          ...(ambiguousHits.length === 0 ? {} : { ambiguousHits }),
+        };
+      }
+    }
+
+    let sessions = options.sessions;
+    if (sessions === undefined && extractor !== undefined) {
+      const captured = await extractor({ workItemRef, runId: "closeout-attribution" });
+      const commit = latestVerifiedCommit(options.store, workItemRef);
+      if (!captured.ok) {
+        sessions = {
+          available: false,
+          sessionIds: [],
+          ...(commit === undefined ? {} : { lastVerifiedCommit: commit }),
+        };
+      } else {
+        const ids = [...new Set(captured.value.records.map((record) => record.sessionId))];
+        sessions = {
+          available: ids.length > 0 || captured.value.failedSessions.length === 0,
+          sessionIds: ids,
+          ...(commit === undefined ? {} : { lastVerifiedCommit: commit }),
+        };
+      }
+      sessionFacts.set(workItemRef, sessions);
+    }
+
+    let retro = options.retro;
+    if (retro === undefined) {
+      const registry = readRetroRegistry(options.store);
+      if (!registry.ok) {
+        retro = { available: false, collected: false };
+      } else {
+        const runs = readRetroRuns(registry.value).filter(
+          (run) => run.level === "change" && run.scope === workItemRef,
+        );
+        const latest = runs[runs.length - 1];
+        retro = {
+          available: true,
+          collected: latest !== undefined,
+          ...(latest === undefined ? {} : { runId: latest.runId }),
+        };
+      }
+      retroFacts.set(workItemRef, retro);
+    }
+
     const history = readCloseoutHistory(options.store, workItemRef);
     if (!history.ok) {
       // A torn/malformed ledger is a classified state failure, never zeros.
@@ -1485,11 +1875,88 @@ export const createCloseoutComposition = (
       cleanWorktree,
       baseRefExists,
       branches,
-      checkedOutElsewhere,
+      checkedOutElsewhere: effectiveCheckedOutElsewhere,
       persisted: foldCloseoutHistory(history.value),
+      ...(options.capsule === undefined
+        ? {}
+        : { capsule: capsuleFactsOf(options.capsule, workItemRef) }),
+      worktree,
+      ...(mergedRequest.observation === "observed"
+        ? {
+            threadAuthorFacts: mergedRequest.value.threads.map((thread) => ({
+              threadId: thread.threadId,
+              authorPrincipal: thread.authorLogin ?? "unknown",
+              authorKind: thread.authorKind ?? "unknown",
+            })),
+          }
+        : {}),
+      ...(diff === undefined ? {} : { diff }),
+      ...(retro === undefined ? {} : { retro }),
+      ...(sessions === undefined ? {} : { sessions }),
     };
   };
 
+  const promotionFor = (workItemRef: string): CloseoutPromotionRuntime => {
+    const memoryRoot = options.memoryRoot ?? "";
+    const documents = options.capsule?.readCandidateDocuments(workItemRef);
+    return {
+      candidates: documents?.ok === true ? documents.documents : [],
+      memory: readMemoryFacts(memoryRoot),
+      write: (write) => {
+        const result = applyPromotionWrite(memoryRoot, write);
+        return result.ok
+          ? result
+          : {
+              ok: false,
+              code: result.code === "escape" ? "escape" : "conflict",
+              detail: result.detail,
+            };
+      },
+      preflight: (writes) => {
+        for (const write of writes) {
+          const checked = checkPromotionConfinement(memoryRoot, write);
+          if (!checked.ok) return { ok: false, code: "escape", detail: checked.detail };
+        }
+        return { ok: true };
+      },
+    };
+  };
+  const buildTelemetry = (): CloseoutTelemetryRuntime | undefined => {
+    if (options.telemetry !== undefined) return options.telemetry;
+    if (extractor === undefined) return undefined;
+    return {
+      extract: extractor,
+      append: (capture) => {
+        let appended = 0;
+        let skipped = 0;
+        for (const record of capture.records) {
+          const result = appendHarnessTelemetry(options.store, options.newFenceToken(), record);
+          if (!result.ok) return { ok: false, error: result.error };
+          appended += result.value.report.appended;
+          skipped += result.value.report.skipped;
+        }
+        const outcome = {
+          schemaId: HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
+          workItemRef: capture.workItemRef,
+          runId: capture.runId,
+          captured: capture.records.length,
+          degraded: capture.records.filter((record) => record.warnings.length > 0).length,
+          failed: capture.failedSessions.length,
+          warnings: capture.warnings,
+          capturedAt: capture.capturedAt,
+        };
+        const appendedOutcome = appendHarnessCaptureOutcome(
+          options.store,
+          options.newFenceToken(),
+          outcome,
+        );
+        if (!appendedOutcome.ok) return appendedOutcome;
+        return { ok: true, value: { appended, skipped } };
+      },
+    };
+  };
+
+  const telemetry = buildTelemetry();
   return {
     planFacts,
     provider,
@@ -1497,6 +1964,16 @@ export const createCloseoutComposition = (
     state: createCloseoutStateRuntime(options.store),
     nowIso: options.nowIso,
     newFenceToken: options.newFenceToken,
+    ...(options.capsule === undefined || options.memoryRoot === undefined
+      ? {}
+      : { promotion: promotionFor }),
+    ...(options.retro === undefined ? {} : { retro: options.retro }),
+    sessionsFor: (workItemRef) => options.sessions ?? sessionFacts.get(workItemRef),
+    retroFor: (workItemRef) => options.retro ?? retroFacts.get(workItemRef),
+    diffReadFor: (workItemRef) => diffReads.get(workItemRef),
+    ...(telemetry === undefined ? {} : { telemetry }),
+    ...(options.capsule === undefined ? {} : { capsule: options.capsule }),
+    capsuleExpected: (workItemRef) => capsuleExpectedEvents(options.store, workItemRef),
   };
 };
 
@@ -1515,6 +1992,26 @@ export const createCloseoutCommandRuntime = (
       timestamp: composition.nowIso(),
       fenceToken: composition.newFenceToken(),
       apply,
+      ...(composition.capsule === undefined ? {} : { capsule: composition.capsule }),
+      ...(composition.capsuleExpected === undefined
+        ? {}
+        : { capsuleExpected: composition.capsuleExpected(workItemRef) }),
+      ...(composition.promotion === undefined
+        ? {}
+        : { promotion: composition.promotion(workItemRef) }),
+      ...(() => {
+        const diffRead = composition.diffRead ?? composition.diffReadFor?.(workItemRef);
+        return diffRead === undefined ? {} : { diffRead };
+      })(),
+      ...(() => {
+        const retro = composition.retro ?? composition.retroFor?.(workItemRef);
+        return retro === undefined ? {} : { retro };
+      })(),
+      ...(() => {
+        const sessions = composition.sessions ?? composition.sessionsFor?.(workItemRef);
+        return sessions === undefined ? {} : { sessions };
+      })(),
+      ...(composition.telemetry === undefined ? {} : { telemetry: composition.telemetry }),
     });
   };
   return {

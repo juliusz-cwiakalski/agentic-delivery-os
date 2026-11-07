@@ -121,7 +121,13 @@ export const makeMergedRequest = (overrides: Partial<DeliveryRequest> = {}): Del
   reviewState: "merged",
   threads: [
     { threadId: "PRRT_1", resolved: true, commentCount: 2 },
-    { threadId: THREAD_ID, resolved: false, commentCount: 1 },
+    {
+      threadId: THREAD_ID,
+      resolved: false,
+      commentCount: 1,
+      authorLogin: "dependabot[bot]",
+      authorKind: "non-human",
+    },
   ],
   headSha: MERGED_HEAD_SHA,
   ...overrides,
@@ -334,32 +340,53 @@ const operationEvidence = (operation: CloseoutOperation): CloseoutEvidence => [
   { name: "target", value: operation.target.entityId },
 ];
 
-export const makeFacts = (overrides: Partial<CloseoutPlanFacts> = {}): CloseoutPlanFacts => ({
-  workspaceId: WORKSPACE_ID,
-  workItemRef: WORK_ITEM_REF,
-  provider: {
-    systemName: SYSTEM_NAME,
-    capabilities: {
-      supportedOperations: [...FULL_SUPPORTED],
-      declaredGaps: [
-        { operation: "write-comment", reason: "adapter-not-implemented" },
-        { operation: "write-delivery-request", reason: "adapter-not-implemented" },
-      ],
-      writableCarriers: [],
-      readableCarriers: [],
+export const makeFacts = (overrides: Partial<CloseoutPlanFacts> = {}): CloseoutPlanFacts => {
+  const base = {
+    workspaceId: WORKSPACE_ID,
+    workItemRef: WORK_ITEM_REF,
+    provider: {
+      systemName: SYSTEM_NAME,
+      capabilities: {
+        supportedOperations: [...FULL_SUPPORTED],
+        declaredGaps: [
+          { operation: "write-comment", reason: "adapter-not-implemented" },
+          { operation: "write-delivery-request", reason: "adapter-not-implemented" },
+        ],
+        writableCarriers: [],
+        readableCarriers: [],
+      },
     },
-  },
-  observedWorkItem: observed(makeWorkItem()),
-  mergedRequest: observed(makeMergedRequest()),
-  dependents: observed([]),
-  checkout: { state: "delivery-branch", branch: BRANCH_NAME, head: HEAD_SHA },
-  cleanWorktree: true,
-  baseRefExists: true,
-  branches: [{ name: BRANCH_NAME, head: MERGED_HEAD_SHA }],
-  checkedOutElsewhere: [],
-  persisted: {},
-  ...overrides,
-});
+    observedWorkItem: observed(makeWorkItem()),
+    mergedRequest: observed(makeMergedRequest()),
+    dependents: observed([]),
+    checkout: { state: "delivery-branch", branch: BRANCH_NAME, head: HEAD_SHA },
+    cleanWorktree: true,
+    baseRefExists: true,
+    branches: [{ name: BRANCH_NAME, head: MERGED_HEAD_SHA }],
+    checkedOutElsewhere: [],
+    persisted: {},
+    retro: { available: true, collected: false },
+    sessions: { available: true, sessionIds: [] },
+  };
+  const merged = overrides.mergedRequest ?? base.mergedRequest;
+  const derived =
+    merged.observation === "observed"
+      ? merged.value.threads
+          .filter((thread) => !thread.resolved)
+          .map((thread) => ({
+            threadId: thread.threadId,
+            authorPrincipal: thread.authorLogin ?? "unknown",
+            authorKind: thread.authorKind ?? "non-human",
+          }))
+      : [];
+  return {
+    ...base,
+    threadAuthorFacts: Object.hasOwn(overrides, "threadAuthorFacts")
+      ? overrides.threadAuthorFacts
+      : derived,
+    ...overrides,
+  };
+};
 
 export const testDependent = (
   item: WorkItem,

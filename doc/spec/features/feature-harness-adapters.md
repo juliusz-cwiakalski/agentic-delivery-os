@@ -6,9 +6,9 @@ created: 2026-11-06
 last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (spawn, resume/steer, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the unchanged exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group; and the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output."
+summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (spawn, resume/steer, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the unchanged exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and store-scoped orphan/invalid-identity disclosure; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, harness-store session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record."
 links:
-  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236"]
+  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240"]
   related_decisions: ["ADR-0008", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/harness.ts"
@@ -17,6 +17,7 @@ links:
     - "packages/core/src/contracts/error-table.ts"
     - "packages/core/src/config/catalog.ts"
     - "packages/adapters/src/harness/index.ts"
+    - "packages/adapters/src/harness/review-deferrals.ts"
 ---
 
 # Feature: Harness Adapters
@@ -188,28 +189,68 @@ Claude Code emits one record per session.
 opencode extraction opens the session store read-only, sets the query-only
 pragma before the first read, and issues only bounded indexed queries with no
 full message/part scans. Claude Code extraction parses local session files
-read-only with per-file byte and line caps. Optional-field drift degrades with a
-warning and never hard-fails; an unattributable tree root or malformed identity
-is a classified failed capture with no fabricated record; conversation content
-never enters the output.
+read-only with per-file byte and line caps, and its file reader checks the
+declared byte cap before reading: `readBounded` stats the file, opens it, reads
+at most the capped number of encoded bytes, and reports `truncated` with the
+omitted-byte count, so a full transcript is never loaded before the cap is
+applied. A truncated file degrades with a `truncated` warning and never
+hard-fails.
+
+Optional-field drift degrades with a warning and never hard-fails. On the
+opencode store, parentless sessions without a work-item port are counted as a
+bounded store-level warning (`store:out-of-port-orphans=<n>`) and invalid
+session identities as `store:invalid-identity=<n>`; they are never fabricated as
+the capturing delivery's failed sessions. A session that is attributed to the
+capturing delivery but cannot be parsed is a classified failed capture with no
+fabricated record. Conversation content never enters the output.
 
 ## 6. Closeout capture
 
-The closeout apply path accepts an injected telemetry capability. After the
-terminal steps it extracts, appends one `harness.telemetry` record per captured
-session group plus a run-scoped capture outcome, and discloses
+The closeout composition constructs the telemetry capability from the resolved
+typed harness settings when they are supplied: the opencode extractor over the
+configured database or the Claude Code reader over the configured session
+directory. After the terminal steps, apply extracts, appends one
+`harness.telemetry` record per captured session group plus a run-scoped capture
+outcome, and discloses
 captured/degraded/failed counts and warning reasons in the bounded output; the
 captured count is the number of extracted session-group records. Appends are
 fenced and verified; session-group capture is idempotent by (work item, run,
 session, agent, model) and the capture outcome by (work item, run), so re-runs
 append nothing already captured. A failed capture writes no zero-valued record
 and changes no other closeout effect. The state schema version is unchanged and
-no migration or derived projection exists.
+no migration or derived projection exists. An injected
+`CloseoutComposition.telemetry` runtime overrides the constructed capture for
+tests.
 
-No production composer injects the closeout telemetry capability yet: the CLI
-closeout edge composes commit telemetry only, and the capability is exercised
-through the injected-capability tier. GH-240 (M1-S12) wires the production
-composer; until then a real closeout run captures no harness telemetry records.
+Apply runs extraction after the terminal steps and before the applied payload;
+plan performs no extraction and no append. The state-layer `harness.telemetry`
+records remain in the event log and are the only source `spend` reads; the
+capsule stream carries no statistics.
+
+The same harness-neutral extractors attribute the delivery's sessions for the
+closeout compaction checkpoint when harness settings are supplied. An opencode
+work-item root or a Claude session tree yields the bounded session identities;
+an empty store is `skipped-noop` (`no-sessions`); an unavailable store or a
+store whose sessions cannot be attributed to the delivery is `skipped-gap`
+(`session-attribution-unavailable`) plus a `session-attribution-gap` residue
+item. Injected session facts override the derived attribution for tests.
+
+### Review deferrals
+
+The GH-233 review findings on the reachable capture path are recorded in
+`HARNESS_REVIEW_DEFERRALS` (`packages/adapters/src/harness/review-deferrals.ts`)
+with a status, reason, owning story, and revisit trigger:
+
+| Finding | Status | Reason and owner |
+|---|---|---|
+| F-8 (Claude Code file-read budget) | resolved | The reader checks the declared byte cap before the read and reads at most that many encoded bytes. Owner: GH-240. |
+| F-11 (store-scoped orphan/invalid disclosure) | resolved | Parentless sessions without a work-item port are a bounded store-level warning; only the capturing delivery's own unattributable or invalid sessions are failed sessions. Owner: GH-240. |
+| F-9 (host-runner semantics) | re-deferred | The host runner is not on the closeout extraction path, and no production consumer exists until dispatch (M1-S9). Owner: M1-S9. |
+
+The host-runner semantics stay as delivered: an external `SIGTERM` sets
+`timedOut`, `stderr` truncation lacks the stdout marker, and the output bound is
+measured in UTF-16 units. These are characterized as the deferred defect; no
+dispatch surface, queue, spawn-failure row, or invented runner API is added.
 
 ## 7. Out of scope
 
@@ -239,8 +280,12 @@ Worktree-activity sourcing and Claude Code liveness remain declared gaps.
   `economics-liveness-corroboration.test.ts`
 - `tests/conformance/harness-classification.test.ts`, `harness-liveness.test.ts`
 - `tests/behaviour/harness-telemetry-{opencode,claude,shape,drift}.test.ts`,
+  `harness-telemetry-claude-budget.test.ts`,
+  `harness-telemetry-opencode-orphan-scope.test.ts`,
   `harness-closeout-{capture,idempotency,nongating}.test.ts`,
   `harness-output-bounds.test.ts`
+- `tests/structure/harness-review-deferrals.test.ts` — the F-8/F-11 resolution
+  and F-9 re-deferral record with its owner and revisit trigger.
 - `tests/checks/harness-{mutants,determinism,ci-parity}.test.ts`
 
 ## Related
@@ -254,7 +299,9 @@ Worktree-activity sourcing and Claude Code liveness remain declared gaps.
   telemetry records.
 - [Configuration Layer and Inspection](feature-config-layer.md) — the harness
   branch.
-- [Closeout Transaction](feature-closeout.md) — the capture point.
+- [Closeout Transaction](feature-closeout.md) — the capture point, the capture
+  construction from resolved harness settings, and the compaction-checkpoint
+  attribution consumer.
 - [Result Contract and Error Table](feature-result-contract.md) — the `harness`
   error family and the delivery-result token projection consumed here.
 - [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md) —

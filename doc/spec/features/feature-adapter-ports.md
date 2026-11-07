@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-ADAPTER-PORTS
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the additive HarnessInstance/HarnessSession/execution-environment port family, the additive optional DeliveryRequest.headSha merged-head identity, the four optional verify-gates facts, and resolve-delivery-thread operation, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, the dedicated git seam covering branch, checkout, precise staging, and commit-object creation, the declared inference network edge behind the commit primitive's transport seam, the bounded GitHub deploy-job trace read behind the existing ports, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
+summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the additive HarnessInstance/HarnessSession/execution-environment port family, the additive optional DeliveryRequest.headSha merged-head identity, the additive optional DeliveryThread root-author facts (login, normalized author kind, author association), the four optional verify-gates facts, and resolve-delivery-thread operation, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, the dedicated git seam covering branch, checkout, precise staging, and commit-object creation, the declared inference network edge behind the commit primitive's transport seam, the bounded GitHub deploy-job trace read behind the existing ports, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227", "GH-231", "GH-225", "GH-233"]
+  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227", "GH-231", "GH-225", "GH-233", "GH-240"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "ADR-0010", "TDR-0005", "TDR-0008"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
@@ -63,6 +63,7 @@ The v1 port set is bounded to the catalogue's adapter-interaction rows typed at 
 | `WorkflowMap` | Native status to delivery-state alias mappings, each naming its transition mechanism. |
 | `WorkItemRelation` | Closed relation kinds — `parent`, `child`, `blocks`, `blocked-by`, `relates-to` — targeting a provider-qualified identity. |
 | `DeliveryRequest` | Delivery request (PR/MR) view: identity, source and target refs, review state, review threads, and an optional provider-resolved merged head commit (`headSha`). `headSha` absent means the provider did not supply the merged-head signal (unknown); it is never guessed or derived. Four optional gate facts — `sourceHeadSha`, `mergeableState`, `commitCount`, `changedFileCount` — are unknown when absent, never presumed mergeable or non-empty. |
+| `DeliveryThread` | Review-thread view: `threadId`, `resolved`, `commentCount`, and optional root-author facts `authorLogin`, `authorKind` (`human`/`non-human`/`unknown`), and `authorAssociation`. Provider normalization maps `User` to `human`, `Bot`/`App` to `non-human`, and `Mannequin` or an absent/unrecognized author to `unknown`; unknown is treated as human by the closeout policy and is never inferred from comment text. |
 | `PipelineRun` | Pipeline, job states, and trace-evidence references — never a bare status colour. |
 | `RetryPolicy` | Bounded attempts and backoff for known-safe operations. Unsafe writes carry no retry policy rather than an empty or permissive one. |
 | `IdempotencyKey` | Key value plus scope, making an external write safely retryable. |

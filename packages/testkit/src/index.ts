@@ -94,6 +94,11 @@ export type {
   MockTenantRoute,
   RunConformanceInput,
 } from "./conformance/types.js";
+export {
+  type CapsuleConformanceEntry,
+  CAPSULE_CONFORMANCE_REGISTRY,
+  capsuleConformanceViolations,
+} from "./conformance/capsule.js";
 export type {
   RuleId,
   ScriptedRuleId,

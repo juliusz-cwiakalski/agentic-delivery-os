@@ -143,22 +143,23 @@ export const createOpencodeTelemetryExtractor = (
         readonly sessionId: string | null;
         readonly reason: HarnessTelemetryCapture["failedSessions"][number]["reason"];
       }> = [];
-      for (const orphan of handle.query(
-        "SELECT id FROM session WHERE parent_id IS NULL AND (work_item_ref IS NULL OR work_item_ref = '') LIMIT ?",
-        [maxSessions + 1],
-      )) {
-        failedSessions.push({
-          sessionId: str(orphan.id) ?? null,
-          reason: "unattributable-session",
-        });
-      }
-      if (
-        handle.query("SELECT id FROM session WHERE id IS NULL OR id = '' LIMIT ?", [
-          maxSessions + 1,
-        ]).length > 0
-      ) {
-        failedSessions.push({ sessionId: null, reason: "invalid-session-identity" });
-      }
+      // Store-scoped disclosure: parentless sessions without a work-item port
+      // belong to no delivery. They are counted as a bounded store warning,
+      // never fabricated as this delivery's failed sessions (GH-233 F-11).
+      const outOfPortOrphans =
+        num(
+          handle.query(
+            "SELECT COUNT(*) AS total FROM (SELECT id FROM session WHERE parent_id IS NULL AND (work_item_ref IS NULL OR work_item_ref = '') LIMIT ?)",
+            [maxSessions + 1],
+          )[0]?.total,
+        ) ?? 0;
+      const invalidIdentityRows =
+        num(
+          handle.query(
+            "SELECT COUNT(*) AS total FROM (SELECT id FROM session WHERE id IS NULL OR id = '' LIMIT ?)",
+            [maxSessions + 1],
+          )[0]?.total,
+        ) ?? 0;
 
       const rootTotal =
         roots.length > maxSessions
@@ -359,6 +360,22 @@ export const createOpencodeTelemetryExtractor = (
       const warnings = [
         ...records.flatMap((record) => record.warnings),
         ...groupTruncationWarnings,
+        ...(outOfPortOrphans === 0
+          ? []
+          : [
+              {
+                reason: "unattributable-session" as const,
+                field: `store:out-of-port-orphans=${outOfPortOrphans}`,
+              },
+            ]),
+        ...(invalidIdentityRows === 0
+          ? []
+          : [
+              {
+                reason: "invalid-session-identity" as const,
+                field: `store:invalid-identity=${invalidIdentityRows}`,
+              },
+            ]),
       ];
       return {
         ok: true,

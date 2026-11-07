@@ -9,7 +9,7 @@ area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010]
-  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237]
+  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237, GH-240]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -93,18 +93,18 @@ No typed daemon or background scheduler is established by `packages/`.
 |---|---|
 | `core/src/contracts/` | Data-only ports, normalized primitives, schemas, capability declarations and error vocabulary shared across packages. |
 | `core/src/config/`, `branding/` | Pure layered resolution with provenance; pure brand identity resolution. Exported through core root and `./branding`, respectively. |
-| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, queue scheduling (graph, leases, ranks, parks), owner-gate SLA evaluation, doctor diagnostics, session-admin policy, harness classification, capability, registry, spawn-environment, liveness, canonicalization, telemetry policy, the spend read-side fold (five-class totals, phase attribution, restarts, resume amplification), the session lifecycle economics budget/resume/view/evidence folds, and the deterministic retro evidence pipeline (collection, truth checks, report/export folds). |
+| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, queue scheduling (graph, leases, ranks, parks), owner-gate SLA evaluation, doctor diagnostics, session-admin policy, harness classification, capability, registry, spawn-environment, liveness, canonicalization, telemetry policy, capsule event rules and candidate promotion, merged-diff marker classification, thread-authorship policy, worktree safety, the spend read-side fold (five-class totals, phase attribution, restarts, resume amplification), the session lifecycle economics budget/resume/view/evidence folds, and the deterministic retro evidence pipeline (collection, truth checks, report/export folds). |
 | `core/src/provider/` | Availability chain, quota/peak evaluation, model-profile selection and pacing policy, `data-v1` env-record validation, expiring parks and announcements through injected ports. No session spawn. |
 | `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections, the economics restart/exhaustion ledger and view fold, the spend telemetry read consumer, the retro registry consumer, and the independent evidence sidecar consumer. Runtime APIs confined to `state/driver/`. |
 | `core/src/app/`, core `createRuntime` | Application tier is a type placeholder; `createRuntime` is an `export declare` signature, not a callable composition implementation. |
 | `cli/src/index.ts`, `edge.ts`, `commands/` | In-process parser/result boundary; config acquisition and optional command registration; thin handlers plus bounded status collectors. |
 | `adapters/src/github/`, `gitlab/`, `jira/` | Normalized reads plus supported GitHub/Jira closeout writes. GitLab retains declared write gaps and no work-item read. GitHub reads feed status and gate composition, and the bounded deploy-job trace read feeds `verify deploy`. |
-| `adapters/src/git/` | Fixed-argv local process edge; protected-ref checks, merged-head equality, checkout/foreign-worktree safety and delete-time recheck. |
-| `adapters/src/file/`, `repo/`, `legacy/` | YAML/config and pm-notes acquisition/staging, repository facts, legacy-name mapping. |
+| `adapters/src/git/` | Fixed-argv local process edge; protected-ref checks, merged-head equality, checkout/foreign-worktree safety, delete-time recheck, worktree listing/current/clean facts, no-force local worktree removal, and a bounded merged-diff read over the recorded squash landing. |
+| `adapters/src/file/`, `repo/`, `legacy/` | YAML/config and pm-notes acquisition/staging, repository facts, legacy-name mapping, the append-only capsule runtime and confined memory-home writes. |
 | `adapters/src/credentials/`, `provider-quota/` | Credential-reference resolution and injectable quota HTTP transport. Factories exist, but production host mounting is not established. |
 | `adapters/src/session/` | OpenCode CLI-backed metadata reads, dry-run-first prune and guarded checkpoint through separate read/admin ports. |
 | `adapters/src/io/` | Internal metadata codec, content policy, privacy rules and transport types; not a public package export. |
-| `adapters/src/harness/` | The opencode and Claude Code delivery adapters, read-only telemetry extractors, and the read-only SQLite session-store loader. |
+| `adapters/src/harness/` | The opencode and Claude Code delivery adapters, read-only telemetry extractors with a bounded Claude byte read and store-scoped orphan disclosure, harness-store session attribution, the review-deferral record, and the read-only SQLite session-store loader. |
 | `adapters/src/host/` | The harness seam's one child-process spawn site, a pinned entry in the exact repository-wide `node:child_process` allowlist: receives the constructed environment as data and reads no ambient environment. |
 | `adapters/src/azure/`, `ci/`, `registry/` | Type-only placeholders; provider clients implement some CI reads without making `./ci` runnable. |
 | `mcp/src/` | Closed three-tool catalog, pure toolset seam and payload adapter, the in-package stdio JSON-RPC 2.0 protocol, the lifecycle exit owner, and the Node-hosted `./serve` composition root. The three read-only tools mirror the status, verify-change, and verify-gates engines. |
@@ -197,16 +197,41 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   the resume-amplification block with named `restart-loop prefill re-pay` events;
   telemetry-absent is `spend.telemetry-absent` (exit 1). No harness re-query, no
   state writes, no cost aggregation. See the [spend read side](../spec/features/feature-spend.md).
-- [Closeout](../spec/features/feature-closeout.md) is integrated: seven-step
+- [Closeout](../spec/features/feature-closeout.md) is integrated: twelve-step
   transaction, plan by default, writes only with `--apply`, ref validation before
-  reads. `createCloseoutComposition` in CLI edge bridges raw provider clients,
-  real git and StateStorePort; planFacts reads issue, merged request, dependents,
-  checkout and persisted history. This is command-specific production composition,
-  not shared-root or installed-binary completion.
+  reads. The steps cover the tracker, review-thread authorship policy from
+  provider root-author facts, checkout,
+  local worktree and branch cleanup, the detection-only merged-diff sweep with
+  its four marker kinds and action tokens, retro coverage read from the delivered
+  registry, session compaction,
+  and the change-capsule close. The transaction reports a
+  bounded `residue[]` and exits 1 through the additive `attention` class when
+  judgment residue remains; human mode renders a `JUDGMENT RESIDUE` section and
+  a capsule close summary. `createCloseoutComposition` in CLI edge bridges raw
+  provider clients, the real git seam, `StateStorePort`, the capsule runtime, and
+  resolved harness settings; `planFacts` reads issue, merged request, dependents,
+  checkout, branches, worktrees, the recorded squash diff, persisted history,
+  capsule pre-flight, and harness-derived session facts, and constructs the
+  telemetry capture from the settings unless an injected runtime overrides it.
+  This is command-specific production composition, not shared-root or
+  installed-binary completion.
+- The [change capsule](../spec/features/feature-capsule.md) is the change folder
+  as a memory episode: append-only `events.jsonl` with a closed event/writer
+  vocabulary and deterministic keys, plus one-file-per-candidate `candidates/`.
+  `phase`, `commit`, and `verify gates` append their own events non-gatingly;
+  closeout validates the capsule, completes a pre-contract folder, evaluates
+  candidates against the capture bar and evidence link, home-writes lessons/tacit,
+  records sanctioned handoffs, and closes the capsule terminally. The capsule is
+  file-based and adds no state record kind or schema-version bump.
 - The [harness adapter seam](../spec/features/feature-harness-adapters.md) ships
   typed `HarnessInstance`/`HarnessSession` ports, the opencode and Claude Code
   delivery adapters, the deny-by-default execution-environment descriptor, and
-  read-only telemetry extraction consumed by non-gating closeout capture. No
+  read-only telemetry extraction consumed by non-gating closeout capture. The
+  closeout composition constructs the capture from the resolved harness settings
+  and uses the same extractors to attribute sessions for the compaction
+  checkpoint; the Claude reader bounds the byte read before parsing and opencode
+  discloses out-of-port orphans as store-level warnings. The GH-233 review
+  F-8/F-11 items are resolved and F-9 is re-deferred with M1-S9 as owner. No
   dispatch engine ships; cross-harness dispatch parity belongs to M1-S9.
 - [Session lifecycle economics](../spec/features/feature-session-lifecycle-economics.md)
   ships the adapter-sourced liveness bridge, the prefill-safe corroboration rule,
@@ -308,15 +333,23 @@ Contract homes: [config](../../packages/core/src/config/resolver.ts),
    a separately invented write-ahead-intent protocol. The retro registry is a
    validated state boundary with three additive kinds; the evidence sidecar is a
    separate collector-fenced, keyed-chain artifact family outside the store, so
-   state salvage cannot mask evidence tampering. See
+   state salvage cannot mask evidence tampering. The change capsule is a third
+   local artifact family inside the change folder: append-only `events.jsonl`
+   plus `candidates/`, with its own framing, lock, dedup, and terminal close. It
+   is not a state record kind and does not enter the store's salvage or index
+   rebuild. Harness telemetry stays in the state log and is never copied into the
+   capsule; capsule events never enter the telemetry family. See
    [ledger](../../packages/core/src/state/closeout.ts),
-   [engine](../../packages/core/src/domain/closeout.ts), and
+   [engine](../../packages/core/src/domain/closeout.ts),
+   [capsule](../../packages/adapters/src/file/capsule.ts), and
    [retro](../../packages/core/src/domain/retro.ts). Real-local git/store plus
    mocked-provider integration tests exist; they were inspected, not rerun here.
 6. CLI handlers return data/errors without writing streams. The surface owns
    classification, redaction and one JSON envelope under `--json`. Exactly one of
    `data`/`error` appears with schema version, run ID, timing and exit code.
-   Only CLI projects success/user-validation/platform-provider to 0/1/2.
+   Only CLI projects success/user-validation/platform-provider/attention to
+   0/1/2/1; `attention` is a data-bearing success outcome with residue, never an
+   error envelope.
    Errors preserve category, retryability, consequence (`landed`, `not_landed`,
    `unknown`) and remediation. Raw thrown messages/stacks are not copied.
 
@@ -337,7 +370,8 @@ rules passing does not establish project-specific literal coverage.
 | Unit / dependency | Current topology, ownership and criticality |
 |---|---|
 | Standalone CLI target | Local Bun-targeted design; implemented runner is in-process with injected streams. CLI manifest has no `bin`; installed executable/bootstrap is not established by these modules. |
-| Harness adapter seam | The typed `HarnessInstance`/`HarnessSession` ports with the opencode and Claude Code delivery adapters, the deny-by-default execution-environment descriptor, read-only telemetry extraction, and non-gating closeout capture. See [feature-harness-adapters.md](../spec/features/feature-harness-adapters.md). |
+| Harness adapter seam | The typed `HarnessInstance`/`HarnessSession` ports with the opencode and Claude Code delivery adapters, the deny-by-default execution-environment descriptor, read-only telemetry extraction with a bounded Claude byte read and store-scoped orphan disclosure, harness-store session attribution, and non-gating closeout capture constructed from the resolved harness settings. See [feature-harness-adapters.md](../spec/features/feature-harness-adapters.md). |
+| Change documents and capsule | Local operator-owned change folders. Each folder may carry the append-only capsule `events.jsonl` and `candidates/`; closeout validates and closes it and home-writes accepted lessons/tacit to `.ai/memory/`. See [feature-capsule.md](../spec/features/feature-capsule.md). |
 | Existing harness/prompt stack | Locally installed canonical `.opencode/` definitions, generated Claude Code plugin and shell automation. Independent of the empty typed integration package. See [plugin build](../../scripts/build-claude-plugin.sh). |
 | State and change documents | Local operator-owned files; only local store level implemented. JSONL forever-retention direction; project/global levels are declared seams, not shared stores. |
 | OpenCode CLI | External local executable owned by its upstream; required for implemented session adapter operations. Session DB is not the tooling state ledger. |

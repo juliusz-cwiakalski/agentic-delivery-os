@@ -5,6 +5,7 @@ import { parse } from "yaml";
 import type { VerifyCommandRuntime } from "../../../../packages/cli/src/commands/verify";
 import { createVerifyCommandDefinition } from "../../../../packages/cli/src/commands/verify";
 import type { VerifyGatesCommandRuntime } from "../../../../packages/cli/src/commands/verify-gates";
+import type { CapsuleProducerPort } from "../../../../packages/core/src/contracts/index";
 import { type CliDependencies, runCli } from "../../../../packages/cli/src/index";
 import { resolveMergeGateSet } from "../../../../packages/core/src/domain/merge-gate-set";
 import { bufferSink, SYNTHETIC_BRAND } from "../../../golden/helpers";
@@ -23,6 +24,7 @@ export type RuntimeOverrides = {
   readonly gateSet?: VerifyGatesCommandRuntime["readGateSet"];
   readonly appendVerification?: VerifyGatesCommandRuntime["appendVerification"];
   readonly nowMs?: () => number;
+  readonly capsule?: CapsuleProducerPort;
 };
 
 export const gatesRuntime = (overrides: RuntimeOverrides = {}): VerifyGatesCommandRuntime => {
@@ -65,6 +67,7 @@ export const gatesRuntime = (overrides: RuntimeOverrides = {}): VerifyGatesComma
       }),
     appendVerification: overrides.appendVerification ?? (() => ({ ok: true })),
     nowMs: overrides.nowMs ?? (() => Date.parse("2026-11-06T12:00:00Z")),
+    ...(overrides.capsule === undefined ? {} : { capsule: overrides.capsule }),
   };
 };
 
