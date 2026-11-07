@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-07T06:20:00Z", completed: "2026-11-07T07:30:00Z" }
   quality_gates: { started: "2026-11-07T07:20:00Z", completed: "2026-11-07T07:40:00Z" }
   dod_check: { started: "2026-11-07T07:45:00Z", completed: "2026-11-07T07:50:00Z" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-11-07T07:55:00Z", completed: "2026-11-07T08:05:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/261" }
 decisions:
   - text: "PM-decided (autonomous): proceed without the in-repo legacy resolver scripting; the binding behavioral contract is the ticket AC + pinned decisions + SC-M1-21/22 + concept model-profiles.md + man-page provider.md. 'Ported tests' means the ported decision-table groups enumerated in the ticket (chain order, lazy probes, park-versus-switch, revert, condition seams), not an ID-for-ID mapping to an external battery. Precedent: GH-182 had an in-repo battery; GH-234 does not."
     date: "2026-11-07"
@@ -64,7 +64,10 @@ notes:
   - text: "Delivery COMPLETED_ALL: 9/9 plan phases (56/56 tasks) across 10 commits cb8c4285..318d3c4c; 106 files +11220/-131. Aggregate pnpm check 4731/4733 pass; 2 failures reported environmental (TC-STATE-021 corepack pnpm download; CI-parity clone cross-device) - quality_gates phase must verify pre-existing-vs-regression against base a69b555e. Coder deviations recorded: (1) watch config under provider.profiles.watch keyed by provider (additive); (2) edge.ts wiring observational + sync production probe, async quota probing deferred to M1-S9 seam; (3) brand-neutral env-record defaults per no-hardcoded-brand rule, legacy OC_ADOS allowlist as injectable option (TC-037); (4) plan diff entrypoint unavailable (no tsx), observational reconciliation; (5) bracket-access fetch spies per hermetic literal ban."
     type: "info"
     date: "2026-11-07"
-  - text: "Retro: pm-notes edit anchor mistake repeated twice in this session (edit replaced the last list item instead of appending). Improvement: for appends to YAML lists, anchor on the closing line of the following section (e.g., 'open_questions:') or rewrite the whole notes block; verify with grep after every list edit."
+  - text: "PR #261 created (main-tools <- feat/GH-234/model-profiles, 23 commits pushed); branch was absent on remote so pr-manager pushed it. Ticket synced: labels change+review, assignee juliusz-cwiakalski, comment with PR link + 2 open review questions (external legacy battery; tier/rung naming is configuration). Awaiting human/CEO review; merge authority is NOT ours. Full lifecycle: clarify->spec->test-plan->plan->DoR READY->delivery 9 phases->doc-sync->review FAIL->remediation->review PASS->quality gates->DoD->PR. Aggregate 4742 pass / 2 environmental."
+    type: "info"
+    date: "2026-11-07"
+  - text: "Retro: pm-notes edit anchor mistake repeated THREE times this session (edit replaced the last list item instead of appending; third occurrence deleted the retro note recording the first two). Improvement (binding for future sessions): for appends to YAML lists, never anchor oldString on the last list item — anchor on the next section key or rewrite the whole notes block; grep-verify the previous last item still exists after every list edit."
     type: "retro"
     date: "2026-11-07"
   - text: "Plan phase 1 complete (commit hash recorded in the next ledger entry; a commit cannot contain its own hash): provider-profile contract module, additive provider watch mapping-kind closed set, eight additive provider.profile.*/provider.env-record.* error identities with documented-table rows, contract inventory fixture + structure/type tests. Gates green: pnpm typecheck (all packages + tests/types); provider-profile-contract/provider-contract/error-table/content-inventory 84 pass / 0 fail; error-table-sync 91 entries documented 91, OK."
