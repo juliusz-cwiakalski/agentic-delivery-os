@@ -5,6 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   computeQueueSchedule,
+  evaluateClaimPreconditions,
   resolveQueueWeight,
   weightLoads,
 } from "../../packages/core/src/domain/index";
@@ -184,5 +185,60 @@ describe("TC-WEIGHT-004 weight load view", () => {
     ]);
     // The claim action carries the resolved class and provenance.
     expect(schedule.entries.find((entry) => entry.ref === "GH-301")?.weightClass).toBe("standard");
+  });
+});
+
+describe("TC-WEIGHT-001/003/004 claim-side weight rows", () => {
+  test("a heavy claim under an active heavy lease refuses with reason weight-class", () => {
+    const facts = makeFacts(
+      [
+        { ref: "GH-308", repository: REPO_A, plan: { state: "valid", tier: "full", weightClass: "heavy" } },
+        { ref: "GH-309", repository: REPO_B, plan: { state: "valid", tier: "full", weightClass: "heavy" } },
+      ],
+      {
+        leases: [
+          activeLease({
+            repository: REPO_A,
+            holder: "holder-a",
+            ref: "GH-308",
+            weightClass: "heavy",
+            runner: RUNNER,
+          }),
+        ],
+      },
+    );
+    const precondition = evaluateClaimPreconditions(facts, "GH-309", {
+      weightHeldBy: "GH-308",
+    });
+    expect(precondition).toMatchObject({
+      ok: false,
+      code: "queue.precondition.unmet",
+      reason: "weight-class",
+    });
+  });
+
+  test("a standard claim continues while a heavy lease is active", () => {
+    const facts = makeFacts(
+      [
+        { ref: "GH-308", repository: REPO_A, plan: { state: "valid", tier: "full", weightClass: "heavy" } },
+        { ref: "GH-311", repository: REPO_B, plan: { state: "valid", tier: "full", weightClass: "standard" } },
+      ],
+      {
+        leases: [
+          activeLease({
+            repository: REPO_A,
+            holder: "holder-a",
+            ref: "GH-308",
+            weightClass: "heavy",
+            runner: RUNNER,
+          }),
+        ],
+      },
+    );
+    expect(evaluateClaimPreconditions(facts, "GH-311").ok).toBe(true);
+    const schedule = computeQueueSchedule(facts);
+    const action = schedule.nextActions.find((candidate) => candidate.ref === "GH-311");
+    expect(action?.weightClass).toBe("standard");
+    expect(action?.weightClassSource).toBe("declared");
   });
 });

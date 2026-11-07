@@ -28,6 +28,7 @@ import {
   QUEUE_LEASE_RECORD_KIND,
   QUEUE_LEASE_SCOPES,
   QUEUE_LEASE_SCHEMA,
+  QUEUE_DEFAULT_LEASE_TTL_MS,
   QUEUE_MAX_EDGES_PER_ENTRY,
   QUEUE_PARK_CAUSES,
   QUEUE_PARK_CONDITION_TYPES,
@@ -36,12 +37,14 @@ import {
   QUEUE_PARK_RECOVERY_STATES,
   QUEUE_PARK_SCHEMA,
   QUEUE_WEIGHT_CLASSES,
+  type QueueActiveLease,
   type QueueDependencyRecord,
   type QueueEntryRecord,
   type QueueGraphDocument,
   type QueueIncidentRecord,
   type QueueLeaseRecord,
   type QueueParkRecord,
+  type QueueWeightClass,
   type StateAppendRequest,
   type StateFailure,
   type StateFailureCode,
@@ -63,6 +66,17 @@ import {
   type QueueGraphFold,
   queueGraphDocument,
 } from "../domain/queue-graph.js";
+import {
+  claimScope,
+  earliestTakeoverAtIso,
+  foldActiveLeases,
+  isLeaseStale,
+  leaseConflict,
+  leaseHeartbeatAgeMs,
+  makeLeaseId,
+  type QueueClaimPrecondition,
+  type QueueLeaseConflict,
+} from "../domain/queue-lease.js";
 
 export type {
   QueueGraphEdge,
@@ -835,3 +849,434 @@ export const addQueueDependency = (
 
 /** The normalized edge set used when a record is serialized (exported for tests). */
 export const normalizedQueueEdges = normalizeEdges;
+
+/* ------------------------------ lease ledger ------------------------------ */
+
+/** One verified active-lease read: the folded live holders plus the raw history. */
+export type QueueActiveLeaseRead =
+  | {
+      readonly ok: true;
+      readonly records: readonly QueueLeaseRecord[];
+      readonly active: readonly QueueActiveLease[];
+      readonly evidence: StateReadEvidence;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: QueueReadReason;
+      readonly code: StateFailureCode;
+    };
+
+/** Read the verified lease history and fold it to at most one holder per repo. */
+export const readActiveLeases = (
+  store: StateStorePort,
+  nowMs: number,
+): QueueActiveLeaseRead => {
+  const read = readQueueLeases(store);
+  if (!read.ok) return read;
+  const active = foldActiveLeases(read.records, nowMs);
+  if (active === undefined) {
+    return { ok: false, reason: "torn", code: "state.store.torn" };
+  }
+  return { ok: true, records: read.records, active, evidence: read.evidence };
+};
+
+/** One lease outcome: the landed record plus an optional takeover incident. */
+export type QueueClaimOutcome = {
+  readonly result: "claimed" | "renewed" | "taken-over";
+  readonly lease: QueueLeaseRecord;
+  readonly incident?: QueueIncidentRecord;
+};
+
+/** One release outcome: the landed record, or noop with no lease held. */
+export type QueueReleaseOutcome = {
+  readonly result: "released" | "noop";
+  readonly lease?: QueueLeaseRecord;
+};
+
+/** A lease refusal cannot be a dependency cycle; it reuses the intent refusals. */
+export type QueueLeaseFailure =
+  | QueueIntentFailure
+  | {
+      readonly ok: false;
+      readonly kind: "queue";
+      readonly code: "queue.lease-conflict";
+      readonly conflict: QueueLeaseConflict;
+      readonly detail: string;
+    }
+  | {
+      readonly ok: false;
+      readonly kind: "queue";
+      readonly code: "queue.precondition.unmet";
+      readonly reason: string;
+      readonly detail?: string;
+    }
+  | {
+      readonly ok: false;
+      readonly kind: "queue";
+      readonly code: "queue.park-condition-stuck";
+      readonly detail?: string;
+    };
+
+export type QueueClaimResult =
+  | { readonly ok: true; readonly value: QueueClaimOutcome }
+  | QueueLeaseFailure;
+
+export type QueueReleaseResult =
+  | { readonly ok: true; readonly value: QueueReleaseOutcome }
+  | QueueLeaseFailure;
+
+const entryRepository = (
+  fold: QueueGraphFold,
+  ref: string,
+): { readonly ok: true; readonly repository: string; readonly record: QueueEntryRecord } | QueueLeaseFailure => {
+  const entry = entryOf(fold, ref);
+  if (entry === undefined) {
+    return { ok: false, kind: "queue", code: "queue.entry.unobserved", ref };
+  }
+  if (entry.repository === undefined) {
+    return {
+      ok: false,
+      kind: "queue",
+      code: "queue.precondition.unmet",
+      reason: "not-ready",
+      detail: "repository-binding-unresolved",
+    };
+  }
+  return { ok: true, repository: entry.repository, record: entry };
+};
+
+const leasePayload = (record: QueueLeaseRecord): StateJsonValue =>
+  record as unknown as StateJsonValue;
+
+const incidentPayload = (record: QueueIncidentRecord): StateJsonValue =>
+  record as unknown as StateJsonValue;
+
+const runClaimFence = (
+  store: StateStorePort,
+  fenceToken: string,
+  body: (handle: StateFenceHandle) => QueueClaimResult,
+): QueueClaimResult => {
+  const acquired = store.acquireFence(fenceToken);
+  if (!acquired.ok) return stateFailureOf(acquired.error);
+  try {
+    return body(acquired.value.handle);
+  } finally {
+    store.releaseFence(acquired.value.handle);
+  }
+};
+
+const runReleaseFence = (
+  store: StateStorePort,
+  fenceToken: string,
+  body: (handle: StateFenceHandle) => QueueReleaseResult,
+): QueueReleaseResult => {
+  const acquired = store.acquireFence(fenceToken);
+  if (!acquired.ok) return stateFailureOf(acquired.error);
+  try {
+    return body(acquired.value.handle);
+  } finally {
+    store.releaseFence(acquired.value.handle);
+  }
+};
+
+const appendLeaseRecords = (
+  store: StateStorePort,
+  handle: StateFenceHandle,
+  appends: readonly StateAppendRequest[],
+): { readonly ok: true; readonly sequences: readonly number[] } | QueueLeaseFailure => {
+  const before = store.readRecords();
+  if (!before.ok) return stateFailureOf(before.error);
+  const appended: { readonly sequence: number }[] = [];
+  for (const append of appends) {
+    const outcome = store.append(handle, append);
+    if (!outcome.ok) return stateFailureOf(outcome.error);
+    appended.push(outcome.value);
+  }
+  const verification = verifyAppends(
+    store,
+    before.value.records,
+    appended,
+    appends.map((append) => ({ kind: append.kind, recordKey: append.recordKey })),
+  );
+  if (verification !== undefined) return verification;
+  return { ok: true, sequences: appended.map((outcome) => outcome.sequence) };
+};
+
+const newLeaseRecord = (input: {
+  readonly operation: QueueLeaseRecord["operation"];
+  readonly repository: string;
+  readonly holder: string;
+  readonly ref: string;
+  readonly runner: string;
+  readonly weightClass: QueueWeightClass;
+  readonly ttlMs: number;
+  readonly nowIso: string;
+  readonly acquiredAt?: string;
+  readonly leaseId?: string;
+  readonly takeover?: QueueLeaseRecord["takeover"];
+}): QueueLeaseRecord => ({
+  schema: QUEUE_LEASE_SCHEMA,
+  leaseId: input.leaseId ?? makeLeaseId(input.repository, input.holder, input.nowIso),
+  scope: claimScope(),
+  repository: input.repository,
+  holder: input.holder,
+  ref: input.ref,
+  runner: input.runner,
+  weightClass: input.weightClass,
+  operation: input.operation,
+  acquiredAt: input.acquiredAt ?? input.nowIso,
+  heartbeatAt: input.nowIso,
+  ttlMs: input.ttlMs,
+  recordedAt: input.nowIso,
+  ...(input.takeover === undefined ? {} : { takeover: input.takeover }),
+});
+
+/**
+ * Claim one repository for one holder with the two-stage contract.
+ *
+ * The caller supplies the pre-fence precondition (parks and the five
+ * non-exclusivity readiness conditions); `repo-free` is never part of it. Inside
+ * the fence the verified lease history is re-read: a live lease held by another
+ * holder refuses `queue.lease-conflict`, a stale lease is taken over with full
+ * evidence plus a `lease-stale-takeover` incident, and the caller's own lease is
+ * renewed. Every append is verified post-append.
+ */
+export const claimQueueLease = (
+  store: StateStorePort,
+  request: {
+    readonly ref: string;
+    readonly holder: string;
+    readonly runner: string;
+    readonly weightClass: QueueWeightClass;
+    readonly ttlMs?: number;
+    readonly nowIso: string;
+    readonly nowMs: number;
+    readonly fenceToken: string;
+    readonly precheck?: () => QueueClaimPrecondition;
+  },
+): QueueClaimResult => {
+  if (request.holder.length === 0) {
+    return { ok: false, kind: "input", code: "input.value.rejected", detail: "holder is empty" };
+  }
+  if (request.precheck !== undefined) {
+    const pre = request.precheck();
+    if (!pre.ok) {
+      if (pre.code === "queue.park-condition-stuck") {
+        return {
+          ok: false,
+          kind: "queue",
+          code: pre.code,
+          ...(pre.detail === undefined ? {} : { detail: pre.detail }),
+        };
+      }
+      return {
+        ok: false,
+        kind: "queue",
+        code: pre.code,
+        reason: pre.reason,
+        ...(pre.detail === undefined ? {} : { detail: pre.detail }),
+      };
+    }
+  }
+  const fold = readQueueFold(store);
+  if (!fold.ok) return fold;
+  const ref = canonicalQueueRef(request.ref);
+  if (ref === undefined) {
+    return {
+      ok: false,
+      kind: "input",
+      code: "input.value.rejected",
+      detail: `ref ${request.ref} is not canonical`,
+    };
+  }
+  const resolved = entryRepository(fold.value, ref);
+  if (!resolved.ok) return resolved;
+  const repository = resolved.repository;
+  const ttlMs = request.ttlMs ?? QUEUE_DEFAULT_LEASE_TTL_MS;
+  if (!Number.isInteger(ttlMs) || ttlMs <= 0) {
+    return { ok: false, kind: "input", code: "input.value.rejected", detail: "ttlMs must be positive" };
+  }
+  return runClaimFence(store, request.fenceToken, (handle) => {
+    const activeRead = readActiveLeases(store, request.nowMs);
+    if (!activeRead.ok) return stateFailureOf({ ...activeRead, kind: "state", consequence: "not_landed", location: { path: store.identity.stateDirectory } });
+    const existing = activeRead.active.find((lease) => lease.repository === repository);
+    if (existing === undefined) {
+      const record = newLeaseRecord({
+        operation: "acquired",
+        repository,
+        holder: request.holder,
+        ref,
+        runner: request.runner,
+        weightClass: request.weightClass,
+        ttlMs,
+        nowIso: request.nowIso,
+      });
+      const appended = appendLeaseRecords(store, handle, [
+        {
+          kind: QUEUE_LEASE_RECORD_KIND,
+          recordKey: queueLeaseRecordKey(repository),
+          payload: leasePayload(record),
+        },
+      ]);
+      if (!appended.ok) return appended;
+      return { ok: true, value: { result: "claimed", lease: record } };
+    }
+    if (existing.holder === request.holder) {
+      const record = newLeaseRecord({
+        operation: "renewed",
+        repository,
+        holder: request.holder,
+        ref,
+        runner: request.runner,
+        weightClass: request.weightClass,
+        ttlMs,
+        nowIso: request.nowIso,
+        acquiredAt: existing.acquiredAt,
+        leaseId: existing.leaseId,
+      });
+      const appended = appendLeaseRecords(store, handle, [
+        {
+          kind: QUEUE_LEASE_RECORD_KIND,
+          recordKey: queueLeaseRecordKey(repository),
+          payload: leasePayload(record),
+        },
+      ]);
+      if (!appended.ok) return appended;
+      return { ok: true, value: { result: "renewed", lease: record } };
+    }
+    if (!isLeaseStale(existing.heartbeatAgeMs, existing.ttlMs)) {
+      const conflict = leaseConflict(existing);
+      return {
+        ok: false,
+        kind: "queue",
+        code: "queue.lease-conflict",
+        conflict,
+        detail: `holder:${conflict.holder}; lease:${conflict.leaseId}; heartbeatAgeMs:${conflict.heartbeatAgeMs}; earliestTakeoverAt:${conflict.earliestTakeoverAt}`,
+      };
+    }
+    const record = newLeaseRecord({
+      operation: "taken-over",
+      repository,
+      holder: request.holder,
+      ref,
+      runner: request.runner,
+      weightClass: request.weightClass,
+      ttlMs,
+      nowIso: request.nowIso,
+      takeover: {
+        previousHolder: existing.holder,
+        leaseId: existing.leaseId,
+        heartbeatAgeMs: existing.heartbeatAgeMs,
+        lastHeartbeatAt: existing.heartbeatAt,
+        takenOverAt: request.nowIso,
+      },
+    });
+    const incident: QueueIncidentRecord = {
+      schema: QUEUE_INCIDENT_SCHEMA,
+      type: "lease-stale-takeover",
+      repository,
+      evidence: [
+        { key: "previousHolder", value: existing.holder },
+        { key: "leaseId", value: existing.leaseId },
+        { key: "heartbeatAgeMs", value: String(existing.heartbeatAgeMs) },
+        { key: "lastHeartbeatAt", value: existing.heartbeatAt },
+        { key: "earliestTakeoverAt", value: earliestTakeoverAtIso(existing) },
+      ],
+      recordedAt: request.nowIso,
+    };
+    const appended = appendLeaseRecords(store, handle, [
+      {
+        kind: QUEUE_LEASE_RECORD_KIND,
+        recordKey: queueLeaseRecordKey(repository),
+        payload: leasePayload(record),
+      },
+      {
+        kind: QUEUE_INCIDENT_RECORD_KIND,
+        recordKey: queueIncidentRecordKey(repository),
+        payload: incidentPayload(incident),
+      },
+    ]);
+    if (!appended.ok) return appended;
+    return { ok: true, value: { result: "taken-over", lease: record, incident } };
+  });
+};
+
+/**
+ * Release one held lease. Releasing when no lease exists is an explicit noop;
+ * releasing another holder's live lease refuses; the release record is verified
+ * post-append.
+ */
+export const releaseQueueLease = (
+  store: StateStorePort,
+  request: {
+    readonly ref: string;
+    readonly holder?: string;
+    readonly nowIso: string;
+    readonly nowMs: number;
+    readonly fenceToken: string;
+  },
+): QueueReleaseResult => {
+  const fold = readQueueFold(store);
+  if (!fold.ok) return fold;
+  const ref = canonicalQueueRef(request.ref);
+  if (ref === undefined) {
+    return {
+      ok: false,
+      kind: "input",
+      code: "input.value.rejected",
+      detail: `ref ${request.ref} is not canonical`,
+    };
+  }
+  const resolved = entryRepository(fold.value, ref);
+  if (!resolved.ok) return resolved;
+  const repository = resolved.repository;
+  return runReleaseFence(store, request.fenceToken, (handle) => {
+    const activeRead = readActiveLeases(store, request.nowMs);
+    if (!activeRead.ok) {
+      return stateFailureOf({
+        ...activeRead,
+        kind: "state",
+        consequence: "not_landed",
+        location: { path: store.identity.stateDirectory },
+      });
+    }
+    const existing = activeRead.active.find((lease) => lease.repository === repository);
+    if (existing === undefined) {
+      return { ok: true, value: { result: "noop" } };
+    }
+    if (request.holder !== undefined && existing.holder !== request.holder) {
+      const conflict = leaseConflict(existing);
+      return {
+        ok: false,
+        kind: "queue",
+        code: "queue.lease-conflict",
+        conflict,
+        detail: `holder:${conflict.holder}; lease:${conflict.leaseId}`,
+      };
+    }
+    const record = newLeaseRecord({
+      operation: "released",
+      repository,
+      holder: existing.holder,
+      ref: existing.ref,
+      runner: existing.runner,
+      weightClass: existing.weightClass,
+      ttlMs: existing.ttlMs,
+      nowIso: request.nowIso,
+      acquiredAt: existing.acquiredAt,
+      leaseId: existing.leaseId,
+    });
+    const appended = appendLeaseRecords(store, handle, [
+      {
+        kind: QUEUE_LEASE_RECORD_KIND,
+        recordKey: queueLeaseRecordKey(repository),
+        payload: leasePayload(record),
+      },
+    ]);
+    if (!appended.ok) return appended;
+    return { ok: true, value: { result: "released", lease: record } };
+  });
+};
+
+/** The derived heartbeat age for one raw lease record. */
+export const leaseRecordHeartbeatAgeMs = leaseHeartbeatAgeMs;

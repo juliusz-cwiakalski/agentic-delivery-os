@@ -865,3 +865,15 @@ export const createStateStore = (
     },
   };
 };
+export {
+  claimQueueLease,
+  leaseRecordHeartbeatAgeMs,
+  readActiveLeases,
+  releaseQueueLease,
+  type QueueActiveLeaseRead,
+  type QueueClaimOutcome,
+  type QueueClaimResult,
+  type QueueLeaseFailure,
+  type QueueReleaseOutcome,
+  type QueueReleaseResult,
+} from "./queue.js";

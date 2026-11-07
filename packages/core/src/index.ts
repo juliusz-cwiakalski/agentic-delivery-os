@@ -354,3 +354,22 @@ export {
   type QueueWorkItemFact,
   weightLoads,
 } from "./domain/index.js";
+
+// The pure lease policy and claim preconditions (GH-237 F-3, F-4): scope,
+// identity, inclusive staleness, renewal cadence, takeover evidence, the
+// pre-fence five-condition gate, and conflict projection.
+export {
+  DEFAULT_LEASE_SCOPE,
+  claimScope,
+  defaultLeaseTtlMs,
+  earliestTakeoverAtIso,
+  evaluateClaimPreconditions,
+  foldActiveLeases,
+  isLeaseStale,
+  leaseConflict,
+  leaseHeartbeatAgeMs,
+  makeLeaseId,
+  renewalCadenceMs,
+  type QueueClaimPrecondition,
+  type QueueLeaseConflict,
+} from "./domain/index.js";

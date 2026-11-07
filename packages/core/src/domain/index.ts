@@ -403,3 +403,18 @@ export {
   type WatchdogRestorationPlan,
   watchdogPreservedRefName,
 } from "./watchdog.js";
+export {
+  DEFAULT_LEASE_SCOPE,
+  claimScope,
+  defaultLeaseTtlMs,
+  earliestTakeoverAtIso,
+  evaluateClaimPreconditions,
+  foldActiveLeases,
+  isLeaseStale,
+  leaseConflict,
+  leaseHeartbeatAgeMs,
+  makeLeaseId,
+  renewalCadenceMs,
+  type QueueClaimPrecondition,
+  type QueueLeaseConflict,
+} from "./queue-lease.js";
