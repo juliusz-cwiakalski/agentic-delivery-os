@@ -10,7 +10,7 @@ phases:
   delivery: { started: "2026-11-07T01:05:00Z", completed: "2026-11-07T03:30:00Z" }
   system_spec_update: { started: "2026-11-07T03:40:00Z", completed: "2026-11-07T04:20:00Z" }
   review_fix: { started: "2026-11-07T04:30:00Z", completed: "2026-11-07T05:30:00Z" }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-11-07T05:40:00Z", completed: "2026-11-07T06:00:00Z" }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -106,6 +106,9 @@ notes:
     date: "2026-11-07"
   - text: "Review closed after iteration 2: re-review PASS with zero findings (0c/0h/0m/0l/0i), no new phase appended, plan 8/8 phases done. F-1 remediation verified as prescribed (typed ternary, zero casts remain in domain/status.ts, byte-identical semantics); post-remediation doc-syncer re-verification found no doc-visible delta; hygiene+corpus+contract+golden suites 65/65 green on clean worktree. Record: code-review/review-iter-2.yaml."
     type: "decision"
+    date: "2026-11-07"
+  - text: "Quality gates ALL_GREEN (5/5): pnpm check exit 0 (lint 1356 files 0 errors, format clean, typecheck clean, 4370 pass / 4 skip / 0 fail, depcruise/ambient-globals/entrypoints/secret-boundary/exports-parity all green); doc-distribution guard green (81 docs); post-remediation status spot suites 60/60; no fixture mutations; branch 19 commits over main-tools at HEAD 893b93cf. Environment workaround (TMPDIR/COREPACK_HOME) applied from the outset per documented pre-existing infra sensitivity."
+    type: "info"
     date: "2026-11-07"
   - text: "Plan phase 8 complete (commit d2dbd779): review remediation F-1 — assertionAvailability now selects availability.epicMembership/storyPoints/inSprint through the typed ternary and compares to \"available\", dropping the `as unknown as Readonly<Record<string, string | undefined>>` double cast and computed-key lookup. Pure refactor, zero behavior change. Gates green: status-hygiene + status-corpus + status-contract (60 pass / 0 fail), pnpm typecheck, and status-digest goldens (5 pass / 0 fail) with no golden file modified."
     type: "info"
