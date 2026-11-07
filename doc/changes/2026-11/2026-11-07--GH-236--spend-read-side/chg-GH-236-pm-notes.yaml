@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-07T07:05:00Z", completed: "2026-11-07T09:15:00Z" }
   quality_gates: { started: "2026-11-07T09:20:00Z", completed: "2026-11-07T10:50:00Z" }
   dod_check: { started: "2026-11-07T10:55:00Z", completed: "2026-11-07T11:05:00Z" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-11-07T11:10:00Z", completed: "2026-11-07T11:25:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/263" }
 decisions:
   - text: "OQ-1 (spec): PM-decided to author a standalone TDR for the amplification formula (spec DEC-3) via @decision-advisor before test planning — AC-bearing, consumed later by M1-S21 routing and M2-S6 alarms; GH-232/TDR-0009 precedent."
     date: "2026-11-07"
@@ -132,6 +132,12 @@ notes:
     type: info
     date: "2026-11-07"
   - text: "DoD check: PASS. (1) All lifecycle phases recorded with completion timestamps except pr_creation (in progress by definition). (2) Plan completion: 6/6 plan phases have evidence notes naming phase id, commit hash, and test result; plan validate readyForDevelopment=true at review. (3) ACs: reviewer independently confirmed 19/19 satisfied including both binding ticket ACs (AC-F2-1 via TC-003/006/032; AC-F5-1/2 via TC-014/015/016/017/034). (4) Current-truth docs: doc-syncer zero residual gaps; reviewer spot-checked feature-spend.md vs code; TC-SPEND-031 doc half closed. (5) No open blockers; advisory F-1..F-8 are non-blocking. Gates valid at the proposed commit (only doc-artifact commits after the gate run)."
+    type: info
+    date: "2026-11-07"
+  - text: "PR created: #263 https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/263 — title 'feat(GH-236): spend read side and resume amplification', base main-tools (explicit, not main), head 6b65fe53, MERGEABLE with 21 required checks pending (strict branch protection on main-tools). 145 files, +12446/-352. Closes #236. NOT merged; merge authority stays with the CEO/human. Owner review must include TDR-0011 acceptance (Proposed) alongside the PIN-3 events-tail extension and MCP/CLI divergence disclosures."
+    type: info
+    date: "2026-11-07"
+  - text: "Tracker final state set: labels change+review (Ready for review per pm-instructions mapping), PR link comment added, issue assigned to juliusz-cwiakalski for human review."
     type: info
     date: "2026-11-07"
   - text: "Specification checkpoint committed as c8262434 (message-only amend f8d24f1f->c8262434 to fix commitlint body-max-line-length; tree hash unchanged). Retro: keep commit bodies pre-wrapped at <=100 chars when briefing @committer; CI commitlint is the authority, the local hook is warn-only."
