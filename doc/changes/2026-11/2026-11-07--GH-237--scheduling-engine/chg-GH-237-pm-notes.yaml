@@ -3,10 +3,10 @@ title: "M1-S17: Scheduling engine: queue, lanes, dependency batching"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-07T10:00:00Z", completed: "2026-11-07T10:00:00Z" }
-  specification: { started: "2026-11-07T10:05:00Z", completed: "2026-11-07T12:20:00Z", reopened_at: "2026-11-07T11:55:00Z", iterations: 2 }
-  test_planning: { started: "2026-11-07T10:20:00Z", completed: "2026-11-07T13:40:00Z", reopened_at: "2026-11-07T11:55:00Z", iterations: 2 }
-  delivery_planning: { started: "2026-11-07T11:25:00Z", completed: "2026-11-07T14:00:00Z", reopened_at: "2026-11-07T11:55:00Z", iterations: 2 }
-  dor_check: { started: "2026-11-07T11:50:00Z", completed: null, iteration: 1, verdict: NOT_READY }
+  specification: { started: "2026-11-07T10:05:00Z", completed: null, reopened_at: "2026-11-07T14:30:00Z", iterations: 3 }
+  test_planning: { started: "2026-11-07T10:20:00Z", completed: null, reopened_at: "2026-11-07T14:30:00Z", iterations: 3 }
+  delivery_planning: { started: "2026-11-07T11:25:00Z", completed: null, reopened_at: "2026-11-07T14:30:00Z", iterations: 3 }
+  dor_check: { started: "2026-11-07T14:05:00Z", completed: null, iteration: 2, verdict: NOT_READY }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -48,6 +48,6 @@ notes:
   - text: "Resume sync 2026-11-07: merged origin/main-tools (GH-236 spend read side, be5045e7) into the branch — clean merge, no conflicts. Post-merge `pnpm check`: lint/format/typecheck PASS; test stage 4 failures — one real artifact defect (privacy-literal credential pattern in our test plan, since sanitized) plus an environmental `ci-baseline-parity` EXDEV failure because /tmp is a different filesystem from the repo. The EXDEV failure is infrastructure, not change content; re-verify with TMPDIR on the repo filesystem during quality_gates."
     type: info
     date: "2026-11-07"
-  - text: "DoR iteration 1: NOT_READY (2 critical, 8 major, 4 minor; 8 blocking). Blocking: claim refusal-identity contradiction (R-01), unenumerated closed park-cause set that rejects `preempted-for-close-item` (R-02), undefined producer-root discovery for deploy expectations (R-03), stuck-park schedule status undefined (R-04), missing in-pass single-flight projection rule (R-05), Phases 3-5 test gates depend on the Phase-7 CLI surface (R-06), impossible '49 refusals' assertion with alternating holders (R-07). Non-blocking: one-shot narrowing acknowledgement (R-08, recorded as PM-decided), AC-F8-1 interval wording (R-09), AC-F1-1 given clause (R-10), lane vocabulary provenance (R-11), status-digest follow-up ownership (R-12), missing CLI phase reconciliation (R-13), inventory registration in Phases 2-6 (R-14), type-test bun invocation (R-15), TC-LANES-002 typo (R-16). Reopened specification, test_planning, delivery_planning; delivery not reopened."
+  - text: "DoR iteration 2: NOT_READY. All 7 blocking iteration-1 findings resolved; one new blocking cross-artifact conflict introduced by the remediation — R2-01, AC-F1-1 requires `queue list` to show the recorded repository root, but Appendix C/DM-13 omit the root, the plan forbids absolute paths in goldens, and no TC asserts it. Non-blocking: TC-PARK-004 partial marking (R2-02), missing `degraded[]` in add/prioritize/dep envelope (R2-03), privacy review silent on the root (R2-04), Phase 2 not tasked to record the root (R2-05), stale `queue-ready.test.ts` gate reference (R2-06), `queue.park` kind wording (R2-07). Reopened specification/test_planning/delivery_planning for iteration 3; delivery not reopened."
     type: retro
     date: "2026-11-07"
