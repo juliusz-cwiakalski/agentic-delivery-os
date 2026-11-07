@@ -1,0 +1,727 @@
+# GH-241 implementation plan — machine-readable projection (delivery.plan.v1).
+# Execution companion: chg-GH-241-plan.md (same phases, tasks, AC/TC links,
+# verification commands, exit criteria). When both plan files exist this YAML
+# document is authoritative for `plan validate`; `plan diff` reads its scope.
+#
+# SOURCES (single source of truth; plan revision 1, 2026-11-07):
+#   - Spec:   ./chg-GH-241-spec.md (v1.1; F-1..F-10; 43 ACs; DEC-1..DEC-13;
+#             DM-1..DM-11; EVT-1..EVT-7; NFR-1..NFR-15; Appendix A..H)
+#   - Tests:  ./chg-GH-241-test-plan.md (v1.1; 66 TCs TC-COORD-001..092;
+#             43/43 AC coverage; SC-M1-25 clause map in section 3.4; section 7
+#             is the file/command inventory this plan maps onto phases)
+#   - Seed:   SC-M1-25 in doc/planning/oss-tooling/milestones/m1/test-scenarios.md
+#   - Schema: doc/spec/features/feature-plan-schema.md and
+#             doc/templates/implementation-plan-template.md
+#
+# PINNED CONTRACTS BINDING ON EVERY PHASE (do not reshape at delivery):
+#   - Exactly two two-segment coordinator codes join RESERVED_TWO_SEGMENT_CODES
+#     in BOTH scripts/checks/error-table-sync.ts and
+#     tests/structure/error-table.test.ts: coordinator.already-running and
+#     coordinator.restart-budget-exhausted (set 22 -> 24; table 99 -> 105).
+#     The other four coordinator identities are three-segment. No wildcard.
+#   - STATE_SCHEMA_VERSION stays delivery.state.v1; six additive record kinds.
+#   - The reserved escalation slot predicate is payload-only:
+#     type=decision-needed AND audience=owner AND lane=coordinator AND
+#     ref=<coordinatorId>#<budgetEpochId> with exactly one '#' and both sides
+#     non-empty. No coordinator-state read; the eight-question bound is
+#     unchanged (at most seven others plus the reserved question).
+#   - Only a successful wake (outcome=woken) persists and consumes the
+#     one-wake-per-question lifetime; already-woken, answered-before-wake,
+#     delivery-failed, and no-pickup append no durable wake record.
+#   - coordinator.stuck carries a closed reason field distinct from the restart
+#     reason: stuck-artifact-evidence | evidence-unevaluable.
+#   - Capability ownership is four-way: harness resume undeclared/unavailable
+#     -> spawn-fresh reason session-interrupted (one ordinal, exit 0, no error);
+#     harness spawn impossible/refused -> harness.capability.gap /
+#     harness.spawn.refused exit 1; process-port alive/kill absent ->
+#     coordinator.process.capability-gap exit 2, no destructive action;
+#     progress absent -> unknown evidence class, never a failure or a kill.
+#   - No CPU signal, no model call, no ambient clock/randomness/environment in
+#     any decision or render path. No daemon command, control socket, lane
+#     supervision, OS installer, or dispatch surface (M1-S18 / M1-S9 seams
+#     only). No agent-prompt change (M1-S20).
+#   - ceo-loop.sh remains byte-unchanged; the only status/brief change is the
+#     declared reserved escalation slot.
+#
+# TC -> PHASE MAP (66/66; no orphan, every TC mapped exactly once; each phase's
+# mapped TCs are fully provable at that phase's declared gate):
+#   Phase 1:  TC-COORD-001, TC-COORD-081, TC-COORD-082
+#   Phase 2:  TC-COORD-032, TC-COORD-033, TC-COORD-034, TC-COORD-037
+#   Phase 3:  TC-COORD-020, TC-COORD-021, TC-COORD-022, TC-COORD-023,
+#             TC-COORD-026, TC-COORD-030, TC-COORD-031, TC-COORD-036,
+#             TC-COORD-038, TC-COORD-039, TC-COORD-050, TC-COORD-051,
+#             TC-COORD-053, TC-COORD-083
+#   Phase 4:  TC-COORD-056, TC-COORD-080
+#   Phase 5:  TC-COORD-040, TC-COORD-041, TC-COORD-042, TC-COORD-043,
+#             TC-COORD-044, TC-COORD-085
+#   Phase 6:  TC-COORD-003, TC-COORD-004, TC-COORD-010, TC-COORD-011,
+#             TC-COORD-012, TC-COORD-013, TC-COORD-014, TC-COORD-015,
+#             TC-COORD-016, TC-COORD-017, TC-COORD-024, TC-COORD-025,
+#             TC-COORD-035, TC-COORD-052, TC-COORD-054, TC-COORD-055,
+#             TC-COORD-060, TC-COORD-061, TC-COORD-062, TC-COORD-065,
+#             TC-COORD-070, TC-COORD-071, TC-COORD-072, TC-COORD-073,
+#             TC-COORD-074, TC-COORD-075
+#   Phase 7:  TC-COORD-063, TC-COORD-064
+#   Phase 8:  TC-COORD-002, TC-COORD-084, TC-COORD-086, TC-COORD-087,
+#             TC-COORD-088, TC-COORD-091
+#   Phase 9:  TC-COORD-092
+#   Phase 10: TC-COORD-089, TC-COORD-090
+#
+# DELIVERY MODEL: one commit per phase on feat/GH-241/coordinator-supervision;
+# each phase boundary leaves the declared narrow gate green. Extra phase data
+# (tasks, verification commands, exit criteria, AC/TC ids) is carried in YAML
+# comments and in the MD companion so the parsed document stays schema-strict.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-241
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  escalationTriggers:
+    - "error-table-sync gate red after Phase 1 (exact two-code allowlist, set 22->24, table 99->105, or documented-row binding failed)"
+    - "a status/brief golden diff outside the declared reserved escalation slot"
+    - "a TDR-0013/TDR-0014 or spec v1.1 pinned contract requires reshaping (reopens the test plan per GAP-T1)"
+    - "the work begins to require a daemon command, control socket, lane supervision, OS installer, or dispatch surface (M1-S18 / M1-S9)"
+    - "a coordinator record, error evidence, or rendered output contains prompt, transcript, secret, or credential content"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Contracts, coordinator error family, result-contract sync
+  #
+  # Goal: land the runtime-neutral coordinator vocabulary as types + as-const
+  # data, the six-row coordinator error family with the exact two-code
+  # two-segment allowlist, and the documented-table companion in the same
+  # commit so error-table-sync is green from this boundary.
+  #
+  # Tasks (TC-COORD-001, 081, 082):
+  #  1.1 Create packages/core/src/contracts/coordinator.ts: closed lifecycle
+  #      decisions (join-live, resume-context, spawn-fresh, none), decision
+  #      reasons, restart reasons, stuck verdicts, stuck reasons, evidence
+  #      classes/states, kill outcomes, wake outcomes, fence actions,
+  #      escalation states, recovery options, five config key paths, six
+  #      record-kind identifiers and payload schema ids, delivery.coordinator.v1
+  #      observation payload types, regime descriptor type, and the injected
+  #      process-lifecycle port / capability declaration types. Data only.
+  #  1.2 Export the module from packages/core/src/contracts/index.ts; register
+  #      the new contract module in tests/structure/inventory.json and the
+  #      port-contract inventory fixtures.
+  #  1.3 Add `coordinator` to DOMAIN_KINDS exactly once and append exactly six
+  #      rows to ERROR_TABLE with code/domainKind/category/retryable/
+  #      consequence/remediation/projection/summary: already-running,
+  #      restart-budget-exhausted, process.capability-gap, session.kill-failed,
+  #      escalation.publish-failed, wake.delivery-failed. Zero existing rows
+  #      modified.
+  #  1.4 Add coordinator.already-running and
+  #      coordinator.restart-budget-exhausted to RESERVED_TWO_SEGMENT_CODES in
+  #      BOTH scripts/checks/error-table-sync.ts and
+  #      tests/structure/error-table.test.ts; set 22 -> 24; no wildcard and no
+  #      generic widening; a near-miss remains rejected; the other four codes
+  #      are three-segment.
+  #  1.5 Add the six documented rows to
+  #      doc/spec/features/feature-result-contract.md (99 -> 105) and extend
+  #      tests/fixtures/result/code-corpora true/false positives.
+  #  1.6 Create tests/structure/coordinator-contract.test.ts and
+  #      tests/types/coordinator.type-test.ts; extend
+  #      tests/structure/error-table.test.ts and
+  #      tests/checks/error-table-sync.test.ts for exact kind/row/count/
+  #      projection/round-trip/near-miss assertions.
+  #
+  # Verification:
+  #   bun test tests/structure/coordinator-contract.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   pnpm typecheck
+  #
+  # Exit: error-table-sync green (105 entries, 105 documented rows, set exactly
+  # 24 in both gate files); coordinator vocabularies have one data-only home;
+  # no existing row or identity changed.
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Contracts, coordinator error family, and result-contract sync (allowlist 22->24; table 99->105)"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/coordinator.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - scripts/checks/error-table-sync.ts
+        - tests/structure/error-table.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/structure/coordinator-contract.test.ts
+        - tests/types/coordinator.type-test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/port-contract-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - doc/spec/features/feature-result-contract.md
+      folders:
+        - tests/fixtures/result/code-corpora
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/coordinator.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Pure coordinator supervision domain
+  #
+  # Goal: implement every deterministic decision as pure functions over
+  # injected facts. No I/O, clock, randomness, environment, CPU, process, or
+  # model call.
+  #
+  # Tasks (TC-COORD-032, 033, 034, 037):
+  #  2.1 Lifecycle decision: join-live / resume-context / spawn-fresh with the
+  #      five reasons, context-limit comparison, resume capability input, and
+  #      ordinal accounting (join-live and initial-start/clean-iteration-end
+  #      consume none; resume and the three recovery spawn reasons consume one).
+  #      Implemented here; its durable-record TCs land in Phase 3.
+  #  2.2 Artifact-evidence stuck verdict: digest-consumed fingerprint + new
+  #      session turn, merge, answer; advanced/stale/unknown totality; verified
+  #      empty store = stale zero, unreadable = unknown; all-unknown or
+  #      unreadable required store = unevaluable/evidence-unevaluable; positive
+  #      sourced progress vetoes stuck; no CPU field exists. Implemented here;
+  #      record/exit TCs land in Phases 3 and 6.
+  #  2.3 Restart admission fold over the current epoch: contiguous ordinals,
+  #      below-bound admit, at/above-bound refuse; torn/gapped is unevaluable.
+  #  2.4 Wake evaluation: strict isCoordinatorPickup (rank 1, open, audience
+  #      coordinator), persisted-vs-tick outcomes, dedupe by coordinator id +
+  #      question id + askedAt, answered-before-wake handling. Implemented
+  #      here; full tick/record TCs land in Phase 6.
+  #  2.5 Escalation projection: the payload-only reserved-slot predicate and
+  #      the bounded owner question projection; no renderer/state read.
+  #  2.6 Regime projection and deterministic observation renderers for the
+  #      delivery.coordinator.v1 data and bounded human text.
+  #  2.7 Export from packages/core/src/domain/index.ts; add import guards and
+  #      temp-copy mutants proving no node:/bun:, clock, random, env, fetch,
+  #      timer, child-process, filesystem, or CPU read is reachable.
+  #  2.8 Tests that are fully provable at this boundary: no-cpu, mutants,
+  #      stuck-fingerprint, stuck-corroborator, stuck-unknown, and the
+  #      domain-import scan; fixtures lifecycle.ts, evidence.ts, and the
+  #      recording process-port fake (reused by Phases 3 and 5).
+  #
+  # Verification:
+  #   bun test tests/structure/coordinator-imports.test.ts tests/structure/coordinator-no-cpu.test.ts tests/checks/coordinator-mutants.test.ts
+  #   bun test tests/behaviour/coordinator-stuck-fingerprint.test.ts tests/behaviour/coordinator-stuck-corroborator.test.ts tests/behaviour/coordinator-stuck-unknown.test.ts
+  #   pnpm check:boundaries
+  #
+  # Exit: pure-domain and structure suites green; every absence claim has its
+  # three observations (capability absent, zero recorded invocation, zero state
+  # mutation); no CPU/clock/env/model/process import.
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Pure coordinator domain: lifecycle, artifact-evidence stuck verdict, restart admission, wake evaluation, escalation and regime projection"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/index.ts
+        - tests/structure/coordinator-imports.test.ts
+        - tests/structure/coordinator-no-cpu.test.ts
+        - tests/behaviour/coordinator-stuck-fingerprint.test.ts
+        - tests/behaviour/coordinator-stuck-corroborator.test.ts
+        - tests/behaviour/coordinator-stuck-unknown.test.ts
+        - tests/checks/coordinator-mutants.test.ts
+        - tests/fixtures/coordinator/lifecycle.ts
+        - tests/fixtures/coordinator/evidence.ts
+        - tests/fixtures/coordinator/process-port.ts
+      packages:
+        - packages/core/src/domain/coordinator*
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Additive coordinator state records
+  #
+  # Goal: implement the six record kinds over the delivered artifact boundary
+  # with validated appends, verified reads, contiguous-ordinal checks, and
+  # crash durability. STATE_SCHEMA_VERSION unchanged; no migration.
+  #
+  # Tasks (TC-COORD-020, 021, 022, 023, 026, 030, 031, 036, 038, 039, 050,
+  #        051, 053, 083):
+  #  3.1 packages/core/src/state/coordinator.ts: iteration, restart, stuck,
+  #      exhaustion, wake, fence records with kind/schema/required-field/
+  #      vocabulary validation; append through the delivered fenced artifact
+  #      boundary with post-append coverage; verified reads; torn/unknown/
+  #      gapped classification.
+  #  3.2 Restart ordinal fold per budget epoch: contiguous from 1; a torn or
+  #      gapped ordinal is unevaluable and never count 0; a replayed ordinal
+  #      appends nothing; namespace is coordinator/<coordinatorId>, disjoint
+  #      from lane and economics.
+  #  3.3 Fence record carriers: acquired / released / stale-takeover with
+  #      holder, previousHolder, fenceAgeMs; durable and status-readable.
+  #      Supports TC-COORD-017 (Phase 6).
+  #  3.4 Exhaustion receipt: one terminal receipt per epoch, lands only after
+  #      the escalation question, idempotent by coordinator + epoch.
+  #  3.5 Decision durability and mid-iteration artifact preservation: a fresh
+  #      store handle over the same temp root reconstructs the decision,
+  #      ordinal, closed-out phase/merge/answer artifacts, and does not
+  #      re-execute them. Supports TC-COORD-024/025 (Phase 6).
+  #  3.6 Fresh-budget epoch: start --fresh-budget opens a new epoch at 0 while
+  #      the old epoch and escalation remain in history. Supports TC-COORD-054
+  #      (Phase 6).
+  #  3.7 Recorded-decision tests: coordinator-decision-join/resume/spawn,
+  #      coordinator-ordinals; assert the decision + reason + session +
+  #      context + ordinal + iteration are written before the effect, nothing
+  #      is spawned/resumed on join-live, exactly one ordinal is consumed on
+  #      resume-context and each recovery spawn-fresh, and none on
+  #      initial-start/clean-iteration-end.
+  #  3.8 Persisted-stuck tests: coordinator-stuck-verdict, stuck-matrix,
+  #      stuck-torn, expectation, stuck-reason; assert one stuck record for
+  #      stuck/unevaluable, the closed reason coupling, the 3x3x3 matrix, one
+  #      active expectation, and a torn/gapped store never read as zero/stale.
+  #  3.9 Remaining state tests: coordinator-records, restart-namespace,
+  #      restart-admit, restart-durability; extend state-contract and the state
+  #      fixture harness; fixtures states.ts, lifecycle.ts, evidence.ts, and
+  #      process-port.ts. Fence, recovery, fresh-budget, and torn-status TCs
+  #      are completed at the Phase-6 command surface.
+  #
+  # Verification:
+  #   bun test tests/behaviour/coordinator-decision-*.test.ts tests/behaviour/coordinator-ordinals.test.ts
+  #   bun test tests/behaviour/coordinator-stuck-verdict.test.ts tests/behaviour/coordinator-stuck-matrix.test.ts tests/behaviour/coordinator-stuck-torn.test.ts tests/behaviour/coordinator-expectation.test.ts tests/behaviour/coordinator-stuck-reason.test.ts
+  #   bun test tests/behaviour/coordinator-records.test.ts tests/behaviour/coordinator-restart-namespace.test.ts tests/behaviour/coordinator-restart-admit.test.ts tests/behaviour/coordinator-restart-durability.test.ts tests/structure/state-contract.test.ts
+  #
+  # Exit: all six kinds round-trip and validate; malformed records classify and
+  # are never served; ordinal contiguity is enforced; state schema unchanged;
+  # lane/economics records byte-unchanged.
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Additive coordinator state records and recorded decisions: iteration, restart, stuck, exhaustion, wake, fence over the delivered artifact boundary"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/state/index.ts
+        - tests/behaviour/coordinator-records.test.ts
+        - tests/behaviour/coordinator-decision-join.test.ts
+        - tests/behaviour/coordinator-decision-resume.test.ts
+        - tests/behaviour/coordinator-decision-spawn.test.ts
+        - tests/behaviour/coordinator-ordinals.test.ts
+        - tests/behaviour/coordinator-stuck-verdict.test.ts
+        - tests/behaviour/coordinator-stuck-matrix.test.ts
+        - tests/behaviour/coordinator-stuck-torn.test.ts
+        - tests/behaviour/coordinator-expectation.test.ts
+        - tests/behaviour/coordinator-stuck-reason.test.ts
+        - tests/behaviour/coordinator-restart-namespace.test.ts
+        - tests/behaviour/coordinator-restart-admit.test.ts
+        - tests/behaviour/coordinator-restart-durability.test.ts
+        - tests/structure/state-contract.test.ts
+        - tests/fixtures/state/harness.ts
+        - tests/fixtures/coordinator/states.ts
+        - tests/fixtures/coordinator/lifecycle.ts
+        - tests/fixtures/coordinator/evidence.ts
+        - tests/fixtures/coordinator/process-port.ts
+        - tests/structure/inventory.json
+      packages:
+        - packages/core/src/state/coordinator*
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — Coordinator config branch
+  #
+  # Goal: add the five coordinator keys to the delivered config catalog,
+  # defaults, and schema with declared domains; every decision reads resolved
+  # values, never a literal.
+  #
+  # Tasks (TC-COORD-056, 080):
+  #  4.1 Add coordinator.stuck-window (600000 ms, integer > 0),
+  #      coordinator.kill-grace (20000 ms, integer > 0),
+  #      coordinator.restart-budget (10, integer >= 0),
+  #      coordinator.resume-context-limit (100000 tokens, integer > 0), and
+  #      coordinator.collection-interval (30000 ms, integer > 0) to the
+  #      catalog/defaults/schema with provenance.
+  #  4.2 Wire resolution into the lifecycle, stuck, admission, and wake
+  #      decisions; no default or bound literal in decision code; no alias to
+  #      lane.restart-budget, lane.liveness-interval, or daemon.heartbeat-cycle.
+  #  4.3 Tests: coordinator-config (absent/explicit/unknown/invalid/boundary),
+  #      coordinator-budget-config (0/1/10 and observed-at-evaluation), config
+  #      contract extension, fixture roots.
+  #
+  # Verification:
+  #   bun test tests/behaviour/coordinator-config.test.ts tests/behaviour/coordinator-budget-config.test.ts tests/structure/config-contract.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #
+  # Exit: defaults and domains exact; unknown -> config.key.unknown; invalid ->
+  # config.value.invalid; no decision-code literal; no cross-key aliasing.
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Coordinator config branch: five keys, declared defaults/domains, no decision-code literals"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/config/catalog.ts
+        - packages/core/src/config/defaults.ts
+        - packages/core/src/config/schema.ts
+        - packages/core/src/config/resolver.ts
+        - tests/behaviour/coordinator-config.test.ts
+        - tests/behaviour/coordinator-budget-config.test.ts
+        - tests/structure/config-contract.test.ts
+        - tests/fixtures/coordinator/lifecycle.ts
+      folders:
+        - tests/fixtures/config
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Injected process-lifecycle port and adapters
+  #
+  # Goal: implement spawn/attach, alive, kill-with-grace, and sourced progress
+  # beside the harness adapters with an injected child-process runner; the
+  # domain stays pure and the delivered harness session port is unchanged.
+  #
+  # Tasks (TC-COORD-040, 041, 042, 043, 044, 085):
+  #  5.1 packages/adapters/src/harness/process-lifecycle.ts: resolve the
+  #      recorded session/process-tree handle, alive probe, TERM -> wait
+  #      kill-grace -> conditional KILL, closed terminated/forced/failed
+  #      outcomes, sourced progress facts, capability declarations/gaps. The
+  #      child-process runner is injected; no name/pattern kill and no shell
+  #      interpolation.
+  #  5.2 Export from packages/adapters/src/harness/index.ts; no new package
+  #      subpath, no new dependency, no boundary-rule loosening.
+  #  5.3 Capability ownership: alive/kill absent ->
+  #      coordinator.process.capability-gap exit 2 with zero kill calls; resume
+  #      and spawn and progress keep their distinct owners (Phase 6 composes).
+  #  5.4 Tests: coordinator-kill-grace/failed/target/fence/capability-gap,
+  #      structure kill-target scan, tests/boundaries, fixture process-port.ts
+  #      (phase log and fake clock).
+  #
+  # Verification:
+  #   bun test tests/behaviour/coordinator-kill-*.test.ts tests/behaviour/coordinator-capability-gap.test.ts tests/structure/coordinator-kill-target.test.ts
+  #   bun test tests/boundaries; pnpm check:boundaries
+  #
+  # Exit: TERM -> grace -> conditional KILL exact; failed kill classified exit
+  # 2; handle-only target; no kill without the fence; four capability owners
+  # distinct; no shell/network/privilege path.
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Injected process-lifecycle port and adapters: spawn/attach, alive, kill-with-grace, sourced progress, capability gaps"
+    kind: delivery
+    scope:
+      files:
+        - packages/adapters/src/harness/process-lifecycle.ts
+        - packages/adapters/src/harness/index.ts
+        - packages/core/src/contracts/coordinator.ts
+        - tests/behaviour/coordinator-kill-grace.test.ts
+        - tests/behaviour/coordinator-kill-failed.test.ts
+        - tests/behaviour/coordinator-kill-target.test.ts
+        - tests/behaviour/coordinator-kill-fence.test.ts
+        - tests/behaviour/coordinator-capability-gap.test.ts
+        - tests/structure/coordinator-kill-target.test.ts
+        - tests/fixtures/coordinator/process-port.ts
+      folders:
+        - tests/boundaries
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Coordinator CLI family and edge composition
+  #
+  # Goal: compose the command family over injected state, config, process,
+  # blocker, clock, id, brand, and harness seams; the handler is pure (no
+  # stream writes, no exit literals) and the edge is the only writer/projector.
+  #
+  # Tasks (TC-COORD-003, 004, 010, 011, 012, 013, 014, 015, 016, 017, 024,
+  #        025, 035, 052, 054, 055, 060, 061, 062, 065, 070, 071, 072, 073,
+  #        074, 075):
+  #  6.1 packages/cli/src/commands/coordinator.ts: start [--foreground]
+  #      [--fresh-budget], stop, status [--live], tick; closed grammar;
+  #      delivery.coordinator.v1 data; deterministic bounded text renderer.
+  #  6.2 packages/cli/src/edge.ts composition: state dir + fence, config,
+  #      fake-able process port, blocker verified read/append, injected clock,
+  #      ids, brand, harness session facts; register exactly one coordinator
+  #      family; no daemon/dispatch/supervise command.
+  #  6.3 Fence semantics: start acquires and records the instance; a second
+  #      start or contended tick -> coordinator.already-running exit 2 with the
+  #      holder named and no record; stop -> graceful release/
+  #      released=true, idempotent without a supervisor; stale-holder takeover
+  #      with a coordinator.fence stale-takeover record; acquire/release/
+  #      takeover each append exactly one validated record (TC-COORD-017).
+  #  6.4 Lifecycle application: join/resume/spawn; killed-mid-iteration
+  #      recovery without re-executing closed-out work; --fresh-budget only
+  #      when stopped; status reports durable decision/restart/stuck/wake/
+  #      escalation/fence and degrades --live honestly; stuck-unevaluable and
+  #      torn/gapped budget return the delivered state identity at exit 2 with
+  #      no kill or restart (TC-COORD-024/025/035/054/055).
+  #  6.5 Escalation and wake integration: exactly one owner decision-needed
+  #      question, terminal receipt after the question, publish failure exit 2,
+  #      idempotent reuse; strict pickup wake with persisted woken only,
+  #      already-woken/answered-before-wake/delivery-failed/no-pickup as tick
+  #      results, retry without duplicate records.
+  #  6.6 Tests: coordinator-grammar, envelope, start, stop, tick, status,
+  #      fence-records, fence-stale, decision-durability, decision-recovery,
+  #      fresh-budget, restart-exhausted, restart-torn, stuck-unevaluable,
+  #      escalation-publish/idempotent/failed/reuse, wake-pickup/answered/
+  #      dedupe/paths/failed/next; exit-code-literals; fixture harness.ts and
+  #      blockers.ts.
+  #
+  # Verification:
+  #   bun test tests/behaviour/coordinator-grammar.test.ts tests/behaviour/coordinator-envelope.test.ts tests/checks/exit-code-literals.test.ts
+  #   bun test tests/behaviour/coordinator-start.test.ts tests/behaviour/coordinator-stop.test.ts tests/behaviour/coordinator-tick.test.ts tests/behaviour/coordinator-status.test.ts tests/behaviour/coordinator-fence-stale.test.ts tests/behaviour/coordinator-fresh-budget.test.ts
+  #   bun test tests/behaviour/coordinator-restart-exhausted.test.ts tests/behaviour/coordinator-escalation-*.test.ts tests/behaviour/coordinator-wake-*.test.ts
+  #
+  # Exit: one bounded envelope and one {0,1,2} exit per outcome; fence refusal
+  # and stale takeover exact; start/stop/status/tick behaviour pinned;
+  # escalation and wake persistence rules pinned.
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Coordinator CLI family and edge composition: start/stop/status/tick, fence, exits, wake and escalation integration"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/commands/coordinator.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/index.ts
+        - packages/cli/src/output/coordinator-text.ts
+        - tests/behaviour/coordinator-grammar.test.ts
+        - tests/behaviour/coordinator-envelope.test.ts
+        - tests/checks/exit-code-literals.test.ts
+        - tests/behaviour/coordinator-start.test.ts
+        - tests/behaviour/coordinator-stop.test.ts
+        - tests/behaviour/coordinator-tick.test.ts
+        - tests/behaviour/coordinator-status.test.ts
+        - tests/behaviour/coordinator-fence-records.test.ts
+        - tests/behaviour/coordinator-fence-stale.test.ts
+        - tests/behaviour/coordinator-decision-durability.test.ts
+        - tests/behaviour/coordinator-decision-recovery.test.ts
+        - tests/behaviour/coordinator-fresh-budget.test.ts
+        - tests/behaviour/coordinator-restart-exhausted.test.ts
+        - tests/behaviour/coordinator-restart-torn.test.ts
+        - tests/behaviour/coordinator-stuck-unevaluable.test.ts
+        - tests/behaviour/coordinator-escalation-publish.test.ts
+        - tests/behaviour/coordinator-escalation-idempotent.test.ts
+        - tests/behaviour/coordinator-escalation-failed.test.ts
+        - tests/behaviour/coordinator-escalation-reuse.test.ts
+        - tests/behaviour/coordinator-wake-pickup.test.ts
+        - tests/behaviour/coordinator-wake-answered.test.ts
+        - tests/behaviour/coordinator-wake-dedupe.test.ts
+        - tests/behaviour/coordinator-wake-paths.test.ts
+        - tests/behaviour/coordinator-wake-failed.test.ts
+        - tests/behaviour/coordinator-wake-next.test.ts
+        - tests/fixtures/coordinator/harness.ts
+        - tests/fixtures/coordinator/blockers.ts
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — Reserved owner-escalation slot and consumer docs
+  #
+  # Goal: add one bounded rendering rule to the delivered digest/brief: an
+  # open owner decision-needed coordinator question renders under a reserved
+  # slot inside the eight-question bound, selected by payload alone.
+  #
+  # Tasks (TC-COORD-063, 064):
+  #  7.1 Add the payload-only reserved-slot predicate as one contracts datum
+  #      (type=decision-needed AND audience=owner AND lane=coordinator AND ref
+  #      shape with exactly one '#' and both sides non-empty); no coordinator
+  #      state read.
+  #  7.2 domain/status.ts typed-questions: keep at most seven other questions
+  #      plus the reserved one; preserve ordering, omitted/truncated counts,
+  #      section ids, and evidence states.
+  #  7.3 domain/brief.ts blocker-questions: mirror the same projection; no new
+  #      anchor, section, surface, or question type.
+  #  7.4 Regenerate the reserved-slot goldens only via the explicit scripts and
+  #      diff field by field; a control golden without escalation is unchanged.
+  #  7.5 Update doc/spec/features/feature-status-digest.md,
+  #      feature-brief.md, and feature-blockers.md with the reserved-slot and
+  #      enforcement-arm notes.
+  #  7.6 Tests: coordinator-escalation-slot, coordinator-escalation-surface,
+  #      status-digest and brief goldens; near-miss predicate controls; the
+  #      dropped-slot / nine-rendered / widened-predicate mutants.
+  #
+  # Verification:
+  #   bun test tests/behaviour/coordinator-escalation-slot.test.ts tests/behaviour/coordinator-escalation-surface.test.ts
+  #   bun test tests/golden/status-digest.test.ts tests/golden/brief.test.ts
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #
+  # Exit: escalation renders at the cap; at most seven others; omitted count
+  # truthful; no new section/anchor/type; no extra read; only the declared
+  # golden diff.
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Reserved owner-escalation slot in typed-questions/blocker-questions plus consumer docs"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/status.ts
+        - packages/core/src/contracts/brief.ts
+        - packages/core/src/domain/status.ts
+        - packages/core/src/domain/brief.ts
+        - tests/behaviour/coordinator-escalation-slot.test.ts
+        - tests/behaviour/coordinator-escalation-surface.test.ts
+        - tests/golden/status-digest.test.ts
+        - tests/golden/brief.test.ts
+        - doc/spec/features/feature-status-digest.md
+        - doc/spec/features/feature-brief.md
+        - doc/spec/features/feature-blockers.md
+      folders:
+        - tests/fixtures/status
+        - tests/fixtures/brief
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/status.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/brief.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — Integration behaviour and SC-M1-25
+  #
+  # Goal: prove the integrated surface over an in-process CLI, synthetic state
+  # dir, fake process port, fake clock, fake harness capabilities, and fake
+  # blocker ledger; pin determinism, privacy, performance, read cost, and the
+  # seed scenario end to end.
+  #
+  # Tasks (TC-COORD-002, 084, 086, 087, 088, 091):
+  #  8.1 Integration scenario: start/fence/stop/status; join/resume/spawn and
+  #      killed-mid-iteration artifact preservation; stuck permutations; kill
+  #      outcomes; budget durability/exhaustion/escalation idempotency/reserved
+  #      slot; wake outcomes and retry; config/state/error paths; SC-M1-25.
+  #  8.2 Tier boundaries, purity, adapter confinement, and brand neutrality
+  #      across the now-complete coordinator surface; three mutants (node:fs in
+  #      contracts, Date.now in domain, OS-signal in domain) must fail.
+  #  8.2 Determinism: two identical roots byte-identical data/text; ambient
+  #      scan; fresh instance/reopened store; zero model calls.
+  #  8.3 Idempotency: second identical tick appends no decision/restart/stuck/
+  #      wake/exhaustion record and performs no destructive action; liveness
+  #      controls still fire.
+  #  8.4 Privacy: canaries and a synthetic registered secret across every
+  #      command/record/evidence/error; bounded key=value <= 512 UTF-8 bytes;
+  #      no credential read.
+  #  8.5 Performance/read cost: synthetic reference store, injected clock,
+  #      tick p95 <= 2000 ms, status p95 <= 1000 ms, start p95 <= 2000 ms
+  #      excluding spawn, one verified read per store per tick, <= 64 KiB /
+  #      <= 32 lines.
+  #  8.6 No-CPU/no-LLM mutants; SC-M1-25 transcript; golden fixtures under
+  #      tests/fixtures/coordinator/golden.
+  #
+  # Verification:
+  #   bun test tests/behaviour/coordinator-scenario.test.ts tests/behaviour/coordinator-idempotency.test.ts
+  #   bun test tests/checks/coordinator-determinism.test.ts tests/checks/coordinator-privacy.test.ts
+  #   bun test tests/behaviour/coordinator-performance.test.ts tests/behaviour/coordinator-read-cost.test.ts tests/golden/coordinator.test.ts
+  #
+  # Exit: SC-M1-25 green end to end; determinism/privacy/idempotency/
+  # performance/read-cost gates green; no record duplication; no destructive
+  # replay.
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Integration behaviour, determinism, privacy, performance, and SC-M1-25 end-to-end"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/coordinator-scenario.test.ts
+        - tests/behaviour/coordinator-idempotency.test.ts
+        - tests/structure/coordinator-imports.test.ts
+        - tests/checks/coordinator-determinism.test.ts
+        - tests/checks/coordinator-privacy.test.ts
+        - tests/checks/coordinator-mutants.test.ts
+        - tests/checks/secret-read-boundary.test.ts
+        - tests/behaviour/coordinator-performance.test.ts
+        - tests/behaviour/coordinator-read-cost.test.ts
+        - tests/golden/coordinator.test.ts
+        - tests/fixtures/coordinator/harness.ts
+        - tests/fixtures/coordinator/process-port.ts
+      packages:
+        - packages/core/src/domain/coordinator*
+        - packages/core/src/state/coordinator*
+        - packages/cli/src/commands/coordinator*
+      folders:
+        - tests/fixtures/coordinator
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — CLI registry, M1 command contract/man page, and changeset
+  #
+  # Goal: register the delivered surface in the planning documents and ship one
+  # lockstep minor changeset over the publishables.
+  #
+  # Tasks (TC-COORD-092):
+  #  9.1 doc/planning/oss-tooling/cli-command-registry.md: add the coordinator
+  #      family row (four subcommands/flags, the delivery.coordinator.v1 data,
+  #      the M1-S18 seam) and update the ceo-loop.sh strangler row to name
+  #      coordinator supervision as the delivered replacement.
+  #  9.2 doc/planning/oss-tooling/milestones/m1/contracts.md and man-page.md:
+  #      coordinator command contract and usage lines.
+  #  9.3 .changeset/gh-241-coordinator-supervision-minor.md: lockstep minor
+  #      over the publishables.
+  #
+  # Verification:
+  #   git diff --check
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   bun run scripts/checks/changesets-group.ts
+  #
+  # Exit: registry and command page match the delivered grammar; the strangler
+  # row names the replacement; the changeset validates; no daemon/dispatch/
+  # supervise claim is documented.
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "CLI registry, M1 command contract/man page, and lockstep changeset"
+    kind: delivery
+    scope:
+      files:
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/milestones/m1/contracts.md
+        - doc/planning/oss-tooling/milestones/m1/man-page.md
+        - .changeset/gh-241-coordinator-supervision-minor.md
+
+  # ---------------------------------------------------------------------------
+  # Phase 10 — Gate battery, release pinning, and spec reconciliation
+  #
+  # Goal: reconcile the current-truth system docs, run the full gate battery,
+  # pin the final AC/TC status, and declare the release obligations. Fix only
+  # within the declared change scope.
+  #
+  # Tasks (TC-COORD-089, 090):
+  #  10.1 Reconcile doc/spec/features/feature-coordinator-supervision.md as the
+  #       current-truth home; add the consumer/boundary notes to
+  #       feature-session-lifecycle-economics.md and feature-harness-adapters.md;
+  #       re-check feature-result-contract.md and the Phase-7 docs; update
+  #       doc/00-index.md.
+  #  10.2 Non-regression: status/brief goldens differ only in the reserved-slot
+  #       case; blockers ranking, economics records, lane records, and
+  #       ceo-loop.sh byte-unchanged; no other command envelope/exit changes;
+  #       no daemon/dispatch/supervise surface.
+  #  10.3 ceo-loop.sh function-map trace: context resume decision
+  #       (AC-F2-*), stuck detection (AC-F3-*), kill with grace (AC-F4-*),
+  #       restart budget (AC-F5-*), wake on question (AC-F7-*), owner
+  #       escalation (AC-F6-*), supervisor regime (AC-F8-*), each with a
+  #       passing TC at DoD.
+  #  10.4 Full gate battery: pnpm check; error-table-sync; ambient-globals;
+  #       forbidden/privacy literals; boundaries; exports parity; doc
+  #       distribution; commitlint; git diff --check.
+  #  10.5 Update this plan's acknowledgement and the AC/TC status table; leave
+  #       the spec and test plan unedited (their status is owned by their
+  #       authors); report evidence to @pm.
+  #
+  # Verification:
+  #   pnpm check
+  #   bun run scripts/checks/error-table-sync.ts
+  #   pnpm check:forbidden-literals; pnpm check:privacy-literals
+  #   pnpm check:boundaries; bun run scripts/checks/exports-parity.ts
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   git diff --check
+  #
+  # Exit: every gate green; 43/43 ACs and 66/66 TCs traced to a passing result;
+  # only the declared digest/brief diff; release/spec reconciliation declared
+  # in scope.
+  # ---------------------------------------------------------------------------
+  - id: 10
+    title: "Gate battery, release pinning, and spec reconciliation"
+    kind: delivery
+    scope:
+      files:
+        - doc/spec/features/feature-coordinator-supervision.md
+        - doc/spec/features/feature-session-lifecycle-economics.md
+        - doc/spec/features/feature-harness-adapters.md
+        - doc/spec/features/feature-status-digest.md
+        - doc/spec/features/feature-brief.md
+        - doc/spec/features/feature-blockers.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/00-index.md
+      folders:
+        - doc/changes/2026-11/2026-11-07--GH-241--coordinator-supervision
+        - tests/fixtures/coordinator
+        - tests/fixtures/status
+        - tests/fixtures/brief
+      packages:
+        - packages/core/src/domain/coordinator*
+        - packages/core/src/state/coordinator*
+        - packages/core/src/config/*
+        - packages/adapters/src/harness/process-lifecycle*
+        - packages/cli/src/commands/coordinator*
+        - packages/cli/src/output/coordinator*
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-241/coordinator-supervision targeting main-tools"
+      pipelineId: "CI pipeline for the GH-241 delivery branch"
+      trackerTransition: "in-review"

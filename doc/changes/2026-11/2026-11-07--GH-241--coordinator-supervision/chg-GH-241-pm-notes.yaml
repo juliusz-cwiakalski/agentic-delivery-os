@@ -5,8 +5,8 @@ phases:
   clarify_scope: { started: "2026-11-07T11:55:00Z", completed: "2026-11-07T12:04:00Z" }
   specification: { started: "2026-11-07T12:05:00Z", completed: "2026-11-07T12:58:27Z" }
   test_planning: { started: "2026-11-07T12:36:00Z", completed: "2026-11-07T13:15:27Z" }
-  delivery_planning: { started: "2026-11-07T13:16:00Z", completed: null }
-  dor_check: { started: null, completed: null }
+  delivery_planning: { started: "2026-11-07T13:16:00Z", completed: "2026-11-07T13:35:11Z" }
+  dor_check: { started: "2026-11-07T13:36:00Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -58,5 +58,8 @@ notes:
     type: "decision"
     date: "2026-11-07"
   - text: "test_planning iteration 2 complete: test plan v1.1 has 66 TCs, 43/43 AC coverage with no orphans, Scenario Index/Details/Automation Plan all 66, SC-M1-25 clause map preserved, no remaining spec gaps. Added TCs for the coordinator.fence record and the closed stuck reason; wake/capability/reserved-slot/allowlist TCs updated to the pinned contracts. Only GAP-T1 (implementation plan absent) remains as a delivery-planning input."
+    type: "info"
+    date: "2026-11-07"
+  - text: "Delivery planning complete: chg-GH-241-plan.yaml is machine-validated (`delivery.plan.v1`, verdict valid, readyForDevelopment true, 0 errors) with 10 phases and 66/66 TCs mapped exactly once. Phase order: contracts+error rows+result-contract sync -> pure domain -> state records -> config -> process-lifecycle port -> CLI/edge -> reserved escalation slot+consumer docs -> integration+SC-M1-25 -> registry/man-page/changeset -> gates. The plan keeps the two-code allowlist (22→24), six additive record kinds, payload-only reserved-slot predicate, persisted-`woken`-only wake, closed stuck reason, four-way capability ownership, and no M1-S18/M1-S9/M1-S20 preemption. Non-blocking delivery-bound path: process port at packages/adapters/src/harness/process-lifecycle.ts rather than a new process subpath, to avoid a new package subpath/dependency rule."
     type: "info"
     date: "2026-11-07"
