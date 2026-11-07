@@ -8,13 +8,23 @@
  */
 import type {
   AnnouncementCode,
+  CredentialPort,
+  CredentialReference,
+  ProviderClock,
+  ProviderConfiguration,
   ProviderErrorCode,
   ProviderParkEvidence,
+  ProviderWatchConditionView,
+  ProviderWatchMappingPort,
+  ProviderWatchNormalization,
+  ProviderWatchTarget,
   QuotaEvaluation,
   QuotaLimit,
   QuotaSnapshot,
+  QuotaTransport,
   QuotaTransportResult,
 } from "#contracts";
+import { formatUtcIso } from "./parks.js";
 
 export type QuotaNormalizationFailure = {
   readonly errorCode: ProviderErrorCode;
@@ -184,3 +194,146 @@ export const evaluateQuotaResponse = (
     httpStatus: normalized.httpStatus,
   };
 };
+
+/* ------------------------------------------------------------------------- *
+ * GH-234 — read-only watch condition view (F-5, DM-9, AC-F9-7).
+ *
+ * Authorization resolves only through the credential port; the material is
+ * handed once to the transport and never cached or returned. The read path
+ * performs zero state writes: no store is accepted.
+ * ------------------------------------------------------------------------- */
+
+export type ProviderWatchStatusRuntime = {
+  readonly clock: ProviderClock;
+  readonly credentialPort: CredentialPort;
+  readonly transport: QuotaTransport;
+  readonly mappings: ProviderWatchMappingPort;
+};
+
+export type ProviderWatchStatusInput = {
+  readonly targets: Readonly<Record<string, ProviderWatchTarget>>;
+  readonly credentials: ProviderConfiguration["credentials"];
+  readonly providerName?: string;
+};
+
+export type ProviderWatchStatusResult =
+  | { readonly ok: true; readonly providers: readonly ProviderWatchConditionView[] }
+  | { readonly ok: false; readonly code: string; readonly summary: string };
+
+export type ProviderWatchStatusReader = {
+  readonly status: (input: ProviderWatchStatusInput) => Promise<ProviderWatchStatusResult>;
+};
+
+const conditionForFailure = (normalization: ProviderWatchNormalization): string => {
+  if (normalization.status === "parked") return normalization.condition;
+  if (normalization.status === "clear") return "clear";
+  switch (normalization.errorCode) {
+    case "provider.auth.rejected":
+      return "credential-rejected";
+    case "provider.quota.exceeded":
+      return "quota-exhausted";
+    case "provider.outage":
+      return "provider-outage";
+    default:
+      return "provider-outage";
+  }
+};
+
+const summaryForFailure = (normalization: ProviderWatchNormalization): string => {
+  if (normalization.status === "failed") return normalization.failureClass;
+  if (normalization.status === "parked") return normalization.snapshot.sourceSummary;
+  return normalization.snapshot.sourceSummary;
+};
+
+const credentialReference = (
+  credentials: ProviderConfiguration["credentials"],
+  credentialRef: string,
+): CredentialReference | undefined => {
+  const declared = credentials[credentialRef];
+  if (declared === undefined) return undefined;
+  return { referenceName: credentialRef, sourceKey: declared.sourceKey };
+};
+
+/**
+ * Build the read-only watch status reader over injected seams. The provider set
+ * comes from the declared watch targets; no state is read or written.
+ */
+export const createProviderWatchStatus = (
+  runtime: ProviderWatchStatusRuntime,
+): ProviderWatchStatusReader => ({
+  status: async (input: ProviderWatchStatusInput): Promise<ProviderWatchStatusResult> => {
+    const names = Object.keys(input.targets).sort();
+    if (input.providerName !== undefined) {
+      if (input.targets[input.providerName] === undefined) {
+        return {
+          ok: false,
+          code: "input.value.rejected",
+          summary: `provider ${input.providerName} has no declared watch target`,
+        };
+      }
+      names.length = 0;
+      names.push(input.providerName);
+    }
+    const nowMs = runtime.clock.nowMs();
+    const checkedAt = formatUtcIso(nowMs);
+    const providers: ProviderWatchConditionView[] = [];
+    for (const name of names) {
+      const target = input.targets[name];
+      if (target === undefined) continue;
+      const reference = credentialReference(input.credentials, target.credentialRef);
+      if (reference === undefined) {
+        providers.push({
+          name,
+          condition: "credential-missing",
+          source: `credential ${target.credentialRef} is not declared`,
+          checkedAt,
+        });
+        continue;
+      }
+      const resolved = runtime.credentialPort.resolve(reference);
+      if (!resolved.ok) {
+        providers.push({
+          name,
+          condition: "credential-missing",
+          source: `credential ${target.credentialRef} did not resolve`,
+          checkedAt,
+        });
+        continue;
+      }
+      let result: QuotaTransportResult;
+      try {
+        result = await runtime.transport.send({
+          endpoint: target.endpoint,
+          method: "GET",
+          timeoutMs: 15000,
+          credential: resolved.material,
+        });
+      } catch {
+        providers.push({
+          name,
+          condition: "provider-outage",
+          source: "transport failure",
+          checkedAt,
+        });
+        continue;
+      }
+      const normalization = runtime.mappings.normalize({
+        mapping: target.mapping,
+        bodyText: result.bodyText,
+        status: result.status,
+        nowMs,
+        ...(target.floor === undefined ? {} : { floor: target.floor }),
+        ...(target.thresholdPercent === undefined
+          ? {}
+          : { thresholdPercent: target.thresholdPercent }),
+      });
+      providers.push({
+        name,
+        condition: conditionForFailure(normalization),
+        source: summaryForFailure(normalization),
+        checkedAt,
+      });
+    }
+    return { ok: true, providers };
+  },
+});

@@ -323,3 +323,19 @@ describe("TC-DOCTOR-023 doctor adds no secret-read surface", () => {
     }
   });
 });
+
+describe("TC-PROFILE-021 provider-profile work adds zero secret-read allowlist entries", () => {
+  test("the allowlist stays exactly five entries and names no profile/watch path", () => {
+    expect(SECRET_READ_ALLOWLIST).toHaveLength(5);
+    for (const entry of SECRET_READ_ALLOWLIST) {
+      expect(entry.path).not.toContain("provider-profile");
+      expect(entry.path).not.toContain("profile-env-record");
+      expect(entry.path).not.toContain("provider-quota");
+    }
+  });
+
+  test("the live tree remains clean over the profile/watch modules", () => {
+    expect(scan(ROOT)).toEqual([]);
+    expect(validate(ROOT)).toEqual([]);
+  });
+});

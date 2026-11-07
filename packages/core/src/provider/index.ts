@@ -19,12 +19,64 @@ export {
 } from "./chain.js";
 export { combineProviderConditions } from "./conditions.js";
 export {
+  createProfileProbePort,
   createProviderEngine,
+  createProviderFactsProbe,
   type ProviderEngine,
   type ProviderEngineDependencies,
   type ProviderQuotaInput,
   type ProviderResolveInput,
 } from "./engine.js";
+export {
+  createProfileEvent,
+  familyDiversityAllowed,
+  profileEventIdentity,
+  projectProfileEvidence,
+  resolveProfileForSpawn,
+  runProfileSpawn,
+  scoreProfileTask,
+  selectProfile,
+  targetSeatName,
+  type ProfileEventInput,
+  type ProfileHeuristicPolicy,
+  type ProfileSelectionInput,
+  type ProfileSelectionOptions,
+  type ProfileSpawnInput,
+  type ProfileSpawnOutcome,
+  type ProfileSpawnPort,
+  type ProfileSpawnRunInput,
+  type ProfileTaskFacts,
+} from "./profile.js";
+export {
+  buildProfileEnvRecord,
+  envRecordNameForSeat,
+  resolveEnvRecordPolicy,
+  serializeEnvRecord,
+  validateEnvRecord,
+  type EnvRecordErrorCode,
+  type EnvRecordValidation,
+  type EnvRecordValidationError,
+  type ProfileEnvRecordInput,
+  type ResolvedEnvRecordPolicy,
+} from "./profile-env-record.js";
+export {
+  activeRung,
+  evaluatePacing,
+  rungState,
+  type PacingEvaluation,
+  type PacingEvaluationInput,
+} from "./profile-pacing.js";
+export {
+  createProfileTargetRecord,
+  evaluateProfileLifecycle,
+  persistProfileTarget,
+  readProfileTarget,
+  type PersistProfileTargetInput,
+  type PersistProfileTargetOutcome,
+  type ProfileLifecycleInput,
+  type ProfileLifecycleOutcome,
+  type ProfileTargetRecordInput,
+} from "./profile-lifecycle.js";
 export { type ProviderLoopInput, type ProviderLoopResult, runProviderLoop } from "./loop.js";
 export {
   type AnnouncementInput,
@@ -52,17 +104,29 @@ export {
 export { evaluatePeakWindow, utcSecondsOfDay } from "./peak.js";
 export {
   classifyQuotaTransport,
+  createProviderWatchStatus,
   evaluateQuotaResponse,
   evaluateQuotaSnapshot,
   normalizeQuotaEnvelopeResult,
+  type ProviderWatchStatusInput,
+  type ProviderWatchStatusReader,
+  type ProviderWatchStatusResult,
+  type ProviderWatchStatusRuntime,
   type QuotaNormalizationFailure,
 } from "./quota.js";
 export {
-  type ProviderChainSelection,
-  type ProviderConfigResult,
-  type ProviderValidationError,
+  emptyProfileConfiguration,
+  parseAndValidateProfileConfiguration,
+  parseProfileConfiguration,
   parseAndValidateProviderConfiguration,
   parseProviderConfiguration,
   selectProviderChain,
+  validateProfileConfiguration,
   validateProviderConfiguration,
+  type ProfileConfigResult,
+  type ProfileValidationError,
+  type ProfileValidationErrorCode,
+  type ProviderChainSelection,
+  type ProviderConfigResult,
+  type ProviderValidationError,
 } from "./validate.js";

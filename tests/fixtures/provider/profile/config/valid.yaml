@@ -1,0 +1,60 @@
+provider:
+  credentials:
+    zai:
+      sourceKey:
+        style: literal
+        name: ZAI_API_KEY
+    deepseek:
+      sourceKey:
+        style: literal
+        name: DEEPSEEK_API_KEY
+  entries:
+    zai-coding-plan:
+      class: subscription
+    deepseek:
+      class: pay-per-token
+  profiles:
+    tiers:
+      regular:
+        description: "default delivery work"
+      powerful: {}
+    profiles:
+      mixed:
+        tier: regular
+        providers: [zai-coding-plan, deepseek]
+        seats:
+          pm:
+            model: claude-opus
+            pacingClass: judgment
+            capability: vision-capable
+          coder:
+            model: claude-sonnet
+            pacingClass: execution
+            capability: text-only
+        agentOverrides:
+          reviewer: coder
+      deepseek-only:
+        tier: powerful
+        providers: [deepseek]
+        seats:
+          pm:
+            model: deepseek-reasoner
+            pacingClass: judgment
+            capability: text-only
+          coder:
+            model: deepseek-chat
+            pacingClass: execution
+            capability: text-only
+    preferenceChain:
+      base: mixed
+      fallbacks: [deepseek-only]
+    pacing:
+      goalPriorities: [hold-judgment, utilize-subscription, minimize-paid]
+      tailThresholdPercent: 80
+      rungs:
+        cruise:
+          thresholdPercent: 0
+          executionModel: claude-sonnet
+        conserve:
+          thresholdPercent: 70
+          executionModel: claude-haiku

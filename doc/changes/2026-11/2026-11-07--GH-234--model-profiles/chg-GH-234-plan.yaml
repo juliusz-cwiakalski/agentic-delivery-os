@@ -1,0 +1,495 @@
+# GH-234 implementation plan — M1-S21: Model profiles and provider watching
+#
+# Sources (single source of truth):
+#   - Spec:  ./chg-GH-234-spec.md (v1.0; F-1..F-11; 9 ACs AC-F8-1, AC-F6-1,
+#     AC-F6-2, AC-F3-3, AC-F7-4, AC-F1-5, AC-F11-6, AC-F9-7, AC-F8-8;
+#     DM-1..DM-10; EVT-1..EVT-5; NFR-1..NFR-11; DEC-1..DEC-9; RSK-1..RSK-8;
+#     §14 OQ-1..OQ-3; §18 delivery order; Appendix A ported groups,
+#     Appendix C envelope shapes, Appendix D env-record classes)
+#   - Test plan: ./chg-GH-234-test-plan.md (v1.0; 58 TCs TC-PROFILE-001..058;
+#     §4 layer table; §7 automation mapping incl. the implementation-order
+#     steps 1-7; gaps GAP-T1..T8; OQ-T1..T7)
+#   - Man page contract: doc/planning/oss-tooling/milestones/m1/commands/provider.md
+#     (grammar, envelope `data` shapes, exit statuses)
+#
+# TC-mapping obligation: all 58 TCs are mapped onto Phases 1-9 below,
+# following the test plan §7 implementation-order mapping (config branch ->
+# selection engine -> lifecycle/pacing -> watch -> CLI -> spawn seam ->
+# cross-cutting battery) reconciled with spec §18 delivery order
+# (configuration + engine first, then CLI, then spawn-seam integration).
+# TCs whose halves land in different phases are marked in `coverage` with
+# their completing phase (GH-225/GH-233 discipline). Two reconciliation
+# notes against the §7 step list, neither reshaping a pinned oracle:
+#   - TC-PROFILE-053 (100-run replay) is grouped in step 7 but lives in the
+#     selection and park-switch-revert suites; its replay rows land with
+#     those host suites (Phase 3 selection half, completing Phase 4).
+#   - TC-PROFILE-045 spans step 4 (engine-level status read) and step 5
+#     (CLI envelope + golden); split accordingly (completes Phase 6).
+# Spec and test plan were cross-checked: no behavioural inconsistency found
+# (one representational observation — the man-page example renders
+# `envRecord` as a structured map with `recordFormat: data-v1` while DM-7
+# describes the serialized data-v1 grammar; pinned below as a delivery
+# decision: the envelope carries the structured record, the serialized
+# grammar is the wrapper-consumed wire form).
+#
+# Delivery decisions recorded by this plan (PM-decided 2026-11-07 or
+# placement choices the spec/test plan leave delivery-bound; each is a
+# placement, spelling, or precedence pin — never a behaviour change):
+#   - PM decision (pacing goal-priority precedence; closes test-plan
+#     OQ-T2 / GAP-T4, spec DM-5 gap): the DECLARED ORDER of goal priorities
+#     in configuration IS the precedence — first declared wins; the engine
+#     evaluates deterministically over the declared order and contains no
+#     hardcoded precedence. `pacing.goalPriorities` is an ordered list;
+#     duplicate priority ids are a validation error. This keeps
+#     AC-F7-4/AC-F1-5 (rungs/thresholds/overrides are configuration)
+#     intact and finalizes TC-PROFILE-031's assertions.
+#   - PM decision (spawn-surface enforcement; closes OQ-T1 / GAP-T3): the
+#     in-change enforcement points are (a) the `provider profile resolve
+#     --for-spawn` seam and (b) the hardened data-v1 env-record contract
+#     flowing into the harness spawn-env deny-by-default construction.
+#     The legacy bash hook (scripts/ceo-loop.sh) is NOT rewritten in this
+#     change — it stays byte-unchanged (asserted structurally in Phase 8);
+#     its `ADOS_HOOK_ENV_V1` contract is consumed as data only (NG-6,
+#     DEC-3, DEC-6). M1-S9 (daemon) and M1-S20 (agent integration) own
+#     surface rewiring; this change delivers the seam they consume.
+#   - PM decision (vendor watch mappings are fixture-proven; GAP-T2 /
+#     OQ-T4): snapshot normalizers are proven against committed recorded
+#     fixtures per vendor shape — coding-plan weekly + rolling windows,
+#     DeepSeek balance vs configured floor, OpenAI usage windows. Zero
+#     live network in tests; a missing fixture fails the mapping test
+#     naming it, never a weakened assertion.
+#   - PM decision (empty-by-default fail-closed; DEC-9): the
+#     `provider.profiles` branch ships empty — no tier, no profile, no
+#     preference chain, no rung, no pacing goals — mirroring the engine's
+#     shipped no-default-chain precedent (`provider.chains` empty,
+#     `provider.defaultChain` absent). A fresh installation resolves no
+#     profile and refuses spawns with a classified error.
+#   - Placement (GAP-T8): the profile-family contract module is the NEW
+#     packages/core/src/contracts/provider-profile.ts (the delivered
+#     contracts/provider.ts gains only the additive watch mapping-kind
+#     closed set); the selection/lifecycle/pacing/env-record policy lives
+#     as new flat modules in packages/core/src/provider/ (parks.ts
+#     precedent for record handling); the three vendor normalizers live
+#     INSIDE packages/adapters/src/provider-quota/ — they join the
+#     existing `^packages/adapters/src/provider-quota/` runtime-API
+#     confinement entry (comment updated to name them); NO new boundary
+#     edge, NO new subpath export, NO new secret-read allowlist entry.
+#     Exact record-kind/payload-schema/error-identity spellings are
+#     implementation-bound within the pinned families.
+#   - Placement (envelope envRecord representation): per Appendix C and
+#     the man page, the selection envelope carries `envRecord` as the
+#     structured record (name->value entries plus
+#     `recordFormat: "data-v1"`); the serialized data-v1 grammar
+#     (header line, `set`/`unset` records, final LF) is the wire form the
+#     spawn wrapper consumes and the hardened validator (DM-7, Appendix D)
+#     rejects or accepts byte-level. Both directions are tested.
+#   - Doc placement (spec OQ-7 analogue, test-plan OQ-T7): the default is
+#     a NEW doc/spec/features/feature-provider-profiles.md per the
+#     first-spec rule (the profile area is a distinct capability surface);
+#     feature-provider-engine.md is reconciled either way (watch mappings,
+#     guarded-vocabulary growth, the profile exclusion flips). Final
+#     placement is confirmed at doc-sync (lifecycle phase 7); the
+#     docs-touch list is declared as Phase 9 scope below.
+#
+# Tier rationale: `full` — 11 capabilities, 9 ACs, 58 automated TCs,
+# cross-package delivery (core contracts + provider engine + config,
+# adapters provider-quota normalizers, CLI command surface),
+# security_impact high (spec front matter; env-record injection is the
+# highest-severity surface). All phases are delivery kind; plan-level
+# defaultLeases/defaultWeightClass apply. Per-phase completion: one
+# Conventional Commit per phase (the `summary` key, landed via
+# @committer) plus the `testGate` commands passing; typed doneArtifacts
+# are declared on the final phase where the evidence exists.
+#
+# Invariants carried by every phase (spec §9, §21; DEC-1..DEC-9):
+# selection policy is pure and runtime-neutral (imports only core
+# contracts; NFR-3); identical config + provider facts + injected clock
+# produce identical decisions, eligibility lists, env records, and event
+# identities (NFR-1); the test battery is hermetic — zero live network,
+# live credential reads, or real sleeps (NFR-2); zero secret bytes,
+# auth headers, raw vendor bodies, or endpoint userinfo on any surface,
+# watch authorization credential-port-only with one-time handoff (NFR-4,
+# §20); evidence bounded to closed allowlists (NFR-8); idempotent events
+# and zero-write reads (NFR-9); error identities exact-code and total
+# with fallback.internal containment, appended never renumbered (NFR-10);
+# configuration-only tuning with zero code changes (NFR-11); the engine
+# v1 vocabulary (conditions, parks, announcements, exit conventions) is
+# reused, never forked; the legacy bash hook stays untouched (NG-6).
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-234
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Provider-profile contracts, guarded vocabulary, and additive error identities (core contracts; the vocabulary every later phase compiles against)"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/provider-profile.ts
+        - packages/core/src/contracts/provider.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/structure/provider-profile-contract.test.ts
+        - tests/structure/provider-contract.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/provider/contract-inventory.json
+        - tests/checks/error-table-sync.test.ts
+        - tests/types/provider-profile.type-test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/provider-profile.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/provider.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+    summary: "feat(GH-234): provider-profile contracts, guarded vocabulary, additive error identities"
+    tasks:
+      - "1.1 packages/core/src/contracts/provider-profile.ts — NEW data-only contract module (no call expressions, no runtime APIs, no ambient clock/env/fs; imports only ./ contract modules): the profile-model vocabulary of DM-1..DM-7 — Tier (named responsibility group), Profile (model-per-tier/seat assignments, optional per-agent overrides, capability descriptor per seat from a CLOSED capability vocabulary e.g. vision-capable/text-only, the set of providers it uses, preference-chain position data), seat assignment carrying the typed `pacingClass` with exactly the closed values `judgment` and `execution` (DM-3, DEC-1), Preference chain (base, fallbacks, order; DM-4), Pacing configuration (ordered goalPriorities, named rungs, thresholds; DM-5 — the ordered list IS the precedence per the PM decision), Eligibility verdict (eligible/ineligible + named blockers drawn from the engine condition vocabulary plus the capability gate; DM-6), the selection decision envelope data shape (selected profile, rung, agentOverrides, eligibility[], envRecord, events; DM-8 per Appendix C and the man page), the env-record contract (DM-7: recordFormat `data-v1`, header line, set/unset records only, final LF, byte limits, name-allowlist pattern with the `OC_ADOS_AGENT_*_MODEL` default carried over and overridable by configuration), the watch condition view (DM-9: name, condition, source, checkedAt), and the expensive-window descriptor (DM-10). [F-1, F-3, F-7, F-8, F-9; DM-1..DM-10; DEC-1, DEC-3; TC: TC-PROFILE-039 vocabulary basis, TC-PROFILE-001 typing basis]"
+      - "1.2 Event and record vocabulary (F-10): the announcement/event codes for profile switch (EVT-1: previous target, new target, revert condition), profile revert (EVT-2: restored target, recovering provider), profile-ineligible (EVT-3: verdict + blockers per refused profile), and selection (EVT-5: profile, tier, rung, reason, blockers when the top candidate was refused) join the engine's closed guarded set with severity, safe templated messages, bounded allowlisted evidence, and deterministic-identity dedupe rules carried over; the ONE additive state record kind for target-profile persistence (EVT-4) declares its payload-schema identifier and store-scoped key prefix mirroring the delivery.provider.park.v1 pattern in contracts/provider.ts (latest record wins, single-writer fence, verified post-append read; no schema-version bump). Exact schema-id/kind spellings implementation-bound (GAP-T8). [F-10; EVT-1..EVT-5; NFR-8, NFR-10; TC: TC-PROFILE-039, TC-PROFILE-041 contract basis]"
+      - "1.3 packages/core/src/contracts/provider.ts — additive ONLY: the watch mapping-kind closed set (the three first-iteration vendor mapping identifiers: coding-plan subscription windows, deepseek balance, openai usage windows) registered beside the delivered snapshot vocabulary. No existing engine v1 row, condition, or schema id changes (§8.5 backward compatibility). [F-5; DM-9; DEC-8; TC: TC-PROFILE-039 mapping-kind rows]"
+      - "1.4 Error identities (F-10, NFR-10): packages/core/src/contracts/error-table.ts gains the additive `provider.profile.*` family — at minimum the fail-closed empty/undeclared-profile-chain refusal (DEC-9, exit 1 misconfiguration class), the capability-gate refusal, the no-capable-candidate classified refusal (exit 2 announced class), and the env-record validation refusal identities covering the Appendix D classes (unauthorized name, duplicate name, malformed shape, size violation). Existing provider.* rows unchanged and appended-never-renumbered; the documented S2 rows in doc/spec/features/feature-result-contract.md land in the SAME commit (bidirectional sync discipline); `provider.chain.empty`/`provider.chain.invalid` reuse is asserted where the semantics coincide, not duplicated. [F-10; NFR-10; TC: TC-PROFILE-040 add-rows branch, TC-PROFILE-003 identity basis]"
+      - "1.5 tests/structure/provider-profile-contract.test.ts + tests/fixtures/provider/contract-inventory.json (extend) + tests/structure/provider-contract.test.ts (extend): the closed-set inventory — pacingClass exactly {judgment, execution}; capability vocabulary closed with no wildcard; event codes EVT-1..EVT-5 unique; exactly one new record kind with its own payload schema id distinct from state/command/engine schema ids; mapping kinds exactly three; envelope data field shapes per Appendix C; error identities present in machine table, documented table, and inventory in BOTH directions; duplicate or wildcard entries fail by name; contract modules are data-only (scan). [F-10; NFR-10; TC: TC-PROFILE-039 full, TC-PROFILE-040 sync rows, TC-PROFILE-055 structure half]"
+      - "1.6 tests/types/provider-profile.type-test.ts: a pacingClass literal outside {judgment, execution} fails typecheck; a widened string is not assignable to the closed union; a capability descriptor outside the closed vocabulary fails; the env-record name allowlist pattern is a branded type, not a bare string. [F-1, F-7; DM-3; DEC-1; TC: TC-PROFILE-001 typing half, TC-PROFILE-030 type discipline]"
+      - "1.7 Register the new modules in tests/structure/inventory.json with executable allowances in content-inventory.test.ts; run the error-table sync check end to end. [TC: TC-PROFILE-040 tooling half]"
+    coverage:
+      - "TC-PROFILE-039 (full), TC-PROFILE-040 (full), TC-PROFILE-055 (structure-inventory half; runtime-neutrality and boundary halves complete in Phase 8)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/structure/provider-profile-contract.test.ts tests/structure/provider-contract.test.ts tests/structure/error-table.test.ts tests/structure/content-inventory.test.ts tests/types/provider-profile.type-test.ts"
+      - "bun run scripts/checks/error-table-sync.ts"
+  - id: 2
+    title: "Typed provider.profiles configuration branch — tiers, profiles, seats, chains, pacing — record-map field kinds, empty-by-default fail-closed shipping, layered provenance (core config tier)"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/config/catalog.ts
+        - packages/core/src/config/schema.ts
+        - packages/core/src/config/defaults.ts
+        - packages/core/src/provider/validate.ts
+        - tests/behaviour/provider-profile-config.test.ts
+      folders:
+        - tests/fixtures/provider/profile/config
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/config/catalog.ts
+        role: producer
+    summary: "feat(GH-234): typed provider.profiles configuration branch, empty-by-default fail-closed"
+    tasks:
+      - "2.1 packages/core/src/config/catalog.ts — the typed `provider.profiles` branch beside the delivered `provider` branch (GH-225/GH-233 branch pattern): `tiers` (dynamic-name map), `profiles` (dynamic-name map: model per tier/seat, optional per-agent overrides, capability descriptor per seat, provider set, per-seat pacingClass), `preferenceChain` (ordered list — base first, fallbacks in declared order), and `pacing` (ordered `goalPriorities` list, named `rungs` dynamic-name map, thresholds). Dynamic-name maps use the additive `record` field kind (provider.entries precedent) — every child name arbitrary, every child value validated against the declared shape; fixed subshapes keep exact unknown-key discipline. Lists replace whole; record maps merge by child name; reset removes inherited values (delivered catalog rules). [F-1, F-7; DM-1..DM-5; AC-F1-5; NFR-11; TC: TC-PROFILE-001 steps 1-3]"
+      - "2.2 packages/core/src/config/schema.ts — the field-kind declarations for the branch (record kinds for tiers/profiles/rungs, list kind for preferenceChain and goalPriorities, fixed shapes for seats/thresholds); provenance for the branch rides the delivered generic machinery — `config debug` and `config get --show-origin` report every effective value's winning layer and source with no dedicated new flag (GAP-T7). [F-1; AC-F1-5; NFR-11; TC: TC-PROFILE-005 basis]"
+      - "2.3 packages/core/src/config/defaults.ts — the branch ships EMPTY (PM decision / DEC-9): no tier, no profile, no preference chain, no rung, no goal priorities, no thresholds — mirroring the engine's shipped no-default-chain precedent (provider.chains empty, provider.defaultChain absent). A fresh installation resolving against shipped defaults yields a classified `provider.profile.*` misconfiguration refusal (exit 1) naming the absent profile/chain, never an invented model. [F-1; DEC-9; AC-F8-1 empty-config half, AC-F1-5; TC: TC-PROFILE-003 steps 1-2 config half]"
+      - "2.4 packages/core/src/provider/validate.ts — fail-closed validation matrix for the branch, classified per the Phase-1 identities and naming the offending field, profile, or chain entry: unknown tier/profile/provider reference; duplicate profile or tier name; chain with duplicate entries, unknown entries, or empty; ordering violation; unknown top-level or nested key; pacingClass outside {judgment, execution}; capability value outside the closed vocabulary; negative or malformed threshold; duplicate goal-priority id (the ordered-precedence pin). Validation performs no credential resolution, no probe, and no state write (recording-fake proof); no partial decision is ever returned. [F-1, F-3, F-7; DM-4, DM-5; AC-F1-5; TC: TC-PROFILE-002 full]"
+      - "2.5 Pacing precedence pin (PM decision, closes OQ-T2/GAP-T4): `pacing.goalPriorities` is an ORDERED list and the declared order IS the precedence — first declared wins; the engine contains no hardcoded ordering among {utilize subscription window, keep judgment seat until configured tail, minimize paid use}; duplicate priorities are rejected at validation. Recorded here and asserted by TC-PROFILE-031 (Phase 4). [F-7; DM-5; AC-F7-4, AC-F1-5; NFR-11]"
+      - "2.6 tests/behaviour/provider-profile-config.test.ts over tests/fixtures/provider/profile/config/** (valid layered fixtures; an invalid fixture per matrix class; four config-only tuning pairs — chain order, threshold, rung definition, per-agent override; defaults/project/user layering with resets and list replacement): every declared field typed and accepted; merge/reset/list-replace semantics; shipped-empty assertion; classified failures naming the field with no I/O; tuning pairs change routing with ONLY configuration differing and provenance reporting the changed value and layer. [F-1, F-2; AC-F1-5; NFR-11; TC: TC-PROFILE-001 full, TC-PROFILE-002 full, TC-PROFILE-004 full, TC-PROFILE-005 full, TC-PROFILE-003 config half — spawn half completes in Phase 7]"
+    coverage:
+      - "TC-PROFILE-001 (full), TC-PROFILE-002 (full), TC-PROFILE-004 (full), TC-PROFILE-005 (full), TC-PROFILE-003 (config half; spawn-refusal half completes in Phase 7)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/provider-profile-config.test.ts tests/behaviour/config-schema.test.ts tests/structure/provider-contract.test.ts"
+  - id: 3
+    title: "Selection engine — declarative heuristics, hard capability gate, eligibility chain with lazy memoized probes, selection events; ported decision-table groups 1-2 (core provider family)"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/provider/profile.ts
+        - packages/core/src/provider/engine.ts
+        - packages/core/src/provider/index.ts
+        - tests/behaviour/provider-profile-selection.test.ts
+        - tests/behaviour/provider-profile-probes.test.ts
+        - tests/behaviour/provider-profile-legacy-decision-table.test.ts
+      folders:
+        - tests/fixtures/provider/profile/selection
+        - tests/fixtures/provider/profile/probes
+        - tests/fixtures/provider/profile/legacy
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/provider/profile.ts
+        role: producer
+    summary: "feat(GH-234): profile selection engine — heuristics, capability gate, lazy memoized eligibility"
+    tasks:
+      - "3.1 packages/core/src/provider/profile.ts — the selection engine as PURE policy (imports only core contracts; no ambient clock/env/randomness/locale — NFR-1, NFR-3): evaluates a resolution pass as (1) capability gate FIRST (a seat whose declared descriptor is text-only is refused for a vision task regardless of chain position or quota advantage — the gate reads declared descriptors, infers nothing from names), (2) eligibility over the preference chain in declared order (first fully eligible profile wins; later eligible profiles report shadowed-equivalent), (3) declarative heuristic scoring for tier/seat assignment (consequence of error x reasoning depth / volume; amplification and family-diversity rules read from configuration — zero hardcoded weights or rules), (4) selection event emission. No capable candidate fails closed with the classified refusal naming every blocker. [F-2, F-3, F-4; DM-6, DM-8; DEC-2, DEC-7; AC-F3-3; NFR-1; TC: TC-PROFILE-006 full, TC-PROFILE-008 full, TC-PROFILE-009 full, TC-PROFILE-010 full, TC-PROFILE-011 full]"
+      - "3.2 Eligibility and probes (F-4, NFR-5): a profile is a candidate iff EVERY provider it uses is available under the engine v1 conditions (enabled, peak, quota, outage, credential — no new condition kinds, spec §12); availability probes are LAZY (a provider probed only when a decision depends on it) and MEMOIZED within a resolution pass (N profiles sharing one provider cause at most one probe; probe count <= distinct providers evaluated); probe failure is NEVER availability (fail-loud carries over); each ineligible profile reports a verdict plus named blockers from the closed condition vocabulary (e.g. quota-exhausted, peak-window) surfaced in eligibility[] (EVT-3 — never silently dropped). [F-4; DM-6; EVT-3; AC-F6-2 eligibility half; NFR-5; TC: TC-PROFILE-011, TC-PROFILE-012 full, TC-PROFILE-013 full, TC-PROFILE-014 full]"
+      - "3.3 packages/core/src/provider/engine.ts — the probe seam: the profile engine consumes engine v1 availability through an injected probe port (the engine's condition evaluation supplies verdicts; memoization wraps the port per pass). Engine v1 behavior, envelopes, exit conventions, and records unchanged (§8.5). [F-4; NFR-3; TC: TC-PROFILE-012 seam basis]"
+      - "3.4 Selection events (EVT-5): exactly one structured event per selection decision carrying profile, tier, rung, reason, and the blockers of a refused top candidate when present; deterministic identity for identical facts; a second identical resolution appends NO duplicate; no secret or raw vendor body anywhere in the event. The join key for later spend/metrics stories (M1-S19/M2-S6) — no exporter ships here. [F-2, F-10; EVT-5; NFR-9; TC: TC-PROFILE-007 steps 1-4 selection half — evidence-bounds half completes in Phase 8]"
+      - "3.5 tests/behaviour/provider-profile-selection.test.ts over tests/fixtures/provider/profile/selection/** (heuristics fixtures: two policies differing only in declared weights/rules; capability fixtures: text-only first candidate with quota advantage; fail-closed fixtures): deterministic scoring per declared policy; selection changes only with the declared difference; amplification/family-diversity read from config (no literal in the evaluated path); gate refusal independent of position and quota-pressure inversion; env record corresponds to the capable candidate; 100-run replay rows with identical decisions, eligibility lists, and event identities (NFR-1 half). [F-2, F-3; AC-F3-3; NFR-1; TC: TC-PROFILE-006, TC-PROFILE-007, TC-PROFILE-008, TC-PROFILE-009, TC-PROFILE-010, TC-PROFILE-053 selection half]"
+      - "3.6 tests/behaviour/provider-profile-probes.test.ts over tests/fixtures/provider/profile/probes/** (recording probe fake): laziness (providers of shadowed-equivalent later profiles never probed after the decision lands), memoization (shared provider probed once regardless of referencing profile count), probe-failure classification (never clear, never availability), and the NFR-6 performance case — pure eligibility evaluation of 100 profiles over a 100-provider configuration in <= 50 ms on the reference environment with warm-up and a recorded baseline, EXCLUDING transport, plus the environment-independent no-I/O assertion (GAP-T6). [F-4; NFR-5, NFR-6; TC: TC-PROFILE-012, TC-PROFILE-013, TC-PROFILE-014, TC-PROFILE-015 full]"
+      - "3.7 tests/behaviour/provider-profile-legacy-decision-table.test.ts (created) over tests/fixtures/provider/profile/legacy/** — ported group 1 (chain order: declared preference order, first fully eligible wins, later eligible shadowed-equivalent, ordering violations fail validation) and group 2 (lazy probes: probe only on dependence, one probe per provider per pass, probe failure never availability) per Appendix A and the DEC-5 enumerated-groups definition (not an external ID battery — OQ-3/OQ-T5 stay open for the owner at PR review). [F-11; AC-F11-6 groups 1-2; DEC-5; TC: TC-PROFILE-047 full, TC-PROFILE-048 full]"
+    coverage:
+      - "TC-PROFILE-006 (full), TC-PROFILE-007 (selection half; evidence-bounds half completes in Phase 8), TC-PROFILE-008 (full), TC-PROFILE-009 (full), TC-PROFILE-010 (full), TC-PROFILE-011 (full), TC-PROFILE-012 (full), TC-PROFILE-013 (full), TC-PROFILE-014 (full), TC-PROFILE-015 (full), TC-PROFILE-047 (full), TC-PROFILE-048 (full), TC-PROFILE-053 (selection half; completes in Phase 4)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/provider-profile-selection.test.ts tests/behaviour/provider-profile-probes.test.ts tests/behaviour/provider-profile-legacy-decision-table.test.ts"
+  - id: 4
+    title: "Profile lifecycle — expensive-window parks, switch-not-park on exhaustion, persisted target with revert-on-recovery, pacing rungs over typed pacingClass seats; ported groups 3-4 (core provider family + state)"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/provider/profile-lifecycle.ts
+        - packages/core/src/provider/profile-pacing.ts
+        - packages/core/src/provider/parks.ts
+        - packages/core/src/provider/index.ts
+        - tests/behaviour/provider-profile-park-switch-revert.test.ts
+        - tests/behaviour/provider-profile-pacing.test.ts
+        - tests/behaviour/provider-profile-legacy-decision-table.test.ts
+      folders:
+        - tests/fixtures/provider/profile/lifecycle
+        - tests/fixtures/provider/profile/pacing
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/provider/profile-lifecycle.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/provider/profile-pacing.ts
+        role: producer
+    summary: "feat(GH-234): profile park/switch/revert with persisted target, pacing rungs"
+    tasks:
+      - "4.1 packages/core/src/provider/profile-lifecycle.ts — expensive windows (F-6, DM-10): a provider in a declared peak window or above the priced-multiplier threshold parks with a CLOSED cause from the engine's park vocabulary, active conditions, and an ABSOLUTE expiry at the window end; read-time expiry resumes exactly when the window clears (no timer, no background job, no sleep-without-record path — NG-5); profiles using a parked provider are ineligible with the park named as blocker. Park semantics REUSE the engine's records and announcement vocabulary via packages/core/src/provider/parks.ts — no parallel vocabulary (a forked-shape scan row asserts it). [F-6; DM-10; EVT-3; AC-F6-1; NFR-9; TC: TC-PROFILE-022 full, TC-PROFILE-023 full]"
+      - "4.2 Switch-not-park (F-6): a provider whose subscription is exhausted never stalls the spawn — the chain switches to the next eligible profile automatically; the switch event (EVT-1) carries the previous target, the new target, and the revert condition, with deterministic identity and zero duplicates for an unchanged condition; when nothing is eligible the decision parks honestly with the classified announced outcome (exit 2 class). [F-6; EVT-1; AC-F6-2 switch half; NFR-9; TC: TC-PROFILE-024 full, TC-PROFILE-027 full]"
+      - "4.3 Target persistence (EVT-4): the selected target profile persists as the ONE additive state record kind (Phase-1 contract: own payload schema id, store-scoped key, latest-wins) carrying the target, the reason (selection, switch, revert), and the revert condition when present; every append is fenced (single-writer) and verified post-append; appends happen only on change; no schema-version bump, no migration, no backfill (§19). Later spawns read the persisted target and stay stable across spawns in between. [F-6, F-10; EVT-4; AC-F6-2 persistence half; TC: TC-PROFILE-025 full, TC-PROFILE-041 full]"
+      - "4.4 Revert-on-recovery (F-6, EVT-2): when the exhausted provider recovers on a later resolution, the target reverts automatically to the preferred profile and exactly ONE revert event per exhaustion episode is recorded (restored target + recovering provider); flap stabilization via memoized probes, the recorded revert condition, declared thresholds gating transitions, and deterministic-identity dedupe (RSK-5). [F-6; EVT-2; AC-F6-2 revert half; NFR-9; TC: TC-PROFILE-026 full, TC-PROFILE-028 full, TC-PROFILE-050 full]"
+      - "4.5 packages/core/src/provider/profile-pacing.ts — rung evaluation (F-7, DEC-1): thresholds cross -> rung adjustment evaluates the declared goal priorities in DECLARED ORDER (first declared wins — the Phase-2 PM decision; no hardcoded precedence); rungs move ONLY seats whose typed pacingClass is `execution`; `judgment` seats are structurally immovable (the engine enforces the typed field, never a naming convention) and stay on their assigned model until the declared tail threshold of the subscription window; a configuration attempting to move a judgment seat is rejected at validation or structurally inert; rung transitions are recorded as EVT-5 events and deduplicated. [F-7; DM-3, DM-5; DEC-1; AC-F7-4; NFR-9, NFR-11; TC: TC-PROFILE-029 full, TC-PROFILE-030 full, TC-PROFILE-031 full (assertions finalized against the declared-order precedence), TC-PROFILE-032 full]"
+      - "4.6 tests/behaviour/provider-profile-park-switch-revert.test.ts over tests/fixtures/provider/profile/lifecycle/** with the state harness (tests/fixtures/state/harness.ts) and injected clock/sleep/transport: park cause+expiry present and exact resume at window clear; exhaustion switch with target persistence; recovery revert exactly once; dedupe and flap stabilization across episodes; target-record additivity (kind, schema id, store-scoped key, fence, verified read, latest wins, no version bump); 100-run replay rows over the lifecycle (TC-053 completing half); zero-write read paths. [F-6; AC-F6-1, AC-F6-2; NFR-1, NFR-9; TC: TC-PROFILE-022..028, TC-PROFILE-041, TC-PROFILE-050, TC-PROFILE-053 completes]"
+      - "4.7 tests/behaviour/provider-profile-pacing.test.ts over tests/fixtures/provider/profile/pacing/** and the legacy suite extended with ported group 3 (park-versus-switch: expensive window parks with cause/expiry; exhaustion switches, never spawn-stalls; parked decision when nothing eligible) and group 4 (revert: recovery restores the preferred target automatically, exactly one revert event per episode, persisted target stable across spawns in between). [F-6, F-7, F-11; AC-F7-4, AC-F11-6 groups 3-4; TC: TC-PROFILE-029..032, TC-PROFILE-049 full, TC-PROFILE-050]"
+    coverage:
+      - "TC-PROFILE-022 (full), TC-PROFILE-023 (full), TC-PROFILE-024 (full), TC-PROFILE-025 (full), TC-PROFILE-026 (full), TC-PROFILE-027 (full), TC-PROFILE-028 (full), TC-PROFILE-029 (full), TC-PROFILE-030 (full), TC-PROFILE-031 (full), TC-PROFILE-032 (full), TC-PROFILE-041 (full), TC-PROFILE-049 (full), TC-PROFILE-050 (full), TC-PROFILE-053 (completes: lifecycle replay half)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/provider-profile-park-switch-revert.test.ts tests/behaviour/provider-profile-pacing.test.ts tests/behaviour/provider-profile-legacy-decision-table.test.ts"
+      - "bun test tests/behaviour/provider-parks.test.ts tests/behaviour/provider-chain-resolution.test.ts"
+  - id: 5
+    title: "Watch transports for the first-iteration provider set — coding-plan windows, DeepSeek balance, OpenAI usage — as normalized snapshot mappings behind the existing quota seam; read-only watch status; ported group 5 (adapters + core)"
+    kind: delivery
+    scope:
+      files:
+        - packages/adapters/src/provider-quota/coding-plan.ts
+        - packages/adapters/src/provider-quota/deepseek.ts
+        - packages/adapters/src/provider-quota/openai.ts
+        - packages/adapters/src/provider-quota/index.ts
+        - packages/core/src/provider/quota.ts
+        - .dependency-cruiser.cjs
+        - tests/behaviour/provider-watch-mappings.test.ts
+        - tests/behaviour/provider-watch-status.test.ts
+        - tests/behaviour/provider-profile-legacy-decision-table.test.ts
+      folders:
+        - tests/fixtures/provider/watch
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/provider-quota/coding-plan.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/provider-quota/deepseek.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/provider-quota/openai.ts
+        role: producer
+    summary: "feat(GH-234): watch transports for coding-plan, DeepSeek, OpenAI behind the quota seam"
+    tasks:
+      - "5.1 The three normalizers inside packages/adapters/src/provider-quota/ (fixture-proven per the PM decision — GAP-T2/OQ-T4): coding-plan.ts normalizes the subscription quota endpoints' weekly and rolling windows into the engine's secret-free snapshot vocabulary with threshold/reset semantics consistent with the engine's quota rules; deepseek.ts normalizes the balance API and compares against a CONFIGURED floor (below-floor behaves as the engine's exhaustion class with an honestly recorded recovery condition — top-up is operator action); openai.ts normalizes declared usage windows and percentages like quota limits with the window end supplying the park expiry. Authorization resolves ONLY through the credential port, material handed once to the transport, never cached/logged/persisted/returned; endpoints HTTPS without userinfo; every malformed, non-auth-HTTP, transport, or credential failure classifies exactly as the engine classifies today (outage/credential park semantics) — NEVER as clear. [F-5; §8.4; AC-F9-7 mapping half; NFR-2, NFR-4; TC: TC-PROFILE-016 full, TC-PROFILE-017 full, TC-PROFILE-018 full, TC-PROFILE-019 full]"
+      - "5.2 packages/adapters/src/provider-quota/index.ts + packages/core/src/provider/quota.ts — registration and consumption: the mapping kinds (Phase-1 closed set) bind to the normalizers; watch targets are declared as CONFIGURATION per DEC-8 (a provider entry declares its mapping kind), and adding a watch target later is a new normalized mapping plus fixtures, never a code branch. [F-5; DEC-8; TC: TC-PROFILE-016 declaration rows]"
+      - "5.3 Boundary reconciliation: the normalizers live INSIDE the already-admitted `^packages/adapters/src/provider-quota/` runtime-API confinement entry — .dependency-cruiser.cjs gains NO new edge; the entry's comment is updated to name the three mappings (ADR-0005 exact-path pattern). No new subpath export, no new package.json surface, no new secret-read allowlist entry (NFR-3; the negative fixture proving runtime APIs outside allowed adapters paths still fail is extended in Phase 8). [F-5; NFR-3; TC: TC-PROFILE-055 boundary half — completes in Phase 8]"
+      - "5.4 tests/behaviour/provider-watch-mappings.test.ts over tests/fixtures/provider/watch/** (committed recorded fixtures per vendor shape: nominal weekly/rolling/balance/window payloads, boundary threshold crossings, and malformed classes per vendor): normalization into the snapshot vocabulary; boundary classification at thresholds and window edges; malformed/non-auth/transport/credential classes as outage or credential conditions, never clear; a MISSING fixture fails the test naming it rather than weakening the assertion; `globalThis.fetch` treated as a failure if reached. [F-5; AC-F9-7; NFR-2; GAP-T2; RSK-2; TC: TC-PROFILE-016..019]"
+      - "5.5 tests/behaviour/provider-watch-status.test.ts — the read-only watch condition view (DM-9) at engine level: per configured provider name, condition (engine vocabulary), source (mapping id plus human summary, e.g. 'weekly 61%, 5h window 12%'), checkedAt (injected clock); [--provider <name>] filtering; ZERO state writes on the read path; credential-port-only authorization (decoy ambient credential material unused). The CLI envelope and golden halves complete in Phase 6. [F-5, F-9; DM-9; AC-F9-7; NFR-4, NFR-9; TC: TC-PROFILE-020 full, TC-PROFILE-021 watch half — secret-read-boundary half completes in Phase 8, TC-PROFILE-045 engine half, TC-PROFILE-057 full (both host suites — park-switch-revert from Phase 4 and watch-status here — assert idempotence and zero-write reads)]"
+      - "5.6 Legacy suite extended with ported group 5 (condition seams at the profile level): threshold crossings, window start/end instants, buffer effects, credential classes, and malformed vendor responses (never clear) — every seam case asserts a structured event or classified outcome. [F-11; AC-F11-6 group 5; TC: TC-PROFILE-051 full]"
+    coverage:
+      - "TC-PROFILE-016 (full), TC-PROFILE-017 (full), TC-PROFILE-018 (full), TC-PROFILE-019 (full), TC-PROFILE-020 (full), TC-PROFILE-021 (watch half; secret-read-boundary half completes in Phase 8), TC-PROFILE-045 (engine/read half; envelope + golden complete in Phase 6), TC-PROFILE-051 (full), TC-PROFILE-057 (full)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/provider-watch-mappings.test.ts tests/behaviour/provider-watch-status.test.ts tests/behaviour/provider-profile-legacy-decision-table.test.ts tests/behaviour/provider-quota-evaluation.test.ts"
+      - "pnpm check:boundaries"
+  - id: 6
+    title: "CLI surface — provider profile resolve [--agent] [--for-spawn], provider watch status [--provider], and the --profile flag on provider resolve; envelopes, exits, goldens (cli)"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/commands/provider.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/classify.ts
+        - tests/behaviour/provider-profile-cli.test.ts
+        - tests/behaviour/provider-watch-status.test.ts
+        - tests/golden/provider-profile-resolve.test.ts
+        - tests/golden/provider-watch-status.test.ts
+      folders:
+        - tests/fixtures/provider/profile/golden
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/commands/provider.ts
+        role: producer
+    summary: "feat(GH-234): provider profile resolve, watch status, and --profile CLI surface"
+    tasks:
+      - "6.1 packages/cli/src/commands/provider.ts — the grammar per the man page and Appendix C: `provider profile resolve [--agent <name>] [--for-spawn]` (the selection decision every spawn runs; `--for-spawn` adds the envRecord), `provider watch status [--provider <name>]`, and the `--profile <name>` flag on the delivered `provider resolve` (scopes the resolution context; the delivered provider/mode/decision/parksConsidered shape is unchanged). Invalid grammars fail as classified invocation errors. Existing `provider resolve`, `quota`, and `parks list` behavior and envelopes unchanged (§8.5). [F-9; Appendix C; TC: TC-PROFILE-043 full, TC-PROFILE-046 full]"
+      - "6.2 Envelope data shapes (DM-8, DM-9): `profile resolve` returns profile, eligibility[] (profile, verdict, blockers), rung, agentOverrides, and with `--for-spawn` an envRecord declaring `recordFormat: \"data-v1\"` — the envelope carries the structured record (name->value entries); the serialized data-v1 grammar is the wrapper-consumed wire form validated in Phase 7. `watch status` returns providers[] (name, condition, source, checkedAt). All results ride the delivered CommandResult envelope; no secret or raw vendor body in any field. [F-8, F-9; DM-7, DM-8, DM-9; AC-F8-1 envelope half; TC: TC-PROFILE-044 full, TC-PROFILE-045 envelope half]"
+      - "6.3 Exit conventions per the delivered provider convention: 0 resolved/read; 1 misconfiguration (classified — e.g. the empty-by-default refusal); 2 all candidates skipped or exhausted (announced with skip reasons). packages/cli/src/classify.ts projects the new `provider.profile.*` identities onto the exit/status mapping; fallback.internal containment asserted. [F-9; NFR-10; TC: TC-PROFILE-044 exit rows, TC-PROFILE-046 classification rows]"
+      - "6.4 tests/behaviour/provider-profile-cli.test.ts: named-profile resolve scoping; profile-resolve envelope and exit conventions across resolved, switched, reverted, parked, and refused fixtures; watch-status envelope and filter; invalid grammars classified; the empty-default refusal path through the CLI. [F-9; TC: TC-PROFILE-043, TC-PROFILE-044, TC-PROFILE-045, TC-PROFILE-046]"
+      - "6.5 tests/golden/provider-profile-resolve.test.ts + tests/golden/provider-watch-status.test.ts over tests/fixtures/provider/profile/golden/**: normalized machine and human output for resolved, switched, reverted, parked, refused, and watch-status cases; no absolute paths, wall-clock timestamps, or unstable ordering; regeneration only by explicit command. [F-9; NFR-1; TC: TC-PROFILE-043 golden half, TC-PROFILE-044 golden half, TC-PROFILE-045 completes]"
+    coverage:
+      - "TC-PROFILE-043 (full), TC-PROFILE-044 (full), TC-PROFILE-045 (completes: envelope + golden), TC-PROFILE-046 (full)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/provider-profile-cli.test.ts tests/behaviour/provider-watch-status.test.ts tests/golden/provider-profile-resolve.test.ts tests/golden/provider-watch-status.test.ts"
+      - "bun test tests/behaviour/provider-cli.test.ts"
+  - id: 7
+    title: "Spawn-time resolution and hardened data-v1 env records — resolution-before-spawn on the --for-spawn seam, injection into the deny-by-default spawn-env construction; the legacy hook boundary held (core + spawn seam)"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/provider/profile-env-record.ts
+        - packages/core/src/provider/profile.ts
+        - packages/core/src/domain/harness-spawn-env.ts
+        - tests/behaviour/provider-profile-spawn.test.ts
+        - tests/behaviour/provider-profile-env-record.test.ts
+        - tests/behaviour/provider-profile-config.test.ts
+      folders:
+        - tests/fixtures/provider/profile/spawn
+        - tests/fixtures/provider/env-record
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/provider/profile-env-record.ts
+        role: producer
+    summary: "feat(GH-234): spawn-time resolution and hardened data-v1 env records"
+    tasks:
+      - "7.1 packages/core/src/provider/profile-env-record.ts — the hardened `data-v1` env-record validator as PURE core policy (DEC-3): carried-over floor — exact header line, only `set NAME=value` and `unset NAME` records, name matches the allowlist (`OC_ADOS_AGENT_*_MODEL` default, overridable by configuration), no duplicate names, final line feed, byte limits on the file and per line, CR and NUL rejected anywhere; the file-metadata classes (safe regular file, ownership, permissions) assert through the legacy-carry-over file path (T-RSK-8 split — the in-memory record path asserts the in-memory classes). Hardened ceiling — name shape enforced by the strict identifier rule, embedded equals signs in names rejected, homoglyph and non-ASCII names rejected (allowlist matching exact), metacharacters in names rejected, unauthorized/unknown names refused with a classified error, values passed as DATA with no shell interpretation at any consumption point. Every Appendix D class rejected with a classified refusal, never partially applied. [F-8; DM-7; DEC-3; AC-F8-1 record half; NFR-7; TC: TC-PROFILE-035 full, TC-PROFILE-036 full, TC-PROFILE-037 full]"
+      - "7.2 Resolution-before-spawn (F-8, PM decision — spawn-surface boundary): the in-change enforcement points are the `provider profile resolve --for-spawn` seam and the env-record contract; profile resolution ALWAYS runs before any harness spawn on the wrapper path — a spawn never starts without a resolved profile, and resolution failure is a classified, announced refusal (exit 1 class), never an implicit model. The spawn wrapper injects the validated record into the harness spawn-env seam's deny-by-default construction. The legacy bash hook (scripts/ceo-loop.sh) is NOT rewritten: its `ADOS_HOOK_ENV_V1` contract carries over as the data contract for the current bash surface; M1-S9 (GH-239) and M1-S20 own surface rewiring (NG-1, NG-6, DEC-6). [F-8; DEC-3, DEC-6; AC-F8-1 spawn half; TC: TC-PROFILE-033 full]"
+      - "7.3 packages/core/src/domain/harness-spawn-env.ts — additive extension: the env-record entries enter the construction as DECLARED variables (data only); the deny-by-default invariant is unchanged — no new ambient reads, no secret-read allowlist entries, every undeclared parent variable still absent (delivered seam behavior re-asserted green). [F-8; NFR-3, NFR-4; TC: TC-PROFILE-034 injection half]"
+      - "7.4 tests/behaviour/provider-profile-spawn.test.ts over tests/fixtures/provider/profile/spawn/** (recording harness spawn port; injected clock/transport/state): resolution runs before the port call and the refusal stops the spawn on the empty-config path (TC-003 spawn half completes — no model substituted, refusal announced); `--for-spawn` emits the record into the seam and the observed environment at the port is exactly the declared set; milestone-seam evaluability rows record that AC-F8-8's exit evidence arrives via M1-S9/M1-S22 and is NOT asserted here (DEC-4/DEC-6, GAP-T1). [F-8; AC-F8-1 full, AC-F8-8 machinery half; TC: TC-PROFILE-003 completes, TC-PROFILE-033, TC-PROFILE-034 full, TC-PROFILE-058]"
+      - "7.5 tests/behaviour/provider-profile-env-record.test.ts over tests/fixtures/provider/env-record/** (adversarial fixtures per Appendix D class, inert homoglyph/metacharacter strings, synthetic non-secret canaries): 100% of the enumerated classes rejected with classified refusals; carried-over floor classes through the legacy-carry-over file path and in-memory classes through the record validator (T-RSK-8); the legacy `OC_ADOS_AGENT_*_MODEL` allowlist carries over and the override path is validated; byte-level shape assertions on the serialized grammar; values are data — no shell interpretation at any consumption point (no eval/exec/spawn-arg surface touches a value). [F-8; DM-7; NFR-7; TC: TC-PROFILE-035, TC-PROFILE-036, TC-PROFILE-037, TC-PROFILE-038 env-record half — hermetic/canary half completes in Phase 8]"
+      - "7.6 Boundary record (task text, asserted in Phase 8): scripts/ceo-loop.sh and scripts/.tests/test-hook-regression.sh are consumed as contracts only — no execution as a live oracle, no modification; the structure row and the bash regression suite run green in Phase 8. [NG-6; GAP-T3; T-RSK-4]"
+    coverage:
+      - "TC-PROFILE-003 (completes: spawn-refusal half), TC-PROFILE-033 (full), TC-PROFILE-034 (full), TC-PROFILE-035 (full), TC-PROFILE-036 (full), TC-PROFILE-037 (full), TC-PROFILE-038 (env-record half; hermetic-canary half completes in Phase 8), TC-PROFILE-058 (full; milestone evidence external by design)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/provider-profile-spawn.test.ts tests/behaviour/provider-profile-env-record.test.ts tests/behaviour/provider-profile-config.test.ts tests/behaviour/harness-spawn-env.test.ts"
+  - id: 8
+    title: "Cross-cutting battery — hermeticity, secret-safety canaries, evidence bounds, runtime neutrality and watch-edge confinement, the no-silent-path matrix, and the untouched-legacy-hook assertion (checks + boundaries)"
+    kind: delivery
+    scope:
+      files:
+        - tests/checks/provider-profile-hermetic.test.ts
+        - tests/checks/provider-profile-evidence-bounds.test.ts
+        - tests/checks/secret-read-boundary.test.ts
+        - tests/behaviour/provider-profile-legacy-decision-table.test.ts
+        - tests/structure/provider-surface.test.ts
+      packages:
+        - tests/boundaries/**
+    summary: "test(GH-234): hermetic, secret-safety, evidence-bound, boundary, and legacy-decision-table battery"
+    tasks:
+      - "8.1 tests/checks/provider-profile-hermetic.test.ts — NFR-2: zero live network calls (globalThis.fetch throws if reached by any provider/profile test path), zero live credential reads, zero real sleeps; clock, sleep, transport, credential port, and state store injected everywhere; no socket opens; forbidden-literal and ambient-globals scans green over the new modules with non-zero file floors. [NFR-2; TC: TC-PROFILE-054 full]"
+      - "8.2 Secret-safety canaries (NFR-4): synthetic non-secret canaries planted as credential material, authorization headers, raw vendor bodies, and endpoint userinfo appear NOWHERE in envelopes, env records, state records, events, diagnostics, or evidence across resolved/switched/reverted/parked/refused/watch paths; one-time credential handoff to the transport asserted (material resolved once per watch, never cached or returned). [NFR-4; §20, §21; TC: TC-PROFILE-056 full, TC-PROFILE-038 completes, TC-PROFILE-021 secret-read-boundary half completes]"
+      - "8.3 tests/checks/provider-profile-evidence-bounds.test.ts — NFR-8: every new event (EVT-1, EVT-2, EVT-3, EVT-5) and the target-profile record (EVT-4) serialize to <= 1024 bytes with <= 20 fields, drawn only from the closed engine allowlists; the selection-event evidence rows complete TC-PROFILE-007. [F-10; NFR-8; TC: TC-PROFILE-042 full, TC-PROFILE-007 completes]"
+      - "8.4 Runtime neutrality and confinement (NFR-3): selection policy imports only core contracts with zero runtime-API access; watch transports exist ONLY inside the declared `^packages/adapters/src/provider-quota/` adapter edge; tests/boundaries gain the negative fixture proving runtime APIs in a non-allowed adapters path still fail and a fixture-coverage meta-check; secret-read-boundary allowlist gains ZERO entries (extended rows); ambient-globals and workspace-entrypoints checks green. [NFR-3; TC: TC-PROFILE-055 completes]"
+      - "8.5 The no-silent-path matrix (F-11): across all five ported groups, every legacy fail-open or fail-stuck class asserts a structured event or a classified outcome — no case exists where a pause, switch, revert, refusal, or probe failure passes silently. [F-11; AC-F11-6; DEC-5; TC: TC-PROFILE-052 full]"
+      - "8.6 Untouched-legacy-hook assertion: tests/structure/provider-surface.test.ts gains the row asserting scripts/ceo-loop.sh (and the hook regression suite's contract surface) is byte-unchanged across the branch; bash scripts/.tests/test-hook-regression.sh runs green — the legacy hook remains the authoritative bash-surface executor until M1-S9/M1-S20 consume the seam (NG-6, §8.5). [NG-6; GAP-T3; T-RSK-4]"
+    coverage:
+      - "TC-PROFILE-007 (completes: evidence-bounds half), TC-PROFILE-021 (completes), TC-PROFILE-038 (completes), TC-PROFILE-042 (full), TC-PROFILE-052 (full), TC-PROFILE-054 (full), TC-PROFILE-055 (completes), TC-PROFILE-056 (full)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/checks/provider-profile-hermetic.test.ts tests/checks/provider-profile-evidence-bounds.test.ts tests/checks/secret-read-boundary.test.ts tests/behaviour/provider-profile-legacy-decision-table.test.ts tests/structure/provider-surface.test.ts"
+      - "pnpm check:boundaries && bun test tests/boundaries && bun run scripts/checks/secret-read-boundary.ts && bun run scripts/checks/ambient-globals.ts && bun run scripts/checks/workspace-entrypoints.ts"
+      - "bash scripts/.tests/test-hook-regression.sh"
+  - id: 9
+    title: "Finalize and release — aggregate gates, changeset, evidence log, and the doc-sync handoff (SPEC placement, man page, command registry, glossary)"
+    kind: delivery
+    scope:
+      files:
+        - .changeset/gh-234-provider-profiles-minor.md
+        - doc/spec/features/feature-provider-profiles.md
+        - doc/spec/features/feature-provider-engine.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/planning/oss-tooling/milestones/m1/commands/provider.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/overview/glossary.md
+        - doc/changes/2026-11/2026-11-07--GH-234--model-profiles/chg-GH-234-test-plan.md
+        - doc/changes/2026-11/2026-11-07--GH-234--model-profiles/chg-GH-234-plan.yaml
+    doneArtifacts:
+      pipelineId: "GitHub Actions matrix green on the GH-234 PR targeting main-tools"
+      trackerTransition: "GH-234 dod_check pass; PR opened against main-tools at lifecycle phase 11"
+    summary: "chore(GH-234): finalize provider-profile delivery with changeset, gates, doc-sync handoff"
+    tasks:
+      - "9.1 Aggregate gates green end-to-end: pnpm check (lint via Biome, format, typecheck, tests, boundaries, exports parity), git diff --check, git status --porcelain at the phase boundary; bun run scripts/checks/error-table-sync.ts and the license/vulnerability gates green with zero new dependencies; run plan diff GH-234 for the declared-versus-actual scope reconciliation of this plan (observational additions recorded in the execution log per the GH-225/GH-233 discipline). [Testing-strategy evidence obligation; all TCs gate through the aggregate battery]"
+      - "9.2 Exactly one lockstep changeset .changeset/gh-234-provider-profiles-minor.md for the fixed-group minor bump triggered by the @delivery-os/core + @delivery-os/adapters + @delivery-os/cli changes (version_impact: minor per spec front matter; gh-233 naming precedent). [Release obligation]"
+      - "9.3 Doc-sync handoff — declared as scope, executed at lifecycle phase 7 by @doc-syncer (documentation work, not code; lands in this PR before merge): DEFAULT placement per the first-spec rule is the NEW doc/spec/features/feature-provider-profiles.md (frontmatter ados_distribution: internal; tiers/profiles/seats/pacingClass, declarative heuristics, capability gates, eligibility and probes, park/switch/revert with the persisted target, pacing rungs, spawn resolution and the data-v1 env-record contract, the CLI surface, and the watch first-iteration set — no dispatch-daemon, audit-ledger, or spend-reporting claims per NG-1..NG-3); reconcile the neighbors: feature-provider-engine.md (the profile exclusion flips to delivered-here or points at the new spec; watch mapping kinds and guarded-vocabulary growth; final placement confirmed at doc-sync per OQ-T7), feature-config-layer.md (the provider.profiles branch, record maps, empty-by-default rule), feature-state-layer.md (the additive target-profile record kind), feature-result-contract.md (re-verify the Phase-1 documented error rows), the man page doc/planning/oss-tooling/milestones/m1/commands/provider.md (grammar, envelope shapes, exit statuses flip from proposed to shipped; examples per Appendix C), doc/planning/oss-tooling/cli-command-registry.md (two new subcommands and one flag registered), doc/overview/glossary.md (profile, tier, seat, pacingClass, pacing rung, preference chain, eligibility, probe, hard capability gate, expensive window, switch-not-park, revert-on-recovery, env record, judgment seat, execution seat, watch status). [Spec §16/§22 doc duties; TC: manual, lifecycle phase 7]"
+      - "9.4 Doc-distribution guard: confirm no marker-scoped document (doc/guides/**, doc/templates/** incl. blueprints/ and *.yaml, doc/documentation-handbook.md, doc/00-index.md, doc/decisions/README.md, doc/decisions/00-index.md, .ai/rules/README.md) was modified by Phases 1-8 — list the checked paths and record N/A; doc/spec/** and doc/planning/** touches ride the phase-7 handoff, so bash scripts/.tests/test-doc-distribution.sh is recorded not-run for the delivery phases and re-checked when the handoff lands. [Doc-distribution marker rule]"
+      - "9.5 Record gate evidence in the test-plan execution log (chg-GH-234-test-plan.md §10): commands run, Bun/pnpm versions, the NFR-6 measured baseline on the reference CI class (GAP-T6), the vendor fixture inventory (GAP-T2/OQ-T4 — any fixture still missing is a named failure, not a skipped row), the adversarial env-record class tally (Appendix D, NFR-7), the zero-write read observations, and the aggregate pnpm check result; record the external-evidence obligations honestly — AC-F8-8's milestone exit evidence arrives via M1-S9 (GH-239) and M1-S22 (GH-223), and the external legacy battery question (OQ-3/OQ-T5) is surfaced at PR review; never record unrun results as passing. [GAP-T1; DEC-4, DEC-5, DEC-6; TC: TC-PROFILE-058 milestone-review note]"
+      - "9.6 PR readiness checklist: all 9 ACs traceable to green TCs (AC-F8-1 -> TC-003/033/034/035/036/037/044/058; AC-F6-1 -> TC-022/023/049/051; AC-F6-2 -> TC-024..028/041/050; AC-F3-3 -> TC-008/009/010; AC-F7-4 -> TC-029..032; AC-F1-5 -> TC-001/002/004/005; AC-F11-6 -> TC-047..052; AC-F9-7 -> TC-016..021/045; AC-F8-8 -> TC-058 machinery/seam + external milestone evidence per GAP-T1); all 11 NFRs measured; DoR/DoD cite DEC-1..DEC-9, the four PM decisions recorded in this plan's header, and GAP-T1..T8 rather than literal ticket wording; the env-record hardening surface and the empty-by-default fail-closed rule are surfaced in the PR description for reviewer verification; exactly one changeset; PR targets main-tools. [DoD checklist]"
+    coverage:
+      - "No new TC in this phase; all 58 TCs gate through the aggregate battery. TC-PROFILE-058's milestone-review half is the recorded external-evidence obligation (GAP-T1), not a suite assertion"
+    testGate:
+      - "pnpm check"
+      - "bun run scripts/checks/error-table-sync.ts"
+      - "git diff --check && git status --porcelain"
+  # ---------------------------------------------------------------------------
+  # Amendment (review iteration 1, 2026-11-07): Phase 10 is the code-review
+  # remediation phase appended after the FAIL verdict in ./review/review-iter-1.md
+  # (must-fix F-1/F-2; should-fix F-3..F-6, informational F-7/F-8 need no task).
+  # It adds no new requirement: every task closes a gap between delivered
+  # machinery and the production composition already declared by the spec
+  # (F-6, F-9, Appendix C), plan tasks 6.1 and 4.2-4.4, and the man page. The
+  # plan schema's phase kinds are planning|delivery only, so kind stays
+  # `delivery` (lease-taking, one Conventional Commit) and `remediation: true`
+  # carries the rework provenance. Phases 1-9 and the 58-TC mapping are
+  # untouched; the tier phase set grows to 10. Binding constraints: every
+  # review-verified-clean behavior is preserved (all five binding delivery
+  # decisions), zero new ambient I/O in core, hermetic tests only, error-table
+  # sync maintained, and each task maps to the delivered TC-PROFILE ids it
+  # extends (no new TC ids).
+  # ---------------------------------------------------------------------------
+  - id: 10
+    title: "Code review remediation (iteration 1) — production wiring of provider resolve --profile (R-1) and the profile lifecycle switch/revert/persist path (R-2); should-fix hygiene: dead capability identity (R-3), structural NFR-8 evidence bound (R-4), env-record header boundary (R-5), test-plan §10 accuracy (R-6)"
+    kind: delivery
+    remediation: true
+    scope:
+      files:
+        - packages/cli/src/edge.ts
+        - packages/core/src/provider/engine.ts
+        - packages/core/src/provider/profile.ts
+        - packages/core/src/provider/profile-lifecycle.ts
+        - packages/core/src/provider/profile-env-record.ts
+        - packages/core/src/provider/validate.ts
+        - packages/core/src/contracts/error-table.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/behaviour/provider-profile-edge-wiring.test.ts
+        - tests/behaviour/provider-profile-cli.test.ts
+        - tests/behaviour/provider-profile-park-switch-revert.test.ts
+        - tests/behaviour/provider-profile-config.test.ts
+        - tests/behaviour/provider-profile-env-record.test.ts
+        - tests/golden/provider-profile-resolve.test.ts
+        - tests/fixtures/provider/profile/golden/data.ts
+        - tests/checks/provider-profile-evidence-bounds.test.ts
+        - doc/changes/2026-11/2026-11-07--GH-234--model-profiles/chg-GH-234-test-plan.md
+      folders:
+        - tests/fixtures/provider/profile/lifecycle
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/provider/profile.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/provider/profile-lifecycle.ts
+        role: producer
+    summary: "fix(GH-234): review iteration 1 remediation — wire --profile and the profile lifecycle into the production edge; vocabulary, evidence-bound, and header-boundary hygiene"
+    tasks:
+      - "10.1 R-1 (review F-1, MUST-FIX): wire `provider resolve --profile` through the production edge. `ProviderResolveInput` (packages/core/src/provider/engine.ts:98-102) gains the profile field and the edge resolve handler (packages/cli/src/edge.ts:2284-2302, currently forwarding only chainName) consumes `input.profile`: parse and validate the provider.profiles branch, reject an unknown profile name with the classified `provider.profile.invalid` misconfiguration at exit 1 (today `--profile ghost` exits 0 and echoes an unrelated chain decision), and scope the resolution context for a known name (at minimum restrict candidate providers to the named profile's providers) per spec F-9/Appendix C — the envelope shape provider/mode/decision/parksConsidered is unchanged — plan task 6.1, and the man page. NEW tests/behaviour/provider-profile-edge-wiring.test.ts drives the REAL edge/handler path with injected clock/state/transport (not the stub runtime that let provider-profile-cli.test.ts:129-134 pass a contract the shipped edge never enforced): a valid flag drives the engine effect (scoped decision), an unknown name fails classified at exit 1, and the flag absent keeps the delivered resolve unchanged. Edge-integration test discipline (the over-mocking root-cause fix): every CLI flag this change's spec declares — `--profile`, `--agent`, `--for-spawn`, `--provider` — gets an edge-level production test in this suite; stub-runtime rows in provider-profile-cli.test.ts remain contract echoes, never the only coverage. [F-9; Appendix C; TC: TC-PROFILE-043 production-wiring half extends, TC-PROFILE-046 classification rows extend]"
+      - "10.2 R-2 (review F-2, MUST-FIX): wire the profile lifecycle (switch/revert/persist) into the production `profileResolve` path. After a successful selectProfile, the edge path (packages/cli/src/edge.ts:2330-2398, today calling only selectProfile/resolveProfileForSpawn) runs the delivered machinery that currently has zero non-test consumers — readProfileTarget -> evaluateProfileLifecycle -> persistProfileTarget (packages/core/src/provider/profile-lifecycle.ts): detect a probe-detectable condition change on the base profile's provider via the SYNC probe (enabled + UTC peak per accepted deviation 2 — a declared peak window parking the base provider; quota-exhaustion enters only through injected facts in tests), switch to the next eligible profile emitting the EVT-1 switch event (previous target, new target, revert condition), persist the EVT-4 target record through the engine state-store discipline (fenced single-writer, verified post-append, latest wins), and emit the EVT-2 revert event exactly once per exhaustion episode on recovery. The `switched` and `reverted` members of the outcome union (packages/core/src/contracts/provider-profile.ts:292) become reachable through real engine paths: the outcome projection lands in core (packages/core/src/provider/profile.ts composed with profile-lifecycle.ts — selectProfile's unconditional `selected` at profile.ts:314 is replaced by the lifecycle-projected outcome), never hand-built at the edge; the golden `switched` outcome (hand-built fixture row at tests/fixtures/provider/profile/golden/data.ts:65) is replaced with engine-path output or joined by an engine-path golden in tests/golden/provider-profile-resolve.test.ts. Production-wiring tests for switch AND revert through the edge path with injected probe facts (hermetic; NO async quota probing is introduced — that stays the M1-S9/GH-239 seam per accepted deviation 2), asserting events, persisted target, envelope outcome, and human text. [F-6; AC-F6-2 production half; EVT-1, EVT-2, EVT-4; NFR-9; TC: TC-PROFILE-024..028 production halves extend, TC-PROFILE-044 outcome rows extend, TC-PROFILE-053 engine-path replay rows extend]"
+      - "10.3 R-3 (review F-3, SHOULD-FIX): make the `provider.profile.capability-denied` identity honest under the error-table exact-code discipline — declared and documented (packages/core/src/contracts/error-table.ts:191, doc/spec/features/feature-result-contract.md:140) but raised by no code path today (every refusal, including all-capability-refused, raises `provider.profile.unavailable`). Either raise it from the capability-gate refusal path in packages/core/src/provider/profile.ts when every blocker on the losing candidates is a capability blocker, or — if the delivered refusal identity is kept — document why on the row and remove the dead row from BOTH the machine table and the documented table in the same commit. Either branch keeps `bun run scripts/checks/error-table-sync.ts` bidirectionally green: 91/91 when raising, or consistently re-counted with every removed row documented when dropping. [F-10; NFR-10; RSK-1; TC: TC-PROFILE-009 and TC-PROFILE-010 gate-refusal rows extend, TC-PROFILE-040 sync rows extend]"
+      - "10.4 R-4 (review F-4, SHOULD-FIX): enforce the NFR-8 1024-byte evidence bound structurally, not by message truncation alone. packages/core/src/provider/validate.ts caps profile/provider/seat name lengths at validation (unbounded today, validate.ts:515-516); packages/core/src/provider/profile.ts bounds the blockers[] count and per-string evidence sizes at serialization (blockers are built from every ineligible profile today, profile.ts:263-264, and only the message is truncated with no post-truncation re-check, profile.ts:176-181) and re-asserts the 1024-byte bound after truncation. tests/checks/provider-profile-evidence-bounds.test.ts gains the overflow test: a pathological configuration (many long-named ineligible profiles) still serializes every event within 1024 bytes. [NFR-8; TC: TC-PROFILE-042 overflow rows extend]"
+      - "10.5 R-5 (review F-5, SHOULD-FIX): reject embedded LF/CR/NUL in `envRecord.header` at the earliest boundary — a classified config error at parse time (packages/core/src/provider/validate.ts, where only non-empty is checked today, validate.ts:705-708) and a refusal at serialization time (packages/core/src/provider/profile-env-record.ts, where a malformed header currently survives until the wrapper's downstream byte-level validation). Fail-closed stays (the wrapper validation is not removed); the misconfiguration simply fails where it enters. While touching the module, compile the namePattern allowlist once per resolved policy instead of per name per record (profile-env-record.ts:90-93). Config-time failure rows extend tests/behaviour/provider-profile-config.test.ts; serialization-time failure rows extend tests/behaviour/provider-profile-env-record.test.ts. [DM-7; NFR-7; TC: TC-PROFILE-002 matrix rows extend, TC-PROFILE-035 and TC-PROFILE-037 class rows extend]"
+      - "10.6 R-6 (review F-6, SHOULD-FIX): correct chg-GH-234-test-plan.md §10 aggregate wording — replace the overstated `pnpm check` green phrasing with the accurate ledger result: 4731/4733 passing plus the two named environmental failures (TC-STATE-021 corepack pnpm download with no network; CI-parity cross-device clone), honoring the task-9.5 rule that unrun or environmentally-failed results are never recorded as passing; the remediation iteration's own gate evidence is appended to §10 the same way once re-run. §10 of the test plan is the ONLY artifact this task touches — spec, pm-notes, and every other change artifact stay untouched by R-6. [Testing-strategy evidence obligation; no TC change]"
+      - "10.7 Regression proof for everything review verified clean: re-run the review battery and keep it green — pnpm typecheck; pnpm check:boundaries (0 violations, secret-read allowlist unchanged at 5 entries, no new boundary edge); bun run scripts/checks/error-table-sync.ts; bash scripts/.tests/test-hook-regression.sh with scripts/ceo-loop.sh still byte-unchanged (the sha256 rows in tests/structure/provider-surface.test.ts keep matching); hermetic, secret-safety, ambient-globals, and workspace-entrypoints checks; goldens stable except the engine-path golden from 10.2. Constraints binding every Phase-10 task: the five binding delivery decisions verified by review stay intact (declared-order pacing precedence; legacy hook byte-unchanged; fixture-proven vendor mappings with zero live network; provider.profiles empty-by-default fail-closed; structured envRecord plus serialized data-v1 both tested); zero new ambient I/O in core (lifecycle wiring composes injected ports at the edge under the engine's existing state-store discipline); hermetic tests only; exactly one Conventional Commit for the phase. [NFR-2, NFR-3, NFR-4; TC: aggregate battery, no new TC ids]"
+    coverage:
+      - "No new TC ids; remediation extends delivered TCs on the production path: TC-PROFILE-043 (production-wiring half), TC-PROFILE-046 (classification rows), TC-PROFILE-024..028 (production switch/revert/persist halves), TC-PROFILE-044 (outcome rows), TC-PROFILE-053 (engine-path replay rows), TC-PROFILE-009 and TC-PROFILE-010 (capability-gate refusal rows), TC-PROFILE-040 (sync rows), TC-PROFILE-042 (overflow rows), TC-PROFILE-002, TC-PROFILE-035, TC-PROFILE-037 (header-class rows)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/provider-profile-edge-wiring.test.ts tests/behaviour/provider-profile-cli.test.ts tests/golden/provider-profile-resolve.test.ts"
+      - "bun test tests/behaviour/provider-profile-park-switch-revert.test.ts tests/behaviour/provider-profile-config.test.ts tests/behaviour/provider-profile-env-record.test.ts tests/checks/provider-profile-evidence-bounds.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts && pnpm check:boundaries && bash scripts/.tests/test-hook-regression.sh"
+      - "pnpm check"

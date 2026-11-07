@@ -26,6 +26,7 @@
     "PROVIDER_QUOTA_DEFAULTS",
     "PROVIDER_RECORD_KINDS",
     "PROVIDER_SKIP_REASONS",
+    "PROVIDER_WATCH_MAPPING_KINDS",
     "ParkCause",
     "ProviderAnnouncementEvidence",
     "ProviderAnnouncementRecord",
@@ -53,6 +54,7 @@
     "ProviderSkipReason",
     "ProviderSkippedEntry",
     "ProviderSleep",
+    "ProviderWatchMappingKind",
     "QuotaEvaluation",
     "QuotaLimit",
     "QuotaSnapshot",
@@ -103,7 +105,8 @@
     ],
     "recordKinds": ["provider.park", "provider.announcement"],
     "parkStates": ["active", "cleared"],
-    "severities": ["info", "warning"]
+    "severities": ["info", "warning"],
+    "watchMappingKinds": ["coding-plan-windows", "deepseek-balance", "openai-usage-windows"]
   },
   "evidence": {
     "park": [

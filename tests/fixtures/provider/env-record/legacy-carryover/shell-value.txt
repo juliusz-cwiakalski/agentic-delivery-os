@@ -1,0 +1,2 @@
+# model-env data-v1
+set OC_ADOS_AGENT_PM_MODEL=$(touch /tmp/pwned); `id`; * = \ "quoted" && echo

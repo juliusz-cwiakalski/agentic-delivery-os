@@ -569,10 +569,82 @@ const PROVIDER_ROWS = [
     "user-validation",
     "The provider chain is invalid.",
   ],
+  [
+    "provider.profile.absent",
+    "user",
+    false,
+    "not_landed",
+    "Declare provider profiles and a preference chain in configuration, then retry; no model is invented when nothing is declared.",
+    "user-validation",
+    "No provider profile or preference chain is declared.",
+  ],
+  [
+    "provider.profile.invalid",
+    "user",
+    false,
+    "not_landed",
+    "Correct the named profile, tier, seat, chain entry, or pacing value and retry; the profile configuration is validated fail-closed.",
+    "user-validation",
+    "The provider profile configuration is invalid.",
+  ],
+  [
+    "provider.profile.capability-denied",
+    "user",
+    false,
+    "not_landed",
+    "Assign a seat whose declared capability matches the task (for example vision-capable) and retry; the gate reads declared descriptors only.",
+    "user-validation",
+    "A profile seat was refused by the hard capability gate.",
+  ],
+  [
+    "provider.profile.unavailable",
+    "transient",
+    true,
+    "not_landed",
+    "Wait for a named provider condition to clear or declare another eligible profile, then retry; the decision is parked with reasons.",
+    "platform-provider",
+    "No provider profile is eligible under the current conditions.",
+  ],
+  [
+    "provider.env-record.unauthorized",
+    "user",
+    false,
+    "not_landed",
+    "Use a model-environment name that matches the configured allowlist and retry; the record was rejected as a whole.",
+    "user-validation",
+    "The env record names a variable outside the allowlist.",
+  ],
+  [
+    "provider.env-record.duplicate",
+    "user",
+    false,
+    "not_landed",
+    "Remove the duplicated env-record name and retry; the record was rejected as a whole.",
+    "user-validation",
+    "The env record declares a name more than once.",
+  ],
+  [
+    "provider.env-record.malformed",
+    "user",
+    false,
+    "not_landed",
+    "Correct the env-record header, line grammar, name shape, or final line feed and retry; the record was rejected as a whole.",
+    "user-validation",
+    "The env record does not conform to the data-v1 grammar.",
+  ],
+  [
+    "provider.env-record.oversized",
+    "user",
+    false,
+    "not_landed",
+    "Reduce the env-record file, line, or record count below the configured limits and retry.",
+    "user-validation",
+    "The env record exceeds a configured size limit.",
+  ],
 ] as const;
 
 describe("TC-PROV-045 provider rows are exact and synced", () => {
-  test("the five provider rows carry their declared fields", () => {
+  test("the thirteen provider rows carry their declared fields", () => {
     const provider = entries.filter((entry) => entry.domainKind === "provider");
     expect(provider.map((entry) => entry.code)).toEqual(PROVIDER_ROWS.map(([code]) => code));
     for (const [
@@ -681,7 +753,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
   });
 
   test("existing kinds keep their rows and the provider, verify, and db additions are present", () => {
-    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(5);
+    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(13);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
@@ -690,7 +762,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "doctor")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
-    expect(entries).toHaveLength(86);
+    expect(entries).toHaveLength(94);
   });
 });
 
@@ -766,7 +838,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(86);
+    expect(entries).toHaveLength(94);
     expect(db).toHaveLength(4);
   });
 
@@ -991,7 +1063,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(86);
+    expect(entries).toHaveLength(94);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1045,7 +1117,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
   });
 
   test("pre-existing provider, input, config, state, lint, verify, db and closeout rows are unchanged", () => {
-    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(5);
+    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(13);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
@@ -1497,8 +1569,8 @@ describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (
     expect(doc).toContain("`dispatch` kind carries exactly the two economics identities");
   });
 
-  test("the three economics additions are the only table growth and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(86);
+  test("the three economics additions land and the delivered rows stay byte-identical", () => {
+    expect(entries).toHaveLength(94);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.

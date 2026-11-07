@@ -1,0 +1,29 @@
+provider:
+  credentials:
+    zai:
+      sourceKey: { style: literal, name: ZAI_API_KEY }
+  entries:
+    zai-coding-plan:
+      class: subscription
+  profiles:
+    tiers:
+      regular: {}
+    profiles:
+      mixed:
+        tier: missing
+        providers: [zai-coding-plan]
+        seats:
+          pm:
+            model: claude-opus
+            pacingClass: judgment
+            capability: vision-capable
+    preferenceChain:
+      base: mixed
+      fallbacks: []
+    pacing:
+      goalPriorities: [hold-judgment]
+      tailThresholdPercent: 80
+      rungs:
+        conserve:
+          thresholdPercent: 70
+          executionModel: claude-haiku
