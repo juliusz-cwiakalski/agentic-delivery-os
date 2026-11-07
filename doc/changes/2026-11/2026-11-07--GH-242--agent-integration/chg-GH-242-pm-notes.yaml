@@ -76,6 +76,9 @@ notes:
   - text: "Plan phase 4 complete: optional non-empty phases[].summary accepted and echoed by plan validate, plan-writer and template adoption, no tasks key. Commit 910e9533. Tests: 59 pass / 0 fail across plan and commit-message suites; build-claude-plugin 16/16; typecheck green."
     type: info
     date: "2026-11-07"
-  - text: "Plan phase 5 complete: PM, coder, committer, commit, and run-plan adopt phase/commit/typed-blocker primitives; prompt-conformance plan-progress rule and lifecycle inventory added; Claude plugin regenerated. Commit c682b4f1. Tests: prompt/role conformance 13 pass; commit-command, phase-write-path-lint, pm-notes-lint 48 pass; build-claude-plugin 16/16; typecheck green."
+  - text: "Plan phase 5 complete: PM, coder, committer, commit, and run-plan adopt phase/commit/typed-blocker primitives; prompt-conformance plan-progress rule and lifecycle inventory added; Claude plugin regenerated. Commit b35f05d3. Tests: prompt/role conformance 13 pass; commit-command, phase-write-path-lint, pm-notes-lint 48 pass; build-claude-plugin 16/16; typecheck green."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 6 complete: CEO J1 loop via status/blockers answer/verify change/phase list/merge/closeout/queue plan; review and writer roles stay pure and commit through the primitive; PR manager never merges; retained/retired fixture and coordinator suite added; Claude plugin regenerated. Commit 9e39741b. Tests: role/coordinator/blocker adoption 81 pass; build-claude-plugin 16/16; biome clean."
     type: info
     date: "2026-11-07"
