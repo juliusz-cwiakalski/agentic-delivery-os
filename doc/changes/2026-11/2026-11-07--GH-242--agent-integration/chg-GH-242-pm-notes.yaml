@@ -88,3 +88,6 @@ notes:
   - text: "Plan phase 8 complete: full PSCAN rule set over every agent/command with mutants and repeat runs; help/guide coverage matrix and mutants; reference-page parity; prompt and fixture secret scans; key=value/plan/verify goldens; scans wired into pnpm check and the CI aggregate job. Commit 41c7e38d. Tests: 93 phase-8 tests pass; scanners clean; retained bash suites 54 pass; plugin 16/16; typecheck and biome green."
     type: info
     date: "2026-11-07"
+  - text: "Plan phase 9 complete: fixture-backed pilot J1 conformance suite (real temp repository, bare mirror, JSONL state ledger, seeded change folder/plan/pm-notes, fixed clock/ids/fence tokens, recording tracker/CI/PR-platform/provider stubs, real merge squash landing and closeout sweep, real envelopes/exits) plus TC-PSCAN-010 pilot privacy and commit-safety scan. Commit 60d17369. Tests: 54 pass / 0 fail across the phase-9 suites (TC-PILOT-001..006, TC-PSCAN-010); zero outbound calls, zero sleeps, byte-identical double replay, expected next ref GH-320."
+    type: info
+    date: "2026-11-07"
