@@ -16,7 +16,7 @@ ados_distribution: redistributable
 | [Overview](overview/) | North star, roadmap, architecture, glossary |
 | [System Spec](spec/) | Current truth — feature specs, API descriptions, NFRs |
 | [Adapter Conformance Suite](spec/features/feature-adapter-conformance.md) | The three provider-agnostic flows, capability-gated skips, coverage gates, `delivery.conformance.v1` artifact, and the scheduled read-only live tier |
-| [Status Digest](spec/features/feature-status-digest.md) | The read-only six-section delivery digest, its evidence states, bounds, and declared gaps |
+| [Status Digest](spec/features/feature-status-digest.md) | The read-only nine-section attention-state delivery digest: closed finding-code registry, grouped ranked findings, evidence states, bounds, and declared gaps |
 | [Brief](spec/features/feature-brief.md) | The read-only one-screen owner render: nine surfaces, three named placeholders, anchored actions, and collector failure as evidence at exit `0` |
 | [Queue Ready](spec/features/feature-queue-ready.md) | The read-only ready set: six tri-state readiness conditions, close classification and ranking, identity resolution, bounds, and evidence model |
 | [Owner-Gate SLA](spec/features/feature-owner-gate-sla.md) | The owner-gate aging and escalation contract: 24 h escalation, 72 h default-on-expiry, the recorded decision ledger, recorded waivers folded into gate kind and `waivedBy`, never-silence, and the render-once `board` surface |

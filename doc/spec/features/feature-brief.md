@@ -6,9 +6,9 @@ created: 2026-11-06
 last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The read-only brief command and its delivery.brief.v1 payload: one deterministic, decision-first, one-screen render projected from the same injected collector facts as the status digest; nine closed render surfaces (six digest sections plus three named placeholders); ready-to-merge and owner-gate-age anchors; the closed three-entry placeholder catalog; exit 0 on collector unavailability with no status.collector identity; digest vocabulary and bounds reused by reference; zero brief-specific reads; no LLM in the render path."
+summary: "The read-only brief command and its delivery.brief.v1 payload: one deterministic, decision-first, one-screen render projected from the same injected collector facts as the status digest; nine closed render surfaces (the six projected digest sections plus three named placeholders); ready-to-merge and owner-gate-age anchors; the closed three-entry placeholder catalog; exit 0 on collector unavailability with no status.collector identity; digest vocabulary and bounds reused by reference; zero brief-specific reads; no LLM in the render path."
 links:
-  related_changes: ["GH-228"]
+  related_changes: ["GH-228", "GH-243"]
   contracts:
     - "packages/core/src/contracts/brief.ts"
 ---
@@ -23,7 +23,7 @@ The brief is a projection over the same collector state as the status digest. Th
 
 Collector unavailability is digest data, not a command failure. Every successful run returns all nine surfaces in the payload, and a failed, absent, unattempted, or unresolved read appears as the corresponding digest section state with the digest's reason. Only a rejected invocation (`fallback.invocation`, exit `1`) and containment (`fallback.internal`, exit `2`) can fail the command. The command adds no error-table row, no domain kind, no configuration key, no adapter read, and no new package or runtime-API location.
 
-The brief is the owner-facing render surface for the three v0 anchors. It is attention, not authority: ready-to-merge cites observed collector evidence and never issues a merge verdict, and merge readiness remains owned by the verify-gates battery and the merge transaction. The status digest remains the coordinator-facing evidence surface; its M1-S10 expansion now exposes digest-native ready-to-merge and owner-gate-age fields from the same collector state, and the brief's projection agrees with them because both consume the same injected facts and the same status vocabulary. The brief's nine-surface catalog is its own literal contract and is not auto-derived from the digest section count, so the digest's growth to nine sections does not change the brief payload.
+The brief is the owner-facing render surface for the three v0 anchors. It is attention, not authority: ready-to-merge cites observed collector evidence and never issues a merge verdict, and merge readiness remains owned by the verify-gates battery and the merge transaction. The status digest remains the coordinator-facing evidence surface; its M1-S10 expansion exposes digest-native ready-to-merge and owner-gate-age fields from the same collector state, and the brief's projection agrees with them because both consume the same injected facts and the same status vocabulary. The brief's nine-surface catalog is its own literal contract and is not auto-derived from the digest section count, so the digest's growth to nine sections does not change the brief payload.
 
 The surrounding contracts are described in [Status Digest](feature-status-digest.md), [Result Contract and Error Table](feature-result-contract.md), [Queue Ready](feature-queue-ready.md), [Verify Gates](feature-verify-gates.md), and [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md). Command naming follows [ODR-0003](../../decisions/ODR-0003-cli-command-naming-v1-lock.md), and package tiers follow [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
@@ -38,7 +38,7 @@ The surrounding contracts are described in [Status Digest](feature-status-digest
 ### Goals
 
 - Provide one read-only `brief` command with no positionals and no command-specific flags beyond the global machine-output switch.
-- Return exactly nine surfaces in every successful payload: the six digest sections and the three named placeholders.
+- Return exactly nine surfaces in every successful payload: the six digest sections the brief projects and the three named placeholders.
 - Put anchored actions first: ready-to-merge, blocker questions, and owner-gate ages.
 - Never turn a failed, absent, unattempted, or unresolved read into an observed, clear, green, available, or zero claim.
 - Keep the command deterministic, bounded, brand-neutral, read-only, and free of LLM calls, network capability, and child processes.
@@ -67,7 +67,7 @@ The payload's `surfaces` array is a closed, ordered set of exactly nine ids:
 | 8 | `gate-sla-states` | Placeholder catalog | SLA classifications until owner-gate SLA mechanics exist; renders beside the age anchor |
 | 9 | `lane-queue-engine` | Placeholder catalog | The queue/lane engine until it exists |
 
-A digest surface copies its section's `state`, `counts`, and `truncated` flag unchanged and carries the section's first evidence reason when one exists. A placeholder surface carries `not-delivered`, zero counts, `truncated: false`, and a fixed title in the payload. The surface set is closed: the status digest's six sections each have exactly one corresponding brief surface, and each unbuilt capability in the placeholder catalog has exactly one placeholder surface. Anchored actions are action groups, not a tenth surface.
+A digest surface copies its section's `state`, `counts`, and `truncated` flag unchanged and carries the section's first evidence reason when one exists. A placeholder surface carries `not-delivered`, zero counts, `truncated: false`, and a fixed title in the payload. The surface set is closed: the six digest sections the brief projects each have exactly one corresponding brief surface, and each unbuilt capability in the placeholder catalog has exactly one placeholder surface. The digest's `ready-to-merge`, `spend`, and `blockers` sections are not brief surfaces. Anchored actions are action groups, not a tenth surface.
 
 ### Anchored actions
 
@@ -126,11 +126,11 @@ providers  <state>  total <n> (<n> unknown)
 parked-work  <state>  total <n> (<n> unknown)
 ```
 
-The header names the injected brand binary and the bound repository; when the binding is unavailable it reads `repository unavailable (<reason>)`. Every line names its state; when a digest evidence reason exists and is neither `observed` nor the state word itself, the line appends it as `(<reason>)`. Truncation appends ` +N more` when items were omitted, or ` +more` for a source-at-limit signal. The human text is at most `STATUS_MAX_HUMAN_LINES` (24) non-empty lines and `STATUS_MAX_HUMAN_BYTES` (4096) bytes; if the content exceeds the bound, lines are dropped from the end (context first) and the final line is `... <n> line(s) omitted to fit the one-screen bound`, so no drop is silent. Human mode contains no timestamps, no raw payloads, no item titles, no secrets, and no generated prose; it performs no extra reads.
+The header names the injected brand binary and the bound repository; when the binding is unavailable it reads `repository unavailable (<reason>)`. Every line names its state; when a digest evidence reason exists and is neither `observed` nor the state word itself, the line appends it as `(<reason>)`. Truncation appends ` +N more` when items were omitted, or ` +more` for a source-at-limit signal. The human text is at most `STATUS_MAX_HUMAN_LINES` (32) non-empty lines and `STATUS_MAX_HUMAN_BYTES` (6144) bytes; if the content exceeds the bound, lines are dropped from the end (context first) and the final line is `... <n> line(s) omitted to fit the one-screen bound`, so no drop is silent. Human mode contains no timestamps, no raw payloads, no item titles, no secrets, and no generated prose; it performs no extra reads.
 
 ### Bounds and determinism
 
-All bounds are consumed by reference from the status contract: `STATUS_MAX_HUMAN_LINES` (24), `STATUS_MAX_HUMAN_BYTES` (4096), and `STATUS_MAX_MACHINE_BYTES` (65536). The brief declares no parallel numeric bound and no parallel vocabulary. Identical injected inputs produce byte-identical human and machine output: the clock, run id, brand, and output streams are injected, and every variable collector fact arrives through `StatusFacts`.
+All bounds are consumed by reference from the status contract: `STATUS_MAX_HUMAN_LINES` (32), `STATUS_MAX_HUMAN_BYTES` (6144), and `STATUS_MAX_MACHINE_BYTES` (65536). The brief declares no parallel numeric bound and no parallel vocabulary. Identical injected inputs produce byte-identical human and machine output: the clock, run id, brand, and output streams are injected, and every variable collector fact arrives through `StatusFacts`.
 
 ### Error identity reuse and collector unavailability
 
@@ -156,7 +156,7 @@ The brief adds no error-table row and no domain kind. Section and placeholder fa
 
 1. The CLI edge composes `createBriefCommandDefinition(createStatusCommandRuntime(options.brief, resolveProviderConfig))`. The credential-reference guard runs first; a refused instance withholds only the GitHub reads.
 2. The handler calls `collectStatusFacts(runtime)` once: repository binding and HEAD, one bounded issues page, one bounded pull-request page, one bounded check-runs page when the SHA is resolved, the provider configuration resolve, the verified park fold, and the local PM-context read.
-3. `projectBrief(facts)` calls `aggregateStatus(facts)` over the same object, then copies the six section states, counts, truncation, and first reason into surfaces and appends the three placeholder surfaces.
+3. `projectBrief(facts)` calls `aggregateStatus(facts)` over the same object, then copies the six projected section states, counts, truncation, and first reason into surfaces and appends the three placeholder surfaces.
 4. The projection derives the two anchor groups: ready-to-merge from the changes section's rendered pull requests, and owner-gate ages from the tracker owner-hand-back family plus the underlying injected work items' `updatedAt`.
 5. The projection assembles truncation markers and returns the payload.
 6. Machine mode wraps the payload in the standard envelope; human mode calls `renderBriefHuman` and writes through the single redaction path.
@@ -186,10 +186,10 @@ The brief adds no error-table row and no domain kind. Section and placeholder fa
 
 | Concern | Current guarantee |
 |---|---|
-| Surface totality | Exactly nine surfaces in fixed order in every successful payload: six digest sections plus three placeholders; zero missing or extra surfaces. |
+| Surface totality | Exactly nine surfaces in fixed order in every successful payload: the six projected digest sections plus three placeholders; zero missing or extra surfaces. |
 | Non-verdict guarantee | A failed, absent, unattempted, or unresolved read never renders as observed, clear, green, available, or zero; an unknown age is never `0`; no SLA state is fabricated; ready-to-merge is never a verdict. |
 | Shared truth | Every digest-derived state, count, truncation flag, and reason equals the digest's value for the same injected facts; the only derived claims are owner-gate ages under the declared parse-and-floor rule and the closed catalog entries. |
-| Bounds | Human output at most 24 lines and 4096 bytes; serialized `data` at most 65 536 bytes; every drop or limit-truncated case marked. |
+| Bounds | Human output at most 32 lines and 6144 bytes; serialized `data` at most 65 536 bytes; every drop or limit-truncated case marked. |
 | Read-only, determinism | Zero writes, fence acquisitions, state mutations, network writes, or child processes; identical injected inputs produce identical payload and human bytes. |
 | Output contract | `--json` produces exactly one valid envelope with an exit in `{0,1,2}`; human mode produces one bounded screen; rendering performs zero extra reads. |
 | Error-table stability | Zero new rows, domain kinds, or configuration keys; the sync check stays green. |
@@ -238,7 +238,7 @@ One invocation performs the same work as one status invocation: at most three ou
 
 ## Dependencies & Risks
 
-- **Depends on** the status digest ([feature-status-digest.md](feature-status-digest.md)) for the collector facts, the six sections, the five-value states, the evidence reasons, the counts, the truncation model, and the declared bounds.
+- **Depends on** the status digest ([feature-status-digest.md](feature-status-digest.md)) for the collector facts, the six projected sections, the five-value states, the evidence reasons, the counts, the truncation model, and the declared bounds.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, the `{0,1,2}` exit projection, existing failure identities, and the sole redaction path.
 - **Depends on** queue ready ([feature-queue-ready.md](feature-queue-ready.md)) for the observed-approval merge-ready convention the ready-to-merge anchor must not contradict.
 - **Depends on** verify gates ([feature-verify-gates.md](feature-verify-gates.md)) for gate-verdict ownership; the brief never issues a verdict.
@@ -266,7 +266,7 @@ The brief's current rules are fixed by these decisions; each row states the rule
 | DEC-6 | The placeholder catalog is closed at exactly `typed-questions` (M1-S16), `gate-sla-states` (M1-S5), and `lane-queue-engine` (M1-S17), each `not-delivered` and each naming capability, owning story, and state. |
 | DEC-7 | Ready-to-merge projects only observed-approval, non-draft, open pull-request evidence from the digest and is an attention anchor, never a gate verdict. |
 
-**Human grammar (OQ-1).** The exact human line grammar and per-surface wording are pinned by the committed goldens `tests/fixtures/brief/golden/human.txt` and `envelope.json`. The cap-sized screen renders in 11 non-empty lines and 564 UTF-8 bytes, inside the 24-line and 4096-byte bounds, so the decision-first order and the bound do not conflict. Regeneration is the explicit command `bun run tests/fixtures/brief/golden/regenerate.ts`.
+**Human grammar (OQ-1).** The exact human line grammar and per-surface wording are pinned by the committed goldens `tests/fixtures/brief/golden/human.txt` and `envelope.json`. The cap-sized screen renders in 11 non-empty lines and 564 UTF-8 bytes, inside the 32-line and 6144-byte bounds, so the decision-first order and the bound do not conflict. Regeneration is the explicit command `bun run tests/fixtures/brief/golden/regenerate.ts`.
 
 ## Glossary & References
 
@@ -274,7 +274,7 @@ The brief's current rules are fixed by these decisions; each row states the rule
 |---|---|
 | Brief | The one-screen, decision-first, deterministic projection of the collector state for the owner's daily attention; render-only, no LLM. |
 | `delivery.brief.v1` | The brief payload schema version carried in the machine envelope's `data`. |
-| Render surface | One of the closed nine brief surfaces: six digest sections plus three named placeholders, each carrying exactly one five-value state. |
+| Render surface | One of the closed nine brief surfaces: the six projected digest sections plus three named placeholders, each carrying exactly one five-value state. |
 | Anchored action | A decision-first entry in one of the two ranked action groups, citing bounded collector evidence and carrying an explicit state; attention, never a gate verdict. |
 | Ready-to-merge | An attention projection over observed approved, non-draft, open pull requests from the changes section; never an authorization or verdict. |
 | Owner-gate age | The age of an owner-hand-back item under the parse-and-floor rule over its provider-native `updatedAt`; unknown when the timestamp is absent, unparseable, or in the future. |

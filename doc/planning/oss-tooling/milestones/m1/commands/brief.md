@@ -16,8 +16,8 @@ Status: M1-S6 shipped (GH-228). Example values are illustrative unless stated.
 
 One screen, decision-first, rendered from the same collector state as
 the status digest (one source of truth). The brief carries ready-to-merge
-and owner-gate ages as anchored action groups, then six digest-section
-surfaces. Ready-to-merge is an attention projection over observed
+and owner-gate ages as anchored action groups, then the six digest-section
+surfaces it projects. Ready-to-merge is an attention projection over observed
 approved, non-draft, open pull requests; it is never a merge verdict.
 Unbuilt capabilities appear as named placeholders, exactly
 three: typed questions (M1-S16), gate SLA states (M1-S5), and the
@@ -27,12 +27,12 @@ processes, and no brief-specific reads.
 
 ## OUTPUT
 
-Text: one bounded screen, at most 24 lines and 4096 bytes, decision-first.
+Text: one bounded screen, at most 32 lines and 6144 bytes, decision-first.
 The header names the injected binary and the bound repository.
 
 Envelope `data`: `delivery.brief.v1`, with `schemaVersion`, `generatedAt`,
-`repository`, `surfaces[]` (the closed nine ids: six digest sections plus
-`typed-questions`, `gate-sla-states`, `lane-queue-engine`), `anchors[]`
+`repository`, `surfaces[]` (the closed nine ids: the six projected digest
+sections plus `typed-questions`, `gate-sla-states`, `lane-queue-engine`), `anchors[]`
 (`ready-to-merge`, `owner-gate-ages`), `placeholders[]` (exactly three
 entries, each naming capability, owning story, and `not-delivered`), and
 `truncation[]` (one marker per omitted surface or anchor group).

@@ -142,7 +142,7 @@ The tracker collector consumes normalized work items and a declared per-family s
 - **Owner hand-backs:** An open item carrying a declared owner-attention label, matched case-insensitively. `assignee` is not used because the normalized field is optional and absence means the provider did not supply the signal, not that no assignee exists ([ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md)). Each rendered hand-back carries additive `age`, `ageUnknownReason`, and `slaState` fields projected from the M1-S5 evaluator over the injected clock and the imported policy; unknown age uses the two declared markers and escalates, never `0` or `fresh`.
 - **Blocked dependencies:** An open item with a `blocked-by` relation. A target observed as `done` or `canceled` does not leave the item blocked; a target observed as not done leaves it blocked with `dependencyState: open`; a target not observed leaves it blocked with `dependencyState: unknown`, never resolved. When the tracker source declares relations unavailable, the family is `unavailable` with `signal-unavailable`, never an observed empty family.
 - **Stalls:** An open item with a parseable provider-native `updatedAt` older than the 14-day threshold is listed as `stalled` with its age. An item at or under the threshold is active and is not listed. An item with absent or invalid `updatedAt` is listed as `unknown` activity. The clock is injected, and no timestamp is derived from comments, ordering, or the current time ([ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md)).
-- **Ticket hygiene:** Conformance over mapped normalized data only. Findings are `missing-title` for a blank or empty title and `missing-labels` for an empty label set. The hygiene family also exposes the three named assertions `epic-membership`, `story-points`, and `in-sprint` with additive tri-state counts (`violations`, `unknown`, `satisfied`). Each assertion is gated by a declared per-assertion availability that travels with the tracker read; within a declared available signal, an item carrying no conforming value is a violation (absence-as-violation), while an undeclared signal is all-unknown with `signal-unavailable` and never a violation. Epic membership maps a label equal to `epic` or prefixed `epic:`; story points maps a `points:` label with a parseable non-negative integer; in-sprint maps a present, non-empty milestone. Comment conformance is not evaluated because absent comments mean unknown; unmapped custom-field conformance is not evaluated because no named consumer requires it.
+- **Ticket hygiene:** Conformance over mapped normalized data only. Findings are `missing-title` for a blank or empty title and `missing-labels` for an empty label set. The hygiene family also exposes the three named assertions `epic-membership`, `story-points`, and `in-sprint` with additive tri-state counts (`violations`, `unknown`, `satisfied`). Each assertion is gated by a declared per-assertion availability that travels with the tracker read; within a declared available signal, an item carrying no conforming value is a violation (absence-as-violation), while an undeclared signal is all-unknown with `signal-unavailable` and never a violation. The GitHub edge declares all three mapped assertions available because the bounded issue page supplies the normalized label set and the milestone; a source that does not declare one leaves that assertion all-unknown. Epic membership maps a label equal to `epic` or prefixed `epic:`; story points maps a `points:` label with a parseable non-negative integer; in-sprint maps a present, non-empty milestone. Comment conformance is not evaluated because absent comments mean unknown; unmapped custom-field conformance is not evaluated because no named consumer requires it.
 
 Tracker ranks are deterministic. Owner hand-backs order by label group, then oldest `updatedAt`, then reference. Blocked dependencies order by `unknown` before `open`, then reference. Stalls order oldest stalled first, then unknown-activity reference. Hygiene orders by finding count, then reference.
 
@@ -164,7 +164,7 @@ The `ready-to-merge` section is the ranked action list. It reuses the queue-read
 
 ### Lanes vocabulary and placeholders
 
-The `lanes-or-queue` section remains exactly the shipped declared gap (capability `queue-lane-engine`, expected story `M2-S1`, reason `engine-not-delivered`) and gains only the additive declared attention-state vocabulary `delivering`, `idle-with-reason`, `idle-no-reason`. No per-lane state is fabricated and the dormant `lane.idle-no-reason` code is never emitted before the lane engine lands.
+The `lanes-or-queue` section remains exactly the shipped declared gap (capability `queue-lane-engine`, expected story `M2-S1`, reason `engine-not-delivered`) and gains only the additive declared attention-state vocabulary `delivering`, `idle-with-reason`, `idle-no-reason`. No per-lane state is fabricated and the dormant `lane.idle-no-reason` code is never emitted before the lane engine lands. The brief's placeholder catalog is a separate closed contract: it names the same gap with capability `lane-queue-engine` and owning story `M1-S17`. The two capability spellings belong to two different surfaces and neither is derived from the other.
 
 `spend` (capability `spend-summary`, expected story `M1-S19`) and `blockers` (capability `typed-blockers`, expected story `M1-S16`) are named `not-delivered` placeholders with zero items and counts. Their human lines are pinned: `spend summary arrives with M1-S19` and `typed blockers arrive with M1-S16`. They are removed only by their delivering stories.
 
@@ -192,7 +192,7 @@ The collector resolves the commit under observation from the current checkout HE
 
 ### Lanes or queue
 
-The section is always `not-delivered` with capability `queue-lane-engine`, expected delivering story `M1-S17`, reason `engine-not-delivered`, source `queue-engine`, zero items, zero counts, and an explicit note that no queue or lane engine exists in this release. It is never an observed empty queue, never a fabricated queue, and never a duplicate of `queue ready` (M0-S7). The `queue ready` command is the separate read-only ready-set specified in [Queue Ready](feature-queue-ready.md); it consumes the same tracker, pull-request, CI, provider, and local PM-context inputs, adds no status behavior, and does not fill or change this section.
+The section is always `not-delivered` with capability `queue-lane-engine`, expected story `M2-S1`, reason `engine-not-delivered`, source `queue-engine`, zero items, zero counts, and an explicit note that no queue or lane engine exists in this release. It is never an observed empty queue, never a fabricated queue, and never a duplicate of `queue ready` (M0-S7). The `queue ready` command is the separate read-only ready-set specified in [Queue Ready](feature-queue-ready.md); it consumes the same tracker, pull-request, CI, provider, and local PM-context inputs, adds no status behavior, and does not fill or change this section.
 
 ### Providers
 
@@ -226,19 +226,7 @@ No affected section is ever `observed` under the guard. Restoring a credential-r
 
 `summary` counts the nine sections by state and reports `actionable` as the sum of the rendered item arrays of sections 1-6 whose state is `observed` or `degraded`. Tracker family items are counted individually; rendered pull requests, CI runs, provider entries, provider parks, and parked-work items are counted. The ready-to-merge action list and the placeholders contribute zero to `actionable`, so the shipped count is unchanged for identical facts. Two additive summary counts are present: `findingsTotal` (the number of grouped findings across observed and degraded sections) and `placeholderSectionCount` (exactly 2: `spend` and `blockers`; the lanes declared-gap section is excluded).
 
-Human mode renders the same digest deterministically:
-
-```
-<binary> status <owner>/<name> @ <branch|detached> <sha7>
-tracker    <state>  hand-backs <n> | blocked <state> | stalls <n> (<unknown> unknown) | hygiene <n>
-changes    <state>  active <ref|none|unknown> | PRs <n|?> (review state <unavailable|observed|unknown>)
-ci         <state>  <failed|pending|succeeded|canceled|none-reported|unknown> (<failed>/<total> jobs)
-lanes      not-delivered  no queue or lane engine in this release
-providers  <state>  chain <name|none|unknown> | active parks <n|?> | <entries|?> entries
-parked     <state>  <n|?> parked changes (git-ignored local state)
-```
-
-The header is optional and appears only when the repository binding is observed and the commit SHA is resolved. There is exactly one line per section in the fixed nine-section order, then the attention rollup line. The exact grammar is:
+Human mode renders the same digest deterministically. The header is optional and appears only when the repository binding is observed and the commit SHA is resolved. There is exactly one line per section in the fixed nine-section order, then the attention rollup line. The exact grammar is:
 
 ```
 <binary> status <owner>/<name> @ <branch|detached> <sha7>
@@ -375,7 +363,7 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 - **Depends on** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for the resolved provider branch; status adds no keys.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, existing failure identities, exact-code classification, and the sole redaction path; status adds no rows.
 - **Depends on** the monorepo scaffold ([feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)) for tiers, boundaries, and runtime-API confinement.
-- **Enables** `queue ready` (M0-S7) ([Queue Ready](feature-queue-ready.md)), which consumes the read seams, normalized views, CI classification, and provider availability vocabulary established here without changing the digest; **enables** `brief` (M1-S6) ([Brief](feature-brief.md)), which projects the same collector facts into the owner's one-screen render with zero brief-specific reads; **precedes** M1-S10 collector expansion and M2-S4 shared board state.
+- **Enables** `queue ready` (M0-S7) ([Queue Ready](feature-queue-ready.md)), which consumes the read seams, normalized views, CI classification, and provider availability vocabulary established here without changing the digest; **enables** `brief` (M1-S6) ([Brief](feature-brief.md)), which projects the same collector facts into the owner's one-screen render with zero brief-specific reads; **is extended by** the delivered M1-S10 attention-state expansion and **precedes** M2-S4 shared board state.
 - **Risk — degraded evidence read as an all-clear:** mitigated by the explicit five-state vocabulary, evidence reasons, and an exhaustive negative-control matrix.
 - **Risk — provider park shown as available capacity:** mitigated by `parked`/`unverified` availability and by never running the provider engine.
 - **Risk — queue gap mistaken for an empty queue:** mitigated by the always-`not-delivered` section and its explicit note.
@@ -400,7 +388,7 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 | No-evidence-no-claim | A failed or unresolved read emits no finding for its section; the section state and evidence reasons carry the failure. |
 | Unknown age | A declared marker for an absent or unparseable activity timestamp; the gate escalates and age is never fabricated. |
 | Placeholder section | A named `not-delivered` section declaring a capability and its expected delivering story (`spend` → M1-S19, `blockers` → M1-S16). |
-| Dormant code | A registry code declared but untriggerable until its delivering story lands (`lane.idle-no-reason` until M1-S17). |
+| Dormant code | A registry code declared but untriggerable until its delivering capability lands (`lane.idle-no-reason` until the lane engine lands). |
 | Attention rollup | The final bounded human line previewing up to three severity-ordered finding groups, then `+N`. |
 | Section state | One of `observed`, `degraded`, `unknown`, `unavailable`, `not-delivered`; describes evidence quality and availability, not a global all-clear. |
 | Evidence record | The bounded sources, outcomes, reasons, and failure codes or classes that justify a section or item state; never raw provider payloads. |
@@ -425,4 +413,4 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 
 See also: [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Brief](feature-brief.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Verify Gates](feature-verify-gates.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md). Verify Gates reuses `STATUS_OWNER_ATTENTION_LABELS`, `STATUS_CI_RESULTS` (including `unknown`), and `STATUS_SOURCE_PIPELINE_LIMIT` by reference; status remains a digest, not a merge-gate verdict.
 
-**Change record:** `doc/changes/2026-10/2026-10-31--GH-175--status-v1/`.
+**Change record:** `doc/changes/2026-10/2026-10-31--GH-175--status-v1/`; `doc/changes/2026-11/2026-11-06--GH-243--status-collector-expansion/`.

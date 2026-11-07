@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: "2026-11-06T23:55:00Z", completed: "2026-11-07T00:25:00Z" }
   dor_check: { started: "2026-11-07T00:30:00Z", completed: "2026-11-07T01:00:00Z" }
   delivery: { started: "2026-11-07T01:05:00Z", completed: "2026-11-07T03:30:00Z" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-11-07T03:40:00Z", completed: "2026-11-07T04:20:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -94,4 +94,7 @@ notes:
     date: "2026-11-07"
   - text: "retro: coder needed env workarounds for pnpm check (TMPDIR=$PWD/tmp/tmpdir, COREPACK_HOME=$HOME/.cache/node/corepack) to avoid sandbox /tmp cross-device and corepack-cache failures on two environment-sensitive checks — pre-existing infra sensitivity worth a repo-level fix; delivery itself unaffected."
     type: "retro"
+    date: "2026-11-07"
+  - text: "Doc reconciliation complete, zero residual gaps: feature-status-digest.md reconciled to code truth (lanes expectedStory M2-S1 emitted; capability-string split queue-lane-engine vs lane-queue-engine documented explicitly), stale six-section grammar block removed, hygiene-availability declaration documented; brief/nonfunctional/00-index/architecture-overview/glossary/contracts.md/brief man page/user-journeys updated to nine-section delivered behavior; doc-distribution guard green (81 docs). DoR CLI-edge nit resolved as consistent (edge.ts did change +3 availability declarations)."
+    type: "info"
     date: "2026-11-07"

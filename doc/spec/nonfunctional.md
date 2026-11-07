@@ -2,11 +2,11 @@
 id: SPEC-TOOLING-NONFUNCTIONAL
 status: Proposed
 created: 2026-11-01
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-232, GH-251]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-232, GH-251, GH-243]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -86,7 +86,7 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 - Requirement: one valid `CommandResult` under `--json`, exactly one of data/error,
   classified containment, deterministic ordering, and visible truncation.
 - Canonical budgets: [status](features/feature-status-digest.md#evidence-counts-truncation-and-bounds)
-  caps human output at 24 lines/4096 bytes and serialized data at 65536 bytes;
+  caps human output at 32 lines/6144 bytes and serialized data at 65536 bytes;
   [queue-ready](features/feature-queue-ready.md#reasons-bounds-and-truncation) caps
   human output at 16 lines/4096 UTF-8 bytes and serialized data at 65536 UTF-8 bytes;
   [board](features/feature-owner-gate-sla.md#ranking-bounds-and-truncation) caps
