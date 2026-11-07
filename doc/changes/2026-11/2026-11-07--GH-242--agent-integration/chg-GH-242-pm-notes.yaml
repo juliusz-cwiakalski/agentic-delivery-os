@@ -64,3 +64,6 @@ notes:
   - text: "DoR iteration 3: READY. Non-blocking RR-28..RR-31 fixed in spec v1.3 as an ownership/phrase consistency pass; no behavior or AC change."
     type: info
     date: "2026-11-07"
+  - text: "Plan phase 1 complete: executable entrypoint, root/command help and version, fallback.internal composition honesty, static help coverage inventory. Commit 9b6fdbfc. Tests: 150 pass / 0 fail across the phase-1 suites; forbidden-literals 27 pass; install 55/55; pnpm typecheck green."
+    type: info
+    date: "2026-11-07"
