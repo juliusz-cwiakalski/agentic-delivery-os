@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-07T01:06:00Z", completed: "2026-11-07T01:40:00Z" }
   delivery_planning: { started: "2026-11-07T01:41:00Z", completed: "2026-11-07T02:10:00Z" }
   dor_check: { started: "2026-11-07T02:11:00Z", completed: "2026-11-07T02:30:00Z" }
-  delivery: { started: "2026-11-07T02:35:00Z", completed: null }
+  delivery: { started: "2026-11-07T02:35:00Z", completed: "2026-11-07T04:40:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -51,6 +51,12 @@ notes:
     date: "2026-11-07"
   - text: "Plan delivered as canonical YAML (chg-GH-234-plan.yaml, delivery.plan.v1, 9 phases, 56 tasks, repo plan validate verdict=valid readyForDevelopment=true). PM decisions baked in: goal-priority declared order = precedence; spawn enforcement = --for-spawn seam + data-v1 contract with legacy hook byte-unchanged (structurally asserted); vendor mappings fixture-proven; profiles ship empty fail-closed."
     type: "info"
+    date: "2026-11-07"
+  - text: "Delivery COMPLETED_ALL: 9/9 plan phases (56/56 tasks) across 10 commits cb8c4285..318d3c4c; 106 files +11220/-131. Aggregate pnpm check 4731/4733 pass; 2 failures reported environmental (TC-STATE-021 corepack pnpm download; CI-parity clone cross-device) - quality_gates phase must verify pre-existing-vs-regression against base a69b555e. Coder deviations recorded: (1) watch config under provider.profiles.watch keyed by provider (additive); (2) edge.ts wiring observational + sync production probe, async quota probing deferred to M1-S9 seam; (3) brand-neutral env-record defaults per no-hardcoded-brand rule, legacy OC_ADOS allowlist as injectable option (TC-037); (4) plan diff entrypoint unavailable (no tsx), observational reconciliation; (5) bracket-access fetch spies per hermetic literal ban."
+    type: "info"
+    date: "2026-11-07"
+  - text: "Retro: pm-notes edit anchor mistake repeated twice in this session (edit replaced the last list item instead of appending). Improvement: for appends to YAML lists, anchor on the closing line of the following section (e.g., 'open_questions:') or rewrite the whole notes block; verify with grep after every list edit."
+    type: "retro"
     date: "2026-11-07"
   - text: "Plan phase 1 complete (commit hash recorded in the next ledger entry; a commit cannot contain its own hash): provider-profile contract module, additive provider watch mapping-kind closed set, eight additive provider.profile.*/provider.env-record.* error identities with documented-table rows, contract inventory fixture + structure/type tests. Gates green: pnpm typecheck (all packages + tests/types); provider-profile-contract/provider-contract/error-table/content-inventory 84 pass / 0 fail; error-table-sync 91 entries documented 91, OK."
     type: "info"
