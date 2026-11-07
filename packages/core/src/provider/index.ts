@@ -86,9 +86,14 @@ export {
 export { evaluatePeakWindow, utcSecondsOfDay } from "./peak.js";
 export {
   classifyQuotaTransport,
+  createProviderWatchStatus,
   evaluateQuotaResponse,
   evaluateQuotaSnapshot,
   normalizeQuotaEnvelopeResult,
+  type ProviderWatchStatusInput,
+  type ProviderWatchStatusReader,
+  type ProviderWatchStatusResult,
+  type ProviderWatchStatusRuntime,
   type QuotaNormalizationFailure,
 } from "./quota.js";
 export {

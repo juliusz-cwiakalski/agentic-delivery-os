@@ -341,6 +341,8 @@ export type ProviderWatchMappingPort = {
     readonly mapping: import("./provider.js").ProviderWatchMappingKind;
     readonly bodyText: string;
     readonly status: number;
+    readonly nowMs: number;
     readonly floor?: number;
+    readonly thresholdPercent?: number;
   }) => ProviderWatchNormalization;
 };

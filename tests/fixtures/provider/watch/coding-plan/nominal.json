@@ -1,0 +1,4 @@
+{
+  "weekly": { "usedPercent": 61, "resetsAtMs": 1700003600000 },
+  "rolling": { "usedPercent": 12, "resetsAtMs": 1700000600000 }
+}

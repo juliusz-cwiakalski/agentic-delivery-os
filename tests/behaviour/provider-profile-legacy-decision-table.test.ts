@@ -325,3 +325,69 @@ describe("TC-PROFILE-050 ported group 4 — revert", () => {
     expect(second.append).toBe(false);
   });
 });
+
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { evaluatePeakWindow } from "../../packages/core/src/provider/peak";
+import {
+  normalizeCodingPlanWindows,
+  normalizeOpenAiUsage,
+} from "../../packages/adapters/src/provider-quota/index";
+
+const watchFixture = (relative: string): string =>
+  readFileSync(join(process.cwd(), "tests/fixtures/provider/watch", relative), "utf8");
+
+describe("TC-PROFILE-051 ported group 5 — condition seams", () => {
+  test("a threshold crossing parks exactly at the threshold and not below", () => {
+    const clear = normalizeCodingPlanWindows({
+      status: 200,
+      bodyText: watchFixture("coding-plan/nominal.json"),
+      nowMs: NOW,
+      thresholdPercent: 100,
+    });
+    expect(clear.status).toBe("clear");
+    const parked = normalizeCodingPlanWindows({
+      status: 200,
+      bodyText: watchFixture("coding-plan/boundary.json"),
+      nowMs: NOW,
+      thresholdPercent: 100,
+    });
+    expect(parked.status).toBe("parked");
+  });
+
+  test("window start, buffer, and end instants behave half-open", () => {
+    const peak = { timezone: "UTC" as const, startSecondsOfDay: 6 * 3600, endSecondsOfDay: 10 * 3600, bufferSeconds: 3600 };
+    const beforeBuffer = Date.UTC(2026, 10, 7, 4, 59, 59);
+    const atBuffer = Date.UTC(2026, 10, 7, 5, 0, 0);
+    const atEnd = Date.UTC(2026, 10, 7, 10, 0, 0);
+    expect(evaluatePeakWindow(peak, beforeBuffer).status).toBe("clear");
+    expect(evaluatePeakWindow(peak, atBuffer).status).toBe("parked");
+    expect(evaluatePeakWindow(peak, atEnd).status).toBe("clear");
+  });
+
+  test("credential classes classify as credential failures", () => {
+    const rejected = normalizeOpenAiUsage({ status: 401, bodyText: "", nowMs: NOW });
+    expect(rejected.status === "failed" && rejected.errorCode).toBe("provider.auth.rejected");
+  });
+
+  test("malformed vendor responses are never clear", () => {
+    for (const input of [
+      { status: 200, bodyText: "not json", nowMs: NOW },
+      { status: 200, bodyText: watchFixture("malformed/wrong-types.json"), nowMs: NOW },
+      { status: 500, bodyText: "", nowMs: NOW },
+    ]) {
+      const result = normalizeCodingPlanWindows(input);
+      expect(result.status).not.toBe("clear");
+    }
+  });
+
+  test("every seam case asserts a structured condition or classified outcome", () => {
+    const result = normalizeCodingPlanWindows({
+      status: 200,
+      bodyText: watchFixture("coding-plan/nominal.json"),
+      nowMs: NOW,
+    });
+    expect(result.status).toBe("clear");
+    expect(result.snapshot.limits.length).toBeGreaterThan(0);
+  });
+});

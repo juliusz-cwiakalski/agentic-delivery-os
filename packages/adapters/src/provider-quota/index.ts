@@ -1,17 +1,22 @@
 /**
  * `@delivery-os/adapters/provider-quota` — the production quota transport
- * (GH-182 PD-C).
+ * (GH-182 PD-C) and the three first-iteration watch mappings (GH-234 F-5).
  *
- * This is the only admitted runtime-API edge for the provider quota request.
- * The fetch implementation is injectable; the production default is the
- * runtime's native `fetch`. Credential material is handed in once per request,
- * used to build the authorization header in memory, and never stored.
+ * This is the only admitted runtime-API edge for provider network I/O. The
+ * fetch implementation is injectable; the production default is the runtime's
+ * native `fetch`. Credential material is handed in once per request, used to
+ * build the authorization header in memory, and never stored. The coding-plan,
+ * DeepSeek-balance, and OpenAI-usage normalizers are pure text mappings.
  */
 import type {
+  ProviderWatchMappingPort,
   QuotaTransport,
   QuotaTransportRequest,
   QuotaTransportResult,
 } from "@delivery-os/core/contracts";
+import { normalizeCodingPlanWindows } from "./coding-plan.js";
+import { normalizeDeepseekBalance } from "./deepseek.js";
+import { normalizeOpenAiUsage } from "./openai.js";
 
 /** The minimal response surface the transport consumes. */
 export type QuotaFetchResponse = {
@@ -62,3 +67,43 @@ export const createProviderQuotaTransport = (
     },
   };
 };
+
+/**
+ * Bind the closed watch mapping kinds to their normalizers. The mapping kinds
+ * themselves are declared in core contracts; this factory is the single
+ * adapter-side registration point.
+ */
+export const createProviderWatchMappings = (): ProviderWatchMappingPort => ({
+  normalize: (input) => {
+    switch (input.mapping) {
+      case "coding-plan-windows":
+        return normalizeCodingPlanWindows({
+          status: input.status,
+          bodyText: input.bodyText,
+          nowMs: input.nowMs,
+          ...(input.thresholdPercent === undefined
+            ? {}
+            : { thresholdPercent: input.thresholdPercent }),
+        });
+      case "deepseek-balance":
+        return normalizeDeepseekBalance({
+          status: input.status,
+          bodyText: input.bodyText,
+          floor: input.floor ?? 0,
+        });
+      case "openai-usage-windows":
+        return normalizeOpenAiUsage({
+          status: input.status,
+          bodyText: input.bodyText,
+          nowMs: input.nowMs,
+          ...(input.thresholdPercent === undefined
+            ? {}
+            : { thresholdPercent: input.thresholdPercent }),
+        });
+    }
+  },
+});
+
+export { normalizeCodingPlanWindows } from "./coding-plan.js";
+export { normalizeDeepseekBalance } from "./deepseek.js";
+export { normalizeOpenAiUsage } from "./openai.js";
