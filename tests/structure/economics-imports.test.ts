@@ -99,7 +99,13 @@ export const domainPurityViolations = (file: string, text: string): string[] => 
 };
 
 const importsOfText = (text: string): string[] => {
-  const source = ts.createSourceFile("probe.ts", text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const source = ts.createSourceFile(
+    "probe.ts",
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
   const specifiers: string[] = [];
   for (const statement of source.statements) {
     if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)) {
@@ -111,7 +117,12 @@ const importsOfText = (text: string): string[] => {
 
 export const harnessLiteralViolations = (file: string, text: string): string[] => {
   const violations: string[] = [];
-  for (const token of ['harness === "opencode"', 'harness === "claude-code"', '"opencode"', '"claude-code"']) {
+  for (const token of [
+    'harness === "opencode"',
+    'harness === "claude-code"',
+    '"opencode"',
+    '"claude-code"',
+  ]) {
     if (text.includes(token)) violations.push(`${file}: harness-specific branch ${token}`);
   }
   return violations;
@@ -152,7 +163,13 @@ describe("TC-ECON-002 the economics surface respects the tier boundaries", () =>
   });
 
   test("per-harness sourcing lives only in the adapter seam", () => {
-    for (const file of [...CONTRACT_FILES, ...DOMAIN_FILES, ...CONFIG_FILES, ...STATE_FILES, ...CLI_FILES]) {
+    for (const file of [
+      ...CONTRACT_FILES,
+      ...DOMAIN_FILES,
+      ...CONFIG_FILES,
+      ...STATE_FILES,
+      ...CLI_FILES,
+    ]) {
       // The contracts home declares the closed harness-kind vocabulary and the
       // config catalog declares per-harness store paths; no other module may
       // branch on a harness name or carry a harness literal.
@@ -160,9 +177,12 @@ describe("TC-ECON-002 the economics surface respects the tier boundaries", () =>
         file === "packages/core/src/contracts/harness.ts" ||
         file.startsWith("packages/core/src/config/")
       ) {
-        expect(harnessLiteralViolations(file, readFileSync(join(ROOT, file), "utf8")).filter((violation) =>
-          violation.includes('harness === "'),
-        ), file).toEqual([]);
+        expect(
+          harnessLiteralViolations(file, readFileSync(join(ROOT, file), "utf8")).filter(
+            (violation) => violation.includes('harness === "'),
+          ),
+          file,
+        ).toEqual([]);
         continue;
       }
       expect(harnessLiteralViolations(file, readFileSync(join(ROOT, file), "utf8")), file).toEqual(
@@ -190,17 +210,25 @@ describe("TC-ECON-002 the economics surface respects the tier boundaries", () =>
         `${economics}\nimport "node:fs";\n`,
       );
       expect(
-        domainPurityViolations("packages/core/src/contracts/probe.ts", `${economics}\nimport "node:fs";\n`),
-      ).toContain('packages/core/src/contracts/probe.ts: runtime API node:');
+        domainPurityViolations(
+          "packages/core/src/contracts/probe.ts",
+          `${economics}\nimport "node:fs";\n`,
+        ),
+      ).toContain("packages/core/src/contracts/probe.ts: runtime API node:");
     } finally {
       rmSync(contractsRoot, { recursive: true, force: true });
     }
     const budget = readFileSync(join(ROOT, DOMAIN_FILES[0] as string), "utf8");
-    expect(domainPurityViolations(DOMAIN_FILES[0] as string, `${budget}\nconst t = Date.now();\n`)).toContain(
-      `${DOMAIN_FILES[0]}: runtime API Date.now`,
-    );
     expect(
-      harnessLiteralViolations("packages/core/src/domain/probe.ts", 'if (harness === "opencode") {}'),
-    ).toContain('packages/core/src/domain/probe.ts: harness-specific branch harness === "opencode"');
+      domainPurityViolations(DOMAIN_FILES[0] as string, `${budget}\nconst t = Date.now();\n`),
+    ).toContain(`${DOMAIN_FILES[0]}: runtime API Date.now`);
+    expect(
+      harnessLiteralViolations(
+        "packages/core/src/domain/probe.ts",
+        'if (harness === "opencode") {}',
+      ),
+    ).toContain(
+      'packages/core/src/domain/probe.ts: harness-specific branch harness === "opencode"',
+    );
   });
 });

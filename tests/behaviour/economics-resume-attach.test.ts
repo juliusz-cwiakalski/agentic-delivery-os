@@ -74,9 +74,7 @@ describe("TC-ECON-040 attach-and-continue resumes without re-paying prefill", ()
       capability: { modes: ["prompt-reentry"] },
     });
     runtimes.push(created);
-    const decision = created.supervised.attempt(
-      input("ses_fixture_2"),
-    );
+    const decision = created.supervised.attempt(input("ses_fixture_2"));
     expect(decision.outcome).not.toBe("attach-continue");
     expect(decision.outcome).toBe("admit-restart");
     if (decision.outcome !== "admit-restart") return;

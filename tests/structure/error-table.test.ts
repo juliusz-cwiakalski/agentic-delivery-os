@@ -1503,16 +1503,18 @@ describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
     expect(entries.filter((entry) => entry.domainKind === "watchdog").slice(0, 3)).toEqual(
-      WATCHDOG_ROWS.slice(0, 3).map(([code, category, retryable, consequence, hint, projectionClass, summary]) => ({
-        code,
-        domainKind: "watchdog",
-        category,
-        retryable,
-        consequence,
-        remediationHint: hint,
-        projectionClass,
-        summary,
-      })),
+      WATCHDOG_ROWS.slice(0, 3).map(
+        ([code, category, retryable, consequence, hint, projectionClass, summary]) => ({
+          code,
+          domainKind: "watchdog",
+          category,
+          retryable,
+          consequence,
+          remediationHint: hint,
+          projectionClass,
+          summary,
+        }),
+      ),
     );
     expect(ALLOWLIST.allowed.some((code) => code.startsWith("dispatch."))).toBe(false);
   });

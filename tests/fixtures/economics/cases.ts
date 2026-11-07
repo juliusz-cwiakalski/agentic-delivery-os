@@ -146,7 +146,12 @@ export const CORROBORATION_CASES: readonly CorroborationCase[] = [
           ...(heartbeatAgeMs === undefined ? {} : { heartbeatAgeMs }),
           ...(tokenDelta === undefined ? {} : { tokenDelta }),
           ...(trafficValue === undefined ? {} : { traffic: trafficValue }),
-          expected: present === 0 ? ("absent" as const) : stalled ? ("stalled" as const) : ("progressing" as const),
+          expected:
+            present === 0
+              ? ("absent" as const)
+              : stalled
+                ? ("stalled" as const)
+                : ("progressing" as const),
         };
       }),
     ),
@@ -158,7 +163,13 @@ export const CORROBORATION_CASES: readonly CorroborationCase[] = [
     traffic: 0,
     expected: "progressing",
   },
-  { id: "corroboration-bound-exact", heartbeatAgeMs: BOUND, tokenDelta: 0, traffic: 0, expected: "stalled" },
+  {
+    id: "corroboration-bound-exact",
+    heartbeatAgeMs: BOUND,
+    tokenDelta: 0,
+    traffic: 0,
+    expected: "stalled",
+  },
   {
     id: "corroboration-bound-plus-one",
     heartbeatAgeMs: BOUND + 1,
@@ -169,7 +180,11 @@ export const CORROBORATION_CASES: readonly CorroborationCase[] = [
 ];
 
 /** The four precedence cells: budget state x economics classification. */
-export type ResumePrecedenceCell = "within-economical" | "within-uneconomical" | "past-economical" | "past-uneconomical";
+export type ResumePrecedenceCell =
+  | "within-economical"
+  | "within-uneconomical"
+  | "past-economical"
+  | "past-uneconomical";
 
 export type ResumePrecedenceCase = {
   readonly cell: ResumePrecedenceCell;
@@ -247,17 +262,53 @@ export const restartRecord = (
 
 /** Amplification fixtures: zero re-pay, one re-pay, three ascending, and a loop. */
 export const AMPLIFICATION_FIXTURES = {
-  zeroRepay: [restartRecord({ ordinal: 1, repayTokens: { inputTokens: 0, outputTokens: 0 }, observedUniqueProgressTokens: 400 })],
-  oneRepay: [restartRecord({ ordinal: 1, repayTokens: { inputTokens: 100, outputTokens: 0 }, observedUniqueProgressTokens: 400 })],
+  zeroRepay: [
+    restartRecord({
+      ordinal: 1,
+      repayTokens: { inputTokens: 0, outputTokens: 0 },
+      observedUniqueProgressTokens: 400,
+    }),
+  ],
+  oneRepay: [
+    restartRecord({
+      ordinal: 1,
+      repayTokens: { inputTokens: 100, outputTokens: 0 },
+      observedUniqueProgressTokens: 400,
+    }),
+  ],
   threeAscending: [
-    restartRecord({ ordinal: 1, repayTokens: { inputTokens: 100, outputTokens: 0 }, observedUniqueProgressTokens: 400 }),
-    restartRecord({ ordinal: 2, repayTokens: { inputTokens: 200, outputTokens: 0 }, observedUniqueProgressTokens: 400 }),
-    restartRecord({ ordinal: 3, repayTokens: { inputTokens: 300, outputTokens: 0 }, observedUniqueProgressTokens: 400 }),
+    restartRecord({
+      ordinal: 1,
+      repayTokens: { inputTokens: 100, outputTokens: 0 },
+      observedUniqueProgressTokens: 400,
+    }),
+    restartRecord({
+      ordinal: 2,
+      repayTokens: { inputTokens: 200, outputTokens: 0 },
+      observedUniqueProgressTokens: 400,
+    }),
+    restartRecord({
+      ordinal: 3,
+      repayTokens: { inputTokens: 300, outputTokens: 0 },
+      observedUniqueProgressTokens: 400,
+    }),
   ],
   loop: [
-    restartRecord({ ordinal: 1, repayTokens: { inputTokens: 300, outputTokens: 0 }, observedUniqueProgressTokens: 100 }),
-    restartRecord({ ordinal: 2, repayTokens: { inputTokens: 300, outputTokens: 0 }, observedUniqueProgressTokens: 100 }),
-    restartRecord({ ordinal: 3, repayTokens: { inputTokens: 300, outputTokens: 0 }, observedUniqueProgressTokens: 100 }),
+    restartRecord({
+      ordinal: 1,
+      repayTokens: { inputTokens: 300, outputTokens: 0 },
+      observedUniqueProgressTokens: 100,
+    }),
+    restartRecord({
+      ordinal: 2,
+      repayTokens: { inputTokens: 300, outputTokens: 0 },
+      observedUniqueProgressTokens: 100,
+    }),
+    restartRecord({
+      ordinal: 3,
+      repayTokens: { inputTokens: 300, outputTokens: 0 },
+      observedUniqueProgressTokens: 100,
+    }),
   ],
 } as const;
 
@@ -320,11 +371,13 @@ export type MemoryResumeStore = {
   };
 };
 
-export const createMemoryResumeStore = (options: {
-  readonly restarts?: readonly EconomicsRestartRecord[];
-  readonly read?: import("../../../packages/core/src/contracts/index").EconomicsRecordsRead;
-  readonly terminal?: import("../../../packages/core/src/contracts/index").EconomicsExhaustionRecord;
-} = {}): MemoryResumeStore => {
+export const createMemoryResumeStore = (
+  options: {
+    readonly restarts?: readonly EconomicsRestartRecord[];
+    readonly read?: import("../../../packages/core/src/contracts/index").EconomicsRecordsRead;
+    readonly terminal?: import("../../../packages/core/src/contracts/index").EconomicsExhaustionRecord;
+  } = {},
+): MemoryResumeStore => {
   const state = {
     restarts: [...(options.restarts ?? [])],
     ...(options.terminal === undefined ? {} : { terminal: options.terminal }),
@@ -346,8 +399,7 @@ export const createMemoryResumeStore = (options: {
     },
     appendRestartEvent: (record) => {
       const replay = state.restarts.some(
-        (candidate) =>
-          candidate.runId === record.runId && candidate.ordinal === record.ordinal,
+        (candidate) => candidate.runId === record.runId && candidate.ordinal === record.ordinal,
       );
       if (replay) return { ok: true, appended: false, record };
       state.restarts.push(record);

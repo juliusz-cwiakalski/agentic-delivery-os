@@ -42,7 +42,8 @@ const normalized = (decision: EconomicsResumeDecision): Record<string, unknown> 
 const terminalRecords = (created: EconomicsRuntime): number => {
   const read = created.store.readRecords();
   if (!read.ok) return 0;
-  return read.value.records.filter((record) => record.kind === "economics.budget-exhaustion").length;
+  return read.value.records.filter((record) => record.kind === "economics.budget-exhaustion")
+    .length;
 };
 
 describe("TC-ECON-053 every resume path consumes the exhaustion identically", () => {

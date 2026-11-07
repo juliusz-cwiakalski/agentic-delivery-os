@@ -10,10 +10,7 @@ import {
   type WatchdogSignals,
   WATCHDOG_SIGNAL_KEYS,
 } from "../../packages/core/src/contracts/index";
-import {
-  classifyWatchdogLiveness,
-  parseRefusalCorpus,
-} from "../../packages/core/src/domain/index";
+import { classifyWatchdogLiveness, parseRefusalCorpus } from "../../packages/core/src/domain/index";
 import { CORROBORATION_CASES } from "../fixtures/economics/cases";
 import { runWatchdogCli } from "../fixtures/watchdog/harness";
 import { createWatchdogRepository } from "../fixtures/watchdog/temp-git";
@@ -36,7 +33,10 @@ const mutantClassifier = (
 ): ((signals: WatchdogSignals) => string) => {
   return (signals) => {
     const heartbeat = signals.heartbeatAgeMs;
-    const boundOk = drop === "bound" ? typeof heartbeat === "number" : (heartbeat ?? -1) >= WATCHDOG_STALL_HEARTBEAT_MS;
+    const boundOk =
+      drop === "bound"
+        ? typeof heartbeat === "number"
+        : (heartbeat ?? -1) >= WATCHDOG_STALL_HEARTBEAT_MS;
     const deltaOk = drop === "token-delta" ? true : signals.tokenDelta === 0;
     const trafficOk = drop === "traffic" ? true : signals.traffic === 0;
     return boundOk && deltaOk && trafficOk ? "stalled" : "progressing";
@@ -46,9 +46,15 @@ const mutantClassifier = (
 describe("TC-ECON-021 stall requires the full corroboration", () => {
   test("the matrix covers every present-value combination and the bound boundaries", () => {
     expect(CORROBORATION_CASES.length).toBeGreaterThanOrEqual(36);
-    expect(CORROBORATION_CASES.some((entry) => entry.id === "corroboration-bound-minus-one")).toBe(true);
-    expect(CORROBORATION_CASES.some((entry) => entry.id === "corroboration-bound-exact")).toBe(true);
-    expect(CORROBORATION_CASES.some((entry) => entry.id === "corroboration-bound-plus-one")).toBe(true);
+    expect(CORROBORATION_CASES.some((entry) => entry.id === "corroboration-bound-minus-one")).toBe(
+      true,
+    );
+    expect(CORROBORATION_CASES.some((entry) => entry.id === "corroboration-bound-exact")).toBe(
+      true,
+    );
+    expect(CORROBORATION_CASES.some((entry) => entry.id === "corroboration-bound-plus-one")).toBe(
+      true,
+    );
   });
 
   test("stalled classifies only when heartbeat >= bound AND tokenDelta 0 AND traffic 0", () => {
@@ -75,15 +81,19 @@ describe("TC-ECON-021 stall requires the full corroboration", () => {
       expect(outcomeOf(signals), entry.id).toBe(entry.expected);
     }
     expect(outcomeOf({ tokenDelta: 0, traffic: 0 })).toBe("progressing");
-    expect(outcomeOf({ tokenDelta: 0, traffic: 0, heartbeatAgeMs: WATCHDOG_STALL_HEARTBEAT_MS - 1 })).toBe(
-      "progressing",
-    );
+    expect(
+      outcomeOf({ tokenDelta: 0, traffic: 0, heartbeatAgeMs: WATCHDOG_STALL_HEARTBEAT_MS - 1 }),
+    ).toBe("progressing");
   });
 
   test("an absent signal is never coerced to 0 anywhere in the projection", () => {
     const facts = [
       { kind: "token-delta" as const, status: "absent" as const, reason: "not-observed" as const },
-      { kind: "heartbeat-age" as const, status: "absent" as const, reason: "not-observed" as const },
+      {
+        kind: "heartbeat-age" as const,
+        status: "absent" as const,
+        reason: "not-observed" as const,
+      },
     ];
     const signals = source(() => ({ readings: [], sourcedSignals: facts }))("lane-1");
     expect(signals).toEqual({});
@@ -112,7 +122,12 @@ describe("TC-ECON-021 stall requires the full corroboration", () => {
           },
         ],
         sourcedSignals: [
-          { kind: "heartbeat-age" as const, status: "sourced" as const, value: 400_000, observedAt: "t" },
+          {
+            kind: "heartbeat-age" as const,
+            status: "sourced" as const,
+            value: 400_000,
+            observedAt: "t",
+          },
           { kind: "token-delta" as const, status: "sourced" as const, value: 0, observedAt: "t" },
         ],
       };
@@ -154,7 +169,9 @@ describe("TC-ECON-021 stall requires the full corroboration", () => {
   test("no CPU-shaped key exists in the projection", () => {
     const signals = source(() => ({
       readings: [],
-      sourcedSignals: [{ kind: "heartbeat-age" as const, status: "sourced" as const, value: 1, observedAt: "t" }],
+      sourcedSignals: [
+        { kind: "heartbeat-age" as const, status: "sourced" as const, value: 1, observedAt: "t" },
+      ],
     }))("lane-1");
     expect(JSON.stringify(signals ?? {})).not.toMatch(/cpu/i);
     for (const key of Object.keys(signals ?? {})) {

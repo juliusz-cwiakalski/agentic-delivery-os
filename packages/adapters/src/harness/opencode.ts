@@ -271,7 +271,12 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
         ECONOMICS_SOURCED_SIGNAL_KINDS.filter((kind) => !declaredSourcedSignals.includes(kind)).map(
           (kind) => [kind, "harness-unsupported"],
         ),
-      ) as Partial<Record<(typeof ECONOMICS_SOURCED_SIGNAL_KINDS)[number], "harness-unsupported" | "not-observed">>;
+      ) as Partial<
+        Record<
+          (typeof ECONOMICS_SOURCED_SIGNAL_KINDS)[number],
+          "harness-unsupported" | "not-observed"
+        >
+      >;
       return {
         ok: true,
         value: options.assembleLiveness({

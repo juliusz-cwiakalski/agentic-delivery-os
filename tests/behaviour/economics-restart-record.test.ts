@@ -6,7 +6,11 @@
  */
 import { afterEach, describe, expect, test } from "bun:test";
 import { STATE_SCHEMA_VERSION } from "../../packages/core/src/contracts/index";
-import { createEconomicsRuntime, runtimeEvidence, type EconomicsRuntime } from "../fixtures/economics/harness";
+import {
+  createEconomicsRuntime,
+  runtimeEvidence,
+  type EconomicsRuntime,
+} from "../fixtures/economics/harness";
 
 const runtimes: EconomicsRuntime[] = [];
 

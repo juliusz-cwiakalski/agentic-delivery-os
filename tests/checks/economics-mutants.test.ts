@@ -15,14 +15,26 @@ import {
   parseRefusalCorpus,
 } from "../../packages/core/src/domain/index";
 import { PREFILL_CASES } from "../fixtures/economics/cases";
-import { MUTANT_ID as A, classify as classifyA } from "../fixtures/economics/mutants/a-prefill-misclassification";
+import {
+  MUTANT_ID as A,
+  classify as classifyA,
+} from "../fixtures/economics/mutants/a-prefill-misclassification";
 import { MUTANT_ID as B, classifyCpu } from "../fixtures/economics/mutants/b-cpu-substitution";
 import { MUTANT_ID as C, projectTraffic } from "../fixtures/economics/mutants/c-absence-to-zero";
-import { attempt as attemptBypass, MUTANT_ID as D } from "../fixtures/economics/mutants/d-gate-bypass";
+import {
+  attempt as attemptBypass,
+  MUTANT_ID as D,
+} from "../fixtures/economics/mutants/d-gate-bypass";
 import { admit as admitE, MUTANT_ID as E } from "../fixtures/economics/mutants/e-hardcoded-bound";
-import { classifyUnreadable, MUTANT_ID as F } from "../fixtures/economics/mutants/f-fail-open-budget";
+import {
+  classifyUnreadable,
+  MUTANT_ID as F,
+} from "../fixtures/economics/mutants/f-fail-open-budget";
 import { MUTANT_ID as G, refusalCorpus } from "../fixtures/economics/mutants/g-silent-exhaustion";
-import { amplificationForMissingRepay, MUTANT_ID as H } from "../fixtures/economics/mutants/h-fabricated-zero";
+import {
+  amplificationForMissingRepay,
+  MUTANT_ID as H,
+} from "../fixtures/economics/mutants/h-fabricated-zero";
 
 const realOutcome = (signals: WatchdogSignals): string => {
   const evaluation = classifyWatchdogLiveness(signals);
@@ -35,7 +47,9 @@ describe("TC-ECON-081 mutants prove every zero-defect threshold is enforced", ()
       (entry) =>
         classifyA({
           heartbeatAgeMs: entry.signals.heartbeatAgeMs,
-          ...(entry.signals.tokenDelta === undefined ? {} : { tokenDelta: entry.signals.tokenDelta }),
+          ...(entry.signals.tokenDelta === undefined
+            ? {}
+            : { tokenDelta: entry.signals.tokenDelta }),
           ...(entry.signals.traffic === undefined ? {} : { traffic: entry.signals.traffic }),
         }) !== entry.expectedVerdict,
     );
@@ -67,7 +81,9 @@ describe("TC-ECON-081 mutants prove every zero-defect threshold is enforced", ()
       spawn: () => calls.push("spawn"),
     });
     expect(calls).toEqual(["append:1", "spawn"]);
-    expect(calls.indexOf("spawn")).toBeGreaterThan(calls.findIndex((call) => call.startsWith("append:")));
+    expect(calls.indexOf("spawn")).toBeGreaterThan(
+      calls.findIndex((call) => call.startsWith("append:")),
+    );
     expect(D).toContain("gate-bypass");
   });
 

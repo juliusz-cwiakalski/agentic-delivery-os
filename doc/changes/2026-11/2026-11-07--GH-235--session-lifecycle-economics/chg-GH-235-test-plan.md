@@ -1438,6 +1438,105 @@ TC IDs use the `ECON` feature prefix. Sequence blocks are intentional: `0xx` con
 
 ## 10. Test Execution Log
 
-| TC ID | Run Date | Result | Notes |
-|-------|----------|--------|-------|
-| — | — | Not run | Populated during delivery and quality gates. |
+Run date: 2026-11-07. Environment: Bun 1.4.4, pnpm 10.18.3, Linux x64
+(worktree `feat/GH-235/session-lifecycle-economics`, base `a69b555e`).
+
+### 10.1 Per-TC results (delivery phases 1-6)
+
+| TC ID | Run Date | Result | Evidence |
+|-------|----------|--------|----------|
+| TC-ECON-001 | 2026-11-07 | PASS | `tests/structure/economics-contract.test.ts` (15 tests): data-only home, one-home vocabularies, exact-three liveness kinds, no CPU key, matrix mutants. |
+| TC-ECON-002 | 2026-11-07 | PASS | `tests/structure/economics-imports.test.ts`: tier matrix, ambient guard, three temp-copy mutants. |
+| TC-ECON-003 | 2026-11-07 | PASS | `tests/structure/error-table.test.ts` (66 tests): `dispatch` kind + two rows, fourth watchdog row, round-trips, documented rows, exact total 86, delivered rows byte-identical. |
+| TC-ECON-004 | 2026-11-07 | PASS | `tests/checks/error-table-sync.test.ts` (84 tests) + `bun run scripts/checks/error-table-sync.ts`: entries=86 documented=86 S1=192 S3=29 corpus=41; delete/mismatch/undocumented mutations fail by name. |
+| TC-ECON-005 | 2026-11-07 | PASS | `tests/structure/economics-contract.test.ts`: six outcomes, one identity/exit per refusal, digits ⊆ {0,1,2}, seventh-outcome/duplicate/fourth-digit/fallback mutants fail. |
+| TC-ECON-010 | 2026-11-07 | PASS | `tests/conformance/harness-liveness.test.ts` (8) + `tests/behaviour/economics-liveness-sourcing.test.ts` (8): sourced entries beside exactly three kinds, projected keys, absent stays absent, edge composition wired. |
+| TC-ECON-011 | 2026-11-07 | PASS | `tests/behaviour/watchdog-liveness.test.ts` (11): source-less exit 2, no data/verdict, evidence names absent kinds; source-present control does not answer absent. |
+| TC-ECON-012 | 2026-11-07 | PASS | `tests/structure/economics-imports.test.ts`, `tests/behaviour/economics-liveness-sourcing.test.ts`, `tests/behaviour/economics-liveness-corroboration.test.ts`, `tests/types/economics.type-test.ts`: zero CPU keys, CPU-only reading absent, projection drops undeclared CPU facts. |
+| TC-ECON-020 | 2026-11-07 | PASS | `tests/behaviour/economics-liveness-prefill.test.ts` (3 tests; matrix floor 3×3×4 = 36 rows verified): every row progressing exit 0, no runner-side effect, no lane mutation. |
+| TC-ECON-021 | 2026-11-07 | PASS | `tests/behaviour/economics-liveness-corroboration.test.ts` (8 tests): full 36-combination matrix + bound−1/bound/bound+1, exactly-corroborated stalls only, corpus parse/stability, three criterion-drop mutants flip rows. |
+| TC-ECON-022 | 2026-11-07 | PASS | `tests/behaviour/economics-no-execution.test.ts` (6 tests): port declares no execution operation, execution log empty for all fixture classes, imports clean, spawn-on-refusal mutant observable. |
+| TC-ECON-030 | 2026-11-07 | PASS | `tests/behaviour/watchdog-liveness.test.ts` + `tests/behaviour/economics-envelope.test.ts`: `watchdog.liveness-stalled`, exit 1, no `data.verdict`, bounded stall corpus, unchanged error key set. |
+| TC-ECON-031 | 2026-11-07 | PASS | `tests/behaviour/economics-envelope.test.ts` (8 tests): progressing 0, stalled 1, absent 2, mutually exclusive and jointly exhaustive. |
+| TC-ECON-032 | 2026-11-07 | PASS | `tests/golden/watchdog-output.test.ts` (12): progressing/stalled/absent pinned in JSON and text mode; narrow normalization; goldens read-only. |
+| TC-ECON-033 | 2026-11-07 | PASS | `tests/behaviour/economics-envelope.test.ts` + `tests/golden/economics.test.ts`: one valid exclusive envelope across attach/restart/refusal/unevaluable; exit classes exact; corpus non-empty and ≤512 bytes. |
+| TC-ECON-040 | 2026-11-07 | PASS | `tests/behaviour/economics-resume-attach.test.ts` (3): identity/tree root persist, no ordinal, no event, no execution; control takes re-entry. |
+| TC-ECON-041 | 2026-11-07 | PASS | `tests/behaviour/economics-resume-uneconomical.test.ts` (4): `dispatch.resume-uneconomical`, exit 1, `reason/repayTokens/economicsRef` corpus with numeric re-pay, zero spawns, economical control records one event. |
+| TC-ECON-042 | 2026-11-07 | PASS | `tests/behaviour/economics-resume-precedence.test.ts` (8): four cells, budget-before-economics, one identity per attempt, distinct remediation hints, both compositions identical. |
+| TC-ECON-043 | 2026-11-07 | PASS | `tests/behaviour/economics-resume-capability.test.ts` (6): absent capability unsupported, declared-but-gapped refuses naming the gap, incomplete evidence refuses naming the fact, undefined→attach mutant caught. |
+| TC-ECON-050 | 2026-11-07 | PASS | `tests/behaviour/economics-restart-record.test.ts` (4): one verified record per admission (ordinals 1..3, work item/run/session/reason/re-pay/time), refusals append nothing, fold read-only, existing kinds readable. |
+| TC-ECON-051 | 2026-11-07 | PASS | `tests/behaviour/economics-restart-durability.test.ts` (4): closed-writer → fresh handle count 2 + identical history, next ordinal 3, byte-identical derivation, no migration. |
+| TC-ECON-052 | 2026-11-07 | PASS | `tests/behaviour/economics-budget-exhaustion.test.ts` (5): 3-of-3 fourth attempt refused before spawn, `dispatch.restart-budget-exceeded` exit 1, corpus `reason/restarts/historyRef=economics/GH-235`, reference resolves to 3 ordered records, terminal read back, no event, 2-of-3 control admits ordinal 3. |
+| TC-ECON-053 | 2026-11-07 | PASS | `tests/behaviour/economics-budget-path-parity.test.ts` (4): supervised vs one-shot normalized refusal byte-identical, one terminal record, one-shot state-only, bypass mutant observable. |
+| TC-ECON-054 | 2026-11-07 | PASS | `tests/behaviour/economics-exhaustion-record.test.ts` (6): terminal/consumer-field contract, same resolvable reference as the corpus, no content canary, post-exhaustion replay zero spawns/queue mutation, no requeue/retry instruction, additive. |
+| TC-ECON-055 | 2026-11-07 | PASS | `tests/behaviour/economics-budget-failclosed.test.ts` (6): torn/gapped/duplicate/unknown-kind/unreadable refuse with existing state identities, exit per projection, never `fallback.internal`, fail-open mutant caught. |
+| TC-ECON-056 | 2026-11-07 | PASS | `tests/structure/economics-gate-seam.test.ts` (6): exactly one gate declaration, append dominated by gate, shared evaluation, no cached count, bypass-order mutant fails by file. |
+| TC-ECON-060 | 2026-11-07 | PASS | `tests/behaviour/economics-view.test.ts` (6): four fixtures from fresh handles, declared field names, byte-identical replay, zero harness query, read-only. |
+| TC-ECON-061 | 2026-11-07 | PASS | `tests/behaviour/economics-amplification.test.ts` (6): 0.25/0.75/1.5 ratios, monotonic, loop flagged `restart-loop`, zero restarts → no ratio/flag. |
+| TC-ECON-062 | 2026-11-07 | PASS | `tests/behaviour/economics-degradation.test.ts` (5): absent re-pay / absent unique progress → null + closed warning naming field+ordinal, complete fixture warning-free, fabricated-zero mutant caught. |
+| TC-ECON-070 | 2026-11-07 | PASS | `tests/behaviour/config-lane.test.ts`: absent branch 30000/3 with defaults origins, explicit values with source origins, single-homed defaults, no scheduler. |
+| TC-ECON-071 | 2026-11-07 | PASS | `tests/behaviour/config-lane.test.ts`: 13-case invalid matrix via existing identities, budget 0 valid, valid control resolves. |
+| TC-ECON-072 | 2026-11-07 | PASS | `tests/behaviour/economics-budget-config.test.ts` (7): budget 0/1/5 behaviours, rebinding observed at evaluation time, no `3` literal in the gate, hardcoded-3 mutant fails. |
+| TC-ECON-080 | 2026-11-07 | PASS | `tests/checks/economics-determinism.test.ts` (5): same-facts liveness replay, two structurally identical stores byte-identical, narrow normalization preserves semantic tokens. |
+| TC-ECON-081 | 2026-11-07 | PASS | `tests/checks/economics-mutants.test.ts` (9): eight committed mutant modules each rejected by its named oracle (tokenDelta, cpu, traffic, gate-bypass, bound, fail-open, historyRef, repayTokens). |
+| TC-ECON-082 | 2026-11-07 | PASS | Full regression battery: 4728 pass / 4 skip / 0 fail; signals-absent still exit 2; the four deliberate liveness updates are exactly (i)-(iv); harness exact-three assertions unchanged. |
+| TC-ECON-083 | 2026-11-07 | HANDOFF | Manual lifecycle-phase-7 documentation check rides the `@doc-syncer` spec-reconciliation handoff; delivery did not edit `doc/spec/**` beyond the Phase-1 result-contract rows. |
+| TC-ECON-084 | 2026-11-07 | PASS | `tests/checks/forbidden-literals.test.ts` (27): no seed literal in the new surface, temp-copy literal fails by file/token, refusal/record payload canary scan clean. |
+
+### 10.2 Aggregate gate evidence
+
+| Gate | Command | Result |
+|------|---------|--------|
+| Aggregate | `pnpm check` | PASS (lint 0 errors, format clean, typecheck, 4728 pass / 4 skip / 0 fail, boundaries 248 modules/652 deps, attw 5 publishables) |
+| Boundaries | `bun test tests/boundaries`; `pnpm check:boundaries` | PASS (140 tests; no dependency violations) |
+| Brand | `pnpm check:forbidden-literals`; `bun run scripts/checks/ambient-globals.ts` | PASS (5/5 scope classes, 0 violations; 95 neutral-set files clean) |
+| Error table | `bun run scripts/checks/error-table-sync.ts` | PASS (entries=86 documented=86) |
+| Licenses | `bun run scripts/checks/license-audit.ts` | PASS (0 new dependencies; registry allow-list holds) |
+| Vulnerabilities | `bun run scripts/checks/vulnerability-gate.ts` | PASS (0 high/critical in the committed lockfile) |
+| Whitespace | `git diff --check` | PASS |
+| Changesets | `.changeset/gh-235-session-lifecycle-economics-minor.md` | Exactly one new five-package minor changeset. |
+
+`pnpm check` requires `TMPDIR` inside the repository (e.g.
+`TMPDIR="$PWD/tmp/tmpdir"`) in this environment: the `ci-baseline-parity`
+suite's local `git clone --local` uses hardlinks and fails across filesystems
+(`Invalid cross-device link`) when `/tmp` is a different device. The product
+suites are unaffected.
+
+### 10.3 Delivery-time confirmations (D-1..D-13)
+
+- D-9: unevaluable budgets reuse the delivered `state.store.torn`,
+  `state.store.unknown`, `state.schema.mismatch`, `state.permission.denied`, and
+  `state.keys.missing` identities; `fallback.internal` is never produced.
+- D-1 fixture-side additive extension: the economics recording runtime uses the
+  delivered state harness unchanged, plus a state-port factory; no production
+  module was reshaped for the fixture.
+- D-11: the gate reads the bound from the injected policy port on every
+  evaluation; the TC-ECON-072 rebinding fixture observes the new bound.
+- D-13: no new dependency, no `node:child_process` site, no `.dependency-cruiser`
+  rule change, and no new workspace edge.
+
+### 10.4 Deviations and observations (for the review gate)
+
+1. **Error-table additions are three rows, not four.** The binding spec §7.1 and
+   plan D-2 declare exactly two `dispatch` rows and one fourth `watchdog` row;
+   the delivered table grows 83 → 86. The test plan's "four rows" wording is
+   reconciled to the spec; no fourth identity was invented, and the four
+   `WATCHDOG_ERROR_CODES` are bound 4/4.
+2. **Commit subjects were shortened to ≤100 characters** to pass the repository's
+   commitlint `header-max-length` rule; each phase's meaning is preserved.
+3. **Observational additions beyond the declared file list** (required support,
+   no behaviour beyond the plan): `packages/core/src/{index.ts,config/index.ts,
+   domain/index.ts,state/index.ts}` exports; `scripts/checks/error-table-sync.ts`
+   reserved two-segment identities; `tests/fixtures/ports/v1-contract-inventory.json`;
+   `tests/fixtures/harness/harness-io.ts` sourced-fact fixture;
+   `tests/fixtures/config/lane.ts`; `tests/fixtures/economics/**` (harness, cases,
+   mutants, goldens); `biome.json` golden formatter overrides; existing-suite
+   exact-key updates in `tests/behaviour/config-schema.test.ts` and
+   `tests/structure/config-contract.test.ts` (the new `lane` branch).
+4. **Production sourcing seam:** the command edge composes the adapter-sourced
+   bridge over an injected `readSourcedSignals` fact seam. The lane→session fact
+   acquisition belongs to the out-of-scope dispatch/session surfaces (NG-4); the
+   flip is fully exercised through injected adapter facts in the conformance,
+   sourcing, prefill, corroboration, envelope, and golden suites.
+5. **`lane.restart-budget = 0` is valid** (D-12) and is the positive control, not
+   an invalid case; no new configuration identity was added.

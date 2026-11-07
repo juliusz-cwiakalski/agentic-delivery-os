@@ -111,7 +111,8 @@ export type EconomicsRuntime = {
   readonly supervised: EconomicsResumeComposition;
   readonly oneShot: EconomicsResumeComposition;
   readonly execution: ExecutionDouble;
-  readonly options: Required<Pick<EconomicsRuntimeOptions, "bound" | "runId">> & EconomicsRuntimeOptions;
+  readonly options: Required<Pick<EconomicsRuntimeOptions, "bound" | "runId">> &
+    EconomicsRuntimeOptions;
   attempt(mode: "supervised" | "one-shot", input: EconomicsResumeInput): EconomicsResumeDecision;
   read(workItemRef: string): EconomicsRecordsRead;
   view(workItemRef: string): EconomicsView;
@@ -122,9 +123,7 @@ let fenceCounter = 0;
 let seedCounter = 0;
 
 /** Open one recording runtime over a fresh temp store root (`gh235-` label). */
-export const createEconomicsRuntime = (
-  options: EconomicsRuntimeOptions = {},
-): EconomicsRuntime => {
+export const createEconomicsRuntime = (options: EconomicsRuntimeOptions = {}): EconomicsRuntime => {
   const root = mkdtempSync(join(tmpdir(), `gh235-${options.label ?? "economics"}-`));
   const identity = makeIdentity(root);
   const edge = createTestEdge();
@@ -210,7 +209,6 @@ export const seedRestarts = (
       workItemRef: "GH-235",
       runId: "run-seed",
       sessionId: `ses_fixture_${ordinal}`,
-      ordinal,
       reason: "session-interrupted",
       repayTokens: { inputTokens: 100, outputTokens: 0 },
       observedUniqueProgressTokens: 400,

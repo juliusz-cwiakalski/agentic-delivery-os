@@ -106,6 +106,18 @@
       "formatter": {
         "enabled": false
       }
+    },
+    {
+      "includes": ["tests/fixtures/economics/golden/**"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": ["tests/fixtures/watchdog/golden/**"],
+      "formatter": {
+        "enabled": false
+      }
     }
   ]
 }

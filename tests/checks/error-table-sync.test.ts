@@ -1578,11 +1578,7 @@ describe("TC-ECON-004 the four economics rows bind two-way to the table and corp
     expect(result.failures).toEqual([]);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     const doc = readFile(ROOT, DOC);
-    for (const row of [
-      ROW_ECON_WATCHDOG_STALLED,
-      ROW_ECON_BUDGET,
-      ROW_ECON_UNECONOMICAL,
-    ]) {
+    for (const row of [ROW_ECON_WATCHDOG_STALLED, ROW_ECON_BUDGET, ROW_ECON_UNECONOMICAL]) {
       expect(doc.split(row).length - 1).toBe(1);
     }
   });

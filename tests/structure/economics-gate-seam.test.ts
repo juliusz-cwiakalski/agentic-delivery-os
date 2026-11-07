@@ -39,9 +39,7 @@ export const gateOrderViolations = (text: string, label: string): string[] => {
   const gateIndex = text.indexOf("evaluateRestartBudget(");
   if (appendIndex < 0) return [];
   if (gateIndex < 0) return [`${label}: restart append without an admission gate call`];
-  return appendIndex < gateIndex
-    ? [`${label}: restart append precedes the admission gate`]
-    : [];
+  return appendIndex < gateIndex ? [`${label}: restart append precedes the admission gate`] : [];
 };
 
 const CACHED_COUNT_NAMES = ["cachedCount", "countCache", "restartCountCache", "cachedRestarts"];
@@ -57,7 +55,7 @@ describe("TC-ECON-056 one gate, every path: budget consumption has a single seam
   test("every restart-event append is dominated by the gate's admission result", () => {
     const text = readFileSync(join(ROOT, RESUME), "utf8");
     expect(gateOrderViolations(text, RESUME)).toEqual([]);
-    expect(text).toContain("if (gate.outcome === \"refuse-budget\")");
+    expect(text).toContain('if (gate.outcome === "refuse-budget")');
     expect(text).toContain("const record = restartRecordFor(deps, input, gate.nextOrdinal)");
   });
 
@@ -76,7 +74,9 @@ describe("TC-ECON-056 one gate, every path: budget consumption has a single seam
     for (const file of files) {
       const text = readFileSync(file, "utf8");
       if (/\bcount\s*>=\s*input\.bound\b/.test(text)) {
-        throw new Error(`${file.slice(ROOT.length + 1)} composes restart admission outside the gate`);
+        throw new Error(
+          `${file.slice(ROOT.length + 1)} composes restart admission outside the gate`,
+        );
       }
     }
     expect(true).toBe(true);
@@ -98,12 +98,12 @@ describe("TC-ECON-056 one gate, every path: budget consumption has a single seam
   test("the bypass mutant (append before the gate) fails the order assertion naming the file", () => {
     const live = readFileSync(join(ROOT, RESUME), "utf8");
     const appendBefore = `deps.store.appendRestartEvent(record);\nconst gate = evaluateRestartBudget(input);\n`;
-    expect(gateOrderViolations(appendBefore, "packages/core/src/domain/bypass.ts").join("\n")).toContain(
-      "packages/core/src/domain/bypass.ts: restart append precedes the admission gate",
-    );
-    expect(gateOrderViolations("deps.store.appendRestartEvent(record);", "x.ts").join("\n")).toContain(
-      "restart append without an admission gate call",
-    );
+    expect(
+      gateOrderViolations(appendBefore, "packages/core/src/domain/bypass.ts").join("\n"),
+    ).toContain("packages/core/src/domain/bypass.ts: restart append precedes the admission gate");
+    expect(
+      gateOrderViolations("deps.store.appendRestartEvent(record);", "x.ts").join("\n"),
+    ).toContain("restart append without an admission gate call");
     expect(gateOrderViolations(live, RESUME)).toEqual([]);
 
     const temp = mkdtempSync(join(tmpdir(), "gate-seam-"));
@@ -113,9 +113,7 @@ describe("TC-ECON-056 one gate, every path: budget consumption has a single seam
         join(temp, "packages/core/src/domain/bypass.ts"),
         "export const evaluateRestartBudget = () => 1;\n",
       );
-      const declarations = gateDeclarations([
-        join(temp, "packages/core/src/domain/bypass.ts"),
-      ]);
+      const declarations = gateDeclarations([join(temp, "packages/core/src/domain/bypass.ts")]);
       expect(declarations).toHaveLength(1);
     } finally {
       rmSync(temp, { recursive: true, force: true });

@@ -128,9 +128,9 @@ describe("TC-ECON-054 the terminal state is escalation-ready data", () => {
     const records = created.store.readRecords();
     expect(records.ok).toBe(true);
     if (!records.ok) return;
-    expect(records.value.records.every((record) => record.schemaVersion === "delivery.state.v1")).toBe(
-      true,
-    );
+    expect(
+      records.value.records.every((record) => record.schemaVersion === "delivery.state.v1"),
+    ).toBe(true);
     expect(records.value.records.some((record) => record.kind === "economics.restart")).toBe(true);
     expect(
       records.value.records.some((record) => record.kind === "economics.budget-exhaustion"),

@@ -108,7 +108,11 @@ describe("TC-ECON-001 the economics contract has one data-only home", () => {
   test("each vocabulary is a single `as const` declaration driving its union", () => {
     const text = readFileSync(join(ROOT, CONTRACT), "utf8");
     const vocabularies = [
-      ["ECONOMICS_SOURCED_SIGNAL_KINDS", "EconomicsSourcedSignalKind", ECONOMICS_SOURCED_SIGNAL_KINDS],
+      [
+        "ECONOMICS_SOURCED_SIGNAL_KINDS",
+        "EconomicsSourcedSignalKind",
+        ECONOMICS_SOURCED_SIGNAL_KINDS,
+      ],
       ["ECONOMICS_RESTART_REASONS", "EconomicsRestartReason", ECONOMICS_RESTART_REASONS],
       ["ECONOMICS_VIEW_FIELDS", "EconomicsViewField", ECONOMICS_VIEW_FIELDS],
       [
@@ -117,11 +121,7 @@ describe("TC-ECON-001 the economics contract has one data-only home", () => {
         ECONOMICS_RESTART_HISTORY_FIELDS,
       ],
       ["ECONOMICS_OUTCOMES", "EconomicsOutcome", ECONOMICS_OUTCOMES],
-      [
-        "ECONOMICS_EXHAUSTION_OPTIONS",
-        "EconomicsExhaustionOption",
-        ECONOMICS_EXHAUSTION_OPTIONS,
-      ],
+      ["ECONOMICS_EXHAUSTION_OPTIONS", "EconomicsExhaustionOption", ECONOMICS_EXHAUSTION_OPTIONS],
       ["ECONOMICS_RESUME_MODES", "EconomicsResumeMode", ECONOMICS_RESUME_MODES],
     ] as const;
     for (const [name, union, values] of vocabularies) {
@@ -135,7 +135,9 @@ describe("TC-ECON-001 the economics contract has one data-only home", () => {
 
   test("the sourced-signal vocabulary is closed, non-empty, and disjoint from the exact-three liveness kinds", () => {
     expect(ECONOMICS_SOURCED_SIGNAL_KINDS.length).toBeGreaterThan(0);
-    expect(new Set(ECONOMICS_SOURCED_SIGNAL_KINDS).size).toBe(ECONOMICS_SOURCED_SIGNAL_KINDS.length);
+    expect(new Set(ECONOMICS_SOURCED_SIGNAL_KINDS).size).toBe(
+      ECONOMICS_SOURCED_SIGNAL_KINDS.length,
+    );
     expect(ECONOMICS_SOURCED_SIGNAL_KINDS).toEqual(["heartbeat-age", "token-delta"]);
     // DEC-8: the delivered liveness-kind vocabulary is asserted still exactly three.
     expect(HARNESS_LIVENESS_KINDS).toEqual(["session-traffic", "worktree-activity", "process"]);
@@ -205,9 +207,9 @@ describe("TC-ECON-001 the economics contract has one data-only home", () => {
       ),
     ).toBe(true);
     expect(
-      economicsContractViolations(`${live}\nexport function rogue(): number {\n  return 1;\n}\n`).some(
-        (message) => message.includes("executable statement"),
-      ),
+      economicsContractViolations(
+        `${live}\nexport function rogue(): number {\n  return 1;\n}\n`,
+      ).some((message) => message.includes("executable statement")),
     ).toBe(true);
   });
 });
@@ -233,7 +235,8 @@ export const matrixViolations = (rows: readonly EconomicsOutcomeMatrixRow[]): st
       if (row.projection !== "success") violations.push("progressing is not a success projection");
     }
     if (row.outcome === "restart-within-budget") {
-      if (row.identity !== null) violations.push("restart-within-budget declares a refusal identity");
+      if (row.identity !== null)
+        violations.push("restart-within-budget declares a refusal identity");
       if (row.exitCode !== null) violations.push("restart-within-budget declares an exit digit");
       if (row.projection !== "record") violations.push("restart-within-budget is not a record");
     }
@@ -275,9 +278,7 @@ describe("TC-ECON-005 the outcome/identity/exit matrix is declared once and tota
     });
     expect(byOutcome.get("sources-absent")?.identity).toBe("watchdog.signals-absent");
     expect(byOutcome.get("sources-absent")?.exitCode).toBe(2);
-    expect(byOutcome.get("restart-past-budget")?.identity).toBe(
-      "dispatch.restart-budget-exceeded",
-    );
+    expect(byOutcome.get("restart-past-budget")?.identity).toBe("dispatch.restart-budget-exceeded");
     expect(byOutcome.get("resume-uneconomical")?.identity).toBe("dispatch.resume-uneconomical");
     expect(byOutcome.get("progressing")?.identity).toBeNull();
   });
@@ -333,7 +334,9 @@ describe("TC-ECON-001 no second sourced-signal home in a temp package tree", () 
             : "";
         })
         .filter((entry) => entry.length > 0);
-      expect(violations.join("\n")).toContain("rogue.ts: redeclares ECONOMICS_SOURCED_SIGNAL_KINDS");
+      expect(violations.join("\n")).toContain(
+        "rogue.ts: redeclares ECONOMICS_SOURCED_SIGNAL_KINDS",
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

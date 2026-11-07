@@ -52,8 +52,9 @@ const failureCodes = new Set<string>(ECONOMICS_RECORD_FAILURE_CODES);
 const classifyReadFailure = (code: string): EconomicsRecordFailureCode =>
   failureCodes.has(code) ? (code as EconomicsRecordFailureCode) : "state.store.torn";
 
-const locationOf = (error: { readonly location?: StateSafeLocation }): StateSafeLocation | undefined =>
-  error.location;
+const locationOf = (error: {
+  readonly location?: StateSafeLocation;
+}): StateSafeLocation | undefined => error.location;
 
 const restartPayload = (record: EconomicsRestartRecord): StateJsonValue => ({
   schemaId: record.schemaId,
@@ -216,7 +217,8 @@ export const readEconomicsRecords = (
     if (record.kind === ECONOMICS_RESTART_RECORD_KIND) {
       const parsed = restartFrom(record.payload, location);
       if (!parsed.ok) return readFailure(parsed.error.code, parsed.error.location);
-      if (parsed.value.workItemRef !== workItemRef) return readFailure("state.store.unknown", location);
+      if (parsed.value.workItemRef !== workItemRef)
+        return readFailure("state.store.unknown", location);
       if (ordinals.has(parsed.value.ordinal)) return readFailure("state.store.torn", location);
       ordinals.add(parsed.value.ordinal);
       restarts.push(parsed.value);

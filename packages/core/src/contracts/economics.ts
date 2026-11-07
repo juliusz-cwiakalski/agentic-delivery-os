@@ -45,7 +45,10 @@ export type EconomicsSourcedSignalReading =
   | EconomicsSourcedSignalAbsentReading;
 
 /** The closed restart-reason vocabulary (D-5). */
-export const ECONOMICS_RESTART_REASONS = ["watchdog.liveness-stalled", "session-interrupted"] as const;
+export const ECONOMICS_RESTART_REASONS = [
+  "watchdog.liveness-stalled",
+  "session-interrupted",
+] as const;
 
 export type EconomicsRestartReason = (typeof ECONOMICS_RESTART_REASONS)[number];
 
@@ -189,7 +192,12 @@ export type EconomicsOutcomeMatrixRow = {
 };
 
 export const ECONOMICS_OUTCOME_MATRIX = [
-  { outcome: "progressing", identity: null, exitCode: ECONOMICS_EXIT_SUCCESS, projection: "success" },
+  {
+    outcome: "progressing",
+    identity: null,
+    exitCode: ECONOMICS_EXIT_SUCCESS,
+    projection: "success",
+  },
   {
     outcome: "stalled",
     identity: "watchdog.liveness-stalled",
@@ -431,8 +439,7 @@ export type EconomicsResumeDecision =
 /** The two composition shapes: supervised-style and one-shot-style (AC-F4-3). */
 export const ECONOMICS_RESUME_COMPOSITION_MODES = ["supervised", "one-shot"] as const;
 
-export type EconomicsResumeCompositionMode =
-  (typeof ECONOMICS_RESUME_COMPOSITION_MODES)[number];
+export type EconomicsResumeCompositionMode = (typeof ECONOMICS_RESUME_COMPOSITION_MODES)[number];
 
 /** One production composition: its mode plus the attempt entry point. */
 export type EconomicsResumeComposition = {

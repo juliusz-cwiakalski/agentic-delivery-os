@@ -113,7 +113,12 @@ describe("TC-ECON-033/080 canonical economics goldens", () => {
 
   test("no golden file was rewritten by a read-only run", () => {
     if (UPDATE) return;
-    const names = ["view-three.json", "view-terminal.json", "decision-past-budget.json", "decision-uneconomical.json"];
+    const names = [
+      "view-three.json",
+      "view-terminal.json",
+      "decision-past-budget.json",
+      "decision-uneconomical.json",
+    ];
     for (const name of names) {
       expect(statSync(join(GOLDEN_ROOT, name)).isFile()).toBe(true);
     }

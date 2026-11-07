@@ -318,9 +318,7 @@ describe("TC-ECON-010 sourced signals beside the unchanged exact-three kinds", (
       "heartbeat-age",
       "token-delta",
     ]);
-    expect(report.value.sourcedSignals).toEqual([
-      ...SOURCED_SIGNAL_FACTS,
-    ]);
+    expect(report.value.sourcedSignals).toEqual([...SOURCED_SIGNAL_FACTS]);
     const signals = harnessLivenessToWatchdogSignals(report.value);
     expect(signals).toEqual({ heartbeatAgeMs: 1_500, tokenDelta: 42, traffic: 11 });
   });

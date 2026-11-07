@@ -274,8 +274,6 @@ export const catalogPaths = (catalog: ConfigCatalog): Array<[string, CatalogFiel
   return result;
 };
 
-
-
 /** The resolved lane branch: cadence and bound, with units declared. */
 export type LaneSettings = {
   /** Lane liveness evaluation cadence in milliseconds. */

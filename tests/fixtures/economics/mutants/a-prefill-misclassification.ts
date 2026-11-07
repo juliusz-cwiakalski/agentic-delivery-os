@@ -5,5 +5,4 @@ export const classify = (input: {
   readonly heartbeatAgeMs: number;
   readonly tokenDelta?: number;
   readonly traffic?: number;
-}): "stalled" | "progressing" =>
-  (input.tokenDelta ?? 0) > 0 ? "stalled" : "progressing";
+}): "stalled" | "progressing" => ((input.tokenDelta ?? 0) > 0 ? "stalled" : "progressing");

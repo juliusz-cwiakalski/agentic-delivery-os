@@ -37,7 +37,7 @@ const utf8Bytes = (text: string): number => {
   return bytes;
 };
 
-const valueOf = (value: string | number): string => {
+const renderValue = (value: string | number): string => {
   if (typeof value === "number") {
     if (!Number.isFinite(value)) throw new Error("economics evidence value is not finite");
     return String(value);
@@ -61,7 +61,7 @@ export const formatRefusalCorpus = (
       if (key.length === 0 || key.includes("=")) {
         throw new Error("economics evidence key is empty or contains '='");
       }
-      return `${key}=${valueOf(value)}`;
+      return `${key}=${renderValue(value)}`;
     })
     .join(ECONOMICS_EVIDENCE_SEPARATOR);
   const bytes = utf8Bytes(text);
@@ -95,14 +95,17 @@ export const formatStallEvidence = (input: {
   readonly traffic: number;
   readonly stallBoundMs: number;
 }): string => {
-  const values: Readonly<Record<(typeof ECONOMICS_EVIDENCE_STALL_KEYS)[number], string | number>> = {
-    reason: input.reason,
-    heartbeatAgeMs: input.heartbeatAgeMs,
-    tokenDelta: input.tokenDelta,
-    traffic: input.traffic,
-    stallBoundMs: input.stallBoundMs,
-  };
-  return formatRefusalCorpus(ECONOMICS_EVIDENCE_STALL_KEYS.map((key) => [key, values[key]] as const));
+  const values: Readonly<Record<(typeof ECONOMICS_EVIDENCE_STALL_KEYS)[number], string | number>> =
+    {
+      reason: input.reason,
+      heartbeatAgeMs: input.heartbeatAgeMs,
+      tokenDelta: input.tokenDelta,
+      traffic: input.traffic,
+      stallBoundMs: input.stallBoundMs,
+    };
+  return formatRefusalCorpus(
+    ECONOMICS_EVIDENCE_STALL_KEYS.map((key) => [key, values[key]] as const),
+  );
 };
 
 /** The budget corpus: reason, restart count, and the resolvable history reference. */
@@ -111,12 +114,15 @@ export const formatBudgetEvidence = (input: {
   readonly restarts: number;
   readonly workItemRef: string;
 }): string => {
-  const values: Readonly<Record<(typeof ECONOMICS_EVIDENCE_BUDGET_KEYS)[number], string | number>> = {
-    reason: input.reason,
-    restarts: input.restarts,
-    historyRef: economicsReferenceFor(input.workItemRef),
-  };
-  return formatRefusalCorpus(ECONOMICS_EVIDENCE_BUDGET_KEYS.map((key) => [key, values[key]] as const));
+  const values: Readonly<Record<(typeof ECONOMICS_EVIDENCE_BUDGET_KEYS)[number], string | number>> =
+    {
+      reason: input.reason,
+      restarts: input.restarts,
+      historyRef: economicsReferenceFor(input.workItemRef),
+    };
+  return formatRefusalCorpus(
+    ECONOMICS_EVIDENCE_BUDGET_KEYS.map((key) => [key, values[key]] as const),
+  );
 };
 
 /** The uneconomical corpus: reason, the re-pay token figure, and the records reference. */

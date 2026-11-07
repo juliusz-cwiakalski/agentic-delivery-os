@@ -254,10 +254,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "HARNESS_TOKEN_CLASSES",
     "HARNESS_WARNING_REASONS",
   ],
-  "core/src/domain/economics-budget.ts": [
-    "evaluateRestartBudget",
-    "foldRestartRecords",
-  ],
+  "core/src/domain/economics-budget.ts": ["evaluateRestartBudget", "foldRestartRecords"],
   "core/src/domain/economics-evidence.ts": [
     "economicsReferenceFor",
     "formatBudgetEvidence",
@@ -275,10 +272,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "evaluateResumeEconomics",
     "isEconomicalRepay",
   ],
-  "core/src/domain/economics-view.ts": [
-    "deriveEconomicsView",
-    "latestUniqueProgressTokens",
-  ],
+  "core/src/domain/economics-view.ts": ["deriveEconomicsView", "latestUniqueProgressTokens"],
   "core/src/domain/harness-canonical.ts": ["canonicalHarnessJson"],
   "core/src/domain/harness-capability.ts": [
     "harnessCapabilityViolations",

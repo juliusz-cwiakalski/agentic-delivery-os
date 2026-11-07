@@ -451,7 +451,11 @@ describe("TC-ECON-084 the economics surface is brand- and privacy-conformant", (
         traffic: 0,
         stallBoundMs: 300_000,
       }),
-      formatBudgetEvidence({ reason: "dispatch.restart-budget-exceeded", restarts: 3, workItemRef: "GH-235" }),
+      formatBudgetEvidence({
+        reason: "dispatch.restart-budget-exceeded",
+        restarts: 3,
+        workItemRef: "GH-235",
+      }),
       formatUneconomicalEvidence({
         reason: "dispatch.resume-uneconomical",
         repayTokens: 900,

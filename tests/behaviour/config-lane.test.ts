@@ -25,7 +25,12 @@ const resolveLane = (sources?: Parameters<typeof resolveConfig>[0]) => {
   if (!resolved.ok) return { ok: false as const, error: resolved.error };
   const lane = resolveLaneSettings(resolved.value.values, resolved.value.origins);
   return lane.ok
-    ? { ok: true as const, lane: lane.value, origins: resolved.value.origins, values: resolved.value.values }
+    ? {
+        ok: true as const,
+        lane: lane.value,
+        origins: resolved.value.origins,
+        values: resolved.value.values,
+      }
     : { ok: false as const, error: lane.error };
 };
 

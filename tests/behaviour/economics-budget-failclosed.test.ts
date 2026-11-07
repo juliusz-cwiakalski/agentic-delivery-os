@@ -65,7 +65,9 @@ const rawAppend = (
   }
 };
 
-const stubPort = (read: ReturnType<EconomicsResumeStorePort["readDeliveryRecords"]>): EconomicsResumeStorePort => ({
+const stubPort = (
+  read: ReturnType<EconomicsResumeStorePort["readDeliveryRecords"]>,
+): EconomicsResumeStorePort => ({
   readDeliveryRecords: () => read,
   appendRestartEvent: () => {
     throw new Error("must not append");
@@ -121,7 +123,12 @@ describe("TC-ECON-055 the budget gate is fail-closed on unevaluable state", () =
     const duplicate = createEconomicsRuntime({ bound: 3, label: "failclosed-duplicate" });
     runtimes.push(duplicate);
     rawAppend(duplicate, "economics.restart", rawRestartPayload(1, { runId: "run-a" }));
-    rawAppend(duplicate, "economics.restart", rawRestartPayload(1, { runId: "run-b" }), "raw-fence-2");
+    rawAppend(
+      duplicate,
+      "economics.restart",
+      rawRestartPayload(1, { runId: "run-b" }),
+      "raw-fence-2",
+    );
     const duplicateDecision = duplicate.supervised.attempt(input());
     expect(duplicateDecision.outcome).toBe("unevaluable");
     if (duplicateDecision.outcome === "unevaluable") {

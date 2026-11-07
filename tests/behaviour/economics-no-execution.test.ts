@@ -32,7 +32,9 @@ const input = (overrides: { repayTokens?: number; observed?: number } = {}) => (
     ...(overrides.repayTokens === undefined
       ? {}
       : { repayTokens: { inputTokens: overrides.repayTokens, outputTokens: 0 } }),
-    ...(overrides.observed === undefined ? {} : { observedUniqueProgressTokens: overrides.observed }),
+    ...(overrides.observed === undefined
+      ? {}
+      : { observedUniqueProgressTokens: overrides.observed }),
   }),
 });
 

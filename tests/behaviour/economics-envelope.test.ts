@@ -6,14 +6,15 @@
  */
 import { describe, expect, test } from "bun:test";
 import type { EconomicsResumeDecision } from "../../packages/core/src/contracts/index";
-import {
-  assertEnvelopeContract,
-} from "../../packages/testkit/src/result-conformance";
+import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import { runCli, type CliDependencies, type CommandProgram } from "../../packages/cli/src/index";
 import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
 import { runWatchdogCli } from "../fixtures/watchdog/harness";
 import { createWatchdogRepository } from "../fixtures/watchdog/temp-git";
-import { createSourcedWatchdogSignalSource, parseRefusalCorpus } from "../../packages/core/src/domain/index";
+import {
+  createSourcedWatchdogSignalSource,
+  parseRefusalCorpus,
+} from "../../packages/core/src/domain/index";
 
 const ERROR_KEYS = ["code", "category", "retryable", "consequence", "remediationHint", "summary"];
 
@@ -148,7 +149,8 @@ describe("TC-ECON-033 every new outcome emits one valid exclusive envelope", () 
 
   test("exit 0 only for success, exit 1 for refusals, exit 2 for source-unavailable", async () => {
     const successes = decisions.filter(
-      (entry) => entry.decision.outcome === "attach-continue" || entry.decision.outcome === "admit-restart",
+      (entry) =>
+        entry.decision.outcome === "attach-continue" || entry.decision.outcome === "admit-restart",
     );
     for (const entry of successes) {
       const { exitCode } = await runEconomicsOutcome(entry.decision);
@@ -200,7 +202,10 @@ describe("TC-ECON-033 every new outcome emits one valid exclusive envelope", () 
           repo,
           signalSources: [createSourcedWatchdogSignalSource(facts)],
         });
-        return { exitCode: runResult.exitCode, envelope: JSON.parse(runResult.stdout) as Record<string, unknown> };
+        return {
+          exitCode: runResult.exitCode,
+          envelope: JSON.parse(runResult.stdout) as Record<string, unknown>,
+        };
       };
       const progressing = await run(() => ({
         readings: [{ kind: "session-traffic", status: "sourced", value: 1, observedAt: "t" }],

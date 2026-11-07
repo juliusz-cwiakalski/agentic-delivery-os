@@ -40,9 +40,7 @@ type FoldedRestarts =
   | { readonly ok: false; readonly code: EconomicsRecordFailureCode };
 
 /** Fold verified restart records into the count/history, refusing torn ordinals. */
-export const foldRestartRecords = (
-  records: readonly EconomicsRestartRecord[],
-): FoldedRestarts => {
+export const foldRestartRecords = (records: readonly EconomicsRestartRecord[]): FoldedRestarts => {
   const ordered = sorts(records);
   let expected = 1;
   for (const record of ordered) {

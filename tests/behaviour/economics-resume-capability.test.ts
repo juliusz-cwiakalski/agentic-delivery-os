@@ -86,7 +86,10 @@ describe("TC-ECON-043 resume economics is capability-driven and fail-closed", ()
   });
 
   test("incomplete session evidence refuses naming the missing fact and never fabricates 0", () => {
-    const unreadableTokens = attempt({ modes: ["prompt-reentry"] }, sessionEvidence({ tokensReadable: false }));
+    const unreadableTokens = attempt(
+      { modes: ["prompt-reentry"] },
+      sessionEvidence({ tokensReadable: false }),
+    );
     expect(unreadableTokens.decision.outcome).toBe("refuse");
     if (unreadableTokens.decision.outcome === "refuse") {
       expect(unreadableTokens.decision.code).toBe("harness.telemetry.extraction-failed");
@@ -94,16 +97,22 @@ describe("TC-ECON-043 resume economics is capability-driven and fail-closed", ()
     }
     expect(unreadableTokens.store.state.appends).toBe(0);
 
-    const unreadableCost = attempt({ modes: ["prompt-reentry"] }, sessionEvidence({ costReadable: false }));
+    const unreadableCost = attempt(
+      { modes: ["prompt-reentry"] },
+      sessionEvidence({ costReadable: false }),
+    );
     expect(unreadableCost.decision.outcome).toBe("refuse");
     if (unreadableCost.decision.outcome === "refuse") {
       expect(unreadableCost.decision.corpus).toContain("field=cost");
     }
 
-    const missingRepay = evaluateResumeEconomics(depsFor(createMemoryResumeStore(), { modes: ["prompt-reentry"] }), {
-      ...input,
-      evidence: { sessionId: "ses_fixture_1", treeRoot: "ses_fixture_1", tokensReadable: true },
-    });
+    const missingRepay = evaluateResumeEconomics(
+      depsFor(createMemoryResumeStore(), { modes: ["prompt-reentry"] }),
+      {
+        ...input,
+        evidence: { sessionId: "ses_fixture_1", treeRoot: "ses_fixture_1", tokensReadable: true },
+      },
+    );
     expect(missingRepay.outcome).toBe("refuse");
     if (missingRepay.outcome === "refuse") {
       expect(missingRepay.corpus).toContain("field=repayTokens");

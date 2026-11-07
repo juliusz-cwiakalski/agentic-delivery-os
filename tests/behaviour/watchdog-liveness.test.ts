@@ -222,9 +222,7 @@ const sourcedRun = async (facts: {
 describe("TC-ECON-030/031 a sourced lane reaches progressing or the stalled refusal", () => {
   test("a sourced progressing lane stays exit 0 with data.verdict and populated signals", async () => {
     const { run, envelope } = await sourcedRun({
-      readings: [
-        { kind: "session-traffic", status: "sourced", value: 9, observedAt: "t" },
-      ],
+      readings: [{ kind: "session-traffic", status: "sourced", value: 9, observedAt: "t" }],
       sourcedSignals: [
         { kind: "heartbeat-age", status: "sourced", value: 1_000, observedAt: "t" },
         { kind: "token-delta", status: "sourced", value: 42, observedAt: "t" },
@@ -241,9 +239,7 @@ describe("TC-ECON-030/031 a sourced lane reaches progressing or the stalled refu
 
   test("a fully corroborated sourced stall is the classified refusal at exit 1 with no verdict", async () => {
     const { run, envelope } = await sourcedRun({
-      readings: [
-        { kind: "session-traffic", status: "sourced", value: 0, observedAt: "t" },
-      ],
+      readings: [{ kind: "session-traffic", status: "sourced", value: 0, observedAt: "t" }],
       sourcedSignals: [
         { kind: "heartbeat-age", status: "sourced", value: 400_000, observedAt: "t" },
         { kind: "token-delta", status: "sourced", value: 0, observedAt: "t" },

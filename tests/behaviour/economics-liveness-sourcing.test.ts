@@ -18,11 +18,9 @@ import { runWatchdogCli } from "../fixtures/watchdog/harness";
 
 const FACT_NOW = "2026-11-07T00:00:09Z";
 
-const sourcedFacts = (overrides: {
-  heartbeatAgeMs?: number;
-  tokenDelta?: number;
-  traffic?: number;
-} = {}): readonly EconomicsSourcedSignalReading[] => [
+const sourcedFacts = (
+  overrides: { heartbeatAgeMs?: number; tokenDelta?: number; traffic?: number } = {},
+): readonly EconomicsSourcedSignalReading[] => [
   {
     kind: "heartbeat-age",
     status: "sourced",
@@ -42,7 +40,7 @@ const sourceFor = (facts: readonly EconomicsSourcedSignalReading[]) =>
 
 describe("TC-ECON-010 sourced signals populate exactly the three declared keys", () => {
   test("adapter facts project to heartbeatAgeMs and tokenDelta, and traffic from the neutral reading", () => {
-    const signals = sourceFor(sourcedFacts())( "lane-1");
+    const signals = sourceFor(sourcedFacts())("lane-1");
     expect(signals).toBeDefined();
     if (signals === undefined) return;
     expect(Object.keys(signals).sort()).toEqual(["heartbeatAgeMs", "tokenDelta"]);

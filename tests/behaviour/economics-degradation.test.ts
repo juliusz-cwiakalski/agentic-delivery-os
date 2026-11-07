@@ -25,7 +25,9 @@ describe("TC-ECON-062 missing figures degrade to null with a warning", () => {
   });
 
   test("an absent unique-progress figure yields null with a warning, not a zero", () => {
-    const view = deriveEconomicsView({ records: asRecords(DEGRADED_FIXTURES.absentUniqueProgress) });
+    const view = deriveEconomicsView({
+      records: asRecords(DEGRADED_FIXTURES.absentUniqueProgress),
+    });
     expect(view.resumeAmplification).toBeNull();
     expect(view.warnings).toContainEqual({
       kind: "missing-unique-progress",

@@ -5,10 +5,7 @@
  * byte-identically, and derivation is read-only with no harness query.
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import {
-  createStateStore,
-  readEconomicsRecords,
-} from "../../packages/core/src/state/index";
+import { createStateStore, readEconomicsRecords } from "../../packages/core/src/state/index";
 import { createTestEdge, makeIdentity } from "../fixtures/state/harness";
 import { deriveEconomicsView } from "../../packages/core/src/domain/index";
 import {

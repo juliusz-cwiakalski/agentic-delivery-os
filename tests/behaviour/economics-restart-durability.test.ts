@@ -39,7 +39,11 @@ const input = () => ({
 
 describe("TC-ECON-051 the budget survives a process boundary and replays identically", () => {
   test("a fresh handle reconstructs count and history without prior memory", () => {
-    const created = createEconomicsRuntime({ bound: 3, runId: "run-durability", label: "durability" });
+    const created = createEconomicsRuntime({
+      bound: 3,
+      runId: "run-durability",
+      label: "durability",
+    });
     runtimes.push(created);
     created.supervised.attempt(input());
     created.supervised.attempt(input());
@@ -69,7 +73,11 @@ describe("TC-ECON-051 the budget survives a process boundary and replays identic
   });
 
   test("the next admission on a fresh handle takes ordinal 3", () => {
-    const created = createEconomicsRuntime({ bound: 3, runId: "run-durability", label: "durability-next" });
+    const created = createEconomicsRuntime({
+      bound: 3,
+      runId: "run-durability",
+      label: "durability-next",
+    });
     runtimes.push(created);
     created.supervised.attempt(input());
     created.supervised.attempt(input());
@@ -92,7 +100,11 @@ describe("TC-ECON-051 the budget survives a process boundary and replays identic
   });
 
   test("two fresh handles derive byte-identical output and no harness query occurs", () => {
-    const created = createEconomicsRuntime({ bound: 3, runId: "run-durability", label: "durability-derive" });
+    const created = createEconomicsRuntime({
+      bound: 3,
+      runId: "run-durability",
+      label: "durability-derive",
+    });
     runtimes.push(created);
     created.supervised.attempt(input());
     created.supervised.attempt(input());
@@ -124,6 +136,8 @@ describe("TC-ECON-051 the budget survives a process boundary and replays identic
     expect(created.store.readRecords().ok).toBe(true);
     created.close();
     runtimes.splice(runtimes.indexOf(created), 1);
-    expect(() => createStateStore(makeIdentity(root), { driver: "jsonl", edge: createTestEdge() })).not.toThrow();
+    expect(() =>
+      createStateStore(makeIdentity(root), { driver: "jsonl", edge: createTestEdge() }),
+    ).not.toThrow();
   });
 });

@@ -9,7 +9,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSourcedWatchdogSignalSource } from "../../packages/core/src/domain/index";
 import { normalizeEnvelopeText, runWatchdogCli } from "../fixtures/watchdog/harness";
-import { createWatchdogRepository, type WatchdogTempRepository } from "../fixtures/watchdog/temp-git";
+import {
+  createWatchdogRepository,
+  type WatchdogTempRepository,
+} from "../fixtures/watchdog/temp-git";
 import {
   createEconomicsRuntime,
   runtimeEvidence,
@@ -45,7 +48,9 @@ const input = () => ({
 });
 
 const facts = () => ({
-  readings: [{ kind: "session-traffic" as const, status: "sourced" as const, value: 9, observedAt: "t" }],
+  readings: [
+    { kind: "session-traffic" as const, status: "sourced" as const, value: 9, observedAt: "t" },
+  ],
   sourcedSignals: [
     { kind: "heartbeat-age" as const, status: "sourced" as const, value: 1_500, observedAt: "t" },
     { kind: "token-delta" as const, status: "sourced" as const, value: 42, observedAt: "t" },
