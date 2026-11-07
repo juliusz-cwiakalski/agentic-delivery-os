@@ -672,6 +672,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renderStepEvidence",
   ],
   "core/src/domain/status.ts": ["aggregateStatus", "evaluateStatusFindings", "renderStatusHuman"],
+  "core/src/domain/spend.ts": [
+    "computeSpendReport",
+    "spendDigestSection",
+    "spendTruncationWarning",
+  ],
+  "core/src/domain/spend-text.ts": ["renderSpendHuman"],
   "core/src/contracts/spend.ts": [
     "SPEND_AGENT_ORDER",
     "SPEND_AMPLIFICATION_CAUSES",

@@ -75,6 +75,8 @@
     "src/domain/retro.ts",
     "src/domain/session-admin.ts",
     "src/domain/sha256.ts",
+    "src/domain/spend-text.ts",
+    "src/domain/spend.ts",
     "src/domain/status.ts",
     "src/domain/verify-change.ts",
     "src/domain/verify-deploy.ts",

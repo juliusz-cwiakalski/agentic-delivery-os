@@ -56,8 +56,12 @@ export const SPEND_MAX_HUMAN_LINES = 200 as const;
 /** The truncation marker label carried in the truncated channel (PIN-3). */
 export const SPEND_TRUNCATION_MARKER = "truncated" as const;
 
-/** The declared truncation tail order: `perAgent[]` first, then `perPhase[]`. */
-export const SPEND_TRUNCATION_TARGETS = ["perAgent", "perPhase"] as const;
+/**
+ * The declared truncation tail order: `perAgent[]` first, then `perPhase[]`,
+ * then the event list. The final tail exists so the NFR-1 byte bound holds when
+ * a long restart loop's named events alone would exceed it.
+ */
+export const SPEND_TRUNCATION_TARGETS = ["perAgent", "perPhase", "events"] as const;
 
 /** The declared `perAgent[]` total order (PIN-3, TP-DEC-5). */
 export const SPEND_AGENT_ORDER = ["tokens-desc", "agent-asc", "model-asc"] as const;
@@ -149,6 +153,7 @@ export type SpendReport = {
 export type SpendTruncation = {
   readonly agents: number;
   readonly phases: number;
+  readonly events: number;
 };
 
 /** The verified-ledger evidence a spend read carries (store path and position). */

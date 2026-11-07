@@ -178,7 +178,7 @@ describe("TC-SPEND-001 declaration-only spend contract", () => {
     expect(constInitializer("SPEND_MAX_HUMAN_LINES")).toBe("200");
     expect(stringArray("SPEND_AGENT_ORDER")).toEqual(["tokens-desc", "agent-asc", "model-asc"]);
     expect(stringArray("SPEND_PHASE_ORDER")).toEqual(["window-start-asc", "phase-id-asc"]);
-    expect(stringArray("SPEND_TRUNCATION_TARGETS")).toEqual(["perAgent", "perPhase"]);
+    expect(stringArray("SPEND_TRUNCATION_TARGETS")).toEqual(["perAgent", "perPhase", "events"]);
     expect(stringArray("SPEND_DISCLOSURES")).toHaveLength(4);
     expect(SPEND_DISCLOSURES.join(" ")).toContain("run duplication");
     expect(SPEND_DISCLOSURES.join(" ")).not.toContain("work duplication");

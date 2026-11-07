@@ -18,12 +18,15 @@ import {
   type PhaseTransitionRecord,
   type StateStorePort,
 } from "../../../packages/core/src/contracts/index";
+import { computeSpendReport, type SpendFoldOutcome } from "../../../packages/core/src/domain/spend";
 import {
   appendHarnessCaptureOutcome,
   appendHarnessTelemetry,
   appendPhaseTransition,
+  readSpendLedger,
 } from "../../../packages/core/src/state/index";
 import { SYNTHETIC_BRAND } from "../../golden/helpers";
+import { makeIdentity, makeTempRoot, openStore } from "../state/harness";
 
 export {
   independentChecksum,
@@ -100,6 +103,8 @@ export type SessionRecordInput = {
   readonly warnings?: readonly HarnessTelemetryWarning[];
   readonly cost?: number | null;
   readonly capturedAt?: string;
+  readonly treeRoot?: string;
+  readonly parentChain?: readonly string[];
 };
 
 /** One session-group telemetry record with a deterministic default shape. */
@@ -112,8 +117,8 @@ export const makeSessionRecord = (input: SessionRecordInput): HarnessTelemetryRe
   harnessVersion: "1.0.0",
   agent: input.agent ?? "planner",
   model: input.model ?? "sonnet",
-  treeRoot: input.sessionId ?? `ses-${input.runId}`,
-  parentChain: [],
+  treeRoot: input.treeRoot ?? input.sessionId ?? `ses-${input.runId}`,
+  parentChain: [...(input.parentChain ?? [])],
   tokens: input.tokens ?? tokens(),
   calls: input.calls ?? 1,
   toolCounts: [],
@@ -290,3 +295,22 @@ export const threeGroupRun = (input: {
       warnings: input.warnings ?? [],
     }),
   );
+
+/** One seeded and folded case: the read outcome and the fold outcome. */
+export type FoldedSeed = {
+  readonly root: string;
+  readonly read: ReturnType<typeof readSpendLedger>;
+  readonly fold: SpendFoldOutcome | undefined;
+};
+
+/** Seed a fresh temp store, run the verified read, then the pure fold. */
+export const foldSeed = (seed: SpendSeed, label = "case"): FoldedSeed => {
+  const root = makeTempRoot(`gh236-${label}`);
+  const identity = makeIdentity(root);
+  const { store } = openStore(identity);
+  seedSpend(store, seed);
+  const ref = seed.ref ?? SPEND_REF;
+  const read = readSpendLedger(store, ref);
+  const fold = read.ok ? computeSpendReport(read.value, { workItemRef: ref }) : undefined;
+  return { root, read, fold };
+};

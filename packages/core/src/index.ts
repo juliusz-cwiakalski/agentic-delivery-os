@@ -250,8 +250,6 @@ export {
   evaluateRetroTruthChecks,
   exportRetroEvidence,
   isImplementedRetroLevel,
-  recordMemoryAuditRun,
-  reportRetro,
   RETRO_ENGINE_CHAIN_ANCHOR,
   RETRO_ENGINE_DEFAULT_LEVEL,
   RETRO_ENGINE_EVIDENCE_SCHEMA,
@@ -264,6 +262,16 @@ export {
   type RetroReportDeps,
   type RetroTruthCheckInput,
   type RetroTruthCheckOptions,
+  recordMemoryAuditRun,
+  reportRetro,
   retroLevelRefusalHint,
   selectRetroTarget,
 } from "./domain/retro.js";
+export {
+  computeSpendReport,
+  type SpendAbsence,
+  type SpendFoldOutcome,
+  spendDigestSection,
+  spendTruncationWarning,
+} from "./domain/spend.js";
+export { renderSpendHuman, type SpendHumanOptions } from "./domain/spend-text.js";

@@ -200,6 +200,29 @@ export {
 } from "./pm-notes-lint.js";
 export { evaluateQueueReady, renderQueueReadyHuman } from "./queue-ready.js";
 export {
+  attemptOutOfSeamEvidenceWrite,
+  collectRetro,
+  evaluateRetroTruthChecks,
+  exportRetroEvidence,
+  isImplementedRetroLevel,
+  RETRO_ENGINE_CHAIN_ANCHOR,
+  RETRO_ENGINE_DEFAULT_LEVEL,
+  RETRO_ENGINE_EVIDENCE_SCHEMA,
+  RETRO_ENGINE_REPORT_SCHEMA,
+  RETRO_ENGINE_TRUTH_CHECKS,
+  RETRO_TARGET_SELECTION_ORDER,
+  type RetroCollectDeps,
+  type RetroExportDeps,
+  type RetroExportOutcome,
+  type RetroReportDeps,
+  type RetroTruthCheckInput,
+  type RetroTruthCheckOptions,
+  recordMemoryAuditRun,
+  reportRetro,
+  retroLevelRefusalHint,
+  selectRetroTarget,
+} from "./retro.js";
+export {
   classifyPruneCandidate,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
@@ -210,6 +233,14 @@ export {
   selectPruneCandidates,
 } from "./session-admin.js";
 export { sha256Hex } from "./sha256.js";
+export {
+  computeSpendReport,
+  type SpendAbsence,
+  type SpendFoldOutcome,
+  spendDigestSection,
+  spendTruncationWarning,
+} from "./spend.js";
+export { renderSpendHuman, type SpendHumanOptions } from "./spend-text.js";
 export { aggregateStatus, evaluateStatusFindings, renderStatusHuman } from "./status.js";
 export {
   classifyVerifyChange,
@@ -270,26 +301,3 @@ export {
   type WatchdogRestorationPlan,
   watchdogPreservedRefName,
 } from "./watchdog.js";
-export {
-  attemptOutOfSeamEvidenceWrite,
-  collectRetro,
-  evaluateRetroTruthChecks,
-  exportRetroEvidence,
-  isImplementedRetroLevel,
-  recordMemoryAuditRun,
-  reportRetro,
-  RETRO_ENGINE_CHAIN_ANCHOR,
-  RETRO_ENGINE_DEFAULT_LEVEL,
-  RETRO_ENGINE_EVIDENCE_SCHEMA,
-  RETRO_ENGINE_REPORT_SCHEMA,
-  RETRO_ENGINE_TRUTH_CHECKS,
-  RETRO_TARGET_SELECTION_ORDER,
-  type RetroCollectDeps,
-  type RetroExportDeps,
-  type RetroExportOutcome,
-  type RetroReportDeps,
-  type RetroTruthCheckInput,
-  type RetroTruthCheckOptions,
-  retroLevelRefusalHint,
-  selectRetroTarget,
-} from "./retro.js";
