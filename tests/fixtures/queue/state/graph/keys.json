@@ -1,0 +1,8 @@
+{
+  "entryKey": "queue.entries:GH-301",
+  "dependencyKey": "queue.deps:GH-301",
+  "leaseKey": "queue.leases:github.com/owner/repo-alpha",
+  "parkKey": "queue.parks:GH-301",
+  "incidentKey": "queue.incidents:GH-301",
+  "graphDocument": "queue-graph.json"
+}

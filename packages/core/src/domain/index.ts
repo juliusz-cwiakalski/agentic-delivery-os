@@ -233,6 +233,23 @@ export {
 } from "./pm-notes-lint.js";
 export { evaluateQueueReady, renderQueueReadyHuman } from "./queue-ready.js";
 export {
+  buildAdjacency,
+  canonicalQueueRef,
+  defaultQueuePriority,
+  detectCycleForEdge,
+  foldLatestDependencies,
+  foldLatestDependencyRecords,
+  foldLatestEntries,
+  foldQueueGraph,
+  mergeEdges,
+  normalizeEdges,
+  normalizeRepositoryKey,
+  projectEntry,
+  type QueueGraphEdge,
+  type QueueGraphFold,
+  queueGraphDocument,
+} from "./queue-graph.js";
+export {
   attemptOutOfSeamEvidenceWrite,
   collectRetro,
   evaluateRetroTruthChecks,

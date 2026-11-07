@@ -1,0 +1,15 @@
+{
+  "rows": [
+    { "remote": "https://github.com/Owner/Repo.git", "key": "github.com/owner/repo" },
+    { "remote": "git@github.com:Owner/Repo.git", "key": "github.com/owner/repo" },
+    { "remote": "ssh://git@github.com/owner/repo", "key": "github.com/owner/repo" },
+    { "remote": "https://token@github.com/owner/repo", "key": "github.com/owner/repo" },
+    { "remote": "https://github.com/owner/repo/", "key": "github.com/owner/repo" },
+    { "remote": "not-a-remote", "key": null }
+  ],
+  "control": {
+    "ref": "GH-320",
+    "repository": "github.com/owner/repo-alpha",
+    "repositoryRoot": "/home/user/checkouts/repo-alpha"
+  }
+}

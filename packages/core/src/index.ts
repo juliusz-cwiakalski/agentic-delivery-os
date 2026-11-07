@@ -284,3 +284,24 @@ export {
   spendTruncationWarning,
 } from "./domain/spend.js";
 export { renderSpendHuman, type SpendHumanOptions } from "./domain/spend-text.js";
+
+// The queue declaration and graph-folding policy (GH-237 F-1, DM-1, DM-2,
+// DM-12, DM-13): canonical refs, repository-key normalization, acyclic edge
+// validation, superseding projection, and the rebuildable graph fold.
+export {
+  buildAdjacency,
+  canonicalQueueRef,
+  defaultQueuePriority,
+  detectCycleForEdge,
+  foldLatestDependencies,
+  foldLatestDependencyRecords,
+  foldLatestEntries,
+  foldQueueGraph,
+  mergeEdges,
+  normalizeEdges,
+  normalizeRepositoryKey,
+  projectEntry,
+  type QueueGraphEdge,
+  type QueueGraphFold,
+  queueGraphDocument,
+} from "./domain/index.js";
