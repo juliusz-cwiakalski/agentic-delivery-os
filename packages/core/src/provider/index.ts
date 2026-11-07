@@ -41,6 +41,24 @@ export {
   type ProfileSelectionOptions,
   type ProfileTaskFacts,
 } from "./profile.js";
+export {
+  activeRung,
+  evaluatePacing,
+  rungState,
+  type PacingEvaluation,
+  type PacingEvaluationInput,
+} from "./profile-pacing.js";
+export {
+  createProfileTargetRecord,
+  evaluateProfileLifecycle,
+  persistProfileTarget,
+  readProfileTarget,
+  type PersistProfileTargetInput,
+  type PersistProfileTargetOutcome,
+  type ProfileLifecycleInput,
+  type ProfileLifecycleOutcome,
+  type ProfileTargetRecordInput,
+} from "./profile-lifecycle.js";
 export { type ProviderLoopInput, type ProviderLoopResult, runProviderLoop } from "./loop.js";
 export {
   type AnnouncementInput,

@@ -61,3 +61,6 @@ notes:
   - text: "Plan phase 3 complete (phase-2 commit a79bdb9f): pure selection engine (capability gate first, declared-order eligibility, lazy per-pass memoized probes, probe failure never availability, one deterministic selection/ineligible event), declarative heuristic scoring helper with policy supplied as data, and the probe seam over the engine condition vocabulary. Fixtures for selection/probes/legacy groups 1-2. Gates green: pnpm typecheck; selection/probes/legacy suites 42 pass / 0 fail (NFR-6 measured under 50ms)."
     type: "info"
     date: "2026-11-07"
+  - text: "Plan phase 4 complete (phase-3 commit 9a2f2baf): pure pacing policy (declared-order goal-priority precedence; rungs move only execution seats; judgment structurally immovable; transition events deduped) and pure lifecycle policy (switch-not-park, exactly-once revert per episode, stable target, honest parked decision) plus fenced/verified target-profile persistence (own schema id, store key, latest-wins, no schema bump). Legacy groups 3-4 added. Gates green: pnpm typecheck; park-switch-revert/pacing/legacy 47 pass, provider-parks/chain-resolution 35 pass."
+    type: "info"
+    date: "2026-11-07"

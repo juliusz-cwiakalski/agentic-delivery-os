@@ -977,6 +977,17 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "selectProfile",
     "targetSeatName",
   ],
+  "core/src/provider/profile-pacing.ts": [
+    "activeRung",
+    "evaluatePacing",
+    "rungState",
+  ],
+  "core/src/provider/profile-lifecycle.ts": [
+    "createProfileTargetRecord",
+    "evaluateProfileLifecycle",
+    "persistProfileTarget",
+    "readProfileTarget",
+  ],
   "core/src/provider/loop.ts": ["runProviderLoop"],
   "core/src/provider/quota.ts": [
     "classifyQuotaTransport",

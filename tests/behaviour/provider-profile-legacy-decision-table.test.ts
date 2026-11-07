@@ -192,3 +192,136 @@ describe("TC-PROFILE-052 no-silent-path matrix (groups 1-2)", () => {
     });
   }
 });
+
+import {
+  createProfileTargetRecord,
+  evaluateProfileLifecycle,
+  evaluatePacing,
+} from "../../packages/core/src/provider/index";
+import { peak } from "../fixtures/provider/profile/selection/fixtures";
+import { holdJudgmentPacing } from "../fixtures/provider/profile/lifecycle/fixtures";
+
+describe("TC-PROFILE-049 ported group 3 — park versus switch", () => {
+  test("an expensive window parks with cause and expiry", () => {
+    const result = selectProfile({
+      profiles: mixedChain(),
+      probe: createProviderFactsProbe({ "coding-plan": peak("coding-plan"), deepseek: available() }),
+      nowMs: NOW,
+    });
+    if (!result.ok) throw new Error("selection failed");
+    expect(result.decision.profile).toBe("deepseek");
+    expect(result.decision.eligibility[0]?.blockers[0]?.value).toBe("peak-window");
+  });
+
+  test("exhaustion switches to the next eligible profile, never a spawn-stalling park", () => {
+    const result = selectProfile({
+      profiles: mixedChain(),
+      probe: createProviderFactsProbe({ "coding-plan": exhausted("coding-plan"), deepseek: available() }),
+      nowMs: NOW,
+    });
+    if (!result.ok) throw new Error("selection failed");
+    expect(result.decision.profile).toBe("deepseek");
+    expect(result.ok).toBe(true);
+  });
+
+  test("an all-ineligible chain yields an honest classified outcome with reasons", () => {
+    const result = selectProfile({
+      profiles: mixedChain(),
+      probe: createProviderFactsProbe({
+        "coding-plan": exhausted("coding-plan"),
+        deepseek: exhausted("deepseek"),
+      }),
+      nowMs: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("provider.profile.unavailable");
+    expect(result.events.length).toBeGreaterThan(0);
+  });
+
+  test("a judgment-seat rung action is structurally inert", () => {
+    const chain = mixedChain();
+    const mixed = chain.profiles.mixed;
+    if (mixed === undefined) throw new Error("mixed profile missing");
+    const evaluation = evaluatePacing({
+      pacing: holdJudgmentPacing(),
+      profile: mixed,
+      utilizationPercent: 99,
+      nowMs: NOW,
+    });
+    expect(evaluation.seatModels.pm).toBe("claude-opus");
+    expect(evaluation.seatModels.coder).toBe("claude-haiku-mini");
+  });
+});
+
+describe("TC-PROFILE-050 ported group 4 — revert", () => {
+  test("recovery restores the preferred target automatically", () => {
+    const recovered = selectProfile({
+      profiles: mixedChain(),
+      probe: createProviderFactsProbe({ "coding-plan": available(), deepseek: available() }),
+      nowMs: NOW,
+    });
+    const outcome = evaluateProfileLifecycle({
+      profiles: mixedChain(),
+      selection: recovered,
+      persisted: createProfileTargetRecord({
+        targetProfile: "deepseek",
+        reason: "switch",
+        previousProfile: "mixed",
+        revertCondition: "quota-exhausted",
+        nowMs: NOW,
+      }),
+      nowMs: NOW,
+    });
+    expect(outcome.target?.targetProfile).toBe("mixed");
+    expect(outcome.events.filter((event) => event.code === "profile.reverted")).toHaveLength(1);
+  });
+
+  test("the persisted target stays stable across intermediate spawns", () => {
+    const exhaustedSelection = selectProfile({
+      profiles: mixedChain(),
+      probe: createProviderFactsProbe({ "coding-plan": exhausted("coding-plan"), deepseek: available() }),
+      nowMs: NOW,
+    });
+    const persisted = createProfileTargetRecord({
+      targetProfile: "deepseek",
+      reason: "switch",
+      nowMs: NOW,
+    });
+    for (let index = 0; index < 3; index += 1) {
+      const outcome = evaluateProfileLifecycle({
+        profiles: mixedChain(),
+        selection: exhaustedSelection,
+        persisted,
+        nowMs: NOW,
+      });
+      expect(outcome.append).toBe(false);
+    }
+  });
+
+  test("a later episode can record a new revert", () => {
+    const recovered = selectProfile({
+      profiles: mixedChain(),
+      probe: createProviderFactsProbe({ "coding-plan": available(), deepseek: available() }),
+      nowMs: NOW,
+    });
+    const first = evaluateProfileLifecycle({
+      profiles: mixedChain(),
+      selection: recovered,
+      persisted: createProfileTargetRecord({
+        targetProfile: "deepseek",
+        reason: "switch",
+        nowMs: NOW,
+      }),
+      nowMs: NOW,
+    });
+    const second = evaluateProfileLifecycle({
+      profiles: mixedChain(),
+      selection: recovered,
+      persisted: first.target,
+      nowMs: NOW,
+    });
+    expect(first.target?.reason).toBe("revert");
+    expect(second.append).toBe(false);
+  });
+});
