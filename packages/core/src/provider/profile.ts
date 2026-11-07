@@ -129,14 +129,96 @@ export const targetSeatName = (profile: ProviderProfile, agent?: string): string
   return Object.keys(profile.seats).sort()[0];
 };
 
-/** Project evidence through the closed allowlist only (NFR-8). */
+/**
+ * Structural evidence caps (NFR-8, remediation 10.4). Applied before
+ * serialization so a pathological configuration can never carry unbounded
+ * evidence into an event; `createProfileEvent` re-asserts the total byte bound
+ * afterwards.
+ */
+const PROFILE_EVIDENCE_STRING_MAX_BYTES = 128;
+const PROFILE_EVIDENCE_ARRAY_MAX_ITEMS = 8;
+const PROFILE_EVIDENCE_ITEM_MAX_BYTES = 96;
+const PROFILE_IDENTITY_MAX_BYTES = 256;
+
+/** Count UTF-8 bytes without a runtime text-encoding API. */
+const utf8ByteLength = (text: string): number => {
+  let bytes = 0;
+  for (const character of text) {
+    const code = character.codePointAt(0) ?? 0;
+    bytes += code <= 0x7f ? 1 : code <= 0x7ff ? 2 : code <= 0xffff ? 3 : 4;
+  }
+  return bytes;
+};
+
+/** Truncate to at most the byte budget without splitting a code point. */
+const truncateToUtf8Bytes = (text: string, maxBytes: number): string => {
+  if (utf8ByteLength(text) <= maxBytes) return text;
+  let bytes = 0;
+  let result = "";
+  for (const character of text) {
+    const code = character.codePointAt(0) ?? 0;
+    const width = code <= 0x7f ? 1 : code <= 0x7ff ? 2 : code <= 0xffff ? 3 : 4;
+    if (bytes + width > maxBytes) break;
+    result += character;
+    bytes += width;
+  }
+  return result;
+};
+
+/** Project evidence through the closed allowlist and structural caps (NFR-8). */
 export const projectProfileEvidence = (evidence: ProfileEvidence): ProfileEvidence => {
   const projected: Record<string, unknown> = {};
   for (const field of PROFILE_EVIDENCE_FIELDS) {
     const value = evidence[field];
-    if (value !== undefined) projected[field] = value;
+    if (value === undefined) continue;
+    if (Array.isArray(value)) {
+      projected[field] = value
+        .slice(0, PROFILE_EVIDENCE_ARRAY_MAX_ITEMS)
+        .map((item) => truncateToUtf8Bytes(String(item), PROFILE_EVIDENCE_ITEM_MAX_BYTES));
+    } else if (typeof value === "string") {
+      projected[field] = truncateToUtf8Bytes(value, PROFILE_EVIDENCE_STRING_MAX_BYTES);
+    }
   }
   return projected as ProfileEvidence;
+};
+
+/**
+ * Shrink evidence deterministically until the event fits: first halve the
+ * array fields, then halve the longest string, then drop the last field.
+ */
+const shrinkEvidence = (evidence: ProfileEvidence): ProfileEvidence => {
+  const next: Record<string, unknown> = { ...evidence };
+  for (const [key, value] of Object.entries(next)) {
+    if (Array.isArray(value) && value.length > 0) {
+      next[key] = value.slice(0, Math.floor(value.length / 2));
+      return next as ProfileEvidence;
+    }
+  }
+  let longestKey: string | undefined;
+  let longestBytes = 0;
+  for (const [key, value] of Object.entries(next)) {
+    if (typeof value === "string") {
+      const bytes = utf8ByteLength(value);
+      if (bytes > longestBytes) {
+        longestKey = key;
+        longestBytes = bytes;
+      }
+    }
+  }
+  if (longestKey !== undefined && longestBytes > 0) {
+    next[longestKey] = truncateToUtf8Bytes(
+      next[longestKey] as string,
+      Math.floor(longestBytes / 2),
+    );
+    return next as ProfileEvidence;
+  }
+  const keys = Object.keys(next);
+  const last = keys[keys.length - 1];
+  if (last !== undefined) {
+    delete next[last];
+    return next as ProfileEvidence;
+  }
+  return evidence;
 };
 
 export type ProfileEventInput = {
@@ -164,20 +246,49 @@ export const profileEventIdentity = (input: ProfileEventInput): string => {
 
 /** Construct one structured profile event with bounded evidence (NFR-8). */
 export const createProfileEvent = (input: ProfileEventInput): ProfileEvent => {
-  const event: ProfileEvent = {
+  const boundedEvidence = projectProfileEvidence(input.evidence);
+  const identity = truncateToUtf8Bytes(
+    profileEventIdentity({ ...input, evidence: boundedEvidence }),
+    PROFILE_IDENTITY_MAX_BYTES,
+  );
+  const head = {
     code: input.code,
     severity: input.severity ?? PROFILE_EVENT_SEVERITIES[0],
-    identity: profileEventIdentity(input),
+    identity,
     createdAt: formatUtcIso(input.createdAtMs),
     createdAtMs: input.createdAtMs,
-    message: input.message,
-    evidence: projectProfileEvidence(input.evidence),
-  };
-  const size = JSON.stringify(event).length;
-  if (size <= PROFILE_EVIDENCE_MAX_BYTES) return event;
-  const overflow = size - PROFILE_EVIDENCE_MAX_BYTES;
-  const message = input.message.slice(0, Math.max(0, input.message.length - overflow - 3));
-  return { ...event, message: `${message}...` };
+  } as const;
+  const build = (message: string, evidence: ProfileEvidence): ProfileEvent => ({
+    ...head,
+    message,
+    evidence,
+  });
+
+  // Shrink the evidence until the empty-message skeleton fits on its own.
+  let evidence = boundedEvidence;
+  let skeleton = build("", evidence);
+  for (;;) {
+    if (utf8ByteLength(JSON.stringify(skeleton)) <= PROFILE_EVIDENCE_MAX_BYTES) break;
+    const shrunk = shrinkEvidence(evidence);
+    if (shrunk === evidence) break;
+    evidence = shrunk;
+    skeleton = build("", evidence);
+  }
+  const budget = Math.max(0, PROFILE_EVIDENCE_MAX_BYTES - utf8ByteLength(JSON.stringify(skeleton)));
+  let message = input.message;
+  if (utf8ByteLength(message) > budget) {
+    message =
+      budget > 3
+        ? `${truncateToUtf8Bytes(message, budget - 3)}...`
+        : truncateToUtf8Bytes(message, budget);
+  }
+  let event = build(message, evidence);
+  // Re-assert the bound after truncation; JSON escaping can widen the text.
+  while (utf8ByteLength(JSON.stringify(event)) > PROFILE_EVIDENCE_MAX_BYTES && message.length > 0) {
+    message = message.slice(0, -1);
+    event = build(message, evidence);
+  }
+  return event;
 };
 
 /**
@@ -260,6 +371,9 @@ export const selectProfile = (
   }
 
   if (selected === undefined) {
+    const allBlockers = eligibility.flatMap((entry) => entry.blockers);
+    const capabilityOnly =
+      allBlockers.length > 0 && allBlockers.every((blocker) => blocker.kind === "capability");
     const blockers = eligibility.flatMap((entry) =>
       entry.blockers.map((blocker) => `${entry.profile}:${blocker.kind}:${blocker.value}`),
     );
@@ -267,13 +381,20 @@ export const selectProfile = (
       code: "profile.ineligible",
       severity: "warning",
       createdAtMs: input.nowMs,
-      message: "no provider profile is eligible under the current conditions",
-      evidence: { reason: "no-eligible-profile", blockers },
+      message: capabilityOnly
+        ? "no provider profile satisfies the hard capability gate"
+        : "no provider profile is eligible under the current conditions",
+      evidence: {
+        reason: capabilityOnly ? "capability-gate" : "no-eligible-profile",
+        blockers,
+      },
     });
     return {
       ok: false,
-      code: "provider.profile.unavailable",
-      summary: "no provider profile is eligible under the current conditions",
+      code: capabilityOnly ? "provider.profile.capability-denied" : "provider.profile.unavailable",
+      summary: capabilityOnly
+        ? "no provider profile satisfies the hard capability gate"
+        : "no provider profile is eligible under the current conditions",
       eligibility,
       events: [event],
     };
@@ -328,6 +449,12 @@ export type ProfileSpawnPort = {
 export type ProfileSpawnInput = ProfileSelectionInput & {
   readonly namePrefix: string;
   readonly policy?: ProviderEnvRecordPolicy;
+  /**
+   * A lifecycle-projected selection from the caller (the production edge).
+   * When absent the pure selection runs here; when present the caller's
+   * switch/revert outcome and events are preserved.
+   */
+  readonly selection?: ProfileSelectionResult;
 };
 
 export type ProfileSpawnOutcome =
@@ -347,7 +474,7 @@ export type ProfileSpawnOutcome =
 
 /** Resolve a profile and build the hardened env record; never spawns. */
 export const resolveProfileForSpawn = (input: ProfileSpawnInput): ProfileSpawnOutcome => {
-  const selection = selectProfile(input);
+  const selection = input.selection ?? selectProfile(input);
   if (!selection.ok) {
     return {
       ok: false,

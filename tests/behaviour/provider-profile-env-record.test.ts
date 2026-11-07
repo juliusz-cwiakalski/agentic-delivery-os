@@ -88,6 +88,24 @@ describe("TC-PROFILE-035 carried-over env-record validation floor", () => {
     });
     expect(result.ok).toBe(true);
   });
+
+  test("a configured header containing LF, CR, or NUL is refused at serialization and parse", () => {
+    for (const header of ["# model\nenv", "# model\renv", "# model\0env"]) {
+      const serialized = serializeEnvRecord(
+        [{ operation: "set", name: "OC_ADOS_AGENT_PM_MODEL", value: "m" }],
+        { header },
+      );
+      expect(serialized.ok).toBe(false);
+      if (serialized.ok) continue;
+      expect(serialized.error.code).toBe("provider.env-record.malformed");
+      expect(serialized.error.detail).toContain("header");
+
+      const parsed = validateEnvRecord("# model-env data-v1\n", { header });
+      expect(parsed.ok).toBe(false);
+      if (parsed.ok) continue;
+      expect(parsed.error.code).toBe("provider.env-record.malformed");
+    }
+  });
 });
 
 describe("TC-PROFILE-036 hardened env-record validation ceiling", () => {

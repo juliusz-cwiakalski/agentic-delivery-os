@@ -87,10 +87,13 @@ const failure = (
   },
 });
 
-const nameAllowed = (name: string, pattern: string): boolean => {
-  if (!NAME_IDENTIFIER.test(name)) return false;
-  return new RegExp(`^(?:${pattern})$`).test(name);
-};
+/** Compile the configured allowlist once per resolved policy. */
+const compileAllowlist = (pattern: string): RegExp => new RegExp(`^(?:${pattern})$`);
+
+const headerInvalid = (header: string): boolean => /[\r\n\0]/.test(header);
+
+const nameAllowed = (name: string, allowlist: RegExp): boolean =>
+  NAME_IDENTIFIER.test(name) && allowlist.test(name);
 
 const renderLine = (entry: EnvRecordEntry): string =>
   entry.operation === "set" ? `set ${entry.name}=${entry.value}` : `unset ${entry.name}`;
@@ -115,9 +118,16 @@ export const serializeEnvRecord = (
   policy: ProviderEnvRecordPolicy | undefined,
 ): EnvRecordValidation => {
   const resolved = resolveEnvRecordPolicy(policy);
+  if (headerInvalid(resolved.header)) {
+    return failure(
+      "provider.env-record.malformed",
+      "the configured header contains LF, CR, or NUL",
+    );
+  }
+  const allowlist = compileAllowlist(resolved.namePattern);
   const seen = new Set<string>();
   for (const entry of entries) {
-    if (!nameAllowed(entry.name, resolved.namePattern)) {
+    if (!nameAllowed(entry.name, allowlist)) {
       return failure(
         "provider.env-record.unauthorized",
         `name ${entry.name} is outside the configured allowlist`,
@@ -163,6 +173,12 @@ export const validateEnvRecord = (
   policy: ProviderEnvRecordPolicy | undefined,
 ): EnvRecordValidation => {
   const resolved = resolveEnvRecordPolicy(policy);
+  if (headerInvalid(resolved.header)) {
+    return failure(
+      "provider.env-record.malformed",
+      "the configured header contains LF, CR, or NUL",
+    );
+  }
   if (utf8Bytes(text) > resolved.maxBytes) {
     return failure("provider.env-record.oversized", "the record exceeds the byte limit");
   }
@@ -185,6 +201,7 @@ export const validateEnvRecord = (
   }
   const entries: EnvRecordEntry[] = [];
   const seen = new Set<string>();
+  const allowlist = compileAllowlist(resolved.namePattern);
   for (const line of records) {
     if (utf8Bytes(line) > resolved.maxLineBytes) {
       return failure("provider.env-record.oversized", "a record line exceeds the line limit");
@@ -210,7 +227,7 @@ export const validateEnvRecord = (
     } else {
       return failure("provider.env-record.malformed", "a record line is neither set nor unset");
     }
-    if (!nameAllowed(entry.name, resolved.namePattern)) {
+    if (!nameAllowed(entry.name, allowlist)) {
       return failure(
         "provider.env-record.unauthorized",
         `name ${entry.name} is outside the configured allowlist`,

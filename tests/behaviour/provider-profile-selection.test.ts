@@ -232,7 +232,7 @@ describe("TC-PROFILE-010 no capable candidate fails closed", () => {
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.code).toBe("provider.profile.unavailable");
+    expect(result.code).toBe("provider.profile.capability-denied");
     expect(result.eligibility).toHaveLength(2);
     for (const entry of result.eligibility) {
       expect(entry.verdict).toBe("ineligible");

@@ -6,12 +6,16 @@ import { describe, expect, test } from "bun:test";
 import {
   createProfileEvent,
   createProfileTargetRecord,
+  createProviderFactsProbe,
   projectProfileEvidence,
+  selectProfile,
 } from "../../packages/core/src/provider/index";
 import {
+  type ProfileProviderAvailability,
   PROFILE_EVIDENCE_FIELDS,
   PROFILE_EVIDENCE_MAX_BYTES,
   PROFILE_EVIDENCE_MAX_FIELDS,
+  type ProviderProfileConfiguration,
 } from "../../packages/core/src/contracts/index";
 
 const NOW = 1_700_000_000_000;
@@ -113,5 +117,75 @@ describe("TC-PROFILE-042 evidence bounds", () => {
     evidence.profileName = "mixed";
     const projected = projectProfileEvidence(evidence as never);
     expect(Object.keys(projected)).toEqual(["profileName"]);
+  });
+
+  const utf8 = (value: unknown): number => Buffer.byteLength(JSON.stringify(value), "utf8");
+
+  test("pathological evidence is structurally capped before serialization", () => {
+    const event = createProfileEvent({
+      code: "profile.ineligible",
+      createdAtMs: NOW,
+      message: "m".repeat(4000),
+      evidence: {
+        reason: "no-eligible-profile",
+        blockers: Array.from({ length: 100 }, (_, index) => `${index}:${"b".repeat(400)}`),
+      },
+    });
+    expect(utf8(event)).toBeLessThanOrEqual(PROFILE_EVIDENCE_MAX_BYTES);
+    expect(Object.keys(event.evidence).length).toBeLessThanOrEqual(PROFILE_EVIDENCE_MAX_FIELDS);
+  });
+
+  test("a pathological configuration still serializes every event within 1024 bytes", () => {
+    const longName = (index: number): string => `${"p".repeat(400)}-${index}`;
+    const names = Array.from({ length: 40 }, (_, index) => longName(index));
+    const profiles: ProviderProfileConfiguration = {
+      tiers: {},
+      profiles: Object.fromEntries(
+        names.map((name) => [
+          name,
+          {
+            name,
+            tier: "regular",
+            providers: [`${name}-provider`],
+            agentOverrides: {},
+            seats: {
+              pm: {
+                model: "m",
+                pacingClass: "judgment" as const,
+                capability: "text-only" as const,
+              },
+            },
+          },
+        ]),
+      ),
+      preferenceChain: { base: names[0] as string, fallbacks: names.slice(1), order: names },
+    };
+    const unavailableFact = (provider: string): ProfileProviderAvailability => ({
+      available: false,
+      condition: "provider-outage",
+      source: `provider ${provider}: ${"s".repeat(400)}`,
+      blockers: [
+        {
+          kind: "condition",
+          value: "provider-outage",
+          detail: `provider ${provider} ${"d".repeat(400)}`,
+        },
+      ],
+    });
+    const facts = Object.fromEntries(
+      names.map((name) => [`${name}-provider`, unavailableFact(`${name}-provider`)]),
+    );
+    const result = selectProfile({
+      profiles,
+      probe: createProviderFactsProbe(facts),
+      nowMs: NOW,
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.events.length).toBeGreaterThan(0);
+    for (const event of result.events) {
+      expect(utf8(event)).toBeLessThanOrEqual(PROFILE_EVIDENCE_MAX_BYTES);
+      expect(Object.keys(event.evidence).length).toBeLessThanOrEqual(PROFILE_EVIDENCE_MAX_FIELDS);
+    }
   });
 });

@@ -120,6 +120,66 @@ describe("TC-PROFILE-002 fail-closed validation matrix", () => {
     }
   });
 
+  test("envRecord.header with embedded LF, CR, or NUL fails closed at parse time", () => {
+    for (const header of ["# model\nenv", "# model\renv", "# model\0env"]) {
+      const values = { provider: { profiles: { envRecord: { header } } } };
+      const result = parseProfileConfiguration(values);
+      expect(result.ok).toBe(false);
+      if (result.ok) continue;
+      expect(result.error.code).toBe("provider.profile.invalid");
+      expect(result.error.detail).toContain("envRecord.header");
+    }
+  });
+
+  test("profile, provider, and seat names beyond the structural bound fail closed", () => {
+    const long = "x".repeat(65);
+    const longProfile = {
+      provider: {
+        profiles: {
+          profiles: {
+            [long]: {
+              tier: "t",
+              providers: ["p1"],
+              seats: { pm: { model: "m", pacingClass: "judgment", capability: "text-only" } },
+            },
+          },
+        },
+      },
+    };
+    const profileResult = parseProfileConfiguration(longProfile);
+    expect(profileResult.ok).toBe(false);
+
+    const longProvider = {
+      provider: {
+        profiles: {
+          profiles: {
+            ok: {
+              tier: "t",
+              providers: [long],
+              seats: { pm: { model: "m", pacingClass: "judgment", capability: "text-only" } },
+            },
+          },
+        },
+      },
+    };
+    expect(parseProfileConfiguration(longProvider).ok).toBe(false);
+
+    const longSeat = {
+      provider: {
+        profiles: {
+          profiles: {
+            ok: {
+              tier: "t",
+              providers: ["p1"],
+              seats: { [long]: { model: "m", pacingClass: "judgment", capability: "text-only" } },
+            },
+          },
+        },
+      },
+    };
+    expect(parseProfileConfiguration(longSeat).ok).toBe(false);
+  });
+
   test("an empty chain is a classified absent refusal and no partial decision escapes", () => {
     const values = {
       provider: {

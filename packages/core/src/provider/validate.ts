@@ -53,6 +53,13 @@ export type ProviderChainSelection =
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/**
+ * Structural name bounds (NFR-8, remediation 10.4): profile, provider, and
+ * seat names are routing data that feed bounded event evidence, so an
+ * unbounded name is a validation failure rather than an overflow.
+ */
+const PROFILE_NAME_MAX_LENGTH = 64;
+
 const invalid = (
   detail: string,
   extra: { readonly chainName?: string; readonly entries?: readonly string[] } = {},
@@ -477,6 +484,12 @@ const parseTier = (name: string, value: unknown): ProviderProfileTier | ProfileC
 };
 
 const parseSeat = (name: string, value: unknown): ProviderProfileSeat | ProfileConfigResult => {
+  if (name.length === 0) return profileInvalid("provider.profiles.seats name is empty");
+  if (name.length > PROFILE_NAME_MAX_LENGTH) {
+    return profileInvalid(
+      `provider.profiles.seats name exceeds ${PROFILE_NAME_MAX_LENGTH} characters`,
+    );
+  }
   if (!isRecord(value)) return profileInvalid(`seat ${name} must be an object`, name);
   const extra = exactKeys(
     value,
@@ -514,6 +527,11 @@ const parseSeat = (name: string, value: unknown): ProviderProfileSeat | ProfileC
 
 const parseProfile = (name: string, value: unknown): ProviderProfile | ProfileConfigResult => {
   if (name.length === 0) return profileInvalid("provider.profiles.profiles name is empty");
+  if (name.length > PROFILE_NAME_MAX_LENGTH) {
+    return profileInvalid(
+      `provider.profiles.profiles name exceeds ${PROFILE_NAME_MAX_LENGTH} characters`,
+    );
+  }
   if (!isRecord(value)) return profileInvalid(`profiles.${name} must be an object`, name);
   const extra = exactKeys(
     value,
@@ -530,6 +548,12 @@ const parseProfile = (name: string, value: unknown): ProviderProfile | ProfileCo
   for (const providerName of value.providers) {
     if (typeof providerName !== "string" || providerName.length === 0) {
       return profileInvalid(`profiles.${name}.providers has an invalid entry`, name);
+    }
+    if (providerName.length > PROFILE_NAME_MAX_LENGTH) {
+      return profileInvalid(
+        `profiles.${name}.providers entry exceeds ${PROFILE_NAME_MAX_LENGTH} characters`,
+        name,
+      );
     }
     providers.push(providerName);
   }
@@ -705,6 +729,9 @@ const parseEnvRecordPolicy = (value: unknown): ProviderEnvRecordPolicy | Profile
   const header = value.header === undefined ? undefined : nonEmptyString(value.header);
   if (value.header !== undefined && header === undefined) {
     return profileInvalid("envRecord.header must be a non-empty string", "envRecord");
+  }
+  if (header !== undefined && /[\r\n\0]/.test(header)) {
+    return profileInvalid("envRecord.header must not contain LF, CR, or NUL", "envRecord");
   }
   const namePattern =
     value.namePattern === undefined ? undefined : nonEmptyString(value.namePattern);

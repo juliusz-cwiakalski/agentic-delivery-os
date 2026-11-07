@@ -153,8 +153,11 @@ import {
   createProviderEngine,
   createProviderWatchStatus,
   evaluatePeakWindow,
+  evaluateProfileLifecycle,
   parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
+  persistProfileTarget,
+  readProfileTarget,
   readProviderLedger,
   readProviderParkViews,
   resolveProfileForSpawn,
@@ -2294,9 +2297,35 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
         if (!parsed.ok) {
           return { ok: false, code: parsed.error.code, summary: parsed.error.detail };
         }
+        let profileScope:
+          | { readonly name: string; readonly providers: readonly string[] }
+          | undefined;
+        if (input.profile !== undefined) {
+          const profileParsed = parseAndValidateProfileConfiguration(
+            snapshot.value.config.values,
+            parsed.config,
+          );
+          if (!profileParsed.ok) {
+            return {
+              ok: false,
+              code: profileParsed.error.code,
+              summary: profileParsed.error.detail,
+            };
+          }
+          const profile = profileParsed.config.profiles[input.profile];
+          if (profile === undefined) {
+            return {
+              ok: false,
+              code: "provider.profile.invalid",
+              summary: `profile ${input.profile} is not declared`,
+            };
+          }
+          profileScope = { name: profile.name, providers: profile.providers };
+        }
         return engine.resolve({
           config: parsed.config,
           ...(input.chainName === undefined ? {} : { chainName: input.chainName }),
+          ...(profileScope === undefined ? {} : { profile: profileScope }),
           persist: true,
         });
       },
@@ -2402,6 +2431,57 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
             source: `provider ${providerName}: clear`,
           };
         });
+        const selection = selectProfile({
+          profiles: profileParsed.config,
+          probe,
+          nowMs,
+          ...(input.agent === undefined ? {} : { agent: input.agent }),
+        });
+        if (!selection.ok) return selection;
+        const baseProfileName = profileParsed.config.preferenceChain?.base;
+        const baseProfile =
+          baseProfileName === undefined
+            ? undefined
+            : profileParsed.config.profiles[baseProfileName];
+        let lifecycleProvider: string | undefined;
+        if (baseProfile !== undefined) {
+          for (const providerName of baseProfile.providers) {
+            if (!probe.probe(providerName).available) {
+              lifecycleProvider = providerName;
+              break;
+            }
+          }
+        }
+        const persisted = readProfileTarget(provider.stateStore);
+        if (!persisted.ok) {
+          return {
+            ok: false,
+            code: persisted.error.code,
+            summary: `profile target read failed (${persisted.error.code})`,
+          };
+        }
+        const lifecycle = evaluateProfileLifecycle({
+          profiles: profileParsed.config,
+          selection,
+          ...(persisted.value === undefined ? {} : { persisted: persisted.value }),
+          nowMs,
+          ...(lifecycleProvider === undefined ? {} : { providerName: lifecycleProvider }),
+        });
+        if (lifecycle.append && lifecycle.target !== undefined) {
+          const written = persistProfileTarget({
+            store: provider.stateStore,
+            fenceToken: provider.newFenceToken(),
+            record: lifecycle.target,
+          });
+          if (!written.ok) {
+            return {
+              ok: false,
+              code: written.error.code,
+              summary: `profile target write failed (${written.error.code})`,
+            };
+          }
+        }
+        if (!lifecycle.selection.ok) return lifecycle.selection;
         if (input.forSpawn === true) {
           const outcome = resolveProfileForSpawn({
             profiles: profileParsed.config,
@@ -2412,6 +2492,7 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
             ...(profileParsed.config.envRecord === undefined
               ? {}
               : { policy: profileParsed.config.envRecord }),
+            selection: lifecycle.selection,
           });
           if (!outcome.ok) {
             return {
@@ -2424,12 +2505,7 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
           }
           return outcome.selection;
         }
-        return selectProfile({
-          profiles: profileParsed.config,
-          probe,
-          nowMs,
-          ...(input.agent === undefined ? {} : { agent: input.agent }),
-        });
+        return lifecycle.selection;
       },
       watchStatus: async (input) => {
         const snapshot = resolve({});

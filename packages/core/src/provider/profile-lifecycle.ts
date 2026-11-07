@@ -213,6 +213,7 @@ export const evaluateProfileLifecycle = (input: ProfileLifecycleInput): ProfileL
   if (base !== undefined && selected === base) {
     if (persistedTarget !== undefined && persistedTarget !== base) {
       const revertCondition = input.persisted?.revertCondition;
+      const recoveringProvider = providerName ?? input.persisted?.providerName;
       events.push(
         createProfileEvent({
           code: "profile.reverted",
@@ -223,7 +224,7 @@ export const evaluateProfileLifecycle = (input: ProfileLifecycleInput): ProfileL
             previousProfile: persistedTarget,
             newProfile: base,
             reason: "revert",
-            ...(providerName === undefined ? {} : { providerName }),
+            ...(recoveringProvider === undefined ? {} : { providerName: recoveringProvider }),
             ...(revertCondition === undefined ? {} : { revertCondition }),
           },
         }),
@@ -232,17 +233,25 @@ export const evaluateProfileLifecycle = (input: ProfileLifecycleInput): ProfileL
         targetProfile: base,
         reason: "revert",
         previousProfile: persistedTarget,
-        ...(providerName === undefined ? {} : { providerName }),
+        ...(recoveringProvider === undefined ? {} : { providerName: recoveringProvider }),
         ...(revertCondition === undefined ? {} : { revertCondition }),
         nowMs: input.nowMs,
       });
-      return { selection, target, events: dedupe(events), append: true };
+      const deduped = dedupe(events);
+      return {
+        selection: { ...selection, outcome: "reverted", target, events: deduped },
+        target,
+        events: deduped,
+        append: true,
+      };
     }
-    return { selection, events: dedupe(events), append: false };
+    const deduped = dedupe(events);
+    return { selection: { ...selection, events: deduped }, events: deduped, append: false };
   }
 
   if (persistedTarget === selected) {
-    return { selection, events: dedupe(events), append: false };
+    const deduped = dedupe(events);
+    return { selection: { ...selection, events: deduped }, events: deduped, append: false };
   }
   const revertCondition = deriveRevertCondition(selection);
   const previous = persistedTarget ?? base ?? "none";
@@ -269,5 +278,11 @@ export const evaluateProfileLifecycle = (input: ProfileLifecycleInput): ProfileL
     ...(providerName === undefined ? {} : { providerName }),
     nowMs: input.nowMs,
   });
-  return { selection, target, events: dedupe(events), append: true };
+  const deduped = dedupe(events);
+  return {
+    selection: { ...selection, outcome: "switched", target, events: deduped },
+    target,
+    events: deduped,
+    append: true,
+  };
 };
