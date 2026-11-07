@@ -101,6 +101,7 @@
     "src/state/commit-telemetry.ts",
     "src/state/driver/runtime-edge.ts",
     "src/state/driver/strategy.ts",
+    "src/state/economics.ts",
     "src/state/edge.ts",
     "src/state/harness-telemetry.ts",
     "src/state/index.ts",

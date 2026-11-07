@@ -729,6 +729,13 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/domain/status.ts": ["aggregateStatus", "evaluateStatusFindings", "renderStatusHuman"],
   "core/src/domain/brief.ts": ["projectBrief", "renderBriefHuman"],
   "core/src/state/index.ts": ["createStateStore"],
+  "core/src/state/economics.ts": [
+    "appendEconomicsRestartEvent",
+    "createEconomicsResumeStorePort",
+    "economicsRecordKey",
+    "ensureEconomicsExhaustionRecord",
+    "readEconomicsRecords",
+  ],
   "core/src/state/artifact-boundary.ts": ["createArtifactBoundary"],
   "core/src/state/audit.ts": [
     "appendAuditInvocation",
