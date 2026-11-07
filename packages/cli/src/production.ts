@@ -159,8 +159,6 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       changesDirectory,
       fs: notesFs,
       cwd,
-      environment,
-      sessionEnvironmentKeys: [],
       phaseCommit: true,
       nowIso,
       newFenceToken,

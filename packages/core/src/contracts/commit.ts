@@ -40,7 +40,6 @@ export const COMMIT_ERROR_CODES = [
   "commit.safety.secret-suspected",
   "commit.safety.scan-unavailable",
   "commit.atomic-abort",
-  "commit.session.context-refused",
 ] as const;
 export type CommitErrorCode = (typeof COMMIT_ERROR_CODES)[number];
 

@@ -132,14 +132,6 @@ describe("TC-ENV-002 the six commit failures project exactly", () => {
         },
         expectExit: 1,
       },
-      {
-        code: "commit.session.context-refused",
-        setup: (harness) => {
-          seedDirtyTree(harness);
-          harness.sessionFacts = { insideDeliverySession: true, sessionId: "fixture" };
-        },
-        expectExit: 1,
-      },
     ];
     for (const entry of cases) {
       const harness = scenarioHarness("commit-success");

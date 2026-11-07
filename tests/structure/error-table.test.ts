@@ -775,7 +775,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "blockers")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "spend")).toHaveLength(1);
-    expect(entries).toHaveLength(105);
+    expect(entries).toHaveLength(104);
   });
 });
 
@@ -851,7 +851,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(105);
+    expect(entries).toHaveLength(104);
     expect(db).toHaveLength(4);
   });
 
@@ -1076,7 +1076,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(105);
+    expect(entries).toHaveLength(104);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1188,19 +1188,10 @@ const COMMIT_ROWS = [
     "platform-provider",
     "The atomic phase completion aborted and restored both sides.",
   ],
-  [
-    "commit.session.context-refused",
-    "user",
-    false,
-    "not_landed",
-    "Invoke the commit primitive from outside the delivery session (agents invoke it from a plain shell or subagent boundary).",
-    "user-validation",
-    "The commit primitive refused to run inside a delivery session.",
-  ],
 ] as const;
 
-describe("TC-TABLE-005 the commit kind declares exactly six rows", () => {
-  test("the commit kind carries the six pinned identities and classifications", () => {
+describe("TC-TABLE-005 the commit kind declares exactly five rows", () => {
+  test("the commit kind carries the five pinned identities and classifications", () => {
     expect(DOMAIN_KINDS).toContain("commit");
     const commit = entries.filter((entry) => entry.domainKind === "commit");
     expect(commit.map((entry) => entry.code)).toEqual(COMMIT_ROWS.map(([code]) => code));
@@ -1230,7 +1221,7 @@ describe("TC-TABLE-005 the commit kind declares exactly six rows", () => {
       expect(classifyThrown({ kind: "commit", code })).toEqual(classifyDomainKind("commit", code));
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(commit).toHaveLength(6);
+    expect(commit).toHaveLength(5);
     expect(entries.some((entry) => entry.code.includes("template-fallback"))).toBe(false);
   });
 
@@ -1257,7 +1248,7 @@ describe("TC-TABLE-005 the commit kind declares exactly six rows", () => {
       const row = `| ${code} | commit | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
       expect(doc.split(row).length - 1, code).toBe(1);
     }
-    expect(doc).toContain("`commit` kind carries exactly the six commit-primitive identities");
+    expect(doc).toContain("`commit` kind carries exactly the five commit-primitive identities");
   });
 
   test("template fallback is success evidence, never a failure identity", () => {
@@ -1651,7 +1642,7 @@ describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(105);
+    expect(entries).toHaveLength(104);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1722,7 +1713,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(104);
+    expect(delivered).toHaveLength(103);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({

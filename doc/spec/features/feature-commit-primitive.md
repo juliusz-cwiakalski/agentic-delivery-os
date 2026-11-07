@@ -6,7 +6,7 @@ created: 2026-11-06
 last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered commit primitive: a `commit` command that computes a conventional commit from the working tree plus change context (deterministic skeleton, precise staging, deterministic safety, one constrained message call behind an ordered transport seam with a marked template fallback), default-on atomic record-plus-commit inside `phase complete` with per-call and per-project opt-outs, total four-state re-run convergence over durable commit-intent evidence, the `commit.telemetry` state-layer record kind, the typed `commit.phaseCommit` configuration key, and the six `commit.*` error identities."
+summary: "The delivered commit primitive: a `commit` command that computes a conventional commit from the working tree plus change context (deterministic skeleton, precise staging, deterministic safety, one constrained message call behind an ordered transport seam with a marked template fallback), default-on atomic record-plus-commit inside `phase complete` with per-call and per-project opt-outs, total four-state re-run convergence over durable commit-intent evidence, the `commit.telemetry` state-layer record kind, the typed `commit.phaseCommit` configuration key, and the five `commit.*` error identities."
 links:
   related_changes: ["GH-227"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005"]
@@ -139,17 +139,16 @@ Six rows sit under the `commit` domain kind in both the machine error table and 
 | `commit.safety.secret-suspected` | user | false | `1` | The secret scan flagged candidate content or a filename on suspicion; human review required |
 | `commit.safety.scan-unavailable` | platform | true | `2` | The deterministic safety pass could not run; nothing is staged or committed |
 | `commit.atomic-abort` | platform | true | `2` | The atomic act aborted; the clean abort restored both sides to neither-landed |
-| `commit.session.context-refused` | user | false | `1` | A commit-capable invocation ran inside a delivery session |
 
-### Session guard
+### Session context
 
-The commit surface refuses every invocation when the injected edge facts report an active delivery session: `commit`, `commit --dry-run`, `commit --phase`, and `phase complete` with or without `--no-commit` all return `commit.session.context-refused` (exit `1`) before any port is constructed, leaving the tree, the head, and the ledger untouched. The guard is mechanical — the runtime edge declares which injected environment keys mark a session and a non-empty value refuses — and the harness one-shot's temporary empty project context is deliberately not a delivery session. `phase list` and `phase reopen` are unaffected.
+The commit surface runs inside a delivery session: `commit`, `commit --dry-run`, `commit --phase`, and `phase complete` with or without `--no-commit` proceed under the primitive's normal grammar, safety, staging, and atomicity rules. The startup path injects no delivery-session facts into `commit` or `phase complete`, and the retired session-refusal identity is not returned. The harness one-shot still runs in its own sanitized, temporary empty project context with no delivery-session facts, and that context is removed after the attempt. `phase list` and `phase reopen` are unaffected.
 
 ## Technical Architecture & Codebase Map
 
 | Path | Responsibility |
 |---|---|
-| `packages/core/src/contracts/commit.ts` | The runtime-neutral vocabulary: commit intents and bases, message sources, transports, the telemetry kind and schema id, the six error codes, conventional types, the phase/type table, constrained-output caps, diff-budget and noise/forbidden data, exclusion and safety classes, skeleton/bundle/staging/message/safety/transport/envelope/telemetry types, and the git, safety, commitlint, transport, and session-fact ports. Types and `as const` data only. |
+| `packages/core/src/contracts/commit.ts` | The runtime-neutral vocabulary: commit intents and bases, message sources, transports, the telemetry kind and schema id, the five error codes, conventional types, the phase/type table, constrained-output caps, diff-budget and noise/forbidden data, exclusion and safety classes, skeleton/bundle/staging/message/safety/transport/envelope/telemetry types, and the git, safety, commitlint, transport, and session-fact ports. Types and `as const` data only. |
 | `packages/core/src/domain/commit-skeleton.ts` | Pure skeleton computation: phase→type candidate, scope = ref, breaking default, documented default type. |
 | `packages/core/src/domain/commit-staging.ts` | Pure staging-set computation and disclosures: tracked-with-drift, declared-scope untracked, strays, forbidden paths, oversized binaries, scope source. |
 | `packages/core/src/domain/commit-bundle.ts` | Deterministic model bundle: noise stripping, per-file cap, top-N full diffs, total input budget, normalized and sorted paths. |
@@ -198,7 +197,7 @@ The commit surface refuses every invocation when the injected edge facts report 
 ## Related
 
 - [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md) — the phase command family, the nine-row idempotency matrix, and the transition record the atomic completion extends.
-- [Result Contract and Error Table](feature-result-contract.md) — the envelope, the six `commit` rows, the classification chain, and the binding sync check.
+- [Result Contract and Error Table](feature-result-contract.md) — the envelope, the five `commit` rows, the classification chain, and the binding sync check.
 - [Machine-Readable Delivery Plan Schema](feature-plan-schema.md) — per-phase declared scope and summaries, the skeleton and staging scope input.
 - [State Layer](feature-state-layer.md) — the ledger substrate, verified reads, fences, and the additive record-kind contract behind `commit.telemetry`.
 - [Configuration Layer and Inspection](feature-config-layer.md) — the typed `commit.phaseCommit` branch and origin reporting.

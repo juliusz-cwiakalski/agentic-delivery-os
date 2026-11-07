@@ -54,7 +54,6 @@ import {
   readRepositoryFacts,
 } from "@delivery-os/adapters/repo";
 import {
-  createDeliverySessionFacts,
   createSessionAdmin,
   createSessionStore,
   type OpencodeSessionIo,
@@ -617,8 +616,6 @@ export type ProductionCommitRuntimeOptions = {
   readonly changesDirectory: string;
   readonly fs: PmNotesFileSystemFacts;
   readonly cwd: string;
-  readonly environment: Readonly<Record<string, string | undefined>>;
-  readonly sessionEnvironmentKeys: readonly string[];
   readonly phaseCommit: boolean;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
@@ -640,10 +637,7 @@ export const createProductionCommitRuntimeOptions = (
     coreInference: { available: false, reason: "no-provider-route" },
     harnessOneShot: { available: false, reason: "no-harness-credentials" },
   },
-  sessionFacts: createDeliverySessionFacts({
-    environment: options.environment,
-    keys: options.sessionEnvironmentKeys,
-  }),
+  sessionFacts: { insideDeliverySession: false },
   phaseCommit: options.phaseCommit,
   nowIso: options.nowIso,
   newFenceToken: options.newFenceToken,
@@ -2415,18 +2409,7 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
       options.commit === undefined ? undefined : createPhaseCommitExtension(options.commit);
     const phaseRuntime =
       extension === undefined ? options.phase : { ...options.phase, commit: extension };
-    const committedPhaseRuntime =
-      options.commit === undefined
-        ? phaseRuntime
-        : {
-            ...phaseRuntime,
-            sessionFacts: () => {
-              const facts = options.commit?.sessionFacts;
-              return typeof facts === "function"
-                ? facts()
-                : (facts ?? { insideDeliverySession: false });
-            },
-          };
+    const committedPhaseRuntime = { ...phaseRuntime };
     commands.phase = createPhaseCommandDefinition(committedPhaseRuntime);
     if (options.commit !== undefined && extension !== undefined) {
       commands.commit = createCommitCommandDefinition(

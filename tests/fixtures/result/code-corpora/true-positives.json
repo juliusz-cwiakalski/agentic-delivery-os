@@ -85,12 +85,6 @@
       "resolves": true
     },
     {
-      "id": "commit-session-context-refused",
-      "text": "commit.session.context-refused",
-      "recognized": true,
-      "resolves": true
-    },
-    {
       "id": "declared-collector-family",
       "text": "status.collector.tracker.unavailable",
       "recognized": true,

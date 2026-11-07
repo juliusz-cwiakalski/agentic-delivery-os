@@ -640,16 +640,6 @@ const transitionTarget = async (
   noCommit: boolean,
 ): Promise<TargetSuccess | TargetFailure> => {
   const { changeRef, phaseId, kind } = grammar;
-  if (kind === "complete" && runtime.sessionFacts?.().insideDeliverySession === true) {
-    return {
-      ok: false,
-      error: {
-        kind: "commit",
-        code: "commit.session.context-refused",
-        summary: "the commit primitive is invoked from outside a delivery session",
-      },
-    };
-  }
   const read = runtime.readPmNotes(changeRef);
   if (!read.ok) return targetFailure(read) ?? internalFailure("target read");
 

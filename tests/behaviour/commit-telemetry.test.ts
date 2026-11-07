@@ -7,13 +7,11 @@ import { readCommitTelemetry } from "../../packages/core/src/state/index";
 import { withCommitHarness } from "../fixtures/commit/harness";
 import {
   COMMIT_REF,
-  commitCount,
   dataOf,
   errorCodeOf,
   head,
   seedDirtyTree,
   telemetryPayloads,
-  transitionPayloads,
   validMessage,
 } from "./commit-support";
 
@@ -99,7 +97,7 @@ describe("TC-TELEM-002 emission failure is disclosed without failing the commit"
 });
 
 describe("TC-TELEM-003 no event on any non-landed outcome", () => {
-  test("refusal, STOP, staging-blocked, scan-unavailable, abort, no-op, no-pending", async () => {
+  test("STOP, staging-blocked, scan-unavailable, abort, no-pending", async () => {
     const cases: Array<{
       readonly label: string;
       readonly run: (
@@ -107,13 +105,6 @@ describe("TC-TELEM-003 no event on any non-landed outcome", () => {
       ) => Promise<unknown>;
       readonly setup: (harness: import("../fixtures/commit/harness").CommitHarness) => void;
     }> = [
-      {
-        label: "session-refusal",
-        setup: (harness) => {
-          harness.sessionFacts = { insideDeliverySession: true };
-        },
-        run: (harness) => harness.runCommit([COMMIT_REF]),
-      },
       {
         label: "secret-stop",
         setup: (harness) => {

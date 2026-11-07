@@ -248,17 +248,6 @@ export const createCommitCommandDefinition = (
   requiresValue: ["--phase"],
   humanSuccess: true,
   handler: async ({ positionals, flags }) => {
-    const facts = runtime.sessionFacts();
-    if (facts.insideDeliverySession) {
-      return {
-        error: {
-          kind: "commit",
-          code: "commit.session.context-refused",
-          summary: "the commit primitive is invoked from outside a delivery session",
-        },
-      };
-    }
-
     const [explicitRef, ...extra] = positionals;
     if (extra.length > 0) return failure(`unexpected argument "${extra[0] as string}"`);
     if (explicitRef !== undefined && !REF_PATTERN.test(explicitRef)) {
