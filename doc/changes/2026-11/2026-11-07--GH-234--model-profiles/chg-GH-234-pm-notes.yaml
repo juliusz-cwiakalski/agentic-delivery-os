@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-07T01:06:00Z", completed: "2026-11-07T01:40:00Z" }
   delivery_planning: { started: "2026-11-07T01:41:00Z", completed: "2026-11-07T02:10:00Z" }
   dor_check: { started: "2026-11-07T02:11:00Z", completed: "2026-11-07T02:30:00Z" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-11-07T02:35:00Z", completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -19,8 +19,6 @@ decisions:
   - text: "PM-decided: spawn-integration scope = profile selection machinery + provider profile resolve --for-spawn env-record contract + current spawn surfaces (bash hook contract ADOS_HOOK_ENV_V1 / harness spawn-env seam); dispatch-daemon integration lands with M1-S9 (GH-239, still open) which consumes this seam. The milestone-exit criterion (zero manual overrides in final two-week window) is milestone-scoped per the ticket wording 'declared in', with the audit ledger arriving in M1-S22 (GH-223)."
     date: "2026-11-07"
   - text: "DoR gate iteration 1: READY (10/10 facets PASS, pause-required=no). 3 non-blocking findings carried for doc-sync reconciliation: (1) plan header missing NG-4 non-UTC exclusion line; (2) pacing-precedence pin lives in plan header + pm-notes, spec DM-5 silent -> add DEC-10 line at next spec revision; (3) nit: spec Appendix C/DM-7 envRecord representation clarified by plan pin. Verdict artifact: readiness-review/readiness-iter-1.md"
-    date: "2026-11-07"
-  - text: "PM-decided: spawn-integration scope = profile selection machinery + provider profile resolve --for-spawn env-record contract + current spawn surfaces (bash hook contract ADOS_HOOK_ENV_V1 / harness spawn-env seam); dispatch-daemon integration lands with M1-S9 (GH-239, still open) which consumes this seam. The milestone-exit criterion (zero manual overrides in final two-week window) is milestone-scoped per the ticket wording 'declared in', with the audit ledger arriving in M1-S22 (GH-223)."
     date: "2026-11-07"
 open_questions:
   - text: "Legacy user-config resolver scripting + its test battery are referenced as the reverse-engineering source but are not present in this repository (checked scripts/, hooks, tests, docs). If the owner has an external battery to port ID-for-ID (GH-182 style), surface it at PR review; until then the decision table is defined by the ticket's enumerated semantics."
