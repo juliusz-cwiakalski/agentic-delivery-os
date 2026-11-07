@@ -1,0 +1,625 @@
+# GH-266 implementation plan — Amend the M1-S9 handover gate to an evidence-based clean bar
+#
+# Plan revision: v1.0 (2026-11-07). Initial delivery plan.
+#
+# Sources (single source of truth):
+#   - Spec:  ./chg-GH-266-spec.md (v1.0; F-1..F-5; 13 ACs
+#     AC-F1-1..AC-NFR3-1; NFR-1..NFR-6; DM-1..DM-3; DEC-1..DEC-9;
+#     RSK-1..RSK-8; NG-1..NG-5; §7.2 out-of-scope; §17.1 DoD;
+#     §24 appendices with the verbatim superseded sentence and the
+#     canonical eleven-token set).
+#   - Test plan: ./chg-GH-266-test-plan.md (v1.0; 17 TCs
+#     TC-GATE-001..017; 15 procedure blocks P0..P14 in §7.1; §7.2
+#     TC-to-procedure map; §7.3 failure triage; §8.3 OQ-1..OQ-4;
+#     §1.2 declared gaps G-1..G-3).
+#   - PM notes: ./chg-GH-266-pm-notes.yaml (binding decisions: composite
+#     bar, eleven-token resolution, two-file scope, history handling,
+#     residual). Binding wording constraint recorded there: the eleven
+#     classes must be backticked inside one paragraph that also contains
+#     `noop-lane-nothing-to-do`, so the set comparison is mechanical.
+#   - Repository truth inspected: doc/planning/oss-tooling/backlog.md
+#     (M1-S9 entry, heading at line 529, definition at line 541),
+#     doc/planning/oss-tooling/status.md (history at §"M0 exit amendment
+#     and M1 re-planning (2026-11-03)", forward restatements at the
+#     paragraph after "Milestone exit: pending" and item 3 of "Proposed
+#     next steps", dated delivery section at EOF),
+#     packages/core/src/contracts/delivery-result.ts
+#     (DELIVERY_RESULT_TOKENS, eleven tokens),
+#     scripts/.tests/test-doc-distribution.sh (doc/planning is outside
+#     the closed scan set), scripts/checks/forbidden-literals.registry.json
+#     (doc/userFacingDocs scans doc/planning; seed literals are
+#     ados, ADOS_, ~/.ados), .ai/rules/*.md and
+#     doc/documentation-handbook.md (no em-dash prohibition; the two
+#     planning files use em dashes as house style).
+#
+# Change shape: docs-only, two product files, no runtime surface, no
+# schema, no changeset, no doc/spec correction owed (spec §12 assumption;
+# M1-S9/GH-239 is undelivered and feature-scheduling-engine.md excludes
+# dispatch and handover). The plan therefore has three delivery phases:
+# P1 backlog entry, P2 status entry plus pointers, P3 verification sweep
+# and delivery evidence.
+#
+# TC-mapping obligation (all 17 TCs, each exactly once):
+#   P1: TC-GATE-001, 002, 003, 004, 005, 010        (6)
+#   P2: TC-GATE-006, 007, 008, 009, 011             (5)
+#   P3: TC-GATE-012, 013, 014, 015, 016, 017        (6)
+# (6 + 5 + 6 = 17; set difference against TC-GATE-001..017 is empty.)
+# No split-completion markers are required: TC-GATE-009 is the only
+# TC whose oracle spans both files, and its completing phase is P2,
+# where both amended files first exist. P1 observes the backlog half
+# through P3's d-corroboration check but claims no completing marker
+# for TC-GATE-009.
+#
+# AC coverage (13/13, each AC appears once):
+#   AC-F1-1  -> TC-GATE-001                    -> P1
+#   AC-F1-2  -> TC-GATE-002, TC-GATE-003      -> P1
+#   AC-F1-3  -> TC-GATE-004                    -> P1
+#   AC-F2-1  -> TC-GATE-006                    -> P2
+#   AC-F2-2  -> TC-GATE-007                    -> P2
+#   AC-F2-3  -> TC-GATE-008                    -> P2
+#   AC-F3-1  -> TC-GATE-009                    -> P2
+#   AC-F4-1  -> TC-GATE-010                    -> P1
+#   AC-F5-1  -> TC-GATE-005                    -> P1
+#   AC-F5-2  -> TC-GATE-011                    -> P2
+#   AC-NFR1-1-> TC-GATE-012, TC-GATE-017      -> P3
+#   AC-NFR5-1-> TC-GATE-013, 014, 015          -> P3
+#   AC-NFR3-1-> TC-GATE-016                    -> P3
+#
+# Spec/test-plan cross-check (findings recorded, none silently smoothed):
+#   1. [NON-BLOCKING, plan constraint D-4] TC-GATE-009 requires the
+#      backlog M1-S9 region to contain "pm-notes"; TC-GATE-010/P9 treats
+#      every backticked lowercase literal in the enumeration paragraph as
+#      a candidate token. If corroboration text with a backticked
+#      `pm-notes` shares the paragraph that contains
+#      `noop-lane-nothing-to-do`, P9 reports extra=1. Resolution: the
+#      eleven-token enumeration is its own blank-line-delimited
+#      paragraph, and the corroboration rule is a separate paragraph
+#      that names pm-notes without backticks.
+#   2. [NON-BLOCKING, plan constraint D-6] TC-GATE-007/P6 accepts the
+#      literal `CEO-D-073` as a supersession-pointer marker, while
+#      TC-GATE-006/P5 selects the FIRST `##` section whose body contains
+#      `CEO-D-073`. A pointer that names the directive id would make P5
+#      select the pointer's section and fail with missing markers.
+#      Resolution: the two pointers say "superseded ... by the 2026-11-07
+#      amendment below" and do NOT contain `CEO-D-073`; only the new
+#      amendment section names the directive.
+#   3. [RECONCILED, no action] Test plan §9 says "14 uncommitted inspection
+#      procedures"; §7.1 has 15 blocks (P0..P14), but P0 is setup and
+#      P1..P14 are the 14 inspections, of which P11..P13 are the three
+#      guards. The PM notes say 15 blocks. The counts reconcile; this plan
+#      uses P0..P14.
+#   4. [INTERPRETATION, declared in D-2] Spec NFR-1 says "changed files
+#      exactly 2"; test plan P1a measures product files with
+#      `:(exclude)doc/changes/**`. The P3 evidence record is a change
+#      artifact under doc/changes and is outside the product diff, which
+#      is how the test plan already measures AC-NFR1-1.
+#   5. [NON-BLOCKING] P9's "one paragraph, backticked tokens" form is a
+#      derived testability requirement, not a spec sentence; the test
+#      plan declares it (TC-GATE-010 preconditions) and the PM notes
+#      record it. The plan pins it as a wording constraint.
+#   6. [NON-BLOCKING] P4a's byte-identical AC..Depends block is stronger
+#      than spec AC-F1-3's "unchanged"; both are compatible and the
+#      plan takes the stronger oracle.
+# No reopen-worthy contradiction was found between spec v1.0 and test
+# plan v1.0. If the DoR gate disagrees, the only candidate for a test-plan
+# note is finding 2 (P5 should say "the unique CEO-D-073 section"); the
+# delivery is nonetheless deterministic under D-6.
+#
+# Delivery-planning decisions (placement, wording, sequencing; no
+# behavioural deviation):
+#   D-1 Ceremony. tier `lite` with mandatory escalation triggers, the
+#       two-tier split required by operator requirement R10. All three
+#       phases are delivery (lease-taking) under repo:main-tools and the
+#       standard weight class; docs-only work needs no heavy weight and
+#       no planning phase.
+#   D-2 No test code. Every verification is one of the test plan's
+#       uncommitted procedures, materialised under
+#       /tmp/gh266-procedures/ by copy, never retyped and never committed.
+#       NFR-1 forbids tests/**, scripts/**, and build-config changes; a
+#       permanent branch-diff test would also violate the
+#       testing-strategy rule that moving-base diff checks belong to
+#       review gates. P3's delivery-evidence file lives under
+#       doc/changes/** and is excluded by P1a, so AC-NFR1-1 still sees
+#       exactly two product files.
+#   D-3 Phase split. P1 is independently verifiable by the backlog
+#       procedures; P2 by the status procedures; P3 by the containment,
+#       guard, cross-file, and re-run sweep. Each phase lands one
+#       Conventional Commit.
+#   D-4 Paragraph boundaries in the M1-S9 entry. The current entry has no
+#       blank lines. The amendment introduces exactly two: one before the
+#       eleven-token enumeration paragraph and one after it. The
+#       enumeration paragraph contains its lead-in sentence and the
+#       eleven backticked tokens, nothing else. Corroboration (with
+#       `pm-notes`) and the untouched Handover-flips sentence may share
+#       the following paragraph.
+#   D-5 No-wrap literals. P3's condition checks, P5, P8, and P14 test the
+#       RAW text, not a flattened copy. Every multi-word literal named in
+#       the phase tasks must therefore sit on one physical line. P2 and
+#       the floor-scope half of P3 flatten whitespace; the rest do not.
+#   D-6 Status placement and pointers. Append the new `##` section at
+#       EOF, after the dated 2026-11-07 scheduling-engine section. Append
+#       each pointer inside the existing paragraph/list item (no blank
+#       line between the original sentence and the pointer) so P6 counts
+#       the original statement as pointed, and keep every original
+#       sentence verbatim. Pointers carry "superseded" but not
+#       `CEO-D-073` (finding 2).
+#   D-7 Invariants. backlog.md frontmatter byte-identical; status.md
+#       gains no frontmatter; neither file gains an `ados_distribution`
+#       marker (doc/planning is outside the closed distribution scope;
+#       the guard's scan set is doc/guides, doc/templates, blueprints,
+#       and the fixed standalone list); the M1-S9 heading is
+#       byte-identical; the AC block and dependency line are
+#       byte-identical.
+#   D-8 Residual and non-goals. Do NOT edit the seven residual planning
+#       documents listed in spec §7.2, operator-requirements-2026-11.md,
+#       the GH-239 ticket body, the roadmap M0 exit criterion, or
+#       doc/spec/**. Report the stale GH-239 body and those residual
+#       documents in the PR or ticket comment, and state there that
+#       `pr-open-unverified` was added on the authority of the normative
+#       clause (DEC-3).
+#   D-9 Commit and release. One Conventional Commit per phase through
+#       @committer; subject `docs(GH-266): ...`; every body and footer
+#       line <= 100 characters (CI commitlint is the authority; the
+#       local hook is warn-only). PR targets `main-tools`.
+#   D-10 Plan validation. The repository's `plan validate` logic is the
+#       pure `validatePlan` over `readPlanArtifact`; no `plan` binary is
+#       installed in this checkout. The artifact was validated with that
+#       exact read+validate path on the parsed document (see the
+#       validation record at the end of this header).
+#
+# Verification conventions (binding for every phase):
+#   - Run from the repository root on branch
+#     docs/GH-266/evidence-based-handover-gate.
+#   - Materialise each procedure ONCE, verbatim by copy from
+#     chg-GH-266-test-plan.md §7.1, as
+#     /tmp/gh266-procedures/p00.sh .. p14.sh (P0..P14). Do not retype:
+#     the literals in those blocks are the oracle.
+#   - Run each gate with BASE=origin/main-tools in the environment
+#     (e.g. `BASE=origin/main-tools bash /tmp/gh266-procedures/p03.sh
+#     doc/planning/oss-tooling/backlog.md`). The P0 block also writes
+#     /tmp/gh266-base-backlog.md and /tmp/gh266-base-status.md.
+#   - Gates run at the phase HEAD, after the phase commit. A failing
+#     gate blocks the next phase: fix inside the same phase's scope,
+#     re-commit, re-run.
+#   - Record the observed output line for every gate in the P3 evidence
+#     file and in the PR body (test plan §6; spec §17.1 DoD).
+#
+# Validation record (2026-11-07, plan revision v1.0):
+#   verdict=valid, readyForDevelopment=true, totalErrors=0,
+#   artifact=chg-GH-266-plan.yaml (kind=yaml),
+#   schemaVersion=delivery.plan.v1, tier=lite, phases=1..3.
+#   Method: readPlanArtifact(changeRef GH-266, changesDirectory
+#   doc/changes) + validatePlan with the repository `yaml` parser, i.e.
+#   the exact composition `plan validate GH-266` invokes. 17/17 TCs
+#   mapped exactly once; 13/13 ACs covered.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-266
+tier:
+  name: lite
+  phases: [1, 2, 3]
+  escalationTriggers:
+    - "A product path other than doc/planning/oss-tooling/backlog.md or doc/planning/oss-tooling/status.md appears in the branch diff (P1a/P1b)"
+    - "The backlog.md frontmatter, the M1-S9 heading, or the M1-S9 AC/Depends block changes (P4, P10)"
+    - "The M1-S9 enumeration stops being set-equal to DELIVERY_RESULT_TOKENS (P9)"
+    - "The dated 2026-11-03 amendment, the M0 exit-criteria list, or an M0 pilot statement changes (P7)"
+    - "A supersession pointer contains the literal CEO-D-073, or the status amendment contains the hyphenated two-clean-weeks token (P5/P6 section selection)"
+    - "A doc guard fails in a way attributable to the two amended files (P11/P12)"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "P1 — Amend the M1-S9 backlog entry to the evidence-based composite clean bar"
+    kind: delivery
+    weightClass: standard
+    scope:
+      files:
+        - doc/planning/oss-tooling/backlog.md
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every phase testGate green at the phase HEAD"
+      - "TC-GATE-001/002/003/004/005/010 complete; TC-GATE-009 backlog half observed (completing marker stays P2)"
+    summary: "docs(GH-266): redefine the M1-S9 clean bar on evidence"
+    tasks:
+      - |-
+        1.1 Replace ONLY the superseded definition clause inside the
+        `### M1-S9 Dispatch engine: dual-run evidence and per-repo handover`
+        entry, in its `- Tasks:` block. Current anchor text (verbatim):
+        "requires the resident daemon live (M1-S18) and the evidence window
+        elapsed. Clean is defined: a rolling two-week window with zero
+        false-success incidents and zero unresolved divergences on the
+        repository's pilot paths."
+        Replace it so the phase (b) gate reads "... the resident daemon live
+        (M1-S18) and the evidence-based clean bar met." followed by the
+        four-condition definition. Keep everything before the anchor (the
+        Goal line, the Ticket line, the (a) **evidence accrual** clause) and
+        everything after it (the "Handover flips ..." sentence, the "Covers
+        the functions of ..." sentence, the `- AC:` block, the
+        `- Depends on:` line, the following story) byte-identical.
+        [F-1, DM-1; AC-F1-1, AC-F1-2, AC-F1-3; TC-GATE-001, 002, 003, 004]
+      - |-
+        1.2 State the four conditions as ONE definition, with these pinned
+        literals, each on one physical line (D-5): "false-success incidents",
+        "unresolved divergences", "pilot paths" for condition (a);
+        "TDR-0005 result class", "real tickets" for (b); "20 dispatches",
+        "7 consecutive days", "whichever comes first" for (c);
+        "pm-notes", "tracker state", "CI on the pushed head",
+        "never sufficient" for (d). The floor sentence must additionally
+        say that the either/or "binds only the floor" and "never substitutes
+        for class coverage, incident truth, or corroboration", placed within
+        the same sentence as "whichever comes first" (P3's floor-scope
+        window is +/-240 characters before and +300 after). Do not use the
+        phrases "rolling two-week window" or "two clean weeks" anywhere in
+        the entry, and remove "evidence window elapsed": the gate is no
+        longer time-defined (P2 requires occurrences=0). [F-1, DEC-1,
+        DEC-2; AC-F1-1, AC-F1-2; TC-GATE-001, 002, 003]
+      - |-
+        1.3 Insert the eleven-token enumeration as its OWN paragraph,
+        delimited by a blank line before and after (D-4). Lead-in sentence,
+        then exactly these eleven backticked tokens, each exactly once, in
+        this order: `merged`, `blocked`, `pr-open`, `pr-open-unverified`,
+        `failed`, `finished`, `max-restarts`, `state-unverified`, `partial`,
+        `noop-lane-permission`, `noop-lane-nothing-to-do`. The paragraph must
+        contain no other backticked lowercase literal (P9 collects every
+        `[a-z0-9-]+` span between backticks); in particular, do NOT backtick
+        `pm-notes` here. This paragraph is the only place the eleven classes
+        are enumerated. [F-4, DM-2, DEC-3; AC-F4-1; TC-GATE-010]
+      - |-
+        1.4 Put the corroboration rule in a SEPARATE paragraph (D-4): an
+        engine-claimed success is never sufficient; a dispatch counts clean
+        only when artifact and tracker truth agree; the evidence set is
+        exactly three sources, completed pm-notes phases, tracker state, and
+        CI on the pushed head. Make it legible per outcome family: a success
+        claim such as merged needs the pushed head, CI on that head, tracker
+        state, and completed phases; a tracker-derived claim such as
+        pr-open, blocked, or pr-open-unverified needs the tracker fact. State
+        that a result token alone never counts. No fourth evidence source
+        (a bare exit code, an engine log line, a self-reported summary) may
+        be offered. [F-3, DM-3, DEC-4; AC-F3-1; TC-GATE-009 backlog half]
+      - |-
+        1.5 Preservation guardrails. Do not touch: the `---` frontmatter
+        block (byte-identical), the `### M1-S9 ...` heading text, the
+        `- Ticket: GH-239` line, the `- AC:` block (keep the sentence
+        "handover is refused while the repository's clean window is unmet
+        and offered when met" exactly), and the `- Depends on:` line. Do not
+        add an `ados_distribution` marker. Do not rewrap or reformat
+        untouched lines; keep the entry's two-space continuation indent. Do
+        not introduce the seed literals `ados`, `ADOS_`, or `~/.ados`. No
+        repo rule forbids em dashes; use none in the new prose and do not
+        convert or remove existing ones. Reference wording that passed
+        P2/P3/P4a/P8/P9/P14 in a /tmp copy (connective wording may change
+        only if no pinned literal and no paragraph boundary changes). The
+        replacement starts immediately after "(M1-S18) and ":
+          Clean is the conjunction of four conditions: (a) zero
+          false-success incidents and zero unresolved divergences on the
+          repository's pilot paths; (b) dispatch evidence exercising every
+          TDR-0005 result class on real tickets; (c) an exposure floor of at
+          least 20 dispatches or at least 7 consecutive days, whichever comes first,
+          where that either/or binds only the floor and never substitutes
+          for class coverage, incident truth, or corroboration; (d) corroboration,
+          where an engine-claimed success is never sufficient and a dispatch
+          counts clean only when artifact and tracker truth agree.
+
+          The result-class condition is total over the vocabulary the classifier
+          can emit, enumerated here for set comparison against the typed contract:
+          `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `failed`,
+          `finished`, `max-restarts`, `state-unverified`, `partial`,
+          `noop-lane-permission`, `noop-lane-nothing-to-do`.
+
+          Corroboration is exactly three evidence sources: completed pm-notes
+          phases, tracker state, and CI on the pushed head. A success claim such
+          as merged needs the pushed head, CI on that head, the tracker state,
+          and completed phases; a tracker-derived claim such as pr-open,
+          blocked, or pr-open-unverified needs the tracker fact. A result
+          token alone never counts.
+        [F-5, NFR-1, NFR-2, DEC-8, DEC-9; AC-F1-3, AC-F5-1, AC-F5-2]
+    coverage:
+      - "TC-GATE-001 (complete: four conditions present as one definition, both phase markers intact)"
+      - "TC-GATE-002 (complete: occurrences=0 unmarked=0)"
+      - "TC-GATE-003 (complete: floor-scope=OK)"
+      - "TC-GATE-004 (complete: M1-S9 AC+Depends byte-identical, four AC phrases present)"
+      - "TC-GATE-005 (complete: heading unchanged)"
+      - "TC-GATE-010 (complete: tokens=11 missing=0 extra=0 duplicates=0, negative control missing=1)"
+    testGate:
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p00.sh
+        (base snapshots into /tmp/gh266-base-backlog.md and
+        /tmp/gh266-base-status.md)
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p03.sh
+        doc/planning/oss-tooling/backlog.md
+        -> a-truth: OK, b-classes: OK, c-floor: OK,
+        d-corroboration: OK, floor-scope=OK, conditions=4/4; exit 0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p02.sh
+        doc/planning/oss-tooling/backlog.md
+        -> occurrences=0 unmarked=0; exit 0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p09.sh
+        doc/planning/oss-tooling/backlog.md
+        -> tokens=11 missing=0 extra=0 duplicates=0; exit 0
+      - >-
+        Negative control: sed 's/`pr-open-unverified`, //'
+        doc/planning/oss-tooling/backlog.md > /tmp/gh266-neg.md; then
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p09.sh
+        /tmp/gh266-neg.md -> tokens=10 missing=1, "missing:
+        pr-open-unverified", exit 1 (proves the check is not vacuous)
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p04.sh
+        -> "heading unchanged"; identical heading lines; "M1-S9
+        AC+Depends byte-identical"; no MISSING: lines for clean window,
+        refused while, per repository and reversible, fallback with
+        deprecation
+    invariants:
+      - "F-1/DEC-1/DEC-2: the four conditions are a conjunction; the either/or binds only the exposure floor"
+      - "F-4/DEC-3: the enumeration is total over DELIVERY_RESULT_TOKENS and includes pr-open-unverified; no other backticked lowercase literal shares its paragraph"
+      - "F-5/NFR-2: heading, frontmatter, AC block, and dependency line are byte-identical; no ados_distribution marker"
+      - "D-5: every multi-word test literal sits on one physical line"
+
+  - id: 2
+    title: "P2 — Record the CEO-D-073 amendment in status.md and point the two forward-looking restatements at it"
+    kind: delivery
+    weightClass: standard
+    scope:
+      files:
+        - doc/planning/oss-tooling/status.md
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every phase testGate green at the phase HEAD"
+      - "TC-GATE-006/007/008/009/011 complete"
+    summary: "docs(GH-266): record the CEO-D-073 handover amendment in status"
+    tasks:
+      - |-
+        2.1 Append ONE new `##` section at end of file, after the dated
+        "M1 delivery: scheduling engine delivered (2026-11-07)" section and
+        after the `[lanes.md](milestones/m1/commands/lanes.md)` paragraph.
+        Heading must be a `##` sibling of the 2026-11-03 amendment and must
+        carry both the directive id and an ISO date, e.g.
+        "## M1-S9 handover amendment: evidence-based clean bar (2026-11-07, CEO-D-073)".
+        The section states: the directive attribution (CEO-D-073); the same
+        four conditions as the backlog, with "false-success incidents",
+        "unresolved divergences", "result class", "real tickets",
+        "20 dispatches", "7 consecutive days", "whichever comes first",
+        "pm-notes", "tracker state", "CI on the pushed head",
+        "never sufficient", each on one physical line (D-5); the floor-only
+        scope; the three-source corroboration rule and the insufficiency
+        rule; that [backlog.md](backlog.md) is canonical and this section
+        defers to it; and the declared residual naming all seven of
+        backlog-ranking.md, roadmap.md, cli-command-registry.md,
+        milestones/m1/commands/dispatch.md, milestones/m1/journeys.md,
+        user-journeys.md, and milestones/m1/test-scenarios.md, plus
+        operator-requirements-2026-11.md as a dated historical record that
+        stays as written (P5 needs at least two residual basenames; name
+        all seven so the residual is discoverable). Do NOT use the
+        hyphenated token two-clean-weeks in this
+        section: P6 would count it as a third forward paragraph and fail
+        forward=2 (D-6). [F-2, F-3, F-5, DEC-6; AC-F2-1, AC-F3-1;
+        TC-GATE-006, TC-GATE-009]
+      - |-
+        2.2 First supersession pointer. In the paragraph that begins
+        "Per backlog-ranking.md reading notes ..." (the paragraph after
+        "## Milestone exit: pending" and its numbered list), append a
+        sentence INSIDE the same paragraph (no blank line before it) after
+        "remains the critical path for M0 exit.": the M1-S9 half is
+        superseded by the 2026-11-07 M1-S9 handover amendment below. Keep
+        "stories that do not touch dispatch are unconstrained", "requires
+        its per-repository two-clean-weeks evidence", and "remains the
+        critical path for M0 exit." byte-identical (P7c). The pointer must
+        contain "superseded" (or "supersedes") and must NOT contain the
+        literal CEO-D-073 (finding 2). [F-2, DEC-6; AC-F2-2; TC-GATE-007]
+      - |-
+        2.3 Second supersession pointer. In item 3 of "## Proposed next
+        steps", append a sentence INSIDE the same list-item paragraph (no
+        blank line) after "respecting the per-repo two-clean-weeks rule.":
+        M1-S9 handover is now governed by the evidence-based clean bar
+        recorded in the 2026-11-07 amendment below, which supersedes the
+        per-repo rule named here. Keep the original sentence verbatim; the
+        pointer is additive. Must not contain CEO-D-073. [F-2, DEC-6;
+        AC-F2-2; TC-GATE-007]
+      - |-
+        2.4 History and invariants. Do not touch the dated 2026-11-03
+        amendment bullets, the M0 exit-criteria list (including "zero
+        false-success incidents on pilot paths over two weeks"), the M0
+        pilot statements, the milestone table, or any earlier section. Do
+        not add frontmatter (first line stays the H1), and do not add an
+        ados_distribution marker. Do not rewrap untouched lines; keep the
+        file's hard-wrapped prose style. Reference wording that passed
+        P5/P6/P7/P8/P10/P14 in a /tmp copy (connective wording may change
+        only if no pinned literal and no paragraph boundary changes):
+        ## M1-S9 handover amendment: evidence-based clean bar (2026-11-07, CEO-D-073)
+
+        Recorded under the owner directive CEO-D-073. The M1-S9 per-repository
+        handover gate is no longer defined by elapsed time. Clean is the conjunction
+        of four conditions: (a) zero false-success incidents and zero unresolved divergences
+        on the repository's pilot paths; (b) dispatch evidence exercising
+        every TDR-0005 result class on real tickets; (c) an exposure floor of at
+        least 20 dispatches or at least 7 consecutive days, whichever comes first,
+        where that either/or binds only the floor and never substitutes for class
+        coverage, incident truth, or corroboration; (d) corroboration, where an
+        engine-claimed success is never sufficient and a dispatch counts clean only
+        when artifact and tracker truth agree.
+
+        Corroboration is exactly three evidence sources: completed pm-notes phases,
+        tracker state, and CI on the pushed head. A result token on its own never
+        counts.
+
+        The canonical definition is the M1-S9 entry in [backlog.md](backlog.md);
+        this section records the amendment and defers to that entry for the normative
+        wording. Declared residual: the amendment is not yet propagated to
+        backlog-ranking.md, roadmap.md, cli-command-registry.md,
+        milestones/m1/commands/dispatch.md, milestones/m1/journeys.md,
+        user-journeys.md, and milestones/m1/test-scenarios.md, which still carry
+        the superseded calendar phrasing; operator-requirements-2026-11.md is a
+        dated historical record and stays as written. A follow-up change refreshes
+        them.
+        [F-2, F-5, NFR-2, DEC-6, DEC-7, DEC-9; AC-F2-1, AC-F2-3, AC-F5-2]
+    coverage:
+      - "TC-GATE-006 (complete: dated CEO-D-073 section, residual-named=8, missing=0)"
+      - "TC-GATE-007 (complete: forward=2 pointed=2)"
+      - "TC-GATE-008 (complete: 2026-11-03 section identical, M0 exit criteria identical, no MISSING pilot statement)"
+      - "TC-GATE-009 (complete: status.md sources=3/3 insufficiency=OK; backlog half was P1)"
+      - "TC-GATE-011 (complete: backlog frontmatter byte-identical, status has no frontmatter, 0 added ados_distribution lines)"
+    testGate:
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p05.sh
+        doc/planning/oss-tooling/status.md
+        -> amendment: ## ... (2026-11-07, CEO-D-073); residual-named>=2;
+        missing=0; exit 0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p06.sh
+        doc/planning/oss-tooling/status.md
+        -> one "history (no pointer required)" line; forward=2 pointed=2;
+        exit 0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p07.sh
+        -> "2026-11-03 section identical"; "M0 exit criteria identical";
+        no MISSING: lines; "history check done"
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p08.sh
+        -> backlog.md: sources=3/3 insufficiency=OK and status.md:
+        sources=3/3 insufficiency=OK; both exit 0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p10.sh
+        -> "backlog frontmatter byte-identical"; "status has no
+        frontmatter"; 0 added ados_distribution lines
+    invariants:
+      - "F-2/DEC-6: the amendment is additive and dated; the two pointers are additive and sit inside the original paragraphs; no historical region is rewritten"
+      - "F-3/DEC-4: exactly three corroboration sources and the insufficiency rule are stated in both files"
+      - "F-5/NFR-2/DEC-9: no frontmatter added, no ados_distribution marker, 2026-11-03 bullets and M0 exit/pilot text byte-identical"
+      - "D-6: pointers do not contain CEO-D-073; the amendment text does not contain two-clean-weeks"
+
+  - id: 3
+    title: "P3 — Verification sweep across both files, guard evidence, and declared residual"
+    kind: delivery
+    weightClass: standard
+    scope:
+      files:
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/status.md
+        - doc/changes/2026-11/2026-11-07--GH-266--evidence-based-handover-gate/chg-GH-266-spec.md
+        - doc/changes/2026-11/2026-11-07--GH-266--evidence-based-handover-gate/chg-GH-266-test-plan.md
+        - doc/changes/2026-11/2026-11-07--GH-266--evidence-based-handover-gate/chg-GH-266-plan.yaml
+        - doc/changes/2026-11/2026-11-07--GH-266--evidence-based-handover-gate/chg-GH-266-pm-notes.yaml
+      folders:
+        - doc/changes/2026-11/2026-11-07--GH-266--evidence-based-handover-gate/delivery-evidence
+    doneArtifacts:
+      pipelineId: "GitHub Actions CI on the GH-266 PR targeting main-tools is green"
+      trackerTransition: "GH-266 stays In Progress through merge; the PR body carries the residual list and the DEC-3 disclosure"
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every phase testGate green at the final HEAD"
+      - "TC-GATE-012/013/014/015/016/017 complete"
+      - "delivery-evidence/verification.md records every procedure id, command, expected line, and observed line"
+    summary: "docs(GH-266): record verification evidence for the handover-gate amendment"
+    tasks:
+      - |-
+        3.1 Re-materialise the base (p00) and run containment and
+        whitespace: p01 (P1a/P1b/P1c). P1a must print exactly
+        doc/planning/oss-tooling/backlog.md and
+        doc/planning/oss-tooling/status.md (doc/changes/** is excluded);
+        P1b must print "none"; P1c must print exit=0 with no output. A third
+        product path is an automatic FAIL: revert it, do not rationalise it.
+        [NFR-1, DEC-5; AC-NFR1-1; TC-GATE-012, TC-GATE-017]
+      - |-
+        3.2 Run the guards: p11 (doc-distribution, expect exit=0 and the
+        81 in-scope docs line), p12 (forbidden literals, expect 5/5 scope
+        classes, 0 violations, exit=0; any violation naming either amended
+        file is a FAIL and is fixed by rewording, never by an allowlist
+        edit that would touch scripts/**), p13 (link integrity, expect
+        broken=0; the added link is [backlog.md](backlog.md), which
+        resolves). [NFR-5; AC-NFR5-1; TC-GATE-013, 014, 015]
+      - |-
+        3.3 Re-run the content procedures at the final HEAD to prove the
+        two commits did not regress: p02, p03, p04, p05, p06, p07, p08,
+        p09, p10, p14, with the expected lines recorded in steps 1-2 and
+        in the phase-2 gate list. P14 must print backlog.md
+        corroboration=3/3 incident=OK classes=OK floor=OK and status.md
+        corroboration=3/3 incident=OK classes=OK floor=OK|n/a. Then do the
+        two manual reads the test plan requires: TC-GATE-016 steps 2-4
+        (side-by-side contradiction read) and TC-GATE-006 step 4 (markdown
+        render review). [NFR-3; AC-NFR3-1; TC-GATE-016, plus re-prove rows]
+      - |-
+        3.4 Write doc/changes/2026-11/2026-11-07--GH-266--evidence-based-handover-gate/delivery-evidence/verification.md:
+        one row per TC (TC id, procedure ids, command, expected line,
+        observed line), the plan-validation verdict, the P1a two-path list,
+        the P11/P12 outputs, and the declared residual with the GH-239
+        staleness and the DEC-3 disclosure. This is a change artifact
+        (D-2), not a third product file. [DoD; AC-NFR1-1, AC-NFR5-1,
+        AC-NFR3-1]
+      - |-
+        3.5 Commit the evidence with the phase summary, then re-run p01a
+        and p01b at the final HEAD and confirm the same two product paths
+        and "none". Record that confirmation in the PR body, not in a
+        second commit. If a gate failed in 3.1-3.3, fix only inside the
+        P1/P2 regions, re-run the affected procedure, and re-commit the
+        phase; do not widen the diff. [NFR-1, NFR-6; AC-NFR1-1]
+    coverage:
+      - "TC-GATE-012 (complete: exactly two product files; no code/spec/opencode/build path)"
+      - "TC-GATE-013 (complete: doc-distribution guard exit=0, 81 in-scope docs, no drift)"
+      - "TC-GATE-014 (complete: forbidden-literals 5/5, 0 violations, exit=0)"
+      - "TC-GATE-015 (complete: broken=0)"
+      - "TC-GATE-016 (complete: cross-file presence lines plus manual contradiction read)"
+      - "TC-GATE-017 (complete: git diff --check exit=0; proportionate stat; no conflict markers)"
+    testGate:
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p00.sh
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p01.sh
+        -> exactly two doc/planning/oss-tooling paths; "none"; exit=0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p11.sh
+        -> exit=0; (guard-doc-distribution)[OK] no drift - 81 in-scope docs
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p12.sh
+        -> OK forbidden-literals: 5/5 scope classes scanned, 0 violations;
+        exit=0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p13.sh
+        -> broken=0; exit 0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p14.sh
+        -> backlog.md: corroboration=3/3 incident=OK classes=OK floor=OK;
+        status.md: corroboration=3/3 incident=OK classes=OK floor=OK|n/a
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p02.sh
+        doc/planning/oss-tooling/backlog.md -> occurrences=0 unmarked=0;
+        exit 0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p03.sh
+        doc/planning/oss-tooling/backlog.md -> conditions=4/4,
+        floor-scope=OK; exit 0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p04.sh
+        -> heading unchanged; M1-S9 AC+Depends byte-identical
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p05.sh
+        doc/planning/oss-tooling/status.md -> residual-named=8, missing=0;
+        exit 0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p06.sh
+        doc/planning/oss-tooling/status.md -> forward=2 pointed=2; exit 0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p07.sh
+        -> 2026-11-03 section identical; M0 exit criteria identical; no
+        MISSING: lines
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p08.sh
+        -> backlog.md and status.md both sources=3/3 insufficiency=OK;
+        exit 0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p09.sh
+        doc/planning/oss-tooling/backlog.md -> tokens=11 missing=0 extra=0
+        duplicates=0; exit 0
+      - >-
+        BASE=origin/main-tools bash /tmp/gh266-procedures/p10.sh
+        -> backlog frontmatter byte-identical; status has no frontmatter;
+        0 added ados_distribution lines
+      - >-
+        git diff --stat origin/main-tools...HEAD -- doc/planning/oss-tooling/
+        -> added/removed counts proportionate to one definition swap, one
+        amendment section, and two pointer sentences; no whole-file rewrap
+    invariants:
+      - "NFR-1: exactly two product files; doc/changes/** artifacts are excluded from the product diff by P1a"
+      - "NFR-2/NFR-3: history byte-identical; the two files agree on the four conditions, the floor-only scope, and the three sources"
+      - "NFR-5: all three doc guards green with attribution"
+      - "D-8: residual documents, operator-requirements, the GH-239 ticket body, the roadmap M0 criterion, and doc/spec/** stay untouched and are reported, not edited"

@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-11-07T22:52:00Z", completed: "2026-11-07T23:05:00Z" }
   specification: { started: "2026-11-07T23:06:00Z", completed: "2026-11-07T23:24:00Z" }
   test_planning: { started: "2026-11-07T23:25:00Z", completed: "2026-11-07T23:41:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-11-07T23:42:00Z", completed: "2026-11-07T23:58:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -56,4 +56,10 @@ notes:
     date: "2026-11-07"
   - text: "RETRO: appending the test-planning notes used a non-unique two-line anchor (`type`/`date`) with replace-all, so the same two notes were inserted four times, and a follow-up repair edit then truncated the specification-phase note mid-sentence. Both defects were caught by reading the file back and by the committer's YAML validation before any commit existed, so no bad state reached history. Improvement: append notes at end of file, and validate the YAML after every notes edit."
     type: "retro"
+    date: "2026-11-07"
+  - text: "Delivery planning phase complete: chg-GH-266-plan.yaml authored as delivery.plan.v1 (tier lite, 3 phases P1-P3, 17/17 TCs mapped exactly once, 13/13 ACs mapped, per-phase test-gate procedures drawn from the test plan). Repository plan validator verdict: valid, readyForDevelopment true, 0 errors. Prose-level encoding decisions: the M1-S9 amendment is one phase and the status amendment is another so each is independently committable; the P3 verification phase writes verification evidence under the change folder (not a product file) so AC-NFR1-1 still sees exactly two product files."
+    type: "info"
+    date: "2026-11-07"
+  - text: "Plan cross-check findings (non-blocking, encoded in the plan rather than smoothed over): (1) the status pointer wording must not carry the CEO-D-073 id, otherwise P5's first-section selection picks the pointer section instead of the amendment; (2) the eleven-token enumeration must be its own blank-line-delimited paragraph with only the eleven backticked literals, otherwise P9 reports an extra token and TC-GATE-009 needs `pm-notes` in the backlog region; (3) the plan interprets AC-NFR1-1 as 'two product files' and treats the P3 evidence record under doc/changes/** as outside that set. No spec-vs-test-plan contradiction requires reopening an upstream artifact."
+    type: "info"
     date: "2026-11-07"
