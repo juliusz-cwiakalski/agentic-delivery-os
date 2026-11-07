@@ -22,12 +22,7 @@ import {
   peak,
 } from "../fixtures/provider/profile/selection/fixtures";
 import { lifecycleChain, peakWindow } from "../fixtures/provider/profile/lifecycle/fixtures";
-import {
-  makeIdentity,
-  makeTempRoot,
-  openStore,
-  removeRoot,
-} from "../fixtures/state/harness";
+import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const NOW = 1_700_000_000_000;
 const roots: string[] = [];
@@ -231,7 +226,11 @@ describe("TC-PROFILE-026/028 revert-on-recovery, dedupe and flap stabilization",
     const switched = evaluateProfileLifecycle({
       profiles: lifecycleChain(),
       selection: exhaustedSelection,
-      persisted: createProfileTargetRecord({ targetProfile: "mixed", reason: "revert", nowMs: NOW }),
+      persisted: createProfileTargetRecord({
+        targetProfile: "mixed",
+        reason: "revert",
+        nowMs: NOW,
+      }),
       nowMs: NOW,
     });
     expect(switched.target?.reason).toBe("switch");
@@ -256,7 +255,11 @@ describe("TC-PROFILE-027 nothing eligible yields an honest parked decision", () 
     const outcome = evaluateProfileLifecycle({
       profiles: lifecycleChain(),
       selection,
-      persisted: createProfileTargetRecord({ targetProfile: "mixed", reason: "selection", nowMs: NOW }),
+      persisted: createProfileTargetRecord({
+        targetProfile: "mixed",
+        reason: "selection",
+        nowMs: NOW,
+      }),
       nowMs: NOW,
     });
     expect(outcome.append).toBe(false);

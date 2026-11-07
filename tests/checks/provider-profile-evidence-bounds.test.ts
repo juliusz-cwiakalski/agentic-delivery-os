@@ -90,7 +90,7 @@ describe("TC-PROFILE-042 evidence bounds", () => {
     const projected = projectProfileEvidence({
       profileName: "mixed",
       unknownKey: "dropped",
-      rawVendorBody: "{\"secret\":true}",
+      rawVendorBody: '{"secret":true}',
     } as never);
     expect(projected).toEqual({ profileName: "mixed" });
     expect(Object.keys(projected).length).toBeLessThanOrEqual(PROFILE_EVIDENCE_MAX_FIELDS);

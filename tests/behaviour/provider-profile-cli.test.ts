@@ -57,10 +57,10 @@ const runtime = (
     profileResolve: async (input) => {
       calls.profileResolve += 1;
       return input.forSpawn
-        ? {
+        ? ({
             ...selectedResult(),
             decision: { ...selectedResult().decision, envRecord },
-          } as ProfileSelectionResult
+          } as ProfileSelectionResult)
         : selectedResult();
     },
     watchStatus: async (input) => {
@@ -149,7 +149,10 @@ describe("TC-PROFILE-044 provider profile resolve envelope and exits", () => {
     const { runtime: commandRuntime } = runtime({
       profileResolve: async () => selectedResult(),
     });
-    const result = await run(["profile", "resolve", "--agent", "reviewer", "--json"], commandRuntime);
+    const result = await run(
+      ["profile", "resolve", "--agent", "reviewer", "--json"],
+      commandRuntime,
+    );
     expect(result.exitCode).toBe(0);
     const data = parse(result.stdout).data as Record<string, unknown>;
     expect(data.agentOverrides).toEqual({ reviewer: "coder" });

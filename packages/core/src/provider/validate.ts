@@ -478,7 +478,11 @@ const parseTier = (name: string, value: unknown): ProviderProfileTier | ProfileC
 
 const parseSeat = (name: string, value: unknown): ProviderProfileSeat | ProfileConfigResult => {
   if (!isRecord(value)) return profileInvalid(`seat ${name} must be an object`, name);
-  const extra = exactKeys(value, ["model", "pacingClass", "capability", "envName"], `seats.${name}`);
+  const extra = exactKeys(
+    value,
+    ["model", "pacingClass", "capability", "envName"],
+    `seats.${name}`,
+  );
   if (extra !== undefined) return extra;
   const model = nonEmptyString(value.model);
   if (model === undefined) return profileInvalid(`seats.${name}.model is required`, name);
@@ -494,10 +498,7 @@ const parseSeat = (name: string, value: unknown): ProviderProfileSeat | ProfileC
     typeof capability !== "string" ||
     !(PROFILE_CAPABILITIES as readonly string[]).includes(capability)
   ) {
-    return profileInvalid(
-      `seats.${name}.capability must be vision-capable or text-only`,
-      name,
-    );
+    return profileInvalid(`seats.${name}.capability must be vision-capable or text-only`, name);
   }
   const envName = value.envName === undefined ? undefined : nonEmptyString(value.envName);
   if (value.envName !== undefined && envName === undefined) {
@@ -564,11 +565,13 @@ const parseProfile = (name: string, value: unknown): ProviderProfile | ProfileCo
 };
 
 const parsePreferenceChain = (value: unknown): ProviderPreferenceChain | ProfileConfigResult => {
-  if (!isRecord(value)) return profileInvalid("preferenceChain must be an object", "preferenceChain");
+  if (!isRecord(value))
+    return profileInvalid("preferenceChain must be an object", "preferenceChain");
   const extra = exactKeys(value, ["base", "fallbacks"], "preferenceChain");
   if (extra !== undefined) return extra;
   const base = nonEmptyString(value.base);
-  if (base === undefined) return profileInvalid("preferenceChain.base is required", "preferenceChain");
+  if (base === undefined)
+    return profileInvalid("preferenceChain.base is required", "preferenceChain");
   const fallbacks: string[] = [];
   if (value.fallbacks !== undefined) {
     if (!Array.isArray(value.fallbacks)) {
@@ -614,8 +617,14 @@ const parsePacing = (value: unknown): ProviderPacingConfiguration | ProfileConfi
       return profileInvalid("pacing.goalPriorities must be a list", "pacing");
     }
     for (const entry of value.goalPriorities) {
-      if (typeof entry !== "string" || !(PACING_GOAL_PRIORITIES as readonly string[]).includes(entry)) {
-        return profileInvalid(`pacing.goalPriorities contains unknown priority ${String(entry)}`, "pacing");
+      if (
+        typeof entry !== "string" ||
+        !(PACING_GOAL_PRIORITIES as readonly string[]).includes(entry)
+      ) {
+        return profileInvalid(
+          `pacing.goalPriorities contains unknown priority ${String(entry)}`,
+          "pacing",
+        );
       }
       goalPriorities.push(entry as PacingGoalPriority);
     }
@@ -697,7 +706,8 @@ const parseEnvRecordPolicy = (value: unknown): ProviderEnvRecordPolicy | Profile
   if (value.header !== undefined && header === undefined) {
     return profileInvalid("envRecord.header must be a non-empty string", "envRecord");
   }
-  const namePattern = value.namePattern === undefined ? undefined : nonEmptyString(value.namePattern);
+  const namePattern =
+    value.namePattern === undefined ? undefined : nonEmptyString(value.namePattern);
   if (value.namePattern !== undefined && namePattern === undefined) {
     return profileInvalid("envRecord.namePattern must be a non-empty string", "envRecord");
   }
@@ -813,8 +823,7 @@ export const validateProfileConfiguration = (
   config: ProviderProfileConfiguration,
   providers: ProviderConfiguration,
 ): ProfileValidationError | undefined => {
-  const absent =
-    Object.keys(config.profiles).length === 0 && config.preferenceChain === undefined;
+  const absent = Object.keys(config.profiles).length === 0 && config.preferenceChain === undefined;
   if (absent) {
     return {
       code: "provider.profile.absent",

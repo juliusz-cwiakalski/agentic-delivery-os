@@ -1,5 +1,3 @@
 {
-  "windows": [
-    { "name": "5h", "usedPercent": 100 }
-  ]
+  "windows": [{ "name": "5h", "usedPercent": 100 }]
 }

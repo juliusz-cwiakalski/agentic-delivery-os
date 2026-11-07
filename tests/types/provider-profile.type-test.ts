@@ -17,13 +17,21 @@ type Expect<T extends true> = T;
 
 type JudgementSeat = Expect<IsAssignable<"judgment", PacingClass>>;
 type ExecutionSeat = Expect<IsAssignable<"execution", PacingClass>>;
-type UnknownPacingClassRejected = Expect<IsAssignable<"coordinator", PacingClass> extends false ? true : false>;
-type WidenedPacingClassRejected = Expect<IsAssignable<string, PacingClass> extends false ? true : false>;
+type UnknownPacingClassRejected = Expect<
+  IsAssignable<"coordinator", PacingClass> extends false ? true : false
+>;
+type WidenedPacingClassRejected = Expect<
+  IsAssignable<string, PacingClass> extends false ? true : false
+>;
 
 type VisionCapable = Expect<IsAssignable<"vision-capable", ProfileCapability>>;
 type TextOnly = Expect<IsAssignable<"text-only", ProfileCapability>>;
-type UnknownCapabilityRejected = Expect<IsAssignable<"audio-capable", ProfileCapability> extends false ? true : false>;
-type WidenedCapabilityRejected = Expect<IsAssignable<string, ProfileCapability> extends false ? true : false>;
+type UnknownCapabilityRejected = Expect<
+  IsAssignable<"audio-capable", ProfileCapability> extends false ? true : false
+>;
+type WidenedCapabilityRejected = Expect<
+  IsAssignable<string, ProfileCapability> extends false ? true : false
+>;
 
 type BrandedNameAccepts = Expect<IsAssignable<EnvRecordName, string>>;
 type BareStringRejected = Expect<IsAssignable<string, EnvRecordName> extends false ? true : false>;

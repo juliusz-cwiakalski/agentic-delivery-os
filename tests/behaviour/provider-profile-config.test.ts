@@ -72,10 +72,7 @@ describe("TC-PROFILE-001 typed profile configuration model", () => {
     const provider = parseProviderConfiguration(resolved.value.values);
     expect(provider.ok).toBe(true);
     if (!provider.ok) return;
-    const validation = parseAndValidateProfileConfiguration(
-      resolved.value.values,
-      provider.config,
-    );
+    const validation = parseAndValidateProfileConfiguration(resolved.value.values, provider.config);
     expect(validation.ok).toBe(false);
     if (validation.ok) return;
     expect(validation.error.code).toBe("provider.profile.absent");
@@ -104,23 +101,22 @@ describe("TC-PROFILE-002 fail-closed validation matrix", () => {
     });
   }
 
-  test("validation performs no I/O (fetch is never reached)", () => {
-    const original = globalThis.fetch;
+  test("validation performs no I/O (the network seam is never reached)", () => {
+    const holder = globalThis as unknown as Record<string, unknown>;
+    const original = holder["fetch"];
     let reached = false;
-    globalThis.fetch = (() => {
+    holder["fetch"] = () => {
       reached = true;
-      throw new Error("fetch reached");
-    }) as typeof globalThis.fetch;
+      throw new Error("network seam reached");
+    };
     try {
       const values = validValues();
-      expect(
-        parseAndValidateProfileConfiguration(values, providerConfigOf(values)).ok,
-      ).toBe(true);
+      expect(parseAndValidateProfileConfiguration(values, providerConfigOf(values)).ok).toBe(true);
       const bad = invalid("unknown-tier.yaml");
       expect(parseAndValidateProfileConfiguration(bad, providerConfigOf(bad)).ok).toBe(false);
       expect(reached).toBe(false);
     } finally {
-      globalThis.fetch = original;
+      holder["fetch"] = original;
     }
   });
 
@@ -198,55 +194,67 @@ describe("TC-PROFILE-004 configuration-only tuning", () => {
 describe("TC-PROFILE-005 layered provenance for every effective value", () => {
   const systemFacts = () =>
     fileFacts(
-    "system",
-    {
-      provider: {
-        profiles: {
-          tiers: { regular: {} },
+      "system",
+      {
+        provider: {
           profiles: {
-            mixed: {
-              tier: "regular",
-              providers: ["zai-coding-plan"],
-              seats: {
-                pm: { model: "model-system", pacingClass: "judgment", capability: "vision-capable" },
-                coder: { model: "coder-system", pacingClass: "execution", capability: "text-only" },
+            tiers: { regular: {} },
+            profiles: {
+              mixed: {
+                tier: "regular",
+                providers: ["zai-coding-plan"],
+                seats: {
+                  pm: {
+                    model: "model-system",
+                    pacingClass: "judgment",
+                    capability: "vision-capable",
+                  },
+                  coder: {
+                    model: "coder-system",
+                    pacingClass: "execution",
+                    capability: "text-only",
+                  },
+                },
+              },
+              "deepseek-only": {
+                tier: "regular",
+                providers: ["zai-coding-plan"],
+                seats: {
+                  pm: {
+                    model: "deepseek-reasoner",
+                    pacingClass: "judgment",
+                    capability: "text-only",
+                  },
+                },
               },
             },
-            "deepseek-only": {
-              tier: "regular",
-              providers: ["zai-coding-plan"],
-              seats: {
-                pm: { model: "deepseek-reasoner", pacingClass: "judgment", capability: "text-only" },
-              },
-            },
+            preferenceChain: { base: "mixed", fallbacks: ["deepseek-only"] },
           },
-          preferenceChain: { base: "mixed", fallbacks: ["deepseek-only"] },
         },
-      },
-    } as Record<string, ConfigValue>,
-    5,
+      } as Record<string, ConfigValue>,
+      5,
     );
   const userFacts = () =>
     fileFacts(
-    "user-global",
-    {
-      provider: {
-        profiles: {
+      "user-global",
+      {
+        provider: {
           profiles: {
-            mixed: {
-              tier: "regular",
-              providers: ["zai-coding-plan"],
-              seats: {
-                coder: { model: "coder-user", pacingClass: "execution", capability: "text-only" },
+            profiles: {
+              mixed: {
+                tier: "regular",
+                providers: ["zai-coding-plan"],
+                seats: {
+                  coder: { model: "coder-user", pacingClass: "execution", capability: "text-only" },
+                },
               },
             },
+            preferenceChain: { base: "mixed", fallbacks: ["deepseek-only", "mixed"] },
           },
-          preferenceChain: { base: "mixed", fallbacks: ["deepseek-only", "mixed"] },
         },
-      },
-    } as Record<string, ConfigValue>,
-    9,
-    ["provider.profiles.profiles.deepseek-only"],
+      } as Record<string, ConfigValue>,
+      9,
+      ["provider.profiles.profiles.deepseek-only"],
     );
 
   test("record maps merge by child name and provenance names the winning layer", () => {
@@ -306,7 +314,7 @@ import { resolveProfileForSpawn } from "../../packages/core/src/provider/index";
 
 describe("TC-PROFILE-003 shipped-empty defaults refuse resolution and spawn", () => {
   test("the shipped-empty branch refuses before a spawn without inventing a model", () => {
-    let spawned = 0;
+    const spawned = 0;
     const outcome = resolveProfileForSpawn({
       profiles: { tiers: {}, profiles: {} },
       probe: {

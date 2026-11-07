@@ -71,8 +71,10 @@ const INVENTORY = JSON.parse(
 
 const diff = (label: string, actual: readonly string[], expected: readonly string[]): string[] => {
   const failures: string[] = [];
-  for (const name of expected) if (!actual.includes(name)) failures.push(`${label}: missing ${name}`);
-  for (const name of actual) if (!expected.includes(name)) failures.push(`${label}: unexpected ${name}`);
+  for (const name of expected)
+    if (!actual.includes(name)) failures.push(`${label}: missing ${name}`);
+  for (const name of actual)
+    if (!expected.includes(name)) failures.push(`${label}: unexpected ${name}`);
   return failures;
 };
 
@@ -95,11 +97,14 @@ describe("TC-PROFILE-039 contract inventory", () => {
       targetReasons: PROFILE_TARGET_REASONS,
     };
     for (const [name, values] of Object.entries(sets)) {
-      expect(diff(`closed set ${name}`, values, INVENTORY.closedSets[name] ?? []), name).toEqual([]);
-      expect(new Set(values).size, `${name} uniqueness`).toBe(values.length);
-      expect(values.some((value) => value === "*" || value === "any"), `${name} wildcard`).toBe(
-        false,
+      expect(diff(`closed set ${name}`, values, INVENTORY.closedSets[name] ?? []), name).toEqual(
+        [],
       );
+      expect(new Set(values).size, `${name} uniqueness`).toBe(values.length);
+      expect(
+        values.some((value) => value === "*" || value === "any"),
+        `${name} wildcard`,
+      ).toBe(false);
     }
     expect([...PACING_CLASSES]).toEqual(["judgment", "execution"]);
     expect([...PROFILE_CAPABILITIES]).toEqual(["vision-capable", "text-only"]);
@@ -183,7 +188,9 @@ describe("TC-PROFILE-055 contract modules are data-only", () => {
     );
     const specifiers = source.statements
       .filter(ts.isImportDeclaration)
-      .map((statement) => (ts.isStringLiteral(statement.moduleSpecifier) ? statement.moduleSpecifier.text : ""));
+      .map((statement) =>
+        ts.isStringLiteral(statement.moduleSpecifier) ? statement.moduleSpecifier.text : "",
+      );
     for (const specifier of specifiers) expect(specifier).toMatch(/^\.\/[a-z-]+\.js$/);
   });
 });

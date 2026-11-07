@@ -21,10 +21,7 @@ import {
   type StateStorePort,
 } from "#contracts";
 import { formatUtcIso } from "./parks.js";
-import {
-  createProfileEvent,
-  projectProfileEvidence,
-} from "./profile.js";
+import { createProfileEvent, projectProfileEvidence } from "./profile.js";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -72,10 +69,7 @@ const targetFromJson = (value: unknown): ProfileTargetRecord | undefined => {
   return value as unknown as ProfileTargetRecord;
 };
 
-const readKey = (
-  store: StateStorePort,
-  key: string,
-): StateResult<StateJsonValue | undefined> => {
+const readKey = (store: StateStorePort, key: string): StateResult<StateJsonValue | undefined> => {
   const read = store.read({ requiredKeys: [key] });
   if (read.ok) return { ok: true, value: read.value.values[key] };
   if (read.error.code === "state.keys.missing") return { ok: true, value: undefined };
@@ -205,9 +199,7 @@ const dedupe = (events: readonly ProfileEvent[]): readonly ProfileEvent[] =>
  * - selected non-base with a different persisted target → switch
  * - unchanged target → no event, no append
  */
-export const evaluateProfileLifecycle = (
-  input: ProfileLifecycleInput,
-): ProfileLifecycleOutcome => {
+export const evaluateProfileLifecycle = (input: ProfileLifecycleInput): ProfileLifecycleOutcome => {
   const selection = input.selection;
   if (!selection.ok) {
     return { selection, events: selection.events, append: false };

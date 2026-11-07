@@ -62,7 +62,11 @@ describe("TC-PROFILE-006 declarative selection heuristics", () => {
 describe("TC-PROFILE-007 selection event", () => {
   test("exactly one event carries profile, tier, rung, reason, and refused blockers", () => {
     const facts = { "coding-plan": exhausted("coding-plan"), deepseek: available() };
-    const result = selectProfile({ profiles: mixedChain(), probe: createProviderFactsProbe(facts), nowMs: NOW });
+    const result = selectProfile({
+      profiles: mixedChain(),
+      probe: createProviderFactsProbe(facts),
+      nowMs: NOW,
+    });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.events).toHaveLength(1);
@@ -77,8 +81,16 @@ describe("TC-PROFILE-007 selection event", () => {
 
   test("the event identity is deterministic and a changed rung produces a new identity", () => {
     const facts = { "coding-plan": available(), deepseek: available() };
-    const first = selectProfile({ profiles: mixedChain(), probe: createProviderFactsProbe(facts), nowMs: NOW });
-    const second = selectProfile({ profiles: mixedChain(), probe: createProviderFactsProbe(facts), nowMs: NOW });
+    const first = selectProfile({
+      profiles: mixedChain(),
+      probe: createProviderFactsProbe(facts),
+      nowMs: NOW,
+    });
+    const second = selectProfile({
+      profiles: mixedChain(),
+      probe: createProviderFactsProbe(facts),
+      nowMs: NOW,
+    });
     if (!first.ok || !second.ok) throw new Error("selection failed");
     expect(first.events[0]?.identity).toBe(second.events[0]?.identity);
     const rungChanged = selectProfile(
@@ -116,7 +128,9 @@ describe("TC-PROFILE-008 hard capability gate", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.decision.profile).toBe("vision-later");
-    const refused = result.decision.eligibility.find((entry) => entry.profile === "text-only-first");
+    const refused = result.decision.eligibility.find(
+      (entry) => entry.profile === "text-only-first",
+    );
     expect(refused?.verdict).toBe("ineligible");
     expect(refused?.blockers.some((blocker) => blocker.kind === "capability")).toBe(true);
     expect(result.decision.seatModels.pm).toBe("vision-model");
@@ -168,7 +182,9 @@ describe("TC-PROFILE-009 the gate reads declared descriptors, not names", () => 
       profiles: {
         "vision-named-text-only": {
           ...first,
-          seats: { pm: { model: "same-model", pacingClass: "judgment", capability: "vision-capable" } },
+          seats: {
+            pm: { model: "same-model", pacingClass: "judgment", capability: "vision-capable" },
+          },
         },
         "text-named-vision": {
           ...second,
@@ -197,7 +213,13 @@ describe("TC-PROFILE-010 no capable candidate fails closed", () => {
         "text-only-first": chain.profiles["text-only-first"],
         "vision-later": {
           ...chain.profiles["vision-later"],
-          seats: { pm: { model: "vision-model", pacingClass: "judgment" as const, capability: "text-only" as const } },
+          seats: {
+            pm: {
+              model: "vision-model",
+              pacingClass: "judgment" as const,
+              capability: "text-only" as const,
+            },
+          },
         },
       },
     };
@@ -275,7 +297,11 @@ describe("TC-PROFILE-011 eligibility requires every provider; first fully eligib
 describe("TC-PROFILE-053 100-run deterministic replay", () => {
   test("identical facts produce byte-identical decisions and event identities", () => {
     const facts = { "coding-plan": available(), deepseek: available() };
-    const first = selectProfile({ profiles: mixedChain(), probe: createProviderFactsProbe(facts), nowMs: NOW });
+    const first = selectProfile({
+      profiles: mixedChain(),
+      probe: createProviderFactsProbe(facts),
+      nowMs: NOW,
+    });
     if (!first.ok) throw new Error("selection failed");
     const expected = JSON.stringify(first);
     const identities = new Set<string>();

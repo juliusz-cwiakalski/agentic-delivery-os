@@ -94,10 +94,7 @@ const recordingTransport = (handlers?: (endpoint: string) => QuotaTransportResul
 };
 
 const reader = (
-  options: {
-    readonly credentialPort?: CredentialPort;
-    readonly transport?: QuotaTransport;
-  } = {},
+  options: { readonly credentialPort?: CredentialPort; readonly transport?: QuotaTransport } = {},
 ) =>
   createProviderWatchStatus({
     clock: { nowMs: () => NOW },
@@ -116,11 +113,7 @@ describe("TC-PROFILE-020/045 read-only watch status", () => {
       "deepseek",
       "openai",
     ]);
-    expect(result.providers.map((entry) => entry.condition)).toEqual([
-      "clear",
-      "clear",
-      "clear",
-    ]);
+    expect(result.providers.map((entry) => entry.condition)).toEqual(["clear", "clear", "clear"]);
     expect(result.providers[0]?.source).toBe("weekly 61%, rolling 12%");
     expect(result.providers[1]?.source).toBe("balance 12.50 vs floor 5.00");
     expect(result.providers[2]?.source).toBe("5h 12%, weekly 61%");
@@ -152,7 +145,10 @@ describe("TC-PROFILE-021 credential-port-only authorization", () => {
   test("the credential port is called once per target and the transport gets the material", async () => {
     const { port, references } = recordingCredentialPort();
     const { transport, requests } = recordingTransport();
-    const result = await reader({ credentialPort: port, transport }).status({ targets, credentials });
+    const result = await reader({ credentialPort: port, transport }).status({
+      targets,
+      credentials,
+    });
     expect(result.ok).toBe(true);
     expect(references).toHaveLength(3);
     expect(requests).toHaveLength(3);

@@ -986,11 +986,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "serializeEnvRecord",
     "validateEnvRecord",
   ],
-  "core/src/provider/profile-pacing.ts": [
-    "activeRung",
-    "evaluatePacing",
-    "rungState",
-  ],
+  "core/src/provider/profile-pacing.ts": ["activeRung", "evaluatePacing", "rungState"],
   "core/src/provider/profile-lifecycle.ts": [
     "createProfileTargetRecord",
     "evaluateProfileLifecycle",

@@ -126,8 +126,7 @@ describe("TC-PROFILE-019 malformed vendor classes are never clear", () => {
   const cases = [
     {
       name: "malformed-json",
-      run: () =>
-        normalizeCodingPlanWindows({ status: 200, bodyText: "not json", nowMs: NOW }),
+      run: () => normalizeCodingPlanWindows({ status: 200, bodyText: "not json", nowMs: NOW }),
     },
     {
       name: "wrong-types",
@@ -149,18 +148,15 @@ describe("TC-PROFILE-019 malformed vendor classes are never clear", () => {
     },
     {
       name: "http-401",
-      run: () =>
-        normalizeCodingPlanWindows({ status: 401, bodyText: "", nowMs: NOW }),
+      run: () => normalizeCodingPlanWindows({ status: 401, bodyText: "", nowMs: NOW }),
     },
     {
       name: "http-403",
-      run: () =>
-        normalizeCodingPlanWindows({ status: 403, bodyText: "", nowMs: NOW }),
+      run: () => normalizeCodingPlanWindows({ status: 403, bodyText: "", nowMs: NOW }),
     },
     {
       name: "http-500",
-      run: () =>
-        normalizeOpenAiUsage({ status: 500, bodyText: "", nowMs: NOW }),
+      run: () => normalizeOpenAiUsage({ status: 500, bodyText: "", nowMs: NOW }),
     },
   ];
 
@@ -184,23 +180,38 @@ describe("TC-PROFILE-019 malformed vendor classes are never clear", () => {
   });
 
   test("a missing fixture fails naming it rather than weakening the assertion", () => {
-    expect(() => readFixture("coding-plan/absent.json")).toThrow("missing fixture coding-plan/absent.json");
+    expect(() => readFixture("coding-plan/absent.json")).toThrow(
+      "missing fixture coding-plan/absent.json",
+    );
   });
 
-  test("globalThis.fetch is never reached by the pure mappings", () => {
-    const original = globalThis.fetch;
+  test("the network seam is never reached by the pure mappings", () => {
+    const holder = globalThis as unknown as Record<string, unknown>;
+    const original = holder["fetch"];
     let reached = false;
-    globalThis.fetch = (() => {
+    holder["fetch"] = () => {
       reached = true;
-      throw new Error("fetch reached");
-    }) as typeof globalThis.fetch;
+      throw new Error("network seam reached");
+    };
     try {
-      normalizeOpenAiUsage({ status: 200, bodyText: readFixture("openai/nominal.json"), nowMs: NOW });
-      normalizeCodingPlanWindows({ status: 200, bodyText: readFixture("coding-plan/nominal.json"), nowMs: NOW });
-      normalizeDeepseekBalance({ status: 200, bodyText: readFixture("deepseek/above.json"), floor: 5 });
+      normalizeOpenAiUsage({
+        status: 200,
+        bodyText: readFixture("openai/nominal.json"),
+        nowMs: NOW,
+      });
+      normalizeCodingPlanWindows({
+        status: 200,
+        bodyText: readFixture("coding-plan/nominal.json"),
+        nowMs: NOW,
+      });
+      normalizeDeepseekBalance({
+        status: 200,
+        bodyText: readFixture("deepseek/above.json"),
+        floor: 5,
+      });
       expect(reached).toBe(false);
     } finally {
-      globalThis.fetch = original;
+      holder["fetch"] = original;
     }
   });
 });

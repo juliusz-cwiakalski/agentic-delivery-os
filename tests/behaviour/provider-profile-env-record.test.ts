@@ -60,7 +60,10 @@ describe("TC-PROFILE-035 carried-over env-record validation floor", () => {
   });
 
   test("a NUL byte anywhere is rejected", () => {
-    const result = validateEnvRecord("# model-env data-v1\nset OC_ADOS_AGENT_PM_MODEL=a\0b\n", undefined);
+    const result = validateEnvRecord(
+      "# model-env data-v1\nset OC_ADOS_AGENT_PM_MODEL=a\0b\n",
+      undefined,
+    );
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.code).toBe("provider.env-record.malformed");
@@ -111,7 +114,10 @@ describe("TC-PROFILE-036 hardened env-record validation ceiling", () => {
   });
 
   test("a metacharacter in the value is accepted as data", () => {
-    const result = validateEnvRecord(fixture("legacy-carryover/value-metacharacters.txt"), undefined);
+    const result = validateEnvRecord(
+      fixture("legacy-carryover/value-metacharacters.txt"),
+      undefined,
+    );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.variables.OC_ADOS_AGENT_PM_MODEL).toBe("value with = embedded");
@@ -147,16 +153,16 @@ describe("TC-PROFILE-037 values are data and the legacy allowlist carries over",
   test("the built-in allowlist accepts the legacy shape and rejects others", () => {
     const accepted = validateEnvRecord(fixture("legacy-carryover/legacy-valid.txt"), undefined);
     expect(accepted.ok).toBe(true);
-    const rejected = validateEnvRecord("# model-env data-v1\nset OC_ADOS_AGENT_PM=value\n", undefined);
+    const rejected = validateEnvRecord(
+      "# model-env data-v1\nset OC_ADOS_AGENT_PM=value\n",
+      undefined,
+    );
     expect(rejected.ok).toBe(false);
   });
 
   test("a configured allowlist is honored and resetting returns the built-in behavior", () => {
     const custom = { namePattern: "^MODEL_[A-Z_]+$" };
-    const record = serializeEnvRecord(
-      [{ operation: "set", name: "MODEL_PM", value: "x" }],
-      custom,
-    );
+    const record = serializeEnvRecord([{ operation: "set", name: "MODEL_PM", value: "x" }], custom);
     expect(record.ok).toBe(true);
     const rejected = serializeEnvRecord(
       [{ operation: "set", name: "OC_ADOS_AGENT_PM_MODEL", value: "x" }],

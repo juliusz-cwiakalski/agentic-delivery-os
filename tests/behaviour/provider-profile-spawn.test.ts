@@ -20,7 +20,10 @@ import { createProviderFactsProbe } from "../../packages/core/src/provider/index
 const NOW = 1_700_000_000_000;
 const NAME_PREFIX = "ADOS";
 
-const facts = { "coding-plan": { available: true, condition: "clear", blockers: [], source: "clear" }, deepseek: { available: true, condition: "clear", blockers: [], source: "clear" } };
+const facts = {
+  "coding-plan": { available: true, condition: "clear", blockers: [], source: "clear" },
+  deepseek: { available: true, condition: "clear", blockers: [], source: "clear" },
+};
 
 const recordingSpawnPort = () => {
   const environments: Array<Readonly<Record<string, string>>> = [];
@@ -71,7 +74,12 @@ describe("TC-PROFILE-033 resolution runs before every spawn; refusal stops the s
     const outcome = runProfileSpawn({
       profiles: mixedChain(),
       probe: createProviderFactsProbe({
-        "coding-plan": { available: false, condition: "quota-exhausted", blockers: [], source: "x" },
+        "coding-plan": {
+          available: false,
+          condition: "quota-exhausted",
+          blockers: [],
+          source: "x",
+        },
         deepseek: { available: false, condition: "provider-outage", blockers: [], source: "y" },
       }),
       nowMs: NOW,
@@ -109,7 +117,10 @@ describe("TC-PROFILE-034 --for-spawn emits a data-v1 record into the spawn seam"
     const descriptor: HarnessExecutionEnvironmentDescriptor = {
       kind: "opencode",
       workDirectory: "/work",
-      environment: Object.keys(outcome.variables).map((name) => ({ kind: "variable" as const, name })),
+      environment: Object.keys(outcome.variables).map((name) => ({
+        kind: "variable" as const,
+        name,
+      })),
     };
     const credentials: CredentialPort = {
       resolve: () => ({

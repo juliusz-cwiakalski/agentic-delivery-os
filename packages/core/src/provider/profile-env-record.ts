@@ -125,7 +125,11 @@ export const serializeEnvRecord = (
       );
     }
     if (seen.has(entry.name)) {
-      return failure("provider.env-record.duplicate", `name ${entry.name} is duplicated`, entry.name);
+      return failure(
+        "provider.env-record.duplicate",
+        `name ${entry.name} is duplicated`,
+        entry.name,
+      );
     }
     seen.add(entry.name);
     const line = renderLine(entry);
@@ -141,7 +145,10 @@ export const serializeEnvRecord = (
     }
   }
   if (entries.length > resolved.maxRecords) {
-    return failure("provider.env-record.oversized", "the record count exceeds the configured limit");
+    return failure(
+      "provider.env-record.oversized",
+      "the record count exceeds the configured limit",
+    );
   }
   const text = renderEnvRecord(entries, resolved);
   if (utf8Bytes(text) > resolved.maxBytes) {
@@ -171,7 +178,10 @@ export const validateEnvRecord = (
   }
   const records = lines.slice(1);
   if (records.length > resolved.maxRecords) {
-    return failure("provider.env-record.oversized", "the record count exceeds the configured limit");
+    return failure(
+      "provider.env-record.oversized",
+      "the record count exceeds the configured limit",
+    );
   }
   const entries: EnvRecordEntry[] = [];
   const seen = new Set<string>();
@@ -208,7 +218,11 @@ export const validateEnvRecord = (
       );
     }
     if (seen.has(entry.name)) {
-      return failure("provider.env-record.duplicate", `name ${entry.name} is duplicated`, entry.name);
+      return failure(
+        "provider.env-record.duplicate",
+        `name ${entry.name} is duplicated`,
+        entry.name,
+      );
     }
     seen.add(entry.name);
     entries.push(entry);
@@ -250,7 +264,10 @@ export const buildProfileEnvRecord = (
     if (seat === undefined) {
       return {
         ok: false,
-        error: { code: "provider.env-record.malformed", detail: `seat ${seatName} is not declared` },
+        error: {
+          code: "provider.env-record.malformed",
+          detail: `seat ${seatName} is not declared`,
+        },
       };
     }
     entries.push({

@@ -26,7 +26,12 @@ const failed = (
 
 const httpFailure = (status: number): ProviderWatchNormalization | undefined => {
   if (status === 401 || status === 403) {
-    return failed("provider.auth.rejected", "provider.quota.auth_rejected", `http_${status}`, status);
+    return failed(
+      "provider.auth.rejected",
+      "provider.quota.auth_rejected",
+      `http_${status}`,
+      status,
+    );
   }
   if (status < 200 || status >= 300) {
     return failed("provider.outage", "provider.quota.http_error", `http_${status}`, status);
@@ -41,9 +46,7 @@ export type DeepseekWatchInput = {
 };
 
 /** Normalize the balance response and compare it to the configured floor. */
-export const normalizeDeepseekBalance = (
-  input: DeepseekWatchInput,
-): ProviderWatchNormalization => {
+export const normalizeDeepseekBalance = (input: DeepseekWatchInput): ProviderWatchNormalization => {
   const http = httpFailure(input.status);
   if (http !== undefined) return http;
   let parsed: unknown;

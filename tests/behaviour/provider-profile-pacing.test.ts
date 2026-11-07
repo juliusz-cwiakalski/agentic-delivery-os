@@ -13,10 +13,7 @@ import {
   parseProviderConfiguration,
 } from "../../packages/core/src/provider/validate";
 import { mixedChain } from "../fixtures/provider/profile/selection/fixtures";
-import {
-  holdJudgmentPacing,
-  utilizePacing,
-} from "../fixtures/provider/profile/lifecycle/fixtures";
+import { holdJudgmentPacing, utilizePacing } from "../fixtures/provider/profile/lifecycle/fixtures";
 
 const NOW = 1_700_000_000_000;
 const profileOf = () => {

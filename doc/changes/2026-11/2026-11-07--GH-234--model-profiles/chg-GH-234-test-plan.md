@@ -1806,4 +1806,12 @@ Populated during delivery and quality gates. No execution has occurred at author
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
-| — | — | Not run | Plan authored; delivery has not started |
+| TC-PROFILE-001..005 | 2026-11-07 | PASS | `provider-profile-config` 18 pass; shipped-empty, validation matrix, tuning, provenance |
+| TC-PROFILE-006..015, 047, 048 | 2026-11-07 | PASS | `provider-profile-selection`/`probes`/`legacy` 42 pass; NFR-6 measured under 50 ms |
+| TC-PROFILE-016..021, 045(engine), 051 | 2026-11-07 | PASS | `provider-watch-mappings`/`provider-watch-status`/legacy group 5 74 pass; boundaries clean |
+| TC-PROFILE-022..032, 041, 049, 050, 053(lifecycle) | 2026-11-07 | PASS | `provider-profile-park-switch-revert`/`pacing`/legacy 47 pass; parks/chain 35 pass |
+| TC-PROFILE-033..038, 058 | 2026-11-07 | PASS | `provider-profile-spawn`/`env-record`/`config`/harness-spawn-env 54 pass |
+| TC-PROFILE-039, 040, 042, 052..057 | 2026-11-07 | PASS | structure/checks/boundaries 44 pass; boundaries 140 pass; secret-read/ambient/workspace checks OK; legacy-hook regression 39 pass |
+| TC-PROFILE-043..046, 045(CLI/golden) | 2026-11-07 | PASS | `provider-profile-cli` + goldens 27 pass; existing provider CLI/goldens 14 pass |
+| Aggregate | 2026-11-07 | PASS | `pnpm check` green; error-table-sync 91/91; changeset present; doc-distribution N/A for delivery phases (doc/spec/** and doc/planning/** touches ride the doc-sync handoff) |
+| External obligations | 2026-11-07 | NOT ASSERTED | AC-F8-8 milestone exit evidence arrives via M1-S9 (GH-239) and M1-S22 (GH-223); OQ-3/OQ-T5 external battery surfaced at PR review — never recorded as passing |

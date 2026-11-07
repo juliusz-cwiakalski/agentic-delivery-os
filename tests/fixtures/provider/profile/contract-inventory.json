@@ -58,19 +58,9 @@
     "ProviderWatchTarget"
   ],
   "closedSets": {
-    "pacingClasses": [
-      "judgment",
-      "execution"
-    ],
-    "capabilities": [
-      "vision-capable",
-      "text-only"
-    ],
-    "goalPriorities": [
-      "utilize-subscription",
-      "hold-judgment",
-      "minimize-paid"
-    ],
+    "pacingClasses": ["judgment", "execution"],
+    "capabilities": ["vision-capable", "text-only"],
+    "goalPriorities": ["utilize-subscription", "hold-judgment", "minimize-paid"],
     "eventCodes": [
       "profile.selected",
       "profile.switched",
@@ -78,24 +68,10 @@
       "profile.ineligible",
       "profile.rung-changed"
     ],
-    "eventSeverities": [
-      "info",
-      "warning"
-    ],
-    "eligibilityVerdicts": [
-      "eligible",
-      "ineligible",
-      "shadowed"
-    ],
-    "blockerKinds": [
-      "condition",
-      "capability"
-    ],
-    "targetReasons": [
-      "selection",
-      "switch",
-      "revert"
-    ]
+    "eventSeverities": ["info", "warning"],
+    "eligibilityVerdicts": ["eligible", "ineligible", "shadowed"],
+    "blockerKinds": ["condition", "capability"],
+    "targetReasons": ["selection", "switch", "revert"]
   },
   "identifiers": {
     "envRecordFormat": "data-v1",

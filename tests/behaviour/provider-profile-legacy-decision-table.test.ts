@@ -9,10 +9,7 @@ import {
 } from "../../packages/core/src/provider/validate";
 import { selectProfile } from "../../packages/core/src/provider/index";
 import { available, exhausted } from "../fixtures/provider/profile/selection/fixtures";
-import {
-  capabilityChain,
-  mixedChain,
-} from "../fixtures/provider/profile/selection/fixtures";
+import { capabilityChain, mixedChain } from "../fixtures/provider/profile/selection/fixtures";
 import { createProviderFactsProbe } from "../../packages/core/src/provider/index";
 import { recordingProbe } from "../fixtures/provider/profile/probes/fixtures";
 
@@ -127,7 +124,9 @@ describe("TC-PROFILE-048 ported group 2 — lazy probes", () => {
           name: `p${index}`,
           tier: "regular",
           providers: ["shared"],
-          seats: { pm: { model: "m", pacingClass: "judgment" as const, capability: "text-only" as const } },
+          seats: {
+            pm: { model: "m", pacingClass: "judgment" as const, capability: "text-only" as const },
+          },
           agentOverrides: {},
         },
       ]),
@@ -167,10 +166,30 @@ describe("TC-PROFILE-052 no-silent-path matrix (groups 1-2)", () => {
     readonly facts: Readonly<Record<string, ReturnType<typeof available>>>;
     readonly vision: boolean;
   }> = [
-    { name: "chain order", profiles: mixedChain(), facts: { "coding-plan": available(), deepseek: available() }, vision: false },
-    { name: "exhaustion", profiles: mixedChain(), facts: { "coding-plan": exhausted("coding-plan"), deepseek: available() }, vision: false },
-    { name: "no candidate", profiles: mixedChain(), facts: { "coding-plan": exhausted("coding-plan"), deepseek: exhausted("deepseek") }, vision: false },
-    { name: "capability gate", profiles: capabilityChain(), facts: { cheap: available(), pricey: available() }, vision: true },
+    {
+      name: "chain order",
+      profiles: mixedChain(),
+      facts: { "coding-plan": available(), deepseek: available() },
+      vision: false,
+    },
+    {
+      name: "exhaustion",
+      profiles: mixedChain(),
+      facts: { "coding-plan": exhausted("coding-plan"), deepseek: available() },
+      vision: false,
+    },
+    {
+      name: "no candidate",
+      profiles: mixedChain(),
+      facts: { "coding-plan": exhausted("coding-plan"), deepseek: exhausted("deepseek") },
+      vision: false,
+    },
+    {
+      name: "capability gate",
+      profiles: capabilityChain(),
+      facts: { cheap: available(), pricey: available() },
+      vision: true,
+    },
   ];
 
   for (const entry of cases) {
@@ -205,7 +224,10 @@ describe("TC-PROFILE-049 ported group 3 — park versus switch", () => {
   test("an expensive window parks with cause and expiry", () => {
     const result = selectProfile({
       profiles: mixedChain(),
-      probe: createProviderFactsProbe({ "coding-plan": peak("coding-plan"), deepseek: available() }),
+      probe: createProviderFactsProbe({
+        "coding-plan": peak("coding-plan"),
+        deepseek: available(),
+      }),
       nowMs: NOW,
     });
     if (!result.ok) throw new Error("selection failed");
@@ -216,7 +238,10 @@ describe("TC-PROFILE-049 ported group 3 — park versus switch", () => {
   test("exhaustion switches to the next eligible profile, never a spawn-stalling park", () => {
     const result = selectProfile({
       profiles: mixedChain(),
-      probe: createProviderFactsProbe({ "coding-plan": exhausted("coding-plan"), deepseek: available() }),
+      probe: createProviderFactsProbe({
+        "coding-plan": exhausted("coding-plan"),
+        deepseek: available(),
+      }),
       nowMs: NOW,
     });
     if (!result.ok) throw new Error("selection failed");
@@ -280,7 +305,10 @@ describe("TC-PROFILE-050 ported group 4 — revert", () => {
   test("the persisted target stays stable across intermediate spawns", () => {
     const exhaustedSelection = selectProfile({
       profiles: mixedChain(),
-      probe: createProviderFactsProbe({ "coding-plan": exhausted("coding-plan"), deepseek: available() }),
+      probe: createProviderFactsProbe({
+        "coding-plan": exhausted("coding-plan"),
+        deepseek: available(),
+      }),
       nowMs: NOW,
     });
     const persisted = createProfileTargetRecord({
@@ -356,7 +384,12 @@ describe("TC-PROFILE-051 ported group 5 — condition seams", () => {
   });
 
   test("window start, buffer, and end instants behave half-open", () => {
-    const peak = { timezone: "UTC" as const, startSecondsOfDay: 6 * 3600, endSecondsOfDay: 10 * 3600, bufferSeconds: 3600 };
+    const peak = {
+      timezone: "UTC" as const,
+      startSecondsOfDay: 6 * 3600,
+      endSecondsOfDay: 10 * 3600,
+      bufferSeconds: 3600,
+    };
     const beforeBuffer = Date.UTC(2026, 10, 7, 4, 59, 59);
     const atBuffer = Date.UTC(2026, 10, 7, 5, 0, 0);
     const atEnd = Date.UTC(2026, 10, 7, 10, 0, 0);
@@ -417,7 +450,10 @@ describe("TC-PROFILE-052 no-silent-path matrix (all five groups)", () => {
       run: () =>
         selectProfile({
           profiles: mixedChain(),
-          probe: createProviderFactsProbe({ "coding-plan": peak("coding-plan"), deepseek: available() }),
+          probe: createProviderFactsProbe({
+            "coding-plan": peak("coding-plan"),
+            deepseek: available(),
+          }),
           nowMs: NOW,
         }),
     },

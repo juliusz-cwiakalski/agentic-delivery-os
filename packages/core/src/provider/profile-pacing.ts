@@ -6,13 +6,13 @@
  * is structurally immovable. Goal priorities are evaluated in declared order —
  * the first declared priority is the precedence, with no hardcoded ordering.
  */
-import {
-  type PacingGoalPriority,
-  type ProfileEvent,
-  type ProfileRungState,
-  type ProviderPacingConfiguration,
-  type ProviderPacingRung,
-  type ProviderProfile,
+import type {
+  PacingGoalPriority,
+  ProfileEvent,
+  ProfileRungState,
+  ProviderPacingConfiguration,
+  ProviderPacingRung,
+  ProviderProfile,
 } from "#contracts";
 import { createProfileEvent } from "./profile.js";
 
@@ -32,9 +32,7 @@ export type PacingEvaluation = {
   readonly events: readonly ProfileEvent[];
 };
 
-const orderedRungs = (
-  pacing: ProviderPacingConfiguration,
-): readonly ProviderPacingRung[] =>
+const orderedRungs = (pacing: ProviderPacingConfiguration): readonly ProviderPacingRung[] =>
   Object.values(pacing.rungs).sort(
     (left, right) =>
       left.thresholdPercent - right.thresholdPercent ||
@@ -54,9 +52,8 @@ export const activeRung = (
   return active;
 };
 
-const firstPriority = (
-  priorities: readonly PacingGoalPriority[],
-): PacingGoalPriority | undefined => priorities[0];
+const firstPriority = (priorities: readonly PacingGoalPriority[]): PacingGoalPriority | undefined =>
+  priorities[0];
 
 /**
  * Whether execution seats move for the active rung under the first declared

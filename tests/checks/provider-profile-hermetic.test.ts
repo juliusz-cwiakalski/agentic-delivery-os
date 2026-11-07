@@ -114,7 +114,10 @@ describe("TC-PROFILE-054 hermetic and runtime-neutral scans", () => {
           resolve: () => ({ ok: true, material: { value: CANARY } }),
         },
         transport: {
-          send: async () => ({ status: 200, bodyText: '{"weekly":{"usedPercent":1},"rolling":{"usedPercent":1}}' }),
+          send: async () => ({
+            status: 200,
+            bodyText: '{"weekly":{"usedPercent":1},"rolling":{"usedPercent":1}}',
+          }),
         },
         mappings: createProviderWatchMappings(),
       });

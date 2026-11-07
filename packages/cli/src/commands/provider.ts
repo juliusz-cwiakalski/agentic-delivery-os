@@ -177,11 +177,7 @@ const providerError = (
   summary: string,
 ): { readonly error: Record<string, unknown> } => ({
   error: {
-    kind: code.startsWith("config.")
-      ? "config"
-      : code.startsWith("input.")
-        ? "input"
-        : "provider",
+    kind: code.startsWith("config.") ? "config" : code.startsWith("input.") ? "input" : "provider",
     code,
     summary,
   },
@@ -355,7 +351,9 @@ export const createProviderCommandDefinition = (
         agentOverrides: result.decision.agentOverrides,
         eligibility: result.decision.eligibility,
         events: result.events,
-        ...(result.decision.envRecord === undefined ? {} : { envRecord: result.decision.envRecord }),
+        ...(result.decision.envRecord === undefined
+          ? {}
+          : { envRecord: result.decision.envRecord }),
         summary: `resolved ${result.decision.profile} (${result.outcome})`,
       };
       return { data };

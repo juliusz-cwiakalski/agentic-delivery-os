@@ -65,7 +65,8 @@ export const scoreProfileTask = (
   policy: ProfileHeuristicPolicy,
 ): number => {
   const base =
-    ((facts.consequenceOfError * policy.consequenceWeight) *
+    (facts.consequenceOfError *
+      policy.consequenceWeight *
       (facts.reasoningDepth * policy.reasoningDepthWeight)) /
     (Math.max(facts.volume, 1) * policy.volumeWeight);
   return base >= policy.amplificationThreshold ? base * policy.amplificationMultiplier : base;
@@ -84,7 +85,10 @@ export type ProfileSelectionOptions = {
   readonly seatModels?: Readonly<Record<string, string>>;
 };
 
-const capabilityBlocker = (seatName: string, seat: ProviderProfileSeat | undefined): ProfileBlocker => ({
+const capabilityBlocker = (
+  seatName: string,
+  seat: ProviderProfileSeat | undefined,
+): ProfileBlocker => ({
   kind: "capability",
   value: "vision-capable",
   detail:
@@ -93,7 +97,10 @@ const capabilityBlocker = (seatName: string, seat: ProviderProfileSeat | undefin
       : `seat ${seatName} is declared ${seat.capability}`,
 });
 
-const conditionBlocker = (providerName: string, availability: ProfileProviderAvailability): ProfileBlocker => ({
+const conditionBlocker = (
+  providerName: string,
+  availability: ProfileProviderAvailability,
+): ProfileBlocker => ({
   kind: "condition",
   value: availability.condition,
   detail: availability.source.length > 0 ? availability.source : `provider ${providerName}`,

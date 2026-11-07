@@ -85,10 +85,11 @@ export const ENV_RECORD_HEADER = "# model-env data-v1" as const;
  * `OC_<PREFIX>_AGENT_<SEAT>_MODEL` shape; the concrete product prefix is a
  * branding/config value, never hardcoded here.
  */
-export const DEFAULT_ENV_RECORD_NAME_PATTERN = "^OC_[A-Z][A-Z0-9]*_AGENT_[A-Z0-9_]+_MODEL$";
+export const DEFAULT_ENV_RECORD_NAME_PATTERN =
+  "^OC_[A-Z][A-Z0-9]*_AGENT_[A-Z0-9_]+_MODEL$" as const;
 
 /** The strict identifier rule applied to a record name (Appendix D). */
-export const ENV_RECORD_NAME_PATTERN = "^[A-Z_][A-Z0-9_]*$";
+export const ENV_RECORD_NAME_PATTERN = "^[A-Z_][A-Z0-9_]*$" as const;
 
 /**
  * A model-environment name that has passed the allowlist/identifier rules. The

@@ -8,10 +8,11 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with eight skip reasons, UTC peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider error identities, and the pure-core / provider-quota adapter boundaries."
 links:
-  related_changes: ["GH-182", "GH-175", "GH-176", "GH-224", "GH-231"]
+  related_changes: ["GH-182", "GH-234", "GH-175", "GH-176", "GH-224", "GH-231"]
   related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007"]
   contracts:
     - "packages/core/src/contracts/provider.ts"
+    - "packages/core/src/contracts/provider-profile.ts"
     - "packages/adapters/src/provider-quota/index.ts"
 ---
 
@@ -21,7 +22,7 @@ links:
 
 The provider engine decides which declared AI model provider entry is available for a spawn. It validates typed provider configuration, resolves a named chain in declared order, evaluates every entry's peak-window and subscription-quota conditions, and selects the first eligible entry under a subscription-first cost policy — or returns a chain park carrying an honest resume time. Every pause is a named, self-expiring park persisted through the state layer, and every failure to determine availability is a structured announcement rather than a silent "clear" verdict. Quota authorization resolves only through the credential port.
 
-The engine does not select models or spawn sessions. It returns a decision plus durable availability state that the later spawn gate and the status, queue-readiness, doctor, spend, and ceremony surfaces consume. The minimal CLI surface is `provider resolve`, `provider quota`, and `provider parks list`.
+The engine selects provider entries, not models: model-profile selection and provider watching are specified in [Provider Profiles and Watching](feature-provider-profiles.md) and compose this engine's conditions, parks, announcements, and quota transport seam. It returns a decision plus durable availability state that the later spawn gate and the status, queue-readiness, doctor, spend, and ceremony surfaces consume. The minimal engine CLI surface is `provider resolve`, `provider quota`, and `provider parks list`.
 
 The configuration branch is specified in [Configuration Layer and Inspection](feature-config-layer.md); the ledger records and projection in [State Layer](feature-state-layer.md); failure identity and the envelope in [Result Contract and Error Table](feature-result-contract.md); credential resolution and runtime confinement in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); package tiers and boundary mechanics in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md). Placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); the quota transport follows the reviewed confinement path of [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md); the engine's placement, fail-loud semantics, park vocabulary, and cost policy are recorded in [ADR-0007](../../decisions/ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md) (Proposed, owner acceptance pending).
 

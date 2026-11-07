@@ -5,10 +5,7 @@
  * crossed threshold parks at the earliest future window end. Every malformed or
  * non-auth-HTTP class is an outage or credential condition, never clear.
  */
-import type {
-  ProviderWatchNormalization,
-  QuotaLimit,
-} from "@delivery-os/core/contracts";
+import type { ProviderWatchNormalization, QuotaLimit } from "@delivery-os/core/contracts";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -28,7 +25,12 @@ const failed = (
 
 const httpFailure = (status: number): ProviderWatchNormalization | undefined => {
   if (status === 401 || status === 403) {
-    return failed("provider.auth.rejected", "provider.quota.auth_rejected", `http_${status}`, status);
+    return failed(
+      "provider.auth.rejected",
+      "provider.quota.auth_rejected",
+      `http_${status}`,
+      status,
+    );
   }
   if (status < 200 || status >= 300) {
     return failed("provider.outage", "provider.quota.http_error", `http_${status}`, status);
@@ -104,7 +106,12 @@ export const normalizeOpenAiUsage = (input: OpenAiWatchInput): ProviderWatchNorm
     .map((limit) => limit.resetEpochMs)
     .filter((reset): reset is number => reset !== undefined);
   if (!everyHasReset || resets.length === 0) {
-    return failed("provider.quota.exceeded", "provider.quota.reset_missing", "reset_missing", input.status);
+    return failed(
+      "provider.quota.exceeded",
+      "provider.quota.reset_missing",
+      "reset_missing",
+      input.status,
+    );
   }
   const reset = Math.min(...resets);
   return {
