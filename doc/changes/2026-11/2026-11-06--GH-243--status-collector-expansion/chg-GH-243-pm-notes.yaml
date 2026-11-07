@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-07T00:30:00Z", completed: "2026-11-07T01:00:00Z" }
   delivery: { started: "2026-11-07T01:05:00Z", completed: "2026-11-07T03:30:00Z" }
   system_spec_update: { started: "2026-11-07T03:40:00Z", completed: "2026-11-07T04:20:00Z" }
-  review_fix: { started: "2026-11-07T04:30:00Z", completed: null }
+  review_fix: { started: "2026-11-07T04:30:00Z", completed: "2026-11-07T05:30:00Z" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -103,6 +103,9 @@ notes:
     date: "2026-11-07"
   - text: "retro: consumer-golden reconciliation landed in phase 7 rather than the byte-changing phase 2, leaving the aggregate red mid-delivery on those goldens (within accepted deviation, final battery green). Future plans for multi-consumer contract changes should schedule consumer golden updates inside the single byte-changing phase."
     type: "retro"
+    date: "2026-11-07"
+  - text: "Review closed after iteration 2: re-review PASS with zero findings (0c/0h/0m/0l/0i), no new phase appended, plan 8/8 phases done. F-1 remediation verified as prescribed (typed ternary, zero casts remain in domain/status.ts, byte-identical semantics); post-remediation doc-syncer re-verification found no doc-visible delta; hygiene+corpus+contract+golden suites 65/65 green on clean worktree. Record: code-review/review-iter-2.yaml."
+    type: "decision"
     date: "2026-11-07"
   - text: "Plan phase 8 complete (commit d2dbd779): review remediation F-1 — assertionAvailability now selects availability.epicMembership/storyPoints/inSprint through the typed ternary and compares to \"available\", dropping the `as unknown as Readonly<Record<string, string | undefined>>` double cast and computed-key lookup. Pure refactor, zero behavior change. Gates green: status-hygiene + status-corpus + status-contract (60 pass / 0 fail), pnpm typecheck, and status-digest goldens (5 pass / 0 fail) with no golden file modified."
     type: "info"

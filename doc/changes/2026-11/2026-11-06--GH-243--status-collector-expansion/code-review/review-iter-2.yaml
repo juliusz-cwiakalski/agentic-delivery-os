@@ -1,0 +1,39 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-243
+branch: feat/GH-243/status-collector-expansion
+status: PASS
+summary: >-
+  Re-review after remediation (delta 7c7d231d..HEAD: d2dbd779 + 375d525e only).
+  F-1 is resolved exactly as prescribed: the `as unknown as
+  Readonly<Record<string, string | undefined>>` double cast and computed-key
+  lookup are gone, replaced by a typed ternary selecting
+  availability.epicMembership / .storyPoints / .inSprint with an
+  `=== "available"` compare; the three-way assertion mapping is unchanged and
+  the access is type-sound (optional props are StatusSignalAvailability, where
+  absent yields undefined !== "available", identical to the old record lookup).
+  No casts remain anywhere in domain/status.ts, satisfying
+  .ai/rules/typescript.md §0. Remediation scope is letter-exact: the code diff
+  touches only the assertionAvailability function in
+  packages/core/src/domain/status.ts (5+/6-), matching phase 8 scope.files;
+  the only other delta is the pm-notes ledger entry. Independently re-run
+  gates: hygiene+corpus+contract+golden suites 65 pass / 0 fail against
+  unmodified fixtures (worktree clean after the run — zero golden drift), and
+  pnpm typecheck green. Plan audit clean: phase 8 completed with commit
+  d2dbd779 and gate evidence in pm-notes (no OPEN_PHASES, EVIDENCE_MISSING, or
+  SCOPE_DEVIATION). Iteration-1 info findings F-2..F-4 remain advisory-only
+  (all carry "No action required for this change"), are correctly recorded in
+  review-iter-1.yaml and the pm-notes decision entry, and nothing in the
+  remediation touches them. No new findings; review_fix can close.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings: []
+reviewed_at: 2026-11-07T00:32:43Z
+next_step: PROCEED
