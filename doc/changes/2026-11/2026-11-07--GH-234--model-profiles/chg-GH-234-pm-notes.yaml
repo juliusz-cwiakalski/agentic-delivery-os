@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-07T02:11:00Z", completed: "2026-11-07T02:30:00Z" }
   delivery: { started: "2026-11-07T02:35:00Z", completed: "2026-11-07T04:40:00Z" }
   system_spec_update: { started: "2026-11-07T04:45:00Z", completed: "2026-11-07T05:05:00Z" }
-  review_fix: { started: "2026-11-07T06:20:00Z", completed: null }
+  review_fix: { started: "2026-11-07T06:20:00Z", completed: "2026-11-07T07:30:00Z" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -25,8 +25,8 @@ open_questions:
     date: "2026-11-07"
 blockers: []
 notes:
-  - text: "REVIEW ITERATION 1: Status=FAIL (artifact review/review-iter-1.md). 2 MUST-FIX: F-1 provider resolve --profile grammatically accepted but semantically inert (edge.ts:2284-2302 drops the flag; ProviderResolveInput has no profile field; stub runtime masked the gap - over-mocking catch); F-2 lifecycle EVT-1/2/4 unreachable in production (evaluateProfileLifecycle/persistProfileTarget have zero non-test consumers; selectProfile only returns outcome=selected so switched/reverted union members unreachable; golden switched outcome is hand-built fixture). 4 SHOULD-FIX: dead error identity provider.profile.capability-denied; NFR-8 1024-byte bound only via message truncation (unbounded blockers[]/name lengths); envRecord.header accepts embedded LF/CR (caught downstream, should be config-time); test-plan §10 says 'pnpm check green' despite 2 recorded environmental failures. Reviewer verified all 5 binding decisions honored + suites re-run green. Remediation: reopen delivery (remediation tasks R-1/R-2 added to plan), wire --profile through edge + wire lifecycle/persistence into production profileResolve path with production-wiring tests."
-    type: "blocker"
+  - text: "REVIEW ITERATION 2: Status=PASS (artifact review/review-iter-2.md). All 6 iteration-1 findings genuinely resolved (F-1 --profile enforced on real edge path; F-2 switch/revert/persist reachable in production; F-3 capability-denied raised; F-4 structural evidence bounds; F-5 header rejection at parse+serialization; F-6 test-plan wording). Adversarial sweep: no new blocking issues; 3 non-blocking observations (low: phase-10 commit hash deferred in ledger - recorded below; 2 info: benign declared-but-unchanged scope entries, reason:'selection' record not production-reachable). Aggregate pnpm check verified in two independent runs: 4742 pass / 4 skip / 2 fail (only the accepted environmental pair). Remediation commit: 9c3125ce."
+    type: "info"
     date: "2026-11-07"
   - text: "Retro: F-1 class is an over-mocking review catch - the CLI test passed against a stub runtime that enforced the contract the production edge dropped. Improvement: production-wiring tests (edge-level, real handler path) for every CLI flag the spec declares; coder plan phases should include an edge-integration test per new flag, not only unit+golden tests."
     type: "retro"
