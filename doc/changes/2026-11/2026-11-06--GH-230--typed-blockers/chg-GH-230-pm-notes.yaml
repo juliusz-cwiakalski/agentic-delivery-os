@@ -10,8 +10,8 @@ phases:
   delivery: { started: "2026-11-06T10:40:00Z", completed: "2026-11-06T12:10:00Z" }
   system_spec_update: { started: "2026-11-06T12:20:00Z", completed: "2026-11-06T12:55:00Z" }
   review_fix: { started: "2026-11-06T13:05:00Z", completed: "2026-11-07T10:45:00Z" }
-  quality_gates: { started: null, completed: null }
-  dod_check: { started: null, completed: null }
+  quality_gates: { started: "2026-11-07T10:50:00Z", completed: "2026-11-07T12:05:00Z" }
+  dod_check: { started: "2026-11-07T12:10:00Z", completed: "2026-11-07T12:20:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "Scope boundary from ticket pinned decisions (binding, not re-derived): GH-230 delivers the typed question channel (publish/list/answer as state records), audience routing with confused-deputy guard, credential name-only guard, digest+brief ranking integration, and laneResume mode recording conditioned on the harness adapter resume-injection capability flag. Application actors (daemon M1-S18, coordinator loop M1-S23, dispatch --resume) are downstream consumers; v0 application path is exercisable over injected facts, mirroring the GH-229 v0-posture precedent."
@@ -112,6 +112,15 @@ notes:
     type: "decision"
     date: "2026-11-07"
   - text: "Review iteration 3 (final) verdict PASS — zero findings. F-1 verified precisely against delivered STATUS_SECTION_ORDER/renderers (ninth section after spend; retained seven-surfaces/six-context claims confirmed correct against render behavior; zero residual pre-merge numbering); F-2 mutation reasoning confirmed the askedAt guard is now genuinely isolated; delta was exactly 2 files, no production code. Artifact code-review/review-iter-3.yaml. review_fix closed (iterations: 3)."
+    type: "info"
+    date: "2026-11-07"
+  - text: "Second drift sync: origin/main-tools advanced again (GH-236 spend read side, M1-S19) before PR; merged at 5f7345ff (25 conflicts, union preserved). Merged truth now: spend becomes a real collector with 0 placeholders (STATUS_PLACEHOLDER_SECTION_IDS []), STATUS_EVIDENCE_SOURCES 10 (blockers + state-log), error identities 99, RESERVED_TWO_SEGMENT_CODES 22, blockers TDR renumbered to TDR-0012 (GH-236 took 0011). Gate green on merged tree: 5384 pass / 4 skip / 0 fail."
+    type: "info"
+    date: "2026-11-07"
+  - text: "quality_gates PASS on final tree (5f7345ff): official runner battery at cffcaf12 exit 0 (5183 pass/4 skip/0 fail; lint 46 pre-existing warnings only, format/typecheck/boundaries/exports-parity green) and post-GH-236 merge full re-run exit 0 (5384 pass/4 skip/0 fail, 558 files). No failures, no fixes needed."
+    type: "info"
+    date: "2026-11-07"
+  - text: "DoD PASS: all 11 lifecycle phases recorded (clarify_scope through review_fix complete; quality_gates complete; dod_check complete at verification); plan phases 1-10 all committed with per-phase pm-notes evidence (phase hashes 0348ece3..b9c5bb61, remediation 70bb4697/0d5d04ec, merges 3c58a449/5f7345ff) and all plan.md task checkboxes closed (b97a336b, 60/60); all 21 ACs semantics verified by review iteration 3 PASS at merged truth (5 ticket ACs + 4 pinned decisions + SC-M1-13/SC-M1-24 exact pins); current-truth docs reconciled (feature-blockers.md authored; status/brief/result-contract/state-layer/owner-gate/nonfunctional/overview/glossary/index at merged numbers) with no unresolved gaps; branch 0 drift vs origin/main-tools be5045e7."
     type: "info"
     date: "2026-11-07"
   - text: "Retro: all three medium findings are things gates cannot catch — stale comments (no check reads prose against constants), an untested production composition seam (unit suites test the pure path), and undocumented CLI flag semantics (tests passed because the behavior was never asserted). Lesson: reviewer's adversarial pass is where composition-seam coverage and comment-truth get checked; budget for it in every change."
