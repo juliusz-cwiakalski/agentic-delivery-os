@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "prompt.retained-retired.v1",
+  "retained": [
+    {
+      "id": "deliver-ticket",
+      "entry": "scripts/deliver-ticket.sh",
+      "role": "per-ticket delivery dispatch",
+      "primary": true
+    },
+    {
+      "id": "ceo-loop",
+      "entry": "scripts/ceo-loop.sh",
+      "role": "outer supervision loop",
+      "primary": true
+    }
+  ],
+  "retired": [
+    { "id": "raw-git-commit", "literal": "git commit" },
+    { "id": "raw-git-add", "literal": "git add" },
+    { "id": "platform-merge", "literal": "gh pr merge" },
+    { "id": "platform-merge-gitlab", "literal": "glab mr merge" },
+    { "id": "raw-pr-discovery", "literal": "gh pr list" }
+  ]
+}

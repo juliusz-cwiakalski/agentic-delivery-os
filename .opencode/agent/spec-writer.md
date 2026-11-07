@@ -51,7 +51,7 @@ Folder structure:
 
 <pure_writer_note>
 You are a pure writer: you write the spec file and return with zero git operations.
-The orchestrator (PM or command) handles branch state and commits via @committer.
+The orchestrator (PM or command) handles branch state and commits via the `commit` primitive.
 </pure_writer_note>
 
 <front_matter_rules>
@@ -212,5 +212,5 @@ Before generating the spec, attempt to read the structural template:
 - Tech neutral; rely on planning context & repo conventions
 - Deterministic output for downstream `@plan-writer`
 - Your output may be returned for revision by the Definition of Ready gate (`dor_check`, phase 5, `@readiness-reviewer`) before delivery; respond to `@pm`'s re-delegation.
-- Pure writer: no git operations; orchestrator commits your output via @committer
+- Pure writer: no git operations; orchestrator commits your output via the `commit` primitive
 </notes>

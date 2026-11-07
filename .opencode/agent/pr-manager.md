@@ -246,9 +246,9 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
   </step>
   <step id="2">
     Ensure there are no uncommitted changes before generating the PR/MR summary:
-    - If `git status --porcelain` is non-empty: you MUST invoke `@committer` now (do not ask the user; do not stop).
+    - If `git status --porcelain` is non-empty: you MUST invoke the `commit` primitive now (do not ask the user; do not stop).
       - Provide the explicit invocation workItemRef when present; otherwise provide the structurally resolved branch workItemRef. Include supported user-supplied outcome/why only as actual values; do not add generic checkpoint intent or placeholders.
-    - If `@committer` fails: STOP and surface the error.
+    - If the `commit` primitive fails: STOP and surface its classified error.
     - After commit: verify `git status --porcelain` is empty; otherwise STOP.
   </step>
   <step id="3">
@@ -432,7 +432,7 @@ If `.ai/agent/pr-instructions.md` does not exist: STOP with message:
 
 <constraints>
   <rule>Never merge, approve, or close the PR/MR.</rule>
-  <rule>If the worktree is dirty, auto-commit via `@committer` and continue (do not stop and ask the user).</rule>
+  <rule>If the worktree is dirty, commit via the `commit` primitive (or the thin `@committer`) and continue (do not stop and ask the user).</rule>
   <rule>Branch MUST be pushed to remote before any PR/MR create/update. A PR/MR for a non-existent remote branch will fail or create an empty diff.</rule>
   <rule>Do not fabricate change intent; base title/body on the diff, commits, and ticket context.</rule>
   <rule>If there is no diff vs base: still write the file and explain why in the body.</rule>

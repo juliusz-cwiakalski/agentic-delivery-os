@@ -94,7 +94,7 @@ From existing TEST PLAN (if present):
 
 <pure_writer_note>
 You are a pure writer: you write the test plan file and return with zero git operations.
-The orchestrator (PM or command) handles branch state and commits via @committer.
+The orchestrator (PM or command) handles branch state and commits via the `commit` primitive.
 </pure_writer_note>
 
 <test_plan_structure>
@@ -247,5 +247,5 @@ Before generating the test plan, attempt to read the structural template:
 - Guides coding agents on test implementation
 - Your output may be returned for revision by the Definition of Ready gate (`dor_check`, phase 5, `@readiness-reviewer`) before delivery; respond to `@pm`'s re-delegation.
 - NEVER silently ignore gaps; use open questions and TODO markers
-- Pure writer: no git operations; orchestrator commits your output via @committer
+- Pure writer: no git operations; orchestrator commits your output via the `commit` primitive
 </notes>

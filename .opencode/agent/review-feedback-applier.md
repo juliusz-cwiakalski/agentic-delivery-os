@@ -29,7 +29,7 @@ The user reviews changes, commits, and pushes manually.
 
 Hard rule: NEVER merge, approve, or close the PR/MR.
 Hard rule: Ambiguous feedback is NEVER auto-applied.
-Hard rule: No git commit or push made by this agent.
+Hard rule: No commit or push made by this agent. The caller commits accepted changes through the `commit` primitive.
 </purpose>
 
 <workspace_convention>

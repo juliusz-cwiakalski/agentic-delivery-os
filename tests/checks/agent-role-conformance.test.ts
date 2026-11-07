@@ -66,3 +66,49 @@ describe("TC-ADOPT-002 the committer is a thin executor", () => {
     expect(commitCommand).not.toContain("git commit");
   });
 });
+
+describe("coordination role conformance", () => {
+  const ceo = read(".opencode/agent/ceo.md");
+  const reviewer = read(".opencode/agent/reviewer.md");
+  const readiness = read(".opencode/agent/readiness-reviewer.md");
+  const docSyncer = read(".opencode/agent/doc-syncer.md");
+  const specWriter = read(".opencode/agent/spec-writer.md");
+  const testPlanWriter = read(".opencode/agent/test-plan-writer.md");
+  const prManager = read(".opencode/agent/pr-manager.md");
+  const reviewFeedback = read(".opencode/agent/review-feedback-applier.md");
+
+  test("the coordinator uses merge, closeout, status, and queue plan", () => {
+    for (const token of [
+      "status",
+      "blockers answer",
+      "verify change",
+      "phase list",
+      "merge <ref>",
+      "closeout --apply",
+      "queue plan --next",
+    ]) {
+      expect(ceo).toContain(token);
+    }
+  });
+
+  test("read-only roles do not commit", () => {
+    expect(reviewer).toContain("pure writer");
+    expect(reviewer).toContain("zero commit operations");
+    expect(reviewer).toContain("Read-only git inspection");
+    expect(reviewer).toContain("blockers publish");
+    expect(readiness).toContain("zero git operations");
+    expect(reviewFeedback).toContain("No commit or push made by this agent");
+  });
+
+  test("writer roles delegate commits to the primitive", () => {
+    for (const text of [docSyncer, specWriter, testPlanWriter]) {
+      expect(text).toContain("`commit` primitive");
+    }
+  });
+
+  test("the PR manager never merges and commits dirty work through the primitive", () => {
+    expect(prManager).toContain("Never merge");
+    expect(prManager).toContain("`commit` primitive");
+    expect(prManager).toContain("push");
+  });
+});
