@@ -177,6 +177,8 @@ export type PlanPhase = {
   readonly id: number;
   readonly title: string;
   readonly kind: PlanPhaseKind;
+  /** Optional one-line plan-phase summary consumed by the commit message. */
+  readonly summary?: string;
   readonly scope: PlanScope;
   readonly doneArtifacts?: PlanDoneArtifacts;
   readonly leases?: readonly string[];
@@ -224,6 +226,7 @@ export type PlanPhaseVerdict = {
   readonly title: string;
   readonly kind: PlanPhaseKind;
   readonly leaseClass: PlanLeaseClass;
+  readonly summary?: string;
   readonly scope: PlanScopeEcho;
   readonly leases: readonly string[];
   readonly interactions: readonly PlanInteraction[];
