@@ -1,0 +1,38 @@
+{
+  "restarts": 3,
+  "resumeAmplification": 0.75,
+  "restartHistory": [
+    {
+      "ordinal": 1,
+      "reason": "session-interrupted",
+      "repayTokens": {
+        "inputTokens": 100,
+        "outputTokens": 0
+      },
+      "sessionId": "ses_fixture_1",
+      "recordedAt": "2026-11-07T00:00:01Z"
+    },
+    {
+      "ordinal": 2,
+      "reason": "session-interrupted",
+      "repayTokens": {
+        "inputTokens": 100,
+        "outputTokens": 0
+      },
+      "sessionId": "ses_fixture_2",
+      "recordedAt": "2026-11-07T00:00:02Z"
+    },
+    {
+      "ordinal": 3,
+      "reason": "session-interrupted",
+      "repayTokens": {
+        "inputTokens": 100,
+        "outputTokens": 0
+      },
+      "sessionId": "ses_fixture_3",
+      "recordedAt": "2026-11-07T00:00:03Z"
+    }
+  ],
+  "amplificationFlag": null,
+  "warnings": []
+}

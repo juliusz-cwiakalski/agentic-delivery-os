@@ -69,6 +69,7 @@ import {
   collectRetro,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
+  createSourcedWatchdogSignalSource,
   isLiveDbSession,
   type MergeTransactionPorts,
   newestWaiverByGate,
@@ -121,6 +122,7 @@ import {
   type DoctorStateStoresRead,
   type DoctorWiringRead,
   type ExternalSystemInstance,
+  type HarnessLivenessFacts,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
   PHASE_STATE_DOCUMENT_PREFIX,
@@ -1896,24 +1898,36 @@ export const createPlanCommandRuntime = (options: PlanRuntimeOptions): PlanComma
   },
 });
 
-/** The watchdog composition seams; production M1-S1 wires zero signal sources. */
+/** The watchdog composition seams. */
 export type WatchdogComposition = {
   readonly readLane: (lane: string) => WatchdogLaneRead;
   readonly git?: WatchdogGitPort;
   readonly signalSources?: readonly WatchdogSignalSource[];
+  /**
+   * The adapter-sourced liveness facts read seam (GH-235 F-1). When supplied,
+   * the runtime composes the sourced-signal bridge into the delivered probe
+   * seam; when omitted, no signal source is declared and liveness stays
+   * `watchdog.signals-absent`.
+   */
+  readonly readSourcedSignals?: (lane: string) => HarnessLivenessFacts | undefined;
 };
 
 /**
  * Compose the watchdog runtime: the injected lane reader, the bounded git seam
- * (a production seam by default), and the declared signal sources (none in
- * production M1-S1, so liveness always classifies absent).
+ * (a production seam by default), and the declared signal sources. A supplied
+ * `readSourcedSignals` composes the adapter-sourced bridge, so a sourced lane
+ * reaches `progressing`/`stalled` instead of always answering absent.
  */
 export const createWatchdogCommandRuntime = (
   composition: WatchdogComposition,
 ): WatchdogCommandRuntime => ({
   readLane: composition.readLane,
   git: composition.git ?? createWatchdogGitSeam(),
-  signalSources: composition.signalSources ?? [],
+  signalSources:
+    composition.signalSources ??
+    (composition.readSourcedSignals === undefined
+      ? []
+      : [createSourcedWatchdogSignalSource(composition.readSourcedSignals)]),
 });
 
 /**

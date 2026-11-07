@@ -260,3 +260,107 @@ describe("TC-HARN-007 all-absent liveness and the zero-source watchdog", () => {
     }
   });
 });
+
+import { createOpencodeSession } from "../../packages/adapters/src/harness/index";
+import {
+  createRecordingRunner,
+  output as runnerOutput,
+  runnerResult,
+  SOURCED_SIGNAL_FACTS,
+} from "../fixtures/harness/harness-io";
+
+const sourcedSession = (io: {
+  readonly livenessFacts: typeof LIVENESS_FACTS;
+  readonly sourcedSignals: readonly import("../../packages/core/src/contracts/index").EconomicsSourcedSignalReading[];
+}) => {
+  const recording = createRecordingRunner(() =>
+    runnerResult(runnerOutput("ses_sourced", "complete")),
+  );
+  return {
+    invocations: recording.invocations,
+    session: createOpencodeSession({
+      command: HARNESS_COMMAND,
+      spawnArgs: SPAWN_ARGS,
+      resumeArgs: RESUME_ARGS,
+      listArgs: LIST_ARGS,
+      runner: recording.runner,
+      buildEnvironment: declaredBuildEnvironment(createFakeCredentialPort()),
+      classify: classifier,
+      assembleLiveness,
+      now: () => "2026-11-06T00:00:00Z",
+      timeoutMs: TIMEOUT_MS,
+      livenessFacts: io.livenessFacts,
+      sourcedSignals: io.sourcedSignals,
+    }),
+  };
+};
+
+describe("TC-ECON-010 sourced signals beside the unchanged exact-three kinds", () => {
+  test("the neutral report carries three liveness readings and the additive sourced signals", async () => {
+    const { session } = sourcedSession({
+      livenessFacts: LIVENESS_FACTS,
+      sourcedSignals: SOURCED_SIGNAL_FACTS,
+    });
+    const spawned = await session.spawn({
+      workItemRef: "GH-235",
+      prompt: "sourced",
+      descriptor: { kind: "host", workDirectory: "/synthetic/work", environment: [] },
+    });
+    expect(spawned.ok).toBe(true);
+    if (!spawned.ok) return;
+    const report = await session.liveness({ handle: spawned.value });
+    expect(report.ok).toBe(true);
+    if (!report.ok) return;
+    expect(report.value.readings.map((reading) => reading.kind)).toEqual([
+      ...HARNESS_LIVENESS_KINDS,
+    ]);
+    expect(report.value.sourcedSignals?.map((entry) => entry.kind)).toEqual([
+      "heartbeat-age",
+      "token-delta",
+    ]);
+    expect(report.value.sourcedSignals).toEqual([...SOURCED_SIGNAL_FACTS]);
+    const signals = harnessLivenessToWatchdogSignals(report.value);
+    expect(signals).toEqual({ heartbeatAgeMs: 1_500, tokenDelta: 42, traffic: 11 });
+  });
+
+  test("an unsourced signal yields an absent entry and an absent projected key", async () => {
+    const { session } = sourcedSession({ livenessFacts: [], sourcedSignals: [] });
+    const spawned = await session.spawn({
+      workItemRef: "GH-235",
+      prompt: "sourced",
+      descriptor: { kind: "host", workDirectory: "/synthetic/work", environment: [] },
+    });
+    if (!spawned.ok) return;
+    const report = await session.liveness({ handle: spawned.value });
+    if (!report.ok) return;
+    for (const entry of report.value.sourcedSignals ?? []) {
+      expect(entry.status).toBe("absent");
+      expect(Object.hasOwn(entry, "value")).toBe(false);
+      expect(Object.hasOwn(entry, "observedAt")).toBe(false);
+    }
+    const signals = harnessLivenessToWatchdogSignals(report.value);
+    expect(Object.hasOwn(signals, "heartbeatAgeMs")).toBe(false);
+    expect(Object.hasOwn(signals, "tokenDelta")).toBe(false);
+  });
+
+  test("replaying the same facts is byte-identical and the projected key set is declared", async () => {
+    const { session } = sourcedSession({
+      livenessFacts: LIVENESS_FACTS,
+      sourcedSignals: SOURCED_SIGNAL_FACTS,
+    });
+    const spawned = await session.spawn({
+      workItemRef: "GH-235",
+      prompt: "sourced",
+      descriptor: { kind: "host", workDirectory: "/synthetic/work", environment: [] },
+    });
+    if (!spawned.ok) return;
+    const first = await session.liveness({ handle: spawned.value });
+    const second = await session.liveness({ handle: spawned.value });
+    if (!first.ok || !second.ok) return;
+    expect(canonicalHarnessJson(first.value)).toBe(canonicalHarnessJson(second.value));
+    const signals = harnessLivenessToWatchdogSignals(first.value);
+    for (const key of Object.keys(signals)) {
+      expect(["heartbeatAgeMs", "tokenDelta", "traffic"]).toContain(key);
+    }
+  });
+});

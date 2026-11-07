@@ -17,6 +17,8 @@ import {
   runWatchdogCli,
   type WatchdogRun,
 } from "../fixtures/watchdog/harness";
+import { createSourcedWatchdogSignalSource } from "../../packages/core/src/domain/index";
+import type { WatchdogSignalSource } from "../../packages/core/src/contracts/index";
 import {
   createWatchdogRepository,
   makeClean,
@@ -35,7 +37,24 @@ type GoldenCase = {
   readonly format: "json" | "text";
   readonly argv: readonly string[];
   readonly setup: (repo: WatchdogTempRepository) => void;
+  readonly signalSources?: readonly WatchdogSignalSource[];
 };
+
+const progressingSource = createSourcedWatchdogSignalSource(() => ({
+  readings: [{ kind: "session-traffic", status: "sourced", value: 9, observedAt: "t0" }],
+  sourcedSignals: [
+    { kind: "heartbeat-age", status: "sourced", value: 1_500, observedAt: "t0" },
+    { kind: "token-delta", status: "sourced", value: 42, observedAt: "t0" },
+  ],
+}));
+
+const stalledSource = createSourcedWatchdogSignalSource(() => ({
+  readings: [{ kind: "session-traffic", status: "sourced", value: 0, observedAt: "t0" }],
+  sourcedSignals: [
+    { kind: "heartbeat-age", status: "sourced", value: 400_000, observedAt: "t0" },
+    { kind: "token-delta", status: "sourced", value: 0, observedAt: "t0" },
+  ],
+}));
 
 const CASES: readonly GoldenCase[] = [
   {
@@ -69,6 +88,40 @@ const CASES: readonly GoldenCase[] = [
     setup: () => {},
   },
   {
+    id: "liveness-absent-text",
+    format: "text",
+    argv: ["watchdog", "liveness", "lane-1"],
+    setup: () => {},
+  },
+  {
+    id: "liveness-progressing",
+    format: "json",
+    argv: ["watchdog", "liveness", "lane-1", "--json"],
+    setup: () => {},
+    signalSources: [progressingSource],
+  },
+  {
+    id: "liveness-progressing-text",
+    format: "text",
+    argv: ["watchdog", "liveness", "lane-1"],
+    setup: () => {},
+    signalSources: [progressingSource],
+  },
+  {
+    id: "liveness-stalled",
+    format: "json",
+    argv: ["watchdog", "liveness", "lane-1", "--json"],
+    setup: () => {},
+    signalSources: [stalledSource],
+  },
+  {
+    id: "liveness-stalled-text",
+    format: "text",
+    argv: ["watchdog", "liveness", "lane-1"],
+    setup: () => {},
+    signalSources: [stalledSource],
+  },
+  {
     id: "preflight-clean-text",
     format: "text",
     argv: ["watchdog", "preflight", "lane-1"],
@@ -93,7 +146,10 @@ describe("TC-WATCHDOG-028/050/051 canonical watchdog goldens", () => {
       const repo = createWatchdogRepository();
       try {
         entry.setup(repo);
-        const run = await runWatchdogCli(entry.argv, { repo });
+        const run = await runWatchdogCli(entry.argv, {
+          repo,
+          ...(entry.signalSources === undefined ? {} : { signalSources: entry.signalSources }),
+        });
         const rendered = render(entry, run, repo.directory);
         const path = join(GOLDEN_ROOT, `${entry.id}.${entry.format}`);
         if (UPDATE) {

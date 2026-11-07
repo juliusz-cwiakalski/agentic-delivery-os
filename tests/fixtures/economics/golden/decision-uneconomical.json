@@ -1,0 +1,7 @@
+{
+  "outcome": "refuse",
+  "code": "dispatch.resume-uneconomical",
+  "exitCode": 1,
+  "reason": "the resume path would re-pay prefill and is uneconomical",
+  "corpus": "reason=dispatch.resume-uneconomical; repayTokens=900; economicsRef=economics/GH-235"
+}

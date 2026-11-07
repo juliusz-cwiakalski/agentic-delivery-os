@@ -61,6 +61,10 @@ export const PRODUCTION_DEFAULTS = {
       { name: "DELIVERY_WORK_PATH" },
     ],
   },
+  lane: {
+    "liveness-interval": 30000,
+    "restart-budget": 3,
+  },
 } as const;
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>

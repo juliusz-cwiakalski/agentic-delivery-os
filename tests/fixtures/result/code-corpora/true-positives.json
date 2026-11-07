@@ -149,6 +149,24 @@
       "text": "retro.evidence.denied",
       "recognized": true,
       "resolves": true
+    },
+    {
+      "id": "econ-watchdog-stalled",
+      "text": "watchdog.liveness-stalled",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "econ-dispatch-budget",
+      "text": "dispatch.restart-budget-exceeded",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "econ-dispatch-uneconomical",
+      "text": "dispatch.resume-uneconomical",
+      "recognized": true,
+      "resolves": true
     }
   ]
 }

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 0
+  },
+  "data": {
+    "schemaVersion": "delivery.watchdog.v1",
+    "probe": "liveness",
+    "lane": "lane-1",
+    "verdict": "progressing",
+    "signals": {
+      "heartbeatAgeMs": 1500,
+      "tokenDelta": 42,
+      "traffic": 9
+    },
+    "evidence": "declared progress signals observed: heartbeatAgeMs, tokenDelta, traffic"
+  }
+}

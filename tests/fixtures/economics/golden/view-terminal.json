@@ -1,0 +1,52 @@
+{
+  "restarts": 3,
+  "resumeAmplification": 0.75,
+  "restartHistory": [
+    {
+      "ordinal": 1,
+      "reason": "session-interrupted",
+      "repayTokens": {
+        "inputTokens": 100,
+        "outputTokens": 0
+      },
+      "sessionId": "ses_fixture_1",
+      "recordedAt": "2026-11-07T00:00:01Z"
+    },
+    {
+      "ordinal": 2,
+      "reason": "session-interrupted",
+      "repayTokens": {
+        "inputTokens": 100,
+        "outputTokens": 0
+      },
+      "sessionId": "ses_fixture_2",
+      "recordedAt": "2026-11-07T00:00:02Z"
+    },
+    {
+      "ordinal": 3,
+      "reason": "session-interrupted",
+      "repayTokens": {
+        "inputTokens": 100,
+        "outputTokens": 0
+      },
+      "sessionId": "ses_fixture_3",
+      "recordedAt": "2026-11-07T00:00:03Z"
+    }
+  ],
+  "amplificationFlag": null,
+  "warnings": [],
+  "terminal": {
+    "schemaId": "delivery.economics.exhaustion.v1",
+    "workItemRef": "GH-235",
+    "runId": "run-economics-fixture",
+    "reason": "dispatch.restart-budget-exceeded",
+    "restarts": 3,
+    "historyRef": "economics/GH-235",
+    "terminal": true,
+    "options": [
+      "requeue-fresh-budget",
+      "park-owner-review"
+    ],
+    "recordedAt": "2026-11-07T12:00:00Z"
+  }
+}

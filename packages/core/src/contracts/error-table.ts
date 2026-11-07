@@ -27,6 +27,7 @@ export const DOMAIN_KINDS = [
   "merge",
   "harness",
   "retro",
+  "dispatch",
 ] as const;
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -730,6 +731,17 @@ export const ERROR_TABLE = [
     summary: "No liveness signal sources are available; the answer is unknown.",
   },
   {
+    code: "watchdog.liveness-stalled",
+    domainKind: "watchdog",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the corroborated stall evidence, then apply the budget-governed restart response for the lane.",
+    projectionClass: "user-validation",
+    summary: "The lane is stalled and fully corroborated by the declared progress signals.",
+  },
+  {
     code: "commit.staging-blocked-untracked",
     domainKind: "commit",
     category: "user",
@@ -1068,5 +1080,27 @@ export const ERROR_TABLE = [
       "Write evidence only through the collector seam; the sidecar is collector-owned and the attempted write did not land.",
     projectionClass: "platform-provider",
     summary: "A write outside the collector seam was refused.",
+  },
+  {
+    code: "dispatch.restart-budget-exceeded",
+    domainKind: "dispatch",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Request a fresh restart budget through the coordinator or operator, then retry the resume.",
+    projectionClass: "user-validation",
+    summary: "The delivery's restart budget is exhausted.",
+  },
+  {
+    code: "dispatch.resume-uneconomical",
+    domainKind: "dispatch",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Change the harness capability to attach-and-continue, or re-evaluate and accept the prefill re-pay cost, then retry the resume.",
+    projectionClass: "user-validation",
+    summary: "The resume path would re-pay prefill and is uneconomical.",
   },
 ] as const satisfies readonly ErrorTableEntry[];
