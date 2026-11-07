@@ -315,6 +315,89 @@ describe("TC-LEASE / TC-RANK claim and release rows", () => {
     expect(error(unsupported.stdout)?.code).toBe("fallback.invocation");
   });
 
+  test("--until is accepted only with --park provider-window and every refusal appends nothing", async () => {
+    let log: StoreWriteLog | undefined;
+    const harness = createQueueEdgeHarness("release-until-grammar", {
+      wrapStore: (store) => {
+        const tracked = trackingStore(store);
+        log = tracked.log;
+        return tracked.store;
+      },
+    });
+    expect((await harness.run(["queue", "add", "GH-320", "--json"])).exitCode).toBe(0);
+    expect(
+      (await harness.run(["queue", "claim", "GH-320", "--holder", "holder-a", "--json"])).exitCode,
+    ).toBe(0);
+    const writeLog = log;
+    if (writeLog === undefined) return;
+
+    const reset = (): void => {
+      writeLog.appends = 0;
+      writeLog.replaces = 0;
+      writeLog.fences = 0;
+      writeLog.releases = 0;
+    };
+    const refusals: readonly {
+      readonly argv: readonly string[];
+      readonly reason: string;
+    }[] = [
+      {
+        argv: ["queue", "release", "GH-320", "--until", "2026-11-07T12:00:00Z", "--json"],
+        reason: "until-without-park",
+      },
+      {
+        argv: [
+          "queue",
+          "release",
+          "GH-320",
+          "--park",
+          "provider-quota",
+          "--until",
+          "2026-11-07T12:00:00Z",
+          "--json",
+        ],
+        reason: "until-unsupported",
+      },
+      {
+        argv: ["queue", "release", "GH-320", "--park", "provider-window", "--json"],
+        reason: "until-required",
+      },
+    ];
+    for (const { argv, reason } of refusals) {
+      reset();
+      const refused = await harness.run(argv);
+      expect(refused.exitCode).toBe(1);
+      expect(error(refused.stdout)?.code).toBe("fallback.invocation");
+      expect(error(refused.stdout)?.summary).toBe(`result=refused; reason=${reason}`);
+      expect(json(refused.stdout).data).toBeUndefined();
+      expect(writeLog).toEqual({ appends: 0, replaces: 0, fences: 0, releases: 0 });
+    }
+
+    const listed = await harness.run(["queue", "list", "--json"]);
+    expect(listed.exitCode).toBe(0);
+    const leases = data(listed.stdout).leases as Array<Record<string, unknown>>;
+    expect(leases).toHaveLength(1);
+    expect(leases[0]?.holder).toBe("holder-a");
+
+    const parked = await harness.run([
+      "queue",
+      "release",
+      "GH-320",
+      "--holder",
+      "holder-a",
+      "--park",
+      "provider-window",
+      "--until",
+      "2026-11-07T12:00:00Z",
+      "--json",
+    ]);
+    expect(parked.exitCode).toBe(0);
+    const park = data(parked.stdout).park as Record<string, unknown>;
+    expect(park.cause).toBe("provider-window");
+    expect(park.conditionType).toBe("provider-window");
+    expect(park.expiresAt).toBe("2026-11-07T12:00:00Z");
+  });
+
   test("release --park rejects a condition-type token as an invocation rejection", async () => {
     const harness = createQueueEdgeHarness("park-token");
     const refused = await harness.run([

@@ -3554,11 +3554,7 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
           summary: "provider-window park requires --until <iso>",
         };
       }
-      if (
-        input.parkCause !== undefined &&
-        input.parkCause !== "provider-window" &&
-        input.parkUntil !== undefined
-      ) {
+      if (input.parkCause !== "provider-window" && input.parkUntil !== undefined) {
         return {
           ok: false,
           kind: "input",

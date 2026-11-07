@@ -432,6 +432,9 @@ export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): Comm
       if (parkFlag === "provider-window" && until === undefined) {
         return invocationRefusal("until-required");
       }
+      if (parkFlag === undefined && until !== undefined) {
+        return invocationRefusal("until-without-park");
+      }
       if (parkFlag !== undefined && parkFlag !== "provider-window" && until !== undefined) {
         return invocationRefusal("until-unsupported");
       }
