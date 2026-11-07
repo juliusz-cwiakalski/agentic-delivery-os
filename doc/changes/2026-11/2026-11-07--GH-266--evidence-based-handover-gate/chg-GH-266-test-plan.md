@@ -1,14 +1,14 @@
 ---
 id: chg-GH-266-test-plan
 status: Updated
-version: 1.1
+version: 1.2
 created: 2026-11-07T00:00:00Z
-last_updated: 2026-11-07T12:00:00Z
+last_updated: 2026-11-08T00:00:00Z
 owners: [engineering]
 service: delivery-os-planning
 labels: [change, docs]
 version_impact: none
-summary: "Docs-only verification of the M1-S9 handover-gate amendment, aligned to spec v1.1. Prove by direct inspection of the diff and the two amended planning files that `clean` is the conjunction of pilot-path truth, eleven-class TDR-0005 coverage on real tickets, the exposure floor, and corroboration; that the superseded rolling two-week window no longer defines the gate while every historical statement stays byte-exact under comparison with no whitespace normalisation (the 2026-11-03 bullets, the M0 exit-criteria lead-in, and the pilot, adoption and decision-acceptance bullets); that every `backlog.md` diff hunk lies inside the M1-S9 entry and every other story's `- AC:`/`- Depends on:` block is byte-identical; that the eleven enumerated classes are set-equal to `DELIVERY_RESULT_TOKENS` (including `pr-open-unverified`, DEC-3); that the corroboration rule names exactly pm-notes phases, tracker state, and CI on the pushed head in both files; that the amendment adjudicates the dated 2026-11-03 per-engine sentence as the same gate superseded not waived, says the gate is no longer defined by a calendar window alone with the floor-only `whichever comes first` retained, and cites `CEO-D-073 (GH-266, 2026-11-07)`; that the diff is exactly two product files outside `doc/changes/**` under `doc/planning/oss-tooling/` with unchanged `backlog.md` frontmatter, no `ados_distribution` marker, unchanged M1-S9 heading, and no source/test/spec change; and that the doc-distribution, forbidden-literals and link guards stay green, with a direct added-line seed-literal scan compensating for the guard's registered-doc-only scan set. No test code, suite, or runtime harness is added: 21 TCs are reproducible inspection procedures with recorded commands and observed expected values, plus three honestly declared gaps. Revision 1.1 closes readiness-review iteration 1 findings 2, 4 and 5."
+summary: "Docs-only verification of the M1-S9 handover-gate amendment, aligned to spec v1.2. Prove by direct inspection of the diff and the two amended planning files that `clean` is the conjunction of pilot-path truth, eleven-class TDR-0005 coverage on real tickets, the exposure floor, and corroboration; that the superseded rolling two-week window no longer defines the gate while every historical statement stays byte-exact under comparison with no whitespace normalisation (the 2026-11-03 bullets, the M0 exit-criteria lead-in, and the pilot, adoption and decision-acceptance bullets); that every `backlog.md` diff hunk lies inside the M1-S9 entry and every other story's `- AC:`/`- Depends on:` block is byte-identical, and that the five M1-S9 prose regions the spec freezes (Goal, Ticket, phase (a), handover-flips, covers-functions) are byte-identical with two mutants proving the oracle fires (TC-GATE-022); that the eleven enumerated classes are set-equal to `DELIVERY_RESULT_TOKENS` (including `pr-open-unverified`, DEC-3); that the corroboration rule names exactly pm-notes phases, tracker state, and CI on the pushed head in both files; that the amendment adjudicates the dated 2026-11-03 per-engine sentence as the same gate superseded not waived, says the gate is no longer defined by a calendar window alone with the floor-only `whichever comes first` retained, and cites `CEO-D-073 (GH-266, 2026-11-07)`; that the diff is exactly two product files outside `doc/changes/**` under `doc/planning/oss-tooling/` with unchanged `backlog.md` frontmatter, no `ados_distribution` marker, unchanged M1-S9 heading, and no source/test/spec change; and that the doc-distribution, forbidden-literals and link guards stay green, with a direct added-line seed-literal scan compensating for the guard's registered-doc-only scan set. No test code, suite, or runtime harness is added: 22 TCs are reproducible inspection procedures with recorded commands and observed expected values, plus three honestly declared gaps. Revision 1.1 closed readiness-review iteration 1 findings 2, 4 and 5; revision 1.2 closes iteration 2 findings N1 (hunk-boundary precision), N2 (byte identity of the two forward-looking status statements plus the pointer-shape rule), N4 (M1-S9 inside-entry preservation oracle) and N6 (wrap-proof lead-in negative control), and is aligned to spec v1.2 (AC-F1-3 five-region freeze, DEC-12) through TC-GATE-022."
 links:
   change_spec: ./chg-GH-266-spec.md
   implementation_plan: ./chg-GH-266-plan.yaml
@@ -19,7 +19,7 @@ links:
 
 ## 1. Scope and Objectives
 
-This change moves one sentence of planning truth: the M1-S9 per-repository handover gate stops being a rolling two-week calendar window and becomes a conjunction of four conditions — pilot-path truth, total TDR-0005 class coverage on real tickets, a minimum exposure floor, and corroboration against non-engine evidence. Nothing executes at runtime, so the risk this plan must control is *documentary*: the gate could be weakened in prose (floor read as an alternative to class coverage, or "success" accepted from the engine's own token), the enumeration could silently inherit the ticket's ten-token list, or the amendment could drift into another story's acceptance criteria or rewrite dated history that must stay as recorded. Each of those is a defect a reviewer must be able to see, not infer, which is why every acceptance criterion is bound here to an explicit command with an expected output rather than to a reading impression. Revision 1.1 makes the two containment oracles executable rather than incidental: diff-hunk confinement to the M1-S9 entry plus byte-exact comparison of every other story's acceptance-criteria block, and history comparison byte for byte with no whitespace normalisation. It also stops claiming a guard covers a file the guard never reads.
+This change moves one sentence of planning truth: the M1-S9 per-repository handover gate stops being a rolling two-week calendar window and becomes a conjunction of four conditions — pilot-path truth, total TDR-0005 class coverage on real tickets, a minimum exposure floor, and corroboration against non-engine evidence. Nothing executes at runtime, so the risk this plan must control is *documentary*: the gate could be weakened in prose (floor read as an alternative to class coverage, or "success" accepted from the engine's own token), the enumeration could silently inherit the ticket's ten-token list, or the amendment could drift into another story's acceptance criteria or rewrite dated history that must stay as recorded. Each of those is a defect a reviewer must be able to see, not infer, which is why every acceptance criterion is bound here to an explicit command with an expected output rather than to a reading impression. Revision 1.1 made the two containment oracles executable rather than incidental: diff-hunk confinement to the M1-S9 entry plus byte-exact comparison of every other story's acceptance-criteria block, and history comparison byte for byte with no whitespace normalisation. It also stopped claiming a guard covers a file the guard never reads. Revision 1.2 closes the residual precision gaps: the hunk guard now excludes the next heading line from the entry, the two forward-looking status statements get their own byte oracle (a pointer may be appended, but the sentences' bytes may not move) and the pointer-shape rule is enforced, the rest of the M1-S9 entry that the plan freezes is compared byte for byte, and the lead-in negative control runs on the flattened form so a wrapped phrase cannot turn it into a no-op.
 
 Three properties are load-bearing and are tested independently so that one cannot pass behind another: (i) the amended `clean` definition is a four-part conjunction with a floor-only "whichever comes first"; (ii) the eleven enumerated classes are set-equal to the typed contract, verified mechanically, not by prose inspection; (iii) history (the dated 2026-11-03 amendment bullets, the M0 exit-criteria list, the M0 pilot statements) and every unrelated story AC and dependency are byte-identical to the base revision.
 
@@ -45,7 +45,7 @@ Three properties are load-bearing and are tested independently so that one canno
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-266-spec.md`](./chg-GH-266-spec.md) v1.1 | Binding source for F-1..F-5, AC-F1-1..AC-NFR3-1 (17 ACs, including AC-F5-3 and AC-F2-4/5/6 added in v1.1), NFR-1..NFR-6, DM-1..DM-3, DEC-1..DEC-11 |
+| [`chg-GH-266-spec.md`](./chg-GH-266-spec.md) v1.2 | Binding source for F-1..F-5, AC-F1-1..AC-NFR3-1 (17 ACs; AC-F5-3 and AC-F2-4/5/6 added in v1.1, AC-F1-3 extended in v1.2 to freeze five M1-S9 prose regions), NFR-1..NFR-6, DM-1..DM-3, DEC-1..DEC-12 |
 | [`chg-GH-266-plan.yaml`](./chg-GH-266-plan.yaml) | Delivery plan: materialises these procedures as `p00.sh`…`p17.sh` under `/tmp/gh266-procedures/` and gates each phase on them |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | Test layers: static/diff and content checks for `doc/**`; fallback rule for docs-only changes (automated tests **N/A**, manual verification + `git diff --check` required); invariant-test rule (branch-diff shape checks belong to review gates, not the permanent suite) |
 | [`doc/planning/oss-tooling/backlog.md`](../../../planning/oss-tooling/backlog.md) | File under test (M1-S9 entry) |
@@ -67,7 +67,7 @@ Forward traceability (every AC appears exactly once in this table):
 |---|---|---|---|
 | AC-F1-1 | M1-S9 `clean` states all four conditions (truth, class coverage, floor, corroboration) | TC-GATE-001 | Covered |
 | AC-F1-2 | "rolling two-week window" / "two clean weeks" no longer define the gate; "whichever comes first" applies only to the floor | TC-GATE-002, TC-GATE-003 | Covered |
-| AC-F1-3 | M1-S9 acceptance criteria and dependency line unchanged (incl. "clean window", refusal/offer, reversibility, bash fallback) | TC-GATE-004 | Covered |
+| AC-F1-3 | M1-S9 acceptance criteria and dependency line unchanged (incl. "clean window", refusal/offer, reversibility, bash fallback); the rest of the entry the plan freezes (Goal, Ticket, phase (a), handover-flips, covers-functions) also byte-identical | TC-GATE-004, TC-GATE-022 | Covered |
 | AC-F2-1 | One new dated CEO-D-073 amendment section: composite bar, corroboration rule, canonical pointer, declared residual | TC-GATE-006 | Covered |
 | AC-F2-2 | Both forward-looking restatements of the two-clean-weeks rule carry a supersession pointer | TC-GATE-007 | Covered |
 | AC-F2-3 | Byte for byte (no whitespace normalisation): the 2026-11-03 amendment bullets; the M0 exit-criteria lead-in sentence; and the pilot, adoption and decision-acceptance bullets | TC-GATE-008 | Covered |
@@ -108,6 +108,7 @@ Reverse traceability (no orphan test cases):
 | TC-GATE-019 | AC-F2-4 |
 | TC-GATE-020 | AC-F2-5 |
 | TC-GATE-021 | AC-F2-6 |
+| TC-GATE-022 | AC-F1-3 |
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -180,6 +181,7 @@ The procedures below are therefore **uncommitted, reproducible inspection comman
 | TC-GATE-019 | 2026-11-03 per-engine sentence adjudicated as same gate, superseded not waived, bytes unchanged | Corner Case | Critical | High | AC-F2-4 | Content + byte compare |
 | TC-GATE-020 | Amendment lead-in: calendar window alone, no elapsed-time-only phrasing, floor-only retained | Corner Case | Important | High | AC-F2-5 | Content |
 | TC-GATE-021 | Directive citation reads `CEO-D-073 (GH-266, 2026-11-07)` | Happy Path | Important | Medium | AC-F2-6 | Content |
+| TC-GATE-022 | M1-S9 frozen regions byte-identical (Goal, Ticket, phase (a), handover-flips, covers-functions) | Regression | Important | High | AC-F1-3 | Static/diff |
 
 ### 5.2 Scenario Details
 
@@ -359,7 +361,7 @@ The procedures below are therefore **uncommitted, reproducible inspection comman
 
 **Expected Outcome**:
 
-- `amendment: ## <dated heading containing CEO-D-073>`, `residual-named` of at least 2, `missing=0`, exit code 0. The marker set covers: `CEO-D-073`; false-success/incident truth; TDR-0005 result-class coverage; the `20 dispatches` / `7 consecutive days` floor; `pm-notes`; `tracker state`; `CI on the pushed head`; a `backlog.md` + `M1-S9` canonical pointer; the word residual plus at least two residual document filenames.
+- An `amendment:` line echoing the new dated section heading (which contains `CEO-D-073`), `residual-named` of at least 2, `missing=0`, exit code 0. The marker set covers: `CEO-D-073`; false-success/incident truth; TDR-0005 result-class coverage; the `20 dispatches` / `7 consecutive days` floor; `pm-notes`; `tracker state`; `CI on the pushed head`; a `backlog.md` + `M1-S9` canonical pointer; the word residual plus at least two residual document filenames.
 - The section renders as one coherent dated entry.
 
 **Notes / Clarifications**:
@@ -384,18 +386,22 @@ The procedures below are therefore **uncommitted, reproducible inspection comman
 
 **Steps**:
 
-1. Run procedure **P6**: split the file into blank-line paragraphs, ignore paragraphs located before `## Story delivery` (dated history), and for every remaining paragraph containing `two-clean-weeks` require a pointer marker (`CEO-D-073`, `supersed…`, or an in-document link `](#…)`).
-2. Confirm exactly two forward-looking occurrences are found, matching the spec's named locations: the paragraph after "Milestone exit: pending" and item 3 of "Proposed next steps".
+1. Run procedure **P6a**: units are blank-line paragraphs with ordered-list items split out, so a pointer in item 2 cannot satisfy item 3's requirement. Ignore units before `## Story delivery` (dated history). For every remaining unit containing `two-clean-weeks`, require a pointer marker (`supersed…` or an in-document link `](#…)`) **and** require the unit not to contain `CEO-D-073` (pointer-shape rule D-6: the forward pointers must not carry the directive id, or P5/P16 could select a pointer paragraph instead of the amendment section).
+2. Confirm exactly two forward-looking units are found, matching the spec's named locations: the paragraph after "Milestone exit: pending" and item 3 of "Proposed next steps".
 3. Confirm the 2026-11-03 bullet is *not* counted as forward-looking (it is history and must carry no pointer; TC-GATE-008 proves it is untouched).
+4. Run procedure **P6b**: slice the two forward statements from the base snapshot and from HEAD as raw text and compare bytes — `milestone-exit-forward` (from `Per backlog-ranking.md reading notes` to `remains the critical path for M0 exit.`) and `next-steps-item-3` (from `3. **M1 delivery start**:` to `respecting the per-repo two-clean-weeks rule.`). The pointer is appended *after* those bytes, so both slices must be identical.
 
 **Expected Outcome**:
 
-- `forward=2 pointed=2`, exit code 0.
+- `forward=2 pointed=2 pointer-shape=2/2 bytes=2/2`, exit code 0.
+- `forward bytes milestone-exit-forward: byte-identical (332 bytes)` and `forward bytes next-steps-item-3: byte-identical (247 bytes)` (observed at authoring time on the base tree; the counts change only if the pointer is placed inside the compared slice, which is a FAIL).
 - Each of the two statements still says what it said, with a pointer beside it — not rewritten as if it had never said the calendar rule (DEC-6).
 
 **Notes / Clarifications**:
 
-- Falsifiability anchor: on `origin/main-tools` the same procedure prints `forward=2 pointed=0`, so a pass cannot be produced by the pre-existing word "amendment" elsewhere in those paragraphs. The pointer must be specifically to the new section.
+- This is the oracle readiness finding N2 asked for: plan task 2.2 cites "byte-identical (P7c)", but P7c byte-compares the three numbered M0 exit-criteria statements. The forward statements are compared here instead, and the citation should point at P6b.
+- Falsifiability anchor: on `origin/main-tools` the same procedure prints `history (no pointer required): ...`, `forward=2 pointed=0 pointer-shape=2/2 bytes=2/2`, exit 1, so a pass cannot be produced by the pre-existing word "amendment" elsewhere. The pointer must be specifically to the new section.
+- The pointer may be appended on the same line or on a new line: the slices end at the sentence terminator, so either placement passes while any edit *inside* the sentences fails.
 
 #### TC-GATE-008 - status.md historical regions byte-identical, no whitespace normalisation
 
@@ -741,7 +747,7 @@ doc/planning/oss-tooling/status.md
 1. Run **P15a**: it derives the M1-S9 entry range in HEAD (the `### M1-S9 ` heading line through the line before the next `### ` heading), then classifies every added-side hunk range from `git diff -U0` against that range.
 2. Confirm `hunks: inside=N outside=0` and `hunk confinement OK`.
 3. Confirm non-vacuity: `backlog.md hunks: N` with `N>=1`. Zero hunks means the amendment is absent, not that containment holds.
-4. Run the two **P15a matcher self-tests**: a synthetic hunk at `+600` must report `OUTSIDE` / `hunk confinement FAILED`; a synthetic hunk at `+541,9` must report `hunks: inside=1 outside=0` / `hunk confinement OK`.
+4. Run the four **P15a matcher self-tests**: `+600,1` (well outside) and `+560,0` (a deletion of the next `### M1-S10` heading line, i.e. the first line after the entry) must both report `OUTSIDE` / `hunk confinement FAILED`; `+559,0` (a deletion of the entry's last line) and `+541,9` (an addition inside the anchor) must report `hunks: inside=1 outside=0` / `hunk confinement OK`.
 5. Run **P15b**: extract, for every story except M1-S9, the full block from its `- AC:` line through its `- Depends on:` line (multi-line blocks included) from the base snapshot and from HEAD, then `diff -u` the two extractions.
 6. Run the **P15b negative control**: apply a one-line edit to M1-S8's acceptance criterion in a `/tmp` copy (`retro output survives a malformed entry without data loss` → `retro output survives a malformed entry`) and re-extract; the comparison must now differ at exactly that line.
 
@@ -750,7 +756,7 @@ doc/planning/oss-tooling/status.md
 - `M1-S9 entry lines: 529..559` at authoring time (derived, not hardcoded; the heading line stays 529 because the amendment adds no line before it).
 - `hunks: inside=N outside=0`, `hunk confinement OK`, `backlog.md hunks: N` with `N>=1`.
 - `P15 verdict: OK`, exit 0.
-- Self-tests: `hunks: inside=0 outside=1` + `hunk confinement FAILED`, then `hunks: inside=1 outside=0` + `hunk confinement OK`.
+- Self-tests, in order: `+600,1` → `OUTSIDE: @@ -600,1 +600,1 @@ (added 600..600, entry 529..559)` + `hunks: inside=0 outside=1` + `hunk confinement FAILED`; `+560,0` → `OUTSIDE: @@ -560,1 +560,0 @@ (added 560..560, entry 529..559)` + `hunks: inside=0 outside=1` + `hunk confinement FAILED`; `+559,0` → `hunks: inside=1 outside=0` + `hunk confinement OK`; `+541,9` → `hunks: inside=1 outside=0` + `hunk confinement OK`.
 - `other-story AC/Depends byte-identical`, `stories compared: 66` (observed at authoring time).
 - Negative control: `negative control detected the M1-S8 edit` with a one-line diff naming the M1-S8 `- AC:` line.
 
@@ -758,7 +764,7 @@ doc/planning/oss-tooling/status.md
 
 - This is the requirement readiness finding 2 found claimed but unimplemented: every other story's `- AC:` and `- Depends on:` line, plus hunk confinement, is AC-F5-3 and lives here; TC-GATE-004 no longer asserts it.
 - The entry range includes the blank separator line before the next `###` heading because AC-F5-3 defines the entry as "from its heading to the line before the next `###` heading".
-- A pure deletion hunk (`+c,0`) has an empty added range and is accepted when `c` is within the entry; the matcher handles that case explicitly.
+- A pure deletion hunk (`+c,0`) has an empty added range and is accepted only when `c` is within the entry's own lines (`c <= e`), not on the next heading line. Revision 1.2 tightened this: v1.1 accepted `c <= e+1`, so `@@ -560,1 +560,0 @@` (the `### M1-S10` heading line) was misclassified `inside` (readiness N1). The `+560,0` self-test pins the boundary.
 - Observed on the unamended tree: no `backlog.md` hunk (`backlog.md hunks: 0`), so step 3 fails by design — the containment check only becomes meaningful once the amendment exists.
 
 #### TC-GATE-019 - 2026-11-03 per-engine sentence adjudicated as the same gate, superseded not waived, bytes unchanged
@@ -781,13 +787,13 @@ doc/planning/oss-tooling/status.md
 1. Run **P16** and read the `adjudication:` line.
 2. Run **P7a** and confirm the dated 2026-11-03 section — which contains the per-engine sentence `Per-engine handover still requires its own two-clean-weeks evidence; that constraint is never waived.` (wrapped across source lines; compare bytes, never a single-line grep) — is byte-identical to the base revision.
 3. Read the adjudication and confirm each of its six elements: it names the date `2026-11-03`; it names the per-engine sentence; it says the sentence describes the **same** M1-S9 **gate**; it says **superseded**, explicitly **not waived**; it gives the coverage reason (**stricter/stronger on coverage**); and it gives the floor reason (**elapsed/calendar time** replaced or bounded by an **exposure floor**).
-4. Run the P16 adjudication negative control: a `/tmp` copy with `stricter on coverage` replaced by `much better` must report `missing=1 -> stricter-coverage`.
+4. Read the built-in adjudication mutant: P16 removes every `coverage` from the flattened amendment and must report `mutant coverage: changed=true adjudication-missing=stricter-coverage`.
 
 **Expected Outcome**:
 
 - `adjudication: missing=0`, exit 0.
 - `2026-11-03 section byte-identical`.
-- Negative control: `adjudication: missing=1 -> stricter-coverage` — proving the check tests the required substance, not the presence of the word "superseded" alone.
+- Negative control: `mutant coverage: changed=true adjudication-missing=stricter-coverage` — proving the check tests the required substance, not the presence of the word "superseded" alone.
 
 **Notes / Clarifications**:
 
@@ -815,12 +821,12 @@ doc/planning/oss-tooling/status.md
 2. Confirm the amendment states the gate is no longer defined by a **calendar window alone** (`calendar-window-alone=OK`).
 3. Confirm it does **not** use the elapsed-time-only formulation `no longer defined by elapsed time` (`elapsed-only-phrase=ABSENT`). That phrasing contradicts the retained 7-consecutive-days floor and was readiness finding 10.
 4. Confirm `whichever comes first` is retained and scoped to the floor inside its character window (`floor-scope=OK`).
-5. Run the P16 lead-in negative control: a `/tmp` copy with `no longer defined by a calendar window alone` replaced by `no longer defined by elapsed time` must report `calendar-window-alone=MISSING elapsed-only-phrase=PRESENT`.
+5. Read the two built-in lead-in mutants, which run on the flattened amendment (not on the raw file): the first replaces `calendar window alone` with `a fixed window` and must report `mutant lead-in: changed=true raw-single-line-noop=true calendar-window-alone=MISSING`; the second rewrites the same clause to the forbidden `no longer defined by elapsed time` and must report `mutant elapsed-only-phrase: changed=true elapsed-only-phrase=PRESENT`.
 
 **Expected Outcome**:
 
 - `lead-in: calendar-window-alone=OK elapsed-only-phrase=ABSENT floor-scope=OK`, exit 0.
-- Negative control: `calendar-window-alone=MISSING elapsed-only-phrase=PRESENT`, exit 1.
+- Negative controls: `mutant lead-in: changed=true raw-single-line-noop=true calendar-window-alone=MISSING` and `mutant elapsed-only-phrase: changed=true elapsed-only-phrase=PRESENT`. `raw-single-line-noop=true` documents why the control must not be a raw `sed`: the reference text wraps the phrase, so a single-line replacement would be a no-op (readiness N6).
 
 **Notes / Clarifications**:
 
@@ -846,17 +852,50 @@ doc/planning/oss-tooling/status.md
 
 1. Run **P16** and read the `citation:` line.
 2. Confirm the amendment contains the exact literal `CEO-D-073 (GH-266, 2026-11-07)` — the identifier with its tracker home and directive date, not the bare identifier.
-3. Run the P16 citation negative control: a `/tmp` copy citing only `CEO-D-073` must report `citation: MISSING`.
+3. Read the built-in citation mutant: P16 reduces the citation to the bare `CEO-D-073` and must report `mutant citation: changed=true citation=MISSING`.
 
 **Expected Outcome**:
 
 - `citation: OK`, exit 0.
-- Negative control: `citation: MISSING`, exit 1.
+- Negative control: `mutant citation: changed=true citation=MISSING`.
 
 **Notes / Clarifications**:
 
 - DEC-11: `CEO-D-073` exists only in the GH-266 ticket, so a bare citation is unresolvable from inside the repository. The exact-literal check is appropriate because the requirement *is* the exact form.
 - A future reader may resolve `GH-266` in the tracker; the date distinguishes the directive from the change.
+
+#### TC-GATE-022 - M1-S9 frozen regions byte-identical (Goal, Ticket, phase (a), handover-flips, covers-functions)
+
+**Scenario Type**: Regression
+**Impact Level**: Important
+**Priority**: High
+**Related IDs**: F-1, F-5, NFR-2, AC-F1-3
+**Test Type(s)**: Manual (byte comparison)
+**Automation Level**: Semi-automated
+**Target Layer / Location**: `doc/planning/oss-tooling/backlog.md`, M1-S9 entry outside the amended anchor
+**Tags**: @docs, @diff, @preservation
+
+**Preconditions**:
+
+- Base snapshot `/tmp/gh266-base-backlog.md` (Section 7.1, step P0).
+
+**Steps**:
+
+1. Run **P4c**: five literal-anchored regions are sliced from the base snapshot and from HEAD as raw text (wrapping preserved, no normalisation) and compared byte for byte — `goal` (the `- Goal:` line), `ticket` (the `- Ticket:` line), `phase-a` (the `(a) **evidence accrual**` clause through `divergences reported;`), `handover-flips` (the `Handover flips the repository to the engine` sentence through `as authoritative (recorded, reversible)`), and `covers-functions` (the `Covers` sentence through `loop-driving` / `function.`).
+2. Confirm all five print `byte-identical`.
+3. Run **P4d** and confirm the two negative controls fire: a one-word edit inside `phase-a` and a one-space reflow of the `handover-flips` sentence must both report `bytes changed` (not `marker not found`), while `P4` still ends `P4 verdict: OK` because the mutants are self-tests.
+
+**Expected Outcome**:
+
+- `region goal: byte-identical (244 bytes)`, `region ticket: byte-identical (32 bytes)`, `region phase-a: byte-identical (231 bytes)`, `region handover-flips: byte-identical (85 bytes)`, `region covers-functions: byte-identical (213 bytes)` (observed at authoring time on the base tree).
+- `negative control frozen-region mutation: fired=yes named_phase_a_and_handover_flips=yes`.
+- `P4 verdict: OK`, exit 0.
+
+**Notes / Clarifications**:
+
+- The five frozen regions are stated in plan v1.2 task 1.6 (containment and inside-entry preservation), with the replacement reference in task 1.5. Spec v1.2 extends AC-F1-3 to name the same five regions (DEC-12), so this TC is bound to AC-F1-3 with no oracle/AC gap; OQ-6, which raised that gap, is resolved by spec v1.2.
+- Byte comparison, not grep: a reflow of `as authoritative (recorded, reversible)` (one extra space) fails, which is exactly the kind of drift a normalised check would miss.
+- The negative controls deliberately keep both anchor literals intact, so the failure must be `bytes changed`. A `marker not found` outcome would mean the anchor itself moved and is also a FAIL.
 
 ## 6. Environments and Test Data
 
@@ -866,7 +905,9 @@ doc/planning/oss-tooling/status.md
 | Toolchain | `git` (branch + base revision), `bash`, `awk`, `cmp`, `grep`, `bun` (used only for `bun -e` inspection and the forbidden-literals check); all already required by the repository |
 | Base revision | `origin/main-tools` (the integration branch; `f87ec185` at authoring time). All diff checks use the three-dot form `origin/main-tools...HEAD` so an advanced base cannot silently widen the comparison |
 | Test data | Base-revision snapshots written to `/tmp/gh266-base-backlog.md` and `/tmp/gh266-base-status.md`; the amended files are read from the worktree. No fixtures are fabricated and no synthetic planning text is committed |
-| Negative fixtures | Four `/tmp`-only copies: the enumeration paragraph with `pr-open-unverified` removed (TC-GATE-010); `backlog.md` with a one-line M1-S8 AC edit (TC-GATE-018); `status.md` with statement 1 reflowed (TC-GATE-008); and `status.md` with a doctored amendment for the P16 adjudication, lead-in and citation negatives (TC-GATE-019/020/021). Never committed, never written into the repository |
+| Negative fixtures | `/tmp`-only copies, never committed and never written into the repository: the enumeration paragraph with `pr-open-unverified` removed (TC-GATE-010); `backlog.md` with a one-line M1-S8 AC edit (TC-GATE-018); `backlog.md` with a one-word `phase-a` edit plus a one-space `handover-flips` reflow (TC-GATE-022); `status.md` with statement 1 reflowed (TC-GATE-008) |
+| Built-in mutants | P16 derives its four negative controls from the amendment it just read, on the same flattened form the positive check uses (`calendar window alone` removed, the forbidden `no longer defined by elapsed time` constructed, `coverage` removed, the citation reduced to `CEO-D-073`). A wrapped phrase therefore cannot turn a control into a no-op (readiness N6); each mutant reports `changed=`. |
+| Forward-statement fixtures | For TC-GATE-007 a `/tmp` status fixture appends pointers to the two forward statements (in three variants: correct, pointer containing `CEO-D-073`, and one word changed inside the sentence) to prove the byte oracle distinguishes all three. |
 | Guard scope | `scripts/checks/forbidden-literals.ts` scans `registry.registered` documents only: `status.md` is registered, `backlog.md` is not (it is present at `corpusBaseline 32784aff…`, and the guard rejects registering such a file). P17 therefore scans added lines directly for the three seed literals |
 | Isolation | Every procedure is read-only with respect to the repository: no writes outside `/tmp`, no branch, index, or file mutation. The two planning files are under test and are never edited by a tester to make a check pass |
 | Cleanup | `rm -f /tmp/gh266-*` (base snapshots, flattened text, link list, split halves) |
@@ -971,9 +1012,11 @@ process.exit(pass === 4 && floorScoped ? 0 : 1);
 
 Expected: four `OK` lines, `floor-scope=OK`, `conditions=4/4`, exit 0. (Base prints `MISSING` for b/c/d and `conditions=1/4`.)
 
-**P4 — heading and AC/dependency preservation (TC-GATE-004, TC-GATE-005):**
+**P4 — M1-S9 entry preservation: heading, AC/dependency block, frozen regions (TC-GATE-004, TC-GATE-005, TC-GATE-022):**
 
 ```bash
+BASE=${BASE:-origin/main-tools}
+
 # P4b: heading must not appear as a changed line
 git diff -U0 "$BASE"...HEAD -- doc/planning/oss-tooling/backlog.md \
   | grep -E '^[+-]#{3} M1-S9' || echo "heading unchanged"
@@ -988,9 +1031,54 @@ cmp /tmp/gh266-ac-part-aa /tmp/gh266-ac-part-ab && echo "M1-S9 AC+Depends byte-i
 for phrase in "clean window" "refused while" "per repository and reversible" "fallback with deprecation"; do
   grep -Fq "$phrase" doc/planning/oss-tooling/backlog.md || echo "MISSING: $phrase"
 done
+
+# P4c: the frozen M1-S9 regions, byte for byte (raw text slices, wrapping preserved)
+frozen_regions() { bun -e '
+const fs = require("node:fs");
+const base = fs.readFileSync(process.argv[1], "utf8");
+const head = fs.readFileSync(process.argv[2], "utf8");
+const regions = [
+  ["goal", "- Goal: The typed dispatch loop", "\n"],
+  ["ticket", "- Ticket: GH-239 (milestone M1)", "\n"],
+  ["phase-a", "(a) **evidence accrual**", "divergences reported;"],
+  ["handover-flips", "Handover flips the repository to the engine", "as authoritative (recorded, reversible)"],
+  ["covers-functions", "Covers", "loop-driving\n  function."],
+];
+let bad = 0;
+for (const [name, startLit, endLit] of regions) {
+  const slice = (text) => {
+    const i = text.indexOf(startLit);
+    if (i < 0) return null;
+    const j = text.indexOf(endLit, i);
+    if (j < 0) return null;
+    return text.slice(i, j + endLit.length);
+  };
+  const b = slice(base), h = slice(head);
+  if (b === null || h === null) { bad++; console.log(`FAIL ${name}: marker not found (base=${b === null ? "missing" : "ok"}, head=${h === null ? "missing" : "ok"})`); continue; }
+  if (b === h) { console.log(`region ${name}: byte-identical (${h.length} bytes)`); continue; }
+  bad++; console.log(`FAIL ${name}: bytes changed (base ${b.length} bytes, head ${h.length} bytes)`);
+}
+process.exit(bad === 0 ? 0 : 1);
+' "$1" "$2"; }
+
+frozen_ok=1
+frozen_regions /tmp/gh266-base-backlog.md doc/planning/oss-tooling/backlog.md || frozen_ok=0
+
+# P4d: negative controls — one text edit (phase-a) and one reflow (handover-flips).
+# Both keep the region's start and end literals intact, so the failure must be
+# "bytes changed", not "marker not found": the oracle is bytes, not presence.
+sed 's/verify-change evidence recorded per ticket/verify-change evidence recorded per run/' \
+  doc/planning/oss-tooling/backlog.md > /tmp/gh266-neg-backlog-entry.md
+sed -i 's/^  as authoritative/   as authoritative/' /tmp/gh266-neg-backlog-entry.md
+if frozen_regions /tmp/gh266-base-backlog.md /tmp/gh266-neg-backlog-entry.md > /tmp/gh266-p4d.txt 2>&1; then neg_ok=0; else neg_ok=1; fi
+if grep -q 'FAIL phase-a: bytes changed' /tmp/gh266-p4d.txt && grep -q 'FAIL handover-flips: bytes changed' /tmp/gh266-p4d.txt; then neg_named=1; else neg_named=0; fi
+echo "negative control frozen-region mutation: fired=$([ "$neg_ok" -eq 1 ] && echo yes || echo no) named_phase_a_and_handover_flips=$([ "$neg_named" -eq 1 ] && echo yes || echo no)"
+
+if [ "$frozen_ok" -eq 1 ] && [ "$neg_ok" -eq 1 ] && [ "$neg_named" -eq 1 ]; then echo "P4 verdict: OK"; else echo "P4 verdict: FAILED"; fi
+[ "$frozen_ok" -eq 1 ] && [ "$neg_ok" -eq 1 ] && [ "$neg_named" -eq 1 ]
 ```
 
-Expected: `heading unchanged`; identical heading lines; `M1-S9 AC+Depends byte-identical`; no `MISSING:` lines.
+Expected: `heading unchanged`; identical heading lines; `M1-S9 AC+Depends byte-identical`; no `MISSING:` lines; five `region …: byte-identical (N bytes)` lines; `negative control frozen-region mutation: fired=yes named_phase_a_and_handover_flips=yes`; `P4 verdict: OK`.
 If `split -n l/2` is unavailable on the host `split`, run the `awk` twice and `cmp` the two files explicitly — the assertion is identical.
 
 **P5 — status amendment content (TC-GATE-006):**
@@ -1031,28 +1119,84 @@ process.exit(missing.length === 0 ? 0 : 1);
 
 Expected: an `amendment:` line echoing the new dated section heading, `residual-named` of at least `2`, `missing=0`, exit 0. (Base prints `amendment: not found`.)
 
-**P6 — status supersession pointers (TC-GATE-007):**
+**P6 — status supersession pointers and forward-statement bytes (TC-GATE-007):**
 
 ```bash
 bun -e '
-const text = require("node:fs").readFileSync(process.argv[1], "utf8");
-const cutoff = text.indexOf("## Story delivery");
-const paras = text.split(/\n\s*\n/);
-let offset = 0, forward = 0, pointed = 0;
-for (const p of paras) {
-  const at = text.indexOf(p, offset); offset = at + p.length;
+const fs = require("node:fs");
+const head = fs.readFileSync(process.argv[1], "utf8");
+const base = fs.readFileSync(process.argv[2], "utf8");
+const cutoff = head.indexOf("## Story delivery");
+const amendBlocks = head.split(/^## /m).slice(1).map((b) => "## " + b).filter((b) => b.includes("CEO-D-073"));
+const amend = amendBlocks.length ? amendBlocks[amendBlocks.length - 1] : "";
+const amendStart = amend ? head.indexOf(amend) : -1;
+const amendEnd = amendStart + amend.length;
+
+// P6a: pointer presence and pointer shape, per logical unit.
+// Units are blank-line paragraphs, with ordered-list items split out, so a
+// pointer in item 2 cannot satisfy item 3.
+const units = (t) => {
+  const out = [];
+  for (const para of t.split(/\n\s*\n/)) {
+    if (/^\d+\. \*\*/m.test(para)) out.push(...para.split(/^(?=\d+\. \*\*)/m).filter((p) => p.trim()));
+    else if (para.trim()) out.push(para);
+  }
+  return out;
+};
+let forward = 0, pointed = 0, shaped = 0, bad = 0;
+for (const p of units(head)) {
   if (!/two-clean-weeks/.test(p)) continue;
+  const at = head.indexOf(p);
+  if (amendStart >= 0 && at >= amendStart && at < amendEnd) {
+    console.log("amendment (not a forward statement):", p.trim().split("\n")[0].slice(0, 60)); continue;
+  }
   if (at < cutoff) { console.log("history (no pointer required):", p.trim().split("\n")[0]); continue; }
   forward++;
-  if (/CEO-D-073|supersed|]\(#/.test(p)) pointed++;
-  else console.log("MISSING POINTER:", p.trim().replace(/\s+/g, " ").slice(0, 120));
+  if (/supersed|]\(#/i.test(p)) pointed++;
+  else { bad++; console.log("MISSING POINTER:", p.trim().replace(/\s+/g, " ").slice(0, 120)); }
+  if (!p.includes("CEO-D-073")) shaped++;
+  else { bad++; console.log("FAIL pointer contains CEO-D-073:", p.trim().replace(/\s+/g, " ").slice(0, 120)); }
 }
-console.log(`forward=${forward} pointed=${pointed}`);
-process.exit(forward === 2 && pointed === 2 ? 0 : 1);
-' doc/planning/oss-tooling/status.md
+
+// P6b: the two forward statements, byte for byte. The pointer is appended
+// AFTER these bytes, so the slices must be identical.
+const block = (t, startLit, endLit) => {
+  const i = t.indexOf(startLit);
+  if (i < 0) return null;
+  const j = t.indexOf(endLit, i);
+  if (j < 0) return null;
+  return t.slice(i, j + endLit.length);
+};
+const sentences = [
+  ["milestone-exit-forward", "Per backlog-ranking.md reading notes", "remains the critical path for M0 exit."],
+  ["next-steps-item-3", "3. **M1 delivery start**:", "respecting the per-repo two-clean-weeks rule."],
+];
+let bytes = 0;
+for (const [name, s, e] of sentences) {
+  const b = block(base, s, e), h = block(head, s, e);
+  if (b === null || h === null) { bad++; console.log(`FAIL ${name}: marker not found`); continue; }
+  if (b === h) { bytes++; console.log(`forward bytes ${name}: byte-identical (${h.length} bytes)`); }
+  else { bad++; console.log(`FAIL ${name}: bytes changed`); }
+}
+
+console.log(`forward=${forward} pointed=${pointed} pointer-shape=${shaped}/${forward} bytes=${bytes}/${sentences.length}`);
+process.exit(forward === 2 && pointed === 2 && shaped === 2 && bytes === 2 && bad === 0 ? 0 : 1);
+' doc/planning/oss-tooling/status.md /tmp/gh266-base-status.md
 ```
 
-Expected: one `history (no pointer required)` line, `forward=2 pointed=2`, exit 0. (Base prints `forward=2 pointed=0`.)
+Expected after the amendment: one `history (no pointer required)` line, `forward bytes milestone-exit-forward: byte-identical (332 bytes)`, `forward bytes next-steps-item-3: byte-identical (247 bytes)`, `forward=2 pointed=2 pointer-shape=2/2 bytes=2/2`, exit 0. An `amendment (not a forward statement): ...` line is printed only when the amendment itself uses the hyphenated token; the unit is then skipped rather than counted, so the amendment may quote the dated sentence without breaking the count.
+
+Observed on the unamended tree (exit 1, by design), verbatim:
+```
+history (no pointer required): - The dual-run pilot starts now and runs concurrently with M1 planning and
+MISSING POINTER: Per backlog-ranking.md reading notes and the recorded M0 exit amendment (above), M1 delivery starts now and runs beside
+MISSING POINTER: 3. **M1 delivery start**: milestone and 23 tickets created (GH-221 through GH-243; map below); dispatch in ranking order
+forward bytes milestone-exit-forward: byte-identical (332 bytes)
+forward bytes next-steps-item-3: byte-identical (247 bytes)
+forward=2 pointed=0 pointer-shape=2/2 bytes=2/2
+```
+
+Observed against a `/tmp` amended status fixture (exit 0): an extra `amendment (not a forward statement): ...` line, then `forward bytes milestone-exit-forward: byte-identical (332 bytes)`, `forward bytes next-steps-item-3: byte-identical (247 bytes)`, `forward=2 pointed=2 pointer-shape=2/2 bytes=2/2`.
 
 **P7 — status history preservation, byte for byte, no normalisation (TC-GATE-008, TC-GATE-019):**
 
@@ -1275,7 +1419,7 @@ hunk_guard() { # $1=entry start, $2=entry end; reads hunk headers on stdin
     [ -z "$d" ] && d=1
     if [ "$d" -eq 0 ]; then
       last=$c
-      ok=$([ "$c" -ge "$s" ] && [ "$c" -le $((e+1)) ] && echo 1 || echo 0)
+      ok=$([ "$c" -ge "$s" ] && [ "$c" -le "$e" ] && echo 1 || echo 0)
     else
       last=$(( c + d - 1 ))
       ok=$([ "$c" -ge "$s" ] && [ "$last" -le "$e" ] && echo 1 || echo 0)
@@ -1297,8 +1441,12 @@ else
   echo "hunk confinement: SKIPPED (vacuous without a backlog.md hunk)"
 fi
 
-# P15a matcher self-tests: outside must be reported, inside must pass
+# P15a matcher self-tests. Outside must be reported: a hunk well away from the
+# entry, and a deletion of the next heading line (the first line after the entry,
+# which AC-F5-3 excludes). Inside must pass on both boundary sides.
 printf '@@ -600,1 +600,1 @@\n' | hunk_guard "$start" "$end" || true
+printf '@@ -560,1 +560,0 @@\n' | hunk_guard "$start" "$end" || true
+printf '@@ -559,1 +559,0 @@\n' | hunk_guard "$start" "$end" || true
 printf '@@ -541,3 +541,9 @@\n' | hunk_guard "$start" "$end"
 
 # P15b: every other story's - AC: .. - Depends on: block, byte for byte
@@ -1338,9 +1486,9 @@ else
 fi
 ```
 
-Expected after the amendment (exit 0): `backlog.md hunks: N` with `N>=1`, `non-vacuous: backlog.md changed`, `hunks: inside=N outside=0`, `hunk confinement OK`, the two self-tests `hunks: inside=0 outside=1` + `hunk confinement FAILED` then `hunks: inside=1 outside=0` + `hunk confinement OK`, `other-story AC/Depends byte-identical`, `stories compared: 66`, `negative control detected the M1-S8 edit` with a one-line diff, and `P15 verdict: OK`.
+Expected after the amendment (exit 0): `backlog.md hunks: N` with `N>=1`, `non-vacuous: backlog.md changed`, `hunks: inside=N outside=0`, `hunk confinement OK`, then the four boundary self-tests — `+600,1` and `+560,0` each `OUTSIDE` + `hunks: inside=0 outside=1` + `hunk confinement FAILED`, then `+559,0` and `+541,9` each `hunks: inside=1 outside=0` + `hunk confinement OK` — then `other-story AC/Depends byte-identical`, `stories compared: 66`, `negative control detected the M1-S8 edit` with a one-line diff, and `P15 verdict: OK`.
 
-Observed on the unamended tree (exit 1, by design):
+Observed on the unamended tree (exit 1, by design), verbatim:
 ```
 M1-S9 entry lines: 529..559
 backlog.md hunks: 0
@@ -1349,11 +1497,20 @@ hunk confinement: SKIPPED (vacuous without a backlog.md hunk)
 OUTSIDE: @@ -600,1 +600,1 @@ (added 600..600, entry 529..559)
 hunks: inside=0 outside=1
 hunk confinement FAILED
+OUTSIDE: @@ -560,1 +560,0 @@ (added 560..560, entry 529..559)
+hunks: inside=0 outside=1
+hunk confinement FAILED
+hunks: inside=1 outside=0
+hunk confinement OK
 hunks: inside=1 outside=0
 hunk confinement OK
 other-story AC/Depends byte-identical
 stories compared: 66
 negative control detected the M1-S8 edit
+154c154
+< - AC: retro output survives a malformed entry without data loss; evidence
+---
+> - AC: retro output survives a malformed entry; evidence
 P15 verdict: FAILED
 ```
 
@@ -1364,7 +1521,7 @@ bun -e '
 const text = require("node:fs").readFileSync(process.argv[1], "utf8");
 const sec = text.split(/^## /m).slice(1).map((b) => "## " + b).find((b) => b.includes("CEO-D-073"));
 if (!sec) { console.log("amendment: not found"); process.exit(1); }
-const flat = sec.replace(/\s+/g, " ");
+const flatSec = sec.replace(/\s+/g, " ");
 const need = [
   ["dated-2026-11-03", /2026-11-03/],
   ["per-engine", /per-engine/i],
@@ -1373,25 +1530,69 @@ const need = [
   ["stricter-coverage", /stricter|stronger|higher|more stringent/i, /coverage/i],
   ["elapsed-to-floor", /elapsed|calendar/i, /floor/i],
 ];
-const adjMissing = [];
-for (const [name, ...pats] of need) if (!pats.every((p) => p.test(flat))) adjMissing.push(name);
-const aloneOk = /calendar window alone/i.test(flat);
-const elapsedOnly = /no longer defined by elapsed time/i.test(flat);
-const idx = flat.search(/whichever comes first/i);
-let floorOk = false;
-if (idx !== -1) {
-  const win = flat.slice(Math.max(0, idx - 240), idx + 300);
-  floorOk = /floor/i.test(win) && /only|binds|not an alternative|never substitut/i.test(win);
-}
-const citationOk = sec.includes("CEO-D-073 (GH-266, 2026-11-07)");
-console.log(`adjudication: missing=${adjMissing.length}${adjMissing.length ? " -> " + adjMissing.join(",") : ""}`);
-console.log(`lead-in: calendar-window-alone=${aloneOk ? "OK" : "MISSING"} elapsed-only-phrase=${elapsedOnly ? "PRESENT" : "ABSENT"} floor-scope=${floorOk ? "OK" : "MISSING"}`);
-console.log(`citation: ${citationOk ? "OK" : "MISSING"}`);
-process.exit(adjMissing.length === 0 && aloneOk && !elapsedOnly && floorOk && citationOk ? 0 : 1);
+// Every predicate runs on the flattened amendment. The negative controls below
+// use the same form, so a phrase wrapped across lines cannot make them a no-op.
+const evaluate = (flatText) => {
+  const missing = need.filter(([, ...pats]) => !pats.every((p) => p.test(flatText))).map(([name]) => name);
+  const idx = flatText.search(/whichever comes first/i);
+  const win = idx === -1 ? "" : flatText.slice(Math.max(0, idx - 240), idx + 300);
+  return {
+    missing,
+    alone: /calendar window alone/i.test(flatText),
+    elapsed: /no longer defined by elapsed time/i.test(flatText),
+    floor: idx !== -1 && /floor/i.test(win) && /only|binds|not an alternative|never substitut/i.test(win),
+    citation: flatText.includes("CEO-D-073 (GH-266, 2026-11-07)"),
+  };
+};
+const r = evaluate(flatSec);
+console.log(`adjudication: missing=${r.missing.length}${r.missing.length ? " -> " + r.missing.join(",") : ""}`);
+console.log(`lead-in: calendar-window-alone=${r.alone ? "OK" : "MISSING"} elapsed-only-phrase=${r.elapsed ? "PRESENT" : "ABSENT"} floor-scope=${r.floor ? "OK" : "MISSING"}`);
+console.log(`citation: ${r.citation ? "OK" : "MISSING"}`);
+
+// Negative controls on the SAME flattened form the positive check uses (N6). A
+// raw single-line replacement on the wrapped reference text would match nothing:
+// the raw-single-line-noop flag below reports exactly that, and the mutant still
+// fires because it runs on the flattened string.
+let controls = 0;
+const leadMut = flatSec.replace(/calendar window alone/i, "a fixed window");
+const lr = evaluate(leadMut);
+const rawNoop = sec.replace(/calendar window alone/i, "a fixed window") === sec;
+console.log(`mutant lead-in: changed=${leadMut !== flatSec} raw-single-line-noop=${rawNoop} calendar-window-alone=${lr.alone ? "OK" : "MISSING"}`);
+if (leadMut !== flatSec && !lr.alone) controls++;
+const elapsedMut = flatSec.replace(/(no longer defined by\s+)(?:an?\s+)?calendar window alone/i, "$1elapsed time");
+const er = evaluate(elapsedMut);
+console.log(`mutant elapsed-only-phrase: changed=${elapsedMut !== flatSec} elapsed-only-phrase=${er.elapsed ? "PRESENT" : "ABSENT"}`);
+if (elapsedMut !== flatSec && er.elapsed) controls++;
+const covMut = flatSec.replace(/coverage/gi, "evidence");
+const cr = evaluate(covMut);
+console.log(`mutant coverage: changed=${covMut !== flatSec} adjudication-missing=${cr.missing.join(",") || "none"}`);
+if (covMut !== flatSec && cr.missing.includes("stricter-coverage")) controls++;
+const citMut = flatSec.replace("CEO-D-073 (GH-266, 2026-11-07)", "CEO-D-073");
+const cir = evaluate(citMut);
+console.log(`mutant citation: changed=${citMut !== flatSec} citation=${cir.citation ? "OK" : "MISSING"}`);
+if (citMut !== flatSec && !cir.citation) controls++;
+
+const ok = r.missing.length === 0 && r.alone && !r.elapsed && r.floor && r.citation && controls === 4;
+console.log(`P16 verdict: ${ok ? "OK" : "FAILED"}`);
+process.exit(ok ? 0 : 1);
 ' doc/planning/oss-tooling/status.md
 ```
 
-Expected after the amendment: `adjudication: missing=0`, `lead-in: calendar-window-alone=OK elapsed-only-phrase=ABSENT floor-scope=OK`, `citation: OK`, exit 0. Observed on the unamended tree: `amendment: not found`, exit 1. Negative controls (all observed against a synthetic amendment in `/tmp`): replacing `stricter on coverage` → `adjudication: missing=1 -> stricter-coverage`; replacing `calendar window alone` → `calendar-window-alone=MISSING elapsed-only-phrase=PRESENT`; citing bare `CEO-D-073` → `citation: MISSING`.
+Expected after the amendment (exit 0), verbatim:
+```
+adjudication: missing=0
+lead-in: calendar-window-alone=OK elapsed-only-phrase=ABSENT floor-scope=OK
+citation: OK
+mutant lead-in: changed=true raw-single-line-noop=true calendar-window-alone=MISSING
+mutant elapsed-only-phrase: changed=true elapsed-only-phrase=PRESENT
+mutant coverage: changed=true adjudication-missing=stricter-coverage
+mutant citation: changed=true citation=MISSING
+P16 verdict: OK
+```
+
+Observed on the unamended tree (exit 1, by design): `amendment: not found` (no mutants are printed, because the amendment section does not exist yet).
+
+Observed against a `/tmp` amended status fixture whose lead-in wraps the phrase as `no longer defined by a` / `calendar` / `window alone` across three lines (exit 0): the eight lines above, exactly. `raw-single-line-noop=true` is the direct closure of readiness N6: a single-line replacement on the wrapped raw text matches nothing, while `changed=true` on the flattened form shows the mutant fires. `mutant elapsed-only-phrase: ... elapsed-only-phrase=PRESENT` proves the forbidden-phrase predicate is live, not merely absent.
 
 **P17 — added-line seed-literal scan for the unregistered `backlog.md` (TC-GATE-014):**
 
@@ -1441,9 +1642,10 @@ Observed on the unamended tree (exit 1, by design): `added-lines=0 seed-hits=0`,
 | TC-GATE-002 | P2 | `bun -e '…' backlog.md` | Manual Only — uncommitted inspection | `occurrences/unmarked` line |
 | TC-GATE-003 | P3 (`floor-scope`) | same as TC-GATE-001 | Manual Only — uncommitted inspection | `floor-scope=OK` |
 | TC-GATE-004 | P4a | `git diff -U0` + `awk` + `cmp` + 4 greps | Manual Only — uncommitted inspection | `M1-S9 AC+Depends byte-identical` + grep count (no other-story claim) |
+| TC-GATE-022 | P4c + P4d | `bun -e` raw-text slicing + two mutants | Manual Only — uncommitted inspection | 5 × `region …: byte-identical (N bytes)`; `negative control frozen-region mutation: fired=yes named_phase_a_and_handover_flips=yes`; `P4 verdict: OK` |
 | TC-GATE-005 | P4b | `git diff -U0 … \| grep -E '^[+-]#{3} M1-S9'` | Manual Only — uncommitted inspection | `heading unchanged` |
 | TC-GATE-006 | P5 | `bun -e '…' status.md` + render review | Semi-automated (script) + Manual (render) | `missing=0` + rendered section |
-| TC-GATE-007 | P6 | `bun -e '…' status.md` | Manual Only — uncommitted inspection | `forward=2 pointed=2` |
+| TC-GATE-007 | P6a + P6b | `bun -e '…' status.md base-status.md` | Manual Only — uncommitted inspection | `forward=2 pointed=2 pointer-shape=2/2 bytes=2/2`; `forward bytes milestone-exit-forward: byte-identical (332 bytes)`; `forward bytes next-steps-item-3: byte-identical (247 bytes)` |
 | TC-GATE-008 | P7a/P7b/P7c/P7d | `awk` extraction + `cmp` (no normalisation) + reflow negative control | Manual Only — uncommitted inspection | `2026-11-03 section byte-identical`, `lead-in byte-identical`, 3 × `statement N byte-identical`, `negative control: reflow detected` |
 | TC-GATE-009 | P8 | `bun -e '…'` on both files | Semi-automated (presence) + Manual (exactly-three, per-family legibility) | `sources=3/3 insufficiency=OK` ×2 + read note |
 | TC-GATE-010 | P9 + negative control | `bun -e '…'` importing the typed module | Semi-automated (executable assertion) + Manual (DEC-3 disclosure) | `tokens=11 missing=0 extra=0 duplicates=0`; negative `missing=1` |
@@ -1454,10 +1656,10 @@ Observed on the unamended tree (exit 1, by design): `added-lines=0 seed-hits=0`,
 | TC-GATE-015 | P13a/P13b | `git diff \| grep -oE` + existence loop | Manual Only — uncommitted inspection | `broken=0` |
 | TC-GATE-016 | P14 + read | `bun -e '…'` on both files | Semi-automated (presence) + Manual (contradiction read) | two summary lines + read note |
 | TC-GATE-017 | P1c + `--stat` | `git diff --check` | Manual Only — uncommitted inspection | `exit=0`, stat review |
-| TC-GATE-018 | P15a/P15b | hunk-header classifier + `awk` extraction + `diff -u`, with two self-tests and a one-line negative control | Manual Only — uncommitted inspection | `hunks: inside=N outside=0`, `hunk confinement OK`, `other-story AC/Depends byte-identical`, `stories compared: 66`, `negative control detected the M1-S8 edit` |
-| TC-GATE-019 | P7a + P16 (`adjudication`) | `cmp` of the dated section + `bun -e` marker check | Semi-automated (byte compare + content markers) + Manual (substance read) | `2026-11-03 section byte-identical`, `adjudication: missing=0`, negative `missing=1 -> stricter-coverage` |
-| TC-GATE-020 | P16 (`lead-in`) | `bun -e` marker check | Manual Only — uncommitted inspection | `calendar-window-alone=OK elapsed-only-phrase=ABSENT floor-scope=OK`, negative `MISSING`/`PRESENT` |
-| TC-GATE-021 | P16 (`citation`) | `bun -e` exact-literal check | Manual Only — uncommitted inspection | `citation: OK`, negative `MISSING` |
+| TC-GATE-018 | P15a/P15b | hunk-header classifier + `awk` extraction + `diff -u`, with four boundary self-tests and a one-line negative control | Manual Only — uncommitted inspection | `hunks: inside=N outside=0`, `hunk confinement OK`, boundary self-tests for `+600,1`, `+560,0`, `+559,0`, `+541,9`, `other-story AC/Depends byte-identical`, `stories compared: 66`, `negative control detected the M1-S8 edit` |
+| TC-GATE-019 | P7a + P16 (`adjudication`) | `cmp` of the dated section + `bun -e` marker check with a built-in mutant | Semi-automated (byte compare + content markers) + Manual (substance read) | `2026-11-03 section byte-identical`, `adjudication: missing=0`, `mutant coverage: changed=true adjudication-missing=stricter-coverage` |
+| TC-GATE-020 | P16 (`lead-in`) | `bun -e` marker check with two built-in mutants on the flattened form | Manual Only — uncommitted inspection | `calendar-window-alone=OK elapsed-only-phrase=ABSENT floor-scope=OK`; `mutant lead-in: changed=true raw-single-line-noop=true calendar-window-alone=MISSING`; `mutant elapsed-only-phrase: changed=true elapsed-only-phrase=PRESENT` |
+| TC-GATE-021 | P16 (`citation`) | `bun -e` exact-literal check with a built-in mutant | Manual Only — uncommitted inspection | `citation: OK`; `mutant citation: changed=true citation=MISSING` |
 
 No test file is created or updated: **no permanent suite change is permitted or needed** (NFR-1; `.ai/rules/testing-strategy.md` invariant-test rule).
 
@@ -1478,9 +1680,18 @@ No test file is created or updated: **no permanent suite change is permitted or 
 | P15a prints `OUTSIDE` or `hunk confinement FAILED` | A `backlog.md` hunk escaped the M1-S9 entry (AC-F5-3) | Revert the out-of-entry hunk; re-run P15a. Do not "tidy" a neighbouring story. |
 | P15b `diff -u` is non-empty | Another story's `- AC:` or `- Depends on:` block changed (AC-F5-3) | Restore that block byte for byte; the diff names the story and line. |
 | P15a prints `FAIL: no backlog.md hunk` | The backlog amendment is absent, so containment is vacuous | This is a missing deliverable, not a containment pass. |
+| P15a's `+560,0` self-test prints `inside` | The hunk boundary regressed (readiness N1): a deletion of the next heading line must be `outside` | Restore the `d=0` predicate to `c <= e` (entry's last line), not `c <= e+1`. |
+| P6 prints `FAIL pointer contains CEO-D-073` | A forward pointer carries the directive id, so P5/P16 could select the wrong section (D-6) | Reword the pointer to cite the amendment ("superseded by the evidence-based handover amendment"), never the id. |
+| P6 prints `FAIL …: bytes changed` naming a forward statement | A forward statement was edited while gaining its pointer (AC-F2-2, N2) | Restore the statement's bytes and append the pointer after them; a reflow also fails. |
+| P6 prints `forward≠2` or `pointer-shape≠2/2` | A unit lost its pointer, or a third forward unit appeared | Restore the pointer inside the named unit; confirm the amendment did not acquire the hyphenated token as a *forward* unit (it is skipped and labelled). |
+| P4 prints `FAIL …: bytes changed` naming a frozen region | A frozen M1-S9 region moved (AC-F1-3, N4) | Restore that region byte for byte; the message names it. |
+| P4 prints `FAIL …: marker not found` naming a frozen region | The region's start or end literal was reworded, so the anchor moved | Restore the original wording, or re-anchor deliberately — the plan freezes these five regions. |
+| P4 prints `fired=no` or `named_...=no` | The frozen-region negative control stopped working, so a green run is unproven | Investigate the fixtures; do not treat a green P4 as evidence until the controls fire. |
 | P16 `adjudication: missing=…` | The 2026-11-03 per-engine adjudication is absent or lacks a required element (AC-F2-4, DEC-10) | Add the missing element: date, per-engine subject, same-gate statement, superseded-not-waived, coverage reason, elapsed→floor reason. |
 | P16 `calendar-window-alone=MISSING` or `elapsed-only-phrase=PRESENT` | The lead-in is missing the "alone" qualifier or uses the elapsed-time-only phrasing that contradicts the floor (AC-F2-5) | Reword to "no longer defined by a calendar window alone" and keep the floor-only qualifier. |
 | P16 `citation: MISSING` | The directive is cited without its tracker home and date (AC-F2-6, DEC-11) | Use the exact form `CEO-D-073 (GH-266, 2026-11-07)`. |
+| P16 prints `mutant … changed=false` | A negative control could not be applied to the amendment's wording, so that predicate is unproven | Reword the amendment so the control applies, or fix the pattern; do not accept a verdict whose controls did not fire. |
+| P16 prints `P16 verdict: FAILED` while the three positive lines look right | One of the four mutants did not fire | Read the `changed=` and mutant lines; the verdict requires `controls === 4`. |
 | P8 prints `sources<3` in either file | The corroboration rule is vague or incomplete (AC-F3-1, RSK-4) | Name the missing source explicitly; do not substitute a synonym. |
 | P8 prints `insufficiency=MISSING` | The "engine token alone is not enough" rule is absent | State it explicitly; without it the gate can be satisfied by a self-claimed success. |
 | P10 frontmatter differs, or `ados_distribution` count > 0 | Decoration or distribution class was invented (AC-F5-2, DEC-9) | Revert the frontmatter; `doc/planning` stays outside distribution scope. |
@@ -1509,6 +1720,9 @@ No test file is created or updated: **no permanent suite change is permitted or 
 | TR-6 | A containment oracle that inspects only the M1-S9 block would pass while another story drifts — the exact gap readiness finding 2 found | AC-F5-3 is verified by TC-GATE-018 with two independent mechanisms (hunk confinement and a full out-of-entry byte comparison), each with a live self-test |
 | TR-7 | The forbidden-literals guard is silent on `backlog.md`, so "guard green" could be read as full coverage | TC-GATE-014 records the scan-set limitation and covers the gap with P17's added-line scan, whose matcher is the production `matchSeedLiteral` |
 | TR-8 | A byte-exact history check could be replaced by a normalised grep again, silently weakening the oracle | The plan states the oracle is bytes-not-words, ships a reflow negative control (P7d) with its expected `FAIL`, and records the retraction in TC-GATE-008 |
+| TR-9 | A forward pointer containing `CEO-D-073` would make section selection ambiguous for P5/P16, which find the amendment by that literal | P6 enforces the pointer-shape rule (pointer units must not contain `CEO-D-073`) and selects the *last* `##` block containing the id, so a stray mention cannot quietly redirect the selection |
+| TR-10 | A negative control can silently become a no-op when the phrase it targets is wrapped across lines (readiness N6) | P16's mutants run on the same flattened text the positive check uses and print `changed=` plus `raw-single-line-noop=`; a control that does not fire fails the verdict |
+| TR-11 | A reader could mistake the frozen-region oracle (TC-GATE-022) for a plan-only or over-broad check | Spec v1.2 extends AC-F1-3 to name the same five regions (DEC-12) and plan v1.2 states the freeze in task 1.6, so AC, plan and TC agree; OQ-6 is resolved |
 
 ### 8.2 Assumptions
 
@@ -1530,6 +1744,7 @@ No test file is created or updated: **no permanent suite change is permitted or 
 | OQ-3 | Should the status amendment enumerate every residual document or a representative subset? | No | Owner | This plan requires naming at least two (P5) plus a manual comparison against spec §7.2. If the owner prefers a shorter note, the manual comparison is the binding read. |
 | OQ-4 | Should the amended definition appear identically in both files, or should `status.md` summarise and defer? | No | Answered by spec F-2 | Summary plus pointer, backlog canonical. TC-GATE-016 accepts a deferring summary, provided no threshold or source count contradicts the backlog. |
 | OQ-5 | AC-NFR5-1 says "the forbidden-literals check reports no new violation attributable to the two changed files", but that check only scans registered docs and `backlog.md` is not one. Should the AC name the compensating scan, narrow the attribution to the guard's actual scan set, or accept the combined evidence? | No — resolved for this change by combined evidence | Owner / spec-writer | Spec v1.1 left NFR-5/AC-NFR5-1 as written; this plan satisfies the intent by running the guard *and* P17, and records the mismatch. Recommend a one-line AC refinement in the follow-up: "the guard reports 0 violations on its scan set, and no seed literal appears in added lines of either changed file". |
+| OQ-6 | Should the plan's five-region M1-S9 freeze (Goal, Ticket, phase (a), handover-flips, covers-functions) have an AC-level home? | Closed — resolved by spec v1.2 | Owner / spec-writer | AC-F1-3 now names the five regions (DEC-12) and plan v1.2 states the freeze in task 1.6; TC-GATE-022 is bound to AC-F1-3 with no oracle/AC gap. |
 
 ## 9. Plan Revision Log
 
@@ -1537,6 +1752,7 @@ No test file is created or updated: **no permanent suite change is permitted or 
 |---|---|---|---|
 | 1.0 | 2026-11-07 | @test-plan-writer | Initial test plan for spec v1.0: 13 ACs covered by 17 TCs (bidirectional traceability, no orphans), 14 uncommitted inspection procedures with validated base-revision failing values, 3 doc guards, run order, failure triage, and two declared gaps (G-1 future enforcement, G-2 declared residual). |
 | 1.1 | 2026-11-07 | @test-plan-writer | Aligned to spec v1.1 and readiness-review iteration 1. **Finding 2 (critical, closed):** TC-GATE-004 no longer claims out-of-entry preservation it did not check; new TC-GATE-018 + P15 verify every `backlog.md` `-U0` hunk lies inside the M1-S9 entry and every other story's `- AC:`/`- Depends on:` block is byte-identical, with two matcher self-tests and a one-line negative control. **Finding 4 (major, closed):** P7c's whitespace-normalised `grep -F` replaced by byte-exact extraction of the lead-in and the three M0 exit-criteria statements (P7b/P7c) plus a reflow negative control (P7d); new TC-GATE-019/020/021 + P16 cover AC-F2-4 (2026-11-03 per-engine adjudication, superseded not waived), AC-F2-5 (calendar window alone, floor-only retained) and AC-F2-6 (`CEO-D-073 (GH-266, 2026-11-07)`). **Finding 5 (minor, closed):** TC-GATE-014 records that the guard scans registered docs only and never reads `backlog.md`; new P17 applies the production `matchSeedLiteral` to added lines with a non-vacuity guard and matcher self-tests. Traceability extended to 17 ACs / 21 TCs (AC-F5-3, AC-F2-4/5/6 added; AC-F2-3 and AC-NFR1-1 reworded). Every new or changed procedure was run on the unamended tree and its observed output recorded. Open question OQ-5 records the residual AC-NFR5-1 wording mismatch. |
+| 1.2 | 2026-11-08 | @test-plan-writer | DoR iteration 2 remediation (final iteration). **N1 (closed):** P15a's pure-deletion branch tightened from `c <= e+1` to `c <= e`, and a `+560,0` boundary self-test added (a deletion of the next `###` heading line is now `outside`), with a `+559,0` counter-test proving the entry's own last line stays `inside`; observed `OUTSIDE: @@ -560,1 +560,0 @@ (added 560..560, entry 529..559)` + `hunk confinement FAILED`. **N2 (closed, test-plan side):** P6 extended with P6b, a byte-exact oracle for the two forward-looking status statements (`forward bytes milestone-exit-forward: byte-identical (332 bytes)`, `forward bytes next-steps-item-3: byte-identical (247 bytes)`), and with the pointer-shape rule enforced (`CEO-D-073` removed from the accepted pointer markers and its presence in a pointer unit made a FAIL); unit scoping now splits ordered-list items and skips the amendment section. **N4 (closed):** P4 extended with P4c/P4d — the five frozen M1-S9 regions compared byte for byte from raw text — and new TC-GATE-022 bound to AC-F1-3 (spec v1.2 extends AC-F1-3 to name the same five regions under DEC-12; OQ-6 is resolved). **N6 (closed):** TC-GATE-020's lead-in control replaced by P16 built-in mutants that run on the flattened amendment; the output now prints `raw-single-line-noop=true` next to `mutant lead-in: changed=true`, proving the wrapped phrase would have defeated a raw single-line replacement. Traceability 17 ACs / 22 TCs / 18 procedure blocks (P0-P17, with P4 and P6 extended in place so the plan's p00-p17 list stays valid). |
 
 ## 10. Test Execution Log
 

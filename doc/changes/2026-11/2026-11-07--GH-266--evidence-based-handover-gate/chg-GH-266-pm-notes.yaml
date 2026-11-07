@@ -3,9 +3,9 @@ title: "docs: amend M1-S9 handover gate to an evidence-based bar (CEO-D-073)"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-07T22:52:00Z", completed: "2026-11-07T23:05:00Z" }
-  specification: { started: "2026-11-07T23:06:00Z", completed: "2026-11-08T00:48:00Z", reopened: "2026-11-08T00:12:00Z", reopen_count: 1, revision: "v1.1" }
-  test_planning: { started: "2026-11-07T23:25:00Z", completed: "2026-11-08T01:02:00Z", reopened: "2026-11-08T01:40:00Z", reopen_count: 2, revision: "v1.1" }
-  delivery_planning: { started: "2026-11-07T23:42:00Z", completed: "2026-11-08T01:18:00Z", reopened: "2026-11-08T01:40:00Z", reopen_count: 2, revision: "v1.1" }
+  specification: { started: "2026-11-07T23:06:00Z", completed: "2026-11-08T02:05:00Z", reopened: "2026-11-08T01:40:00Z", reopen_count: 2, revision: "v1.2" }
+  test_planning: { started: "2026-11-07T23:25:00Z", completed: "2026-11-08T02:02:00Z", reopened: "2026-11-08T01:40:00Z", reopen_count: 2, revision: "v1.2" }
+  delivery_planning: { started: "2026-11-07T23:42:00Z", completed: "2026-11-08T02:14:00Z", reopened: "2026-11-08T01:40:00Z", reopen_count: 2, revision: "v1.2" }
   dor_check: { started: "2026-11-07T23:59:00Z", completed: null, iterations: 2, status: "not_ready" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -92,4 +92,13 @@ notes:
     date: "2026-11-08"
   - text: "DoR iteration 2 remediation routing (final permitted iteration): reopened test_planning for N1, N2 (test-plan side: give the forward-looking status phrases their own byte check), N4 and N6; reopened delivery_planning for N3, N2 (task wording), N5 and N7 plus gate alignment for the revised procedures. Sequence: test plan v1.2 -> plan v1.2 -> dor_check iteration 3. If iteration 3 is not READY the gate escalates to the human rather than looping further."
     type: "decision"
+    date: "2026-11-08"
+  - text: "DoR iteration 2 remediation complete. Test plan v1.2 closed N1 (P15a deletion-branch predicate tightened to c <= e with +560,0 OUTSIDE and +559,0 inside boundary pins), N2 test-side (new P6b byte check for the two forward-looking status phrases plus pointer-shape rule, so task 2.2 now cites P6b), N4 (new TC-GATE-022 and P4c/P4d byte-compare the five frozen M1-S9 regions with a mutation negative control) and N6 (P16 negative controls now fire on the flattened form, proven by raw-single-line-noop=true plus changed=true). Procedure set stays P0-P17 so the plan's materialisation list stays valid."
+    type: "info"
+    date: "2026-11-08"
+  - text: "Test plan emitted OQ-6: the plan's inside-entry freeze had no spec AC (TC-GATE-022 was bound to AC-F1-3, which named only the AC block and dependency line). PM decision: close it at the spec level rather than narrowing the plan. Spec v1.2 extends AC-F1-3 to freeze exactly five M1-S9 prose regions and adds DEC-12 recording the freeze set and why it exists. AC count stays 17; no other AC changed meaning; DEC-3 and DEC-5 untouched."
+    type: "decision"
+    date: "2026-11-08"
+  - text: "Plan v1.2 closed N3 (P1 corroboration gate is now region-scoped by extracting the M1-S9 section and asserting the four literals inside it only, with the file-wide grep explicitly rejected because pm-notes occurs 8 times on the base; p10 added to P1), N2 plan-side (task 2.2 cites P6b/P6a), N5 (adjudication wording is 'replaces the calendar-only window with an exposure floor'), and N7 (D-12 now states P1 runs P15, P2 runs P16, P3 re-runs both). All expected-output strings for p04, p06, p15 and p16 were refreshed to test plan v1.2 values, including p06's second argument. Validator: valid, readyForDevelopment true, 0 errors; 22/22 TCs mapped exactly once (8/8/6) and 17/17 ACs covered. The agent also verified the region-scoped gate passes on a correct draft and fails on a mutant that removes the insufficiency rule from M1-S9 only, while the old file-wide gate passed that mutant."
+    type: "info"
     date: "2026-11-08"
