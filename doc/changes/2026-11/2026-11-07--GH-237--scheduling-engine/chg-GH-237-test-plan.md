@@ -2,15 +2,15 @@
 id: chg-GH-237-test-plan
 status: Updated
 created: "2026-11-07T10:30:00Z"
-last_updated: "2026-11-07T12:00:00Z"
+last_updated: "2026-11-07T13:30:00Z"
 owners: [engineering]
 service: delivery-os scheduling engine
 labels: [change, planning]
 version_impact: minor
-summary: "Prove the scheduling engine as machinery, not coordinator discipline: one fenced, replay-idempotent queue graph; readiness re-derived from artifacts on the delivered six-condition model; per-repo single-flight leases with a scope field and daemon-free fence-token claim/release; stale-lease takeover with evidence and zero live-lease takeover; build weight as a per-runner resource class, never a lane cap; producer-before-consumer batching with a deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, exact resume, recovery incidents, and the classified stuck-park finding; the queue and lanes command surfaces with bounded payloads and truthful daemon-down degradation; and additive, bidirectionally synchronized record kinds, error rows, collector ids, and configuration keys. The battery is hermetic and deterministic: injected clock, fence/state transport, provider reads, deploy reads, and economics fold; zero live network, live credentials, or real sleeps. 65 named TCs cover all 22 acceptance criteria (spec v1.1, including AC-F4-3, AC-F5-2, AC-F6-2, and AC-F10-3), the six seeded scenarios (SC-M1-08/09/10/11/17/17b) without weakening their assertions, and all 14 NFRs."
+summary: "Prove the scheduling engine as machinery, not coordinator discipline: one fenced, replay-idempotent queue graph; readiness re-derived from artifacts on the delivered six-condition model; per-repo single-flight leases with a scope field and daemon-free fence-token claim/release; stale-lease takeover with evidence and zero live-lease takeover; build weight as a per-runner resource class, never a lane cap; producer-before-consumer batching with a deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, exact resume, recovery incidents, and the classified stuck-park finding; the queue and lanes command surfaces with bounded payloads and truthful daemon-down degradation; and additive, bidirectionally synchronized record kinds, error rows, collector ids, and configuration keys. The battery is hermetic and deterministic: injected clock, fence/state transport, provider reads, deploy reads, and economics fold; zero live network, live credentials, or real sleeps. 66 named TCs cover all 22 acceptance criteria (spec v1.2, including AC-F4-3, AC-F5-2, AC-F6-2, AC-F8-1's stuck-park hard exclusion, and AC-F10-3), the six seeded scenarios (SC-M1-08/09/10/11/17/17b) without weakening their assertions, and all 14 NFRs. DoR iteration-1 remediation (R-04, R-06, R-07, R-16) is folded in: TC-PARK-008 proves a stuck park is never a next action, Phases 3–5 command invocations are marked partial with their CLI rows completing in Phase 7, and TC-LEASE-002 pins 50 distinct holders."
 links:
   change_spec: ./chg-GH-237-spec.md
-  implementation_plan: null   # authored in delivery_planning (phase 4); TCs and traces are pinned here
+  implementation_plan: ./chg-GH-237-plan.yaml
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
@@ -22,18 +22,18 @@ This plan protects one behavioural thesis: **parallelism is computed from declar
 
 The highest-severity surfaces are **same-repository mutual exclusion** (F-3, F-4; RSK-1) and **fail-closed truthfulness** (NFR-13; F-2). A single missing re-read inside the fence, a takeover of a live lease, an unreadable lease read as "free", or a failed source read as `satisfied` is a delivery-correctness defect, not a test inconvenience. The plan therefore proves concurrency behaviour with deterministic, fixture-driven interleavings — injected clock, injected fence/state transport, injected provider and deploy reads, and a scheduled single-writer gate — never with real OS races, real sleeps, live network, or live credentials (NFR-3, NFR-7).
 
-The seeded scenarios `SC-M1-08`, `SC-M1-09`, `SC-M1-10`, `SC-M1-11`, `SC-M1-17`, and `SC-M1-17b` in `doc/planning/oss-tooling/milestones/m1/test-scenarios.md` are binding and are inherited without weakening. Their assertions are folded into TC-LEASE-001, TC-LEASE-002, TC-LEASE-003, TC-LEASE-005, TC-LEASE-006, TC-WEIGHT-001, TC-WEIGHT-003, TC-RANK-001, TC-PARK-001, TC-PARK-002, TC-PARK-005, TC-SCHED-008, TC-SCHED-009, and TC-SCHED-010.
+The seeded scenarios `SC-M1-08`, `SC-M1-09`, `SC-M1-10`, `SC-M1-11`, `SC-M1-17`, and `SC-M1-17b` in `doc/planning/oss-tooling/milestones/m1/test-scenarios.md` are binding and are inherited without weakening. Their assertions are folded into TC-LEASE-001, TC-LEASE-002, TC-LEASE-003, TC-LEASE-005, TC-LEASE-006, TC-WEIGHT-001, TC-WEIGHT-003, TC-RANK-001, TC-PARK-001, TC-PARK-002, TC-PARK-005, TC-PARK-008, TC-SCHED-008, TC-SCHED-009, and TC-SCHED-010.
 
 ### 1.1 In Scope
 
-- Queue declaration and the folded graph: entries, explicit priorities, repository keys, dependency edges, cycle refusal before append, idempotent replay, and superseding-entry semantics (F-1; DM-1, DM-2, DM-13; EVT-1, EVT-2; AC-F1-1; NFR-8).
+- Queue declaration and the folded graph: entries, explicit priorities, repository keys, each entry's recorded declaring-checkout root, dependency edges (including an edge to a ref with no entry, retained and evaluated `dependency-unobserved`), cycle refusal before append, idempotent replay, and superseding-entry semantics (F-1, F-2; DM-1, DM-2, DM-13; EVT-1, EVT-2; AC-F1-1; NFR-8).
 - Artifact-computed readiness on the delivered six-condition model, with scheduler truth for `deps-satisfied`, `repo-free`, and `tier-known`, closed tri-state, bounded evidence, named blockers, and `unknown` for every failed/unavailable/unresolved source (F-2; DM-3; AC-F2-1; NFR-1, NFR-13).
-- Per-repo single-flight leases with a `scope` field, repository-key normalization, the "only structural cap" invariant, and the absence of any capacity/bandwidth/CI-slot input (F-3; DM-4, DM-12; AC-F3-1(a), AC-F3-1(b), AC-F3-2; NFR-14).
-- The daemon-free one-shot scheduling step: fence-token claim, in-fence re-read, post-append verification, conflict refusal with holder evidence, stale-lease takeover with evidence, renewal, release, and park-on-release atomicity; a no-ref claim selects the top-ranked eligible action deterministically (F-4; DM-4, DM-6; EVT-3, EVT-5; AC-F4-1, AC-F4-2, AC-F4-3; NFR-3, NFR-4, NFR-13).
+- Per-repo single-flight leases with a `scope` field, repository-key normalization, the per-pass projection that holds the remainder of a repository's ready entries `repo-claimed-in-pass` (distinct from `lease-held`), the "only structural cap" invariant, and the absence of any capacity/bandwidth/CI-slot input (F-3, F-9; DM-4, DM-12; AC-F3-1(a), AC-F3-1(b), AC-F3-2; NFR-14).
+- The daemon-free one-shot scheduling step: the two-stage claim (pre-fence readiness excludes `repo-free`; the in-fence verified lease read owns `queue.lease-conflict`; a genuinely unready entry is `queue.precondition.unmet` on the other five conditions), fence-token claim, in-fence re-read, post-append verification, conflict refusal with holder evidence, stale-lease takeover with evidence, renewal, release, and park-on-release atomicity; a no-ref claim selects the top-ranked eligible action deterministically (F-2, F-4; DM-4, DM-6; EVT-3, EVT-5; AC-F4-1, AC-F4-2, AC-F4-3; NFR-3, NFR-4, NFR-13).
 - Build-weight classes as a per-runner resource class with conservative resolution and no lane-count reduction; an unreadable or absent plan resolves to `heavy`, never `standard` (F-5; DM-7; AC-F5-1, AC-F5-2; DEC-10).
-- Dependency-aware batching, producer precedence, landing observation, and the deploy-verified gate with producer-bound expectations and its bounded, memoized deploy-read budget (F-6; DM-2, DM-9, DM-12; AC-F6-1, AC-F6-2; NFR-6, NFR-13).
+- Dependency-aware batching, producer precedence, landing observation, and the deploy-verified gate with producer-bound expectations, producer-root discovery from entry-recorded roots (exact-key match; no match or a collision → `unknown`), and its bounded, memoized deploy-read budget (F-6; DM-1, DM-2, DM-9, DM-12; AC-F6-1, AC-F6-2; NFR-6, NFR-13).
 - Closing-beats-opening rank classes, resumable-park ranking, computed preemption with the named park state, and the explicit release path (F-7; DM-8, DM-10; AC-F7-1, AC-F7-2).
-- Parks with closed causes and condition types, per-type recheck configuration, exact resume, auto-recovery incidents, the stuck-park finding, and fail-closed unreadable park history (F-8; DM-5, DM-6, DM-14; EVT-4, EVT-5; AC-F8-1, AC-F8-2; NFR-5, NFR-10, NFR-13).
+- Parks with two distinct closed sets (condition types `{provider-window, provider-quota, preemption}` and causes `{provider-window, provider-quota, preempted-for-close-item}`) with the one-to-one cause↔condition pairing, per-type recheck configuration, exact resume, auto-recovery incidents, the stuck-park finding, the stuck park's hard exclusion from `nextActions`/`resume-parked`/no-ref selection, and fail-closed unreadable park history (F-7, F-8; DM-5, DM-6, DM-14; EVT-4, EVT-5; AC-F8-1, AC-F8-2; NFR-5, NFR-10, NFR-13).
 - The declared total scheduling precedence: hard exclusions strictly before ordering, rank before producer tie-break, priority only inside a class, numeric suffix then ref text, and input-order invariance (F-9; AC-F9-1; Appendix B).
 - `queue` (`list`, `plan`, `add`, `prioritize`, `dep`, `claim`, `release`) and `lanes` (`list`, `show`) command surfaces, envelope shapes, exit projection, refusal semantics, bounded payloads, truthful `daemon-unreachable` degradation, and fail-closed read projection at exit 2 when lease or park history is unreadable/torn/unknown-kind (F-10, F-11; AC-F10-1, AC-F10-2, AC-F10-3, AC-F11-1, AC-F11-2; NFR-2, NFR-9, NFR-13).
 - Guarded vocabulary growth synchronized in-change: five additive record kinds plus one derived document, five `queue` error rows, the collector-id extension `tracker` → `{tracker, lanes}`, the typed `queue` configuration branch, and bidirectional documentation/code agreement (F-12; EVT-1..EVT-5; AC-F12-1; NFR-8, NFR-10, NFR-11, NFR-12, NFR-14).
@@ -95,20 +95,20 @@ Ticket-to-AC traceability: the six ticket ACs in Appendix G map to AC-F3-1(a)/AC
 
 | AC ID | Criterion (abbreviated) | TC ID(s) | Status |
 |-------|--------------------------|----------|--------|
-| AC-F1-1 | Entry and first edge land under the fence; a cycle-creating edge is refused with `queue.dependency-cycle` naming the existing path and appends nothing; identical replay appends nothing; `queue list` shows entry, repo key, priority, and edge. | TC-SCHED-001, TC-SCHED-002, TC-SCHED-015 | Covered |
+| AC-F1-1 | Entry and first edge land under the fence; the entry records its repository key and declaring-checkout root; a seeded edge to a ref with no entry is retained and readiness reports `unknown` with `dependency-unobserved` until the producer is declared; a cycle-creating edge is refused with `queue.dependency-cycle` naming the existing path and appends nothing; identical replay appends nothing; `queue list` shows entry, repo key, recorded root, priority, and edge. | TC-SCHED-001, TC-SCHED-002, TC-SCHED-015, TC-DEPEND-001 | Covered |
 | AC-F2-1 | Exactly six conditions in the delivered order with the closed tri-state; open dependency → `unsatisfied`, owner label → `unsatisfied`, unreadable CI → `unknown` with reason; every non-satisfied condition in `blockingConditions`; not ready; no fabricated zero and no `satisfied` from a failed read. | TC-SCHED-003, TC-SCHED-005 | Covered |
-| AC-F3-1 | (a) Read-only projection: `queue plan`/`queue list` show exactly one eligible action per repository and, once any lease exists for repo-alpha, name `lease-held` with holder and lease evidence for the other entry without claiming or holding a lease; (b) mutating enforcement: concurrent or repeated claims on one repository acquire exactly one `repo-exclusive` lease and refuse the rest at exit 1 with `queue.lease-conflict`, naming holder and lease identity, so exactly one holder exists per repository. (SC-M1-08) | TC-LEASE-001 (a,b), TC-SCHED-004 (a), TC-LEASE-002 (b) | Covered |
+| AC-F3-1 | (a) Read-only projection: `queue plan`/`queue list` show exactly one eligible action per repository — before any lease exists, the other ready entry is held `repo-claimed-in-pass` (a per-pass projection reason distinct from `lease-held`), and once any lease exists for repo-alpha, names `lease-held` with holder and lease evidence for the other entry, without claiming or holding a lease; (b) mutating enforcement: concurrent or repeated claims on one repository acquire exactly one `repo-exclusive` lease and refuse the rest at exit 1 with `queue.lease-conflict` (never `queue.precondition.unmet` for repository exclusivity), naming holder and lease identity, so exactly one holder exists per repository and a same-holder repeat renews. (SC-M1-08) | TC-LEASE-001 (a,b), TC-SCHED-004 (a), TC-LEASE-002 (b) | Covered |
 | AC-F3-2 | Every lease carries `scope: repo-exclusive`; no delivered path acquires another scope; no config key, code path, or rule reduces lane count for capacity/bandwidth/CI slots. | TC-LEASE-009, TC-VOCAB-004 | Covered |
-| AC-F4-1 | Daemon down, no lease, two concurrent one-shots: exactly one acquires with a recorded heartbeat, the other refuses exit 1 `queue.lease-conflict`, consequence `not_landed`, naming holder and lease; a lease at/beyond `queue.lease-ttl` is taken over with evidence, and a live lease is never taken over. (SC-M1-17b) | TC-LEASE-002, TC-LEASE-003, TC-LEASE-004, TC-LEASE-005 | Covered |
+| AC-F4-1 | Daemon down, no lease, two concurrent one-shots: exactly one acquires with a recorded heartbeat, the other refuses exit 1 `queue.lease-conflict`, consequence `not_landed`, naming holder and lease; repository exclusivity is decided only by the in-fence verified lease read and is never a pre-fence `queue.precondition.unmet`; a same-holder repeat claim renews; a lease at/beyond `queue.lease-ttl` is taken over with evidence, and a live lease is never taken over. (SC-M1-17b) | TC-LEASE-002, TC-LEASE-003, TC-LEASE-004, TC-LEASE-005, TC-LEASE-013 | Covered |
 | AC-F4-2 | An unreadable/torn lease history makes a claim refuse with the classified `state.*` identity at exit 2, perform no append, and never report the repository free. | TC-LEASE-006, TC-SCHED-005 | Covered |
 | AC-F4-3 | With eligible entries and no ref argument, `queue claim` selects the top-ranked eligible action from the declared precedence deterministically, names the selected ref in the envelope, and repeats the same selection on identical passes; with no eligible action it refuses at exit 1 with `queue.precondition.unmet`, reason `no-eligible-action`, and appends nothing. | TC-RANK-005 | Covered |
 | AC-F5-1 | Runner R2 carries a heavy lease and GH-309 is heavy and ready: GH-309 held `weight-class`, at most one heavy per runner, standard entries continue, active repository count unchanged. (SC-M1-09) | TC-WEIGHT-001, TC-WEIGHT-003, TC-WEIGHT-004, TC-WEIGHT-002 | Covered |
 | AC-F5-2 | An invalid, unreadable, or absent plan resolves weight to `heavy` with source evidence `plan-unreadable` or `plan-absent` (naming `plan.schema.invalid` or `plan.artifact.missing`), never to `standard`; an invalid/unreadable plan holds `tier-known` unknown, and an absent plan is subject to the heavy cap or the triage fallback's readiness verdict, so the entry is never scheduled as standard. | TC-WEIGHT-002, TC-SCHED-005 | Covered |
 | AC-F6-1 | Consumer held `dependency-open` while producer unresolved; with producer landed and deploy expectations declared, consumer merge eligible only after `verify deploy` is `verified` with evidence, held `deploy-unverified` on `unknown`/`failed`/exhausted budget, landing-only with `deploy: not-declared` otherwise; producer ranks before consumer in one repository. | TC-DEPEND-001, TC-DEPEND-002, TC-DEPEND-003, TC-DEPEND-004, TC-DEPEND-005, TC-DEPEND-006 | Covered |
-| AC-F6-2 | In a state directory spanning producer repo-alpha and consumer repo-beta, a dependent merge reads repo-alpha's deploy expectations from repo-alpha's own configuration bound to its recorded repository key, not from the invocation's configuration; a missing, unreadable, or invalid producer config yields `unknown` (never `not-declared` or `verified`) and the dependent holds `deploy-unverified`. | TC-DEPEND-003, TC-DEPEND-004 | Covered |
+| AC-F6-2 | In a state directory spanning producer repo-alpha and consumer repo-beta, a dependent merge reads repo-alpha's deploy expectations from repo-alpha's own configuration bound to its recorded repository key through the entry-recorded root whose normalized remote matches that key, not from the invocation's configuration; no matching recorded root, two distinct roots claiming one key (collision), or a missing, unreadable, or invalid matched config yields `unknown` (never `not-declared` or `verified`) and the dependent holds `deploy-unverified`. | TC-DEPEND-003, TC-DEPEND-004 | Covered |
 | AC-F7-1 | One merge-ready and one ready new start: `queue plan --next 2` ranks merge-ready first, both carry reasons, and the order is byte-identical across repeated runs. (SC-M1-10) | TC-RANK-001, TC-SCHED-008, TC-SCHED-006, TC-SCHED-013 | Covered |
 | AC-F7-2 | A merge-ready entry on repo-alpha whose lease is held by a new start produces a preemption action naming `preempted-for-close-item` and the holder; the close item is not scheduled that pass; `queue release GH-311 --park preempted-for-close-item` releases and records the park in one fenced transaction (both or neither). | TC-RANK-003, TC-RANK-004, TC-LEASE-011 | Covered |
-| AC-F8-1 | A provider-window park ending at T resumes within one interval of T on a mutating pass with a `queue.incident` naming condition, clear time, evaluation time, and observation gap; a park observed clear yet still active, or a refused recovery append, is the `queue.park-condition-stuck` finding on reads and a refusal on claim; a park skipped only because no engine ran recovers with a gap-naming incident and is never stuck. (SC-M1-11) | TC-PARK-001, TC-PARK-002, TC-PARK-003, TC-PARK-005 | Covered |
+| AC-F8-1 | A provider-window park ending at T resumes within one interval of T when a mutating pass runs within that interval, with a `queue.incident` naming condition, clear time, evaluation time, and observation gap; when no mutating pass runs within one interval, the first pass after the gap recovers with a gap-naming incident and the park is never stuck solely because the gap exceeded the interval; a park observed clear yet still active, or a refused recovery append, is the `queue.park-condition-stuck` finding on reads at exit 0 and a refusal on claim at exit 1 with zero appends; a stuck park is a hard exclusion — never `resume-parked`, never in `nextActions`, never selected by a no-ref claim. (SC-M1-11) | TC-PARK-001, TC-PARK-002, TC-PARK-003, TC-PARK-005, TC-PARK-008 | Covered |
 | AC-F8-2 | Changing only `queue.park-recheck.{type}` changes resume timing with no code change and is observable in park evidence; a non-integer, zero, or negative value is refused `config.value.invalid` naming the key. | TC-PARK-006, TC-VOCAB-004 | Covered |
 | AC-F9-1 | A generated corpus mixing every gate, both weight classes, three park types, both dependency roles, close and new-start classes, and explicit priorities follows the declared total order exactly — hard exclusions before ordering, rank before producer tie-break, priority only inside a class, numeric suffix then ref text last — and input ordering never changes the result. | TC-SCHED-006, TC-SCHED-007, TC-RANK-002, TC-RANK-006, TC-SCHED-013 | Covered |
 | AC-F10-1 | Daemon stopped and one ready entry: `queue plan --next 1` computes from state and exits 0 with `degraded: ["daemon-unreachable"]`; the one-shot claim lands a lease; state is consistent for later reconciliation; no daemon, socket, or background process is required at any point. (SC-M1-17) | TC-SCHED-008, TC-SCHED-009, TC-SCHED-010 | Covered |
@@ -118,18 +118,18 @@ Ticket-to-AC traceability: the six ticket ACs in Appendix G map to AC-F3-1(a)/AC
 | AC-F11-2 | Any `lanes` invocation carrying `--watch` is refused through `fallback.invocation` at exit 1 with a remediation hint naming the resident-daemon story and no empty/partial stream; an unreadable queue store returns `status.collector.lanes.unavailable` at exit 2, never a zero-lane view. | TC-LANES-004, TC-LANES-005 | Covered |
 | AC-F12-1 | Delivered `queue ready` grammar, sources, ranking, caps, byte bounds, read-only guarantee, and error rows are unchanged with byte-identical output; the new `queue` rows and extended collector-id set agree across the machine table, documented table, source references, and fixtures in both directions. | TC-COMPAT-001, TC-VOCAB-001, TC-VOCAB-002, TC-VOCAB-003 | Covered |
 
-**Coverage total**: 22 acceptance-criteria rows — 18 from spec v1.0 plus the four added by spec v1.1 (AC-F4-3, AC-F5-2, AC-F6-2, AC-F10-3). All are **Covered**; zero AC gaps. AC-F3-1 is a single row with its (a) read-only and (b) mutating clauses mapped to distinct TCs.
+**Coverage total**: 22 acceptance-criteria rows — 18 from spec v1.0 plus the four added by spec v1.1 (AC-F4-3, AC-F5-2, AC-F6-2, AC-F10-3), all retained and tightened by spec v1.2 (AC-F1-1, AC-F3-1(a), AC-F6-2, AC-F8-1). All are **Covered**; zero AC gaps. AC-F3-1 is a single row with its (a) read-only and (b) mutating clauses mapped to distinct TCs; AC-F8-1 carries the stuck-park hard exclusion in TC-PARK-008.
 
 **Capability coverage** (every F-# has at least one TC):
 
-- F-1 → TC-SCHED-001, 002, 015
-- F-2 → TC-SCHED-003, 004, 005
+- F-1 → TC-SCHED-001, 002, 015; TC-DEPEND-001
+- F-2 → TC-SCHED-003, 004, 005; TC-DEPEND-001
 - F-3 → TC-LEASE-001, 008, 009, 013; TC-SCHED-004
 - F-4 → TC-LEASE-002..007, 010, 011, 012; TC-SCHED-010
 - F-5 → TC-WEIGHT-001..004
 - F-6 → TC-DEPEND-001..006
-- F-7 → TC-RANK-001..006; TC-LEASE-011
-- F-8 → TC-PARK-001..007
+- F-7 → TC-RANK-001..006; TC-LEASE-011; TC-PARK-008
+- F-8 → TC-PARK-001..008
 - F-9 → TC-SCHED-006, 007; TC-RANK-002, 006
 - F-10 → TC-SCHED-008, 009, 010, 016; TC-LEASE-005, 012; TC-LANES-004
 - F-11 → TC-LANES-001..006
@@ -139,16 +139,16 @@ Ticket-to-AC traceability: the six ticket ACs in Appendix G map to AC-F3-1(a)/AC
 
 | Seed | Binding assertions preserved | TC ID(s) |
 |------|-----------------------------|----------|
-| SC-M1-08 same-repo single-flight | Read-only projection shows exactly one eligible action per repository and names `lease-held` with holder/lease evidence once a lease exists (AC-F3-1(a)); mutating claims yield exactly one `repo-exclusive` holder and refuse the rest with `queue.lease-conflict` (AC-F3-1(b)); different repositories never contend. | TC-LEASE-001, TC-LEASE-002, TC-SCHED-004 |
+| SC-M1-08 same-repo single-flight | Read-only projection shows exactly one eligible action per repository, holds the remainder `repo-claimed-in-pass` before any lease exists, and names `lease-held` with holder/lease evidence once a lease exists (AC-F3-1(a)); mutating claims yield exactly one `repo-exclusive` holder and refuse the rest with `queue.lease-conflict`, never `queue.precondition.unmet` for repository exclusivity (AC-F3-1(b)); different repositories never contend. | TC-LEASE-001, TC-LEASE-002, TC-SCHED-004 |
 | SC-M1-09 heavy build not co-scheduled | At most one heavy-class job per runner; GH-309 held `weight-class`; standard-class entries still scheduled; the number of active repositories is unchanged (weight is not a lane cap). | TC-WEIGHT-001, TC-WEIGHT-003 |
 | SC-M1-10 close-first ranking | Merge-ready ranks first in `queue plan --next 2`; reasons printed for both; byte-identical across repeated runs. | TC-RANK-001, TC-SCHED-013 |
-| SC-M1-11 park resumes exactly when its condition clears | Resume timestamp within (T, T+interval]; a mutating pass appends the durable `clear-observed` marker before recovery; a park still active after the condition clears surfaces `queue.park-condition-stuck` as a report-only finding on reads and a claim refusal; recovery carries an incident. | TC-PARK-001, TC-PARK-002, TC-PARK-005 |
+| SC-M1-11 park resumes exactly when its condition clears | Resume timestamp within (T, T+interval] when a mutating pass runs inside the interval; a mutating pass appends the durable `clear-observed` marker before recovery; a park still active after the condition clears surfaces `queue.park-condition-stuck` as a report-only finding on reads and a claim refusal; recovery carries an incident; a stuck park is never a next action (never `resume-parked`, never in `nextActions`, never selected by a no-ref claim). | TC-PARK-001, TC-PARK-002, TC-PARK-005, TC-PARK-008 |
 | SC-M1-17 one-shot works daemon-down | Plan computed from state; exit 0 with `degraded=daemon-unreachable`; claim lands a lease; state consistent for later daemon reconciliation. The executor is the scheduling step, not `dispatch`. | TC-SCHED-008, TC-SCHED-009, TC-SCHED-010 |
 | SC-M1-17b daemon-down one-shots are mutually exclusive | Exactly one lease record with heartbeat; the refused process exits 1 naming the holder; a stale lease (TTL exceeded, no heartbeat) is taken over with evidence; unreadable state fails closed. | TC-LEASE-002, TC-LEASE-003, TC-LEASE-005, TC-LEASE-006 |
 
-**Decision coverage**: DEC-1 → TC-LEASE-009, TC-WEIGHT-003; DEC-2 → TC-LEASE-002, TC-LEASE-003, TC-LEASE-004; DEC-3 → TC-PARK-001, TC-PARK-002, TC-PARK-006; DEC-4 → TC-DEPEND-001..006, TC-RANK-001..004; DEC-5 → TC-SCHED-003, TC-SCHED-004, TC-COMPAT-001; DEC-6 → TC-SCHED-010, TC-LEASE-012; DEC-7 → TC-LANES-004; DEC-8 → TC-LANES-001, TC-LANES-002; DEC-9 → TC-SCHED-006, TC-SCHED-007; DEC-10 → TC-WEIGHT-002, TC-SCHED-005; DEC-11 → TC-LEASE-006, TC-PARK-007, TC-SCHED-009, TC-SCHED-016; DEC-12 → TC-RANK-005; DEC-13 → TC-DEPEND-003, TC-DEPEND-004.
+**Decision coverage**: DEC-1 → TC-LEASE-009, TC-WEIGHT-003; DEC-2 → TC-LEASE-002, TC-LEASE-003, TC-LEASE-004; DEC-3 → TC-PARK-001, TC-PARK-002, TC-PARK-006, TC-PARK-008; DEC-4 → TC-DEPEND-001..006, TC-RANK-001..004; DEC-5 → TC-SCHED-003, TC-SCHED-004, TC-COMPAT-001; DEC-6 → TC-SCHED-010, TC-LEASE-012; DEC-7 → TC-LANES-004; DEC-8 → TC-LANES-001, TC-LANES-002; DEC-9 → TC-SCHED-006, TC-SCHED-007; DEC-10 → TC-WEIGHT-002, TC-SCHED-005; DEC-11 → TC-LEASE-006, TC-PARK-007, TC-SCHED-009, TC-SCHED-016; DEC-12 → TC-RANK-005; DEC-13 → TC-DEPEND-003, TC-DEPEND-004.
 
-**Risk coverage**: RSK-1 → TC-LEASE-002, TC-LEASE-004, TC-LEASE-006; RSK-2 → TC-LEASE-003, TC-LEASE-007; RSK-3 → TC-PARK-002, TC-PARK-003; RSK-4 → TC-SCHED-011, TC-DEPEND-005; RSK-5 → TC-SCHED-006, TC-SCHED-013; RSK-6 → TC-DEPEND-003, TC-DEPEND-004, TC-DEPEND-005; RSK-7 → TC-SCHED-010, TC-SCHED-016; RSK-8 → TC-WEIGHT-002; RSK-9 → out of scope (status digest); RSK-10 → TC-VOCAB-002, TC-VOCAB-003, TC-VOCAB-004.
+**Risk coverage**: RSK-1 → TC-LEASE-002, TC-LEASE-004, TC-LEASE-006; RSK-2 → TC-LEASE-003, TC-LEASE-007; RSK-3 → TC-PARK-002, TC-PARK-003, TC-PARK-008; RSK-4 → TC-SCHED-011, TC-DEPEND-005; RSK-5 → TC-SCHED-006, TC-SCHED-013; RSK-6 → TC-DEPEND-003, TC-DEPEND-004, TC-DEPEND-005; RSK-7 → TC-SCHED-010, TC-SCHED-016; RSK-8 → TC-WEIGHT-002; RSK-9 → out of scope (status digest); RSK-10 → TC-VOCAB-002, TC-VOCAB-003, TC-VOCAB-004.
 
 ### 3.2 Interface Coverage (EVT-#, DM-#)
 
@@ -159,23 +159,23 @@ The spec declares no REST/HTTP endpoint and no `API-#` identifier (§8.1). The c
 | EVT-1 `queue.entry` intent record | TC-SCHED-002, TC-SCHED-015 | Payload schema `delivery.queue.entry.v1`, store key `queue.entries:{REF}`, latest wins, identical replay appends zero, malformed/wrong kind is `state.*` and never a fabricated entry |
 | EVT-2 `queue.dependency` intent record | TC-SCHED-001, TC-SCHED-002 | Schema `delivery.queue.dependency.v1`, key `queue.deps:{REF}`, acyclicity validated before append, duplicate edge appends zero, cycle lands zero |
 | EVT-3 `queue.lease` execution record | TC-LEASE-001, TC-LEASE-002, TC-LEASE-003, TC-LEASE-004, TC-LEASE-005, TC-LEASE-011, TC-LEASE-013 | Schema `delivery.queue.lease.v1`, key `queue.leases:{repoKey}`, writer attribution, one new record per operation, post-append verification, takeover evidence |
-| EVT-4 `queue.park` execution record | TC-PARK-001, TC-PARK-002, TC-PARK-004, TC-PARK-006, TC-RANK-004 | Schema `delivery.queue.park.v1`, key `queue.parks:{REF}`, cause/condition/expiry/recheck/last-eval/clear/recovery, durable `clear-observed` marker (`clearObservedAt`, `recoveryState`) appended before recovery and superseded by `recovered`, at most one active park per entry |
+| EVT-4 `queue.park` execution record | TC-PARK-001, TC-PARK-002, TC-PARK-004, TC-PARK-006, TC-PARK-008, TC-RANK-004 | Schema `delivery.queue.park.v1`, key `queue.parks:{REF}`, a cause from the closed cause set and a condition type from the distinct closed condition-type set with the one-to-one pairing, expiry/recheck/last-eval/clear/recovery, durable `clear-observed` marker (`clearObservedAt`, `recoveryState`) appended before recovery and superseded by `recovered`, at most one active park per entry |
 | EVT-5 `queue.incident` execution record | TC-LEASE-003, TC-PARK-001, TC-PARK-003, TC-VOCAB-006 | Schema `delivery.queue.incident.v1`, key `queue.incidents:{REF}` or `{repoKey}`, bounded typed evidence, no free-form prose, no secret |
 | EVT-6 computed schedule/findings view | TC-SCHED-008, TC-SCHED-009, TC-SCHED-013, TC-RANK-001 | Envelope-only `nextActions[]`, `entries[]`, `leases[]`, `weights`, `parks[]`, `findings[]`, `degraded[]`; never persisted; identical state → byte-identical output |
-| DM-1 Queue entry | TC-SCHED-002, TC-SCHED-015 | Ref identity, repo key absent when unresolved, non-negative priority with default, recorded time; weight/tier/rank resolve per pass |
-| DM-2 Dependency edge | TC-SCHED-001, TC-SCHED-002, TC-DEPEND-001, TC-DEPEND-003, TC-DEPEND-004 | Consumer→producer edge; ordering role and deploy-gating applicability derived from the producer repository's own expectations bound to its recorded repository key |
+| DM-1 Queue entry | TC-SCHED-002, TC-SCHED-015 | Ref identity, repo key absent when unresolved, the declaring checkout's repository root recorded alongside the key, non-negative priority with default, recorded time; weight/tier/rank resolve per pass |
+| DM-2 Dependency edge | TC-SCHED-001, TC-SCHED-002, TC-DEPEND-001, TC-DEPEND-003, TC-DEPEND-004 | Consumer→producer edge; an edge may name a ref with no queue entry and is retained, evaluating `unknown` with `dependency-unobserved` until the producer is declared; ordering role and deploy-gating applicability derived from the producer repository's own expectations bound to its recorded repository key |
 | DM-3 Readiness evaluation | TC-SCHED-003, TC-SCHED-004, TC-SCHED-005 | Six conditions, fixed order, closed tri-state, bounded evidence, named blockers, ready only when all six satisfied |
 | DM-4 Lease with scope | TC-LEASE-001, TC-LEASE-003, TC-LEASE-006, TC-LEASE-008, TC-LEASE-009, TC-LEASE-013 | Scope, repo key, holder, ref, runner, weight, acquired/heartbeat, TTL, lifecycle, takeover evidence |
-| DM-5 Park | TC-PARK-001, TC-PARK-002, TC-PARK-004, TC-PARK-006, TC-PARK-007 | Entry, repo key, closed cause, typed condition, absolute expiry, resolved recheck, last eval, clear/recovery, release cause, and the durable `clearObservedAt`/`recoveryState` marker (`parked`, `clear-observed`, `recovered`, `released`) |
+| DM-5 Park | TC-PARK-001, TC-PARK-002, TC-PARK-004, TC-PARK-006, TC-PARK-007, TC-PARK-008 | Entry, repo key, a closed cause and a distinct closed condition type with the one-to-one pairing, absolute expiry, resolved recheck, last eval, clear/recovery, release cause, and the durable `clearObservedAt`/`recoveryState` marker (`parked`, `clear-observed`, `recovered`, `released`) |
 | DM-6 Incident | TC-LEASE-003, TC-PARK-001, TC-PARK-003 | Type `park-auto-recovery` / `lease-stale-takeover`, bounded typed evidence, entry or repo key, recorded time |
 | DM-7 Weight class | TC-WEIGHT-002, TC-SCHED-005 | Closed `standard`/`heavy`; validated plan omitting declaration → `standard`; declared-unrecognized → `heavy`; invalid/unreadable plan → `heavy` with `plan-unreadable`; absent plan → `heavy` with `plan-absent`; never `standard` when the plan cannot be read |
 | DM-8 Scheduling rank class | TC-RANK-002 | Closed ordered `merge-ready` < `in-review` < `resume-parked` < `new-start`; derived, never frozen |
-| DM-9 Scheduled action | TC-SCHED-008, TC-DEPEND-003, TC-RANK-005 | Ref, repo, rank, reason, priority, weight, lease status, blocking conditions, preemption block when applicable; a no-ref claim names the selected action's ref in the envelope (`selectedRef`) |
+| DM-9 Scheduled action | TC-SCHED-004, TC-SCHED-008, TC-DEPEND-003, TC-RANK-005 | Ref, repo, rank, reason, priority, weight, lease status, blocking conditions, preemption block when applicable; `repo-claimed-in-pass` is a per-pass projection reason distinct from `lease-held`; a no-ref claim names the selected action's ref in the envelope (`selectedRef`) |
 | DM-10 Preemption block | TC-RANK-003, TC-RANK-004 | Target ref, repo, holder, cause `preempted-for-close-item`, motivating close item |
 | DM-11 Lane view | TC-LANES-001, TC-LANES-002, TC-LANES-003 | Ref identity, closed state, bounded reason, lease holder/scope, restarts, amplification (null+warning), weight class |
-| DM-12 Repository key | TC-LEASE-008 | Normalized `host/owner/name`; protocol/credentials/userinfo/`.git` removed; contention domain |
+| DM-12 Repository key and root | TC-LEASE-008, TC-DEPEND-003, TC-DEPEND-004 | Normalized `host/owner/name`; protocol/credentials/userinfo/`.git` removed; contention domain; producer-root discovery uses only entry-recorded roots with exact-key matching, and no match or a two-root collision yields `unknown` (never a substituted invocation root) |
 | DM-13 Queue graph document | TC-SCHED-002, TC-SCHED-009, TC-SCHED-012 | Rebuildable derived document; replaced atomically only on intent change; never truth when divergent; reads replace zero |
-| DM-14 Finding | TC-PARK-002, TC-SCHED-009 | Stable code + severity + bounded evidence; `queue.park-condition-stuck` is report-only at exit 0 on readable reads and a refusal at exit 1 on a claim |
+| DM-14 Finding | TC-PARK-002, TC-PARK-008, TC-SCHED-009 | Stable code + severity + bounded evidence; `queue.park-condition-stuck` is report-only at exit 0 on readable reads and a refusal at exit 1 on a claim, and a stuck park is never a scheduled next action |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
@@ -183,9 +183,9 @@ The spec declares no REST/HTTP endpoint and no `API-#` identifier (§8.1). The c
 |-------------------|----------|--------|
 | NFR-1 Determinism | TC-SCHED-006, TC-SCHED-013, TC-RANK-001 | Covered — 100 identical passes byte-identical; no ambient clock/randomness/locale/env/iteration-order input |
 | NFR-2 Read purity | TC-SCHED-012, TC-LANES-006 | Covered — 0 writes, 0 fences, 0 appends, 0 derived replacements on the `queue list`, `queue plan`, `lanes list`, and `lanes show` surfaces |
-| NFR-3 Claim atomicity | TC-LEASE-002, TC-LEASE-004 | Covered — 50 scheduled claims → exactly 1 acquire / 49 refuse; 0 duplicate records; 0 unverified landings |
+| NFR-3 Claim atomicity | TC-LEASE-002, TC-LEASE-004 | Covered — 50 scheduled claims from 50 distinct holders → exactly 1 acquire / 0 renewals / 49 `queue.lease-conflict` refusals; 0 duplicate records; 0 unverified landings. The distinct-holder precondition is required because a repeat claim by the winner renews (TC-LEASE-013); NFR-3's unqualified "1 acquires and 49 refuse" is only true for distinct holders (R-07). |
 | NFR-4 Lease staleness integrity | TC-LEASE-003 | Covered — 100 % at-or-beyond-TTL leases takeover-eligible; every takeover evidenced; 0 live takeovers |
-| NFR-5 Park resume latency | TC-PARK-001, TC-PARK-002, TC-PARK-005 | Covered — resume ≤ one interval after clear; 0 active-without-recovery-or-stuck once observed clear; a durable `clear-observed` marker without a later `recovered` record is the stuck condition |
+| NFR-5 Park resume latency | TC-PARK-001, TC-PARK-002, TC-PARK-003, TC-PARK-005 | Covered — when a mutating pass runs within one interval of the clear, resume ≤ one interval after clear; the no-engine gap case recovers with a gap-naming incident and is never stuck solely because the gap exceeded the interval; 0 active-without-recovery-or-stuck once observed clear; a durable `clear-observed` marker without a later `recovered` record is the stuck condition |
 | NFR-6 Bounded scheduling cost | TC-SCHED-011, TC-DEPEND-005 | Covered — 32 evaluated candidates, named truncation, memoized bounded reads, ≤ 250 ms structural/perf baseline |
 | NFR-7 Hermetic tests | TC-SCHED-014 | Covered — 0 live network, 0 live credentials, 0 real sleeps; injected clock/state/providers/deploy |
 | NFR-8 State compatibility | TC-VOCAB-001 | Covered — 0 schema bumps/migrations/backfills; 5 kinds + 1 document; existing stores verified-empty |
@@ -194,7 +194,7 @@ The spec declares no REST/HTTP endpoint and no `API-#` identifier (§8.1). The c
 | NFR-11 Error-table synchronization | TC-VOCAB-002, TC-VOCAB-003 | Covered — 5 rows and 1 collector id agree in both directions; 0 existing rows change |
 | NFR-12 Secret and payload safety | TC-VOCAB-006, TC-PARK-001 | Covered — 0 secret/credential/raw-provider/free-form bytes; redaction chokepoint covers new payloads |
 | NFR-13 Fail-closed state reads | TC-LEASE-006, TC-PARK-007, TC-LANES-005, TC-SCHED-005, TC-SCHED-016 | Covered — unreadable/torn/unknown lease or park history yields classified `state.*`, never "free"/"not parked"; claim exits 2 with zero writes; `queue list|plan` exit 2 with bounded evidence and no `data` sibling, partial view, or empty schedule (AC-F10-3) |
-| NFR-14 Vocabulary stability | TC-LEASE-009, TC-VOCAB-005, TC-WEIGHT-002 | Covered — closed sets; no capacity/bandwidth/CI-slot path; only `repo-exclusive` acquired |
+| NFR-14 Vocabulary stability | TC-LEASE-009, TC-VOCAB-005, TC-WEIGHT-002, TC-PARK-004 | Covered — closed sets; the park condition-type set `{provider-window, provider-quota, preemption}` and the park cause set `{provider-window, provider-quota, preempted-for-close-item}` are distinct with a one-to-one pairing; no capacity/bandwidth/CI-slot path; only `repo-exclusive` acquired |
 
 ## 4. Test Types and Layers
 
@@ -218,6 +218,8 @@ The spec declares no REST/HTTP endpoint and no `API-#` identifier (§8.1). The c
 | Aggregate | Whole workspace | all of the above | `pnpm check` |
 
 All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`. Clock, fence/state transport, provider reads, deploy reads, and economics input are injected. Goldens carry no absolute paths, wall-clock timestamps, or unstable ordering and are regenerated only by an explicit command. No permanent suite asserts a diff against a moving base branch.
+
+**Phase-surface note (R-06).** Behaviour suites assert pure domain/state policy. CLI grammar, envelope shape, `result=`, `selectedRef`, `degraded[]`, and exit projection are asserted in `tests/behaviour/queue-cli.test.ts` and the `tests/golden/queue-*.test.ts` files, which land with the queue command family in plan Phase 7; the lanes command family lands in Phase 6. A TC spanning both halves is marked partial in §5.2 and listed in §7.1.
 
 ## 5. Test Scenarios
 
@@ -277,6 +279,7 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 | TC-PARK-005 | Resume latency bound and no active-without-recovery park | Regression | Behaviour | Critical | High | AC-F8-1, NFR-5 |
 | TC-PARK-006 | `queue.park-recheck.{type}` is configuration-only tuning | Happy Path | Behaviour/Config | Critical | High | AC-F8-2, NFR-10 |
 | TC-PARK-007 | Unreadable park history is never "not parked" | Negative | Behaviour | Critical | High | NFR-13, AC-F10-3, F-8 |
+| TC-PARK-008 | A stuck park is never a next action; claim refuses with zero appends | Negative | Behaviour | Critical | High | AC-F8-1, F-7, F-8, DM-14 |
 | TC-LANES-001 | `lanes list` reports the full lane contract with no fabricated values | Happy Path | Behaviour/CLI | Critical | High | AC-F11-1 |
 | TC-LANES-002 | `lanes show` returns one lane; an unobserved ref is classified | Happy Path/Negative | Behaviour/CLI | Important | High | AC-F11-1, Appendix F |
 | TC-LANES-003 | Restarts and amplification come from the economics fold | Edge Case | Behaviour | Critical | High | AC-F11-1, F-11 |
@@ -310,13 +313,14 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 - `queue add GH-301 --priority 5 --dep GH-300` has not run.
 
 **Steps**:
-1. Run `queue add GH-301 --priority 5 --dep GH-300`; assert the entry and the GH-301→GH-300 edge append under one fence.
-2. Run `queue dep GH-301 GH-302` (which would create GH-301→GH-302→GH-301); assert the command exits 1 with `queue.dependency-cycle`, consequence `not_landed`, and the existing path token sequence `GH-301 -> GH-302 -> GH-301`.
-3. Assert the ledger record count and sequence are byte-unchanged by the refused call (no append, no derived-document replacement).
-4. Replay the identical refused call; assert the same refusal and still zero new records.
+1. Before GH-301 is declared, fold the graph; assert the seeded GH-302→GH-301 edge is retained even though GH-301 has no queue entry, and readiness for GH-302 reports `deps-satisfied` `unknown` with `dependency-unobserved` — never `satisfied` and never silently dropped.
+2. Run `queue add GH-301 --priority 5 --dep GH-300`; assert the entry (with its repository key and recorded root) and the GH-301→GH-300 edge append under one fence.
+3. Run `queue dep GH-301 GH-302` (which would create GH-301→GH-302→GH-301); assert the command exits 1 with `queue.dependency-cycle`, consequence `not_landed`, and the existing path token sequence `GH-301 -> GH-302 -> GH-301`.
+4. Assert the ledger record count and sequence are byte-unchanged by the refused call (no append, no derived-document replacement).
+5. Replay the identical refused call; assert the same refusal and still zero new records.
 
 **Expected Outcome**:
-- The successful entry and edge are durable and fenced; the cycle-creating edge lands nothing, names the existing path, and leaves the folded graph unchanged. Re-running a refused mutation is stable.
+- A seeded edge to a not-yet-declared producer is retained and evaluates `dependency-unobserved`; the successful entry and edge are durable and fenced; the cycle-creating edge lands nothing, names the existing path, and leaves the folded graph unchanged. Re-running a refused mutation is stable.
 
 #### TC-SCHED-002 - Entry, edge, priority land under the fence; replay is a no-op
 
@@ -381,9 +385,11 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-readiness.test.ts`, `tests/fixtures/queue/readiness/sources/**`
 **Tags**: @backend, @readiness, @leases
 
+**Phase-surface split**: Partial — readiness/read-projection rows land in Phase 3; `queue plan`/`queue list` grammar, envelope, and reason projection complete in Phase 7.
+
 **Preconditions**:
-- Cases cover: tracker relation only, declared edge only, both satisfied, either open, and a declared edge stricter than tracker.
-- A live lease exists for repo-alpha held by `holder-a` with lease identity `lease-7`.
+- Cases cover: tracker relation only, declared edge only, both satisfied, either open, a declared edge stricter than tracker, and a declared edge to a ref with no queue entry (`unknown`/`dependency-unobserved`).
+- Two ready entries target repo-alpha: a first case has no lease held; a paired case has a live lease held by `holder-a` with lease identity `lease-7`.
 - One case has a validated plan tier `lite`; a paired case has no plan but a triage label `priority:high`.
 
 **Steps**:
@@ -392,7 +398,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 3. With no lease, assert `repo-free` is `satisfied` with no fabricated holder.
 4. For `tier-known`, assert the validated plan tier wins when a plan exists; assert the triage label is used only when no plan artifact exists.
 5. Assert condition ids, order, tri-state, and evidence vocabulary are identical to the delivered set (`QUEUE_READY_CONDITION_ORDER`, `QUEUE_READY_CONDITION_STATES`, `QUEUE_READY_EVIDENCE_REASONS`).
-6. Run `queue plan`/`queue list` over the same state; assert the read-only projection shows exactly one eligible action for repo-alpha and, once the live lease exists, the other entry names `lease-held` with holder and lease evidence, with zero appends and zero fences (AC-F3-1(a)).
+6. Run `queue plan`/`queue list` over the same state; with no lease held, assert the read-only projection shows exactly one eligible action for repo-alpha and holds the other ready entry `repo-claimed-in-pass` (a per-pass projection reason distinct from `lease-held`); once the live lease exists, assert the other entry names `lease-held` with holder and lease evidence; assert zero appends and zero fences in both cases (AC-F3-1(a)).
+7. For the declared edge whose producer ref has no queue entry, assert the edge is retained in the fold and `deps-satisfied` is `unknown` with `dependency-unobserved`, never `satisfied` and never silently dropped.
 
 **Expected Outcome**:
 - The scheduler strengthens only the three sources it owns, reuses the delivered vocabulary verbatim, and never redefines readiness.
@@ -537,6 +544,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-lease.test.ts`, `tests/fixtures/queue/e2e/**`
 **Tags**: @backend, @daemon-free, @integration
 
+**Phase-surface split**: Partial — the plan→claim→release domain path lands in Phase 4; the CLI e2e rows complete in Phase 7.
+
 **Preconditions**:
 - No daemon process, no socket, no background task; a throwing-fetch guard is installed.
 - One ready entry on repo-alpha; no lease held; a temp state store with a mutable clock.
@@ -586,6 +595,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-schedule.test.ts`, `tests/behaviour/lanes.test.ts`
 **Tags**: @backend, @readonly, @state
+
+**Phase-surface split**: Partial — queue read-purity rows land in Phase 3 and lanes read-purity in Phase 6; command-level zero-write rows complete in Phase 7 (queue) and Phase 6 (lanes).
 
 **Preconditions**:
 - A recording state store counts `append`, `replaceDocument`, `acquireFence`, and `releaseFence` calls.
@@ -710,13 +721,15 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-lease.test.ts`, `tests/fixtures/queue/leases/single-flight/**`
 **Tags**: @backend, @leases, @single-flight
 
+**Phase-surface split**: Partial — single-flight state rows land in Phase 4; `queue plan`/`queue list`/`queue claim` envelope and exit rows complete in Phase 7.
+
 **Preconditions**:
 - Two ready entries GH-320 and GH-321 both target `github.com/owner/repo-alpha`; no lease held.
 - One ready entry GH-322 targets `github.com/owner/repo-beta`.
 - The injected clock is fixed; provider facts are all available.
 
 **Steps**:
-1. With no lease held, run `queue plan`/`queue list`; assert exactly one of GH-320/GH-321 is the repo-alpha eligible action and the read surface itself claims or holds no lease (zero appends, zero fences) — the AC-F3-1(a) read-only projection.
+1. With no lease held, run `queue plan`/`queue list`; assert exactly one of GH-320/GH-321 is the repo-alpha eligible action, the other is held `repo-claimed-in-pass` (a per-pass projection reason, not `lease-held`), and the read surface itself claims or holds no lease (zero appends, zero fences) — the AC-F3-1(a) read-only projection.
 2. Claim GH-320; assert exactly one `repo-exclusive` lease record for repo-alpha naming holder and lease identity.
 3. Compute the schedule again; assert GH-321 is held with `lease-held`, its `repo-free` evidence names GH-320's holder and lease identity, and its `blockingConditions` includes `repo-free`.
 4. Claim GH-321 from a second holder; assert exit 1 with `queue.lease-conflict`, consequence `not_landed`, naming GH-320's holder and lease identity, and assert exactly one holder remains for repo-alpha (AC-F3-1(b)); then assert GH-322 on repo-beta remains eligible and is not blocked by the repo-alpha lease.
@@ -736,22 +749,25 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-lease-concurrency.test.ts`, `tests/fixtures/queue/leases/fence-harness.ts`
 **Tags**: @backend, @leases, @concurrency
 
+**Phase-surface split**: Partial — concurrency state rows land in Phase 4; `result=` and exit-projection rows complete in Phase 7.
+
 **Preconditions**:
 - A deterministic fence harness implements the delivered `StateStorePort` with: a mutable injected clock, a single-writer fence token, an operation log, and a barrier hook at the pre-fence readiness read.
-- No lease held for repo-alpha; 50 claim attempts GH-320 alternate between two holders.
+- No lease held for repo-alpha; 50 claim attempts for GH-320, each from a **distinct holder** (`holder-01` … `holder-50`), so no holder repeats and no attempt is a same-holder renewal.
 - No real timer, worker thread, or OS race is used.
 
 **Steps**:
 1. Arm the barrier so all 50 claim attempts observe "no lease" during the pre-fence readiness read.
 2. Release the barrier; drain the single-writer fence in a fixed declared order.
-3. Assert exactly 1 claim returns `result=claimed` and 49 return `queue.lease-conflict` at exit 1 with consequence `not_landed`.
+3. Assert exactly 1 claim returns `result=claimed`, exactly 0 return `result=renewed`, and the remaining 49 return `queue.lease-conflict` at exit 1 with consequence `not_landed`.
 4. Assert exactly one `queue.lease` acquisition record exists for repo-alpha, with a recorded heartbeat, and zero duplicate records for one `(repository, holder, acquisition)`.
 5. Assert the operation log proves every attempt performed its authoritative lease read *inside* the fence before appending.
 6. Assert every claimed outcome has a post-append verification read of exactly one new record.
 7. Run a second scenario with a state transport that refuses the append for one contender; assert it refuses with a classified `state.*` and does not retry into a duplicate.
+8. Run a paired control with a single repeating holder; assert the repeat claim is `result=renewed` and is never counted as a conflict (TC-LEASE-013), proving why the distinct-holder fixture above is required.
 
 **Expected Outcome**:
-- Under a forced "all saw free" interleaving, the in-fence re-read plus single-writer serialization yields exactly one lease and 49 evidenced refusals; no duplicate record and no unverified landing exists.
+- Under a forced "all saw free" interleaving, the in-fence re-read plus single-writer serialization yields exactly one lease and 49 evidenced refusals, with zero renewals because no holder repeats; no duplicate record and no unverified landing exists. NFR-3's "1 acquires and 49 refuse" is thereby scoped to distinct holders.
 
 #### TC-LEASE-003 - Stale takeover with evidence; live lease never taken over
 
@@ -789,6 +805,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-lease.test.ts`, `tests/fixtures/queue/leases/verification/**`
 **Tags**: @backend, @leases, @state
 
+**Phase-surface split**: Partial — store/verification state rows land in Phase 4; the `result=claimed` projection row completes in Phase 7.
+
 **Preconditions**:
 - A recording store can return 0, 1, or 2 new records after an append.
 - A store can append a duplicate acquisition for the same holder/acquisition id.
@@ -814,12 +832,14 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-lease.test.ts`, `tests/golden/queue-lease-conflict.test.ts`
 **Tags**: @backend, @leases, @refusal
 
+**Phase-surface split**: Partial — conflict identity/evidence rows land in Phase 4; golden and text-mode `result=refused`/exit rows complete in Phase 7.
+
 **Preconditions**:
 - A live lease held by `holder-a` for repo-alpha with a known acquisition time and heartbeat age.
 - The injected clock is fixed.
 
 **Steps**:
-1. Run `queue claim GH-320 --holder holder-b`; assert exit 1, `queue.lease-conflict`, category `transient`, `retryable: true`, consequence `not_landed`.
+1. Run `queue claim GH-320 --holder holder-b`; assert exit 1, `queue.lease-conflict`, category `transient`, `retryable: true`, consequence `not_landed`; assert the identity is never `queue.precondition.unmet`, because `repo-free` is excluded from the pre-fence gate and the in-fence lease read owns repository exclusivity (spec v1.2 F-4/C-2).
 2. Assert the error/evidence names the holder `holder-a`, the lease identity, the acquisition time, the heartbeat age, and the earliest takeover-eligible time.
 3. Assert text mode prints `result=refused` before the classified refusal and a remediation hint.
 4. Assert no lease record or derived-document change occurred.
@@ -838,6 +858,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-lease.test.ts`, `tests/fixtures/queue/leases/torn/**`
 **Tags**: @backend, @leases, @fail-closed
+
+**Phase-surface split**: Partial — claim `state.*` rows land in Phase 4; `queue list`/`queue plan` exit-2 rows complete in Phase 7.
 
 **Preconditions**:
 - A temp store with a torn ledger tail, an unreadable key, and an unknown record kind under `queue.leases:{repoKey}`.
@@ -891,7 +913,7 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Tags**: @backend, @leases, @normalization
 
 **Preconditions**:
-- Remotes written as `https://github.com/Owner/Repo.git`, `git@github.com:Owner/Repo.git`, `ssh://git@github.com/Owner/Repo.git`, and `https://user:token@github.com/Owner/Repo`.
+- Remotes written as `https://github.com/Owner/Repo.git`, `git@github.com:Owner/Repo.git`, `ssh://git@github.com/Owner/Repo.git`, and a synthetic userinfo variant `https://user:redacted@github.com/Owner/Repo` (the `redacted` token is a placeholder, never a credential).
 - A distinct remote `github.com/owner/repo-beta`.
 
 **Steps**:
@@ -940,6 +962,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-lease.test.ts`, `tests/fixtures/queue/leases/release/**`
 **Tags**: @backend, @leases, @idempotence
 
+**Phase-surface split**: Partial — release state/idempotence rows land in Phase 4; `result=noop` and `degraded[]` rows complete in Phase 7.
+
 **Preconditions**:
 - No lease exists for GH-320; a recording store counts appends.
 
@@ -958,25 +982,29 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4, F-7, AC-F7-2, EVT-3, EVT-4, DM-5
+**Related IDs**: F-4, F-7, AC-F7-2, EVT-3, EVT-4, DM-5, DM-10, NFR-14
 **Test Type(s)**: Unit, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-lease.test.ts`, `tests/behaviour/queue-rank.test.ts`, `tests/fixtures/queue/leases/release-park/**`
 **Tags**: @backend, @leases, @parks
 
+**Phase-surface split**: Partial — holder-refusal and release+park state rows land in Phases 4–5; `--park` grammar and exit rows complete in Phase 7.
+
 **Preconditions**:
 - A live lease held by `holder-a` for repo-alpha; the caller is `holder-b`.
 - A fault-injecting store can refuse the second append in the release+park transaction.
+- Paired invocations use a condition-type token (`--park preemption`) and an unknown token (`--park bogus`) as the cause.
 
 **Steps**:
 1. Run `queue release GH-320 --holder holder-b`; assert exit 1 with `queue.lease-conflict` (or the delivered release-conflict identity) and zero appends.
-2. Run `queue release GH-320 --holder holder-a --park preempted-for-close-item`; assert one release record and one park record with cause `preempted-for-close-item` in the same fenced transaction.
+2. Run `queue release GH-320 --holder holder-a --park preempted-for-close-item`; assert one release record and one park record with cause `preempted-for-close-item` paired with condition type `preemption` in the same fenced transaction.
 3. With the second append refused, assert neither the release nor the park lands (both or neither) and the lease remains active.
 4. Assert at most one active park exists per entry after success.
-5. Assert the park carries the resolved recheck interval for `preemption`.
+5. Assert the park carries the resolved recheck interval for the `preemption` condition type (not a cause-keyed interval).
+6. Run `queue release GH-320 --holder holder-a --park preemption` (a condition type, not a cause) and `queue release GH-320 --holder holder-a --park bogus` (unknown); assert each is an invocation rejection through `fallback.invocation` at exit 1 with zero appends, proving the cause set is exactly `{provider-window, provider-quota, preempted-for-close-item}` and is never widened by a condition-type token.
 
 **Expected Outcome**:
-- Release respects holder identity; a park-on-release is atomic, and a refused transaction leaves no partial state.
+- Release respects holder identity; a park-on-release is atomic and records the cause together with its paired condition type; an unknown or condition-type `--park` token is refused before any append, and a refused transaction leaves no partial state.
 
 #### TC-LEASE-012 - Claim precondition unmet names the reason
 
@@ -989,8 +1017,11 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-lease.test.ts`, `tests/fixtures/queue/leases/preconditions/**`
 **Tags**: @backend, @leases, @negative
 
+**Phase-surface split**: Partial — precondition-reason rows land in Phase 4; claim exit/envelope rows complete in Phase 7.
+
 **Preconditions**:
-- Three cases: an entry not ready (owner gate), an entry outranked by a higher-ranked eligible action for its repository, and a heavy entry under the runner's active heavy lease.
+- Three cases: an entry not ready on one of the five pre-fence conditions (owner gate), an entry outranked by a higher-ranked eligible action for its repository, and a heavy entry under the runner's active heavy lease.
+- No case uses `repo-free` as a precondition: a repository held by another live holder is the `queue.lease-conflict` outcome proven in TC-LEASE-005, never this row (spec v1.2 F-4/C-2).
 - A control eligible entry.
 
 **Steps**:
@@ -999,6 +1030,7 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 3. Claim the heavy entry; assert `queue.precondition.unmet` with reason `weight-class` naming the carrying lease.
 4. Assert zero appends in each refusal.
 5. Claim the control; assert success.
+6. Assert no refusal in this scenario carries `queue.lease-conflict`, and no held-repository case produces `queue.precondition.unmet` (repository exclusivity is never a pre-fence refusal).
 
 **Expected Outcome**:
 - A claim refuses an ineligible target with a precise reason; it never claims behind a gate.
@@ -1013,6 +1045,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-lease.test.ts`, `tests/fixtures/queue/leases/renewal/**`
 **Tags**: @backend, @leases, @renewal
+
+**Phase-surface split**: Partial — renewal state rows land in Phase 4; `result=renewed` envelope rows complete in Phase 7.
 
 **Preconditions**:
 - A live lease held by `holder-a` with heartbeat at T.
@@ -1120,6 +1154,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-weight.test.ts`, `tests/fixtures/queue/weight/claim/**`
 **Tags**: @backend, @weight, @negative
 
+**Phase-surface split**: Partial — weight-cap state rows land in Phase 4; claim exit/reason envelope rows complete in Phase 7.
+
 **Preconditions**:
 - R1 carries a heavy lease; GH-309 is heavy and ready; GH-331 is standard and ready.
 - Both target different repositories.
@@ -1139,7 +1175,7 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-6, AC-F6-1, DM-2, DM-9
+**Related IDs**: F-1, F-2, F-6, AC-F1-1, AC-F6-1, DM-2, DM-9, NFR-13
 **Test Type(s)**: Unit, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-depend.test.ts`, `tests/fixtures/queue/depend/open/**`
@@ -1147,7 +1183,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 
 **Preconditions**:
 - GH-300 is the producer and unresolved; GH-301 is the consumer with a declared edge to GH-300.
-- Both are otherwise ready; GH-301's merge is ready.
+- A paired case builds on GH-302, which declares a seeded edge to GH-303 while GH-303 has no queue entry.
+- Both primary entries are otherwise ready; GH-301's merge is ready.
 
 **Steps**:
 1. Compute the schedule; assert GH-301 is held with reason `dependency-open` and is not in `nextActions`.
@@ -1155,9 +1192,10 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 3. Assert GH-300 is eligible and appears.
 4. Resolve GH-300 (landing evidence present) and recompute; assert GH-301 becomes eligible subject to the deploy gate.
 5. Assert declared edges are additive and can only make `deps-satisfied` stricter.
+6. For the edge that targets GH-303 with no queue entry, assert the edge is retained in the folded graph and `deps-satisfied` is `unknown` with the delivered `dependency-unobserved` reason; assert GH-302 is not ready and the edge is never `satisfied` and never dropped.
 
 **Expected Outcome**:
-- A consumer is removed from competition while its producer is unresolved, not merely reordered.
+- A consumer is removed from competition while its producer is unresolved, not merely reordered; an edge to a ref with no entry is visible evidence (`dependency-unobserved`), never a silent pass.
 
 #### TC-DEPEND-002 - Producer precedes consumer in one repository, regardless of priority
 
@@ -1199,8 +1237,9 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 - GH-300 (producer, repo-alpha) is landed; repo-alpha declares `merge.deploy-expectations`.
 - GH-301 (consumer, repo-beta) has a ready merge.
 - A multi-repository state directory contains repo-alpha and repo-beta; the invocation runs from repo-beta.
+- Repo-alpha's queue entry records its declaration root (for example `/work/repo-alpha`) whose normalized remote equals repo-alpha's recorded key; roots are discovered only from entry records.
 - A paired case where repo-beta's own configuration declares no deploy expectations while repo-alpha's does, and the reverse.
-- Cases where repo-alpha's configuration is missing, unreadable, or invalid.
+- Cases where no entry-recorded root matches repo-alpha's key, two distinct entry-recorded roots claim the same key (collision), and the matched config is missing, unreadable, or invalid.
 - Deploy fixtures: `verified` with evidence, `unknown` (never ran / stale), and `failed` with a named step.
 
 **Steps**:
@@ -1209,13 +1248,15 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 3. With `failed`, assert GH-301 holds at `deploy-unverified` and the failed step is named in evidence.
 4. With an unreadable trace, assert the same hold and a classified deploy read identity.
 5. Assert the hold is a hard exclusion and never a green fallback.
-6. In the multi-repository directory with the invocation run from repo-beta, assert repo-alpha's expectations are read from repo-alpha's own configuration bound to its recorded repository key, and the invocation's configuration never changes the verdict (AC-F6-2).
+6. In the multi-repository directory with the invocation run from repo-beta, assert repo-alpha's expectations are read from repo-alpha's own configuration, discovered through the entry-recorded root whose normalized remote exactly matches repo-alpha's recorded key; assert the invocation's root/configuration never changes the verdict (AC-F6-2, DM-12).
 7. With repo-alpha declaring expectations and repo-beta declaring none (and the reverse), assert the producer's declaration governs and the invocation checkout is irrelevant.
-8. With repo-alpha's config missing or unreadable, assert the expectation is `unknown` — never `not-declared` and never `verified` — and GH-301 holds `deploy-unverified` with no green deploy read.
-9. With repo-alpha's config invalid, assert the same `unknown`/`deploy-unverified` hold.
+8. With no entry-recorded root matching repo-alpha's key, assert the expectation is `unknown` — never `not-declared` and never `verified` — and GH-301 holds `deploy-unverified` with no green deploy read.
+9. With two distinct entry-recorded roots claiming repo-alpha's key (a collision), assert the expectation is `unknown` (the collision is never resolved by picking one), never `not-declared` and never `verified`, and GH-301 holds `deploy-unverified`.
+10. With the matched repo-alpha config missing or unreadable, assert the expectation is `unknown` — never `not-declared` and never `verified` — and GH-301 holds `deploy-unverified` with no green deploy read.
+11. With the matched repo-alpha config invalid, assert the same `unknown`/`deploy-unverified` hold.
 
 **Expected Outcome**:
-- A dependent merge is gated on a `verified` deploy verdict with evidence; unknown, failed, or unreadable is never green. Expectations come from the producer's own config bound to its recorded repository key; a missing, unreadable, or invalid producer config is `unknown`, never `not-declared` or `verified`.
+- A dependent merge is gated on a `verified` deploy verdict with evidence; unknown, failed, or unreadable is never green. Expectations come from the producer's own config discovered through its entry-recorded root whose normalized remote matches its recorded key; no match, a two-root collision, or a missing, unreadable, or invalid producer config is `unknown`, never `not-declared` or `verified`.
 
 #### TC-DEPEND-004 - No declared deploy expectation: landing-only with `deploy: not-declared`
 
@@ -1232,7 +1273,7 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 - GH-300 is landed; repo-alpha declares no `merge.deploy-expectations`.
 - GH-301's merge is ready.
 - A multi-repository case where the invocation runs from repo-beta and repo-beta's own config declares deploy expectations while repo-alpha's does not.
-- A case where repo-alpha's config is missing or unreadable.
+- A case where repo-alpha's config is missing or unreadable, and a case where two distinct entry-recorded roots claim repo-alpha's key (collision).
 
 **Steps**:
 1. Compute the schedule; assert GH-301's merge is eligible on landing evidence alone.
@@ -1242,9 +1283,10 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 5. Assert the not-declared path never fabricates a `verified` verdict.
 6. With the invocation run from repo-beta and repo-beta declaring expectations, assert repo-alpha's own config bound to its recorded key governs: the gate is landing-only with `deploy: not-declared`, and the invocation's configuration does not gate repo-alpha's producer (AC-F6-2).
 7. With repo-alpha's config missing or unreadable, assert `deploy: not-declared` is never emitted; the expectation is `unknown` and GH-301 holds `deploy-unverified`.
+8. With two distinct entry-recorded roots claiming repo-alpha's key (collision), assert `deploy: not-declared` is never emitted; the expectation is `unknown` and GH-301 holds `deploy-unverified`, with no root chosen arbitrarily.
 
 **Expected Outcome**:
-- Where the producer declares no expectations, the gate is landing-only and the weaker guarantee is explicitly visible; a missing or unreadable producer config never masquerades as `not-declared`, and the invocation's config never supplies another repository's gate.
+- Where the producer declares no expectations, the gate is landing-only and the weaker guarantee is explicitly visible; a missing, unreadable, or colliding producer root never masquerades as `not-declared`, and the invocation's config never supplies another repository's gate.
 
 #### TC-DEPEND-005 - Deploy reads are bounded and memoized; overflow holds `deploy-unverified`
 
@@ -1306,6 +1348,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-rank.test.ts`, `tests/golden/queue-rank.test.ts`, `tests/fixtures/queue/rank/close-first/**`
 **Tags**: @backend, @rank, @determinism
+
+**Phase-surface split**: Partial — ordering rows land in Phase 3; `queue plan --next 2` and the golden/output rows complete in Phase 7.
 
 **Preconditions**:
 - One merge-ready entry and one ready new start, both eligible.
@@ -1382,6 +1426,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-rank.test.ts`, `tests/fixtures/queue/rank/preemption-release/**`
 **Tags**: @backend, @rank, @parks
 
+**Phase-surface split**: Partial — release+park state rows land in Phase 5; `queue release --park` envelope and exit rows complete in Phase 7.
+
 **Preconditions**:
 - GH-311 holds the repo-alpha lease; GH-310 is merge-ready.
 - A fault-injecting store can refuse the park append after the release append.
@@ -1390,7 +1436,7 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 1. Run `queue release GH-311 --holder holder-a --park preempted-for-close-item`; assert one release and one park record in the same fenced transaction.
 2. Recompute; assert GH-310 is now eligible and scheduled, and GH-311 is `resume-parked` (condition clear) ranking above new starts.
 3. With the park append refused, assert neither the release nor the park lands and GH-311 still holds the lease.
-4. Assert the park carries cause, entry, repo key, resolved recheck interval, and release cause.
+4. Assert the park carries cause `preempted-for-close-item`, condition type `preemption` (the one-to-one pair), entry, repo key, resolved recheck interval, and release cause.
 5. Assert a subsequent pass resumes GH-311 exactly when its condition clears, with an incident per TC-PARK-001.
 
 **Expected Outcome**:
@@ -1407,6 +1453,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-rank.test.ts`, `tests/fixtures/queue/rank/outranked/**`
 **Tags**: @backend, @rank, @negative
 
+**Phase-surface split**: Partial — outranked/no-ref selection rows land in Phase 3 and claim-enforcement rows in Phase 4; `selectedRef`, `no-eligible-action`, and exit-projection rows complete in Phase 7.
+
 **Preconditions**:
 - GH-310 merge-ready and eligible for repo-alpha; GH-311 new-start and eligible for repo-alpha but outranked.
 - No lease held.
@@ -1416,7 +1464,7 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 2. Assert zero appends.
 3. Claim GH-310; assert success.
 4. Assert the refusal is not a lease conflict and does not claim single-flight.
-5. With no ref argument, assert `queue claim` selects the top-ranked eligible action from the Appendix B precedence deterministically (ties resolved by Appendix B steps 10–13), the envelope names the selected ref in `selectedRef`, and repeated identical passes select the same ref; assert that when no action is eligible it refuses `queue.precondition.unmet`, reason `no-eligible-action`, at exit 1 and appends nothing.
+5. With no ref argument, assert `queue claim` selects the top-ranked eligible action from the Appendix B precedence deterministically (ties resolved by Appendix B steps 10–13), the envelope names the selected ref in `selectedRef`, and repeated identical passes select the same ref; assert that when no action is eligible it refuses `queue.precondition.unmet`, reason `no-eligible-action`, at exit 1 and appends nothing; assert a stuck park is never a selectable candidate (TC-PARK-008).
 
 **Expected Outcome**:
 - An outranked explicit claim refuses with the outranking ref; a no-ref claim equals the top-ranked eligible action and refuses `no-eligible-action` when none is eligible; the scheduler never lets an explicit request silently violate precedence.
@@ -1457,20 +1505,22 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-park.test.ts`, `tests/fixtures/queue/parks/window/**`
 **Tags**: @backend, @parks, @resume
 
+**Phase-surface split**: Partial — park resume/incident state rows land in Phase 5; the `queue claim` mutating-pass CLI rows complete in Phase 7.
+
 **Preconditions**:
 - A lane is parked on a provider window ending at absolute `T`.
 - The injected clock starts before T and advances past T; the recheck interval is the shipped 60 000 ms.
 - A mutating pass (`queue claim`) is the surface.
 
 **Steps**:
-1. Advance to T + 1; run the mutating pass; assert the park condition evaluates clear and the entry resumes.
+1. Advance to T + 1 (a mutating pass inside one recheck interval of T); run the mutating pass; assert the park condition evaluates clear and the entry resumes.
 2. Assert the resume timestamp is within `(T, T + interval]`.
 3. Assert exactly one `queue.incident` of type `park-auto-recovery` names the condition, the clear time T, the evaluation time, and the observation gap since the previous evaluation.
 4. Assert exactly one park recovery record is appended and at most one active park remains per entry.
 5. Assert the resumed entry ranks `resume-parked` if it is a park-only resume, or its normal class if it is eligible to start.
 
 **Expected Outcome**:
-- A cleared park resumes in the same mutating pass, within one interval, with a complete recovery incident and no duplicate park.
+- A cleared park resumes in the same mutating pass, within one interval of T, with a complete recovery incident and no duplicate park. The bound is scoped to a pass that runs inside the interval; the no-engine gap case is TC-PARK-003 and is never classified stuck solely because the gap exceeded the interval (spec v1.2 R-09/AC-F8-1).
 
 #### TC-PARK-002 - A park observed clear but still active is the stuck finding
 
@@ -1482,6 +1532,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-park.test.ts`, `tests/fixtures/queue/parks/stuck/**`
 **Tags**: @backend, @parks, @negative
+
+**Phase-surface split**: Partial — stuck finding/refusal state rows land in Phase 5; `queue list`/`queue plan`/`queue claim` envelope and exit rows complete in Phase 7.
 
 **Preconditions**:
 - Case A: a durable `clear-observed` `queue.park` record is seeded for the entry (`delivery.queue.park.v1`, key `queue.parks:<REF>`, fields `clearObservedAt` and `recoveryState: clear-observed`) per Appendix D, representing a prior mutating pass that observed the condition clear while the park remains active without a later `recovered` record.
@@ -1529,25 +1581,29 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-8, DM-5, DM-6, EVT-4, NFR-14
+**Related IDs**: F-8, DM-5, DM-6, DM-10, EVT-4, NFR-14
 **Test Type(s)**: Unit, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/queue-scheduling-contract.test.ts`, `tests/behaviour/queue-park.test.ts`, `tests/fixtures/queue/parks/types/**`
 **Tags**: @structure, @parks
 
 **Preconditions**:
-- Fixtures for `provider-window` (absolute expiry), `provider-quota` (available again), and `preemption` (preempting lease released and entry ready).
+- Fixtures for condition types `provider-window` (absolute expiry), `provider-quota` (available again), and `preemption` (preempting lease released and entry ready).
+- Fixtures for causes `provider-window`, `provider-quota`, and `preempted-for-close-item`, including each valid one-to-one pairing.
 - An owner-gate and an external wait, which are not parks.
 
 **Steps**:
-1. Assert the closed condition-type set is exactly the three shipped types plus their closed causes.
-2. Assert `provider-window` clears at the absolute expiry; `provider-quota` clears on observed availability; `preemption` clears when the preempting lease is released and the entry is ready.
-3. Assert an owner gate or external wait is a readiness blocker and not a park record.
-4. Assert at most one active park exists per entry; a second active park is a classified `state.*`.
-5. Assert each park carries a resolved recheck interval and an optional absolute expiry only where the condition supplies one.
+1. Assert the closed condition-type set is exactly `{provider-window, provider-quota, preemption}`.
+2. Assert the closed cause set is exactly `{provider-window, provider-quota, preempted-for-close-item}`, and assert the two sets are distinct and never conflated (`preemption` is a condition type, never a cause; `preempted-for-close-item` is a cause, never a condition type).
+3. Assert the one-to-one pairing: cause `provider-window` ↔ condition type `provider-window`; cause `provider-quota` ↔ condition type `provider-quota`; cause `preempted-for-close-item` ↔ condition type `preemption`.
+4. Assert `provider-window` clears at the absolute expiry; `provider-quota` clears on observed availability; `preemption` clears when the preempting lease is released and the entry is ready.
+5. Assert an owner gate or external wait is a readiness blocker and not a park record.
+6. Assert at most one active park exists per entry; a second active park is a classified `state.*`.
+7. Assert each park carries a resolved recheck interval keyed by condition type and an optional absolute expiry only where the condition supplies one.
+8. Assert `queue release --park` accepts exactly the cause set and rejects a condition-type token or an unknown token through `fallback.invocation` (cross-checked behaviourally in TC-LEASE-011).
 
 **Expected Outcome**:
-- Park causes and condition types are a closed evaluable contract; non-evaluable waits are not misclassified as parks.
+- The cause set and condition-type set are two distinct closed contracts with a one-to-one pairing; non-evaluable waits are not misclassified as parks, and no cause token can masquerade as a condition type or vice versa.
 
 #### TC-PARK-005 - Resume latency bound and no active-without-recovery park
 
@@ -1562,17 +1618,20 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 
 **Preconditions**:
 - Window and preemption intervals 60 000 ms; quota 300 000 ms.
-- Cases at clear time, one interval, and one interval + 1 ms.
+- Bound cases: a mutating pass at the clear time T and at exactly T + interval.
+- Gap case: a park clears with no mutating pass inside the interval, and the first pass runs at T + interval + 1 ms (or later).
 
 **Steps**:
-1. Assert a park whose condition cleared while a mutating pass runs is resumed within `≤ interval` of the clear time for each type.
+1. Assert that when a mutating pass runs within one recheck interval of the clear, the park is resumed in that pass within `≤ interval` of the clear time for each type.
 2. Assert the shipped defaults are 60 000 ms for window/preemption and 300 000 ms for quota.
-3. Assert 0 parks remain active without either a recovery record or a `queue.park-condition-stuck` finding once a pass observed the condition clear.
-4. Assert no real sleep is used; time advances through the injected clock.
-5. Assert repeated passes do not append duplicate recovery records.
+3. Assert the at-bound pass (exactly T + interval) still resumes in that pass; the bound is inclusive.
+4. Assert the gap case (T + interval + 1 ms with no earlier pass): the first pass after the gap recovers the park with a gap-naming incident and is never reported stuck solely because the gap exceeded the interval (TC-PARK-003); the latency bound does not apply as a violation to this case.
+5. Assert 0 parks remain active without either a recovery record or a `queue.park-condition-stuck` finding once a pass observed the condition clear.
+6. Assert no real sleep is used; time advances through the injected clock.
+7. Assert repeated passes do not append duplicate recovery records.
 
 **Expected Outcome**:
-- Park resume meets the latency bound for every type, and no park can remain active unaccounted for after a clear observation.
+- Park resume meets the inclusive latency bound for every type when a mutating pass runs inside one interval; the no-engine gap case recovers with a gap-naming incident and is never stuck solely because the gap exceeded the interval; no park can remain active unaccounted for after a clear observation.
 
 #### TC-PARK-006 - `queue.park-recheck.{type}` is configuration-only tuning
 
@@ -1610,6 +1669,8 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 **Target Layer / Location**: `tests/behaviour/queue-park.test.ts`, `tests/fixtures/queue/parks/unreadable/**`
 **Tags**: @backend, @parks, @fail-closed
 
+**Phase-surface split**: Partial — unreadable-park state rows land in Phase 5; `queue list`/`queue plan`/`queue claim` exit-2 rows complete in Phase 7.
+
 **Preconditions**:
 - A torn or unreadable `queue.parks:{REF}` history and a wrong-kind record under the prefix.
 - A control healthy park.
@@ -1624,6 +1685,36 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 
 **Expected Outcome**:
 - Unreadable park truth fails closed: it is never served as unparked, `queue list`/`queue plan` exit 2 with bounded evidence and no schedule view, and a claim refuses at exit 2 without writing; a readable stuck park remains the distinct report-only case at exit 0.
+
+#### TC-PARK-008 - A stuck park is never a next action; claim refuses with zero appends
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-7, F-8, AC-F8-1, DM-5, DM-14, Appendix B step 7b, NFR-13
+**Test Type(s)**: Unit, Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/queue-park.test.ts`, `tests/fixtures/queue/parks/stuck-not-next-action/**`
+**Tags**: @backend, @parks, @negative, @precedence
+
+**Phase-surface split**: Partial — the hard-exclusion and claim-refusal policy lands in Phase 5; reads/claim envelope rows complete in Phase 7.
+
+**Preconditions**:
+- A durable `clear-observed` `queue.park` record is seeded for GH-340 (`delivery.queue.park.v1`, key `queue.parks:GH-340`, `clearObservedAt`, `recoveryState: clear-observed`) with no later `recovered` record, so the park is classified `queue.park-condition-stuck`.
+- GH-340 is otherwise ready and would rank `resume-parked` if the cleared condition alone decided rank.
+- A control new-start entry GH-341 is eligible in a different repository; a second control has a genuinely uncleared park (`parked:<cause>`), and a third control has no park.
+- No lease held; no daemon; the injected clock is fixed.
+
+**Steps**:
+1. Run `queue plan` and `queue list`; assert GH-340 is absent from `nextActions` and from every eligible action, and is never classified `resume-parked`.
+2. Assert the held entry carries the blocking reason `park-condition-stuck` and the report-only `queue.park-condition-stuck` finding at exit 0, with bounded evidence and zero appends, fences, or derived replacements.
+3. Run `queue claim` with no ref; assert it selects GH-341 (or refuses `queue.precondition.unmet` with reason `no-eligible-action` when GH-341 is removed), and never selects GH-340.
+4. Run `queue claim GH-340`; assert exit 1 with `queue.park-condition-stuck`, consequence `not_landed`, and zero appends; assert it is never a `queue.lease-conflict` and never `queue.precondition.unmet`.
+5. Assert Appendix B step 7b removes GH-340 before rank assignment: the uncleared-park control is held `parked:<cause>` (a pre-rank hard exclusion, not stuck), and the no-park control is eligible.
+6. Assert the same identity never appears twice in one outcome (finding on the read surface vs refusal on the claim are mutually exclusive per surface), and the read never attempts a park recovery.
+
+**Expected Outcome**:
+- A stuck park is a hard exclusion from scheduling, never a `resume-parked` candidate, never in `nextActions`, and never selected by a no-ref claim; an explicit claim on it refuses at exit 1 with `queue.park-condition-stuck` and zero appends, never a lease conflict or a generic precondition refusal.
 
 #### TC-LANES-001 - `lanes list` reports the full lane contract with no fabricated values
 
@@ -1671,7 +1762,7 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 1. Run `lanes show GH-320`; assert it returns exactly one lane with the full contract and exit 0.
 2. Run `lanes show GH-999`; assert exit 1 with `queue.entry.unobserved` and zero writes.
 3. Assert `lanes show` accepts the same canonical form as `queue add` and rejects a malformed ref at invocation time.
-4. Assert no synthetic a synthetic `L` ordinal identity is produced.
+4. Assert no synthetic `L` ordinal identity is produced.
 5. Assert repeated runs are byte-identical.
 
 **Expected Outcome**:
@@ -1894,7 +1985,7 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 - The delivered contract declarations and a snapshot of the closed sets.
 
 **Steps**:
-1. Assert the closed sets and their order: condition ids/order, `standard`/`heavy`, rank classes, park causes/condition types, lane states, record kinds, error rows, and configuration keys.
+1. Assert the closed sets and their order: condition ids/order, `standard`/`heavy`, rank classes, the distinct park cause and condition-type sets with their one-to-one pairing, lane states, the blocking-reason vocabulary (including `repo-claimed-in-pass` as distinct from `lease-held` and `park-condition-stuck` as a reason, not a cause), record kinds, error rows, and configuration keys.
 2. Assert no test or fixture introduces an undeclared value that the engine accepts.
 3. Assert a growth attempt (an undeclared weight/rank/cause/state) is rejected or unrecognized, never silently accepted.
 4. Assert `queue ready` condition ids, order, tri-state, and evidence reasons are unchanged.
@@ -1970,12 +2061,12 @@ All suites use `bun:test` under `tests/**`; fixtures are never named `*.test.ts`
 
 | Corpus | Contents | Proposed location |
 |---|---|---|
-| Queue graph | entries, priorities, declared edges, duplicate edge, cycle path, superseding entry, unresolved binding, replay pairs | `tests/fixtures/queue/graph/**` |
-| Readiness | six-condition cases: deps union (tracker/declared/both), repo-free live/none, tier plan/label, owner labels, CI healthy/failed/pending/unknown/none, provider available/parked/unavailable | `tests/fixtures/queue/readiness/**`; reuse `tests/fixtures/queue-ready/**` |
-| Leases | no lease, live, at-bound, stale, renewed, taken-over, duplicate acquisition, torn/unreadable history, conflict evidence, repo-key variants, release/no-op, release+park, precondition cases | `tests/fixtures/queue/leases/**` |
-| Parks | provider-window/quota/preemption, clear/unclear, observation gap, durable `clear-observed` marker, stuck (prior observation), refused recovery, unreadable history, recheck variants | `tests/fixtures/queue/parks/**` |
+| Queue graph | entries (with recorded roots), priorities, declared edges, edge to a ref with no entry, duplicate edge, cycle path, superseding entry, unresolved binding, replay pairs | `tests/fixtures/queue/graph/**` |
+| Readiness | six-condition cases: deps union (tracker/declared/both), `dependency-unobserved`, repo-free live/none, `repo-claimed-in-pass` read projection, tier plan/label, owner labels, CI healthy/failed/pending/unknown/none, provider available/parked/unavailable | `tests/fixtures/queue/readiness/**`; reuse `tests/fixtures/queue-ready/**` |
+| Leases | no lease, live, at-bound, stale, renewed, taken-over, duplicate acquisition, 50 distinct holders, torn/unreadable history, conflict evidence, repo-key variants (including synthetic userinfo), release/no-op, release+park, precondition cases | `tests/fixtures/queue/leases/**` |
+| Parks | provider-window/quota/preemption condition types and the distinct cause set with pairings, clear/unclear, observation gap, durable `clear-observed` marker, stuck (prior observation), stuck-not-next-action, refused recovery, unreadable history, recheck variants | `tests/fixtures/queue/parks/**` |
 | Plans | tier, `weightClass`, `defaultWeightClass`, producer/consumer interactions, deploy expectations, invalid/missing plan, unknown weight | `tests/fixtures/queue/plan/**`; reuse `tests/fixtures/plan/**` |
-| Deploy verdicts | verified with evidence, unknown (never ran / stale), failed with step, unreadable trace, read-budget overflow, producer-config binding across repositories, missing/unreadable/invalid producer config | `tests/fixtures/queue/deploy/**`; reuse `tests/fixtures/verify-deploy/**` |
+| Deploy verdicts | verified with evidence, unknown (never ran / stale), failed with step, unreadable trace, read-budget overflow, producer-root discovery across repositories (match, no match, collision), producer-config binding, missing/unreadable/invalid producer config | `tests/fixtures/queue/deploy/**`; reuse `tests/fixtures/verify-deploy/**` |
 | Economics | restart counts, restart-loop amplification, missing-unique-progress warning, underivable value | `tests/fixtures/queue/economics/**`; reuse `tests/fixtures/economics/**` |
 | Precedence corpus | generated mix of every gate, class, weight, park type, dependency role, priority and tie-break, in multiple input orders | `tests/fixtures/queue/precedence/**` |
 | State ledgers | one seed per new kind, verified-empty store, wrong-kind/malformed record, torn tail, unreadable key | `tests/fixtures/queue/state/**` |
@@ -2041,6 +2132,7 @@ All scenarios are **To Implement** in this change except where an existing suite
 | TC-PARK-005 | `tests/behaviour/queue-park.test.ts` | `bun test tests/behaviour/queue-park.test.ts` | To Implement |
 | TC-PARK-006 | `tests/behaviour/queue-park.test.ts` | `bun test tests/behaviour/queue-park.test.ts` | To Implement |
 | TC-PARK-007 | `tests/behaviour/queue-park.test.ts` | `bun test tests/behaviour/queue-park.test.ts` | To Implement |
+| TC-PARK-008 | `tests/behaviour/queue-park.test.ts`, `tests/behaviour/queue-cli.test.ts`, `tests/fixtures/queue/parks/stuck-not-next-action/**` | `bun test tests/behaviour/queue-park.test.ts tests/behaviour/queue-cli.test.ts` | To Implement |
 | TC-LANES-001 | `tests/behaviour/lanes.test.ts`, `tests/golden/lanes-list.test.ts` | `bun test tests/behaviour/lanes.test.ts tests/golden` | To Implement |
 | TC-LANES-002 | `tests/behaviour/lanes.test.ts`, `tests/golden/lanes-show.test.ts` | `bun test tests/behaviour/lanes.test.ts tests/golden` | To Implement |
 | TC-LANES-003 | `tests/behaviour/lanes.test.ts` | `bun test tests/behaviour/lanes.test.ts` | To Implement |
@@ -2055,15 +2147,47 @@ All scenarios are **To Implement** in this change except where an existing suite
 | TC-VOCAB-006 | `tests/checks/queue-hermetic.test.ts`, `tests/checks/secret-read-boundary.test.ts` | `bun test tests/checks/queue-hermetic.test.ts tests/checks/secret-read-boundary.test.ts` | Existing — Update |
 | TC-COMPAT-001 | `tests/behaviour/queue-ready-*.test.ts`, `tests/golden/queue-ready.test.ts` | `bun test tests/behaviour/queue-ready-output.test.ts tests/golden` | Existing — Extend |
 
-**Implementation-order mapping** (per spec §18; reconcile with `chg-GH-237-plan.yaml` at phase 4):
+### 7.1 Phase-surface split (R-06)
 
-1. Configuration branch and record-kind vocabulary → TC-VOCAB-001, 003, 004, 005; TC-LEASE-007; TC-PARK-006.
-2. Declaration and graph folding → TC-SCHED-001, 002, 015.
-3. Readiness, gates, precedence, ranking → TC-SCHED-003..007, 011..013; TC-WEIGHT-002; TC-DEPEND-001, 002, 006; TC-RANK-001, 002, 006.
-4. Leases, claim, release → TC-LEASE-001..006, 008..013; TC-WEIGHT-001, 003, 004; TC-SCHED-010.
-5. Parks, incidents, stuck finding → TC-PARK-001..007; TC-RANK-003, 004; TC-DEPEND-003..005.
-6. Lane view and surfaces → TC-LANES-001..006; TC-SCHED-008, 009, 016.
-7. Documentation reconciliation and cross-cutting gates → TC-VOCAB-002, 006; TC-COMPAT-001; TC-SCHED-014.
+**Rule.** Pure domain/state assertions land in the phase that owns the policy. CLI grammar, envelope shape, `result=`, `selectedRef`, `degraded[]`, and exit-projection assertions complete only where the command family lands: the **queue** family in plan Phase 7, the **lanes** family in plan Phase 6. A TC that spans both surfaces is **partial** in the earlier phase and must not be marked "full" before the command exists; the earlier phase's test gate runs only the rows it can actually exercise. No assertion is weakened by the split — each half is still required, just at its real surface.
+
+| TC ID | Domain/state rows land in | CLI grammar/envelope/exit rows complete in | Split note |
+|---|---|---|---|
+| TC-SCHED-004 | Phase 3 | Phase 7 | readiness and read projection; `queue plan/list` invocation and reason projection |
+| TC-SCHED-012 | Phase 3 (queue) / Phase 6 (lanes) | Phase 7 (queue) / Phase 6 (lanes) | read purity at the domain fold; command-level zero-write rows at the command families |
+| TC-RANK-001 | Phase 3 | Phase 7 | ordering rows in Phase 3; `queue plan --next 2` and goldens in Phase 7 |
+| TC-RANK-005 | Phase 3 (selection) / Phase 4 (claim enforcement) | Phase 7 | `selectedRef` and `no-eligible-action` envelope/exit rows |
+| TC-LEASE-001 | Phase 4 | Phase 7 | single-flight state; `queue plan/list/claim` envelopes |
+| TC-LEASE-002 | Phase 4 | Phase 7 | concurrency state; `result=` and exit-projection rows |
+| TC-LEASE-004 | Phase 4 | Phase 7 | store/verification state; the `result=claimed` projection row |
+| TC-LEASE-005 | Phase 4 | Phase 7 | conflict identity/evidence; golden and text-mode exit rows |
+| TC-LEASE-006 | Phase 4 | Phase 7 | claim `state.*`; `queue list/plan` exit-2 rows |
+| TC-LEASE-010 | Phase 4 | Phase 7 | release state/idempotence; `result=noop` and `degraded[]` |
+| TC-LEASE-011 | Phases 4–5 | Phase 7 | holder refusal and release+park state; `--park` grammar and exit rows |
+| TC-LEASE-012 | Phase 4 | Phase 7 | precondition reasons; claim exit/envelope |
+| TC-LEASE-013 | Phase 4 | Phase 7 | renewal state; `result=renewed` envelope |
+| TC-WEIGHT-004 | Phase 4 | Phase 7 | weight-cap state; claim exit/reason envelope |
+| TC-SCHED-010 | Phase 4 | Phase 7 | plan→claim→release domain path; full CLI e2e |
+| TC-PARK-001 | Phase 5 | Phase 7 | park resume/incident state; `queue claim` mutating-pass CLI |
+| TC-PARK-002 | Phase 5 | Phase 7 | stuck finding/refusal state; `queue list/plan/claim` envelopes and exits |
+| TC-PARK-007 | Phase 5 | Phase 7 | unreadable park state; `queue list/plan/claim` exit-2 rows |
+| TC-RANK-004 | Phase 5 | Phase 7 | release+park state; `queue release --park` envelope/exit |
+| TC-PARK-008 | Phase 5 | Phase 7 | hard exclusion and claim-refusal policy; reads/claim envelope rows |
+
+The same rule applies to Phase 2 command rows: TC-SCHED-002's CLI `result=noop` half is already assigned to Phase 7 by the plan, and TC-SCHED-015's `queue add`/`queue list` rows complete there too when the family exists.
+
+### 7.2 Implementation-order mapping (plan phases 1–8)
+
+Reconciled with `chg-GH-237-plan.yaml`; the plan is the sequencing authority and this section names only what each phase can prove.
+
+1. **Plan Phase 1 — vocabulary, typed configuration, error identities** → TC-VOCAB-001 structure rows, TC-VOCAB-002, TC-VOCAB-003 structure/sync rows, TC-VOCAB-004, TC-VOCAB-005; TC-LEASE-007 config half; TC-PARK-006 config half.
+2. **Plan Phase 2 — declaration and graph folding** → TC-SCHED-001, TC-SCHED-002 state/graph half, TC-SCHED-015; TC-VOCAB-001 entry/dependency round-trip.
+3. **Plan Phase 3 — readiness, gates, precedence, ranking** → TC-SCHED-003..007, TC-SCHED-011, TC-SCHED-012 queue half, TC-SCHED-013 determinism rows; TC-WEIGHT-001 scheduling half, TC-WEIGHT-002; TC-DEPEND-001..006; TC-RANK-001 behaviour rows, TC-RANK-002, TC-RANK-003, TC-RANK-005 selection rows, TC-RANK-006.
+4. **Plan Phase 4 — leases, claim, release** → TC-LEASE-001..006, TC-LEASE-007 completes, TC-LEASE-008..013; TC-WEIGHT-001 completes, TC-WEIGHT-003, TC-WEIGHT-004; TC-SCHED-010 domain half; TC-RANK-005 claim rows.
+5. **Plan Phase 5 — parks, incidents, stuck finding** → TC-PARK-001..008; TC-RANK-003 re-asserted, TC-RANK-004; TC-LEASE-011 release+park half; TC-VOCAB-001 lease/park/incident round-trip.
+6. **Plan Phase 6 — lane view** → TC-LANES-001..006; TC-SCHED-012 lanes half; TC-VOCAB-003 lanes/exit-2 half.
+7. **Plan Phase 7 — queue command family, envelopes, exits, hermetic battery** → TC-SCHED-002 CLI half, TC-SCHED-008, TC-SCHED-009, TC-SCHED-010 CLI e2e, TC-SCHED-014, TC-SCHED-016; TC-LEASE-005 golden half, TC-LEASE-006/010/011/012/013 command rows; TC-WEIGHT-004 command rows; TC-RANK-001 golden half, TC-RANK-004 command rows, TC-RANK-005 envelope rows; TC-PARK-001/002/007/008 command rows; TC-VOCAB-006; TC-COMPAT-001.
+8. **Plan Phase 8 — documentation reconciliation and aggregate gate** → TC-VOCAB-002 documented-table direction and TC-COMPAT-001 byte-identical corpus re-verified after docs edits; all 66 TCs gate through `pnpm check`. No new TC in this phase.
 
 **Mocking/injection requirements**: no `mock.module`; inject fakes for clock, fence/state transport, provider reads, deploy reads, economics input, and repository binding. The concurrency suite uses the scheduled fence harness, never real OS concurrency. Tests that need a lease conflict assert the operation log, not wall-clock timing. Tests that need a golden consume normalized output and fail naming a missing fixture rather than skipping.
 
@@ -2074,14 +2198,15 @@ All scenarios are **To Implement** in this change except where an existing suite
 - **T-RSK-1 — Concurrency is algorithmic, not OS-level (RSK-1; GAP-T3)**: the fence harness proves the in-fence re-read and single-writer serialization under a forced interleaving, not real multi-process memory races. Mitigation: TC-LEASE-002 asserts the operation order and post-append verification; TC-LEASE-004 asserts the refusal paths with injected stores; review confirms the fence is held for the write duration only.
 - **T-RSK-2 — "Configuration-only" is structural (NFR-10)**: TC-LEASE-007 and TC-PARK-006 change fixtures only, not source. Mitigation: each pair differs only in configuration and provenance reports the changed value; review confirms no source diff accompanies the behaviour change.
 - **T-RSK-3 — Performance bound is environment-sensitive (NFR-6; GAP-T6)**: the 250 ms bound depends on the runner. Mitigation: warm-up, committed baseline, recorded measurement, and structural budget assertions that are environment-independent.
-- **T-RSK-4 — Stuck-park storage seam is pinned (C-3; formerly GAP-T4/OQ-T4)**: the durable `clear-observed` marker is a `queue.park` record (`delivery.queue.park.v1`, key `queue.parks:<REF>`, fields `clearObservedAt`, `recoveryState`) appended by a mutating pass before recovery; a later `recovered` record supersedes it and reads never append. Mitigation: TC-PARK-002 seeds that exact record, asserts the marker precedes recovery, and asserts it survives a refused recovery. No open question remains.
+- **T-RSK-4 — Stuck-park storage seam is pinned (C-3; formerly GAP-T4/OQ-T4)**: the durable `clear-observed` marker is a `queue.park` record (`delivery.queue.park.v1`, key `queue.parks:<REF>`, fields `clearObservedAt`, `recoveryState`) appended by a mutating pass before recovery; a later `recovered` record supersedes it and reads never append. Mitigation: TC-PARK-002 seeds that exact record, asserts the marker precedes recovery, and asserts it survives a refused recovery; TC-PARK-008 proves the stuck park is a hard exclusion (never `resume-parked`, never in `nextActions`, never selected by a no-ref claim) with a zero-append claim refusal. No open question remains.
 - **T-RSK-5 — Lane idle-reason names are delivery-bound (GAP-T5)**: the closed set's exact strings are not enumerated. Mitigation: TC-LANES-001 asserts membership in the declared set and absence of free-form text, not specific spellings.
 - **T-RSK-6 — Delivery-bound names and locations (GAP-T7)**: module paths, record kinds, schema strings, error ids, and fixture names may be chosen in delivery. Mitigation: tests resolve seams through delivered contracts and fail naming a missing contract; behaviours, AC traces, and IDs remain pinned.
 - **T-RSK-7 — Provider/deploy fixtures are committed approximations (RSK-4, GAP-T2)**: live-shape drift will not fail CI. Mitigation: normalization is defensive, every malformed class holds or fails closed, and a missing fixture fails loudly.
 - **T-RSK-8 — Read-surface exit projection is pinned (C-1, C-7, AC-F10-3)**: `queue list`/`queue plan` exit 2 with the classified `state.*` identity and bounded evidence when lease or park history is unreadable/torn/unknown-kind, presenting no `data` sibling, partial view, or empty view as a schedule; a readable stuck park remains report-only at exit 0. Mitigation: TC-LEASE-006, TC-PARK-007, TC-SCHED-009, and TC-SCHED-016 assert both sides of the distinction and zero writes.
-- **T-RSK-9 — AC-F3-1 is split (C-2)**: (a) read-only projection shows exactly one eligible action per repository and names `lease-held` with holder/lease evidence once a lease exists; (b) mutating claims acquire exactly one `repo-exclusive` holder and refuse the rest with `queue.lease-conflict`. Mitigation: TC-LEASE-001 proves (a) and (b), TC-SCHED-004 proves the readiness/evidence side, and TC-LEASE-002 proves concurrent enforcement.
-- **T-RSK-10 — No-ref claim selection is pinned (C-4, AC-F4-3)**: `queue claim` without a ref selects the top-ranked eligible action deterministically and names `selectedRef`; no eligible action refuses `queue.precondition.unmet` with reason `no-eligible-action` at exit 1 and zero appends. Mitigation: TC-RANK-005 step 5 asserts selection, determinism, and the empty-case refusal.
-- **T-RSK-11 — Deploy expectations are producer-bound (C-6, AC-F6-2)**: expectations resolve from the producer repository's own config bound to its recorded key; a missing, unreadable, or invalid producer config is `unknown` and holds the dependent `deploy-unverified`, never `not-declared` or `verified`. Mitigation: TC-DEPEND-003/004 assert the multi-repository discrimination and the fail-closed producer-config cases.
+- **T-RSK-9 — AC-F3-1 is split (C-2)**: (a) read-only projection shows exactly one eligible action per repository, holds the remainder `repo-claimed-in-pass` before any lease exists, and names `lease-held` with holder/lease evidence once a lease exists; (b) mutating claims acquire exactly one `repo-exclusive` holder and refuse the rest with `queue.lease-conflict`, never `queue.precondition.unmet` for repository exclusivity. Mitigation: TC-LEASE-001 proves (a) and (b), TC-SCHED-004 proves the readiness/evidence and `repo-claimed-in-pass` side, and TC-LEASE-002 proves concurrent enforcement.
+- **T-RSK-10 — No-ref claim selection is pinned (C-4, AC-F4-3)**: `queue claim` without a ref selects the top-ranked eligible action deterministically and names `selectedRef`; no eligible action refuses `queue.precondition.unmet` with reason `no-eligible-action` at exit 1 and zero appends; a stuck park is never a selectable candidate. Mitigation: TC-RANK-005 step 5 asserts selection, determinism, the empty-case refusal, and the stuck-park exclusion; TC-PARK-008 proves the exclusion end to end.
+- **T-RSK-11 — Deploy expectations are producer-bound (C-6, AC-F6-2)**: expectations resolve from the producer repository's own config bound to its recorded key, discovered only from entry-recorded roots whose normalized remote exactly matches that key; no matching root, a two-root collision, or a missing, unreadable, or invalid matched config is `unknown` and holds the dependent `deploy-unverified`, never `not-declared` or `verified`, and the invocation's root is never substituted. Mitigation: TC-DEPEND-003/004 assert the multi-repository discrimination, the no-match and collision cases, and the fail-closed producer-config cases.
+- **T-RSK-12 — Phase-surface split (R-06)**: the queue command family lands in plan Phase 7, so Phases 3–5 can prove only domain/state rows; asserting CLI envelopes or exits earlier would require undeclared front-loading. Mitigation: §7.1 marks every affected TC partial with the completing phase, each phase's gate names only the rows it can run, and no assertion is dropped — the CLI half is still required in Phase 7.
 
 ### 8.2 Assumptions
 
@@ -2097,7 +2222,9 @@ All scenarios are **To Implement** in this change except where an existing suite
 
 ### 8.3 Open Questions and Findings
 
-All contract findings surfaced by v1.0 of this plan are resolved by spec v1.1 §5.2 (C-1..C-7); one delivery-bound naming question remains open.
+All contract findings surfaced by v1.0 of this plan are resolved by spec v1.1 §5.2 (C-1..C-7) and the DoR iteration-1 findings are resolved by spec v1.2 plus this plan's v1.2 remediation; one delivery-bound naming question remains open.
+
+**DoR iteration-1 remediation note (2026-11-07).** Addressed in this test plan: **R-04** (stuck park is not a next action — TC-PARK-008), **R-06** (phase-surface split — §7.1 and 20 partial TC marks), **R-07** (50 distinct holders — TC-LEASE-002), **R-16** (TC-LANES-002 step-4 typo). Spec-side R-01/R-02/R-03/R-05/R-09/R-10 are reflected in the aligned TC assertions and coverage rows; R-08 and R-11 are spec/PM-record dispositions with no test-assertion change; the spec is the authority for those changes.
 
 | ID | Question / Finding | Disposition (2026-11-07) | Owner |
 |----|--------------------|--------------------------|-------|
@@ -2107,7 +2234,11 @@ All contract findings surfaced by v1.0 of this plan are resolved by spec v1.1 §
 | OQ-T4 | Durable location of a prior-pass "observed clear" park fact. | **Resolved** — durable `clear-observed` `queue.park` record (`delivery.queue.park.v1`, key `queue.parks:<REF>`, `clearObservedAt`, `recoveryState`) appended before recovery and superseded by `recovered` (C-3, DM-5, EVT-4, Appendix D). | spec v1.1 |
 | OQ-T5 | No-ref `queue claim` selection rule. | **Resolved** — top-ranked eligible action under Appendix B, deterministic, selected ref named in the envelope; no eligible action refuses `queue.precondition.unmet`, reason `no-eligible-action`, exit 1, zero appends (C-4, AC-F4-3, DEC-12). | spec v1.1 |
 | OQ-T6 | Weight resolution when the plan is invalid, unreadable, or absent. | **Resolved** — `heavy` with `plan-unreadable`/`plan-absent` evidence, never `standard`; an invalid/unreadable plan also holds `tier-known` unknown (C-5, AC-F5-2, DEC-10). | spec v1.1 |
-| OQ-T7 | Deploy-expectation resolution scope in a multi-repository state directory. | **Resolved** — producer repository's own configuration bound to its recorded repository key; missing/unreadable/invalid → `unknown`, dependent holds `deploy-unverified` (C-6, AC-F6-2, DEC-13). | spec v1.1 |
+| OQ-T7 | Deploy-expectation resolution scope in a multi-repository state directory. | **Resolved** — producer repository's own configuration bound to its recorded repository key through the entry-recorded root; no match/collision/missing/unreadable/invalid → `unknown`, dependent holds `deploy-unverified` (C-6, DM-12, AC-F6-2, DEC-13). | spec v1.2 |
+| OQ-T9 (DoR R-04) | What is a stuck park's schedule status, and can a no-ref claim select it? | **Resolved** — Appendix B step 7b makes it a hard exclusion carrying `park-condition-stuck`, never `resume-parked`, never in `nextActions`, never selected by a no-ref claim; a claim refuses at exit 1 with zero appends (F-7, F-8, AC-F8-1). TC-PARK-008 added. | spec v1.2 / test plan v1.2 |
+| OQ-T10 (DoR R-06) | Which Phase 3–5 TCs can be "full" before the `queue` command family lands in Phase 7? | **Resolved** — none that assert CLI grammar/envelope/exit rows; §7.1 marks the affected TCs partial and names the completing phase. No assertion is weakened. | test plan v1.2 |
+| OQ-T11 (DoR R-07) | Is "50 claims → 1 acquire / 49 refuse" satisfiable with alternating holders? | **Resolved** — no; a repeat claim by the winner renews. TC-LEASE-002 now pins 50 distinct holders → 1 acquire / 0 renew / 49 `queue.lease-conflict`. NFR-3's unqualified wording is reported to the spec owner (the spec is not edited here). | test plan v1.2 |
+| OQ-T12 (DoR R-16) | Typo in TC-LANES-002 step 4. | **Resolved** — "Assert no synthetic `L` ordinal identity is produced." | test plan v1.2 |
 | OQ-T8 | Exact lane idle-reason strings and the final module/record/error names (GAP-T5, GAP-T7). | **Open** — delivery-bound naming; fixtures use declared names and renames are contract changes, not test changes. | delivery / naming lock |
 
 ## 9. Plan Revision Log
@@ -2116,6 +2247,7 @@ All contract findings surfaced by v1.0 of this plan are resolved by spec v1.1 §
 |---------|------|--------|---------|
 | 1.0 | 2026-11-07 | test-plan-writer | Initial plan from `chg-GH-237-spec.md` v1.0, `chg-GH-237-pm-notes.yaml`, the M1 design pack, the six seeded scenarios (SC-M1-08/09/10/11/17/17b), and the delivered queue-ready/state/plan/verify-deploy/economics/config/provider/result precedents. 65 TCs; all 18 ACs traced; all 14 NFRs traced; six explicit spec ambiguities recorded as findings rather than lowered assertions. |
 | 1.1 | 2026-11-07 | test-plan-writer | **Amendment reconciliation against spec v1.1** (§5.2 C-1..C-7). Pinned read-surface fail-closed exit 2 and the report-only readable-stuck exception (AC-F10-3) in TC-LEASE-006, TC-PARK-007, TC-SCHED-009, TC-SCHED-016; deterministic no-ref claim selection and `no-eligible-action` refusal (AC-F4-3) in TC-RANK-005; unreadable/absent-plan weight → `heavy` (AC-F5-2) in TC-WEIGHT-002; producer-bound deploy expectations (AC-F6-2) in TC-DEPEND-003/004; durable `clear-observed` park marker (C-3) in TC-PARK-002; AC-F3-1(a)/(b) split in TC-LEASE-001/TC-SCHED-004. Coverage table now 22 ACs (18 prior + 4 added: AC-F4-3, AC-F5-2, AC-F6-2, AC-F10-3), zero gaps; OQ-T1..OQ-T7 resolved, OQ-T8 retained. TC count unchanged at 65. Hermetic fixture-driven concurrency and the M1-S9/M1-S18 exclusions preserved. |
+| 1.2 | 2026-11-07 | test-plan-writer | **DoR iteration-1 remediation and spec v1.2 reconciliation.** R-07: TC-LEASE-002 now seeds 50 **distinct** holders, asserting exactly 1 acquisition, 0 renewals, and 49 `queue.lease-conflict` refusals, plus a same-holder renewal control; NFR-3's unqualified "1 acquires and 49 refuse" is reported to the spec owner, not silently weakened. R-06: added §7.1 phase-surface split; 20 TCs spanning Phases 3–5 are marked partial with their CLI grammar/envelope/`result=`/`selectedRef`/`degraded[]`/exit rows completing in plan Phase 7 (lanes rows in Phase 6). R-04: added TC-PARK-008 proving a stuck park is never `resume-parked`, never in `nextActions`, never selected by a no-ref claim, and refuses a claim at exit 1 with zero appends; added to coverage, index, details, automation mapping, and fixture corpus. Spec v1.2 alignment: `repo-claimed-in-pass` distinguished from `lease-held` (TC-SCHED-004/TC-LEASE-001); the distinct park cause/condition-type sets and one-to-one pairing (TC-PARK-004/TC-LEASE-011/TC-RANK-004); two-stage claim with `repo-free` excluded pre-fence (TC-LEASE-005/TC-LEASE-012); producer-root discovery and collision → `unknown` (TC-DEPEND-003/004); edge to a non-entry ref → `dependency-unobserved` (TC-SCHED-001/TC-DEPEND-001); AC-F8-1 interval scoping and no-engine gap case (TC-PARK-001/TC-PARK-005). R-16: corrected the TC-LANES-002 step-4 typo. Privacy-literal guard: replaced the committed credential-bearing connection-string literal with the non-credential placeholder `https://user:redacted@github.com/Owner/Repo`; `pnpm check:privacy-literals` passes for this file. TC count 65 → 66; all 22 ACs and 14 NFRs remain traced; M1-S9/M1-S18 exclusions unchanged. |
 
 ## 10. Test Execution Log
 
@@ -2124,3 +2256,4 @@ Populated during delivery and quality gates. No execution has occurred at author
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
 | — | — | NOT RUN | Plan authored; delivery has not started. |
+| — (authoring gate) | 2026-11-07 | PASS | `pnpm check:privacy-literals` exit 0, 2 691 files scanned, 0 violations; the test plan's connection-string literal was sanitized to the placeholder `https://user:redacted@github.com/Owner/Repo`. |
