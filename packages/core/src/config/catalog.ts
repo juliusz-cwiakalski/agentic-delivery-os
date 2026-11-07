@@ -108,6 +108,97 @@ const PROVIDER_CHAIN_VALUE = {
 } as const satisfies CatalogField;
 
 /**
+ * The typed `provider.profiles` branch (GH-234 F-1, DM-1..DM-5).
+ *
+ * Dynamic-name maps use the `record` field kind (tiers, profiles, rungs, watch
+ * targets); lists replace whole (preference chain, goal priorities); fixed
+ * subshapes keep exact unknown-key discipline. The branch ships empty by
+ * default (DEC-9), so a fresh installation declares nothing and fails closed.
+ */
+const PROVIDER_PROFILE_SEAT = {
+  type: "object",
+  required: true,
+  fields: {
+    model: { type: "string", required: true },
+    pacingClass: { type: "string", required: true },
+    capability: { type: "string", required: true },
+    envName: { type: "string" },
+  },
+} as const satisfies CatalogField;
+
+const PROVIDER_PROFILE_VALUE = {
+  type: "object",
+  required: true,
+  fields: {
+    tier: { type: "string", required: true },
+    providers: { type: "array", items: { type: "string" }, required: true },
+    seats: { type: "record", value: PROVIDER_PROFILE_SEAT, required: true },
+    agentOverrides: { type: "record", value: { type: "string" } },
+  },
+} as const satisfies CatalogField;
+
+const PROVIDER_PACING_RUNG = {
+  type: "object",
+  required: true,
+  fields: {
+    thresholdPercent: { type: "number", required: true },
+    executionModel: { type: "string", required: true },
+  },
+} as const satisfies CatalogField;
+
+const PROVIDER_WATCH_TARGET = {
+  type: "object",
+  required: true,
+  fields: {
+    mapping: { type: "string", required: true },
+    endpoint: { type: "string", required: true },
+    credentialRef: { type: "string", required: true },
+    floor: { type: "number" },
+    thresholdPercent: { type: "number" },
+  },
+} as const satisfies CatalogField;
+
+const PROVIDER_PROFILES = {
+  type: "object",
+  fields: {
+    tiers: {
+      type: "record",
+      value: {
+        type: "object",
+        fields: { description: { type: "string" } },
+      },
+    },
+    profiles: { type: "record", value: PROVIDER_PROFILE_VALUE },
+    preferenceChain: {
+      type: "object",
+      fields: {
+        base: { type: "string", required: true },
+        fallbacks: { type: "array", items: { type: "string" } },
+      },
+    },
+    pacing: {
+      type: "object",
+      fields: {
+        goalPriorities: { type: "array", items: { type: "string" } },
+        tailThresholdPercent: { type: "number" },
+        rungs: { type: "record", value: PROVIDER_PACING_RUNG },
+      },
+    },
+    watch: { type: "record", value: PROVIDER_WATCH_TARGET },
+    envRecord: {
+      type: "object",
+      fields: {
+        header: { type: "string" },
+        namePattern: { type: "string" },
+        maxBytes: { type: "number" },
+        maxLineBytes: { type: "number" },
+        maxRecords: { type: "number" },
+      },
+    },
+  },
+} as const satisfies CatalogField;
+
+/**
  * One declared gate entry (GH-225 DM-4). The closed recipe vocabulary and the
  * mandatory-built-in / reserved-id rules are semantic and validated by the
  * merge domain; this schema pins the entry shape.
@@ -211,6 +302,7 @@ export const PRODUCTION_CATALOG = {
       credentials: { type: "record", value: PROVIDER_CREDENTIAL_VALUE },
       entries: { type: "record", value: PROVIDER_ENTRY_VALUE },
       chains: { type: "record", value: PROVIDER_CHAIN_VALUE },
+      profiles: PROVIDER_PROFILES,
     },
   },
   commit: {

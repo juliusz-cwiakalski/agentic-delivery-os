@@ -58,11 +58,18 @@ export {
   type QuotaNormalizationFailure,
 } from "./quota.js";
 export {
-  type ProviderChainSelection,
-  type ProviderConfigResult,
-  type ProviderValidationError,
+  emptyProfileConfiguration,
+  parseAndValidateProfileConfiguration,
+  parseProfileConfiguration,
   parseAndValidateProviderConfiguration,
   parseProviderConfiguration,
   selectProviderChain,
+  validateProfileConfiguration,
   validateProviderConfiguration,
+  type ProfileConfigResult,
+  type ProfileValidationError,
+  type ProfileValidationErrorCode,
+  type ProviderChainSelection,
+  type ProviderConfigResult,
+  type ProviderValidationError,
 } from "./validate.js";

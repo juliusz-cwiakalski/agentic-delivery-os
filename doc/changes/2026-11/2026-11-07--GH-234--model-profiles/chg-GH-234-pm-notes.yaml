@@ -55,3 +55,6 @@ notes:
   - text: "Plan phase 1 complete (commit hash recorded in the next ledger entry; a commit cannot contain its own hash): provider-profile contract module, additive provider watch mapping-kind closed set, eight additive provider.profile.*/provider.env-record.* error identities with documented-table rows, contract inventory fixture + structure/type tests. Gates green: pnpm typecheck (all packages + tests/types); provider-profile-contract/provider-contract/error-table/content-inventory 84 pass / 0 fail; error-table-sync 91 entries documented 91, OK."
     type: "info"
     date: "2026-11-07"
+  - text: "Plan phase 2 complete (phase-1 commit cb8c4285): typed provider.profiles catalog branch (tiers/profiles/seats/preferenceChain/pacing/watch/envRecord) using record field kinds, shipped empty by DEFAULT (DEC-9), and pure fail-closed parse/validate in provider/validate.ts (unknown refs, duplicate chain/priority, closed pacingClass/capability, 0..100 thresholds, watch credential refs). Gates green: pnpm typecheck; provider-profile-config 18 pass, config-schema/provider-contract 21 pass, packed-config/config-default-positions 9 pass; content-inventory 6 pass."
+    type: "info"
+    date: "2026-11-07"

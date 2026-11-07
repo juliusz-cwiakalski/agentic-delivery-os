@@ -972,9 +972,13 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "normalizeQuotaEnvelopeResult",
   ],
   "core/src/provider/validate.ts": [
+    "emptyProfileConfiguration",
+    "parseAndValidateProfileConfiguration",
     "parseAndValidateProviderConfiguration",
+    "parseProfileConfiguration",
     "parseProviderConfiguration",
     "selectProviderChain",
+    "validateProfileConfiguration",
     "validateProviderConfiguration",
   ],
   "core/src/contracts/config.ts": ["CONFIG_LAYERS"],
