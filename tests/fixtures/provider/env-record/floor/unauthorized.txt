@@ -1,0 +1,2 @@
+# model-env data-v1
+set SECRET_TOKEN=value

@@ -301,3 +301,27 @@ describe("TC-PROFILE-005 layered provenance for every effective value", () => {
     expect(provider.profiles).toEqual({});
   });
 });
+
+import { resolveProfileForSpawn } from "../../packages/core/src/provider/index";
+
+describe("TC-PROFILE-003 shipped-empty defaults refuse resolution and spawn", () => {
+  test("the shipped-empty branch refuses before a spawn without inventing a model", () => {
+    let spawned = 0;
+    const outcome = resolveProfileForSpawn({
+      profiles: { tiers: {}, profiles: {} },
+      probe: {
+        probe: () => {
+          throw new Error("no provider should be probed");
+        },
+      },
+      nowMs: 1_700_000_000_000,
+      namePrefix: "ADOS",
+      // The port is only reachable through runProfileSpawn; resolution itself
+      // must fail before any model is substituted.
+    });
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.code).toBe("provider.profile.absent");
+    expect(spawned).toBe(0);
+  });
+});

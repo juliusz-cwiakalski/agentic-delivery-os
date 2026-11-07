@@ -973,9 +973,18 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "familyDiversityAllowed",
     "profileEventIdentity",
     "projectProfileEvidence",
+    "resolveProfileForSpawn",
+    "runProfileSpawn",
     "scoreProfileTask",
     "selectProfile",
     "targetSeatName",
+  ],
+  "core/src/provider/profile-env-record.ts": [
+    "buildProfileEnvRecord",
+    "envRecordNameForSeat",
+    "resolveEnvRecordPolicy",
+    "serializeEnvRecord",
+    "validateEnvRecord",
   ],
   "core/src/provider/profile-pacing.ts": [
     "activeRung",

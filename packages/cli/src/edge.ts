@@ -149,11 +149,18 @@ import {
   type WorkItem,
 } from "@delivery-os/core/contracts";
 import {
+  createProfileProbePort,
   createProviderEngine,
+  createProviderWatchStatus,
+  evaluatePeakWindow,
+  parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
   readProviderLedger,
   readProviderParkViews,
+  resolveProfileForSpawn,
+  selectProfile,
 } from "@delivery-os/core/provider";
+import { createProviderWatchMappings } from "@delivery-os/adapters/provider-quota";
 import {
   appendAuditInvocation,
   appendCloseoutOutcome,
@@ -2312,6 +2319,158 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
         });
       },
       parks: (input) => engine.parks(input),
+      profileResolve: async (input) => {
+        const snapshot = resolve({});
+        if (!snapshot.ok) {
+          return {
+            ok: false,
+            code: snapshot.error.code,
+            summary: `configuration rejected (${snapshot.error.code})`,
+          };
+        }
+        const providerParsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
+        if (!providerParsed.ok) {
+          return {
+            ok: false,
+            code: providerParsed.error.code,
+            summary: providerParsed.error.detail,
+          };
+        }
+        const profileParsed = parseAndValidateProfileConfiguration(
+          snapshot.value.config.values,
+          providerParsed.config,
+        );
+        if (!profileParsed.ok) {
+          return {
+            ok: false,
+            code: profileParsed.error.code,
+            summary: profileParsed.error.detail,
+          };
+        }
+        const nowMs = provider.clock.nowMs();
+        const probe = createProfileProbePort((providerName) => {
+          const descriptor = providerParsed.config.entries[providerName];
+          if (descriptor === undefined) {
+            return {
+              available: false,
+              condition: "provider-outage",
+              blockers: [
+                {
+                  kind: "condition",
+                  value: "provider-outage",
+                  detail: `provider ${providerName} is not declared`,
+                },
+              ],
+              source: `provider ${providerName}: undeclared`,
+            };
+          }
+          if (!descriptor.enabled) {
+            return {
+              available: false,
+              condition: "disabled",
+              blockers: [
+                {
+                  kind: "condition",
+                  value: "disabled",
+                  detail: `provider ${providerName} is disabled`,
+                },
+              ],
+              source: `provider ${providerName}: disabled`,
+            };
+          }
+          if (descriptor.peak !== undefined) {
+            const peak = evaluatePeakWindow(descriptor.peak, nowMs);
+            if (peak.status === "parked") {
+              return {
+                available: false,
+                condition: "peak-window",
+                blockers: [
+                  {
+                    kind: "condition",
+                    value: "peak-window",
+                    detail: `provider ${providerName}: peak window active`,
+                  },
+                ],
+                source: `provider ${providerName}: peak window`,
+              };
+            }
+          }
+          return {
+            available: true,
+            condition: "clear",
+            blockers: [],
+            source: `provider ${providerName}: clear`,
+          };
+        });
+        if (input.forSpawn === true) {
+          const outcome = resolveProfileForSpawn({
+            profiles: profileParsed.config,
+            probe,
+            nowMs,
+            namePrefix: input.namePrefix ?? "",
+            ...(input.agent === undefined ? {} : { agent: input.agent }),
+            ...(profileParsed.config.envRecord === undefined
+              ? {}
+              : { policy: profileParsed.config.envRecord }),
+          });
+          if (!outcome.ok) {
+            return {
+              ok: false,
+              code: outcome.code,
+              summary: outcome.summary,
+              eligibility: outcome.eligibility,
+              events: outcome.events,
+            };
+          }
+          return outcome.selection;
+        }
+        return selectProfile({
+          profiles: profileParsed.config,
+          probe,
+          nowMs,
+          ...(input.agent === undefined ? {} : { agent: input.agent }),
+        });
+      },
+      watchStatus: async (input) => {
+        const snapshot = resolve({});
+        if (!snapshot.ok) {
+          return {
+            ok: false,
+            code: snapshot.error.code,
+            summary: `configuration rejected (${snapshot.error.code})`,
+          };
+        }
+        const providerParsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
+        if (!providerParsed.ok) {
+          return {
+            ok: false,
+            code: providerParsed.error.code,
+            summary: providerParsed.error.detail,
+          };
+        }
+        const profileParsed = parseAndValidateProfileConfiguration(
+          snapshot.value.config.values,
+          providerParsed.config,
+        );
+        if (!profileParsed.ok) {
+          return {
+            ok: false,
+            code: profileParsed.error.code,
+            summary: profileParsed.error.detail,
+          };
+        }
+        const reader = createProviderWatchStatus({
+          clock: provider.clock,
+          credentialPort: provider.credentialPort,
+          transport: provider.transport,
+          mappings: createProviderWatchMappings(),
+        });
+        return reader.status({
+          targets: profileParsed.config.watch ?? {},
+          credentials: providerParsed.config.credentials,
+          ...(input.providerName === undefined ? {} : { providerName: input.providerName }),
+        });
+      },
     };
     commands.provider = createProviderCommandDefinition(providerRuntime);
   }

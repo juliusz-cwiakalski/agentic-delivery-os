@@ -32,6 +32,8 @@ export {
   familyDiversityAllowed,
   profileEventIdentity,
   projectProfileEvidence,
+  resolveProfileForSpawn,
+  runProfileSpawn,
   scoreProfileTask,
   selectProfile,
   targetSeatName,
@@ -39,8 +41,24 @@ export {
   type ProfileHeuristicPolicy,
   type ProfileSelectionInput,
   type ProfileSelectionOptions,
+  type ProfileSpawnInput,
+  type ProfileSpawnOutcome,
+  type ProfileSpawnPort,
+  type ProfileSpawnRunInput,
   type ProfileTaskFacts,
 } from "./profile.js";
+export {
+  buildProfileEnvRecord,
+  envRecordNameForSeat,
+  resolveEnvRecordPolicy,
+  serializeEnvRecord,
+  validateEnvRecord,
+  type EnvRecordErrorCode,
+  type EnvRecordValidation,
+  type EnvRecordValidationError,
+  type ProfileEnvRecordInput,
+  type ResolvedEnvRecordPolicy,
+} from "./profile-env-record.js";
 export {
   activeRung,
   evaluatePacing,

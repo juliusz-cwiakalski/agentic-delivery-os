@@ -1,0 +1,2 @@
+# wrong header
+set OC_ADOS_AGENT_PM_MODEL=claude-opus

@@ -8,6 +8,7 @@
  * env records (NFR-1).
  */
 import {
+  type EnvRecord,
   type ProfileBlocker,
   type ProfileEligibility,
   type ProfileEvent,
@@ -18,11 +19,13 @@ import {
   type ProfileSelectionResult,
   PROFILE_EVIDENCE_FIELDS,
   PROFILE_EVENT_SEVERITIES,
+  type ProviderEnvRecordPolicy,
   type ProviderProfile,
   type ProviderProfileConfiguration,
   type ProviderProfileSeat,
 } from "#contracts";
 import { formatUtcIso } from "./parks.js";
+import { buildProfileEnvRecord } from "./profile-env-record.js";
 
 export type ProfileSelectionInput = {
   readonly profiles: ProviderProfileConfiguration;
@@ -294,4 +297,98 @@ export const selectProfile = (
     seatModels,
   };
   return { ok: true, outcome: "selected", decision, events: [selectionEvent] };
+};
+
+/* ------------------------------------------------------------------------- *
+ * Spawn-time resolution (GH-234 F-8, DEC-3, DEC-6).
+ *
+ * Resolution always runs before the spawn port; a refusal stops the spawn and
+ * the env record reaches the port as validated data only.
+ * ------------------------------------------------------------------------- */
+
+export type ProfileSpawnPort = {
+  readonly spawn: (environment: Readonly<Record<string, string>>) => void;
+};
+
+export type ProfileSpawnInput = ProfileSelectionInput & {
+  readonly namePrefix: string;
+  readonly policy?: ProviderEnvRecordPolicy;
+};
+
+export type ProfileSpawnOutcome =
+  | {
+      readonly ok: true;
+      readonly selection: ProfileSelectionResult;
+      readonly envRecord: EnvRecord;
+      readonly variables: Readonly<Record<string, string>>;
+    }
+  | {
+      readonly ok: false;
+      readonly code: string;
+      readonly summary: string;
+      readonly eligibility: readonly ProfileEligibility[];
+      readonly events: readonly ProfileEvent[];
+    };
+
+/** Resolve a profile and build the hardened env record; never spawns. */
+export const resolveProfileForSpawn = (input: ProfileSpawnInput): ProfileSpawnOutcome => {
+  const selection = selectProfile(input);
+  if (!selection.ok) {
+    return {
+      ok: false,
+      code: selection.code,
+      summary: selection.summary,
+      eligibility: selection.eligibility,
+      events: selection.events,
+    };
+  }
+  const profile = input.profiles.profiles[selection.decision.profile];
+  if (profile === undefined) {
+    return {
+      ok: false,
+      code: "provider.profile.invalid",
+      summary: `selected profile ${selection.decision.profile} is not declared`,
+      eligibility: selection.decision.eligibility,
+      events: selection.events,
+    };
+  }
+  const built = buildProfileEnvRecord({
+    seatModels: selection.decision.seatModels,
+    seats: profile.seats,
+    namePrefix: input.namePrefix,
+    ...(input.policy === undefined ? {} : { policy: input.policy }),
+  });
+  if (!built.ok) {
+    return {
+      ok: false,
+      code: built.error.code,
+      summary: built.error.detail,
+      eligibility: selection.decision.eligibility,
+      events: selection.events,
+    };
+  }
+  return {
+    ok: true,
+    selection: {
+      ...selection,
+      decision: { ...selection.decision, envRecord: built.record },
+    },
+    envRecord: built.record,
+    variables: built.record.entries.reduce<Record<string, string>>((variables, entry) => {
+      if (entry.operation === "set") variables[entry.name] = entry.value;
+      return variables;
+    }, {}),
+  };
+};
+
+export type ProfileSpawnRunInput = ProfileSpawnInput & {
+  readonly spawnPort: ProfileSpawnPort;
+};
+
+/** Resolve before spawning; a refusal stops the port call entirely. */
+export const runProfileSpawn = (input: ProfileSpawnRunInput): ProfileSpawnOutcome => {
+  const outcome = resolveProfileForSpawn(input);
+  if (!outcome.ok) return outcome;
+  input.spawnPort.spawn(outcome.variables);
+  return outcome;
 };
