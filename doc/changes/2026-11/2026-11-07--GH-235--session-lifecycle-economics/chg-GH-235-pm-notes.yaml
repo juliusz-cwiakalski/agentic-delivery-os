@@ -7,9 +7,9 @@ phases:
   test_planning: { started: "2026-11-07T04:25:00Z", completed: "2026-11-07T05:55:00Z" }
   delivery_planning: { started: "2026-11-07T06:00:00Z", completed: "2026-11-07T06:30:00Z" }
   dor_check: { started: "2026-11-07T06:45:00Z", completed: "2026-11-07T07:30:00Z", verdict: "READY", iteration: 1, blocking_findings: 0, advisory_findings: 5 }
-  delivery: { started: "2026-11-07T08:00:00Z", completed: "2026-11-07T12:30:00Z" }
+  delivery: { started: "2026-11-07T08:00:00Z", completed: "2026-11-07T12:30:00Z", reopened: "2026-11-07T15:30:00Z", reopen_reason: "review iteration 1 FAIL — plan phase 8 remediation (F-1 budget-gate precedence, F-2 terminal-append failure surfacing, F-3 fixture fidelity, F-4 plan pinning reconciliation)" }
   system_spec_update: { started: "2026-11-07T13:00:00Z", completed: "2026-11-07T14:00:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-07T14:30:00Z", completed: null, iteration_1: { status: "FAIL", date: "2026-11-07", findings: "6 (0 blocker/2 major/3 minor/1 info)", artifact: "code-review/review-iter-1.yaml", remediation: "plan phase 8 appended by reviewer; @coder to execute" } }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -43,6 +43,12 @@ notes:
     date: "2026-11-07"
   - text: "Tracker write access: github-mcp update_issue failed with authentication error (reads work). Label sync (spec-ready/readiness-passed/in-progress) deferred; use gh CLI for tracker writes at PR phase or skip non-essential labels"
     type: "info"
+    date: "2026-11-07"
+  - text: "Review iteration 1 FAIL: F-1 MAJOR economics-resume.ts:155-208 evidence-completeness refusals run BEFORE budget gate (past-budget + missing facts refuses with harness.telemetry.extraction-failed instead of dispatch.restart-budget-exceeded; terminal record never lands — contra DEC-7/plan task 2.2); F-2 MAJOR ensureExhaustionRecord return discarded (failed terminal append swallowed — AC-F4-2/F4-4 unguarded); F-3 MINOR prefill fixture traffic dimension dead (factsFor ignores traffic param); F-4 MINOR plan scope deviation: 5th/6th existing-test updates (config-schema.test.ts, config-contract.test.ts) + biome.json golden overrides modified outside declared phases, declared post-hoc; F-5 INFO corpus over-bound throws raw Error (accepted as-is); F-6 MINOR EconomicsResumeInput.runId duplicates deps.runId, never read. Remediation: plan phase 8 (budget gate before evidence, surface terminal-append failure, wire traffic fixture, reconcile plan pinning). Delivery reopened for remediation"
+    type: "risk"
+    date: "2026-11-07"
+  - text: "Retro: review caught two real correctness defects the plan's own tests missed (precedence corner cell absent from RESUME_PRECEDENCE_CASES; failing-ensure fixture absent) — the test plan asserted the four happy precedence cells but not the intersection cells (past-budget x incomplete-evidence). Next time: test plans should include adversarial intersection cells for every declared precedence rule, and assertion-discipline review for discarded return values on durably-recorded effects"
+    type: "retro"
     date: "2026-11-07"
   - text: "Delivery phase 1 (contracts+error-table binding) complete: commit 1dcdf6ff, contracts/economics.ts new, dispatch kind + 3 rows (watchdog.liveness-stalled, dispatch.restart-budget-exceeded, dispatch.resume-uneconomical), error-table-sync 86=86, tests 190 pass / 0 fail, typecheck pass"
     type: "info"

@@ -196,7 +196,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-235
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8]
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -471,3 +471,29 @@ phases:
       - "pnpm check"
       - "bun run scripts/checks/license-audit.ts && bun run scripts/checks/vulnerability-gate.ts"
       - "git diff --check && git status --porcelain"
+  - id: 8
+    title: "Code Review Remediation (Iteration 1) — DEC-7 precedence corner, terminal-append failure surfacing, prefill fixture fidelity, plan pinning reconciliation"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/economics-resume.ts
+        - packages/core/src/contracts/economics.ts
+        - tests/behaviour/economics-resume-precedence.test.ts
+        - tests/behaviour/economics-budget-failclosed.test.ts
+        - tests/behaviour/economics-liveness-prefill.test.ts
+        - tests/types/economics.type-test.ts
+        - doc/changes/2026-11/2026-11-07--GH-235--session-lifecycle-economics/chg-GH-235-plan.yaml
+        - doc/changes/2026-11/2026-11-07--GH-235--session-lifecycle-economics/code-review/review-iter-1.yaml
+    summary: "fix(GH-235): code review iteration 1 remediation — budget gate before evidence checks, terminal-append failure surfaced, prefill traffic dimension wired, plan pinning reconciled"
+    tasks:
+      - "8.1 [major] packages/core/src/domain/economics-resume.ts:155-208 — DEC-7 precedence corner: the evidence-completeness refusals (tokensReadable/costReadable/repayTokens) currently run before the budget gate, so a past-budget delivery with unreadable or missing token facts refuses with harness.telemetry.extraction-failed and never lands its terminal exhaustion record; fix: reorder evaluateResumeEconomics so the capability checks stay first, then readDeliveryRecords + evaluateRestartBudget + refuse-budget handling (ensure terminal record), and only on gate-admit run the evidence-completeness and economics checks; add past-budget × missing-evidence cells (tokensReadable false AND repayTokens-undefined variants) to tests/behaviour/economics-resume-precedence.test.ts asserting dispatch.restart-budget-exceeded, the budget corpus, the terminal record, and zero spawns; keep within-budget incomplete-evidence refusals unchanged. [DEC-7; AC-F4-2, AC-F4-4; review F-1]"
+      - "8.2 [major] packages/core/src/domain/economics-resume.ts:200 — the ensureExhaustionRecord outcome is discarded, so a failed terminal append is swallowed while the refusal still emits; fix: capture the outcome and surface ok:false additively on the refusal decision (optional warnings entry or corpus condition naming the classified append failure) or classify per D-9 exactly as the appendRestartEvent failure path does — never ignore, never throw raw; add a failclosed fixture whose ensureExhaustionRecord returns state.write.failed asserting the refusal, zero spawns, and the observable append failure. [AC-F4-2, AC-F4-4; §21 fail-closed; review F-2]"
+      - "8.3 [minor] tests/behaviour/economics-liveness-prefill.test.ts:28-61 — the prefill matrix's traffic dimension is dead (factsFor ignores its traffic parameter; readings always empty), so rising-traffic rows run with traffic absent; fix: map entry.signals.traffic into a session-traffic sourced reading in the prefill runner (or drop the parameter and rename shapes honestly), keeping the 3×3×4 floor and all existing assertions. [TC-ECON-020 fidelity; SC-M1-14; review F-3]"
+      - "8.4 [minor] Plan pinning reconciliation: amend the four-deliberate-update note (or add a revision-log entry) recording the config exact-key updates in tests/behaviour/config-schema.test.ts and tests/structure/config-contract.test.ts plus the biome.json golden formatter overrides as deliberate updates (v)/(vi) with their forcing reason, so the TC-ECON-082 'exactly four' pin matches the delivered diff. [review F-4]"
+      - "8.5 [minor] packages/core/src/contracts/economics.ts:453 — EconomicsResumeInput.runId duplicates ResumeEconomicsDeps.runId and is never read; fix: remove it (keeping deps.runId as the one run identity) or use it consistently in restartRecordFor/exhaustionRecordFor; update tests/types/economics.type-test.ts. [review F-6]"
+    coverage:
+      - "No new TC — remediation strengthens TC-ECON-042 (precedence corner), TC-ECON-055 (terminal-append failure), TC-ECON-020 (fixture fidelity); F-5 (corpus throw) accepted as-is with low severity, no task"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/economics-resume-precedence.test.ts tests/behaviour/economics-budget-failclosed.test.ts tests/behaviour/economics-liveness-prefill.test.ts tests/behaviour/economics-resume-capability.test.ts tests/behaviour/economics-budget-exhaustion.test.ts tests/behaviour/economics-budget-path-parity.test.ts tests/types/economics.type-test.ts"
+      - "pnpm check"

@@ -1,0 +1,180 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-235
+branch: feat/GH-235/session-lifecycle-economics
+status: FAIL
+summary: >-
+  The delivery is structurally strong: contracts are data-only and one-homed, the
+  delivered watchdog classifier / liveness-kind vocabulary / error shape are untouched,
+  the error table grows exactly per DM-5 (83→86; dispatch kind + two rows + fourth
+  watchdog row — the "three rows not four" PM deviation is factually correct against
+  §7.1/DEC-2), the budget gate is fail-closed with verified idempotent appends and a
+  single terminal record, DEC-6/8/9 hold under direct inspection, no new process sites
+  or boundary rule changes exist, and the SC-M1-14/SC-M1-15 suites run the real CLI
+  composition and real temp state stores. Two major defects remain in the resume path:
+  evidence-completeness refusals preempt the budget gate (DEC-7 "always" corner — a
+  past-budget delivery with unreadable token facts emits harness.telemetry.extraction-failed
+  and never lands its terminal exhaustion record), and the ensureExhaustionRecord outcome
+  is discarded, so a failed terminal append is swallowed while AC-F4-2/F4-4 claim durable
+  escalation data. Minor: the prefill fixture's traffic dimension is dead (rows labeled
+  rising-traffic run with traffic absent), two existing config suites + biome.json were
+  modified beyond the plan's "exactly four updates" pinning (declared post-hoc in
+  evidence log §10.4), and two low-severity contract/evidence cleanups.
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 2
+  low: 2
+  info: 0
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/economics-resume.ts:155
+    message: >-
+      DEC-7 precedence violated on a reachable corner: the evidence-completeness refusals
+      (tokensReadable/costReadable/repayTokens checks, lines 155-164) run BEFORE the budget
+      gate (line 183). A past-budget delivery with unreadable or missing token facts is
+      refused with harness.telemetry.extraction-failed instead of
+      dispatch.restart-budget-exceeded, and because the gate never evaluates, the terminal
+      exhaustion record is never ensured (D-10's "first refusal that observes exhaustion"
+      never observes it). Plan task 2.2 pins "PAST BUDGET → dispatch.restart-budget-exceeded
+      always, evaluated BEFORE economics — the budget reason wins, one identity per attempt";
+      DEC-7's rationale is that precedence keeps the terminal budget state unambiguous. No
+      test covers incomplete-evidence × past-budget (the precedence suite always supplies
+      complete evidence). Zero spawns still hold — the defect is identity choice plus the
+      missing terminal escalation record, not a silent loop.
+    suggestion: >-
+      Reorder evaluateResumeEconomics: keep the capability checks first (attach-continue
+      consumes no ordinal), then read records and evaluate the budget gate, handle
+      refuse-budget (ensure terminal record + refuse), and only on gate-admit run the
+      evidence-completeness and economics checks. Add a precedence cell for
+      past-budget × missing-evidence (tokensReadable false, and repayTokens-undefined
+      variants) asserting dispatch.restart-budget-exceeded, the budget corpus, the terminal
+      record landing, and zero spawns; keep the within-budget incomplete-evidence refusals
+      (harness.telemetry.extraction-failed) unchanged.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/economics-resume.ts:200
+    message: >-
+      The ensureExhaustionRecord return value is discarded. EconomicsExhaustionAppendOutcome
+      declares classified failures (state.write.failed, torn, permission-denied, ...), but a
+      failed terminal append is swallowed: the refusal still emits exit 1 with the budget
+      corpus while the durable terminal record — the escalation carrier M1-S16/S17/S18
+      consume (AC-F4-2 "a terminal exhaustion record lands durably", AC-F4-4 "escalation-ready
+      data, not silence") — silently never lands. Inconsistent with the sibling path:
+      appendRestartEvent failure IS classified (lines 231-245). No test injects a failing
+      ensure. Error-contract violation: a declared-failing operation whose result the caller
+      ignores.
+    suggestion: >-
+      Capture the outcome; on ok:false surface it additively on the refusal decision (e.g.
+      an optional warnings entry or corpus condition naming the classified append failure)
+      or classify per D-9 the way the restart-append failure is — never a bare ignore and
+      never a raw throw. Add a failclosed fixture whose ensureExhaustionRecord returns
+      ok:false (state.write.failed) asserting the refusal still happens, zero spawns, and
+      the append failure is observable on the decision.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: testing
+    location: tests/behaviour/economics-liveness-prefill.test.ts:28
+    message: >-
+      The prefill matrix's traffic dimension is dead. factsFor (lines 28-40) accepts a
+      traffic parameter it never uses, and the runner always passes readings: [] (line 61),
+      so rows labeled rising-traffic / rising-both run with traffic ABSENT rather than
+      rising. The rows still classify progressing (correct for a partial reading), so the
+      assertions pass, but the fixture does not exercise what its case IDs claim, and a
+      future regression in the traffic projection would flip no prefill row. AC-F2-1 remains
+      genuinely covered by TC-ECON-021's traffic>0 combinations and TC-ECON-030's sourced
+      traffic run, so this is a fidelity gap, not an AC gap.
+    suggestion: >-
+      Map entry.signals.traffic into a session-traffic sourced reading (facts.readings)
+      inside the prefill runner so each shape injects exactly what its name declares (or
+      drop the unused parameter and rename the shapes honestly); keep the 3×3×4 floor and
+      the no-side-effect assertions unchanged.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: tests/behaviour/config-schema.test.ts:24
+    message: >-
+      Two existing config suites and biome.json were modified outside every phase's declared
+      scope and beyond the plan's four-deliberate-update pinning ("pins that exactly these
+      four updates exist — no fifth file", task 6.5): the exact PRODUCTION_CATALOG key lists
+      in tests/behaviour/config-schema.test.ts and tests/structure/config-contract.test.ts
+      gain "lane", and biome.json gains formatter overrides for the golden fixture folders.
+      The changes are behavior-preserving (exact-list extension for a genuinely new branch;
+      byte-stable goldens) and are declared post-hoc in evidence log §10.4(3), but at
+      delivery time they were unapproved deviations from the plan's own pin, and the plan
+      text still claims "exactly four".
+    suggestion: >-
+      No code change required. Amend the plan's four-deliberate-update note (or add a
+      revision-log entry) recording the config exact-key updates and biome.json overrides
+      as deliberate updates (v)/(vi) with their forcing reason, so the TC-ECON-082 "exactly
+      four" pin matches the delivered diff; the evidence log §10.4 already lists them.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/economics-evidence.ts:68
+    message: >-
+      formatRefusalCorpus throws a raw Error when a corpus exceeds the 512-byte bound (or a
+      value is non-finite/empty). A throw is an unclassified failure escaping the domain
+      tier, inconsistent with the classified-failure error contract. Practically unreachable
+      with tracker-scale refs (fixed keys + short refs stay far below the bound) and the
+      loudness is deliberate, so low severity.
+    suggestion: >-
+      Acceptable to keep if the bound is asserted unreachable; otherwise return a classified
+      failure (or clamp the historyRef) instead of throwing, and pin the choice with a test.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/contracts/economics.ts:453
+    message: >-
+      EconomicsResumeInput.runId duplicates ResumeEconomicsDeps.runId and is never read —
+      the restart and terminal records take deps.runId (economics-resume.ts:98, 121), so the
+      two identity sources can diverge and one is dead. The contract is new in this change
+      with no external consumers, so fixing it now is free.
+    suggestion: >-
+      Remove runId from EconomicsResumeInput (keeping ResumeEconomicsDeps.runId as the one
+      run identity) or use input.runId consistently in restartRecordFor/exhaustionRecordFor;
+      update the type test.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-07T15:30:00Z
+next_step: CALL_CODER
