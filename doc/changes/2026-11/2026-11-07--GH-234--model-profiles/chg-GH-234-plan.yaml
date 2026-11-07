@@ -120,7 +120,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-234
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -428,3 +428,68 @@ phases:
       - "pnpm check"
       - "bun run scripts/checks/error-table-sync.ts"
       - "git diff --check && git status --porcelain"
+  # ---------------------------------------------------------------------------
+  # Amendment (review iteration 1, 2026-11-07): Phase 10 is the code-review
+  # remediation phase appended after the FAIL verdict in ./review/review-iter-1.md
+  # (must-fix F-1/F-2; should-fix F-3..F-6, informational F-7/F-8 need no task).
+  # It adds no new requirement: every task closes a gap between delivered
+  # machinery and the production composition already declared by the spec
+  # (F-6, F-9, Appendix C), plan tasks 6.1 and 4.2-4.4, and the man page. The
+  # plan schema's phase kinds are planning|delivery only, so kind stays
+  # `delivery` (lease-taking, one Conventional Commit) and `remediation: true`
+  # carries the rework provenance. Phases 1-9 and the 58-TC mapping are
+  # untouched; the tier phase set grows to 10. Binding constraints: every
+  # review-verified-clean behavior is preserved (all five binding delivery
+  # decisions), zero new ambient I/O in core, hermetic tests only, error-table
+  # sync maintained, and each task maps to the delivered TC-PROFILE ids it
+  # extends (no new TC ids).
+  # ---------------------------------------------------------------------------
+  - id: 10
+    title: "Code review remediation (iteration 1) — production wiring of provider resolve --profile (R-1) and the profile lifecycle switch/revert/persist path (R-2); should-fix hygiene: dead capability identity (R-3), structural NFR-8 evidence bound (R-4), env-record header boundary (R-5), test-plan §10 accuracy (R-6)"
+    kind: delivery
+    remediation: true
+    scope:
+      files:
+        - packages/cli/src/edge.ts
+        - packages/core/src/provider/engine.ts
+        - packages/core/src/provider/profile.ts
+        - packages/core/src/provider/profile-lifecycle.ts
+        - packages/core/src/provider/profile-env-record.ts
+        - packages/core/src/provider/validate.ts
+        - packages/core/src/contracts/error-table.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/behaviour/provider-profile-edge-wiring.test.ts
+        - tests/behaviour/provider-profile-cli.test.ts
+        - tests/behaviour/provider-profile-park-switch-revert.test.ts
+        - tests/behaviour/provider-profile-config.test.ts
+        - tests/behaviour/provider-profile-env-record.test.ts
+        - tests/golden/provider-profile-resolve.test.ts
+        - tests/fixtures/provider/profile/golden/data.ts
+        - tests/checks/provider-profile-evidence-bounds.test.ts
+        - doc/changes/2026-11/2026-11-07--GH-234--model-profiles/chg-GH-234-test-plan.md
+      folders:
+        - tests/fixtures/provider/profile/lifecycle
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/provider/profile.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/provider/profile-lifecycle.ts
+        role: producer
+    summary: "fix(GH-234): review iteration 1 remediation — wire --profile and the profile lifecycle into the production edge; vocabulary, evidence-bound, and header-boundary hygiene"
+    tasks:
+      - "10.1 R-1 (review F-1, MUST-FIX): wire `provider resolve --profile` through the production edge. `ProviderResolveInput` (packages/core/src/provider/engine.ts:98-102) gains the profile field and the edge resolve handler (packages/cli/src/edge.ts:2284-2302, currently forwarding only chainName) consumes `input.profile`: parse and validate the provider.profiles branch, reject an unknown profile name with the classified `provider.profile.invalid` misconfiguration at exit 1 (today `--profile ghost` exits 0 and echoes an unrelated chain decision), and scope the resolution context for a known name (at minimum restrict candidate providers to the named profile's providers) per spec F-9/Appendix C — the envelope shape provider/mode/decision/parksConsidered is unchanged — plan task 6.1, and the man page. NEW tests/behaviour/provider-profile-edge-wiring.test.ts drives the REAL edge/handler path with injected clock/state/transport (not the stub runtime that let provider-profile-cli.test.ts:129-134 pass a contract the shipped edge never enforced): a valid flag drives the engine effect (scoped decision), an unknown name fails classified at exit 1, and the flag absent keeps the delivered resolve unchanged. Edge-integration test discipline (the over-mocking root-cause fix): every CLI flag this change's spec declares — `--profile`, `--agent`, `--for-spawn`, `--provider` — gets an edge-level production test in this suite; stub-runtime rows in provider-profile-cli.test.ts remain contract echoes, never the only coverage. [F-9; Appendix C; TC: TC-PROFILE-043 production-wiring half extends, TC-PROFILE-046 classification rows extend]"
+      - "10.2 R-2 (review F-2, MUST-FIX): wire the profile lifecycle (switch/revert/persist) into the production `profileResolve` path. After a successful selectProfile, the edge path (packages/cli/src/edge.ts:2330-2398, today calling only selectProfile/resolveProfileForSpawn) runs the delivered machinery that currently has zero non-test consumers — readProfileTarget -> evaluateProfileLifecycle -> persistProfileTarget (packages/core/src/provider/profile-lifecycle.ts): detect a probe-detectable condition change on the base profile's provider via the SYNC probe (enabled + UTC peak per accepted deviation 2 — a declared peak window parking the base provider; quota-exhaustion enters only through injected facts in tests), switch to the next eligible profile emitting the EVT-1 switch event (previous target, new target, revert condition), persist the EVT-4 target record through the engine state-store discipline (fenced single-writer, verified post-append, latest wins), and emit the EVT-2 revert event exactly once per exhaustion episode on recovery. The `switched` and `reverted` members of the outcome union (packages/core/src/contracts/provider-profile.ts:292) become reachable through real engine paths: the outcome projection lands in core (packages/core/src/provider/profile.ts composed with profile-lifecycle.ts — selectProfile's unconditional `selected` at profile.ts:314 is replaced by the lifecycle-projected outcome), never hand-built at the edge; the golden `switched` outcome (hand-built fixture row at tests/fixtures/provider/profile/golden/data.ts:65) is replaced with engine-path output or joined by an engine-path golden in tests/golden/provider-profile-resolve.test.ts. Production-wiring tests for switch AND revert through the edge path with injected probe facts (hermetic; NO async quota probing is introduced — that stays the M1-S9/GH-239 seam per accepted deviation 2), asserting events, persisted target, envelope outcome, and human text. [F-6; AC-F6-2 production half; EVT-1, EVT-2, EVT-4; NFR-9; TC: TC-PROFILE-024..028 production halves extend, TC-PROFILE-044 outcome rows extend, TC-PROFILE-053 engine-path replay rows extend]"
+      - "10.3 R-3 (review F-3, SHOULD-FIX): make the `provider.profile.capability-denied` identity honest under the error-table exact-code discipline — declared and documented (packages/core/src/contracts/error-table.ts:191, doc/spec/features/feature-result-contract.md:140) but raised by no code path today (every refusal, including all-capability-refused, raises `provider.profile.unavailable`). Either raise it from the capability-gate refusal path in packages/core/src/provider/profile.ts when every blocker on the losing candidates is a capability blocker, or — if the delivered refusal identity is kept — document why on the row and remove the dead row from BOTH the machine table and the documented table in the same commit. Either branch keeps `bun run scripts/checks/error-table-sync.ts` bidirectionally green: 91/91 when raising, or consistently re-counted with every removed row documented when dropping. [F-10; NFR-10; RSK-1; TC: TC-PROFILE-009 and TC-PROFILE-010 gate-refusal rows extend, TC-PROFILE-040 sync rows extend]"
+      - "10.4 R-4 (review F-4, SHOULD-FIX): enforce the NFR-8 1024-byte evidence bound structurally, not by message truncation alone. packages/core/src/provider/validate.ts caps profile/provider/seat name lengths at validation (unbounded today, validate.ts:515-516); packages/core/src/provider/profile.ts bounds the blockers[] count and per-string evidence sizes at serialization (blockers are built from every ineligible profile today, profile.ts:263-264, and only the message is truncated with no post-truncation re-check, profile.ts:176-181) and re-asserts the 1024-byte bound after truncation. tests/checks/provider-profile-evidence-bounds.test.ts gains the overflow test: a pathological configuration (many long-named ineligible profiles) still serializes every event within 1024 bytes. [NFR-8; TC: TC-PROFILE-042 overflow rows extend]"
+      - "10.5 R-5 (review F-5, SHOULD-FIX): reject embedded LF/CR/NUL in `envRecord.header` at the earliest boundary — a classified config error at parse time (packages/core/src/provider/validate.ts, where only non-empty is checked today, validate.ts:705-708) and a refusal at serialization time (packages/core/src/provider/profile-env-record.ts, where a malformed header currently survives until the wrapper's downstream byte-level validation). Fail-closed stays (the wrapper validation is not removed); the misconfiguration simply fails where it enters. While touching the module, compile the namePattern allowlist once per resolved policy instead of per name per record (profile-env-record.ts:90-93). Config-time failure rows extend tests/behaviour/provider-profile-config.test.ts; serialization-time failure rows extend tests/behaviour/provider-profile-env-record.test.ts. [DM-7; NFR-7; TC: TC-PROFILE-002 matrix rows extend, TC-PROFILE-035 and TC-PROFILE-037 class rows extend]"
+      - "10.6 R-6 (review F-6, SHOULD-FIX): correct chg-GH-234-test-plan.md §10 aggregate wording — replace the overstated `pnpm check` green phrasing with the accurate ledger result: 4731/4733 passing plus the two named environmental failures (TC-STATE-021 corepack pnpm download with no network; CI-parity cross-device clone), honoring the task-9.5 rule that unrun or environmentally-failed results are never recorded as passing; the remediation iteration's own gate evidence is appended to §10 the same way once re-run. §10 of the test plan is the ONLY artifact this task touches — spec, pm-notes, and every other change artifact stay untouched by R-6. [Testing-strategy evidence obligation; no TC change]"
+      - "10.7 Regression proof for everything review verified clean: re-run the review battery and keep it green — pnpm typecheck; pnpm check:boundaries (0 violations, secret-read allowlist unchanged at 5 entries, no new boundary edge); bun run scripts/checks/error-table-sync.ts; bash scripts/.tests/test-hook-regression.sh with scripts/ceo-loop.sh still byte-unchanged (the sha256 rows in tests/structure/provider-surface.test.ts keep matching); hermetic, secret-safety, ambient-globals, and workspace-entrypoints checks; goldens stable except the engine-path golden from 10.2. Constraints binding every Phase-10 task: the five binding delivery decisions verified by review stay intact (declared-order pacing precedence; legacy hook byte-unchanged; fixture-proven vendor mappings with zero live network; provider.profiles empty-by-default fail-closed; structured envRecord plus serialized data-v1 both tested); zero new ambient I/O in core (lifecycle wiring composes injected ports at the edge under the engine's existing state-store discipline); hermetic tests only; exactly one Conventional Commit for the phase. [NFR-2, NFR-3, NFR-4; TC: aggregate battery, no new TC ids]"
+    coverage:
+      - "No new TC ids; remediation extends delivered TCs on the production path: TC-PROFILE-043 (production-wiring half), TC-PROFILE-046 (classification rows), TC-PROFILE-024..028 (production switch/revert/persist halves), TC-PROFILE-044 (outcome rows), TC-PROFILE-053 (engine-path replay rows), TC-PROFILE-009 and TC-PROFILE-010 (capability-gate refusal rows), TC-PROFILE-040 (sync rows), TC-PROFILE-042 (overflow rows), TC-PROFILE-002, TC-PROFILE-035, TC-PROFILE-037 (header-class rows)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/provider-profile-edge-wiring.test.ts tests/behaviour/provider-profile-cli.test.ts tests/golden/provider-profile-resolve.test.ts"
+      - "bun test tests/behaviour/provider-profile-park-switch-revert.test.ts tests/behaviour/provider-profile-config.test.ts tests/behaviour/provider-profile-env-record.test.ts tests/checks/provider-profile-evidence-bounds.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts && pnpm check:boundaries && bash scripts/.tests/test-hook-regression.sh"
+      - "pnpm check"
