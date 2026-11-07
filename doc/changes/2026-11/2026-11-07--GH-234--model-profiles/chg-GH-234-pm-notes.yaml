@@ -52,3 +52,6 @@ notes:
   - text: "Plan delivered as canonical YAML (chg-GH-234-plan.yaml, delivery.plan.v1, 9 phases, 56 tasks, repo plan validate verdict=valid readyForDevelopment=true). PM decisions baked in: goal-priority declared order = precedence; spawn enforcement = --for-spawn seam + data-v1 contract with legacy hook byte-unchanged (structurally asserted); vendor mappings fixture-proven; profiles ship empty fail-closed."
     type: "info"
     date: "2026-11-07"
+  - text: "Plan phase 1 complete (commit hash recorded in the next ledger entry; a commit cannot contain its own hash): provider-profile contract module, additive provider watch mapping-kind closed set, eight additive provider.profile.*/provider.env-record.* error identities with documented-table rows, contract inventory fixture + structure/type tests. Gates green: pnpm typecheck (all packages + tests/types); provider-profile-contract/provider-contract/error-table/content-inventory 84 pass / 0 fail; error-table-sync 91 entries documented 91, OK."
+    type: "info"
+    date: "2026-11-07"

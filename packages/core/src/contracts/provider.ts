@@ -249,6 +249,18 @@ export type ProviderAnnouncementEvidence = ProviderParkEvidence & {
   readonly announcementCode?: AnnouncementCode;
 };
 
+/**
+ * The first-iteration watch mapping kinds (GH-234 F-5, DM-9). Additive only:
+ * each identifier binds a configured watch target to one normalized snapshot
+ * mapping behind the existing quota transport seam.
+ */
+export const PROVIDER_WATCH_MAPPING_KINDS = [
+  "coding-plan-windows",
+  "deepseek-balance",
+  "openai-usage-windows",
+] as const;
+export type ProviderWatchMappingKind = (typeof PROVIDER_WATCH_MAPPING_KINDS)[number];
+
 /** A normalized quota limit (DM-9). */
 export type QuotaLimit = {
   readonly type: string;

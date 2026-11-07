@@ -26,6 +26,7 @@
     "PROVIDER_QUOTA_DEFAULTS",
     "PROVIDER_RECORD_KINDS",
     "PROVIDER_SKIP_REASONS",
+    "PROVIDER_WATCH_MAPPING_KINDS",
     "ParkCause",
     "ProviderAnnouncementEvidence",
     "ProviderAnnouncementRecord",
@@ -53,6 +54,7 @@
     "ProviderSkipReason",
     "ProviderSkippedEntry",
     "ProviderSleep",
+    "ProviderWatchMappingKind",
     "QuotaEvaluation",
     "QuotaLimit",
     "QuotaSnapshot",
@@ -61,7 +63,10 @@
     "QuotaTransportResult"
   ],
   "closedSets": {
-    "costClasses": ["subscription", "pay-per-token"],
+    "costClasses": [
+      "subscription",
+      "pay-per-token"
+    ],
     "conditionKinds": [
       "peak-window",
       "quota-exhausted",
@@ -101,9 +106,23 @@
       "provider.reevaluation.cap",
       "provider.resumed"
     ],
-    "recordKinds": ["provider.park", "provider.announcement"],
-    "parkStates": ["active", "cleared"],
-    "severities": ["info", "warning"]
+    "recordKinds": [
+      "provider.park",
+      "provider.announcement"
+    ],
+    "parkStates": [
+      "active",
+      "cleared"
+    ],
+    "severities": [
+      "info",
+      "warning"
+    ],
+    "watchMappingKinds": [
+      "coding-plan-windows",
+      "deepseek-balance",
+      "openai-usage-windows"
+    ]
   },
   "evidence": {
     "park": [

@@ -28,6 +28,7 @@
     "src/contracts/plan.ts",
     "src/contracts/pm-notes.ts",
     "src/contracts/ports.ts",
+    "src/contracts/provider-profile.ts",
     "src/contracts/provider.ts",
     "src/contracts/queue-ready.ts",
     "src/contracts/registry.ts",
@@ -208,7 +209,11 @@
     "src/output/protocol.ts",
     "src/serve.ts"
   ],
-  "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "opencode": [
+    "src/commands/index.ts",
+    "src/index.ts",
+    "src/output/index.ts"
+  ],
   "testkit": [
     "src/commit/git-repo.ts",
     "src/commit/index.ts",
