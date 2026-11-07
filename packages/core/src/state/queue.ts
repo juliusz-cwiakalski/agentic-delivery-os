@@ -43,6 +43,8 @@ import {
   type QueueGraphDocument,
   type QueueIncidentRecord,
   type QueueLeaseRecord,
+  type QueueParkCause,
+  type QueueParkCondition,
   type QueueParkRecord,
   type QueueWeightClass,
   type StateAppendRequest,
@@ -77,6 +79,18 @@ import {
   type QueueClaimPrecondition,
   type QueueLeaseConflict,
 } from "../domain/queue-lease.js";
+import {
+  clearObservedRecord,
+  conditionTypeForCause,
+  createParkRecord,
+  defaultParkRecheckMs,
+  evaluateParkPass,
+  observationGapMs,
+  recoveredRecord,
+  type QueueParkContext,
+  type QueueParkPass,
+} from "../domain/queue-park.js";
+import type { QueueParkEvaluation } from "../domain/queue-readiness.js";
 
 export type {
   QueueGraphEdge,
@@ -889,8 +903,9 @@ export type QueueClaimOutcome = {
 
 /** One release outcome: the landed record, or noop with no lease held. */
 export type QueueReleaseOutcome = {
-  readonly result: "released" | "noop";
+  readonly result: "released" | "parked" | "noop";
   readonly lease?: QueueLeaseRecord;
+  readonly park?: QueueParkRecord;
 };
 
 /** A lease refusal cannot be a dependency cycle; it reuses the intent refusals. */
@@ -1211,6 +1226,11 @@ export const releaseQueueLease = (
   request: {
     readonly ref: string;
     readonly holder?: string;
+    readonly park?: {
+      readonly cause: QueueParkCause;
+      readonly condition: QueueParkCondition;
+      readonly recheckMs?: number;
+    };
     readonly nowIso: string;
     readonly nowMs: number;
     readonly fenceToken: string;
@@ -1266,16 +1286,185 @@ export const releaseQueueLease = (
       acquiredAt: existing.acquiredAt,
       leaseId: existing.leaseId,
     });
+    if (request.park === undefined) {
+      const appended = appendLeaseRecords(store, handle, [
+        {
+          kind: QUEUE_LEASE_RECORD_KIND,
+          recordKey: queueLeaseRecordKey(repository),
+          payload: leasePayload(record),
+        },
+      ]);
+      if (!appended.ok) return appended;
+      return { ok: true, value: { result: "released", lease: record } };
+    }
+    const expectedConditionType = conditionTypeForCause(request.park.cause);
+    if (request.park.condition.type !== expectedConditionType) {
+      return {
+        ok: false,
+        kind: "input",
+        code: "input.value.rejected",
+        detail: `cause ${request.park.cause} pairs with condition type ${expectedConditionType}`,
+      };
+    }
+    const parkRecord = createParkRecord({
+      ref,
+      ...(resolved.record.repository === undefined
+        ? {}
+        : { repository: resolved.record.repository }),
+      cause: request.park.cause,
+      condition: request.park.condition,
+      recheckMs: request.park.recheckMs ?? defaultParkRecheckMs(expectedConditionType),
+      evaluatedAt: request.nowIso,
+      recordedAt: request.nowIso,
+    });
+    // Release and park append in the SAME fenced transaction: both land or a
+    // refused append lands nothing.
     const appended = appendLeaseRecords(store, handle, [
       {
         kind: QUEUE_LEASE_RECORD_KIND,
         recordKey: queueLeaseRecordKey(repository),
         payload: leasePayload(record),
       },
+      {
+        kind: QUEUE_PARK_RECORD_KIND,
+        recordKey: queueParkRecordKey(ref),
+        payload: parkRecord as unknown as StateJsonValue,
+      },
     ]);
     if (!appended.ok) return appended;
-    return { ok: true, value: { result: "released", lease: record } };
+    return { ok: true, value: { result: "parked", lease: record, park: parkRecord } };
   });
+};
+
+/** One pass of park re-evaluation: recover cleared parks, report stuck ones. */
+export type QueueParkRecoveryOutcome = {
+  readonly recovered: readonly string[];
+  readonly stuck: readonly string[];
+  readonly evaluations: Readonly<Record<string, QueueParkEvaluation>>;
+  readonly records: readonly QueueParkRecord[];
+};
+
+export type QueueParkRecoveryResult =
+  | { readonly ok: true; readonly value: QueueParkRecoveryOutcome }
+  | QueueLeaseFailure;
+
+/**
+ * Mutating park pass: for every latest park whose condition evaluated clear,
+ * append the durable clear-observed marker first, then attempt recovery with a
+ * `park-auto-recovery` incident. If the recovery append is refused, the marker
+ * persists and the pass returns `queue.park-condition-stuck`. Reads never call
+ * this; a park seen only by a read is reported, never recovered.
+ */
+export const recoverQueueParks = (
+  store: StateStorePort,
+  request: {
+    readonly nowIso: string;
+    readonly nowMs: number;
+    readonly context: QueueParkContext;
+    readonly fenceToken: string;
+  },
+): QueueParkRecoveryResult => {
+  const fold = readQueueFold(store);
+  if (!fold.ok) return fold;
+  const acquired = store.acquireFence(request.fenceToken);
+  if (!acquired.ok) return stateFailureOf(acquired.error);
+  try {
+    const read = readQueueParks(store);
+    if (!read.ok) {
+      return stateFailureOf({
+        ...read,
+        kind: "state",
+        consequence: "not_landed",
+        location: { path: store.identity.stateDirectory },
+      });
+    }
+    const pass = evaluateParkPass(read.records, request.nowMs, request.context);
+    const recovered: string[] = [];
+    const stuck: string[] = [];
+    for (const record of pass.records) {
+      const evaluation = pass.evaluations[record.ref];
+      if (evaluation?.state === "stuck") {
+        stuck.push(record.ref);
+        continue;
+      }
+      if (evaluation?.state !== "resumable") continue;
+      const marker = clearObservedRecord(record, {
+        nowIso: request.nowIso,
+        nowMs: request.nowMs,
+      });
+      const markerWrite = appendLeaseRecords(store, acquired.value.handle, [
+        {
+          kind: QUEUE_PARK_RECORD_KIND,
+          recordKey: queueParkRecordKey(record.ref),
+          payload: marker as unknown as StateJsonValue,
+        },
+      ]);
+      if (!markerWrite.ok) return markerWrite;
+      const recovery = recoveredRecord(marker, {
+        nowIso: request.nowIso,
+        nowMs: request.nowMs,
+      });
+      const incident: QueueIncidentRecord = {
+        schema: QUEUE_INCIDENT_SCHEMA,
+        type: "park-auto-recovery",
+        ref: record.ref,
+        ...(record.repository === undefined ? {} : { repository: record.repository }),
+        evidence: [
+          { key: "condition", value: record.conditionType },
+          { key: "clearObservedAt", value: marker.clearObservedAt ?? request.nowIso },
+          { key: "evaluatedAt", value: request.nowIso },
+          {
+            key: "observationGapMs",
+            value: String(observationGapMs(record.evaluatedAt, request.nowMs)),
+          },
+        ],
+        recordedAt: request.nowIso,
+      };
+      const recoveredWrite = appendLeaseRecords(store, acquired.value.handle, [
+        {
+          kind: QUEUE_PARK_RECORD_KIND,
+          recordKey: queueParkRecordKey(record.ref),
+          payload: recovery as unknown as StateJsonValue,
+        },
+        {
+          kind: QUEUE_INCIDENT_RECORD_KIND,
+          recordKey: queueIncidentRecordKey(record.ref),
+          payload: incidentPayload(incident),
+        },
+      ]);
+      if (!recoveredWrite.ok) {
+        // The durable marker persists; the pass reports the stuck class.
+        stuck.push(record.ref);
+        continue;
+      }
+      recovered.push(record.ref);
+    }
+    return {
+      ok: true,
+      value: { recovered, stuck, evaluations: pass.evaluations, records: pass.records },
+    };
+  } finally {
+    store.releaseFence(acquired.value.handle);
+  }
+};
+
+/** Read-only park pass for the read surfaces and the lane fold. */
+export type QueueParkRead =
+  | {
+      readonly ok: true;
+      readonly pass: QueueParkPass;
+      readonly evidence: StateReadEvidence;
+    }
+  | { readonly ok: false; readonly reason: QueueReadReason; readonly code: StateFailureCode };
+
+export const readQueueParkPass = (
+  store: StateStorePort,
+  nowMs: number,
+  context: QueueParkContext,
+): QueueParkRead => {
+  const read = readQueueParks(store);
+  if (!read.ok) return read;
+  return { ok: true, pass: evaluateParkPass(read.records, nowMs, context), evidence: read.evidence };
 };
 
 /** The derived heartbeat age for one raw lease record. */

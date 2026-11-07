@@ -1,0 +1,10 @@
+{
+  "conditionTypes": ["provider-window", "provider-quota", "preemption"],
+  "causes": ["provider-window", "provider-quota", "preempted-for-close-item"],
+  "pairing": [
+    { "cause": "provider-window", "conditionType": "provider-window" },
+    { "cause": "provider-quota", "conditionType": "provider-quota" },
+    { "cause": "preempted-for-close-item", "conditionType": "preemption" }
+  ],
+  "boundary": { "T-1": "active", "T": "resumable", "T+1": "resumable" }
+}

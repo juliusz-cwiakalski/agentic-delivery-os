@@ -373,3 +373,22 @@ export {
   type QueueClaimPrecondition,
   type QueueLeaseConflict,
 } from "./domain/index.js";
+
+// The park evaluation policy (GH-237 F-8): the two distinct closed sets and
+// their pairing, per-type recheck, the durable clear-observed marker, exact
+// recovery, the stuck class, and the report-only finding.
+export {
+  clearObservedRecord,
+  conditionTypeForCause,
+  createParkRecord,
+  defaultParkRecheckMs,
+  evaluateParkPass,
+  evaluateParkRecord,
+  latestParkRecords,
+  observationGapMs,
+  parkConditionForCause,
+  recoveredRecord,
+  releasedParkRecord,
+  type QueueParkContext,
+  type QueueParkPass,
+} from "./domain/index.js";

@@ -127,3 +127,48 @@ describe("TC-RANK-006 a hard gate removes a close item", () => {
     expect(held?.blocking[0]?.reason).toBe("owner-gate");
   });
 });
+
+describe("TC-RANK-003/004 preemption re-asserted with real park state", () => {
+  test("after the explicit release-park the close item schedules and the preempted entry resumes above new starts", () => {
+    const preemptionFacts = makeFacts(
+      [
+        { ref: "GH-301", repository: REPO_A, close: "none" },
+        { ref: "GH-310", repository: REPO_A, close: "merge-ready" },
+        {
+          ref: "GH-311",
+          repository: REPO_B,
+          close: "none",
+          park: { state: "active", cause: "preemption", recheckMs: 60000 },
+        },
+      ],
+      {
+        leases: [activeLease({ repository: REPO_A, holder: "holder-a", ref: "GH-301" })],
+      },
+    );
+    const first = computeQueueSchedule(preemptionFacts);
+    const action = first.nextActions.find((candidate) => candidate.preemption !== undefined);
+    expect(action?.preemption).toEqual({
+      targetRef: "GH-310",
+      repository: REPO_A,
+      holder: "holder-a",
+      parkCause: "preempted-for-close-item",
+      conditionType: "preemption",
+      closeRef: "GH-310",
+    });
+
+    const afterRelease = makeFacts([
+      { ref: "GH-301", repository: REPO_A, close: "none" },
+      { ref: "GH-310", repository: REPO_A, close: "merge-ready" },
+      {
+        ref: "GH-311",
+        repository: REPO_B,
+        close: "none",
+        park: { state: "resumable", cause: "preemption", recheckMs: 60000 },
+      },
+    ]);
+    const second = computeQueueSchedule(afterRelease, { next: 3 });
+    expect(second.nextActions[0]?.ref).toBe("GH-310");
+    const resumed = second.nextActions.find((candidate) => candidate.ref === "GH-311");
+    expect(resumed?.rankClass).toBe("resume-parked");
+  });
+});

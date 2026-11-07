@@ -418,3 +418,18 @@ export {
   type QueueClaimPrecondition,
   type QueueLeaseConflict,
 } from "./queue-lease.js";
+export {
+  clearObservedRecord,
+  conditionTypeForCause,
+  createParkRecord,
+  defaultParkRecheckMs,
+  evaluateParkPass,
+  evaluateParkRecord,
+  latestParkRecords,
+  observationGapMs,
+  parkConditionForCause,
+  recoveredRecord,
+  releasedParkRecord,
+  type QueueParkContext,
+  type QueueParkPass,
+} from "./queue-park.js";

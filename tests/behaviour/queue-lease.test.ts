@@ -21,9 +21,10 @@ import {
   readActiveLeases,
   readQueueIncidents,
   readQueueLeases,
+  readQueueParks,
   releaseQueueLease,
 } from "../../packages/core/src/state/index";
-import { makeAuditStore } from "../fixtures/state/harness";
+import { armAppendFailure, makeAuditStore } from "../fixtures/state/harness";
 import {
   makeFacts,
   REPO_A,
@@ -548,5 +549,85 @@ describe("TC-SCHED-010 daemon-free plan → claim → release", () => {
       const latest = history.records[history.records.length - 1];
       expect(latest?.operation).toBe("released");
     }
+  });
+});
+
+describe("TC-LEASE-011 / TC-RANK-004 release plus park atomicity", () => {
+  test("an accepted cause releases and records its paired park in one transaction", () => {
+    const fixture = makeAuditStore("queue-lease-release-park");
+    seedEntry(fixture.store);
+    expect(claim(fixture.store, "holder-a").ok).toBe(true);
+    const parked = releaseQueueLease(fixture.store, {
+      ref: "GH-320",
+      holder: "holder-a",
+      park: {
+        cause: "preempted-for-close-item",
+        condition: { type: "preemption" },
+        recheckMs: 60_000,
+      },
+      nowIso: NOW_ISO,
+      nowMs: NOW_MS,
+      fenceToken: "release-park",
+    });
+    expect(parked.ok).toBe(true);
+    if (parked.ok) {
+      expect(parked.value.result).toBe("parked");
+      expect(parked.value.park?.cause).toBe("preempted-for-close-item");
+      expect(parked.value.park?.conditionType).toBe("preemption");
+    }
+    const parks = readQueueParks(fixture.store);
+    expect(parks.ok).toBe(true);
+    if (parks.ok) expect(parks.records).toHaveLength(1);
+  });
+
+  test("a cause/condition-type mismatch is refused before any append", () => {
+    const fixture = makeAuditStore("queue-lease-release-pairing");
+    seedEntry(fixture.store);
+    expect(claim(fixture.store, "holder-a").ok).toBe(true);
+    const before = readQueueLeases(fixture.store);
+    const beforeCount = before.ok ? before.records.length : 0;
+    const refused = releaseQueueLease(fixture.store, {
+      ref: "GH-320",
+      holder: "holder-a",
+      park: {
+        cause: "provider-window",
+        condition: { type: "preemption" },
+      },
+      nowIso: NOW_ISO,
+      nowMs: NOW_MS,
+      fenceToken: "release-pairing",
+    });
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) expect(refused.kind).toBe("input");
+    const after = readQueueLeases(fixture.store);
+    expect(after.ok ? after.records.length : -1).toBe(beforeCount);
+    const parks = readQueueParks(fixture.store);
+    expect(parks.ok ? parks.records.length : -1).toBe(0);
+  });
+
+  test("a refused first append lands neither side of the transaction", () => {
+    const fixture = makeAuditStore("queue-lease-release-refused");
+    seedEntry(fixture.store);
+    expect(claim(fixture.store, "holder-a").ok).toBe(true);
+    const beforeLeases = readQueueLeases(fixture.store);
+    const beforeCount = beforeLeases.ok ? beforeLeases.records.length : 0;
+    const armed = armAppendFailure(fixture.edge, 1);
+    try {
+      const refused = releaseQueueLease(fixture.store, {
+        ref: "GH-320",
+        holder: "holder-a",
+        park: { cause: "provider-quota", condition: { type: "provider-quota" } },
+        nowIso: NOW_ISO,
+        nowMs: NOW_MS,
+        fenceToken: "release-refused",
+      });
+      expect(refused.ok).toBe(false);
+    } finally {
+      armed.restore();
+    }
+    const afterLeases = readQueueLeases(fixture.store);
+    expect(afterLeases.ok ? afterLeases.records.length : -1).toBe(beforeCount);
+    const parks = readQueueParks(fixture.store);
+    expect(parks.ok ? parks.records.length : -1).toBe(0);
   });
 });

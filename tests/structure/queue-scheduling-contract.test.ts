@@ -74,6 +74,16 @@ import {
 } from "../../packages/core/src/contracts/index";
 import { PRODUCTION_CATALOG, resolveQueueSettings } from "../../packages/core/src/config/index";
 import { resolveConfig } from "../../packages/core/src/index";
+import {
+  claimQueueLease,
+  declareQueueEntry,
+  readQueueIncidents,
+  readQueueLeases,
+  readQueueParks,
+  recoverQueueParks,
+  releaseQueueLease,
+} from "../../packages/core/src/state/index";
+import { makeAuditStore } from "../fixtures/state/harness";
 
 const ROOT = process.cwd();
 const CONTRACT = "packages/core/src/contracts/queue.ts";
@@ -433,5 +443,89 @@ describe("contract module discipline", () => {
   test("a rogue call expression fails the data-only detector", () => {
     const mutated = `${readFileSync(join(ROOT, CONTRACT), "utf8")}\nexport const rogue = Date.now();\n`;
     expect(dataOnlyViolations(mutated).some((line) => line.includes("CallExpression"))).toBe(true);
+  });
+});
+
+/**
+ * TC-VOCAB-001 completion (Phase 5): the lease, park, and incident records
+ * round-trip through the real ledgers with their Appendix D schema ids and
+ * store keys; `queue.park` carries `clearObservedAt`/`recoveryState` from its
+ * first write and the clear-observed marker is another record of that same
+ * kind, not a sixth kind.
+ */
+describe("TC-VOCAB-001 lease/park/incident round-trip through the ledgers", () => {
+  test("claim, release-with-park, and recovery land the declared kinds and keys", () => {
+    const { store } = makeAuditStore("queue-vocab-roundtrip");
+    const declared = declareQueueEntry(store, {
+      ref: "GH-320",
+      repository: "github.com/owner/repo-alpha",
+      repositoryRoot: "/work/repo-alpha",
+      priority: 1,
+      recordedAt: "2026-11-07T10:00:00Z",
+      fenceToken: "vocab-entry",
+    });
+    expect(declared.ok).toBe(true);
+    const claimed = claimQueueLease(store, {
+      ref: "GH-320",
+      holder: "holder-a",
+      runner: "runner-a",
+      weightClass: "standard",
+      nowIso: "2026-11-07T10:00:00Z",
+      nowMs: Date.parse("2026-11-07T10:00:00Z"),
+      fenceToken: "vocab-claim",
+    });
+    expect(claimed.ok).toBe(true);
+    const released = releaseQueueLease(store, {
+      ref: "GH-320",
+      holder: "holder-a",
+      park: {
+        cause: "provider-window",
+        condition: { type: "provider-window", expiresAt: "2026-11-07T11:00:00Z" },
+      },
+      nowIso: "2026-11-07T10:05:00Z",
+      nowMs: Date.parse("2026-11-07T10:05:00Z"),
+      fenceToken: "vocab-release",
+    });
+    expect(released.ok).toBe(true);
+    if (released.ok) {
+      expect(released.value.result).toBe("parked");
+      expect(released.value.park?.schema).toBe("delivery.queue.park.v1");
+      expect(released.value.park?.clearObservedAt).toBeUndefined();
+      expect(released.value.park?.recoveryState).toBe("parked");
+    }
+    const leases = readQueueLeases(store);
+    expect(leases.ok).toBe(true);
+    if (leases.ok) {
+      expect(leases.records.every((record) => record.schema === "delivery.queue.lease.v1")).toBe(
+        true,
+      );
+    }
+    const parks = readQueueParks(store);
+    expect(parks.ok).toBe(true);
+    if (parks.ok) {
+      expect(parks.records).toHaveLength(1);
+      expect(parks.records[0]?.schema).toBe("delivery.queue.park.v1");
+    }
+    const recovered = recoverQueueParks(store, {
+      nowIso: "2026-11-07T11:00:01Z",
+      nowMs: Date.parse("2026-11-07T11:00:01Z"),
+      context: { providerAvailable: true, leaseHeldRepositories: [] },
+      fenceToken: "vocab-recover",
+    });
+    expect(recovered.ok).toBe(true);
+    const after = readQueueParks(store);
+    if (after.ok) {
+      expect(after.records.map((record) => record.schema)).toEqual([
+        "delivery.queue.park.v1",
+        "delivery.queue.park.v1",
+        "delivery.queue.park.v1",
+      ]);
+      expect(after.records[1]?.recoveryState).toBe("clear-observed");
+      expect(after.records[2]?.recoveryState).toBe("recovered");
+    }
+    const incidents = readQueueIncidents(store);
+    if (incidents.ok) {
+      expect(incidents.records[0]?.schema).toBe("delivery.queue.incident.v1");
+    }
   });
 });

@@ -80,6 +80,7 @@
     "src/domain/pm-notes-lint.ts",
     "src/domain/queue-graph.ts",
     "src/domain/queue-lease.ts",
+    "src/domain/queue-park.ts",
     "src/domain/queue-rank.ts",
     "src/domain/queue-ready.ts",
     "src/domain/queue-readiness.ts",
