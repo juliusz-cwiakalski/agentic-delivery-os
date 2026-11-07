@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: "2026-11-07T04:45:00Z", completed: "2026-11-07T05:05:00Z" }
   review_fix: { started: "2026-11-07T06:20:00Z", completed: "2026-11-07T07:30:00Z" }
   quality_gates: { started: "2026-11-07T07:20:00Z", completed: "2026-11-07T07:40:00Z" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-11-07T07:45:00Z", completed: "2026-11-07T07:50:00Z" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "PM-decided (autonomous): proceed without the in-repo legacy resolver scripting; the binding behavioral contract is the ticket AC + pinned decisions + SC-M1-21/22 + concept model-profiles.md + man-page provider.md. 'Ported tests' means the ported decision-table groups enumerated in the ticket (chain order, lazy probes, park-versus-switch, revert, condition seams), not an ID-for-ID mapping to an external battery. Precedent: GH-182 had an in-repo battery; GH-234 does not."
