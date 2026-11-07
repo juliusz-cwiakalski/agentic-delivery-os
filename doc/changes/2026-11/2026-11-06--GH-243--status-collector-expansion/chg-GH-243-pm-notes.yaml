@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-07T04:30:00Z", completed: "2026-11-07T05:30:00Z" }
   quality_gates: { started: "2026-11-07T05:40:00Z", completed: "2026-11-07T06:00:00Z" }
   dod_check: { started: "2026-11-07T06:05:00Z", completed: "2026-11-07T06:15:00Z" }
-  pr_creation: { started: "2026-11-07T06:20:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-11-07T06:20:00Z", completed: "2026-11-07T06:35:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/259" }
 decisions:
   - text: "Keep shipped exit-code semantics: the digest is data, not a command failure; exit-1-on-actionable-finding from the proposed man page is deferred to M1-S20 agent integration. Ticket AC does not request exit-code changes and SPEC-STATUS-DIGEST pins section failures as digest data."
     date: "2026-11-06"
