@@ -2466,9 +2466,7 @@
     "RetryPolicy",
     "IdempotencyKey"
   ],
-  "credentialPort": [
-    "CredentialPort"
-  ],
+  "credentialPort": ["CredentialPort"],
   "envelope": [
     "DEGRADATION_REASONS",
     "ENVELOPE_SCHEMA_ID",

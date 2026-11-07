@@ -19,13 +19,16 @@ import {
 
 const degraded: SpendSeed = {
   records: [
-    makeSessionRecord({ runId: "run-R1", tokens: tokens({
-      input: 10,
-      output: 10,
-      reasoning: 10,
-      cacheRead: 10,
-      cacheWrite: 10,
-    }) }),
+    makeSessionRecord({
+      runId: "run-R1",
+      tokens: tokens({
+        input: 10,
+        output: 10,
+        reasoning: 10,
+        cacheRead: 10,
+        cacheWrite: 10,
+      }),
+    }),
     makeSessionRecord({
       runId: "run-R1",
       sessionId: "ses-degraded-1",
