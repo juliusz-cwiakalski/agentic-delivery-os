@@ -180,7 +180,7 @@ The secret-read boundary remains unchanged: the provider engine, the CLI provide
 
 | Subcommand | Mutating | Flags | Success payload |
 |------------|----------|-------|-----------------|
-| `provider resolve` | yes; persists parks and announcements for a resolved decision | `--chain <name>` | Decision (selected or parked), skipped entries, parks, announcements |
+| `provider resolve` | yes; persists parks and announcements for a resolved decision | `--chain <name>`, `--profile <name>` (restricts candidates to the named profile's providers; see [Provider Profiles and Watching](feature-provider-profiles.md)) | Decision (selected or parked), skipped entries, parks, announcements |
 | `provider quota` | no | `--provider <name>` | Per-provider condition views and announcements, or a classified error |
 | `provider parks list` | no | `--all`, `--provider <name>` | Park views folded from verified ledger truth; active by default, expired and cleared with `--all` |
 
