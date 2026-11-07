@@ -1,0 +1,145 @@
+{
+  "name": "ready-review-unknown-degraded",
+  "scenario": "ready-review-unknown-degraded",
+  "expected": {
+    "sections": {
+      "tracker": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": [],
+        "assertions": [
+          {
+            "assertion": "epic-membership",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 0
+          },
+          {
+            "assertion": "story-points",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 0
+          },
+          {
+            "assertion": "in-sprint",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 0
+          }
+        ]
+      },
+      "changes-and-prs": {
+        "state": "degraded",
+        "reasons": ["partial-evidence", "signal-unavailable", "item-signal-absent"],
+        "counts": {
+          "observed": 0,
+          "unknown": 2,
+          "total": 2,
+          "omitted": 0
+        },
+        "orderedIds": ["501", "502"],
+        "truncated": false,
+        "findings": []
+      },
+      "ci": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "lanes-or-queue": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "providers": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 1,
+          "unknown": 0,
+          "total": 1,
+          "omitted": 0
+        },
+        "orderedIds": ["entry:primary"],
+        "truncated": false,
+        "findings": []
+      },
+      "parked-work": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "ready-to-merge": {
+        "state": "degraded",
+        "reasons": ["signal-unavailable", "partial-evidence"],
+        "counts": {
+          "observed": 0,
+          "unknown": 2,
+          "total": 2,
+          "omitted": 0
+        },
+        "orderedIds": ["501", "502"],
+        "truncated": false,
+        "findings": []
+      },
+      "spend": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "blockers": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      }
+    }
+  }
+}

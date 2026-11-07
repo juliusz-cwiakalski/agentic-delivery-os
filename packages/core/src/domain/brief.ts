@@ -72,10 +72,10 @@ const placeholderEntry = (id: BriefPlaceholderSurfaceId): BriefPlaceholderEntry 
 const surfaceOf = (brief: BriefPayload, id: BriefSurfaceId): BriefSurface | undefined =>
   brief.surfaces.find((surface) => surface.id === id);
 
-const digestSurface = (section: StatusSection): BriefSurface => {
+const digestSurface = (section: StatusSection, id: BriefSurfaceId): BriefSurface => {
   const reason = section.evidence.reasons[0];
   return {
-    id: section.id,
+    id,
     title: section.title,
     state: section.state,
     counts: section.counts,
@@ -95,7 +95,7 @@ const placeholderSurface = (entry: BriefPlaceholderEntry): BriefSurface => ({
 const buildSurfaces = (digest: StatusDigest): readonly BriefSurface[] =>
   BRIEF_SURFACE_ORDER.map((id) => {
     const section = digest.sections.find((entry) => entry.id === id);
-    if (section !== undefined) return digestSurface(section);
+    if (section !== undefined) return digestSurface(section, id);
     const placeholder = BRIEF_PLACEHOLDER_CATALOG.find((entry) => entry.capability === id);
     if (placeholder === undefined)
       throw new Error(`surface ${id} has no digest section or catalog entry`);

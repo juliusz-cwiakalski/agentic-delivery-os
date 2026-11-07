@@ -18,6 +18,7 @@ import {
   deliveryRequestRead,
   failedDeliveryRequestRead,
   failedPipelineRunRead,
+  failedRun,
   failedWorkItemRead,
   GITHUB_SLICE_AVAILABILITY,
   localContext,
@@ -28,6 +29,7 @@ import {
   NOW_MS,
   parkView,
   pipelineRunRead,
+  primaryRepository,
   providerConfig,
   providerConfigRead,
   providers,
@@ -278,6 +280,32 @@ export const matrixCases: readonly MatrixCase[] = [
     facts: baseFacts({ ci: pipelineRunRead([]), nowMs: NOW_MS }),
     expected: {
       ci: { state: "observed", reason: "observed-empty" },
+    },
+  },
+  {
+    name: "ci-four-red-runs-grouped",
+    facts: baseFacts({
+      repository: primaryRepository(),
+      ci: pipelineRunRead([failedRun("700"), failedRun("701"), failedRun("702"), failedRun("703")]),
+    }),
+    expected: {
+      ci: { state: "observed", reason: "observed" },
+    },
+  },
+  {
+    name: "ci-four-red-runs-feature-branch",
+    facts: baseFacts({
+      repository: repository({
+        head: {
+          branch: "feat/GH-243/x",
+          sha: "1111111111111111111111111111111111111111",
+          detached: false,
+        },
+      }),
+      ci: pipelineRunRead([failedRun("700"), failedRun("701"), failedRun("702"), failedRun("703")]),
+    }),
+    expected: {
+      ci: { state: "observed", reason: "observed" },
     },
   },
 ] as const;

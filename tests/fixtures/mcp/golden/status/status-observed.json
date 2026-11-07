@@ -39,11 +39,13 @@
           "family": "ownerHandBacks",
           "items": [
             {
+              "age": 86400000,
               "family": "ownerHandBacks",
               "itemState": "observed",
               "labels": [
                 "hand-back"
               ],
+              "slaState": "escalated",
               "title": "Owner hand back",
               "workItemRef": "GH-232"
             }
@@ -73,6 +75,26 @@
           "state": "observed"
         },
         {
+          "assertions": [
+            {
+              "assertion": "epic-membership",
+              "satisfied": 0,
+              "unknown": 2,
+              "violations": 0
+            },
+            {
+              "assertion": "story-points",
+              "satisfied": 0,
+              "unknown": 2,
+              "violations": 0
+            },
+            {
+              "assertion": "in-sprint",
+              "satisfied": 0,
+              "unknown": 2,
+              "violations": 0
+            }
+          ],
           "counts": {
             "observed": 1,
             "omitted": 0,
@@ -92,6 +114,26 @@
             }
           ],
           "state": "observed"
+        }
+      ],
+      "findings": [
+        {
+          "code": "tracker.owner-gate-escalated",
+          "count": 1,
+          "evidenceRef": "GH-232",
+          "members": [
+            "GH-232"
+          ],
+          "severity": "high"
+        },
+        {
+          "code": "tracker.hygiene.missing-labels",
+          "count": 1,
+          "evidenceRef": "GH-231",
+          "members": [
+            "GH-231"
+          ],
+          "severity": "low"
         }
       ],
       "id": "tracker",
@@ -197,6 +239,11 @@
       "truncated": false
     },
     {
+      "attentionStates": [
+        "delivering",
+        "idle-with-reason",
+        "idle-no-reason"
+      ],
       "capability": "queue-lane-engine",
       "counts": {
         "observed": 0,
@@ -297,14 +344,111 @@
       "state": "observed",
       "title": "Parked work",
       "truncated": false
+    },
+    {
+      "counts": {
+        "observed": 2,
+        "omitted": 0,
+        "total": 2,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed"
+        ],
+        "sources": [
+          {
+            "outcome": "read",
+            "source": "changes"
+          }
+        ]
+      },
+      "id": "ready-to-merge",
+      "items": [
+        {
+          "ciResult": "succeeded",
+          "class": "review-pending",
+          "ref": "231",
+          "reviewState": "observed",
+          "sourceRef": "feat/GH-231",
+          "targetRef": "main-tools"
+        },
+        {
+          "ciResult": "succeeded",
+          "class": "review-pending",
+          "ref": "232",
+          "reviewState": "observed",
+          "sourceRef": "feat/GH-232",
+          "targetRef": "main-tools"
+        }
+      ],
+      "state": "observed",
+      "title": "Ready to merge",
+      "truncated": false
+    },
+    {
+      "capability": "spend-summary",
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "engine-not-delivered"
+        ],
+        "sources": [
+          {
+            "outcome": "not-delivered",
+            "source": "queue-engine"
+          }
+        ]
+      },
+      "expectedStory": "M1-S19",
+      "id": "spend",
+      "items": [],
+      "note": "spend summary arrives with M1-S19",
+      "state": "not-delivered",
+      "title": "Spend",
+      "truncated": false
+    },
+    {
+      "capability": "typed-blockers",
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "engine-not-delivered"
+        ],
+        "sources": [
+          {
+            "outcome": "not-delivered",
+            "source": "queue-engine"
+          }
+        ]
+      },
+      "expectedStory": "M1-S16",
+      "id": "blockers",
+      "items": [],
+      "note": "typed blockers arrive with M1-S16",
+      "state": "not-delivered",
+      "title": "Blockers",
+      "truncated": false
     }
   ],
   "summary": {
     "actionable": 6,
     "degraded": 0,
-    "notDelivered": 1,
-    "observed": 5,
-    "sections": 6,
+    "findingsTotal": 2,
+    "notDelivered": 3,
+    "observed": 6,
+    "placeholderSectionCount": 2,
+    "sections": 9,
     "unavailable": 0,
     "unknown": 0
   }

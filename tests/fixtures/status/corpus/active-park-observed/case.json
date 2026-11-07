@@ -1,7 +1,6 @@
 {
   "name": "active-park-observed",
   "scenario": "active-park-observed",
-  "controls": ["active provider park"],
   "expected": {
     "sections": {
       "tracker": {
@@ -14,7 +13,28 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": [],
+        "assertions": [
+          {
+            "assertion": "epic-membership",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 0
+          },
+          {
+            "assertion": "story-points",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 0
+          },
+          {
+            "assertion": "in-sprint",
+            "violations": 0,
+            "unknown": 0,
+            "satisfied": 0
+          }
+        ]
       },
       "changes-and-prs": {
         "state": "observed",
@@ -26,7 +46,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "ci": {
         "state": "observed",
@@ -38,7 +59,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "lanes-or-queue": {
         "state": "not-delivered",
@@ -50,7 +72,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "providers": {
         "state": "observed",
@@ -62,7 +85,8 @@
           "omitted": 0
         },
         "orderedIds": ["entry:primary", "park:provider:primary"],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "parked-work": {
         "state": "observed",
@@ -74,8 +98,49 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
+      },
+      "ready-to-merge": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "spend": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "blockers": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
       }
     }
-  }
+  },
+  "controls": ["active provider park"]
 }

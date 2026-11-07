@@ -12,6 +12,7 @@ import type {
 import { aggregateStatus } from "../../packages/core/src/domain/index";
 import {
   ALL_AVAILABLE,
+  ASSERTIONS_AVAILABLE,
   baseFacts,
   blockedBy,
   GITHUB_SLICE_AVAILABILITY,
@@ -201,5 +202,89 @@ describe("TC-STATUS-012 hygiene checks title and labels only", () => {
       workItemRead([makeWorkItem({ entityId: "1", title: "Conforming", labels: ["tracker"] })]),
     );
     expect(family(facts, "hygiene").items).toEqual([]);
+  });
+});
+
+describe("TC-ATT-010 existing findings are code-carrying with unchanged behaviour", () => {
+  const codedFacts = () =>
+    trackerFacts(
+      workItemRead([
+        makeWorkItem({ entityId: "1", title: "", labels: ["tracker"] }),
+        makeWorkItem({ entityId: "2", title: "Item 2", labels: [] }),
+        makeWorkItem({ entityId: "3", title: "", labels: [] }),
+        makeWorkItem({ entityId: "10", updatedAt: "2026-09-01T00:00:00Z" }),
+        makeWorkItem({ entityId: "11", updatedAt: "2026-09-02T00:00:00Z" }),
+        makeWorkItem({ entityId: "12" }),
+      ]),
+    );
+
+  test("blank title and empty labels keep their triggers and gain codes", () => {
+    const facts = codedFacts();
+    const trackerSection = sectionById(aggregateStatus(facts).sections, "tracker");
+    const codes = (trackerSection.findings ?? []).map((finding) => finding.code);
+    expect(codes).toContain("tracker.hygiene.missing-title");
+    expect(codes).toContain("tracker.hygiene.missing-labels");
+    const hygiene = family(facts, "hygiene");
+    expect(hygiene.items.map((item) => [item.workItemRef, item.findings])).toEqual([
+      ["3", ["missing-title", "missing-labels"]],
+      ["1", ["missing-title"]],
+      ["10", ["missing-labels"]],
+      ["11", ["missing-labels"]],
+    ]);
+    expect(hygiene.counts.total).toBe(6);
+  });
+
+  test("stalled items group into one tracker.stalled-ticket finding", () => {
+    const facts = codedFacts();
+    const trackerSection = sectionById(aggregateStatus(facts).sections, "tracker");
+    const stalled = trackerSection.findings?.find(
+      (finding) => finding.code === "tracker.stalled-ticket",
+    );
+    expect(stalled?.severity).toBe("medium");
+    expect(stalled?.members).toEqual(["10", "11"]);
+    expect(stalled?.count).toBe(2);
+  });
+
+  test("unknown activity emits no invented finding and stays visible", () => {
+    const facts = codedFacts();
+    const stalls = family(facts, "stalls");
+    expect(ids(stalls.items)).toContain("12");
+    const trackerSection = sectionById(aggregateStatus(facts).sections, "tracker");
+    const stalled = trackerSection.findings?.find(
+      (finding) => finding.code === "tracker.stalled-ticket",
+    );
+    expect(stalled?.members).not.toContain("12");
+  });
+
+  test("the new assertions reuse the shipped absence semantics", () => {
+    const absent = trackerFacts(
+      workItemRead(
+        [makeWorkItem({ entityId: "1", title: "No labels", labels: [] })],
+        ASSERTIONS_AVAILABLE,
+      ),
+    );
+    const absentCodes = (
+      sectionById(aggregateStatus(absent).sections, "tracker").findings ?? []
+    ).map((finding) => finding.code);
+    expect(absentCodes).toContain("tracker.hygiene.missing-labels");
+    expect(absentCodes).toContain("tracker.hygiene.epic-membership");
+
+    const conforming = trackerFacts(
+      workItemRead(
+        [
+          makeWorkItem({
+            entityId: "1",
+            title: "Conforming",
+            labels: ["epic:x", "points:3"],
+            milestone: "Sprint 1",
+          }),
+        ],
+        ASSERTIONS_AVAILABLE,
+      ),
+    );
+    const conformingCodes = (
+      sectionById(aggregateStatus(conforming).sections, "tracker").findings ?? []
+    ).map((finding) => finding.code);
+    expect(conformingCodes).toEqual([]);
   });
 });

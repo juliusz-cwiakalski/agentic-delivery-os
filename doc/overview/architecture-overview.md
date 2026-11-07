@@ -3,13 +3,13 @@ ados_distribution: internal
 id: TOOLING-ARCHITECTURE-OVERVIEW
 status: Draft
 created: 2026-11-01
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, ADR-0010]
-  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-232]
+  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-232, GH-243]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -116,8 +116,11 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
 
 ### Shipped versus planned behavior
 
-- `status` is a bounded, read-only six-section digest: human ceiling 24 lines /
-  4096 bytes; machine `data` ceiling 65536 bytes, with counts and truncation.
+- `status` is a bounded, read-only nine-section attention-state digest: a
+  closed finding-code registry with grouped ranked findings, tri-state
+  hygiene assertions, owner-gate ages, parked conditions, and a
+  merge-ready-first action list; human ceiling 32 lines / 6144 bytes;
+  machine `data` ceiling 65536 bytes, with counts, findings, and truncation.
 - `queue ready` is a bounded read-only tri-state ready-set with ranked resumption,
   at most eight candidates. It does not dispatch, acquire delivery ownership or
   implement the M2 queue/lane scheduler. See [status](../spec/features/feature-status-digest.md)

@@ -3,7 +3,7 @@ ados_distribution: internal
 id: SPEC-OWNER-GATE-SLA
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
 summary: "The owner-gate SLA: the shared owner-gate population and its provider-native age clock, the pinned 24 h escalation and 72 h default-on-expiry thresholds with `>=` boundary semantics, the three-value `slaState` with declared unknown age, the PDR-0003 two-row policy-as-data default map (owner-review never-merge and non-defaultable, waiver defaulting to owner-review-first), the per-class waiver-authorization policy consumed by the merge transaction, the append-only idempotent EVT-1 decision record, recorded merge waivers folded into gate kind and `waivedBy`, structural never-merge protection, never-silence declared collector unavailability, the render-once board command with its deterministic rank key, bounds, and truncation marks, and the owner/coordinator audience seam."
@@ -263,7 +263,7 @@ One invocation performs one bounded tracker list read and, only when a default i
 
 ## Dependencies & Risks
 
-- **Depends on** the status digest ([feature-status-digest.md](feature-status-digest.md)) for the declared owner-attention label set, the open-item family, the provider-native activity timestamp, and the thresholds-as-contract-data precedent; the set is reused by reference, not duplicated.
+- **Depends on** the status digest ([feature-status-digest.md](feature-status-digest.md)) for the declared owner-attention label set, the open-item family, the provider-native activity timestamp, and the thresholds-as-contract-data precedent; the set is reused by reference, not duplicated. The digest's M1-S10 owner-gate-age projection consumes `evaluateOwnerGateSla`, `OWNER_GATE_SLA_POLICY`, and the two unknown-age markers by reference read-only, writes no decision record, and never re-derives a threshold.
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for the append-only ledger, verified reads, verified-empty evidence, fences, and torn-state classification that carry the decision record.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the `CommandResult` envelope, the `status` domain kind, the declared family identity, the `{0, 1, 2}` projection, and the redaction path.
 - **Depends on** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for the resolved GitHub instance and credential reference; the SLA adds no key.

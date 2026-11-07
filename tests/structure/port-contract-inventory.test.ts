@@ -318,8 +318,14 @@ describe("TC-CONTRACT-001 WorkItem field-shape probe", () => {
       "assignee",
       "relations",
       "comments",
+      "milestone",
       "updatedAt",
     ]);
+    expect(fieldShapeFixture.fields.find((field) => field.name === "milestone")).toMatchObject({
+      optional: true,
+      readonly: true,
+      typeText: "string",
+    });
     expect(fieldShapeFixture.fields.find((field) => field.name === "comments")).toMatchObject({
       optional: true,
       readonly: true,

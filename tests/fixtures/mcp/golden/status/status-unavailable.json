@@ -153,6 +153,11 @@
       "truncated": false
     },
     {
+      "attentionStates": [
+        "delivering",
+        "idle-with-reason",
+        "idle-no-reason"
+      ],
       "capability": "queue-lane-engine",
       "counts": {
         "observed": 0,
@@ -253,15 +258,95 @@
       "state": "observed",
       "title": "Parked work",
       "truncated": false
+    },
+    {
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "addressing-unresolved"
+        ],
+        "sources": [
+          {
+            "outcome": "not-configured",
+            "source": "repository-binding"
+          }
+        ]
+      },
+      "id": "ready-to-merge",
+      "items": [],
+      "state": "unavailable",
+      "title": "Ready to merge",
+      "truncated": false
+    },
+    {
+      "capability": "spend-summary",
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "engine-not-delivered"
+        ],
+        "sources": [
+          {
+            "outcome": "not-delivered",
+            "source": "queue-engine"
+          }
+        ]
+      },
+      "expectedStory": "M1-S19",
+      "id": "spend",
+      "items": [],
+      "note": "spend summary arrives with M1-S19",
+      "state": "not-delivered",
+      "title": "Spend",
+      "truncated": false
+    },
+    {
+      "capability": "typed-blockers",
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "engine-not-delivered"
+        ],
+        "sources": [
+          {
+            "outcome": "not-delivered",
+            "source": "queue-engine"
+          }
+        ]
+      },
+      "expectedStory": "M1-S16",
+      "id": "blockers",
+      "items": [],
+      "note": "typed blockers arrive with M1-S16",
+      "state": "not-delivered",
+      "title": "Blockers",
+      "truncated": false
     }
   ],
   "summary": {
     "actionable": 1,
     "degraded": 1,
-    "notDelivered": 1,
+    "findingsTotal": 0,
+    "notDelivered": 3,
     "observed": 2,
-    "sections": 6,
-    "unavailable": 2,
+    "placeholderSectionCount": 2,
+    "sections": 9,
+    "unavailable": 3,
     "unknown": 0
   }
 }

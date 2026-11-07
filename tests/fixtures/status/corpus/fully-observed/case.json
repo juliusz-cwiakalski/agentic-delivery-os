@@ -30,7 +30,59 @@
           "hygiene:GH-202",
           "hygiene:GH-203"
         ],
-        "truncated": true
+        "truncated": true,
+        "findings": [
+          {
+            "code": "tracker.owner-gate-escalated",
+            "severity": "high",
+            "count": 4,
+            "members": ["GH-100", "GH-101", "GH-102", "GH-103"],
+            "evidenceRef": "GH-100"
+          },
+          {
+            "code": "tracker.stalled-ticket",
+            "severity": "medium",
+            "count": 4,
+            "members": ["GH-300", "GH-301", "GH-302", "GH-303"],
+            "evidenceRef": "GH-300"
+          },
+          {
+            "code": "tracker.hygiene.missing-labels",
+            "severity": "low",
+            "count": 12,
+            "members": [
+              "GH-200",
+              "GH-201",
+              "GH-202",
+              "GH-203",
+              "GH-300",
+              "GH-301",
+              "GH-302",
+              "GH-303"
+            ],
+            "evidenceRef": "GH-200"
+          }
+        ],
+        "assertions": [
+          {
+            "assertion": "epic-membership",
+            "violations": 0,
+            "unknown": 16,
+            "satisfied": 0
+          },
+          {
+            "assertion": "story-points",
+            "violations": 0,
+            "unknown": 16,
+            "satisfied": 0
+          },
+          {
+            "assertion": "in-sprint",
+            "violations": 0,
+            "unknown": 16,
+            "satisfied": 0
+          }
+        ]
       },
       "changes-and-prs": {
         "state": "observed",
@@ -42,7 +94,8 @@
           "omitted": 0
         },
         "orderedIds": ["500", "502", "504", "506", "501", "503", "505", "507"],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "ci": {
         "state": "observed",
@@ -54,7 +107,8 @@
           "omitted": 0
         },
         "orderedIds": ["700", "707", "706", "705", "704", "703", "702", "701"],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "lanes-or-queue": {
         "state": "not-delivered",
@@ -66,7 +120,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "providers": {
         "state": "observed",
@@ -95,7 +150,8 @@
           "park:provider:provider-6",
           "park:provider:provider-7"
         ],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "parked-work": {
         "state": "observed",
@@ -116,7 +172,47 @@
           "GH-806",
           "GH-807"
         ],
-        "truncated": false
+        "truncated": false,
+        "findings": []
+      },
+      "ready-to-merge": {
+        "state": "observed",
+        "reasons": ["observed"],
+        "counts": {
+          "observed": 8,
+          "unknown": 0,
+          "total": 8,
+          "omitted": 0
+        },
+        "orderedIds": ["500", "501", "502", "503", "504", "505", "506", "507"],
+        "truncated": false,
+        "findings": []
+      },
+      "spend": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "blockers": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
       }
     }
   }

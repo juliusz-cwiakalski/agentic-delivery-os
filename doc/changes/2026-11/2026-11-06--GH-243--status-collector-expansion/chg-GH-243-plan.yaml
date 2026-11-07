@@ -1,0 +1,459 @@
+# GH-243 implementation plan — M1-S10: Status collector expansion
+#
+# Sources (single source of truth):
+#   - Spec:  ./chg-GH-243-spec.md (v1.1; F-1..F-10 plus F-4a; 23 ACs
+#     AC-F1-1..AC-F10-1 and AC-NFR-1..3; NFR-1..10; DM-1..DM-13; DEC-1..DEC-18;
+#     Appendix A finding-code registry, Appendix B bounds, Appendix C
+#     ready-to-merge derivation row, Appendix D ticket-AC traceability)
+#   - Test plan: ./chg-GH-243-test-plan.md (rev 1.1; 42 TCs TC-ATT-001..042;
+#     binding in-process harness §4.1; non-vacuity contract §4.2; automation
+#     map §7; execution order §7)
+#   - PM notes: ./chg-GH-243-pm-notes.yaml (three binding decisions: exit codes
+#     unchanged, no --watch, lanes declared not-delivered; phase-7 doc-risk list)
+#   - Code truth inspected: packages/core/src/contracts/status.ts (six ids,
+#     24/4096 human bounds, STATUS_HYGIENE_FINDINGS item-level vocabulary),
+#     packages/core/src/domain/status.ts (six section builders, summaryOf,
+#     renderStatusHuman), packages/cli/src/commands/status.ts +
+#     packages/cli/src/edge.ts (composition — NO change required; every new
+#     surface derives inside the pure aggregator from already-injected facts),
+#     packages/adapters/src/github/normalize.ts (labels mapped, milestone NOT
+#     yet), packages/adapters/src/file/pm-context.ts (parked projection lacks a
+#     condition), packages/core/src/{contracts,domain}/owner-gate-sla.ts
+#     (evaluateOwnerGateSla, OWNER_GATE_SLA_POLICY, unknown-age markers),
+#     packages/core/src/{contracts,domain}/queue-ready.ts (close-class
+#     vocabulary + numeric-aware rank keys), tests/fixtures/status/** (harness,
+#     12 corpus cases, matrix, goldens), tests/structure/**, tests/types/**,
+#     tests/checks/**, scripts/checks/**.
+#
+# GAP-1/A-T2 mapping obligation: all 42 TCs are mapped onto Phases 1–7 below
+# without reshaping any TC's behaviour, states, reasons, codes, bounds,
+# assertions, or AC/NFR mapping. Per-phase `coverage` entries carry the
+# mapping; TCs whose structure half and behaviour half land in different phases
+# are marked with the completing phase. The full TC and AC matrices are pinned
+# in the comment block at the end of this file.
+#
+# Spec/test-plan/code cross-check (performed before authoring; findings
+# recorded, none blocking, nothing silently adapted):
+#   1. BRIEF_SURFACE_ORDER (packages/core/src/contracts/brief.ts) is today
+#      auto-derived as [...STATUS_SECTION_ORDER, ...placeholder ids]. Spec §12
+#      assumes the brief's nine-surface catalog "is its own contract and is not
+#      auto-derived from the section count". Growing STATUS_SECTION_ORDER 6→9
+#      without decoupling would silently grow the brief catalog to twelve and
+#      break TC-ATT-038. Resolution (Phase 1, delivery decision D-3): pin
+#      BRIEF_SURFACE_ORDER to its own literal nine-id list — same nine values,
+#      zero brief payload change, brief suites stay green with no contract-edit
+#      beyond the mechanical decoupling. Reported to the orchestrator.
+#   2. Findings-cap constant spelling varies inside the test plan: TC-ATT-002
+#      step 1 writes `STATUS_MAX_SECTION_FINDINGS` while TC-ATT-003 step 2 and
+#      DEC-15 write `STATUS_MAX_FINDINGS_PER_SECTION`. GAP-12/A-T8 pin values,
+#      not spellings ("names delivery-bound; values pinned"). Resolution
+#      (delivery decision D-1): one canonical constant named
+#      STATUS_MAX_FINDINGS_PER_SECTION = 8; TC-ATT-002's spelling is read as
+#      the same constant. Non-blocking.
+#   3. "Nine sections × five states" (AC-NFR-1, NFR-10) is shorthand; the
+#      precise oracle is TC-ATT-033 step 2 — every state in each section's
+#      DECLARED derivation row (ready-to-merge: four states, never
+#      not-delivered; lanes/spend/blockers: not-delivered only). The plan
+#      follows the precise reading.
+#   4. The CLI edge and StatusCommandRuntime need NO change: the
+#      ready-to-merge section, findings, hygiene assertions, owner-gate ages,
+#      and placeholders all derive inside aggregateStatus from facts the edge
+#      already injects (spec Flow 4). Confirmed against edge.ts.
+#   5. The existing item-level hygiene field `findings: ["missing-title", ...]`
+#     (kebab, on StatusTrackerItem) is a different layer from the registry's
+#     dotted section-level findings[] codes; TC-ATT-010 keeps the item field
+#     unchanged while the section findings[] carries the code. No conflict.
+#
+# Delivery decisions recorded by this plan (delivery-bound items the spec and
+# test plan leave open; recorded against the spec per the GAP/OQ discipline):
+#   - D-1 Canonical bound constant spellings (GAP-12): STATUS_MAX_FINDINGS_PER_SECTION,
+#     STATUS_MAX_FINDING_MEMBERS, STATUS_MAX_READY_ITEMS (all = 8), plus the
+#     raised STATUS_MAX_HUMAN_LINES = 32 and STATUS_MAX_HUMAN_BYTES = 6144.
+#   - D-2 Findings-layer seam (DEC-15/TC-ATT-008): the pure findings evaluation
+#     accepts an injectable registry whose default is the shipped contract
+#     registry; the test-only 10-code extension injects at that seam inside the
+#     test tree only, and the production registry is never mutated or widened.
+#   - D-3 Brief surface-order decoupling (cross-check item 1): literal
+#     nine-id BRIEF_SURFACE_ORDER, byte-identical brief output.
+#   - D-4 SLA reuse seam (DEC-6/F-5): domain/status derives gate facts from the
+#     SAME tracker read's owner-hand-back items (kind "owner-review", ref =
+#     entityId, activityAt = updatedAt), evaluates with OWNER_GATE_SLA_POLICY
+#     imported by reference over the injected clock, audience "coordinator",
+#     injects NO existing decision records (no state read; the read budget
+#     stays 3 network reads / 1 park fold / 1 config resolve), DISCARDS
+#     decisionsToApply, and projects only age/ageUnknownReason/slaState (DM-8;
+#     default/waivedBy never rendered — TC-ATT-014 step 5). Unknown age
+#     therefore always escalates (TC-ATT-015) and expiry-eligible gates render
+#     default-applied without any write.
+#   - D-5 Mapped-signal projection (F-4a/DM-13/DEC-14): WorkItem gains an
+#     optional additive `milestone` field (camelCase, DEC-17) mapped in
+#     normalizeGithubIssue from the same issue payload's milestone; the GitHub
+#     slice declares all three assertion signals available (labels were already
+#     normalized; milestone now mapped); availability is declared contract data
+#     on the tracker read result, never runtime-inferred. Other slices stay
+#     all-unknown where unmapped.
+#   - D-6 Placeholder identity (DM-6): spend capability id `spend-summary`
+#     (expectedStory M1-S19) and blockers capability id `typed-blockers`
+#     (expectedStory M1-S16), reason engine-not-delivered, notes exactly
+#     "spend summary arrives with M1-S19" / "typed blockers arrive with M1-S16"
+#     (human lines pinned byte-exact by TC-ATT-019/020; ids delivery-bound).
+#   - D-7 Truncation-marker reading (TC-ATT-007 notes): the section `truncated`
+#     flag declares member/finding drops; counts.omitted keeps its shipped
+#     ranked-item meaning and is never inflated by member drops.
+#   - D-8 Golden regeneration (A-T10): digest.json/human.txt plus the declared
+#     state variants (header-absent, degraded merge-ready-?) are regenerated
+#     exactly ONCE in Phase 2 — the only phase that changes rendered bytes —
+#     as a reviewed diff recorded in the change revision log; later phases add
+#     tests/fixtures only and never touch committed golden bytes.
+#   - D-9 Section item surface for sections 7–9 (DM-3 uniform shape): the
+#     ready-to-merge section renders its DM-5 items through the uniform
+#     `items` surface (union item type); placeholders carry zero items.
+#
+# Phase-boundary greenness strategy (each phase committable, type-safe,
+# gate-green): Phase 1 adds contract data, types, and the adapter mapping but
+# changes NO rendered digest bytes (the aggregator keeps emitting six sections;
+# structure suites are extended in the same phase). Phase 2 is the single
+# machine-and-human surface phase: it wires every additive surface and lands
+# the one golden regeneration plus the allowlist-governed expectation updates
+# (TC-ATT-037 discipline). Phases 3–6 add behaviour suites, fixtures, and
+# checks over already-wired, already-pinned behaviour; Phase 7 finalizes.
+#
+# Tier rationale: `full` — 10+1 capabilities, 23 ACs, 42 automated TCs,
+# cross-package delivery (core contracts + ports + domain, github/file
+# adapters, consumer reconciliation), an additive change to a shipped,
+# byte-pinned contract surface. All phases are delivery kind; plan-level
+# defaultLeases/defaultWeightClass apply. Per-phase completion: one
+# Conventional Commit per phase (the `summary` key, landed via @committer)
+# plus the `testGate` commands passing; typed doneArtifacts slots are declared
+# on the final phase where the evidence exists.
+#
+# Invariants carried by every phase (spec §7.2/§21, NFR-1..10, DEC-1/DEC-16):
+# additive-only over delivery.status.v1 (sections 1–6 frozen in id, order,
+# derivation, required fields; only the DEC-16 optional-field allowlist may be
+# added); exit codes unchanged (DEC-9); no --watch (DEC-10); read budget
+# exactly 3 network reads + 1 park fold + 1 config resolve with zero new reads
+# (NFR-4); read-only — zero writes, fences, mutations, child processes, and
+# zero SLA decision records (NFR-7); no new package, subpath, runtime-API
+# location, error-table row, domain kind, or configuration key (NG-10);
+# brand-neutral (injected binary name, no product literals); every new item
+# surface capped with explicit truncation (NFR-1); determinism — total,
+# order-independent rank keys (NFR-6); no-evidence-no-claim (DEC-18); lanes
+# never fabricated, dormant lane.idle-no-reason never emitted (DEC-7); findings
+# carry registry codes and identities only — no titles, payloads, secrets, or
+# free-form text (NFR-8/9); schema version stays delivery.status.v1 (DEC-1).
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-243
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7]
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Finding-code registry, nine-section contract vocabulary, mapped-signal projection, and structure pinning"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/status.ts
+        - packages/core/src/contracts/brief.ts
+        - packages/core/src/contracts/ports.ts
+        - packages/core/src/contracts/index.ts
+        - packages/adapters/src/github/normalize.ts
+        - tests/structure/status-findings-contract.test.ts
+        - tests/structure/status-contract.test.ts
+        - tests/structure/status-imports.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+        - tests/types/status-additive-v1.type-test.ts
+        - tests/behaviour/providers/github-collection.test.ts
+        - tests/fixtures/status/harness.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/status.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/ports.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/brief.ts
+        role: producer
+    summary: "feat(GH-243): finding registry, severity set, nine-section vocabulary, DEC-16 allowlist types, and mapped hygiene signals as contract data"
+    tasks:
+      - "1.1 Author the finding-code registry in packages/core/src/contracts/status.ts as closed contract data beside the existing bounds and label sets (F-1, DM-1, DM-2, Appendix A): the ten codes in declared order (ci.red-on-main, tracker.owner-gate-escalated, tracker.stalled-ticket, tracker.hygiene.missing-title, tracker.hygiene.missing-labels, tracker.hygiene.epic-membership, tracker.hygiene.story-points, tracker.hygiene.in-sprint, lane.idle-no-reason, parked.stale-no-condition) with per-code default severities high/high/medium/low/low/low/low/low/medium/low, one-line meanings, the dormant marker on lane.idle-no-reason (the only dormant code), the closed three-value severity set [high, medium, low], and the code-to-trigger-surface map over declared section ids; SCREAMING_SNAKE constants, lowercase dotted codes, no executable content. [AC: AC-F1-1 data half; TC: TC-ATT-001]"
+      - "1.2 Extend packages/core/src/contracts/status.ts with the additive vocabulary and bounds (DM-3, DM-4, DM-5, DM-6, DM-8, DM-9, DM-11, DM-12, DM-13, DEC-16, DEC-17, Appendix B): STATUS_SECTION_ORDER grows to exactly nine ids (sections 1-6 unchanged, then ready-to-merge, spend, blockers); STATUS_MAX_FINDINGS_PER_SECTION = 8, STATUS_MAX_FINDING_MEMBERS = 8, STATUS_MAX_READY_ITEMS = 8 (D-1); STATUS_MAX_HUMAN_LINES 24 -> 32 and STATUS_MAX_HUMAN_BYTES 4096 -> 6144 with the retired values absent; STATUS_MAX_MACHINE_BYTES unchanged 65536; the section findings[] type {code, severity, count, members[], evidenceRef} as an OPTIONAL field on every section; the ready-to-merge item shape (ref, class merge-ready|review-pending, sourceRef, targetRef, reviewState, ciResult) and its derivation-row type excluding not-delivered; the placeholder section shape (capability, expectedStory, reason engine-not-delivered, note); hand-back additive age/ageUnknownReason/slaState reusing OwnerGateSlaState and the M1-S5 unknown-age markers by reference; parked optional condition under STATUS_MAX_DETAIL_CHARS; lanes attention-state declaration fields naming the closed vocabulary [delivering, idle-with-reason, idle-no-reason]; additive per-assertion hygiene tri-state counts (violations, unknown, satisfied) for epic-membership/story-points/in-sprint with declared per-assertion availability on the tracker read (additive optional keys beside the four required family keys, closed available/unavailable vocabulary) and the declared label-convention contract data (epic token 'epic' or 'epic:' prefix; points token 'points:' with parseable non-negative integer); summary additive findingsTotal and placeholderSectionCount. Re-export via contracts/index.ts. [AC: DM contracts halves; TC: TC-ATT-002, TC-ATT-003, TC-ATT-013 step 1, TC-ATT-018 steps 2-3 structure half, TC-ATT-021 structure half, TC-ATT-024 type half]"
+      - "1.3 Decouple the brief render surface in packages/core/src/contracts/brief.ts (delivery decision D-3, cross-check item 1): pin BRIEF_SURFACE_ORDER to its own literal nine-id list (six digest sections plus typed-questions/gate-sla-states/lane-queue-engine) instead of spreading STATUS_SECTION_ORDER, keeping the identical nine values so every brief suite and golden stays byte-identical while the digest section set grows. [AC: RSK-1 containment; TC: TC-ATT-038 enabler (completes Phase 6)]"
+      - "1.4 Add the mapped-signal projection (F-4a, DM-13, DEC-14, D-5): optional additive milestone field on the WorkItem view in packages/core/src/contracts/ports.ts; map it in normalizeGithubIssue in packages/adapters/src/github/normalize.ts from the same bounded issue payload (milestone title when the milestone object is present; absent otherwise) with no request-shape change; extend tests/behaviour/providers/github-collection.test.ts for the additive normalization (present/absent/null milestone, labels unchanged, same page shape) and tests/fixtures/status/harness.ts with the per-assertion availability builders (all-available, mixed, all-unavailable) and mapped-value inputs. No new endpoint, package, subpath, or pagination. [AC: F-4a provenance; TC: TC-ATT-004 step 3, TC-ATT-013 step 5 adapter half (behaviour completes Phase 4)]"
+      - "1.5 Create tests/structure/status-findings-contract.test.ts and extend tests/structure/status-contract.test.ts, status-imports.test.ts, content-inventory.test.ts per the test plan §7 automation map: registry key set/order/defaults/dormant-marker/surface-map with per-datum deep-copy mutation controls; bounds constants with per-constant mutations (7/9/31/6143/6145/65535/65537 and a pre-existing cap) and a source scan for duplicate or stale (24/4096) bound literals; nine-id order with reorder/rename/drop/bump/required-field/undeclared-field mutations and DEC-17 naming checks; data-only detector and purity/tier/inventory registration for every new or changed module (tests/structure/inventory.json, executable allowances in content-inventory.test.ts); author the backward-compatibility type probe tests/types/status-additive-v1.type-test.ts asserting a pre-change consumer reading only sections 1-6 and their pre-change fields typechecks against the extended contract (compiled by the existing typecheck via tests/types/tsconfig.json). [AC: NFR-8, DM-1..DM-3, DM-11; TC: TC-ATT-001, TC-ATT-002, TC-ATT-003, TC-ATT-004]"
+    coverage:
+      - "TC-ATT-001 (complete)"
+      - "TC-ATT-002 (complete)"
+      - "TC-ATT-003 (complete)"
+      - "TC-ATT-004 (complete)"
+      - "TC-ATT-013 (structure half: availability contract keys; behaviour half completes in Phase 4)"
+      - "TC-ATT-018 (structure half: vocabulary literals + dormant registry entry; behaviour half completes in Phase 5)"
+      - "TC-ATT-021 (structure half: summary additions + section-kind data; behaviour half completes in Phase 5)"
+      - "TC-ATT-024 (type half: never-not-delivered derivation row; behaviour half completes in Phase 5)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/structure/status-findings-contract.test.ts tests/structure/status-contract.test.ts tests/structure/status-imports.test.ts tests/structure/content-inventory.test.ts tests/structure/brief-contract.test.ts"
+      - "bun test tests/behaviour/providers/github-collection.test.ts tests/behaviour/providers/github-trap.test.ts tests/structure/trap-catalog.test.ts"
+      - "bun test tests/boundaries && bun run scripts/checks/ambient-globals.ts && bun run scripts/checks/forbidden-literals.ts && bun run scripts/checks/workspace-entrypoints.ts"
+      - "bun test tests/behaviour/status-command.test.ts tests/behaviour/status-output.test.ts tests/golden/status-digest.test.ts (unchanged bytes prove Phase 1 renders nothing new)"
+  - id: 2
+    title: "The additive digest surface: findings layer, hygiene assertions, owner-gate ages, parked conditions, three new sections, extended grammar, and the single golden regeneration"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/status.ts
+        - packages/core/src/domain/index.ts
+        - tests/fixtures/status/harness.ts
+        - tests/fixtures/status/golden/digest.json
+        - tests/fixtures/status/golden/human.txt
+        - tests/golden/status-digest.test.ts
+        - tests/behaviour/status-command.test.ts
+        - tests/behaviour/status-section-states.test.ts
+        - tests/behaviour/status-tracker.test.ts
+        - tests/behaviour/status-changes-ci.test.ts
+        - tests/behaviour/status-providers-parked.test.ts
+        - tests/behaviour/status-output.test.ts
+        - tests/behaviour/status-corpus.test.ts
+        - tests/behaviour/status-negative-controls.test.ts
+        - tests/behaviour/status-readonly-determinism.test.ts
+        - tests/behaviour/status-performance.test.ts
+      folders:
+        - tests/fixtures/status/corpus
+    summary: "feat(GH-243): wire the additive attention surfaces into the pure aggregator and renderer; regenerate goldens once as a reviewed diff"
+    tasks:
+      - "2.1 Author the pure findings layer inside packages/core/src/domain/status.ts (F-2, DM-4, DEC-3, DEC-15, DEC-17, DEC-18, D-2): per-section, per-code coalescing of registry-coded observations into one finding {code, severity, count, members[], evidenceRef}; members are unique deduplicated identities ordered by the section's fixed ranking with evidenceRef = first member; count is the exact observation total and may exceed members.length; findings rank by severity -> count descending -> code ascending -> first occurrence in fixed source order (total, order-independent); per-section cap 8 and per-finding member cap 8 with the section truncated flag declaring drops (D-7) and counts.omitted untouched; the layer takes an injectable registry defaulting to the shipped contract registry; no-evidence-no-claim — sections whose state is unknown/unavailable/not-delivered emit zero findings; existing findings become code-carrying with unchanged triggers (stalls -> tracker.stalled-ticket grouped; hygiene items -> tracker.hygiene.missing-title/missing-labels; item-level findings field unchanged). [AC: AC-F2-1..AC-F2-5 wiring; TC: behaviour pinning in Phase 3 (TC-ATT-005..010, 042)]"
+      - "2.2 Wire the three named hygiene assertions into the tracker hygiene family (F-4, DM-7, DM-13, DEC-13, DEC-14): tri-state per-assertion counts over open items gated by declared per-assertion availability (undeclared -> all-unknown with signal-unavailable, zero violations, counted like stall unknown-activity); within a declared available signal, absence-as-violation per the declared label conventions (no epic/epic: label; no points: label or unparseable/non-negative-integer-violating suffix — points:0 conforms; no mapped milestone), emitted as the matching tracker.hygiene.* code and grouped per F-2; satisfied items are silent; counts aggregate over the fully ranked family before the four-item render cap; family/section state semantics unchanged; title/labels findings keep their shipped item-level behaviour. [AC: AC-F4-1..AC-F4-4 wiring; TC: behaviour pinning in Phase 4 (TC-ATT-011..013, 041)]"
+      - "2.3 Wire owner-gate ages onto hand-back items (F-5, DM-8, DEC-6, D-4): derive gate facts from the same tracker read's owner-hand-back items, evaluate via the imported evaluateOwnerGateSla with OWNER_GATE_SLA_POLICY by reference over the injected clock (audience coordinator, no injected existing decisions), discard decisionsToApply (read-only; zero state reads), project only age/ageUnknownReason/slaState; escalated and default-applied gates (unknown-age included) coalesce into tracker.owner-gate-escalated; thresholds/markers imported, never duplicated. [AC: AC-F5-1, AC-F5-2 wiring; TC: behaviour pinning in Phase 4 (TC-ATT-014, 015)]"
+      - "2.4 Wire parked conditions (F-6, DM-9, DEC-12): project the recorded re-entry condition as an additive optional item field bounded by STATUS_MAX_DETAIL_CHARS (multibyte-safe) from the existing StatusParkedWorkEntry — extending packages/adapters/src/file/pm-context.ts projection additively with no new key admitted beyond condition; entries without a condition render none; unknown-age + no-condition entries coalesce into parked.stale-no-condition; notes and free-form keys never projected. [AC: AC-F6-1, AC-F6-2 wiring; TC: behaviour pinning in Phase 4 (TC-ATT-016, 017)]"
+      - "2.5 Add the three new sections in fixed order 7/8/9 (F-3, F-7, F-8, F-9, DM-3, DM-5, DM-6, Appendix C, DEC-5, DEC-7, DEC-8, D-6, D-9): ready-to-merge classifies the existing open-pull-request read exactly as queue ready does (observed approval on a non-draft open PR = merge-ready; everything else including unknown review = review-pending with an unknown marker), ranks merge-ready first then the queue-ready numeric-aware ref keys imported by reference, caps at 8 with the existing truncation model, and derives state per Appendix C (observed/degraded/unknown/unavailable, never not-delivered; verified-empty is a real zero; unavailable review signals render merge-ready ? and degrade the section); zero new reads. spend and blockers are uniform not-delivered placeholders (capability, expectedStory M1-S19/M1-S16, reason engine-not-delivered, note, zero items/counts). The lanes section keeps its shipped evidence byte-identically and gains only the additive attention-state declaration fields naming the closed vocabulary; lane.idle-no-reason is never emitted. ci.red-on-main groups failed runs only on the declared primary branch from the checkout-HEAD read. Summary gains findingsTotal (grouped findings across observed/degraded sections) and placeholderSectionCount exactly 2 (lanes excluded). [AC: AC-F3-1, AC-F3-2, AC-F7-1, AC-F8-1, AC-F9-1 wiring, DM-12; TC: behaviour pinning in Phase 5 (TC-ATT-018..028)]"
+      - "2.6 Extend renderStatusHuman with the declared grammar (F-10, DM-10, DEC-11, DEC-17, §8.3): the changed tracker line (hand-backs n | gates n|? escalated | blocked state | stalls n (u unknown) | hygiene n (a unknown)); the new lines ready/spend/blockers exactly as pinned; the attention rollup line last (at most three severity-ordered code x count groups then +N counting grouped findings beyond the preview; attention 0 findings () when none); the five unchanged section lines byte-identical; enforce the raised bounds (32 defensive lines, 6144 operative UTF-8 bytes, multibyte-safe clamp with the declared marker); zero extra reads; no titles/payloads/secrets/timestamps/ANSI. [AC: AC-F10-1 wiring, NFR-2; TC: behaviour pinning in Phase 5 (TC-ATT-026..028)]"
+      - "2.7 Keep-green expectation updates under TC-ATT-037 discipline + the single golden regeneration (D-8, A-T10, DEC-16, §8.5): update the six-section length/summary assertions to nine in status-command/status-section-states/status-output/status-negative-controls/status-performance and tests/golden/status-digest.test.ts; extend all twelve committed corpus case.json files with the three new sections' expectations and the summary additions (no pre-existing expectation for sections 1-6 weakened or changed beyond the DEC-16 allowlist); regenerate tests/fixtures/status/golden/digest.json and human.txt exactly once over the unchanged capSizedFacts fixture plus the declared state variants (header-absent; degraded merge-ready ?), review the diff against the pre-change goldens confirming the delta is exactly the DEC-16 allowlist + three section objects + declared human delta, and record the regeneration in the change revision log; extend the golden suite with the read-only, bounds, and changed-fact mutation controls. Files: the golden tree, the corpus case files, the listed suites, tests/fixtures/status/harness.ts (new builders only; capSizedFacts facts unchanged). [AC: AC-F10-1, NFR-10, DEC-1/DEC-16; TC: TC-ATT-034 (complete) + TC-ATT-037 baseline update (completes Phase 6)]"
+    coverage:
+      - "TC-ATT-034 (complete: goldens regenerated once, byte-pinned, suite read-only)"
+      - "TC-ATT-037 (baseline/allowlist update half; verification half completes in Phase 6)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/status-command.test.ts tests/behaviour/status-section-states.test.ts tests/behaviour/status-tracker.test.ts tests/behaviour/status-changes-ci.test.ts tests/behaviour/status-providers-parked.test.ts tests/behaviour/status-output.test.ts tests/behaviour/status-corpus.test.ts tests/behaviour/status-negative-controls.test.ts tests/behaviour/status-readonly-determinism.test.ts tests/behaviour/status-performance.test.ts"
+      - "bun test tests/golden/status-digest.test.ts && git diff --check && git status --porcelain (golden regeneration reviewed in the phase commit)"
+  - id: 3
+    title: "Findings behaviour pinning: grouping, member and findings caps, rank key, code-carrying existing findings, no-evidence-no-claim"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/status-findings.test.ts
+        - tests/behaviour/status-findings-bounds.test.ts
+        - tests/behaviour/status-tracker.test.ts
+        - tests/behaviour/status-negative-controls.test.ts
+        - tests/fixtures/status/harness.ts
+        - tests/fixtures/status/matrix/cases.ts
+      folders:
+        - tests/fixtures/status/matrix/bounds
+        - tests/fixtures/status/corpus/four-red-runs-grouped
+        - tests/fixtures/status/corpus/ci-read-failed-no-finding
+    summary: "test(GH-243): pin the findings layer — grouping, caps, ranking, registry coding, no-evidence-no-claim"
+    tasks:
+      - "3.1 Author tests/behaviour/status-findings.test.ts over extended harness builders and matrix/cases.ts (TC-ATT-005, TC-ATT-006, TC-ATT-009): the corpus/matrix-wide sweep asserting every emitted finding's key set, registry code, registry severity, recomputed exact count, unique identity-shaped members in rank order, evidenceRef = first member, and no finding from any unknown/unavailable/not-delivered section; the pinned four-failed-primary-branch-runs case (one ci.red-on-main, count 4, four members, one rollup group) with 0/1/2/3/4/9/20-run generality controls, mixed-result and pending-only controls, the non-primary-branch zero-findings control, and reversed-input determinism; the rank-key matrix (high count-1 above medium count-4; low codes ascending; permutation twins; registry-iteration-order independence; comparator totality with the fourth key exercised; changed-count control). Deliverable: the two suites green over the Phase-2 wiring. Verification: bun test tests/behaviour/status-findings.test.ts. [AC: AC-F1-1, AC-F2-1, AC-F2-3; TC: TC-ATT-005, TC-ATT-006, TC-ATT-009]"
+      - "3.2 Author tests/behaviour/status-findings-bounds.test.ts with tests/fixtures/status/matrix/bounds/** (TC-ATT-007, TC-ATT-008): member-cap cases 7/8/9/12/20 with the repeated-identity fixture (count 10 > members 8, identity once), first-eight-unique-in-rank-order retention, evidenceRef, truncated-flag drop declaration, counts.omitted semantics preserved (D-7), and deterministic truncation, with cap-removed and dedup-after-cap failing controls; the defensive findings-cap case — reachable-code computation from the production registry (tracker 7, ci 1, parked 1, others 0), the test-only ten-code registry extension injected at the pure-layer seam (D-2) proving exactly eight retained in rank order with the drop declared, the real-input seven-code tracker control with no truncation, the no-production-leak structure scan, and the production registry re-read assertion. Verification: bun test tests/behaviour/status-findings-bounds.test.ts. [AC: AC-F2-2, AC-F2-4, NFR-1; TC: TC-ATT-007, TC-ATT-008]"
+      - "3.3 Extend tests/behaviour/status-tracker.test.ts (TC-ATT-010): blank-title/empty-labels/both items produce the coded findings with unchanged family counts, states, rank behaviour, and cap behaviour versus the pre-change baseline; stalls group into one tracker.stalled-ticket finding with members in the stall family rank order; unknown-activity items emit nothing and stay visible; the paired-fixture assertion that the new assertions reuse the shipped absence semantics; the additive-only baseline delta cross-referenced to TC-ATT-037. Add the four-red-runs-grouped and ci-read-failed-no-finding corpus cases (full nine-section expectations). Verification: bun test tests/behaviour/status-tracker.test.ts tests/behaviour/status-corpus.test.ts. [AC: F-1, F-4 baseline; TC: TC-ATT-010]"
+      - "3.4 Extend tests/behaviour/status-negative-controls.test.ts with the no-evidence-no-claim case (TC-ATT-042): the three CI failure modes (read failed, unresolved SHA, unattempted/no binding) emit zero findings with unknown/unavailable states and classified reasons, no ci.red-on-main anywhere, no fabricated member or count, the planted canary absent, the observed control emitting the one count-4 finding, and the failed-tracker-read generality control; wire the case into the negative-control completeness meta-check. Verification: bun test tests/behaviour/status-negative-controls.test.ts. [AC: AC-F2-5, DEC-18; TC: TC-ATT-042]"
+    coverage:
+      - "TC-ATT-005, TC-ATT-006, TC-ATT-007, TC-ATT-008, TC-ATT-009, TC-ATT-010, TC-ATT-042 (all complete)"
+    testGate:
+      - "bun test tests/behaviour/status-findings.test.ts tests/behaviour/status-findings-bounds.test.ts tests/behaviour/status-tracker.test.ts tests/behaviour/status-negative-controls.test.ts tests/behaviour/status-corpus.test.ts"
+      - "bun test tests/behaviour/status-findings.test.ts --rerun-each 2 (permutation/determinism spot check) && pnpm typecheck"
+  - id: 4
+    title: "Hygiene, owner-gate age, and parked-condition behaviour pinning"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/status-hygiene.test.ts
+        - tests/behaviour/status-owner-gate-age.test.ts
+        - tests/behaviour/status-parked-conditions.test.ts
+        - tests/behaviour/status-section-states.test.ts
+        - tests/fixtures/status/harness.ts
+      folders:
+        - tests/fixtures/status/corpus/hygiene-assertions-tri-state
+        - tests/fixtures/status/corpus/hygiene-absence-violation
+        - tests/fixtures/status/corpus/hygiene-satisfied-arm
+        - tests/fixtures/status/corpus/hygiene-all-unknown
+        - tests/fixtures/status/corpus/owner-gate-unknown-age-escalated
+        - tests/fixtures/status/corpus/parked-condition-present
+        - tests/fixtures/status/corpus/parked-stale-no-condition-grouped
+    summary: "test(GH-243): pin tri-state hygiene assertions, owner-gate ages via the M1-S5 evaluator, and parked conditions"
+    tasks:
+      - "4.1 Author tests/behaviour/status-hygiene.test.ts with the four hygiene corpus cases (TC-ATT-011, TC-ATT-012, TC-ATT-013 behaviour half, TC-ATT-041): three named assertion surfaces in declared order with tri-state counts summing to the open-item population (closed/canceled excluded), zero unknown under declared availability, grouped per-code violations with members in family rank order, cap-before-count aggregation, and the all-violating/all-satisfied/observed-empty/fourth-surface controls; absence-as-violation variants per assertion (no labels; labels without the epic token; 'epics'; empty/non-numeric/negative/non-integer/colon-less points suffixes; absent/empty/whitespace milestone) with conforming controls (epic, epic:payments, points:0, points:5, present milestone), title/assignee/unrelated-label immunity, and the label-token deep-copy mutation; the undeclared-signal cases (all-three and mixed) — all-unknown with signal-unavailable and zero violations while declared assertions evaluate independently, the GitHub-slice availability variant, the observed-empty distinction, the restored-availability control, and the hard-coded-availability failing control. Extend tests/behaviour/status-section-states.test.ts with the availability-driven hygiene rows. Verification: bun test tests/behaviour/status-hygiene.test.ts tests/behaviour/status-section-states.test.ts. [AC: AC-F4-1, AC-F4-2, AC-F4-3, AC-F4-4; TC: TC-ATT-011, TC-ATT-012, TC-ATT-013 (completes), TC-ATT-041]"
+      - "4.2 Author tests/behaviour/status-owner-gate-age.test.ts (TC-ATT-014, TC-ATT-015): the 26 h escalated case with observed age, slaState, the grouped tracker.owner-gate-escalated finding, and the gates 1 escalated fragment; the T-1/T/T+1 boundary read from the M1-S5 contract (comparator and threshold imported, never hard-coded); the default-applied control counted by finding and fragment with no decision record, no default name, no authority claim (D-4); the three-escalated grouping control; the fresh no-finding control; the unknown-age variants (absent: missing/undefined/null/empty/whitespace; unparseable: three forms) with the two distinct M1-S5 markers, escalated state, never 0/0h/fresh, clock-advance stability, the 0h-is-fresh control, and the unknown-as-fresh failing control; zero appends via the guardStore; the duplicated-threshold-literal structure control. Add the owner-gate-unknown-age-escalated corpus case. Verification: bun test tests/behaviour/status-owner-gate-age.test.ts. [AC: AC-F5-1, AC-F5-2; TC: TC-ATT-014, TC-ATT-015]"
+      - "4.3 Author tests/behaviour/status-parked-conditions.test.ts (TC-ATT-016, TC-ATT-017): condition present/over-cap/multibyte/absent projection under STATUS_MAX_DETAIL_CHARS with absence never invented; the free-form-notes canary never projected; pre-change item fields unchanged with condition the only additive field; the unchanged human parked line; malformed/missing/empty-context controls; the parked.stale-no-condition grouping (three unknown-age conditionless entries, count 3, stable identities including the ref-less entry identity) with both negative controls (condition present; parseable age), the all-conditions no-finding case, empty/unavailable/unknown-section no-finding cases, clock-advance persistence, and the human member-privacy scan. Add the parked corpus cases. Verification: bun test tests/behaviour/status-parked-conditions.test.ts. [AC: AC-F6-1, AC-F6-2; TC: TC-ATT-016, TC-ATT-017]"
+    coverage:
+      - "TC-ATT-011, TC-ATT-012, TC-ATT-013 (completes), TC-ATT-014, TC-ATT-015, TC-ATT-016, TC-ATT-017, TC-ATT-041 (all complete)"
+    testGate:
+      - "bun test tests/behaviour/status-hygiene.test.ts tests/behaviour/status-owner-gate-age.test.ts tests/behaviour/status-parked-conditions.test.ts tests/behaviour/status-section-states.test.ts tests/behaviour/status-corpus.test.ts"
+      - "bun test tests/behaviour/board-command.test.ts tests/golden/board-grid.test.ts (SLA evaluator non-regression — consumed, not modified)"
+  - id: 5
+    title: "Ready-to-merge, placeholders, nine-section totality, and the extended human grammar"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/status-ready-to-merge.test.ts
+        - tests/behaviour/status-placeholders.test.ts
+        - tests/behaviour/status-section-states.test.ts
+        - tests/behaviour/status-findings-bounds.test.ts
+        - tests/behaviour/status-output.test.ts
+        - tests/fixtures/status/harness.ts
+      folders:
+        - tests/fixtures/status/corpus/lanes-not-delivered-vocabulary
+        - tests/fixtures/status/corpus/placeholders-not-delivered
+        - tests/fixtures/status/corpus/ready-merge-ready-ranked
+        - tests/fixtures/status/corpus/ready-review-unknown-degraded
+        - tests/fixtures/status/corpus/mixed-attention-ranked
+        - tests/fixtures/status/corpus/no-findings-attention-zero
+        - tests/fixtures/status/matrix/bounds
+    summary: "test(GH-243): pin the ready-to-merge action list, placeholders, lanes vocabulary, totality, grammar, rollup, and human bounds"
+    tasks:
+      - "5.1 Author tests/behaviour/status-ready-to-merge.test.ts (TC-ATT-022, TC-ATT-023): the classification matrix (non-draft observed approval merge-ready; draft/no-approval/changes-requested review-pending; closed/merged absent), merge-ready ranking above review-pending with the queue-ready numeric-aware keys, total order under permutation, no merge verdict or authority claim (RSK-8), the queue-ready differential over the same injected facts, the verified-empty real zero, and the zero-extra-read transport guard; the unknown/unavailable review cases (every item review-pending with unknown marker, section degraded with signal-unavailable, merge-ready ? never 0, the partial one-unknown-item case, failed read -> unknown, no binding -> unavailable, never not-delivered, no approval fabricated from CI/draft/threads, restored observed control). Add the two ready corpus cases. Verification: bun test tests/behaviour/status-ready-to-merge.test.ts. [AC: AC-F3-1, AC-F3-2; TC: TC-ATT-022, TC-ATT-023]"
+      - "5.2 Author tests/behaviour/status-placeholders.test.ts and extend status-section-states.test.ts + status-findings-bounds.test.ts (TC-ATT-018 behaviour half, TC-ATT-019, TC-ATT-020, TC-ATT-021 behaviour half, TC-ATT-024 behaviour half, TC-ATT-025): the spend and blockers placeholder shapes at indices 8/9 (state, capability, expectedStory, reason, note, zero counts/items, no findings, zero actionable contribution, independence of every read outcome, pinned human lines, mutation controls, no implementation leakage, exactly-two placeholder ordering); the lanes section byte-identical to shipped with the closed vocabulary declared, the never-emitted scan over every corpus/matrix/golden payload and human bytes for the three vocabulary literals and the dormant code, and the code-injection/vocabulary-mutation controls; nine-section totality, per-state summary counts, findingsTotal counting groups never observations, placeholder count exactly 2 via declared section-kind data, actionable zero contribution, and the removed/added/tenth-section/count-by-observation controls; the full ready-to-merge derivation row across matrix cases with precedence and the never-not-delivered sweep; the ready item cap 7/8/9/12 with merge-ready-never-dropped, deterministic truncation, disclosed drops, and the nine-merge-ready disclosure control. Add the lanes/placeholders/mixed-attention/no-findings corpus cases and the ready bounds fixtures. Verification: bun test tests/behaviour/status-placeholders.test.ts tests/behaviour/status-section-states.test.ts tests/behaviour/status-findings-bounds.test.ts. [AC: AC-F7-1, AC-F8-1, AC-F9-1, DM-3, DM-12, NFR-1; TC: TC-ATT-018 (completes), TC-ATT-019, TC-ATT-020, TC-ATT-021 (completes), TC-ATT-024 (completes), TC-ATT-025]"
+      - "5.3 Extend tests/behaviour/status-output.test.ts (TC-ATT-026, TC-ATT-027, TC-ATT-028): the line-for-line extended grammar (optional header; tracker/changes/ci/lanes/providers/parked/ready/spend/blockers; attention last) with header-present and header-absent fixtures, the exact tracker fragments (gates n|? only-when-family-unavailable rules), the five unchanged lines byte-identical, data-only rendering with zero extra reads, and the leak scan; the attention rollup zero/1/2/3/4/6/9-group cases with the x separator, +N counting grouped findings (the 20/3/2/1 -> +1 arithmetic), severity-ordered preview, agreement with summary.findingsTotal, permutation invariance, and the preview/observation-count/reorder failing controls; the human-bounds cases — the 11-line structural worst case under 32 defensive lines, the 6144-byte operative max-length stress case with measured length, the multibyte measurement, the retired 24/4096 source scan, the hostile clamp-with-marker case, per-golden bounds assertions, and the old-bound/operative-line failing controls. Verification: bun test tests/behaviour/status-output.test.ts. [AC: AC-F10-1, NFR-2; TC: TC-ATT-026, TC-ATT-027, TC-ATT-028]"
+    coverage:
+      - "TC-ATT-018 (completes), TC-ATT-019, TC-ATT-020, TC-ATT-021 (completes), TC-ATT-022, TC-ATT-023, TC-ATT-024 (completes), TC-ATT-025, TC-ATT-026, TC-ATT-027, TC-ATT-028 (all complete)"
+    testGate:
+      - "bun test tests/behaviour/status-ready-to-merge.test.ts tests/behaviour/status-placeholders.test.ts tests/behaviour/status-section-states.test.ts tests/behaviour/status-findings-bounds.test.ts tests/behaviour/status-output.test.ts tests/behaviour/status-corpus.test.ts"
+      - "bun test tests/behaviour/queue-ready-corpus.test.ts tests/golden/queue-ready.test.ts (queue ready reused read-only, unchanged)"
+      - "pnpm typecheck"
+  - id: 6
+    title: "Corpus completeness, all-caps bound, negative controls, evidence hygiene, read-only/determinism, performance, and consumer non-regression"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/status-corpus.test.ts
+        - tests/behaviour/status-output.test.ts
+        - tests/behaviour/status-negative-controls.test.ts
+        - tests/behaviour/status-readonly-determinism.test.ts
+        - tests/behaviour/status-performance.test.ts
+        - tests/behaviour/status-findings.test.ts
+        - tests/checks/secret-read-boundary.test.ts
+        - tests/checks/forbidden-literals.test.ts
+        - tests/structure/status-contract.test.ts
+        - tests/behaviour/verify-support.ts
+      folders:
+        - tests/fixtures/status/corpus/owner-gate-escalated-observed
+        - tests/fixtures/status/corpus/ready-read-failed-unknown
+        - tests/fixtures/status/corpus/all-caps-bound
+        - tests/fixtures/status/matrix/bounds
+    summary: "test(GH-243): pin the 9x5 corpus meta-check, all-caps machine bound, expanded negatives, posture, determinism, budget, latency, consumers"
+    tasks:
+      - "6.1 Extend tests/behaviour/status-corpus.test.ts into the nine-section completeness meta-check (TC-ATT-033): require every section id in every case; require every state of each section's declared derivation row (sections 1-6 as shipped; ready-to-merge observed/degraded/unknown/unavailable; lanes/spend/blockers not-delivered); require the named case classes (the eighteen new cases incl. four-red-runs-grouped, hygiene absence/satisfied/all-unknown, ci-read-failed-no-finding, grouping, all-caps-bound); assert per-case findings tuples, hygiene tri-state counts, and truncation; corruption fails by case name on every mutated field; zero live calls and read-only corpus. Add the remaining corpus cases (owner-gate-escalated-observed, ready-read-failed-unknown, all-caps-bound with every surface at cap). Verification: bun test tests/behaviour/status-corpus.test.ts. [AC: AC-NFR-1, NFR-10; TC: TC-ATT-033]"
+      - "6.2 Extend tests/behaviour/status-output.test.ts and the corpus suite with the machine-bound oracle (TC-ATT-029): the all-caps fixture asserts serialized data <= 65536 UTF-8 bytes with every declared cap at limit, exact truncation markers, all nine sections and every new surface populated, the envelope-may-exceed/data-may-not rule, the hostile-identity clamp, and the bound-raised/oversize controls. Verification: bun test tests/behaviour/status-output.test.ts. [AC: AC-NFR-2, NFR-1, NFR-3; TC: TC-ATT-029]"
+      - "6.3 Extend tests/behaviour/status-performance.test.ts (TC-ATT-030, TC-ATT-039): the read-budget recorder — exactly three GETs (issues/pulls per_page=100, check-runs per_page=20), one park fold, one config resolve on the fully observed AND findings-heavy fixtures (mapped labels/milestones ride the same byte-identical issues request), identical reads in both modes, zero pagination/retries/new endpoints/engine calls, unavailable-binding zero reads, failed-read single attempt, zero child processes/network writes, and the second-read/non-GET/widened-request controls; the latency measurement — warm-up + median-of-five <= 50 ms over cap-sized and over-cap inputs including findings grouping, hygiene, ready classification, and both renderers, the deliberately expensive control, environment recorded, linearity beyond the cap. Verification: bun test tests/behaviour/status-performance.test.ts. [AC: AC-NFR-3, NFR-4, NFR-5; TC: TC-ATT-030, TC-ATT-039]"
+      - "6.4 Extend tests/behaviour/status-readonly-determinism.test.ts over the guardStore from tests/behaviour/verify-support.ts (TC-ATT-031, TC-ATT-032): zero appends/fences/replacements on the escalated-and-default-applied fixture with the no-SLA-record and no-default-authority assertions, zero filesystem writes and clean porcelain, zero child processes/network writes, the seeded-write and deliberate-fence controls; byte-identical machine and human output across repeated runs, every permutation twin, the 50-run hash set, runId/timing normalization, changed-fact control, and TZ/time independence. Verification: bun test tests/behaviour/status-readonly-determinism.test.ts. [AC: NFR-6, NFR-7; TC: TC-ATT-031, TC-ATT-032]"
+      - "6.5 Extend tests/behaviour/status-negative-controls.test.ts and the checks suites (TC-ATT-035, TC-ATT-036): the expanded new-section negative matrix (failed PR read, unavailable review, no binding, malformed context, absent updatedAt, no approval, lanes, placeholders, failed CI) each with exact state/reason/counts, zero findings from failures, planted-status-* canaries absent everywhere, restored controls, and the completeness meta-check with the removed-case control; evidence hygiene — identity-only members/evidence, canary and in-memory-credential scans across payload/human/stdout/stderr, rollup privacy, condition-leak scan, secret-read allowlist unchanged (tests/checks/secret-read-boundary.test.ts), no new config key or ambient read (tests/checks/forbidden-literals.test.ts, tests/structure/status-contract.test.ts), the title-fallback control, and the undeclared-field serialization control. Verification: bun test tests/behaviour/status-negative-controls.test.ts tests/checks/secret-read-boundary.test.ts tests/checks/forbidden-literals.test.ts. [AC: AC-F2-5/AC-F3-2/AC-F5-2/AC-F7-1 negative arms, NFR-1, NFR-9; TC: TC-ATT-035, TC-ATT-036]"
+      - "6.6 Six-section and consumer non-regression (TC-ATT-037 verification half, TC-ATT-038): run the full status suite family asserting sections 1-6 keep states/reasons/counts/ordered identities/truncation for identical facts with the machine delta exactly the DEC-16 allowlist and the human delta exactly the two tracker fragments plus the three new lines and the rollup; run the brief structure/behaviour/golden suites (byte-identical output; sections-by-id tolerance for the three additions; shared-truth agreement on ready-to-merge and owner-gate-age anchors), the queue-ready and verify-gates suites and goldens (unchanged; shared constants still by reference), and the consumer type probe; record the man-page and registry-row doc drift as Phase-7 obligations rather than silently accepting. Verification: the full evidence list of test plan §7. [AC: DEC-1, DEC-16, §8.5, RSK-1, RSK-9; TC: TC-ATT-037 (completes), TC-ATT-038]"
+    coverage:
+      - "TC-ATT-029, TC-ATT-030, TC-ATT-031, TC-ATT-032, TC-ATT-033, TC-ATT-035, TC-ATT-036, TC-ATT-037 (completes), TC-ATT-038, TC-ATT-039 (all complete)"
+    testGate:
+      - "bun test tests/behaviour/status-corpus.test.ts tests/behaviour/status-output.test.ts tests/behaviour/status-performance.test.ts tests/behaviour/status-readonly-determinism.test.ts tests/behaviour/status-negative-controls.test.ts tests/behaviour/status-findings.test.ts"
+      - "bun test tests/behaviour/brief-corpus.test.ts tests/golden/brief.test.ts tests/behaviour/queue-ready-corpus.test.ts tests/golden/queue-ready.test.ts tests/behaviour/verify-gates-corpus.test.ts tests/golden/verify-gates.test.ts tests/structure/brief-contract.test.ts"
+      - "bun test tests/checks/secret-read-boundary.test.ts tests/checks/forbidden-literals.test.ts tests/checks/exit-code-literals.test.ts tests/boundaries && bun run scripts/checks/exit-code-literals.ts"
+  - id: 7
+    title: "Finalize and release: live smoke, changeset, aggregate battery, and the spec-reconciliation handoff"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/status-live.test.ts
+        - .changeset/gh-243-status-collector-expansion-minor.md
+        - scripts/checks/forbidden-literals.registry.json
+        - doc/spec/features/feature-status-digest.md
+        - doc/spec/features/feature-brief.md
+        - doc/spec/features/feature-queue-ready.md
+        - doc/spec/features/feature-owner-gate-sla.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/milestones/m1/commands/status.md
+        - doc/overview/glossary.md
+        - doc/changes/2026-11/2026-11-06--GH-243--status-collector-expansion/chg-GH-243-test-plan.md
+        - doc/changes/2026-11/2026-11-06--GH-243--status-collector-expansion/chg-GH-243-plan.yaml
+    doneArtifacts:
+      pipelineId: "GitHub Actions ts-* matrix green on the GH-243 PR targeting main-tools"
+      trackerTransition: "GH-243 dod_check pass; PR opened against main-tools at lifecycle phase 11"
+    summary: "chore(GH-243): finalize the status collector expansion with changeset, aggregate gates, and spec reconciliation"
+    tasks:
+      - "7.1 Extend tests/behaviour/status-live.test.ts (TC-ATT-040, opt-in, outside the aggregate): nine-section structural invariants only against the live repository — declared order, one state per section from the closed set, bounds (data <= 65536; human <= 32 lines / <= 6144 bytes), ready-to-merge never not-delivered, spend/blockers/lanes always not-delivered, the declared lane vocabulary with no per-lane state and no dormant code, every finding registry-coded with registry severity, no finding from a failed read, no observed-zero after a declared failure, merge-ready numeric only under observed review; no volatile counts pinned; skipped without the test-only switch and credential. Verification: opt-in run recorded when executed. [AC: QA strategy live-smoke row; TC: TC-ATT-040]"
+      - "7.2 Aggregate gates green end-to-end per .ai/rules/testing-strategy.md and the test plan §7 evidence list: pnpm install --frozen-lockfile; every named bun test suite; bun test tests/boundaries; bun run scripts/checks/{ambient-globals,forbidden-literals,exit-code-literals,workspace-entrypoints}.ts; pnpm check (lint -> format:check -> typecheck -> test -> check:boundaries); git diff --check; git status --porcelain; bash scripts/.tests/test-doc-distribution.sh (guard untouched); run plan diff GH-243 for declared-versus-actual scope reconciliation. Record every command in the test-plan execution log (section 10); never record unrun results as passing. [AC: all TCs aggregate row; testing-strategy evidence obligation]"
+      - "7.3 Add the lockstep minor changeset .changeset/gh-243-status-collector-expansion-minor.md for the fixed group bump triggered by the @delivery-os/core + @delivery-os/adapters changes (version_impact minor; gh-229/gh-225 changeset naming precedent); no dependency additions, so no license-registry verdict is needed. Register any doc-syncer-authored current-truth doc in scripts/checks/forbidden-literals.registry.json as it lands; branding and privacy gates stay green. [Release obligation]"
+      - "7.4 Spec-reconciliation handoff (lifecycle phase 7, @doc-syncer-owned, landed in this PR before merge — documentation, not code): rewrite doc/spec/features/feature-status-digest.md to current truth (nine sections and order, finding-code registry with severities and dormant code, grouping/ranking/caps, the three hygiene assertions with absence-as-violation and mapped-signal provenance, owner-gate ages via the M1-S5 evaluator with zero digest-side writes, parked conditions, ready-to-merge derivation row, placeholders, extended human grammar with 32/6144 bounds and bound roles, summary additions, extended QA strategy and fixture model incl. the eighteen new corpus cases and golden variants); update doc/spec/features/feature-brief.md (the same-collector-state claim against digest-native ready-to-merge/owner-gate-age surfaces; nine-surface catalog unchanged by the D-3 decoupling); doc/spec/features/feature-queue-ready.md and doc/spec/features/feature-owner-gate-sla.md (reuse claims: classification and evaluator consumed read-only by the digest); doc/planning/oss-tooling/cli-command-registry.md status row (nine sections; M1-S10 note exactly once); doc/planning/oss-tooling/milestones/m1/commands/status.md man page reconciled to delivered behaviour with --watch/exit-1/questions[] explicitly excluded per PM decisions (RSK-9); doc/overview/glossary.md new terms (finding, finding code, severity, grouping, action list, hygiene assertion, absence-as-violation, assertion-unknown, mapped-signal availability, no-evidence-no-claim, dormant code, attention rollup, placeholder section). YAML-parse changed .yaml files; markdown/link review for changed docs. [Spec §16/§18 phase-7 obligation list; PM-notes doc-risk list]"
+      - "7.5 PR readiness checklist: all 23 ACs traceable to green TCs and all 10 NFRs measured; 42/42 TCs mapped and passing (TC-ATT-040 opt-in recorded when run); the single golden regeneration recorded in the revision log; the four ticket ACs evidenced per Appendix D (artifact-verified bounded collectors; named hygiene assertions; stable finding codes; ranked ready-to-merge); exactly one changeset; PR targets main-tools; the delivery decisions D-1..D-9 and the three cross-check findings surfaced in the PR description for reviewer verification. [DoD checklist]"
+    coverage:
+      - "TC-ATT-040 (complete; opt-in, outside the aggregate check)"
+      - "All 42 TCs gate through the aggregate battery (no new TC; Phase 7 is release and reconciliation)"
+    testGate:
+      - "pnpm check"
+      - "bash scripts/.tests/test-doc-distribution.sh"
+      - "git diff --check && git status --porcelain"
+  - id: 8
+    title: "Code review remediation (iteration 1)"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/status.ts
+    summary: "refactor(GH-243): replace the avoidable availability double cast with a typed ternary"
+    tasks:
+      - "8.1 Reviewer finding F-1 (review-iter-1.yaml, low): in assertionAvailability (packages/core/src/domain/status.ts ~line 725), remove the `availability as unknown as Readonly<Record<string, string | undefined>>` double cast and the computed-key lookup; select availability.epicMembership / availability.storyPoints / availability.inSprint via the typed ternary already used for the key mapping and compare to \"available\". Pure refactor, zero behavior change (.ai/rules/typescript.md §0: no `as` cast where a typed alternative exists); behavior stays pinned by the existing hygiene/corpus suites. [AC: none — review remediation; TC: regression cover TC-ATT-011..013, TC-ATT-041, TC-ATT-033]"
+    coverage:
+      - "Review remediation F-1 only; no new TC (existing suites pin behavior)"
+    testGate:
+      - "bun test tests/behaviour/status-hygiene.test.ts tests/behaviour/status-corpus.test.ts tests/structure/status-contract.test.ts"
+      - "pnpm typecheck"
+#
+# ---------------------------------------------------------------------------
+# TRACEABILITY (GAP-1/A-T2): 42/42 TCs mapped, each exactly one completing
+# phase; structure halves land earlier as marked. 23/23 ACs covered.
+#
+# TC -> phase:
+#   TC-ATT-001 P1 | TC-ATT-002 P1 | TC-ATT-003 P1 | TC-ATT-004 P1
+#   TC-ATT-005 P3 | TC-ATT-006 P3 | TC-ATT-007 P3 | TC-ATT-008 P3
+#   TC-ATT-009 P3 | TC-ATT-010 P3 | TC-ATT-011 P4 | TC-ATT-012 P4
+#   TC-ATT-013 P4 (structure half P1) | TC-ATT-014 P4 | TC-ATT-015 P4
+#   TC-ATT-016 P4 | TC-ATT-017 P4 | TC-ATT-018 P5 (structure half P1)
+#   TC-ATT-019 P5 | TC-ATT-020 P5 | TC-ATT-021 P5 (structure half P1)
+#   TC-ATT-022 P5 | TC-ATT-023 P5 | TC-ATT-024 P5 (type half P1)
+#   TC-ATT-025 P5 | TC-ATT-026 P5 | TC-ATT-027 P5 | TC-ATT-028 P5
+#   TC-ATT-029 P6 | TC-ATT-030 P6 | TC-ATT-031 P6 | TC-ATT-032 P6
+#   TC-ATT-033 P6 | TC-ATT-034 P2 | TC-ATT-035 P6 | TC-ATT-036 P6
+#   TC-ATT-037 P6 (baseline update P2) | TC-ATT-038 P6 | TC-ATT-039 P6
+#   TC-ATT-040 P7 | TC-ATT-041 P4 | TC-ATT-042 P3
+#
+# AC -> completing phase (via its TCs):
+#   AC-F1-1 P3 (TC-001 P1, TC-005 P3) | AC-F2-1 P3 | AC-F2-2 P3 | AC-F2-3 P3
+#   AC-F2-4 P3 | AC-F2-5 P3 | AC-F3-1 P5 | AC-F3-2 P5 (TC-024 type half P1)
+#   AC-F4-1 P4 | AC-F4-2 P4 | AC-F4-3 P4 | AC-F4-4 P4 | AC-F5-1 P4
+#   AC-F5-2 P4 | AC-F6-1 P4 | AC-F6-2 P4 | AC-F7-1 P5 (structure half P1)
+#   AC-F8-1 P5 | AC-F9-1 P5 | AC-F10-1 P5 (byte pins already golden in P2)
+#   AC-NFR-1 P6 | AC-NFR-2 P6 (corpus oracle; bound wiring P2) | AC-NFR-3 P6
+#
+# Ticket ACs (Appendix D, verbatim):
+#   1. artifact-verified bounded collectors -> P2 wiring, P3/P5 cap TCs,
+#      P6 corpus/golden/bounds evidence
+#   2. named hygiene assertions -> P1 mapping, P4 behaviour
+#   3. stable finding codes -> P1 registry, P3 corpus-wide sweep
+#   4. ranked ready-to-merge action list -> P2 wiring, P5 behaviour
+# ---------------------------------------------------------------------------
+#
+# EXECUTION LOG (2026-11-07, delivery executor):
+#   Phase 1: 68368c1a  Phase 2: 6c7ef2a1  Phase 3: ecad21a4  Phase 4: f5abbf39
+#   Phase 5: f13ea4f8  Phase 6: 4badf039  Phase 7: this commit
+#   Single golden regeneration: Phase 2 (tests/fixtures/status/golden/*), reviewed
+#   as the DEC-16 allowlist + three section objects + declared human delta.
+#   Aggregate: pnpm check green (4370 pass / 4 skip / 0 fail); doc-distribution
+#   guard green; git diff --check clean. TC-ATT-040 remains opt-in and skipped.
+#   Delivery decisions D-1..D-9 were followed. Deviations recorded in pm-notes:
+#   (a) edge.ts declares the three mapped hygiene signals available (F-4a/
+#       DEC-14 truthfulness; additive, no read change);
+#   (b) owner-review gates cannot reach default-applied because the digest
+#       injects no decision records (D-4); the state is representable and is
+#       never fabricated;
+#   (c) per-item partial review-unknown is not representable because the PR
+#       read declares review availability section-wide (existing contract).
+# ---------------------------------------------------------------------------

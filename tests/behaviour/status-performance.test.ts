@@ -13,6 +13,7 @@ import { aggregateStatus } from "../../packages/core/src/domain/index";
 import { fixtureBrand } from "../fixtures/credentials/cases";
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 import {
+  allCapsFacts,
   capSizedFacts,
   NOW_ISO,
   NOW_MS,
@@ -58,7 +59,12 @@ const pullsUrl =
   "https://api.github.com/repos/owner-placeholder/project-placeholder/pulls?state=open&per_page=100&sort=updated&direction=desc";
 const checksUrl = `https://api.github.com/repos/owner-placeholder/project-placeholder/commits/${SHA}/check-runs?per_page=20`;
 
-const setup = (options: { readonly withOrigin: boolean }) => {
+const setup = (options: {
+  readonly withOrigin: boolean;
+  readonly issuesBody?: readonly unknown[];
+  readonly pullsBody?: readonly unknown[];
+  readonly checksBody?: { readonly check_runs: readonly unknown[] };
+}) => {
   const root = makeTempRoot("gh175-perf");
   const pmDir = mkdtempSync(join(tmpdir(), "gh175-perf-pm-"));
   const pmPath = join(pmDir, "pm-context.yaml");
@@ -67,9 +73,9 @@ const setup = (options: { readonly withOrigin: boolean }) => {
   const recorder = { calls: [] as string[] };
   const guarded = guardStore(store, recorder);
   const transport = createFixtureTransport([
-    { url: issuesUrl, body: [] },
-    { url: pullsUrl, body: [] },
-    { url: checksUrl, body: checkRuns(20) },
+    { url: issuesUrl, body: options.issuesBody ?? [] },
+    { url: pullsUrl, body: options.pullsBody ?? [] },
+    { url: checksUrl, body: options.checksBody ?? checkRuns(20) },
   ]);
   let resolves = 0;
   const composition: StatusComposition = {
@@ -130,6 +136,57 @@ describe("TC-STATUS-033 performance and read-cost bounds", () => {
     }
   });
 
+  test("a findings-heavy fixture keeps the same three-read budget", async () => {
+    const issues = Array.from({ length: 8 }, (_, index) => ({
+      number: 610 + index,
+      title: `Mapped ${index}`,
+      state: "open",
+      labels: [{ name: "epic:x" }, { name: "points:1" }],
+      milestone: { title: "Sprint 1" },
+      updated_at: "2026-09-01T00:00:00Z",
+    }));
+    const pulls = Array.from({ length: 8 }, (_, index) => ({
+      number: 500 + index,
+      state: "open",
+      draft: false,
+      reviewDecision: "APPROVED",
+      head: { ref: `feat/GH-${500 + index}/x`, sha: SHA },
+      base: { ref: "main-tools" },
+    }));
+    const harness = setup({
+      withOrigin: true,
+      issuesBody: issues,
+      pullsBody: pulls,
+      checksBody: {
+        check_runs: Array.from({ length: 20 }, (_, index) => ({
+          id: 9000 + index,
+          name: `ci-${index}`,
+          status: "completed",
+          conclusion: "failure",
+        })),
+      },
+    });
+    try {
+      const run = await runStatusCli(["--json", "status"], harness.runtime);
+      expect(run.exitCode).toBe(0);
+      expect(harness.transport.requests).toHaveLength(3);
+      expect(new Set(harness.transport.requests.map((request) => request.url))).toEqual(
+        new Set([issuesUrl, pullsUrl, checksUrl]),
+      );
+      expect(harness.recorder.calls.filter((call) => call === "read")).toHaveLength(1);
+      expect(harness.resolves()).toBe(1);
+      const data = JSON.parse(run.stdout) as {
+        data: {
+          summary: { findingsTotal: number };
+          sections: Array<{ id: string; findings?: unknown[] }>;
+        };
+      };
+      expect(data.data.summary.findingsTotal).toBeGreaterThan(0);
+    } finally {
+      harness.cleanup();
+    }
+  });
+
   test("the check-runs raw page of 20 drives source-truncated and renders eight runs", async () => {
     const harness = setup({ withOrigin: true });
     try {
@@ -153,14 +210,14 @@ describe("TC-STATUS-033 performance and read-cost bounds", () => {
     }
   });
 
-  test("an unavailable binding short-circuits to zero network reads with six sections", async () => {
+  test("an unavailable binding short-circuits to zero network reads with nine sections", async () => {
     const harness = setup({ withOrigin: false });
     try {
       const run = await runStatusCli(["--json", "status"], harness.runtime);
       expect(run.exitCode).toBe(0);
       expect(harness.transport.requests).toHaveLength(0);
       const envelope = JSON.parse(run.stdout) as { data: { sections: unknown[] } };
-      expect(envelope.data.sections).toHaveLength(6);
+      expect(envelope.data.sections).toHaveLength(9);
     } finally {
       harness.cleanup();
     }
@@ -187,5 +244,24 @@ describe("TC-STATUS-033 performance and read-cost bounds", () => {
       // intentional delay
     }
     expect(performance.now() - slowStart).toBeGreaterThanOrEqual(10);
+  });
+
+  test("aggregation over the all-caps findings-heavy input stays within 50 ms", () => {
+    const facts = allCapsFacts();
+    aggregateStatus(facts);
+    const timings: number[] = [];
+    for (let index = 0; index < 5; index += 1) {
+      const started = performance.now();
+      aggregateStatus(facts);
+      timings.push(performance.now() - started);
+    }
+    timings.sort((left, right) => left - right);
+    const median = timings[2] ?? Number.POSITIVE_INFINITY;
+    console.log(
+      `all-caps status aggregation median ${median.toFixed(3)} ms; runtime ${Bun.version}; platform ${process.platform}/${process.arch}`,
+    );
+    expect(median).toBeLessThanOrEqual(50);
+    const digest = aggregateStatus(facts);
+    expect(Buffer.byteLength(JSON.stringify(digest), "utf8")).toBeLessThanOrEqual(65536);
   });
 });

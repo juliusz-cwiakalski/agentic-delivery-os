@@ -16,7 +16,6 @@ import type {
   StatusItemSignalState,
   StatusRepositoryBinding,
 } from "./status.js";
-import { STATUS_SECTION_ORDER } from "./status.js";
 
 /** The brief payload schema (DM-1). */
 export const BRIEF_SCHEMA_VERSION = "delivery.brief.v1" as const;
@@ -47,10 +46,17 @@ export const BRIEF_PLACEHOLDER_SURFACE_IDS = [
 /** One placeholder surface id. */
 export type BriefPlaceholderSurfaceId = (typeof BRIEF_PLACEHOLDER_SURFACE_IDS)[number];
 
-/** The closed nine-id render-surface set (DM-5): six digest sections plus three placeholders. */
+/** The closed nine-id render-surface set (DM-5): its own literal contract. */
 export const BRIEF_SURFACE_ORDER = [
-  ...STATUS_SECTION_ORDER,
-  ...BRIEF_PLACEHOLDER_SURFACE_IDS,
+  "tracker",
+  "changes-and-prs",
+  "ci",
+  "lanes-or-queue",
+  "providers",
+  "parked-work",
+  "typed-questions",
+  "gate-sla-states",
+  "lane-queue-engine",
 ] as const;
 
 /** One closed render-surface id. */

@@ -8,10 +8,11 @@
  * in this module.
  */
 
+import type { OwnerGateSlaState, OwnerGateUnknownAgeReason } from "./owner-gate-sla.js";
 import type { DeliveryRequest, PipelineRun, WorkItem } from "./ports.js";
 import type { ProviderConfiguration, ProviderParkView } from "./provider.js";
 
-/** The six section ids in their fixed order (F-2, Appendix C). */
+/** The nine section ids in their fixed order (DM-3, DEC-1). */
 export const STATUS_SECTION_ORDER = [
   "tracker",
   "changes-and-prs",
@@ -19,8 +20,192 @@ export const STATUS_SECTION_ORDER = [
   "lanes-or-queue",
   "providers",
   "parked-work",
+  "ready-to-merge",
+  "spend",
+  "blockers",
 ] as const;
 export type StatusSectionId = (typeof STATUS_SECTION_ORDER)[number];
+
+/** The closed section-kind vocabulary (DM-12, DEC-17). */
+export const STATUS_SECTION_KINDS = {
+  tracker: "collector",
+  "changes-and-prs": "collector",
+  ci: "collector",
+  "lanes-or-queue": "declared-gap",
+  providers: "collector",
+  "parked-work": "collector",
+  "ready-to-merge": "collector",
+  spend: "placeholder",
+  blockers: "placeholder",
+} as const;
+export type StatusSectionKind = (typeof STATUS_SECTION_KINDS)[StatusSectionId];
+
+/** The two delivered placeholder section ids (DM-12, DEC-17). */
+export const STATUS_PLACEHOLDER_SECTION_IDS = ["spend", "blockers"] as const;
+export type StatusPlaceholderSectionId = (typeof STATUS_PLACEHOLDER_SECTION_IDS)[number];
+
+/** The declared per-section state-derivation rows (Appendix C, TC-ATT-024). */
+export const STATUS_SECTION_DERIVATION: Readonly<
+  Record<StatusSectionId, readonly StatusSectionState[]>
+> = {
+  tracker: ["observed", "degraded", "unknown", "unavailable"],
+  "changes-and-prs": ["observed", "degraded", "unknown", "unavailable"],
+  ci: ["observed", "unknown", "unavailable"],
+  "lanes-or-queue": ["not-delivered"],
+  providers: ["observed", "degraded", "unknown", "unavailable"],
+  "parked-work": ["observed", "unknown", "unavailable"],
+  "ready-to-merge": ["observed", "degraded", "unknown", "unavailable"],
+  spend: ["not-delivered"],
+  blockers: ["not-delivered"],
+};
+
+/** The ready-to-merge derivation row never admits `not-delivered` (Appendix C). */
+export const STATUS_READY_TO_MERGE_STATES = [
+  "observed",
+  "degraded",
+  "unknown",
+  "unavailable",
+] as const;
+export type StatusReadyToMergeState = (typeof STATUS_READY_TO_MERGE_STATES)[number];
+
+/** The closed three-value finding-severity vocabulary (DM-2). */
+export const STATUS_FINDING_SEVERITIES = ["high", "medium", "low"] as const;
+export type StatusFindingSeverity = (typeof STATUS_FINDING_SEVERITIES)[number];
+
+/** The ten shipped finding codes in declared order (Appendix A, DM-1). */
+export const STATUS_FINDING_CODES = [
+  "ci.red-on-main",
+  "tracker.owner-gate-escalated",
+  "tracker.stalled-ticket",
+  "tracker.hygiene.missing-title",
+  "tracker.hygiene.missing-labels",
+  "tracker.hygiene.epic-membership",
+  "tracker.hygiene.story-points",
+  "tracker.hygiene.in-sprint",
+  "lane.idle-no-reason",
+  "parked.stale-no-condition",
+] as const;
+export type StatusFindingCode = (typeof STATUS_FINDING_CODES)[number];
+
+/** One closed registry entry: default severity, meaning, owning surface, dormancy (DM-1). */
+export type StatusFindingDefinition = {
+  readonly severity: StatusFindingSeverity;
+  readonly meaning: string;
+  readonly surface: StatusSectionId;
+  readonly dormant: boolean;
+};
+
+/** The closed finding-code registry, declared in Appendix A order (DM-1). */
+export const STATUS_FINDING_REGISTRY: Readonly<Record<StatusFindingCode, StatusFindingDefinition>> =
+  {
+    "ci.red-on-main": {
+      severity: "high",
+      meaning: "failed CI classification on the declared primary branch",
+      surface: "ci",
+      dormant: false,
+    },
+    "tracker.owner-gate-escalated": {
+      severity: "high",
+      meaning: "owner hand-back gate escalated or default-applied",
+      surface: "tracker",
+      dormant: false,
+    },
+    "tracker.stalled-ticket": {
+      severity: "medium",
+      meaning: "open work item with no activity past the stall threshold",
+      surface: "tracker",
+      dormant: false,
+    },
+    "tracker.hygiene.missing-title": {
+      severity: "low",
+      meaning: "open work item with a blank title",
+      surface: "tracker",
+      dormant: false,
+    },
+    "tracker.hygiene.missing-labels": {
+      severity: "low",
+      meaning: "open work item with no labels",
+      surface: "tracker",
+      dormant: false,
+    },
+    "tracker.hygiene.epic-membership": {
+      severity: "low",
+      meaning: "open work item with no conforming epic label",
+      surface: "tracker",
+      dormant: false,
+    },
+    "tracker.hygiene.story-points": {
+      severity: "low",
+      meaning: "open work item with no conforming story-points label",
+      surface: "tracker",
+      dormant: false,
+    },
+    "tracker.hygiene.in-sprint": {
+      severity: "low",
+      meaning: "open work item with no mapped active-sprint membership",
+      surface: "tracker",
+      dormant: false,
+    },
+    "lane.idle-no-reason": {
+      severity: "medium",
+      meaning: "declared dormant until the lane engine reports an idle lane without a reason",
+      surface: "lanes-or-queue",
+      dormant: true,
+    },
+    "parked.stale-no-condition": {
+      severity: "low",
+      meaning: "parked entry with unknown age and no recorded re-entry condition",
+      surface: "parked-work",
+      dormant: false,
+    },
+  };
+
+/** The code-to-trigger-surface map (Appendix A, TC-ATT-001). */
+export const STATUS_FINDING_SURFACES: Readonly<Record<StatusFindingCode, StatusSectionId>> = {
+  "ci.red-on-main": "ci",
+  "tracker.owner-gate-escalated": "tracker",
+  "tracker.stalled-ticket": "tracker",
+  "tracker.hygiene.missing-title": "tracker",
+  "tracker.hygiene.missing-labels": "tracker",
+  "tracker.hygiene.epic-membership": "tracker",
+  "tracker.hygiene.story-points": "tracker",
+  "tracker.hygiene.in-sprint": "tracker",
+  "lane.idle-no-reason": "lanes-or-queue",
+  "parked.stale-no-condition": "parked-work",
+};
+
+/** The dormant code set: declared, never emitted before its delivering story (DEC-7). */
+export const STATUS_DORMANT_FINDING_CODES = ["lane.idle-no-reason"] as const;
+export type StatusDormantFindingCode = (typeof STATUS_DORMANT_FINDING_CODES)[number];
+
+/** The three named hygiene assertions in declared order (DM-7, F-4). */
+export const STATUS_HYGIENE_ASSERTIONS = ["epic-membership", "story-points", "in-sprint"] as const;
+export type StatusHygieneAssertionId = (typeof STATUS_HYGIENE_ASSERTIONS)[number];
+
+/** The declared label conventions for the mapped hygiene signals (DM-13, DEC-14). */
+export const STATUS_HYGIENE_LABEL_CONVENTIONS = {
+  epicToken: "epic",
+  epicPrefix: "epic:",
+  storyPointsPrefix: "points:",
+} as const;
+
+/** The closed lane attention-state vocabulary (DEC-17, F-7). */
+export const STATUS_LANE_ATTENTION_STATES = [
+  "delivering",
+  "idle-with-reason",
+  "idle-no-reason",
+] as const;
+export type StatusLaneAttentionState = (typeof STATUS_LANE_ATTENTION_STATES)[number];
+
+/** The closed ready-to-merge item classes (DM-5, DEC-5). */
+export const STATUS_READY_CLASSES = ["merge-ready", "review-pending"] as const;
+export type StatusReadyClass = (typeof STATUS_READY_CLASSES)[number];
+
+/** The declared primary-branch convention (Appendix A, §12). */
+export const STATUS_PRIMARY_BRANCH = "main" as const;
+
+/** The declared human clamp marker for defensive byte truncation (NFR-2). */
+export const STATUS_HUMAN_CLAMP_MARKER = "+" as const;
 
 /** The closed five-value section-state vocabulary (DM-3). */
 export const STATUS_SECTION_STATES = [
@@ -138,6 +323,9 @@ export type StatusTrackerAvailability = {
   readonly blockedDependencies: StatusSignalAvailability;
   readonly stalls: StatusSignalAvailability;
   readonly hygiene: StatusSignalAvailability;
+  readonly epicMembership?: StatusSignalAvailability;
+  readonly storyPoints?: StatusSignalAvailability;
+  readonly inSprint?: StatusSignalAvailability;
 };
 
 /** Per-signal declared availability for the VCS source (DM-14). */
@@ -156,6 +344,9 @@ export const STATUS_SECTION_TITLES: Readonly<Record<StatusSectionId, string>> = 
   "lanes-or-queue": "Lanes or queue",
   providers: "Providers",
   "parked-work": "Parked work",
+  "ready-to-merge": "Ready to merge",
+  spend: "Spend",
+  blockers: "Blockers",
 };
 
 /** Rendered-item cap for each non-tracker ranked list (Appendix C). */
@@ -184,10 +375,16 @@ export const STATUS_SOURCE_PIPELINE_LIMIT = 20 as const;
 export const STATUS_MAX_TITLE_CHARS = 120 as const;
 /** Safe evidence/reason detail cap (Appendix C). */
 export const STATUS_MAX_DETAIL_CHARS = 160 as const;
-/** Human digest line cap (Appendix C). */
-export const STATUS_MAX_HUMAN_LINES = 24 as const;
-/** Human digest byte cap (Appendix C). */
-export const STATUS_MAX_HUMAN_BYTES = 4096 as const;
+/** Per-section findings cap; defensive headroom (Appendix B, DEC-15). */
+export const STATUS_MAX_FINDINGS_PER_SECTION = 8 as const;
+/** Per-finding member-identity cap (Appendix B, DM-4). */
+export const STATUS_MAX_FINDING_MEMBERS = 8 as const;
+/** Ready-to-merge action-list cap (Appendix B, DM-5). */
+export const STATUS_MAX_READY_ITEMS = 8 as const;
+/** Human digest line cap; defensive headroom (Appendix B, DEC-11). */
+export const STATUS_MAX_HUMAN_LINES = 32 as const;
+/** Human digest byte cap; the operative bound (Appendix B, DEC-11). */
+export const STATUS_MAX_HUMAN_BYTES = 6144 as const;
 /** Byte cap on the serialized `data` digest (Appendix C). */
 export const STATUS_MAX_MACHINE_BYTES = 65536 as const;
 /** Declared stall threshold (Appendix C). */
@@ -329,6 +526,7 @@ export type StatusParkedWorkEntry = {
   readonly changeFolder?: string;
   readonly reason?: string;
   readonly parkedAt?: string;
+  readonly condition?: string;
 };
 
 /** The local PM-context read result (DM-10). */
@@ -371,6 +569,23 @@ type StatusActiveChangeState =
   | { readonly state: "observed-empty" }
   | { readonly state: "unknown"; readonly reason: StatusEvidenceReason };
 
+/** One grouped, registry-coded finding (DM-4, F-2). */
+export type StatusFinding = {
+  readonly code: StatusFindingCode;
+  readonly severity: StatusFindingSeverity;
+  readonly count: number;
+  readonly members: readonly string[];
+  readonly evidenceRef: string;
+};
+
+/** One named hygiene assertion's tri-state counts (DM-7, F-4). */
+export type StatusHygieneAssertion = {
+  readonly assertion: StatusHygieneAssertionId;
+  readonly violations: number;
+  readonly unknown: number;
+  readonly satisfied: number;
+};
+
 /** One tracker item with its family-specific signals. */
 export type StatusTrackerItem = {
   readonly workItemRef: string;
@@ -382,6 +597,9 @@ export type StatusTrackerItem = {
   readonly activity?: StatusStallState;
   readonly ageDays?: number;
   readonly findings?: readonly StatusHygieneFinding[];
+  readonly age?: number | null;
+  readonly ageUnknownReason?: OwnerGateUnknownAgeReason;
+  readonly slaState?: OwnerGateSlaState;
 };
 
 /** One tracker family list (DM-5). */
@@ -391,6 +609,7 @@ export type StatusTrackerFamily = {
   readonly reason?: StatusEvidenceReason;
   readonly counts: StatusCounts;
   readonly items: readonly StatusTrackerItem[];
+  readonly assertions?: readonly StatusHygieneAssertion[];
 };
 
 /** One open pull request with observed-or-unknown review signals (DM-6). */
@@ -456,7 +675,21 @@ export type StatusParkedWorkItem = {
   readonly parkedAt?: string;
   readonly ageDays?: number;
   readonly itemState: StatusParkedItemState;
+  readonly condition?: string;
 };
+
+/** One ready-to-merge action-list item (DM-5, D-9). */
+export type StatusReadyItem = {
+  readonly ref: string;
+  readonly class: StatusReadyClass;
+  readonly sourceRef: string;
+  readonly targetRef: string;
+  readonly reviewState: StatusItemSignalState;
+  readonly ciResult: StatusCiResult;
+};
+
+/** The uniform per-section item surface (DM-3, D-9). */
+export type StatusSectionItem = StatusParkedWorkItem | StatusReadyItem;
 
 /** One digest section: common fields plus its section-specific fields. */
 export type StatusSection = {
@@ -479,10 +712,12 @@ export type StatusSection = {
   readonly entries?: readonly StatusProviderEntry[];
   readonly parks?: readonly StatusProviderPark[];
   readonly source?: StatusParkedWorkSource;
-  readonly items?: readonly StatusParkedWorkItem[];
+  readonly items?: readonly StatusSectionItem[];
+  readonly findings?: readonly StatusFinding[];
+  readonly attentionStates?: readonly StatusLaneAttentionState[];
 };
 
-/** The digest summary counts (DM-1). */
+/** The digest summary counts (DM-1, DM-12). */
 export type StatusSummary = {
   readonly sections: number;
   readonly observed: number;
@@ -491,6 +726,10 @@ export type StatusSummary = {
   readonly unavailable: number;
   readonly notDelivered: number;
   readonly actionable: number;
+  /** Added in M1-S10; present on every digest produced from Phase 2 onward. */
+  readonly findingsTotal?: number;
+  /** Added in M1-S10; present on every digest produced from Phase 2 onward. */
+  readonly placeholderSectionCount?: number;
 };
 
 /** The complete bounded status digest (DM-1). */

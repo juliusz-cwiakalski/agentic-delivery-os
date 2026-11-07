@@ -1,7 +1,6 @@
 {
   "name": "missing-credential-unknown",
   "scenario": "missing-credential-unknown",
-  "controls": ["missing credential"],
   "expected": {
     "sections": {
       "tracker": {
@@ -14,7 +13,9 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": [],
+        "assertions": []
       },
       "changes-and-prs": {
         "state": "degraded",
@@ -26,7 +27,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "ci": {
         "state": "unknown",
@@ -38,7 +40,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "lanes-or-queue": {
         "state": "not-delivered",
@@ -50,7 +53,8 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "providers": {
         "state": "observed",
@@ -62,7 +66,8 @@
           "omitted": 0
         },
         "orderedIds": ["entry:primary"],
-        "truncated": false
+        "truncated": false,
+        "findings": []
       },
       "parked-work": {
         "state": "observed",
@@ -74,8 +79,49 @@
           "omitted": 0
         },
         "orderedIds": [],
-        "truncated": false
+        "truncated": false,
+        "findings": []
+      },
+      "ready-to-merge": {
+        "state": "unknown",
+        "reasons": ["credential-unavailable"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "spend": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
+      },
+      "blockers": {
+        "state": "not-delivered",
+        "reasons": ["engine-not-delivered"],
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "orderedIds": [],
+        "truncated": false,
+        "findings": []
       }
     }
-  }
+  },
+  "controls": ["missing credential"]
 }

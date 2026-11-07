@@ -113,7 +113,7 @@ describe("TC-STATUS-001 status command surface", () => {
     const facts = baseFacts();
     const human = await runStatusCli(["status"], statusRuntime(facts));
     expect(human.exitCode).toBe(0);
-    expect(human.stdout.split("\n").filter((line) => line.length > 0)).toHaveLength(7);
+    expect(human.stdout.split("\n").filter((line) => line.length > 0)).toHaveLength(11);
     const json = await runStatusCli(["--json", "status"], statusRuntime(facts));
     expect(json.exitCode).toBe(0);
     const envelope = PARSE(json.stdout);
@@ -180,7 +180,7 @@ describe("TC-STATUS-001 status command surface", () => {
 });
 
 describe("TC-STATUS-002 non-observed sections still succeed", () => {
-  test("a reachable non-observed digest keeps six sections and exit 0", async () => {
+  test("a reachable non-observed digest keeps nine sections and exit 0", async () => {
     const facts = baseFacts({
       tracker: failedWorkItemRead("read-failed"),
       changes: deliveryRequestRead([], REVIEWS_UNAVAILABLE),
@@ -200,13 +200,15 @@ describe("TC-STATUS-002 non-observed sections still succeed", () => {
     const data = envelope.data;
     if (!isRecord(data) || !isRecord(data.summary)) throw new Error("data summary missing");
     expect(data.summary).toEqual({
-      sections: 6,
+      sections: 9,
       observed: 0,
-      degraded: 1,
+      degraded: 2,
       unknown: 2,
       unavailable: 2,
-      notDelivered: 1,
+      notDelivered: 3,
       actionable: 0,
+      findingsTotal: 0,
+      placeholderSectionCount: 2,
     });
     expect(section(data, "tracker").state).toBe("unknown");
     expect(section(data, "ci").state).toBe("unknown");
@@ -214,6 +216,9 @@ describe("TC-STATUS-002 non-observed sections still succeed", () => {
     expect(section(data, "providers").state).toBe("unavailable");
     expect(section(data, "parked-work").state).toBe("unavailable");
     expect(section(data, "lanes-or-queue").state).toBe("not-delivered");
+    expect(section(data, "ready-to-merge").state).toBe("degraded");
+    expect(section(data, "spend").state).toBe("not-delivered");
+    expect(section(data, "blockers").state).toBe("not-delivered");
   });
 
   test("the fully observed control reaches observed sections", async () => {

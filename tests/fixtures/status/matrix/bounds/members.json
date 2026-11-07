@@ -1,0 +1,14 @@
+{
+  "memberCases": [7, 8, 9, 12, 20],
+  "atCap": 8,
+  "repeatedIdentity": {
+    "entityIds": ["700", "700", "700", "701", "702", "703", "704", "705", "706", "707"],
+    "count": 10,
+    "members": 8
+  },
+  "allCaps": {
+    "findingsPerSection": 8,
+    "membersPerFinding": 8,
+    "readyItems": 8
+  }
+}

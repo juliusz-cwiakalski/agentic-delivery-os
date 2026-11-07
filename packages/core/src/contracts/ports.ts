@@ -121,6 +121,11 @@ export type WorkItem = {
    */
   readonly comments?: readonly WorkItemComment[];
   /**
+   * The provider-native milestone title copied verbatim. Absent = the provider
+   * did not supply a milestone (unknown), never fabricated (DM-13, DEC-14).
+   */
+  readonly milestone?: string;
+  /**
    * The provider-native last-modified timestamp, copied verbatim as an
    * ISO-8601 UTC string. Absent = activity is unknown, never "no activity"
    * (ADR-0004; GH-188 OQ-E).

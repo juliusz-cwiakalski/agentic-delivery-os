@@ -16,13 +16,15 @@
       "remoteName": "origin"
     },
     "summary": {
-      "sections": 6,
-      "observed": 5,
+      "sections": 9,
+      "observed": 6,
       "degraded": 0,
       "unknown": 0,
       "unavailable": 0,
-      "notDelivered": 1,
-      "actionable": 56
+      "notDelivered": 3,
+      "actionable": 56,
+      "findingsTotal": 3,
+      "placeholderSectionCount": 2
     },
     "sections": [
       {
@@ -67,7 +69,9 @@
                 "itemState": "observed",
                 "labels": [
                   "hand-back"
-                ]
+                ],
+                "age": 86400000,
+                "slaState": "escalated"
               },
               {
                 "workItemRef": "GH-101",
@@ -76,7 +80,9 @@
                 "itemState": "observed",
                 "labels": [
                   "hand-back"
-                ]
+                ],
+                "age": 86400000,
+                "slaState": "escalated"
               },
               {
                 "workItemRef": "GH-102",
@@ -85,7 +91,9 @@
                 "itemState": "observed",
                 "labels": [
                   "hand-back"
-                ]
+                ],
+                "age": 86400000,
+                "slaState": "escalated"
               },
               {
                 "workItemRef": "GH-103",
@@ -94,7 +102,9 @@
                 "itemState": "observed",
                 "labels": [
                   "hand-back"
-                ]
+                ],
+                "age": 86400000,
+                "slaState": "escalated"
               }
             ]
           },
@@ -228,7 +238,69 @@
                   "missing-labels"
                 ]
               }
+            ],
+            "assertions": [
+              {
+                "assertion": "epic-membership",
+                "violations": 0,
+                "unknown": 16,
+                "satisfied": 0
+              },
+              {
+                "assertion": "story-points",
+                "violations": 0,
+                "unknown": 16,
+                "satisfied": 0
+              },
+              {
+                "assertion": "in-sprint",
+                "violations": 0,
+                "unknown": 16,
+                "satisfied": 0
+              }
             ]
+          }
+        ],
+        "findings": [
+          {
+            "code": "tracker.owner-gate-escalated",
+            "severity": "high",
+            "count": 4,
+            "members": [
+              "GH-100",
+              "GH-101",
+              "GH-102",
+              "GH-103"
+            ],
+            "evidenceRef": "GH-100"
+          },
+          {
+            "code": "tracker.stalled-ticket",
+            "severity": "medium",
+            "count": 4,
+            "members": [
+              "GH-300",
+              "GH-301",
+              "GH-302",
+              "GH-303"
+            ],
+            "evidenceRef": "GH-300"
+          },
+          {
+            "code": "tracker.hygiene.missing-labels",
+            "severity": "low",
+            "count": 12,
+            "members": [
+              "GH-200",
+              "GH-201",
+              "GH-202",
+              "GH-203",
+              "GH-300",
+              "GH-301",
+              "GH-302",
+              "GH-303"
+            ],
+            "evidenceRef": "GH-200"
           }
         ]
       },
@@ -506,7 +578,12 @@
         "capability": "queue-lane-engine",
         "expectedStory": "M2-S1",
         "note": "no queue or lane engine exists in this release",
-        "items": []
+        "items": [],
+        "attentionStates": [
+          "delivering",
+          "idle-with-reason",
+          "idle-no-reason"
+        ]
       },
       {
         "id": "providers",
@@ -799,6 +876,149 @@
             "itemState": "observed"
           }
         ]
+      },
+      {
+        "id": "ready-to-merge",
+        "title": "Ready to merge",
+        "state": "observed",
+        "evidence": {
+          "sources": [
+            {
+              "source": "changes",
+              "outcome": "read"
+            }
+          ],
+          "reasons": [
+            "observed"
+          ]
+        },
+        "counts": {
+          "observed": 8,
+          "unknown": 0,
+          "total": 8,
+          "omitted": 0
+        },
+        "truncated": false,
+        "items": [
+          {
+            "ref": "500",
+            "class": "review-pending",
+            "sourceRef": "feat/GH-500",
+            "targetRef": "main-tools",
+            "reviewState": "observed",
+            "ciResult": "failed"
+          },
+          {
+            "ref": "501",
+            "class": "review-pending",
+            "sourceRef": "feat/GH-501",
+            "targetRef": "main-tools",
+            "reviewState": "observed",
+            "ciResult": "failed"
+          },
+          {
+            "ref": "502",
+            "class": "review-pending",
+            "sourceRef": "feat/GH-502",
+            "targetRef": "main-tools",
+            "reviewState": "observed",
+            "ciResult": "failed"
+          },
+          {
+            "ref": "503",
+            "class": "review-pending",
+            "sourceRef": "feat/GH-503",
+            "targetRef": "main-tools",
+            "reviewState": "observed",
+            "ciResult": "failed"
+          },
+          {
+            "ref": "504",
+            "class": "review-pending",
+            "sourceRef": "feat/GH-504",
+            "targetRef": "main-tools",
+            "reviewState": "observed",
+            "ciResult": "failed"
+          },
+          {
+            "ref": "505",
+            "class": "review-pending",
+            "sourceRef": "feat/GH-505",
+            "targetRef": "main-tools",
+            "reviewState": "observed",
+            "ciResult": "failed"
+          },
+          {
+            "ref": "506",
+            "class": "review-pending",
+            "sourceRef": "feat/GH-506",
+            "targetRef": "main-tools",
+            "reviewState": "observed",
+            "ciResult": "failed"
+          },
+          {
+            "ref": "507",
+            "class": "review-pending",
+            "sourceRef": "feat/GH-507",
+            "targetRef": "main-tools",
+            "reviewState": "observed",
+            "ciResult": "failed"
+          }
+        ]
+      },
+      {
+        "id": "spend",
+        "title": "Spend",
+        "state": "not-delivered",
+        "evidence": {
+          "sources": [
+            {
+              "source": "queue-engine",
+              "outcome": "not-delivered"
+            }
+          ],
+          "reasons": [
+            "engine-not-delivered"
+          ]
+        },
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "truncated": false,
+        "capability": "spend-summary",
+        "expectedStory": "M1-S19",
+        "note": "spend summary arrives with M1-S19",
+        "items": []
+      },
+      {
+        "id": "blockers",
+        "title": "Blockers",
+        "state": "not-delivered",
+        "evidence": {
+          "sources": [
+            {
+              "source": "queue-engine",
+              "outcome": "not-delivered"
+            }
+          ],
+          "reasons": [
+            "engine-not-delivered"
+          ]
+        },
+        "counts": {
+          "observed": 0,
+          "unknown": 0,
+          "total": 0,
+          "omitted": 0
+        },
+        "truncated": false,
+        "capability": "typed-blockers",
+        "expectedStory": "M1-S16",
+        "note": "typed blockers arrive with M1-S16",
+        "items": []
       }
     ]
   }

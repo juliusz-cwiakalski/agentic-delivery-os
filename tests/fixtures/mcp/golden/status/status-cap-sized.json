@@ -40,38 +40,46 @@
           "family": "ownerHandBacks",
           "items": [
             {
+              "age": 86400000,
               "family": "ownerHandBacks",
               "itemState": "observed",
               "labels": [
                 "hand-back"
               ],
+              "slaState": "escalated",
               "title": "Hand back 0",
               "workItemRef": "GH-100"
             },
             {
+              "age": 86400000,
               "family": "ownerHandBacks",
               "itemState": "observed",
               "labels": [
                 "hand-back"
               ],
+              "slaState": "escalated",
               "title": "Hand back 1",
               "workItemRef": "GH-101"
             },
             {
+              "age": 86400000,
               "family": "ownerHandBacks",
               "itemState": "observed",
               "labels": [
                 "hand-back"
               ],
+              "slaState": "escalated",
               "title": "Hand back 2",
               "workItemRef": "GH-102"
             },
             {
+              "age": 86400000,
               "family": "ownerHandBacks",
               "itemState": "observed",
               "labels": [
                 "hand-back"
               ],
+              "slaState": "escalated",
               "title": "Hand back 3",
               "workItemRef": "GH-103"
             }
@@ -163,6 +171,26 @@
           "state": "observed"
         },
         {
+          "assertions": [
+            {
+              "assertion": "epic-membership",
+              "satisfied": 0,
+              "unknown": 16,
+              "violations": 0
+            },
+            {
+              "assertion": "story-points",
+              "satisfied": 0,
+              "unknown": 16,
+              "violations": 0
+            },
+            {
+              "assertion": "in-sprint",
+              "satisfied": 0,
+              "unknown": 16,
+              "violations": 0
+            }
+          ],
           "counts": {
             "observed": 12,
             "omitted": 8,
@@ -209,6 +237,48 @@
             }
           ],
           "state": "observed"
+        }
+      ],
+      "findings": [
+        {
+          "code": "tracker.owner-gate-escalated",
+          "count": 4,
+          "evidenceRef": "GH-100",
+          "members": [
+            "GH-100",
+            "GH-101",
+            "GH-102",
+            "GH-103"
+          ],
+          "severity": "high"
+        },
+        {
+          "code": "tracker.stalled-ticket",
+          "count": 4,
+          "evidenceRef": "GH-300",
+          "members": [
+            "GH-300",
+            "GH-301",
+            "GH-302",
+            "GH-303"
+          ],
+          "severity": "medium"
+        },
+        {
+          "code": "tracker.hygiene.missing-labels",
+          "count": 12,
+          "evidenceRef": "GH-200",
+          "members": [
+            "GH-200",
+            "GH-201",
+            "GH-202",
+            "GH-203",
+            "GH-300",
+            "GH-301",
+            "GH-302",
+            "GH-303"
+          ],
+          "severity": "low"
         }
       ],
       "id": "tracker",
@@ -466,6 +536,11 @@
       "truncated": false
     },
     {
+      "attentionStates": [
+        "delivering",
+        "idle-with-reason",
+        "idle-no-reason"
+      ],
       "capability": "queue-lane-engine",
       "counts": {
         "observed": 0,
@@ -783,14 +858,159 @@
       "state": "observed",
       "title": "Parked work",
       "truncated": false
+    },
+    {
+      "counts": {
+        "observed": 8,
+        "omitted": 0,
+        "total": 8,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "observed"
+        ],
+        "sources": [
+          {
+            "outcome": "read",
+            "source": "changes"
+          }
+        ]
+      },
+      "id": "ready-to-merge",
+      "items": [
+        {
+          "ciResult": "failed",
+          "class": "review-pending",
+          "ref": "500",
+          "reviewState": "observed",
+          "sourceRef": "feat/GH-500",
+          "targetRef": "main-tools"
+        },
+        {
+          "ciResult": "failed",
+          "class": "review-pending",
+          "ref": "501",
+          "reviewState": "observed",
+          "sourceRef": "feat/GH-501",
+          "targetRef": "main-tools"
+        },
+        {
+          "ciResult": "failed",
+          "class": "review-pending",
+          "ref": "502",
+          "reviewState": "observed",
+          "sourceRef": "feat/GH-502",
+          "targetRef": "main-tools"
+        },
+        {
+          "ciResult": "failed",
+          "class": "review-pending",
+          "ref": "503",
+          "reviewState": "observed",
+          "sourceRef": "feat/GH-503",
+          "targetRef": "main-tools"
+        },
+        {
+          "ciResult": "failed",
+          "class": "review-pending",
+          "ref": "504",
+          "reviewState": "observed",
+          "sourceRef": "feat/GH-504",
+          "targetRef": "main-tools"
+        },
+        {
+          "ciResult": "failed",
+          "class": "review-pending",
+          "ref": "505",
+          "reviewState": "observed",
+          "sourceRef": "feat/GH-505",
+          "targetRef": "main-tools"
+        },
+        {
+          "ciResult": "failed",
+          "class": "review-pending",
+          "ref": "506",
+          "reviewState": "observed",
+          "sourceRef": "feat/GH-506",
+          "targetRef": "main-tools"
+        },
+        {
+          "ciResult": "failed",
+          "class": "review-pending",
+          "ref": "507",
+          "reviewState": "observed",
+          "sourceRef": "feat/GH-507",
+          "targetRef": "main-tools"
+        }
+      ],
+      "state": "observed",
+      "title": "Ready to merge",
+      "truncated": false
+    },
+    {
+      "capability": "spend-summary",
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "engine-not-delivered"
+        ],
+        "sources": [
+          {
+            "outcome": "not-delivered",
+            "source": "queue-engine"
+          }
+        ]
+      },
+      "expectedStory": "M1-S19",
+      "id": "spend",
+      "items": [],
+      "note": "spend summary arrives with M1-S19",
+      "state": "not-delivered",
+      "title": "Spend",
+      "truncated": false
+    },
+    {
+      "capability": "typed-blockers",
+      "counts": {
+        "observed": 0,
+        "omitted": 0,
+        "total": 0,
+        "unknown": 0
+      },
+      "evidence": {
+        "reasons": [
+          "engine-not-delivered"
+        ],
+        "sources": [
+          {
+            "outcome": "not-delivered",
+            "source": "queue-engine"
+          }
+        ]
+      },
+      "expectedStory": "M1-S16",
+      "id": "blockers",
+      "items": [],
+      "note": "typed blockers arrive with M1-S16",
+      "state": "not-delivered",
+      "title": "Blockers",
+      "truncated": false
     }
   ],
   "summary": {
     "actionable": 56,
     "degraded": 0,
-    "notDelivered": 1,
-    "observed": 5,
-    "sections": 6,
+    "findingsTotal": 3,
+    "notDelivered": 3,
+    "observed": 6,
+    "placeholderSectionCount": 2,
+    "sections": 9,
     "unavailable": 0,
     "unknown": 0
   }
