@@ -3,6 +3,8 @@
  * Exposes the config command definition for edge composition.
  */
 
+export type { BlockerSessionPort, BlockersCommandRuntime } from "./blockers.js";
+export { createBlockersCommandDefinition } from "./blockers.js";
 export type { BoardCollector, BoardCommandRuntime } from "./board.js";
 export { createBoardCommandDefinition } from "./board.js";
 export type { BriefCommandRuntime } from "./brief.js";

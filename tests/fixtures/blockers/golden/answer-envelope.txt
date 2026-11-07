@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-blockers-golden",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "schemaVersion": "delivery.blockers.v1",
+    "answered": "q-golden-1",
+    "audience": "coordinator",
+    "choice": "lite+escalation",
+    "applied": false,
+    "laneResume": {
+      "mode": "boundary-note",
+      "sessionReentry": false,
+      "capabilitySource": "adapter-declared"
+    }
+  }
+}

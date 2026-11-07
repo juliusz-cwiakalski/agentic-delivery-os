@@ -17,7 +17,7 @@ call of every session.
 
 Artifact-verified collectors render nine fixed sections in order:
 tracker, changes and pull requests, CI, lanes or queue, providers, parked
-work, ready-to-merge, spend, and blockers. Each section carries a closed
+work, ready-to-merge, spend, and typed-questions. Each section carries a closed
 state (`observed`, `degraded`, `unknown`, `unavailable`, `not-delivered`),
 bounded evidence, counts, and an explicit truncation marker.
 
@@ -30,8 +30,9 @@ re-entry conditions. Ready-to-merge is a ranked action list that reuses
 the queue-ready merge-ready/review-pending classification. The lane
 attention-state vocabulary is declared while the section reports its
 existing not-delivered gap. The spend section is fed by the spend read
-side's state-log fold and reports observed or unknown; typed blockers
-remain a named not-delivered placeholder until M1-S16.
+side's state-log fold and reports observed or unknown; typed questions
+render the verified blocker ledger's open questions under the channel's
+shared ranking.
 
 The command is read-only: at most three network reads (issues, pull
 requests, check-runs for the checkout HEAD), one park fold, and one
@@ -75,9 +76,9 @@ $ <binary> status --json
     "schemaVersion": "delivery.status.v1",
     "generatedAt": "2026-11-18T09:00:12Z",
     "summary": {
-      "sections": 9, "observed": 7, "degraded": 0, "unknown": 0,
-      "unavailable": 0, "notDelivered": 2, "actionable": 12,
-      "findingsTotal": 1, "placeholderSectionCount": 1
+      "sections": 9, "observed": 8, "degraded": 0, "unknown": 0,
+      "unavailable": 0, "notDelivered": 1, "actionable": 12,
+      "findingsTotal": 1, "placeholderSectionCount": 0
     },
     "sections": [
       { "id": "tracker", "state": "observed" },
@@ -97,7 +98,7 @@ $ <binary> status --json
           "cacheRead": 2, "cacheWrite": 1 },
         "restarts": 0, "ratio": 1
       } },
-      { "id": "blockers", "state": "not-delivered" }
+      { "id": "typed-questions", "state": "observed" }
     ]
   }
 }

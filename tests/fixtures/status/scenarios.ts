@@ -10,6 +10,7 @@ import {
   activeChange,
   allCapsFacts,
   baseFacts,
+  blockersUnreadable,
   capSizedFacts,
   deliveryRequestRead,
   failedDeliveryRequestRead,
@@ -75,6 +76,7 @@ export const corpusScenarios = [
   "parked-stale-no-condition-grouped",
   "lanes-not-delivered-vocabulary",
   "placeholders-not-delivered",
+  "blockers-unreadable-unknown",
   "mixed-attention-ranked",
   "no-findings-attention-zero",
   "ready-merge-ready-ranked",
@@ -314,6 +316,8 @@ export const factsFor = (scenario: string): StatusFacts => {
     case "placeholders-not-delivered":
     case "no-findings-attention-zero":
       return baseFacts();
+    case "blockers-unreadable-unknown":
+      return baseFacts({ blockers: blockersUnreadable() });
     case "mixed-attention-ranked":
       return capSizedFacts();
     case "ready-merge-ready-ranked":

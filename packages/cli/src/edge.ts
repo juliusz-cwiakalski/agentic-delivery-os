@@ -7,6 +7,7 @@
  * shapes the already-resolved snapshot.
  */
 
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import {
   acquireFileConfig,
@@ -64,6 +65,7 @@ import {
   buildCloseoutPlan,
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
+  callerAudienceVariableName,
   type CommitActRequest,
   type CommitTransportPorts,
   catalogPaths,
@@ -128,6 +130,9 @@ import {
   AUDIT_IDENTITY_VARIABLE_SUFFIX,
   type AuditAgentIdentity,
   type AuditInvocationFacts,
+  BLOCKER_DELEGATION_POLICY,
+  type BlockerCapabilityFact,
+  type BlockerDelegationPolicy,
   type BrandIdentity,
   CLOSEOUT_MAX_DEPENDENTS,
   type CloseoutGitRuntime,
@@ -172,6 +177,7 @@ import {
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type StateStorePort,
+  type StatusBlockersRead,
   type StatusLocalContextRead,
   type StatusParkRead,
   type StatusProviderConfigRead,
@@ -201,6 +207,8 @@ import {
 } from "@delivery-os/core/provider";
 import {
   appendAuditInvocation,
+  appendBlockerAnswer,
+  appendBlockerQuestion,
   appendCloseoutOutcome,
   appendCommitTelemetry,
   appendMergeGateVerification,
@@ -215,6 +223,7 @@ import {
   foldCloseoutHistory,
   readAllMergeWaivers,
   readAuditLedger,
+  readBlockerLedger,
   readChangeTransitionsTolerant,
   readCloseoutHistory,
   readCommitTelemetry,
@@ -231,6 +240,10 @@ import {
   seedRetroRegistry,
 } from "@delivery-os/core/state";
 import { resolveAppErrorCode } from "./classify.js";
+import {
+  type BlockersCommandRuntime,
+  createBlockersCommandDefinition,
+} from "./commands/blockers.js";
 import { type BoardCommandRuntime, createBoardCommandDefinition } from "./commands/board.js";
 import { createBriefCommandDefinition } from "./commands/brief.js";
 import {
@@ -1662,6 +1675,12 @@ export const createStatusCommandRuntime = (
     },
     readLocalContext: (): StatusLocalContextRead =>
       readLocalPmContext({ path: options.localContext.path, fs: options.localContext.fs }),
+    readBlockers: (): StatusBlockersRead => {
+      const read = readBlockerLedger(options.store);
+      return read.ok
+        ? { ok: true, value: read.value }
+        : { ok: false, reason: "state-unreadable", failureCode: read.error.code };
+    },
     readSpend: (): SpendDigestSection => spendDigestFor(options),
     nowIso: options.clock.nowIso,
     nowMs: options.clock.nowMs,
@@ -2125,6 +2144,51 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
   };
 };
 
+/**
+ * The blockers composition seams: the state store, injected time/id/fence
+ * factories, and the optional capability and delegation snapshots. The
+ * caller-audience environment fact is resolved here from the branding-derived
+ * variable name and handed to the handler as data.
+ */
+export type BlockersComposition = {
+  readonly store: StateStorePort;
+  readonly clock: { readonly nowMs: () => number; readonly nowIso: () => string };
+  readonly newQuestionSuffix?: () => string;
+  readonly newFenceToken: () => string;
+  readonly capability?: BlockerCapabilityFact;
+  readonly delegationPolicy?: BlockerDelegationPolicy;
+};
+
+/** Compose the blockers runtime over the real state ledger. */
+export const createBlockersCommandRuntime = (
+  composition: BlockersComposition,
+  brand: BrandIdentity,
+  secrets: readonly string[],
+  environment: Readonly<Record<string, string | undefined>>,
+): BlockersCommandRuntime => ({
+  brand,
+  clock: composition.clock,
+  newQuestionSuffix: composition.newQuestionSuffix ?? (() => randomUUID()),
+  newFenceToken: composition.newFenceToken,
+  readBlockers: () => readBlockerLedger(composition.store),
+  appendQuestion: (record, current) =>
+    appendBlockerQuestion(composition.store, {
+      record,
+      fenceToken: composition.newFenceToken(),
+      ...(current === undefined ? {} : { current }),
+    }),
+  appendAnswer: (record, current) =>
+    appendBlockerAnswer(composition.store, {
+      record,
+      fenceToken: composition.newFenceToken(),
+      ...(current === undefined ? {} : { current }),
+    }),
+  callerAudienceFact: environment[callerAudienceVariableName(brand)],
+  capability: composition.capability,
+  delegationPolicy: composition.delegationPolicy ?? BLOCKER_DELEGATION_POLICY,
+  secrets,
+});
+
 export type ConfigProgramOptions = {
   readonly workingName: string;
   readonly environment: Readonly<Record<string, string | undefined>>;
@@ -2153,6 +2217,7 @@ export type ConfigProgramOptions = {
   readonly closeout?: CloseoutComposition;
   readonly watchdog?: WatchdogComposition;
   readonly board?: BoardComposition;
+  readonly blockers?: BlockersComposition;
   readonly merge?: MergeCommandRuntime;
   readonly retro?: RetroCompositionOptions;
   readonly spend?: SpendCompositionOptions;
@@ -2722,6 +2787,11 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.board !== undefined) {
     commands.board = createBoardCommandDefinition(createBoardCommandRuntime(options.board));
+  }
+  if (options.blockers !== undefined) {
+    commands.blockers = createBlockersCommandDefinition(
+      createBlockersCommandRuntime(options.blockers, brand, secrets, options.environment),
+    );
   }
   if (options.merge !== undefined) {
     commands.merge = createMergeCommandDefinition(options.merge);

@@ -108,9 +108,9 @@
         "truncated": false,
         "findings": []
       },
-      "blockers": {
-        "state": "not-delivered",
-        "reasons": ["engine-not-delivered"],
+      "typed-questions": {
+        "state": "observed",
+        "reasons": ["observed-empty"],
         "counts": {
           "observed": 0,
           "unknown": 0,

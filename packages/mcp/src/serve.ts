@@ -33,6 +33,7 @@ import { readProviderParkViews } from "@delivery-os/core/provider";
 import {
   createNodeStateEdge,
   createStateStore,
+  readBlockerLedger,
   readChangeTransitionsTolerant,
 } from "@delivery-os/core/state";
 import type { GateReportRegistryRead, GateReportToolRuntime } from "./commands/gate-report.js";
@@ -126,6 +127,14 @@ const buildStatusRuntime = (
       path: `${cwd}/.ai/local/pm-context.yaml`,
       fs: nodeFileSystemFacts(),
     }),
+  readBlockers: () => {
+    // The same verified blocker-ledger read the CLI status edge composes; a
+    // failed or torn read stays digest evidence, never a tool failure.
+    const read = readBlockerLedger(store);
+    return read.ok
+      ? { ok: true, value: read.value }
+      : { ok: false, reason: "state-unreadable", failureCode: read.error.code };
+  },
   nowIso: () => new Date().toISOString(),
   nowMs: () => Date.now(),
 });

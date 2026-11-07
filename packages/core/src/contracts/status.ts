@@ -8,12 +8,13 @@
  * in this module.
  */
 
+import type { BlockerLedgerView, BlockerQuestionView } from "./blockers.js";
 import type { OwnerGateSlaState, OwnerGateUnknownAgeReason } from "./owner-gate-sla.js";
 import type { DeliveryRequest, PipelineRun, WorkItem } from "./ports.js";
 import type { ProviderConfiguration, ProviderParkView } from "./provider.js";
 import type { SpendDigestSection } from "./spend.js";
 
-/** The nine section ids in their fixed order (DM-3, DEC-1). */
+/** The nine section ids in their fixed order (DM-3, DEC-1; DEC-6 of GH-230). */
 export const STATUS_SECTION_ORDER = [
   "tracker",
   "changes-and-prs",
@@ -23,7 +24,7 @@ export const STATUS_SECTION_ORDER = [
   "parked-work",
   "ready-to-merge",
   "spend",
-  "blockers",
+  "typed-questions",
 ] as const;
 export type StatusSectionId = (typeof STATUS_SECTION_ORDER)[number];
 
@@ -37,12 +38,18 @@ export const STATUS_SECTION_KINDS = {
   "parked-work": "collector",
   "ready-to-merge": "collector",
   spend: "collector",
-  blockers: "placeholder",
+  "typed-questions": "collector",
 } as const;
 export type StatusSectionKind = (typeof STATUS_SECTION_KINDS)[StatusSectionId];
 
-/** The one remaining placeholder section id (DM-12, DEC-17; GH-236 flipped spend). */
-export const STATUS_PLACEHOLDER_SECTION_IDS = ["blockers"] as const;
+/**
+ * The placeholder section ids (DM-12, DEC-17).
+ *
+ * Vacant: typed questions shipped with GH-230 and spend with GH-236, so every
+ * section is a collector or the declared lanes gap. `placeholderSectionCount`
+ * therefore reports exactly 0 for the shipped nine-section digest.
+ */
+export const STATUS_PLACEHOLDER_SECTION_IDS = [] as const;
 export type StatusPlaceholderSectionId = (typeof STATUS_PLACEHOLDER_SECTION_IDS)[number];
 
 /** The declared per-section state-derivation rows (Appendix C, TC-ATT-024). */
@@ -57,7 +64,7 @@ export const STATUS_SECTION_DERIVATION: Readonly<
   "parked-work": ["observed", "unknown", "unavailable"],
   "ready-to-merge": ["observed", "degraded", "unknown", "unavailable"],
   spend: ["observed", "unknown"],
-  blockers: ["not-delivered"],
+  "typed-questions": ["observed", "unknown"],
 };
 
 /** The ready-to-merge derivation row never admits `not-delivered` (Appendix C). */
@@ -218,7 +225,7 @@ export const STATUS_SECTION_STATES = [
 ] as const;
 export type StatusSectionState = (typeof STATUS_SECTION_STATES)[number];
 
-/** The eight evidence source ids (DM-4). */
+/** The ten evidence source ids (DM-4; GH-230 added `blockers`, GH-236 added `state-log`). */
 export const STATUS_EVIDENCE_SOURCES = [
   "tracker",
   "changes",
@@ -228,6 +235,7 @@ export const STATUS_EVIDENCE_SOURCES = [
   "provider-parks",
   "local-context",
   "repository-binding",
+  "blockers",
   "state-log",
 ] as const;
 export type StatusEvidenceSource = (typeof STATUS_EVIDENCE_SOURCES)[number];
@@ -348,7 +356,7 @@ export const STATUS_SECTION_TITLES: Readonly<Record<StatusSectionId, string>> = 
   "parked-work": "Parked work",
   "ready-to-merge": "Ready to merge",
   spend: "Spend",
-  blockers: "Blockers",
+  "typed-questions": "Typed questions",
 };
 
 /** Rendered-item cap for each non-tracker ranked list (Appendix C). */
@@ -548,6 +556,21 @@ export type StatusLocalContextRead =
       readonly path: string;
     };
 
+/** One ranked open question in the digest section (open only). */
+export type StatusTypedQuestionItem = Omit<BlockerQuestionView, "status"> & {
+  readonly rank: number;
+};
+
+/** The verified blocker-store read, or a classified unreadable source. */
+export type StatusBlockersRead =
+  | { readonly ok: true; readonly value: BlockerLedgerView }
+  | {
+      readonly ok: false;
+      readonly reason: "state-unreadable";
+      readonly failureCode?: string;
+      readonly failureClass?: string;
+    };
+
 /** The complete injected fact set the pure aggregator consumes. */
 export type StatusFacts = {
   readonly nowIso: string;
@@ -558,6 +581,7 @@ export type StatusFacts = {
   readonly ci: StatusPipelineRunRead;
   readonly providers: StatusProviderFacts;
   readonly localContext: StatusLocalContextRead;
+  readonly blockers: StatusBlockersRead;
   /** The spend read projection fed by the same fold the command consumes. */
   readonly spend: SpendDigestSection;
 };
@@ -719,6 +743,7 @@ export type StatusSection = {
   readonly items?: readonly StatusSectionItem[];
   readonly findings?: readonly StatusFinding[];
   readonly attentionStates?: readonly StatusLaneAttentionState[];
+  readonly questions?: readonly StatusTypedQuestionItem[];
   /** The spend section's observed or unknown projection (GH-236 DM-6). */
   readonly spend?: SpendDigestSection;
 };

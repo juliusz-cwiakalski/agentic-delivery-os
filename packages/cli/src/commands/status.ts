@@ -11,6 +11,7 @@ import {
   type SpendDigestSection,
   STATUS_SOURCE_ITEM_LIMIT,
   STATUS_SOURCE_PIPELINE_LIMIT,
+  type StatusBlockersRead,
   type StatusDeliveryRequestRead,
   type StatusDigest,
   type StatusFacts,
@@ -39,6 +40,7 @@ export type StatusCommandRuntime = {
   readonly readProviderConfig: () => StatusProviderConfigRead;
   readonly readProviderParks: (nowMs: number) => StatusParkRead;
   readonly readLocalContext: () => StatusLocalContextRead;
+  readonly readBlockers: () => StatusBlockersRead;
   readonly readSpend?: () => SpendDigestSection;
   readonly nowIso: () => string;
   readonly nowMs: () => number;
@@ -88,6 +90,7 @@ export const collectStatusFacts = async (runtime: StatusCommandRuntime): Promise
       parks: runtime.readProviderParks(nowMs),
     },
     localContext: runtime.readLocalContext(),
+    blockers: runtime.readBlockers(),
     spend: runtime.readSpend?.() ?? { state: "observed", captured: false },
   };
 };

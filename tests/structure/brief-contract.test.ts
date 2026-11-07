@@ -82,13 +82,15 @@ describe("TC-BRIEF-001 contract surface and closed catalog", () => {
     }
   });
 
-  test("the placeholder catalog is exactly the three DEC-6 entries", () => {
+  test("the placeholder catalog is exactly the two DEC-6 entries", () => {
     expect(BRIEF_PLACEHOLDER_CATALOG).toEqual([
-      { capability: "typed-questions", owningStory: "M1-S16", state: "not-delivered" },
       { capability: "gate-sla-states", owningStory: "M1-S5", state: "not-delivered" },
       { capability: "lane-queue-engine", owningStory: "M1-S17", state: "not-delivered" },
     ]);
-    expect(BRIEF_PLACEHOLDER_CATALOG).toHaveLength(3);
+    expect(BRIEF_PLACEHOLDER_CATALOG).toHaveLength(2);
+    expect(BRIEF_PLACEHOLDER_CATALOG.some((entry) => entry.capability === "typed-questions")).toBe(
+      false,
+    );
     expect(BRIEF_PLACEHOLDER_CATALOG.some((entry) => entry.capability === "spend")).toBe(false);
   });
 

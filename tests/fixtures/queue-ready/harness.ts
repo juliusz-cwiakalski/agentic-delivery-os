@@ -426,6 +426,10 @@ export const queueRuntime = (
     recorder.calls.push("readLocalContext");
     return facts.localContext;
   },
+  readBlockers: () => {
+    recorder.calls.push("readBlockers");
+    return { ok: true, value: { questions: [], answers: [], verifiedEmpty: true } };
+  },
   nowIso: () => facts.nowIso,
   nowMs: () => facts.nowMs,
 });

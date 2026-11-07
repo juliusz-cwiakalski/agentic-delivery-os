@@ -1,7 +1,7 @@
 /**
  * TC-ATT-018 (behaviour half) / 019 / 020 / 021 / 024 — the lanes declaration,
- * the flipped spend section, the blockers placeholder, nine-section totality,
- * and the summary.
+ * the delivered spend and typed-questions sections, nine-section totality, and
+ * the summary.
  */
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
@@ -13,7 +13,6 @@ import {
   STATUS_SECTION_ORDER,
   type StatusDigest,
   type StatusFacts,
-  type StatusSection,
 } from "../../packages/core/src/contracts/index";
 import { aggregateStatus, renderStatusHuman } from "../../packages/core/src/domain/index";
 import {
@@ -35,35 +34,7 @@ const ROOT = process.cwd();
 const humanOf = (facts: StatusFacts): string =>
   renderStatusHuman(aggregateStatus(facts), { binaryName: "example-product" } as never);
 
-const placeholderFailures = (
-  section: StatusSection,
-  id: "blockers",
-  capability: string,
-  story: string,
-  note: string,
-): string[] => {
-  const failures: string[] = [];
-  if (section.id !== id) failures.push(`id ${section.id} != ${id}`);
-  if (section.state !== "not-delivered") failures.push(`state ${section.state}`);
-  if (section.capability !== capability) failures.push(`capability ${String(section.capability)}`);
-  if (section.expectedStory !== story) failures.push(`story ${String(section.expectedStory)}`);
-  if (section.note !== note) failures.push(`note ${String(section.note)}`);
-  if (!section.evidence.reasons.includes("engine-not-delivered")) failures.push("reason");
-  if (!section.evidence.sources.some((source) => source.outcome === "not-delivered")) {
-    failures.push("source outcome");
-  }
-  if (section.counts.total !== 0 || section.counts.observed !== 0 || section.counts.unknown !== 0) {
-    failures.push("counts");
-  }
-  if ((section.items ?? []).length !== 0) failures.push("items");
-  if ((section.findings ?? []).length !== 0) failures.push("findings");
-  return failures;
-};
-
-const placeholderSection = (facts: StatusFacts, id: "blockers"): StatusSection =>
-  sectionById(aggregateStatus(facts).sections, id);
-
-describe("TC-ATT-019/020 the flipped spend section and the blockers placeholder", () => {
+describe("TC-ATT-019/020 the delivered spend and typed-questions sections", () => {
   test("spend is a real observed section fed by the read-side fold", () => {
     const spend = sectionById(aggregateStatus(baseFacts()).sections, "spend");
     expect(spend.state).toBe("observed");
@@ -101,32 +72,29 @@ describe("TC-ATT-019/020 the flipped spend section and the blockers placeholder"
     ]);
   });
 
-  test("blockers is a uniform not-delivered placeholder declaring M1-S16", () => {
-    expect(
-      placeholderFailures(
-        placeholderSection(baseFacts(), "blockers"),
-        "blockers",
-        "typed-blockers",
-        "M1-S16",
-        "typed blockers arrive with M1-S16",
-      ),
-    ).toEqual([]);
+  test("typed-questions is a delivered collector section, not a placeholder", () => {
+    const digest = aggregateStatus(baseFacts());
+    const typed = sectionById(digest.sections, "typed-questions");
+    expect(typed.state).toBe("observed");
+    expect(typed.evidence.reasons).toEqual(["observed-empty"]);
+    expect(typed.evidence.sources).toEqual([{ source: "blockers", outcome: "observed-empty" }]);
+    expect(typed.questions).toEqual([]);
   });
 
-  test("the declared order keeps spend at index 8 and blockers at index 9", () => {
+  test("the declared order places spend then typed-questions at indices 8 and 9", () => {
     const digest = aggregateStatus(baseFacts());
     expect(digest.sections[7]?.id).toBe("spend");
-    expect(digest.sections[8]?.id).toBe("blockers");
-    expect(STATUS_PLACEHOLDER_SECTION_IDS).toEqual(["blockers"]);
+    expect(digest.sections[8]?.id).toBe("typed-questions");
+    expect(STATUS_PLACEHOLDER_SECTION_IDS).toEqual([]);
     expect(STATUS_SECTION_KINDS.spend).toBe("collector");
-    expect(STATUS_SECTION_KINDS.blockers).toBe("placeholder");
+    expect(STATUS_SECTION_KINDS["typed-questions"]).toBe("collector");
     expect(STATUS_SECTION_KINDS["lanes-or-queue"]).toBe("declared-gap");
   });
 
-  test("the human spend and blockers lines are pinned byte-for-byte", () => {
+  test("the human spend and questions lines are pinned byte-for-byte", () => {
     const human = humanOf(baseFacts());
     expect(human).toContain("spend      observed  no captured telemetry (absence of capture)");
-    expect(human).toContain("blockers   not-delivered  typed blockers arrive with M1-S16");
+    expect(human).toContain("questions  observed  0 open");
     expect(human).not.toContain("spend summary arrives with M1-S19");
   });
 
@@ -139,40 +107,18 @@ describe("TC-ATT-019/020 the flipped spend section and the blockers placeholder"
       repository: repository({ binding: unavailableBinding() }),
     });
     expect(sectionById(aggregateStatus(failing).sections, "spend").state).toBe("observed");
-    expect(placeholderSection(failing, "blockers").state).toBe("not-delivered");
+    expect(sectionById(aggregateStatus(failing).sections, "typed-questions").state).toBe(
+      "observed",
+    );
   });
 
-  test("mutation controls fail the blockers placeholder validator by name", () => {
-    const blockers = placeholderSection(baseFacts(), "blockers");
-    const mutations: StatusSection[] = [
-      { ...blockers, expectedStory: "M1-S18" },
-      { ...blockers, note: "" },
-      { ...blockers, state: "observed" },
-      { ...blockers, items: [{ workItemRef: "GH-1", itemState: "observed" }] },
-      { ...blockers, capability: "typed-questions" },
-    ];
-    for (const mutation of mutations) {
-      expect(
-        placeholderFailures(
-          mutation,
-          "blockers",
-          "typed-blockers",
-          "M1-S16",
-          "typed blockers arrive with M1-S16",
-        ).length,
-      ).toBeGreaterThan(0);
-    }
-  });
-
-  test("no spend or blocker implementation leaks into the contracts or domain", () => {
+  test("no retired spendAmount identifier leaks into the contracts or domain", () => {
     for (const file of [
       "packages/core/src/contracts/status.ts",
       "packages/core/src/domain/status.ts",
     ]) {
       const text = readFileSync(join(ROOT, file), "utf8");
       expect(text).not.toContain("spendAmount");
-      expect(text).not.toContain("blockerChannel");
-      expect(text).not.toContain("typed-question");
     }
   });
 });
@@ -271,16 +217,16 @@ const totalityFailures = (digest: StatusDigest): string[] => {
     .reduce((sum, section) => sum + (section.findings?.length ?? 0), 0);
   if (digest.summary.findingsTotal !== groups)
     failures.push(`findingsTotal ${digest.summary.findingsTotal} != ${groups}`);
-  if (digest.summary.placeholderSectionCount !== 1) {
+  if (digest.summary.placeholderSectionCount !== 0) {
     failures.push(`placeholder count ${digest.summary.placeholderSectionCount}`);
   }
-  const placeholders = digest.sections.filter(
-    (section) => STATUS_SECTION_KINDS[section.id] === "placeholder",
-  );
-  if (placeholders.length !== 1) failures.push(`placeholder sections ${placeholders.length}`);
-  if (placeholders[0]?.id !== "blockers") {
-    failures.push(`placeholder section ${String(placeholders[0]?.id)} != blockers`);
+  if (STATUS_PLACEHOLDER_SECTION_IDS.length !== 0) {
+    failures.push(`declared placeholders ${STATUS_PLACEHOLDER_SECTION_IDS.length}`);
   }
+  const placeholders = digest.sections.filter(
+    (section) => String(STATUS_SECTION_KINDS[section.id]) === "placeholder",
+  );
+  if (placeholders.length !== 0) failures.push(`placeholder sections ${placeholders.length}`);
   return failures;
 };
 
@@ -315,7 +261,7 @@ describe("TC-ATT-021 nine-section totality, findings total, placeholder count", 
     expect(digest.summary.findingsTotal).toBe(1);
   });
 
-  test("placeholders contribute zero to actionable", () => {
+  test("the spend and typed-questions sections contribute zero to actionable", () => {
     const digest = aggregateStatus(baseFacts());
     const expectedActionable = digest.sections
       .filter((section) => section.state === "observed" || section.state === "degraded")
@@ -330,12 +276,12 @@ describe("TC-ATT-021 nine-section totality, findings total, placeholder count", 
           (section.runs?.length ?? 0) +
           (section.entries?.length ?? 0) +
           (section.parks?.length ?? 0) +
-          (section.id === "parked-work" ? (section.items?.length ?? 0) : 0),
+          (section.id === "parked-work" ? (section.items?.length ?? 0) : 0) +
+          (section.id === "typed-questions" ? (section.questions?.length ?? 0) : 0),
         0,
       );
     expect(digest.summary.actionable).toBe(expectedActionable);
-    expect(placeholderSection(baseFacts(), "spend").counts.total).toBe(0);
-    expect(placeholderSection(baseFacts(), "blockers").counts.total).toBe(0);
+    expect(sectionById(digest.sections, "spend").counts.total).toBe(0);
   });
 
   test("removing a section, adding a tenth, or counting by observation fails by name", () => {

@@ -11,6 +11,7 @@ import {
   type SpendDigestSection,
   STATUS_SOURCE_ITEM_LIMIT,
   STATUS_SOURCE_PIPELINE_LIMIT,
+  type StatusBlockersRead,
   type StatusDeliveryRequestRead,
   type StatusDigest,
   type StatusLocalContextRead,
@@ -38,6 +39,7 @@ export type StatusToolRuntime = {
   readonly readProviderConfig: () => StatusProviderConfigRead;
   readonly readProviderParks: (nowMs: number) => StatusParkRead;
   readonly readLocalContext: () => StatusLocalContextRead;
+  readonly readBlockers: () => StatusBlockersRead;
   /** The spend read projection; absent means the verified-empty observation. */
   readonly readSpend?: () => SpendDigestSection;
   readonly nowIso: () => string;
@@ -88,6 +90,7 @@ const collectStatusFacts = async (runtime: StatusToolRuntime) => {
       parks: runtime.readProviderParks(nowMs),
     },
     localContext: runtime.readLocalContext(),
+    blockers: runtime.readBlockers(),
     spend: runtime.readSpend?.() ?? { state: "observed", captured: false },
   };
 };

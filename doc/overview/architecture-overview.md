@@ -8,8 +8,8 @@ owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
-  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, ADR-0010]
-  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-237]
+  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010]
+  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -120,9 +120,11 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
 
 - `status` is a bounded, read-only nine-section attention-state digest: a
   closed finding-code registry with grouped ranked findings, tri-state
-  hygiene assertions, owner-gate ages, parked conditions, and a
-  merge-ready-first action list; human ceiling 32 lines / 6144 bytes;
-  machine `data` ceiling 65536 bytes, with counts, findings, and truncation.
+  hygiene assertions, owner-gate ages, parked conditions, a
+  merge-ready-first action list, and the `typed-questions` section ranking
+  open questions from the local blocker ledger; human ceiling 32 lines /
+  6144 bytes; machine `data` ceiling 65536 bytes, with counts, findings, and
+  truncation.
 - `queue ready` is a bounded read-only tri-state ready-set with ranked resumption,
   at most eight candidates; it remains read-only and never claims ownership. The
   scheduling engine ships beside it as `queue list|plan|add|prioritize|dep|claim|release`
@@ -141,6 +143,12 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   and follows the defaultable path. A rendered board exits zero while an
   unavailable collector exits two. See the
   [owner-gate SLA](../spec/features/feature-owner-gate-sla.md).
+- `blockers` is the typed question channel: `list`, `answer`, and `publish` over
+  append-only local state, with audience routing through a policy-as-data map,
+  the layered credential guard, and a recorded `laneResume` projection. Answers
+  declare `applied: false` and no session is touched; open questions rank once
+  and surface on the list, the digest, and the brief. See the
+  [typed blocker channel](../spec/features/feature-blockers.md).
 - `doctor` is a bounded, read-only pre-flight diagnostic over `repo`, `tracker`,
   `provider`, `state`, and `ci`, in that fixed order. It performs at most two
   single-page network reads, never repairs, never fetches quota, and never runs

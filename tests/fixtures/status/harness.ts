@@ -11,6 +11,8 @@ import {
 } from "../../../packages/cli/src/commands/status";
 import { type CliDependencies, runCli } from "../../../packages/cli/src/index";
 import type {
+  BlockerAnswerRecord,
+  BlockerQuestionRecord,
   DeliveryRequest,
   DeliveryThread,
   ExternalSystemInstance,
@@ -19,6 +21,7 @@ import type {
   ProviderConfiguration,
   ProviderParkView,
   StatusActiveChange,
+  StatusBlockersRead,
   StatusDeliveryRequestRead,
   StatusFacts,
   StatusLocalContextRead,
@@ -353,8 +356,25 @@ export const baseFacts = (overrides: Partial<StatusFacts> = {}): StatusFacts => 
   ci: pipelineRunRead([]),
   providers: providers(),
   localContext: localContext({ activeChange: activeChange() }),
+  blockers: blockersRead(),
   spend: verifiedEmptySpend(),
   ...overrides,
+});
+
+/** A verified blocker read over the supplied records (empty by default). */
+export const blockersRead = (
+  questions: readonly BlockerQuestionRecord[] = [],
+  answers: readonly BlockerAnswerRecord[] = [],
+): StatusBlockersRead => ({
+  ok: true,
+  value: { questions, answers, verifiedEmpty: questions.length === 0 && answers.length === 0 },
+});
+
+/** A classified unreadable blocker source. */
+export const blockersUnreadable = (): StatusBlockersRead => ({
+  ok: false,
+  reason: "state-unreadable",
+  failureCode: "state.store.torn",
 });
 
 export const statusInstance = (): ExternalSystemInstance => ({
@@ -462,6 +482,10 @@ export const statusRuntime = (
   readLocalContext: () => {
     recorder.calls.push("readLocalContext");
     return facts.localContext;
+  },
+  readBlockers: () => {
+    recorder.calls.push("readBlockers");
+    return facts.blockers;
   },
   readSpend: () => {
     recorder.calls.push("readSpend");

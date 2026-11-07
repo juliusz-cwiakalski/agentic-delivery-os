@@ -1,0 +1,173 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-230
+branch: feat/GH-230/typed-blockers
+status: FAIL
+summary: >-
+  The change is functionally complete and spec-faithful: all 21 ACs verified against
+  code and tests (SC-M1-24 and SC-M1-13 pinned exactly), the four ticket-pinned decisions
+  delivered unre-derived (verified against the live ticket), the TDR-0012 two-layer guard
+  boundary honored with real negative controls, the v0 applied:false / laneResume posture
+  correct with zero-call session assertions, byte-stability limited to exactly the two
+  declared status/brief exceptions, the error-table gate green at 57/57 (re-run by this
+  review), and 326 blockers/sibling tests re-run green by this review. Findings are
+  accuracy and hygiene items, none blocking: two stale count comments in contract module
+  headers (eight→nine evidence sources; three→two placeholder catalog), one untested
+  production composition seam (createBlockersCommandRuntime: brand-named env fact to
+  caller audience, default delegation policy, real-store bridging — the security-relevant
+  confused-deputy wiring has no edge-level test, contrary to the GH-170 lesson and the
+  createStatusCommandRuntime precedent), a `blockers list --open` semantics wrinkle
+  (filter-excluded answered rows counted as omitted/truncated, inconsistent with the
+  digest's omitted semantics and undocumented), and a stale TC-BLK-041 index row in the
+  test plan. Documented coder deviations (classify fallback-namespace resolution,
+  STATUS_EVIDENCE_SOURCES 8->9 with deliberate golden regen, rank-only-on-open list rows,
+  .txt goldens + regenerate scripts, queue-ready harness accommodation) are each judged
+  legitimate readings required by declared behavior and are within defaultLeases.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 3
+  low: 2
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: documentation
+    location: packages/core/src/contracts/status.ts:37
+    message: >-
+      The module comment still says "The eight evidence source ids (DM-4)" but
+      STATUS_EVIDENCE_SOURCES now declares nine ids after this change added "blockers".
+      Misleading count in the canonical closed-vocabulary declaration module.
+    suggestion: >-
+      Update the comment to nine (or drop the count: "The closed evidence source ids").
+      Comment-only; no behavior change.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: documentation
+    location: packages/core/src/contracts/brief.ts:5
+    message: >-
+      The header comment still says "the closed three-entry placeholder catalog" but
+      BRIEF_PLACEHOLDER_CATALOG now holds two entries after the typed-questions
+      placeholder retired.
+    suggestion: >-
+      Update the header to "two-entry placeholder catalog". Comment-only; no behavior
+      change.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: test-gap
+    location: packages/cli/src/edge.ts:1193
+    message: >-
+      createBlockersCommandRuntime has no direct test: the production composition that
+      resolves the caller audience from the brand-named environment variable
+      (environment[callerAudienceVariableName(brand)]), wires the default
+      BLOCKER_DELEGATION_POLICY, the randomUUID question suffix, and the real-store
+      read/append bridging is only reachable in production. All behaviour tests inject a
+      hand-built runtime, so a regression in this seam (e.g. reading the wrong variable)
+      would pass the suite. The repo's own review standard (GH-170 lesson: prove the rule
+      fires in the production resolution world) and the sibling precedent
+      (createStatusCommandRuntime is directly tested in queue-ready-live and
+      brief-readonly) make this a gap for the change's primary security control.
+    suggestion: >-
+      Add an edge-composition behaviour test (e.g.
+      tests/behaviour/blockers-edge-composition.test.ts) that calls
+      createBlockersCommandRuntime (and createConfigProgram with a blockers composition)
+      over a temp store and asserts: a coordinator value in the brand-named variable
+      produces a coordinator audience and the SC-M1-24 refusal end-to-end; an absent or
+      unrecognized value defaults to owner; the default delegation policy refuses
+      coordinator answering an owner question; one publish and one answer land on the
+      real ledger.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/blockers.ts:610
+    message: >-
+      `blockers list --open` counts filter-excluded answered rows into `omitted` and sets
+      `truncated: true` (verified empirically: one answered question yields
+      {truncated:true, omitted:1} and the human "+1 more questions omitted" line), even
+      though nothing was dropped for bounds. This conflates user filtering with cap
+      truncation, is inconsistent with the digest's omitted semantics over identical
+      facts (digest reports omitted:0 for the same store), and is undocumented in
+      feature-blockers.md ("--open restricts the payload to open questions").
+    suggestion: >-
+      Either exclude answered rows from the omitted count when openOnly is set (preferred:
+      omitted counts only cap/byte-bound drops), or document the semantics explicitly in
+      feature-blockers.md and pin it with a test asserting the --open omitted value.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: artifact-accuracy
+    location: doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/chg-GH-230-test-plan.md:1733
+    message: >-
+      The TC-BLK-041 scenario-index row says "brief eight surfaces/two anchors stable"
+      while the delivered brief has nine surfaces and three anchors. The TC's own step
+      list (L1567: "the other eight surfaces ... unchanged") and the delivered tests are
+      correct; only the index-row summary is stale.
+    suggestion: >-
+      Reword the row to match delivered truth, e.g. "brief nine surfaces/three anchors;
+      the other eight surfaces and the two existing anchors stable".
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: robustness
+    location: packages/core/src/state/blockers.ts:248
+    message: >-
+      askedAt/answeredAt are validated at read as non-empty strings but not as
+      ISO-parseable instants; a hand-corrupted ledger with a garbage timestamp would be
+      served as truth (age 0, sorted last via the Infinity fallback in askedMs) rather
+      than classified torn. AC-F1-2's "malformed" reading arguably covers structure only,
+      so this is an accepted residual rather than a violation; records written by this
+      change always carry injected-clock ISO stamps.
+    suggestion: >-
+      Optional hardening: validate Date.parse-ability in questionFrom/answerFrom (torn on
+      failure), or record the residual in feature-blockers.md. No action strictly required.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: packages/cli/src/classify.ts:127
+    message: >-
+      Documented scope deviations, each judged a legitimate reading (not a spec
+      violation): (1) classify.ts fallback-namespace resolution — required by plan task
+      4.1's "malformed invocation -> fallback.invocation exit 1"; additive, contained to
+      the two reserved codes, documented in feature-result-contract.md; classify.ts was
+      not in phase-4 scope.files though within defaultLeases and recorded in the phase-4
+      execution log. (2) STATUS_EVIDENCE_SOURCES 8->9 with deliberate golden updates —
+      required by DM-6's state-sourced section. (3) list payload open+answered rows with
+      rank only on open — declared by test-plan GAP-6. (4) .txt byte goldens and the
+      status golden regenerate script — test infrastructure within declared fixture
+      folders. (5) queue-ready harness readBlockers accommodation — required by the new
+      required StatusFacts field; the queue command code itself is unchanged and its
+      output byte-stable.
+    suggestion: >-
+      No action; recorded for traceability. The phase-4 scope list in plan.yaml could
+      have named classify.ts — worth remembering when authoring future phase scopes.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-06T14:05:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

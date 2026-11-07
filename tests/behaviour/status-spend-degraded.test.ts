@@ -102,7 +102,7 @@ describe("TC-SPEND-028 digest verified-empty and failed-read projections", () =>
   test("no placeholder reappears and the spend section adds zero actionable items", () => {
     const empty = aggregateStatus(baseFacts({ spend: verifiedEmptySpend() }));
     const failed = aggregateStatus(baseFacts({ spend: failedSpend() }));
-    expect(failed.summary.placeholderSectionCount).toBe(1);
+    expect(failed.summary.placeholderSectionCount).toBe(0);
     expect(failed.summary.actionable).toBe(empty.summary.actionable);
     const spend = failed.sections[7];
     if (spend === undefined) throw new Error("spend section missing");

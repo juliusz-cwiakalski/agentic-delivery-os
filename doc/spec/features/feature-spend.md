@@ -185,7 +185,7 @@ Status digest section 8 `spend` is a collector section fed by the same `readSpen
 | Failed store read | `unknown` with the `state-unreadable` reason and the state failure code; the digest still renders all nine sections and exits 0 | source `state-log`, outcome `failed`, `failureCode` |
 | No resolvable active change ref | `unknown` with reason `local-context-missing` and its code | source `state-log`, outcome `failed`, `failureCode` |
 
-The digest carries the spend projection as the section's `spend` field. The section contributes zero to `actionable`; `placeholderSectionCount` is exactly 1 (the `blockers` placeholder). No spend placeholder line renders. The brief carries no spend surface.
+The digest carries the spend projection as the section's `spend` field. The section contributes zero to `actionable`; `placeholderSectionCount` is exactly 0 (no section is a placeholder after the typed-questions and spend deliveries). No spend placeholder line renders. The brief carries no spend surface.
 
 ## Technical Architecture & Codebase Map
 

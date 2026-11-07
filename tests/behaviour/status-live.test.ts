@@ -105,13 +105,13 @@ describe("TC-STATUS-032 opt-in live smoke", () => {
         "parked-work",
         "ready-to-merge",
         "spend",
-        "blockers",
+        "typed-questions",
       ]);
       const stateOf = (id: string): string =>
         envelope.data.sections.find((entry) => entry.id === id)?.state ?? "missing";
       expect(stateOf("lanes-or-queue")).toBe("not-delivered");
       expect(stateOf("spend")).toBe("not-delivered");
-      expect(stateOf("blockers")).toBe("not-delivered");
+      expect(stateOf("typed-questions")).not.toBe("not-delivered");
       expect(stateOf("ready-to-merge")).not.toBe("not-delivered");
       const lanes = envelope.data.sections.find((entry) => entry.id === "lanes-or-queue");
       expect(lanes?.attentionStates).toEqual(["delivering", "idle-with-reason", "idle-no-reason"]);
@@ -140,7 +140,7 @@ describe("TC-STATUS-032 opt-in live smoke", () => {
         "parked",
         "ready",
         "spend",
-        "blockers",
+        "questions",
         "attention",
       ]) {
         expect(lines.some((line) => line.startsWith(label))).toBe(true);

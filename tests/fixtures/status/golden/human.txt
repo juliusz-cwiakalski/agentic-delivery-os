@@ -7,5 +7,5 @@ providers  observed  chain primary | active parks 8 | 8 entries
 parked     observed  8 parked changes (git-ignored local state)
 ready      observed  8 ready-to-merge (merge-ready 0)
 spend      observed  no captured telemetry (absence of capture)
-blockers   not-delivered  typed blockers arrive with M1-S16
+questions  observed  0 open
 attention  3 findings (tracker.owner-gate-escalated×4, tracker.stalled-ticket×4, tracker.hygiene.missing-labels×12)

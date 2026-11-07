@@ -1,5 +1,5 @@
 /**
- * TC-STATUS-003 / TC-STATUS-004 — six-section totality and the Appendix A
+ * TC-STATUS-003 / TC-STATUS-004 — seven-section totality and the Appendix A
  * derivation matrix, including item-unknown vs section-unknown twins.
  */
 import { describe, expect, test } from "bun:test";
@@ -142,18 +142,6 @@ const shapeFailures = (value: unknown): string[] => {
       }
       if (section.counts.total !== 0) failures.push(`${id}: counts must be zero`);
     }
-    if (id === "blockers") {
-      if (section.state !== "not-delivered") failures.push(`${id}: must be not-delivered`);
-      if (typeof section.capability !== "string") failures.push(`${id}: capability missing`);
-      if (typeof section.expectedStory !== "string") failures.push(`${id}: expectedStory missing`);
-      if (typeof section.note !== "string" || section.note.length === 0) {
-        failures.push(`${id}: note missing`);
-      }
-      if (!Array.isArray(section.items) || section.items.length !== 0) {
-        failures.push(`${id}: items must be empty`);
-      }
-      if (section.counts.total !== 0) failures.push(`${id}: counts must be zero`);
-    }
     if (id === "providers") {
       if (!isRecord(section.chain)) failures.push(`${id}: chain missing`);
       if (!Array.isArray(section.entries)) failures.push(`${id}: entries missing`);
@@ -172,8 +160,8 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const sectionOf = (digest: StatusDigest, id: string): StatusSection =>
   sectionById(digest.sections, id);
 
-describe("TC-STATUS-003 six-section totality and shape", () => {
-  test("the fully observed digest has all six sections in fixed order", () => {
+describe("TC-STATUS-003 seven-section totality and shape", () => {
+  test("the fully observed digest has all seven sections in fixed order", () => {
     const digest = aggregateStatus(baseFacts());
     expect(shapeFailures(digest)).toEqual([]);
     expect(digest.sections.map((section) => section.id)).toEqual([...STATUS_SECTION_ORDER]);
