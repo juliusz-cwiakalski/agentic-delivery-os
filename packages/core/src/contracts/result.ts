@@ -19,7 +19,7 @@ export type ErrorCategory = "user" | "platform" | "transient" | "permanent";
 export type ErrorConsequence = "landed" | "not_landed" | "unknown";
 
 /** The standalone CLI's fixed exit-code projection class (F-4, Appendix C). */
-export type ProjectionClass = "success" | "user-validation" | "platform-provider";
+export type ProjectionClass = "success" | "user-validation" | "platform-provider" | "attention";
 
 /**
  * Stable symbolic hierarchical identity: `domain.reason.detail`.

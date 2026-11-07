@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-RETRO-PIPELINE
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The retro evidence pipeline: the `retro collect` and `retro report` command family over an independent append-only evidence sidecar outside the delivery state store, a distinct HMAC-SHA-256 keyed chain with its own store-managed key artifact, collector-assigned trace ids and claimed collector identity, one collector fence, verified reads that flag tamper, the two-level shape-crash guard, five pipeline-truth checks, the explicit no-target collect success, the validated retro registry with three record kinds and levels R1-R6, the periodic memory-audit trigger home, the bounded library-only export bundle, doctor state-store visibility, deterministic zero-model-call render paths, and four retro error identities."
+summary: "The retro evidence pipeline: the `retro collect` and `retro report` command family over an independent append-only evidence sidecar outside the delivery state store, a distinct HMAC-SHA-256 keyed chain with its own store-managed key artifact, collector-assigned trace ids and claimed collector identity, one collector fence, verified reads that flag tamper, the two-level shape-crash guard, five pipeline-truth checks, the explicit no-target collect success, the validated retro registry with three record kinds and levels R1-R6, the periodic memory-audit trigger home, the bounded library-only export bundle, doctor state-store visibility, deterministic zero-model-call render paths, the read-only closeout coverage consumer, and four retro error identities."
 links:
-  related_changes: ["GH-232"]
+  related_changes: ["GH-232", "GH-240"]
   related_decisions: ["TDR-0009", "ADR-0003", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/retro.ts"
@@ -210,6 +210,10 @@ Collection seeds the registry additively and idempotently by identity: the six l
 | `R5` | `project` | `project` | lifecycle: `milestone-end` | `declared` (M2-S3) |
 | `R6` | `fleet` | `fleet` | schedule: `fleet-cadence` | `declared` (post-M4 fleet retro, unscheduled) |
 
+### Closeout coverage read
+
+Closeout's `retro-coverage-move` step is a read-only consumer of the registry. The production closeout composition reads the validated `retro.run` records at level `change`, determines whether a run's scope is the closed work item, and records the result as one idempotent `capsule.retro-coverage` capsule event with `state: "collected"` (a run exists) or `state: "pending"` (none) and the run id when present; an injected coverage fact overrides the read for tests. It appends no registry record, writes no evidence, and adds no mode value; the registry remains the selection authority for `retro collect`. An unreadable registry is a declared gap in the closeout step (`retro-registry-unavailable`) plus a `retro-coverage-unavailable` residue item, and the rest of closeout proceeds; a validated registry with no matching run is `pending`, not a gap. A re-run appends nothing for the same work item and level. The coverage contract is described in [Closeout Transaction](feature-closeout.md) and [Change Capsule](feature-capsule.md).
+
 ### Periodic memory audit
 
 The registry hosts the periodic memory-audit trigger as data: `name: "memory-audit"`, `kind: "schedule"`, `cadence: "weekly"`, `owningBinding: "memory consolidation skill"`. Invocation is on demand in the delivered surface; scheduled invocation belongs to the ceremony runner.
@@ -366,12 +370,12 @@ The pipeline adds no network, provider, or telemetry cost. The recurring cost is
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for the public port, validated boundaries, verified reads, fences, store-managed artifacts, least-privilege permissions, and forever retention.
 - **Depends on** the command audit ledger ([feature-audit-ledger.md](feature-audit-ledger.md)) for the bounded read surface, chain verdict, skipped-ordinal findings, and claimed-identity convention.
 - **Depends on** closeout outcome records and commit telemetry records as collector sources, and on pm-notes typed `retro` notes through the existing read surface.
-- **Consumed by** capsules/closeout (M1-S12), the ceremony runner (M2-S3), and the action registry (M2-S10).
+- **Consumed by** closeout's read-only coverage move, the ceremony runner (M2-S3), and the action registry (M2-S10). Coverage is recorded as a capsule fact; the pipeline's own collection and truth rules are unchanged.
 - **Risk — key loss:** losing the key artifact prevents verification and continuation. Mitigation: store-managed `0600` artifact under the state directory; rotation and backup/restore are deferred.
 - **Risk — same-user key access:** a same-user process that reads the key artifact can forge links; this is outside the documented lane contract and accepted as residual single-user risk.
 - **Risk — false breaks across processes:** mitigated by durable key material and cross-process suites; reported salvage removals are distinguished from breaks.
 - **Risk — check vacuity:** every truth check ships a triggerable negative fixture; removing or disabling a check fails the suite.
-- **Risk — scope creep:** the ceremony runner, action registry, capsule expansion, and export CLI exposure are explicitly outside this feature.
+- **Risk — scope creep:** the ceremony runner, action registry, and export CLI exposure are explicitly outside this feature; closeout's coverage read adds no write path to the registry or the sidecar.
 
 ## Glossary & References
 
@@ -403,7 +407,8 @@ The pipeline adds no network, provider, or telemetry cost. The recurring cost is
 - [State Layer](feature-state-layer.md) — the store, validated boundaries, fences, store-managed artifacts, and the retro registry in the store layout.
 - [Command Audit Ledger](feature-audit-ledger.md) — the bounded read surface, chain verdict, skipped-ordinal findings, and claimed identity.
 - [Doctor](feature-doctor.md) — the state check's `retro-registry` store verdict.
-- [Closeout Transaction](feature-closeout.md) and [Commit Primitive](feature-commit-primitive.md) — collector sources.
+- [Closeout Transaction](feature-closeout.md) — the read-only `retro-coverage-move` consumer and a collector source; [Change Capsule](feature-capsule.md) — the capsule event that records coverage.
+- [Commit Primitive](feature-commit-primitive.md) — a collector source.
 - [Glossary](../../overview/glossary.md) — repository-wide terms.
 - [TDR-0009](../../decisions/TDR-0009-retro-evidence-sidecar-keyed-chain-construction.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0004](../../decisions/TDR-0004-state-storage-engine.md), [TDR-0005](../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md).
-- Change record: `doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/`.
+- Change records: `doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/`, `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`.

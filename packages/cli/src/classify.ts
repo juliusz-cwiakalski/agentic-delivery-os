@@ -8,6 +8,7 @@
 import {
   BOARD_COLLECTOR_ERROR_PREFIX,
   BOARD_COLLECTOR_ERROR_SUFFIX,
+  CLOSEOUT_STEP_IDS,
   DOMAIN_KINDS,
   ERROR_TABLE,
   ERROR_TABLE_FAMILIES,
@@ -95,9 +96,47 @@ const mergeGateFamilyEntry = (code: string, kind?: string): ErrorTableEntry | un
   };
 };
 
+const CLOSEOUT_STEP_PREFIX = "closeout.step.";
+const CLOSEOUT_STEP_SUFFIX = ".failed";
+
+const closeoutStepFamily = (): ErrorTableFamily | undefined =>
+  (ERROR_TABLE_FAMILIES as readonly ErrorTableFamily[]).find(
+    (family) => family.slotPrefix === CLOSEOUT_STEP_PREFIX,
+  );
+
+/**
+ * The declared `closeout.step.<id>.failed` family (GH-240 DEC-15).
+ *
+ * The slot must name an id in the effective `CLOSEOUT_STEP_IDS` set; there is
+ * no generic `closeout.*` widening and no template/empty slot.
+ */
+const closeoutStepFamilyEntry = (code: string, kind?: string): ErrorTableEntry | undefined => {
+  if (kind !== undefined && kind !== "closeout") return undefined;
+  if (!code.startsWith(CLOSEOUT_STEP_PREFIX)) return undefined;
+  if (!code.endsWith(CLOSEOUT_STEP_SUFFIX)) return undefined;
+  const id = code.slice(CLOSEOUT_STEP_PREFIX.length, code.length - CLOSEOUT_STEP_SUFFIX.length);
+  if (!(CLOSEOUT_STEP_IDS as readonly string[]).includes(id)) return undefined;
+  const family = closeoutStepFamily();
+  if (family === undefined) return undefined;
+  return {
+    code,
+    domainKind: family.domainKind,
+    category: family.category,
+    retryable: family.retryable,
+    consequence: family.consequence,
+    remediationHint: family.remediationHint,
+    projectionClass: family.projectionClass,
+    ...(family.summary === undefined ? {} : { summary: family.summary }),
+  };
+};
+
 /** Resolve a code to exactly one entry; "not found" is distinct from containment. */
 export function resolveAppErrorCode(code: string): CodeResolution {
-  const entry = entryForCode(code) ?? collectorFamilyEntry(code) ?? mergeGateFamilyEntry(code);
+  const entry =
+    entryForCode(code) ??
+    collectorFamilyEntry(code) ??
+    mergeGateFamilyEntry(code) ??
+    closeoutStepFamilyEntry(code);
   return entry === undefined ? { ok: false, reason: "unresolvable" } : { ok: true, entry };
 }
 

@@ -20,7 +20,11 @@ import {
 } from "../../packages/cli/src/commands/phase";
 import type { CommandDefinition } from "../../packages/cli/src/index";
 import { type CliDependencies, runCli } from "../../packages/cli/src/index";
-import type { StateStoreIdentity, StateStorePort } from "../../packages/core/src/contracts/index";
+import type {
+  CapsuleProducerPort,
+  StateStoreIdentity,
+  StateStorePort,
+} from "../../packages/core/src/contracts/index";
 import {
   appendPhaseTransition,
   phaseStateDocumentName,
@@ -81,6 +85,8 @@ export type PhaseHarnessOptions = {
   readonly recorder?: PhaseCallRecorder;
   readonly omitTarget?: boolean;
   readonly state?: { readonly identity: StateStoreIdentity; readonly store: StateStorePort };
+  /** The non-gating capsule producer port (GH-240 F-2). */
+  readonly capsule?: CapsuleProducerPort;
 };
 
 export type PhaseHarness = {
@@ -195,6 +201,7 @@ export const createPhaseHarness = (
       fenceCounter += 1;
       return `phase-writer-${fenceCounter}`;
     },
+    ...(options.capsule === undefined ? {} : { capsule: options.capsule }),
   };
 
   const runDefinition = async (

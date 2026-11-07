@@ -101,6 +101,19 @@ export const ERROR_TABLE_FAMILIES = [
     slotPrefix: "merge.gate.",
     slotSuffix: ".failed",
   },
+  {
+    template: "closeout.step.<id>.failed",
+    domainKind: "closeout",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Resolve the named closeout step condition (for example a promotion home outside the memory root) and retry; the capsule is never repaired.",
+    projectionClass: "user-validation",
+    summary: "A closeout step failed.",
+    slotPrefix: "closeout.step.",
+    slotSuffix: ".failed",
+  },
 ] as const satisfies readonly ErrorTableFamily[];
 
 /**
@@ -632,6 +645,17 @@ export const ERROR_TABLE = [
       "Resolve the named checkout, worktree, protected-ref, or merged-head condition, then retry.",
     projectionClass: "user-validation",
     summary: "Branch cleanup or checkout restore was refused for safety.",
+  },
+  {
+    code: "closeout.capsule-invalid",
+    domainKind: "closeout",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair the capsule damage named in the evidence (torn tail, duplicate key, sequence gap, post-close line, or candidate schema failure) and retry; closeout never repairs or truncates the capsule.",
+    projectionClass: "user-validation",
+    summary: "The change capsule is damaged and no promotion write landed.",
   },
   {
     code: "verify.gates.failed",

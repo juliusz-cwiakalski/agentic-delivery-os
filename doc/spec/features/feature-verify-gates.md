@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-VERIFY-GATES
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the appended EVT-1 gate-verification record with byte-identical verdicts, and the two verify.gates.* error rows."
+summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the appended EVT-1 gate-verification record with byte-identical verdicts, the non-gating capsule `gate.outcome` append with a bounded disclosure, and the two verify.gates.* error rows."
 links:
-  related_changes: ["GH-178", "GH-225"]
+  related_changes: ["GH-178", "GH-225", "GH-240"]
   related_decisions: ["ADR-0003", "ADR-0006", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/verify-gates.ts"
@@ -167,6 +167,10 @@ cleanliness remain outside this surface. Merge execution is the merge
 transaction's surface, specified in
 [Merge and Verify Deploy](feature-merge-verify-deploy.md).
 
+## Capsule gate append
+
+After the gate-verification state append, a full battery evaluation also appends one `gate.outcome` capsule event when a capsule producer port is injected. The event carries the gate-set identity (`<schemaVersion>:<id,id,...>`), the head SHA, and one bounded `{gateId, verdict, reason}` entry per evaluated gate. The event key is derived from the gate-set identity and head SHA, so a re-run of the same evaluation appends nothing. The append is non-gating: a failed or thrown append becomes a bounded `capsule` disclosure on the success data or on the classified failure envelope, and the gate verdicts, the verification record, and the exit projection are unchanged. The capsule contract is in [Change Capsule](feature-capsule.md).
+
 ## Related
 
 - [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md)
@@ -174,6 +178,7 @@ transaction's surface, specified in
 - [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md)
 - [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md)
 - [Result Contract and Error Table](feature-result-contract.md)
+- [Change Capsule](feature-capsule.md)
 - [Merge and Verify Deploy](feature-merge-verify-deploy.md)
 - [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md)
 - [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md)
@@ -181,7 +186,7 @@ transaction's surface, specified in
 - [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md)
 - [ADR-0006 — Work-Item Custom Fields and Comment-Omission Representation](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md)
 
-**Change record:** `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/`; `doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/`.
+**Change record:** `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/`; `doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/`; `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`.
 
 ## Config-declared gate set and verification record
 

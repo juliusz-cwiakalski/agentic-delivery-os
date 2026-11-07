@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-COMMIT-PRIMITIVE
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered commit primitive: a `commit` command that computes a conventional commit from the working tree plus change context (deterministic skeleton, precise staging, deterministic safety, one constrained message call behind an ordered transport seam with a marked template fallback), default-on atomic record-plus-commit inside `phase complete` with per-call and per-project opt-outs, total four-state re-run convergence over durable commit-intent evidence, the `commit.telemetry` state-layer record kind, the typed `commit.phaseCommit` configuration key, and the six `commit.*` error identities."
+summary: "The delivered commit primitive: a `commit` command that computes a conventional commit from the working tree plus change context (deterministic skeleton, precise staging, deterministic safety, one constrained message call behind an ordered transport seam with a marked template fallback), default-on atomic record-plus-commit inside `phase complete` with per-call and per-project opt-outs, total four-state re-run convergence over durable commit-intent evidence, the `commit.telemetry` state-layer record kind, the non-gating capsule `commit.landed` append with a bounded disclosure, the typed `commit.phaseCommit` configuration key, and the six `commit.*` error identities."
 links:
-  related_changes: ["GH-227"]
+  related_changes: ["GH-227", "GH-240"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/commit.ts"
@@ -124,6 +124,10 @@ A both-landed phase re-run is the row-2 no-op no matter how many later commits h
 
 Every landed commit — standalone, atomic, or reconciled — emits one telemetry event: an additive `commit.telemetry` record kind inside the existing state schema with payload schema `delivery.commit.telemetry.v1`, appended through the state port under the store-scoped key `commit.telemetry:<REF>` with one freshly acquired fence. The payload carries the change ref, the phase id when phase-centric, the commit identity, message source, transport, token spend (zero for the template), the landing timestamp, the transition identity for atomic completions, and any recorded failovers. Payloads are metadata only: never message bodies, diff content, or secret material. Emission is non-gating — a failed append is disclosed in `data.telemetry` and never fails the landed commit. Verified reads return one change's history with the state layer's evidence; the events corroborate convergence (the record-bound SHA is primary), and no derived projection document exists.
 
+### Capsule commit append
+
+When a capsule producer port is injected, every landed commit also appends one `commit.landed` capsule event beside the `commit.telemetry` state record. The event carries the commit SHA, the parent SHA when known, the message source, and the change ref; it never carries a message body, diff content, or credential material. The event key is the commit SHA, so a re-run of the same landed commit is a no-op append. The append is non-gating: a missing SHA is disclosed as `capsule.commit-sha-absent`, a failed append or a thrown append becomes a bounded `capsule` disclosure in the command data, and the landed commit, its telemetry record, and the command outcome are unchanged. No cross-change capsule write exists. The capsule contract is in [Change Capsule](feature-capsule.md).
+
 ### Configuration
 
 The configuration catalog declares one typed `commit` branch: `commit.phaseCommit` (boolean, default `true`). Setting it to `false` disables the atomic commit for the project; `commit.phaseCommit` resolved from any layer participates through ordinary origin reporting.
@@ -201,6 +205,7 @@ The commit surface refuses every invocation when the injected edge facts report 
 - [Result Contract and Error Table](feature-result-contract.md) — the envelope, the six `commit` rows, the classification chain, and the binding sync check.
 - [Machine-Readable Delivery Plan Schema](feature-plan-schema.md) — per-phase declared scope and summaries, the skeleton and staging scope input.
 - [State Layer](feature-state-layer.md) — the ledger substrate, verified reads, fences, and the additive record-kind contract behind `commit.telemetry`.
+- [Change Capsule](feature-capsule.md) — the non-gating `commit.landed` append point and its bounded disclosure.
 - [Configuration Layer and Inspection](feature-config-layer.md) — the typed `commit.phaseCommit` branch and origin reporting.
 - [Provider Engine](feature-provider-engine.md) — the availability facts and provider HTTP edge behind core-owned inference.
 - [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md) and [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md) — the runtime-edge allowances for the commit seam and the inference transport.

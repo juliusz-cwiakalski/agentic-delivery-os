@@ -6,9 +6,9 @@ created: 2026-11-07
 last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; repo-exclusive leases with a fence-token claim, renewal, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, and truthful read-surface exits; and the additive record kinds, error rows, collector id, and typed configuration branch, all synchronized in-change."
+summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; repo-exclusive leases with a fence-token claim, renewal, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change."
 links:
-  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182"]
+  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240"]
   related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003"]
   contracts:
     - "packages/core/src/contracts/queue.ts"
@@ -325,6 +325,16 @@ checkout's absolute repository root together. The root is internal state used
 only for producer deploy-expectation discovery; it is never serialized into an
 envelope, finding, incident, golden, log line, or telemetry event, and read
 surfaces render the normalized key alone. The derived graph folds no root.
+
+### Capsule and collector boundary
+
+Queue and lane scheduling state is the additive state-layer record families in
+this section plus the derived `queue-graph.json` document. It is **not** capsule
+evidence: the change capsule's `events.jsonl` carries phase, commit, gate,
+review, closeout, and capsule-lifecycle events only, and a queue or lane
+mutation never appends a capsule event or copies queue state into one. The
+`status.collector.*` family ships exactly two declared collector ids, `tracker`
+and `lanes`; `lanes` names the queue/lane read surface.
 
 ## Error identities
 

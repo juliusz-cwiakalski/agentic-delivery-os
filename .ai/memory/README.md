@@ -113,19 +113,36 @@ folder into topic files; rebuild the index. No substantive rewording: a merge
 may concatenate or union evidence but must not paraphrase. Every cross-folder
 edit is named in its report.
 
-## Promotion routing (consolidation only)
+## Promotion routing
 
-| Candidate | Home | Owner |
+Closeout executes this routing at the change boundary for change-capsule
+candidates, and `consolidate-memory` executes it during a consolidation pass for
+everything else. Both follow the same one-home table.
+
+| Candidate | Home | Write owner |
 |---|---|---|
-| Operational lesson | `.ai/memory/lessons/` record file | `consolidate-memory` |
-| Heuristic, judgment, reversal condition | `.ai/memory/tacit/` record file | `consolidate-memory` |
+| Operational lesson | `.ai/memory/lessons/` record file | closeout (change capsule) or `consolidate-memory` |
+| Heuristic, judgment, reversal condition | `.ai/memory/tacit/` record file | closeout (change capsule) or `consolidate-memory` |
 | Verified fact about the system | `doc/spec/**` | handoff proposal to `@doc-syncer` |
 | Decision with rationale | `doc/decisions/**` | handoff proposal to `@decision-advisor` |
 | Repeated successful workflow | Command or skill | normal change process |
 | Hard norm | `AGENTS.md` | normal change process |
 | Policy, security rule | Owner only | never autonomous |
+| Preference or fleet item | No implemented home | rejected by closeout (`home-not-implemented`, `owner-approval-required`) |
 
-`consolidate-memory` never writes `doc/spec` or `doc/decisions` itself.
+For a change capsule, closeout validates the capsule (including the
+`capsule.opened` first event, the `<id>.yaml` candidate names, and exactly one
+decision per candidate), evaluates each candidate
+against the capture bar and an evidence link, dedups by exact normalized
+statement, records one `capsule.promotion` decision per candidate, home-writes
+accepted `lesson`/`tacit` records with one index row, records sanctioned handoffs
+for `fact`/`decision`/`norm`/`workflow`, and rejects `preference`/`fleet` with
+their declared reasons. Writes are confined to the injected memory root by
+realpath; a resolved escape is `closeout.step.capsule.failed` with zero writes.
+`consolidate-memory` remains the only cross-folder writer and the owner of full
+index rebuilds, pruning, supersession, and topic splits; closeout appends one
+bounded index row per home-written record and never rebuilds the index or edits
+`doc/spec` or `doc/decisions`.
 
 ## Conflict reality
 

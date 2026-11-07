@@ -57,6 +57,39 @@ const recordField = (
   return isRecord(value) ? value : undefined;
 };
 
+const authorKindFrom = (
+  author: Readonly<Record<string, unknown>> | undefined,
+): DeliveryThread["authorKind"] => {
+  if (author === undefined) return undefined;
+  const type = author.__typename;
+  if (type === "Bot" || type === "App") return "non-human";
+  if (type === "User") return "human";
+  // Mannequin is a deleted/unavailable human placeholder; fail closed to unknown.
+  return "unknown";
+};
+
+const rootAuthorFrom = (
+  comments: Readonly<Record<string, unknown>> | undefined,
+): Pick<DeliveryThread, "authorLogin" | "authorKind" | "authorAssociation"> => {
+  const nodes = comments?.nodes;
+  if (!Array.isArray(nodes) || nodes.length === 0) return {};
+  const first = nodes[0];
+  if (!isRecord(first)) return {};
+  const author = isRecord(first.author) ? first.author : undefined;
+  const login =
+    typeof author?.login === "string" && author.login.length > 0 ? author.login : undefined;
+  const association =
+    typeof first.authorAssociation === "string" && first.authorAssociation.length > 0
+      ? first.authorAssociation
+      : undefined;
+  const kind = authorKindFrom(author);
+  return {
+    ...(login === undefined ? {} : { authorLogin: login }),
+    ...(kind === undefined ? {} : { authorKind: kind }),
+    ...(association === undefined ? {} : { authorAssociation: association }),
+  };
+};
+
 const threadFrom = (value: unknown): DeliveryThread | undefined => {
   if (!isRecord(value)) return undefined;
   const threadId = identityField(value, "id");
@@ -453,6 +486,7 @@ export const normalizeReviewThreads = (
       threadId,
       resolved: node.isResolved,
       commentCount: Number(commentCount),
+      ...rootAuthorFrom(comments),
     });
   }
   return { ok: true, value: threads };

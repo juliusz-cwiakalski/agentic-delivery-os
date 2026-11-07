@@ -6,7 +6,17 @@ import {
   createCloseoutCommandRuntime,
 } from "../../../packages/cli/src/edge";
 import { type CliDependencies, type CommandProgram, runCli } from "../../../packages/cli/src/index";
-import type { CloseoutData } from "../../../packages/core/src/contracts/index";
+import type {
+  CapsuleFileRuntime,
+  CloseoutCapsuleFacts,
+  CloseoutData,
+  CloseoutDiffRead,
+  CloseoutExpectedCapsuleEvent,
+  CloseoutPromotionRuntime,
+  CloseoutRetroFacts,
+  CloseoutSessionFacts,
+  CloseoutTelemetryRuntime,
+} from "../../../packages/core/src/contracts/index";
 import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
 import {
   CLOSEOUT_NOW_MS,
@@ -35,6 +45,12 @@ export type RunCloseoutCliOptions = {
   readonly provider?: FakeProvider;
   readonly git?: FakeGit;
   readonly state?: FakeState;
+  /** The append-only capsule runtime (GH-240 F-3). */
+  readonly capsule?: CapsuleFileRuntime;
+  readonly capsuleExpected?: readonly CloseoutExpectedCapsuleEvent[];
+  readonly promotion?: CloseoutPromotionRuntime;
+  readonly diffRead?: CloseoutDiffRead;
+  readonly telemetry?: CloseoutTelemetryRuntime;
 };
 
 export const runCloseoutCli = async (
@@ -44,7 +60,11 @@ export const runCloseoutCli = async (
   const provider = options.provider ?? makeProvider();
   const git = options.git ?? makeGit();
   const state = options.state ?? makeState();
-  const facts = options.facts ?? makeFacts();
+  const baseFacts = options.facts ?? makeFacts();
+  const facts =
+    options.capsule === undefined
+      ? baseFacts
+      : { ...baseFacts, capsule: capsuleFactsOf(options.capsule, baseFacts.workItemRef) };
   const composition: CloseoutComposition = {
     planFacts: async () => facts,
     provider: provider.runtime,
@@ -52,6 +72,17 @@ export const runCloseoutCli = async (
     state: state.runtime,
     nowIso: () => CLOSEOUT_TIMESTAMP,
     newFenceToken: () => "fence-closeout",
+    ...(options.capsule === undefined ? {} : { capsule: options.capsule }),
+    ...(options.capsuleExpected === undefined
+      ? {}
+      : { capsuleExpected: () => options.capsuleExpected ?? [] }),
+    ...(options.promotion === undefined
+      ? {}
+      : { promotion: () => options.promotion as CloseoutPromotionRuntime }),
+    ...(options.diffRead === undefined ? {} : { diffRead: options.diffRead }),
+    ...(facts.retro === undefined ? {} : { retro: facts.retro }),
+    ...(facts.sessions === undefined ? {} : { sessions: facts.sessions }),
+    ...(options.telemetry === undefined ? {} : { telemetry: options.telemetry }),
   };
   const runtime = createCloseoutCommandRuntime(composition);
   const program: CommandProgram = {
@@ -78,6 +109,27 @@ export const runCloseoutCli = async (
   const envelope: Record<string, unknown> =
     text.length === 0 ? {} : (JSON.parse(text) as Record<string, unknown>);
   return { exitCode, stdout: stdout.value, stderr: stderr.value, envelope, provider, git, state };
+};
+
+const capsuleFactsOf = (runtime: CapsuleFileRuntime, workItemRef: string): CloseoutCapsuleFacts => {
+  const read = runtime.read(workItemRef);
+  const candidates = runtime.readCandidates(workItemRef);
+  return {
+    present: read.ok && read.events.length > 0,
+    valid: read.ok && candidates.ok,
+    ...(read.ok
+      ? {}
+      : {
+          refusal: {
+            code: read.code,
+            detail: read.detail,
+            ...(read.line === undefined ? {} : { line: read.line }),
+          },
+        }),
+    ...(candidates.ok ? {} : { refusal: { code: candidates.code, detail: candidates.detail } }),
+    events: read.ok ? read.events.length : 0,
+    candidates: candidates.ok ? candidates.candidates.length : 0,
+  };
 };
 
 export const closeoutData = (envelope: Record<string, unknown>): CloseoutData => {
