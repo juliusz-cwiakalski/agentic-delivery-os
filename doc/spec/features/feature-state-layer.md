@@ -308,23 +308,29 @@ with no schema-version bump, migration, backfill, or compatibility path.
 | `queue.entry` | `delivery.queue.entry.v1` | `queue.entries:<REF>` | `queue add`, `queue prioritize`, under the state fence | The graph fold, precedence, claim |
 | `queue.dependency` | `delivery.queue.dependency.v1` | `queue.deps:<REF>` | `queue add --dep`, `queue dep`, under the state fence | The graph fold, readiness, deploy gating |
 | `queue.lease` | `delivery.queue.lease.v1` | `queue.leases:<repoKey>` | Claim, renewal, release, and stale takeover | Readiness `repo-free`, the claim pipeline, the lane fold |
-| `queue.park` | `delivery.queue.park.v1` | `queue.parks:<REF>` | `queue release --park` and the mutating park pass | The park pass, precedence, the lane fold |
+| `queue.park` | `delivery.queue.park.v1` | `queue.parks:<REF>` | `queue release --park` (including its compensating withdrawal) and the mutating park pass | The park pass, precedence, the lane fold |
 | `queue.incident` | `delivery.queue.incident.v1` | `queue.incidents:<REF or repoKey>` | Stale takeover and park auto-recovery | Incident history evidence |
 | Derived queue graph | `delivery.queue.graph.v1` | `queue-graph.json` | Every intent mutation, under the same fence | Diagnostics and tests; never served as truth |
 
 Every `queue.park` record carries `clearObservedAt` and `recoveryState` from
 its first write; the durable clear-observed marker is another record of that
-same kind, not a sixth kind. The lease kind carries the closed operation set
+same kind, not a sixth kind. The release+park path appends the park first and,
+when the lease-release append fails, appends a compensating `queue.park` record
+with `recoveryState: released` for the same ref, so the fold observes no active
+park while the lease remains held. The lease kind carries the closed operation set
 `{acquired, renewed, released, taken-over}`, the implemented scope
 `repo-exclusive`, and the always-recorded takeover evidence. The incident kind
 carries the closed type set `{park-auto-recovery, lease-stale-takeover}` and
 bounded `{key, value}` evidence pairs, never free-form prose.
 
 An identical replay appends nothing, the latest record per identity governs,
-and a wrong kind, malformed payload, duplicate acquisition, or
-schema-incompatible record under a queue prefix classifies as `state.store.torn`
-or `state.schema.mismatch`, never a fabricated entry, holder, park, or zero. A
-store that has never seen a queue record reads verified-empty.
+and a wrong kind, malformed payload, duplicate acquisition,
+schema-incompatible record, or two concurrently active `parked` records for one
+ref under a queue prefix classifies as `state.store.torn` or
+`state.schema.mismatch`, never a fabricated entry, holder, park, or zero. The
+two-active-park case fails closed at the verified park read instead of letting
+latest-record-wins fabricate a single park. A store that has never seen a queue
+record reads verified-empty.
 
 The queue ledgers are orchestrated in the app tier
 (`packages/core/src/app/queue.ts`) over the injected state port; the state tier

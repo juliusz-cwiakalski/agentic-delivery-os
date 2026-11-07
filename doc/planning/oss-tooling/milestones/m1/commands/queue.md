@@ -186,7 +186,10 @@ its exit-1 identity.
 and `preempted-for-close-item`. Causes and condition types are two distinct
 closed sets paired one-to-one: cause `preempted-for-close-item` pairs with
 condition type `preemption`. A condition-type or unknown token is an invocation
-rejection at exit 1 and appends nothing. `--until <iso>` is accepted only with
-`--park provider-window`, where it is required and supplies the window's
-absolute expiry; a missing or misplaced `--until` is refused through
-`fallback.invocation` at exit 1 and appends nothing.
+rejection at exit 1 and appends nothing. With `--park`, the park record is
+appended first; if the lease-release append then fails, a compensating
+`queue.park` record with `recoveryState: released` withdraws the park and the
+command returns the classified state failure. `--until <iso>` supplies the
+absolute window expiry for `--park provider-window`, where it is required; a
+missing `--until` or an `--until` paired with another park cause is refused
+through `fallback.invocation` at exit 1 and appends nothing.

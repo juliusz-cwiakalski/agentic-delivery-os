@@ -63,13 +63,19 @@ identities, one collector id, and one typed `queue` configuration branch.
   the normalized repository key; the fence is held only for one write and its
   staleness window is a distinct mechanism from the lease TTL. No capacity,
   bandwidth, concurrency-budget, or CI-slot key or path exists.
-- **Release and park in one transaction.** `queue release <ref>
-  [--holder <id>] [--park <cause>]` releases the recorded holder's lease;
+- **Release and park under one fence.** `queue release <ref> [--holder <id>]
+  [--park <cause>] [--until <iso>]` releases the recorded holder's lease;
   releasing when no lease exists is an explicit idempotent `noop`, and releasing
   another holder's live lease refuses `queue.lease-conflict`. When a park cause
-  is named, the release record and the park record append inside one fenced
-  transaction: both land or neither does. An unknown cause is an invocation
-  rejection at exit 1 that appends nothing.
+  is named, the park record is appended first and the lease release second,
+  both under one fenced handle. A failed park append lands nothing; a failed
+  lease-release append withdraws the already-appended park with a compensating
+  `queue.park` record whose `recoveryState` is `released`, so the fold observes
+  no active park while the lease remains held, and the call returns the
+  classified state failure. A successful release+park leaves both records
+  durable; on a failed lease release the compensating record keeps the park out
+  of the active fold. An unknown cause is an
+  invocation rejection at exit 1 that appends nothing.
 - **Weight as a resource class.** A validated plan that omits `weightClass`
   resolves to `standard`; a declared-but-unrecognized value resolves to `heavy`;
   an invalid, unreadable, or absent plan resolves to `heavy` with named source
@@ -84,9 +90,10 @@ identities, one collector id, and one typed `queue` configuration branch.
   producer with no declared expectation passes on landing with
   `deploy: not-declared` evidence, so the weaker guarantee stays visible.
   Expectations resolve from the producer repository's own configuration bound to
-  its recorded key through the recorded root whose normalized remote matches
-  exactly; no matching recorded root, a two-root collision, or an
-  unreadable/invalid config is `unknown`, never `not-declared` or `verified`.
+  its recorded key through the entry-recorded root whose normalized remote
+  matches that key exactly; the invocation checkout's root is never substituted.
+  No matching recorded root, a two-root collision, or an unreadable or invalid
+  config is `unknown`, never `not-declared` or `verified`.
   Reads are memoized per producer within a pass.
 - **Closing beats opening.** Rank classes are `merge-ready`, `in-review`,
   `resume-parked`, `new-start` in that order. A stuck park is excluded before
@@ -101,26 +108,29 @@ identities, one collector id, and one typed `queue` configuration branch.
   clears at its absolute expiry, quota clears when the provider is observed
   available, and preemption clears when the repository is observed with no held
   lease and the entry is ready again. An active park is re-evaluated only once
-  its configured per-type recheck interval has elapsed since the last
-  evaluation; a not-yet-due park stays active with its interval and last
-  evaluation, so changing only `queue.park-recheck.<type>` changes resume timing
-  with no code change. A mutating pass that observes a clear
-  condition appends the durable `clear-observed` marker first, then the
-  `recovered` record and a `park-auto-recovery` incident naming the condition,
-  clear time, evaluation time, and observation gap. A marker without a later
+  the recheck interval recorded on that park has elapsed since the last
+  evaluation; the interval is resolved from
+  `queue.park-recheck.<condition-type>` when the park is created. A not-yet-due
+  park stays active with its interval and last evaluation, so tuning the key
+  changes resume timing for parks created afterwards with no code change. A
+  mutating pass that observes a clear condition appends the durable
+  `clear-observed` marker first, then the `recovered` record and a
+  `park-auto-recovery` incident naming the condition, clear time, evaluation
+  time, and observation gap. A marker without a later
   `recovered` record is the stuck class: a report-only finding on reads at exit 0
   and a `queue.park-condition-stuck` refusal on a claim at exit 1. A park that was
   simply not evaluated while no process ran carries no marker, is never stuck on
   the first pass after the gap, and recovers with an incident naming the gap.
   `queue release --park provider-window --until <iso>` records the supplied
   absolute window expiry; `--until` is required for that cause and refused for
-  the other causes through `fallback.invocation`. An absent `--until` or an
-  `--until` with a non-window cause appends nothing.
+  the other park causes through `fallback.invocation`. An absent `--until`, or
+  an `--until` paired with another cause, is refused and appends nothing.
 - **One declared total order.** Hard exclusions (readiness, dependency/deploy,
   parks, single-flight, weight) remove candidates; ordering applies rank class,
   then producer-before-consumer within one repository, then explicit priority
-  ascending, then numeric ref suffix, then canonical ref text. Step 13b projects
-  at most one action per repository per pass and holds the remainder
+  ascending, then numeric ref suffix, then canonical ref text compared by
+  Unicode code point with no ambient locale dependence. Step 13b projects at
+  most one action per repository per pass and holds the remainder
   `repo-claimed-in-pass`; a later pass re-evaluates them. Candidate selection
   uses the cheap rank, priority, and ref facts for the whole entry set and
   performs the expensive readiness, deploy, and provider reads for at most the
@@ -128,7 +138,9 @@ identities, one collector id, and one typed `queue` configuration branch.
   `evaluated-candidates-truncated` detail and `truncated` is set.
 - **Bounded, truthful surfaces.** `queue ready|list|plan|add|prioritize|dep|claim|release`
   return the Appendix C envelopes; `lanes list` and `lanes show <ref>` return
-  the bounded lane view. `queue add` accepts one `--dep` edge per call;
+  the bounded lane view. `queue ready` keeps the delivered ready-only grammar
+  and byte output, accepting one to eight candidate refs through the
+  full-family definition. `queue add` accepts one `--dep` edge per call;
   `queue plan` takes `--next <n>` (default 3, maximum 20); `queue prioritize`
   and `queue dep` take two positionals; `queue claim` takes an optional ref and
   `--holder` (default `local`). Every queue and lanes payload carries a
@@ -148,9 +160,12 @@ identities, one collector id, and one typed `queue` configuration branch.
   exists. The closed state set is `delivering`, `idle-with-reason`, `parked`,
   `merge-ready`, `in-review`, `failed`; an idle lane always carries a declared
   reason token, and a parked lane carries `parked:<cause>` over the closed cause
-  set. A lane carries its lease identity and scope when held, its weight class,
-  and the delivered economics fold's restart count and amplification, which are
-  `null` with an `economics-underivable` warning rather than a fabricated zero.
+  set. A ready unleased lane carries `new-start`, or `resume-parked` when its
+  rank class is `resume-parked`; a not-ready lane carries its first declared
+  blocking reason. A lane carries its lease identity and scope when held, its
+  weight class, and the delivered economics fold's restart count and
+  amplification, which are `null` with an `economics-underivable` warning
+  rather than a fabricated zero.
   `failed` is reserved for a delivery past its restart budget and carries
   `restart-budget-exhausted`. The fold is capped at 200 lanes and sets
   `truncated` on any drop; `lanes show <ref>` selects one lane or refuses
@@ -182,9 +197,12 @@ An entry projection carries `ref`, optional `repository`, `state`
 `weightClass`, `weightClassSource`, `deps[]`, and `blocking[]`. A next action
 adds `reason`, `lease`, optional `deploy` evidence, and optional `preemption`
 (`targetRef`, `repository`, `holder`, `parkCause`, `conditionType`,
-`closeRef`). Every blocking reason is drawn from the closed reason vocabulary or
-is a `parked:<cause>` template. Human mode prints a bounded deterministic
-summary and one line per entry, action, or lane.
+`closeRef`). A mutation envelope projects the entry's current computed state,
+rank class, weight class, and weight-source provenance from a fresh pass; an
+entry declared with an unresolved repository binding is `not-ready` with its
+binding reason, never a fabricated `ready`. Every blocking reason is drawn from
+the closed reason vocabulary or is a `parked:<cause>` template. Human mode
+prints a bounded deterministic summary and one line per entry, action, or lane.
 
 ## Exit projection
 
@@ -210,13 +228,14 @@ reported.
 | Lanes per payload | 200 | `lanes list`, `lanes show` |
 | Findings per payload | 20 | Every pass |
 | Reasons per entry or action | 8 | Every projection |
-| Serialized machine `data` | 65536 UTF-8 bytes | Every queue payload |
+| Serialized machine `data` | 65536 UTF-8 bytes | `queue list`, `queue plan` |
 | Human output | 40 lines, 8192 bytes | Every queue and lanes surface |
 | Canonical ref length | 64 characters | Every ref position (`GH-010` and `GH-10` are one identity) |
 
 A bound reached sets `truncated` and never silently drops the last row; a cut
 caused by the serialized byte cap also sets `truncationReason:
-"machine-byte-cap"`, and the human renderer appends `+more`.
+"machine-byte-cap"`, a lane-cap or findings cut sets `truncationReason:
+"lane-cap"` on the lanes payload, and the human renderer appends `+more`.
 
 ## Known limits
 
@@ -230,7 +249,9 @@ caused by the serialized byte cap also sets `truncationReason:
   shipped edge reads the producer repository's configuration and the delivered
   deploy verdict through those seams. Producer expectations are resolved through
   an injected producer-root port from entry-recorded roots only; the invocation
-  checkout's configuration is never used for a producer.
+  checkout's configuration is never used for a producer. When no producer-root
+  port is supplied, the caller's pre-resolved expectations are consumed
+  unchanged.
 - **Deferred production composition.** No shipped binary wires `options.queue`
   or `options.lanes` yet. The engine runs only through an injected composition,
   so AC-F10-1's "state is consistent for later daemon reconciliation" holds at
@@ -244,9 +265,9 @@ caused by the serialized byte cap also sets `truncationReason:
 | Key | Shape | Default | Semantics |
 |---|---|---|---|
 | `queue.lease-ttl` | integer milliseconds | `90000` | Heartbeat age at or beyond it makes a lease takeover-eligible. Renewal cadence is one third of the TTL (minimum one second), derived rather than a key. |
-| `queue.park-recheck.provider-window` | integer milliseconds | `60000` | Recheck cadence for provider-window parks. |
-| `queue.park-recheck.provider-quota` | integer milliseconds | `300000` | Recheck cadence for provider-quota parks. |
-| `queue.park-recheck.preemption` | integer milliseconds | `60000` | Recheck cadence for preemption parks. |
+| `queue.park-recheck.provider-window` | integer milliseconds | `60000` | Due cadence for re-evaluating provider-window parks. |
+| `queue.park-recheck.provider-quota` | integer milliseconds | `300000` | Due cadence for re-evaluating provider-quota parks. |
+| `queue.park-recheck.preemption` | integer milliseconds | `60000` | Due cadence for re-evaluating preemption parks. |
 
 An absent branch resolves to the defaults with `defaults` origins. A
 `park-recheck` child outside the closed condition-type set is
@@ -266,7 +287,7 @@ CI-slot key exists or is reserved.
 | `queue.entry` | `delivery.queue.entry.v1` | `queue.entries:<REF>` | `queue add`, `queue prioritize` | Graph fold, precedence, claim |
 | `queue.dependency` | `delivery.queue.dependency.v1` | `queue.deps:<REF>` | `queue add --dep`, `queue dep` | Graph fold, readiness, deploy gating |
 | `queue.lease` | `delivery.queue.lease.v1` | `queue.leases:<repoKey>` | `queue claim`, `queue release`, stale takeover | Readiness `repo-free`, claim, lane fold |
-| `queue.park` | `delivery.queue.park.v1` | `queue.parks:<REF>` | `queue release --park`, park recovery | Park pass, precedence, lane fold |
+| `queue.park` | `delivery.queue.park.v1` | `queue.parks:<REF>` | `queue release --park` (including its compensating withdrawal), park recovery | Park pass, precedence, lane fold |
 | `queue.incident` | `delivery.queue.incident.v1` | `queue.incidents:<REF or repoKey>` | Stale takeover, park auto-recovery | Incidents are read as history evidence |
 | Derived: queue graph | `delivery.queue.graph.v1` | derived document `queue-graph.json` | Intent mutations under the fence | Diagnostics and tests only; never truth |
 
@@ -295,9 +316,9 @@ Payload fields are closed and validated at the ledger boundary:
   bounded `evidence[]` of `{key, value}` pairs, `recordedAt`.
 
 Latest record per identity wins; an identical replay appends nothing. A wrong
-kind, malformed payload, duplicate acquisition, or schema-incompatible record
-under a queue prefix is a classified `state.*` failure, never a fabricated
-entry, holder, park, or zero.
+kind, malformed payload, duplicate acquisition, schema-incompatible record, or
+two concurrently active `parked` records for one ref under a queue prefix is a
+classified `state.*` failure, never a fabricated entry, holder, park, or zero.
 
 The entry record carries the normalized repository key and the declaring
 checkout's absolute repository root together. The root is internal state used

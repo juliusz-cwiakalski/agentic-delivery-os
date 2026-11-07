@@ -83,8 +83,8 @@ $ <binary> lanes list --watch --json
     "category": "user",
     "retryable": false,
     "consequence": "unknown",
-    "remediationHint": "Check the command name and arguments, then retry the invocation.",
-    "summary": "The invocation could not be understood."
+    "remediationHint": "Live --watch streaming is provided by the resident daemon (M1-S18), which is not part of this one-shot release; rerun without --watch.",
+    "summary": "result=refused; reason=watch-unsupported"
   }
 }
 ```
@@ -115,6 +115,6 @@ lane or `queue.entry.unobserved` at exit 1. An unreadable queue store projects
 `status.collector.lanes.unavailable` at exit 2, never a zero-lane view.
 
 `--watch` is **refused** in this release. The flag is not in the accepted
-grammar; the invocation fails at exit 1 through `fallback.invocation` and no
-stream or frame is emitted. Live streaming belongs to the resident daemon
-(M1-S18).
+grammar; the invocation fails at exit 1 through `fallback.invocation` with a
+remediation hint naming the resident daemon (M1-S18), and no stream or frame is
+emitted. Live streaming belongs to the resident daemon (M1-S18).

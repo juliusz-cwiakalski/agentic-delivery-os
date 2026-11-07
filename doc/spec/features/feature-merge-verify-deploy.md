@@ -210,7 +210,10 @@ never green; a producer with no declared expectation passes on landing with
 `deploy: not-declared` evidence. Deploy verdict reads are bounded at three per
 scheduling pass and memoized per producer, and an exhausted budget holds the
 dependent `deploy-unverified` with reason `read-budget-exhausted`. Expectations
-resolve from the producer repository's recorded key through a recorded root whose
-normalized remote matches exactly; no match, a two-root collision, or an
-unreadable/invalid matched config is `unknown`, never `not-declared` or
-`verified`. See [Scheduling Engine](feature-scheduling-engine.md).
+are resolved through an injected producer-root port from the roots recorded on
+queue entries only: the producer's entry-recorded root is matched to the
+producer entry's recorded normalized repository key by exact string equality,
+and the invocation checkout's configuration is never substituted. No matching
+recorded root, two distinct roots claiming one key, or a missing, unreadable, or
+invalid matched config is `unknown`, never `not-declared` or `verified`. See
+[Scheduling Engine](feature-scheduling-engine.md).

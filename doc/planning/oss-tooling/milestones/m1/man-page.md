@@ -71,7 +71,8 @@ per project).
 | `brief` (M1-S6) | `<binary> brief` |
 
 `--watch` is refused on `lanes` and `queue` in this release (invocation error at
-exit 1); live streaming belongs to the resident daemon (M1-S18).
+exit 1 with a remediation hint naming the resident daemon); live streaming
+belongs to the resident daemon (M1-S18).
 
 ### Operate
 

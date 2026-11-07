@@ -302,8 +302,11 @@ staleness bound and the per-condition-type park recheck cadence as policy data.
 An absent `queue` branch resolves to the shipped defaults with `defaults`
 origins, and an unknown key under `queue` fails `config.key.unknown`. The values
 are policy data: resolving the branch starts no scheduler and no background
-process, the claim reads the TTL at claim time, and the park pass reads the
-recheck interval at evaluation time. Deploy expectations are not a `queue` key;
+process, the claim reads the TTL at claim time, and the release path resolves
+`queue.park-recheck.<condition-type>` when it creates a park. The park pass
+re-evaluates an active park only after the interval recorded on that park has
+elapsed, so tuning the key changes resume timing for parks created afterwards
+with no code change. Deploy expectations are not a `queue` key;
 they are the delivered `merge.deploy-expectations`. No capacity, bandwidth,
 concurrency, or CI-slot key is declared or reserved. See
 [Scheduling Engine](feature-scheduling-engine.md).

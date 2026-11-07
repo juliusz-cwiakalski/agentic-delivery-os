@@ -192,14 +192,17 @@ exit-code projection; secret redaction; bounded output.
 - Inputs: `list | plan [--next <n>] | add <ref> [--priority <n>]
   [--dep <ref>] | prioritize <ref> <n> | dep <ref> <on-ref> |
   claim [<ref>] [--holder <id>] | release <ref> [--holder <id>]
-  [--park <cause>]`. `ready` keeps its M0-S7 grammar unchanged.
+  [--park <cause>] [--until <iso>]`. `ready` keeps its M0-S7 grammar unchanged.
 - Outputs: the dependency graph, ready set, per-repo lease holders,
   weight-class loads, park states with conditions, and `queue plan`'s
   next N scheduled actions with reasons (close-first, producer-first,
-  single-flight, weight-capped). Mutating subcommands append intent under
+  resume-parked, new-start, and lease-held on a preemption proposal).
+  Mutating subcommands append intent under
   the state fence and land durably without a resident daemon; no control
   socket is involved, and every payload reports
-  `degraded: ["daemon-unreachable"]` at exit 0.
+  `degraded: ["daemon-unreachable"]` at exit 0. `release --park` appends the
+  park first and withdraws it with a `released` park record when the
+  lease-release append fails.
 - Errors: `queue.dependency-cycle`, `queue.lease-conflict`,
   `queue.park-condition-stuck`, `queue.entry.unobserved`, and
   `queue.precondition.unmet`; invocation rejections such as `--watch`
@@ -214,8 +217,9 @@ exit-code projection; secret redaction; bounded output.
 - Inputs: `list | show <ref>`.
 - Outputs: lane list with state (delivering, idle-with-reason, parked,
   merge-ready, in-review, failed), lease holder and scope, restart counts,
-  amplification signal, and weight class. `--watch` is refused at exit 1;
-  live streaming belongs to the resident daemon (M1-S18).
+  amplification signal, and weight class. `--watch` is refused at exit 1 with
+  a remediation hint naming the resident daemon (M1-S18); live streaming
+  belongs to the resident daemon (M1-S18).
 
 ### `blockers` (M1-S16, proposed)
 
