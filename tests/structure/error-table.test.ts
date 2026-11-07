@@ -72,6 +72,8 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "merge.state-unverified",
   "merge.landing-unverified",
   "merge.transaction-aborted",
+  // GH-236 pins the spend read-side identity exactly; it is a two-segment code.
+  "spend.telemetry-absent",
 ]);
 
 const isValidCode = (code: string): boolean =>
@@ -670,7 +672,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `doctor`, `merge`, `harness`, and `retro`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `doctor`, `merge`, `harness`, `retro`, and `spend`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -686,7 +688,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(3);
     expect(entries.filter((entry) => entry.domainKind === "doctor")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
-    expect(entries).toHaveLength(83);
+    expect(entries).toHaveLength(84);
   });
 });
 
@@ -762,7 +764,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(83);
+    expect(entries).toHaveLength(84);
     expect(db).toHaveLength(4);
   });
 
@@ -978,7 +980,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(83);
+    expect(entries).toHaveLength(84);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1245,7 +1247,7 @@ describe("TC-DOCTOR-020 the doctor kind has exactly one row and leaves the table
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| doctor.check.failed | doctor | user | false | not_landed | ${DOCTOR_HINT} | user-validation | ${DOCTOR_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("`status`, `doctor`, `merge`, `harness`, and `retro`");
+    expect(doc).toContain("`status`, `doctor`, `merge`, `harness`, `retro`, and `spend`");
   });
 
   test("fallback remains the reserved two-segment namespace", () => {
@@ -1372,5 +1374,83 @@ describe("TC-RETRO-004 four retro identities round-trip and contain", () => {
     expect(resolveAppErrorCode("state.permission.denied").ok).toBe(true);
     expect(entries.filter((entry) => entry.domainKind === "retro")).toHaveLength(4);
     expect(entries.filter((entry) => entry.code.startsWith("retro."))).toHaveLength(4);
+  });
+});
+
+const SPEND_HINT =
+  "Capture harness telemetry (session-group and capture-outcome records) for the selected work item at closeout, then re-run spend.";
+const SPEND_SUMMARY = "No captured harness telemetry exists for the selected work item.";
+
+describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
+  const spend = entries.filter((entry) => entry.domainKind === "spend");
+
+  test("spend declares exactly one row with the pinned identity", () => {
+    expect(DOMAIN_KINDS).toContain("spend");
+    expect(spend).toHaveLength(1);
+    expect(spend[0]).toEqual({
+      code: "spend.telemetry-absent",
+      domainKind: "spend",
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      remediationHint: SPEND_HINT,
+      projectionClass: "user-validation",
+      summary: SPEND_SUMMARY,
+    });
+    expect(spend[0]?.projectionClass).toBe("user-validation");
+  });
+
+  test("the row round-trips through returned and thrown classification", () => {
+    const row = classifyDomainKind("spend", "spend.telemetry-absent");
+    expect(resolveAppErrorCode("spend.telemetry-absent")).toEqual({ ok: true, entry: row });
+    expect(classifyThrown({ kind: "spend", code: "spend.telemetry-absent" })).toEqual(row);
+    expect(
+      classifyThrown({ kind: "spend", code: "spend.telemetry-absent", summary: "GH-236" }),
+    ).toEqual(row);
+  });
+
+  test("kind-only spend is exact-code only and contains; wrong codes contain", () => {
+    expect(() => classifyDomainKind("spend")).toThrow();
+    expect(classifyThrown({ kind: "spend" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    for (const failure of [
+      { kind: "spend", code: "spend.other.unknown" },
+      { kind: "spend", code: "state.store.torn" },
+      { kind: "state", code: "spend.telemetry-absent" },
+      { kind: "spend", code: 42 },
+      { kind: "spend", code: null },
+    ]) {
+      expect(classifyThrown(failure).code).toBe(FALLBACK_INTERNAL_CODE);
+    }
+    expect(() => classifyDomainKind("spend", "input.value.rejected")).toThrow();
+  });
+
+  test("no delivered row is re-projected by the spend addition", () => {
+    const delivered = entries.filter((entry) => entry.domainKind !== "spend");
+    expect(delivered).toHaveLength(83);
+    expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
+    expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
+    expect(resolveAppErrorCode("state.store.torn")).toEqual({
+      ok: true,
+      entry: classifyDomainKind("state", "state.store.torn"),
+    });
+    expect(classifyDomainKind("state", "state.store.torn").projectionClass).toBe(
+      "platform-provider",
+    );
+    expect(classifyDomainKind("state", "state.permission.denied").projectionClass).toBe(
+      "user-validation",
+    );
+  });
+
+  test("the documented spend row agrees exactly once and matches every column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
+    expect(doc.split(row).length - 1).toBe(1);
+    expect(doc).toContain("84 identities");
+  });
+
+  test("the documented table is complete in both directions", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const entry of spend) expect(doc).toContain(`| ${entry.code} |`);
+    expect(doc.split("| spend.telemetry-absent |").length - 1).toBe(1);
   });
 });

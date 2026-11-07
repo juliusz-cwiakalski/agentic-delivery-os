@@ -34,6 +34,7 @@
     "src/contracts/result.ts",
     "src/contracts/retro.ts",
     "src/contracts/session.ts",
+    "src/contracts/spend.ts",
     "src/contracts/state.ts",
     "src/contracts/status.ts",
     "src/contracts/verify-deploy.ts",
