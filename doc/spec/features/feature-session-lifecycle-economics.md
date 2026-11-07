@@ -6,7 +6,7 @@ created: 2026-11-07
 last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "Session lifecycle economics: adapter-sourced progress signals (heartbeat age, session traffic, token delta) projected into the unchanged watchdog signal shape with the exact-three liveness-kind vocabulary untouched, source-less lanes still classifying `watchdog.signals-absent` and no CPU signal anywhere; prefill/resume safety so a rising token delta or traffic classifies `progressing` and a stall requires the full corroboration; the classified `watchdog.liveness-stalled` refusal at exit 1; capability-driven attach-and-continue versus classified uneconomical re-entry; a durable per-delivery restart budget consumed by supervised-style and one-shot-style compositions through one gate, with a loud `dispatch.restart-budget-exceeded` refusal and a terminal exhaustion record carrying the restart history; additive `economics.restart` and `economics.budget-exhaustion` record kinds with no schema-version bump; a rebuildable per-delivery economics view deriving restart count, ordered history, and the resume-amplification signal with null-with-warning degradation; and the typed `lane.liveness-interval` and `lane.restart-budget` configuration branch."
+summary: "Session lifecycle economics: adapter-sourced progress signals (heartbeat age, session traffic, token delta) projected into the unchanged watchdog signal shape with the exact-three liveness-kind vocabulary untouched, source-less lanes still classifying `watchdog.signals-absent` and no CPU signal anywhere; prefill/resume safety so a rising token delta or traffic classifies `progressing` and a stall requires the full corroboration; the classified `watchdog.liveness-stalled` refusal at exit 1; capability-driven attach-and-continue versus classified uneconomical re-entry; a durable per-delivery restart budget consumed by supervised-style and one-shot-style compositions through one gate, with the budget gate evaluated before evidence completeness, a loud `dispatch.restart-budget-exceeded` refusal, a terminal exhaustion record carrying the restart history, and a failed terminal append surfaced as `terminalAppendError`; additive `economics.restart` and `economics.budget-exhaustion` record kinds with no schema-version bump; a rebuildable per-delivery economics view deriving restart count, ordered history, and the resume-amplification signal with null-with-warning degradation; and the typed `lane.liveness-interval` and `lane.restart-budget` configuration branch."
 links:
   related_changes: ["GH-235"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0005"]
@@ -87,11 +87,11 @@ The watchdog composition accepts an injected `readSourcedSignals(lane)` seam ove
 
 Every resume attempt returns exactly one decision. Precedence is fixed:
 
-1. **Capability.** An undeclared resume capability, or a declared capability whose attach mode is a gap, refuses `harness.capability.gap` at exit `1` naming the gap and session.
-2. **Evidence availability.** Unreadable token facts, an unreadable cost figure, or a missing prefill re-pay figure refuses `harness.telemetry.extraction-failed` at exit `1` naming the missing fact.
-3. **Budget.** For a path that must re-enter rather than attach, the restart budget gate is evaluated before economics. A delivery already at its bound refuses `dispatch.restart-budget-exceeded` at exit `1`; an unevaluable record set refuses with its classified state identity.
+1. **Capability.** An undeclared resume capability, or a declared capability whose attach mode is a gap, refuses `harness.capability.gap` at exit `1` naming the gap and session. A declared `attach-continue` capability continues at this step, reads no budget, and consumes no ordinal.
+2. **Record availability and budget.** A path that must re-enter reads the delivery's verified records and evaluates the restart budget gate before evidence completeness and economics. An unreadable record set or an unevaluable gate refuses as `unevaluable` with its classified state identity and never admits. A delivery already at its bound refuses `dispatch.restart-budget-exceeded` at exit `1` and ensures the terminal exhaustion record exists — including when its token facts are unreadable or missing, so budget exhaustion always wins the classification.
+3. **Evidence availability.** Unreadable token facts, an unreadable cost figure, or a missing prefill re-pay figure refuses `harness.telemetry.extraction-failed` at exit `1` naming the missing fact.
 4. **Economics.** A re-entry that must re-pay prefill is economical only when the observed unique progress is a positive number and the re-pay total is at or below it. Otherwise it refuses `dispatch.resume-uneconomical` at exit `1` naming the reason and the re-pay token figure.
-5. **Admission.** An attach-capable path continues without consuming an ordinal; an economical re-entry appends one restart event with the next ordinal.
+5. **Admission.** An economical re-entry appends one restart event with the next ordinal.
 
 The two resume composition modes — `supervised` and `one-shot` — delegate to the same evaluation function and the same gate. They differ only in the composition label; refusal identity, reason, evidence, restart count, and history reference are identical.
 
@@ -108,6 +108,8 @@ The budget is per delivery and counts admitted restarts, not sessions, processes
 An unevaluable gate never fabricates count `0`, never admits, and never falls back to `fallback.internal`. The permission-denied identity projects exit `1`; the remaining state identities project exit `2` per their delivered rows.
 
 An admitted restart appends one `economics.restart` record through a fresh fence and reads it back before reporting success. A replay of the same `(run, ordinal)` appends nothing. A failed append is classified and never consumable as captured economics. The first refusal that observes exhaustion ensures the single terminal `economics.budget-exhaustion` record exists; later refusals re-read the same terminal truth and neither overwrite nor fork it.
+
+When the terminal append itself fails, the budget refusal carries the classified failure additively as `terminalAppendError` — an `EconomicsRecordFailureCode` or `state.write.failed`. The refusal identity, exit, and evidence corpus are unchanged, so the field is the only signal that the escalation record did not land; a caller can never read the refusal as proof of durable terminal truth without checking it.
 
 ### 3.5 Economics view and amplification
 
@@ -170,6 +172,7 @@ An absent `lane` branch resolves to both shipped defaults with `defaults` origin
 - A restart past budget appends no restart event and performs no spawn.
 - An uneconomical refusal leaves the existing session identity and records unchanged; it is a recorded decision, not a destructive act.
 - A terminal exhaustion record is idempotent per delivery; a second refusal does not fork it.
+- A failed terminal exhaustion append surfaces `terminalAppendError` on the budget refusal while the refusal identity, exit, and corpus stay unchanged.
 
 ## 4. Technical Architecture & Codebase Map
 
@@ -186,6 +189,7 @@ An absent `lane` branch resolves to both shipped defaults with `defaults` origin
 - `ECONOMICS_EXHAUSTION_OPTIONS` — `requeue-fresh-budget`, `park-owner-review`.
 - `ECONOMICS_OUTCOMES`, `ECONOMICS_OUTCOME_MATRIX`, and the exit constants — the declared outcome/identity/exit matrix.
 - The view field and history field declarations, the amplification baseline and flag, the degradation-warning vocabulary, the evidence key orders and byte bound, and the injected store/policy port shapes.
+- `EconomicsResumeDecision` — the per-attempt decision shape, including the additive `terminalAppendError` durability field on a budget refusal.
 
 ### 4.2 Pure domain
 
@@ -197,7 +201,7 @@ An absent `lane` branch resolves to both shipped defaults with `defaults` origin
 | `packages/core/src/domain/economics-evidence.ts` | The one deterministic `key=value` corpus formatter and parser, the fixed key orders, and the 512-byte bound. |
 | `packages/core/src/domain/harness-liveness.ts` | The additive neutral liveness assembly and the watchdog bridge: sourced-signal entries beside the unchanged exact-three readings, all three declared keys projected, absent keys left absent. |
 
-The domain modules are pure: no clock, randomness, environment, filesystem, or network access. Time and identities arrive as injected values; the store and policy arrive as injected ports.
+The domain modules are pure: no clock, randomness, environment, filesystem, or network access. Time and identities arrive as injected values; the store and policy arrive as injected ports. The run identity has one source: `ResumeEconomicsDeps.runId`. A resume attempt's input carries the work item, restart reason, and session evidence only.
 
 ### 4.3 State tier
 
@@ -253,7 +257,7 @@ Existing rows are unchanged. The dispatch command story's spawn-failure classifi
 | Structure | `tests/structure/economics-contract.test.ts`, `economics-imports.test.ts`, `economics-gate-seam.test.ts`, `error-table.test.ts` | Data-only contract homes, the exact-three liveness kinds with additive sourced kinds, one gate declaration, call-order dominance, tier and ambient boundaries, and the error-table rows. |
 | Conformance | `tests/conformance/harness-liveness.test.ts` | The neutral report keeps the exact-three readings and carries sourced signals beside them; the bridge projects the declared keys and leaves absent keys absent. |
 | Behaviour — liveness | `tests/behaviour/economics-liveness-sourcing.test.ts`, `economics-liveness-prefill.test.ts`, `economics-liveness-corroboration.test.ts`, `watchdog-liveness.test.ts`, `economics-envelope.test.ts` | Sourced wiring, the prefill matrix, the corroboration matrix, source-less absence, the stall identity, and the envelope/exit matrix. |
-| Behaviour — economics | `tests/behaviour/economics-resume-*.test.ts`, `economics-restart-*.test.ts`, `economics-budget-*.test.ts`, `economics-exhaustion-record.test.ts`, `economics-view.test.ts`, `economics-amplification.test.ts`, `economics-degradation.test.ts` | Attach/refusal precedence, durable records, process-boundary replay, path parity, fail-closed budget evaluation, terminal-record fields, and view derivation. |
+| Behaviour — economics | `tests/behaviour/economics-resume-*.test.ts`, `economics-restart-*.test.ts`, `economics-budget-*.test.ts`, `economics-exhaustion-record.test.ts`, `economics-view.test.ts`, `economics-amplification.test.ts`, `economics-degradation.test.ts` | Capability-first and budget-before-evidence precedence, attach/refusal decisions, durable records, process-boundary replay, path parity, fail-closed budget evaluation including a surfaced terminal-append failure, terminal-record fields, and view derivation. |
 | Behaviour — config | `tests/behaviour/config-lane.test.ts`, `economics-budget-config.test.ts` | Defaults and origins, the invalid matrix, the budget `0` policy, and the evaluation-time bound. |
 | Golden | `tests/golden/watchdog-output.test.ts`, `tests/golden/economics.test.ts` | Progressing, stalled, and absent envelopes in JSON and text mode; economics envelopes; narrow normalization; read-only goldens. |
 | Checks | `tests/checks/economics-determinism.test.ts`, `economics-mutants.test.ts`, `forbidden-literals.test.ts`, `error-table-sync.test.ts` | Byte-identical replay, the eight guard mutants, brand/tier literals, and two-way error-table binding. |
