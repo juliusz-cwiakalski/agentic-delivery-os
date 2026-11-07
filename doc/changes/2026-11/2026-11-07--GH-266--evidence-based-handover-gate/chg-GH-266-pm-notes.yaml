@@ -4,9 +4,9 @@ delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-07T22:52:00Z", completed: "2026-11-07T23:05:00Z" }
   specification: { started: "2026-11-07T23:06:00Z", completed: "2026-11-08T00:48:00Z", reopened: "2026-11-08T00:12:00Z", reopen_count: 1, revision: "v1.1" }
-  test_planning: { started: "2026-11-07T23:25:00Z", completed: "2026-11-08T01:02:00Z", reopened: "2026-11-08T00:12:00Z", reopen_count: 1, revision: "v1.1" }
-  delivery_planning: { started: "2026-11-07T23:42:00Z", completed: "2026-11-08T01:18:00Z", reopened: "2026-11-08T00:12:00Z", reopen_count: 1, revision: "v1.1" }
-  dor_check: { started: "2026-11-07T23:59:00Z", completed: null, iterations: 1, status: "not_ready" }
+  test_planning: { started: "2026-11-07T23:25:00Z", completed: "2026-11-08T01:02:00Z", reopened: "2026-11-08T01:40:00Z", reopen_count: 2, revision: "v1.1" }
+  delivery_planning: { started: "2026-11-07T23:42:00Z", completed: "2026-11-08T01:18:00Z", reopened: "2026-11-08T01:40:00Z", reopen_count: 2, revision: "v1.1" }
+  dor_check: { started: "2026-11-07T23:59:00Z", completed: null, iterations: 2, status: "not_ready" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -86,4 +86,10 @@ notes:
     date: "2026-11-08"
   - text: "RETRO: the v1.0 plan's reference text was authored independently of the sentence it replaced, so it silently dropped the connective and would have duplicated a following sentence. Both defects were invisible to the v1.0 gates because those gates checked phrase presence, not sentence grammar or duplication. Improvement: when a plan instructs a verbatim replacement, the reference block must be the exact old->new pair, and at least one gate should assert the absence of the old anchor and the uniqueness of the surviving sentence."
     type: "retro"
+    date: "2026-11-08"
+  - text: "DoR iteration 2: NOT_READY — 9/10 facets PASS; plan_coverage FAIL on one major finding (N3). All twelve iteration-1 findings verified: 1, 2, 3 closed (the three blockers), 4, 6, 8, 9, 10, 11, 12 closed, 5 closed with the accepted N-1 residual. Record: readiness-review/readiness-iter-2.md. N3: the new P1 backlog corroboration gate is file-wide, not M1-S9-scoped, so a partial omission of the insufficiency rule from the M1-S9 region would pass P1 and only surface in P2's region-scoped p08, whose phase scope is status.md only; p10a has the same shape. Six minor findings: N1 P15a's deletion branch accepts the next heading as inside (P15b still fails the change, but the sub-oracle is imprecise); N2 plan task 2.2 still cites P7c for the forward-looking status phrases while P7c now compares the numbered M0 statements; N4 no oracle checks inside-entry preservation of the M1-S9 prose beyond the AC block and heading; N5 'replaces elapsed calendar time' is imprecise because the floor retains 7 consecutive days; N6 the TC-020 lead-in negative control assumes a single line while the reference wraps; N7 plan D-12 says P1 re-runs P16 when P1 runs P15."
+    type: "info"
+    date: "2026-11-08"
+  - text: "DoR iteration 2 remediation routing (final permitted iteration): reopened test_planning for N1, N2 (test-plan side: give the forward-looking status phrases their own byte check), N4 and N6; reopened delivery_planning for N3, N2 (task wording), N5 and N7 plus gate alignment for the revised procedures. Sequence: test plan v1.2 -> plan v1.2 -> dor_check iteration 3. If iteration 3 is not READY the gate escalates to the human rather than looping further."
+    type: "decision"
     date: "2026-11-08"
