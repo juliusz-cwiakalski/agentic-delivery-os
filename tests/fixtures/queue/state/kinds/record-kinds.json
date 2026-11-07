@@ -1,0 +1,39 @@
+{
+  "records": [
+    {
+      "kind": "queue.entry",
+      "payloadSchema": "delivery.queue.entry.v1",
+      "keyPrefix": "queue.entries:",
+      "identityField": "ref"
+    },
+    {
+      "kind": "queue.dependency",
+      "payloadSchema": "delivery.queue.dependency.v1",
+      "keyPrefix": "queue.deps:",
+      "identityField": "ref"
+    },
+    {
+      "kind": "queue.lease",
+      "payloadSchema": "delivery.queue.lease.v1",
+      "keyPrefix": "queue.leases:",
+      "identityField": "repository"
+    },
+    {
+      "kind": "queue.park",
+      "payloadSchema": "delivery.queue.park.v1",
+      "keyPrefix": "queue.parks:",
+      "identityField": "ref"
+    },
+    {
+      "kind": "queue.incident",
+      "payloadSchema": "delivery.queue.incident.v1",
+      "keyPrefix": "queue.incidents:",
+      "identityField": "type"
+    }
+  ],
+  "derivedDocument": {
+    "schema": "delivery.queue.graph.v1",
+    "name": "queue-graph.json"
+  },
+  "stateSchemaVersion": "delivery.state.v1"
+}

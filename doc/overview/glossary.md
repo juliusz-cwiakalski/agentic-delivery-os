@@ -9,7 +9,7 @@ area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008", "TDR-0009", "TDR-0011", "TDR-0012"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-226", "GH-227", "GH-228", "GH-229", "GH-223", "GH-231", "GH-225", "GH-233", "GH-232", "GH-243", "GH-234", "GH-235", "GH-236", "GH-230"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-226", "GH-227", "GH-228", "GH-229", "GH-223", "GH-231", "GH-225", "GH-233", "GH-232", "GH-243", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237"]
 summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, provider-client-seed, provider-profile, session-lifecycle-economics, status-digest and attention-state, typed blocker channel, spend-read-side, queue-readiness, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, merge/verify-deploy, and harness-adapter terms used across the repository."
 ---
 
@@ -39,7 +39,7 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Watch status | The read-only per-provider condition view (name, condition, source, checkedAt) from the normalized snapshot mappings. | Provider profiles | [feature-provider-profiles.md](../spec/features/feature-provider-profiles.md) |
 | Profile class | A group of model profiles organized by task difficulty; working class names are not individual profiles or a new naming freeze. | Model policy | [Model profiles](../planning/concepts/model-profiles.md) |
 | Dual-run | Migration mode comparing a replacement engine with the shell while the shell remains authoritative until explicit per-engine parity and cutover evidence. It does not establish an observed clean pilot window. | Migration | [Roadmap](../planning/oss-tooling/roadmap.md), [UL](ubiquitous-language.md#disambiguation-at-boundaries) |
-| Single-flight | The scheduled default of one delivery per repository, keyed by repository remote identity rather than checkout path. Scoped parallel leases are a designed mode, not an implemented scheduler guarantee. | Scheduling | [Parallel delivery](../planning/concepts/parallel-delivery.md) |
+| Single-flight | The implemented scheduling guarantee of one active delivery per repository, enforced by a `repo-exclusive` lease acquired through the state layer's fence and keyed on the normalized remote rather than checkout path. The `worktree` scope is declared and never acquired. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md), [Parallel delivery](../planning/concepts/parallel-delivery.md) |
 | Strangler | Engine-by-engine migration using wrappers to retain working commands, with old tools retired after parity and explicit authority transfer. | Migration | [Roadmap](../planning/oss-tooling/roadmap.md), [UL](ubiquitous-language.md#disambiguation-at-boundaries) |
 | Adapter capability declaration | Typed data on the adapter contract naming the operations and metadata carrier kinds an adapter supports, plus explicit gap records for what it does not. An unlisted operation is unsupported; parity is never implied. | Adapter contracts | [feature-adapter-ports.md](../spec/features/feature-adapter-ports.md) |
 | Aggregate check | The single quality entry point `check` that chains `lint`, `format:check`, `typecheck`, `test`, and `check:boundaries` in that order. It exists at the workspace root and in every package; at the root it also appends the packed-exports parity check. No alternate aggregate or bypass flag exists. | Quality | — |
@@ -351,6 +351,26 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Transaction outcome record | The append-only `merge.transaction` record of a landing or replayed already-merged detection: result, squash SHA, landing evidence, refresh attempts, waiver references, and post-landing steps. | Verify Deploy | [feature-merge-verify-deploy.md](../spec/features/feature-merge-verify-deploy.md) |
 | `pipeline-created-never-ran` | The declared unknown reason for a pipeline with zero executed steps — never green; carried at `verify.deploy.trace-missing`. | Verify Deploy | [feature-merge-verify-deploy.md](../spec/features/feature-merge-verify-deploy.md) |
 | `status-stale` | The declared unknown reason when a status field stands alone without trace evidence or contradicts the trace; carried at `verify.deploy.status-stale`. | Verify Deploy | [feature-merge-verify-deploy.md](../spec/features/feature-merge-verify-deploy.md) |
+| Queue graph | The folded entries, edges, priorities, repository keys, and resolved weight and rank classes; a rebuildable cache rebuilt from ledger truth, never the source of truth. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Repository key | The normalized `host/owner/name` contention domain; protocol, credentials, userinfo, and the `.git` suffix are removed. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Lease scope | The closed lease scope set: `repo-exclusive` is implemented and `worktree` is declared and never acquired. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Stale lease | A lease whose heartbeat age is at or beyond `queue.lease-ttl`; takeover always records the previous holder and lease evidence. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Weight class | `standard` or `heavy`; a per-runner resource class, never a lane cap. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Rank class | `merge-ready`, `in-review`, `resume-parked`, `new-start`, in that order. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Hard exclusion | A gate that removes a candidate with a named reason; it never merely reorders. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Park condition | The closed condition type a pass re-evaluates: `provider-window`, `provider-quota`, `preemption`. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Park cause | The closed reason a lease was released: `provider-window`, `provider-quota`, `preempted-for-close-item`. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Recheck interval | The per-condition-type cadence resolved from `queue.park-recheck.<condition-type>`. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Park resume | Recovery of a parked entry when its condition evaluates clear; recorded with a recovery incident. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Observation gap | The elapsed time between a park's previous evaluation and the recovering pass; named in the recovery incident. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Stuck park | A durable `clear-observed` marker with no later `recovered` record; report-only on reads and a refusal on a claim. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Clear-observed marker | The durable prior-pass `queue.park` record that makes stuck detection possible without a read writing. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Preemption | A computed proposal to release a new start's lease so a close item may schedule; execution is explicit and belongs to the daemon story. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Runner (scheduling) | The declared execution-environment identity; one host runner exists today. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Scheduling lane | The canonical-ref observation of one entry's delivery state; no lane record kind or stored lane state exists. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Degraded marker (queue) | A declared `degraded[]` value such as `daemon-unreachable`, reported at exit 0 rather than as a silent failure. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Queue incident | The durable event surface for park auto-recovery and stale-lease takeover. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| One-shot scheduling step | The plan, claim, and release sequence with no daemon, control socket, or background process. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
 
 ## Acronyms
 
@@ -385,6 +405,7 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Status Digest](../spec/features/feature-status-digest.md)
 - [Brief](../spec/features/feature-brief.md)
 - [Queue Ready](../spec/features/feature-queue-ready.md)
+- [Scheduling Engine](../spec/features/feature-scheduling-engine.md)
 - [Owner-Gate SLA](../spec/features/feature-owner-gate-sla.md)
 - [Doctor](../spec/features/feature-doctor.md)
 - [MCP Surface](../spec/features/feature-mcp-surface.md)
@@ -397,3 +418,4 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Session Lifecycle Economics](../spec/features/feature-session-lifecycle-economics.md)
 - [ADR-0003 — OSS Tooling Monorepo Structure](../decisions/ADR-0003-oss-monorepo-structure.md)
 - [TDR-0005 — Delivery Result Enum and CLI Exit Taxonomy](../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md)
+

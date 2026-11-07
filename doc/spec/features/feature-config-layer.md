@@ -6,9 +6,9 @@ last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist), the typed lane branch (liveness interval and restart budget), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003"]
 ---
 
@@ -227,8 +227,9 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 | Origin | The winning source label for an effective leaf or collection. |
 | Selected file | The `--config`/environment/legacy file occupying project-committed priority. |
 | Lane branch | The typed `lane.liveness-interval` and `lane.restart-budget` policy data with shipped defaults and existing configuration identities. |
+| Queue branch | The typed `queue.lease-ttl` and `queue.park-recheck.<condition-type>` policy data with shipped defaults and existing configuration identities. |
 
-See also: [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
+See also: [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [Scheduling Engine](feature-scheduling-engine.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
 
 ## The merge configuration branch
 
@@ -287,3 +288,31 @@ capturing it at construction. See
 
 - [Harness Adapters](feature-harness-adapters.md) adds the typed `harness` branch (selected kind, execution kind, store locations, deny-by-default environment allowlist); a literal value in an allowlist entry is rejected by `config.secret.forbidden`.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) documents the `lane` branch (liveness interval and restart budget) and consumes the resolved values as policy data.
+
+## The queue configuration branch
+
+The production catalog declares a typed `queue` branch. It carries the lease
+staleness bound and the per-condition-type park recheck cadence as policy data.
+
+| Key | Shape | Default | Semantics |
+|---|---|---|---|
+| `queue.lease-ttl` | integer milliseconds | `90000` | The lease staleness bound: a lease whose heartbeat age is at or beyond it is takeover-eligible. Renewal cadence is derived as `max(1000 ms, floor(ttl / 3))` and is not a key. The value must be an integer greater than `0`; a non-integer, zero, or negative value is `config.value.invalid` naming `queue.lease-ttl`. |
+| `queue.park-recheck` | record of integer milliseconds | `provider-window: 60000`, `provider-quota: 300000`, `preemption: 60000` | A dynamic-name record whose valid child names are the closed park condition-type set `{provider-window, provider-quota, preemption}`, never the cause set. A child outside the set is `config.key.unknown`; a non-integer, zero, or negative value is `config.value.invalid`, both naming the full key (`queue.park-recheck.<type>`). An omitted child keeps its shipped default. |
+
+An absent `queue` branch resolves to the shipped defaults with `defaults`
+origins, and an unknown key under `queue` fails `config.key.unknown`. The values
+are policy data: resolving the branch starts no scheduler and no background
+process, the claim reads the TTL at claim time, and the release path resolves
+`queue.park-recheck.<condition-type>` when it creates a park. The park pass
+re-evaluates an active park only after the interval recorded on that park has
+elapsed, so tuning the key changes resume timing for parks created afterwards
+with no code change. Deploy expectations are not a `queue` key;
+they are the delivered `merge.deploy-expectations`. No capacity, bandwidth,
+concurrency, or CI-slot key is declared or reserved. See
+[Scheduling Engine](feature-scheduling-engine.md).
+
+## Related
+
+- [Harness Adapters](feature-harness-adapters.md) adds the typed `harness` branch (selected kind, execution kind, store locations, deny-by-default environment allowlist); a literal value in an allowlist entry is rejected by `config.secret.forbidden`.
+- [Session Lifecycle Economics](feature-session-lifecycle-economics.md) documents the `lane` branch (liveness interval and restart budget) and consumes the resolved values as policy data.
+- [Scheduling Engine](feature-scheduling-engine.md) documents the `queue` branch (lease TTL and per-condition-type park recheck) and consumes the resolved values as policy data.

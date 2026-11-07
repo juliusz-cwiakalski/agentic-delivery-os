@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-edge",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "schemaVersion": "delivery.queue.v1",
+    "entries": [],
+    "leases": [],
+    "weights": [],
+    "parks": [],
+    "findings": [],
+    "degraded": ["daemon-unreachable"],
+    "truncated": false,
+    "counts": {
+      "entries": 0,
+      "ready": 0,
+      "held": 0,
+      "parked": 0,
+      "leases": 0,
+      "parks": 0
+    }
+  }
+}

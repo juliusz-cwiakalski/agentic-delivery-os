@@ -252,3 +252,13 @@ The feature adds no dependency, package, service, or CI job. It runs inside the 
 | Transition verdict | The classified `plan.format.legacy-markdown` answer for a legacy markdown plan. |
 
 See also: [Result Contract and Error Table](feature-result-contract.md), [pm-notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md), [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md), [Repository glossary](../../overview/glossary.md), [CLI command registry](../../planning/oss-tooling/cli-command-registry.md), and [ODR-0003](../../decisions/ODR-0003-cli-command-naming-v1-lock.md).
+
+## Scheduling engine reconciliation (GH-237)
+
+The scheduler owns the weight vocabulary the plan schema deferred. A validated
+plan that omits `weightClass`/`defaultWeightClass` resolves to `standard`; a
+declared-but-unrecognized value resolves to `heavy`; an invalid, unreadable, or
+absent plan resolves to `heavy` with source evidence `plan-unreadable` or
+`plan-absent`. The plan's tier and declared interactions are consumed as intent
+evidence; the scheduler never treats declared `leases` as a grant. See
+[Scheduling Engine](feature-scheduling-engine.md).

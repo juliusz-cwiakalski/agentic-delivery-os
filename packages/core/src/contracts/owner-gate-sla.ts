@@ -90,8 +90,13 @@ export const BOARD_MAX_ID_CHARS = 160 as const;
 export const BOARD_MAX_REF_CHARS = 160 as const;
 export const BOARD_MAX_WAIVED_BY_CHARS = 120 as const;
 
-/** The closed collector-id set required by the shipped board surface (v0). */
-export const BOARD_COLLECTOR_IDS = ["tracker"] as const;
+/**
+ * The closed collector-id set: the board's tracker collector plus the
+ * scheduling engine's lanes collector (GH-237 F-12). The family shape, resolved
+ * row, and exit-2 projection are unchanged; a family code naming an id outside
+ * this set stays unrecognized.
+ */
+export const BOARD_COLLECTOR_IDS = ["tracker", "lanes"] as const;
 export type BoardCollectorId = (typeof BOARD_COLLECTOR_IDS)[number];
 
 /** The declared collector-unavailable identity family (GAP-3, DEC-7). */

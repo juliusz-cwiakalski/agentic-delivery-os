@@ -19,6 +19,8 @@ export type { DbCommandRuntime } from "./db.js";
 export { createDbCommandDefinition } from "./db.js";
 export type { DoctorCommandRuntime } from "./doctor.js";
 export { createDoctorCommandDefinition } from "./doctor.js";
+export type { LanesCommandRuntime, LanesRuntimeRead } from "./lanes.js";
+export { createLanesCommandDefinition } from "./lanes.js";
 export type {
   LintCommandRuntime,
   LintPmNotesRead,
@@ -41,8 +43,21 @@ export type { PlanCommandRuntime } from "./plan.js";
 export { createPlanCommandDefinition } from "./plan.js";
 export type { ProviderCommandRuntime } from "./provider.js";
 export { createProviderCommandDefinition } from "./provider.js";
-export type { QueueReadyCommandRuntime } from "./queue.js";
-export { createQueueReadyCommandDefinition } from "./queue.js";
+export type {
+  QueueCommandRuntime,
+  QueueReadyCommandRuntime,
+  QueueRuntimeClaim,
+  QueueRuntimeFailure,
+  QueueRuntimeMutation,
+  QueueRuntimeRelease,
+  QueueRuntimeSchedule,
+} from "./queue.js";
+export {
+  createQueueCommandDefinition,
+  createQueueReadyCommandDefinition,
+  toQueuePlanData,
+  toQueueReadData,
+} from "./queue.js";
 export type { RetroCommandRuntime } from "./retro.js";
 export { createRetroCommandDefinition } from "./retro.js";
 export type { SpendCommandRuntime } from "./spend.js";

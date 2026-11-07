@@ -1,0 +1,9 @@
+{
+  "seed": {
+    "producer": "GH-302",
+    "edgeTo": "GH-301",
+    "consumer": "GH-301",
+    "firstEdge": "GH-300"
+  },
+  "expectedCyclePath": ["GH-301", "GH-302", "GH-301"]
+}

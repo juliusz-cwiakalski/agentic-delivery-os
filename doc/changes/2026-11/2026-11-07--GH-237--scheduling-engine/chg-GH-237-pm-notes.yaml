@@ -1,0 +1,119 @@
+change_id: GH-237
+title: "M1-S17: Scheduling engine: queue, lanes, dependency batching"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-07T10:00:00Z", completed: "2026-11-07T10:00:00Z" }
+  specification: { started: "2026-11-07T10:05:00Z", completed: "2026-11-07T15:10:00Z", reopened_at: "2026-11-07T14:30:00Z", iterations: 3 }
+  test_planning: { started: "2026-11-07T10:20:00Z", completed: "2026-11-07T15:10:00Z", reopened_at: "2026-11-07T14:30:00Z", iterations: 3 }
+  delivery_planning: { started: "2026-11-07T11:25:00Z", completed: "2026-11-07T15:10:00Z", reopened_at: "2026-11-07T14:30:00Z", iterations: 3 }
+  dor_check: { started: "2026-11-07T15:15:00Z", completed: "2026-11-07T15:40:00Z", iteration: 3, verdict: READY_WITH_RISKS }
+  delivery: { started: "2026-11-07T15:45:00Z", completed: "2026-11-07T18:30:00Z", iterations: 1 }
+  system_spec_update: { started: "2026-11-07T18:35:00Z", completed: "2026-11-07T19:30:00Z" }
+  review_fix: { started: "2026-11-07T19:35:00Z", completed: "2026-11-07T20:45:00Z", iteration: 2, status: PASS }
+  quality_gates: { started: "2026-11-07T20:50:00Z", completed: "2026-11-07T21:15:00Z" }
+  dod_check: { started: "2026-11-07T21:20:00Z", completed: "2026-11-07T21:30:00Z" }
+  pr_creation: { started: "2026-11-07T21:35:00Z", completed: "2026-11-07T21:45:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/265" }
+decisions:
+  - text: "One-shot scope boundary: this story delivers the daemon-free scheduling engine (dependency graph, readiness, per-repo single-flight leases via the fence-token state path, weight classes, close-first ranking, parks with condition-exact resume, and `queue plan` next-action computation). Session execution/spawn of a delivery remains the `dispatch` story (M1-S9), which this story unblocks. Lease acquisition/release is delivered as a scheduling capability exercised by the queue surface so two daemon-down one-shots are mutually exclusive (SC-M1-17b) without shipping the dispatch command."
+    date: "2026-11-07"
+  - text: "`lanes --watch` streaming depends on the resident daemon (M1-S18) and control protocol v1. This story delivers `lanes list|show` from state; `--watch` is out of scope for live streaming and must degrade truthfully (declared unavailable/degraded, never a silent empty stream) when no daemon exists."
+    date: "2026-11-07"
+  - text: "Park recheck is evaluated on demand by any queue one-shot invocation (and by the future daemon on start), using per-condition-type intervals from configuration. Auto-recovery produces a recorded incident; a park outliving its cleared condition surfaces the `queue.park-condition-stuck` finding."
+    date: "2026-11-07"
+  - text: "`queue ready` (M0-S7, GH-176) stays the read-only ready-set surface and its contract is preserved; the scheduling engine consumes/reuses its condition model rather than redefining it."
+    date: "2026-11-07"
+  - text: "Spec OQ-3 (weight vocabulary) resolved as PM-decided: accept DEC-10 — classes are `standard` and `heavy`, absent resolves to `standard`, a declared-but-unrecognized value resolves to `heavy` (conservative, never overloads a runner, plan schema already deferred vocabulary ownership to the scheduler). Revisit only if a real typo-silently-heavy incident appears; not a blocker."
+    date: "2026-11-07"
+  - text: "Spec OQ-2 (preemption authority) deferred by PM decision to M1-S18 planning: this story computes the preemption action and requires an explicit `queue release --park`, because nothing in this scope may abandon a live session. Automatic preemption by the daemon is a daemon-story decision with cost consequences; record it in `doc/decisions/**` at M1-S18 if automatic preemption is adopted."
+    date: "2026-11-07"
+  - text: "Spec OQ-1 (explicit queue membership via `queue add`) and OQ-4 (`queue claim`/`queue release` surface revisited at M1-S9) accepted as recorded assumptions; neither blocks this delivery."
+    date: "2026-11-07"
+  - text: "DoR R-08 acknowledgement (PM-decided, autonomous mode): the ticket's 'a CLI one-shot executes it' is narrowed to the scheduling step (plan → claim → release), and the SC-M1-17 `dispatch <ref>` clause is explicitly inherited by M1-S9, which this story unblocks and which is a separate backlog story (rank 39). Shipping `dispatch` here would deliver M1-S9 out of sequence and duplicate its scope. The human owner retains the final say at the open-PR review gate; if the human requires execution in this change, delivery stops and this decision is reopened."
+    date: "2026-11-07"
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: issue GH-237 open with labels change,review; no PR in any state; branch feat/GH-237/scheduling-engine clean and zero commits ahead of origin/main-tools; no change artifacts existed. Treated as fresh delivery."
+    type: info
+    date: "2026-11-07"
+  - text: "Reopened specification after test planning surfaced contract ambiguities OQ-T1/T2/T4/T5/T6/T7 (read-surface exit projection on unreadable state, AC-F3-1 read/write split, stuck-park observation storage, no-ref claim selection, invalid-plan weight resolution, deploy-expectation resolution scope). Targeted spec amendment, then test-plan reconciliation; no assertion was lowered."
+    type: retro
+    date: "2026-11-07"
+  - text: "Design baseline read: doc/planning/oss-tooling/milestones/m1/{contracts.md,commands/queue.md,commands/lanes.md,test-scenarios.md,architecture.md}, doc/planning/oss-tooling/backlog.md M1-S17, cli-command-registry.md, concepts/parallel-delivery.md. Scenarios SC-M1-08, SC-M1-09, SC-M1-10, SC-M1-11, SC-M1-17, SC-M1-17b seed the test plan."
+    type: info
+    date: "2026-11-07"
+  - text: "Doc impact risk: new feature spec doc/spec/features/feature-scheduling-engine.md (or extension of feature-queue-ready.md), CLI command registry, m1 status.md story tracking, and possibly config keys (queue.lease-ttl, queue.park-recheck.*) documented in configuration-layer spec."
+    type: risk
+    date: "2026-11-07"
+  - text: "Resume sync 2026-11-07: merged origin/main-tools (GH-236 spend read side, be5045e7) into the branch — clean merge, no conflicts. Post-merge `pnpm check`: lint/format/typecheck PASS; test stage 4 failures — one real artifact defect (privacy-literal credential pattern in our test plan, since sanitized) plus an environmental `ci-baseline-parity` EXDEV failure because /tmp is a different filesystem from the repo. The EXDEV failure is infrastructure, not change content; re-verify with TMPDIR on the repo filesystem during quality_gates."
+    type: info
+    date: "2026-11-07"
+  - text: "DoR iteration 1: NOT_READY (2 critical, 8 major, 4 minor; 8 blocking). Blocking: claim refusal-identity contradiction (R-01), unenumerated closed park-cause set that rejects `preempted-for-close-item` (R-02), undefined producer-root discovery for deploy expectations (R-03), stuck-park schedule status undefined (R-04), missing in-pass single-flight projection rule (R-05), Phases 3-5 test gates depend on the Phase-7 CLI surface (R-06), impossible '49 refusals' assertion with alternating holders (R-07). Non-blocking: one-shot narrowing acknowledgement (R-08, PM-decided), AC-F8-1 interval wording (R-09), AC-F1-1 given clause (R-10), lane vocabulary provenance (R-11), status-digest follow-up ownership (R-12), missing CLI phase reconciliation (R-13), inventory registration in Phases 2-6 (R-14), type-test bun invocation (R-15), TC-LANES-002 typo (R-16). Reopened specification, test_planning, delivery_planning; delivery not reopened."
+    type: retro
+    date: "2026-11-07"
+  - text: "DoR iteration 2: NOT_READY. All iteration-1 blockers resolved; one new blocking cross-artifact conflict introduced by remediation — R2-01, AC-F1-1 required `queue list` to show the recorded repository root, but Appendix C/DM-13 omit it and goldens forbid absolute paths. Non-blocking: TC-PARK-004 partial marking (R2-02), missing `degraded[]` in add/prioritize/dep envelope (R2-03), privacy review silent on the root (R2-04), Phase 2 not tasked to record the root (R2-05), stale `queue-ready.test.ts` gate reference (R2-06), `queue.park` kind wording (R2-07). Reopened specification/test_planning/delivery_planning; delivery not reopened."
+    type: retro
+    date: "2026-11-07"
+  - text: "DoR iteration 3: READY_WITH_RISKS (gate PASS; no blocking findings). All R2-01..R2-07 resolved. Accepted non-blocking residuals: N1 test-plan partial-mark count differs from the plan (21 vs 24; TC-SCHED-001/002/015 lack explicit partial markers though the §7.1 rule covers them); N2 plan task 8.8's AC→TC checklist omits AC-F12-1 and some secondary TCs (DoD phase verifies all 22 ACs independently); N3 no explicit `degraded[]` assertion for `queue add|prioritize|dep`; N4 one-phase header wording says the entry projection folds the root while DM-13 says it does not. None blocks delivery; N2 and N4 are noted for the docs/review phases."
+    type: retro
+    date: "2026-11-07"
+  - text: "Plan Phase 1 complete: commit f4b809ab. Scheduling vocabulary contract, typed queue config branch, five record kinds, five queue error rows, lanes collector id, documented table sync, and compile-only type probe. Gate: pnpm typecheck PASS; structure suites 111 tests PASS; error-table-sync entries=101 documented=101 PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 2 complete: commit 58fe6d96. Queue declaration and graph folding with canonical refs, repository-key normalization, fenced entry/dependency appends, the internal-only recorded root, cycle refusal before append, replay no-op, superseding projection, and the rebuildable queue-graph document. Gate: typecheck PASS; graph/state/structure 51 tests PASS; queue-ready preservation 55 tests PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 3 complete: commit 4bf1a935. Six-condition readiness with scheduler sources, weight resolution and per-runner accounting, producer-bound deploy gate with a three-read budget, close-first rank classes and preemption proposal, and the declared total precedence with per-repository single-flight. Gate: typecheck PASS; Phase 3 suites plus bounds and structure 84 tests PASS; queue-graph 14 tests PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 4 complete: commit d886643a. Repo-exclusive lease policy, two-stage claim with in-fence re-read and post-append verification, renewal, release, stale takeover with evidence and incident, fail-closed unreadable history, and the deterministic 50-holder harness. Gate: typecheck PASS; lease/weight/structure 37 tests PASS; rank/readiness/bounds 24 tests PASS; queue-ready 55 tests PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 5 complete: commit ab09bdc9. Two distinct park sets with one-to-one pairing, per-type recheck, durable clear-observed marker, recovered record and park-auto-recovery incident, stuck finding and claim refusal, release-with-park atomicity, and the lease/park/incident vocabulary round-trip. Gate: typecheck PASS; park/rank/lease/structure 65 tests PASS; readiness/schedule/bounds 25 tests PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 6 complete: commit aeeea424. Pure lane fold over entries, leases, parks, and economics; lanes list/show envelopes; closed six-state vocabulary and bounded idle reasons; null-plus-warning economics; unreadable store as status.collector.lanes.unavailable at exit 2; --watch refused through fallback.invocation; 200-lane bound. Gate: typecheck PASS; lanes behaviour and three goldens plus bounds/structure 49 tests PASS; economics neighbours 14 tests PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 7 complete: commit 6b090bea. Full queue family with edge composition, Appendix C envelopes, text key=value summaries, grammar and bounded input validation, exit projection, no-ref selection, queue list/plan exit 2 on unreadable lease/park history, queue ready delegation, five queue goldens, hermetic battery, and secret canary. Placement deviation: the state-port ledger composition moved from core/src/state/queue.ts to core/src/app/queue.ts because the state tier is contract-only under the ADR-0003 dependency boundary; public behavior and the state port are unchanged. Gate: typecheck PASS; check:boundaries PASS; 179 Phase 7 tests PASS; error-table-sync PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 8 complete: docs reconciliation (new feature-scheduling-engine spec, neighbour spec notes, queue/lanes man pages, registry, glossary), exactly one five-package minor changeset, test-plan execution log, doc-distribution guard (no marker-scoped doc changed; N/A for bash scripts/.tests), and PR readiness checklist. Aggregate pnpm check: PASS except the environmental ci-baseline-parity EXDEV failure (/tmp on a different filesystem); re-run with TMPDIR=$PWD/tmp/tmpdir PASSES. error-table-sync PASS. Deviation: the lanes --watch refusal projects fallback.invocation at exit 1 with no stream, but the generic parser diagnostic is 'unknown flag' rather than a daemon-naming summary because the flag is outside the accepted grammar."
+    type: info
+    date: "2026-11-07"
+  - text: "Delivery complete: 8/8 plan phases implemented and committed (f4b809ab, 58fe6d96, 4bf1a935, d886643a, ab09bdc9, aeeea424, 6b090bea, ec6a7077). Aggregate gate green except the environmental ci-baseline-parity EXDEV failure (passes with a repo-local TMPDIR). Accepted implementation deviations to verify at review: queue state composition lives in core/src/app/queue.ts (not the planned state/queue.ts) to respect ADR-0003's state→domain ban; machine goldens compare parsed JSON while human goldens stay byte-exact; lanes --watch is refused by the generic unknown-flag path. DoR residuals N1/N3 remain unaddressed (N2/N4 partially covered by the delivered docs)."
+    type: info
+    date: "2026-11-07"
+  - text: "System spec update complete. Reconciled current-truth docs: feature-scheduling-engine (verified against delivered code), state-layer record kinds, config-layer queue branch, status-digest lanes gap, result-contract error rows/collector set, merge-verify-deploy consumption, session-lifecycle-economics consumption, doc/00-index, architecture-overview, glossary; planning pack (m1 queue/lanes contracts, cli-command-registry, status, man-page). Validation: test-doc-distribution PASS (81 docs, no drift); error-table.test PASS (75). Residual current-truth documentation gaps: none. Doc-sync flagged product nuances for review: `released` recovery state declared but unreachable; `queue release --park provider-window` cannot declare a future expiry (records release instant); status digest still emits stale `expectedStory: M2-S1` / note literals (code-owned, declared gap); queue/lanes require an injected composition and are not wired by a production binary (consistent with the repo's in-process command surface)."
+    type: info
+    date: "2026-11-07"
+  - text: "Review iteration 1: FAIL (0 critical, 2 high, 8 medium, 9 low, 3 info). Blocking: F-1 per-type park recheck interval is inert (`evaluateParkRecord` never compares elapsed time; TC-PARK-006 tautological); F-2 producer-root deploy-expectation resolution absent (edge injects expectations directly; `repositoryRoot` never consumed). Medium: F-3 `--watch` refusal lacks daemon-naming hint; F-4 `queue ready` broken under full-family composition (3+ refs refused); F-5 release+park not atomic on second-append failure; F-6 NFR-9 machine byte cap unenforced (129,808 bytes for 500 entries); F-7 second-active-park invariant unenforced and test vacuous; F-8 execution-log zero-write claims unsubstantiated; F-9 lanes purity test compares a value to itself; F-10 AC-F9-1 corpus omits weight classes/park types. Low/info: locale-sensitive sort, mislabelled `producer-first` reason, fabricated mutation `ready` state, dead `released` state, release-instant provider-window expiry, plan scope/status-digest boundary drift, over-titled machine goldens, deferred composition, stale header, asymmetric CLI park coverage. Remediation Phase 9 appended to the plan; delivery reopened for remediation."
+    type: retro
+    date: "2026-11-07"
+  - text: "Review remediation iteration 1 complete: commit 89a18f47 (fixes F-1..F-22: park recheck due-gate, producer-root deploy resolution, daemon-naming `--watch` hint, `queue ready` full-family preservation, release+park atomicity with compensating `released` park, machine byte cap, two-active-park fail-closed, real test-efficacy fixes, code-point comparator, truthful reason/mutation states, `--until` for provider-window, plan/header/doc honesty, CLI park coverage) plus fbfda0e0 (pm-notes evidence). Phase 9 gate PASS; aggregate `pnpm check` with a repo-local TMPDIR: 5608 pass / 4 skip, only `privacy-ci-wiring` TC-WIRE-002 timing out at ~5.05s vs a 5s limit — reproduced on the pre-change baseline and passing in isolation, so environmental/pre-existing. Re-running doc-sync before review iteration 2 because code and behavior claims changed."
+    type: info
+    date: "2026-11-07"
+  - text: "Doc re-sync after remediation complete: reconciled feature-scheduling-engine (park due-gating, implemented producer-root resolution, `--watch` M1-S18 hint, park-first + compensating `released` marker, byte/lane truncation markers, truthful reasons, mutation provenance, `queue ready` 1–8-ref preservation), state-layer (`released` reachable; two-active-park `state.store.torn`), config-layer (interval resolved at creation, pass due-gates), result-contract (handler-supplied remediationHint; GH-230 rows intact), merge-verify-deploy, and the M1 planning pack. Validation: doc-distribution PASS (81 docs); error-table.test 79 pass (105 identities). Residual current-truth doc gaps: none. Doc-sync found one code gap: `--until` without `--park` was silently accepted."
+    type: info
+    date: "2026-11-07"
+  - text: "Fixed the doc-sync code gap: `queue release --until` is now valid only with `--park provider-window` (required for that cause, refused for others); lone `--until` refuses `fallback.invocation` reason `until-without-park` at exit 1 with zero writes. Verified: queue-cli 24 pass, queue regression 86 pass, typecheck 0, error-table-sync 105/105."
+    type: info
+    date: "2026-11-07"
+  - text: "Review iteration 2: PASS (0 critical/high/medium; 4 low, 1 info). All 22 iteration-1 findings verified resolved in code/tests. Accepted non-blocking residuals carried to DoD: (low) spec still says `--watch` is 'not in the accepted grammar' while it is now a declared refused flag (behavior matches AC-F11-2); (low) Appendix C reason enumeration omits the new `new-start`/`resume-parked` tokens; (low) byte-cap truncation drops rows without recomputing `counts` (untested); (low) release+compensation double-failure path unproven and its return ignored; (info) deploy-expectation port has no production adapter (same deferred composition seam as F-20). Re-ran targeted evidence: typecheck, boundaries, error-table-sync 105/105, queue/lanes and structure suites green; privacy-ci-wiring TC-WIRE-002 is a 5s default-timeout threshold (passes with --timeout 30000); ci-baseline-parity EXDEV is environmental (passes with repo-local TMPDIR)."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 9 complete: commit 89a18f47 (plus 25c33b27 for the `--until` grammar fix and 67f55985 for the doc re-sync). Code Review Remediation (Iteration 1) delivered all tasks 9.1–9.12 / findings F-1..F-22. Gate: pnpm typecheck PASS; Phase 9 behaviour/checks/structure battery 169 tests PASS; goldens 17 PASS; queue-ready preservation 66 PASS; check:boundaries PASS; error-table-sync entries=105 documented=105 PASS; aggregate pnpm check with repo-local TMPDIR 5608 pass / 4 skip with only the pre-existing 5s privacy-wiring timeout, reproduced on baseline and passing in isolation."
+    type: info
+    date: "2026-11-07"
+  - text: "Quality gates complete: lint PASS (0 errors), format:check PASS, typecheck PASS, boundaries PASS, exports-parity PASS, full test suite `bun test --timeout 30000` 5610 pass / 4 skip / 0 fail across 582 files. The default 5s aggregate run shows three load-sensitive timeouts in unrelated pre-existing suites (`closeout-branch`, `watchdog-preflight`) that pass in isolation and whose files are unchanged on this branch; `ci-baseline-parity` EXDEV is environmental and passes with a repo-local TMPDIR; `privacy-ci-wiring` TC-WIRE-002 is a 5s-threshold issue that passes with `--timeout 30000`. No assertion failures attributable to GH-237."
+    type: info
+    date: "2026-11-07"
+  - text: "DoD check complete: all lifecycle phases recorded with completion timestamps (clarify_scope, specification, test_planning, delivery_planning, dor_check, delivery, system_spec_update, review_fix, quality_gates); all 9 plan phases have pm-notes entries naming the phase, commit hash, and gate result (Phase 1 f4b809ab … Phase 8 ec6a7077, Phase 9 89a18f47); review iteration 2 PASS verifies 22/22 ACs and 14/14 NFRs; doc-sync reports no residual current-truth documentation gaps; exactly one changeset `gh-237-scheduling-engine-minor.md`; worktree clean; 30 commits ahead of main-tools and 0 behind."
+    type: info
+    date: "2026-11-07"
+  - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/265 (base main-tools, head feat/GH-237/scheduling-engine, labels change+review, assignee juliusz-cwiakalski, MERGEABLE, not merged). Branch pushed with no force. Ticket GH-237 moved to review labels and assigned to the owner. Lifecycle complete; awaiting human review/merge — PM is not authorized to merge."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 9 complete: commit 89a18f47. Review iteration-1 remediation F-1..F-22: operative per-type park recheck due check and rewritten TC-PARK-006 (60 000 vs 5 000 ms); producer-bound deploy-expectation resolution from entry-recorded roots with multi-repository no-match/collision/invalid cases; resident-daemon --watch remediation hint on queue and lanes; queue ready preservation for 3-8 refs through the full family; release+park second-append compensation producing the released withdrawn-park marker; NFR-9 machine byte cap with truncationReason plus human/reason bounds; two-active-park fail-closed; command-level zero-write, real lanes purity, mixed AC-F9-1 corpus, config-resolved lease TTL; code-point comparator and truthful new-start/resume-parked reasons; real mutation-envelope state/weight; --until provider-window expiry; plan/test-plan reconciliation (F-17/F-18, N2/N3/N4); structurally-identical golden titles, deferred-composition note, refreshed queue.ts header, and the CLI park exit-2/stuck-exit-0 matrix. Gate: pnpm typecheck PASS; Phase 9 behaviour/checks/structure 169 pass; queue/lanes goldens 17 pass; queue ready 66 pass; check:boundaries 0 violations; error-table-sync entries=105 documented=105; pnpm check 5608 pass, 4 skip, 1 pre-existing environmental timing failure (TC-WIRE-002 times out at ~5.05s against its 5s limit and reproduces at ~5.05s on the pre-change baseline; ci-baseline-parity passes with TMPDIR=$PWD/tmp/tmpdir)."
+    type: info
+    date: "2026-11-07"

@@ -6,8 +6,15 @@
 /** Placeholder marker for the pure domain tier. */
 export type DomainPlaceholder = { readonly __tier: "domain" };
 
-export { projectBrief, renderBriefHuman } from "./brief.js";
 export {
+  type BlockerDelegationDecision,
+  type BlockerGuardRequest,
+  type BlockerGuardVerdict,
+  type BlockerPublishValidated,
+  type BlockerPublishValidation,
+  type BlockerRanking,
+  type BlockerValidationCode,
+  type BlockerValidationFailure,
   buildBlockerAnswerData,
   buildBlockerListData,
   buildBlockerPublishData,
@@ -25,18 +32,11 @@ export {
   renderBlockersHuman,
   resolveAnsweringAudience,
   resolveBlockerDelegation,
-  type BlockerDelegationDecision,
-  type BlockerGuardRequest,
-  type BlockerGuardVerdict,
-  type BlockerPublishValidated,
-  type BlockerPublishValidation,
-  type BlockerRanking,
-  type BlockerValidationCode,
-  type BlockerValidationFailure,
   validateBlockerAnswer,
   validateBlockerDelegationPolicy,
   validateBlockerPublish,
 } from "./blockers.js";
+export { projectBrief, renderBriefHuman } from "./brief.js";
 export {
   boundCloseoutData,
   buildCloseoutPlan,
@@ -116,16 +116,10 @@ export {
   renderDoctorHuman,
   runIsolatedDoctorCheck,
 } from "./doctor.js";
-export { canonicalHarnessJson } from "./harness-canonical.js";
 export {
-  type HarnessCapabilityInspection,
-  harnessCapabilityViolations,
-  inspectHarnessCapability,
-} from "./harness-capability.js";
-export {
-  type RestartBudgetGateInput,
   evaluateRestartBudget,
   foldRestartRecords,
+  type RestartBudgetGateInput,
 } from "./economics-budget.js";
 export {
   economicsReferenceFor,
@@ -136,20 +130,26 @@ export {
   formatStallEvidence,
   formatUneconomicalEvidence,
   formatUnevaluableEvidence,
-  type RefusalCorpus,
   parseRefusalCorpus,
+  type RefusalCorpus,
 } from "./economics-evidence.js";
 export {
-  type ResumeEconomicsDeps,
   createOneShotResumeComposition,
   createSupervisedResumeComposition,
   evaluateResumeEconomics,
   isEconomicalRepay,
+  type ResumeEconomicsDeps,
 } from "./economics-resume.js";
 export {
   deriveEconomicsView,
   latestUniqueProgressTokens,
 } from "./economics-view.js";
+export { canonicalHarnessJson } from "./harness-canonical.js";
+export {
+  type HarnessCapabilityInspection,
+  harnessCapabilityViolations,
+  inspectHarnessCapability,
+} from "./harness-capability.js";
 export { classifyHarnessEvidence } from "./harness-classify.js";
 export {
   assembleHarnessLiveness,
@@ -261,7 +261,117 @@ export {
   type PmNotesLintLocation,
   type PmNotesLintVerdict,
 } from "./pm-notes-lint.js";
+export {
+  createDeployGateState,
+  deployEvidenceOf,
+  evaluateDependencyGate,
+  evaluateDeployGate,
+  producerLanding,
+  QUEUE_DEPLOY_READ_BUDGET,
+  type QueueDependencyGateOutcome,
+  type QueueDeployGateState,
+  type QueueDeployOutcome,
+} from "./queue-deploy-gate.js";
+export {
+  buildAdjacency,
+  canonicalQueueRef,
+  defaultQueuePriority,
+  detectCycleForEdge,
+  foldLatestDependencies,
+  foldLatestDependencyRecords,
+  foldLatestEntries,
+  foldQueueGraph,
+  mergeEdges,
+  normalizeEdges,
+  normalizeRepositoryKey,
+  projectEntry,
+  type QueueGraphEdge,
+  type QueueGraphFold,
+  queueGraphDocument,
+} from "./queue-graph.js";
+export {
+  foldLanes,
+  type QueueLaneEconomics,
+  type QueueLaneFoldInput,
+  renderLanesHuman,
+  selectLane,
+} from "./queue-lanes.js";
+export {
+  claimScope,
+  defaultLeaseTtlMs,
+  earliestTakeoverAtIso,
+  evaluateClaimPreconditions,
+  foldActiveLeases,
+  isLeaseStale,
+  leaseConflict,
+  leaseHeartbeatAgeMs,
+  makeLeaseId,
+  type QueueClaimPrecondition,
+  type QueueLeaseConflict,
+  renewalCadenceMs,
+} from "./queue-lease.js";
+export {
+  clearObservedRecord,
+  conditionTypeForCause,
+  createParkRecord,
+  defaultParkRecheckMs,
+  evaluateParkPass,
+  evaluateParkRecord,
+  hasDuplicateActiveParks,
+  latestParkRecords,
+  observationGapMs,
+  parkConditionForCause,
+  type QueueParkContext,
+  type QueueParkPass,
+  recoveredRecord,
+  releasedParkRecord,
+} from "./queue-park.js";
+export {
+  boundQueuePlanData,
+  boundQueueReadData,
+  computeQueueSchedule,
+  isDeclaredBlockingReason,
+  QUEUE_NEXT_DEFAULT,
+  type QueueHumanData,
+  type QueueSchedule,
+  type QueueScheduleOptions,
+  renderQueueHuman,
+} from "./queue-precedence.js";
+export {
+  isCloseRank,
+  isPreemptionAction,
+  preemptionBlock,
+  preemptionParkCause,
+  rankClassIndex,
+  resolveRankClass,
+} from "./queue-rank.js";
+export {
+  closeClassOf,
+  evaluateQueueReadiness,
+  QUEUE_SCHEDULER_CONDITION_ORDER,
+  type QueueCiFact,
+  type QueueCloseFact,
+  type QueueDeployExpectation,
+  type QueueDeployFacts,
+  type QueueDeployVerdictFact,
+  type QueueEntryCheapFacts,
+  type QueueParkEvaluation,
+  type QueueParkEvaluationState,
+  type QueuePlanFact,
+  type QueueProviderFact,
+  type QueueReadiness,
+  type QueueSchedulerFacts,
+  type QueueWorkItemFact,
+} from "./queue-readiness.js";
 export { evaluateQueueReady, renderQueueReadyHuman } from "./queue-ready.js";
+export {
+  activeHeavyLease,
+  isHeldByWeight,
+  type QueueWeightLoad,
+  type QueueWeightResolution,
+  resolveQueueWeight,
+  weightLoads,
+} from "./queue-weight.js";
 export {
   attemptOutOfSeamEvidenceWrite,
   collectRetro,

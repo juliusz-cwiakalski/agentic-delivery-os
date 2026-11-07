@@ -427,7 +427,9 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(index).toContain('export { createLintCommandDefinition } from "./lint.js"');
     expect(index).toContain('export { createPhaseCommandDefinition } from "./phase.js"');
     expect(index).toContain('export { createStatusCommandDefinition } from "./status.js"');
-    expect(index).toContain('export { createQueueReadyCommandDefinition } from "./queue.js"');
+    expect(index).toContain("createQueueReadyCommandDefinition");
+    expect(index).toContain("createQueueCommandDefinition");
+    expect(index).toContain("createLanesCommandDefinition");
     expect(index).toContain('export { createRetroCommandDefinition } from "./retro.js"');
     expect(index).toContain('export { createVerifyCommandDefinition } from "./verify.js"');
   });
@@ -519,12 +521,23 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       "collectStatusFacts",
       "createStatusCommandDefinition",
     ]);
-    expect(exported(`${CLI_DIR}/commands/queue.ts`)).toEqual(["createQueueReadyCommandDefinition"]);
+    expect(exported(`${CLI_DIR}/commands/queue.ts`)).toEqual([
+      "createQueueReadyCommandDefinition",
+      "toQueueReadData",
+      "toQueuePlanData",
+      "createQueueCommandDefinition",
+      "QUEUE_MUTATION_RESULT_VALUES",
+      "QUEUE_CLAIM_RESULT_VALUES",
+      "QUEUE_RELEASE_RESULT_VALUES",
+      "QUEUE_MAX_NEXT",
+      "QUEUE_MAX_REFERENCE_CHARS",
+    ]);
+    expect(exported(`${CLI_DIR}/commands/lanes.ts`)).toEqual(["createLanesCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/retro.ts`)).toEqual(["createRetroCommandDefinition"]);
     expect(exported(`${CLI_DIR}/commands/spend.ts`)).toEqual(["createSpendCommandDefinition"]);
   });
 
-  test("only blockers, board, brief, closeout, db, doctor, merge, plan, provider, queue, retro, spend, status, verify, and watchdog declare the optional human-text renderer", () => {
+  test("only blockers, board, brief, closeout, db, doctor, lanes, merge, plan, provider, queue, retro, spend, status, verify, and watchdog declare the optional human-text renderer", () => {
     const declarers = listTypeScriptFiles(ROOT, `${CLI_DIR}/commands`).filter((file) =>
       readFileSync(join(ROOT, file), "utf8").includes("humanText"),
     );
@@ -535,6 +548,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       `${CLI_DIR}/commands/closeout.ts`,
       `${CLI_DIR}/commands/db.ts`,
       `${CLI_DIR}/commands/doctor.ts`,
+      `${CLI_DIR}/commands/lanes.ts`,
       `${CLI_DIR}/commands/merge.ts`,
       `${CLI_DIR}/commands/plan.ts`,
       `${CLI_DIR}/commands/provider.ts`,

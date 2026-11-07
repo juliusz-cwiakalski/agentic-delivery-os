@@ -1,0 +1,14 @@
+{
+  "queueRows": [
+    "queue.dependency-cycle",
+    "queue.lease-conflict",
+    "queue.park-condition-stuck",
+    "queue.entry.unobserved",
+    "queue.precondition.unmet"
+  ],
+  "collectorIds": ["tracker", "lanes"],
+  "collectorFamily": {
+    "prefix": "status.collector.",
+    "suffix": ".unavailable"
+  }
+}

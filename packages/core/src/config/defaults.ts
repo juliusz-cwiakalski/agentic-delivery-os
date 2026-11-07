@@ -65,6 +65,14 @@ export const PRODUCTION_DEFAULTS = {
     "liveness-interval": 30000,
     "restart-budget": 3,
   },
+  queue: {
+    "lease-ttl": 90000,
+    "park-recheck": {
+      "provider-window": 60000,
+      "provider-quota": 300000,
+      preemption: 60000,
+    },
+  },
 } as const;
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>

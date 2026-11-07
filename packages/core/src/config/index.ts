@@ -11,7 +11,10 @@ export {
   LANE_BRANCH,
   type LaneSettings,
   PRODUCTION_CATALOG,
+  QUEUE_BRANCH,
+  type QueueSettings,
   resolveLaneSettings,
+  resolveQueueSettings,
 } from "./catalog.js";
 export { defaultsFor, PRODUCTION_DEFAULTS } from "./defaults.js";
 export {

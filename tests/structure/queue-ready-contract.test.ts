@@ -8,6 +8,7 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import * as contracts from "../../packages/core/src/contracts/index";
 import {
   QUEUE_READY_ASSOCIATED_COUNT_RANGE,
   QUEUE_READY_BRANCH_SEGMENT_MIN,
@@ -49,9 +50,8 @@ import {
   STATUS_SOURCE_ITEM_LIMIT,
   STATUS_SOURCE_PIPELINE_LIMIT,
 } from "../../packages/core/src/contracts/index";
-import * as contracts from "../../packages/core/src/contracts/index";
-import * as domain from "../../packages/core/src/domain/index";
 import * as ciResult from "../../packages/core/src/domain/ci-result";
+import * as domain from "../../packages/core/src/domain/index";
 import * as core from "../../packages/core/src/index";
 
 const ROOT = process.cwd();
@@ -283,7 +283,7 @@ describe("TC-QREADY-024 declared constants and closed vocabularies", () => {
   test("the human segment cap is byte-named and the old character name is gone", () => {
     expect(QUEUE_READY_MAX_HUMAN_SEGMENT_BYTES).toBe(32);
     const oldName = ["QUEUE_READY_MAX_HUMAN_SEGMENT", "CHARS"].join("_");
-    expect(Object.prototype.hasOwnProperty.call(contracts, oldName)).toBe(false);
+    expect(Object.hasOwn(contracts, oldName)).toBe(false);
   });
 
   test("the queue-ready public additions are exactly evaluateQueueReady and renderQueueReadyHuman", () => {

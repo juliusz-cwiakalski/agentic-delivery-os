@@ -29,6 +29,7 @@ export const DOMAIN_KINDS = [
   "harness",
   "retro",
   "spend",
+  "queue",
   "dispatch",
 ] as const;
 
@@ -831,6 +832,17 @@ export const ERROR_TABLE = [
     summary: "The named board collector is unavailable.",
   },
   {
+    code: "status.collector.lanes.unavailable",
+    domainKind: "status",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Restore access to the named collector source and re-run the board; the board withheld its gates rather than display a partial picture.",
+    projectionClass: "platform-provider",
+    summary: "The named board collector is unavailable.",
+  },
+  {
     code: "merge.gates-stale",
     domainKind: "merge",
     category: "user",
@@ -1125,6 +1137,61 @@ export const ERROR_TABLE = [
       "Change the harness capability to attach-and-continue, or re-evaluate and accept the prefill re-pay cost, then retry the resume.",
     projectionClass: "user-validation",
     summary: "The resume path would re-pay prefill and is uneconomical.",
+  },
+  {
+    code: "queue.dependency-cycle",
+    domainKind: "queue",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Remove the named cycle-creating dependency edge (the existing path is named) and retry; nothing was appended.",
+    projectionClass: "user-validation",
+    summary: "The dependency edge would close a directed cycle.",
+  },
+  {
+    code: "queue.lease-conflict",
+    domainKind: "queue",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Wait for the named holder to release the repository lease or for its heartbeat age to reach the lease TTL, then retry; the live lease was not taken over.",
+    projectionClass: "user-validation",
+    summary: "The repository is leased by another holder.",
+  },
+  {
+    code: "queue.park-condition-stuck",
+    domainKind: "queue",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the named park whose condition cleared without recovery, restore the recovery append path, then retry; reads report the same identity as a report-only finding.",
+    projectionClass: "user-validation",
+    summary: "A cleared park stayed active without a recovery record.",
+  },
+  {
+    code: "queue.entry.unobserved",
+    domainKind: "queue",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare the named ref with `queue add` or correct the reference, then retry; no entry was fabricated.",
+    projectionClass: "user-validation",
+    summary: "The requested queue entry does not exist.",
+  },
+  {
+    code: "queue.precondition.unmet",
+    domainKind: "queue",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Resolve the named blocking precondition (readiness, active park, outranking action, or weight class) and retry; repository exclusivity is reported as a lease conflict, never this identity.",
+    projectionClass: "user-validation",
+    summary: "A claim precondition was not met.",
   },
   {
     code: "blockers.invalid-type",

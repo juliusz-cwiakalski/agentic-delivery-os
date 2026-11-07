@@ -142,6 +142,12 @@ const explicitSummary = (value: unknown): string | undefined => {
   return typeof summary === "string" && summary.length > 0 ? summary : undefined;
 };
 
+const explicitRemediationHint = (value: unknown): string | undefined => {
+  if (!isRecord(value)) return undefined;
+  const hint = value.remediationHint;
+  return typeof hint === "string" && hint.length > 0 ? hint : undefined;
+};
+
 const failureOutcome = (entry: ErrorTableEntry, value?: unknown): Outcome => {
   // No untrusted config summary, even when the discriminator was malformed and
   // classification contained it as fallback.internal.
@@ -151,9 +157,12 @@ const failureOutcome = (entry: ErrorTableEntry, value?: unknown): Outcome => {
       (typeof value.code === "string" && value.code.startsWith("config.")));
   const summary =
     configShaped || entry.domainKind === "config" ? undefined : explicitSummary(value);
+  const hint =
+    configShaped || entry.domainKind === "config" ? undefined : explicitRemediationHint(value);
+  const resolved = hint === undefined ? entry : { ...entry, remediationHint: hint };
   return summary === undefined
-    ? { type: "failure", entry, ...(value === undefined ? {} : { value }) }
-    : { type: "failure", entry, summary, ...(value === undefined ? {} : { value }) };
+    ? { type: "failure", entry: resolved, ...(value === undefined ? {} : { value }) }
+    : { type: "failure", entry: resolved, summary, ...(value === undefined ? {} : { value }) };
 };
 
 const invocationFailure = (reason: string): Outcome => ({

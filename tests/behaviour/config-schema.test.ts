@@ -27,6 +27,7 @@ describe("TC-CONFIG-008/009/011 canonical schema, partial and final", () => {
       "merge",
       "harness",
       "lane",
+      "queue",
     ]);
     expect(PRODUCTION_SCHEMA).toEqual(generateConfigSchema(PRODUCTION_CATALOG));
     const result = resolveConfig();

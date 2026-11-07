@@ -1,0 +1,8 @@
+{
+  "path": [
+    "queue plan --next 1",
+    "queue claim GH-320 --holder one-shot-1",
+    "queue release GH-320 --holder one-shot-1"
+  ],
+  "daemon": "absent"
+}

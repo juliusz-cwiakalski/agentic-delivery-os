@@ -1,0 +1,15 @@
+{
+  "reasons": [
+    "dependency-open",
+    "dependency-unobserved",
+    "tier-unknown",
+    "owner-gate",
+    "ci-failed",
+    "provider-chain-parked",
+    "parked:<cause>",
+    "park-condition-stuck",
+    "outranked",
+    "weight-class",
+    "no-eligible-action"
+  ]
+}

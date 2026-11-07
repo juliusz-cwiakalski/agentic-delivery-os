@@ -82,6 +82,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "merge.transaction-aborted",
   // GH-236 pins the spend read-side identity exactly; it is a two-segment code.
   "spend.telemetry-absent",
+  // GH-237 pins the four two-segment queue identities exactly.
+  "queue.dependency-cycle",
+  "queue.lease-conflict",
+  "queue.park-condition-stuck",
+  "queue.entry.unobserved",
 ]);
 
 const isValidCode = (code: string): boolean =>
@@ -752,7 +757,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, `spend`, and `dispatch`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, `spend`, `dispatch`, and `queue`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -770,7 +775,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "blockers")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "spend")).toHaveLength(1);
-    expect(entries).toHaveLength(99);
+    expect(entries).toHaveLength(105);
   });
 });
 
@@ -846,7 +851,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(99);
+    expect(entries).toHaveLength(105);
     expect(db).toHaveLength(4);
   });
 
@@ -1071,7 +1076,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(99);
+    expect(entries).toHaveLength(105);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1354,7 +1359,7 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(22);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(26);
   });
 });
 
@@ -1408,7 +1413,7 @@ describe("TC-DOCTOR-020 the doctor kind has exactly one row and leaves the table
     const row = `| doctor.check.failed | doctor | user | false | not_landed | ${DOCTOR_HINT} | user-validation | ${DOCTOR_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     expect(doc).toContain(
-      "`status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, `spend`, and `dispatch`",
+      "`status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, `dispatch`, `spend`, and `queue`",
     );
   });
 
@@ -1646,7 +1651,7 @@ describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(99);
+    expect(entries).toHaveLength(105);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1717,7 +1722,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(98);
+    expect(delivered).toHaveLength(104);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1736,12 +1741,104 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("99 identities");
+    expect(doc).toContain("105 identities");
   });
 
   test("the documented table is complete in both directions", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     for (const entry of spend) expect(doc).toContain(`| ${entry.code} |`);
     expect(doc.split("| spend.telemetry-absent |").length - 1).toBe(1);
+  });
+});
+
+/**
+ * TC-VOCAB-002 (GH-237): the `queue` kind declares exactly the five Appendix F
+ * rows, each synced into the documented table, and the collector-id set grew by
+ * exactly one id without touching the family shape.
+ */
+describe("TC-VOCAB-002 the queue kind declares exactly five rows", () => {
+  const QUEUE_ROWS = [
+    [
+      "queue.dependency-cycle",
+      "user",
+      false,
+      "Remove the named cycle-creating dependency edge (the existing path is named) and retry; nothing was appended.",
+      "The dependency edge would close a directed cycle.",
+    ],
+    [
+      "queue.lease-conflict",
+      "transient",
+      true,
+      "Wait for the named holder to release the repository lease or for its heartbeat age to reach the lease TTL, then retry; the live lease was not taken over.",
+      "The repository is leased by another holder.",
+    ],
+    [
+      "queue.park-condition-stuck",
+      "platform",
+      false,
+      "Inspect the named park whose condition cleared without recovery, restore the recovery append path, then retry; reads report the same identity as a report-only finding.",
+      "A cleared park stayed active without a recovery record.",
+    ],
+    [
+      "queue.entry.unobserved",
+      "user",
+      false,
+      "Declare the named ref with `queue add` or correct the reference, then retry; no entry was fabricated.",
+      "The requested queue entry does not exist.",
+    ],
+    [
+      "queue.precondition.unmet",
+      "user",
+      false,
+      "Resolve the named blocking precondition (readiness, active park, outranking action, or weight class) and retry; repository exclusivity is reported as a lease conflict, never this identity.",
+      "A claim precondition was not met.",
+    ],
+  ] as const;
+
+  test("the five rows carry their declared classification and round-trip", () => {
+    expect(DOMAIN_KINDS).toContain("queue");
+    const queue = entries.filter((entry) => entry.domainKind === "queue");
+    expect(queue.map((entry) => entry.code)).toEqual(QUEUE_ROWS.map(([code]) => code));
+    for (const [code, category, retryable, hint, summary] of QUEUE_ROWS) {
+      expect(classifyDomainKind("queue", code)).toMatchObject({
+        code,
+        domainKind: "queue",
+        category,
+        retryable,
+        consequence: "not_landed",
+        projectionClass: "user-validation",
+        remediationHint: hint,
+        summary,
+      });
+      expect(resolveAppErrorCode(code)).toEqual({
+        ok: true,
+        entry: classifyDomainKind("queue", code),
+      });
+      expect(classifyThrown({ kind: "queue", code })).toEqual(classifyDomainKind("queue", code));
+    }
+    expect(() => classifyDomainKind("queue")).toThrow();
+    expect(classifyThrown({ kind: "queue" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    expect(classifyThrown({ kind: "queue", code: "state.store.torn" }).code).toBe(
+      FALLBACK_INTERNAL_CODE,
+    );
+  });
+
+  test("the documented queue rows agree exactly once and match every column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [code, category, retryable, hint, summary] of QUEUE_ROWS) {
+      const row = `| ${code} | queue | ${category} | ${String(retryable)} | not_landed | ${hint} | user-validation | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
+  });
+
+  test("the collector-id set extends by exactly the lanes id", () => {
+    expect([...BOARD_COLLECTOR_IDS]).toEqual(["tracker", "lanes"]);
+    expect(
+      entries.filter((entry) => entry.code.startsWith("status.")).map((entry) => entry.code),
+    ).toEqual(
+      BOARD_COLLECTOR_IDS.map(
+        (id) => `${BOARD_COLLECTOR_ERROR_PREFIX}${id}${BOARD_COLLECTOR_ERROR_SUFFIX}`,
+      ),
+    );
   });
 });

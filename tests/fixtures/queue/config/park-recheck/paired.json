@@ -1,0 +1,12 @@
+{
+  "types": ["provider-window", "provider-quota", "preemption"],
+  "defaults": {
+    "provider-window": 60000,
+    "provider-quota": 300000,
+    "preemption": 60000
+  },
+  "slowMs": 60000,
+  "fastMs": 5000,
+  "earlyPassOffsetMs": 5001,
+  "latePassOffsetMs": 60001
+}

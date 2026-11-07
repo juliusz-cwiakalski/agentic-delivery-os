@@ -1,0 +1,5 @@
+{
+  "repository": "github.com/owner/repo-alpha",
+  "holders": ["holder-a", "holder-b"],
+  "expected": "one-acquisition-one-conflict"
+}

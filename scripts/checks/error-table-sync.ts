@@ -140,6 +140,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "merge.transaction-aborted",
   // GH-236 pins the spend read-side identity exactly; it is a two-segment code.
   "spend.telemetry-absent",
+  // GH-237 pins the four two-segment queue identities exactly.
+  "queue.dependency-cycle",
+  "queue.lease-conflict",
+  "queue.park-condition-stuck",
+  "queue.entry.unobserved",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;

@@ -1,0 +1,826 @@
+# GH-237 implementation plan — M1-S17: Scheduling engine: queue, lanes, dependency batching
+#
+# Sources (single source of truth):
+#   - Spec:  ./chg-GH-237-spec.md (v1.3; F-1..F-12; 22 ACs AC-F1-1, AC-F2-1,
+#     AC-F3-1(a)/(b), AC-F3-2, AC-F4-1, AC-F4-2, AC-F4-3, AC-F5-1, AC-F5-2,
+#     AC-F6-1, AC-F6-2, AC-F7-1, AC-F7-2, AC-F8-1, AC-F8-2, AC-F9-1,
+#     AC-F10-1, AC-F10-2, AC-F10-3, AC-F11-1, AC-F11-2, AC-F12-1;
+#     DM-1..DM-14; EVT-1..EVT-6; NFR-1..NFR-14; DEC-1..DEC-13;
+#     RSK-1..RSK-10; OQ-1..OQ-12 (OQ-12 delivery-bound naming);
+#     §5.2 clarifications C-1..C-7; §18 delivery order; §24 Appendix A
+#     seeded scenarios, Appendix B precedence order, Appendix C envelope
+#     shapes, Appendix D record kinds, Appendix E configuration keys,
+#     Appendix F error identities, Appendix G ticket AC map)
+#   - Test plan: ./chg-GH-237-test-plan.md (v1.3; 66 TCs
+#     TC-SCHED-001..016, TC-LEASE-001..013, TC-WEIGHT-001..004,
+#     TC-DEPEND-001..006, TC-RANK-001..006, TC-PARK-001..008,
+#     TC-LANES-001..006, TC-VOCAB-001..006, TC-COMPAT-001; §3 coverage;
+#     §4 layer table; §5.1 index; §5.2 scenario details; §6 fixture corpus;
+#     §7 automation mapping, §7.1 phase-surface split and §7.2
+#     implementation-order steps 1-8;
+#     §8.3 OQ-T1..OQ-T8, OQ-T8 remains delivery-bound)
+#   - Design baseline: doc/planning/oss-tooling/milestones/m1/contracts.md,
+#     commands/queue.md, commands/lanes.md, architecture.md,
+#     test-scenarios.md (SC-M1-08/09/10/11/17/17b),
+#     doc/planning/concepts/parallel-delivery.md,
+#     doc/planning/oss-tooling/cli-command-registry.md
+#   - Delivered substrate reused, never re-implemented:
+#     contracts/queue-ready.ts + domain/queue-ready.ts + commands/queue.ts
+#     (ready only), contracts/state.ts + state/**, contracts/plan.ts +
+#     domain/plan-validate.ts and plan-overlap.ts, contracts/verify-deploy.ts
+#     + domain/verify-deploy.ts, contracts/economics.ts +
+#     domain/economics-view.ts, config/{catalog,defaults,schema,resolver}.ts,
+#     contracts/{result,error-table,envelope}.ts + cli/classify.ts,
+#     contracts/owner-gate-sla.ts (collector family), provider parks.
+#
+# TC-mapping obligation: all 66 TCs are mapped onto Phases 1-9 below (Phases 1-8
+# as delivered; Phase 9 completes the review-iteration-1 remediation rows and
+# adds no new TC id). TCs whose
+# halves land in different phases are marked in `coverage` with their completing
+# phase (GH-225/GH-234 discipline). Test-plan §7.1 tabulates 21 TCs along the
+# surface boundary — TC-SCHED-004, TC-SCHED-010,
+# TC-SCHED-012, TC-RANK-001, TC-RANK-004, TC-RANK-005, TC-LEASE-001,
+# TC-LEASE-002, TC-LEASE-004, TC-LEASE-005, TC-LEASE-006, TC-LEASE-010,
+# TC-LEASE-011, TC-LEASE-012, TC-LEASE-013, TC-WEIGHT-004, TC-PARK-001,
+# TC-PARK-002, TC-PARK-004, TC-PARK-007, TC-PARK-008 — and its footer plus its
+# rule extend the set to TC-SCHED-002, TC-SCHED-015, and TC-SCHED-001 (whose
+# `queue add|dep` invocation and `queue list` projection steps span both
+# surfaces), giving 24 partial TCs. TC-PARK-004 is partial since the v1.3
+# iteration-2 remediation: its closed-set, pairing, and one-active-park
+# domain/state rows land in Phase 5 and step 8's `queue release --park` grammar
+# and `fallback.invocation` exit row complete in Phase 7. Those TCs are never
+# marked "full" in Phases 2-6: their domain/state rows are marked partial with
+# the literal `Phase 7` completing surface, and their CLI grammar, envelope,
+# `result=`, `selectedRef`, `degraded[]`, and exit-projection rows are the
+# corresponding Phase 7 coverage entries. Each phase test gate invokes only the
+# rows its own surface can run (test-plan §7.1 rule).
+# Reconciliation notes against test-plan §7 implementation-order mapping (no
+# oracle is reshaped, only placement):
+#   - R-13 placement reconciliation: test-plan v1.2 §7.2 presents the
+#     implementation order as eight plan phases (1-8), including a dedicated
+#     Phase 7 CLI-surface step (queue family, envelopes, exits, hermetic
+#     battery) between the lane view (Phase 6) and documentation
+#     reconciliation (Phase 8). Spec §18's high-level delivery-order bullet
+#     remains a seven-step narrative that folds the command surface into the
+#     sequence without a separate bullet; the plan's Phase 7 is that step. This
+#     is a placement refinement only — no oracle, AC, NFR, or TC assertion is
+#     reshaped, and the CLI surface is separated from the lane view because the
+#     queue command family is where the envelope/exit oracle completes while
+#     the lane view completes its own surface in Phase 6.
+#   - R-12 status-digest follow-up (named, not assumed away): the status
+#     digest's `lanes-or-queue` section, its expected-story reference, and its
+#     `engine-not-delivered` reason are reconciled by that spec's own owner as
+#     a named follow-up. Owner: coordinator/PM. Trigger: the status digest's
+#     own reconciliation cycle (not this change). Tracking route: a tracker
+#     ticket created only with human approval — PM is not authorized to create
+#     one autonomously — and the follow-up is recorded in the digest spec's
+#     reconciliation notes at that time. This plan does not edit
+#     doc/spec/features/feature-status-digest.md (NG-10) and does not assert
+#     that the digest's declared gap is closed.
+#   - TC-DEPEND-003..005 are grouped with parks in §7 step 5. They land in
+#     Phase 3 (gates) here: the deploy-verified gate is Appendix B step 2, a
+#     hard exclusion evaluated inside the readiness/precedence pass. It needs no
+#     park record and is independently testable and revertible in Phase 3.
+#   - TC-RANK-003 (the preemption action is emitted) lands in Phase 3 with the
+#     rank/precedence pass, driven by injected lease facts; TC-RANK-004
+#     (release + park in one fenced transaction) lands in Phase 5 with the park
+#     record it writes.
+#   - TC-LEASE-007 and TC-PARK-006 have a configuration-acceptance half in
+#     Phase 1 (key shape, defaults, invalid-value refusal) and a behaviour half
+#     that completes in Phases 4 and 5 respectively; `config.value.invalid` and
+#     `config.key.unknown` are asserted where the key is parsed.
+#   - TC-VOCAB-001 splits three ways: contract declarations in Phase 1,
+#     entry/dependency round-trip in Phase 2, lease/park/incident round-trip
+#     completion in Phase 5. TC-VOCAB-003 splits into the structure/sync half
+#     (Phase 1) and the lanes exit-2 half (Phase 6).
+#   - TC-SCHED-002 (state/graph half Phase 2, CLI `result=noop` rows Phase 7),
+#     TC-SCHED-015 (state/graph half Phase 2, `queue add|list` rows Phase 7),
+#     TC-SCHED-012 (queue read purity Phase 3, queue command-level zero-write
+#     rows Phase 7, lanes read purity Phase 6), and TC-SCHED-013 (determinism
+#     rows Phase 3, hermetic-suite rows Phase 7) are split along the surface
+#     boundary.
+#   - Phases 3-5 consume lease and park truth as injected facts. The
+#     store-backed folds land in Phase 4 (leases) and Phase 5 (parks), so each
+#     phase stays independently testable without a half-written store.
+#   - R-14 source-inventory obligation: `tests/structure/inventory.json` must
+#     equal the actual `packages/**` TypeScript file set, and
+#     `tests/structure/content-inventory.test.ts` requires a per-file executable
+#     allowance for any file that declares a value export. Every phase that
+#     creates a `packages/**` source file (Phases 1-6) therefore names
+#     tests/structure/inventory.json and tests/structure/content-inventory.test.ts
+#     in its `scope.files`, carries the registration task, and runs the
+#     inventory test in its gate. The two files are shared across those phases by
+#     design (shared-file declaration is expected).
+#   - R-15 type-probe obligation: `tests/types/queue-scheduling.type-test.ts` is
+#     a compile-only probe. It is never invoked through `bun test` (Bun's
+#     discovery rejects `*.type-test.ts`); it compiles through `pnpm typecheck`,
+#     which reads `tests/types/tsconfig.json`, and `pnpm typecheck` is the first
+#     gate line of every implementation phase (Phase 8's aggregate `pnpm check`
+#     includes typecheck) — the GH-243 pattern.
+#
+# Delivery decisions recorded by this plan (spec/test-plan leave them
+# delivery-bound; each is a placement, spelling, or composition pin, never a
+# behaviour change):
+#   - Placement: the NEW scheduling contract module is
+#     packages/core/src/contracts/queue.ts (the delivered contracts/queue-ready.ts
+#     stays byte-unchanged; the scheduler imports its condition ids, tri-state,
+#     evidence vocabulary, and reason vocabulary as types/data). Additive edits
+#     only in contracts/index.ts (exports), contracts/error-table.ts (the
+#     `queue` domain kind and five rows), and contracts/owner-gate-sla.ts (the
+#     closed collector-id set extends to {tracker, lanes}).
+#   - Placement: pure policy lives in NEW flat modules under
+#     packages/core/src/domain/ — queue-graph.ts, queue-readiness.ts,
+#     queue-weight.ts, queue-deploy-gate.ts, queue-precedence.ts, queue-rank.ts,
+#     queue-lease.ts, queue-park.ts, queue-lanes.ts (the provider/parks.ts and
+#     domain/economics-*.ts flat-module precedent). Queue-ledger composition
+#     lives in NEW packages/core/src/app/queue.ts (ADR-0003: state imports
+#     contracts only, app imports contracts + domain; the delivered
+#     dependency-cruiser boundary is green — R-17/F-17). CLI surfaces: extend
+#     packages/cli/src/commands/queue.ts, add packages/cli/src/commands/lanes.ts,
+#     compose in packages/cli/src/edge.ts.
+#   - Composition seam: createQueueReadyCommandDefinition and the `options.queueReady`
+#     edge seam are preserved unchanged so `queue ready` behaviour and output stay
+#     byte-identical. The full family is a NEW createQueueCommandDefinition(runtime)
+#     selected by the edge only when the scheduling runtime (`options.queue`) is
+#     supplied; the ready-only definition remains the fallback. lanes composes
+#     through a NEW options.lanes seam. No existing caller is rewired.
+#   - Record kinds, payload schemas, and store keys are the Appendix D spellings
+#     verbatim: queue.entry / delivery.queue.entry.v1 / queue.entries:<REF>;
+#     queue.dependency / delivery.queue.dependency.v1 / queue.deps:<REF>;
+#     queue.lease / delivery.queue.lease.v1 / queue.leases:<repoKey>;
+#     queue.park / delivery.queue.park.v1 / queue.parks:<REF>;
+#     queue.incident / delivery.queue.incident.v1 / queue.incidents:<REF or repoKey>;
+#     derived document delivery.queue.graph.v1 at queue-graph.json. No schema
+#     version bump, no migration, no backfill.
+#   - Lane idle-reason spellings (OQ-T8 / GAP-T5): the closed set is the
+#     delivered queue-ready condition-reason vocabulary (the Appendix B tokens
+#     dependency-open, dependency-unobserved, producer-not-landed,
+#     deploy-unverified, owner-gate, tier-unknown, ci-<reason>,
+#     provider-<reason>, not-ready) plus the declared scheduler-hold tokens
+#     lease-held, repo-claimed-in-pass (the per-pass projection reason, distinct
+#     from lease-held which requires an actual lease), weight-class,
+#     close-first, producer-first, outranked, no-eligible-action,
+#     park-condition-stuck (a blocking reason, not a park cause),
+#     parked:<cause> (cause drawn from the closed park-cause set), and
+#     restart-budget-exhausted for the failed state. Reasons are resolved from
+#     that closed set and never free-form; a rename is a contract change, not a
+#     test change.
+#   - Concurrency proof: the fence harness under
+#     tests/fixtures/queue/leases/fence-harness.ts schedules a pre-fence barrier
+#     and drains the single-writer fence in a declared order over the injected
+#     StateStorePort fake. No real OS race, worker thread, sleep, or multi-process
+#     memory assumption. NFR-3 is asserted at the algorithmic contract (GAP-T3).
+#   - Doc placement: the default is a NEW
+#     doc/spec/features/feature-scheduling-engine.md per the first-spec rule
+#     (the engine is a distinct capability surface); feature-queue-ready.md is
+#     reconciled as the unaffected neighbour. Final placement is confirmed at
+#     doc-sync (lifecycle phase 7); the docs-touch list is declared as Phase 8
+#     scope.
+#
+# Open questions carried, not invented: OQ-2 (preemption authority) and OQ-4
+# (the public claim/release surface once M1-S9 lands) are deferred by PM decision
+# to M1-S18 and M1-S9 planning; this plan computes the preemption action and
+# requires an explicit release. OQ-12 (delivery-bound lane idle-reason spellings)
+# is closed for delivery by the closed-set pin above; there is no plan-level
+# blocking question. OQ-1 is the explicit-membership assumption (Section 12);
+# OQ-3 and OQ-5..OQ-11 are resolved by spec v1.2 and carried as stated.
+#
+# DoR iteration-1 remediation (2026-11-07): findings R-06 (placement side),
+# R-12, R-13, R-14 and R-15 are addressed in this revision. R-06: the 23 partial
+# TCs (the 20 tabulated in test-plan §7.1 plus TC-SCHED-001, TC-SCHED-002 and
+# TC-SCHED-015) are marked partial where their
+# CLI rows do not yet exist, and each phase gate names only the rows it can run.
+# R-12: the status-digest reconciliation is a named follow-up with an owner
+# (coordinator/PM), a trigger (the digest's own reconciliation cycle), and a
+# tracking route that requires human approval; no ticket is created here and the
+# digest spec is not edited (NG-10). R-13: the eight-phase order (dedicated
+# Phase 7 CLI surface between the lane view and docs reconciliation) is
+# reconciled in the header note above. R-14: every phase that creates a
+# `packages/**` source file registers it in tests/structure/inventory.json with
+# an executable allowance in tests/structure/content-inventory.test.ts and runs
+# the inventory test. R-15: the `*.type-test.ts` probe is compiled by
+# `pnpm typecheck`, never invoked through `bun test`. Pinned behavior, the
+# M1-S9/M1-S18 exclusions, and the declared scope are unchanged by this
+# remediation; TC-PARK-008 is the only added TC (66 total).
+#
+# DoR iteration-2 remediation (2026-11-07): findings R2-01, R2-02, R2-05, R2-06
+# and R2-07 are addressed in this revision against spec v1.3 and test plan v1.3.
+# R2-02: TC-PARK-004 is now partial — Phase 5 covers the closed-set, pairing,
+# and one-active-park domain/state rows and Phase 7 adds step 8's
+# `queue release --park` grammar and `fallback.invocation` exit row (added to
+# task 7.8 and the Phase 7 coverage list). R2-01 (plan half): AC-F1-1 no longer
+# renders the recorded root, so the Phase 7 coverage claim for TC-SCHED-001 now
+# names the `queue list` projection of the entry, its normalized repository key,
+# priority, and edges only; the read surfaces render the normalized key alone
+# and the goldens assert no absolute path and no `root` field — the recorded
+# root is internal entry state used solely for deploy-expectation discovery
+# (DM-1, DM-12). R2-05: Phase 2 tasks 2.1/2.3 now explicitly record the
+# declaring checkout's repository root alongside the normalized key on the
+# entry (absolute, internal-only, never rendered) and carry it on the internal
+# entry record only — never in the derived graph document and never in any
+# read-surface projection — since Phase 3 task 3.3 and Phase 7 task 7.3 consume
+# the recorded root for producer-root discovery. R2-06: the nonexistent
+# `tests/behaviour/queue-ready.test.ts` filter is removed from the Phase 2, 4,
+# and 7 gates and replaced where a preservation check is intended with the
+# existing `tests/behaviour/queue-ready-output.test.ts` suite (the Phase 7 gate
+# already runs the output, command, golden, and structure suites). R2-07: task
+# 5.7 now states that `queue.park` is one of this change's five NEW record
+# kinds, that `clearObservedAt`/`recoveryState` are fields of that same new kind
+# from its first write, and that the clear-observed marker is another record of
+# that same kind — not a sixth kind and not a change to a pre-existing kind;
+# the "existing payload schema / older park record" wording is gone. No TC is
+# added or removed (66 total), no oracle is reshaped, and no declared scope
+# changes.
+#
+# Review iteration-1 remediation (2026-11-07): code-review/review-iter-1.yaml
+# returned FAIL with two high spec-compliance gaps and eight medium findings.
+# Phase 9 (tasks 9.1-9.12) closes F-1..F-22 without renumbering or reordering
+# Phases 1-8:
+#   - F-1: a real park due check (elapsed >= recheckMs), and TC-PARK-006 is
+#     rewritten to the two-pass 60 000-vs-5 000 ms fixtures for all three
+#     condition types.
+#   - F-2: producer-root discovery plus producer-bound
+#     merge.deploy-expectations resolution in the edge (exact normalized-key
+#     match, collision/unreadable/invalid -> unknown), with real multi-repo
+#     TC-DEPEND-003/004 cases.
+#   - F-3..F-14: the daemon-naming --watch hint on both surfaces; queue ready
+#     preservation through the full family (3-8 refs); release+park atomicity
+#     against a second-append failure; enforced NFR-9 bounds; two-active-park
+#     fail-closed; command-level zero-write and real purity/mixed-corpus/
+#     config-TTL tests; the code-point comparator; truthful reason tokens and
+#     idle reasons; no fabricated mutation-envelope entry.state.
+#   - F-15/F-16 chosen resolutions: PRODUCE the `released` recovery state as the
+#     compensating park marker on the release+park path (closed set unchanged,
+#     no spec removal); ADD `queue release --park provider-window --until <iso>`
+#     (required for that cause, refused for the others) instead of the
+#     release-instant expiry.
+#   - F-17: the earlier-phase ledger-composition scope spelling is corrected to
+#     `packages/core/src/app/queue.ts` (ADR-0003), so no phantom file remains.
+#   - F-18: the status-digest doc-only edit is recorded as an accepted declared
+#     exception to NG-10; DoR N2 (AC-F12-1 -> TC-COMPAT-001 in task 8.8), N3
+#     (explicit mutation-envelope degraded[] assertion), and N4 (the
+#     root-in-entry-projection wording) are closed.
+#   - F-19..F-22: golden titles, the deferred-composition note, the stale
+#     queue.ts header, and the CLI park exit-2/stuck-exit-0 cases.
+# No new TC id is added: every gap extends or rewrites the named existing TC
+# (66 total). Phase 9 is delivery kind and keeps the plan-level leases and
+# weight class.
+#
+# Tier rationale: `full` — 12 capabilities, 22 ACs, 66 automated TCs across the
+# core contract/domain/state tiers and the CLI surface, cross-cutting vocabulary
+# growth (five record kinds, five error rows, one collector id, one configuration
+# branch), security_impact medium (structural mutual exclusion, fail-closed
+# reads), risk_level high (RSK-1 lease races, RSK-6 deploy gating). All phases
+# are delivery kind; plan-level defaultLeases/defaultWeightClass apply. Per-phase
+# completion: one Conventional Commit (the `summary`, landed via @committer) plus
+# the `testGate` commands passing; typed doneArtifacts are declared on the final
+# phase where the evidence exists.
+#
+# Honest boundaries (excluded from this plan; reviewers should see them here):
+#   - M1-S18 (GH-238) owns the resident daemon, control socket, NDJSON wire
+#     protocol, install/uninstall, startup reconciliation, automatic preemption
+#     execution, and live `--watch` streaming. This plan delivers one-shot
+#     scheduling only; `--watch` is refused through fallback.invocation (NG-2,
+#     NG-3, DEC-7).
+#   - M1-S9 (GH-239) owns dispatch, session spawn, delivery execution, harness
+#     selection, resume, and handover. This plan delivers claim/release and the
+#     scheduling step they compose (NG-1, DEC-6).
+#   - Also out: tracker writes, merge execution and gate evaluation, worktree
+#     leases, capacity/bandwidth/CI-slot policy, fleet/multi-host coordination,
+#     status-digest behaviour (NG-4..NG-10).
+#
+# Invariants carried by every phase (spec §9, §21; DEC-1..DEC-13):
+# scheduling policy is pure and runtime-neutral (imports only core contracts and
+# domain peers; NFR-1, NFR-3, NFR-14); an identical state + injected clock
+# produces byte-identical payloads, findings, reasons, and human text (NFR-1);
+# read surfaces perform 0 writes, 0 fences, 0 appends, 0 derived replacements
+# (NFR-2); the claim re-reads inside the fence and verifies exactly one new lease
+# post-append (NFR-3); a live lease is never taken over and every takeover is
+# evidenced (NFR-4); a failed, unavailable, unread or unresolved source is
+# evidence and `unknown`, never `satisfied`, never free, never not-parked
+# (NFR-13); `queue ready` stays byte-identical (NG-4, AC-F12-1); the state schema
+# keeps its version and existing stores read verified-empty (NFR-8); no secret,
+# credential, raw provider payload, or free-form message body enters any record,
+# envelope, finding, or incident (NFR-12); the test battery is hermetic — zero
+# live network, zero live credential reads, zero real sleeps, zero sockets
+# (NFR-7); no capacity, bandwidth, concurrency, or CI-slot key or code path
+# exists (DEC-1, NFR-14).
+#
+# Validation: `plan validate` must return valid for this file; phases are
+# ordered, scopes are concrete, and every interaction target is covered by its
+# phase scope. Shared files across phases are named in the task text
+# (domain/index.ts, app/queue.ts, commands/index.ts, the shared behaviour and
+# structure test files, tests/structure/inventory.json, and
+# tests/structure/content-inventory.test.ts) so sequencing is honest rather than
+# implied.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-237
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  escalationTriggers:
+    - "a lease can be acquired twice for one repository, or a live lease is taken over"
+    - "a read surface writes, or serves an empty/partial schedule on unreadable lease or park state"
+    - "queue ready output or an existing error row changes"
+    - "a capacity, bandwidth, concurrency-budget, or CI-slot key or code path is introduced"
+    - "a park resumes without a recovery incident, or a cleared park stays active without the stuck finding"
+    - "deploy expectations are read from anywhere other than the producer repository's own configuration bound to its recorded key"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Vocabulary, typed queue configuration, additive record kinds, and the five queue error identities (contracts + config + documented tables)"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/queue.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/owner-gate-sla.ts
+        - packages/core/src/config/catalog.ts
+        - packages/core/src/config/schema.ts
+        - packages/core/src/config/defaults.ts
+        - packages/core/src/index.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/structure/queue-scheduling-contract.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/owner-gate-sla-contract.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+        - tests/checks/error-table-sync.test.ts
+        - tests/types/queue-scheduling.type-test.ts
+      folders:
+        - tests/fixtures/queue/state/kinds
+        - tests/fixtures/queue/errors
+        - tests/fixtures/queue/vocabulary
+        - tests/fixtures/queue/config/branch
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/queue.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/owner-gate-sla.ts
+        role: producer
+    summary: "feat(GH-237): scheduling vocabulary, typed queue configuration branch, record kinds, and queue error rows"
+    tasks:
+      - "1.1 packages/core/src/contracts/queue.ts — NEW data-only contract module (types and `as const` data only; imports only `./queue-ready.js`, `./plan.js`, `./state.js`, and other `./` contract modules; no clock, env, fs, network, or call expression): the closed scheduling vocabulary of DM-1..DM-14 — lease scope set exactly {repo-exclusive, worktree} with repo-exclusive the only implemented value, lease lifecycle operations {acquired, renewed, released, taken-over}, lease fields and TTL semantics (DM-4), weight classes exactly {standard, heavy} with weightClassSource {declared, absent, plan-unreadable, plan-absent} (DM-7), rank classes exactly {merge-ready, in-review, resume-parked, new-start} in that order (DM-8), park causes and condition types as TWO distinct closed sets with their one-to-one pairing (DM-5): condition types exactly {provider-window, provider-quota, preemption} and causes exactly {provider-window, provider-quota, preempted-for-close-item}, paired cause `provider-window` <-> condition type `provider-window`, cause `provider-quota` <-> condition type `provider-quota`, cause `preempted-for-close-item` <-> condition type `preemption`; the sets are never conflated and never interchangeable (the `preemption` condition supplies no absolute expiry), recovery states {parked, clear-observed, recovered, released} (DM-5), incident types {park-auto-recovery, lease-stale-takeover} (DM-6), lane states {delivering, idle-with-reason, parked, merge-ready, in-review, failed} and the closed idle-reason set pinned in this plan's header (DM-11), precedence step ids 0..14 (Appendix B), and the bounded caps of NFR-9. Record kinds, payload schema identifiers, and store-scoped key prefixes are the Appendix D spellings verbatim, including the derived document delivery.queue.graph.v1 at queue-graph.json (DM-13). Envelope data shapes for queue list, plan, add, prioritize, dep, claim, release, and lanes list/show follow Appendix C exactly (DM-9, DM-10; lease, action, park, finding, degradation, truncation fields). [F-1, F-3, F-4, F-5, F-7, F-8, F-10, F-11, F-12; DM-1..DM-14; EVT-1..EVT-6; NFR-9, NFR-14; TC: TC-VOCAB-004, TC-VOCAB-005, TC-VOCAB-001 structure rows]"
+      - "1.2 packages/core/src/contracts/queue.ts — the record-kind boundary declarations the state ledgers consume (kind, identity field, field shapes, closed vocabularies, payload schema): one declaration per new kind plus the derived-document declaration, mirroring the phase.transition and merge.* boundary precedent. Declarations are additive inside delivery.state.v1; STATE_SCHEMA_VERSION is untouched. A wrong kind, a malformed payload, a duplicate acquisition for one holder, or a second active park for one entry is classified state.* and never a fabricated value (Appendix D). [F-12; EVT-1..EVT-5; NFR-8, NFR-11; TC: TC-VOCAB-001 structure half]"
+      - "1.3 Typed `queue` configuration branch (Appendix E, NFR-10): packages/core/src/config/catalog.ts gains the `queue` branch — `lease-ttl` as an integer millisecond scalar defaulting to 90000, and `park-recheck` as a `record` field kind with integer millisecond values whose valid child names are the three condition types and whose defaults are 60000 (provider-window), 300000 (provider-quota), 60000 (preemption). packages/core/src/config/defaults.ts ships those defaults so an absent branch is valid with `defaults` origins. packages/core/src/config/schema.ts needs no bespoke generator change (the record kind is already supported); the typed projection `resolveQueueSettings` lands beside `resolveLaneSettings` in catalog.ts and enforces: a `park-recheck.<type>` name outside the closed condition set is `config.key.unknown` naming the key; a non-integer, zero, or negative value is `config.value.invalid` naming the key; no invalid input silently falls back. No capacity, bandwidth, concurrency, or CI-slot key is added or reserved. [F-8, F-12; DEC-1; AC-F8-2; NFR-10, NFR-14; TC: TC-VOCAB-004 full, TC-LEASE-007 config half, TC-PARK-006 config half, TC-VOCAB-005 no-capacity-key rows]"
+      - "1.4 Error identities (Appendix F, NFR-11): packages/core/src/contracts/error-table.ts adds `queue` to DOMAIN_KINDS and exactly five rows — queue.dependency-cycle (user, not retryable, not_landed, user-validation), queue.lease-conflict (transient, retryable, not_landed, user-validation), queue.park-condition-stuck (platform, not retryable, not_landed, user-validation), queue.entry.unobserved (user, not retryable, not_landed, user-validation), queue.precondition.unmet (user, not retryable, not_landed, user-validation) — with remediation hints and summaries that name the real reachable behaviour. The closed collector-id set extends from {tracker} to {tracker, lanes} in packages/core/src/contracts/owner-gate-sla.ts (additive constant growth; the constant remains the single home of the closed set, its doc comment updated); the family shape, resolved row, and platform-provider exit-2 projection are unchanged and a family code naming an undeclared id stays fallback.internal. doc/spec/features/feature-result-contract.md gains the five queue rows and the status.collector.lanes.unavailable row in the SAME commit (bidirectional sync discipline); queue ready gains no row. [F-12; AC-F11-2, AC-F12-1; NFR-11, NFR-14; TC: TC-VOCAB-002 full, TC-VOCAB-003 structure half]"
+      - "1.5 tests/structure/queue-scheduling-contract.test.ts + tests/fixtures/queue/vocabulary/** + tests/fixtures/queue/state/kinds/** — the closed-set inventory: lease scopes exactly two with one implemented; rank classes ordered and exactly four; weight classes exactly two with the four source evidence values; park condition types exactly three and park causes exactly three as distinct closed sets with their declared one-to-one pairing (no cause is a condition type by accident and no unpaired token is accepted); recovery states exactly four; incident types exactly two; lane states exactly six; idle reasons drawn only from the declared closed set with no free-form string; record kinds exactly five plus one derived document, each with its own payload schema id and store-scoped key prefix distinct from state/command/engine schema ids; envelope field shapes per Appendix C in both directions; error rows present in the machine table, the documented table, the source references, and the fixtures; duplicate, wildcard, or extra entries fail by name; the new contract module is data-only (no call expressions, no runtime imports) and imports queue-ready rather than redefining a condition id, order, or tri-state. [F-12; NFR-11, NFR-14; TC: TC-VOCAB-001 structure rows, TC-VOCAB-002 sync rows, TC-VOCAB-003 structure rows, TC-VOCAB-005 full]"
+      - "1.6 tests/types/queue-scheduling.type-test.ts — a rank class, weight class, park condition type, park cause, recovery state, or lease scope literal outside its closed union fails typecheck; a widened string is not assignable; the idle-reason type admits only the declared set; payload schema and record-kind constants are literal-typed, not bare strings. This is a compile-only probe compiled by `pnpm typecheck` through tests/types/tsconfig.json (the GH-243 pattern), never a `bun test` target (Bun's discovery rejects `*.type-test.ts`). [NFR-14; TC: TC-VOCAB-005 type-discipline half]"
+      - "1.7 Register packages/core/src/contracts/queue.ts in tests/structure/inventory.json with its executable allowances in tests/structure/content-inventory.test.ts; update the collector-id equality assertion in tests/structure/owner-gate-sla-contract.test.ts to the spec-pinned {tracker, lanes} set (this is the required extension, not a weakened assertion); extend tests/structure/error-table.test.ts and tests/checks/error-table-sync.test.ts; run the sync check end to end. The same registration obligation repeats in every later phase that creates a `packages/**` source file (Phases 2-6); the two inventory files are shared across those phases by design. [F-12; NFR-11; TC: TC-VOCAB-002 tooling half, TC-VOCAB-003 sync half]"
+    coverage:
+      - "TC-VOCAB-004 (full)"
+      - "TC-VOCAB-005 (full)"
+      - "TC-VOCAB-002 (full; re-verified in Phase 8 after documented-table edits)"
+      - "TC-VOCAB-001 (structure half: five kinds plus the derived document declared with payload schemas and store keys; entry/dependency round-trip continues in Phase 2, lease/park/incident round-trip completes in Phase 5)"
+      - "TC-VOCAB-003 (structure and sync half: queue domain kind, five rows, collector-id set {tracker, lanes} across machine table, documented table, source references, and fixtures; lanes exit-2 behaviour half completes in Phase 6)"
+      - "TC-LEASE-007 (config half: lease-ttl accepted, non-integer/zero/negative refused config.value.invalid naming the key; staleness behaviour half completes in Phase 4)"
+      - "TC-PARK-006 (config half: park-recheck.<type> accepted with defaults, unknown type config.key.unknown, invalid value config.value.invalid naming the key; resume-timing half completes in Phase 5)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/error-table.test.ts tests/structure/owner-gate-sla-contract.test.ts tests/structure/content-inventory.test.ts tests/structure/config-contract.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts"
+
+  - id: 2
+    title: "Queue declaration and graph folding — fenced intent records carrying the normalized repository key plus the internal-only recorded root for producer discovery, replay idempotence, cycle refusal before append, and the rebuildable derived graph"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/queue-graph.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/app/queue.ts
+        - packages/core/src/state/index.ts
+        - tests/behaviour/queue-graph.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/queue/graph
+        - tests/fixtures/queue/state/graph
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/queue-graph.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/app/queue.ts
+        role: producer
+    summary: "feat(GH-237): queue declaration and graph folding with cycle refusal and replay idempotence"
+    tasks:
+      - "2.1 packages/core/src/domain/queue-graph.ts — pure declaration and folding policy (imports only core contracts; no ambient I/O): canonical ref identity (the delivered pattern and length bound), non-negative priority with the declared default, repository key carried or absent when the binding could not be resolved, the declaring checkout's repository root recorded alongside that key with the SAME fence append (absolute path; absent exactly when the key is absent; internal-only state used solely for deploy-expectation discovery per DM-12 — never serialized into an envelope, finding, incident, golden, log line, or telemetry event, and never rendered by a read surface), directed consumer-to-producer edges, acyclicity validation BEFORE any append with the existing path named in token order (e.g. GH-301 -> GH-302 -> GH-301), duplicate-edge detection, superseding-entry projection by ref identity (normalized key and recorded root travel with the entry), and the deterministic fold of entries plus edges into the graph document shape (entries, edges, priorities, repository keys, resolved weight class, rank class — DM-13 folds no root, because the root is internal-only). A binding that cannot be resolved records the entry with neither repository key nor root, is never ready, and reports the delivered bundle reasons (addressing-unresolved, remote-unsupported) as evidence (F-1, DM-1, DM-2, DM-12, DM-13). [F-1; AC-F1-1; NFR-1; TC: TC-SCHED-001 domain/state half (queue add/dep invocation and the queue list projection rows complete in Phase 7), TC-SCHED-002 state half, TC-SCHED-015 domain/state half (queue add/list rows complete in Phase 7)]"
+      - "2.2 packages/core/src/app/queue.ts — NEW ledger composition over the injected StateStorePort (state/merge.ts precedent): the queue.entry and queue.dependency ledgers with their declared prefixes, fenced appends, append only when intent truth changes (an identical replay appends nothing and returns a noop outcome), verified reads, and the atomically replaced queue-graph.json derived document written only when the fold changed. Reads never write; the derived document is never served as truth when it diverges from the ledger (rebuild equals document, byte-for-byte). A wrong kind, malformed payload, or torn/unreadable key set is classified state.* and never a fabricated entry. Later phases extend this module with the lease, park, and incident ledgers (shared file; Phase 4 and Phase 5). [F-1, F-12; EVT-1, EVT-2; NFR-8, NFR-13; TC: TC-SCHED-001, TC-SCHED-002 state half, TC-VOCAB-001 entry/dependency round-trip rows]"
+      - "2.3 tests/behaviour/queue-graph.test.ts over tests/fixtures/queue/graph/** — the AC-F1-1 sequence: add with a first dependency lands entry plus edge under one fence, and the entry record carries BOTH the normalized repository key and the declaring checkout's absolute repository root (absent exactly when the key is absent; DM-1, DM-12) — the root is asserted on the record only, as internal state, and the read projection, human text, and goldens contain neither a `root` field nor an absolute path; a cycle-creating dep exits 1 with queue.dependency-cycle, consequence not_landed, the existing path named, zero new records, and the graph byte-unchanged; an identical replay appends nothing in every mutation; priority update latest-wins with no schema bump; a superseding entry replaces the prior projection by identity (key and recorded root included) and appears once in the list projection; the derived document equals a rebuild from the ledger, contains no root, and is untouched by a refused mutation. [F-1; AC-F1-1; NFR-8; TC: TC-SCHED-001 domain/state half (queue add/dep invocation and the queue list projection rows complete in Phase 7), TC-SCHED-002 state half, TC-SCHED-015 domain/state half (queue add/list rows complete in Phase 7)]"
+      - "2.4 Unresolved-binding rows: an entry declared from a checkout whose repository binding cannot be resolved is recorded, carries no repository key, is never ready, and surfaces the delivered bundle reasons as evidence rather than assuming a repository; a later resolvable declaration for the same ref supersedes it. [F-1, F-2; AC-F1-1; TC: TC-SCHED-015 domain/state half]"
+      - "2.5 Register the source files this phase creates — packages/core/src/domain/queue-graph.ts and packages/core/src/app/queue.ts — in tests/structure/inventory.json, add their per-file executable allowances in tests/structure/content-inventory.test.ts, and run the inventory test in the phase gate. The two inventory files are shared across Phases 1-6 by design; an unlisted file or an unallowed value export fails equality/allowance by name. (R-14) [NFR-11; TC: TC-VOCAB-002 tooling half]"
+    coverage:
+      - "TC-SCHED-001 (domain/state half: seeded edge to a not-yet-declared producer, fenced entry/edge append with the normalized key plus the internal-only recorded root, cycle refusal before append, replay stability; `queue add`/`queue dep` invocation and the `queue list` projection rows — normalized repository key only, no root, no absolute path — complete in Phase 7)"
+      - "TC-SCHED-002 (state/graph half: fenced appends, replay no-op, superseding projection, derived-document equality; CLI `result=noop` envelope rows complete in Phase 7)"
+      - "TC-SCHED-015 (domain/state half: unresolved binding recorded with no repository key and no root, never ready, delivered bundle reasons as evidence; `queue add`/`queue list` rows complete in Phase 7)"
+      - "TC-VOCAB-001 (entry/dependency round-trip rows; lease/park/incident round-trip completes in Phase 5)"
+      - "Completion criterion (R2-05): every entry record carries the declaring checkout's repository root alongside its normalized key (the two are recorded together in one fence append and are absent together), the root is internal-only and never rendered by a read surface or serialized into any envelope, finding, incident, golden, log line, or telemetry event, and the derived graph document folds no root; Phase 3 task 3.3 and Phase 7 task 7.3 consume the recorded root for producer-root discovery."
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/queue-graph.test.ts tests/structure/state-contract.test.ts tests/structure/queue-scheduling-contract.test.ts tests/structure/content-inventory.test.ts"
+      - "bun test tests/behaviour/queue-ready-command.test.ts tests/behaviour/queue-ready-output.test.ts"
+
+  - id: 3
+    title: "Readiness, deploy and dependency gates, weight resolution, total precedence, and close-first ranking/preemption over injected facts"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/queue-readiness.ts
+        - packages/core/src/domain/queue-weight.ts
+        - packages/core/src/domain/queue-deploy-gate.ts
+        - packages/core/src/domain/queue-rank.ts
+        - packages/core/src/domain/queue-precedence.ts
+        - packages/core/src/domain/index.ts
+        - tests/behaviour/queue-readiness.test.ts
+        - tests/behaviour/queue-weight.test.ts
+        - tests/behaviour/queue-depend.test.ts
+        - tests/behaviour/queue-rank.test.ts
+        - tests/behaviour/queue-precedence.test.ts
+        - tests/behaviour/queue-schedule.test.ts
+        - tests/checks/queue-bounds.test.ts
+        - tests/structure/queue-scheduling-contract.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/queue/readiness
+        - tests/fixtures/queue/precedence
+        - tests/fixtures/queue/weight/resolution
+        - tests/fixtures/queue/depend
+        - tests/fixtures/queue/deploy
+        - tests/fixtures/queue/rank
+        - tests/fixtures/queue/plan/weight
+        - tests/fixtures/queue/bounds
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/queue-precedence.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/domain/queue-readiness.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/domain/queue-deploy-gate.ts
+        role: producer
+    summary: "feat(GH-237): readiness, dependency/deploy gates, weight resolution, and declared total precedence with close-first ranking"
+    tasks:
+      - "3.1 packages/core/src/domain/queue-readiness.ts — the delivered six-condition model reused verbatim (same ids, order, tri-state, evidence vocabulary, ready-only-when-all-six) with scheduler truth where it is stronger (F-2, DEC-5): deps-satisfied consumes the union of normalized tracker blocked-by relations and declared edges (an edge only makes it stricter); repo-free consumes injected active-lease facts and names the holder and lease identity as evidence (the store-backed fold arrives in Phase 4) — it is a read-surface condition and is never a pre-fence claim refusal, because a claim decides repository exclusivity only through its in-fence verified lease read (F-4, C-2); tier-known prefers the validated plan tier and falls back to the delivered triage-label proxy only when no plan artifact exists; no-owner-gate, ci-healthy, and provider-available reuse the delivered sources and evidence. Every source that failed, was not attempted, is unavailable, or is unresolved yields unknown, never satisfied. Every non-satisfied condition appears in blockingConditions in the fixed order. AC-F2-1's exact fixture (one open dependency, an owner-attention label, an unreadable CI source) is asserted row by row. [F-2; AC-F2-1, AC-F3-1(a); NFR-1, NFR-13; TC: TC-SCHED-003 full, TC-SCHED-004 readiness/read-projection half (queue plan/list invocation and reason projection complete in Phase 7), TC-SCHED-005 readiness rows]"
+      - "3.2 packages/core/src/domain/queue-weight.ts — weight resolution and accounting (DM-7, DEC-10): a validated plan that omits weightClass/defaultWeightClass resolves to standard with source `absent`; a validated plan with an unrecognized value resolves to heavy with source `declared`; a plan that is invalid or unreadable resolves to heavy with source plan-unreadable and the delivered plan.schema.invalid identity; an absent plan resolves to heavy with source plan-absent and plan.artifact.missing; never standard when the plan cannot be read. Per-runner accounting: at most one active heavy-class lease per runner; a heavy candidate is held with reason weight-class while another heavy lease is active on that runner; standard candidates continue to schedule and the number of active repositories is unchanged (weight is never a lane cap). [F-5; AC-F5-1, AC-F5-2; DEC-1, DEC-10; TC: TC-WEIGHT-002 full, TC-WEIGHT-001 scheduling half (completing assertion in Phase 4), TC-VOCAB-005 no-cap rows]"
+      - "3.3 packages/core/src/domain/queue-deploy-gate.ts — dependency and deploy gating (F-6, C-6, DEC-13) over injected ports: a consumer is not eligible while its producer is unresolved (held dependency-open); producer landing is observed through the delivered landing evidence (producer-not-landed otherwise); when the producer repository declares merge.deploy-expectations, the delivered verify deploy verdict must be verified with evidence; unknown, failed, or an unreadable trace holds the dependent at deploy-unverified, never green; a missing, unreadable, or invalid producer configuration yields unknown (never not-declared, never verified); no declared expectation passes on landing with evidence deploy: not-declared; deploy verdict reads are bounded per pass (3) and memoized per producer, with overflow held deploy-unverified and reason read-budget-exhausted. Expectations are resolved from the producer repository's own configuration bound to the producer entry's recorded repository key, never the invocation's configuration (C-6, DM-12). Producer roots are discovered ONLY from entry records: a candidate root is used only when its own normalized remote equals the recorded key by exact string equality; when no recorded root matches the key, or two distinct recorded roots both claim the key (a collision, never resolved by picking one), or the matched config is missing, unreadable, or invalid, the expectation is `unknown` (never not-declared and never verified) and the dependent holds deploy-unverified. [F-6; AC-F6-1, AC-F6-2; NFR-6, NFR-13; TC: TC-DEPEND-001..006 full]"
+      - "3.4 packages/core/src/domain/queue-rank.ts — rank classes and preemption (F-7, DM-8, DM-10): merge-ready and in-review reuse the delivered close-association classification (merge-ready requires an observed approval on a non-draft open pull request; in-review is the review-pending population); resume-parked applies only to a parked entry whose condition evaluated clear in this pass (an uncleared park is not a candidate); a park classified queue.park-condition-stuck is excluded BEFORE rank assignment (Appendix B step 7b): it is never resume-parked, never appears in nextActions, and is never selected by a no-ref claim; the closed order merge-ready < in-review < resume-parked < new-start; a close item eligible for a repository whose lease is held by a new start emits a preemption action naming park cause preempted-for-close-item (paired with condition type preemption), the holder, and the motivating close item, and the close item is still not scheduled that pass (single-flight holds). Preemption execution is out of scope (M1-S18); the action is computed and the release is explicit. [F-7; AC-F7-1, AC-F7-2 emission half, AC-F8-1 stuck-park exclusion; DEC-4; NFR-1; TC: TC-RANK-001 behaviour/ordering half (queue plan --next and golden rows complete in Phase 7), TC-RANK-002 full, TC-RANK-003 full, TC-RANK-005 selection rows, TC-RANK-006 full; TC-PARK-008 exercises the stuck-park exclusion from Phase 5]"
+      - "3.5 packages/core/src/domain/queue-precedence.ts — the single total order of Appendix B: steps 1-9 (including step 7b, the stuck-park hard exclusion) are hard exclusions that remove a candidate with a named reason and never reorder; steps 10-13 order by rank class, then producer-before-consumer within one repository, then explicit priority ascending (declared default when undeclared), then numeric ref suffix, then canonical ref text; step 13b is the per-pass single-flight projection — after ordering, at most one action per repository is projected and the remaining ready entries in that repository are held with reason repo-claimed-in-pass, a per-pass projection reason distinct from lease-held (which requires an actual lease), and a later pass re-evaluates them; step 14 emits a preemption action only. No input iteration order, locale, or object-key order enters the comparison. The schedule result carries nextActions[] with ref, repository, rankClass, reason, priority, weightClass, weightClassSource, lease status, blocking[], deploy evidence, and the preemption block when present. Candidate ordering uses cheap graph facts over the whole entry set; the expensive readiness reads are performed for at most the first 32 ordered candidates, with the remainder marked truncated and a named reason; 500 entries and 1000 edges complete within the recorded baseline excluding provider reads (NFR-6). [F-3, F-9; AC-F3-1(a), AC-F9-1, AC-F7-1; DEC-9; NFR-1, NFR-6; TC: TC-SCHED-006 full, TC-SCHED-007 full, TC-SCHED-011 full, TC-RANK-006 full]"
+      - "3.6 tests/behaviour/queue-readiness.test.ts, queue-weight.test.ts, queue-depend.test.ts, queue-rank.test.ts, queue-precedence.test.ts, queue-schedule.test.ts over the Phase-3 fixture corpora — the six-condition matrix and failed-source rows; weight resolution across validated/absent/unreadable/invalid plans; the full dependency/deploy matrix including producer-bound expectations across a multi-repository state directory; rank and preemption rows; a generated precedence corpus mixing every gate, both weights, all three park condition types, both dependency roles, close and new-start classes, and explicit priorities in multiple input orders (the result is invariant); the per-pass projection rows (exactly one action per repository; the remainder held repo-claimed-in-pass before any lease exists; once a lease exists the other entry is named lease-held with holder and lease evidence, without claiming); 100 identical passes byte-identical; bounds and truncation markers; the ≤ 250 ms structural/perf baseline with warm-up and a recorded measurement; and zero state writes on the queue read path (the queue command-level zero-write rows complete in Phase 7; the LANES half completes in Phase 6). [F-2, F-3, F-5, F-6, F-7, F-9; AC-F2-1, AC-F3-1(a), AC-F5-2, AC-F6-1, AC-F6-2, AC-F7-1, AC-F9-1; NFR-1, NFR-2, NFR-6, NFR-9; TC: TC-SCHED-003, TC-SCHED-004 readiness/read-projection half, TC-SCHED-005, TC-SCHED-006, TC-SCHED-007, TC-SCHED-011, TC-SCHED-012 queue read half, TC-SCHED-013 determinism rows, TC-WEIGHT-002, TC-DEPEND-001..006, TC-RANK-001 behaviour rows, TC-RANK-002, TC-RANK-003, TC-RANK-005 selection rows, TC-RANK-006 (splits per the coverage list)]"
+      - "3.7 tests/checks/queue-bounds.test.ts + tests/fixtures/queue/bounds/** — structural bounds that are environment-independent: entries per folded read 500, edges per entry 32, next actions 20 (default 3), findings 20, reasons 8, serialized data 65536 UTF-8 bytes, human output 40 lines and 8192 bytes, each with an explicit truncation marker; the 32-evaluated-candidate budget and the memoization counts; and the absence of any capacity, bandwidth, concurrency, or CI-slot key or code path (leases half extends in Phase 4, lanes half in Phase 6). [F-9, F-12; NFR-6, NFR-9, NFR-14; TC: TC-SCHED-011 full, TC-VOCAB-005 no-cap rows]"
+      - "3.8 Register the source files this phase creates — packages/core/src/domain/queue-readiness.ts, queue-weight.ts, queue-deploy-gate.ts, queue-rank.ts, and queue-precedence.ts — in tests/structure/inventory.json, add their per-file executable allowances in tests/structure/content-inventory.test.ts, and run the inventory test in the phase gate. Shared inventory files (Phases 1-6 by design). (R-14) [NFR-11; TC: TC-VOCAB-002 tooling half, TC-VOCAB-005 structure half]"
+    coverage:
+      - "TC-SCHED-003 (full), TC-SCHED-004 (readiness and read-projection half: the six-condition matrix and reasons; `queue plan|list` invocation and reason projection complete in Phase 7), TC-SCHED-005 (full: failed, unavailable, invalid, and unreadable sources yield unknown over injected facts), TC-SCHED-006 (full), TC-SCHED-007 (full), TC-SCHED-011 (full)"
+      - "TC-SCHED-012 (queue read-purity half; queue command-level zero-write rows complete in Phase 7; lanes read-purity half completes in Phase 6)"
+      - "TC-SCHED-013 (determinism rows; hermetic-suite half completes in Phase 7)"
+      - "TC-WEIGHT-002 (full)"
+      - "TC-WEIGHT-001 (scheduling half: held weight-class with standard entries still scheduled and the active-repository count unchanged; claim-side rows complete in Phase 4)"
+      - "TC-DEPEND-001 (full), TC-DEPEND-002 (full), TC-DEPEND-003 (full), TC-DEPEND-004 (full), TC-DEPEND-005 (full), TC-DEPEND-006 (full)"
+      - "TC-RANK-001 (ordering/behaviour rows: merge-ready first with reasons and invariant order; `queue plan --next 2` and golden rows complete in Phase 7), TC-RANK-002 (full), TC-RANK-003 (full), TC-RANK-005 (outranked and no-ref selection rows; claim enforcement rows complete in Phase 4, envelope/exit rows in Phase 7), TC-RANK-006 (full)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/queue-readiness.test.ts tests/behaviour/queue-weight.test.ts tests/behaviour/queue-depend.test.ts tests/behaviour/queue-rank.test.ts tests/behaviour/queue-precedence.test.ts tests/behaviour/queue-schedule.test.ts tests/checks/queue-bounds.test.ts tests/structure/queue-scheduling-contract.test.ts tests/structure/content-inventory.test.ts"
+      - "bun test tests/behaviour/queue-graph.test.ts"
+
+  - id: 4
+    title: "Leases, claim, and release — fenced acquisition with in-fence re-read and post-append verification, conflict evidence, stale takeover, renewal, and scope"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/queue-lease.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/app/queue.ts
+        - packages/core/src/state/index.ts
+        - tests/behaviour/queue-lease.test.ts
+        - tests/behaviour/queue-lease-concurrency.test.ts
+        - tests/behaviour/queue-weight.test.ts
+        - tests/fixtures/queue/leases/fence-harness.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/queue/leases/single-flight
+        - tests/fixtures/queue/leases/staleness
+        - tests/fixtures/queue/leases/verification
+        - tests/fixtures/queue/leases/torn
+        - tests/fixtures/queue/leases/repo-key
+        - tests/fixtures/queue/leases/release
+        - tests/fixtures/queue/leases/preconditions
+        - tests/fixtures/queue/leases/renewal
+        - tests/fixtures/queue/leases/scope
+        - tests/fixtures/queue/weight/heavy
+        - tests/fixtures/queue/weight/accounting
+        - tests/fixtures/queue/weight/claim
+        - tests/fixtures/queue/e2e
+        - tests/fixtures/queue/config/lease-ttl
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/queue-lease.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/app/queue.ts
+        role: producer
+    summary: "feat(GH-237): fenced lease claim, release, renewal, and stale takeover with evidence"
+    tasks:
+      - "4.1 packages/core/src/domain/queue-lease.ts — pure lease policy (imports only core contracts and domain peers): scope is repo-exclusive only and is the single implemented value (worktree is declared but no path acquires it); the repository key is the normalized host/owner/name with protocol, credentials, userinfo, and .git removed, and is the contention domain, so different repositories never contend; staleness is heartbeat age at or beyond queue.lease-ttl (inclusive), with renewal cadence derived as one third of the TTL (minimum one second, not a separate key); a takeover is eligible only for a stale lease and always records previous holder, lease identity, heartbeat age, last heartbeat time, and takeover time; a live lease is never takeover-eligible. The claim has two ordered stages (F-4, C-2): the PRE-FENCE stage evaluates parks and the five non-exclusivity readiness conditions — deps-satisfied, tier-known, no-owner-gate, ci-healthy, provider-available — and refuses queue.precondition.unmet when any is not satisfied; an active uncleared park on the entry is likewise a pre-fence queue.precondition.unmet refusal naming parked:<cause> and its recheck interval, while a stuck park is the separate queue.park-condition-stuck refusal. repo-free is EXCLUDED from the pre-fence gate: a claim never refuses queue.precondition.unmet for a repository that is not free, because repository exclusivity is decided only by the verified in-fence lease read. The IN-FENCE stage acquires the state fence, re-reads the verified lease history for the repository key inside the fence, and a live lease held by another holder refuses queue.lease-conflict at exit 1 (never queue.precondition.unmet for repository exclusivity) naming holder, lease identity, acquisition time, heartbeat age, and earliest takeover-eligible time. Pre-fence preconditions name the reason: not ready on one of the five, outranked by a higher-ranked eligible action for the same repository, held by the runner's weight cap, or no eligible action for a no-ref claim (reason no-eligible-action). A claim without a ref selects the top-ranked eligible action from the same precedence and readiness computation deterministically (ties resolved by Appendix B steps 10-13) and never an arbitrary entry; the envelope names the selected ref. Release of another holder's live lease refuses; release with no lease is an idempotent noop. [F-3, F-4; AC-F3-1(b), AC-F4-1, AC-F4-3; DEC-2; NFR-3, NFR-4; TC: TC-LEASE-003 full, TC-LEASE-005/012/013 domain/state policy rows (command/envelope/exit rows complete in Phase 7), TC-LEASE-009 full]"
+      - "4.2 packages/core/src/app/queue.ts — the queue.lease ledger (shared file, extended from Phase 2): the two-stage claim in order — the pre-fence five-condition and park evaluation happens before any fence is taken and excludes repo-free, then acquire the state fence, re-read verified lease history for the repository key INSIDE the fence, append only when the read shows no live lease, a stale lease eligible for takeover, or the caller's own lease (renewal heartbeat refresh), then verify the post-append read shows exactly one new record of the expected kind under the repository key, and release the fence. The in-fence read owns the exclusivity outcome: a live lease held by another holder is queue.lease-conflict, never queue.precondition.unmet. One record per operation with writer attribution, scope, repository key, holder, ref, runner, weight class, acquiredAt, heartbeatAt, ttlMs, lifecycle operation, and takeover evidence. An unreadable or torn lease history is never read as free: the claim refuses state.* at exit 2 with zero appends. A duplicate acquisition for one (repository, holder, acquisition) is refused state.*. Release plus park is one fenced transaction (park half completes in Phase 5; the release-only path lands here). [F-4, F-12; AC-F4-1, AC-F4-2; EVT-3; DEC-2; NFR-3, NFR-13; TC: TC-LEASE-001/002/004/006/010/011 domain/state rows (command/envelope/exit rows complete in Phase 7)]"
+      - "4.3 tests/behaviour/queue-lease-concurrency.test.ts + tests/fixtures/queue/leases/fence-harness.ts — the deterministic fence harness: both claims observe no-lease at a pre-fence barrier, the single-writer fence is then drained in a declared order, and the operation log asserts the in-fence re-read precedes every append. 50 scheduled claims against one repository from 50 DISTINCT holders (holder-01..holder-50, no holder repeats, so no attempt is a same-holder renewal) yield exactly 1 acquisition, exactly 0 renewals, and 49 queue.lease-conflict refusals; zero duplicate lease records; zero claims land without post-append verification. A paired same-holder control asserts the repeat claim is result=renewed and is never counted as a conflict, proving why the distinct-holder fixture is required (NFR-3's scoping to distinct holders). This is an algorithmic proof (GAP-T3), not an OS-scheduler claim. [F-4; AC-F3-1(b), AC-F4-1; NFR-3; TC: TC-LEASE-002/004 domain/state rows (result= and exit-projection rows complete in Phase 7)]"
+      - "4.4 tests/behaviour/queue-lease.test.ts over tests/fixtures/queue/leases/** — single-flight both as the read projection (at most one eligible action per repository: before any lease exists the other ready entry is held repo-claimed-in-pass, a per-pass projection reason distinct from lease-held; once a lease exists the other entry is named lease-held with holder and lease evidence, without claiming) and as the mutating enforcement (one repo-exclusive holder, the rest refused); conflict refusal names holder, lease identity, acquisition time, heartbeat age, and earliest takeover-eligible time; staleness at bound-1, bound, and bound+1; an at-or-beyond-TTL lease is taken over with full evidence and appends a lease-stale-takeover incident, while a live lease is never taken over; renewal of one's own lease refreshes the heartbeat without changing the holder; release of another holder refuses; release with no lease is a noop; an unreadable/torn history refuses state.* at exit 2 with zero writes and never reports free; repository-key normalization rows (protocol, credentials, userinfo, .git); scope rows; and the lease-ttl configuration-only tuning pair (fixtures differ only in queue.lease-ttl; provenance reports the changed value; no source diff). [F-3, F-4; AC-F3-1, AC-F3-2, AC-F4-1, AC-F4-2; NFR-3, NFR-4, NFR-10; TC: TC-LEASE-001/005/006/010/012/013 domain/state rows (command/envelope/exit rows complete in Phase 7), TC-LEASE-003 full, TC-LEASE-007 completes, TC-LEASE-008 full, TC-LEASE-009 full]"
+      - "4.5 tests/behaviour/queue-weight.test.ts (claim rows; shared file extended from Phase 3) over tests/fixtures/queue/weight/{heavy,accounting,claim}/** — at most one heavy lease per runner; a heavy claim under an active heavy lease refuses queue.precondition.unmet with reason weight-class; standard claims continue and the active-repository count is unchanged; the weight view reports runner, class, and active state; the claim action carries weightClass and weightClassSource. [F-5; AC-F5-1; DEC-1, DEC-10; TC: TC-WEIGHT-001 completes (domain/state claim-side rows), TC-WEIGHT-003 full, TC-WEIGHT-004 domain/state rows (claim exit/reason envelope rows complete in Phase 7)]"
+      - "4.6 tests/behaviour/queue-lease.test.ts (end-to-end domain rows) over tests/fixtures/queue/e2e/** — the daemon-down one-shot domain path: plan computed from state, claim lands a lease with a recorded heartbeat, state stays consistent for later reconciliation, and no daemon, socket, or background process exists at any point (the full CLI e2e envelope rows complete in Phase 7). [F-10, F-4; AC-F10-1; DEC-6; TC: TC-SCHED-010 domain half (CLI e2e rows complete in Phase 7)]"
+      - "4.7 Register the source file this phase creates — packages/core/src/domain/queue-lease.ts — in tests/structure/inventory.json, add its per-file executable allowance in tests/structure/content-inventory.test.ts, and run the inventory test in the phase gate. Shared inventory files (Phases 1-6 by design). (R-14) [NFR-11; TC: TC-VOCAB-002 tooling half]"
+    coverage:
+      - "TC-LEASE-001 (domain/state half: single-flight state, scope, staleness, takeover evidence, release, repo-claimed-in-pass and lease-held read projection; `queue plan|list|claim` envelopes complete in Phase 7), TC-LEASE-002 (domain/state half: fenced concurrency state; `result=` and exit-projection rows complete in Phase 7), TC-LEASE-003 (full), TC-LEASE-004 (domain/state half: store/verification state; the `result=claimed` projection row completes in Phase 7), TC-LEASE-005 (domain/state half: conflict identity and evidence; golden and text-mode exit rows complete in Phase 7), TC-LEASE-006 (domain/state half: claim `state.*`; `queue list|plan` exit-2 rows complete in Phase 7), TC-LEASE-008 (full), TC-LEASE-009 (full), TC-LEASE-010 (domain/state half: release state and idempotence; `result=noop` and `degraded[]` rows complete in Phase 7), TC-LEASE-012 (domain/state half: precondition reasons; claim exit/envelope rows complete in Phase 7), TC-LEASE-013 (domain/state half: renewal state; `result=renewed` envelope rows complete in Phase 7)"
+      - "TC-LEASE-007 (completes: lease-ttl behaviour and staleness tuning)"
+      - "TC-LEASE-011 (holder-refusal and release-without-park half; release+park atomicity completes in Phase 5; `--park` grammar and exit rows complete in Phase 7)"
+      - "TC-WEIGHT-001 (completes: claim-side weight-cap rows), TC-WEIGHT-003 (full), TC-WEIGHT-004 (domain/state half: weight-cap state; claim exit/reason envelope rows complete in Phase 7)"
+      - "TC-RANK-005 (completes: claim-side outranked and no-eligible-action enforcement rows; envelope/exit rows complete in Phase 7)"
+      - "TC-SCHED-010 (domain half: plan→claim→release state path; full CLI e2e rows complete in Phase 7)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/queue-lease.test.ts tests/behaviour/queue-lease-concurrency.test.ts tests/behaviour/queue-weight.test.ts tests/structure/content-inventory.test.ts"
+      - "bun test tests/behaviour/queue-rank.test.ts tests/behaviour/queue-readiness.test.ts tests/checks/queue-bounds.test.ts"
+      - "bun test tests/behaviour/queue-ready-command.test.ts tests/behaviour/queue-ready-output.test.ts"
+
+  - id: 5
+    title: "Parks, incidents, and the stuck finding — typed conditions, per-type recheck, durable clear-observed marker, exact resume, and refusal on claim"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/queue-park.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/app/queue.ts
+        - packages/core/src/state/index.ts
+        - tests/behaviour/queue-park.test.ts
+        - tests/behaviour/queue-rank.test.ts
+        - tests/behaviour/queue-lease.test.ts
+        - tests/structure/queue-scheduling-contract.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/queue/parks
+        - tests/fixtures/queue/parks/stuck-not-next-action
+        - tests/fixtures/queue/leases/release-park
+        - tests/fixtures/queue/config/park-recheck
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/queue-park.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/app/queue.ts
+        role: producer
+    summary: "feat(GH-237): parks with per-type recheck, durable clear-observed marker, recovery incidents, and the stuck finding"
+    tasks:
+      - "5.1 packages/core/src/domain/queue-park.ts — park evaluation policy (F-8, C-3, DEC-3): TWO distinct closed sets that are never conflated — the condition-type set that a pass re-evaluates (provider-window, clears at the provider window absolute expiry; provider-quota, clears when the provider condition is observed available; preemption, clears when the preempting lease on the repository is released and the entry is ready again) and the cause set that explains why the lease was released (provider-window, provider-quota, preempted-for-close-item). The valid pairing is one-to-one: cause provider-window <-> condition type provider-window; cause provider-quota <-> condition type provider-quota; cause preempted-for-close-item <-> condition type preemption. The preemption condition supplies no absolute expiry and is re-evaluated each pass at the preemption recheck interval. A park carries entry, repository key, closed cause, closed condition type, the typed evaluable condition, absolute expiry when supplied, the resolved recheck interval, last evaluation time, clearObservedAt, and recoveryState. Each active park whose interval has elapsed is re-evaluated; a park that is not yet due is reported as active with its interval and last evaluation. Owner gates and external waits are readiness blockers, never parks. At most one active park per entry. [F-8; AC-F8-1, AC-F8-2; DM-5, DM-14; TC: TC-PARK-001/004 domain/state rows, TC-PARK-006 per-type recheck rows]"
+      - "5.2 Recovery and the durable marker (C-3, NFR-5): a mutating pass that observes a condition clear first appends a queue.park record with recoveryState clear-observed, clearObservedAt, the evaluation time, and the observation gap since the previous evaluation, then attempts recovery; if recovery lands in the same pass the recovered record supersedes the marker and a queue.incident of type park-auto-recovery records the condition, clear time, evaluation time, and observation gap; if the recovery append is refused the marker persists and the pass returns queue.park-condition-stuck. A park observed clear but still active on a later pass, or whose recovery append was refused, is the stuck class: reads report queue.park-condition-stuck as a report-only finding at exit 0, the entry is NEVER a resume-parked candidate, NEVER appears in nextActions, and is NEVER selected by a no-ref claim, and a claim on that entry refuses at exit 1 with the same identity, consequence not_landed, and zero appends, never falling through to a lease conflict. A park skipped only because no engine ran recovers with a gap-naming incident and is never reported stuck solely because the gap exceeded the interval. Reads never append. [F-8; AC-F8-1; C-3, C-7; NFR-2, NFR-5, NFR-13; TC: TC-PARK-001 domain/state rows, TC-PARK-002/003/005 full, TC-PARK-008 hard-exclusion and claim-refusal policy rows]"
+      - "5.3 packages/core/src/app/queue.ts — the queue.park and queue.incident ledgers (shared file, extended from Phase 4): fenced appends, verified post-append reads, latest-record-wins for one entry, the clear-observed marker and its supersession by recovered, and the incidents ledger keyed by ref for recovery and by repository key for takeover. A second active park for one entry, a wrong kind, or a malformed payload is classified state.* and never a fabricated park. An unreadable or torn park history is never read as not-parked: reads that cannot verify it fail closed with the classified state.* identity, and a claim on it refuses at exit 2 with zero writes. [F-8, F-12; EVT-4, EVT-5; NFR-8, NFR-13; TC: TC-PARK-004 domain/state half (its `queue release --park` CLI/`fallback.invocation` row completes in Phase 7), TC-PARK-007 state half]"
+      - "5.4 tests/behaviour/queue-park.test.ts over tests/fixtures/queue/parks/** — a provider-window park ending at T resumes on the first mutating pass after T within one recheck interval with the incident naming condition, clear time, evaluation time, and observation gap; the clear-observed marker precedes recovery and survives a refused recovery; a clear-but-active park yields the report-only finding at exit 0 and a claim refusal at exit 1 with zero appends; a stuck park is never a resume-parked candidate, never appears in nextActions, and is never selected by a no-ref claim (tests/fixtures/queue/parks/stuck-not-next-action/**); an observation gap yields a gap-naming incident and never a stuck finding; boundary instants at T-1, T, T+1; recheck-interval configuration-only tuning (fixtures differ only in queue.park-recheck.<type>; provenance reports the changed value; no source diff); an unknown condition-type key is config.key.unknown and an invalid interval is config.value.invalid naming the key; unreadable park history is never not-parked. [F-8; AC-F8-1, AC-F8-2; NFR-5, NFR-10, NFR-13; TC: TC-PARK-001 domain/state rows (queue claim mutating-pass CLI rows complete in Phase 7), TC-PARK-002/003/005 full, TC-PARK-006 completes, TC-PARK-007 domain/state rows (exit-2 rows complete in Phase 7), TC-PARK-008 domain/state half (reads/claim envelope rows complete in Phase 7)]"
+      - "5.5 Release plus park atomicity (F-7, AC-F7-2, F-8): at the contract/state layer, `queue release <ref> --park <cause>` accepts EXACTLY the closed cause set {provider-window, provider-quota, preempted-for-close-item}; any other token — including a condition-type token — is rejected with zero appends; omitting --park releases without a park; an accepted cause is recorded together with its paired condition type (cause preempted-for-close-item <-> condition type preemption). The release and the park record append in the SAME fenced transaction — both land or neither, a refused append lands nothing. A release of another holder's live lease still refuses. The CLI grammar projection of the same cause set (exit 1 through `fallback.invocation` for a condition-type or unknown token) completes in Phase 7 with the command family (TC-PARK-004 step 8, TC-LEASE-011, TC-RANK-004). [F-7, F-8, F-4; AC-F7-2, AC-F8-1; DM-5, DM-10; TC: TC-RANK-004 domain/state half (release--park envelope/exit rows complete in Phase 7), TC-LEASE-011 release+park half (command rows complete in Phase 7), TC-PARK-004 domain/state half (step 8's CLI grammar row completes in Phase 7)]"
+      - "5.6 Preemption rows re-asserted with real park state (shared queue-rank.test.ts): the preemption action names the holder and the motivating close item and the park cause preempted-for-close-item paired with condition type preemption; after the explicit release-park the close item schedules on the next pass and the preempted entry becomes resume-parked and ranks above new starts once its condition clears. [F-7; AC-F7-2, AC-F7-1; TC: TC-RANK-003 re-asserted, TC-RANK-004 domain/state half]"
+      - "5.7 TC-VOCAB-001 completion rows in tests/structure/queue-scheduling-contract.test.ts: lease, park, and incident records round-trip through the real ledgers with their Appendix D schema ids and store keys; `queue.park` (payload delivery.queue.park.v1, key queue.parks:<REF>) is one of this change's five NEW record kinds, and its first-write schema already carries `clearObservedAt` and `recoveryState` — the durable clear-observed marker is another record of that SAME new `queue.park` kind (a field set on the same kind), not a sixth record kind and not a mutation of a pre-existing kind; the kind inventory stays five new kinds plus one derived document, with no schema-version bump, no migration, and no compatibility path. [F-12; EVT-3..EVT-5; NFR-8; TC: TC-VOCAB-001 completes]"
+      - "5.8 Register the source file this phase creates — packages/core/src/domain/queue-park.ts — in tests/structure/inventory.json, add its per-file executable allowance in tests/structure/content-inventory.test.ts, and run the inventory test in the phase gate. Shared inventory files (Phases 1-6 by design). (R-14) [NFR-11; TC: TC-VOCAB-002 tooling half]"
+    coverage:
+      - "TC-PARK-001 (domain/state half: park resume and incident state; `queue claim` mutating-pass CLI rows complete in Phase 7), TC-PARK-002 (domain/state half: stuck finding and refusal state; `queue list|plan|claim` envelopes and exits complete in Phase 7), TC-PARK-003 (full), TC-PARK-004 (domain/state half: the closed cause and condition-type sets, their one-to-one pairing, and one active park per entry; its `queue release --park` accepted-cause grammar and `fallback.invocation` exit row complete in Phase 7), TC-PARK-005 (full), TC-PARK-007 (domain/state half: unreadable park state; `queue list|plan|claim` exit-2 rows complete in Phase 7)"
+      - "TC-PARK-008 (domain/state half: a stuck park is never resume-parked, never in nextActions, never selected by a no-ref claim, and a claim on it refuses at exit 1 with zero appends; reads/claim envelope rows complete in Phase 7)"
+      - "TC-PARK-006 (completes: resume-timing and per-type recheck tuning)"
+      - "TC-RANK-004 (domain/state half: release+park atomicity and the exact cause set; `queue release --park` envelope/exit rows complete in Phase 7)"
+      - "TC-LEASE-011 (completes: release+park atomicity; `--park` grammar and exit rows complete in Phase 7)"
+      - "TC-VOCAB-001 (completes: lease/park/incident round-trip rows; `queue.park` is a new kind whose first-write schema carries `clearObservedAt`/`recoveryState`, and the clear-observed marker is another record of that same kind, not a sixth kind)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/queue-park.test.ts tests/behaviour/queue-rank.test.ts tests/behaviour/queue-lease.test.ts tests/structure/queue-scheduling-contract.test.ts tests/structure/content-inventory.test.ts"
+      - "bun test tests/behaviour/queue-readiness.test.ts tests/behaviour/queue-schedule.test.ts tests/checks/queue-bounds.test.ts"
+
+  - id: 6
+    title: "Lane observation view — pure fold over entries, leases, parks, and economics; lanes list/show, --watch refusal, and fail-closed unreadable store"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/queue-lanes.ts
+        - packages/core/src/domain/index.ts
+        - packages/cli/src/commands/lanes.ts
+        - packages/cli/src/commands/index.ts
+        - tests/behaviour/lanes.test.ts
+        - tests/golden/lanes-list.test.ts
+        - tests/golden/lanes-show.test.ts
+        - tests/golden/lanes-watch-refusal.test.ts
+        - tests/checks/queue-bounds.test.ts
+        - tests/structure/queue-scheduling-contract.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/queue/lanes
+        - tests/fixtures/queue/economics
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/queue-lanes.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/commands/lanes.ts
+        role: producer
+    summary: "feat(GH-237): lanes list/show fold with idle reasons, lease evidence, economics, and truthful degradation"
+    tasks:
+      - "6.1 packages/core/src/domain/queue-lanes.ts — the lane view as a PURE fold over queue entries, leases, parks, and the delivered economics view (F-11, DM-11): lane identity is the canonical ref (no synthetic ordinal, no lane record kind, no stored lane state); state is one of delivering, idle-with-reason, parked, merge-ready, in-review, failed; an idle reason is one declared token from the closed set pinned in this plan's header (never free-form), and a parked reason is parked:<cause> with a closed cause; each lane carries its lease holder and scope when held, restart count and amplification from the delivered economics fold (null plus the delivered warning when underivable, never a fabricated zero), and its weight class. An unreadable queue store surfaces as status.collector.lanes.unavailable with the platform-provider projection, never a zero-lane view. [F-11; AC-F11-1, AC-F11-2; DEC-8; NFR-2, NFR-13; TC: TC-LANES-001 fold rows, TC-LANES-003 full, TC-LANES-005 fold row]"
+      - "6.2 packages/cli/src/commands/lanes.ts — NEW command definition for `lanes list` and `lanes show <ref>` (Appendix C): envelope data lanes[] (id, ref, state, reason, lease, leaseScope, restarts, amplification, amplificationWarning, weightClass), findings[], degraded[], truncated; text mode prints one line per lane with state and reason; `show` returns one lane or classifies an unobserved ref; `--watch` is NOT accepted in the grammar and is refused through fallback.invocation at exit 1 with a remediation hint naming the resident daemon story and no stream; an unreadable store exits 2 with status.collector.lanes.unavailable and bounded evidence. No secret, credential, raw provider payload, or free-form body appears in any field. [F-10, F-11; AC-F11-1, AC-F11-2; DEC-7; NFR-12; TC: TC-LANES-001 full, TC-LANES-002 full, TC-LANES-004 full, TC-LANES-005 full]"
+      - "6.3 Compose the lanes command in packages/cli/src/commands/index.ts and expose its runtime factory; the edge seam (options.lanes) lands with the queue surface in Phase 7 (shared file, sequenced). [F-10; TC: TC-LANES-001 composition basis]"
+      - "6.4 tests/behaviour/lanes.test.ts + tests/golden/lanes-*.test.ts over tests/fixtures/queue/lanes/** and tests/fixtures/queue/economics/** — one delivering lane, one quota-parked lane, and one failed-past-restart-budget lane report ref identity, closed state, bounded idle reason, holder and scope, restart count and amplification (null plus warning when underivable), and weight class with zero writes and zero fabricated values; `show` and unobserved-ref classification; `--watch` refusal with no emitted frame; unreadable store exit 2; empty queue is an explicit observed-empty with counts, never a silent zero; bounds and truncation markers; goldens carry no absolute paths, wall-clock timestamps, or unstable ordering. [F-11; AC-F11-1, AC-F11-2; NFR-2, NFR-9, NFR-13; TC: TC-LANES-001 full, TC-LANES-002 full, TC-LANES-003 full, TC-LANES-004 full, TC-LANES-005 full, TC-LANES-006 full]"
+      - "6.5 Read purity and bounds completion: lanes list/show perform 0 writes, 0 fences, 0 appends, and 0 derived-document replacements; the lane count is bounded at 200 and every bound has an explicit truncation marker (extend tests/checks/queue-bounds.test.ts, shared file). [F-11; NFR-2, NFR-9; TC: TC-SCHED-012 lanes half, TC-LANES-006 full]"
+      - "6.6 Lane-vocabulary rows in tests/structure/queue-scheduling-contract.test.ts (shared file): lane states exactly six, idle reasons drawn only from the declared set (including lease-held, repo-claimed-in-pass, and park-condition-stuck as blocking reasons), no stored lane kind exists, and the collector-id family resolves the lanes id without widening the family shape. [F-11, F-12; AC-F11-2; NFR-11, NFR-14; TC: TC-VOCAB-003 completes, TC-LANES-006 vocabulary rows]"
+      - "6.7 Register the source files this phase creates — packages/core/src/domain/queue-lanes.ts and packages/cli/src/commands/lanes.ts — in tests/structure/inventory.json, add their per-file executable allowances in tests/structure/content-inventory.test.ts, and run the inventory test in the phase gate. Shared inventory files (Phases 1-6 by design). (R-14) [NFR-11; TC: TC-VOCAB-002 tooling half]"
+    coverage:
+      - "TC-LANES-001 (full), TC-LANES-002 (full), TC-LANES-003 (full), TC-LANES-004 (full), TC-LANES-005 (full), TC-LANES-006 (full)"
+      - "TC-SCHED-012 (lanes read-purity half; the queue command-level zero-write rows complete in Phase 7)"
+      - "TC-VOCAB-003 (completes: lanes exit-2 behaviour and collector resolution)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/lanes.test.ts tests/golden/lanes-list.test.ts tests/golden/lanes-show.test.ts tests/golden/lanes-watch-refusal.test.ts tests/checks/queue-bounds.test.ts tests/structure/queue-scheduling-contract.test.ts tests/structure/content-inventory.test.ts"
+      - "bun test tests/behaviour/economics-amplification.test.ts tests/behaviour/economics-envelope.test.ts"
+
+  - id: 7
+    title: "Cross-cutting command surface — the queue family (list, plan, add, prioritize, dep, claim, release), envelopes/exits/degradation, queue ready preservation, and the hermetic and secret-safety battery"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/commands/queue.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/queue-cli.test.ts
+        - tests/behaviour/queue-edge-wiring.test.ts
+        - tests/behaviour/queue-graph.test.ts
+        - tests/behaviour/queue-schedule.test.ts
+        - tests/behaviour/queue-precedence.test.ts
+        - tests/behaviour/queue-ready-output.test.ts
+        - tests/structure/queue-ready-contract.test.ts
+        - tests/checks/queue-hermetic.test.ts
+        - tests/checks/secret-read-boundary.test.ts
+        - tests/golden/queue-plan.test.ts
+        - tests/golden/queue-list.test.ts
+        - tests/golden/queue-envelope.test.ts
+        - tests/golden/queue-lease-conflict.test.ts
+        - tests/golden/queue-rank.test.ts
+        - tests/golden/queue-ready.test.ts
+      folders:
+        - tests/fixtures/queue/golden
+        - tests/fixtures/queue/secret
+        - tests/fixtures/queue/parks/stuck-not-next-action
+        - tests/fixtures/queue-ready/golden
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/commands/queue.ts
+        role: producer
+    summary: "feat(GH-237): queue command family, envelopes, degradation, queue ready preservation, hermetic battery"
+    tasks:
+      - "7.1 packages/cli/src/commands/queue.ts — extend the delivered file from ready-only to the full family WITHOUT touching ready behaviour (F-10, NG-4): keep createQueueReadyCommandDefinition and every existing `ready` grammar check byte-for-byte; add createQueueCommandDefinition(runtime) with `queue list`, `queue plan [--next <n>]`, `queue add <ref> [--priority <n>] [--dep <ref>]...`, `queue prioritize <ref> <n>`, `queue dep <ref> <on-ref>`, `queue claim [<ref>] [--holder <id>]`, and `queue release <ref> [--holder <id>] [--park <cause>]`. `--watch` is not accepted on any queue subcommand and is refused through fallback.invocation. Grammar and bounded untrusted input (canonical ref pattern and length, integer priority, and the closed park CAUSE set {provider-window, provider-quota, preempted-for-close-item} — never the condition-type set) are validated before any read; an oversized or malformed input is an invocation rejection. Handlers own no stream writes and choose no exit code. [F-10; AC-F10-1, AC-F10-2, AC-F8-1; Appendix C; TC: TC-SCHED-002 CLI rows, TC-SCHED-008 grammar rows, TC-SCHED-016 grammar rows, TC-RANK-004 and TC-LEASE-011 --park grammar rows]"
+      - "7.2 Envelope data and exit projection (Appendix C, C-1, C-4): `list` returns entries[], leases[], weights, parks[], findings[], degraded[], truncated — `entries[]` carries the normalized repository key and never the recorded root (Appendix C declares no root field; DM-1/DM-12 keep the root internal-only), and no envelope, human text, or golden contains an absolute path; `plan --next n` adds nextActions[] with ref, repository, rankClass, reason, priority, weightClass, weightClassSource, lease status, blocking[], deploy evidence, and preemption block; mutations return ref, entry, edges[], result (added/updated/noop); claim returns result (claimed/renewed/taken-over), selectedRef, lease, action, degraded[]; release returns result (released/parked/noop), lease, park?, degraded[]. A no-ref claim names the deterministically selected ref or refuses queue.precondition.unmet with reason no-eligible-action at exit 1 and zero appends; a stuck-park claim refuses queue.park-condition-stuck at exit 1 with zero appends. A successful mutation with no daemon reachable exits 0 with degraded [daemon-unreachable]; a refused mutation projects its own exit-1 identity and never claims degradation as success. `queue list|plan` exit 2 with the classified state.* identity and bounded evidence when lease or park history is unreadable, torn, or of unknown kind, presenting no success verdict and no data sibling, partial view, or empty view as a schedule; a readable stuck park stays a report-only finding at exit 0. Text mode prints result=, ref=, lease=, next=, degraded= before human detail and result=refused before a classified refusal. [F-10, F-11; AC-F10-1, AC-F10-2, AC-F10-3; C-1, C-4, C-7; NFR-2, NFR-13; TC: TC-SCHED-008 full, TC-SCHED-009 full, TC-SCHED-016 full, TC-LEASE-006 read-surface rows, TC-PARK-007 read-surface rows]"
+      - "7.3 packages/cli/src/edge.ts — the production composition seam: keep `options.queueReady` and the ready-only fallback exactly as shipped; add `options.queue` (state store, clock, tracker/PR/CI/provider/deploy read ports, repository binding, economics fold, config resolver) and `options.lanes`, and select createQueueCommandDefinition/lanes only when supplied. The edge supplies the queue ttl and park-recheck settings from the resolved configuration, resolves deploy expectations from the producer repository config bound to the recorded key through a recorded root whose normalized remote matches that key exactly (roots discovered only from entry records; no match or a two-root collision yields unknown, never not-declared or verified), and never reads the invocation config for another repository's expectations. Dedicated edge-level wiring tests in tests/behaviour/queue-edge-wiring.test.ts drive the REAL edge path with injected fakes (not a stub runtime): every new queue subcommand and flag, plus lanes list/show and the --watch refusal, is exercised at edge level, and queue ready output through the edge is byte-identical. [F-10; AC-F10-1, AC-F10-2, AC-F6-2; DEC-13; TC: TC-SCHED-010 edge rows, TC-DEPEND-003 edge rows, TC-COMPAT-001 edge rows]"
+      - "7.4 tests/behaviour/queue-cli.test.ts and tests/behaviour/queue-edge-wiring.test.ts + tests/golden/queue-{plan,list,envelope,lease-conflict,rank}.test.ts over tests/fixtures/queue/golden/** (shared queue-graph, queue-schedule, and queue-precedence suites are extended from Phases 2-3) — every grammar, envelope, and exit row; empty queue is explicit observed-empty at exit 0 with counts; degraded daemon-unreachable on the daemon-down paths; refusal shapes for cycle, conflict, precondition, unobserved entry, and stuck park; `--json` versus text; goldens normalized with no absolute paths, no `root` field or recorded repository root, no wall-clock timestamps, or unstable ordering and regenerated only by an explicit command. [F-10; AC-F10-1, AC-F10-2, AC-F10-3; NFR-1, NFR-9; TC: TC-SCHED-008 full, TC-SCHED-009 full, TC-SCHED-016 full, TC-SCHED-002 CLI half completes, TC-LEASE-005 golden half, TC-RANK-001 golden half]"
+      - "7.5 `queue ready` preservation (AC-F12-1, NG-4, GAP-T1): extend tests/behaviour/queue-ready-output.test.ts, tests/golden/queue-ready.test.ts, and tests/structure/queue-ready-contract.test.ts to assert byte-identical machine and human output over the existing tests/fixtures/queue-ready/** corpus, unchanged grammar and caps, the six condition ids/order/tri-state/evidence vocabulary unchanged, read-only posture, and no new queue row attributable to ready. The assertion is fixture equivalence plus structural vocabulary stability, not 'the file never changed'. [F-12, F-2; AC-F12-1; NG-4; NFR-11; TC: TC-COMPAT-001 full, TC-VOCAB-005 ready-invariance rows]"
+      - "7.6 tests/checks/queue-hermetic.test.ts — NFR-7: zero live network (globalThis.fetch throws if reached), zero live credential reads, zero real sleeps, zero sockets; clock, state/fence transport, tracker/PR/CI/provider reads, deploy verdicts, economics input, and repository binding injected everywhere; forbidden-literal and ambient-globals scans green over the new modules with non-zero file floors; 100-run determinism rows for precedence, plan, and lane folds; a missing fixture fails naming the missing fixture. [NFR-1, NFR-7; TC: TC-SCHED-014 full, TC-SCHED-013 completes]"
+      - "7.7 Secret and payload safety (NFR-12): tests/checks/queue-hermetic.test.ts + tests/checks/secret-read-boundary.test.ts (extend) + tests/fixtures/queue/secret/** — synthetic non-secret canaries placed as credential material, tracker bodies, provider payloads, and free-form messages appear nowhere in envelopes, records, findings, incidents, reasons, or evidence across list/plan/claim/release/lanes; the delivered redaction chokepoint covers the new payloads; the secret-read allowlist gains ZERO entries; the no-shell/no-child-process posture holds (no eval/exec/spawn-arg surface touches a value). [F-10, F-12; NFR-12; TC: TC-VOCAB-006 full]"
+      - "7.8 Completion rows for the TCs marked partial in Phases 2-6 (test-plan §7.1): this is the phase that first owns the queue command family, so the CLI grammar, envelope shape, result=, selectedRef, degraded[], and exit-projection halves of TC-SCHED-001 (queue add/dep invocation and the queue list projection of the entry, its normalized repository key, priority, and edges — no `root` field and no absolute path; the recorded root is internal-only), TC-SCHED-002 (result=noop envelopes), TC-SCHED-004 (queue plan/list invocation and reason projection), TC-SCHED-010 (full CLI e2e plan→claim→release), TC-SCHED-012 (queue command-level zero-write rows), TC-SCHED-015 (queue add/list rows), TC-LEASE-001/002/004/005/006/010/011/012/013 (claim/release envelopes, result= and exit rows), TC-WEIGHT-004 (claim exit/reason envelope), TC-RANK-001 (queue plan --next 2 and goldens), TC-RANK-004 (release --park envelope/exit), TC-RANK-005 (selectedRef and no-eligible-action envelope/exit), and TC-PARK-001/002/004/007/008 (reads/claim envelope and exit rows; TC-PARK-004 contributes step 8's `queue release --park` accepted-cause grammar and `fallback.invocation` rejection of a condition-type or unknown token) complete here. No assertion is weakened: the domain/state halves landed in their phases and these rows are added, not substituted. [Test-plan §7.1 rule; AC-F3-1, AC-F4-1, AC-F4-3, AC-F7-2, AC-F8-1, AC-F10-1..3; TC: the listed completion rows]"
+    coverage:
+      - "TC-SCHED-008 (full), TC-SCHED-009 (full), TC-SCHED-014 (full), TC-SCHED-016 (full)"
+      - "TC-SCHED-001 (completes: `queue add`/`queue dep` invocation rows and the `queue list` projection rows for the entry, its normalized repository key, priority, and edges; the read surfaces render the normalized repository key ONLY — the recorded root is internal state for deploy-expectation discovery and is never displayed, and the goldens assert no `root` field and no absolute path; domain/state half landed in Phase 2)"
+      - "TC-SCHED-002 (completes: CLI add/prioritize/dep envelopes and result=noop rows)"
+      - "TC-SCHED-004 (completes: queue plan/list invocation and reason projection)"
+      - "TC-SCHED-010 (completes: full CLI e2e plan→claim→release rows)"
+      - "TC-SCHED-012 (completes: queue command-level zero-write rows; lanes half landed in Phase 6)"
+      - "TC-SCHED-015 (completes: queue add/list rows; domain/state half landed in Phase 2)"
+      - "TC-SCHED-013 (completes: hermetic-suite determinism half)"
+      - "TC-LEASE-001 (completes: queue plan/list/claim envelopes), TC-LEASE-002 (completes: result= and exit-projection rows), TC-LEASE-004 (completes: result=claimed projection), TC-LEASE-005 (completes: golden and text-mode exit rows), TC-LEASE-006 (completes: queue list/plan exit-2 rows), TC-LEASE-010 (completes: result=noop and degraded[] rows), TC-LEASE-011 (completes: --park grammar and exit rows), TC-LEASE-012 (completes: claim exit/envelope rows), TC-LEASE-013 (completes: result=renewed envelope rows)"
+      - "TC-WEIGHT-004 (completes: claim exit/reason envelope rows)"
+      - "TC-RANK-001 (completes: queue plan --next 2 and golden rows), TC-RANK-004 (completes: queue release --park envelope/exit rows), TC-RANK-005 (completes: selectedRef and no-eligible-action envelope/exit rows)"
+      - "TC-PARK-001 (completes: queue claim mutating-pass CLI rows), TC-PARK-002 (completes: queue list/plan/claim envelopes and exits), TC-PARK-004 (completes: step 8's `queue release --park` accepted-cause grammar and the `fallback.invocation` exit row for a condition-type or unknown token; closed-set/state half landed in Phase 5), TC-PARK-007 (completes: queue list/plan/claim exit-2 rows), TC-PARK-008 (completes: reads/claim envelope rows for the stuck-park hard exclusion)"
+      - "TC-VOCAB-006 (full)"
+      - "TC-COMPAT-001 (full)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/queue-cli.test.ts tests/behaviour/queue-edge-wiring.test.ts tests/behaviour/queue-graph.test.ts tests/behaviour/queue-schedule.test.ts tests/behaviour/queue-precedence.test.ts tests/golden/queue-plan.test.ts tests/golden/queue-list.test.ts tests/golden/queue-envelope.test.ts tests/golden/queue-lease-conflict.test.ts tests/golden/queue-rank.test.ts"
+      - "bun test tests/behaviour/queue-ready-output.test.ts tests/behaviour/queue-ready-command.test.ts tests/golden/queue-ready.test.ts tests/structure/queue-ready-contract.test.ts"
+      - "bun test tests/checks/queue-hermetic.test.ts tests/checks/queue-bounds.test.ts tests/checks/secret-read-boundary.test.ts"
+      - "pnpm check:boundaries && bun run scripts/checks/error-table-sync.ts"
+
+  - id: 8
+    title: "Documentation reconciliation, release evidence, and finalization — scheduling feature spec, queue/lanes man pages, registry, glossary, neighbour specs, changeset, and the aggregate gate"
+    kind: delivery
+    scope:
+      files:
+        - .changeset/gh-237-scheduling-engine-minor.md
+        - doc/spec/features/feature-scheduling-engine.md
+        - doc/spec/features/feature-queue-ready.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-plan-schema.md
+        - doc/spec/features/feature-merge-verify-deploy.md
+        - doc/spec/features/feature-session-lifecycle-economics.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/planning/oss-tooling/milestones/m1/commands/queue.md
+        - doc/planning/oss-tooling/milestones/m1/commands/lanes.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/overview/glossary.md
+        - doc/changes/2026-11/2026-11-07--GH-237--scheduling-engine/chg-GH-237-test-plan.md
+        - doc/changes/2026-11/2026-11-07--GH-237--scheduling-engine/chg-GH-237-plan.yaml
+    doneArtifacts:
+      pipelineId: "GitHub Actions matrix green on the GH-237 PR targeting main-tools"
+      trackerTransition: "GH-237 dod_check pass; PR opened against main-tools at lifecycle phase 11"
+    summary: "chore(GH-237): reconcile scheduling docs, man pages, registry, glossary, and finalize the release"
+    tasks:
+      - "8.1 Doc-sync handoff — declared as scope, executed at lifecycle phase 7 by @doc-syncer (documentation work, lands in this PR before merge). DEFAULT placement per the first-spec rule is the NEW doc/spec/features/feature-scheduling-engine.md (frontmatter ados_distribution: internal) covering F-1..F-12 as shipped: one folded graph, readiness on the delivered six conditions with scheduler sources, scoped repo-exclusive leases and the daemon-free claim, weight classes as a per-runner resource class, producer-before-consumer with the deploy-verified gate, close-first rank classes and computed preemption, parks with per-type recheck plus the durable clear-observed marker and stuck finding, the queue and lanes surfaces with truthful degradation, and the additive vocabulary. It must make no daemon, socket, --watch-stream, dispatch/session, tracker-write, or merge-execution claim (NG-1, NG-2, NG-3, NG-5, NG-6). Final placement remains doc-sync's decision; if the engine is instead declared an extension of feature-queue-ready.md, the content obligation is identical and the neighbour becomes the host. [Spec §16, §22, §18; TC: manual, lifecycle phase 7]"
+      - "8.2 Reconcile neighbours: feature-queue-ready.md (unchanged contract; add a pointer to the engine and keep the repo-free/tier-known proxies described as the ready-set's own weaker sources); feature-state-layer.md (five additive queue record kinds plus the derived queue-graph document, no schema bump, clear-observed additivity); feature-config-layer.md (the typed queue branch, lease-ttl and park-recheck.<type>, defaults, config.value.invalid/config.key.unknown); feature-plan-schema.md (the scheduler-owned weight vocabulary and the plan tier/weight/interactions consumption); feature-merge-verify-deploy.md (the engine reads the deploy verdict and merge.deploy-expectations, producer-bound); feature-session-lifecycle-economics.md (lanes consumes the restart count and amplification fold, null plus warning); feature-result-contract.md (re-verify the Phase-1 documented queue rows and the lanes collector row after any docs edit). [Spec §16; TC: manual, lifecycle phase 7]"
+      - "8.3 Man pages and registry: doc/planning/oss-tooling/milestones/m1/commands/queue.md flips to shipped for ready/list/plan/add/prioritize/dep/claim/release with the exact Appendix C envelopes, exit statuses, the five error codes plus the state.* exit-2 rule, and the daemon-down degradation (the baseline synopsis that assumed dispatch owned acquisition is corrected per DEC-6); it records that `queue release --park` accepts exactly the closed park cause set {provider-window, provider-quota, preempted-for-close-item} and that causes and condition types are two distinct closed sets with a one-to-one pairing. commands/lanes.md flips to shipped for list/show, records the lane states and bounded idle reasons, and states that --watch is refused in this release (DEC-7) with the daemon story named; doc/planning/oss-tooling/cli-command-registry.md registers the eight queue subcommands and the lanes family, and updates the status-digest row note to read: `engine shipped; the digest's declared lanes-or-queue gap and its expected-story reference remain pending its own reconciliation` — the registry row does not assert a state the digest spec denies and does not change digest behaviour. doc/overview/glossary.md adds queue graph, repository key, lease scope, single-flight, stale lease, weight class, rank class, hard exclusion, park condition, park cause, recheck interval, resume, observation gap, stuck park, clear-observed marker, preemption, runner, lane, degraded, incident, and one-shot scheduling step. The only digest edit in this change is the accepted, declared doc-only exception recorded in 8.3a (GH-237 links, the declared gap, and the stale literals); no digest behaviour changes and its reconciliation remains the named follow-up below. [Spec §18, §23; F-18; TC: manual, lifecycle phase 7]"
+      - "8.3a Status-digest boundary (R-12, F-18, named and owned): the digest spec keeps its `lanes-or-queue` section, its expected-story reference, and its `engine-not-delivered` reason until its own owner reconciles them. OWNER: coordinator/PM. TRIGGER: the status digest's own reconciliation cycle, not this change. TRACKING ROUTE: a tracker ticket is created only with human approval — PM is not authorized to create one autonomously — and the follow-up is recorded in the digest spec's reconciliation notes at that time. The delivered change's only digest edit is the accepted, declared doc-only exception already landed (GH-237 links, the declared gap, and the stale literals); it changes no digest behaviour and asserts no reconciliation. This plan makes no claim that the digest gap is closed. [Spec §18, §22, RSK-9; NG-10; F-18; TC: manual, lifecycle phase 7]"
+      - "8.4 Exactly one lockstep changeset .changeset/gh-237-scheduling-engine-minor.md for the fixed-group minor bump triggered by the @delivery-os/core and @delivery-os/cli changes (version_impact: minor per spec front matter; gh-234 naming precedent). [Release obligation]"
+      - "8.5 Aggregate gates green end-to-end: pnpm check (lint, format, typecheck, tests, boundaries, exports parity), git diff --check, git status --porcelain at the phase boundary; bun run scripts/checks/error-table-sync.ts green in both directions after the docs pass; zero new dependencies; run plan diff GH-237 for the declared-versus-actual scope reconciliation (observational additions recorded in the execution log per the GH-225/GH-234 discipline). [Testing-strategy evidence obligation; all 66 TCs gate through the aggregate battery]"
+      - "8.6 Record gate evidence in the test-plan execution log (chg-GH-237-test-plan.md §10): commands run, Bun/pnpm versions, the NFR-6 measured baseline on the reference CI class (GAP-T6), the fixture inventory including any fixture that is missing (a named failure, never a skipped row), the NFR-3 scheduled-concurrency result (50 distinct holders: exactly 1 acquisition, 0 renewals, 49 queue.lease-conflict refusals, plus the same-holder renewal control), the stale-takeover evidence tally, the park boundary matrix (T-1/T/T+1), the zero-write read observations, the secret-canary result, and the aggregate pnpm check result. Record the honest external-evidence boundary: provider/deploy shapes are fixture-proven, not live-proven (GAP-T2); concurrency is algorithmic (GAP-T3); lane idle-reason spellings are the delivery pin recorded in this plan (OQ-T8); M1-S18/M1-S9 carry the daemon, --watch, automatic preemption, and dispatch/session obligations. Never record an unrun or environmentally-failed result as passing. [GAP-T1..GAP-T7; TC: manual evidence ledger]"
+      - "8.7 Doc-distribution guard: confirm no marker-scoped document (doc/guides/**, doc/templates/** including blueprints/ and *.yaml, doc/documentation-handbook.md, doc/00-index.md, doc/decisions/README.md, doc/decisions/00-index.md, .ai/rules/README.md) was modified by Phases 1-7; list the checked paths and record N/A for bash scripts/.tests/test-doc-distribution.sh. [Doc-distribution marker rule]"
+      - "8.8 PR readiness checklist: all 22 AC rows traceable to green TCs (AC-F3-1 is one row with distinct (a) read-projection and (b) mutating clauses; AC-F1-1 -> TC-SCHED-001/002/015; AC-F2-1 -> TC-SCHED-003/005; AC-F3-1(a) -> TC-SCHED-004/LEASE-001; AC-F3-1(b) -> TC-LEASE-001/002; AC-F3-2 -> TC-LEASE-009/VOCAB-004; AC-F4-1 -> TC-LEASE-002/003/004/005/006; AC-F4-2 -> TC-LEASE-006/SCHED-005; AC-F4-3 -> TC-RANK-005; AC-F5-1 -> TC-WEIGHT-001/003/004; AC-F5-2 -> TC-WEIGHT-002/SCHED-005; AC-F6-1 -> TC-DEPEND-001..006; AC-F6-2 -> TC-DEPEND-003/004; AC-F7-1 -> TC-RANK-001/SCHED-006/008/013; AC-F7-2 -> TC-RANK-003/004/LEASE-011; AC-F8-1 -> TC-PARK-001/002/003/005/007/008; AC-F8-2 -> TC-PARK-006/VOCAB-004; AC-F9-1 -> TC-SCHED-006/007/013/RANK-002/006; AC-F10-1 -> TC-SCHED-008/009/010; AC-F10-2 -> TC-SCHED-002/010/LEASE-010; AC-F10-3 -> TC-LEASE-006/PARK-007/SCHED-009/016; AC-F11-1 -> TC-LANES-001/002/003; AC-F11-2 -> TC-LANES-004/005; AC-F12-1 -> TC-COMPAT-001); all 14 NFRs measured; DoR/DoD cite DEC-1..DEC-13, the delivery decisions in this plan's header, and GAP-T1..GAP-T7 rather than literal ticket wording; the five error rows, the collector-id extension, the two closed park sets with their pairing, and the no-capacity-key invariant are surfaced for reviewer verification; all 66 TCs are mapped with no orphan in either direction; exactly one changeset; PR targets main-tools. [DoD checklist]"
+    coverage:
+      - "No new TC in this phase; all 66 TCs gate through the aggregate battery. TC-VOCAB-002's documented-table direction and TC-COMPAT-001's byte-identical corpus are re-verified after the docs edits. The test-plan execution log records the external-evidence boundaries (GAP-T1..GAP-T7) rather than asserting them."
+    testGate:
+      - "pnpm check"
+      - "bun run scripts/checks/error-table-sync.ts"
+      - "git diff --check && git status --porcelain"
+
+  - id: 9
+    title: "Code Review Remediation (Iteration 1)"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/queue.ts
+        - packages/core/src/domain/queue-park.ts
+        - packages/core/src/domain/queue-precedence.ts
+        - packages/core/src/domain/queue-weight.ts
+        - packages/core/src/domain/queue-lanes.ts
+        - packages/core/src/app/queue.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/commands/queue.ts
+        - packages/cli/src/commands/lanes.ts
+        - tests/behaviour/queue-park.test.ts
+        - tests/behaviour/queue-lease.test.ts
+        - tests/behaviour/queue-depend.test.ts
+        - tests/behaviour/queue-precedence.test.ts
+        - tests/behaviour/queue-weight.test.ts
+        - tests/behaviour/queue-cli.test.ts
+        - tests/behaviour/queue-edge-wiring.test.ts
+        - tests/behaviour/queue-schedule.test.ts
+        - tests/behaviour/lanes.test.ts
+        - tests/checks/queue-bounds.test.ts
+        - tests/checks/queue-hermetic.test.ts
+        - tests/structure/queue-scheduling-contract.test.ts
+        - tests/types/queue-scheduling.type-test.ts
+        - doc/spec/features/feature-scheduling-engine.md
+        - doc/planning/oss-tooling/milestones/m1/commands/queue.md
+        - doc/planning/oss-tooling/milestones/m1/commands/lanes.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/changes/2026-11/2026-11-07--GH-237--scheduling-engine/chg-GH-237-plan.yaml
+        - doc/changes/2026-11/2026-11-07--GH-237--scheduling-engine/chg-GH-237-test-plan.md
+      folders:
+        - tests/golden
+        - tests/fixtures/queue
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/queue.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/commands/queue.ts
+        role: producer
+    summary: "fix(GH-237): remediate review iteration 1 findings"
+    tasks:
+      - "9.1 (F-1) packages/core/src/domain/queue-park.ts — make the per-condition-type recheck interval behavioural: `evaluateParkRecord`/`evaluateParkPass`/`recoverQueueParks` compare elapsed time since `evaluatedAt` with the park's resolved `recheckMs` and report a not-yet-due park as active with its interval and last evaluation, so only an elapsed park is re-evaluated or recovered and no cleared park resumes before its interval. Rewrite TC-PARK-006 in tests/behaviour/queue-park.test.ts over tests/fixtures/queue/config/park-recheck/** to the two-pass 60 000-vs-5 000 ms paired fixtures for provider-window, provider-quota, and preemption: assert no resume at T+5 001 under the default, a resume by T+60 001, and an earlier resume after the 5 000 ms config with the changed value visible in park evidence. [F-1; AC-F8-2; DM-5; NFR-10; TC: TC-PARK-006 remediation-completing]"
+      - "9.2 (F-2) packages/cli/src/edge.ts — implement AC-F6-2 producer-bound deploy-expectation resolution in the composition seam: discover candidate roots ONLY from entry records (never the invocation root), read each candidate's normalized remote, match the producer entry's recorded key by exact string equality, load `merge.deploy-expectations` from the matched root's own configuration, and feed the resolved `facts.deploy.expectations[producerRef]`; fail closed to `unknown` on no match, on two distinct recorded roots claiming one key (collision, never pick one), and on a missing, unreadable, or invalid matched config, so the dependent holds `deploy-unverified` and never `not-declared` or `verified`. Extend tests/behaviour/queue-depend.test.ts and tests/behaviour/queue-edge-wiring.test.ts with a real multi-repository state-directory fixture under tests/fixtures/queue/depend/** that resolves producer expectations from a matched root config and covers no-match, collision, and unreadable/invalid config; a pre-resolved expectation injection may not stand in for the resolution. [F-2, C-6, DM-12; AC-F6-2; NFR-13; TC: TC-DEPEND-003, TC-DEPEND-004 remediation-completing]"
+      - "9.3 (F-3) packages/cli/src/commands/lanes.ts and packages/cli/src/commands/queue.ts — detect `--watch` before the generic flag parser (or register it as an explicitly refused flag on both families) and emit a `fallback.invocation` envelope at exit 1 whose remediationHint names the M1-S18 resident-daemon story, with no stream emitted. Update tests/fixtures/queue/golden/lanes-watch-refusal.json (and the queue-side refusal assertion) and assert the hint text itself, not only the code and the absence of data, in TC-LANES-004 (tests/behaviour/lanes.test.ts) and TC-SCHED-016 (tests/behaviour/queue-cli.test.ts). [F-3; AC-F11-2 and the F-10 refusal surface; DEC-7; TC: TC-LANES-004, TC-SCHED-016 remediation-completing]"
+      - "9.4 (F-4) packages/cli/src/commands/queue.ts — preserve `queue ready` under the full-family composition: delegate or parse `ready` against the delivered ready grammar (up to 8 candidate refs / 33 positionals) before the shared full-definition positional cap, or raise the full-definition cap and delegate before the generic check, so `queue ready` exits 0 for 3-8 candidate refs exactly as the ready-only definition does. Add a preservation test with 3-8 candidate refs through the full queue definition in tests/behaviour/queue-cli.test.ts or tests/behaviour/queue-edge-wiring.test.ts and assert the ready output stays byte-identical. [F-4; AC-F12-1, NG-4; TC: TC-COMPAT-001 extended (full-family preservation case) remediation-completing]"
+      - "9.5 (F-5) packages/core/src/app/queue.ts — make release+park atomic against a SECOND-append failure: append the park record first and, when the lease-release append fails, append a compensating `queue.park` record with `recoveryState: released` so the fold observes no active park while the lease remains held (neither outcome landed), then return the classified state.* failure; keep the release and park verification so the partial-write case is observable. Add a second-append-failure test in tests/behaviour/queue-lease.test.ts that arms the lease-release append to fail and asserts the exact expected observable state (latest park record `released`, no active park, lease still held, state.* result) in addition to the existing first-append-failure case. [F-5, F-7; AC-F7-2; EVT-3, EVT-4; NFR-3; TC: TC-RANK-004, TC-LEASE-011 remediation-completing]"
+      - "9.6 (F-6) packages/core/src/domain/queue-precedence.ts and packages/core/src/contracts/queue.ts — enforce NFR-9 instead of declaring it: cap the serialized machine `data` at QUEUE_MAX_MACHINE_BYTES (65 536 UTF-8 bytes) by dropping trailing entries/actions with an explicit `+more` truncation marker and reason; wire QUEUE_MAX_HUMAN_LINES and QUEUE_MAX_HUMAN_BYTES into the human renderer instead of the hardcoded 40/8192; and enforce QUEUE_MAX_REASONS (truncate with a marker, or remove the declared bound if it is not a real bound). Add a 500-entry bound test in tests/checks/queue-bounds.test.ts that asserts the serialized `queue plan` payload is at or below 65 536 bytes and carries the truncation marker, with the human line and byte caps asserted too. [F-6; NFR-9; TC: TC-SCHED-011 remediation-completing]"
+      - "9.7 (F-7) packages/core/src/app/queue.ts (verified park read and fold) and packages/core/src/domain/queue-park.ts — detect two active `parked` records for one ref during the verified park read and fail closed with the classified state.* identity, never latest-wins, while one active park remains the normal case. Rewrite TC-PARK-004 in tests/behaviour/queue-park.test.ts and the structure rows in tests/structure/queue-scheduling-contract.test.ts to seed two active records for one ref, assert the refusal with zero fabricated park state, and keep the one-active-park control. [F-7; AC-F8-1, DM-5; NFR-13; TC: TC-PARK-004 remediation-completing]"
+      - "9.8 (F-8, F-9, F-10, F-11) Close the test-efficacy gaps: add recording/guarded-store zero-write tests around the real edge harness for `queue list`, `queue plan`, `lanes list`, and `lanes show`, asserting zero append/replaceDocument/acquireFence (tests/behaviour/queue-cli.test.ts, tests/behaviour/lanes.test.ts); replace the vacuous lanes purity assertion with a snapshot of the real injected facts/schedule before the fold, or a frozen/proxy input that throws on mutation, in tests/behaviour/lanes.test.ts; expand the TC-SCHED-006 generated corpus in tests/behaviour/queue-precedence.test.ts and tests/fixtures/queue/precedence/** to both weight classes, all three park condition types (active and stuck), both dependency roles, close and new-start classes, and explicit priorities, then assert shuffle invariance; add a config-resolved `queue.lease-ttl` case in tests/behaviour/queue-lease.test.ts over tests/fixtures/queue/config/lease-ttl/** that resolves two configurations differing only in the key and observes the same heartbeat age live under one value and stale under the other; correct the execution-log claims in chg-GH-237-test-plan.md §10 to match what is actually asserted. [F-8, F-9, F-10, F-11; AC-F9-1, AC-F11-1, NFR-1, NFR-2, NFR-10; TC: TC-SCHED-012, TC-LANES-006, TC-LANES-001, TC-SCHED-006, TC-LEASE-007 remediation-completing]"
+      - "9.9 (F-12, F-13, F-14) packages/core/src/domain/queue-weight.ts — replace the locale-sensitive `localeCompare` in `weightLoads` with the shared code-point comparator so weight rows are byte-stable across locales. packages/core/src/domain/queue-precedence.ts and packages/core/src/domain/queue-lanes.ts — give non-close/non-producer actions a truthful reason (add a neutral `new-start` token to the closed reason vocabulary in packages/core/src/contracts/queue.ts, or derive it from rank) and give a ready-but-unleased lane a truthful idle reason that does not contradict its ready state; update tests/fixtures/queue/golden/queue-plan.json and the reason assertions in tests/behaviour/queue-precedence.test.ts, tests/behaviour/lanes.test.ts, tests/structure/queue-scheduling-contract.test.ts, and tests/types/queue-scheduling.type-test.ts. packages/cli/src/commands/queue.ts — stop fabricating `entry.state: ready` and hardcoding `weightClassSource: absent`/`standard` on `queue add|prioritize|dep`: project the real declaration state (for example `not-ready` with the binding reason, or a neutral `declared`) and report weight provenance only when resolved; update tests/golden/queue-envelope.json and tests/behaviour/queue-cli.test.ts. [F-12, F-13, F-14; AC-F9-1, AC-F11-1, AC-F1-1, NFR-1; TC: TC-SCHED-013, TC-WEIGHT-002, TC-RANK-001, TC-LANES-001, TC-SCHED-015, TC-SCHED-002 remediation-completing]"
+      - "9.10 (F-15, F-16) Record and implement the chosen resolutions. F-15 CHOSEN: PRODUCE the `released` recovery state as the compensating park marker written by task 9.5 when the lease-release append fails after the park append, leaving the closed set unchanged and requiring no spec removal; document its semantics as the withdrawn-park marker in doc/spec/features/feature-scheduling-engine.md (replacing the `no delivered path writes it` note) and in the `queue.park` contract comment, and assert it in the second-append-failure test. F-16 CHOSEN: ADD `queue release <ref> --park provider-window --until <iso>`; packages/cli/src/commands/queue.ts accepts `--until` only with cause provider-window (required there and refused for the other causes through `fallback.invocation`), packages/cli/src/edge.ts threads the supplied absolute expiry into the park condition instead of using the release instant, and tests/behaviour/queue-park.test.ts plus tests/behaviour/queue-cli.test.ts assert the window ends at `--until` and that a missing or extra `--until` is refused; update doc/spec/features/feature-scheduling-engine.md (removing the release-instant known limit), the queue man page, the lanes man page where its cross-reference changes, and the command registry. [F-15, F-16; AC-F8-1, AC-F7-2; DM-5; TC: TC-PARK-001, TC-PARK-004, TC-LEASE-011 remediation-completing]"
+      - "9.11 (F-17, F-18) Reconcile the plan and close the DoR residuals: confirm every earlier-phase scope and interaction target names `packages/core/src/app/queue.ts` and no `packages/core/src/state/queue.ts` scope or interaction target remains (Phases 2, 4, 5), with the ADR-0003 tier-matrix reason recorded in the plan header; keep the status-digest doc-only edit (GH-237 links, declared gap, stale literals) recorded as an accepted, declared exception to NG-10 in task 8.3a rather than as a hidden boundary crossing; close DoR N2 by keeping AC-F12-1 -> TC-COMPAT-001 in the task 8.8 AC->TC checklist; close N3 by adding an explicit `degraded[]` assertion for `queue add|prioritize|dep` in tests/behaviour/queue-cli.test.ts; close N4 by keeping the header wording that carries the root on the internal entry record only, never in the derived graph document and never in a read-surface projection; mirror the N2/N3/N4 closure in chg-GH-237-test-plan.md where the test plan is the named home. [F-17, F-18; ADR-0003; NG-10; TC: manual plan/test-plan reconciliation]"
+      - "9.12 (F-19, F-20, F-21, F-22) tests/golden/queue-*.test.ts — rename or reword the machine-golden assertions from `byte-identical` to `structurally identical` (or add a real byte comparison where serializer formatting is stable) so the title matches the `JSON.parse` plus `toEqual` check; doc/spec/features/feature-scheduling-engine.md — add the explicit deferred-production-composition note (no shipped binary wires `options.queue`/`options.lanes`; AC-F10-1 holds at the injected-fixture tier) as was done for GH-233; packages/cli/src/commands/queue.ts — replace the stale M0/M2-S1 header comment with the shipped family and the remaining M1-S9 dispatch scope; tests/behaviour/queue-cli.test.ts — add the two CLI park cases: `queue list|plan` exit 2 on unreadable park history and exit 0 with a readable stuck-park finding, completing AC-F10-3's read-surface matrix. [F-19, F-20, F-21, F-22; AC-F10-3, AC-F10-1; TC: TC-SCHED-009, TC-SCHED-016, TC-PARK-007 remediation-completing]"
+    coverage:
+      - "Remediation-completing: TC-PARK-006 (F-1 due check and the rewritten two-pass 60 000-vs-5 000 ms fixtures for all three condition types) and TC-PARK-004 (F-7 two-active-park refusal plus the one-active-park control)."
+      - "Remediation-completing: TC-DEPEND-003 and TC-DEPEND-004 (F-2 real producer-root discovery, config load, collision, and unreadable fail-closed over a multi-repository state directory)."
+      - "Remediation-completing: TC-LANES-004 and TC-SCHED-016 (F-3 daemon-naming --watch hint on both surfaces, with goldens and hint assertions)."
+      - "Remediation-completing: TC-COMPAT-001 (F-4 queue ready preservation through the full family with 3-8 candidate refs; no new TC id)."
+      - "Remediation-completing: TC-RANK-004 and TC-LEASE-011 (F-5 second-append-failure atomicity, the F-15 produced `released` marker, and the F-16 `--until` window on the same release+park path)."
+      - "Remediation-completing: TC-SCHED-011 (F-6 machine byte cap, human bounds, reasons bound, and the 500-entry bound test)."
+      - "Remediation-completing: TC-SCHED-012, TC-LANES-006, TC-LANES-001, TC-SCHED-006, and TC-LEASE-007 (F-8 command-level zero-write rows for `queue list|plan` and `lanes list|show`, real lanes purity, the mixed AC-F9-1 corpus, config-resolved TTL tuning, and the corrected execution log)."
+      - "Remediation-completing: TC-SCHED-013, TC-WEIGHT-002, TC-RANK-001, TC-LANES-001, TC-SCHED-015, and TC-SCHED-002 (F-12 code-point comparator, F-13 truthful reason/idle tokens, F-14 no fabricated entry.state on mutation envelopes)."
+      - "Remediation-completing: TC-PARK-001, TC-PARK-004, and TC-LEASE-011 (F-16 `--until` provider-window expiry and the F-15 released-state semantics)."
+      - "Remediation-completing: TC-SCHED-009, TC-SCHED-016, and TC-PARK-007 (F-19 golden titles, F-20 deferred-composition note, F-21 header comment, F-22 CLI park exit-2/stuck-exit-0 cases)."
+      - "No new TC id is added by this remediation (66 total); every gap extends or rewrites the named existing TC. F-17 and F-18 are plan/test-plan reconciliations with no behavioural TC."
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/queue-park.test.ts tests/behaviour/queue-lease.test.ts tests/behaviour/queue-depend.test.ts tests/behaviour/queue-precedence.test.ts tests/behaviour/queue-weight.test.ts tests/behaviour/queue-cli.test.ts tests/behaviour/queue-edge-wiring.test.ts tests/behaviour/queue-schedule.test.ts tests/behaviour/lanes.test.ts tests/checks/queue-bounds.test.ts tests/checks/queue-hermetic.test.ts tests/structure/queue-scheduling-contract.test.ts"
+      - "bun test tests/golden/queue-plan.test.ts tests/golden/queue-list.test.ts tests/golden/queue-envelope.test.ts tests/golden/queue-lease-conflict.test.ts tests/golden/queue-rank.test.ts tests/golden/lanes-list.test.ts tests/golden/lanes-show.test.ts tests/golden/lanes-watch-refusal.test.ts"
+      - "bun test tests/behaviour/queue-ready-output.test.ts tests/behaviour/queue-ready-command.test.ts tests/golden/queue-ready.test.ts"
+      - "pnpm check"

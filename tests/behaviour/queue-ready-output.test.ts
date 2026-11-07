@@ -4,6 +4,10 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  ERROR_TABLE,
+  QUEUE_READY_CONDITION_ORDER,
+  QUEUE_READY_CONDITION_STATES,
+  QUEUE_READY_EVIDENCE_REASONS,
   QUEUE_READY_MAX_BRANCH_CHARS,
   QUEUE_READY_MAX_HUMAN_SEGMENT_BYTES,
   QUEUE_READY_MAX_IDENTITY_CHARS,
@@ -32,10 +36,6 @@ import {
   astralOverCapFacts,
 } from "../fixtures/queue-ready/caps/astral";
 import {
-  nonAsciiByteBudgetControlFacts,
-  nonAsciiByteBudgetFacts,
-} from "../fixtures/queue-ready/caps/non-ascii-byte-budget";
-import {
   humanAstral8,
   humanAstral8Facts,
   humanAstral8Refs,
@@ -45,6 +45,10 @@ import {
   humanOverBudgetFacts,
   humanOverBudgetRefs,
 } from "../fixtures/queue-ready/caps/human-over-budget/facts";
+import {
+  nonAsciiByteBudgetControlFacts,
+  nonAsciiByteBudgetFacts,
+} from "../fixtures/queue-ready/caps/non-ascii-byte-budget";
 import {
   baseFacts,
   blockedBy,
@@ -1222,3 +1226,35 @@ const boundViolations = (payload: QueueReadyPayload): string[] => {
 
 export const machinePayloadViolations = payloadViolations;
 export const machineBoundViolations = boundViolations;
+
+describe("TC-COMPAT-001 queue ready preservation (Phase 7)", () => {
+  test("the six condition ids, order, tri-state, and evidence vocabulary are unchanged", () => {
+    expect([...QUEUE_READY_CONDITION_ORDER]).toEqual([
+      "deps-satisfied",
+      "repo-free",
+      "tier-known",
+      "no-owner-gate",
+      "ci-healthy",
+      "provider-available",
+    ]);
+    expect([...QUEUE_READY_CONDITION_STATES]).toEqual(["satisfied", "unsatisfied", "unknown"]);
+    for (const reason of [
+      "dependency-open",
+      "dependency-unobserved",
+      "owner-labels",
+      "tier-label",
+      "ci-succeeded",
+      "ci-failed",
+      "no-active-park",
+    ]) {
+      expect(QUEUE_READY_EVIDENCE_REASONS as readonly string[]).toContain(reason);
+    }
+  });
+
+  test("ready contributes no new error row", () => {
+    const readyRows = (ERROR_TABLE as readonly { code: string }[]).filter((entry) =>
+      entry.code.startsWith("queue.ready"),
+    );
+    expect(readyRows).toEqual([]);
+  });
+});
