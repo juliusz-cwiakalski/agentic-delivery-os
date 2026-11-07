@@ -2264,3 +2264,60 @@ Populated during delivery and quality gates. No execution has occurred at author
 | — | — | NOT RUN | Plan authored; delivery has not started. |
 | — (authoring gate) | 2026-11-07 | PASS | `pnpm check:privacy-literals` exit 0, 2 691 files scanned, 0 violations; the test plan's connection-string literal was sanitized to the placeholder `https://user:redacted@github.com/Owner/Repo`. |
 | — (authoring gate, test plan v1.3) | 2026-11-07 | PASS | `pnpm check:privacy-literals` exit 0, 2 692 files scanned, 0 violations; the DoR iteration-2 edits (R2-01/R2-02/R2-07) introduced no privacy literal. |
+
+### Delivery execution log (2026-11-07, GH-237)
+
+Environment: Bun 1.4.4, pnpm 10.18.3, Node v24/v26 available for the Node smoke
+suites, Linux/x64.
+
+| Gate | Command | Result |
+|---|---|---|
+| Typecheck | `pnpm typecheck` | PASS |
+| Phase 1 | `bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/error-table.test.ts tests/structure/owner-gate-sla-contract.test.ts tests/structure/content-inventory.test.ts tests/structure/config-contract.test.ts` | PASS (111) |
+| Phase 1 sync | `bun run scripts/checks/error-table-sync.ts` | PASS `entries=101 documented=101`; `bun test tests/checks/error-table-sync.test.ts` PASS (86) |
+| Phase 2 | `bun test tests/behaviour/queue-graph.test.ts tests/structure/state-contract.test.ts tests/structure/queue-scheduling-contract.test.ts tests/structure/content-inventory.test.ts` | PASS (51) |
+| Phase 2 preservation | `bun test tests/behaviour/queue-ready-command.test.ts tests/behaviour/queue-ready-output.test.ts` | PASS (55) |
+| Phase 3 | `bun test tests/behaviour/queue-readiness.test.ts tests/behaviour/queue-weight.test.ts tests/behaviour/queue-depend.test.ts tests/behaviour/queue-rank.test.ts tests/behaviour/queue-precedence.test.ts tests/behaviour/queue-schedule.test.ts tests/checks/queue-bounds.test.ts tests/structure/queue-scheduling-contract.test.ts tests/structure/content-inventory.test.ts` | PASS (84) |
+| Phase 4 | `bun test tests/behaviour/queue-lease.test.ts tests/behaviour/queue-lease-concurrency.test.ts tests/behaviour/queue-weight.test.ts tests/structure/content-inventory.test.ts` | PASS (37) |
+| Phase 4 neighbours | `bun test tests/behaviour/queue-rank.test.ts tests/behaviour/queue-readiness.test.ts tests/checks/queue-bounds.test.ts` | PASS (24) |
+| Phase 5 | `bun test tests/behaviour/queue-park.test.ts tests/behaviour/queue-rank.test.ts tests/behaviour/queue-lease.test.ts tests/structure/queue-scheduling-contract.test.ts tests/structure/content-inventory.test.ts` | PASS (65) |
+| Phase 6 | `bun test tests/behaviour/lanes.test.ts tests/golden/lanes-list.test.ts tests/golden/lanes-show.test.ts tests/golden/lanes-watch-refusal.test.ts tests/checks/queue-bounds.test.ts tests/structure/queue-scheduling-contract.test.ts tests/structure/content-inventory.test.ts` | PASS (49) |
+| Phase 6 neighbours | `bun test tests/behaviour/economics-amplification.test.ts tests/behaviour/economics-envelope.test.ts` | PASS (14) |
+| Phase 7 | the queue CLI/edge/golden/ready/hermetic/bounds/secret battery | PASS (179) |
+| Phase 7 boundaries | `pnpm check:boundaries` | PASS (0 violations; ambient 114 files; secret boundary 248 files) |
+| Phase 8 aggregate | `pnpm check` | PASS except the environmental `ci-baseline-parity` EXDEV failure; re-running `TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/ci-baseline-parity.test.ts` PASSES |
+| Phase 8 sync | `bun run scripts/checks/error-table-sync.ts` | PASS |
+
+Evidence highlights:
+
+- **NFR-3 scheduled concurrency:** 50 distinct holders against one repository
+  yield exactly 1 acquisition, 0 renewals, 49 `queue.lease-conflict` refusals,
+  and 1 lease record; the same-holder control is `renewed`. The harness is
+  algorithmic (declared drain order over the injected state port), not an OS
+  race (GAP-T3).
+- **Stale takeover:** the staleness bound is inclusive; bound-1 refuses as a
+  live lease, bound and bound+1 take over with previous holder, lease identity,
+  heartbeat age, last heartbeat, and earliest takeover time, plus a
+  `lease-stale-takeover` incident.
+- **Park boundary matrix:** T-1 is active; T and T+1 are resumable; recovery
+  records the clear-observed marker before the recovered record and the
+  `park-auto-recovery` incident; a long observation gap recovers with a
+  gap-naming incident and is never stuck solely because of the gap.
+- **Zero-write reads:** the read surfaces are pure folds over injected facts;
+  the command-level checks use the injected state port and observe zero
+  appends/fences/derived replacements on `queue list|plan` and `lanes list|show`.
+- **NFR-6 baseline:** the 500-entry / 1000-edge plan completes below the 250 ms
+  reference bound in the recorded test run; the structural bound (32 evaluated
+  candidates, named truncation, 3 deploy reads) is environment-independent.
+- **Secret canary:** the synthetic `tests/fixtures/queue/secret/canary.txt` marker
+  appears in no queue or lanes envelope; the secret-read allowlist gained zero
+  entries.
+- **Queue ready preservation:** the six condition ids/order/tri-state/evidence
+  vocabulary and the `queue ready` payload over the existing fixture corpus are
+  unchanged; the full family delegates `ready` to the delivered definition.
+
+Honest boundaries (unchanged from the plan): provider and deploy shapes are
+fixture-proven, not live-proven (GAP-T2); concurrency is algorithmic (GAP-T3);
+lane idle-reason spellings are the plan's delivery pin (OQ-T8); the daemon,
+`--watch` streaming, automatic preemption, and dispatch/session obligations
+remain M1-S18 (GH-238) and M1-S9 (GH-239).

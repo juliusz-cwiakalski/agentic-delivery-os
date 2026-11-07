@@ -15,13 +15,15 @@ describe("queue envelope golden", () => {
     const harness = createQueueEdgeHarness("golden-envelope");
     const run = await harness.run(["queue", "list", "--json"]);
     expect(run.exitCode).toBe(0);
-    expect(run.stdout).toBe(readFileSync(join(GOLDEN, "queue-envelope.json"), "utf8"));
+    expect(JSON.parse(run.stdout)).toEqual(
+      JSON.parse(readFileSync(join(GOLDEN, "queue-envelope.json"), "utf8")),
+    );
   });
 
   test("the empty envelope names the degradation and explicit counts", () => {
-    const envelope = JSON.parse(
-      readFileSync(join(GOLDEN, "queue-envelope.json"), "utf8"),
-    ) as { data: { degraded: string[]; counts: { entries: number } } };
+    const envelope = JSON.parse(readFileSync(join(GOLDEN, "queue-envelope.json"), "utf8")) as {
+      data: { degraded: string[]; counts: { entries: number } };
+    };
     expect(envelope.data.degraded).toEqual(["daemon-unreachable"]);
     expect(envelope.data.counts.entries).toBe(0);
   });

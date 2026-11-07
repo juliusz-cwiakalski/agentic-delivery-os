@@ -7,6 +7,14 @@
  * `tests/types/tsconfig.json` compiles it through the root `typecheck` script.
  */
 import type {
+  QUEUE_ENTRY_RECORD_KIND,
+  QUEUE_ENTRY_SCHEMA,
+  QUEUE_GRAPH_SCHEMA,
+  QUEUE_LANE_STATES,
+  QUEUE_LEASE_SCHEMA,
+  QUEUE_PARK_SCHEMA,
+  QUEUE_RANK_CLASSES,
+  QUEUE_WEIGHT_CLASSES,
   QueueGraphEntry,
   QueueLaneIdleReason,
   QueueLaneState,
@@ -18,16 +26,6 @@ import type {
   QueueRankClass,
   QueueWeightClass,
   QueueWeightClassSource,
-} from "../../packages/core/src/contracts/index";
-import {
-  QUEUE_ENTRY_RECORD_KIND,
-  QUEUE_ENTRY_SCHEMA,
-  QUEUE_GRAPH_SCHEMA,
-  QUEUE_LANE_STATES,
-  QUEUE_LEASE_SCHEMA,
-  QUEUE_PARK_SCHEMA,
-  QUEUE_RANK_CLASSES,
-  QUEUE_WEIGHT_CLASSES,
 } from "../../packages/core/src/contracts/index";
 
 type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
@@ -54,7 +52,10 @@ type RecoveryUnion = Expect<
   Equal<QueueParkRecoveryState, "parked" | "clear-observed" | "recovered" | "released">
 >;
 type LaneStateUnion = Expect<
-  Equal<QueueLaneState, "delivering" | "idle-with-reason" | "parked" | "merge-ready" | "in-review" | "failed">
+  Equal<
+    QueueLaneState,
+    "delivering" | "idle-with-reason" | "parked" | "merge-ready" | "in-review" | "failed"
+  >
 >;
 type IdleReasonIsClosed = Expect<Equal<QueueLaneIdleReason extends string ? true : false, true>>;
 

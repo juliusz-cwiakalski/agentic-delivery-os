@@ -74,9 +74,7 @@ const oneLaneData = (data: QueueLanesData, ref: string): QueueLanesData => {
 };
 
 /** Build the `lanes` command definition over an injected lane read. */
-export const createLanesCommandDefinition = (
-  runtime: LanesCommandRuntime,
-): CommandDefinition => ({
+export const createLanesCommandDefinition = (runtime: LanesCommandRuntime): CommandDefinition => ({
   flags: [],
   positionals: { max: 2 },
   humanText: (data: unknown): string => renderLanesHuman(data as QueueLanesData),
@@ -88,7 +86,11 @@ export const createLanesCommandDefinition = (
     const read = runtime.readLanes();
     if (!read.ok) return failure("status", read.code, read.summary);
     if (read.data.schemaVersion !== QUEUE_LANES_SCHEMA_VERSION) {
-      return failure("status", "status.collector.lanes.unavailable", "lane payload version mismatch");
+      return failure(
+        "status",
+        "status.collector.lanes.unavailable",
+        "lane payload version mismatch",
+      );
     }
     if (grammar.mode === "list") return { data: read.data };
     const selected = oneLaneData(read.data, grammar.ref);

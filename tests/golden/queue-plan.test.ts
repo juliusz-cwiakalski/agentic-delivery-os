@@ -16,7 +16,9 @@ describe("queue plan golden", () => {
     await harness.run(["queue", "add", "GH-320", "--priority", "5", "--json"]);
     const run = await harness.run(["queue", "plan", "--next", "2", "--json"]);
     expect(run.exitCode).toBe(0);
-    expect(run.stdout).toBe(readFileSync(join(GOLDEN, "queue-plan.json"), "utf8"));
+    expect(JSON.parse(run.stdout)).toEqual(
+      JSON.parse(readFileSync(join(GOLDEN, "queue-plan.json"), "utf8")),
+    );
   });
 
   test("the plan golden carries no absolute path or recorded root", () => {

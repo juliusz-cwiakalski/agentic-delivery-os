@@ -86,16 +86,10 @@ export {
   renderDoctorHuman,
   runIsolatedDoctorCheck,
 } from "./doctor.js";
-export { canonicalHarnessJson } from "./harness-canonical.js";
 export {
-  type HarnessCapabilityInspection,
-  harnessCapabilityViolations,
-  inspectHarnessCapability,
-} from "./harness-capability.js";
-export {
-  type RestartBudgetGateInput,
   evaluateRestartBudget,
   foldRestartRecords,
+  type RestartBudgetGateInput,
 } from "./economics-budget.js";
 export {
   economicsReferenceFor,
@@ -106,20 +100,26 @@ export {
   formatStallEvidence,
   formatUneconomicalEvidence,
   formatUnevaluableEvidence,
-  type RefusalCorpus,
   parseRefusalCorpus,
+  type RefusalCorpus,
 } from "./economics-evidence.js";
 export {
-  type ResumeEconomicsDeps,
   createOneShotResumeComposition,
   createSupervisedResumeComposition,
   evaluateResumeEconomics,
   isEconomicalRepay,
+  type ResumeEconomicsDeps,
 } from "./economics-resume.js";
 export {
   deriveEconomicsView,
   latestUniqueProgressTokens,
 } from "./economics-view.js";
+export { canonicalHarnessJson } from "./harness-canonical.js";
+export {
+  type HarnessCapabilityInspection,
+  harnessCapabilityViolations,
+  inspectHarnessCapability,
+} from "./harness-capability.js";
 export { classifyHarnessEvidence } from "./harness-classify.js";
 export {
   assembleHarnessLiveness,
@@ -231,7 +231,17 @@ export {
   type PmNotesLintLocation,
   type PmNotesLintVerdict,
 } from "./pm-notes-lint.js";
-export { evaluateQueueReady, renderQueueReadyHuman } from "./queue-ready.js";
+export {
+  createDeployGateState,
+  deployEvidenceOf,
+  evaluateDependencyGate,
+  evaluateDeployGate,
+  producerLanding,
+  QUEUE_DEPLOY_READ_BUDGET,
+  type QueueDependencyGateOutcome,
+  type QueueDeployGateState,
+  type QueueDeployOutcome,
+} from "./queue-deploy-gate.js";
 export {
   buildAdjacency,
   canonicalQueueRef,
@@ -250,6 +260,59 @@ export {
   queueGraphDocument,
 } from "./queue-graph.js";
 export {
+  foldLanes,
+  type QueueLaneEconomics,
+  type QueueLaneFoldInput,
+  renderLanesHuman,
+  selectLane,
+} from "./queue-lanes.js";
+export {
+  claimScope,
+  defaultLeaseTtlMs,
+  earliestTakeoverAtIso,
+  evaluateClaimPreconditions,
+  foldActiveLeases,
+  isLeaseStale,
+  leaseConflict,
+  leaseHeartbeatAgeMs,
+  makeLeaseId,
+  type QueueClaimPrecondition,
+  type QueueLeaseConflict,
+  renewalCadenceMs,
+} from "./queue-lease.js";
+export {
+  clearObservedRecord,
+  conditionTypeForCause,
+  createParkRecord,
+  defaultParkRecheckMs,
+  evaluateParkPass,
+  evaluateParkRecord,
+  latestParkRecords,
+  observationGapMs,
+  parkConditionForCause,
+  type QueueParkContext,
+  type QueueParkPass,
+  recoveredRecord,
+  releasedParkRecord,
+} from "./queue-park.js";
+export {
+  computeQueueSchedule,
+  isDeclaredBlockingReason,
+  QUEUE_NEXT_DEFAULT,
+  type QueueHumanData,
+  type QueueSchedule,
+  type QueueScheduleOptions,
+  renderQueueHuman,
+} from "./queue-precedence.js";
+export {
+  isCloseRank,
+  isPreemptionAction,
+  preemptionBlock,
+  preemptionParkCause,
+  rankClassIndex,
+  resolveRankClass,
+} from "./queue-rank.js";
+export {
   closeClassOf,
   evaluateQueueReadiness,
   QUEUE_SCHEDULER_CONDITION_ORDER,
@@ -267,40 +330,15 @@ export {
   type QueueSchedulerFacts,
   type QueueWorkItemFact,
 } from "./queue-readiness.js";
+export { evaluateQueueReady, renderQueueReadyHuman } from "./queue-ready.js";
 export {
   activeHeavyLease,
   isHeldByWeight,
-  resolveQueueWeight,
   type QueueWeightLoad,
   type QueueWeightResolution,
+  resolveQueueWeight,
   weightLoads,
 } from "./queue-weight.js";
-export {
-  createDeployGateState,
-  deployEvidenceOf,
-  evaluateDependencyGate,
-  evaluateDeployGate,
-  producerLanding,
-  QUEUE_DEPLOY_READ_BUDGET,
-  type QueueDependencyGateOutcome,
-  type QueueDeployGateState,
-  type QueueDeployOutcome,
-} from "./queue-deploy-gate.js";
-export {
-  isCloseRank,
-  isPreemptionAction,
-  preemptionBlock,
-  preemptionParkCause,
-  rankClassIndex,
-  resolveRankClass,
-} from "./queue-rank.js";
-export {
-  computeQueueSchedule,
-  isDeclaredBlockingReason,
-  QUEUE_NEXT_DEFAULT,
-  type QueueSchedule,
-  type QueueScheduleOptions,
-} from "./queue-precedence.js";
 export {
   attemptOutOfSeamEvidenceWrite,
   collectRetro,
@@ -403,41 +441,3 @@ export {
   type WatchdogRestorationPlan,
   watchdogPreservedRefName,
 } from "./watchdog.js";
-export {
-  DEFAULT_LEASE_SCOPE,
-  claimScope,
-  defaultLeaseTtlMs,
-  earliestTakeoverAtIso,
-  evaluateClaimPreconditions,
-  foldActiveLeases,
-  isLeaseStale,
-  leaseConflict,
-  leaseHeartbeatAgeMs,
-  makeLeaseId,
-  renewalCadenceMs,
-  type QueueClaimPrecondition,
-  type QueueLeaseConflict,
-} from "./queue-lease.js";
-export {
-  clearObservedRecord,
-  conditionTypeForCause,
-  createParkRecord,
-  defaultParkRecheckMs,
-  evaluateParkPass,
-  evaluateParkRecord,
-  latestParkRecords,
-  observationGapMs,
-  parkConditionForCause,
-  recoveredRecord,
-  releasedParkRecord,
-  type QueueParkContext,
-  type QueueParkPass,
-} from "./queue-park.js";
-export {
-  foldLanes,
-  renderLanesHuman,
-  selectLane,
-  type QueueLaneEconomics,
-  type QueueLaneFoldInput,
-} from "./queue-lanes.js";
-export { renderQueueHuman, type QueueHumanData } from "./queue-precedence.js";

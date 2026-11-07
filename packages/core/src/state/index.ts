@@ -82,15 +82,15 @@ export {
   commitTelemetryRecordKey,
   readCommitTelemetry,
 } from "./commit-telemetry.js";
+export { createNodeRetroSidecarIo, createNodeStateEdge } from "./driver/runtime-edge.js";
 export {
   appendEconomicsRestartEvent,
   createEconomicsResumeStorePort,
-  economicsRecordKey,
   type EconomicsResumeStorePortOptions,
+  economicsRecordKey,
   ensureEconomicsExhaustionRecord,
   readEconomicsRecords,
 } from "./economics.js";
-export { createNodeRetroSidecarIo, createNodeStateEdge } from "./driver/runtime-edge.js";
 export type {
   StateEdgeFaultPoint,
   StateIndexRow,

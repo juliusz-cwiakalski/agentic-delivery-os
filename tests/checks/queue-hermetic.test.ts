@@ -8,10 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { computeQueueSchedule } from "../../packages/core/src/domain/index";
 import { scan, scopedFiles } from "../../scripts/checks/ambient-globals";
-import {
-  makeFacts,
-  type EntrySpec,
-} from "../fixtures/queue/schedule/harness";
+import { type EntrySpec, makeFacts } from "../fixtures/queue/schedule/harness";
 
 const ROOT = process.cwd();
 
@@ -54,7 +51,10 @@ describe("TC-SCHED-014 hermetic guarantees", () => {
   test("every scheduling module is inside the ambient scan and the scan is clean", () => {
     const scoped = new Set(scopedFiles(ROOT));
     for (const module of QUEUE_MODULES) {
-      if (!module.startsWith("packages/core/src/contracts/") && !module.startsWith("packages/core/src/domain/")) {
+      if (
+        !module.startsWith("packages/core/src/contracts/") &&
+        !module.startsWith("packages/core/src/domain/")
+      ) {
         continue;
       }
       expect(scoped.has(module), module).toBe(true);
@@ -104,15 +104,32 @@ describe("TC-SCHED-014 hermetic guarantees", () => {
   });
 
   test("the deploy-read budget is bounded and memoized", () => {
-    const facts = makeFacts([
-      { ref: "GH-300", repository: "github.com/owner/repo-alpha", workItem: { state: "observed", deliveryState: "done", labels: ["priority:high"], blockedBy: [] } },
-      { ref: "GH-310", repository: "github.com/owner/repo-beta", close: "merge-ready", edges: ["GH-300"] },
-    ], {
-      deploy: {
-        expectations: { "GH-300": { state: "not-declared" } },
-        verdicts: {},
+    const facts = makeFacts(
+      [
+        {
+          ref: "GH-300",
+          repository: "github.com/owner/repo-alpha",
+          workItem: {
+            state: "observed",
+            deliveryState: "done",
+            labels: ["priority:high"],
+            blockedBy: [],
+          },
+        },
+        {
+          ref: "GH-310",
+          repository: "github.com/owner/repo-beta",
+          close: "merge-ready",
+          edges: ["GH-300"],
+        },
+      ],
+      {
+        deploy: {
+          expectations: { "GH-300": { state: "not-declared" } },
+          verdicts: {},
+        },
       },
-    });
+    );
     const schedule = computeQueueSchedule(facts);
     expect(schedule.deployReads).toBeLessThanOrEqual(3);
   });

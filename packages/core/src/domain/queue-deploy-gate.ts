@@ -40,10 +40,8 @@ export const createDeployGateState = (facts: QueueDeployFacts): QueueDeployGateS
   memo: new Map(),
 });
 
-const verdictOf = (
-  facts: QueueDeployFacts,
-  producerRef: string,
-): QueueDeployVerdictFact => facts.verdicts[producerRef] ?? { verdict: "unknown" };
+const verdictOf = (facts: QueueDeployFacts, producerRef: string): QueueDeployVerdictFact =>
+  facts.verdicts[producerRef] ?? { verdict: "unknown" };
 
 /**
  * Evaluate the deploy gate for one producer ref, memoized per producer and
@@ -70,8 +68,7 @@ export const evaluateDeployGate = (
   const expectation = facts.expectations[producerRef];
   let outcome: QueueDeployOutcome;
   if (expectation === undefined || expectation.state === "unknown") {
-    const reason =
-      expectation === undefined ? "config-missing" : (expectation.reason as string);
+    const reason = expectation === undefined ? "config-missing" : (expectation.reason as string);
     outcome = {
       ok: false,
       reason: `expectation-unknown:${reason}`,
@@ -122,7 +119,11 @@ export type QueueDependencyGateOutcome =
   | { readonly ok: true; readonly deploy: QueueDeployEvidence | undefined }
   | {
       readonly ok: false;
-      readonly reason: "dependency-open" | "dependency-unobserved" | "producer-not-landed" | "deploy-unverified";
+      readonly reason:
+        | "dependency-open"
+        | "dependency-unobserved"
+        | "producer-not-landed"
+        | "deploy-unverified";
       readonly deploy: QueueDeployEvidence | undefined;
     };
 

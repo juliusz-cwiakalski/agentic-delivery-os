@@ -5,6 +5,14 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  declareQueueEntry,
+  queueParkRecordKey,
+  readQueueIncidents,
+  readQueueParkPass,
+  readQueueParks,
+  recoverQueueParks,
+} from "../../packages/core/src/app/index";
+import {
   QUEUE_PARK_RECORD_KIND,
   QUEUE_PARK_SCHEMA,
   type QueueParkRecord,
@@ -18,16 +26,8 @@ import {
   evaluateParkRecord,
   recoveredRecord,
 } from "../../packages/core/src/domain/index";
-import {
-  declareQueueEntry,
-  queueParkRecordKey,
-  readQueueIncidents,
-  readQueueParkPass,
-  readQueueParks,
-  recoverQueueParks,
-} from "../../packages/core/src/app/index";
-import { makeAuditStore } from "../fixtures/state/harness";
 import { makeFacts, REPO_A } from "../fixtures/queue/schedule/harness";
+import { makeAuditStore } from "../fixtures/state/harness";
 
 const NOW_ISO = "2026-11-07T10:00:00Z";
 const NOW_MS = Date.parse(NOW_ISO);
@@ -196,7 +196,10 @@ describe("TC-PARK-003 an observation gap is a gap, never stuck", () => {
   test("a long gap recovers with a gap-naming incident", () => {
     const fixture = makeAuditStore("queue-park-gap");
     seedEntry(fixture.store);
-    seedPark(fixture.store, windowPark({ expiresAt: "2026-11-07T08:00:00Z", evaluatedAt: "2026-11-07T08:00:00Z" }));
+    seedPark(
+      fixture.store,
+      windowPark({ expiresAt: "2026-11-07T08:00:00Z", evaluatedAt: "2026-11-07T08:00:00Z" }),
+    );
     const nowIso = "2026-11-07T12:00:00Z";
     const result = recoverQueueParks(fixture.store, {
       nowIso,
@@ -214,7 +217,9 @@ describe("TC-PARK-003 an observation gap is a gap, never stuck", () => {
       const evidence = new Map(
         (incidents.records[0]?.evidence ?? []).map((entry) => [entry.key, entry.value]),
       );
-      expect(evidence.get("observationGapMs")).toBe(String(Date.parse(nowIso) - Date.parse("2026-11-07T08:00:00Z")));
+      expect(evidence.get("observationGapMs")).toBe(
+        String(Date.parse(nowIso) - Date.parse("2026-11-07T08:00:00Z")),
+      );
     }
   });
 });
@@ -224,7 +229,11 @@ describe("TC-PARK-004 closed condition types and one active park", () => {
     expect(conditionTypeForCause("provider-window")).toBe("provider-window");
     expect(conditionTypeForCause("provider-quota")).toBe("provider-quota");
     expect(conditionTypeForCause("preempted-for-close-item")).toBe("preemption");
-    for (const cause of ["provider-window", "provider-quota", "preempted-for-close-item"] as const) {
+    for (const cause of [
+      "provider-window",
+      "provider-quota",
+      "preempted-for-close-item",
+    ] as const) {
       const record = createParkRecord({
         ref: REF,
         cause,
@@ -344,8 +353,9 @@ describe("TC-PARK-008 a stuck park is never a next action", () => {
     expect(stuck?.state).toBe("stuck");
     expect(schedule.findings.some((finding) => finding.ref === REF)).toBe(true);
     expect(schedule.nextActions.some((action) => action.ref === REF)).toBe(false);
-    expect(
-      evaluateClaimPreconditions(facts, REF),
-    ).toMatchObject({ ok: false, code: "queue.park-condition-stuck" });
+    expect(evaluateClaimPreconditions(facts, REF)).toMatchObject({
+      ok: false,
+      code: "queue.park-condition-stuck",
+    });
   });
 });

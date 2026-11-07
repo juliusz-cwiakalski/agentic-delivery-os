@@ -6,15 +6,6 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
-  QUEUE_LEASE_RECORD_KIND,
-  QUEUE_LEASE_SCHEMA,
-  type QueueLeaseRecord,
-} from "../../packages/core/src/contracts/index";
-import {
-  computeQueueSchedule,
-  evaluateClaimPreconditions,
-} from "../../packages/core/src/domain/index";
-import {
   claimQueueLease,
   declareQueueEntry,
   queueLeaseRecordKey,
@@ -24,23 +15,29 @@ import {
   readQueueParks,
   releaseQueueLease,
 } from "../../packages/core/src/app/index";
+import {
+  QUEUE_LEASE_RECORD_KIND,
+  QUEUE_LEASE_SCHEMA,
+  type QueueLeaseRecord,
+} from "../../packages/core/src/contracts/index";
+import {
+  computeQueueSchedule,
+  evaluateClaimPreconditions,
+} from "../../packages/core/src/domain/index";
+import { REPO, recordingStore } from "../fixtures/queue/leases/fence-harness";
+import { makeFacts, REPO_A, REPO_B } from "../fixtures/queue/schedule/harness";
 import { armAppendFailure, makeAuditStore } from "../fixtures/state/harness";
-import {
-  makeFacts,
-  REPO_A,
-  REPO_B,
-} from "../fixtures/queue/schedule/harness";
-import {
-  recordingStore,
-  REPO,
-} from "../fixtures/queue/leases/fence-harness";
 
 const NOW_ISO = "2026-11-07T10:00:00Z";
 const NOW_MS = Date.parse(NOW_ISO);
 const ROOT = "/work/repo-alpha";
 const TTL = 90_000;
 
-const seedEntry = (store: Parameters<typeof declareQueueEntry>[0], ref = "GH-320", repository = REPO) => {
+const seedEntry = (
+  store: Parameters<typeof declareQueueEntry>[0],
+  ref = "GH-320",
+  repository = REPO,
+) => {
   const result = declareQueueEntry(store, {
     ref,
     repository,
@@ -149,9 +146,7 @@ describe("TC-LEASE-001 same-repo single-flight", () => {
       expect(refused.conflict.holder).toBe("holder-a");
       expect(refused.conflict.leaseId).toContain("holder-a");
       expect(refused.conflict.heartbeatAgeMs).toBe(0);
-      expect(refused.conflict.earliestTakeoverAt).toBe(
-        new Date(NOW_MS + TTL).toISOString(),
-      );
+      expect(refused.conflict.earliestTakeoverAt).toBe(new Date(NOW_MS + TTL).toISOString());
     } else {
       throw new Error("expected a lease conflict");
     }
@@ -359,10 +354,8 @@ describe("TC-LEASE-008 repository key defines the contention domain", () => {
     expect(first.ok).toBe(true);
     expect(second.ok).toBe(true);
     const active = readActiveLeases(fixture.store, NOW_MS);
-    if (active.ok) expect(active.active.map((lease) => lease.repository).sort()).toEqual([
-      REPO_A,
-      REPO_B,
-    ]);
+    if (active.ok)
+      expect(active.active.map((lease) => lease.repository).sort()).toEqual([REPO_A, REPO_B]);
   });
 });
 
@@ -435,7 +428,16 @@ describe("TC-LEASE-011 release another holder refuses", () => {
 describe("TC-LEASE-012 claim precondition names the reason", () => {
   test("parks, readiness, outranking, and weight refuse with named reasons", () => {
     const deps = makeFacts([
-      { ref: "GH-320", repository: REPO_A, workItem: { state: "observed", deliveryState: "ready", labels: ["priority:high"], blockedBy: ["GH-300"] } },
+      {
+        ref: "GH-320",
+        repository: REPO_A,
+        workItem: {
+          state: "observed",
+          deliveryState: "ready",
+          labels: ["priority:high"],
+          blockedBy: ["GH-300"],
+        },
+      },
       { ref: "GH-300", repository: REPO_B },
     ]);
     expect(evaluateClaimPreconditions(deps, "GH-320")).toMatchObject({
@@ -445,7 +447,11 @@ describe("TC-LEASE-012 claim precondition names the reason", () => {
     });
 
     const parked = makeFacts([
-      { ref: "GH-320", repository: REPO_A, park: { state: "active", cause: "provider-quota", recheckMs: 300000 } },
+      {
+        ref: "GH-320",
+        repository: REPO_A,
+        park: { state: "active", cause: "provider-quota", recheckMs: 300000 },
+      },
     ]);
     expect(evaluateClaimPreconditions(parked, "GH-320")).toMatchObject({
       ok: false,
@@ -462,12 +468,13 @@ describe("TC-LEASE-012 claim precondition names the reason", () => {
     });
 
     const healthy = makeFacts([{ ref: "GH-320", repository: REPO_A }]);
-    expect(
-      evaluateClaimPreconditions(healthy, "GH-320", { outrankedBy: "GH-301" }),
-    ).toMatchObject({ ok: false, reason: "outranked" });
-    expect(
-      evaluateClaimPreconditions(healthy, "GH-320", { weightHeldBy: "GH-309" }),
-    ).toMatchObject({ ok: false, reason: "weight-class" });
+    expect(evaluateClaimPreconditions(healthy, "GH-320", { outrankedBy: "GH-301" })).toMatchObject({
+      ok: false,
+      reason: "outranked",
+    });
+    expect(evaluateClaimPreconditions(healthy, "GH-320", { weightHeldBy: "GH-309" })).toMatchObject(
+      { ok: false, reason: "weight-class" },
+    );
     expect(evaluateClaimPreconditions(healthy, "GH-320").ok).toBe(true);
   });
 });

@@ -364,3 +364,16 @@ reality), `workspace` to `repos` (workspace is the per-change artifact set
 in ADOS vocabulary; the command does repository hygiene), `opencode` to
 `harness` (the command manages harness integrations generally, not one
 harness). The remote connection command was deferred rather than named.
+
+## Scheduling engine registration (GH-237)
+
+The `queue` family ships `ready`, `list`, `plan`, `add`, `prioritize`, `dep`,
+`claim`, and `release`; `queue ready` is unchanged from its M0-S7 contract. The
+`lanes` family ships `list` and `show <ref>`; `--watch` is refused in this
+release (resident daemon, M1-S18).
+
+The status-digest row note reads: `engine shipped; the digest's declared
+lanes-or-queue gap and its expected-story reference remain pending its own
+reconciliation`. The registry row does not assert a state the digest spec denies
+and does not change digest behaviour. See
+[feature-scheduling-engine.md](../../../spec/features/feature-scheduling-engine.md).

@@ -287,3 +287,20 @@ ordinal, a second terminal record, a malformed payload, or an unknown kind under
 the delivery key classifies as `state.store.torn` or `state.store.unknown`,
 never a fabricated count. See
 [Session Lifecycle Economics](feature-session-lifecycle-economics.md).
+
+## Scheduling engine reconciliation (GH-237)
+
+The scheduling engine adds five record kinds additively inside
+`delivery.state.v1`: `queue.entry` (`delivery.queue.entry.v1`,
+`queue.entries:<REF>`), `queue.dependency` (`delivery.queue.dependency.v1`,
+`queue.deps:<REF>`), `queue.lease` (`delivery.queue.lease.v1`,
+`queue.leases:<repoKey>`), `queue.park` (`delivery.queue.park.v1`,
+`queue.parks:<REF>`), and `queue.incident` (`delivery.queue.incident.v1`,
+`queue.incidents:<REF or repoKey>`), plus the rebuildable derived document
+`delivery.queue.graph.v1` at `queue-graph.json`. There is no schema-version bump,
+migration, or backfill; a store that has never seen a queue record reads
+verified-empty. `queue.park` carries `clearObservedAt` and `recoveryState` from
+its first write, and the durable clear-observed marker is another record of that
+same kind. The queue ledgers are orchestrated in the app tier
+(`packages/core/src/app/queue.ts`) over the injected state port; the state tier
+remains contract-only. See [Scheduling Engine](feature-scheduling-engine.md).

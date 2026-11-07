@@ -261,6 +261,7 @@ describe("TC-STATUS-026 contracts/domain tier discipline", () => {
     }
     expect([...codes].filter((code) => code.startsWith("status."))).toEqual([
       "status.collector.tracker.unavailable",
+      "status.collector.lanes.unavailable",
     ]);
   });
 

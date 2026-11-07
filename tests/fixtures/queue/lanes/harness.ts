@@ -1,13 +1,16 @@
 /**
  * Shared lane-fold builders for the GH-237 behaviour and golden suites.
  */
-import { foldLanes, type QueueLaneEconomics } from "../../../../packages/core/src/domain/queue-lanes";
+import {
+  foldLanes,
+  type QueueLaneEconomics,
+} from "../../../../packages/core/src/domain/queue-lanes";
 import { computeQueueSchedule } from "../../../../packages/core/src/domain/queue-precedence";
 import {
   activeLease,
-  makeFacts,
   type EntrySpec,
   type FactsOverrides,
+  makeFacts,
   REPO_A,
   REPO_B,
 } from "../schedule/harness";
@@ -19,7 +22,7 @@ export const HEAVY = "GH-323";
 
 export type LaneCaseOverrides = FactsOverrides & {
   readonly economics?: Readonly<Record<string, QueueLaneEconomics>>;
-  readonly degraded?: readonly ("daemon-unreachable")[];
+  readonly degraded?: readonly "daemon-unreachable"[];
 };
 
 export const laneSpecs = (): readonly EntrySpec[] => [
@@ -36,7 +39,11 @@ export const laneSpecs = (): readonly EntrySpec[] => [
 
 export const laneEconomics = (): Readonly<Record<string, QueueLaneEconomics>> => ({
   [DELIVERING]: { restarts: 1, amplification: 2 },
-  [QUOTA_PARKED]: { restarts: null, amplification: null, amplificationWarning: "economics-underivable" },
+  [QUOTA_PARKED]: {
+    restarts: null,
+    amplification: null,
+    amplificationWarning: "economics-underivable",
+  },
   [FAILED]: { restarts: 4, amplification: 6, failedPastBudget: true },
 });
 

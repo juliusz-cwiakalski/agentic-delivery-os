@@ -73,9 +73,7 @@ export type QueueWeightLoad = {
 };
 
 /** Fold active leases into deterministic per-runner weight loads. */
-export const weightLoads = (
-  leases: readonly QueueActiveLease[],
-): readonly QueueWeightLoad[] => {
+export const weightLoads = (leases: readonly QueueActiveLease[]): readonly QueueWeightLoad[] => {
   const rows = new Map<string, { runner: string; class: QueueWeightClass; refs: string[] }>();
   for (const lease of leases) {
     const key = `${lease.runner}\u0000${lease.weightClass}`;

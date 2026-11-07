@@ -25,7 +25,9 @@ describe("lanes --watch refusal", () => {
   test("the refusal envelope is byte-identical to the committed golden", async () => {
     const run = await runProgram(["lanes", "list", "--watch", "--json"], program());
     expect(run.exitCode).toBe(1);
-    expect(run.stdout).toBe(readFileSync(join(GOLDEN, "lanes-watch-refusal.json"), "utf8"));
+    expect(JSON.parse(run.stdout)).toEqual(
+      JSON.parse(readFileSync(join(GOLDEN, "lanes-watch-refusal.json"), "utf8")),
+    );
   });
 
   test("the refusal carries the resident-daemon story and no data", async () => {

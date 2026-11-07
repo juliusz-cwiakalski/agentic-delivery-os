@@ -1,6 +1,7 @@
 # lanes(1)
 
-Status: M1 planned (M1-S17). Proposed contract.
+Status: shipped by GH-237 (M1-S17). `--watch` is refused in this release;
+live streaming belongs to the resident daemon (M1-S18).
 
 ## NAME
 
@@ -56,3 +57,23 @@ $ <binary> lanes list --json
 ## SEE ALSO
 
 [queue.md](queue.md), [daemon.md](daemon.md), [spend.md](spend.md)
+
+## Shipped contract (GH-237)
+
+`lanes list` and `lanes show <ref>` fold queue entries, leases, parks, and the
+economics view. Lane identity is the canonical work-item ref. The closed state
+set is `delivering`, `idle-with-reason`, `parked`, `merge-ready`, `in-review`,
+`failed`; an idle reason is a declared token, and a parked reason is
+`parked:<cause>` over the closed cause set. Each lane carries its lease holder
+and scope when held, `restarts` and `amplification` from the delivered economics
+fold (`null` plus a warning when underivable), and its weight class.
+
+Machine envelope: `lanes[]`, `findings[]`, `degraded[]`, `truncated`, `counts`.
+An empty queue is an explicit observed-empty with counts. `show` returns one
+lane or `queue.entry.unobserved` at exit 1. An unreadable queue store projects
+`status.collector.lanes.unavailable` at exit 2, never a zero-lane view.
+
+`--watch` is **refused** in this release. The flag is not in the accepted
+grammar; the invocation fails at exit 1 through `fallback.invocation` and no
+stream or frame is emitted. Live streaming belongs to the resident daemon
+(M1-S18).

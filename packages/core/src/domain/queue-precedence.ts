@@ -24,7 +24,6 @@ import {
   QUEUE_STUCK_PARK_FINDING_CODE,
   type QueueBlocking,
   type QueueBlockingReason,
-  type QueueReadyCloseClass,
   type QueueDeployEvidence,
   type QueueEntryProjection,
   type QueueEntryState,
@@ -32,9 +31,10 @@ import {
   type QueueLeaseProjection,
   type QueueLeaseStatus,
   type QueueNextAction,
-  type QueueParkProjection,
   type QueueParkedReason,
+  type QueueParkProjection,
   type QueueRankClass,
+  type QueueReadyCloseClass,
   type QueueWeightClass,
   type QueueWeightClassSource,
   type QueueWeightProjection,
@@ -45,6 +45,7 @@ import {
   type QueueDeployGateState,
 } from "./queue-deploy-gate.js";
 import type { QueueGraphFold } from "./queue-graph.js";
+import { isCloseRank, rankClassIndex, resolveRankClass } from "./queue-rank.js";
 import {
   closeClassOf,
   evaluateQueueReadiness,
@@ -52,7 +53,6 @@ import {
   type QueueParkEvaluation,
   type QueueSchedulerFacts,
 } from "./queue-readiness.js";
-import { isCloseRank, rankClassIndex, resolveRankClass } from "./queue-rank.js";
 import { isHeldByWeight, resolveQueueWeight, weightLoads } from "./queue-weight.js";
 
 /** The default next-action cap. */
@@ -130,8 +130,10 @@ const compareRefs = (left: string, right: string): number => {
   return numeric !== 0 ? numeric : compareText(left, right);
 };
 
-const blocking = (reason: QueueBlockingReason | QueueParkedReason, detail?: string): QueueBlocking =>
-  detail === undefined ? { reason } : { reason, detail };
+const blocking = (
+  reason: QueueBlockingReason | QueueParkedReason,
+  detail?: string,
+): QueueBlocking => (detail === undefined ? { reason } : { reason, detail });
 
 const parkedReason = (cause: QueueParkEvaluation["cause"]): QueueParkedReason =>
   `parked:${cause ?? "provider-window"}`;
@@ -164,7 +166,10 @@ const reasonForProvider = (reason: string | undefined): QueueBlockingReason => {
   }
 };
 
-const leaseStatusOf = (facts: QueueSchedulerFacts, repository: string | undefined): QueueLeaseStatus => {
+const leaseStatusOf = (
+  facts: QueueSchedulerFacts,
+  repository: string | undefined,
+): QueueLeaseStatus => {
   if (repository === undefined) return { state: "free" };
   const lease = facts.leases.find((candidate) => candidate.repository === repository);
   if (lease === undefined) return { state: "free" };
@@ -225,7 +230,9 @@ const evaluateEntry = (
     return {
       ...base,
       state: "not-ready",
-      blocking: [blocking("tier-unknown", `plan:${plan?.state === "invalid" ? plan.code : "invalid"}`)],
+      blocking: [
+        blocking("tier-unknown", `plan:${plan?.state === "invalid" ? plan.code : "invalid"}`),
+      ],
       projected: false,
     };
   }
@@ -292,7 +299,9 @@ const evaluateEntry = (
     return {
       ...base,
       state: "held",
-      blocking: [blocking(reasonForProvider(provider.evidence[0]?.reason), provider.evidence[0]?.detail)],
+      blocking: [
+        blocking(reasonForProvider(provider.evidence[0]?.reason), provider.evidence[0]?.detail),
+      ],
       projected: false,
     };
   }
@@ -359,14 +368,14 @@ const entryOrder = (fold: QueueGraphFold, left: EntryState, right: EntryState): 
   return compareRefs(left.ref, right.ref);
 };
 
-const parkProjection = (record: QueueSchedulerFacts["parkRecords"][number]): QueueParkProjection => ({
+const parkProjection = (
+  record: QueueSchedulerFacts["parkRecords"][number],
+): QueueParkProjection => ({
   ref: record.ref,
   cause: record.cause,
   conditionType: record.conditionType,
   recheckMs: record.recheckMs,
-  ...(record.condition.type === "provider-window"
-    ? { expiresAt: record.condition.expiresAt }
-    : {}),
+  ...(record.condition.type === "provider-window" ? { expiresAt: record.condition.expiresAt } : {}),
   lastEvaluatedAt: record.evaluatedAt,
   ...(record.clearObservedAt === undefined ? {} : { clearObservedAt: record.clearObservedAt }),
   recoveryState: record.recoveryState,
@@ -418,7 +427,9 @@ export const computeQueueSchedule = (
       return compareRefs(left.ref, right.ref);
     });
 
-  const evaluated = new Set(cheap.slice(0, QUEUE_MAX_EVALUATED_CANDIDATES).map((entry) => entry.ref));
+  const evaluated = new Set(
+    cheap.slice(0, QUEUE_MAX_EVALUATED_CANDIDATES).map((entry) => entry.ref),
+  );
   const states = folded.map((entry) =>
     evaluateEntry(facts, deployState, entry.ref, !evaluated.has(entry.ref)),
   );
@@ -475,8 +486,7 @@ export const computeQueueSchedule = (
     ) {
       continue;
     }
-    const onlyLeaseHeld =
-      state.blocking.length === 1 && state.blocking[0]?.reason === "lease-held";
+    const onlyLeaseHeld = state.blocking.length === 1 && state.blocking[0]?.reason === "lease-held";
     if (!onlyLeaseHeld) continue;
     const lease = facts.leases.find((candidate) => candidate.repository === state.repository);
     if (lease === undefined) continue;

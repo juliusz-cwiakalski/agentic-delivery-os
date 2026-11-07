@@ -103,7 +103,9 @@ export const evaluateParkRecord = (
   let cleared: boolean;
   switch (record.conditionType) {
     case "provider-window": {
-      const expiry = Date.parse(record.condition.type === "provider-window" ? record.condition.expiresAt : "");
+      const expiry = Date.parse(
+        record.condition.type === "provider-window" ? record.condition.expiresAt : "",
+      );
       cleared = Number.isFinite(expiry) && nowMs >= expiry;
       break;
     }

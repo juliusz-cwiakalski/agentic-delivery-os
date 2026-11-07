@@ -11,6 +11,7 @@
  */
 
 import {
+  QUEUE_DEFAULT_LEASE_TTL_MS,
   QUEUE_DEFAULT_PRIORITY,
   QUEUE_DEPENDENCY_KEY_PREFIX,
   QUEUE_DEPENDENCY_RECORD_KIND,
@@ -26,9 +27,8 @@ import {
   QUEUE_LEASE_KEY_PREFIX,
   QUEUE_LEASE_OPERATIONS,
   QUEUE_LEASE_RECORD_KIND,
-  QUEUE_LEASE_SCOPES,
   QUEUE_LEASE_SCHEMA,
-  QUEUE_DEFAULT_LEASE_TTL_MS,
+  QUEUE_LEASE_SCOPES,
   QUEUE_MAX_EDGES_PER_ENTRY,
   QUEUE_PARK_CAUSES,
   QUEUE_PARK_CONDITION_TYPES,
@@ -86,9 +86,9 @@ import {
   defaultParkRecheckMs,
   evaluateParkPass,
   observationGapMs,
-  recoveredRecord,
   type QueueParkContext,
   type QueueParkPass,
+  recoveredRecord,
 } from "../domain/queue-park.js";
 import type { QueueParkEvaluation } from "../domain/queue-readiness.js";
 
@@ -164,8 +164,10 @@ const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
 
-const hasOnlyKeys = (value: Readonly<Record<string, unknown>>, allowed: readonly string[]): boolean =>
-  Object.keys(value).every((key) => allowed.includes(key));
+const hasOnlyKeys = (
+  value: Readonly<Record<string, unknown>>,
+  allowed: readonly string[],
+): boolean => Object.keys(value).every((key) => allowed.includes(key));
 
 const stringList = (value: unknown): value is readonly string[] =>
   Array.isArray(value) && value.every((entry) => typeof entry === "string");
@@ -259,7 +261,10 @@ const isLeaseRecord = (value: unknown): value is QueueLeaseRecord => {
   if (!isPlainRecord(value) || !hasOnlyKeys(value, LEASE_KEYS)) return false;
   if (value.schema !== QUEUE_LEASE_SCHEMA) return false;
   if (!isNonEmptyString(value.leaseId)) return false;
-  if (typeof value.scope !== "string" || !(QUEUE_LEASE_SCOPES as readonly string[]).includes(value.scope)) {
+  if (
+    typeof value.scope !== "string" ||
+    !(QUEUE_LEASE_SCOPES as readonly string[]).includes(value.scope)
+  ) {
     return false;
   }
   if (!isNonEmptyString(value.repository)) return false;
@@ -289,7 +294,10 @@ const isParkRecord = (value: unknown): value is QueueParkRecord => {
   if (value.schema !== QUEUE_PARK_SCHEMA) return false;
   if (typeof value.ref !== "string" || canonicalQueueRef(value.ref) !== value.ref) return false;
   if (value.repository !== undefined && !isNonEmptyString(value.repository)) return false;
-  if (typeof value.cause !== "string" || !(QUEUE_PARK_CAUSES as readonly string[]).includes(value.cause)) {
+  if (
+    typeof value.cause !== "string" ||
+    !(QUEUE_PARK_CAUSES as readonly string[]).includes(value.cause)
+  ) {
     return false;
   }
   if (
@@ -300,10 +308,7 @@ const isParkRecord = (value: unknown): value is QueueParkRecord => {
   }
   if (!isPlainRecord(value.condition)) return false;
   if (value.condition.type !== value.conditionType) return false;
-  if (
-    value.conditionType === "provider-window" &&
-    !isNonEmptyString(value.condition.expiresAt)
-  ) {
+  if (value.conditionType === "provider-window" && !isNonEmptyString(value.condition.expiresAt)) {
     return false;
   }
   if (!isInteger(value.recheckMs) || value.recheckMs <= 0) return false;
@@ -556,9 +561,7 @@ type DesiredEntry = {
   readonly edgesChanged: boolean;
 };
 
-type DesiredEntryResult =
-  | { readonly ok: true; readonly value: DesiredEntry }
-  | QueueIntentFailure;
+type DesiredEntryResult = { readonly ok: true; readonly value: DesiredEntry } | QueueIntentFailure;
 
 const desiredEntry = (
   fold: QueueGraphFold,
@@ -630,7 +633,10 @@ const desiredEntry = (
   const currentEdges = edgesOf(fold, ref);
   const edgesChanged =
     edges.length !== currentEdges.length || edges.some((edge) => !currentEdges.includes(edge));
-  return { ok: true, value: { record, edges, existed: current !== undefined, entryChanged, edgesChanged } };
+  return {
+    ok: true,
+    value: { record, edges, existed: current !== undefined, entryChanged, edgesChanged },
+  };
 };
 
 const verifyAppends = (
@@ -881,10 +887,7 @@ export type QueueActiveLeaseRead =
     };
 
 /** Read the verified lease history and fold it to at most one holder per repo. */
-export const readActiveLeases = (
-  store: StateStorePort,
-  nowMs: number,
-): QueueActiveLeaseRead => {
+export const readActiveLeases = (store: StateStorePort, nowMs: number): QueueActiveLeaseRead => {
   const read = readQueueLeases(store);
   if (!read.ok) return read;
   const active = foldActiveLeases(read.records, nowMs);
@@ -943,7 +946,9 @@ export type QueueReleaseResult =
 const entryRepository = (
   fold: QueueGraphFold,
   ref: string,
-): { readonly ok: true; readonly repository: string; readonly record: QueueEntryRecord } | QueueLeaseFailure => {
+):
+  | { readonly ok: true; readonly repository: string; readonly record: QueueEntryRecord }
+  | QueueLeaseFailure => {
   const entry = entryOf(fold, ref);
   if (entry === undefined) {
     return { ok: false, kind: "queue", code: "queue.entry.unobserved", ref };
@@ -1109,11 +1114,22 @@ export const claimQueueLease = (
   const repository = resolved.repository;
   const ttlMs = request.ttlMs ?? QUEUE_DEFAULT_LEASE_TTL_MS;
   if (!Number.isInteger(ttlMs) || ttlMs <= 0) {
-    return { ok: false, kind: "input", code: "input.value.rejected", detail: "ttlMs must be positive" };
+    return {
+      ok: false,
+      kind: "input",
+      code: "input.value.rejected",
+      detail: "ttlMs must be positive",
+    };
   }
   return runClaimFence(store, request.fenceToken, (handle) => {
     const activeRead = readActiveLeases(store, request.nowMs);
-    if (!activeRead.ok) return stateFailureOf({ ...activeRead, kind: "state", consequence: "not_landed", location: { path: store.identity.stateDirectory } });
+    if (!activeRead.ok)
+      return stateFailureOf({
+        ...activeRead,
+        kind: "state",
+        consequence: "not_landed",
+        location: { path: store.identity.stateDirectory },
+      });
     const existing = activeRead.active.find((lease) => lease.repository === repository);
     if (existing === undefined) {
       const record = newLeaseRecord({
@@ -1464,7 +1480,11 @@ export const readQueueParkPass = (
 ): QueueParkRead => {
   const read = readQueueParks(store);
   if (!read.ok) return read;
-  return { ok: true, pass: evaluateParkPass(read.records, nowMs, context), evidence: read.evidence };
+  return {
+    ok: true,
+    pass: evaluateParkPass(read.records, nowMs, context),
+    evidence: read.evidence,
+  };
 };
 
 /** The derived heartbeat age for one raw lease record. */

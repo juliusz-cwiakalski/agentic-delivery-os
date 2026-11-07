@@ -287,3 +287,15 @@ capturing it at construction. See
 
 - [Harness Adapters](feature-harness-adapters.md) adds the typed `harness` branch (selected kind, execution kind, store locations, deny-by-default environment allowlist); a literal value in an allowlist entry is rejected by `config.secret.forbidden`.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) documents the `lane` branch (liveness interval and restart budget) and consumes the resolved values as policy data.
+
+## Scheduling engine reconciliation (GH-237)
+
+The production catalog gains a typed `queue` branch with `queue.lease-ttl`
+(integer milliseconds, default `90000`) and `queue.park-recheck` (a record field
+whose valid child names are the closed condition-type set
+`{provider-window, provider-quota, preemption}`; defaults `60000`, `300000`,
+`60000`). An absent branch resolves to those defaults with `defaults` origins. A
+child outside the set is `config.key.unknown`; a non-integer, zero, or negative
+value is `config.value.invalid`, both naming the key. No capacity, bandwidth,
+concurrency, or CI-slot key is added or reserved. See
+[Scheduling Engine](feature-scheduling-engine.md).

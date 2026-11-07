@@ -16,7 +16,9 @@ import { foldLanes, selectLane } from "../../packages/core/src/domain/index";
 import { laneData } from "../fixtures/queue/lanes/harness";
 import { runProgram } from "../fixtures/queue-ready/harness";
 
-const runtime = (read: () => ReturnType<LanesCommandRuntime["readLanes"]>): LanesCommandRuntime => ({
+const runtime = (
+  read: () => ReturnType<LanesCommandRuntime["readLanes"]>,
+): LanesCommandRuntime => ({
   readLanes: read,
 });
 
@@ -24,7 +26,9 @@ const runLanes = async (
   argv: readonly string[],
   data: QueueLanesData,
 ): Promise<{ exitCode: number; stdout: string }> =>
-  runProgram(argv, { commands: { lanes: createLanesCommandDefinition(runtime(() => ({ ok: true, data }))) } });
+  runProgram(argv, {
+    commands: { lanes: createLanesCommandDefinition(runtime(() => ({ ok: true, data }))) },
+  });
 
 describe("TC-LANES-001 the full lane contract with no fabricated values", () => {
   test("a delivering, a quota-parked, and a failed lane report identity, state, reason, lease, economics, and weight", () => {
@@ -51,9 +55,14 @@ describe("TC-LANES-001 the full lane contract with no fabricated values", () => 
     expect(failed?.reason).toBe("restart-budget-exhausted");
 
     for (const lane of data.lanes) {
-      expect(["delivering", "idle-with-reason", "parked", "merge-ready", "in-review", "failed"]).toContain(
-        lane.state,
-      );
+      expect([
+        "delivering",
+        "idle-with-reason",
+        "parked",
+        "merge-ready",
+        "in-review",
+        "failed",
+      ]).toContain(lane.state);
       if (lane.reason !== undefined) {
         expect(lane.reason).toMatch(/^[a-z][a-z0-9:-]*$/);
       }
@@ -114,7 +123,10 @@ describe("TC-LANES-004 --watch is refused through fallback.invocation", () => {
     const data = laneData();
     const run = await runLanes(["lanes", "list", "--watch", "--json"], data);
     expect(run.exitCode).toBe(1);
-    const envelope = JSON.parse(run.stdout) as { error?: { code?: string; summary?: string }; data?: unknown };
+    const envelope = JSON.parse(run.stdout) as {
+      error?: { code?: string; summary?: string };
+      data?: unknown;
+    };
     expect(envelope.error?.code).toBe("fallback.invocation");
     expect(envelope.data).toBeUndefined();
   });
@@ -122,20 +134,17 @@ describe("TC-LANES-004 --watch is refused through fallback.invocation", () => {
 
 describe("TC-LANES-005 unreadable store returns status.collector.lanes.unavailable", () => {
   test("the handler projects exit 2 and never a zero-lane view", async () => {
-    const output = await runProgram(
-      ["lanes", "list", "--json"],
-      {
-        commands: {
-          lanes: createLanesCommandDefinition(
-            runtime(() => ({
-              ok: false,
-              code: "status.collector.lanes.unavailable",
-              summary: "queue store is unreadable",
-            })),
-          ),
-        },
+    const output = await runProgram(["lanes", "list", "--json"], {
+      commands: {
+        lanes: createLanesCommandDefinition(
+          runtime(() => ({
+            ok: false,
+            code: "status.collector.lanes.unavailable",
+            summary: "queue store is unreadable",
+          })),
+        ),
       },
-    );
+    });
     expect(output.exitCode).toBe(2);
     const envelope = JSON.parse(output.stdout) as { error?: { code?: string }; data?: unknown };
     expect(envelope.error?.code).toBe("status.collector.lanes.unavailable");
@@ -145,21 +154,31 @@ describe("TC-LANES-005 unreadable store returns status.collector.lanes.unavailab
 
 describe("TC-LANES-006 lanes reads are bounded and truthfully empty", () => {
   test("an empty queue is an explicit observed-empty with counts", async () => {
-    const data = foldLanes({ schedule: {
-      entries: [],
-      nextActions: [],
-      findings: [],
-      leases: [],
-      weights: [],
-      parks: [],
-      truncated: false,
-      evaluatedCandidates: 0,
-      deployReads: 0,
-    }, economics: {}, degraded: ["daemon-unreachable"] });
+    const data = foldLanes({
+      schedule: {
+        entries: [],
+        nextActions: [],
+        findings: [],
+        leases: [],
+        weights: [],
+        parks: [],
+        truncated: false,
+        evaluatedCandidates: 0,
+        deployReads: 0,
+      },
+      economics: {},
+      degraded: ["daemon-unreachable"],
+    });
     const run = await runLanes(["lanes", "list", "--json"], data);
     expect(run.exitCode).toBe(0);
     const envelope = JSON.parse(run.stdout) as { data: QueueLanesData };
-    expect(envelope.data.counts).toEqual({ lanes: 0, delivering: 0, idle: 0, parked: 0, failed: 0 });
+    expect(envelope.data.counts).toEqual({
+      lanes: 0,
+      delivering: 0,
+      idle: 0,
+      parked: 0,
+      failed: 0,
+    });
     expect(envelope.data.lanes).toEqual([]);
     expect(envelope.data.degraded).toEqual(["daemon-unreachable"]);
   });

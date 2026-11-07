@@ -6,6 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { PRODUCTION_CATALOG } from "../../packages/core/src/config/index";
 import {
   QUEUE_BLOCKING_REASONS,
   QUEUE_LANE_IDLE_REASONS,
@@ -21,12 +22,8 @@ import {
   QUEUE_MAX_NEXT_ACTIONS,
   QUEUE_MAX_REASONS,
 } from "../../packages/core/src/contracts/index";
-import { PRODUCTION_CATALOG } from "../../packages/core/src/config/index";
 import { computeQueueSchedule } from "../../packages/core/src/domain/index";
-import {
-  makeFacts,
-  type EntrySpec,
-} from "../fixtures/queue/schedule/harness";
+import { type EntrySpec, makeFacts } from "../fixtures/queue/schedule/harness";
 
 const ROOT = process.cwd();
 
@@ -35,10 +32,7 @@ const corpus = (count: number, edgeCount: number): EntrySpec[] =>
     ref: `GH-${2000 + index}`,
     repository: `github.com/owner/repo-${String(index % 25)}`,
     priority: (index * 11) % 100,
-    edges:
-      index < edgeCount
-        ? [`GH-${2000 + ((index * 3 + 1) % count)}`]
-        : [],
+    edges: index < edgeCount ? [`GH-${2000 + ((index * 3 + 1) % count)}`] : [],
   }));
 
 describe("TC-SCHED-011 structural bounds", () => {

@@ -6,11 +6,11 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { queueLeaseRecordKey } from "../../packages/core/src/app/index";
 import {
   QUEUE_LEASE_RECORD_KIND,
   QUEUE_LEASE_SCHEMA,
 } from "../../packages/core/src/contracts/index";
-import { queueLeaseRecordKey } from "../../packages/core/src/app/index";
 import { createQueueEdgeHarness, NOW_ISO } from "../fixtures/queue/cli/harness";
 
 const ROOT = process.cwd();
@@ -75,7 +75,9 @@ describe("TC-SCHED-001/002/015 add, list, priority, dep, replay", () => {
 
   test("a replay is result=noop and appends nothing", async () => {
     const harness = createQueueEdgeHarness("replay");
-    expect((await harness.run(["queue", "add", "GH-320", "--priority", "5", "--json"])).exitCode).toBe(0);
+    expect(
+      (await harness.run(["queue", "add", "GH-320", "--priority", "5", "--json"])).exitCode,
+    ).toBe(0);
     const replay = await harness.run(["queue", "add", "GH-320", "--priority", "5", "--json"]);
     expect(replay.exitCode).toBe(0);
     expect(data(replay.stdout).result).toBe("noop");
@@ -84,7 +86,9 @@ describe("TC-SCHED-001/002/015 add, list, priority, dep, replay", () => {
   test("prioritize and dep land their rows; a cycle refuses with the named path", async () => {
     const harness = createQueueEdgeHarness("cycle");
     expect((await harness.run(["queue", "add", "GH-320", "--json"])).exitCode).toBe(0);
-    expect((await harness.run(["queue", "add", "GH-321", "--dep", "GH-320", "--json"])).exitCode).toBe(0);
+    expect(
+      (await harness.run(["queue", "add", "GH-321", "--dep", "GH-320", "--json"])).exitCode,
+    ).toBe(0);
     const prioritized = await harness.run(["queue", "prioritize", "GH-320", "2", "--json"]);
     expect(prioritized.exitCode).toBe(0);
     expect(data(prioritized.stdout).result).toBe("updated");
@@ -159,7 +163,14 @@ describe("TC-LEASE / TC-RANK claim and release rows", () => {
   test("claim lands a lease, a second holder conflicts, and release lands", async () => {
     const harness = createQueueEdgeHarness("claim");
     expect((await harness.run(["queue", "add", "GH-320", "--json"])).exitCode).toBe(0);
-    const claimed = await harness.run(["queue", "claim", "GH-320", "--holder", "holder-a", "--json"]);
+    const claimed = await harness.run([
+      "queue",
+      "claim",
+      "GH-320",
+      "--holder",
+      "holder-a",
+      "--json",
+    ]);
     expect(claimed.exitCode).toBe(0);
     const claim = data(claimed.stdout);
     expect(claim.result).toBe("claimed");
@@ -167,11 +178,25 @@ describe("TC-LEASE / TC-RANK claim and release rows", () => {
     expect((claim.lease as Record<string, unknown>).holder).toBe("holder-a");
     expect(claim.degraded).toEqual(["daemon-unreachable"]);
 
-    const conflict = await harness.run(["queue", "claim", "GH-320", "--holder", "holder-b", "--json"]);
+    const conflict = await harness.run([
+      "queue",
+      "claim",
+      "GH-320",
+      "--holder",
+      "holder-b",
+      "--json",
+    ]);
     expect(conflict.exitCode).toBe(1);
     expect(error(conflict.stdout)?.code).toBe("queue.lease-conflict");
 
-    const released = await harness.run(["queue", "release", "GH-320", "--holder", "holder-a", "--json"]);
+    const released = await harness.run([
+      "queue",
+      "release",
+      "GH-320",
+      "--holder",
+      "holder-a",
+      "--json",
+    ]);
     expect(released.exitCode).toBe(0);
     expect(data(released.stdout).result).toBe("released");
   });
@@ -187,7 +212,9 @@ describe("TC-LEASE / TC-RANK claim and release rows", () => {
   test("release --park accepts a cause and lands a paired park", async () => {
     const harness = createQueueEdgeHarness("release-park");
     expect((await harness.run(["queue", "add", "GH-320", "--json"])).exitCode).toBe(0);
-    expect((await harness.run(["queue", "claim", "GH-320", "--holder", "holder-a", "--json"])).exitCode).toBe(0);
+    expect(
+      (await harness.run(["queue", "claim", "GH-320", "--holder", "holder-a", "--json"])).exitCode,
+    ).toBe(0);
     const parked = await harness.run([
       "queue",
       "release",
@@ -207,7 +234,14 @@ describe("TC-LEASE / TC-RANK claim and release rows", () => {
 
   test("release --park rejects a condition-type token as an invocation rejection", async () => {
     const harness = createQueueEdgeHarness("park-token");
-    const refused = await harness.run(["queue", "release", "GH-320", "--park", "preemption", "--json"]);
+    const refused = await harness.run([
+      "queue",
+      "release",
+      "GH-320",
+      "--park",
+      "preemption",
+      "--json",
+    ]);
     expect(refused.exitCode).toBe(1);
     expect(error(refused.stdout)?.code).toBe("input.value.rejected");
   });

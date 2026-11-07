@@ -55,9 +55,7 @@ const laneStateFor = (
   if (economics?.failedPastBudget === true) {
     return { state: "failed", reason: "restart-budget-exhausted" };
   }
-  const parkCondition = entry.blocking.find(
-    (block) => block.reason === "park-condition-stuck",
-  );
+  const parkCondition = entry.blocking.find((block) => block.reason === "park-condition-stuck");
   if (parkCondition !== undefined) {
     return { state: "idle-with-reason", reason: "park-condition-stuck" };
   }
@@ -93,7 +91,8 @@ export const foldLanes = (input: QueueLaneFoldInput): QueueLanesData => {
     input.schedule.leases.map((lease) => [lease.repository, lease]),
   );
   const lanes: QueueLane[] = entries.map((entry) => {
-    const lease = entry.repository === undefined ? undefined : leaseByRepository.get(entry.repository);
+    const lease =
+      entry.repository === undefined ? undefined : leaseByRepository.get(entry.repository);
     const economics = input.economics[entry.ref];
     const resolved = laneStateFor(entry, lease !== undefined, economics);
     const amplificationWarning =
@@ -120,7 +119,9 @@ export const foldLanes = (input: QueueLaneFoldInput): QueueLanesData => {
     lanes,
     findings,
     degraded: input.degraded,
-    truncated: input.schedule.entries.length > QUEUE_MAX_LANES || findings.length < input.schedule.findings.length,
+    truncated:
+      input.schedule.entries.length > QUEUE_MAX_LANES ||
+      findings.length < input.schedule.findings.length,
     counts: {
       lanes: lanes.length,
       delivering: lanes.filter((lane) => lane.state === "delivering").length,
@@ -143,8 +144,8 @@ const truncateToBytes = (value: string, maxBytes: number): string => {
 
 /** Deterministic human text: one line per lane, bounded at 40 lines / 8192 bytes. */
 export const renderLanesHuman = (data: QueueLanesData): string => {
-  const lines = data.lanes.map((lane) =>
-    `${lane.id} ${lane.state}${lane.reason === undefined ? "" : ` ${lane.reason}`}`,
+  const lines = data.lanes.map(
+    (lane) => `${lane.id} ${lane.state}${lane.reason === undefined ? "" : ` ${lane.reason}`}`,
   );
   const header = `lanes ${data.counts.lanes}${data.truncated ? "+more" : ""}`;
   const kept: string[] = [];

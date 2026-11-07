@@ -392,3 +392,45 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Session Lifecycle Economics](../spec/features/feature-session-lifecycle-economics.md)
 - [ADR-0003 — OSS Tooling Monorepo Structure](../decisions/ADR-0003-oss-monorepo-structure.md)
 - [TDR-0005 — Delivery Result Enum and CLI Exit Taxonomy](../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md)
+
+## Scheduling engine terms (GH-237)
+
+- **Queue graph** — the folded entries, edges, priorities, repository keys,
+  resolved weight and rank classes; a rebuildable cache, never truth.
+- **Repository key** — the normalized `host/owner/name` contention domain;
+  protocol, credentials, userinfo, and `.git` are removed.
+- **Lease scope** — `repo-exclusive` is the only implemented scope;
+  `worktree` is declared and unused.
+- **Single-flight** — the only structural cap: one active delivery per
+  repository, enforced by the fence-token lease.
+- **Stale lease** — a lease whose heartbeat age is at or beyond
+  `queue.lease-ttl`; takeover always records evidence.
+- **Weight class** — `standard` or `heavy`; a per-runner resource class, never a
+  lane cap.
+- **Rank class** — `merge-ready`, `in-review`, `resume-parked`, `new-start`, in
+  that order.
+- **Hard exclusion** — a gate that removes a candidate with a named reason; it
+  never merely reorders.
+- **Park condition** — the closed type a pass re-evaluates: `provider-window`,
+  `provider-quota`, `preemption`.
+- **Park cause** — why the lease was released: `provider-window`,
+  `provider-quota`, `preempted-for-close-item`.
+- **Recheck interval** — the per-condition-type cadence from
+  `queue.park-recheck.<type>`.
+- **Resume** — recovery of a parked entry when its condition evaluates clear.
+- **Observation gap** — the elapsed time between a park's previous evaluation
+  and the recovering pass; named in the recovery incident.
+- **Stuck park** — a durable `clear-observed` marker with no later `recovered`
+  record; report-only on reads, a refusal on a claim.
+- **Clear-observed marker** — the durable prior-pass record on the `queue.park`
+  kind that makes stuck detection possible without a read writing.
+- **Preemption** — a computed proposal to release a new start's lease so a close
+  item may schedule; execution is explicit and belongs to the daemon story.
+- **Runner** — the execution-environment identity; one host runner today.
+- **Lane** — the canonical-ref observation of one entry's delivery state.
+- **Degraded** — a declared `degraded[]` marker such as `daemon-unreachable`,
+  never a silent failure.
+- **Incident** — the durable event surface for park auto-recovery and stale-lease
+  takeover.
+- **One-shot scheduling step** — plan → claim → release with no daemon, socket,
+  or background process.

@@ -49,9 +49,7 @@
       }
     ],
     "findings": [],
-    "degraded": [
-      "daemon-unreachable"
-    ],
+    "degraded": ["daemon-unreachable"],
     "truncated": false,
     "counts": {
       "lanes": 4,

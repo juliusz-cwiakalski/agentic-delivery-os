@@ -2,19 +2,14 @@
  * Edge-level queue harness for GH-237: a real `createConfigProgram` over an
  * injected temp state store, fact source, clock, and fence tokens.
  */
-import { createConfigProgram } from "../../../../packages/cli/src/edge";
+
 import type { QueueComposition, QueueFactSource } from "../../../../packages/cli/src/edge";
+import { createConfigProgram } from "../../../../packages/cli/src/edge";
 import { runCli } from "../../../../packages/cli/src/index";
 import { bufferSink } from "../../../golden/helpers";
-import { makeAuditStore } from "../../state/harness";
 import { baseFacts, queueRuntime } from "../../queue-ready/harness";
-import {
-  ciSucceeded,
-  observed,
-  REPO_A,
-  REPO_B,
-  RUNNER,
-} from "../schedule/harness";
+import { makeAuditStore } from "../../state/harness";
+import { ciSucceeded, observed, REPO_A, REPO_B, RUNNER } from "../schedule/harness";
 
 export const NOW_ISO = "2026-11-07T10:00:00Z";
 export const NOW_MS = Date.parse(NOW_ISO);
@@ -81,7 +76,10 @@ export const createQueueEdgeHarness = (label = "edge"): QueueEdgeHarness => {
     runner: RUNNER,
     nowIso: () => new Date(now).toISOString(),
     nowMs: () => now,
-    newFenceToken: () => `fence-${(fence += 1)}`,
+    newFenceToken: () => {
+      fence += 1;
+      return `fence-${fence}`;
+    },
     degraded: ["daemon-unreachable"],
     readyRuntime: queueRuntime(
       baseFacts({ candidates: ["GH-176"], nowIso: NOW_ISO, nowMs: NOW_MS }),
@@ -103,18 +101,22 @@ export const createQueueEdgeHarness = (label = "edge"): QueueEdgeHarness => {
   const run = async (argv: readonly string[]) => {
     const stdout = bufferSink();
     const stderr = bufferSink();
-    const exitCode = await runCli(argv, { stdout, stderr }, {
-      brand: built.brand,
-      clock: {
-        now: () => {
-          tick += 1;
-          return NOW_MS + tick * 10;
+    const exitCode = await runCli(
+      argv,
+      { stdout, stderr },
+      {
+        brand: built.brand,
+        clock: {
+          now: () => {
+            tick += 1;
+            return NOW_MS + tick * 10;
+          },
         },
+        newRunId: () => "run-queue-edge",
+        secrets: built.secrets,
+        program: built.program,
       },
-      newRunId: () => "run-queue-edge",
-      secrets: built.secrets,
-      program: built.program,
-    });
+    );
     return { exitCode, stdout: stdout.value, stderr: stderr.value };
   };
   return {

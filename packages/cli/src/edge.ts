@@ -61,26 +61,13 @@ import {
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
   addQueueDependency,
-  claimQueueLease,
-  declareQueueEntry,
-  prioritizeQueueEntry,
-  readActiveLeases,
-  readQueueFold,
-  readQueueParkPass,
-  recoverQueueParks,
-  releaseQueueLease,
-  type QueueIntentFailure,
-  type QueueIntentOutcome,
-  type QueueIntentResult,
-  type QueueLeaseFailure,
-} from "@delivery-os/core";
-import {
   buildCloseoutPlan,
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
   type CommitActRequest,
   type CommitTransportPorts,
   catalogPaths,
+  claimQueueLease,
   classifyPruneCandidate,
   collectRetro,
   computeDbCutoffMs,
@@ -88,6 +75,7 @@ import {
   computeQueueSchedule,
   computeSpendReport,
   createSourcedWatchdogSignalSource,
+  declareQueueEntry,
   defaultParkRecheckMs,
   evaluateClaimPreconditions,
   foldLanes,
@@ -95,8 +83,26 @@ import {
   isLiveDbSession,
   type MergeTransactionPorts,
   newestWaiverByGate,
-  parkConditionForCause,
   PRODUCTION_CATALOG,
+  parkConditionForCause,
+  prioritizeQueueEntry,
+  type QueueCiFact,
+  type QueueCloseFact,
+  type QueueDeployFacts,
+  type QueueIntentFailure,
+  type QueueIntentOutcome,
+  type QueueIntentResult,
+  type QueueLaneEconomics,
+  type QueueLeaseFailure,
+  type QueuePlanFact,
+  type QueueProviderFact,
+  type QueueSchedulerFacts,
+  type QueueWorkItemFact,
+  readActiveLeases,
+  readQueueFold,
+  readQueueParkPass,
+  recoverQueueParks,
+  releaseQueueLease,
   reportRetro,
   resolveCloseoutBaseRef,
   resolveConfig,
@@ -107,14 +113,6 @@ import {
   runCommitAct,
   selectPruneCandidates,
   spendDigestSection,
-  type QueueCloseFact,
-  type QueueCiFact,
-  type QueueDeployFacts,
-  type QueueLaneEconomics,
-  type QueuePlanFact,
-  type QueueProviderFact,
-  type QueueSchedulerFacts,
-  type QueueWorkItemFact,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
   type VerifyGatesOpenPrPage,
@@ -167,6 +165,7 @@ import {
   type ProviderClock,
   type ProviderParkRecord,
   type ProviderSleep,
+  type QueueDegradationReason,
   type QuotaTransport,
   type Result,
   type SpendDigestSection,
@@ -184,7 +183,6 @@ import {
   type WatchdogLaneRead,
   type WatchdogSignalSource,
   type WorkItem,
-  type QueueDegradationReason,
 } from "@delivery-os/core/contracts";
 import {
   createProfileProbePort,
@@ -251,6 +249,7 @@ import {
 } from "./commands/config.js";
 import { createDbCommandDefinition, type DbCommandRuntime } from "./commands/db.js";
 import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
+import { createLanesCommandDefinition } from "./commands/lanes.js";
 import {
   createLintCommandDefinition,
   type LintCommandRuntime,
@@ -269,16 +268,15 @@ import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
 } from "./commands/provider.js";
-import { createQueueReadyCommandDefinition } from "./commands/queue.js";
 import {
   createQueueCommandDefinition,
+  createQueueReadyCommandDefinition,
   type QueueCommandRuntime,
   type QueueReadyCommandRuntime,
   type QueueRuntimeFailure,
   type QueueRuntimeMutation,
   type QueueRuntimeSchedule,
 } from "./commands/queue.js";
-import { createLanesCommandDefinition } from "./commands/lanes.js";
 import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
@@ -2677,7 +2675,10 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
     const resolvedSettings = (() => {
       const snapshot = resolve({});
       if (!snapshot.ok) return undefined;
-      const settings = resolveQueueSettings(snapshot.value.config.values, snapshot.value.config.origins);
+      const settings = resolveQueueSettings(
+        snapshot.value.config.values,
+        snapshot.value.config.origins,
+      );
       return settings.ok ? settings.value : undefined;
     })();
     commands.queue = createQueueCommandDefinition(
@@ -3026,7 +3027,11 @@ export type QueueComposition = {
 };
 
 type QueueBuilt =
-  | { readonly ok: true; readonly facts: QueueSchedulerFacts; readonly parkRecords: readonly unknown[] }
+  | {
+      readonly ok: true;
+      readonly facts: QueueSchedulerFacts;
+      readonly parkRecords: readonly unknown[];
+    }
   | QueueRuntimeFailure;
 
 const queueStateFailure = (code: string): QueueRuntimeFailure => ({
@@ -3038,7 +3043,10 @@ const queueStateFailure = (code: string): QueueRuntimeFailure => ({
 
 const buildQueueFacts = (
   composition: QueueComposition,
-  parkContext: { readonly providerAvailable: boolean; readonly leaseHeldRepositories: readonly string[] },
+  parkContext: {
+    readonly providerAvailable: boolean;
+    readonly leaseHeldRepositories: readonly string[];
+  },
 ): QueueBuilt => {
   const nowMs = composition.nowMs();
   const nowIso = composition.nowIso();
@@ -3069,7 +3077,9 @@ const buildQueueFacts = (
   };
 };
 
-const parkContextFor = (composition: QueueComposition): {
+const parkContextFor = (
+  composition: QueueComposition,
+): {
   readonly providerAvailable: boolean;
   readonly leaseHeldRepositories: readonly string[];
 } => {
@@ -3080,7 +3090,9 @@ const parkContextFor = (composition: QueueComposition): {
   };
 };
 
-const recoverParksForMutation = (composition: QueueComposition): QueueRuntimeFailure | undefined => {
+const recoverParksForMutation = (
+  composition: QueueComposition,
+): QueueRuntimeFailure | undefined => {
   const active = readActiveLeases(composition.store, composition.nowMs());
   if (!active.ok) return queueStateFailure(active.code);
   const context = parkContextFor(composition);
@@ -3098,10 +3110,23 @@ const mapQueueFailure = (
   failure:
     | QueueIntentFailure
     | QueueLeaseFailure
-    | { readonly ok: false; readonly kind: string; readonly code: string; readonly reason?: string; readonly detail?: string; readonly path?: readonly string[]; readonly conflict?: { readonly holder: string; readonly leaseId: string } },
+    | {
+        readonly ok: false;
+        readonly kind: string;
+        readonly code: string;
+        readonly reason?: string;
+        readonly detail?: string;
+        readonly path?: readonly string[];
+        readonly conflict?: { readonly holder: string; readonly leaseId: string };
+      },
 ): QueueRuntimeFailure => {
   if (failure.kind === "state") {
-    return { ok: false, kind: "state", code: failure.code, summary: `state failure (${failure.code})` };
+    return {
+      ok: false,
+      kind: "state",
+      code: failure.code,
+      summary: `state failure (${failure.code})`,
+    };
   }
   if (failure.kind === "input") {
     return {
@@ -3142,7 +3167,12 @@ const mapQueueFailure = (
     };
   }
   if (failure.code === "queue.park-condition-stuck") {
-    return { ok: false, kind: "queue", code: failure.code, summary: "park condition cleared without recovery" };
+    return {
+      ok: false,
+      kind: "queue",
+      code: failure.code,
+      summary: "park condition cleared without recovery",
+    };
   }
   return {
     ok: false,
@@ -3199,9 +3229,7 @@ const mutationOutcome = (
 });
 
 /** Compose the full queue command runtime from the injected state and facts. */
-export const createQueueCommandRuntime = (
-  composition: QueueComposition,
-): QueueCommandRuntime => {
+export const createQueueCommandRuntime = (composition: QueueComposition): QueueCommandRuntime => {
   const degraded = composition.degraded ?? (["daemon-unreachable"] as const);
   const readSchedule = (next: number): QueueRuntimeSchedule => {
     const built = buildQueueFacts(composition, parkContextFor(composition));
@@ -3212,9 +3240,7 @@ export const createQueueCommandRuntime = (
       degraded,
     };
   };
-  const mutate = (
-    operation: () => QueueIntentResult,
-  ): QueueRuntimeMutation => {
+  const mutate = (operation: () => QueueIntentResult): QueueRuntimeMutation => {
     const recovered = recoverParksForMutation(composition);
     if (recovered !== undefined) return recovered;
     const result = operation();
@@ -3264,8 +3290,7 @@ export const createQueueCommandRuntime = (
       if (!built.ok) return built;
       const schedule = computeQueueSchedule(built.facts, { next: 20 });
       const selected =
-        input.ref ??
-        schedule.nextActions.find((action) => action.preemption === undefined)?.ref;
+        input.ref ?? schedule.nextActions.find((action) => action.preemption === undefined)?.ref;
       if (selected === undefined) {
         return {
           ok: false,
@@ -3290,12 +3315,7 @@ export const createQueueCommandRuntime = (
           action.ref !== selected,
       );
       const weight = resolveQueueWeight(built.facts.plans[selected]);
-      const heavyLease = isHeldByWeight(
-        weight,
-        built.facts.leases,
-        built.facts.runner,
-        selected,
-      );
+      const heavyLease = isHeldByWeight(weight, built.facts.leases, built.facts.runner, selected);
       const precheck = evaluateClaimPreconditions(built.facts, selected, {
         ...(outranking === undefined ? {} : { outrankedBy: outranking.ref }),
         ...(heavyLease === undefined ? {} : { weightHeldBy: heavyLease.ref }),
@@ -3312,18 +3332,17 @@ export const createQueueCommandRuntime = (
         precheck: () => precheck,
       });
       if (!claimed.ok) return mapQueueFailure(claimed);
-      const action =
-        schedule.nextActions.find((candidate) => candidate.ref === selected) ?? {
-          ref: selected,
-          ...(entry.repository === undefined ? {} : { repository: entry.repository }),
-          rankClass: entry.rankClass,
-          reason: "close-first" as const,
-          priority: entry.priority,
-          weightClass: entry.weightClass,
-          weightClassSource: entry.weightClassSource,
-          lease: { state: "free" as const },
-          blocking: [],
-        };
+      const action = schedule.nextActions.find((candidate) => candidate.ref === selected) ?? {
+        ref: selected,
+        ...(entry.repository === undefined ? {} : { repository: entry.repository }),
+        rankClass: entry.rankClass,
+        reason: "close-first" as const,
+        priority: entry.priority,
+        weightClass: entry.weightClass,
+        weightClassSource: entry.weightClassSource,
+        lease: { state: "free" as const },
+        blocking: [],
+      };
       return {
         ok: true,
         result: claimed.value.result,
@@ -3344,13 +3363,10 @@ export const createQueueCommandRuntime = (
               }),
               recheckMs:
                 composition.settings?.parkRecheckMs[
-                  input.parkCause === "preempted-for-close-item"
-                    ? "preemption"
-                    : input.parkCause
-                ] ?? defaultParkRecheckMs(
-                  input.parkCause === "preempted-for-close-item"
-                    ? "preemption"
-                    : input.parkCause,
+                  input.parkCause === "preempted-for-close-item" ? "preemption" : input.parkCause
+                ] ??
+                defaultParkRecheckMs(
+                  input.parkCause === "preempted-for-close-item" ? "preemption" : input.parkCause,
                 ),
             };
       const released = releaseQueueLease(composition.store, {

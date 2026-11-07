@@ -167,6 +167,7 @@
     "doc/spec/features/feature-queue-ready.md",
     "doc/spec/features/feature-result-contract.md",
     "doc/spec/features/feature-retro-pipeline.md",
+    "doc/spec/features/feature-scheduling-engine.md",
     "doc/spec/features/feature-session-database-admin.md",
     "doc/spec/features/feature-session-lifecycle-economics.md",
     "doc/spec/features/feature-spend.md",

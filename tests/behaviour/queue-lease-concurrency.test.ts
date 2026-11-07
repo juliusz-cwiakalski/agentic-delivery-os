@@ -4,20 +4,17 @@
  * acquisition and 49 lease conflicts; the same-holder control renews.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  declareQueueEntry,
-  readActiveLeases,
-} from "../../packages/core/src/app/index";
-import { makeAuditStore } from "../fixtures/state/harness";
+import { declareQueueEntry, readActiveLeases } from "../../packages/core/src/app/index";
 import {
   holders,
   inFenceReadPrecedesAppend,
   NOW_ISO,
   NOW_MS,
-  recordingStore,
   REPO,
+  recordingStore,
   runScheduledClaims,
 } from "../fixtures/queue/leases/fence-harness";
+import { makeAuditStore } from "../fixtures/state/harness";
 
 const seeded = (label: string) => {
   const fixture = makeAuditStore(`queue-lease-${label}`);
@@ -42,10 +39,17 @@ describe("TC-LEASE-002 50 distinct holders acquire exactly one lease", () => {
       holders: holders(50),
       repository: REPO,
     });
-    const claimed = results.filter((entry) => entry.result.ok && entry.result.value.result === "claimed");
-    const renewed = results.filter((entry) => entry.result.ok && entry.result.value.result === "renewed");
+    const claimed = results.filter(
+      (entry) => entry.result.ok && entry.result.value.result === "claimed",
+    );
+    const renewed = results.filter(
+      (entry) => entry.result.ok && entry.result.value.result === "renewed",
+    );
     const conflicts = results.filter(
-      (entry) => !entry.result.ok && entry.result.kind === "queue" && entry.result.code === "queue.lease-conflict",
+      (entry) =>
+        !entry.result.ok &&
+        entry.result.kind === "queue" &&
+        entry.result.code === "queue.lease-conflict",
     );
     expect(claimed).toHaveLength(1);
     expect(renewed).toHaveLength(0);

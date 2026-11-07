@@ -16,11 +16,11 @@ import {
   QUEUE_READY_TIER_LABELS,
   type QueueActiveLease,
   type QueueBlocking,
-  type QueueReadyCloseClass,
   type QueueParkCause,
   type QueueParkRecord,
   type QueueRankClass,
   type QueueReadyBlockingCondition,
+  type QueueReadyCloseClass,
   type QueueReadyCondition,
   type QueueReadyEvidence,
   type QueueReadyReason,
@@ -35,7 +35,10 @@ export type QueuePlanFact =
   | { readonly state: "absent" }
   | {
       readonly state: "invalid";
-      readonly code: "plan.schema.invalid" | "plan.artifact.missing" | "plan.format.legacy-markdown";
+      readonly code:
+        | "plan.schema.invalid"
+        | "plan.artifact.missing"
+        | "plan.format.legacy-markdown";
     };
 
 /** One work-item observation for one entry. */
@@ -153,8 +156,7 @@ const evidence = (
   source: QueueReadyEvidence["source"],
   reason: QueueReadyReason,
   detail?: string,
-): QueueReadyEvidence =>
-  detail === undefined ? { source, reason } : { source, reason, detail };
+): QueueReadyEvidence => (detail === undefined ? { source, reason } : { source, reason, detail });
 
 const clampDetail = (value: string): string =>
   value.length <= 160 ? value : `${value.slice(0, 159)}+`;
@@ -335,13 +337,13 @@ const tierCondition = (
   return {
     id: "tier-known",
     state: "unsatisfied",
-    evidence: [evidence(SOURCE.tracker, "tier-conflict", `tier:priority-label; labels:${sorted.join(",")}`)],
+    evidence: [
+      evidence(SOURCE.tracker, "tier-conflict", `tier:priority-label; labels:${sorted.join(",")}`),
+    ],
   };
 };
 
-const ownerGateCondition = (
-  item: QueueWorkItemFact | undefined,
-): QueueReadyCondition => {
+const ownerGateCondition = (item: QueueWorkItemFact | undefined): QueueReadyCondition => {
   if (item?.state !== "observed") {
     return {
       id: "no-owner-gate",
@@ -360,7 +362,9 @@ const ownerGateCondition = (
   return {
     id: "no-owner-gate",
     state: "unsatisfied",
-    evidence: [evidence(SOURCE.tracker, "owner-labels", `owner-labels:${[...matches].sort().join(",")}`)],
+    evidence: [
+      evidence(SOURCE.tracker, "owner-labels", `owner-labels:${[...matches].sort().join(",")}`),
+    ],
   };
 };
 
@@ -418,11 +422,7 @@ const providerCondition = (fact: QueueProviderFact): QueueReadyCondition => {
       id: "provider-available",
       state: "unsatisfied",
       evidence: [
-        evidence(
-          SOURCE.providerParks,
-          fact.reason as QueueReadyReason,
-          `provider:${fact.reason}`,
-        ),
+        evidence(SOURCE.providerParks, fact.reason as QueueReadyReason, `provider:${fact.reason}`),
       ],
     };
   }
@@ -434,10 +434,7 @@ const providerCondition = (fact: QueueProviderFact): QueueReadyCondition => {
 };
 
 /** Evaluate the delivered six conditions with scheduler sources for one entry. */
-export const evaluateQueueReadiness = (
-  facts: QueueSchedulerFacts,
-  ref: string,
-): QueueReadiness => {
+export const evaluateQueueReadiness = (facts: QueueSchedulerFacts, ref: string): QueueReadiness => {
   const item = observed(facts, ref);
   const conditions: QueueReadyCondition[] = [
     depsCondition(facts, ref, item),

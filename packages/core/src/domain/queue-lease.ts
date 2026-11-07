@@ -22,11 +22,11 @@ import {
 } from "#contracts";
 import { evaluateQueueReadiness, type QueueSchedulerFacts } from "./queue-readiness.js";
 
-/** The single implemented lease scope. */
-export const DEFAULT_LEASE_SCOPE: QueueLeaseScope = "repo-exclusive";
+/** The single implemented lease scope; the declared scope every path acquires. */
+const LEASE_SCOPE: QueueLeaseScope = "repo-exclusive";
 
 /** The declared scope every delivered path acquires. */
-export const claimScope = (): QueueLeaseScope => DEFAULT_LEASE_SCOPE;
+export const claimScope = (): QueueLeaseScope => LEASE_SCOPE;
 
 /** Deterministic lease identity: repository, holder, and acquisition instant. */
 export const makeLeaseId = (repository: string, holder: string, acquiredAt: string): string =>
@@ -115,9 +115,7 @@ export const leaseConflict = (lease: QueueActiveLease): QueueLeaseConflict => ({
   leaseId: lease.leaseId,
   acquiredAt: lease.acquiredAt,
   heartbeatAgeMs: lease.heartbeatAgeMs,
-  earliestTakeoverAt: new Date(
-    Date.parse(lease.heartbeatAt) + lease.ttlMs,
-  ).toISOString(),
+  earliestTakeoverAt: new Date(Date.parse(lease.heartbeatAt) + lease.ttlMs).toISOString(),
 });
 
 /** The pre-fence claim precondition result. */
@@ -229,7 +227,9 @@ export const evaluateClaimPreconditions = (
       ok: false,
       code: "queue.precondition.unmet",
       reason: reasonForProvider(provider.evidence[0]?.reason),
-      ...(provider.evidence[0]?.detail === undefined ? {} : { detail: provider.evidence[0].detail }),
+      ...(provider.evidence[0]?.detail === undefined
+        ? {}
+        : { detail: provider.evidence[0].detail }),
     };
   }
   if (options.outrankedBy !== undefined) {

@@ -55,7 +55,9 @@ export type FactsOverrides = {
   readonly parkRecords?: readonly QueueParkRecord[];
 };
 
-export const observed = (overrides: Partial<Extract<QueueWorkItemFact, { state: "observed" }>> = {}): QueueWorkItemFact => ({
+export const observed = (
+  overrides: Partial<Extract<QueueWorkItemFact, { state: "observed" }>> = {},
+): QueueWorkItemFact => ({
   state: "observed",
   deliveryState: overrides.deliveryState ?? "ready",
   labels: overrides.labels ?? ["priority:high"],

@@ -411,3 +411,16 @@ See also: [glossary](../../overview/glossary.md) for repository-wide terms, [fea
 - [Commit Primitive](feature-commit-primitive.md) adds the `commit` kind with `commit.staging-blocked-untracked`, `commit.commitlint-failed`, `commit.safety.secret-suspected`, `commit.safety.scan-unavailable`, `commit.atomic-abort`, and `commit.session.context-refused`.
 - [Doctor](feature-doctor.md) adds the `doctor` kind with the single `doctor.check.failed` row and the deterministic failing-check summary.
 - [Retro Evidence Pipeline](feature-retro-pipeline.md) adds the `retro` kind with the four evidence-plane rows and consumes the state identities unchanged for store-level damage.
+
+## Scheduling engine reconciliation (GH-237)
+
+The `queue` domain kind carries exactly the five scheduling rows
+(`queue.dependency-cycle`, `queue.lease-conflict`,
+`queue.park-condition-stuck`, `queue.entry.unobserved`,
+`queue.precondition.unmet`), documented and machine-declared together. The
+collector-id set is extended from `{tracker}` to `{tracker, lanes}`; the family
+shape, resolved row, and exit-2 projection are unchanged, and a family code
+naming an undeclared id stays unrecognized. No other domain kind changes and
+`queue ready` gains no row. Unreadable lease or park history reuses the
+delivered `state.*` identity at exit 2; `--watch` reuses `fallback.invocation`
+at exit 1. See [Scheduling Engine](feature-scheduling-engine.md).

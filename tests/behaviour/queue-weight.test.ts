@@ -9,13 +9,7 @@ import {
   resolveQueueWeight,
   weightLoads,
 } from "../../packages/core/src/domain/index";
-import {
-  activeLease,
-  makeFacts,
-  REPO_A,
-  REPO_B,
-  RUNNER,
-} from "../fixtures/queue/schedule/harness";
+import { activeLease, makeFacts, REPO_A, REPO_B, RUNNER } from "../fixtures/queue/schedule/harness";
 
 const plan = (weightClass?: string) =>
   weightClass === undefined
@@ -192,8 +186,16 @@ describe("TC-WEIGHT-001/003/004 claim-side weight rows", () => {
   test("a heavy claim under an active heavy lease refuses with reason weight-class", () => {
     const facts = makeFacts(
       [
-        { ref: "GH-308", repository: REPO_A, plan: { state: "valid", tier: "full", weightClass: "heavy" } },
-        { ref: "GH-309", repository: REPO_B, plan: { state: "valid", tier: "full", weightClass: "heavy" } },
+        {
+          ref: "GH-308",
+          repository: REPO_A,
+          plan: { state: "valid", tier: "full", weightClass: "heavy" },
+        },
+        {
+          ref: "GH-309",
+          repository: REPO_B,
+          plan: { state: "valid", tier: "full", weightClass: "heavy" },
+        },
       ],
       {
         leases: [
@@ -220,8 +222,16 @@ describe("TC-WEIGHT-001/003/004 claim-side weight rows", () => {
   test("a standard claim continues while a heavy lease is active", () => {
     const facts = makeFacts(
       [
-        { ref: "GH-308", repository: REPO_A, plan: { state: "valid", tier: "full", weightClass: "heavy" } },
-        { ref: "GH-311", repository: REPO_B, plan: { state: "valid", tier: "full", weightClass: "standard" } },
+        {
+          ref: "GH-308",
+          repository: REPO_A,
+          plan: { state: "valid", tier: "full", weightClass: "heavy" },
+        },
+        {
+          ref: "GH-311",
+          repository: REPO_B,
+          plan: { state: "valid", tier: "full", weightClass: "standard" },
+        },
       ],
       {
         leases: [

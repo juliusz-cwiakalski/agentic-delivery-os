@@ -11,9 +11,9 @@
 import {
   canonicalQueueRef,
   evaluateQueueReady,
+  type QueueSchedule,
   renderQueueHuman,
   renderQueueReadyHuman,
-  type QueueSchedule,
 } from "@delivery-os/core";
 import {
   type BrandIdentity,
@@ -170,10 +170,7 @@ export type QueueCommandRuntime = {
     readonly priority: number;
   }) => QueueRuntimeMutation;
   readonly dep: (input: { readonly ref: string; readonly onRef: string }) => QueueRuntimeMutation;
-  readonly claim: (input: {
-    readonly ref?: string;
-    readonly holder: string;
-  }) => QueueRuntimeClaim;
+  readonly claim: (input: { readonly ref?: string; readonly holder: string }) => QueueRuntimeClaim;
   readonly release: (input: {
     readonly ref: string;
     readonly holder?: string;
@@ -249,9 +246,7 @@ const mutationData = (mutation: QueueRuntimeMutation): QueueMutationData => {
     ref: mutation.ref,
     entry: {
       ref: mutation.ref,
-      ...(mutation.entry.repository === undefined
-        ? {}
-        : { repository: mutation.entry.repository }),
+      ...(mutation.entry.repository === undefined ? {} : { repository: mutation.entry.repository }),
       state: mutation.result === "noop" ? "ready" : "ready",
       rankClass: mutation.entry.rankClass,
       priority: mutation.entry.priority,
@@ -295,9 +290,7 @@ const humanFailure = (): string => "result=refused\n";
  * definition unchanged; the additive subcommands share the declared grammar and
  * bounded untrusted-input validation before any read.
  */
-export const createQueueCommandDefinition = (
-  runtime: QueueCommandRuntime,
-): CommandDefinition => ({
+export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): CommandDefinition => ({
   flags: ["--next", "--priority", "--dep", "--holder", "--park"],
   requiresValue: ["--next", "--priority", "--dep", "--holder", "--park"],
   positionals: { max: 3 },
@@ -332,8 +325,7 @@ export const createQueueCommandDefinition = (
         return fullGrammarRejection("add-grammar");
       }
       const priorityValue = invocation.flags["--priority"];
-      const priority =
-        priorityValue === undefined ? undefined : parsePriority(priorityValue);
+      const priority = priorityValue === undefined ? undefined : parsePriority(priorityValue);
       if (priorityValue !== undefined && priority === undefined) {
         return fullGrammarRejection("priority");
       }
@@ -350,7 +342,8 @@ export const createQueueCommandDefinition = (
       return { data: mutationData(mutation) };
     }
     if (subcommand === "prioritize") {
-      if (ref === undefined || second === undefined) return fullGrammarRejection("prioritize-grammar");
+      if (ref === undefined || second === undefined)
+        return fullGrammarRejection("prioritize-grammar");
       const priority = parsePriority(second);
       if (priority === undefined) return fullGrammarRejection("priority");
       const mutation = runtime.prioritize({ ref, priority });
@@ -389,9 +382,7 @@ export const createQueueCommandDefinition = (
       const release = runtime.release({
         ref,
         ...(typeof holderFlag === "string" ? { holder: holderFlag } : {}),
-        ...(typeof parkFlag === "string" && isParkCause(parkFlag)
-          ? { parkCause: parkFlag }
-          : {}),
+        ...(typeof parkFlag === "string" && isParkCause(parkFlag) ? { parkCause: parkFlag } : {}),
       });
       if (!release.ok) return runtimeFailure(release);
       return { data: releaseData(release) };

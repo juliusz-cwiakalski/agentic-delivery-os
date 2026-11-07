@@ -1685,6 +1685,8 @@ describe("TC-VOCAB-002/003 (GH-237) queue rows and lanes collector family", () =
         `${BOARD_COLLECTOR_ERROR_PREFIX}queue${BOARD_COLLECTOR_ERROR_SUFFIX}`,
       ),
     ).toBe(false);
-    expect(collectorIdOfFamilyCode(`${BOARD_COLLECTOR_ERROR_PREFIX}lanes.unavailable`)).toBe("lanes");
+    expect(collectorIdOfFamilyCode(`${BOARD_COLLECTOR_ERROR_PREFIX}lanes.unavailable`)).toBe(
+      "lanes",
+    );
   });
 });

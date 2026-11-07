@@ -12,9 +12,7 @@
     "weights": [],
     "parks": [],
     "findings": [],
-    "degraded": [
-      "daemon-unreachable"
-    ],
+    "degraded": ["daemon-unreachable"],
     "truncated": false,
     "counts": {
       "entries": 0,

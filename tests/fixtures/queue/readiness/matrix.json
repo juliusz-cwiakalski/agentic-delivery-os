@@ -1,5 +1,12 @@
 {
-  "conditionOrder": ["deps-satisfied", "repo-free", "tier-known", "no-owner-gate", "ci-healthy", "provider-available"],
+  "conditionOrder": [
+    "deps-satisfied",
+    "repo-free",
+    "tier-known",
+    "no-owner-gate",
+    "ci-healthy",
+    "provider-available"
+  ],
   "triState": ["satisfied", "unsatisfied", "unknown"],
   "acF21": {
     "blockedBy": ["GH-300"],

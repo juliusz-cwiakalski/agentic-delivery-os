@@ -8,6 +8,16 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import {
+  claimQueueLease,
+  declareQueueEntry,
+  readQueueIncidents,
+  readQueueLeases,
+  readQueueParks,
+  recoverQueueParks,
+  releaseQueueLease,
+} from "../../packages/core/src/app/index";
+import { PRODUCTION_CATALOG, resolveQueueSettings } from "../../packages/core/src/config/index";
+import {
   BOARD_COLLECTOR_IDS,
   DOMAIN_KINDS,
   ERROR_TABLE,
@@ -34,8 +44,8 @@ import {
   QUEUE_INCIDENT_SCHEMA,
   QUEUE_INCIDENT_TYPES,
   QUEUE_LANE_IDLE_REASONS,
-  QUEUE_LANES_SCHEMA_VERSION,
   QUEUE_LANE_STATES,
+  QUEUE_LANES_SCHEMA_VERSION,
   QUEUE_LEASE_KEY_PREFIX,
   QUEUE_LEASE_OPERATIONS,
   QUEUE_LEASE_RECORD_KIND,
@@ -54,8 +64,8 @@ import {
   QUEUE_MAX_REASONS,
   QUEUE_MIN_RENEWAL_MS,
   QUEUE_MUTATION_RESULTS,
-  QUEUE_PARK_CAUSES,
   QUEUE_PARK_CAUSE_CONDITION_PAIRS,
+  QUEUE_PARK_CAUSES,
   QUEUE_PARK_CONDITION_TYPES,
   QUEUE_PARK_KEY_PREFIX,
   QUEUE_PARK_RECHECK_DEFAULTS,
@@ -68,21 +78,11 @@ import {
   QUEUE_RELEASE_RESULTS,
   QUEUE_SCHEMA_VERSION,
   QUEUE_STUCK_PARK_FINDING_CODE,
-  QUEUE_WEIGHT_CLASSES,
   QUEUE_WEIGHT_CLASS_SOURCES,
+  QUEUE_WEIGHT_CLASSES,
   STATE_SCHEMA_VERSION,
 } from "../../packages/core/src/contracts/index";
-import { PRODUCTION_CATALOG, resolveQueueSettings } from "../../packages/core/src/config/index";
 import { resolveConfig } from "../../packages/core/src/index";
-import {
-  claimQueueLease,
-  declareQueueEntry,
-  readQueueIncidents,
-  readQueueLeases,
-  readQueueParks,
-  recoverQueueParks,
-  releaseQueueLease,
-} from "../../packages/core/src/app/index";
 import { makeAuditStore } from "../fixtures/state/harness";
 
 const ROOT = process.cwd();
@@ -196,7 +196,9 @@ describe("TC-VOCAB-005 closed sets are exact and distinct", () => {
     expect(QUEUE_PARK_CAUSES as readonly string[]).toContain("preempted-for-close-item");
     // Every cause and every condition type participates in exactly one pairing.
     for (const cause of QUEUE_PARK_CAUSES) {
-      expect(QUEUE_PARK_CAUSE_CONDITION_PAIRS.filter((pair) => pair.cause === cause)).toHaveLength(1);
+      expect(QUEUE_PARK_CAUSE_CONDITION_PAIRS.filter((pair) => pair.cause === cause)).toHaveLength(
+        1,
+      );
     }
     for (const conditionType of QUEUE_PARK_CONDITION_TYPES) {
       expect(

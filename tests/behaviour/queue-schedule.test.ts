@@ -5,12 +5,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { computeQueueSchedule } from "../../packages/core/src/domain/index";
-import {
-  activeLease,
-  makeFacts,
-  type EntrySpec,
-  REPO_A,
-} from "../fixtures/queue/schedule/harness";
+import { activeLease, type EntrySpec, makeFacts, REPO_A } from "../fixtures/queue/schedule/harness";
 
 const many = (count: number): EntrySpec[] =>
   Array.from({ length: count }, (_, index) => ({
@@ -115,9 +110,7 @@ describe("TC-SCHED-011 structural bounds", () => {
     const specs: EntrySpec[] = Array.from({ length: 500 }, (_, index) => {
       const edges =
         ((index >= 4 && index % 2 === 0) || index === 5 || index === 7) && index < 504
-          ? [index - 1, index - 2, index - 3, index - 4].map(
-              (previous) => `GH-${1000 + previous}`,
-            )
+          ? [index - 1, index - 2, index - 3, index - 4].map((previous) => `GH-${1000 + previous}`)
           : [];
       return {
         ref: `GH-${1000 + index}`,

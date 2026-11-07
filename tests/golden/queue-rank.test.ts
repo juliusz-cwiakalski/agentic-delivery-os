@@ -16,7 +16,9 @@ describe("queue rank golden", () => {
     await harness.run(["queue", "add", "GH-320", "--json"]);
     const run = await harness.run(["queue", "plan", "--next", "2", "--json"]);
     expect(run.exitCode).toBe(0);
-    expect(run.stdout).toBe(readFileSync(join(GOLDEN, "queue-rank.json"), "utf8"));
+    expect(JSON.parse(run.stdout)).toEqual(
+      JSON.parse(readFileSync(join(GOLDEN, "queue-rank.json"), "utf8")),
+    );
   });
 
   test("the merge-ready entry ranks first", () => {

@@ -375,3 +375,13 @@ One invocation performs at most three outbound read-only GitHub requests (issues
 See also: [Status Digest](feature-status-digest.md), [Provider Engine](feature-provider-engine.md), [State Layer](feature-state-layer.md), [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), the [repository glossary](../../overview/glossary.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md), [ADR-0007](../../decisions/ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md), and [ODR-0003](../../decisions/ODR-0003-cli-command-naming-v1-lock.md).
 
 **Change record:** `doc/changes/2026-10/2026-10-31--GH-176--queue-ready/`.
+
+## Scheduling engine reconciliation (GH-237)
+
+`queue ready` is unchanged by the scheduling engine: grammar, the six condition
+ids and their fixed order, tri-state, evidence vocabulary, ranking, caps, byte
+bounds, read-only posture, and error rows carry over verbatim, and its machine
+and human output is byte-identical over the existing fixture corpus. The engine
+consumes the same condition vocabulary rather than redefining it, and the
+`scheduler` strengthens only the `deps-satisfied`, `repo-free`, and `tier-known`
+sources in its own readiness pass. See [Scheduling Engine](feature-scheduling-engine.md).

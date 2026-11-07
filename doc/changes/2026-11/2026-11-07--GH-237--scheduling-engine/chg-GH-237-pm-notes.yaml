@@ -57,3 +57,27 @@ notes:
   - text: "DoR iteration 3: READY_WITH_RISKS (gate PASS; no blocking findings). All R2-01..R2-07 resolved. Accepted non-blocking residuals: N1 test-plan partial-mark count differs from the plan (21 vs 24; TC-SCHED-001/002/015 lack explicit partial markers though the §7.1 rule covers them); N2 plan task 8.8's AC→TC checklist omits AC-F12-1 and some secondary TCs (DoD phase verifies all 22 ACs independently); N3 no explicit `degraded[]` assertion for `queue add|prioritize|dep`; N4 one-phase header wording says the entry projection folds the root while DM-13 says it does not. None blocks delivery; N2 and N4 are noted for the docs/review phases."
     type: retro
     date: "2026-11-07"
+  - text: "Plan Phase 1 complete: commit f4b809ab. Scheduling vocabulary contract, typed queue config branch, five record kinds, five queue error rows, lanes collector id, documented table sync, and compile-only type probe. Gate: pnpm typecheck PASS; structure suites 111 tests PASS; error-table-sync entries=101 documented=101 PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 2 complete: commit 58fe6d96. Queue declaration and graph folding with canonical refs, repository-key normalization, fenced entry/dependency appends, the internal-only recorded root, cycle refusal before append, replay no-op, superseding projection, and the rebuildable queue-graph document. Gate: typecheck PASS; graph/state/structure 51 tests PASS; queue-ready preservation 55 tests PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 3 complete: commit 4bf1a935. Six-condition readiness with scheduler sources, weight resolution and per-runner accounting, producer-bound deploy gate with a three-read budget, close-first rank classes and preemption proposal, and the declared total precedence with per-repository single-flight. Gate: typecheck PASS; Phase 3 suites plus bounds and structure 84 tests PASS; queue-graph 14 tests PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 4 complete: commit d886643a. Repo-exclusive lease policy, two-stage claim with in-fence re-read and post-append verification, renewal, release, stale takeover with evidence and incident, fail-closed unreadable history, and the deterministic 50-holder harness. Gate: typecheck PASS; lease/weight/structure 37 tests PASS; rank/readiness/bounds 24 tests PASS; queue-ready 55 tests PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 5 complete: commit ab09bdc9. Two distinct park sets with one-to-one pairing, per-type recheck, durable clear-observed marker, recovered record and park-auto-recovery incident, stuck finding and claim refusal, release-with-park atomicity, and the lease/park/incident vocabulary round-trip. Gate: typecheck PASS; park/rank/lease/structure 65 tests PASS; readiness/schedule/bounds 25 tests PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 6 complete: commit aeeea424. Pure lane fold over entries, leases, parks, and economics; lanes list/show envelopes; closed six-state vocabulary and bounded idle reasons; null-plus-warning economics; unreadable store as status.collector.lanes.unavailable at exit 2; --watch refused through fallback.invocation; 200-lane bound. Gate: typecheck PASS; lanes behaviour and three goldens plus bounds/structure 49 tests PASS; economics neighbours 14 tests PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 7 complete: commit 6b090bea. Full queue family with edge composition, Appendix C envelopes, text key=value summaries, grammar and bounded input validation, exit projection, no-ref selection, queue list/plan exit 2 on unreadable lease/park history, queue ready delegation, five queue goldens, hermetic battery, and secret canary. Placement deviation: the state-port ledger composition moved from core/src/state/queue.ts to core/src/app/queue.ts because the state tier is contract-only under the ADR-0003 dependency boundary; public behavior and the state port are unchanged. Gate: typecheck PASS; check:boundaries PASS; 179 Phase 7 tests PASS; error-table-sync PASS."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan Phase 8 complete: docs reconciliation (new feature-scheduling-engine spec, neighbour spec notes, queue/lanes man pages, registry, glossary), exactly one five-package minor changeset, test-plan execution log, doc-distribution guard (no marker-scoped doc changed; N/A for bash scripts/.tests), and PR readiness checklist. Aggregate pnpm check: PASS except the environmental ci-baseline-parity EXDEV failure (/tmp on a different filesystem); re-run with TMPDIR=$PWD/tmp/tmpdir PASSES. error-table-sync PASS. Deviation: the lanes --watch refusal projects fallback.invocation at exit 1 with no stream, but the generic parser diagnostic is 'unknown flag' rather than a daemon-naming summary because the flag is outside the accepted grammar."
+    type: info
+    date: "2026-11-07"

@@ -10,8 +10,8 @@ import {
 } from "../../packages/core/src/domain/index";
 import {
   activeLease,
-  makeFacts,
   type EntrySpec,
+  makeFacts,
   REPO_A,
   REPO_B,
 } from "../fixtures/queue/schedule/harness";
@@ -25,7 +25,12 @@ const corpus: readonly EntrySpec[] = [
     repository: REPO_A,
     close: "none",
     priority: 5,
-    workItem: { state: "observed", deliveryState: "done", labels: ["priority:high"], blockedBy: [] },
+    workItem: {
+      state: "observed",
+      deliveryState: "done",
+      labels: ["priority:high"],
+      blockedBy: [],
+    },
   },
   { ref: "GH-305", repository: "github.com/owner/repo-gamma", close: "none", priority: 1 },
   { ref: "GH-306", repository: "github.com/owner/repo-delta", close: "none", priority: 1 },
@@ -41,7 +46,12 @@ const corpus: readonly EntrySpec[] = [
     repository: "github.com/owner/repo-zeta",
     close: "none",
     priority: 1,
-    workItem: { state: "observed", deliveryState: "ready", labels: ["priority:high", "hand-back"], blockedBy: [] },
+    workItem: {
+      state: "observed",
+      deliveryState: "ready",
+      labels: ["priority:high", "hand-back"],
+      blockedBy: [],
+    },
   },
 ];
 
@@ -65,9 +75,7 @@ describe("TC-SCHED-006 total order is independent of input order", () => {
     const baseline = computeQueueSchedule(makeFacts(corpus), { next: 20 });
     for (const seed of [1, 2, 3, 17, 99]) {
       const schedule = computeQueueSchedule(makeFacts(shuffle(corpus, seed)), { next: 20 });
-      expect(JSON.stringify(schedule.nextActions)).toBe(
-        JSON.stringify(baseline.nextActions),
-      );
+      expect(JSON.stringify(schedule.nextActions)).toBe(JSON.stringify(baseline.nextActions));
       expect(JSON.stringify(schedule.entries)).toBe(JSON.stringify(baseline.entries));
     }
   });
@@ -88,7 +96,18 @@ describe("TC-SCHED-006 total order is independent of input order", () => {
   test("rank class is applied before producer-before-consumer", () => {
     const facts = makeFacts(
       [
-        { ref: "GH-300", repository: REPO_A, close: "none", priority: 1, workItem: { state: "observed", deliveryState: "done", labels: ["priority:high"], blockedBy: [] } },
+        {
+          ref: "GH-300",
+          repository: REPO_A,
+          close: "none",
+          priority: 1,
+          workItem: {
+            state: "observed",
+            deliveryState: "done",
+            labels: ["priority:high"],
+            blockedBy: [],
+          },
+        },
         { ref: "GH-301", repository: REPO_A, close: "merge-ready", edges: ["GH-300"] },
       ],
       {
@@ -104,7 +123,17 @@ describe("TC-SCHED-006 total order is independent of input order", () => {
 
   test("producer-before-consumer applies only inside one repository", () => {
     const facts = makeFacts([
-      { ref: "GH-300", repository: REPO_A, close: "none", workItem: { state: "observed", deliveryState: "done", labels: ["priority:high"], blockedBy: [] } },
+      {
+        ref: "GH-300",
+        repository: REPO_A,
+        close: "none",
+        workItem: {
+          state: "observed",
+          deliveryState: "done",
+          labels: ["priority:high"],
+          blockedBy: [],
+        },
+      },
       { ref: "GH-301", repository: REPO_B, close: "none", edges: ["GH-300"], priority: 1 },
     ]);
     const schedule = computeQueueSchedule(facts, { next: 2 });
@@ -183,9 +212,9 @@ describe("TC-SCHED-013 100-run determinism", () => {
     const previousLocale = process.env.LC_ALL;
     try {
       process.env.LC_ALL = "tr_TR.UTF-8";
-      expect(JSON.stringify(computeQueueSchedule(makeFacts(shuffle(corpus, 7)), { next: 20 }))).toBe(
-        baseline,
-      );
+      expect(
+        JSON.stringify(computeQueueSchedule(makeFacts(shuffle(corpus, 7)), { next: 20 })),
+      ).toBe(baseline);
     } finally {
       if (previousLocale === undefined) delete process.env.LC_ALL;
       else process.env.LC_ALL = previousLocale;

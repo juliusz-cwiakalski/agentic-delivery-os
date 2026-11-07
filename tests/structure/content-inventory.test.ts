@@ -761,7 +761,6 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/domain/queue-lanes.ts": ["foldLanes", "renderLanesHuman", "selectLane"],
   "core/src/domain/queue-lease.ts": [
-    "DEFAULT_LEASE_SCOPE",
     "claimScope",
     "defaultLeaseTtlMs",
     "earliestTakeoverAtIso",

@@ -310,3 +310,11 @@ Worktree-activity sourcing remains the declared opencode gap, and Claude Code's 
 See also: [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Harness Adapters](feature-harness-adapters.md), [Result Contract and Error Table](feature-result-contract.md), [State Layer](feature-state-layer.md), [Configuration Layer and Inspection](feature-config-layer.md), [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 **Change record:** `doc/changes/2026-11/2026-11-07--GH-235--session-lifecycle-economics/`.
+
+## Scheduling engine reconciliation (GH-237)
+
+The lane view consumes the delivered economics fold: restarts and the
+resume-amplification signal are read, never recomputed, and an underivable value
+is `null` with a warning rather than a fabricated zero. A lane failed past its
+restart budget reports the closed `failed` state with reason
+`restart-budget-exhausted`. See [Scheduling Engine](feature-scheduling-engine.md).

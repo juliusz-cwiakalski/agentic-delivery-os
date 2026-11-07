@@ -10,10 +10,7 @@ import {
   QUEUE_READY_EVIDENCE_REASONS,
   QUEUE_READY_EVIDENCE_SOURCES,
 } from "../../packages/core/src/contracts/index";
-import {
-  computeQueueSchedule,
-  evaluateQueueReadiness,
-} from "../../packages/core/src/domain/index";
+import { computeQueueSchedule, evaluateQueueReadiness } from "../../packages/core/src/domain/index";
 import {
   activeLease,
   ciSucceeded,
@@ -25,10 +22,7 @@ import {
   unobserved,
 } from "../fixtures/queue/schedule/harness";
 
-const condition = (
-  readiness: ReturnType<typeof evaluateQueueReadiness>,
-  id: string,
-) => {
+const condition = (readiness: ReturnType<typeof evaluateQueueReadiness>, id: string) => {
   const found = readiness.conditions.find((candidate) => candidate.id === id);
   if (found === undefined) throw new Error(`condition ${id} is missing`);
   return found;
@@ -127,7 +121,9 @@ describe("TC-SCHED-004 scheduler truth for deps, repo-free, and tier", () => {
 
   test("repo-free consumes lease truth and names the holder and lease identity", () => {
     const withLease = makeFacts([{ ref: "GH-301", repository: REPO_A }], {
-      leases: [activeLease({ repository: REPO_A, holder: "holder-a", ref: "GH-300", leaseId: "lease-7" })],
+      leases: [
+        activeLease({ repository: REPO_A, holder: "holder-a", ref: "GH-300", leaseId: "lease-7" }),
+      ],
     });
     const repoFree = condition(evaluateQueueReadiness(withLease, "GH-301"), "repo-free");
     expect(repoFree.state).toBe("unsatisfied");
@@ -180,7 +176,14 @@ describe("TC-SCHED-004 scheduler truth for deps, repo-free, and tier", () => {
         { ref: "GH-302", repository: REPO_A, priority: 6 },
       ],
       {
-        leases: [activeLease({ repository: REPO_A, holder: "holder-a", ref: "GH-300", leaseId: "lease-7" })],
+        leases: [
+          activeLease({
+            repository: REPO_A,
+            holder: "holder-a",
+            ref: "GH-300",
+            leaseId: "lease-7",
+          }),
+        ],
       },
     );
     const leased = computeQueueSchedule(leasedFacts);
@@ -207,18 +210,27 @@ describe("TC-SCHED-004 scheduler truth for deps, repo-free, and tier", () => {
 
 describe("TC-SCHED-005 failed sources are unknown, never satisfied", () => {
   test("every failed/unavailable/unresolved source maps to unknown and blocks readiness", () => {
-    const facts = makeFacts([
+    const facts = makeFacts(
+      [
+        {
+          ref: "GH-301",
+          workItem: unobserved(),
+          ci: ciUnreadable(),
+          plan: { state: "invalid", code: "plan.schema.invalid" },
+        },
+      ],
       {
-        ref: "GH-301",
-        workItem: unobserved(),
-        ci: ciUnreadable(),
-        plan: { state: "invalid", code: "plan.schema.invalid" },
+        provider: { state: "unavailable", reason: "not-configured" },
       },
-    ], {
-      provider: { state: "unavailable", reason: "not-configured" },
-    });
+    );
     const readiness = evaluateQueueReadiness(facts, "GH-301");
-    for (const id of ["deps-satisfied", "tier-known", "no-owner-gate", "ci-healthy", "provider-available"]) {
+    for (const id of [
+      "deps-satisfied",
+      "tier-known",
+      "no-owner-gate",
+      "ci-healthy",
+      "provider-available",
+    ]) {
       expect(condition(readiness, id).state).toBe("unknown");
     }
     expect(readiness.ready).toBe(false);

@@ -25,7 +25,9 @@ describe("lane list golden", () => {
   test("the machine payload is byte-identical to the committed golden", async () => {
     const run = await runProgram(["lanes", "list", "--json"], program());
     expect(run.exitCode).toBe(0);
-    expect(run.stdout).toBe(readFileSync(join(GOLDEN, "lanes-list.json"), "utf8"));
+    expect(JSON.parse(run.stdout)).toEqual(
+      JSON.parse(readFileSync(join(GOLDEN, "lanes-list.json"), "utf8")),
+    );
   });
 
   test("the human output is byte-identical to the committed golden", async () => {

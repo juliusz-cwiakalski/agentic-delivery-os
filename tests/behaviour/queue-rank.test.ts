@@ -3,16 +3,8 @@
  * stuck-park hard exclusion, and the computed preemption proposal.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  computeQueueSchedule,
-  resolveRankClass,
-} from "../../packages/core/src/domain/index";
-import {
-  activeLease,
-  makeFacts,
-  REPO_A,
-  REPO_B,
-} from "../fixtures/queue/schedule/harness";
+import { computeQueueSchedule, resolveRankClass } from "../../packages/core/src/domain/index";
+import { activeLease, makeFacts, REPO_A, REPO_B } from "../fixtures/queue/schedule/harness";
 
 describe("TC-RANK-001 close-first ranking is deterministic", () => {
   test("merge-ready ranks before a ready new start and the order is byte-identical", () => {
@@ -45,10 +37,17 @@ describe("TC-RANK-002 rank classes are closed, ordered, and derived per pass", (
       {
         ref: "GH-301",
         repository: REPO_A,
-        park: { state: "active", cause: "provider-window", recheckMs: 60000, expiresAt: "2026-11-07T11:00:00Z" },
+        park: {
+          state: "active",
+          cause: "provider-window",
+          recheckMs: 60000,
+          expiresAt: "2026-11-07T11:00:00Z",
+        },
       },
     ]);
-    const entry = computeQueueSchedule(facts).entries.find((candidate) => candidate.ref === "GH-301");
+    const entry = computeQueueSchedule(facts).entries.find(
+      (candidate) => candidate.ref === "GH-301",
+    );
     expect(entry?.state).toBe("parked");
     expect(entry?.blocking[0]?.reason).toBe("parked:provider-window");
   });
@@ -58,7 +57,12 @@ describe("TC-RANK-002 rank classes are closed, ordered, and derived per pass", (
       {
         ref: "GH-301",
         repository: REPO_A,
-        park: { state: "resumable", cause: "provider-window", recheckMs: 60000, clearObservedAt: "2026-11-07T10:00:00Z" },
+        park: {
+          state: "resumable",
+          cause: "provider-window",
+          recheckMs: 60000,
+          clearObservedAt: "2026-11-07T10:00:00Z",
+        },
       },
       { ref: "GH-302", repository: REPO_B, close: "none", priority: 1 },
     ]);

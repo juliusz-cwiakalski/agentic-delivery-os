@@ -1,7 +1,8 @@
 # queue(1)
 
-Status: `queue ready` M0 shipped (M0-S7); full queue M1 planned
-(M1-S17). Proposed examples; scenarios SC-M1-08..11, SC-M1-17.
+Status: `queue ready` M0 shipped (M0-S7); full queue shipped by GH-237
+(M1-S17). Examples reconcile the M1-S17 delivery; scenarios SC-M1-08..11,
+SC-M1-17.
 
 ## NAME
 
@@ -81,3 +82,53 @@ class, surfaced as a finding).
 ## SEE ALSO
 
 [lanes.md](lanes.md), [plan.md](plan.md), [daemon.md](daemon.md)
+
+## Shipped contract (GH-237)
+
+The full family ships as `ready`, `list`, `plan`, `add`, `prioritize`, `dep`,
+`claim`, and `release`. `ready` is unchanged.
+
+```
+<binary> queue list
+<binary> queue plan [--next <n>]
+<binary> queue add <ref> [--priority <n>] [--dep <ref>]
+<binary> queue prioritize <ref> <n>
+<binary> queue dep <ref> <on-ref>
+<binary> queue claim [<ref>] [--holder <id>]
+<binary> queue release <ref> [--holder <id>] [--park <cause>]
+```
+
+`--watch` is not accepted on any queue subcommand; it is an invocation rejection
+at exit 1 through `fallback.invocation`.
+
+Machine envelopes follow the contract-level shapes:
+
+- `list` → `entries[]`, `leases[]`, `weights`, `parks[]`, `findings[]`,
+  `degraded[]`, `truncated`, `counts`. The entry `repository` field is the
+  normalized `host/owner/name` key; the recorded root is internal and never
+  rendered.
+- `plan [--next n]` → the same collections plus `nextActions[]` with `ref`,
+  `repository`, `rankClass`, `reason`, `priority`, `weightClass`,
+  `weightClassSource`, `lease`, `blocking[]`, optional `deploy`, optional
+  `preemption`.
+- `add | prioritize | dep` → `ref`, `entry`, `edges[]`, `result`
+  (`added`/`updated`/`noop`), `degraded[]`.
+- `claim` → `result` (`claimed`/`renewed`/`taken-over`), `selectedRef`, `lease`,
+  `action`, `degraded[]`.
+- `release` → `result` (`released`/`parked`/`noop`), `lease`, optional `park`,
+  `degraded[]`.
+
+Exit projection: `0` computed/read/landed/observed-empty/report-only stuck-park
+finding; `1` invocation rejection, dependency cycle, lease conflict, unmet
+precondition (including no eligible action), stuck-park refusal on a claim, or
+unobserved entry; `2` platform/provider/unverified state read, including
+`list|plan` when lease or park history is unreadable, torn, or of unknown kind.
+A daemon-down successful mutation lands durably and carries
+`degraded: ["daemon-unreachable"]` at exit 0; a refused mutation projects only
+its exit-1 identity.
+
+`release --park <cause>` accepts exactly `provider-window`, `provider-quota`,
+and `preempted-for-close-item`. Causes and condition types are two distinct
+closed sets paired one-to-one: cause `preempted-for-close-item` pairs with
+condition type `preemption`. A condition-type or unknown token is an invocation
+rejection at exit 1 and appends nothing.

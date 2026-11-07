@@ -5,12 +5,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { computeQueueSchedule } from "../../packages/core/src/domain/index";
-import {
-  makeFacts,
-  observed,
-  REPO_A,
-  REPO_B,
-} from "../fixtures/queue/schedule/harness";
+import { makeFacts, observed, REPO_A, REPO_B } from "../fixtures/queue/schedule/harness";
 
 const close = "merge-ready" as const;
 
@@ -38,7 +33,12 @@ describe("TC-DEPEND-001 consumer held while the producer is unresolved", () => {
 describe("TC-DEPEND-002 producer precedes consumer in one repository", () => {
   test("the producer ranks before the consumer regardless of priority", () => {
     const facts = makeFacts([
-      { ref: "GH-300", repository: REPO_A, priority: 20, workItem: observed({ deliveryState: "done" }) },
+      {
+        ref: "GH-300",
+        repository: REPO_A,
+        priority: 20,
+        workItem: observed({ deliveryState: "done" }),
+      },
       { ref: "GH-301", repository: REPO_A, priority: 1, edges: ["GH-300"] },
     ]);
     const schedule = computeQueueSchedule(facts);

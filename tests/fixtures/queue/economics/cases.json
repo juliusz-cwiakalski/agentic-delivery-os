@@ -1,5 +1,9 @@
 {
   "GH-320": { "restarts": 1, "amplification": 2 },
-  "GH-321": { "restarts": null, "amplification": null, "amplificationWarning": "economics-underivable" },
+  "GH-321": {
+    "restarts": null,
+    "amplification": null,
+    "amplificationWarning": "economics-underivable"
+  },
   "GH-322": { "restarts": 4, "amplification": 6, "failedPastBudget": true }
 }

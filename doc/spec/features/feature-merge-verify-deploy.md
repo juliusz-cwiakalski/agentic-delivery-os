@@ -198,3 +198,16 @@ with no pattern widening.
 [Configuration Layer](feature-config-layer.md) · [State Layer](feature-state-layer.md) ·
 [Adapter Ports](feature-adapter-ports.md) ·
 [Result Contract and Error Table](feature-result-contract.md) · [Commit Primitive](feature-commit-primitive.md)
+
+## Scheduling engine reconciliation (GH-237)
+
+The scheduler reads the delivered deploy verdict and the producer repository's
+own `merge.deploy-expectations`; it never executes a merge or evaluates a gate.
+A dependent merge is eligible only after the producer has landed and, where
+expectations are declared, the verdict is `verified` with evidence. Unknown,
+failed, or unreadable traces hold the dependent at `deploy-unverified`, never
+green. Expectations resolve from the producer repository's recorded key through
+a recorded root whose normalized remote matches exactly; no match, a two-root
+collision, or an unreadable/invalid matched config is `unknown`, never
+`not-declared` or `verified`. See
+[Scheduling Engine](feature-scheduling-engine.md).

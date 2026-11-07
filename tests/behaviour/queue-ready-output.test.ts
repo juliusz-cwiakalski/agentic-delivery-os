@@ -36,10 +36,6 @@ import {
   astralOverCapFacts,
 } from "../fixtures/queue-ready/caps/astral";
 import {
-  nonAsciiByteBudgetControlFacts,
-  nonAsciiByteBudgetFacts,
-} from "../fixtures/queue-ready/caps/non-ascii-byte-budget";
-import {
   humanAstral8,
   humanAstral8Facts,
   humanAstral8Refs,
@@ -49,6 +45,10 @@ import {
   humanOverBudgetFacts,
   humanOverBudgetRefs,
 } from "../fixtures/queue-ready/caps/human-over-budget/facts";
+import {
+  nonAsciiByteBudgetControlFacts,
+  nonAsciiByteBudgetFacts,
+} from "../fixtures/queue-ready/caps/non-ascii-byte-budget";
 import {
   baseFacts,
   blockedBy,
@@ -1226,7 +1226,6 @@ const boundViolations = (payload: QueueReadyPayload): string[] => {
 
 export const machinePayloadViolations = payloadViolations;
 export const machineBoundViolations = boundViolations;
-
 
 describe("TC-COMPAT-001 queue ready preservation (Phase 7)", () => {
   test("the six condition ids, order, tri-state, and evidence vocabulary are unchanged", () => {

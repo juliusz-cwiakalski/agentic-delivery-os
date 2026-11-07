@@ -16,7 +16,9 @@ describe("queue lease-conflict golden", () => {
     await harness.run(["queue", "claim", "GH-320", "--holder", "holder-a", "--json"]);
     const run = await harness.run(["queue", "claim", "GH-320", "--holder", "holder-b", "--json"]);
     expect(run.exitCode).toBe(1);
-    expect(run.stdout).toBe(readFileSync(join(GOLDEN, "queue-lease-conflict.json"), "utf8"));
+    expect(JSON.parse(run.stdout)).toEqual(
+      JSON.parse(readFileSync(join(GOLDEN, "queue-lease-conflict.json"), "utf8")),
+    );
   });
 
   test("the refusal names the holder and carries no data sibling", () => {

@@ -2,6 +2,13 @@
   "delivering": "GH-320",
   "quotaParked": "GH-321",
   "failed": "GH-322",
-  "closedStates": ["delivering", "idle-with-reason", "parked", "merge-ready", "in-review", "failed"],
+  "closedStates": [
+    "delivering",
+    "idle-with-reason",
+    "parked",
+    "merge-ready",
+    "in-review",
+    "failed"
+  ],
   "maxLanes": 200
 }

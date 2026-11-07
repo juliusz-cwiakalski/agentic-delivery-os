@@ -1,1 +1,4 @@
-{ "accepted": ["provider-window", "provider-quota", "preempted-for-close-item"], "rejected": ["preemption", "unknown"] }
+{
+  "accepted": ["provider-window", "provider-quota", "preempted-for-close-item"],
+  "rejected": ["preemption", "unknown"]
+}

@@ -1,9 +1,21 @@
 {
   "cases": [
     { "plan": { "state": "valid" }, "weightClass": "standard", "source": "absent" },
-    { "plan": { "state": "valid", "weightClass": "heavy" }, "weightClass": "heavy", "source": "declared" },
-    { "plan": { "state": "valid", "weightClass": "unrecognized" }, "weightClass": "heavy", "source": "declared" },
-    { "plan": { "state": "invalid", "code": "plan.schema.invalid" }, "weightClass": "heavy", "source": "plan-unreadable" },
+    {
+      "plan": { "state": "valid", "weightClass": "heavy" },
+      "weightClass": "heavy",
+      "source": "declared"
+    },
+    {
+      "plan": { "state": "valid", "weightClass": "unrecognized" },
+      "weightClass": "heavy",
+      "source": "declared"
+    },
+    {
+      "plan": { "state": "invalid", "code": "plan.schema.invalid" },
+      "weightClass": "heavy",
+      "source": "plan-unreadable"
+    },
     { "plan": { "state": "absent" }, "weightClass": "heavy", "source": "plan-absent" }
   ]
 }

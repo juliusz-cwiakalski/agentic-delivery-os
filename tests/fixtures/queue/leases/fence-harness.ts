@@ -6,7 +6,12 @@
  * state port and records the operation log so the suite can assert that the
  * in-fence verified read precedes every append.
  */
+
+import type { QueueClaimResult } from "../../../../packages/core/src/app/queue";
+import { claimQueueLease } from "../../../../packages/core/src/app/queue";
 import type {
+  QueueLeaseRecord,
+  QueueWeightClass,
   StateAppendOutcome,
   StateAppendRequest,
   StateDocumentReplaceRequest,
@@ -27,12 +32,6 @@ import type {
   StateStoreArtifactRequest,
   StateStorePort,
 } from "../../../../packages/core/src/contracts/index";
-import type {
-  QueueLeaseRecord,
-  QueueWeightClass,
-} from "../../../../packages/core/src/contracts/index";
-import type { QueueClaimResult } from "../../../../packages/core/src/app/queue";
-import { claimQueueLease } from "../../../../packages/core/src/app/queue";
 
 export const NOW_ISO = "2026-11-07T10:00:00Z";
 export const NOW_MS = Date.parse(NOW_ISO);

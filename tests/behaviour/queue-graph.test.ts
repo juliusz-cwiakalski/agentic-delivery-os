@@ -8,11 +8,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import {
-  canonicalQueueRef,
-  foldQueueGraph,
-  normalizeRepositoryKey,
-} from "../../packages/core/src/domain/index";
-import {
   addQueueDependency,
   declareQueueEntry,
   prioritizeQueueEntry,
@@ -23,6 +18,11 @@ import {
   readQueueEntries,
   readQueueFold,
 } from "../../packages/core/src/app/index";
+import {
+  canonicalQueueRef,
+  foldQueueGraph,
+  normalizeRepositoryKey,
+} from "../../packages/core/src/domain/index";
 import { makeAuditStore } from "../fixtures/state/harness";
 
 const ROOT = process.cwd();
@@ -204,7 +204,10 @@ describe("TC-SCHED-001 entry, edge, cycle, and replay", () => {
       expect(JSON.stringify(entry)).not.toContain(ROOT_PATH);
     }
     const rebuilt = JSON.parse(
-      JSON.stringify({ schema: "delivery.queue.graph.v1", entries: foldQueueGraph(fold.value.entryRecords, fold.value.dependencyRecords).entries }),
+      JSON.stringify({
+        schema: "delivery.queue.graph.v1",
+        entries: foldQueueGraph(fold.value.entryRecords, fold.value.dependencyRecords).entries,
+      }),
     ) as unknown;
     expect(document).toEqual(rebuilt);
   });
@@ -338,9 +341,7 @@ describe("TC-SCHED-002 replay, priority, and superseding projection", () => {
     const dependencies = readQueueDependencies(store);
     expect(dependencies.ok).toBe(true);
     if (dependencies.ok) {
-      expect(
-        dependencies.records.filter((record) => record.ref === "GH-301"),
-      ).toHaveLength(1);
+      expect(dependencies.records.filter((record) => record.ref === "GH-301")).toHaveLength(1);
     }
   });
 });
