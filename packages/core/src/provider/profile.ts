@@ -18,6 +18,7 @@ import {
   type ProfileSelectionDecision,
   type ProfileSelectionResult,
   PROFILE_EVIDENCE_FIELDS,
+  PROFILE_EVIDENCE_MAX_BYTES,
   PROFILE_EVENT_SEVERITIES,
   type ProviderEnvRecordPolicy,
   type ProviderProfile,
@@ -154,16 +155,23 @@ export const profileEventIdentity = (input: ProfileEventInput): string => {
   ].join(":");
 };
 
-/** Construct one structured profile event with bounded evidence. */
-export const createProfileEvent = (input: ProfileEventInput): ProfileEvent => ({
-  code: input.code,
-  severity: input.severity ?? PROFILE_EVENT_SEVERITIES[0],
-  identity: profileEventIdentity(input),
-  createdAt: formatUtcIso(input.createdAtMs),
-  createdAtMs: input.createdAtMs,
-  message: input.message,
-  evidence: projectProfileEvidence(input.evidence),
-});
+/** Construct one structured profile event with bounded evidence (NFR-8). */
+export const createProfileEvent = (input: ProfileEventInput): ProfileEvent => {
+  const event: ProfileEvent = {
+    code: input.code,
+    severity: input.severity ?? PROFILE_EVENT_SEVERITIES[0],
+    identity: profileEventIdentity(input),
+    createdAt: formatUtcIso(input.createdAtMs),
+    createdAtMs: input.createdAtMs,
+    message: input.message,
+    evidence: projectProfileEvidence(input.evidence),
+  };
+  const size = JSON.stringify(event).length;
+  if (size <= PROFILE_EVIDENCE_MAX_BYTES) return event;
+  const overflow = size - PROFILE_EVIDENCE_MAX_BYTES;
+  const message = input.message.slice(0, Math.max(0, input.message.length - overflow - 3));
+  return { ...event, message: `${message}...` };
+};
 
 /**
  * Evaluate the preference chain: capability gate first, then provider

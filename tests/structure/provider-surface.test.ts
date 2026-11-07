@@ -235,3 +235,33 @@ describe("TC-SURFACE-001 provider export surface", () => {
     }
   });
 });
+
+import { createHash } from "node:crypto";
+
+/**
+ * TC-PROFILE-033/058 (NG-6, GAP-T3, T-RSK-4) — the legacy bash hook is the
+ * authoritative current spawn-surface executor and stays byte-unchanged while
+ * M1-S9/M1-S20 own surface rewiring. The hashes pin the branch bytes.
+ */
+const LEGACY_HOOK_FILES: Readonly<Record<string, string>> = {
+  "scripts/ceo-loop.sh": "ddf27f14b7ec52459513ceb878300eebc8b696638610d5fe6aefd9e1635148a7",
+  "scripts/.tests/test-hook-regression.sh":
+    "67584d6fccc79b5e02bed541dce41a727a92ea6f27a60e5c698166b90259bab5",
+};
+
+describe("TC-PROFILE-033 legacy hook boundary", () => {
+  test("the legacy hook and its regression suite are byte-unchanged", () => {
+    for (const [relative, expected] of Object.entries(LEGACY_HOOK_FILES)) {
+      const digest = createHash("sha256")
+        .update(readFileSync(join(ROOT, relative)))
+        .digest("hex");
+      expect(digest, relative).toBe(expected);
+    }
+  });
+
+  test("the legacy hook remains the ADOS_HOOK_ENV_V1 data-contract executor", () => {
+    const hook = readFileSync(join(ROOT, "scripts/ceo-loop.sh"), "utf8");
+    expect(hook).toContain("ADOS_HOOK_ENV_V1");
+    expect(hook).toContain("OC_ADOS_AGENT_");
+  });
+});

@@ -1,2 +1,0 @@
-# model-env data-v1
-set OC_ADOS_AGENT_PM_MODEL=claude-opus

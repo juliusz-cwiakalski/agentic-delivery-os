@@ -391,3 +391,99 @@ describe("TC-PROFILE-051 ported group 5 — condition seams", () => {
     expect(result.snapshot.limits.length).toBeGreaterThan(0);
   });
 });
+
+describe("TC-PROFILE-052 no-silent-path matrix (all five groups)", () => {
+  const rows = [
+    {
+      group: "1 chain order",
+      run: () =>
+        selectProfile({
+          profiles: mixedChain(),
+          probe: createProviderFactsProbe({ "coding-plan": available(), deepseek: available() }),
+          nowMs: NOW,
+        }),
+    },
+    {
+      group: "2 lazy probes",
+      run: () =>
+        selectProfile({
+          profiles: mixedChain(),
+          probe: recordingProbe(() => "throw"),
+          nowMs: NOW,
+        }),
+    },
+    {
+      group: "3 park versus switch",
+      run: () =>
+        selectProfile({
+          profiles: mixedChain(),
+          probe: createProviderFactsProbe({ "coding-plan": peak("coding-plan"), deepseek: available() }),
+          nowMs: NOW,
+        }),
+    },
+    {
+      group: "3 all ineligible",
+      run: () =>
+        selectProfile({
+          profiles: mixedChain(),
+          probe: createProviderFactsProbe({
+            "coding-plan": exhausted("coding-plan"),
+            deepseek: exhausted("deepseek"),
+          }),
+          nowMs: NOW,
+        }),
+    },
+    {
+      group: "4 revert",
+      run: () => {
+        const recovered = selectProfile({
+          profiles: mixedChain(),
+          probe: createProviderFactsProbe({ "coding-plan": available(), deepseek: available() }),
+          nowMs: NOW,
+        });
+        return evaluateProfileLifecycle({
+          profiles: mixedChain(),
+          selection: recovered,
+          persisted: createProfileTargetRecord({
+            targetProfile: "deepseek",
+            reason: "switch",
+            previousProfile: "mixed",
+            revertCondition: "quota-exhausted",
+            nowMs: NOW,
+          }),
+          nowMs: NOW,
+        });
+      },
+    },
+    {
+      group: "5 condition seams",
+      run: () => {
+        const result = normalizeCodingPlanWindows({
+          status: 200,
+          bodyText: watchFixture("malformed/wrong-types.json"),
+          nowMs: NOW,
+        });
+        return result;
+      },
+    },
+  ];
+
+  for (const row of rows) {
+    test(`${row.group} has a structured outcome, never silence`, () => {
+      const outcome = row.run();
+      const serialized = JSON.stringify(outcome);
+      expect(serialized.length).toBeGreaterThan(0);
+      expect(
+        serialized.includes('"ok"') ||
+          serialized.includes('"status"') ||
+          serialized.includes('"events"') ||
+          serialized.includes('"code"'),
+      ).toBe(true);
+    });
+  }
+
+  test("the matrix is non-vacuous", () => {
+    expect(rows.length).toBeGreaterThanOrEqual(5);
+    expect(new Set(rows.map((row) => row.group.split(" ")[0])).size).toBeGreaterThanOrEqual(5);
+  });
+});

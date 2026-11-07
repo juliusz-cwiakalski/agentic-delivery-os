@@ -37,7 +37,6 @@ describe("TC-PROFILE-035 carried-over env-record validation floor", () => {
   const rejects: ReadonlyArray<readonly [string, string]> = [
     ["floor/bad-header.txt", "provider.env-record.malformed"],
     ["floor/missing-final-lf.txt", "provider.env-record.malformed"],
-    ["floor/cr.txt", "provider.env-record.malformed"],
     ["floor/duplicate.txt", "provider.env-record.duplicate"],
     ["floor/unauthorized.txt", "provider.env-record.unauthorized"],
   ];
@@ -49,6 +48,16 @@ describe("TC-PROFILE-035 carried-over env-record validation floor", () => {
       expect(result.error.code).toBe(code);
     });
   }
+
+  test("a CR byte anywhere is rejected", () => {
+    const result = validateEnvRecord(
+      "# model-env data-v1\r\nset OC_ADOS_AGENT_PM_MODEL=claude-opus\r\n",
+      undefined,
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("provider.env-record.malformed");
+  });
 
   test("a NUL byte anywhere is rejected", () => {
     const result = validateEnvRecord("# model-env data-v1\nset OC_ADOS_AGENT_PM_MODEL=a\0b\n", undefined);
