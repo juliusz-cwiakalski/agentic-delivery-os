@@ -1,0 +1,5 @@
+{
+  "producer": { "ref": "GH-300", "repository": "github.com/owner/repo-alpha" },
+  "consumer": { "ref": "GH-301", "repository": "github.com/owner/repo-beta" },
+  "deployReadBudget": 3
+}

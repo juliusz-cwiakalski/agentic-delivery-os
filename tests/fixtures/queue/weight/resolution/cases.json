@@ -1,0 +1,6 @@
+{
+  "runner": "runner-a",
+  "heavyLease": { "repository": "github.com/owner/repo-alpha", "holder": "holder-a", "ref": "GH-308" },
+  "heavyCandidate": { "ref": "GH-309", "repository": "github.com/owner/repo-beta" },
+  "standardCandidate": { "ref": "GH-311", "repository": "github.com/owner/repo-beta" }
+}

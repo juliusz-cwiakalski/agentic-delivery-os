@@ -1,0 +1,4 @@
+{
+  "order": ["merge-ready", "in-review", "resume-parked", "new-start"],
+  "stuckExcluded": true
+}

@@ -1,0 +1,14 @@
+{
+  "entries": 500,
+  "edgesPerEntry": 32,
+  "nextActions": 20,
+  "defaultNextActions": 3,
+  "lanes": 200,
+  "findings": 20,
+  "reasons": 8,
+  "machineBytes": 65536,
+  "humanLines": 40,
+  "humanBytes": 8192,
+  "evaluatedCandidates": 32,
+  "deployReads": 3
+}

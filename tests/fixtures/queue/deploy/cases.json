@@ -1,0 +1,8 @@
+{
+  "expectationDeclared": { "state": "declared", "steps": ["deploy"] },
+  "expectationNotDeclared": { "state": "not-declared" },
+  "expectationUnknown": { "state": "unknown", "reason": "config-invalid" },
+  "verdictVerified": { "verdict": "verified" },
+  "verdictUnknown": { "verdict": "unknown" },
+  "verdictFailed": { "verdict": "failed" }
+}

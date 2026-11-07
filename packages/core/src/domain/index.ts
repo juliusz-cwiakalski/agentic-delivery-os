@@ -250,6 +250,58 @@ export {
   queueGraphDocument,
 } from "./queue-graph.js";
 export {
+  closeClassOf,
+  evaluateQueueReadiness,
+  QUEUE_SCHEDULER_CONDITION_ORDER,
+  type QueueCiFact,
+  type QueueCloseFact,
+  type QueueDeployExpectation,
+  type QueueDeployFacts,
+  type QueueDeployVerdictFact,
+  type QueueEntryCheapFacts,
+  type QueueParkEvaluation,
+  type QueueParkEvaluationState,
+  type QueuePlanFact,
+  type QueueProviderFact,
+  type QueueReadiness,
+  type QueueSchedulerFacts,
+  type QueueWorkItemFact,
+} from "./queue-readiness.js";
+export {
+  activeHeavyLease,
+  isHeldByWeight,
+  resolveQueueWeight,
+  type QueueWeightLoad,
+  type QueueWeightResolution,
+  weightLoads,
+} from "./queue-weight.js";
+export {
+  createDeployGateState,
+  deployEvidenceOf,
+  evaluateDependencyGate,
+  evaluateDeployGate,
+  producerLanding,
+  QUEUE_DEPLOY_READ_BUDGET,
+  type QueueDependencyGateOutcome,
+  type QueueDeployGateState,
+  type QueueDeployOutcome,
+} from "./queue-deploy-gate.js";
+export {
+  isCloseRank,
+  isPreemptionAction,
+  preemptionBlock,
+  preemptionParkCause,
+  rankClassIndex,
+  resolveRankClass,
+} from "./queue-rank.js";
+export {
+  computeQueueSchedule,
+  isDeclaredBlockingReason,
+  QUEUE_NEXT_DEFAULT,
+  type QueueSchedule,
+  type QueueScheduleOptions,
+} from "./queue-precedence.js";
+export {
   attemptOutOfSeamEvidenceWrite,
   collectRetro,
   evaluateRetroTruthChecks,

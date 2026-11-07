@@ -740,6 +740,38 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "projectEntry",
     "queueGraphDocument",
   ],
+  "core/src/domain/queue-readiness.ts": [
+    "QUEUE_SCHEDULER_CONDITION_ORDER",
+    "closeClassOf",
+    "evaluateQueueReadiness",
+  ],
+  "core/src/domain/queue-weight.ts": [
+    "activeHeavyLease",
+    "isHeldByWeight",
+    "resolveQueueWeight",
+    "weightLoads",
+  ],
+  "core/src/domain/queue-deploy-gate.ts": [
+    "QUEUE_DEPLOY_READ_BUDGET",
+    "createDeployGateState",
+    "deployEvidenceOf",
+    "evaluateDependencyGate",
+    "evaluateDeployGate",
+    "producerLanding",
+  ],
+  "core/src/domain/queue-rank.ts": [
+    "isCloseRank",
+    "isPreemptionAction",
+    "preemptionBlock",
+    "preemptionParkCause",
+    "rankClassIndex",
+    "resolveRankClass",
+  ],
+  "core/src/domain/queue-precedence.ts": [
+    "QUEUE_NEXT_DEFAULT",
+    "computeQueueSchedule",
+    "isDeclaredBlockingReason",
+  ],
   "core/src/domain/watchdog.ts": [
     "buildWatchdogTeardownData",
     "buildWatchdogVerdictData",
