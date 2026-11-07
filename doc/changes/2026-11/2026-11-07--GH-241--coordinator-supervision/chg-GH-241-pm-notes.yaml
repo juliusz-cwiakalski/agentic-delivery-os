@@ -3,9 +3,9 @@ title: "M1-S23: Coordinator supervision"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-07T11:55:00Z", completed: "2026-11-07T12:04:00Z" }
-  specification: { started: "2026-11-07T12:05:00Z", completed: "2026-11-07T12:58:27Z" }
-  test_planning: { started: "2026-11-07T12:36:00Z", completed: "2026-11-07T13:15:27Z" }
-  delivery_planning: { started: "2026-11-07T13:16:00Z", completed: "2026-11-07T13:35:11Z" }
+  specification: { started: "2026-11-07T12:05:00Z", completed: null }
+  test_planning: { started: "2026-11-07T12:36:00Z", completed: null }
+  delivery_planning: { started: "2026-11-07T13:16:00Z", completed: null }
   dor_check: { started: "2026-11-07T13:36:00Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -15,6 +15,8 @@ phases:
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "Delivery restarts from a clean branch: feat/GH-241/coordinator-supervision existed at origin/main-tools tip 03edcdd7 with zero own commits, no PR ever opened, and no change artifacts. Issue label 'review' was premature; corrected to planning at delivery start."
+    date: "2026-11-07"
+  - text: "DoR iteration 1 verdict NOT_READY (12 blocking, 7 advisory). Reopened specification + test_planning + delivery_planning. Root causes are model-level, not wording: (1) the spec conflated the delivered short-lived state write fence with a lifetime single-instance lock, making stop/stale-takeover/escalation-under-fence unimplementable; (2) the append-only state store has no record update, so killOutcome cannot be written onto an existing stuck record; (3) the stuck evidence named 'new turn' and 'ready-to-merge count' without declared sources; (4) the instance identity, wake askedAt dedupe key, stop-request channel, and reserved-question render position had no durable carriers. Remediation direction: introduce a durable coordinator instance lease carried by the coordinator.fence record (acquired/released/stale-takeover/stop-requested) separate from the short-lived state write fence; fold two-phase coordinator.stuck records by stuckId (verdict then outcome); add coordinator.progress-bound and define 'new turn' as tokenDelta>0 or traffic>0 from the delivered harness liveness facts; drop ready-to-merge from the digest fingerprint; pin the reserved escalation question first; add PID+start-time identity verification before TERM; use exhausted-escalated; pin isCoordinatorPickup absent-status = open; update TDR-0013/0014 and the test plan accordingly."
     date: "2026-11-07"
   - text: "Specification defines the coordinator supervision surface as its own `coordinator` command family (start/stop/status/tick) plus a shared supervisor-regime descriptor, with daemon-install wiring as the M1-S18 seam (no daemon command created). Precedent-setting decisions recorded as TDR-0013 (architecture, regime, process port, lifecycle decision, wake policy) and TDR-0014 (artifact-evidence stuck detection, owner-brief exhaustion escalation); both status Proposed pending owner acceptance at PR review. DEC-2 (new family name) ruled registry-only under ODR-0003 DC-4: no naming record created."
     date: "2026-11-07"
@@ -62,4 +64,10 @@ notes:
     date: "2026-11-07"
   - text: "Delivery planning complete: chg-GH-241-plan.yaml is machine-validated (`delivery.plan.v1`, verdict valid, readyForDevelopment true, 0 errors) with 10 phases and 66/66 TCs mapped exactly once. Phase order: contracts+error rows+result-contract sync -> pure domain -> state records -> config -> process-lifecycle port -> CLI/edge -> reserved escalation slot+consumer docs -> integration+SC-M1-25 -> registry/man-page/changeset -> gates. The plan keeps the two-code allowlist (22→24), six additive record kinds, payload-only reserved-slot predicate, persisted-`woken`-only wake, closed stuck reason, four-way capability ownership, and no M1-S18/M1-S9/M1-S20 preemption. Non-blocking delivery-bound path: process port at packages/adapters/src/harness/process-lifecycle.ts rather than a new process subpath, to avoid a new package subpath/dependency rule."
     type: "info"
+    date: "2026-11-07"
+  - text: "PM-notes correction (A4): the earlier note that 'all six coordinator identities are two-segment' was wrong — exactly two are two-segment (`coordinator.already-running`, `coordinator.restart-budget-exhausted`); the other four are three-segment. The record sets are EVT-1..EVT-7 (six coordinator records plus the owner-question message) and DM-1..DM-11. The spec, plan, and test plan already carry the corrected values."
+    type: "info"
+    date: "2026-11-07"
+  - text: "Retro (DoR iteration 1): the spec was internally consistent but clashed with delivered state-layer semantics (short-lived write fence vs lifetime lock, append-only records, no process-liveness input to recoverFence). The DoR gate caught it before implementation. Future spec writing for supervision-style surfaces should read the delivered state-port fence/append contract first and model lifetime ownership separately from the write fence."
+    type: "retro"
     date: "2026-11-07"
