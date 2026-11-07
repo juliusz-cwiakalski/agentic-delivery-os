@@ -9,7 +9,7 @@ area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, ADR-0010]
-  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234]
+  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-237]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -93,7 +93,7 @@ No typed daemon or background scheduler is established by `packages/`.
 |---|---|
 | `core/src/contracts/` | Data-only ports, normalized primitives, schemas, capability declarations and error vocabulary shared across packages. |
 | `core/src/config/`, `branding/` | Pure layered resolution with provenance; pure brand identity resolution. Exported through core root and `./branding`, respectively. |
-| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, owner-gate SLA evaluation, doctor diagnostics, session-admin policy, harness classification, capability, registry, spawn-environment, liveness, canonicalization, telemetry policy, the spend read-side fold (five-class totals, phase attribution, restarts, resume amplification), the session lifecycle economics budget/resume/view/evidence folds, and the deterministic retro evidence pipeline (collection, truth checks, report/export folds). |
+| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, queue scheduling (graph, leases, ranks, parks), owner-gate SLA evaluation, doctor diagnostics, session-admin policy, harness classification, capability, registry, spawn-environment, liveness, canonicalization, telemetry policy, the spend read-side fold (five-class totals, phase attribution, restarts, resume amplification), the session lifecycle economics budget/resume/view/evidence folds, and the deterministic retro evidence pipeline (collection, truth checks, report/export folds). |
 | `core/src/provider/` | Availability chain, quota/peak evaluation, model-profile selection and pacing policy, `data-v1` env-record validation, expiring parks and announcements through injected ports. No session spawn. |
 | `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections, the economics restart/exhaustion ledger and view fold, the spend telemetry read consumer, the retro registry consumer, and the independent evidence sidecar consumer. Runtime APIs confined to `state/driver/`. |
 | `core/src/app/`, core `createRuntime` | Application tier is a type placeholder; `createRuntime` is an `export declare` signature, not a callable composition implementation. |
@@ -124,9 +124,15 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   merge-ready-first action list; human ceiling 32 lines / 6144 bytes;
   machine `data` ceiling 65536 bytes, with counts, findings, and truncation.
 - `queue ready` is a bounded read-only tri-state ready-set with ranked resumption,
-  at most eight candidates. It does not dispatch, acquire delivery ownership or
-  implement the M2 queue/lane scheduler. See [status](../spec/features/feature-status-digest.md)
-  and [queue-ready](../spec/features/feature-queue-ready.md).
+  at most eight candidates; it remains read-only and never claims ownership. The
+  scheduling engine ships beside it as `queue list|plan|add|prioritize|dep|claim|release`
+  and `lanes list|show`: a daemon-free one-shot queue graph with repo-exclusive
+  fence-token leases and stale takeover, per-runner build-weight classes,
+  producer-before-consumer deploy gating, close-first ranking, and parks that
+  resume when their condition clears. No resident daemon, `dispatch`, or live
+  `--watch` streaming ships with it. See [status](../spec/features/feature-status-digest.md),
+  [queue-ready](../spec/features/feature-queue-ready.md), and
+  [scheduling engine](../spec/features/feature-scheduling-engine.md).
 - `board` is a bounded, render-once owner-gate aging grid: 24 h escalation,
   72 h default-on-expiry, declared collector unavailability, and at most eight
   ranked gates. An unwaived tracker-observed gate maps to `owner-review` and
@@ -199,8 +205,10 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   the classified `watchdog.liveness-stalled` identity, the single restart-budget
   gate and its supervised-style and one-shot-style compositions, the additive
   `economics.restart` and `economics.budget-exhaustion` records, the per-delivery
-  amplification fold, and the lane configuration branch. No scheduler, daemon,
-  dispatch command, or spend surface ships here.
+  amplification fold, and the lane configuration branch. The scheduling engine
+  and its `queue`/`lanes` surfaces ship separately (GH-237), and the read-only
+  spend fold ships separately (GH-236). No resident daemon, `dispatch` command,
+  or live `--watch` stream ships with any of them.
 - Accepted architecture calls for one shared composition root. Today the working
   compositions are command-specific CLI edge functions. Optional registrations
   require supplied ports. Production credential/quota factories and a spawn gate

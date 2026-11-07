@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: "2026-11-07T11:25:00Z", completed: "2026-11-07T15:10:00Z", reopened_at: "2026-11-07T14:30:00Z", iterations: 3 }
   dor_check: { started: "2026-11-07T15:15:00Z", completed: "2026-11-07T15:40:00Z", iteration: 3, verdict: READY_WITH_RISKS }
   delivery: { started: "2026-11-07T15:45:00Z", completed: "2026-11-07T18:30:00Z", iterations: 1 }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-11-07T18:35:00Z", completed: "2026-11-07T19:30:00Z" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -82,5 +82,8 @@ notes:
     type: info
     date: "2026-11-07"
   - text: "Delivery complete: 8/8 plan phases implemented and committed (f4b809ab, 58fe6d96, 4bf1a935, d886643a, ab09bdc9, aeeea424, 6b090bea, ec6a7077). Aggregate gate green except the environmental ci-baseline-parity EXDEV failure (passes with a repo-local TMPDIR). Accepted implementation deviations to verify at review: queue state composition lives in core/src/app/queue.ts (not the planned state/queue.ts) to respect ADR-0003's state→domain ban; machine goldens compare parsed JSON while human goldens stay byte-exact; lanes --watch is refused by the generic unknown-flag path. DoR residuals N1/N3 remain unaddressed (N2/N4 partially covered by the delivered docs)."
+    type: info
+    date: "2026-11-07"
+  - text: "System spec update complete. Reconciled current-truth docs: feature-scheduling-engine (verified against delivered code), state-layer record kinds, config-layer queue branch, status-digest lanes gap, result-contract error rows/collector set, merge-verify-deploy consumption, session-lifecycle-economics consumption, doc/00-index, architecture-overview, glossary; planning pack (m1 queue/lanes contracts, cli-command-registry, status, man-page). Validation: test-doc-distribution PASS (81 docs, no drift); error-table.test PASS (75). Residual current-truth documentation gaps: none. Doc-sync flagged product nuances for review: `released` recovery state declared but unreachable; `queue release --park provider-window` cannot declare a future expiry (records release instant); status digest still emits stale `expectedStory: M2-S1` / note literals (code-owned, declared gap); queue/lanes require an injected composition and are not wired by a production binary (consistent with the repo's in-process command surface)."
     type: info
     date: "2026-11-07"

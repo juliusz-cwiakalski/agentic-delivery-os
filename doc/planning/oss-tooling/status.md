@@ -127,3 +127,18 @@ invariants, never moving-base diffs.
 | M1-S9 | GH-239 | M1-S12 | GH-240 |
 | M1-S23 | GH-241 | M1-S20 | GH-242 |
 | M1-S10 | GH-243 | | |
+
+## M1 delivery: scheduling engine delivered (2026-11-07)
+
+M1-S17 (GH-237) delivered the daemon-free scheduling engine: the `queue`
+family (`ready`, `list`, `plan`, `add`, `prioritize`, `dep`, `claim`,
+`release`) and `lanes list|show`, with one folded queue graph, repo-exclusive
+fence-token leases and stale takeover, build-weight classes,
+producer-before-consumer deploy gating, close-first ranking, and parks that
+resume when their condition clears. Mutations land durably without a resident
+process and every surface reports the truthful `daemon-unreachable`
+degradation marker. The resident daemon and its control protocol (M1-S18),
+`dispatch` (M1-S9), and live `--watch` streaming are not delivered by this
+story. See [feature-scheduling-engine.md](../../spec/features/feature-scheduling-engine.md)
+and the M1 command pages [queue.md](milestones/m1/commands/queue.md) and
+[lanes.md](milestones/m1/commands/lanes.md).

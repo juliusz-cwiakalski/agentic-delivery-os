@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe, owner-gate classification as merge authority, recorded authorized waivers, the single rebase-refresh with no force path, the verified squash landing with idempotent convergence and dry-run, the verify deploy trace verdict taxonomy, and the merge.* / verify.deploy.* error identities."
 links:
-  related_changes: ["GH-225"]
+  related_changes: ["GH-225", "GH-237"]
   related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003"]
   contracts:
     - "packages/core/src/contracts/merge.ts"
@@ -203,11 +203,14 @@ with no pattern widening.
 
 The scheduler reads the delivered deploy verdict and the producer repository's
 own `merge.deploy-expectations`; it never executes a merge or evaluates a gate.
-A dependent merge is eligible only after the producer has landed and, where
-expectations are declared, the verdict is `verified` with evidence. Unknown,
-failed, or unreadable traces hold the dependent at `deploy-unverified`, never
-green. Expectations resolve from the producer repository's recorded key through
-a recorded root whose normalized remote matches exactly; no match, a two-root
-collision, or an unreadable/invalid matched config is `unknown`, never
-`not-declared` or `verified`. See
-[Scheduling Engine](feature-scheduling-engine.md).
+A dependent merge action is eligible only after the producer has landed and,
+where expectations are declared, the verdict is `verified` with evidence.
+Unknown, failed, or unreadable traces hold the dependent at `deploy-unverified`,
+never green; a producer with no declared expectation passes on landing with
+`deploy: not-declared` evidence. Deploy verdict reads are bounded at three per
+scheduling pass and memoized per producer, and an exhausted budget holds the
+dependent `deploy-unverified` with reason `read-budget-exhausted`. Expectations
+resolve from the producer repository's recorded key through a recorded root whose
+normalized remote matches exactly; no match, a two-root collision, or an
+unreadable/invalid matched config is `unknown`, never `not-declared` or
+`verified`. See [Scheduling Engine](feature-scheduling-engine.md).

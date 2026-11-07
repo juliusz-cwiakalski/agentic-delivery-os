@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The read-only status command and its bounded delivery.status.v1 digest: nine fixed sections in order, a closed five-value section state, a closed finding-code registry with grouped ranked findings, tri-state hygiene assertions, owner-gate ages, parked conditions, a ready-to-merge action list, declared lane attention-state vocabulary, the state-log-fed spend section beside the blockers placeholder, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, providers read from configuration and the verified park fold, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and extended human digest grammar, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236"]
+  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236", "GH-237"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006"]
   contracts:
     - "packages/core/src/contracts/status.ts"
@@ -24,7 +24,7 @@ Each section carries one state from the closed set `observed`, `degraded`, `unkn
 
 The machine mode is the standard `CommandResult` envelope whose `data` is the full digest. Human mode is a deterministic, bounded digest rendered from the same data. Status performs zero writes, fences, state mutations, network writes, or child processes. It adds no error-table row, no configuration key, and no state-schema change; it introduces no new package, subpath, or runtime-API location. Closeout is a separate mutating surface: status does not import or compose the closeout engine, the git branch/checkout seam, or provider write operations, and its read-only guarantees are unchanged.
 
-The separate read-only ready-set command that consumes these inputs is specified in [Queue Ready](feature-queue-ready.md); it is a distinct command and does not change the status digest. The status digest's M1-S10 ready-to-merge section reuses the same merge-ready/review-pending classification and deterministic rank keys read-only, with zero new reads; the queue-ready command's own payload, ranking, and cap are unchanged. The owner-facing one-screen projection of the same collector state is specified in [Brief](feature-brief.md); it is a distinct read-only command that consumes these facts without adding a status section, schema, or read, and its nine-surface catalog is its own literal contract. The read-only pre-flight diagnostic is specified in [Doctor](feature-doctor.md); it is a distinct additional consumer of the `origin`-derived binding, the bounded single-page reads, the verified park fold, and the human-renderer hook, and it changes no status section, schema, or read. The surrounding contracts are described in [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Spend Read Side](feature-spend.md), [Provider Engine](feature-provider-engine.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md). Package tiers and runtime confinement follow [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); tracker absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md).
+The separate read-only ready-set command that consumes these inputs is specified in [Queue Ready](feature-queue-ready.md); it is a distinct command and does not change the status digest. The scheduling engine and its `queue`/`lanes` command families are specified in [Scheduling Engine](feature-scheduling-engine.md): the digest does not consume them, and the `lanes-or-queue` section remains a declared gap of this collector. The status digest's M1-S10 ready-to-merge section reuses the same merge-ready/review-pending classification and deterministic rank keys read-only, with zero new reads; the queue-ready command's own payload, ranking, and cap are unchanged. The owner-facing one-screen projection of the same collector state is specified in [Brief](feature-brief.md); it is a distinct read-only command that consumes these facts without adding a status section, schema, or read, and its nine-surface catalog is its own literal contract. The read-only pre-flight diagnostic is specified in [Doctor](feature-doctor.md); it is a distinct additional consumer of the `origin`-derived binding, the bounded single-page reads, the verified park fold, and the human-renderer hook, and it changes no status section, schema, or read. The surrounding contracts are described in [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Spend Read Side](feature-spend.md), [Provider Engine](feature-provider-engine.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), and [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md). Package tiers and runtime confinement follow [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); tracker absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md).
 
 ## Business Context
 
@@ -41,7 +41,7 @@ The separate read-only ready-set command that consumes these inputs is specified
 - Never turn a failed, absent, unattempted, or unresolved read into an observed, clear, green, available, or zero claim.
 - Answer the four tracker families from normalized work-item data.
 - Report changes and pull requests, CI, providers, and parked work from declared sources with explicit degradation.
-- Report the lanes-or-queue section as a declared capability gap, never as an empty queue.
+- Report the lanes-or-queue section as a declared collector gap, never as an empty queue; the engine behind it ships independently in its own feature.
 - Cover attention state with stable finding codes: grouped, deduplicated, deterministically ranked findings; a ready-to-merge action list; tri-state hygiene assertions; owner-gate ages; and parked re-entry conditions.
 - Keep output deterministic, bounded, brand-neutral, read-only, and within the existing tiers, error table, configuration schema, and secret-read boundary.
 
@@ -51,7 +51,7 @@ The separate read-only ready-set command that consumes these inputs is specified
 
 The command is exactly `status`, composed where the other top-level commands are composed. It accepts no positionals and declares no command-specific flags; `--json` is the existing global machine-output switch and adds no command behavior. An unexpected positional or unknown flag is rejected by the parser before any source read as `fallback.invocation` with exit `1`.
 
-The command handler owns no stream writes and chooses no exit code. It reads the injected sources, assembles the digest, and returns it; the CLI edge renders the human text or the machine envelope. The optional human-text renderer hook on the command-definition contract is invoked by the CLI edge in human mode. Thirteen command declarers provide the hook: `board`, `brief`, `closeout`, `db`, `doctor`, `merge`, `plan`, `queue`, `retro`, `spend`, `status`, `verify`, and `watchdog`; the CLI-edge seam test pins that exact set. Status is one of them, and doctor is an additional read-only consumer of the same seam, not a new hook.
+The command handler owns no stream writes and chooses no exit code. It reads the injected sources, assembles the digest, and returns it; the CLI edge renders the human text or the machine envelope. The optional human-text renderer hook on the command-definition contract is invoked by the CLI edge in human mode. Fifteen command declarers provide the hook: `board`, `brief`, `closeout`, `db`, `doctor`, `lanes`, `merge`, `plan`, `provider`, `queue`, `retro`, `spend`, `status`, `verify`, and `watchdog`; the CLI-edge seam test pins that exact set. Status is one of them, and doctor is an additional read-only consumer of the same seam, not a new hook.
 
 ### Nine sections and five states
 
@@ -62,7 +62,7 @@ The section ids and order are fixed:
 | 1 | `tracker` | Tracker | Tracker list read plus a declared per-family signal availability |
 | 2 | `changes-and-prs` | Changes and pull requests | Local PM context plus the open pull-request list |
 | 3 | `ci` | CI | Checkout HEAD plus one bounded check-runs page |
-| 4 | `lanes-or-queue` | Lanes or queue | None; declared capability gap |
+| 4 | `lanes-or-queue` | Lanes or queue | None in the digest; the shipped `queue`/`lanes` commands exist but the section is not wired to them |
 | 5 | `providers` | Providers | Provider configuration plus the verified park fold |
 | 6 | `parked-work` | Parked work | Local PM context's `parked_changes` |
 | 7 | `ready-to-merge` | Ready to merge | The existing open pull-request read plus the CI classification |
@@ -77,7 +77,7 @@ Every section has exactly one state:
 | `degraded` | Some required evidence is present and some is missing, failed, or declared unavailable. The digest is partial but truthful. |
 | `unknown` | No usable evidence remains for the section; it is never a clear or zero claim. |
 | `unavailable` | The section's source is known to be absent or not configured, such as no repository binding, no declared provider chain, or no local PM context. |
-| `not-delivered` | The capability itself does not exist in this release; used by the lanes-or-queue section and the blockers placeholder. |
+| `not-delivered` | The section's capability is not wired into this collector in this release; used by the lanes-or-queue declared gap and the blockers placeholder. The engine behind a gap may ship independently of the section. |
 
 Item-level unknown is distinct from a section state. An observed section may contain items whose review state, activity timestamp, or dependency target is unknown; those signals are counted and never fabricated.
 
@@ -164,7 +164,27 @@ The `ready-to-merge` section is the ranked action list. It reuses the queue-read
 
 ### Lanes vocabulary, spend, and the blockers placeholder
 
-The `lanes-or-queue` section remains exactly the shipped declared gap (capability `queue-lane-engine`, expected story `M2-S1`, reason `engine-not-delivered`) and gains only the additive declared attention-state vocabulary `delivering`, `idle-with-reason`, `idle-no-reason`. No per-lane state is fabricated and the dormant `lane.idle-no-reason` code is never emitted before the lane engine lands. The brief's placeholder catalog is a separate closed contract: it names the same gap with capability `lane-queue-engine` and owning story `M1-S17`. The two capability spellings belong to two different surfaces and neither is derived from the other.
+The `lanes-or-queue` section is a declared gap of this collector, not of the
+engine. The scheduling engine, the `queue` family, and the `lanes` view ship
+(GH-237, M1-S17; see [Scheduling Engine](feature-scheduling-engine.md)), but the
+digest does not yet consume them: the section still emits `state: "not-delivered"`
+with capability `queue-lane-engine`, reason `engine-not-delivered`, an empty item
+list, zero counts, and the attention-state vocabulary `delivering`,
+`idle-with-reason`, `idle-no-reason` declared as data only. No per-lane state is
+fabricated and the dormant `lane.idle-no-reason` code is never emitted. Wiring
+the section to the shipped lane fold is the remaining collector work; until then
+an empty queue is never implied by this section.
+
+Two code-owned literals in that section predate the delivery and no longer
+describe the product: `expectedStory` still reads `M2-S1`, and the note reads
+`no queue or lane engine exists in this release`. Both are emitted verbatim by
+the digest; bringing them in line with the shipped engine is a declared open
+item of this collector and is not a documentation claim about the engine.
+
+The brief's placeholder catalog is a separate closed contract: it names the
+same gap with capability `lane-queue-engine` and owning story `M1-S17`. The two
+capability spellings belong to two different surfaces and neither is derived
+from the other.
 
 The `spend` section is a real collector section, not a placeholder. It reads the active change's telemetry through the same verified read and pure fold the `spend` command consumes, and projects one of three outcomes:
 
@@ -202,7 +222,7 @@ The collector resolves the commit under observation from the current checkout HE
 
 ### Lanes or queue
 
-The section is always `not-delivered` with capability `queue-lane-engine`, expected story `M2-S1`, reason `engine-not-delivered`, source `queue-engine`, zero items, zero counts, and an explicit note that no queue or lane engine exists in this release. It is never an observed empty queue, never a fabricated queue, and never a duplicate of `queue ready` (M0-S7). The `queue ready` command is the separate read-only ready-set specified in [Queue Ready](feature-queue-ready.md); it consumes the same tracker, pull-request, CI, provider, and local PM-context inputs, adds no status behavior, and does not fill or change this section.
+The section emits `not-delivered` with capability `queue-lane-engine`, reason `engine-not-delivered`, source `queue-engine`, zero items, and zero counts. It is never an observed empty queue, never a fabricated queue, and never a duplicate of `queue ready` (M0-S7). The shipped `queue` and `lanes` commands are not consumed by this section; their contract is in [Scheduling Engine](feature-scheduling-engine.md). The `queue ready` command is the separate read-only ready-set specified in [Queue Ready](feature-queue-ready.md); it consumes the same tracker, pull-request, CI, provider, and local PM-context inputs, adds no status behavior, and does not fill or change this section.
 
 ### Providers
 
@@ -254,6 +274,8 @@ attention  <n> findings (<code>×<count>[, <code>×<count>][, <code>×<count>][+
 
 A verified-empty spend read renders `spend      observed  no captured telemetry (absence of capture)`; a failed read renders `spend      unknown  state-unreadable (<failure code>)`.
 
+The `lanes` line is fixed by the section contract and prints its note literal unchanged; because that literal still asserts that no queue or lane engine exists, it is listed above as an open collector item rather than a statement about the shipped engine.
+
 `gates <n>` counts hand-backs whose `slaState` is `escalated` or `default-applied`; `gates ?` appears only when the owner-hand-back family is unavailable. The attention line previews at most three severity-ordered groups, then `+N` counts grouped findings beyond the preview, never raw observations; it renders `attention  0 findings ()` when there are none. Truncation is marked with `+N` when items were omitted or `+more` for a source-at-limit signal. The digest never invents a zero for an unread source: `PRs ?` appears when the pull-request source was not read successfully, and review state is then `unknown`; `merge-ready ?` appears unless review signals are observed. The digest is at most 32 lines (defensive headroom; the structural worst case is 11 lines) and 6144 UTF-8 bytes (the operative enforced bound), contains no raw provider payloads, no item titles, no secrets, and no LLM-generated prose, performs no extra reads, and contains no timestamps.
 
 ### Error identity reuse
@@ -274,7 +296,7 @@ Evidence reuses existing identities only. `failureCode` is an existing `config.*
 | `packages/core/src/domain/index.ts` | Re-exports `aggregateStatus` and `renderStatusHuman`. |
 | `packages/cli/src/commands/status.ts` | The `status` command definition over injected readers; no stream writes and no exit-code choice. |
 | `packages/cli/src/edge.ts` | The status runtime composition: repository binding, credential-reference guard, GitHub collection reads, provider config and park fold, local PM-context read, and clock. |
-| `packages/cli/src/index.ts` | The optional pure `humanText` command-definition hook the CLI edge invokes in human mode; thirteen declarers supply it: board, brief, closeout, db, doctor, merge, plan, queue, retro, spend, status, verify, and watchdog. |
+| `packages/cli/src/index.ts` | The optional pure `humanText` command-definition hook the CLI edge invokes in human mode; fifteen declarers supply it: board, brief, closeout, db, doctor, lanes, merge, plan, provider, queue, retro, spend, status, verify, and watchdog. |
 | `packages/cli/src/output/serialize.ts` | The single redacted output path; renders pre-rendered human text when supplied. |
 | `packages/adapters/src/github/client.ts` | Bounded `listWorkItems`, `listDeliveryRequests`, and page-limited `readPipelineRun` over the existing read operations. |
 | `packages/adapters/src/github/normalize.ts` | Issue-list, pull-list, and check-run normalization that preserves the raw page size and filters pull-request objects before issue normalization. |
@@ -376,10 +398,10 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 - **Depends on** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for the resolved provider branch; status adds no keys.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, existing failure identities, exact-code classification, and the sole redaction path; status adds no rows.
 - **Depends on** the monorepo scaffold ([feature-monorepo-scaffold-toolchain.md](feature-monorepo-scaffold-toolchain.md)) for tiers, boundaries, and runtime-API confinement.
-- **Enables** `queue ready` (M0-S7) ([Queue Ready](feature-queue-ready.md)), which consumes the read seams, normalized views, CI classification, and provider availability vocabulary established here without changing the digest; **enables** `brief` (M1-S6) ([Brief](feature-brief.md)), which projects the same collector facts into the owner's one-screen render with zero brief-specific reads; **is extended by** the delivered M1-S10 attention-state expansion and **precedes** M2-S4 shared board state.
+- **Enables** `queue ready` (M0-S7) ([Queue Ready](feature-queue-ready.md)), which consumes the read seams, normalized views, CI classification, and provider availability vocabulary established here without changing the digest; **enables** `brief` (M1-S6) ([Brief](feature-brief.md)), which projects the same collector facts into the owner's one-screen render with zero brief-specific reads; **supplies vocabulary to** the [Scheduling Engine](feature-scheduling-engine.md), which reuses the six condition ids, tri-state, and reason vocabulary in its own pass without changing this digest; **is extended by** the delivered M1-S10 attention-state expansion and **precedes** M2-S4 shared board state.
 - **Risk — degraded evidence read as an all-clear:** mitigated by the explicit five-state vocabulary, evidence reasons, and an exhaustive negative-control matrix.
 - **Risk — provider park shown as available capacity:** mitigated by `parked`/`unverified` availability and by never running the provider engine.
-- **Risk — queue gap mistaken for an empty queue:** mitigated by the always-`not-delivered` section and its explicit note.
+- **Risk — queue gap mistaken for an empty queue:** mitigated by the always-`not-delivered` section and its explicit note; the shipped engine does not change the section until the collector is wired.
 - **Risk — absent signals fabricated:** mitigated by item-level unknown states, the declared per-source availability, and ADR-0004/ADR-0006 absence rules.
 - **Risk — unbounded output:** mitigated by exact caps, source read limits, byte bounds, and truncation evidence.
 - **Risk — credential or provider payload leakage:** mitigated by credential-port-only resolution, bounded evidence, and the serialization redaction chokepoint.
@@ -410,7 +432,7 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 | Degraded | Some required evidence is present and some is missing, failed, or unavailable; the digest is partial but truthful. |
 | Unknown | No usable evidence remains for the section or signal; never a clear or zero claim. |
 | Unavailable | The section's source is known to be absent or not configured. |
-| Not-delivered | The capability itself does not exist in this release; used by the lanes section and the blockers placeholder. |
+| Not-delivered | The section's capability is not wired into this collector in this release; used by the lanes section and the blockers placeholder. |
 | Item-level unknown | A signal on an individual item is absent or unavailable; it is counted and never fabricated. |
 | Source availability | The declared per-family and per-signal statement of what the bound adapter supplies, which decides whether a family or item signal is observed or unavailable. |
 | Owner hand-back | An open work item carrying a declared owner-attention label; absent assignee is not used as a signal. |
@@ -425,6 +447,6 @@ One invocation performs at most three outbound read-only GitHub requests, one lo
 | Source truncation | The explicit marker that output items were dropped by a cap or that the source returned its declared read limit, so more may exist. |
 | Live smoke | The opt-in, credentialed structural test against a real repository; not a default-CI network test. |
 
-See also: [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Brief](feature-brief.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Verify Gates](feature-verify-gates.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md). Verify Gates reuses `STATUS_OWNER_ATTENTION_LABELS`, `STATUS_CI_RESULTS` (including `unknown`), and `STATUS_SOURCE_PIPELINE_LIMIT` by reference; status remains a digest, not a merge-gate verdict.
+See also: [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Provider Engine](feature-provider-engine.md), [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Brief](feature-brief.md), [Scheduling Engine](feature-scheduling-engine.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Verify Gates](feature-verify-gates.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), the [repository glossary](../../overview/glossary.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md). Verify Gates reuses `STATUS_OWNER_ATTENTION_LABELS`, `STATUS_CI_RESULTS` (including `unknown`), and `STATUS_SOURCE_PIPELINE_LIMIT` by reference; status remains a digest, not a merge-gate verdict.
 
 **Change record:** `doc/changes/2026-10/2026-10-31--GH-175--status-v1/`; `doc/changes/2026-11/2026-11-06--GH-243--status-collector-expansion/`.

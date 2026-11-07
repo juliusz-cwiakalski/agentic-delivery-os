@@ -13,75 +13,129 @@ scheduling with single-flight and weight classes.
 
 ```
 <binary> queue ready <ref>... (1..8 refs)
-<binary> queue [list|plan]
-<binary> queue add <ref> [--priority <n>] [--dep <ref>]...
+<binary> queue list
+<binary> queue plan [--next <n>]
+<binary> queue add <ref> [--priority <n>] [--dep <ref>]
 <binary> queue prioritize <ref> <n>
 <binary> queue dep <ref> <on-ref>
+<binary> queue claim [<ref>] [--holder <id>]
+<binary> queue release <ref> [--holder <id>] [--park <cause>]
 ```
 
 ## DESCRIPTION
 
 `queue ready` is the read-only ready-set (deps satisfied, repo free,
 tier known, no owner gate, CI healthy, provider available; every
-unsatisfied condition named). The full queue (M1) manages scheduling:
+unsatisfied condition named). The queue manages scheduling:
 per-repo single-flight as the only structural cap, build-weight classes
 as resource classes, producers before consumers, closing beats opening,
-parks that resume exactly when their condition clears, one-shot
-operation without the daemon. Mutating subcommands write intent to
-state and notify a running daemon (control socket); daemon-down they
-still write and the daemon reconciles on start.
+parks that resume exactly when their condition clears, and one-shot
+operation without the daemon. Mutating subcommands append intent under
+the state layer's fence and land durably; no resident daemon or control
+socket is involved, and every successful queue/lanes payload reports
+`degraded: ["daemon-unreachable"]` at exit 0. `--watch` is not accepted.
 
 ## OUTPUT
 
-Text: graph, lease holders, weight loads, parks with conditions; `queue
-plan` prints the next N actions with reasons. Envelope `data`:
-`entries[]` (ref, state, priority, deps), `leases[]` (repo, holder,
-scope), `weights` (runner, class, active), `parks[]` (id, cause,
-condition, recheck), `nextActions[]` (ref, reason).
+Text: one bounded summary plus one line per entry or action; `queue
+plan` prints the next N actions with reasons. Envelope `data` (schema
+`delivery.queue.v1`): `entries[]` (ref, repository, state, rankClass,
+priority, weightClass, weightClassSource, deps, blocking), `leases[]`,
+`weights[]`, `parks[]`, `findings[]`, `degraded[]`, `truncated`, `counts`,
+and, for `plan`, `nextActions[]` with `ref`, `repository`, `rankClass`,
+`reason`, `priority`, `weightClass`, `weightClassSource`, `lease`,
+`blocking[]`, optional `deploy`, and optional `preemption`.
 
 ## EXIT STATUS
 
-0 computed; 1 dependency cycle or unmet precondition named; 2 platform
-faults.
+0 read, landed mutation, observed-empty queue, or report-only stuck-park
+finding; 1 invocation rejection (including `--watch`), dependency cycle,
+lease conflict, unmet claim precondition, stuck-park claim refusal, or
+unobserved entry; 2 platform or state read failure, including
+`list`/`plan` over unreadable, torn, or unknown-kind history.
 
 ## EXAMPLES
 
 ```
 $ <binary> queue plan --next 3 --json
 {
-  "schemaVersion": 1,
-  "runId": "r_01J8ZS2P8V",
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-example",
   "exitCode": 0,
-  "timing": { "started": "2026-11-18T09:05:00Z", "durationMs": 140 },
+  "timing": { "totalMs": 10 },
   "data": {
-    "nextActions": [
-      { "ref": "GH-303", "reason": "merge-ready (close-first)", "lease": "repo-alpha: free" },
-      { "ref": "GH-302", "reason": "resume at phase boundary (answered)", "lease": "repo-beta: free" },
-      { "ref": "GH-305", "reason": "held: weight heavy on runner R2 (ETA 22m); standard lanes unaffected" }
+    "schemaVersion": "delivery.queue.v1",
+    "entries": [
+      {
+        "ref": "GH-310",
+        "repository": "github.com/owner/repo-alpha",
+        "state": "ready",
+        "rankClass": "merge-ready",
+        "priority": 100,
+        "weightClass": "standard",
+        "weightClassSource": "absent",
+        "deps": [],
+        "blocking": []
+      }
     ],
-    "parks": [
-      { "id": "P-31", "cause": "provider-peak-window", "condition": "ends 10:30Z", "recheck": "60s" }
+    "leases": [],
+    "weights": [],
+    "parks": [],
+    "findings": [],
+    "degraded": ["daemon-unreachable"],
+    "truncated": false,
+    "counts": {
+      "entries": 1, "ready": 1, "held": 0, "parked": 0, "leases": 0, "parks": 0
+    },
+    "nextActions": [
+      {
+        "ref": "GH-310",
+        "repository": "github.com/owner/repo-alpha",
+        "rankClass": "merge-ready",
+        "reason": "close-first",
+        "priority": 100,
+        "weightClass": "standard",
+        "weightClassSource": "absent",
+        "lease": { "state": "free" },
+        "blocking": []
+      }
     ]
   }
 }
 ```
 
-Dependency cycle refused:
+Dependency cycle refused (nothing appended):
 
 ```
-$ <binary> queue dep GH-306 GH-307 --json | cat
-{"error":{"code":"queue.dependency-cycle","category":"user","retryable":false,"consequence":"not_landed","remediationHint":"the edge creates a cycle: GH-307 -> GH-306 already exists"}}
+$ <binary> queue dep GH-306 GH-307 --json
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-example",
+  "exitCode": 1,
+  "timing": { "totalMs": 10 },
+  "error": {
+    "code": "queue.dependency-cycle",
+    "category": "user",
+    "retryable": false,
+    "consequence": "not_landed",
+    "remediationHint": "Remove the named cycle-creating dependency edge (the existing path is named) and retry; nothing was appended.",
+    "summary": "The dependency edge would close a directed cycle."
+  }
+}
 ```
 
 ## ERRORS
 
 `queue.dependency-cycle`, `queue.lease-conflict`,
-`queue.park-condition-stuck` (park outliving its condition is a bug
-class, surfaced as a finding).
+`queue.park-condition-stuck`, `queue.entry.unobserved`,
+`queue.precondition.unmet`. An invocation rejection such as `--watch` or an
+unknown park cause reuses `fallback.invocation` at exit 1; unreadable lease,
+park, or entry history reuses the delivered `state.*` identities at exit 2.
 
 ## SEE ALSO
 
-[lanes.md](lanes.md), [plan.md](plan.md), [daemon.md](daemon.md)
+[lanes.md](lanes.md), [status.md](status.md),
+[scheduling engine specification](../../../../../spec/features/feature-scheduling-engine.md)
 
 ## Shipped contract (GH-237)
 

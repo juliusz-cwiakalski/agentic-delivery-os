@@ -10,53 +10,94 @@ live streaming belongs to the resident daemon (M1-S18).
 ## SYNOPSIS
 
 ```
-<binary> lanes [list | show <lane>] [--watch] [--json]
+<binary> lanes list|show <ref> [--json]
 ```
+
+`--watch` is refused in this release: it is not in the accepted grammar, the
+invocation fails at exit 1 through `fallback.invocation`, and no stream or
+frame is emitted.
 
 ## DESCRIPTION
 
 Read view over lanes: state (delivering, idle-with-reason, parked,
 merge-ready, in-review, failed), lease scope and holder, restart
-counters, resume-amplification signal. `--watch` subscribes to bounded
-lane events (NDJSON frames; line-delimited always).
+counters, resume-amplification signal. `--watch` is refused in this
+release; live streaming belongs to the resident daemon (M1-S18).
 
 ## OUTPUT
 
-Text: one line per lane with state and reason. Envelope `data`:
-`lanes[]` (id, ref, state, reason, lease, restarts, amplification,
-weightClass).
+Text: one line per lane with state and reason. Envelope `data` (schema
+`delivery.lanes.v1`): `lanes[]` (`id`, `ref`, `state`, `reason`, `lease`,
+`leaseScope`, `restarts`, `amplification`, `amplificationWarning`,
+`weightClass`), `findings[]`, `degraded[]`, `truncated`, `counts`.
 
 ## EXIT STATUS
 
-0 read; 2 collection impossible.
+0 read or observed-empty; 1 invocation refusal (including `--watch`) or an
+unobserved ref from `show`; 2 collection impossible.
 
 ## EXAMPLES
 
 ```
 $ <binary> lanes list --json
 {
-  "schemaVersion": 1,
-  "runId": "r_01J8ZS7T3X",
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-lanes-example",
   "exitCode": 0,
-  "timing": { "started": "2026-11-18T09:10:00Z", "durationMs": 95 },
+  "timing": { "totalMs": 10 },
   "data": {
+    "schemaVersion": "delivery.lanes.v1",
     "lanes": [
-      { "id": "L1", "ref": "GH-301", "state": "delivering", "reason": null,
-        "lease": "repo-alpha", "restarts": 0, "amplification": 1.0, "weightClass": "standard" },
-      { "id": "L3", "ref": "GH-304", "state": "parked", "reason": "provider window ends 10:30Z",
-        "lease": null, "restarts": 1, "amplification": 1.02, "weightClass": "standard" }
-    ]
+      {
+        "id": "GH-320", "ref": "GH-320", "state": "delivering",
+        "lease": "lease-GH-320", "leaseScope": "repo-exclusive",
+        "restarts": 1, "amplification": 2, "weightClass": "standard"
+      },
+      {
+        "id": "GH-321", "ref": "GH-321", "state": "parked",
+        "reason": "parked:provider-quota",
+        "restarts": null, "amplification": null,
+        "amplificationWarning": "economics-underivable",
+        "weightClass": "standard"
+      }
+    ],
+    "findings": [],
+    "degraded": ["daemon-unreachable"],
+    "truncated": false,
+    "counts": { "lanes": 2, "delivering": 1, "idle": 0, "parked": 1, "failed": 0 }
+  }
+}
+```
+
+`--watch` refused:
+
+```
+$ <binary> lanes list --watch --json
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-lanes-example",
+  "exitCode": 1,
+  "timing": { "totalMs": 10 },
+  "error": {
+    "code": "fallback.invocation",
+    "category": "user",
+    "retryable": false,
+    "consequence": "unknown",
+    "remediationHint": "Check the command name and arguments, then retry the invocation.",
+    "summary": "The invocation could not be understood."
   }
 }
 ```
 
 ## ERRORS
 
-`status.collector.lanes.unavailable` (declared, never silent zero).
+`status.collector.lanes.unavailable` (declared, never a silent zero) and
+`queue.entry.unobserved` for `lanes show <ref>`.
 
 ## SEE ALSO
 
-[queue.md](queue.md), [daemon.md](daemon.md), [spend.md](spend.md)
+[queue.md](queue.md), [spend.md](spend.md),
+[scheduling engine specification](../../../../../spec/features/feature-scheduling-engine.md)
 
 ## Shipped contract (GH-237)
 

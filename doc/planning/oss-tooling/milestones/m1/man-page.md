@@ -63,12 +63,15 @@ per project).
 |---|---|
 | `status` (M0-S6, M1-S10) | `<binary> status [--repo <path>]... [--json]` |
 | `queue ready` (M0-S7) | `<binary> queue ready <ref>... (1..8 refs)` |
-| `queue` (M1-S17) | `<binary> queue [list\|plan\|add\|prioritize\|dep]` |
-| `lanes` (M1-S17) | `<binary> lanes [list\|show <lane>]` |
+| `queue` (M1-S17) | `<binary> queue [list\|plan\|add\|prioritize\|dep\|claim\|release]` |
+| `lanes` (M1-S17) | `<binary> lanes list\|show <ref>` |
 | `blockers list` (M1-S16) | `<binary> blockers list [--open]` |
 | `blockers answer` (M1-S16) | `<binary> blockers answer <id> [--choice <n>] [--text <s>]` |
 | `board` (M1-S5) | `<binary> board [--watch]` |
 | `brief` (M1-S6) | `<binary> brief` |
+
+`--watch` is refused on `lanes` and `queue` in this release (invocation error at
+exit 1); live streaming belongs to the resident daemon (M1-S18).
 
 ### Operate
 

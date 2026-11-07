@@ -187,30 +187,35 @@ exit-code projection; secret redaction; bounded output.
   grouped job; every finding carries a finding code; ready-to-merge ranks
   as an action list; blockers surface within one collection cycle.
 
-### `queue` (M1-S17, proposed)
+### `queue` (M1-S17, delivered)
 
-- Inputs: `list | plan | add <ref> [--priority <n>] [--dep <ref>]... |
-  prioritize <ref> <n> | dep <ref> <on-ref>`.
+- Inputs: `list | plan [--next <n>] | add <ref> [--priority <n>]
+  [--dep <ref>] | prioritize <ref> <n> | dep <ref> <on-ref> |
+  claim [<ref>] [--holder <id>] | release <ref> [--holder <id>]
+  [--park <cause>]`. `ready` keeps its M0-S7 grammar unchanged.
 - Outputs: the dependency graph, ready set, per-repo lease holders,
-  weight-class loads, park states with conditions; `queue plan` prints
-  the next N scheduled actions with reasons (close-first, producer-first,
-  single-flight, weight-capped). Mutating subcommands (`add`,
-  `prioritize`, `dep`) write intent to state and notify a running daemon
-  through the control socket; without the daemon they still write state
-  and the daemon reconciles on start.
+  weight-class loads, park states with conditions, and `queue plan`'s
+  next N scheduled actions with reasons (close-first, producer-first,
+  single-flight, weight-capped). Mutating subcommands append intent under
+  the state fence and land durably without a resident daemon; no control
+  socket is involved, and every payload reports
+  `degraded: ["daemon-unreachable"]` at exit 0.
 - Errors: `queue.dependency-cycle`, `queue.lease-conflict`,
-  `queue.park-condition-stuck` (park outliving its condition is a bug
-  class).
+  `queue.park-condition-stuck`, `queue.entry.unobserved`, and
+  `queue.precondition.unmet`; invocation rejections such as `--watch`
+  reuse `fallback.invocation`.
 - Scenarios: same-repo concurrency refused; heavy build not co-scheduled;
   producer before consumer; close items rank above new starts; park
   resumes exactly when condition clears; full operation one-shot without
   daemon.
 
-### `lanes` (M1-S17, proposed)
+### `lanes` (M1-S17, delivered)
 
+- Inputs: `list | show <ref>`.
 - Outputs: lane list with state (delivering, idle-with-reason, parked,
-  merge-ready, in-review), lease scope, restart counts, amplification
-  signal.
+  merge-ready, in-review, failed), lease holder and scope, restart counts,
+  amplification signal, and weight class. `--watch` is refused at exit 1;
+  live streaming belongs to the resident daemon (M1-S18).
 
 ### `blockers` (M1-S16, proposed)
 

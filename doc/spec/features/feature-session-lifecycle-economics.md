@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "Session lifecycle economics: adapter-sourced progress signals (heartbeat age, session traffic, token delta) projected into the unchanged watchdog signal shape with the exact-three liveness-kind vocabulary untouched, source-less lanes still classifying `watchdog.signals-absent` and no CPU signal anywhere; prefill/resume safety so a rising token delta or traffic classifies `progressing` and a stall requires the full corroboration; the classified `watchdog.liveness-stalled` refusal at exit 1; capability-driven attach-and-continue versus classified uneconomical re-entry; a durable per-delivery restart budget consumed by supervised-style and one-shot-style compositions through one gate, with the budget gate evaluated before evidence completeness, a loud `dispatch.restart-budget-exceeded` refusal, a terminal exhaustion record carrying the restart history, and a failed terminal append surfaced as `terminalAppendError`; additive `economics.restart` and `economics.budget-exhaustion` record kinds with no schema-version bump; a rebuildable per-delivery economics view deriving restart count, ordered history, and the resume-amplification signal with null-with-warning degradation; and the typed `lane.liveness-interval` and `lane.restart-budget` configuration branch."
 links:
-  related_changes: ["GH-235"]
+  related_changes: ["GH-235", "GH-237"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/economics.ts"
@@ -313,8 +313,12 @@ See also: [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Ha
 
 ## Scheduling engine reconciliation (GH-237)
 
-The lane view consumes the delivered economics fold: restarts and the
-resume-amplification signal are read, never recomputed, and an underivable value
-is `null` with a warning rather than a fabricated zero. A lane failed past its
-restart budget reports the closed `failed` state with reason
-`restart-budget-exhausted`. See [Scheduling Engine](feature-scheduling-engine.md).
+The lane view consumes this feature's delivered economics fold. The `lanes`
+command reads the per-delivery restart count and the resume-amplification signal;
+it never recomputes either. An underivable value is `null` with the
+`economics-underivable` warning rather than a fabricated zero. A delivery past
+its restart budget projects the closed lane state `failed` with reason
+`restart-budget-exhausted`, so the budget outcome is visible where the operator
+looks without a second read path. The scheduler adds no restart record, no
+budget rule, and no amplification rule of its own. See
+[Scheduling Engine](feature-scheduling-engine.md).

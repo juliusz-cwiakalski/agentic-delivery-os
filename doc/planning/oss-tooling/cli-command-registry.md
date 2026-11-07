@@ -71,7 +71,7 @@ near-synonym pairs are rejected at the naming lock.
 order:
 
 - Deliver: dispatch, plan, commit, verify change, verify gates, merge, verify deploy, closeout
-- See: status, queue (ready now, full queue and lanes in M1), board, brief, blockers
+- See: status, queue (ready-set, queue/lane engine), board, brief, blockers
 - Operate: provider (AI model routing), config, state, lint, phase, db, watchdog, doctor, daemon, supervise, repos
 - Learn: retro, metrics, spend, policy
 - Surfaces: mcp, harness (opencode, Claude Code)
@@ -136,8 +136,8 @@ grow it later.
 | Command | Purpose | Primary user | Delivery | Extended |
 |---|---|---|---|---|
 | `ados config` | Two modes. Basic: print the merged configuration evaluated for the current context as a plain JSON object. Debug (`config debug` or `--debug`): per-key provenance (which layer, file, line) as extended JSON, or annotated JSONC with the source as a per-key comment | all users | M0-S4 | - |
-| `ados status` | One bounded, ranked digest of the delivery world: nine fixed sections (tracker, changes and PRs, CI, lanes or queue, providers, parked work, ready-to-merge, spend, blockers), each with an observed/degraded/unknown/unavailable/not-delivered state and bounded evidence. M1-S10 adds the attention-state expansion: a closed finding-code registry with grouped ranked findings, tri-state hygiene assertions, owner-gate ages, parked conditions, a merge-ready-first action list, and the declared lane attention-state vocabulary. The spend section is fed by the state-log spend fold; typed blockers remain a named not-delivered placeholder. The lanes-or-queue section reports a declared `not-delivered` gap until M1-S17 establishes the queue/lane engine; it never presents an empty queue and never duplicates `ados queue ready` (M0-S7) | coordinator, operator | M0-S6 | M1-S10 (collector expansion; delivered), M1-S19 (spend section), M2-S4 (shared board state source) |
-| `ados queue ready` | Read-only ready-set for one or more candidate refs (1..8): six fixed tri-state conditions (deps satisfied, repo free, tier known, no owner gate, CI healthy, provider available) with bounded evidence and every non-satisfied condition named; associates open pull requests by the repository branch convention and ranks close items (merge-ready, review-pending) above new starts. Reuses the status reads and never runs the provider engine or writes. Specified in [Queue Ready](../../spec/features/feature-queue-ready.md) | coordinator | M0-S7 | M1-S17 (full queue, lanes) |
+| `ados status` | One bounded, ranked digest of the delivery world: nine fixed sections (tracker, changes and PRs, CI, lanes or queue, providers, parked work, ready-to-merge, spend, blockers), each with an observed/degraded/unknown/unavailable/not-delivered state and bounded evidence. M1-S10 adds the attention-state expansion: a closed finding-code registry with grouped ranked findings, tri-state hygiene assertions, owner-gate ages, parked conditions, a merge-ready-first action list, and the declared lane attention-state vocabulary. The spend section is fed by the state-log spend fold; typed blockers remain a named not-delivered placeholder. The lanes-or-queue section remains a declared `not-delivered` gap of this collector after M1-S17 ships the queue/lane engine: the digest is not wired to it, it never presents an empty queue, and it never duplicates `ados queue ready` (M0-S7) | coordinator, operator | M0-S6 | M1-S10 (collector expansion; delivered), M1-S19 (spend section), M2-S4 (shared board state source) |
+| `ados queue ready` | Read-only ready-set for one or more candidate refs (1..8): six fixed tri-state conditions (deps satisfied, repo free, tier known, no owner gate, CI healthy, provider available) with bounded evidence and every non-satisfied condition named; associates open pull requests by the repository branch convention and ranks close items (merge-ready, review-pending) above new starts. Reuses the status reads and never runs the provider engine or writes. Specified in [Queue Ready](../../spec/features/feature-queue-ready.md) | coordinator | M0-S7 | M1-S17 (full queue, lanes; delivered in GH-237) |
 | `ados verify change` | Verify a delivered change against the 11-phase ledger and classify the delivery result tuple; malformed notes are classified, never a crash | coordinator | M0-S8 | M1-S9 (dual-run evidence consumer) |
 | `ados verify gates` | One command evaluating all merge gates for a change, each gate cited in the result (delivered) | coordinator | M0-S9 | M2-S7 (suite-to-job mapping) |
 | `ados lint` | Schema and format conformance for pm-notes and the delivery registry at write time; lands bundled with verify change (M0-S8). The plan target (`lint plan`) ships with the delivery plan schema (M1-S13, GH-226) and reports the shared `plan.*` identities plus `lint.document.unreadable` | lifecycle agents, coordinator | M0-S10 | M1-S13 (delivery plan schema; shipped in GH-226), M3-S4 (decision records, frontmatter, deploy checklist) |
@@ -171,8 +171,8 @@ GitHub, Azure on demand).
 | `ados mcp` | Minimal MCP mirroring the CLI scope over proven engines: status, verify-artifact, gate report | sessions | M1-S7 | M3-S2 (full MCP with batch semantics) |
 | `ados retro` | Retrospective evidence pipeline: collection, registry hardening, shape-crash guards, export; home of the periodic memory audit; runs retro levels on demand per concepts/retrospectives.md | coordinator | M1-S8 | - |
 | `ados blockers` | Typed blocker and question channel: typed questions (decision-needed with options, spec-ambiguity, credential-missing with variable name only, external-wait) published to the state layer, ranked in digest and brief, answerable as data; answers resume lanes without re-entering delivery sessions; one mechanism, two audiences (owner gates and coordinator) | coordinator, operator | M1-S16 | - |
-| `ados queue` | Programmatic delivery queue: dependency graph, ready-set, per-remote single-flight (the only structural lane cap), preemption with named park state, build-weight classes, closing-beats-opening ranking, park/resume that re-checks its condition continuously; one-shot mode computes the next action without the daemon | coordinator | M1-S17 | - |
-| `ados lanes` | Lane observation surface: lanes with state (delivering, idle-with-reason, parked, merge-ready, in-review, failed), lease holders, restart counters, resume-amplification signal; `--watch` subscribes to bounded lane events | coordinator | M1-S17 | - |
+| `ados queue` | Programmatic delivery queue: dependency graph, ready-set, per-remote single-flight (the only structural lane cap), preemption with named park state, build-weight classes, closing-beats-opening ranking, and park/resume that re-checks its condition each pass at the per-type recheck interval; one-shot operation computes the next action without a daemon. Ships `ready`, `list`, `plan`, `add`, `prioritize`, `dep`, `claim`, and `release` (GH-237, M1-S17) | coordinator | M1-S17 | - |
+| `ados lanes` | Lane observation surface: `lanes list` and `lanes show <ref>` project lanes with state (delivering, idle-with-reason, parked, merge-ready, in-review, failed), lease holders and scopes, restart counters, and the resume-amplification signal. `--watch` is refused in this release; live streaming belongs to the resident daemon (M1-S18) | coordinator | M1-S17 | - |
 | `ados daemon` | Resident dispatch daemon: start [--foreground], stop, status [--live], install, uninstall; single-instance enforcement with fence-token takeover, crash-safe state, dispatcher never a lane, prepares and queues merges but never fires them, startup reconciliation with lane classification and durable restart budgets, trust model: the filesystem same-user boundary with a reserved caller-principal seam; absence or failure degrades to the CLI one-shot path; communication contract: state-mediated truth with a local control socket as optimization (wake-now, live streams), every interaction carrying a state-only fallback | coordinator | M1-S18 | M2-S2 (supervision battery over its lanes) |
 | `ados spend` | Spend read side v0: per-ticket and per-phase tokens by class, calls, per agent and model from closeout-captured telemetry; resume-amplification metric and restart counts | operator, coordinator | M1-S19 | M2-S6 (burn-rate alarms, quota snapshots, ceremony share) |
 | `ados dispatch` | The typed per-ticket dispatch loop (spawn, watch, classify, summarize with the key=value continuity contract) beside the bash stack: spawns sessions through the harness adapter over an execution-environment descriptor with a deny-by-default env allowlist; result `merged` means already-merged detection, never a merge fired by dispatch (constraint 9); dual-run with verify-change evidence, then per-repo handover (new stack authoritative, bash fallback with deprecation pointers) after two clean weeks per repo | coordinator | M1-S9 | - |
@@ -269,11 +269,12 @@ unless noted.
   without writing state; `parks list` reads the park projection. None of
   them sleeps or spawns. Tracker, VCS, and CI providers are adapters, not
   this command.
-- `status`: the read-only first-call digest. Six sections in fixed order,
+- `status`: the read-only first-call digest. Nine sections in fixed order,
   each with an explicit evidence state; a failed, absent, or unattempted
   read is reported as degraded, unknown, unavailable, or not-delivered,
-  never as clear or zero. The queue/lane section is a declared
-  `not-delivered` gap until M1-S17, so an empty queue is never implied;
+  never as clear or zero. The queue/lane section remains a declared
+  `not-delivered` gap of this collector after M1-S17 ships the engine; the
+  digest is not wired to it, so an empty queue is never implied, and
   `queue ready` (M0-S7) remains the separate ready-set command.
 - `policy`: policy as code. Declare what repos should enforce (branch
   protection, required checks, merge rules); check reports drift across the
@@ -323,9 +324,11 @@ M3-S7 or M4-S5 without a replacement.
   contract. Only the neutral extension hooks are in scope here (M4-S6).
 - Hosted-only commands (inbox, relay admin, fleet supervision): proprietary,
   never committed in this repository.
-- `ados queue ready` ships in M0 before its parent `ados queue` exists in
-  M1. This registry note records the partial family so it does not read as
-  a defect; no rendered command-help surface exists or is added in M0.
+- `ados queue` ships the full family — `ready`, `list`, `plan`, `add`,
+  `prioritize`, `dep`, `claim`, and `release` — with `ready` delivered earlier
+  as the M0-S7 ready-set. This registry note records the family so it does not
+  read as a partial surface; no rendered command-help surface exists or is
+  added.
 - Concept-parked surfaces (no commands in M0-M4; see
   [../concepts/README.md](../concepts/README.md)): an agent messaging
   family beyond steer (typed inbox surface; steer M2-S5 is the first
@@ -353,8 +356,9 @@ ODR-0003 v1 lock covers the locked surface, and each family's delivery
 records the name through the lock's superseding-note path (one record
 covering the M1 additions, or per-story notes). Renames of locked names
 still require a superseding decision record. The `plan` family shipped in
-GH-226 (M1-S13) and the `commit` family in GH-227 (M1-S14) while this note
-stands; recording their names through that path remains pending.
+GH-226 (M1-S13), the `commit` family in GH-227 (M1-S14), and the `queue` and
+`lanes` families in GH-237 (M1-S17) while this note stands; recording their
+names through that path remains pending.
 
 Renames made by the original audit (before the M0-S17 lock): `change` to
 `phase` (the command manages phases; "change" is the domain noun and
@@ -370,10 +374,11 @@ harness). The remote connection command was deferred rather than named.
 The `queue` family ships `ready`, `list`, `plan`, `add`, `prioritize`, `dep`,
 `claim`, and `release`; `queue ready` is unchanged from its M0-S7 contract. The
 `lanes` family ships `list` and `show <ref>`; `--watch` is refused in this
-release (resident daemon, M1-S18).
+release (resident daemon, M1-S18). No resident daemon, `dispatch`, or live
+stream ships with this registration.
 
-The status-digest row note reads: `engine shipped; the digest's declared
-lanes-or-queue gap and its expected-story reference remain pending its own
-reconciliation`. The registry row does not assert a state the digest spec denies
-and does not change digest behaviour. See
-[feature-scheduling-engine.md](../../../spec/features/feature-scheduling-engine.md).
+The `ados status` row records the lanes-or-queue section as a declared
+`not-delivered` gap of the digest collector even though the engine ships; the
+digest is not wired to it, and its expected-story literal remains the digest's
+own reconciliation item. The registry rows change no digest behaviour. See
+[feature-scheduling-engine.md](../../spec/features/feature-scheduling-engine.md).
