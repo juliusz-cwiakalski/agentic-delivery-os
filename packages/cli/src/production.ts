@@ -13,6 +13,7 @@ import {
   nodeFileSystemFacts,
   nodePmNotesFileSystemFacts,
   readPmNotesText,
+  relativeChangeFolder,
 } from "@delivery-os/adapters/file";
 import { createGitBranchSeam, createGitMergeSeam } from "@delivery-os/adapters/git";
 import { createGitHubClient, type GithubClientOptions } from "@delivery-os/adapters/github";
@@ -153,6 +154,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     });
 
     const plan = createPlanCommandRuntime({ changesDirectory, fs: notesFs });
+    const readChangeFolder = (changeRef: string): string | undefined =>
+      relativeChangeFolder({
+        changeRef,
+        changesDirectory,
+        repoRoot: cwd,
+        fs: notesFs,
+      });
 
     const commitOptions = createProductionCommitRuntimeOptions({
       store,
@@ -162,6 +170,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       phaseCommit: true,
       nowIso,
       newFenceToken,
+      readChangeFolder,
     });
     const phaseRuntime = createPhaseCommandRuntime({
       store,
@@ -172,6 +181,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
       nowIso,
       newFenceToken,
+      readChangeFolder,
     });
     const phaseExtension = createPhaseCommitExtension(commitOptions);
     const committedPhaseRuntime = { ...phaseRuntime, commit: phaseExtension };

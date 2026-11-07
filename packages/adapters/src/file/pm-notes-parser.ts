@@ -19,13 +19,13 @@ import {
   parseAllDocuments,
   parseDocument,
 } from "yaml";
+import { locateChangeFolder } from "./change-folder.js";
 
 const MAX_SOURCE_BYTES = 1_048_576;
 const MAX_NODES = 2_048;
 const MAX_DEPTH = 64;
 const MAX_ALIASES = 100;
 const REF_PATTERN = /^[A-Z]+-[0-9]+$/;
-const MONTH_PATTERN = /^\d{4}-\d{2}$/;
 const CORE_TAG_PREFIX = "tag:yaml.org,2002:";
 const ALLOWED_TAGS = new Set([
   `${CORE_TAG_PREFIX}str`,
@@ -113,14 +113,6 @@ const utf8ByteLength = (value: string): number => {
   return bytes;
 };
 
-const safeList = (fs: PmNotesFileSystemFacts, path: string): readonly string[] => {
-  try {
-    return fs.listDirectory(path);
-  } catch {
-    return [];
-  }
-};
-
 const malformed = (file: string, location: string): PmNotesParseResult => ({
   ok: false,
   reason: "malformed",
@@ -137,19 +129,10 @@ const malformedText = (file: string, location: string): PmNotesTextRead => ({
 
 const locatePmNotes = (request: PmNotesTargetRequest): string | undefined => {
   if (!REF_PATTERN.test(request.changeRef)) return undefined;
-  const { fs, changesDirectory, changeRef } = request;
-  if (!fs.exists(changesDirectory)) return undefined;
-  for (const month of [...safeList(fs, changesDirectory)]
-    .filter((name) => MONTH_PATTERN.test(name))
-    .sort()) {
-    const monthDirectory = `${changesDirectory}/${month}`;
-    for (const folder of [...safeList(fs, monthDirectory)].sort()) {
-      if (!folder.includes(`--${changeRef}--`)) continue;
-      const file = `${monthDirectory}/${folder}/chg-${changeRef}-pm-notes.yaml`;
-      if (fs.exists(file)) return file;
-    }
-  }
-  return undefined;
+  const folder = locateChangeFolder(request);
+  if (folder === undefined) return undefined;
+  const file = `${folder}/chg-${request.changeRef}-pm-notes.yaml`;
+  return request.fs.exists(file) ? file : undefined;
 };
 
 const countNodes = (node: Node, depth: number, seen: Set<Node>, state: { nodes: number }): void => {

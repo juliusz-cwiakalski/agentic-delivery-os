@@ -401,6 +401,8 @@ export type PhaseRuntimeOptions = {
   readonly writeFile: (file: string, text: string) => void;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
+  /** The repository-relative change folder for a ref (staging scope input). */
+  readonly readChangeFolder?: (changeRef: string) => string | undefined;
 };
 
 export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCommandRuntime => ({
@@ -410,6 +412,7 @@ export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCo
       changesDirectory: options.changesDirectory,
       fs: options.fs,
     }),
+  ...(options.readChangeFolder === undefined ? {} : { readChangeFolder: options.readChangeFolder }),
   stageEntry: (text, edit) => stagePmNotesPhaseEntry(text, edit),
   readRegistry: (changeRef) => {
     const read = readChangeTransitionsTolerant(options.store, changeRef);
@@ -452,6 +455,8 @@ export type CommitRuntimeOptions = {
   readonly phaseCommit: boolean;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
+  /** The repository-relative change folder for a ref (staging scope input). */
+  readonly readChangeFolder?: (changeRef: string) => string | undefined;
   readonly resolveRef?: () => Promise<
     { readonly ref: string; readonly refSource: "branch" | "change-folder" } | undefined
   >;
@@ -619,6 +624,7 @@ export type ProductionCommitRuntimeOptions = {
   readonly phaseCommit: boolean;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
+  readonly readChangeFolder?: (changeRef: string) => string | undefined;
   readonly transports?: CommitTransportPorts;
   readonly availability?: CommitTransportAvailability;
 };
@@ -641,6 +647,7 @@ export const createProductionCommitRuntimeOptions = (
   phaseCommit: options.phaseCommit,
   nowIso: options.nowIso,
   newFenceToken: options.newFenceToken,
+  ...(options.readChangeFolder === undefined ? {} : { readChangeFolder: options.readChangeFolder }),
 });
 
 /** Compose the standalone `commit` surface (GH-227 F-1..F-5). */
@@ -650,6 +657,7 @@ export const createCommitCommandRuntime = (
 ): CommitCommandRuntime => ({
   sessionFacts: () =>
     typeof options.sessionFacts === "function" ? options.sessionFacts() : options.sessionFacts,
+  ...(options.readChangeFolder === undefined ? {} : { readChangeFolder: options.readChangeFolder }),
   resolveRef:
     options.resolveRef ??
     (async () => {

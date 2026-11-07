@@ -109,26 +109,32 @@ describe("TC-ATOMIC-002 SC-M1-12 --no-commit records the transition alone", () =
   });
 });
 
-describe("TC-ATOMIC-003 no stageable work lands the transition alone", () => {
-  test("durable skipped-no-pending-work basis and a stable no-op re-run", async () => {
+describe("TC-ATOMIC-003 the transition alone is the completion commit", () => {
+  test("a completion whose only pending work is the pm-notes transition commits it", async () => {
     await withCommitHarness(
       async (harness) => {
         const beforeHead = head(harness);
+        const beforeCommits = commitCount(harness);
         const run = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
         expect(run.exitCode).toBe(0);
-        expect(dataOf(run).commitSkipped).toBe("skipped-no-pending-work");
-        expect(head(harness)).toBe(beforeHead);
-        expect(telemetryPayloads(harness)).toEqual([]);
+        expect(dataOf(run)).toMatchObject({ outcome: "landed", atomic: true });
+        expect(dataOf(run).stagedFiles).toEqual([
+          "doc/changes/2026-11/2026-11-05--GH-310--commit-fixture/chg-GH-310-pm-notes.yaml",
+        ]);
+        expect(commitCount(harness)).toBe(beforeCommits + 1);
+        expect(head(harness)).not.toBe(beforeHead);
+        expect(telemetryPayloads(harness)).toHaveLength(1);
         const records = transitionPayloads(harness);
         expect(records).toHaveLength(1);
         expect(records[0]).toMatchObject({
-          commitIntent: "record-only",
-          commitIntentBasis: "skipped-no-pending-work",
+          commitIntent: "atomic",
+          commitSha: head(harness),
         });
         const reRun = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
         expect(reRun.exitCode).toBe(0);
+        expect(dataOf(reRun).outcome).toBe("no-op");
         expect(transitionPayloads(harness)).toHaveLength(1);
-        expect(harness.coreTransport.calls).toHaveLength(0);
+        expect(commitCount(harness)).toBe(beforeCommits + 1);
       },
       { seedFiles: SEED },
     );
@@ -298,7 +304,7 @@ describe("TC-ATOMIC-010/012 exactly one record with the durable intent", () => {
     );
   });
 
-  test("all four modes append exactly one line and the envelope basis matches the record", async () => {
+  test("the three durable-intent modes append exactly one line and the envelope basis matches the record", async () => {
     const cases: Array<{
       readonly label: string;
       readonly phaseCommit: boolean;
@@ -314,13 +320,6 @@ describe("TC-ATOMIC-010/012 exactly one record with the durable intent", () => {
         noCommit: false,
         dirty: true,
         basis: "config-disabled",
-      },
-      {
-        label: "no-pending",
-        phaseCommit: true,
-        noCommit: false,
-        dirty: false,
-        basis: "skipped-no-pending-work",
       },
     ];
     for (const entry of cases) {
@@ -403,13 +402,13 @@ describe("TC-ATOMIC-013 lifecycle phase ids map to declared plan-phase scopes", 
         const beforeCommits = commitCount(harness);
         const run = await harness.runPhase(["complete", COMMIT_REF, "review_fix"]);
         expect(run.exitCode).toBe(0);
-        expect(dataOf(run)).toMatchObject({
-          outcome: "landed",
-          atomic: false,
-          commitSkipped: "skipped-no-pending-work",
-        });
-        expect(commitCount(harness)).toBe(beforeCommits);
-        expect(telemetryPayloads(harness)).toEqual([]);
+        expect(dataOf(run)).toMatchObject({ outcome: "landed", atomic: true });
+        expect(dataOf(run).stagedFiles).toEqual([
+          "doc/changes/2026-11/2026-11-05--GH-310--commit-fixture/chg-GH-310-pm-notes.yaml",
+        ]);
+        expect(excludedOf(run).untrackedNotStaged).toEqual(["src/two.ts"]);
+        expect(commitCount(harness)).toBe(beforeCommits + 1);
+        expect(telemetryPayloads(harness)).toHaveLength(1);
         expect(status(harness)).toContain("?? src/two.ts");
       },
       { seedFiles: SEED, planYaml: COMMIT_MULTI_PHASE_PLAN_YAML },
@@ -417,25 +416,20 @@ describe("TC-ATOMIC-013 lifecycle phase ids map to declared plan-phase scopes", 
   });
 });
 
-describe("TC-ATOMIC-014 interrupted atomic re-run with no pending work", () => {
-  test("discloses the envelope-only basis and lands nothing", async () => {
+describe("TC-ATOMIC-014 interrupted atomic re-run recovers the pending document", () => {
+  test("lands the recovered commit from the durable record", async () => {
     await withCommitHarness(
       async (harness) => {
         appendCompletionRecord(harness, { intent: "atomic" });
-        const beforeHead = head(harness);
         const beforeCommits = commitCount(harness);
         const run = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
         expect(run.exitCode).toBe(0);
-        expect(dataOf(run)).toMatchObject({
-          outcome: "no-op",
-          atomic: false,
-          commitSkipped: "interrupted-atomic-no-pending-work",
-        });
-        expect(commitCount(harness)).toBe(beforeCommits);
-        expect(head(harness)).toBe(beforeHead);
+        expect(dataOf(run)).toMatchObject({ outcome: "landed", atomic: true });
+        expect(dataOf(run).reconciliation).toEqual({ completed: "commit" });
+        expect(commitCount(harness)).toBe(beforeCommits + 1);
         expect(transitionPayloads(harness)).toHaveLength(1);
-        expect(telemetryPayloads(harness)).toEqual([]);
-        expect(harness.coreTransport.calls).toHaveLength(0);
+        expect(telemetryPayloads(harness)).toHaveLength(1);
+        expect(harness.coreTransport.calls).toHaveLength(1);
       },
       { seedFiles: SEED },
     );
@@ -448,11 +442,17 @@ describe("TC-ATOMIC-015 delivery_planning maps to planning-kind plan scope", () 
       async (harness) => {
         harness.repo.write("src/planning-note.ts", "export const plan = 1;\n");
         const beforeCommits = commitCount(harness);
-        harness.coreTransport.push({ kind: "success", message: validMessage() });
+        harness.coreTransport.push({
+          kind: "success",
+          message: validMessage(undefined, "Include the planning phase artifacts."),
+        });
         const run = await harness.runPhase(["complete", COMMIT_REF, "delivery_planning"]);
         expect(run.exitCode).toBe(0);
         expect(dataOf(run)).toMatchObject({ outcome: "landed", atomic: true });
-        expect(dataOf(run).stagedFiles).toEqual(["src/planning-note.ts"]);
+        expect(dataOf(run).stagedFiles).toEqual([
+          "doc/changes/2026-11/2026-11-05--GH-310--commit-fixture/chg-GH-310-pm-notes.yaml",
+          "src/planning-note.ts",
+        ]);
         expect(commitCount(harness)).toBe(beforeCommits + 1);
         expect(transitionPayloads(harness)[0]).toMatchObject({
           phaseId: "delivery_planning",

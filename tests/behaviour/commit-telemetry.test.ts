@@ -97,7 +97,7 @@ describe("TC-TELEM-002 emission failure is disclosed without failing the commit"
 });
 
 describe("TC-TELEM-003 no event on any non-landed outcome", () => {
-  test("STOP, staging-blocked, scan-unavailable, abort, no-pending", async () => {
+  test("STOP, staging-blocked, scan-unavailable, abort", async () => {
     const cases: Array<{
       readonly label: string;
       readonly run: (
@@ -130,13 +130,6 @@ describe("TC-TELEM-003 no event on any non-landed outcome", () => {
         label: "atomic-abort",
         setup: (harness) => {
           harness.faults.commitObject = true;
-        },
-        run: (harness) => harness.runPhase(["complete", COMMIT_REF, "delivery"]),
-      },
-      {
-        label: "no-pending-work",
-        setup: (harness) => {
-          harness.repo.run(["checkout", "--", "src/existing.ts"]);
         },
         run: (harness) => harness.runPhase(["complete", COMMIT_REF, "delivery"]),
       },

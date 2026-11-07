@@ -1646,6 +1646,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readRepositoryFacts",
     "resolveRepositoryRoot",
   ],
+  "adapters/src/file/change-folder.ts": ["locateChangeFolder", "relativeChangeFolder"],
   "adapters/src/file/plan-artifact.ts": ["readPlanArtifact"],
   "adapters/src/file/pm-context.ts": ["readLocalPmContext"],
   "adapters/src/legacy/index.ts": [

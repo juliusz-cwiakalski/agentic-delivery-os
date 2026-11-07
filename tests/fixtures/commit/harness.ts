@@ -167,6 +167,10 @@ export type CommitHarnessFaults = {
   commitObject: boolean;
   ledgerAppend: boolean;
   telemetryAppend: boolean;
+  /** Make the git stage call fail (a staging refusal). */
+  staging: boolean;
+  /** Per-write pm-notes outcomes; exhausted queue means success. */
+  documentWrites: ("ok" | "fail")[];
 };
 
 export type CommitHarness = {
@@ -186,6 +190,7 @@ export type CommitHarness = {
   readonly sessionFacts: CommitSessionFacts;
   readonly availability: CommitTransportAvailability;
   readonly faults: CommitHarnessFaults;
+  readonly events: string[];
   readonly phaseDefinition: CommandDefinition;
   readonly commitDefinition: CommandDefinition;
   runCommit(args: readonly string[], options?: { readonly json?: boolean }): Promise<CommitRun>;
@@ -273,13 +278,21 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
     commitObject: false,
     ledgerAppend: false,
     telemetryAppend: false,
+    staging: false,
+    documentWrites: [],
   };
+  const events: string[] = [];
   const gitWithFaults = {
     ...git,
-    commit: async (message: Parameters<typeof git.commit>[0]) =>
-      faults.commitObject
-        ? { ok: false as const, detail: "injected commit-object failure" }
-        : git.commit(message),
+    stage: async (paths: readonly string[]) => (faults.staging ? false : git.stage(paths)),
+    commit: async (message: Parameters<typeof git.commit>[0]) => {
+      if (faults.commitObject) {
+        return { ok: false as const, detail: "injected commit-object failure" };
+      }
+      const committed = await git.commit(message);
+      if (committed.ok) events.push("commit-object");
+      return committed;
+    },
   };
   const commitStore: StateStorePort = {
     ...store,
@@ -338,8 +351,13 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
     replaceProjection: (request: Parameters<typeof replacePhaseProjection>[1]) =>
       replacePhaseProjection(store, request),
     writePmNotes: (file: string, text: string) => {
+      const outcome = faults.documentWrites.shift() ?? "ok";
+      if (outcome === "fail") {
+        return { ok: false as const, message: `failed to write ${file}` };
+      }
       try {
         writeFileSync(file, text);
+        events.push("document-write");
         return { ok: true as const };
       } catch {
         return { ok: false as const, message: `failed to write ${file}` };
@@ -348,6 +366,7 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
     nowIso: () => clock.nextIso(),
     newFenceToken,
     sessionFacts: () => sessionFacts,
+    readChangeFolder: () => COMMIT_CHANGE_DIRECTORY,
   };
   const extension = createPhaseCommitExtension({
     store: commitStore,
@@ -380,6 +399,7 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
         phaseCommit: options.phaseCommit ?? true,
         nowIso: () => clock.nextIso(),
         newFenceToken,
+        readChangeFolder: () => COMMIT_CHANGE_DIRECTORY,
         ...(options.resolvedRef === undefined
           ? { resolveRef: async () => ({ ref: COMMIT_REF, refSource: "branch" as const }) }
           : options.resolvedRef === null
@@ -458,6 +478,7 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
     },
     availability,
     faults,
+    events,
     phaseDefinition: phaseAtomicDefinition,
     commitDefinition,
     runPhase: (args, runOptions) => runDefinition(phaseAtomicDefinition, "phase", args, runOptions),

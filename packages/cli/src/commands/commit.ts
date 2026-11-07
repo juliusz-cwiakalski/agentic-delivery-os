@@ -42,6 +42,8 @@ export type CommitContext = {
 /** The injected commit surface runtime; all I/O and time are ports. */
 export type CommitCommandRuntime = {
   readonly sessionFacts: () => CommitSessionFacts;
+  /** The repository-relative change folder for the resolved ref, when present. */
+  readonly readChangeFolder?: (changeRef: string) => string | undefined;
   readonly resolveRef: () =>
     | { readonly ref: string; readonly refSource: CommitRefSource }
     | undefined
@@ -310,8 +312,17 @@ export const createCommitCommandDefinition = (
 
     const scopePaths =
       phaseIdFlag === undefined
-        ? context.phases.flatMap((entry) => entry.declaredScopePaths)
-        : (planPhase?.declaredScopePaths ?? []);
+        ? context.planPresent
+          ? context.phases.flatMap((entry) => entry.declaredScopePaths)
+          : [runtime.readChangeFolder?.(changeRef)].filter(
+              (entry): entry is string => entry !== undefined,
+            )
+        : [
+            ...(planPhase?.declaredScopePaths ?? []),
+            ...[runtime.readChangeFolder?.(changeRef)].filter(
+              (entry): entry is string => entry !== undefined,
+            ),
+          ];
     const scopeSource = !context.planPresent
       ? "plan-absent"
       : phaseCentric
