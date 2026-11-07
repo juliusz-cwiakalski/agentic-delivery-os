@@ -26,10 +26,16 @@ import {
 } from "./index.js";
 
 /** The neutral default working name; never the forbidden seed literal. */
-export const NEUTRAL_WORKING_NAME = "delivery-os";
+const NEUTRAL_WORKING_NAME = "delivery-os";
 
 /** The non-empty working-name override read from the injected environment. */
-export const WORKING_NAME_ENVIRONMENT = "DELIVERY_OS_WORKING_NAME";
+const WORKING_NAME_ENVIRONMENT = "DELIVERY_OS_WORKING_NAME";
+
+/** The neutral default working name, exposed as behavior (no exported literal). */
+export const neutralWorkingName = (): string => NEUTRAL_WORKING_NAME;
+
+/** The working-name environment variable name, exposed as behavior. */
+export const workingNameEnvironmentVariable = (): string => WORKING_NAME_ENVIRONMENT;
 
 /** The exact §8.1 prompt-required command set composed by the entrypoint. */
 export const PROMPT_REQUIRED_COMMANDS = [
@@ -93,7 +99,7 @@ export const resolveWorkingName = (options: {
 }): string => {
   const configured = options.configuredWorkingName;
   if (configured !== undefined && configured.length > 0) return configured;
-  return NEUTRAL_WORKING_NAME;
+  return neutralWorkingName();
 };
 
 /** Resolve the brand for the entrypoint (pure; reads only the injected facts). */
@@ -102,7 +108,7 @@ export const resolveEntrypointBrand = (options: {
   readonly environment: Readonly<Record<string, string | undefined>>;
 }): BrandIdentity => {
   const workingName = resolveWorkingName(options);
-  const override = options.environment[WORKING_NAME_ENVIRONMENT];
+  const override = options.environment[workingNameEnvironmentVariable()];
   const branded = resolveBrandIdentity(
     override === undefined || override.length === 0 ? { workingName } : { workingName, override },
   );
@@ -110,7 +116,7 @@ export const resolveEntrypointBrand = (options: {
   // An invalid override/name is a resolver-input error. Help and version must
   // still be usable, so fall back to the neutral default rather than reading
   // configuration or crashing; no seed literal is introduced.
-  const neutral = resolveBrandIdentity({ workingName: NEUTRAL_WORKING_NAME });
+  const neutral = resolveBrandIdentity({ workingName: neutralWorkingName() });
   if (!neutral.ok) throw new Error("the neutral working name is unusable");
   return neutral.value;
 };

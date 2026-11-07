@@ -25,7 +25,7 @@ import {
 const CI_PATH = ".github/workflows/ci.yml";
 const GUARD_COMMAND = "bun run scripts/checks/privacy-literals.ts";
 const AGGREGATE =
-  "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/exports-parity.ts";
+  "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts";
 const NEW_SUITES = [
   "tests/checks/privacy-literals.test.ts",
   "tests/checks/privacy-registry.test.ts",
@@ -261,7 +261,7 @@ describe("TC-WIRE-003 new suites run under the binding test job", () => {
     "tests/checks/privacy-registry.test.ts": "the valid control",
     "tests/checks/privacy-scope.test.ts": "an untracked-but-not-ignored value is scanned",
     "tests/checks/privacy-reporting.test.ts": "two runs in each mode",
-    "tests/checks/privacy-authoring.test.ts": "a piped literal yields",
+    "tests/checks/privacy-authoring.test.ts": "no fixture carries a real secret shape",
     "tests/checks/privacy-performance.test.ts": "the distinct-length envelope",
     "tests/behaviour/envelope-content-policy.test.ts": "clean envelopes",
   };

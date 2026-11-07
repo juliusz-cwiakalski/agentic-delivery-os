@@ -21,12 +21,13 @@ const PATTERNS: readonly { readonly id: string; readonly pattern: RegExp }[] = [
 const markdownFiles = (directory: string): readonly string[] => {
   const found: string[] = [];
   const walk = (relative: string): void => {
-    let entries;
-    try {
-      entries = readdirSync(join(ROOT, directory, relative), { withFileTypes: true });
-    } catch {
-      return;
-    }
+    const entries = (() => {
+      try {
+        return readdirSync(join(ROOT, directory, relative), { withFileTypes: true });
+      } catch {
+        return [];
+      }
+    })();
     for (const entry of entries) {
       const next = relative.length === 0 ? entry.name : `${relative}/${entry.name}`;
       if (entry.isDirectory()) walk(next);

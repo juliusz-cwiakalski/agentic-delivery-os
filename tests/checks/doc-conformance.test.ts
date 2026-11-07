@@ -242,3 +242,135 @@ describe("TC-DOCREC-002 scope: docs guides, man page, and reference pages", () =
     expect(text.toLowerCase().includes("phase complete")).toBe(false);
   });
 });
+
+/** The current-truth pages named by the §16.1.1 phrase table. */
+const FULL_PHRASE_PAGES = [
+  "feature-commit-primitive.md",
+  "feature-pm-notes-lint-and-phase-transitions.md",
+  "feature-result-contract.md",
+  "feature-delivery-lifecycle.md",
+  "feature-quality-gates-and-pr.md",
+  "feature-autonomous-delivery.md",
+  "feature-local-code-review.md",
+] as const;
+
+/** The behavioral-primitives pages the generic §16.1.1 row covers. */
+const GENERIC_PHRASE_PAGES = [
+  "feature-plan-schema.md",
+  "feature-blockers.md",
+  "feature-status-digest.md",
+  "feature-brief.md",
+  "feature-merge-verify-deploy.md",
+  "feature-closeout.md",
+  "feature-scheduling-engine.md",
+  "feature-agents-and-commands.md",
+] as const;
+
+const GENERIC_STALE = [
+  "git add -A",
+  "git commit -F",
+  "post-hook amend",
+  "`started`/`completed` hand-edited",
+  "`phases.pr_creation.url` written",
+] as const;
+
+const GENERIC_REQUIRED = [
+  "lifecycle commits route through the `commit` primitive or the thin `@committer`",
+  "phase state is written only through the `phase` family",
+  "the PR URL is a pm-notes `notes:` entry",
+] as const;
+
+const CLI_COMMAND_CLAIMS = [
+  "`state` command",
+  "`mcp` command",
+  "dispatch command",
+  "daemon command",
+];
+
+describe("TC-DOCREC-003 scope: full phrase-table rows", () => {
+  test("the fixture covers exactly the §16.1.1 page set and the generic row", () => {
+    const rows = rowsOf(read(SPEC));
+    const pages = rows.flatMap((row) => (row.page === undefined ? [] : [row.page]));
+    expect(pages).toEqual([...FULL_PHRASE_PAGES]);
+    const generic = rows.filter((row) => row.page === undefined);
+    expect(generic).toHaveLength(1);
+    expect(generic[0]?.owner).toContain("Phase 10");
+    expect(generic[0]?.stale.length).toBeGreaterThan(0);
+    expect(generic[0]?.required.length).toBeGreaterThan(0);
+  });
+
+  test("every named stale phrase is absent and every required phrase is present", () => {
+    const rows = rowsOf(read(SPEC));
+    const failures: string[] = [];
+    for (const row of rows) {
+      if (row.page === undefined) continue;
+      const text = read(`doc/spec/features/${row.page}`);
+      const residue = stripRequired(text, row.required);
+      for (const phrase of row.stale) {
+        if (residue.toLowerCase().includes(phrase.toLowerCase())) {
+          failures.push(`${row.page}: stale phrase still present: ${phrase}`);
+        }
+      }
+      for (const phrase of row.required) {
+        if (!text.toLowerCase().includes(phrase.toLowerCase())) {
+          failures.push(`${row.page}: required phrase missing: ${phrase}`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test("the generic behavioral-primitives row is covered across its page set", () => {
+    const rows = rowsOf(read(SPEC));
+    const generic = rows.find((row) => row.page === undefined);
+    expect(generic).toBeDefined();
+    const texts = GENERIC_PHRASE_PAGES.map((page) => ({
+      page,
+      text: read(`doc/spec/features/${page}`),
+    }));
+    const failures: string[] = [];
+    for (const { page, text } of texts) {
+      for (const phrase of GENERIC_STALE) {
+        if (text.includes(phrase)) failures.push(`${page}: stale phrase still present: ${phrase}`);
+      }
+    }
+    const union = texts
+      .map((entry) => entry.text)
+      .join("\n")
+      .toLowerCase();
+    for (const phrase of GENERIC_REQUIRED) {
+      if (!union.includes(phrase.toLowerCase())) {
+        failures.push(`generic page set: required phrase missing: ${phrase}`);
+      }
+    }
+    const agents = texts.find((entry) => entry.page === "feature-agents-and-commands.md");
+    for (const phrase of GENERIC_REQUIRED) {
+      if (agents === undefined || !agents.text.toLowerCase().includes(phrase.toLowerCase())) {
+        failures.push(`feature-agents-and-commands.md: missing ${phrase}`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test("no phrase-table page claims state, mcp, dispatch, or the daemon as a CLI command", () => {
+    const failures: string[] = [];
+    for (const page of [...FULL_PHRASE_PAGES, ...GENERIC_PHRASE_PAGES]) {
+      const text = read(`doc/spec/features/${page}`);
+      for (const claim of CLI_COMMAND_CLAIMS) {
+        if (text.includes(claim)) failures.push(`${page}: claims ${claim}`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test("the full scan is non-vacuous: a stale phrase in a temp copy fails", () => {
+    const row = rowsOf(read(SPEC)).find((entry) => entry.page === "feature-autonomous-delivery.md");
+    expect(row).toBeDefined();
+    const mutated = `${read("doc/spec/features/feature-autonomous-delivery.md")}\n| \`gh pr merge --squash\` |`;
+    const residue = stripRequired(mutated, row?.required ?? []);
+    const detected = (row?.stale ?? []).some((phrase) =>
+      residue.toLowerCase().includes(phrase.toLowerCase()),
+    );
+    expect(detected).toBe(true);
+  });
+});

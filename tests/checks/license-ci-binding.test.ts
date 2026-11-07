@@ -19,7 +19,7 @@ const ROOT = process.cwd();
 const CI_PATH = ".github/workflows/ci.yml";
 const LICENSE_JOB = "ts-license-audit";
 const PINNED_CHECK =
-  "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/exports-parity.ts";
+  "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts";
 
 type WorkflowJob = {
   permissions?: Record<string, unknown>;

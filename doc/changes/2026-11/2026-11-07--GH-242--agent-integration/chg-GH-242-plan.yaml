@@ -471,7 +471,14 @@ phases:
     kind: delivery
     scope:
       files:
+        - .changeset/gh-242-agent-integration-minor.md
+        - packages/cli/src/entrypoint.ts
+        - scripts/checks/forbidden-literals.registry.json
         - tests/checks/doc-conformance.test.ts
+        - tests/checks/license-ci-binding.test.ts
+        - tests/checks/privacy-ci-wiring.test.ts
+        - tests/checks/prompt-secret-scan.test.ts
+        - tests/structure/content-inventory.test.ts
         - doc/spec/features/feature-commit-primitive.md
         - doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md
         - doc/spec/features/feature-result-contract.md

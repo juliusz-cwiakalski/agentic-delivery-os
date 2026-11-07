@@ -119,6 +119,7 @@
     "doc/planning/oss-tooling/milestones/m1/commands/db.md",
     "doc/planning/oss-tooling/milestones/m1/commands/dispatch.md",
     "doc/planning/oss-tooling/milestones/m1/commands/doctor.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/entrypoint.md",
     "doc/planning/oss-tooling/milestones/m1/commands/lanes.md",
     "doc/planning/oss-tooling/milestones/m1/commands/lint.md",
     "doc/planning/oss-tooling/milestones/m1/commands/mcp.md",

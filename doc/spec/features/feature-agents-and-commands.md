@@ -45,6 +45,7 @@ The agents and their prompt definitions (`.opencode/agent/*.md`, `.opencode/comm
 - **Agent/command inventory (F-2):** Agents perform roles (orchestration, artifact creation, implementation, verification, documentation/release, specialized); commands are thin entry points that delegate to agents. Authoritative inventory: [AGENTS.md](../../../AGENTS.md) ("Agent team" + "Commands") and [.opencode/README.md](../../../.opencode/README.md).
 - **Frontmatter (F-3):** Each `.md` carries frontmatter (`description`, `mode`, and an optional `claude:` block). See the model-configuration mechanism below.
 - **Authoring/tuning discipline (F-4):** Creating or modifying agents/commands is delegated to `@toolsmith` (by reference — see `.opencode/agent/toolsmith.md`), which specializes in prompt engineering and model-format-aware design. Hand-editing is discouraged; related tools are tuned together because agents hand off to each other.
+- **Delivery-integration invariants (F-9):** Lifecycle commits route through the `commit` primitive or the thin `@committer`; phase state is written only through the `phase` family; the PR URL is a pm-notes `notes:` entry.
 
 ### The Two-Layer Model-Configuration Mechanism (F-5) — must be understood precisely
 

@@ -65,7 +65,7 @@ The reviewer persists each review iteration as a single **`review-iter-<N>.yaml`
 ```
 /review GH-456           → @reviewer audits diff vs spec/plan + heuristics
                          → if findings: append "Code Review Remediation" phase to plan
-                         → /review triggers /commit (@committer) for the review artifact
+                         → review-triggered commit via the commit primitive
                          → next action: /run-plan GH-456 (remediation)
                          → re-run /review until PASS
 /review-deep GH-456      → same, stronger reasoning model
@@ -92,7 +92,7 @@ The reviewer persists each review iteration as a single **`review-iter-<N>.yaml`
 
 ### Plan Mutation Contract
 
-The reviewer only modifies the **plan artifact** (`chg-<workItemRef>-plan.yaml`, or a legacy `chg-<workItemRef>-plan.md` during the transition) — never the spec or code. It is a **pure writer**: it writes the `review-iter-<N>.yaml` artifact and (on findings) appends the remediation phase to the plan, then returns with zero git operations. The `/review` (or `/review-deep`) command triggers `/commit` (`@committer`) after the reviewer returns. It never uses `doc/changes/current` in paths.
+The reviewer only modifies the **plan artifact** (`chg-<workItemRef>-plan.yaml`, or a legacy `chg-<workItemRef>-plan.md` during the transition) — never the spec or code. It is a **pure writer**: it writes the `review-iter-<N>.yaml` artifact and (on findings) appends the remediation phase to the plan, then returns with zero git operations. After the reviewer returns, the review-triggered commit path is the primitive-backed `commit` or the thin `@committer`; no raw-git commit instruction remains. It never uses `doc/changes/current` in paths.
 
 ## Non-Functional Requirements
 

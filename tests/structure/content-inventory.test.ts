@@ -1181,8 +1181,8 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/index.ts": ["runCli"],
   "cli/bin/delivery-os.ts": ["completion"],
   "cli/src/entrypoint.ts": [
-    "NEUTRAL_WORKING_NAME",
-    "WORKING_NAME_ENVIRONMENT",
+    "neutralWorkingName",
+    "workingNameEnvironmentVariable",
     "PROMPT_REQUIRED_COMMANDS",
     "resolveWorkingName",
     "resolveEntrypointBrand",
