@@ -32,6 +32,9 @@ export const PRODUCTION_DEFAULTS = {
       },
     },
     chains: {},
+    // GH-234 DEC-9: the profile-model branch ships empty. No tier, profile,
+    // preference chain, rung, goal priority, or threshold is invented.
+    profiles: {},
   },
   commit: {
     phaseCommit: true,
@@ -57,6 +60,10 @@ export const PRODUCTION_DEFAULTS = {
       { name: "HARNESS_SMALL_MODEL" },
       { name: "DELIVERY_WORK_PATH" },
     ],
+  },
+  lane: {
+    "liveness-interval": 30000,
+    "restart-budget": 3,
   },
 } as const;
 

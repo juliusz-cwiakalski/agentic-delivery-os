@@ -8,6 +8,7 @@
  * (GAP-T2).
  */
 import type {
+  EconomicsSourcedSignalReading,
   HarnessClassifier,
   HarnessExecutionEnvironmentDescriptor,
   HarnessLivenessSourcedReading,
@@ -120,6 +121,22 @@ export const LIVENESS_FACTS: readonly HarnessLivenessSourcedReading[] = [
     kind: "process",
     status: "sourced",
     value: 1,
+    observedAt: "2026-11-06T00:00:05Z",
+  },
+];
+
+/** The additive sourced-signal facts (GH-235 D-3): read-only, counts only. */
+export const SOURCED_SIGNAL_FACTS: readonly EconomicsSourcedSignalReading[] = [
+  {
+    kind: "heartbeat-age",
+    status: "sourced",
+    value: 1_500,
+    observedAt: "2026-11-06T00:00:05Z",
+  },
+  {
+    kind: "token-delta",
+    status: "sourced",
+    value: 42,
     observedAt: "2026-11-06T00:00:05Z",
   },
 ];

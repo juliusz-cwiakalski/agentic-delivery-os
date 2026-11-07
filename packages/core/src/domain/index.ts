@@ -92,8 +92,41 @@ export {
   harnessCapabilityViolations,
   inspectHarnessCapability,
 } from "./harness-capability.js";
+export {
+  type RestartBudgetGateInput,
+  evaluateRestartBudget,
+  foldRestartRecords,
+} from "./economics-budget.js";
+export {
+  economicsReferenceFor,
+  formatBudgetEvidence,
+  formatCapabilityGapEvidence,
+  formatIncompleteEvidence,
+  formatRefusalCorpus,
+  formatStallEvidence,
+  formatUneconomicalEvidence,
+  formatUnevaluableEvidence,
+  type RefusalCorpus,
+  parseRefusalCorpus,
+} from "./economics-evidence.js";
+export {
+  type ResumeEconomicsDeps,
+  createOneShotResumeComposition,
+  createSupervisedResumeComposition,
+  evaluateResumeEconomics,
+  isEconomicalRepay,
+} from "./economics-resume.js";
+export {
+  deriveEconomicsView,
+  latestUniqueProgressTokens,
+} from "./economics-view.js";
 export { classifyHarnessEvidence } from "./harness-classify.js";
-export { assembleHarnessLiveness, harnessLivenessToWatchdogSignals } from "./harness-liveness.js";
+export {
+  assembleHarnessLiveness,
+  createHarnessLivenessSignalSource,
+  createSourcedWatchdogSignalSource,
+  harnessLivenessToWatchdogSignals,
+} from "./harness-liveness.js";
 export {
   type HarnessAdapterRegistration,
   type HarnessVersionProbe,

@@ -115,6 +115,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "watchdog.checkout-dirty",
   "watchdog.checkout-non-base",
   "watchdog.signals-absent",
+  // GH-235 pins the sourced-stall and dispatch economics identities exactly;
+  // they remain exact declared codes, not a pattern widening.
+  "watchdog.liveness-stalled",
+  "dispatch.restart-budget-exceeded",
+  "dispatch.resume-uneconomical",
   // GH-227 pins these three commit identities exactly; they remain exact
   // declared codes, not a pattern widening.
   "commit.staging-blocked-untracked",

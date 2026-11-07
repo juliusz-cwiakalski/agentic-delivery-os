@@ -43,6 +43,7 @@ import {
 import { GITLAB_ADAPTER_CONTRACT, type GitLabClient } from "@delivery-os/adapters/gitlab";
 import { JIRA_ADAPTER_CONTRACT, type JiraClient } from "@delivery-os/adapters/jira";
 import { createLegacyCompat } from "@delivery-os/adapters/legacy";
+import { createProviderWatchMappings } from "@delivery-os/adapters/provider-quota";
 import {
   findGitRoot,
   nodeRepositoryIo,
@@ -70,6 +71,7 @@ import {
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
   computeSpendReport,
+  createSourcedWatchdogSignalSource,
   isLiveDbSession,
   type MergeTransactionPorts,
   newestWaiverByGate,
@@ -123,6 +125,7 @@ import {
   type DoctorStateStoresRead,
   type DoctorWiringRead,
   type ExternalSystemInstance,
+  type HarnessLivenessFacts,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
   PHASE_STATE_DOCUMENT_PREFIX,
@@ -152,10 +155,19 @@ import {
   type WorkItem,
 } from "@delivery-os/core/contracts";
 import {
+  createProfileProbePort,
   createProviderEngine,
+  createProviderWatchStatus,
+  evaluatePeakWindow,
+  evaluateProfileLifecycle,
+  parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
+  persistProfileTarget,
+  readProfileTarget,
   readProviderLedger,
   readProviderParkViews,
+  resolveProfileForSpawn,
+  selectProfile,
 } from "@delivery-os/core/provider";
 import {
   appendAuditInvocation,
@@ -1922,24 +1934,36 @@ export const createPlanCommandRuntime = (options: PlanRuntimeOptions): PlanComma
   },
 });
 
-/** The watchdog composition seams; production M1-S1 wires zero signal sources. */
+/** The watchdog composition seams. */
 export type WatchdogComposition = {
   readonly readLane: (lane: string) => WatchdogLaneRead;
   readonly git?: WatchdogGitPort;
   readonly signalSources?: readonly WatchdogSignalSource[];
+  /**
+   * The adapter-sourced liveness facts read seam (GH-235 F-1). When supplied,
+   * the runtime composes the sourced-signal bridge into the delivered probe
+   * seam; when omitted, no signal source is declared and liveness stays
+   * `watchdog.signals-absent`.
+   */
+  readonly readSourcedSignals?: (lane: string) => HarnessLivenessFacts | undefined;
 };
 
 /**
  * Compose the watchdog runtime: the injected lane reader, the bounded git seam
- * (a production seam by default), and the declared signal sources (none in
- * production M1-S1, so liveness always classifies absent).
+ * (a production seam by default), and the declared signal sources. A supplied
+ * `readSourcedSignals` composes the adapter-sourced bridge, so a sourced lane
+ * reaches `progressing`/`stalled` instead of always answering absent.
  */
 export const createWatchdogCommandRuntime = (
   composition: WatchdogComposition,
 ): WatchdogCommandRuntime => ({
   readLane: composition.readLane,
   git: composition.git ?? createWatchdogGitSeam(),
-  signalSources: composition.signalSources ?? [],
+  signalSources:
+    composition.signalSources ??
+    (composition.readSourcedSignals === undefined
+      ? []
+      : [createSourcedWatchdogSignalSource(composition.readSourcedSignals)]),
 });
 
 /**
@@ -2324,9 +2348,35 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
         if (!parsed.ok) {
           return { ok: false, code: parsed.error.code, summary: parsed.error.detail };
         }
+        let profileScope:
+          | { readonly name: string; readonly providers: readonly string[] }
+          | undefined;
+        if (input.profile !== undefined) {
+          const profileParsed = parseAndValidateProfileConfiguration(
+            snapshot.value.config.values,
+            parsed.config,
+          );
+          if (!profileParsed.ok) {
+            return {
+              ok: false,
+              code: profileParsed.error.code,
+              summary: profileParsed.error.detail,
+            };
+          }
+          const profile = profileParsed.config.profiles[input.profile];
+          if (profile === undefined) {
+            return {
+              ok: false,
+              code: "provider.profile.invalid",
+              summary: `profile ${input.profile} is not declared`,
+            };
+          }
+          profileScope = { name: profile.name, providers: profile.providers };
+        }
         return engine.resolve({
           config: parsed.config,
           ...(input.chainName === undefined ? {} : { chainName: input.chainName }),
+          ...(profileScope === undefined ? {} : { profile: profileScope }),
           persist: true,
         });
       },
@@ -2349,6 +2399,205 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
         });
       },
       parks: (input) => engine.parks(input),
+      profileResolve: async (input) => {
+        const snapshot = resolve({});
+        if (!snapshot.ok) {
+          return {
+            ok: false,
+            code: snapshot.error.code,
+            summary: `configuration rejected (${snapshot.error.code})`,
+          };
+        }
+        const providerParsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
+        if (!providerParsed.ok) {
+          return {
+            ok: false,
+            code: providerParsed.error.code,
+            summary: providerParsed.error.detail,
+          };
+        }
+        const profileParsed = parseAndValidateProfileConfiguration(
+          snapshot.value.config.values,
+          providerParsed.config,
+        );
+        if (!profileParsed.ok) {
+          return {
+            ok: false,
+            code: profileParsed.error.code,
+            summary: profileParsed.error.detail,
+          };
+        }
+        const nowMs = provider.clock.nowMs();
+        const probe = createProfileProbePort((providerName) => {
+          const descriptor = providerParsed.config.entries[providerName];
+          if (descriptor === undefined) {
+            return {
+              available: false,
+              condition: "provider-outage",
+              blockers: [
+                {
+                  kind: "condition",
+                  value: "provider-outage",
+                  detail: `provider ${providerName} is not declared`,
+                },
+              ],
+              source: `provider ${providerName}: undeclared`,
+            };
+          }
+          if (!descriptor.enabled) {
+            return {
+              available: false,
+              condition: "disabled",
+              blockers: [
+                {
+                  kind: "condition",
+                  value: "disabled",
+                  detail: `provider ${providerName} is disabled`,
+                },
+              ],
+              source: `provider ${providerName}: disabled`,
+            };
+          }
+          if (descriptor.peak !== undefined) {
+            const peak = evaluatePeakWindow(descriptor.peak, nowMs);
+            if (peak.status === "parked") {
+              return {
+                available: false,
+                condition: "peak-window",
+                blockers: [
+                  {
+                    kind: "condition",
+                    value: "peak-window",
+                    detail: `provider ${providerName}: peak window active`,
+                  },
+                ],
+                source: `provider ${providerName}: peak window`,
+              };
+            }
+          }
+          return {
+            available: true,
+            condition: "clear",
+            blockers: [],
+            source: `provider ${providerName}: clear`,
+          };
+        });
+        const selection = selectProfile({
+          profiles: profileParsed.config,
+          probe,
+          nowMs,
+          ...(input.agent === undefined ? {} : { agent: input.agent }),
+        });
+        if (!selection.ok) return selection;
+        const baseProfileName = profileParsed.config.preferenceChain?.base;
+        const baseProfile =
+          baseProfileName === undefined
+            ? undefined
+            : profileParsed.config.profiles[baseProfileName];
+        let lifecycleProvider: string | undefined;
+        if (baseProfile !== undefined) {
+          for (const providerName of baseProfile.providers) {
+            if (!probe.probe(providerName).available) {
+              lifecycleProvider = providerName;
+              break;
+            }
+          }
+        }
+        const persisted = readProfileTarget(provider.stateStore);
+        if (!persisted.ok) {
+          return {
+            ok: false,
+            code: persisted.error.code,
+            summary: `profile target read failed (${persisted.error.code})`,
+          };
+        }
+        const lifecycle = evaluateProfileLifecycle({
+          profiles: profileParsed.config,
+          selection,
+          ...(persisted.value === undefined ? {} : { persisted: persisted.value }),
+          nowMs,
+          ...(lifecycleProvider === undefined ? {} : { providerName: lifecycleProvider }),
+        });
+        if (lifecycle.append && lifecycle.target !== undefined) {
+          const written = persistProfileTarget({
+            store: provider.stateStore,
+            fenceToken: provider.newFenceToken(),
+            record: lifecycle.target,
+          });
+          if (!written.ok) {
+            return {
+              ok: false,
+              code: written.error.code,
+              summary: `profile target write failed (${written.error.code})`,
+            };
+          }
+        }
+        if (!lifecycle.selection.ok) return lifecycle.selection;
+        if (input.forSpawn === true) {
+          const outcome = resolveProfileForSpawn({
+            profiles: profileParsed.config,
+            probe,
+            nowMs,
+            namePrefix: input.namePrefix ?? "",
+            ...(input.agent === undefined ? {} : { agent: input.agent }),
+            ...(profileParsed.config.envRecord === undefined
+              ? {}
+              : { policy: profileParsed.config.envRecord }),
+            selection: lifecycle.selection,
+          });
+          if (!outcome.ok) {
+            return {
+              ok: false,
+              code: outcome.code,
+              summary: outcome.summary,
+              eligibility: outcome.eligibility,
+              events: outcome.events,
+            };
+          }
+          return outcome.selection;
+        }
+        return lifecycle.selection;
+      },
+      watchStatus: async (input) => {
+        const snapshot = resolve({});
+        if (!snapshot.ok) {
+          return {
+            ok: false,
+            code: snapshot.error.code,
+            summary: `configuration rejected (${snapshot.error.code})`,
+          };
+        }
+        const providerParsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
+        if (!providerParsed.ok) {
+          return {
+            ok: false,
+            code: providerParsed.error.code,
+            summary: providerParsed.error.detail,
+          };
+        }
+        const profileParsed = parseAndValidateProfileConfiguration(
+          snapshot.value.config.values,
+          providerParsed.config,
+        );
+        if (!profileParsed.ok) {
+          return {
+            ok: false,
+            code: profileParsed.error.code,
+            summary: profileParsed.error.detail,
+          };
+        }
+        const reader = createProviderWatchStatus({
+          clock: provider.clock,
+          credentialPort: provider.credentialPort,
+          transport: provider.transport,
+          mappings: createProviderWatchMappings(),
+        });
+        return reader.status({
+          targets: profileParsed.config.watch ?? {},
+          credentials: providerParsed.config.credentials,
+          ...(input.providerName === undefined ? {} : { providerName: input.providerName }),
+        });
+      },
     };
     commands.provider = createProviderCommandDefinition(providerRuntime);
   }

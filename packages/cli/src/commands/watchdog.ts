@@ -12,12 +12,14 @@ import {
   buildWatchdogVerdictData,
   classifyWatchdogLiveness,
   evaluateWatchdogPreflight,
+  formatStallEvidence,
   planWatchdogRestoration,
   readWatchdogSignals,
 } from "@delivery-os/core";
 import type { BrandIdentity } from "@delivery-os/core/contracts";
 import {
   WATCHDOG_PROBES,
+  WATCHDOG_STALL_HEARTBEAT_MS,
   type WatchdogGitPort,
   type WatchdogLaneRead,
   type WatchdogMemoryPublication,
@@ -230,6 +232,25 @@ const liveness = (runtime: WatchdogCommandRuntime, lane: string): WatchdogResult
   const evaluation = classifyWatchdogLiveness(signals);
   if (evaluation.outcome === "absent") {
     return failure("watchdog", "watchdog.signals-absent", `lane ${lane}: ${evaluation.evidence}`);
+  }
+  if (evaluation.verdict === "stalled") {
+    const { heartbeatAgeMs, tokenDelta, traffic } = evaluation.signals;
+    if (typeof heartbeatAgeMs !== "number" || tokenDelta !== 0 || traffic !== 0) {
+      return failure("watchdog", "watchdog.signals-absent", `lane ${lane}: ${evaluation.evidence}`);
+    }
+    // GAP-T2 resolved as DEC-1: a corroborated stall is a classified refusal at
+    // exit 1, with the corroborating signals as the bounded key=value corpus.
+    return failure(
+      "watchdog",
+      "watchdog.liveness-stalled",
+      formatStallEvidence({
+        reason: "watchdog.liveness-stalled",
+        heartbeatAgeMs,
+        tokenDelta,
+        traffic,
+        stallBoundMs: WATCHDOG_STALL_HEARTBEAT_MS,
+      }),
+    );
   }
   return {
     ok: true,

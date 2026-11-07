@@ -14,8 +14,8 @@ export type WatchdogSchemaVersion = typeof WATCHDOG_SCHEMA_VERSION;
 /**
  * The verdict vocabulary (DM-1). One declaration drives both the runtime list
  * and the `WatchdogVerdict` union so the two cannot drift. `stalled` and
- * `progressing` are declared contract values whose signal-backed reachability
- * arrives with M1-S15; M1-S1 never emits them.
+ * `progressing` are reachable through sourced progress signals; a fully
+ * corroborated stall projects as a classified refusal identity.
  */
 export const WATCHDOG_VERDICTS = ["ok", "refused", "stalled", "progressing"] as const;
 
@@ -53,6 +53,7 @@ export const WATCHDOG_ERROR_CODES = [
   "watchdog.checkout-dirty",
   "watchdog.checkout-non-base",
   "watchdog.signals-absent",
+  "watchdog.liveness-stalled",
 ] as const;
 
 export type WatchdogErrorCode = (typeof WATCHDOG_ERROR_CODES)[number];

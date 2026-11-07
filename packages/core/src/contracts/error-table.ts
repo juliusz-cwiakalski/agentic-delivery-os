@@ -28,6 +28,7 @@ export const DOMAIN_KINDS = [
   "harness",
   "retro",
   "spend",
+  "dispatch",
 ] as const;
 
 /**
@@ -175,6 +176,94 @@ export const ERROR_TABLE = [
     remediationHint: "Correct the named chain entries, ordering, or references and retry.",
     projectionClass: "user-validation",
     summary: "The provider chain is invalid.",
+  },
+  {
+    code: "provider.profile.absent",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare provider profiles and a preference chain in configuration, then retry; no model is invented when nothing is declared.",
+    projectionClass: "user-validation",
+    summary: "No provider profile or preference chain is declared.",
+  },
+  {
+    code: "provider.profile.invalid",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Correct the named profile, tier, seat, chain entry, or pacing value and retry; the profile configuration is validated fail-closed.",
+    projectionClass: "user-validation",
+    summary: "The provider profile configuration is invalid.",
+  },
+  {
+    code: "provider.profile.capability-denied",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Assign a seat whose declared capability matches the task (for example vision-capable) and retry; the gate reads declared descriptors only.",
+    projectionClass: "user-validation",
+    summary: "A profile seat was refused by the hard capability gate.",
+  },
+  {
+    code: "provider.profile.unavailable",
+    domainKind: "provider",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Wait for a named provider condition to clear or declare another eligible profile, then retry; the decision is parked with reasons.",
+    projectionClass: "platform-provider",
+    summary: "No provider profile is eligible under the current conditions.",
+  },
+  {
+    code: "provider.env-record.unauthorized",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Use a model-environment name that matches the configured allowlist and retry; the record was rejected as a whole.",
+    projectionClass: "user-validation",
+    summary: "The env record names a variable outside the allowlist.",
+  },
+  {
+    code: "provider.env-record.duplicate",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Remove the duplicated env-record name and retry; the record was rejected as a whole.",
+    projectionClass: "user-validation",
+    summary: "The env record declares a name more than once.",
+  },
+  {
+    code: "provider.env-record.malformed",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Correct the env-record header, line grammar, name shape, or final line feed and retry; the record was rejected as a whole.",
+    projectionClass: "user-validation",
+    summary: "The env record does not conform to the data-v1 grammar.",
+  },
+  {
+    code: "provider.env-record.oversized",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Reduce the env-record file, line, or record count below the configured limits and retry.",
+    projectionClass: "user-validation",
+    summary: "The env record exceeds a configured size limit.",
   },
   {
     code: "input.value.rejected",
@@ -653,6 +742,17 @@ export const ERROR_TABLE = [
     summary: "No liveness signal sources are available; the answer is unknown.",
   },
   {
+    code: "watchdog.liveness-stalled",
+    domainKind: "watchdog",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the corroborated stall evidence, then apply the budget-governed restart response for the lane.",
+    projectionClass: "user-validation",
+    summary: "The lane is stalled and fully corroborated by the declared progress signals.",
+  },
+  {
     code: "commit.staging-blocked-untracked",
     domainKind: "commit",
     category: "user",
@@ -1002,5 +1102,27 @@ export const ERROR_TABLE = [
       "Capture harness telemetry (session-group and capture-outcome records) for the selected work item at closeout, then re-run spend.",
     projectionClass: "user-validation",
     summary: "No captured harness telemetry exists for the selected work item.",
+  },
+  {
+    code: "dispatch.restart-budget-exceeded",
+    domainKind: "dispatch",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Request a fresh restart budget through the coordinator or operator, then retry the resume.",
+    projectionClass: "user-validation",
+    summary: "The delivery's restart budget is exhausted.",
+  },
+  {
+    code: "dispatch.resume-uneconomical",
+    domainKind: "dispatch",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Change the harness capability to attach-and-continue, or re-evaluate and accept the prefill re-pay cost, then retry the resume.",
+    projectionClass: "user-validation",
+    summary: "The resume path would re-pay prefill and is uneconomical.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

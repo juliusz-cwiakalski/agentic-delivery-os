@@ -59,6 +59,10 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "watchdog.checkout-dirty",
   "watchdog.checkout-non-base",
   "watchdog.signals-absent",
+  // GH-235 pins the sourced-stall and dispatch economics identities exactly.
+  "watchdog.liveness-stalled",
+  "dispatch.restart-budget-exceeded",
+  "dispatch.resume-uneconomical",
   // GH-227 pins these three commit identities exactly; they remain exact
   // declared codes, not a pattern widening.
   "commit.staging-blocked-untracked",
@@ -567,10 +571,82 @@ const PROVIDER_ROWS = [
     "user-validation",
     "The provider chain is invalid.",
   ],
+  [
+    "provider.profile.absent",
+    "user",
+    false,
+    "not_landed",
+    "Declare provider profiles and a preference chain in configuration, then retry; no model is invented when nothing is declared.",
+    "user-validation",
+    "No provider profile or preference chain is declared.",
+  ],
+  [
+    "provider.profile.invalid",
+    "user",
+    false,
+    "not_landed",
+    "Correct the named profile, tier, seat, chain entry, or pacing value and retry; the profile configuration is validated fail-closed.",
+    "user-validation",
+    "The provider profile configuration is invalid.",
+  ],
+  [
+    "provider.profile.capability-denied",
+    "user",
+    false,
+    "not_landed",
+    "Assign a seat whose declared capability matches the task (for example vision-capable) and retry; the gate reads declared descriptors only.",
+    "user-validation",
+    "A profile seat was refused by the hard capability gate.",
+  ],
+  [
+    "provider.profile.unavailable",
+    "transient",
+    true,
+    "not_landed",
+    "Wait for a named provider condition to clear or declare another eligible profile, then retry; the decision is parked with reasons.",
+    "platform-provider",
+    "No provider profile is eligible under the current conditions.",
+  ],
+  [
+    "provider.env-record.unauthorized",
+    "user",
+    false,
+    "not_landed",
+    "Use a model-environment name that matches the configured allowlist and retry; the record was rejected as a whole.",
+    "user-validation",
+    "The env record names a variable outside the allowlist.",
+  ],
+  [
+    "provider.env-record.duplicate",
+    "user",
+    false,
+    "not_landed",
+    "Remove the duplicated env-record name and retry; the record was rejected as a whole.",
+    "user-validation",
+    "The env record declares a name more than once.",
+  ],
+  [
+    "provider.env-record.malformed",
+    "user",
+    false,
+    "not_landed",
+    "Correct the env-record header, line grammar, name shape, or final line feed and retry; the record was rejected as a whole.",
+    "user-validation",
+    "The env record does not conform to the data-v1 grammar.",
+  ],
+  [
+    "provider.env-record.oversized",
+    "user",
+    false,
+    "not_landed",
+    "Reduce the env-record file, line, or record count below the configured limits and retry.",
+    "user-validation",
+    "The env record exceeds a configured size limit.",
+  ],
 ] as const;
 
 describe("TC-PROV-045 provider rows are exact and synced", () => {
-  test("the five provider rows carry their declared fields", () => {
+  test("the thirteen provider rows carry their declared fields", () => {
     const provider = entries.filter((entry) => entry.domainKind === "provider");
     expect(provider.map((entry) => entry.code)).toEqual(PROVIDER_ROWS.map(([code]) => code));
     for (const [
@@ -672,23 +748,23 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `doctor`, `merge`, `harness`, `retro`, and `spend`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `doctor`, `merge`, `harness`, `retro`, `spend`, and `dispatch`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
   });
 
   test("existing kinds keep their rows and the provider, verify, and db additions are present", () => {
-    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(5);
+    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(13);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
-    expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(3);
+    expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "doctor")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
-    expect(entries).toHaveLength(84);
+    expect(entries).toHaveLength(95);
   });
 });
 
@@ -764,7 +840,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(84);
+    expect(entries).toHaveLength(95);
     expect(db).toHaveLength(4);
   });
 
@@ -951,13 +1027,22 @@ const WATCHDOG_ROWS = [
     "platform-provider",
     "No liveness signal sources are available; the answer is unknown.",
   ],
+  [
+    "watchdog.liveness-stalled",
+    "user",
+    false,
+    "not_landed",
+    "Inspect the corroborated stall evidence, then apply the budget-governed restart response for the lane.",
+    "user-validation",
+    "The lane is stalled and fully corroborated by the declared progress signals.",
+  ],
 ] as const;
 
-describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-trips", () => {
-  test("watchdog is a declared multi-row kind with exactly the three pinned identities", () => {
+describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trips", () => {
+  test("watchdog is a declared multi-row kind with exactly the four pinned identities", () => {
     expect(DOMAIN_KINDS).toContain("watchdog");
     const watchdog = entries.filter((entry) => entry.domainKind === "watchdog");
-    expect(watchdog).toHaveLength(3);
+    expect(watchdog).toHaveLength(4);
     expect(watchdog.map((entry) => entry.code)).toEqual(WATCHDOG_ROWS.map(([code]) => code));
     for (const [
       code,
@@ -980,7 +1065,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(84);
+    expect(entries).toHaveLength(95);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -992,6 +1077,9 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
     );
     expect(classifyDomainKind("watchdog", "watchdog.signals-absent").projectionClass).toBe(
       "platform-provider",
+    );
+    expect(classifyDomainKind("watchdog", "watchdog.liveness-stalled").projectionClass).toBe(
+      "user-validation",
     );
   });
 
@@ -1027,11 +1115,11 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly three rows and round-tri
       const row = `| ${code} | watchdog | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
       expect(doc.split(row).length - 1, code).toBe(1);
     }
-    expect(doc).toContain("`watchdog` kind carries exactly the three lane-safety identities");
+    expect(doc).toContain("`watchdog` kind carries exactly the four lane-safety identities");
   });
 
   test("pre-existing provider, input, config, state, lint, verify, db and closeout rows are unchanged", () => {
-    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(5);
+    expect(entries.filter((entry) => entry.domainKind === "provider")).toHaveLength(13);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
@@ -1247,7 +1335,9 @@ describe("TC-DOCTOR-020 the doctor kind has exactly one row and leaves the table
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| doctor.check.failed | doctor | user | false | not_landed | ${DOCTOR_HINT} | user-validation | ${DOCTOR_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("`status`, `doctor`, `merge`, `harness`, `retro`, and `spend`");
+    expect(doc).toContain(
+      "`status`, `doctor`, `merge`, `harness`, `retro`, `dispatch`, and `spend`",
+    );
   });
 
   test("fallback remains the reserved two-segment namespace", () => {
@@ -1377,6 +1467,135 @@ describe("TC-RETRO-004 four retro identities round-trip and contain", () => {
   });
 });
 
+const DISPATCH_ROWS = [
+  [
+    "dispatch.restart-budget-exceeded",
+    "user",
+    false,
+    "not_landed",
+    "Request a fresh restart budget through the coordinator or operator, then retry the resume.",
+    "user-validation",
+    "The delivery's restart budget is exhausted.",
+  ],
+  [
+    "dispatch.resume-uneconomical",
+    "user",
+    false,
+    "not_landed",
+    "Change the harness capability to attach-and-continue, or re-evaluate and accept the prefill re-pay cost, then retry the resume.",
+    "user-validation",
+    "The resume path would re-pay prefill and is uneconomical.",
+  ],
+] as const;
+
+describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (three economics additions)", () => {
+  test("dispatch is the appended declared kind with exactly the two pinned identities in order", () => {
+    expect(DOMAIN_KINDS).toContain("dispatch");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 1]).toBe("dispatch");
+    const dispatch = entries.filter((entry) => entry.domainKind === "dispatch");
+    expect(dispatch.map((entry) => entry.code)).toEqual(DISPATCH_ROWS.map(([code]) => code));
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of DISPATCH_ROWS) {
+      expect(classifyDomainKind("dispatch", code)).toEqual({
+        code,
+        domainKind: "dispatch",
+        category,
+        retryable,
+        consequence,
+        remediationHint: hint,
+        projectionClass,
+        summary,
+      });
+      expect(String(hint).length).toBeGreaterThan(0);
+    }
+  });
+
+  test("every new row projects user-validation and no new platform-provider row exists", () => {
+    for (const [code] of DISPATCH_ROWS) {
+      expect(classifyDomainKind("dispatch", code).projectionClass).toBe("user-validation");
+    }
+    expect(classifyDomainKind("watchdog", "watchdog.liveness-stalled").projectionClass).toBe(
+      "user-validation",
+    );
+    const newCodes = [
+      "dispatch.restart-budget-exceeded",
+      "dispatch.resume-uneconomical",
+      "watchdog.liveness-stalled",
+    ];
+    for (const code of newCodes) {
+      const resolved = resolveAppErrorCode(code);
+      expect(resolved.ok).toBe(true);
+      if (resolved.ok) {
+        expect(resolved.entry.projectionClass).not.toBe("platform-provider");
+        expect(resolved.entry.consequence).not.toBe("unknown");
+      }
+    }
+  });
+
+  test("dispatch codes round-trip and contain invalid shapes", () => {
+    for (const [code] of DISPATCH_ROWS) {
+      const row = classifyDomainKind("dispatch", code);
+      expect(resolveAppErrorCode(code)).toEqual({ ok: true, entry: row });
+      expect(classifyThrown({ kind: "dispatch", code })).toEqual(row);
+      expect(classifyThrown({ kind: "dispatch", code, summary: "UNTRUSTED-CANARY" })).toEqual(row);
+    }
+    expect(() => classifyDomainKind("dispatch")).toThrow();
+    expect(classifyThrown({ kind: "dispatch" }).code).toBe(FALLBACK_INTERNAL_CODE);
+    expect(classifyThrown({ kind: "dispatch", code: "state.store.torn" }).code).toBe(
+      FALLBACK_INTERNAL_CODE,
+    );
+    expect(classifyThrown({ kind: "watchdog", code: "dispatch.resume-uneconomical" }).code).toBe(
+      FALLBACK_INTERNAL_CODE,
+    );
+  });
+
+  test("the documented dispatch rows agree exactly once and match every column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [
+      code,
+      category,
+      retryable,
+      consequence,
+      hint,
+      projectionClass,
+      summary,
+    ] of DISPATCH_ROWS) {
+      const row = `| ${code} | dispatch | ${category} | ${String(retryable)} | ${consequence} | ${hint} | ${projectionClass} | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
+    expect(doc).toContain("`dispatch` kind carries exactly the two economics identities");
+  });
+
+  test("the three economics additions land and the delivered rows stay byte-identical", () => {
+    expect(entries).toHaveLength(95);
+    expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(2);
+    expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
+    // The delivered watchdog rows retain their exact declared columns.
+    expect(entries.filter((entry) => entry.domainKind === "watchdog").slice(0, 3)).toEqual(
+      WATCHDOG_ROWS.slice(0, 3).map(
+        ([code, category, retryable, consequence, hint, projectionClass, summary]) => ({
+          code,
+          domainKind: "watchdog",
+          category,
+          retryable,
+          consequence,
+          remediationHint: hint,
+          projectionClass,
+          summary,
+        }),
+      ),
+    );
+    expect(ALLOWLIST.allowed.some((code) => code.startsWith("dispatch."))).toBe(false);
+  });
+});
+
 const SPEND_HINT =
   "Capture harness telemetry (session-group and capture-outcome records) for the selected work item at closeout, then re-run spend.";
 const SPEND_SUMMARY = "No captured harness telemetry exists for the selected work item.";
@@ -1426,7 +1645,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(83);
+    expect(delivered).toHaveLength(94);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1445,7 +1664,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("84 identities");
+    expect(doc).toContain("95 identities");
   });
 
   test("the documented table is complete in both directions", () => {

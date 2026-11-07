@@ -1,0 +1,6 @@
+{
+  "windows": [
+    { "name": "5h", "usedPercent": 12, "resetsAtMs": 1700000600000 },
+    { "name": "weekly", "usedPercent": 61, "resetsAtMs": 1700003600000 }
+  ]
+}

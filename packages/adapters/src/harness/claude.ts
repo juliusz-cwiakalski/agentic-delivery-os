@@ -30,6 +30,11 @@ export const CLAUDE_CAPABILITIES: HarnessCapabilityDeclaration = {
   supportedOperations: ["spawn", "collect"],
   lifecycleCapabilities: ["headless-spawn", "telemetry-extraction"],
   livenessSources: [],
+  sourcedSignalSources: [],
+  sourcedSignalGaps: [
+    { capability: "heartbeat-age", reason: "provider-unsupported" },
+    { capability: "token-delta", reason: "provider-unsupported" },
+  ],
   declaredGaps: [
     { capability: "deliver", reason: "headless-mode-limitation" },
     { capability: "resume", reason: "headless-mode-limitation" },
@@ -214,6 +219,11 @@ export const createClaudeSession = (options: ClaudeHarnessOptions): HarnessSessi
           "session-traffic": "harness-unsupported",
           "worktree-activity": "harness-unsupported",
           process: "harness-unsupported",
+        },
+        sourcedSignalFacts: [],
+        sourcedSignalAbsenceReasons: {
+          "heartbeat-age": "harness-unsupported",
+          "token-delta": "harness-unsupported",
         },
       }),
     }),

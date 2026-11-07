@@ -1,0 +1,7 @@
+{
+  "outcome": "refuse",
+  "code": "dispatch.restart-budget-exceeded",
+  "exitCode": 1,
+  "reason": "the delivery's restart budget is exhausted; the restart is refused before any spawn",
+  "corpus": "reason=dispatch.restart-budget-exceeded; restarts=3; historyRef=economics/GH-235"
+}

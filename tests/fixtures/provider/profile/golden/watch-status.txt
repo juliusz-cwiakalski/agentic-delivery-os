@@ -1,0 +1,3 @@
+coding-plan: clear (weekly 61%, rolling 12%)
+deepseek: clear (balance 12.50 vs floor 5.00)
+openai: quota-exhausted (5h 100%, weekly 61%)

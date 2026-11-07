@@ -27,6 +27,7 @@ import {
   PROVIDER_PARKS_PROJECTION_SCHEMA_ID,
   PROVIDER_RECORD_KINDS,
   PROVIDER_SKIP_REASONS,
+  PROVIDER_WATCH_MAPPING_KINDS,
 } from "../../packages/core/src/contracts/provider";
 
 const ROOT = process.cwd();
@@ -101,6 +102,7 @@ describe("TC-PROV-001 contract surface", () => {
       recordKinds: PROVIDER_RECORD_KINDS,
       parkStates: PROVIDER_PARK_STATES,
       severities: ANNOUNCEMENT_SEVERITIES,
+      watchMappingKinds: PROVIDER_WATCH_MAPPING_KINDS,
     };
     for (const [name, values] of Object.entries(sets)) {
       expect(diffNames(`closed set ${name}`, values, INVENTORY.closedSets[name] ?? [])).toEqual([]);

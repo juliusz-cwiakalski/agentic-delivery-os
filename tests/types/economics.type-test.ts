@@ -1,0 +1,188 @@
+/**
+ * Type-contract cases for TC-ECON-001, TC-ECON-005, TC-ECON-012 and
+ * TC-ECON-062's optional-field modelling.
+ *
+ * This file is compiled by `pnpm typecheck` (`tests/types/tsconfig.json`), not
+ * run by Bun; the `@ts-expect-error` comments are the assertions.
+ */
+import type {
+  EconomicsAmplificationFlag,
+  EconomicsExhaustionRecord,
+  EconomicsOutcome,
+  EconomicsRestartHistoryEntry,
+  EconomicsWarningKind,
+  EconomicsRestartReason,
+  EconomicsRestartRecord,
+  EconomicsResumeDecision,
+  EconomicsResumeInput,
+  EconomicsSourcedSignalKind,
+  EconomicsView,
+  HarnessLivenessReport,
+  WatchdogSignals,
+} from "../../packages/core/src/contracts/index";
+import {
+  ECONOMICS_RESTART_SCHEMA_ID,
+  ECONOMICS_SOURCED_SIGNAL_KINDS,
+  RESUME_AMPLIFICATION_LOOP_FLAG,
+} from "../../packages/core/src/contracts/index";
+
+const sourcedKind: EconomicsSourcedSignalKind = "heartbeat-age";
+const restartReason: EconomicsRestartReason = "watchdog.liveness-stalled";
+const outcome: EconomicsOutcome = "restart-past-budget";
+
+// @ts-expect-error — a literal outside the closed sourced-signal set is rejected.
+const unknownSourced: EconomicsSourcedSignalKind = "cpu";
+
+// @ts-expect-error — a literal outside the closed restart-reason set is rejected.
+const unknownReason: EconomicsRestartReason = "operator-said-so";
+
+const widened: string = "heartbeat-age";
+// @ts-expect-error — a widened string is not assignable to the closed union.
+const widenedSourced: EconomicsSourcedSignalKind = widened;
+
+// @ts-expect-error — `cpu` is not a delivered liveness kind and never a sourced kind.
+const cpuLiveness: EconomicsSourcedSignalKind = "cpu";
+
+// @ts-expect-error — CPU-shaped keys are not assignable into the signal shape.
+const cpuSignals: WatchdogSignals = { cpu: 0.9 };
+
+const recordWithoutRepay: EconomicsRestartRecord = {
+  schemaId: ECONOMICS_RESTART_SCHEMA_ID,
+  workItemRef: "GH-235",
+  runId: "run-1",
+  sessionId: "ses_fixture_1",
+  ordinal: 1,
+  reason: restartReason,
+  recordedAt: "2026-11-07T00:00:00Z",
+};
+
+// @ts-expect-error — exact optional modelling: an unobserved figure is absent, not undefined.
+const recordWithExplicitUndefined: EconomicsRestartRecord = {
+  schemaId: ECONOMICS_RESTART_SCHEMA_ID,
+  workItemRef: "GH-235",
+  runId: "run-1",
+  sessionId: "ses_fixture_1",
+  ordinal: 1,
+  reason: restartReason,
+  repayTokens: undefined,
+  recordedAt: "2026-11-07T00:00:00Z",
+};
+
+const reportWithoutSourced: HarnessLivenessReport = { readings: [] };
+
+// @ts-expect-error — exact optional modelling: the sourced member is absent, not explicit undefined.
+const reportWithExplicitUndefined: HarnessLivenessReport = {
+  readings: [],
+  sourcedSignals: undefined,
+};
+
+const view: EconomicsView = {
+  restarts: 0,
+  resumeAmplification: null,
+  restartHistory: [],
+  amplificationFlag: null,
+  warnings: [],
+};
+
+const flaggedView: EconomicsView = { ...view, amplificationFlag: RESUME_AMPLIFICATION_LOOP_FLAG };
+
+// @ts-expect-error — the view field names are literal-checked.
+const wrongView: EconomicsView = { ...view, amplification: 1 };
+
+const sourcedKinds: readonly string[] = ECONOMICS_SOURCED_SIGNAL_KINDS;
+
+export {
+  cpuLiveness,
+  cpuSignals,
+  flaggedView,
+  outcome,
+  recordWithExplicitUndefined,
+  recordWithoutRepay,
+  reportWithExplicitUndefined,
+  reportWithoutSourced,
+  sourcedKind,
+  sourcedKinds,
+  unknownReason,
+  unknownSourced,
+  view,
+  widenedSourced,
+  wrongView,
+};
+
+// --- Phase 2: record-payload optional-field modelling and closed unions. ---
+
+const warningKind: EconomicsWarningKind = "missing-repay-tokens";
+
+// @ts-expect-error — a warning kind outside the closed vocabulary is rejected.
+const unknownWarning: EconomicsWarningKind = "missing-everything";
+
+const flag: EconomicsAmplificationFlag | null = RESUME_AMPLIFICATION_LOOP_FLAG;
+
+// @ts-expect-error — the flag name is literal-checked; free-form strings are rejected.
+const freeFormFlag: EconomicsAmplificationFlag = "loop";
+
+const recordWithObservedNull: EconomicsRestartRecord = {
+  ...recordWithoutRepay,
+  observedUniqueProgressTokens: null,
+};
+
+const historyEntry: EconomicsRestartHistoryEntry = {
+  ordinal: 1,
+  reason: restartReason,
+  sessionId: "ses_fixture_1",
+  recordedAt: "2026-11-07T00:00:00Z",
+};
+
+const terminal: EconomicsExhaustionRecord = {
+  schemaId: "delivery.economics.exhaustion.v1",
+  workItemRef: "GH-235",
+  runId: "run-1",
+  reason: "dispatch.restart-budget-exceeded",
+  restarts: 3,
+  historyRef: "economics/GH-235",
+  terminal: true,
+  options: ["requeue-fresh-budget", "park-owner-review"],
+  recordedAt: "2026-11-07T00:00:00Z",
+};
+
+// @ts-expect-error — the terminal marker is the literal `true`.
+const nonTerminal: EconomicsExhaustionRecord = { ...terminal, terminal: false };
+
+export {
+  flag,
+  freeFormFlag,
+  historyEntry,
+  nonTerminal,
+  recordWithObservedNull,
+  terminal,
+  unknownWarning,
+  warningKind,
+};
+
+// --- Phase 8 remediation: one run identity source (review F-6). ---
+
+const resumeInput: EconomicsResumeInput = {
+  workItemRef: "GH-235",
+  reason: restartReason,
+  evidence: { sessionId: "ses_fixture_1", treeRoot: "ses_fixture_1" },
+};
+
+const inputWithRunId: EconomicsResumeInput = {
+  workItemRef: "GH-235",
+  // @ts-expect-error — the run identity lives only on the composition deps, never the input.
+  runId: "run-1",
+  reason: restartReason,
+  evidence: { sessionId: "ses_fixture_1", treeRoot: "ses_fixture_1" },
+};
+
+const refuseWithRawAppendError: EconomicsResumeDecision = {
+  outcome: "refuse",
+  code: "dispatch.restart-budget-exceeded",
+  exitCode: 1,
+  reason: "budget exhausted",
+  corpus: "reason=dispatch.restart-budget-exceeded",
+  // @ts-expect-error — the additive durability guard names only a classified append failure.
+  terminalAppendError: "kaboom",
+};
+
+export { inputWithRunId, refuseWithRawAppendError, resumeInput };

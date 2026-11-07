@@ -10,6 +10,11 @@
 
 import type { CredentialReference } from "./credentials.js";
 import type { DeliveryResultDerivationClass, DeliveryResultToken } from "./delivery-result.js";
+import type {
+  EconomicsSourcedSignalAbsenceReason,
+  EconomicsSourcedSignalKind,
+  EconomicsSourcedSignalReading,
+} from "./economics.js";
 import type { HarnessTruncation } from "./harness-telemetry.js";
 import type { Result } from "./index.js";
 
@@ -82,6 +87,16 @@ export type HarnessCapabilityDeclaration = {
   readonly lifecycleCapabilities: readonly HarnessLifecycleCapability[];
   readonly livenessSources: readonly HarnessLivenessKind[];
   readonly declaredGaps: readonly HarnessCapabilityGap[];
+  /** Additive sourced-signal sources (GH-235 D-3, DEC-8); the liveness kinds are untouched. */
+  readonly sourcedSignalSources?: readonly EconomicsSourcedSignalKind[];
+  /** Declared gaps for a sourced signal kind (GH-235 NG-7); declared gaps stay gaps. */
+  readonly sourcedSignalGaps?: readonly HarnessSourcedSignalGap[];
+};
+
+/** One declared sourced-signal gap: the sourced kind plus a closed reason. */
+export type HarnessSourcedSignalGap = {
+  readonly capability: EconomicsSourcedSignalKind;
+  readonly reason: HarnessGapReason;
 };
 
 /** The closed version-probe warning vocabulary. */
@@ -210,9 +225,24 @@ export type HarnessLivenessAbsentReading = {
 
 export type HarnessLivenessReading = HarnessLivenessSourcedReading | HarnessLivenessAbsentReading;
 
+/**
+ * The adapter-sourced liveness facts seam (GH-235 D-3): the delivered liveness
+ * readings plus the additive sourced-signal facts, both read-only.
+ */
+export type HarnessLivenessFacts = {
+  readonly readings: readonly HarnessLivenessSourcedReading[];
+  readonly sourcedSignals?: readonly EconomicsSourcedSignalReading[];
+};
+
 /** The neutral liveness report: one entry per closed kind, in closed order. */
 export type HarnessLivenessReport = {
   readonly readings: readonly HarnessLivenessReading[];
+  /**
+   * Additive sourced signals carried beside the unchanged exact-three readings
+   * (GH-235 D-3, DEC-8): one entry per sourced-signal kind, never a re-typed
+   * delivered kind and never a zero/false/empty value.
+   */
+  readonly sourcedSignals?: readonly EconomicsSourcedSignalReading[];
 };
 
 /** A session handle: identity and attribution only (no token, no raw payload). */
@@ -320,6 +350,11 @@ export type HarnessClassifier = (evidence: HarnessEvidence) => HarnessClassifica
 export type HarnessLivenessAssembler = (input: {
   readonly sourced: readonly HarnessLivenessSourcedReading[];
   readonly absenceReasons?: Partial<Record<HarnessLivenessKind, HarnessLivenessAbsenceReason>>;
+  /** Additive sourced-signal facts; absent kinds get an explicit closed absence. */
+  readonly sourcedSignalFacts?: readonly EconomicsSourcedSignalReading[];
+  readonly sourcedSignalAbsenceReasons?: Partial<
+    Record<EconomicsSourcedSignalKind, EconomicsSourcedSignalAbsenceReason>
+  >;
 }) => HarnessLivenessReport;
 
 /**

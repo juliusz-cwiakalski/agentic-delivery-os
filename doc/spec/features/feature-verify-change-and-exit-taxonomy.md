@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The `verify` command family: ledger-only `verify change` verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, the verify.gates.* and verify.deploy.* rows of the sibling verify surfaces, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
 links:
-  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225", "GH-233"]
+  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225", "GH-233", "GH-235"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
@@ -108,13 +108,13 @@ The eleven tokens are the bash-era delivery summary vocabulary, adopted verbatim
 | `pr-open-unverified` | Open PR but its URL could not be resolved | Reserved: PR evidence | none | `success` | `0` |
 | `failed` | Classification or delivery failure | Document-conformance failure, non-platform-category `state.*` failure, or handler grammar rejection | the pinned identity | `user-validation` | `1` |
 | `finished` | Complete artifact ledger | All required phases of the declared variant completed after overlay | success envelope | `success` | `0` |
-| `max-restarts` | Restart budget exhausted | Reserved: dispatch/session evidence | none | `user-validation` | `1` |
+| `max-restarts` | Dispatch/session restart or invocation-time bound exhausted | Reserved: dispatch/session evidence; a harness timeout projects here | none | `user-validation` | `1` |
 | `state-unverified` | Delivery state could not be verified | Platform-category registry/store failure | the specific `state.*` identity | `platform-provider` | `2` |
 | `partial` | Incomplete artifact ledger | Required phase absent after overlay, or declared but not completed | `lint.phases.incomplete` or `verify.ledger.incomplete` | `user-validation` | `1` |
 | `noop-lane-permission` | Headless permission auto-reject or harness spawn refusal, no work landed | Reserved: dispatch/session and lane-log evidence | none | `user-validation` | `1` |
 | `noop-lane-nothing-to-do` | Nothing was attempted in the lane | Reserved: tracker/dispatch evidence | none | `success` | `0` |
 
-Pinned derivation mapping: `verify` derives `finished`, `partial`, `failed`, and `state-unverified`; `tracker-pr` derives `merged`, `blocked`, `pr-open`, and `pr-open-unverified`; `dispatch-session` derives `max-restarts`, `noop-lane-permission`, and `noop-lane-nothing-to-do`. Reserving a token never makes it reachable, so a tracker-derived success cannot leak into a ledger-only verdict.
+Pinned derivation mapping: `verify` derives `finished`, `partial`, `failed`, and `state-unverified`; `tracker-pr` derives `merged`, `blocked`, `pr-open`, and `pr-open-unverified`; `dispatch-session` derives `max-restarts`, `noop-lane-permission`, and `noop-lane-nothing-to-do`. Reserving a token never makes it reachable, so a tracker-derived success cannot leak into a ledger-only verdict. The session lifecycle economics restart budget is a separate classified refusal (`dispatch.restart-budget-exceeded`), not this token; `max-restarts` is derived by a dispatch/session bound such as a harness timeout.
 
 At the adapter/port boundary, the harness-neutral classifier projects its closed outcomes onto existing taxonomy rows: a spawn refusal projects `noop-lane-permission`, a timeout projects `max-restarts`, completion projects `finished` (or `partial` on a tool failure), premature end projects `partial`, and a failure projects `failed`. These are the shared taxonomy tokens; there is no dispatch-session-class completion token. The projection is lossy on the token alone: premature end and a completed run with a reported tool failure both project `partial`, so the harness outcome field is authoritative for disambiguation. From the harness path, `noop-lane-permission` means the spawn was refused before a session existed, not a lane-permission policy verdict. The mapping is declared once in the harness contracts and the derivation class is read from this taxonomy; adapters normalize evidence and never classify. The harness surface is described in [Harness Adapters](feature-harness-adapters.md).
 
@@ -325,6 +325,7 @@ See also:
 - [PM-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) — schema, variants, lint identities, registry and fold.
 - [State layer](feature-state-layer.md) — verified reads, fences, torn-state detection, and derived documents.
 - [Harness adapters](feature-harness-adapters.md) — the harness-neutral classifier that projects onto the `verify` and `dispatch-session` taxonomy rows at the adapter/port boundary.
+- [Session lifecycle economics](feature-session-lifecycle-economics.md) — the restart-budget refusal identity and the economics outcome/identity/exit matrix, distinct from the `max-restarts` token.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — package tiers, boundary matrices, and the aggregate check.
 - [Change lifecycle guide](../../guides/change-lifecycle.md) — canonical eleven phases and the variant rule.
 - [TDR-0005 — Delivery Result Enum and CLI Exit Taxonomy](../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md) — token parity, projection binding, and the `state-unverified` divergence.

@@ -1,0 +1,4 @@
+stdout:
+stderr:
+example-product: watchdog.signals-absent
+summary: lane lane-1: no declared progress-signal sources are available; the answer is unknown

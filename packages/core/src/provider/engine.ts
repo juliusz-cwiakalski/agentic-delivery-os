@@ -10,6 +10,8 @@ import type {
   CombinedProviderCondition,
   CredentialPort,
   CredentialReference,
+  ProfileProbePort,
+  ProfileProviderAvailability,
   ProviderAnnouncementRecord,
   ProviderChain,
   ProviderClock,
@@ -53,6 +55,37 @@ export type ProviderEngineDependencies = {
   readonly newFenceToken?: () => string;
 };
 
+/**
+ * The profile-probe seam over the engine v1 condition vocabulary (GH-234 F-4).
+ *
+ * The caller supplies the availability verdict per provider (the engine's
+ * condition evaluation or a fixed fact set); memoization per resolution pass is
+ * the selection engine's responsibility, so a shared provider is probed once.
+ */
+export const createProfileProbePort = (
+  evaluate: (providerName: string) => ProfileProviderAvailability,
+): ProfileProbePort => ({ probe: evaluate });
+
+/** A fixed-facts probe seam for replay/idempotence suites. */
+export const createProviderFactsProbe = (
+  facts: Readonly<Record<string, ProfileProviderAvailability>>,
+): ProfileProbePort =>
+  createProfileProbePort(
+    (providerName) =>
+      facts[providerName] ?? {
+        available: false,
+        condition: "provider-outage",
+        blockers: [
+          {
+            kind: "condition",
+            value: "provider-outage",
+            detail: `provider ${providerName} has no supplied availability fact`,
+          },
+        ],
+        source: `provider ${providerName}: no fact`,
+      },
+  );
+
 export type ProviderEngine = {
   readonly resolve: (input: ProviderResolveInput) => Promise<ProviderResolveResult>;
   readonly quota: (input: ProviderQuotaInput) => Promise<ProviderEngineResult>;
@@ -62,9 +95,21 @@ export type ProviderEngine = {
   }) => StateResult<readonly ProviderParkView[]>;
 };
 
+/**
+ * A named profile's provider scope for `provider resolve --profile` (GH-234
+ * F-9, Appendix C): resolution candidates are restricted to the named
+ * profile's providers while the delivered envelope shape stays unchanged.
+ */
+export type ProviderResolveProfileScope = {
+  readonly name: string;
+  readonly providers: readonly string[];
+};
+
 export type ProviderResolveInput = {
   readonly config: ProviderConfiguration;
   readonly chainName?: string;
+  /** Named-profile context; restricts chain candidates to its providers. */
+  readonly profile?: ProviderResolveProfileScope;
   readonly persist?: boolean;
 };
 
@@ -311,7 +356,18 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
       }
       const selection = selectProviderChain(input.config, input.chainName);
       if (!selection.ok) return failure(selection.error.code, selection.error.detail);
-      const chain: ProviderChain = selection.chain;
+      let chain: ProviderChain = selection.chain;
+      if (input.profile !== undefined) {
+        const allowed = new Set(input.profile.providers);
+        const entries = chain.entries.filter((entry) => allowed.has(entry));
+        if (entries.length === 0) {
+          return failure(
+            "provider.chain.empty",
+            `profile ${input.profile.name} declares no provider in chain ${chain.name}`,
+          );
+        }
+        chain = { ...chain, entries };
+      }
       const nowMs = deps.clock.nowMs();
       const evaluations = await evaluateAll(input.config, chain.entries, nowMs);
       const states: Record<string, ChainEntryState> = {};
