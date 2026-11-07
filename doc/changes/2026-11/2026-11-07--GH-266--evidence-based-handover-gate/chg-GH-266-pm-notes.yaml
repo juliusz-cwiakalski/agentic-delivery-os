@@ -4,7 +4,7 @@ delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-07T22:52:00Z", completed: "2026-11-07T23:05:00Z" }
   specification: { started: "2026-11-07T23:06:00Z", completed: "2026-11-07T23:24:00Z" }
-  test_planning: { started: null, completed: null }
+  test_planning: { started: "2026-11-07T23:25:00Z", completed: "2026-11-07T23:41:00Z" }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
@@ -30,6 +30,12 @@ notes:
   - text: "Intake state: GH-266 open with label `change` only, zero comments; no PR (open or closed) for docs/GH-266/evidence-based-handover-gate. Branch exists locally, worktree clean, zero commits ahead of origin/main-tools (f87ec185) — a fresh start, so no resume merge and no review threads to process."
     type: "info"
     date: "2026-11-07"
+  - text: "Test planning phase complete: chg-GH-266-test-plan.md v1.0 authored (17 TCs TC-GATE-001..017, 15 executable procedure blocks P0-P14, 13/13 ACs covered exactly once, no orphan TCs, 3 declared gaps). Every procedure was executed against the pre-change tree, so the plan's expected failures are falsifiable rather than asserted: P2/P3 detect the old definition, P5 finds no amendment, P6 finds two unpointed forward statements, P9's set comparison yields 11/0/0 on a synthetic amended paragraph and 10/missing-1 when `pr-open-unverified` is dropped, P11/P12 pass on base (doc guard exit 0, scope clean)."
+    type: "info"
+    date: "2026-11-07"
+  - text: "Test-plan judgment call surfaced for the DoR gate: TC-GATE-010 requires the eleven classes to be backticked inside one paragraph that also contains `noop-lane-nothing-to-do`, so set comparison against DELIVERY_RESULT_TOKENS is mechanical. That constrains the delivery prose and is therefore recorded in the plan rather than discovered at review."
+    type: "info"
+    date: "2026-11-07"
   - text: "Scope review against current system spec: no doc/spec/** feature spec describes dispatch or the handover gate yet (M1-S9/GH-239 is undelivered; feature-scheduling-engine.md explicitly excludes dispatch and handover, and feature-verify-change-and-exit-taxonomy.md owns the TDR-0005 token vocabulary). The amendment is therefore planning-truth only and touches no delivered system contract."
     type: "info"
     date: "2026-11-07"
@@ -47,4 +53,7 @@ notes:
     date: "2026-11-07"
   - text: "Specification phase complete: chg-GH-266-spec.md v1.0 authored (5 F, 13 ACs, 6 NFRs, 9 DECs, 8 RSKs, 5 NGs, 0 open questions, §17.1 Definition of Done). Shape decisions: the amended M1-S9 heading stays byte-identical (anchor stability); the AC sentence 'refused while the clean window is unmet and offered when met' stays as written while the definition of `clean` changes; the status amendment names the declared residual rather than hiding it; class coverage is bound to DELIVERY_RESULT_TOKENS as a set comparison so the eleven-token enumeration is mechanically checkable."
     type: "info"
+    date: "2026-11-07"
+  - text: "RETRO: appending the test-planning notes used a non-unique two-line anchor (`type`/`date`) with replace-all, so the same two notes were inserted four times, and a follow-up repair edit then truncated the specification-phase note mid-sentence. Both defects were caught by reading the file back and by the committer's YAML validation before any commit existed, so no bad state reached history. Improvement: append notes at end of file, and validate the YAML after every notes edit."
+    type: "retro"
     date: "2026-11-07"
