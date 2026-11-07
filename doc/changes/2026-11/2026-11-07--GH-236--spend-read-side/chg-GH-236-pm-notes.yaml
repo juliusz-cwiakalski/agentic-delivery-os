@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-07T03:40:00Z", completed: "2026-11-07T04:30:00Z" }
   delivery_planning: { started: "2026-11-07T04:35:00Z", completed: "2026-11-07T04:55:00Z" }
   dor_check: { started: "2026-11-07T05:00:00Z", completed: "2026-11-07T05:20:00Z" }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-11-07T05:25:00Z", completed: "2026-11-07T06:30:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -90,6 +90,15 @@ notes:
     type: info
     date: "2026-11-07"
   - text: "Handoff additions for phase 7 (doc-syncer), from DoR nits: (a) F-1 — one additive DM-3 sentence pinning capture-outcome-only store behavior (ratio null, progressRun null, success, never telemetry-absent) in the spec itself; (b) nit-3 — spec front-matter links.related_decisions gains TDR-0011 (already recorded above); (c) nit-2 — test plan GAP-1 stale pointer may be tidied at next test-plan touch (optional, non-blocking); (d) nit-4 — PIN-3 window-start ordering clarification optional at next plan touch."
+    type: info
+    date: "2026-11-07"
+  - text: "Delivery completed: COMPLETED_ALL, 6/6 plan phases committed (P1 f1f70dee contracts+error row, P2 d5522f91 state read consumer, P3 2266310c domain fold+renderer, P4 a738c223 CLI+digest flip, P5 6f4425d1 imports guard+12-mutant meta-suite, P6 49cf8886 changeset+gates). Aggregate: TMPDIR convention pnpm check exit 0 (4728 pass/4 skip/0 fail, 483 files), depcruise clean, error-table-sync 84/84, doc-distribution no drift, changesets-group one fixed group of five, plan validate still readyForDevelopment=true. Coder supplied per-TC evidence with exact test names for all binding-AC TCs (TC-003/006/014/015/016/017/032/034) — the GH-232 retro requirement, satisfied first time."
+    type: info
+    date: "2026-11-07"
+  - text: "Nine scope deviations reported, all justified under plan policy, flagged for reviewer: (1) classify.ts EXACT_CODE_DOMAIN_KINDS for exact-code-only spend kind; (2) error-table-sync recognizer admits two-segment spend.telemetry-absent; (3) content-inventory allowance map updates; (4) cli/commands/status.ts injection seam (plan omitted the file); (5) mcp status readSpend mirror for CLI/MCP digest parity; (6) digest-flip fixture churn per RSK-4 (corpus+goldens regenerated); (7) spend fixtures extended across P3/P4 (file in P2 scope); (8) PIN-3 EXTENDED: SPEND_TRUNCATION_TARGETS gains events — without the events tail a long restart loop breaches the 64 KiB NFR-1 bound (observed 82 KB); TC-021 permits it with marker declaring 'events N omitted'; totals/restarts/ratio/progressRun never truncated — REVIEWER must verify this stays within PIN-3's intent; (9) feature-result-contract.md documented-row companion (the one permitted Phase-1 doc/spec touch)."
+    type: info
+    date: "2026-11-07"
+  - text: "Pending into phase 7: plan task 6.3 / TC-SPEND-031 documentation half — feature-spend.md absent, feature-status-digest.md still declares spend not-delivered (retired pinned line present); code-side half passes. This is the declared phase-7 doc-syncer output, not a delivery failure."
     type: info
     date: "2026-11-07"
   - text: "Specification checkpoint committed as c8262434 (message-only amend f8d24f1f->c8262434 to fix commitlint body-max-line-length; tree hash unchanged). Retro: keep commit bodies pre-wrapped at <=100 chars when briefing @committer; CI commitlint is the authority, the local hook is warn-only."
