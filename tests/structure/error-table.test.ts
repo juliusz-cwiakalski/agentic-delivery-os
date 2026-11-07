@@ -59,6 +59,10 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "watchdog.checkout-dirty",
   "watchdog.checkout-non-base",
   "watchdog.signals-absent",
+  "blockers.invalid-type",
+  "blockers.unknown-id",
+  "blockers.credential-value-rejected",
+  "blockers.audience-mismatch",
   // GH-235 pins the sourced-stall and dispatch economics identities exactly.
   "watchdog.liveness-stalled",
   "dispatch.restart-budget-exceeded",
@@ -748,7 +752,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `doctor`, `merge`, `harness`, `retro`, `spend`, and `dispatch`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, `spend`, and `dispatch`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -764,7 +768,9 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "doctor")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
-    expect(entries).toHaveLength(95);
+    expect(entries.filter((entry) => entry.domainKind === "blockers")).toHaveLength(4);
+    expect(entries.filter((entry) => entry.domainKind === "spend")).toHaveLength(1);
+    expect(entries).toHaveLength(99);
   });
 });
 
@@ -840,7 +846,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(95);
+    expect(entries).toHaveLength(99);
     expect(db).toHaveLength(4);
   });
 
@@ -1065,7 +1071,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(95);
+    expect(entries).toHaveLength(99);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1286,6 +1292,72 @@ describe("TC-BRIEF-013 brief adds no error identity", () => {
   });
 });
 
+const BLOCKERS_ROWS = [
+  "blockers.invalid-type",
+  "blockers.unknown-id",
+  "blockers.credential-value-rejected",
+  "blockers.audience-mismatch",
+] as const;
+
+describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", () => {
+  test("exactly one blockers kind and exactly four rows", () => {
+    expect(DOMAIN_KINDS.filter((kind) => kind === "blockers")).toHaveLength(1);
+    const blockers = entries.filter((entry) => entry.domainKind === "blockers");
+    expect(blockers).toHaveLength(4);
+    expect(blockers.map((entry) => entry.code)).toEqual([...BLOCKERS_ROWS]);
+    for (const entry of blockers) {
+      expect(entry).toMatchObject({
+        domainKind: "blockers",
+        category: "user",
+        retryable: false,
+        consequence: "not_landed",
+        projectionClass: "user-validation",
+      });
+      expect(entry.remediationHint.length).toBeGreaterThan(0);
+      expect(entry.summary?.length ?? 0).toBeGreaterThan(0);
+    }
+  });
+
+  test("every blockers code resolves and classifies; near-misses do not", () => {
+    for (const code of BLOCKERS_ROWS) {
+      const resolved = resolveAppErrorCode(code);
+      expect(resolved.ok).toBe(true);
+      if (resolved.ok) expect(resolved.entry.code).toBe(code);
+      expect(classifyThrown({ kind: "blockers", code }).code).toBe(code);
+      expect(isValidCode(code)).toBe(true);
+    }
+    for (const nearMiss of [
+      "blockers.invalid_type",
+      "blockers.unknown",
+      "blocker.invalid-type",
+      "blockers.extra-code",
+    ]) {
+      expect(isValidCode(nearMiss), nearMiss).toBe(false);
+      expect(resolveAppErrorCode(nearMiss).ok, nearMiss).toBe(false);
+    }
+    expect(resolveAppErrorCode("blockers.invalid-type.extra").ok).toBe(false);
+    expect(() => classifyDomainKind("blockers")).toThrow();
+  });
+
+  test("the documented table carries the four blockers rows exactly once", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const entry of entries.filter((candidate) => candidate.domainKind === "blockers")) {
+      const row = `| ${entry.code} | blockers | ${entry.category} | ${String(entry.retryable)} | ${entry.consequence} | ${entry.remediationHint} | ${entry.projectionClass} | ${entry.summary ?? ""} |`;
+      expect(doc.split(row).length - 1, entry.code).toBe(1);
+    }
+    expect(doc).toContain("The `blockers` kind carries exactly the four typed-question-channel");
+  });
+
+  test("the reserved allowlist is the four exact blockers codes, not a wildcard", () => {
+    for (const code of BLOCKERS_ROWS) expect(RESERVED_TWO_SEGMENT_CODES.has(code)).toBe(true);
+    const blockersReserved = [...RESERVED_TWO_SEGMENT_CODES].filter((code) =>
+      code.startsWith("blockers."),
+    );
+    expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(22);
+  });
+});
+
 describe("TC-DOCTOR-020 the doctor kind has exactly one row and leaves the table intact", () => {
   const DOCTOR_HINT = "Resolve each named failing check using its fix hint, then re-run doctor.";
   const DOCTOR_SUMMARY = "One or more wiring checks failed.";
@@ -1336,7 +1408,7 @@ describe("TC-DOCTOR-020 the doctor kind has exactly one row and leaves the table
     const row = `| doctor.check.failed | doctor | user | false | not_landed | ${DOCTOR_HINT} | user-validation | ${DOCTOR_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     expect(doc).toContain(
-      "`status`, `doctor`, `merge`, `harness`, `retro`, `dispatch`, and `spend`",
+      "`status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, `spend`, and `dispatch`",
     );
   });
 
@@ -1574,7 +1646,7 @@ describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(95);
+    expect(entries).toHaveLength(99);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1645,7 +1717,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(94);
+    expect(delivered).toHaveLength(98);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1664,7 +1736,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("95 identities");
+    expect(doc).toContain("99 identities");
   });
 
   test("the documented table is complete in both directions", () => {

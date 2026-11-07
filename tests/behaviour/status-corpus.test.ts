@@ -78,8 +78,9 @@ const orderedIds = (section: StatusSection): readonly string[] => {
     case "ready-to-merge":
       return (section.items ?? []).map((item) => ("ref" in item ? item.ref : "(unknown)"));
     case "spend":
-    case "blockers":
       return [];
+    case "typed-questions":
+      return (section.questions ?? []).map((question) => question.id);
     default:
       return [];
   }

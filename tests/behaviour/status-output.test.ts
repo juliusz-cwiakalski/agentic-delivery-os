@@ -227,18 +227,7 @@ describe("TC-STATUS-005 machine envelope and 64 KiB bound", () => {
       "parked-work": ["counts", "evidence", "id", "items", "source", "state", "title", "truncated"],
       "ready-to-merge": ["counts", "evidence", "id", "items", "state", "title", "truncated"],
       spend: ["counts", "evidence", "id", "items", "note", "spend", "state", "title", "truncated"],
-      blockers: [
-        "capability",
-        "counts",
-        "evidence",
-        "expectedStory",
-        "id",
-        "items",
-        "note",
-        "state",
-        "title",
-        "truncated",
-      ],
+      "typed-questions": ["counts", "evidence", "id", "questions", "state", "title", "truncated"],
     };
     for (const [id, keys] of Object.entries(expectedKeys)) {
       expect(Object.keys(section(data, id)).sort()).toEqual([...keys].sort());
@@ -302,7 +291,7 @@ describe("TC-STATUS-006 human digest grammar and bounds", () => {
     expect(lines.some((line) => line.startsWith("parked"))).toBe(true);
     expect(lines.some((line) => line.startsWith("ready"))).toBe(true);
     expect(lines.some((line) => line.startsWith("spend"))).toBe(true);
-    expect(lines.some((line) => line.startsWith("blockers"))).toBe(true);
+    expect(lines.some((line) => line.startsWith("questions"))).toBe(true);
     expect(lines.some((line) => line.startsWith("attention"))).toBe(true);
     expect(lines.length).toBeLessThanOrEqual(32);
     expect(Buffer.byteLength(run.stdout, "utf8")).toBeLessThanOrEqual(6144);
@@ -554,7 +543,7 @@ describe("TC-ATT-026 extended human grammar", () => {
       "parked",
       "ready",
       "spend",
-      "blockers",
+      "questions",
       "attention",
     ]);
   });
@@ -586,11 +575,11 @@ describe("TC-ATT-026 extended human grammar", () => {
     expect(human).toContain("parked     observed  0 parked changes (git-ignored local state)");
   });
 
-  test("the ready, spend, blockers, and attention lines are pinned", () => {
+  test("the ready, spend, questions, and attention lines are pinned", () => {
     const human = renderStatusHuman(aggregateStatus(baseFacts()), SYNTHETIC_BRAND);
     expect(human).toContain("ready      observed  0 ready-to-merge (merge-ready 0)");
     expect(human).toContain("spend      observed  no captured telemetry (absence of capture)");
-    expect(human).toContain("blockers   not-delivered  typed blockers arrive with M1-S16");
+    expect(human).toContain("questions  observed  0 open");
     expect(human).toContain("attention  0 findings ()");
   });
 
@@ -751,7 +740,7 @@ describe("TC-ATT-029 machine bound with every surface at cap", () => {
     expect((section(data, "providers").entries as unknown[]).length).toBe(8);
     expect((section(data, "parked-work").items as unknown[]).length).toBe(8);
     expect((section(data, "spend").items as unknown[]).length).toBe(0);
-    expect((section(data, "blockers").items as unknown[]).length).toBe(0);
+    expect((section(data, "typed-questions").questions as unknown[]).length).toBe(0);
   });
 
   test("the corpus carries the same all-caps case name", () => {

@@ -1,6 +1,6 @@
 example-product brief  owner-placeholder/project-placeholder
 ready-to-merge  observed  none approved
-blocker-questions  typed-questions (M1-S16)  not-delivered
+blocker-questions  observed (observed-empty)  none
 owner-gate-ages  observed  GH-100 1d, GH-101 1d, GH-102 1d, GH-103 1d
 gate-sla-states  M1-S5  not-delivered
 tracker  observed  total 32 (8 unknown) +16 more

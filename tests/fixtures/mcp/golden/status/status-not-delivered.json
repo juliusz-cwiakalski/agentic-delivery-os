@@ -321,7 +321,6 @@
       "truncated": false
     },
     {
-      "capability": "typed-blockers",
       "counts": {
         "observed": 0,
         "omitted": 0,
@@ -330,21 +329,19 @@
       },
       "evidence": {
         "reasons": [
-          "engine-not-delivered"
+          "observed-empty"
         ],
         "sources": [
           {
-            "outcome": "not-delivered",
-            "source": "queue-engine"
+            "outcome": "observed-empty",
+            "source": "blockers"
           }
         ]
       },
-      "expectedStory": "M1-S16",
-      "id": "blockers",
-      "items": [],
-      "note": "typed blockers arrive with M1-S16",
-      "state": "not-delivered",
-      "title": "Blockers",
+      "id": "typed-questions",
+      "questions": [],
+      "state": "observed",
+      "title": "Typed questions",
       "truncated": false
     }
   ],
@@ -352,9 +349,9 @@
     "actionable": 1,
     "degraded": 1,
     "findingsTotal": 0,
-    "notDelivered": 2,
-    "observed": 5,
-    "placeholderSectionCount": 1,
+    "notDelivered": 1,
+    "observed": 6,
+    "placeholderSectionCount": 0,
     "sections": 9,
     "unavailable": 1,
     "unknown": 0

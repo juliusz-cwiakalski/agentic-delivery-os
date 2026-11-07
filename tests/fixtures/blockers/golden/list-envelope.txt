@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-blockers-golden",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "schemaVersion": "delivery.blockers.v1",
+    "questions": [
+      {
+        "id": "q-golden-1",
+        "type": "decision-needed",
+        "audience": "coordinator",
+        "lane": "L5",
+        "ref": null,
+        "question": "closeout residue sweep: full or lite?",
+        "options": [
+          "full",
+          "lite+escalation"
+        ],
+        "askedAt": "2026-11-06T10:00:00Z",
+        "age": 7200000,
+        "rank": 1,
+        "status": "open"
+      },
+      {
+        "id": "q-golden-2",
+        "type": "external-wait",
+        "audience": "coordinator",
+        "lane": "L9",
+        "ref": null,
+        "question": "awaiting vendor confirmation",
+        "options": [],
+        "askedAt": "2026-11-06T11:00:00Z",
+        "age": 3600000,
+        "rank": 2,
+        "status": "open"
+      },
+      {
+        "id": "q-golden-3",
+        "type": "spec-ambiguity",
+        "audience": "owner",
+        "lane": "L2",
+        "ref": null,
+        "question": "which acceptance criterion applies?",
+        "options": [],
+        "askedAt": "2026-11-06T09:00:00Z",
+        "age": 10800000,
+        "status": "answered",
+        "answer": {
+          "text": "criterion two",
+          "answeringAudience": "owner",
+          "answeredAt": "2026-11-06T12:00:00Z"
+        }
+      }
+    ],
+    "truncated": false,
+    "omitted": 0
+  }
+}

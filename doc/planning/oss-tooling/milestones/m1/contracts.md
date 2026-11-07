@@ -175,17 +175,17 @@ exit-code projection; secret redaction; bounded output.
   daemon story M1-S18, not delivered by M1-S10.
 - Outputs (delivered expansion): nine fixed sections in order (tracker,
   changes and PRs, CI, lanes or queue, providers, parked work,
-  ready-to-merge, spend, blockers); grouped, ranked findings with stable
+  ready-to-merge, spend, typed-questions); grouped, ranked findings with stable
   registry codes; tri-state hygiene assertions (epic membership, story
   points, in-sprint); owner-gate ages; parked items with conditions; a
   merge-ready-first ready-to-merge action list; the declared lane
   attention-state vocabulary while the lanes section reports its existing
   not-delivered gap; the state-log-fed spend section (spend read side,
-  M1-S19); typed blockers (until M1-S16) as a named not-delivered
-  placeholder; partial collection reported in-band.
+  M1-S19); the state-sourced typed-questions section over the verified
+  blocker ledger; partial collection reported in-band.
 - Scenarios: four red CI findings on the primary branch render as one
   grouped job; every finding carries a finding code; ready-to-merge ranks
-  as an action list; blockers surface within one collection cycle.
+  as an action list; typed questions surface within one collection cycle.
 
 ### `queue` (M1-S17, proposed)
 

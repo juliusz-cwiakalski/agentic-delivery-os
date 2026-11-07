@@ -54,7 +54,7 @@ describe("TC-STATUS-031 golden full-digest snapshot", () => {
       "parked",
       "ready",
       "spend",
-      "blockers",
+      "questions",
       "attention",
     ]) {
       expect(lines.some((line) => line.startsWith(label))).toBe(true);

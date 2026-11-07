@@ -445,7 +445,7 @@ describe("TC-ATT-035 expanded new-section negative controls", () => {
     const spend = digest.sections.find((entry) => entry.id === "spend");
     expect(spend?.state).toBe("observed");
     expect(spend?.spend).toMatchObject({ state: "observed", captured: false });
-    expect(digest.sections.find((entry) => entry.id === "blockers")?.state).toBe("not-delivered");
+    expect(digest.sections.find((entry) => entry.id === "typed-questions")?.state).toBe("observed");
   });
 
   test("the lane section never emits a lane state or the dormant code", () => {

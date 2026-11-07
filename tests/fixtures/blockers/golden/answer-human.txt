@@ -1,0 +1,1 @@
+example-product blockers answered q-golden-1  audience=coordinator  choice "lite+escalation"  applied=false  laneResume=boundary-note (sessionReentry=false, source=adapter-declared)

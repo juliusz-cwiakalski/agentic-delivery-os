@@ -77,6 +77,30 @@
       "text": "merge.gate..failed",
       "recognized": false,
       "resolves": false
+    },
+    {
+      "id": "blockers-invalid-underscore",
+      "text": "blockers.invalid_type",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "blockers-unknown-two-segment",
+      "text": "blockers.unknown",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "blocker-invalid-type",
+      "text": "blocker.invalid-type",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "blockers-extra-code",
+      "text": "blockers.extra-code",
+      "recognized": false,
+      "resolves": false
     }
   ]
 }

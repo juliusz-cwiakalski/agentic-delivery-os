@@ -208,21 +208,21 @@ export const briefSourceMutations: readonly BriefSourceMutation[] = [
     prohibited: "a placeholder surface renders as observed",
     mutate: (source) => replaceOnce(source, "  state: entry.state,", '  state: "observed",'),
     fires: (module) =>
-      surface(module.projectBrief(baseFacts()), "typed-questions")?.state !== "not-delivered",
+      surface(module.projectBrief(baseFacts()), "gate-sla-states")?.state !== "not-delivered",
   },
   {
     id: "fourth-catalog-entry",
     caseName: "brief-mutant-fourth-catalog-entry",
     ac: "AC-F3-1",
     intendedSuite: "tests/behaviour/brief-placeholders.test.ts (TC-BRIEF-009)",
-    prohibited: "the closed three-entry catalog grows a fourth entry",
+    prohibited: "the closed two-entry catalog grows a third entry",
     mutate: (source) =>
       replaceOnce(
         source,
         "    placeholders: BRIEF_PLACEHOLDER_CATALOG,",
         '    placeholders: [...BRIEF_PLACEHOLDER_CATALOG, { capability: "spend", owningStory: "M1-S19", state: "not-delivered" } as never],',
       ),
-    fires: (module) => module.projectBrief(baseFacts()).placeholders.length !== 3,
+    fires: (module) => module.projectBrief(baseFacts()).placeholders.length !== 2,
   },
   {
     id: "unavailability-throws",
