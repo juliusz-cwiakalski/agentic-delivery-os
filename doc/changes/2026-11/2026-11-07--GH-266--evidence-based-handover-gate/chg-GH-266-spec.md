@@ -3,6 +3,7 @@ change:
   ref: GH-266
   type: docs
   status: Proposed
+  version: 1.1
   slug: evidence-based-handover-gate
   title: "Amend the M1-S9 handover gate to an evidence-based clean bar"
   owners: [engineering]
@@ -23,14 +24,14 @@ change:
 
 ## 1. SUMMARY
 
-Amend the M1-S9 story entry in `doc/planning/oss-tooling/backlog.md` and record the amendment in `doc/planning/oss-tooling/status.md` so that `clean` for per-repository handover is defined by evidence rather than by elapsed time. The new bar is a conjunction: zero false-success incidents and zero unresolved divergences on the repository's pilot paths; dispatch evidence exercising every TDR-0005 result class on real tickets; a floor of at least 20 dispatches or at least 7 consecutive days, whichever comes first; and corroboration, where an engine-claimed success never counts without artifact and tracker truth. No source code, runtime contract, dependency, or other story acceptance criterion changes.
+Amend the M1-S9 story entry in `doc/planning/oss-tooling/backlog.md` and record the amendment in `doc/planning/oss-tooling/status.md` so that `clean` for per-repository handover is defined by evidence rather than by a calendar window alone. The new bar is a conjunction: zero false-success incidents and zero unresolved divergences on the repository's pilot paths; dispatch evidence exercising every TDR-0005 result class on real tickets; a floor of at least 20 dispatches or at least 7 consecutive days, whichever comes first; and corroboration, where an engine-claimed success never counts without artifact and tracker truth. No source code, runtime contract, dependency, or other story acceptance criterion changes.
 
 ## 2. CONTEXT
 
 ### 2.1 Current State Snapshot
 
 - `doc/planning/oss-tooling/backlog.md` is the canonical story scope. Its M1-S9 entry (GH-239, "Dispatch engine: dual-run evidence and per-repo handover") describes two gated phases: (a) evidence accrual during dual-run, and (b) per-repository handover, which additionally requires the resident daemon and the elapsed evidence window. The entry currently defines `clean` as "a rolling two-week window with zero false-success incidents and zero unresolved divergences on the repository's pilot paths". Its acceptance criteria state that handover is refused while the repository's clean window is unmet and offered when met, that handover is per repository and reversible, and that the bash entry points remain runnable as fallback with deprecation pointers.
-- `doc/planning/oss-tooling/status.md` is a dated snapshot, explicitly subordinate to the backlog. It restates the two-clean-weeks rule for M1-S9 in forward-looking text: in the paragraph following "Milestone exit: pending" (the dispatch handover sentence) and in item 3 of "Proposed next steps". It also contains a dated 2026-11-03 amendment section that restates per-engine two-clean-weeks evidence, and an M0 exit-criteria list whose first item requires "zero false-success incidents on pilot paths over two weeks".
+- `doc/planning/oss-tooling/status.md` is a dated snapshot, explicitly subordinate to the backlog. It restates the two-clean-weeks rule for M1-S9 in forward-looking text: in the paragraph following "Milestone exit: pending" (the dispatch handover sentence) and in item 3 of "Proposed next steps". It also contains a dated 2026-11-03 amendment section whose per-engine bullet states "Per-engine handover still requires its own two-clean-weeks evidence; that constraint is never waived.", and an M0 exit-criteria paragraph whose three statements are the pilot bullet (the dual-run pilot with zero false-success incidents on pilot paths over two weeks), the adoption bullet, and the decision-acceptance bullet. DEC-10 adjudicates the 2026-11-03 sentence as describing the same M1-S9 handover gate, whose two-clean-weeks formulation is superseded by CEO-D-073 rather than waived.
 - The authoritative delivery-result vocabulary is the eleven-token set in `packages/core/src/contracts/delivery-result.ts` (`DELIVERY_RESULT_TOKENS`), bound to TDR-0005: `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `failed`, `finished`, `max-restarts`, `state-unverified`, `partial`, `noop-lane-permission`, `noop-lane-nothing-to-do`. TDR-0005 makes token-level parity, not exit parity, the dual-run comparison unit and records `state-unverified` as the single known projection divergence.
 - No delivered system specification describes dispatch or the handover gate: M1-S9 is undelivered, `feature-scheduling-engine.md` explicitly excludes dispatch and handover, and the TDR-0005 vocabulary is owned by the verify/result-contract feature spec. The handover gate therefore exists only as planning truth.
 - Both planning files are outside the closed doc-distribution scope: the distribution guard enumerates `doc/guides`, `doc/templates`, and a fixed standalone list, not `doc/planning`. Neither `backlog.md` nor `status.md` carries an `ados_distribution` marker today; `backlog.md` carries a copyright/`source` frontmatter block and `status.md` has no frontmatter.
@@ -40,7 +41,7 @@ Amend the M1-S9 story entry in `doc/planning/oss-tooling/backlog.md` and record 
 - A rolling two-week calendar window measures elapsed time, not classifier exposure. Two weeks of light traffic passes the gate with almost no evidence, while heavy traffic across varied outcomes is held back for no safety benefit.
 - The gate does not require the classifier to have produced the outcomes it is supposed to distinguish, so a handover can occur after exercising only a narrow slice of the TDR-0005 vocabulary. Rare but important classes (`state-unverified`, `noop-lane-permission`, `max-restarts`) may never be observed before the engine becomes authoritative.
 - The current definition accepts "zero false-success incidents" as an absolute claim without saying how a success claim is established. An engine result token can be self-consistent and still contradict the pushed head, CI state, tracker state, or the recorded phase artifacts.
-- The owner has directed an evidence-based bar with early use and on-the-go tuning (CEO-D-073), and the planning truth must reflect that direction before M1-S9 is delivered and evaluated.
+- The owner has directed an evidence-based bar with early use and on-the-go tuning (CEO-D-073, recorded in GH-266 with directive date 2026-11-07), and the planning truth must reflect that direction before M1-S9 is delivered and evaluated.
 
 ## 3. PROBLEM STATEMENT
 
@@ -57,12 +58,13 @@ Because the M1-S9 handover gate is defined as an elapsed calendar window, the de
 
 | Metric | Target for this change |
 |---|---|
-| Planning files changed | Exactly 2 (`backlog.md`, `status.md`) |
-| Other files changed | 0 |
+| Product files changed outside `doc/changes/**` | Exactly 2 (`backlog.md`, `status.md`) |
+| Other product files changed outside `doc/changes/**` | 0 |
 | TDR-0005 classes enumerated in the amended M1-S9 `clean` definition | 11 of 11, 0 missing, 0 extra |
 | Documents stating the corroboration rule | 2 of 2 (backlog and status) |
-| Other-story acceptance criteria or dependencies modified | 0 |
-| Rewritten historical records (dated 2026-11-03 amendment, M0 exit criteria) | 0 |
+| Other-story acceptance criteria or dependencies modified (AC-F5-3) | 0 |
+| Directive citations resolvable in-repository (CEO-D-073 to GH-266 and 2026-11-07) | 1 of 1 |
+| Rewritten historical records (dated 2026-11-03 amendment, the three M0 exit-criteria statements) | 0 |
 | Doc guard failures | 0 |
 
 ### 4.2 Non-Goals
@@ -86,10 +88,10 @@ Because the M1-S9 handover gate is defined as an elapsed calendar window, the de
 ### 5.1 Capability Details
 
 - **F-1**: The M1-S9 entry's definition of `clean` becomes a conjunction of four conditions. (a) **Truth on pilot paths**: zero false-success incidents and zero unresolved divergences on the repository's pilot paths. (b) **Class coverage**: dispatch evidence exercising every TDR-0005 result class on real tickets. (c) **Exposure floor**: at least 20 dispatches or at least 7 consecutive days, whichever comes first. (d) **Corroboration**: engine-claimed success is never sufficient; a dispatch counts clean only when artifact and tracker truth agree. The text must state that "whichever comes first" binds only the floor in (c), so the floor alternates between dispatch count and elapsed days but never substitutes for class coverage, incident truth, or corroboration. The phrases "rolling two-week window" and "two clean weeks" must no longer define the M1-S9 gate. The story's existing acceptance criteria, its dependency line, its phase structure, and its heading remain as written.
-- **F-2**: `status.md` gains one new dated amendment section that attributes the change to CEO-D-073, states the composite bar and the corroboration rule, points to the M1-S9 backlog entry as canonical, and notes that secondary planning documents still carry the superseded calendar phrasing pending a follow-up. The forward-looking statements that restated the two-clean-weeks rule for M1-S9 gain short supersession pointers to the new section, without being rewritten as if they had never said it. The dated 2026-11-03 amendment bullets, the M0 exit-criteria list, and the M0 pilot evidence statements are untouched.
+- **F-2**: `status.md` gains one new dated amendment section that attributes the change to CEO-D-073 as recorded in GH-266 with directive date 2026-11-07, states the composite bar and the corroboration rule, says the gate is no longer defined by a calendar window alone, points to the M1-S9 backlog entry as canonical, and notes that secondary planning documents still carry the superseded calendar phrasing pending a follow-up. It also records the adjudication of the dated 2026-11-03 per-engine sentence: that sentence describes the same M1-S9 handover gate, and its two-clean-weeks formulation is superseded, not waived, because the replacement bar is stricter on coverage (all eleven classes plus corroboration) and replaces elapsed time with an exposure floor. The forward-looking statements that restated the two-clean-weeks rule for M1-S9 gain short supersession pointers to the new section, without being rewritten as if they had never said it. The dated 2026-11-03 bullets and the three M0 exit-criteria statements are untouched. The three statements are the pilot bullet (the dual-run pilot with zero false-success incidents on pilot paths over two weeks), the adoption bullet, and the decision-acceptance bullet, all in the paragraph beginning "The roadmap's M0 exit criteria (roadmap.md, Milestone 0 section) are:". The supersession pointer for the forward-looking dispatch-handover sentence is appended in the following paragraph, after those statements, so the lead-in sentence and the three bullets keep their exact bytes.
 - **F-3**: Both files state that a dispatch's result token is by itself insufficient. Corroboration is exactly the evidence set named by the owner directive: completed pm-notes phases, tracker state, and CI on the pushed head. The rule must be legible per outcome family: a success claim such as `merged` needs the pushed head, CI on that head, tracker state, and completed phases; a tracker-derived claim such as `pr-open`, `blocked`, or `pr-open-unverified` needs the tracker fact. The spec does not require a per-token table in the docs; it requires the insufficiency rule and the three evidence sources.
 - **F-4**: The enumerated classes are set-equal to `DELIVERY_RESULT_TOKENS`, which is the TDR-0005 vocabulary: `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `failed`, `finished`, `max-restarts`, `state-unverified`, `partial`, `noop-lane-permission`, `noop-lane-nothing-to-do`. The ticket's parenthetical list carries ten tokens and omits `pr-open-unverified`; the normative clause "every TDR-0005 result class" governs, so the amendment enumerates all eleven and the omission is resolved deliberately and disclosed to the owner (DEC-3). The enumeration must be checkable by set comparison against the contract, not by prose inspection alone.
-- **F-5**: Changes are line-scoped to the M1-S9 entry in `backlog.md` and to the new amendment section plus supersession pointers in `status.md`. The M1-S9 heading text is unchanged, so existing headings and any reader expectations around anchors are stable. The `backlog.md` frontmatter block is preserved byte for byte; `status.md` remains without frontmatter; no `ados_distribution` marker is added to either file. The status amendment names, without editing, the documents that still restate the superseded M1-S9 phrasing, so the residual is declared rather than hidden.
+- **F-5**: Changes are line-scoped to the M1-S9 entry in `backlog.md` and to the new amendment section plus supersession pointers in `status.md`. Preservation is mechanically checkable: every `git diff -U0` hunk in `backlog.md` lies inside the M1-S9 entry (from its heading to the line before the next `###` heading), and every other story's `- AC:` and `- Depends on:` line is byte-identical to the base revision (AC-F5-3). The M1-S9 heading text is unchanged, so existing headings and any reader expectations around anchors are stable. The `backlog.md` frontmatter block is preserved byte for byte; `status.md` remains without frontmatter; no `ados_distribution` marker is added to either file. The status amendment names, without editing, the documents that still restate the superseded M1-S9 phrasing, so the residual is declared rather than hidden.
 
 ## 6. USER & SYSTEM FLOWS
 
@@ -121,6 +123,9 @@ Flow 3: Future handover evaluation for a repository
 - The M1-S9 definition of `clean` in `doc/planning/oss-tooling/backlog.md`, including the corroboration rule and the eleven-class enumeration.
 - One new dated amendment section in `doc/planning/oss-tooling/status.md` recording CEO-D-073 with the same bar and rule.
 - Short supersession pointers in `status.md` on the forward-looking statements that restated the two-clean-weeks rule for M1-S9.
+- The supersession adjudication of the 2026-11-03 per-engine two-clean-weeks sentence, recorded in the new amendment section without changing the dated bullet's bytes.
+- A resolvable citation for CEO-D-073 in the new amendment section: GH-266 as the directive's home and 2026-11-07 as its date.
+- Preservation guarantees: all `backlog.md` diff hunks confined to the M1-S9 entry, and byte-identity for every other story's `- AC:` and `- Depends on:` line.
 - A one-line declared-residual note in the status amendment naming the secondary documents that still carry the superseded phrasing.
 
 ### 7.2 Out of Scope
@@ -172,8 +177,8 @@ None. No tracker, CI, provider, or harness integration behavior changes. The cor
 
 | ID | Requirement | Threshold |
 |---|---|---|
-| NFR-1 | Docs-only containment | Changed files exactly 2, both under `doc/planning/oss-tooling/`; 0 changes under `packages/`, `scripts/`, `tests/`, `doc/spec/`, `.opencode/`, or schema/build files. |
-| NFR-2 | Historical integrity | 0 characters changed in the dated 2026-11-03 amendment bullets, the M0 exit-criteria list, and the M0 pilot evidence statements; `backlog.md` frontmatter byte-identical. |
+| NFR-1 | Docs-only containment | Exactly 2 product files changed outside `doc/changes/**`, both under `doc/planning/oss-tooling/`; 0 other product files changed under `packages/`, `scripts/`, `tests/`, `doc/spec/`, `.opencode/`, or schema/build configuration. Change artifacts under `doc/changes/**` are excluded from the product-file count. |
+| NFR-2 | Historical integrity | Byte-exact (no whitespace normalisation) identity for the dated 2026-11-03 amendment bullets; the lead-in sentence "The roadmap's M0 exit criteria (roadmap.md, Milestone 0 section) are:"; and the three M0 exit-criteria statements (pilot bullet, adoption bullet, decision-acceptance bullet); `backlog.md` frontmatter byte-identical. |
 | NFR-3 | Semantic consistency between the two files | 0 contradictions on the four conditions, the floor-only scope of "whichever comes first", and the three corroboration sources. |
 | NFR-4 | Contract fidelity of the enumeration | 11 of 11 TDR-0005 tokens present, 0 missing, 0 extras, verified by set comparison against the typed contract. |
 | NFR-5 | Guard cleanliness | `bash scripts/.tests/test-doc-distribution.sh` exits 0; the forbidden-literals check reports 0 new violations attributable to the two changed files; no broken intra-repository link is introduced. |
@@ -194,11 +199,11 @@ None. The amendment describes evidence that future dispatch evaluation will cons
 | RSK-5 | Editing the M1-S9 heading breaks or shifts anchors used elsewhere | M | L | Keep the heading text unchanged; record the pre-existing stale `#m1-s9-dispatch-dual-run-pilot` references in `doc/inception` as untouched | L: the stale anchor remains stale, which predates this change |
 | RSK-6 | A doc guard fails or a forbidden literal is introduced | L | L | Run the doc-distribution guard and the forbidden-literals check; introduce no new brand or path literals | L: guard coverage is limited to the scoped doc set |
 | RSK-7 | The GH-239 ticket body now quotes a superseded definition | L | H | Report the discrepancy to the owner with the PR; do not edit another ticket's body | L: the ticket stays stale until the owner or PM updates it |
-| RSK-8 | The edit over-reaches and touches another story's acceptance criteria or dependency | M | L | line-scoped edits; AC requires the diff to show no change outside the M1-S9 entry and the status amendment | L: review by diff is reliable for a two-file change |
+| RSK-8 | The edit over-reaches and touches another story's acceptance criteria or dependency | M | L | Line-scoped edits; AC-F5-3 requires every `backlog.md` diff hunk to lie inside the M1-S9 entry and every other story's `- AC:` and `- Depends on:` line to be byte-identical to the base revision | L: review by diff is reliable for a two-file change |
 
 ## 12. ASSUMPTIONS
 
-- CEO-D-073 is an owner directive with standing authority; recording it in the backlog and status is sufficient, and no new decision record is required.
+- CEO-D-073 is an owner directive recorded in GH-266 with directive date 2026-11-07; the status amendment cites both so the id resolves from within the repository. Recording it in the backlog and status is sufficient, and no new decision record is required.
 - TDR-0005 and `packages/core/src/contracts/delivery-result.ts` remain the normative, unchanged vocabulary for result classes.
 - "Real tickets" means dispatches on the repository's actual pilot work items, not fixtures, synthetic runs, or harness smoke tests.
 - The M0 exit criterion that mentions two weeks is a distinct gate about the M0 dual-run pilot, not the M1-S9 handover gate, and must remain as written.
@@ -210,7 +215,7 @@ None. The amendment describes evidence that future dispatch evaluation will cons
 | Direction | Item | Notes |
 |---|---|---|
 | Depends on | TDR-0005 and the typed delivery-result contract | The enumeration must be set-equal to the eleven-token vocabulary. |
-| Depends on | CEO-D-073 owner directive | The bar and the corroboration rule derive from it. |
+| Depends on | CEO-D-073 owner directive, recorded in GH-266 (2026-11-07) | The bar and the corroboration rule derive from it; the status amendment carries the resolvable citation. |
 | Depends on | Existing M1-S9 entry (GH-239) | It is the text being amended; GH-239 is undelivered, so no delivered behavior depends on the old wording. |
 | Blocks | M1-S9 delivery and any handover decision | Handover will be evaluated against the amended bar. |
 | Blocks | Future owner decision on the secondary documents and the ticket body | Deferred until the owner rules; see 7.3. |
@@ -232,13 +237,15 @@ No blocking questions. The ticket's ten-token parenthetical is resolved by the n
 | DEC-7 | The M0 exit criterion mentioning two weeks is left unchanged | It is the M0 pilot gate, not the M1-S9 handover gate | 2026-11-07 |
 | DEC-8 | The M1-S9 heading text is unchanged, so anchors do not shift; the pre-existing stale `#m1-s9-dispatch-dual-run-pilot` references in `doc/inception` are neither fixed nor worsened here | Heading edits are a gratuitous compatibility risk in a docs amendment | 2026-11-07 |
 | DEC-9 | No `ados_distribution` marker is added to either file | `doc/planning` is outside the closed doc-distribution scope, and neither file carries the marker today; adding one would invent a distribution class | 2026-11-07 |
+| DEC-10 | The dated 2026-11-03 sentence "Per-engine handover still requires its own two-clean-weeks evidence; that constraint is never waived." describes the same M1-S9 handover gate; for that gate its two-clean-weeks formulation is superseded by CEO-D-073, not waived, because the replacement bar is stricter on coverage (all eleven classes plus corroboration) and replaces elapsed time with an exposure floor. The dated bullet's bytes stay untouched; the adjudication is recorded in the new amendment section | History is preserved and the apparent live contradiction is resolved explicitly rather than left to reader inference | 2026-11-07 |
+| DEC-11 | The status amendment cites the directive as `CEO-D-073 (GH-266, 2026-11-07)` so the identifier resolves to its repository home and date | `CEO-D-073` otherwise exists only in the GH-266 ticket; planning docs already cite tracker items by `GH-` reference | 2026-11-07 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
 | Component | Impact |
 |---|---|
 | `doc/planning/oss-tooling/backlog.md` | Updated: M1-S9 `clean` definition, class enumeration, corroboration rule |
-| `doc/planning/oss-tooling/status.md` | Updated: new dated amendment section, supersession pointers, residual note |
+| `doc/planning/oss-tooling/status.md` | Updated: new dated amendment section (composite bar, corroboration rule, 2026-11-03 supersession adjudication, `CEO-D-073 (GH-266, 2026-11-07)` citation), supersession pointers, residual note |
 | Secondary planning documents (ranking, roadmap, command registry, journey, scenario, operator-input files) | Unchanged; declared residual, named in the status amendment |
 | GH-239 ticket body | Unchanged; becomes stale; reported to the owner |
 | Delivery-result contract and runtime tooling | Unchanged |
@@ -252,12 +259,16 @@ No blocking questions. The ticket's ten-token parenthetical is resolved by the n
 | AC-F1-3 | **Given** the M1-S9 entry, **when** its acceptance criteria and dependency line are compared with the pre-change text, **then** they are unchanged, including the "clean window" phrase, the refusal-and-offer criterion, per-repository reversibility, and the bash fallback criterion. | F-1, F-5, NFR-2 |
 | AC-F2-1 | **Given** `status.md`, **when** a reviewer reads it, **then** one new dated section attributes the change to CEO-D-073, states the composite bar and the corroboration rule, points to the M1-S9 entry as canonical, and names the declared residual without editing those documents. | F-2, F-5 |
 | AC-F2-2 | **Given** the forward-looking `status.md` statements that restated the two-clean-weeks rule for M1-S9 (the paragraph after "Milestone exit: pending" and item 3 of "Proposed next steps"), **when** read, **then** each carries a supersession pointer to the new amendment section. | F-2 |
-| AC-F2-3 | **Given** the dated 2026-11-03 amendment bullets, the M0 exit-criteria list, and the M0 pilot evidence statements in `status.md`, **when** the diff is inspected, **then** those regions are byte-identical to the pre-change file. | F-5, NFR-2 |
+| AC-F2-3 | **Given** `status.md`, **when** its historical regions are compared byte for byte with the base revision (no whitespace normalisation), **then** these are identical: the dated 2026-11-03 amendment bullets; the lead-in sentence "The roadmap's M0 exit criteria (roadmap.md, Milestone 0 section) are:"; the pilot bullet (the dual-run pilot with zero false-success incidents on pilot paths over two weeks); the adoption bullet; and the decision-acceptance bullet. The supersession pointer for the forward-looking dispatch-handover sentence is appended in the following paragraph, after those statements, not inside them. | F-5, NFR-2 |
+| AC-F2-4 | **Given** the new `status.md` amendment section, **when** read, **then** it states that the dated 2026-11-03 per-engine two-clean-weeks sentence describes the same M1-S9 handover gate and that its formulation is superseded, not waived, by CEO-D-073 because the replacement bar is stricter on coverage and replaces elapsed time with an exposure floor; and the dated sentence itself remains byte-identical. | F-2, DEC-10, NFR-2 |
+| AC-F2-5 | **Given** the new `status.md` amendment section, **when** its lead-in is read, **then** it says the gate is no longer defined by a calendar window alone and avoids an elapsed-time-only formulation that would contradict the 7-consecutive-days floor, and it retains the floor-only "whichever comes first" wording. | F-2, DEC-2 |
+| AC-F2-6 | **Given** the new `status.md` amendment section, **when** the directive is cited, **then** it reads `CEO-D-073 (GH-266, 2026-11-07)`, so the identifier resolves to its tracker home and directive date from within the repository. | F-2, DEC-11 |
 | AC-F3-1 | **Given** the amended files, **when** a reviewer checks the corroboration rule, **then** both files state that an engine-claimed success is never sufficient and name exactly the three evidence sources: completed pm-notes phases, tracker state, and CI on the pushed head. | F-3, DM-3 |
 | AC-F4-1 | **Given** the amended M1-S9 enumeration, **when** compared as a set with `DELIVERY_RESULT_TOKENS`, **then** all eleven tokens are present, including `pr-open-unverified`, with zero missing and zero extras; and the change record discloses that the ticket's ten-token list was resolved in favor of the normative clause. | F-4, DM-2, NFR-4, DEC-3 |
 | AC-F5-1 | **Given** the M1-S9 heading in `backlog.md`, **when** the diff is inspected, **then** the heading text is unchanged. | F-5, DEC-8 |
 | AC-F5-2 | **Given** both changed files, **when** the diff is inspected, **then** the `backlog.md` frontmatter block is byte-identical, `status.md` has no frontmatter added, and neither file gains an `ados_distribution` marker. | F-5, NFR-2, DEC-9 |
-| AC-NFR1-1 | **Given** the full change diff, **when** the changed-path list is inspected, **then** exactly two files changed, both under `doc/planning/oss-tooling/`, and no file under `packages/`, `scripts/`, `tests/`, `doc/spec/`, `.opencode/`, or build configuration changed. | NFR-1 |
+| AC-F5-3 | **Given** the `backlog.md` diff against the base revision using zero-context hunks (`git diff -U0`), **when** the hunk headers are inspected, **then** every hunk lies inside the M1-S9 entry (from its heading to the line before the next `###` heading), with nothing quoted from the story before it or the story after it, and every other story's `- AC:` and `- Depends on:` line is byte-identical to the base revision. | F-5, G-4, NFR-2 |
+| AC-NFR1-1 | **Given** the branch diff filtered to product files (all paths except `doc/changes/**`), **when** the changed-path list is inspected, **then** exactly two product files changed, both under `doc/planning/oss-tooling/` (`backlog.md` and `status.md`), and no product file under `packages/`, `scripts/`, `tests/`, `doc/spec/`, `.opencode/`, or build configuration changed. | NFR-1 |
 | AC-NFR5-1 | **Given** the repository's doc guards, **when** they are run on the amended tree, **then** `bash scripts/.tests/test-doc-distribution.sh` exits 0, the forbidden-literals check reports no new violation attributable to the two changed files, and no intra-repository link introduced by the change is broken. | NFR-5 |
 | AC-NFR3-1 | **Given** the amended files, **when** the four conditions, the floor-only scope of "whichever comes first", and the three corroboration sources are compared across the two files, **then** no contradiction exists. | NFR-3, F-1, F-2, F-3 |
 
@@ -265,8 +276,10 @@ No blocking questions. The ticket's ten-token parenthetical is resolved by the n
 
 - [ ] Every acceptance criterion above is verified against the diff, not against intent.
 - [ ] The eleven-token comparison is performed mechanically (set comparison against `DELIVERY_RESULT_TOKENS`), and the result is recorded in the PR description or review.
+- [ ] The out-of-entry containment check (AC-F5-3) is recorded: every `backlog.md` hunk lies inside the M1-S9 entry, and all other stories' `- AC:` and `- Depends on:` lines are byte-identical to the base revision.
 - [ ] The doc guards named in AC-NFR5-1 have been run and their results recorded.
-- [ ] The diff touches exactly the two declared files; no incidental reformatting, whitespace churn, or heading change appears.
+- [ ] The diff touches exactly the two declared product files; no incidental reformatting, whitespace churn, or heading change appears.
+- [ ] The status amendment cites `CEO-D-073 (GH-266, 2026-11-07)` and states that the 2026-11-03 per-engine two-clean-weeks sentence is superseded for M1-S9, not waived, while that dated bullet's bytes remain unchanged.
 - [ ] The stale GH-239 ticket body and the declared-residual documents are reported to the owner in a ticket comment, without editing them.
 - [ ] The owner is told, in that comment, that `pr-open-unverified` was added on the authority of the normative clause (DEC-3).
 
@@ -318,13 +331,16 @@ Ticket parenthetical (ten tokens, missing `pr-open-unverified`): `merged`, `pr-o
 
 Declared residual documents (unchanged, still carrying the superseded M1-S9 phrasing): `backlog-ranking.md` (rank 39 note), `roadmap.md` (M1 sequencing constraint 6 and the M1 exit-evidence table row for M1-S9), `cli-command-registry.md` (dispatch row and `deliver-ticket.sh` row), `milestones/m1/commands/dispatch.md`, `milestones/m1/journeys.md`, `user-journeys.md`, `milestones/m1/test-scenarios.md` (SC-M1-29 and SC-M1-30), and `operator-requirements-2026-11.md` (dated historical record).
 
-Sources: GH-266 ticket with owner directive CEO-D-073; PM planning summary and binding decisions; current `backlog.md` M1-S9 entry; current `status.md`; `packages/core/src/contracts/delivery-result.ts`; TDR-0005.
+Owner directive: CEO-D-073, recorded in GH-266, directive date 2026-11-07. The dated 2026-11-03 status bullet ("Per-engine handover still requires its own two-clean-weeks evidence; that constraint is never waived.") refers to the same M1-S9 handover gate and is superseded, not waived, by that directive (DEC-10).
+
+Sources: GH-266 ticket with owner directive CEO-D-073 (2026-11-07); PM planning summary and binding decisions; current `backlog.md` M1-S9 entry; current `status.md`; `packages/core/src/contracts/delivery-result.ts`; TDR-0005.
 
 ## 25. DOCUMENT HISTORY
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-11-07 | @spec-writer | Initial specification |
+| 1.1 | 2026-11-07 | @spec-writer | Definition of Ready iteration 1 findings closed: added AC-F5-3 (all `backlog.md` hunks confined to M1-S9; other stories' `- AC:`/`- Depends on:` byte-identical, finding 1); named the three M0 exit-criteria statements and made byte-identity exact (AC-F2-3, NFR-2, F-2, finding 4); narrowed NFR-1/AC-NFR1-1 to product files outside `doc/changes/**` (finding 8); adjudicated the 2026-11-03 per-engine sentence as the same gate, superseded not waived (DEC-10, AC-F2-4, finding 9); required "calendar window alone" wording (AC-F2-5, finding 10); required `CEO-D-073 (GH-266, 2026-11-07)` citation (DEC-11, AC-F2-6, finding 11) |
 
 ---
 

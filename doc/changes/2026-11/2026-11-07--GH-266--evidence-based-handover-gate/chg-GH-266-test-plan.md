@@ -1,16 +1,17 @@
 ---
 id: chg-GH-266-test-plan
-status: Proposed
+status: Updated
+version: 1.1
 created: 2026-11-07T00:00:00Z
-last_updated: 2026-11-07T00:00:00Z
+last_updated: 2026-11-07T12:00:00Z
 owners: [engineering]
 service: delivery-os-planning
 labels: [change, docs]
 version_impact: none
-summary: "Docs-only verification of the M1-S9 handover-gate amendment. Prove by direct inspection of the diff and the two amended planning files that `clean` is now the conjunction of pilot-path truth, eleven-class TDR-0005 coverage on real tickets, the exposure floor, and corroboration; that the superseded rolling two-week window no longer defines the gate while the dated 2026-11-03 amendment and M0 exit criteria stay byte-identical; that the eleven enumerated classes are set-equal to `DELIVERY_RESULT_TOKENS` (including `pr-open-unverified`, DEC-3); that the corroboration rule names exactly pm-notes phases, tracker state, and CI on the pushed head in both files; that the diff is exactly two files under `doc/planning/oss-tooling/` with unchanged `backlog.md` frontmatter, no `ados_distribution` marker, unchanged M1-S9 heading, and no source/test/spec change; and that the doc-distribution, forbidden-literals, and link guards stay green. No test code, suite, or runtime harness is added: 17 TCs are reproducible inspection procedures with recorded commands and expected output, plus two honestly declared gaps."
+summary: "Docs-only verification of the M1-S9 handover-gate amendment, aligned to spec v1.1. Prove by direct inspection of the diff and the two amended planning files that `clean` is the conjunction of pilot-path truth, eleven-class TDR-0005 coverage on real tickets, the exposure floor, and corroboration; that the superseded rolling two-week window no longer defines the gate while every historical statement stays byte-exact under comparison with no whitespace normalisation (the 2026-11-03 bullets, the M0 exit-criteria lead-in, and the pilot, adoption and decision-acceptance bullets); that every `backlog.md` diff hunk lies inside the M1-S9 entry and every other story's `- AC:`/`- Depends on:` block is byte-identical; that the eleven enumerated classes are set-equal to `DELIVERY_RESULT_TOKENS` (including `pr-open-unverified`, DEC-3); that the corroboration rule names exactly pm-notes phases, tracker state, and CI on the pushed head in both files; that the amendment adjudicates the dated 2026-11-03 per-engine sentence as the same gate superseded not waived, says the gate is no longer defined by a calendar window alone with the floor-only `whichever comes first` retained, and cites `CEO-D-073 (GH-266, 2026-11-07)`; that the diff is exactly two product files outside `doc/changes/**` under `doc/planning/oss-tooling/` with unchanged `backlog.md` frontmatter, no `ados_distribution` marker, unchanged M1-S9 heading, and no source/test/spec change; and that the doc-distribution, forbidden-literals and link guards stay green, with a direct added-line seed-literal scan compensating for the guard's registered-doc-only scan set. No test code, suite, or runtime harness is added: 21 TCs are reproducible inspection procedures with recorded commands and observed expected values, plus three honestly declared gaps. Revision 1.1 closes readiness-review iteration 1 findings 2, 4 and 5."
 links:
   change_spec: ./chg-GH-266-spec.md
-  implementation_plan: null   # authored in delivery_planning (phase 4)
+  implementation_plan: ./chg-GH-266-plan.yaml
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
@@ -18,7 +19,7 @@ links:
 
 ## 1. Scope and Objectives
 
-This change moves one sentence of planning truth: the M1-S9 per-repository handover gate stops being a rolling two-week calendar window and becomes a conjunction of four conditions — pilot-path truth, total TDR-0005 class coverage on real tickets, a minimum exposure floor, and corroboration against non-engine evidence. Nothing executes at runtime, so the risk this plan must control is *documentary*: the gate could be weakened in prose (floor read as an alternative to class coverage, or "success" accepted from the engine's own token), the enumeration could silently inherit the ticket's ten-token list, or the amendment could drift into another story's acceptance criteria or rewrite dated history that must stay as recorded. Each of those is a defect a reviewer must be able to see, not infer, which is why every acceptance criterion is bound here to an explicit command with an expected output rather than to a reading impression.
+This change moves one sentence of planning truth: the M1-S9 per-repository handover gate stops being a rolling two-week calendar window and becomes a conjunction of four conditions — pilot-path truth, total TDR-0005 class coverage on real tickets, a minimum exposure floor, and corroboration against non-engine evidence. Nothing executes at runtime, so the risk this plan must control is *documentary*: the gate could be weakened in prose (floor read as an alternative to class coverage, or "success" accepted from the engine's own token), the enumeration could silently inherit the ticket's ten-token list, or the amendment could drift into another story's acceptance criteria or rewrite dated history that must stay as recorded. Each of those is a defect a reviewer must be able to see, not infer, which is why every acceptance criterion is bound here to an explicit command with an expected output rather than to a reading impression. Revision 1.1 makes the two containment oracles executable rather than incidental: diff-hunk confinement to the M1-S9 entry plus byte-exact comparison of every other story's acceptance-criteria block, and history comparison byte for byte with no whitespace normalisation. It also stops claiming a guard covers a file the guard never reads.
 
 Three properties are load-bearing and are tested independently so that one cannot pass behind another: (i) the amended `clean` definition is a four-part conjunction with a floor-only "whichever comes first"; (ii) the eleven enumerated classes are set-equal to the typed contract, verified mechanically, not by prose inspection; (iii) history (the dated 2026-11-03 amendment bullets, the M0 exit-criteria list, the M0 pilot statements) and every unrelated story AC and dependency are byte-identical to the base revision.
 
@@ -26,7 +27,9 @@ Three properties are load-bearing and are tested independently so that one canno
 
 - The M1-S9 entry in `doc/planning/oss-tooling/backlog.md`: four-condition `clean` definition, floor-only scope statement, eleven-class enumeration, corroboration rule, and preservation of its heading, acceptance criteria, dependency line, and phase structure.
 - The new dated CEO-D-073 amendment section in `doc/planning/oss-tooling/status.md`, its supersession pointers on the two forward-looking statements, its declared-residual naming, and preservation of dated history.
-- Diff containment, frontmatter/marker invariants, and the repository doc guards (`test-doc-distribution.sh`, `forbidden-literals.ts`, intra-repository link integrity).
+- Out-of-entry containment in `backlog.md`: every `-U0` hunk inside the M1-S9 entry, and every other story's `- AC:`/`- Depends on:` block byte-identical to the base revision (AC-F5-3).
+- Product-file containment (two files outside `doc/changes/**`), frontmatter/marker invariants, and the repository doc guards (`test-doc-distribution.sh`, `forbidden-literals.ts`, intra-repository link integrity), with a direct added-line seed-literal scan covering the file the guard does not scan.
+- The new status-amendment claims: the 2026-11-03 per-engine adjudication, the "calendar window alone" lead-in with the floor-only qualifier, and the `CEO-D-073 (GH-266, 2026-11-07)` citation.
 - Cross-file semantic consistency between the two amended files on the four conditions, the floor-only scope, and the three corroboration sources.
 
 ### 1.2 Out of Scope & Known Gaps
@@ -36,12 +39,14 @@ Three properties are load-bearing and are tested independently so that one canno
 - **Known gap G-3 — the GH-239 ticket body is stale by design.** It quotes the superseded definition verbatim; correcting it is reported to the owner at PR time and is outside this change (spec §7.2, §17.1). No TC tests ticket state.
 - **Not applicable:** unit, integration, contract-execution, E2E, performance, migration, telemetry, and security-surface testing. There is no runtime code path, no schema, and no emitted artifact; the only "contract" tested is a static set comparison against `DELIVERY_RESULT_TOKENS`.
 - **Not applicable:** M0 exit criterion "zero false-success incidents on pilot paths over two weeks". It is a different milestone gate and is verified only as *preserved* (TC-GATE-008), never as *amended*.
+- **Compensated, not a gap: the forbidden-literals guard does not read `backlog.md`.** `scripts/checks/forbidden-literals.ts` scans `registry.registered` documents only; `status.md` is registered and `backlog.md` is not, so the guard is structurally silent on the amended backlog. This plan therefore adds a direct added-line seed-literal scan (P17, TC-GATE-014) instead of asserting a protection the guard does not provide. The AC-NFR5-1 wording still says "attributable to the two changed files"; the executable check, not the guard alone, is what makes that true. Recorded as open question OQ-5.
 
 ## 2. References
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-266-spec.md`](./chg-GH-266-spec.md) v1.0 | Binding source for F-1..F-5, AC-F1-1..AC-NFR3-1 (13 ACs), NFR-1..NFR-6, DM-1..DM-3, DEC-1..DEC-9 |
+| [`chg-GH-266-spec.md`](./chg-GH-266-spec.md) v1.1 | Binding source for F-1..F-5, AC-F1-1..AC-NFR3-1 (17 ACs, including AC-F5-3 and AC-F2-4/5/6 added in v1.1), NFR-1..NFR-6, DM-1..DM-3, DEC-1..DEC-11 |
+| [`chg-GH-266-plan.yaml`](./chg-GH-266-plan.yaml) | Delivery plan: materialises these procedures as `p00.sh`…`p17.sh` under `/tmp/gh266-procedures/` and gates each phase on them |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | Test layers: static/diff and content checks for `doc/**`; fallback rule for docs-only changes (automated tests **N/A**, manual verification + `git diff --check` required); invariant-test rule (branch-diff shape checks belong to review gates, not the permanent suite) |
 | [`doc/planning/oss-tooling/backlog.md`](../../../planning/oss-tooling/backlog.md) | File under test (M1-S9 entry) |
 | [`doc/planning/oss-tooling/status.md`](../../../planning/oss-tooling/status.md) | File under test (amendment, pointers, history) |
@@ -49,7 +54,7 @@ Three properties are load-bearing and are tested independently so that one canno
 | [TDR-0005](../../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md) | Decision adopting the eleven-token vocabulary and token-level dual-run parity |
 | [`scripts/.tests/test-doc-distribution.sh`](../../../../scripts/.tests/test-doc-distribution.sh) | Distribution-marker drift guard (AC-NFR5-1) |
 | [`scripts/checks/forbidden-literals.ts`](../../../../scripts/checks/forbidden-literals.ts) | Forbidden-literal scan (AC-NFR5-1) |
-| `CEO-D-073` (owner directive, quoted in spec §13) | Source of the evidence-based bar and the corroboration rule |
+| `CEO-D-073` (owner directive, recorded in GH-266, 2026-11-07; spec §13, DEC-11) | Source of the evidence-based bar and the corroboration rule; cited in the amendment as `CEO-D-073 (GH-266, 2026-11-07)` |
 | GH-266 ticket | Ticket scope: two files; ten-token parenthetical resolved by DEC-3 |
 
 ## 3. Coverage Overview
@@ -65,13 +70,17 @@ Forward traceability (every AC appears exactly once in this table):
 | AC-F1-3 | M1-S9 acceptance criteria and dependency line unchanged (incl. "clean window", refusal/offer, reversibility, bash fallback) | TC-GATE-004 | Covered |
 | AC-F2-1 | One new dated CEO-D-073 amendment section: composite bar, corroboration rule, canonical pointer, declared residual | TC-GATE-006 | Covered |
 | AC-F2-2 | Both forward-looking restatements of the two-clean-weeks rule carry a supersession pointer | TC-GATE-007 | Covered |
-| AC-F2-3 | 2026-11-03 bullets, M0 exit-criteria list, M0 pilot statements byte-identical | TC-GATE-008 | Covered |
+| AC-F2-3 | Byte for byte (no whitespace normalisation): the 2026-11-03 amendment bullets; the M0 exit-criteria lead-in sentence; and the pilot, adoption and decision-acceptance bullets | TC-GATE-008 | Covered |
+| AC-F2-4 | Amendment adjudicates the dated 2026-11-03 per-engine sentence as the same M1-S9 gate, superseded not waived (stricter on coverage, elapsed time replaced by an exposure floor); the dated sentence stays byte-identical | TC-GATE-019 | Covered |
+| AC-F2-5 | Amendment says the gate is no longer defined by a calendar window alone, avoids an elapsed-time-only formulation, and retains the floor-only "whichever comes first" | TC-GATE-020 | Covered |
+| AC-F2-6 | Amendment cites `CEO-D-073 (GH-266, 2026-11-07)` | TC-GATE-021 | Covered |
 | AC-F3-1 | Both files state engine-claimed success is never sufficient and name exactly pm-notes phases, tracker state, CI on the pushed head | TC-GATE-009 | Covered |
 | AC-F4-1 | Enumeration set-equal to `DELIVERY_RESULT_TOKENS` (11/11, incl. `pr-open-unverified`, 0 extra); DEC-3 resolution disclosed | TC-GATE-010 | Covered |
 | AC-F5-1 | M1-S9 heading text unchanged | TC-GATE-005 | Covered |
 | AC-F5-2 | `backlog.md` frontmatter byte-identical; no frontmatter added to `status.md`; no `ados_distribution` marker added | TC-GATE-011 | Covered |
-| AC-NFR1-1 | Exactly two changed files, both under `doc/planning/oss-tooling/`; nothing under `packages/`, `scripts/`, `tests/`, `doc/spec/`, `.opencode/`, or build config | TC-GATE-012, TC-GATE-017 | Covered |
-| AC-NFR5-1 | Doc-distribution guard exit 0; no new forbidden literal attributable to the two files; no broken intra-repo link | TC-GATE-013, TC-GATE-014, TC-GATE-015 | Covered |
+| AC-F5-3 | Every `backlog.md` `-U0` hunk lies inside the M1-S9 entry; every other story's `- AC:` and `- Depends on:` block byte-identical to the base revision | TC-GATE-018 | Covered |
+| AC-NFR1-1 | Exactly two product files outside `doc/changes/**`, both under `doc/planning/oss-tooling/`; no product file under `packages/`, `scripts/`, `tests/`, `doc/spec/`, `.opencode/`, or build config | TC-GATE-012, TC-GATE-017 | Covered |
+| AC-NFR5-1 | Doc-distribution guard exit 0; no new forbidden literal attributable to the two files (guard on its registered scan set, plus P17's added-line scan for the unregistered `backlog.md`); no broken intra-repo link | TC-GATE-013, TC-GATE-014, TC-GATE-015 | Covered |
 | AC-NFR3-1 | No contradiction between the files on the four conditions, the floor-only scope, and the three corroboration sources | TC-GATE-016 | Covered |
 
 Reverse traceability (no orphan test cases):
@@ -95,6 +104,10 @@ Reverse traceability (no orphan test cases):
 | TC-GATE-015 | AC-NFR5-1 |
 | TC-GATE-016 | AC-NFR3-1 |
 | TC-GATE-017 | AC-NFR1-1 |
+| TC-GATE-018 | AC-F5-3 |
+| TC-GATE-019 | AC-F2-4 |
+| TC-GATE-020 | AC-F2-5 |
+| TC-GATE-021 | AC-F2-6 |
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -112,11 +125,11 @@ API-# / EVT-#: none exist in the spec; nothing to cover.
 
 | NFR ID | Requirement | TC ID(s) | Status |
 |---|---|---|---|
-| NFR-1 | Docs-only containment (2 files; 0 in code/spec/opencode/build roots) | TC-GATE-012, TC-GATE-017 | Covered |
-| NFR-2 | Historical integrity (2026-11-03 bullets, M0 exit criteria, M0 pilot statements, `backlog.md` frontmatter) | TC-GATE-008, TC-GATE-011, TC-GATE-004 | Covered |
+| NFR-1 | Docs-only containment (2 product files outside `doc/changes/**`; 0 in code/spec/opencode/build roots) | TC-GATE-012, TC-GATE-017 | Covered |
+| NFR-2 | Historical integrity, byte-exact without normalisation (2026-11-03 bullets, M0 exit-criteria lead-in and three statements, other stories' AC/dependency blocks, `backlog.md` frontmatter) | TC-GATE-008, TC-GATE-011, TC-GATE-004, TC-GATE-018, TC-GATE-019 | Covered |
 | NFR-3 | Semantic consistency across the two files | TC-GATE-016 | Covered (semi-automated: presence script + contradiction read) |
 | NFR-4 | Contract fidelity of the enumeration (11/11, 0 missing, 0 extra) | TC-GATE-010 | Covered (mechanical) |
-| NFR-5 | Guard cleanliness (distribution guard, forbidden literals, links) | TC-GATE-013, TC-GATE-014, TC-GATE-015 | Covered |
+| NFR-5 | Guard cleanliness (distribution guard, forbidden literals including a direct added-line scan of the unregistered `backlog.md`, links) | TC-GATE-013, TC-GATE-014, TC-GATE-015 | Covered |
 | NFR-6 | Reversibility (one docs revert; no migration or downstream state) | TC-GATE-012 | Partially covered — containment proves nothing outside the two files must be unwound; the actual `git revert` is a release action, not a test step (assumption A-4) |
 
 ## 4. Test Types and Layers
@@ -136,6 +149,7 @@ Per `.ai/rules/testing-strategy.md`, a `doc/**` change is covered by **static/di
 - The change has no runtime behaviour to assert; the only executable assertion available is a *set comparison against an existing typed constant*, which TC-GATE-010 performs inline and validates against the real module.
 - Everything else is a property of **the diff against a moving base branch**. `.ai/rules/testing-strategy.md` states that branch-diff shape checks ("only these files changed", "coverage titles preserved") belong to review and PR-time gates, not to the permanent suite, because such an assertion only holds at the PR that introduced it and fails every later delivery. A committed `tests/**` case asserting "exactly two files changed since `origin/main-tools`" would be exactly that anti-pattern.
 - NFR-1 forbids touching `tests/**`, `scripts/**`, and build config, so committing a helper script would violate the change's own containment criterion.
+- One guard's coverage is narrower than AC-NFR5-1's wording implies: `scripts/checks/forbidden-literals.ts` scans only `registry.registered` documents (`status.md` is registered; `backlog.md` is not). This plan therefore runs a direct added-line seed-literal scan (P17) rather than restating a protection the guard does not provide.
 
 The procedures below are therefore **uncommitted, reproducible inspection commands**. Each states its expected output, and each was validated against the base revision, where the relevant checks are expected to *fail* pre-change (see the falsifiability anchors in Section 5.2) — which is what makes them falsifiable rather than decorative.
 
@@ -156,12 +170,16 @@ The procedures below are therefore **uncommitted, reproducible inspection comman
 | TC-GATE-009 | Corroboration insufficiency rule with exactly three sources in both files | Happy Path | Critical | High | AC-F3-1 | Content |
 | TC-GATE-010 | Eleven enumerated classes set-equal to `DELIVERY_RESULT_TOKENS`; DEC-3 disclosed | Contract | Critical | High | AC-F4-1 | Contract (set equality) |
 | TC-GATE-011 | Frontmatter and distribution-marker invariants | Negative | Important | Medium | AC-F5-2 | Static/diff |
-| TC-GATE-012 | Diff containment: exactly two planning files, no code/spec paths | Negative | Critical | High | AC-NFR1-1 | Static/diff |
+| TC-GATE-012 | Diff containment: exactly two product files outside `doc/changes/`, no code/spec paths | Negative | Critical | High | AC-NFR1-1 | Static/diff |
 | TC-GATE-013 | Doc-distribution guard exits 0 | Regression | Important | Medium | AC-NFR5-1 | Guard |
-| TC-GATE-014 | Forbidden-literals check reports no new violation | Regression | Important | Medium | AC-NFR5-1 | Guard |
+| TC-GATE-014 | Guard result plus direct added-line seed-literal scan (covers unregistered `backlog.md`) | Regression | Important | Medium | AC-NFR5-1 | Guard + diff |
 | TC-GATE-015 | No broken intra-repository link introduced | Edge Case | Important | Medium | AC-NFR5-1 | Guard |
 | TC-GATE-016 | Cross-file consistency of conditions, floor scope, and corroboration sources | Corner Case | Critical | High | AC-NFR3-1 | Content |
 | TC-GATE-017 | Whitespace/conflict-marker clean and no incidental reformatting | Negative | Minor | Medium | AC-NFR1-1 | Static/diff |
+| TC-GATE-018 | Out-of-entry containment: every backlog hunk inside M1-S9, other stories byte-identical | Negative | Critical | High | AC-F5-3 | Static/diff |
+| TC-GATE-019 | 2026-11-03 per-engine sentence adjudicated as same gate, superseded not waived, bytes unchanged | Corner Case | Critical | High | AC-F2-4 | Content + byte compare |
+| TC-GATE-020 | Amendment lead-in: calendar window alone, no elapsed-time-only phrasing, floor-only retained | Corner Case | Important | High | AC-F2-5 | Content |
+| TC-GATE-021 | Directive citation reads `CEO-D-073 (GH-266, 2026-11-07)` | Happy Path | Important | Medium | AC-F2-6 | Content |
 
 ### 5.2 Scenario Details
 
@@ -275,17 +293,18 @@ The procedures below are therefore **uncommitted, reproducible inspection comman
 
 1. Run procedure **P4a**: extract the slice from `- AC:` through `- Depends on:` inside the M1-S9 section from both the base snapshot and the worktree file, then `cmp` them.
 2. Run the four phrase greps from **P4a** (`clean window`, `refused while`, `per repository and reversible`, `fallback with deprecation`) against the worktree file.
-3. Confirm no hunk of `git diff -U0` touches the `- Ticket: GH-239` line or the `- Depends on:` dependency list.
+3. Confirm the two phase markers `(a) **evidence accrual**` and `(b) **handover per repository**` are still present and that the M1-S9 heading and ticket line were not rewritten by the slice comparison (step 1 covers the block from `- AC:` through `- Depends on:`).
 
 **Expected Outcome**:
 
 - `cmp` prints nothing and the wrapper echoes `M1-S9 AC+Depends byte-identical`.
 - All four greps match once each inside the M1-S9 section.
-- No other story's `- AC:` or `- Depends on:` line appears in the diff.
+- Both phase markers remain.
 
 **Notes / Clarifications**:
 
-- The amendment changes the *definition of* `clean`; it must not touch the sentence that *uses* the phrase "clean window". Both are true simultaneously and this TC is what distinguishes them.
+- This TC verifies only the M1-S9 acceptance-criteria block and dependency line (AC-F1-3). It deliberately makes **no** claim about other stories: containment of the rest of `backlog.md` is a different requirement (AC-F5-3) and is verified by TC-GATE-018 through hunk confinement and a byte comparison of every other story's AC/dependency block. An earlier revision of this TC asserted the other-story property while its steps only inspected the M1-S9 block; that oracle/steps gap is closed by splitting the requirement.
+- The amendment changes the *definition of* `clean`; it must not touch the sentence that *uses* the phrase "clean window". Both are true simultaneously and the slice comparison is what distinguishes them.
 
 #### TC-GATE-005 - M1-S9 heading text unchanged
 
@@ -378,15 +397,15 @@ The procedures below are therefore **uncommitted, reproducible inspection comman
 
 - Falsifiability anchor: on `origin/main-tools` the same procedure prints `forward=2 pointed=0`, so a pass cannot be produced by the pre-existing word "amendment" elsewhere in those paragraphs. The pointer must be specifically to the new section.
 
-#### TC-GATE-008 - status.md dated history and M0 exit/pilot statements byte-identical
+#### TC-GATE-008 - status.md historical regions byte-identical, no whitespace normalisation
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-5, NFR-2, DEC-6, DEC-7, AC-F2-3
-**Test Type(s)**: Manual (static/diff inspection)
+**Test Type(s)**: Manual (static/diff inspection, byte comparison)
 **Automation Level**: Semi-automated
-**Target Layer / Location**: `doc/planning/oss-tooling/status.md` regions
+**Target Layer / Location**: `doc/planning/oss-tooling/status.md`: the dated 2026-11-03 bullets; the M0 exit-criteria lead-in sentence; the pilot, adoption and decision-acceptance bullets
 **Tags**: @docs, @diff, @history
 
 **Preconditions**:
@@ -395,20 +414,22 @@ The procedures below are therefore **uncommitted, reproducible inspection comman
 
 **Steps**:
 
-1. Run procedure **P7a**: extract the `## M0 exit amendment and M1 re-planning (2026-11-03)` region (heading through the line before the next `## `) from base and worktree, then `cmp`.
-2. Run procedure **P7b**: extract the M0 exit-criteria list (from `The roadmap's M0 exit criteria` through the line ending `as enumerated in the inception readiness report.`), then `cmp`.
-3. Run procedure **P7c**: normalise whitespace (`tr '\n' ' ' | tr -s ' '`) and `grep -F` for the three M0 pilot statements (`stories that do not touch dispatch are unconstrained`; `requires its per-repository two-clean-weeks evidence`; `remains the critical path for M0 exit.`). Normalisation is required because the source wraps mid-sentence.
-4. Inspect `git diff -U0 origin/main-tools...HEAD -- doc/planning/oss-tooling/status.md` and confirm no hunk header covers a line inside those regions.
+1. Run **P7a**: extract the `## M0 exit amendment and M1 re-planning (2026-11-03)` region (heading through the line before the next `## `) from base and worktree, then `cmp`.
+2. Run **P7b**: extract the lead-in sentence `The roadmap's M0 exit criteria (roadmap.md, Milestone 0 section) are:` from both revisions and `cmp`.
+3. Run **P7c**: extract each of the three M0 exit-criteria statements separately from both revisions — (1) the pilot bullet (`1. Dual-run pilot:` … zero false-success incidents on pilot paths over two weeks), (2) the adoption bullet (`2. This repository adopts the scaffold`), (3) the decision-acceptance bullet (`3. Decision acceptance recorded:` … `as enumerated in the inception readiness report.`) — and `cmp` each pair.
+4. Run the **P7d negative control**: reflow statement 1 in a `/tmp` copy by breaking one line at `…(shell stays authoritative), with zero`; the comparison for statement 1 must then report `FAIL statement 1` and show a diff, even though no word changed.
+5. Inspect `git diff -U0 origin/main-tools...HEAD -- doc/planning/oss-tooling/status.md` and confirm no hunk covers a line inside those regions, i.e. the supersession pointer sits in the paragraph after the list, not inside it.
 
 **Expected Outcome**:
 
-- P7a and P7b print nothing from `cmp` and echo `identical`.
-- P7c reports no `MISSING` line for any of the three statements.
+- `2026-11-03 section byte-identical`; `lead-in byte-identical`; `statement 1/2/3 byte-identical` (213, 72 and 582 bytes respectively at authoring time, 3/1/8 lines).
+- Negative control: `FAIL statement 1` plus a two-line diff, then `P7 verdict: OK` (the negative control is a self-test and does not enter the verdict). Proving agreement comes from bytes, not from wording.
 - The only status.md hunks are the new amendment section and the two pointer additions.
 
 **Notes / Clarifications**:
 
-- This is the check that stops an over-eager contributor from "cleaning up" the superseded phrasing inside the dated record. The pointer is *additive*; the history is not rewritable (NG-3, DEC-6).
+- Spec v1.1 renames the three statements explicitly, which is what makes this oracle unambiguous. The region end anchor is the last line of the decision-acceptance bullet, so the forward-looking paragraph that receives the pointer is outside the compared region.
+- Replaces the previous whitespace-normalised `grep -F` check, under which a pure reflow passed while bytes changed (readiness finding 4).
 - The M0 exit criterion mentioning "two weeks" stays as written and is verified here as *preserved*, never as amended (DEC-7, NG-4).
 
 #### TC-GATE-009 - Corroboration insufficiency rule with exactly three sources in both files
@@ -516,16 +537,16 @@ The procedures below are therefore **uncommitted, reproducible inspection comman
 **Related IDs**: NFR-1, NFR-6, DEC-5, AC-NFR1-1
 **Test Type(s)**: Manual (static/diff inspection)
 **Automation Level**: Semi-automated
-**Target Layer / Location**: change diff vs `origin/main-tools`
+**Target Layer / Location**: product-file diff vs `origin/main-tools`
 **Tags**: @diff, @containment
 
 **Preconditions**:
 
-- Branch HEAD contains the change artifacts plus the two amended files; `origin/main-tools` is fetched.
+- Branch HEAD contains the change artifacts under `doc/changes/**` plus the two amended product files; `origin/main-tools` is fetched.
 
 **Steps**:
 
-1. Run procedure **P1a**: `git diff --name-only origin/main-tools...HEAD -- . ':(exclude)doc/changes/**' | sort` and read exactly two path lines.
+1. Run procedure **P1a**: `git diff --name-only origin/main-tools...HEAD -- . ':(exclude)doc/changes/**' | sort` and read exactly two path lines. This is the measurement the AC defines: product files, i.e. all paths except `doc/changes/**`.
 2. Run procedure **P1b**: `git diff --name-only origin/main-tools...HEAD | grep -E '^(packages|scripts|tests|doc/spec|\.opencode)/|(^|/)(package\.json|pnpm-lock\.yaml|tsconfig.*\.json|biome\.json|bunfig\.toml|\.dependency-cruiser\.cjs)$'` and confirm no output.
 3. Confirm `doc/changes/` contains only this change folder's artifacts (spec, this test plan, and later the plan), which is expected and correct.
 
@@ -573,15 +594,15 @@ doc/planning/oss-tooling/status.md
 
 - `doc/planning` is not in the guard's scope, so this TC mainly proves the change did not *drag* a scoped doc into the diff and did not disturb the marker set (DEC-9).
 
-#### TC-GATE-014 - Forbidden-literals check reports no new violation
+#### TC-GATE-014 - Guard result plus a direct added-line seed-literal scan
 
 **Scenario Type**: Regression
 **Impact Level**: Important
 **Priority**: Medium
 **Related IDs**: NFR-5, AC-NFR5-1
-**Test Type(s)**: Manual (guard execution)
+**Test Type(s)**: Manual (guard execution + diff scan)
 **Automation Level**: Semi-automated
-**Target Layer / Location**: `scripts/checks/forbidden-literals.ts`
+**Target Layer / Location**: `scripts/checks/forbidden-literals.ts` plus the added lines of `doc/planning/oss-tooling/` in the diff
 **Tags**: @guard, @docs, @literals
 
 **Preconditions**:
@@ -590,18 +611,23 @@ doc/planning/oss-tooling/status.md
 
 **Steps**:
 
-1. Run procedure **P12**: `bun run scripts/checks/forbidden-literals.ts; echo "exit=$?"`.
-2. Confirm the summary reports 5/5 scope classes scanned with 0 violations.
-3. Attribute the result: confirm no violation, if any, names `doc/planning/oss-tooling/backlog.md` or `doc/planning/oss-tooling/status.md`.
+1. Run procedure **P12**: `bun run scripts/checks/forbidden-literals.ts; echo "exit=$?"`; confirm `OK forbidden-literals: 5/5 scope classes scanned, 0 violations` and `exit=0`.
+2. Confirm from the guard's own detail line that the scanned doc set is the registered list — i.e. that `status.md` is scanned and `backlog.md` is **not**. The guard is structurally silent on the amended backlog.
+3. Run procedure **P17**: it imports the production `matchSeedLiteral` matcher, filters the diff to added lines (`^+`, excluding `+++`) under `doc/planning/oss-tooling/`, and applies the three registry seed literals (`ados`, `ADOS_`, `~/.ados`) with the guard's own delimiting semantics.
+4. Confirm `seed-hits=0`, `added-lines>0` (a non-vacuous scan) and `exit=0`.
+5. Run the P17 matcher self-tests: `vendored ados binary` → `ados`, `~/.ados/config` → `~/.ados`, `shadowados` → `none`.
 
 **Expected Outcome**:
 
-- `exit=0` and the summary line `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`.
-- A failure naming either amended file is a FAIL of this TC and must be fixed by rewording, never by adding an allowlist entry (which would touch `scripts/**` and violate AC-NFR1-1).
+- Guard: `OK forbidden-literals: 5/5 scope classes scanned, 0 violations`, `exit=0`, and a `registered docs` detail that does not include `backlog.md`.
+- Diff scan: `added-lines=N seed-hits=0` with `N>=1`, `seed scan exit=0`, `P17 verdict: OK`.
+- Self-tests: `positive: ados`, `positive2: ~/.ados`, `negative: none` — proving the scan would catch a real brand literal and does not fire on a substring.
 
 **Notes / Clarifications**:
 
-- Baseline verified on the base revision: identical line, exit 0. A regression can therefore only come from the two amended files.
+- **Why the guard alone is not enough (readiness finding 5):** `scanFile` is called only for documents in `registry.registered`. `doc/planning/oss-tooling/status.md` is registered; `doc/planning/oss-tooling/backlog.md` is present at `corpusBaseline` (`32784aff…`) and therefore must *not* be registered, so the amended backlog is never scanned. An earlier revision claimed "a regression can therefore only come from the two amended files", which was false for the backlog and is retracted.
+- If a hit appears, reword the text. Never add an allowlist entry or register the backlog: either change touches `scripts/**` and violates AC-NFR1-1.
+- Baseline observed on the unamended tree: `added-lines=0 seed-hits=0`, `exit=0`.
 
 #### TC-GATE-015 - No broken intra-repository link introduced
 
@@ -657,7 +683,7 @@ doc/planning/oss-tooling/status.md
 
 **Expected Outcome**:
 
-- `backlog.md: corroboration=3/3 incident=OK classes=OK floor=OK`, `status.md: corroboration=3/3 incident=OK classes=OK floor=OK|n/a`, exit code 0. (`floor=n/a` is correct when the status amendment restates no floor numbers; `floor=MISSING` means it restated them without the floor qualifier.)
+- `backlog.md: corroboration=3/3 incident=OK classes=OK floor=OK`, `status.md: corroboration=3/3 incident=OK classes=OK floor=OK|n/a`, exit code 0. (`floor=n/a` is correct when the status amendment restates no floor numbers; `floor=MISSING` means it restated them without the floor qualifier.) The script exits non-zero if any expected presence is missing, so a vacuous green is not possible.
 - No contradiction found in the manual comparison; a divergence in any threshold or source count is a FAIL even if each file is internally coherent.
 
 **Notes / Clarifications**:
@@ -694,6 +720,144 @@ doc/planning/oss-tooling/status.md
 
 - The `.ai/rules/testing-strategy.md` quality gate for docs-only changes is manual verification plus `git diff --check`; this TC is the mechanical half of that requirement.
 
+#### TC-GATE-018 - Out-of-entry containment: every backlog hunk inside M1-S9, other stories byte-identical
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-5, G-4, NFR-2, AC-F5-3
+**Test Type(s)**: Manual (static/diff inspection + extraction)
+**Automation Level**: Semi-automated
+**Target Layer / Location**: `doc/planning/oss-tooling/backlog.md`, every story outside M1-S9
+**Tags**: @docs, @diff, @containment
+
+**Preconditions**:
+
+- Base snapshot `/tmp/gh266-base-backlog.md` (Section 7.1, step P0).
+- Repository root; `BASE` set by P0 or defaulted inside the block.
+
+**Steps**:
+
+1. Run **P15a**: it derives the M1-S9 entry range in HEAD (the `### M1-S9 ` heading line through the line before the next `### ` heading), then classifies every added-side hunk range from `git diff -U0` against that range.
+2. Confirm `hunks: inside=N outside=0` and `hunk confinement OK`.
+3. Confirm non-vacuity: `backlog.md hunks: N` with `N>=1`. Zero hunks means the amendment is absent, not that containment holds.
+4. Run the two **P15a matcher self-tests**: a synthetic hunk at `+600` must report `OUTSIDE` / `hunk confinement FAILED`; a synthetic hunk at `+541,9` must report `hunks: inside=1 outside=0` / `hunk confinement OK`.
+5. Run **P15b**: extract, for every story except M1-S9, the full block from its `- AC:` line through its `- Depends on:` line (multi-line blocks included) from the base snapshot and from HEAD, then `diff -u` the two extractions.
+6. Run the **P15b negative control**: apply a one-line edit to M1-S8's acceptance criterion in a `/tmp` copy (`retro output survives a malformed entry without data loss` → `retro output survives a malformed entry`) and re-extract; the comparison must now differ at exactly that line.
+
+**Expected Outcome**:
+
+- `M1-S9 entry lines: 529..559` at authoring time (derived, not hardcoded; the heading line stays 529 because the amendment adds no line before it).
+- `hunks: inside=N outside=0`, `hunk confinement OK`, `backlog.md hunks: N` with `N>=1`.
+- `P15 verdict: OK`, exit 0.
+- Self-tests: `hunks: inside=0 outside=1` + `hunk confinement FAILED`, then `hunks: inside=1 outside=0` + `hunk confinement OK`.
+- `other-story AC/Depends byte-identical`, `stories compared: 66` (observed at authoring time).
+- Negative control: `negative control detected the M1-S8 edit` with a one-line diff naming the M1-S8 `- AC:` line.
+
+**Notes / Clarifications**:
+
+- This is the requirement readiness finding 2 found claimed but unimplemented: every other story's `- AC:` and `- Depends on:` line, plus hunk confinement, is AC-F5-3 and lives here; TC-GATE-004 no longer asserts it.
+- The entry range includes the blank separator line before the next `###` heading because AC-F5-3 defines the entry as "from its heading to the line before the next `###` heading".
+- A pure deletion hunk (`+c,0`) has an empty added range and is accepted when `c` is within the entry; the matcher handles that case explicitly.
+- Observed on the unamended tree: no `backlog.md` hunk (`backlog.md hunks: 0`), so step 3 fails by design — the containment check only becomes meaningful once the amendment exists.
+
+#### TC-GATE-019 - 2026-11-03 per-engine sentence adjudicated as the same gate, superseded not waived, bytes unchanged
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-2, DEC-10, NFR-2, AC-F2-4
+**Test Type(s)**: Manual (content inspection + byte comparison)
+**Automation Level**: Semi-automated
+**Target Layer / Location**: `doc/planning/oss-tooling/status.md`, new amendment section plus the dated 2026-11-03 section
+**Tags**: @docs, @status, @history
+
+**Preconditions**:
+
+- Base snapshot `/tmp/gh266-base-status.md` (P0).
+
+**Steps**:
+
+1. Run **P16** and read the `adjudication:` line.
+2. Run **P7a** and confirm the dated 2026-11-03 section — which contains the per-engine sentence `Per-engine handover still requires its own two-clean-weeks evidence; that constraint is never waived.` (wrapped across source lines; compare bytes, never a single-line grep) — is byte-identical to the base revision.
+3. Read the adjudication and confirm each of its six elements: it names the date `2026-11-03`; it names the per-engine sentence; it says the sentence describes the **same** M1-S9 **gate**; it says **superseded**, explicitly **not waived**; it gives the coverage reason (**stricter/stronger on coverage**); and it gives the floor reason (**elapsed/calendar time** replaced or bounded by an **exposure floor**).
+4. Run the P16 adjudication negative control: a `/tmp` copy with `stricter on coverage` replaced by `much better` must report `missing=1 -> stricter-coverage`.
+
+**Expected Outcome**:
+
+- `adjudication: missing=0`, exit 0.
+- `2026-11-03 section byte-identical`.
+- Negative control: `adjudication: missing=1 -> stricter-coverage` — proving the check tests the required substance, not the presence of the word "superseded" alone.
+
+**Notes / Clarifications**:
+
+- DEC-10 is the decision this TC makes executable. The point is that "never waived" and "no longer defined by a calendar window" are reconciled *in the amendment*, while the dated bullet keeps its bytes (NG-3). Without this TC, a reader meets a live-looking contradiction with no recorded adjudication — readiness finding 9.
+- The six marker groups map one-to-one onto AC-F2-4's clauses; none is decorative.
+
+#### TC-GATE-020 - Amendment lead-in: calendar window alone, no elapsed-time-only phrasing, floor-only retained
+
+**Scenario Type**: Corner Case
+**Impact Level**: Important
+**Priority**: High
+**Related IDs**: F-2, DEC-2, AC-F2-5
+**Test Type(s)**: Manual (executable content inspection)
+**Automation Level**: Semi-automated
+**Target Layer / Location**: `doc/planning/oss-tooling/status.md`, new amendment section
+**Tags**: @docs, @status, @wording
+
+**Preconditions**:
+
+- As TC-GATE-019.
+
+**Steps**:
+
+1. Run **P16** and read the `lead-in:` line.
+2. Confirm the amendment states the gate is no longer defined by a **calendar window alone** (`calendar-window-alone=OK`).
+3. Confirm it does **not** use the elapsed-time-only formulation `no longer defined by elapsed time` (`elapsed-only-phrase=ABSENT`). That phrasing contradicts the retained 7-consecutive-days floor and was readiness finding 10.
+4. Confirm `whichever comes first` is retained and scoped to the floor inside its character window (`floor-scope=OK`).
+5. Run the P16 lead-in negative control: a `/tmp` copy with `no longer defined by a calendar window alone` replaced by `no longer defined by elapsed time` must report `calendar-window-alone=MISSING elapsed-only-phrase=PRESENT`.
+
+**Expected Outcome**:
+
+- `lead-in: calendar-window-alone=OK elapsed-only-phrase=ABSENT floor-scope=OK`, exit 0.
+- Negative control: `calendar-window-alone=MISSING elapsed-only-phrase=PRESENT`, exit 1.
+
+**Notes / Clarifications**:
+
+- The positive and negative halves are both required: "calendar window alone" is the remedy, and the absence of the elapsed-only phrasing is what keeps the amendment consistent with its own floor.
+- This is the status-side counterpart of TC-GATE-003, which checks the floor-only scope in the backlog.
+
+#### TC-GATE-021 - Directive citation reads `CEO-D-073 (GH-266, 2026-11-07)`
+
+**Scenario Type**: Happy Path
+**Impact Level**: Important
+**Priority**: Medium
+**Related IDs**: F-2, DEC-11, AC-F2-6
+**Test Type(s)**: Manual (executable content inspection)
+**Automation Level**: Semi-automated
+**Target Layer / Location**: `doc/planning/oss-tooling/status.md`, new amendment section
+**Tags**: @docs, @status, @citation
+
+**Preconditions**:
+
+- As TC-GATE-019.
+
+**Steps**:
+
+1. Run **P16** and read the `citation:` line.
+2. Confirm the amendment contains the exact literal `CEO-D-073 (GH-266, 2026-11-07)` — the identifier with its tracker home and directive date, not the bare identifier.
+3. Run the P16 citation negative control: a `/tmp` copy citing only `CEO-D-073` must report `citation: MISSING`.
+
+**Expected Outcome**:
+
+- `citation: OK`, exit 0.
+- Negative control: `citation: MISSING`, exit 1.
+
+**Notes / Clarifications**:
+
+- DEC-11: `CEO-D-073` exists only in the GH-266 ticket, so a bare citation is unresolvable from inside the repository. The exact-literal check is appropriate because the requirement *is* the exact form.
+- A future reader may resolve `GH-266` in the tracker; the date distinguishes the directive from the change.
+
 ## 6. Environments and Test Data
 
 | Aspect | Detail |
@@ -702,7 +866,8 @@ doc/planning/oss-tooling/status.md
 | Toolchain | `git` (branch + base revision), `bash`, `awk`, `cmp`, `grep`, `bun` (used only for `bun -e` inspection and the forbidden-literals check); all already required by the repository |
 | Base revision | `origin/main-tools` (the integration branch; `f87ec185` at authoring time). All diff checks use the three-dot form `origin/main-tools...HEAD` so an advanced base cannot silently widen the comparison |
 | Test data | Base-revision snapshots written to `/tmp/gh266-base-backlog.md` and `/tmp/gh266-base-status.md`; the amended files are read from the worktree. No fixtures are fabricated and no synthetic planning text is committed |
-| Negative fixture | A `/tmp`-only copy of the enumeration paragraph with `pr-open-unverified` removed (TC-GATE-010 step 5). Never committed, never written into the repository |
+| Negative fixtures | Four `/tmp`-only copies: the enumeration paragraph with `pr-open-unverified` removed (TC-GATE-010); `backlog.md` with a one-line M1-S8 AC edit (TC-GATE-018); `status.md` with statement 1 reflowed (TC-GATE-008); and `status.md` with a doctored amendment for the P16 adjudication, lead-in and citation negatives (TC-GATE-019/020/021). Never committed, never written into the repository |
+| Guard scope | `scripts/checks/forbidden-literals.ts` scans `registry.registered` documents only: `status.md` is registered, `backlog.md` is not (it is present at `corpusBaseline 32784aff…`, and the guard rejects registering such a file). P17 therefore scans added lines directly for the three seed literals |
 | Isolation | Every procedure is read-only with respect to the repository: no writes outside `/tmp`, no branch, index, or file mutation. The two planning files are under test and are never edited by a tester to make a check pass |
 | Cleanup | `rm -f /tmp/gh266-*` (base snapshots, flattened text, link list, split halves) |
 | Evidence capture | Command output pasted into the PR description or review comment per `.ai/rules/testing-strategy.md` ("record evidence in change artifacts: commands run + result summary") and spec §17.1 DoD |
@@ -889,34 +1054,57 @@ process.exit(forward === 2 && pointed === 2 ? 0 : 1);
 
 Expected: one `history (no pointer required)` line, `forward=2 pointed=2`, exit 0. (Base prints `forward=2 pointed=0`.)
 
-**P7 — status history preservation (TC-GATE-008):**
+**P7 — status history preservation, byte for byte, no normalisation (TC-GATE-008, TC-GATE-019):**
 
 ```bash
-# P7a: dated 2026-11-03 amendment section
+# P7a: dated 2026-11-03 section, byte for byte (contains the per-engine sentence)
 for f in /tmp/gh266-base-status.md doc/planning/oss-tooling/status.md; do
   awk '/^## M0 exit amendment and M1 re-planning \(2026-11-03\)/{f=1;print;next} f&&/^## /{exit} f{print}' "$f"
 done > /tmp/gh266-hist-both.txt
 split -n l/2 /tmp/gh266-hist-both.txt /tmp/gh266-hist-part-
-cmp /tmp/gh266-hist-part-aa /tmp/gh266-hist-part-ab && echo "2026-11-03 section identical"
+cmp /tmp/gh266-hist-part-aa /tmp/gh266-hist-part-ab && echo "2026-11-03 section byte-identical"
 
-# P7b: M0 exit-criteria list
-for f in /tmp/gh266-base-status.md doc/planning/oss-tooling/status.md; do
-  awk '/^The roadmap.s M0 exit criteria/{p=1} p{print} p&&/as enumerated in the inception readiness report/{exit}' "$f"
-done > /tmp/gh266-exit-both.txt
-split -n l/2 /tmp/gh266-exit-both.txt /tmp/gh266-exit-part-
-cmp /tmp/gh266-exit-part-aa /tmp/gh266-exit-part-ab && echo "M0 exit criteria identical"
+# P7b: the M0 exit-criteria lead-in sentence, byte for byte
+lead() { awk '/^The roadmap.s M0 exit criteria \(roadmap\.md, Milestone 0 section\) are:$/{print; exit}' "$1"; }
+stmts_ok=1
+lead /tmp/gh266-base-status.md > /tmp/gh266-lead-base.txt
+lead doc/planning/oss-tooling/status.md > /tmp/gh266-lead-head.txt
+if cmp /tmp/gh266-lead-base.txt /tmp/gh266-lead-head.txt; then echo "lead-in byte-identical"; else stmts_ok=0; fi
 
-# P7c: M0 pilot statements still present verbatim (whitespace-normalised: the source wraps mid-sentence)
-tr '\n' ' ' < doc/planning/oss-tooling/status.md | tr -s ' ' > /tmp/gh266-status-flat.txt
-for s in "stories that do not touch dispatch are unconstrained" \
-         "requires its per-repository two-clean-weeks evidence" \
-         "remains the critical path for M0 exit."; do
-  grep -Fq "$s" /tmp/gh266-status-flat.txt || echo "MISSING: $s"
+# P7c: the three M0 exit-criteria statements, byte for byte (no normalisation)
+stmt() { # $1=file $2=1|2|3
+  case "$2" in
+    1) awk '/^1\. Dual-run pilot:/{p=1} /^2\. This repository adopts/{p=0} p' "$1" ;;
+    2) awk '/^2\. This repository adopts/{p=1} /^3\. Decision acceptance recorded:/{p=0} p' "$1" ;;
+    3) awk '/^3\. Decision acceptance recorded:/{p=1} p{print} p&&/as enumerated in the inception readiness report\./{exit}' "$1" ;;
+  esac
+}
+for n in 1 2 3; do
+  stmt /tmp/gh266-base-status.md "$n" > "/tmp/gh266-stmt-base-$n.txt"
+  stmt doc/planning/oss-tooling/status.md "$n" > "/tmp/gh266-stmt-head-$n.txt"
+  if cmp -s "/tmp/gh266-stmt-base-$n.txt" "/tmp/gh266-stmt-head-$n.txt"; then
+    echo "statement $n byte-identical ($(wc -c < "/tmp/gh266-stmt-head-$n.txt") bytes, $(wc -l < "/tmp/gh266-stmt-head-$n.txt") lines)"
+  else
+    echo "FAIL statement $n"; stmts_ok=0
+    diff -u "/tmp/gh266-stmt-base-$n.txt" "/tmp/gh266-stmt-head-$n.txt"
+  fi
 done
-echo "history check done"
+
+# P7d: negative control — a pure reflow with identical words must be detected
+sed 's/beside the bash stack (shell stays authoritative), with zero/beside the bash stack (shell stays authoritative),\n   with zero/' \
+  doc/planning/oss-tooling/status.md > /tmp/gh266-neg-status.md
+stmt /tmp/gh266-neg-status.md 1 > /tmp/gh266-stmt-neg-1.txt
+if cmp -s /tmp/gh266-stmt-base-1.txt /tmp/gh266-stmt-neg-1.txt; then
+  echo "NEGATIVE CONTROL FAILED: reflow not detected"
+else
+  echo "negative control: reflow detected"
+  diff /tmp/gh266-stmt-base-1.txt /tmp/gh266-stmt-neg-1.txt | head -6
+fi
+if [ "$stmts_ok" -eq 1 ]; then echo "P7 verdict: OK"; else echo "P7 verdict: FAILED"; fi
+[ "$stmts_ok" -eq 1 ]
 ```
 
-Expected: `2026-11-03 section identical`, `M0 exit criteria identical`, no `MISSING:` lines, `history check done`.
+Expected: `2026-11-03 section byte-identical`, `lead-in byte-identical`, three `statement N byte-identical (... bytes, ... lines)` lines, `negative control: reflow detected` followed by a two-line diff, and `P7 verdict: OK` (exit 0). Observed at authoring time on the unamended tree (exit 0): `statement 1 byte-identical (213 bytes, 3 lines)`, `statement 2 byte-identical (72 bytes, 1 lines)`, `statement 3 byte-identical (582 bytes, 8 lines)`, `P7 verdict: OK`.
 
 **P8 — corroboration rule in both files (TC-GATE-009):**
 
@@ -1046,6 +1234,7 @@ function region(path, text) {
   }
   return text.split(/^## /m).slice(1).map((b) => "## " + b).find((b) => b.includes("CEO-D-073")) ?? "";
 }
+let allOk = 1;
 for (const path of ["doc/planning/oss-tooling/backlog.md", "doc/planning/oss-tooling/status.md"]) {
   const text = fs.readFileSync(path, "utf8");
   const r = region(path, text);
@@ -1054,15 +1243,195 @@ for (const path of ["doc/planning/oss-tooling/backlog.md", "doc/planning/oss-too
   const classes = /result class/i.test(r) && /real tickets/i.test(r);
   const floorParas = r.split(/\n\s*\n/).filter((p) => /20 dispatches|7 consecutive days/i.test(p));
   const floor = floorParas.length === 0 ? "n/a" : floorParas.every((p) => /floor/i.test(p)) ? "OK" : "MISSING";
+  const ok = corroboration === 3 && incident && classes && (floor === "OK" || floor === "n/a");
+  if (!ok) allOk = 0;
   console.log(`${path.split("/").pop()}: corroboration=${corroboration}/3 incident=${incident ? "OK" : "MISSING"} classes=${classes ? "OK" : "MISSING"} floor=${floor}`);
 }
+process.exit(allOk ? 0 : 1);
 '
 ```
 
-Expected: `backlog.md: corroboration=3/3 incident=OK classes=OK floor=OK` and `status.md: corroboration=3/3 incident=OK classes=OK floor=OK|n/a`.
-Then complete TC-GATE-016 steps 2-4 by reading the two definitions side by side.
+Expected after the amendment (exit 0): `backlog.md: corroboration=3/3 incident=OK classes=OK floor=OK` and `status.md: corroboration=3/3 incident=OK classes=OK floor=OK|n/a`. Observed on the unamended tree (exit 1, by design): `backlog.md: corroboration=0/3 incident=OK classes=MISSING floor=n/a`, `status.md: corroboration=0/3 incident=MISSING classes=MISSING floor=n/a`.
+Then complete TC-GATE-016 steps 2-4 by reading the two definitions side by side; the script proves presence, the read proves agreement.
 
-**Recommended order:** P0 → P1 → P11 → P12 → P2 → P3 → P4 → P9 → P10 → P5 → P6 → P7 → P8 → P13 → P14 → then the two manual reads (TC-GATE-016 side-by-side contradiction read and the TC-GATE-006 markdown render review). Cheap containment and guards first (a two-file violation makes every downstream reading moot), then the executable assertions, then the content and history reads.
+**P15 — out-of-entry containment in `backlog.md` (TC-GATE-018):**
+
+```bash
+BASE=${BASE:-origin/main-tools}
+FILE=doc/planning/oss-tooling/backlog.md
+
+# P15a: every added-side hunk must lie inside the M1-S9 entry
+start=$(grep -n '^### M1-S9 ' "$FILE" | cut -d: -f1)
+next=$(awk -v s="$start" 'NR>s && /^### /{print NR; exit}' "$FILE")
+end=$(( ${next:-$((start+1))} - 1 ))
+echo "M1-S9 entry lines: $start..$end"
+
+hunk_guard() { # $1=entry start, $2=entry end; reads hunk headers on stdin
+  s=$1; e=$2; inside=0; outside=0
+  while IFS= read -r h; do
+    case "$h" in '@@'*) ;; *) continue ;; esac
+    range=$(printf '%s\n' "$h" | sed -E 's/^@@ -[0-9]+(,[0-9]+)? \+([0-9]+)(,([0-9]+))? @@.*/\2 \4/')
+    c=${range%% *}; d=${range##* }
+    [ -z "$d" ] && d=1
+    if [ "$d" -eq 0 ]; then
+      last=$c
+      ok=$([ "$c" -ge "$s" ] && [ "$c" -le $((e+1)) ] && echo 1 || echo 0)
+    else
+      last=$(( c + d - 1 ))
+      ok=$([ "$c" -ge "$s" ] && [ "$last" -le "$e" ] && echo 1 || echo 0)
+    fi
+    if [ "$ok" -eq 1 ]; then inside=$((inside+1)); else outside=$((outside+1)); echo "OUTSIDE: $h (added $c..$last, entry $s..$e)"; fi
+  done
+  echo "hunks: inside=$inside outside=$outside"
+  if [ "$outside" -eq 0 ]; then echo "hunk confinement OK"; else echo "hunk confinement FAILED"; fi
+  [ "$outside" -eq 0 ]
+}
+
+hunk_count=$(git diff -U0 "$BASE"...HEAD -- "$FILE" | grep -cE '^@@' || true)
+echo "backlog.md hunks: $hunk_count"
+if [ "$hunk_count" -ge 1 ]; then
+  echo "non-vacuous: backlog.md changed"; present=1
+  if git diff -U0 "$BASE"...HEAD -- "$FILE" | grep -E '^@@' | hunk_guard "$start" "$end"; then confine_ok=1; else confine_ok=0; fi
+else
+  echo "FAIL: no backlog.md hunk (amendment missing)"; present=0; confine_ok=0
+  echo "hunk confinement: SKIPPED (vacuous without a backlog.md hunk)"
+fi
+
+# P15a matcher self-tests: outside must be reported, inside must pass
+printf '@@ -600,1 +600,1 @@\n' | hunk_guard "$start" "$end" || true
+printf '@@ -541,3 +541,9 @@\n' | hunk_guard "$start" "$end"
+
+# P15b: every other story's - AC: .. - Depends on: block, byte for byte
+extract_other_story_ac() {
+  awk -v skip="### M1-S9 " '
+    /^### /{ story=$0; inblock=0; next }
+    /^- AC:/{ inblock=1; if (index(story,skip)==0) print story }
+    inblock {
+      if (index(story,skip)==0) print
+      if ($0 ~ /^- Depends on:/) { if (index(story,skip)==0) print "--"; inblock=0 }
+    }
+  ' "$1"
+}
+extract_other_story_ac /tmp/gh266-base-backlog.md > /tmp/gh266-otherac-base.txt
+extract_other_story_ac "$FILE" > /tmp/gh266-otherac-head.txt
+if diff -u /tmp/gh266-otherac-base.txt /tmp/gh266-otherac-head.txt; then
+  echo "other-story AC/Depends byte-identical"; stories_ok=1
+else
+  stories_ok=0
+fi
+echo "stories compared: $(grep -c '^--$' /tmp/gh266-otherac-head.txt)"
+
+# P15b negative control: a one-line edit to M1-S8 must be detected
+sed 's/retro output survives a malformed entry without data loss/retro output survives a malformed entry/' \
+  "$FILE" > /tmp/gh266-neg-backlog.md
+extract_other_story_ac /tmp/gh266-neg-backlog.md > /tmp/gh266-otherac-neg.txt
+if diff -q /tmp/gh266-otherac-base.txt /tmp/gh266-otherac-neg.txt > /dev/null; then
+  echo "NEGATIVE CONTROL FAILED: M1-S8 edit not detected"
+else
+  echo "negative control detected the M1-S8 edit"
+  diff /tmp/gh266-otherac-base.txt /tmp/gh266-otherac-neg.txt | head -6
+fi
+if [ "$confine_ok" -eq 1 ] && [ "$present" -eq 1 ] && [ "$stories_ok" -eq 1 ]; then
+  echo "P15 verdict: OK"; [ "$confine_ok" -eq 1 ]
+else
+  echo "P15 verdict: FAILED"; false
+fi
+```
+
+Expected after the amendment (exit 0): `backlog.md hunks: N` with `N>=1`, `non-vacuous: backlog.md changed`, `hunks: inside=N outside=0`, `hunk confinement OK`, the two self-tests `hunks: inside=0 outside=1` + `hunk confinement FAILED` then `hunks: inside=1 outside=0` + `hunk confinement OK`, `other-story AC/Depends byte-identical`, `stories compared: 66`, `negative control detected the M1-S8 edit` with a one-line diff, and `P15 verdict: OK`.
+
+Observed on the unamended tree (exit 1, by design):
+```
+M1-S9 entry lines: 529..559
+backlog.md hunks: 0
+FAIL: no backlog.md hunk (amendment missing)
+hunk confinement: SKIPPED (vacuous without a backlog.md hunk)
+OUTSIDE: @@ -600,1 +600,1 @@ (added 600..600, entry 529..559)
+hunks: inside=0 outside=1
+hunk confinement FAILED
+hunks: inside=1 outside=0
+hunk confinement OK
+other-story AC/Depends byte-identical
+stories compared: 66
+negative control detected the M1-S8 edit
+P15 verdict: FAILED
+```
+
+**P16 — status amendment adjudication, lead-in wording, citation (TC-GATE-019, TC-GATE-020, TC-GATE-021):**
+
+```bash
+bun -e '
+const text = require("node:fs").readFileSync(process.argv[1], "utf8");
+const sec = text.split(/^## /m).slice(1).map((b) => "## " + b).find((b) => b.includes("CEO-D-073"));
+if (!sec) { console.log("amendment: not found"); process.exit(1); }
+const flat = sec.replace(/\s+/g, " ");
+const need = [
+  ["dated-2026-11-03", /2026-11-03/],
+  ["per-engine", /per-engine/i],
+  ["same-gate", /\bsame\b/i, /\bgate\b/i],
+  ["superseded-not-waived", /supersed/i, /not waived|never waived|not a waiver|rather than waived/i],
+  ["stricter-coverage", /stricter|stronger|higher|more stringent/i, /coverage/i],
+  ["elapsed-to-floor", /elapsed|calendar/i, /floor/i],
+];
+const adjMissing = [];
+for (const [name, ...pats] of need) if (!pats.every((p) => p.test(flat))) adjMissing.push(name);
+const aloneOk = /calendar window alone/i.test(flat);
+const elapsedOnly = /no longer defined by elapsed time/i.test(flat);
+const idx = flat.search(/whichever comes first/i);
+let floorOk = false;
+if (idx !== -1) {
+  const win = flat.slice(Math.max(0, idx - 240), idx + 300);
+  floorOk = /floor/i.test(win) && /only|binds|not an alternative|never substitut/i.test(win);
+}
+const citationOk = sec.includes("CEO-D-073 (GH-266, 2026-11-07)");
+console.log(`adjudication: missing=${adjMissing.length}${adjMissing.length ? " -> " + adjMissing.join(",") : ""}`);
+console.log(`lead-in: calendar-window-alone=${aloneOk ? "OK" : "MISSING"} elapsed-only-phrase=${elapsedOnly ? "PRESENT" : "ABSENT"} floor-scope=${floorOk ? "OK" : "MISSING"}`);
+console.log(`citation: ${citationOk ? "OK" : "MISSING"}`);
+process.exit(adjMissing.length === 0 && aloneOk && !elapsedOnly && floorOk && citationOk ? 0 : 1);
+' doc/planning/oss-tooling/status.md
+```
+
+Expected after the amendment: `adjudication: missing=0`, `lead-in: calendar-window-alone=OK elapsed-only-phrase=ABSENT floor-scope=OK`, `citation: OK`, exit 0. Observed on the unamended tree: `amendment: not found`, exit 1. Negative controls (all observed against a synthetic amendment in `/tmp`): replacing `stricter on coverage` → `adjudication: missing=1 -> stricter-coverage`; replacing `calendar window alone` → `calendar-window-alone=MISSING elapsed-only-phrase=PRESENT`; citing bare `CEO-D-073` → `citation: MISSING`.
+
+**P17 — added-line seed-literal scan for the unregistered `backlog.md` (TC-GATE-014):**
+
+```bash
+export BASE=${BASE:-origin/main-tools}
+scan_status=0
+bun -e '
+const { matchSeedLiteral } = await import("./scripts/checks/forbidden-literals.ts");
+const { spawnSync } = require("node:child_process");
+const seeds = ["ados", "ADOS_", "~/.ados"];
+const base = process.env.BASE ?? "origin/main-tools";
+const diff = spawnSync("git", ["diff", "-U0", `${base}...HEAD`, "--", "doc/planning/oss-tooling/"], { encoding: "utf8" }).stdout ?? "";
+const added = diff.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++"));
+let hits = 0;
+for (const line of added) {
+  const token = matchSeedLiteral(line, seeds);
+  if (token) { hits++; console.log(`HIT ${token}: ${line.slice(0, 120)}`); }
+}
+console.log(`added-lines=${added.length} seed-hits=${hits}`);
+if (added.length === 0) { console.log("FAIL: no added lines under doc/planning/oss-tooling/ (amendment missing)"); process.exit(1); }
+process.exit(hits === 0 ? 0 : 1);
+' || scan_status=$?
+echo "seed scan exit=$scan_status"
+# matcher self-tests (must print ados, ~/.ados, none)
+bun -e '
+const { matchSeedLiteral } = await import("./scripts/checks/forbidden-literals.ts");
+const seeds = ["ados", "ADOS_", "~/.ados"];
+console.log("positive:", matchSeedLiteral("vendored ados binary", seeds));
+console.log("positive2:", matchSeedLiteral("~/.ados/config", seeds));
+console.log("negative:", matchSeedLiteral("shadowados", seeds) ?? "none");
+'
+if [ "$scan_status" -eq 0 ]; then echo "P17 verdict: OK"; else echo "P17 verdict: FAILED"; fi
+[ "$scan_status" -eq 0 ]
+```
+
+Expected after the amendment (exit 0): `added-lines=N seed-hits=0` with `N>=1`, `seed scan exit=0`, self-tests `positive: ados`, `positive2: ~/.ados`, `negative: none`, and `P17 verdict: OK`.
+
+Observed on the unamended tree (exit 1, by design): `added-lines=0 seed-hits=0`, `FAIL: no added lines under doc/planning/oss-tooling/ (amendment missing)`, `seed scan exit=1`, `positive: ados`, `positive2: ~/.ados`, `negative: none`, `P17 verdict: FAILED`.
+
+**Recommended order:** P0 → P1 → P15 → P11 → P12 → P17 → P2 → P3 → P4 → P9 → P10 → P5 → P16 → P6 → P7 → P8 → P13 → P14 → then the two manual reads (TC-GATE-016 side-by-side contradiction read and the TC-GATE-006 markdown render review). Cheap containment and guards first (a product-file or out-of-entry change makes every downstream reading moot), then the executable assertions, then the content and history reads. P15 precedes P4 because containment of the whole file is broader than preservation of one block: if a hunk escapes the M1-S9 entry, the rest of the reading is wasted.
 
 ### 7.2 TC → Procedure → Implementation Mapping
 
@@ -1071,20 +1440,24 @@ Then complete TC-GATE-016 steps 2-4 by reading the two definitions side by side.
 | TC-GATE-001 | P3 | `bun -e '…' backlog.md` (Section 7.1) | Manual Only — uncommitted inspection | `conditions=4/4` line |
 | TC-GATE-002 | P2 | `bun -e '…' backlog.md` | Manual Only — uncommitted inspection | `occurrences/unmarked` line |
 | TC-GATE-003 | P3 (`floor-scope`) | same as TC-GATE-001 | Manual Only — uncommitted inspection | `floor-scope=OK` |
-| TC-GATE-004 | P4a | `git diff -U0` + `awk` + `cmp` + 4 greps | Manual Only — uncommitted inspection | `byte-identical` + grep count |
+| TC-GATE-004 | P4a | `git diff -U0` + `awk` + `cmp` + 4 greps | Manual Only — uncommitted inspection | `M1-S9 AC+Depends byte-identical` + grep count (no other-story claim) |
 | TC-GATE-005 | P4b | `git diff -U0 … \| grep -E '^[+-]#{3} M1-S9'` | Manual Only — uncommitted inspection | `heading unchanged` |
 | TC-GATE-006 | P5 | `bun -e '…' status.md` + render review | Semi-automated (script) + Manual (render) | `missing=0` + rendered section |
 | TC-GATE-007 | P6 | `bun -e '…' status.md` | Manual Only — uncommitted inspection | `forward=2 pointed=2` |
-| TC-GATE-008 | P7a/P7b/P7c | `awk` + `cmp` + `grep -F` | Manual Only — uncommitted inspection | two `identical` lines, no `MISSING` |
+| TC-GATE-008 | P7a/P7b/P7c/P7d | `awk` extraction + `cmp` (no normalisation) + reflow negative control | Manual Only — uncommitted inspection | `2026-11-03 section byte-identical`, `lead-in byte-identical`, 3 × `statement N byte-identical`, `negative control: reflow detected` |
 | TC-GATE-009 | P8 | `bun -e '…'` on both files | Semi-automated (presence) + Manual (exactly-three, per-family legibility) | `sources=3/3 insufficiency=OK` ×2 + read note |
 | TC-GATE-010 | P9 + negative control | `bun -e '…'` importing the typed module | Semi-automated (executable assertion) + Manual (DEC-3 disclosure) | `tokens=11 missing=0 extra=0 duplicates=0`; negative `missing=1` |
 | TC-GATE-011 | P10 | `awk` + `cmp` + `head` + `git diff \| grep -c` | Manual Only — uncommitted inspection | three expected lines |
-| TC-GATE-012 | P1a/P1b | `git diff --name-only …` | Manual Only — uncommitted inspection | two-line path list, `none` |
+| TC-GATE-012 | P1a/P1b | `git diff --name-only … ':(exclude)doc/changes/**'` | Manual Only — uncommitted inspection | two-line product-file list, `none` |
 | TC-GATE-013 | P11 | `bash scripts/.tests/test-doc-distribution.sh` | Existing guard — no change | guard summary + `exit=0` |
-| TC-GATE-014 | P12 | `bun run scripts/checks/forbidden-literals.ts` | Existing guard — no change | `5/5 … 0 violations`, `exit=0` |
+| TC-GATE-014 | P12 + P17 | `bun run scripts/checks/forbidden-literals.ts`; then the added-line scan importing `matchSeedLiteral` | Existing guard (covers `status.md` only) + Manual Only uncommitted scan (covers `backlog.md`) | `5/5 … 0 violations`, `exit=0`; `added-lines=N seed-hits=0`; matcher self-tests `ados` / `~/.ados` / `none` |
 | TC-GATE-015 | P13a/P13b | `git diff \| grep -oE` + existence loop | Manual Only — uncommitted inspection | `broken=0` |
 | TC-GATE-016 | P14 + read | `bun -e '…'` on both files | Semi-automated (presence) + Manual (contradiction read) | two summary lines + read note |
 | TC-GATE-017 | P1c + `--stat` | `git diff --check` | Manual Only — uncommitted inspection | `exit=0`, stat review |
+| TC-GATE-018 | P15a/P15b | hunk-header classifier + `awk` extraction + `diff -u`, with two self-tests and a one-line negative control | Manual Only — uncommitted inspection | `hunks: inside=N outside=0`, `hunk confinement OK`, `other-story AC/Depends byte-identical`, `stories compared: 66`, `negative control detected the M1-S8 edit` |
+| TC-GATE-019 | P7a + P16 (`adjudication`) | `cmp` of the dated section + `bun -e` marker check | Semi-automated (byte compare + content markers) + Manual (substance read) | `2026-11-03 section byte-identical`, `adjudication: missing=0`, negative `missing=1 -> stricter-coverage` |
+| TC-GATE-020 | P16 (`lead-in`) | `bun -e` marker check | Manual Only — uncommitted inspection | `calendar-window-alone=OK elapsed-only-phrase=ABSENT floor-scope=OK`, negative `MISSING`/`PRESENT` |
+| TC-GATE-021 | P16 (`citation`) | `bun -e` exact-literal check | Manual Only — uncommitted inspection | `citation: OK`, negative `MISSING` |
 
 No test file is created or updated: **no permanent suite change is permitted or needed** (NFR-1; `.ai/rules/testing-strategy.md` invariant-test rule).
 
@@ -1101,13 +1474,21 @@ No test file is created or updated: **no permanent suite change is permitted or 
 | P5 prints `amendment: not found` or `missing=…` | The status amendment is absent or incomplete (AC-F2-1) | Add the missing markers; keep the section dated and sibling to the 2026-11-03 amendment. |
 | P6 prints `forward=2 pointed=0` or `pointed=1` | A forward-looking statement still stands unqualified (AC-F2-2) | Add a pointer sentence to the affected paragraph; do not rewrite the original claim. |
 | P6 prints `forward≠2` | A statement was reworded away or the history bullet was dragged into scope | Restore the original sentences verbatim; the pointer is additive only. |
-| P7 `cmp` differs | Dated history or M0 exit criteria were edited (AC-F2-3, NFR-2) | Revert that region to the base revision; the new section is the only permitted addition. |
+| P7 `cmp` differs or prints `FAIL statement N` | A historical statement's bytes changed — edit or reflow (AC-F2-3 / AC-F2-4, NFR-2) | Revert that statement to the base bytes exactly. A reflow is a failure even when every word survives; the pointer belongs in the following paragraph. |
+| P15a prints `OUTSIDE` or `hunk confinement FAILED` | A `backlog.md` hunk escaped the M1-S9 entry (AC-F5-3) | Revert the out-of-entry hunk; re-run P15a. Do not "tidy" a neighbouring story. |
+| P15b `diff -u` is non-empty | Another story's `- AC:` or `- Depends on:` block changed (AC-F5-3) | Restore that block byte for byte; the diff names the story and line. |
+| P15a prints `FAIL: no backlog.md hunk` | The backlog amendment is absent, so containment is vacuous | This is a missing deliverable, not a containment pass. |
+| P16 `adjudication: missing=…` | The 2026-11-03 per-engine adjudication is absent or lacks a required element (AC-F2-4, DEC-10) | Add the missing element: date, per-engine subject, same-gate statement, superseded-not-waived, coverage reason, elapsed→floor reason. |
+| P16 `calendar-window-alone=MISSING` or `elapsed-only-phrase=PRESENT` | The lead-in is missing the "alone" qualifier or uses the elapsed-time-only phrasing that contradicts the floor (AC-F2-5) | Reword to "no longer defined by a calendar window alone" and keep the floor-only qualifier. |
+| P16 `citation: MISSING` | The directive is cited without its tracker home and date (AC-F2-6, DEC-11) | Use the exact form `CEO-D-073 (GH-266, 2026-11-07)`. |
 | P8 prints `sources<3` in either file | The corroboration rule is vague or incomplete (AC-F3-1, RSK-4) | Name the missing source explicitly; do not substitute a synonym. |
 | P8 prints `insufficiency=MISSING` | The "engine token alone is not enough" rule is absent | State it explicitly; without it the gate can be satisfied by a self-claimed success. |
 | P10 frontmatter differs, or `ados_distribution` count > 0 | Decoration or distribution class was invented (AC-F5-2, DEC-9) | Revert the frontmatter; `doc/planning` stays outside distribution scope. |
 | P4b prints a changed heading line | Anchor drift (AC-F5-1, DEC-8) | Restore the heading text exactly. |
 | P11 non-zero or drift line | A scoped doc was disturbed or a marker was removed | Usually indicates the diff escaped `doc/planning`; check P1a first. |
-| P12 non-zero naming an amended file | A forbidden literal was introduced | Reword the text; never add an allowlist entry (that touches `scripts/**`). |
+| P12 non-zero naming `status.md` | A forbidden literal was introduced in the registered doc | Reword the text; never add an allowlist entry (that touches `scripts/**`). |
+| P17 prints `HIT …` or `seed-hits>0` | A seed literal was added to the diff under `doc/planning/oss-tooling/` — the case the guard cannot see for `backlog.md` | Reword the added line. Never register `backlog.md` or extend the allowlist: both violate AC-NFR1-1. |
+| P17 prints `FAIL: no added lines` | The scanned diff is empty, so a green result would be vacuous | Confirm the amendment exists before treating the literal scan as evidence. |
 | P13 `broken>0` | A pointer or reference does not resolve | Fix the path or anchor; a pointer that 404s is worse than none. |
 | P14 shows a threshold or source-count difference between files | Cross-file contradiction (AC-NFR3-1) | Make the status amendment defer to `backlog.md` for the numbers instead of restating them divergently. |
 | Any check fails only inside the *secondary* planning documents (`roadmap.md`, `backlog-ranking.md`, …) | This is the declared residual **G-2**, expected by design | Record as accepted residual; do **not** open a TC, do not edit those files (spec §7.2, NG-5). Escalate to the owner at PR time. |
@@ -1123,8 +1504,11 @@ No test file is created or updated: **no permanent suite change is permitted or 
 | TR-1 | Prose checks are judgment-shaped, so a reviewer can "pass" a weakened bar by reading generously | The three load-bearing properties (four conditions, floor-only scope, eleven-class set) each have an executable presence/extraction check with a stated base-revision failing value |
 | TR-2 | The set-equality check depends on an extractable enumeration paragraph, so a stylistic rewrite could make it unverifiable rather than wrong | Stated as a derived testability requirement of NFR-4/DM-2; P9 fails loudly with an actionable message instead of passing vacuously |
 | TR-3 | History-preservation checks compare against `origin/main-tools`, which may advance | Three-dot diff plus base snapshots taken at run time; if the base advances, P0 re-materialises snapshots and the comparison remains valid (the regions are stable history) |
-| TR-4 | "No new forbidden literal attributable to the two files" could be read as "the guard is green", which it already was | TC-GATE-014 requires attribution: any violation naming either amended file is a FAIL, regardless of the guard's prior state |
+| TR-4 | "No new forbidden literal attributable to the two files" could be read as "the guard is green", which it already was — and the guard never reads `backlog.md` at all | TC-GATE-014 combines the guard (which can only report on `status.md`) with P17's added-line scan of both files, so the attribution is made by the plan, not assumed from a green guard |
 | TR-5 | A green run could be mistaken for evidence that the *future* handover gate works | G-1 and OQ-1 state explicitly that operational enforcement is out of testable scope for this change |
+| TR-6 | A containment oracle that inspects only the M1-S9 block would pass while another story drifts — the exact gap readiness finding 2 found | AC-F5-3 is verified by TC-GATE-018 with two independent mechanisms (hunk confinement and a full out-of-entry byte comparison), each with a live self-test |
+| TR-7 | The forbidden-literals guard is silent on `backlog.md`, so "guard green" could be read as full coverage | TC-GATE-014 records the scan-set limitation and covers the gap with P17's added-line scan, whose matcher is the production `matchSeedLiteral` |
+| TR-8 | A byte-exact history check could be replaced by a normalised grep again, silently weakening the oracle | The plan states the oracle is bytes-not-words, ships a reflow negative control (P7d) with its expected `FAIL`, and records the retraction in TC-GATE-008 |
 
 ### 8.2 Assumptions
 
@@ -1134,6 +1518,8 @@ No test file is created or updated: **no permanent suite change is permitted or 
 - **A-4**: NFR-6 (reversibility) is a release property verified by containment, not by executing a revert; a revert test would mutate the branch and is out of scope for a review-time procedure.
 - **A-5**: The two planning files are internal planning documents with no installed consumer that parses them, so byte-preservation checks (rather than semantic-equivalence checks) are the correct bar for history and frontmatter.
 - **A-6**: Markdown rendering review is human; the repository has no Markdown renderer gate, and the amended regions are plain prose, bullets, and links.
+- **A-7**: `scripts/checks/forbidden-literals.ts` scans `registry.registered` documents only, and `backlog.md` cannot be registered because it exists at `corpusBaseline`; the guard's silence on the backlog is structural, not a defect this change may fix (fixing it would touch `scripts/**`). P17 is the compensating control.
+- **A-8**: `matchSeedLiteral` is exported by the guard module and can be imported read-only from `bun -e`; this keeps the added-line scan on the production matching semantics instead of a re-implemented regex.
 
 ### 8.3 Open Questions
 
@@ -1143,12 +1529,14 @@ No test file is created or updated: **no permanent suite change is permitted or 
 | OQ-2 | Which secondary planning documents are refreshed in the follow-up, and does the owner accept the residual in the meantime? | No | Owner / PM | Declared gap G-2. Consistency checks over those files are expected to FAIL by design and are recorded as out-of-scope residual, never as TCs. |
 | OQ-3 | Should the status amendment enumerate every residual document or a representative subset? | No | Owner | This plan requires naming at least two (P5) plus a manual comparison against spec §7.2. If the owner prefers a shorter note, the manual comparison is the binding read. |
 | OQ-4 | Should the amended definition appear identically in both files, or should `status.md` summarise and defer? | No | Answered by spec F-2 | Summary plus pointer, backlog canonical. TC-GATE-016 accepts a deferring summary, provided no threshold or source count contradicts the backlog. |
+| OQ-5 | AC-NFR5-1 says "the forbidden-literals check reports no new violation attributable to the two changed files", but that check only scans registered docs and `backlog.md` is not one. Should the AC name the compensating scan, narrow the attribution to the guard's actual scan set, or accept the combined evidence? | No — resolved for this change by combined evidence | Owner / spec-writer | Spec v1.1 left NFR-5/AC-NFR5-1 as written; this plan satisfies the intent by running the guard *and* P17, and records the mismatch. Recommend a one-line AC refinement in the follow-up: "the guard reports 0 violations on its scan set, and no seed literal appears in added lines of either changed file". |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-11-07 | @test-plan-writer | Initial test plan for spec v1.0: 13 ACs covered by 17 TCs (bidirectional traceability, no orphans), 14 uncommitted inspection procedures with validated base-revision failing values, 3 doc guards, run order, failure triage, and two declared gaps (G-1 future enforcement, G-2 declared residual). |
+| 1.1 | 2026-11-07 | @test-plan-writer | Aligned to spec v1.1 and readiness-review iteration 1. **Finding 2 (critical, closed):** TC-GATE-004 no longer claims out-of-entry preservation it did not check; new TC-GATE-018 + P15 verify every `backlog.md` `-U0` hunk lies inside the M1-S9 entry and every other story's `- AC:`/`- Depends on:` block is byte-identical, with two matcher self-tests and a one-line negative control. **Finding 4 (major, closed):** P7c's whitespace-normalised `grep -F` replaced by byte-exact extraction of the lead-in and the three M0 exit-criteria statements (P7b/P7c) plus a reflow negative control (P7d); new TC-GATE-019/020/021 + P16 cover AC-F2-4 (2026-11-03 per-engine adjudication, superseded not waived), AC-F2-5 (calendar window alone, floor-only retained) and AC-F2-6 (`CEO-D-073 (GH-266, 2026-11-07)`). **Finding 5 (minor, closed):** TC-GATE-014 records that the guard scans registered docs only and never reads `backlog.md`; new P17 applies the production `matchSeedLiteral` to added lines with a non-vacuity guard and matcher self-tests. Traceability extended to 17 ACs / 21 TCs (AC-F5-3, AC-F2-4/5/6 added; AC-F2-3 and AC-NFR1-1 reworded). Every new or changed procedure was run on the unamended tree and its observed output recorded. Open question OQ-5 records the residual AC-NFR5-1 wording mismatch. |
 
 ## 10. Test Execution Log
 

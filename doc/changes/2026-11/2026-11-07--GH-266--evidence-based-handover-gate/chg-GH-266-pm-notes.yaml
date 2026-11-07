@@ -3,9 +3,9 @@ title: "docs: amend M1-S9 handover gate to an evidence-based bar (CEO-D-073)"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-07T22:52:00Z", completed: "2026-11-07T23:05:00Z" }
-  specification: { started: "2026-11-07T23:06:00Z", completed: "2026-11-07T23:24:00Z", reopened: "2026-11-08T00:12:00Z", reopen_count: 1 }
-  test_planning: { started: "2026-11-07T23:25:00Z", completed: "2026-11-07T23:41:00Z", reopened: "2026-11-08T00:12:00Z", reopen_count: 1 }
-  delivery_planning: { started: "2026-11-07T23:42:00Z", completed: "2026-11-07T23:58:00Z", reopened: "2026-11-08T00:12:00Z", reopen_count: 1 }
+  specification: { started: "2026-11-07T23:06:00Z", completed: "2026-11-08T00:48:00Z", reopened: "2026-11-08T00:12:00Z", reopen_count: 1, revision: "v1.1" }
+  test_planning: { started: "2026-11-07T23:25:00Z", completed: "2026-11-08T01:02:00Z", reopened: "2026-11-08T00:12:00Z", reopen_count: 1, revision: "v1.1" }
+  delivery_planning: { started: "2026-11-07T23:42:00Z", completed: "2026-11-08T01:18:00Z", reopened: "2026-11-08T00:12:00Z", reopen_count: 1, revision: "v1.1" }
   dor_check: { started: "2026-11-07T23:59:00Z", completed: null, iterations: 1, status: "not_ready" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -70,5 +70,20 @@ notes:
     type: "decision"
     date: "2026-11-08"
   - text: "RETRO: the DoR gate caught a class the authors kept missing: a requirement stated in the ticket's Unchanged clause ('no other story AC or dependency is modified') was never turned into an AC, because both spec and test plan reasoned about the file list rather than the content invariant. The invariant was only indirectly covered by a TC whose stated oracle was broader than its steps. Improvement: when a ticket has a preservation clause, give it its own mechanically checkable AC (here: a diff-hunk restriction over every other story block in backlog.md) and make the TC's steps as broad as its oracle."
+    type: "retro"
+    date: "2026-11-08"
+  - text: "DoR remediation cycle 1 complete. Specification v1.1 closed findings 1, 4, 8, 9, 10, 11: added AC-F5-3 (backlog hunk confinement inside the M1-S9 entry plus other-story `- AC:`/`- Depends on:` byte identity) and fixed RSK-8's dangling AC reference; named the three M0 pilot statements and made their byte identity checkable without whitespace normalisation; reworded NFR-1/AC-NFR1-1 to 'exactly two product files outside doc/changes/**'; added AC-F2-4 with DEC-10 adjudicating the 2026-11-03 'per-engine handover ... never waived' sentence as the same M1-S9 gate, superseded not waived because the replacement is stricter on coverage; added AC-F2-5 for the 'calendar window alone' wording and AC-F2-6 with DEC-11 citing 'CEO-D-073 (GH-266, 2026-11-07)'. Existing 13 AC ids and DEC-1..DEC-9 keep their intent; DEC-3 and DEC-5 were not reopened."
+    type: "info"
+    date: "2026-11-08"
+  - text: "Test plan v1.1 closed findings 2 and 4 and compensated finding 5: 17 ACs, 21 TCs, 18 procedures (P0-P17). TC-GATE-004 narrowed to the M1-S9 slice and a new TC-GATE-018 owns containment (P15); TC-GATE-008 rewritten to byte-exact statement comparison with a reflow negative control (P7); TC-GATE-014 rewritten to pair the guard with a direct added-line seed scan (P17) because the forbidden-literals guard cannot scan backlog.md; new TC-GATE-019/020/021 cover the adjudication, wording and citation ACs (P16). All procedures were re-run and the expected outputs are observed values."
+    type: "info"
+    date: "2026-11-08"
+  - text: "Plan v1.1 closed findings 3, 6, 7, 12 and aligned with test plan v1.1: task 1.5's replacement text now begins with the connective and P1 gates it; P2 runs p00 to re-materialise base snapshots; P1 runs a backlog-only corroboration gate so a backlog defect is fixable inside phase 1; P3 declares readiness-review/ and code-review/ as review records excluded from the product diff; the stale P7/P14 expected strings were replaced with what the revised procedures print; P1 runs p15, P2 runs p16, P3 runs p17; 21/21 TCs mapped exactly once (7/8/6) and 17/17 ACs covered. Validator: verdict valid, readyForDevelopment true, 0 errors. The revision also caught an unrequested defect: v1.0's reference text would have duplicated the existing 'Handover flips the repository to the engine' sentence."
+    type: "info"
+    date: "2026-11-08"
+  - text: "Accepted residual (finding 5, minor): AC-NFR5-1 still says the forbidden-literals check reports no new violation attributable to the two changed files, while that guard structurally scans only registered docs and cannot see backlog.md. Accepted rather than re-specifying, because the test plan compensates with P17's direct added-line seed scan using the production matcher, and widening the guard would touch scripts/** and violate AC-NFR1-1. Recorded in the plan as N-1."
+    type: "decision"
+    date: "2026-11-08"
+  - text: "RETRO: the v1.0 plan's reference text was authored independently of the sentence it replaced, so it silently dropped the connective and would have duplicated a following sentence. Both defects were invisible to the v1.0 gates because those gates checked phrase presence, not sentence grammar or duplication. Improvement: when a plan instructs a verbatim replacement, the reference block must be the exact old->new pair, and at least one gate should assert the absence of the old anchor and the uniqueness of the surviving sentence."
     type: "retro"
     date: "2026-11-08"
