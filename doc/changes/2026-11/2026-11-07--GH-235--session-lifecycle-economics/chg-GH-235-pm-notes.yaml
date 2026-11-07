@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: "2026-11-07T13:00:00Z", completed: "2026-11-07T14:00:00Z" }
   review_fix: { started: "2026-11-07T14:30:00Z", completed: "2026-11-07T18:00:00Z", iteration_1: { status: "FAIL", date: "2026-11-07", findings: "6 (0 blocker/2 major/3 minor/1 info)", artifact: "code-review/review-iter-1.yaml", remediation: "plan phase 8 appended by reviewer; @coder to execute" }, iteration_2: { status: "PASS", date: "2026-11-07", findings: "2 info non-blocking (stale BASELINE_ROWS docstring prose; biome organize-imports assist not in gate) — accepted as-is", artifact: "code-review/review-iter-2.yaml", tree: "c4e70115 after main-tools sync (GH-234)" } }
   quality_gates: { started: "2026-11-07T18:15:00Z", completed: "2026-11-07T18:25:00Z", result: "PASS: pnpm check 4948 pass/4 skip/0 fail (495 files); doc-distribution OK 81 docs; error-table-sync entries=94 documented=94; lint 0 errors (46 pre-existing warnings); boundaries 257 modules/676 deps clean; exports-parity 5/5; git diff --check clean" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-11-07T18:35:00Z", completed: "2026-11-07T18:40:00Z", result: "PASS: all 9 prior phases completed; plan phases 1-8 each have a pm-notes entry with commit hash + test result (1dcdf6ff/190, c8cb9482/25, 73a28900/64, da081d41/103, cbc66bdb/50, 39416938/4103, 297151fd/4728, 0a274a59/4730); 13/13 ACs satisfied (review iter 2 PASS, 37/37 TCs); current-truth docs complete (doc-syncer zero gaps + post-merge verified)" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "delivery_mode=autonomous: user directive requests end-to-end delivery with stop-only-on-block semantics"
@@ -52,6 +52,9 @@ notes:
     date: "2026-11-07"
   - text: "Review iteration 2 PASS (artifact code-review/review-iter-2.yaml): F-1/F-2/F-3/F-4/F-6 verified fixed in tree; sync-resolved artifacts consistent (error-table 94 rows exact, BASELINE+60, inventory union 32 modules, result-contract doc 13 provider/4 watchdog/2 dispatch/94 documented); no GH-234 assertion weakening; DEC-4/6/7/8/9 intact; 13 ACs/37 TCs; 2 info findings accepted as-is (pre-existing docstring prose 'twenty-six later rows'; biome organize-imports assist not in gate). Gate note: reviewer's bare bun test hit ci-baseline-parity /tmp tmpfs cross-device hardlink — environment-only, passes with repo TMPDIR. Main-tools sync: merge c4e70115 (GH-234 model profiles), 0 behind/19 ahead, pnpm check PASS 4948/0"
     type: "decision"
+    date: "2026-11-07"
+  - text: "DoD check PASS: all phases complete; plan 1-8 verified against pm-notes commit+test evidence; 13/13 ACs; docs complete"
+    type: "info"
     date: "2026-11-07"
   - text: "Plan phase 8 (remediation) complete: commit 0a274a59, F-1 budget gate now evaluates before evidence checks (past-budget x missing facts refuses restart-budget-exceeded + terminal record lands), F-2 terminalAppendError additive field surfaces failed terminal appends, F-3 prefill fixture traffic wired, F-4 plan pinning declares updates (v)(vi)+biome overrides, F-6 duplicate runId removed; TC-042/055/020 strengthened. Also repaired forbidden-literals registry for the new feature spec doc (4 pre-existing tests red from doc-sync commit). pnpm check PASS 4730/4 skip/0 fail"
     type: "info"
