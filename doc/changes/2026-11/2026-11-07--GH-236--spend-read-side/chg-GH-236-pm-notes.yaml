@@ -6,7 +6,7 @@ phases:
   specification: { started: "2026-11-07T03:08:00Z", completed: "2026-11-07T04:25:00Z" }
   test_planning: { started: "2026-11-07T03:40:00Z", completed: "2026-11-07T04:30:00Z" }
   delivery_planning: { started: "2026-11-07T04:35:00Z", completed: "2026-11-07T04:55:00Z" }
-  dor_check: { started: null, completed: null }
+  dor_check: { started: "2026-11-07T05:00:00Z", completed: "2026-11-07T05:20:00Z" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -85,6 +85,12 @@ notes:
     date: "2026-11-07"
   - text: "Plan-writer validation behavior confirms the GH-232 retro lesson landed: authoring-time plan-validate ran BEFORE the artifact reached PM, zero schema errors on first submission."
     type: retro
+    date: "2026-11-07"
+  - text: "DoR iteration 1 verdict: READY (readiness-review/readiness-iter-1.md, 10/10 facets PASS, 0 blocking). Reviewer independently re-ran validatePlan through the production path (valid, readyForDevelopment=true), re-read the ticket live, verified both binding ACs verbatim and traced unweakened end-to-end, found zero oracle forks on the amplification block/null rule/error row/digest flip, confirmed TP-DEC-to-PIN completeness and 34/34 single-phase TC coverage. 1 required-non-blocking (F-1: spec DM-3 should carry the capture-outcome-only boundary itself — unanimous in TDR-0011 A-1/test plan A-11/plan task 3.1(e), no coder freedom, fold into spec at phase-7 doc-sync; do not hold delivery) + 3 nits (GAP-1 stale pointer in test plan; spec related_decisions lacks TDR-0011 — already a doc-sync handoff; PIN-3 window-start wording optional)."
+    type: info
+    date: "2026-11-07"
+  - text: "Handoff additions for phase 7 (doc-syncer), from DoR nits: (a) F-1 — one additive DM-3 sentence pinning capture-outcome-only store behavior (ratio null, progressRun null, success, never telemetry-absent) in the spec itself; (b) nit-3 — spec front-matter links.related_decisions gains TDR-0011 (already recorded above); (c) nit-2 — test plan GAP-1 stale pointer may be tidied at next test-plan touch (optional, non-blocking); (d) nit-4 — PIN-3 window-start ordering clarification optional at next plan touch."
+    type: info
     date: "2026-11-07"
   - text: "Specification checkpoint committed as c8262434 (message-only amend f8d24f1f->c8262434 to fix commitlint body-max-line-length; tree hash unchanged). Retro: keep commit bodies pre-wrapped at <=100 chars when briefing @committer; CI commitlint is the authority, the local hook is warn-only."
     type: retro
