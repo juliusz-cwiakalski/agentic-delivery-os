@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-11-07T00:00:00Z", completed: "2026-11-07T00:30:00Z" }
   specification: { started: "2026-11-07T00:35:00Z", completed: "2026-11-07T01:05:00Z" }
   test_planning: { started: "2026-11-07T01:06:00Z", completed: "2026-11-07T01:40:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-11-07T01:41:00Z", completed: "2026-11-07T02:10:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -45,5 +45,8 @@ notes:
     type: "risk"
     date: "2026-11-07"
   - text: "Test plan delivered: 58 TCs (TC-PROFILE-001..058), all 9 spec ACs traced, SC-M1-21/22 folded in; 7 gaps reported by test-plan-writer, all delivery-bound or external-evidence (AC-F8-8 milestone-scoped, pacing precedence -> delivery decision in plan, vendor fixtures fixture-proven, NFR-6 baseline recorded). No spec reopen required."
+    type: "info"
+    date: "2026-11-07"
+  - text: "Plan delivered as canonical YAML (chg-GH-234-plan.yaml, delivery.plan.v1, 9 phases, 56 tasks, repo plan validate verdict=valid readyForDevelopment=true). PM decisions baked in: goal-priority declared order = precedence; spawn enforcement = --for-spawn seam + data-v1 contract with legacy hook byte-unchanged (structurally asserted); vendor mappings fixture-proven; profiles ship empty fail-closed."
     type: "info"
     date: "2026-11-07"
