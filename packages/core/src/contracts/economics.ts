@@ -403,7 +403,26 @@ export type EconomicsResumeDecision =
       readonly exitCode: 1;
       readonly reason: string;
       readonly corpus: string;
+    }
+  | {
+      readonly outcome: "unevaluable";
+      readonly code: EconomicsRecordFailureCode | "state.write.failed";
+      readonly exitCode: 1 | 2;
+      readonly reason: string;
+      readonly corpus: string;
     };
+
+/** The two composition shapes: supervised-style and one-shot-style (AC-F4-3). */
+export const ECONOMICS_RESUME_COMPOSITION_MODES = ["supervised", "one-shot"] as const;
+
+export type EconomicsResumeCompositionMode =
+  (typeof ECONOMICS_RESUME_COMPOSITION_MODES)[number];
+
+/** One production composition: its mode plus the attempt entry point. */
+export type EconomicsResumeComposition = {
+  readonly mode: EconomicsResumeCompositionMode;
+  readonly attempt: (input: EconomicsResumeInput) => EconomicsResumeDecision;
+};
 
 /** One resume attempt's injected input (no execution, no ambient fact). */
 export type EconomicsResumeInput = {

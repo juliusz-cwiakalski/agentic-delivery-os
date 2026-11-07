@@ -6,7 +6,11 @@
  * run by Bun; the `@ts-expect-error` comments are the assertions.
  */
 import type {
+  EconomicsAmplificationFlag,
+  EconomicsExhaustionRecord,
   EconomicsOutcome,
+  EconomicsRestartHistoryEntry,
+  EconomicsWarningKind,
   EconomicsRestartReason,
   EconomicsRestartRecord,
   EconomicsSourcedSignalKind,
@@ -101,4 +105,54 @@ export {
   view,
   widenedSourced,
   wrongView,
+};
+
+// --- Phase 2: record-payload optional-field modelling and closed unions. ---
+
+const warningKind: EconomicsWarningKind = "missing-repay-tokens";
+
+// @ts-expect-error — a warning kind outside the closed vocabulary is rejected.
+const unknownWarning: EconomicsWarningKind = "missing-everything";
+
+const flag: EconomicsAmplificationFlag | null = RESUME_AMPLIFICATION_LOOP_FLAG;
+
+// @ts-expect-error — the flag name is literal-checked; free-form strings are rejected.
+const freeFormFlag: EconomicsAmplificationFlag = "loop";
+
+const recordWithObservedNull: EconomicsRestartRecord = {
+  ...recordWithoutRepay,
+  observedUniqueProgressTokens: null,
+};
+
+const historyEntry: EconomicsRestartHistoryEntry = {
+  ordinal: 1,
+  reason: restartReason,
+  sessionId: "ses_fixture_1",
+  recordedAt: "2026-11-07T00:00:00Z",
+};
+
+const terminal: EconomicsExhaustionRecord = {
+  schemaId: "delivery.economics.exhaustion.v1",
+  workItemRef: "GH-235",
+  runId: "run-1",
+  reason: "dispatch.restart-budget-exceeded",
+  restarts: 3,
+  historyRef: "economics/GH-235",
+  terminal: true,
+  options: ["requeue-fresh-budget", "park-owner-review"],
+  recordedAt: "2026-11-07T00:00:00Z",
+};
+
+// @ts-expect-error — the terminal marker is the literal `true`.
+const nonTerminal: EconomicsExhaustionRecord = { ...terminal, terminal: false };
+
+export {
+  flag,
+  freeFormFlag,
+  historyEntry,
+  nonTerminal,
+  recordWithObservedNull,
+  terminal,
+  unknownWarning,
+  warningKind,
 };
