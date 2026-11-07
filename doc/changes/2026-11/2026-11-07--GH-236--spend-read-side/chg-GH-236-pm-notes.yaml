@@ -10,7 +10,7 @@ phases:
   delivery: { started: "2026-11-07T05:25:00Z", completed: "2026-11-07T06:30:00Z" }
   system_spec_update: { started: "2026-11-07T06:35:00Z", completed: "2026-11-07T07:00:00Z" }
   review_fix: { started: "2026-11-07T07:05:00Z", completed: "2026-11-07T09:15:00Z" }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-11-07T09:20:00Z", completed: "2026-11-07T10:50:00Z" }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -108,6 +108,27 @@ notes:
     type: info
     date: "2026-11-07"
   - text: "Advisory findings recorded for potential follow-ups (non-blocking): F-1 human amplification decomposition uses possibly-truncated events list; F-2 status human line wording for missing local context; F-3 ordering/truncation constants not consumed by fold/bounder; F-4 spendDigestFor seam lacks end-to-end store test; F-5 MCP/CLI spend can diverge for downstream; F-6 change-spec NFR-1 names only perAgent/perPhase; F-7 PIN-10 reference numbers live in pm-notes; F-8 unused brand option."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 1 (Contracts — spend vocabulary and telemetry-absent row): commit f1f70dee. Verification: structure+checks 97+79 pass; error-table-sync 84/84 at the time (before base merge); pnpm typecheck exit 0. Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 2 (State read consumer — verified ref-scoped read-only): commit d5522f91. Verification: spend read-contract/store-damage 12 pass; state structure 33 pass; typecheck exit 0. Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 3 (Domain engine — fold, attribution, amplification, renderer): commit 2266310c. Verification: 60 behavioural pass across 13 suites + 20 bounds/determinism/privacy/performance pass + 5 golden pass; typecheck exit 0. Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 4 (CLI surface + digest section-8 flip): commit a738c223. Verification: 30 spend CLI/absent/grammar/ref/readonly pass; 43 status flip/corpus pass; cli-edge-seam 26 pass; goldens green; typecheck exit 0. Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 5 (Invariant and boundary guards): commit 6f4425d1. Verification: spend-imports + 12-mutant meta-suite 24 pass; invariant battery clean (ambient-globals 93 files, exit-code-literals, forbidden-literals, error-table-sync); behaviour+golden 3330 pass. Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 6 (Finalize — aggregate gate, changeset, traceability): commit 49cf8886. Verification: TMPDIR pnpm check exit 0 (4728 pass at that point), doc-distribution no drift, changesets-group OK (one fixed group of five), plan validate readyForDevelopment=true. Task 6.3 doc half completed in phase 7 (feature-spend.md + reconciled pages). Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "Quality gates (phase 9) after review PASS at HEAD 57979a5d: TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 — 5150 pass / 4 skip / 0 fail across 526 files, 47047 expects, depcruise 262 modules clean, ambient-globals/workspace-entrypoints/secret-read-boundary/exports-parity (5/5) OK, biome 0 errors (48 warnings + 12 infos only). Standalone: doc-distribution no drift (81 docs), error-table-sync entries=95 documented=95 OK, forbidden-literals 5/5 scope classes 0 violations, privacy-literals 2686 files 0 violations. Commitlint clean over c4f6cd63..HEAD (16 commits). Branch 0 behind / 16 ahead. Result: pass."
     type: info
     date: "2026-11-07"
   - text: "Specification checkpoint committed as c8262434 (message-only amend f8d24f1f->c8262434 to fix commitlint body-max-line-length; tree hash unchanged). Retro: keep commit bodies pre-wrapped at <=100 chars when briefing @committer; CI commitlint is the authority, the local hook is warn-only."
