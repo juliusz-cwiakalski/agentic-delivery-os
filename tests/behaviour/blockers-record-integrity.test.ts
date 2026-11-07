@@ -111,7 +111,12 @@ describe("TC-BLK-011 corruption classification", () => {
       rawAppend(harness.state.store, {
         kind: "blocker.question",
         recordKey: "blockers.questions:q-bad-time",
-        payload: { ...malformedQuestion(), id: "q-bad-time", askedAt: "not-an-instant" },
+        payload: {
+          ...malformedQuestion(),
+          id: "q-bad-time",
+          ref: null,
+          askedAt: "not-an-instant",
+        },
       });
       const run = await harness.run(["list"]);
       expect(run.exitCode).toBe(2);

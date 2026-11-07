@@ -181,7 +181,7 @@ The handler owns no stream writes and chooses no exit code. It returns data or o
 
 ### Digest integration
 
-The status digest carries a seventh fixed section, `typed-questions` (title `Typed questions`), after `parked-work`. The section is state-sourced: one verified read of the blocker ledger per status invocation, exposed as the `blockers` evidence source.
+The status digest carries a ninth fixed section, `typed-questions` (title `Typed questions`), after `spend`. The section is state-sourced: one verified read of the blocker ledger per status invocation, exposed as the `blockers` evidence source.
 
 | Condition | Section state | Evidence |
 |---|---|---|
@@ -191,7 +191,7 @@ The status digest carries a seventh fixed section, `typed-questions` (title `Typ
 
 `degraded`, `unavailable`, and `not-delivered` never apply to this section: it has one required local read, and an absent store is verified-empty evidence rather than an unavailable source. The section renders open questions only, ranked by the shared ranking, capped at eight; each item carries `id`, `type`, `audience`, `lane`, `ref`, `question`, `options`, `askedAt`, `age`, and `rank`. Counts report the open total as `observed` and `total`, zero unknown, and the omitted count; a truncation appends the `source-truncated` reason. A failed read yields zero counts and an empty `questions` array — never a fabricated question — and it is payload data, not a command failure: `status` still returns a success envelope with exit `0`. The digest `summary` counts nine sections and includes rendered typed questions in its actionable total.
 
-The human digest renders one additional line after the parked-work line:
+The human digest renders one additional line after the spend line:
 
 ```
 questions  <state>  <n|?> open[ (<reason>)]
@@ -253,7 +253,7 @@ The v0 production composition supplies no adapter capability fact, so a real pub
 | `packages/cli/src/commands/blockers.ts` | The `blockers` command definition: the three-subcommand grammar, validation and guard ordering, one read, at most one append, and data-or-classified-failure results with no stream writes or exit literals. |
 | `packages/cli/src/edge.ts` | The blockers composition: `createBlockersCommandRuntime` wires the state store, clock, id suffix and fence-token factories, the capability and delegation snapshots, the brand, the registered secrets, and the branding-derived caller-audience environment fact; registration occurs only when a blockers composition is supplied. |
 | `packages/cli/src/classify.ts` | Resolves the reserved `fallback` namespace returned by a handler for grammar-level refusals. |
-| `packages/core/src/contracts/status.ts` | The seventh section id and title, the `blockers` evidence source, and the typed-question item and read types. |
+| `packages/core/src/contracts/status.ts` | The ninth section id and title, the `blockers` evidence source, and the typed-question item and read types. |
 | `packages/core/src/domain/status.ts` | Derives the bounded `typed-questions` section from the verified read through the shared ranking and renders the human question line. |
 | `packages/core/src/contracts/brief.ts` | The nine-id surface order, the two-entry placeholder catalog, the three anchor-group ids, and the `blocker-question` action evidence type. |
 | `packages/core/src/domain/brief.ts` | Mirrors the digest section into the `typed-questions` surface and projects the ranked `blocker-questions` anchor. |
@@ -266,7 +266,7 @@ The v0 production composition supplies no adapter capability fact, so a real pub
 3. `publish` validates the type, audience, lane, question, and options, evaluates the guard over the question and identifiers, generates the id and `askedAt`, and appends one question record under one fence with post-append coverage.
 4. `answer` guards the supplied free text, reads once, resolves the question, guards the stored content and identifiers, resolves the answering audience, consults the delegation map, validates the channel, projects `laneResume`, and appends one answer record under one fence with post-append coverage.
 5. The CLI edge renders the human form when `--json` is absent or the standard envelope when present, redacts registered values, and projects the exit code.
-6. A `status` or `brief` invocation reads the blocker ledger once through the status runtime; the digest derives the seventh section and the brief derives the mirrored surface and ranked anchor from the same bytes.
+6. A `status` or `brief` invocation reads the blocker ledger once through the status runtime; the digest derives the ninth section and the brief derives the mirrored surface and ranked anchor from the same bytes.
 
 ### API and interface contracts
 
@@ -368,13 +368,13 @@ One `blockers list`, `status`, or `brief` invocation performs one verified block
 
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for the append-only ledger, validated artifact boundaries, verified reads and verified-empty evidence, fences, and torn/unknown classification that carry both record kinds.
 - **Depends on** the owner-gate SLA ([feature-owner-gate-sla.md](feature-owner-gate-sla.md)) for the `owner` | `coordinator` audience dimension, the policy-as-data and deterministic rank-key precedents, and the bounded-truncation discipline.
-- **Depends on** the status digest ([feature-status-digest.md](feature-status-digest.md)) for the fixed-section vocabulary, the five-value section state, the closed reason set, the counts and bounds model, and the section-failures-are-payload-data rule the seventh section follows.
+- **Depends on** the status digest ([feature-status-digest.md](feature-status-digest.md)) for the fixed-section vocabulary, the five-value section state, the closed reason set, the counts and bounds model, and the section-failures-are-payload-data rule the ninth section follows.
 - **Depends on** the brief ([feature-brief.md](feature-brief.md)) for the nine-surface totality, the closed placeholder catalog, and the anchored-action model the mirrored surface and ranked group extend.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, the `blockers` domain kind and its four rows, the `{0, 1, 2}` projection, and the registered-secrets record layer 1 consumes.
 - **Depends on** the branding seam ([feature-branding-seam.md](feature-branding-seam.md)) for the injected binary name and the environment-prefix naming discipline.
 - **Depends on** lane contracts ([feature-watchdog-lane-contracts.md](feature-watchdog-lane-contracts.md)) for the lane vocabulary behind `--lane`; lane-registry existence is not verified here.
 - **Feeds** the resident dispatch daemon (M1-S18), coordinator supervision (M1-S23), the one-shot `dispatch --resume` path (M1-S9), and agent integration (M1-S20), which consume the recorded intents and projections.
-- **Feeds** session-lifecycle economics (M1-S15), which raises typed questions through this channel on budget exhaustion, and status collector expansion (M1-S10), which builds around the seventh section.
+- **Feeds** session-lifecycle economics (M1-S15), which raises typed questions through this channel on budget exhaustion, and status collector expansion (M1-S10), which builds around the ninth section.
 - **Risk — the ranking is forked per surface:** mitigated by one shared pure ranking consumed by the list, the digest section, and the brief anchor, with an equality test over identical facts.
 - **Risk — an unregistered credential value transits the channel:** accepted residual under TDR-0011, bounded by content caps, the local-first posture, layer 2 on the highest-temptation type, and the named revisit triggers; no channel-local pattern layer exists.
 - **Risk — the answering identity is claimed, not proven:** accepted residual; the guard is process discipline plus durable evidence, revisited at the M1-S22 audit-identity reconciliation.
