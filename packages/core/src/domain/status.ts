@@ -722,14 +722,13 @@ const assertionAvailability = (
   availability: StatusTrackerAvailability,
   assertion: string,
 ): boolean => {
-  const record = availability as unknown as Readonly<Record<string, string | undefined>>;
-  const key =
+  const signal =
     assertion === "epic-membership"
-      ? "epicMembership"
+      ? availability.epicMembership
       : assertion === "story-points"
-        ? "storyPoints"
-        : "inSprint";
-  return record[key] === "available";
+        ? availability.storyPoints
+        : availability.inSprint;
+  return signal === "available";
 };
 
 type HygieneAssertionEvaluation = {
