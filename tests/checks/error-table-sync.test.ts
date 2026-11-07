@@ -695,9 +695,11 @@ const ROW_VERIFY =
  * (`state.storage.exhausted`, `state.store.unknown`), the three GH-221 watchdog
  * lane-safety rows, the five GH-226 machine-readable delivery-plan rows, the
  * six GH-227 commit-primitive rows, the GH-228/GH-229 status collector row,
- * and the GH-224 doctor row,
- * so the frozen baseline plus those twenty-six later rows equals the live
- * table; a changed baseline row fails naming it.
+ * the GH-224 doctor row, the GH-234 provider-profile and env-record rows,
+ * the GH-235 watchdog-stall and dispatch economics rows, and the GH-236 spend
+ * read-side row,
+ * so the frozen baseline plus those sixty-one later rows equals the live table;
+ * a changed baseline row fails naming it.
  */
 const BASELINE_ROWS: ReadonlyArray<
   readonly [string, string, string, boolean, string, string, string, string]
@@ -1071,8 +1073,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 60) {
-    failures.push(`table length ${live.length} != baseline + 60 (${BASELINE_ROWS.length + 60})`);
+  if (live.length !== BASELINE_ROWS.length + 61) {
+    failures.push(`table length ${live.length} != baseline + 61 (${BASELINE_ROWS.length + 61})`);
   }
   return failures;
 };
@@ -1102,6 +1104,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       doctor: 1,
       merge: 7,
       harness: 9,
+      spend: 1,
       dispatch: 2,
     });
   });
@@ -1150,7 +1153,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 60,
+      BASELINE_ROWS.length + 61,
     );
   });
 
@@ -1173,7 +1176,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 60);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 61);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);

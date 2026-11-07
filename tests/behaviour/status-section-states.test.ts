@@ -126,7 +126,23 @@ const shapeFailures = (value: unknown): string[] => {
         failures.push(`${id}: observed items must carry the ready class`);
       }
     }
-    if (id === "spend" || id === "blockers") {
+    if (id === "spend") {
+      if (section.state === "not-delivered") failures.push(`${id}: must never be not-delivered`);
+      if (!isRecord(section.spend)) failures.push(`${id}: spend projection missing`);
+      else if (section.spend.state !== section.state) {
+        failures.push(`${id}: spend projection state mismatch`);
+      }
+      if (section.state === "unknown" && section.spend?.state === "unknown") {
+        if (typeof section.spend.failureCode !== "string") {
+          failures.push(`${id}: unknown spend must carry the state failure code`);
+        }
+      }
+      if (!Array.isArray(section.items) || section.items.length !== 0) {
+        failures.push(`${id}: items must be empty`);
+      }
+      if (section.counts.total !== 0) failures.push(`${id}: counts must be zero`);
+    }
+    if (id === "blockers") {
       if (section.state !== "not-delivered") failures.push(`${id}: must be not-delivered`);
       if (typeof section.capability !== "string") failures.push(`${id}: capability missing`);
       if (typeof section.expectedStory !== "string") failures.push(`${id}: expectedStory missing`);

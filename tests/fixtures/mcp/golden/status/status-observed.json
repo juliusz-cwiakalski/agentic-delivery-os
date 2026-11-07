@@ -387,7 +387,6 @@
       "truncated": false
     },
     {
-      "capability": "spend-summary",
       "counts": {
         "observed": 0,
         "omitted": 0,
@@ -396,20 +395,23 @@
       },
       "evidence": {
         "reasons": [
-          "engine-not-delivered"
+          "observed-empty"
         ],
         "sources": [
           {
-            "outcome": "not-delivered",
-            "source": "queue-engine"
+            "outcome": "observed-empty",
+            "source": "state-log"
           }
         ]
       },
-      "expectedStory": "M1-S19",
       "id": "spend",
       "items": [],
-      "note": "spend summary arrives with M1-S19",
-      "state": "not-delivered",
+      "note": "no captured telemetry (absence of capture)",
+      "spend": {
+        "captured": false,
+        "state": "observed"
+      },
+      "state": "observed",
       "title": "Spend",
       "truncated": false
     },
@@ -445,9 +447,9 @@
     "actionable": 6,
     "degraded": 0,
     "findingsTotal": 2,
-    "notDelivered": 3,
-    "observed": 6,
-    "placeholderSectionCount": 2,
+    "notDelivered": 2,
+    "observed": 7,
+    "placeholderSectionCount": 1,
     "sections": 9,
     "unavailable": 0,
     "unknown": 0

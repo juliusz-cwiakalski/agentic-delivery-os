@@ -96,6 +96,7 @@ const EXPECTED_SOURCES = [
   "provider-parks",
   "local-context",
   "repository-binding",
+  "state-log",
 ];
 
 type ConstantSnapshot = {
@@ -265,7 +266,7 @@ const compareSnapshot = (candidate: ConstantSnapshot): string[] => {
     "unknown",
     "unavailable",
   ]);
-  eq("STATUS_PLACEHOLDER_SECTION_IDS", STATUS_PLACEHOLDER_SECTION_IDS, ["spend", "blockers"]);
+  eq("STATUS_PLACEHOLDER_SECTION_IDS", STATUS_PLACEHOLDER_SECTION_IDS, ["blockers"]);
   eq("STATUS_PRIMARY_BRANCH", STATUS_PRIMARY_BRANCH, "main");
   eq("STATUS_HUMAN_CLAMP_MARKER", STATUS_HUMAN_CLAMP_MARKER, "+");
   eq("STATUS_DORMANT_FINDING_CODES", STATUS_DORMANT_FINDING_CODES, ["lane.idle-no-reason"]);
@@ -282,7 +283,7 @@ const compareSnapshot = (candidate: ConstantSnapshot): string[] => {
     providers: "collector",
     "parked-work": "collector",
     "ready-to-merge": "collector",
-    spend: "placeholder",
+    spend: "collector",
     blockers: "placeholder",
   });
   eq("STATUS_SECTION_DERIVATION.ready-to-merge", STATUS_SECTION_DERIVATION["ready-to-merge"], [
@@ -325,7 +326,7 @@ describe("TC-STATUS-008 declared constants bind Appendix C", () => {
     expect(compareSnapshot(liveSnapshot())).toEqual([]);
     expect(STATUS_SECTION_ORDER).toHaveLength(9);
     expect(STATUS_EVIDENCE_REASONS).toHaveLength(20);
-    expect(STATUS_EVIDENCE_SOURCES).toHaveLength(8);
+    expect(STATUS_EVIDENCE_SOURCES).toHaveLength(9);
   });
 
   test("StatusProviderEntry binds the emitted quota and peak declarations", () => {

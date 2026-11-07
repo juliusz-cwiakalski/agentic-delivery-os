@@ -43,6 +43,7 @@ import {
 import { GITLAB_ADAPTER_CONTRACT, type GitLabClient } from "@delivery-os/adapters/gitlab";
 import { JIRA_ADAPTER_CONTRACT, type JiraClient } from "@delivery-os/adapters/jira";
 import { createLegacyCompat } from "@delivery-os/adapters/legacy";
+import { createProviderWatchMappings } from "@delivery-os/adapters/provider-quota";
 import {
   findGitRoot,
   nodeRepositoryIo,
@@ -69,6 +70,7 @@ import {
   collectRetro,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
+  computeSpendReport,
   createSourcedWatchdogSignalSource,
   isLiveDbSession,
   type MergeTransactionPorts,
@@ -81,6 +83,7 @@ import {
   runCloseout,
   runCommitAct,
   selectPruneCandidates,
+  spendDigestSection,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
   type VerifyGatesOpenPrPage,
@@ -135,6 +138,7 @@ import {
   type ProviderSleep,
   type QuotaTransport,
   type Result,
+  type SpendDigestSection,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type StateStorePort,
@@ -165,7 +169,6 @@ import {
   resolveProfileForSpawn,
   selectProfile,
 } from "@delivery-os/core/provider";
-import { createProviderWatchMappings } from "@delivery-os/adapters/provider-quota";
 import {
   appendAuditInvocation,
   appendCloseoutOutcome,
@@ -191,6 +194,7 @@ import {
   readOwnerGateSlaDecisions,
   readRetroRegistry,
   readRetroRuns,
+  readSpendLedger,
   recordRetroRun,
   replacePhaseProjection,
   STATE_SCHEMA_VERSION,
@@ -235,6 +239,7 @@ import {
 } from "./commands/provider.js";
 import { createQueueReadyCommandDefinition } from "./commands/queue.js";
 import { createRetroCommandDefinition } from "./commands/retro.js";
+import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
 import type { VerifyDeployRuntime } from "./commands/verify-deploy.js";
@@ -1618,9 +1623,40 @@ export const createStatusCommandRuntime = (
     },
     readLocalContext: (): StatusLocalContextRead =>
       readLocalPmContext({ path: options.localContext.path, fs: options.localContext.fs }),
+    readSpend: (): SpendDigestSection => spendDigestFor(options),
     nowIso: options.clock.nowIso,
     nowMs: options.clock.nowMs,
   };
+};
+
+/**
+ * The digest's spend projection over the already-composed store seam (DM-6).
+ *
+ * The active change ref comes from the same local PM context the digest already
+ * reads; a missing context is digest data, never a command failure. The section
+ * derives from the SAME `readSpendLedger` + fold the command consumes.
+ */
+const spendDigestFor = (options: {
+  readonly store: StateStorePort;
+  readonly localContext: { readonly path: string; readonly fs: FileSystemFacts };
+}): SpendDigestSection => {
+  const context = readLocalPmContext({
+    path: options.localContext.path,
+    fs: options.localContext.fs,
+  });
+  const ref = context.ok ? context.context.activeChange?.workItemRef : undefined;
+  if (ref === undefined) {
+    return {
+      state: "unknown",
+      reason: "local-context-missing",
+      failureCode: "local-context-missing",
+    };
+  }
+  const read = readSpendLedger(options.store, ref);
+  if (!read.ok) {
+    return { state: "unknown", reason: "state-unreadable", failureCode: read.error.code };
+  }
+  return spendDigestSection(read.value);
 };
 
 /** The doctor composition seams; the provider resolver is supplied by the edge. */
@@ -2078,6 +2114,7 @@ export type ConfigProgramOptions = {
   readonly board?: BoardComposition;
   readonly merge?: MergeCommandRuntime;
   readonly retro?: RetroCompositionOptions;
+  readonly spend?: SpendCompositionOptions;
 };
 
 export type ConfigProgramResult =
@@ -2625,6 +2662,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   if (options.retro !== undefined) {
     commands.retro = createRetroCommandDefinition(createRetroCommandRuntime(options.retro));
   }
+  if (options.spend !== undefined) {
+    commands.spend = createSpendCommandDefinition(createSpendCommandRuntime(options.spend));
+  }
   return {
     ok: true,
     brand,
@@ -2840,3 +2880,48 @@ export const readRetroRegistryState = (store: StateStorePort): DoctorStateStores
     stores: [{ name: "retro-registry", verdict: read.value.verdict }],
   };
 };
+
+/**
+ * The spend composition seams (GH-236 F-6): the delivery state store and the
+ * local PM context. The command is read-only: no fence, no append, no spawn,
+ * no credential resolution is composed here.
+ */
+export type SpendCompositionOptions = {
+  readonly store: StateStorePort;
+  readonly localContext: { readonly path: string; readonly fs: FileSystemFacts };
+};
+
+/** Compose the spend command runtime from the injected read-only seams. */
+export const createSpendCommandRuntime = (
+  options: SpendCompositionOptions,
+): SpendCommandRuntime => ({
+  resolveActiveRef: () => {
+    const context = readLocalPmContext({
+      path: options.localContext.path,
+      fs: options.localContext.fs,
+    });
+    const ref = context.ok ? context.context.activeChange?.workItemRef : undefined;
+    return ref === undefined ? { ref: null } : { ref };
+  },
+  report: (selection) => {
+    const read = readSpendLedger(options.store, selection.workItemRef);
+    if (!read.ok) {
+      return {
+        ok: false,
+        error: {
+          kind: "state",
+          code: read.error.code,
+          consequence: read.error.consequence,
+          location: read.error.location,
+        },
+      };
+    }
+    const folded = computeSpendReport(read.value, selection);
+    if (!folded.ok) {
+      return { ok: false, error: { kind: "spend", code: folded.absence.code } };
+    }
+    return folded.warnings.length === 0
+      ? { ok: true, data: folded.data }
+      : { ok: true, data: folded.data, warnings: folded.warnings };
+  },
+});

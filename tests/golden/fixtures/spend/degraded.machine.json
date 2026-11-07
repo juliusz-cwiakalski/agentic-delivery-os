@@ -1,0 +1,51 @@
+{
+  "tokensByClass": {
+    "input": 140,
+    "output": 20,
+    "reasoning": 0,
+    "cacheRead": 0,
+    "cacheWrite": 0
+  },
+  "perPhase": [
+    {
+      "phase": "unknown",
+      "calls": 3,
+      "tokens": 160,
+      "share": 100
+    }
+  ],
+  "perAgent": [
+    {
+      "agent": "planner",
+      "model": "sonnet",
+      "calls": 2,
+      "tokens": 120
+    },
+    {
+      "agent": "coder",
+      "model": "opus",
+      "calls": 1,
+      "tokens": 40
+    }
+  ],
+  "restarts": 0,
+  "amplification": {
+    "ratio": 1,
+    "progressRun": null,
+    "events": []
+  },
+  "degradation": {
+    "records": 3,
+    "byReason": {
+      "optional-field-absent": 1,
+      "non-numeric-value": 1,
+      "cost-missing": 0,
+      "version-drift": 0,
+      "malformed-line": 0,
+      "truncated": 0,
+      "session-capture-failed": 1,
+      "unattributable-session": 0,
+      "invalid-session-identity": 0
+    }
+  }
+}

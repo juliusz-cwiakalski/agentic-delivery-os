@@ -129,7 +129,15 @@ describe("TC-STATUS-033 performance and read-cost bounds", () => {
       expect(harness.transport.requests.some((request) => request.url.includes("&page=2"))).toBe(
         false,
       );
-      expect(harness.recorder.calls.filter((call) => call === "read")).toHaveLength(1);
+      // One logical park fold plus one transition-history probe for the spend
+      // section (GH-236); still one bounded read per logical source.
+      expect(harness.recorder.calls.filter((call) => call === "read")).toHaveLength(2);
+      expect(
+        harness.recorder.calls.filter((call) => call === "readRecords").length,
+      ).toBeLessThanOrEqual(3);
+      expect(
+        harness.recorder.calls.filter((call) => call === "readRecords").length,
+      ).toBeGreaterThan(0);
       expect(harness.resolves()).toBe(1);
     } finally {
       harness.cleanup();
@@ -173,7 +181,15 @@ describe("TC-STATUS-033 performance and read-cost bounds", () => {
       expect(new Set(harness.transport.requests.map((request) => request.url))).toEqual(
         new Set([issuesUrl, pullsUrl, checksUrl]),
       );
-      expect(harness.recorder.calls.filter((call) => call === "read")).toHaveLength(1);
+      // One logical park fold plus one transition-history probe for the spend
+      // section (GH-236); still one bounded read per logical source.
+      expect(harness.recorder.calls.filter((call) => call === "read")).toHaveLength(2);
+      expect(
+        harness.recorder.calls.filter((call) => call === "readRecords").length,
+      ).toBeLessThanOrEqual(3);
+      expect(
+        harness.recorder.calls.filter((call) => call === "readRecords").length,
+      ).toBeGreaterThan(0);
       expect(harness.resolves()).toBe(1);
       const data = JSON.parse(run.stdout) as {
         data: {

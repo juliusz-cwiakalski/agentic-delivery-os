@@ -1,0 +1,148 @@
+change_id: GH-236
+title: "M1-S19: Spend read side and resume amplification"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-07T02:45:00Z", completed: "2026-11-07T03:05:00Z" }
+  specification: { started: "2026-11-07T03:08:00Z", completed: "2026-11-07T04:25:00Z" }
+  test_planning: { started: "2026-11-07T03:40:00Z", completed: "2026-11-07T04:30:00Z" }
+  delivery_planning: { started: "2026-11-07T04:35:00Z", completed: "2026-11-07T04:55:00Z" }
+  dor_check: { started: "2026-11-07T05:00:00Z", completed: "2026-11-07T05:20:00Z" }
+  delivery: { started: "2026-11-07T05:25:00Z", completed: "2026-11-07T06:30:00Z" }
+  system_spec_update: { started: "2026-11-07T06:35:00Z", completed: "2026-11-07T07:00:00Z" }
+  review_fix: { started: "2026-11-07T07:05:00Z", completed: "2026-11-07T09:15:00Z" }
+  quality_gates: { started: "2026-11-07T09:20:00Z", completed: "2026-11-07T10:50:00Z" }
+  dod_check: { started: "2026-11-07T10:55:00Z", completed: "2026-11-07T11:05:00Z" }
+  pr_creation: { started: "2026-11-07T11:10:00Z", completed: "2026-11-07T11:25:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/263" }
+decisions:
+  - text: "OQ-1 (spec): PM-decided to author a standalone TDR for the amplification formula (spec DEC-3) via @decision-advisor before test planning — AC-bearing, consumed later by M1-S21 routing and M2-S6 alarms; GH-232/TDR-0009 precedent."
+    date: "2026-11-07"
+  - text: "OQ-1 RESOLVED: TDR-0011 (doc/decisions/TDR-0011-spend-resume-amplification-v0-formula.md) authored at rigor R2, status Proposed, owner acceptance reserved at PR review (TDR-0009 precedent). Chosen ALT-2: run-identity ratio, latest-record-bearing-run progress, per-run named events; rejected ALT-1 naive aggregate (no attributable surface for M2-S6) and ALT-3 charitable denominator (hides waste in exactly the crashed-loop shape). Constraints C-1..C-6 pin log-only derivability, healthy=1, determinism (capturedAt desc / runId asc), honesty limits, and delivery.spend.v1 amplification-block stability."
+    date: "2026-11-07"
+open_questions:
+  - text: "OQ-T2 (test-plan iteration 1, reopened specification): AC-F5-3 requires ratio:null while 'naming the run' in machine mode, but DM-1 pins amplification to exactly {ratio, events[]} and events[] carries only superseded positive-spend runs — the zero-progress (latest) run cannot appear anywhere. Human channel satisfies naming; machine consumers cannot see which run produced the null. Resolution direction: minimal DM-1 amendment (additive machine surface for the zero-progress run identity) or explicit AC rewording to human-channel-only; spec-writer decides the minimal consistent option, reconciling AC-F5-3, DM-1, and TDR-0011 stability contract."
+    date: "2026-11-07"
+blockers: []
+notes:
+  - text: "State detection: issue GH-236 open (labels change+review, milestone M1); no open PR anywhere for branch feat/GH-236/spend-read-side; no closed/merged PR ever for this ticket; no remote branch; no local change folder; fresh per-ticket worktree. Classified as fresh start, not resume; no main-tools sync merge needed. PR search matched only PR #252 (GH-223) via a substring in its body — not related."
+    type: info
+    date: "2026-11-07"
+  - text: "Dependency verified delivered: M1-S11 (GH-233 harness adapters and dispatch portability) merged to origin/main-tools as a69b555e at 2026-11-07T02:23:51Z — ~1.5h before session start. Ticket dependency satisfied; closeout-captured telemetry capture path and harness.telemetry record kind exist."
+    type: info
+    date: "2026-11-07"
+  - text: "Scope cross-check vs system spec and design baseline: spend command surface `<binary> spend [--ref <ref>] [--phase <phase>] [--amplification] [--json]` consistent across commands/spend.md, contracts.md §spend (Learn family), man-page.md, journeys.md; backlog.md M1-S19 entry matches ticket verbatim. Source data pinned: closeout-captured event log only — harness.telemetry session-group records (delivery.harness.telemetry.v1, key harness.telemetry:<workItemRef>) plus run-scoped capture-outcome records (delivery.harness.telemetry.capture.v1); NO harness re-query."
+    type: info
+    date: "2026-11-07"
+  - text: "Design resolution deferred to spec-writer (data available in the pinned event log): per-phase attribution — harness telemetry records carry no phase field; the delivery registry writes phase.transition records into the same ledger, so per-phase spend can fold phase windows over captured-at timestamps. Restart counts — capture-outcome records are per (workItemRef, runId), giving per-delivery run counts. Amplification ratio (tokens paid vs unique progress) and named events (restart-loop prefill re-pay) have no upstream primitive yet; design baseline defines the shape (ratio, events[] with cause/window/tokensWasted)."
+    type: info
+    date: "2026-11-07"
+  - text: "Captured caveat (not a blocker): no production composer injects the closeout telemetry capability yet — GH-240 (M1-S12) wires it, so real closeout runs capture no harness.telemetry records until then. spend v0 must treat telemetry-absent as the first-class classified outcome (spend.telemetry-absent, exit 1 per design baseline ERRORS/EXIT) rather than an edge case; fixture-seeded state stores prove the reporting path."
+    type: risk
+    date: "2026-11-07"
+  - text: "Token classes: harness telemetry carries five classes (input, output, reasoning, cacheRead, cacheWrite); the design-baseline example shows only three (input/cacheRead/output). Spec must reconcile to the delivered five-class vocabulary — spec-writer decision, design example is illustrative not binding."
+    type: info
+    date: "2026-11-07"
+  - text: "Cross-feature integration note: status digest currently names spend as a not-delivered gap ('until M1-S19', contracts.md line ~183, commands/status.md examples) and brief prints a placeholder spend summary. This change flips that gap to delivered — spec must decide whether status/brief consume a spend capability or the flip is registry-driven; reviewer/doc-syncer must verify no stale 'until M1-S19' claims remain."
+    type: risk
+    date: "2026-11-07"
+  - text: "Expected error contract: one new domain kind `spend` with spend.telemetry-absent (user, exit 1 per design baseline); reuses state.store.torn and state-layer identities for unreachable/torn event log (exit 2). Bidirectional error-table sync required. Exit baseline: 0 reported; 1 no telemetry for ref; 2 event log unreachable."
+    type: info
+    date: "2026-11-07"
+  - text: "Doc impacts for phase 7 (system_spec_update): author doc/spec/features/feature-spend.md (first-spec-only, none exists) with ados_distribution marker; reconcile feature-state-layer.md (spend as verified read consumer of harness.telemetry), feature-result-contract.md (new error rows), feature-status-digest.md (gap flip if in scope), glossary/index; register new spec in forbidden-literals.registry.json (GH-224/GH-225/GH-232 precedent). M1 pack docs are planning docs refined at delivery per pack conventions."
+    type: info
+    date: "2026-11-07"
+  - text: "Tracker label realigned: 'review' was stale (no PR exists); replaced with 'planning' at planning start per pm-instructions workflow-state mapping. No comment left on ticket (nothing value-adding; requirements complete with binding pinned decisions)."
+    type: info
+    date: "2026-11-07"
+  - text: "clarify_scope completed without human questions: ticket has binding pinned decisions (log-only reads; amplification ~1 healthy; alarms/burn-rate deferred to M2-S6), testable AC, delivered dependency (M1-S11), and consistent design baseline across five pack docs. Proceeding to artifact generation."
+    type: info
+    date: "2026-11-07"
+  - text: "Branch ensure complete: worktree was already on feat/GH-236/spend-read-side at a69b555e; verified base-up-to-date against freshly fetched origin/main-tools (same commit). Only untracked dirt is this change folder's pm-notes (expected PM artifact). Label swap executed via gh CLI: change+review -> change+planning."
+    type: info
+    date: "2026-11-07"
+  - text: "Auth observation for later phases: github-mcp write calls fail with 'Requires authentication' (reads work); gh CLI 2.91.0 is authenticated (repo scope, ssh). Route tracker writes and PR creation through gh CLI tooling (@pr-manager/@committer paths)."
+    type: info
+    date: "2026-11-07"
+  - text: "Spec authored by @spec-writer: chg-GH-236-spec.md (15 ACs; DEC-2..DEC-10 pinned). PM validation passed: both binding ticket ACs quoted verbatim in the traceability map (spec lines 313/424-425); error contract = exactly one new row spend.telemetry-absent (user-validation, exit 1) with delivered rows unchanged; per-phase attribution pinned as capture-time basis over phase.transition windows (DEC-4); restarts = max(0, N-1) over run identities (DEC-5); five delivered token classes reconciled against the design example's illustrative three (DEC-2)."
+    type: info
+    date: "2026-11-07"
+  - text: "RETRO: my clarify_scope planning summary claimed 'brief prints a placeholder spend summary' (inferred from m1 pack docs) — spec-writer disproved this against delivered truth: the brief deliberately has no spend surface (its own DEC-5), only the status digest section 8 placeholder flips in this change. Lesson: pack planning docs describe intent, not delivered truth; cross-check integration claims against delivered feature specs (feature-brief.md) before handing them downstream as facts."
+    type: retro
+    date: "2026-11-07"
+  - text: "test_planning iteration 1: 34 TCs authored (TC-SPEND-001..034), 19/19 AC coverage, dedicated binding oracle matrices (amplification A-01..A-11, phase attribution P-01..P-14, read/absence R-01..R-10, CLI L-01..L-15, exit oracle, 12-mutant meta-case TC-SPEND-034), nine plan pins TP-DEC-1..9. Verdict: AC-F5-3 not machine-coverable as specced (OQ-T2) — specification REOPENED (iteration 2) for a surgical DM-1/AC-F5-3 amendment; paid=0-and-progress=0 degenerate was already delegated by TDR-0011 to plan time (TP-DEC-1 pins ratio:null + named run, not blocking)."
+    type: retro
+    date: "2026-11-07"
+  - text: "Reopen root cause (OQ-T2): spec pinned an AC-derived naming guarantee (machine mode) that the six-key data envelope cannot express. Lesson for spec authoring: when an AC says the report 'names X', the same edit must verify a machine surface exists for X in the pinned data contract — human-channel satisfaction is not machine satisfaction."
+    type: retro
+    date: "2026-11-07"
+  - text: "Specification iteration 2 completed (v1.1, OQ-T2 resolved): additive nullable machine field amplification.progressRun (run-id-or-null; set exactly when ratio null AND a record-bearing progress run exists; null when progress>0 or no record-bearing run i.e. capture-outcome-only store); DM-3 null rule generalized to paid=0-and-progress=0; AC-F5-3 strengthened, still 19 ACs, binding ACs verbatim and unweakened; DEC-11 records the rejected human-only alternative. TDR-0011 amended to match (A-1..A-5 + 3-point overstatement tightening for the capture-outcome-only case); test plan reconciled to v1.1 (9 TCs updated, OQ-T1/T2 closed, zero unresolved coverage gaps)."
+    type: info
+    date: "2026-11-07"
+  - text: "Reopen loop assessment: one iteration, surgical scope (spec 12 insert/7 delete; TDR additive; test plan 9 TCs), no scope loss, binding ACs never weakened. The spec->TDR->test-plan reconciliation chain held together because the spec amendment was written before the dependent edits and included an explicit addendum instruction for the record owner."
+    type: retro
+    date: "2026-11-07"
+  - text: "Delivery plan authored by @plan-writer: chg-GH-236-plan.yaml (canonical machine-readable delivery.plan.v1 YAML; 883 lines, 6 phases / 30 tasks, one commit per phase). PM validation: plan-writer ran the production validatePlan invariant itself — verdict valid, readyForDevelopment=true, errors=[]; 34/34 TCs each in exactly one phase's verification scope (programmatic check); 19/19 ACs traceable; 12 delivery pins PIN-1..12 carrying TP-DEC-2..9 so coder cannot silently choose. TC-031 help-path ambiguity resolved as plan pin (locked grammar forbids --help flag; help ships on documented surfaces)."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan-writer validation behavior confirms the GH-232 retro lesson landed: authoring-time plan-validate ran BEFORE the artifact reached PM, zero schema errors on first submission."
+    type: retro
+    date: "2026-11-07"
+  - text: "DoR iteration 1 verdict: READY (readiness-review/readiness-iter-1.md, 10/10 facets PASS, 0 blocking). Reviewer independently re-ran validatePlan through the production path (valid, readyForDevelopment=true), re-read the ticket live, verified both binding ACs verbatim and traced unweakened end-to-end, found zero oracle forks on the amplification block/null rule/error row/digest flip, confirmed TP-DEC-to-PIN completeness and 34/34 single-phase TC coverage. 1 required-non-blocking (F-1: spec DM-3 should carry the capture-outcome-only boundary itself — unanimous in TDR-0011 A-1/test plan A-11/plan task 3.1(e), no coder freedom, fold into spec at phase-7 doc-sync; do not hold delivery) + 3 nits (GAP-1 stale pointer in test plan; spec related_decisions lacks TDR-0011 — already a doc-sync handoff; PIN-3 window-start wording optional)."
+    type: info
+    date: "2026-11-07"
+  - text: "Handoff additions for phase 7 (doc-syncer), from DoR nits: (a) F-1 — one additive DM-3 sentence pinning capture-outcome-only store behavior (ratio null, progressRun null, success, never telemetry-absent) in the spec itself; (b) nit-3 — spec front-matter links.related_decisions gains TDR-0011 (already recorded above); (c) nit-2 — test plan GAP-1 stale pointer may be tidied at next test-plan touch (optional, non-blocking); (d) nit-4 — PIN-3 window-start ordering clarification optional at next plan touch."
+    type: info
+    date: "2026-11-07"
+  - text: "Delivery completed: COMPLETED_ALL, 6/6 plan phases committed (P1 f1f70dee contracts+error row, P2 d5522f91 state read consumer, P3 2266310c domain fold+renderer, P4 a738c223 CLI+digest flip, P5 6f4425d1 imports guard+12-mutant meta-suite, P6 49cf8886 changeset+gates). Aggregate: TMPDIR convention pnpm check exit 0 (4728 pass/4 skip/0 fail, 483 files), depcruise clean, error-table-sync 84/84, doc-distribution no drift, changesets-group one fixed group of five, plan validate still readyForDevelopment=true. Coder supplied per-TC evidence with exact test names for all binding-AC TCs (TC-003/006/014/015/016/017/032/034) — the GH-232 retro requirement, satisfied first time."
+    type: info
+    date: "2026-11-07"
+  - text: "Nine scope deviations reported, all justified under plan policy, flagged for reviewer: (1) classify.ts EXACT_CODE_DOMAIN_KINDS for exact-code-only spend kind; (2) error-table-sync recognizer admits two-segment spend.telemetry-absent; (3) content-inventory allowance map updates; (4) cli/commands/status.ts injection seam (plan omitted the file); (5) mcp status readSpend mirror for CLI/MCP digest parity; (6) digest-flip fixture churn per RSK-4 (corpus+goldens regenerated); (7) spend fixtures extended across P3/P4 (file in P2 scope); (8) PIN-3 EXTENDED: SPEND_TRUNCATION_TARGETS gains events — without the events tail a long restart loop breaches the 64 KiB NFR-1 bound (observed 82 KB); TC-021 permits it with marker declaring 'events N omitted'; totals/restarts/ratio/progressRun never truncated — REVIEWER must verify this stays within PIN-3's intent; (9) feature-result-contract.md documented-row companion (the one permitted Phase-1 doc/spec touch)."
+    type: info
+    date: "2026-11-07"
+  - text: "Pending into phase 7: plan task 6.3 / TC-SPEND-031 documentation half — feature-spend.md absent, feature-status-digest.md still declares spend not-delivered (retired pinned line present); code-side half passes. This is the declared phase-7 doc-syncer output, not a delivery failure."
+    type: info
+    date: "2026-11-07"
+  - text: "Resume sync: origin/main-tools advanced to c4f6cd63 (GH-234 M1-S21 model profiles; GH-235 M1-S15 session economics). Plain rebase and union merge both conflicted (additive overlap on error-table kinds/rows, contract inventories, four spec docs). @coder resolved union-style: 13 files, error table 94->95/95 identities with spend.telemetry-absent byte-identical; merge commit 70125be0 'chore(GH-236): sync with origin/main-tools' (conventional subject, no plain merge message). Post-merge verification: error-table/content-inventory/cli-edge-seam/port-inventory 199 pass, spend suites 129 pass, typecheck clean; 0 behind / 15 ahead."
+    type: info
+    date: "2026-11-07"
+  - text: "Review iteration 1 verdict: PASS (code-review/review-iter-1.yaml; 19/19 ACs, plan 30/30 tasks, PIN-1..12 honored; 0 critical/high/medium, 4 low + 4 info advisory, no remediation phase). PM-flagged items all acceptable: PIN-3 events-tail extension within intent (deterministic tail-drop, honest marker, totals/restarts/ratio/progressRun never truncated, TC-021/step-5 covered); nine deviations necessary and minimal; merge 70125be0 internally consistent (spend additive only; GH-234/235 rows intact); TC-031 doc half closed; MCP verified-empty parity acceptable with NG-5 intact. Reviewer independently re-ran 171 spend suites, 801 status/brief/structure/checks, 1573/1574 structure/boundaries/checks/golden (lone ci-baseline-parity failure is the known cross-device /tmp hardlink environmental quirk), typecheck/biome/depcruise/invariant battery clean, commitlint clean c4f6cd63..HEAD."
+    type: info
+    date: "2026-11-07"
+  - text: "Advisory findings recorded for potential follow-ups (non-blocking): F-1 human amplification decomposition uses possibly-truncated events list; F-2 status human line wording for missing local context; F-3 ordering/truncation constants not consumed by fold/bounder; F-4 spendDigestFor seam lacks end-to-end store test; F-5 MCP/CLI spend can diverge for downstream; F-6 change-spec NFR-1 names only perAgent/perPhase; F-7 PIN-10 reference numbers live in pm-notes; F-8 unused brand option."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 1 (Contracts — spend vocabulary and telemetry-absent row): commit f1f70dee. Verification: structure+checks 97+79 pass; error-table-sync 84/84 at the time (before base merge); pnpm typecheck exit 0. Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 2 (State read consumer — verified ref-scoped read-only): commit d5522f91. Verification: spend read-contract/store-damage 12 pass; state structure 33 pass; typecheck exit 0. Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 3 (Domain engine — fold, attribution, amplification, renderer): commit 2266310c. Verification: 60 behavioural pass across 13 suites + 20 bounds/determinism/privacy/performance pass + 5 golden pass; typecheck exit 0. Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 4 (CLI surface + digest section-8 flip): commit a738c223. Verification: 30 spend CLI/absent/grammar/ref/readonly pass; 43 status flip/corpus pass; cli-edge-seam 26 pass; goldens green; typecheck exit 0. Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 5 (Invariant and boundary guards): commit 6f4425d1. Verification: spend-imports + 12-mutant meta-suite 24 pass; invariant battery clean (ambient-globals 93 files, exit-code-literals, forbidden-literals, error-table-sync); behaviour+golden 3330 pass. Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan phase 6 (Finalize — aggregate gate, changeset, traceability): commit 49cf8886. Verification: TMPDIR pnpm check exit 0 (4728 pass at that point), doc-distribution no drift, changesets-group OK (one fixed group of five), plan validate readyForDevelopment=true. Task 6.3 doc half completed in phase 7 (feature-spend.md + reconciled pages). Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "Quality gates (phase 9) after review PASS at HEAD 57979a5d: TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 — 5150 pass / 4 skip / 0 fail across 526 files, 47047 expects, depcruise 262 modules clean, ambient-globals/workspace-entrypoints/secret-read-boundary/exports-parity (5/5) OK, biome 0 errors (48 warnings + 12 infos only). Standalone: doc-distribution no drift (81 docs), error-table-sync entries=95 documented=95 OK, forbidden-literals 5/5 scope classes 0 violations, privacy-literals 2686 files 0 violations. Commitlint clean over c4f6cd63..HEAD (16 commits). Branch 0 behind / 16 ahead. Result: pass."
+    type: info
+    date: "2026-11-07"
+  - text: "DoD check: PASS. (1) All lifecycle phases recorded with completion timestamps except pr_creation (in progress by definition). (2) Plan completion: 6/6 plan phases have evidence notes naming phase id, commit hash, and test result; plan validate readyForDevelopment=true at review. (3) ACs: reviewer independently confirmed 19/19 satisfied including both binding ticket ACs (AC-F2-1 via TC-003/006/032; AC-F5-1/2 via TC-014/015/016/017/034). (4) Current-truth docs: doc-syncer zero residual gaps; reviewer spot-checked feature-spend.md vs code; TC-SPEND-031 doc half closed. (5) No open blockers; advisory F-1..F-8 are non-blocking. Gates valid at the proposed commit (only doc-artifact commits after the gate run)."
+    type: info
+    date: "2026-11-07"
+  - text: "PR created: #263 https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/263 — title 'feat(GH-236): spend read side and resume amplification', base main-tools (explicit, not main), head 6b65fe53, MERGEABLE with 21 required checks pending (strict branch protection on main-tools). 145 files, +12446/-352. Closes #236. NOT merged; merge authority stays with the CEO/human. Owner review must include TDR-0011 acceptance (Proposed) alongside the PIN-3 events-tail extension and MCP/CLI divergence disclosures."
+    type: info
+    date: "2026-11-07"
+  - text: "Tracker final state set: labels change+review (Ready for review per pm-instructions mapping), PR link comment added, issue assigned to juliusz-cwiakalski for human review."
+    type: info
+    date: "2026-11-07"
+  - text: "Specification checkpoint committed as c8262434 (message-only amend f8d24f1f->c8262434 to fix commitlint body-max-line-length; tree hash unchanged). Retro: keep commit bodies pre-wrapped at <=100 chars when briefing @committer; CI commitlint is the authority, the local hook is warn-only."
+    type: retro
+    date: "2026-11-07"
+  - text: "Handoff item for phase 7 (doc-syncer): add TDR-0011 to the spec's links.related_decisions (decision-advisor request); owner acceptance of TDR-0011 must be reserved at PR review alongside binding ACs."
+    type: info
+    date: "2026-11-07"

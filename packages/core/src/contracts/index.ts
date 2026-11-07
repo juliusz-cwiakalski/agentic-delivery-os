@@ -381,6 +381,8 @@ export {
   type ErrorTableDomainKind,
   type ErrorTableEntry,
   type ErrorTableFamily,
+  EXACT_CODE_DOMAIN_KINDS,
+  type ExactCodeDomainKind,
   FALLBACK_INTERNAL_CODE,
   FALLBACK_INVOCATION_CODE,
 } from "./error-table.js";
@@ -1095,6 +1097,47 @@ export {
   type SessionSummary,
   type SizeData,
 } from "./session.js";
+// The `delivery.spend.v1` read-side vocabulary (GH-236 F-1..F-8, DM-1..DM-6):
+// the report data shape, the declared bounds/orderings/disclosures, the
+// verified-ledger read port, the command runtime port, and the digest
+// projection consumed by the status section flip.
+export {
+  SPEND_AGENT_ORDER,
+  SPEND_AMPLIFICATION_CAUSES,
+  SPEND_AMPLIFICATION_KEYS,
+  SPEND_DATA_KEYS,
+  SPEND_DATA_SCHEMA_ID,
+  SPEND_DISCLOSURES,
+  SPEND_FLAGS,
+  SPEND_HUMAN_AMPLIFICATION_FLAG,
+  SPEND_MAX_HUMAN_BYTES,
+  SPEND_MAX_HUMAN_LINES,
+  SPEND_MAX_MACHINE_BYTES,
+  SPEND_PHASE_ORDER,
+  SPEND_PHASE_UNKNOWN,
+  SPEND_TELEMETRY_ABSENT_CODE,
+  SPEND_TRUNCATION_MARKER,
+  SPEND_TRUNCATION_TARGETS,
+  SPEND_WORK_ITEM_REF_PATTERN,
+  type SpendAgentEntry,
+  type SpendAmplification,
+  type SpendAmplificationCause,
+  type SpendAmplificationEvent,
+  type SpendAmplificationWindow,
+  type SpendCommandFailure,
+  type SpendCommandOutcome,
+  type SpendCommandRuntime,
+  type SpendDegradation,
+  type SpendDigestSection,
+  type SpendLedgerEvidence,
+  type SpendLedgerRead,
+  type SpendPhaseEntry,
+  type SpendPhaseId,
+  type SpendReport,
+  type SpendSelection,
+  type SpendTokenTotals,
+  type SpendTruncation,
+} from "./spend.js";
 
 // The state layer's driver-neutral store vocabulary (GH-174 D1, DM-1..DM-5;
 // GH-222 adds salvage and artifact-boundary declarations).
@@ -1243,10 +1286,10 @@ export {
   type StatusProviderFacts,
   type StatusProviderPark,
   type StatusPullRequestItem,
+  type StatusReadFailure,
   type StatusReadyClass,
   type StatusReadyItem,
   type StatusReadyToMergeState,
-  type StatusReadFailure,
   type StatusRepositoryBinding,
   type StatusRepositoryFacts,
   type StatusRepositoryTarget,

@@ -43,6 +43,8 @@ export type { QueueReadyCommandRuntime } from "./queue.js";
 export { createQueueReadyCommandDefinition } from "./queue.js";
 export type { RetroCommandRuntime } from "./retro.js";
 export { createRetroCommandDefinition } from "./retro.js";
+export type { SpendCommandRuntime } from "./spend.js";
+export { createSpendCommandDefinition } from "./spend.js";
 export type { StatusCommandRuntime } from "./status.js";
 export { createStatusCommandDefinition } from "./status.js";
 export type {

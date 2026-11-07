@@ -14,6 +14,7 @@ import {
   deliveryRequestRead,
   failedDeliveryRequestRead,
   failedPipelineRunRead,
+  failedSpend,
   failedRun,
   failedWorkItemRead,
   GITHUB_SLICE_AVAILABILITY,
@@ -80,6 +81,7 @@ export const corpusScenarios = [
   "ready-review-unknown-degraded",
   "ready-read-failed-unknown",
   "all-caps-bound",
+  "spend-read-failed",
 ] as const;
 
 export type CorpusScenario = (typeof corpusScenarios)[number];
@@ -88,6 +90,8 @@ export const factsFor = (scenario: string): StatusFacts => {
   switch (scenario) {
     case "fully-observed":
       return capSizedFacts();
+    case "spend-read-failed":
+      return baseFacts({ spend: failedSpend() });
     case "tracker-degraded-github":
       return baseFacts({ tracker: workItemRead([], GITHUB_SLICE_AVAILABILITY) });
     case "failed-reads-degraded":

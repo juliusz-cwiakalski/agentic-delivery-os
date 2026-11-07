@@ -563,7 +563,7 @@ the M1 redefinition).
 - Tasks: expand beyond the six M0 collectors toward attention-state
   coverage: lanes delivering versus idle-with-reason, ready-to-merge as a
   first-class action list, parked items with their conditions, owner-gate
-  ages, spend summary (placeholder until M1-S19); stable finding codes so
+  ages, spend summary (delivered by M1-S19); stable finding codes so
   findings are acted on without re-deriving; grouped, deduplicated, ranked
   output (four red CI findings on mains is one job, not four); the
   blockers section is a named placeholder until M1-S16; tracker
