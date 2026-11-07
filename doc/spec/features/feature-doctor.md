@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-DOCTOR
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only doctor command and its bounded delivery.doctor.v1 report: five checks in fixed order (repo, tracker, provider, state, ci), the closed ok/fail/unreachable verdicts, eleven evidence sources, four evidence outcomes, twenty-two reasons, one closed hint template per condition, the structured httpStatus credential-rejection classification, read limits of 50 tracker items and 20 check runs, machine/human bounds, the doctor.check.failed error identity with its deterministic failure summary, per-check containment, quota-free provider diagnosis, the delivery and retro registry store verdicts in the state check, and zero-write execution."
 links:
-  related_changes: ["GH-224", "GH-229", "GH-232"]
+  related_changes: ["GH-224", "GH-229", "GH-232", "GH-236"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/doctor.ts"
@@ -230,7 +230,7 @@ The first header line appears only when the repository binding is observed. Each
 
 ### Renderer seam and consumers
 
-Doctor supplies the optional pure `humanText` hook and the optional `humanFailureText` hook on the command-definition contract. Ten command declarers provide the human-text renderer: `board`, `brief`, `closeout`, `db`, `doctor`, `plan`, `queue`, `status`, `verify`, and `watchdog`; the CLI-edge seam test pins that exact set. Doctor is an additional read-only consumer of the status-style renderer seam, not a new seam. This is the human rendering hook only; no doctor content is duplicated into the status digest.
+Doctor supplies the optional pure `humanText` hook and the optional `humanFailureText` hook on the command-definition contract. Thirteen command declarers provide the human-text renderer: `board`, `brief`, `closeout`, `db`, `doctor`, `merge`, `plan`, `queue`, `retro`, `spend`, `status`, `verify`, and `watchdog`; the CLI-edge seam test pins that exact set. Doctor is an additional read-only consumer of the status-style renderer seam, not a new seam. This is the human rendering hook only; no doctor content is duplicated into the status digest.
 
 ## Technical Architecture & Codebase Map
 

@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (spawn, resume/steer, read-only session listing, sourced liveness); the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, and unsourced liveness kinds declared as gaps; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group; and the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output."
 links:
-  related_changes: ["GH-233"]
+  related_changes: ["GH-233", "GH-236"]
   related_decisions: ["ADR-0008", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/harness.ts"
@@ -191,10 +191,12 @@ composer; until then a real closeout run captures no harness telemetry records.
 ## 7. Out of scope
 
 No dispatch engine or dispatch command (M1-S9), no plugin generation (M3-S1), no
-containerized executor implementation, no spend projection or retro pipeline
-(M1-S19/M1-S8), no model profiles (M1-S21), and no new CLI command surface. The
-watchdog keeps its zero-signal-source wiring; progress-based signal economics
-arrive with M1-S15.
+containerized executor implementation, and no retro pipeline (M1-S8). The spend
+read side is delivered separately and consumes the captured `harness.telemetry`
+records from the state ledger without re-querying a harness store; this seam
+keeps its extraction, capture, and composer boundary unchanged. No model
+profiles (M1-S21), and no new CLI command surface here. The watchdog keeps its
+zero-signal-source wiring; progress-based signal economics arrive with M1-S15.
 
 ## 8. Verification
 
@@ -218,6 +220,8 @@ arrive with M1-S15.
 - [Adapter Conformance Suite](feature-adapter-conformance.md) — the harness
   conformance registry.
 - [State Layer](feature-state-layer.md) — the additive telemetry record kind.
+- [Spend Read Side](feature-spend.md) — the read-only consumer of the captured
+  telemetry records.
 - [Configuration Layer and Inspection](feature-config-layer.md) — the harness
   branch.
 - [Closeout Transaction](feature-closeout.md) — the capture point.

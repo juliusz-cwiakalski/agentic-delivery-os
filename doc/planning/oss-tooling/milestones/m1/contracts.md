@@ -180,9 +180,9 @@ exit-code projection; secret redaction; bounded output.
   points, in-sprint); owner-gate ages; parked items with conditions; a
   merge-ready-first ready-to-merge action list; the declared lane
   attention-state vocabulary while the lanes section reports its existing
-  not-delivered gap; spend (until M1-S19) and typed blockers (until
-  M1-S16) as named not-delivered placeholders; partial collection
-  reported in-band.
+  not-delivered gap; the state-log-fed spend section (spend read side,
+  M1-S19); typed blockers (until M1-S16) as a named not-delivered
+  placeholder; partial collection reported in-band.
 - Scenarios: four red CI findings on the primary branch render as one
   grouped job; every finding carries a finding code; ready-to-merge ranks
   as an action list; blockers surface within one collection cycle.
@@ -345,15 +345,28 @@ resolve/quota/parks as shipped with named self-expiring parks.
 
 ## Learn family
 
-### `spend` (M1-S19, proposed)
+### `spend` (M1-S19, shipped)
 
-- Inputs: `--ref <ref>`; `--phase <phase>`; `--amplification`.
-- Outputs: per-ticket and per-phase tokens by class, calls, per agent and
-  model, restart counts, from the event log (no harness re-query);
-  `--amplification` prints tokens-paid vs unique-progress (approximately
-  1 for healthy deliveries) and flags amplification events by name.
-- Scenarios: closed change reports from the log alone; amplification
-  event flagged and attributed to its restart loop.
+- Inputs: `--ref <ref>` (defaults to the active change ref); `--phase
+  <phase>`; `--amplification`; global `--json`.
+- Outputs: `data` under `delivery.spend.v1` with exactly
+  `tokensByClass` (the five delivered classes; null classes excluded and
+  disclosed in `degradation`), `perPhase[]`, `perAgent[]`, `restarts`,
+  `amplification` (`ratio`, `progressRun`, `events[]`), and `degradation`.
+  Figures derive from closeout-captured telemetry in the event log (no
+  harness re-query); per-phase attribution uses `phase.transition`
+  windows with the named `unknown` fallback. `--amplification` prints
+  tokens-paid vs unique-progress (approximately 1 for healthy deliveries)
+  in the human digest and flags `restart-loop prefill re-pay` events by
+  name; the envelope always carries the block. Output is bounded
+  (64 KiB machine, 16 KiB / 200 lines human) and deterministic.
+- Exit: 0 reported; 1 `spend.telemetry-absent`, input rejection, or a
+  delivered user-validation state row; 2 delivered platform-provider
+  state rows. Cost is not aggregated; alarms/burn rates/quota are M2-S6.
+- Scenarios: a closed change reports from the log alone; a telemetry-absent
+  store classifies rather than reporting zeros; a restart loop flags one
+  named event per superseded record-bearing run; a healthy single-run
+  delivery reads exactly 1.
 
 ### `retro` (M1-S8, proposed)
 
