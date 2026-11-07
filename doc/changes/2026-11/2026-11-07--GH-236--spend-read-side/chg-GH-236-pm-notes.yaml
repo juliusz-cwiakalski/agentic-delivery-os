@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-11-07T02:45:00Z", completed: "2026-11-07T03:05:00Z" }
   specification: { started: "2026-11-07T03:08:00Z", completed: "2026-11-07T04:25:00Z" }
   test_planning: { started: "2026-11-07T03:40:00Z", completed: "2026-11-07T04:30:00Z" }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: "2026-11-07T04:35:00Z", completed: "2026-11-07T04:55:00Z" }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -78,6 +78,12 @@ notes:
     type: info
     date: "2026-11-07"
   - text: "Reopen loop assessment: one iteration, surgical scope (spec 12 insert/7 delete; TDR additive; test plan 9 TCs), no scope loss, binding ACs never weakened. The spec->TDR->test-plan reconciliation chain held together because the spec amendment was written before the dependent edits and included an explicit addendum instruction for the record owner."
+    type: retro
+    date: "2026-11-07"
+  - text: "Delivery plan authored by @plan-writer: chg-GH-236-plan.yaml (canonical machine-readable delivery.plan.v1 YAML; 883 lines, 6 phases / 30 tasks, one commit per phase). PM validation: plan-writer ran the production validatePlan invariant itself — verdict valid, readyForDevelopment=true, errors=[]; 34/34 TCs each in exactly one phase's verification scope (programmatic check); 19/19 ACs traceable; 12 delivery pins PIN-1..12 carrying TP-DEC-2..9 so coder cannot silently choose. TC-031 help-path ambiguity resolved as plan pin (locked grammar forbids --help flag; help ships on documented surfaces)."
+    type: info
+    date: "2026-11-07"
+  - text: "Plan-writer validation behavior confirms the GH-232 retro lesson landed: authoring-time plan-validate ran BEFORE the artifact reached PM, zero schema errors on first submission."
     type: retro
     date: "2026-11-07"
   - text: "Specification checkpoint committed as c8262434 (message-only amend f8d24f1f->c8262434 to fix commitlint body-max-line-length; tree hash unchanged). Retro: keep commit bodies pre-wrapped at <=100 chars when briefing @committer; CI commitlint is the authority, the local hook is warn-only."
