@@ -9,7 +9,7 @@ phases:
   specification: { started: "2026-11-07T18:28:11Z", completed: "2026-11-07T20:52:00Z", reopened: "2026-11-07T20:35:00Z", iteration: 2 }
   test_planning: { started: "2026-11-07T18:42:00Z", completed: "2026-11-07T20:56:00Z", reopened: "2026-11-07T20:35:00Z", iteration: 2 }
   delivery_planning: { started: "2026-11-07T18:52:00Z", completed: "2026-11-07T21:00:00Z", reopened: "2026-11-07T20:35:00Z", iteration: 2 }
-  dor_check: { started: "2026-11-07T21:01:00Z", completed: null, reopened: "2026-11-07T20:35:00Z", verdict: "NOT_READY", iteration: 1, iteration_current: 2 }
+  dor_check: { started: "2026-11-07T21:01:00Z", completed: null, reopened: "2026-11-07T21:20:00Z", verdict: "NOT_READY", iteration: 1, iteration_current: 3 }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -52,6 +52,12 @@ notes:
   - text: "PM decision after DoR iter-1: keep one ticket/PR (delivery brief requires exactly one work item), accept the review-risk explicitly, and repair hidden dependencies by reordering phase tests and moving prompt/doc scans after their inputs. Reopen specification, test_planning, and delivery_planning."
     type: decision
     date: "2026-11-07"
+  - text: "PM decision after DoR iter-2: close the residual forward dependencies in one pass — move pilot-fixture privacy/safety scanning into phase 9/final, add edge.ts and the commit/phase feature specs to their owning phases, use the existing platform-classified fallback.internal identity instead of inventing a config composition row, scope system-spec scans after reconciliation, and split the help coverage test from reference-page reconciliation."
+    type: decision
+    date: "2026-11-07"
   - text: "Retro: DoR caught a real atomicity hole (document written, commit failed) and several forward dependencies; the plan was too eager to put conformance scans before the artifacts they scan. Reopening is cheaper than discovering this in review."
+    type: retro
+    date: "2026-11-07"
+  - text: "Retro: DoR iteration 2 found that moving scans to later phases created new ownership gaps (pilot data in phase 8, system specs in phase 8, reference-page inventory in phase 1). The plan needs a single explicit 'who owns which artifact' matrix before re-entry, not piecemeal moves."
     type: retro
     date: "2026-11-07"
