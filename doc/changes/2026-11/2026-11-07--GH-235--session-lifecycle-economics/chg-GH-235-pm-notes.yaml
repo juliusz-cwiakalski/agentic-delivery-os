@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-07T04:25:00Z", completed: "2026-11-07T05:55:00Z" }
   delivery_planning: { started: "2026-11-07T06:00:00Z", completed: "2026-11-07T06:30:00Z" }
   dor_check: { started: "2026-11-07T06:45:00Z", completed: "2026-11-07T07:30:00Z", verdict: "READY", iteration: 1, blocking_findings: 0, advisory_findings: 5 }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-11-07T08:00:00Z", completed: "2026-11-07T12:30:00Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -43,6 +43,30 @@ notes:
     date: "2026-11-07"
   - text: "Tracker write access: github-mcp update_issue failed with authentication error (reads work). Label sync (spec-ready/readiness-passed/in-progress) deferred; use gh CLI for tracker writes at PR phase or skip non-essential labels"
     type: "info"
+    date: "2026-11-07"
+  - text: "Delivery phase 1 (contracts+error-table binding) complete: commit 1dcdf6ff, contracts/economics.ts new, dispatch kind + 3 rows (watchdog.liveness-stalled, dispatch.restart-budget-exceeded, dispatch.resume-uneconomical), error-table-sync 86=86, tests 190 pass / 0 fail, typecheck pass"
+    type: "info"
+    date: "2026-11-07"
+  - text: "Delivery phase 2 (pure domain) complete: commit c8cb9482, domain/economics-{budget,resume,view,evidence}.ts, tests 25 pass / 0 fail, typecheck pass"
+    type: "info"
+    date: "2026-11-07"
+  - text: "Delivery phase 3 (state records + wired compositions) complete: commit 73a28900, state/economics.ts verified append/read + one terminal record, tests 64 pass / 0 fail, typecheck pass"
+    type: "info"
+    date: "2026-11-07"
+  - text: "Delivery phase 4 (adapter sourcing + stalled flip + goldens) complete: commit da081d41, sourcedSignals carriage + 3-key bridge projection, watchdog.liveness-stalled failure flip, tests 103 pass / 0 fail, typecheck pass"
+    type: "info"
+    date: "2026-11-07"
+  - text: "Delivery phase 5 (lane config branch) complete: commit cbc66bdb, lane branch defaults 30000ms/3, tests 50 pass / 0 fail, full config battery 115 pass"
+    type: "info"
+    date: "2026-11-07"
+  - text: "Delivery phase 6 (verification battery) complete: commit 39416938, imports/no-execution/determinism/mutants suites, boundaries 140 pass, full battery 4103 pass / 0 fail"
+    type: "info"
+    date: "2026-11-07"
+  - text: "Delivery phase 7 (finalize) complete: commit 297151fd, changeset, evidence log §10, pnpm check PASS 4728/4 skip/0 fail, lint clean, boundaries clean, license PASS, vuln 0 high/critical, git diff --check clean. HEAD 297151fd, 7 commits, unpushed"
+    type: "info"
+    date: "2026-11-07"
+  - text: "Delivery deviations accepted (PM-validated): (1) 3 new error-table rows not 4 — test-plan wording conflation; WATCHDOG codes 3->4 is the 4/4 binding; reconciled in evidence log, review to verify. (2) exit digits typed once in contracts ECONOMICS_EXIT_*. (3) observational index exports/inventory/fixtures. (4) production sourcing seam = injected readSourcedSignals fact seam at edge (lane->session fact acquisition stays with M1-S9 dispatch per NG-4). (5) QUALITY-GATES NOTE: pnpm check here requires TMPDIR inside the repo (TMPDIR=$PWD/tmp/tmpdir) or ci-baseline-parity fails on cross-device hardlink in git clone --local"
+    type: "risk"
     date: "2026-11-07"
   - text: "Git state: branch fresh fork of origin/main-tools at a69b555e (GH-233 / M1-S11 delivery); 0 commits ahead, 0 behind, clean worktree; no resume sync needed"
     type: "info"
