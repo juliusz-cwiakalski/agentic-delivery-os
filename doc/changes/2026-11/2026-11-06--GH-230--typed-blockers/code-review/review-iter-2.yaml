@@ -1,0 +1,114 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-230
+branch: feat/GH-230/typed-blockers
+status: FAIL
+summary: >-
+  Re-review over the merged+remediated tree (branch @ 6ede8d78; merge 3c58a449
+  bringing GH-223..235; base main-tools @ c4f6cd63). Every iteration-1 finding is
+  genuinely closed and no remediation regression was introduced: F-1/F-2 header
+  counts now match the constants; F-3 adds a real production-seam suite
+  (createBlockersCommandRuntime + createConfigProgram over a temp store) covering
+  the brand-named env->audience mapping, shipped-policy refusal with the exact
+  "delegation policy: none" summary, real fenced ledger +1 coverage, UUID suffix,
+  and classified failure routing; F-4 excludes filter-excluded answered rows from
+  `--open` omitted/truncated and pins default=5 vs --open=2 over a 13-question
+  fixture plus feature-blockers.md prose; F-5 refreshes TC-BLK-041; F-6 fails
+  closed as state.store.torn on unparseable askedAt/answeredAt. The three merge
+  decisions re-judge correct against GH-243's delivered contract: GH-243 NG-5 and
+  its placeholder lifecycle ("M1-S16 removes the blockers placeholder") make
+  replacing the blockers placeholder with typed-questions at section 9 the correct
+  reading, not a dropped behavior; TDR-0011 renumbering is complete (no GH-230
+  TDR-0009 residue); merged-truth literals verify against code (error-table-sync
+  entries=98 documented=98, RESERVED_TWO_SEGMENT_CODES=21, corpora 32/17,
+  bounds 32/6144, nine sections, summary observed7/notDelivered2/placeholder1);
+  and the CLI and MCP status compositions both read readBlockerLedger and map a
+  failed/torn read to digest unknown/state-unreadable (never a tool failure). Two
+  defects remain: the current-truth feature-blockers.md still describes
+  typed-questions as "the seventh fixed section ... after parked-work" and its
+  human line "after the parked-work line" (six stale phrases), contradicting the
+  merged nine-section order (section 9, after spend) and the sibling
+  feature-status-digest.md; and the F-6 unparseable-askedAt negative test is not
+  isolating (its payload also omits `ref`, so a mutation removing the askedAt
+  guard still fails closed on `ref`). All functional ACs are semantically
+  satisfied; the change spec/plan/test-plan pre-merge numbering is accepted as a
+  non-blocking residual per the re-review directive, but the current-truth doc must
+  be accurate. Suites re-run by this review: 437 blockers/brief behaviour tests,
+  388 status/structure tests, error-table-sync — all green.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 1
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: documentation
+    location: doc/spec/features/feature-blockers.md:184
+    message: >-
+      The current-truth feature spec still places `typed-questions` as "the seventh
+      fixed section ... after `parked-work`" (line 184), says the human digest renders
+      its line "after the parked-work line" (line 194), and repeats "the seventh
+      section" at lines 256, 269, 371, and 377. At merged truth the digest has nine
+      sections and `typed-questions` is section 9 (immediately after `spend`,
+      STATUS_SECTION_ORDER[8]); the human render emits `questions` after the `spend`
+      line (tests/fixtures/status/golden/human.txt). This directly contradicts
+      feature-status-digest.md ("nine fixed sections", section 9) and even line 192 of
+      this same file ("counts nine sections"). It is a merged-state doc-truth defect,
+      not merely the change-spec pre-merge numbering (which is accepted as a residual).
+    suggestion: >-
+      Update feature-blockers.md: line 184 to "the ninth fixed section ... after
+      `spend`"; line 194 to "after the spend line"; and the four "seventh section"
+      mentions to "the typed-questions section" (or "ninth section"). Doc-only; no
+      behavior or test change required.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: test-quality
+    location: tests/behaviour/blockers-record-integrity.test.ts:114
+    message: >-
+      The F-6 "unparseable askedAt fails closed" case builds its payload from
+      `malformedQuestion()`, which omits `ref`; the spread sets only id and askedAt,
+      so `ref` is still missing. `questionFrom` checks askedAt parseability before the
+      `ref` null-or-string check, so the test passes via the askedAt guard today — but
+      if the askedAt guard were removed, the missing `ref` would still yield
+      state.store.torn and the test would keep passing. It therefore does not pin the
+      hardening it claims to protect (the answeredAt case, by contrast, sets `ref:
+      null` on a valid question and does isolate the answer guard).
+    suggestion: >-
+      Add `ref: null` to the unparseable-askedAt payload (and keep a valid askedAt
+      control) so the case isolates the askedAt parse guard; optionally mirror the
+      answeredAt case's shape. No production-code change.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: artifact-accuracy
+    location: doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/chg-GH-230-spec.md:242
+    message: >-
+      The change artifacts (spec §8.5/RISK-5/DM-6/DEC-6, plan phase 7/9 notes,
+      test-plan scenarios) still use pre-merge numbering ("six to seven sections",
+      "seventh section", "eight surfaces/two anchors"). These predate GH-243's
+      nine-section landing and are judged semantically fulfilled, not literal
+      constraints, per the re-review directive: AC-F6-1/2/3 describe the delivered
+      typed-questions section, nine surfaces, 2-entry catalog, and 3 anchors, all of
+      which the code and current-truth docs satisfy.
+    suggestion: >-
+      No action required for delivery. Optional: add a document-history note in the
+      change spec recording that the merged base already carried nine sections and
+      GH-230 replaced the blockers placeholder seat rather than extending six to seven.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-07T12:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE
