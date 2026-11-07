@@ -18,6 +18,7 @@
     "src/contracts/credentials.ts",
     "src/contracts/delivery-result.ts",
     "src/contracts/doctor.ts",
+    "src/contracts/economics.ts",
     "src/contracts/envelope.ts",
     "src/contracts/error-table.ts",
     "src/contracts/harness-telemetry.ts",
@@ -208,7 +209,11 @@
     "src/output/protocol.ts",
     "src/serve.ts"
   ],
-  "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "opencode": [
+    "src/commands/index.ts",
+    "src/index.ts",
+    "src/output/index.ts"
+  ],
   "testkit": [
     "src/commit/git-repo.ts",
     "src/commit/index.ts",

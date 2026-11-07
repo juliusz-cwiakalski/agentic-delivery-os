@@ -1071,8 +1071,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 49) {
-    failures.push(`table length ${live.length} != baseline + 49 (${BASELINE_ROWS.length + 49})`);
+  if (live.length !== BASELINE_ROWS.length + 52) {
+    failures.push(`table length ${live.length} != baseline + 52 (${BASELINE_ROWS.length + 52})`);
   }
   return failures;
 };
@@ -1096,12 +1096,13 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       plan: 5,
       verify: 6,
       closeout: 4,
-      watchdog: 3,
+      watchdog: 4,
       commit: 6,
       status: 1,
       doctor: 1,
       merge: 7,
       harness: 9,
+      dispatch: 2,
     });
   });
 
@@ -1149,7 +1150,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 49,
+      BASELINE_ROWS.length + 52,
     );
   });
 
@@ -1172,7 +1173,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 49);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 52);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1560,6 +1561,94 @@ describe("TC-RETRO-005 retro rows synchronize in both directions", () => {
     );
     expect(messages((await runSyncCheck({ root })).failures)).toContain(
       "undeclared namespace retro",
+    );
+  });
+});
+
+const ROW_ECON_WATCHDOG_STALLED =
+  "| watchdog.liveness-stalled | watchdog | user | false | not_landed | Inspect the corroborated stall evidence, then apply the budget-governed restart response for the lane. | user-validation | The lane is stalled and fully corroborated by the declared progress signals. |";
+const ROW_ECON_BUDGET =
+  "| dispatch.restart-budget-exceeded | dispatch | user | false | not_landed | Request a fresh restart budget through the coordinator or operator, then retry the resume. | user-validation | The delivery's restart budget is exhausted. |";
+const ROW_ECON_UNECONOMICAL =
+  "| dispatch.resume-uneconomical | dispatch | user | false | not_landed | Change the harness capability to attach-and-continue, or re-evaluate and accept the prefill re-pay cost, then retry the resume. | user-validation | The resume path would re-pay prefill and is uneconomical. |";
+
+describe("TC-ECON-004 the four economics rows bind two-way to the table and corpora", () => {
+  test("the delivered tree is green and all four codes are documented exactly once", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
+    const doc = readFile(ROOT, DOC);
+    for (const row of [
+      ROW_ECON_WATCHDOG_STALLED,
+      ROW_ECON_BUDGET,
+      ROW_ECON_UNECONOMICAL,
+    ]) {
+      expect(doc.split(row).length - 1).toBe(1);
+    }
+  });
+
+  test("one true-positive corpus row per new code resolves and no false-positive row masks one", () => {
+    const corpus = JSON.parse(readFile(ROOT, `${CORPUS}/true-positives.json`)) as {
+      readonly rows: readonly { readonly text: string; readonly recognized: boolean }[];
+    };
+    for (const code of [
+      "watchdog.liveness-stalled",
+      "dispatch.restart-budget-exceeded",
+      "dispatch.resume-uneconomical",
+    ]) {
+      expect(corpus.rows.some((row) => row.text === code && row.recognized)).toBe(true);
+    }
+    const falsePositive = JSON.parse(readFile(ROOT, `${CORPUS}/false-positives.json`)) as {
+      readonly rows: readonly { readonly text: string }[];
+    };
+    for (const code of [
+      "watchdog.liveness-stalled",
+      "dispatch.restart-budget-exceeded",
+      "dispatch.resume-uneconomical",
+    ]) {
+      expect(falsePositive.rows.some((row) => row.text === code)).toBe(false);
+    }
+  });
+
+  test("deleting a documented economics row fails naming the undocumented source entry", async () => {
+    const root = makeTempRoot();
+    editFile(root, DOC, removeDocRow(ROW_ECON_UNECONOMICAL));
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "source entry dispatch.resume-uneconomical is undocumented",
+    );
+  });
+
+  test("a mismatched hint or projection class fails naming the field", async () => {
+    const hint = makeTempRoot();
+    editFile(hint, DOC, (text) =>
+      text.replace(ROW_ECON_BUDGET, ROW_ECON_BUDGET.replace("Request a fresh", "Request fresh")),
+    );
+    expect(messages((await runSyncCheck({ root: hint })).failures)).toContain(
+      "dispatch.restart-budget-exceeded hint mismatch",
+    );
+
+    const projection = makeTempRoot();
+    editFile(projection, DOC, (text) =>
+      text.replace(
+        ROW_ECON_WATCHDOG_STALLED,
+        ROW_ECON_WATCHDOG_STALLED.replace("| user-validation |", "| platform-provider |"),
+      ),
+    );
+    expect(messages((await runSyncCheck({ root: projection })).failures)).toContain(
+      "watchdog.liveness-stalled projection class mismatch",
+    );
+  });
+
+  test("an undocumented source row fails naming the code", async () => {
+    const root = makeTempRoot();
+    editFile(root, TABLE, (text) =>
+      text.replace(
+        "] as const satisfies readonly ErrorTableEntry[];",
+        `  {\n    code: "dispatch.phantom.row",\n    domainKind: "dispatch",\n    category: "user",\n    retryable: false,\n    consequence: "not_landed",\n    remediationHint: "Phantom.",\n    projectionClass: "user-validation",\n  },\n] as const satisfies readonly ErrorTableEntry[];`,
+      ),
+    );
+    expect(messages((await runSyncCheck({ root })).failures)).toContain(
+      "source entry dispatch.phantom.row is undocumented",
     );
   });
 });

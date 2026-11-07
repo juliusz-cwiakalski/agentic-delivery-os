@@ -9,7 +9,11 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
-import { WATCHDOG_SIGNAL_KEYS, WATCHDOG_VERDICTS } from "../../packages/core/src/contracts/index";
+import {
+  WATCHDOG_ERROR_CODES,
+  WATCHDOG_SIGNAL_KEYS,
+  WATCHDOG_VERDICTS,
+} from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();
 const CONTRACT = "packages/core/src/contracts/watchdog.ts";
@@ -159,6 +163,15 @@ describe("TC-WATCHDOG-001 the contract data has one data-only home", () => {
     expect(WATCHDOG_VERDICTS).toEqual(["ok", "refused", "stalled", "progressing"]);
     expect(vocabularyViolations(WATCHDOG_VERDICTS)).toEqual([]);
     expect(singleVocabularyHomeFailures(ROOT)).toEqual([]);
+  });
+
+  test("the watchdog error codes are exactly the three delivered plus the sourced-stall identity", () => {
+    expect(WATCHDOG_ERROR_CODES).toEqual([
+      "watchdog.checkout-dirty",
+      "watchdog.checkout-non-base",
+      "watchdog.signals-absent",
+      "watchdog.liveness-stalled",
+    ]);
   });
 
   test("the signals shape declares exactly the three progress keys and no CPU field", () => {
