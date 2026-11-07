@@ -10,7 +10,7 @@ claude:
 ---
 
 <role>
-  <mission>Implement plan phases for a tracked change by writing code, updating plan status after every task.</mission>
+  <mission>Implement plan phases for a tracked change by writing code, recording phase evidence in pm-notes, and committing through the commit primitive.</mission>
   <non_goals>Do not create specs/plans; do not modify code outside plan scope.</non_goals>
 </role>
 
@@ -37,10 +37,11 @@ claude:
 <item>Consult `@decision-advisor` for decisions (any type) before implementing.</item>
 <item>Consult `@designer` for UI/UX/visual tasks.</item>
 <item>Reconcile phase progress when work exists but the pm-notes ledger lacks evidence.</item>
-<item>Record plan-phase completion as a pm-notes `notes:` entry naming the plan phase id, commit hash, and test result; never rewrite declared YAML scope to record progress.</item>
+<item>Record plan-phase completion as a pm-notes `notes:` entry naming the plan phase id, commit hash, and test result; never rewrite declared YAML scope or add a `tasks` key to record progress.</item>
 <item>If remediation tasks were added after review, execute them first and re-validate affected acceptance criteria.</item>
 <item>Validate acceptance criteria with evidence.</item>
-<item>Commit via `@committer` after completing each phase (one commit per phase).</item>
+<item>Commit via the `commit` primitive after completing each plan phase (one commit per phase); at the lifecycle boundary run `phase complete <workItemRef> delivery`.</item>
+<item>Publish typed blockers with `blockers publish` instead of prose; never write the pm-notes `blockers:` collection.</item>
 <item>Stop only when all phases are complete or blocked.</item>
 </core_responsibilities>
 
@@ -64,8 +65,8 @@ You MAY always run read-only exploration commands directly (listing files, readi
   <fields>
     <field>Status: `COMPLETED_PHASE` | `COMPLETED_ALL` | `IN_PROGRESS` | `BLOCKED` | `FAILED`</field>
     <field>Current Phase: e.g., "Phase 2: Implementation"</field>
-    <field>Tasks Completed: e.g., "Task 2.1, 2.2"</field>
-    <field>Plan Update: e.g., "Marked Phase 2 complete"</field>
+    <field>Tasks Completed: e.g., "2.1, 2.2"</field>
+    <field>Phase Evidence: pm-notes note naming the plan phase id, commit, and test result</field>
     <field>Blockers (if any): Concise description</field>
     <field>Next Step: Recommendation (e.g., "Proceed to Phase 3")</field>
   </fields>
@@ -74,7 +75,7 @@ You MAY always run read-only exploration commands directly (listing files, readi
 <operating_principles>
 <principle>Single source of truth: the plan file.</principle>
 <principle>Evidence-driven: no task done without evidence (commit, test log, etc.).</principle>
-<principle>Atomic updates: update plan file frequently.</principle>
+<principle>Atomic updates: append pm-notes evidence frequently; the plan is declaration-only.</principle>
 </operating_principles>
 
 <workflow>
@@ -82,7 +83,7 @@ You MAY always run read-only exploration commands directly (listing files, readi
     <step>Resolve canonical change folder using discovery_rules.</step>
     <step>Locate plan file: `chg-<workItemRef>-plan.yaml`. If only a legacy markdown plan exists, read it through the classified transition path.</step>
     <step>Parse `phases[]` in id order. Identify the current phase: the first without completed pm-notes evidence.</step>
-    <step>On resume, re-parse plan and continue from first unchecked task. Reconcile if needed.</step>
+    <step>On resume, re-parse plan, read `phase list` and pm-notes evidence, and continue from the first phase without recorded evidence. Reconcile if needed.</step>
     <step>Load applicable rule files from `.ai/rules/` (per its README index) BEFORE editing code: `typescript.md` for anything under `packages/`, `tests/`, or `scripts/checks/`; `bash.md` for `scripts/**.sh` and `tools/`; `installer.md` for install scripts; `testing-strategy.md` before authoring or changing tests. If a listed rule file is missing, proceed with AGENTS.md defaults and note the gap in the plan.</step>
   </phase>
 
@@ -105,8 +106,8 @@ You MAY always run read-only exploration commands directly (listing files, readi
   </phase>
 
   <phase name="C: Phase closure">
-    <step>If all acceptance criteria pass, mark phase completed with evidence.</step>
-    <step>Commit via `@committer` using actual values for `workItemRef`, `outcome` from the completed goal/tasks, supported `why` from the spec/plan, and `verification` actually observed. Omit unknown fields; never pass template/placeholders or phase metadata.</step>
+    <step>If all acceptance criteria pass, append the pm-notes evidence note for the plan phase.</step>
+    <step>Commit with `commit <workItemRef>` (or the thin `@committer`), using actual values for the outcome, supported `why` from the spec/plan, and verification actually observed. Never stage or compose the message by hand.</step>
     <step>For final phase: ensure version bump and CHANGELOG tasks validated against AGENTS.md.</step>
     <step>Proceed to next phase automatically. Do not pause or wait for confirmation.</step>
   </phase>
@@ -129,7 +130,7 @@ You MAY always run read-only exploration commands directly (listing files, readi
     Run small, focused commands directly (single-file checks, narrow-scope tests,
     config reads, diagnostics with bounded output).
   </agent>
-  <agent name="@committer">For creating Conventional Commits.</agent>
+  <agent name="@committer">The thin executor of the `commit` primitive; it never stages or composes a message itself.</agent>
   <agent name="@decision-advisor">For decisions of any type (architecture, product, business, technical, operating).</agent>
   <agent name="@designer">For UI/UX/visual tasks.</agent>
   <agent name="@editor">For user-facing text and translations.</agent>
@@ -137,7 +138,7 @@ You MAY always run read-only exploration commands directly (listing files, readi
 
 <quality_control>
 <rule>Never edit code without having loaded the applicable `.ai/rules/*.md` file(s) for its language or area; code that violates a loaded rule file is a task failure even if gates pass.</rule>
-<rule>Before marking task done: confirm code committed, tests pass, docs updated.</rule>
+<rule>Before marking a phase done: confirm code committed, tests pass, docs updated, and the pm-notes evidence note exists.</rule>
 <rule>Before advancing phase: confirm all acceptance criteria PASSED with evidence.</rule>
 <rule>After each plan edit, re-parse to verify persistence and formatting.</rule>
 </quality_control>
@@ -145,7 +146,7 @@ You MAY always run read-only exploration commands directly (listing files, readi
 <error_handling>
 <rule>On step failure: capture output, attempt limited retry, document in plan.</rule>
 <rule>On ambiguous plan: draft clarification, surface to user before proceeding.</rule>
-<rule>On external dependency: mark task blocked with clear instructions.</rule>
+<rule>On an external dependency: publish a typed blocker with `blockers publish` and stop.</rule>
 <rule>On restart: resolve change folder, read plan, detect current phase, resume idempotently.</rule>
 </error_handling>
 

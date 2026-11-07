@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "prompt.inventory.v1",
+  "prompts": [
+    {
+      "path": ".opencode/agent/pm.md",
+      "kind": "lifecycle",
+      "required": ["phase complete", "commit", "blockers publish", "phase list"]
+    },
+    {
+      "path": ".opencode/agent/coder.md",
+      "kind": "lifecycle",
+      "required": ["commit", "phase complete", "blockers publish", "pm-notes"]
+    },
+    {
+      "path": ".opencode/agent/committer.md",
+      "kind": "lifecycle",
+      "required": ["commit", "never stage"],
+      "forbidden": ["git add", "git commit"]
+    },
+    {
+      "path": ".opencode/command/commit.md",
+      "kind": "lifecycle",
+      "required": ["commit"]
+    },
+    {
+      "path": ".opencode/command/run-plan.md",
+      "kind": "lifecycle",
+      "required": ["commit", "phase complete", "pm-notes"],
+      "forbidden": ["commit per task"]
+    }
+  ]
+}
