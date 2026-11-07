@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-07T05:00:00Z", completed: "2026-11-07T05:20:00Z" }
   delivery: { started: "2026-11-07T05:25:00Z", completed: "2026-11-07T06:30:00Z" }
   system_spec_update: { started: "2026-11-07T06:35:00Z", completed: "2026-11-07T07:00:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-07T07:05:00Z", completed: "2026-11-07T09:15:00Z" }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -99,6 +99,15 @@ notes:
     type: info
     date: "2026-11-07"
   - text: "Pending into phase 7: plan task 6.3 / TC-SPEND-031 documentation half — feature-spend.md absent, feature-status-digest.md still declares spend not-delivered (retired pinned line present); code-side half passes. This is the declared phase-7 doc-syncer output, not a delivery failure."
+    type: info
+    date: "2026-11-07"
+  - text: "Resume sync: origin/main-tools advanced to c4f6cd63 (GH-234 M1-S21 model profiles; GH-235 M1-S15 session economics). Plain rebase and union merge both conflicted (additive overlap on error-table kinds/rows, contract inventories, four spec docs). @coder resolved union-style: 13 files, error table 94->95/95 identities with spend.telemetry-absent byte-identical; merge commit 70125be0 'chore(GH-236): sync with origin/main-tools' (conventional subject, no plain merge message). Post-merge verification: error-table/content-inventory/cli-edge-seam/port-inventory 199 pass, spend suites 129 pass, typecheck clean; 0 behind / 15 ahead."
+    type: info
+    date: "2026-11-07"
+  - text: "Review iteration 1 verdict: PASS (code-review/review-iter-1.yaml; 19/19 ACs, plan 30/30 tasks, PIN-1..12 honored; 0 critical/high/medium, 4 low + 4 info advisory, no remediation phase). PM-flagged items all acceptable: PIN-3 events-tail extension within intent (deterministic tail-drop, honest marker, totals/restarts/ratio/progressRun never truncated, TC-021/step-5 covered); nine deviations necessary and minimal; merge 70125be0 internally consistent (spend additive only; GH-234/235 rows intact); TC-031 doc half closed; MCP verified-empty parity acceptable with NG-5 intact. Reviewer independently re-ran 171 spend suites, 801 status/brief/structure/checks, 1573/1574 structure/boundaries/checks/golden (lone ci-baseline-parity failure is the known cross-device /tmp hardlink environmental quirk), typecheck/biome/depcruise/invariant battery clean, commitlint clean c4f6cd63..HEAD."
+    type: info
+    date: "2026-11-07"
+  - text: "Advisory findings recorded for potential follow-ups (non-blocking): F-1 human amplification decomposition uses possibly-truncated events list; F-2 status human line wording for missing local context; F-3 ordering/truncation constants not consumed by fold/bounder; F-4 spendDigestFor seam lacks end-to-end store test; F-5 MCP/CLI spend can diverge for downstream; F-6 change-spec NFR-1 names only perAgent/perPhase; F-7 PIN-10 reference numbers live in pm-notes; F-8 unused brand option."
     type: info
     date: "2026-11-07"
   - text: "Specification checkpoint committed as c8262434 (message-only amend f8d24f1f->c8262434 to fix commitlint body-max-line-length; tree hash unchanged). Retro: keep commit bodies pre-wrapped at <=100 chars when briefing @committer; CI commitlint is the authority, the local hook is warn-only."
