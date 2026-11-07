@@ -1,0 +1,413 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-237
+branch: feat/GH-237/scheduling-engine
+status: FAIL
+summary: >-
+  The scheduling engine is delivered with a strong, largely well-tested core: a fenced, replay-idempotent
+  queue graph (cycle refusal before append, superseding projection, derived graph that folds no root);
+  the six-condition readiness model with scheduler sources and failed-source-unknown discipline; a
+  two-stage, in-fence lease claim with post-append verification, renewal, release, and evidenced stale
+  takeover (50 distinct holders -> exactly 1 acquisition, 49 conflicts, verified in this review); weight
+  as a per-runner resource class; close-first ranking with a computed preemption proposal; bounded park
+  passes with the durable clear-observed marker, recovered record, incident, and the stuck-park hard
+  exclusion; the lanes fold with truthful nulls; and additive, bidirectionally synchronized record kinds,
+  error rows, collector id, and typed config branch (structure/error-sync/boundary/hermetic/golden
+  suites all green here with a repo-local TMPDIR; the ci-baseline-parity EXDEV failure reproduces as
+  environmental). Two high findings block: (1) AC-F8-2 is not delivered — the resolved
+  `queue.park-recheck.<type>` interval is stored and echoed but never consulted, so a cleared park is
+  resumed on the first mutating pass regardless of the configured cadence (the TC-PARK-006 "config-only
+  tuning" test is a tautological constructor check that cannot observe this); (2) AC-F6-2's core
+  mechanism is absent — nothing resolves a producer repository's `merge.deploy-expectations` from its
+  entry-recorded root and normalized key (root matching, collision detection, and config load are
+  unimplemented; `repositoryRoot` is recorded but never consumed, and `root-collision`/`root-unresolved`
+  are produced only by fixtures). Medium findings: `--watch` refusal on both surfaces carries the generic
+  fallback hint, not the AC-F11-2 resident-daemon remediation; `queue ready` is not preserved under the
+  full-family composition (3+ candidate refs are refused although ready-only accepts 8); release+park is
+  not atomic when the second append fails (lease released, no park); the NFR-9 machine byte cap is
+  unenforced and exceeded ~2x (129,808 bytes for 500 entries); the "second active park is a state.*
+  failure" invariant is unenforced and its named test is vacuous; the execution log claims command-level
+  zero-write checks that do not exist; one purity test compares a value to itself; and AC-F9-1's generated
+  corpus omits both weight classes and two of three park types. The known deviations and DoR residuals
+  are adjudicated individually below. Verdict is FAIL; remediation is required before the DoD gate.
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 8
+  low: 9
+  info: 3
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/queue-park.ts:104
+    message: >-
+      AC-F8-2 is not delivered: the per-condition-type recheck interval is inert. `evaluateParkRecord`
+      decides resumability only from the typed condition (window expiry, provider availability, or lease
+      freedom) and never compares elapsed time to `recheckMs`; `evaluateParkPass`/`recoverQueueParks`
+      therefore re-evaluate and can recover every park on every mutating pass regardless of the configured
+      cadence. F-8/plan task 5.1 explicitly require "a park that is not yet due is reported as active with
+      its interval and last evaluation", and AC-F8-2 requires changing only `queue.park-recheck.<type>` to
+      change resume timing with no code change. A probe with a 60 000 ms provider-window interval shows the
+      park resumable at T+5 001 ms (TC-PARK-006 step 1 explicitly requires it to be active there). The
+      edge does resolve and thread operator settings (edge.ts:2675), but they have no behavioural effect.
+    suggestion: >-
+      Add a due check (elapsed since `evaluatedAt` >= `recheckMs`) before re-evaluation, report a not-yet-due
+      park as active with its interval/last evaluation, and replace the tautological TC-PARK-006 with the
+      two-pass 60 000-vs-5 000 ms fixture the test plan specifies (assert no resume at T+5 001 and resume by
+      T+60 001 for each condition type).
+    suppressed: false
+  - id: F-2
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/edge.ts:3073
+    message: >-
+      AC-F6-2 / C-6 / DM-12 producer-bound deploy-expectation resolution is absent. The edge builds the
+      deploy facts directly from `composition.facts.deploy` (edge.ts:3073), and the gate only reads
+      `facts.expectations[producerRef]` (queue-deploy-gate.ts:68). No code discovers the producer's recorded
+      `repositoryRoot`, compares its normalized remote to the recorded key by exact equality, detects a
+      two-root collision, or loads `merge.deploy-expectations` from that root's configuration. The
+      `QueueDeployExpectation` `root-unresolved`/`root-collision` reasons (queue-readiness.ts:98-105) are
+      constructed only by tests, so the recorded root is written but never consumed. Plan task 7.3 assigns
+      this resolution to the edge; it was not delivered, and TC-DEPEND-003/004 inject pre-resolved
+      expectations so they cannot observe the gap. The feature spec (feature-scheduling-engine.md:88-89)
+      claims root matching and collision behaviour that does not exist.
+    suggestion: >-
+      Implement producer-root discovery and config resolution in the composition seam (entry-recorded roots
+      only, exact normalized-key match, collision -> unknown, unreadable/invalid config -> unknown), feed
+      the result into `facts.deploy.expectations`, and add a TC-DEPEND-003/004 case that resolves expectations
+      from a real producer root + config across a multi-repository state directory.
+    suppressed: false
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/commands/lanes.ts:78
+    message: >-
+      AC-F11-2 (and F-10 for `queue`) require the `--watch` refusal to carry "a remediation hint naming the
+      resident daemon story". Both command definitions omit `--watch` from the accepted grammar (lanes.ts:78
+      `flags: []`; queue.ts:294), so the generic parser rejects it with the shipped fallback hint. The
+      committed golden (tests/fixtures/queue/golden/lanes-watch-refusal.json) records the generic
+      remediationHint "Check the command name and arguments, then retry the invocation." and summary "The
+      invocation could not be understood." No test asserts the daemon-naming hint (lanes.test.ts:121-133
+      checks only the code and absence of data); the test title claims the daemon story without proving it.
+    suggestion: >-
+      Detect `--watch` before generic flag parsing (or register it as a refused flag) and emit a
+      `fallback.invocation` envelope whose remediationHint names the resident daemon story (M1-S18); update
+      both goldens and assert the hint text in TC-LANES-004 and TC-SCHED-016.
+    suppressed: false
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/commands/queue.ts:296
+    message: >-
+      AC-F12-1 `queue ready` preservation is broken under the full-family composition. The ready-only
+      definition allows up to 33 positionals (queue.ts:94) and 8 candidate refs, but the full-family
+      definition caps positionals at 3 (queue.ts:296) and delegates `ready` only after the shared parser has
+      already accepted/rejected the invocation. A probe through the real edge harness shows `queue ready`
+      exits 0 for 1-2 refs and exits 1 with `fallback.invocation` for 3 refs, whereas the ready-only
+      definition accepts up to 8. This is latent today only because no production composer supplies
+      `options.queue`; the plan task 7.3 preservation claim covers only single-ref fixtures.
+    suggestion: >-
+      Parse `ready` against the delivered ready grammar (or raise the full-definition positional cap and
+      delegate before the generic check), and add a preservation test with 3-8 candidate refs through the
+      full queue definition.
+    suppressed: false
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/queue.ts:1336
+    message: >-
+      The release+park "both land or neither" guarantee (F-7, AC-F7-2, plan task 5.5) holds only when the
+      first append fails. `releaseQueueLease` appends the lease-release record and the park record
+      sequentially under one fence with no rollback (app/queue.ts:1336-1351); if the *second* append fails,
+      the lease release is already durable and no park exists. Reproduced: arming the second append yields
+      two lease records (last `released`) and zero park records while the call reports a state failure. The
+      delivered atomicity test arms only the first append (queue-lease.test.ts:615-639), so the partial-write
+      path is unproven.
+    suggestion: >-
+      Make the two appends atomic (a single multi-record store operation or a compensating release/park
+      marker) or append the park first with a compensating record, and add a second-append-failure test that
+      asserts the exact expected observable state.
+    suppressed: false
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/queue-precedence.ts:556
+    message: >-
+      NFR-9's "serialized data <= 65 536 UTF-8 bytes, every bound has an explicit truncation marker" is
+      unenforced. `QUEUE_MAX_MACHINE_BYTES`, `QUEUE_MAX_HUMAN_LINES`, and `QUEUE_MAX_HUMAN_BYTES` are
+      declared (contracts/queue.ts:474-478) but never referenced; the renderer hardcodes 40/8192, and no
+      layer caps the serialized `data`. A probe with 500 entries produces a 129 808-byte `queue plan`
+      payload (nearly 2x the cap) while `truncated` is set only for the candidate-evaluation cut, not for a
+      byte drop. `QUEUE_MAX_REASONS` is likewise declared but unused. An agent consumer can therefore
+      receive an unbounded (over-declared-bound) payload.
+    suggestion: >-
+      Enforce the machine byte cap in the queue payload/render path (drop entries/actions with an explicit
+      "+more" truncation marker), wire the human constants into the renderers, and either enforce or remove
+      the reasons bound; add a bound test at 500 entries that asserts the byte cap.
+    suppressed: false
+  - id: F-7
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/app/queue.ts:292
+    message: >-
+      Appendix D / plan task 5.3 require "a second active park for one entry is a classified state.*
+      failure". The park ledger validates a single record shape only (`isParkRecord`) and folds
+      latest-record-wins (`latestParkRecords`); two active `parked` records for one ref are silently
+      accepted with the latest winning. The test named for this rule (queue-park.test.ts:254-271) does not
+      create a second park: it asserts one `parked` record exists and comments that none was created, so it
+      proves nothing about the invariant.
+    suggestion: >-
+      Detect two active `parked` records for one ref during the verified park read and fail closed with the
+      classified state identity, and rewrite TC-PARK-004 to seed two active records and assert the refusal
+      (and that one active park is the normal case).
+    suppressed: false
+  - id: F-8
+    severity: medium
+    confidence: high
+    category: test-efficacy
+    location: doc/changes/2026-11/2026-11-07--GH-237--scheduling-engine/chg-GH-237-test-plan.md:2306
+    message: >-
+      The delivery execution log states "the command-level checks use the injected state port and observe
+      zero appends/fences/derived replacements on `queue list|plan` and `lanes list|show`", but no such
+      assertion exists: the only guarded-store zero-write test covers `queue ready`
+      (tests/behaviour/queue-ready-readonly-determinism.test.ts), and no `queue list|plan`/`lanes` test
+      wraps the store to count appends/fences. TC-SCHED-012's "queue command-level zero-write rows" and the
+      lanes read-purity rows are therefore unmet while the ledger records them as evidence. The runtime is
+      in fact read-only, but the recorded evidence is unsubstantiated.
+    suggestion: >-
+      Add a recording/guarded store test around the real edge harness for `queue list`, `queue plan`,
+      `lanes list`, and `lanes show` asserting zero append/replaceDocument/acquireFence, and correct the
+      execution log to match what is actually asserted.
+    suppressed: false
+  - id: F-9
+    severity: medium
+    confidence: high
+    category: test-efficacy
+    location: tests/behaviour/lanes.test.ts:82
+    message: >-
+      TC-LANES-001's "the fold is pure and leaves the injected facts untouched" test is vacuous: it computes
+      `data`, snapshots `JSON.stringify(data)`, assigns `const schedule = data`, then asserts
+      `JSON.stringify(schedule) === snapshot` — a value compared to itself. It never inspects the injected
+      facts or the store, so it cannot fail on a mutation.
+    suggestion: >-
+      Snapshot the injected facts/schedule input before the fold and assert it is unchanged after, or run
+      the fold through a frozen/proxy-instrumented input that throws on mutation.
+    suppressed: false
+  - id: F-10
+    severity: medium
+    confidence: high
+    category: test-efficacy
+    location: tests/behaviour/queue-precedence.test.ts:19
+    message: >-
+      AC-F9-1 requires "a generated corpus mixing every gate, both weight classes, three park condition
+      types, both dependency roles, close and new-start classes, and explicit priorities". TC-SCHED-006's
+      corpus has one park type (provider-quota), no heavy weight class, one dependency direction, and no
+      provider-window/preemption parks; the shuffle invariance therefore does not exercise the mixed corpus
+      the AC names. The individual behaviours are covered elsewhere, but the AC's generated-corpus claim is
+      only partially proven.
+    suggestion: >-
+      Expand the TC-SCHED-006 corpus (or add a generated variant) to include both weight classes, all three
+      condition types (active and stuck), and both dependency roles, then assert shuffle invariance over it.
+    suppressed: false
+  - id: F-11
+    severity: low
+    confidence: high
+    category: test-efficacy
+    location: tests/behaviour/queue-lease.test.ts:509
+    message: >-
+      TC-LEASE-007 does not demonstrate configuration-only TTL tuning: it seeds two lease records with
+      different `ttlMs` values directly instead of resolving `queue.lease-ttl` through the configuration
+      layer and observing the staleness outcome. It proves "the recorded TTL drives staleness", not
+      "changing the key changes behaviour with zero code changes" (NFR-10).
+    suggestion: >-
+      Add a case that resolves two configurations differing only in `queue.lease-ttl`, feeds the resolved
+      TTL through the claim/edge path, and asserts the same heartbeat age is live under one value and stale
+      under the other.
+    suppressed: false
+  - id: F-12
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/queue-weight.ts:91
+    message: >-
+      `weightLoads` sorts runner/class rows with `String.prototype.localeCompare` (queue-weight.ts:91-95),
+      the only locale-sensitive comparison in the scheduling output path (every other comparator is a
+      code-point comparator). NFR-1 requires no ambient locale dependence, and the weight rows are part of
+      the serialized payload. The TC-SCHED-013 "ambient locale" test sets `process.env.LC_ALL` after Node
+      startup, which does not reliably change the effective default locale, so it may not detect this.
+    suggestion: >-
+      Replace `localeCompare` with the shared code-point comparator used elsewhere, so the weight view is
+      byte-stable across locales.
+    suppressed: false
+  - id: F-13
+    severity: low
+    confidence: high
+    category: contract-clarity
+    location: packages/core/src/domain/queue-precedence.ts:460
+    message: >-
+      Every scheduled action that is not a close item is labelled `reason: "producer-first"` (also for a
+      plain new-start with no dependency role and for resume-parked), and the committed golden
+      tests/fixtures/queue/golden/queue-plan.json pins `"reason": "producer-first"` for a standalone
+      GH-320. The reason is supposed to explain why the action was chosen, so this label misstates the
+      decision. Separately, `laneStateFor` labels a ready-but-unleased lane `idle-with-reason` /
+      `not-ready` (queue-lanes.ts:75-78), which contradicts the entry's ready state.
+    suggestion: >-
+      Use a truthful reason for non-close, non-producer actions (add a neutral token such as `new-start`
+      to the closed vocabulary, or omit/derive it from rank) and pick a truthful idle reason for a ready
+      lane; update the goldens.
+    suppressed: false
+  - id: F-14
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/queue.ts:243
+    message: >-
+      The `queue add|prioritize|dep` mutation envelope fabricates `entry.state: "ready"` unconditionally
+      (`mutation.result === "noop" ? "ready" : "ready"`) and hardcodes `weightClassSource: "absent"` /
+      the fold-default `standard` class. An entry declared from an unresolved binding is recorded as
+      "never ready" (F-1/TC-SCHED-015), yet the mutation envelope reports it ready; this is a fabricated
+      value on a success surface.
+    suggestion: >-
+      Project the real declaration state (e.g. `not-ready` with the binding reason) or a neutral
+      "declared" state, and report weight provenance only when it has actually been resolved.
+    suppressed: false
+  - id: F-15
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/queue-park.ts:227
+    message: >-
+      The `released` recovery state is declared in the closed set (contracts/queue.ts:137-143) and has a
+      builder (`releasedParkRecord`, queue-park.ts:227-235), but no delivered path writes it:
+      `releaseQueueLease` writes a `parked` record, and releases without a park write no park record. The
+      state is documented as unreachable in the feature spec (feature-scheduling-engine.md:275), which is
+      honest but leaves a declared-but-dead state in the contract.
+    suggestion: >-
+      Either produce the `released` state on a real release/park-clear path or remove it from the closed set
+      via a spec amendment and delete the unused builder.
+    suppressed: false
+  - id: F-16
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/edge.ts:3361
+    message: >-
+      `queue release --park provider-window` records the release instant as the window's absolute expiry
+      (edge.ts:3361-3363 -> `parkConditionForCause(..., { expiresAt: nowIso })`), so the park is immediately
+      clear and resumes on the next mutating pass. This is documented (feature-scheduling-engine.md:111-113,
+      216) but means the release path cannot express a real provider window, weakening AC-F8-1's intent for
+      that path.
+    suggestion: >-
+      Accept an explicit window expiry (`--until <iso>`) for provider-window parks, or reject
+      `provider-window` on release until a real window source is available.
+    suppressed: false
+  - id: F-17
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-07--GH-237--scheduling-engine/chg-GH-237-plan.yaml:360
+    message: >-
+      Plan Phases 2/4/5 declare `packages/core/src/state/queue.ts` as the ledger-composition module; that
+      file does not exist. The composition landed in `packages/core/src/app/queue.ts`. The deviation is
+      justified by ADR-0003's tier matrix (state may import contracts only; app may import contracts+domain;
+      confirmed by `.dependency-cruiser.cjs` and a green `pnpm check:boundaries`), but the plan itself still
+      lists the wrong path and no reconciliation note updates the phase scopes.
+    suggestion: >-
+      Update the plan phase scopes/notes to name `packages/core/src/app/queue.ts` and record the ADR-0003
+      reason, so a future plan-diff audit does not report a phantom file.
+    suppressed: false
+  - id: F-18
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-07--GH-237--scheduling-engine/chg-GH-237-plan.yaml:701
+    message: >-
+      Plan task 8.3a says "Do NOT edit doc/spec/features/feature-status-digest.md in this change (NG-10)",
+      but the change edits it (adds GH-237 links and documents the declared gap and stale literals). The
+      edit is doc-only and truthful, but it crosses the declared boundary. The recorded DoR residuals also
+      remain: N2 (plan task 8.8's AC->TC checklist omits AC-F12-1), N3 (no explicit `degraded[]` assertion
+      for `queue add|prioritize|dep`), and N4 (a phase-header "fold it into the entry projection" wording
+      conflicts with DM-13's no-root-in-graph rule).
+    suggestion: >-
+      Reconcile the plan's status-digest boundary (record the doc-only edit as an accepted, declared
+      exception) and close N2/N3/N4 in the plan/test plan, or explicitly re-accept them at the DoD gate.
+    suppressed: false
+  - id: F-19
+    severity: low
+    confidence: high
+    category: test-efficacy
+    location: tests/golden/queue-plan.test.ts:14
+    message: >-
+      The machine golden tests are titled "byte-identical to the committed golden" but compare
+      `JSON.parse(output)` with `toEqual`, so field-order/formatting drift passes; only human goldens are
+      byte-exact. The known machine-golden deviation is recorded, but the title overstates the guarantee.
+    suggestion: >-
+      Rename the machine assertions to "structurally identical" (or add a byte comparison where the
+      serializer formatting is stable) so the reader is not misled.
+    suppressed: false
+  - id: F-20
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: packages/cli/src/edge.ts:2670
+    message: >-
+      No production binary wires `options.queue`/`options.lanes`; the engine runs only through an injected
+      composition, so AC-F10-1's "state is consistent for later daemon reconciliation" holds at the
+      injected-fixture tier only. This matches the repo's in-process command surface and the pm-notes
+      posture, so it is recorded for visibility, not as a defect.
+    suggestion: >-
+      Make the deferred production composition explicit in the feature doc (as was done for the harness
+      closeout telemetry in GH-233) so readers do not expect a shipped binary path yet.
+    suppressed: false
+  - id: F-21
+    severity: info
+    confidence: high
+    category: documentation
+    location: packages/cli/src/commands/queue.ts:9
+    message: >-
+      The header comment still says "The `queue` family is the M0 ready-set; lanes and dispatch arrive in
+      M2-S1", which no longer describes the delivered family (lanes shipped here; dispatch remains M1-S9).
+    suggestion: >-
+      Update the comment to describe the shipped family and the remaining dispatch scope.
+    suppressed: false
+  - id: F-22
+    severity: info
+    confidence: medium
+    category: test-efficacy
+    location: tests/behaviour/queue-cli.test.ts:132
+    message: >-
+      CLI-level fail-closed coverage is asymmetric: unreadable *lease* history -> `queue list` exit 2 is
+      tested, and readable stuck-park findings are tested at the domain layer, but there is no CLI test for
+      `queue list|plan` exit 2 on unreadable *park* history nor for exit 0 with a readable stuck-park
+      finding. The code paths exist (`buildQueueFacts` fails on `readQueueParkPass`); only the assertions
+      are missing.
+    suggestion: >-
+      Add the two CLI-level park cases to the queue-cli suite to complete AC-F10-3's read-surface matrix.
+    suppressed: false
+reviewed_at: 2026-11-07T20:05:00Z
+next_step: EXECUTE_REMEDIATION_PHASE
+remediation_tasks:
+  - "Phase 9: Code Review Remediation (Iteration 1)"
+  - "9.1 (F-1) Implement a due check for park re-evaluation: skip a park whose elapsed time since `evaluatedAt` is below `recheckMs`, report it active with its interval/last evaluation, and only recover an elapsed park. Replace TC-PARK-006 with the two-pass 60 000-vs-5 000 ms fixtures for provider-window, provider-quota, and preemption, asserting no early resume and an earlier resume after the 5 000 ms config."
+  - "9.2 (F-2) Implement producer-root deploy-expectation resolution: from entry-recorded roots only, match the producer's normalized key by exact equality, detect two-root collision, load `merge.deploy-expectations` from the matched root config, and degrade to `unknown` (`deploy-unverified`) on no-match/collision/unreadable/invalid. Feed `facts.deploy.expectations` from the resolution and add multi-repository TC-DEPEND-003/004 cases."
+  - "9.3 (F-3) Emit a `fallback.invocation` `--watch` refusal whose remediationHint names the resident daemon story on both `queue` and `lanes`; update goldens and assert the hint in TC-LANES-004 and TC-SCHED-016."
+  - "9.4 (F-4) Preserve `queue ready` under the full-family composition: parse `ready` with the delivered grammar before the shared positional cap (or raise the cap), and add a 3-8-candidate preservation test through the full definition."
+  - "9.5 (F-5) Make release+park atomic against a second-append failure (single multi-record append, park-first with compensation, or rollback) and add a second-append-failure test asserting the exact expected observable state."
+  - "9.6 (F-6) Enforce NFR-9's machine byte cap with an explicit truncation marker (and wire the human line/byte constants and reasons bound), plus a 500-entry byte-cap test."
+  - "9.7 (F-7) Fail closed when two active `parked` records exist for one ref, and rewrite TC-PARK-004 to seed two active records and assert the classified state refusal."
+  - "9.8 (F-8, F-9, F-10, F-11) Close the test-efficacy gaps: add command-level zero-write assertions for `queue list|plan` and `lanes list|show`; make the lanes purity test compare the real injected facts; expand the TC-SCHED-006 corpus to both weights/all three park types/both dependency roles; add a config-resolved `queue.lease-ttl` tuning case; fix the execution-log claims."
+  - "9.9 (F-12, F-13, F-14) Use the code-point comparator in `weightLoads`; give non-close/non-producer actions and ready lanes truthful reason tokens; stop fabricating `entry.state: ready` on mutation envelopes."
+  - "9.10 (F-15, F-16) Resolve the `released` recovery-state dead path and the release-instant provider-window expiry (produce the state or remove it; add `--until` or reject provider-window on release)."
+  - "9.11 (F-17, F-18) Reconcile the plan: correct the `state/queue.ts` scope to `app/queue.ts`, record the status-digest doc-only edit as an accepted declared exception, and close DoR N2/N3/N4."
+  - "9.12 (F-19, F-20, F-21, F-22) Rename/reword the machine-golden titles, document the deferred production composition, refresh the stale `queue.ts` header, and add the CLI park exit-2/stuck-exit-0 cases."

@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-07T15:15:00Z", completed: "2026-11-07T15:40:00Z", iteration: 3, verdict: READY_WITH_RISKS }
   delivery: { started: "2026-11-07T15:45:00Z", completed: "2026-11-07T18:30:00Z", iterations: 1 }
   system_spec_update: { started: "2026-11-07T18:35:00Z", completed: "2026-11-07T19:30:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-07T19:35:00Z", completed: null, iteration: 1, status: FAIL }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -86,4 +86,7 @@ notes:
     date: "2026-11-07"
   - text: "System spec update complete. Reconciled current-truth docs: feature-scheduling-engine (verified against delivered code), state-layer record kinds, config-layer queue branch, status-digest lanes gap, result-contract error rows/collector set, merge-verify-deploy consumption, session-lifecycle-economics consumption, doc/00-index, architecture-overview, glossary; planning pack (m1 queue/lanes contracts, cli-command-registry, status, man-page). Validation: test-doc-distribution PASS (81 docs, no drift); error-table.test PASS (75). Residual current-truth documentation gaps: none. Doc-sync flagged product nuances for review: `released` recovery state declared but unreachable; `queue release --park provider-window` cannot declare a future expiry (records release instant); status digest still emits stale `expectedStory: M2-S1` / note literals (code-owned, declared gap); queue/lanes require an injected composition and are not wired by a production binary (consistent with the repo's in-process command surface)."
     type: info
+    date: "2026-11-07"
+  - text: "Review iteration 1: FAIL (0 critical, 2 high, 8 medium, 9 low, 3 info). Blocking: F-1 per-type park recheck interval is inert (`evaluateParkRecord` never compares elapsed time; TC-PARK-006 tautological); F-2 producer-root deploy-expectation resolution absent (edge injects expectations directly; `repositoryRoot` never consumed). Medium: F-3 `--watch` refusal lacks daemon-naming hint; F-4 `queue ready` broken under full-family composition (3+ refs refused); F-5 release+park not atomic on second-append failure; F-6 NFR-9 machine byte cap unenforced (129,808 bytes for 500 entries); F-7 second-active-park invariant unenforced and test vacuous; F-8 execution-log zero-write claims unsubstantiated; F-9 lanes purity test compares a value to itself; F-10 AC-F9-1 corpus omits weight classes/park types. Low/info: locale-sensitive sort, mislabelled `producer-first` reason, fabricated mutation `ready` state, dead `released` state, release-instant provider-window expiry, plan scope/status-digest boundary drift, over-titled machine goldens, deferred composition, stale header, asymmetric CLI park coverage. Remediation Phase 9 appended to the plan; delivery reopened for remediation."
+    type: retro
     date: "2026-11-07"
