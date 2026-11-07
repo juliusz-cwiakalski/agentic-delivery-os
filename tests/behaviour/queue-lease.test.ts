@@ -5,6 +5,8 @@
  * plan → claim → release path.
  */
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   claimQueueLease,
   declareQueueEntry,
@@ -15,6 +17,7 @@ import {
   readQueueParks,
   releaseQueueLease,
 } from "../../packages/core/src/app/index";
+import { resolveQueueSettings } from "../../packages/core/src/config/index";
 import {
   QUEUE_LEASE_RECORD_KIND,
   QUEUE_LEASE_SCHEMA,
@@ -507,17 +510,32 @@ describe("TC-LEASE-013 renewal keeps the holder", () => {
 });
 
 describe("TC-LEASE-007 lease TTL is configuration-only tuning", () => {
+  const cases = JSON.parse(
+    readFileSync(join(process.cwd(), "tests/fixtures/queue/config/lease-ttl/cases.json"), "utf8"),
+  ) as { readonly defaultMs: number; readonly longMs: number; readonly shortMs: number };
+
+  const resolveTtl = (ttlMs: number): number => {
+    const resolved = resolveQueueSettings({ queue: { "lease-ttl": ttlMs } });
+    expect(resolved.ok).toBe(true);
+    return resolved.ok ? resolved.value.leaseTtlMs : -1;
+  };
+
   test("the same heartbeat age is live under a longer TTL and stale under a shorter one", () => {
+    const longTtlMs = resolveTtl(cases.longMs);
+    const shortTtlMs = resolveTtl(cases.shortMs);
+    expect(longTtlMs).toBe(cases.longMs);
+    expect(shortTtlMs).toBe(cases.shortMs);
+
     const longTtl = makeAuditStore("queue-lease-ttl-long");
     seedEntry(longTtl.store);
     seedLease(longTtl.store, {
       holder: "holder-a",
       ref: "GH-320",
       repository: REPO,
-      heartbeatAt: heartbeatAgo(60_000),
-      ttlMs: 120_000,
+      heartbeatAt: heartbeatAgo(cases.shortMs),
+      ttlMs: longTtlMs,
     });
-    expect(claim(longTtl.store, "holder-b").ok).toBe(false);
+    expect(claim(longTtl.store, "holder-b", { ttlMs: longTtlMs }).ok).toBe(false);
 
     const shortTtl = makeAuditStore("queue-lease-ttl-short");
     seedEntry(shortTtl.store);
@@ -525,10 +543,10 @@ describe("TC-LEASE-007 lease TTL is configuration-only tuning", () => {
       holder: "holder-a",
       ref: "GH-320",
       repository: REPO,
-      heartbeatAt: heartbeatAgo(60_000),
-      ttlMs: 60_000,
+      heartbeatAt: heartbeatAgo(cases.shortMs),
+      ttlMs: shortTtlMs,
     });
-    const taken = claim(shortTtl.store, "holder-b");
+    const taken = claim(shortTtl.store, "holder-b", { ttlMs: shortTtlMs });
     expect(taken.ok).toBe(true);
     if (taken.ok) expect(taken.value.result).toBe("taken-over");
   });
@@ -636,5 +654,43 @@ describe("TC-LEASE-011 / TC-RANK-004 release plus park atomicity", () => {
     expect(afterLeases.ok ? afterLeases.records.length : -1).toBe(beforeCount);
     const parks = readQueueParks(fixture.store);
     expect(parks.ok ? parks.records.length : -1).toBe(0);
+  });
+
+  test("a refused second append withdraws the park and leaves the lease held", () => {
+    const fixture = makeAuditStore("queue-lease-release-second");
+    seedEntry(fixture.store);
+    expect(claim(fixture.store, "holder-a").ok).toBe(true);
+    const beforeLeases = readQueueLeases(fixture.store);
+    const beforeCount = beforeLeases.ok ? beforeLeases.records.length : 0;
+    // Occurrence 1 is the park append; occurrence 2 is the lease-release append.
+    const armed = armAppendFailure(fixture.edge, 2);
+    try {
+      const refused = releaseQueueLease(fixture.store, {
+        ref: "GH-320",
+        holder: "holder-a",
+        park: {
+          cause: "provider-window",
+          condition: { type: "provider-window", expiresAt: "2026-11-07T12:00:00Z" },
+        },
+        nowIso: NOW_ISO,
+        nowMs: NOW_MS,
+        fenceToken: "release-second-refused",
+      });
+      expect(refused.ok).toBe(false);
+      if (!refused.ok) expect(refused.kind).toBe("state");
+    } finally {
+      armed.restore();
+    }
+    const afterLeases = readQueueLeases(fixture.store);
+    expect(afterLeases.ok ? afterLeases.records.length : -1).toBe(beforeCount);
+    const active = readActiveLeases(fixture.store, NOW_MS);
+    expect(active.ok).toBe(true);
+    if (active.ok) expect(active.active[0]?.holder).toBe("holder-a");
+    const parks = readQueueParks(fixture.store);
+    expect(parks.ok).toBe(true);
+    if (parks.ok) {
+      expect(parks.records.map((record) => record.recoveryState)).toEqual(["parked", "released"]);
+      expect(parks.records[parks.records.length - 1]?.recoveryState).toBe("released");
+    }
   });
 });

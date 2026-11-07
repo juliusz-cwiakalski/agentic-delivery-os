@@ -785,6 +785,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/domain/queue-graph.ts": [
     "buildAdjacency",
     "canonicalQueueRef",
+    "compareText",
     "defaultQueuePriority",
     "detectCycleForEdge",
     "foldLatestDependencies",
@@ -836,6 +837,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "defaultParkRecheckMs",
     "evaluateParkPass",
     "evaluateParkRecord",
+    "hasDuplicateActiveParks",
     "latestParkRecords",
     "observationGapMs",
     "parkConditionForCause",
@@ -852,6 +854,8 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/domain/queue-precedence.ts": [
     "QUEUE_NEXT_DEFAULT",
+    "boundQueuePlanData",
+    "boundQueueReadData",
     "computeQueueSchedule",
     "isDeclaredBlockingReason",
     "renderQueueHuman",

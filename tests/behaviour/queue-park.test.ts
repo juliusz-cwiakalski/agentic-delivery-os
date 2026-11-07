@@ -4,6 +4,8 @@
  * report-only finding that never becomes a next action.
  */
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   declareQueueEntry,
   queueParkRecordKey,
@@ -12,6 +14,7 @@ import {
   readQueueParks,
   recoverQueueParks,
 } from "../../packages/core/src/app/index";
+import { resolveQueueSettings } from "../../packages/core/src/config/index";
 import {
   QUEUE_PARK_RECORD_KIND,
   QUEUE_PARK_SCHEMA,
@@ -86,11 +89,14 @@ const windowPark = (
 const context = { providerAvailable: true, leaseHeldRepositories: [] as string[] };
 
 describe("TC-PARK-001 park resumes exactly when its condition clears", () => {
-  test("a window ending at T resumes on the first mutating pass after T with an incident", () => {
+  test("a window ending at T resumes on the first due mutating pass after T with an incident", () => {
     const fixture = makeAuditStore("queue-park-resume");
     seedEntry(fixture.store);
     const expiresAt = "2026-11-07T10:00:05Z";
-    seedPark(fixture.store, windowPark({ expiresAt }));
+    seedPark(
+      fixture.store,
+      windowPark({ expiresAt, evaluatedAt: "2026-11-07T09:58:00Z", recheckMs: 60_000 }),
+    );
     const result = recoverQueueParks(fixture.store, {
       nowIso: "2026-11-07T10:00:06Z",
       nowMs: Date.parse("2026-11-07T10:00:06Z"),
@@ -125,7 +131,10 @@ describe("TC-PARK-001 park resumes exactly when its condition clears", () => {
   test("the marker precedes recovery and the recovered record supersedes it", () => {
     const fixture = makeAuditStore("queue-park-marker");
     seedEntry(fixture.store);
-    seedPark(fixture.store, windowPark({ expiresAt: "2026-11-07T09:59:00Z" }));
+    seedPark(
+      fixture.store,
+      windowPark({ expiresAt: "2026-11-07T09:59:00Z", evaluatedAt: "2026-11-07T09:58:00Z" }),
+    );
     recoverQueueParks(fixture.store, {
       nowIso: "2026-11-07T10:00:01Z",
       nowMs: Date.parse("2026-11-07T10:00:01Z"),
@@ -251,30 +260,36 @@ describe("TC-PARK-004 closed condition types and one active park", () => {
     }
   });
 
-  test("a second active park for one entry is refused as a state failure", () => {
+  test("one active park is normal and a second active park fails closed", () => {
+    const control = makeAuditStore("queue-park-one-active");
+    seedEntry(control.store);
+    seedPark(control.store, windowPark({ expiresAt: "2026-11-07T11:00:00Z" }));
+    const single = readQueueParks(control.store);
+    expect(single.ok).toBe(true);
+    if (single.ok) {
+      expect(single.records.filter((record) => record.recoveryState === "parked")).toHaveLength(1);
+    }
+
     const fixture = makeAuditStore("queue-park-second");
     seedEntry(fixture.store);
     seedPark(fixture.store, windowPark({ expiresAt: "2026-11-07T11:00:00Z" }));
-    const refused = recoverQueueParks(fixture.store, {
-      nowIso: NOW_ISO,
-      nowMs: NOW_MS,
-      context,
-      fenceToken: "second-park",
-    });
-    // The existing non-cleared park is active, so no second active park is
-    // created; the pass leaves it active.
-    expect(refused.ok).toBe(true);
-    const parks = readQueueParks(fixture.store);
-    if (parks.ok) {
-      expect(parks.records.filter((record) => record.recoveryState === "parked")).toHaveLength(1);
+    seedPark(fixture.store, windowPark({ expiresAt: "2026-11-07T12:00:00Z" }));
+    const refused = readQueueParks(fixture.store);
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) {
+      expect(refused.code).toBe("state.store.torn");
+      expect(refused.reason).toBe("torn");
     }
+    const pass = readQueueParkPass(fixture.store, NOW_MS, context);
+    expect(pass.ok).toBe(false);
+    if (!pass.ok) expect(pass.code).toBe("state.store.torn");
   });
 });
 
 describe("TC-PARK-005 resume boundary and no active-without-recovery", () => {
-  test("T-1 is active, T and T+1 are resumable", () => {
+  test("T-1 is active, T and T+1 are resumable once the interval has elapsed", () => {
     const expiry = "2026-11-07T10:00:00Z";
-    const record = windowPark({ expiresAt: expiry });
+    const record = windowPark({ expiresAt: expiry, evaluatedAt: "2026-11-07T09:58:00Z" });
     expect(evaluateParkRecord(record, Date.parse(expiry) - 1, context).state).toBe("active");
     expect(evaluateParkRecord(record, Date.parse(expiry), context).state).toBe("resumable");
     expect(evaluateParkRecord(record, Date.parse(expiry) + 1, context).state).toBe("resumable");
@@ -290,27 +305,136 @@ describe("TC-PARK-005 resume boundary and no active-without-recovery", () => {
 });
 
 describe("TC-PARK-006 recheck interval is configuration-only", () => {
-  test("the resolved interval rides on the park record without code changes", () => {
-    const fast = createParkRecord({
+  const cases = JSON.parse(
+    readFileSync(
+      join(process.cwd(), "tests/fixtures/queue/config/park-recheck/paired.json"),
+      "utf8",
+    ),
+  ) as {
+    readonly types: readonly ("provider-window" | "provider-quota" | "preemption")[];
+    readonly defaults: Readonly<Record<string, number>>;
+    readonly slowMs: number;
+    readonly fastMs: number;
+    readonly earlyPassOffsetMs: number;
+    readonly latePassOffsetMs: number;
+  };
+
+  const recordFor = (
+    type: "provider-window" | "provider-quota" | "preemption",
+    recheckMs: number,
+  ): QueueParkRecord =>
+    createParkRecord({
       ref: REF,
-      cause: "provider-window",
-      condition: { type: "provider-window", expiresAt: "2026-11-07T11:00:00Z" },
-      recheckMs: 30_000,
+      repository: REPO,
+      cause:
+        type === "preemption"
+          ? "preempted-for-close-item"
+          : (type as "provider-window" | "provider-quota"),
+      condition:
+        type === "provider-window"
+          ? { type: "provider-window", expiresAt: NOW_ISO }
+          : type === "provider-quota"
+            ? { type: "provider-quota" }
+            : { type: "preemption" },
+      recheckMs,
       evaluatedAt: NOW_ISO,
       recordedAt: NOW_ISO,
     });
-    const slow = createParkRecord({
-      ref: REF,
-      cause: "provider-window",
-      condition: { type: "provider-window", expiresAt: "2026-11-07T11:00:00Z" },
-      recheckMs: 120_000,
-      evaluatedAt: NOW_ISO,
-      recordedAt: NOW_ISO,
+
+  const contextFor = (type: "provider-window" | "provider-quota" | "preemption") => ({
+    providerAvailable: type !== "preemption",
+    leaseHeldRepositories: [] as string[],
+  });
+
+  for (const type of cases.types) {
+    test(`${type}: a 60000 ms interval does not resume at T+5001 but does at T+60001`, () => {
+      const resolved = resolveQueueSettings({
+        queue: { "lease-ttl": 90_000, "park-recheck": { [type]: cases.slowMs } },
+      });
+      expect(resolved.ok).toBe(true);
+      if (!resolved.ok) return;
+      expect(resolved.value.parkRecheckMs[type]).toBe(cases.slowMs);
+      const fixture = makeAuditStore(`queue-park-recheck-default-${type}`);
+      seedEntry(fixture.store);
+      seedPark(fixture.store, recordFor(type, resolved.value.parkRecheckMs[type]));
+
+      const early = recoverQueueParks(fixture.store, {
+        nowIso: new Date(NOW_MS + cases.earlyPassOffsetMs).toISOString(),
+        nowMs: NOW_MS + cases.earlyPassOffsetMs,
+        context: contextFor(type),
+        fenceToken: `recheck-early-default-${type}`,
+      });
+      expect(early.ok).toBe(true);
+      if (early.ok) expect(early.value.recovered).toEqual([]);
+      const pass = readQueueParkPass(
+        fixture.store,
+        NOW_MS + cases.earlyPassOffsetMs,
+        contextFor(type),
+      );
+      expect(pass.ok).toBe(true);
+      if (pass.ok) {
+        expect(pass.pass.evaluations[REF]?.state).toBe("active");
+        expect(pass.pass.evaluations[REF]?.recheckMs).toBe(cases.slowMs);
+        expect(pass.pass.evaluations[REF]?.lastEvaluatedAt).toBe(NOW_ISO);
+      }
+
+      const late = recoverQueueParks(fixture.store, {
+        nowIso: new Date(NOW_MS + cases.latePassOffsetMs).toISOString(),
+        nowMs: NOW_MS + cases.latePassOffsetMs,
+        context: contextFor(type),
+        fenceToken: `recheck-late-default-${type}`,
+      });
+      expect(late.ok).toBe(true);
+      if (late.ok) expect(late.value.recovered).toEqual([REF]);
     });
-    expect(fast.recheckMs).toBe(30_000);
-    expect(slow.recheckMs).toBe(120_000);
-    expect(evaluateParkRecord(fast, NOW_MS, context).recheckMs).toBe(30_000);
-    expect(evaluateParkRecord(slow, NOW_MS, context).recheckMs).toBe(120_000);
+
+    test(`${type}: a 5000 ms interval resumes at the earlier pass with the changed value in evidence`, () => {
+      const resolved = resolveQueueSettings({
+        queue: { "lease-ttl": 90_000, "park-recheck": { [type]: cases.fastMs } },
+      });
+      expect(resolved.ok).toBe(true);
+      if (!resolved.ok) return;
+      expect(resolved.value.parkRecheckMs[type]).toBe(cases.fastMs);
+      const fixture = makeAuditStore(`queue-park-recheck-fast-${type}`);
+      seedEntry(fixture.store);
+      seedPark(fixture.store, recordFor(type, resolved.value.parkRecheckMs[type]));
+
+      const early = recoverQueueParks(fixture.store, {
+        nowIso: new Date(NOW_MS + cases.earlyPassOffsetMs).toISOString(),
+        nowMs: NOW_MS + cases.earlyPassOffsetMs,
+        context: contextFor(type),
+        fenceToken: `recheck-early-fast-${type}`,
+      });
+      expect(early.ok).toBe(true);
+      if (early.ok) expect(early.value.recovered).toEqual([REF]);
+      const parks = readQueueParks(fixture.store);
+      if (parks.ok) {
+        const latest = parks.records[parks.records.length - 1];
+        expect(latest?.recheckMs).toBe(cases.fastMs);
+        expect(latest?.recoveryState).toBe("recovered");
+      }
+    });
+  }
+
+  test("an unknown type and an invalid interval are refused naming the key", () => {
+    const unknown = resolveQueueSettings({
+      queue: { "lease-ttl": 90_000, "park-recheck": { suspended: 5000 } },
+    });
+    expect(unknown.ok).toBe(false);
+    if (!unknown.ok) {
+      expect(unknown.error.code).toBe("config.key.unknown");
+      expect(unknown.error.key).toBe(`queue.park-recheck.suspended`);
+    }
+    for (const value of [0, -1, 1.5]) {
+      const invalid = resolveQueueSettings({
+        queue: { "lease-ttl": 90_000, "park-recheck": { preemption: value } },
+      });
+      expect(invalid.ok).toBe(false);
+      if (!invalid.ok) {
+        expect(invalid.error.code).toBe("config.value.invalid");
+        expect(invalid.error.key).toBe(`queue.park-recheck.preemption`);
+      }
+    }
   });
 });
 

@@ -85,10 +85,12 @@ import {
   createParkRecord,
   defaultParkRecheckMs,
   evaluateParkPass,
+  hasDuplicateActiveParks,
   observationGapMs,
   type QueueParkContext,
   type QueueParkPass,
   recoveredRecord,
+  releasedParkRecord,
 } from "../domain/queue-park.js";
 import type { QueueParkEvaluation } from "../domain/queue-readiness.js";
 
@@ -470,13 +472,22 @@ export const readQueueLeases = (store: StateStorePort): QueueLedgerRead<QueueLea
   });
 
 /** Read every verified queue park record, oldest first. */
-export const readQueueParks = (store: StateStorePort): QueueLedgerRead<QueueParkRecord> =>
-  readRecords(store, {
+export const readQueueParks = (store: StateStorePort): QueueLedgerRead<QueueParkRecord> => {
+  const read = readRecords(store, {
     prefix: QUEUE_PARK_KEY_PREFIX,
     kind: QUEUE_PARK_RECORD_KIND,
     schema: QUEUE_PARK_SCHEMA,
     isRecord: isParkRecord,
   });
+  if (!read.ok) return read;
+  // At most one active park exists per entry. Two concurrently active `parked`
+  // records are an Appendix D invariant violation and fail closed rather than
+  // letting latest-record-wins fabricate a single park.
+  if (hasDuplicateActiveParks(read.records)) {
+    return { ok: false, reason: "torn", code: "state.store.torn" };
+  }
+  return read;
+};
 
 /** Read every verified queue incident record, oldest first. */
 export const readQueueIncidents = (store: StateStorePort): QueueLedgerRead<QueueIncidentRecord> =>
@@ -1333,21 +1344,36 @@ export const releaseQueueLease = (
       evaluatedAt: request.nowIso,
       recordedAt: request.nowIso,
     });
-    // Release and park append in the SAME fenced transaction: both land or a
-    // refused append lands nothing.
-    const appended = appendLeaseRecords(store, handle, [
-      {
-        kind: QUEUE_LEASE_RECORD_KIND,
-        recordKey: queueLeaseRecordKey(repository),
-        payload: leasePayload(record),
-      },
+    // Park first, then release. Both land or neither outcome lands: if the
+    // lease-release append fails after the park landed, append a compensating
+    // `released` park record so the fold observes no active park while the
+    // lease remains held, then return the classified state failure.
+    const parkWrite = appendLeaseRecords(store, handle, [
       {
         kind: QUEUE_PARK_RECORD_KIND,
         recordKey: queueParkRecordKey(ref),
         payload: parkRecord as unknown as StateJsonValue,
       },
     ]);
-    if (!appended.ok) return appended;
+    if (!parkWrite.ok) return parkWrite;
+    const releaseWrite = appendLeaseRecords(store, handle, [
+      {
+        kind: QUEUE_LEASE_RECORD_KIND,
+        recordKey: queueLeaseRecordKey(repository),
+        payload: leasePayload(record),
+      },
+    ]);
+    if (!releaseWrite.ok) {
+      const withdrawn = releasedParkRecord(parkRecord, { nowIso: request.nowIso });
+      appendLeaseRecords(store, handle, [
+        {
+          kind: QUEUE_PARK_RECORD_KIND,
+          recordKey: queueParkRecordKey(ref),
+          payload: withdrawn as unknown as StateJsonValue,
+        },
+      ]);
+      return releaseWrite;
+    }
     return { ok: true, value: { result: "parked", lease: record, park: parkRecord } };
   });
 };

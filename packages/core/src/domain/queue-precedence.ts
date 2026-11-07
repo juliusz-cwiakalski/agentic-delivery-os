@@ -20,7 +20,11 @@ import {
   QUEUE_MAX_ENTRIES,
   QUEUE_MAX_EVALUATED_CANDIDATES,
   QUEUE_MAX_FINDINGS,
+  QUEUE_MAX_HUMAN_BYTES,
+  QUEUE_MAX_HUMAN_LINES,
+  QUEUE_MAX_MACHINE_BYTES,
   QUEUE_MAX_NEXT_ACTIONS,
+  QUEUE_MAX_REASONS,
   QUEUE_STUCK_PARK_FINDING_CODE,
   type QueueBlocking,
   type QueueBlockingReason,
@@ -30,9 +34,11 @@ import {
   type QueueFinding,
   type QueueLeaseProjection,
   type QueueLeaseStatus,
+  type QueueListData,
   type QueueNextAction,
   type QueueParkedReason,
   type QueueParkProjection,
+  type QueuePlanData,
   type QueueRankClass,
   type QueueReadyCloseClass,
   type QueueWeightClass,
@@ -183,6 +189,23 @@ const leaseStatusOf = (
 
 const isProducerOf = (fold: QueueGraphFold, producer: string, consumer: string): boolean =>
   fold.entries.find((entry) => entry.ref === consumer)?.edges.includes(producer) ?? false;
+
+const isProducerInRepository = (
+  fold: QueueGraphFold,
+  repository: string | undefined,
+  ref: string,
+): boolean =>
+  repository !== undefined &&
+  fold.entries.some(
+    (entry) => entry.repository === repository && entry.ref !== ref && entry.edges.includes(ref),
+  );
+
+const boundBlocking = (
+  items: readonly QueueBlocking[],
+): { readonly blocking: readonly QueueBlocking[]; readonly dropped: boolean } =>
+  items.length <= QUEUE_MAX_REASONS
+    ? { blocking: items, dropped: false }
+    : { blocking: items.slice(0, QUEUE_MAX_REASONS), dropped: true };
 
 const evaluateEntry = (
   facts: QueueSchedulerFacts,
@@ -460,7 +483,12 @@ export const computeQueueSchedule = (
   const nextActions: QueueNextAction[] = orderedEligible.map((state) => {
     const reason: QueueBlockingReason = isCloseRank(state.rankClass as QueueRankClass)
       ? "close-first"
-      : "producer-first";
+      : isProducerInRepository(facts.fold, state.repository, state.ref)
+        ? "producer-first"
+        : state.rankClass === "resume-parked"
+          ? "resume-parked"
+          : "new-start";
+    const bounded = boundBlocking(state.blocking);
     return {
       ref: state.ref,
       ...(state.repository === undefined ? {} : { repository: state.repository }),
@@ -470,7 +498,7 @@ export const computeQueueSchedule = (
       weightClass: state.weightClass,
       weightClassSource: state.weightClassSource,
       lease: state.lease,
-      blocking: [],
+      blocking: bounded.blocking,
       ...(state.deploy === undefined ? {} : { deploy: state.deploy }),
     };
   });
@@ -525,6 +553,7 @@ export const computeQueueSchedule = (
     .slice(0, QUEUE_MAX_FINDINGS);
 
   const cappedActions = nextActions.slice(0, nextCap);
+  const reasonsTruncated = states.some((state) => state.blocking.length > QUEUE_MAX_REASONS);
   const entries: QueueEntryProjection[] = folded.map((entry) => {
     const state = byRef.get(entry.ref);
     if (state === undefined) throw new Error(`entry ${entry.ref} lost its state`);
@@ -537,7 +566,7 @@ export const computeQueueSchedule = (
       weightClass: state.weightClass,
       weightClassSource: state.weightClassSource,
       deps: state.deps,
-      blocking: state.blocking,
+      blocking: boundBlocking(state.blocking).blocking,
     };
   });
 
@@ -557,7 +586,8 @@ export const computeQueueSchedule = (
     totalEntries > QUEUE_MAX_ENTRIES ||
     states.length > evaluated.size ||
     nextActions.length > nextCap ||
-    findings.length === QUEUE_MAX_FINDINGS;
+    findings.length === QUEUE_MAX_FINDINGS ||
+    reasonsTruncated;
 
   return {
     entries,
@@ -584,12 +614,87 @@ export type QueueHumanData =
   | import("#contracts").QueueClaimData
   | import("#contracts").QueueReleaseData;
 
-const capHuman = (lines: readonly string[]): string => {
-  const kept = lines.slice(0, 40);
-  if (lines.length > 40) kept.push("+more");
-  const text = `${kept.join("\n")}\n`;
-  return text.length <= 8_192 ? text : `${text.slice(0, 8_191)}+`;
+const utf8Length = (text: string): number => new TextEncoder().encode(text).length;
+
+const truncateUtf8 = (text: string, maxBytes: number): string => {
+  if (maxBytes <= 0) return "";
+  if (utf8Length(text) <= maxBytes) return text;
+  const characters = Array.from(text);
+  let low = 0;
+  let high = characters.length;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (utf8Length(characters.slice(0, middle).join("")) <= maxBytes - 1) low = middle;
+    else high = middle - 1;
+  }
+  return `${characters.slice(0, low).join("")}+`;
 };
+
+const capHuman = (lines: readonly string[]): string => {
+  const overflow = lines.length > QUEUE_MAX_HUMAN_LINES;
+  const kept = lines.slice(0, overflow ? QUEUE_MAX_HUMAN_LINES - 1 : QUEUE_MAX_HUMAN_LINES);
+  if (overflow) kept.push("+more");
+  const text = `${kept.join("\n")}\n`;
+  return utf8Length(text) <= QUEUE_MAX_HUMAN_BYTES
+    ? text
+    : truncateUtf8(text, QUEUE_MAX_HUMAN_BYTES);
+};
+
+/**
+ * Enforce NFR-9's serialized machine byte cap. Trailing entries, then actions,
+ * then findings/parks/leases/weights are dropped until the payload fits, and
+ * `truncated` plus `truncationReason` are set so the cut is explicit.
+ */
+const boundQueueData = <T extends QueueListData | QueuePlanData>(data: T): T => {
+  if (utf8Length(JSON.stringify(data)) <= QUEUE_MAX_MACHINE_BYTES) return data;
+  const entries = [...data.entries];
+  const nextActions = "nextActions" in data ? [...(data as QueuePlanData).nextActions] : undefined;
+  const findings = [...data.findings];
+  const parks = [...data.parks];
+  const leases = [...data.leases];
+  const weights = [...data.weights];
+  const build = (): T =>
+    ({
+      ...data,
+      entries,
+      ...(nextActions === undefined ? {} : { nextActions }),
+      findings,
+      parks,
+      leases,
+      weights,
+      truncated: true,
+      truncationReason: "machine-byte-cap",
+    }) as T;
+  const dropTail = (lists: unknown[][]): boolean => {
+    for (const list of lists) {
+      if (list.length === 0) continue;
+      const chunk = Math.max(1, Math.floor(list.length / 10));
+      list.splice(list.length - chunk, chunk);
+      return true;
+    }
+    return false;
+  };
+  let current = build();
+  while (utf8Length(JSON.stringify(current)) > QUEUE_MAX_MACHINE_BYTES) {
+    const dropped = dropTail([
+      entries,
+      ...(nextActions === undefined ? [] : [nextActions]),
+      findings,
+      parks,
+      leases,
+      weights,
+    ]);
+    if (!dropped) break;
+    current = build();
+  }
+  return current;
+};
+
+/** Bound a `queue list` payload to the NFR-9 machine byte cap. */
+export const boundQueueReadData = (data: QueueListData): QueueListData => boundQueueData(data);
+
+/** Bound a `queue plan` payload to the NFR-9 machine byte cap. */
+export const boundQueuePlanData = (data: QueuePlanData): QueuePlanData => boundQueueData(data);
 
 /**
  * Deterministic human text for the queue family. When defined, the key=value

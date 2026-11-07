@@ -1,6 +1,6 @@
 /**
  * TC-SCHED-009 / TC-COMPAT-001 (GH-237) — committed queue list goldens are
- * byte-compared through the real edge path.
+ * structurally compared through the real edge path.
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -11,7 +11,7 @@ const ROOT = process.cwd();
 const GOLDEN = join(ROOT, "tests/fixtures/queue/golden");
 
 describe("queue list golden", () => {
-  test("the machine payload is byte-identical to the committed golden", async () => {
+  test("the machine payload is structurally identical to the committed golden", async () => {
     const harness = createQueueEdgeHarness("golden-list");
     await harness.run(["queue", "add", "GH-320", "--priority", "5", "--json"]);
     const run = await harness.run(["queue", "list", "--json"]);

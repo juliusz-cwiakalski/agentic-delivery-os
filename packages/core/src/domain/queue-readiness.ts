@@ -91,6 +91,7 @@ export type QueueParkEvaluation = {
   readonly state: QueueParkEvaluationState;
   readonly cause?: QueueParkCause;
   readonly recheckMs?: number;
+  readonly lastEvaluatedAt?: string;
   readonly expiresAt?: string;
   readonly clearObservedAt?: string;
 };

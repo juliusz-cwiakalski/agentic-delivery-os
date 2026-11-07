@@ -10,7 +10,7 @@ const ROOT = process.cwd();
 const GOLDEN = join(ROOT, "tests/fixtures/queue/golden");
 
 describe("queue lease-conflict golden", () => {
-  test("the refusal envelope is byte-identical to the committed golden", async () => {
+  test("the refusal envelope is structurally identical to the committed golden", async () => {
     const harness = createQueueEdgeHarness("golden-conflict");
     await harness.run(["queue", "add", "GH-320", "--json"]);
     await harness.run(["queue", "claim", "GH-320", "--holder", "holder-a", "--json"]);

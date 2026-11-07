@@ -10,7 +10,7 @@ const ROOT = process.cwd();
 const GOLDEN = join(ROOT, "tests/fixtures/queue/golden");
 
 describe("queue rank golden", () => {
-  test("the close-first action order is byte-identical to the committed golden", async () => {
+  test("the close-first action order is structurally identical to the committed golden", async () => {
     const harness = createQueueEdgeHarness("golden-rank");
     await harness.run(["queue", "add", "GH-310", "--json"]);
     await harness.run(["queue", "add", "GH-320", "--json"]);

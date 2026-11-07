@@ -100,7 +100,11 @@ identities, one collector id, and one typed `queue` configuration branch.
   `provider-quota`, and `preempted-for-close-item`, paired one-to-one. A window
   clears at its absolute expiry, quota clears when the provider is observed
   available, and preemption clears when the repository is observed with no held
-  lease and the entry is ready again. A mutating pass that observes a clear
+  lease and the entry is ready again. An active park is re-evaluated only once
+  its configured per-type recheck interval has elapsed since the last
+  evaluation; a not-yet-due park stays active with its interval and last
+  evaluation, so changing only `queue.park-recheck.<type>` changes resume timing
+  with no code change. A mutating pass that observes a clear
   condition appends the durable `clear-observed` marker first, then the
   `recovered` record and a `park-auto-recovery` incident naming the condition,
   clear time, evaluation time, and observation gap. A marker without a later
@@ -108,9 +112,10 @@ identities, one collector id, and one typed `queue` configuration branch.
   and a `queue.park-condition-stuck` refusal on a claim at exit 1. A park that was
   simply not evaluated while no process ran carries no marker, is never stuck on
   the first pass after the gap, and recovers with an incident naming the gap.
-  The `--park` grammar carries the cause only: a `provider-window` park records
-  the release instant as its absolute expiry, so it is clear at its next
-  evaluation, and the command has no way to declare a future window.
+  `queue release --park provider-window --until <iso>` records the supplied
+  absolute window expiry; `--until` is required for that cause and refused for
+  the other causes through `fallback.invocation`. An absent `--until` or an
+  `--until` with a non-window cause appends nothing.
 - **One declared total order.** Hard exclusions (readiness, dependency/deploy,
   parks, single-flight, weight) remove candidates; ordering applies rank class,
   then producer-before-consumer within one repository, then explicit priority
@@ -135,8 +140,9 @@ identities, one collector id, and one typed `queue` configuration branch.
   history is unreadable, torn, or of unknown kind, presenting no success verdict
   and no partial or empty view as a schedule. A report-only stuck-park finding
   never fails a read. `--watch` is not in the accepted grammar of any queue or
-  lanes subcommand and is refused through `fallback.invocation` at exit 1 with
-  no stream representable.
+  lanes subcommand and is refused through `fallback.invocation` at exit 1 with a
+  remediation hint naming the resident daemon (M1-S18) and no stream
+  representable.
 - **One lane fold.** `lanes list|show` projects the same schedule: identity is
   the canonical work-item ref, and no lane record kind or stored lane state
   exists. The closed state set is `delivering`, `idle-with-reason`, `parked`,
@@ -167,7 +173,7 @@ identities, one collector id, and one typed `queue` configuration branch.
 | `queue prioritize <ref> <n>` | `ref`, `entry`, `edges[]`, `result`, `degraded[]` | `added`, `updated`, `noop` |
 | `queue dep <ref> <on-ref>` | `ref`, `entry`, `edges[]`, `result`, `degraded[]` | `added`, `updated`, `noop` |
 | `queue claim [<ref>] [--holder <id>]` | `result`, `selectedRef`, `lease`, `action`, `degraded[]` | `claimed`, `renewed`, `taken-over` |
-| `queue release <ref> [--holder <id>] [--park <cause>]` | `result`, optional `lease`, optional `park`, `degraded[]` | `released`, `parked`, `noop` |
+| `queue release <ref> [--holder <id>] [--park <cause>] [--until <iso>]` | `result`, optional `lease`, optional `park`, `degraded[]` | `released`, `parked`, `noop` |
 | `lanes list` | `schemaVersion: delivery.lanes.v1`, `lanes[]`, `findings[]`, `degraded[]`, `truncated`, `counts` | — |
 | `lanes show <ref>` | The same payload narrowed to one lane | — |
 
@@ -203,26 +209,35 @@ reported.
 | Deploy verdict reads | 3, memoized per producer | Every pass |
 | Lanes per payload | 200 | `lanes list`, `lanes show` |
 | Findings per payload | 20 | Every pass |
+| Reasons per entry or action | 8 | Every projection |
+| Serialized machine `data` | 65536 UTF-8 bytes | Every queue payload |
 | Human output | 40 lines, 8192 bytes | Every queue and lanes surface |
 | Canonical ref length | 64 characters | Every ref position (`GH-010` and `GH-10` are one identity) |
 
-A bound reached sets `truncated` and never silently drops the last row; the
-human renderer appends `+more`.
+A bound reached sets `truncated` and never silently drops the last row; a cut
+caused by the serialized byte cap also sets `truncationReason:
+"machine-byte-cap"`, and the human renderer appends `+more`.
 
 ## Known limits
 
 - `queue add` takes one `--dep` edge per call; a repeatable flag is not in the
   grammar, so a second edge needs a second `queue dep` invocation.
-- `queue release --park provider-window` cannot declare a future expiry; the
-  recorded window ends at the release instant. A real provider window is
-  expected from the provider engine's own park records.
+- `queue release --park provider-window` requires an explicit `--until <iso>`
+  window expiry. A provider-engine-generated window is expected from the
+  provider engine's own park records.
 - Deploy gating resolves from facts injected at the CLI edge: the caller
   supplies the plan, work-item, CI, provider, close, and deploy facts, and the
   shipped edge reads the producer repository's configuration and the delivered
-  deploy verdict through those seams. No production composition root assembles
-  the scheduling fact set yet; the family is registered only when a queue
-  composition is supplied, which keeps the engine and its surfaces testable
-  without an installed binary.
+  deploy verdict through those seams. Producer expectations are resolved through
+  an injected producer-root port from entry-recorded roots only; the invocation
+  checkout's configuration is never used for a producer.
+- **Deferred production composition.** No shipped binary wires `options.queue`
+  or `options.lanes` yet. The engine runs only through an injected composition,
+  so AC-F10-1's "state is consistent for later daemon reconciliation" holds at
+  the injected-fixture tier in this release; the resident daemon (M1-S18) will
+  supply the production composition root. The family is registered only when a
+  queue composition is supplied, which keeps the engine and its surfaces
+  testable without an installed binary.
 
 ## Configuration
 
@@ -272,8 +287,9 @@ Payload fields are closed and validated at the ledger boundary:
   `provider-quota` and `preemption` carry no expiry), `recheckMs`,
   `evaluatedAt`, optional `clearObservedAt`, `clearedAt`, `recoveredAt`,
   `observationGapMs`, `recoveryState` (`parked`, `clear-observed`, `recovered`,
-  `released`; `released` is declared in the closed set and no delivered path
-  writes it), `recordedAt`.
+  `released`; `released` is the withdrawn-park marker written when the
+  release+park path appends the park and the lease-release append then fails, so
+  the fold observes no active park while the lease remains held), `recordedAt`.
 - `queue.incident` — `schema`, `type` (`park-auto-recovery`,
   `lease-stale-takeover`), optional `ref`, optional `repository`, non-empty
   bounded `evidence[]` of `{key, value}` pairs, `recordedAt`.

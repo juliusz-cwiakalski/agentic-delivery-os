@@ -5,6 +5,8 @@
  */
 import { describe, expect, test } from "bun:test";
 import { computeQueueSchedule } from "../../packages/core/src/domain/index";
+import { createQueueEdgeHarness } from "../fixtures/queue/cli/harness";
+import { producerPort, seedDependFacts, seedEntry } from "../fixtures/queue/depend/multi-repo";
 import { makeFacts, observed, REPO_A, REPO_B } from "../fixtures/queue/schedule/harness";
 
 const close = "merge-ready" as const;
@@ -192,5 +194,84 @@ describe("TC-DEPEND-006 producer landing is observed", () => {
     expect(
       computeQueueSchedule(landed).entries.find((entry) => entry.ref === "GH-301")?.state,
     ).toBe("ready");
+  });
+});
+
+describe("TC-DEPEND-003/004 producer-root resolution across a multi-repository state directory", () => {
+  const blockingReason = (entry: Record<string, unknown> | undefined): unknown =>
+    (entry?.blocking as Array<Record<string, unknown>> | undefined)?.[0]?.reason;
+
+  const consumer = async (harness: ReturnType<typeof createQueueEdgeHarness>) => {
+    const listed = await harness.run(["queue", "list", "--json"]);
+    const entries = (
+      JSON.parse(listed.stdout) as { data: { entries: Array<Record<string, unknown>> } }
+    ).data.entries;
+    return entries.find((entry) => entry.ref === "GH-301");
+  };
+
+  const build = (port: Parameters<typeof producerPort>[0]) => {
+    const harness = createQueueEdgeHarness("depend-domain", {
+      overrides: { deployExpectations: producerPort(port) },
+    });
+    seedEntry(harness, {
+      ref: "GH-300",
+      repository: REPO_A,
+      repositoryRoot: "/work/repo-alpha",
+    });
+    seedEntry(harness, {
+      ref: "GH-301",
+      repository: REPO_B,
+      repositoryRoot: "/work/repo-beta",
+      edges: ["GH-300"],
+    });
+    return harness;
+  };
+
+  test("a matched producer root with no declared expectation is landing-only", async () => {
+    const harness = build({
+      "/work/repo-alpha": {
+        normalizedRemote: REPO_A,
+        deploy: { ok: true, declared: false, steps: [] },
+      },
+      "/work/repo-beta": {
+        normalizedRemote: REPO_B,
+        deploy: { ok: true, declared: true, steps: ["deploy"] },
+      },
+    });
+    seedDependFacts(harness, { verdict: "unknown" });
+    expect((await consumer(harness))?.state).toBe("ready");
+  });
+
+  test("no matching root and a two-root collision both hold deploy-unverified", async () => {
+    const mismatch = build({
+      "/work/repo-alpha": {
+        normalizedRemote: "github.com/owner/repo-beta",
+        deploy: { ok: true, declared: false, steps: [] },
+      },
+    });
+    seedDependFacts(mismatch, { verdict: "verified" });
+    const mismatchEntry = await consumer(mismatch);
+    expect(mismatchEntry?.state).toBe("held");
+    expect(blockingReason(mismatchEntry)).toBe("deploy-unverified");
+
+    const collision = build({
+      "/work/repo-alpha": {
+        normalizedRemote: REPO_A,
+        deploy: { ok: true, declared: true, steps: ["deploy"] },
+      },
+      "/work/repo-alpha-2": {
+        normalizedRemote: REPO_A,
+        deploy: { ok: true, declared: true, steps: ["deploy"] },
+      },
+    });
+    seedEntry(collision, {
+      ref: "GH-299",
+      repository: REPO_A,
+      repositoryRoot: "/work/repo-alpha-2",
+    });
+    seedDependFacts(collision, { verdict: "verified" });
+    const collisionEntry = await consumer(collision);
+    expect(collisionEntry?.state).toBe("held");
+    expect(blockingReason(collisionEntry)).toBe("deploy-unverified");
   });
 });

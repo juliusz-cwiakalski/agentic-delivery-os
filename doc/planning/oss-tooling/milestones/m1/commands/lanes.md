@@ -14,8 +14,8 @@ live streaming belongs to the resident daemon (M1-S18).
 ```
 
 `--watch` is refused in this release: it is not in the accepted grammar, the
-invocation fails at exit 1 through `fallback.invocation`, and no stream or
-frame is emitted.
+invocation fails at exit 1 through `fallback.invocation`, the remediation hint
+names the resident daemon (M1-S18), and no stream or frame is emitted.
 
 ## DESCRIPTION
 

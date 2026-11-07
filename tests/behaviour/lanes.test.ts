@@ -13,7 +13,9 @@ import {
   type QueueLanesData,
 } from "../../packages/core/src/contracts/index";
 import { foldLanes, selectLane } from "../../packages/core/src/domain/index";
-import { laneData } from "../fixtures/queue/lanes/harness";
+import { computeQueueSchedule } from "../../packages/core/src/domain/queue-precedence";
+import { createQueueEdgeHarness, trackingStore } from "../fixtures/queue/cli/harness";
+import { laneData, laneFacts } from "../fixtures/queue/lanes/harness";
 import { runProgram } from "../fixtures/queue-ready/harness";
 
 const runtime = (
@@ -79,11 +81,15 @@ describe("TC-LANES-001 the full lane contract with no fabricated values", () => 
     expect(lane?.amplificationWarning).toBe("economics-underivable");
   });
 
-  test("the fold is pure and leaves the injected facts untouched", () => {
-    const data = laneData();
-    const snapshot = JSON.stringify(data);
-    const schedule = data;
-    expect(JSON.stringify(schedule)).toBe(snapshot);
+  test("the fold is pure and leaves the real injected facts and schedule untouched", () => {
+    const input = laneFacts();
+    const schedule = computeQueueSchedule(input.facts, { next: 20 });
+    const snapshot = JSON.stringify({ facts: input.facts, schedule, economics: input.economics });
+    const data = foldLanes({ schedule, economics: input.economics, degraded: input.degraded });
+    expect(data.lanes.length).toBeGreaterThan(0);
+    expect(JSON.stringify({ facts: input.facts, schedule, economics: input.economics })).toBe(
+      snapshot,
+    );
   });
 });
 
@@ -119,15 +125,16 @@ describe("TC-LANES-003 restart count and amplification come from economics", () 
 });
 
 describe("TC-LANES-004 --watch is refused through fallback.invocation", () => {
-  test("no stream is emitted and the summary names the resident daemon story", async () => {
+  test("no stream is emitted and the remediation hint names the resident daemon story", async () => {
     const data = laneData();
     const run = await runLanes(["lanes", "list", "--watch", "--json"], data);
     expect(run.exitCode).toBe(1);
     const envelope = JSON.parse(run.stdout) as {
-      error?: { code?: string; summary?: string };
+      error?: { code?: string; remediationHint?: string; summary?: string };
       data?: unknown;
     };
     expect(envelope.error?.code).toBe("fallback.invocation");
+    expect(envelope.error?.remediationHint).toContain("resident daemon (M1-S18)");
     expect(envelope.data).toBeUndefined();
   });
 });
@@ -181,5 +188,28 @@ describe("TC-LANES-006 lanes reads are bounded and truthfully empty", () => {
     });
     expect(envelope.data.lanes).toEqual([]);
     expect(envelope.data.degraded).toEqual(["daemon-unreachable"]);
+  });
+});
+
+describe("TC-SCHED-012 lanes command-level zero-write reads", () => {
+  test("lanes list|show perform zero appends, fences, or replacements", async () => {
+    let log: { appends: number; replaces: number; fences: number; releases: number } | undefined;
+    const harness = createQueueEdgeHarness("lanes-zero-write", {
+      wrapStore: (store) => {
+        const tracked = trackingStore(store);
+        log = tracked.log;
+        return tracked.store;
+      },
+    });
+    expect((await harness.run(["queue", "add", "GH-320", "--json"])).exitCode).toBe(0);
+    expect(log).toBeDefined();
+    if (log === undefined) return;
+    log.appends = 0;
+    log.replaces = 0;
+    log.fences = 0;
+    log.releases = 0;
+    expect((await harness.run(["lanes", "list", "--json"])).exitCode).toBe(0);
+    expect((await harness.run(["lanes", "show", "GH-320", "--json"])).exitCode).toBe(0);
+    expect(log).toEqual({ appends: 0, replaces: 0, fences: 0, releases: 0 });
   });
 });

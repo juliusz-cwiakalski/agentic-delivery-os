@@ -21,6 +21,8 @@
     "weight-class",
     "close-first",
     "producer-first",
+    "new-start",
+    "resume-parked",
     "outranked",
     "no-eligible-action",
     "park-condition-stuck",

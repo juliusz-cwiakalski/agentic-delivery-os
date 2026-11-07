@@ -1,6 +1,6 @@
 /**
  * TC-LANES-002 / TC-LANES-005 (GH-237) — `lanes show <ref>` selects one lane and
- * its committed goldens are byte-compared.
+ * its machine golden is structurally compared and its human output is byte-exact.
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -22,7 +22,7 @@ const program = () => {
 };
 
 describe("lane show golden", () => {
-  test("the machine payload is byte-identical to the committed golden", async () => {
+  test("the machine payload is structurally identical to the committed golden", async () => {
     const run = await runProgram(["lanes", "show", "GH-320", "--json"], program());
     expect(run.exitCode).toBe(0);
     expect(JSON.parse(run.stdout)).toEqual(

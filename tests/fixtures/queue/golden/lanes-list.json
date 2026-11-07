@@ -41,7 +41,7 @@
         "id": "GH-323",
         "ref": "GH-323",
         "state": "idle-with-reason",
-        "reason": "not-ready",
+        "reason": "new-start",
         "restarts": null,
         "amplification": null,
         "amplificationWarning": "economics-underivable",

@@ -133,7 +133,14 @@ export const QUEUE_PARK_CAUSE_CONDITION_PAIRS = [
   readonly conditionType: QueueParkConditionType;
 }[];
 
-/** The closed recovery-state set (DM-5, C-3). */
+/**
+ * The closed recovery-state set (DM-5, C-3).
+ *
+ * `released` is the withdrawn-park marker: the release+park path appends the
+ * park first and, if the lease-release append fails, appends a `released`
+ * record for the same park so the fold observes no active park while the lease
+ * remains held. It is never a fabricated terminal state.
+ */
 export const QUEUE_PARK_RECOVERY_STATES = [
   "parked",
   "clear-observed",
@@ -218,6 +225,8 @@ export const QUEUE_LANE_IDLE_REASONS = [
   "weight-class",
   "close-first",
   "producer-first",
+  "new-start",
+  "resume-parked",
   "outranked",
   "no-eligible-action",
   "park-condition-stuck",
@@ -614,6 +623,8 @@ export type QueueReadData = {
   readonly findings: readonly QueueFinding[];
   readonly degraded: readonly QueueDegradationReason[];
   readonly truncated: boolean;
+  /** The named reason when `truncated` is set by a bound other than a cap. */
+  readonly truncationReason?: string;
   readonly counts: {
     readonly entries: number;
     readonly ready: number;
@@ -706,6 +717,8 @@ export type QueueLanesData = {
   readonly findings: readonly QueueFinding[];
   readonly degraded: readonly QueueDegradationReason[];
   readonly truncated: boolean;
+  /** The named reason when `truncated` is set by a bound other than a cap. */
+  readonly truncationReason?: string;
   readonly counts: {
     readonly lanes: number;
     readonly delivering: number;

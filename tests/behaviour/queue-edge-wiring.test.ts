@@ -8,12 +8,15 @@ import { createQueueReadyCommandDefinition } from "../../packages/cli/src/comman
 import type { QueueReadyPayload } from "../../packages/core/src/contracts/index";
 import { evaluateQueueReady } from "../../packages/core/src/domain/index";
 import { createQueueEdgeHarness } from "../fixtures/queue/cli/harness";
+import { producerPort, seedDependFacts, seedEntry } from "../fixtures/queue/depend/multi-repo";
 import { baseFacts, queueRuntime } from "../fixtures/queue-ready/harness";
 
 const json = (text: string): Record<string, unknown> => JSON.parse(text) as Record<string, unknown>;
 const data = (text: string): Record<string, unknown> => json(text).data as Record<string, unknown>;
 const error = (text: string): Record<string, unknown> | undefined =>
   json(text).error as Record<string, unknown> | undefined;
+const blockingReason = (entry: Record<string, unknown> | undefined): unknown =>
+  (entry?.blocking as Array<Record<string, unknown>> | undefined)?.[0]?.reason;
 
 describe("edge wiring: queue subcommands and flags", () => {
   test("add/list/plan/prioritize/dep/claim/release all reach the edge runtime", async () => {
@@ -116,6 +119,143 @@ describe("edge wiring: queue subcommands and flags", () => {
   });
 });
 
+describe("TC-DEPEND-003/004 producer-root deploy-expectation resolution", () => {
+  const consumerOf = async (
+    harness: ReturnType<typeof createQueueEdgeHarness>,
+    consumerRef = "GH-301",
+  ): Promise<Record<string, unknown> | undefined> => {
+    const listed = await harness.run(["queue", "list", "--json"]);
+    const entries = data(listed.stdout).entries as Array<Record<string, unknown>>;
+    return entries.find((entry) => entry.ref === consumerRef);
+  };
+
+  const build = (port: Parameters<typeof producerPort>[0]) => {
+    const harness = createQueueEdgeHarness("depend-resolution", {
+      overrides: { deployExpectations: producerPort(port) },
+    });
+    seedEntry(harness, {
+      ref: "GH-300",
+      repository: "github.com/owner/repo-alpha",
+      repositoryRoot: "/work/repo-alpha",
+    });
+    seedEntry(harness, {
+      ref: "GH-301",
+      repository: "github.com/owner/repo-beta",
+      repositoryRoot: "/work/repo-beta",
+      edges: ["GH-300"],
+    });
+    return harness;
+  };
+
+  test("a declared producer config with a verified verdict frees the dependent merge", async () => {
+    const harness = build({
+      "/work/repo-alpha": {
+        normalizedRemote: "github.com/owner/repo-alpha",
+        deploy: { ok: true, declared: true, steps: ["deploy"] },
+      },
+      "/work/repo-beta": {
+        normalizedRemote: "github.com/owner/repo-beta",
+        deploy: { ok: true, declared: false, steps: [] },
+      },
+    });
+    seedDependFacts(harness, { verdict: "verified" });
+    expect((await consumerOf(harness))?.state).toBe("ready");
+  });
+
+  test("a declared producer config with an unknown verdict holds deploy-unverified", async () => {
+    const harness = build({
+      "/work/repo-alpha": {
+        normalizedRemote: "github.com/owner/repo-alpha",
+        deploy: { ok: true, declared: true, steps: ["deploy"] },
+      },
+    });
+    seedDependFacts(harness, { verdict: "unknown" });
+    const consumer = await consumerOf(harness);
+    expect(consumer?.state).toBe("held");
+    expect(blockingReason(consumer)).toBe("deploy-unverified");
+  });
+
+  test("the producer's own not-declared config wins over a pre-resolved declared expectation", async () => {
+    const harness = build({
+      "/work/repo-alpha": {
+        normalizedRemote: "github.com/owner/repo-alpha",
+        deploy: { ok: true, declared: false, steps: [] },
+      },
+    });
+    seedDependFacts(harness, {
+      verdict: "unknown",
+      preResolvedExpectations: { "GH-300": { state: "declared", steps: ["deploy"] } },
+    });
+    expect((await consumerOf(harness))?.state).toBe("ready");
+  });
+
+  test("a recorded root whose remote does not match the producer key is unknown, never not-declared", async () => {
+    const harness = build({
+      "/work/repo-alpha": {
+        normalizedRemote: "github.com/owner/repo-beta",
+        deploy: { ok: true, declared: false, steps: [] },
+      },
+    });
+    seedDependFacts(harness, { verdict: "verified" });
+    const consumer = await consumerOf(harness);
+    expect(consumer?.state).toBe("held");
+    expect(blockingReason(consumer)).toBe("deploy-unverified");
+  });
+
+  test("two recorded roots claiming one key collide and hold deploy-unverified", async () => {
+    const harness = build({
+      "/work/repo-alpha": {
+        normalizedRemote: "github.com/owner/repo-alpha",
+        deploy: { ok: true, declared: true, steps: ["deploy"] },
+      },
+      "/work/repo-alpha-2": {
+        normalizedRemote: "github.com/owner/repo-alpha",
+        deploy: { ok: true, declared: true, steps: ["deploy"] },
+      },
+    });
+    seedEntry(harness, {
+      ref: "GH-299",
+      repository: "github.com/owner/repo-alpha",
+      repositoryRoot: "/work/repo-alpha-2",
+    });
+    seedDependFacts(harness, { verdict: "verified" });
+    const consumer = await consumerOf(harness);
+    expect(consumer?.state).toBe("held");
+    expect(blockingReason(consumer)).toBe("deploy-unverified");
+  });
+
+  test("an invalid matched config is unknown, never not-declared", async () => {
+    const harness = build({
+      "/work/repo-alpha": {
+        normalizedRemote: "github.com/owner/repo-alpha",
+        deploy: { ok: false, reason: "config-invalid" },
+      },
+    });
+    seedDependFacts(harness, { verdict: "verified" });
+    const consumer = await consumerOf(harness);
+    expect(consumer?.state).toBe("held");
+    expect(blockingReason(consumer)).toBe("deploy-unverified");
+  });
+
+  test("the invocation checkout's config never substitutes for the producer's", async () => {
+    // The invocation runs from repo-beta (harness binding) and repo-beta's own
+    // config declares expectations, but repo-alpha declares none. The producer's
+    // own config governs, so the gate is landing-only.
+    const harness = build({
+      "/work/repo-alpha": {
+        normalizedRemote: "github.com/owner/repo-alpha",
+        deploy: { ok: true, declared: false, steps: [] },
+      },
+      "/work/repo-beta": {
+        normalizedRemote: "github.com/owner/repo-beta",
+        deploy: { ok: true, declared: true, steps: ["deploy"] },
+      },
+    });
+    seedDependFacts(harness, { verdict: "unknown" });
+    expect((await consumerOf(harness))?.state).toBe("ready");
+  });
+});
+
 describe("edge wiring: lanes list/show and --watch refusal", () => {
   test("lanes list and show are served through the edge seam", async () => {
     const harness = createQueueEdgeHarness("wiring-lanes");
@@ -130,15 +270,34 @@ describe("edge wiring: lanes list/show and --watch refusal", () => {
     expect((data(shown.stdout).lanes as Array<Record<string, unknown>>).length).toBe(1);
   });
 
-  test("lanes --watch is refused through fallback.invocation", async () => {
+  test("lanes --watch is refused through fallback.invocation with a resident-daemon hint", async () => {
     const harness = createQueueEdgeHarness("wiring-lanes-watch");
     const refused = await harness.run(["lanes", "list", "--watch", "--json"]);
     expect(refused.exitCode).toBe(1);
     expect(error(refused.stdout)?.code).toBe("fallback.invocation");
+    expect(String(error(refused.stdout)?.remediationHint)).toContain("resident daemon (M1-S18)");
   });
 });
 
 describe("TC-COMPAT-001 queue ready preservation through the full family", () => {
+  test("3-8 candidate refs are accepted and byte-identical to the ready evaluator", async () => {
+    const harness = createQueueEdgeHarness("wiring-ready-multi");
+    const refs = ["GH-176", "GH-177", "GH-178", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183"];
+    for (const count of [3, 5, 8]) {
+      const candidates = refs.slice(0, count);
+      const run = await harness.run(["queue", "ready", ...candidates, "--json"]);
+      expect(run.exitCode).toBe(0);
+      const expected = evaluateQueueReady(
+        baseFacts({
+          candidates,
+          nowIso: "2026-11-07T10:00:00Z",
+          nowMs: Date.parse("2026-11-07T10:00:00Z"),
+        }),
+      );
+      expect(JSON.stringify(data(run.stdout))).toBe(JSON.stringify(expected));
+    }
+  });
+
   test("the ready data is byte-identical to the delivered evaluator over the same fixtures", async () => {
     const harness = createQueueEdgeHarness("wiring-ready");
     const run = await harness.run(["queue", "ready", "GH-176", "--json"]);

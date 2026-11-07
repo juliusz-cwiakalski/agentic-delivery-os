@@ -1,6 +1,6 @@
 /**
  * TC-SCHED-016 (GH-237) — the empty queue envelope and the success/refusal
- * shapes are byte-compared and carry the truthful degradation marker.
+ * shapes are structurally compared (human output is byte-exact) and carry the truthful degradation marker.
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -11,7 +11,7 @@ const ROOT = process.cwd();
 const GOLDEN = join(ROOT, "tests/fixtures/queue/golden");
 
 describe("queue envelope golden", () => {
-  test("the observed-empty envelope is byte-identical to the committed golden", async () => {
+  test("the observed-empty envelope is structurally identical to the committed golden", async () => {
     const harness = createQueueEdgeHarness("golden-envelope");
     const run = await harness.run(["queue", "list", "--json"]);
     expect(run.exitCode).toBe(0);

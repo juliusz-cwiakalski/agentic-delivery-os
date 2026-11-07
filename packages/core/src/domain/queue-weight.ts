@@ -16,6 +16,7 @@ import {
   type QueueWeightClass,
   type QueueWeightClassSource,
 } from "#contracts";
+import { compareText } from "./queue-graph.js";
 import type { QueuePlanFact } from "./queue-readiness.js";
 
 /** The resolved class plus its provenance and (where applicable) identity. */
@@ -90,7 +91,7 @@ export const weightLoads = (leases: readonly QueueActiveLease[]): readonly Queue
     }))
     .sort((left, right) =>
       left.runner === right.runner
-        ? left.class.localeCompare(right.class)
-        : left.runner.localeCompare(right.runner),
+        ? compareText(left.class, right.class)
+        : compareText(left.runner, right.runner),
     );
 };

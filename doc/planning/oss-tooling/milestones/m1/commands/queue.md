@@ -19,7 +19,7 @@ scheduling with single-flight and weight classes.
 <binary> queue prioritize <ref> <n>
 <binary> queue dep <ref> <on-ref>
 <binary> queue claim [<ref>] [--holder <id>]
-<binary> queue release <ref> [--holder <id>] [--park <cause>]
+<binary> queue release <ref> [--holder <id>] [--park <cause>] [--until <iso>]
 ```
 
 ## DESCRIPTION
@@ -149,11 +149,12 @@ The full family ships as `ready`, `list`, `plan`, `add`, `prioritize`, `dep`,
 <binary> queue prioritize <ref> <n>
 <binary> queue dep <ref> <on-ref>
 <binary> queue claim [<ref>] [--holder <id>]
-<binary> queue release <ref> [--holder <id>] [--park <cause>]
+<binary> queue release <ref> [--holder <id>] [--park <cause>] [--until <iso>]
 ```
 
 `--watch` is not accepted on any queue subcommand; it is an invocation rejection
-at exit 1 through `fallback.invocation`.
+at exit 1 through `fallback.invocation`, with a remediation hint naming the
+resident daemon (M1-S18).
 
 Machine envelopes follow the contract-level shapes:
 
@@ -185,4 +186,7 @@ its exit-1 identity.
 and `preempted-for-close-item`. Causes and condition types are two distinct
 closed sets paired one-to-one: cause `preempted-for-close-item` pairs with
 condition type `preemption`. A condition-type or unknown token is an invocation
-rejection at exit 1 and appends nothing.
+rejection at exit 1 and appends nothing. `--until <iso>` is accepted only with
+`--park provider-window`, where it is required and supplies the window's
+absolute expiry; a missing or misplaced `--until` is refused through
+`fallback.invocation` at exit 1 and appends nothing.

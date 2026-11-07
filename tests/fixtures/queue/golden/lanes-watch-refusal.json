@@ -10,7 +10,7 @@
     "category": "user",
     "retryable": false,
     "consequence": "unknown",
-    "remediationHint": "Check the command name and arguments, then retry the invocation.",
-    "summary": "The invocation could not be understood."
+    "remediationHint": "Live --watch streaming is provided by the resident daemon (M1-S18), which is not part of this one-shot release; rerun without --watch.",
+    "summary": "result=refused; reason=watch-unsupported"
   }
 }

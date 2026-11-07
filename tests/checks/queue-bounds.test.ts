@@ -6,6 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { toQueuePlanData, toQueueReadData } from "../../packages/cli/src/commands/queue";
 import { PRODUCTION_CATALOG } from "../../packages/core/src/config/index";
 import {
   QUEUE_BLOCKING_REASONS,
@@ -22,7 +23,12 @@ import {
   QUEUE_MAX_NEXT_ACTIONS,
   QUEUE_MAX_REASONS,
 } from "../../packages/core/src/contracts/index";
-import { computeQueueSchedule } from "../../packages/core/src/domain/index";
+import {
+  computeQueueSchedule,
+  foldLanes,
+  renderLanesHuman,
+  renderQueueHuman,
+} from "../../packages/core/src/domain/index";
 import { type EntrySpec, makeFacts } from "../fixtures/queue/schedule/harness";
 
 const ROOT = process.cwd();
@@ -66,6 +72,36 @@ describe("TC-SCHED-011 structural bounds", () => {
     expect(schedule.nextActions.length).toBeLessThanOrEqual(20);
     // More than 32 entries always means the readiness window is explicit.
     expect(schedule.evaluatedCandidates).toBe(32);
+  });
+
+  test("the 500-entry plan payload stays inside the 65536-byte cap with a marker", () => {
+    const facts = makeFacts(corpus(500, 40));
+    const schedule = computeQueueSchedule(facts, { next: 20 });
+    const data = toQueuePlanData(schedule, ["daemon-unreachable"]);
+    const bytes = new TextEncoder().encode(JSON.stringify(data)).length;
+    expect(bytes).toBeLessThanOrEqual(QUEUE_MAX_MACHINE_BYTES);
+    expect(data.truncated).toBe(true);
+    expect(data.truncationReason).toBe("machine-byte-cap");
+    expect(data.entries.length).toBeLessThan(500);
+  });
+
+  test("human output respects the declared line and byte bounds with +more", () => {
+    const facts = makeFacts(corpus(500, 40));
+    const schedule = computeQueueSchedule(facts, { next: 20 });
+    const human = renderQueueHuman(toQueueReadData(schedule, ["daemon-unreachable"]));
+    expect(human.split("\n").filter((line) => line !== "").length).toBeLessThanOrEqual(
+      QUEUE_MAX_HUMAN_LINES,
+    );
+    expect(new TextEncoder().encode(human).length).toBeLessThanOrEqual(QUEUE_MAX_HUMAN_BYTES);
+    expect(human).toContain("+more");
+
+    const lanes = foldLanes({ schedule, economics: {}, degraded: ["daemon-unreachable"] });
+    const lanesHuman = renderLanesHuman(lanes);
+    expect(lanesHuman.split("\n").filter((line) => line !== "").length).toBeLessThanOrEqual(
+      QUEUE_MAX_HUMAN_LINES,
+    );
+    expect(new TextEncoder().encode(lanesHuman).length).toBeLessThanOrEqual(QUEUE_MAX_HUMAN_BYTES);
+    expect(lanesHuman).toContain("+more");
   });
 
   test("no capacity, bandwidth, concurrency, or CI-slot key exists in the catalog", () => {

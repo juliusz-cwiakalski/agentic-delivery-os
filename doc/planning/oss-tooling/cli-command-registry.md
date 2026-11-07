@@ -372,10 +372,11 @@ harness). The remote connection command was deferred rather than named.
 ## Scheduling engine registration (GH-237)
 
 The `queue` family ships `ready`, `list`, `plan`, `add`, `prioritize`, `dep`,
-`claim`, and `release`; `queue ready` is unchanged from its M0-S7 contract. The
-`lanes` family ships `list` and `show <ref>`; `--watch` is refused in this
-release (resident daemon, M1-S18). No resident daemon, `dispatch`, or live
-stream ships with this registration.
+`claim`, and `release` (with `--park <cause>` and, for `provider-window`, a
+required `--until <iso>` window expiry); `queue ready` is unchanged from its
+M0-S7 contract. The `lanes` family ships `list` and `show <ref>`; `--watch` is
+refused in this release (resident daemon, M1-S18). No resident daemon,
+`dispatch`, or live stream ships with this registration.
 
 The `ados status` row records the lanes-or-queue section as a declared
 `not-delivered` gap of the digest collector even though the engine ships; the

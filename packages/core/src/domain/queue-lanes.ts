@@ -11,6 +11,8 @@
 import {
   QUEUE_LANES_SCHEMA_VERSION,
   QUEUE_MAX_FINDINGS,
+  QUEUE_MAX_HUMAN_BYTES,
+  QUEUE_MAX_HUMAN_LINES,
   QUEUE_MAX_LANES,
   type QueueDegradationReason,
   type QueueLane,
@@ -40,7 +42,7 @@ export type QueueLaneFoldInput = {
 const UNDERIVABLE_WARNING = "economics-underivable" as const;
 
 const asIdleReason = (reason: string | undefined): QueueLaneIdleReason | QueueParkedReason => {
-  if (reason !== undefined && reason.startsWith("parked:")) {
+  if (reason?.startsWith("parked:")) {
     return reason as QueueParkedReason;
   }
   if (reason === undefined) return "not-ready";
@@ -71,6 +73,12 @@ const laneStateFor = (
   }
   if (entry.rankClass === "in-review") {
     return { state: "in-review" };
+  }
+  if (entry.state === "ready") {
+    return {
+      state: "idle-with-reason",
+      reason: entry.rankClass === "resume-parked" ? "resume-parked" : "new-start",
+    };
   }
   return {
     state: "idle-with-reason",
@@ -114,14 +122,16 @@ export const foldLanes = (input: QueueLaneFoldInput): QueueLanesData => {
     };
   });
   const findings = input.schedule.findings.slice(0, QUEUE_MAX_FINDINGS);
+  const truncated =
+    input.schedule.entries.length > QUEUE_MAX_LANES ||
+    findings.length < input.schedule.findings.length;
   return {
     schemaVersion: QUEUE_LANES_SCHEMA_VERSION,
     lanes,
     findings,
     degraded: input.degraded,
-    truncated:
-      input.schedule.entries.length > QUEUE_MAX_LANES ||
-      findings.length < input.schedule.findings.length,
+    truncated,
+    ...(truncated ? { truncationReason: "lane-cap" } : {}),
     counts: {
       lanes: lanes.length,
       delivering: lanes.filter((lane) => lane.state === "delivering").length,
@@ -136,25 +146,41 @@ export const foldLanes = (input: QueueLaneFoldInput): QueueLanesData => {
 export const selectLane = (data: QueueLanesData, ref: string): QueueLane | undefined =>
   data.lanes.find((lane) => lane.ref === ref || lane.id === ref);
 
+const utf8Length = (value: string): number => new TextEncoder().encode(value).length;
+
 const truncateToBytes = (value: string, maxBytes: number): string => {
   if (maxBytes <= 0) return "";
-  if (value.length <= maxBytes) return value;
-  return `${value.slice(0, Math.max(0, maxBytes - 1))}+`;
+  if (utf8Length(value) <= maxBytes) return value;
+  const characters = Array.from(value);
+  let low = 0;
+  let high = characters.length;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (utf8Length(characters.slice(0, middle).join("")) <= maxBytes - 1) low = middle;
+    else high = middle - 1;
+  }
+  return `${characters.slice(0, low).join("")}+`;
 };
 
-/** Deterministic human text: one line per lane, bounded at 40 lines / 8192 bytes. */
+/**
+ * Deterministic human text: one line per lane, bounded by the declared human
+ * line and UTF-8 byte caps; every cut is marked `+more`.
+ */
 export const renderLanesHuman = (data: QueueLanesData): string => {
   const lines = data.lanes.map(
     (lane) => `${lane.id} ${lane.state}${lane.reason === undefined ? "" : ` ${lane.reason}`}`,
   );
   const header = `lanes ${data.counts.lanes}${data.truncated ? "+more" : ""}`;
   const kept: string[] = [];
-  let bytes = header.length + 1;
+  let bytes = utf8Length(header) + 1;
   for (const line of lines) {
     const next = truncateToBytes(line, 512);
-    if (kept.length >= 39 || bytes + next.length + 1 > 8_192) break;
+    // Leave room for the header and a possible "+more" marker line.
+    if (kept.length >= QUEUE_MAX_HUMAN_LINES - 2) break;
+    const nextBytes = utf8Length(next) + 1;
+    if (bytes + nextBytes > QUEUE_MAX_HUMAN_BYTES) break;
     kept.push(next);
-    bytes += next.length + 1;
+    bytes += nextBytes;
   }
   if (kept.length < lines.length) kept.push("+more");
   return `${[header, ...kept].join("\n")}\n`;

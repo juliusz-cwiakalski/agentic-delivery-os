@@ -41,7 +41,8 @@ export type QueueGraphFold = {
   readonly dependencyRecords: readonly QueueDependencyRecord[];
 };
 
-const compareText = (left: string, right: string): number => {
+/** The shared code-point comparator; never locale-sensitive. */
+export const compareText = (left: string, right: string): number => {
   const a = Array.from(left);
   const b = Array.from(right);
   const length = Math.min(a.length, b.length);

@@ -22,7 +22,7 @@ const program = () => {
 };
 
 describe("lanes --watch refusal", () => {
-  test("the refusal envelope is byte-identical to the committed golden", async () => {
+  test("the refusal envelope is structurally identical to the committed golden", async () => {
     const run = await runProgram(["lanes", "list", "--watch", "--json"], program());
     expect(run.exitCode).toBe(1);
     expect(JSON.parse(run.stdout)).toEqual(

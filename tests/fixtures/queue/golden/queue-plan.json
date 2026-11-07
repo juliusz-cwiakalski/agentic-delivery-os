@@ -39,7 +39,7 @@
         "ref": "GH-320",
         "repository": "github.com/owner/repo-alpha",
         "rankClass": "new-start",
-        "reason": "producer-first",
+        "reason": "new-start",
         "priority": 5,
         "weightClass": "standard",
         "weightClassSource": "absent",

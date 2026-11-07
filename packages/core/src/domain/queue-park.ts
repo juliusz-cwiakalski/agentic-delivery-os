@@ -65,6 +65,26 @@ export const latestParkRecords = (
   );
 };
 
+/**
+ * Whether the ledger contains two concurrently active `parked` records for one
+ * ref — the Appendix D invariant violation. A `recovered` or `released` record
+ * closes the active park, so a later legitimate re-park is allowed.
+ */
+export const hasDuplicateActiveParks = (records: readonly QueueParkRecord[]): boolean => {
+  const active = new Set<string>();
+  for (const record of records) {
+    if (record.recoveryState === "parked") {
+      if (active.has(record.ref)) return true;
+      active.add(record.ref);
+      continue;
+    }
+    if (record.recoveryState === "recovered" || record.recoveryState === "released") {
+      active.delete(record.ref);
+    }
+  }
+  return false;
+};
+
 /** Context a pass injects while re-evaluating parks. */
 export type QueueParkContext = {
   readonly providerAvailable: boolean;
@@ -86,6 +106,7 @@ export const evaluateParkRecord = (
       state: "stuck",
       cause: record.cause,
       recheckMs: record.recheckMs,
+      lastEvaluatedAt: record.evaluatedAt,
       ...(record.condition.type === "provider-window"
         ? { expiresAt: record.condition.expiresAt }
         : {}),
@@ -95,11 +116,20 @@ export const evaluateParkRecord = (
   const base = {
     cause: record.cause,
     recheckMs: record.recheckMs,
+    lastEvaluatedAt: record.evaluatedAt,
     ...(record.condition.type === "provider-window"
       ? { expiresAt: record.condition.expiresAt }
       : {}),
     ...(record.clearObservedAt === undefined ? {} : { clearObservedAt: record.clearObservedAt }),
   };
+  // A park is re-evaluated only once its configured interval has elapsed since
+  // the last evaluation. A not-yet-due park stays active with its interval and
+  // last evaluation, so configuration alone changes resume timing (AC-F8-2).
+  const evaluatedAtMs = Date.parse(record.evaluatedAt);
+  const elapsedMs = Number.isFinite(evaluatedAtMs) ? Math.max(0, nowMs - evaluatedAtMs) : Infinity;
+  if (elapsedMs < record.recheckMs) {
+    return { state: "active", ...base };
+  }
   let cleared: boolean;
   switch (record.conditionType) {
     case "provider-window": {

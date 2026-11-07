@@ -6,6 +6,7 @@
 import type { QueueComposition, QueueFactSource } from "../../../../packages/cli/src/edge";
 import { createConfigProgram } from "../../../../packages/cli/src/edge";
 import { runCli } from "../../../../packages/cli/src/index";
+import type { StateStorePort } from "../../../../packages/core/src/contracts/index";
 import { bufferSink } from "../../../golden/helpers";
 import { baseFacts, queueRuntime } from "../../queue-ready/harness";
 import { makeAuditStore } from "../../state/harness";
@@ -13,6 +14,52 @@ import { ciSucceeded, observed, REPO_A, REPO_B, RUNNER } from "../schedule/harne
 
 export const NOW_ISO = "2026-11-07T10:00:00Z";
 export const NOW_MS = Date.parse(NOW_ISO);
+
+/** A write log for the read-purity assertions (NFR-2). */
+export type StoreWriteLog = {
+  appends: number;
+  replaces: number;
+  fences: number;
+  releases: number;
+};
+
+/** Wrap a store so every write seam is counted while delegating unchanged. */
+export const trackingStore = (
+  store: StateStorePort,
+): { readonly store: StateStorePort; readonly log: StoreWriteLog } => {
+  const log: StoreWriteLog = { appends: 0, replaces: 0, fences: 0, releases: 0 };
+  const wrapped = new Proxy(store, {
+    get(target, property) {
+      if (property === "append") {
+        return (handle: never, request: never) => {
+          log.appends += 1;
+          return target.append(handle, request);
+        };
+      }
+      if (property === "replaceDocument") {
+        return (handle: never, request: never) => {
+          log.replaces += 1;
+          return target.replaceDocument(handle, request);
+        };
+      }
+      if (property === "acquireFence") {
+        return (token: string) => {
+          log.fences += 1;
+          return target.acquireFence(token);
+        };
+      }
+      if (property === "releaseFence") {
+        return (handle: never) => {
+          log.releases += 1;
+          return target.releaseFence(handle);
+        };
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  return { store: wrapped, log };
+};
 
 export const queueFactSource = (): QueueFactSource => ({
   plans: {
@@ -52,16 +99,28 @@ export type QueueEdgeHarness = {
   readonly nowMs: () => number;
 };
 
+export type QueueEdgeHarnessOptions = {
+  /** Wrap the injected store (for write-counting read-purity tests). */
+  readonly wrapStore?: (store: StateStorePort) => StateStorePort;
+  /** Composition overrides (for example the producer-root deploy port). */
+  readonly overrides?: Partial<QueueComposition>;
+};
+
 /** Build a real edge program over an injected queue composition. */
-export const createQueueEdgeHarness = (label = "edge"): QueueEdgeHarness => {
+export const createQueueEdgeHarness = (
+  label = "edge",
+  options: QueueEdgeHarnessOptions = {},
+): QueueEdgeHarness => {
   const fixture = makeAuditStore(`queue-cli-${label}`);
   let now = NOW_MS;
   let fence = 0;
   const factSource = queueFactSource();
+  const store = options.wrapStore?.(fixture.store) ?? fixture.store;
   const composition: QueueComposition = {
-    store: fixture.store,
+    store,
     facts: factSource,
-    settings: {
+    ...options.overrides,
+    settings: options.overrides?.settings ?? {
       leaseTtlMs: 90_000,
       parkRecheckMs: {
         "provider-window": 60_000,
@@ -69,21 +128,21 @@ export const createQueueEdgeHarness = (label = "edge"): QueueEdgeHarness => {
         preemption: 60_000,
       },
     },
-    repositoryBinding: {
+    repositoryBinding: options.overrides?.repositoryBinding ?? {
       repository: REPO_A,
       repositoryRoot: "/work/repo-alpha",
     },
-    runner: RUNNER,
+    runner: options.overrides?.runner ?? RUNNER,
     nowIso: () => new Date(now).toISOString(),
     nowMs: () => now,
     newFenceToken: () => {
       fence += 1;
       return `fence-${fence}`;
     },
-    degraded: ["daemon-unreachable"],
-    readyRuntime: queueRuntime(
-      baseFacts({ candidates: ["GH-176"], nowIso: NOW_ISO, nowMs: NOW_MS }),
-    ),
+    degraded: options.overrides?.degraded ?? ["daemon-unreachable"],
+    readyRuntime:
+      options.overrides?.readyRuntime ??
+      queueRuntime(baseFacts({ candidates: ["GH-176"], nowIso: NOW_ISO, nowMs: NOW_MS })),
   };
   const built = createConfigProgram({
     workingName: "synthetic",

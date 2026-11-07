@@ -1,14 +1,18 @@
 /**
- * The read-only `queue ready` command definition (GH-176 F-1, F-2, D4).
+ * The `queue` command family (GH-176 F-1, F-2, D4; GH-237 F-10, Appendix C).
  *
- * `queue` is the command and `ready` is its subcommand positional. The handler
- * owns no stream writes and chooses no exit code. Grammar (including the
- * canonical-ref length and duplicate checks) runs before any source read; only
- * a clean grammar calls the shared {@link collectStatusFacts} composition once.
- *
- * The `queue` family is the M0 ready-set; lanes and dispatch arrive in M2-S1.
+ * `queue ready` is the delivered read-only ready-set and is delegated to its
+ * own definition unchanged. The same command now also serves `queue
+ * list|plan|add|prioritize|dep|claim|release` over the scheduling engine;
+ * dispatch/session execution remains M1-S9. The handler owns no stream writes
+ * and chooses no exit code. Grammar (including the canonical-ref length and
+ * duplicate checks) runs before any source read; only a clean grammar calls the
+ * shared {@link collectStatusFacts} composition or the injected scheduling
+ * runtime.
  */
 import {
+  boundQueuePlanData,
+  boundQueueReadData,
   canonicalQueueRef,
   evaluateQueueReady,
   type QueueSchedule,
@@ -28,8 +32,10 @@ import {
   QUEUE_READY_MAX_WORK_ITEM_REF_CHARS,
   QUEUE_READY_WORK_ITEM_REF_PATTERN,
   QUEUE_RELEASE_RESULTS,
+  type QueueBlocking,
   type QueueClaimLease,
   type QueueDegradationReason,
+  type QueueEntryState,
   type QueueGraphEntry,
   type QueueMutationData,
   type QueueNextAction,
@@ -39,6 +45,8 @@ import {
   type QueueReadData,
   type QueueReadyPayload,
   type QueueReleaseData,
+  type QueueWeightClass,
+  type QueueWeightClassSource,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition } from "../index.js";
 import { collectStatusFacts, type StatusCommandRuntime } from "./status.js";
@@ -128,6 +136,10 @@ export type QueueRuntimeMutation =
       readonly ok: true;
       readonly ref: string;
       readonly entry: QueueGraphEntry;
+      readonly entryState: QueueEntryState;
+      readonly blocking: readonly QueueBlocking[];
+      readonly weightClass: QueueWeightClass;
+      readonly weightClassSource: QueueWeightClassSource;
       readonly edges: readonly string[];
       readonly result: "added" | "updated" | "noop";
       readonly degraded: readonly QueueDegradationReason[];
@@ -175,6 +187,8 @@ export type QueueCommandRuntime = {
     readonly ref: string;
     readonly holder?: string;
     readonly parkCause?: QueueParkCause;
+    /** The absolute provider-window expiry, required for cause provider-window. */
+    readonly parkUntil?: string;
   }) => QueueRuntimeRelease;
   /** The delivered ready-only definition, preserved byte-for-byte. */
   readonly readyDefinition?: CommandDefinition;
@@ -191,6 +205,35 @@ const fullGrammarRejection = (reason: string): { readonly error: Record<string, 
     summary: `result=refused; reason=${reason}`,
   },
 });
+
+/**
+ * The remediation hint for a `--watch` invocation. Live streaming belongs to
+ * the resident daemon (M1-S18); this release is one-shot scheduling only.
+ */
+const RESIDENT_DAEMON_WATCH_HINT =
+  "Live --watch streaming is provided by the resident daemon (M1-S18), which is not part of this one-shot release; rerun without --watch.";
+
+const watchRefusal = (): { readonly error: Record<string, string> } => ({
+  error: {
+    kind: "fallback",
+    code: "fallback.invocation",
+    summary: "result=refused; reason=watch-unsupported",
+    remediationHint: RESIDENT_DAEMON_WATCH_HINT,
+  },
+});
+
+const invocationRefusal = (reason: string): { readonly error: Record<string, string> } => ({
+  error: {
+    kind: "fallback",
+    code: "fallback.invocation",
+    summary: `result=refused; reason=${reason}`,
+  },
+});
+
+const parseUntil = (value: string | true | undefined): string | undefined => {
+  if (typeof value !== "string") return undefined;
+  return Number.isFinite(Date.parse(value)) ? value : undefined;
+};
 
 const parsePriority = (value: string | true | undefined): number | undefined => {
   if (typeof value !== "string") return undefined;
@@ -212,33 +255,35 @@ const isParkCause = (value: string): value is QueueParkCause =>
 export const toQueueReadData = (
   schedule: QueueSchedule,
   degraded: readonly QueueDegradationReason[],
-): QueueReadData => ({
-  schemaVersion: "delivery.queue.v1",
-  entries: schedule.entries,
-  leases: schedule.leases,
-  weights: schedule.weights,
-  parks: schedule.parks,
-  findings: schedule.findings,
-  degraded,
-  truncated: schedule.truncated,
-  counts: {
-    entries: schedule.entries.length,
-    ready: schedule.entries.filter((entry) => entry.state === "ready").length,
-    held: schedule.entries.filter((entry) => entry.state === "held").length,
-    parked: schedule.entries.filter((entry) => entry.state === "parked").length,
-    leases: schedule.leases.length,
-    parks: schedule.parks.length,
-  },
-});
+): QueueReadData =>
+  boundQueueReadData({
+    schemaVersion: "delivery.queue.v1",
+    entries: schedule.entries,
+    leases: schedule.leases,
+    weights: schedule.weights,
+    parks: schedule.parks,
+    findings: schedule.findings,
+    degraded,
+    truncated: schedule.truncated,
+    counts: {
+      entries: schedule.entries.length,
+      ready: schedule.entries.filter((entry) => entry.state === "ready").length,
+      held: schedule.entries.filter((entry) => entry.state === "held").length,
+      parked: schedule.entries.filter((entry) => entry.state === "parked").length,
+      leases: schedule.leases.length,
+      parks: schedule.parks.length,
+    },
+  });
 
 /** Build the `queue plan` payload (the same collections plus nextActions). */
 export const toQueuePlanData = (
   schedule: QueueSchedule,
   degraded: readonly QueueDegradationReason[],
-): QueuePlanData => ({
-  ...toQueueReadData(schedule, degraded),
-  nextActions: schedule.nextActions,
-});
+): QueuePlanData =>
+  boundQueuePlanData({
+    ...toQueueReadData(schedule, degraded),
+    nextActions: schedule.nextActions,
+  });
 
 const mutationData = (mutation: QueueRuntimeMutation): QueueMutationData => {
   if (!mutation.ok) throw new Error("mutation failure is not data");
@@ -247,13 +292,13 @@ const mutationData = (mutation: QueueRuntimeMutation): QueueMutationData => {
     entry: {
       ref: mutation.ref,
       ...(mutation.entry.repository === undefined ? {} : { repository: mutation.entry.repository }),
-      state: mutation.result === "noop" ? "ready" : "ready",
+      state: mutation.entryState,
       rankClass: mutation.entry.rankClass,
       priority: mutation.entry.priority,
-      weightClass: mutation.entry.weightClass,
-      weightClassSource: "absent",
+      weightClass: mutation.weightClass,
+      weightClassSource: mutation.weightClassSource,
       deps: mutation.edges,
-      blocking: [],
+      blocking: mutation.blocking,
     },
     edges: mutation.edges,
     result: mutation.result,
@@ -291,20 +336,22 @@ const humanFailure = (): string => "result=refused\n";
  * bounded untrusted-input validation before any read.
  */
 export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): CommandDefinition => ({
-  flags: ["--next", "--priority", "--dep", "--holder", "--park"],
-  requiresValue: ["--next", "--priority", "--dep", "--holder", "--park"],
-  positionals: { max: 3 },
+  flags: ["--next", "--priority", "--dep", "--holder", "--park", "--until", "--watch"],
+  requiresValue: ["--next", "--priority", "--dep", "--holder", "--park", "--until"],
+  positionals: { max: QUEUE_READY_MAX_POSITIONALS },
   humanText: (data: unknown): string => renderQueueHuman(data as never),
   humanFailureText: (): string => humanFailure(),
   handler: (invocation) => {
+    if (invocation.flags["--watch"] !== undefined) return watchRefusal();
     const [subcommand, first, second, ...extra] = invocation.positionals;
-    if (extra.length > 0) return fullGrammarRejection("positionals");
     if (subcommand === "ready") {
       if (runtime.readyDefinition === undefined) {
         return fullGrammarRejection("ready-unavailable");
       }
+      if (Object.keys(invocation.flags).length > 0) return invocationRefusal("ready-flags");
       return runtime.readyDefinition.handler(invocation);
     }
+    if (extra.length > 0) return invocationRefusal("positionals");
     if (subcommand === "list") {
       if (first !== undefined) return fullGrammarRejection("list-positionals");
       const read = runtime.readSchedule(QUEUE_DEFAULT_NEXT_ACTIONS);
@@ -374,15 +421,25 @@ export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): Comm
       if (ref === undefined || second !== undefined) return fullGrammarRejection("release-grammar");
       const holderFlag = invocation.flags["--holder"];
       const parkFlag = invocation.flags["--park"];
+      const untilFlag = invocation.flags["--until"];
       if (parkFlag !== undefined) {
         if (typeof parkFlag !== "string" || !isParkCause(parkFlag)) {
           return fullGrammarRejection("park-cause");
         }
       }
+      const until = parseUntil(untilFlag);
+      if (untilFlag !== undefined && until === undefined) return invocationRefusal("until");
+      if (parkFlag === "provider-window" && until === undefined) {
+        return invocationRefusal("until-required");
+      }
+      if (parkFlag !== undefined && parkFlag !== "provider-window" && until !== undefined) {
+        return invocationRefusal("until-unsupported");
+      }
       const release = runtime.release({
         ref,
         ...(typeof holderFlag === "string" ? { holder: holderFlag } : {}),
         ...(typeof parkFlag === "string" && isParkCause(parkFlag) ? { parkCause: parkFlag } : {}),
+        ...(until === undefined ? {} : { parkUntil: until }),
       });
       if (!release.ok) return runtimeFailure(release);
       return { data: releaseData(release) };

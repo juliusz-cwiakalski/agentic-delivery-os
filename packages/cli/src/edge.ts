@@ -65,9 +65,9 @@ import {
   buildCloseoutPlan,
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
-  callerAudienceVariableName,
   type CommitActRequest,
   type CommitTransportPorts,
+  callerAudienceVariableName,
   catalogPaths,
   claimQueueLease,
   classifyPruneCandidate,
@@ -90,7 +90,9 @@ import {
   prioritizeQueueEntry,
   type QueueCiFact,
   type QueueCloseFact,
+  type QueueDeployExpectation,
   type QueueDeployFacts,
+  type QueueGraphFold,
   type QueueIntentFailure,
   type QueueIntentOutcome,
   type QueueIntentResult,
@@ -3075,6 +3077,28 @@ export type QueueFactSource = {
   readonly deploy: QueueDeployFacts;
 };
 
+/** One producer-root configuration read for deploy-expectation resolution. */
+export type QueueDeployExpectationRead =
+  | {
+      readonly ok: true;
+      readonly declared: boolean;
+      readonly steps: readonly string[];
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "config-missing" | "config-invalid";
+    };
+
+/**
+ * The producer-root resolution seam (C-6, AC-F6-2, DM-12). Candidate roots come
+ * only from entry records; the returned normalized remote is compared to the
+ * producer entry's recorded key by exact string equality.
+ */
+export type QueueDeployExpectationPort = {
+  readonly normalizedRemote: (root: string) => string | undefined;
+  readonly deployExpectations: (root: string) => QueueDeployExpectationRead;
+};
+
 /** The scheduling-engine composition seams supplied by the caller. */
 export type QueueComposition = {
   readonly store: StateStorePort;
@@ -3087,6 +3111,8 @@ export type QueueComposition = {
     readonly repository?: string;
     readonly repositoryRoot?: string;
   };
+  /** The producer-root config resolution seam; absent means use injected facts. */
+  readonly deployExpectations?: QueueDeployExpectationPort;
   readonly runner?: string;
   readonly nowIso: () => string;
   readonly nowMs: () => number;
@@ -3110,6 +3136,73 @@ const queueStateFailure = (code: string): QueueRuntimeFailure => ({
   code,
   summary: `state read failed (${code})`,
 });
+
+/**
+ * Resolve producer deploy expectations from the producer's own configuration
+ * (AC-F6-2, C-6, DM-12). Candidate roots are discovered ONLY from entry records
+ * and matched to the producer entry's recorded key by exact normalized-remote
+ * equality; the invocation root is never substituted. No matching root, a
+ * two-root collision, or a missing/unreadable/invalid config yields `unknown`.
+ */
+const resolveDeployExpectations = (
+  composition: QueueComposition,
+  fold: QueueGraphFold,
+): Readonly<Record<string, QueueDeployExpectation>> => {
+  const port = composition.deployExpectations;
+  if (port === undefined) return composition.facts.deploy.expectations;
+
+  const rootsByKey = new Map<string, Set<string>>();
+  for (const entry of fold.entryRecords) {
+    if (entry.repository === undefined || entry.repositoryRoot === undefined) continue;
+    const roots = rootsByKey.get(entry.repository) ?? new Set<string>();
+    roots.add(entry.repositoryRoot);
+    rootsByKey.set(entry.repository, roots);
+  }
+
+  const producers = new Set<string>();
+  for (const entry of fold.entries) {
+    for (const producer of entry.edges) producers.add(producer);
+  }
+
+  const expectations: Record<string, QueueDeployExpectation> = {
+    ...composition.facts.deploy.expectations,
+  };
+  for (const producer of [...producers].sort()) {
+    const record = fold.entryRecords.find((entry) => entry.ref === producer);
+    if (record?.repository === undefined) {
+      expectations[producer] = { state: "unknown", reason: "root-unresolved" };
+      continue;
+    }
+    const roots = [...(rootsByKey.get(record.repository) ?? [])].sort();
+    if (roots.length === 0) {
+      expectations[producer] = { state: "unknown", reason: "root-unresolved" };
+      continue;
+    }
+    if (roots.length > 1) {
+      expectations[producer] = { state: "unknown", reason: "root-collision" };
+      continue;
+    }
+    const root = roots[0];
+    if (root === undefined) {
+      expectations[producer] = { state: "unknown", reason: "root-unresolved" };
+      continue;
+    }
+    const remote = port.normalizedRemote(root);
+    if (remote === undefined || remote !== record.repository) {
+      expectations[producer] = { state: "unknown", reason: "root-unresolved" };
+      continue;
+    }
+    const config = port.deployExpectations(root);
+    if (!config.ok) {
+      expectations[producer] = { state: "unknown", reason: config.reason };
+      continue;
+    }
+    expectations[producer] = config.declared
+      ? { state: "declared", steps: config.steps }
+      : { state: "not-declared" };
+  }
+  return expectations;
+};
 
 const buildQueueFacts = (
   composition: QueueComposition,
@@ -3140,7 +3233,10 @@ const buildQueueFacts = (
       parkEvaluations: parks.pass.evaluations,
       parkRecords: parks.pass.records,
       close: composition.facts.close,
-      deploy: composition.facts.deploy,
+      deploy: {
+        ...composition.facts.deploy,
+        expectations: resolveDeployExpectations(composition, fold.value),
+      },
       runner: composition.runner ?? "runner-a",
     },
     parkRecords: parks.pass.records,
@@ -3281,22 +3377,49 @@ const claimLeaseProjection = (lease: {
 const mutationOutcome = (
   result: QueueIntentOutcome,
   degraded: readonly QueueDegradationReason[],
-): QueueRuntimeMutation => ({
-  ok: true,
-  ref: result.entry.ref,
-  entry: result.fold.entries.find((entry) => entry.ref === result.entry.ref) ?? {
+  composition: QueueComposition,
+): QueueRuntimeMutation => {
+  const fallbackEntry = result.fold.entries.find((entry) => entry.ref === result.entry.ref) ?? {
     ref: result.entry.ref,
     ...(result.entry.repository === undefined ? {} : { repository: result.entry.repository }),
     priority: result.entry.priority,
     edges: result.edges,
-    weightClass: "standard",
-    rankClass: "new-start",
+    weightClass: "standard" as const,
+    rankClass: "new-start" as const,
     recordedAt: result.entry.recordedAt,
-  },
-  edges: result.edges,
-  result: result.result,
-  degraded,
-});
+  };
+  const weight = resolveQueueWeight(composition.facts.plans[result.entry.ref]);
+  const built = buildQueueFacts(composition, parkContextFor(composition));
+  const projected = built.ok
+    ? computeQueueSchedule(built.facts, { next: 20 }).entries.find(
+        (entry) => entry.ref === result.entry.ref,
+      )
+    : undefined;
+  const entryProjection =
+    projected === undefined
+      ? fallbackEntry
+      : {
+          ...fallbackEntry,
+          rankClass: projected.rankClass,
+          weightClass: projected.weightClass,
+        };
+  return {
+    ok: true,
+    ref: result.entry.ref,
+    entry: entryProjection,
+    entryState: projected?.state ?? "not-ready",
+    blocking: projected?.blocking ?? [
+      fallbackEntry.repository === undefined
+        ? { reason: "not-ready" as const, detail: "repository-binding-unresolved" }
+        : { reason: "not-ready" as const, detail: "state-unreadable" },
+    ],
+    weightClass: projected?.weightClass ?? weight.weightClass,
+    weightClassSource: projected?.weightClassSource ?? weight.source,
+    edges: result.edges,
+    result: result.result,
+    degraded,
+  };
+};
 
 /** Compose the full queue command runtime from the injected state and facts. */
 export const createQueueCommandRuntime = (composition: QueueComposition): QueueCommandRuntime => {
@@ -3315,7 +3438,7 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
     if (recovered !== undefined) return recovered;
     const result = operation();
     if (!result.ok) return mapQueueFailure(result);
-    return mutationOutcome(result.value, degraded);
+    return mutationOutcome(result.value, degraded, composition);
   };
   return {
     readSchedule,
@@ -3423,13 +3546,33 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
       };
     },
     release: (input) => {
+      if (input.parkCause === "provider-window" && input.parkUntil === undefined) {
+        return {
+          ok: false,
+          kind: "input",
+          code: "input.value.rejected",
+          summary: "provider-window park requires --until <iso>",
+        };
+      }
+      if (
+        input.parkCause !== undefined &&
+        input.parkCause !== "provider-window" &&
+        input.parkUntil !== undefined
+      ) {
+        return {
+          ok: false,
+          kind: "input",
+          code: "input.value.rejected",
+          summary: "--until is accepted only with --park provider-window",
+        };
+      }
       const park =
         input.parkCause === undefined
           ? undefined
           : {
               cause: input.parkCause,
               condition: parkConditionForCause(input.parkCause, {
-                expiresAt: composition.nowIso(),
+                ...(input.parkUntil === undefined ? {} : { expiresAt: input.parkUntil }),
               }),
               recheckMs:
                 composition.settings?.parkRecheckMs[

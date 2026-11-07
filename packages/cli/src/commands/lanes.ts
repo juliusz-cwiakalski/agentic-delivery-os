@@ -32,11 +32,22 @@ type Failure = {
     readonly kind: string;
     readonly code: string;
     readonly summary?: string;
+    readonly remediationHint?: string;
   };
 };
 
 const failure = (kind: string, code: string, summary?: string): Failure => ({
   error: { kind, code, ...(summary === undefined ? {} : { summary }) },
+});
+
+const watchRefusal = (): Failure => ({
+  error: {
+    kind: "fallback",
+    code: "fallback.invocation",
+    summary: "result=refused; reason=watch-unsupported",
+    remediationHint:
+      "Live --watch streaming is provided by the resident daemon (M1-S18), which is not part of this one-shot release; rerun without --watch.",
+  },
 });
 
 type Grammar =
@@ -75,10 +86,11 @@ const oneLaneData = (data: QueueLanesData, ref: string): QueueLanesData => {
 
 /** Build the `lanes` command definition over an injected lane read. */
 export const createLanesCommandDefinition = (runtime: LanesCommandRuntime): CommandDefinition => ({
-  flags: [],
+  flags: ["--watch"],
   positionals: { max: 2 },
   humanText: (data: unknown): string => renderLanesHuman(data as QueueLanesData),
   handler: (invocation) => {
+    if (invocation.flags["--watch"] !== undefined) return watchRefusal();
     const grammar = parseGrammar(invocation.positionals);
     if (!grammar.ok) {
       return failure("input", "input.value.rejected", "result=refused; reason=grammar");

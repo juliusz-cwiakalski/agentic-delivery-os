@@ -6,8 +6,15 @@
 /** Placeholder marker for the pure domain tier. */
 export type DomainPlaceholder = { readonly __tier: "domain" };
 
-export { projectBrief, renderBriefHuman } from "./brief.js";
 export {
+  type BlockerDelegationDecision,
+  type BlockerGuardRequest,
+  type BlockerGuardVerdict,
+  type BlockerPublishValidated,
+  type BlockerPublishValidation,
+  type BlockerRanking,
+  type BlockerValidationCode,
+  type BlockerValidationFailure,
   buildBlockerAnswerData,
   buildBlockerListData,
   buildBlockerPublishData,
@@ -25,18 +32,11 @@ export {
   renderBlockersHuman,
   resolveAnsweringAudience,
   resolveBlockerDelegation,
-  type BlockerDelegationDecision,
-  type BlockerGuardRequest,
-  type BlockerGuardVerdict,
-  type BlockerPublishValidated,
-  type BlockerPublishValidation,
-  type BlockerRanking,
-  type BlockerValidationCode,
-  type BlockerValidationFailure,
   validateBlockerAnswer,
   validateBlockerDelegationPolicy,
   validateBlockerPublish,
 } from "./blockers.js";
+export { projectBrief, renderBriefHuman } from "./brief.js";
 export {
   boundCloseoutData,
   buildCloseoutPlan,
@@ -317,6 +317,7 @@ export {
   defaultParkRecheckMs,
   evaluateParkPass,
   evaluateParkRecord,
+  hasDuplicateActiveParks,
   latestParkRecords,
   observationGapMs,
   parkConditionForCause,
@@ -326,6 +327,8 @@ export {
   releasedParkRecord,
 } from "./queue-park.js";
 export {
+  boundQueuePlanData,
+  boundQueueReadData,
   computeQueueSchedule,
   isDeclaredBlockingReason,
   QUEUE_NEXT_DEFAULT,

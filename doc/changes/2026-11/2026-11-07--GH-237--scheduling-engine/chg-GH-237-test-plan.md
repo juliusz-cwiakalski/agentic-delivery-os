@@ -2231,6 +2231,8 @@ All contract findings surfaced by v1.0 of this plan are resolved by spec v1.1 §
 
 **DoR iteration-2 remediation note (2026-11-07).** Addressed in this test plan: **R2-01** (the recorded root is internal-only — AC-F1-1 coverage row, TC-SCHED-009, and the fixture corpus now state the normalized key alone is rendered and no absolute path appears), **R2-02** (TC-PARK-004 is partial: its domain/state half lands in Phase 5 and its `queue release --park` CLI row in Phase 7), **R2-07** (TC-VOCAB-001 pins `queue.park` as one of this change's five new kinds with the clear-observed fields in its first-write schema, not a sixth kind or a pre-existing-kind change).
 
+**Review iteration-1 closure note (2026-11-07).** DoR **N2** (AC-F12-1 -> TC-COMPAT-001) remains in the plan's task 8.8 checklist; **N3** (an explicit `degraded[]` assertion on successful `queue add|prioritize|dep`) is added to `tests/behaviour/queue-cli.test.ts`; and **N4** (the recorded root lives on the internal entry record only, never in the derived graph or a read projection) remains the plan-header wording. The status-digest doc-only edit is recorded as an accepted, declared exception to NG-10, not a hidden boundary crossing.
+
 | ID | Question / Finding | Disposition (2026-11-07) | Owner |
 |----|--------------------|--------------------------|-------|
 | OQ-T1 | Read-surface exit projection on unreadable lease/park state. | **Resolved** — `queue list`/`queue plan` exit 2 with the classified `state.*` identity, bounded evidence, no success verdict, and no `data` sibling/partial/empty schedule; a readable stuck park remains report-only at exit 0 (C-1, C-7, AC-F10-3, NFR-13). | spec v1.1 |
@@ -2254,6 +2256,7 @@ All contract findings surfaced by v1.0 of this plan are resolved by spec v1.1 §
 | 1.1 | 2026-11-07 | test-plan-writer | **Amendment reconciliation against spec v1.1** (§5.2 C-1..C-7). Pinned read-surface fail-closed exit 2 and the report-only readable-stuck exception (AC-F10-3) in TC-LEASE-006, TC-PARK-007, TC-SCHED-009, TC-SCHED-016; deterministic no-ref claim selection and `no-eligible-action` refusal (AC-F4-3) in TC-RANK-005; unreadable/absent-plan weight → `heavy` (AC-F5-2) in TC-WEIGHT-002; producer-bound deploy expectations (AC-F6-2) in TC-DEPEND-003/004; durable `clear-observed` park marker (C-3) in TC-PARK-002; AC-F3-1(a)/(b) split in TC-LEASE-001/TC-SCHED-004. Coverage table now 22 ACs (18 prior + 4 added: AC-F4-3, AC-F5-2, AC-F6-2, AC-F10-3), zero gaps; OQ-T1..OQ-T7 resolved, OQ-T8 retained. TC count unchanged at 65. Hermetic fixture-driven concurrency and the M1-S9/M1-S18 exclusions preserved. |
 | 1.2 | 2026-11-07 | test-plan-writer | **DoR iteration-1 remediation and spec v1.2 reconciliation.** R-07: TC-LEASE-002 now seeds 50 **distinct** holders, asserting exactly 1 acquisition, 0 renewals, and 49 `queue.lease-conflict` refusals, plus a same-holder renewal control; NFR-3's unqualified "1 acquires and 49 refuse" is reported to the spec owner, not silently weakened. R-06: added §7.1 phase-surface split; 20 TCs spanning Phases 3–5 are marked partial with their CLI grammar/envelope/`result=`/`selectedRef`/`degraded[]`/exit rows completing in plan Phase 7 (lanes rows in Phase 6). R-04: added TC-PARK-008 proving a stuck park is never `resume-parked`, never in `nextActions`, never selected by a no-ref claim, and refuses a claim at exit 1 with zero appends; added to coverage, index, details, automation mapping, and fixture corpus. Spec v1.2 alignment: `repo-claimed-in-pass` distinguished from `lease-held` (TC-SCHED-004/TC-LEASE-001); the distinct park cause/condition-type sets and one-to-one pairing (TC-PARK-004/TC-LEASE-011/TC-RANK-004); two-stage claim with `repo-free` excluded pre-fence (TC-LEASE-005/TC-LEASE-012); producer-root discovery and collision → `unknown` (TC-DEPEND-003/004); edge to a non-entry ref → `dependency-unobserved` (TC-SCHED-001/TC-DEPEND-001); AC-F8-1 interval scoping and no-engine gap case (TC-PARK-001/TC-PARK-005). R-16: corrected the TC-LANES-002 step-4 typo. Privacy-literal guard: replaced the committed credential-bearing connection-string literal with the non-credential placeholder `https://user:redacted@github.com/Owner/Repo`; `pnpm check:privacy-literals` passes for this file. TC count 65 → 66; all 22 ACs and 14 NFRs remain traced; M1-S9/M1-S18 exclusions unchanged. |
 | 1.3 | 2026-11-07 | test-plan-writer | **DoR iteration-2 remediation against spec v1.3.** R2-01: removed the recorded-root display from AC-F1-1's `queue list` clause and made the root internal-only; TC-SCHED-009 now asserts the normalized repository key alone and that no `root` field or absolute path appears in the machine envelope or human output; the queue-graph fixture note states roots are record data used only for deploy discovery and never rendered (DM-1/DM-12 rows aligned). R2-02: marked TC-PARK-004 partial — Phase 5 covers the closed-set/state half and step 8's `queue release --park` CLI/`fallback.invocation` row completes in Phase 7 — added to the §7.1 split table and §7.2 Phase 5/7 mapping, bringing the partial marks to 21. R2-07: TC-VOCAB-001 step 7 now states `queue.park` is one of this change's five new kinds whose first-write schema carries `clearObservedAt`/`recoveryState`; the clear-observed marker is another record of that same kind, not a sixth kind and not a change to a pre-existing kind; the kind inventory assertion (five kinds + one derived document) is unchanged. TC count unchanged at 66; all 22 ACs and 14 NFRs remain traced; `pnpm check:privacy-literals` exit 0, 2 692 files scanned, 0 violations. |
+| 1.4 | 2026-11-07 | coder | **Review iteration-1 remediation.** F-1: TC-PARK-006 now uses the paired 60 000-vs-5 000 ms per-type fixtures and proves a not-yet-due park stays active. F-2: TC-DEPEND-003/004 add multi-repository producer-root resolution cases (matching root, no match, collision, invalid config, invocation-root non-substitution). F-3: TC-LANES-004 and TC-SCHED-016 assert the resident-daemon remediation hint. F-4: TC-COMPAT-001 adds the 3-8 candidate full-family preservation case. F-5: TC-LEASE-011 adds the second-append-failure withdrawal assertion. F-6: TC-SCHED-011 adds the 500-entry machine byte cap and human bounds. F-7: TC-PARK-004 seeds two active parks and asserts the classified refusal. F-8/F-9/F-10/F-11: command-level zero-write assertions, a real lanes-purity snapshot, the mixed AC-F9-1 corpus, and config-resolved TTL tuning. F-12/F-13/F-14: code-point comparator, truthful reason tokens, and real mutation-envelope state/weight. F-15/F-16: the `released` withdrawn marker and `--until` provider-window expiry. F-19/F-22: machine-golden titles say structurally identical and the CLI park exit-2/stuck-exit-0 matrix is covered. TC count stays 66. |
 
 ## 10. Test Execution Log
 
@@ -2303,9 +2306,12 @@ Evidence highlights:
   records the clear-observed marker before the recovered record and the
   `park-auto-recovery` incident; a long observation gap recovers with a
   gap-naming incident and is never stuck solely because of the gap.
-- **Zero-write reads:** the read surfaces are pure folds over injected facts;
-  the command-level checks use the injected state port and observe zero
-  appends/fences/derived replacements on `queue list|plan` and `lanes list|show`.
+- **Zero-write reads:** the read surfaces are pure folds over injected facts.
+  The command-level assertions run through the real edge composition with a
+  write-counting store wrapper (`tests/fixtures/queue/cli/harness.ts`) and assert
+  zero `append`, `replaceDocument`, `acquireFence`, and `releaseFence` calls for
+  `queue list`, `queue plan`, `lanes list`, and `lanes show` (see
+  `tests/behaviour/queue-cli.test.ts` and `tests/behaviour/lanes.test.ts`).
 - **NFR-6 baseline:** the 500-entry / 1000-edge plan completes below the 250 ms
   reference bound in the recorded test run; the structural bound (32 evaluated
   candidates, named truncation, 3 deploy reads) is environment-independent.
@@ -2321,3 +2327,55 @@ fixture-proven, not live-proven (GAP-T2); concurrency is algorithmic (GAP-T3);
 lane idle-reason spellings are the plan's delivery pin (OQ-T8); the daemon,
 `--watch` streaming, automatic preemption, and dispatch/session obligations
 remain M1-S18 (GH-238) and M1-S9 (GH-239).
+
+### Review iteration-1 remediation execution log (2026-11-07, Phase 9)
+
+Environment: Bun 1.4.4, pnpm 10.18.3, Node v24/v26 available, Linux/x64;
+`TMPDIR=$PWD/tmp/tmpdir`.
+
+| Gate | Command | Result |
+|---|---|---|
+| Typecheck | `pnpm typecheck` | PASS |
+| Phase 9 behaviour/checks/structure | `bun test` over the 12 Phase 9 behaviour, checks, and structure suites | PASS (169) |
+| Phase 9 goldens | `bun test` over the eight queue/lanes goldens | PASS (17) |
+| Queue ready preservation | `bun test tests/behaviour/queue-ready-output.test.ts tests/behaviour/queue-ready-command.test.ts tests/golden/queue-ready.test.ts` | PASS (66) |
+| Boundaries and error sync | `pnpm check:boundaries && bun run scripts/checks/error-table-sync.ts` | PASS (0 violations; entries=105 documented=105) |
+| Aggregate | `pnpm check` with `TMPDIR=$PWD/tmp/tmpdir` | 5608 pass, 4 skip, 1 environmental timing failure: `TC-WIRE-002` (`tests/checks/privacy-ci-wiring.test.ts`) times out at 5 058 ms against its 5 000 ms limit; the same test times out at 5 052 ms on the pre-change baseline, so it is a pre-existing environment threshold, not a Phase 9 regression. `ci-baseline-parity` passes with the repo-local TMPDIR. |
+
+Remediation evidence highlights:
+
+- **F-1:** `evaluateParkRecord` compares elapsed time since `evaluatedAt` with the
+  resolved `recheckMs`; TC-PARK-006 proves 60 000 ms parks stay active at
+  T+5 001 and resume by T+60 001, while the 5 000 ms config resumes at T+5 001
+  for provider-window, provider-quota, and preemption.
+- **F-2:** producer expectations resolve through the entry-recorded roots and
+  the injected producer-root port; exact normalized-key matching, no-match,
+  two-root collision, invalid config, and invocation-root non-substitution are
+  asserted in TC-DEPEND-003/004.
+- **F-3:** `--watch` is refused on both surfaces with a remediation hint naming
+  the resident daemon (M1-S18); the lanes golden and both command suites assert
+  the hint text.
+- **F-5/F-15:** the release+park path appends the park first and withdraws it
+  with a `released` record when the lease-release append fails; the
+  second-append-failure test asserts the lease stays held and no active park
+  remains.
+- **F-6:** a 500-entry plan payload is capped at 65 536 UTF-8 bytes with
+  `truncated: true` and `truncationReason: "machine-byte-cap"`; human output
+  respects the 40-line/8192-byte bounds and the reasons bound is enforced.
+- **F-7:** two concurrently active `parked` records for one ref fail the
+  verified park read closed with `state.store.torn`; one active park remains the
+  normal case.
+- **F-8/F-9/F-10/F-11:** command-level zero-write assertions use a
+  write-counting store; the lanes purity test snapshots the real facts/schedule;
+  the AC-F9-1 corpus spans both weights, all three park types (active and
+  stuck), both dependency roles, and every rank class; the lease TTL case
+  resolves two configs differing only in `queue.lease-ttl`.
+- **F-12/F-13/F-14:** the weight view uses the code-point comparator; non-close
+  actions and ready lanes carry `new-start`/`resume-parked`; mutation envelopes
+  project the real schedule state and plan-resolved weight provenance.
+- **F-16:** `queue release --park provider-window --until <iso>` records the
+  supplied expiry; a missing or misplaced `--until` is refused through
+  `fallback.invocation`.
+- **F-19/F-22:** machine-golden titles say structurally identical; `queue
+  list|plan` exit 2 on unreadable park history and exit 0 with a readable
+  stuck-park finding are asserted at CLI level.
