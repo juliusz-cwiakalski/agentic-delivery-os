@@ -1,0 +1,117 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-243
+branch: feat/GH-243/status-collector-expansion
+status: PASS
+summary: >-
+  First review of GH-243 (status collector expansion, 14 commits over main-tools).
+  The implementation matches spec v1.1: closed ten-code registry with severities and
+  the dormant lane.idle-no-reason never emitted, per-section per-code grouping with
+  exact counts/bounded members/deterministic ranking, no-evidence-no-claim held on
+  every failed-read path, ready-to-merge reusing the queue-ready classification with
+  zero new reads, tri-state hygiene assertions gated by declared availability,
+  owner-gate ages via the imported M1-S5 evaluator with no decision writes, parked
+  conditions, two placeholders, and the extended human grammar golden-pinned within
+  32/6144. Plan audit clean: 7/7 phases completed with commits and gate evidence in
+  pm-notes; goldens regenerated exactly once (6c7ef2a1); the six PM-accepted
+  deviations all verified to hold and are truthfully documented. Independent test
+  runs (388 tests across status/structure/consumer suites) plus full pnpm check green.
+  One low code-quality finding (avoidable double cast) and three informational notes;
+  no spec, plan, security, correctness, performance, or repo-rule violations found.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 3
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/status.ts:725
+    message: >-
+      assertionAvailability erases the StatusTrackerAvailability type with an
+      `as unknown as Readonly<Record<string, string | undefined>>` double cast to
+      do a computed-key lookup. The ternary one line below already maps assertion
+      id to property name, so the three optional props (epicMembership, storyPoints,
+      inSprint) can be selected directly with no cast. .ai/rules/typescript.md §0
+      forbids `as` casts used to silence type errors where a typed alternative exists.
+    suggestion: >-
+      Replace the cast and computed key with a typed ternary selecting
+      availability.epicMembership / availability.storyPoints / availability.inSprint
+      and compare the result to "available". Pure refactor; behavior is pinned by the
+      status-hygiene and corpus suites. Landed as plan phase 8 (remediation).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/status.ts:88
+    message: >-
+      clampDetail changed from UTF-16-length to UTF-8-byte clamping under the same
+      STATUS_MAX_DETAIL_CHARS constant, which also re-scopes the shipped cap for the
+      pre-existing parked `reason` field (not only the new `condition`). The change
+      is in the safe direction (never longer, ASCII-identical, goldens unchanged) and
+      is documented ("bounded by STATUS_MAX_DETAIL_CHARS multibyte-safely"), but the
+      constant name still says CHARS while the unit is now bytes.
+    suggestion: >-
+      No action required. If the contracts file is touched again, consider renaming
+      the constant (e.g. STATUS_MAX_DETAIL_BYTES) or noting the byte unit in its doc
+      comment as its own reviewed contract change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-243--status-collector-expansion/chg-GH-243-plan.yaml:207
+    message: >-
+      Plan metadata nits, not delivery defects: packages/adapters/src/file/pm-context.ts
+      is changed on the branch and named explicitly in task 2.4 text but is absent from
+      phase 2 scope.files; the new fixture helper tests/fixtures/status/scenarios.ts is
+      likewise undeclared in any scope list. The delivered work matches the task text;
+      only the scope summary is incomplete.
+    suggestion: >-
+      No action required for this change. Future plans should keep scope.files in
+      exact sync with the files named in task text so `plan diff` reconciliation is
+      letter-exact.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-243--status-collector-expansion/chg-GH-243-plan.yaml:239
+    message: >-
+      Consumer golden fixtures (tests/fixtures/mcp/golden/status/*, brief
+      output/determinism expectations, port-contract inventory) were reconciled in
+      phase 7 (bdc0903b), not in phase 2 where the rendered bytes changed. Because no
+      per-phase testGate included those consumer suites, the aggregate battery would
+      have been red on them between phases 2 and 7; each phase was still green on its
+      declared gates. This is within the PM-accepted consumer-fixture deviation and the
+      end state is consistent (all suites green).
+    suggestion: >-
+      No action required for this change. Future byte-changing phases should include
+      consumer golden suites (brief/MCP parity) in their testGate so mid-delivery
+      aggregate greenness holds.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-07T00:25:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

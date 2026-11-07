@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-07T00:30:00Z", completed: "2026-11-07T01:00:00Z" }
   delivery: { started: "2026-11-07T01:05:00Z", completed: "2026-11-07T03:30:00Z" }
   system_spec_update: { started: "2026-11-07T03:40:00Z", completed: "2026-11-07T04:20:00Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-07T04:30:00Z", completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -97,4 +97,10 @@ notes:
     date: "2026-11-07"
   - text: "Doc reconciliation complete, zero residual gaps: feature-status-digest.md reconciled to code truth (lanes expectedStory M2-S1 emitted; capability-string split queue-lane-engine vs lane-queue-engine documented explicitly), stale six-section grammar block removed, hygiene-availability declaration documented; brief/nonfunctional/00-index/architecture-overview/glossary/contracts.md/brief man page/user-journeys updated to nine-section delivered behavior; doc-distribution guard green (81 docs). DoR CLI-edge nit resolved as consistent (edge.ts did change +3 availability declarations)."
     type: "info"
+    date: "2026-11-07"
+  - text: "Review verdict PASS (iteration 1) with remediation phase ADDED: 4 findings (0c/0h/0m/1l/3i). F-1 low: avoidable as-unknown-as double cast in assertionAvailability (domain/status.ts:725) — reviewer appended Phase 8 to the plan, pure refactor pinned by existing suites. F-2..F-4 info: byte-based clampDetail under _CHARS name (documented, safe direction; rename next touch), plan scope.files summary gaps, consumer goldens reconciled in phase 7 not phase 2 (future-plan improvement: gate consumer goldens in the byte-changing phase). No PM decisions required. Record: code-review/review-iter-1.yaml. Remediating via @coder then re-review."
+    type: "decision"
+    date: "2026-11-07"
+  - text: "retro: consumer-golden reconciliation landed in phase 7 rather than the byte-changing phase 2, leaving the aggregate red mid-delivery on those goldens (within accepted deviation, final battery green). Future plans for multi-consumer contract changes should schedule consumer golden updates inside the single byte-changing phase."
+    type: "retro"
     date: "2026-11-07"

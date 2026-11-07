@@ -392,6 +392,20 @@ phases:
       - "pnpm check"
       - "bash scripts/.tests/test-doc-distribution.sh"
       - "git diff --check && git status --porcelain"
+  - id: 8
+    title: "Code review remediation (iteration 1)"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/status.ts
+    summary: "refactor(GH-243): replace the avoidable availability double cast with a typed ternary"
+    tasks:
+      - "8.1 Reviewer finding F-1 (review-iter-1.yaml, low): in assertionAvailability (packages/core/src/domain/status.ts ~line 725), remove the `availability as unknown as Readonly<Record<string, string | undefined>>` double cast and the computed-key lookup; select availability.epicMembership / availability.storyPoints / availability.inSprint via the typed ternary already used for the key mapping and compare to \"available\". Pure refactor, zero behavior change (.ai/rules/typescript.md §0: no `as` cast where a typed alternative exists); behavior stays pinned by the existing hygiene/corpus suites. [AC: none — review remediation; TC: regression cover TC-ATT-011..013, TC-ATT-041, TC-ATT-033]"
+    coverage:
+      - "Review remediation F-1 only; no new TC (existing suites pin behavior)"
+    testGate:
+      - "bun test tests/behaviour/status-hygiene.test.ts tests/behaviour/status-corpus.test.ts tests/structure/status-contract.test.ts"
+      - "pnpm typecheck"
 #
 # ---------------------------------------------------------------------------
 # TRACEABILITY (GAP-1/A-T2): 42/42 TCs mapped, each exactly one completing
