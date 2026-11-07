@@ -3,9 +3,9 @@ title: "M1-S23: Coordinator supervision"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-07T11:55:00Z", completed: "2026-11-07T12:04:00Z" }
-  specification: { started: "2026-11-07T12:05:00Z", completed: "2026-11-07T14:47:21Z" }
-  test_planning: { started: "2026-11-07T12:36:00Z", completed: "2026-11-07T14:47:21Z" }
-  delivery_planning: { started: "2026-11-07T13:16:00Z", completed: "2026-11-07T14:47:21Z" }
+  specification: { started: "2026-11-07T12:05:00Z", completed: null }
+  test_planning: { started: "2026-11-07T12:36:00Z", completed: null }
+  delivery_planning: { started: "2026-11-07T13:16:00Z", completed: null }
   dor_check: { started: "2026-11-07T13:36:00Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -73,4 +73,7 @@ notes:
     date: "2026-11-07"
   - text: "DoR iteration 1 remediation complete (spec v1.2, test plan v1.2, plan v1.2, TDR-0013/TDR-0014 amended): 45 ACs (added AC-F1-4 instance lease/stop and AC-F4-4 PID identity), 69 TCs (added TC-COORD-018/029/045), 10 phases, 69/69 TC mapping, plan validator valid/readyForDevelopment true/0 errors, 6 coordinator config keys (added progress-bound). Model changes: durable instance lease via coordinator.fence records separate from the delivered per-append state write fence; stop-requested + supervisor releases; stale takeover via process alive + lease age (no recoverFence, no state contract change); two-phase coordinator.stuck (verdict then outcome, same stuckId, latest-wins fold); new turn = tokenDelta>0 or traffic>0 from delivered liveness facts; fingerprint = event-log cursor + open coordinator-question count only; reserved escalation question renders first; PID+start-time identity check before TERM; exhausted-escalated; absent pickup status = open; supervisorMode foreground|detached + externalUnit absent. DoR iteration 2 pending."
     type: "decision"
+    date: "2026-11-07"
+  - text: "DoR iteration 2 verdict NOT_READY (4 blocking, 8 advisory). Prior findings RF-01..RF-10, RF-12, A2..A7 resolved; RF-11/A1 partial. New blockers: RF2-01 age-OR lease takeover fires on a healthy supervisor after 2x collection interval (no lease refresh), contradicting AC-F8-1 and AC-F1-3; RF2-02 lease claim is read-fold-then-append with no atomicity; RF2-03 tick cannot recover a crashed holder's lease; RF2-04 TC-040 phase-5 mapping asserts phase-6 composition. Advisory: quiet-tick fence pair vs log-growth claim (RF2-05), stale-takeover/acquired crash window (RF2-06), state-fence stale-lock recovery and missing state.lock.busy row (RF2-07), stale PLAN-MAP bullet (RF2-08), detached start behavior (RF2-09), progressing payload phase/reason (RF2-10), fold tie-break (RF2-11), stuckId derivation (RF2-12). Remediation direction for iteration 3: liveness-first lease (alive true refuses takeover regardless of age; alive false allows takeover; age only when liveness unknown), atomic claim under one state write fence with state.lock.busy mapped to coordinator.already-running, tick shares the claim/takeover path, single-record stale-takeover, foreground-only start with detached deferred to M1-S18, state-fence stale-lock recovery via delivered recoverFence, ledger-sequence-primary folds, stuckId = iterationId, progressing reported as a tick result separate from the persisted last verdict, and plan TC-040 moved to Phase 6."
+    type: "blocker"
     date: "2026-11-07"
