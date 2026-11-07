@@ -1,0 +1,30 @@
+{
+  "defaults": {
+    "leaseTtlMs": 90000,
+    "parkRecheckMs": {
+      "provider-window": 60000,
+      "provider-quota": 300000,
+      "preemption": 60000
+    }
+  },
+  "valid": {
+    "leaseTtlMs": 120000,
+    "parkRecheckMs": {
+      "provider-window": 30000,
+      "provider-quota": 300000,
+      "preemption": 60000
+    }
+  },
+  "invalidValues": [
+    { "key": "queue.lease-ttl", "value": 0, "code": "config.value.invalid" },
+    { "key": "queue.lease-ttl", "value": -1, "code": "config.value.invalid" },
+    { "key": "queue.lease-ttl", "value": 1.5, "code": "config.value.invalid" },
+    { "key": "queue.park-recheck.provider-window", "value": 0, "code": "config.value.invalid" },
+    { "key": "queue.park-recheck.provider-quota", "value": -5, "code": "config.value.invalid" },
+    { "key": "queue.park-recheck.preemption", "value": 1.25, "code": "config.value.invalid" }
+  ],
+  "unknownKeys": [
+    { "key": "queue.park-recheck.preempted-for-close-item", "code": "config.key.unknown" },
+    { "key": "queue.capacity", "code": "config.key.unknown" }
+  ]
+}

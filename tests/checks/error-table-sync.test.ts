@@ -1073,8 +1073,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 61) {
-    failures.push(`table length ${live.length} != baseline + 61 (${BASELINE_ROWS.length + 61})`);
+  if (live.length !== BASELINE_ROWS.length + 67) {
+    failures.push(`table length ${live.length} != baseline + 67 (${BASELINE_ROWS.length + 67})`);
   }
   return failures;
 };
@@ -1100,11 +1100,12 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       closeout: 4,
       watchdog: 4,
       commit: 6,
-      status: 1,
+      status: 2,
       doctor: 1,
       merge: 7,
       harness: 9,
       spend: 1,
+      queue: 5,
       dispatch: 2,
     });
   });
@@ -1153,7 +1154,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 61,
+      BASELINE_ROWS.length + 67,
     );
   });
 
@@ -1176,7 +1177,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 61);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 67);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1649,5 +1650,41 @@ describe("TC-ECON-004 the four economics rows bind two-way to the table and corp
     expect(messages((await runSyncCheck({ root })).failures)).toContain(
       "source entry dispatch.phantom.row is undocumented",
     );
+  });
+});
+
+describe("TC-VOCAB-002/003 (GH-237) queue rows and lanes collector family", () => {
+  test("the five queue rows resolve in the machine table and each is documented once", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    const doc = readFile(ROOT, DOC);
+    for (const code of [
+      "queue.dependency-cycle",
+      "queue.lease-conflict",
+      "queue.park-condition-stuck",
+      "queue.entry.unobserved",
+      "queue.precondition.unmet",
+    ]) {
+      expect(
+        (ERROR_TABLE as readonly ErrorTableEntry[]).some((entry) => entry.code === code),
+        code,
+      ).toBe(true);
+      expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
+    }
+  });
+
+  test("the collector family recognizes the extended set and rejects an undeclared id", () => {
+    expect([...BOARD_COLLECTOR_IDS]).toEqual(["tracker", "lanes"]);
+    expect(
+      isDeclaredCollectorFamilyCode(
+        `${BOARD_COLLECTOR_ERROR_PREFIX}lanes${BOARD_COLLECTOR_ERROR_SUFFIX}`,
+      ),
+    ).toBe(true);
+    expect(
+      isDeclaredCollectorFamilyCode(
+        `${BOARD_COLLECTOR_ERROR_PREFIX}queue${BOARD_COLLECTOR_ERROR_SUFFIX}`,
+      ),
+    ).toBe(false);
+    expect(collectorIdOfFamilyCode(`${BOARD_COLLECTOR_ERROR_PREFIX}lanes.unavailable`)).toBe("lanes");
   });
 });

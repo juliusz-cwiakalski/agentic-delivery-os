@@ -174,7 +174,7 @@ describe("TC-SLA-001 policy contract data pinned", () => {
     expect(BOARD_MAX_HUMAN_LINES).toBe(24);
     expect(BOARD_MAX_HUMAN_BYTES).toBe(4_096);
     expect(BOARD_SCHEMA_VERSION).toBe("delivery.board.v1");
-    expect([...BOARD_COLLECTOR_IDS]).toEqual(["tracker"]);
+    expect([...BOARD_COLLECTOR_IDS]).toEqual(["tracker", "lanes"]);
     expect(BOARD_COLLECTOR_ERROR_PREFIX).toBe("status.collector.");
     expect(BOARD_COLLECTOR_ERROR_SUFFIX).toBe(".unavailable");
     expect(OWNER_GATE_SLA_DECISION_RECORD_KIND).toBe("owner-gate.decision");

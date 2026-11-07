@@ -3,8 +3,10 @@ import type {
   ConfigNodeOrigins,
   ConfigOrigin,
   ConfigValue,
+  QueueParkConditionType,
   Result,
 } from "#contracts";
+import { QUEUE_PARK_CONDITION_TYPES, QUEUE_PARK_RECHECK_DEFAULTS } from "#contracts";
 
 type DefaultMetadata = { readonly defaultOrigin?: ConfigOrigin & { readonly layer: "defaults" } };
 
@@ -313,6 +315,23 @@ export const LANE_BRANCH = {
 } as const satisfies CatalogField;
 
 /**
+ * The typed `queue` branch (GH-237 F-8, F-12, Appendix E).
+ *
+ * `queue.lease-ttl` is the lease staleness bound in integer milliseconds;
+ * `queue.park-recheck` is a dynamic-name record whose valid child names are the
+ * closed park condition-type set and whose values are integer milliseconds. The
+ * shipped defaults live in the defaults layer. No capacity, bandwidth,
+ * concurrency, or CI-slot key is declared or reserved.
+ */
+export const QUEUE_BRANCH = {
+  type: "object",
+  fields: {
+    "lease-ttl": { type: "number" },
+    "park-recheck": { type: "record", value: { type: "number" } },
+  },
+} as const satisfies CatalogField;
+
+/**
  * The production catalog. `provider` is a typed branch (GH-182 F-1); its
  * dynamic-name maps use the additive record field kind (PD-F), while every
  * fixed branch keeps exact unknown-key discipline.
@@ -337,6 +356,7 @@ export const PRODUCTION_CATALOG = {
   merge: MERGE_BRANCH,
   harness: HARNESS_BRANCH,
   lane: LANE_BRANCH,
+  queue: QUEUE_BRANCH,
 } as const satisfies ConfigCatalog;
 
 export const fieldAt = (
@@ -423,4 +443,68 @@ export const resolveLaneSettings = (
     return laneFailure("config.value.invalid", origins, "lane.restart-budget");
   }
   return { ok: true, value: { livenessIntervalMs: interval, restartBudget: budget } };
+};
+
+/** The resolved `queue` branch: lease TTL and per-condition-type recheck. */
+export type QueueSettings = {
+  /** Lease staleness bound in milliseconds. */
+  readonly leaseTtlMs: number;
+  /** Recheck cadence per closed park condition type. */
+  readonly parkRecheckMs: Readonly<Record<QueueParkConditionType, number>>;
+};
+
+/**
+ * Validate the resolved `queue` branch and project it into typed settings.
+ *
+ * The dynamic-name `park-recheck` record is validated against the closed
+ * condition-type set here (the JSON schema cannot close dynamic names); an
+ * unknown child is `config.key.unknown`, and a non-integer, zero, or negative
+ * value is `config.value.invalid`, both naming the key. No invalid input
+ * silently falls back.
+ */
+export const resolveQueueSettings = (
+  values: Readonly<Record<string, ConfigValue>>,
+  origins: ConfigNodeOrigins = {},
+): Result<QueueSettings, ConfigFailure> => {
+  const branch = values.queue;
+  if (branch === undefined) {
+    return {
+      ok: true,
+      value: {
+        leaseTtlMs: 90_000,
+        parkRecheckMs: { ...QUEUE_PARK_RECHECK_DEFAULTS },
+      },
+    };
+  }
+  if (!isPlainRecord(branch)) return laneFailure("config.value.invalid", origins, "queue");
+  for (const key of Object.keys(branch)) {
+    if (key !== "lease-ttl" && key !== "park-recheck") {
+      return laneFailure("config.key.unknown", origins, `queue.${key}`);
+    }
+  }
+  const ttl = branch["lease-ttl"];
+  if (typeof ttl !== "number" || !Number.isInteger(ttl) || ttl <= 0) {
+    return laneFailure("config.value.invalid", origins, "queue.lease-ttl");
+  }
+  const recheckRaw = branch["park-recheck"];
+  const recheck: Record<QueueParkConditionType, number> = {
+    "provider-window": QUEUE_PARK_RECHECK_DEFAULTS["provider-window"],
+    "provider-quota": QUEUE_PARK_RECHECK_DEFAULTS["provider-quota"],
+    preemption: QUEUE_PARK_RECHECK_DEFAULTS.preemption,
+  };
+  if (recheckRaw !== undefined) {
+    if (!isPlainRecord(recheckRaw)) {
+      return laneFailure("config.value.invalid", origins, "queue.park-recheck");
+    }
+    for (const [child, value] of Object.entries(recheckRaw)) {
+      if (!(QUEUE_PARK_CONDITION_TYPES as readonly string[]).includes(child)) {
+        return laneFailure("config.key.unknown", origins, `queue.park-recheck.${child}`);
+      }
+      if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
+        return laneFailure("config.value.invalid", origins, `queue.park-recheck.${child}`);
+      }
+      recheck[child as QueueParkConditionType] = value;
+    }
+  }
+  return { ok: true, value: { leaseTtlMs: ttl, parkRecheckMs: recheck } };
 };

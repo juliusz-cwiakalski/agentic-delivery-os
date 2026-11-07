@@ -32,6 +32,7 @@
     "src/contracts/provider-profile.ts",
     "src/contracts/provider.ts",
     "src/contracts/queue-ready.ts",
+    "src/contracts/queue.ts",
     "src/contracts/registry.ts",
     "src/contracts/result.ts",
     "src/contracts/retro.ts",

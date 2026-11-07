@@ -43,11 +43,14 @@ export {
   PRODUCTION_CATALOG,
   PRODUCTION_DEFAULTS,
   PRODUCTION_SCHEMA,
+  QUEUE_BRANCH,
+  type QueueSettings,
   type ResolveConfigInput,
   type ResolvedConfig,
   resolveConfig,
   resolveLaneSettings,
   resolveHarnessSettings,
+  resolveQueueSettings,
   serializeProductionSchema,
 } from "./config/index.js";
 export {
