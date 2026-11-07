@@ -10,7 +10,7 @@ phases:
   test_planning: { started: "2026-11-07T18:42:00Z", completed: "2026-11-07T21:44:00Z", reopened: "2026-11-07T21:20:00Z", iteration: 3 }
   delivery_planning: { started: "2026-11-07T18:52:00Z", completed: "2026-11-07T21:48:00Z", reopened: "2026-11-07T21:20:00Z", iteration: 3 }
   dor_check: { started: "2026-11-07T21:49:00Z", completed: "2026-11-07T22:05:00Z", verdict: "READY", iteration: 3 }
-  delivery: { started: null, completed: null }
+  delivery: { started: "2026-11-07T22:10:00Z", completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }

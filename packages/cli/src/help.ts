@@ -1,0 +1,496 @@
+/**
+ * Static self-description for the executable (GH-242 F-1, DEC-10).
+ *
+ * Help is a pure data lookup: rendering reads no configuration, state, git, or
+ * network. Usage, options, examples, exit codes, and a see-also pointer are the
+ * five declared sections; every prompt-required command and subcommand has one
+ * entry. The binary name always arrives through the branding seam.
+ */
+import type { BrandIdentity } from "@delivery-os/core/contracts";
+
+/** One help page: a command path plus its five declared sections. */
+export type HelpEntry = {
+  /** Command path; the empty path is root help. */
+  readonly path: readonly string[];
+  /** One-line summary rendered next to the usage heading. */
+  readonly summary: string;
+  /** Usage lines; `<binary>` is substituted with the resolved binary name. */
+  readonly usage: readonly string[];
+  /** Flag/option list, in declaration order. */
+  readonly options: readonly (readonly [string, string])[];
+  /** Example invocations; `<binary>` is substituted. */
+  readonly examples: readonly string[];
+  /** Reference pages this page points at. */
+  readonly seeAlso: readonly string[];
+};
+
+const REFERENCE_ROOT = "doc/planning/oss-tooling/milestones/m1";
+const MAN_PAGE = `${REFERENCE_ROOT}/man-page.md`;
+const ENTRYPOINT_PAGE = `${REFERENCE_ROOT}/commands/entrypoint.md`;
+
+const page = (name: string): string => `${REFERENCE_ROOT}/commands/${name}.md`;
+
+const GLOBAL_OPTIONS: readonly (readonly [string, string])[] = [
+  ["--json", "Emit the machine envelope instead of the human report"],
+  ["--verbose", "Add diagnostic detail to human output"],
+  ["--pretty", "Indent machine output"],
+];
+
+const STANDARD_EXIT_CODES: readonly (readonly [number, string])[] = [
+  [0, "The operation completed and returned its declared verdict"],
+  [1, "The request was refused, invalid, or returned a negative verdict"],
+  [2, "A platform, state, or provider failure prevented the operation"],
+];
+
+/** Root help: families, global flags, and the see-also pointer. */
+export const ROOT_HELP: HelpEntry = {
+  path: [],
+  summary: "Spec-driven delivery tooling",
+  usage: ["<binary> <command> [options]"],
+  options: [
+    ["--help", "Show root help"],
+    ["--version", "Show version and build identity"],
+    ...GLOBAL_OPTIONS,
+  ],
+  examples: ["<binary> --help", "<binary> --version", "<binary> status --json"],
+  seeAlso: [MAN_PAGE, ENTRYPOINT_PAGE],
+};
+
+const entry = (
+  path: readonly string[],
+  summary: string,
+  usage: readonly string[],
+  options: readonly (readonly [string, string])[],
+  examples: readonly string[],
+  pageName: string,
+): HelpEntry => ({
+  path,
+  summary,
+  usage,
+  options: [...options, ...GLOBAL_OPTIONS],
+  examples,
+  seeAlso: [page(pageName)],
+});
+
+/** Every prompt-required command and subcommand help page. */
+export const COMMAND_HELP: readonly HelpEntry[] = [
+  entry(
+    ["status"],
+    "Collect the nine-section delivery digest",
+    ["<binary> status [--repo <path>]"],
+    [["--repo", "Target repository path (repeatable)"]],
+    ["<binary> status", "<binary> status --json", "<binary> status --repo . --json"],
+    "status",
+  ),
+  entry(
+    ["brief"],
+    "Render the owner-facing delivery brief",
+    ["<binary> brief"],
+    [],
+    ["<binary> brief", "<binary> brief --json"],
+    "brief",
+  ),
+  entry(
+    ["queue"],
+    "Read and mutate the scheduling queue",
+    ["<binary> queue <list|plan|add|prioritize|dep|claim|release> [options]"],
+    [
+      ["--next <n>", "Limit the planned next actions"],
+      ["--priority <n>", "Set or filter entry priority"],
+      ["--dep <ref>", "Declare a dependency edge"],
+      ["--holder <id>", "Claim or release holder identity"],
+      ["--park <cause>", "Park a released entry with a condition"],
+      ["--until <iso>", "Provider-window expiry for a park"],
+      ["--watch", "Watch the queue (requires the resident daemon)"],
+    ],
+    ["<binary> queue list", "<binary> queue plan --next 3", "<binary> queue add GH-242"],
+    "queue",
+  ),
+  entry(
+    ["queue", "list"],
+    "List observed queue entries",
+    ["<binary> queue list"],
+    [],
+    ["<binary> queue list", "<binary> queue list --json"],
+    "queue",
+  ),
+  entry(
+    ["queue", "plan"],
+    "Plan the next scheduling actions",
+    ["<binary> queue plan [--next <n>]"],
+    [["--next <n>", "Number of next actions to return"]],
+    ["<binary> queue plan --next 3", "<binary> queue plan --json"],
+    "queue",
+  ),
+  entry(
+    ["queue", "add"],
+    "Declare a queue entry",
+    ["<binary> queue add <ref> [--priority <n>] [--dep <ref>]"],
+    [
+      ["--priority <n>", "Entry priority"],
+      ["--dep <ref>", "Declare a dependency edge"],
+    ],
+    ["<binary> queue add GH-242", "<binary> queue add GH-242 --priority 10"],
+    "queue",
+  ),
+  entry(
+    ["queue", "prioritize"],
+    "Change an entry priority",
+    ["<binary> queue prioritize <ref> --priority <n>"],
+    [["--priority <n>", "New entry priority"]],
+    ["<binary> queue prioritize GH-242 --priority 5"],
+    "queue",
+  ),
+  entry(
+    ["queue", "dep"],
+    "Declare a dependency edge",
+    ["<binary> queue dep <ref> --on <ref>"],
+    [["--dep <ref>", "The dependency target"]],
+    ["<binary> queue dep GH-243 --dep GH-242"],
+    "queue",
+  ),
+  entry(
+    ["queue", "claim"],
+    "Claim the next eligible entry",
+    ["<binary> queue claim [<ref>] --holder <id>"],
+    [["--holder <id>", "Claim holder identity"]],
+    ["<binary> queue claim --holder lane-1", "<binary> queue claim GH-242 --holder lane-1"],
+    "queue",
+  ),
+  entry(
+    ["queue", "release"],
+    "Release a claim or park an entry",
+    ["<binary> queue release <ref> [--park <cause>] [--until <iso>]"],
+    [
+      ["--park <cause>", "Park cause"],
+      ["--until <iso>", "Provider-window expiry"],
+    ],
+    ["<binary> queue release GH-242", "<binary> queue release GH-242 --park merge-conflict"],
+    "queue",
+  ),
+  entry(
+    ["lanes"],
+    "Read lane occupancy and economics",
+    ["<binary> lanes <list|show <ref>>"],
+    [],
+    ["<binary> lanes list", "<binary> lanes show GH-242"],
+    "lanes",
+  ),
+  entry(
+    ["lanes", "list"],
+    "List lanes",
+    ["<binary> lanes list"],
+    [],
+    ["<binary> lanes list", "<binary> lanes list --json"],
+    "lanes",
+  ),
+  entry(
+    ["lanes", "show"],
+    "Show one lane",
+    ["<binary> lanes show <ref>"],
+    [],
+    ["<binary> lanes show GH-242"],
+    "lanes",
+  ),
+  entry(
+    ["blockers"],
+    "Publish, list, and answer typed questions",
+    ["<binary> blockers <publish|list|answer> [options]"],
+    [
+      ["--lane <id>", "Publishing lane identity"],
+      ["--options <list>", "Declared answer options"],
+      ["--audience <name>", "Target audience"],
+      ["--choice <n>", "Selected answer option"],
+      ["--text <text>", "Free-text answer"],
+      ["--open", "List only open questions"],
+    ],
+    [
+      "<binary> blockers list --open",
+      '<binary> blockers publish decision --lane lane-1 "Which gate applies?"',
+      "<binary> blockers answer question-1 --choice 2",
+    ],
+    "blockers",
+  ),
+  entry(
+    ["blockers", "publish"],
+    "Publish a typed question",
+    ['<binary> blockers publish <type> --lane <id> "<question>" [--options ...] [--audience ...]'],
+    [
+      ["--lane <id>", "Publishing lane identity"],
+      ["--options <list>", "Declared answer options"],
+      ["--audience <name>", "Target audience"],
+    ],
+    ['<binary> blockers publish decision --lane lane-1 "Which gate applies?"'],
+    "blockers",
+  ),
+  entry(
+    ["blockers", "list"],
+    "List typed questions and answers",
+    ["<binary> blockers list [--open]"],
+    [["--open", "List only open questions"]],
+    ["<binary> blockers list", "<binary> blockers list --open --json"],
+    "blockers",
+  ),
+  entry(
+    ["blockers", "answer"],
+    "Answer a typed question",
+    ["<binary> blockers answer <id> [--choice <n>] [--text <text>]"],
+    [
+      ["--choice <n>", "Selected answer option"],
+      ["--text <text>", "Free-text answer"],
+    ],
+    ["<binary> blockers answer question-1 --choice 2"],
+    "blockers",
+  ),
+  entry(
+    ["phase"],
+    "Read and write lifecycle phase state",
+    ["<binary> phase <list|complete|reopen> [options]"],
+    [["--no-commit", "Record the transition without a commit"]],
+    [
+      "<binary> phase list GH-242",
+      "<binary> phase complete GH-242 delivery",
+      '<binary> phase reopen GH-242 review_fix "scope gap"',
+    ],
+    "phase",
+  ),
+  entry(
+    ["phase", "list"],
+    "List phase state",
+    ["<binary> phase list <ref>"],
+    [],
+    ["<binary> phase list GH-242", "<binary> phase list GH-242 --json"],
+    "phase",
+  ),
+  entry(
+    ["phase", "complete"],
+    "Complete a lifecycle phase",
+    ["<binary> phase complete <ref> <phase> [--no-commit]"],
+    [["--no-commit", "Record the transition without a commit"]],
+    [
+      "<binary> phase complete GH-242 delivery",
+      "<binary> phase complete GH-242 delivery --no-commit",
+    ],
+    "phase",
+  ),
+  entry(
+    ["phase", "reopen"],
+    "Reopen a completed lifecycle phase",
+    ["<binary> phase reopen <ref> <phase> <reason>"],
+    [],
+    ['<binary> phase reopen GH-242 review_fix "review found a gap"'],
+    "phase",
+  ),
+  entry(
+    ["commit"],
+    "Create one commit through the commit primitive",
+    ["<binary> commit [<ref>] [--phase <phase>] [--dry-run]"],
+    [
+      ["--phase <phase>", "Complete the lifecycle phase atomically with the commit"],
+      ["--dry-run", "Compute the staging set and message without committing"],
+    ],
+    ["<binary> commit", "<binary> commit GH-242 --phase delivery", "<binary> commit --dry-run"],
+    "commit",
+  ),
+  entry(
+    ["lint"],
+    "Check pm-notes and plan conformance",
+    ["<binary> lint <ref> [--registry]", "<binary> lint plan <ref>"],
+    [["--registry", "Check the phase-state registry projection"]],
+    ["<binary> lint GH-242", "<binary> lint plan GH-242"],
+    "lint",
+  ),
+  entry(
+    ["plan"],
+    "Validate and compare delivery plans",
+    ["<binary> plan <validate|diff|overlap> [options]"],
+    [["--against <base>", "Base ref for a plan diff"]],
+    [
+      "<binary> plan validate GH-242",
+      "<binary> plan diff GH-242 --against origin/main-tools",
+      "<binary> plan overlap GH-242 GH-243",
+    ],
+    "plan",
+  ),
+  entry(
+    ["plan", "validate"],
+    "Validate a delivery plan",
+    ["<binary> plan validate <ref>"],
+    [],
+    ["<binary> plan validate GH-242", "<binary> plan validate GH-242 --json"],
+    "plan",
+  ),
+  entry(
+    ["plan", "diff"],
+    "Diff a plan's declared scope against a base",
+    ["<binary> plan diff <ref> [--against <base>]"],
+    [["--against <base>", "Base ref for the scope diff"]],
+    ["<binary> plan diff GH-242 --against origin/main-tools"],
+    "plan",
+  ),
+  entry(
+    ["plan", "overlap"],
+    "Check scope overlap between two plans",
+    ["<binary> plan overlap <refA> <refB>"],
+    [],
+    ["<binary> plan overlap GH-242 GH-243"],
+    "plan",
+  ),
+  entry(
+    ["verify"],
+    "Verify artifact, gate, and deploy evidence",
+    ["<binary> verify <change|gates|deploy> <ref>"],
+    [],
+    [
+      "<binary> verify change GH-242",
+      "<binary> verify gates GH-242",
+      "<binary> verify deploy GH-242",
+    ],
+    "verify-change",
+  ),
+  entry(
+    ["verify", "change"],
+    "Verify the change artifact ledger",
+    ["<binary> verify change <ref>"],
+    [],
+    ["<binary> verify change GH-242"],
+    "verify-change",
+  ),
+  entry(
+    ["verify", "gates"],
+    "Verify CI gate evidence",
+    ["<binary> verify gates <ref>"],
+    [],
+    ["<binary> verify gates GH-242"],
+    "verify-gates",
+  ),
+  entry(
+    ["verify", "deploy"],
+    "Verify deploy trace evidence",
+    ["<binary> verify deploy <ref>"],
+    [],
+    ["<binary> verify deploy GH-242"],
+    "verify-deploy",
+  ),
+  entry(
+    ["merge"],
+    "Merge a verified ready item",
+    ["<binary> merge <ref> [--dry-run]"],
+    [
+      ["--dry-run", "Verify merge readiness without landing"],
+      ["--waive <gate>", "Waive one gate identity"],
+      ["--waived-by <principal>", "Waiver authority"],
+      ["--waive-reason <text>", "Waiver rationale"],
+    ],
+    ["<binary> merge GH-242 --dry-run", "<binary> merge GH-242"],
+    "merge",
+  ),
+  entry(
+    ["closeout"],
+    "Plan or apply the post-merge sweep",
+    ["<binary> closeout <ref> [--apply]"],
+    [["--apply", "Apply the closeout writes"]],
+    ["<binary> closeout GH-242", "<binary> closeout GH-242 --apply"],
+    "closeout",
+  ),
+  entry(
+    ["spend"],
+    "Report captured spend and amplification",
+    ["<binary> spend [--ref <ref>] [--phase <phase>] [--amplification]"],
+    [
+      ["--ref <ref>", "Work item ref"],
+      ["--phase <phase>", "Lifecycle phase"],
+      ["--amplification", "Render the amplification view"],
+    ],
+    ["<binary> spend --ref GH-242", "<binary> spend --amplification --json"],
+    "spend",
+  ),
+  entry(
+    ["retro"],
+    "Collect and report retro evidence",
+    ["<binary> retro <collect|report> [--level <name>]"],
+    [["--level <name>", "Retro level (change, milestone, release)"]],
+    ["<binary> retro collect", "<binary> retro report --level milestone"],
+    "retro",
+  ),
+  entry(
+    ["retro", "collect"],
+    "Collect retro evidence",
+    ["<binary> retro collect [--level <name>]"],
+    [["--level <name>", "Retro level"]],
+    ["<binary> retro collect --level change"],
+    "retro",
+  ),
+  entry(
+    ["retro", "report"],
+    "Render a retro report",
+    ["<binary> retro report [--level <name>]"],
+    [["--level <name>", "Retro level"]],
+    ["<binary> retro report --level milestone"],
+    "retro",
+  ),
+];
+
+const ALL_HELP: readonly HelpEntry[] = [ROOT_HELP, ...COMMAND_HELP];
+
+const pathKey = (path: readonly string[]): string => path.join(" ");
+
+/** Resolve the help entry for a command path, or `undefined`. */
+export const helpEntryFor = (path: readonly string[]): HelpEntry | undefined =>
+  ALL_HELP.find((candidate) => pathKey(candidate.path) === pathKey(path));
+
+/** Every help entry, root first. */
+export const allHelpEntries = (): readonly HelpEntry[] => ALL_HELP;
+
+const withBinary = (text: string, brand: BrandIdentity): string =>
+  text.replaceAll("<binary>", brand.binaryName);
+
+/**
+ * Render one help page with the five declared sections.
+ *
+ * The rendering is pure: the only dynamic fact is the injected binary name.
+ */
+export const renderHelp = (help: HelpEntry, brand: BrandIdentity): string => {
+  const title =
+    help.path.length === 0
+      ? `${brand.binaryName} — ${help.summary}`
+      : `${brand.binaryName} ${help.path.join(" ")} — ${help.summary}`;
+  const usage = help.usage.map((line) => `  ${withBinary(line, brand)}`).join("\n");
+  const options =
+    help.options.length === 0
+      ? "  (none)"
+      : help.options.map(([flag, description]) => `  ${flag}  ${description}`).join("\n");
+  const examples = help.examples.map((line) => `  ${withBinary(line, brand)}`).join("\n");
+  const exitCodes = STANDARD_EXIT_CODES.map(([code, meaning]) => `  ${code}  ${meaning}`).join(
+    "\n",
+  );
+  const seeAlso = help.seeAlso.map((target) => `  ${target}`).join("\n");
+  return [
+    title,
+    "",
+    "Usage:",
+    usage,
+    "",
+    "Options:",
+    options,
+    "",
+    "Examples:",
+    examples,
+    "",
+    "Exit codes:",
+    exitCodes,
+    "",
+    "See also:",
+    seeAlso,
+    "",
+  ].join("\n");
+};
+
+/** Root help with the command families named explicitly. */
+export const renderRootHelp = (brand: BrandIdentity): string => {
+  const families = COMMAND_HELP.filter((help) => help.path.length === 1)
+    .map((help) => `  ${help.path[0]}  ${help.summary}`)
+    .join("\n");
+  const base = renderHelp(ROOT_HELP, brand);
+  return `${base}\nCommands:\n${families}\n`;
+};
