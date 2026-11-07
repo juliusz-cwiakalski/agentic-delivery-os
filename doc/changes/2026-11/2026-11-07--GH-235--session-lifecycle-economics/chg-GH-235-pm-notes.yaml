@@ -7,7 +7,7 @@ phases:
   test_planning: { started: "2026-11-07T04:25:00Z", completed: "2026-11-07T05:55:00Z" }
   delivery_planning: { started: "2026-11-07T06:00:00Z", completed: "2026-11-07T06:30:00Z" }
   dor_check: { started: "2026-11-07T06:45:00Z", completed: "2026-11-07T07:30:00Z", verdict: "READY", iteration: 1, blocking_findings: 0, advisory_findings: 5 }
-  delivery: { started: "2026-11-07T08:00:00Z", completed: "2026-11-07T12:30:00Z", reopened: "2026-11-07T15:30:00Z", reopen_reason: "review iteration 1 FAIL — plan phase 8 remediation (F-1 budget-gate precedence, F-2 terminal-append failure surfacing, F-3 fixture fidelity, F-4 plan pinning reconciliation)" }
+  delivery: { started: "2026-11-07T08:00:00Z", completed: "2026-11-07T12:30:00Z", reopened: "2026-11-07T15:30:00Z", reopen_reason: "review iteration 1 FAIL — plan phase 8 remediation (F-1 budget-gate precedence, F-2 terminal-append failure surfacing, F-3 fixture fidelity, F-4 plan pinning reconciliation)", remediation_completed: "2026-11-07T16:30:00Z", remediation_commit: "0a274a59" }
   system_spec_update: { started: "2026-11-07T13:00:00Z", completed: "2026-11-07T14:00:00Z" }
   review_fix: { started: "2026-11-07T14:30:00Z", completed: null, iteration_1: { status: "FAIL", date: "2026-11-07", findings: "6 (0 blocker/2 major/3 minor/1 info)", artifact: "code-review/review-iter-1.yaml", remediation: "plan phase 8 appended by reviewer; @coder to execute" } }
   quality_gates: { started: null, completed: null }
@@ -49,6 +49,9 @@ notes:
     date: "2026-11-07"
   - text: "Retro: review caught two real correctness defects the plan's own tests missed (precedence corner cell absent from RESUME_PRECEDENCE_CASES; failing-ensure fixture absent) — the test plan asserted the four happy precedence cells but not the intersection cells (past-budget x incomplete-evidence). Next time: test plans should include adversarial intersection cells for every declared precedence rule, and assertion-discipline review for discarded return values on durably-recorded effects"
     type: "retro"
+    date: "2026-11-07"
+  - text: "Plan phase 8 (remediation) complete: commit 0a274a59, F-1 budget gate now evaluates before evidence checks (past-budget x missing facts refuses restart-budget-exceeded + terminal record lands), F-2 terminalAppendError additive field surfaces failed terminal appends, F-3 prefill fixture traffic wired, F-4 plan pinning declares updates (v)(vi)+biome overrides, F-6 duplicate runId removed; TC-042/055/020 strengthened. Also repaired forbidden-literals registry for the new feature spec doc (4 pre-existing tests red from doc-sync commit). pnpm check PASS 4730/4 skip/0 fail"
+    type: "info"
     date: "2026-11-07"
   - text: "Delivery phase 1 (contracts+error-table binding) complete: commit 1dcdf6ff, contracts/economics.ts new, dispatch kind + 3 rows (watchdog.liveness-stalled, dispatch.restart-budget-exceeded, dispatch.resume-uneconomical), error-table-sync 86=86, tests 190 pass / 0 fail, typecheck pass"
     type: "info"
