@@ -1,0 +1,48 @@
+change_id: GH-242
+title: "M1-S20: Agent integration: prompts consume the tooling"
+delivery_mode: autonomous
+milestone: M1
+story_code: M1-S20
+variant: full
+phases:
+  clarify_scope: { started: "2026-11-07T18:20:00Z", completed: "2026-11-07T18:28:11Z" }
+  specification: { started: "2026-11-07T18:28:11Z", completed: "2026-11-07T18:38:00Z" }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "D1 — Scope includes the minimum executable and self-description surface the prompts need: a neutral CLI entrypoint plus --help/--version. The prompts cannot consume a primitive with no invocation path or help."
+    date: "2026-11-07"
+  - text: "D2 — Lifecycle phase state is written only through the phase family. The PM stops hand-editing started/completed fields; completion is the only transition needed, and the tool creates the entry. PR URL is recorded as a note, not as hand-written phase state."
+    date: "2026-11-07"
+  - text: "D3 — Reverses GH-227 DEC-6 for agent adoption: commit and phase complete must run inside lifecycle sessions, because that is where PM and coder operate. The delivery-session refusal is removed; the harness one-shot still runs in a sanitized empty project context."
+    date: "2026-11-07"
+  - text: "D4 — Lifecycle completion staging scope is the mapped plan-phase scope UNION the change folder, so artifact phases (spec, test plan, plan, review notes, pm-notes) commit atomically with their transition."
+    date: "2026-11-07"
+  - text: "D5 — @committer stops hand-crafting raw-git commits: its instruction becomes a thin executor of the typed commit primitive. Every lifecycle prompt calls the primitive directly or delegates to the primitive-backed committer."
+    date: "2026-11-07"
+  - text: "D6 — Typed blockers are the only blocker channel for lifecycle agents: publish via blockers publish, consume via blockers list/answer. The pm-notes blockers collection stays schema-allowed but is no longer an agent write target."
+    date: "2026-11-07"
+  - text: "D7 — Coordinator J1 iteration is expressed with status, blockers, merge, closeout, and queue plan. Per-ticket delivery still calls the bash dispatch until M1-S9 lands; that entry point is not retired, so it is not demoted from a primary path."
+    date: "2026-11-07"
+open_questions: []
+blockers: []
+notes:
+  - text: "Clarify-scope cross-check found no requirement contradiction with doc/spec: the typed primitives exist (phase, commit, plan, blockers, status, merge, closeout, queue), but their agent adoption is explicitly deferred by GH-227 NG-1 and is this ticket's job."
+    type: info
+    date: "2026-11-07"
+  - text: "Doc impact: doc/spec feature pages for commit, pm-notes/phase, result contract, status/blockers, and the guides change-lifecycle, AGENTS.md, and autonomous-batch-delivery must be reconciled. New guide required for agent-facing primitive calls."
+    type: risk
+    date: "2026-11-07"
+  - text: "Retro: state detection took an extra pass because the GitHub default branch (main) is stale while delivery truth is main-tools; git/gh local checks were required."
+    type: retro
+    date: "2026-11-07"
+  - text: "OQ resolution: no split; TDR-0013 authored for the session-guard reversal; help + reconciled reference pages satisfy the guide obligation; prompt-required composition subset."
+    type: decision
+    date: "2026-11-07"
