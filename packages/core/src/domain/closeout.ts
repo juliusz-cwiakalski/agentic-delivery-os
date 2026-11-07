@@ -52,13 +52,18 @@ import {
   type CloseoutStep,
   type CloseoutStepId,
   type CloseoutSummary,
+  type CloseoutTelemetryDisclosure,
   type CloseoutThreadArguments,
   type CloseoutTransitionArguments,
   type CloseoutWriteOutcome,
   DELIVERED_LABEL,
+  type HarnessResult,
+  type HarnessTelemetryAppendReport,
+  type HarnessTelemetryCapture,
   LIFECYCLE_LABEL_DISPOSITIONS,
   OWNER_ATTENTION_LABEL,
   PROTECTED_REF_NAMES,
+  type StateResult,
 } from "#contracts";
 import { sha256Hex } from "./sha256.js";
 
@@ -850,6 +855,15 @@ export const boundCloseoutData = (data: CloseoutData): CloseoutData => {
 };
 
 /** The apply-orchestrator input (Phase 3, F-3, D6). */
+/** The injected, non-gating telemetry capture capability (GH-233 F-8). */
+export type CloseoutTelemetryRuntime = {
+  readonly extract: (input: {
+    readonly workItemRef: string;
+    readonly runId: string;
+  }) => Promise<HarnessResult<HarnessTelemetryCapture>>;
+  readonly append: (capture: HarnessTelemetryCapture) => StateResult<HarnessTelemetryAppendReport>;
+};
+
 export type CloseoutRunInput = {
   readonly plan: CloseoutPlan;
   readonly provider: CloseoutProviderRuntime;
@@ -858,6 +872,8 @@ export type CloseoutRunInput = {
   readonly timestamp: string;
   readonly fenceToken: string;
   readonly apply: boolean;
+  readonly runId?: string;
+  readonly telemetry?: CloseoutTelemetryRuntime;
 };
 
 /** The apply-orchestrator result: bounded data or a classified identity. */
@@ -978,6 +994,69 @@ const targetFailure = (plan: CloseoutPlan, apply: boolean): CloseoutRunResult | 
     }
   }
   return undefined;
+};
+
+/**
+ * Capture telemetry after the terminal steps. Non-gating: no step outcome,
+ * summary, or command verdict changes; every failure is disclosed in counts and
+ * warning reasons, and a failed capture writes no zero-valued record.
+ */
+const captureTelemetry = async (
+  input: CloseoutRunInput,
+  steps: readonly CloseoutStep[],
+): Promise<CloseoutTelemetryDisclosure | undefined> => {
+  if (input.telemetry === undefined) return undefined;
+  void steps;
+  const runId = input.runId ?? "closeout-run";
+  const failed = (field: string): CloseoutTelemetryDisclosure => {
+    const disclosure: CloseoutTelemetryDisclosure = {
+      captured: 0,
+      degraded: 0,
+      failed: 1,
+      warnings: [{ reason: "session-capture-failed", field }],
+    };
+    try {
+      input.telemetry?.append({
+        workItemRef: input.plan.workItemRef,
+        runId,
+        capturedAt: input.timestamp,
+        records: [],
+        agents: [],
+        models: [],
+        failedSessions: [{ sessionId: null, reason: "session-capture-failed" }],
+        warnings: disclosure.warnings,
+      });
+    } catch {
+      // The disclosure remains in the bounded output even if the ledger write fails.
+    }
+    return disclosure;
+  };
+  try {
+    const captured = await input.telemetry.extract({
+      workItemRef: input.plan.workItemRef,
+      runId,
+    });
+    if (!captured.ok) return failed(captured.error.code);
+    const appended = input.telemetry.append(captured.value);
+    const degraded = captured.value.records.filter((record) => record.warnings.length > 0).length;
+    const warnings = [
+      ...captured.value.warnings,
+      ...(appended.ok
+        ? []
+        : [{ reason: "session-capture-failed" as const, field: appended.error.code }]),
+    ];
+    return {
+      captured: captured.value.records.length,
+      degraded,
+      failed: captured.value.failedSessions.length + (appended.ok ? 0 : 1),
+      warnings,
+      ...(captured.value.sessionTruncation === undefined
+        ? {}
+        : { sessionTruncation: captured.value.sessionTruncation }),
+    };
+  } catch {
+    return failed("capture-runtime");
+  }
 };
 
 /**
@@ -1102,6 +1181,7 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
   if (stateFailure !== undefined) {
     return { ok: false, error: stateFailure };
   }
+  const telemetryCapture = await captureTelemetry(input, steps);
   const data: CloseoutData = {
     schemaId: CLOSEOUT_SCHEMA_ID,
     command: "closeout",
@@ -1114,6 +1194,7 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
     steps,
     summary: summarizeCloseout(steps),
     ledgerKey: `closeout.operations:${input.plan.workItemRef}`,
+    ...(telemetryCapture === undefined ? {} : { telemetryCapture }),
   };
   if (steps.some((step) => step.outcome === "failed")) {
     return {

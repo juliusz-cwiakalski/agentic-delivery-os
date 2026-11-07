@@ -6,13 +6,15 @@ created: 2026-10-30
 last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os
-summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the additive optional DeliveryRequest.headSha merged-head identity, the four optional verify-gates facts, and resolve-delivery-thread operation, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, the dedicated git seam covering branch, checkout, precise staging, and commit-object creation, the declared inference network edge behind the commit primitive's transport seam, the bounded GitHub deploy-job trace read behind the existing ports, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
+summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the additive HarnessInstance/HarnessSession/execution-environment port family, the additive optional DeliveryRequest.headSha merged-head identity, the four optional verify-gates facts, and resolve-delivery-thread operation, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, the dedicated git seam covering branch, checkout, precise staging, and commit-object creation, the declared inference network edge behind the commit primitive's transport seam, the bounded GitHub deploy-job trace read behind the existing ports, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227", "GH-231", "GH-225"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0010", "TDR-0005", "TDR-0008"]
+  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227", "GH-231", "GH-225", "GH-233"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "ADR-0010", "TDR-0005", "TDR-0008"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
     - "packages/core/src/contracts/session.ts"
+    - "packages/core/src/contracts/harness.ts"
+    - "packages/core/src/contracts/harness-telemetry.ts"
 ---
 
 # Feature: Adapter Ports, Credential Resolution, and Embedded Metadata
@@ -51,7 +53,7 @@ The surrounding workspace is described in [Monorepo Scaffold and Toolchain](feat
 
 ### Primitive port set
 
-The v1 port set is bounded to the catalogue's adapter-interaction rows typed at M0. No other catalogue primitive is typed here; harness, queue/scheduling, state/audit, and non-adapter context primitives belong to their owning stories.
+The v1 port set is bounded to the catalogue's adapter-interaction rows typed at M0. The harness port family joins the delivered set as an additive layer: `HarnessInstance` (configured kind, observed version, capability declaration), `HarnessSession` (spawn, deliver, resume/steer, collect, classify, harness-agnostic liveness, and bounded session listing), and `HarnessExecutionEnvironmentDescriptor` (host execution, work directory, and the declared deny-by-default environment allowlist of names and credential references only). These are specified in [Harness Adapters](feature-harness-adapters.md); queue/scheduling, state/audit, and non-adapter context primitives belong to their owning stories. Harnesses use the same capability/gap posture as providers: an unlisted capability is a declared gap, never implied parity.
 
 | Port | Contract |
 |------|----------|
@@ -359,3 +361,4 @@ See also: [Session Database Administration](feature-session-database-admin.md), 
 
 ## Related
 - [Verify Gates](feature-verify-gates.md) consumes the optional `DeliveryRequest` gate facts; absence is unknown.
+- [Harness Adapters](feature-harness-adapters.md) joins the port family with `HarnessInstance`, `HarnessSession`, and the execution-environment descriptor; [ADR-0008](../../decisions/ADR-0008-harness-adapter-contract.md) is the binding contract.

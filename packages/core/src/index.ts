@@ -35,6 +35,8 @@ export {
   type DefaultPositionManifest,
   defaultsFor,
   generateConfigSchema,
+  type HarnessEnvironmentSetting,
+  type HarnessSettings,
   originLabel,
   PRODUCTION_CATALOG,
   PRODUCTION_DEFAULTS,
@@ -42,6 +44,7 @@ export {
   type ResolveConfigInput,
   type ResolvedConfig,
   resolveConfig,
+  resolveHarnessSettings,
   serializeProductionSchema,
 } from "./config/index.js";
 export {

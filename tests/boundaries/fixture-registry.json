@@ -258,6 +258,11 @@
       "path": "packages/adapters/src/registry/probe.ts"
     },
     {
+      "id": "runtime-child-process-adapter-registry",
+      "tc": "TC-HARN-014",
+      "path": "packages/adapters/src/registry/probe.ts"
+    },
+    {
       "id": "runtime-node-fs-adapter-io",
       "tc": "TC-SCAFFOLD-014",
       "path": "packages/adapters/src/io/probe.ts"

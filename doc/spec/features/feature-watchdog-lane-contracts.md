@@ -174,3 +174,7 @@ The domain tier `packages/core/src/domain/watchdog.ts` is runtime-neutral and ex
 See also: [Result Contract and Error Table](feature-result-contract.md), [State Layer](feature-state-layer.md), [Branding Seam and Working Name](feature-branding-seam.md), [Closeout Transaction](feature-closeout.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 **Change record:** `doc/changes/2026-11/2026-11-05--GH-221--watchdog-lane-contracts/`.
+
+## Related
+
+- [Harness Adapters](feature-harness-adapters.md) provides the adapter-level liveness signal surface (session traffic, worktree activity, process) with declared absences; the watchdog stays zero-source and economics remain M1-S15.

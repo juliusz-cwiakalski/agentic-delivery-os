@@ -1,0 +1,265 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-233
+branch: feat/GH-233/harness-adapters
+status: PASS
+summary: >-
+  Re-review after remediation phase 9 (commit 8194eb11), the GH-232 merge union
+  (10a200bc), the doc re-reconciliation (3ae43274), and the decision records
+  (82a4311f). All six remediated code findings are verified closed at their
+  original sites by independent probing, not by trusting the remediation diff:
+  the Claude declaration is truthful about deliver (supportedOperations excludes
+  it, the gap record and deliver()'s machine-readable gap both name "deliver",
+  with structure rows, a zero-invocation behaviour case, and the feature-doc gap
+  list); the opencode extractor emits one record per (session, agent, model)
+  group with an explicit group-cap truncation warning and per-group tool
+  attribution, and the state append identity is additively widened to (run,
+  session, agent, model) — backward-compatible because payloads always carried
+  agent/model; the three formerly vacuous mutant families now route through the
+  shared callable checkers in tests/fixtures/harness/neutrality-scans.ts and can
+  genuinely fail; the node:child_process allowlist is an exact observed==declared
+  equality over the whole packages tree (independently re-derived by grep: 10
+  sites, exact match) with a new boundaries negative-fixture case; the duplicated
+  optional-field-absent warnings are gone with a no-input-column drift fixture
+  pinning exactly-one; the demo fixture is derived from the shipped declaration.
+  F-2 is closed via the PM-decided vehicle (test plan v1.2 §4.2 binding oracle,
+  TDR-0010 Proposed — correct pending-acceptance posture, feature-doc
+  disambiguation semantics), F-7's deferral note and F-12's plan audit note are
+  in place, and F-8/F-9/F-11 remain correctly scoped as deferred with no
+  regression masking (their files are untouched by the remediation and the
+  merge). The GH-232 merge union is clean: no GH-233 harness file was altered by
+  the merge, the error table carries both the harness.* and retro.* families
+  (error-table-sync 83/83 green, re-run during this review), and the
+  ubiquitous-language row keeps the delivered-truth harness wording. Independent
+  re-execution during this review: structure+mutants 39 pass, behaviour incl.
+  closeout 46 pass, boundaries 140 pass, error-table-sync OK (0 fail). Three new
+  low findings are cosmetic artifact-consistency residue (a stale plan-header
+  version label, the change-spec F-2 sentence left unamended, duplicate YAML
+  keys in one pm-notes note) plus one informational test-isolation note; none
+  block. No remediation phase required — fold the three one-line doc fixes into
+  the PR or the next artifact touch.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 3
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-13
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-233--harness-adapters/chg-GH-233-plan.yaml:7
+    message: >-
+      The plan header's Sources block still cites "Test plan:
+      ./chg-GH-233-test-plan.md (v1.1; 33 TCs...)" while the test plan is at
+      v1.2. The same header's remediation note (lines 89-91) explicitly states
+      the header's test-plan reference "is refreshed by that reopen, not here" —
+      but the v1.2 reopen and the phase-9 append landed in the same commit
+      (f554b5da), so the expected refresh never happened. This is the same
+      deviation-not-propagated-to-artifact class the iteration-1 retro recorded,
+      though here it is only a version label: the TC count is still correct and
+      the binding oracle itself (the test plan) is the corrected artifact.
+    suggestion: >-
+      One-line edit: v1.1 -> v1.2 in the plan header Sources block (optionally
+      noting the §4.2 reopen), foldable into any pre-PR artifact touch; no coder
+      phase needed.
+    suppressed: false
+  - id: F-14
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-06--GH-233--harness-adapters/chg-GH-233-spec.md:122
+    message: >-
+      The change spec's F-2 capability text still reads "emits the
+      delivery-result taxonomy's dispatch-session-class tokens identically
+      regardless of the executing harness (DEC-10)" — one of the three
+      contradicting artifacts named in iteration-1 F-2. The remediation reopened
+      only the test plan (the PM's recorded decision, matching iteration-1's
+      suggestion), so the delivered projection is now correctly pinned by test
+      plan v1.2 §4.2, the feature doc's disambiguation semantics, and TDR-0010
+      — but the change spec's own sentence remains contradicted by delivery:
+      finished/partial/failed are verify-class shared tokens, and only
+      refused/timed-out reuse dispatch-session tokens. AC-F2-1 (identical
+      classification) holds; the binding oracles are consistent; this is
+      residual narrative drift in a historical change artifact, not an unmet AC.
+    suggestion: >-
+      Either append a one-row document-history note recording that §F-2's
+      token-provenance wording is superseded by test plan v1.2 §4.2 + TDR-0010,
+      or fold the wording fix into the next spec touch; no reopen required.
+    suppressed: false
+  - id: F-15
+    severity: low
+    confidence: high
+    category: artifact-integrity
+    location: doc/changes/2026-11/2026-11-06--GH-233--harness-adapters/chg-GH-233-pm-notes.yaml:26
+    message: >-
+      The "Review iteration 1: FAIL" note item carries duplicate mapping keys —
+      `type: "info"` and `date: "2026-11-07"` appear twice (lines 24-25 and
+      26-27) inside the same YAML mapping, introduced by the post-remediation
+      pm-notes edit. PyYAML tolerates it with last-wins (values are identical,
+      so semantics are unaffected), but duplicate keys violate the YAML spec and
+      strict consumers (yaml.v3-based tooling, several validators) reject the
+      document outright, making the change folder a latent parse hazard for
+      future automation.
+    suggestion: >-
+      Delete the duplicated two lines (26-27). Verified no current repo tooling
+      breaks today (notes parse, 18 items), so this is a tidy-up foldable into
+      any artifact touch before the PR.
+    suppressed: false
+  - id: F-16
+    severity: info
+    confidence: medium
+    category: test-efficacy
+    location: tests/checks/harness-mutants.test.ts:30
+    message: >-
+      Pre-existing (unchanged by remediation, newly load-bearing): loadMutant
+      writes mutant files in place under packages/core/src/** and
+      packages/adapters/src/harness/**, and those files now deliberately contain
+      violations the shared checkers must return. bun runs test files in
+      parallel workers, so a live scan suite (e.g. harness-neutrality's
+      core-wide harness-literal sweep) racing a mutant file's brief existence
+      could fail spuriously. Exposure is unchanged from iteration 1 (the same
+      files with the same content were written then), the window is
+      milliseconds, and the aggregate gate has passed repeatedly.
+    suggestion: >-
+      If ever hardened: write mutants into a temp mirror of the scanned tree, or
+      serialize the mutant suite and the scan suites behind a shared lock. No
+      action required for this change.
+    suppressed: false
+closed_findings:
+  - ref: F-1
+    verified_at:
+      - packages/adapters/src/harness/claude.ts:30
+      - packages/adapters/src/harness/claude.ts:34
+      - packages/adapters/src/harness/claude.ts:197
+      - tests/structure/harness-contract.test.ts:211
+      - tests/behaviour/harness-claude-session.test.ts:158
+      - doc/spec/features/feature-harness-adapters.md:134
+    note: >-
+      supportedOperations is ["spawn","collect"]; the deliver gap record and
+      deliver()'s gap both name "deliver"; TC-HARN-002 rows + zero-invocation
+      behaviour case + feature-doc gap list all present; re-run green.
+  - ref: F-2
+    verified_at:
+      - doc/changes/2026-11/2026-11-06--GH-233--harness-adapters/chg-GH-233-test-plan.md:186
+      - doc/changes/2026-11/2026-11-06--GH-233--harness-adapters/chg-GH-233-test-plan.md:1473
+      - doc/decisions/TDR-0010-dispatch-session-classification-token-projection.md:1
+      - doc/spec/features/feature-harness-adapters.md:96
+    note: >-
+      Closed via the PM-decided vehicle: test plan v1.2 §4.2 pins the six-row
+      projection with the outcome-required disambiguation and spawn-refused
+      semantics (revision log 1.2 records the reopen per the plan-header rule);
+      TDR-0010 carries the taxonomy-owner ratification (Proposed — correct
+      pending-PR-acceptance posture, not flagged); the feature doc documents the
+      lossy token + outcome-field requirement. Residual spec wording drift
+      recorded as F-14 (low).
+  - ref: F-3
+    verified_at:
+      - packages/adapters/src/harness/telemetry-opencode.ts:206
+      - packages/adapters/src/harness/telemetry-opencode.ts:224
+      - packages/adapters/src/harness/telemetry-opencode.ts:286
+      - packages/core/src/state/harness-telemetry.ts:44
+      - tests/fixtures/harness/opencode-store/build.ts:215
+      - tests/behaviour/harness-telemetry-opencode.test.ts:197
+      - tests/behaviour/harness-closeout-idempotency.test.ts:114
+    note: >-
+      One record per (session, agent, model) group with a 16-group cap, explicit
+      truncation warning (omitted + cap counts), per-group tool attribution, and
+      the state append identity widened additively to (run, session, agent,
+      model) — old records still match since payloads always carried agent/model.
+      Two-group fixture + group-cap fixture + behaviour/shape/drift/closeout pins
+      all present; re-run green.
+  - ref: F-4
+    verified_at:
+      - tests/fixtures/harness/neutrality-scans.ts:43
+      - tests/checks/harness-mutants.test.ts:136
+      - tests/checks/harness-mutants.test.ts:151
+      - tests/checks/harness-mutants.test.ts:499
+      - tests/structure/harness-neutrality.test.ts:141
+    note: >-
+      The ambient-read, adapter-classify, and harness-literal mutants are now
+      returned by the shared callable checkers by name (file, file+token, file);
+      the self-text rows and the synthetic inline mirror row are deleted; all 14
+      families can fail; battery re-run green (39 pass across structure+checks).
+  - ref: F-5
+    verified_at:
+      - tests/structure/harness-imports.test.ts:26
+      - tests/structure/harness-imports.test.ts:65
+      - tests/boundaries/fixtures/cases.ts:528
+    note: >-
+      Exact 10-site allowlist with observed==declared equality over the whole
+      packages tree; independently re-derived the observed set by grep (exact
+      match, dist excluded by the walker); stale comment fixed; the
+      runtime-child-process-adapter-registry negative fixture exists and the
+      boundaries suite passes 140/140.
+  - ref: F-6
+    verified_at:
+      - packages/adapters/src/harness/telemetry-opencode.ts:252
+      - tests/fixtures/harness/opencode-store/build.ts:23
+      - tests/behaviour/harness-telemetry-drift.test.ts:124
+    note: >-
+      The duplicate direct optional-field-absent pushes are removed (tokenFor is
+      the single emitter); the no-input-column fixture variant and the
+      exactly-one-naming-warning drift row pin it; re-run green.
+  - ref: F-7
+    verified_at:
+      - doc/spec/features/feature-harness-adapters.md:186
+      - packages/cli/src/edge.ts:458
+    note: >-
+      The feature doc's closeout section now states explicitly that no
+      production composer injects the capability until GH-240 (M1-S12) and that
+      real closeouts capture no harness telemetry until then; the CLI edge still
+      composes commit telemetry only (verified unchanged post-merge).
+  - ref: F-10
+    verified_at:
+      - tests/structure/harness-contract.test.ts:43
+    note: claudeDeclaration() is derived from CLAUDE_CAPABILITIES (spread + clone), so the drift demos cannot diverge from the shipped declaration.
+  - ref: F-12
+    verified_at:
+      - doc/changes/2026-11/2026-11-06--GH-233--harness-adapters/chg-GH-233-plan.yaml:97
+    note: The phase-6 unused scope entry audit note is recorded in the plan header alongside the scope-additions record, as tasked by 9.7.
+  - ref: F-8/F-9/F-11
+    verified_at:
+      - packages/adapters/src/harness/telemetry-claude.ts:1
+      - packages/adapters/src/host/index.ts:1
+      - packages/adapters/src/harness/telemetry-opencode.ts:146
+      - doc/changes/2026-11/2026-11-06--GH-233--harness-adapters/chg-GH-233-pm-notes.yaml:23
+    note: >-
+      Deferrals intact and correctly scoped: telemetry-claude.ts and
+      host/index.ts are untouched by both the remediation commit and the GH-232
+      merge (verified via git diff of the merge range — no harness-file delta);
+      the orphan scan remains bounded (LIMIT maxSessions+1) and disclosed;
+      deferral reasons recorded in pm-notes. No regression masking: the
+      per-group change did not alter the deferred code paths.
+merge_and_artifact_audit:
+  gh232_merge: >-
+    Clean additive union: conflict files (error table, error-table tests,
+    inventories, overview/spec docs) carry both harness.* and retro.* rows
+    (error-table-sync 83/83 green, re-run during this review); no GH-233 harness
+    source file was altered by the merge; the ubiquitous-language harness row
+    keeps the delivered-truth port-boundary wording; pre-existing moving-base
+    ci-checks failure resolved (aggregate 4334 pass / 0 fail recorded at
+    remediation HEAD).
+  decision_records: >-
+    ADR-0008 Accepted with ratification evidence (PR #207, b31ec475,
+    2026-10-31) and record/index/register statuses consistent; TDR-0010 added as
+    a TDR-0005 addendum with Proposed status (correct pending-PR-acceptance
+    posture — not a defect), consumer bindings, and revisit triggers.
+  artifacts: >-
+    Spec v1.1 / test plan v1.2 (revision log 1.2) / plan with phase 9 (tasks
+    9.1-9.7 all evidenced in commit 8194eb11 + doc commits; pm-notes carries
+    phase id + commit hash + gate results for the completion evidence) /
+    pm-notes / feature docs mutually consistent on the delivered truth. Residual
+    inconsistencies are F-13 (plan header version label), F-14 (spec F-2
+    wording), F-15 (pm-notes duplicate keys) — all low, all one-line fixes.
+reviewed_at: 2026-11-07T01:07:29Z
+next_step: >-
+  PROCEED — iteration-1 remediation verified closed; no remediation phase
+  appended (no code action required). Fold the three one-line artifact fixes
+  (F-13 plan header v1.1->v1.2, F-14 spec F-2 supersession note, F-15 delete
+  duplicate pm-notes keys) into the pre-PR artifact touch, then advance to
+  quality gates and PR creation.

@@ -6,7 +6,7 @@ last_updated: 2026-11-07
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-232, GH-251, GH-243]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -126,6 +126,7 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 | [Brief](features/feature-brief.md#non-functional-requirements) | Pure cap-sized projection within 50 ms; the same three outbound reads, park fold, and config resolve as one status invocation; no brief-specific read. | `tests/behaviour/brief-performance.test.ts` samples projection latency and injected read counts. |
 | [Queue-ready](features/feature-queue-ready.md#non-functional-requirements) | Pure evaluation/ranking/rendering contract within 50 ms; same three outbound reads, one park fold/config/local-context read. | `tests/behaviour/queue-ready-performance.test.ts` samples evaluator latency and injected read counts; independent renderer timing not established here. |
 | [Board](features/feature-owner-gate-sla.md#non-functional-requirements) | Pure evaluation/ranking/rendering within 50 ms; one bounded tracker read, at most one decision-history read, and one fence plus one append per newly defaulted gate. | `tests/behaviour/board-performance.test.ts`, `board-read-cost.test.ts`. |
+| [Harness Adapters](features/feature-harness-adapters.md) | Read-only harness-store extraction: query-only pragma before the first read, bounded indexed queries with no message/part scans, capped sessions, per-session agent/model groups, tools, agents, and models with explicit marks or warnings, machine payload at most 65 536 UTF-8 bytes, human disclosure at most 4 096 bytes / 24 lines; identical injected facts yield byte-identical output. | `tests/behaviour/harness-telemetry-*.test.ts`, `harness-output-bounds.test.ts`, `tests/checks/harness-determinism.test.ts` pin the read budget and byte bounds. |
 | [Doctor](features/feature-doctor.md#non-functional-requirements) | Pure cap-sized aggregation within 50 ms; at most two single-page network reads (tracker and CI), one configuration resolve, one shared verified ledger read; no pagination, retry, or write. | `tests/behaviour/doctor-performance.test.ts` samples the median of 21 runs after warm-ups; `doctor-network-posture.test.ts` pins the read budget and shared-source read-once posture. |
 | [Merge and verify deploy](features/feature-merge-verify-deploy.md#invariants) | Pure freshness, waiver, and deploy-verdict evaluation; `merge` performs one verification read, one work-item read, one check-run page, one request-detail read, and only the declared git mutations; `verify deploy` performs one bounded trace read; the freshness bound defaults to 1800 s with at-bound stale. | `tests/behaviour/merge-probe.test.ts`, `merge-determinism.test.ts`, `verify-deploy-read-budget.test.ts`, `merge-bounds.test.ts`, `verify-deploy-bounds.test.ts`. |
 | [Retro](features/feature-retro-pipeline.md#non-functional-requirements) | Pure deterministic collect/report/export folds; the audit collector reads at limit 1000; collect ≤ 30 s, report ≤ 10 s, and export ≤ 10 s over a 10,000-record sidecar with full chain verification; CI gates bounded work instead of wall clock (one chain walk per read, one batched append per collection run), and the 10000 ms read / 30000 ms append seam constants are seam data rather than command budgets; export is capped at 1000 records with in-band truncation. | `tests/behaviour/retro-performance.test.ts`, `retro-collect.test.ts`, `retro-export.test.ts`. |
@@ -183,6 +184,15 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 - [Result](features/feature-result-contract.md) redacts edge-registered non-empty
   secret values through `packages/cli/src/output/serialize.ts`; unregistered or
   transformed secret material is not a general detection guarantee.
+- [Harness](features/feature-harness-adapters.md) builds the spawned child
+  environment from the declared allowlist alone: undeclared parent variables are
+  absent, credential references resolve through the credential port at use time,
+  and an unresolvable reference fails closed naming the reference. The spawn path
+  adds no ambient-environment read and no secret-read allowlist entry;
+  `harness.spawn.variable-missing` classifies a declared-but-absent variable and a
+  credential-port failure keeps `config.credential.missing` unchanged. The host
+  runner is the harness seam's one child-process site and a pinned entry in the
+  exact repository-wide `node:child_process` allowlist.
 - The [retro pipeline](features/feature-retro-pipeline.md) passes evidence,
   findings, reports, and export bundles through the same redaction chokepoint and
   keeps the sidecar chaining key out of records, output, configuration, and lane
@@ -191,7 +201,12 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 - Evidence/test: config restrictions/parser suites, result goldens, credential and
   `tests/checks/secret-read-boundary.test.ts` negative controls;
   `tests/behaviour/config-parser.test.ts` and
-  `tests/behaviour/pm-notes-source-limits.test.ts` pin the source-size boundary.
+  `tests/behaviour/pm-notes-source-limits.test.ts` pin the source-size boundary;
+  `tests/behaviour/harness-spawn-env.test.ts` and
+  `harness-spawn-credential.test.ts` pin the deny-by-default spawn environment and
+  use-time credential resolution; `tests/structure/harness-imports.test.ts` pins
+  the exact `node:child_process` site set and the non-allowlisted-path boundary
+  control.
 - Bounded input: the YAML parser limits nodes/depth/aliases to 2048/64/100 and
   enforces its 1048576-byte source limit as true UTF-8 byte length at the YAML
   check site and both pm-notes parser check sites, fail-closed and with the
@@ -233,8 +248,15 @@ over local stdio; the typed OpenCode entry remains a placeholder.
   coverage, exact-URL mock replay, explicit skips, and bounded artifacts (262144
   bytes). Mock conformance executes supported production writes; at least one
   executing step per adapter is not all-flow or live write coverage.
+- [Harness conformance](features/feature-harness-adapters.md) registers exactly the
+  two shipped harnesses, each covering the six-scenario classification floor
+  through the one shared classifier plus a liveness read over injected facts; the
+  coverage meta-check fails an unregistered closed-vocabulary kind or a missing
+  scenario.
 - Evidence/test: `tests/conformance/mock-conformance.test.ts`,
-  `broken-adapter-control.test.ts`, `tests/structure/conformance-coverage.test.ts`.
+  `broken-adapter-control.test.ts`, `tests/structure/conformance-coverage.test.ts`,
+  `tests/conformance/harness-classification.test.ts`,
+  `harness-liveness.test.ts`, `tests/structure/harness-neutrality.test.ts`.
 - Live v1 is GET-only, zero mutations/created artifacts, and scheduled evidence,
   not a merge gate. Not-configured exit zero is not a successful configured run.
 - Owner/trigger: adapter engineering/reviewer; capability or provider-shape change

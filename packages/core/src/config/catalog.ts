@@ -147,6 +147,58 @@ const MERGE_BRANCH = {
 } as const satisfies CatalogField;
 
 /**
+ * The typed `harness` branch (GH-233 F-6, DM-3, DEC-8).
+ *
+ * Selection, per-harness store locations, and the declared environment
+ * allowlist are configuration data. The allowlist carries variable names and
+ * credential references only; a literal value beside a credential reference is
+ * rejected with the existing secret-forbidden identity.
+ */
+const HARNESS_ENVIRONMENT_ENTRY = {
+  type: "object",
+  required: true,
+  fields: {
+    name: { type: "string", required: true },
+    credentialRef: { type: "string" },
+    value: { type: "string" },
+  },
+} as const satisfies CatalogField;
+
+const HARNESS_BRANCH = {
+  type: "object",
+  fields: {
+    kind: { type: "string" },
+    execution: {
+      type: "object",
+      fields: {
+        kind: { type: "string" },
+      },
+    },
+    stores: {
+      type: "object",
+      fields: {
+        opencode: {
+          type: "object",
+          fields: {
+            databasePath: { type: "string" },
+          },
+        },
+        "claude-code": {
+          type: "object",
+          fields: {
+            sessionDirectory: { type: "string" },
+          },
+        },
+      },
+    },
+    environment: {
+      type: "array",
+      items: HARNESS_ENVIRONMENT_ENTRY,
+    },
+  },
+} as const satisfies CatalogField;
+
+/**
  * The production catalog. `provider` is a typed branch (GH-182 F-1); its
  * dynamic-name maps use the additive record field kind (PD-F), while every
  * fixed branch keeps exact unknown-key discipline.
@@ -168,6 +220,7 @@ export const PRODUCTION_CATALOG = {
     },
   },
   merge: MERGE_BRANCH,
+  harness: HARNESS_BRANCH,
 } as const satisfies ConfigCatalog;
 
 export const fieldAt = (

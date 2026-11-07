@@ -1,0 +1,7 @@
+{"type":"session","sessionId":"cc_root","parentId":null,"workItemRef":"GH-233","harnessVersion":"1.0.0","agent":"agent-a","model":"model-a"}
+{"type":"usage","sessionId":"cc_root","agent":"agent-a","model":"model-a","tool":"edit","cost":0.5,"input_tokens":10,"output_tokens":5,"reasoning_tokens":1,"cache_read_input_tokens":2,"cache_creation_input_tokens":1,"content":"PRIVACY-CANARY-transcript-body-3c9"}
+{"type":"usage","sessionId":"cc_root","agent":"agent-a","model":"model-a","tool":"edit","cost":0.25,"input_tokens":5,"output_tokens":3,"reasoning_tokens":1,"cache_read_input_tokens":1,"cache_creation_input_tokens":0,"content":"PRIVACY-CANARY-transcript-body-3c9"}
+{"type":"session","sessionId":"cc_child_a","parentId":"cc_root","workItemRef":"GH-233","harnessVersion":"1.0.0","agent":"agent-b","model":"model-b"}
+{"type":"usage","sessionId":"cc_child_a","agent":"agent-b","model":"model-b","tool":"bash","cost":0.4,"input_tokens":6,"output_tokens":3,"reasoning_tokens":1,"cache_read_input_tokens":2,"cache_creation_input_tokens":1,"content":"PRIVACY-CANARY-transcript-body-3c9"}
+{"type":"session","sessionId":"cc_child_b","parentId":"cc_root","workItemRef":"GH-233","harnessVersion":"1.0.0","agent":"agent-a","model":"model-b"}
+{"type":"usage","sessionId":"cc_child_b","agent":"agent-a","model":"model-b","tool":"edit","cost":0.1,"input_tokens":4,"output_tokens":2,"reasoning_tokens":1,"cache_read_input_tokens":1,"cache_creation_input_tokens":0,"content":"PRIVACY-CANARY-transcript-body-3c9"}

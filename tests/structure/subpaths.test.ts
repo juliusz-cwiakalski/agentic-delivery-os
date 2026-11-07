@@ -18,6 +18,7 @@ const ADAPTER_SUBPATHS = [
   "./repo",
   "./file",
   "./host",
+  "./harness",
   "./session",
   "./legacy",
   "./credentials",

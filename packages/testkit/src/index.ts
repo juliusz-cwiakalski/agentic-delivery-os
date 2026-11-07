@@ -3,7 +3,6 @@
  * Re-exports the envelope conformance validator for test suites.
  */
 
-export { CONFORMANCE_ADAPTERS } from "./conformance/adapters.js";
 export {
   createTempGitRepository,
   type RepoCommandResult,
@@ -20,6 +19,7 @@ export {
   type ScriptedTransportStep,
   transportAvailability,
 } from "./commit/transport-fakes.js";
+export { CONFORMANCE_ADAPTERS } from "./conformance/adapters.js";
 export {
   CONFORMANCE_FLOW_STATUSES,
   CONFORMANCE_LIMITS,
@@ -40,6 +40,15 @@ export {
   structuralCoverageViolations,
 } from "./conformance/coverage.js";
 export { CONFORMANCE_FLOWS, findFlow } from "./conformance/flows.js";
+export {
+  HARNESS_CONFORMANCE_REGISTRY,
+  HARNESS_CONFORMANCE_SCENARIOS,
+  type HarnessConformanceDeps,
+  type HarnessConformanceIo,
+  type HarnessConformanceRegistration,
+  type HarnessConformanceScenarioId,
+  harnessConformanceViolations,
+} from "./conformance/harness.js";
 export type { MockTenantTransport } from "./conformance/mock-tenant.js";
 export { createMockTenantTransport, decodeMockTenant } from "./conformance/mock-tenant.js";
 export { runConformance } from "./conformance/runner.js";

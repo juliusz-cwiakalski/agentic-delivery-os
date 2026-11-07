@@ -335,6 +335,7 @@ describe("TC-DB-002 contract and domain tier discipline", () => {
         "./inference",
         "./github",
         "./gitlab",
+        "./harness",
         "./host",
         "./jira",
         "./legacy",

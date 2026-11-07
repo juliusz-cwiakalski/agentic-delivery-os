@@ -6,9 +6,9 @@ created: 2026-11-01
 last_updated: 2026-11-06
 owners: ["engineering"]
 service: delivery-os provider adapters
-summary: "The provider-agnostic adapter conformance suite: one three-flow registry over the eight closed adapter operations, capability-gated execution with explicit declared-gap skips, production write execution in the mock tier, deterministic exact-URL mock tenants, structural and runtime coverage gates, the delivery.conformance.v1 artifact, and a scheduled read-only live evidence tier."
+summary: "The provider-agnostic adapter conformance suite: one three-flow registry over the eight closed adapter operations, capability-gated execution with explicit declared-gap skips, production write execution in the mock tier, deterministic exact-URL mock tenants, structural and runtime coverage gates, the delivery.conformance.v1 artifact, a scheduled read-only live evidence tier, and the harness conformance registry with its six-scenario classification floor and liveness read."
 links:
-  related_changes: ["GH-189", "GH-183", "GH-231", "GH-225"]
+  related_changes: ["GH-189", "GH-183", "GH-231", "GH-225", "GH-233"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0008"]
 ---
 
@@ -35,6 +35,14 @@ Together the registry represents all eight closed adapter operations. Merge and 
 ## Adapter registry
 
 The conformance adapter registry is the sole participant list. It registers exactly the three shipped provider contracts — GitHub, GitLab, and Jira — and each registration binds the imported contract, the addressing the flows need, and a client builder over the tenant instance, credential port, and injected transport. Placeholder `azure`/`ci` subpaths and non-provider I/O adapters are not registered. A structural scan of exported `*_ADAPTER_CONTRACT` bindings under `packages/adapters/src` fails when a provider contract has no registration or a registration names no declared contract.
+
+## Harness conformance registry
+
+The harness conformance registry lives beside the provider registry in the testkit package (`packages/testkit/src/conformance/harness.ts`). `HARNESS_CONFORMANCE_REGISTRY` is the sole participant list for harness flows and registers exactly the two shipped harness kinds — `opencode` and `claude-code`. Each registration carries the adapter's capability declaration, a spawn/collect builder over injected harness I/O and injected seams (environment builder, classifier, liveness assembler, clock, timeout), and its supported scenario ids.
+
+`HARNESS_CONFORMANCE_SCENARIOS` is the fixed six-scenario classification floor: `completed`, `tool-failure`, `premature-end`, `harness-failure`, `spawn-refusal`, and `timeout`. Classification runs through the one shared harness-neutral classifier, so the same injected scenario yields the same delivery-result token for either harness. The registry imports the delivery-result token type from core contracts and never re-declares the taxonomy. A coverage meta-check fails a registered harness with a missing scenario, a duplicate registration, an unregistered closed-vocabulary kind, or a kind that is registered but absent from the vocabulary. A liveness read over injected facts proves the harness-agnostic liveness shape and its declared absences without adding a runtime signal source.
+
+The provider registry remains the sole participant list for provider conformance flows; the harness registry is a separate registry for the harness port family. The harness contract is specified in [Harness Adapters](feature-harness-adapters.md).
 
 ## Capability gating
 
@@ -97,7 +105,7 @@ The conformance suite adds no secret-read allowlist entry. Testkit source import
 
 The mock suite rides `pnpm test` in the existing TypeScript jobs; no workflow job is added to the pinned CI topology. Structure tests cover the registry, adapter binding, declaration-only provider-contract scan, and structural coverage. Conformance tests cover the per-provider matrices, runtime coverage, determinism, exact-URL replay, the broken-adapter control, the artifact contract, and the live entrypoint. The workflow contract test rejects every drift, including trigger, permission, pin, secret-scope, upload-path, and retention mutations.
 
-The evidence lives in `tests/conformance/mock-conformance.test.ts`, `tests/conformance/broken-adapter-control.test.ts`, `tests/conformance/artifact.test.ts`, `tests/conformance/live/`, `tests/structure/conformance-coverage.test.ts`, and `tests/checks/conformance-workflow.test.ts`. The broken-adapter control wraps the production client, corrupts one normalized view, and must fail naming provider, flow, step, operation, and assertion while the unmodified client passes the same flow.
+The evidence lives in `tests/conformance/mock-conformance.test.ts`, `tests/conformance/broken-adapter-control.test.ts`, `tests/conformance/artifact.test.ts`, `tests/conformance/harness-classification.test.ts`, `tests/conformance/harness-liveness.test.ts`, `tests/conformance/live/`, `tests/structure/conformance-coverage.test.ts`, and `tests/checks/conformance-workflow.test.ts`. The broken-adapter control wraps the production client, corrupts one normalized view, and must fail naming provider, flow, step, operation, and assertion while the unmodified client passes the same flow.
 
 ## Related documentation
 
@@ -108,3 +116,4 @@ The evidence lives in `tests/conformance/mock-conformance.test.ts`, `tests/confo
 - [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md)
 - [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md)
 - [TDR-0008](../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md)
+- [Harness Adapters](feature-harness-adapters.md) adds the harness conformance registry beside the provider registry: exactly the two shipped harnesses, each covering the six-scenario classification floor and a liveness read over injected facts.

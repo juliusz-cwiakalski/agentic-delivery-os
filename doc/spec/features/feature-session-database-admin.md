@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The typed `db` command-family session-database administration surface: four closed subcommands (`size`, `list`, `prune`, `reboot`) over the opencode SQLite session store, a read-only `SessionStorePort` for size/list and a mutating `SessionAdminPort` for prune/reboot, dry-run-by-default mutation, the 15-minute activity-based live window, the 30-day default prune threshold, leaf-only candidate selection with a pre-delete TOCTOU re-check, official `opencode session delete` per candidate, one bounded WAL checkpoint on reboot, the `message`/`part` current store pin with legacy-empty `session_message`, the `db` error kind and four rows, bounded metadata-only output, and the ADR-0003 C-11 owner merge gate."
 links:
-  related_changes: ["GH-180"]
+  related_changes: ["GH-180", "GH-233"]
   related_decisions: ["ADR-0003", "ADR-0010"]
   contracts:
     - "packages/core/src/contracts/session.ts"
@@ -348,7 +348,7 @@ The envelope's `runId` and `timing`, the per-run counts, the explicit mode, the 
 - **Depends on** the result contract and error table for the envelope, classification chain, projection, redaction chokepoint, and binding documented sync.
 - **Depends on** the CLI command-definition and composition precedent and the existing `humanText` hook.
 - **Depends on** the opencode CLI surface `opencode db path`, `opencode db "<SQL>" --format json`, `opencode session delete <id>`, and the SQLite WAL mode of the session store.
-- **Consumed by** operator and coordinator workflows that need bounded store facts; future harness telemetry may consume the same read port, but no telemetry is added here.
+- **Consumed by** operator and coordinator workflows that need bounded store facts. Harness telemetry extraction uses its own read-only SQLite loader in the adapters `./harness` subpath and does not compose this administration port; this feature adds no telemetry.
 - **Risk — external opencode surface:** The `db path`, `db "<SQL>" --format json`, `session delete`, and WAL behavior are taken from recorded live environment facts, are not verifiable by repository tests, and can change. Mitigation: a single adapter seam, malformed results classified as `db.query.failed`, and no direct SQLite fallback.
 - **Risk — live-session definition:** Liveness is activity-based only, with no PID or lock-file probe, so an open-but-idle session older than `--older-than` is prunable. The 15-minute window and conservative default threshold bound the exposure.
 - **Risk — store-version drift:** `size` and `list` pin the message store to `message` and the part store to `part` because `session_message` is empty on the reference store. A harness version that moves the store is handled by a versioned contract change; a zero message count on a non-empty session table is a review smell.

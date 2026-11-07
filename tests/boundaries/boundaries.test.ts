@@ -107,6 +107,7 @@ describe("ADR-verbatim scope and allowlist assertions", () => {
     expect([...pathNot]).toEqual([
       "^packages/core/src/state/driver/",
       "^packages/adapters/src/(repo|file|host|session|legacy|credentials)/",
+      "^packages/adapters/src/harness/",
       "^packages/adapters/src/github/",
       "^packages/adapters/src/gitlab/",
       "^packages/adapters/src/jira/",

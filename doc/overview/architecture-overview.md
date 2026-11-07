@@ -9,7 +9,7 @@ area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, ADR-0010]
-  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-232, GH-243]
+  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -63,7 +63,7 @@ flowchart TB
     Caller["Typed caller / test harness"]
     CLI["CLI library: runCli plus optional edge composition"]
     Core["Core policy, configuration and contracts"]
-    IO["Adapters: files, repository, git, session, credentials, provider reads/writes"]
+    IO["Adapters: files, repository, git, session, credentials, harness, provider reads/writes"]
     State["State facade and runtime driver"]
     Ledger[("JSONL ledger + derived documents; optional SQLite index")]
     Checkout[("Checkout and pm-notes YAML")]
@@ -77,7 +77,7 @@ flowchart TB
     IO --> Checkout
     Shell --> Checkout
   end
-  IO --> APIs["External provider APIs / local OpenCode CLI"]
+  IO --> APIs["External provider APIs / harness CLIs (OpenCode, Claude Code)"]
   MCP["Local MCP stdio server: status, verify-artifact, gate-report"] --> Core
   Future["Typed OpenCode surface"] -.-> Core
 ```
@@ -93,7 +93,7 @@ No typed daemon or background scheduler is established by `packages/`.
 |---|---|
 | `core/src/contracts/` | Data-only ports, normalized primitives, schemas, capability declarations and error vocabulary shared across packages. |
 | `core/src/config/`, `branding/` | Pure layered resolution with provenance; pure brand identity resolution. Exported through core root and `./branding`, respectively. |
-| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, owner-gate SLA evaluation, doctor diagnostics, session-admin policy, and the deterministic retro evidence pipeline (collection, truth checks, report/export folds). |
+| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, owner-gate SLA evaluation, doctor diagnostics, session-admin policy, harness classification, capability, registry, spawn-environment, liveness, canonicalization, and telemetry policy, and the deterministic retro evidence pipeline (collection, truth checks, report/export folds). |
 | `core/src/provider/` | Availability chain, quota/peak evaluation, expiring parks and announcements through injected ports. No model selection or session spawn. |
 | `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections, the retro registry consumer, and the independent evidence sidecar consumer. Runtime APIs confined to `state/driver/`. |
 | `core/src/app/`, core `createRuntime` | Application tier is a type placeholder; `createRuntime` is an `export declare` signature, not a callable composition implementation. |
@@ -104,10 +104,12 @@ No typed daemon or background scheduler is established by `packages/`.
 | `adapters/src/credentials/`, `provider-quota/` | Credential-reference resolution and injectable quota HTTP transport. Factories exist, but production host mounting is not established. |
 | `adapters/src/session/` | OpenCode CLI-backed metadata reads, dry-run-first prune and guarded checkpoint through separate read/admin ports. |
 | `adapters/src/io/` | Internal metadata codec, content policy, privacy rules and transport types; not a public package export. |
-| `adapters/src/azure/`, `ci/`, `registry/`, `host/` | Type-only placeholders; provider clients implement some CI reads without making `./ci` runnable. |
+| `adapters/src/harness/` | The opencode and Claude Code delivery adapters, read-only telemetry extractors, and the read-only SQLite session-store loader. |
+| `adapters/src/host/` | The harness seam's one child-process spawn site, a pinned entry in the exact repository-wide `node:child_process` allowlist: receives the constructed environment as data and reads no ambient environment. |
+| `adapters/src/azure/`, `ci/`, `registry/` | Type-only placeholders; provider clients implement some CI reads without making `./ci` runnable. |
 | `mcp/src/` | Closed three-tool catalog, pure toolset seam and payload adapter, the in-package stdio JSON-RPC 2.0 protocol, the lifecycle exit owner, and the Node-hosted `./serve` composition root. The three read-only tools mirror the status, verify-change, and verify-gates engines. |
 | `opencode/src/index.ts` | Type-only entry exports; no typed native-tool plugin. |
-| `testkit/src/` | Dev-only envelope assertions and capability-aware conformance; real client factories over mocked transport, scheduled live read-only tier. |
+| `testkit/src/` | Dev-only envelope assertions and capability-aware conformance; real client factories over mocked transport, the harness conformance registry, scheduled live read-only tier. |
 
 Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packages/cli/src/edge.ts),
 [adapter exports](../../packages/adapters/package.json), [MCP entry](../../packages/mcp/src/index.ts),
@@ -180,6 +182,11 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   real git and StateStorePort; planFacts reads issue, merged request, dependents,
   checkout and persisted history. This is command-specific production composition,
   not shared-root or installed-binary completion.
+- The [harness adapter seam](../spec/features/feature-harness-adapters.md) ships
+  typed `HarnessInstance`/`HarnessSession` ports, the opencode and Claude Code
+  delivery adapters, the deny-by-default execution-environment descriptor, and
+  read-only telemetry extraction consumed by non-gating closeout capture. No
+  dispatch engine ships; cross-harness dispatch parity belongs to M1-S9.
 - Accepted architecture calls for one shared composition root. Today the working
   compositions are command-specific CLI edge functions. Optional registrations
   require supplied ports. Production credential/quota factories and a spawn gate
@@ -300,6 +307,7 @@ rules passing does not establish project-specific literal coverage.
 | Unit / dependency | Current topology, ownership and criticality |
 |---|---|
 | Standalone CLI target | Local Bun-targeted design; implemented runner is in-process with injected streams. CLI manifest has no `bin`; installed executable/bootstrap is not established by these modules. |
+| Harness adapter seam | The typed `HarnessInstance`/`HarnessSession` ports with the opencode and Claude Code delivery adapters, the deny-by-default execution-environment descriptor, read-only telemetry extraction, and non-gating closeout capture. See [feature-harness-adapters.md](../spec/features/feature-harness-adapters.md). |
 | Existing harness/prompt stack | Locally installed canonical `.opencode/` definitions, generated Claude Code plugin and shell automation. Independent of the empty typed integration package. See [plugin build](../../scripts/build-claude-plugin.sh). |
 | State and change documents | Local operator-owned files; only local store level implemented. JSONL forever-retention direction; project/global levels are declared seams, not shared stores. |
 | OpenCode CLI | External local executable owned by its upstream; required for implemented session adapter operations. Session DB is not the tooling state ledger. |
