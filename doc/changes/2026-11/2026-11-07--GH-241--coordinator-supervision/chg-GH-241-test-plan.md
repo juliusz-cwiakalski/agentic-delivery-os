@@ -2,15 +2,15 @@
 id: chg-GH-241-test-plan
 status: Updated
 created: 2026-11-07T12:45:00Z
-last_updated: 2026-11-07T16:30:00Z
+last_updated: 2026-11-07T18:30:00Z
 owners: [engineering]
 service: delivery-os coordinator supervision (lifecycle decisions, artifact-evidence stuck detection, kill with grace, restart budget, exhaustion escalation, predicate-bound wake)
 labels: [cli, supervision, session-lifecycle, state, blockers, harness, process-lifecycle, m1]
 version_impact: minor
-summary: "M1-S23 coordinator supervision: prove that a coordinator session has the same managed lifecycle lanes already have. The plan pins a new `coordinator` family (start/stop/status/tick) over a pure decision domain and an injected process-lifecycle port; recorded join-live / resume-context / spawn-fresh decisions that survive a supervisor restart and never re-execute closed-out work (SC-M1-25); artifact-evidence stuck detection over digest-consumed, merge, and answer with a sourced-progress prefill-safety veto, no CPU read anywhere, and an `unevaluable` fail-closed path; TERM-then-KILL with grace over the recorded process-tree handle only; a durable per-epoch restart budget distinct from lane and economics, a classified loud exhaustion receipt, exactly one owner-audience decision-needed escalation rendered through the existing brief anchor under a reserved slot inside the eight-question cap; a strict isCoordinatorPickup wake with one persisted wake per question and closed tick-result outcomes; a shared supervisor-regime descriptor and state-dir fence with a durable `coordinator.fence` record and stale-holder takeover; five coordinator config keys with no decision-code literals; six additive coordinator records with STATE_SCHEMA_VERSION unchanged; six coordinator error identities with the exact two-code two-segment allowlist addition; deterministic bounded text and data; performance, privacy, security, idempotency, and non-regression of the delivered status/brief/economics/blockers surfaces. Sixty-six scenarios trace every one of the 43 acceptance criteria; specification v1.1 pins all six former gaps and the exact two-code two-segment allowlist, so the plan is an executable verification map against fixed contracts."
+summary: "M1-S23 coordinator supervision: prove that a coordinator session has the same managed lifecycle lanes already have. The plan pins a new `coordinator` family (start/stop/status/tick) over a pure decision domain and an injected process-lifecycle port; recorded join-live / resume-context / spawn-fresh decisions that survive a supervisor restart and never re-execute closed-out work (SC-M1-25); artifact-evidence stuck detection over digest-consumed, merge, and answer with a sourced-progress prefill-safety veto, no CPU read anywhere, and an `unevaluable` fail-closed path; coordinator single-instance ownership as a durable, append-only **instance lease** carried by `coordinator.fence` records (`acquired`, `released`, `stale-takeover`, `stop-requested`), with the instance identity folded from the latest lease and the delivered short-lived state write fence taken only for one append; `stop` as a recorded request that reports `requested=true`/`released=false` or `not-running` and never releases another process's write-fence handle; stale takeover on holder `alive(handle)` absent or lease age > 2x `collection-interval`, with no `recoverFence` and no `contracts/state.ts` change; a two-phase `coordinator.stuck` record (`phase=verdict`, `killOutcome=not-attempted` before the kill; `phase=outcome`, same `stuckId`, after) folded latest-wins; a state-sourced digest-input fingerprint over the state event-log cursor plus open coordinator-audience question count only; a new turn as a positive `token-delta` or `session-traffic` reading mapped by the adapter, with the sixth key `coordinator.progress-bound` (default 300 000 ms) as the prefill-safety veto; PID plus process-start-time identity verification before TERM with `killFailureReason=identity-mismatch`; TERM-then-KILL with grace over the recorded process-tree handle only; a durable per-epoch restart budget distinct from lane and economics; exactly one owner-audience decision-needed escalation rendered **first by index** in both `typed-questions` and `blocker-questions`, with up to seven others in rank order and the lowest-ranked displaced and counted as omitted, and idempotent `exhausted-escalated`; a strict isCoordinatorPickup wake (an absent status counts as open) with one persisted wake per question and closed tick-result outcomes; a shared supervisor-regime descriptor with `supervisorMode` exactly `foreground`/`detached` and `externalUnit` exactly `absent`; six coordinator config keys with no decision-code literals; six additive coordinator records with STATE_SCHEMA_VERSION unchanged; six coordinator error identities with the exact two-code two-segment allowlist addition; deterministic bounded text and data; performance, privacy, security, idempotency, and non-regression of the delivered status/brief/economics/blockers surfaces. Sixty-nine scenarios trace every one of the 45 acceptance criteria of specification v1.2; all DoR iteration-1 findings (RF-01..RF-12, A1/A2/A3/A6) are resolved, and the implementation plan (`chg-GH-241-plan.yaml`) exists and maps the TCs, so the plan is an executable verification map against fixed contracts."
 links:
   change_spec: ./chg-GH-241-spec.md
-  implementation_plan: null
+  implementation_plan: ./chg-GH-241-plan.yaml
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
@@ -18,24 +18,25 @@ links:
 
 ## 1. Scope and Objectives
 
-This change makes the last unmanaged actor in the M1 end state supervised. The tests must protect eight properties at once, and each one is a structural guarantee, not a behavioural hope. **First, lifecycle decisions are recorded before they are applied**: every evaluation chooses exactly one of `join-live`, `resume-context`, or `spawn-fresh`, persists the decision, session identity, context reading (or its explicit absence), reason, ordinal consumption, and iteration identity, and only then acts; a supervisor restart reads the same truth from durable records and a killed-mid-iteration coordinator resumes or respawns per the last recorded decision without re-executing closed-out phase, merge, or answer artifacts (`AC-F2-1`..`AC-F2-6`, `NFR-7`, `SC-M1-25`). **Second, stuck detection is artifact evidence, never CPU**: three read-only classes (`digest-consumed`, `merge`, `answer`) plus positive sourced session progress as a prefill-safety veto; a `stuck` verdict requires the declared window, no advanced class, no positive progress, and at least one evaluable stale class; all-unknown or an unreadable store is `unevaluable` with no kill and no restart; CPU is not read, structurally or behaviourally (`AC-F3-1`..`AC-F3-4`, `NFR-2`, `NFR-13`, `DEC-4`). **Third, kill is bounded and safe**: TERM, wait `coordinator.kill-grace`, KILL only if the recorded tree is still alive, then `terminated` / `forced` / `failed`; the target is always the recorded session and process-tree handle, never a name, pattern, or shell-interpolated value; a failed kill is `coordinator.session.kill-failed` at exit `2`, never a silent success; no kill exists without the state-dir fence (`AC-F4-1`..`AC-F4-3`, `NFR-10`, `NFR-14`). **Fourth, the restart budget is distinct and durable**: per budget epoch under `coordinator/<coordinatorId>`, contiguous ordinals from `1`, torn or gapped means unevaluable (never count `0`), below-bound admits one restart, at/above-bound starts no replacement and refuses with `coordinator.restart-budget-exhausted` at exit `1` plus the history reference, and `start --fresh-budget` opens a new epoch while the old epoch and escalation stay in history (`AC-F5-1`..`AC-F5-5`, `NFR-6`, `NFR-7`). **Fifth, exhaustion is loud and idempotent**: exactly one owner-audience `decision-needed` question with the coordinator-and-epoch ref, count, bound, history, and declared options; reuse of an existing open question rather than a duplicate; the terminal receipt lands only after the question lands; publish failure is `coordinator.escalation.publish-failed` at exit `2` with `exhausted-escalation-failed` visible in status; the digest and brief keep one reserved escalation slot inside the existing eight-question bound, with at most seven other questions and displaced questions still counted as omitted (`AC-F6-1`..`AC-F6-3`, `DEC-5`, `NFR-4`, `NFR-13`). **Sixth, wake is predicate-bound**: strictly `isCoordinatorPickup` (rank 1, open, audience coordinator), one wake per question lifetime deduped on coordinator + question + `askedAt`, only a successful `woken` persisted (and consuming the lifetime) while `already-woken` is a no-op and `answered-before-wake` / `delivery-failed` / `no-pickup` are tick results that append nothing, and a new top question wakes normally (`AC-F7-1`..`AC-F7-6`, `DEC-9`, `NFR-8`). **Seventh, the supervisor regime is shared and single-instance**: a regime descriptor (state-dir scope, fence, unit identity, distinct process kind, distinct budget store, M1-S18 seam), a second start or a contended tick refused with `coordinator.already-running` at exit `2`, a stale holder taken over with a durable `coordinator.fence` record (EVT-7, DM-11), and no invented daemon or OS installer (`AC-F8-1`..`AC-F8-3`, `DEC-1`, `DEC-6`). **Eighth, the surface is closed and deterministic**: five `coordinator.*` config keys with declared defaults and no decision-code literals; additive coordinator records under `delivery.state.v1` with `STATE_SCHEMA_VERSION` unchanged; six coordinator error identities with the exact two-code two-segment allowlist addition; bounded, ANSI-free text and `delivery.coordinator.v1` `data`; no prompt, transcript, secret, or credential value; no model call; exits only in `{0,1,2}` (`AC-F9-1`, `AC-F10-1`..`AC-F10-5`, `AC-NFR-1`..`AC-NFR-4`).
+This change makes the last unmanaged actor in the M1 end state supervised. The tests must protect eight properties at once, and each one is a structural guarantee, not a behavioural hope. **First, lifecycle decisions are recorded before they are applied**: every evaluation chooses exactly one of `join-live`, `resume-context`, or `spawn-fresh`, persists the decision, session identity, context reading (or its explicit absence), reason, ordinal consumption, and iteration identity, and only then acts; a supervisor restart reads the same truth from durable records and a killed-mid-iteration coordinator resumes or respawns per the last recorded decision without re-executing closed-out phase, merge, or answer artifacts (`AC-F2-1`..`AC-F2-6`, `NFR-7`, `SC-M1-25`). **Second, stuck detection is artifact evidence, never CPU**: three read-only classes (`digest-consumed`, `merge`, `answer`) plus positive sourced session progress as a prefill-safety veto; a `stuck` verdict requires the declared window, no advanced class, no positive progress, and at least one evaluable stale class; all-unknown or an unreadable store is `unevaluable` with no kill and no restart; CPU is not read, structurally or behaviourally (`AC-F3-1`..`AC-F3-4`, `NFR-2`, `NFR-13`, `DEC-4`). **Third, kill is bounded and safe**: TERM, wait `coordinator.kill-grace`, KILL only if the recorded tree is still alive, then `terminated` / `forced` / `failed`; the target is always the recorded session and process-tree handle, never a name, pattern, or shell-interpolated value; a failed kill is `coordinator.session.kill-failed` at exit `2`, never a silent success; before TERM the recorded `pid` plus `processStartTimeMs` identity is verified and a mismatch sends no signal; the kill requires the current instance lease, and the kill-outcome append takes the delivered state write fence for that append only (`AC-F4-1`..`AC-F4-4`, `NFR-10`, `NFR-14`, `RSK-13`). **Fourth, the restart budget is distinct and durable**: per budget epoch under `coordinator/<coordinatorId>`, contiguous ordinals from `1`, torn or gapped means unevaluable (never count `0`), below-bound admits one restart, at/above-bound starts no replacement and refuses with `coordinator.restart-budget-exhausted` at exit `1` plus the history reference, and `start --fresh-budget` opens a new epoch while the old epoch and escalation stay in history (`AC-F5-1`..`AC-F5-5`, `NFR-6`, `NFR-7`). **Fifth, exhaustion is loud and idempotent**: exactly one owner-audience `decision-needed` question with the coordinator-and-epoch ref, count, bound, history, and declared options; reuse of an existing open question rather than a duplicate; the terminal receipt lands only after the question lands; publish failure is `coordinator.escalation.publish-failed` at exit `2` with `exhausted-escalation-failed` visible in status; the digest and brief keep one reserved escalation slot inside the existing eight-question bound, with at most seven other questions and displaced questions still counted as omitted (`AC-F6-1`..`AC-F6-3`, `DEC-5`, `NFR-4`, `NFR-13`). **Sixth, wake is predicate-bound**: strictly `isCoordinatorPickup` (rank 1, open, audience coordinator), one wake per question lifetime deduped on coordinator + question + `askedAt`, only a successful `woken` persisted (and consuming the lifetime) while `already-woken` is a no-op and `answered-before-wake` / `delivery-failed` / `no-pickup` are tick results that append nothing, and a new top question wakes normally (`AC-F7-1`..`AC-F7-6`, `DEC-9`, `NFR-8`). **Seventh, the supervisor regime is shared and single-instance**: a regime descriptor (state-dir scope, unit identity, distinct process kind, distinct budget store, `supervisorMode` exactly `foreground`/`detached`, `externalUnit` exactly `absent`, M1-S18 seam); coordinator single-instance ownership is a durable append-only **instance lease** folded from `coordinator.fence` records (`acquired`, `released`, `stale-takeover`, `stop-requested`) with the instance identity (`instanceId`, `pid`, `holder`, `startedAt`, `supervisorMode`, `externalUnit`); every write takes the delivered state write fence for that append only, never for the supervisor's lifetime; `stop` is a recorded request, not a remote handle release; a second start or a contended tick is refused with `coordinator.already-running` at exit `2`; a stale lease is taken over when the holder is not alive or the lease is older than two collection intervals, with no `recoverFence` and no state-contract change; and no invented daemon or OS installer exists (`AC-F1-1`..`AC-F1-4`, `AC-F8-1`..`AC-F8-3`, `DEC-1`, `DEC-6`). **Eighth, the surface is closed and deterministic**: six `coordinator.*` config keys (`stuck-window`, `kill-grace`, `restart-budget`, `resume-context-limit`, `collection-interval`, `progress-bound`) with declared defaults and no decision-code literals; additive coordinator records under `delivery.state.v1` with `STATE_SCHEMA_VERSION` unchanged; six coordinator error identities with the exact two-code two-segment allowlist addition; bounded, ANSI-free text and `delivery.coordinator.v1` `data`; no prompt, transcript, secret, or credential value; no model call; exits only in `{0,1,2}` (`AC-F9-1`, `AC-F10-1`..`AC-F10-5`, `AC-NFR-1`..`AC-NFR-4`).
 
-The plan is deliberately adversarial about the failure modes this story exists to prevent. **False green from a false kill**: a large working session must be vetoed by sourced progress (TC-COORD-033), a CPU-only reading must never classify (TC-COORD-037), and an unknown class must never be fabricated as stale (TC-COORD-034/036). **Silent exhaustion**: the escalation question must render at the cap under the reserved slot with the omitted count intact (TC-COORD-063), and a publish failure must be exit `2`, never exit `0` (TC-COORD-062). **Double supervisor or double evaluation**: the fence is proven from both sides, and the kill path is proven fenced (TC-COORD-010/015/043). **Wake storm**: a still-top question is `already-woken` with no second record, while a delivery failure still retries (TC-COORD-071/074). **Schema and gate drift**: the coordinator records are additive with the schema version asserted unchanged (TC-COORD-001/083), and the two two-segment codes (`coordinator.already-running`, `coordinator.restart-budget-exhausted`) must join the exact allowlist in both the check and the structure test (set 22→24), with exact totals (TC-COORD-081/082). **Regressing the delivered surfaces**: status/brief goldens change only through the declared reserved-slot rule, and blockers ranking, economics records, lane records, and `ceo-loop.sh` stay untouched (TC-COORD-089).
+The plan is deliberately adversarial about the failure modes this story exists to prevent. **False green from a false kill**: a large working session must be vetoed by sourced progress (TC-COORD-033), a CPU-only reading must never classify (TC-COORD-037), and an unknown class must never be fabricated as stale (TC-COORD-034/036). **False kill after PID reuse**: the kill port must verify the recorded `pid` plus `processStartTimeMs` before TERM, and a mismatch must send no signal, record `killFailureReason=identity-mismatch`, and exit `2` (TC-COORD-045). **Silent exhaustion**: the escalation question must render first by index at the cap with the omitted count intact (TC-COORD-063), and a publish failure must be exit `2`, never exit `0` (TC-COORD-062). **Double supervisor or double evaluation**: the instance lease is proven from both sides, and the kill path is proven lease-guarded with a per-append state write fence (TC-COORD-010/015/043). **Wake storm**: a still-top question is `already-woken` with no second record, while a delivery failure still retries (TC-COORD-071/074). **Schema and gate drift**: the coordinator records are additive with the schema version asserted unchanged (TC-COORD-001/083), and the two two-segment codes (`coordinator.already-running`, `coordinator.restart-budget-exhausted`) must join the exact allowlist in both the check and the structure test (set 22→24), with exact totals (TC-COORD-081/082). **Regressing the delivered surfaces**: status/brief goldens change only through the declared reserved-slot rule, and blockers ranking, economics records, lane records, and `ceo-loop.sh` stay untouched (TC-COORD-089).
 
-This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time. Where delivery owns a name (module path, record-kind string, schema id, store-key spelling), the scenario asserts the declared property and names the seam, never a guessed spelling (GAP-T5). The plan is aligned to specification v1.1 (committed `08818818`): the six former gaps are now pinned contracts — the uncontended-`tick` Given (GAP-1), the four-way capability ownership split (GAP-2), the payload-only reserved-slot predicate (GAP-3), persisted-`woken`-only wake accounting (GAP-4), the closed `coordinator.stuck` `reason` field (GAP-5), the `coordinator.fence` record (GAP-6), and the exact two-code two-segment allowlist (GAP-T7). No assertion is left pending arbitration; the remaining GAP-T1..GAP-T6 markers are declared test-method constraints (§1.2, §8.4).
+This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time. Where delivery owns a name (module path, record-kind string, schema id, store-key spelling), the scenario asserts the declared property and names the seam, never a guessed spelling (GAP-T5). The plan is aligned to specification v1.2: every DoR iteration-1 finding is resolved as a pinned contract — the append-only **instance lease** carried by `coordinator.fence` records with a per-append state write fence (RF-01/RF-05/RF-06/RF-07/A1), the two-phase `coordinator.stuck` record (RF-04), the `token-delta`/`session-traffic` new-turn source plus `coordinator.progress-bound` (RF-08/A3), the state-sourced fingerprint over the event-log cursor and open coordinator-question count only (RF-09), `exhausted-escalated` (RF-10), the render-first reserved slot asserted by index (RF-12/A5), PID plus process-start-time verification (A2), absent status counts as open (A6), and the six-key config branch. No assertion is left pending arbitration; the remaining GAP-T2..GAP-T6 markers are declared test-method constraints (§1.2, §8.4). The implementation plan now exists (`chg-GH-241-plan.yaml`), so GAP-T1 is removed.
 
 ### 1.1 In Scope
 
-- The `coordinator` command family: `start [--foreground] [--fresh-budget]`, `stop`, `status [--live]`, `tick`; grammar, single-cycle semantics, the `delivery.coordinator.v1` payload, and the `{0,1,2}` exit projection (F-1, F-9; AC-F1-1..AC-F1-3, AC-F9-1; DM-9; NFR-4, NFR-12).
-- The shared supervisor-regime descriptor and the state-dir single-instance fence, including stale-holder takeover, different-state-dir independence, and the durable `coordinator.fence` acquisition/release/takeover record (F-8; AC-F8-1..AC-F8-3; DM-8, DM-11; EVT-7; DEC-1, DEC-6).
+- The `coordinator` command family: `start [--foreground] [--fresh-budget]`, `stop`, `status [--live]`, `tick`; grammar, single-cycle semantics, the `delivery.coordinator.v1` payload, and the `{0,1,2}` exit projection (F-1, F-9; AC-F1-1..AC-F1-4, AC-F9-1; DM-9, DM-11; NFR-4, NFR-12).
+- The shared supervisor-regime descriptor and the state-dir single-instance **instance lease**, including the durable `coordinator.fence` records (`acquired`, `released`, `stale-takeover`, `stop-requested`), stale-lease takeover by holder `alive(handle)` absence or lease age > 2x `collection-interval`, different-state-dir independence, and instance identity folded from the latest lease (`instanceId`, `pid`, `holder`, `startedAt`, `supervisorMode` `foreground|detached`, `externalUnit` `absent`) (F-1, F-8; AC-F1-1..AC-F1-4, AC-F8-1..AC-F8-3; DM-8, DM-11; EVT-7; DEC-1, DEC-6).
+- The delivered short-lived state write fence used only for the duration of one append; no write-fence handle is held across a cycle and no other process's handle is released (F-1, F-8; AC-F1-1, AC-F1-3, AC-F8-3, AC-F10-4; DM-11).
 - The pure join-or-resume-or-spawn decision domain and its durable records, including every reason and ordinal rule, decision-before-action ordering, crash recovery, and non-re-execution of closed-out work (F-2; AC-F2-1..AC-F2-6; DM-1, DM-2; DEC-7).
-- Artifact-evidence stuck detection over the three classes, the bounded digest-input fingerprint, the sourced-progress prefill-safety corroborator, the full advanced/stale/unknown matrix, torn/unreadable classification, and the unevaluable fail-closed path (F-3; AC-F3-1..AC-F3-4; DM-3; DEC-4; NFR-1, NFR-2, NFR-9, NFR-13).
-- Kill with grace over the injected process-lifecycle port, including the fake-clock TERM/KILL sequence, `terminated`/`forced`/`failed`, handle-only targeting, no shell interpolation, and kill-under-fence (F-4; AC-F4-1..AC-F4-3; DM-7; NFR-10, NFR-14).
+- Artifact-evidence stuck detection over the three classes, the state-sourced digest-input fingerprint (event-log cursor plus open coordinator-audience question count only), the `token-delta`/`session-traffic` new-turn source, the `coordinator.progress-bound` prefill-safety corroborator, the full advanced/stale/unknown matrix, torn/unreadable classification, the two-phase stuck record, and the unevaluable fail-closed path (F-3; AC-F3-1..AC-F3-4; DM-3; DEC-4; NFR-1, NFR-2, NFR-9, NFR-13).
+- Kill with grace over the injected process-lifecycle port, including the fake-clock TERM/KILL sequence, `terminated`/`forced`/`failed`, handle-only targeting, pre-TERM `pid` + `processStartTimeMs` identity verification (mismatch → no signal, `killFailureReason=identity-mismatch`), no shell interpolation, and the instance-lease guarantee with a per-append state write fence (F-4; AC-F4-1..AC-F4-4; DM-3, DM-7; NFR-10, NFR-14; RSK-13).
 - The durable per-epoch restart budget, contiguous ordinals, below/at/above-bound behaviour, replayed ordinal idempotency, crash durability, `--fresh-budget`, and the distinct namespace (F-5; AC-F5-1..AC-F5-5; DM-2; DEC-8; NFR-6, NFR-7).
-- Owner-brief exhaustion escalation: exactly one owner-audience `decision-needed` question, idempotent reuse, terminal receipt ordering, publish-failure exit `2`, and the reserved escalation slot inside the declared eight-question bound, selected from the payload alone by the payload-only predicate (`type=decision-needed` AND `audience=owner` AND `lane=coordinator` AND `ref` shape `<coordinatorId>#<budgetEpochId>`), with no new anchor, section, type, or read (F-6; AC-F6-1..AC-F6-3; EVT-6; DM-4; DEC-5; NFR-4, NFR-13).
-- Predicate-bound wake: strict `isCoordinatorPickup`, one wake per question lifetime persisted only on a successful `woken`, `already-woken` as a no-op, `answered-before-wake`/`delivery-failed`/`no-pickup` as tick results that append no record, live-wake/resume/spawn paths, retry after delivery failure, and the next-new-top-question case (F-7; AC-F7-1..AC-F7-6; DM-5; DEC-9; NFR-8).
-- The `coordinator` config branch: five keys, declared defaults and domains, unknown-key and invalid-value identities, boundary values (`restart-budget` 0, window/interval 1 ms), and no default or bound literal in decision code (F-10; AC-F10-1; DM-6; DEC-10).
-- The additive coordinator state records: six record kinds (iteration, restart, stuck, exhaustion, wake, fence), schema/kind/required-field/vocabulary validation, identity fields, ordinal contiguity, permission-denied projection, no migration, and the unchanged state schema version (F-10; AC-F10-3; DM-1..DM-5, DM-11; DEC-12; NFR-13).
+- Owner-brief exhaustion escalation: exactly one owner-audience `decision-needed` question, idempotent reuse with `exhausted-escalated`, terminal receipt ordering, publish-failure exit `2` with `exhausted-escalation-failed`, and the reserved escalation slot rendered **first by index** in both `typed-questions` and `blocker-questions` inside the declared eight-question bound, selected from the payload alone by the payload-only predicate (`type=decision-needed` AND `audience=owner` AND `lane=coordinator` AND `ref` shape `<coordinatorId>#<budgetEpochId>`), with up to seven others in rank order, the lowest-ranked displaced and counted as omitted, and no new anchor, section, type, or read (F-6; AC-F6-1..AC-F6-3; EVT-6; DM-4; DEC-5; NFR-4, NFR-13).
+- Predicate-bound wake: strict `isCoordinatorPickup` (an absent status counts as open), one wake per question lifetime persisted only on a successful `woken`, `already-woken` as a no-op, `answered-before-wake`/`delivery-failed`/`no-pickup` as tick results that append no record, live-wake/resume/spawn paths, retry after delivery failure, and the next-new-top-question case (F-7; AC-F7-1..AC-F7-6; DM-5; DEC-9; NFR-8).
+- The `coordinator` config branch: six keys (`stuck-window`, `kill-grace`, `restart-budget`, `resume-context-limit`, `collection-interval`, `progress-bound`), declared defaults and domains, unknown-key and invalid-value identities, boundary values (`restart-budget` 0, window/interval/progress-bound 1 ms), and no default or bound literal in decision code (F-10; AC-F10-1; DM-6; DEC-10).
+- The additive coordinator state records: six record kinds (iteration, restart, two-phase stuck, exhaustion, wake, fence), schema/kind/required-field/vocabulary validation, identifier and instance-identity fields, ordinal contiguity, latest-wins stuck fold, permission-denied projection, no migration, no separate instance record, and the unchanged state schema version (F-10; AC-F10-3; DM-1..DM-5, DM-11; DEC-12; NFR-13).
 - The `coordinator` error domain kind and six identities, the exact reserved two-segment allowlist addition of `coordinator.already-running` and `coordinator.restart-budget-exhausted` (set 22→24; table 99→105; the other four are three-segment), two-way documented sync, true/false-positive corpora, and total `{0,1,2}` projection (F-10; AC-F10-2; DM-10; DEC-11; NFR-12).
 - Deterministic, bounded, ANSI-free observation: byte-identical `data` and text for identical state, config, and injected facts; no ambient clock, randomness, or environment; 64 KiB machine and 32 human-line bounds; at most one verified read per store per tick (F-9; AC-NFR-1, AC-NFR-4; NFR-1, NFR-4, NFR-5).
 - Privacy, security, and idempotency: zero prompt/transcript/secret/credential values, bounded `key=value` evidence at ≤ 512 UTF-8 bytes, handle-only kill, same-user trust unchanged, and no duplicate record or destructive action on replay (AC-NFR-1..AC-NFR-3; NFR-6, NFR-11, NFR-14).
@@ -44,7 +45,7 @@ This document is a verification map, not an execution claim: no command was run 
 
 ### 1.2 Out of Scope & Known Gaps
 
-- [OUT] A `daemon` command, control socket, lane supervision, startup reconciliation, resident daemon process, or any OS supervisor unit installer — NG-1, M1-S18. This plan tests the regime descriptor, the fence, and the M1-S18 seam; it starts no daemon and installs no unit.
+- [OUT] A `daemon` command, control socket, lane supervision, startup reconciliation, resident daemon process, or any OS supervisor unit installer — NG-1, M1-S18. This plan tests the regime descriptor, the instance lease, and the M1-S18 seam; it starts no daemon and installs no unit.
 - [OUT] A `dispatch` command, spawn loop, dual-run evidence, or per-repo handover — NG-2, M1-S9.
 - [OUT] Agent-prompt or lifecycle-instruction changes — NG-3, M1-S20.
 - [OUT] Queue scheduling, merge execution, closeout mechanics, board expansion, or status-collector redesign — NG-4, NG-10.
@@ -55,23 +56,25 @@ This document is a verification map, not an execution claim: no command was run 
 - [OUT] Multi-coordinator, multi-host, or remote supervision — §7.2. One coordinator per state-dir scope.
 - [OUT] Automatic application of the owner's exhaustion answer — §7.2. The owner decision is a manual `stop` + `start --fresh-budget` or a future daemon/queue path.
 - [OUT] OS autostart behaviour — RSK-4. Declared and tested as a gap naming M1-S18, never as an invented installer.
-- [GAP-T1 — implementation plan absent] `chg-GH-241-plan.yaml`/`chg-GH-241-plan.md` does not exist at test-planning time (`links.implementation_plan: null`). Delivery planning must map all 66 TCs onto phases without reshaping identities, exits, vocabularies, ordering, or AC traceability. A plan that reshapes a pinned contract reopens this test plan.
-- [GAP-T2 — no scheduler in v1] This change ships `tick` and a foreground loop, not a resident scheduler. NFR-8 and NFR-9 are asserted with v1 semantics: the **next `tick` after the qualifying condition produces exactly one wake** (the question becoming rank 1) or **exactly one verdict** (the window elapsing). No resident scheduler and no wall-clock timer is started, and cadence is not measured; an injected clock drives the fixtures.
+- [PINNED — v1.2 observables] The instance lease is the latest `coordinator.fence` record action; there is no separate instance record kind or payload. `stop` appends `stop-requested` and reports `requested=true`/`released=false` (or `not-running`); the live supervisor appends `released` at the next cycle boundary. Stale takeover occurs when the holder's `alive(handle)` is false OR the lease age exceeds 2x `collection-interval`; it uses no `recoverFence` and changes no state contract. `coordinator.stuck` is two-phase under one `stuckId` (`phase=verdict` with `killOutcome=not-attempted` before the kill, `phase=outcome` after) with a deterministic latest-wins fold by `recordedAt` then ledger sequence; a replay appends nothing. A new turn is a positive `token-delta` OR a positive `session-traffic` reading from the delivered harness liveness facts, mapped at the adapter; an absent reading is `unknown`; `coordinator.progress-bound` defaults to 300 000 ms. The escalation state is `exhausted-escalated` (no `escalated`). The reserved escalation question renders first by index in both `typed-questions` and `blocker-questions`; the other seven follow in rank order and the lowest-ranked is displaced and counted as omitted. A recorded `pid` plus `processStartTimeMs` mismatch sends no signal, records `killFailureReason=identity-mismatch`, and exits `2`. An absent question `status` counts as open. `supervisorMode` is exactly `foreground`/`detached` and `externalUnit` is exactly `absent`. TC-COORD-018/029/045 plus the updated TCs assert these directly.
+- [GAP-T2 — no scheduler in v1] This change ships `tick` and a foreground loop, not a resident scheduler. NFR-8 and NFR-9 are asserted with v1 semantics: the **next `tick` after the qualifying condition produces exactly one wake** (the question becoming rank 1) or **exactly one verdict** (the window elapsing). The supervisor's own loop ticks at `coordinator.collection-interval`; a caller ticking slower is caller-bounded and does not violate the policy. No resident scheduler and no wall-clock timer is started, and cadence is not measured; an injected clock drives the fixtures.
 - [GAP-T3 — absences are proven by three observations] "Not re-executed", "no CPU read", "no model call", and "no destructive action" are absences. Each is proven by (i) the capability/port not existing on the evaluated surface, (ii) zero recorded invocations in a recording fake, and (iii) zero state mutation, plus a structural scan or mutant where a source-level proof exists. A single passing behavioural assertion is never accepted as proof of an absence.
 - [GAP-T4 — process-boundary durability at the store boundary] Supervisor-crash durability is proven by closing the writer handle and reopening a **fresh store handle** over the same temp root, not by a second OS process, unless delivery adds a bounded child process cheaply. No sleeps and no flake surface.
 - [GAP-T5 — delivery-bound names] Module paths, export names, record-kind strings, schema ids, store-key spellings, field spellings not pinned by the spec, and human labels are delivery-bound. Behaviour, identities, exits, closed vocabularies, ordering rules, bounds, and AC traceability are not. A test that cannot resolve a seam must fail naming the missing contract, never skip silently.
 - [GAP-T6 — performance measurement method] `tick` p95 ≤ 2 000 ms and `status` p95 ≤ 1 000 ms are measured over a synthetic reference store on the reference host with an injected clock (no real sleeping), recording the environment and iteration count in test output. The bound is never silently relaxed; a timing test that cannot be made deterministic in CI is marked `Semi-automated` with a manual gate, not deleted.
+- [PLAN-MAP — delivery planning must map three new TCs] The existing `chg-GH-241-plan.yaml` maps the 66 v1.1 TCs. The three v1.2 TCs (TC-COORD-018 instance-lease identity, TC-COORD-029 new-turn/progress-bound mapping, TC-COORD-045 identity-mismatch kill) must be added to the plan's TC→phase map. This is a planning-document update, not a reshaping of a pinned contract; no v1.2 assertion is deferred to delivery.
 - [PINNED — exact two-segment allowlist] Exactly two coordinator identities are two-segment: `coordinator.already-running` and `coordinator.restart-budget-exhausted`. Both join `RESERVED_TWO_SEGMENT_CODES` in `scripts/checks/error-table-sync.ts` and `tests/structure/error-table.test.ts`, taking the set from 22 to 24 and the table from 99 to 105 entries; the other four coordinator identities are three-segment. No `coordinator.*` wildcard and no generic two-segment widening. TC-COORD-081/082 assert the exact values and a near-miss rejection.
 
 ## 2. References
 
-- **Change specification**: [chg-GH-241-spec.md](./chg-GH-241-spec.md) — specification v1.1 (committed `08818818`); F-1..F-10, 43 ACs (AC-F1-1..AC-F10-5, AC-NFR-1..4), DM-1..DM-11, EVT-1..EVT-7, NFR-1..NFR-15, RSK-1..RSK-12, DEC-1..DEC-13, §6 flows 1–6, Appendix A (`ceo-loop.sh` function map), Appendix B (closed vocabularies), Appendix C (SC-M1-25), Appendix D (config defaults), Appendix E (record shapes, including `coordinator.fence` and the closed stuck `reason`), Appendix F (exit matrix), Appendix G (command grammar and output shapes), Appendix H (ticket traceability).
+- **Change specification**: [chg-GH-241-spec.md](./chg-GH-241-spec.md) — specification v1.2; F-1..F-10, **45 ACs** (AC-F1-1..AC-F1-4, AC-F2-1..AC-F2-6, AC-F3-1..AC-F3-4, AC-F4-1..AC-F4-4, AC-F5-1..AC-F5-5, AC-F6-1..AC-F6-3, AC-F7-1..AC-F7-6, AC-F8-1..AC-F8-3, AC-F9-1, AC-F10-1..AC-F10-5, AC-NFR-1..4), DM-1..DM-11, EVT-1..EVT-7, NFR-1..NFR-15, RSK-1..RSK-13, DEC-1..DEC-13, §6 flows 1–7, §10 telemetry, §25 document history, Appendix A (`ceo-loop.sh` function map), Appendix B (closed vocabularies), Appendix C (SC-M1-25), Appendix D (config defaults incl. `coordinator.progress-bound`), Appendix E (record shapes, including the four-action `coordinator.fence` instance lease and the two-phase `coordinator.stuck`), Appendix F (exit matrix incl. `identity-mismatch`), Appendix G (command grammar and output shapes), Appendix H (ticket traceability).
+- **Implementation plan**: [chg-GH-241-plan.yaml](./chg-GH-241-plan.yaml) — `delivery.plan.v1`, 10 phases, with the TC→phase map and the plan's pinned-contract acknowledgement. The YAML is authoritative when both plan formats exist.
 - **PM record**: [chg-GH-241-pm-notes.yaml](./chg-GH-241-pm-notes.yaml) — context only: the six clarify-scope findings, the decision routing, and the spec-completion note. The specification is the source of truth.
 - **Seed scenario**: [test-scenarios.md](../../../planning/oss-tooling/milestones/m1/test-scenarios.md) — SC-M1-25 (M1-S23 coordinator supervision lifecycle), reconciled in §3.4.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — `bun:test` under `tests/**/*.test.ts`; fixtures never named `*.test.ts`; suites under `tests/{structure,types,behaviour,conformance,golden,checks,boundaries}`; permanent suites assert the current tree, never a moving base branch; goldens regenerate only by an explicit command; `pnpm check` is the aggregate gate.
 - **TypeScript rules**: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — strict typing; injected clock/randomness/environment; data-only contracts; pure domain; adapters own I/O; the error contract; injected fakes over `mock.module`; exact optional-property modelling.
 - **Delivered error table and result contract**: `packages/core/src/contracts/error-table.ts` (`DOMAIN_KINDS`, `ERROR_TABLE`, `EXACT_CODE_DOMAIN_KINDS`), `packages/core/src/contracts/result.ts`, `scripts/checks/error-table-sync.ts`, `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/fixtures/result/code-corpora/**`, [feature-result-contract.md](../../../spec/features/feature-result-contract.md).
-- **Delivered state layer**: `packages/core/src/contracts/state.ts` (`STATE_SCHEMA_VERSION = "delivery.state.v1"`, failure identities), `packages/core/src/state/artifact-boundary.ts`, `packages/core/src/state/economics.ts` (the closest additive-record pattern), `tests/fixtures/state/harness.ts`, [feature-state-layer.md](../../../spec/features/feature-state-layer.md).
+- **Delivered state layer**: `packages/core/src/contracts/state.ts` (`STATE_SCHEMA_VERSION = "delivery.state.v1"`, failure identities), `packages/core/src/state/artifact-boundary.ts`, `packages/core/src/state/index.ts` (`acquireFence`/`releaseFence` handle-scoped, `recoverFence` only age-stale), `packages/core/src/state/blockers.ts` (`appendBlockerQuestion` acquires and releases its own fence), `packages/core/src/state/economics.ts` (the closest additive-record pattern), `tests/fixtures/state/harness.ts`, [feature-state-layer.md](../../../spec/features/feature-state-layer.md). The delivered write fence is a short-lived, handle-scoped lock: a coordinator append takes it for that one append only, and the escalation publish composes with the delivered blocker append path without a handle-reusing refactor.
 - **Delivered configuration layer**: `packages/core/src/config/{catalog,defaults,resolver,schema,provenance}.ts` (`PRODUCTION_CATALOG`, `LANE_BRANCH` pattern, `config.key.unknown`/`config.value.invalid`), `tests/behaviour/config-*.test.ts`, [feature-config-layer.md](../../../spec/features/feature-config-layer.md).
 - **Delivered blocker channel and pickup predicate**: `packages/core/src/contracts/blockers.ts` (`BLOCKER_QUESTION_TYPES`, `BLOCKER_AUDIENCES`, `BLOCKER_PRIORITY_BY_TYPE`, `BLOCKER_QUESTION_RECORD_KIND`), `packages/core/src/domain/blockers.ts` (`rankBlockerQuestions`, `isCoordinatorPickup`), `packages/core/src/state/blockers.ts`, `tests/fixtures/blockers/**`, `tests/behaviour/blockers-*.test.ts`, [feature-blockers.md](../../../spec/features/feature-blockers.md).
 - **Delivered status digest and brief**: `packages/core/src/domain/status.ts` (`typedQuestionsSection`, `STATUS_MAX_ITEMS_PER_SECTION = 8`), `packages/core/src/domain/brief.ts` (`blockerQuestions`), `packages/core/src/contracts/status.ts` (`STATUS_MAX_ITEMS_PER_SECTION`, `STATUS_MAX_HUMAN_LINES = 32`, `STATUS_MAX_MACHINE_BYTES = 65536`), `tests/golden/{status-digest,brief}.test.ts`, `tests/fixtures/{status,brief}/**`, [feature-status-digest.md](../../../spec/features/feature-status-digest.md), [feature-brief.md](../../../spec/features/feature-brief.md).
@@ -84,47 +87,49 @@ This document is a verification map, not an execution claim: no command was run 
 
 ## 3. Coverage Overview
 
-All 43 acceptance criteria map to at least one named scenario; there are no TODO or uncovered ACs. Every TC names at least one AC, NFR, DEC, or the seed scenario. SC-M1-25 is reconciled clause by clause in §3.4. Specification v1.1 pins all six former specification gaps and the two-code allowlist correction (§8.4), so every assertion below targets a fixed contract.
+All 45 acceptance criteria map to at least one named scenario; there are no TODO or uncovered ACs. Every TC names at least one AC, NFR, DEC, or the seed scenario. SC-M1-25 is reconciled clause by clause in §3.4. Specification v1.2 resolves the DoR iteration-1 findings (RF-01..RF-12, A1/A2/A3/A6), so every assertion below targets a fixed contract.
 
 ### 3.1 Functional Coverage (F-#, AC-#)
 
 | AC ID | Description (abbreviated) | TC ID(s) | Status |
 |-------|---------------------------|----------|--------|
-| AC-F1-1 | `start --foreground` acquires the fence, records the instance, reports `running`; a second start is `coordinator.already-running` exit `2` with the holder named | TC-COORD-003, TC-COORD-010, TC-COORD-016 | Covered |
-| AC-F1-2 | `tick` on an uncontended state dir performs exactly one bounded collection cycle with all `delivery.coordinator.v1` fields and starts no background loop; a contended tick is the AC-F8-1 refusal | TC-COORD-003, TC-COORD-012 | Covered |
-| AC-F1-3 | `stop` requests a graceful stop at the next cycle boundary, releases the fence, reports `released=true`; no-supervisor stop is idempotent exit `0` | TC-COORD-003, TC-COORD-011 | Covered |
+| AC-F1-1 | `start --foreground` acquires the instance lease by appending one `coordinator.fence` record with `action=acquired`, `instanceId`, `holder` (pid + process start time), `supervisorMode`, `externalUnit=absent`, reports `running`, and status reports the instance; a second start is `coordinator.already-running` exit `2` with the holder named; no state write fence is held beyond the lease append | TC-COORD-003, TC-COORD-010, TC-COORD-016, TC-COORD-018 | Covered |
+| AC-F1-2 | `tick` on an uncontended state dir acquires the instance lease for its cycle (an `acquired`/`released` pair or equivalent atomic claim), performs exactly one bounded collection cycle with all `delivery.coordinator.v1` fields (including `instance`), and starts no background loop; a contended tick is the AC-F8-1 refusal | TC-COORD-003, TC-COORD-012, TC-COORD-017 | Covered |
+| AC-F1-3 | `stop` appends one `coordinator.fence` `action=stop-requested` record and reports `requested=true` without claiming `released=true`; the live supervisor observes it at the next cycle boundary, stops, and appends `action=released`; a latest lease that is `released` or stale yields `not-running` at exit `0` with nothing appended; `stop` never releases another process's state write fence handle | TC-COORD-003, TC-COORD-011, TC-COORD-017, TC-COORD-018 | Covered |
+| AC-F1-4 | The instance identity is folded from the latest `coordinator.fence` lease record — `instanceId`, `pid`, `holder`, `startedAt` (the instance's `acquired` record time), `supervisorMode` (`foreground` or `detached`), and `externalUnit` (`absent`) — and no separate instance record kind or payload exists | TC-COORD-013, TC-COORD-018 | Covered |
 | AC-F2-1 | A live session records `join-live`, consumes no ordinal, and spawns/resumes nothing | TC-COORD-020, TC-COORD-026, TC-COORD-091 | Covered |
 | AC-F2-2 | A resumable unclean session with known context below the limit records `resume-context`, consumes one ordinal, resumes without re-paying prefill | TC-COORD-021, TC-COORD-026, TC-COORD-091 | Covered |
 | AC-F2-3 | `spawn-fresh` with `context-pressure` / `context-unknown` / `session-interrupted` consumes exactly one ordinal; an undeclared or unavailable harness resume selects `session-interrupted` with no error identity | TC-COORD-022, TC-COORD-026, TC-COORD-091 | Covered |
 | AC-F2-4 | A mid-iteration kill resumes or respawns per the recorded decision; closed-out phase/merge/answer artifacts remain and are not re-executed | TC-COORD-024 | Covered |
 | AC-F2-5 | The recorded decision and ordinal survive a supervisor restart and are reported by status | TC-COORD-025 | Covered |
 | AC-F2-6 | `spawn-fresh` with `initial-start` / `clean-iteration-end` consumes no ordinal | TC-COORD-012, TC-COORD-023, TC-COORD-026 | Covered |
-| AC-F3-1 | Window elapsed, no class advanced, no positive progress, ≥1 evaluable stale class → `stuck` verdict with closed reason `stuck-artifact-evidence` and bounded evidence | TC-COORD-030, TC-COORD-031, TC-COORD-032, TC-COORD-038, TC-COORD-039, TC-COORD-091 | Covered |
-| AC-F3-2 | Positive sourced session progress vetoes a stuck verdict; no kill | TC-COORD-033 | Covered |
-| AC-F3-3 | Session signals absent/unsupported leave the digest class `unknown`; a stale merge/answer class can still yield `stuck`; all-unknown or unreadable is `unevaluable` with reason `evidence-unevaluable`, no kill/restart, exit `2` with the state identity; absence alone never kills | TC-COORD-031, TC-COORD-034, TC-COORD-035, TC-COORD-036, TC-COORD-039 | Covered |
+| AC-F3-1 | Window elapsed, no class advanced, no positive progress, ≥1 evaluable stale class → `stuck` verdict with closed reason `stuck-artifact-evidence` recorded as one append with `phase=verdict`, `killOutcome=not-attempted`, and bounded evidence; the fingerprint inputs are the state event-log cursor and open coordinator-audience question count only | TC-COORD-029, TC-COORD-030, TC-COORD-031, TC-COORD-032, TC-COORD-038, TC-COORD-039, TC-COORD-091 | Covered |
+| AC-F3-2 | Positive sourced session progress within `coordinator.progress-bound` — a positive `token-delta` or `session-traffic` reading since the expectation — vetoes a stuck verdict; no kill | TC-COORD-029, TC-COORD-033 | Covered |
+| AC-F3-3 | Session signals absent/unsupported map to `unknown` (never zero/false); a stale merge/answer class can still yield `stuck`; all-unknown or unreadable is `unevaluable` with reason `evidence-unevaluable`, no kill/restart, exit `2` with the state identity; absence alone never kills | TC-COORD-029, TC-COORD-031, TC-COORD-034, TC-COORD-035, TC-COORD-036, TC-COORD-039 | Covered |
 | AC-F3-4 | Identical state/config/facts yield identical verdict and evidence; no CPU signal is read | TC-COORD-037 | Covered |
-| AC-F4-1 | A `stuck` verdict sends TERM, waits `coordinator.kill-grace`, sends KILL if alive, records `terminated` or `forced` | TC-COORD-040, TC-COORD-091 | Covered |
-| AC-F4-2 | A kill that cannot terminate records `killOutcome=failed`, returns `coordinator.session.kill-failed` exit `2` with consequence `unknown`, and does not retry forever | TC-COORD-041 | Covered |
+| AC-F4-1 | The supervisor has already appended `phase=verdict`; the port verifies the recorded `pid` plus `processStartTimeMs`, TERM is sent, `coordinator.kill-grace` elapses, KILL is sent if alive, and `phase=outcome` appends `terminated` or `forced` with the same `stuckId` | TC-COORD-040, TC-COORD-045, TC-COORD-091 | Covered |
+| AC-F4-2 | A kill that cannot terminate appends `phase=outcome` with the same `stuckId` and `killOutcome=failed`, returns `coordinator.session.kill-failed` exit `2` with consequence `unknown`, and does not retry forever | TC-COORD-041, TC-COORD-045 | Covered |
 | AC-F4-3 | The kill target is the recorded session and process-tree handle; no name/pattern kill and no shell interpolation | TC-COORD-042, TC-COORD-043, TC-COORD-085 | Covered |
+| AC-F4-4 | A recorded `pid` plus `processStartTimeMs` that no longer matches sends no signal, appends `phase=outcome` with the same `stuckId`, `killOutcome=failed`, and `killFailureReason=identity-mismatch`, returns `coordinator.session.kill-failed` exit `2`, and never signals the reused pid | TC-COORD-041, TC-COORD-045 | Covered |
 | AC-F5-1 | A restart lands in `coordinator/<coordinatorId>`, not in lane or economics; those records are unchanged | TC-COORD-050, TC-COORD-083 | Covered |
 | AC-F5-2 | Below `coordinator.restart-budget`: one restart record with the next contiguous ordinal, and the action proceeds | TC-COORD-026, TC-COORD-051, TC-COORD-056, TC-COORD-091 | Covered |
 | AC-F5-3 | At/above the bound: no replacement, `coordinator.restart-budget-exhausted` exit `1` with history, escalation runs, a prior kill is recorded and not undone | TC-COORD-052, TC-COORD-056, TC-COORD-091 | Covered |
 | AC-F5-4 | Supervisor crash/restart preserves count and bound; a replayed ordinal appends nothing | TC-COORD-053, TC-COORD-055 | Covered |
 | AC-F5-5 | `start --fresh-budget` opens a new epoch at count `0`, preserving the old epoch and escalation in history | TC-COORD-016, TC-COORD-054 | Covered |
-| AC-F6-1 | Exactly one owner-audience `decision-needed` question with ref, count, bound, history, and options; digest and brief render it at the cap under the reserved slot selected by the payload-only predicate (type `decision-needed`, audience `owner`, lane `coordinator`, `ref` = `<coordinatorId>#<budgetEpochId>` with exactly one `#` and both sides non-empty), with seven others plus it and displaced questions counted as omitted | TC-COORD-052, TC-COORD-060, TC-COORD-063, TC-COORD-064, TC-COORD-091 | Covered |
+| AC-F6-1 | Exactly one owner-audience `decision-needed` question with ref, count, bound, history, and options; the digest `typed-questions` section and brief `blocker-questions` anchor render it **first by index** even at the cap, the other questions follow in rank order up to seven, and the lowest-ranked is displaced and counted as omitted; selected from the payload alone by the payload-only predicate (type `decision-needed`, audience `owner`, lane `coordinator`, `ref` = `<coordinatorId>#<budgetEpochId>` with exactly one `#` and both sides non-empty) | TC-COORD-052, TC-COORD-060, TC-COORD-063, TC-COORD-064, TC-COORD-091 | Covered |
 | AC-F6-2 | Publish failure returns `coordinator.escalation.publish-failed` exit `2` with consequence `unknown`; status reports `exhausted-escalation-failed`; no exit `0` without a receipt | TC-COORD-062 | Covered |
-| AC-F6-3 | A repeated exhausted tick reuses the existing open question, creates no second question/terminal record, returns idempotent `escalated` at exit `0`, and leaves the original open | TC-COORD-061, TC-COORD-065 | Covered |
+| AC-F6-3 | A repeated exhausted tick reuses the existing open question, creates no second question/terminal record, returns idempotent `exhausted-escalated` at exit `0`, and leaves the original open | TC-COORD-061, TC-COORD-065 | Covered |
 | AC-F7-1 | A newly rank-1, open, coordinator-audience question wakes the coordinator (live/resume/spawn) and appends a `woken` record within one collection interval | TC-COORD-070, TC-COORD-073, TC-COORD-091 | Covered |
-| AC-F7-2 | The same still-top already-woken question yields `already-woken` with no second wake or duplicate record | TC-COORD-071 | Covered |
-| AC-F7-3 | An owner-audience or non-open head, or no question, yields `no-pickup` and no wake | TC-COORD-070, TC-COORD-073 | Covered |
+| AC-F7-2 | The same still-top already-woken question yields `already-woken` with no second wake or duplicate record; dedupe uses coordinator id, question id, and persisted `askedAt` | TC-COORD-071 | Covered |
+| AC-F7-3 | An owner-audience or explicitly non-open head, or no question, yields `no-pickup` and no wake; an absent `status` counts as open, so a rank-1 absent-status coordinator-audience head is a pickup | TC-COORD-070, TC-COORD-073 | Covered |
 | AC-F7-4 | A question answered between ranking and wake yields `answered-before-wake`, no wake, and the next cycle re-evaluates | TC-COORD-072 | Covered |
 | AC-F7-5 | Wake delivery failure returns `coordinator.wake.delivery-failed` exit `2`, appends no durable wake record, and the next cycle retries; only a later successful wake appends the single `woken` record, so retry cannot duplicate records | TC-COORD-074 | Covered |
 | AC-F7-6 | A new question that replaces the answered one as rank 1 wakes normally; one-wake is per question, not per coordinator | TC-COORD-075 | Covered |
-| AC-F8-1 | A second `start` or a contended `tick` on the same state dir is refused with `coordinator.already-running` exit `2`, the holder named, no fence taken, no record appended, and no cycle performed; a different state dir is independent | TC-COORD-010, TC-COORD-017, TC-COORD-043 | Covered |
-| AC-F8-2 | The regime descriptor declares scope, fence, unit identity, distinct process kind, distinct budget, and the M1-S18 seam; no OS installer ships, and the gap is declared and tested naming M1-S18 | TC-COORD-013, TC-COORD-014, TC-COORD-092 | Covered |
-| AC-F8-3 | A stale fence from a gone process or one older than two collection intervals is taken over and appends one durable `coordinator.fence` record with `action=stale-takeover`, the new `holder`, the `previousHolder`, and the observed `fenceAgeMs`, readable from durable state and `status` | TC-COORD-015, TC-COORD-017 | Covered |
-| AC-F9-1 | `status [--live]` reports instance, session, decision, restarts, stuck verdict/reason/evidence, wake, escalation, and fence holder with the last fence action in deterministic text/data; `--live` degrades to `unknown`/`degraded` when facts are unavailable | TC-COORD-003, TC-COORD-012, TC-COORD-013, TC-COORD-017 | Covered |
-| AC-F10-1 | Five config keys validate with declared defaults/domains; unknown → `config.key.unknown`; wrong type/domain → `config.value.invalid`; no decision-code literal | TC-COORD-001, TC-COORD-056, TC-COORD-080 | Covered |
+| AC-F8-1 | A second `start` or a contended `tick` on the same state dir is refused with `coordinator.already-running` exit `2`, the holder named, no lease record appended, and no cycle performed; a different state dir is independent | TC-COORD-010, TC-COORD-017, TC-COORD-018, TC-COORD-043 | Covered |
+| AC-F8-2 | The regime descriptor declares state-dir scope, single-instance lease, unit identity, distinct process kind, distinct budget, `supervisorMode` (`foreground`/`detached`), `externalUnit` (`absent`), and the M1-S18 seam; no OS installer ships, and the gap is declared and tested naming M1-S18 | TC-COORD-013, TC-COORD-014, TC-COORD-092 | Covered |
+| AC-F8-3 | A lease whose recorded holder is not alive (`alive(handle)` absent) or which is older than two collection intervals is taken over: one `action=stale-takeover` record with the new `holder`, `previousHolder`, and observed `fenceAgeMs`, then `action=acquired`; no `recoverFence` and no state-contract change; readable from durable state and `status` | TC-COORD-015, TC-COORD-017, TC-COORD-018 | Covered |
+| AC-F9-1 | `status [--live]` reports instance from the latest lease (`instanceId`, `pid`, `holder`, `startedAt` = acquired record time, `supervisorMode`, `externalUnit`), session, decision, restarts, stuck verdict/reason/evidence, wake, escalation, and lease holder with the last lease action in deterministic text/data; `--live` degrades to `unknown`/`degraded` when facts are unavailable | TC-COORD-003, TC-COORD-012, TC-COORD-013, TC-COORD-017, TC-COORD-018 | Covered |
+| AC-F10-1 | Six config keys validate with declared defaults/domains; unknown → `config.key.unknown`; wrong type/domain → `config.value.invalid`; no decision-code literal | TC-COORD-001, TC-COORD-056, TC-COORD-080 | Covered |
 | AC-F10-2 | The `coordinator` kind and six identities resolve with category/retryability/consequence/remediation and `{0,1,2}` projection; `coordinator.already-running` and `coordinator.restart-budget-exhausted` join `RESERVED_TWO_SEGMENT_CODES` in both gate files (set 22→24; documented table 99→105), the other four are three-segment, and the reserved fallback namespace is unchanged | TC-COORD-004, TC-COORD-081, TC-COORD-082, TC-COORD-092 | Covered |
 | AC-F10-3 | Unreadable/torn/unknown records yield `unevaluable`, no kill/restart, the state identity and exit; a torn/gapped ordinal is never count `0` | TC-COORD-035, TC-COORD-036, TC-COORD-055, TC-COORD-083 | Covered |
 | AC-F10-4 | A missing process-port alive or kill-with-grace capability returns `coordinator.process.capability-gap` exit `2` and performs no destructive action; this identity does not cover harness resume (AC-F2-3), spawn (`harness.capability.gap`/`harness.spawn.refused`, exit `1`), or progress (`unknown` class, AC-F3-3) | TC-COORD-044 | Covered |
@@ -134,63 +139,63 @@ All 43 acceptance criteria map to at least one named scenario; there are no TODO
 | AC-NFR-3 | Decision and render paths perform no model call and read no CPU signal | TC-COORD-002, TC-COORD-037 | Covered |
 | AC-NFR-4 | Reference-store `tick` p95 ≤ 2 000 ms and `status` p95 ≤ 1 000 ms; output stays within the declared bounds | TC-COORD-088 | Covered |
 
-**Capability coverage** (every F-# has at least one TC): F-1 → 003, 010, 011, 012, 016; F-2 → 020–026; F-3 → 030–039; F-4 → 040–044; F-5 → 050–056; F-6 → 060–065; F-7 → 070–075; F-8 → 010, 013, 014, 015, 017; F-9 → 003, 012, 013, 017; F-10 → 001, 004, 080–083.
+**Capability coverage** (every F-# has at least one TC): F-1 → 003, 010, 011, 012, 016, 018; F-2 → 020–026; F-3 → 029–039; F-4 → 040–045; F-5 → 050–056; F-6 → 060–065; F-7 → 070–075; F-8 → 010, 013, 014, 015, 017, 018; F-9 → 003, 012, 013, 017, 018; F-10 → 001, 004, 080–083.
 
-**Decision coverage**: DEC-1/DEC-6 → 014, 017, 092; DEC-2 → 092; DEC-3/DEC-7 → 020–026, 091; DEC-4 → 030–037, 039; DEC-5 → 060–065; DEC-8 → 050–056; DEC-9 → 070–075; DEC-10 → 080; DEC-11 → 081, 082; DEC-12 → 001, 083; DEC-13 → 064, 089.
+**Decision coverage**: DEC-1/DEC-6 → 014, 017, 018, 092; DEC-2 → 092; DEC-3/DEC-7 → 020–026, 091; DEC-4 → 029–037, 039; DEC-5 → 060–065; DEC-8 → 050–056; DEC-9 → 070–075; DEC-10 → 080; DEC-11 → 081, 082; DEC-12 → 001, 083; DEC-13 → 064, 089.
 
-**Seed-scenario coverage**: SC-M1-25 → 091 (primary end-to-end), with clause-level mapping in §3.4 (020–026, 030–036, 040, 051–052, 060–064, 070, 090).
+**Seed-scenario coverage**: SC-M1-25 → 091 (primary end-to-end), with clause-level mapping in §3.4 (020–026, 029–036, 040, 045, 051–052, 060–064, 070, 090).
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
-The specification declares no REST/HTTP endpoint (API-#): the interface is the CLI family, the `delivery.coordinator.v1` payload, six additive record kinds, one reused typed-question record, the injected process-lifecycle port, the regime descriptor, five config keys, and the error table. There are no new external events; EVT-1..EVT-7 are the durable/reused message surface (§8.2).
+The specification declares no REST/HTTP endpoint (API-#): the interface is the CLI family, the `delivery.coordinator.v1` payload, six additive record kinds, one reused typed-question record, the injected process-lifecycle port, the regime descriptor, six config keys, and the error table. There are no new external events; EVT-1..EVT-7 are the durable/reused message surface (§8.2).
 
 | Element | TC ID(s) | Observable assertion |
 |---------|----------|----------------------|
-| EVT-1 `coordinator.iteration` | TC-COORD-020–026, TC-COORD-038, TC-COORD-083 | One record per recorded decision/expectation with iteration/coordinator/trigger/decision/reason/session/context/fingerprint/window/timestamp; `decision=none` allowed; nulls explicit; validated on read |
+| EVT-1 `coordinator.iteration` | TC-COORD-020–026, TC-COORD-038, TC-COORD-083 | One record per recorded decision/expectation with iteration/coordinator/trigger/decision/reason/session/context/fingerprint/window/timestamp; `decision=none` allowed; the fingerprint covers only the state event-log cursor plus open coordinator-audience question count; nulls explicit; validated on read |
 | EVT-2 `coordinator.restart` | TC-COORD-050–056, TC-COORD-083 | One record per admitted restart with `<coordinatorId>#<budgetEpochId>#<ordinal>`, contiguous ordinal from `1`, closed reason, session/previous session, epoch, timestamp |
-| EVT-3 `coordinator.stuck` | TC-COORD-030–036, TC-COORD-039, TC-COORD-083 | One record per `stuck`/`unevaluable` with stuckId/coordinatorId/iterationId/verdict/closed `reason` (`stuck-artifact-evidence` or `evidence-unevaluable`)/bounded evidence/killOutcome/timestamp; progressing is not persisted |
+| EVT-3 `coordinator.stuck` | TC-COORD-030–036, TC-COORD-039, TC-COORD-045, TC-COORD-083 | One or two records per `stuck`/`unevaluable` verdict sharing one `stuckId`: `phase=verdict` (before the kill, `killOutcome=not-attempted`) then `phase=outcome` (`terminated`/`forced`/`failed`), with closed `reason` (`stuck-artifact-evidence` or `evidence-unevaluable`), bounded evidence, `killFailureReason`; latest-wins fold by `recordedAt` then ledger sequence; progressing is not persisted; a replay appends nothing |
 | EVT-4 `coordinator.exhaustion` | TC-COORD-060–065, TC-COORD-083 | One terminal receipt per epoch (`<coordinatorId>#<budgetEpochId>`), with restarts/historyRef/escalationQuestionId/options/`terminal:true`; lands only after the question |
-| EVT-5 `coordinator.wake` | TC-COORD-070–075, TC-COORD-083 | One record per **successful** wake (`outcome=woken`) with wakeId/coordinatorId/questionId/rank/iterationId/timestamp; `already-woken`, `answered-before-wake`, `delivery-failed`, and `no-pickup` are tick results and append no record |
-| EVT-6 owner escalation question | TC-COORD-060, TC-COORD-063, TC-COORD-064 | Reuses `decision-needed`/owner with ref `<coordinatorId>#<budgetEpochId>`, lane `coordinator`, bounded text, declared options; selected by the payload-only predicate; renders under the reserved slot; no new type |
-| EVT-7 `coordinator.fence` | TC-COORD-017, TC-COORD-083 | One record per fence action with fenceId/coordinatorId/action (`acquired`/`released`/`stale-takeover`)/holder/previousHolder/fenceAgeMs/timestamp; reads validate it like every coordinator record |
+| EVT-5 `coordinator.wake` | TC-COORD-070–075, TC-COORD-083 | One record per **successful** wake (`outcome=woken`) with wakeId/coordinatorId/questionId/rank/**askedAt**/iterationId/timestamp; `already-woken`, `answered-before-wake`, `delivery-failed`, and `no-pickup` are tick results and append no record |
+| EVT-6 owner escalation question | TC-COORD-060, TC-COORD-063, TC-COORD-064 | Reuses `decision-needed`/owner with ref `<coordinatorId>#<budgetEpochId>`, lane `coordinator`, bounded text, declared options; selected by the payload-only predicate; renders **first by index** in both sections; no new type |
+| EVT-7 `coordinator.fence` | TC-COORD-010, TC-COORD-017, TC-COORD-018, TC-COORD-083 | One record per lease action with fenceId/**instanceId**/coordinatorId/action (`acquired`/`released`/`stale-takeover`/`stop-requested`)/holder/**pid**/**processStartTimeMs**/**supervisorMode**/**externalUnit**/previousHolder/fenceAgeMs/timestamp; the latest record is the instance identity and each append takes the state write fence only for that append; reads validate it like every coordinator record |
 | DM-1 lifecycle decision | TC-COORD-020–026, TC-COORD-083 | Closed decision/reason vocabulary, session identity, context reading or explicit absence, iteration identity, recorded before action |
 | DM-2 restart record | TC-COORD-050–056, TC-COORD-083 | Durable per-epoch namespace, contiguous ordinal, closed reason, budget epoch, restartId identity |
-| DM-3 stuck record | TC-COORD-030–036, TC-COORD-039, TC-COORD-083 | `stuck`/`unevaluable` verdict with closed `reason` (`stuck-artifact-evidence` or `evidence-unevaluable`), bounded `key=value` evidence ≤ 512 bytes, killOutcome |
+| DM-3 stuck record | TC-COORD-030–036, TC-COORD-039, TC-COORD-045, TC-COORD-083 | Two-phase (`verdict` then `outcome`, same `stuckId`) `stuck`/`unevaluable` verdict with closed `reason`, bounded `key=value` evidence ≤ 512 bytes, `killOutcome`, `killFailureReason` (`identity-mismatch` or null), latest-wins fold |
 | DM-4 exhaustion record | TC-COORD-060–065, TC-COORD-083 | Terminal receipt linking count, history reference, question id, options; one per epoch |
-| DM-5 wake record | TC-COORD-070–075, TC-COORD-083 | Question id/rank/iteration identity for a persisted `woken` only; `already-woken`/`answered-before-wake`/`delivery-failed`/`no-pickup` append nothing; one wake per question lifetime |
-| DM-6 config branch | TC-COORD-056, TC-COORD-080 | Five keys with declared defaults/domains; no literal in decision code |
-| DM-7 process-lifecycle port / capability | TC-COORD-040–044 | Injected spawn/attach, alive, kill-with-grace, and sourced-progress facts; harness session resume consumed from the delivered harness port; four-way ownership split (resume → decision input, spawn → harness identity, alive/kill → coordinator process gap, progress → `unknown` class) |
-| DM-8 supervisor-regime descriptor | TC-COORD-010, TC-COORD-013, TC-COORD-014, TC-COORD-015, TC-COORD-017 | State-dir scope, fence, unit identity, process kind, distinct budget store, M1-S18 seam; fence actions recorded durably |
-| DM-9 closed vocabularies | TC-COORD-001 | Decisions, restart reasons, stuck reasons, verdicts, evidence classes/states, kill/wake outcomes, fence actions, escalation states, options, config keys, error identities have one data-only home |
+| DM-5 wake record | TC-COORD-070–075, TC-COORD-083 | Question id/rank/askedAt/iteration identity for a persisted `woken` only; `already-woken`/`answered-before-wake`/`delivery-failed`/`no-pickup` append nothing; one wake per question lifetime |
+| DM-6 config branch | TC-COORD-056, TC-COORD-080 | Six keys (`stuck-window`, `kill-grace`, `restart-budget`, `resume-context-limit`, `collection-interval`, `progress-bound`) with declared defaults/domains; no literal in decision code |
+| DM-7 process-lifecycle port / capability | TC-COORD-029, TC-COORD-040–045 | Injected spawn/attach, alive, kill-with-grace, and sourced-progress facts; harness session resume consumed from the delivered harness port; pre-TERM `pid` + `processStartTimeMs` identity verification; adapter mapping of delivered `token-delta`/`session-traffic` to `newTurn`/`progressing`; four-way ownership split (resume → decision input, spawn → harness identity, alive/kill → coordinator process gap, progress → `unknown` class) |
+| DM-8 supervisor-regime descriptor | TC-COORD-010, TC-COORD-013, TC-COORD-014, TC-COORD-015, TC-COORD-017, TC-COORD-018 | State-dir scope, single-instance lease, unit identity, process kind, distinct budget store, `supervisorMode` exactly `foreground`/`detached`, `externalUnit` exactly `absent`, M1-S18 seam; lease actions recorded durably |
+| DM-9 closed vocabularies | TC-COORD-001 | Decisions, restart reasons, stuck reasons, verdicts, stuck phases, evidence classes/states, kill outcomes/failure reasons, wake outcomes, fence actions incl. `stop-requested`, supervisor modes, escalation states, options, config keys, error identities have one data-only home |
 | DM-10 error-table integration | TC-COORD-081, TC-COORD-082 | `coordinator` kind with exactly six rows; exact two-segment allowlist (`coordinator.already-running`, `coordinator.restart-budget-exhausted`; set 22→24, table 99→105; other four three-segment); `{0,1,2}` projection; fallback unchanged |
-| DM-11 coordinator fence record | TC-COORD-017, TC-COORD-083 | Durable acquisition, release, or stale-takeover record naming the holder, previous holder, fence age, and time; takeover evidence readable from status |
-| Appendix F exit matrix | TC-COORD-004, TC-COORD-041, TC-COORD-044, TC-COORD-062, TC-COORD-074, TC-COORD-081 | Every listed outcome resolves to exactly one identity and one exit digit; no exit outside `{0,1,2}` |
-| Appendix G command grammar/payload | TC-COORD-003, TC-COORD-012, TC-COORD-013, TC-COORD-017 | Four subcommands/flags; bounded `delivery.coordinator.v1` machine payload including `fence.holder`/`fence.action`/`fence.previousHolder`/`fence.fenceAgeMs`; deterministic bounded human text |
+| DM-11 coordinator fence record | TC-COORD-010, TC-COORD-017, TC-COORD-018, TC-COORD-083 | Durable instance-lease record for acquisition, release, stale takeover, or stop request, naming the instance, holder (pid + start time), previous holder, fence age, supervisor mode, external unit, and time; the latest record is the instance identity; no separate instance record; takeover evidence readable from status |
+| Appendix F exit matrix | TC-COORD-004, TC-COORD-041, TC-COORD-044, TC-COORD-045, TC-COORD-062, TC-COORD-074, TC-COORD-081 | Every listed outcome resolves to exactly one identity and one exit digit; no exit outside `{0,1,2}`; `identity-mismatch` is `coordinator.session.kill-failed` exit `2`; stop-requested is `requested=true`, `released=false` exit `0` |
+| Appendix G command grammar/payload | TC-COORD-003, TC-COORD-012, TC-COORD-013, TC-COORD-017, TC-COORD-018 | Four subcommands/flags; bounded `delivery.coordinator.v1` machine payload including `instance` (`instanceId`/`pid`/`holder`/`startedAt`/`supervisorMode`/`externalUnit`) and `fence.holder`/`fence.action`/`fence.previousHolder`/`fence.fenceAgeMs`; deterministic bounded human text |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
 | NFR ID | Requirement (threshold) | TC ID(s) | Status |
 |--------|--------------------------|----------|--------|
-| NFR-1 | Identical state/config/facts → 100% identical decision and `data`; no ambient clock/random/env outside injected ports | TC-COORD-001, TC-COORD-080, TC-COORD-086 | Covered |
-| NFR-2 | 0 CPU reads or CPU-derived thresholds in the stuck/lifecycle path | TC-COORD-002, TC-COORD-033, TC-COORD-037 | Covered |
+| NFR-1 | Identical state/config/facts → 100% identical decision and `data`; no ambient clock/random/env outside injected ports | TC-COORD-001, TC-COORD-029, TC-COORD-080, TC-COORD-086 | Covered |
+| NFR-2 | 0 CPU reads or CPU-derived thresholds in the stuck/lifecycle path | TC-COORD-002, TC-COORD-029, TC-COORD-033, TC-COORD-037 | Covered |
 | NFR-3 | 0 model calls in any decision/status/render path | TC-COORD-002, TC-COORD-037 | Covered |
 | NFR-4 | At most one verified read per store per tick; ≤ 8 questions; ≤ 64 KiB machine and ≤ 32 human lines | TC-COORD-012, TC-COORD-063, TC-COORD-088 | Covered |
 | NFR-5 | `tick` p95 ≤ 2 000 ms; `status` p95 ≤ 1 000 ms; `start` p95 ≤ 2 000 ms excluding spawn | TC-COORD-088 | Covered (GAP-T6) |
-| NFR-6 | Repeated tick/wake/restart/exhaustion appends no duplicate and performs no duplicate destructive action (100%) | TC-COORD-011, TC-COORD-051, TC-COORD-061, TC-COORD-071, TC-COORD-087 | Covered |
-| NFR-7 | Restart count, budget epoch, exhaustion receipt, and wake dedupe survive a supervisor crash/restart (100%) | TC-COORD-025, TC-COORD-053, TC-COORD-054 | Covered (GAP-T4) |
-| NFR-8 | Wake latency ≤ one collection interval (default 30 000 ms) after the question qualifies | TC-COORD-070 | Covered (GAP-T2) |
-| NFR-9 | Stuck-detection latency ≤ `stuck-window` + one interval (default 630 000 ms) after an expectation | TC-COORD-030, TC-COORD-088 | Covered (GAP-T2) |
-| NFR-10 | TERM then KILL after `kill-grace` (default 20 000 ms); `forced` is never reported as `terminated` | TC-COORD-040 | Covered |
+| NFR-6 | Repeated tick/wake/restart/exhaustion/stuck evaluation appends no duplicate and performs no duplicate destructive action (100%) | TC-COORD-011, TC-COORD-030, TC-COORD-051, TC-COORD-061, TC-COORD-071, TC-COORD-087 | Covered |
+| NFR-7 | Restart count, budget epoch, exhaustion receipt, wake dedupe, and instance lease survive a supervisor crash/restart (100%) | TC-COORD-018, TC-COORD-025, TC-COORD-053, TC-COORD-054 | Covered (GAP-T4) |
+| NFR-8 | Wake latency ≤ one collection interval (default 30 000 ms) after the question qualifies; caller-bounded if the caller ticks slower | TC-COORD-070 | Covered (GAP-T2) |
+| NFR-9 | Stuck-detection latency ≤ `stuck-window` + one interval (default 630 000 ms) after an expectation; caller-bounded if the caller ticks slower | TC-COORD-029, TC-COORD-030, TC-COORD-088 | Covered (GAP-T2) |
+| NFR-10 | TERM then KILL after `kill-grace` (default 20 000 ms); `forced` is never reported as `terminated`; identity is verified before TERM | TC-COORD-040, TC-COORD-045 | Covered |
 | NFR-11 | 0 prompt/transcript/secret/credential values; evidence bounded `key=value` ≤ 512 UTF-8 bytes | TC-COORD-084, TC-COORD-085 | Covered |
-| NFR-12 | Exits only `0`/`1`/`2`; every non-zero resolves to one declared identity | TC-COORD-004, TC-COORD-041, TC-COORD-044, TC-COORD-062, TC-COORD-074, TC-COORD-081, TC-COORD-082 | Covered |
+| NFR-12 | Exits only `0`/`1`/`2`; every non-zero resolves to one declared identity | TC-COORD-004, TC-COORD-041, TC-COORD-044, TC-COORD-045, TC-COORD-062, TC-COORD-074, TC-COORD-081, TC-COORD-082 | Covered |
 | NFR-13 | 0 exit-`0` for an unverified state, an unlanded escalation, or a destructive action on unevaluable state; every skipped/degraded path is reported | TC-COORD-013, TC-COORD-035, TC-COORD-044, TC-COORD-062, TC-COORD-083 | Covered |
-| NFR-14 | Kill target is the recorded handle/tree only; no name/pattern kill; no shell interpolation; no kill without the fence | TC-COORD-042, TC-COORD-043, TC-COORD-085 | Covered |
+| NFR-14 | Kill target is the recorded handle/tree only; no name/pattern kill; no shell interpolation; the recorded `pid` + `processStartTimeMs` identity is verified before TERM; the kill requires the current instance lease and the outcome append takes the state write fence for that append only | TC-COORD-042, TC-COORD-043, TC-COORD-045, TC-COORD-085 | Covered |
 | NFR-15 | 0 changes to existing output/envelope/exits/config/digest/anchors except the declared reserved escalation slot | TC-COORD-064, TC-COORD-089, TC-COORD-092 | Covered |
 
 ### 3.4 Coverage-Matrix Integrity and SC-M1-25 Reconciliation
 
-- **Uncovered ACs**: none (43/43 in §3.1). **Orphan TCs**: none; every TC names an AC, NFR, DEC, or the seed in §5.1 and §5.2.
-- **Intentional duplicate coverage**: AC-F1-1 spans three TCs because the start receipt, the duplicate refusal, and the fresh-budget refusal fail independently. AC-F2-* spans the decision matrix plus durability plus the ordinal matrix because recording, action, and bookmarking fail independently. AC-F3-* spans the evidence matrix, the fingerprint rule, the corroborator, the unknown rule, the unevaluable rule, and the no-CPU proof because each can regress alone. AC-F6-1 spans behaviour, the terminal receipt, the reserved-slot render, and digest/brief agreement because the escalation can land but be crowded out. AC-NFR-4 spans performance and read-count and output bounds.
+- **Uncovered ACs**: none (45/45 in §3.1). **Orphan TCs**: none; every TC names an AC, NFR, DEC, or the seed in §5.1 and §5.2.
+- **Intentional duplicate coverage**: AC-F1-1 spans the start receipt, the duplicate refusal, and the fresh-budget refusal because they fail independently; AC-F1-4 adds the instance-identity fold. AC-F4-4 spans the identity-mismatch kill path together with AC-F4-2 because the failure classification and the pre-signal verification fail independently. AC-F2-* spans the decision matrix plus durability plus the ordinal matrix because recording, action, and bookmarking fail independently. AC-F3-* spans the evidence matrix, the fingerprint rule, the adapter new-turn mapping, the corroborator, the unknown rule, the unevaluable rule, and the no-CPU proof because each can regress alone. AC-F6-1 spans behaviour, the terminal receipt, the render-first index, and digest/brief agreement because the escalation can land but be crowded out. AC-NFR-4 spans performance and read-count and output bounds.
 
 **SC-M1-25 (restated from `doc/planning/oss-tooling/milestones/m1/test-scenarios.md`):**
 
@@ -200,21 +205,21 @@ The specification declares no REST/HTTP endpoint (API-#): the interface is the C
 |-------------|---------------|-------|
 | Given: a coordinator session mid-iteration | TC-COORD-020, TC-COORD-024 | A live recorded session is `join-live`; a killed-mid-iteration session is recovered per the recorded decision with closed-out artifacts untouched |
 | Given: context pressure rises | TC-COORD-021, TC-COORD-022 | `resume-context` below `resume-context-limit`; `spawn-fresh` with `context-pressure` at/above it |
-| Given: a coordinator-audience question ranked top-of-digest | TC-COORD-070, TC-COORD-073 | Strict `isCoordinatorPickup`: rank 1, open, audience coordinator |
+| Given: a coordinator-audience question ranked top-of-digest | TC-COORD-070, TC-COORD-073 | Strict `isCoordinatorPickup`: rank 1, open (an absent status counts as open), audience coordinator |
 | When: supervision evaluates | TC-COORD-012, TC-COORD-026 | One bounded `tick` performs the evaluation; the decision is persisted before the action |
 | Then: join-or-resume decision recorded and applied | TC-COORD-020, TC-COORD-021, TC-COORD-024, TC-COORD-025, TC-COORD-026 | Decision + reason + session + context + ordinal + iteration recorded; durable across restart |
-| Then: no digest consumed, no merge, no answer within the declared window | TC-COORD-030, TC-COORD-031, TC-COORD-032 | Three classes; the fingerprint must advance **and** a new session turn must exist for `digest-consumed` (the spec's declared clarification) |
-| Then: detected by artifact evidence | TC-COORD-030, TC-COORD-031, TC-COORD-034, TC-COORD-037 | No CPU read; unknown is disclosed, never fabricated as stale; positive progress vetoes |
-| Then: killed with grace | TC-COORD-040, TC-COORD-042 | TERM → grace → KILL if alive; recorded handle only |
+| Then: no digest consumed, no merge, no answer within the declared window | TC-COORD-029, TC-COORD-030, TC-COORD-031, TC-COORD-032 | Three classes; the fingerprint is the state event-log cursor plus open coordinator-question count; `digest-consumed` requires a fingerprint advance **and** a new turn (positive `token-delta` or `session-traffic`) |
+| Then: detected by artifact evidence | TC-COORD-029, TC-COORD-030, TC-COORD-031, TC-COORD-034, TC-COORD-037 | No CPU read; unknown is disclosed, never fabricated as stale; positive progress within `progress-bound` vetoes |
+| Then: killed with grace | TC-COORD-040, TC-COORD-042, TC-COORD-045 | TERM → grace → KILL if alive; recorded handle only; pre-TERM identity verified |
 | Then: restarted within budget | TC-COORD-051, TC-COORD-052, TC-COORD-054 | Below bound appends the next ordinal; at/above refuses and escalates; fresh budget opens a new epoch |
 | Then: the typed question wakes the next iteration within one collection cycle | TC-COORD-070, TC-COORD-073 | One tick after the question qualifies issues the wake; no scheduler in v1 (GAP-T2) |
 | Assert: restart events classified | TC-COORD-026, TC-COORD-039, TC-COORD-051, TC-COORD-052 | Closed restart reasons plus the distinct closed stuck `reason` field (`stuck-artifact-evidence` / `evidence-unevaluable`) |
-| Assert: exhaustion escalates to the owner brief, never silent | TC-COORD-060, TC-COORD-062, TC-COORD-063, TC-COORD-064 | Exactly one owner question; publish failure exit `2`; reserved slot renders at the cap; digest/brief agree |
-| Assert: the ceo-loop function map is covered | TC-COORD-090 (trace) plus TC-COORD-020/030/040/051/070 | Context-resume decision, stuck detection, kill, budget, wake each have a passing AC trace |
+| Assert: exhaustion escalates to the owner brief, never silent | TC-COORD-060, TC-COORD-062, TC-COORD-063, TC-COORD-064 | Exactly one owner question; publish failure exit `2`; reserved slot renders first at the cap; digest/brief agree; `exhausted-escalated` |
+| Assert: the ceo-loop function map is covered | TC-COORD-090 (trace) plus TC-COORD-020/029/040/045/051/070 | Context-resume decision, stuck detection, kill, budget, wake each have a passing AC trace |
 
 **Divergence declaration.** No divergence. The only clarification beyond the seed's wording is the observable definition of "digest consumed" (spec DEC-4): the digest-input fingerprint must advance **and** the coordinator session must produce a new session turn. This preserves the seed's artifact-evidence intent and the corroborator prevents a false kill. TC-COORD-032 pins that a fingerprint advance without a turn does **not** count.
 
-**Specification resolutions (v1.1)** (full detail in §8.4): GAP-1 (AC-F1-2 now applies only to an uncontended state dir; the contended tick remains AC-F8-1 `coordinator.already-running` exit `2`); GAP-2 (four-way capability ownership: resume undeclared/unavailable → `spawn-fresh session-interrupted`; harness spawn impossible/refused → `harness.capability.gap`/`harness.spawn.refused` exit `1`; process-port alive/kill absent → `coordinator.process.capability-gap` exit `2`; progress absent → `unknown` class, never a failure or kill); GAP-3 (payload-only reserved-slot predicate: type, audience, lane, and ref shape with exactly one `#` and both sides non-empty; no extra read; eight-question bound unchanged); GAP-4 (only a successful `woken` persists and consumes the one-wake lifetime; `already-woken` is a no-op; `delivery-failed`, `answered-before-wake`, and `no-pickup` append no record); GAP-5 (closed `coordinator.stuck.reason`: `stuck-artifact-evidence` or `evidence-unevaluable`, distinct from the restart reason); GAP-6 (`coordinator.fence` record with action/holder/previousHolder/fenceAgeMs, durable and status-readable); GAP-T7 (exactly two two-segment codes, `coordinator.already-running` and `coordinator.restart-budget-exhausted`, set 22→24). No specification gap remains open; the affected TCs assert the pinned contracts directly.
+**Specification resolutions (v1.2)** (full detail in §8.4): RF-01/RF-05/RF-06/RF-07/A1 (the durable instance lease via `coordinator.fence` records replaces every lifetime-fence assertion; the per-append state write fence composes with the delivered `appendBlockerQuestion`; `stop` is a recorded request; stale takeover is holder `alive(handle)` absent or lease age > 2x interval with no `recoverFence` and no `contracts/state.ts` change; AC-F1-4 pins the instance identity); RF-04 (two-phase `coordinator.stuck`, same `stuckId`, latest-wins fold, replay appends nothing); RF-08/A3 (new turn = positive `token-delta` or `session-traffic`; `coordinator.progress-bound` default 300 000 ms; adapter-level mapping; absent → `unknown`; caller-bounded next-tick semantics); RF-09 (fingerprint = state event-log cursor + open coordinator-question count only; no ready-to-merge, tracker, CI, or network read); RF-10 (`exhausted-escalated`, no `escalated`); RF-12/A5 (reserved question renders first by index in both sections; other seven in rank order; lowest displaced and counted omitted); A2/AC-F4-4 (pre-TERM `pid` + `processStartTimeMs` verification; mismatch → no signal, `killFailureReason=identity-mismatch`, exit `2`); A6 (absent status counts as open; `no-pickup` only for non-rank-1 / non-coordinator / explicitly non-open). No specification gap remains open; the affected TCs assert the pinned contracts directly.
 
 ## 4. Test Types and Layers
 
@@ -223,18 +228,18 @@ All TypeScript tests use `bun:test` with `describe`/`test`; fixtures are never n
 | Layer | Runner / invocation | Location | Covers |
 |-------|--------------------|----------|--------|
 | Static/diff and content | `git diff --check`; changed-file naming/path review; markdown table/fence sanity | change artifacts, touched docs | Gate precondition; TC-COORD-092 |
-| Unit (pure domain) | `bun test tests/behaviour/coordinator-*.test.ts` importing the pure functions directly | `packages/core/src/domain/coordinator*` (expected) and `packages/core/src/contracts/coordinator*` | Decision, stuck, admission, wake, escalation matrix cases; no I/O |
-| Structure / invariant | `bun test tests/structure/coordinator-*.test.ts` | contracts/domain/state/config modules; AST scans and temp-copy mutants | TC-COORD-001, 002, 003, 037, 080, 081, 083 |
-| State-record | `bun test tests/behaviour/coordinator-records.test.ts tests/behaviour/coordinator-*-durability.test.ts tests/behaviour/coordinator-fence-records.test.ts` | `packages/core/src/state/coordinator*` (expected), `tests/fixtures/state/harness.ts` | TC-COORD-017, 025, 053, 055, 083 |
-| Adapter / process-port | `bun test tests/behaviour/coordinator-{kill-grace,kill-failed,capability-gap}.test.ts` | `tests/fixtures/coordinator/process-port.ts`, `packages/adapters/src/process/**` (expected) | TC-COORD-040, 041, 044 |
+| Unit (pure domain) | `bun test tests/behaviour/coordinator-*.test.ts` importing the pure functions directly | `packages/core/src/domain/coordinator*` (expected) and `packages/core/src/contracts/coordinator*` | Decision, stuck (including TC-029 new-turn mapping), admission, wake, escalation matrix cases; no I/O |
+| Structure / invariant | `bun test tests/structure/coordinator-*.test.ts` | contracts/domain/state/config modules; AST scans and temp-copy mutants | TC-COORD-001, 002, 003, 018, 037, 045, 080, 081, 083 |
+| State-record | `bun test tests/behaviour/coordinator-records.test.ts tests/behaviour/coordinator-*-durability.test.ts tests/behaviour/coordinator-fence-records.test.ts tests/behaviour/coordinator-instance-lease.test.ts` | `packages/core/src/state/coordinator*` (expected), `tests/fixtures/state/harness.ts` | TC-COORD-017, 018, 025, 053, 055, 083 |
+| Adapter / process-port | `bun test tests/behaviour/coordinator-{kill-grace,kill-failed,kill-identity,capability-gap,new-turn}.test.ts` | `tests/fixtures/coordinator/process-port.ts`, `packages/adapters/src/harness/process-lifecycle*` (expected) | TC-COORD-029, 040, 041, 044, 045 |
 | Security / privacy | `bun test tests/checks/coordinator-privacy.test.ts tests/structure/coordinator-kill-target.test.ts` | privacy canaries, secret boundary, shell/network scans | TC-COORD-042, 084, 085 |
 | Non-regression | `bun test tests/structure tests/behaviour tests/golden tests/conformance` | unchanged delivered suites plus the declared reserved-slot golden | TC-COORD-089 |
 | Type-level | `pnpm typecheck`; `tests/types/coordinator.type-test.ts` | closed unions, absent-vs-null-vs-zero modelling, no CPU field, envelope exclusivity | Supports TC-COORD-001, 002, 004, 083 |
 | Error-table binding | `bun test tests/checks/error-table-sync.test.ts`; `bun run scripts/checks/error-table-sync.ts` | `tests/fixtures/result/code-corpora/*.json`, `doc/spec/features/feature-result-contract.md` | TC-COORD-081, 082 |
-| Behaviour (CLI in-process) | `bun test tests/behaviour/coordinator-*.test.ts` | `tests/fixtures/coordinator/**`; injected clock/ids/brand/ports/state; in-process `runCli` | TC-COORD-003–017, 020–075, 080–087 |
+| Behaviour (CLI in-process) | `bun test tests/behaviour/coordinator-*.test.ts` | `tests/fixtures/coordinator/**`; injected clock/ids/brand/ports/state; in-process `runCli` | TC-COORD-003–018, 020–075, 080–087 |
 | Integration (fake process harness) | `bun test tests/behaviour/coordinator-scenario.test.ts` | `tests/fixtures/coordinator/harness.ts` + `process-port.ts`; in-process CLI over a temp state root | TC-COORD-091 |
 | Golden | `bun test tests/golden/coordinator.test.ts tests/golden/status-digest.test.ts tests/golden/brief.test.ts` | committed normalized fixtures under `tests/fixtures/coordinator/golden/`, `tests/fixtures/status/golden/`, `tests/fixtures/brief/golden/` | TC-COORD-013, 063, 064, 086, 089 |
-| Checks / mutants / determinism | `bun test tests/checks/coordinator-{mutants,determinism}.test.ts` | `tests/fixtures/coordinator/mutants/**`, temp copies | TC-COORD-037, 086, 087 |
+| Checks / mutants / determinism | `bun test tests/checks/coordinator-{mutants,determinism}.test.ts` | `tests/fixtures/coordinator/mutants/**`, temp copies | TC-COORD-029, 037, 045, 086, 087 |
 | Boundaries | `bun test tests/boundaries`; `pnpm check:boundaries` | production `.dependency-cruiser.cjs`, ambient-globals AST guard, fixture-coverage meta-check | TC-COORD-002, 085 |
 | Performance | `bun test tests/behaviour/coordinator-performance.test.ts` | synthetic reference store; injected clock; p95 over declared iterations, environment recorded | TC-COORD-088 |
 | Manual | content/manual review at phase 7 | `doc/spec/features/feature-coordinator-supervision.md`, registry, man page, decision records; `bash scripts/.tests/test-doc-distribution.sh` | TC-COORD-092 |
@@ -263,14 +268,15 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 | TC-COORD-002 | Tier boundaries, purity, adapter confinement, and brand neutrality hold | Happy Path | Critical | High | AC-NFR-3; NFR-1, NFR-2, NFR-3 |
 | TC-COORD-003 | Command grammar is the declared four-subcommand family; unknown input is classified | Happy Path | Critical | High | AC-F1-1, AC-F1-2, AC-F1-3, AC-F9-1 |
 | TC-COORD-004 | The CLI handler is pure and every outcome projects one identity in `{0,1,2}` | Happy Path | Critical | High | AC-F10-2; NFR-12 |
-| TC-COORD-010 | `start --foreground` fences, records the instance, and refuses a second supervisor | Happy Path | Critical | High | AC-F1-1, AC-F8-1; DM-8 |
-| TC-COORD-011 | `stop` is graceful, releases the fence, and is idempotent without a supervisor | Happy Path | Critical | High | AC-F1-3; NFR-6 |
+| TC-COORD-010 | `start --foreground` acquires the instance lease, records the instance, and refuses a second supervisor | Happy Path | Critical | High | AC-F1-1, AC-F8-1; DM-8, DM-11 |
+| TC-COORD-011 | `stop` is a recorded request, reports `requested`/`not-running`, and is idempotent without a supervisor | Happy Path | Critical | High | AC-F1-3; NFR-6 |
 | TC-COORD-012 | `tick` is exactly one bounded cycle with the declared payload and no loop | Happy Path | Critical | High | AC-F1-2, AC-F9-1, AC-F2-6; NFR-4 |
 | TC-COORD-013 | `status [--live]` reports the full state and degrades honestly | Happy Path | Critical | High | AC-F9-1, AC-F8-2; NFR-13 |
 | TC-COORD-014 | The regime descriptor is shared, declares the M1-S18 seam, and ships no installer | Happy Path | Important | High | AC-F8-2; DEC-1, DEC-6 |
 | TC-COORD-015 | A stale fence is taken over with recorded evidence, not refused forever | Edge Case | Critical | High | AC-F8-3; NFR-6 |
 | TC-COORD-016 | `--fresh-budget` is a start-time option and requires a stopped supervisor | Negative | Important | High | AC-F1-1, AC-F5-5 |
-| TC-COORD-017 | `coordinator.fence` records acquisition, release, and stale takeover durably | Happy Path | Critical | High | AC-F8-1, AC-F8-3, AC-F9-1; DM-11; EVT-7; NFR-6 |
+| TC-COORD-017 | `coordinator.fence` records acquisition, release, stale takeover, and stop request durably | Happy Path | Critical | High | AC-F1-1, AC-F1-3, AC-F8-1, AC-F8-3, AC-F9-1; DM-11; EVT-7; NFR-6 |
+| TC-COORD-018 | The instance identity is folded from the latest lease; no separate instance record exists | Happy Path | Critical | High | AC-F1-1, AC-F1-3, AC-F1-4, AC-F8-1, AC-F9-1; DM-11; EVT-7 |
 | TC-COORD-020 | A live session records `join-live` and consumes no ordinal | Happy Path | Critical | High | AC-F2-1; DEC-7; SC-M1-25 |
 | TC-COORD-021 | A resumable unclean session records `resume-context` without re-paying prefill | Happy Path | Critical | High | AC-F2-2; DM-1, DM-2; SC-M1-25 |
 | TC-COORD-022 | `spawn-fresh` recovery reasons each consume exactly one ordinal | Corner Case | Critical | High | AC-F2-3; DM-1, DM-2 |
@@ -278,21 +284,23 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 | TC-COORD-024 | A mid-iteration kill resumes/respawns without re-executing closed-out work | Edge Case | Critical | High | AC-F2-4; SC-M1-25 |
 | TC-COORD-025 | The recorded decision survives a supervisor restart | Edge Case | Critical | High | AC-F2-5; NFR-7 |
 | TC-COORD-026 | Ordinal accounting is consistent across all six decision outcomes | Corner Case | Critical | High | AC-F2-1..AC-F2-6, AC-F5-2 |
-| TC-COORD-030 | A stuck verdict requires the full artifact-evidence conjunction | Happy Path | Critical | High | AC-F3-1; DM-3; SC-M1-25 |
+| TC-COORD-029 | The adapter maps `token-delta`/`session-traffic` to a new turn and progress-bound; absent is `unknown` | Corner Case | Critical | High | AC-F3-1, AC-F3-2, AC-F3-3; DM-7; DEC-4 |
+| TC-COORD-030 | A stuck verdict is the full two-phase artifact-evidence conjunction | Happy Path | Critical | High | AC-F3-1; DM-3; EVT-3; SC-M1-25 |
 | TC-COORD-031 | The advanced/stale/unknown evidence matrix is total and deterministic | Corner Case | Critical | High | AC-F3-1, AC-F3-3 |
-| TC-COORD-032 | A fingerprint advance without a session turn does not count as consumed | Negative | Critical | High | AC-F3-1; DEC-4 |
-| TC-COORD-033 | Positive sourced progress vetoes a stuck verdict and no kill occurs | Regression | Critical | Critical | AC-F3-2; NFR-2; RSK-1 |
-| TC-COORD-034 | Absent session signals leave the digest class unknown and only a stale artifact can kill | Corner Case | Critical | High | AC-F3-3 |
+| TC-COORD-032 | A fingerprint advance without a session turn does not count as consumed; the fingerprint is state-sourced only | Negative | Critical | High | AC-F3-1; DEC-4 |
+| TC-COORD-033 | Positive sourced progress within `progress-bound` vetoes a stuck verdict and no kill occurs | Regression | Critical | Critical | AC-F3-2; NFR-2; RSK-1 |
+| TC-COORD-034 | Absent session signals map to `unknown`, never zero; only a stale artifact can justify a kill | Corner Case | Critical | High | AC-F3-3; DM-7 |
 | TC-COORD-035 | All-unknown or an unreadable required store yields `unevaluable`, exit `2`, no action | Negative | Critical | Critical | AC-F3-3, AC-F10-3; NFR-13 |
 | TC-COORD-036 | A single torn/unreadable store is unknown, never fabricated stale | Negative | Critical | High | AC-F3-3, AC-F10-3 |
 | TC-COORD-037 | CPU is never read, structurally or behaviourally | Negative | Critical | Critical | AC-F3-4, AC-NFR-3; NFR-2 |
 | TC-COORD-038 | One expectation is active per coordinator and a trigger refreshes it | Corner Case | Important | High | AC-F3-1; EVT-1 |
 | TC-COORD-039 | The stuck record's closed `reason` distinguishes `stuck-artifact-evidence` from `evidence-unevaluable` | Corner Case | Critical | High | AC-F3-1, AC-F3-3, AC-F10-3; DM-3; EVT-3 |
-| TC-COORD-040 | Kill sends TERM, waits grace, then KILL, and records the outcome | Happy Path | Critical | Critical | AC-F4-1; NFR-10; SC-M1-25 |
-| TC-COORD-041 | A failed kill is classified at exit `2` and never claims success | Negative | Critical | Critical | AC-F4-2; NFR-12, NFR-13 |
+| TC-COORD-040 | Kill verifies identity, sends TERM, waits grace, then KILL, and records the two-phase outcome | Happy Path | Critical | Critical | AC-F4-1; NFR-10; EVT-3; SC-M1-25 |
+| TC-COORD-041 | A failed kill is classified at exit `2` and never claims success | Negative | Critical | Critical | AC-F4-2, AC-F4-4; NFR-12, NFR-13 |
 | TC-COORD-042 | The kill target is the recorded handle and tree; no name/pattern/shell path exists | Negative | Critical | Critical | AC-F4-3; NFR-14 |
-| TC-COORD-043 | No kill exists without the fence; a contended tick is refused | Negative | Critical | Critical | AC-F4-3, AC-F8-1; NFR-14 |
+| TC-COORD-043 | No kill exists without the current instance lease; a contended tick is refused | Negative | Critical | Critical | AC-F4-3, AC-F8-1; NFR-14 |
 | TC-COORD-044 | Missing process-port capabilities are a classified gap; the four capability owners stay distinct | Negative | Critical | High | AC-F10-4; DM-7; NFR-13 |
+| TC-COORD-045 | A PID/start-time identity mismatch sends no signal and records `identity-mismatch` | Negative | Critical | Critical | AC-F4-4, AC-F4-2; DM-3, DM-7; NFR-14; RSK-13 |
 | TC-COORD-050 | The restart namespace is the coordinator's, not lane/economics | Happy Path | Critical | High | AC-F5-1; DM-2; DEC-8 |
 | TC-COORD-051 | A below-bound restart appends the next contiguous ordinal and proceeds | Happy Path | Critical | High | AC-F5-2; NFR-6 |
 | TC-COORD-052 | At/above the bound no replacement starts, the refusal is exit `1`, and escalation runs | Negative | Critical | Critical | AC-F5-3, AC-F6-1; SC-M1-25 |
@@ -303,16 +311,16 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 | TC-COORD-060 | Exactly one owner-audience exhaustion question lands, and the receipt follows it | Happy Path | Critical | Critical | AC-F6-1; DM-4; DEC-5; SC-M1-25 |
 | TC-COORD-061 | A repeated exhausted tick is idempotent and leaves the original question open | Regression | Critical | High | AC-F6-3; NFR-6 |
 | TC-COORD-062 | Publish failure is exit `2`, status says `exhausted-escalation-failed`, and no exit `0` lies | Negative | Critical | Critical | AC-F6-2; NFR-12, NFR-13 |
-| TC-COORD-063 | The reserved escalation slot renders at the cap with the omitted count intact | Corner Case | Critical | Critical | AC-F6-1; NFR-4 |
+| TC-COORD-063 | The reserved escalation slot renders first by index at the cap with the omitted count intact | Corner Case | Critical | Critical | AC-F6-1; NFR-4 |
 | TC-COORD-064 | The reserved slot adds no new anchor, section, or type, and digest/brief agree | Regression | Critical | High | AC-F6-1; NFR-15 |
 | TC-COORD-065 | Escalation is idempotent by coordinator-and-epoch and reuses the open owner question | Corner Case | Critical | High | AC-F6-3 |
-| TC-COORD-070 | Strict `isCoordinatorPickup` wakes only rank-1 open coordinator questions | Happy Path | Critical | Critical | AC-F7-1, AC-F7-3; NFR-8; DEC-9; SC-M1-25 |
+| TC-COORD-070 | Strict `isCoordinatorPickup` wakes only rank-1 open coordinator questions; an absent status counts as open | Happy Path | Critical | Critical | AC-F7-1, AC-F7-3; NFR-8; DEC-9; SC-M1-25 |
 | TC-COORD-071 | One wake per question lifetime; a still-top question is `already-woken` | Regression | Critical | High | AC-F7-2; NFR-6 |
 | TC-COORD-072 | A question answered between ranking and wake yields `answered-before-wake` | Edge Case | Critical | High | AC-F7-4 |
 | TC-COORD-073 | The wake uses the live/resume/spawn path and records the question and iteration | Happy Path | Critical | High | AC-F7-1, AC-F7-3 |
 | TC-COORD-074 | Wake delivery failure is exit `2`, appends nothing, and retries without duplicate records | Negative | Critical | High | AC-F7-5; NFR-6 |
 | TC-COORD-075 | A new top question after an answered one wakes normally | Corner Case | Important | High | AC-F7-6 |
-| TC-COORD-080 | The five config keys own defaults/domains; invalid input reuses the delivered identities | Happy Path | Critical | High | AC-F10-1; DM-6; DEC-10 |
+| TC-COORD-080 | The six config keys own defaults/domains; invalid input reuses the delivered identities | Happy Path | Critical | High | AC-F10-1; DM-6; DEC-10 |
 | TC-COORD-081 | The error table gains the coordinator kind and exactly six rows, with the exact allowlist addition | Happy Path | Critical | Critical | AC-F10-2; DM-10; NFR-12 |
 | TC-COORD-082 | The six documented rows bind two-way and the corpora are non-vacuous | Happy Path | Critical | Critical | AC-F10-2; NFR-12 |
 | TC-COORD-083 | Coordinator records are additive, validated, and the schema version is unchanged | Happy Path | Critical | High | AC-F10-3, AC-F5-1; DM-1..DM-5, DM-11 |
@@ -344,12 +352,12 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - The six record kinds, the config key paths, and the six error identities are declared.
 
 **Steps**:
-1. Import the closed vocabularies: lifecycle decisions, lifecycle reasons, restart reasons, stuck verdicts, stuck reasons, evidence classes and states, kill outcomes, wake outcomes, fence actions, escalation states, exhaustion options, config keys, and error identities.
+1. Import the closed vocabularies: lifecycle decisions, lifecycle reasons, restart reasons, stuck verdicts, stuck reasons, stuck phases, evidence classes and states, kill outcomes, kill failure reasons, wake outcomes (persisted and tick-result), fence actions, supervisor modes, escalation states, exhaustion options, config keys, and error identities.
 2. Assert each vocabulary is a single `as const` declaration driving both the runtime list and the union type, with no duplicate, missing, or extra member; assert declared order where the spec declares order.
-3. Assert the six record-kind identifiers and their payload schema ids are strings under the `coordinator.` prefix, distinct from `economics.*`, `blocker.*`, and every delivered kind; include the `fence` kind and its `acquired`/`released`/`stale-takeover` actions.
-4. Assert `STATE_SCHEMA_VERSION` is still `delivery.state.v1` and the coordinator kinds are additive constants, not a schema version or migration marker.
-5. Assert `DOMAIN_KINDS` will contain `coordinator` exactly once and that the six identities are unique and two- or three-segment per Appendix B.
-6. Assert the config key paths are exactly the five declared keys, with no sixth key and no alias.
+3. Assert the six record-kind identifiers and their payload schema ids are strings under the `coordinator.` prefix, distinct from `economics.*`, `blocker.*`, and every delivered kind; include the `fence` kind and its `acquired`/`released`/`stale-takeover`/`stop-requested` actions.
+4. Assert `STATE_SCHEMA_VERSION` is still `delivery.state.v1` and the coordinator kinds are additive constants, not a schema version or migration marker; assert no `coordinator.instance` kind.
+5. Assert `DOMAIN_KINDS` will contain `coordinator` exactly once and that the six identities are unique and two- or three-segment per Appendix B; assert `supervisorMode` is exactly `foreground`/`detached` and `externalUnit` exactly `absent`.
+6. Assert the config key paths are exactly the six declared keys (`stuck-window`, `kill-grace`, `restart-budget`, `resume-context-limit`, `collection-interval`, `progress-bound`), with no seventh key and no alias.
 7. Scan every file under `packages/` for a redeclaration of any coordinator vocabulary; assert none.
 8. Run the structure layer's AST data-only detector over the module; a temp-copy mutant injecting a runtime import or an executable statement fails naming the file and kind.
 
@@ -371,7 +379,7 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 **Related IDs**: AC-NFR-3, F-9, F-10, NFR-1, NFR-2, NFR-3
 **Test Type(s)**: Unit, Contract, Structure
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/coordinator-imports.test.ts`, `tests/boundaries`, `packages/core/src/{contracts,domain,state,config}/coordinator*`, `packages/adapters/src/process/**` (expected)
+**Target Layer / Location**: `tests/structure/coordinator-imports.test.ts`, `tests/boundaries`, `packages/core/src/{contracts,domain,state,config}/coordinator*`, `packages/adapters/src/harness/process-lifecycle*` (expected)
 **Tags**: @contract, @backend, @boundary
 
 **Preconditions**:
@@ -451,70 +459,71 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - The handler is stream-free and exit-free; the edge projection is total.
 - `fallback.internal` remains a containment path, not a coordinator outcome.
 
-#### TC-COORD-010 - `start --foreground` fences, records the instance, and refuses a second supervisor
+#### TC-COORD-010 - `start --foreground` acquires the instance lease, records the instance, and refuses a second supervisor
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F1-1, AC-F8-1, F-1, F-8, DM-8
+**Related IDs**: AC-F1-1, AC-F1-4, AC-F8-1, F-1, F-8, DM-8, DM-11, EVT-7
 **Test Type(s)**: Behaviour, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-start.test.ts`; `tests/fixtures/coordinator/harness.ts`
-**Tags**: @backend, @cli, @fence
+**Tags**: @backend, @cli, @lease
 
 **Preconditions**:
-- Two independent temp state roots exist; no supervisor holds either fence.
-- The process-lifecycle fake and injected clock are ready.
+- Two independent temp state roots exist; no supervisor holds either lease.
+- The process-lifecycle fake, injected clock, and injected fence token are ready.
 
 **Steps**:
-1. Run `coordinator start --foreground` against root A; assert the fence is acquired exactly once, the instance record is durable, and `status` reports `state=running` with the instance id.
-2. Assert the start receipt carries `scope=state-dir`, `instance`, `pid` (or `-`), and `supervisor=foreground`.
-3. Run a second `coordinator start --foreground` against root A; assert `coordinator.already-running` at exit `2`, no second instance record, and the holder named in the error.
-4. Run `coordinator tick` against root A while the first supervisor holds the fence; assert the same refusal (AC-F8-1).
-5. Run `coordinator start --foreground` against root B; assert it succeeds independently and both instances report their own scope.
-6. Assert the fence token is injected, never guessed, and that a failed acquisition appends no instance record.
+1. Run `coordinator start --foreground` against root A; assert exactly one `coordinator.fence` record with `action=acquired`, `instanceId`, `holder` (pid + process start time), `pid`, `processStartTimeMs`, `supervisorMode=foreground`, and `externalUnit=absent`; assert `status` reports `state=running` and the same instance id.
+2. Assert the start receipt carries `scope=state-dir`, `instance`, `pid` (or `-`), `supervisor=foreground`, and `external-unit=absent`.
+3. Assert no state write fence handle is held after the lease append: a subsequent append by this process (or a recording fake) acquires and releases its own handle, and no lifetime lock is open.
+4. Run a second `coordinator start --foreground` against root A; assert `coordinator.already-running` at exit `2`, no second lease record, and the holder named in the error.
+5. Run `coordinator tick` against root A while the first supervisor holds a live lease; assert the same refusal (AC-F8-1) and no lease record appended by the refused invocation.
+6. Run `coordinator start --foreground` against root B; assert it succeeds independently and both instances report their own scope.
+7. Assert a failed acquisition appends no lease record, and that a `detached` start records `supervisorMode=detached` with `externalUnit=absent`.
 
 **Expected Outcome**:
-- `start --foreground` acquires the state-dir fence, records the instance, and reports `running`.
-- A second start or a contended tick is `coordinator.already-running` at exit `2` with the holder named.
-- A different state dir is independent.
+- `start --foreground` acquires the instance lease by one `coordinator.fence` append, records the instance, and reports `running`.
+- A second start or a contended tick is `coordinator.already-running` at exit `2` with the holder named and no appended lease.
+- A different state dir is independent; no state write fence is held beyond an append.
 
 **Notes / Clarifications**:
-- AC-F8-1 governs the contended case; AC-F1-2's one-cycle property is exercised only on an uncontended state dir (TC-COORD-012).
+- AC-F8-1 governs the contended case; AC-F1-2's one-cycle property is exercised only on an uncontended state dir (TC-COORD-012). The detailed instance fold is TC-COORD-018; the four lease actions are TC-COORD-017.
 
-#### TC-COORD-011 - `stop` is graceful, releases the fence, and is idempotent without a supervisor
+#### TC-COORD-011 - `stop` is a recorded request, reports `requested`/`not-running`, and is idempotent without a supervisor
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F1-3, F-1, F-8, NFR-6
+**Related IDs**: AC-F1-3, F-1, F-8, NFR-6, DM-11, EVT-7
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-stop.test.ts`
-**Tags**: @backend, @cli, @fence
+**Tags**: @backend, @cli, @lease
 
 **Preconditions**:
-- One root has a running supervisor; one has never had one.
+- One root has a running supervisor (latest lease `acquired`); one has never had one; one has a `released`/stale latest lease.
 
 **Steps**:
-1. With a running supervisor, run `coordinator stop`; assert a graceful stop is requested at the next cycle boundary, the fence is released exactly once, and the receipt reports `released=true`.
-2. Assert no kill and no destructive action occurs on a graceful stop.
-3. Assert a subsequent `status` reports `state=stopped` and `fence=<none>`.
-4. With no supervisor, run `coordinator stop`; assert exit `0`, no failure, no fence acquisition/release error, and `released` reflects the fact that no fence was held (boolean, not a fabricated success).
-5. Run `stop` twice in a row on the stopped root; assert both are exit `0` and append no new record.
-6. Assert a stop after a crash (stale fence) releases or reports the stale holder without killing a live process.
+1. With a running supervisor, run `coordinator stop`; assert it appends exactly one `coordinator.fence` record with `action=stop-requested`, the live holder/instance identity, and reports `requested=true`, `released=false`, exit `0`.
+2. Assert `stop` does not release or hold another process's state write fence handle (no `releaseFence` call for a handle this process did not acquire) and does not kill.
+3. Drive the live supervisor to its next cycle boundary; assert it observes the request, stops, and appends exactly one `action=released` record; assert status then reports `state=stopped` and the lease action `released`.
+4. With no live supervisor and the latest lease `released` or stale, run `coordinator stop`; assert exit `0`, `not-running`, and **no** record appended.
+5. Run `stop` twice in a row on the stopped root; assert both are exit `0`, `not-running`, and append no new record.
+6. Assert a stop request against a stale lease is `not-running`, does not fabricate a release, and does not take over the lease.
 
 **Expected Outcome**:
-- `stop` requests a graceful stop, releases the fence, and reports `released=true` when it owned it.
-- A no-supervisor stop is an idempotent success at exit `0`.
-- Repeated stops append nothing and perform no destructive action.
+- A live `stop` appends one `stop-requested` record and reports `requested=true`/`released=false`.
+- The live supervisor appends `released` at its next cycle boundary; only then does status report stopped/released.
+- A no-supervisor or stale-lease stop is an idempotent `not-running` success at exit `0` with nothing appended, and no cross-process handle is released.
 
 #### TC-COORD-012 - `tick` is exactly one bounded cycle with the declared payload and no loop
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F1-2, AC-F9-1, AC-F2-6, F-1, F-9, NFR-4
+**Related IDs**: AC-F1-2, AC-F9-1, AC-F2-6, F-1, F-9, DM-11, NFR-4
 **Test Type(s)**: Behaviour, Golden
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-tick.test.ts`; `tests/golden/coordinator.test.ts`
@@ -525,47 +534,49 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - A fresh state dir case and a healthy running case are prepared.
 
 **Steps**:
-1. Run `coordinator tick` once on a fresh state dir; assert exit `0`, one bounded cycle, `delivery.coordinator.v1` data with `decision`, `wake`, `stuck`, `restarts`, `escalation`, `regime`, `session`, and `degradation`.
+1. Run `coordinator tick` once on a fresh state dir; assert exit `0`, one bounded cycle, `delivery.coordinator.v1` data with `coordinatorId`, `instance`, `decision`, `wake`, `stuck`, `restarts`, `escalation`, `regime`, `session`, `fence`, and `degradation`.
 2. Assert the fresh state dir is a verified-empty record set, the decision is `spawn-fresh` with reason `initial-start`, and no restart ordinal is consumed.
-3. Assert the invocation returns after the cycle: the fake records one collection cycle, no timer is registered, and no daemon/child process is spawned.
-4. Run `tick` on a healthy running case; assert exactly one cycle and the field values are deterministic for the injected facts.
-5. Assert the machine payload is ≤ 64 KiB and the human text is ≤ 32 lines.
-6. Compare a committed normalized golden byte-for-byte for both cases.
-7. Assert a second `tick` on the unchanged healthy case is a no-op for record counts (idempotency is TC-COORD-087; here only the shape and single-cycle claim are asserted).
+3. Assert the tick acquires the instance lease for its cycle as one `acquired`/`released` pair (or an equivalent atomic claim), releases it before returning, and leaves no write-fence handle open.
+4. Assert the invocation returns after the cycle: the fake records one collection cycle, no timer is registered, and no daemon/child process is spawned.
+5. Run `tick` on a healthy running case; assert exactly one cycle and the field values are deterministic for the injected facts.
+6. Assert the machine payload is ≤ 64 KiB and the human text is ≤ 32 lines.
+7. Compare a committed normalized golden byte-for-byte for both cases.
+8. Assert a second `tick` on the unchanged healthy case is a no-op for record counts (idempotency is TC-COORD-087; here only the shape and single-cycle claim are asserted).
 
 **Expected Outcome**:
-- `tick` performs exactly one bounded collection cycle and returns every declared field.
+- `tick` acquires/releases the instance lease for its cycle, performs exactly one bounded collection cycle, and returns every declared field.
 - A fresh state dir is valid and yields `initial-start` with no ordinal.
-- No background loop, timer, or daemon is started; output is bounded and golden-stable.
+- No background loop, timer, daemon, or lifetime write fence is started; output is bounded and golden-stable.
 
 #### TC-COORD-013 - `status [--live]` reports the full state and degrades honestly
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F9-1, AC-F8-2, F-9, F-8, NFR-13
+**Related IDs**: AC-F1-4, AC-F9-1, AC-F8-2, F-9, F-8, DM-11, NFR-13
 **Test Type(s)**: Behaviour, Golden
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-status.test.ts`; `tests/golden/coordinator.test.ts`
 **Tags**: @backend, @cli, @golden
 
 **Preconditions**:
-- Running, exhausted, and stopped fixtures exist.
+- Running (foreground and detached), exhausted, and stopped fixtures exist.
 - Live process facts are available for one case and unavailable for another.
 
 **Steps**:
-1. Run `coordinator status` for each fixture; assert it reports the instance, state-dir scope, fence holder, coordinator session identity and liveness, last decision and reason, restart count and bound, history reference, last stuck verdict and evidence, last wake outcome and question, escalation state and question id, and a bounded degradation list.
+1. Run `coordinator status` for each fixture; assert it reports the instance from the latest lease (`instanceId`, `pid`, `holder`, `startedAt` = the instance's `acquired` record time, `supervisorMode` `foreground` or `detached`, `externalUnit` `absent`), state-dir scope, lease holder and last lease action, coordinator session identity and liveness, last decision and reason, restart count and bound, history reference, last stuck verdict/phase/reason/evidence, last wake outcome and question, escalation state and question id, and a bounded degradation list.
 2. Assert the human text is deterministic, ANSI-free, and ≤ 32 lines; the machine `data` is `delivery.coordinator.v1` and ≤ 64 KiB.
 3. Run `status --live` with live facts available; assert uptime and process facts are reported.
 4. Run `status --live` with live facts unavailable; assert the field is `unknown` or a `degraded` entry naming the absence — never a fabricated alive/uptime value.
-5. Assert an exhausted fixture reports `exhausted-escalated` or `exhausted-escalation-failed` and the question id (or null on failure).
+5. Assert an exhausted fixture reports `exhausted-escalated` or `exhausted-escalation-failed` and the question id (or null on failure), never `escalated`.
 6. Assert a stopped fixture reports the durable last decision, last stuck, and last wake; status never mutates state.
-7. Compare committed normalized goldens for one running text and one machine payload.
+7. Assert a `detached` fixture renders `supervisorMode=detached` and `externalUnit=absent`, and that no `external-unit-absent` value appears as a supervisor mode.
+8. Compare committed normalized goldens for one running text and one machine payload.
 
 **Expected Outcome**:
 - Status is the complete operational query and is deterministic and bounded.
-- `--live` degrades honestly and never fabricates process facts.
-- Status reads durable state and appends nothing.
+- The instance identity is folded from the latest lease with the six declared fields and no separate instance record.
+- `--live` degrades honestly and never fabricates process facts; status reads durable state and appends nothing.
 
 #### TC-COORD-014 - The regime descriptor is shared, declares the M1-S18 seam, and ships no installer
 
@@ -582,55 +593,55 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - The regime descriptor type/data and the status projection exist.
 
 **Steps**:
-1. Assert the descriptor declares state-dir scope, single-instance fence, unit identity derived from state dir and coordinator identity, a distinct process kind, a distinct budget store, and `daemonInstallSeam: "M1-S18"`.
-2. Assert a detached start records `supervisor=external-unit-absent` in the descriptor and in `status`; a foreground start records `foreground`.
-3. Assert the unit identity changes when the state dir or coordinator identity changes and is stable otherwise.
-4. Assert no `daemon` command, control socket, lane supervision, or OS unit installer is registered or shipped; scan for systemd/launchd/Windows service files on the coordinator surface.
-5. Assert the M1-S18 seam is declared as a tested gap naming M1-S18 in the feature spec and the registry, not as an implemented installer.
-6. Non-vacuity: a temp-copy mutant that hardcodes a unit path or claims `supervisor=unit` fails.
+1. Assert the descriptor declares state-dir scope, single-instance **instance lease**, unit identity derived from state dir and coordinator identity, a distinct process kind, a distinct budget store, `supervisorMode` with exactly `foreground`/`detached`, `externalUnit` exactly `absent`, and `daemonInstallSeam: "M1-S18"`.
+2. Assert a detached start records `supervisorMode=detached` and `externalUnit=absent` in the descriptor and in `status`; a foreground start records `supervisorMode=foreground` and `externalUnit=absent`.
+3. Assert the mode vocabulary is exactly `foreground`/`detached` and contains no `external-unit-absent` member (the absence is a separate `externalUnit` field).
+4. Assert the unit identity changes when the state dir or coordinator identity changes and is stable otherwise.
+5. Assert no `daemon` command, control socket, lane supervision, or OS unit installer is registered or shipped; scan for systemd/launchd/Windows service files on the coordinator surface.
+6. Assert the M1-S18 seam is declared as a tested gap naming M1-S18 in the feature spec and the registry, not as an implemented installer.
+7. Non-vacuity: a temp-copy mutant that hardcodes a unit path, claims `supervisorMode=unit`, or adds `external-unit-absent` as a mode fails.
 
 **Expected Outcome**:
 - The shared regime descriptor is complete and observable through status.
-- Detached mode claims only `external-unit-absent`.
+- `supervisorMode` is exactly `foreground`/`detached` and `externalUnit` is exactly `absent`; detached is a manual mode, not an OS-supervision claim.
 - No daemon or OS autostart installer is invented or preempted.
 
-#### TC-COORD-015 - A stale fence is taken over with recorded evidence, not refused forever
+#### TC-COORD-015 - A stale lease is taken over with recorded evidence, not refused forever
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F8-3, F-8, DM-8, NFR-6
+**Related IDs**: AC-F8-3, F-8, DM-8, DM-11, EVT-7, NFR-6
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-fence-stale.test.ts`
-**Tags**: @backend, @fence, @edge
+**Tags**: @backend, @lease, @edge
 
 **Preconditions**:
-- Two stale-holder cases exist: the recorded process is gone, and the fence record is older than two collection intervals.
-- The fake clock and process port are injected.
+- Two stale-lease cases exist: the recorded holder is not alive (the process port's `alive(handle)` reports absent), and the lease is older than two `collection-interval`s.
+- The fake clock and process port are injected; a recording `recoverFence` spy is armed.
 
 **Steps**:
-1. Seed a fence held by a recorded process the fake reports as gone; run `start --foreground`; assert the new start takes over rather than refusing forever and appends exactly one `coordinator.fence` record with `action=stale-takeover`.
-2. Seed a fence record older than two collection intervals with the recorded process still alive-or-unknown; run `start`; assert takeover per the declared condition and one `action=stale-takeover` record.
-3. Seed a fence newer than two intervals with a live recorded process; run `start`; assert `coordinator.already-running` at exit `2`, no takeover, and no fence record appended.
-4. Assert the takeover record carries the new `holder`, the `previousHolder`, the observed `fenceAgeMs`, and `recordedAt`, is durable across a reopened store handle, and is readable from `coordinator status` (`fence.holder`/`fence.action`/`fence.previousHolder`/`fence.fenceAgeMs`); it contains identities/counts only.
-5. Assert a takeover performs no kill of a live process and does not duplicate an instance record.
-6. Non-vacuity: a fixture with a live, fresh holder must not be taken over.
+1. Seed an `acquired` lease whose recorded holder the fake reports as not alive; run `start --foreground`; assert the new start takes over rather than refusing forever and appends exactly one `coordinator.fence` record with `action=stale-takeover`.
+2. Seed an `acquired` lease older than two collection intervals with the recorded holder still alive-or-unknown; run `start`; assert takeover per the declared condition and one `action=stale-takeover` record.
+3. In both takeover cases, assert the takeover record is followed by one `action=acquired` record for the new instance, with the new `holder`, `pid`, `processStartTimeMs`, `supervisorMode`, and `externalUnit=absent`.
+4. Seed a lease newer than two intervals with a live recorded holder; run `start`; assert `coordinator.already-running` at exit `2`, no takeover, and no lease record appended.
+5. Assert the takeover record carries the new `holder`, the `previousHolder`, the observed `fenceAgeMs`, and `recordedAt`, is durable across a reopened store handle, and is readable from `coordinator status` (`instance.instanceId`, `fence.holder`/`fence.action`/`fence.previousHolder`/`fence.fenceAgeMs`); it contains identities/counts only.
+6. Assert the takeover calls no `recoverFence`, does not require the delivered state write fence to be age-stale, and does not change `packages/core/src/contracts/state.ts`.
+7. Assert a takeover performs no kill of a live process and does not create a separate instance record.
+8. Non-vacuity: a fixture with a live, fresh holder must not be taken over.
 
 **Expected Outcome**:
-- Stale holders are taken over with recorded evidence; live fresh holders are refused.
-- The two stale conditions are independently exercised.
+- Stale leases are taken over with recorded evidence (`stale-takeover` then `acquired`); live fresh holders are refused.
+- The two stale conditions are independently exercised; no `recoverFence` and no state-contract change is used.
 - No destructive action occurs on a live holder.
-
-**Notes / Clarifications**:
-- Pinned by AC-F8-3, EVT-7, and DM-11: the durable carrier is the `coordinator.fence` record (`action=stale-takeover`, `holder`, `previousHolder`, `fenceAgeMs`, `recordedAt`). TC-COORD-017 covers the full acquire/release/takeover record matrix.
 
 #### TC-COORD-016 - `--fresh-budget` is a start-time option and requires a stopped supervisor
 
 **Scenario Type**: Negative
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: AC-F1-1, AC-F5-5, F-1, F-5
+**Related IDs**: AC-F1-1, AC-F1-3, AC-F5-5, F-1, F-5, DM-11
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-fresh-budget.test.ts`
@@ -640,48 +651,85 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - A live supervisor case and a stopped/exhausted case exist.
 
 **Steps**:
-1. With a live supervisor, run `coordinator start --fresh-budget`; assert `coordinator.already-running` at exit `2`, the holder named, a hint to stop first, and no new epoch created.
-2. Assert no restart record, no epoch record, and no escalation change occurs on the refusal.
-3. Stop the supervisor, then run `coordinator start --fresh-budget`; assert success, a new budget epoch at count `0`, and the old epoch plus its escalation still readable in history.
+1. With a live supervisor (live lease), run `coordinator start --fresh-budget`; assert `coordinator.already-running` at exit `2`, the holder named, a hint to stop first, and no new epoch created.
+2. Assert no restart record, no epoch record, no lease record, and no escalation change occurs on the refusal.
+3. Request `stop` (which appends `stop-requested`), drive the supervisor to observe it and append `released`, then run `coordinator start --fresh-budget`; assert success, a new budget epoch at count `0`, and the old epoch plus its escalation still readable in history.
 4. Assert `--fresh-budget` is rejected on `stop`, `status`, and `tick` with `fallback.invocation` exit `1`.
-5. Assert the fresh-budget start still acquires the fence and records the instance.
+5. Assert the fresh-budget start still acquires the instance lease by one `action=acquired` record and records the instance identity.
 
 **Expected Outcome**:
-- `--fresh-budget` is a start-time option only and is refused while a live supervisor holds the fence.
-- After a stop, it opens a new epoch at zero and preserves old history.
+- `--fresh-budget` is a start-time option only and is refused while a live supervisor holds the lease.
+- After a stop request and the supervisor's `released`, it opens a new epoch at zero and preserves old history.
 - The refusal is classified and appends nothing.
 
-#### TC-COORD-017 - `coordinator.fence` records acquisition, release, and stale takeover durably
+#### TC-COORD-017 - `coordinator.fence` records acquisition, release, stale takeover, and stop request durably
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F8-1, AC-F8-3, AC-F9-1, F-8, EVT-7, DM-11, NFR-6
+**Related IDs**: AC-F1-1, AC-F1-3, AC-F8-1, AC-F8-3, AC-F9-1, F-8, EVT-7, DM-11, NFR-6
 **Test Type(s)**: Behaviour, Structure
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-fence-records.test.ts`; `tests/structure/coordinator-contract.test.ts`
-**Tags**: @backend, @fence, @state
+**Tags**: @backend, @lease, @state
 
 **Preconditions**:
 - A fresh temp state root with no holder; a second root with a stale holder seeded.
 - The fake clock and injected fence tokens are ready; a fresh store handle can be reopened over the same root.
+- A recording state port counts `acquireFence`/`releaseFence` calls per append.
 
 **Steps**:
-1. Acquire the fence via `start --foreground`; assert exactly one `coordinator.fence` record with `action=acquired`, the new `holder`, `previousHolder=null`, `fenceAgeMs=null`, and `recordedAt`; assert `status` reports `fence.holder` and `fence.action=acquired`.
-2. Release via `stop`; assert exactly one `action=released` record with the releasing holder and null previous/age; assert `status` reports `fence.action=released` and `fence.holder=null`.
-3. Seed a gone-process stale holder and start; assert exactly one `action=stale-takeover` record with the new `holder`, the old `previousHolder`, the observed `fenceAgeMs`, and `recordedAt`; assert `status` exposes all four.
-4. Reopen a fresh store handle over the same root and assert the takeover record and status projection are reconstructed from durable state alone (GAP-T4).
-5. Assert every fence record validates kind/schema/required fields/vocabulary on read; a torn fence record is `unevaluable` and never yields a fabricated holder.
-6. Assert exactly one record per action, a refused contended start appends no fence record (AC-F8-1), and no action record carries content beyond identities/counts/age.
+1. Acquire the lease via `start --foreground`; assert exactly one `coordinator.fence` record with `action=acquired`, `instanceId`, the new `holder`, `pid`, `processStartTimeMs`, `supervisorMode=foreground`, `externalUnit=absent`, `previousHolder=null`, `fenceAgeMs=null`, and `recordedAt`; assert `status` reports `instance.instanceId`, `fence.holder`, and `fence.action=acquired`.
+2. Request `stop` from another process; assert exactly one `action=stop-requested` record with the live holder/instance identity, and that `released` is still absent (the lease is not released by the request).
+3. Drive the live supervisor to append `action=released`; assert exactly one `action=released` record with the releasing holder and null previous/age; assert `status` reports `fence.action=released` and `fence.holder=null`.
+4. Seed a not-alive stale holder and start; assert exactly one `action=stale-takeover` record with the new `holder`, the old `previousHolder`, the observed `fenceAgeMs`, and `recordedAt`, followed by one `action=acquired`; assert `status` exposes all four.
+5. Reopen a fresh store handle over the same root and assert the lease sequence and status projection are reconstructed from durable state alone (GAP-T4).
+6. Assert every fence record validates kind/schema/required fields/vocabulary on read; a torn fence record is `unevaluable` and never yields a fabricated holder or action.
+7. Assert each append acquires the delivered state write fence for that append only and releases it immediately: the recording state port shows one acquire/release pair per record and no lifetime handle.
+8. Assert exactly one record per action, a refused contended start appends no lease record (AC-F8-1), and no action record carries content beyond identities/counts/age.
 
 **Expected Outcome**:
-- Acquisition, release, and stale takeover each append one validated durable `coordinator.fence` record.
+- Acquisition, stop request, release, and stale takeover each append one validated durable `coordinator.fence` record, and takeover is `stale-takeover` then `acquired`.
 - Takeover evidence (`holder`, `previousHolder`, `fenceAgeMs`) is readable from durable state and `status`.
-- A refusal and a torn record never fabricate a holder or an action.
+- The lease fold is latest-wins, the four actions are the only actions, and a refusal or torn record never fabricates a holder or an action.
+- Each append uses the state write fence only for its own duration.
 
 **Notes / Clarifications**:
-- Pinned by EVT-7/DM-11 (spec v1.1): the fence record is the declared durable carrier; `previousHolder` and `fenceAgeMs` are `null` except on `stale-takeover`.
+- Pinned by EVT-7/DM-11 (spec v1.2): the fence record is the append-only instance lease; `previousHolder` and `fenceAgeMs` are `null` except on `stale-takeover`; `stop-requested` does not release the lease.
 - Record-kind/schema-id spellings remain delivery-bound (GAP-T5); the test reads them from the contract and asserts one-home and closedness (TC-COORD-001).
+
+#### TC-COORD-018 - The instance identity is folded from the latest lease; no separate instance record exists
+
+**Scenario Type**: Happy Path
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: AC-F1-1, AC-F1-3, AC-F1-4, AC-F8-1, AC-F9-1, F-1, F-8, F-9, DM-11, EVT-7
+**Test Type(s)**: Behaviour, Structure
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/coordinator-instance-lease.test.ts`; `tests/structure/coordinator-contract.test.ts`
+**Tags**: @backend, @lease, @contract
+
+**Preconditions**:
+- A lease sequence is seeded: `acquired` (instance A) → `stop-requested` (A) → `released` (A) → `stale-takeover` (previous A) → `acquired` (instance B).
+- A detached-start root and a foreground-start root exist.
+- The contract record-kind set is imported.
+
+**Steps**:
+1. Read `status` after instance A's `acquired`; assert `instance.instanceId=A`, `pid`, `holder`, `startedAt` = A's `acquired` record time, `supervisorMode`, and `externalUnit=absent`.
+2. Append `stop-requested` for A; assert the reported instance identity does not change (`startedAt` is still A's `acquired` time) and the lease action is `stop-requested`.
+3. Append `released` for A; assert `status` reports the `released` action and does not fabricate a running instance or a new `startedAt`.
+4. After `stale-takeover` + `acquired` for B, assert the instance folds to B: new `instanceId`, `pid`, `holder`, `startedAt` = B's `acquired` time, `supervisorMode`, `externalUnit=absent`, with `previousHolder`/`fenceAgeMs` visible on the takeover record.
+5. Assert a detached start reports `supervisorMode=detached` and `externalUnit=absent`; a foreground start reports `foreground` and `absent`.
+6. Assert the record-kind set is still exactly six (`iteration`, `restart`, `stuck`, `exhaustion`, `wake`, `fence`) and contains no `coordinator.instance` kind; assert `delivery.coordinator.v1` has an `instance` field derived from the lease and no separate `instanceRecord` payload.
+7. Assert the latest record is the sole instance identity: an older `acquired` record does not override a later `released`/`acquired` record.
+
+**Expected Outcome**:
+- The instance identity is exactly the six declared fields folded from the latest `coordinator.fence` record.
+- `stop-requested` and `released` do not fabricate a new instance or rewrite `startedAt`.
+- No separate instance record kind or payload exists; the record-kind set stays six.
+
+**Notes / Clarifications**:
+- Pinned by AC-F1-4/EVT-7/DM-11 (spec v1.2): the fence record is the instance identity; `startedAt` is the `acquired` record time. TC-COORD-017 covers the action matrix; this TC isolates the identity fold.
 
 #### TC-COORD-020 - A live session records `join-live` and consumes no ordinal
 
@@ -879,12 +927,43 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - The distinction between normal starts and recoveries is enforced.
 - The order (decision → restart → action) is uniform.
 
-#### TC-COORD-030 - A stuck verdict requires the full artifact-evidence conjunction
+#### TC-COORD-029 - The adapter maps `token-delta`/`session-traffic` to a new turn and progress-bound; absent is `unknown`
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: AC-F3-1, AC-F3-2, AC-F3-3, F-3, DM-7, DEC-4, NFR-1, NFR-2, NFR-9
+**Test Type(s)**: Behaviour, Unit, Contract
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/coordinator-new-turn.test.ts`; `tests/fixtures/coordinator/process-port.ts`; process-lifecycle adapter (expected)
+**Tags**: @backend, @adapter, @stuck, @mapping
+
+**Preconditions**:
+- Delivered harness liveness-report fixtures with a positive `token-delta`, a positive `session-traffic`, zero/negative readings, and an absent/unsupported reading.
+- Config fixtures with the default `coordinator.progress-bound=300000` and explicit values.
+- A recording adapter fake so the domain receives `newTurn`/`progressing` facts rather than raw liveness fields.
+
+**Steps**:
+1. With a delivered liveness report whose `token-delta` is positive since the expectation, assert the adapter yields `newTurn=true` and `progressing=true`.
+2. With a positive `session-traffic` reading instead, assert the same `newTurn=true`/`progressing=true`; either positive reading is sufficient.
+3. With both readings zero or negative, assert `newTurn=false` and `progressing=false` (present but not positive, not `unknown`).
+4. With the reading absent or unsupported, assert `newTurn=unknown` and `progressing=unknown`, never `false` or `0`, and assert no error identity is raised.
+5. Assert the mapping lives only in the process-lifecycle adapter (beside the harness adapters) and consumes the delivered liveness report's `token-delta`/`session-traffic`; the pure domain receives the mapped facts and reads no CPU.
+6. Assert `coordinator.progress-bound` defaults to `300000` ms and is config-driven: a positive progress reading within the bound vetoes a stuck verdict; a reading older than the bound does not; no `300000` or other bound literal exists in the decision code.
+7. Assert next-tick/caller-bounded semantics: the veto is evaluated on each `tick`; a caller ticking slower than `coordinator.collection-interval` is caller-bounded and does not violate the policy, and no wall-clock timer is started.
+8. Non-vacuity: mutants that map absent→zero, ignore `session-traffic`, hardcode the progress bound, or read CPU fail naming the seam.
+
+**Expected Outcome**:
+- A new turn is exactly a positive `token-delta` OR positive `session-traffic` from the delivered harness liveness facts, mapped at the adapter.
+- Absent/unsupported maps to `unknown`, never to zero or stale.
+- `coordinator.progress-bound` (default 300 000 ms) is the config-driven veto window, and the assertion is next-tick/caller-bounded.
+
+#### TC-COORD-030 - A stuck verdict is the full two-phase artifact-evidence conjunction
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F3-1, F-3, DM-3, DEC-4, EVT-3, SC-M1-25
+**Related IDs**: AC-F3-1, AC-F4-1, F-3, F-4, DM-3, DEC-4, EVT-3, SC-M1-25
 **Test Type(s)**: Behaviour, Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-stuck-verdict.test.ts`
@@ -896,19 +975,21 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 
 **Steps**:
 1. Evaluate the stuck check; assert the verdict is `stuck`.
-2. Assert one `coordinator.stuck` record is appended with the stuck id, coordinator id, iteration id, verdict, closed `reason=stuck-artifact-evidence`, and bounded `key=value` evidence; assert the kill outcome is carried as declared (`not-attempted` before a kill, then `terminated`/`forced`/`failed` per the delivery's declared append/update discipline), never fabricated as success.
-3. Assert the evidence corpus names each class and its state, the window, and the fingerprint/count references — identities/counts only, no question text.
-4. Assert a `progressing` verdict is not persisted as a record.
-5. Assert the stuck record precedes the kill and the restart; the stuck record's closed `reason` is `stuck-artifact-evidence`, and the subsequent restart record carries the same classified restart reason.
-6. Assert one expectation is active and the verdict names its iteration.
+2. Assert the **first** append is one `coordinator.stuck` record with `phase=verdict`, the stuck id, coordinator id, iteration id, verdict, closed `reason=stuck-artifact-evidence`, bounded `key=value` evidence, and `killOutcome=not-attempted`; assert it lands **before** any kill or restart.
+3. Drive the kill; assert a **second** append with `phase=outcome` and the **same `stuckId`**, carrying the resulting `killOutcome` (`terminated`, `forced`, or `failed`) and `killFailureReason` (`identity-mismatch` or null). Assert the outcome is never written onto the verdict record, and there is no update-in-place path.
+4. Assert the read fold is deterministic latest-wins per `stuckId` by `recordedAt`, then ledger sequence: the `phase=outcome` record is the effective outcome, and a replay appends nothing.
+5. Assert the evidence corpus names each class and its state, the window, and only the state event-log cursor plus open coordinator-question count references — identities/counts only, no question text, no ready-to-merge/tracker/CI value.
+6. Assert a `progressing` verdict is not persisted as a record.
+7. Assert the verdict `reason` is `stuck-artifact-evidence` and the subsequent restart record carries the same classified restart reason.
+8. Assert one expectation is active and the verdict names its iteration.
 
 **Expected Outcome**:
-- The full conjunction yields exactly one `stuck` verdict with bounded evidence.
-- `progressing` is a transient result, not a durable record.
-- The stuck record is the durable evidence carrier.
+- The full conjunction yields exactly one `stuck` verdict in two ordered appends under one `stuckId`.
+- `phase=verdict`/`killOutcome=not-attempted` precedes the kill; `phase=outcome` follows with the actual outcome; latest-wins fold is deterministic and a replay appends nothing.
+- `progressing` is a transient result, not a durable record; the fingerprint is state-sourced only.
 
 **Notes / Clarifications**:
-- Pinned by AC-F3-1/EVT-3/Appendix E: the `coordinator.stuck` record carries a closed `reason` field (`stuck-artifact-evidence` for `verdict=stuck`; `evidence-unevaluable` for `verdict=unevaluable`), distinct from `coordinator.restart.reason`. TC-COORD-039 pins the two-value vocabulary and the verdict/reason coupling.
+- Pinned by AC-F3-1/AC-F4-1/EVT-3/Appendix E (spec v1.2): the `coordinator.stuck` record is two-phase under one `stuckId`; the kill outcome is a second append, never an update. TC-COORD-039 pins the reason vocabulary and the verdict/reason coupling.
 
 #### TC-COORD-031 - The advanced/stale/unknown evidence matrix is total and deterministic
 
@@ -941,34 +1022,35 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - `unknown` is never fabricated as stale and an advanced class always prevents `stuck`.
 - Verdicts are deterministic.
 
-#### TC-COORD-032 - A fingerprint advance without a session turn does not count as consumed
+#### TC-COORD-032 - A fingerprint advance without a session turn does not count as consumed; the fingerprint is state-sourced only
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F3-1, F-3, DEC-4
+**Related IDs**: AC-F3-1, F-3, DEC-4, DM-7
 **Test Type(s)**: Behaviour, Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-stuck-fingerprint.test.ts`
 **Tags**: @backend, @domain, @stuck
 
 **Preconditions**:
-- An expectation exists; the digest-input fingerprint (state cursor + open coordinator questions + ready-to-merge count) advances after it.
+- An expectation exists; the digest-input fingerprint (state event-log cursor + open coordinator-audience question count only) advances after it.
 - The coordinator session produces no new turn in the first case and a new turn in the second.
 
 **Steps**:
 1. With fingerprint advanced and no new session turn, and merge/answer stale, evaluate; assert the `digest-consumed` class is not `advanced` and the verdict is `stuck` (window elapsed, no progress).
-2. With fingerprint advanced and a new session turn, and merge/answer stale, evaluate; assert `digest-consumed` is `advanced` and the verdict is not `stuck`.
-3. Assert the fingerprint changes when the state cursor advances, when the open coordinator-question count changes, and when the ready-to-merge count changes; it is bounded and opaque and contains no question text.
-4. Assert the fingerprint is stable when none of the three inputs changes.
-5. Non-vacuity: a mutant that treats a fingerprint advance alone as consumed fails row 1.
+2. With fingerprint advanced and a new session turn (positive `token-delta` or `session-traffic`), and merge/answer stale, evaluate; assert `digest-consumed` is `advanced` and the verdict is not `stuck`.
+3. Assert the fingerprint changes when the state event-log cursor advances and when the open coordinator-audience question count changes; it is bounded and opaque and contains no question text.
+4. Assert the fingerprint does **not** read a ready-to-merge count and performs no tracker, CI, or network read; a recording network/tracker fake is never invoked, and a mutant that adds a ready-to-merge input fails.
+5. Assert the fingerprint is stable when neither input changes.
+6. Non-vacuity: a mutant that treats a fingerprint advance alone as consumed fails row 1; a mutant that adds a ready-to-merge input fails row 4.
 
 **Expected Outcome**:
-- "Digest consumed" is exactly the spec's clarification: fingerprint advance **and** a new session turn.
-- A re-run of a command without a turn does not fake progress.
-- The fingerprint is bounded and content-free.
+- "Digest consumed" is exactly the spec v1.2 clarification: state-sourced fingerprint advance **and** a new session turn (positive `token-delta` or `session-traffic`).
+- The fingerprint has only two state-sourced inputs and no tracker/CI/network/ready-to-merge read.
+- A re-run of a command without a turn does not fake progress; the fingerprint is bounded and content-free.
 
-#### TC-COORD-033 - Positive sourced progress vetoes a stuck verdict and no kill occurs
+#### TC-COORD-033 - Positive sourced progress within `progress-bound` vetoes a stuck verdict and no kill occurs
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -981,27 +1063,28 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 
 **Preconditions**:
 - An expectation exists and the window has elapsed; all three artifact classes are stale.
-- The sourced progress signal reports positive progress within the liveness bound.
+- The sourced progress signal reports a positive `token-delta` or `session-traffic` within `coordinator.progress-bound`.
 
 **Steps**:
 1. Evaluate; assert the verdict is not `stuck` (the corroborator vetoes).
 2. Assert zero kill calls and zero spawn/resume calls; the kill counter stays `0`.
 3. Assert no `coordinator.stuck` record is persisted.
-4. Vary the progress source (heartbeat-age, token-delta, session traffic) and assert any positive sourced signal is sufficient to veto.
-5. Negative control: with progress absent and all classes stale, the same fixture yields `stuck` (the veto is not permanent).
-6. Assert a CPU-only "busy" fact does not veto (and is ignored) — the structural proof is TC-COORD-037.
+4. Vary the positive signal (`token-delta` only, `session-traffic` only) and assert either positive sourced signal is sufficient to veto.
+5. Advance the injected clock past `coordinator.progress-bound` while keeping the reading positive but stale; assert the veto no longer applies and the stale conjunction can yield `stuck`.
+6. Negative control: with progress absent and all classes stale, the same fixture yields `stuck` (the veto is not permanent).
+7. Assert a CPU-only "busy" fact does not veto (and is ignored) — the structural proof is TC-COORD-037.
 
 **Expected Outcome**:
-- A large working session is never killed while sourced progress is positive.
-- The veto is driven by sourced progress, not CPU.
+- A large working session is never killed while sourced progress is positive within `coordinator.progress-bound`.
+- The veto is driven by sourced progress, not CPU, and is bounded by the config value.
 - The negative control proves the veto is not vacuous.
 
-#### TC-COORD-034 - Absent session signals leave the digest class unknown and only a stale artifact can kill
+#### TC-COORD-034 - Absent session signals map to `unknown`, never zero; only a stale artifact can justify a kill
 
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F3-3, F-3, DM-3, DEC-4
+**Related IDs**: AC-F3-3, F-3, DM-3, DM-7, DEC-4
 **Test Type(s)**: Behaviour, Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-stuck-unknown.test.ts`
@@ -1012,16 +1095,17 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - A merge class that advanced, a merge class that is stale, and an answer class that is stale in different cases.
 
 **Steps**:
-1. With progress unsupported and the digest fingerprint unchanged, assert the `digest-consumed` class is `unknown`, disclosed in evidence.
+1. With `token-delta` and `session-traffic` absent/unsupported and the digest fingerprint unchanged, assert the adapter reports `newTurn=unknown`/`progressing=unknown` (never `0` or `false`) and the `digest-consumed` class is `unknown`, disclosed in evidence.
 2. With merge stale and answer stale, assert the verdict is `stuck` based on the stale artifact class.
 3. With merge advanced (or answer advanced), assert the verdict is not `stuck`; absence of session signals alone never kills.
-4. Assert the evidence names the unknown class and the reason (unsupported/absent), never a fabricated `stale`.
+4. Assert the evidence names the unknown class and the reason (unsupported/absent), never a fabricated `stale` or a zero reading.
 5. Assert no kill occurs when the only unknown is the digest class and no artifact class is stale.
+6. Assert no failure identity is raised for the absent progress source (it is an `unknown` evidence class, not `coordinator.process.capability-gap`).
 
 **Expected Outcome**:
-- An unsupported progress source makes only the digest class `unknown`.
+- An unsupported progress source maps to `unknown` and makes only the digest class `unknown`.
 - A stale merge or answer class can still justify `stuck`.
-- Absence of session signals alone never triggers a kill.
+- Absence of session signals alone never triggers a kill or a failure identity.
 
 #### TC-COORD-035 - All-unknown or an unreadable required store yields `unevaluable`, exit `2`, no action
 
@@ -1039,7 +1123,7 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 
 **Steps**:
 1. Evaluate each fixture; assert the verdict is `unevaluable`.
-2. Assert one `coordinator.stuck` record with `verdict=unevaluable`, `reason=evidence-unevaluable`, and bounded evidence, or the declared state-identity failure path; no fabricated verdict.
+2. Assert one `coordinator.stuck` record with `phase=verdict`, `verdict=unevaluable`, `reason=evidence-unevaluable`, `killOutcome=not-attempted`, and bounded evidence, or the declared state-identity failure path; no fabricated verdict and no `phase=outcome` because no kill is attempted.
 3. Assert zero kill, zero spawn, zero resume, and zero restart records.
 4. Assert the command exits `2` and returns the delivered `state.store.torn` / `state.store.unknown` / schema identity as declared; no exit `0`.
 5. Assert the degradation/evidence names the unreadable store and the class(es) unknown.
@@ -1148,8 +1232,8 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - The stuck-reason vocabulary and the restart-reason vocabulary are imported from the contract.
 
 **Steps**:
-1. On the `stuck` fixture, assert the `coordinator.stuck` record has `verdict=stuck` and `reason=stuck-artifact-evidence`.
-2. On the `unevaluable` fixture, assert `verdict=unevaluable` and `reason=evidence-unevaluable`.
+1. On the `stuck` fixture, assert the `coordinator.stuck` records have `phase=verdict` then `phase=outcome`, the same `stuckId`, `verdict=stuck`, and `reason=stuck-artifact-evidence`.
+2. On the `unevaluable` fixture, assert `phase=verdict`, `verdict=unevaluable`, `reason=evidence-unevaluable`, and `killOutcome=not-attempted` (no outcome phase).
 3. Assert the stuck-reason vocabulary is exactly those two values, that the restart-reason vocabulary is exactly `stuck-artifact-evidence`, `session-interrupted`, `context-pressure`, `context-unknown`, and that the two fields are declared separately and never aliased.
 4. Assert an inconsistent couple (`verdict=stuck` with `reason=evidence-unevaluable`, or the reverse) is rejected on read as invalid, never served as truth.
 5. Assert a `progressing` verdict is not persisted, so no `progressing` reason exists.
@@ -1161,58 +1245,59 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - Status exposes the stuck reason.
 
 **Notes / Clarifications**:
-- Pinned by AC-F3-1/AC-F3-3/EVT-3/Appendix E (spec v1.1): the earlier ambiguity about where `stuck-artifact-evidence` lives is resolved — it is the `coordinator.stuck.reason`, not only the restart reason.
+- Pinned by AC-F3-1/AC-F3-3/EVT-3/Appendix E (spec v1.2): the earlier ambiguity about where `stuck-artifact-evidence` lives is resolved — it is the `coordinator.stuck.reason`, not only the restart reason, and the record is two-phase under one `stuckId`.
 
-#### TC-COORD-040 - Kill sends TERM, waits grace, then KILL, and records the outcome
+#### TC-COORD-040 - Kill verifies identity, sends TERM, waits grace, then KILL, and records the two-phase outcome
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F4-1, F-4, DM-3, DM-7, NFR-10, SC-M1-25
+**Related IDs**: AC-F4-1, F-4, DM-3, DM-7, NFR-10, EVT-3, SC-M1-25
 **Test Type(s)**: Behaviour, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-kill-grace.test.ts`; `tests/fixtures/coordinator/process-port.ts`
 **Tags**: @backend, @process, @kill
 
 **Preconditions**:
-- A `stuck` verdict has been recorded for a known session and process-tree handle.
-- The fake process port and fake clock are injected; the grace is a declared fixture value.
+- A `stuck` verdict has been recorded for a known session and process-tree handle; its `phase=verdict` record exists with `killOutcome=not-attempted`.
+- The fake process port and fake clock are injected; the grace is a declared fixture value; the recorded `pid` + `processStartTimeMs` matches the fake live process.
 
 **Steps**:
-1. Invoke the kill; assert the port receives TERM on the recorded handle first.
+1. Invoke the kill; assert the port first verifies the recorded `pid` + `processStartTimeMs` against the live process, then receives TERM on the recorded handle.
 2. Advance the fake clock by less than the grace; assert no KILL.
 3. Advance to the grace boundary with the fake tree reporting exiting/terminated; assert the outcome is `terminated` and no KILL is sent.
 4. In a second case, keep the tree alive through the grace; assert KILL is sent at the boundary and the outcome is `forced`.
-5. Assert the kill outcome is recorded on the stuck record (`terminated`/`forced`) and the record is durable.
+5. Assert the kill outcome is recorded as a **second** `coordinator.stuck` append with `phase=outcome` and the **same `stuckId`** (`terminated`/`forced`), durable across a reopened handle; assert the verdict record is unchanged.
 6. Assert the port is called with the handle only, and the grace value comes from `coordinator.kill-grace`.
-7. Assert the kill is followed by the budget check, not by an immediate spawn.
+7. Assert the kill is followed by the budget check, not by an immediate spawn; the outcome append takes the state write fence for that append only.
 
 **Expected Outcome**:
-- TERM → grace → conditional KILL is exact.
-- `terminated` and `forced` are distinguished and recorded.
-- The kill does not bypass the budget check.
+- Identity is verified before TERM; TERM → grace → conditional KILL is exact.
+- `terminated` and `forced` are distinguished and recorded in `phase=outcome` under the same `stuckId`.
+- The kill does not bypass the budget check and does not hold a lifetime write fence.
 
 #### TC-COORD-041 - A failed kill is classified at exit `2` and never claims success
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F4-2, F-4, DM-3, NFR-12, NFR-13
+**Related IDs**: AC-F4-2, AC-F4-4, F-4, DM-3, NFR-12, NFR-13
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-kill-failed.test.ts`
 **Tags**: @backend, @process, @kill, @fail-loud
 
 **Preconditions**:
-- The fake port is configured to report the tree still alive after KILL (or a declared kill error).
+- The fake port is configured to report the tree still alive after KILL (a declared kill error), with a matching recorded identity.
+- A separate identity-mismatch control is covered in TC-COORD-045.
 
 **Steps**:
-1. Invoke the kill; assert the outcome is `failed` per the declared closed vocabulary and that the stuck record carries `killOutcome=failed`.
+1. Invoke the kill; assert the outcome is `failed` per the declared closed vocabulary and that the `phase=outcome` record carries `killOutcome=failed` with the same `stuckId`.
 2. Assert the command returns `coordinator.session.kill-failed` at exit `2` with consequence `unknown` and a bounded remediation hint.
-3. Assert the error does not claim `terminated` or `forced`, and the evidence names the failed kill.
+3. Assert the error does not claim `terminated` or `forced`, and the evidence names the failed kill; for a non-identity failure `killFailureReason` is `null` (identity mismatch is TC-COORD-045).
 4. Assert the supervisor does not retry the kill forever: a bounded attempt count is recorded and a subsequent tick does not spin.
 5. Assert no spawn/resume occurs on a failed kill (the tree is still unmanaged), and the exhaustion/restart path is not falsely advanced.
-6. Assert `status` reports the failed kill outcome.
+6. Assert `status` reports the failed kill outcome and the same `stuckId` fold.
 
 **Expected Outcome**:
 - A failed kill is loud, classified, and exit `2` with consequence `unknown`.
@@ -1245,33 +1330,33 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - No name, pattern, or shell interpolation exists on the kill path.
 - Shell metacharacters are inert data.
 
-#### TC-COORD-043 - No kill exists without the fence; a contended tick is refused
+#### TC-COORD-043 - No kill exists without the current instance lease; a contended tick is refused
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F4-3, AC-F8-1, F-4, F-8, NFR-14
+**Related IDs**: AC-F4-3, AC-F8-1, F-4, F-8, DM-11, NFR-14
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-kill-fence.test.ts`
-**Tags**: @backend, @fence, @kill
+**Tags**: @backend, @lease, @kill
 
 **Preconditions**:
-- A stuck coordinator exists; the fence is held by another supervisor in one case and free in the other.
-- A recording process port counts kill calls.
+- A stuck coordinator exists; the instance lease is held by another live supervisor in one case and free in the other.
+- A recording process port counts kill calls and a recording state port counts fence acquire/release.
 
 **Steps**:
-1. With the fence held elsewhere, run `tick`; assert `coordinator.already-running` at exit `2`, zero kill calls, and zero restart records.
-2. With the fence acquired by this cycle, run the kill; assert it proceeds.
-3. Assert the kill path checks the fence immediately before the destructive call; a race that loses the fence aborts the kill with the refusal.
+1. With the instance lease held elsewhere, run `tick`; assert `coordinator.already-running` at exit `2`, zero kill calls, zero restart records, and no lease record appended.
+2. With the instance lease acquired by this cycle (an `acquired`/`released` pair or atomic claim), run the kill; assert it proceeds.
+3. Assert the kill path checks the current instance lease immediately before the destructive call; a race that loses the lease aborts the kill with the refusal.
 4. Assert a `status`/`stop` path never kills.
-5. Assert the fence is released even when the kill fails (finally), so the state dir is not wedged.
-6. Non-vacuity: a mutant that kills before acquiring/checking the fence fails.
+5. Assert the kill-outcome append acquires the state write fence for that append only and releases it even when the kill fails (finally), so the state dir is not wedged and no handle leaks.
+6. Non-vacuity: a mutant that kills before checking the current instance lease, or holds a lifetime write fence, fails.
 
 **Expected Outcome**:
-- Kill is impossible without the fence.
+- Kill is impossible without the current instance lease.
 - A contended tick is refused and performs no destructive action.
-- The fence is not leaked on failure.
+- The per-append state write fence is not leaked on failure.
 
 #### TC-COORD-044 - Missing process-port capabilities are a classified gap; the four capability owners stay distinct
 
@@ -1302,7 +1387,36 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - No capability gap is conflated with another.
 
 **Notes / Clarifications**:
-- Pinned by spec v1.1 DEC-11/§8.4: the four-way split is fixed; no fourth behaviour exists and no arbitration is pending. TC-COORD-022 covers the resume decision path in depth.
+- Pinned by spec v1.2 DEC-11/§8.4: the four-way split is fixed; no fourth behaviour exists and no arbitration is pending. TC-COORD-022 covers the resume decision path in depth; TC-COORD-045 covers PID identity, which is not a capability gap.
+
+#### TC-COORD-045 - A PID/start-time identity mismatch sends no signal and records `identity-mismatch`
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: AC-F4-4, AC-F4-2, F-4, DM-3, DM-7, NFR-14, RSK-13
+**Test Type(s)**: Behaviour, Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/coordinator-kill-identity.test.ts`; `tests/fixtures/coordinator/process-port.ts`
+**Tags**: @backend, @process, @kill, @identity
+
+**Preconditions**:
+- A `stuck` verdict has a recorded `pid` + `processStartTimeMs`; its `phase=verdict` record exists with `killOutcome=not-attempted`.
+- The fake process port can report the recorded identity as matching or as mismatched (a reused pid with a different start time).
+- A recording signal log counts TERM/KILL calls.
+
+**Steps**:
+1. Configure the fake live process so the recorded `pid` matches but `processStartTimeMs` differs; invoke the kill; assert the port sends **no signal** (zero TERM, zero KILL) and never signals the reused pid.
+2. Assert the supervisor appends a second `coordinator.stuck` record with `phase=outcome`, the **same `stuckId`**, `killOutcome=failed`, and `killFailureReason=identity-mismatch`; assert the `phase=verdict` record is unchanged.
+3. Assert the command returns `coordinator.session.kill-failed` at exit `2` with consequence `unknown`, and `status` reports the failed outcome and `identity-mismatch`.
+4. Assert no spawn, resume, or restart occurs (the tree is not safely managed) and the budget is not falsely advanced.
+5. Matching-identity control: with the same `pid` and matching `processStartTimeMs`, assert the kill proceeds to TERM (it is not blocked by the verification).
+6. Non-vacuity: a mutant that signals before verifying, or that records `terminated`/`forced` on a mismatch, fails naming the step.
+
+**Expected Outcome**:
+- A `pid` + `processStartTimeMs` mismatch sends no signal and records `killOutcome=failed` with `killFailureReason=identity-mismatch`.
+- The outcome is the second `phase=outcome` append under the same `stuckId`; the command exits `2` with `coordinator.session.kill-failed`.
+- A matching identity proceeds normally; a reused pid is never signalled.
 
 #### TC-COORD-050 - The restart namespace is the coordinator's, not lane/economics
 
@@ -1515,15 +1629,17 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 **Steps**:
 1. Run the tick; assert exactly one owner-audience `decision-needed` question is published with type/audience/lane `coordinator`, `ref=<coordinatorId>#<budgetEpochId>`, the restart count and bound, the history reference, and the declared options (`restart-fresh-budget`, `park-owner-review`).
 2. Assert the question text is bounded and contains no prompt/transcript/secret.
-3. Assert the terminal `coordinator.exhaustion` receipt lands **after** the question append and carries the same ref, count, history, question id, options, and `terminal:true`.
-4. Assert the question id is stable and the receipt references it.
-5. Assert no second question and no second terminal receipt is created in the same tick.
-6. Assert the first exhaustion tick returns `coordinator.restart-budget-exhausted` at exit `1` (AC-F5-3) while the escalation lands; a later tick with no restart attempt returns the idempotent `escalated` state at exit `0` (TC-COORD-061).
+3. Assert publishing uses the delivered `appendBlockerQuestion` path unchanged: it acquires and releases its **own** state write fence for the append, and the tick holds no lifetime write fence; assert no handle-reusing refactor is required and no `state.lock.busy` collision occurs.
+4. Assert the terminal `coordinator.exhaustion` receipt lands **after** the question append and carries the same ref, count, history, question id, options, and `terminal:true`; its own append also takes the write fence only for that append.
+5. Assert the question id is stable and the receipt references it.
+6. Assert no second question and no second terminal receipt is created in the same tick.
+7. Assert the first exhaustion tick returns `coordinator.restart-budget-exhausted` at exit `1` (AC-F5-3) while the escalation lands; a later tick with no restart attempt returns the idempotent `exhausted-escalated` state at exit `0` (TC-COORD-061).
 
 **Expected Outcome**:
 - Exactly one owner-audience escalation question with the declared payload.
-- The terminal receipt lands only after the question and references it.
-- No duplicate question or receipt.
+- Publishing composes with the delivered `appendBlockerQuestion` without a handle-reusing refactor; every append takes the write fence for that append only.
+- The terminal receipt lands only after the question and references it; no duplicate question or receipt.
+- The idempotent state is `exhausted-escalated`.
 
 #### TC-COORD-061 - A repeated exhausted tick is idempotent and leaves the original question open
 
@@ -1542,7 +1658,7 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 **Steps**:
 1. Run the tick again; assert it reuses the existing open owner question for the same coordinator-and-epoch ref.
 2. Assert no second question and no second terminal record is appended.
-3. Assert the result is the idempotent `escalated` state at exit `0`.
+3. Assert the result is the idempotent `exhausted-escalated` state at exit `0` (never `escalated`).
 4. Assert the original question remains open and its answer channel/options are unchanged.
 5. Assert the terminal receipt is unchanged.
 6. Assert the history reference is unchanged.
@@ -1579,7 +1695,7 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - Status reports the failure state even without a receipt.
 - Repair publishes once and no earlier lie remains.
 
-#### TC-COORD-063 - The reserved escalation slot renders at the cap with the omitted count intact
+#### TC-COORD-063 - The reserved escalation slot renders first by index at the cap with the omitted count intact
 
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
@@ -1591,26 +1707,26 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 **Tags**: @backend, @escalation, @render, @cap
 
 **Preconditions**:
-- A ledger with the escalation question ranked ninth and seven other open questions ahead of it (eight total).
-- A second ledger with the escalation ranked ninth and nine others ahead (ten total).
+- A ledger with eight open questions where the escalation question ranks eighth (seven others ahead).
+- A second ledger with ten open questions where the escalation ranks tenth (nine others ahead), and a control ledger with a near-miss escalation-shaped question.
 
 **Steps**:
-1. Render `status` and `brief`; assert the escalation question is present in `typed-questions`/`blocker-questions` even though it ranks ninth.
-2. Assert exactly eight questions render: the escalation plus seven others; no ninth question.
-3. Assert the omitted count equals the number of open questions not rendered (for the ten-question ledger, `2`), and `truncated` is true.
-4. Assert ordering of the rendered seven is otherwise unchanged.
+1. Render `status` and `brief`; assert the escalation question is present in both `typed-questions` and `blocker-questions` even though it is ranked last in its ledger.
+2. Assert it is **first by index** — index `0` — in both sections, ahead of every other question, for both the eight-question and ten-question ledgers.
+3. Assert the other questions follow in normal shared-rank order (the seven highest-ranked non-escalation questions, asserted by index `1..7`); assert no ninth question renders.
+4. Assert the lowest-ranked question is the one displaced and is counted in `omitted`; for the ten-question ledger assert exactly `2` omitted and `truncated=true`.
 5. Assert the escalation is selected from the payload alone by `type === "decision-needed"` AND `audience === "owner"` AND `lane === "coordinator"` AND `ref` shape `<coordinatorId>#<budgetEpochId>`; assert exactly one `#` and both sides non-empty.
-6. Assert near-miss payloads are **not** selected: no `#`, two `#`, empty coordinator side, empty epoch side, wrong lane, wrong audience, wrong type. Assert zero coordinator-state reads (the render read-count is unchanged).
-7. Assert the machine/human bounds still hold and the golden is byte-stable.
-8. Non-vacuity: a mutant that drops the reserved question at the cap, a mutant that renders nine, and a mutant that widens the predicate to any owner question each fail.
+6. Assert near-miss payloads are **not** selected or rendered first: no `#`, two `#`, empty coordinator side, empty epoch side, wrong lane, wrong audience, wrong type. Assert zero coordinator-state reads (the render read-count is unchanged).
+7. Assert the machine/human bounds still hold (at most eight rendered, ≤ 64 KiB / ≤ 32 lines) and the golden is byte-stable.
+8. Non-vacuity: a mutant that renders the reserved question in rank position, drops it at the cap, renders nine, or widens the predicate to any owner question each fail.
 
 **Expected Outcome**:
-- The escalation renders at the cap under the reserved slot.
-- The bound stays at eight, with at most seven others.
-- The payload-only predicate selects exactly the exhaustion question and adds no read; the omitted count remains truthful and ordering is otherwise unchanged.
+- The escalation renders first by index in both sections at the cap.
+- The bound stays at eight, with at most seven others in rank order; the lowest-ranked is displaced and counted as omitted.
+- The payload-only predicate selects exactly the exhaustion question and adds no read; ordering of the other questions is otherwise unchanged.
 
 **Notes / Clarifications**:
-- Pinned by AC-F6-1/EVT-6/DEC-5 (spec v1.1): the predicate is payload-only (type/audience/lane/ref shape) and adds no coordinator-state read; the eight-question bound is unchanged (seven others plus the reserved one). No arbitration is pending.
+- Pinned by AC-F6-1/EVT-6/DEC-5 (spec v1.2): the predicate is payload-only (type/audience/lane/ref shape) and adds no coordinator-state read; the reserved question renders first by index, the eight-question bound is unchanged (seven others plus the reserved one). No arbitration is pending.
 
 #### TC-COORD-064 - The reserved slot adds no new anchor, section, or type, and digest/brief agree
 
@@ -1630,7 +1746,7 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 1. Assert the digest section id set is unchanged (no `coordinator` section) and `typed-questions` remains the only typed-question surface.
 2. Assert the brief anchor set is unchanged (no new `coordinator` anchor) and `blocker-questions` remains the only blocker anchor.
 3. Assert the typed-question type set is still exactly the delivered four; `decision-needed` is reused.
-4. Assert the digest `typed-questions` projection and the brief `blocker-questions` projection render the same escalation question, rank, audience, lane, and omitted count.
+4. Assert the digest `typed-questions` projection and the brief `blocker-questions` projection render the same escalation question at index `0`, with the same rank, audience, lane, and omitted count, and the same ordered remaining questions at indices `1..7`.
 5. Assert the status/brief golden diff is limited to the reserved-slot case; a control golden without an escalation is byte-unchanged.
 6. Assert the status collector remains read-only and performs no coordinator kill/restart.
 
@@ -1679,19 +1795,21 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 
 **Preconditions**:
 - A fixture ledger whose head is rank 1, open, audience `coordinator`.
-- Controls: rank 1 owner, rank 1 answered/closed, rank 2 coordinator, and no questions.
+- A second qualifying head with an **absent** `status` (must count as open).
+- Controls: rank 1 owner, rank 1 explicitly `answered`/non-open, rank 2 coordinator, and no questions.
 
 **Steps**:
-1. With the qualifying head, run one `tick`; assert the delivered `isCoordinatorPickup` returns true and exactly one wake is issued.
-2. Assert one `coordinator.wake` record with outcome `woken`, the question id, rank 1, and the iteration identity.
-3. For each control (owner head, non-open head, rank 2 coordinator, empty), assert `isCoordinatorPickup` is false, the outcome is `no-pickup`, no wake is issued, and **no** wake record is persisted.
-4. Assert the predicate is payload-determinable: it consumes only rank/status/audience from the ranked read, with no coordinator-state read.
-5. Assert the wake happens on the first tick after the question qualifies (one-cycle bound in the tick model; GAP-T2), not after a delay or a second tick.
-6. Assert the ranking is the shared `rankBlockerQuestions`, not a second comparator.
+1. With the qualifying open head, run one `tick`; assert the delivered `isCoordinatorPickup` returns true and exactly one wake is issued.
+2. With the rank-1 coordinator-audience head whose `status` is absent, run `tick`; assert `isCoordinatorPickup` returns true (an absent status counts as open), a wake is issued, and `no-pickup` is **not** returned.
+3. Assert one `coordinator.wake` record with outcome `woken`, the question id, rank 1, persisted `askedAt`, and the iteration identity.
+4. For each control (owner head, explicitly `answered`/non-open head, rank 2 coordinator, empty), assert `isCoordinatorPickup` is false, the outcome is `no-pickup`, no wake is issued, and **no** wake record is persisted.
+5. Assert the predicate is payload-determinable: it consumes only rank/status/audience from the ranked read, with no coordinator-state read; assert the status semantics match the delivered predicate (absent = open).
+6. Assert the wake happens on the first tick after the question qualifies (one-cycle bound in the tick model; GAP-T2), not after a delay or a second tick.
+7. Assert the ranking is the shared `rankBlockerQuestions`, not a second comparator.
 
 **Expected Outcome**:
-- Only a rank-1, open, coordinator-audience head wakes.
-- `no-pickup` is a tick result with no record.
+- Only a rank-1, open (including absent-status), coordinator-audience head wakes.
+- `no-pickup` is returned only for non-rank-1, non-coordinator, or explicitly non-open heads (and empty ledgers), with no record.
 - The wake is issued in the same bounded cycle.
 
 #### TC-COORD-071 - One wake per question lifetime; a still-top question is `already-woken`
@@ -1804,7 +1922,7 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - No duplicate `woken` records and the one-wake lifetime is consumed only by success.
 
 **Notes / Clarifications**:
-- Pinned by spec v1.1 DEC-9/EVT-5/AC-F7-5: only a successful `woken` persists and consumes the one-wake lifetime; `delivery-failed`, `answered-before-wake`, and `no-pickup` are tick results that append nothing, and `already-woken` is a no-op, so retry cannot duplicate records. No arbitration is pending.
+- Pinned by spec v1.2 DEC-9/EVT-5/AC-F7-5: only a successful `woken` persists and consumes the one-wake lifetime; `delivery-failed`, `answered-before-wake`, and `no-pickup` are tick results that append nothing, and `already-woken` is a no-op, so retry cannot duplicate records. The persisted `askedAt` is the lifetime identity. No arbitration is pending.
 
 #### TC-COORD-075 - A new top question after an answered one wakes normally
 
@@ -1833,7 +1951,7 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - The one-wake rule is scoped per question.
 - No cross-question dedupe.
 
-#### TC-COORD-080 - The five config keys own defaults/domains; invalid input reuses the delivered identities
+#### TC-COORD-080 - The six config keys own defaults/domains; invalid input reuses the delivered identities
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -1849,17 +1967,18 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - The delivered config catalog/resolver/provenance are used unchanged.
 
 **Steps**:
-1. Absent branch: assert `stuck-window=600000`, `kill-grace=20000`, `restart-budget=10`, `resume-context-limit=100000`, `collection-interval=30000`, each with a `defaults` origin.
-2. Explicit values: assert they are observed and the origin is the declaring layer.
-3. Unknown key: assert `config.key.unknown` at the delivered exit projection, naming `coordinator.<key>`.
-4. Wrong type (string for a number, scalar for the branch) and wrong domain (`stuck-window=0`, negative, fractional; `kill-grace=0`; `resume-context-limit=0`; `collection-interval=0`; `restart-budget=-1`/fractional): assert `config.value.invalid`, naming the path.
-5. Boundaries: `restart-budget=0` is valid; each positive window/interval at `1` ms is valid.
-6. Assert no default or bound literal appears in the lifecycle/stuck/wake/admission decision code; the domain reads the resolved config values (structural scan + mutant).
-7. Assert the collection interval is distinct from `daemon.heartbeat-cycle` and `lane.liveness-interval` (no aliasing).
+1. Absent branch: assert `stuck-window=600000`, `kill-grace=20000`, `restart-budget=10`, `resume-context-limit=100000`, `collection-interval=30000`, `progress-bound=300000`, each with a `defaults` origin.
+2. Explicit values: assert all six are observed and the origin is the declaring layer.
+3. Unknown key: assert `config.key.unknown` at the delivered exit projection, naming `coordinator.<key>`; assert there is no seventh coordinator key.
+4. Wrong type (string for a number, scalar for the branch) and wrong domain (`stuck-window=0`, negative, fractional; `kill-grace=0`; `resume-context-limit=0`; `collection-interval=0`; `progress-bound=0`, negative, fractional; `restart-budget=-1`/fractional): assert `config.value.invalid`, naming the path.
+5. Boundaries: `restart-budget=0` is valid; each positive window/interval/progress-bound at `1` ms is valid.
+6. Assert no default or bound literal appears in the lifecycle/stuck/wake/admission decision code; the domain reads the resolved config values (structural scan + mutant), including the `progress-bound` veto window and the pre-TERM kill grace.
+7. Assert the collection interval is distinct from `daemon.heartbeat-cycle` and `lane.liveness-interval`, and `progress-bound` is not aliased to `lane.liveness-interval` (no aliasing).
+8. Non-vacuity: a mutant that hardcodes `300000` or `20000` in the decision code fails.
 
 **Expected Outcome**:
-- The five keys have the declared defaults and domains.
-- Unknown and invalid input reuse the delivered identities.
+- The six keys have the declared defaults and domains, including `progress-bound=300000`.
+- Unknown and invalid input reuse the delivered identities; boundary values behave as declared.
 - No decision-code literal and no cross-key aliasing.
 
 #### TC-COORD-081 - The error table gains the coordinator kind and exactly six rows, with the exact allowlist addition
@@ -1893,7 +2012,7 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - Every row has a declared projection and remediation hint.
 
 **Notes / Clarifications**:
-- Pinned by AC-F10-2/DEC-11 (spec v1.1): exactly `coordinator.already-running` and `coordinator.restart-budget-exhausted` join `RESERVED_TWO_SEGMENT_CODES` (set 22→24); the other four are three-segment. A wildcard or a generic two-segment widening is a defect.
+- Pinned by AC-F10-2/DEC-11 (spec v1.2): exactly `coordinator.already-running` and `coordinator.restart-budget-exhausted` join `RESERVED_TWO_SEGMENT_CODES` (set 22→24); the other four are three-segment. A wildcard or a generic two-segment widening is a defect.
 - Category/retryability are delivery-declared and asserted as valid/documented, not guessed; the pinned fields are code, domain kind, consequence, projection class, and non-empty hint.
 
 #### TC-COORD-082 - The six documented rows bind two-way and the corpora are non-vacuous
@@ -1941,17 +2060,18 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - Valid, torn, wrong-kind, missing-required-field, unknown-schema, gapped, and permission-denied record fixtures exist for all six kinds.
 
 **Steps**:
-1. Assert the six record kinds (`iteration`, `restart`, `stuck`, `exhaustion`, `wake`, `fence`) and their payload schema ids are additive under `delivery.state.v1` and `STATE_SCHEMA_VERSION` is unchanged; no migration or derived document is produced.
-2. For each valid fixture, assert the record round-trips through the store with every required field and identity field present; for the `fence` kind assert `action`/`holder`/`previousHolder`/`fenceAgeMs` validate and the takeover record is readable from a reopened handle.
-3. For each malformed fixture, assert the read fails with the declared state identity (`state.store.torn`/`state.store.unknown`), is never served as truth, and never becomes count `0`; a torn `fence` record never yields a fabricated holder.
+1. Assert the six record kinds (`iteration`, `restart`, `stuck`, `exhaustion`, `wake`, `fence`) and their payload schema ids are additive under `delivery.state.v1` and `STATE_SCHEMA_VERSION` is unchanged; no migration or derived document is produced; assert there is no `coordinator.instance` kind.
+2. For each valid fixture, assert the record round-trips through the store with every required field and identity field present; for the `fence` kind assert `instanceId`/`action` (`acquired`/`released`/`stale-takeover`/`stop-requested`)/`holder`/`pid`/`processStartTimeMs`/`supervisorMode`/`externalUnit`/`previousHolder`/`fenceAgeMs` validate and the takeover record is readable from a reopened handle; for `stuck` assert `phase` (`verdict`/`outcome`) pairs share one `stuckId`, `killFailureReason` is `identity-mismatch` or null, and the latest-wins fold is deterministic.
+3. For each malformed fixture, assert the read fails with the declared state identity (`state.store.torn`/`state.store.unknown`), is never served as truth, and never becomes count `0`; a torn `fence` record never yields a fabricated holder, and an invalid `phase`/`killOutcome` couple is rejected.
 4. Assert ordinal contiguity is validated before serving (`1,2,3` valid; `1,3` unevaluable).
 5. Assert a permission-denied read/append maps to `state.permission.denied` exit `1`/`not_landed`, not exit `2`.
 6. Assert records carry counts/identities/references and no prompt/transcript/secret field exists in any schema.
 7. Assert the record kind prefix is `coordinator.` and is disjoint from `economics.*` and `blocker.*`.
+8. Assert every coordinator record append (iteration, restart, both stuck phases, exhaustion, wake, fence) goes through the delivered fenced artifact boundary; a recording state port shows one acquire/release pair per append and no lifetime handle.
 
 **Expected Outcome**:
-- The six kinds are additive, validated, and schema-version-neutral.
-- The fence record validates like every other coordinator record and carries takeover evidence durably.
+- The six kinds are additive, validated, and schema-version-neutral; no separate instance record exists.
+- The `fence` record validates the four lease actions and instance identity; the `stuck` record validates the two-phase fold.
 - Malformed records are classified and never served.
 - Permission denial has the delivered exit projection.
 
@@ -1999,14 +2119,15 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 
 **Steps**:
 1. Assert the kill path uses no shell, no `exec`/`eval`, no string interpolation, and no user-supplied free-form target (shared with TC-COORD-042).
-2. Assert no network client, socket, listener, or remote transport exists on the coordinator surface.
-3. Assert no privilege escalation (no `sudo`, setuid, service install) and no read of another user's state.
-4. Assert the state-dir fence and filesystem permissions are the only boundary and the same-user assumption is documented.
-5. Assert the dependency-cruiser boundary rule for the adapter seam stays green with no loosening and the fixture-coverage meta-check reports no unenforced rule.
-6. Non-vacuity: a temp-copy mutant adding a network call or a shell kill fails.
+2. Assert the kill path verifies the recorded `pid` + `processStartTimeMs` before TERM and holds no signal for a reused pid.
+3. Assert no network client, socket, listener, or remote transport exists on the coordinator surface.
+4. Assert no privilege escalation (no `sudo`, setuid, service install) and no read of another user's state.
+5. Assert the instance lease and filesystem permissions are the only boundary and the same-user assumption is documented; the state write fence is taken only per append.
+6. Assert the dependency-cruiser boundary rule for the adapter seam stays green with no loosening and the fixture-coverage meta-check reports no unenforced rule.
+7. Non-vacuity: a temp-copy mutant adding a network call or a shell kill fails.
 
 **Expected Outcome**:
-- The kill path is shell-free and handle-only.
+- The kill path is shell-free, handle-only, and identity-verified.
 - The same-user, local trust boundary is unchanged; no network or privilege escalation exists.
 - The boundary gate remains enforced.
 
@@ -2054,11 +2175,11 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - Recording counters for each record kind and destructive action.
 
 **Steps**:
-1. Run `tick` twice with unchanged state; assert the second run appends no decision, restart, stuck, wake, or exhaustion record.
-2. Assert the second run performs no spawn, resume, kill, or blocker append.
-3. Assert the second run returns the same actionable/idempotent outcome and exit `0` (or the same classified refusal), not a new effect.
+1. Run `tick` twice with unchanged state; assert the second run appends no decision, restart, stuck, wake, exhaustion, or lease record.
+2. Assert the second run performs no spawn, resume, kill, or blocker append, and no `stop-requested` duplicate.
+3. Assert the second run returns the same actionable/idempotent outcome and exit `0` (or the same classified refusal), not a new effect; a repeated exhausted tick is `exhausted-escalated`.
 4. Assert a changed fact (new question, window advanced) does cause the declared new effect (liveness control).
-5. Assert a replayed restart ordinal and a repeated exhausted escalation are both no-ops.
+5. Assert a replayed restart ordinal, a replayed `coordinator.stuck` phase (same `stuckId`), a repeated exhausted escalation, and a repeated `stop` on a stopped root are all no-ops.
 6. Non-vacuity: a mutant that appends a duplicate on replay fails.
 
 **Expected Outcome**:
@@ -2157,7 +2278,7 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5, AC-F2-6, AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F4-1, AC-F5-2, AC-F5-3, AC-F6-1, AC-F7-1, AC-F10-5, SC-M1-25
+**Related IDs**: AC-F1-1, AC-F1-3, AC-F1-4, AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5, AC-F2-6, AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F4-1, AC-F4-4, AC-F5-2, AC-F5-3, AC-F6-1, AC-F7-1, AC-F10-5, SC-M1-25
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/coordinator-scenario.test.ts`; `tests/fixtures/coordinator/harness.ts` + `process-port.ts`
@@ -2168,19 +2289,20 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - The in-process CLI, fake process port, fake clock, config, and state seams are injected.
 
 **Steps**:
-1. Run `coordinator tick`: record `join-live` (or `resume-context`/`spawn-fresh` per the context fixture) and apply it; assert the ordinal rule.
-2. Advance the fake clock past `stuck-window` with no digest advance, no merge, no answer, and no sourced progress; run `tick`; assert `stuck` with evidence.
-3. Assert TERM → grace → KILL (fake) and the recorded `terminated`/`forced` outcome.
+1. Run `coordinator tick`: acquire the instance lease (`acquired`/`released` pair), record `join-live` (or `resume-context`/`spawn-fresh` per the context fixture), and apply it; assert the ordinal rule and that the instance identity folds from the latest lease.
+2. Advance the fake clock past `stuck-window` with no fingerprint advance, no merge, no answer, and no positive `token-delta`/`session-traffic` within `progress-bound`; run `tick`; assert `stuck` with bounded evidence, including the `phase=verdict`/`killOutcome=not-attempted` append before the kill.
+3. Assert identity verification, TERM → grace → KILL (fake), and the `phase=outcome` append with the same `stuckId` and `terminated`/`forced`.
 4. Assert the next restart is admitted below the bound with the classified reason; drive the count to the bound and assert the refusal + escalation.
-5. Assert exactly one owner-audience escalation question and the terminal receipt; assert the brief/digest render it at the cap.
-6. With a rank-1 coordinator question and a live/resumable/spawnable session, run `tick`; assert exactly one wake and the `woken` record.
-7. Assert the whole scenario is deterministic: rerun on a fresh identical root and compare the normalized transcript.
-8. Assert the `ceo-loop` map trace (TC-COORD-090) is satisfied by the sequence.
+5. Assert exactly one owner-audience escalation question and the terminal receipt; assert the brief/digest render it **first by index** at the cap, with the lowest-ranked displaced and counted as omitted, and the idempotent state is `exhausted-escalated`.
+6. With a rank-1 coordinator question and a live/resumable/spawnable session, run `tick`; assert exactly one wake and the `woken` record with `askedAt`.
+7. Assert a PID identity mismatch in the sequence sends no signal and records `identity-mismatch` (a negative sub-case) and that a stop request is append-only and idempotent.
+8. Assert the whole scenario is deterministic: rerun on a fresh identical root and compare the normalized transcript.
+9. Assert the `ceo-loop` map trace (TC-COORD-090) is satisfied by the sequence.
 
 **Expected Outcome**:
 - SC-M1-25 runs end to end with no divergence beyond the declared "digest consumed" clarification.
-- Every clause maps to an observable assertion and a TC.
-- The scenario is hermetic and deterministic.
+- The instance lease, two-phase stuck record, progress bound, render-first escalation, and PID identity all hold in the integrated flow.
+- Every clause maps to an observable assertion and a TC; the scenario is hermetic and deterministic.
 
 #### TC-COORD-092 - Documentation, registry, man page, and distribution marker reconcile with the delivered surface
 
@@ -2197,18 +2319,18 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - The implementation and the docs land in the same delivery.
 
 **Steps**:
-1. Assert the new feature spec is the current-truth home for the command family, decisions, records, config, error identities, and regime descriptor.
-2. Assert the five consumer/boundary notes are present: economics (distinct budget), blockers (enforcement arm, unchanged vocabulary), brief (reserved slot, no new anchor), status digest (reserved slot, read-only), harness adapters (additive process port).
+1. Assert the new feature spec is the current-truth home for the command family, decisions, records (including the four-action `coordinator.fence` instance lease and the two-phase `coordinator.stuck`), six config keys, error identities, and regime descriptor.
+2. Assert the five consumer/boundary notes are present: economics (distinct budget; `token-delta`/`session-traffic` consumed), blockers (enforcement arm, unchanged vocabulary, absent status counts as open), brief (render-first reserved slot, no new anchor), status digest (render-first reserved slot, read-only), harness adapters (additive process port, new-turn mapping).
 3. Assert the CLI registry and man page carry the four subcommands/flags and the M1-S18 seam; the `ceo-loop.sh` strangler row names coordinator supervision.
-4. Assert TDR-0013/TDR-0014 references and the ODR-0003 registry-only naming note are accurate.
+4. Assert TDR-0013/TDR-0014 references and the ODR-0003 registry-only naming note are accurate, and that the TDR-0013 amendment (four-way capability split, lease-based single-instance) and TDR-0014 checklist cleanup are recorded by `@decision-advisor`.
 5. Assert the documentation index links the new feature spec and records; the distribution marker is declared on every changed redistributable doc.
 6. Run `bash scripts/.tests/test-doc-distribution.sh` and `git diff --check`; assert green.
-7. Assert the docs do not claim a daemon, socket, lane supervision, OS installer, prompt change, or new question type.
+7. Assert the docs do not claim a daemon, socket, lane supervision, OS installer, prompt change, or new question type; they describe `stop` as a recorded request and the write fence as per-append.
 
 **Expected Outcome**:
-- Docs reconcile with the delivered surface and the spec's declared scope.
+- Docs reconcile with the delivered v1.2 surface and scope.
 - The distribution and diff gates pass.
-- No out-of-scope claim is documented.
+- No out-of-scope or stale v1.1 claim is documented.
 
 ## 6. Environments and Test Data
 
@@ -2224,15 +2346,15 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 
 **Test data.**
 
-- **Synthetic state dirs** live under `tests/fixtures/coordinator/states.ts` as committed case data: a verified-empty coordinator record set, a healthy running set, an exhausted set, a torn payload, a gapped ordinal (`1,3`), an unknown record kind, an undeclared schema id, a permission-denied root, a stale-fence root (gone process and old-fence cases), and a torn `coordinator.fence` record. Each case declares the expected decision/verdict/exit.
-- **Fake process-lifecycle port** lives in `tests/fixtures/coordinator/process-port.ts`: records `spawn`, `resume`, `alive`, `kill` with a fake clock that advances only when the supervisor "waits" for the grace, and returns declared `terminated`/`forced`/`failed` outcomes. It also exposes a `sourcedProgress` fact and per-capability `declared`/`missing` switches. No real child process, signal, PID, or process-tree enumeration is used.
-- **Fake harness capability facts** cover spawn/resume/alive/kill/progress declared, individually missing, and all-missing; the declaration is authoritative and an absent declaration means unsupported (fail-closed).
-- **Fixture blocker ledgers** live in `tests/fixtures/coordinator/blockers.ts`: owner-only, coordinator-only, mixed rank order, a cap-sized ledger (8 open questions), a cap+1 ledger, and an exhaustion escalation that ranks ninth with seven other questions ahead of it. Question ids, `askedAt`, types, audiences, lanes, and refs are fixed; no real question text or secret appears.
-- **Fixture coordinator records** are fixed by case: iteration/restart/stuck/exhaustion/wake/fence payloads in valid, torn, wrong-kind, malformed, gapped, and unknown forms; stuck records pair `verdict` with the closed `reason`; fence records cover `acquired`/`released`/`stale-takeover` and null/non-null `previousHolder`/`fenceAgeMs`; ordinals and epochs are constants.
-- **Golden outputs** live under `tests/fixtures/coordinator/golden/` for `tick` and `status` text/data, plus new reserved-slot cases under `tests/fixtures/status/golden/` and `tests/fixtures/brief/golden/`. Normalization replaces temp roots and removes only `recordedAt`/`timing`; the declared reserved-slot golden is the only permitted status/brief golden change and is reviewed explicitly.
+- **Synthetic state dirs** live under `tests/fixtures/coordinator/states.ts` as committed case data: a verified-empty coordinator record set, a healthy running set, an exhausted set, a torn payload, a gapped ordinal (`1,3`), an unknown record kind, an undeclared schema id, a permission-denied root, a stale-lease root (holder not alive and old-lease cases), a `stop-requested` root, a `released` root, and a torn `coordinator.fence` record. Each case declares the expected decision/verdict/exit; no case declares a separate instance record.
+- **Fake process-lifecycle port** lives in `tests/fixtures/coordinator/process-port.ts`: records `spawn`, `resume`, `alive`, `kill` with a fake clock that advances only when the supervisor "waits" for the grace, records TERM/KILL signals and whether the recorded `pid` + `processStartTimeMs` matched, and returns declared `terminated`/`forced`/`failed` outcomes. It also exposes `token-delta`/`session-traffic` liveness readings, an `alive(handle)` probe, and per-capability `declared`/`missing` switches. No real child process, signal, PID, or process-tree enumeration is used.
+- **Fake harness capability facts** cover spawn/resume/alive/kill/progress declared, individually missing, and all-missing; the declaration is authoritative and an absent declaration means unsupported (fail-closed). The new-turn mapping fixtures include positive `token-delta` only, positive `session-traffic` only, zero/negative, and absent/unsupported.
+- **Fixture blocker ledgers** live in `tests/fixtures/coordinator/blockers.ts`: owner-only, coordinator-only, mixed rank order, a cap-sized ledger (8 open questions), a cap+1 ledger, an absent-status rank-1 coordinator question, and an exhaustion escalation that ranks ninth with seven other questions ahead of it. Question ids, `askedAt`, types, audiences, lanes, statuses, and refs are fixed; no real question text or secret appears.
+- **Fixture coordinator records** are fixed by case: iteration/restart/stuck/exhaustion/wake/fence payloads in valid, torn, wrong-kind, malformed, gapped, and unknown forms; stuck records are two-phase under one `stuckId` (`phase=verdict` with `killOutcome=not-attempted`, `phase=outcome` with `terminated`/`forced`/`failed` and `killFailureReason`); fence records cover `acquired`/`released`/`stale-takeover`/`stop-requested` with `instanceId`, `pid`, `processStartTimeMs`, `supervisorMode`, `externalUnit`, and null/non-null `previousHolder`/`fenceAgeMs`; ordinals and epochs are constants.
+- **Golden outputs** live under `tests/fixtures/coordinator/golden/` for `tick` and `status` text/data, plus new reserved-slot cases under `tests/fixtures/status/golden/` and `tests/fixtures/brief/golden/`. Normalization replaces temp roots and removes only `recordedAt`/`timing`; the reserved-slot golden asserts the escalation at index `0` and is the only permitted status/brief golden change, reviewed explicitly.
 - **Privacy canaries**: fabricated canary strings are planted in every field that could carry content (session, ref, question, evidence, summary) and each suite asserts the canary never appears in a record, evidence payload, status output, or error envelope.
-- **Configuration fixtures** live under `tests/fixtures/config/**` and cover: absent `coordinator` branch (defaults), explicit values, unknown key, wrong type, wrong domain, negative/fractional/zero windows, `restart-budget` `0`/`1`/`10`, and window/interval `1` ms.
-- **Mutants** live under `tests/fixtures/coordinator/mutants/**` and are applied to temp copies or in-memory strings; the live tree is never mutated. Each mutant declares the suite and assertion it must trip (no-CPU, no-literal, no-shell, no-model, bypass-fence, fabricated-stale, count-zero, duplicate-wake, duplicate-escalation, reserved-slot-dropped).
+- **Configuration fixtures** live under `tests/fixtures/config/**` and cover: absent `coordinator` branch (defaults incl. `progress-bound=300000`), explicit values, unknown key, wrong type, wrong domain, negative/fractional/zero windows, `restart-budget` `0`/`1`/`10`, and window/interval/progress-bound `1` ms.
+- **Mutants** live under `tests/fixtures/coordinator/mutants/**` and are applied to temp copies or in-memory strings; the live tree is never mutated. Each mutant declares the suite and assertion it must trip (no-CPU, no-literal, no-shell, no-model, bypass-lease, signal-before-identity-check, fabricated-stale, absent-to-zero, ready-to-merge-in-fingerprint, count-zero, duplicate-wake, duplicate-escalation, reserved-slot-dropped, reserved-slot-in-rank-position, `escalated`-instead-of-`exhausted-escalated`).
 
 **Isolation and cleanup.**
 
@@ -2250,14 +2372,15 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 | TC-COORD-002 | `tests/structure/coordinator-imports.test.ts`; `tests/boundaries` | `bun test tests/structure/coordinator-imports.test.ts tests/boundaries`; `pnpm check:boundaries` | AST scans; temp-copy mutants; production depcruise rules | To Implement |
 | TC-COORD-003 | `tests/behaviour/coordinator-grammar.test.ts`; `tests/structure/coordinator-contract.test.ts` | `bun test tests/behaviour/coordinator-grammar.test.ts` | In-process `runCli`; recorder; invalid-grammar matrix | To Implement |
 | TC-COORD-004 | `tests/behaviour/coordinator-envelope.test.ts`; `tests/checks/exit-code-literals.test.ts` | `bun test tests/behaviour/coordinator-envelope.test.ts tests/checks/exit-code-literals.test.ts` | `assertEnvelopeContract`; outcome/identity/exit matrix | To Implement |
-| TC-COORD-010 | `tests/behaviour/coordinator-start.test.ts`; `tests/fixtures/coordinator/harness.ts` | `bun test tests/behaviour/coordinator-start.test.ts` | Temp state roots; fence token; recording state port; two state dirs | To Implement |
-| TC-COORD-011 | `tests/behaviour/coordinator-stop.test.ts` | `bun test tests/behaviour/coordinator-stop.test.ts` | Fence holder fixtures; no-supervisor control | To Implement |
+| TC-COORD-010 | `tests/behaviour/coordinator-start.test.ts`; `tests/fixtures/coordinator/harness.ts` | `bun test tests/behaviour/coordinator-start.test.ts` | Temp state roots; injected fence token; recording state port; two state dirs; lease-record oracle | To Implement |
+| TC-COORD-011 | `tests/behaviour/coordinator-stop.test.ts` | `bun test tests/behaviour/coordinator-stop.test.ts` | Live/released/stale lease fixtures; no-supervisor control; cross-process handle spy | To Implement |
 | TC-COORD-012 | `tests/behaviour/coordinator-tick.test.ts`; `tests/golden/coordinator.test.ts` | `bun test tests/behaviour/coordinator-tick.test.ts tests/golden/coordinator.test.ts` | Fresh/valid state; fake process port; payload goldens | To Implement |
 | TC-COORD-013 | `tests/behaviour/coordinator-status.test.ts`; `tests/golden/coordinator.test.ts` | `bun test tests/behaviour/coordinator-status.test.ts tests/golden/coordinator.test.ts` | Running/stopped/exhausted fixtures; live-fact absent/present | To Implement |
 | TC-COORD-014 | `tests/structure/coordinator-regime.test.ts`; `tests/behaviour/coordinator-status.test.ts` | `bun test tests/structure/coordinator-regime.test.ts tests/behaviour/coordinator-status.test.ts` | Descriptor data; no-installer negative scan | To Implement |
-| TC-COORD-015 | `tests/behaviour/coordinator-fence-stale.test.ts` | `bun test tests/behaviour/coordinator-fence-stale.test.ts` | Gone-process and old-fence fixtures; fake clock; `coordinator.fence` record oracle | To Implement |
-| TC-COORD-017 | `tests/behaviour/coordinator-fence-records.test.ts`; `tests/structure/coordinator-contract.test.ts` | `bun test tests/behaviour/coordinator-fence-records.test.ts tests/structure/coordinator-contract.test.ts` | Acquire/release/takeover fixtures; reopened store handle; torn-fence fixture | To Implement |
-| TC-COORD-016 | `tests/behaviour/coordinator-fresh-budget.test.ts` | `bun test tests/behaviour/coordinator-fresh-budget.test.ts` | Live-supervisor refusal; stopped-supervisor success | To Implement |
+| TC-COORD-015 | `tests/behaviour/coordinator-fence-stale.test.ts` | `bun test tests/behaviour/coordinator-fence-stale.test.ts` | Not-alive-holder and old-lease fixtures; fake clock; `recoverFence` spy; `coordinator.fence` record oracle | To Implement |
+| TC-COORD-017 | `tests/behaviour/coordinator-fence-records.test.ts`; `tests/structure/coordinator-contract.test.ts` | `bun test tests/behaviour/coordinator-fence-records.test.ts tests/structure/coordinator-contract.test.ts` | Acquire/stop-requested/release/takeover fixtures; reopened store handle; torn-fence fixture; per-append fence counter | To Implement |
+| TC-COORD-018 | `tests/behaviour/coordinator-instance-lease.test.ts`; `tests/structure/coordinator-contract.test.ts` | `bun test tests/behaviour/coordinator-instance-lease.test.ts tests/structure/coordinator-contract.test.ts` | Lease-sequence fixtures; six-kind set assertion; identity fold oracle | To Implement |
+| TC-COORD-016 | `tests/behaviour/coordinator-fresh-budget.test.ts` | `bun test tests/behaviour/coordinator-fresh-budget.test.ts` | Live-supervisor refusal; stop-request/release; stopped-supervisor success | To Implement |
 | TC-COORD-020 | `tests/behaviour/coordinator-decision-join.test.ts` | `bun test tests/behaviour/coordinator-decision-join.test.ts` | Live-session fact; recording process port | To Implement |
 | TC-COORD-021 | `tests/behaviour/coordinator-decision-resume.test.ts` | `bun test tests/behaviour/coordinator-decision-resume.test.ts` | Resumable/known-context fixture; port recorder | To Implement |
 | TC-COORD-022 | `tests/behaviour/coordinator-decision-spawn.test.ts`; `tests/fixtures/coordinator/lifecycle.ts` | `bun test tests/behaviour/coordinator-decision-spawn.test.ts` | Recovery-reason matrix; resume-capability fixtures | To Implement |
@@ -2265,9 +2388,10 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 | TC-COORD-024 | `tests/behaviour/coordinator-decision-recovery.test.ts` | `bun test tests/behaviour/coordinator-decision-recovery.test.ts` | Killed-mid-iteration state; closed-out artifact snapshot | To Implement |
 | TC-COORD-025 | `tests/behaviour/coordinator-decision-durability.test.ts` | `bun test tests/behaviour/coordinator-decision-durability.test.ts` | Closed/reopened store handles (GAP-T4) | To Implement |
 | TC-COORD-026 | `tests/behaviour/coordinator-ordinals.test.ts`; `tests/fixtures/coordinator/lifecycle.ts` | `bun test tests/behaviour/coordinator-ordinals.test.ts` | Six-outcome matrix; recorder | To Implement |
-| TC-COORD-030 | `tests/behaviour/coordinator-stuck-verdict.test.ts` | `bun test tests/behaviour/coordinator-stuck-verdict.test.ts` | Window-expired fixture; fake clock; evidence corpus parser; stuck `reason` field | To Implement |
+| TC-COORD-029 | `tests/behaviour/coordinator-new-turn.test.ts`; `tests/fixtures/coordinator/process-port.ts` | `bun test tests/behaviour/coordinator-new-turn.test.ts` | Liveness-report fixtures (`token-delta`/`session-traffic` positive/zero/absent); progress-bound config; adapter mapping mutants | To Implement |
+| TC-COORD-030 | `tests/behaviour/coordinator-stuck-verdict.test.ts` | `bun test tests/behaviour/coordinator-stuck-verdict.test.ts` | Window-expired fixture; fake clock; evidence corpus parser; two-phase `stuckId`/outcome oracle | To Implement |
 | TC-COORD-031 | `tests/behaviour/coordinator-stuck-matrix.test.ts`; `tests/fixtures/coordinator/evidence.ts` | `bun test tests/behaviour/coordinator-stuck-matrix.test.ts` | 3×3×3 evidence matrix; expected verdict table | To Implement |
-| TC-COORD-032 | `tests/behaviour/coordinator-stuck-fingerprint.test.ts` | `bun test tests/behaviour/coordinator-stuck-fingerprint.test.ts` | Fingerprint-advanced/no-turn and fingerprint+turn couples | To Implement |
+| TC-COORD-032 | `tests/behaviour/coordinator-stuck-fingerprint.test.ts` | `bun test tests/behaviour/coordinator-stuck-fingerprint.test.ts` | Two-input state fingerprint fixtures; no-tracker/CI/network spy; fingerprint+turn couples | To Implement |
 | TC-COORD-033 | `tests/behaviour/coordinator-stuck-corroborator.test.ts` | `bun test tests/behaviour/coordinator-stuck-corroborator.test.ts` | Positive progress fixture; kill counter stays `0` | To Implement |
 | TC-COORD-034 | `tests/behaviour/coordinator-stuck-unknown.test.ts` | `bun test tests/behaviour/coordinator-stuck-unknown.test.ts` | Unsupported-progress fixture; stale merge/answer controls | To Implement |
 | TC-COORD-035 | `tests/behaviour/coordinator-stuck-unevaluable.test.ts` | `bun test tests/behaviour/coordinator-stuck-unevaluable.test.ts` | All-unknown and unreadable-store fixtures; exit/identity oracle | To Implement |
@@ -2275,11 +2399,12 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 | TC-COORD-037 | `tests/structure/coordinator-no-cpu.test.ts`; `tests/checks/coordinator-mutants.test.ts` | `bun test tests/structure/coordinator-no-cpu.test.ts tests/checks/coordinator-mutants.test.ts` | AST scan; CPU-shaped fixture; no-CPU mutant | To Implement |
 | TC-COORD-038 | `tests/behaviour/coordinator-expectation.test.ts` | `bun test tests/behaviour/coordinator-expectation.test.ts` | Trigger sequence; iteration-record counter | To Implement |
 | TC-COORD-039 | `tests/behaviour/coordinator-stuck-reason.test.ts`; `tests/structure/coordinator-contract.test.ts` | `bun test tests/behaviour/coordinator-stuck-reason.test.ts tests/structure/coordinator-contract.test.ts` | Stuck/unevaluable couples; verdict/reason vocabulary; invalid-couple reader | To Implement |
-| TC-COORD-040 | `tests/behaviour/coordinator-kill-grace.test.ts`; `tests/fixtures/coordinator/process-port.ts` | `bun test tests/behaviour/coordinator-kill-grace.test.ts` | Fake clock/port; TERM/KILL phase log; `terminated`/`forced` cases | To Implement |
-| TC-COORD-041 | `tests/behaviour/coordinator-kill-failed.test.ts` | `bun test tests/behaviour/coordinator-kill-failed.test.ts` | Port returning failed; no-infinite-retry counter | To Implement |
-| TC-COORD-042 | `tests/structure/coordinator-kill-target.test.ts`; `tests/behaviour/coordinator-kill-target.test.ts` | `bun test tests/structure/coordinator-kill-target.test.ts tests/behaviour/coordinator-kill-target.test.ts` | AST scan for shell/name kill; metacharacter handle fixture | To Implement |
-| TC-COORD-043 | `tests/behaviour/coordinator-kill-fence.test.ts` | `bun test tests/behaviour/coordinator-kill-fence.test.ts` | Fence-held/absent fixtures; kill counter | To Implement |
+| TC-COORD-040 | `tests/behaviour/coordinator-kill-grace.test.ts`; `tests/fixtures/coordinator/process-port.ts` | `bun test tests/behaviour/coordinator-kill-grace.test.ts` | Fake clock/port; identity-match verify; TERM/KILL phase log; two-phase `stuckId` cases | To Implement |
+| TC-COORD-041 | `tests/behaviour/coordinator-kill-failed.test.ts` | `bun test tests/behaviour/coordinator-kill-failed.test.ts` | Port returning failed; no-infinite-retry counter; `killFailureReason=null` control | To Implement |
+| TC-COORD-042 | `tests/structure/coordinator-kill-target.test.ts`; `tests/behaviour/coordinator-kill-target.test.ts` | `bun test tests/structure/coordinator-kill-target.test.ts tests/behaviour/coordinator-kill-target.test.ts` | AST scan for shell/name kill; metacharacter handle fixture; identity check | To Implement |
+| TC-COORD-043 | `tests/behaviour/coordinator-kill-fence.test.ts` | `bun test tests/behaviour/coordinator-kill-fence.test.ts` | Lease-held/absent fixtures; kill counter; per-append fence counter | To Implement |
 | TC-COORD-044 | `tests/behaviour/coordinator-capability-gap.test.ts` | `bun test tests/behaviour/coordinator-capability-gap.test.ts` | Four-way ownership matrix (resume/spawn/alive-kill/progress); destructive-action counter | To Implement |
+| TC-COORD-045 | `tests/behaviour/coordinator-kill-identity.test.ts`; `tests/fixtures/coordinator/process-port.ts` | `bun test tests/behaviour/coordinator-kill-identity.test.ts` | Matching/mismatched `pid`+`processStartTimeMs`; signal log; identity-mismatch effect oracle | To Implement |
 | TC-COORD-050 | `tests/behaviour/coordinator-restart-namespace.test.ts` | `bun test tests/behaviour/coordinator-restart-namespace.test.ts` | Coordinator/lane/economics roots; byte snapshot | To Implement |
 | TC-COORD-051 | `tests/behaviour/coordinator-restart-admit.test.ts` | `bun test tests/behaviour/coordinator-restart-admit.test.ts` | Below-bound matrix; ordinal parser | To Implement |
 | TC-COORD-052 | `tests/behaviour/coordinator-restart-exhausted.test.ts` | `bun test tests/behaviour/coordinator-restart-exhausted.test.ts` | At/above-bound fixtures; spawn counter; history reference | To Implement |
@@ -2290,7 +2415,7 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 | TC-COORD-060 | `tests/behaviour/coordinator-escalation-publish.test.ts` | `bun test tests/behaviour/coordinator-escalation-publish.test.ts` | Exhausted state; fixture ledger; append counter | To Implement |
 | TC-COORD-061 | `tests/behaviour/coordinator-escalation-idempotent.test.ts` | `bun test tests/behaviour/coordinator-escalation-idempotent.test.ts` | Existing open owner question; duplicate counters | To Implement |
 | TC-COORD-062 | `tests/behaviour/coordinator-escalation-failed.test.ts` | `bun test tests/behaviour/coordinator-escalation-failed.test.ts` | Failing blocker append; status projection | To Implement |
-| TC-COORD-063 | `tests/behaviour/coordinator-escalation-slot.test.ts`; `tests/golden/coordinator.test.ts` | `bun test tests/behaviour/coordinator-escalation-slot.test.ts tests/golden/coordinator.test.ts` | Cap-sized ledger; escalation ranked ninth; payload-predicate and near-miss-ref fixtures; omitted-count oracle | To Implement |
+| TC-COORD-063 | `tests/behaviour/coordinator-escalation-slot.test.ts`; `tests/golden/coordinator.test.ts` | `bun test tests/behaviour/coordinator-escalation-slot.test.ts tests/golden/coordinator.test.ts` | Cap-sized ledger; escalation ranked ninth; index-0 render assertion; payload-predicate and near-miss-ref fixtures; omitted-count oracle | To Implement |
 | TC-COORD-064 | `tests/behaviour/coordinator-escalation-surface.test.ts`; `tests/golden/{status-digest,brief}.test.ts` | `bun test tests/behaviour/coordinator-escalation-surface.test.ts tests/golden/status-digest.test.ts tests/golden/brief.test.ts` | Surface id/anchor inventory; digest/brief agreement | To Implement |
 | TC-COORD-065 | `tests/behaviour/coordinator-escalation-reuse.test.ts` | `bun test tests/behaviour/coordinator-escalation-reuse.test.ts` | Same/different epoch fixtures; ref matching | To Implement |
 | TC-COORD-070 | `tests/behaviour/coordinator-wake-pickup.test.ts` | `bun test tests/behaviour/coordinator-wake-pickup.test.ts` | Pickup matrix; rank/audience/status controls; wake counter | To Implement |
@@ -2299,14 +2424,14 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 | TC-COORD-073 | `tests/behaviour/coordinator-wake-paths.test.ts` | `bun test tests/behaviour/coordinator-wake-paths.test.ts` | Live/resume/spawn session facts; wake record | To Implement |
 | TC-COORD-074 | `tests/behaviour/coordinator-wake-failed.test.ts` | `bun test tests/behaviour/coordinator-wake-failed.test.ts` | Failing delivery; retry tick; persisted-vs-tick-result counter | To Implement |
 | TC-COORD-075 | `tests/behaviour/coordinator-wake-next.test.ts` | `bun test tests/behaviour/coordinator-wake-next.test.ts` | Answered-then-new-top ledger; two wake records | To Implement |
-| TC-COORD-080 | `tests/behaviour/coordinator-config.test.ts`; `tests/fixtures/config/**` | `bun test tests/behaviour/coordinator-config.test.ts` | Default/explicit/invalid/boundary fixtures; literal mutant | To Implement |
+| TC-COORD-080 | `tests/behaviour/coordinator-config.test.ts`; `tests/fixtures/config/**` | `bun test tests/behaviour/coordinator-config.test.ts` | Six-key default/explicit/invalid/boundary fixtures; literal mutant | To Implement |
 | TC-COORD-081 | `tests/structure/error-table.test.ts` (extended); `packages/core/src/contracts/error-table.ts`; `scripts/checks/error-table-sync.ts` | `bun test tests/structure/error-table.test.ts` | In-memory table; committed existing-row fingerprint; exact counts (set 24, table 105); both gate files | Existing – Update |
 | TC-COORD-082 | `tests/checks/error-table-sync.test.ts`; `tests/fixtures/result/code-corpora/*.json`; `doc/spec/features/feature-result-contract.md` | `bun test tests/checks/error-table-sync.test.ts`; `bun run scripts/checks/error-table-sync.ts` | Temp-copy mutation roots; true/false-positive corpora | Existing – Update |
-| TC-COORD-083 | `tests/behaviour/coordinator-records.test.ts`; `tests/structure/state-contract.test.ts` | `bun test tests/behaviour/coordinator-records.test.ts tests/structure/state-contract.test.ts` | Valid/torn/unknown/gapped/permission fixtures; schema assertion | To Implement |
+| TC-COORD-083 | `tests/behaviour/coordinator-records.test.ts`; `tests/structure/state-contract.test.ts` | `bun test tests/behaviour/coordinator-records.test.ts tests/structure/state-contract.test.ts` | Valid/torn/unknown/gapped/permission fixtures; four-action fence and two-phase stuck validation; schema assertion | To Implement |
 | TC-COORD-084 | `tests/checks/coordinator-privacy.test.ts`; `tests/checks/secret-read-boundary.test.ts` | `bun test tests/checks/coordinator-privacy.test.ts tests/checks/secret-read-boundary.test.ts` | Privacy canaries; 512-byte evidence bound; redaction scan | To Implement |
 | TC-COORD-085 | `tests/structure/coordinator-kill-target.test.ts`; `tests/boundaries` | `bun test tests/structure/coordinator-kill-target.test.ts tests/boundaries`; `pnpm check:boundaries` | Shell-call scan; no-network/no-privilege scan; mutant | To Implement |
 | TC-COORD-086 | `tests/checks/coordinator-determinism.test.ts`; `tests/golden/coordinator.test.ts` | `bun test tests/checks/coordinator-determinism.test.ts tests/golden/coordinator.test.ts` | Two identical stores; injected clock/ids/brand; byte comparison | To Implement |
-| TC-COORD-087 | `tests/behaviour/coordinator-idempotency.test.ts` | `bun test tests/behaviour/coordinator-idempotency.test.ts` | Second-tick counters for every record kind and destructive action | To Implement |
+| TC-COORD-087 | `tests/behaviour/coordinator-idempotency.test.ts` | `bun test tests/behaviour/coordinator-idempotency.test.ts` | Second-tick counters for every record kind and destructive action; stuck-phase and stop replay controls | To Implement |
 | TC-COORD-088 | `tests/behaviour/coordinator-performance.test.ts`; `tests/behaviour/coordinator-read-cost.test.ts` | `bun test tests/behaviour/coordinator-performance.test.ts tests/behaviour/coordinator-read-cost.test.ts` | Reference store; p95 method; per-store read counters; bound assertions (GAP-T6) | To Implement |
 | TC-COORD-089 | existing `tests/{structure,behaviour,golden,conformance,boundaries}` suites; `scripts/**` | `bun test tests/structure tests/behaviour tests/golden tests/conformance`; `bun test tests/boundaries`; `git diff --name-only` | Unchanged suites plus the declared reserved-slot golden update | Existing – Update |
 | TC-COORD-090 | change-artifact trace review; `doc/spec/features/feature-coordinator-supervision.md` | Manual review against Appendix A; TC/AC cross-reference | — | Manual Only |
@@ -2316,11 +2441,11 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 **Fixture helper obligations:**
 
 - `tests/fixtures/coordinator/harness.ts` — an in-process `runCli` harness with injected clock/ids/brand/config/state/process/blocker seams, a call recorder, and counters for spawn, resume, alive, kill (TERM/KILL), progress reads, state appends, blocker reads, and destructive actions.
-- `tests/fixtures/coordinator/process-port.ts` — the fake process-lifecycle port with a fake clock, per-capability `declared`/`missing`, handle-only kill, and phase logs.
-- `tests/fixtures/coordinator/states.ts` — valid/torn/unknown/gapped/permission-denied coordinator record and state-root fixtures.
+- `tests/fixtures/coordinator/process-port.ts` — the fake process-lifecycle port with a fake clock, per-capability `declared`/`missing`, `alive(handle)`, matching/mismatched `pid`+`processStartTimeMs`, handle-only kill, TERM/KILL phase logs, and positive/zero/absent `token-delta`/`session-traffic` readings.
+- `tests/fixtures/coordinator/states.ts` — valid/torn/unknown/gapped/permission-denied coordinator record and state-root fixtures, including the `acquired`→`stop-requested`→`released`→`stale-takeover`→`acquired` lease sequence and two-phase `stuck` fixtures.
 - `tests/fixtures/coordinator/lifecycle.ts` — session/context/capability matrices with expected decision, reason, and ordinal.
-- `tests/fixtures/coordinator/evidence.ts` — the 3×3×3 evidence matrix plus fingerprint/turn couples.
-- `tests/fixtures/coordinator/blockers.ts` — pickups, cap boundaries, and the escalation-ranked-ninth ledger.
+- `tests/fixtures/coordinator/evidence.ts` — the 3×3×3 evidence matrix plus fingerprint/turn couples and progress-bound windows.
+- `tests/fixtures/coordinator/blockers.ts` — pickups, absent-status rank-1, cap boundaries, near-miss escalation refs, and the escalation-ranked-ninth ledger.
 - `tests/fixtures/coordinator/golden/` — normalized `tick`/`status` data and text plus the reserved-slot status/brief goldens; explicit regeneration only.
 - `tests/fixtures/coordinator/mutants/` — the mutant modules and their expected tripping suite/message.
 - Reused unchanged: `tests/fixtures/state/harness.ts`, `tests/fixtures/blockers/{harness.ts,records.ts,bounds/**,capabilities/**,ranking/**}`, `tests/fixtures/status/harness.ts`, `tests/fixtures/brief/harness.ts`, `tests/fixtures/config/**`.
@@ -2336,14 +2461,15 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 
 **Exit criteria.**
 
-- All 43 ACs traced to at least one passing TC; no orphan TC; SC-M1-25 clause map complete.
-- All 66 TCs green (or `Manual Only` TCs signed off in phase 7 with evidence).
+- All 45 ACs traced to at least one passing TC; no orphan TC; SC-M1-25 clause map complete.
+- All 69 TCs green (or `Manual Only` TCs signed off in phase 7 with evidence).
 - `pnpm check` green: lint, format, typecheck, full `bun test`, boundaries, exports parity; `git diff --check` clean.
 - No new lint warnings; no rule loosening; the fixture-coverage meta-check reports no unenforced rule.
 - `bun run scripts/checks/error-table-sync.ts` green: 105 entries, 105 documented rows, six coordinator identities recognized, the reserved two-segment set exactly 24 (both gate files), corpora non-vacuous.
 - `bash scripts/.tests/test-doc-distribution.sh` green for changed marker-scoped docs.
 - The only permitted status/brief golden diff is the reserved escalation slot; blockers ranking, economics records, lane records, and `ceo-loop.sh` are byte-unchanged.
-- Every process-boundary claim uses a reopened store handle; every absence claim has its three observations (GAP-T3); every declared test-method constraint names GAP-T1..GAP-T6, and no GAP-1..GAP-6 or GAP-T7 assertion remains.
+- Every process-boundary claim uses a reopened store handle; every absence claim has its three observations (GAP-T3); every declared test-method constraint names GAP-T2..GAP-T6, and no GAP-1..GAP-6, GAP-T1, or GAP-T7 assertion remains.
+- The v1.2 pinned observables hold: the four-action instance lease, the two-phase stuck fold, the two-input state fingerprint, the `progress-bound` veto, the render-first reserved slot, `exhausted-escalated`, absent-status pickup, and PID identity verification.
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -2351,18 +2477,21 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 
 | ID | Risk | Impact | Mitigation |
 |----|------|--------|------------|
-| TR-1 | A large working coordinator session is killed as stuck because the corroborator is not wired or a CPU-only reading is used. | H | TC-COORD-033/037 require positive sourced progress to veto and a structural no-CPU scan plus mutant; the fake port exposes progress, and a CPU-shaped fixture must be ignored. |
+| TR-1 | A large working coordinator session is killed as stuck because the corroborator is not wired, the new-turn source is wrong, or a CPU-only reading is used. | H | TC-COORD-029/033/037 require a positive `token-delta` or `session-traffic` within `progress-bound` to veto, plus a structural no-CPU scan and mutants; the fake port exposes the delivered liveness fields, and a CPU-shaped fixture must be ignored. |
 | TR-2 | `unevaluable` is silently treated as `progressing`, so a torn store hides a wedged coordinator or a stale store causes a wrong kill. | H | TC-COORD-035/036/055 assert exit `2`, the state identity, zero kill/spawn, and a fabricated-stale/count-zero mutant; no exit-`0` result on unknown state. |
 | TR-3 | The restart budget is cached in memory or conflated with the lane/economics budget, so a supervisor restart resets or double-counts. | H | TC-COORD-025/050/053/055 assert durable reopened-handle reads, the distinct namespace, byte-unchanged lane/economics records, and a replayed ordinal appending nothing. |
-| TR-4 | Exhaustion is "escalated" but the question is crowded out of the eight-question render, making "never silent" false. | H | TC-COORD-063/064 pin the reserved slot with seven others, the omitted count, no ninth, and digest/brief agreement; a dropped-slot mutant must fail. |
-| TR-5 | A duplicate or thundering-herd wake, or a retry that never happens after `delivery-failed`. | H | TC-COORD-071 asserts one wake per question; TC-COORD-074 pins the persisted-vs-tick-result split (only `woken` persists and consumes the lifetime) and a record counter. |
+| TR-4 | Exhaustion is "escalated" but the question is crowded out of the eight-question render, making "never silent" false. | H | TC-COORD-063/064 pin the reserved slot at index `0` with seven others in rank order, the omitted count, no ninth, `exhausted-escalated`, and digest/brief agreement; a dropped-slot / rank-position mutant must fail. |
+| TR-5 | A duplicate or thundering-herd wake, or a retry that never happens after `delivery-failed`. | H | TC-COORD-071 asserts one wake per question with persisted `askedAt`; TC-COORD-074 pins the persisted-vs-tick-result split (only `woken` persists and consumes the lifetime) and a record counter. |
 | TR-6 | The reserved-slot predicate is implemented as a coordinator-state read, adding an undeclared read or making status depend on supervisor state. | M | AC-F6-1 pins the payload-only predicate; TC-COORD-063 asserts payload-determinable selection (type/audience/lane/ref shape) with near-miss rejection and TC-COORD-088 asserts read counts. |
 | TR-7 | A two-segment coordinator identity fails the code-format gate, or a wildcard is used to pass it. | H | TC-COORD-081/082 pin the exact two-code addition (`coordinator.already-running`, `coordinator.restart-budget-exhausted`), exact set/table totals 24/105, the other four three-segment, and a near-miss rejection; no wildcard. |
-| TR-8 | The status/brief goldens are regenerated wholesale, hiding a ranking or anchor regression. | H | TC-COORD-089 asserts the only permitted diff is the reserved-slot case and names the unchanged suites; goldens are read-only with `mtimeMs` asserted. |
-| TR-9 | The fake process port makes the kill test vacuous (it always "succeeds") or the real path shells out. | H | TC-COORD-041/042/043/085 use declared `failed` outcomes, a phase log, an AST scan for shell/name kill, and a kill-only-under-fence counter; a shell-call mutant must fail. |
-| TR-10 | "Within one collection cycle" is read as a scheduler claim, and the test sleeps or flakes. | M | GAP-T2 pins the tick-model assertion; TC-COORD-070/030 use the injected clock and one-tick semantics, never a sleep. |
+| TR-8 | The status/brief goldens are regenerated wholesale, hiding a ranking, index, or anchor regression. | H | TC-COORD-089 asserts the only permitted diff is the reserved-slot case and names the unchanged suites; TC-COORD-063/064 assert the first-by-index rule; goldens are read-only with `mtimeMs` asserted. |
+| TR-9 | The fake process port makes the kill test vacuous (it always "succeeds"), the real path shells out, or it signals a reused pid. | H | TC-COORD-041/042/043/045/085 use declared `failed` and identity-mismatch outcomes, a signal phase log, an AST scan for shell/name kill, a pre-TERM identity assertion, and a kill-only-under-current-lease counter; a shell/identity mutant must fail. |
+| TR-10 | "Within one collection cycle" is read as a scheduler claim, and the test sleeps or flakes. | M | GAP-T2 pins the tick-model assertion and caller-bounded semantics; TC-COORD-029/070/030 use the injected clock and one-tick semantics, never a sleep. |
 | TR-11 | Performance tests are flaky in CI and get softened. | M | GAP-T6 pins the method and environment; TC-COORD-088 records iteration count and environment, and a bound relaxation requires an explicit reviewed change. |
 | TR-12 | The `ceo-loop.sh` function map is claimed but one function has no passing AC trace. | M | TC-COORD-090/091 enumerate the five functions and their TC/AC traces; a missing trace fails the manual review and the DoD gate. |
+| TR-13 | PID reuse causes the supervisor to signal an unrelated process between the expectation and TERM. | H | TC-COORD-045 verifies the recorded `pid` + `processStartTimeMs` before TERM; a mismatch sends no signal, records `killFailureReason=identity-mismatch`, and exits `2`; TC-COORD-085 asserts the identity check on the kill path. |
+| TR-14 | The instance lease drifts into a lifetime state-fence hold, or `stop` tries to release another process's handle. | H | TC-COORD-010/011/017/018 assert the lease records and per-append fence acquire/release, and that `stop` appends `stop-requested` without calling `releaseFence` for a foreign handle. |
+| TR-15 | Stale takeover reintroduces `recoverFence` or a state-contract change. | H | TC-COORD-015 asserts holder-liveness/lease-age takeover, a `recoverFence` spy at zero, and no `contracts/state.ts` change. |
 
 ### 8.2 Assumptions
 
@@ -2371,7 +2500,7 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 - The harness adapter can expose a stable session handle and process identity sufficient for alive, resume, and kill; capability ownership is the pinned four-way split (resume → decision input, spawn → harness identity exit `1`, alive/kill → coordinator process gap exit `2`, progress → `unknown` class).
 - The process-lifecycle port is injected at the CLI edge and faked in tests; the domain remains pure and owns no I/O, clock, randomness, environment, or network.
 - One coordinator exists per state-dir scope; multi-coordinator, multi-host, and remote supervision are out of scope.
-- The supervisor runs as the same OS user as the coordinator; the state-dir fence and filesystem permissions are the boundary, and no privilege escalation is needed.
+- The supervisor runs as the same OS user as the coordinator; the state-dir instance lease and filesystem permissions are the boundary, every append takes the state write fence only for that append, and no privilege escalation is needed.
 - POSIX process signals are available on the reference host; the Windows equivalent is behind the same port and is not exercised on Linux.
 - The owner reads the brief and the operator reads `coordinator status`; no additional notification channel is assumed.
 - Module paths, export names, record-kind strings, schema ids, store-key spellings, and human labels are delivery-bound (GAP-T5); their behaviour, identities, closedness, and AC traceability are pinned.
@@ -2381,32 +2510,43 @@ TC IDs use the `COORD` feature prefix. Sequence blocks are intentional: `0xx` co
 
 | ID | Question | Status | Resolution |
 |----|----------|--------|------------|
-| OQ-T1 | Does `tick` run a cycle when a supervisor already holds the fence, or is it refused? | Resolved (GAP-1) | AC-F1-2 now applies only to an uncontended state dir; the contended tick remains AC-F8-1 `coordinator.already-running` exit `2`. TC-COORD-012/043. |
-| OQ-T2 | Which layer owns `resume`, and which identity/exit applies when it is undeclared? | Resolved (GAP-2) | Four-way split pinned in DEC-11/§8.4: resume undeclared/unavailable → `spawn-fresh session-interrupted`, one ordinal, exit `0`, no error. TC-COORD-022/044. |
-| OQ-T3 | How does the digest/brief identify the reserved escalation question? | Resolved (GAP-3) | Payload-only predicate (type `decision-needed`, audience `owner`, lane `coordinator`, `ref` shape `<coordinatorId>#<budgetEpochId>` with exactly one `#`); no extra read; eight-question bound unchanged. TC-COORD-063. |
-| OQ-T4 | Does a `delivery-failed` wake attempt consume the one-wake budget? | Resolved (GAP-4) | Only a persisted `woken` consumes it; `already-woken` is a no-op; `delivery-failed`, `answered-before-wake`, and `no-pickup` append no record. TC-COORD-071/072/074. |
-| OQ-T5 | Where is `reason=stuck-artifact-evidence` recorded? | Resolved (GAP-5) | The `coordinator.stuck` record carries a closed `reason` (`stuck-artifact-evidence` / `evidence-unevaluable`), distinct from the restart reason. TC-COORD-030/039. |
-| OQ-T6 | Which durable carrier holds the stale-holder takeover evidence? | Resolved (GAP-6) | The durable `coordinator.fence` record (`action`/`holder`/`previousHolder`/`fenceAgeMs`), readable from `status`. TC-COORD-017. |
-| OQ-T7 | Does the implementation plan map all 66 TCs without reshaping them? | Open — delivery-planning constraint (GAP-T1; not a spec gap) | Phase 4 must map TCs onto phases; any reshaping of a pinned contract reopens this test plan. |
-| OQ-T8 | Which exact counts must TC-COORD-081 assert after the six rows land? | Resolved (GAP-T7) | Set 22→24 with exactly `coordinator.already-running` and `coordinator.restart-budget-exhausted`; table 99→105; the other four three-segment. TC-COORD-081/082. |
+| OQ-T1 | Does `tick` run a cycle when a live instance lease exists, or is it refused? | Resolved | AC-F1-2 applies only to an uncontended state dir; the contended tick remains AC-F8-1 `coordinator.already-running` exit `2`. TC-COORD-012/043. |
+| OQ-T2 | Which layer owns `resume`, and which identity/exit applies when it is undeclared? | Resolved | Four-way split in DEC-11/§8.4: resume undeclared/unavailable → `spawn-fresh session-interrupted`, one ordinal, exit `0`, no error. TC-COORD-022/044. |
+| OQ-T3 | How does the digest/brief identify the reserved escalation question? | Resolved | Payload-only predicate (type `decision-needed`, audience `owner`, lane `coordinator`, `ref` shape `<coordinatorId>#<budgetEpochId>` with exactly one `#`); no extra read; eight-question bound unchanged. TC-COORD-063. |
+| OQ-T4 | Does a `delivery-failed` wake attempt consume the one-wake budget? | Resolved | Only a persisted `woken` consumes it; `already-woken` is a no-op; `delivery-failed`, `answered-before-wake`, and `no-pickup` append no record. TC-COORD-071/072/074. |
+| OQ-T5 | Where is `reason=stuck-artifact-evidence` recorded? | Resolved | The `coordinator.stuck` record carries a closed `reason` (`stuck-artifact-evidence` / `evidence-unevaluable`), distinct from the restart reason. TC-COORD-030/039. |
+| OQ-T6 | Which durable carrier holds the stale-holder takeover evidence? | Resolved | The durable `coordinator.fence` instance-lease record (`action`/`instanceId`/`holder`/`previousHolder`/`fenceAgeMs`), readable from `status`. TC-COORD-015/017/018. |
+| OQ-T7 | Which exact counts must TC-COORD-081 assert after the six rows land? | Resolved | Set 22→24 with exactly `coordinator.already-running` and `coordinator.restart-budget-exhausted`; table 99→105; the other four three-segment. TC-COORD-081/082. |
+| OQ-T8 | What is the durable instance identity, given the closed six-kind set? | Resolved (RF-01) | The latest `coordinator.fence` record is the instance identity (`instanceId`, `pid`, `holder`, `startedAt` = acquired time, `supervisorMode`, `externalUnit`); no separate instance record/payload. TC-COORD-018. |
+| OQ-T9 | How is the pre-kill verdict and post-kill outcome represented on an append-only record? | Resolved (RF-04) | Two appends under one `stuckId`: `phase=verdict` (`killOutcome=not-attempted`) then `phase=outcome`; reads fold latest-wins by `recordedAt` then ledger sequence; a replay appends nothing. TC-COORD-030/040/041/045/083. |
+| OQ-T10 | What is a "new turn" and what is its bound? | Resolved (RF-08/A3) | A positive `token-delta` OR positive `session-traffic` from the delivered liveness facts, mapped at the adapter; `coordinator.progress-bound` defaults to 300 000 ms; absent → `unknown`; next-tick/caller-bounded. TC-COORD-029/033/080. |
+| OQ-T11 | Which inputs may the digest-input fingerprint read? | Resolved (RF-09) | Only the state event-log cursor and the open coordinator-audience question count; no ready-to-merge, tracker, CI, or network read. TC-COORD-032. |
+| OQ-T12 | What is the idempotent exhausted-tick state called? | Resolved (RF-10) | `exhausted-escalated`; `escalated` is not a declared state. TC-COORD-061/065. |
+| OQ-T13 | Where does the reserved escalation question render? | Resolved (RF-12) | First by index (`0`) in both `typed-questions` and `blocker-questions`; up to seven others in rank order; the lowest-ranked is displaced and counted as omitted. TC-COORD-063/064. |
+| OQ-T14 | How is PID reuse prevented from signalling an unrelated process? | Resolved (A2/AC-F4-4) | Verify the recorded `pid` + `processStartTimeMs` before TERM; a mismatch sends no signal, records `killFailureReason=identity-mismatch`, and exits `2`. TC-COORD-045. |
+| OQ-T15 | Does an absent question `status` count as open for pickup? | Resolved (A6) | Yes; `no-pickup` is only for non-rank-1, non-coordinator, or explicitly non-open heads (and empty ledgers). TC-COORD-070. |
 
-No specification question remains open. OQ-T7 is a delivery-planning constraint on the absent implementation plan (GAP-T1), not a specification ambiguity.
+No specification question remains open. Every DoR iteration-1 finding is resolved in specification v1.2.
 
-### 8.4 Specification Resolutions (v1.1) — No Remaining Gaps
+### 8.4 Specification Resolutions (v1.2) — No Remaining Gaps
 
-The six former test-plan gaps and the allowlist correction are resolved in specification v1.1 (committed `08818818`). The table records each pinned resolution and the TCs that verify it; nothing is pending arbitration.
+All blocking and advisory DoR iteration-1 findings are resolved in specification v1.2. The table records each pinned resolution and the TCs that verify it; nothing is pending arbitration.
 
-| Former gap | Location in spec v1.1 | Pinned resolution | Verifying TCs |
-|------------|-----------------------|-------------------|---------------|
-| GAP-1 | AC-F1-2, F-1, AC-F8-1 | AC-F1-2 applies only to an uncontended state dir where no live supervisor holds the fence; the contended tick remains AC-F8-1 `coordinator.already-running` exit `2` with the holder named. | TC-COORD-012, TC-COORD-043 |
-| GAP-2 | F-2, F-10, AC-F2-3, AC-F10-4, DEC-11, §8.4 | Four-way capability ownership: harness resume undeclared/unavailable → `spawn-fresh` reason `session-interrupted`, one ordinal, exit `0`, no error; harness spawn impossible/refused → delivered `harness.capability.gap`/`harness.spawn.refused` exit `1`; process-port alive or kill-with-grace absent → `coordinator.process.capability-gap` exit `2`, no destructive action; progress absent → `unknown` evidence class, never a failure or kill. | TC-COORD-022, TC-COORD-034, TC-COORD-039, TC-COORD-044 |
-| GAP-3 | F-6, AC-F6-1, EVT-6, DEC-5 | Reserved-slot predicate is payload-only: `type === "decision-needed"` AND `audience === "owner"` AND `lane === "coordinator"` AND `ref` shape `<coordinatorId>#<budgetEpochId>` (exactly one `#`, both sides non-empty). No extra read; the eight-question bound is unchanged (seven others plus the reserved one). | TC-COORD-063, TC-COORD-064, TC-COORD-088 |
-| GAP-4 | F-7, AC-F7-2, AC-F7-5, EVT-5, DEC-9 | Only a successful `woken` persists and consumes the one-wake lifetime; `already-woken` is a no-op; `delivery-failed`, `answered-before-wake`, and `no-pickup` are tick results that append no record, so retry cannot duplicate records. | TC-COORD-071, TC-COORD-072, TC-COORD-074 |
-| GAP-5 | AC-F3-1, AC-F3-3, EVT-3, DM-3, Appendix E | `coordinator.stuck` carries a closed `reason`: `stuck-artifact-evidence` when `verdict=stuck`, `evidence-unevaluable` when `verdict=unevaluable`; distinct from `coordinator.restart.reason`. | TC-COORD-030, TC-COORD-035, TC-COORD-039 |
-| GAP-6 | F-8, AC-F8-3, EVT-7, DM-11 | New `coordinator.fence` record carries `action` (`acquired`/`released`/`stale-takeover`), `holder`, `previousHolder`, `fenceAgeMs`, and `recordedAt`; stale-takeover evidence is durable and readable from `status`. | TC-COORD-015, TC-COORD-017, TC-COORD-083 |
-| GAP-T7 | AC-F10-2, DEC-11, Appendix B, §16 | Exactly two coordinator identities are two-segment: `coordinator.already-running` and `coordinator.restart-budget-exhausted`. Both join `RESERVED_TWO_SEGMENT_CODES` in `scripts/checks/error-table-sync.ts` and `tests/structure/error-table.test.ts` (set 22→24); the other four are three-segment; table 99→105; no wildcard and no pattern widening. | TC-COORD-081, TC-COORD-082 |
+| Finding | Location in spec v1.2 | Pinned resolution | Verifying TCs |
+|---------|-----------------------|-------------------|---------------|
+| RF-01 / A1 | F-1, AC-F1-1..4, EVT-7, DM-11, Appendix G | The latest `coordinator.fence` record **is** the instance identity (`instanceId`, `pid`, `holder`, `startedAt` = acquired time, `supervisorMode` `foreground|detached`, `externalUnit` `absent`); no separate instance record kind or payload; the record-kind set stays six. | TC-COORD-018, TC-COORD-010, TC-COORD-013 |
+| RF-05 / RF-06 / RF-07 | F-1, F-6, F-8, AC-F1-1, AC-F1-3, AC-F6-1, AC-F8-3 | Coordinator ownership is a durable append-only instance lease; every write takes the delivered state write fence for that append only; `stop` appends `stop-requested` and never releases another process's handle; stale takeover is holder `alive(handle)` absent or lease age > 2x interval, with no `recoverFence` and no state-contract change; escalation publishing composes with the delivered `appendBlockerQuestion` without a handle-reusing refactor. | TC-COORD-010, TC-COORD-011, TC-COORD-015, TC-COORD-017, TC-COORD-043, TC-COORD-060 |
+| RF-04 | F-3, F-4, AC-F3-1, AC-F4-1, AC-F4-2, EVT-3, DM-3 | The stuck record is two-phase under one `stuckId`; `phase=verdict` with `killOutcome=not-attempted` precedes the kill, `phase=outcome` follows; deterministic latest-wins fold; a replay appends nothing. | TC-COORD-030, TC-COORD-040, TC-COORD-041, TC-COORD-045, TC-COORD-083 |
+| RF-08 / A3 | F-3, AC-F3-2, AC-F3-3, DM-7, DEC-4, Appendix D | A new turn is a positive `token-delta` or `session-traffic` reading from the delivered liveness facts; the adapter maps the raw fields to `newTurn`/`progressing`; absent → `unknown`; `coordinator.progress-bound` defaults to 300 000 ms; NFR-8/9 are next-tick and caller-bounded. | TC-COORD-029, TC-COORD-033, TC-COORD-034, TC-COORD-080 |
+| RF-09 | F-3, AC-F3-1, EVT-1, DM-3 | The fingerprint reads only the state event-log cursor and the open coordinator-audience question count; no ready-to-merge, tracker, CI, or network input. | TC-COORD-032, TC-COORD-030 |
+| RF-10 | F-6, AC-F6-3, Appendix B, Appendix F | The idempotent exhausted state is `exhausted-escalated`; `escalated` is undeclared. | TC-COORD-061, TC-COORD-065 |
+| RF-12 | F-6, AC-F6-1, EVT-6, §10 | The reserved question renders first by index (`0`) in both `typed-questions` and `blocker-questions`; up to seven others in rank order; the lowest-ranked is displaced and counted as omitted, within the eight-question bound. | TC-COORD-063, TC-COORD-064 |
+| A2 / AC-F4-4 | F-4, AC-F4-4, NFR-14, Appendix F | Before TERM the port verifies the recorded `pid` + `processStartTimeMs`; a mismatch sends no signal, records `killFailureReason=identity-mismatch`, and returns `coordinator.session.kill-failed` exit `2`. | TC-COORD-045, TC-COORD-041 |
+| A6 | F-7, AC-F7-3, DEC-9 | An absent question `status` counts as open; `no-pickup` is only for non-rank-1, non-coordinator, or explicitly non-open heads (and empty ledgers). | TC-COORD-070 |
+| A5 / GAP-T1 | Test plan front matter, §2 | The implementation plan exists (`chg-GH-241-plan.yaml`); GAP-T1 is removed and `links.implementation_plan` is set; the remaining test-method constraints are GAP-T2..GAP-T6. | Plan link; TC-COORD-090/092 |
+| GAP-1..GAP-6 / GAP-T7 (v1.1) | Prior spec v1.1 sections | Still valid: uncontended-tick semantics, four-way capability ownership, payload-only predicate, persisted-`woken`-only accounting, closed stuck `reason`, the fence record, and the exact two-code allowlist (set 22→24, table 99→105). | TC-COORD-012/043, 022/044, 063/064, 071/072/074, 030/039, 015/017, 081/082 |
 
-**Remaining specification gaps: none.** The only open item is GAP-T1 (implementation plan absent), a delivery-planning constraint, not a specification ambiguity.
+**Remaining specification gaps: none.** GAP-T1 is removed because the plan now exists. The only remaining items are the declared test-method GAP-T2..GAP-T6 and the plan-map update for the three new v1.2 TCs (TC-COORD-018/029/045), which is a planning-document action, not a specification ambiguity or a deferred contract.
 
 ## 9. Plan Revision Log
 
@@ -2414,12 +2554,13 @@ The six former test-plan gaps and the allowlist correction are resolved in speci
 |---------|------|--------|---------|
 | 1.0 | 2026-11-07 | test-plan-writer | Initial test plan derived from `chg-GH-241-spec.md` v1.0, ticket GH-241, backlog M1-S23, seed scenario SC-M1-25, the delivered GH-235 economics and GH-230 blockers surfaces, and `.ai/rules/testing-strategy.md`. 64 scenarios; all 43 ACs covered; SC-M1-25 reconciled clause by clause; GAP-1..GAP-6 and GAP-T1..GAP-T7 recorded. |
 | 1.1 | 2026-11-07 | test-plan-writer | Realigned to specification v1.1 (committed `08818818`). Removed every GAP-1..GAP-6 and GAP-T7 arbitration marker and replaced each with its pinned contract: uncontended-tick semantics, four-way capability ownership, payload-only reserved-slot predicate, persisted-`woken`-only wake accounting, closed `coordinator.stuck.reason`, the `coordinator.fence` record (EVT-7, DM-11), and the exact two-code two-segment allowlist (set 22→24; table 99→105). Added TC-COORD-017 (fence records) and TC-COORD-039 (stuck reason); rewrote TC-COORD-044 for the four-way split, TC-COORD-063 for the payload predicate, and TC-COORD-071/072/074 for tick-result wake outcomes; updated TC-COORD-030/035/081/082/083 and all coverage tables. 66 scenarios; 43/43 ACs covered; GAP-T1..GAP-T6 retained as declared test-method constraints; no specification gap remains. |
+| 1.2 | 2026-11-07 | test-plan-writer | Realigned to specification v1.2 and the DoR iteration-1 findings (RF-01..RF-12, A1/A2/A3/A5/A6). Removed every assertion that the supervisor holds the state fence for its lifetime and replaced it with the durable append-only **instance lease** carried by `coordinator.fence` records (`acquired`, `released`, `stale-takeover`, `stop-requested`): `stop` is a recorded request (`requested=true`/`released=false` or `not-running`), the live supervisor appends `released` at the next cycle boundary, stale takeover is holder `alive(handle)` absent or lease age > 2x `collection-interval` with no `recoverFence` and no `contracts/state.ts` change, and every append takes the state write fence for that append only. Added **AC-F1-4** (instance identity folded from the latest lease; no separate instance record) and **AC-F4-4** (PID + process-start-time identity mismatch), bringing the plan to **45 ACs**. Added TC-COORD-018 (instance lease identity), TC-COORD-029 (adapter `token-delta`/`session-traffic` new-turn mapping and `progress-bound`), and TC-COORD-045 (identity-mismatch kill), and updated TC-COORD-010/011/012/013/014/015/016/017/030/032/033/034/039/040/041/043/060/061/063/064/070/080/083/087/091/092 plus every coverage table, risk, open question, and resolution row. Replaced the one-record stuck assertion with the two-phase `phase=verdict`/`phase=outcome` same-`stuckId` latest-wins fold (a replay appends nothing); removed the ready-to-merge fingerprint input; pinned `exhausted-escalated`; asserted the reserved question first by index with the lowest-ranked displaced; pinned `supervisorMode` exactly `foreground`/`detached` and `externalUnit` exactly `absent`; updated the config branch to six keys (adding `coordinator.progress-bound`, default 300 000 ms) and the boundary cases; removed GAP-T1 (the plan `chg-GH-241-plan.yaml` now exists and `links.implementation_plan` is set). 69 scenarios; 45/45 ACs covered; SC-M1-25 clause map complete; no specification gap remains; GAP-T2..GAP-T6 remain declared test-method constraints. |
 
 ## 10. Test Execution Log
 
 Run date: TBD at delivery. Environment: Bun `1.4.4`, pnpm `10.18.3`, Linux x64 (worktree `feat/GH-241/coordinator-supervision`, base `main-tools`).
 
-### 10.1 Per-TC results (delivery phases 1-6)
+### 10.1 Per-TC results (delivery phases 1-10)
 
 | TC ID | Run Date | Result | Evidence |
 |-------|----------|--------|----------|
@@ -2438,7 +2579,10 @@ Run date: TBD at delivery. Environment: Bun `1.4.4`, pnpm `10.18.3`, Linux x64 (
 
 ### 10.3 Deviations and observations (for the review gate)
 
-- Specification v1.1 pins GAP-1..GAP-6 and GAP-T7; delivery implements the pinned contracts and must not reintroduce arbitration. GAP-T1..GAP-T6 remain declared test-method constraints.
-- The reserved-slot status/brief golden is the only permitted digest/brief golden diff; any other golden change is a defect.
+- Specification v1.2 resolves every DoR iteration-1 finding (RF-01..RF-12, A1/A2/A3/A5/A6); delivery implements the pinned contracts and must not reintroduce arbitration. GAP-T2..GAP-T6 remain declared test-method constraints.
+- The instance lease is the append-only `coordinator.fence` record; no lifetime state write fence is held, no separate instance record exists, and `stop` never releases another process's handle.
+- The `coordinator.stuck` record is two-phase under one `stuckId` (`phase=verdict` with `killOutcome=not-attempted`, then `phase=outcome`); a replay appends nothing.
+- The digest-input fingerprint reads only the state event-log cursor and open coordinator-question count; a new turn is a positive `token-delta` or `session-traffic` within `coordinator.progress-bound` (default 300 000 ms).
+- The reserved-slot status/brief golden is the only permitted digest/brief golden diff; the escalation must be at index `0`, and any other golden change is a defect.
 - Exactly `coordinator.already-running` and `coordinator.restart-budget-exhausted` are two-segment; the exact allowlist addition is `+2` in both files (set 22→24), never a wildcard.
-- The `coordinator.fence` record is the durable takeover-evidence carrier; `coordinator.stuck.reason` is a distinct closed field from the restart reason.
+- `coordinator.stuck.reason` is a distinct closed field from the restart reason; the exhausted state is `exhausted-escalated`; a PID identity mismatch records `killFailureReason=identity-mismatch`.

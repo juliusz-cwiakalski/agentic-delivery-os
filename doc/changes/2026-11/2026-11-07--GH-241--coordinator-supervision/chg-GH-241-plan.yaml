@@ -3,15 +3,26 @@
 # verification commands, exit criteria). When both plan files exist this YAML
 # document is authoritative for `plan validate`; `plan diff` reads its scope.
 #
-# SOURCES (single source of truth; plan revision 1, 2026-11-07):
-#   - Spec:   ./chg-GH-241-spec.md (v1.1; F-1..F-10; 43 ACs; DEC-1..DEC-13;
+# SOURCES (single source of truth; plan revision 1.2, 2026-11-07):
+#   - Spec:   ./chg-GH-241-spec.md (v1.2; F-1..F-10; 45 ACs; DEC-1..DEC-13;
 #             DM-1..DM-11; EVT-1..EVT-7; NFR-1..NFR-15; Appendix A..H)
-#   - Tests:  ./chg-GH-241-test-plan.md (v1.1; 66 TCs TC-COORD-001..092;
-#             43/43 AC coverage; SC-M1-25 clause map in section 3.4; section 7
+#   - Tests:  ./chg-GH-241-test-plan.md (v1.2; 69 TCs TC-COORD-001..092;
+#             45/45 AC coverage; SC-M1-25 clause map in section 3.4; section 7
 #             is the file/command inventory this plan maps onto phases)
+#   - DoR:    ./readiness-review/readiness-iter-1.md (RF-01..RF-12, A1/A2/A3/A6)
 #   - Seed:   SC-M1-25 in doc/planning/oss-tooling/milestones/m1/test-scenarios.md
 #   - Schema: doc/spec/features/feature-plan-schema.md and
 #             doc/templates/implementation-plan-template.md
+#
+# REVISION NOTE (v1.2): aligns to spec v1.2 and test plan v1.2. Adds TC-018,
+# TC-029, and TC-045; moves TC-092 to Phase 10; moves the composition-dependent
+# kill/capability TCs (041/043/044/045) to the Phase-6 command gate; creates
+# tests/golden/coordinator.test.ts and tests/structure/coordinator-regime.test.ts
+# in Phase 6 where they are first needed; adds
+# tests/behaviour/coordinator-new-turn.test.ts to Phase 5; and re-states the
+# instance-lease, two-phase stuck, progress-bound, PID-identity, render-first
+# reserved-slot, exhausted-escalated, absent-status pickup, and supervisor-mode
+# contracts. 69/69 TCs, 45/45 ACs.
 #
 # PINNED CONTRACTS BINDING ON EVERY PHASE (do not reshape at delivery):
 #   - Exactly two two-segment coordinator codes join RESERVED_TWO_SEGMENT_CODES
@@ -20,16 +31,40 @@
 #     coordinator.restart-budget-exhausted (set 22 -> 24; table 99 -> 105).
 #     The other four coordinator identities are three-segment. No wildcard.
 #   - STATE_SCHEMA_VERSION stays delivery.state.v1; six additive record kinds.
+#   - Coordinator single-instance ownership is the append-only instance lease
+#     carried by coordinator.fence records (acquired, released, stale-takeover,
+#     stop-requested), folded from the latest record into instanceId, pid,
+#     holder, startedAt, supervisorMode (foreground|detached), externalUnit
+#     (absent). No separate instance record. The delivered state write fence is
+#     taken only for the duration of one append; stop is a request and the live
+#     supervisor appends released; stale takeover uses process-port alive(handle)
+#     or lease age > 2 x collection-interval, with no recoverFence and no
+#     contracts/state.ts change.
 #   - The reserved escalation slot predicate is payload-only:
 #     type=decision-needed AND audience=owner AND lane=coordinator AND
 #     ref=<coordinatorId>#<budgetEpochId> with exactly one '#' and both sides
-#     non-empty. No coordinator-state read; the eight-question bound is
-#     unchanged (at most seven others plus the reserved question).
+#     non-empty. It renders first by index in both typed-questions and
+#     blocker-questions, other questions follow in rank order up to seven, and
+#     the lowest-ranked is displaced and counted as omitted inside the
+#     eight-question bound. No coordinator-state read.
 #   - Only a successful wake (outcome=woken) persists and consumes the
 #     one-wake-per-question lifetime; already-woken, answered-before-wake,
-#     delivery-failed, and no-pickup append no durable wake record.
-#   - coordinator.stuck carries a closed reason field distinct from the restart
-#     reason: stuck-artifact-evidence | evidence-unevaluable.
+#     delivery-failed, and no-pickup append no durable wake record. An absent
+#     question status counts as open; no-pickup is only for a non-rank-1 head,
+#     a non-coordinator audience, or an explicitly non-open status.
+#   - coordinator.stuck is two-phase under one stuckId: phase=verdict with
+#     killOutcome=not-attempted before the kill, phase=outcome after it, folded
+#     latest-wins by recordedAt then ledger sequence. The closed reason field is
+#     distinct from the restart reason: stuck-artifact-evidence |
+#     evidence-unevaluable.
+#   - The digest-input fingerprint is the state event-log cursor plus the open
+#     coordinator-audience question count only. A new turn is a positive
+#     token-delta OR session-traffic reading mapped by the adapter; absent maps
+#     to unknown. coordinator.progress-bound (300000 ms) is the veto window.
+#     No ready-to-merge, tracker, CI, or network composition.
+#   - Before TERM the port verifies the recorded pid plus processStartTimeMs;
+#     a mismatch sends no signal and records killOutcome=failed with
+#     killFailureReason=identity-mismatch.
 #   - Capability ownership is four-way: harness resume undeclared/unavailable
 #     -> spawn-fresh reason session-interrupted (one ordinal, exit 0, no error);
 #     harness spawn impossible/refused -> harness.capability.gap /
@@ -43,8 +78,10 @@
 #   - ceo-loop.sh remains byte-unchanged; the only status/brief change is the
 #     declared reserved escalation slot.
 #
-# TC -> PHASE MAP (66/66; no orphan, every TC mapped exactly once; each phase's
-# mapped TCs are fully provable at that phase's declared gate):
+# TC -> PHASE MAP (69/69; no orphan, every TC mapped exactly once; each phase's
+# mapped TCs are fully provable at that phase's declared gate; Phase 9 carries
+# no TC because its registry/man-page/changeset output is verified by TC-092 at
+# the Phase-10 gate):
 #   Phase 1:  TC-COORD-001, TC-COORD-081, TC-COORD-082
 #   Phase 2:  TC-COORD-032, TC-COORD-033, TC-COORD-034, TC-COORD-037
 #   Phase 3:  TC-COORD-020, TC-COORD-021, TC-COORD-022, TC-COORD-023,
@@ -52,20 +89,20 @@
 #             TC-COORD-038, TC-COORD-039, TC-COORD-050, TC-COORD-051,
 #             TC-COORD-053, TC-COORD-083
 #   Phase 4:  TC-COORD-056, TC-COORD-080
-#   Phase 5:  TC-COORD-040, TC-COORD-041, TC-COORD-042, TC-COORD-043,
-#             TC-COORD-044, TC-COORD-085
+#   Phase 5:  TC-COORD-029, TC-COORD-040, TC-COORD-042, TC-COORD-085
 #   Phase 6:  TC-COORD-003, TC-COORD-004, TC-COORD-010, TC-COORD-011,
 #             TC-COORD-012, TC-COORD-013, TC-COORD-014, TC-COORD-015,
-#             TC-COORD-016, TC-COORD-017, TC-COORD-024, TC-COORD-025,
-#             TC-COORD-035, TC-COORD-052, TC-COORD-054, TC-COORD-055,
-#             TC-COORD-060, TC-COORD-061, TC-COORD-062, TC-COORD-065,
-#             TC-COORD-070, TC-COORD-071, TC-COORD-072, TC-COORD-073,
-#             TC-COORD-074, TC-COORD-075
+#             TC-COORD-016, TC-COORD-017, TC-COORD-018, TC-COORD-024,
+#             TC-COORD-025, TC-COORD-035, TC-COORD-041, TC-COORD-043,
+#             TC-COORD-044, TC-COORD-045, TC-COORD-052, TC-COORD-054,
+#             TC-COORD-055, TC-COORD-060, TC-COORD-061, TC-COORD-062,
+#             TC-COORD-065, TC-COORD-070, TC-COORD-071, TC-COORD-072,
+#             TC-COORD-073, TC-COORD-074, TC-COORD-075
 #   Phase 7:  TC-COORD-063, TC-COORD-064
 #   Phase 8:  TC-COORD-002, TC-COORD-084, TC-COORD-086, TC-COORD-087,
 #             TC-COORD-088, TC-COORD-091
-#   Phase 9:  TC-COORD-092
-#   Phase 10: TC-COORD-089, TC-COORD-090
+#   Phase 9:  (none; TC-092 is verified at the Phase-10 gate)
+#   Phase 10: TC-COORD-089, TC-COORD-090, TC-COORD-092
 #
 # DELIVERY MODEL: one commit per phase on feat/GH-241/coordinator-supervision;
 # each phase boundary leaves the declared narrow gate green. Extra phase data
@@ -80,7 +117,7 @@ tier:
   escalationTriggers:
     - "error-table-sync gate red after Phase 1 (exact two-code allowlist, set 22->24, table 99->105, or documented-row binding failed)"
     - "a status/brief golden diff outside the declared reserved escalation slot"
-    - "a TDR-0013/TDR-0014 or spec v1.1 pinned contract requires reshaping (reopens the test plan per GAP-T1)"
+    - "a TDR-0013/TDR-0014, spec v1.2, or test-plan v1.2 pinned contract requires reshaping (reopens the test plan per GAP-T1)"
     - "the work begins to require a daemon command, control socket, lane supervision, OS installer, or dispatch surface (M1-S18 / M1-S9)"
     - "a coordinator record, error evidence, or rendered output contains prompt, transcript, secret, or credential content"
 defaultLeases:
@@ -98,11 +135,12 @@ phases:
   # Tasks (TC-COORD-001, 081, 082):
   #  1.1 Create packages/core/src/contracts/coordinator.ts: closed lifecycle
   #      decisions (join-live, resume-context, spawn-fresh, none), decision
-  #      reasons, restart reasons, stuck verdicts, stuck reasons, evidence
-  #      classes/states, kill outcomes, wake outcomes, fence actions,
-  #      escalation states, recovery options, five config key paths, six
-  #      record-kind identifiers and payload schema ids, delivery.coordinator.v1
-  #      observation payload types, regime descriptor type, and the injected
+  #      reasons, restart reasons, stuck verdicts, stuck phases, stuck reasons,
+  #      evidence classes/states, kill outcomes, kill failure reasons, wake
+  #      outcomes, four fence actions, escalation states, recovery options, six
+  #      config key paths, six record-kind identifiers and payload schema ids,
+  #      the delivery.coordinator.v1 observation payload types (including the
+  #      lease-folded instance shape), regime descriptor type, and the injected
   #      process-lifecycle port / capability declaration types. Data only.
   #  1.2 Export the module from packages/core/src/contracts/index.ts; register
   #      the new contract module in tests/structure/inventory.json and the
@@ -178,22 +216,31 @@ phases:
   #      ordinal accounting (join-live and initial-start/clean-iteration-end
   #      consume none; resume and the three recovery spawn reasons consume one).
   #      Implemented here; its durable-record TCs land in Phase 3.
-  #  2.2 Artifact-evidence stuck verdict: digest-consumed fingerprint + new
-  #      session turn, merge, answer; advanced/stale/unknown totality; verified
-  #      empty store = stale zero, unreadable = unknown; all-unknown or
-  #      unreadable required store = unevaluable/evidence-unevaluable; positive
-  #      sourced progress vetoes stuck; no CPU field exists. Implemented here;
-  #      record/exit TCs land in Phases 3 and 6.
+  #  2.2 Artifact-evidence stuck verdict: the digest-input fingerprint is the
+  #      state event-log cursor plus the open coordinator-audience question
+  #      count only; digest-consumed also requires a new session turn (a
+  #      positive token-delta OR session-traffic reading mapped by the Phase-5
+  #      adapter); merge and answer are post-expectation records;
+  #      advanced/stale/unknown totality; verified empty store = stale zero,
+  #      unreadable = unknown; all-unknown or unreadable required store =
+  #      unevaluable/evidence-unevaluable; positive sourced progress within
+  #      coordinator.progress-bound vetoes stuck; no CPU field exists, and no
+  #      ready-to-merge/tracker/CI input. Implemented here; record/exit TCs land
+  #      in Phases 3, 5 and 6.
   #  2.3 Restart admission fold over the current epoch: contiguous ordinals,
   #      below-bound admit, at/above-bound refuse; torn/gapped is unevaluable.
-  #  2.4 Wake evaluation: strict isCoordinatorPickup (rank 1, open, audience
-  #      coordinator), persisted-vs-tick outcomes, dedupe by coordinator id +
-  #      question id + askedAt, answered-before-wake handling. Implemented
-  #      here; full tick/record TCs land in Phase 6.
+  #  2.4 Wake evaluation: strict isCoordinatorPickup (rank 1, open with an
+  #      absent status counting as open, audience coordinator),
+  #      persisted-vs-tick outcomes, dedupe by coordinator id + question id +
+  #      askedAt, answered-before-wake handling. Implemented here; full
+  #      tick/record TCs land in Phase 6.
   #  2.5 Escalation projection: the payload-only reserved-slot predicate and
-  #      the bounded owner question projection; no renderer/state read.
+  #      the bounded owner question projection; no renderer/state read; the
+  #      escalation state vocabulary is exhausted-escalated /
+  #      exhausted-escalation-failed / not-exhausted (no "escalated").
   #  2.6 Regime projection and deterministic observation renderers for the
-  #      delivery.coordinator.v1 data and bounded human text.
+  #      delivery.coordinator.v1 data and bounded human text; supervisorMode is
+  #      exactly foreground|detached and externalUnit is exactly absent.
   #  2.7 Export from packages/core/src/domain/index.ts; add import guards and
   #      temp-copy mutants proving no node:/bun:, clock, random, env, fetch,
   #      timer, child-process, filesystem, or CPU read is reachable.
@@ -238,8 +285,8 @@ phases:
   #
   # Tasks (TC-COORD-020, 021, 022, 023, 026, 030, 031, 036, 038, 039, 050,
   #        051, 053, 083):
-  #  3.1 packages/core/src/state/coordinator.ts: iteration, restart, stuck,
-  #      exhaustion, wake, fence records with kind/schema/required-field/
+  #  3.1 packages/core/src/state/coordinator.ts: iteration, restart, two-phase
+  #      stuck, exhaustion, wake, fence records with kind/schema/required-field/
   #      vocabulary validation; append through the delivered fenced artifact
   #      boundary with post-append coverage; verified reads; torn/unknown/
   #      gapped classification.
@@ -247,9 +294,15 @@ phases:
   #      gapped ordinal is unevaluable and never count 0; a replayed ordinal
   #      appends nothing; namespace is coordinator/<coordinatorId>, disjoint
   #      from lane and economics.
-  #  3.3 Fence record carriers: acquired / released / stale-takeover with
-  #      holder, previousHolder, fenceAgeMs; durable and status-readable.
-  #      Supports TC-COORD-017 (Phase 6).
+  #  3.3 Fence record carriers are the append-only instance lease:
+  #      acquired / stop-requested / released / stale-takeover with instanceId,
+  #      holder, pid, processStartTimeMs, supervisorMode, externalUnit,
+  #      previousHolder, fenceAgeMs; durable and status-readable. The latest
+  #      record folds to the instance identity (instanceId, pid, holder,
+  #      startedAt = its acquired record time, supervisorMode, externalUnit);
+  #      there is no separate instance record. Each append takes the delivered
+  #      state write fence for that append only. Supports TC-COORD-017/018
+  #      (Phase 6).
   #  3.4 Exhaustion receipt: one terminal receipt per epoch, lands only after
   #      the escalation question, idempotent by coordinator + epoch.
   #  3.5 Decision durability and mid-iteration artifact preservation: a fresh
@@ -266,9 +319,11 @@ phases:
   #      resume-context and each recovery spawn-fresh, and none on
   #      initial-start/clean-iteration-end.
   #  3.8 Persisted-stuck tests: coordinator-stuck-verdict, stuck-matrix,
-  #      stuck-torn, expectation, stuck-reason; assert one stuck record for
-  #      stuck/unevaluable, the closed reason coupling, the 3x3x3 matrix, one
-  #      active expectation, and a torn/gapped store never read as zero/stale.
+  #      stuck-torn, expectation, stuck-reason; assert the two-phase record
+  #      (phase=verdict with killOutcome=not-attempted before the kill, then
+  #      phase=outcome with the same stuckId, latest-wins fold), the closed
+  #      reason coupling, the 3x3x3 matrix, one active expectation, and a
+  #      torn/gapped store never read as zero/stale.
   #  3.9 Remaining state tests: coordinator-records, restart-namespace,
   #      restart-admit, restart-durability; extend state-contract and the state
   #      fixture harness; fixtures states.ts, lifecycle.ts, evidence.ts, and
@@ -316,7 +371,7 @@ phases:
   # ---------------------------------------------------------------------------
   # Phase 4 — Coordinator config branch
   #
-  # Goal: add the five coordinator keys to the delivered config catalog,
+  # Goal: add the six coordinator keys to the delivered config catalog,
   # defaults, and schema with declared domains; every decision reads resolved
   # values, never a literal.
   #
@@ -324,25 +379,29 @@ phases:
   #  4.1 Add coordinator.stuck-window (600000 ms, integer > 0),
   #      coordinator.kill-grace (20000 ms, integer > 0),
   #      coordinator.restart-budget (10, integer >= 0),
-  #      coordinator.resume-context-limit (100000 tokens, integer > 0), and
-  #      coordinator.collection-interval (30000 ms, integer > 0) to the
+  #      coordinator.resume-context-limit (100000 tokens, integer > 0),
+  #      coordinator.collection-interval (30000 ms, integer > 0), and
+  #      coordinator.progress-bound (300000 ms, integer > 0) to the
   #      catalog/defaults/schema with provenance.
-  #  4.2 Wire resolution into the lifecycle, stuck, admission, and wake
-  #      decisions; no default or bound literal in decision code; no alias to
-  #      lane.restart-budget, lane.liveness-interval, or daemon.heartbeat-cycle.
-  #  4.3 Tests: coordinator-config (absent/explicit/unknown/invalid/boundary),
-  #      coordinator-budget-config (0/1/10 and observed-at-evaluation), config
-  #      contract extension, fixture roots.
+  #  4.2 Wire resolution into the lifecycle, stuck, admission, wake, and
+  #      progress-veto decisions; no default or bound literal in decision code;
+  #      no alias to lane.restart-budget, lane.liveness-interval, or
+  #      daemon.heartbeat-cycle.
+  #  4.3 Tests: coordinator-config (six keys; absent/explicit/unknown/invalid/
+  #      boundary), coordinator-budget-config (0/1/10 and
+  #      observed-at-evaluation), progress-bound boundary (1 ms and default),
+  #      config contract extension, fixture roots.
   #
   # Verification:
   #   bun test tests/behaviour/coordinator-config.test.ts tests/behaviour/coordinator-budget-config.test.ts tests/structure/config-contract.test.ts
   #   bun run scripts/checks/ambient-globals.ts
   #
-  # Exit: defaults and domains exact; unknown -> config.key.unknown; invalid ->
-  # config.value.invalid; no decision-code literal; no cross-key aliasing.
+  # Exit: six keys, six defaults, six domains; unknown -> config.key.unknown;
+  # invalid -> config.value.invalid; no decision-code literal; no cross-key
+  # aliasing; the progress bound is the veto window used by Phase 5.
   # ---------------------------------------------------------------------------
   - id: 4
-    title: "Coordinator config branch: five keys, declared defaults/domains, no decision-code literals"
+    title: "Coordinator config branch: six keys, declared defaults/domains, no decision-code literals"
     kind: delivery
     scope:
       files:
@@ -364,32 +423,47 @@ phases:
   # beside the harness adapters with an injected child-process runner; the
   # domain stays pure and the delivered harness session port is unchanged.
   #
-  # Tasks (TC-COORD-040, 041, 042, 043, 044, 085):
+  # Tasks (TC-COORD-029, 040, 042, 085; TC-041/043/044/045 are proven at the
+  # Phase-6 command gate where the exit/status composition exists):
   #  5.1 packages/adapters/src/harness/process-lifecycle.ts: resolve the
-  #      recorded session/process-tree handle, alive probe, TERM -> wait
+  #      recorded session/process-tree handle, alive probe, pre-TERM pid +
+  #      processStartTimeMs identity verification (mismatch sends no signal and
+  #      returns failed with killFailureReason=identity-mismatch), TERM -> wait
   #      kill-grace -> conditional KILL, closed terminated/forced/failed
   #      outcomes, sourced progress facts, capability declarations/gaps. The
-  #      child-process runner is injected; no name/pattern kill and no shell
-  #      interpolation.
+  #      adapter returns the closed outcome; the supervisor's phase=outcome
+  #      append is composed in Phase 6. The child-process runner is injected;
+  #      no name/pattern kill and no shell interpolation.
   #  5.2 Export from packages/adapters/src/harness/index.ts; no new package
   #      subpath, no new dependency, no boundary-rule loosening.
-  #  5.3 Capability ownership: alive/kill absent ->
+  #  5.3 Map the delivered harness liveness report to the domain facts: a
+  #      positive token-delta OR positive session-traffic reading is
+  #      newTurn=true/progressing=true; zero/negative is false; absent or
+  #      unsupported is unknown (never zero). coordinator.progress-bound is the
+  #      config-driven veto window. The mapping lives only in the adapter.
+  #  5.4 Capability ownership: alive/kill absent ->
   #      coordinator.process.capability-gap exit 2 with zero kill calls; resume
-  #      and spawn and progress keep their distinct owners (Phase 6 composes).
-  #  5.4 Tests: coordinator-kill-grace/failed/target/fence/capability-gap,
-  #      structure kill-target scan, tests/boundaries, fixture process-port.ts
-  #      (phase log and fake clock).
+  #      uses the delivered harness resume as a decision input (no error);
+  #      spawn uses the delivered harness identities; progress absence is the
+  #      unknown evidence class (Phase 6 composes the projection).
+  #  5.5 Tests: coordinator-kill-grace, coordinator-kill-target,
+  #      coordinator-new-turn, structure kill-target scan, tests/boundaries,
+  #      fixture process-port.ts (phase log, fake clock, matching/mismatched
+  #      pid + processStartTimeMs, positive/zero/absent liveness readings).
   #
   # Verification:
-  #   bun test tests/behaviour/coordinator-kill-*.test.ts tests/behaviour/coordinator-capability-gap.test.ts tests/structure/coordinator-kill-target.test.ts
+  #   bun test tests/behaviour/coordinator-kill-grace.test.ts tests/behaviour/coordinator-kill-target.test.ts tests/behaviour/coordinator-new-turn.test.ts tests/structure/coordinator-kill-target.test.ts
   #   bun test tests/boundaries; pnpm check:boundaries
   #
-  # Exit: TERM -> grace -> conditional KILL exact; failed kill classified exit
-  # 2; handle-only target; no kill without the fence; four capability owners
-  # distinct; no shell/network/privilege path.
+  # Exit: TERM -> grace -> conditional KILL exact; a pid/start-time mismatch
+  # sends no signal; failed kill classified; handle-only target; no kill
+  # without the current instance lease at the composed gate; the four
+  # capability owners distinct; token-delta/session-traffic map to
+  # newTurn/progressing and absent maps to unknown; no shell/network/privilege
+  # path.
   # ---------------------------------------------------------------------------
   - id: 5
-    title: "Injected process-lifecycle port and adapters: spawn/attach, alive, kill-with-grace, sourced progress, capability gaps"
+    title: "Injected process-lifecycle port and adapters: spawn/attach, alive, identity-verified kill-with-grace, new-turn mapping, capability gaps"
     kind: delivery
     scope:
       files:
@@ -397,10 +471,8 @@ phases:
         - packages/adapters/src/harness/index.ts
         - packages/core/src/contracts/coordinator.ts
         - tests/behaviour/coordinator-kill-grace.test.ts
-        - tests/behaviour/coordinator-kill-failed.test.ts
         - tests/behaviour/coordinator-kill-target.test.ts
-        - tests/behaviour/coordinator-kill-fence.test.ts
-        - tests/behaviour/coordinator-capability-gap.test.ts
+        - tests/behaviour/coordinator-new-turn.test.ts
         - tests/structure/coordinator-kill-target.test.ts
         - tests/fixtures/coordinator/process-port.ts
       folders:
@@ -413,51 +485,76 @@ phases:
   # blocker, clock, id, brand, and harness seams; the handler is pure (no
   # stream writes, no exit literals) and the edge is the only writer/projector.
   #
-  # Tasks (TC-COORD-003, 004, 010, 011, 012, 013, 014, 015, 016, 017, 024,
-  #        025, 035, 052, 054, 055, 060, 061, 062, 065, 070, 071, 072, 073,
-  #        074, 075):
+  # Tasks (TC-COORD-003, 004, 010, 011, 012, 013, 014, 015, 016, 017, 018,
+  #        024, 025, 035, 041, 043, 044, 045, 052, 054, 055, 060, 061, 062,
+  #        065, 070, 071, 072, 073, 074, 075):
   #  6.1 packages/cli/src/commands/coordinator.ts: start [--foreground]
   #      [--fresh-budget], stop, status [--live], tick; closed grammar;
-  #      delivery.coordinator.v1 data; deterministic bounded text renderer.
-  #  6.2 packages/cli/src/edge.ts composition: state dir + fence, config,
-  #      fake-able process port, blocker verified read/append, injected clock,
-  #      ids, brand, harness session facts; register exactly one coordinator
-  #      family; no daemon/dispatch/supervise command.
-  #  6.3 Fence semantics: start acquires and records the instance; a second
-  #      start or contended tick -> coordinator.already-running exit 2 with the
-  #      holder named and no record; stop -> graceful release/
-  #      released=true, idempotent without a supervisor; stale-holder takeover
-  #      with a coordinator.fence stale-takeover record; acquire/release/
-  #      takeover each append exactly one validated record (TC-COORD-017).
+  #      delivery.coordinator.v1 data (including the lease-folded instance);
+  #      deterministic bounded text renderer. supervisorMode is foreground when
+  #      --foreground is set and detached otherwise; externalUnit is absent.
+  #  6.2 packages/cli/src/edge.ts composition: state dir + instance lease +
+  #      per-append state write fence, config, fake-able process port, blocker
+  #      verified read/append, injected clock, ids, brand, harness session
+  #      facts; register exactly one coordinator family; no
+  #      daemon/dispatch/supervise command.
+  #  6.3 Instance-lease semantics: start appends one coordinator.fence
+  #      acquired record (instanceId, holder, pid, processStartTimeMs,
+  #      supervisorMode, externalUnit=absent); a second start or a contended
+  #      tick -> coordinator.already-running exit 2 with the holder named and
+  #      no record; stop appends stop-requested and reports
+  #      requested=true/released=false (or not-running at exit 0 when the
+  #      latest lease is released/stale), never releases another process's
+  #      handle; the live supervisor appends released at the next cycle
+  #      boundary; stale takeover when the recorded holder's alive(handle) is
+  #      absent or the lease age > 2 x collection-interval, appending
+  #      stale-takeover then acquired; no recoverFence and no contracts/state.ts
+  #      change; every append takes the state write fence for that append only.
+  #      The latest record folds to the instance identity; there is no
+  #      separate instance record (TC-COORD-010/011/015/017/018).
   #  6.4 Lifecycle application: join/resume/spawn; killed-mid-iteration
   #      recovery without re-executing closed-out work; --fresh-budget only
-  #      when stopped; status reports durable decision/restart/stuck/wake/
-  #      escalation/fence and degrades --live honestly; stuck-unevaluable and
-  #      torn/gapped budget return the delivered state identity at exit 2 with
-  #      no kill or restart (TC-COORD-024/025/035/054/055).
+  #      when stopped; status reports the instance fold, lease action, decision,
+  #      restart count/bound, two-phase stuck verdict/phase/reason/outcome,
+  #      wake, and escalation and degrades --live honestly; stuck-unevaluable
+  #      and torn/gapped budget return the delivered state identity at exit 2
+  #      with no kill or restart (TC-COORD-012/013/014/016/024/025/035/041/043/
+  #      044/045/054/055).
   #  6.5 Escalation and wake integration: exactly one owner decision-needed
-  #      question, terminal receipt after the question, publish failure exit 2,
-  #      idempotent reuse; strict pickup wake with persisted woken only,
-  #      already-woken/answered-before-wake/delivery-failed/no-pickup as tick
-  #      results, retry without duplicate records.
+  #      question, terminal receipt after the question, publish failure exit 2
+  #      with exhausted-escalation-failed, idempotent reuse returning
+  #      exhausted-escalated (never "escalated"); the delivered blocker append
+  #      acquires its own state write fence and composes without a lock
+  #      collision (no packages/core/src/state/blockers.ts change); strict
+  #      pickup wake with an absent status counting as open and persisted woken
+  #      only, already-woken/answered-before-wake/delivery-failed/no-pickup as
+  #      tick results (no-pickup only for a non-rank-1 head, a non-coordinator
+  #      audience, or an explicitly non-open status), retry without duplicate
+  #      records.
   #  6.6 Tests: coordinator-grammar, envelope, start, stop, tick, status,
-  #      fence-records, fence-stale, decision-durability, decision-recovery,
-  #      fresh-budget, restart-exhausted, restart-torn, stuck-unevaluable,
-  #      escalation-publish/idempotent/failed/reuse, wake-pickup/answered/
-  #      dedupe/paths/failed/next; exit-code-literals; fixture harness.ts and
-  #      blockers.ts.
+  #      instance-lease, fence-records, fence-stale, decision-durability,
+  #      decision-recovery, fresh-budget, restart-exhausted, restart-torn,
+  #      stuck-unevaluable, kill-failed, kill-fence, capability-gap,
+  #      kill-identity, escalation-publish/idempotent/failed/reuse,
+  #      wake-pickup/answered/dedupe/paths/failed/next; structure coordinator-
+  #      regime; exit-code-literals; golden/coordinator; fixture harness.ts
+  #      and blockers.ts.
   #
   # Verification:
   #   bun test tests/behaviour/coordinator-grammar.test.ts tests/behaviour/coordinator-envelope.test.ts tests/checks/exit-code-literals.test.ts
-  #   bun test tests/behaviour/coordinator-start.test.ts tests/behaviour/coordinator-stop.test.ts tests/behaviour/coordinator-tick.test.ts tests/behaviour/coordinator-status.test.ts tests/behaviour/coordinator-fence-stale.test.ts tests/behaviour/coordinator-fresh-budget.test.ts
-  #   bun test tests/behaviour/coordinator-restart-exhausted.test.ts tests/behaviour/coordinator-escalation-*.test.ts tests/behaviour/coordinator-wake-*.test.ts
+  #   bun test tests/behaviour/coordinator-start.test.ts tests/behaviour/coordinator-stop.test.ts tests/behaviour/coordinator-tick.test.ts tests/behaviour/coordinator-status.test.ts tests/behaviour/coordinator-instance-lease.test.ts tests/behaviour/coordinator-fence-records.test.ts tests/behaviour/coordinator-fence-stale.test.ts tests/behaviour/coordinator-fresh-budget.test.ts
+  #   bun test tests/behaviour/coordinator-restart-exhausted.test.ts tests/behaviour/coordinator-restart-torn.test.ts tests/behaviour/coordinator-stuck-unevaluable.test.ts tests/behaviour/coordinator-kill-failed.test.ts tests/behaviour/coordinator-kill-fence.test.ts tests/behaviour/coordinator-kill-identity.test.ts tests/behaviour/coordinator-capability-gap.test.ts
+  #   bun test tests/structure/coordinator-regime.test.ts tests/golden/coordinator.test.ts tests/behaviour/coordinator-escalation-*.test.ts tests/behaviour/coordinator-wake-*.test.ts
   #
-  # Exit: one bounded envelope and one {0,1,2} exit per outcome; fence refusal
-  # and stale takeover exact; start/stop/status/tick behaviour pinned;
-  # escalation and wake persistence rules pinned.
+  # Exit: one bounded envelope and one {0,1,2} exit per outcome; the instance
+  # lease (four actions, stop as a request, stale takeover, per-append state
+  # write fence, lease-folded instance) is exact; start/stop/status/tick
+  # behaviour pinned; two-phase stuck and PID-identity failure pinned;
+  # escalation is exhausted-escalated and never "escalated"; wake is strict
+  # with absent status open; persistence rules pinned.
   # ---------------------------------------------------------------------------
   - id: 6
-    title: "Coordinator CLI family and edge composition: start/stop/status/tick, fence, exits, wake and escalation integration"
+    title: "Coordinator CLI family and edge composition: start/stop/status/tick, instance lease, exits, identity-verified kill, wake and escalation integration"
     kind: delivery
     scope:
       files:
@@ -473,6 +570,7 @@ phases:
         - tests/behaviour/coordinator-stop.test.ts
         - tests/behaviour/coordinator-tick.test.ts
         - tests/behaviour/coordinator-status.test.ts
+        - tests/behaviour/coordinator-instance-lease.test.ts
         - tests/behaviour/coordinator-fence-records.test.ts
         - tests/behaviour/coordinator-fence-stale.test.ts
         - tests/behaviour/coordinator-decision-durability.test.ts
@@ -481,6 +579,10 @@ phases:
         - tests/behaviour/coordinator-restart-exhausted.test.ts
         - tests/behaviour/coordinator-restart-torn.test.ts
         - tests/behaviour/coordinator-stuck-unevaluable.test.ts
+        - tests/behaviour/coordinator-kill-failed.test.ts
+        - tests/behaviour/coordinator-kill-fence.test.ts
+        - tests/behaviour/coordinator-kill-identity.test.ts
+        - tests/behaviour/coordinator-capability-gap.test.ts
         - tests/behaviour/coordinator-escalation-publish.test.ts
         - tests/behaviour/coordinator-escalation-idempotent.test.ts
         - tests/behaviour/coordinator-escalation-failed.test.ts
@@ -491,6 +593,8 @@ phases:
         - tests/behaviour/coordinator-wake-paths.test.ts
         - tests/behaviour/coordinator-wake-failed.test.ts
         - tests/behaviour/coordinator-wake-next.test.ts
+        - tests/structure/coordinator-regime.test.ts
+        - tests/golden/coordinator.test.ts
         - tests/fixtures/coordinator/harness.ts
         - tests/fixtures/coordinator/blockers.ts
 
@@ -506,28 +610,33 @@ phases:
   #      (type=decision-needed AND audience=owner AND lane=coordinator AND ref
   #      shape with exactly one '#' and both sides non-empty); no coordinator
   #      state read.
-  #  7.2 domain/status.ts typed-questions: keep at most seven other questions
-  #      plus the reserved one; preserve ordering, omitted/truncated counts,
-  #      section ids, and evidence states.
-  #  7.3 domain/brief.ts blocker-questions: mirror the same projection; no new
-  #      anchor, section, surface, or question type.
+  #  7.2 domain/status.ts typed-questions: render the reserved question at
+  #      index 0 first, then at most seven other questions in normal rank
+  #      order; the lowest-ranked is the one displaced and counted as omitted;
+  #      preserve omitted/truncated counts, section ids, and evidence states;
+  #      the rendered bound stays eight.
+  #  7.3 domain/brief.ts blocker-questions: mirror the same first-index
+  #      projection; no new anchor, section, surface, or question type.
   #  7.4 Regenerate the reserved-slot goldens only via the explicit scripts and
   #      diff field by field; a control golden without escalation is unchanged.
   #  7.5 Update doc/spec/features/feature-status-digest.md,
   #      feature-brief.md, and feature-blockers.md with the reserved-slot and
   #      enforcement-arm notes.
   #  7.6 Tests: coordinator-escalation-slot, coordinator-escalation-surface,
-  #      status-digest and brief goldens; near-miss predicate controls; the
-  #      dropped-slot / nine-rendered / widened-predicate mutants.
+  #      status-digest, brief, and coordinator goldens; the index-0 render
+  #      assertion, the displaced-lowest and omitted-count oracle, near-miss
+  #      predicate controls, and the dropped-slot / nine-rendered /
+  #      widened-predicate mutants.
   #
   # Verification:
   #   bun test tests/behaviour/coordinator-escalation-slot.test.ts tests/behaviour/coordinator-escalation-surface.test.ts
-  #   bun test tests/golden/status-digest.test.ts tests/golden/brief.test.ts
+  #   bun test tests/golden/status-digest.test.ts tests/golden/brief.test.ts tests/golden/coordinator.test.ts
   #   bash scripts/.tests/test-doc-distribution.sh
   #
-  # Exit: escalation renders at the cap; at most seven others; omitted count
-  # truthful; no new section/anchor/type; no extra read; only the declared
-  # golden diff.
+  # Exit: the escalation renders first by index at the cap; at most seven
+  # others follow in rank order; the lowest-ranked is displaced and counted as
+  # omitted truthfully; no new section/anchor/type; no extra read; only the
+  # declared golden diff.
   # ---------------------------------------------------------------------------
   - id: 7
     title: "Reserved owner-escalation slot in typed-questions/blocker-questions plus consumer docs"
@@ -565,26 +674,29 @@ phases:
   # seed scenario end to end.
   #
   # Tasks (TC-COORD-002, 084, 086, 087, 088, 091):
-  #  8.1 Integration scenario: start/fence/stop/status; join/resume/spawn and
-  #      killed-mid-iteration artifact preservation; stuck permutations; kill
-  #      outcomes; budget durability/exhaustion/escalation idempotency/reserved
-  #      slot; wake outcomes and retry; config/state/error paths; SC-M1-25.
+  #  8.1 Integration scenario: start/instance-lease/stop/status; join/resume/
+  #      spawn and killed-mid-iteration artifact preservation; two-phase stuck
+  #      permutations and latest-wins fold; identity-verified kill outcomes;
+  #      budget durability/exhaustion/exhausted-escalated idempotency/first-index
+  #      reserved slot; absent-status pickup and wake outcomes/retry;
+  #      token-delta/session-traffic progress bound; config/state/error paths;
+  #      SC-M1-25.
   #  8.2 Tier boundaries, purity, adapter confinement, and brand neutrality
   #      across the now-complete coordinator surface; three mutants (node:fs in
   #      contracts, Date.now in domain, OS-signal in domain) must fail.
-  #  8.2 Determinism: two identical roots byte-identical data/text; ambient
+  #  8.3 Determinism: two identical roots byte-identical data/text; ambient
   #      scan; fresh instance/reopened store; zero model calls.
-  #  8.3 Idempotency: second identical tick appends no decision/restart/stuck/
+  #  8.4 Idempotency: second identical tick appends no decision/restart/stuck/
   #      wake/exhaustion record and performs no destructive action; liveness
   #      controls still fire.
-  #  8.4 Privacy: canaries and a synthetic registered secret across every
+  #  8.5 Privacy: canaries and a synthetic registered secret across every
   #      command/record/evidence/error; bounded key=value <= 512 UTF-8 bytes;
   #      no credential read.
-  #  8.5 Performance/read cost: synthetic reference store, injected clock,
+  #  8.6 Performance/read cost: synthetic reference store, injected clock,
   #      tick p95 <= 2000 ms, status p95 <= 1000 ms, start p95 <= 2000 ms
   #      excluding spawn, one verified read per store per tick, <= 64 KiB /
   #      <= 32 lines.
-  #  8.6 No-CPU/no-LLM mutants; SC-M1-25 transcript; golden fixtures under
+  #  8.7 No-CPU/no-LLM mutants; SC-M1-25 transcript; golden fixtures under
   #      tests/fixtures/coordinator/golden.
   #
   # Verification:
@@ -610,7 +722,6 @@ phases:
         - tests/checks/secret-read-boundary.test.ts
         - tests/behaviour/coordinator-performance.test.ts
         - tests/behaviour/coordinator-read-cost.test.ts
-        - tests/golden/coordinator.test.ts
         - tests/fixtures/coordinator/harness.ts
         - tests/fixtures/coordinator/process-port.ts
       packages:
@@ -626,7 +737,8 @@ phases:
   # Goal: register the delivered surface in the planning documents and ship one
   # lockstep minor changeset over the publishables.
   #
-  # Tasks (TC-COORD-092):
+  # Tasks (supports TC-COORD-092; the TC itself is verified at the Phase-10
+  # gate after the current-truth feature spec exists):
   #  9.1 doc/planning/oss-tooling/cli-command-registry.md: add the coordinator
   #      family row (four subcommands/flags, the delivery.coordinator.v1 data,
   #      the M1-S18 seam) and update the ceo-loop.sh strangler row to name
@@ -662,12 +774,12 @@ phases:
   # pin the final AC/TC status, and declare the release obligations. Fix only
   # within the declared change scope.
   #
-  # Tasks (TC-COORD-089, 090):
+  # Tasks (TC-COORD-089, 090, 092):
   #  10.1 Reconcile doc/spec/features/feature-coordinator-supervision.md as the
   #       current-truth home; add the consumer/boundary notes to
   #       feature-session-lifecycle-economics.md and feature-harness-adapters.md;
-  #       re-check feature-result-contract.md and the Phase-7 docs; update
-  #       doc/00-index.md.
+  #       re-check feature-result-contract.md, the Phase-7 docs, and the Phase-9
+  #       registry/man-page output; update doc/00-index.md.
   #  10.2 Non-regression: status/brief goldens differ only in the reserved-slot
   #       case; blockers ranking, economics records, lane records, and
   #       ceo-loop.sh byte-unchanged; no other command envelope/exit changes;
@@ -680,9 +792,10 @@ phases:
   #  10.4 Full gate battery: pnpm check; error-table-sync; ambient-globals;
   #       forbidden/privacy literals; boundaries; exports parity; doc
   #       distribution; commitlint; git diff --check.
-  #  10.5 Update this plan's acknowledgement and the AC/TC status table; leave
-  #       the spec and test plan unedited (their status is owned by their
-  #       authors); report evidence to @pm.
+  #  10.5 Verify TC-COORD-092 against the delivered surface and reconcile any
+  #       registry/man-page drift; update this plan's acknowledgement and the
+  #       AC/TC status table; leave the spec and test plan unedited (their
+  #       status is owned by their authors); report evidence to @pm.
   #
   # Verification:
   #   pnpm check
@@ -692,7 +805,7 @@ phases:
   #   bash scripts/.tests/test-doc-distribution.sh
   #   git diff --check
   #
-  # Exit: every gate green; 43/43 ACs and 66/66 TCs traced to a passing result;
+  # Exit: every gate green; 45/45 ACs and 69/69 TCs traced to a passing result;
   # only the declared digest/brief diff; release/spec reconciliation declared
   # in scope.
   # ---------------------------------------------------------------------------
@@ -709,6 +822,9 @@ phases:
         - doc/spec/features/feature-blockers.md
         - doc/spec/features/feature-result-contract.md
         - doc/00-index.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/milestones/m1/contracts.md
+        - doc/planning/oss-tooling/milestones/m1/man-page.md
       folders:
         - doc/changes/2026-11/2026-11-07--GH-241--coordinator-supervision
         - tests/fixtures/coordinator

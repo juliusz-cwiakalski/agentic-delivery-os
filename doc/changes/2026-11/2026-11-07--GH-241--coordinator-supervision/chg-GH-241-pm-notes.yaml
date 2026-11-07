@@ -3,9 +3,9 @@ title: "M1-S23: Coordinator supervision"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-07T11:55:00Z", completed: "2026-11-07T12:04:00Z" }
-  specification: { started: "2026-11-07T12:05:00Z", completed: null }
-  test_planning: { started: "2026-11-07T12:36:00Z", completed: null }
-  delivery_planning: { started: "2026-11-07T13:16:00Z", completed: null }
+  specification: { started: "2026-11-07T12:05:00Z", completed: "2026-11-07T14:47:21Z" }
+  test_planning: { started: "2026-11-07T12:36:00Z", completed: "2026-11-07T14:47:21Z" }
+  delivery_planning: { started: "2026-11-07T13:16:00Z", completed: "2026-11-07T14:47:21Z" }
   dor_check: { started: "2026-11-07T13:36:00Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -70,4 +70,7 @@ notes:
     date: "2026-11-07"
   - text: "Retro (DoR iteration 1): the spec was internally consistent but clashed with delivered state-layer semantics (short-lived write fence vs lifetime lock, append-only records, no process-liveness input to recoverFence). The DoR gate caught it before implementation. Future spec writing for supervision-style surfaces should read the delivered state-port fence/append contract first and model lifetime ownership separately from the write fence."
     type: "retro"
+    date: "2026-11-07"
+  - text: "DoR iteration 1 remediation complete (spec v1.2, test plan v1.2, plan v1.2, TDR-0013/TDR-0014 amended): 45 ACs (added AC-F1-4 instance lease/stop and AC-F4-4 PID identity), 69 TCs (added TC-COORD-018/029/045), 10 phases, 69/69 TC mapping, plan validator valid/readyForDevelopment true/0 errors, 6 coordinator config keys (added progress-bound). Model changes: durable instance lease via coordinator.fence records separate from the delivered per-append state write fence; stop-requested + supervisor releases; stale takeover via process alive + lease age (no recoverFence, no state contract change); two-phase coordinator.stuck (verdict then outcome, same stuckId, latest-wins fold); new turn = tokenDelta>0 or traffic>0 from delivered liveness facts; fingerprint = event-log cursor + open coordinator-question count only; reserved escalation question renders first; PID+start-time identity check before TERM; exhausted-escalated; absent pickup status = open; supervisorMode foreground|detached + externalUnit absent. DoR iteration 2 pending."
+    type: "decision"
     date: "2026-11-07"
