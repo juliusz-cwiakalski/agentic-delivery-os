@@ -8,7 +8,7 @@ phases:
   delivery_planning: { started: "2026-11-07T23:42:00Z", completed: "2026-11-08T03:12:00Z", reopened: "2026-11-08T01:40:00Z", reopen_count: 2, revision: "v1.3" }
   dor_check: { started: "2026-11-07T23:59:00Z", completed: "2026-11-08T03:28:00Z", iterations: 4, status: "ready" }
   delivery: { started: "2026-11-08T03:30:00Z", completed: "2026-11-08T03:58:00Z", status: "complete" }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: "2026-11-08T04:00:00Z", completed: "2026-11-08T04:12:00Z", status: "no-op-verified" }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -128,4 +128,10 @@ notes:
     date: "2026-11-08"
   - text: "Plan phase P3 complete: full sweep green at the final HEAD (p00, p01, p11, p12, p17, p13, p02-p10, p14-p16, derived-boundary assertion, git diff --check). Evidence recorded in delivery-evidence/verification.md with per-TC command, expected and observed lines, the guard outputs, the declared residual, the GH-239 staleness and DEC-3 disclosures, and the N-1 accepted residual. One deviation: the P9 block hardcodes its input path, so the negative control ran on a mechanically path-substituted copy (p09-neg.sh) without retyping literals. Product diff is exactly two files, 61 insertions and 5 deletions."
     type: "info"
+    date: "2026-11-08"
+  - text: "System spec update: reasoned no-op, zero files changed. No doc/spec/** feature spec describes dispatch or the handover gate (feature-scheduling-engine.md explicitly excludes both; the other M1-S9 mentions are undelivered-boundary pointers), so authoring a Current feature spec would invent undelivered behaviour and compete with the canonical backlog entry; the gap re-opens when M1-S9 delivers. No doc/spec/**, doc/overview/**, doc/decisions/**, doc/guides/** or index document restates the two-week M1-S9 handover rule (the north-star two-week wording is the separate M0 exit criterion). TDR-0005 still declares exactly eleven tokens, re-verified by set comparison rather than assumed. doc/00-index.md has no doc/planning section and the oss-tooling README already covers 'recorded amendments', so no index entry is needed. Doc-distribution guard green at 81 docs, tree clean."
+    type: "info"
+    date: "2026-11-08"
+  - text: "New residual discovered during doc-sync: doc/planning/oss-tooling/milestones/m1/interactions.md (Session G 'handover day', ~lines 269-276) depicts handover eligibility from '14 days 41 deliveries', i.e. the superseded calendar gate, and is NOT in the spec's declared residual list or the status amendment's enumeration. Decision: do not extend the status amendment now, because the plan's reference text is authoritative and the test plan's p05 gate is calibrated to the eight named documents; instead disclose it in the PR body and add it to the follow-up propagation change together with the other seven planning documents. The delivered sentence is incomplete rather than false: every document it names does still carry the superseded phrasing."
+    type: "decision"
     date: "2026-11-08"
