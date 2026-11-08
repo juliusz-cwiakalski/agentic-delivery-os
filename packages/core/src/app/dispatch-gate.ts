@@ -17,13 +17,13 @@ import {
 } from "#contracts";
 import { buildDispatchAuthorityView, foldDispatchHandover } from "../domain/dispatch-authority.js";
 import {
+  type DispatchEvidenceWindow,
+  type DispatchGateEvaluation,
+  type DispatchRepositoryScope,
   evaluateHandoverGate,
   foldEvidenceWindow,
   handoverConditionsSnapshot,
   toSummaryData,
-  type DispatchEvidenceWindow,
-  type DispatchGateEvaluation,
-  type DispatchRepositoryScope,
 } from "../domain/dispatch-gate.js";
 import {
   appendDispatchDivergence,
@@ -197,6 +197,29 @@ export const handoverDispatchEvidence = (input: {
 }): DispatchHandoverResult => {
   const read = readDispatchGate(input);
   if (!read.ok) return { ok: false, error: { kind: "dispatch", code: read.code } };
+
+  // NFR-6: fold the authority before appending, so an identical replay under an
+  // advancing clock reports a noop instead of appending a second record.
+  const handover = readDispatchHandover(input.store);
+  if (!handover.ok) {
+    return { ok: false, error: { kind: "dispatch", code: "dispatch.state-unverified" } };
+  }
+  const current = foldDispatchHandover(handover.records).find(
+    (entry) => entry.repository === input.repository,
+  );
+  if (current !== undefined && current.authority === "authoritative") {
+    return {
+      ok: true,
+      data: {
+        repository: input.repository,
+        operation: "authoritative",
+        recorded: false,
+        noop: true,
+        verdict: read.evaluation.verdict,
+      },
+    };
+  }
+
   if (!read.evaluation.eligibility) {
     return {
       ok: true,

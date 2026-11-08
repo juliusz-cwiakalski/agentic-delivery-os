@@ -5,12 +5,12 @@
  * host. The deterministic bounded-read assertion is the default gate.
  */
 import { describe, expect, test } from "bun:test";
+import { summarizeDispatchEvidence } from "../../packages/core/src/app/dispatch-gate";
+import { appendDispatchAttempt } from "../../packages/core/src/app/dispatch-ledger";
+import type { StateStorePort } from "../../packages/core/src/contracts/index";
+import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
-import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
-import { appendDispatchAttempt } from "../../packages/core/src/app/dispatch-ledger";
-import { summarizeDispatchEvidence } from "../../packages/core/src/app/dispatch-gate";
-import type { StateStorePort } from "../../packages/core/src/contracts/index";
 import { REPOSITORY } from "../fixtures/dispatch/ledger";
 
 const MAX_MACHINE_BYTES = 65_536;
@@ -79,6 +79,50 @@ describe("TC-NFR-002 human output stays within 40 lines and 8,192 bytes", () => 
     } finally {
       scenario.dispose();
     }
+  });
+});
+
+describe("TC-NFR-004 the bounded read declares its truncation above 5,000 records", () => {
+  test("a >5,000-record store keeps the newest bound and reports omitted records", () => {
+    const attempts = buildAttempts(eligibleSpecs());
+    const total = 5_010;
+    const records = Array.from({ length: total }, (_, index) => {
+      const attempt = attempts[index % attempts.length];
+      return {
+        schemaVersion: "delivery.state.v1",
+        kind: "dispatch.attempt",
+        key: `dispatch.attempt.trunc-${index}`,
+        sequence: index,
+        checksum: "0".repeat(16),
+        payload: {
+          ...attempt,
+          attemptId: `trunc-${index}`,
+          recordedAt: `2026-11-0${1 + (index % 7)}T10:00:00.000Z`,
+        },
+      };
+    });
+    const evidence = {
+      storePath: "/tmp/trunc",
+      verification: ["framing", "terminal", "sequence", "checksum", "index", "permissions"],
+      verifiedEmpty: false,
+      recordCount: records.length,
+    };
+    const store = {
+      readRecords: () => ({ ok: true as const, value: { records, evidence } }),
+    } as unknown as StateStorePort;
+
+    const read = summarizeDispatchEvidence({
+      store,
+      repository: REPOSITORY,
+      scope: "production",
+      nowIso: "2026-11-30T10:00:00.000Z",
+    });
+    expect(read.ok).toBe(true);
+    if (!read.ok) return;
+    // The declared bound is 5,000 retained records; the 10 oldest are omitted
+    // and the truncation is declared, never silently dropped.
+    expect(read.data.truncation).toEqual({ bound: 5000, omittedRecords: 10 });
+    expect(read.data.countedDeliveries).toBeLessThanOrEqual(5000);
   });
 });
 

@@ -351,3 +351,21 @@ notes:
       and exports parity all green)."
     type: info
     date: "2026-11-08"
+  - text: "Review iteration 1 verdict FAIL (code-review/review-iter-1.yaml):
+      0 critical, 3 high, 5 medium, 5 low, 1 info. High findings are production
+      composition gaps: F-1 the gate (summary/resolve/handover) is not composed,
+      so the shipped CLI refuses input.value.rejected; F-2 existingLane and
+      restartBudget are not composed, so --resume-prompt spawns fresh and the
+      restart-budget exhaustion record is never written; F-3 the repository
+      identity resolver/persisted marker is never called in production, so a
+      remote change re-keys evidence. Library-level ACs verified correct."
+    type: blocker
+    date: "2026-11-08"
+  - text: "Remediation routing for review iteration 1: @coder fixes F-1..F-9 and
+      F-11..F-13 in one pass; F-8 (daemon production entry) is partially
+      GH-238-owned and must be explicitly dispositioned; F-10 (nested data.error)
+      is accepted as a documented extension, requiring one spec/DM-5 sentence;
+      F-14 is informational (auto-generated commit subjects). Then re-run
+      @doc-syncer if behavior changed, then @reviewer iteration 2."
+    type: info
+    date: "2026-11-08"

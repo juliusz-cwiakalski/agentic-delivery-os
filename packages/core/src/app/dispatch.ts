@@ -10,17 +10,17 @@
 import {
   DELIVERY_RESULT_TAXONOMY,
   DELIVERY_RESULT_TOKENS,
-  HARNESS_OUTCOMES,
+  type DeliveryResultToken,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
   DISPATCH_MAX_LAST_MESSAGE_CHARS,
-  type DeliveryResultToken,
   type DispatchAttemptRecord,
   type DispatchEnvelopeData,
   type DispatchEvidenceClass,
   type DispatchHandoverState,
   type DispatchPhaseLedger,
   type DispatchResumeMode,
+  HARNESS_OUTCOMES,
   type HarnessEvidence,
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
@@ -32,21 +32,24 @@ import {
 import {
   buildComparisonRecord,
   buildCorroborationRecord,
+  type CorroborationFacts,
   classifyFalseSuccess,
   dispatchFamilyOf,
+  unreadableCorroborationSources,
 } from "../domain/dispatch-comparison.js";
 import {
-  evaluateDispatchLiveness,
   type DispatchLivenessReading,
+  type DispatchLivenessVerdict,
+  evaluateDispatchLiveness,
 } from "../domain/dispatch-liveness.js";
-import { admissionRefusalPair } from "../domain/dispatch-resume.js";
 import {
-  deriveDispatchResult,
   type DispatchArtifactFacts,
   type DispatchLedgerFacts,
   type DispatchRead,
   type DispatchTrackerFacts,
+  deriveDispatchResult,
 } from "../domain/dispatch-result.js";
+import { admissionRefusalPair, admitDispatchRestart } from "../domain/dispatch-resume.js";
 import { appendDispatchAttempt, appendDispatchDivergence } from "./dispatch-ledger.js";
 
 /** `f` failed, `su` state-unverified, `mr` max-restarts, `po` pr-open,
@@ -61,6 +64,20 @@ type DispatchToken = DeliveryResultToken;
 export type DispatchLeaseClaim =
   | { readonly ok: true; readonly leaseId: string }
   | { readonly ok: false; readonly code: string };
+
+/** One cancellable cadence wait; the composition owns the timer. */
+export type DispatchCadenceWait = {
+  readonly promise: Promise<void>;
+  readonly cancel: () => void;
+};
+
+/** The delivered terminal restart-budget exhaustion append (AC-F3-2). */
+export type DispatchExhaustionRequest = {
+  readonly ref: string;
+  readonly runId: string;
+  readonly restarts: number;
+  readonly recordedAt: string;
+};
 
 /** The independently read truth the derivation and evidence consume. */
 export type DispatchTruthReads = {
@@ -116,6 +133,17 @@ export type DispatchPorts = {
   readonly initialRestarts?: number;
   readonly restartBudget?: number;
   readonly livenessIntervalMs?: number;
+  /**
+   * The cancellable cadence wait the watcher polls on while `collect` is
+   * pending. Composition supplies the real timer; a test supplies a fake.
+   */
+  readonly waitForCadence?: (cadenceMs: number) => DispatchCadenceWait;
+  /**
+   * The delivered terminal exhaustion append (`ensureEconomicsExhaustionRecord`)
+   * invoked when restart admission refuses. Absent leaves the refusal recorded
+   * without a terminal record; the composition owns the state write.
+   */
+  readonly ensureRestartExhaustion?: (input: DispatchExhaustionRequest) => boolean;
   readonly resumeAmplification?: string;
   readonly existingHandle?: HarnessSessionHandle;
   readonly resumePrompt?: string;
@@ -235,6 +263,38 @@ const staleReads = (): DispatchTruthReads => ({
   phasesComplete: false,
 });
 
+/**
+ * Append the delivered terminal exhaustion record through the composition's
+ * state seam and name the evidence reference honestly: an absent or failed
+ * append is recorded as unrecorded, never claimed as landed.
+ */
+const ensureExhaustion = (
+  ports: DispatchPorts,
+  runId: string,
+  restarts: number,
+  recordedAt: string,
+): string => {
+  const ensured =
+    ports.ensureRestartExhaustion?.({
+      ref: ports.ref,
+      runId,
+      restarts,
+      recordedAt,
+    }) ?? false;
+  return ensured ? "economics:exhaustion" : "economics:exhaustion-unrecorded";
+};
+
+/** The corroboration facts derived from the truth reads (AC-F4-4). */
+const corroborationFactsOf = (reads: DispatchTruthReads): CorroborationFacts => ({
+  "pm-notes": reads.ledger.ok ? (reads.phasesComplete ? "satisfied" : "unsatisfied") : "unreadable",
+  tracker: reads.tracker.ok ? "satisfied" : "unreadable",
+  ci: reads.ci.ok
+    ? reads.ci.value.verdict === "success"
+      ? "satisfied"
+      : "unsatisfied"
+    : "unreadable",
+});
+
 /** Map the harness liveness report into the dispatch liveness readings. */
 const livenessReadings = (
   readings: readonly {
@@ -265,9 +325,9 @@ const livenessReadings = (
  * Run one dispatch.
  *
  * A pre-session refusal (conflicting lease before a spawn) returns an error and
- * appends no attempt record. A spawn failure, a spawn refusal, and an
- * unverifiable truth read are attempt-stage outcomes: they append exactly one
- * attempt record and return a classified envelope.
+ * appends no attempt record. A spawn failure, a spawn refusal, a post-spawn
+ * `collect` failure, and an unverifiable truth read are attempt-stage outcomes:
+ * they append exactly one attempt record and return a classified envelope.
  */
 export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResult> => {
   const claimed = ports.claimLease();
@@ -351,6 +411,10 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         const pair = admissionRefusalPair(admission.code);
         if (admission.resumeMode !== undefined) resumeMode = admission.resumeMode;
         const reads = staleReads();
+        const exhaustionRef =
+          admission.code === "dispatch.restart-budget-exceeded"
+            ? ensureExhaustion(ports, ports.existingHandle?.sessionId ?? attemptId, restarts, now)
+            : undefined;
         return record({
           token: pair.token,
           outcome: pair.outcome,
@@ -372,7 +436,9 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
                 ? "resume refused: the prefill re-pay is uneconomical"
                 : "resume admission could not read its token or cost facts",
           evidenceRefs:
-            admission.terminal === true ? ["economics:exhaustion"] : [`attempt:${attemptId}`],
+            admission.terminal === true
+              ? [exhaustionRef ?? "economics:exhaustion"]
+              : [`attempt:${attemptId}`],
         });
       }
       if (admission.resumeMode !== undefined) resumeMode = admission.resumeMode;
@@ -418,27 +484,133 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       });
     }
 
-    const evidenceResult = await ports.harness.collect({ handle: session.value });
+    const collectPromise = ports.harness.collect({ handle: session.value });
+
+    // Progress-based liveness (NFR-2, DEC-9): poll at the `lane.liveness-interval`
+    // cadence while `collect` is pending, carrying the previous observation so a
+    // stall needs two consecutive sourced no-advance readings. The verdict trail
+    // is recorded as attempt liveness evidence; a corroborated terminal stall is
+    // routed through restart admission below.
+    const verdicts: DispatchLivenessVerdict[] = [];
+    let stalled = false;
+    let previousReadings: readonly DispatchLivenessReading[] | undefined;
+    const observeLiveness = (readings: readonly DispatchLivenessReading[]): void => {
+      const evaluation = evaluateDispatchLiveness({
+        readings,
+        ...(previousReadings === undefined ? {} : { previous: previousReadings }),
+        cadenceMs: ports.livenessIntervalMs ?? 30_000,
+      });
+      if (!verdicts.includes(evaluation.verdict)) verdicts.push(evaluation.verdict);
+      if (evaluation.verdict === "stalled") stalled = true;
+      previousReadings = readings;
+    };
+
+    let watching = false;
+    let stopWatching = (): void => {};
+    let watcherDone: Promise<void> = Promise.resolve();
+    if (ports.waitForCadence !== undefined && ports.livenessIntervalMs !== undefined) {
+      watching = true;
+      let stopped = false;
+      let cancelWait: (() => void) | undefined;
+      watcherDone = (async () => {
+        while (!stopped) {
+          let report: Awaited<ReturnType<HarnessSessionPort["liveness"]>>;
+          try {
+            report = await ports.harness.liveness({ handle: session.value });
+          } catch {
+            return;
+          }
+          if (stopped) return;
+          if (report.ok) observeLiveness(livenessReadings(report.value.readings));
+          const wait = ports.waitForCadence?.(ports.livenessIntervalMs ?? 0);
+          if (wait === undefined) return;
+          cancelWait = wait.cancel;
+          await wait.promise;
+        }
+      })();
+      stopWatching = () => {
+        stopped = true;
+        cancelWait?.();
+      };
+    }
+
+    const evidenceResult = await collectPromise;
+    if (watching) {
+      stopWatching();
+      await watcherDone;
+    }
+    if (evidenceResult.ok) {
+      // With no composed cadence the session cannot be watched while it runs;
+      // one post-collect observation is still taken and never fabricated.
+      if (!watching) {
+        try {
+          const liveness = await ports.harness.liveness({ handle: session.value });
+          if (liveness.ok) observeLiveness(livenessReadings(liveness.value.readings));
+        } catch {
+          // A liveness read failure never fabricates progress or a stall.
+        }
+      }
+    }
+    const livenessRefs = verdicts.map((verdict) => `liveness:${verdict}`);
     if (!evidenceResult.ok) {
-      return { ok: false, error: { kind: "harness", code: evidenceResult.error.code } };
+      // A session existed but its evidence could not be read (Appendix G): the
+      // attempt is recorded as unevaluable at exit 2, never returned unrecorded.
+      const reads = staleReads();
+      return record({
+        token: su,
+        outcome: O_FAILED,
+        errorCode: "dispatch.state-unverified",
+        comparison: comparisonFor({
+          token: su,
+          errorCode: "dispatch.state-unverified",
+          reads,
+          urlResolved: false,
+        }),
+        corroboration: buildCorroborationRecord({ token: su }),
+        falseSuccess: false,
+        prUrl: "",
+        urlResolved: false,
+        lastMessage: `harness evidence unreadable (${evidenceResult.error.code})`,
+        evidenceRefs: ["harness:collect-failed", ...livenessRefs],
+      });
+    }
+    if (stalled) {
+      // A corroborated terminal stall consults the one restart-admission gate. At
+      // or above the bound the attempt is the Appendix G restart-budget refusal;
+      // below the bound the delivered port cannot kill a live session, so the
+      // stall is recorded and left to lane supervision instead of leaking a
+      // silent second spawn.
+      const decision = admitDispatchRestart({ count: restarts, bound: budget });
+      if (!decision.admitted) {
+        const reads = staleReads();
+        const exhaustionRef = ensureExhaustion(
+          ports,
+          ports.existingHandle?.sessionId ?? attemptId,
+          restarts,
+          now,
+        );
+        return record({
+          token: mr,
+          outcome: O_FAILED,
+          errorCode: "dispatch.restart-budget-exceeded",
+          comparison: comparisonFor({
+            token: mr,
+            errorCode: "dispatch.restart-budget-exceeded",
+            reads,
+            urlResolved: false,
+          }),
+          corroboration: buildCorroborationRecord({ token: mr }),
+          falseSuccess: false,
+          prUrl: "",
+          urlResolved: false,
+          lastMessage: `liveness stalled; restart budget exhausted at ${restarts} of ${budget}`,
+          evidenceRefs: [exhaustionRef ?? "economics:exhaustion", ...livenessRefs],
+        });
+      }
     }
     const evidence: HarnessEvidence = evidenceResult.value;
     const classification = ports.harness.classify(evidence);
     const harnessToken = classification.token;
-
-    // Progress-based liveness: one observation cannot stall; a later phase
-    // resumes the loop against the previous observation.
-    try {
-      const liveness = await ports.harness.liveness({ handle: session.value });
-      if (liveness.ok) {
-        evaluateDispatchLiveness({
-          readings: livenessReadings(liveness.value.readings),
-          cadenceMs: ports.livenessIntervalMs ?? 30_000,
-        });
-      }
-    } catch {
-      // A liveness read failure never fabricates progress or a stall.
-    }
 
     const reads = await ports.readTruth();
     const derivation = deriveDispatchResult({
@@ -484,18 +656,14 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       });
     }
 
-    const corroboration = buildCorroborationRecord({
-      token: derivedToken,
-      facts: {
-        "pm-notes": reads.phasesComplete ? "satisfied" : "unsatisfied",
-        tracker: reads.tracker.ok ? "satisfied" : "unsatisfied",
-        ci: reads.ci.ok && reads.ci.value.verdict === "success" ? "satisfied" : "unsatisfied",
-      },
-    });
+    const facts = corroborationFactsOf(reads);
+    const corroboration = buildCorroborationRecord({ token: derivedToken, facts });
+    const unreadable = unreadableCorroborationSources(facts);
     const falseSuccess = classifyFalseSuccess({
       token: derivedToken,
       comparison,
       corroboration,
+      ...(unreadable.length === 0 ? {} : { unreadable }),
     });
 
     return record({
@@ -508,7 +676,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       prUrl: derivation.prUrl,
       urlResolved: derivation.urlResolved,
       lastMessage: derivation.lastMessage,
-      evidenceRefs: [`attempt:${attemptId}`],
+      evidenceRefs: [`attempt:${attemptId}`, ...livenessRefs],
       ...(divergenceRef === undefined ? {} : { divergenceRef }),
     });
   } finally {

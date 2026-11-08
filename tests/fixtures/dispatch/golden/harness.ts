@@ -6,24 +6,31 @@
  * The real shared classifier, the real derivation, and the real ledger are
  * used; only external I/O is scripted.
  */
-import { resolveBrandIdentity } from "../../../../packages/core/src/branding/index";
-import { runCli, type CliStreams } from "../../../../packages/cli/src/index";
+
 import { createDispatchCommandDefinition } from "../../../../packages/cli/src/commands/dispatch";
 import {
   createDispatchCommandRuntime,
   type DispatchCommandRuntime,
 } from "../../../../packages/cli/src/edge";
+import { type CliStreams, runCli } from "../../../../packages/cli/src/index";
 import { projectExitCode } from "../../../../packages/cli/src/projection";
+import type {
+  DispatchLeaseClaim,
+  DispatchTruthReads,
+} from "../../../../packages/core/src/app/dispatch";
+import { resolveBrandIdentity } from "../../../../packages/core/src/branding/index";
 import {
   DELIVERY_RESULT_TAXONOMY,
   type DeliveryResultToken,
   type DispatchEnvelopeData,
   type DispatchEvidenceClass,
+  ECONOMICS_EXHAUSTION_OPTIONS,
+  ECONOMICS_EXHAUSTION_SCHEMA_ID,
   type HarnessEvidence,
+  type HarnessLivenessReport,
 } from "../../../../packages/core/src/contracts/index";
+import { ensureEconomicsExhaustionRecord } from "../../../../packages/core/src/state/index";
 import { createDispatchState, createScriptedHarness } from "../harness";
-import type { DispatchTruthReads } from "../../../../packages/core/src/app/dispatch";
-import type { DispatchLeaseClaim } from "../../../../packages/core/src/app/dispatch";
 import { truthInput as defaultTruthInput } from "../truth";
 
 const BRAND = (() => {
@@ -56,6 +63,7 @@ export type CommandScenarioOptions = {
   readonly label?: string;
   readonly evidence?: HarnessEvidence;
   readonly spawnFails?: boolean;
+  readonly collectFails?: boolean;
   readonly claim?: DispatchLeaseClaim;
   readonly reads?: DispatchTruthReads;
   readonly evidenceClass?: DispatchEvidenceClass;
@@ -63,6 +71,18 @@ export type CommandScenarioOptions = {
   readonly handover?: "dual-run" | "authoritative";
   readonly restartBudget?: number;
   readonly initialRestarts?: number;
+  /** The delivery's persisted restart count the run reads at run time. */
+  readonly restartCount?: number;
+  /** The real `lane.liveness-interval` value the watcher is composed with. */
+  readonly livenessIntervalMs?: number;
+  /** A deterministic liveness sequence the scripted harness consumes per poll. */
+  readonly livenessSequence?: readonly HarnessLivenessReport[];
+  /** A deterministic report per 1-based poll; precedence over the sequence. */
+  readonly livenessOf?: (poll: number) => HarnessLivenessReport;
+  /** Resolve `collect` once this many liveness polls have happened. */
+  readonly collectAfterPolls?: number;
+  /** The advancing clock the composition reads; defaults to the fixed instant. */
+  readonly nowIso?: () => string;
   readonly gate?: {
     readonly scope?: "production" | "controlled";
     readonly principal?: string;
@@ -91,6 +111,7 @@ export type CommandScenario = {
     readonly merge: number;
     readonly claims: string[];
     readonly releases: string[];
+    readonly exhaustions: readonly { readonly ref: string; readonly restarts: number }[];
   };
   readonly invoke: (argv: readonly string[]) => Promise<CommandRun>;
   readonly dispose: () => void;
@@ -125,28 +146,34 @@ let divergenceSequence = 0;
 
 export const createCommandScenario = (options: CommandScenarioOptions = {}): CommandScenario => {
   const state = createDispatchState(options.label ?? "command");
-  const scripted = createScriptedHarness(
-    options.evidence === undefined && options.spawnFails === undefined
-      ? { harnessKind: options.harnessKind ?? "opencode" }
-      : {
-          ...(options.evidence === undefined ? {} : { evidence: options.evidence }),
-          ...(options.spawnFails === undefined ? {} : { spawnFails: options.spawnFails }),
-          ...(options.harnessKind === undefined ? {} : { harnessKind: options.harnessKind }),
-        },
-  );
+  const scripted = createScriptedHarness({
+    ...(options.evidence === undefined ? {} : { evidence: options.evidence }),
+    ...(options.spawnFails === undefined ? {} : { spawnFails: options.spawnFails }),
+    ...(options.collectFails === undefined ? {} : { collectFails: options.collectFails }),
+    ...(options.livenessSequence === undefined
+      ? {}
+      : { livenessSequence: options.livenessSequence }),
+    ...(options.livenessOf === undefined ? {} : { livenessOf: options.livenessOf }),
+    ...(options.collectAfterPolls === undefined
+      ? {}
+      : { collectAfterPolls: options.collectAfterPolls }),
+    ...(options.harnessKind === undefined ? {} : { harnessKind: options.harnessKind }),
+  });
   const calls = {
     spawn: 0,
     resume: 0,
     merge: 0,
     claims: [] as string[],
     releases: [] as string[],
+    exhaustions: [] as { readonly ref: string; readonly restarts: number }[],
   };
+  const nowIso = options.nowIso ?? (() => "2026-11-08T10:00:00.000Z");
 
   const runtime = createDispatchCommandRuntime({
     store: state.store,
     stateRoot: state.root,
     fenceToken: state.fenceToken,
-    nowIso: () => "2026-11-08T10:00:00.000Z",
+    nowIso,
     newAttemptId: () => {
       attemptSequence += 1;
       return `attempt-${attemptSequence}`;
@@ -176,6 +203,32 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
     },
     phaseLedger: () => ({ completed: 3, total: 9, variant: "full" }),
     ...(options.restartBudget === undefined ? {} : { restartBudget: options.restartBudget }),
+    ...(options.restartCount === undefined
+      ? {}
+      : { restartCount: () => options.restartCount ?? 0 }),
+    ...(options.livenessIntervalMs === undefined
+      ? {}
+      : {
+          livenessIntervalMs: options.livenessIntervalMs,
+          // The fake cadence resolves immediately: the scripted harness decides
+          // when `collect` completes, so no wall clock participates.
+          waitForCadence: () => ({ promise: Promise.resolve(), cancel: () => {} }),
+        }),
+    ensureRestartExhaustion: ({ ref, runId, restarts, recordedAt }) => {
+      calls.exhaustions = [...calls.exhaustions, { ref, restarts }];
+      const ensured = ensureEconomicsExhaustionRecord(state.store, state.fenceToken, {
+        schemaId: ECONOMICS_EXHAUSTION_SCHEMA_ID,
+        workItemRef: ref,
+        runId,
+        reason: "dispatch.restart-budget-exceeded",
+        restarts,
+        historyRef: `economics/${ref}`,
+        terminal: true,
+        options: [...ECONOMICS_EXHAUSTION_OPTIONS],
+        recordedAt,
+      });
+      return ensured.ok;
+    },
     ...(options.gate === undefined
       ? {}
       : {

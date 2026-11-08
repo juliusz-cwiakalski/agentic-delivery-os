@@ -9,11 +9,24 @@ import {
   appendDispatchAttempt,
   readDispatchAttempts,
 } from "../../packages/core/src/app/dispatch-ledger";
-import { deriveDispatchResult } from "../../packages/core/src/domain/dispatch-result";
 import { classifyFalseSuccess } from "../../packages/core/src/domain/dispatch-comparison";
-import { createDispatchState, DISPATCH_NOW } from "../fixtures/dispatch/harness";
+import { deriveDispatchResult } from "../../packages/core/src/domain/dispatch-result";
+import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
+import {
+  COMPLETED_EVIDENCE,
+  createDispatchState,
+  DISPATCH_NOW,
+} from "../fixtures/dispatch/harness";
 import { makeAttemptFor } from "../fixtures/dispatch/ledger";
-import { artifacts, ledger, prNone, readOk, truthInput } from "../fixtures/dispatch/truth";
+import {
+  artifacts,
+  ledger,
+  prMerged,
+  prNone,
+  readFail,
+  readOk,
+  truthInput,
+} from "../fixtures/dispatch/truth";
 
 describe("TC-EVID-003 a false success is recorded, never clean", () => {
   test("an engine success claim contradicted by truth is a false-success incident", () => {
@@ -95,6 +108,65 @@ describe("TC-EVID-003 a false success is recorded, never clean", () => {
         }),
         token,
       ).toBe(false);
+    }
+  });
+});
+
+describe("TC-EVID-004 an unreadable corroboration source is unevaluable, not a contradiction", () => {
+  test("the classifier distinguishes an unreadable source from a contradicted one", () => {
+    expect(
+      classifyFalseSuccess({
+        token: "merged",
+        comparison: {
+          class: "tracker-truth",
+          token: "merged",
+          outcome: "match",
+          urlResolved: true,
+        },
+        corroboration: { pmNotes: "satisfied", tracker: "satisfied", ci: "unsatisfied" },
+        unreadable: ["ci"],
+      }),
+    ).toBe(false);
+    expect(
+      classifyFalseSuccess({
+        token: "merged",
+        comparison: {
+          class: "tracker-truth",
+          token: "merged",
+          outcome: "match",
+          urlResolved: true,
+        },
+        corroboration: { pmNotes: "satisfied", tracker: "satisfied", ci: "unsatisfied" },
+      }),
+    ).toBe(true);
+  });
+
+  test("a merged claim with an unreadable CI read blocks eligibility without resetting the window", async () => {
+    const scenario = createCommandScenario({
+      evidence: COMPLETED_EVIDENCE,
+      reads: readsFrom({
+        artifacts: readOk(artifacts({ branchCommits: 2, pr: prMerged() })),
+        ci: readFail("state", "ci.absent"),
+        trackerToken: "merged",
+        phasesComplete: true,
+      }),
+      gate: {},
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+      expect(run.exit).toBe(0);
+      expect(run.envelope?.data?.result).toBe("merged");
+      const read = readDispatchAttempts(scenario.state.store);
+      expect(read.ok).toBe(true);
+      if (!read.ok) return;
+      const record = read.records[0];
+      // Recorded as uncorroborated — so the gate's corroboration condition is
+      // unmet — but never as a false-success incident, so the window is intact.
+      expect(record?.corroboration.ci).toBe("unsatisfied");
+      expect(record?.falseSuccess).toBe(false);
+      expect(record?.divergenceRef).toBeUndefined();
+    } finally {
+      scenario.dispose();
     }
   });
 });

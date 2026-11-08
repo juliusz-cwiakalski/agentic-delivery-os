@@ -8,41 +8,54 @@
  *
  * The production composer is exercised end to end through `runCli`; only the
  * external seams are injected (a recording GitHub transport, a recording git
- * child runner, a credential port, and the harness spawn runner), so no network,
- * no model, and no checkout mutation happens. A source that genuinely fails
- * keeps its classified identity and the dispatch classifies `state-unverified`.
+ * child runner, a credential port, the harness spawn runner, and the repository
+ * facts), so no network, no model, and no checkout mutation happens. Repository
+ * facts are injected rather than read from the checkout, so the suite is not
+ * environment-dependent on a parseable origin remote.
  */
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { resolveBrandIdentity } from "../../packages/core/src/branding/index";
-import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledger";
-import { declareQueueEntry } from "../../packages/core/src/app/queue";
-import type {
-  CredentialPort,
-  DispatchComparisonRecord,
-  DispatchEnvelopeData,
-  HarnessSpawnRunner,
-  HarnessSpawnRunnerResult,
-} from "../../packages/core/src/contracts/index";
+import { readDispatchIdentityMarkerText } from "../../packages/adapters/src/file/dispatch-identity";
+import type { GitChildRunner, GitChildRunnerResult } from "../../packages/adapters/src/git/index";
+import { type CliStreams, runCli } from "../../packages/cli/src/index";
+import { createProductionComposer } from "../../packages/cli/src/production";
+import { appendDaemonLane } from "../../packages/core/src/app/daemon";
 import {
+  appendDispatchAttempt,
+  appendDispatchDivergence,
+  readDispatchAttempts,
+  readDispatchHandover,
+} from "../../packages/core/src/app/dispatch-ledger";
+import { declareQueueEntry } from "../../packages/core/src/app/queue";
+import { resolveBrandIdentity } from "../../packages/core/src/branding/index";
+import type { StateStorePort } from "../../packages/core/src/contracts/index";
+import {
+  type BrandIdentity,
+  type CredentialPort,
+  DAEMON_LANE_PAYLOAD_SCHEMA,
+  type DispatchComparisonRecord,
+  type DispatchEnvelopeData,
+  type HarnessSpawnRunner,
+  type HarnessSpawnRunnerResult,
+} from "../../packages/core/src/contracts/index";
+import { serializeIdentityMarker } from "../../packages/core/src/domain/dispatch-identity";
+import {
+  appendEconomicsRestartEvent,
   createNodeStateEdge,
   createStateStore,
+  readEconomicsRecords,
   STATE_SCHEMA_VERSION,
 } from "../../packages/core/src/state/index";
-import { createProductionComposer } from "../../packages/cli/src/production";
-import { runCli, type CliStreams } from "../../packages/cli/src/index";
-import { normalizeRepositoryRemote } from "../../packages/core/src/domain/dispatch-identity";
-import {
-  nodeRepositoryIo,
-  parseGitHubRemote,
-  readRepositoryFacts,
-} from "../../packages/adapters/src/repo/index";
-import type { GitChildRunner, GitChildRunnerResult } from "../../packages/adapters/src/git/index";
+import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
+import { makeDivergence, REPOSITORY } from "../fixtures/dispatch/ledger";
 
 const ROOT = process.cwd();
+
+/** The injected checkout remote and the derived identity it normalizes to. */
+const GITHUB_ORIGIN = "https://github.com/owner/repo.git";
 
 describe("TC-MERGE-004 the production composition has no reachable merge port", () => {
   test("the composition type declares no merge member", () => {
@@ -107,10 +120,7 @@ describe("the production composer builds a real harness session port", () => {
         },
         { driver: "jsonl", edge: createNodeStateEdge() },
       );
-      const repositoryFacts = readRepositoryFacts({ cwd: ROOT, io: nodeRepositoryIo() });
-      const repository = normalizeRepositoryRemote(repositoryFacts.originUrl);
-      expect(repository).toBeDefined();
-      if (repository === undefined) return;
+      const repository = "github.com/owner/repo";
       const seeded = declareQueueEntry(store, {
         ref: "GH-301",
         repository,
@@ -119,7 +129,6 @@ describe("the production composer builds a real harness session port", () => {
         fenceToken: "seed-fence",
       });
       expect(seeded.ok).toBe(true);
-
       const invocations: Array<{
         readonly command: string;
         readonly environment: Readonly<Record<string, string>>;
@@ -150,6 +159,7 @@ describe("the production composer builds a real harness session port", () => {
         cwd: ROOT,
         homeDirectory: home,
         workingName: "delivery-os",
+        repositoryFacts: { originUrl: GITHUB_ORIGIN },
         harnessSpawnRunner: runner,
         // A failing credential port keeps the truth read hermetic: the provider
         // read is refused before any request leaves the process.
@@ -300,12 +310,7 @@ const mergedPullRequest = (): unknown => ({
 const successChecks = [{ id: 1, name: "ci", status: "completed", conclusion: "success" }];
 
 /** The provider web address the composed read derives for one request number. */
-const expectedPrUrl = (): string => {
-  const facts = readRepositoryFacts({ cwd: ROOT, io: nodeRepositoryIo() });
-  const parsed = parseGitHubRemote(facts.originUrl);
-  if (!parsed.ok) throw new Error("origin is not a GitHub remote");
-  return `https://github.com/${parsed.owner}/${parsed.name}/pull`;
-};
+const expectedPrUrl = (): string => "https://github.com/owner/repo/pull";
 
 /** Run one production-composed dispatch over the injected seams. */
 const observeTruth = async (scenario: TruthScenario): Promise<TruthObservation> => {
@@ -328,9 +333,8 @@ const observeTruth = async (scenario: TruthScenario): Promise<TruthObservation> 
       },
       { driver: "jsonl", edge: createNodeStateEdge() },
     );
-    const facts = readRepositoryFacts({ cwd: ROOT, io: nodeRepositoryIo() });
-    const repository = normalizeRepositoryRemote(facts.originUrl);
-    if (repository === undefined) throw new Error("repository identity is unresolvable");
+    const facts = { originUrl: GITHUB_ORIGIN };
+    const repository = "github.com/owner/repo";
     const seeded = declareQueueEntry(store, {
       ref: CHANGE_REF,
       repository,
@@ -384,6 +388,7 @@ const observeTruth = async (scenario: TruthScenario): Promise<TruthObservation> 
       cwd: ROOT,
       homeDirectory: home,
       workingName: "delivery-os",
+      repositoryFacts: facts,
       harnessSpawnRunner: completedSessionRunner,
       credentials: credentialPort(scenario.credentialMissing === true),
       githubTransport: transport,
@@ -518,7 +523,10 @@ describe("the production truth read classifies artifact and tracker truth", () =
       outcome: "match",
       urlResolved: false,
     });
-    expect(observed.attempts[0]?.comparison.token).toBe("pr-open-unverified");
+    // The independent tracker baseline is the open request itself; the concrete
+    // address is the engine-side attribute, never a second tracker token.
+    expect(observed.attempts[0]?.comparison.token).toBe("pr-open");
+    expect(observed.attempts[0]?.falseSuccess).toBe(false);
     expect(observed.attempts[0]?.divergenceRef).toBeUndefined();
   });
 
@@ -576,5 +584,405 @@ describe("the production truth read keeps honest failure classified", () => {
     expect(observed.data?.error?.summary).toContain("provider.payload.invalid");
     expect(observed.attempts[0]?.token).toBe("state-unverified");
     expect(observed.requests.length).toBeGreaterThan(0);
+  });
+});
+
+/* ----------------------- production gate and resume proof ------------------ */
+
+type ProductionHarness = {
+  readonly brand: BrandIdentity;
+  readonly home: string;
+  readonly store: StateStorePort;
+  readonly program: ReturnType<ReturnType<typeof createProductionComposer>>;
+  readonly spawns: readonly { readonly command: string; readonly args: readonly string[] }[];
+  readonly dispose: () => void;
+};
+
+/**
+ * Compose the shipped production program over a temp state root with every
+ * external seam injected. The checkout remote is injected, so no real origin is
+ * required (F-12); an existing `home` re-opens the same state root.
+ */
+const createProductionHarness = (input: {
+  readonly label: string;
+  readonly home?: string;
+  readonly originUrl?: string;
+  readonly credentialMissing?: boolean;
+  readonly transport?: { send: (request: { readonly url: string }) => Promise<unknown> };
+  readonly gitRunner?: GitChildRunner;
+}): ProductionHarness => {
+  const brandResult = resolveBrandIdentity({ workingName: "delivery-os" });
+  if (!brandResult.ok) throw new Error("brand resolution failed");
+  const brand = brandResult.value;
+  const base = join(ROOT, "tmp", "tmpdir");
+  mkdirSync(base, { recursive: true });
+  const home = input.home ?? mkdtempSync(join(base, input.label));
+  const store = createStateStore(
+    {
+      level: "local",
+      workspaceId: "default",
+      fenceNamespace: "cli",
+      schemaVersion: STATE_SCHEMA_VERSION,
+      stateDirectory: join(home, brand.stateDirectoryName),
+    },
+    { driver: "jsonl", edge: createNodeStateEdge() },
+  );
+  const spawns: { command: string; args: readonly string[] }[] = [];
+  const runner: HarnessSpawnRunner = async (file, args): Promise<HarnessSpawnRunnerResult> => {
+    spawns.push({ command: file, args });
+    return {
+      stdout: JSON.stringify({
+        session: { id: "ses-existing" },
+        result: { completion: "complete" },
+      }),
+      stderr: "",
+      status: 0,
+      timedOut: false,
+    };
+  };
+  const program = createProductionComposer({
+    environment: {
+      HOME: home,
+      HARNESS_MODEL: "synthetic/model-large",
+      HARNESS_SMALL_MODEL: "synthetic/model-small",
+    },
+    cwd: ROOT,
+    homeDirectory: home,
+    workingName: "delivery-os",
+    ...(input.originUrl === undefined
+      ? { repositoryFacts: {} }
+      : { repositoryFacts: { originUrl: input.originUrl } }),
+    harnessSpawnRunner: runner,
+    credentials:
+      input.credentialMissing === false
+        ? credentialPort(false)
+        : {
+            resolve: () => ({
+              ok: false,
+              code: "config.credential.missing",
+              domainKind: "config",
+              category: "user",
+              retryable: false,
+              consequence: "not_landed",
+              projectionClass: "user-validation",
+            }),
+          },
+    ...(input.transport === undefined ? {} : { githubTransport: input.transport }),
+    ...(input.gitRunner === undefined ? {} : { gitChildRunner: input.gitRunner }),
+  })(brand);
+  return {
+    brand,
+    home,
+    store,
+    program,
+    spawns,
+    dispose: () => rmSync(home, { recursive: true, force: true }),
+  };
+};
+
+const invokeProduction = async (
+  harness: ProductionHarness,
+  argv: readonly string[],
+): Promise<{
+  readonly exit: number;
+  readonly data?: Record<string, unknown>;
+  readonly error?: { readonly code: string; readonly summary?: string };
+}> => {
+  const out: string[] = [];
+  const streams: CliStreams = {
+    stdout: { write: (chunk: string) => out.push(chunk) },
+    stderr: { write: () => undefined },
+  };
+  const exit = await runCli(argv, streams, {
+    brand: harness.brand,
+    clock: { now: () => Date.parse("2026-11-08T10:00:00.000Z") },
+    newRunId: () => "run-production",
+    secrets: [],
+    program: harness.program,
+  });
+  const text = out.join("").trim();
+  const envelope = text.startsWith("{")
+    ? (JSON.parse(text) as {
+        data?: Record<string, unknown>;
+        error?: { code: string; summary?: string };
+      })
+    : {};
+  return {
+    exit,
+    ...(envelope.data === undefined ? {} : { data: envelope.data }),
+    ...(envelope.error === undefined ? {} : { error: envelope.error }),
+  };
+};
+
+describe("the production composer exposes the dual-run gate and handover", () => {
+  test("summary, handover, resolve, and reversal run through the shipped CLI", async () => {
+    const harness = createProductionHarness({ label: "gh239-gate-", originUrl: GITHUB_ORIGIN });
+    try {
+      for (const attempt of buildAttempts(eligibleSpecs())) {
+        const appended = appendDispatchAttempt(harness.store, "seed-fence", attempt);
+        expect(appended.ok).toBe(true);
+      }
+
+      const summary = await invokeProduction(harness, [
+        "dispatch",
+        "dual-run",
+        "summary",
+        "--repo",
+        REPOSITORY,
+        "--json",
+      ]);
+      expect(summary.error).toBeUndefined();
+      expect(summary.exit).toBe(0);
+      expect(summary.data?.repository).toBe(REPOSITORY);
+      expect(summary.data?.verdict).toBe("eligible");
+
+      const handover = await invokeProduction(harness, [
+        "dispatch",
+        "handover",
+        REPOSITORY,
+        "--json",
+      ]);
+      expect(handover.error).toBeUndefined();
+      expect(handover.exit).toBe(0);
+      expect(handover.data).toMatchObject({
+        repository: REPOSITORY,
+        operation: "authoritative",
+        recorded: true,
+        noop: false,
+      });
+      const records = readDispatchHandover(harness.store);
+      expect(records.ok && records.records).toHaveLength(1);
+      expect(records.ok && records.records[0]?.principal).toBe("local-same-user");
+
+      const replay = await invokeProduction(harness, [
+        "dispatch",
+        "handover",
+        REPOSITORY,
+        "--json",
+      ]);
+      expect(replay.exit).toBe(0);
+      expect(replay.data).toMatchObject({ recorded: false, noop: true });
+
+      const divergence = makeDivergence();
+      const opened = appendDispatchDivergence(harness.store, "seed-fence", divergence);
+      expect(opened.ok).toBe(true);
+      const resolved = await invokeProduction(harness, [
+        "dispatch",
+        "dual-run",
+        "resolve",
+        divergence.divergenceId,
+        "--note",
+        "tracker truth re-read",
+        "--json",
+      ]);
+      expect(resolved.error).toBeUndefined();
+      expect(resolved.exit).toBe(0);
+      expect(resolved.data).toMatchObject({
+        divergenceId: divergence.divergenceId,
+        state: "resolved",
+      });
+
+      const revert = await invokeProduction(harness, [
+        "dispatch",
+        "handover",
+        REPOSITORY,
+        "--revert",
+        "--json",
+      ]);
+      expect(revert.exit).toBe(0);
+      expect(revert.data).toMatchObject({ operation: "dual-run", recorded: true, noop: false });
+    } finally {
+      harness.dispose();
+    }
+  });
+});
+
+describe("the production composer resumes the existing lane", () => {
+  test("--resume-prompt resumes the delivered session instead of spawning fresh", async () => {
+    const harness = createProductionHarness({ label: "gh239-resume-", originUrl: GITHUB_ORIGIN });
+    try {
+      const queued = declareQueueEntry(harness.store, {
+        ref: CHANGE_REF,
+        repository: REPOSITORY,
+        repositoryRoot: ROOT,
+        recordedAt: new Date().toISOString(),
+        fenceToken: "seed-fence",
+      });
+      expect(queued.ok).toBe(true);
+      const seeded = appendDaemonLane(harness.store, "seed-fence", {
+        schema: DAEMON_LANE_PAYLOAD_SCHEMA,
+        ref: CHANGE_REF,
+        state: "delivering",
+        harnessKind: "opencode",
+        sessionId: "ses-existing",
+        ledgerPosition: { lastCompletedPhase: "specification" },
+        spawnOrdinal: 1,
+        recordedAt: "2026-11-08T09:00:00.000Z",
+      });
+      expect(seeded.ok).toBe(true);
+
+      const run = await invokeProduction(harness, [
+        "dispatch",
+        CHANGE_REF,
+        "--resume-prompt",
+        "continue",
+        "--json",
+      ]);
+      // The resume is a session resume: the delivered port passes `--session`
+      // with the persisted id; a fresh spawn would omit it.
+      expect(harness.spawns).toHaveLength(1);
+      expect(harness.spawns[0]?.command.startsWith("opencode")).toBe(true);
+      expect(harness.spawns[0]?.args).toContain("--session");
+      expect(harness.spawns[0]?.args).toContain("ses-existing");
+
+      const attempts = readDispatchAttempts(harness.store);
+      expect(attempts.ok).toBe(true);
+      if (!attempts.ok) return;
+      expect(attempts.records).toHaveLength(1);
+      expect(attempts.records[0]?.resumeMode).toBe("attach-continue");
+      expect(run.exit).toBe(2);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("a restart-budget refusal appends the terminal exhaustion record", async () => {
+    const harness = createProductionHarness({ label: "gh239-budget-", originUrl: GITHUB_ORIGIN });
+    try {
+      const queued = declareQueueEntry(harness.store, {
+        ref: CHANGE_REF,
+        repository: REPOSITORY,
+        repositoryRoot: ROOT,
+        recordedAt: new Date().toISOString(),
+        fenceToken: "seed-fence",
+      });
+      expect(queued.ok).toBe(true);
+      const seeded = appendDaemonLane(harness.store, "seed-fence", {
+        schema: DAEMON_LANE_PAYLOAD_SCHEMA,
+        ref: CHANGE_REF,
+        state: "delivering",
+        harnessKind: "opencode",
+        sessionId: "ses-existing",
+        spawnOrdinal: 4,
+        recordedAt: "2026-11-08T09:00:00.000Z",
+      });
+      expect(seeded.ok).toBe(true);
+      for (const ordinal of [1, 2, 3]) {
+        const appended = appendEconomicsRestartEvent(harness.store, "seed-fence", {
+          schemaId: "delivery.economics.restart.v1",
+          workItemRef: CHANGE_REF,
+          runId: "ses-existing",
+          sessionId: "ses-existing",
+          ordinal,
+          reason: "session-interrupted",
+          recordedAt: "2026-11-08T09:00:00.000Z",
+        });
+        expect(appended.ok).toBe(true);
+      }
+
+      const run = await invokeProduction(harness, [
+        "dispatch",
+        CHANGE_REF,
+        "--resume-prompt",
+        "retry",
+        "--json",
+      ]);
+      expect(run.exit).toBe(1);
+      expect(run.data?.result).toBe("max-restarts");
+      expect((run.data?.error as { code?: string } | undefined)?.code).toBe(
+        "dispatch.restart-budget-exceeded",
+      );
+      // No spawn and no resume occurred; the refusal is decided before one.
+      expect(harness.spawns).toHaveLength(0);
+      const economics = readEconomicsRecords(harness.store, CHANGE_REF);
+      expect(economics.ok && economics.terminal !== undefined).toBe(true);
+      const attempts = readDispatchAttempts(harness.store);
+      expect(attempts.ok && attempts.records).toHaveLength(1);
+    } finally {
+      harness.dispose();
+    }
+  });
+});
+
+describe("the production composer keeps the repository identity rename-invariant", () => {
+  test("a changed remote and scheduler key reuse the persisted binding", async () => {
+    const first = createProductionHarness({ label: "gh239-identity-", originUrl: GITHUB_ORIGIN });
+    try {
+      const seeded = declareQueueEntry(first.store, {
+        ref: CHANGE_REF,
+        repository: "github.com/owner/alpha",
+        repositoryRoot: ROOT,
+        recordedAt: new Date().toISOString(),
+        fenceToken: "seed-fence",
+      });
+      expect(seeded.ok).toBe(true);
+      const run = await invokeProduction(first, ["dispatch", CHANGE_REF, "--json"]);
+      expect(run.exit).toBe(2);
+      const attempts = readDispatchAttempts(first.store);
+      expect(attempts.ok && attempts.records[0]?.repository).toBe("github.com/owner/alpha");
+      // First use persisted the binding.
+      expect(readDispatchIdentityMarkerText(first.store)).toBe(
+        serializeIdentityMarker("github.com/owner/alpha"),
+      );
+
+      // Same state root, renamed checkout remote, changed scheduler key. The
+      // persisted marker governs, so history is never re-keyed (AC-F6-6).
+      const renamed = createProductionHarness({
+        label: "gh239-identity-renamed-",
+        home: first.home,
+        originUrl: "https://github.com/owner/renamed.git",
+      });
+      try {
+        const requeued = declareQueueEntry(renamed.store, {
+          ref: CHANGE_REF,
+          repository: "github.com/owner/renamed",
+          repositoryRoot: ROOT,
+          recordedAt: new Date(Date.now() + 1000).toISOString(),
+          fenceToken: "seed-fence-2",
+        });
+        expect(requeued.ok).toBe(true);
+
+        const summary = await invokeProduction(renamed, [
+          "dispatch",
+          "dual-run",
+          "summary",
+          "--repo",
+          "github.com/owner/renamed",
+          "--json",
+        ]);
+        expect(summary.error).toBeUndefined();
+        expect(summary.exit).toBe(0);
+        expect(summary.data?.repository).toBe("github.com/owner/alpha");
+
+        const rerun = await invokeProduction(renamed, ["dispatch", CHANGE_REF, "--json"]);
+        expect(rerun.exit).toBe(2);
+        const recorded = readDispatchAttempts(renamed.store);
+        expect(recorded.ok && recorded.records[1]?.repository).toBe("github.com/owner/alpha");
+      } finally {
+        // The renamed harness shares the first home; disposing it also clears
+        // that shared state root, and the outer dispose is idempotent.
+        renamed.dispose();
+      }
+    } finally {
+      first.dispose();
+    }
+  });
+
+  test("an unresolvable identity refuses cleanly at exit 1", async () => {
+    const harness = createProductionHarness({ label: "gh239-unresolvable-" });
+    try {
+      const summary = await invokeProduction(harness, [
+        "dispatch",
+        "dual-run",
+        "summary",
+        "--repo",
+        "not-a-repository",
+        "--json",
+      ]);
+      expect(summary.exit).toBe(1);
+      expect(summary.error?.code).toBe("input.value.rejected");
+    } finally {
+      harness.dispose();
+    }
   });
 });

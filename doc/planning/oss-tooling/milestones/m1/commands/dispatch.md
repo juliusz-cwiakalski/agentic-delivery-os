@@ -28,6 +28,15 @@ ledger, and CI truth rather than from an exit code. An exit-0 session with no
 branch commit, no pull request, and no ledger progress is `failed`; unreadable
 truth is `state-unverified`.
 
+The watch polls the harness liveness source at the `lane.liveness-interval`
+cadence while collection is pending and carries the previous observation, so a
+stall needs two consecutive sourced evaluations with no advance. A corroborated
+stall at or above `lane.restart-budget` is the restart-budget refusal
+(`max-restarts`) with the terminal exhaustion record; below the bound the stall
+is recorded as liveness evidence and left to lane supervision. The delivered
+session port exposes no kill operation, so the one-shot command never starts a
+second session for the same attempt: a stall is never silently leaked.
+
 Dual-run keeps the bash stack authoritative. A repository moves to
 engine-authoritative only when the evidence-based handover bar is met. The bar is
 one conjunction of four separated conditions over the evaluated evidence window:

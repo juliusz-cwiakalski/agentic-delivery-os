@@ -14,8 +14,10 @@ import {
 } from "@delivery-os/adapters/credentials";
 import {
   acquireFileConfig,
+  ensureDispatchIdentityMarkerText,
   nodeFileSystemFacts,
   nodePmNotesFileSystemFacts,
+  readDispatchIdentityMarkerText,
   readPmNotesText,
   relativeChangeFolder,
   runtimePlatform,
@@ -48,10 +50,17 @@ import {
   type DispatchTruthReads,
   EvaluateVerifyChange,
   type HarnessSettings,
+  type LaneSettings,
+  normalizeDispatchRepositoryKey,
   normalizeRepositoryRemote,
+  readDaemonLanes,
+  readQueueEntries,
   releaseQueueLease,
   resolveConfig,
+  resolveDispatchIdentity,
   resolveHarnessSettings,
+  resolveLaneSettings,
+  serializeIdentityMarker,
   type VerifyDocumentClassification,
 } from "@delivery-os/core";
 import {
@@ -63,12 +72,16 @@ import {
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
   type DispatchLedgerVariant,
   type DispatchPhaseLedger,
+  ECONOMICS_EXHAUSTION_OPTIONS,
+  ECONOMICS_EXHAUSTION_SCHEMA_ID,
   type ExternalSystemInstance,
-  type HarnessEnvironmentEntry,
+  HARNESS_KINDS,
   type HarnessEnvironmentBuilder,
+  type HarnessEnvironmentEntry,
   type HarnessKind,
   type HarnessSessionPort,
   type HarnessSpawnRunner,
+  LOCAL_CALLER_PRINCIPAL,
   type PipelineRun,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
@@ -77,17 +90,18 @@ import {
 import {
   createNodeStateEdge,
   createStateStore,
+  ensureEconomicsExhaustionRecord,
   foldPhaseState,
   readChangeTransitionsTolerant,
+  readEconomicsRecords,
   STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
 import {
   type ConfigProgramOptions,
   createCloseoutComposition,
-  type DispatchCommandRuntime,
-  type DispatchComposition,
   createConfigProgram,
   createDispatchCommandRuntime,
+  createDispatchGateRuntime,
   createMergeCommandRuntime,
   createPhaseCommandRuntime,
   createPhaseCommitExtension,
@@ -97,6 +111,9 @@ import {
   createVerifyCommandRuntime,
   createVerifyDeployCommandRuntime,
   createVerifyGatesCommandRuntime,
+  type DispatchCommandRuntime,
+  type DispatchComposition,
+  type DispatchLaneFacts,
 } from "./edge.js";
 import type { EntrypointComposer } from "./entrypoint.js";
 
@@ -104,10 +121,9 @@ const PROVIDER_FAILURE = "config.credential.missing";
 
 /**
  * The tracker-family tokens the truth read derives, resolved from the one
- * taxonomy: `merged`, `blocked`, `pr-open`, `pr-open-unverified`.
+ * taxonomy: `merged`, `blocked`, `pr-open`.
  */
-const [PR_MERGED_TOKEN, PR_BLOCKED_TOKEN, PR_OPEN_TOKEN, PR_OPEN_UNVERIFIED_TOKEN] =
-  DELIVERY_RESULT_TOKENS;
+const [PR_MERGED_TOKEN, PR_BLOCKED_TOKEN, PR_OPEN_TOKEN] = DELIVERY_RESULT_TOKENS;
 
 /** The bounded provider page the truth read addresses. */
 const TRUTH_PROVIDER_LIMIT = STATUS_SOURCE_ITEM_LIMIT;
@@ -151,12 +167,26 @@ const repositoryTargetOf = (originUrl: string | undefined): RepositoryTarget | u
   return parsed.ok ? { owner: parsed.owner, name: parsed.name } : undefined;
 };
 
+/** The production caller principal the handover/resolution records carry. */
+const DISPATCH_PRINCIPAL = LOCAL_CALLER_PRINCIPAL.kind;
+
+/** The declared harness kinds, used to validate a persisted lane fact. */
+const harnessKindOf = (value: string | undefined): HarnessKind | undefined =>
+  value !== undefined && (HARNESS_KINDS as readonly string[]).includes(value)
+    ? (value as HarnessKind)
+    : undefined;
+
 /** Construction facts the bin passes to the production composer. */
 export type ProductionCompositionFacts = {
   readonly environment: Readonly<Record<string, string | undefined>>;
   readonly cwd: string;
   readonly homeDirectory: string;
   readonly workingName: string;
+  /**
+   * The injected repository facts. Production reads the checkout's origin;
+   * tests inject a fixed remote so composition is proven without a real origin.
+   */
+  readonly repositoryFacts?: { readonly originUrl?: string };
   /**
    * The injected harness spawn runner. Production uses the host runner; tests
    * inject a recording runner so composition is proven without a harness process.
@@ -218,9 +248,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       cwd,
       ...(facts.gitChildRunner === undefined ? {} : { childRunner: facts.gitChildRunner }),
     });
-    const repositoryFacts = readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
+    const repositoryFacts =
+      facts.repositoryFacts ?? readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
     const target = repositoryTargetOf(repositoryFacts.originUrl);
-    const dispatchRepository = normalizeRepositoryRemote(repositoryFacts.originUrl);
     const harnessSpawnRunner = facts.harnessSpawnRunner ?? createHostSpawnRunner();
     const clientTarget = target ?? { owner: "unresolved", name: "unresolved" };
     const client = createGitHubClient({
@@ -427,6 +457,97 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     };
 
     /**
+     * The persisted first-use repository identity, resolved through the delivered
+     * policy (persisted marker, scheduler key, normalized remote — in that order
+     * of authority) and bound on first use so a later rename or remote change
+     * never re-keys history (AC-F6-2, AC-F6-6).
+     */
+    const resolveProductionRepository = (schedulerKey: string | undefined): string | undefined => {
+      const persistedMarker = readDispatchIdentityMarkerText(store);
+      const resolution = resolveDispatchIdentity({
+        ...(schedulerKey === undefined ? {} : { schedulerKey }),
+        ...(repositoryFacts.originUrl === undefined
+          ? {}
+          : { remoteUrl: repositoryFacts.originUrl }),
+        ...(persistedMarker === undefined ? {} : { persistedMarker }),
+      });
+      if (!resolution.ok) return undefined;
+      // Persist the binding; an unpersistable marker never changes the resolved
+      // identity, so the caller still records under the same key.
+      ensureDispatchIdentityMarkerText(store, serializeIdentityMarker(resolution.repository));
+      return resolution.repository;
+    };
+
+    /** The scheduling engine's declared key for a ref, when one is queued. */
+    const schedulerKeyForRef = (ref: string): string | undefined => {
+      const entries = readQueueEntries(store);
+      return entries.ok ? entries.latest.find((entry) => entry.ref === ref)?.repository : undefined;
+    };
+
+    /**
+     * Normalize a command argument into a scheduler key. A full
+     * `host/owner/name`, a VCS remote, or a bare `owner/name` (the remote's host
+     * supplies the missing component) all resolve; anything else does not.
+     */
+    const schedulerKeyOf = (repo: string): string | undefined => {
+      const direct = normalizeDispatchRepositoryKey(repo);
+      if (direct !== undefined) return direct;
+      const remote = normalizeRepositoryRemote(repo);
+      if (remote !== undefined) return remote;
+      const parts = repo
+        .trim()
+        .replace(/\.git$/iu, "")
+        .split("/");
+      if (parts.length !== 2) return undefined;
+      const host =
+        normalizeRepositoryRemote(repositoryFacts.originUrl)?.split("/")[0] ?? "github.com";
+      return normalizeDispatchRepositoryKey(`${host}/${parts[0]}/${parts[1]}`);
+    };
+
+    /** The completed phase identifiers of a change, from the folded registry. */
+    const completedPhaseIds = (ref: string): readonly string[] => {
+      const transitions = readChangeTransitionsTolerant(store, ref);
+      if (!transitions.ok) return [];
+      return Object.entries(foldPhaseState(ref, transitions.value.transitions).phases)
+        .filter(([, state]) => state.completed !== null)
+        .map(([phaseId]) => phaseId);
+    };
+
+    /**
+     * The delivered lane facts a resume admits against: the latest resumable
+     * daemon lane record's session, the folded phase ledger position, the
+     * adapter's resume-injection capability, and the recorded restart count.
+     */
+    const laneFactsFor = (ref: string, defaultKind: HarnessKind): DispatchLaneFacts | undefined => {
+      const lanes = readDaemonLanes(store);
+      if (!lanes.ok) return undefined;
+      const latest = [...lanes.records]
+        .reverse()
+        .find(
+          (lane) =>
+            lane.ref === ref &&
+            lane.sessionId !== undefined &&
+            (lane.state === "delivering" ||
+              lane.state === "detached" ||
+              lane.state === "preempted"),
+        );
+      if (latest?.sessionId === undefined) return undefined;
+      const kind = harnessKindOf(latest.harnessKind) ?? defaultKind;
+      const restarts = readEconomicsRecords(store, ref);
+      return {
+        handle: {
+          harnessKind: kind,
+          sessionId: latest.sessionId,
+          treeRoot: cwd,
+          workItemRef: ref,
+        },
+        completedPhases: completedPhaseIds(ref),
+        adapterSupportsResumeInjection: kind === "opencode",
+        restartCount: restarts.ok ? restarts.restarts.length : Math.max(0, latest.spawnOrdinal - 1),
+      };
+    };
+
+    /**
      * The provider web base, derived from the declared API base: the two
      * provider addressings GitHub publishes differ only by the API prefix.
      */
@@ -628,16 +749,19 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       }).outcome;
     };
 
-    /** The independently derived tracker-family token for the same facts. */
+    /**
+     * The independently derived tracker-family token for the same facts. An open
+     * request is the tracker truth `pr-open` regardless of URL resolution; the
+     * concrete address is the engine-side `urlResolved` attribute, so a
+     * `pr-open-unverified` claim compares against an independent baseline.
+     */
     const trackerTokenOf = (
       tracker: DispatchTrackerFacts,
       pr: DispatchPrFact,
     ): DeliveryResultToken | null => {
       if (tracker.blocking || tracker.state === "delivery-blocked") return PR_BLOCKED_TOKEN;
       if (pr.state === "already-merged") return PR_MERGED_TOKEN;
-      if (pr.state === "open") {
-        return pr.url === null || pr.url.length === 0 ? PR_OPEN_UNVERIFIED_TOKEN : PR_OPEN_TOKEN;
-      }
+      if (pr.state === "open") return PR_OPEN_TOKEN;
       return null;
     };
 
@@ -699,8 +823,31 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
+    /**
+     * The cancellable cadence timer: the composition owns the real timer, so a
+     * finished session cancels the pending wait instead of holding the process.
+     */
+    const waitForCadence = (
+      cadenceMs: number,
+    ): { readonly promise: Promise<void>; readonly cancel: () => void } => {
+      let cancel = (): void => {};
+      const promise = new Promise<void>((resolve) => {
+        const timer = setTimeout(() => {
+          resolve();
+        }, cadenceMs);
+        const unref = (timer as { readonly unref?: () => void }).unref;
+        if (typeof unref === "function") unref.call(timer);
+        cancel = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+      });
+      return { promise, cancel };
+    };
+
     const dispatchComposition = (
       settings: HarnessSettings,
+      lane: LaneSettings,
       repository: string,
     ): DispatchComposition => ({
       store,
@@ -745,11 +892,40 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         return released.ok;
       },
       phaseLedger: phaseSummary,
+      // The lane policy is data: both the restart bound and the liveness cadence
+      // come from the typed `lane` configuration branch.
+      restartBudget: lane.restartBudget,
+      restartCount: (ref) => {
+        const restarts = readEconomicsRecords(store, ref);
+        return restarts.ok ? restarts.restarts.length : 0;
+      },
+      livenessIntervalMs: lane.livenessIntervalMs,
+      waitForCadence,
+      existingLane: (ref) => laneFactsFor(ref, settings.kind),
+      ensureRestartExhaustion: ({ ref, runId, restarts, recordedAt }) => {
+        const ensured = ensureEconomicsExhaustionRecord(store, newFenceToken(), {
+          schemaId: ECONOMICS_EXHAUSTION_SCHEMA_ID,
+          workItemRef: ref,
+          runId,
+          reason: "dispatch.restart-budget-exceeded",
+          restarts,
+          historyRef: `economics/${ref}`,
+          terminal: true,
+          options: [...ECONOMICS_EXHAUSTION_OPTIONS],
+          recordedAt,
+        });
+        return ensured.ok;
+      },
+      gate: {
+        scope: "production",
+        principal: DISPATCH_PRINCIPAL,
+        resolveRepository: (repo) => resolveProductionRepository(schedulerKeyOf(repo)),
+      },
     });
 
-    /** Resolve the typed harness configuration branch through the delivered resolver. */
+    /** Resolve the typed harness and lane configuration branches. */
     const resolveProductionHarnessSettings = ():
-      | { readonly ok: true; readonly settings: HarnessSettings }
+      | { readonly ok: true; readonly settings: HarnessSettings; readonly lane: LaneSettings }
       | { readonly ok: false; readonly code: string } => {
       const gitRoot = findGitRoot(cwd, nodeRepositoryIo());
       const acquired = acquireFileConfig({
@@ -767,16 +943,29 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       const resolved = resolveConfig({ sources: acquired.sources });
       if (!resolved.ok) return { ok: false, code: resolved.error.code };
       const settings = resolveHarnessSettings(resolved.value.values, resolved.value.origins);
-      return settings.ok
-        ? { ok: true, settings: settings.value }
-        : { ok: false, code: settings.error.code };
+      if (!settings.ok) return { ok: false, code: settings.error.code };
+      const lane = resolveLaneSettings(resolved.value.values, resolved.value.origins);
+      return lane.ok
+        ? { ok: true, settings: settings.value, lane: lane.value }
+        : { ok: false, code: lane.error.code };
     };
 
-    // The dispatch run surface resolves the typed harness settings per
-    // invocation, composes both delivered session ports over the host runner,
-    // and declares the production evidence class. A configured default path
-    // spawns; an invalid configuration is its delivered classified error.
+    // The dispatch run surface resolves the typed configuration per invocation,
+    // composes both delivered session ports over the host runner, and declares the
+    // production evidence class. The evidence-gate surfaces need no harness
+    // settings, so they are composed once over the same store and resolver.
     const dispatch: DispatchCommandRuntime = {
+      ...createDispatchGateRuntime({
+        store,
+        stateRoot: stateDirectory,
+        fenceToken: newFenceToken(),
+        nowIso,
+        gate: {
+          scope: "production",
+          principal: DISPATCH_PRINCIPAL,
+          resolveRepository: (repo) => resolveProductionRepository(schedulerKeyOf(repo)),
+        },
+      }),
       run: {
         run: async (input) => {
           const resolution = resolveProductionHarnessSettings();
@@ -790,7 +979,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               },
             };
           }
-          if (dispatchRepository === undefined) {
+          const repository = resolveProductionRepository(schedulerKeyForRef(input.ref));
+          if (repository === undefined) {
             return {
               ok: false,
               error: {
@@ -801,7 +991,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             };
           }
           return createDispatchCommandRuntime(
-            dispatchComposition(resolution.settings, dispatchRepository),
+            dispatchComposition(resolution.settings, resolution.lane, repository),
           ).run.run(input);
         },
       },

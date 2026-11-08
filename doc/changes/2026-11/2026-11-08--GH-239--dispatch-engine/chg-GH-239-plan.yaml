@@ -12,8 +12,9 @@
 # AC-NFR9-1) and 82/82 test-plan TCs (TC-DISP-001 through TC-REG-001) are mapped
 # to exactly one owning phase each, where the owning phase is the TC's earliest
 # executable phase in test-plan Section 7.5. Owning phase per TC:
-#   phase 1  (2 ACs, 5 TCs): AC-F12-2, AC-NFR1-1; TC-DISP-008, TC-ERR-003,
-#            TC-ERR-005, TC-TOKEN-001, TC-TOKEN-002
+#   phase 1  (2 ACs, 6 TCs): AC-F12-2, AC-NFR1-1; TC-DISP-008, TC-ERR-003,
+#            TC-ERR-005, TC-TOKEN-001, TC-TOKEN-002, TC-HELP-003 (harness-review
+#            deferral slice)
 #   phase 2  (5 ACs, 12 TCs): AC-F1-2, AC-F2-1..AC-F2-4; TC-DISP-003/004/005/
 #            009/011/012, TC-TRUTH-001..TC-TRUTH-006
 #   phase 3  (6 ACs, 8 TCs): AC-F4-1..AC-F4-6; TC-EVID-001, TC-EVID-003..007,
@@ -40,7 +41,8 @@
 # it never transfers TC ownership. This is the verifiable statement of "every
 # phase independently green":
 #   phase 1  executable: TC-DISP-008 (structure token home), TC-ERR-003,
-#            TC-ERR-005, TC-TOKEN-001, TC-TOKEN-002. confirmations: none.
+#            TC-ERR-005, TC-TOKEN-001, TC-TOKEN-002, and the TC-HELP-003
+#            harness-review-deferrals slice. confirmations: none.
 #   phase 2  executable: TC-DISP-003/004/005 (pure liveness), TC-DISP-009 (pure
 #            projection), TC-DISP-011 (classification slice), TC-DISP-012 (pure
 #            derivation), TC-TRUTH-001..TC-TRUTH-006 (pure derivation and
@@ -60,7 +62,8 @@
 #            TC-ERR-001/002/004. confirmations: TC-DISP-009 (process exit),
 #            TC-DISP-011 (command refusal and record), TC-TRUTH-001..004
 #            (command path), TC-EVID-001 (command record), TC-EVID-006
-#            (production default class).
+#            (production default class), TC-HELP-003 (pre-inversion entrypoint
+#            run), TC-DISP-005 (command watch slice).
 #   phase 5  executable: TC-RESUME-001..004. confirmations: none.
 #   phase 6  executable: TC-GATE-001..011, TC-EVID-002, TC-HAND-001/002/003/
 #            005/006. confirmations: TC-TRUTH-003 (summary/gate), TC-TRUTH-005
@@ -116,7 +119,19 @@
 #   repository scope, phase 10 controlled declaration), `tests/behaviour/dispatch-identity.test.ts` (phase 3 resolution
 #   order and marker reuse, phase 6 unresolvable-identity refusal), and
 #   `tests/types/dispatch-contract.type-test.ts` (phase 1 record types, phase 3
-#   evidence-class and comparison unions).
+#   evidence-class and comparison unions). `tests/structure/dispatch-composition.test.ts`
+#   is phase-4-owned and phases 5 and 6 extend it additively with the
+#   production-composition resume and summary/handover/resolve proofs, plus the
+#   rename-invariant identity proof; the phase-10 suites
+#   `tests/behaviour/dispatch-idempotency.test.ts` (advancing-clock handover
+#   replay) and `tests/behaviour/dispatch-bounds.test.ts` (declared truncation
+#   above 5,000 records) are extended additively in phase 10. Bookkeeping-only
+#   files released with phase 10 (`tests/structure/cli-edge-seam.test.ts`,
+#   `tests/structure/harness-neutrality.test.ts`,
+#   `tests/structure/provider-surface.test.ts` legacy-hook hash, and
+#   `tests/structure/verify-imports.test.ts`) record the new seams, the
+#   delegation exemption, and the rewired provider surface; they assert no
+#   dispatch behaviour of their own.
 # - `tests/structure/harness-review-deferrals.test.ts` is phase-1-owned: phase 1
 #   delivers the phase-1 TC-HELP-003 harness-review-deferrals record slice (the
 #   F-9 production-consumer outcome and its inverted assertion land with the
@@ -333,6 +348,7 @@ phases:
         - tests/behaviour/dispatch-harness-lease.test.ts
         - tests/behaviour/dispatch-envelope.test.ts
         - tests/behaviour/dispatch-error-envelope.test.ts
+        - tests/behaviour/dispatch-watch.test.ts
         - tests/behaviour/dispatch-evidence-class.test.ts
         - tests/behaviour/dispatch-merge-absence.test.ts
         - tests/golden/dispatch-text.test.ts
@@ -595,6 +611,10 @@ phases:
         - tests/behaviour/dispatch-idempotency.test.ts
         - tests/behaviour/dispatch-privacy.test.ts
         - tests/checks/fixture-privacy.test.ts
+        - tests/structure/cli-edge-seam.test.ts
+        - tests/structure/harness-neutrality.test.ts
+        - tests/structure/provider-surface.test.ts
+        - tests/structure/verify-imports.test.ts
         - .changeset/gh-239-dispatch-engine-minor.md
       folders:
         - tests/fixtures/dispatch/mutants
@@ -615,6 +635,7 @@ phases:
       - "bun test tests/behaviour/dispatch-bounds.test.ts"
       - "bun test tests/behaviour/dispatch-bounds.test.ts -t '@perf'"
       - "bun test tests/behaviour/dispatch-determinism.test.ts tests/behaviour/dispatch-idempotency.test.ts"
+      - "bun test tests/behaviour/dispatch-gate-evidence.test.ts tests/behaviour/dispatch-evidence-class.test.ts"
       - "bun test tests/behaviour/dispatch-privacy.test.ts tests/checks/fixture-privacy.test.ts"
       - "bun test tests/checks/exit-code-literals.test.ts"
       - "bun test tests/structure/dispatch-merge-boundary.test.ts tests/boundaries"

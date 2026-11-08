@@ -24,9 +24,9 @@ import {
   parseConfigYaml,
   type RuntimePlatform,
   readCiWorkflowJobNames,
+  readDispatchAuthority,
   readLocalPmContext,
   readMemoryFacts,
-  readDispatchAuthority,
   readPlanArtifact,
   readPmNotesText,
   runtimePlatform,
@@ -73,6 +73,7 @@ import {
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
   addQueueDependency,
+  admitDispatchRestart,
   appendCommandReceipt,
   appendOutboxEffect,
   beginCommitEffect,
@@ -96,14 +97,21 @@ import {
   computeSpendReport,
   computeStagingPlan,
   createSourcedWatchdogSignalSource,
+  type DispatchAdmission,
+  type DispatchLeaseClaim,
+  type DispatchPorts,
+  type DispatchRepositoryScope,
+  type DispatchTruthReads,
   declareQueueEntry,
   defaultParkRecheckMs,
   deriveCapsuleEventKey,
   evaluateClaimPreconditions,
   evaluateDiffSweep,
+  evaluateDispatchResumeEconomics,
   evaluateWorktreeSafety,
   foldLanes,
   type HarnessSettings,
+  handoverDispatchEvidence,
   isHeldByWeight,
   isLiveDbSession,
   type MergeTransactionPorts,
@@ -113,6 +121,7 @@ import {
   parkConditionForCause,
   parseCapsuleEvents,
   payloadFieldViolations,
+  planDispatchResume,
   prioritizeQueueEntry,
   type QueueCiFact,
   type QueueCloseFact,
@@ -139,29 +148,20 @@ import {
   reportRetro,
   resolveCloseoutBaseRef,
   resolveConfig,
+  resolveDispatchDivergenceEvidence,
   resolveMergeGateSet,
   resolveQueueSettings,
   resolveQueueWeight,
   resolveStateDirectoryScope,
-  runCloseout,
-  runDispatch,
-  admitDispatchRestart,
-  evaluateDispatchResumeEconomics,
-  planDispatchResume,
-  handoverDispatchEvidence,
   revertDispatchHandoverEvidence,
-  summarizeDispatchEvidence,
-  resolveDispatchDivergenceEvidence,
-  type DispatchAdmission,
-  type DispatchRepositoryScope,
-  type DispatchLeaseClaim,
-  type DispatchPorts,
-  type DispatchTruthReads,
+  runCloseout,
   runCommitAct,
+  runDispatch,
   selectPruneCandidates,
   serializeCapsuleEvent,
   sha256Hex,
   spendDigestSection,
+  summarizeDispatchEvidence,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
   type VerifyGatesOpenPrPage,
@@ -216,12 +216,7 @@ import {
   type DispatchEvidenceClass,
   type DispatchHandoverState,
   type DispatchPhaseLedger,
-  HARNESS_KINDS,
-  type HarnessExecutionEnvironmentDescriptor,
-  type HarnessKind,
-  type HarnessSessionHandle,
   type DispatchResumeMode,
-  type HarnessSessionPort,
   type DoctorCheckoutFacts,
   type DoctorCommitResolution,
   type DoctorCredentialPresence,
@@ -230,8 +225,13 @@ import {
   type DoctorStateStoresRead,
   type DoctorWiringRead,
   type ExternalSystemInstance,
+  HARNESS_KINDS,
   HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
+  type HarnessExecutionEnvironmentDescriptor,
+  type HarnessKind,
   type HarnessLivenessFacts,
+  type HarnessSessionHandle,
+  type HarnessSessionPort,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
   PHASE_STATE_DOCUMENT_PREFIX,
@@ -336,6 +336,10 @@ import {
 } from "./commands/config.js";
 import { createDaemonCommandDefinition, type DaemonCommandRuntime } from "./commands/daemon.js";
 import { createDbCommandDefinition, type DbCommandRuntime } from "./commands/db.js";
+import {
+  createDispatchCommandDefinition,
+  type DispatchCommandRuntime,
+} from "./commands/dispatch.js";
 import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
 import { createLanesCommandDefinition } from "./commands/lanes.js";
 import {
@@ -370,12 +374,9 @@ import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
-import {
-  createDispatchCommandDefinition,
-  type DispatchCommandRuntime,
-} from "./commands/dispatch.js";
 
 export type { DispatchCommandRuntime } from "./commands/dispatch.js";
+
 import type { VerifyDeployRuntime } from "./commands/verify-deploy.js";
 import type { VerifyGatesCommandRuntime } from "./commands/verify-gates.js";
 import {
@@ -4460,9 +4461,29 @@ export type DispatchComposition = {
   readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
   readonly phaseLedger: (ref: string) => DispatchPhaseLedger;
   readonly restartBudget?: number;
+  /** The delivery's persisted restart count, read at run time (AC-F3-2). */
+  readonly restartCount?: (ref: string) => number;
   readonly livenessIntervalMs?: number;
   readonly resumeAmplification?: string;
   readonly existingLane?: (ref: string) => DispatchLaneFacts | undefined;
+  /**
+   * The cancellable cadence wait the one-shot watcher polls on. Absence means
+   * the session is not watched while it runs; the composition owns the timer.
+   */
+  readonly waitForCadence?: (cadenceMs: number) => {
+    readonly promise: Promise<void>;
+    readonly cancel: () => void;
+  };
+  /**
+   * The delivered terminal restart-budget exhaustion append. Absence leaves the
+   * refusal recorded with an unrecorded-exhaustion evidence reference.
+   */
+  readonly ensureRestartExhaustion?: (input: {
+    readonly ref: string;
+    readonly runId: string;
+    readonly restarts: number;
+    readonly recordedAt: string;
+  }) => boolean;
   readonly gate?: {
     readonly scope: DispatchRepositoryScope;
     readonly principal: string;
@@ -4483,6 +4504,81 @@ export type DispatchLaneFacts = {
 
 const isHarnessKind = (value: string): value is HarnessKind =>
   (HARNESS_KINDS as readonly string[]).includes(value);
+
+/** The composition surface the evidence-gate command family needs. */
+export type DispatchGateComposition = {
+  readonly store: DispatchPorts["store"];
+  readonly stateRoot: string;
+  readonly fenceToken: string;
+  readonly nowIso: () => string;
+  readonly gate: NonNullable<DispatchComposition["gate"]>;
+};
+
+/**
+ * Build the typed evidence-gate runtime (`dual-run summary`, `dual-run resolve`,
+ * `handover [--revert]`) over the injected store and identity resolver. It needs
+ * no harness settings, so a composition can expose it without resolving them.
+ */
+export const createDispatchGateRuntime = (
+  composition: DispatchGateComposition,
+): Required<
+  Pick<import("./commands/dispatch.js").DispatchCommandRuntime, "summary" | "resolve" | "handover">
+> => ({
+  summary: {
+    summarize: async (repo: string) => {
+      const repository = composition.gate.resolveRepository(repo);
+      if (repository === undefined) {
+        return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
+      }
+      const result = summarizeDispatchEvidence({
+        store: composition.store,
+        repository,
+        scope: composition.gate.scope,
+        nowIso: composition.nowIso(),
+        ...(composition.gate.max === undefined ? {} : { max: composition.gate.max }),
+      });
+      return result.ok
+        ? { ok: true as const, data: result.data }
+        : { ok: false as const, error: result.error };
+    },
+  },
+  resolve: {
+    resolve: async (input: { readonly divergenceId: string; readonly note: string }) =>
+      resolveDispatchDivergenceEvidence({
+        store: composition.store,
+        fenceToken: composition.fenceToken,
+        divergenceId: input.divergenceId,
+        note: input.note,
+        principal: composition.gate.principal,
+        nowIso: composition.nowIso(),
+      }),
+  },
+  handover: {
+    handover: async (input: { readonly repo: string; readonly revert: boolean }) => {
+      const repository = composition.gate.resolveRepository(input.repo);
+      if (repository === undefined) {
+        return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
+      }
+      return input.revert
+        ? revertDispatchHandoverEvidence({
+            store: composition.store,
+            fenceToken: composition.fenceToken,
+            repository,
+            scope: composition.gate.scope,
+            nowIso: composition.nowIso(),
+            principal: composition.gate.principal,
+          })
+        : handoverDispatchEvidence({
+            store: composition.store,
+            fenceToken: composition.fenceToken,
+            repository,
+            scope: composition.gate.scope,
+            nowIso: composition.nowIso(),
+            principal: composition.gate.principal,
+          });
+    },
+  },
+});
 
 /**
  * Build the dispatch command runtime. An unknown or uncomposed harness is a
@@ -4570,9 +4666,18 @@ export const createDispatchCommandRuntime = (
         ...(composition.restartBudget === undefined
           ? {}
           : { restartBudget: composition.restartBudget }),
+        ...(composition.restartCount === undefined
+          ? {}
+          : { initialRestarts: composition.restartCount(input.ref) }),
         ...(composition.livenessIntervalMs === undefined
           ? {}
           : { livenessIntervalMs: composition.livenessIntervalMs }),
+        ...(composition.waitForCadence === undefined
+          ? {}
+          : { waitForCadence: composition.waitForCadence }),
+        ...(composition.ensureRestartExhaustion === undefined
+          ? {}
+          : { ensureRestartExhaustion: composition.ensureRestartExhaustion }),
         ...(composition.resumeAmplification === undefined
           ? {}
           : { resumeAmplification: composition.resumeAmplification }),
@@ -4586,69 +4691,11 @@ export const createDispatchCommandRuntime = (
   },
   ...(composition.gate === undefined
     ? {}
-    : {
-        summary: {
-          summarize: async (repo: string) => {
-            const repository = composition.gate?.resolveRepository(repo);
-            if (repository === undefined || composition.gate === undefined) {
-              return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
-            }
-            const result = summarizeDispatchEvidence({
-              store: composition.store,
-              repository,
-              scope: composition.gate.scope,
-              nowIso: composition.nowIso(),
-              ...(composition.gate.max === undefined ? {} : { max: composition.gate.max }),
-            });
-            return result.ok
-              ? { ok: true as const, data: result.data }
-              : { ok: false as const, error: result.error };
-          },
-        },
-        resolve: {
-          resolve: async (input: { readonly divergenceId: string; readonly note: string }) => {
-            if (composition.gate === undefined) {
-              return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
-            }
-            return resolveDispatchDivergenceEvidence({
-              store: composition.store,
-              fenceToken: composition.fenceToken,
-              divergenceId: input.divergenceId,
-              note: input.note,
-              principal: composition.gate.principal,
-              nowIso: composition.nowIso(),
-            });
-          },
-        },
-        handover: {
-          handover: async (input: { readonly repo: string; readonly revert: boolean }) => {
-            const gate = composition.gate;
-            if (gate === undefined) {
-              return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
-            }
-            const repository = gate.resolveRepository(input.repo);
-            if (repository === undefined) {
-              return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
-            }
-            const result = input.revert
-              ? revertDispatchHandoverEvidence({
-                  store: composition.store,
-                  fenceToken: composition.fenceToken,
-                  repository,
-                  scope: gate.scope,
-                  nowIso: composition.nowIso(),
-                  principal: gate.principal,
-                })
-              : handoverDispatchEvidence({
-                  store: composition.store,
-                  fenceToken: composition.fenceToken,
-                  repository,
-                  scope: gate.scope,
-                  nowIso: composition.nowIso(),
-                  principal: gate.principal,
-                });
-            return result;
-          },
-        },
-      }),
+    : createDispatchGateRuntime({
+        store: composition.store,
+        stateRoot: composition.stateRoot,
+        fenceToken: composition.fenceToken,
+        nowIso: composition.nowIso,
+        gate: composition.gate,
+      })),
 });

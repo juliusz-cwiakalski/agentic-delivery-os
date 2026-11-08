@@ -107,3 +107,37 @@ describe("TC-ERR-002 dispatch state failure classifies as dispatch.state-unverif
     expect(doc.split(`| ${row?.code} |`).length - 1).toBe(1);
   });
 });
+
+describe("a post-spawn collect failure is an attempt-stage outcome", () => {
+  test("it appends exactly one unevaluable record instead of returning unrecorded", async () => {
+    const scenario = createCommandScenario({
+      evidence: COMPLETED_EVIDENCE,
+      collectFails: true,
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+      // A session existed, so this is not one of the three unrecorded pre-session
+      // refusals: the attempt is classified `state-unverified` at exit 2.
+      expect(run.exit).toBe(2);
+      expect(run.envelope?.data?.result).toBe("state-unverified");
+      expect(run.envelope?.data?.outcome).toBe("failed");
+      expect(run.envelope?.data?.error?.code).toBe("dispatch.state-unverified");
+      expect(run.envelope?.data?.error?.summary).toContain("harness.collect.unreadable");
+      const read = readDispatchAttempts(scenario.state.store);
+      expect(read.ok && read.records).toHaveLength(1);
+      if (!read.ok) return;
+      expect(read.records[0]?.token).toBe("state-unverified");
+      expect(read.records[0]?.outcome).toBe("failed");
+      expect(read.records[0]?.comparison).toEqual({
+        class: "not-applicable",
+        token: null,
+        outcome: "not-applicable",
+        reason: "comparison-source-unavailable",
+      });
+      expect(read.records[0]?.evidenceRefs).toContain("harness:collect-failed");
+      expect(read.records[0]?.falseSuccess).toBe(false);
+    } finally {
+      scenario.dispose();
+    }
+  });
+});

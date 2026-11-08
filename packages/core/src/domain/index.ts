@@ -6,39 +6,7 @@
 /** Placeholder marker for the pure domain tier. */
 export type DomainPlaceholder = { readonly __tier: "domain" };
 
-export {
-  type CapsuleReviewIngestion,
-  capsuleCapBreach,
-  capsuleCaps,
-  capsuleDigest,
-  capsuleDisclosureOf,
-  capsuleEventGaps,
-  capsuleGateEventKey,
-  capsulePhaseEventKey,
-  capsulePromotionCounts,
-  canonicalCapsuleJson,
-  deriveCapsuleEventKey,
-  emptyCapsulePayload,
-  ingestReviewArtifacts,
-  isCapsuleCandidateClass,
-  isCapsuleCandidateStatus,
-  isCapsuleEventKind,
-  isCapsuleWriter,
-  parseCapsuleEvents,
-  payloadFieldViolations,
-  serializeCapsuleEvent,
-} from "./capsule.js";
 export type { CloseoutTelemetryRuntime } from "#contracts";
-export { evaluateDiffSweep } from "./closeout-diff-sweep.js";
-export { evaluateWorktreeSafety } from "./closeout-worktree.js";
-export {
-  type CandidateFileViolation,
-  candidateFileViolations,
-  evaluateCandidates,
-  isDeclaredRejectionReason,
-  normalizeCandidateStatement,
-  validateCandidate,
-} from "./capsule-candidates.js";
 export {
   type BlockerDelegationDecision,
   type BlockerGuardRequest,
@@ -71,6 +39,36 @@ export {
 } from "./blockers.js";
 export { projectBrief, renderBriefHuman } from "./brief.js";
 export {
+  type CapsuleReviewIngestion,
+  canonicalCapsuleJson,
+  capsuleCapBreach,
+  capsuleCaps,
+  capsuleDigest,
+  capsuleDisclosureOf,
+  capsuleEventGaps,
+  capsuleGateEventKey,
+  capsulePhaseEventKey,
+  capsulePromotionCounts,
+  deriveCapsuleEventKey,
+  emptyCapsulePayload,
+  ingestReviewArtifacts,
+  isCapsuleCandidateClass,
+  isCapsuleCandidateStatus,
+  isCapsuleEventKind,
+  isCapsuleWriter,
+  parseCapsuleEvents,
+  payloadFieldViolations,
+  serializeCapsuleEvent,
+} from "./capsule.js";
+export {
+  type CandidateFileViolation,
+  candidateFileViolations,
+  evaluateCandidates,
+  isDeclaredRejectionReason,
+  normalizeCandidateStatement,
+  validateCandidate,
+} from "./capsule-candidates.js";
+export {
   boundCloseoutData,
   buildCloseoutPlan,
   type CloseoutBranchSafetyInput,
@@ -93,6 +91,8 @@ export {
   selectMatchingBranch,
   summarizeCloseout,
 } from "./closeout.js";
+export { evaluateDiffSweep } from "./closeout-diff-sweep.js";
+export { evaluateWorktreeSafety } from "./closeout-worktree.js";
 export {
   type CommitActFailure,
   type CommitActNoPending,
@@ -144,6 +144,157 @@ export {
   selectCommitTransport,
 } from "./commit-transport.js";
 export {
+  controlOfferedVersions,
+  decodeControlLine,
+  encodeControlFrame,
+  unsupportedVersionError,
+} from "./control-codec.js";
+export {
+  type ControlSessionApi,
+  type ControlSessionOptions,
+  type ControlSessionReceive,
+  type ControlSubscriptionView,
+  createControlSession,
+} from "./control-session.js";
+export {
+  buildHeartbeat,
+  type DaemonHeartbeatInput,
+  type DaemonLiveness,
+  foldDaemonLiveness,
+} from "./daemon-heartbeat.js";
+export {
+  classifyLaneProgress,
+  type LaneProgressInput,
+  type LaneShapingInput,
+  nextSpawnOrdinal,
+  shapeDaemonLane,
+} from "./daemon-lane.js";
+export {
+  type DaemonLockRefusal,
+  daemonScopeDigest,
+  evaluateDaemonLock,
+  takeoverEvidence,
+} from "./daemon-lock.js";
+export {
+  decidePreemption,
+  PREEMPTION_WRITABLE_STATES,
+  type PreemptionDecision,
+  type PreemptionInput,
+} from "./daemon-preemption.js";
+export {
+  type DaemonLaneDecision,
+  type DaemonLaneEvidence,
+  decideDaemonLane,
+} from "./daemon-reconcile.js";
+export {
+  type DaemonStatusFoldInput,
+  foldDaemonStatus,
+  renderDaemonStatusHuman,
+} from "./daemon-status.js";
+export {
+  describeSupervisor,
+  renderOwnershipMarker,
+  renderSystemdUnit,
+  type SupervisorDescriptorInput,
+  type SupervisorOwnershipMarker,
+  type SupervisorPlatform,
+  type SystemdUnitInput,
+  supervisorKindFor,
+  supervisorSupported,
+} from "./daemon-supervisor.js";
+export {
+  buildDispatchAuthorityView,
+  type DispatchAuthorityFold,
+  dualRunAuthority,
+  foldDispatchHandover,
+  isAuthoritative,
+  parseDispatchAuthorityText,
+  parseDispatchAuthorityView,
+} from "./dispatch-authority.js";
+export {
+  buildComparisonRecord,
+  buildCorroborationRecord,
+  type ComparisonInput,
+  type CorroborationFact,
+  type CorroborationFacts,
+  classifyFalseSuccess,
+  comparisonClassOf,
+  corroborationSatisfied,
+  dispatchFamilyOf,
+  isComparisonDivergence,
+  isComparisonShapeValid,
+  requiredCorroboration,
+  unreadableCorroborationSources,
+} from "./dispatch-comparison.js";
+export {
+  COUNTED_EVIDENCE_CLASS,
+  countedEvidenceClass,
+  type DispatchEvidenceWindow,
+  type DispatchGateEvaluation,
+  type DispatchRepositoryScope,
+  evaluateHandoverGate,
+  foldEvidenceWindow,
+  handoverConditionsSnapshot,
+  longestConsecutiveRun as dispatchLongestConsecutiveRun,
+  toSummaryData,
+} from "./dispatch-gate.js";
+export {
+  DISPATCH_IDENTITY_SCHEMA,
+  DISPATCH_IDENTITY_SOURCES,
+  type DispatchIdentityResolution,
+  type DispatchIdentitySource,
+  isRepositoryIdentity,
+  normalizeDispatchRepositoryKey,
+  normalizeRepositoryRemote,
+  parseIdentityMarker,
+  resolveDispatchIdentity,
+  serializeIdentityMarker,
+} from "./dispatch-identity.js";
+export {
+  DISPATCH_LIVENESS_ABSENCE_REASONS,
+  DISPATCH_LIVENESS_SIGNALS,
+  DISPATCH_LIVENESS_UNKNOWN_REASONS,
+  DISPATCH_LIVENESS_VERDICTS,
+  type DispatchLivenessAbsent,
+  type DispatchLivenessEvaluation,
+  type DispatchLivenessReading,
+  type DispatchLivenessSignal,
+  type DispatchLivenessSourced,
+  type DispatchLivenessUnknownReason,
+  type DispatchLivenessVerdict,
+  evaluateDispatchLiveness,
+} from "./dispatch-liveness.js";
+export {
+  classifyDispatchFailure,
+  classifySpawnRefusal,
+  DISPATCH_FAILURE_KINDS,
+  DISPATCH_READ_FAILURE_SOURCES,
+  type DispatchArtifactFacts,
+  type DispatchDerivation,
+  type DispatchFailureClassification,
+  type DispatchFailureKind,
+  type DispatchHarnessFacts,
+  type DispatchLedgerFacts,
+  type DispatchPrFact,
+  type DispatchRead,
+  type DispatchReadFailure,
+  type DispatchRestartFacts,
+  type DispatchResumeAdmission,
+  type DispatchSpawnRefusal,
+  type DispatchTrackerFacts,
+  type DispatchTruthInput,
+  deriveDispatchResult,
+} from "./dispatch-result.js";
+export {
+  admissionRefusalPair,
+  admitDispatchRestart,
+  type DispatchRestartDecision,
+  type DispatchResumeEconomics,
+  type DispatchResumePlan,
+  evaluateDispatchResumeEconomics,
+  planDispatchResume,
+} from "./dispatch-resume.js";
+export {
   aggregateDoctorReport,
   formatDoctorFailureSummary,
   renderDoctorHuman,
@@ -177,6 +328,19 @@ export {
   deriveEconomicsView,
   latestUniqueProgressTokens,
 } from "./economics-view.js";
+export {
+  type CommitQueryOutcome,
+  commitIdempotencyKey,
+  EFFECT_LEGAL_TRANSITIONS,
+  type EffectTransitionDecision,
+  mayReapply,
+  normalizeStagedPaths,
+  pathSetsEqual,
+  resolveCommitEffect,
+  resolveTrackerEffect,
+  type TrackerQueryOutcome,
+  transitionEffect,
+} from "./effect-protocol.js";
 export { canonicalHarnessJson } from "./harness-canonical.js";
 export {
   type HarnessCapabilityInspection,
@@ -201,6 +365,11 @@ export {
   boundHarnessTelemetryCapture,
   renderHarnessTelemetryHuman,
 } from "./harness-telemetry.js";
+export {
+  createLaneLaunchPlanner,
+  type LaneLaunchPlanFacts,
+  planLaneLaunch,
+} from "./lane-launch-plan.js";
 export {
   evaluateMergeFreshness,
   isStaleAge,
@@ -294,6 +463,16 @@ export {
   type PmNotesLintLocation,
   type PmNotesLintVerdict,
 } from "./pm-notes-lint.js";
+export {
+  initialPollState,
+  nextPollDelayMs,
+  oneShotPollPlan,
+  type PollPolicyState,
+  pollDue,
+  pollFailure,
+  pollIssued,
+  pollSuccess,
+} from "./poll-policy.js";
 export {
   createDeployGateState,
   deployEvidenceOf,
@@ -493,6 +672,12 @@ export {
   verifyGatesUnknownIdentity,
 } from "./verify-gates.js";
 export {
+  boundWatchLine,
+  createWatchProjection,
+  type WatchLine,
+  type WatchProjection,
+} from "./watch-stream.js";
+export {
   buildWatchdogTeardownData,
   buildWatchdogVerdictData,
   classifyWatchdogLiveness,
@@ -507,188 +692,3 @@ export {
   type WatchdogRestorationPlan,
   watchdogPreservedRefName,
 } from "./watchdog.js";
-export {
-  daemonScopeDigest,
-  evaluateDaemonLock,
-  takeoverEvidence,
-  type DaemonLockRefusal,
-} from "./daemon-lock.js";
-export {
-  buildHeartbeat,
-  foldDaemonLiveness,
-  type DaemonHeartbeatInput,
-  type DaemonLiveness,
-} from "./daemon-heartbeat.js";
-export {
-  controlOfferedVersions,
-  decodeControlLine,
-  encodeControlFrame,
-  unsupportedVersionError,
-} from "./control-codec.js";
-export {
-  createControlSession,
-  type ControlSessionApi,
-  type ControlSessionOptions,
-  type ControlSessionReceive,
-  type ControlSubscriptionView,
-} from "./control-session.js";
-export {
-  decideDaemonLane,
-  type DaemonLaneDecision,
-  type DaemonLaneEvidence,
-} from "./daemon-reconcile.js";
-export {
-  foldDaemonStatus,
-  renderDaemonStatusHuman,
-  type DaemonStatusFoldInput,
-} from "./daemon-status.js";
-export {
-  initialPollState,
-  nextPollDelayMs,
-  oneShotPollPlan,
-  pollDue,
-  pollFailure,
-  pollIssued,
-  pollSuccess,
-  type PollPolicyState,
-} from "./poll-policy.js";
-export {
-  classifyLaneProgress,
-  nextSpawnOrdinal,
-  shapeDaemonLane,
-  type LaneProgressInput,
-  type LaneShapingInput,
-} from "./daemon-lane.js";
-export {
-  EFFECT_LEGAL_TRANSITIONS,
-  commitIdempotencyKey,
-  mayReapply,
-  normalizeStagedPaths,
-  pathSetsEqual,
-  resolveCommitEffect,
-  resolveTrackerEffect,
-  transitionEffect,
-  type CommitQueryOutcome,
-  type EffectTransitionDecision,
-  type TrackerQueryOutcome,
-} from "./effect-protocol.js";
-export {
-  decidePreemption,
-  PREEMPTION_WRITABLE_STATES,
-  type PreemptionDecision,
-  type PreemptionInput,
-} from "./daemon-preemption.js";
-export {
-  boundWatchLine,
-  createWatchProjection,
-  type WatchLine,
-  type WatchProjection,
-} from "./watch-stream.js";
-export {
-  describeSupervisor,
-  renderOwnershipMarker,
-  renderSystemdUnit,
-  supervisorKindFor,
-  supervisorSupported,
-  type SupervisorDescriptorInput,
-  type SupervisorOwnershipMarker,
-  type SupervisorPlatform,
-  type SystemdUnitInput,
-} from "./daemon-supervisor.js";
-
-export {
-  classifyDispatchFailure,
-  classifySpawnRefusal,
-  deriveDispatchResult,
-  DISPATCH_FAILURE_KINDS,
-  DISPATCH_READ_FAILURE_SOURCES,
-  type DispatchArtifactFacts,
-  type DispatchDerivation,
-  type DispatchFailureClassification,
-  type DispatchFailureKind,
-  type DispatchHarnessFacts,
-  type DispatchLedgerFacts,
-  type DispatchPrFact,
-  type DispatchRead,
-  type DispatchReadFailure,
-  type DispatchRestartFacts,
-  type DispatchResumeAdmission,
-  type DispatchSpawnRefusal,
-  type DispatchTrackerFacts,
-  type DispatchTruthInput,
-} from "./dispatch-result.js";
-export {
-  DISPATCH_LIVENESS_ABSENCE_REASONS,
-  DISPATCH_LIVENESS_SIGNALS,
-  DISPATCH_LIVENESS_UNKNOWN_REASONS,
-  DISPATCH_LIVENESS_VERDICTS,
-  evaluateDispatchLiveness,
-  type DispatchLivenessAbsent,
-  type DispatchLivenessEvaluation,
-  type DispatchLivenessReading,
-  type DispatchLivenessSignal,
-  type DispatchLivenessSourced,
-  type DispatchLivenessUnknownReason,
-  type DispatchLivenessVerdict,
-} from "./dispatch-liveness.js";
-
-export {
-  buildComparisonRecord,
-  buildCorroborationRecord,
-  classifyFalseSuccess,
-  comparisonClassOf,
-  corroborationSatisfied,
-  dispatchFamilyOf,
-  isComparisonDivergence,
-  isComparisonShapeValid,
-  requiredCorroboration,
-  type ComparisonInput,
-  type CorroborationFacts,
-} from "./dispatch-comparison.js";
-export {
-  DISPATCH_IDENTITY_SCHEMA,
-  DISPATCH_IDENTITY_SOURCES,
-  isRepositoryIdentity,
-  normalizeDispatchRepositoryKey,
-  normalizeRepositoryRemote,
-  parseIdentityMarker,
-  resolveDispatchIdentity,
-  serializeIdentityMarker,
-  type DispatchIdentityResolution,
-  type DispatchIdentitySource,
-} from "./dispatch-identity.js";
-export {
-  buildDispatchAuthorityView,
-  dualRunAuthority,
-  foldDispatchHandover,
-  isAuthoritative,
-  parseDispatchAuthorityText,
-  parseDispatchAuthorityView,
-  type DispatchAuthorityFold,
-} from "./dispatch-authority.js";
-export {
-  admissionRefusalPair,
-  admitDispatchRestart,
-  evaluateDispatchResumeEconomics,
-  planDispatchResume,
-  type DispatchRestartDecision,
-  type DispatchResumeEconomics,
-  type DispatchResumePlan,
-} from "./dispatch-resume.js";
-export {
-  countedEvidenceClass,
-  COUNTED_EVIDENCE_CLASS,
-  evaluateHandoverGate,
-  foldEvidenceWindow,
-  handoverConditionsSnapshot,
-  longestConsecutiveRun as dispatchLongestConsecutiveRun,
-  toSummaryData,
-  type DispatchEvidenceWindow,
-  type DispatchGateEvaluation,
-  type DispatchRepositoryScope,
-} from "./dispatch-gate.js";
-export {
-  createLaneLaunchPlanner,
-  planLaneLaunch,
-  type LaneLaunchPlanFacts,
-} from "./lane-launch-plan.js";

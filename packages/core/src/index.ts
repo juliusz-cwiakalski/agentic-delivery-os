@@ -41,6 +41,12 @@ export {
   readDaemonReconciliations,
 } from "./app/daemon.js";
 export {
+  type DaemonDispatchResultInput,
+  type DaemonDispatchResultOutcome,
+  daemonAttemptId,
+  recordDaemonDispatchResult,
+} from "./app/daemon-dispatch-result.js";
+export {
   type ApplyPreemptionInput,
   type ApplyPreemptionResult,
   applyPreemption,
@@ -70,6 +76,41 @@ export {
   type SupervisorResult,
   uninstallSupervisor,
 } from "./app/daemon-supervisor.js";
+export {
+  boundLastMessage,
+  type DispatchAdmission,
+  type DispatchLeaseClaim,
+  type DispatchPorts,
+  type DispatchRunResult,
+  type DispatchTruthReads,
+  runDispatch,
+} from "./app/dispatch.js";
+export {
+  type DispatchGateRead,
+  type DispatchHandoverResult,
+  type DispatchSummaryResult,
+  handoverDispatchEvidence,
+  readDispatchGate,
+  resolveDispatchDivergenceEvidence,
+  revertDispatchHandoverEvidence,
+  summarizeDispatchEvidence,
+} from "./app/dispatch-gate.js";
+export {
+  appendDispatchAttempt,
+  appendDispatchDivergence,
+  appendDispatchHandover,
+  type DispatchAppendResult,
+  type DispatchDivergenceSummary,
+  type DispatchLedgerRead,
+  foldDispatchDivergences,
+  isEvidenceClass,
+  readDispatchAttempts,
+  readDispatchDivergences,
+  readDispatchHandover,
+  resolveDispatchDivergence,
+  summarizeDispatchDivergences,
+  writeDispatchAuthority,
+} from "./app/dispatch-ledger.js";
 export {
   appendCommandReceipt,
   appendOutboxEffect,
@@ -219,6 +260,98 @@ export {
   supervisorSupported,
 } from "./domain/daemon-supervisor.js";
 export {
+  buildDispatchAuthorityView,
+  type DispatchAuthorityFold,
+  dualRunAuthority,
+  foldDispatchHandover,
+  isAuthoritative,
+  parseDispatchAuthorityText,
+  parseDispatchAuthorityView,
+} from "./domain/dispatch-authority.js";
+export {
+  buildComparisonRecord,
+  buildCorroborationRecord,
+  type ComparisonInput,
+  type CorroborationFact,
+  type CorroborationFacts,
+  classifyFalseSuccess,
+  comparisonClassOf,
+  corroborationSatisfied,
+  dispatchFamilyOf,
+  isComparisonDivergence,
+  isComparisonShapeValid,
+  requiredCorroboration,
+  unreadableCorroborationSources,
+} from "./domain/dispatch-comparison.js";
+export {
+  COUNTED_EVIDENCE_CLASS,
+  countedEvidenceClass,
+  type DispatchEvidenceWindow,
+  type DispatchGateEvaluation,
+  type DispatchRepositoryScope,
+  evaluateHandoverGate,
+  foldEvidenceWindow,
+  handoverConditionsSnapshot,
+  longestConsecutiveRun as dispatchLongestConsecutiveRun,
+  toSummaryData,
+} from "./domain/dispatch-gate.js";
+export {
+  DISPATCH_IDENTITY_SCHEMA,
+  DISPATCH_IDENTITY_SOURCES,
+  type DispatchIdentityResolution,
+  type DispatchIdentitySource,
+  isRepositoryIdentity,
+  normalizeDispatchRepositoryKey,
+  normalizeRepositoryRemote,
+  parseIdentityMarker,
+  resolveDispatchIdentity,
+  serializeIdentityMarker,
+} from "./domain/dispatch-identity.js";
+export {
+  DISPATCH_LIVENESS_ABSENCE_REASONS,
+  DISPATCH_LIVENESS_SIGNALS,
+  DISPATCH_LIVENESS_UNKNOWN_REASONS,
+  DISPATCH_LIVENESS_VERDICTS,
+  type DispatchLivenessAbsent,
+  type DispatchLivenessEvaluation,
+  type DispatchLivenessReading,
+  type DispatchLivenessSignal,
+  type DispatchLivenessSourced,
+  type DispatchLivenessUnknownReason,
+  type DispatchLivenessVerdict,
+  evaluateDispatchLiveness,
+} from "./domain/dispatch-liveness.js";
+export {
+  classifyDispatchFailure,
+  classifySpawnRefusal,
+  DISPATCH_FAILURE_KINDS,
+  DISPATCH_READ_FAILURE_SOURCES,
+  type DispatchArtifactFacts,
+  type DispatchDerivation,
+  type DispatchFailureClassification,
+  type DispatchFailureKind,
+  type DispatchHarnessFacts,
+  type DispatchLedgerFacts,
+  type DispatchPrFact,
+  type DispatchRead,
+  type DispatchReadFailure,
+  type DispatchRestartFacts,
+  type DispatchResumeAdmission,
+  type DispatchSpawnRefusal,
+  type DispatchTrackerFacts,
+  type DispatchTruthInput,
+  deriveDispatchResult,
+} from "./domain/dispatch-result.js";
+export {
+  admissionRefusalPair,
+  admitDispatchRestart,
+  type DispatchRestartDecision,
+  type DispatchResumeEconomics,
+  type DispatchResumePlan,
+  evaluateDispatchResumeEconomics,
+  planDispatchResume,
+} from "./domain/dispatch-resume.js";
+export {
   type CommitQueryOutcome,
   commitIdempotencyKey,
   EFFECT_LEGAL_TRANSITIONS,
@@ -251,6 +384,7 @@ export {
   aggregateDoctorReport,
   aggregateStatus,
   artifactMatches,
+  assembleHarnessLiveness,
   authorizeMergeWaiver,
   type BlockerDelegationDecision,
   type BlockerGuardRequest,
@@ -270,6 +404,7 @@ export {
   buildBlockerPublishData,
   buildCloseoutPlan,
   buildCommitBundle,
+  buildHarnessSpawnEnvironment,
   buildWatchdogTeardownData,
   buildWatchdogVerdictData,
   type CloseoutBranchSafetyInput,
@@ -310,6 +445,7 @@ export {
   claimScope,
   classifyCommitDelta,
   classifyCommitSafety,
+  classifyHarnessEvidence,
   classifyPruneCandidate,
   classifyTrackerTransition,
   classifyVerifyChange,
@@ -603,10 +739,10 @@ export {
   weightLoads,
 } from "./domain/index.js";
 export {
-  assembleHarnessLiveness,
-  buildHarnessSpawnEnvironment,
-  classifyHarnessEvidence,
-} from "./domain/index.js";
+  createLaneLaunchPlanner,
+  type LaneLaunchPlanFacts,
+  planLaneLaunch,
+} from "./domain/lane-launch-plan.js";
 export {
   attemptOutOfSeamEvidenceWrite,
   collectRetro,
@@ -644,142 +780,3 @@ export {
   type WatchLine,
   type WatchProjection,
 } from "./domain/watch-stream.js";
-
-export {
-  classifyDispatchFailure,
-  classifySpawnRefusal,
-  deriveDispatchResult,
-  DISPATCH_FAILURE_KINDS,
-  DISPATCH_READ_FAILURE_SOURCES,
-  type DispatchArtifactFacts,
-  type DispatchDerivation,
-  type DispatchFailureClassification,
-  type DispatchFailureKind,
-  type DispatchHarnessFacts,
-  type DispatchLedgerFacts,
-  type DispatchPrFact,
-  type DispatchRead,
-  type DispatchReadFailure,
-  type DispatchRestartFacts,
-  type DispatchResumeAdmission,
-  type DispatchSpawnRefusal,
-  type DispatchTrackerFacts,
-  type DispatchTruthInput,
-} from "./domain/dispatch-result.js";
-export {
-  DISPATCH_LIVENESS_ABSENCE_REASONS,
-  DISPATCH_LIVENESS_SIGNALS,
-  DISPATCH_LIVENESS_UNKNOWN_REASONS,
-  DISPATCH_LIVENESS_VERDICTS,
-  evaluateDispatchLiveness,
-  type DispatchLivenessAbsent,
-  type DispatchLivenessEvaluation,
-  type DispatchLivenessReading,
-  type DispatchLivenessSignal,
-  type DispatchLivenessSourced,
-  type DispatchLivenessUnknownReason,
-  type DispatchLivenessVerdict,
-} from "./domain/dispatch-liveness.js";
-
-export {
-  buildComparisonRecord,
-  buildCorroborationRecord,
-  classifyFalseSuccess,
-  comparisonClassOf,
-  corroborationSatisfied,
-  dispatchFamilyOf,
-  isComparisonDivergence,
-  isComparisonShapeValid,
-  requiredCorroboration,
-  type ComparisonInput,
-  type CorroborationFacts,
-} from "./domain/dispatch-comparison.js";
-export {
-  DISPATCH_IDENTITY_SCHEMA,
-  DISPATCH_IDENTITY_SOURCES,
-  isRepositoryIdentity,
-  normalizeDispatchRepositoryKey,
-  normalizeRepositoryRemote,
-  parseIdentityMarker,
-  resolveDispatchIdentity,
-  serializeIdentityMarker,
-  type DispatchIdentityResolution,
-  type DispatchIdentitySource,
-} from "./domain/dispatch-identity.js";
-export {
-  buildDispatchAuthorityView,
-  dualRunAuthority,
-  foldDispatchHandover,
-  isAuthoritative,
-  parseDispatchAuthorityText,
-  parseDispatchAuthorityView,
-  type DispatchAuthorityFold,
-} from "./domain/dispatch-authority.js";
-
-export {
-  appendDispatchAttempt,
-  appendDispatchDivergence,
-  appendDispatchHandover,
-  foldDispatchDivergences,
-  isEvidenceClass,
-  readDispatchAttempts,
-  readDispatchDivergences,
-  readDispatchHandover,
-  resolveDispatchDivergence,
-  summarizeDispatchDivergences,
-  writeDispatchAuthority,
-  type DispatchAppendResult,
-  type DispatchDivergenceSummary,
-  type DispatchLedgerRead,
-} from "./app/dispatch-ledger.js";
-export {
-  boundLastMessage,
-  runDispatch,
-  type DispatchAdmission,
-  type DispatchLeaseClaim,
-  type DispatchPorts,
-  type DispatchRunResult,
-  type DispatchTruthReads,
-} from "./app/dispatch.js";
-export {
-  admissionRefusalPair,
-  admitDispatchRestart,
-  evaluateDispatchResumeEconomics,
-  planDispatchResume,
-  type DispatchRestartDecision,
-  type DispatchResumeEconomics,
-  type DispatchResumePlan,
-} from "./domain/dispatch-resume.js";
-export {
-  countedEvidenceClass,
-  COUNTED_EVIDENCE_CLASS,
-  evaluateHandoverGate,
-  foldEvidenceWindow,
-  handoverConditionsSnapshot,
-  longestConsecutiveRun as dispatchLongestConsecutiveRun,
-  toSummaryData,
-  type DispatchEvidenceWindow,
-  type DispatchGateEvaluation,
-  type DispatchRepositoryScope,
-} from "./domain/dispatch-gate.js";
-export {
-  handoverDispatchEvidence,
-  readDispatchGate,
-  resolveDispatchDivergenceEvidence,
-  revertDispatchHandoverEvidence,
-  summarizeDispatchEvidence,
-  type DispatchGateRead,
-  type DispatchHandoverResult,
-  type DispatchSummaryResult,
-} from "./app/dispatch-gate.js";
-export {
-  createLaneLaunchPlanner,
-  planLaneLaunch,
-  type LaneLaunchPlanFacts,
-} from "./domain/lane-launch-plan.js";
-export {
-  daemonAttemptId,
-  recordDaemonDispatchResult,
-  type DaemonDispatchResultInput,
-  type DaemonDispatchResultOutcome,
-} from "./app/daemon-dispatch-result.js";

@@ -85,6 +85,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "isComparisonDivergence",
     "isComparisonShapeValid",
     "requiredCorroboration",
+    "unreadableCorroborationSources",
   ],
   "core/src/domain/dispatch-identity.ts": [
     "DISPATCH_IDENTITY_SCHEMA",
@@ -1611,6 +1612,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "resolveCliMode",
     "createBlockersCommandRuntime",
     "createDispatchCommandRuntime",
+    "createDispatchGateRuntime",
   ],
   "cli/src/index.ts": ["runCli"],
   "cli/bin/delivery-os.ts": ["completion"],

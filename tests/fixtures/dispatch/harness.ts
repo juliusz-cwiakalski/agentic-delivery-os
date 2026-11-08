@@ -10,8 +10,6 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { classifyHarnessEvidence } from "../../../packages/core/src/domain/harness-classify";
-import { makeIdentity, openStore, removeRoot, type TestEdge } from "../state/harness";
 import type {
   HarnessEvidence,
   HarnessLivenessReport,
@@ -21,6 +19,8 @@ import type {
   HarnessSpawnInput,
   StateStorePort,
 } from "../../../packages/core/src/contracts/index";
+import { classifyHarnessEvidence } from "../../../packages/core/src/domain/harness-classify";
+import { makeIdentity, openStore, removeRoot, type TestEdge } from "../state/harness";
 
 /** The fixed dispatch clock instant used by every suite. */
 export const DISPATCH_NOW = "2026-11-08T10:00:00.000Z" as const;
@@ -94,7 +94,20 @@ export const createDispatchState = (label = "dispatch"): DispatchState => {
 export type ScriptedHarnessOptions = {
   readonly evidence?: HarnessEvidence;
   readonly spawnFails?: boolean;
+  readonly collectFails?: boolean;
   readonly liveness?: HarnessLivenessReport;
+  /**
+   * A deterministic liveness sequence consumed per poll; the last report
+   * repeats. Used by the watch suites to prove advancing and stalled sessions.
+   */
+  readonly livenessSequence?: readonly HarnessLivenessReport[];
+  /** A deterministic report per 1-based poll; takes precedence over the sequence. */
+  readonly livenessOf?: (poll: number) => HarnessLivenessReport;
+  /**
+   * Resolve `collect` once this many liveness polls have happened. Without it
+   * `collect` resolves immediately.
+   */
+  readonly collectAfterPolls?: number;
   readonly sessionId?: string;
   readonly harnessKind?: "opencode" | "claude-code";
 };
@@ -103,6 +116,7 @@ export type ScriptedHarness = {
   readonly port: HarnessSessionPort;
   readonly calls: string[];
   readonly spawnInputs: HarnessSpawnInput[];
+  readonly livenessPolls: () => number;
 };
 
 const DEFAULT_EVIDENCE: HarnessEvidence = {
@@ -114,15 +128,29 @@ const DEFAULT_EVIDENCE: HarnessEvidence = {
   toolFailure: false,
 };
 
+const DEFAULT_LIVENESS: HarnessLivenessReport = {
+  readings: [
+    { kind: "session-traffic", status: "sourced", value: 1, observedAt: DISPATCH_NOW },
+    { kind: "worktree-activity", status: "sourced", value: 1, observedAt: DISPATCH_NOW },
+    { kind: "process", status: "sourced", value: 1, observedAt: DISPATCH_NOW },
+  ],
+};
+
 export const createScriptedHarness = (options: ScriptedHarnessOptions = {}): ScriptedHarness => {
   const calls: string[] = [];
   const spawnInputs: HarnessSpawnInput[] = [];
+  let livenessPolls = 0;
+  let resolveCollect: (() => void) | undefined;
   const handle: HarnessSessionHandle = {
     harnessKind: options.harnessKind ?? "opencode",
     sessionId: options.sessionId ?? "session-1",
     treeRoot: "/tmp/session-1",
     workItemRef: "GH-239",
   };
+  const collectResult = (): HarnessResult<HarnessEvidence> =>
+    options.collectFails === true
+      ? { ok: false, error: { kind: "harness", code: "harness.collect.unreadable" } }
+      : { ok: true, value: options.evidence ?? DEFAULT_EVIDENCE };
   const port: HarnessSessionPort = {
     spawn: async (input) => {
       calls.push("spawn");
@@ -144,28 +172,34 @@ export const createScriptedHarness = (options: ScriptedHarnessOptions = {}): Scr
     },
     collect: async () => {
       calls.push("collect");
-      return { ok: true, value: options.evidence ?? DEFAULT_EVIDENCE };
+      if (options.collectAfterPolls === undefined) return collectResult();
+      return new Promise((resolve) => {
+        resolveCollect = () => resolve(collectResult());
+      });
     },
     classify: (evidence) => classifyHarnessEvidence(evidence),
     liveness: async () => {
       calls.push("liveness");
-      return {
-        ok: true,
-        value: options.liveness ?? {
-          readings: [
-            { kind: "session-traffic", status: "sourced", value: 1, observedAt: DISPATCH_NOW },
-            { kind: "worktree-activity", status: "sourced", value: 1, observedAt: DISPATCH_NOW },
-            { kind: "process", status: "sourced", value: 1, observedAt: DISPATCH_NOW },
-          ],
-        },
-      };
+      livenessPolls += 1;
+      if (options.collectAfterPolls !== undefined && livenessPolls >= options.collectAfterPolls) {
+        resolveCollect?.();
+        resolveCollect = undefined;
+      }
+      const sequence = options.livenessSequence;
+      const report =
+        options.livenessOf !== undefined
+          ? options.livenessOf(livenessPolls)
+          : sequence === undefined
+            ? (options.liveness ?? DEFAULT_LIVENESS)
+            : (sequence[Math.min(livenessPolls - 1, sequence.length - 1)] ?? DEFAULT_LIVENESS);
+      return { ok: true, value: report };
     },
     listSessions: async () => {
       calls.push("listSessions");
       return { ok: true, value: { handles: [handle] } };
     },
   };
-  return { port, calls, spawnInputs };
+  return { port, calls, spawnInputs, livenessPolls: () => livenessPolls };
 };
 
 /** A recording merge seam: any call fails the scenario that injected it. */

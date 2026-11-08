@@ -10,9 +10,9 @@
  */
 import {
   DELIVERY_RESULT_TOKENS,
+  type DeliveryResultToken,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
-  type DeliveryResultToken,
   type DispatchAttemptRecord,
   type DispatchDivergenceRecord,
   type DispatchEvidenceClass,
@@ -22,14 +22,15 @@ import {
   type HarnessOutcome,
   type StateStorePort,
 } from "#contracts";
-import { classifyHarnessEvidence } from "../domain/harness-classify.js";
 import {
   buildComparisonRecord,
   buildCorroborationRecord,
   classifyFalseSuccess,
   dispatchFamilyOf,
+  unreadableCorroborationSources,
 } from "../domain/dispatch-comparison.js";
 import { deriveDispatchResult } from "../domain/dispatch-result.js";
+import { classifyHarnessEvidence } from "../domain/harness-classify.js";
 import type { DispatchTruthReads } from "./dispatch.js";
 import { appendDispatchAttempt, appendDispatchDivergence } from "./dispatch-ledger.js";
 
@@ -134,18 +135,27 @@ export const recordDaemonDispatchResult = (
               engineToken: derived,
               reason: "dispatch-session-family",
             });
-  const corroboration = buildCorroborationRecord({
+  const corroborationFacts = {
+    "pm-notes": input.reads.ledger.ok
+      ? input.reads.phasesComplete
+        ? ("satisfied" as const)
+        : ("unsatisfied" as const)
+      : ("unreadable" as const),
+    tracker: input.reads.tracker.ok ? ("satisfied" as const) : ("unreadable" as const),
+    ci: input.reads.ci.ok
+      ? input.reads.ci.value.verdict === "success"
+        ? ("satisfied" as const)
+        : ("unsatisfied" as const)
+      : ("unreadable" as const),
+  };
+  const corroboration = buildCorroborationRecord({ token: derived, facts: corroborationFacts });
+  const unreadable = unreadableCorroborationSources(corroborationFacts);
+  const falseSuccess = classifyFalseSuccess({
     token: derived,
-    facts: {
-      "pm-notes": input.reads.phasesComplete ? "satisfied" : "unsatisfied",
-      tracker: input.reads.tracker.ok ? "satisfied" : "unsatisfied",
-      ci:
-        input.reads.ci.ok && input.reads.ci.value.verdict === "success"
-          ? "satisfied"
-          : "unsatisfied",
-    },
+    comparison,
+    corroboration,
+    ...(unreadable.length === 0 ? {} : { unreadable }),
   });
-  const falseSuccess = classifyFalseSuccess({ token: derived, comparison, corroboration });
 
   let divergenceRef: string | undefined;
   if (comparison.outcome === "mismatch") {
