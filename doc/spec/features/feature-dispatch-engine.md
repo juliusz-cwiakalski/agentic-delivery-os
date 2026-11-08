@@ -218,7 +218,7 @@ Every dispatch failure resolves by exact code; no kind-only dispatch discriminan
 
 | Bound | Value |
 |---|---|
-| Attempt records per summary read | 5,000 |
+| Attempt records retained per summary | 5,000 |
 | Machine `data` | 65,536 UTF-8 bytes |
 | Human output | 40 lines, 8,192 bytes |
 | `last_message` | 512 characters, single line, redacted |
