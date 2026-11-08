@@ -36,7 +36,7 @@ phases:
     }
   delivery: { started: "2026-11-07T22:10:00Z", completed: "2026-11-08T00:13:14.519Z" }
   system_spec_update: { started: "2026-11-08T00:50:00Z", completed: "2026-11-08T00:55:18.321Z" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-08T01:00:00Z", completed: null, verdict: "FAIL", iteration: 1 }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -250,4 +250,20 @@ notes:
       implemented, targeted suites green, aggregate gate green. Delivery marked
       complete before docs sync."
     type: info
+    date: "2026-11-08"
+  - text: "Review iteration 1 FAIL: F-1/F-2 high — phase 8 replaced
+      tests/checks/ci-checks.test.ts (37 to 2 tests) and
+      tests/checks/privacy-authoring.test.ts (8 to 3 tests), silently deleting 40
+      pre-existing regression tests of CI invariants and authoring privacy. F-3
+      test-plan execution log still Pending. F-4 change-folder helpers untested.
+      F-5 prompt-conformance negation evasion. F-6 dry-run scope wording.
+      Functional code and all AC evidence are otherwise green. Remediation phase
+      11 added; re-review required."
+    type: blocker
+    date: "2026-11-08"
+  - text: "Retro: a green aggregate gate hid deleted security/supply-chain
+      regression tests because the reduced files still passed. Conformance work
+      must restore and extend existing tests, never replace them; the review
+      gate caught it only because it diffed test counts against base."
+    type: retro
     date: "2026-11-08"

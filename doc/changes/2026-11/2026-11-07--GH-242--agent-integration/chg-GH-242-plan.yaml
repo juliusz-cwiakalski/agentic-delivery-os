@@ -33,7 +33,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-242
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
   escalationTriggers:
     - tdr-acceptance-required-at-pr
     - prompt-conformance-regression
@@ -526,4 +526,37 @@ phases:
       - "bash scripts/.tests/test-deliver-ticket-result-tuples.sh"
       - "bash scripts/.tests/test-ceo-loop.sh"
       - "bun test tests/conformance/pilot"
+      - "pnpm check"
+  - id: 11
+    title: "Code Review Remediation (Iteration 1)"
+    kind: delivery
+    scope:
+      files:
+        - tests/checks/ci-checks.test.ts
+        - tests/checks/privacy-authoring.test.ts
+        - tests/checks/fixture-privacy.test.ts
+        - tests/checks/ci-wiring.test.ts
+        - tests/checks/privacy-support.ts
+        - tests/behaviour/change-folder-locate.test.ts
+        - scripts/checks/prompt-conformance.ts
+        - tests/checks/prompt-conformance-mutants.test.ts
+        - tests/fixtures/prompt-inventory/mutants/raw-git-negated.md
+        - doc/changes/2026-11/2026-11-07--GH-242--agent-integration/chg-GH-242-test-plan.md
+    interactions:
+      - kind: contract-file
+        target: tests/checks/ci-checks.test.ts
+        role: consumer
+    doneArtifacts:
+      trackerTransition: "GH-242 review remediation iteration 1 complete; F-1..F-6 resolved"
+    leases:
+      - lease:conformance
+    weightClass: standard
+    summary: "Remediate the iteration-1 review findings without rewriting delivered scope. F-1: restore the CI-invariant mutation/negative tests that commit 41c7e38d deleted from tests/checks/ci-checks.test.ts (pin-equality four-copy divergence, vulnerability-gate advisories, ci-supply-chain floating tag, ci-topology DEC-7 allowance and job-id removal, ci-bindingness injected continue-on-error/|| true, GH-172/GH-181 bindings) by reverting to the base suite and placing the new prompt/help scan-wiring assertions in a separate file (or by appending them). F-2: restore the authoring-mode privacy tests (TC-PRIVACY-018/019 and F-8) that 41c7e38d deleted from tests/checks/privacy-authoring.test.ts, keeping the new TC-PSCAN-009 fixture scan in a separate file; the runAuthoring helper returns to use. F-3: populate the test-plan execution log (section 10) and update section 7 implementation statuses, or explicitly declare pm-notes notes the authoritative execution log. F-4: add direct behavioural tests for locateChangeFolder/relativeChangeFolder (month-scan order, --<ref>-- token match, repo-relative prefix strip, out-of-root return). F-5: tighten the prompt-conformance negation check to be sentence-local and add a mutant. F-6: align the commit --phase preview-scope wording with DEC-4 or add a TC pinning it. This phase re-runs the restored suites and the aggregate gate; it does not modify prompts, specs, or delivered product code."
+    tests:
+      - "bun test tests/checks/ci-checks.test.ts"
+      - "bun test tests/checks/privacy-authoring.test.ts"
+      - "bun test tests/checks/fixture-privacy.test.ts tests/checks/prompt-secret-scan.test.ts"
+      - "bun test tests/checks/prompt-conformance-mutants.test.ts"
+      - "bun test tests/behaviour/change-folder-locate.test.ts"
+      - "bash scripts/.tests/test-build-claude-plugin.sh"
       - "pnpm check"
