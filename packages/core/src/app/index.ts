@@ -169,6 +169,7 @@ export {
 export {
   boundLastMessage,
   runDispatch,
+  type DispatchAdmission,
   type DispatchLeaseClaim,
   type DispatchPorts,
   type DispatchRunResult,

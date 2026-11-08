@@ -666,3 +666,12 @@ export {
   parseDispatchAuthorityView,
   type DispatchAuthorityFold,
 } from "./dispatch-authority.js";
+export {
+  admissionRefusalPair,
+  admitDispatchRestart,
+  evaluateDispatchResumeEconomics,
+  planDispatchResume,
+  type DispatchRestartDecision,
+  type DispatchResumeEconomics,
+  type DispatchResumePlan,
+} from "./dispatch-resume.js";

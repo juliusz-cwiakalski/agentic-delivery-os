@@ -199,3 +199,12 @@ notes:
       harness.capability.gap run surface until lane harness ports are composed."
     type: info
     date: "2026-11-08"
+  - text: "Delivery plan phase 5 (resume path and dispatch admission) complete.
+      Tests green: dispatch-resume, dispatch-restart-budget,
+      dispatch-resume-economics, economics-budget-exhaustion,
+      economics-resume-attach, economics-restart-durability, content-inventory,
+      dispatch-token-home, pnpm typecheck. Restart admission and resume economics
+      are pure domain functions consumed by the one-shot loop; both refusals are
+      attempt-stage records (one each) with the Appendix G pairs."
+    type: info
+    date: "2026-11-08"

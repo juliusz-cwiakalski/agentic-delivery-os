@@ -63,6 +63,13 @@ export type CommandScenarioOptions = {
   readonly handover?: "dual-run" | "authoritative";
   readonly restartBudget?: number;
   readonly initialRestarts?: number;
+  readonly lane?: {
+    readonly completedPhases?: readonly string[];
+    readonly adapterSupportsResumeInjection?: boolean;
+    readonly restartCount?: number;
+    readonly prefillCost?: number | null;
+    readonly uniqueProgress?: number | null;
+  };
   readonly harnessKind?: "opencode" | "claude-code";
   readonly newAttemptId?: (ref: string) => string;
   readonly newDivergenceId?: (ref: string) => string;
@@ -164,6 +171,27 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
     },
     phaseLedger: () => ({ completed: 3, total: 9, variant: "full" }),
     ...(options.restartBudget === undefined ? {} : { restartBudget: options.restartBudget }),
+    ...(options.lane === undefined
+      ? {}
+      : {
+          existingLane: () => ({
+            handle: {
+              harnessKind: options.harnessKind ?? "opencode",
+              sessionId: "session-existing",
+              treeRoot: state.root,
+              workItemRef: "GH-301",
+            },
+            completedPhases: options.lane?.completedPhases ?? [],
+            adapterSupportsResumeInjection: options.lane?.adapterSupportsResumeInjection ?? false,
+            restartCount: options.lane?.restartCount ?? 0,
+            ...(options.lane?.prefillCost === undefined
+              ? {}
+              : { prefillCost: options.lane.prefillCost }),
+            ...(options.lane?.uniqueProgress === undefined
+              ? {}
+              : { uniqueProgress: options.lane.uniqueProgress }),
+          }),
+        }),
     ...(options.initialRestarts === undefined
       ? {}
       : { resumeAmplification: `${options.initialRestarts}` }),

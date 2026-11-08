@@ -124,6 +124,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "ensureDispatchIdentityMarkerText",
     "readDispatchIdentityMarkerText",
   ],
+  "core/src/domain/dispatch-resume.ts": [
+    "admissionRefusalPair",
+    "admitDispatchRestart",
+    "evaluateDispatchResumeEconomics",
+    "planDispatchResume",
+  ],
   "core/src/domain/dispatch-result.ts": [
     "DISPATCH_FAILURE_KINDS",
     "DISPATCH_READ_FAILURE_SOURCES",

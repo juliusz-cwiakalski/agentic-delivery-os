@@ -730,8 +730,18 @@ export {
 export {
   boundLastMessage,
   runDispatch,
+  type DispatchAdmission,
   type DispatchLeaseClaim,
   type DispatchPorts,
   type DispatchRunResult,
   type DispatchTruthReads,
 } from "./app/dispatch.js";
+export {
+  admissionRefusalPair,
+  admitDispatchRestart,
+  evaluateDispatchResumeEconomics,
+  planDispatchResume,
+  type DispatchRestartDecision,
+  type DispatchResumeEconomics,
+  type DispatchResumePlan,
+} from "./domain/dispatch-resume.js";

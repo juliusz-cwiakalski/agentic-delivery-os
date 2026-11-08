@@ -95,6 +95,7 @@
     "src/domain/dispatch-identity.ts",
     "src/domain/dispatch-liveness.ts",
     "src/domain/dispatch-result.ts",
+    "src/domain/dispatch-resume.ts",
     "src/domain/doctor.ts",
     "src/domain/economics-budget.ts",
     "src/domain/economics-evidence.ts",

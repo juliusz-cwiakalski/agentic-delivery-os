@@ -36,6 +36,7 @@ import {
   dispatchFamilyOf,
 } from "../domain/dispatch-comparison.js";
 import { evaluateDispatchLiveness, type DispatchLivenessReading } from "../domain/dispatch-liveness.js";
+import { admissionRefusalPair } from "../domain/dispatch-resume.js";
 import {
   deriveDispatchResult,
   type DispatchArtifactFacts,
@@ -68,6 +69,25 @@ export type DispatchTruthReads = {
   readonly phasesComplete: boolean;
 };
 
+/** The admission decision computed before any spawn or resume. */
+export type DispatchAdmission =
+  | {
+      readonly admitted: true;
+      readonly resumeMode?: DispatchResumeMode;
+      readonly prefillCostAcknowledged?: boolean;
+      readonly restarts?: number;
+    }
+  | {
+      readonly admitted: false;
+      readonly code:
+        | "dispatch.restart-budget-exceeded"
+        | "dispatch.resume-uneconomical"
+        | "dispatch.state-unverified";
+      readonly terminal?: boolean;
+      readonly escalation?: string;
+      readonly resumeMode?: DispatchResumeMode;
+    };
+
 /** Everything the one-shot run consumes; every field is injected. */
 export type DispatchPorts = {
   readonly store: StateStorePort;
@@ -87,6 +107,7 @@ export type DispatchPorts = {
   readonly claimLease: () => DispatchLeaseClaim;
   readonly releaseLease: (cause: "completed" | "aborted") => boolean;
   readonly phaseLedger: DispatchPhaseLedger;
+  readonly admission?: () => DispatchAdmission;
   readonly initialRestarts?: number;
   readonly restartBudget?: number;
   readonly livenessIntervalMs?: number;
@@ -250,8 +271,10 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
   try {
     const now = ports.nowIso();
     const attemptId = ports.newAttemptId();
-    const restarts = ports.initialRestarts ?? 0;
+    let restarts = ports.initialRestarts ?? 0;
     const budget = ports.restartBudget ?? 0;
+    let resumeMode = ports.resumeMode;
+    let prefillCostAcknowledged = ports.prefillCostAcknowledged;
 
     const record = (input: {
       readonly token: DispatchToken;
@@ -282,10 +305,8 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         ...(input.divergenceRef === undefined ? {} : { divergenceRef: input.divergenceRef }),
         falseSuccess: input.falseSuccess,
         corroboration: input.corroboration,
-        ...(ports.resumeMode === undefined ? {} : { resumeMode: ports.resumeMode }),
-        ...(ports.prefillCostAcknowledged === undefined
-          ? {}
-          : { prefillCostAcknowledged: ports.prefillCostAcknowledged }),
+        ...(resumeMode === undefined ? {} : { resumeMode }),
+        ...(prefillCostAcknowledged === undefined ? {} : { prefillCostAcknowledged }),
         evidenceRefs: input.evidenceRefs,
         recordedAt: now,
       };
@@ -310,6 +331,43 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       releaseCause = "completed";
       return { ok: true, data, attempt, projectionClass: projectionOf(input.token) };
     };
+
+    if (ports.admission !== undefined) {
+      let admission: DispatchAdmission;
+      try {
+        admission = ports.admission();
+      } catch {
+        admission = { admitted: false, code: "dispatch.state-unverified" };
+      }
+      if (!admission.admitted) {
+        const pair = admissionRefusalPair(admission.code);
+        if (admission.resumeMode !== undefined) resumeMode = admission.resumeMode;
+        const reads = staleReads();
+        return record({
+          token: pair.token,
+          outcome: pair.outcome,
+          errorCode: admission.code,
+          comparison: comparisonFor({ token: pair.token, errorCode: admission.code, reads, urlResolved: false }),
+          corroboration: buildCorroborationRecord({ token: pair.token }),
+          falseSuccess: false,
+          prUrl: "",
+          urlResolved: false,
+          lastMessage:
+            admission.code === "dispatch.restart-budget-exceeded"
+              ? `restart budget exhausted at ${restarts} of ${budget}`
+              : admission.code === "dispatch.resume-uneconomical"
+                ? "resume refused: the prefill re-pay is uneconomical"
+                : "resume admission could not read its token or cost facts",
+          evidenceRefs:
+            admission.terminal === true ? ["economics:exhaustion"] : [`attempt:${attemptId}`],
+        });
+      }
+      if (admission.resumeMode !== undefined) resumeMode = admission.resumeMode;
+      if (admission.prefillCostAcknowledged !== undefined) {
+        prefillCostAcknowledged = admission.prefillCostAcknowledged;
+      }
+      if (admission.restarts !== undefined) restarts = admission.restarts;
+    }
 
     const session = await (async () => {
       if (ports.resumePrompt !== undefined && ports.existingHandle !== undefined) {

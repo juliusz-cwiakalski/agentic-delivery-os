@@ -145,6 +145,10 @@ import {
   resolveStateDirectoryScope,
   runCloseout,
   runDispatch,
+  admitDispatchRestart,
+  evaluateDispatchResumeEconomics,
+  planDispatchResume,
+  type DispatchAdmission,
   type DispatchLeaseClaim,
   type DispatchPorts,
   type DispatchRunResult,
@@ -211,6 +215,8 @@ import {
   HARNESS_KINDS,
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
+  type HarnessSessionHandle,
+  type DispatchResumeMode,
   type HarnessSessionPort,
   type DoctorCheckoutFacts,
   type DoctorCommitResolution,
@@ -4452,6 +4458,17 @@ export type DispatchComposition = {
   readonly restartBudget?: number;
   readonly livenessIntervalMs?: number;
   readonly resumeAmplification?: string;
+  readonly existingLane?: (ref: string) => DispatchLaneFacts | undefined;
+};
+
+/** The delivered lane facts a resume admits against. */
+export type DispatchLaneFacts = {
+  readonly handle: HarnessSessionHandle;
+  readonly completedPhases: readonly string[];
+  readonly adapterSupportsResumeInjection: boolean;
+  readonly restartCount: number;
+  readonly prefillCost?: number | null;
+  readonly uniqueProgress?: number | null;
 };
 
 const isHarnessKind = (value: string): value is HarnessKind =>
@@ -4490,6 +4507,46 @@ export const createDispatchCommandRuntime = (
       composition.stateRoot,
       repository,
     ).authority;
+    const lane =
+      input.resumePrompt === undefined ? undefined : composition.existingLane?.(input.ref);
+    let admission: DispatchAdmission | undefined;
+    let resumeMode: DispatchResumeMode | undefined;
+    let prefillCostAcknowledged: boolean | undefined;
+    if (lane !== undefined) {
+      const plan = planDispatchResume({
+        adapterSupportsResumeInjection: lane.adapterSupportsResumeInjection,
+        completedPhases: lane.completedPhases,
+      });
+      resumeMode = plan.mode;
+      prefillCostAcknowledged = plan.prefillCostAcknowledged;
+      const restart = admitDispatchRestart({
+        count: lane.restartCount,
+        bound: composition.restartBudget ?? 0,
+      });
+      if (!restart.admitted) {
+        admission = {
+          admitted: false,
+          code: restart.reason,
+          terminal: true,
+          escalation: restart.escalation,
+          resumeMode: plan.mode,
+        };
+      } else {
+        const economics = evaluateDispatchResumeEconomics({
+          mode: plan.mode,
+          ...(lane.prefillCost === undefined ? {} : { prefillCost: lane.prefillCost }),
+          ...(lane.uniqueProgress === undefined ? {} : { uniqueProgress: lane.uniqueProgress }),
+        });
+        admission = economics.admitted
+          ? {
+              admitted: true,
+              resumeMode: plan.mode,
+              prefillCostAcknowledged: plan.prefillCostAcknowledged,
+              restarts: lane.restartCount,
+            }
+          : { admitted: false, code: economics.code, resumeMode: plan.mode };
+      }
+    }
     return runDispatch({
       store: composition.store,
       fenceToken: composition.fenceToken,
@@ -4518,6 +4575,10 @@ export const createDispatchCommandRuntime = (
         ? {}
         : { resumeAmplification: composition.resumeAmplification }),
       ...(input.resumePrompt === undefined ? {} : { resumePrompt: input.resumePrompt }),
+      ...(lane === undefined ? {} : { existingHandle: lane.handle }),
+      ...(admission === undefined ? {} : { admission: () => admission }),
+      ...(resumeMode === undefined ? {} : { resumeMode }),
+      ...(prefillCostAcknowledged === undefined ? {} : { prefillCostAcknowledged }),
     });
     },
   },
