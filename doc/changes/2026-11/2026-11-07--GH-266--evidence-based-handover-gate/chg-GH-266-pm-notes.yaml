@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-08T04:14:00Z", completed: "2026-11-08T04:34:00Z", status: "pass", iteration: 1 }
   quality_gates: { started: "2026-11-08T04:36:00Z", completed: "2026-11-08T05:00:00Z", status: "pass" }
   dod_check: { started: "2026-11-08T05:02:00Z", completed: "2026-11-08T05:10:00Z", status: "pass" }
-  pr_creation: { started: "2026-11-08T05:12:00Z", completed: null, url: null }
+  pr_creation: { started: "2026-11-08T05:12:00Z", completed: "2026-11-08T05:32:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/269" }
 decisions:
   - text: "Owner directive (CEO-D-073) redefines the M1-S9 handover gate 'clean' from a rolling two-week calendar window to an evidence-based bar. Amendment is docs-only and must not change any other story AC or dependency."
     date: "2026-11-07"
@@ -146,6 +146,15 @@ notes:
     date: "2026-11-08"
   - text: "Environmental note for the PR body: the first `pnpm check` run exited 1 solely on tests/checks/ci-baseline-parity.test.ts, whose `git clone --local` uses hardlinks and fails with EXDEV because /tmp is tmpfs while the repo is on the root volume. The same suite passes in isolation when TMPDIR points at the repository filesystem, and the full aggregate then exits 0. This is the pre-existing noise already recorded on the GH-237 PR, not a regression from this change."
     type: "info"
+    date: "2026-11-08"
+  - text: "PR creation complete: pull request 269 at https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/269 against base main-tools (not the repository default main), head docs/GH-266/evidence-based-handover-gate pushed at d27dfc06. Scope reported as 12 files, +4080/-5, of which exactly two are product files (backlog.md, status.md, +61/-5) and the other ten are change artifacts. Ticket comment posted with the DEC-3 disclosure, the nine-document declared residual including milestones/m1/interactions.md, the N-1 accepted residual, and the GH-239 staleness note. The PR is left open for owner review and merge; the agent does not merge."
+    type: "info"
+    date: "2026-11-08"
+  - text: "Operational note worth carrying: the local branch config had `branch.<name>.merge = refs/heads/main-tools`, so a plain `git push` would have targeted the integration branch directly. The push used an explicit refspec and re-pointed upstream at the branch itself. Any future work on this worktree should keep pushing with an explicit refspec rather than bare `git push`."
+    type: "risk"
+    date: "2026-11-08"
+  - text: "RETRO: the delivery was dominated by DoR remediation (four gate passes over three artifacts) while the product change itself was two paragraphs in two planning files. Two structural causes are worth fixing in the tooling rather than in future PM behaviour: (1) the plan and test plan were allowed to assert 'byte-identical' outcomes without a named oracle coordinate, which forced three successive precision passes; (2) a comment-only summary drift in the plan header and test plan rows survived to the final gate because nothing validates artifact summaries against their own tables. Improvement: the plan validator could reject a plan whose expected-output strings are not derived from the procedure ids it cites, and the test plan could be required to declare each oracle's coordinate source (literal, derived, or byte-slice)."
+    type: "retro"
     date: "2026-11-08"
   - text: "DoD check: PASS. All ten preceding phases carry completion timestamps and evidence; the plan's three phases each have a pm-notes entry naming the phase id, its commit (27ae0000, a32cf599, 5a00f77a) and its gate results, with 22/22 TCs completed; all 17 ACs were verified satisfied against the diff by the reviewer (spec_compliance PASS) rather than assumed; documentation is current — doc-sync was a verified no-op with no unresolved gap, and the one newly discovered residual (milestones/m1/interactions.md) is outside this change's scope and is carried to the PR body and the follow-up change; quality gates are green (pnpm check exit 0, 5828 pass / 4 skip / 0 fail). No phase needed reopening."
     type: "info"
