@@ -149,3 +149,20 @@ export {
   type SupervisorResult,
   uninstallSupervisor,
 } from "./daemon-supervisor.js";
+
+export {
+  appendDispatchAttempt,
+  appendDispatchDivergence,
+  appendDispatchHandover,
+  foldDispatchDivergences,
+  isEvidenceClass,
+  readDispatchAttempts,
+  readDispatchDivergences,
+  readDispatchHandover,
+  resolveDispatchDivergence,
+  summarizeDispatchDivergences,
+  writeDispatchAuthority,
+  type DispatchAppendResult,
+  type DispatchDivergenceSummary,
+  type DispatchLedgerRead,
+} from "./dispatch-ledger.js";

@@ -675,3 +675,55 @@ export {
   type DispatchLivenessUnknownReason,
   type DispatchLivenessVerdict,
 } from "./domain/dispatch-liveness.js";
+
+export {
+  buildComparisonRecord,
+  buildCorroborationRecord,
+  classifyFalseSuccess,
+  comparisonClassOf,
+  corroborationSatisfied,
+  dispatchFamilyOf,
+  isComparisonDivergence,
+  isComparisonShapeValid,
+  requiredCorroboration,
+  type ComparisonInput,
+  type CorroborationFacts,
+} from "./domain/dispatch-comparison.js";
+export {
+  DISPATCH_IDENTITY_SCHEMA,
+  DISPATCH_IDENTITY_SOURCES,
+  isRepositoryIdentity,
+  normalizeDispatchRepositoryKey,
+  normalizeRepositoryRemote,
+  parseIdentityMarker,
+  resolveDispatchIdentity,
+  serializeIdentityMarker,
+  type DispatchIdentityResolution,
+  type DispatchIdentitySource,
+} from "./domain/dispatch-identity.js";
+export {
+  buildDispatchAuthorityView,
+  dualRunAuthority,
+  foldDispatchHandover,
+  isAuthoritative,
+  parseDispatchAuthorityText,
+  parseDispatchAuthorityView,
+  type DispatchAuthorityFold,
+} from "./domain/dispatch-authority.js";
+
+export {
+  appendDispatchAttempt,
+  appendDispatchDivergence,
+  appendDispatchHandover,
+  foldDispatchDivergences,
+  isEvidenceClass,
+  readDispatchAttempts,
+  readDispatchDivergences,
+  readDispatchHandover,
+  resolveDispatchDivergence,
+  summarizeDispatchDivergences,
+  writeDispatchAuthority,
+  type DispatchAppendResult,
+  type DispatchDivergenceSummary,
+  type DispatchLedgerRead,
+} from "./app/dispatch-ledger.js";

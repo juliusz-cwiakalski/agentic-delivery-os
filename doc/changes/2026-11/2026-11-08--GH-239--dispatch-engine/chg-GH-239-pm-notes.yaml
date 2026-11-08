@@ -163,3 +163,25 @@ notes:
       scope drift and committed."
     type: info
     date: "2026-11-08"
+  - text: "Delivery plan phase 2 (pure dispatch domain) complete. Commit b24e8ae.
+      Tests green: dispatch-truth-derivation, dispatch-state-unverified,
+      dispatch-liveness, dispatch-token-closure, dispatch-exit-projection,
+      dispatch-token-home, content-inventory, pnpm typecheck. Notes: the pure
+      module carries no exit digit and no token literal (it returns the
+      projection class; the exit matrix is proven through the delivered
+      projection module in the test). Outcome strings use HARNESS_OUTCOMES
+      indices because the token-home scan forbids token literals in dispatch
+      modules."
+    type: info
+    date: "2026-11-08"
+  - text: "Delivery plan phase 3 (durable dispatch evidence ledger, evidence
+      class, comparison record, repository identity) complete. Tests green:
+      dispatch-evidence-record, dispatch-evidence-class, dispatch-comparison,
+      dispatch-identity, dispatch-false-success, dispatch-unevaluable,
+      dispatch-authority-view, state-atomic-replace, state-ledger,
+      content-inventory, pnpm typecheck, pnpm check:boundaries. Notes: identity
+      resolution now treats a persisted binding as governing over a later
+      derived key, per the record's stability clause; the adapter owns only the
+      store-artifact seam because adapters cannot import the core domain tier."
+    type: info
+    date: "2026-11-08"

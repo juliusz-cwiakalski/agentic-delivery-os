@@ -631,3 +631,38 @@ export {
   type DispatchLivenessUnknownReason,
   type DispatchLivenessVerdict,
 } from "./dispatch-liveness.js";
+
+export {
+  buildComparisonRecord,
+  buildCorroborationRecord,
+  classifyFalseSuccess,
+  comparisonClassOf,
+  corroborationSatisfied,
+  dispatchFamilyOf,
+  isComparisonDivergence,
+  isComparisonShapeValid,
+  requiredCorroboration,
+  type ComparisonInput,
+  type CorroborationFacts,
+} from "./dispatch-comparison.js";
+export {
+  DISPATCH_IDENTITY_SCHEMA,
+  DISPATCH_IDENTITY_SOURCES,
+  isRepositoryIdentity,
+  normalizeDispatchRepositoryKey,
+  normalizeRepositoryRemote,
+  parseIdentityMarker,
+  resolveDispatchIdentity,
+  serializeIdentityMarker,
+  type DispatchIdentityResolution,
+  type DispatchIdentitySource,
+} from "./dispatch-identity.js";
+export {
+  buildDispatchAuthorityView,
+  dualRunAuthority,
+  foldDispatchHandover,
+  isAuthoritative,
+  parseDispatchAuthorityText,
+  parseDispatchAuthorityView,
+  type DispatchAuthorityFold,
+} from "./dispatch-authority.js";
