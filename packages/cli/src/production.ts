@@ -20,7 +20,11 @@ import {
   relativeChangeFolder,
   runtimePlatform,
 } from "@delivery-os/adapters/file";
-import { createGitBranchSeam, createGitMergeSeam } from "@delivery-os/adapters/git";
+import {
+  createGitBranchSeam,
+  createGitMergeSeam,
+  type GitChildRunner,
+} from "@delivery-os/adapters/git";
 import { createGitHubClient, type GithubClientOptions } from "@delivery-os/adapters/github";
 import { createClaudeSession, createOpencodeSession } from "@delivery-os/adapters/harness";
 import { createHostSpawnRunner } from "@delivery-os/adapters/host";
@@ -35,17 +39,27 @@ import {
   buildHarnessSpawnEnvironment,
   claimQueueLease,
   classifyHarnessEvidence,
+  classifyVerifyDocument,
+  type DispatchArtifactFacts,
   type DispatchLedgerFacts,
+  type DispatchPrFact,
   type DispatchRead,
+  type DispatchTrackerFacts,
   type DispatchTruthReads,
+  EvaluateVerifyChange,
   type HarnessSettings,
   normalizeRepositoryRemote,
   releaseQueueLease,
   resolveConfig,
   resolveHarnessSettings,
+  type VerifyDocumentClassification,
 } from "@delivery-os/core";
 import {
   type BrandIdentity,
+  CLOSEOUT_INTEGRATION_BASE,
+  type CredentialPort,
+  DELIVERY_RESULT_TOKENS,
+  type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
   type DispatchLedgerVariant,
   type DispatchPhaseLedger,
@@ -55,6 +69,10 @@ import {
   type HarnessKind,
   type HarnessSessionPort,
   type HarnessSpawnRunner,
+  type PipelineRun,
+  STATUS_OWNER_ATTENTION_LABELS,
+  STATUS_SOURCE_ITEM_LIMIT,
+  VERIFY_GATES_CI_RUN_LIMIT,
 } from "@delivery-os/core/contracts";
 import {
   createNodeStateEdge,
@@ -83,6 +101,16 @@ import {
 import type { EntrypointComposer } from "./entrypoint.js";
 
 const PROVIDER_FAILURE = "config.credential.missing";
+
+/**
+ * The tracker-family tokens the truth read derives, resolved from the one
+ * taxonomy: `merged`, `blocked`, `pr-open`, `pr-open-unverified`.
+ */
+const [PR_MERGED_TOKEN, PR_BLOCKED_TOKEN, PR_OPEN_TOKEN, PR_OPEN_UNVERIFIED_TOKEN] =
+  DELIVERY_RESULT_TOKENS;
+
+/** The bounded provider page the truth read addresses. */
+const TRUTH_PROVIDER_LIMIT = STATUS_SOURCE_ITEM_LIMIT;
 
 const trimTrailingSeparators = (path: string): string => path.replace(/[\\/]+$/u, "");
 
@@ -134,6 +162,21 @@ export type ProductionCompositionFacts = {
    * inject a recording runner so composition is proven without a harness process.
    */
   readonly harnessSpawnRunner?: HarnessSpawnRunner;
+  /**
+   * The injected GitHub transport. Production uses native `fetch`; tests inject
+   * a recording transport so the truth read is proven without network access.
+   */
+  readonly githubTransport?: GithubClientOptions["transport"];
+  /**
+   * The injected credential port. Production reads the process environment;
+   * tests inject a port so a missing credential is proven without ambient state.
+   */
+  readonly credentials?: CredentialPort;
+  /**
+   * The injected git child runner. Production spawns the git binary; tests
+   * inject branch and history facts without touching a checkout.
+   */
+  readonly gitChildRunner?: GitChildRunner;
 };
 
 /**
@@ -167,10 +210,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
       { driver: "jsonl", edge: createNodeStateEdge() },
     );
-    const credentials = createProcessCredentialPort(brand);
+    const credentials = facts.credentials ?? createProcessCredentialPort(brand);
     const harnessCredentials = createEnvironmentCredentialPort({ environment, brand });
     const instance = githubInstance();
-    const transport = nativeTransport;
+    const transport = facts.githubTransport ?? nativeTransport;
+    const gitBranches = createGitBranchSeam({
+      cwd,
+      ...(facts.gitChildRunner === undefined ? {} : { childRunner: facts.gitChildRunner }),
+    });
     const repositoryFacts = readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
     const target = repositoryTargetOf(repositoryFacts.originUrl);
     const dispatchRepository = normalizeRepositoryRemote(repositoryFacts.originUrl);
@@ -199,6 +246,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     });
 
     const plan = createPlanCommandRuntime({ changesDirectory, fs: notesFs });
+    const verifyRuntime = createVerifyCommandRuntime({
+      store,
+      changesDirectory,
+      fs: notesFs,
+    });
     const readChangeFolder = (changeRef: string): string | undefined =>
       relativeChangeFolder({
         changeRef,
@@ -295,7 +347,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const closeout = createCloseoutComposition({
       workspaceId,
       provider: { kind: "github", client },
-      git: createGitBranchSeam({ cwd }),
+      git: gitBranches,
       store,
       nowIso,
       newFenceToken,
@@ -375,9 +427,225 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     };
 
     /**
-     * The production truth read. The phase ledger is read from the state store
-     * and plan artifact; the externally-owned sources this composition does not
-     * read stay explicitly unreadable rather than fabricated.
+     * The provider web base, derived from the declared API base: the two
+     * provider addressings GitHub publishes differ only by the API prefix.
+     */
+    const providerWebBase = (): string =>
+      trimTrailingSeparators(instance.baseUrl)
+        .replace(/\/api\/v3$/u, "")
+        .replace(/\/\/api\./u, "//");
+
+    /**
+     * The pull-request web address, or `undefined` when the resolved
+     * repository binding or the provider entity id cannot address one.
+     */
+    const pullRequestUrl = (entityId: string): string | undefined => {
+      if (target === undefined || !/^[0-9]+$/u.test(entityId)) return undefined;
+      return `${providerWebBase()}/${target.owner}/${target.name}/pull/${entityId}`;
+    };
+
+    /** The change's local branch and head; an unreadable history is classified. */
+    const readChangeBranch = async (
+      changeRef: string,
+    ): Promise<
+      { readonly branch?: string; readonly head?: string } | { readonly identity: string }
+    > => {
+      try {
+        const branches = await gitBranches.listBranches({ workItemRef: changeRef });
+        const found = branches[0];
+        return found === undefined ? {} : { branch: found.name, head: found.head };
+      } catch {
+        return { identity: "git.branch.read-failed" };
+      }
+    };
+
+    /** One pull-request truth: the observed fact plus the head the CI read addresses. */
+    type PullTruth = {
+      readonly fact: DispatchPrFact;
+      readonly headSha?: string;
+      readonly targetRef?: string;
+    };
+
+    type TruthFailure = { readonly ok: false; readonly identity: string };
+    type TruthSuccess<T> = { readonly ok: true; readonly value: T };
+
+    /**
+     * The pull-request truth: an open request whose head is the change branch
+     * first, then an already-merged request for the same ref. Neither the open
+     * nor the merged read may be silently degraded to a narrower fact.
+     */
+    const readPullTruth = async (
+      changeRef: string,
+      branch: string | undefined,
+    ): Promise<TruthSuccess<PullTruth> | TruthFailure> => {
+      if (target === undefined) return { ok: false, identity: "address-unresolved" };
+      const open = await client.listDeliveryRequests(TRUTH_PROVIDER_LIMIT);
+      if (!open.ok) return { ok: false, identity: open.code };
+      const openMatch =
+        branch === undefined
+          ? undefined
+          : open.value.items.find((item) => item.sourceRef === branch);
+      if (openMatch !== undefined) {
+        const url = pullRequestUrl(openMatch.identity.entityId);
+        return {
+          ok: true,
+          value: {
+            fact: {
+              state: "open",
+              url: url ?? null,
+              mergeReady: openMatch.mergeableState === "mergeable",
+            },
+            targetRef: openMatch.targetRef,
+            ...(openMatch.sourceHeadSha === undefined ? {} : { headSha: openMatch.sourceHeadSha }),
+          },
+        };
+      }
+      const merged = await client.findMergedDeliveryRequest({
+        workItemRef: changeRef,
+        limit: TRUTH_PROVIDER_LIMIT,
+      });
+      if (merged.observation === "invalid") {
+        return { ok: false, identity: "provider.payload.invalid" };
+      }
+      const mergedMatch =
+        merged.observation === "observed" &&
+        (branch === undefined || merged.value.sourceRef === branch)
+          ? merged.value
+          : undefined;
+      if (mergedMatch !== undefined) {
+        const url = pullRequestUrl(mergedMatch.identity.entityId);
+        const headSha = mergedMatch.sourceHeadSha ?? mergedMatch.headSha;
+        return {
+          ok: true,
+          value: {
+            fact: { state: "already-merged", url: url ?? null, mergeReady: false },
+            targetRef: mergedMatch.targetRef,
+            ...(headSha === undefined ? {} : { headSha }),
+          },
+        };
+      }
+      return { ok: true, value: { fact: { state: "none", url: null, mergeReady: false } } };
+    };
+
+    /**
+     * The change branch's commit count ahead of the request's target (or the
+     * declared integration base). A target that does not resolve locally falls
+     * back to the branch's reachable count, so the zero-artifact predicate
+     * stays truthful: the branch has no commits only when it has none.
+     */
+    const readBranchCommits = async (
+      branch: string | undefined,
+      pull: PullTruth,
+    ): Promise<TruthSuccess<number> | TruthFailure> => {
+      if (branch === undefined) return { ok: true, value: 0 };
+      const since = pull.targetRef ?? CLOSEOUT_INTEGRATION_BASE;
+      const ahead = await gitBranches.countCommits({ ref: branch, since });
+      if (ahead !== undefined) return { ok: true, value: ahead };
+      const reachable = await gitBranches.countCommits({ ref: branch });
+      return reachable === undefined
+        ? { ok: false, identity: "git.commit-count.unreadable" }
+        : { ok: true, value: reachable };
+    };
+
+    /** The tracker truth: native done state and the owner-attention label set. */
+    const readTrackerTruth = async (
+      changeRef: string,
+    ): Promise<TruthSuccess<DispatchTrackerFacts> | TruthFailure> => {
+      const issueNumber = /^[A-Za-z]+-([0-9]+)$/u.exec(changeRef)?.[1];
+      if (issueNumber === undefined || target === undefined) {
+        return { ok: false, identity: "address-unresolved" };
+      }
+      const read = await client.readWorkItem(Number(issueNumber));
+      if (!read.ok) return { ok: false, identity: read.code };
+      const blocking = read.value.labels.some((label) =>
+        (STATUS_OWNER_ATTENTION_LABELS as readonly string[]).includes(label),
+      );
+      const state: DispatchTrackerFacts["state"] =
+        read.value.status.deliveryState === "done"
+          ? "done"
+          : blocking
+            ? "delivery-blocked"
+            : "in-progress";
+      return { ok: true, value: { state, blocking } };
+    };
+
+    /**
+     * The CI verdict on the pushed head, projected from the delivered check-run
+     * facts. The declared gates battery answers the pre-merge question ("is the
+     * gate green for the open request"); dispatch asks the weaker, also
+     * post-merge-safe question "did the checks on this head succeed", so the
+     * projection of the same `PipelineJobState` vocabulary lives here.
+     */
+    const ciVerdictOf = (
+      runs: readonly PipelineRun[],
+    ): "success" | "failure" | "pending" | "canceled" | "absent" => {
+      const states = runs.flatMap((run) => run.jobs.map((job) => job.jobState));
+      if (states.includes("failed")) return "failure";
+      if (states.length === 0) return "absent";
+      if (states.some((state) => state === "running" || state === "queued")) return "pending";
+      if (states.includes("canceled")) return "canceled";
+      return states.every((state) => state === "succeeded" || state === "skipped")
+        ? "success"
+        : "absent";
+    };
+
+    /** The CI read: the verdict on the pushed head, or its named absence. */
+    const readCiTruth = async (
+      headSha: string | undefined,
+    ): Promise<DispatchRead<{ readonly verdict: "success" | "failure" }>> => {
+      if (headSha === undefined) {
+        return { ok: false, reason: "state", identity: "ci.head-unresolved" };
+      }
+      const read = await client.readPipelineRun(headSha, VERIFY_GATES_CI_RUN_LIMIT);
+      if (!read.ok) return { ok: false, reason: "state", identity: read.code };
+      const verdict = ciVerdictOf(read.value.items);
+      if (verdict === "success") return { ok: true, value: { verdict: "success" } };
+      if (verdict === "failure") return { ok: true, value: { verdict: "failure" } };
+      return { ok: false, reason: "state", identity: `ci.${verdict}` };
+    };
+
+    /** The verify-change ledger outcome for the ref, over the real notes and ledger. */
+    const readVerifyOutcome = (changeRef: string): DeliveryResultToken => {
+      const notes = verifyRuntime.readPmNotes(changeRef);
+      const document: VerifyDocumentClassification = notes.ok
+        ? classifyVerifyDocument({ ok: true, value: notes.value })
+        : notes.reason === "missing"
+          ? {
+              ok: false,
+              kind: "lint",
+              code: "lint.target.missing",
+              summary: "result=failed; variant=unknown; missing=-",
+            }
+          : classifyVerifyDocument({ ok: false, parseFailure: notes.parseFailure });
+      return EvaluateVerifyChange({
+        changeRef,
+        document,
+        registry: verifyRuntime.readRegistry(changeRef),
+      }).outcome;
+    };
+
+    /** The independently derived tracker-family token for the same facts. */
+    const trackerTokenOf = (
+      tracker: DispatchTrackerFacts,
+      pr: DispatchPrFact,
+    ): DeliveryResultToken | null => {
+      if (tracker.blocking || tracker.state === "delivery-blocked") return PR_BLOCKED_TOKEN;
+      if (pr.state === "already-merged") return PR_MERGED_TOKEN;
+      if (pr.state === "open") {
+        return pr.url === null || pr.url.length === 0 ? PR_OPEN_UNVERIFIED_TOKEN : PR_OPEN_TOKEN;
+      }
+      return null;
+    };
+
+    /**
+     * The production truth read.
+     *
+     * Every source is the real one: the local change branch and its commits, the
+     * GitHub-bound pull request and work item, the CI verdict on the pushed head,
+     * the verify-change ledger outcome, and the tracker token derived from those
+     * facts. A source that genuinely fails keeps its classified identity and the
+     * dispatch classifies `state-unverified`; no read is fabricated or silently
+     * narrowed.
      */
     const dispatchTruth = async (changeRef: string): Promise<DispatchTruthReads> => {
       const summary = phaseSummary(changeRef);
@@ -393,13 +661,36 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             },
           }
         : { ok: false, reason: "ledger", identity: transitions.error.code };
+
+      const branch = await readChangeBranch(changeRef);
+      const pull = await readPullTruth(changeRef, "identity" in branch ? undefined : branch.branch);
+      const trackerRead = await readTrackerTruth(changeRef);
+
+      let artifacts: DispatchRead<DispatchArtifactFacts>;
+      if ("identity" in branch) {
+        artifacts = { ok: false, reason: "artifact", identity: branch.identity };
+      } else if (!pull.ok) {
+        artifacts = { ok: false, reason: "artifact", identity: pull.identity };
+      } else {
+        const commits = await readBranchCommits(branch.branch, pull.value);
+        artifacts = commits.ok
+          ? { ok: true, value: { branchCommits: commits.value, pr: pull.value.fact } }
+          : { ok: false, reason: "artifact", identity: commits.identity };
+      }
+
+      const headSha = pull.ok ? pull.value.headSha : "identity" in branch ? undefined : branch.head;
+      const tracker: DispatchRead<DispatchTrackerFacts> = trackerRead.ok
+        ? { ok: true, value: trackerRead.value }
+        : { ok: false, reason: "tracker", identity: trackerRead.identity };
+
       return {
-        artifacts: { ok: false, reason: "artifact", identity: "branch-and-pr-not-read" },
+        artifacts,
         ledger,
-        tracker: { ok: false, reason: "tracker", identity: "tracker-not-read" },
-        ci: { ok: false, reason: "state", identity: "ci-not-read" },
-        verifyOutcome: null,
-        trackerToken: null,
+        tracker,
+        ci: await readCiTruth(headSha),
+        verifyOutcome: readVerifyOutcome(changeRef),
+        trackerToken:
+          trackerRead.ok && pull.ok ? trackerTokenOf(trackerRead.value, pull.value.fact) : null,
         phasesComplete: summary.total > 0 && summary.completed >= summary.total,
       };
     };
@@ -533,11 +824,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
       dispatch,
       verify: {
-        ...createVerifyCommandRuntime({
-          store,
-          changesDirectory,
-          fs: notesFs,
-        }),
+        ...verifyRuntime,
         gates,
         deploy: createVerifyDeployCommandRuntime({
           resolve: async () => ({ ok: false, kind: "no-target" }),

@@ -104,6 +104,15 @@ export type GitBranchSeam = {
     readonly workItemRef: string;
   }) => Promise<readonly GitBranchFacts[]>;
   readonly readBranch: (input: { readonly branch: string }) => Promise<GitBranchFacts | undefined>;
+  /**
+   * Count commits reachable from `ref` but not from `since` (fixed argv,
+   * read-only `rev-list --count`). Absent when either ref is unsafe or the
+   * history read does not resolve.
+   */
+  readonly countCommits: (input: {
+    readonly ref: string;
+    readonly since?: string;
+  }) => Promise<number | undefined>;
   readonly isCheckedOutElsewhere: (input: { readonly branch: string }) => Promise<boolean>;
   /** List local worktrees from `worktree list --porcelain` (read-only). */
   readonly listWorktrees: () => Promise<readonly GitWorktreeFact[]>;
@@ -312,6 +321,14 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
         .sort((left, right) => left.name.localeCompare(right.name));
     },
     readBranch: (input) => readBranchFact(input.branch),
+    countCommits: async (input) => {
+      if (!isSafeRef(input.ref)) return undefined;
+      if (input.since !== undefined && !isSafeRef(input.since)) return undefined;
+      const range = input.since === undefined ? input.ref : `${input.since}..${input.ref}`;
+      const result = await git(["rev-list", "--count", range]);
+      const value = Number.parseInt(result.stdout.trim(), 10);
+      return result.status === 0 && Number.isFinite(value) ? value : undefined;
+    },
     isCheckedOutElsewhere: async (input) => {
       if (!isSafeRef(input.branch)) return false;
       const output = await stdoutOrThrow(["worktree", "list", "--porcelain"], "worktrees");
