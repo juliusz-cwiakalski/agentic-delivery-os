@@ -163,6 +163,7 @@ describe("TC-ENTRY-004 help coverage", () => {
         "closeout",
         "spend",
         "retro",
+        "dispatch",
       ].sort(),
     );
   });

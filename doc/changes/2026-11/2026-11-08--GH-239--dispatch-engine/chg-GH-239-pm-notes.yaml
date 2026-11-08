@@ -221,3 +221,15 @@ notes:
       exits 1."
     type: info
     date: "2026-11-08"
+  - text: "Delivery plan phase 7 (registration, help, reference page, planning
+      reconciliation, absence inversion) complete. Tests green:
+      dispatch-help-inventory, dispatch-help-version, dispatch-doc-conformance,
+      entrypoint-composition, entrypoint-help-coverage, pilot-isolation,
+      help-guide-coverage, reference-page-parity, help-guide-coverage-mutants,
+      content-inventory, dispatch-token-home, pnpm typecheck, pnpm check:help,
+      pnpm check:prompt. dispatch joins PROMPT_REQUIRED_COMMANDS with four help
+      paths; the reference page and SC-M1-29/30 carry the four-condition bar and
+      the resolution/reversal surfaces; the pilot fixture comment is narrowed
+      without composing dispatch into it."
+    type: info
+    date: "2026-11-08"

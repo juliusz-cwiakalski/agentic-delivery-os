@@ -1,6 +1,6 @@
 /**
  * TC-ENTRY-009 — the composition is exactly the §8.1 prompt-required set;
- * `state`, `mcp`, `dispatch`, and the daemon are absent; an invocation outside
+ * `state`, `mcp`, and the daemon are absent while `dispatch` is present; an invocation outside
  * the set fails closed through the existing `fallback.internal` identity.
  */
 import { describe, expect, test } from "bun:test";
@@ -29,6 +29,7 @@ const EXPECTED: readonly PromptRequiredCommand[] = [
   "closeout",
   "spend",
   "retro",
+  "dispatch",
 ];
 
 const withExtras = (): CommandProgram => {
@@ -68,7 +69,7 @@ describe("TC-ENTRY-009 composition honesty", () => {
   test("extra registrations are dropped, not advertised", () => {
     const selected = selectPromptRequiredProgram(withExtras());
     expect(Object.keys(selected.commands).sort()).toEqual([...EXPECTED].sort());
-    for (const absent of ["state", "mcp", "dispatch", "daemon", "config", "doctor"]) {
+    for (const absent of ["state", "mcp", "daemon", "config", "doctor"]) {
       expect(Object.keys(selected.commands)).not.toContain(absent);
     }
   });
@@ -81,7 +82,7 @@ describe("TC-ENTRY-009 composition honesty", () => {
   });
 
   test("an uncomposed command fails closed through fallback.internal", async () => {
-    for (const command of ["state", "mcp", "dispatch", "daemon", "frobnicate"]) {
+    for (const command of ["state", "mcp", "daemon", "frobnicate"]) {
       const run = await invoke(["--json", command]);
       expect(run.exitCode).toBe(2);
       const envelope = JSON.parse(run.stdout) as {

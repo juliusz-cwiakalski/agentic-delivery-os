@@ -23,6 +23,7 @@ export const PROMPT_REQUIRED_COMMANDS = [
   "closeout",
   "spend",
   "retro",
+  "dispatch",
 ] as const;
 
 export type PromptRequiredCommand = (typeof PROMPT_REQUIRED_COMMANDS)[number];

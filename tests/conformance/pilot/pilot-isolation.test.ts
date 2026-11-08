@@ -121,7 +121,7 @@ describe("TC-PILOT-003 stub/real matrix", () => {
     expect(stdout.value).toContain("0.0.0");
   });
 
-  test("the pilot composition is test-only and claims no state/mcp/dispatch command", () => {
+  test("the reduced test-only fixture deliberately omits the state, mcp, and dispatch surfaces", () => {
     const commands = Object.keys(fixture().program.commands).sort();
     expect(commands).toEqual([
       "blockers",
