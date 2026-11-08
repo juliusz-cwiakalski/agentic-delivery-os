@@ -316,3 +316,37 @@ notes:
       re-run green (6418 pass, 4 skip, 0 fail)."
     type: info
     date: "2026-11-08"
+  - text: "Delivery pass 3 (plan phase 4 re-validation, production truth read)
+      complete. Commit 8e8dd542. The production composition now composes the
+      real dispatch truth read instead of permanently-unreadable placeholders:
+      artifacts = the change branch from the git seam plus its rev-list commit
+      count ahead of the request target (or the declared integration base) and
+      the pull request found by head branch through the delivered GitHub client
+      (open first, then merged-by-ref), with the request web URL derived from
+      the declared instance addressing; tracker = the work item read (native
+      done state and the owner-attention label set) with the PR state; ci = the
+      check-run verdict on the pushed head (PR head SHA, else the local branch
+      head; a non-green or absent run set is a named unreadable identity, never
+      a fabricated verdict); verifyOutcome = the delivered verify-change
+      evaluation (classifyVerifyDocument + EvaluateVerifyChange) over the real
+      pm-notes and the real ledger; trackerToken = pr-open/pr-open-unverified/
+      merged/blocked derived from those facts per Appendix B. A genuinely failed
+      read keeps its classified identity (config.credential.missing,
+      provider.payload.invalid, git.*) and the dispatch classifies
+      state-unverified at exit 2; nothing is fabricated or silently narrowed.
+      Hermetic proof in tests/structure/dispatch-composition.test.ts (injected
+      credential port, recording GitHub transport, recording git child runner):
+      pr-open / merged / blocked / pr-open-unverified / no-branch, plus
+      non-green CI corroboration and the two honest failure paths; no network.
+      The suite also keeps the phase-4 harness-port and merge-absence proofs.
+      Scope note: the primitive reported packages/adapters/src/git/index.ts as
+      scope drift; the truth read needs a read-only rev-list --count branch
+      history read, which the branch seam did not expose, so the seam gained
+      `countCommits` (fixed argv, safe-ref validated) rather than dispatching
+      through merge execution. Tests green: dispatch-* behaviour/structure/golden
+      suites (229), closeout-* and daemon-* suites (326), queue-ready contract
+      and imports, content-inventory, pnpm typecheck, pnpm check:boundaries, and
+      the aggregate pnpm check (6426 pass, 4 skip, 0 fail, 766 files; boundaries,
+      prompt conformance, help coverage, and exports parity all green)."
+    type: info
+    date: "2026-11-08"
