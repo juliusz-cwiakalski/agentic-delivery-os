@@ -1,0 +1,475 @@
+# GH-239 delivery plan. `tests` is delivery evidence for plan review; it is not a
+# plan-schema field. Phase progress stays in pm-notes `notes:` entries.
+#
+# Ceremony: one ticket, one PR targeting main-tools. The ten phases are sequenced
+# so each is independently green and independently committable: contracts before
+# the pure domain, the pure domain before the ledger, the ledger before
+# orchestration, orchestration before the gate and handover, and the end-to-end
+# proof last. No phase depends on a later phase to compile.
+#
+# Cross-phase file ownership (declared because these files are touched by more
+# than one phase; the phase-4 declaration is the shared interface and later
+# phases extend it additively):
+# - `packages/core/src/app/dispatch.ts` — phase 4 creates the fresh-run loop,
+#   phase 5 adds resume admission to the same loop.
+# - `packages/cli/src/commands/dispatch.ts` — phase 4 creates the run form,
+#   phase 5 adds `--resume-prompt` handling, phase 6 adds `dual-run summary`,
+#   `dual-run resolve`, and `handover --revert`.
+# - `packages/cli/src/output/dispatch-text.ts` — phase 4 creates the four-key and
+#   error renderers, phase 6 adds the summary and handover renderers.
+# - `packages/cli/src/edge.ts` — phase 4 creates the dispatch runtime factory,
+#   phases 5 and 6 extend it with the resume and gate/handover capabilities.
+# - `tests/structure/inventory.json` and the `EXECUTABLE_ALLOWANCES` table in
+#   `tests/structure/content-inventory.test.ts` are the mechanical new-file and
+#   executable-export manifests; every phase that adds a source file updates the
+#   same two entries. This is bookkeeping, never behavior.
+#
+# Test harness note: dispatch behaviour suites drive `runCli` with an injected
+# command program, which is the same surface `runEntrypoint` delegates to and the
+# convention every delivered command suite already uses. `dispatch` joins the
+# prompt-required set in phase 7, so the entrypoint path is asserted there by the
+# updated composition and help-coverage suites; the behavior, command, output,
+# record, and exit assertions of every scenario stay binding from phase 4.
+#
+# Documentation boundary: the only planned `doc/spec/**` touch is the two
+# documented error-table rows in `feature-result-contract.md` (phase 1), because
+# the delivered two-way error-table sync refuses a machine row with no documented
+# row and a green phase requires it. That is row data, not current-truth
+# reconciliation: every other `doc/spec/**` change stays with the lifecycle
+# system_spec_update phase owned by @doc-syncer.
+#
+# Planning reconciliation is limited to the two story-owned surfaces the spec
+# names (`commands/dispatch.md` and SC-M1-29/SC-M1-30 in `test-scenarios.md`);
+# the GH-239 ticket body and the remaining planning residual are reported, never
+# edited.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-239
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  escalationTriggers:
+    - handover-gate-eligibility-ambiguity
+    - token-or-exit-closure-regression
+    - bash-fallback-behaviour-change
+    - documented-error-table-drift
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Contracts, dispatch error identities, record families, and the F-9 deferral update"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - packages/adapters/src/harness/review-deferrals.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/dispatch-token-home.test.ts
+        - tests/structure/dispatch-error-identity.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/result-contract.test.ts
+        - tests/structure/delivery-result-contract.test.ts
+        - tests/structure/harness-review-deferrals.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/types/dispatch-contract.type-test.ts
+        - tests/fixtures/result/code-corpora/true-positives.json
+        - tests/fixtures/result/code-corpora/false-positives.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-239 in progress; phase 1 evidence recorded in pm-notes notes (contracts, two dispatch error rows, F-9 production-consumer outcome)"
+    leases:
+      - lease:core-contracts
+    weightClass: heavy
+    summary: "Declare the dispatch language once in the runtime-neutral contracts tier: the three additive record kinds with payload schemas and key prefixes (`dispatch.attempt` / `delivery.dispatch.attempt.v1`, `dispatch.divergence` / `delivery.dispatch.divergence.v1`, `dispatch.handover` / `delivery.dispatch.handover.v1`), the derived `delivery.dispatch.authority.v1` view schema and its single production document name, the dispatch envelope data (`result`, `prUrl`, `phaseLedger{completed,total,variant}`, `restarts`, `resumeAmplification`, `harness`, `handoverState`, `outcome`), the summary data (window start and reason, UTC day count, counted deliveries, incidents, divergences, class coverage, corroboration, eligibility, unmet conditions), the four handover condition identifiers, the corroboration family sufficiency map, the bounded constants (5,000 attempt records per read, 65,536 machine bytes, 40 human lines, 8,192 human bytes, 20 dispatches, 7 consecutive UTC dates) and the injected authority-read port; the eleven tokens are imported from `DELIVERY_RESULT_TOKENS` and no second token list exists. Add `dispatch.session.spawn-failed` (category user, non-retryable, `not_landed`, user-validation, exit 1) and `dispatch.state-unverified` (platform, exit 2) to the machine table and to the documented rows in `doc/spec/features/feature-result-contract.md`; the two existing dispatch rows stay unchanged and resolve by exact code. This is the only planned `doc/spec/**` touch: the two documented rows are mechanically required by the two-way sync (AC-F12-1, TC-ERR-005) and carry no current-truth reconciliation, which stays with the system_spec_update phase. It also records the F-9 production-consumer outcome in `HARNESS_REVIEW_DEFERRALS` and inverts the delivered no-dispatch-surface/no-spawn-failure-row assertion, so the error row and the deferral record cannot contradict each other. No new configuration key is introduced (DEC-17): `lane.restart-budget` and `lane.liveness-interval` remain the policy homes and the evidence bounds are contract constants."
+    tests:
+      - "bun test tests/structure/dispatch-token-home.test.ts tests/structure/delivery-result-contract.test.ts tests/structure/result-contract.test.ts"
+      - "bun test tests/structure/dispatch-error-identity.test.ts tests/structure/error-table.test.ts"
+      - "bun test tests/structure/harness-review-deferrals.test.ts"
+      - "bun test tests/checks/error-table-sync.test.ts"
+      - "bun test tests/types"
+      - "bun run scripts/checks/error-table-sync.ts"
+      - "pnpm typecheck"
+      - "pnpm check:boundaries"
+  - id: 2
+    title: "Pure dispatch domain: truth-bound derivation, failure classification, and progress-based liveness"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/dispatch-result.ts
+        - packages/core/src/domain/dispatch-liveness.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/dispatch/harness.ts
+        - tests/fixtures/dispatch/truth.ts
+        - tests/behaviour/dispatch-truth-derivation.test.ts
+        - tests/behaviour/dispatch-state-unverified.test.ts
+        - tests/behaviour/dispatch-liveness.test.ts
+        - tests/behaviour/dispatch-token-closure.test.ts
+        - tests/behaviour/dispatch-exit-projection.test.ts
+    doneArtifacts:
+      trackerTransition: "GH-239 in progress; phase 2 evidence recorded in pm-notes notes (truth-bound derivation, failure classification, progress liveness)"
+    leases:
+      - lease:core-domain
+    weightClass: heavy
+    summary: "Implement the pure dispatch domain over the phase-1 vocabulary. `deriveDispatchResult(...)` is artifact-first: an exit-0 session with no branch commit, no PR, and no ledger progress is `failed` with the missing artifact named; an open PR is `pr-open`, an unresolvable PR URL `pr-open-unverified`, an independently observed merged PR `merged` as detection only, a blocking tracker state `blocked`, an exhausted lane `noop-lane-nothing-to-do` only when no work remains, a pre-session harness refusal `noop-lane-permission` meaning spawn-refused, and a timeout that exhausts liveness `max-restarts` through the restart admission path. Every branch returns a TDR-0005 token plus its harness `outcome`, so `partial` never travels alone and `noop-lane-nothing-to-do` is derived outside the shared classifier (DEC-14). `classifyDispatchFailure(...)` maps a spawn failure before a session to `dispatch.session.spawn-failed` at exit 1 and an unverifiable ledger, tracker, artifact, or state read to `dispatch.state-unverified` at exit 2, and reuses the delivered projection module instead of any call-site exit literal. The progress verdict (`lane.liveness-interval` cadence supplied as data) requires two consecutive sourced evaluations with no advance before a stalled verdict; an advancing token delta, traffic, worktree, or prefill signal keeps the lane progressing; all-absent readings report unknown/absent with their reasons, no absent reading is coerced to zero, and elapsed time alone never stalls. Nothing in the module declares a token or an exit literal outside the contracts home."
+    tests:
+      - "bun test tests/behaviour/dispatch-truth-derivation.test.ts tests/behaviour/dispatch-state-unverified.test.ts"
+      - "bun test tests/behaviour/dispatch-liveness.test.ts"
+      - "bun test tests/behaviour/dispatch-token-closure.test.ts tests/behaviour/dispatch-exit-projection.test.ts"
+      - "bun test tests/structure/delivery-result-contract.test.ts tests/structure/result-contract.test.ts"
+      - "pnpm typecheck"
+  - id: 3
+    title: "Durable dispatch evidence ledger and CLI-independent authority view"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/app/dispatch-ledger.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - packages/core/src/domain/dispatch-authority.ts
+        - packages/core/src/domain/index.ts
+        - packages/adapters/src/file/dispatch-authority.ts
+        - packages/adapters/src/file/index.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/dispatch/ledger.ts
+        - tests/behaviour/dispatch-evidence-record.test.ts
+        - tests/behaviour/dispatch-false-success.test.ts
+        - tests/behaviour/dispatch-unevaluable.test.ts
+        - tests/structure/dispatch-authority-view.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/dispatch-ledger.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/file/dispatch-authority.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-239 in progress; phase 3 evidence recorded in pm-notes notes (attempt/divergence/handover ledgers, atomic authority view)"
+    leases:
+      - lease:dispatch-evidence
+    weightClass: heavy
+    summary: "Add the durable dispatch evidence ledger over the injected state port: one fenced append plus a verified post-append read per attempt, divergence, and handover record; a fold that keeps the latest state per divergence identifier and per repository while preserving every original record; and exactly one attempt record per dispatch carrying repository identity, reference, start and finish timestamps, harness, handover state at run, engine outcome and token, comparison token or explicit not-applicable marker, divergence reference, false-success classification, tri-state corroboration, resume mode, and bounded evidence references, with no prompt, transcript, diff, credential, or raw payload. A disagreement appends an open divergence and a resolution appends a resolved record with a bounded note, principal, and timestamp without rewriting the open record; a contradicted success claim is recorded as a false-success incident and an unevaluable comparison is recorded with its classified state or provider identity. The derived per-repository authority view is rebuilt from the folded handover ledger and replaced atomically through the store document replace, under one declared production document name, and `readDispatchAuthority(stateRoot, repository)` reads that document as a plain file so a non-typed consumer needs no CLI: absent, unreadable, or malformed resolves to dual-run. Repository identity is the scheduling `repository` value with a stable checkout-root digest fallback (DEC-13), the read is bounded at 5,000 attempt records and declares truncation instead of zero, and an identical replay appends no duplicate. Fault-injection coverage proves a failed append or torn read is a classified state failure and never a clean verdict or a fabricated record."
+    tests:
+      - "bun test tests/behaviour/dispatch-evidence-record.test.ts"
+      - "bun test tests/behaviour/dispatch-false-success.test.ts tests/behaviour/dispatch-unevaluable.test.ts"
+      - "bun test tests/structure/dispatch-authority-view.test.ts"
+      - "bun test tests/behaviour/state-atomic-replace.test.ts tests/behaviour/state-ledger.test.ts"
+      - "pnpm typecheck"
+  - id: 4
+    title: "One-shot dispatch command: harness resolution, lease claim, spawn, watch, classification, envelope, and exits"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/app/dispatch.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/output/dispatch-text.ts
+        - packages/cli/src/output/index.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - .dependency-cruiser.cjs
+        - tests/boundaries/fixtures/cases.ts
+        - tests/boundaries/fixture-registry.json
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/dispatch-merge-boundary.test.ts
+        - tests/structure/dispatch-imports.test.ts
+        - tests/structure/dispatch-composition.test.ts
+        - tests/behaviour/dispatch-harness-lease.test.ts
+        - tests/behaviour/dispatch-envelope.test.ts
+        - tests/behaviour/dispatch-error-envelope.test.ts
+        - tests/behaviour/dispatch-merge-absence.test.ts
+        - tests/golden/dispatch-text.test.ts
+        - tests/golden/dispatch-errors.test.ts
+      folders:
+        - tests/fixtures/dispatch/golden
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/dispatch.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/commands/dispatch.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/output/dispatch-text.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/edge.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/production.ts
+        role: producer
+      - kind: contract-file
+        target: .dependency-cruiser.cjs
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-239 in progress; phase 4 evidence recorded in pm-notes notes (one-shot dispatch, envelope, four-key text, merge absence)"
+    leases:
+      - lease:dispatch-command
+    weightClass: heavy
+    summary: "Deliver the one-shot `dispatch <ref> [--harness <name>]` path end to end. Resolve the harness from the flag then configuration, refuse an unknown name as a classified input error without claiming a lease or spawning, claim the repository lease through the delivered scheduling engine, refuse an active conflicting lease without spawning, spawn through the delivered `HarnessSessionPort`, watch with the phase-2 progress verdict at the `lane.liveness-interval` cadence, classify through the shared classifier, derive truth through injected read ports, append exactly one attempt record through the phase-3 ledger, and emit the machine envelope (`result`, `prUrl`, `phaseLedger`, `restarts`, `resumeAmplification`, `harness`, `handoverState`, `outcome`) or, in text mode, exactly `result=`, `pr_url=`, `exit_code=`, `last_message=` in bash order with no fifth key and no `closeout_unverified=`. The handler returns data or a classified failure and never chooses an exit literal; the definition supplies the TDR-0005 token projection, and a failing run still emits a complete error envelope with the full error fields. A merge-ready PR stays `pr-open`/`pr-open-unverified` and no merge is fired: a declared dependency-cruiser merge-absence rule with a registered negative fixture, a source-level import scan, and a production-composition check together prove no merge port or code path is reachable (AC-F9-1, NFR-9). The phase adds the command definition, the four-key and error goldens, the dispatch runtime factory in `edge.ts`, and the `production.ts` composition (harness session ports, host spawn runner, read-only tracker/CI/VCS ports, queue lease, state store, evidence ledger); because the prompt-required set is unchanged until phase 7, the composed command is dropped from the advertised surface and composition honesty stays green."
+    tests:
+      - "bun test tests/behaviour/dispatch-harness-lease.test.ts tests/behaviour/dispatch-envelope.test.ts"
+      - "bun test tests/behaviour/dispatch-error-envelope.test.ts tests/behaviour/dispatch-merge-absence.test.ts"
+      - "bun test tests/golden/dispatch-text.test.ts tests/golden/dispatch-errors.test.ts"
+      - "bun test tests/structure/dispatch-merge-boundary.test.ts tests/structure/dispatch-imports.test.ts tests/structure/dispatch-composition.test.ts"
+      - "bun test tests/boundaries"
+      - "bun test tests/behaviour/harness-spawn-env.test.ts"
+      - "bun test tests/behaviour/entrypoint-composition.test.ts"
+      - "pnpm check:boundaries"
+      - "pnpm typecheck"
+  - id: 5
+    title: "Resume path and dispatch admission: resume modes, restart budget, and resume economics"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/dispatch-resume.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - packages/core/src/app/dispatch.ts
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/edge.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/behaviour/dispatch-resume.test.ts
+        - tests/behaviour/dispatch-restart-budget.test.ts
+        - tests/behaviour/dispatch-resume-economics.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/dispatch.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/cli/src/commands/dispatch.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/cli/src/edge.ts
+        role: consumer
+    doneArtifacts:
+      trackerTransition: "GH-239 in progress; phase 5 evidence recorded in pm-notes notes (resume modes, restart budget, resume economics)"
+    leases:
+      - lease:dispatch-resume
+    weightClass: heavy
+    summary: "Deliver `--resume-prompt <text>` and dispatch admission. Resolve the existing lane, record the resume mode (`attach-continue`, or `resume-prompt-reentry` with its acknowledged prefill cost when the adapter lacks resume injection), continue from the phase-ledger position, and skip completed phases idempotently without re-executing them. Restart admission delegates to the delivered restart-budget gate with the bound resolved from `lane.restart-budget`: at or above the bound the attempt is refused at exit 1 with `dispatch.restart-budget-exceeded`, the delivered terminal exhaustion record is present, a typed escalation is surfaced, no spawn occurs, and the delivery is never silently requeued. Resume economics delegates to the delivered admission: attach-and-continue consumes no restart ordinal, an uneconomical prefill re-pay is refused with `dispatch.resume-uneconomical`, and unreadable token or cost facts refuse or classify unevaluable instead of admitting. The recorded resume mode, prefill acknowledgement, and admission verdict are carried onto the attempt record, and an identical replay converges on the same lane position with no duplicate ordinal and no second spawn. The phase extends the phase-4 loop and command surface additively."
+    tests:
+      - "bun test tests/behaviour/dispatch-resume.test.ts"
+      - "bun test tests/behaviour/dispatch-restart-budget.test.ts"
+      - "bun test tests/behaviour/dispatch-resume-economics.test.ts"
+      - "bun test tests/behaviour/economics-budget-exhaustion.test.ts tests/behaviour/economics-resume-attach.test.ts tests/behaviour/economics-restart-durability.test.ts"
+      - "pnpm typecheck"
+  - id: 6
+    title: "Dual-run gate: evidence window, summary, divergence resolution, handover, and reversal"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/dispatch-gate.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/app/dispatch-gate.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/output/dispatch-text.ts
+        - packages/cli/src/edge.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/dispatch/evidence-windows.ts
+        - tests/behaviour/dispatch-divergence.test.ts
+        - tests/behaviour/dispatch-dual-run-summary.test.ts
+        - tests/behaviour/dispatch-dual-run-floor.test.ts
+        - tests/behaviour/dispatch-gate-evidence.test.ts
+        - tests/behaviour/dispatch-gate-window.test.ts
+        - tests/behaviour/dispatch-handover.test.ts
+        - tests/behaviour/dispatch-authority-view.test.ts
+        - tests/golden/dispatch-summary.test.ts
+      folders:
+        - tests/fixtures/dispatch/authority
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/commands/dispatch.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/cli/src/output/dispatch-text.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/cli/src/edge.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/core/src/domain/dispatch-gate.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-239 in progress; phase 6 evidence recorded in pm-notes notes (window, four-condition gate, summary, handover, reversal)"
+    leases:
+      - lease:dispatch-gate
+    weightClass: heavy
+    summary: "Deliver the evidence gate and the authority mechanism with one declared predicate home. `foldEvidenceWindow(...)` folds the bounded attempt, divergence, and handover ledgers into the window (start is the later of the first counted dispatch and the most recent false-success incident, with the reason reported), the UTC day count over distinct dates in a run of at least seven consecutive dates, counted deliveries, incidents, reported/resolved/unresolved divergences with identifiers, class coverage over the eleven TDR-0005 tokens with missing classes named, and per-family corroboration; an unreadable, torn, or truncated read is unverifiable and never eligible, and an unresolvable repository identity is a clean refusal. `evaluateHandoverGate(...)` returns the four-condition conjunction — zero false-success incidents and zero unresolved divergences, all eleven classes, floor-only exposure (20 counted dispatches or 7 consecutive UTC dates), and corroboration per outcome family — with every unmet condition named. `dispatch dual-run summary --repo <repo>` reports the window, counts, coverage, corroboration, verdict, and unmet conditions at exit 0 even when ineligible; `dispatch dual-run resolve <divergence-id> --note <text>` appends the resolution; `dispatch handover <repo>` refuses at exit 1 as a clean verification with no authority record when the bar is unmet, and on a met gate appends one handover record with the conditions snapshot and bounded evidence references, flips only that repository, replaces the derived view atomically, and reports the flip as recorded and reversible; `dispatch handover <repo> --revert` appends a reversal that restores dual-run, preserves the full history, and is an idempotent noop at exit 0 when the repository is already dual-run. Every dispatch reports `handoverState` from the folded ledger, claims no authority in dual-run, suppresses no bash path, and fires no merge."
+    tests:
+      - "bun test tests/behaviour/dispatch-dual-run-summary.test.ts tests/behaviour/dispatch-divergence.test.ts"
+      - "bun test tests/behaviour/dispatch-dual-run-floor.test.ts tests/behaviour/dispatch-gate-evidence.test.ts tests/behaviour/dispatch-gate-window.test.ts"
+      - "bun test tests/behaviour/dispatch-handover.test.ts tests/behaviour/dispatch-authority-view.test.ts"
+      - "bun test tests/golden/dispatch-summary.test.ts"
+      - "bun test tests/structure/dispatch-authority-view.test.ts"
+      - "pnpm typecheck"
+  - id: 7
+    title: "Registration, help, reference page, planning reconciliation, and absence inversion"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/help/prompt-required-commands.ts
+        - packages/cli/src/help.ts
+        - tests/fixtures/help-guide/coverage.json
+        - tests/behaviour/entrypoint-composition.test.ts
+        - tests/behaviour/entrypoint-help-coverage.test.ts
+        - tests/conformance/pilot/pilot-isolation.test.ts
+        - tests/behaviour/dispatch-help-version.test.ts
+        - tests/structure/dispatch-help-inventory.test.ts
+        - tests/checks/dispatch-doc-conformance.test.ts
+        - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md
+        - doc/planning/oss-tooling/milestones/m1/test-scenarios.md
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/help.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/help/prompt-required-commands.ts
+        role: producer
+      - kind: contract-file
+        target: doc/planning/oss-tooling/milestones/m1/commands/dispatch.md
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-239 in progress; phase 7 evidence recorded in pm-notes notes (dispatch registered, help and page reconciled, absence assertions inverted)"
+    leases:
+      - lease:cli-surface
+    weightClass: heavy
+    summary: "Register the delivered surface and reconcile only the story-owned planning artifacts. Add `dispatch` to `PROMPT_REQUIRED_COMMANDS` and the static help coverage inventory, add the root and command help entries for `dispatch`, `dispatch dual-run`, `dispatch dual-run summary`, `dispatch dual-run resolve`, and `dispatch handover` (with `--revert`), each pointing at the reference page, so the phase-4 production composition becomes the live advertised surface. Rewrite `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md` to the four-condition evidence bar with the resolution and reversal forms and with `--help`/`--version`, and reconcile SC-M1-29 and SC-M1-30 in `test-scenarios.md` to the amended bar; the scan's file allowlist proves it never inspects the GH-239 ticket body or any other planning file, and the remaining planning residual stays reported, not edited. Invert the two remaining delivered absence assertions — the entrypoint-composition set and the pilot-isolation claimed-command list — so none contradicts the delivered command, and re-run the F-9 deferral assertion inverted in phase 1. Add the story-owned doc-conformance check for the stale phrase table (`two clean weeks`, two-week window, fourteen days, clean-window eligibility) and the required phrase table (zero false-success incidents, zero unresolved divergences, all eleven, 20 counted dispatches, 7 consecutive UTC dates, corroboration, floor). Help and version stay pure data lookups: no state, network, git, configuration, or model read, zero writes, and the composer is never invoked."
+    tests:
+      - "bun test tests/structure/dispatch-help-inventory.test.ts tests/behaviour/dispatch-help-version.test.ts"
+      - "bun test tests/checks/dispatch-doc-conformance.test.ts"
+      - "bun test tests/behaviour/entrypoint-composition.test.ts tests/behaviour/entrypoint-help-coverage.test.ts"
+      - "bun test tests/conformance/pilot/pilot-isolation.test.ts tests/structure/harness-review-deferrals.test.ts"
+      - "bun test tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts tests/checks/help-guide-coverage-mutants.test.ts"
+      - "pnpm check:help"
+      - "pnpm check:prompt"
+      - "pnpm typecheck"
+  - id: 8
+    title: "Bash fallback: CLI-independent authority read and deprecation pointers in the four entry points"
+    kind: delivery
+    scope:
+      files:
+        - scripts/deliver-ticket.sh
+        - scripts/batch-deliver.sh
+        - scripts/pm-liveness.sh
+        - scripts/ceo-loop.sh
+        - scripts/lib/dispatch-authority.sh
+        - scripts/install.sh
+        - tests/structure/dispatch-bash-authority.test.ts
+        - scripts/.tests/test-dispatch-bash-fallback.sh
+      folders:
+        - tests/fixtures/dispatch/bash
+    interactions:
+      - kind: contract-file
+        target: scripts/lib/dispatch-authority.sh
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-239 in progress; phase 8 evidence recorded in pm-notes notes (four-script fallback matrix, deprecation pointers)"
+    leases:
+      - lease:bash-fallback
+    weightClass: heavy
+    summary: "Keep the bash stack runnable as fallback with a CLI-independent authority read. Add one shared resolver (`scripts/lib/dispatch-authority.sh`) that reads the derived authority document as a plain file with no typed CLI invocation, no PATH lookup of the binary, no blocking call, and no jq dependency beyond the delivered script baseline, and wire it into `deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, and `ceo-loop.sh` so a dual-run repository behaves exactly as today (no pointer, no new required argument, unchanged exit behaviour and summary keys), an authoritative repository prints a deprecation pointer naming `dispatch` and the reversal surface while remaining executable, and an absent, unreadable, malformed, or torn view means dual-run. The scripts never refuse because authority moved and never need the typed CLI to decide fallback (NFR-8). Add the twelve-cell matrix suite (four scripts times dual-run, authoritative, typed-CLI-absent/broken) over a temporary state root and a sanitized PATH, a source-level structure assertion that no script invokes the typed CLI to decide authority, and the authority fixtures under `tests/fixtures/dispatch/bash`; `scripts/install.sh` installs the resolver beside the four scripts, and the four retained bash suites stay green."
+    tests:
+      - "bash scripts/.tests/test-dispatch-bash-fallback.sh"
+      - "bun test tests/structure/dispatch-bash-authority.test.ts"
+      - "bash scripts/.tests/test-deliver-ticket.sh"
+      - "bash scripts/.tests/test-batch-deliver.sh"
+      - "bash scripts/.tests/test-pm-liveness.sh"
+      - "bash scripts/.tests/test-ceo-loop.sh"
+      - "bash scripts/.tests/test-deliver-ticket-result-tuples.sh"
+      - "bash scripts/.tests/test-install.sh"
+  - id: 9
+    title: "Daemon lane planner, executor composition, and supervision wiring"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/lane-launch-plan.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/daemon-compose.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/behaviour/dispatch-daemon-planner.test.ts
+        - tests/behaviour/dispatch-daemonless.test.ts
+        - tests/conformance/dispatch/dispatch-daemon-lane.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/lane-launch-plan.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/daemon-compose.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-239 in progress; phase 9 evidence recorded in pm-notes notes (lane planner, executor composition, daemon lane)"
+    leases:
+      - lease:daemon
+    weightClass: standard
+    summary: "Fill the daemon lane seam that the resident daemon has left unowned. Implement the production planner as a pure `planLaneLaunch(request)` that returns the lifecycle prompt and only the declared execution-environment variable names, resolving no secret value, reading no parent environment, and carrying no credential material. Compose `createLaneExecutor` over the selected harness session port and the execution-environment descriptor in the daemon composition, and wire the delivered supervision cycle's next-action, claim, and release ports so a planned lane starts, records the delivered daemon lane record, observes progress, collects the outcome, and resumes through the same executor. The daemon path and the one-shot path share the harness port and the shared classifier, so the final token and outcome agree for the same evidence and no second classification exists. An unavailable planner, a missing descriptor, or a declared capability gap still reports honest supervise-only mode; a one-shot dispatch with no daemon completes from state alone, appends its attempt record, and claims no daemon dependency (AC-F10-3)."
+    tests:
+      - "bun test tests/behaviour/dispatch-daemon-planner.test.ts tests/behaviour/dispatch-daemonless.test.ts"
+      - "bun test tests/conformance/dispatch/dispatch-daemon-lane.test.ts"
+      - "bun test tests/behaviour/daemon-lifecycle.test.ts tests/behaviour/daemon-lane-supervision.test.ts"
+      - "bun test tests/structure/daemon-contract.test.ts tests/structure/daemon-imports.test.ts"
+      - "pnpm typecheck"
+  - id: 10
+    title: "Controlled-repository end-to-end proof, bounds, determinism, idempotency, and release gate"
+    kind: delivery
+    scope:
+      files:
+        - tests/conformance/dispatch/controlled-repo.ts
+        - tests/conformance/dispatch/dispatch-e2e.test.ts
+        - tests/conformance/dispatch/dispatch-fixture.test.ts
+        - tests/behaviour/dispatch-bounds.test.ts
+        - tests/behaviour/dispatch-determinism.test.ts
+        - tests/behaviour/dispatch-idempotency.test.ts
+        - tests/behaviour/dispatch-privacy.test.ts
+        - tests/checks/fixture-privacy.test.ts
+        - .changeset/gh-239-dispatch-engine-minor.md
+      folders:
+        - tests/fixtures/dispatch/mutants
+    interactions:
+      - kind: contract-file
+        target: tests/conformance/dispatch/controlled-repo.ts
+        role: producer
+    doneArtifacts:
+      mergeRequestUrl: "PR for feat/GH-239/dispatch-engine targeting main-tools"
+      pipelineId: "pnpm check aggregate gate green"
+      trackerTransition: "GH-239 in review"
+    leases:
+      - lease:conformance
+    weightClass: heavy
+    summary: "Prove the mechanism and release the change. Add the controlled-repository conformance suite (real state store, real local git, real change files; injected harness, tracker, CI, and VCS read ports; deterministic UTC date advance) that accrues evidence through genuine `dispatch` invocations until the gate is met, runs the summary, flips the repository, dispatches once more end to end, reverses the flip, and invokes a bash entry point after reversal — with a provenance guard proving no step hand-installs an attempt, divergence, or handover record and that no real repository, network, or model is touched (D2). Add the bounds suite (machine payload at most 65,536 bytes, human output at most 40 lines and 8,192 bytes, the bounded summary read with declared truncation instead of fabricated zeros, and p95 summary within 5 s on the reference host), the determinism suite (byte-identical repeats and zero model calls in help, summary, gate, classification, and render paths), the idempotency suite (replayed summary, handover, reversal, and resume append nothing, report noop, and consume no duplicate ordinal), and the privacy suite (no secret, credential, prompt, transcript, diff, or raw payload in output, records, help, or logs; every child environment variable declared). Then run the aggregate gate and add the minor changeset. Release obligations: exactly one PR to main-tools, a description naming the new command family, the two new error rows and the two documented rows, the controlled-repository proof boundary, the D1 four-condition bar and D3 comparison baseline, and every Section 17 AC covered by passing evidence with the execution log populated."
+    tests:
+      - "bun test tests/conformance/dispatch"
+      - "bun test tests/behaviour/dispatch-bounds.test.ts"
+      - "bun test tests/behaviour/dispatch-bounds.test.ts -t '@perf'"
+      - "bun test tests/behaviour/dispatch-determinism.test.ts tests/behaviour/dispatch-idempotency.test.ts"
+      - "bun test tests/behaviour/dispatch-privacy.test.ts tests/checks/fixture-privacy.test.ts"
+      - "bun test tests/checks/exit-code-literals.test.ts"
+      - "bun test tests/structure/dispatch-merge-boundary.test.ts tests/boundaries"
+      - "bash scripts/.tests/test-dispatch-bash-fallback.sh"
+      - "bash scripts/.tests/test-deliver-ticket.sh"
+      - "bash scripts/.tests/test-batch-deliver.sh"
+      - "bash scripts/.tests/test-pm-liveness.sh"
+      - "bash scripts/.tests/test-ceo-loop.sh"
+      - "pnpm check"
