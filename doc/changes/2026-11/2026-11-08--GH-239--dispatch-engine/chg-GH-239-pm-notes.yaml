@@ -9,7 +9,7 @@ phases:
   specification: { started: null, completed: 2026-11-08T09:22:12.885Z }
   test_planning: { started: null, completed: 2026-11-08T09:22:18.032Z }
   delivery_planning: { started: null, completed: 2026-11-08T09:22:22.807Z }
-  dor_check: { started: null, completed: null }
+  dor_check: { started: null, completed: 2026-11-08T09:36:33.945Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -121,4 +121,21 @@ notes:
       which are cross-phase confirmations, and the readiness gate should check
       that claim mechanically against the per-phase test commands."
     type: retro
+    date: "2026-11-08"
+  - text: "DoR iteration 3 verdict READY (readiness/readiness-iter-3.yaml): 0
+      critical, 0 major, 2 minor, 5 nit. N1-N6 CLOSED; iteration-1 F1-F16 no
+      regression. Accepted non-blocking residuals to fix during delivery: R1
+      phase 1 must move three BASELINE_ROWS.length + 79 assertions to + 81; R2
+      add the phase-1 TC-HELP-003 harness slice to the test-plan/plan mapping;
+      R4 add the dispatch-derived failed not-applicable clause to TDR-0015 §5;
+      R5 record daemon-live as a satisfied prerequisite (M1-S18), not a fifth
+      gate; R6 rename the stale no-platform-provider-row test title; R7 add
+      dispatch-gate-evidence and dispatch-evidence-class suites to phase-10
+      tests."
+    type: decision
+    date: "2026-11-08"
+  - text: "DoR gate cleared after 3 iterations. Proceeding to delivery. Total
+      artifact cost of the gate: 3 spec revisions, 3 test-plan revisions, 3 plan
+      revisions, 1 decision record. All findings were real; none was noise."
+    type: info
     date: "2026-11-08"
