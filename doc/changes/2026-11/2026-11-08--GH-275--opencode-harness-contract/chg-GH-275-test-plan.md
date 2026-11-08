@@ -1,9 +1,9 @@
 ---
 id: chg-GH-275-test-plan
 status: Updated
-version: 1.2
+version: 1.3
 created: 2026-11-08T22:40:00Z
-last_updated: 2026-11-08T23:45:00Z
+last_updated: 2026-11-09T00:05:00Z
 owners: [engineering]
 service: delivery-os harness adapters
 labels: [change, harness, bug, dispatch]
@@ -29,7 +29,7 @@ The most dangerous testing mistakes this plan is designed against are: proving t
 
 - JSONL decoding: LF split, CR strip, blank-line skip, per-line independent parse, scanning past non-JSON and non-object lines, identifier precedence `sessionID` → `session.id` → `sessionId` → `id`, and the retained single-document degenerate form (F-1, AC-F1-1..AC-F1-7, DEC-4).
 - Non-blocking spawn acquisition: handle on the first identified line, `harnessKind: "opencode"`, `treeRoot` equal to the session id, `workItemRef` from input, no token or raw payload in the handle (F-2, AC-F2-1, AC-F2-2, AC-F2-3, DEC-1).
-- Completion-scoped evidence: a per-session completion promise, `collect` pending before completion, no fabricated completion, and an explicit **source precedence** — a legacy single-document `result` envelope's facts (`completion`/`completed`, `refused`, `failure`/`status`, `toolFailure`) are authoritative, otherwise the JSONL rules apply (`completionMarker` only on exit 0 plus a terminal `step_finish` with `part.reason === "stop"`; `toolFailure` only from a `tool_use` part with `state.status === "error"`; `failureReported` from an `error` event or a non-zero exit), with the host `exitStatus`/`timedOut` merged on top (F-4, AC-F4-1..AC-F4-5, AC-F1-7, DEC-5). `spawnRefused` is reachable on an identified session only through that legacy envelope; the JSONL path never sets it.
+- Completion-scoped evidence: a per-session completion promise, `collect` pending before completion, no fabricated completion, and an explicit **source precedence** — a legacy single-document `result` envelope's facts (`completion`/`completed`, `refused`, `failure`/`status`, `toolFailure`) are authoritative, otherwise the JSONL rules apply (`completionMarker` only on exit 0 plus a terminal `step_finish` with `part.reason === "stop"`; `toolFailure` only from a `tool_use` part with `state.status === "error"`; `failureReported` only from an explicit failure fact — a JSONL `error` event or a legacy `result.failure`/`result.status` fact — never from the process exit), with the host `exitStatus`/`timedOut` merged on top (F-4, AC-F4-1..AC-F4-5, AC-F1-7, DEC-5). A non-zero exit is carried by `exitStatus` alone and classifies `failed` through the classifier's exit branch (`packages/core/src/domain/harness-classify.ts:50-52`); it is never copied into `failureReported`. `spawnRefused` is reachable on an identified session only through that legacy envelope; the JSONL path never sets it.
 - Non-blocking resume/deliver with identity preservation: stream id must equal the caller's handle id; no-identifier and mismatch map to the existing `harness.session.unknown`; a post-handle non-zero exit is evidence, not an acquisition refusal (F-3, AC-F3-1..AC-F3-4, DEC-2).
 - Bounds and hygiene: `handleTimeoutMs` default 60 s, `sessionTimeoutMs` absent/0 means unbounded, no 300 s whole-session cap on spawn/resume, idempotent kill on every failure and abandonment path, no orphaned child (F-5, AC-F5-1..AC-F5-3, DEC-3, DEC-6).
 - The additive streaming starter seam in the runtime-neutral contract tier, the host implementation in the single child-process site, and the composition binding that gives opencode the starter plus the one-shot runner for listing and gives Claude only the one-shot runner (F-6, AC-F6-1, AC-F6-2, DEC-1, DEC-6).
@@ -45,7 +45,7 @@ The most dangerous testing mistakes this plan is designed against are: proving t
 - **[OUT] No live-harness tier in CI.** NFR-5 forbids real CLI invocations in unit, behaviour, conformance, and type suites. The single real-CLI proof is the operator-run procedure in §6.3 (GAP-T1).
 - **[OUT] No new telemetry, spend, liveness sourcing, or streaming per-event reporting** (NG-5, NG-8, spec §10). Liveness stays sourced from injected facts as today.
 - **[GAP-T1 — the real CLI is proven once, manually]** AC-F8-1/AC-F8-2 cannot run in a deterministic suite: they need a live model session. They are proven by the bounded procedure in §6.3 during delivery (and re-run after merge), with recorded evidence in §10. No AC depends on a live CLI except AC-F8-1/AC-F8-2.
-- **[GAP-T2 — closed by spec v1.2]** The v2.2.5 failure encodings are no longer delivery-bound. Spec §8.4, F-4, F-7 and DEC-5 name them: a tool failure is a `tool_use` event whose `part.state.status === "error"`, and a stream/agent failure is an `error` event. The pinned fixture set must carry one dedicated case for each, and TC-OCS-042/TC-OCS-047 (tool) and TC-OCS-048 (stream error) make AC-F4-3/AC-F4-4 fail if the adapter ignores either encoding. OQ-T1 is resolved in §8.3.
+- **[GAP-T2 — closed by spec v1.2, rule finalised in v1.3]** The v2.2.5 failure encodings are no longer delivery-bound. Spec §8.4, F-4, F-7 and DEC-5 name them: a tool failure is a `tool_use` event whose `part.state.status === "error"`, and a stream/agent failure is an `error` event. Spec v1.3 fixes one `failureReported` rule — true only on an explicit failure fact (a JSONL `error` event or a legacy `result.failure`/`result.status` fact), never from a non-zero exit, which `exitStatus` carries. The pinned fixture set must carry one dedicated case for each encoding, and TC-OCS-042/TC-OCS-047 (tool) and TC-OCS-048 (stream error, including its non-zero-exit control) make AC-F4-3/AC-F4-4 fail if the adapter ignores either encoding. OQ-T1 is resolved in §8.3.
 - **[GAP-T3 — evidence provenance is not observable from outside]** `completionMarker` is asserted through the public `collect` result, not by reading the adapter's internal terminal-fact record. The anti-fabrication table (TC-OCS-045) is the oracle for every combination; the internal representation is free.
 
 ### 1.3 Risk-Based Prioritization
@@ -83,7 +83,7 @@ The most dangerous testing mistakes this plan is designed against are: proving t
 - **Delivered harness contract**: [packages/core/src/contracts/harness.ts](../../../../packages/core/src/contracts/harness.ts) — `HarnessSpawnRunner`, `HarnessSpawnRunnerResult`, `HarnessSessionPort`, `HarnessEvidence`, `HARNESS_FAILURE_CODES` (all unchanged), and the additive starter seam.
 - **Delivered fixtures and suites**: `tests/fixtures/harness/harness-io.ts` (`createRecordingRunner`, `runnerResult`, `output`, `classifier`, `assembleLiveness`, `SPAWN_ARGS`, `RESUME_ARGS`, `LIST_ARGS`, `TIMEOUT_MS`), `tests/behaviour/harness-opencode-session.test.ts`, `tests/behaviour/harness-claude-session.test.ts`, `tests/structure/harness-imports.test.ts` (the exact 12-entry `node:child_process` allowlist), `tests/types/harness.type-test.ts`, `tests/conformance/harness-classification.test.ts`, `tests/fixtures/harness/scenarios/classification.ts`, `packages/testkit/src/conformance/harness.ts`.
 - **Dispatch regression fixtures**: `tests/fixtures/dispatch/golden/harness.ts` (`createCommandScenario`, `readsFrom`, `collectAfterPolls`, `livenessOf`), `tests/fixtures/dispatch/harness.ts` (`createScriptedHarness`, `COMPLETED_EVIDENCE`), `tests/structure/dispatch-composition.test.ts` (production composer over injected seams).
-- **ADR-0008**: harness adapter contract — DC-2 is satisfied because the session port and lifecycle operations are unchanged; the additive seam is recorded in the spec decision log (DEC-1).
+- **ADR-0008**: harness adapter contract — DC-2 is satisfied because the session port and lifecycle operations are unchanged. The additive streaming seam is record-governed at R2 by [TDR-0016](../../../../doc/decisions/TDR-0016-harness-streaming-spawn-seam.md); the change decision log (DEC-1) summarises it and does not replace it.
 - **Bash precedent**: `scripts/opencode-session.sh` (`extract_session_id`) — the first-line `.sessionID` behaviour the typed adapter is aligned to; unchanged by this change.
 
 ## 3. Coverage Overview
@@ -109,7 +109,7 @@ The most dangerous testing mistakes this plan is designed against are: proving t
 | AC-F4-1 | JSONL only: exit 0 plus a terminal `step_finish` with `part.reason === "stop"` → `completionMarker: true`, `exitStatus: 0`, `timedOut: false`; a legacy envelope's own completion fact takes precedence. | TC-OCS-040, TC-OCS-046 | Covered |
 | AC-F4-2 | JSONL only: exit 0 but no terminal `step_finish` → `completionMarker: false`, premature end; a legacy envelope's own completion fact takes precedence. | TC-OCS-041, TC-OCS-046 | Covered |
 | AC-F4-3 | JSONL only: exit 0, terminal `step_finish`, and a `tool_use` event whose `part.state.status === "error"` → `completionMarker: true`, `toolFailure: true`, token `partial`; a legacy envelope's `toolFailure` fact takes precedence. | TC-OCS-042, TC-OCS-047, TC-OCS-062 | Covered |
-| AC-F4-4 | Abnormal end (non-zero exit, timeout, kill) → `completionMarker: false` with the observed facts; an `error` event sets `failureReported: true`; a legacy envelope's facts merge under the same host facts (e.g. `completion: "complete"` under a host timeout reports `completionMarker: true` with `timedOut: true` and classifies `timed-out`). | TC-OCS-043, TC-OCS-015, TC-OCS-046, TC-OCS-048 | Covered |
+| AC-F4-4 | Abnormal end (non-zero exit, timeout, kill) → `completionMarker: false` with the observed facts; an `error` event sets `failureReported: true`, while a non-zero exit does not (it is carried by `exitStatus` only); a legacy envelope's facts merge under the same host facts (e.g. `completion: "complete"` under a host timeout reports `completionMarker: true` with `timedOut: true` and classifies `timed-out`). | TC-OCS-043, TC-OCS-015, TC-OCS-046, TC-OCS-048 | Covered |
 | AC-F4-5 | `collect` with no collected facts → `harness.session.unknown`, never fabricated evidence. | TC-OCS-044 | Covered |
 | AC-F5-1 | No identified line within the handle bound → the child is killed, the starter's `timedOut` is true, and spawn maps to the existing pre-session refusal with the observed status and a summary naming the acquisition timeout. | TC-OCS-050, TC-OCS-014 | Covered |
 | AC-F5-2 | Every failed acquisition or abandoned stream in the fake starter has `kill` called and leaves no child. | TC-OCS-051, TC-OCS-052 | Covered |
@@ -163,7 +163,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 
 - **Uncovered ACs**: none. All 30 AC identifiers from spec §17 appear in §3.1 with at least one TC, and no AC identifier outside the spec is used.
 - **Orphan TCs**: none. Every TC names at least one AC in §5.1 and §5.2; TCs also name the F-/NFR-/DEC- they discharge.
-- **Partially testable, with the boundary recorded**: AC-F8-1/AC-F8-2 are operator-run once (GAP-T1); evidence provenance is asserted through `collect` only (GAP-T3); NFR-1's "5 s typical" is a recorded production observation, and the CI-gated half is the 60 s bound (TC-OCS-053). The tool-error and failure-fact encodings are no longer a gap: spec v1.2 pins them in §8.4/DEC-5 and TC-OCS-047/TC-OCS-048 assert the pinned lines are load-bearing.
+- **Partially testable, with the boundary recorded**: AC-F8-1/AC-F8-2 are operator-run once (GAP-T1); evidence provenance is asserted through `collect` only (GAP-T3); NFR-1's "5 s typical" is a recorded production observation, and the CI-gated half is the 60 s bound (TC-OCS-053). The tool-error and failure-fact encodings are no longer a gap: spec v1.2 pins them in §8.4/DEC-5, spec v1.3 fixes the single explicit-fact `failureReported` rule (a non-zero exit is `exitStatus` only), and TC-OCS-047/TC-OCS-048 assert the pinned lines are load-bearing.
 - **Intentional duplicate coverage**: AC-F1-4 spans two TCs because the non-zero-exit and bound-expiry identities carry different observed facts; AC-F2-1 spans three because handle-before-completion, handle shape, and the dispatch-level watch are independently breakable; AC-F6-2 spans five because data-only typing, port shape, the allowlist, engine neutrality, and the real host implementation fail independently; AC-F7-3 spans the DEC-4/DEC-5 mapping battery because each case has a distinct failure mode; AC-F1-7/AC-F4-1..4 span TC-OCS-046 (precedence) and TC-OCS-062 (retained floor) because the source-precedence rule and the six delivered conformance cases can regress independently.
 - **No moving-base diff assertion**: "the dispatch engine is untouched" is enforced as a semantic tree invariant (TC-OCS-004) plus a behavioural regression (TC-OCS-082). A file hash or `origin/main-tools...HEAD` diff is rejected as brittle and untruthful over time (testing-strategy §Invariant-test authoring).
 - **Regression half**: the unchanged Claude suite, the unchanged listing cases, the six-scenario legacy classification floor, `TC-HARN-010`, and the full `pnpm check` battery run as-is; §6.4 lists the non-TC regression runs (bash suites, unchanged dispatch suites).
@@ -199,7 +199,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 | TC-OCS-011 | Leading blank lines and a malformed non-JSON line are scanned past | Edge Case | Critical | High | AC-F1-2; F-1; DEC-4; RSK-2 |
 | TC-OCS-012 | No identifier at exit 0 → `harness.spawn.invalid-output`, no fabricated handle | Negative | Critical | High | AC-F1-3; F-1; NFR-3; DEC-4 |
 | TC-OCS-013 | No identifier with non-zero exit → `harness.spawn.refused` carrying the status | Negative | Critical | High | AC-F1-4; F-1, F-5; DEC-4 |
-| TC-OCS-014 | No identifier at acquisition-bound expiry → `harness.spawn.refused` with `timedOut` | Negative | Critical | High | AC-F1-4, AC-F5-1; F-1, F-5; DEC-3, DEC-4 |
+| TC-OCS-014 | No identifier at acquisition-bound expiry → `harness.spawn.refused` with the starter's `timedOut` fact | Negative | Critical | High | AC-F1-4, AC-F5-1; F-1, F-5; DEC-3, DEC-4 |
 | TC-OCS-015 | Early identifier with a later non-zero exit: handle first, evidence carries the exit | Corner Case | Critical | High | AC-F1-5, AC-F4-4; F-1, F-4; DEC-2, DEC-5; RSK-8 |
 | TC-OCS-016 | Truncation after acquisition, before the terminal event → premature end | Corner Case | Critical | High | AC-F1-6; F-1, F-4; NFR-6; RSK-9; DEC-4 |
 | TC-OCS-017 | Single-document fallback shapes and identifier precedence | Regression | Critical | High | AC-F1-7, AC-F7-1; F-1; DEC-4 |
@@ -214,7 +214,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 | TC-OCS-034 | `deliver` shares the resume acquisition and identity rules | Regression | Important | High | AC-F3-1; F-3; DEC-1 |
 | TC-OCS-040 | Completion: exit 0 plus terminal `step_finish` reason `stop` | Happy Path | Critical | High | AC-F4-1; F-4; DEC-5 |
 | TC-OCS-041 | Exit 0 without a terminal `step_finish` → premature end | Negative | Critical | High | AC-F4-2; F-4; DEC-5; RSK-9 |
-| TC-OCS-042 | Pinned `tool_use` error part → completed with tool failure, token `partial` | Corner Case | Critical | High | AC-F4-3, AC-F7-1; F-4, F-7; DEC-5 |
+| TC-OCS-042 | Pinned `tool_use` error part → outcome `completed`, token `partial` | Corner Case | Critical | High | AC-F4-3, AC-F7-1; F-4, F-7; DEC-5 |
 | TC-OCS-043 | Abnormal end (timeout, kill) reports the observed facts and no completion | Negative | Critical | High | AC-F4-4; F-4; DEC-5 |
 | TC-OCS-044 | `collect` for an unknown handle → `harness.session.unknown`, no fabrication | Negative | Critical | High | AC-F4-5; F-4 |
 | TC-OCS-045 | Anti-fabrication evidence table: completion, refusal, failure, tool-failure combinations | Regression | Critical | High | AC-F4-2, AC-F4-4, AC-F1-6; F-4; NFR-3, NFR-6; DEC-5 |
@@ -347,7 +347,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 1. Read `packages/core/src/app/dispatch.ts` and assert it contains no `HarnessSpawnStarter`, `HarnessSpawnStream`, `handleTimeoutMs`, `sessionTimeoutMs`, `sessionID`, `step_finish`, `JSONL`, or `JSON.parse` token.
 2. Assert it imports only from the contract tier and the app/domain tiers (the delivered import shape) and imports no adapter subpath.
 3. Assert it contains no harness-kind literal (`"opencode"`, `"claude-code"`) and no branch on `harnessKind`.
-4. Assert the `dispatch.session.spawn-failed` identity and the exact `"spawn failed before a session existed"` message still appear exactly once each in the file (the preserved NFR-8 mapping).
+4. Assert the `dispatch.session.spawn-failed` identity is preserved, without asserting an occurrence count the source contradicts. The message string `"spawn failed before a session existed"` appears exactly once — the spawn-failure branch's `lastMessage` (`packages/core/src/app/dispatch.ts:482`) — and no other branch produces it. The code identifier appears three times in the delivered source, all describing the same one event: the comparison switch case (line 210), the attempt record's `errorCode` (line 471) and the `comparisonFor` call's `errorCode` (line 474). Assert the identity behaviourally as well: the single `!session.ok` branch (lines 466-486) is the only producer of that `errorCode`/`lastMessage` pair, and the behavioural proof that the branch returns it is TC-OCS-082 step 3. Do not assert "exactly once" for the code identifier.
 5. Assert `HARNESS_FAILURE_CODES`, `HARNESS_CLASSIFICATION_TOKENS`, and the delivery-result token array are unchanged by diffing against the constants the test imports (not against a branch).
 6. Assert `packages/core/src/domain/harness-classify.ts` is still the only classifier definition (delivered `TC-HARN-005` scan, unchanged).
 
@@ -498,7 +498,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 
 - A non-zero exit before any identifier maps to the existing pre-session refusal with the observed status.
 
-#### TC-OCS-014 - No identifier at acquisition-bound expiry → `harness.spawn.refused` with `timedOut`
+#### TC-OCS-014 - No identifier at acquisition-bound expiry → `harness.spawn.refused` with the starter's `timedOut` fact
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
@@ -523,7 +523,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 
 **Expected Outcome**:
 
-- Bound expiry maps to the existing pre-session refusal with the observed status and timeout fact.
+- Bound expiry maps to the existing pre-session refusal with the observed status and timeout fact. The timeout is the starter's `timedOut` fact and is reported only through the refusal summary: `HarnessFailure` (`packages/core/src/contracts/harness.ts:303-311`) has no structural timeout field, and no new field is added.
 
 #### TC-OCS-015 - Early identifier with a later non-zero exit: handle first, evidence carries the exit
 
@@ -545,7 +545,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 1. Invoke `spawn`; assert it resolves `ok: true` before completion (the fake's completion is still gated).
 2. Assert the handle exists with the acquired id.
 3. Release completion with status 3.
-4. `collect` and assert `exitStatus: 3`, `completionMarker: false`, `spawnRefused: false`.
+4. `collect` and assert `exitStatus: 3`, `completionMarker: false`, `spawnRefused: false`, and `failureReported: false` — the non-zero exit is carried by `exitStatus` only (spec v1.3 F-4).
 5. Classify through the injected shared classifier and assert outcome `failed` (token `failed`), not a refusal.
 6. Replay with status 0 but a missing terminal event; assert premature end instead (cross-check to TC-OCS-041).
 
@@ -821,7 +821,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 **Steps**:
 
 1. Call `resume`; assert the handle returns before completion.
-2. Release completion with status 5; `collect` and assert `exitStatus: 5`, `completionMarker: false`.
+2. Release completion with status 5; `collect` and assert `exitStatus: 5`, `completionMarker: false`, `failureReported: false` (the exit is `exitStatus` only).
 3. Classify and assert outcome `failed` (token `failed`), never `harness.session.unknown`.
 4. Assert the handle identity is still the caller's.
 5. Assert one attempt-level error identity at most: the refusal path was not taken.
@@ -911,7 +911,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 
 - A clean exit alone never fabricates completion; only the declared terminal stop event does.
 
-#### TC-OCS-042 - Pinned `tool_use` error part → completed with tool failure, token `partial`
+#### TC-OCS-042 - Pinned `tool_use` error part → outcome `completed`, token `partial`
 
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
@@ -930,7 +930,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 
 1. Spawn and finish.
 2. Assert `completionMarker: true`, `toolFailure: true`, `failureReported: false`, `exitStatus: 0`.
-3. Classify and assert outcome `completed-with-tool-failure` (or the delivered equivalent key) and token `partial`.
+3. Classify and assert outcome `completed` and token `partial`. The delivered `HARNESS_OUTCOMES` value is `completed`; the carried classification key `completed-with-tool-failure` is only the internal projection that maps to token `partial` (`packages/core/src/contracts/harness.ts:151-176`). Do not assert `completed-with-tool-failure` as an outcome value — it is not in `HARNESS_OUTCOMES`.
 4. Assert the distinction from premature end is the `outcome`, not the token.
 5. **Falsifiability guard:** assert the fixture line really is `type === "tool_use"` with `part.state.status === "error"` (structural read of the committed fixture, not a second invented shape).
 6. **Negative control:** replay the same case with the `tool_use` line removed (or `part.state.status` mutated to a non-error value) and assert `toolFailure: false` and the completed token `finished`. This is what makes AC-F4-3 fail if the adapter ignores the encoding.
@@ -1011,12 +1011,12 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 
 **Preconditions**:
 
-- A declared case table: (exit 0 + terminal stop) → completed; (exit 0, no terminal) → premature; (exit 0, terminal + `tool_use` error part) → completed-with-tool-failure; (exit 0 + `error` event, no terminal stop) → failed; (exit != 0 + terminal stop) → failed; (timedOut) → timed-out; (truncated) → premature; (legacy envelope `completion: "complete"` under host timeout) → timed-out.
+- A declared case table: (exit 0 + terminal stop) → completed; (exit 0, no terminal) → premature; (exit 0, terminal + `tool_use` error part) → completed (token `partial`; the internal classification key is `completed-with-tool-failure`); (exit 0 + `error` event, no terminal stop) → failed; (exit != 0 + terminal stop) → failed; (timedOut) → timed-out; (truncated) → premature; (legacy envelope `completion: "complete"` under host timeout) → timed-out.
 
 **Steps**:
 
 1. Run every case through spawn → collect → classify.
-2. Assert every `completionMarker` is true only for the cases whose declared source fact says so: the two JSONL completed cases (`completed`, `completed-with-tool-failure`) and the legacy envelope that reports `completion: "complete"` under a host timeout.
+2. Assert every `completionMarker` is true only for the cases whose declared source fact says so: the two JSONL completed cases (outcome `completed`, with and without the tool-failure key) and the legacy envelope that reports `completion: "complete"` under a host timeout.
 3. Assert `spawnRefused` is false in every case (each produced an identifier).
 4. Assert `failureReported`/`toolFailure` are set only from their explicit facts, never inferred from the exit status alone.
 5. Assert the declared outcomes project to the delivered token mapping with exactly four distinct tokens (`finished`, `partial`, `failed`, `max-restarts`), and that the `error`-event case and the non-zero-exit case both land on `failed` without conflating their evidence facts.
@@ -1109,7 +1109,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 2. Run spawn → finish (exit 0) → collect; assert `failureReported: true`, `completionMarker: false`, `exitStatus: 0`.
 3. Classify; assert outcome `failed`, token `failed` (not `premature-end`/`partial`) — the `error` event alone changes the outcome.
 4. **Falsifiability control:** remove the `error` line from the same case; assert `failureReported: false` and outcome `premature-end`/token `partial`. This is what makes AC-F4-4 fail if the adapter ignores the event.
-5. Repeat with a non-zero exit and no `error` event; assert `failureReported: true` from the exit mapping (both encodings are honoured, neither is required for the other).
+5. Repeat with a non-zero exit and **no** `error` event, still over a JSONL stream: assert `failureReported: false`, `completionMarker: false`, and `exitStatus` non-zero — the exit is carried by `exitStatus` only and is not copied into `failureReported` (spec v1.3 F-4/§8.4/DEC-5). Classify and assert outcome `failed`, token `failed` through the classifier's exit branch (`packages/core/src/domain/harness-classify.ts:50-52`). This pairs with TC-OCS-045 step 4: the two failure facts stay separable, so a non-zero exit with no failure signal is not mislabelled as a provider-reported failure.
 6. Assert the message text is never interpolated into evidence, a failure, or a log.
 
 **Expected Outcome**:
@@ -1223,11 +1223,11 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 3. Construct with `handleTimeoutMs: 1_234` and `sessionTimeoutMs: 5_678`; assert both are passed through verbatim.
 4. Assert the spawn-path stream options never carry the listing timeout (`timeout`/`timeoutMs`).
 5. Assert `listSessions` still invokes the one-shot runner once with the listing timeout (the delivered `TIMEOUT_MS` fixture) and never the starter.
-6. Structurally assert the adapter source contains no `300_000` literal and no `DEFAULT_TIMEOUT_MS` used on spawn/resume.
+6. Structurally assert that no `300_000` value and no `DEFAULT_TIMEOUT_MS` reference reaches the **spawn/resume starter options**: the options object handed to the starter carries `handleTimeoutMs`/`sessionTimeoutMs` only, with no `timeout`/`timeoutMs` key. The adapter's `DEFAULT_TIMEOUT_MS = 300_000` (`packages/adapters/src/harness/opencode.ts:76`) is legitimately retained for the `listSessions` one-shot runner (`opencode.ts:127,305`, spec §8.4 keeps session listing unchanged), so asserting "no `300_000` literal in the file" is wrong; assert the value is unreachable from the starter path instead.
 
 **Expected Outcome**:
 
-- The acquisition bound is the only default bound; the whole-session bound is opt-in data; listing keeps its own one-shot timeout.
+- The acquisition bound is the only default bound; the whole-session bound is opt-in data; listing keeps its own one-shot timeout with the delivered `DEFAULT_TIMEOUT_MS` (300 s) untouched.
 
 #### TC-OCS-060 - Composition binding: opencode gets starter + runner; Claude gets runner only
 
@@ -1278,7 +1278,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 
 **Steps**:
 
-1. Assert the opencode registration's builder constructs the port over a starter derived from the scenario's `spawnStdout` (split into lines, completion resolved with the same result), never over the one-shot runner.
+1. Assert the opencode registration's `build` acquires from a **multi-line** `spawnStdout`: feed a JSONL stream of two or more lines whose first line carries a top-level `sessionID` (and a later terminal `step_finish`), and assert `spawn` resolves `ok: true` with that id and `collect` returns the derived evidence. This is the only observable seam — `HarnessConformanceIo` (`packages/testkit/src/conformance/harness.ts:41-47`) and `HarnessConformanceRegistration.build` (`:61-65`) expose `spawnStdout` plus the injected deps and nothing else, so a single-document `spawnStdout` is behaviourally indistinguishable between a one-shot runner and a starter. Do **not** assert "never over the one-shot runner" from this surface. If the delivery instead adds a recording starter seam to the registry, assert the recorded invocation there and record that addition in the plan; otherwise the multi-line assertion above is the requirement.
 2. Run the delivered six scenarios on both adapters; assert identical outcome and token per scenario, and assert the delivered expected evidence per case: `completed` → `completionMarker: true`/`finished`; `tool-failure` → `completionMarker: true` + `toolFailure: true`/`partial`; `premature-end` → `completionMarker: false`/`partial`; `harness-failure` → `failureReported: true`/`failed`; `spawn-refusal` → `spawnRefused: true`/`noop-lane-permission`; `timeout` → `completionMarker: true` + `timedOut: true`/`max-restarts`.
 3. **Legacy parity, named cases.** For the five cases that have an identified JSONL counterpart, add a real-shape JSONL variant with the same expected outcome/token and assert it classifies identically to the delivered single-document form: `completed` (terminal `step_finish` reason `stop`), `tool-failure` (`tool_use` with `state.status === "error"` plus terminal stop), `premature-end` (no terminal `step_finish`), `harness-failure` (`error` event), and `timeout` (terminal stop plus host `timedOut: true` → `max-restarts`; the legacy case keeps its envelope `completionMarker: true`, the JSONL case has `completionMarker: false`, and both classify `timed-out`). `spawn-refusal` is legacy-only by design (F-4: `spawnRefused` on an identified session exists only through the envelope); its JSONL counterpart is the pre-session no-identifier refusal path asserted by TC-OCS-013, not an identified classification. Assert the six legacy envelopes' evidence facts come from the envelope under F-4's precedence: `completionMarker` from `result.completion === "complete"` (even with no `step_finish`), `spawnRefused` from `result.refused === true` (even though the envelope carried `session.id`), `failureReported` from `result.status === "failed"`, and `toolFailure` from `result.toolFailure === true`; the host `spawnStatus`/`spawnTimedOut` merge on top.
 4. Assert the Claude registration still builds over the one-shot runner and is untouched.
@@ -1315,7 +1315,7 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 2. Run all six through the opencode adapter over the new streaming starter (legacy single-document line; completion = `{status: spawnStatus, timedOut: spawnTimedOut}`); assert the expected evidence and token for each.
 3. Run the same six through the unchanged Claude adapter; assert identical outcome and token per case, and no divergence record.
 4. Run the delivered `TC-HARN-010` describe unchanged; assert the three outcomes remain distinct and the liveness case still declares the worktree kind absent.
-5. Assert a regression that drops legacy envelope evidence (the M-17 mutation in §7.3) turns steps 1–2 red while the Claude half stays green.
+5. Assert the correct mutation red/green set (M-17, §7.3). M-17 deletes the legacy-envelope branch in the adapter and does **not** touch `CLASSIFICATION_SCENARIOS`, so: step 1 stays **green** (the fixture is unchanged — it is the invariant, not the detector); step 2 goes **red** on the opencode run (`completed` loses `completionMarker`, `harness-failure` loses `failureReported`, `spawn-refusal` loses `spawnRefused`, `timeout` loses its completion fact, so the six cases diverge); step 3 stays **green** (the Claude adapter is untouched by M-17); step 4 goes **red** on its first assertion — the delivered `TC-HARN-010` describe runs the same single-document envelopes through the opencode adapter, so `completed` and `failed` both collapse to `premature-end` and the three outcomes are no longer distinct — while its liveness assertion stays green. Assert this set; a claim that "only step 2 is red" overstates the detector, and a claim that step 1 goes red is false. Note that the §7.3 M-17 command runs only the stream and conformance suites, so step 4's red is observable only when `tests/behaviour/harness-opencode-session.test.ts` is added to the mutation run.
 
 **Expected Outcome**:
 
@@ -1481,9 +1481,9 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 
 1. **Healthy acquisition:** spawn the adapter over a stream that identifies immediately and keeps `collect` pending; dispatch's liveness watch polls at the configured cadence. Assert more than one liveness poll occurs while `collect` is pending (the watch is observable during the session, which is impossible with a completion-gated spawn).
 2. Finish the stream with exit 0 and a terminal stop; assert dispatch reaches classification with token `finished` (or the truth-derived token) and records exactly one attempt.
-3. **Pre-session failure:** run the same composition over a stream with no identifier and a non-zero exit; assert the attempt's `errorCode` is `dispatch.session.spawn-failed`, the `lastMessage` is exactly `spawn failed before a session existed`, the token/outcome are the delivered pair, and exactly one attempt is recorded.
+3. **Pre-session failure:** run the same composition over a stream with no identifier and a non-zero exit; assert the **envelope's** `data.error.code` is `dispatch.session.spawn-failed` and `data.lastMessage` is exactly `spawn failed before a session existed`, the delivered `data.result`/`data.outcome` pair is recorded, and exactly one attempt is recorded. Read both fields from `DispatchEnvelopeData` (`packages/core/src/contracts/dispatch.ts:278-296`). The attempt payload `DispatchAttemptRecord` (`contracts/dispatch.ts:189-210`) carries no `errorCode` and no `lastMessage`; do not read them from the attempt.
 4. Assert dispatch's call order is spawn → collect (pending) → liveness → classification, never collect-before-spawn.
-5. Assert the adapter's handle is the one dispatch consumed (same `sessionId` in the spawn input/handle and the attempt evidence refs).
+5. Assert the attempt record's own fields: a non-empty `attemptId`, the classified `token`/`outcome`, and `evidenceRefs` containing `attempt:<attemptId>` plus any `liveness:<verdict>` refs produced by the watch (`packages/core/src/app/dispatch.ts:684`). Assert the adapter recorded the spawn→collect handle through the injected fake starter (the starter's spawn ran, and the same handle value was passed to `collect`). Do not expect a `sessionId` in the attempt record or in its evidence refs: the record has no `sessionId` field (`contracts/dispatch.ts:189-210`) and the refs are only `attempt:<id>` and `liveness:<verdict>`; the handle is adapter-side, observable through the fake starter.
 6. Assert no merge port is invoked and no additional spawn occurs on either path.
 
 **Expected Outcome**:
@@ -1519,20 +1519,21 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 
 1. Run the §6.3 procedure exactly, capturing the dispatch log and envelope, the step 1c first-event latency probe, and the attempt record.
 2. Kill only the dispatch's own `opencode` child after the handle window (§6.3 step 6); never kill the dispatch process before it classifies.
-3. Read the envelope: `data.result` and `data.lastMessage`; read the attempt record for `errorCode`/`evidenceRefs`.
+3. Read the envelope's `data.result`, `data.lastMessage` and `data.error.code`; read the attempt record's `attemptId`, `token`, `outcome` and `evidenceRefs` (`DispatchAttemptRecord`, `packages/core/src/contracts/dispatch.ts:189-210`; the record has no `errorCode`/`lastMessage`/`sessionId`).
 4. Assert `data.result` is one of the eleven delivered tokens.
 5. Assert `data.lastMessage` is not `spawn failed before a session existed` and `data.error.code` is not `dispatch.session.spawn-failed`.
-6. Assert the attempt record's `evidenceRefs` contains at least one `liveness:` reference — positive evidence that the watch polled while the session was live, which a completion-gated spawn cannot produce. With `lane.liveness-interval: 3000` and the 15 s handle window, at least one poll is guaranteed before the kill.
+6. Assert the attempt record's `evidenceRefs` contains `attempt:<attemptId>` and at least one `liveness:` reference. Treat the `liveness:` ref as **corroborating evidence only**, never as proof of non-blocking acquisition: the production opencode adapter receives no `livenessFacts` (`packages/cli/src/production.ts:443-458`; `packages/adapters/src/harness/opencode.ts:257`), so every reading is absent and the verdict can be `liveness:unknown`, which a completion-gated build can record just as well. The real discriminator for non-blocking acquisition is the deterministic suite — TC-OCS-020/TC-OCS-021, and TC-OCS-082 step 1 which requires `collect` to stay pending across at least one liveness poll.
 7. Assert the elapsed wall time from start to classification is under 180 s.
-8. Record the observed token, exit code, harness kind, elapsed time, the step 1c first-event latency, and the attempt record's `evidenceRefs` in §10.
+7a. Assert the lease proof from §6.3 step 7a: `queue list --json` shows no active `GH-275` lease held by `dispatch` on `github.com/juliusz-cwiakalski/agentic-delivery-os`.
+8. Record the observed token, exit code, harness kind, elapsed time, the step 1c first-event latency, the attempt record's `attemptId` and `evidenceRefs`, and the lease check result in §10.
 
 **Expected Outcome**:
 
-- One real dispatch on a healthy CLI reaches classification with a `liveness:` ref in the attempt; the spawn-failed identity is not taken.
+- One real dispatch on a healthy CLI reaches classification, records one attempt with a non-empty `attemptId`, and releases its `GH-275` lease; the spawn-failed identity is not taken. A `liveness:` ref corroborates that the watch ran while the session was live, but it is not the proof of non-blocking acquisition (see Notes).
 
 **Notes / Clarifications**:
 
-- The observed token may be `failed`/`partial` because the probe kills the session after the handle window; any token is an accepted pass per AC-F8-1. A `liveness:` evidence ref is required corroboration that the watch ran while the session was live; without it the run is a FAIL, not a pass.
+- The observed token may be `failed`/`partial` because the probe kills the session after the handle window; any token is an accepted pass per AC-F8-1. A `liveness:` evidence ref is required corroboration that the watch ran, but it does **not** on its own prove non-blocking acquisition: the production adapter is composed without `livenessFacts`, so the verdict can be `liveness:unknown` and a completion-gated build could record the same ref. The non-blocking property is proven deterministically by TC-OCS-020/TC-OCS-021 and, at the dispatch level, by TC-OCS-082 step 1 (`collect` pending across at least one poll). The operator adds the lease proof (§6.3 step 7a) to the PASS rule; a run that leaves the `GH-275` lease held is a FAIL even with a valid token.
 - If the first identified event itself takes longer than the 60 s acquisition bound, the run is a **blocked precondition** (CLI/provider slowness), recorded per §6.3's pass/fail rule; it is not a product failure and no TC-OCS-100 result is written.
 
 #### TC-OCS-101 - End-to-end proof is bounded and mutates no file in this change's worktree
@@ -1557,14 +1558,14 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A), no event or message contrac
 2. Assert the proof never ran a nested lifecycle in this worktree: the pre/post `git status --porcelain` and `HEAD` of this worktree are identical.
 3. Assert the kill was scoped to the dispatch's own child (recorded PID/`pgrep -P`), not a global `pkill`.
 4. Assert the elapsed time is bounded (≤180 s from dispatch start to classification) and that a session still alive at the bound is killed, not abandoned.
-5. Assert the attempt record carries a `liveness:` ref (§6.3 step 7); a run without one is not a valid proof.
+5. Assert the attempt record carries `attempt:<attemptId>` plus a `liveness:` ref (§6.3 step 7), and assert the lease proof of §6.3 step 7a (no active `GH-275`/`dispatch` lease remains). The `liveness:` ref is corroborating only; it is not evidence of non-blocking acquisition (see TC-OCS-100 step 6). A run without the lease proof is not a valid proof.
 6. Assert the step 1c first-event probe is recorded; if it exceeded the 60 s acquisition bound, the run is a blocked precondition (CLI/provider slowness), not a product failure, and no TC-OCS-101 result is written.
 7. Record the scratch-clone `git status --porcelain` before and after: only state-root artefacts outside the clone are acceptable; a nested edit inside the clone is recorded as expected containment.
-8. Clean up: kill any surviving child of the dispatch, remove the clone (including `.delivery-os/config.yaml`), release the queue lease, and confirm this worktree is still clean.
+8. Clean up: kill any surviving child of the dispatch, remove the clone (including `.delivery-os/config.yaml`), confirm the lease was proven released in step 7a (force-release only if it was not), and confirm this worktree is still clean.
 
 **Expected Outcome**:
 
-- The proof is bounded, scoped, and leaves this change's worktree byte-identical; a nested lifecycle can only touch the disposable clone, and the liveness cadence proves the watch ran while the session was live.
+- The proof is bounded, scoped, and leaves this change's worktree byte-identical; a nested lifecycle can only touch the disposable clone. The `liveness:` cadence corroborates that the watch ran, but the non-blocking claim rests on the deterministic suite (TC-OCS-020/021/082); the lease proof (§6.3 step 7a) is part of the PASS rule.
 
 ## 6. Environments and Test Data
 
@@ -1712,11 +1713,36 @@ echo "exit=$RC"
 STATE_ROOT="$HOME/.delivery-os-state"        # brand.stateDirectoryName = .delivery-os-state
 ATTEMPT=$(jq -r --arg ref GH-275 \
   'select(.kind=="dispatch.attempt") | select(.payload.ref==$ref) | .payload
-   | [.recordedAt, .token, (.evidenceRefs|join(","))] | @tsv' \
+   | [.attemptId, .recordedAt, .token, .outcome, (.evidenceRefs|join(","))] | @tsv' \
   "$STATE_ROOT/ledger.default.jsonl" | tail -1)
-printf '%s\n' "$ATTEMPT"
+printf '%s\n' "$ATTEMPT" | tee "$E2E/attempt.tsv"
+ATTEMPT_ID=$(printf '%s\n' "$ATTEMPT" | cut -f1)
+[ -n "$ATTEMPT_ID" ] \
+  || echo "FAIL: attempt record has no attemptId"
+# The liveness: ref is corroboration only (the production adapter is composed without
+# livenessFacts, so the verdict can be liveness:unknown; see "Expected evidence").
+printf '%s\n' "$ATTEMPT" | grep -q 'attempt:' \
+  || echo "FAIL: attempt record has no attempt:<attemptId> evidence ref"
 printf '%s\n' "$ATTEMPT" | grep -q 'liveness:' \
   || echo "FAIL: attempt record has no liveness: evidence ref"
+
+# 7a. LEASE PROOF - part of the PASS rule, not only cleanup. Step 3 acquired the
+#     GH-275 repo-exclusive lease; a successful dispatch must have released it
+#     (dispatch.ts `releaseLease` in the `finally`). `queue list --json` projects
+#     `.data.leases[]` as QueueLeaseProjection
+#     (packages/core/src/contracts/queue.ts:572-582; payload built at
+#     packages/cli/src/commands/queue.ts:257-282).
+ACTIVE_LEASES=$( ( cd "$E2E" && bun packages/cli/bin/delivery-os.ts queue list --json ) \
+  | jq -r '.data.leases[]
+      | select(.ref=="GH-275")
+      | select(.repository=="github.com/juliusz-cwiakalski/agentic-delivery-os")
+      | [.leaseId, .holder, .scope, (.heartbeatAgeMs|tostring)] | @tsv' )
+printf '%s\n' "$ACTIVE_LEASES" | tee "$E2E/leases.tsv"
+if [ -n "$ACTIVE_LEASES" ]; then
+  echo "FAIL: GH-275 lease still active after dispatch (see leases.tsv)"
+  ( cd "$E2E" && bun packages/cli/bin/delivery-os.ts queue release GH-275 --holder dispatch --json ) \
+    || echo "FAIL: lease release failed"
+fi
 git -C "$REPO" status --porcelain            # must still print nothing
 git -C "$REPO" rev-parse HEAD                # must equal HEAD_before
 ```
@@ -1728,21 +1754,22 @@ git -C "$REPO" rev-parse HEAD                # must equal HEAD_before
 - Step 1c records a first event with a top-level `sessionID` and `first-event-ms` ≤60 000. A longer first event is a blocked precondition (CLI/provider slowness), not a product failure.
 - Step 5 finds the `opencode run --format json` child and the dispatch is still alive (not exited with an envelope) — the handle window.
 - Step 7 prints a `data.result` in the eleven-token set and a `data.lastMessage` that is not `spawn failed before a session existed`; `data.error.code` is not `dispatch.session.spawn-failed` and not `dispatch.state-unverified`; total wall time from step 4 to step 6 is ≤180 s.
-- Step 7's attempt-record line contains at least one `liveness:` evidence ref; a `liveness:` ref is positive evidence that the watch polled while the session was live, which a completion-gated spawn cannot produce. The repository key is `github.com/juliusz-cwiakalski/agentic-delivery-os`.
+- Step 7 prints the attempt record's `attemptId`, `recordedAt`, `token`, `outcome` and `evidenceRefs`. The refs contain `attempt:<attemptId>` and at least one `liveness:<verdict>` ref. The `liveness:` ref is **corroborating only**: the production adapter is composed without `livenessFacts` (`packages/cli/src/production.ts:443-458`; `packages/adapters/src/harness/opencode.ts:257`), so readings are all-absent and the verdict may be `liveness:unknown`, which a completion-gated build can record too. Non-blocking acquisition is proven by the deterministic suite (TC-OCS-020/TC-OCS-021, and TC-OCS-082 step 1's `collect`-pending-across-a-poll assertion), not by this ref. The repository key is `github.com/juliusz-cwiakalski/agentic-delivery-os`.
+- Step 7a shows no active `GH-275` lease: `.data.leases[]` has no row for ref `GH-275` on `github.com/juliusz-cwiakalski/agentic-delivery-os`, proving the dispatch released the lease it acquired in step 3.
 - This worktree's `git status --porcelain` is empty and `HEAD` is unchanged (AC-F8-2).
 
 **Pass/fail rule.**
 
-- PASS = token in the delivered set, `lastMessage` not the spawn-failed sentence, at least one `liveness:` ref in the attempt record, elapsed ≤180 s, this worktree unchanged.
-- FAIL = the spawn-failed identity appears without an acquisition-timeout explanation, no child within 60 s, elapsed >180 s, no `liveness:` ref, or this worktree's status/HEAD changed. A failure reopens delivery, not the E2E wording.
+- PASS = token in the delivered set, `lastMessage` not the spawn-failed sentence, a non-empty `attemptId`, an `attempt:<attemptId>` ref, at least one `liveness:` ref (corroboration only), **no active `GH-275` lease** in `queue list --json` (§6.3 step 7a), elapsed ≤180 s, this worktree unchanged.
+- FAIL = the spawn-failed identity appears without an acquisition-timeout explanation, no child within 60 s, elapsed >180 s, a missing `attempt:<attemptId>`/`liveness:` ref, an active `GH-275` lease after the run, or this worktree's status/HEAD changed. A failure reopens delivery, not the E2E wording.
 - STOP (blocked precondition, not a product-test failure) = step 0a fails, step 1b does not return 3000, or step 1c records a first event later than the 60 s acquisition bound (CLI/provider slowness). Record the blocked precondition, restore the environment, and re-run; do not write a TC-OCS-100/TC-OCS-101 result and do not reopen delivery on it. If step 1c is healthy but the dispatch still ends in an acquisition-timeout refusal, record it as a product FAIL (the adapter did not see a first line the CLI emits).
 
 **Cleanup.**
 
 - Kill any surviving child of `DISPATCH_PID`, then the dispatch process if it is still alive.
 - `rm -rf "$E2E"` (the clone, its `node_modules` symlink, and the clone-local `.delivery-os/config.yaml`; never `$REPO/node_modules`).
-- Release the queue lease if the run was interrupted: `( cd "$E2E" && bun packages/cli/bin/delivery-os.ts queue release GH-275 --holder dispatch --json )` before removing the clone; otherwise the dispatch completed and released it.
-- The attempt record appended to the real state root is retained deliberately as production proof (spec §18); record its token and `evidenceRefs` in §10.
+- The lease is proven released in step 7a and that proof is part of the PASS rule; if step 7a found an active lease, force-release it with `( cd "$E2E" && bun packages/cli/bin/delivery-os.ts queue release GH-275 --holder dispatch --json )` before removing the clone.
+- The attempt record appended to the real state root is retained deliberately as production proof (spec §18); record its `attemptId`, token, `outcome` and `evidenceRefs` in §10.
 
 ### 6.4 Regression Runs Outside the TC Matrix
 
@@ -1784,11 +1811,21 @@ These run as part of delivery evidence but are not AC-bearing scenarios, so they
 | `tests/conformance/harness-classification.test.ts` | edit | Six legacy cases + six JSONL counterparts + seam assertion (TC-OCS-061, TC-OCS-062) |
 | `tests/structure/conformance-coverage.test.ts` | run unchanged | Registry coverage meta-check |
 
+**Migration edits forced by the new required `starter` seam and the async acquisition (they carry no new TC):**
+
+| Path | Action | Purpose |
+|---|---|---|
+| `tests/behaviour/harness-spawn-env.test.ts` | edit | Construct the opencode port with the required `starter` seam (fake starter over the same single-document output) so the environment assertions stay green |
+| `tests/behaviour/harness-spawn-credential.test.ts` | edit | Same migration for the credential-scoping cases |
+| `tests/conformance/harness-liveness.test.ts` | edit | Same migration at the conformance construction site |
+| `tests/structure/harness-neutrality.test.ts` | edit | Same migration for the neutrality scan's construction site |
+
 **Product code (owned by the implementation plan; named here because the tests bind to these seams):**
 
 | Path | Declared change |
 |---|---|
 | `packages/core/src/contracts/harness.ts` | Add `HarnessSpawnStreamOptions`, `HarnessSpawnStream`, `HarnessSpawnStarter` (Appendix B); everything else unchanged |
+| `packages/core/src/contracts/index.ts` | Re-export the additive starter/stream types beside the existing harness contract exports (plan P1); no other export moves |
 | `packages/adapters/src/harness/opencode.ts` | JSONL decode, `sessionID` precedence, non-blocking spawn/resume/deliver, completion promise, bounded acquisition options, kill on failure; listing unchanged |
 | `packages/adapters/src/host/index.ts` | Add `createHostSpawnStarter` beside the unchanged `createHostSpawnRunner`; still the single `node:child_process` site |
 | `packages/cli/src/production.ts` | Bind the starter for opencode; keep the one-shot runner for listing; Claude unchanged |
@@ -1842,8 +1879,18 @@ These run as part of delivery evidence but are not AC-bearing scenarios, so they
 | TC-OCS-080 | `tests/behaviour/harness-claude-session.test.ts` | `bun test tests/behaviour/harness-claude-session.test.ts` | Existing – Update (helper only) |
 | TC-OCS-081 | `tests/behaviour/harness-opencode-session.test.ts` | `bun test tests/behaviour/harness-opencode-session.test.ts` | Existing – Update (move spawn/resume; keep TC-HARN-010) |
 | TC-OCS-082 | `tests/behaviour/dispatch-harness-acquisition.test.ts`; `tests/fixtures/dispatch/golden/harness.ts` | `bun test tests/behaviour/dispatch-harness-acquisition.test.ts` | To Implement |
-| TC-OCS-100 | §6.3 procedure; no test file | Manual: §6.3 steps 0–7 | Manual Only |
-| TC-OCS-101 | §6.3 procedure; no test file | Manual: §6.3 steps 0–7 + worktree snapshots | Manual Only |
+| TC-OCS-100 | §6.3 procedure; no test file | Manual: §6.3 steps 0–7a | Manual Only |
+| TC-OCS-101 | §6.3 procedure; no test file | Manual: §6.3 steps 0–7a + worktree snapshots + lease proof | Manual Only |
+
+**Migration edits carrying no new TC (owned by plan P1/P2).** These files change only because the opencode port now requires the `starter` seam; every delivered assertion stays intact, so no new TC is attached:
+
+| Path | Phase | Migration |
+|---|---|---|
+| `tests/behaviour/harness-spawn-env.test.ts` | P2 | Construct the port with a fake starter over the same single-document stdout |
+| `tests/behaviour/harness-spawn-credential.test.ts` | P2 | Same migration for the credential cases |
+| `tests/conformance/harness-liveness.test.ts` | P2 | Same migration at the conformance construction site |
+| `tests/structure/harness-neutrality.test.ts` | P2 | Same migration for the neutrality scan |
+| `packages/core/src/contracts/index.ts` | P1 | Re-export the additive starter/stream types; no new TC |
 
 **Sequencing notes.**
 
@@ -1936,11 +1983,13 @@ pnpm check          # aggregate: lint, format, typecheck, tests, boundaries, inv
 |----|----------|-----------|-------|--------------------------|
 | OQ-T1 | Which stream facts encode a tool failure and a stream/agent failure, so `toolFailure` and `failureReported` are producible from a JSONL stream? | No | `@spec-writer` (closed) | **Resolved in spec v1.2 (§8.4, §14, F-4, F-7, DEC-5).** Tool failure = a `tool_use` event whose `part.state.status === "error"`; stream/agent failure = an `error` event (`{type:"error", timestamp, sessionID, error:{type,message}}`). Pinned locations: `tests/fixtures/harness/stream/opencode-v2.2.5-tool-error.jsonl` carries the `tool_use` error line, `opencode-v2.2.5-stream-error.jsonl` carries the `error` event, and `tests/fixtures/harness/scenarios/stream.ts` exposes the dedicated `tool-error` and `stream-error` cases; TC-OCS-042/TC-OCS-047 assert the tool encoding and TC-OCS-048 asserts the error event, each with a remove-the-line control. |
 | OQ-T2 | Does the host starter take a kill-grace option, or is the grace a constant? | No | `@coder` | **Carried forward (spec v1.2 DEC-6 says "a short grace period" without fixing whether it is injected).** If injected, TC-OCS-052 shortens it; if constant, the test waits for close within a bounded window. Either way the escalation assertion stands; no AC depends on the answer. |
-| OQ-T3 | Does the listing path keep the delivered 300 s `timeoutMs` option name, or is it renamed? | No | `@plan-writer` | **Carried forward (spec v1.2 leaves session listing unchanged, §8.4).** Delivery-bound: TC-OCS-053/TC-OCS-081 assert the behaviour (listing uses the one-shot runner with its own timeout) and that the stream options never carry it; no AC depends on the spelling. |
+| OQ-T3 | Does the listing path keep the delivered 300 s `timeoutMs` option name, or is it renamed? | No | `@plan-writer` | **Carried forward (spec §8.4 leaves session listing unchanged).** Delivery-bound: TC-OCS-053/TC-OCS-081 assert the behaviour (listing uses the one-shot runner with its own timeout) and that the stream options never carry it; no AC depends on the spelling. The delivered `DEFAULT_TIMEOUT_MS = 300_000` (`packages/adapters/src/harness/opencode.ts:76,127,305`) stays reachable for listing only, and TC-OCS-053 step 6 asserts it does not reach the starter options. |
 | OQ-T4 | Where do the spawn/resume describes move from `harness-opencode-session.test.ts`? | No | `@coder` | The plan's default: they move to `harness-opencode-stream*.test.ts`; keeping them in place with a starter-injected helper is also acceptable, as long as every delivered assertion (including `TC-HARN-010`) survives. |
 | OQ-T5 | Is the end-to-end probe run in the delivery phase or the verification phase? | No | `@pm` | Either, per spec §18 and RSK-1; the evidence lands in §10 and the PR description. |
 
 **Resolved by this revision (v1.2).** OQ-T1 is closed by the spec's real v2.2.5 encodings and is no longer a delivery-time guess; TC-OCS-047/TC-OCS-048 make both encodings falsifiable. OQ-T2/OQ-T3 are explicitly carried forward as non-blocking because spec v1.2 does not need to choose an option spelling or a grace mechanism: the behaviour is asserted and either implementation passes. The end-to-end credential and repository-identity questions resolved in v1.1 remain closed (§6.3 steps 0a/2). OQ-T2..OQ-T5 are the only open items.
+
+**Updated by v1.3.** Spec v1.3 fixes a single `failureReported` rule (explicit failure fact only; a non-zero exit is `exitStatus` alone), so TC-OCS-048 step 5 now asserts `failureReported: false` on a non-zero exit and the §1.1 summary says the same. OQ-T3 is clarified: the delivered listing `DEFAULT_TIMEOUT_MS = 300_000` is retained, and TC-OCS-053 step 6 asserts only that it never reaches the spawn/resume starter options. No open question is added or reopened.
 
 ## 9. Plan Revision Log
 
@@ -1949,6 +1998,7 @@ pnpm check          # aggregate: lint, format, typecheck, tests, boundaries, inv
 | 1.0 | 2026-11-08 | @test-plan-writer | Initial test plan for GH-275. 42 scenarios cover all 30 ACs (AC-F1-1..AC-F8-2), all nine NFRs, DEC-1..DEC-8, and RSK-1..RSK-9: JSONL decoding and `sessionID` acquisition, non-blocking handle with completion-scoped collect, identity-preserving non-blocking resume/deliver, bounded acquisition with no default whole-session bound and leak-free cleanup, the additive starter seam with the unchanged port/runner, conformance and type pinning, Claude/listing/dispatch regressions, the non-vacuity and hermeticity meta-checks, and a bounded operator-run real-CLI proof. Long sessions are simulated in virtual time; 0 real harness CLI invocations in every automated suite. |
 | 1.1 | 2026-11-08 | @test-plan-writer | Corrected the §6.3 end-to-end procedure only; no TC, AC mapping, or other section changed (still 42 TCs, 30/30 ACs). (1) Step 3 now sets the scratch clone's origin to the real repository `https://github.com/juliusz-cwiakalski/agentic-delivery-os.git`; the previous owner made the tracker/CI truth read unresolvable, so the run would have ended as a `dispatch.state-unverified` error envelope instead of a delivered result token and AC-F8-1 could not pass. (2) Added step 0a, a hard authentication precondition: the production GitHub instance resolves the literal `GITHUB_TOKEN` environment variable (`packages/cli/src/production.ts`, `githubInstance()`), so a `gh` keyring login alone is invisible to the dispatch process; the step exports the token, checks `gh auth status`, and probes `gh issue view 275 -R juliusz-cwiakalski/agentic-delivery-os --json number`, with an explicit STOP rule that a missing credential is a blocked precondition, not a product-test failure. (3) Verified the queue grammar in `packages/cli/src/commands/queue.ts`: `queue add <ref>` (one positional ref, no branch argument, optional `--priority`/`--dep`; lines 381-386) and `queue release <ref> --holder <id>` (one ref plus the `--holder` value flag; lines 431-434, flag declared at line 348) are correct as written, so no command changed; the citation is recorded in the procedure. §8.2/§8.3 now confirm that the `dispatch.attempt` record's repository key is `github.com/juliusz-cwiakalski/agentic-delivery-os` (`normalizeRepositoryKey`, `packages/core/src/domain/queue-graph.ts:76-91`). |
 | 1.2 | 2026-11-08 | @test-plan-writer | Reopened `test_planning` after DoR iteration 1 (`readiness/readiness-iter-1.md`, verdict NOT_READY); aligned to spec v1.2. **B-1 (legacy envelope parity)**: TC-OCS-061 now names the six delivered scenarios (`completed`, `tool-failure`, `premature-end`, `harness-failure`, `spawn-refusal` status 126, `timeout` → `max-restarts`) and their JSONL counterparts, and asserts the envelope's `completionMarker`/`spawnRefused`/`failureReported`/`toolFailure` facts under F-4 precedence; new TC-OCS-046 tests the precedence rule directly; new TC-OCS-062 pins the six cases plus `TC-HARN-010`; TC-OCS-081 explicitly keeps `TC-HARN-010`. **B-2 (failure encodings)**: new TC-OCS-047 pins `tool_use` with `part.state.status === "error"` and new TC-OCS-048 pins the `error` event, each with a remove-the-line control; TC-OCS-042 now reads the real encoding; OQ-T1 closed in §8.3 and GAP-T2 removed. **B-3 (deterministic acquisition)**: TC-OCS-020/021/030/031/032 no longer await the fake's `acquired` signal; they use `flushUntil(() => spawnSettled \|\| fake.acquiredCalls > 0, 64)` and assert `spawnSettled`/`acquiredCalls`/`completionSettled`; §7.3 M-3 now names TC-OCS-020 (spawn) and TC-OCS-030 (resume) and states that a completion-gated mutant fails by assertion, not by hang (TC-OCS-021 is M-4's oracle). **A-2**: TC-OCS-071 scopes the command-literal scan to the adapter suites and explicitly excludes `harness-host-stream.test.ts` because TC-OCS-052 legitimately uses `process.execPath`. **A-4**: §6.3 adds step 1b (clone-local `.delivery-os/config.yaml` with `lane.liveness-interval: 3000`; no env/flag mapping exists) and step 1c (bounded first-event probe); a `liveness:` attempt-ref is required for PASS, and a first event beyond the 60 s bound is a blocked precondition (CLI/provider slowness), not a product failure. Also set `version_impact: minor` per spec v1.1/DEC-8. Final count: **46 TCs**; AC coverage remains **30/30**. |
+| 1.3 | 2026-11-09 | @test-plan-writer | Reopened `test_planning` after DoR iteration 2 (`readiness/readiness-iter-2.md`, verdict NOT_READY); aligned to spec v1.3. **B-1 (`failureReported`)**: the plan now states one explicit-fact rule — true only from a JSONL `error` event or a legacy `result.failure`/`result.status` fact; a non-zero exit is carried by `exitStatus` and classifies `failed` through `packages/core/src/domain/harness-classify.ts:50-52`. TC-OCS-048 step 5 asserts `failureReported: false` with a non-zero `exitStatus` (replacing the old `failureReported: true` from the exit mapping); TC-OCS-045 step 4 keeps "never inferred from the exit status alone"; the §1.1 summary, GAP-T2, §3.1 AC-F4-4 and §3.4 say the same. **B-2 (source-accurate assertions)**: TC-OCS-004 step 4 no longer asserts "exactly once" for `dispatch.session.spawn-failed` (delivered three times at `dispatch.ts:210,471,474`) and asserts the message once (`:482`) plus the single producing branch (behavioural proof in TC-OCS-082 step 3); TC-OCS-053 step 6 asserts no `300_000`/`DEFAULT_TIMEOUT_MS` reaches the spawn/resume starter options while listing keeps its delivered 300 s default (`opencode.ts:76,127,305`); TC-OCS-082 steps 3/5 and TC-OCS-100 step 3 read `data.error.code`/`data.lastMessage` from the envelope and assert the attempt's `attemptId`/`token`/`outcome`/`evidenceRefs` (`attempt:<attemptId>` + `liveness:<verdict>`, `dispatch.ts:684`), with the spawn→collect handle proven through the injected fake starter (no `sessionId` in `DispatchAttemptRecord`, `contracts/dispatch.ts:189-210`). **A-1 (lease proof)**: §6.3 step 7 now extracts `attemptId` and adds step 7a — `queue list --json` must show no active `GH-275`/`dispatch` lease on `github.com/juliusz-cwiakalski/agentic-delivery-os`, with `queue release GH-275 --holder dispatch --json` on failure — and the lease check is part of the PASS rule. **A-2 (migration files)**: §7.1/§7.2 list `packages/core/src/contracts/index.ts` (P1) and the four P2 migration suites (`harness-spawn-env`, `harness-spawn-credential`, `harness-liveness`, `harness-neutrality`), carrying no new TC. **A-3 (observability/mutation honesty)**: TC-OCS-061 step 1 asserts a multi-line `spawnStdout` acquisition (no "never over the one-shot runner" claim, since `HarnessConformanceRegistration.build` exposes no seam); TC-OCS-062 step 5 restates M-17's red/green set — step 1 green, step 2 red, step 3 green, step 4's distinctness assertion red. **A-4 (liveness ref)**: TC-OCS-100/TC-OCS-101 and §6.3 treat the `liveness:` ref as corroborating only (the production adapter receives no `livenessFacts`), with the deterministic suite (TC-OCS-020/021/082) as the discriminator. **A-6 (titles)**: TC-OCS-014 → "with the starter's `timedOut` fact"; TC-OCS-042 → outcome `completed`, token `partial` (delivered `HARNESS_OUTCOMES`). §2 now cites TDR-0016 and §8.3 records the v1.3 delta. Final count: **46 TCs**; AC coverage remains **30/30**. |
 
 ## 10. Test Execution Log
 
