@@ -181,3 +181,24 @@ notes:
       scanned on the recorded checkout cwd."
     type: retro
     date: "2026-11-08"
+  - text: "Plan phase 3 complete (invariant preservation + structural anti-recurrence,
+      commit 08153dead338524be90d0f78b9e6e4ba7f1cf105). Added
+      tests/behaviour/queue-binding-invariant.test.ts (TC-BIND-011 write-side
+      negatives + pair control; TC-BIND-012 key-only and root-only raw payloads
+      read as state.store.torn, raw records stay readable, no entry fabricated,
+      queue list --json exits 2 with no data) and
+      tests/structure/queue-binding-derivation.test.ts (TC-BIND-014 one
+      construction site, exactly one pair literal, no one-sided literal, the
+      queue/lanes composition shared once; TC-BIND-016 one readRepositoryFacts
+      and one findGitRoot call; TC-BIND-008 source allowlist for repositoryRoot
+      over packages/**/src). No domain file changed. Green:
+      bun test tests/behaviour/queue-binding-invariant.test.ts (3 pass / 0 fail);
+      bun test tests/structure/queue-binding-derivation.test.ts (5 pass / 0
+      fail); bun test tests/structure/queue-scheduling-contract.test.ts
+      tests/structure/error-table.test.ts
+      tests/checks/error-table-sync.test.ts (193 pass / 0 fail); bun test
+      tests/golden (240 pass / 0 fail); bun run
+      scripts/checks/error-table-sync.ts (entries=115 documented=115, OK); biome
+      check both new files (clean)."
+    type: info
+    date: "2026-11-08"
