@@ -46,7 +46,7 @@ The plan's central discipline is the one called out by spec DEC-5 / RSK-4: compo
 
 ## 2. References
 
-- Change spec: [chg-GH-273-spec.md](./chg-GH-273-spec.md) (v1.3) — AC-F1-1…AC-F6-4, DEC-1…DEC-8, DM-1…DM-3, NFR-1…NFR-8, §17 verification method, Appendix A binding-resolution matrix.
+- Change spec: [chg-GH-273-spec.md](./chg-GH-273-spec.md) (v1.4) — AC-F1-1…AC-F6-4, DEC-1…DEC-8, DM-1…DM-3, NFR-1…NFR-8, §17 verification method, Appendix A binding-resolution matrix.
 - Implementation plan: [chg-GH-273-plan.yaml](./chg-GH-273-plan.yaml) — delivery phases 1–5 and their AC/TC ownership.
 - Repository testing strategy: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md).
 - TypeScript workspace rules: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md).
@@ -821,7 +821,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Notes / Clarifications**:
 
 - This is deliberately not a permanent suite: a test that rewrites source during its run is unsafe and would violate test isolation. It is a review gate, not an automated check.
-- PM-ratified (§8.3 OQ-A, OQ-B) and aligned with spec v1.3 NFR-4, AC-F6-1 and AC-F6-3: each layer's evidence comes from the artifact that layer actually exercises. A producer revert alone cannot red the fixture-shape suite (it parses only `tests/fixtures/**`), and a fixture revert cannot red a production-side test. Do not record a producer revert as the shape suite's red set, and do not record TC-BIND-014 or the shape AST as producer-revert evidence for AC-F6-3.
+- PM-ratified (§8.3 OQ-A, OQ-B) and aligned with spec v1.4 NFR-4, AC-F6-1 and AC-F6-3: each layer's evidence comes from the artifact that layer actually exercises. A producer revert alone cannot red the fixture-shape suite (it parses only `tests/fixtures/**`), and a fixture revert cannot red a production-side test. Do not record a producer revert as the shape suite's red set, and do not record TC-BIND-014 or the shape AST as producer-revert evidence for AC-F6-3.
 - Evidence ownership: P1 → AC-F6-1 (composition add + root-unresolved guard); P2 → AC-F6-3 (fixture shape); P3 → AC-F1-2/AC-F6-1 (key-unresolved symmetry guard); P4 → AC-F6-2/AC-F5-1/AC-F5-2 (domain negatives).
 - The asymmetry mutation and the domain predicate mutations are applied and restored one at a time, so every observed red set is attributable to the named artifact. P3's branch is a test-only insertion **ahead of** the target gate; the delivered production code keeps target-gate-first ordering, so P3 proves the key guard's necessity without changing the shipped contract. Do not record the inserted branch as a production change, and do not leave it in place between runs.
 
@@ -908,7 +908,7 @@ Final verification: `pnpm check` (lint → format:check → typecheck → test �
 
 ### 8.3 Resolved Questions and Resulting Test Obligations
 
-All seven items below were arbitrated by the PM after spec v1.1 and re-checked against spec v1.3. Each is recorded as **RESOLVED** with the ruling and the test obligation it creates; none blocks implementation.
+All seven items below were arbitrated by the PM after spec v1.1 and re-checked against spec v1.4. Each is recorded as **RESOLVED** with the ruling and the test obligation it creates; none blocks implementation.
 
 | ID | Question | PM ruling (RESOLVED) | Resulting test obligation |
 |----|----------|----------------------|---------------------------|
@@ -920,7 +920,7 @@ All seven items below were arbitrated by the PM after spec v1.1 and re-checked a
 | OQ-F | NFR-2 lists `status` and `brief` among surfaces that must not leak the root. | **RESOLVED.** Root absence is asserted on `queue list`, `status` **and** `brief`; **no exit-code assertions** on the credential-degraded surfaces. | TC-BIND-008 asserts the exact root string occurs zero times in `queue list`/`plan`, `lanes`, `claim`/`release`, `status` and `brief` output (JSON and text) and in the graph document, and asserts no exit code for `status`/`brief`. TC-BIND-009 asserts root absence in the dispatch envelope. If a surface proves non-hermetic, report a gap rather than dropping it (TR-5). |
 | OQ-G | AC-F6-4 expects the pre-fix expectations "encoded as the failure the tests detect". | **RESOLVED.** AC-F6-4 may encode the pre-fix failure triple explicitly — refusal on add, zero entries on list, `queue.entry.unobserved` on dispatch — instead of running reverted code. | TC-BIND-010 declares a `PRE_FIX_FAILURE_TRIPLE` constant with those three values and asserts each observed outcome **differs** from it element-by-element (step 4). Revert evidence for the same paths stays with TC-BIND-018; the two are complementary, not duplicated. |
 
-No item remains open; OQ-A/B/C/D/E/F/G are reflected in the spec v1.3 §17 acceptance criteria, Appendix A's cause-labelled matrix, and the TC rows named above.
+No item remains open; OQ-A/B/C/D/E/F/G are reflected in the spec v1.4 §17 acceptance criteria, Appendix A's cause-labelled matrix, and the TC rows named above.
 
 ## 9. Plan Revision Log
 
