@@ -267,3 +267,22 @@ notes:
       gate caught it only because it diffed test counts against base."
     type: retro
     date: "2026-11-08"
+  - text: "Plan phase 11 complete (Code Review Remediation, Iteration 1): F-1
+      restored the 37-test CI-invariant suite and moved the prompt/help scan
+      wiring to tests/checks/ci-wiring.test.ts; F-2 restored TC-PRIVACY-018/019
+      and F-8 and moved the non-pilot fixture scan to
+      tests/checks/fixture-privacy.test.ts, so runAuthoring is used again; F-3
+      set the test-plan section 7 statuses and populated section 10 (plus 7.4
+      remediation coverage); F-4 added tests/behaviour/change-folder-locate.test.ts;
+      F-5 made prompt-conformance negation sentence-local for rules and literals
+      and added the raw-git-negated mutant; F-6 pinned the commit --phase
+      --dry-run DEC-4 union in tests/behaviour/commit-staging-scope.test.ts.
+      privacy-ci-wiring's suite-filter pin was updated for the moved fixture
+      scan. Commit 97dad325. Tests: pnpm check 6005 pass / 4 skip / 0 fail
+      across 6009 tests (683 files); restored/updated suites ci-checks+ci-wiring
+      39, privacy-authoring+fixture-privacy 11, prompt-conformance+muntants 11,
+      change-folder-locate 9, commit-staging-scope 3, privacy-ci-wiring 14;
+      typecheck, lint, format, boundaries, prompt/help scans, plugin 16/16, and
+      plan validate all green."
+    type: info
+    date: "2026-11-08"
