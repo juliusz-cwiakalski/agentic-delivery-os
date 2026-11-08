@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: "2026-11-08T04:00:00Z", completed: "2026-11-08T04:12:00Z", status: "no-op-verified" }
   review_fix: { started: "2026-11-08T04:14:00Z", completed: "2026-11-08T04:34:00Z", status: "pass", iteration: 1 }
   quality_gates: { started: "2026-11-08T04:36:00Z", completed: "2026-11-08T05:00:00Z", status: "pass" }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-11-08T05:02:00Z", completed: "2026-11-08T05:10:00Z", status: "pass" }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "Owner directive (CEO-D-073) redefines the M1-S9 handover gate 'clean' from a rolling two-week calendar window to an evidence-based bar. Amendment is docs-only and must not change any other story AC or dependency."
@@ -126,7 +126,7 @@ notes:
   - text: "Plan phase P2 complete at a32cf599219064b6325d410f0adda134a03e5310 (docs(GH-266): record the CEO-D-073 handover amendment in status). Gates green at the phase HEAD: P5 residual-named=8 missing=0; P16 verdict: OK with all four mutants firing; P6 forward=2 pointed=2 pointer-shape=2/2 bytes=2/2; P7 history byte-identical with the reflow control firing; P8 sources=3/3 on both files; P10b/P10c status has no frontmatter and 0 added ados_distribution lines. TC-GATE-006, 007, 008, 009, 011, 019, 020 and 021 complete."
     type: "info"
     date: "2026-11-08"
-  - text: "Plan phase P3 complete: full sweep green at the final HEAD (p00, p01, p11, p12, p17, p13, p02-p10, p14-p16, derived-boundary assertion, git diff --check). Evidence recorded in delivery-evidence/verification.md with per-TC command, expected and observed lines, the guard outputs, the declared residual, the GH-239 staleness and DEC-3 disclosures, and the N-1 accepted residual. One deviation: the P9 block hardcodes its input path, so the negative control ran on a mechanically path-substituted copy (p09-neg.sh) without retyping literals. Product diff is exactly two files, 61 insertions and 5 deletions."
+  - text: "Plan phase P3 complete at 5a00f77a502807fcb7615c770dd83dc6d64e2f9a (docs(GH-266): record verification evidence for the handover-gate amendment): full sweep green at the final HEAD (p00, p01, p11, p12, p17, p13, p02-p10, p14-p16, derived-boundary assertion, git diff --check). Evidence recorded in delivery-evidence/verification.md with per-TC command, expected and observed lines, the guard outputs, the declared residual, the GH-239 staleness and DEC-3 disclosures, and the N-1 accepted residual. One deviation: the P9 block hardcodes its input path, so the negative control ran on a mechanically path-substituted copy (p09-neg.sh) without retyping literals. Product diff is exactly two files, 61 insertions and 5 deletions."
     type: "info"
     date: "2026-11-08"
   - text: "System spec update: reasoned no-op, zero files changed. No doc/spec/** feature spec describes dispatch or the handover gate (feature-scheduling-engine.md explicitly excludes both; the other M1-S9 mentions are undelivered-boundary pointers), so authoring a Current feature spec would invent undelivered behaviour and compete with the canonical backlog entry; the gap re-opens when M1-S9 delivers. No doc/spec/**, doc/overview/**, doc/decisions/**, doc/guides/** or index document restates the two-week M1-S9 handover rule (the north-star two-week wording is the separate M0 exit criterion). TDR-0005 still declares exactly eleven tokens, re-verified by set comparison rather than assumed. doc/00-index.md has no doc/planning section and the oss-tooling README already covers 'recorded amendments', so no index entry is needed. Doc-distribution guard green at 81 docs, tree clean."
@@ -145,5 +145,8 @@ notes:
     type: "info"
     date: "2026-11-08"
   - text: "Environmental note for the PR body: the first `pnpm check` run exited 1 solely on tests/checks/ci-baseline-parity.test.ts, whose `git clone --local` uses hardlinks and fails with EXDEV because /tmp is tmpfs while the repo is on the root volume. The same suite passes in isolation when TMPDIR points at the repository filesystem, and the full aggregate then exits 0. This is the pre-existing noise already recorded on the GH-237 PR, not a regression from this change."
+    type: "info"
+    date: "2026-11-08"
+  - text: "DoD check: PASS. All ten preceding phases carry completion timestamps and evidence; the plan's three phases each have a pm-notes entry naming the phase id, its commit (27ae0000, a32cf599, 5a00f77a) and its gate results, with 22/22 TCs completed; all 17 ACs were verified satisfied against the diff by the reviewer (spec_compliance PASS) rather than assumed; documentation is current — doc-sync was a verified no-op with no unresolved gap, and the one newly discovered residual (milestones/m1/interactions.md) is outside this change's scope and is carried to the PR body and the follow-up change; quality gates are green (pnpm check exit 0, 5828 pass / 4 skip / 0 fail). No phase needed reopening."
     type: "info"
     date: "2026-11-08"
