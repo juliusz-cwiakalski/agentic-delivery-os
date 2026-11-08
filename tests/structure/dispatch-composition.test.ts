@@ -7,6 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { resolveBrandIdentity } from "../../packages/core/src/branding/index";
+import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledger";
 import { declareQueueEntry } from "../../packages/core/src/app/queue";
 import type {
   HarnessSpawnRunner,
@@ -101,9 +102,16 @@ describe("the production composer builds a real harness session port", () => {
       });
       expect(seeded.ok).toBe(true);
 
-      const invocations: string[] = [];
-      const runner: HarnessSpawnRunner = async (file, args): Promise<HarnessSpawnRunnerResult> => {
-        invocations.push(`${file} ${args.join(" ")}`);
+      const invocations: Array<{
+        readonly command: string;
+        readonly environment: Readonly<Record<string, string>>;
+      }> = [];
+      const runner: HarnessSpawnRunner = async (
+        file,
+        _args,
+        options,
+      ): Promise<HarnessSpawnRunnerResult> => {
+        invocations.push({ command: `${file} ${_args.join(" ")}`, environment: options.env });
         return {
           stdout: JSON.stringify({
             session: { id: "ses-production-1" },
@@ -142,10 +150,22 @@ describe("the production composer builds a real harness session port", () => {
       };
 
       expect(invocations).toHaveLength(1);
-      expect(invocations[0]?.startsWith("opencode ")).toBe(true);
+      expect(invocations[0]?.command.startsWith("opencode ")).toBe(true);
+      expect(Object.keys(invocations[0]?.environment ?? {}).sort()).toEqual([
+        "DELIVERY_WORK_PATH",
+        "HARNESS_MODEL",
+        "HARNESS_SMALL_MODEL",
+      ]);
       expect(outcome.error).toBeUndefined();
       expect(outcome.data?.result).toBeDefined();
       expect(outcome.data?.result).not.toBe("harness.capability.gap");
+
+      const attempts = readDispatchAttempts(store);
+      expect(attempts.ok).toBe(true);
+      if (attempts.ok) {
+        expect(attempts.records).toHaveLength(1);
+        expect(attempts.records[0]?.evidenceClass).toBe("pilot");
+      }
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
