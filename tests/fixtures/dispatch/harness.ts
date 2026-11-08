@@ -11,12 +11,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { classifyHarnessEvidence } from "../../../packages/core/src/domain/harness-classify";
-import {
-  makeIdentity,
-  openStore,
-  removeRoot,
-  type TestEdge,
-} from "../state/harness";
+import { makeIdentity, openStore, removeRoot, type TestEdge } from "../state/harness";
 import type {
   HarnessEvidence,
   HarnessLivenessReport,
@@ -119,9 +114,7 @@ const DEFAULT_EVIDENCE: HarnessEvidence = {
   toolFailure: false,
 };
 
-export const createScriptedHarness = (
-  options: ScriptedHarnessOptions = {},
-): ScriptedHarness => {
+export const createScriptedHarness = (options: ScriptedHarnessOptions = {}): ScriptedHarness => {
   const calls: string[] = [];
   const spawnInputs: HarnessSpawnInput[] = [];
   const handle: HarnessSessionHandle = {

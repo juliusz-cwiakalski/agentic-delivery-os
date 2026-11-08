@@ -18,21 +18,14 @@ const sourced = (
   value: number,
 ): DispatchLivenessReading => ({ signal, status: "sourced", value });
 
-const absent = (
-  signal: DispatchLivenessReading["signal"],
-): DispatchLivenessReading => ({
+const absent = (signal: DispatchLivenessReading["signal"]): DispatchLivenessReading => ({
   signal,
   status: "absent",
   reason: DISPATCH_LIVENESS_ABSENCE_REASONS[1] as "not-observed",
 });
 
 describe("TC-DISP-003 progress signals keep a session live", () => {
-  const ALL_SIGNALS = [
-    "token-delta",
-    "session-traffic",
-    "worktree-activity",
-    "prefill",
-  ] as const;
+  const ALL_SIGNALS = ["token-delta", "session-traffic", "worktree-activity", "prefill"] as const;
   const withOnly = (
     target: (typeof ALL_SIGNALS)[number],
     value: number,

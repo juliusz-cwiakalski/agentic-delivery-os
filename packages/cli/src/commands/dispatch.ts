@@ -60,10 +60,7 @@ export type DispatchResolveRuntime = {
 
 /** The handover/reversal surface; phase 6 composes it. */
 export type DispatchHandoverRuntime = {
-  readonly handover: (input: {
-    readonly repo: string;
-    readonly revert: boolean;
-  }) => Promise<
+  readonly handover: (input: { readonly repo: string; readonly revert: boolean }) => Promise<
     | {
         readonly ok: true;
         readonly data: {

@@ -23,7 +23,13 @@ describe("TC-RESUME-002 restart budget exhaustion", () => {
       },
     });
     try {
-      const run = await scenario.invoke(["dispatch", "GH-301", "--resume-prompt", "retry", "--json"]);
+      const run = await scenario.invoke([
+        "dispatch",
+        "GH-301",
+        "--resume-prompt",
+        "retry",
+        "--json",
+      ]);
       expect(run.exit).toBe(1);
       expect(run.envelope?.data?.result).toBe("max-restarts");
       expect(run.envelope?.data?.outcome).toBe("failed");

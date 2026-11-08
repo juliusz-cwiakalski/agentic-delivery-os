@@ -62,7 +62,8 @@ const listSources = (root: string): string[] => {
   return results.sort();
 };
 
-const TOKEN_LITERAL = /["'](merged|blocked|pr-open|pr-open-unverified|failed|finished|max-restarts|state-unverified|partial|noop-lane-permission|noop-lane-nothing-to-do)["'`]/g;
+const TOKEN_LITERAL =
+  /["'](merged|blocked|pr-open|pr-open-unverified|failed|finished|max-restarts|state-unverified|partial|noop-lane-permission|noop-lane-nothing-to-do)["'`]/g;
 
 /** Dispatch production modules: dispatch-named sources outside the contracts home. */
 const dispatchProductionSources = (root: string): string[] =>

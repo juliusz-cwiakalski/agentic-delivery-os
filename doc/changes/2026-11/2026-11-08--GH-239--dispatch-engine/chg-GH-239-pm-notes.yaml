@@ -254,3 +254,22 @@ notes:
       deterministic attempt per classified lane; a replay/resume appends none."
     type: info
     date: "2026-11-08"
+  - text: "Delivery plan phase 10 (controlled-proof E2E, evidence-class counting,
+      bounds, determinism, idempotency, release gate) complete. Tests green:
+      conformance/dispatch (e2e, fixture, daemon lane), dispatch-bounds
+      (including @perf), dispatch-determinism, dispatch-idempotency,
+      dispatch-privacy, fixture-privacy, dispatch-gate-evidence,
+      dispatch-evidence-class, exit-code-literals, dispatch-merge-boundary,
+      tests/boundaries, the bash fallback matrix and four retained bash suites,
+      and the aggregate `pnpm check` (lint, format, typecheck, 6,416 tests,
+      boundaries, prompt conformance, help coverage, exports parity). One
+      environment note: the sandbox /tmp is a different device from the repo, so
+      `git clone --local` in the CI-baseline parity test fails with EXDEV; with
+      TMPDIR inside the repo the test passes and the aggregate gate is fully
+      green. Formatting and invariant-test bookkeeping released with this phase:
+      Biome format across the new files, the port inventory fixture, the pinned
+      depcruise rule list, the legacy-hook hash (M1-S9 owns the rewiring), the
+      dispatch command's human-text renderer row, and an explicit harness
+      classifier exemption for the two delegating dispatch modules."
+    type: info
+    date: "2026-11-08"

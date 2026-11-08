@@ -8,9 +8,12 @@
  */
 import {
   DELIVERY_RESULT_TOKENS,
+  ECONOMICS_RESTART_SCHEMA_ID,
   HARNESS_OUTCOMES,
   type DispatchResumeMode,
+  type EconomicsRestartRecord,
 } from "#contracts";
+import { evaluateRestartBudget } from "./economics-budget.js";
 
 /** `f` failed, `mr` max-restarts, `su` state-unverified. */
 const [, , , , f, , mr, su] = DELIVERY_RESULT_TOKENS;
@@ -72,17 +75,47 @@ export const admitDispatchRestart = (input: {
   readonly count: number;
   readonly bound: number;
 }): DispatchRestartDecision => {
-  if (input.bound > 0 && input.count >= input.bound) {
+  // A zero/absent bound means the lane policy is not composed: admission is
+  // unbounded and the delivered gate is not consulted.
+  if (input.bound <= 0) {
+    return { admitted: true, count: input.count, bound: input.bound, nextOrdinal: input.count + 1 };
+  }
+  // Delegate to the one delivered restart-budget gate; the count is supplied as
+  // the ordinal-bearing record history, so no second predicate exists here.
+  const records: readonly EconomicsRestartRecord[] = Array.from(
+    { length: input.count },
+    (_, index) =>
+      ({
+        schemaId: ECONOMICS_RESTART_SCHEMA_ID,
+        workItemRef: "dispatch",
+        runId: "dispatch",
+        sessionId: "dispatch",
+        ordinal: index + 1,
+        reason: "session-interrupted",
+        recordedAt: "1970-01-01T00:00:00.000Z",
+      }) satisfies EconomicsRestartRecord,
+  );
+  const verdict = evaluateRestartBudget({
+    workItemRef: "dispatch",
+    bound: input.bound,
+    records,
+  });
+  if (verdict.outcome === "admit") {
     return {
-      admitted: false,
-      reason: "dispatch.restart-budget-exceeded",
-      count: input.count,
+      admitted: true,
+      count: verdict.count,
       bound: input.bound,
-      terminal: true,
-      escalation: "restart-budget-exhausted",
+      nextOrdinal: verdict.nextOrdinal,
     };
   }
-  return { admitted: true, count: input.count, bound: input.bound, nextOrdinal: input.count + 1 };
+  return {
+    admitted: false,
+    reason: "dispatch.restart-budget-exceeded",
+    count: input.count,
+    bound: input.bound,
+    terminal: true,
+    escalation: "restart-budget-exhausted",
+  };
 };
 
 /** The resume-economics verdict. */
@@ -127,7 +160,10 @@ export const evaluateDispatchResumeEconomics = (input: {
 
 /** The token/outcome pair each admission refusal records (Appendix G). */
 export const admissionRefusalPair = (
-  code: "dispatch.restart-budget-exceeded" | "dispatch.resume-uneconomical" | "dispatch.state-unverified",
+  code:
+    | "dispatch.restart-budget-exceeded"
+    | "dispatch.resume-uneconomical"
+    | "dispatch.state-unverified",
 ): {
   readonly token: (typeof DELIVERY_RESULT_TOKENS)[number];
   readonly outcome: typeof O_FAILED;

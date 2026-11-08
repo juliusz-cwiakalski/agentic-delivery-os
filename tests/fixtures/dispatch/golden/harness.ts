@@ -106,9 +106,7 @@ const parseEnvelope = (stdout: string): CommandRun["envelope"] | undefined => {
   }
 };
 
-export const readsFrom = (
-  overrides: Partial<DispatchTruthReads> = {},
-): DispatchTruthReads => {
+export const readsFrom = (overrides: Partial<DispatchTruthReads> = {}): DispatchTruthReads => {
   const base = defaultTruthInput();
   return {
     artifacts: base.artifacts,

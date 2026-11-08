@@ -21,7 +21,8 @@ const DISPATCH_MODULES = [
   "packages/cli/src/output/dispatch-text.ts",
 ] as const;
 
-const MERGE_IMPORT = /(?:domain\/merge-|state\/merge|commands\/merge|merge-(?:transaction|freshness|gate-set|probe|waiver))/;
+const MERGE_IMPORT =
+  /(?:domain\/merge-|state\/merge|commands\/merge|merge-(?:transaction|freshness|gate-set|probe|waiver))/;
 
 describe("TC-MERGE-003 dispatch has no merge code path", () => {
   test("no dispatch production module imports a merge module", () => {
@@ -53,7 +54,11 @@ describe("TC-MERGE-003 dispatch has no merge code path", () => {
 
   test("the fixture cases cover the app, domain, and CLI dispatch paths", () => {
     const cases = readFileSync(join(ROOT, "tests/boundaries/fixtures/cases.ts"), "utf8");
-    for (const id of ["dispatch-core-app-merge", "dispatch-core-domain-merge", "dispatch-cli-merge"]) {
+    for (const id of [
+      "dispatch-core-app-merge",
+      "dispatch-core-domain-merge",
+      "dispatch-cli-merge",
+    ]) {
       expect(cases).toContain(id);
     }
     expect(cases).toContain("dispatch-clean-contracts");

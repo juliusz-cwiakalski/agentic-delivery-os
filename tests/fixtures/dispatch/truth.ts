@@ -43,13 +43,17 @@ export const harnessFacts = (evidence: HarnessEvidence): DispatchHarnessFacts =>
 
 export const prNone: DispatchPrFact = { state: "none", url: null, mergeReady: false };
 
-export const prOpen = (url: string | null = "https://example.test/owner/repo/pull/1"): DispatchPrFact => ({
+export const prOpen = (
+  url: string | null = "https://example.test/owner/repo/pull/1",
+): DispatchPrFact => ({
   state: "open",
   url,
   mergeReady: true,
 });
 
-export const prMerged = (url: string | null = "https://example.test/owner/repo/pull/1"): DispatchPrFact => ({
+export const prMerged = (
+  url: string | null = "https://example.test/owner/repo/pull/1",
+): DispatchPrFact => ({
   state: "already-merged",
   url,
   mergeReady: false,
@@ -135,8 +139,7 @@ export const spawnRefusedInput = (evidence: HarnessEvidence): DispatchTruthInput
   truthInput({ harness: readOk(harnessFacts(evidence)) });
 
 /** A spawn attempt that failed before any session existed. */
-export const spawnFailureInput = (): DispatchTruthInput =>
-  truthInput({ spawnFailure: true });
+export const spawnFailureInput = (): DispatchTruthInput => truthInput({ spawnFailure: true });
 
 /** Every unreadable-truth input, one per source. */
 export const unreadableInputs = (): readonly {
@@ -144,8 +147,14 @@ export const unreadableInputs = (): readonly {
   readonly input: DispatchTruthInput;
 }[] => [
   { source: "ledger", input: truthInput({ ledger: readFail("ledger", "ledger.read-unreadable") }) },
-  { source: "tracker", input: truthInput({ tracker: readFail("tracker", "tracker.read-unreadable") }) },
-  { source: "artifact", input: truthInput({ artifacts: readFail("artifact", "artifact.read-unreadable") }) },
+  {
+    source: "tracker",
+    input: truthInput({ tracker: readFail("tracker", "tracker.read-unreadable") }),
+  },
+  {
+    source: "artifact",
+    input: truthInput({ artifacts: readFail("artifact", "artifact.read-unreadable") }),
+  },
   { source: "state", input: truthInput({ harness: readFail("state", "state.store.torn") }) },
 ];
 

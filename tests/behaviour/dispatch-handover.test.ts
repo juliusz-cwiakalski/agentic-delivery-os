@@ -14,7 +14,11 @@ import {
 } from "../../packages/core/src/app/dispatch-ledger";
 import { readDispatchAuthority } from "../../packages/adapters/src/file/dispatch-authority";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
-import { buildAttempts, eligibleSpecs, missingClassSpecs } from "../fixtures/dispatch/evidence-windows";
+import {
+  buildAttempts,
+  eligibleSpecs,
+  missingClassSpecs,
+} from "../fixtures/dispatch/evidence-windows";
 import { REPOSITORY, REPOSITORY_BETA } from "../fixtures/dispatch/ledger";
 
 const seed = (
@@ -22,7 +26,11 @@ const seed = (
   specs: readonly import("../fixtures/dispatch/evidence-windows").AttemptSpec[],
 ): void => {
   for (const attempt of buildAttempts(specs)) {
-    const appended = appendDispatchAttempt(scenario.state.store, scenario.state.fenceToken, attempt);
+    const appended = appendDispatchAttempt(
+      scenario.state.store,
+      scenario.state.fenceToken,
+      attempt,
+    );
     if (!appended.ok) throw new Error(`seed failed: ${appended.code}`);
   }
 };
@@ -108,7 +116,13 @@ describe("TC-HAND-003 reversal restores dual-run; a second reversal is a noop", 
       const flip = readDispatchAuthority(scenario.state.root, REPOSITORY);
       expect(flip.authority).toBe("authoritative");
 
-      const revert = await scenario.invoke(["dispatch", "handover", REPOSITORY, "--revert", "--json"]);
+      const revert = await scenario.invoke([
+        "dispatch",
+        "handover",
+        REPOSITORY,
+        "--revert",
+        "--json",
+      ]);
       expect(revert.exit).toBe(0);
       expect(revert.envelope?.data).toMatchObject({
         operation: "dual-run",
@@ -117,7 +131,13 @@ describe("TC-HAND-003 reversal restores dual-run; a second reversal is a noop", 
       });
       expect(readDispatchAuthority(scenario.state.root, REPOSITORY).authority).toBe("dual-run");
 
-      const again = await scenario.invoke(["dispatch", "handover", REPOSITORY, "--revert", "--json"]);
+      const again = await scenario.invoke([
+        "dispatch",
+        "handover",
+        REPOSITORY,
+        "--revert",
+        "--json",
+      ]);
       expect(again.exit).toBe(0);
       expect(again.envelope?.data).toMatchObject({ recorded: false, noop: true });
 
@@ -151,7 +171,9 @@ describe("TC-HAND-004 the derived view equals the folded ledger", () => {
       expect(view.reversalAvailable).toBe(false);
       // The document is a complete, parseable prior-or-next version.
       expect(
-        JSON.parse(readFileSync(authorityFile(scenario.state.root, scenario.state.workspaceId), "utf8")),
+        JSON.parse(
+          readFileSync(authorityFile(scenario.state.root, scenario.state.workspaceId), "utf8"),
+        ),
       ).toMatchObject({ schema: "delivery.dispatch.authority.v1", authority: "dual-run" });
     } finally {
       scenario.dispose();
@@ -173,13 +195,19 @@ describe("TC-HAND-006 handover is isolated per repository", () => {
       );
       const betaBefore = readDispatchAuthority(scenario.state.root, REPOSITORY_BETA);
       await scenario.invoke(["dispatch", "handover", REPOSITORY, "--json"]);
-      expect(readDispatchAuthority(scenario.state.root, REPOSITORY).authority).toBe("authoritative");
+      expect(readDispatchAuthority(scenario.state.root, REPOSITORY).authority).toBe(
+        "authoritative",
+      );
       expect(readDispatchAuthority(scenario.state.root, REPOSITORY_BETA)).toEqual(betaBefore);
 
       const betaFlip = await scenario.invoke(["dispatch", "handover", REPOSITORY_BETA, "--json"]);
       expect(betaFlip.exit).toBe(1);
-      expect(readDispatchAuthority(scenario.state.root, REPOSITORY_BETA).authority).toBe("dual-run");
-      expect(readDispatchAuthority(scenario.state.root, REPOSITORY).authority).toBe("authoritative");
+      expect(readDispatchAuthority(scenario.state.root, REPOSITORY_BETA).authority).toBe(
+        "dual-run",
+      );
+      expect(readDispatchAuthority(scenario.state.root, REPOSITORY).authority).toBe(
+        "authoritative",
+      );
     } finally {
       scenario.dispose();
     }

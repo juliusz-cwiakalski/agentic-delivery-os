@@ -116,8 +116,8 @@ export const resolveDispatchIdentity = (input: {
   const marker =
     input.persistedMarker === undefined
       ? undefined
-      : parseIdentityMarker(input.persistedMarker) ??
-        normalizeDispatchRepositoryKey(input.persistedMarker);
+      : (parseIdentityMarker(input.persistedMarker) ??
+        normalizeDispatchRepositoryKey(input.persistedMarker));
   if (marker !== undefined) {
     return { ok: true, repository: marker, source: "marker" };
   }

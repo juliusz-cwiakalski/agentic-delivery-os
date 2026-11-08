@@ -413,7 +413,7 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       "<binary> dispatch GH-242",
       "<binary> dispatch GH-242 --harness claude-code",
       "<binary> dispatch dual-run summary --repo github.com/owner/repo",
-      "<binary> dispatch dual-run resolve DIV-1 --note \"tracker was stale\"",
+      '<binary> dispatch dual-run resolve DIV-1 --note "tracker was stale"',
       "<binary> dispatch handover github.com/owner/repo --revert",
     ],
     "dispatch",
@@ -431,7 +431,7 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     "Resolve one open divergence with a bounded note",
     ["<binary> dispatch dual-run resolve <divergence-id> --note <text>"],
     [["--note <text>", "Bounded resolution note"]],
-    ["<binary> dispatch dual-run resolve DIV-1 --note \"tracker was stale\""],
+    ['<binary> dispatch dual-run resolve DIV-1 --note "tracker was stale"'],
     "dispatch",
   ),
   entry(

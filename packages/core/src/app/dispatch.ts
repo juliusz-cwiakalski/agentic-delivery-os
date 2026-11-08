@@ -35,7 +35,10 @@ import {
   classifyFalseSuccess,
   dispatchFamilyOf,
 } from "../domain/dispatch-comparison.js";
-import { evaluateDispatchLiveness, type DispatchLivenessReading } from "../domain/dispatch-liveness.js";
+import {
+  evaluateDispatchLiveness,
+  type DispatchLivenessReading,
+} from "../domain/dispatch-liveness.js";
 import { admissionRefusalPair } from "../domain/dispatch-resume.js";
 import {
   deriveDispatchResult,
@@ -151,9 +154,10 @@ export const boundLastMessage = (message: string): string => {
     : `${single.slice(0, DISPATCH_MAX_LAST_MESSAGE_CHARS)}…[truncated]`;
 };
 
-const errorOf = (
-  derivation: { readonly lastMessage: string; readonly errorCode: string },
-): NonNullable<DispatchEnvelopeData["error"]> => {
+const errorOf = (derivation: {
+  readonly lastMessage: string;
+  readonly errorCode: string;
+}): NonNullable<DispatchEnvelopeData["error"]> => {
   const stateFailure = derivation.errorCode === "dispatch.state-unverified";
   return {
     code: derivation.errorCode,
@@ -193,8 +197,7 @@ const comparisonFor = (input: {
   }
   const family = dispatchFamilyOf(input.token);
   if (family === "tracker-pr") {
-    const independent =
-      input.reads.trackerToken ?? (input.token === pou ? po : input.token);
+    const independent = input.reads.trackerToken ?? (input.token === pou ? po : input.token);
     return buildComparisonRecord({
       kind: "tracker-truth",
       engineToken: input.token,
@@ -352,7 +355,12 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           token: pair.token,
           outcome: pair.outcome,
           errorCode: admission.code,
-          comparison: comparisonFor({ token: pair.token, errorCode: admission.code, reads, urlResolved: false }),
+          comparison: comparisonFor({
+            token: pair.token,
+            errorCode: admission.code,
+            reads,
+            urlResolved: false,
+          }),
           corroboration: buildCorroborationRecord({ token: pair.token }),
           falseSuccess: false,
           prUrl: "",
@@ -395,7 +403,12 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         token: f,
         outcome: O_FAILED,
         errorCode: "dispatch.session.spawn-failed",
-        comparison: comparisonFor({ token: f, errorCode: "dispatch.session.spawn-failed", reads, urlResolved: false }),
+        comparison: comparisonFor({
+          token: f,
+          errorCode: "dispatch.session.spawn-failed",
+          reads,
+          urlResolved: false,
+        }),
         corroboration: buildCorroborationRecord({ token: f }),
         falseSuccess: false,
         prUrl: "",

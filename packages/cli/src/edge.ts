@@ -4493,95 +4493,95 @@ export const createDispatchCommandRuntime = (
 ): DispatchCommandRuntime => ({
   run: {
     run: async (input) => {
-    const selected = input.harness ?? composition.defaultHarness;
-    if (!isHarnessKind(selected)) {
-      return { ok: false, error: { kind: "input", code: "input.value.rejected" } };
-    }
-    const harness = composition.harnesses[selected];
-    if (harness === undefined) {
-      return {
-        ok: false,
-        error: { kind: "harness", code: "harness.capability.gap", summary: selected },
-      };
-    }
-    const repository = composition.repository(input.ref);
-    const handover: DispatchHandoverState = readDispatchAuthority(
-      composition.stateRoot,
-      repository,
-    ).authority;
-    const lane =
-      input.resumePrompt === undefined ? undefined : composition.existingLane?.(input.ref);
-    let admission: DispatchAdmission | undefined;
-    let resumeMode: DispatchResumeMode | undefined;
-    let prefillCostAcknowledged: boolean | undefined;
-    if (lane !== undefined) {
-      const plan = planDispatchResume({
-        adapterSupportsResumeInjection: lane.adapterSupportsResumeInjection,
-        completedPhases: lane.completedPhases,
-      });
-      resumeMode = plan.mode;
-      prefillCostAcknowledged = plan.prefillCostAcknowledged;
-      const restart = admitDispatchRestart({
-        count: lane.restartCount,
-        bound: composition.restartBudget ?? 0,
-      });
-      if (!restart.admitted) {
-        admission = {
-          admitted: false,
-          code: restart.reason,
-          terminal: true,
-          escalation: restart.escalation,
-          resumeMode: plan.mode,
-        };
-      } else {
-        const economics = evaluateDispatchResumeEconomics({
-          mode: plan.mode,
-          ...(lane.prefillCost === undefined ? {} : { prefillCost: lane.prefillCost }),
-          ...(lane.uniqueProgress === undefined ? {} : { uniqueProgress: lane.uniqueProgress }),
-        });
-        admission = economics.admitted
-          ? {
-              admitted: true,
-              resumeMode: plan.mode,
-              prefillCostAcknowledged: plan.prefillCostAcknowledged,
-              restarts: lane.restartCount,
-            }
-          : { admitted: false, code: economics.code, resumeMode: plan.mode };
+      const selected = input.harness ?? composition.defaultHarness;
+      if (!isHarnessKind(selected)) {
+        return { ok: false, error: { kind: "input", code: "input.value.rejected" } };
       }
-    }
-    return runDispatch({
-      store: composition.store,
-      fenceToken: composition.fenceToken,
-      harness,
-      harnessKind: selected,
-      descriptor: composition.descriptor,
-      prompt: composition.prompt(input.ref),
-      ref: input.ref,
-      evidenceClass: composition.evidenceClass ?? DISPATCH_DEFAULT_EVIDENCE_CLASS,
-      repository,
-      handoverState: handover,
-      nowIso: composition.nowIso,
-      newAttemptId: () => composition.newAttemptId(input.ref),
-      newDivergenceId: () => composition.newDivergenceId(input.ref),
-      readTruth: () => composition.readTruth(input.ref),
-      claimLease: () => composition.claimLease(input.ref, repository),
-      releaseLease: (cause) => composition.releaseLease(input.ref, cause),
-      phaseLedger: composition.phaseLedger(input.ref),
-      ...(composition.restartBudget === undefined
-        ? {}
-        : { restartBudget: composition.restartBudget }),
-      ...(composition.livenessIntervalMs === undefined
-        ? {}
-        : { livenessIntervalMs: composition.livenessIntervalMs }),
-      ...(composition.resumeAmplification === undefined
-        ? {}
-        : { resumeAmplification: composition.resumeAmplification }),
-      ...(input.resumePrompt === undefined ? {} : { resumePrompt: input.resumePrompt }),
-      ...(lane === undefined ? {} : { existingHandle: lane.handle }),
-      ...(admission === undefined ? {} : { admission: () => admission }),
-      ...(resumeMode === undefined ? {} : { resumeMode }),
-      ...(prefillCostAcknowledged === undefined ? {} : { prefillCostAcknowledged }),
-    });
+      const harness = composition.harnesses[selected];
+      if (harness === undefined) {
+        return {
+          ok: false,
+          error: { kind: "harness", code: "harness.capability.gap", summary: selected },
+        };
+      }
+      const repository = composition.repository(input.ref);
+      const handover: DispatchHandoverState = readDispatchAuthority(
+        composition.stateRoot,
+        repository,
+      ).authority;
+      const lane =
+        input.resumePrompt === undefined ? undefined : composition.existingLane?.(input.ref);
+      let admission: DispatchAdmission | undefined;
+      let resumeMode: DispatchResumeMode | undefined;
+      let prefillCostAcknowledged: boolean | undefined;
+      if (lane !== undefined) {
+        const plan = planDispatchResume({
+          adapterSupportsResumeInjection: lane.adapterSupportsResumeInjection,
+          completedPhases: lane.completedPhases,
+        });
+        resumeMode = plan.mode;
+        prefillCostAcknowledged = plan.prefillCostAcknowledged;
+        const restart = admitDispatchRestart({
+          count: lane.restartCount,
+          bound: composition.restartBudget ?? 0,
+        });
+        if (!restart.admitted) {
+          admission = {
+            admitted: false,
+            code: restart.reason,
+            terminal: true,
+            escalation: restart.escalation,
+            resumeMode: plan.mode,
+          };
+        } else {
+          const economics = evaluateDispatchResumeEconomics({
+            mode: plan.mode,
+            ...(lane.prefillCost === undefined ? {} : { prefillCost: lane.prefillCost }),
+            ...(lane.uniqueProgress === undefined ? {} : { uniqueProgress: lane.uniqueProgress }),
+          });
+          admission = economics.admitted
+            ? {
+                admitted: true,
+                resumeMode: plan.mode,
+                prefillCostAcknowledged: plan.prefillCostAcknowledged,
+                restarts: lane.restartCount,
+              }
+            : { admitted: false, code: economics.code, resumeMode: plan.mode };
+        }
+      }
+      return runDispatch({
+        store: composition.store,
+        fenceToken: composition.fenceToken,
+        harness,
+        harnessKind: selected,
+        descriptor: composition.descriptor,
+        prompt: composition.prompt(input.ref),
+        ref: input.ref,
+        evidenceClass: composition.evidenceClass ?? DISPATCH_DEFAULT_EVIDENCE_CLASS,
+        repository,
+        handoverState: handover,
+        nowIso: composition.nowIso,
+        newAttemptId: () => composition.newAttemptId(input.ref),
+        newDivergenceId: () => composition.newDivergenceId(input.ref),
+        readTruth: () => composition.readTruth(input.ref),
+        claimLease: () => composition.claimLease(input.ref, repository),
+        releaseLease: (cause) => composition.releaseLease(input.ref, cause),
+        phaseLedger: composition.phaseLedger(input.ref),
+        ...(composition.restartBudget === undefined
+          ? {}
+          : { restartBudget: composition.restartBudget }),
+        ...(composition.livenessIntervalMs === undefined
+          ? {}
+          : { livenessIntervalMs: composition.livenessIntervalMs }),
+        ...(composition.resumeAmplification === undefined
+          ? {}
+          : { resumeAmplification: composition.resumeAmplification }),
+        ...(input.resumePrompt === undefined ? {} : { resumePrompt: input.resumePrompt }),
+        ...(lane === undefined ? {} : { existingHandle: lane.handle }),
+        ...(admission === undefined ? {} : { admission: () => admission }),
+        ...(resumeMode === undefined ? {} : { resumeMode }),
+        ...(prefillCostAcknowledged === undefined ? {} : { prefillCostAcknowledged }),
+      });
     },
   },
   ...(composition.gate === undefined
@@ -4600,7 +4600,9 @@ export const createDispatchCommandRuntime = (
               nowIso: composition.nowIso(),
               ...(composition.gate.max === undefined ? {} : { max: composition.gate.max }),
             });
-            return result.ok ? { ok: true as const, data: result.data } : { ok: false as const, error: result.error };
+            return result.ok
+              ? { ok: true as const, data: result.data }
+              : { ok: false as const, error: result.error };
           },
         },
         resolve: {

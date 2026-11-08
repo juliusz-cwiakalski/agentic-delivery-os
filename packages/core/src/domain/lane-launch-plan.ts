@@ -6,11 +6,7 @@
  * parent environment, and carries no credential material; the descriptor stays
  * the only environment source.
  */
-import type {
-  LaneLaunchPlan,
-  LaneLaunchPlanner,
-  LaneLaunchRequest,
-} from "#contracts";
+import type { LaneLaunchPlan, LaneLaunchPlanner, LaneLaunchRequest } from "#contracts";
 
 /** The pure facts a production plan supplies. */
 export type LaneLaunchPlanFacts = {
@@ -31,9 +27,7 @@ export const planLaneLaunch = (
   facts: LaneLaunchPlanFacts,
 ): LaneLaunchPlan => ({
   prompt: facts.lifecyclePrompt(request),
-  environment: Object.fromEntries(
-    facts.declaredEnvironment.map((name) => [name, ""] as const),
-  ),
+  environment: Object.fromEntries(facts.declaredEnvironment.map((name) => [name, ""] as const)),
 });
 
 /** Build the injected planner the delivered lane executor consumes. */

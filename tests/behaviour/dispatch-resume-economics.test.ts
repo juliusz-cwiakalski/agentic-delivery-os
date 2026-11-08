@@ -16,12 +16,17 @@ import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
 
 describe("dispatch resume policy", () => {
   test("attach-and-continue is admitted and consumes no ordinal", () => {
-    const plan = planDispatchResume({ adapterSupportsResumeInjection: true, completedPhases: ["a"] });
+    const plan = planDispatchResume({
+      adapterSupportsResumeInjection: true,
+      completedPhases: ["a"],
+    });
     expect(plan.mode).toBe("attach-continue");
     expect(plan.consumesRestartOrdinal).toBe(false);
-    expect(
-      evaluateDispatchResumeEconomics({ mode: plan.mode }),
-    ).toEqual({ admitted: true, mode: "attach-continue", consumesRestartOrdinal: false });
+    expect(evaluateDispatchResumeEconomics({ mode: plan.mode })).toEqual({
+      admitted: true,
+      mode: "attach-continue",
+      consumesRestartOrdinal: false,
+    });
   });
 
   test("restart admission refuses at the bound and never below it", () => {
@@ -48,7 +53,13 @@ describe("TC-RESUME-003 resume economics refuses uneconomical re-pay", () => {
       },
     });
     try {
-      const run = await scenario.invoke(["dispatch", "GH-301", "--resume-prompt", "retry", "--json"]);
+      const run = await scenario.invoke([
+        "dispatch",
+        "GH-301",
+        "--resume-prompt",
+        "retry",
+        "--json",
+      ]);
       expect(run.exit).toBe(1);
       expect(run.envelope?.data?.result).toBe("failed");
       expect(run.envelope?.data?.outcome).toBe("failed");
@@ -76,7 +87,13 @@ describe("TC-RESUME-003 resume economics refuses uneconomical re-pay", () => {
       },
     });
     try {
-      const run = await scenario.invoke(["dispatch", "GH-301", "--resume-prompt", "retry", "--json"]);
+      const run = await scenario.invoke([
+        "dispatch",
+        "GH-301",
+        "--resume-prompt",
+        "retry",
+        "--json",
+      ]);
       expect(run.exit).toBe(2);
       expect(run.envelope?.data?.result).toBe("state-unverified");
       expect(run.envelope?.data?.error?.code).toBe("dispatch.state-unverified");
@@ -98,7 +115,13 @@ describe("TC-RESUME-003 resume economics refuses uneconomical re-pay", () => {
       },
     });
     try {
-      const run = await scenario.invoke(["dispatch", "GH-301", "--resume-prompt", "continue", "--json"]);
+      const run = await scenario.invoke([
+        "dispatch",
+        "GH-301",
+        "--resume-prompt",
+        "continue",
+        "--json",
+      ]);
       expect(run.exit).toBe(0);
       expect(run.envelope?.data?.restarts).toBe(2);
       const read = readDispatchAttempts(scenario.state.store);
@@ -120,8 +143,20 @@ describe("TC-RESUME-004 an identical replay converges without a second effect", 
       },
     });
     try {
-      const first = await scenario.invoke(["dispatch", "GH-301", "--resume-prompt", "continue", "--json"]);
-      const second = await scenario.invoke(["dispatch", "GH-301", "--resume-prompt", "continue", "--json"]);
+      const first = await scenario.invoke([
+        "dispatch",
+        "GH-301",
+        "--resume-prompt",
+        "continue",
+        "--json",
+      ]);
+      const second = await scenario.invoke([
+        "dispatch",
+        "GH-301",
+        "--resume-prompt",
+        "continue",
+        "--json",
+      ]);
       expect(first.exit).toBe(0);
       expect(second.exit).toBe(0);
       expect(scenario.scripted.calls.filter((call) => call === "resume")).toHaveLength(2);

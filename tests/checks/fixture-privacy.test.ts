@@ -12,6 +12,7 @@ const FIXTURES = [
   "tests/fixtures/key-register",
   "tests/fixtures/help-guide",
   "tests/fixtures/entrypoint",
+  "tests/fixtures/dispatch",
   "tests/fixtures/plan/summary",
   "tests/golden/plan",
 ];

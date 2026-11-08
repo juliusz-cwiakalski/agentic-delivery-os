@@ -135,8 +135,7 @@ export const foldEvidenceWindow = (input: {
   const countedClass = countedEvidenceClass(input.scope);
   const excludedEvidenceClasses = classCounts(input.attempts, input.repository, countedClass);
   const counted = input.attempts.filter(
-    (attempt) =>
-      attempt.repository === input.repository && attempt.evidenceClass === countedClass,
+    (attempt) => attempt.repository === input.repository && attempt.evidenceClass === countedClass,
   );
 
   const foldedDivergences = (() => {
@@ -212,7 +211,9 @@ export const foldEvidenceWindow = (input: {
   const successClaims = countedInWindow.filter(
     (attempt) => requiredCorroboration(attempt.token).length > 0,
   );
-  const satisfied = successClaims.filter((attempt) => corroborationSatisfied(attempt.corroboration));
+  const satisfied = successClaims.filter((attempt) =>
+    corroborationSatisfied(attempt.corroboration),
+  );
   const unsatisfied = successClaims.filter(
     (attempt) => !corroborationSatisfied(attempt.corroboration),
   );

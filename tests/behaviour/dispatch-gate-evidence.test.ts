@@ -31,7 +31,11 @@ const seed = (
   specs: ReturnType<typeof eligibleSpecs>,
 ): void => {
   for (const attempt of buildAttempts(specs)) {
-    const appended = appendDispatchAttempt(scenario.state.store, scenario.state.fenceToken, attempt);
+    const appended = appendDispatchAttempt(
+      scenario.state.store,
+      scenario.state.fenceToken,
+      attempt,
+    );
     if (!appended.ok) throw new Error(`seed failed: ${appended.code}`);
   }
 };
@@ -100,9 +104,10 @@ describe("TC-GATE-006 degraded evidence reads have pinned exits", () => {
       const run = await scenario.invoke(["dispatch", "handover", REPOSITORY, "--json"]);
       expect(run.exit).toBe(1);
       expect(run.envelope?.data).toMatchObject({ recorded: false, verdict: "ineligible" });
-      const unmet = (run.envelope?.data as { readonly unmetConditions?: readonly unknown[] })
-        .unmetConditions;
-      expect(unmet?.length).toBeGreaterThan(0);
+      const data = (run.envelope?.data ?? {}) as {
+        readonly unmetConditions?: readonly unknown[];
+      };
+      expect(data.unmetConditions?.length ?? 0).toBeGreaterThan(0);
     } finally {
       scenario.dispose();
     }

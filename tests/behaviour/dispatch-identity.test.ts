@@ -60,8 +60,8 @@ describe("TC-HAND-007 identity normalization", () => {
   });
 
   test("a checkout path is never an identity", () => {
-    expect(normalizeRepositoryRemote("/home/dev/checkout/repo")).toBeUndefined();
-    expect(normalizeDispatchRepositoryKey("/home/dev/checkout/repo")).toBeUndefined();
+    expect(normalizeRepositoryRemote("/opt/checkout/repo")).toBeUndefined();
+    expect(normalizeDispatchRepositoryKey("/opt/checkout/repo")).toBeUndefined();
     const resolution = resolveDispatchIdentity({});
     expect(resolution.ok).toBe(false);
     if (!resolution.ok) expect(resolution.reason).toBe("unresolvable");
@@ -109,9 +109,9 @@ describe("TC-HAND-007 resolution order and persisted binding", () => {
     const root = mkdtempSync(join(tmpdir(), "gh239-identity-"));
     try {
       const first = openStore(makeIdentity(root, { workspaceId: "workspace-identity" }));
-      expect(
-        resolveWithStore(first.store, { remoteUrl: "git@github.com:owner/repo.git" }),
-      ).toEqual({ ok: true, repository: "github.com/owner/repo", source: "remote" });
+      expect(resolveWithStore(first.store, { remoteUrl: "git@github.com:owner/repo.git" })).toEqual(
+        { ok: true, repository: "github.com/owner/repo", source: "remote" },
+      );
       const marker = readDispatchIdentityMarkerText(first.store);
       expect(marker).toBeDefined();
       expect(marker !== undefined && parseIdentityMarker(marker)).toBe("github.com/owner/repo");
@@ -156,14 +156,20 @@ describe("TC-HAND-007 resolution order and persisted binding", () => {
       ).toBeDefined();
       const read = readDispatchIdentityMarkerText(store);
       expect(read !== undefined && parseIdentityMarker(read)).toBe("github.com/owner/first");
-      appendDispatchAttempt(store, "fence", makeAttemptFor("pr-open", { repository: "github.com/owner/first" }));
+      appendDispatchAttempt(
+        store,
+        "fence",
+        makeAttemptFor("pr-open", { repository: "github.com/owner/first" }),
+      );
       // A guarded record exists; the artifact must not be regenerated, and the
       // persisted binding still governs.
       const recreated = ensureDispatchIdentityMarkerText(
         store,
         serializeIdentityMarker("github.com/owner/second"),
       );
-      expect(recreated !== undefined && parseIdentityMarker(recreated)).toBe("github.com/owner/first");
+      expect(recreated !== undefined && parseIdentityMarker(recreated)).toBe(
+        "github.com/owner/first",
+      );
       const resolution = resolveWithStore(store, { schedulerKey: "github.com/owner/second" });
       expect(resolution).toEqual({
         ok: true,
@@ -204,12 +210,7 @@ describe("TC-HAND-007 phase-6 confirmation: an unresolvable identity refuses", (
       ]);
       expect(summary.exit).toBe(1);
       expect(summary.envelope?.error?.code).toBe("input.value.rejected");
-      const handover = await scenario.invoke([
-        "dispatch",
-        "handover",
-        "a-checkout-path",
-        "--json",
-      ]);
+      const handover = await scenario.invoke(["dispatch", "handover", "a-checkout-path", "--json"]);
       expect(handover.exit).toBe(1);
       expect(handover.envelope?.error?.code).toBe("input.value.rejected");
     } finally {

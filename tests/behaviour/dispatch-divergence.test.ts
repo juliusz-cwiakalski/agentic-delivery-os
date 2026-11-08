@@ -24,7 +24,10 @@ const mismatchReads = () =>
 
 describe("TC-EVID-002 divergence opens on disagreement and resolves append-only", () => {
   test("a verify-change mismatch opens a divergence and records the comparison", async () => {
-    const scenario = createCommandScenario({ evidence: COMPLETED_EVIDENCE, reads: mismatchReads() });
+    const scenario = createCommandScenario({
+      evidence: COMPLETED_EVIDENCE,
+      reads: mismatchReads(),
+    });
     try {
       const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
       expect(run.exit).toBe(0);

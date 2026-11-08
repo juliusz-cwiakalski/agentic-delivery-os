@@ -26,12 +26,12 @@ const singleLine = (value: string): string => value.replace(/[\r\n]+/gu, " ").tr
 
 /** Exactly the four bash-continuity keys, in bash order. */
 export const renderDispatchText = (data: DispatchEnvelopeData): string =>
-  [
+  `${[
     `result=${data.result}`,
     `pr_url=${data.prUrl}`,
     `exit_code=${exitFor(data.result)}`,
     `last_message=${singleLine(data.lastMessage)}`,
-  ].join("\n") + "\n";
+  ].join("\n")}\n`;
 
 /** The multi-line summary text; bounded and deterministic. */
 export const renderDispatchSummaryText = (data: DispatchSummaryData): string => {
@@ -41,9 +41,11 @@ export const renderDispatchSummaryText = (data: DispatchSummaryData): string => 
     `window_start_reason=${data.windowStartReason}`,
     `counted_deliveries=${data.countedDeliveries}`,
     `counted_evidence_class=${data.countedEvidenceClass}`,
-    `excluded_evidence_classes=${data.excludedEvidenceClasses
-      .map((entry) => `${entry.evidenceClass}:${entry.count}`)
-      .join(",") || "none"}`,
+    `excluded_evidence_classes=${
+      data.excludedEvidenceClasses
+        .map((entry) => `${entry.evidenceClass}:${entry.count}`)
+        .join(",") || "none"
+    }`,
     `days=${data.dayCount}`,
     `incidents=${data.incidents}`,
     `divergences=${data.divergences.reported}/${data.divergences.resolved}/${data.divergences.unresolved}`,
@@ -59,9 +61,7 @@ export const renderDispatchSummaryText = (data: DispatchSummaryData): string => 
     `unmet_conditions=${data.unmetConditions.map((entry) => entry.condition).join(",") || "none"}`,
     ...(data.truncation === undefined
       ? []
-      : [
-          `truncation=bound:${data.truncation.bound},omitted:${data.truncation.omittedRecords}`,
-        ]),
+      : [`truncation=bound:${data.truncation.bound},omitted:${data.truncation.omittedRecords}`]),
   ];
   return `${lines.join("\n")}\n`;
 };
@@ -73,9 +73,9 @@ export const renderDispatchHandoverText = (data: {
   readonly recorded: boolean;
   readonly noop: boolean;
 }): string =>
-  [
+  `${[
     `repository=${data.repository}`,
     `operation=${data.operation}`,
     `recorded=${data.recorded ? "true" : "false"}`,
     `noop=${data.noop ? "true" : "false"}`,
-  ].join("\n") + "\n";
+  ].join("\n")}\n`;

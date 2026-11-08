@@ -87,7 +87,11 @@ describe("TC-EVID-003 a false success is recorded, never clean", () => {
         classifyFalseSuccess({
           token,
           comparison: { class: "not-applicable", token: null, outcome: "not-applicable" },
-          corroboration: { pmNotes: "not-applicable", tracker: "not-applicable", ci: "not-applicable" },
+          corroboration: {
+            pmNotes: "not-applicable",
+            tracker: "not-applicable",
+            ci: "not-applicable",
+          },
         }),
         token,
       ).toBe(false);

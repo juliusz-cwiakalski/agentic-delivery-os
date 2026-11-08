@@ -37,7 +37,9 @@ describe("dispatch summary golden", () => {
       const golden = readFileSync(GOLDEN, "utf8");
       expect(run.stdout).toBe(golden);
       expect(run.stdout).toContain("floor_only=true");
-      expect(run.stdout).toContain("never substitutes for coverage, incident truth, or corroboration");
+      expect(run.stdout).toContain(
+        "never substitutes for coverage, incident truth, or corroboration",
+      );
       expect(run.stdout.split("\n").length).toBeLessThanOrEqual(40);
     } finally {
       scenario.dispose();

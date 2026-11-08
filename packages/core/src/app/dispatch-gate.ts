@@ -15,10 +15,7 @@ import {
   type DispatchSummaryData,
   type StateStorePort,
 } from "#contracts";
-import {
-  buildDispatchAuthorityView,
-  foldDispatchHandover,
-} from "../domain/dispatch-authority.js";
+import { buildDispatchAuthorityView, foldDispatchHandover } from "../domain/dispatch-authority.js";
 import {
   evaluateHandoverGate,
   foldEvidenceWindow,
@@ -107,7 +104,10 @@ export const resolveDispatchDivergenceEvidence = (input: {
       ok: false,
       error: {
         kind: "dispatch",
-        code: resolved.code === "state.keys.missing" ? "input.value.rejected" : "dispatch.state-unverified",
+        code:
+          resolved.code === "state.keys.missing"
+            ? "input.value.rejected"
+            : "dispatch.state-unverified",
       },
     };
   }
@@ -133,7 +133,9 @@ const resolveAppend = (input: {
 }) => {
   const read = readDispatchDivergences(input.store);
   if (!read.ok) return { ok: false as const, code: read.code };
-  const latest = [...read.records].reverse().find((record) => record.divergenceId === input.divergenceId);
+  const latest = [...read.records]
+    .reverse()
+    .find((record) => record.divergenceId === input.divergenceId);
   if (latest === undefined) return { ok: false as const, code: "state.keys.missing" };
   if (latest.state === "resolved") return { ok: true as const, appended: false, record: latest };
   const resolved: DispatchDivergenceRecord = {
@@ -144,11 +146,10 @@ const resolveAppend = (input: {
     resolvedAt: input.nowIso,
     recordedAt: input.nowIso,
   };
-  const appended = appendDispatchDivergence(
-    input.store,
-    input.fenceToken,
-    { ...resolved, schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA },
-  );
+  const appended = appendDispatchDivergence(input.store, input.fenceToken, {
+    ...resolved,
+    schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
+  });
   return appended.ok
     ? { ok: true as const, appended: appended.appended, record: appended.record }
     : { ok: false as const, code: appended.code };
@@ -164,7 +165,10 @@ export type DispatchHandoverResult =
         readonly recorded: boolean;
         readonly noop: boolean;
         readonly verdict?: string;
-        readonly unmetConditions?: readonly { readonly condition: string; readonly detail: string }[];
+        readonly unmetConditions?: readonly {
+          readonly condition: string;
+          readonly detail: string;
+        }[];
       };
     }
   | { readonly ok: false; readonly error: { readonly kind: string; readonly code: string } };
@@ -176,10 +180,7 @@ const refreshAuthorityView = (input: {
 }): boolean => {
   const handover = readDispatchHandover(input.store);
   if (!handover.ok) return false;
-  const view = buildDispatchAuthorityView(
-    input.repository,
-    foldDispatchHandover(handover.records),
-  );
+  const view = buildDispatchAuthorityView(input.repository, foldDispatchHandover(handover.records));
   return writeDispatchAuthority(input.store, input.fenceToken, view).ok;
 };
 
@@ -247,7 +248,8 @@ export const revertDispatchHandoverEvidence = (input: {
   readonly principal: string;
 }): DispatchHandoverResult => {
   const handover = readDispatchHandover(input.store);
-  if (!handover.ok) return { ok: false, error: { kind: "dispatch", code: "dispatch.state-unverified" } };
+  if (!handover.ok)
+    return { ok: false, error: { kind: "dispatch", code: "dispatch.state-unverified" } };
   const folded = foldDispatchHandover(handover.records);
   const current = folded.find((entry) => entry.repository === input.repository);
   if (current === undefined || current.authority === "dual-run") {

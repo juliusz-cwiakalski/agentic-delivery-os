@@ -62,7 +62,11 @@ describe("TC-EVID-004 record-level degradation degrades only that record", () =>
       const record = read.records[0];
       expect(record?.token).toBe("pr-open");
       expect(record?.corroboration.tracker).toBe("unsatisfied");
-      expect(corroborationSatisfied(record?.corroboration ?? { pmNotes: "satisfied", tracker: "satisfied", ci: "satisfied" })).toBe(false);
+      expect(
+        corroborationSatisfied(
+          record?.corroboration ?? { pmNotes: "satisfied", tracker: "satisfied", ci: "satisfied" },
+        ),
+      ).toBe(false);
       // No divergence is created by a corroboration failure.
       const divergences = readDispatchDivergences(store);
       expect(divergences.ok && divergences.records).toEqual([]);

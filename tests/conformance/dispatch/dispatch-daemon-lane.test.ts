@@ -11,7 +11,11 @@ import { readDispatchAttempts } from "../../../packages/core/src/app/dispatch-le
 import { runSupervisionCycle } from "../../../packages/core/src/app/daemon-supervision";
 import { createLaneLaunchPlanner } from "../../../packages/core/src/domain/lane-launch-plan";
 import { createLaneExecutor } from "../../../packages/adapters/src/daemon/lane-executor";
-import { COMPLETED_EVIDENCE, createDispatchState, createScriptedHarness } from "../../fixtures/dispatch/harness";
+import {
+  COMPLETED_EVIDENCE,
+  createDispatchState,
+  createScriptedHarness,
+} from "../../fixtures/dispatch/harness";
 import { readsFrom } from "../../fixtures/dispatch/golden/harness";
 
 const NOW = "2026-11-08T10:00:00.000Z";
@@ -108,9 +112,9 @@ describe("TC-DAEMON-002 daemon lane matches one-shot classification and recordin
 
       // A resume through the executor adds no second record for the same attempt.
       const handle = { sessionId: "session-1", harnessKind: "opencode" };
-      expect(
-        await executor.resume({ handle, mode: "attach-continue", questionId: "q-1" }),
-      ).toBe(true);
+      expect(await executor.resume({ handle, mode: "attach-continue", questionId: "q-1" })).toBe(
+        true,
+      );
       const replay = recordDaemonDispatchResult({
         store: state.store,
         fenceToken: state.fenceToken,

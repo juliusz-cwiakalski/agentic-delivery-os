@@ -22,9 +22,7 @@ describe("TC-EVID-007 comparison record shape across the eleven tokens", () => {
       const record = comparisonForToken(token);
       expect(isComparisonShapeValid(record), token).toBe(true);
       expect(record.token === null, token).toBe(record.class === "not-applicable");
-      expect(record.outcome === "not-applicable", token).toBe(
-        record.class === "not-applicable",
-      );
+      expect(record.outcome === "not-applicable", token).toBe(record.class === "not-applicable");
     }
   });
 

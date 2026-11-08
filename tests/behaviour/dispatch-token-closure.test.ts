@@ -124,9 +124,9 @@ describe("TC-DISP-012 noop-lane-nothing-to-do only with no remaining work", () =
   });
 
   test("the happy-path open-PR lane is not a no-work claim", () => {
-    expect(deriveDispatchResult(truthInput({ harness: readOk(harnessFacts(COMPLETED_EVIDENCE)) })).token).toBe(
-      "pr-open",
-    );
+    expect(
+      deriveDispatchResult(truthInput({ harness: readOk(harnessFacts(COMPLETED_EVIDENCE)) })).token,
+    ).toBe("pr-open");
   });
 });
 

@@ -211,11 +211,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
     });
   }
 
-  for (const read of [
-    input.ledger,
-    input.tracker,
-    input.artifacts,
-  ] as const) {
+  for (const read of [input.ledger, input.tracker, input.artifacts] as const) {
     if (!read.ok) {
       return base(input, {
         token: su,
@@ -292,7 +288,8 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
     return base(input, {
       token: f,
       outcome: O_FAILED,
-      lastMessage: "the session exited 0 with no branch commit, no pull request, and no ledger progress",
+      lastMessage:
+        "the session exited 0 with no branch commit, no pull request, and no ledger progress",
       missingArtifact: "branch-commit",
     });
   }

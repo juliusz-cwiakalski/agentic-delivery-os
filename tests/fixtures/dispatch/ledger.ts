@@ -39,7 +39,11 @@ export const comparisonForToken = (
 ): DispatchComparisonRecord => {
   const family = dispatchFamilyOf(token);
   if (family === "verify") {
-    return buildComparisonRecord({ kind: "verify-change", engineToken: token, ledgerOutcome: token });
+    return buildComparisonRecord({
+      kind: "verify-change",
+      engineToken: token,
+      ledgerOutcome: token,
+    });
   }
   if (family === "tracker-pr") {
     return buildComparisonRecord({
@@ -59,7 +63,8 @@ export const comparisonForToken = (
 export const corroborationFor = (
   token: DispatchToken,
   facts?: CorroborationFacts,
-): DispatchCorroborationRecord => buildCorroborationRecord({ token, ...(facts === undefined ? {} : { facts }) });
+): DispatchCorroborationRecord =>
+  buildCorroborationRecord({ token, ...(facts === undefined ? {} : { facts }) });
 
 export const makeAttempt = (
   overrides: Partial<DispatchAttemptRecord> & { readonly token: DispatchToken },
@@ -171,5 +176,6 @@ export const makeAttemptFor = (
     ...(options.evidenceRefs === undefined ? {} : { evidenceRefs: options.evidenceRefs }),
   });
 
-export const handoverOperationOf = (operation: DispatchHandoverOperation): DispatchHandoverOperation =>
-  operation;
+export const handoverOperationOf = (
+  operation: DispatchHandoverOperation,
+): DispatchHandoverOperation => operation;

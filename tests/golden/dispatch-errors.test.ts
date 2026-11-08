@@ -52,7 +52,9 @@ describe("TC-ERR-004 error envelopes carry stable identity and bounded exit", ()
       const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
       expect(run.exit).toBe(1);
       assertErrorFields(run.envelope);
-      expect(run.stdout.trim()).toBe(readFileSync(join(GOLDEN, "spawn-failed.json"), "utf8").trim());
+      expect(run.stdout.trim()).toBe(
+        readFileSync(join(GOLDEN, "spawn-failed.json"), "utf8").trim(),
+      );
     } finally {
       scenario.dispose();
     }

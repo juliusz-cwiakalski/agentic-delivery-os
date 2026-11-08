@@ -121,7 +121,12 @@ export const evaluateDispatchLiveness = (input: {
   // Two consecutive sourced evaluations with no advance may classify stalled;
   // an absent previous reading cannot corroborate a stall.
   if (previous.size === 0) {
-    return { verdict: "unknown", advancing: [], unknownReason: "insufficient-observations", ...echo };
+    return {
+      verdict: "unknown",
+      advancing: [],
+      unknownReason: "insufficient-observations",
+      ...echo,
+    };
   }
 
   return { verdict: "stalled", advancing: [], ...echo };

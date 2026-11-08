@@ -124,7 +124,8 @@ const isDivergenceRecord = (value: unknown): value is DispatchDivergenceRecord =
   typeof value.engineToken === "string" &&
   isInstant(value.recordedAt) &&
   isBoundedRefs(value.evidenceRefs) &&
-  (value.note === undefined || (typeof value.note === "string" && value.note.length <= DISPATCH_MAX_NOTE_CHARS));
+  (value.note === undefined ||
+    (typeof value.note === "string" && value.note.length <= DISPATCH_MAX_NOTE_CHARS));
 
 const isHandoverRecord = (value: unknown): value is DispatchHandoverRecord =>
   isRecord(value) &&
@@ -378,13 +379,16 @@ export const writeDispatchAuthority = (
   view: DispatchAuthorityView,
 ): { readonly ok: true } | { readonly ok: false; readonly code: string; readonly path: string } => {
   const acquired = store.acquireFence(fenceToken);
-  if (!acquired.ok) return { ok: false, code: acquired.error.code, path: acquired.error.location.path };
+  if (!acquired.ok)
+    return { ok: false, code: acquired.error.code, path: acquired.error.location.path };
   const replaced = store.replaceDocument(acquired.value.handle, {
     name: DISPATCH_AUTHORITY_DOCUMENT_NAME,
     content: view as unknown as StateJsonValue,
   });
   const released = store.releaseFence(acquired.value.handle);
-  if (!replaced.ok) return { ok: false, code: replaced.error.code, path: replaced.error.location.path };
-  if (!released.ok) return { ok: false, code: released.error.code, path: released.error.location.path };
+  if (!replaced.ok)
+    return { ok: false, code: replaced.error.code, path: replaced.error.location.path };
+  if (!released.ok)
+    return { ok: false, code: released.error.code, path: released.error.location.path };
   return { ok: true };
 };

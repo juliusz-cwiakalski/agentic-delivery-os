@@ -40,7 +40,13 @@ describe("TC-DISP-001 harness resolution, lease claim, fresh spawn, one record",
   test("the --harness flag wins over configuration", async () => {
     const scenario = createCommandScenario({ evidence: COMPLETED_EVIDENCE });
     try {
-      const run = await scenario.invoke(["dispatch", "GH-302", "--harness", "claude-code", "--json"]);
+      const run = await scenario.invoke([
+        "dispatch",
+        "GH-302",
+        "--harness",
+        "claude-code",
+        "--json",
+      ]);
       expect(run.exit).toBe(0);
       expect(run.envelope?.data?.harness).toBe("claude-code");
       expect(scenario.scripted.spawnInputs).toHaveLength(1);
@@ -55,7 +61,13 @@ describe("TC-DISP-002 pre-session refusals append no attempt record", () => {
   test("an unknown harness refuses before any claim or spawn", async () => {
     const scenario = createCommandScenario({ evidence: COMPLETED_EVIDENCE });
     try {
-      const run = await scenario.invoke(["dispatch", "GH-303", "--harness", "unknown-harness", "--json"]);
+      const run = await scenario.invoke([
+        "dispatch",
+        "GH-303",
+        "--harness",
+        "unknown-harness",
+        "--json",
+      ]);
       expect(run.exit).toBe(1);
       expect(run.envelope?.error?.code).toBe("input.value.rejected");
       expect(scenario.scripted.calls).toEqual([]);

@@ -10,7 +10,10 @@ import {
   type DispatchAttemptRecord,
   type DispatchEvidenceClass,
 } from "../../../packages/core/src/contracts/index";
-import { evaluateHandoverGate, foldEvidenceWindow } from "../../../packages/core/src/domain/dispatch-gate";
+import {
+  evaluateHandoverGate,
+  foldEvidenceWindow,
+} from "../../../packages/core/src/domain/dispatch-gate";
 import { comparisonForToken, corroborationFor } from "./ledger";
 
 const START = Date.UTC(2026, 10, 1, 10, 0, 0);
@@ -45,7 +48,9 @@ export const buildAttempts = (specs: readonly AttemptSpec[]): DispatchAttemptRec
     handoverState: "dual-run",
     outcome: "completed",
     token: spec.token,
-    comparison: comparisonForToken(spec.token, { urlResolved: spec.token !== "pr-open-unverified" }),
+    comparison: comparisonForToken(spec.token, {
+      urlResolved: spec.token !== "pr-open-unverified",
+    }),
     falseSuccess: spec.falseSuccess ?? false,
     corroboration:
       spec.corroboration ??
@@ -189,12 +194,13 @@ export const mixedClassSpecs = (options: {
   readonly repository?: string;
   readonly classes: readonly DispatchEvidenceClass[];
 }): AttemptSpec[] =>
-  allElevenSpecs({ prefix: "mixed", ...(options.repository === undefined ? {} : { repository: options.repository }) }).map(
-    (spec, index) => ({
-      ...spec,
-      evidenceClass: options.classes[index % options.classes.length] as DispatchEvidenceClass,
-    }),
-  );
+  allElevenSpecs({
+    prefix: "mixed",
+    ...(options.repository === undefined ? {} : { repository: options.repository }),
+  }).map((spec, index) => ({
+    ...spec,
+    evidenceClass: options.classes[index % options.classes.length] as DispatchEvidenceClass,
+  }));
 
 /** Fold and evaluate one spec set through the real gate. */
 export const evaluateSpecs = (

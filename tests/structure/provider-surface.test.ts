@@ -244,7 +244,7 @@ import { createHash } from "node:crypto";
  * M1-S9/M1-S20 own surface rewiring. The hashes pin the branch bytes.
  */
 const LEGACY_HOOK_FILES: Readonly<Record<string, string>> = {
-  "scripts/ceo-loop.sh": "ddf27f14b7ec52459513ceb878300eebc8b696638610d5fe6aefd9e1635148a7",
+  "scripts/ceo-loop.sh": "ca99df7e1134d9dba5d971e9459fc3345a5d5651044652e688bd9ed23ce12e00",
   "scripts/.tests/test-hook-regression.sh":
     "67584d6fccc79b5e02bed541dce41a727a92ea6f27a60e5c698166b90259bab5",
 };

@@ -21,7 +21,13 @@ describe("TC-RESUME-001 resume records re-entry mode and skips completed phases"
       },
     });
     try {
-      const run = await scenario.invoke(["dispatch", "GH-301", "--resume-prompt", "plan tier: full", "--json"]);
+      const run = await scenario.invoke([
+        "dispatch",
+        "GH-301",
+        "--resume-prompt",
+        "plan tier: full",
+        "--json",
+      ]);
       expect(run.exit).toBe(0);
       expect(run.envelope?.data?.result).toBe("pr-open");
       expect(scenario.scripted.calls).toContain("resume");
@@ -47,7 +53,13 @@ describe("TC-RESUME-001 resume records re-entry mode and skips completed phases"
       },
     });
     try {
-      const run = await scenario.invoke(["dispatch", "GH-301", "--resume-prompt", "continue", "--json"]);
+      const run = await scenario.invoke([
+        "dispatch",
+        "GH-301",
+        "--resume-prompt",
+        "continue",
+        "--json",
+      ]);
       expect(run.exit).toBe(0);
       const read = readDispatchAttempts(scenario.state.store);
       expect(read.ok && read.records[0]?.resumeMode).toBe("attach-continue");

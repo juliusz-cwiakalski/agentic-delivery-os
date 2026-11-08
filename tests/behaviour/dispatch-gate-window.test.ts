@@ -52,7 +52,11 @@ describe("TC-GATE-009 the incident lower bound is exclusive", () => {
   test("the resetting incident never sits inside the evaluated window", () => {
     const { window } = evaluateSpecs([...fixture.before, fixture.incident, ...fixture.recovery]);
     expect(window.countedInWindow.some((attempt) => attempt.attemptId === "incident")).toBe(false);
-    expect(window.countedInWindow.every((attempt) => Date.parse(attempt.recordedAt) > Date.parse(fixture.incidentAt))).toBe(true);
+    expect(
+      window.countedInWindow.every(
+        (attempt) => Date.parse(attempt.recordedAt) > Date.parse(fixture.incidentAt),
+      ),
+    ).toBe(true);
   });
 });
 

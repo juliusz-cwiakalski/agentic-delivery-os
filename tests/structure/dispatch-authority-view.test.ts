@@ -59,7 +59,11 @@ describe("TC-HAND-004 the derived view is complete and fail-safe", () => {
   test("the view is rebuilt from the folded ledger after a flip and a reversal", () => {
     const state = createDispatchState("authority-fold");
     try {
-      appendDispatchHandover(state.store, state.fenceToken, makeHandover({ operation: "authoritative" }));
+      appendDispatchHandover(
+        state.store,
+        state.fenceToken,
+        makeHandover({ operation: "authoritative" }),
+      );
       const afterFlip = readDispatchHandover(state.store);
       expect(afterFlip.ok).toBe(true);
       if (!afterFlip.ok) return;
@@ -92,10 +96,20 @@ describe("TC-HAND-004 the derived view is complete and fail-safe", () => {
       expect(writeDispatchAuthority(state.store, state.fenceToken, second).ok).toBe(true);
       expect(readDispatchAuthority(state.root, REPOSITORY).authority).toBe("dual-run");
       // The observed file is always a complete JSON document.
-      expect(parseDispatchAuthorityView(JSON.parse(readFileSync(
-        join(state.root, `documents.${encodeURIComponent(state.workspaceId)}`, "dispatch-authority.json"),
-        "utf8",
-      )))).toBeDefined();
+      expect(
+        parseDispatchAuthorityView(
+          JSON.parse(
+            readFileSync(
+              join(
+                state.root,
+                `documents.${encodeURIComponent(state.workspaceId)}`,
+                "dispatch-authority.json",
+              ),
+              "utf8",
+            ),
+          ),
+        ),
+      ).toBeDefined();
     } finally {
       state.dispose();
     }

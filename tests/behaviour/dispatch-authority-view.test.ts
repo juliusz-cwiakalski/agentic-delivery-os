@@ -14,9 +14,16 @@ import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
 import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { REPOSITORY } from "../fixtures/dispatch/ledger";
 
-const seed = (scenario: ReturnType<typeof createCommandScenario>, specs: ReturnType<typeof eligibleSpecs>) => {
+const seed = (
+  scenario: ReturnType<typeof createCommandScenario>,
+  specs: ReturnType<typeof eligibleSpecs>,
+) => {
   for (const attempt of buildAttempts(specs)) {
-    const appended = appendDispatchAttempt(scenario.state.store, scenario.state.fenceToken, attempt);
+    const appended = appendDispatchAttempt(
+      scenario.state.store,
+      scenario.state.fenceToken,
+      attempt,
+    );
     if (!appended.ok) throw new Error("seed failed");
   }
 };

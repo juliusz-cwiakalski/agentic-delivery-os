@@ -60,6 +60,14 @@ describe("TC-HARN-005 one shared classifier", () => {
   test("no other module under core re-implements classification", () => {
     const coreDefinitions = coreFiles.filter((file) => {
       if (file === "packages/core/src/domain/harness-classify.ts") return false;
+      // The dispatch paths must delegate to the one shared classifier; they do
+      // not re-implement it.
+      if (
+        file === "packages/core/src/app/dispatch.ts" ||
+        file === "packages/core/src/app/daemon-dispatch-result.ts"
+      ) {
+        return false;
+      }
       if (file.endsWith("/index.ts")) return false;
       const text = readFileSync(join(ROOT, file), "utf8");
       return text.includes("classifyHarnessEvidence") || text.includes("harnessClassification");

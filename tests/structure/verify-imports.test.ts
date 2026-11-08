@@ -588,6 +588,7 @@ describe("TC-VERIFY-020 inventory registration", () => {
 
 const DEPCRUISE_RULES = [
   "daemon-merge-absence",
+  "dispatch-merge-absence",
   "matrix-adapters-importer",
   "matrix-cli-importer",
   "matrix-core-importer",

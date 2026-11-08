@@ -34,7 +34,9 @@ describe("TC-MERGE-001 a merge-ready PR stays open and fires no merge", () => {
     const scenario = createCommandScenario({
       evidence: COMPLETED_EVIDENCE,
       reads: readsFrom({
-        artifacts: readOk(artifacts({ branchCommits: 2, pr: { state: "open", url: null, mergeReady: true } })),
+        artifacts: readOk(
+          artifacts({ branchCommits: 2, pr: { state: "open", url: null, mergeReady: true } }),
+        ),
       }),
     });
     try {
@@ -56,7 +58,11 @@ describe("TC-MERGE-002 an already-merged PR is detection-only", () => {
         artifacts: readOk(
           artifacts({
             branchCommits: 4,
-            pr: { state: "already-merged", url: "https://example.test/owner/repo/pull/1", mergeReady: false },
+            pr: {
+              state: "already-merged",
+              url: "https://example.test/owner/repo/pull/1",
+              mergeReady: false,
+            },
           }),
         ),
       }),

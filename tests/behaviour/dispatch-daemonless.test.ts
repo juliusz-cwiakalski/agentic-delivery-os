@@ -39,7 +39,11 @@ describe("TC-DAEMON-003 one-shot dispatch works with no daemon", () => {
         fenceToken: "fence",
         ports: {
           executor,
-          nextAction: () => ({ ref: "GH-301", repository: "github.com/owner/repo", weightClass: "standard" }),
+          nextAction: () => ({
+            ref: "GH-301",
+            repository: "github.com/owner/repo",
+            weightClass: "standard",
+          }),
           claim: () => ({ ok: true, leaseId: "lease-1" }),
           release: () => true,
           nowIso: () => "2026-11-08T10:00:00.000Z",

@@ -59,10 +59,10 @@ type ComparisonReasonOptional = Expect<
 >;
 
 /** The attempt record carries every declared field with the declared type. */
-type AttemptSchema = Expect<
-  Equal<DispatchAttemptRecord["schema"], "delivery.dispatch.attempt.v1">
+type AttemptSchema = Expect<Equal<DispatchAttemptRecord["schema"], "delivery.dispatch.attempt.v1">>;
+type AttemptEvidenceClass = Expect<
+  Equal<DispatchAttemptRecord["evidenceClass"], DispatchEvidenceClass>
 >;
-type AttemptEvidenceClass = Expect<Equal<DispatchAttemptRecord["evidenceClass"], DispatchEvidenceClass>>;
 type AttemptOutcome = Expect<
   Equal<
     DispatchAttemptRecord["outcome"],
@@ -89,7 +89,9 @@ type EnvelopeOutcomeRequired = Expect<
 type EnvelopeResultIsToken = Expect<
   Equal<DispatchEnvelopeData["result"] extends string ? true : false, true>
 >;
-type EnvelopeHandoverState = Expect<Equal<DispatchEnvelopeData["handoverState"], DispatchHandoverState>>;
+type EnvelopeHandoverState = Expect<
+  Equal<DispatchEnvelopeData["handoverState"], DispatchHandoverState>
+>;
 
 /** The divergence and handover records are append-only shapes. */
 type DivergenceSchema = Expect<

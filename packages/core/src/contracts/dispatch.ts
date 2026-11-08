@@ -104,7 +104,11 @@ export const DISPATCH_HANDOVER_OPERATIONS = ["authoritative", "dual-run"] as con
 export type DispatchHandoverOperation = (typeof DISPATCH_HANDOVER_OPERATIONS)[number];
 
 /** The tri-state corroboration vocabulary (DM-8, NFR-10). */
-export const DISPATCH_CORROBORATION_STATES = ["satisfied", "unsatisfied", "not-applicable"] as const;
+export const DISPATCH_CORROBORATION_STATES = [
+  "satisfied",
+  "unsatisfied",
+  "not-applicable",
+] as const;
 
 export type DispatchCorroborationState = (typeof DISPATCH_CORROBORATION_STATES)[number];
 

@@ -84,7 +84,10 @@ describe("TC-EVID-006 declared, closed, and immutable evidence class", () => {
   test("a fifth value is refused at the append boundary and no record lands", () => {
     withState(({ store, fenceToken }) => {
       const attempt = makeAttemptFor("pr-open", { attemptId: "a-bad" });
-      const tampered = { ...attempt, evidenceClass: "production" } as unknown as DispatchAttemptRecord;
+      const tampered = {
+        ...attempt,
+        evidenceClass: "production",
+      } as unknown as DispatchAttemptRecord;
       const appended = appendDispatchAttempt(store, fenceToken, tampered);
       expect(appended.ok).toBe(false);
       const read = readDispatchAttempts(store);
@@ -94,7 +97,10 @@ describe("TC-EVID-006 declared, closed, and immutable evidence class", () => {
 
   test("an in-place escalation and a second escalating append are both refused", () => {
     withState(({ store, fenceToken }) => {
-      const original = makeAttemptFor("pr-open", { attemptId: "a-immutable", evidenceClass: "fixture" });
+      const original = makeAttemptFor("pr-open", {
+        attemptId: "a-immutable",
+        evidenceClass: "fixture",
+      });
       expect(appendDispatchAttempt(store, fenceToken, original).ok).toBe(true);
       const escalated = makeAttemptFor("pr-open", {
         attemptId: "a-immutable",
@@ -169,9 +175,9 @@ describe("TC-GATE-011 evidence-class counting per repository scope", () => {
     );
     const { window, evaluation } = evaluateSpecs(specs, { scope: "controlled" });
     expect(window.countedEvidenceClass).toBe("controlled-proof");
-    expect(window.countedInWindow.every((attempt) => attempt.evidenceClass === "controlled-proof")).toBe(
-      true,
-    );
+    expect(
+      window.countedInWindow.every((attempt) => attempt.evidenceClass === "controlled-proof"),
+    ).toBe(true);
     expect(window.excludedEvidenceClasses).toEqual([{ evidenceClass: "pilot", count: 4 }]);
     expect(evaluation.eligibility).toBe(false);
     expect(evaluation.unmetConditions.map((entry) => entry.condition)).toContain("coverage");
@@ -207,7 +213,9 @@ describe("TC-GATE-011 evidence-class counting per repository scope", () => {
     expect(window.excludedEvidenceClasses).toEqual([
       { evidenceClass: "controlled-proof", count: 1 },
     ]);
-    expect(window.countedInWindow.some((attempt) => attempt.attemptId === "cross-scope")).toBe(false);
+    expect(window.countedInWindow.some((attempt) => attempt.attemptId === "cross-scope")).toBe(
+      false,
+    );
     expect(evaluation.eligibility).toBe(true);
   });
 });

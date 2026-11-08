@@ -68,6 +68,7 @@ describe("TC-BASH-005 bash never invokes the typed CLI to decide authority", () 
     expect(resolver).toContain("dual-run");
     for (const script of SCRIPTS) {
       const source = readFileSync(join(ROOT, script), "utf8");
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the literal source line is the assertion
       expect(source, script).toContain('source "${SCRIPT_DIR}/lib/dispatch-authority.sh"');
       expect(source, script).toContain("dispatch_authority_announce");
     }
@@ -96,7 +97,7 @@ describe("TC-BASH-005 bash never invokes the typed CLI to decide authority", () 
 
   test("mutation-detects a network call and a model call as well", () => {
     const violations = scanAuthority([
-      { file: "probe.sh", text: '_x() { curl https://example.test; }\n_y() { opencode run; }\n' },
+      { file: "probe.sh", text: "_x() { curl https://example.test; }\n_y() { opencode run; }\n" },
     ]);
     expect(violations.map((entry) => entry.name).sort()).toEqual([
       "model/harness call",

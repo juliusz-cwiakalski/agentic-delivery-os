@@ -1,0 +1,12 @@
+{
+  "result": "pr-open",
+  "prUrl": "https://example.test/owner/repo/pull/1",
+  "phaseLedger": { "completed": 3, "total": 9, "variant": "full" },
+  "restarts": 0,
+  "resumeAmplification": "none",
+  "harness": "opencode",
+  "handoverState": "dual-run",
+  "outcome": "completed",
+  "lastMessage": "mutation: an undeclared fifth key",
+  "closeout_unverified": "yes"
+}

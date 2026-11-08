@@ -63,7 +63,9 @@ describe("TC-DISP-007 exactly four ordered keys", () => {
     const scenario = createCommandScenario({
       evidence: COMPLETED_EVIDENCE,
       reads: readsFrom({
-        artifacts: readOk(artifacts({ branchCommits: 2, pr: { state: "open", url: null, mergeReady: true } })),
+        artifacts: readOk(
+          artifacts({ branchCommits: 2, pr: { state: "open", url: null, mergeReady: true } }),
+        ),
       }),
     });
     try {

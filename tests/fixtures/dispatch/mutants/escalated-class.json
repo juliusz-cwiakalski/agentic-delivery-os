@@ -1,0 +1,7 @@
+{
+  "attemptId": "mutant-escalated",
+  "repository": "github.com/owner/repo",
+  "evidenceClass": "pilot",
+  "declaredClass": "fixture",
+  "note": "mutation: an in-place class escalation attempt"
+}

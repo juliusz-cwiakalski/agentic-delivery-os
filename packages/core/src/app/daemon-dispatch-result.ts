@@ -139,7 +139,10 @@ export const recordDaemonDispatchResult = (
     facts: {
       "pm-notes": input.reads.phasesComplete ? "satisfied" : "unsatisfied",
       tracker: input.reads.tracker.ok ? "satisfied" : "unsatisfied",
-      ci: input.reads.ci.ok && input.reads.ci.value.verdict === "success" ? "satisfied" : "unsatisfied",
+      ci:
+        input.reads.ci.ok && input.reads.ci.value.verdict === "success"
+          ? "satisfied"
+          : "unsatisfied",
     },
   });
   const falseSuccess = classifyFalseSuccess({ token: derived, comparison, corroboration });

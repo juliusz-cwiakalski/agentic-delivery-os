@@ -27,12 +27,19 @@ const seed = (
   specs: readonly AttemptSpec[],
 ): void => {
   for (const attempt of buildAttempts(specs)) {
-    const appended = appendDispatchAttempt(scenario.state.store, scenario.state.fenceToken, attempt);
+    const appended = appendDispatchAttempt(
+      scenario.state.store,
+      scenario.state.fenceToken,
+      attempt,
+    );
     if (!appended.ok) throw new Error(`seed failed: ${appended.code}`);
   }
 };
 
-const summarize = (scenario: ReturnType<typeof createCommandScenario>, scope: "production" | "controlled" = "production") =>
+const summarize = (
+  scenario: ReturnType<typeof createCommandScenario>,
+  scope: "production" | "controlled" = "production",
+) =>
   summarizeDispatchEvidence({
     store: scenario.state.store,
     repository: REPOSITORY,
@@ -48,7 +55,11 @@ describe("TC-GATE-001 the summary reports the full evidence window", () => {
       appendDispatchDivergence(
         scenario.state.store,
         scenario.state.fenceToken,
-        makeDivergence({ divergenceId: "DIV-1", engineToken: "pr-open", comparisonToken: "blocked" }),
+        makeDivergence({
+          divergenceId: "DIV-1",
+          engineToken: "pr-open",
+          comparisonToken: "blocked",
+        }),
       );
       const result = summarize(scenario);
       expect(result.ok).toBe(true);
@@ -155,7 +166,9 @@ describe("TC-GATE-007 all eleven classes are coverable", () => {
         expect(result.ok).toBe(true);
         if (!result.ok) continue;
         expect(result.data.coverage.missing, token).toEqual([token]);
-        const coverage = result.data.unmetConditions.find((entry) => entry.condition === "coverage");
+        const coverage = result.data.unmetConditions.find(
+          (entry) => entry.condition === "coverage",
+        );
         expect(coverage?.detail, token).toBe(token);
       } finally {
         scenario.dispose();

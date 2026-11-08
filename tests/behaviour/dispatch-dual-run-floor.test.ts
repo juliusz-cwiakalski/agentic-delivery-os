@@ -64,7 +64,9 @@ describe("TC-GATE-005 the floor never substitutes for the other conditions", () 
       const { window, evaluation } = evaluateSpecs(testCase.specs);
       expect(window.floorMet).toBe(true);
       expect(evaluation.eligibility).toBe(false);
-      expect(evaluation.unmetConditions.map((entry) => entry.condition)).toContain(testCase.condition);
+      expect(evaluation.unmetConditions.map((entry) => entry.condition)).toContain(
+        testCase.condition,
+      );
     }
   });
 
