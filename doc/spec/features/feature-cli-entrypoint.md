@@ -6,9 +6,9 @@ created: 2026-11-08
 last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The executable CLI surface: a non-installed Bun bin plus a `main` composition entry, working-name resolution (typed configuration, the non-empty `DELIVERY_OS_WORKING_NAME` override, then the neutral `delivery-os` default), root and per-command `--help` plus `--version` with no state, network, git, or configuration read, the exact prompt-required command composition including the `dispatch` family, and fail-closed `fallback.internal` containment for an uncomposed invocation."
+summary: "The executable CLI surface: a non-installed Bun bin plus a `main` composition entry, working-name resolution (typed configuration, the non-empty `DELIVERY_OS_WORKING_NAME` override, then the neutral `delivery-os` default), root and per-command `--help` plus `--version` with no state, network, git, or configuration read, the exact prompt-required command composition including the `dispatch` family, fail-closed `fallback.internal` containment for an uncomposed invocation, and the production composition's single repository-facts resolution that supplies the queue repository binding only as a complete key-and-root pair."
 links:
-  related_changes: ["GH-242", "GH-239"]
+  related_changes: ["GH-242", "GH-239", "GH-273"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/cli/bin/delivery-os.ts"
@@ -65,6 +65,8 @@ Global flags on every surface are `--json`, `--verbose`, and `--pretty`. Command
 
 Program selection is strict. A missing prompt-required command is a composition gap and throws instead of shipping a partial surface; the entrypoint catches that throw and answers the invocation with the `fallback.internal` containment identity. Extra registrations are dropped. The production composer (`packages/cli/src/production.ts`) wires the delivered adapters — the state store, credential port, repository facts, git seams, GitHub client, and the command runtimes — and reuses the branding seam so the name has one source.
 
+The composer resolves the checkout's repository facts once per invocation and derives the queue repository binding from that single resolution. The binding is present only when the GitHub target resolution from the origin succeeds, `normalizeRepositoryKey(originUrl)` yields the normalized `host/owner/name` key, and the resolved checkout root is defined; otherwise the queue composition receives no binding at all, never a key without a root or a root without a key. An injected repository origin replaces only the remote, while the checkout root always resolves from the working directory, so the recorded root is the declaring checkout's absolute root from the top level, a nested directory, or a linked worktree. The queue entry records the normalized key and the root together, and the root stays internal: it is never serialized into an envelope, finding, incident, log line, or telemetry event.
+
 ## Identity resolution
 
 The working name resolves in declared order:
@@ -91,6 +93,7 @@ The bin is not part of the install or release surface. `scripts/install.sh` name
 |---|---|---|
 | Behaviour | Root help, command help coverage, version identity and precedence, help/version isolation, composition honesty and fail-closed containment | `tests/behaviour/entrypoint-help.test.ts`, `entrypoint-help-coverage.test.ts`, `entrypoint-version.test.ts`, `entrypoint-help-isolation.test.ts`, `entrypoint-composition.test.ts` |
 | Structure | Bin and `main` manifest mapping, Bun shebang, composition invocation, installer absence | `tests/structure/entrypoint-bin.test.ts`, `entrypoint-installer-absence.test.ts` |
+| Composition binding | Production queue repository binding derivation, the key-and-root pair, root sourcing and non-disclosure, and the queue entry invariant | `tests/behaviour/queue-production-binding.test.ts`, `queue-binding-invariant.test.ts`, `tests/structure/queue-binding-derivation.test.ts`, `queue-binding-fixture-shape.test.ts`, `tests/conformance/pilot/pilot-records.test.ts` |
 | Checks | Forbidden literals, content inventory, help/guide coverage | `scripts/checks/forbidden-literals.ts`, `tests/structure/content-inventory.test.ts`, `scripts/checks/help-guide-coverage.ts` |
 
 Help/version isolation is asserted with a throwing composer: the composer must not run, the run must exit `0` with empty stderr, and the working directory must stay byte-identical, including when a configuration file is unreadable or the environment is poisoned. An uncomposed-command case asserts the exact identity fields and exit `2` and that `data` is absent. Every case is deterministic over injected streams, clock, and run id.

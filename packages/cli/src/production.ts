@@ -54,6 +54,7 @@ import {
   type HarnessSettings,
   type LaneSettings,
   normalizeDispatchRepositoryKey,
+  normalizeRepositoryKey,
   normalizeRepositoryRemote,
   readDaemonLanes,
   readQueueEntries,
@@ -250,8 +251,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       cwd,
       ...(facts.gitChildRunner === undefined ? {} : { childRunner: facts.gitChildRunner }),
     });
-    const repositoryFacts =
-      facts.repositoryFacts ?? readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
+    // Resolve the checkout facts once per invocation. An injected origin replaces
+    // only the remote; the checkout root always comes from the working directory,
+    // so a composition test can never supply a synthetic root (DEC-2, DEC-5).
+    const resolvedRepositoryFacts = readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
+    const repositoryOriginUrl =
+      facts.repositoryFacts === undefined
+        ? resolvedRepositoryFacts.originUrl
+        : facts.repositoryFacts.originUrl;
+    const repositoryFacts = {
+      ...(resolvedRepositoryFacts.root === undefined ? {} : { root: resolvedRepositoryFacts.root }),
+      ...(repositoryOriginUrl === undefined ? {} : { originUrl: repositoryOriginUrl }),
+    };
     // The identity binding is scoped to this checkout, not the shared per-user
     // state root: its marker lives in the checkout's git common directory, so
     // two repositories in one home never collide and a rename or remote change
@@ -261,6 +272,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       io: nodeRepositoryIo(),
     })?.commonDir;
     const target = repositoryTargetOf(repositoryFacts.originUrl);
+    const repositoryKey =
+      repositoryFacts.originUrl === undefined
+        ? undefined
+        : normalizeRepositoryKey(repositoryFacts.originUrl);
+    // One total derivation: the binding is present only when the GitHub target,
+    // the contention-domain key, and the resolved checkout root all resolve. Any
+    // failed condition yields no binding at all, never a one-sided pair (F-1).
+    const repositoryBinding =
+      target !== undefined && repositoryKey !== undefined && repositoryFacts.root !== undefined
+        ? { repository: repositoryKey, repositoryRoot: repositoryFacts.root }
+        : undefined;
     const harnessSpawnRunner = facts.harnessSpawnRunner ?? createHostSpawnRunner();
     const clientTarget = target ?? { owner: "unresolved", name: "unresolved" };
     const client = createGitHubClient({
@@ -352,9 +374,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const queueComposition = {
       store,
       facts: queueFacts,
-      ...(target === undefined
-        ? {}
-        : { repositoryBinding: { repository: `${target.owner}/${target.name}` } }),
+      ...(repositoryBinding === undefined ? {} : { repositoryBinding }),
       nowIso,
       nowMs,
       newFenceToken,

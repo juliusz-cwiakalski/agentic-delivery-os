@@ -433,7 +433,10 @@ export const createPilot = async (options: PilotOptions = {}): Promise<Pilot> =>
         preemption: 60_000,
       },
     },
-    repositoryBinding: { repository: PILOT_REPOSITORY },
+    repositoryBinding: {
+      repository: PILOT_REPOSITORY,
+      repositoryRoot: `/pilot/${PILOT_REPOSITORY}`,
+    },
     runner: "runner-a",
     nowIso: () => nowIso,
     nowMs: () => nowMs,

@@ -2,6 +2,7 @@
  * TC-PILOT-006 — durable records keep their expected identities.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { readQueueEntries } from "../../../packages/core/src/app/queue";
 import {
   readBlockerLedger,
   readChangeTransitionsTolerant,
@@ -9,7 +10,7 @@ import {
   readCommitTelemetry,
   readMergeTransactions,
 } from "../../../packages/core/src/state/index";
-import { createPilot, PILOT_REF, type Pilot } from "../../fixtures/pilot/harness";
+import { createPilot, PILOT_REF, PILOT_REPOSITORY, type Pilot } from "../../fixtures/pilot/harness";
 
 let pilot: Pilot | undefined;
 
@@ -84,6 +85,19 @@ describe("TC-PILOT-006 durable records", () => {
       const answer = blockers.value.answers.find((record) => record.questionId === "Q-0001");
       expect(answer?.choice).toBe("lite");
       expect(answer?.answeredAt).toBe(fixture().nowIso);
+    }
+  });
+
+  test("every seeded queue entry carries the pair and the pilot seed key", () => {
+    const entries = readQueueEntries(fixture().store);
+    expect(entries.ok, "the pilot queue ledger is readable").toBe(true);
+    if (!entries.ok) return;
+    expect(entries.records.length, "the pilot seeds queue entries").toBeGreaterThan(0);
+    for (const record of entries.records) {
+      expect(record.repository, `${record.ref}: the seed key`).toBe(PILOT_REPOSITORY);
+      expect(record.repositoryRoot, `${record.ref}: the seed root`).toBe(
+        `/pilot/${PILOT_REPOSITORY}`,
+      );
     }
   });
 });

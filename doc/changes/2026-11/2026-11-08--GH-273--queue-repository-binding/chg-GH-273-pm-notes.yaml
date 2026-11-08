@@ -1,0 +1,337 @@
+change_id: GH-273
+title: "fix(queue): production binding sends repository key without root, so
+  queue add is refused and dispatch cannot start"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-08T17:26:00Z", completed: 2026-11-08T17:28:56.048Z }
+  specification: { started: null, completed: 2026-11-08T20:17:27.772Z }
+  test_planning: { started: null, completed: 2026-11-08T19:26:30.381Z }
+  delivery_planning: { started: null, completed: 2026-11-08T19:26:38.537Z }
+  dor_check: { started: null, completed: 2026-11-08T19:33:40.432Z }
+  delivery: { started: null, completed: 2026-11-08T20:14:22.000Z }
+  system_spec_update: { started: null, completed: 2026-11-08T20:22:39.592Z }
+  review_fix: { started: null, completed: 2026-11-08T20:37:40.208Z }
+  quality_gates: { started: null, completed: 2026-11-08T20:44:54.831Z }
+  dod_check: { started: null, completed: 2026-11-08T20:45:58.038Z }
+  pr_creation: { started: null, completed: 2026-11-08T20:49:59.979Z }
+decisions:
+  - text: "D1 — The recorded key is the normalized host/owner/name contention key,
+      not the bare owner/name target; PM ratifies spec DEC-3. This is in-scope,
+      not a scope expansion: GH-273's Expected section already requires 'both
+      the normalized repository key and its recorded root'. Fixing only the root
+      would satisfy the invariant but leave dispatch source and
+      deploy-expectation comparison mismatched."
+    date: "2026-11-08"
+  - text: "D2 — No state migration for synthetic host-less keys (spec DEC-8): no
+      shipped composition could ever record an entry, so no production state
+      exists to repair. The pilot fixture's binding is corrected to a pair; its
+      synthetic key domain stays."
+    date: "2026-11-08"
+  - text: "D3 — PM authorizes a fourth DoR gate iteration (beyond the 3-iteration
+      guideline) because iteration 3's findings are mechanical and fully
+      specified (one plan red/green contradiction plus four wording/sequencing
+      fixes), findings are shrinking, and escalation would block delivery on a
+      one-line inconsistency with no open design question. All findings are
+      applied before re-gating; no scope or architecture change is introduced by
+      the fixes."
+    date: "2026-11-08"
+  - text: "D4 — Release version impact is minor, not patch. TC-RELEASE-001 (pinned)
+      requires every added changeset to declare exactly the five fixed-group
+      packages at minor; a patch entry fails the release gate. Spec
+      version_impact corrected patch -> minor (spec v1.5), the changeset renamed
+      to .changeset/gh-273-queue-repository-binding-minor.md, and plan phase 5
+      wording aligned. No AC or behaviour change."
+    date: "2026-11-08"
+open_questions: []
+blockers: []
+notes:
+  - text: "Spec authored. Verified in source: readRepositoryFacts(root) already
+      available; production injects only originUrl so the composition seam must
+      keep resolving root from cwd (spec DEC-5) or tests would go false-green.
+      Second defect found: key form is host-less in production while all
+      consumers/fixtures use host/owner/name."
+    type: info
+    date: "2026-11-08"
+  - text: "Retro: spec v1.0 asserted AC-F6-1 that the key-unresolved guard fails on
+      revert, which is impossible (pre-fix already emits no binding), and
+      asserted a permanent-suite diff check. Test planning caught it before DoR;
+      specification reopened (iteration 1) and revised to name per-AC evidence
+      classes (suite / mutation-verified / review-verified). Cost: one reopen
+      cycle. Lesson: assign an evidence class when authoring an AC whose pre-fix
+      behaviour already satisfies one branch."
+    type: retro
+    date: "2026-11-08"
+  - text: "Specification re-completed at iteration 1 (commit e5e51e43); test plan
+      realigned and completed (commit f6db33ea). Plan declares 5 phases:
+      producer fix, composition regression suite, invariant + structural
+      anti-recurrence, fixture honesty, docs + changeset + aggregate gate."
+    type: info
+    date: "2026-11-08"
+  - text: "DoR iteration 1 = NOT_READY (readiness-review/readiness-iter-1.md).
+      Blocking B1: spec names the dispatch remote normalizer as the key
+      authority, but normalizeRepositoryRemote preserves case while AC-F3-1
+      requires the lowercase normalizeRepositoryKey form — a coder following
+      §8.4 fails the AC. Blocking B2: the 'key unresolved' matrix cell uses a
+      gitlab remote that does normalize, so the cell is mislabelled unless the
+      target gate is declared. Reopened specification (owner), plus
+      test_planning and delivery_planning for consequential edits; no delivery
+      phase entered."
+    type: blocker
+    date: "2026-11-08"
+  - text: "Retro: both blocking findings are normalizer/gate naming defects that a
+      source probe at spec time would have caught (normalizeRepositoryRemote vs
+      normalizeRepositoryKey), and the matrix cell was written from intuition
+      rather than from an executed normalizer/parse probe. Lesson: when a spec
+      names a normalization authority, probe it; when a test matrix encodes
+      'unresolved', execute the negative input through the real predicate before
+      labelling the cell."
+    type: retro
+    date: "2026-11-08"
+  - text: "DoR iteration 2 = NOT_READY (readiness-iter-2.md). Iteration-1
+      remediation verified genuinely fixed (B1/B2 closed with executed evidence;
+      A1-A11 closed). New blockers: B3 plan phase 1 implements only a
+      two-condition guard while spec F-1 declares three (missing the
+      parseGitHubRemote target gate), so a coder could emit a binding for a
+      non-GitHub remote; B4 NFR-4's fixture-shape revert is unexecutable and
+      misattributed — reverting production.ts cannot fail a suite that only
+      parses tests/fixtures/**. Advisories: A12 (TC-BIND-015 AST rule rejects
+      the nullish-coalescing fallback form), A13 (spec prose calls a local path
+      key-unresolved though three-segment paths normalize), A14 (mutation reds
+      via the domain refusal message, not a root-only emission signal), A15
+      (spec pages named by role only). Reopened specification, test_planning,
+      delivery_planning for iteration 3."
+    type: blocker
+    date: "2026-11-08"
+  - text: "Retro: B3 is a propagation miss — the B2 fix landed in the spec but not
+      in the plan phase that implements it, because spec and plan were edited in
+      separate delegations without a cross-artifact consistency pass. B4 is an
+      evidence-model error: a revert obligation was attached to a layer whose
+      inputs the revert does not touch. Lesson: after any gate-driven edit,
+      re-read the implementing phase summary against the changed AC text in the
+      same iteration; when an AC names a revert/mutation evidence class, name
+      the exact artifact that must be reverted."
+    type: retro
+    date: "2026-11-08"
+  - text: "DoR iteration 3 = NOT_READY (readiness-iter-3.md). B3/B4/A12-A15 verified
+      fixed with executed probes. New blocker B5: the plan says the matrix
+      'present' cell stays green under the P1 producer revert while the test
+      plan and code say it is refused (a key-only binding is emitted exactly
+      when the target resolves). Advisories: A16 (nullish-coalescing operand
+      wording names the wrong side), A17 (the P3 mutated root-only branch must
+      be evaluated before the target gate to be observable), A18 (plan cites
+      test plan v3), A19 (spec ordering prose). Reopened specification,
+      test_planning, delivery_planning."
+    type: blocker
+    date: "2026-11-08"
+  - text: "Retro: B5 is the third instance of one class — an evidence-set claim in
+      the plan contradicting the test plan. Root cause: the plan paraphrases the
+      test plan's evidence sets instead of citing its procedures. Lesson: plan
+      evidence obligations should cite the test-plan procedure ids (P1..P4) and
+      let red/green sets live once, in the test plan."
+    type: retro
+    date: "2026-11-08"
+  - text: "DoR iteration 4 = READY (readiness-iter-4.md), 0 blocking findings. All
+      prior B1-B5 and A1-A19 verified fixed by executed probes. Residual
+      advisories A20 (stale spec v1.3 citations) and A21 (one stale TC-BIND-018
+      step range) folded in immediately as citation-only edits before locking
+      the gate; plan validate remains valid. Delivery authorized to start at
+      plan phase 1."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 1 complete (producer fix, commit
+      fa8ecd03f0013581cbc7485e0c588842263e1350). packages/cli/src/production.ts
+      resolves repository facts once, lets an injected originUrl replace only
+      the remote, takes the recorded root from the resolved facts root, and
+      derives the pair-or-absent queue binding with normalizeRepositoryKey
+      guarded by the existing parseGitHubRemote target gate. Gates green: pnpm
+      typecheck (0 diagnostics); pnpm check:boundaries (356 modules, 1041 deps,
+      0 violations; ambient-globals 162 clean; workspace-entrypoints OK;
+      secret-read-boundary 325 clean); bun test
+      tests/behaviour/production-composition.test.ts
+      tests/behaviour/entrypoint-composition.test.ts (12 pass / 0 fail); bun
+      test tests/behaviour/queue-*.test.ts
+      tests/structure/dispatch-composition.test.ts (333 pass / 0 fail / 1
+      intentional skip); bun test tests/structure/content-inventory.test.ts
+      tests/structure/subpaths.test.ts (10 pass / 0 fail); biome check
+      packages/cli/src/production.ts (clean)."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 2 complete (production-composition regression suite, commit
+      7dc5d2f6339bcee0197864de731f7c558a640a37). Added
+      tests/fixtures/queue/production/harness.ts (real production composer over
+      real fabricated .git metadata; injects only repositoryFacts.originUrl and
+      exposes no root seam) and tests/behaviour/queue-production-binding.test.ts
+      (TC-BIND-001/002/003/004/005/006/007/008/009/010/017). Green: bun test
+      tests/behaviour/queue-production-binding.test.ts (15 pass / 0 fail); -t
+      TC-BIND-002 (4 pass / 0 fail); -t TC-BIND-006 (2 pass / 0 fail); bun test
+      tests/behaviour/queue-cli.test.ts
+      tests/behaviour/queue-edge-wiring.test.ts (39 pass / 0 fail); biome check
+      on both new files (clean)."
+    type: info
+    date: "2026-11-08"
+  - text: "Retro: TC-BIND-002's stated projection 'entry state not-ready with
+      blocking detail repository-binding-unresolved' is not producible through
+      the real production composition: its queue fact source has no work-item
+      facts, so the scheduler's deps-satisfied condition is unknown and the
+      precedence folds the entry to held/dependency-unobserved before the
+      repo-free step runs. The suite therefore asserts the binding-relevant
+      facts at the layers that actually emit them: the add outcome, the absent
+      pair in the ledger (no one-sided record), the repo-free readiness evidence
+      (unknown; source repository-binding; reason addressing-unresolved) via
+      evaluateQueueReadiness over the production fact surface, and the
+      repository-binding-unresolved blocking detail via the domain claim
+      precondition (queue.precondition.unmet). AC-F1-2's required outcome is
+      unchanged and still asserted. Second finding: status renders the
+      pre-existing local-context path from its own cwd, which embeds the
+      checkout path when cwd is the checkout, so TC-BIND-008's status/brief
+      absence assertion runs over the same state with a working directory
+      outside the checkout; all queue/lanes surfaces and the graph document are
+      scanned on the recorded checkout cwd."
+    type: retro
+    date: "2026-11-08"
+  - text: "Plan phase 3 complete (invariant preservation + structural
+      anti-recurrence, commit 08153dead338524be90d0f78b9e6e4ba7f1cf105). Added
+      tests/behaviour/queue-binding-invariant.test.ts (TC-BIND-011 write-side
+      negatives + pair control; TC-BIND-012 key-only and root-only raw payloads
+      read as state.store.torn, raw records stay readable, no entry fabricated,
+      queue list --json exits 2 with no data) and
+      tests/structure/queue-binding-derivation.test.ts (TC-BIND-014 one
+      construction site, exactly one pair literal, no one-sided literal, the
+      queue/lanes composition shared once; TC-BIND-016 one readRepositoryFacts
+      and one findGitRoot call; TC-BIND-008 source allowlist for repositoryRoot
+      over packages/**/src). No domain file changed. Green: bun test
+      tests/behaviour/queue-binding-invariant.test.ts (3 pass / 0 fail); bun
+      test tests/structure/queue-binding-derivation.test.ts (5 pass / 0 fail);
+      bun test tests/structure/queue-scheduling-contract.test.ts
+      tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts
+      (193 pass / 0 fail); bun test tests/golden (240 pass / 0 fail); bun run
+      scripts/checks/error-table-sync.ts (entries=115 documented=115, OK); biome
+      check both new files (clean)."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 4 complete (fixture honesty, commit
+      939f2492345333ac70397daf2f7489efb7a96576). tests/fixtures/pilot/harness.ts
+      now composes repositoryBinding as the pair { repository: PILOT_REPOSITORY,
+      repositoryRoot: `/pilot/${PILOT_REPOSITORY}` }, matching its ledger seeds
+      (DEC-7; no golden regeneration; the pilot never calls queue add). Added
+      tests/structure/queue-binding-fixture-shape.test.ts (TC-BIND-015 AST half:
+      forms (a) literal pair, (b) same-file identifier/member reference, (c)
+      ??/conditional fallback pair; independent one-field literal negative
+      assertion; pilot key identifier equals the seed identifier; the unchanged
+      queue CLI harness ?? fallback stays accepted) and added the runtime
+      seeded-entry assertions to tests/conformance/pilot/pilot-records.test.ts
+      (every seeded entry carries both fields with the pilot key and
+      /pilot/${PILOT_REPOSITORY}). Green: bun test
+      tests/structure/queue-binding-fixture-shape.test.ts (6 pass / 0 fail); bun
+      test tests/conformance/pilot/pilot-records.test.ts (4 pass / 0 fail); bun
+      test tests/conformance/pilot (29 pass / 0 fail); bun test
+      tests/checks/pilot-privacy.test.ts (4 pass / 0 fail); bun test
+      tests/behaviour/queue-cli.test.ts (24 pass / 0 fail); biome check on the
+      three files (clean)."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 5 complete (release, commit
+      83adb96866d6a253deb0743fd9029237045403c3). Added
+      .changeset/gh-273-queue-repository-binding-patch.md (lockstep changeset
+      for the five fixed-group @delivery-os packages), populated test-plan
+      section 10 with the execution evidence for every TC, the four TC-BIND-018
+      procedures, and the informational per-file wall-clock, and adjusted the
+      root-unresolved fixture to fall back to the repository parent directory
+      when TMPDIR points inside the work tree (aggregate-gate parity). Aggregate
+      gate: TMPDIR=\"$PWD/tmp/tmpdir\" pnpm check exit 0 (lint 60 warnings / 0
+      errors; format:check clean; typecheck clean; bun test 6476 pass / 0 fail /
+      4 skip across 771 files in 318.83s; check:boundaries 356 modules 0
+      violations; prompt-conformance 5 prompts clean; help-guide-coverage all
+      covered; exports-parity 5 publishables). Without the repo-local TMPDIR the
+      only failures are the pre-existing cross-device git clone --local in
+      tests/checks/ci-baseline-parity.test.ts (/tmp is a separate filesystem);
+      the targeted run with the repo-local TMPDIR is 8 pass / 0 fail. plan
+      validate GH-273 --json valid; git diff --check clean. All 18 ACs
+      re-confirmed by the full battery. No doc/spec/** file was edited."
+    type: info
+    date: "2026-11-08"
+  - text: "TC-BIND-018 revert/mutation evidence (four separate procedures, each
+      restored; full record in test-plan section 10). P1 producer revert
+      (packages/cli/src/production.ts only): composition suite 3 pass / 12 fail
+      (TC-BIND-001, TC-BIND-003..009, TC-BIND-010, TC-BIND-017 and the present
+      and root-unresolved cells of TC-BIND-002); derivation suite 3 pass / 2
+      fail (TC-BIND-014 pair/partial assertions plus the consequent
+      repositoryRoot allowlist change); green: key-unresolved and
+      target-unresolved cells, TC-BIND-006 pure rows, TC-BIND-011/012,
+      TC-BIND-015 shape suite 6 pass, tests/conformance/pilot 29 pass. P2
+      fixture revert (tests/fixtures/pilot/ harness.ts only): shape suite 4 pass
+      / 2 fail naming tests/fixtures/pilot/harness.ts and { repository }; all
+      production-side files 23 pass and pilot 29 pass. P3 asymmetry mutation
+      (root-only branch inserted ahead of the unchanged GitHub target gate,
+      restored): -t TC-BIND-002 3 pass / 1 fail, exactly the key-unresolved
+      cell, red at its expected-success assertion (Observed exit 1, domain
+      input.value.rejected); present/target-unresolved/root-unresolved green. P4
+      write-side desiredEntry predicate deletion: invariant suite 2 pass / 1
+      fail (TC-BIND-011 only); read-side isEntryRecord predicate deletion: 1
+      pass / 2 fail (both TC-BIND-012 shapes only); second readRepositoryFacts
+      insertion: derivation suite 4 pass / 1 fail (TC-BIND-016 only).
+      Post-restore four files 29 pass / 0 fail and pilot 29 pass / 0 fail."
+    type: info
+    date: "2026-11-08"
+  - text: "Lifecycle phase 7 handoff obligation (owned by @doc-syncer; this note was
+      written before phase 7 ran): (i) re-verify
+      doc/spec/features/feature-scheduling-engine.md still states the
+      key-and-root-together contract and the normalizeRepositoryKey
+      host/owner/name form with no sentence contradicting the delivered
+      producer; (ii) add the composition note to
+      doc/spec/features/feature-cli-entrypoint.md that the production composer
+      derives the queue repository binding from the single repository-facts
+      resolution, present only when the existing GitHub target resolution
+      succeeds, normalizeRepositoryKey(origin) is defined, and the resolved
+      checkout root is defined; an injected origin replaces only the remote and
+      the root always comes from the working directory; the recorded root stays
+      internal (NFR-2, NFR-3, DEC-5, spec F-1)."
+    type: info
+    date: "2026-11-08"
+  - text: "Retro: the plan and spec declare version_impact patch, but the
+      repository's permanent TC-RELEASE-001 gate
+      (tests/checks/privacy-release.test.ts) requires the single added
+      fixed-group changeset to declare all five @delivery-os packages as minor;
+      a patch changeset fails two assertions of that gate (validateChangeset and
+      its mutation probe). The changeset therefore carries minor bumps (a
+      stronger, not weaker, version outcome) under the plan-scoped file name; no
+      pinned test was weakened or modified. Lesson: when a spec's version impact
+      is encoded in a release invariant, probe that invariant while planning the
+      release step, not only the product behaviour."
+    type: retro
+    date: "2026-11-08"
+  - text: "Review iteration 1 = PASS (code-review/review-iter-1.yaml), 0 blocking, 2
+      low + 5 info advisories. Verified: all 18 ACs traceable; one total
+      conjunction in the producer with no one-sided path;
+      domain/grammar/envelope/error table untouched; no root disclosure; harness
+      exposes no root seam; P1-P4 evidence arithmetic consistent; re-ran 29/29
+      new tests, 70/70 affected queue suites, 193/193 contract/error-table,
+      240/240 golden. Advisories F-1 (stale phase-7 handoff note) and F-2
+      (test-plan §7 status column) folded before closing the phase; F-3..F-7
+      accepted as informational."
+    type: info
+    date: "2026-11-08"
+  - text: "Phase 7 doc-sync completed by @doc-syncer: commit d14b91f2 updated
+      doc/spec/features/feature-cli-entrypoint.md (composition binding note +
+      quality evidence) and added GH-273 traceability to
+      feature-scheduling-engine.md, which needed no correction. Residual
+      documentation gaps: none. Doc distribution guard clean (81 in-scope
+      docs)."
+    type: info
+    date: "2026-11-08"
+  - text: "DoD check verified: all prior phases completed in the registry (e7c391b5
+      = dod_check); every declared plan phase 1-5 has a pm-notes entry naming
+      its id, commit (fa8ecd03, 7dc5d2f6, 08153dea, 939f2492, 83adb968) and test
+      result; 18/18 ACs satisfied per review-iter-1 PASS; document truth
+      reconciled with no residual gaps; aggregate gate green (6476 pass / 4 skip
+      / 0 fail across 771 files, plus boundaries, prompt-conformance, help-guide
+      and exports-parity). No reopen required."
+    type: info
+    date: "2026-11-08"
+  - text: "PR created: #274
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/274
+      targeting main-tools from fix/GH-273/queue-repository-binding (title
+      'fix(GH-273): record queue repository key and checkout root atomically',
+      body closes #273). Left open for human review; not merged, no auto-merge."
+    type: info
+    date: "2026-11-08"
