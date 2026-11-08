@@ -81,4 +81,5 @@ export {
   dispatchIdentityMarkerPath,
   ensureDispatchIdentityMarkerText,
   readDispatchIdentityMarkerText,
+  replaceDispatchIdentityMarkerText,
 } from "./dispatch-identity.js";

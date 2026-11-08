@@ -30,12 +30,16 @@ truth is `state-unverified`.
 
 The watch polls the harness liveness source at the `lane.liveness-interval`
 cadence while collection is pending and carries the previous observation, so a
-stall needs two consecutive sourced evaluations with no advance. A corroborated
-stall at or above `lane.restart-budget` is the restart-budget refusal
-(`max-restarts`) with the terminal exhaustion record; below the bound the stall
-is recorded as liveness evidence and left to lane supervision. The delivered
-session port exposes no kill operation, so the one-shot command never starts a
-second session for the same attempt: a stall is never silently leaked.
+stall needs two consecutive sourced evaluations with no advance. A stall is a
+current-state verdict, not a latch: a later `progressing` observation clears it.
+A stall that is still current when evidence collection resolves, at or above
+`lane.restart-budget`, is the restart-budget refusal (`max-restarts`) with the
+terminal exhaustion record; below the bound it is recorded as liveness evidence
+and left to lane supervision. A session that completed is never re-keyed to
+`max-restarts` by an already-reached bound, because the budget governs admission
+of a further attempt rather than the classification of a finished session. The
+delivered session port exposes no kill operation, so the one-shot command never
+starts a second session for the same attempt: a stall is never silently leaked.
 
 Dual-run keeps the bash stack authoritative. A repository moves to
 engine-authoritative only when the evidence-based handover bar is met. The bar is

@@ -137,6 +137,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "dispatchIdentityMarkerPath",
     "ensureDispatchIdentityMarkerText",
     "readDispatchIdentityMarkerText",
+    "replaceDispatchIdentityMarkerText",
   ],
   "core/src/domain/dispatch-resume.ts": [
     "admissionRefusalPair",

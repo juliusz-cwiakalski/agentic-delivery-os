@@ -20,6 +20,7 @@ import {
   readDispatchIdentityMarkerText,
   readPmNotesText,
   relativeChangeFolder,
+  replaceDispatchIdentityMarkerText,
   runtimePlatform,
 } from "@delivery-os/adapters/file";
 import {
@@ -472,6 +473,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
      * directory and is created only by a dispatch operating on this checkout, so
      * a read-only gate read never binds an arbitrary `--repo` argument and a
      * later rename or remote change never re-keys history (AC-F6-2, AC-F6-6).
+     * The marker write is atomic, and a marker that carries no binding is
+     * repaired rather than left permanently unreadable.
      */
     const resolveProductionRepository = (
       schedulerKey: string | undefined,
@@ -487,12 +490,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       });
       if (!resolution.ok) return undefined;
       if (options.persist) {
-        // Persist the binding; an unpersistable marker never changes the
-        // resolved identity, so the caller still records under the same key.
-        ensureDispatchIdentityMarkerText(
-          identityMarkerDirectory,
-          serializeIdentityMarker(resolution.repository),
-        );
+        // Persist the binding. A marker that carries no binding (torn, empty,
+        // or otherwise unparseable) is repaired in place, because create-once
+        // alone would keep the torn content forever. An unpersistable marker
+        // never changes the resolved identity, so the caller still records
+        // under the same key.
+        const serialized = serializeIdentityMarker(resolution.repository);
+        if (persistedMarker === undefined) {
+          ensureDispatchIdentityMarkerText(identityMarkerDirectory, serialized);
+        } else if (resolution.source !== "marker") {
+          replaceDispatchIdentityMarkerText(identityMarkerDirectory, serialized);
+        }
       }
       return resolution.repository;
     };

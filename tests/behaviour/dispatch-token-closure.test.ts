@@ -59,6 +59,24 @@ describe("TC-DISP-008 every derivation branch stays inside the eleven", () => {
     }
     expect(emitted.length).toBeGreaterThan(0);
   });
+
+  test("the restart-budget branch refuses a non-completed session at the bound", () => {
+    for (const evidence of [TIMED_OUT_EVIDENCE, PREMATURE_END_EVIDENCE]) {
+      const result = deriveDispatchResult(
+        truthInput({
+          harness: readOk(harnessFacts(evidence)),
+          restarts: { count: 3, bound: 3 },
+        }),
+      );
+      expect(result.token).toBe("max-restarts");
+      expect(result.outcome).toBe("failed");
+      expect(result.lastMessage).toContain("restart budget exhausted");
+    }
+    // The completed-session exemption is the F-16 contract: a completed harness
+    // at an already-reached bound is never re-keyed to the restart refusal.
+    const completed = deriveDispatchResult(truthInput({ restarts: { count: 3, bound: 3 } }));
+    expect(completed.token).toBe("pr-open");
+  });
 });
 
 describe("TC-DISP-011 partial carries outcome; spawn refusal is recorded", () => {

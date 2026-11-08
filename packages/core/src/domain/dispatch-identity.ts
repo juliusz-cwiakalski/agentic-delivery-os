@@ -4,9 +4,9 @@
  *
  * Resolution order: the scheduling engine's normalized `repository` key, the
  * checkout's configured VCS remote normalized the same way, then a persisted
- * first-use marker created through store-managed artifact semantics. A
- * checkout-path digest is never presented as an identity; when none resolves
- * the caller refuses cleanly.
+ * first-use marker stored with the checkout as the create-once file
+ * `<git-common-dir>/dispatch-identity.json`. A checkout-path digest is never
+ * presented as an identity; when none resolves the caller refuses cleanly.
  */
 
 /** The half-open repository identity pattern: `host/owner/name`. */

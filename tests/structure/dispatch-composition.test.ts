@@ -14,9 +14,20 @@
  * environment-dependent on a parseable origin remote.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
-import { readDispatchIdentityMarkerText } from "../../packages/adapters/src/file/dispatch-identity";
+import {
+  dispatchIdentityMarkerPath,
+  readDispatchIdentityMarkerText,
+} from "../../packages/adapters/src/file/dispatch-identity";
 import type { GitChildRunner, GitChildRunnerResult } from "../../packages/adapters/src/git/index";
 import { type CliStreams, runCli } from "../../packages/cli/src/index";
 import { createProductionComposer } from "../../packages/cli/src/production";
@@ -1096,6 +1107,49 @@ describe("the production composer keeps the repository identity rename-invariant
       }
     } finally {
       alpha.dispose();
+    }
+  });
+
+  test("a torn marker binds nothing and the next dispatch repairs it", async () => {
+    const harness = createProductionHarness({ label: "gh239-torn-", originUrl: GITHUB_ORIGIN });
+    try {
+      writeFileSync(
+        dispatchIdentityMarkerPath(harness.commonDir),
+        '{"schema":"delivery.dispatch.identity.v1","repository":',
+      );
+      const seeded = declareQueueEntry(harness.store, {
+        ref: CHANGE_REF,
+        repository: "github.com/owner/torn",
+        repositoryRoot: harness.checkout,
+        recordedAt: new Date().toISOString(),
+        fenceToken: "seed-fence-torn",
+      });
+      expect(seeded.ok).toBe(true);
+
+      const run = await invokeProduction(harness, ["dispatch", CHANGE_REF, "--json"]);
+      expect(run.exit).toBe(2);
+      const attempts = readDispatchAttempts(harness.store);
+      // The torn marker carried no binding, so the queue key governed the run.
+      expect(attempts.ok && attempts.records[0]?.repository).toBe("github.com/owner/torn");
+      // The run repaired it in place instead of leaving it unrepairable.
+      expect(markerOf(harness.commonDir)).toBe(serializeIdentityMarker("github.com/owner/torn"));
+      expect(readdirSync(harness.commonDir).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+
+      // A later run with a different scheduler key reads the repaired binding.
+      const requeued = declareQueueEntry(harness.store, {
+        ref: CHANGE_REF,
+        repository: "github.com/owner/rival",
+        repositoryRoot: harness.checkout,
+        recordedAt: new Date(Date.now() + 1000).toISOString(),
+        fenceToken: "seed-fence-torn-2",
+      });
+      expect(requeued.ok).toBe(true);
+      const rerun = await invokeProduction(harness, ["dispatch", CHANGE_REF, "--json"]);
+      expect(rerun.exit).toBe(2);
+      const recorded = readDispatchAttempts(harness.store);
+      expect(recorded.ok && recorded.records[1]?.repository).toBe("github.com/owner/torn");
+    } finally {
+      harness.dispose();
     }
   });
 

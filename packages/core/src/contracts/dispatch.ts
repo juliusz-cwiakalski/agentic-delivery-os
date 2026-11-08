@@ -35,7 +35,10 @@ export const DISPATCH_HANDOVER_KEY_PREFIX = "dispatch.handover." as const;
 export const DISPATCH_AUTHORITY_SCHEMA = "delivery.dispatch.authority.v1" as const;
 export const DISPATCH_AUTHORITY_DOCUMENT_NAME = "dispatch-authority.json" as const;
 
-/** The store-managed first-use identity marker name (DEC-13, TDR-0015 §6). */
+/**
+ * The checkout-scoped first-use identity marker file name (DEC-13, TDR-0015
+ * §6): created once inside the checkout's `<git-common-dir>`.
+ */
 export const DISPATCH_IDENTITY_MARKER_NAME = "dispatch-identity.json" as const;
 
 /** The declared record-key builders: one store-scoped key per record. */
@@ -202,7 +205,6 @@ export type DispatchAttemptRecord = {
   readonly corroboration: DispatchCorroborationRecord;
   readonly resumeMode?: DispatchResumeMode;
   readonly prefillCostAcknowledged?: boolean;
-  readonly engineIdentity?: string;
   readonly evidenceRefs: readonly DispatchEvidenceReference[];
   readonly recordedAt: string;
 };

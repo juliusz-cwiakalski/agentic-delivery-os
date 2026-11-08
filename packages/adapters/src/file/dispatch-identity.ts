@@ -9,11 +9,24 @@
  * another's evidence.
  *
  * This module owns only the create-once read/write seam; identity
- * normalization and resolution order are the pure domain policy. The marker is
- * written exclusively on first use and is never overwritten, so the persisted
- * binding survives a remote change and a process restart.
+ * normalization and resolution order are the pure domain policy. Both writes
+ * are atomic at the final path: the payload is written and synced to a sibling
+ * temporary file and only then linked or renamed into place, so an interrupted
+ * write can never leave a torn marker behind. The create-once write fails
+ * closed when a marker already exists, and the explicit repair write replaces a
+ * marker the caller classified as carrying no binding, so an unreadable marker
+ * is never a permanently unrepairable state.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  fsyncSync,
+  linkSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { DISPATCH_IDENTITY_MARKER_NAME } from "@delivery-os/core/contracts";
 
@@ -33,21 +46,72 @@ export const readDispatchIdentityMarkerText = (
   }
 };
 
+/** Write and sync one payload to a sibling temporary file; undefined on failure. */
+const writeMarkerTemporary = (path: string, content: string): string | undefined => {
+  const temporary = `${path}.${process.pid.toString(36)}.tmp`;
+  rmSync(temporary, { force: true });
+  try {
+    const descriptor = openSync(temporary, "wx", 0o600);
+    try {
+      writeFileSync(descriptor, content, "utf8");
+      fsyncSync(descriptor);
+    } finally {
+      closeSync(descriptor);
+    }
+    return temporary;
+  } catch {
+    rmSync(temporary, { force: true });
+    return undefined;
+  }
+};
+
 /**
- * Get-or-create the marker for one checkout. Creation is exclusive and happens
- * only when no marker exists; a later call returns the existing content and
- * never rewrites it, so a rename or remote change cannot re-key the binding.
+ * Get-or-create the marker for one checkout. Creation is an exclusive link of a
+ * fully written sibling file, so two racing writers can never both win and no
+ * reader ever observes a partially written marker. A later call returns the
+ * existing content and never rewrites it, so a rename or remote change cannot
+ * re-key the binding.
  */
 export const ensureDispatchIdentityMarkerText = (
   gitCommonDirectory: string | undefined,
   content: string,
 ): string | undefined => {
   if (gitCommonDirectory === undefined) return undefined;
-  const path = dispatchIdentityMarkerPath(gitCommonDirectory);
+  const existing = readDispatchIdentityMarkerText(gitCommonDirectory);
+  if (existing !== undefined) return existing;
+  const temporary = writeMarkerTemporary(dispatchIdentityMarkerPath(gitCommonDirectory), content);
+  if (temporary === undefined) return undefined;
   try {
-    writeFileSync(path, content, { flag: "wx" });
+    linkSync(temporary, dispatchIdentityMarkerPath(gitCommonDirectory));
+  } catch {
+    // A concurrent writer landed the marker first (or the filesystem refuses a
+    // hard link); the marker that exists, if any, governs.
+  } finally {
+    rmSync(temporary, { force: true });
+  }
+  return readDispatchIdentityMarkerText(gitCommonDirectory);
+};
+
+/**
+ * Replace a marker the caller classified as carrying no binding (torn, empty,
+ * or otherwise unparseable). The replacement is a synced temporary file renamed
+ * over the final path, so the final path is never torn even if the process
+ * dies mid-write; an unwritable marker is left unchanged and reported as
+ * undefined, never as a crash.
+ */
+export const replaceDispatchIdentityMarkerText = (
+  gitCommonDirectory: string | undefined,
+  content: string,
+): string | undefined => {
+  if (gitCommonDirectory === undefined) return undefined;
+  const temporary = writeMarkerTemporary(dispatchIdentityMarkerPath(gitCommonDirectory), content);
+  if (temporary === undefined) return undefined;
+  try {
+    renameSync(temporary, dispatchIdentityMarkerPath(gitCommonDirectory));
     return content;
   } catch {
-    return readDispatchIdentityMarkerText(gitCommonDirectory);
+    return undefined;
+  } finally {
+    rmSync(temporary, { force: true });
   }
 };

@@ -5,7 +5,7 @@
  * here.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -21,6 +21,7 @@ import {
   dispatchIdentityMarkerPath,
   ensureDispatchIdentityMarkerText,
   readDispatchIdentityMarkerText,
+  replaceDispatchIdentityMarkerText,
 } from "../../packages/adapters/src/file/dispatch-identity";
 
 /**
@@ -197,6 +198,58 @@ describe("TC-HAND-007 resolution order and persisted binding", () => {
         repository: "github.com/owner/first",
         source: "marker",
       });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a torn marker binds nothing and the repair write replaces it atomically", () => {
+    const root = mkdtempSync(join(tmpdir(), "gh239-identity-torn-"));
+    try {
+      const commonDir = join(root, ".git");
+      mkdirSync(commonDir, { recursive: true });
+      const path = dispatchIdentityMarkerPath(commonDir);
+      writeFileSync(path, '{"schema":"delivery.dispatch.identity.v1","repository":');
+      const torn = readDispatchIdentityMarkerText(commonDir);
+      expect(torn !== undefined && parseIdentityMarker(torn)).toBeUndefined();
+      // A torn marker never resolves to a repository identity.
+      expect(
+        resolveWithCheckout(commonDir, { remoteUrl: "git@github.com:owner/repo.git" }),
+      ).toEqual({ ok: true, repository: "github.com/owner/repo", source: "remote" });
+
+      // Create-once keeps an existing file, so torn content survives a create.
+      expect(
+        ensureDispatchIdentityMarkerText(commonDir, serializeIdentityMarker("github.com/owner/x")),
+      ).toBe(torn);
+
+      // The explicit repair path replaces it, and no temporary file survives.
+      expect(
+        replaceDispatchIdentityMarkerText(
+          commonDir,
+          serializeIdentityMarker("github.com/owner/repaired"),
+        ),
+      ).toBe(serializeIdentityMarker("github.com/owner/repaired"));
+      expect(readDispatchIdentityMarkerText(commonDir)).toBe(
+        serializeIdentityMarker("github.com/owner/repaired"),
+      );
+      expect(readdirSync(commonDir)).toEqual(["dispatch-identity.json"]);
+      expect(
+        resolveWithCheckout(commonDir, { remoteUrl: "git@github.com:owner/other.git" }),
+      ).toEqual({ ok: true, repository: "github.com/owner/repaired", source: "marker" });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("an unwritable marker path fails closed and leaves no temporary file", () => {
+    const root = mkdtempSync(join(tmpdir(), "gh239-identity-absent-"));
+    try {
+      const missing = join(root, "absent-dir");
+      const content = serializeIdentityMarker("github.com/owner/repo");
+      expect(ensureDispatchIdentityMarkerText(missing, content)).toBeUndefined();
+      expect(replaceDispatchIdentityMarkerText(missing, content)).toBeUndefined();
+      expect(replaceDispatchIdentityMarkerText(undefined, content)).toBeUndefined();
+      expect(readdirSync(root)).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
