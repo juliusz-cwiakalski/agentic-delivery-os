@@ -10,7 +10,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-08T09:22:18.032Z }
   delivery_planning: { started: null, completed: 2026-11-08T09:22:22.807Z }
   dor_check: { started: null, completed: 2026-11-08T09:36:33.945Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-08T13:53:26.334Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -138,15 +138,15 @@ notes:
       green; TDR-0015 authored). Proceeding to delivery."
     type: info
     date: "2026-11-08"
-  - text: "Delivery pass 1 complete (10 plan phases, commits 56e0588..c5e38c9,
-      pnpm check green: 6417 pass). Two gaps found on PM validation before the
+  - text: "Delivery pass 1 complete (10 plan phases, commits 56e0588..c5e38c9, pnpm
+      check green: 6417 pass). Two gaps found on PM validation before the
       delivery checkpoint: (1) production.ts is a stub returning
-      harness.capability.gap, so the shipped dispatch command cannot spawn;
-      the plan requires spawning through the delivered HarnessSessionPort and a
+      harness.capability.gap, so the shipped dispatch command cannot spawn; the
+      plan requires spawning through the delivered HarnessSessionPort and a
       production evidenceClass: pilot composition. (2) attempt-stage failures
-      use a nested data.error envelope, which is a deviation from the
-      data|error exclusivity that the reviewer must judge. Sending (1) back to
-      @coder as incomplete delivery; (2) will be reviewed."
+      use a nested data.error envelope, which is a deviation from the data|error
+      exclusivity that the reviewer must judge. Sending (1) back to @coder as
+      incomplete delivery; (2) will be reviewed."
     type: blocker
     date: "2026-11-08"
   - text: "Commit-primitive friction observed (retro): committing the decision
@@ -184,8 +184,8 @@ notes:
       modules."
     type: info
     date: "2026-11-08"
-  - text: "Delivery plan phase 3 (durable dispatch evidence ledger, evidence
-      class, comparison record, repository identity) complete. Tests green:
+  - text: "Delivery plan phase 3 (durable dispatch evidence ledger, evidence class,
+      comparison record, repository identity) complete. Tests green:
       dispatch-evidence-record, dispatch-evidence-class, dispatch-comparison,
       dispatch-identity, dispatch-false-success, dispatch-unevaluable,
       dispatch-authority-view, state-atomic-replace, state-ledger,
@@ -198,24 +198,25 @@ notes:
   - text: "Delivery plan phase 4 (one-shot dispatch command) complete. Tests green:
       dispatch-harness-lease, dispatch-envelope, dispatch-error-envelope,
       dispatch-merge-absence, dispatch-evidence-class (phase-4 confirmation),
-      golden dispatch-text and dispatch-errors, structure dispatch-merge-boundary,
-      dispatch-imports, dispatch-composition, tests/boundaries (149),
-      harness-spawn-env, entrypoint-composition, content-inventory,
-      dispatch-token-home, pnpm typecheck, pnpm check:boundaries. The dispatch
-      merge-absence boundary rule and its app/domain/cli fixtures are declared.
-      Envelope note: an attempt-stage classified failure carries result/outcome
-      plus a nested data.error (six fields); a pre-session refusal uses the
-      standard top-level error envelope. Production.ts composes only an honest
-      harness.capability.gap run surface until lane harness ports are composed."
+      golden dispatch-text and dispatch-errors, structure
+      dispatch-merge-boundary, dispatch-imports, dispatch-composition,
+      tests/boundaries (149), harness-spawn-env, entrypoint-composition,
+      content-inventory, dispatch-token-home, pnpm typecheck, pnpm
+      check:boundaries. The dispatch merge-absence boundary rule and its
+      app/domain/cli fixtures are declared. Envelope note: an attempt-stage
+      classified failure carries result/outcome plus a nested data.error (six
+      fields); a pre-session refusal uses the standard top-level error envelope.
+      Production.ts composes only an honest harness.capability.gap run surface
+      until lane harness ports are composed."
     type: info
     date: "2026-11-08"
   - text: "Delivery plan phase 5 (resume path and dispatch admission) complete.
       Tests green: dispatch-resume, dispatch-restart-budget,
       dispatch-resume-economics, economics-budget-exhaustion,
       economics-resume-attach, economics-restart-durability, content-inventory,
-      dispatch-token-home, pnpm typecheck. Restart admission and resume economics
-      are pure domain functions consumed by the one-shot loop; both refusals are
-      attempt-stage records (one each) with the Appendix G pairs."
+      dispatch-token-home, pnpm typecheck. Restart admission and resume
+      economics are pure domain functions consumed by the one-shot loop; both
+      refusals are attempt-stage records (one each) with the Appendix G pairs."
     type: info
     date: "2026-11-08"
   - text: "Delivery plan phase 6 (dual-run gate, summary, resolve, handover,
@@ -288,32 +289,31 @@ notes:
       execution descriptor, both store paths, allowlist) and composes the real
       HarnessSessionPort for the configured kind - opencode over the host spawn
       runner with the deny-by-default environment builder and the shared
-      classifier/liveness assembler, claude-code with its declared
-      spawn/collect capabilities - wired into the phase-4
-      createDispatchCommandRuntime with evidenceClass pilot and the
-      execution-environment descriptor. The daemon lane composition already
-      uses the same session port + descriptor + createLaneLaunchPlanner and
-      recordDaemonDispatchResult; no placeholder remains. Test:
-      tests/structure/dispatch-composition.test.ts proves a
+      classifier/liveness assembler, claude-code with its declared spawn/collect
+      capabilities - wired into the phase-4 createDispatchCommandRuntime with
+      evidenceClass pilot and the execution-environment descriptor. The daemon
+      lane composition already uses the same session port + descriptor +
+      createLaneLaunchPlanner and recordDaemonDispatchResult; no placeholder
+      remains. Test: tests/structure/dispatch-composition.test.ts proves a
       production-composed dispatch spawns through an injected runner; the
       dispatch-* suites (55 files, 306 tests), daemon-*, entrypoint-composition,
       pnpm typecheck, pnpm check:boundaries, and pnpm check (6418 pass, 4 skip,
       0 fail) are green."
     type: info
     date: "2026-11-08"
-  - text: "Pass 2 finalization commit d93658b: the production composition
-      resolves the harness settings from the real typed configuration branch
-      with no injected settings override, and the composition test injects only
-      the spawn runner. Re-ran the dispatch-*, daemon-*, and
-      entrypoint-composition suites, pnpm typecheck, pnpm check:boundaries, and
-      the full pnpm check (6418 pass, 4 skip, 0 fail)."
+  - text: "Pass 2 finalization commit d93658b: the production composition resolves
+      the harness settings from the real typed configuration branch with no
+      injected settings override, and the composition test injects only the
+      spawn runner. Re-ran the dispatch-*, daemon-*, and entrypoint-composition
+      suites, pnpm typecheck, pnpm check:boundaries, and the full pnpm check
+      (6418 pass, 4 skip, 0 fail)."
     type: info
     date: "2026-11-08"
-  - text: "Pass 2 test strengthening commit 43b6567: the production composition
-      test now also asserts the spawned environment is exactly the declared
-      allowlist (DELIVERY_WORK_PATH, HARNESS_MODEL, HARNESS_SMALL_MODEL) and
-      that the appended attempt carries evidenceClass pilot. Full pnpm check
-      re-run green (6418 pass, 4 skip, 0 fail)."
+  - text: "Pass 2 test strengthening commit 43b6567: the production composition test
+      now also asserts the spawned environment is exactly the declared allowlist
+      (DELIVERY_WORK_PATH, HARNESS_MODEL, HARNESS_SMALL_MODEL) and that the
+      appended attempt carries evidenceClass pilot. Full pnpm check re-run green
+      (6418 pass, 4 skip, 0 fail)."
     type: info
     date: "2026-11-08"
   - text: "Delivery pass 3 (plan phase 4 re-validation, production truth read)
@@ -343,10 +343,11 @@ notes:
       scope drift; the truth read needs a read-only rev-list --count branch
       history read, which the branch seam did not expose, so the seam gained
       `countCommits` (fixed argv, safe-ref validated) rather than dispatching
-      through merge execution. Tests green: dispatch-* behaviour/structure/golden
-      suites (229), closeout-* and daemon-* suites (326), queue-ready contract
-      and imports, content-inventory, pnpm typecheck, pnpm check:boundaries, and
-      the aggregate pnpm check (6426 pass, 4 skip, 0 fail, 766 files; boundaries,
-      prompt conformance, help coverage, and exports parity all green)."
+      through merge execution. Tests green: dispatch-*
+      behaviour/structure/golden suites (229), closeout-* and daemon-* suites
+      (326), queue-ready contract and imports, content-inventory, pnpm
+      typecheck, pnpm check:boundaries, and the aggregate pnpm check (6426 pass,
+      4 skip, 0 fail, 766 files; boundaries, prompt conformance, help coverage,
+      and exports parity all green)."
     type: info
     date: "2026-11-08"
