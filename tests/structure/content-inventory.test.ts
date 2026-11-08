@@ -146,6 +146,14 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "evaluateDispatchResumeEconomics",
     "planDispatchResume",
   ],
+  "core/src/domain/lane-launch-plan.ts": [
+    "createLaneLaunchPlanner",
+    "planLaneLaunch",
+  ],
+  "core/src/app/daemon-dispatch-result.ts": [
+    "daemonAttemptId",
+    "recordDaemonDispatchResult",
+  ],
   "core/src/domain/dispatch-result.ts": [
     "DISPATCH_FAILURE_KINDS",
     "DISPATCH_READ_FAILURE_SOURCES",

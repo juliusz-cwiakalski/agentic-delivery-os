@@ -185,3 +185,9 @@ export {
   type DispatchHandoverResult,
   type DispatchSummaryResult,
 } from "./dispatch-gate.js";
+export {
+  daemonAttemptId,
+  recordDaemonDispatchResult,
+  type DaemonDispatchResultInput,
+  type DaemonDispatchResultOutcome,
+} from "./daemon-dispatch-result.js";

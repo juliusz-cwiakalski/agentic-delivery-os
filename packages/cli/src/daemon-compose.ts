@@ -7,6 +7,7 @@
  */
 
 import {
+  createLaneExecutor,
   createNodeClock,
   createNodeProcessPort,
   createSupervisorAdapter,
@@ -28,6 +29,9 @@ import {
   recordResumeIntent,
   runSupervisionCycle,
   uninstallSupervisor,
+  createLaneLaunchPlanner,
+  recordDaemonDispatchResult,
+  type DispatchTruthReads,
 } from "@delivery-os/core";
 import {
   CONTROL_PROTOCOL_CURRENT,
@@ -57,6 +61,15 @@ import {
   QUEUE_MAX_ENTRIES,
   type StateStorePort,
   type SupervisorPort,
+  type HarnessExecutionEnvironmentDescriptor,
+  type HarnessEvidence,
+  type HarnessKind,
+  type HarnessSessionPort,
+  type LaneHandle,
+  type LaneLaunchRequest,
+  type DispatchEvidenceClass,
+  type DispatchHandoverState,
+  DISPATCH_DEFAULT_EVIDENCE_CLASS,
 } from "@delivery-os/core/contracts";
 import {
   appendBlockerQuestion,
@@ -121,6 +134,23 @@ export type DaemonComposition = {
   };
   /** The lane-liveness cadence; defaults to the heartbeat interval. */
   readonly livenessIntervalMs?: number;
+  /**
+   * The dispatch lane composition (GH-239 F-10): the harness session port, the
+   * execution-environment descriptor, and the declared environment names. When
+   * present, the production planner and executor become available and the
+   * daemon path records one attempt per classified lane.
+   */
+  readonly lane?: {
+    readonly session: HarnessSessionPort;
+    readonly descriptor: HarnessExecutionEnvironmentDescriptor;
+    readonly declaredEnvironment: readonly string[];
+    readonly lifecyclePrompt: (request: LaneLaunchRequest) => string;
+    readonly repository: string;
+    readonly handoverState: DispatchHandoverState;
+    readonly evidenceClass?: DispatchEvidenceClass;
+    readonly readTruth: () => Promise<DispatchTruthReads>;
+    readonly collectEvidence: (handle: LaneHandle) => Promise<HarnessEvidence | undefined>;
+  };
 };
 
 const supervisorDescriptor = (input: {
@@ -361,21 +391,61 @@ export const createDaemonCommandRuntime = (composition: DaemonComposition): Comm
     nowIso,
   });
   const watchState = createWatchState(composition.store);
+  const laneExecutor =
+    composition.executor ??
+    (composition.lane === undefined
+      ? undefined
+      : createLaneExecutor({
+          session: composition.lane.session,
+          planner: createLaneLaunchPlanner({
+            declaredEnvironment: composition.lane.declaredEnvironment,
+            lifecyclePrompt: composition.lane.lifecyclePrompt,
+          }),
+          descriptor: composition.lane.descriptor,
+        }));
   const supervise =
-    composition.executor === undefined
+    laneExecutor === undefined
       ? undefined
       : async () =>
           runSupervisionCycle({
             store: composition.store,
             fenceToken: composition.newFenceToken(),
             ports: {
-              executor: composition.executor!,
+              executor: laneExecutor,
               nextAction: composition.supervision?.nextAction ?? (() => undefined),
               claim:
                 composition.supervision?.claim ??
                 (() => ({ ok: false as const, code: "queue.precondition.unmet" })),
               release: composition.supervision?.release ?? (() => false),
               nowIso,
+              ...(composition.lane === undefined
+                ? {}
+                : {
+                    onCollected: async ({ action, lane, handle, collected }) => {
+                      const laneComposition = composition.lane;
+                      if (laneComposition === undefined) return;
+                      const evidence = await laneComposition.collectEvidence(handle);
+                      if (evidence === undefined) return;
+                      const reads = await laneComposition.readTruth();
+                      recordDaemonDispatchResult({
+                        store: composition.store,
+                        fenceToken: composition.newFenceToken(),
+                        ref: action.ref,
+                        repository: laneComposition.repository,
+                        sessionId: handle.sessionId,
+                        spawnOrdinal: lane.spawnOrdinal,
+                        harnessKind: handle.harnessKind as HarnessKind,
+                        evidenceClass:
+                          laneComposition.evidenceClass ?? DISPATCH_DEFAULT_EVIDENCE_CLASS,
+                        handoverState: laneComposition.handoverState,
+                        evidence,
+                        collected,
+                        reads,
+                        nowIso: nowIso(),
+                        newDivergenceId: () => `DIV-${action.ref}-${handle.sessionId}`,
+                      });
+                    },
+                  }),
               admitRestart: ({ action, lane }) => {
                 const read = recovery.readRestarts(action.ref);
                 if (!read.ok) return { outcome: "unevaluable" as const, code: read.code };

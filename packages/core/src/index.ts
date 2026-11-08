@@ -767,3 +767,14 @@ export {
   type DispatchHandoverResult,
   type DispatchSummaryResult,
 } from "./app/dispatch-gate.js";
+export {
+  createLaneLaunchPlanner,
+  planLaneLaunch,
+  type LaneLaunchPlanFacts,
+} from "./domain/lane-launch-plan.js";
+export {
+  daemonAttemptId,
+  recordDaemonDispatchResult,
+  type DaemonDispatchResultInput,
+  type DaemonDispatchResultOutcome,
+} from "./app/daemon-dispatch-result.js";

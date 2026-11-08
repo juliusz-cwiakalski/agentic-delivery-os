@@ -244,3 +244,13 @@ notes:
       scripts remain executable."
     type: info
     date: "2026-11-08"
+  - text: "Delivery plan phase 9 (daemon lane planner, executor composition,
+      supervision wiring, daemon-path attempt record) complete. Tests green:
+      dispatch-daemon-planner, dispatch-daemonless,
+      conformance/dispatch/dispatch-daemon-lane, daemon-lifecycle,
+      daemon-lane-supervision, daemon-contract, daemon-imports,
+      content-inventory, pnpm typecheck. The daemon path shares the one shared
+      classifier and truth derivation with the one-shot path and appends one
+      deterministic attempt per classified lane; a replay/resume appends none."
+    type: info
+    date: "2026-11-08"

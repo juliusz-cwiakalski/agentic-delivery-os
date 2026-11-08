@@ -687,3 +687,8 @@ export {
   type DispatchGateEvaluation,
   type DispatchRepositoryScope,
 } from "./dispatch-gate.js";
+export {
+  createLaneLaunchPlanner,
+  planLaneLaunch,
+  type LaneLaunchPlanFacts,
+} from "./lane-launch-plan.js";

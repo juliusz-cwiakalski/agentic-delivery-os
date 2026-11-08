@@ -11,6 +11,7 @@
 import type {
   DaemonLaneRecord,
   DaemonResumeIntent,
+  LaneCollectOutcome,
   LaneExecutorPort,
   LaneHandle,
   LaneObservation,
@@ -48,6 +49,18 @@ export type SupervisionPorts = {
     readonly action: SupervisionAction;
     readonly lane: DaemonLaneRecord;
   }) => StallRestartAdmission | Promise<StallRestartAdmission>;
+  /**
+   * The delivery-verdict collection seam (GH-239 F-10): the cycle hands the
+   * collected evidence to the owner's producer after `collect`, before the
+   * terminal lane record. Absent means no owner verdict is produced.
+   */
+  readonly onCollected?: (input: {
+    readonly action: SupervisionAction;
+    readonly lane: DaemonLaneRecord;
+    readonly handle: LaneHandle;
+    readonly observation: LaneObservation;
+    readonly collected: LaneCollectOutcome;
+  }) => void | Promise<void>;
 };
 
 export type StallRestartAdmission =
@@ -154,6 +167,15 @@ export const runSupervisionCycle = async (input: SupervisionInput): Promise<Supe
   }
   if (observation.done) {
     const collected = await input.ports.executor.collect(started);
+    if (input.ports.onCollected !== undefined) {
+      await input.ports.onCollected({
+        action,
+        lane: livenessLane,
+        handle: started,
+        observation,
+        collected,
+      });
+    }
     if (delivering.resumeIntent !== undefined) {
       await input.ports.executor.resume({
         handle: started,

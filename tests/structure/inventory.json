@@ -1,6 +1,7 @@
 {
   "core": [
     "src/app/control-server.ts",
+    "src/app/daemon-dispatch-result.ts",
     "src/app/daemon-preemption.ts",
     "src/app/daemon-reconcile.ts",
     "src/app/daemon-runtime.ts",
@@ -112,6 +113,7 @@
     "src/domain/harness-spawn-env.ts",
     "src/domain/harness-telemetry.ts",
     "src/domain/index.ts",
+    "src/domain/lane-launch-plan.ts",
     "src/domain/merge-freshness.ts",
     "src/domain/merge-gate-set.ts",
     "src/domain/merge-probe.ts",
