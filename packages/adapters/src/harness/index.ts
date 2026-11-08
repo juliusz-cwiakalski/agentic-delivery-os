@@ -20,6 +20,10 @@ export {
   type OpencodeHarnessOptions,
 } from "./opencode.js";
 export {
+  type HarnessReviewDeferral,
+  HARNESS_REVIEW_DEFERRALS,
+} from "./review-deferrals.js";
+export {
   attemptWrite,
   createBunSqliteStoreOpener,
   type HarnessOpenedStore,

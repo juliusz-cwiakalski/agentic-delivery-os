@@ -705,3 +705,16 @@ describe("TC-HARN-004 harness conformance registry coverage", () => {
     }
   });
 });
+
+describe("TC-CAP-002 capsule conformance registry coverage", () => {
+  test("the shipped capsule registry is a bijection with the event vocabulary", async () => {
+    const { CAPSULE_CONFORMANCE_REGISTRY, capsuleConformanceViolations } = await import(
+      "../../packages/testkit/src/conformance/capsule"
+    );
+    const { CAPSULE_EVENT_KINDS } = await import("../../packages/core/src/contracts/index");
+    expect(capsuleConformanceViolations(CAPSULE_CONFORMANCE_REGISTRY)).toEqual([]);
+    expect(CAPSULE_CONFORMANCE_REGISTRY.map((entry) => entry.kind).sort()).toEqual(
+      [...CAPSULE_EVENT_KINDS].sort(),
+    );
+  });
+});

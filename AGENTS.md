@@ -147,7 +147,8 @@ Agents learn across sessions. Committed memory lives in `.ai/memory/**`; ephemer
 - **Unique ids.** Promoted records take the monotonic next free id per prefix and year, unique across `lessons/` and `tacit/`, and never reused, including after supersession or pruning. Validation scans both `id` and `supersedes`; a duplicate or reused id is rejected, never reallocated.
 - **Reviewer independence.** `reviewer`, `readiness-reviewer`, and `decision-critic` keep no episodic memory and must not load coder reasoning or another agent's episodic memory; shared facts, decisions, and checklists are their only memory input. Mechanical roles (`committer`, `pr-manager`, `runner`) keep none.
 - **Caps and growth.** Your README entry point stays at or under 150 lines; the index stays at or under 200. When the README passes ~50 lines and distinct areas emerge, split into topic files inside your folder and leave one-line pointers; topic files load on demand.
-- **Promotion handoff.** Promote at consolidation, not capture. Route each candidate to exactly one home: operational lesson to `.ai/memory/lessons/`; heuristic to `.ai/memory/tacit/`; verified fact as a handoff proposal to `@doc-syncer` for `doc/spec/**`; decision as a handoff proposal to `@decision-advisor` for `doc/decisions/**`; repeated workflow or hard norm via the normal change process. `consolidate-memory` never writes `doc/spec` or `doc/decisions` itself, and policies and security rules remain owner-only.
+- **Promotion handoff.** Promote at consolidation, not capture. Route each candidate to exactly one home: operational lesson to `.ai/memory/lessons/`; heuristic to `.ai/memory/tacit/`; verified fact as a handoff proposal to `@doc-syncer` for `doc/spec/**`; decision as a handoff proposal to `@decision-advisor` for `doc/decisions/**`; repeated workflow or hard norm via the normal change process. Closeout executes this routing at the change boundary for change-capsule candidates: it home-writes accepted lessons/tacit with one index row, records sanctioned handoffs for fact/decision/norm/workflow, and rejects preference/fleet with declared reasons. `consolidate-memory` still owns full index rebuilds, pruning, supersession, and cross-folder edits and never writes `doc/spec` or `doc/decisions`; policies and security rules remain owner-only.
+- **Capsule completion.** A change folder is the memory capsule: an append-only `events.jsonl` written only by the owning commands (`phase`, `commit`, `verify`, closeout) and a `candidates/` directory with one `<id>.yaml` candidate file per memory proposal. Capsules stay self-contained through phases 1–10, so a command never writes another change's capsule. Closeout is the consolidation ceremony: it validates the capsule (including the `capsule.opened` first event and exactly one decision per candidate), ingests review verdicts, evaluates candidates against the capture bar and an evidence link, records exactly one promotion decision per candidate, applies accepted lessons/tacit to their home, records sanctioned handoffs, and appends the terminal close. The capsule is file-based and is not a state record kind; harness telemetry stays in the state-layer event log and is never copied into the capsule.
 - **Conflict reality.** Never claim memory is conflict-free. Same-role worktrees can edit one agent folder, and shared surfaces (`lessons/`, `tacit/`, the index) are consolidation-only apart from the first-capture row but still merge-conflict capable. Memory changes ride normal delivery PRs (same branch, same review).
 
 ## Extending the system
@@ -172,8 +173,12 @@ doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/
   ├── chg-<workItemRef>-spec.md
   ├── chg-<workItemRef>-plan.md
   ├── chg-<workItemRef>-test-plan.md
-  └── chg-<workItemRef>-pm-notes.yaml
+  ├── chg-<workItemRef>-pm-notes.yaml
+  ├── events.jsonl          # append-only capsule events, command-owned
+  └── candidates/           # one memory-promotion candidate per <id>.yaml file
 ```
+
+`events.jsonl` is written only by the command that owns the event: `phase`, `commit`, `verify`, and closeout. `candidates/` holds one candidate per file. Closeout validates the capsule, records one promotion decision per candidate, and appends the terminal `capsule.closed` event; see [Change Capsule](doc/spec/features/feature-capsule.md).
 
 Branches: `<type>/<workItemRef>/<slug>` (e.g., `feat/GH-456/some-feature`)
 

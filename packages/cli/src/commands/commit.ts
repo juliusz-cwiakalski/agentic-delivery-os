@@ -9,6 +9,7 @@
  */
 
 import {
+  capsuleDisclosureOf,
   type CommitActOutcome,
   type CommitActRequest,
   type CommitTransportPorts,
@@ -17,6 +18,8 @@ import {
 } from "@delivery-os/core";
 import {
   CANONICAL_PHASE_IDS,
+  type CapsuleDisclosure,
+  type CapsuleProducerPort,
   type CommitEnvelopeData,
   type CommitPlanPhaseContext,
   type CommitPlanPhaseKind,
@@ -55,6 +58,56 @@ export type CommitCommandRuntime = {
     readonly runtime: PhaseCommandRuntime;
     readonly extension: PhaseCommitExtension;
   };
+  /** The non-gating capsule append point (GH-240 F-2, DEC-2). */
+  readonly capsule?: CapsuleProducerPort;
+};
+
+/** Append one `commit.landed` event; never changes the primary outcome (F-2). */
+const appendCommitCapsule = (
+  runtime: CommitCommandRuntime,
+  input: {
+    readonly changeRef: string;
+    readonly commitSha?: string;
+    readonly parentSha?: string;
+    readonly messageSource: string;
+  },
+): CapsuleDisclosure | undefined => {
+  if (runtime.capsule === undefined) return undefined;
+  if (input.commitSha === undefined) {
+    return {
+      appended: false,
+      eventKey: "",
+      code: "capsule.commit-sha-absent",
+      detail: "a landed commit without a SHA cannot be keyed",
+    };
+  }
+  const eventKey = input.commitSha;
+  try {
+    return capsuleDisclosureOf(
+      runtime.capsule.append({
+        changeRef: input.changeRef,
+        writer: "commit",
+        kind: "commit.landed",
+        eventKey,
+        payload: {
+          commitSha: input.commitSha,
+          ...(input.parentSha === undefined || input.parentSha.length === 0
+            ? {}
+            : { parentSha: input.parentSha }),
+          messageSource: input.messageSource,
+          changeRef: input.changeRef,
+        },
+      }),
+      eventKey,
+    );
+  } catch {
+    return {
+      appended: false,
+      eventKey,
+      code: "capsule.append-failed",
+      detail: "the capsule append threw",
+    };
+  }
 };
 
 const failure = (summary: string): { readonly error: Record<string, unknown> } => ({
@@ -284,9 +337,17 @@ export const createCommitCommandDefinition = (
       const data = completed.data;
       if (data.outcome === "landed") {
         const envelope = envelopeFromPhase(changeRef, phaseIdFlag, data);
-        return envelope === undefined
-          ? internalFailure("phase completion returned malformed success data")
-          : { data: envelope };
+        if (envelope === undefined) {
+          return internalFailure("phase completion returned malformed success data");
+        }
+        const disclosure = appendCommitCapsule(runtime, {
+          changeRef,
+          ...(typeof data.commitSha === "string" ? { commitSha: data.commitSha } : {}),
+          messageSource: envelope.messageSource,
+        });
+        return {
+          data: disclosure === undefined ? envelope : { ...envelope, capsule: disclosure },
+        };
       }
       return {
         data: {
@@ -377,17 +438,35 @@ export const createCommitCommandDefinition = (
         excluded: act.excluded,
       });
     }
-    return {
-      data: dataFor({
-        changeRef,
-        act,
-        atomic: phaseIdFlag !== undefined,
-        ...(phaseIdFlag === undefined
-          ? {}
-          : { ledgerTransition: { phase: phaseIdFlag, noOp: true } }),
-        ...(degradedScope ? { degradedScope: true } : {}),
-      }),
-    };
+    if (act.kind !== "landed") {
+      return {
+        data: dataFor({
+          changeRef,
+          act,
+          atomic: phaseIdFlag !== undefined,
+          ...(phaseIdFlag === undefined
+            ? {}
+            : { ledgerTransition: { phase: phaseIdFlag, noOp: true } }),
+          ...(degradedScope ? { degradedScope: true } : {}),
+        }),
+      };
+    }
+    const disclosure = appendCommitCapsule(runtime, {
+      changeRef,
+      ...(act.commitSha === undefined ? {} : { commitSha: act.commitSha }),
+      ...(baselineHead.length === 0 ? {} : { parentSha: baselineHead }),
+      messageSource: act.messageSource,
+    });
+    const envelope = dataFor({
+      changeRef,
+      act,
+      atomic: phaseIdFlag !== undefined,
+      ...(phaseIdFlag === undefined
+        ? {}
+        : { ledgerTransition: { phase: phaseIdFlag, noOp: true } }),
+      ...(degradedScope ? { degradedScope: true } : {}),
+    });
+    return { data: disclosure === undefined ? envelope : { ...envelope, capsule: disclosure } };
   },
 });
 

@@ -9,7 +9,11 @@
  * a spawn surface.
  */
 import { execFile } from "node:child_process";
-import { CLOSEOUT_OPERATION_TIMEOUT_MS, PROTECTED_REF_NAMES } from "@delivery-os/core/contracts";
+import {
+  CAPSULE_MAX_DIFF_BYTES as CLOSEOUT_DIFF_MAX_BYTES,
+  CLOSEOUT_OPERATION_TIMEOUT_MS,
+  PROTECTED_REF_NAMES,
+} from "@delivery-os/core/contracts";
 
 /** One child-runner result; a non-zero exit is data, not a throw. */
 export type GitChildRunnerResult = {
@@ -27,6 +31,7 @@ export type GitChildRunner = (
     readonly timeout: number;
     readonly killSignal: "SIGKILL";
     readonly cwd?: string;
+    readonly maxBuffer?: number;
   },
 ) => Promise<GitChildRunnerResult>;
 
@@ -64,6 +69,13 @@ export type GitMutationResult =
       readonly detail: string;
     };
 
+/** One bounded merged-diff read (GH-240 F-5). */
+export type GitMergedDiffRead = {
+  readonly text: string;
+  readonly files: number;
+  readonly truncated: boolean;
+};
+
 /** Construction input for the git seam. */
 export type GitBranchSeamOptions = {
   /** Production default is the closeout operation timeout; tests may shorten it. */
@@ -75,6 +87,13 @@ export type GitBranchSeamOptions = {
 };
 
 /** The bounded git branch/checkout seam. */
+export type GitWorktreeFact = {
+  readonly path: string;
+  readonly branch?: string;
+  readonly head?: string;
+  readonly locked: boolean;
+};
+
 export type GitBranchSeam = {
   readonly readCheckout: (input: {
     readonly deliveryBranch: string;
@@ -86,6 +105,28 @@ export type GitBranchSeam = {
   }) => Promise<readonly GitBranchFacts[]>;
   readonly readBranch: (input: { readonly branch: string }) => Promise<GitBranchFacts | undefined>;
   readonly isCheckedOutElsewhere: (input: { readonly branch: string }) => Promise<boolean>;
+  /** List local worktrees from `worktree list --porcelain` (read-only). */
+  readonly listWorktrees: () => Promise<readonly GitWorktreeFact[]>;
+  /** The repository's top-level working directory (local read only). */
+  readonly currentWorktreePath: () => Promise<string | undefined>;
+  /** Whether one worktree path is clean (read-only, fixed argv). */
+  readonly isWorktreeClean: (input: { readonly path: string }) => Promise<boolean>;
+  /**
+   * One bounded added-line read of a recorded squash landing: fixed argv,
+   * no shell, local only. Absent refs are a classified absence, never a throw.
+   */
+  readonly readMergedDiff: (input: {
+    readonly squashSha: string;
+    readonly maxBytes?: number;
+  }) => Promise<GitMergedDiffRead | undefined>;
+  /**
+   * Remove one local worktree with a fixed argv array: no shell string, no
+   * force flag, and local-only. A git refusal is a refusal.
+   */
+  readonly removeWorktree: (input: {
+    readonly path: string;
+    readonly expectedHead?: string;
+  }) => Promise<GitMutationResult>;
   readonly isClean: () => Promise<boolean>;
   readonly resolveRef: (input: { readonly ref: string }) => Promise<boolean>;
   readonly restoreCheckout: (input: { readonly baseRef: string }) => Promise<GitMutationResult>;
@@ -111,6 +152,7 @@ const execFileRunner: GitChildRunner = (file, args, options) =>
         timeout: options.timeout,
         killSignal: options.killSignal,
         encoding: "utf8",
+        ...(options.maxBuffer === undefined ? {} : { maxBuffer: options.maxBuffer }),
         ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
       },
       (error, stdout, stderr) => {
@@ -143,11 +185,13 @@ const withTimeout = async (
   args: readonly string[],
   timeout: number,
   cwd: string | undefined,
+  maxBuffer?: number,
 ): Promise<GitChildRunnerResult> => {
   const operation = runner(file, args, {
     timeout,
     killSignal: "SIGKILL",
     ...(cwd === undefined ? {} : { cwd }),
+    ...(maxBuffer === undefined ? {} : { maxBuffer }),
   });
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<GitChildRunnerResult>((resolve) => {
@@ -168,8 +212,8 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
   const timeoutMs = options.timeoutMs ?? CLOSEOUT_OPERATION_TIMEOUT_MS;
   const runner = options.childRunner ?? execFileRunner;
 
-  const git = async (args: readonly string[]): Promise<GitChildRunnerResult> =>
-    withTimeout(runner, "git", args, timeoutMs, options.cwd);
+  const git = async (args: readonly string[], maxBuffer?: number): Promise<GitChildRunnerResult> =>
+    withTimeout(runner, "git", args, timeoutMs, options.cwd, maxBuffer);
 
   const stdoutOrThrow = async (args: readonly string[], operation: string): Promise<string> => {
     const result = await git(args);
@@ -275,6 +319,94 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
       return worktrees
         .slice(1)
         .some((block) => block.includes(`branch refs/heads/${input.branch}`));
+    },
+    currentWorktreePath: async () => {
+      try {
+        return (await stdoutOrThrow(["rev-parse", "--show-toplevel"], "top-level")).trim();
+      } catch {
+        return undefined;
+      }
+    },
+    isWorktreeClean: async (input) => {
+      if (!input.path.startsWith("/") || input.path.includes("\0")) return false;
+      const result = await git(["-C", input.path, "status", "--porcelain"]);
+      return result.status === 0 && result.stdout.trim().length === 0;
+    },
+    readMergedDiff: async (input) => {
+      if (!/^[0-9a-f]{40}$/.test(input.squashSha)) return undefined;
+      const maxBytes = input.maxBytes ?? CLOSEOUT_DIFF_MAX_BYTES;
+      const result = await git(
+        ["diff", "--no-color", "--unified=0", `${input.squashSha}^`, input.squashSha],
+        maxBytes + 64 * 1024,
+      );
+      if (result.status !== 0 && result.stdout.length === 0) return undefined;
+      const encoded = Buffer.from(result.stdout, "utf8");
+      const truncated = encoded.length > maxBytes || result.status !== 0;
+      const text = truncated ? encoded.subarray(0, maxBytes).toString("utf8") : result.stdout;
+      const files = text.split("\n").filter((line) => line.startsWith("diff --git ")).length;
+      return { text, files, truncated };
+    },
+    listWorktrees: async () => {
+      const output = await stdoutOrThrow(["worktree", "list", "--porcelain"], "worktrees");
+      return output
+        .split("\n\n")
+        .slice(1)
+        .map((block) => {
+          const lines = block.split("\n");
+          const path = lines
+            .find((line) => line.startsWith("worktree "))
+            ?.slice("worktree ".length);
+          const head = lines.find((line) => line.startsWith("HEAD "))?.slice("HEAD ".length);
+          const branch = lines
+            .find((line) => line.startsWith("branch refs/heads/"))
+            ?.slice("branch refs/heads/".length);
+          return {
+            path: path ?? "",
+            ...(branch === undefined ? {} : { branch }),
+            ...(head === undefined ? {} : { head }),
+            locked: lines.some((line) => line === "locked" || line.startsWith("locked ")),
+          };
+        })
+        .filter((worktree) => worktree.path.length > 0);
+    },
+    removeWorktree: async (input) => {
+      if (!input.path.startsWith("/") || input.path.includes("\0")) {
+        return { ok: false, code: "closeout.branch.unsafe", detail: "unsafe worktree path" };
+      }
+      // Re-observe head and cleanliness immediately before the destructive argv.
+      const worktrees = await git(["worktree", "list", "--porcelain"]);
+      if (worktrees.status !== 0) {
+        return { ok: false, code: "closeout.branch.unsafe", detail: "worktree list failed" };
+      }
+      const block = worktrees.stdout
+        .split("\n\n")
+        .find(
+          (entry) =>
+            entry.includes(`worktree ${input.path}\n`) || entry.endsWith(`worktree ${input.path}`),
+        );
+      const head = block
+        ?.split("\n")
+        .find((line) => line.startsWith("HEAD "))
+        ?.slice("HEAD ".length);
+      if (input.expectedHead !== undefined && head !== input.expectedHead) {
+        return {
+          ok: false,
+          code: "closeout.branch.unsafe",
+          detail: "worktree head changed before removal",
+        };
+      }
+      const clean = await git(["-C", input.path, "status", "--porcelain"]);
+      if (clean.status !== 0 || clean.stdout.trim().length > 0) {
+        return {
+          ok: false,
+          code: "closeout.branch.unsafe",
+          detail: "worktree is dirty or unreadable",
+        };
+      }
+      const result = await git(["worktree", "remove", input.path]);
+      return result.status === 0
+        ? { ok: true }
+        : { ok: false, code: "closeout.branch.unsafe", detail: "git refused the worktree removal" };
     },
     isClean: async () => {
       const output = await stdoutOrThrow(["status", "--porcelain"], "status");

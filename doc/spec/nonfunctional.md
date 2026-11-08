@@ -150,6 +150,7 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 | [Board](features/feature-owner-gate-sla.md#non-functional-requirements) | Pure evaluation/ranking/rendering within 50 ms; one bounded tracker read, at most one decision-history read, and one fence plus one append per newly defaulted gate. | `tests/behaviour/board-performance.test.ts`, `board-read-cost.test.ts`. |
 | [Blockers](features/feature-blockers.md#non-functional-requirements) | Pure validation/guard/ranking/rendering within 50 ms; one verified blocker-ledger read per list, digest, or brief invocation; one business read plus one fence, append, and coverage read per publish or answer; zero outbound requests. | `tests/behaviour/blockers-performance.test.ts`, `blockers-read-cost.test.ts`. |
 | [Harness Adapters](features/feature-harness-adapters.md) | Read-only harness-store extraction: query-only pragma before the first read, bounded indexed queries with no message/part scans, capped sessions, per-session agent/model groups, tools, agents, and models with explicit marks or warnings, machine payload at most 65 536 UTF-8 bytes, human disclosure at most 4 096 bytes / 24 lines; identical injected facts yield byte-identical output. | `tests/behaviour/harness-telemetry-*.test.ts`, `harness-output-bounds.test.ts`, `tests/checks/harness-determinism.test.ts` pin the read budget and byte bounds. |
+| [Change capsule](features/feature-capsule.md#5-non-functional-requirements) | At most 2,000 events and 2 MiB per capsule, 4 KiB per event payload, 100 candidates at 8 KiB each, one writer at a time per capsule with bounded retry, and a terminal close; a non-empty capsule starts with `capsule.opened`, every candidate is `<id>.yaml`, and every candidate has exactly one promotion decision; validation ≤ 2 s on reference fixtures; identical injected facts yield byte-identical event ordering, promotion decisions, and digest. | `tests/checks/capsule-{bounds,determinism,latency,privacy}.test.ts`, `tests/behaviour/capsule-{append,lock,reader,bounds}.test.ts`, `tests/behaviour/closeout-capsule-{validation,naming}.test.ts`. |
 | [Session lifecycle economics](features/feature-session-lifecycle-economics.md) | Pure deterministic budget, resume, evidence, and view folds with no clock or ambient read; the view derives from durable records alone with zero harness-store queries and zero writes. | `tests/checks/economics-determinism.test.ts`, `tests/behaviour/economics-view.test.ts` pin replay identity and the zero-query read posture. |
 | [Doctor](features/feature-doctor.md#non-functional-requirements) | Pure cap-sized aggregation within 50 ms; at most two single-page network reads (tracker and CI), one configuration resolve, one shared verified ledger read; no pagination, retry, or write. | `tests/behaviour/doctor-performance.test.ts` samples the median of 21 runs after warm-ups; `doctor-network-posture.test.ts` pins the read budget and shared-source read-once posture. |
 | [Merge and verify deploy](features/feature-merge-verify-deploy.md#invariants) | Pure freshness, waiver, and deploy-verdict evaluation; `merge` performs one verification read, one work-item read, one check-run page, one request-detail read, and only the declared git mutations; `verify deploy` performs one bounded trace read; the freshness bound defaults to 1800 s with at-bound stale. | `tests/behaviour/merge-probe.test.ts`, `merge-determinism.test.ts`, `verify-deploy-read-budget.test.ts`, `merge-bounds.test.ts`, `verify-deploy-bounds.test.ts`. |
@@ -324,19 +325,29 @@ over local stdio; the typed OpenCode entry remains a placeholder.
 - Bounds: list at most 100, prune at most 500; human 40 lines/8192 bytes, data
   524288 bytes. Liveness is activity within 15 minutes, not a PID/lock guarantee.
 - Evidence/test: provider parks tests; `tests/behaviour/session-admin-prune.test.ts`,
-  `session-admin-reboot.test.ts`, `session-admin-privacy.test.ts`,
+  `session-admin-reboot.test.ts`, `session-admin-privacy.test.ts`.
   `tests/behaviour/blockers-records.test.ts`, `blockers-record-integrity.test.ts`,
   `blockers-read-cost.test.ts`.
-- Closeout is a seven-step transaction, plan by default, `--apply` for mutation.
-  Command-specific production composition bridges raw clients, real git and state.
-  Verified `closeout.operation` history uses deterministic identities, fenced
-  appends, first-terminal reuse and failed-outcome retry; classified state/provider/
-  safety failures preserve consequences. The git seam rechecks protected refs,
-  merged head, checkout and foreign worktrees. This is a real replay substrate,
-  not a separate write-ahead-intent protocol or live crash experiment.
+- Closeout is a twelve-step transaction, plan by default, `--apply` for mutation.
+  Command-specific production composition bridges raw clients, real git, state,
+  the capsule runtime, and resolved harness settings; it derives real worktree
+  facts and the bounded merged-diff read, derives session attribution from the
+  harness store, and constructs the telemetry capture from the settings (an
+  injected runtime overrides it in tests). Verified `closeout.operation` history
+  uses deterministic identities, fenced appends, first-terminal reuse and
+  failed-outcome retry; classified state/provider/safety failures preserve
+  consequences. The git seam rechecks protected refs, merged head, checkout and
+  foreign worktrees and removes a delivery worktree only under the full
+  predicate. The transaction also closes the change capsule, records exactly one
+  promotion decision per candidate, and emits bounded judgment residue with the
+  additive `attention` exit; human mode renders the `JUDGMENT RESIDUE` section
+  and the capsule close summary. This is a real replay substrate, not a separate
+  write-ahead-intent protocol or live crash experiment.
   Evidence: `packages/core/src/state/closeout.ts`, `domain/closeout.ts`,
-  `packages/cli/src/edge.ts`, `tests/behaviour/closeout-integration.test.ts`;
-  real-local git/store with mocked providers inspected, not rerun.
+  `packages/cli/src/edge.ts`, `tests/behaviour/closeout-integration.test.ts`,
+  `tests/behaviour/closeout-composition-facts.test.ts`,
+  `tests/behaviour/closeout-convergence.test.ts`; real-local git/store with
+  mocked providers inspected, not rerun.
 - Watchdog teardown preserves a stranded commit under the attributed
   `watchdog-preserved/<lane>` ref, restores the declared base, removes only
   untracked lane-workspace residue, preserves unattributable content, and reports

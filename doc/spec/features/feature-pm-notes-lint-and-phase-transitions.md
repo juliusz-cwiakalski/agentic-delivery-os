@@ -2,12 +2,12 @@
 id: SPEC-PM-NOTES-LINT-AND-PHASE-TRANSITIONS
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-06
+last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The implemented M0-S10 surface: pm-notes schema and variant conformance through a read-only lint command with named targets, the phase command family as the only schema-validated write path for phase state with a nine-row idempotency matrix, default-on atomic record-plus-commit on completion with per-call and per-project opt-outs, total four-state re-run convergence over durable commit intent, delivery-registry transition records and a derived phase-state projection over the state layer, the pinned evidence vocabulary, the five pm-notes lint error rows, and the variant-era corpus boundary with an explicit exclusion manifest."
+summary: "The implemented M0-S10 surface: pm-notes schema and variant conformance through a read-only lint command with named targets, the phase command family as the only schema-validated write path for phase state with a nine-row idempotency matrix, default-on atomic record-plus-commit on completion with per-call and per-project opt-outs, total four-state re-run convergence over durable commit intent, delivery-registry transition records and a derived phase-state projection over the state layer, the non-gating capsule `phase.transition` append with a bounded disclosure, the pinned evidence vocabulary, the five pm-notes lint error rows, and the variant-era corpus boundary with an explicit exclusion manifest."
 links:
-  related_changes: ["GH-177", "GH-178", "GH-179", "GH-222", "GH-226", "GH-227"]
+  related_changes: ["GH-177", "GH-178", "GH-179", "GH-222", "GH-226", "GH-227", "GH-240"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -88,6 +88,10 @@ The registry declares one validated artifact boundary under its record-key prefi
 
 The per-change phase state is a derived document named `phase-state.<REF>.json` with shape `{ schemaVersion, changeRef, phases }`, where each phase entry is `{ started, completed }`. It is a pure fold of verified transition records: a completion sets the first-completion start and the latest completion, a reopen clears `completed` while keeping the recorded start, and no timestamp or non-fold field is stored, so a rebuild is byte-stable. The ledger is truth; the projection is disposable and atomically replaced.
 
+### Capsule phase append
+
+When a capsule producer port is injected, a landed phase completion or reopen also appends one `phase.transition` capsule event beside the delivery-registry state record. The event carries the phase id, the operation (`complete` or `reopen`), `outcome: "landed"`, the commit intent (`atomic` or `record-only`), and the commit SHA when present. The event key is derived from the phase id, operation, and commit SHA; when no SHA exists the transition timestamp supplies the third identity part, so a re-run of the same logical landing is a no-op append. The append is non-gating: a failed or thrown append becomes a bounded `capsule` disclosure in the command data, and the phase outcome and its state record are unchanged. No-op transitions append nothing, and no command writes another change's capsule. The capsule contract is in [Change Capsule](feature-capsule.md).
+
 ### Evidence vocabulary
 
 Landings carry `{ outcome: "landed" }` plus the reason on a reopen; a record-only completion carries the basis (`{ outcome: "landed", basis }`), and a convergent landing carries the reconciliation marker (`{ outcome: "landed", reconciliation }`). No-op completions carry `{ outcome: "no-op", basis: "already-completed", phase, completedAt }` plus `commitSkipped: "no-op"`; a record-only re-run carries `{ outcome: "no-op", basis, reconciliation: "intentional-no-op" }`; an interrupted atomic re-run with no pending work left carries `commitSkipped: "interrupted-atomic-no-pending-work"` with `{ outcome: "no-op", basis: "interrupted-atomic-no-pending-work" }` evidence; no-op reopens carry `{ outcome: "no-op", basis: "not-completed", phase, reason }`. Advisories use `{ class: "earlier-open", phases }` or `{ class: "outside-required-set", phase, variant }`. A verified-empty registry read carries `{ class: "verified-empty", target: "registry" }`.
@@ -132,6 +136,7 @@ Corpus acceptance derives its member set at run time from change folders dated 2
 
 - [Commit primitive](feature-commit-primitive.md) — the atomic record-plus-commit act, staging and safety, message generation, telemetry, and convergence classification the completion composes.
 - [State layer](feature-state-layer.md) — the ledger substrate, verified reads, fences, and derived-document replace the registry composes.
+- [Change capsule](feature-capsule.md) — the non-gating `phase.transition` append point and its bounded disclosure.
 - [Result contract and error table](feature-result-contract.md) — the envelope, the five `lint` rows, the five `commit` rows, the `verify` row, the classification chain, and the binding sync check.
 - [Verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md) — the read-only verification consumer, variant-aware finalization, and the delivery-result exit taxonomy.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) — tier rules and runtime-API confinement.

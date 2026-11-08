@@ -7,7 +7,7 @@
  * content never enters the output. Malformed lines degrade with warnings;
  * missing files are classified capture outcomes. No shell-out occurs.
  */
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   HARNESS_MAX_AGENTS,
@@ -28,7 +28,15 @@ import {
 
 /** One read result; a missing or unreadable file is data. */
 export type HarnessFileRead =
-  | { readonly ok: true; readonly bytes: number; readonly text: string }
+  | {
+      readonly ok: true;
+      readonly bytes: number;
+      readonly text: string;
+      /** Bytes actually read from disk (bounded by the caller's cap). */
+      readonly readBytes?: number;
+      /** Whether the file exceeded the requested byte cap. */
+      readonly truncated?: boolean;
+    }
   | { readonly ok: false; readonly code: "missing" | "unreadable" };
 
 /** The injected read-only file reader. */
@@ -37,6 +45,12 @@ export type HarnessFileReader = {
     directory: string,
   ) => { readonly ok: true; readonly paths: readonly string[] } | { readonly ok: false };
   readonly read: (path: string) => HarnessFileRead;
+  /**
+   * A bounded read used by the extractor: never loads more than `maxBytes`
+   * encoded bytes. When absent, the extractor falls back to `read` and refuses
+   * to treat UTF-16 code units as bytes.
+   */
+  readonly readBounded?: (path: string, maxBytes: number) => HarnessFileRead;
 };
 
 /** Production reader: local filesystem, read-only. */
@@ -61,6 +75,34 @@ export const createNodeFileReader = (): HarnessFileReader => ({
     } catch (error) {
       const code = (error as { readonly code?: unknown }).code;
       return { ok: false, code: code === "ENOENT" ? "missing" : "unreadable" };
+    }
+  },
+  readBounded: (path, maxBytes) => {
+    let descriptor: number | undefined;
+    try {
+      const info = statSync(path);
+      const length = Math.min(Math.max(0, maxBytes), info.size);
+      descriptor = openSync(path, "r");
+      const buffer = Buffer.alloc(length);
+      const read = readSync(descriptor, buffer, 0, length, 0);
+      return {
+        ok: true,
+        bytes: info.size,
+        readBytes: read,
+        truncated: info.size > maxBytes,
+        text: buffer.subarray(0, read).toString("utf8"),
+      };
+    } catch (error) {
+      const code = (error as { readonly code?: unknown }).code;
+      return { ok: false, code: code === "ENOENT" ? "missing" : "unreadable" };
+    } finally {
+      if (descriptor !== undefined) {
+        try {
+          closeSync(descriptor);
+        } catch {
+          // Closing a read-only descriptor is best effort.
+        }
+      }
     }
   },
 });
@@ -195,7 +237,10 @@ export const createClaudeTelemetryExtractor = (
     };
 
     for (const path of listed.paths) {
-      const read = options.reader.read(path);
+      const read =
+        options.reader.readBounded === undefined
+          ? options.reader.read(path)
+          : options.reader.readBounded(path, maxBytes);
       if (!read.ok) {
         failedSessions.push({ sessionId: null, reason: "session-capture-failed" });
         warnings.push({
@@ -205,11 +250,16 @@ export const createClaudeTelemetryExtractor = (
         continue;
       }
       let text = read.text;
-      if (text.length > maxBytes) {
-        text = text.slice(0, maxBytes);
+      const overCap =
+        read.truncated === true ||
+        read.bytes > maxBytes ||
+        Buffer.byteLength(read.text, "utf8") > maxBytes;
+      if (overCap) {
+        const encoded = Buffer.from(read.text, "utf8");
+        text = encoded.subarray(0, maxBytes).toString("utf8");
         warnings.push({
           reason: "truncated",
-          field: `${path}:omitted-bytes=${read.bytes - maxBytes}`,
+          field: `${path}:omitted-bytes=${Math.max(0, read.bytes - maxBytes)}`,
         });
       }
       const lines = text.split("\n").filter((line) => line.length > 0);

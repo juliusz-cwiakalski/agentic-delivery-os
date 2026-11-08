@@ -92,6 +92,12 @@ const validArguments = (operation: string, value: unknown): boolean => {
       return hasOnlyKeys(value, ["baseRef"]) && isNonEmptyString(value.baseRef);
     case "delete-branch":
       return hasOnlyKeys(value, ["branch"]) && isNonEmptyString(value.branch);
+    case "remove-worktree":
+      return (
+        hasOnlyKeys(value, ["worktreePath", "expectedHead"]) &&
+        isNonEmptyString(value.worktreePath) &&
+        (value.expectedHead === undefined || isNonEmptyString(value.expectedHead))
+      );
     default:
       return false;
   }

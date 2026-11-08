@@ -8,7 +8,7 @@ owners: [engineering]
 area: domain
 document_classification: working-analysis
 links:
-  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232, GH-234]
+  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232, GH-234, GH-240]
 summary: "Thin tooling vocabulary relationship map and disambiguation draft for Gate 4."
 ---
 
@@ -42,6 +42,7 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
 | AI provider availability | Supplies eligibility, parks and announcements to callers; model-profile selection consumes availability rather than redefining it. | [Provider engine](../spec/features/feature-provider-engine.md), [provider profiles](../spec/features/feature-provider-profiles.md) |
 | Local operational state | Supplies verified ledger evidence and rebuildable projections to consumers; it does not own upstream session content. | [State layer](../spec/features/feature-state-layer.md), [session administration](../spec/features/feature-session-database-admin.md) |
 | Learning evidence and retrospection | Folds collector-truth evidence into level reports; the independent sidecar owns evidence integrity while the validated registry owns level and run data. | [Retro evidence pipeline](../spec/features/feature-retro-pipeline.md), [audit ledger](../spec/features/feature-audit-ledger.md) |
+| Memory and change capsule | The change folder is the episode capsule: append-only events plus candidates. Closeout is the consolidation ceremony that records promotion decisions, home-writes lessons/tacit, and records sanctioned handoffs; the curator owns cross-folder maintenance. | [Change capsule](../spec/features/feature-capsule.md), [closeout](../spec/features/feature-closeout.md), [`.ai/memory/README.md`](../../.ai/memory/README.md) |
 | Harness execution and surfaces | A host runs sessions; a surface exposes capabilities. Typed cross-harness adapter parity is delivered at the port boundary; the dispatch engine is planned, distinct from existing prompt/plugin distribution. | [Harness adapters](../spec/features/feature-harness-adapters.md), [primitive surface](../planning/concepts/agent-primitive-surface.md) |
 
 ## Disambiguation at boundaries
@@ -76,6 +77,25 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
   indexing and derived documents are rebuildable. The upstream session database
   is a separate administration target, not that ledger. Session checkpointing
   does not restart the host. Metadata-only administration is not transcript access.
+- **Change capsule / state ledger / telemetry stream:** the capsule is a
+  file-based episode stream inside the change folder (`events.jsonl` plus
+  `candidates/`) with its own framing, lock, event-key dedup, and terminal close.
+  It is not a state record kind, not part of store salvage or index rebuild, and
+  not a telemetry stream. Harness telemetry stays in the state-layer event log
+  and is the only source `spend` reads; no telemetry statistic is copied into the
+  capsule. Capsule event kinds and writers are a closed vocabulary, and the
+  terminal `capsule.closed` is a marker, not an archive move.
+- **Promotion decision / judgment residue:** a promotion decision is exactly one
+  `promoted` or `rejected` verdict per candidate with a home or a closed reason,
+  recorded in the capsule. Judgment residue is a separate bounded list of items
+  that need human attention after the mechanical closeout sweep. A decision is
+  not residue, and residue is not an error envelope; it is data that can exit 1
+  through the `attention` class.
+- **Owed-flip marker / owed-flip dependent:** a merged-diff marker
+  (`todo-marker`, `when-merges-note`, `feature-flag`, `class-string`) names an
+  action owed after merge and is detected, never code-rewritten. An owed-flip in
+  the tracker steps moves an open direct dependent to `hand-back`. Both share the
+  closeout vocabulary but describe different surfaces.
 - **Delivery ledger / evidence sidecar:** the delivery state store's ledger is
   operational truth with fencing, salvage, and derived documents; the retro
   evidence sidecar is a separate collector-write-only artifact family with its

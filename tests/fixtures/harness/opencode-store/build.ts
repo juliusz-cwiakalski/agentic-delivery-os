@@ -25,6 +25,7 @@ export type StoreVariant =
   | "non-numeric-cost"
   | "missing-cost"
   | "orphan"
+  | "orphan-scope"
   | "broken-identity";
 
 export type BuiltStore = {
@@ -53,8 +54,8 @@ export const FULL_FIXTURE_TOTALS: FixtureTotals = {
 type MessageRow = {
   readonly id: string;
   readonly sessionId: string;
-  readonly agent: string;
-  readonly model: string;
+  readonly agent: string | null;
+  readonly model: string | null;
   readonly input: number;
   readonly output: number;
   readonly reasoning: number;
@@ -160,9 +161,11 @@ export const buildOpencodeStore = (
     readonly variant?: StoreVariant;
     readonly extraRoots?: number;
     readonly rootGroups?: number;
+    readonly workItemRef?: string;
   } = {},
 ): BuiltStore => {
   const variant = options.variant ?? "full";
+  const workItemRef = options.workItemRef ?? WORK_ITEM_REF;
   const directory = mkdtempSync(join(tmpdir(), "gh233-opencode-store-"));
   const path = join(directory, "opencode.db");
   const database = new Database(path);
@@ -174,9 +177,9 @@ export const buildOpencodeStore = (
     const insertSession = database.prepare(
       "INSERT INTO session (id, parent_id, work_item_ref, harness_version) VALUES (?, ?, ?, ?)",
     );
-    insertSession.run("ses_root", null, WORK_ITEM_REF, HARNESS_VERSION);
-    insertSession.run("ses_child_a", "ses_root", WORK_ITEM_REF, HARNESS_VERSION);
-    insertSession.run("ses_child_b", "ses_root", WORK_ITEM_REF, HARNESS_VERSION);
+    insertSession.run("ses_root", null, workItemRef, HARNESS_VERSION);
+    insertSession.run("ses_child_a", "ses_root", workItemRef, HARNESS_VERSION);
+    insertSession.run("ses_child_b", "ses_root", workItemRef, HARNESS_VERSION);
 
     const costValue = (row: MessageRow): string | number | null => {
       if (variant === "missing-cost") return null;
@@ -231,6 +234,62 @@ export const buildOpencodeStore = (
       insertPart.run("part_root_group_b", row.id, row.sessionId, row.tool ?? "edit");
     }
 
+    if (variant === "orphan-scope") {
+      for (let index = 0; index < 3; index += 1) {
+        const id = `ses_oop_${index}`;
+        insertSession.run(id, null, null, HARNESS_VERSION);
+        insertMessage.run(
+          ...valuesFor({
+            id: `msg_oop_${index}`,
+            sessionId: id,
+            agent: "agent-orphan",
+            model: "model-orphan",
+            input: 1,
+            output: 1,
+            reasoning: 0,
+            cacheRead: 0,
+            cacheWrite: 0,
+            cost: 0.01,
+            createdAt: "2026-11-06T00:00:09Z",
+            tool: "edit",
+          }),
+        );
+      }
+      insertSession.run("ses_other", null, "GH-999", HARNESS_VERSION);
+      insertMessage.run(
+        ...valuesFor({
+          id: "msg_other",
+          sessionId: "ses_other",
+          agent: "agent-other",
+          model: "model-other",
+          input: 2,
+          output: 2,
+          reasoning: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+          cost: 0.02,
+          createdAt: "2026-11-06T00:00:10Z",
+          tool: "edit",
+        }),
+      );
+      insertSession.run("ses_child_invalid", "ses_root", workItemRef, HARNESS_VERSION);
+      insertMessage.run(
+        ...valuesFor({
+          id: "msg_child_invalid",
+          sessionId: "ses_child_invalid",
+          agent: null,
+          model: null,
+          input: 1,
+          output: 1,
+          reasoning: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+          cost: 0.01,
+          createdAt: "2026-11-06T00:00:11Z",
+          tool: "edit",
+        }),
+      );
+    }
     if (variant === "orphan") {
       insertSession.run("ses_orphan", null, null, HARNESS_VERSION);
       const row: MessageRow = {
@@ -250,13 +309,13 @@ export const buildOpencodeStore = (
       insertMessage.run(...valuesFor(row));
     }
     if (variant === "broken-identity") {
-      insertSession.run(null, null, WORK_ITEM_REF, HARNESS_VERSION);
+      insertSession.run(null, null, workItemRef, HARNESS_VERSION);
     }
 
     const extraRoots = options.extraRoots ?? 0;
     for (let index = 0; index < extraRoots; index += 1) {
       const id = `ses_extra_${index}`;
-      insertSession.run(id, null, WORK_ITEM_REF, HARNESS_VERSION);
+      insertSession.run(id, null, workItemRef, HARNESS_VERSION);
       const row: MessageRow = {
         id: `msg_extra_${index}`,
         sessionId: id,

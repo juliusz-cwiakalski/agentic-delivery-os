@@ -7,6 +7,39 @@
 export type DomainPlaceholder = { readonly __tier: "domain" };
 
 export {
+  type CapsuleReviewIngestion,
+  capsuleCapBreach,
+  capsuleCaps,
+  capsuleDigest,
+  capsuleDisclosureOf,
+  capsuleEventGaps,
+  capsuleGateEventKey,
+  capsulePhaseEventKey,
+  capsulePromotionCounts,
+  canonicalCapsuleJson,
+  deriveCapsuleEventKey,
+  emptyCapsulePayload,
+  ingestReviewArtifacts,
+  isCapsuleCandidateClass,
+  isCapsuleCandidateStatus,
+  isCapsuleEventKind,
+  isCapsuleWriter,
+  parseCapsuleEvents,
+  payloadFieldViolations,
+  serializeCapsuleEvent,
+} from "./capsule.js";
+export type { CloseoutTelemetryRuntime } from "#contracts";
+export { evaluateDiffSweep } from "./closeout-diff-sweep.js";
+export { evaluateWorktreeSafety } from "./closeout-worktree.js";
+export {
+  type CandidateFileViolation,
+  candidateFileViolations,
+  evaluateCandidates,
+  isDeclaredRejectionReason,
+  normalizeCandidateStatement,
+  validateCandidate,
+} from "./capsule-candidates.js";
+export {
   type BlockerDelegationDecision,
   type BlockerGuardRequest,
   type BlockerGuardVerdict,

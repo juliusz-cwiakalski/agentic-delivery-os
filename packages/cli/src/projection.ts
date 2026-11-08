@@ -11,6 +11,7 @@ const PROJECTION: Readonly<Record<ProjectionClass, number>> = {
   success: 0,
   "user-validation": 1,
   "platform-provider": 2,
+  attention: 1,
 };
 
 /** Project a class to its fixed code; unknown input is rejected, never defaulted. */

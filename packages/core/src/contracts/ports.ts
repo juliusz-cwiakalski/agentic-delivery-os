@@ -147,6 +147,12 @@ export type DeliveryThread = {
   readonly threadId: string;
   readonly resolved: boolean;
   readonly commentCount: number;
+  /** The root comment author's login when the provider exposes it. */
+  readonly authorLogin?: string;
+  /** The normalized root-author kind; absent means unknown (fail closed). */
+  readonly authorKind?: "human" | "non-human" | "unknown";
+  /** The provider's author-association value when exposed. */
+  readonly authorAssociation?: string;
 };
 
 /** A delivery request's deterministic mergeability state (GH-178 DM-7). */

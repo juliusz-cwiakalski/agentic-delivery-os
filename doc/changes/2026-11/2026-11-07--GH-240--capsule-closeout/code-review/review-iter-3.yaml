@@ -1,0 +1,225 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-240
+branch: feat/GH-240/capsule-closeout
+status: PASS
+summary: >-
+  Restricted confirmation review of the pre-PR folds (c4834966, doc-sync
+  5089e628), verifying the iteration-2 PASS still holds. All five folded
+  findings are independently verified at their original sites. F-16: the diff
+  sweep now reads an action only from the four pinned tokens inside the marker
+  segment or an explicit `@action:<token>`; probe confirms ordinary hyphenated
+  prose (`retry-policy`, `read-only`) resolves via the declared action, an
+  explicit unknown `@action:do-something` is `out-of-vocabulary-action`, and an
+  explicit wrong-but-valid `@action:remove-guard` on a todo-marker is
+  `kind-mismatch`. F-17: GitHub `Mannequin` now normalizes to `unknown` (human,
+  fail-closed) while `Bot`/`App` stay `non-human`, verified by a provider test.
+  F-18: `capsulePhaseEventKey` adds a persisted `transitionId` discriminator for
+  no-commit transitions; the producer and the expected-event derivation share
+  it, two no-commit transitions of one phase get distinct keys, and a re-run
+  stays a no-op. F-19: a new `capsule-producer-port.test.ts` drives the exported
+  `createCapsuleProducerPort` directly (append, duplicate no-op, configured run
+  id, absent-capsule classified failure). F-21: `git diff --check
+  origin/main-tools...HEAD` is now clean. The doc-sync commit aligns the
+  current-truth docs and test plan to the same semantics (Mannequin→unknown,
+  declared-token/`@action` classification, `transitionId` phase key), and the
+  test plan revision log v1.5 records it with no TC id, oracle count, phase,
+  mutant, or coverage-count change. No pinned vocabulary, AC, DEC, NFR, TC
+  oracle or bound was changed beyond the findings; 61 TC ids and 44 mutants are
+  intact. Independent re-execution is green: full `bun test` 5606 tests / 5602
+  pass / 4 skip / 0 fail, the 44/44 mutant harness, typecheck, lint, format,
+  boundaries, error-table-sync (100/100), forbidden/privacy literals,
+  doc-distribution (81 docs), exit-code-literals, and a clean branch-range diff
+  check. Deferred items F-20 (plan over-listing, wording only) and F-22
+  (pre-existing non-atomic promotion crash window) are recorded with reasons in
+  the PM triage. One low residual (a single-word explicit `@action:` token is
+  not recognized) and one informational pre-existing recovery-path observation
+  are recorded; neither is blocking. The change is ready for quality gates and
+  DoD.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+fold_verifications:
+  - id: F-16
+    verdict: CLOSED
+    evidence:
+      - "packages/core/src/domain/closeout-diff-sweep.ts:29-59 (DECLARED_ACTION, EXPLICIT_ACTION, actionIn)"
+      - "tests/behaviour/closeout-merged-diff-ambiguous.test.ts (explicit @action + ordinary-prose cases)"
+    note: >-
+      Probe: `// TODO GH-183: fix the retry-policy bug` -> resolved close-todo;
+      `// when GH-183 merges, remove the read-only guard` -> resolved
+      remove-guard; `// TODO @action:do-something GH-183` ->
+      out-of-vocabulary-action; `// TODO @action:remove-guard GH-183` ->
+      kind-mismatch; `// feature_flag remove-guard GH-183` -> kind-mismatch.
+      Ordinary prose no longer suppresses resolution. Minor residual F-23.
+  - id: F-17
+    verdict: CLOSED
+    evidence:
+      - "packages/adapters/src/github/normalize.ts:60-66 (Mannequin -> unknown)"
+      - "tests/behaviour/providers/github-closeout-thread-authorship.test.ts (Mannequin test)"
+      - "doc/spec/features/feature-closeout.md (Mannequin -> unknown, fail-closed)"
+    note: >-
+      Bot/App remain non-human; a Mannequin-authored unresolved thread is unknown
+      and therefore never resolved (fail-closed human). Docs reconciled.
+  - id: F-18
+    verdict: CLOSED
+    evidence:
+      - "packages/core/src/domain/capsule.ts:254-278 (commitSha ?? transitionId)"
+      - "packages/cli/src/commands/phase.ts:696-704 (transitionId = data.timestamp)"
+      - "packages/cli/src/edge.ts:1503 (expected transitionId = payload.timestamp)"
+      - "tests/behaviour/capsule-phase-producer.test.ts (re-run no-op; two no-commit transitions distinct)"
+    note: >-
+      Producer and expected-event derivation share `capsulePhaseEventKey`; two
+      distinct no-commit transitions get distinct keys (proven by the new test
+      with an incrementing harness clock), and a re-run of the same landed
+      transition is the existing command no-op (test at line 59). Pre-existing
+      recovery-path observation recorded as F-24.
+  - id: F-19
+    verdict: CLOSED
+    evidence:
+      - "tests/behaviour/capsule-producer-port.test.ts (new; drives createCapsuleProducerPort)"
+      - "packages/cli/src/edge.ts:395"
+    note: >-
+      The production producer port is now exercised directly: an append lands
+      `capsule.opened` + `commit.landed` with the configured run id, a duplicate
+      key is a no-op, and an absent capsule returns the classified
+      `capsule.folder-absent` without throwing.
+  - id: F-21
+    verdict: CLOSED
+    evidence:
+      - "git diff --check origin/main-tools...HEAD (clean)"
+      - "c4834966 removed pm-notes trailing space and test-plan EOF blank line"
+    note: >-
+      Branch-range diff check reports no whitespace errors.
+findings:
+  - id: F-23
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: "packages/core/src/domain/closeout-diff-sweep.ts:30"
+    message: >-
+      `EXPLICIT_ACTION = /@action:\s*([a-z]+(?:-[a-z]+)+)\b/` only recognizes a
+      hyphenated token. A single-word explicit action such as `@action:deploy`
+      is therefore not recognized at all and the marker resolves via its
+      declared action, while the delivered doc says "an explicit
+      `@action:<token>` names an unknown token (`out-of-vocabulary-action`)".
+      Probe: `// TODO @action:foo GH-183` -> resolved close-todo. All four real
+      action tokens are hyphenated, so this affects only a malformed explicit
+      action; the F-16 requirement (hyphenated unknown token -> ambiguous) is
+      met.
+    suggestion: >-
+      Either widen the explicit-action regex to `@action:\s*([a-z][a-z-]*)\b`
+      so any explicit token is judged against the vocabulary, or narrow the doc
+      wording to "an explicit hyphenated `@action:<token>`". Cosmetic/robustness,
+      non-blocking.
+    suppressed: false
+  - id: F-24
+    severity: info
+    confidence: low
+    category: correctness
+    location: "packages/cli/src/commands/phase.ts:512"
+    message: >-
+      Out-of-scope observation (pre-existing, not introduced by this fold): the
+      `record-atomic-without-commit` recovery path returns `landed` with a new
+      `data.commitSha`, so the producer keys the phase event by that SHA, while
+      the pre-existing state record has no commitSha and the expected-event
+      derivation keys by its `transitionId` (timestamp). Reasoning suggests a
+      possible false `capsule-event-gap` on that recovery path. Iteration 2 had
+      the same commitSha-vs-empty divergence, and the F-13 end-to-end test covers
+      the atomic-with-commit path, not this recovery. Not exercised here.
+    suggestion: >-
+      If the path is reachable in practice, cover it in F-13 or align the
+      producer/expected key for an atomic record without a commit. Not blocking
+      and not part of the folded findings.
+    suppressed: false
+ready_for:
+  quality_gates: true
+  dod_check: true
+  notes: >-
+    All five folds are verified, no pinned contract changed, the full suite and
+    44/44 mutants are green, and deferred items are recorded. Proceed to
+    quality_gates and dod_check, then open the PR against main-tools.
+deferred_items:
+  - item: "F-20 plan over-listing"
+    reason: >-
+      Recorded in the PM triage (5b252fb3) and review-iter-2.yaml: P12 scope
+      lists a few unchanged files and says threads.ts is "extended" though it is
+      byte-unchanged. Wording/artifact-consistency only; deliberately deferred,
+      not a behavior change.
+  - item: "F-22 non-atomic promotion crash-window nuance"
+    reason: >-
+      Recorded in the PM triage and review-iter-2.yaml: a crash between a home
+      write and its promotion event can leave a record that a retry classifies as
+      `duplicate:<id>`. Pre-existing, unchanged by this change, no data loss and
+      no duplicate write; deferred.
+  - item: "GAP-C1..C6 live-provider/harness/state proxies"
+    reason: >-
+      Unchanged from iterations 1-2: authorship/telemetry/worktree/promotion/
+      retro are proven over recorded fixtures and temp repos per the declared
+      test-plan gaps.
+verification_commands:
+  - command: "bun test tests/behaviour/capsule-phase-producer.test.ts tests/behaviour/capsule-producer-port.test.ts tests/behaviour/closeout-merged-diff-ambiguous.test.ts tests/behaviour/closeout-merged-diff.test.ts tests/behaviour/providers/github-closeout-thread-authorship.test.ts tests/behaviour/providers/github-closeout-thread-privacy.test.ts"
+    result: "PASS — 24 pass, 0 fail (107 expect calls)"
+  - command: "bun test tests/behaviour/closeout tests/behaviour/capsule-"
+    result: "PASS — 285 pass, 0 fail (57 files)"
+  - command: "bun test tests/structure tests/checks/capsule-mutants.test.ts tests/checks/closeout-mutants.test.ts"
+    result: "PASS — 795 pass, 0 fail (90 files); 44/44 named mutants killed"
+  - command: "bun test (full aggregate, TMPDIR repo-local)"
+    result: "PASS — 5606 tests, 5602 pass, 4 skip, 0 fail (391s)"
+  - command: "pnpm typecheck"
+    result: "PASS — six workspace packages + tests/types tsc --noEmit"
+  - command: "pnpm lint"
+    result: "PASS — exit 0; 54 warnings / 12 infos, 0 errors"
+  - command: "pnpm format:check"
+    result: "PASS — exit 0"
+  - command: "pnpm check:boundaries"
+    result: "PASS — no dependency violations; ambient 111; entrypoints OK; secret-read 251 clean"
+  - command: "bun run scripts/checks/error-table-sync.ts"
+    result: "PASS — entries=100 documented=100"
+  - command: "bun run scripts/checks/forbidden-literals.ts"
+    result: "PASS — 5/5 scope classes, 0 violations"
+  - command: "bash scripts/.tests/test-doc-distribution.sh"
+    result: "PASS — 81 in-scope docs, no drift"
+  - command: "bun run scripts/checks/exit-code-literals.ts"
+    result: "PASS — no call-site exit literal outside projection"
+  - command: "git diff --check origin/main-tools...HEAD"
+    result: "PASS — clean"
+  - command: "probe: evaluateDiffSweep on prose / explicit-action cases"
+    result: "PASS — prose resolves; @action:do-something ambiguous; @action:remove-guard kind-mismatch; (info) @action:foo resolves (F-23)"
+  - command: "plan/test-plan invariants"
+    result: "PASS — 61 unique TC ids, 44 mutants, step list unchanged"
+not_verified:
+  - item: "Live GitHub thread authorship / live harness stores / live retro-merge state"
+    reason: >-
+      No network or credentials; proven over recorded fixtures per declared
+      GAP-C1/C2/C5.
+  - item: "record-atomic-without-commit recovery-path producer/expected key agreement"
+    reason: >-
+      Not independently exercised; reasoning suggests a possible commitSha vs
+      transitionId divergence (F-24). Pre-existing and not introduced by this
+      fold; flagged for the DoD owner.
+  - item: "In-repo host wiring of createCapsuleProducerPort into phase/commit/verify"
+    reason: >-
+      Composition remains caller-supplied; the exported function is now tested
+      directly (F-19), but no in-repo host calls it.
+  - item: "Aggregate pnpm check as one command"
+    reason: >-
+      Ran every constituent step individually (lint, format, typecheck, full
+      bun test, boundaries, exports-parity previously, error-table-sync, doc
+      distribution, exit literals); all pass.
+working_tree_note: >-
+  The only uncommitted change is the pre-existing pm-notes phase-status line
+  (review_fix iteration 3 / confirmation), not authored by this review. No
+  code/spec/plan/test file was modified and nothing was committed or pushed.
+reviewed_at: 2026-11-07T00:00:00Z
+next_step: >-
+  PROCEED — the iteration-2 PASS holds, all five folds are verified, and the
+  change is ready for quality gates and DoD. Optionally widen the explicit
+  `@action:` regex (F-23) in a trivial touch; F-24 is a pre-existing
+  recovery-path observation for the DoD owner.

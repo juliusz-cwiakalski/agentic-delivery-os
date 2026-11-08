@@ -12,6 +12,8 @@
  * exit codes.
  */
 import {
+  capsuleDisclosureOf,
+  capsulePhaseEventKey,
   type CommitActOutcome,
   type CommitActRequest,
   classifyCommitDelta,
@@ -31,6 +33,8 @@ import {
   type PmNotesParseFailure,
   type PmNotesVariant,
   REGISTRY_SCHEMA_VERSION,
+  type CapsuleDisclosure,
+  type CapsuleProducerPort,
   type StateFailure,
   type StateReadEvidence,
   type StateResult,
@@ -164,6 +168,8 @@ export type PhaseCommandRuntime = {
   readonly newFenceToken: () => string;
   /** Present when the edge wires the default-on atomic completion (GH-227). */
   readonly commit?: PhaseCommitExtension;
+  /** The non-gating capsule append point (GH-240 F-2, DEC-2). */
+  readonly capsule?: CapsuleProducerPort;
   /** Injected delivery-session facts for the shared guard (DEC-6). */
   readonly sessionFacts?: () => {
     readonly insideDeliverySession: boolean;
@@ -675,12 +681,75 @@ const actFailure = (act: Extract<CommitActOutcome, { kind: "failure" }>): Target
   },
 });
 
+/** Append one `phase.transition` event; never changes the primary outcome (F-2). */
+const appendPhaseCapsule = (
+  runtime: PhaseCommandRuntime,
+  input: {
+    readonly changeRef: string;
+    readonly phaseId: string;
+    readonly operation: string;
+    readonly commitSha?: string;
+    readonly commitIntent?: "atomic" | "record-only";
+    readonly transitionId?: string;
+  },
+): CapsuleDisclosure | undefined => {
+  if (runtime.capsule === undefined) return undefined;
+  const eventKey = capsulePhaseEventKey({
+    changeRef: input.changeRef,
+    phaseId: input.phaseId,
+    operation: input.operation,
+    ...(input.commitSha === undefined ? {} : { commitSha: input.commitSha }),
+    ...(input.transitionId === undefined ? {} : { transitionId: input.transitionId }),
+  });
+  try {
+    return capsuleDisclosureOf(
+      runtime.capsule.append({
+        changeRef: input.changeRef,
+        writer: "phase",
+        kind: "phase.transition",
+        eventKey,
+        payload: {
+          phaseId: input.phaseId,
+          operation: input.operation,
+          outcome: "landed",
+          ...(input.commitSha === undefined ? {} : { commitSha: input.commitSha }),
+          ...(input.commitIntent === undefined ? {} : { commitIntent: input.commitIntent }),
+        },
+      }),
+      eventKey,
+    );
+  } catch {
+    return {
+      appended: false,
+      eventKey,
+      code: "capsule.append-failed",
+      detail: "the capsule append threw",
+    };
+  }
+};
+
 const transitionTarget = async (
   runtime: PhaseCommandRuntime,
   grammar: Extract<Grammar, { kind: "complete" | "reopen" }>,
   noCommit: boolean,
 ): Promise<TargetSuccess | TargetFailure> => {
   const { changeRef, phaseId, kind } = grammar;
+  const finish = (data: Record<string, unknown>): TargetSuccess => {
+    if (data.outcome !== "landed") return { ok: true, data };
+    const commitSha = typeof data.commitSha === "string" ? data.commitSha : undefined;
+    const transitionId = typeof data.timestamp === "string" ? data.timestamp : undefined;
+    const disclosure = appendPhaseCapsule(runtime, {
+      changeRef,
+      phaseId,
+      operation: kind,
+      ...(commitSha === undefined ? {} : { commitSha }),
+      ...(transitionId === undefined ? {} : { transitionId }),
+      commitIntent: data.atomic === true ? "atomic" : "record-only",
+    });
+    return disclosure === undefined
+      ? { ok: true, data }
+      : { ok: true, data: { ...data, capsule: disclosure } };
+  };
   const read = runtime.readPmNotes(changeRef);
   if (!read.ok) return targetFailure(read) ?? internalFailure("target read");
 
@@ -699,7 +768,7 @@ const transitionTarget = async (
   if (!registry.ok) return stateFailure(registry.error);
 
   if (kind === "complete" && runtime.commit !== undefined) {
-    return completeWithCommit(runtime, runtime.commit, {
+    const committed = await completeWithCommit(runtime, runtime.commit, {
       changeRef,
       phaseId,
       timestamp,
@@ -719,6 +788,7 @@ const transitionTarget = async (
               }
             : undefined,
     });
+    return committed.ok ? finish(committed.data) : committed;
   }
 
   const folded = foldPhaseState(changeRef, registry.transitions);
@@ -761,23 +831,20 @@ const transitionTarget = async (
         ? { class: "earlier-open", phases: earlierOpen }
         : undefined;
 
-  return {
-    ok: true,
-    data: {
-      changeRef,
-      phase: phaseId,
-      operation: kind,
+  return finish({
+    changeRef,
+    phase: phaseId,
+    operation: kind,
+    outcome: "landed",
+    timestamp,
+    variant: verdict.variant,
+    ...(reason === undefined ? {} : { reason }),
+    ...(advisory === undefined ? {} : { advisory }),
+    evidence: {
       outcome: "landed",
-      timestamp,
-      variant: verdict.variant,
       ...(reason === undefined ? {} : { reason }),
-      ...(advisory === undefined ? {} : { advisory }),
-      evidence: {
-        outcome: "landed",
-        ...(reason === undefined ? {} : { reason }),
-      },
     },
-  };
+  });
 };
 
 /**

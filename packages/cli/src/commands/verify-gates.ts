@@ -9,6 +9,8 @@
 
 import type { MergeEffectiveGateSet } from "@delivery-os/core";
 import {
+  capsuleDisclosureOf,
+  capsuleGateEventKey,
   classifyVerifyDocument,
   EvaluateVerifyChange,
   evaluateDeclaredBattery,
@@ -26,6 +28,8 @@ import {
   verifyGatesUnknownIdentity,
 } from "@delivery-os/core";
 import {
+  type CapsuleDisclosure,
+  type CapsuleProducerPort,
   MERGE_GATE_VERIFICATION_SCHEMA,
   type MergeGateVerificationRecord,
   type PhaseTransitionRecord,
@@ -88,6 +92,54 @@ export type VerifyGatesCommandRuntime = {
   ) => { readonly ok: true } | { readonly ok: false; readonly code: string };
   /** The injected clock in epoch milliseconds (EVT-1 verification time). */
   readonly nowMs: () => number;
+  /** The non-gating capsule append point (GH-240 F-2, DEC-2). */
+  readonly capsule?: CapsuleProducerPort;
+};
+
+/** Append one `gate.outcome` event; never changes the primary outcome (F-2). */
+const appendGateCapsule = (
+  runtime: VerifyGatesCommandRuntime,
+  input: {
+    readonly changeRef: string;
+    readonly gateSet: string;
+    readonly headSha: string;
+    readonly gates: readonly {
+      readonly id: string;
+      readonly verdict: string;
+      readonly reason: string;
+    }[];
+  },
+): CapsuleDisclosure | undefined => {
+  if (runtime.capsule === undefined) return undefined;
+  const eventKey = capsuleGateEventKey(input.gateSet, input.headSha);
+  const gates = input.gates;
+  try {
+    return capsuleDisclosureOf(
+      runtime.capsule.append({
+        changeRef: input.changeRef,
+        writer: "verify",
+        kind: "gate.outcome",
+        eventKey,
+        payload: {
+          gateSet: input.gateSet,
+          headSha: input.headSha,
+          gates: gates.map((gate) => ({
+            gateId: gate.id,
+            verdict: gate.verdict,
+            reason: gate.reason,
+          })),
+        },
+      }),
+      eventKey,
+    );
+  } catch {
+    return {
+      appended: false,
+      eventKey,
+      code: "capsule.append-failed",
+      detail: "the capsule append threw",
+    };
+  }
 };
 
 type VerifyGatesFailure = { readonly ok: false; readonly error: Record<string, unknown> };
@@ -261,6 +313,13 @@ export const createVerifyGatesHandler = (runtime: VerifyGatesCommandRuntime): Co
     if (!appended.ok) {
       return failure("state", appended.code, `result=error; condition=${appended.code}`);
     }
+    const gateSetIdentity = `${gateSet.value.schemaVersion}:${gateSet.value.ids.join(",")}`;
+    const capsule = appendGateCapsule(runtime, {
+      changeRef: ref,
+      gateSet: gateSetIdentity,
+      headSha: record.headSha,
+      gates: evaluated.gates,
+    });
     if (evaluated.overall === "pass") {
       const data: Record<string, unknown> = {
         schemaVersion: VERIFY_GATES_SCHEMA_VERSION,
@@ -269,16 +328,26 @@ export const createVerifyGatesHandler = (runtime: VerifyGatesCommandRuntime): Co
         overall: "pass",
         summary: evaluated.summary,
         gates: evaluated.gates,
+        ...(capsule === undefined ? {} : { capsule }),
       };
       return { ok: true, data } satisfies VerifyGatesSuccess;
     }
     const summary = renderVerifyGatesFailureSummary(evaluated);
+    const failed = (kind: string, code: string): VerifyGatesFailure => ({
+      ok: false,
+      error: {
+        kind,
+        code,
+        summary,
+        ...(capsule === undefined ? {} : { capsule }),
+      },
+    });
     if (evaluated.overall === "fail") {
-      return failure("verify", "verify.gates.failed", summary);
+      return failed("verify", "verify.gates.failed");
     }
     const identity = verifyGatesUnknownIdentity(evaluated);
     return identity === undefined
-      ? failure("verify", "verify.gates.unavailable", summary)
-      : failure(identity.domainKind, identity.code, summary);
+      ? failed("verify", "verify.gates.unavailable")
+      : failed(identity.domainKind, identity.code);
   };
 };

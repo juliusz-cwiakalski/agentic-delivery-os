@@ -23,6 +23,7 @@ import {
 import type { CommandDefinition } from "../../../packages/cli/src/index";
 import { type CliDependencies, runCli } from "../../../packages/cli/src/index";
 import type {
+  CapsuleProducerPort,
   CommitSafetyOutcome,
   CommitSessionFacts,
   CommitTransportAvailability,
@@ -156,6 +157,8 @@ export type CommitHarnessOptions = {
   readonly availability?: Partial<CommitTransportAvailability>;
   readonly sessionFacts?: Partial<CommitSessionFacts>;
   readonly phaseCommit?: boolean;
+  /** The non-gating capsule producer port (GH-240 F-2). */
+  readonly capsule?: CapsuleProducerPort;
   /** `null` makes ref resolution fail; omitted resolves the fixture ref. */
   readonly resolvedRef?: {
     readonly ref: string;
@@ -367,6 +370,7 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
     newFenceToken,
     sessionFacts: () => sessionFacts,
     readChangeFolder: () => COMMIT_CHANGE_DIRECTORY,
+    ...(options.capsule === undefined ? {} : { capsule: options.capsule }),
   };
   const extension = createPhaseCommitExtension({
     store: commitStore,
@@ -400,6 +404,7 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
         nowIso: () => clock.nextIso(),
         newFenceToken,
         readChangeFolder: () => COMMIT_CHANGE_DIRECTORY,
+        ...(options.capsule === undefined ? {} : { capsule: options.capsule }),
         ...(options.resolvedRef === undefined
           ? { resolveRef: async () => ({ ref: COMMIT_REF, refSource: "branch" as const }) }
           : options.resolvedRef === null

@@ -10,7 +10,18 @@
  * data: it adds no core primitive-port field and no closed adapter operation.
  */
 import type { AdapterCapabilityDeclaration, CapabilityGapReason } from "./adapter-capabilities.js";
-import type { HarnessTelemetryWarning, HarnessTruncation } from "./harness-telemetry.js";
+import type {
+  CapsuleCandidateProjection,
+  CloseoutCapsuleData,
+  CloseoutResidueItem,
+} from "./capsule.js";
+import type { HarnessResult } from "./harness.js";
+import type {
+  HarnessTelemetryAppendReport,
+  HarnessTelemetryCapture,
+  HarnessTelemetryWarning,
+  HarnessTruncation,
+} from "./harness-telemetry.js";
 import type { DeliveryRequest, ProviderQualifiedIdentity, WorkItem } from "./ports.js";
 import type {
   StateAppendOutcome,
@@ -29,7 +40,7 @@ export const CLOSEOUT_OPERATION_PAYLOAD_SCHEMA = "delivery.closeout.operation.v1
 /** The additive state-ledger record kind (EVT-1, DM-4). */
 export const CLOSEOUT_OPERATION_RECORD_KIND = "closeout.operation" as const;
 
-/** The seven step ids in their binding order (F-2, PIN-2). */
+/** The step ids in their binding order (F-2, PIN-2; GH-240 F-12 additive). */
 export const CLOSEOUT_STEP_IDS = [
   "ticket-to-done",
   "lifecycle-label-sweep",
@@ -37,7 +48,12 @@ export const CLOSEOUT_STEP_IDS = [
   "owed-flip-sweep",
   "comment-resolution",
   "checkout-restore",
+  "worktree-cleanup",
   "branch-cleanup",
+  "merged-diff-sweep",
+  "retro-coverage-move",
+  "session-compaction",
+  "capsule",
 ] as const;
 
 /** Plan-mode outcome vocabulary (DM-3, PIN-5). */
@@ -73,6 +89,7 @@ export const CLOSEOUT_OPERATION_NAMES = [
   "resolve-delivery-thread",
   "restore-checkout",
   "delete-branch",
+  "remove-worktree",
 ] as const;
 
 /** The discriminated read-observation vocabulary (DM-11). */
@@ -251,13 +268,58 @@ export type CloseoutDeleteArguments = {
   readonly branch: string;
 };
 
+/** The canonical arguments for a `remove-worktree` operation. */
+export type CloseoutWorktreeArguments = {
+  readonly worktreePath: string;
+  /** The head observed at planning time; re-checked before removal. */
+  readonly expectedHead?: string;
+};
+
+/** The retro-coverage facts the plan consumes (GH-240 F-8, DM-9). */
+export type CloseoutRetroFacts = {
+  readonly available: boolean;
+  readonly collected: boolean;
+  readonly runId?: string;
+};
+
+/** The session-attribution facts the plan consumes (GH-240 F-9, DM-8). */
+export type CloseoutSessionFacts = {
+  readonly available: boolean;
+  readonly sessionIds: readonly string[];
+  readonly lastVerifiedCommit?: string;
+  readonly unresolvedQuestions?: number;
+  readonly workingStateFlushed?: boolean;
+  readonly eventLogFlushed?: boolean;
+  readonly truncated?: { readonly truncated: boolean; readonly omitted: number };
+};
+
+/** The injected, non-gating telemetry capture capability (GH-240 F-10). */
+export type CloseoutTelemetryRuntime = {
+  readonly extract: (input: {
+    readonly workItemRef: string;
+    readonly runId: string;
+  }) => Promise<HarnessResult<HarnessTelemetryCapture>>;
+  readonly append: (capture: HarnessTelemetryCapture) => StateResult<HarnessTelemetryAppendReport>;
+};
+
+/** The read-only worktree facts the plan consumes (GH-240 F-7, DM-7). */
+export type CloseoutWorktreeFacts = {
+  readonly present: boolean;
+  readonly safe: boolean;
+  readonly reason?: string;
+  readonly path?: string;
+  readonly head?: string;
+  readonly branch?: string;
+};
+
 /** The union of canonical operation arguments (PIN-4). */
 export type CloseoutCanonicalArguments =
   | CloseoutTransitionArguments
   | CloseoutWriteArguments
   | CloseoutThreadArguments
   | CloseoutRestoreArguments
-  | CloseoutDeleteArguments;
+  | CloseoutDeleteArguments
+  | CloseoutWorktreeArguments;
 
 /** Alias for the canonical argument union used by the plan and ledger. */
 export type CloseoutArguments = CloseoutCanonicalArguments;
@@ -308,6 +370,8 @@ export type CloseoutStep = {
   readonly operations: readonly CloseoutOperation[];
   readonly evidence: CloseoutEvidence;
   readonly truncation?: CloseoutTruncation;
+  /** Additive bounded step detail (GH-240 F-12, DM-5). */
+  readonly detail?: Readonly<Record<string, unknown>>;
 };
 
 /** The per-run outcome summary (F-13). */
@@ -337,6 +401,8 @@ export type CloseoutPlan = {
   readonly deliveryRequest?: CloseoutDeliverySummary;
   readonly steps: readonly CloseoutStep[];
   readonly summary: CloseoutSummary;
+  /** Additive planned residue (thread policy and diff ambiguous hits). */
+  readonly residue?: readonly CloseoutResidueItem[];
 };
 
 /** The additive telemetry-capture disclosure on the closeout output (GH-233). */
@@ -361,7 +427,41 @@ export type CloseoutData = {
   readonly ledgerKey?: string;
   /** Non-gating telemetry capture disclosure; absent when no capture ran. */
   readonly telemetryCapture?: CloseoutTelemetryDisclosure;
+  /** Additive bounded judgment residue (GH-240 F-11, DM-4). */
+  readonly residue?: readonly CloseoutResidueItem[];
+  /** Additive applied capsule outcome; absent in plan mode (F-3, DM-5). */
+  readonly capsule?: CloseoutCapsuleData;
 };
+
+/** The read-only capsule pre-flight facts the pure planner consumes (F-3). */
+export type CloseoutCapsuleFacts = {
+  readonly present: boolean;
+  readonly valid: boolean;
+  readonly refusal?: {
+    readonly code: string;
+    readonly detail: string;
+    readonly line?: number;
+  };
+  readonly events: number;
+  readonly candidates: number;
+};
+
+/** One event the durable state records say the capsule must contain (F-3). */
+export type CloseoutExpectedCapsuleEvent = {
+  readonly kind: string;
+  readonly eventKey: string;
+  readonly identity: string;
+};
+
+/** One ingested review verdict from a readable artifact (F-3, Appendix A). */
+export type CloseoutReviewVerdict = {
+  readonly iteration: number;
+  readonly verdict: string;
+  readonly artifact: string;
+};
+
+/** Re-exported for the closeout surface and tests to name one projection. */
+export type CloseoutCapsuleCandidate = CapsuleCandidateProjection;
 
 /** One appended `closeout.operation` ledger record (EVT-1, DM-4). */
 export type CloseoutOperationRecord = {
@@ -451,6 +551,15 @@ export type CloseoutGitRuntime = {
     readonly branch: string;
   }) => Promise<CloseoutBranchFact | undefined>;
   readonly isCheckedOutElsewhere: (input: { readonly branch: string }) => Promise<boolean>;
+  readonly listWorktrees?: () => Promise<
+    readonly {
+      readonly path: string;
+      readonly branch?: string;
+      readonly head?: string;
+      readonly locked: boolean;
+    }[]
+  >;
+  readonly removeWorktree?: (input: { readonly path: string }) => Promise<CloseoutWriteOutcome>;
   readonly isClean: () => Promise<boolean>;
   readonly resolveRef: (input: { readonly ref: string }) => Promise<boolean>;
   readonly restoreCheckout: (input: { readonly baseRef: string }) => Promise<CloseoutWriteOutcome>;

@@ -1,0 +1,476 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-240
+branch: feat/GH-240/capsule-closeout
+status: FAIL
+summary: >-
+  The capsule artifact (contract, append-only runtime, lock, cap, torn-tail
+  refusal, producers in phase/commit/verify, closeout close, promotion ceremony),
+  the merged-diff sweep, worktree predicate, compaction checkpoint, telemetry
+  preservation, additive step vocabulary, `attention` exit, error rows, and the
+  44-guard mutant harness are all genuinely delivered and green: typecheck,
+  boundaries, error-table sync, doc-distribution, privacy/secret/forbidden-literal
+  checks pass, 234 closeout behaviour tests pass in isolation, 788 structure
+  tests pass, and the 44 named mutants execute and are all killed. However the
+  change is NOT acceptable as-is. Two headline controls are engine-only and
+  unreachable in production: (1) the human-vs-non-human review-thread policy
+  never activates because nothing produces thread authorship facts — the GitHub
+  GraphQL query does not request the root author, `DeliveryThread` carries no
+  author, `planFacts` never sets `threadAuthorFacts`, and the engine's
+  "no authorship signal" branch resolves EVERY unresolved thread, so a real
+  closeout still erases human review questions (F-6/AC-F6-1/DEC-9 and the spec's
+  own human-review protection); (2) the retro-coverage step reads no registry —
+  `planFacts` never calls `readRetroRegistry`, `retro` is a host-injected option,
+  so a real closeout always reports `retro-coverage-unavailable` and exits 1.
+  A third blocking gap: capsule validation is documented as a read-only pre-flight
+  "before any mutation", but candidate schema/naming/zero-or-multiple-decision
+  validation only runs in the terminal `capsule` step; an independent probe showed
+  an invalid candidate schema results in ticket transitions, label writes,
+  thread resolution, checkout restore and `git branch -D` before the
+  `closeout.capsule-invalid` refusal. The plan's P5 provider/ports files and P8
+  registry-read/`session-attribution.ts`/`closeout-retro-coverage.ts` files are
+  absent from the diff and were not recorded as deviations. The remaining
+  findings are medium/low fidelity issues (duplicate apply residue, diff evidence
+  keyed by line number not content hash, marker action source, a stale
+  feature-spend claim, plan-mode diff residue, worktree TOCTOU, hardcoded caps)
+  plus one concurrency-only test flake. Remediation phase required.
+severity_breakdown:
+  critical: 1
+  high: 3
+  medium: 4
+  low: 5
+  info: 2
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: critical
+    confidence: high
+    category: spec-compliance
+    location: "packages/core/src/domain/closeout.ts:693"
+    message: >-
+      The human-vs-non-human review-thread policy is not wired in production.
+      `CloseoutPlanFacts.threadAuthorFacts` is never populated: the production
+      `createCloseoutComposition.planFacts` return has no such field
+      (packages/cli/src/edge.ts:1795-1815), `DeliveryThread` has no author field
+      (packages/core/src/contracts/ports.ts:146-150), and the GitHub GraphQL
+      `REVIEW_THREADS_QUERY` requests only `id/isResolved/comments.totalCount`
+      (packages/adapters/src/github/client.ts:122) with no root-author/actor, so
+      the adapter cannot supply the fact either. When the facts are absent the
+      engine takes `authors === undefined` and sets `resolvable = new Set(all
+      unresolved threads)`, i.e. it resolves EVERY unresolved thread — the exact
+      fail-open behaviour F-6/AC-F6-1/DEC-9 forbid ("unknown authorship is treated
+      as human (fail-closed)"). Consequently a real closeout still auto-resolves
+      human review threads and emits no `unresolved-human-thread` residue. Tests
+      pass only because every test injects `threadAuthorFacts` directly through
+      `makeFacts` (see tests/behaviour/providers/github-closeout-thread-authorship.test.ts,
+      closeout-attention-exit.test.ts, closeout-residue.test.ts); an independent
+      probe of the default harness showed `resolveDeliveryThread` is invoked for
+      the unresolved thread. The delivered doc compounds this: feature-closeout.md:160
+      discloses a "resolve-all" fallback (contradicting F-6), while :566 and :586
+      claim fail-closed identity-only residue. The plan's P5 task 5.2 required
+      extending `packages/core/src/contracts/ports.ts` and the GitHub
+      client/normalize/index surfaces with root-author facts; none of those files
+      is in the diff.
+    suggestion: >-
+      Extend `DeliveryThread` (additively) with the root author principal and an
+      actor-kind signal, request the root comment author (login plus bot/actor
+      kind and authorAssociation) in REVIEW_THREADS_QUERY, normalize to
+      `human`/`non-human`/`unknown` in the GitHub adapter, and derive
+      `threadAuthorFacts` in `planFacts`. Change the engine's absent-facts branch
+      to treat unresolved threads as `unknown` → human (fail closed), never
+      resolve-all; a provider that genuinely cannot supply authorship must emit a
+      declared gap/no-op, not resolve. Add a composition-level test that drives
+      `createCloseoutComposition` with the GitHub-normalized threads and asserts
+      human threads remain unresolved with residue; correct feature-closeout.md:160/566/586.
+    suppressed: false
+  - id: F-2
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: "packages/core/src/domain/closeout.ts:1710"
+    message: >-
+      Capsule validation is not the "read-only pre-flight ... before any closeout
+      mutation" that F-3/DEC-4/DoD-3 and the delivered doc (feature-closeout.md:221)
+      require. In apply mode `runCloseout` pre-flights only `capsule.read`
+      (parse/damage) and `readCandidates` (count/byte caps); candidate schema,
+      `<id>.yaml` naming, duplicate ids, and zero/multiple promotion decisions are
+      evaluated only inside the terminal `capsule` step (`executeCapsuleStep`,
+      lines 1444-1488 and 1558-1627), which runs last. Independent probe
+      (tests/fixtures/closeout harness, invalid `scope` candidate, apply): the run
+      executed `transitionWorkItem`, nine `writeWorkItem` calls,
+      `resolveDeliveryThread`, `restoreCheckout` and `deleteBranch` and only then
+      returned `closeout.capsule-invalid`. So an invalid capsule deletes the local
+      delivery branch and removes the worktree before refusing. AC-F3-2's literal
+      "no promotion write" still holds, but the pre-flight ordering contract and the
+      doc claim are violated.
+    suggestion: >-
+      Move the full apply-mode pre-flight ahead of the step loop: read, candidate
+      enumeration, `candidateFileViolations`, `evaluateCandidates` schema/decision
+      checks, duplicate-decision counts, and promotion `preflight` confinement —
+      reuse the block already present in plan mode — and return
+      `closeout.capsule-invalid` / `closeout.step.capsule.failed` before any
+      provider/git mutation. Add an apply test asserting zero provider/git calls
+      for each invalid-capsule row.
+    suppressed: false
+  - id: F-3
+    severity: high
+    confidence: medium
+    category: spec-compliance
+    location: "packages/cli/src/edge.ts:1813"
+    message: >-
+      Retro coverage is engine-only/fixture-supplied. F-8 and DoD-8 require the
+      step to read the delivered `retro.run` registry through its validated read
+      surface, but `createCloseoutComposition.planFacts` never calls
+      `readRetroRegistry`; `retro` is an injected `CloseoutRetroFacts` option
+      (edge.ts:1262, 1813, 1889/1924). Nothing in the repo produces that fact
+      except tests, so a real closeout with no host-supplied `retro` always renders
+      the step `skipped-gap`/`retro-registry-unavailable`, adds
+      `retro-coverage-unavailable` residue, and exits 1 on every run. The one
+      composition test injects `retro: { available: true, collected: false }`
+      (tests/behaviour/closeout-composition-facts.test.ts:135), so the registry
+      read is never proven. Plan P8 task 8.1 explicitly required reading the
+      registry; the named `closeout-retro-coverage.ts` file is also absent.
+    suggestion: >-
+      Derive `CloseoutRetroFacts` in `planFacts` from `readRetroRegistry(options.store)`
+      (find a level-`change` `retro.run` whose scope is the work item), keeping an
+      injected override for tests; add a composition test that seeds the real state
+      store and asserts collected/pending plus the read-only registry hash
+      unchanged. If host injection is the intended design, record it as a spec
+      refinement reopening F-8 rather than shipping a silently-always-gap step.
+    suppressed: false
+  - id: F-4
+    severity: high
+    confidence: high
+    category: plan-compliance
+    location: "doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/chg-GH-240-plan.yaml:763"
+    message: >-
+      Several declared P5/P8 scope files are absent from the delivered diff and the
+      omissions are not recorded as deviations. P5 scope names
+      `packages/core/src/contracts/ports.ts`,
+      `packages/adapters/src/github/client.ts`, `.../github/normalize.ts`,
+      `.../github/index.ts`, `tests/fixtures/closeout/threads.ts`, and
+      `tests/fixtures/providers/github/graphql-review-threads.json`; P8 names
+      `packages/core/src/domain/closeout-retro-coverage.ts`,
+      `.../closeout-compaction.ts`, and
+      `packages/adapters/src/harness/session-attribution.ts`. None is in the diff,
+      and (except the P8 file consolidation the pm-notes acknowledge) the
+      missing P5 provider/ports work is the root cause of F-1. Plan compliance
+      therefore fails on scope, not merely on placement.
+    suggestion: >-
+      Deliver the P5 provider/ports thread-author facts (F-1) and the P8
+      registry-read seam (F-3), or record each consolidation as an explicit plan
+      deviation with the behavioural consequence stated. Do not mark P5/P8
+      complete while their named production seams are absent.
+    suppressed: false
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: correctness
+    location: "packages/core/src/domain/closeout.ts:1855"
+    message: >-
+      Apply mode seeds `capsuleResidue` from `input.plan.residue` (which
+      `buildCloseoutPlan` already fills with `retro-coverage-unavailable` and
+      `session-attribution-gap`) and then the retro/session apply branches push the
+      same items again. Independent probe (apply, `retro.available: false`) returns
+      two identical `{kind: retro-coverage-unavailable, item: "the retro registry
+      is unavailable", location: "retro.registry"}` items. The same duplication
+      affects the session-attribution gap when it is seeded. Residue is meant to be
+      a deduplicated, deterministic attention list.
+    suggestion: >-
+      Do not pre-seed apply residue from the plan, or deduplicate residue by
+      `(kind,location,item)` in `orderResidue`. Add an apply assertion that
+      `retro-coverage-unavailable` and `session-attribution-gap` appear exactly
+      once.
+    suppressed: false
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: "packages/core/src/domain/closeout.ts:2021"
+    message: >-
+      The merged-diff owed-flip evidence key does not match F-5. F-5 requires the
+      `closeout.step` record to be "keyed by file path, line-content hash, marker
+      kind, and work-item ref"; the implementation derives the key from
+      `["closeout.step", filePath, hit.line, kind, ref]` where `hit.line` is the
+      added-line ordinal, and stores `lineHash: String(hit.line)` — a line NUMBER
+      in a field named `lineHash`. Idempotency therefore holds only because the
+      diff is anchored to an immutable squash SHA; a content change that preserves
+      the line position would collide. Separately, the sweep never reads the
+      declared `CLOSEOUT_DIFF_MARKERS[].action`; it uses
+      `CAPSULE_MARKER_ACTION_BY_KIND[kind]` and scans the line text for a known
+      action token (`actionIn`), so an out-of-vocabulary action token is invisible
+      (treated as absent/resolved) rather than `ambiguous-flip-hit`, and a reviewed
+      change to the marker data's `action` would be ignored. The delivered doc
+      (feature-closeout.md:154) was rewritten to this text-token reading, diverging
+      from spec F-5's "each marker's contract-data entry declares the action token
+      it carries, and the sweep reads it".
+    suggestion: >-
+      Key on a hash of the added line content (e.g. sha256 of the trimmed line) and
+      name the payload field accordingly; make the sweep read and trust
+      `marker.action`, marking a declared action outside the four tokens or unequal
+      to the kind mapping as ambiguous; add a negative test for an
+      out-of-vocabulary action and assert the key is content-based.
+    suppressed: false
+  - id: F-7
+    severity: medium
+    confidence: high
+    category: documentation-truth
+    location: "doc/spec/features/feature-spend.md:295"
+    message: >-
+      feature-spend.md still states "No production composer is wired yet; until
+      then a real store is telemetry-absent by contract." GH-240 makes this false:
+      `createCloseoutComposition` constructs the capture from resolved
+      `HarnessSettings`, and the composition test proves `harness.telemetry`
+      records land in the state log on apply. The line arrived with the merged
+      GH-236 spend doc on origin/main-tools and survived the merge; it is a
+      remaining stale "no production composer" claim presented as current truth.
+    suggestion: >-
+      Update the dependency note to the post-GH-240 reality: closeout now captures
+      harness telemetry into the state log, so a real closeout is no longer
+      telemetry-absent; keep the dependency on the neutral record vocabulary. Add
+      feature-spend.md to the neighbor-doc reconcile set.
+    suppressed: false
+  - id: F-8
+    severity: medium
+    confidence: medium
+    category: spec-compliance
+    location: "packages/core/src/domain/closeout.ts:143"
+    message: >-
+      Plan mode cannot render `ambiguous-flip-hit` residue. `CloseoutPlanFacts.diff`
+      carries only `{available, hits, ambiguous}` counts (closeout.ts:143-148,
+      795-808), and `buildCloseoutPlan` builds plan residue only from
+      worktree/retro/session/thread producers (1023-1090). The per-hit
+      `ambiguous-flip-hit` items (with `file:line`) are produced only inside the
+      apply loop (2010-2017). F-5/F-11 describe ambiguous hits as residue and plan
+      mode as rendering "the planned residue"; the delivered plan shows only a
+      count in step detail, so an operator cannot see the ambiguous locations
+      before applying.
+    suggestion: >-
+      Carry the bounded ambiguous hits (kind/location only) into `CloseoutPlanFacts`
+      (or have the plan builder run `evaluateDiffSweep` over the already-read diff)
+      and emit `ambiguous-flip-hit` items in plan residue; assert plan/apply
+      residue equality for the diff producer.
+    suppressed: false
+  - id: F-9
+    severity: low
+    confidence: high
+    category: code-quality
+    location: "packages/core/src/domain/closeout.ts:396"
+    message: >-
+      The `remove-worktree` operation is mislabelled: `operationFor` selects
+      `engine = git` only for `restore-checkout` and `delete-branch`, so
+      `remove-worktree` records the provider `systemName` (e.g. `github`) as its
+      engine, and `capabilityContextFor` maps it to the provider's
+      `write-work-item` capability context. A local git mutation's operation
+      identity/record therefore depends on unrelated provider capabilities.
+    suggestion: >-
+      Treat `remove-worktree` as a git-engine operation in `operationFor` and
+      give it a git-appropriate capability context (e.g. `supported`), so the
+      durable `closeout.operation` record and identity are semantically correct.
+    suppressed: false
+  - id: F-10
+    severity: low
+    confidence: high
+    category: code-quality
+    location: "packages/core/src/domain/closeout.ts:1957"
+    message: >-
+      Contract data is duplicated as literals in several places despite D-2
+      ("values live once in contract data; tests read them, never hardcode a
+      second copy"): session compaction slices `sessions.sessionIds.slice(0, 64)`
+      instead of `CAPSULE_MAX_SESSIONS`; the opening contract version is written as
+      the literal `"delivery.capsule.v1"` in `executeCapsuleStep` and in the
+      apply pre-flight instead of `CAPSULE_CONTRACT_VERSION`; and
+      `buildCloseoutPlan` re-assigns each step's `stepId` from
+      `closeoutStepDefinitions[index]`, hiding ordering/coupling instead of
+      letting each step function own its id.
+    suggestion: >-
+      Use `CAPSULE_MAX_SESSIONS` and `CAPSULE_CONTRACT_VERSION`; drop the index
+      re-assignment (each `planStep` already declares its id) or assert the push
+      order against `CLOSEOUT_STEP_IDS` in a structure test.
+    suppressed: false
+  - id: F-11
+    severity: low
+    confidence: medium
+    category: security
+    location: "packages/core/src/domain/closeout.ts:1218"
+    message: >-
+      Worktree removal has no last-moment re-observation, unlike branch deletion.
+      `deleteBranch` re-reads the branch head and requires `expectedHead` equality
+      immediately before `git branch -D` (packages/adapters/src/git/index.ts:369,
+      260-278), but `removeWorktree` takes only the path and calls
+      `git worktree remove <path>`; the merged-head/cleanliness facts were read
+      earlier during composition. Between plan facts and the destructive argv a
+      concurrent process could advance the worktree head (git's own refusal guards
+      dirty/locked, not moved-head). NFR-9/AC-F7-1 demand the full predicate hold at
+      removal; defense-in-depth parity with branch deletion is missing.
+    suggestion: >-
+      Re-read the worktree head and cleanliness immediately before removal and
+      pass an `expectedHead`-style guard (or re-run `evaluateWorktreeSafety` in the
+      apply step) so a head move after planning refuses instead of removing.
+    suppressed: false
+  - id: F-12
+    severity: low
+    confidence: medium
+    category: correctness
+    location: "packages/core/src/domain/capsule.ts:254"
+    message: >-
+      `capsulePhaseEventKey` falls back to the injected `occurredAt` when no
+      `commitSha` is present. For a record-only completion or a reopen (no commit
+      SHA) the key is therefore clock-derived, so re-running the same logical
+      transition at a different timestamp yields a different `eventKey` and a
+      second `phase.transition` event (the duplicate-key no-op cannot fire). AC-F2-1
+      says a re-run of the same logical event appends nothing.
+    suggestion: >-
+      Derive the key from stable identity (changeRef + phaseId + operation +
+      commitSha when present); if a no-SHA transition genuinely needs uniqueness,
+      use the phase-record identity rather than the wall clock, or explicitly
+      document that reopen is a distinct event and assert it.
+    suppressed: false
+  - id: F-13
+    severity: low
+    confidence: medium
+    category: test-efficacy
+    location: "packages/cli/src/edge.ts:1480"
+    message: >-
+      The production expected-event derivation `capsuleExpectedEvents` (phase/
+      commit/gate → eventKey) is not exercised end-to-end. Every cross-check test
+      injects `capsuleExpected` directly (tests/behaviour/closeout-capsule-gap.test.ts),
+      and the composition test seeds only a `merge.transaction` record. A drift
+      between a producer's key derivation and the expected-event derivation would
+      therefore surface only in production as spurious `capsule-event-gap` residue
+      (attention on every closeout), with no failing test. Review inspection of the
+      three derivations found them aligned, but this is unproven.
+    suggestion: >-
+      Add a composition/behaviour test that writes real `phase.transition`,
+      `commit.telemetry`, and `merge.gate-verification` records, runs the
+      producers (or their key helpers) and closeout, and asserts zero
+      `capsule-event-gap` residue for the matched change.
+    suppressed: false
+  - id: F-14
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: "packages/core/src/domain/closeout.ts:1371"
+    message: >-
+      The residue `+N` marker is appended as an extra item, so the array holds 51
+      entries when 50 real items are present; NFR-4 says "residue ≤ 50 items".
+      tests/behaviour/closeout-residue.test.ts explicitly pins
+      `CAPSULE_MAX_RESIDUE_ITEMS + 1`, so the interpretation is deliberate; noted
+      only because it is a literal divergence between NFR-4 and the binding oracle.
+    suggestion: >-
+      Either state in the spec that the `+N` marker is an additional sentinel not
+      counted toward the cap, or make the marker replace the final item; no code
+      change is required if the spec wording is amended.
+    suppressed: false
+  - id: F-15
+    severity: info
+    confidence: medium
+    category: test-efficacy
+    location: "tests/behaviour/closeout-composition-facts.test.ts:96"
+    message: >-
+      A combined high-concurrency run of ~93 closeout/structure files flaked once
+      at a temp-repo `git commit ("squash landing")` with SIGTERM/status null; the
+      same file passes in isolation (5/5) and the whole closeout behaviour folder
+      passes 234/234 serially. The suite spawns many git temp repositories; this is
+      environmental/parallelism fragility rather than a GH-240 logic defect, but it
+      means a single aggregate `bun test` run is not a reliable green signal.
+    suggestion: >-
+      If hardening: bound the temp-repo tests' concurrency (serialize the git-spawn
+      suites) or add retry tolerance for the fixture's git invocations. No change
+      required for this change.
+    suppressed: false
+deferred_items:
+  - item: "Live GitHub thread authorship (GAP-C1)"
+    reason: >-
+      The test plan declares authorship proven over recorded provider fixtures, not
+      live GitHub. Delivery is worse than the proxy: there is no provider author
+      parse at all (F-1). This is not a deferral that excuses F-1; it is listed so
+      the gap is explicit.
+  - item: "Live harness session stores (GAP-C2)"
+    reason: >-
+      Telemetry and session attribution are exercised over injected opencode/Claude
+      store fixtures; no live store is queried. Declared in test plan §17.
+  - item: "Worktree removal and promotion home writes (GAP-C3/C4)"
+    reason: >-
+      Proven on temporary local repositories / temporary memory trees; no live
+      operator checkout or production memory tree is touched. Declared.
+  - item: "Retro registry / merge transaction state (GAP-C5)"
+    reason: >-
+      Proven over injected state fixtures. This is precisely where F-3 shows the
+      production read seam is missing rather than deferred.
+  - item: "Marker vocabulary concrete patterns (GAP-C6/OQ-1)"
+    reason: >-
+      Patterns are delivery-bound declared data; the four kinds/actions/mapping are
+      pinned and tested. Adding patterns is a reviewed data change.
+  - item: "Adoption metrics (success-metrics.md rows GAP-C7/GAP-C12)"
+    reason: >-
+      `spend` post-closeout re-query count and manual re-grep rate are marked "not
+      measurable in this change" (M1-S19 / adoption trial). Declared honestly.
+  - item: "Decision records for capsule-vs-state/telemetry boundary and human-thread policy"
+    reason: >-
+      Routed recommendations in pm-notes; PM explicitly made them non-blocking.
+      The human-thread policy record should capture the production-wiring
+      correction from F-1 when authored.
+verification_commands:
+  - command: "pnpm typecheck"
+    result: "PASS — all six workspace packages plus tests/types tsc --noEmit"
+  - command: "pnpm check:boundaries"
+    result: "PASS — depcruise 277 modules / 749 deps, 0 violations; ambient-globals 111 clean; workspace-entrypoints OK; secret-read-boundary 251 clean"
+  - command: "bun run scripts/checks/error-table-sync.ts"
+    result: "PASS — entries=100 documented=100; source/document/fixtures agree"
+  - command: "bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts"
+    result: "PASS — 167 pass, 0 fail"
+  - command: "bun run scripts/checks/forbidden-literals.ts; privacy-literals.ts; testkit-exclusion.ts"
+    result: "PASS — 0 forbidden-literal violations; privacy 2842 files/0 violations; testkit excluded from published graph"
+  - command: "bash scripts/.tests/test-doc-distribution.sh"
+    result: "PASS — 81 in-scope docs, no drift"
+  - command: "bun run scripts/checks/exit-code-literals.ts"
+    result: "PASS — 237 files, no call-site exit literal outside the projection module"
+  - command: "bun test tests/behaviour/closeout"
+    result: "PASS in isolation — 234 pass, 0 fail (48 files)"
+  - command: "bun test tests/behaviour/closeout-capsule-closeout-capsule tests/behaviour/capsule- tests/behaviour/closeout-attention-exit.test.ts"
+    result: "PASS — 103 pass, 0 fail"
+  - command: "bun test tests/structure"
+    result: "PASS — 788 pass, 0 fail (88 files)"
+  - command: "bun test tests/checks/capsule-{bounds,determinism,latency,privacy,ci-parity,cli-parity}.test.ts tests/checks/error-table-sync.test.ts tests/checks/closeout-mutants.test.ts"
+    result: "PASS — 102 pass; latency capsule-validation 16.3ms/2s, diff 39.5ms/5s, attribution 4.9ms/5s, retro 2.9ms/2s, apply p95 22.6ms/120s"
+  - command: "bun test tests/checks/capsule-mutants.test.ts"
+    result: "PASS — 44/44 named mutants executed against isolated source+dist copies and killed with the declared signal; 0 survivors, 0 wrong-reason (10.3s)"
+  - command: "bun run /tmp probe: invalid candidate schema, closeout apply (fixtures/closeout harness)"
+    result: "CONFIRMS F-2 — exit 1 closeout.capsule-invalid AFTER transitionWorkItem, 9x writeWorkItem, resolveDeliveryThread, restoreCheckout, deleteBranch"
+  - command: "bun run /tmp probe: retro.available=false, closeout apply"
+    result: "CONFIRMS F-5 — two identical retro-coverage-unavailable residue items"
+  - command: "bun run /tmp probe: default facts (threadAuthorFacts undefined), closeout apply"
+    result: "CONFIRMS F-1 — resolveDeliveryThread invoked for the unresolved thread (fail-open)"
+not_verified:
+  - item: "Full aggregate `pnpm check` in one process"
+    reason: >-
+      Ran the constituent gates individually (typecheck, boundaries, error-table
+      sync, forbidden/privacy/secret literals, doc-distribution, exit-literals)
+      and the relevant test suites; did not run lint+format+all-tests in a single
+      `pnpm check` invocation. The pm-notes claim 5588 tests / 4 skip / 0 fail.
+  - item: "Live GitHub root-author data and live harness stores"
+    reason: >-
+      No network/credentials; the GitHub GraphQL query provably omits author fields
+      (client.ts:122), so live authorship cannot be verified and in fact cannot be
+      produced by the delivered code.
+  - item: "Production host wiring of `createCapsuleProducerPort` into phase/commit/verify"
+    reason: >-
+      The repo exposes the port and the runtimes accept an injected `capsule`, but
+      no installed-binary composition in this repo wires them; the architecture is
+      caller-supplied composition. Noted as a reachability concern, not proven
+      absent in host code outside this repo.
+  - item: "Real production closeout with no host-supplied `retro`"
+    reason: >-
+      Inferred from code (no `readRetroRegistry` in the composition); not executed
+      against a real host because none exists in-repo.
+reviewed_at: 2026-11-07T00:00:00Z
+next_step: >-
+  CALL_CODER — add a remediation phase that closes F-1..F-4 (thread authorship
+  production wiring + fail-closed absent-signal behavior; full apply pre-flight
+  before any mutation; retro registry read in planFacts; deliver or explicitly
+  record the P5/P8 scope deviations), then F-5..F-8, and fold F-9..F-13 as
+  low-cost fixes. Re-review after remediation, then quality gates, DoD check, and
+  PR to main-tools.

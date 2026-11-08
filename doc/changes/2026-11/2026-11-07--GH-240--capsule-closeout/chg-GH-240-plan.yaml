@@ -1,0 +1,1712 @@
+# GH-240 implementation plan — M1-S12: Change capsule completion and closeout expansion
+#
+# Plan revision: v1.3 (2026-11-07). APPENDED Phase 12 — review-iteration-1
+# remediation. Review artifact: ./code-review/review-iter-1.yaml (status FAIL;
+# F-1 critical, F-2/F-3/F-4 high, F-5..F-8 medium, F-9..F-13 low, F-14/F-15
+# info). PM-approved remediation set (chg-GH-240-pm-notes.yaml, 2026-11-07):
+# FIX F-1..F-13; RECORD F-14 (spec-wording follow-up) and F-15 (environmental
+# temp-repo flake, no task); F-7 and F-14 are routed to the doc-syncer/spec
+# wording, not P12 code. No existing phase, completed TC marker, oracle, AC,
+# NFR, DEC, or pinned contract is reshaped.
+#
+# F-4 plan-compliance reconciliation (declared -> actual; symmetric diff):
+#   P5 packages/core/src/contracts/ports.ts, packages/adapters/src/github/
+#     {client,normalize,index}.ts, tests/fixtures/closeout/threads.ts, and
+#     tests/fixtures/providers/github/graphql-review-threads.json EXIST; P12
+#     extends them for the thread root-author facts (F-1).
+#   P8 packages/core/src/domain/closeout-retro-coverage.ts -> superseded by
+#     packages/core/src/domain/closeout.ts (`retroStep` + apply branch); reason:
+#     one closeout plan/apply engine keeps step ordering and safety in one place.
+#     P12 wires the production registry read in packages/cli/src/edge.ts (F-3).
+#   P8 packages/core/src/domain/closeout-compaction.ts -> superseded by
+#     packages/core/src/domain/closeout.ts (`compactionStep` + apply branch);
+#     same single-engine reason. P12 keeps the session attribution seam in
+#     packages/cli/src/edge.ts (`sessionsFor`).
+#   P8 packages/adapters/src/harness/session-attribution.ts -> superseded by
+#     packages/cli/src/edge.ts (`sessionsFor`) over the delivered read-only
+#     harness telemetry extractors and `CloseoutSessionFacts`; reason:
+#     attribution is composition-level over the existing extractor seam, so no
+#     new adapter module is required.
+#   P6 packages/core/src/domain/capsule-residue.ts -> superseded by
+#     packages/core/src/domain/closeout.ts (`orderResidue` + `capsuleResidueOf`);
+#     reason: residue assembly is closeout-wide. Recorded so the declared-versus-
+#     actual diff is symmetric in both directions.
+#
+# Plan revision history: v1.2 (2026-11-07). DoR iteration-1 remediation: blocking findings
+# 1 (TC-CAP-004/010 completing-phase split) and 2 (TC-CAP-034 three-way split),
+# plus nits 10 (ubiquitous-language doc), 11 (golden regeneration script), and
+# current-artifact alignment (spec v1.3 / test plan v1.3, TC-CAP-017/020/021/022/
+# 023/053 shape claims). No oracle, AC, NFR, DEC, or pinned vocabulary reshaped.
+#
+# Sources (single source of truth):
+#   - Spec:  ./chg-GH-240-spec.md (v1.3; F-1..F-12; 26 ACs AC-F1-1..AC-F12-2;
+#     NFR-1..NFR-11; EVT-1..EVT-5; DM-1..DM-10; DEC-1..DEC-16; RSK-1..RSK-11;
+#     §14 OQ-1..OQ-5; §17.1 DoD-1..DoD-20; §18 delivery order P1..P11;
+#     Appendix C pinned vocabularies, including the four merged-diff action
+#     tokens, the path-confinement identities, and the explicit contradiction
+#     declaration).
+#   - Test plan: ./chg-GH-240-test-plan.md (v1.3; 61 TCs TC-CAP-001..061;
+#     44 named guard mutants MUT-CAP-01..44; §4 binding oracles; §5.1 scenario
+#     index; §7 automation mapping; §10 execution log; v1.2/v1.3 shape claims
+#     for TC-CAP-017/020/021/022/023/053).
+#   - Delivered code seams inspected: packages/core/src/contracts/{closeout,
+#     result,state,registry,harness-telemetry,error-table,plan,ports}.ts;
+#     packages/core/src/domain/{closeout,plan-validate,retro,capsule-*}.ts;
+#     packages/core/src/state/{closeout,harness-telemetry,retro-registry}.ts;
+#     packages/cli/src/{edge,projection,classify}.ts;
+#     packages/cli/src/commands/{closeout,phase,commit,verify-gates,verify}.ts;
+#     packages/adapters/src/git/index.ts; packages/adapters/src/harness/**;
+#     packages/adapters/src/file/**; .dependency-cruiser.cjs;
+#     scripts/checks/{error-table-sync,exit-code-literals}.ts.
+#
+# TC-mapping obligation (GH-225 GAP-1 discipline): all 61 TCs are mapped
+# EXACTLY ONCE to a completing phase below. A TC whose oracle needs a surface
+# delivered by a later spec §18 phase is marked in `coverage` with the earlier
+# subset and the completing phase; it appears in exactly one phase's
+# completing-TC set. The full completing map is:
+#   P1  : TC-CAP-001,002,003,005
+#   P2  : TC-CAP-007,008,009
+#   P3  : TC-CAP-004,006,010,011,013,014,015
+#   P4  : TC-CAP-012,016,017,018,019,020,021,022,023
+#   P5  : TC-CAP-024,025,026,027,028,029,030,031
+#   P6  : TC-CAP-032,033,035
+#   P7  : TC-CAP-036,037,038,039
+#   P8  : TC-CAP-040,041,042,043,044
+#   P9  : TC-CAP-045,046,047,048,049
+#   P10 : TC-CAP-034,050,051,052,053
+#   P11 : TC-CAP-054,055,056,057,058,059,060,061
+# (4+3+7+9+8+3+4+5+5+5+8 = 61; set-difference against TC-CAP-001..061 is empty.)
+# The SEVEN split-TC markers are TC-CAP-004, 006, 010, 011, 012, 016, and 034.
+# TC-CAP-052 is a golden-delta staging note (human-thread delta P5, final
+# twelve-step delta P10), not one of the seven completing-phase splits.
+#
+# Spec/test-plan cross-check (findings recorded, none silently adapted):
+#   1. CONSISTENCY FINDING (test plan §5.1 vs §5.2 TC-CAP-004): §5.1 places
+#      TC-CAP-004 in P1, but step 4 asserts closeout apply surfaces the
+#      retryable `state.lock.busy` identity; the closeout capsule step is P3.
+#      The P1 runtime lock half is P1; the completing phase is P3 (D-13).
+#   2. CONSISTENCY FINDING (test plan §5.1 vs §5.2 TC-CAP-010): §5.1 places
+#      TC-CAP-010 in P2, but step 5 runs closeout and asserts a
+#      `capsule-event-gap` residue and a valid close; the closeout capsule step
+#      is P3. The producer/self-containment half is P2; P3 completes it (D-13).
+#   3. CONSISTENCY FINDING (test plan §4.8/§5.1 vs §5.2 TC-CAP-034): §5.1 places
+#      TC-CAP-034 in P6, but step 5 asserts the `closeout.step.<id>.failed`
+#      family row (P10) and step 9 asserts the worktree-refusal fixture (P7).
+#      TC-CAP-034 is a three-way split: P6 attention/data-exit subset, P7
+#      worktree-refusal subset, completing P10 family-row/full-matrix proof
+#      (D-13).
+#   4. CONSISTENCY FINDING (test plan §5.1 vs §5.2 TC-CAP-006): §5.1 places
+#      TC-CAP-006 in P1, but step 4 requires the applied `capsule.closed: true`
+#      payload and the plan-mode absence of the additive `capsule` object,
+#      delivered by the closeout capsule step in spec §18 P3. P1 is the runtime
+#      close half; P3 completes it (D-13).
+#   5. CONSISTENCY FINDING (test plan §5.1 vs §5.2 TC-CAP-011): §5.1 places
+#      TC-CAP-011 in P2, but its step 5 requires closeout's `capsule-event-gap`
+#      cross-check against durable state records (spec F-3, §18 P3). P2 is the
+#      producer/self-containment half; P3 completes it (D-13).
+#   6. CONSISTENCY FINDING (test plan §4.3 valid-row oracle and §5.1 vs §5.2
+#      TC-CAP-012): §5.1 places TC-CAP-012 in P3, but the §4.3 valid row and
+#      TC-CAP-012 steps 1-2 assert one promotion event per candidate and
+#      `promotionEvents === candidateCount`, which requires the candidate model,
+#      capture bar, dedup, and routing delivered by spec §18 P4. P3 is the
+#      validation/damage half; P4 completes it (D-13).
+#   7. CONSISTENCY FINDING (test plan §5.1 vs §5.2 TC-CAP-016): §5.1 places
+#      TC-CAP-016 in P3, but its steps 3-4 and 7 assert promoted/rejected/
+#      handoff decisions per candidate, which require P4 routing. P3 is the
+#      capsule-object shape half; P4 completes it (D-13).
+#   8. CONSISTENCY FINDING (test plan §5.1 vs §4.10/TC-CAP-052): §5.1 places
+#      TC-CAP-052 in P10, but the human-thread golden delta is produced by the
+#      P5 behaviour change, while the twelve-step golden is completed in P10.
+#      D-10 stages the human-thread golden delta in P5; TC-CAP-052 completes in
+#      P10 (golden-delta staging, not a seventh split).
+#   No spec-internal inconsistency was found: §18 P1..P11, Appendix C, and the
+#   DoD `Proven in` column are mutually consistent. No TC is reshaped; only the
+#   completing phase is recorded where the test plan's phase column disagrees
+#   with its own binding oracle.
+#
+# Delivery-planning decisions (delivery-bound items; each is a placement,
+# spelling, or sequencing choice, never a behavioural deviation — a real
+# behavioural deviation reopens the spec/test plan instead of shipping):
+#   D-1 Placement. Capsule vocabulary and types land in the NEW runtime-neutral
+#       contract module packages/core/src/contracts/capsule.ts (types + `as const`
+#       data only). The closeout additive fields stay in
+#       packages/core/src/contracts/closeout.ts. Pure validation/evaluation lands
+#       in packages/core/src/domain/{capsule,capsule-candidates,capsule-residue,
+#       closeout-diff-sweep,closeout-thread-policy,closeout-worktree,
+#       closeout-retro-coverage,closeout-compaction}.ts plus the existing
+#       domain/closeout.ts. File-based capsule I/O and promotion home writes
+#       land in the EXISTING `./file` adapter subpath
+#       (packages/adapters/src/file/{change-folder,capsule,memory-promotion}.ts);
+#       worktree listing/removal lands in the EXISTING `./git` adapter subpath;
+#       session attribution lands in the EXISTING `./harness` adapter subpath.
+#       NO new adapters subpath and NO `.dependency-cruiser.cjs` allowance change
+#       is required (`./file`, `./git`, and `./harness` are already the declared
+#       runtime-API edges). The secret-read allowlist gains NO entry.
+#   D-2 Caps. Exact contract-data values from spec §9/NFRs: 2,000 events; 2 MiB
+#       per capsule; 4 KiB per event payload; 100 candidates at 8 KiB each; 200
+#       memory-index lines; 1 MiB diff text; 500 changed files; 200 diff hits;
+#       50 residue items; 100 unresolved threads per merged request; 65,536
+#       machine bytes; 16,384 human bytes / 200 human lines; 64 sessions per
+#       capture/attribution read. Values live once in contract data; tests read
+#       them, never hardcode a second copy.
+#   D-3 Candidate/index/digest spellings. Candidate file `<id>.yaml` with
+#       id `^[a-z0-9][a-z0-9-]{2,63}$` (no separators or `..`); required keys
+#       include status from `{candidate, authoritative, superseded}`, evidence
+#       exactly one of five shapes (`review-verdict:<ref>`, `ci-verdict:<ref>`,
+#       `human-correction:<ref>`, `merged-pr:<ref>`, `test:<ref>`), and optional
+#       `contradicts`; missing/empty basis is `capture-bar-unmet`, missing/empty
+#       evidence is `evidence-missing`, structural violations are
+#       `closeout.capsule-invalid`. Home records follow the declared
+#       `lesson-YYYY-NNN-<slug>.md`/`tacit-YYYY-NNN-<slug>.md` naming with
+#       monotonic cross-family id allocation (unique across lessons/tacit, never
+#       reused), plus one bounded Markdown index row keyed by record id. A
+#       pre-existing target resolves only as byte-identical `satisfied` no-op,
+#       same-identity `duplicate:<existing-id>`, or declared-contradiction
+#       `contradiction-requires-supersession`; never an overwrite. Capsule digest
+#       is lowercase SHA-256 hex over the canonical JSON of the pre-close event
+#       payloads (bounded to 64 hex chars). Test-plan §4.4/§4.9 assert
+#       semantics, not a frozen digest spelling.
+#   D-4 Marker data. `CLOSEOUT_DIFF_MARKERS` is declared contract data with the
+#       four pinned kinds (`todo-marker`, `when-merges-note`, `feature-flag`,
+#       `class-string`), the four pinned action tokens (`remove-guard`,
+#       `retire-flag`, `rename-class`, `close-todo`), the fixed kind→action
+#       mapping (`todo-marker`→`close-todo`, `when-merges-note`→`remove-guard`,
+#       `feature-flag`→`retire-flag`, `class-string`→`rename-class`), the
+#       attribution rule, and delivery-bound patterns. A hit resolves only when
+#       it names this work item and its declared action matches its kind's
+#       mapping; an out-of-vocabulary or kind-mismatched action is
+#       `ambiguous-flip-hit`. Patterns are reviewed data (TC-CAP-028), never a
+#       test-only widening; adding/changing one is a contract-data change.
+#   D-5 Error identities. Exact spellings: `closeout.capsule-invalid` (user,
+#       non-retryable, not_landed, user-validation/exit 1) and the family row
+#       `closeout.step.<id>.failed` (user, non-retryable, not_landed,
+#       user-validation/exit 1) whose slot is validated against
+#       `CLOSEOUT_STEP_IDS`. Lock contention reuses the delivered
+#       `state.lock.busy` row (transient, retryable, platform-provider/exit 2)
+#       and is never `closeout.capsule-invalid`. Promotion path confinement adds
+#       NO new error row: id/record-name outside the slug shape is
+#       `closeout.capsule-invalid` before any write; a resolved home outside the
+#       injected memory root after realpath is `closeout.step.capsule.failed`
+#       with zero writes and plan-mode `would-refuse`. The family recognizer is
+#       added to scripts/checks/error-table-sync.ts and its mutation suite; no
+#       generic `closeout.*` widening. Staging: `closeout.capsule-invalid` lands
+#       in P3 with the behavior that emits it; P4 declares the
+#       `closeout.step.<id>.failed` family row (so TC-CAP-021's path escape can
+#       classify `closeout.step.capsule.failed` at P4) and adds no path-specific
+#       row; P10 completes the twelve-slot validation/family-row proof and the
+#       consolidated error-table/documentation/golden proof.
+#   D-6 Session-compaction outcome. When sessions exist and the checkpoint is
+#       written, the step outcome is `skipped-gap` with
+#       `harness-compaction-unavailable` evidence: the checkpoint half landed,
+#       the harness invocation half is a declared capability gap (test-plan
+#       OQ-T4 allows `skipped-gap` or `satisfied`; this plan chooses the honest
+#       gap). No sessions is `skipped-noop`/`no-sessions`; attribution unavailable
+#       is `skipped-gap`/`session-attribution-unavailable` plus residue.
+#   D-7 Residue. Closed eight-kind vocabulary and declared order; item shape
+#       exactly `{item, kind, location}`; per-field caps are contract data; 50
+#       items maximum with an explicit omitted count and `+N`; no bodies,
+#       titles, transcripts, credentials, or free-form prose; failure-envelope
+#       rule F-11 applies (no structured `residue[]` beside an `error`).
+#   D-8 Attention. Add the additive `attention` projection class mapping to
+#       exit 1 for a data-bearing residue outcome; scripted success line shape
+#       is unchanged; no exit literal outside packages/cli/src/projection.ts.
+#   D-9 Test layout. Test files follow test-plan §7 exactly; fixtures are
+#       extended, never forked (`tests/fixtures/closeout/harness.ts`,
+#       `tests/fixtures/closeout/temp-git.ts`, `tests/fixtures/harness/**`,
+#       `tests/fixtures/retro/harness.ts`); mutants are generated temp copies,
+#       never committed mutated modules.
+#   D-10 Step wiring and golden staging. New step ids are added to
+#       `CLOSEOUT_STEP_IDS`/`closeoutStepDefinitions` in the phase that wires the
+#       step into `buildCloseoutPlan`; the affected closeout envelope/human
+#       goldens are updated in that same phase so every commit is green. The
+#       explicit reviewed golden writer is
+#       `tests/fixtures/closeout/golden/regenerate.ts` (the closeout goldens live
+#       under `tests/fixtures/closeout/golden`, not the test plan §4.1 illustrative
+#       capsule path); it is authored in P3, the first phase that changes golden
+#       bytes, and invoked in P3, P5, P7, P8, and P10. The FINAL twelve-id order,
+#       schema-identity assertion, consumer-tolerance proof, and consolidated
+#       twelve-step golden complete in P10. This is the sequencing that makes
+#       TC-CAP-052 a golden-delta staging note (human-thread delta P5, final
+#       twelve-step delta P10), not a behaviour change.
+#   D-11 Cross-check source. The capsule-event cross-check reads the delivered
+#       `phase.transition`, `commit.telemetry`, and `merge.gate-verification`
+#       state records through their existing verified read helpers; it adds no
+#       state record kind, no schema-version bump, and no migration.
+#   D-12 Release. One lockstep minor changeset
+#       `.changeset/gh-240-capsule-closeout-minor.md`; PR target is `main-tools`;
+#       merge and owner acceptance remain external.
+#   D-13 TC completion mapping. Where a TC's binding oracle requires a later
+#       spec §18 phase than the test plan's §5.1 phase column, the TC completes
+#       in the later phase and its earlier subset is marked in that earlier
+#       phase's coverage. The SEVEN split TCs are TC-CAP-004 (P1 runtime lock ->
+#       P3 closeout busy-lock complete), TC-CAP-006 (P1 runtime close -> P3
+#       applied payload complete), TC-CAP-010 (P2 producer non-gating -> P3
+#       closeout cross-check complete), TC-CAP-011 (P2 structure -> P3 complete),
+#       TC-CAP-012 (P3 validation -> P4 complete), TC-CAP-016 (P3 shape -> P4
+#       complete), and TC-CAP-034 (P6 attention/data-exit subset + P7
+#       worktree-refusal subset -> P10 family-row/full-matrix complete).
+#       TC-CAP-052 is separate: a golden-delta staging note (P5 human-thread
+#       delta -> P10 final twelve-step golden), not one of the seven. No oracle,
+#       AC, NFR, DEC, or pinned vocabulary is reshaped by this sequencing.
+#
+# Tier rationale: `full` — 12 capabilities, 26 ACs, 61 automated TCs, 44 named
+# mutants, cross-package delivery (core contracts/domain/state consumers,
+# adapters file/git/harness/github, CLI command/edge/projection, testkit
+# conformance, invariant checks), security_impact medium and risk_level high per
+# spec front matter, and an additive change to a published `delivery.closeout.v1`
+# contract. All phases are delivery kind; plan-level defaultLeases/
+# defaultWeightClass apply. Per-phase completion artifacts: one Conventional
+# Commit per phase (the `summary` key, landed via @committer) plus the
+# `testGate` commands passing; typed `doneArtifacts` are declared on the final
+# phase where the external evidence exists.
+#
+# Security-sensitive ordering (spec §21): capsule append/lock/torn-tail refusal
+# is P1 (first); promotion home writes are P4; the merged-diff sweep is P5; the
+# destructive worktree removal is P7; production telemetry wiring is P9. Each
+# predicate lands before the step that can use it, and no phase references a
+# surface that lands later in the same phase boundary.
+#
+# Invariants carried across phases: additive-only within `delivery.closeout.v1`
+# (DEC-7); contracts are types + `as const` only; the domain tier is pure (no
+# fs/network/clock/random); file I/O stays in declared adapter subpaths; no new
+# runtime dependency; the secret-read allowlist is unchanged; capsule events and
+# state telemetry are two streams with two owners (DEC-13, NFR-7); unknown
+# thread authorship is human (DEC-9, NFR-9); no source edit/commit/push/remote
+# write by closeout (NG-4); no invented harness compaction API (NG-3); no new
+# `db` subcommand/field (NG-7); the capsule is never relocated or compacted
+# (DEC-1, NFR-5); determinism under identical injected facts (NFR-1).
+
+# Validation record (delivered validatePlan path, GH-240, plan revision v1.3):
+#   verdict=valid, readyForDevelopment=true, totalErrors=0,
+#   artifact=chg-GH-240-plan.yaml (kind=yaml), schemaVersion=delivery.plan.v1,
+#   tier=full, phases=1..12, 61/61 TCs mapped exactly once (no orphan, no dup);
+#   seven split-TC markers: TC-CAP-004, 006, 010, 011, 012, 016, 034. P12 adds
+#   re-prove rows only and steals no completing marker.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-240
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+  escalationTriggers:
+    - "A valid capsule is refused as capsule-invalid (damage is asserted, not inferred)"
+    - "A human or unknown-authored review thread is resolved by any path"
+    - "A worktree is removed without the full predicate or with a force token"
+    - "Any harness telemetry statistic appears in a capsule event or capsule event in the state log"
+    - "A closeout consumer resolves a step by array position instead of stepId"
+    - "A closeout re-run produces a duplicate event, decision, resolution, deletion, removal, or telemetry record"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "P1 — Capsule contract, change-folder resolution, append-only file runtime, single-writer lock, caps, and torn-tail refusal (security core first)"
+    kind: delivery
+    weightClass: heavy
+    scope:
+      files:
+        - packages/core/src/contracts/capsule.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/capsule.ts
+        - packages/core/src/domain/index.ts
+        - packages/adapters/src/file/change-folder.ts
+        - packages/adapters/src/file/capsule.ts
+        - packages/adapters/src/file/plan-artifact.ts
+        - packages/adapters/src/file/index.ts
+        - packages/testkit/src/conformance/capsule.ts
+        - packages/testkit/src/index.ts
+        - tests/structure/capsule-contract.test.ts
+        - tests/conformance/capsule-events.test.ts
+        - tests/structure/conformance-coverage.test.ts
+        - tests/types/capsule.type-test.ts
+        - tests/behaviour/capsule-reader.test.ts
+        - tests/behaviour/capsule-lock.test.ts
+        - tests/behaviour/capsule-bounds.test.ts
+        - tests/behaviour/capsule-append.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/subpaths.test.ts
+      folders:
+        - tests/fixtures/capsule
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/capsule.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/file/capsule.ts
+        role: producer
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every testGate command green at the phase HEAD"
+      - "TC-CAP-001,002,003,005 complete; TC-CAP-004 and TC-CAP-006 structure halves recorded, not claimed complete"
+    summary: "feat(GH-240): capsule contract, shared change-folder resolution, append-only file runtime, lock, caps, torn-tail refusal"
+    tasks:
+      - >-
+        1.1 Author packages/core/src/contracts/capsule.ts as runtime-neutral contract data
+        (types + `as const` only, no call expressions, no runtime APIs): the
+        `delivery.capsule.event.v1` schema id and exact envelope key set; the closed
+        eleven-kind event vocabulary (capsule.opened, phase.transition, commit.landed,
+        gate.outcome, review.verdict, closeout.step, capsule.promotion,
+        capsule.retro-coverage, capsule.compaction-checkpoint, capsule.backfill-gap,
+        capsule.closed); the closed four-writer vocabulary (phase, commit, verify,
+        closeout); sequence/eventKey/occurredAt/payload shape; the caps (2,000 events,
+        2 MiB capsule, 4 KiB payload, 100 candidates, 8 KiB candidate, 200 index
+        lines); candidate classes/scope/capture-bar/trust/routing/rejection vocabularies;
+        the residue kind vocabulary/order; the four marker kinds; and the
+        capsule/promotion/checkpoint/coverage/detail payload types. Re-export through
+        contracts/index.ts. [F-1, F-4, F-5, F-6, F-8, F-9, F-11, F-12; DM-1..DM-9;
+        DEC-1, DEC-3, DEC-5, DEC-6, DEC-7, DEC-11, DEC-12, DEC-14; AC-F1-1, AC-F4-1,
+        AC-F11-1; TC: TC-CAP-002 vocabulary/type half, TC-CAP-017/028/032 data half
+        consumed later]
+      - >-
+        1.2 Add packages/adapters/src/file/change-folder.ts — the ONE read-only
+        change-folder resolver: iterate `YYYY-MM` month directories ascending, then
+        folder names ascending, and select the first folder whose name contains the
+        exact `--<ref>--` token; no month/folder creation, no archive tree, no
+        relocation; refactor packages/adapters/src/file/plan-artifact.ts to call it so
+        plan artifacts and the capsule share one convention. [DEC-1; AC-F1-1; TC:
+        TC-CAP-001]
+      - >-
+        1.3 Author packages/adapters/src/file/capsule.ts — the append-only capsule file
+        runtime over an injected filesystem/clock/id/lock seam: LF-terminated JSONL
+        read/validate (contiguous sequence, unique eventKey, closed kind/writer, no
+        line after capsule.closed, no torn tail), append with duplicate-eventKey no-op,
+        one exclusive per-capsule lock with bounded retry and release on every path,
+        cap refusal with no partial line and no truncation, atomic `candidates/`
+        creation, and a terminal close carrying decision counts/event count/digest.
+        Lock contention is the retryable `state.lock.busy` identity (transient,
+        platform-provider/exit 2) with a busy detail naming the capsule lock, never
+        `closeout.capsule-invalid`. A torn tail or malformed line is a classified
+        condition with ZERO writes and ZERO repair/truncation/reordering APIs. [F-1;
+        DM-1; DEC-3; NFR-2, NFR-5, NFR-11; AC-F1-1, AC-F1-2, AC-F1-3; TC: TC-CAP-003,
+        TC-CAP-004 runtime half, TC-CAP-005; TC-CAP-006 structure half]
+      - >-
+        1.4 Author the capsule conformance registry packages/testkit/src/conformance/capsule.ts
+        and the type probe tests/types/capsule.type-test.ts; extend
+        tests/structure/capsule-contract.test.ts (envelope key set, closed vocabularies,
+        sequence/eventKey uniqueness, cap data, data-only module scan),
+        tests/conformance/capsule-events.test.ts, tests/structure/conformance-coverage.test.ts,
+        tests/behaviour/capsule-reader.test.ts (torn tail, duplicate key, sequence gap,
+        post-close line, hash unchanged, no repair API), tests/behaviour/capsule-lock.test.ts
+        (runtime half only: exclusive acquisition, serialized concurrent appends,
+        bounded retry, busy disclosure; the closeout apply busy-lock assertion is
+        added in P3), tests/behaviour/capsule-append.test.ts (runtime terminal close:
+        one `capsule.closed`, no later append, prefix-preserving; the closeout
+        applied-payload/plan-mode assertion is P3), and
+        tests/behaviour/capsule-bounds.test.ts (cap refusal, no truncation). [F-1;
+        NFR-2, NFR-5, NFR-11; TC: TC-CAP-002, TC-CAP-003, TC-CAP-004 runtime half,
+        TC-CAP-005, TC-CAP-006 runtime half]
+      - >-
+        1.5 Register every new module and fixture in tests/structure/inventory.json and
+        content-inventory.test.ts; assert the declared `./file` subpath and no new
+        subpath; run the boundary check. No new runtime dependency; the secret-read
+        allowlist is unchanged. [NFR-10; TC: TC-CAP-001 registration half, TC-CAP-002
+        structure half]
+    coverage:
+      - "TC-CAP-001 (complete)"
+      - "TC-CAP-002 (complete)"
+      - "TC-CAP-003 (complete)"
+      - "TC-CAP-004 (structure half: exclusive lock, serialized appends, bounded retry, runtime disclosure; the closeout apply busy-lock assertion completes in P3)"
+      - "TC-CAP-005 (complete)"
+      - "TC-CAP-006 (structure half: terminal close at the file runtime; completes in P3)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/structure/capsule-contract.test.ts tests/conformance/capsule-events.test.ts tests/structure/conformance-coverage.test.ts tests/behaviour/capsule-reader.test.ts tests/behaviour/capsule-lock.test.ts tests/behaviour/capsule-bounds.test.ts tests/behaviour/capsule-append.test.ts"
+      - "bun test tests/structure/content-inventory.test.ts tests/structure/subpaths.test.ts"
+      - "pnpm check:boundaries"
+    invariants:
+      - "DEC-1/DEC-3: the capsule is the existing change folder; resolution is read-only; the event envelope is append-only, locked, deduplicated by eventKey, and terminal at capsule.closed"
+      - "NFR-2/NFR-5/NFR-11: all caps enforced by refusal; zero rewrites/truncation/repair; one writer at a time with bounded retry and disclosure; lock contention is the retryable state.lock.busy identity (exit 2), never closeout.capsule-invalid"
+      - "Contracts are types + as const only; file I/O stays in the existing ./file adapter subpath; no new dependency; secret-read allowlist unchanged"
+
+  - id: 2
+    title: "P2 — Capsule event production in phase, commit, and verify with deterministic event keys, non-gating disclosure, and self-containment"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/domain/capsule.ts
+        - packages/cli/src/commands/phase.ts
+        - packages/cli/src/commands/commit.ts
+        - packages/cli/src/commands/verify-gates.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/capsule-phase-producer.test.ts
+        - tests/behaviour/capsule-commit-producer.test.ts
+        - tests/behaviour/capsule-verify-producer.test.ts
+        - tests/behaviour/capsule-producer-nongating.test.ts
+        - tests/structure/capsule-imports.test.ts
+        - tests/fixtures/closeout/harness.ts
+        - tests/fixtures/commit/harness.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/verify
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every testGate command green at the phase HEAD"
+      - "TC-CAP-007,008,009 complete; TC-CAP-010 and TC-CAP-011 structure halves recorded"
+    summary: "feat(GH-240): phase/commit/verify capsule producers with idempotent non-gating appends"
+    tasks:
+      - >-
+        2.1 Extend packages/cli/src/commands/phase.ts with an optional injected capsule
+        append port: one `phase.transition` event per landed phase completion or reopen,
+        carrying phase id, operation, outcome, commit intent, optional commit SHA, and
+        timestamp; eventKey derived from phase+operation+commit SHA; a duplicate key is
+        a no-op; the delivered transition record and command outcome are unchanged and
+        the append is non-gating with a classified disclosure. [F-2; DEC-2; AC-F2-1;
+        NFR-6; TC: TC-CAP-007]
+      - >-
+        2.2 Extend packages/cli/src/commands/commit.ts with the same optional capsule
+        append port: one `commit.landed` event per landed commit carrying commit SHA,
+        parent SHA when known, message-source token, and change ref; never a message
+        body, diff content, or credential material; eventKey is the commit SHA. [F-2;
+        DEC-2; AC-F2-1; NFR-9; TC: TC-CAP-008]
+      - >-
+        2.3 Extend packages/cli/src/commands/verify-gates.ts with the optional capsule
+        append port: one `gate.outcome` event per full gate evaluation carrying the
+        gate-set identity, head SHA, and per-gate verdict/evidence summary; eventKey
+        derived from gate-set identity plus head SHA. [F-2; DEC-2; AC-F2-1; NFR-6;
+        TC: TC-CAP-009]
+      - >-
+        2.4 Compose the production capsule runtime into the three command edges in
+        packages/cli/src/edge.ts; a busy lock, absent folder, torn tail, or cap breach
+        is a classified, disclosed condition that changes no primary outcome and no
+        state record; busy contention is disclosed as the retryable
+        `state.lock.busy` identity (platform-provider/exit 2), never
+        `closeout.capsule-invalid`; add the structural scans that prove no agent
+        free-text write and no cross-change write (the capsule writer has exactly the
+        phase/commit/verify/closeout production importers). [F-2; DEC-2; AC-F1-3,
+        AC-F2-2; NFR-5, NFR-11; TC: TC-CAP-010 producer half, TC-CAP-011 structure
+        half]
+      - >-
+        2.5 Author tests/behaviour/capsule-phase-producer.test.ts,
+        capsule-commit-producer.test.ts, capsule-verify-producer.test.ts, and
+        capsule-producer-nongating.test.ts over the extended fixtures. The
+        producer-nongating suite carries the P2 half only (primary outcome, state
+        record, exit code unchanged; classified disclosure; no partial/fabricated
+        event; torn-tail hash unchanged); the step-5 closeout cross-check assertion is
+        added in P3. Extend tests/structure/capsule-imports.test.ts; run the delivered
+        phase/commit/verify suites unchanged to prove the no-regression half.
+        [AC-F1-3, AC-F2-1, AC-F2-2; TC: TC-CAP-007, TC-CAP-008, TC-CAP-009,
+        TC-CAP-010 producer half, TC-CAP-011 structure half]
+    coverage:
+      - "TC-CAP-007 (complete)"
+      - "TC-CAP-008 (complete)"
+      - "TC-CAP-009 (complete)"
+      - "TC-CAP-010 (producer/self-containment half: phase/commit/verify non-gating, classified disclosure, no fabricated event, torn-tail hash unchanged; the closeout capsule-event-gap assertion completes in P3)"
+      - "TC-CAP-011 (structure/self-containment half: import ownership and sibling-folder byte equality; the closeout cross-check half completes in P3)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/capsule-phase-producer.test.ts tests/behaviour/capsule-commit-producer.test.ts tests/behaviour/capsule-verify-producer.test.ts tests/behaviour/capsule-producer-nongating.test.ts tests/structure/capsule-imports.test.ts"
+      - "bun test tests/behaviour/phase-transitions.test.ts tests/behaviour/phase-envelope.test.ts tests/behaviour/phase-idempotency.test.ts tests/behaviour/commit-command.test.ts tests/behaviour/commit-convergence.test.ts tests/behaviour/commit-telemetry.test.ts tests/behaviour/verify-gates-lifecycle.test.ts tests/behaviour/verify-gates-surface.test.ts tests/behaviour/verify-envelope.test.ts"
+      - "pnpm check:boundaries"
+    invariants:
+      - "DEC-2: events are written only by their owning command; no free-text agent write; no cross-change write in phases 1-10"
+      - "NFR-5/NFR-6/NFR-11: non-gating append; duplicate eventKey no-op; primary outcome and durable state record unchanged; busy contention is disclosed as state.lock.busy (retryable, exit 2), never closeout.capsule-invalid"
+      - "NFR-9: commit payload is body-free; gate payload is evidence-only; no credentials or free-form prose"
+
+  - id: 3
+    title: "P3 — Capsule validation and the closeout capsule step: pre-contract completion, review-verdict ingestion, cross-check residue, terminal close, and capsule-invalid"
+    kind: delivery
+    weightClass: heavy
+    scope:
+      files:
+        - packages/core/src/contracts/capsule.ts
+        - packages/core/src/contracts/closeout.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/domain/capsule.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/cli/src/commands/closeout.ts
+        - packages/cli/src/edge.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/behaviour/closeout-capsule-close.test.ts
+        - tests/behaviour/closeout-capsule-gap.test.ts
+        - tests/behaviour/closeout-capsule-validation.test.ts
+        - tests/behaviour/closeout-capsule-backfill.test.ts
+        - tests/behaviour/closeout-capsule-plan.test.ts
+        - tests/behaviour/closeout-plan.test.ts
+        - tests/behaviour/closeout-capsule-review-ingest.test.ts
+        - tests/behaviour/capsule-lock.test.ts
+        - tests/behaviour/capsule-producer-nongating.test.ts
+        - tests/golden/closeout-envelope.test.ts
+        - tests/golden/closeout-human.test.ts
+        - tests/fixtures/closeout/golden/regenerate.ts
+        - tests/fixtures/closeout/harness.ts
+        - tests/structure/error-table.test.ts
+        - tests/checks/error-table-sync.test.ts
+      folders:
+        - tests/fixtures/capsule/validation
+        - tests/fixtures/capsule/review
+        - tests/fixtures/closeout/golden
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/closeout.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every testGate command green at the phase HEAD"
+      - "TC-CAP-004,006,010,011,013,014,015 complete; TC-CAP-012/016 structure halves recorded"
+    summary: "feat(GH-240): capsule validation, pre-contract completion, review ingestion, cross-check residue, terminal close"
+    tasks:
+      - >-
+        3.1 Add the read-only capsule pre-flight to packages/core/src/domain/capsule.ts:
+        validate the unique folder, `events.jsonl` parse/contiguity/unique-key/closed-
+        kind/writer/no-line-after-close, the opening event, valid candidate files with
+        unique ids, and zero/one promotion decision per candidate; run in BOTH plan and
+        apply modes before any mutation. Plan mode renders the capsule step
+        `would-refuse` and performs zero writes/appends/promotions/fence acquisitions.
+        Closeout apply lock contention is the retryable `state.lock.busy` identity
+        (transient, platform-provider/exit 2) with the capsule-lock detail; it is
+        never `closeout.capsule-invalid`. [F-3; DEC-4; AC-F3-2; NFR-5, NFR-11; TC:
+        TC-CAP-014, TC-CAP-012 structure half, TC-CAP-004 completing addendum]
+      - >-
+        3.2 Implement apply-mode completion: a no-capsule change folder is a pre-contract
+        capsule — create `events.jsonl` and `candidates/`, append `capsule.opened` and
+        one `capsule.backfill-gap` naming the pre-contract state, then proceed; ingest
+        readable `code-review/review-iter-*.yaml` as `review.verdict` events in
+        deterministic filename order (an unreadable artifact is
+        `review-verdict-unreadable` residue, never capsule-invalid; a missing artifact is
+        not damage); cross-check the capsule against the delivery's durable state records
+        and record a missing expected event as `capsule-event-gap` residue; append
+        exactly one terminal `capsule.closed` with decision counts, event count, and
+        bounded digest. The cross-check half also completes TC-CAP-010's step 5: a
+        producer append failure leaves a missing expected event, closeout reports
+        exactly one `capsule-event-gap` residue naming the missing kind/identity, and
+        the capsule still validates and closes. [F-3; DEC-4; AC-F1-3, AC-F3-1; NFR-6;
+        TC: TC-CAP-006, TC-CAP-010 completing half, TC-CAP-011 completing half,
+        TC-CAP-013, TC-CAP-015]
+      - >-
+        3.3 Wire the `capsule` step as the LAST step of the closeout plan and extend the
+        applied `CloseoutData` with the additive `capsule {closed, events, candidates[]}`
+        object (absent in plan mode) and optional step `detail`; add the
+        `closeout.capsule-invalid` error row to packages/core/src/contracts/error-table.ts
+        and its documented row to doc/spec/features/feature-result-contract.md in the same
+        commit; author the explicit reviewed golden writer
+        `tests/fixtures/closeout/golden/regenerate.ts` and invoke it to update the
+        delivered closeout envelope/human goldens for the added step only. [F-3, F-12;
+        DEC-4, DEC-15; AC-F3-1, AC-F3-2, AC-F12-1; TC: TC-CAP-006, TC-CAP-013,
+        TC-CAP-014, TC-CAP-052 first-staging support]
+      - >-
+        3.4 Author the P3 test matrix: closeout-capsule-validation (non-candidate damage
+        rows: malformed line, torn tail, duplicate key, sequence gap, post-close line,
+        unreadable/missing review artifact), closeout-capsule-backfill,
+        closeout-capsule-plan, closeout-capsule-review-ingest, closeout-capsule-close,
+        and closeout-capsule-gap; extend closeout-plan. Complete the P3 halves by
+        extending tests/behaviour/capsule-lock.test.ts with the closeout apply
+        busy-lock case (retryable `state.lock.busy`, never capsule-invalid) and
+        tests/behaviour/capsule-producer-nongating.test.ts with the step-5 closeout
+        `capsule-event-gap` cross-check. Assert capsule-invalid is
+        user/non-retryable/not_landed/exit 1 with zero promotion writes and unchanged
+        capsule bytes. [AC-F1-2, AC-F1-3, AC-F3-1, AC-F3-2; NFR-11; TC: TC-CAP-004,
+        TC-CAP-006, TC-CAP-010, TC-CAP-011, TC-CAP-013, TC-CAP-014, TC-CAP-015,
+        TC-CAP-012 structure half]
+    coverage:
+      - "TC-CAP-004 (completes: closeout apply busy-lock is retryable state.lock.busy, never capsule-invalid; runtime half was P1)"
+      - "TC-CAP-006 (completes: applied capsule.closed payload and plan-mode absence; structure half was P1)"
+      - "TC-CAP-010 (completes: closeout capsule-event-gap cross-check after a producer append failure; producer half was P2)"
+      - "TC-CAP-011 (completes: capsule-event-gap cross-check; structure half was P2)"
+      - "TC-CAP-013 (complete)"
+      - "TC-CAP-014 (complete: P3 planned step outcomes, not the final twelve-step array)"
+      - "TC-CAP-015 (complete)"
+      - "TC-CAP-012 (structure/validation half: non-candidate damage rows; the candidate rows complete in P4)"
+      - "TC-CAP-016 (capsule-object shape half: key set/additivity; the decision mirror completes in P4)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/closeout-capsule-close.test.ts tests/behaviour/closeout-capsule-gap.test.ts tests/behaviour/closeout-capsule-validation.test.ts tests/behaviour/closeout-capsule-backfill.test.ts tests/behaviour/closeout-capsule-plan.test.ts tests/behaviour/closeout-capsule-review-ingest.test.ts tests/behaviour/capsule-lock.test.ts tests/behaviour/capsule-producer-nongating.test.ts"
+      - "bun test tests/golden/closeout-envelope.test.ts tests/golden/closeout-human.test.ts"
+      - "bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts"
+      - "pnpm check:boundaries"
+    invariants:
+      - "DEC-4: capsule-invalid is reserved for damage that makes decisions untrustworthy; missing mirrored events are residue; no PM-notes completeness check; plan mode writes nothing"
+      - "NFR-5/NFR-6/NFR-11: no promotion write on invalid; exactly one terminal close; a re-run appends zero close events; lock contention reuses state.lock.busy (retryable, exit 2), never capsule-invalid"
+      - "DEC-15/NFR-10: closeout.capsule-invalid is documented and machine-declared in the same commit; no exit literal outside the projection; no path-specific error row is added in P4/P10"
+
+  - id: 4
+    title: "P4 — Candidate model, capture bar, evidence link, deterministic dedup, supersession, promotion routing, home writes, and one decision per candidate (promotion security core)"
+    kind: delivery
+    weightClass: heavy
+    scope:
+      files:
+        - packages/core/src/contracts/capsule.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/domain/capsule-candidates.ts
+        - packages/core/src/domain/capsule.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/core/src/domain/index.ts
+        - packages/adapters/src/file/memory-promotion.ts
+        - packages/adapters/src/file/capsule.ts
+        - packages/adapters/src/file/index.ts
+        - packages/cli/src/edge.ts
+        - scripts/checks/error-table-sync.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/behaviour/closeout-capsule-validation.test.ts
+        - tests/behaviour/closeout-capsule-schema.test.ts
+        - tests/behaviour/closeout-capsule-promotion.test.ts
+        - tests/behaviour/closeout-capsule-dedup.test.ts
+        - tests/behaviour/closeout-capsule-supersession.test.ts
+        - tests/behaviour/closeout-capsule-routing.test.ts
+        - tests/behaviour/closeout-capsule-idempotency.test.ts
+        - tests/behaviour/closeout-capsule-decisions.test.ts
+        - tests/behaviour/closeout-capsule-payload.test.ts
+        - tests/structure/capsule-contract.test.ts
+        - tests/golden/closeout-envelope.test.ts
+        - tests/fixtures/closeout/golden/capsule-applied.json
+        - tests/fixtures/memory/tree.ts
+        - tests/fixtures/closeout/harness.ts
+        - tests/structure/error-table.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/capsule/candidates
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/domain/capsule-candidates.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/file/memory-promotion.ts
+        role: producer
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every testGate command green at the phase HEAD"
+      - "TC-CAP-012, 016, 017..023 complete; closeout.step.<id>.failed family row declared (P10 proves the twelve-slot set)"
+    summary: "feat(GH-240): candidate schema, capture bar, evidence gate, dedup, supersession, routing, home writes, one decision per candidate"
+    tasks:
+      - >-
+        4.1 Author packages/core/src/domain/capsule-candidates.ts as a pure evaluator over
+        injected candidate/memory facts: candidate schema and closed vocabularies —
+        id `^[a-z0-9][a-z0-9-]{2,63}$` (no separators or `..`), class (eight), scope
+        (four), status `{candidate, authoritative, superseded}`, trust `{T0..T5}`,
+        required keys (id, class, scope, statement, evidence, basis, source, trust,
+        status, created_by, created), optional keys `{rationale, applies_when,
+        supersedes, contradicts, hint}`, and evidence exactly one of
+        `review-verdict:<ref>`, `ci-verdict:<ref>`, `human-correction:<ref>`,
+        `merged-pr:<ref>`, `test:<ref>` with a non-empty bounded ref. Structural
+        violations (out-of-set scope/status/class/basis/trust, id shape, unknown
+        evidence prefix, missing required key) are candidate schema failures ->
+        `closeout.capsule-invalid`; missing/empty basis is `capture-bar-unmet` and
+        missing/empty evidence is `evidence-missing`. [F-4; DM-2; DEC-5; AC-F4-1;
+        TC: TC-CAP-017]
+      - >-
+        4.2 Implement the declared single-pass evaluation order — schema -> capture bar ->
+        evidence link -> dedup -> supersession/contradiction -> routing — with the exact
+        reason matrix: `capture-bar-unmet`, `evidence-missing`,
+        `duplicate:<existing-id>`, `supersedes-unknown`,
+        `contradiction-requires-supersession`. Dedup is exact normalized-statement
+        equality (`trim`, en-US lower-case, collapse whitespace) over existing
+        lesson/tacit records plus sibling candidates in id order; no similarity
+        scoring, embedding, or model judgment participates. Contradiction is explicit:
+        `contradicts: <record-id>` must be paired with `supersedes: <record-id>` for
+        the same target; target existence is checked first (unknown target ->
+        `supersedes-unknown`), otherwise missing/different `supersedes` ->
+        `contradiction-requires-supersession`. An accepted pair writes the new record
+        and marks the old record `status: superseded` in a single-file edit. A
+        pre-existing target resolves only as byte-identical `satisfied` no-op,
+        same-identity different-content `duplicate:<existing-id>`, or
+        declared-contradiction `contradiction-requires-supersession`; never an
+        overwrite. [F-4; DEC-5; AC-F4-1, AC-F4-3; NFR-1; TC: TC-CAP-018, TC-CAP-019,
+        TC-CAP-020, TC-CAP-022, TC-CAP-023]
+      - >-
+        4.3 Author packages/adapters/src/file/memory-promotion.ts and the routing stage:
+        `lesson` -> `.ai/memory/lessons/`, `tacit` -> `.ai/memory/tacit/` are home-written
+        as exactly one record file plus one bounded index row, following the declared
+        `lesson-YYYY-NNN-<slug>.md`/`tacit-YYYY-NNN-<slug>.md` naming and monotonic
+        cross-family id allocation (unique across lessons/tacit, never reused); new
+        promoted records carry `status: candidate`, `authoritative` is accepted only as
+        a read value and never written, and the only rewrite is `superseded` on the old
+        record of an accepted supersession;
+        `fact`/`decision`/`norm`/`workflow` are recorded as sanctioned handoff
+        proposals without editing doc/spec/**, doc/decisions/**, AGENTS.md, or
+        .opencode/**; `preference` is rejected `home-not-implemented`, `fleet`
+        `owner-approval-required`; an index that would pass 200 lines is rejected
+        `index-budget-exceeded`. Path confinement is exact: a candidate id or
+        record-name outside the slug shape is `closeout.capsule-invalid` before any
+        write; a resolved home outside `realpath(memoryRoot)` after realpath
+        resolution (symlinked parent, absolute path, traversal) is
+        `closeout.step.capsule.failed` with zero writes and plan-mode `would-refuse`;
+        a `supersedes`/`contradicts` value shaped like a path is
+        `supersedes-unknown` with zero writes and no path join. No new error row is
+        added. Home writes are bounded, atomic, and never push or rewrite history.
+        [F-4; DM-3; DEC-6; AC-F4-2; NFR-2, NFR-9; TC: TC-CAP-021, TC-CAP-022]
+      - >-
+        4.4 Wire the promotion stage into the closeout capsule step and record exactly one
+        durable `capsule.promotion` event per candidate with key set
+        `{id, class, decision, mode?, home?, reason?, supersedes?}` (mode iff promoted,
+        reason iff rejected, supersedes iff declared), and the applied
+        `capsule.candidates[]` projection `{id, decision, home?, reason?}` mirroring
+        the events one-for-one with `class`/`mode`/`supersedes` absent. An accepted
+        record is stable on re-run (no duplicate decision, file, or index row).
+        [F-4; DEC-5, DEC-6, DEC-16; AC-F4-2, AC-F4-3, AC-F12-2; NFR-6; TC:
+        TC-CAP-016 completing half, TC-CAP-020, TC-CAP-022, TC-CAP-023]
+      - >-
+        4.5 Complete the P4 test matrix: the candidate rows of
+        closeout-capsule-validation (valid row, duplicate candidate id, zero/multiple
+        decisions), closeout-capsule-schema (status/evidence/contradicts/path-shaped
+        values), promotion, dedup, supersession (explicit contradiction pair,
+        existence-first, no similarity), routing (naming/monotonic allocation and the
+        path-escape identities with no new error row), idempotency (pre-existing-target
+        three outcomes), decisions (durable event vs output projection), and payload;
+        extend the closeout envelope golden with the decision mirror. [AC-F4-1..AC-F4-3;
+        NFR-9; TC: TC-CAP-012, TC-CAP-016, TC-CAP-017, TC-CAP-018, TC-CAP-019,
+        TC-CAP-020, TC-CAP-021, TC-CAP-022, TC-CAP-023]
+      - >-
+        4.6 Add the `closeout.step.<id>.failed` family row to
+        packages/core/src/contracts/error-table.ts in P4 (declared once, slot
+        validated against `CLOSEOUT_STEP_IDS`), with the documented row in
+        feature-result-contract.md and the narrow recognizer in
+        scripts/checks/error-table-sync.ts; the `capsule` slot is the promotion
+        path-escape identity (`closeout.step.capsule.failed`). No path-specific error
+        row is added. P10 completes the twelve-slot validation/family-row proof.
+        [F-11; DEC-15; AC-F4-2, AC-F11-2; NFR-9, NFR-10; TC: TC-CAP-021 path-escape
+        half, TC-CAP-053 row-declaration half]
+    coverage:
+      - "TC-CAP-012 (completes: candidate schema/decision rows and the valid matrix row; structure half was P3)"
+      - "TC-CAP-016 (completes: decision mirror; capsule-object shape half was P3)"
+      - "TC-CAP-017 (complete: class/scope/basis/trust/status vocabularies and the five evidence shapes; optional contradicts accepted)"
+      - "TC-CAP-018 (complete)"
+      - "TC-CAP-019 (complete)"
+      - "TC-CAP-020 (complete: explicit contradicts+supersedes pair, target-existence-first, exact dedup, no similarity/embedding/model)"
+      - "TC-CAP-021 (complete: routing/naming/allocation plus the id-shape -> capsule-invalid and resolved-home -> closeout.step.capsule.failed path-escape identities, no new error row)"
+      - "TC-CAP-022 (complete: pre-existing target resolves only as satisfied/duplicate/contradiction, no overwrite; index budget)"
+      - "TC-CAP-023 (complete: durable {id,class,decision,mode?,home?,reason?,supersedes?} vs output {id,decision,home?,reason?})"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/closeout-capsule-validation.test.ts tests/behaviour/closeout-capsule-schema.test.ts tests/behaviour/closeout-capsule-promotion.test.ts tests/behaviour/closeout-capsule-dedup.test.ts tests/behaviour/closeout-capsule-supersession.test.ts tests/behaviour/closeout-capsule-routing.test.ts tests/behaviour/closeout-capsule-idempotency.test.ts tests/behaviour/closeout-capsule-decisions.test.ts tests/behaviour/closeout-capsule-payload.test.ts"
+      - "bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts"
+      - "bun test tests/golden/closeout-envelope.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts"
+      - "pnpm check:boundaries"
+    invariants:
+      - "DEC-5/DEC-6: one file per candidate; status/evidence vocabularies closed; capture bar and evidence mandatory; exact normalized-statement dedup; contradiction explicit via paired contradicts+supersedes; lessons/tacit home-written, fact/decision/norm/workflow handed off, preference/fleet rejected"
+      - "NFR-1/NFR-6/NFR-9: deterministic decision order; zero duplicate writes/rows on re-run; pre-existing target resolves only as satisfied/duplicate/contradiction, never overwrite; bounded path-confined writes; no push/remote/history rewrite"
+      - "Path confinement reuses existing identities (id shape -> capsule-invalid before write; resolved-home escape -> closeout.step.capsule.failed; no new error row); the family row is declared once in P4 with its slot validated against CLOSEOUT_STEP_IDS; one durable promotion event and one output projection per candidate; zero or multiple decisions after promotion is capsule-invalid (consumed from P3)"
+
+  - id: 5
+    title: "P5 — Merged-diff owed-flip sweep and human-vs-non-human review-thread policy (detection-only, fail-closed)"
+    kind: delivery
+    weightClass: heavy
+    scope:
+      files:
+        - packages/core/src/contracts/capsule.ts
+        - packages/core/src/contracts/ports.ts
+        - packages/core/src/domain/closeout-diff-sweep.ts
+        - packages/core/src/domain/closeout-thread-policy.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/core/src/domain/index.ts
+        - packages/adapters/src/github/client.ts
+        - packages/adapters/src/github/normalize.ts
+        - packages/adapters/src/github/index.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/closeout-merged-diff.test.ts
+        - tests/behaviour/closeout-merged-diff-ambiguous.test.ts
+        - tests/behaviour/closeout-merged-diff-bounds.test.ts
+        - tests/behaviour/closeout-merged-diff-gap.test.ts
+        - tests/behaviour/providers/github-closeout-thread-authorship.test.ts
+        - tests/behaviour/closeout-thread-caps.test.ts
+        - tests/behaviour/providers/github-closeout-thread-privacy.test.ts
+        - tests/checks/capsule-bounds.test.ts
+        - tests/structure/capsule-contract.test.ts
+        - tests/fixtures/closeout/diff.ts
+        - tests/fixtures/closeout/temp-git.ts
+        - tests/fixtures/closeout/threads.ts
+        - tests/fixtures/providers/github/graphql-review-threads.json
+        - tests/golden/closeout-envelope.test.ts
+        - tests/golden/closeout-human.test.ts
+      folders:
+        - tests/fixtures/closeout/golden
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/closeout-diff-sweep.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/domain/closeout-thread-policy.ts
+        role: producer
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every testGate command green at the phase HEAD"
+      - "TC-CAP-024..031 complete; TC-CAP-052 human-thread golden delta staged"
+    summary: "feat(GH-240): bounded merged-diff sweep with ambiguous-hit residue and fail-closed human-thread policy"
+    tasks:
+      - >-
+        5.1 Author packages/core/src/domain/closeout-diff-sweep.ts and declare
+        `CLOSEOUT_DIFF_MARKERS` in the capsule contract: anchor on the verified
+        `merge.transaction` squash SHA and its parent (one `diff <squash>^ <squash>`
+        read); absent/unresolvable is `skipped-gap`/`merged-diff-unavailable` with zero
+        diff invocations; detect the four closed kinds and read each marker entry's
+        declared action token from the four pinned tokens (`remove-guard`,
+        `retire-flag`, `rename-class`, `close-todo`) with the fixed mapping
+        `todo-marker`→`close-todo`, `when-merges-note`→`remove-guard`,
+        `feature-flag`→`retire-flag`, `class-string`→`rename-class`; a hit naming this
+        work item whose action matches its kind's mapping becomes idempotent
+        `closeout.step` owed-flip evidence; unattributed/class-string-without-owner/
+        out-of-vocabulary/kind-mismatched hits become `ambiguous-flip-hit` residue;
+        bounds 1 MiB/500 files/200 hits with deterministic (filePath,line) order; never
+        edit source, remove a marker, commit, push, or read history. [F-5; DM-6;
+        DEC-8; AC-F5-1, AC-F5-2; NFR-1, NFR-3; TC: TC-CAP-024, TC-CAP-025, TC-CAP-026,
+        TC-CAP-027, TC-CAP-028]
+      - >-
+        5.2 Author packages/core/src/domain/closeout-thread-policy.ts and extend
+        packages/core/src/contracts/ports.ts plus the GitHub normalize/client surfaces
+        with the thread root author facts: normalize each unresolved thread root to
+        `human`/`non-human`/`unknown`; resolve only `non-human` (bounded, identity-keyed,
+        idempotent); leave human and unknown threads unresolved and emit exactly one
+        identity-only `unresolved-human-thread` residue item (thread id + author
+        principal + bounded location; no body/title/subject); unknown is human
+        (fail-closed); 100-thread read cap and 50-item residue cap with `+N`; providers
+        without a thread surface keep their delivered gap/no-op and fabricate nothing.
+        [F-6; DM-4; DEC-9; AC-F6-1, AC-F6-2; NFR-4, NFR-9; TC: TC-CAP-029, TC-CAP-030,
+        TC-CAP-031]
+      - >-
+        5.3 Insert `merged-diff-sweep` into the closeout plan after `branch-cleanup` and
+        before the terminal `capsule` step, and add the authorship gate to the delivered
+        `comment-resolution` step; stage the
+        human-thread delta in the closeout envelope/human goldens in this phase and
+        invoke `tests/fixtures/closeout/golden/regenerate.ts --write` so the commit is
+        green. Do not change the delivered step identity or its outcome vocabulary.
+        [F-6, F-12; DEC-7, DEC-9; AC-F6-1, AC-F12-1; TC: TC-CAP-029, TC-CAP-031;
+        TC-CAP-052 human-thread golden delta]
+      - >-
+        5.4 Author the P5 test matrix over real temp-repo diffs and provider-shaped thread
+        fixtures: attributed/ambiguous/marker-kind cases, diff budget and zero
+        source/remote mutation, gap/re-run stability, the human/non-human/unknown
+        normalization matrix, caps/truncation, identity-only privacy canaries, and
+        no-surface/no-signal gaps; extend the existing provider and closeout golden
+        suites. [AC-F5-1, AC-F5-2, AC-F6-1, AC-F6-2; NFR-3, NFR-4, NFR-9; TC:
+        TC-CAP-024, TC-CAP-025, TC-CAP-026, TC-CAP-027, TC-CAP-028, TC-CAP-029,
+        TC-CAP-030, TC-CAP-031]
+    coverage:
+      - "TC-CAP-024 (complete)"
+      - "TC-CAP-025 (complete)"
+      - "TC-CAP-026 (complete)"
+      - "TC-CAP-027 (complete)"
+      - "TC-CAP-028 (complete)"
+      - "TC-CAP-029 (complete)"
+      - "TC-CAP-030 (complete)"
+      - "TC-CAP-031 (complete)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/closeout-merged-diff.test.ts tests/behaviour/closeout-merged-diff-ambiguous.test.ts tests/behaviour/closeout-merged-diff-bounds.test.ts tests/behaviour/closeout-merged-diff-gap.test.ts"
+      - "bun test tests/behaviour/providers/github-closeout-thread-authorship.test.ts tests/behaviour/closeout-thread-caps.test.ts tests/behaviour/providers/github-closeout-thread-privacy.test.ts tests/checks/capsule-bounds.test.ts"
+      - "bun test tests/golden/closeout-envelope.test.ts tests/golden/closeout-human.test.ts"
+      - "pnpm check:boundaries"
+    invariants:
+      - "DEC-8: the sweep is detection-only; one bounded added-line read; four kinds mapped to the four pinned actions; out-of-vocabulary/kind-mismatched actions are ambiguous; no source edit, marker removal, commit, push, or remote; attributed hits are evidence, ambiguous hits are residue"
+      - "DEC-9/NFR-9: unknown authorship is human; no unattributable thread is resolved; residue is identity-only"
+      - "NFR-1/NFR-3/NFR-4: deterministic ordering; 1 MiB/500/200 scan caps; 100 threads and 50 residue items with +N"
+
+  - id: 6
+    title: "P6 — Judgment-residue contract, bounded ordering, attention output/exit semantics, and the data-bearing attention projection class"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/capsule.ts
+        - packages/core/src/contracts/result.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/capsule-residue.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/core/src/domain/index.ts
+        - packages/cli/src/projection.ts
+        - packages/cli/src/commands/closeout.ts
+        - packages/cli/src/edge.ts
+        - tests/structure/capsule-contract.test.ts
+        - tests/behaviour/closeout-residue.test.ts
+        - tests/checks/capsule-privacy.test.ts
+        - tests/behaviour/closeout-attention-exit.test.ts
+        - tests/behaviour/closeout-residue-provenance.test.ts
+        - tests/golden/closeout-envelope.test.ts
+        - tests/golden/closeout-human.test.ts
+        - tests/golden/closeout-residue.test.ts
+        - tests/fixtures/closeout/canary.ts
+        - tests/structure/result-contract.test.ts
+        - tests/checks/exit-code-literals.test.ts
+      folders:
+        - tests/fixtures/closeout/golden
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/result.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/domain/capsule-residue.ts
+        role: producer
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every testGate command green at the phase HEAD"
+      - "TC-CAP-032,033,035 complete; TC-CAP-034 P6 attention/data-exit subset recorded (worktree-refusal subset P7, completing proof P10)"
+    summary: "feat(GH-240): bounded ordered judgment residue, body-free output, and the attention data-with-exit-1 class"
+    tasks:
+      - >-
+        6.1 Author packages/core/src/domain/capsule-residue.ts: the closed eight-kind
+        residue vocabulary with exactly one producer per kind; the exact `{item, kind,
+        location}` shape; per-field bounds; deterministic order by the declared kind
+        order then location UTF-8 byte order; 50-item cap with an explicit omitted count
+        and `+N`; no body/title/transcript/diff/credential/environment value. Assemble
+        the residue from the capsule cross-check, review ingestion, diff sweep, thread
+        policy, worktree cleanup, retro coverage, session attribution, and cap refusal.
+        [F-11; DM-4; DEC-14; AC-F11-1; NFR-1, NFR-4; TC: TC-CAP-032, TC-CAP-035]
+      - >-
+        6.2 Add the additive `attention` projection class to
+        packages/core/src/contracts/result.ts and packages/cli/src/projection.ts:
+        `attention` maps to exit 1 for a data-bearing outcome; apply returns `data` with
+        `residue[]` and exits 1 when residue remains on a run that completes without a
+        command-level failure; plan renders residue and exits 0 unless a hard plan
+        failure occurs; a command-level failure returns the error envelope with NO
+        structured `residue[]` and its failed-step bounded evidence names the
+        refused/preserved item. No exit literal appears outside the projection module.
+        The P6 attention-exit suite carries only the P6-completable matrix (apply
+        data+exit1, plan exit0, no-residue, capsule-invalid, provider-write failure,
+        scripted line); the family-row proof is added in P10 and the worktree-refusal
+        evidence assertion is added in P7. [F-11; DM-10; DEC-14, DEC-15; AC-F11-1,
+        AC-F11-2; NFR-4, NFR-10; TC: TC-CAP-034 P6 subset]
+      - >-
+        6.3 Render the residue in the closeout machine payload and human digest; add the
+        privacy/body-free canary and provenance-completeness checks; keep the scripted
+        success line shape unchanged. [F-11; AC-F11-1; NFR-9; TC: TC-CAP-033,
+        TC-CAP-035]
+      - >-
+        6.4 Author the P6 test matrix: closeout-residue (ordering/bounds/truncation),
+        closeout-attention-exit (P6 subset only: apply data+1, plan 0, invalid capsule
+        plan 0, no-residue, cap-refusal evidence, provider-write failure, scripted
+        line), closeout-residue-
+        provenance, capsule-privacy, and the golden envelope/human/residue mutation
+        controls; assert no body canary reaches residue, output, or capsule. Do not
+        assert the P10 family row or the P7 worktree-refusal fixture in P6.
+        [AC-F11-1, AC-F11-2; NFR-1, NFR-4, NFR-9; TC: TC-CAP-032, TC-CAP-033,
+        TC-CAP-034 P6 subset, TC-CAP-035]
+    coverage:
+      - "TC-CAP-032 (complete)"
+      - "TC-CAP-033 (complete)"
+      - "TC-CAP-034 (P6 subset: attention/data-exit matrix, no-residue, capsule-invalid, cap-refusal evidence, provider-write failure, scripted line; worktree-refusal subset completes in P7; family-row/full-matrix proof completes in P10)"
+      - "TC-CAP-035 (complete)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/closeout-residue.test.ts tests/behaviour/closeout-attention-exit.test.ts tests/behaviour/closeout-residue-provenance.test.ts tests/checks/capsule-privacy.test.ts"
+      - "bun test tests/golden/closeout-envelope.test.ts tests/golden/closeout-human.test.ts tests/golden/closeout-residue.test.ts"
+      - "bun run scripts/checks/exit-code-literals.ts"
+      - "pnpm check:boundaries"
+    invariants:
+      - "DEC-14/NFR-4: residue is bounded data with a deterministic order and +N; apply data + exit 1; plan exit 0; a command-level failure carries no structured residue"
+      - "NFR-9/NFR-10: zero bodies/titles/transcripts/credentials; no exit literal outside projection; the attention class is additive"
+      - "The result contract still permits exactly one of data or error"
+
+  - id: 7
+    title: "P7 — Local worktree cleanup under the full safety predicate, no force, no shell, and ordering before branch cleanup"
+    kind: delivery
+    weightClass: heavy
+    scope:
+      files:
+        - packages/core/src/contracts/capsule.ts
+        - packages/core/src/contracts/closeout.ts
+        - packages/core/src/domain/closeout-worktree.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/core/src/domain/index.ts
+        - packages/adapters/src/git/index.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/closeout-worktree.test.ts
+        - tests/behaviour/closeout-worktree-refusal.test.ts
+        - tests/behaviour/closeout-worktree-idempotency.test.ts
+        - tests/behaviour/closeout-attention-exit.test.ts
+        - tests/structure/closeout-contracts-git.test.ts
+        - tests/checks/capsule-cli-parity.test.ts
+        - tests/fixtures/closeout/temp-git.ts
+        - tests/golden/closeout-envelope.test.ts
+        - tests/golden/closeout-human.test.ts
+      folders:
+        - tests/fixtures/closeout/golden
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/closeout-worktree.ts
+        role: producer
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every testGate command green at the phase HEAD"
+      - "TC-CAP-036..039 complete; TC-CAP-034 worktree-refusal subset recorded (completes in P10)"
+    summary: "feat(GH-240): safe local worktree cleanup with fixed argv, no force, full predicate, and idempotent removal"
+    tasks:
+      - >-
+        7.1 Extend packages/adapters/src/git/index.ts with one local worktree capability:
+        list worktrees from `worktree list --porcelain` and remove a delivery-owned
+        worktree via a fixed argv array, no shell string, no `--force`/`-f`/
+        `--force-with-lease`, no `push`/`remote` token, local-only. The operation union
+        gains no force variant. [F-7; DM-7; DEC-10; AC-F7-1; NFR-9; TC: TC-CAP-039]
+      - >-
+        7.2 Author packages/core/src/domain/closeout-worktree.ts: the full safety
+        predicate — merged evidence; worktree/branch convention match; merged head known
+        and local head exactly equal (unknown refuses); clean worktree; not the current
+        checkout; not locked and not referenced by another worktree; checkout restore
+        succeeded when required; no earlier non-gap failure. A failing predicate performs
+        no removal and yields `closeout.branch.unsafe` in apply (reusing the delivered
+        identity) or `would-refuse` in plan, with bounded evidence naming the retained
+        worktree (count and identity) and `worktree-retained` residue assertable in plan
+        mode; absent worktree is `satisfied`/`no-worktree`. [F-7; DEC-10; AC-F7-1,
+        AC-F7-2; NFR-6, NFR-9; TC: TC-CAP-036, TC-CAP-037]
+      - >-
+        7.3 Wire `worktree-cleanup` into the closeout plan BEFORE `branch-cleanup`, so a
+        delivery worktree no longer holds the branch when branch deletion evaluates its
+        predicate; a re-run after removal is `satisfied`/`no-worktree` and never removes
+        twice; the delivered foreign-worktree branch refusal remains. Update the closeout
+        goldens for the added step in this phase via
+        `tests/fixtures/closeout/golden/regenerate.ts --write`. [F-7, F-12; DEC-7,
+        DEC-10; AC-F7-1, AC-F7-2; TC: TC-CAP-038]
+      - >-
+        7.4 Author the P7 test matrix over temp repositories: success, the full refusal
+        matrix (dirty, moved head, current checkout, locked, foreign, restore failure,
+        earlier failure, absent), re-run idempotency, ordering before branch cleanup, and
+        the no-force/no-shell/local-only seam scan with a planted-force negative control.
+        Extend `tests/behaviour/closeout-attention-exit.test.ts` with the P7 subset:
+        the worktree-refusal failed-step bounded evidence names the retained worktree
+        with count and identity, and no error envelope carries `data` or structured
+        `residue[]` (TC-CAP-034 step 9 worktree half). [AC-F7-1, AC-F7-2; NFR-6, NFR-9;
+        TC: TC-CAP-034 P7 subset, TC-CAP-036, TC-CAP-037, TC-CAP-038, TC-CAP-039]
+    coverage:
+      - "TC-CAP-034 (P7 subset: worktree-refusal failed-step evidence names the retained worktree with count/identity; no data/residue beside an error; completes in P10)"
+      - "TC-CAP-036 (complete)"
+      - "TC-CAP-037 (complete)"
+      - "TC-CAP-038 (complete)"
+      - "TC-CAP-039 (complete)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/closeout-worktree.test.ts tests/behaviour/closeout-worktree-refusal.test.ts tests/behaviour/closeout-worktree-idempotency.test.ts tests/behaviour/closeout-attention-exit.test.ts tests/structure/closeout-contracts-git.test.ts tests/checks/capsule-cli-parity.test.ts"
+      - "bun test tests/golden/closeout-envelope.test.ts tests/golden/closeout-human.test.ts"
+      - "pnpm check:boundaries"
+    invariants:
+      - "DEC-10/NFR-9: destructive removal only after the full predicate; no force fallback; a refusal preserves the worktree and names it"
+      - "NFR-6: a re-run never removes twice; the absent case is satisfied/no-worktree"
+      - "The git seam stays fixed-argv, no-shell, local-only; no remote or push"
+
+  - id: 8
+    title: "P8 — Read-only retro-coverage move and the session-compaction checkpoint with the declared harness-compaction gap"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/capsule.ts
+        - packages/core/src/domain/closeout-retro-coverage.ts
+        - packages/core/src/domain/closeout-compaction.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/core/src/domain/index.ts
+        - packages/adapters/src/harness/session-attribution.ts
+        - packages/adapters/src/harness/index.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/closeout-retro-coverage.test.ts
+        - tests/behaviour/closeout-compaction.test.ts
+        - tests/behaviour/closeout-compaction-edges.test.ts
+        - tests/structure/closeout-compaction-absence.test.ts
+        - tests/structure/session-admin-contract.test.ts
+        - tests/fixtures/retro/harness.ts
+        - tests/golden/closeout-envelope.test.ts
+        - tests/golden/closeout-human.test.ts
+      folders:
+        - tests/fixtures/harness/opencode-store
+        - tests/fixtures/harness/claude-code
+        - tests/fixtures/closeout/golden
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/closeout-retro-coverage.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/domain/closeout-compaction.ts
+        role: producer
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the prior phase summary"
+      - "Every testGate command green at the phase HEAD"
+      - "TC-CAP-040..044 complete"
+    summary: "feat(GH-240): read-only retro coverage and bounded session-compaction checkpoint with a declared harness gap"
+    tasks:
+      - >-
+        8.1 Author packages/core/src/domain/closeout-retro-coverage.ts: read the delivered
+        `retro.run` registry through its validated read surface, find a level `change` run
+        whose scope is this work item, append exactly one idempotent
+        `capsule.retro-coverage` event with `collected` (run exists) or `pending` (none),
+        and write NO registry record and NO new mode value; an unreadable registry is
+        `skipped-gap`/`retro-registry-unavailable` plus `retro-coverage-unavailable`
+        residue and the rest of closeout proceeds. [F-8; DM-9; DEC-11; AC-F8-1, AC-F8-2;
+        NFR-6; TC: TC-CAP-040, TC-CAP-041]
+      - >-
+        8.2 Author packages/adapters/src/harness/session-attribution.ts and
+        packages/core/src/domain/closeout-compaction.ts: identify the delivery's sessions
+        through the delivered read-only harness-store seam by work-item attribution
+        (opencode `work_item_ref`, Claude session-tree mapping), bounded by the declared
+        session cap with a counted truncation; append one
+        `capsule.compaction-checkpoint` event carrying bounded session identities/count,
+        working-state/event-log flushed flags, unresolved-question count, and last
+        verified commit; declare the harness compaction invocation
+        `skipped-gap`/`harness-compaction-unavailable` (no invented API); no sessions is
+        `skipped-noop`/`no-sessions` with no zero checkpoint; attribution unavailable is
+        `skipped-gap`/`session-attribution-unavailable` plus `session-attribution-gap`
+        residue; same digest+commit re-run appends nothing. [F-9; DM-8; DEC-12; AC-F9-1,
+        AC-F9-2; NFR-6, NFR-9; TC: TC-CAP-042, TC-CAP-043, TC-CAP-044]
+      - >-
+        8.3 Wire `retro-coverage-move` and `session-compaction` into the closeout plan
+        before the terminal `capsule` step; keep the `db` surface unchanged (no new
+        subcommand/field); do not import or invent a harness compaction API. Update the
+        closeout goldens for the added steps in this phase via
+        `tests/fixtures/closeout/golden/regenerate.ts --write`. [F-8, F-9, F-12; DEC-7,
+        DEC-11, DEC-12; AC-F8-1, AC-F9-1; TC: TC-CAP-040, TC-CAP-042, TC-CAP-044]
+      - >-
+        8.4 Author the P8 test matrix over injected retro/state fixtures and synthetic
+        opencode/Claude session fixtures: collected/pending/unreadable; read-only registry
+        hash unchanged; checkpoint content and attribution; no-sessions and
+        attribution-gap edges; same-digest re-run; API-absence scan; `db` unchanged.
+        [AC-F8-1, AC-F8-2, AC-F9-1, AC-F9-2; NFR-6, NFR-9; TC: TC-CAP-040, TC-CAP-041,
+        TC-CAP-042, TC-CAP-043, TC-CAP-044]
+    coverage:
+      - "TC-CAP-040 (complete)"
+      - "TC-CAP-041 (complete)"
+      - "TC-CAP-042 (complete)"
+      - "TC-CAP-043 (complete)"
+      - "TC-CAP-044 (complete)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/closeout-retro-coverage.test.ts tests/behaviour/closeout-compaction.test.ts tests/behaviour/closeout-compaction-edges.test.ts tests/structure/closeout-compaction-absence.test.ts tests/structure/session-admin-contract.test.ts"
+      - "bun test tests/golden/closeout-envelope.test.ts tests/golden/closeout-human.test.ts"
+      - "pnpm check:boundaries"
+    invariants:
+      - "DEC-11: the retro registry is read-only; no synthetic run and no new mode; unreadable is a declared gap/residue"
+      - "DEC-12/NFR-6/NFR-9: bounded attribution, no guessed checkpoint, no zero checkpoint, no duplicate checkpoint; no invented harness API; db unchanged"
+      - "NFR-9: session identities/counts only; no transcripts or session content"
+
+  - id: 9
+    title: "P9 — Production telemetry wiring, two-stream separation, and the GH-233 review F-8/F-11 resolution with F-9 explicit re-deferral"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/capsule.ts
+        - packages/cli/src/edge.ts
+        - packages/adapters/src/harness/telemetry-claude.ts
+        - packages/adapters/src/harness/telemetry-opencode.ts
+        - packages/adapters/src/harness/index.ts
+        - doc/spec/features/feature-harness-adapters.md
+        - tests/behaviour/closeout-telemetry-production.test.ts
+        - tests/behaviour/closeout-telemetry-nongating.test.ts
+        - tests/behaviour/closeout-telemetry-idempotency.test.ts
+        - tests/behaviour/harness-telemetry-claude-budget.test.ts
+        - tests/behaviour/harness-telemetry-opencode-orphan-scope.test.ts
+        - tests/structure/harness-review-deferrals.test.ts
+        - tests/fixtures/closeout/harness-telemetry.ts
+      folders:
+        - tests/fixtures/harness/claude-code
+        - tests/fixtures/harness/opencode-store
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every testGate command green at the phase HEAD"
+      - "TC-CAP-045..049 complete"
+    summary: "feat(GH-240): inject harness telemetry capture into the production closeout composer and scope the GH-233 deferrals"
+    tasks:
+      - >-
+        9.1 In packages/cli/src/edge.ts, construct the M1-S11 capture capability from the
+        configured harness and inject it into createCloseoutComposition: apply mode runs
+        extraction after the terminal steps and before the applied payload; plan mode
+        performs no extraction and no append. Capture remains non-gating and idempotent.
+        [F-10; EVT-5; DEC-13; AC-F10-1; NFR-6, NFR-7; TC: TC-CAP-045, TC-CAP-046]
+      - >-
+        9.2 Keep two streams with two owners: `harness.telemetry` records remain the only
+        source `spend` reads and the only state-log telemetry destination; the capsule
+        carries no statistics and no telemetry schema id; assert log-only readback with
+        the harness store denied, and byte-identical capsule events for capture-on versus
+        capture-off. [F-10; DEC-13; AC-F10-1; NFR-7; TC: TC-CAP-045, TC-CAP-046]
+      - >-
+        9.3 Resolve GH-233 review F-8 in packages/adapters/src/harness/telemetry-claude.ts:
+        check the declared per-file byte cap before a full read and treat a would-exceed
+        file as truncated-with-warning without reading the full transcript. [F-10;
+        AC-F10-2; TC: TC-CAP-047]
+      - >-
+        9.4 Resolve GH-233 review F-11 in packages/adapters/src/harness/telemetry-opencode.ts:
+        scope orphan/invalid-identity disclosure to the capturing delivery; report
+        out-of-port orphans as a store-level warning rather than another delivery's failed
+        sessions. [F-10; AC-F10-2; TC: TC-CAP-048]
+      - >-
+        9.5 Record GH-233 review F-9 as explicitly re-deferred because the host runner is
+        not on the closeout extraction path and no production consumer exists until
+        dispatch (M1-S9); update the harness-adapters feature note with the F-8/F-11
+        resolution and the F-9 reason; add the structural deferral assertion. [F-10;
+        DEC-13; AC-F10-2; TC: TC-CAP-049]
+      - >-
+        9.6 Author the P9 test matrix: production composition capture, plan silence,
+        non-gating failure injectors, idempotent re-run, log-only readback, Claude byte
+        budget, opencode orphan scoping, and the deferral record; run the delivered
+        harness closeout suites unchanged. [AC-F10-1, AC-F10-2; NFR-6, NFR-7; TC:
+        TC-CAP-045, TC-CAP-046, TC-CAP-047, TC-CAP-048, TC-CAP-049]
+    coverage:
+      - "TC-CAP-045 (complete)"
+      - "TC-CAP-046 (complete)"
+      - "TC-CAP-047 (complete)"
+      - "TC-CAP-048 (complete)"
+      - "TC-CAP-049 (complete)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/closeout-telemetry-production.test.ts tests/behaviour/closeout-telemetry-nongating.test.ts tests/behaviour/closeout-telemetry-idempotency.test.ts"
+      - "bun test tests/behaviour/harness-telemetry-claude-budget.test.ts tests/behaviour/harness-telemetry-opencode-orphan-scope.test.ts tests/structure/harness-review-deferrals.test.ts tests/behaviour/harness-closeout-capture.test.ts tests/behaviour/harness-closeout-idempotency.test.ts tests/behaviour/harness-closeout-nongating.test.ts"
+      - "pnpm check:boundaries"
+    invariants:
+      - "DEC-13/NFR-7: two streams/two owners; zero telemetry records moved into the capsule or duplicated; the state log remains the only spend source; capture non-gating"
+      - "The harness store stays read-only; plan mode extracts nothing; no new credential path or network sink"
+      - "GH-233 F-8 and F-11 are resolved on the production path; F-9 is explicitly re-deferred with its consumer reason"
+
+  - id: 10
+    title: "P10 — Step vocabulary and additive contract finalization, error identities, consumer tolerance, and consolidated goldens"
+    kind: delivery
+    weightClass: heavy
+    scope:
+      files:
+        - packages/core/src/contracts/capsule.ts
+        - packages/core/src/contracts/closeout.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/result.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/capsule.ts
+        - packages/core/src/domain/capsule-residue.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/cli/src/commands/closeout.ts
+        - packages/cli/src/projection.ts
+        - scripts/checks/error-table-sync.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/structure/closeout-contract.test.ts
+        - tests/types/closeout.type-test.ts
+        - tests/structure/closeout-additive.test.ts
+        - tests/types/closeout-attention.type-test.ts
+        - tests/fixtures/closeout/legacy-consumer.ts
+        - tests/behaviour/closeout-attention-exit.test.ts
+        - tests/golden/closeout-envelope.test.ts
+        - tests/golden/closeout-human.test.ts
+        - tests/golden/closeout-residue.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/checks/exit-code-literals.test.ts
+        - tests/structure/result-contract.test.ts
+      folders:
+        - tests/fixtures/closeout/golden
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/closeout.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every testGate command green at the phase HEAD"
+      - "TC-CAP-034 completes (family-row/full attention matrix); TC-CAP-050..053 complete; TC-CAP-052 completes (human-thread delta was P5)"
+    summary: "feat(GH-240): final twelve-step vocabulary, additive closeout contract, error identities, consumer tolerance, goldens"
+    tasks:
+      - >-
+        10.1 Finalize `CLOSEOUT_STEP_IDS` and `closeoutStepDefinitions` to exactly twelve
+        ids in Appendix C order: ticket-to-done, lifecycle-label-sweep, unassign,
+        owed-flip-sweep, comment-resolution, checkout-restore, worktree-cleanup,
+        branch-cleanup, merged-diff-sweep, retro-coverage-move, session-compaction,
+        capsule. Preserve the seven delivered spellings; assert worktree-cleanup before
+        branch-cleanup and capsule last; keep `delivery.closeout.v1`; make `residue`,
+        `capsule`, and optional step `detail` additive fields; remove/rename no delivered
+        field; prove a legacy consumer resolves by `stepId`, tolerates an injected
+        unknown step id, and ignores unknown optional fields. [F-12; DM-5; DEC-7;
+        AC-F12-1; NFR-10; TC: TC-CAP-050, TC-CAP-051]
+      - >-
+        10.2 Complete the error identities: keep `closeout.capsule-invalid`; the
+        `closeout.step.<id>.failed` family row declared in P4 is proved here against
+        all twelve `CLOSEOUT_STEP_IDS` slots; reuse `closeout.step.capsule.failed` for
+        promotion path escape and `state.lock.busy` for lock contention, adding NO
+        path-specific or lock-specific row; extend the scripts/checks/error-table-sync.ts
+        recognizer/doc rows as needed and reject empty/malformed/unknown slots without a
+        generic closeout.* widening. [F-11; DEC-15; AC-F11-2; NFR-10; TC: TC-CAP-053]
+      - >-
+        10.3 Regenerate the FINAL closeout envelope/human/residue goldens for the twelve
+        steps and the human-thread behavior delta only via
+        `tests/fixtures/closeout/golden/regenerate.ts --write`; review the diff; pair
+        every golden with a one-field mutation control; assert no other byte changes.
+        [F-12; DEC-7; AC-F12-1; TC: TC-CAP-052]
+      - >-
+        10.4 Author the P10 test matrix: closeout-contract (twelve ids/order/schema id),
+        closeout-additive (optional fields/consumer tolerance), the attention type probe,
+        error-table/sync/exit-code/result suites, and the completing TC-CAP-034
+        family-row/full attention matrix (apply with residue data+1, plan 0,
+        capsule-invalid 1, family-row step failure 1, provider-write failure 2, scripted
+        line, no data/residue beside an error); run the golden suites and the
+        error-table sync check. [AC-F11-2, AC-F12-1; NFR-10; TC: TC-CAP-034, TC-CAP-050,
+        TC-CAP-051, TC-CAP-052, TC-CAP-053]
+    coverage:
+      - "TC-CAP-034 (completes: family-row proof and full attention/data-exit matrix; P6 attention/data-exit subset and P7 worktree-refusal subset recorded)"
+      - "TC-CAP-050 (complete)"
+      - "TC-CAP-051 (complete)"
+      - "TC-CAP-052 (completes: twelve-step and human-thread consolidated golden; the human-thread delta was staged in P5)"
+      - "TC-CAP-053 (complete: capsule-invalid row, twelve-slot family row, reused state.lock.busy/closeout.step.capsule.failed, no promotion-path-specific row)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/structure/closeout-contract.test.ts tests/structure/closeout-additive.test.ts tests/structure/error-table.test.ts tests/structure/result-contract.test.ts"
+      - "bun test tests/checks/error-table-sync.test.ts tests/checks/exit-code-literals.test.ts"
+      - "bun test tests/behaviour/closeout-attention-exit.test.ts tests/golden/closeout-envelope.test.ts tests/golden/closeout-human.test.ts tests/golden/closeout-residue.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts"
+      - "pnpm check:boundaries"
+    invariants:
+      - "DEC-7/NFR-10: additive within delivery.closeout.v1; delivered ids/fields unchanged; consumers resolve by stepId and tolerate unknown ids; no schema-version bump"
+      - "DEC-15: the family slot is validated against the effective step set; empty/malformed/unknown rejected; no exit literal outside projection; promotion path escape reuses closeout.step.capsule.failed and contention reuses state.lock.busy with no new row"
+      - "The twelve-step order is exactly Appendix C; worktree-cleanup precedes branch-cleanup; capsule is last; TC-CAP-034's P6/P7 subsets complete here"
+
+  - id: 11
+    title: "P11 — Determinism, restart convergence, self-containment, latency evidence, 44-mutant meta-check, aggregate gates, one changeset, and spec reconciliation"
+    kind: delivery
+    weightClass: heavy
+    scope:
+      files:
+        - tests/checks/capsule-determinism.test.ts
+        - tests/behaviour/closeout-convergence.test.ts
+        - tests/checks/capsule-latency.test.ts
+        - tests/structure/state-contract.test.ts
+        - tests/structure/closeout-imports.test.ts
+        - tests/checks/capsule-mutants.test.ts
+        - tests/checks/closeout-mutants.test.ts
+        - tests/structure/inventory.json
+        - tests/checks/capsule-ci-parity.test.ts
+        - tests/checks/fixture-sanitization.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/subpaths.test.ts
+        - tests/fixtures/closeout/determinism.ts
+        - tests/fixtures/closeout/performance.ts
+        - .changeset/gh-240-capsule-closeout-minor.md
+        - doc/spec/features/feature-closeout.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/spec/features/feature-harness-adapters.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/spec/features/feature-retro-pipeline.md
+        - doc/spec/features/feature-session-database-admin.md
+        - doc/spec/features/feature-merge-verify-deploy.md
+        - doc/spec/features/feature-commit-primitive.md
+        - doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md
+        - doc/spec/features/feature-verify-gates.md
+        - .ai/memory/README.md
+        - AGENTS.md
+        - doc/overview/architecture.md
+        - doc/overview/glossary.md
+        - doc/overview/ubiquitous-language.md
+        - doc/00-index.md
+        - doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/chg-GH-240-test-plan.md
+        - doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/chg-GH-240-plan.yaml
+      folders:
+        - tests/fixtures/capsule/mutants
+    doneArtifacts:
+      pipelineId: "GitHub Actions ts-* matrix green on the GH-240 PR targeting main-tools"
+      trackerTransition: "GH-240 dod_check pass; PR opened against main-tools at lifecycle phase 11"
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "aggregate pnpm check, error-table sync, doc-distribution, license, and vulnerability gates green"
+      - "Exactly one lockstep minor changeset present"
+      - "TC-CAP-054..061 complete"
+    summary: "chore(GH-240): convergence, determinism, latency and mutant evidence, aggregate gates, changeset, and doc reconciliation"
+    tasks:
+      - >-
+        11.1 Prove determinism and restart convergence: identical injected facts produce
+        byte-identical capsule ordering, promotion decisions, residue, and output; a
+        restart re-run reuses every terminal operation outcome, appends no duplicate
+        capsule event/promotion/thread resolution/branch deletion/worktree removal/
+        telemetry record, writes at most one terminal close, and converges; residue is
+        deterministic. Cover both OQ-T3 readings (same run id and a new run id as a new
+        capture identity). [NFR-1, NFR-6; AC-F12-2; DEC-16; TC: TC-CAP-054, TC-CAP-055]
+      - >-
+        11.2 Prove self-containment and state additivity: zero cross-change writes in
+        phases 1-10; the capsule is file-based; no state record kind or schema-version
+        bump is added; `harness.telemetry` is unchanged; sibling change folders are
+        byte-identical. [AC-F2-2; NFR-5; §8.5, §19; TC: TC-CAP-057]
+      - >-
+        11.3 Record latency budgets on reference fixtures (apply p95 <= 120 s; capsule
+        validation <= 2 s; diff scan <= 5 s; session attribution <= 5 s; registry read
+        <= 2 s) as a measurement artifact, never a fabricated green; run the 44-mutant
+        meta-check so every named guard fails by name; assert CI wiring, inventory,
+        subpaths, and fixture sanitization. [NFR-8, NFR-10; TC: TC-CAP-056, TC-CAP-058,
+        TC-CAP-059]
+      - >-
+        11.4 Run the aggregate release gates on a clean checkout at the delivered HEAD:
+        `pnpm check` (lint, format, typecheck, tests, boundaries, exports parity),
+        `scripts/checks/error-table-sync.ts`, `scripts/.tests/test-doc-distribution.sh`,
+        and the license/vulnerability gates with zero new runtime dependencies. Add
+        exactly one lockstep minor changeset
+        `.changeset/gh-240-capsule-closeout-minor.md`. [DoD-17, DoD-18; NFR-10; TC:
+        TC-CAP-059]
+      - >-
+        11.5 Reconcile neighbor documentation per spec §18 (primary closeout doc plus
+        result contract, harness adapters, state layer, retro pipeline, session database
+        admin, merge/verify deploy, commit primitive, pm-notes/phase transitions, verify
+        gates, memory README, AGENTS.md, architecture, glossary, ubiquitous language,
+        index); record the execution log and DoD-16 metric evidence; declare the PR
+        posture (target main-tools, leave open for human review; merge/owner acceptance
+        external) and the recommended decision-record handoffs without authoring them
+        here. [DoD-16, DoD-19, DoD-20; TC: TC-CAP-060, TC-CAP-061]
+    coverage:
+      - "TC-CAP-054 (complete)"
+      - "TC-CAP-055 (complete)"
+      - "TC-CAP-056 (complete)"
+      - "TC-CAP-057 (complete)"
+      - "TC-CAP-058 (complete)"
+      - "TC-CAP-059 (complete)"
+      - "TC-CAP-060 (complete)"
+      - "TC-CAP-061 (complete)"
+    testGate:
+      - "pnpm check"
+      - "bun run scripts/checks/error-table-sync.ts"
+      - "bash scripts/.tests/test-doc-distribution.sh"
+      - "bun run scripts/checks/license-audit.ts && bun run scripts/checks/vulnerability-gate.ts"
+      - "bun test tests/checks/capsule-determinism.test.ts tests/behaviour/closeout-convergence.test.ts tests/checks/capsule-latency.test.ts tests/checks/capsule-mutants.test.ts tests/checks/closeout-mutants.test.ts tests/checks/capsule-ci-parity.test.ts"
+      - "git diff --check && git status --porcelain"
+    invariants:
+      - "DEC-16/NFR-1/NFR-6: convergence by identity; deterministic residue; no duplicate event/decision/resolution/deletion/removal/telemetry record"
+      - "NFR-5/NFR-7: zero cross-change writes; the capsule is never relocated/compacted; state and telemetry additivity holds"
+      - "DoD-17..DoD-20: aggregate gates, one lockstep minor changeset, neighbor docs, PR posture"
+
+  - id: 12
+    title: "P12 — review-iteration-1 remediation: production thread authorship, true capsule pre-flight, production retro read, residue/diff/worktree fidelity, deterministic event keys, and plan-compliance reconciliation"
+    kind: delivery
+    weightClass: heavy
+    scope:
+      files:
+        - packages/core/src/contracts/ports.ts
+        - packages/core/src/contracts/closeout.ts
+        - packages/core/src/contracts/capsule.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/core/src/domain/capsule.ts
+        - packages/core/src/domain/closeout-diff-sweep.ts
+        - packages/core/src/domain/closeout-thread-policy.ts
+        - packages/core/src/domain/closeout-worktree.ts
+        - packages/adapters/src/github/client.ts
+        - packages/adapters/src/github/normalize.ts
+        - packages/adapters/src/github/index.ts
+        - packages/adapters/src/git/index.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/providers/github-closeout-thread-authorship.test.ts
+        - tests/behaviour/closeout-composition-facts.test.ts
+        - tests/behaviour/closeout-capsule-validation.test.ts
+        - tests/behaviour/closeout-capsule-close.test.ts
+        - tests/behaviour/closeout-retro-coverage.test.ts
+        - tests/behaviour/closeout-residue.test.ts
+        - tests/behaviour/closeout-merged-diff.test.ts
+        - tests/behaviour/closeout-merged-diff-ambiguous.test.ts
+        - tests/behaviour/closeout-worktree.test.ts
+        - tests/behaviour/closeout-worktree-refusal.test.ts
+        - tests/behaviour/capsule-phase-producer.test.ts
+        - tests/behaviour/closeout-capsule-gap.test.ts
+        - tests/behaviour/closeout-attention-exit.test.ts
+        - tests/structure/closeout-contracts-git.test.ts
+        - tests/structure/capsule-contract.test.ts
+        - tests/structure/closeout-imports.test.ts
+        - tests/fixtures/closeout/threads.ts
+        - tests/fixtures/closeout/harness.ts
+        - tests/fixtures/closeout/harness-telemetry.ts
+        - tests/fixtures/providers/github/graphql-review-threads.json
+        - tests/fixtures/state/harness.ts
+        - tests/fixtures/retro/harness.ts
+      folders:
+        - tests/fixtures/closeout/golden
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/ports.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/closeout.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/domain/closeout.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/git/index.ts
+        role: producer
+    completionArtifacts:
+      - "One Conventional Commit landed via @committer using the phase summary"
+      - "Every testGate command green at the phase HEAD"
+      - "F-1..F-13 addressed (F-7/F-14 documented as doc-syncer/spec-wording handoffs); F-15 recorded as environmental with no code task"
+      - "No completing TC marker moved: P12 re-proves the affected TCs only"
+    summary: "fix(GH-240): review-iteration-1 remediation — production thread authorship, true capsule pre-flight, production retro read, residue/diff/worktree fidelity, deterministic event keys"
+    tasks:
+      - >-
+        12.1 F-1 (critical) production thread authorship. Extend
+        packages/core/src/contracts/ports.ts `DeliveryThread` additively with the root
+        author login and actor-kind signal; extend
+        packages/adapters/src/github/client.ts `REVIEW_THREADS_QUERY` to request the root
+        comment author (login, bot/actor type, authorAssociation) and
+        packages/adapters/src/github/normalize.ts to normalize it to
+        `human`/`non-human`/`unknown`; export the additive surface through
+        packages/adapters/src/github/index.ts. In packages/cli/src/edge.ts populate
+        `threadAuthorFacts` in the production `planFacts`, and in
+        packages/core/src/domain/closeout.ts (or closeout-thread-policy.ts) make
+        absent/unknown authorship resolve to human: never resolve a human thread and
+        never resolve-all. Add the composition-level test in
+        tests/behaviour/closeout-composition-facts.test.ts (GitHub-normalized threads
+        through `createCloseoutComposition`) proving a human thread stays unresolved and
+        emits `unresolved-human-thread` residue, plus the provider fixture cases in
+        tests/behaviour/providers/github-closeout-thread-authorship.test.ts and
+        tests/fixtures/providers/github/graphql-review-threads.json. [F-1; F-6,
+        AC-F6-1; DEC-9; TC: TC-CAP-029 re-prove, TC-CAP-031 re-prove]
+      - >-
+        12.2 F-2 (high) true capsule pre-flight. In packages/core/src/domain/closeout.ts
+        move the full apply-mode pre-flight ahead of the step loop: capsule read,
+        candidate enumeration, `<id>.yaml` naming, schema/closed-vocabulary checks,
+        duplicate candidate ids, zero-or-multiple promotion decisions, and promotion
+        path-confinement preflight. Return `closeout.capsule-invalid` or
+        `closeout.step.capsule.failed` before any provider write, git mutation, or state
+        append in both plan and apply. Add apply assertions in
+        tests/behaviour/closeout-capsule-validation.test.ts and
+        tests/behaviour/closeout-capsule-close.test.ts that an invalid candidate yields
+        zero ticket/label/thread/checkout/branch effects and zero promotion writes.
+        [F-2; AC-F3-2, AC-F4-1; DEC-4; TC: TC-CAP-012 re-prove, TC-CAP-014 re-prove]
+      - >-
+        12.3 F-3 (high) production retro coverage. In packages/cli/src/edge.ts
+        `planFacts` call the delivered `readRetroRegistry(options.store)` and derive
+        `CloseoutRetroFacts` from a level-`change` `retro.run` whose scope is the work
+        item, keeping the injected override only as a test seam. A real composition must
+        report `collected` or `pending`; only an unreadable registry may produce the
+        declared `retro-coverage-unavailable` gap. Add a composition test in
+        tests/behaviour/closeout-composition-facts.test.ts that seeds the real temp
+        state store and asserts collected/pending plus the read-only registry hash
+        unchanged; keep tests/behaviour/closeout-retro-coverage.test.ts green.
+        [F-3; AC-F8-1, AC-F8-2; DEC-11; TC: TC-CAP-040 re-prove, TC-CAP-041 re-prove]
+      - >-
+        12.4 F-5 (medium) dedupe apply residue. In packages/core/src/domain/closeout.ts
+        stop pre-seeding apply residue from the plan or deduplicate residue by
+        `(kind, location, item)` in `orderResidue`, so
+        `retro-coverage-unavailable` and `session-attribution-gap` appear exactly once.
+        Add apply assertions in tests/behaviour/closeout-residue.test.ts and the retro
+        coverage suite. If apply output bytes change, regenerate the affected closeout
+        goldens via `tests/fixtures/closeout/golden/regenerate.ts --write` and review the
+        diff. [F-5; NFR-1, NFR-6; TC: TC-CAP-032 re-prove, TC-CAP-034 re-prove]
+      - >-
+        12.5 F-6 (medium) stable diff hit identity and declared action. In
+        packages/core/src/domain/closeout-diff-sweep.ts key the `closeout.step`
+        owed-flip evidence by a real content hash (for example SHA-256 of the trimmed
+        added line) plus file path, marker kind, and work-item ref; store the actual
+        content hash, never the added-line ordinal. Read and trust each marker's
+        declared contract-data action token; an out-of-vocabulary or kind-mismatched
+        action is `ambiguous-flip-hit`, never resolved. Update
+        tests/behaviour/closeout-merged-diff.test.ts and
+        closeout-merged-diff-ambiguous.test.ts with the content-key assertion and the
+        out-of-vocabulary/kind-mismatch negative cases. [F-6; F-5, AC-F5-1; DEC-8;
+        TC: TC-CAP-024 re-prove, TC-CAP-025 re-prove, TC-CAP-028 re-prove]
+      - >-
+        12.6 F-8 (medium) plan-mode ambiguous locations. Extend the
+        packages/core/src/contracts/closeout.ts facts and
+        packages/core/src/domain/closeout.ts `CloseoutPlanFacts.diff` to carry the
+        bounded ambiguous hits (kind/location only), or have the plan builder evaluate
+        the already-read diff, and emit `ambiguous-flip-hit` items in plan residue.
+        Populate the facts in packages/cli/src/edge.ts and assert plan/apply residue
+        equality for the diff producer in
+        tests/behaviour/closeout-merged-diff-ambiguous.test.ts and
+        closeout-attention-exit.test.ts. [F-8; F-5, F-11; AC-F5-1, AC-F11-1; TC:
+        TC-CAP-025 re-prove, TC-CAP-034 re-prove]
+      - >-
+        12.7 F-9 (low) local git engine for worktree removal. In
+        packages/core/src/domain/closeout.ts `operationFor` treat `remove-worktree` as a
+        git-engine operation with a git-appropriate capability context (`supported`),
+        so its durable `closeout.operation` record and identity do not depend on
+        provider capabilities. Assert the engine/identity in
+        tests/structure/closeout-contracts-git.test.ts and the worktree suite. [F-9;
+        DM-7; TC: TC-CAP-038 re-prove, TC-CAP-039 re-prove]
+      - >-
+        12.8 F-10 (low) remove duplicated contract literals and the index stepId remap.
+        In packages/core/src/domain/closeout.ts use `CAPSULE_MAX_SESSIONS` and
+        `CAPSULE_CONTRACT_VERSION` instead of `64` / `"delivery.capsule.v1"`; drop the
+        `closeoutStepDefinitions[index]` stepId re-assignment (each `planStep` already
+        declares its id) or assert push order against `CLOSEOUT_STEP_IDS` in a structure
+        test. Update tests/structure/capsule-contract.test.ts and the compaction suite.
+        [F-10; DEC-7; NFR-10; TC: TC-CAP-002 re-prove, TC-CAP-042 re-prove,
+        TC-CAP-050 re-prove]
+      - >-
+        12.9 F-11 (low) worktree last-moment re-check. In
+        packages/adapters/src/git/index.ts give `removeWorktree` an `expectedHead`-style
+        guard and re-read the worktree head and cleanliness immediately before the
+        destructive argv, mirroring branch deletion; have
+        packages/core/src/domain/closeout-worktree.ts / closeout.ts re-run the safety
+        predicate in apply. A head move or dirtiness between planning and removal must
+        refuse, not remove. Add moved-head/dirty-after-plan fixtures to
+        tests/behaviour/closeout-worktree.test.ts and
+        closeout-worktree-refusal.test.ts. [F-11; AC-F7-1, AC-F7-2; NFR-9; TC:
+        TC-CAP-037 re-prove, TC-CAP-038 re-prove]
+      - >-
+        12.10 F-12 (low) deterministic phase-reopen event key. In
+        packages/core/src/domain/capsule.ts make `capsulePhaseEventKey` derive from
+        stable identity (changeRef + phaseId + operation + commitSha when present) with
+        no `occurredAt` fallback; if a no-SHA reopen needs uniqueness, use the phase
+        record identity and assert the reopen as a distinct logical event. Add re-run
+        assertions at a different timestamp in
+        tests/behaviour/capsule-phase-producer.test.ts. [F-12; AC-F2-1; NFR-6;
+        TC: TC-CAP-007 re-prove, TC-CAP-009 re-prove]
+      - >-
+        12.11 F-13 (low) end-to-end `capsuleExpectedEvents`. Add a
+        composition/behaviour test in tests/behaviour/closeout-capsule-gap.test.ts and
+        closeout-composition-facts.test.ts that writes real `phase.transition`,
+        `commit.telemetry`, and `merge.gate-verification` records, runs the producers or
+        their key helpers and closeout through the production composition, and asserts
+        zero `capsule-event-gap` residue for the matched change. [F-13; AC-F1-3,
+        AC-F2-1; TC: TC-CAP-011 re-prove, TC-CAP-013 re-prove]
+      - >-
+        12.12 F-4 plan-compliance reconciliation. The header now records the P5/P8
+        declared-versus-actual reconciliation: the P5 provider/ports files exist and
+        are extended by 12.1; the P8 retro/compaction modules are superseded by
+        packages/core/src/domain/closeout.ts (`retroStep`, `compactionStep`);
+        session attribution is superseded by packages/cli/src/edge.ts `sessionsFor`;
+        capsule residue is superseded by closeout.ts (`orderResidue`,
+        `capsuleResidueOf`). Add/keep the structure assertion in
+        tests/structure/closeout-imports.test.ts that the consolidated modules/exports
+        exist and no named production seam is silently missing. [F-4; plan compliance;
+        TC: TC-CAP-057 re-prove]
+      - >-
+        12.13 F-7 documented handoff. Record, not code: doc/spec/features/feature-spend.md
+        still contains the stale "No production composer is wired yet" claim. Route it
+        to the @doc-syncer re-run after remediation; no P12 code or P12 scope file.
+        [F-7; DoD-19; no TC completing marker]
+      - >-
+        12.14 F-14 recorded-as-accepted. Record, not code: the `+N` truncation line is
+        an additional sentinel and does not count toward the 50-item cap; the item cap
+        stays 50. Route the spec wording follow-up to the @doc-syncer re-run. [F-14;
+        NFR-4; no TC completing marker]
+      - >-
+        12.15 F-15 recorded-as-environmental. Record, not code: the one high-concurrency
+        temp-repo commit flake passes in isolation and is environmental/parallelism
+        fragility, not a GH-240 logic defect. No task and no TC change. [F-15; no
+        completing marker]
+    coverage:
+      - "TC-CAP-029 (re-prove: production composition supplies thread author facts and a human thread stays unresolved; completing marker stays P5)"
+      - "TC-CAP-031 (re-prove: identity-only human/unknown residue through the production composition; completing marker stays P5)"
+      - "TC-CAP-012 (re-prove: full pre-flight rejects an invalid candidate before any mutation; completing marker stays P4)"
+      - "TC-CAP-014 (re-prove: plan-mode zero writes and would-refuse rendering; completing marker stays P3)"
+      - "TC-CAP-040 (re-prove: production composition reads the real retro registry and records collected/pending; completing marker stays P8)"
+      - "TC-CAP-041 (re-prove: declared unavailable gap only for an unreadable registry; completing marker stays P8)"
+      - "TC-CAP-032 (re-prove: residue dedupe and ordering; completing marker stays P6)"
+      - "TC-CAP-034 (re-prove: attention matrix with deduped apply residue and plan-mode ambiguous locations; completing marker stays P10)"
+      - "TC-CAP-024 (re-prove: stable content-keyed diff evidence; completing marker stays P5)"
+      - "TC-CAP-025 (re-prove: declared action token and out-of-vocabulary/kind-mismatch ambiguity; completing marker stays P5)"
+      - "TC-CAP-028 (re-prove: marker contract-data action is read, not inferred from text; completing marker stays P5)"
+      - "TC-CAP-038 (re-prove: worktree removal re-checks head/cleanliness and never removes twice; completing marker stays P7)"
+      - "TC-CAP-039 (re-prove: remove-worktree records under the git engine and keeps the no-force seam; completing marker stays P7)"
+      - "TC-CAP-037 (re-prove: moved-head/dirty last-moment refusal; completing marker stays P7)"
+      - "TC-CAP-002 (re-prove: contract constants replace hardcoded schema/cap literals; completing marker stays P1)"
+      - "TC-CAP-042 (re-prove: compaction uses CAPSULE_MAX_SESSIONS and the declared contract version; completing marker stays P8)"
+      - "TC-CAP-050 (re-prove: step ids are owned by the step functions, not an index remap; completing marker stays P10)"
+      - "TC-CAP-007 (re-prove: phase-transition key is stable without occurredAt; completing marker stays P2)"
+      - "TC-CAP-009 (re-prove: gate-outcome key behavior unchanged; completing marker stays P2)"
+      - "TC-CAP-011 (re-prove: production capsuleExpectedEvents derives zero gaps for matched records; completing marker stays P3)"
+      - "TC-CAP-013 (re-prove: pre-contract/expected-event cross-check through production composition; completing marker stays P3)"
+      - "TC-CAP-057 (re-prove: declared-vs-actual plan compliance and state additivity; completing marker stays P11)"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/providers/github-closeout-thread-authorship.test.ts tests/behaviour/closeout-composition-facts.test.ts tests/behaviour/closeout-capsule-validation.test.ts tests/behaviour/closeout-capsule-close.test.ts"
+      - "bun test tests/behaviour/closeout-retro-coverage.test.ts tests/behaviour/closeout-residue.test.ts"
+      - "bun test tests/behaviour/closeout-merged-diff.test.ts tests/behaviour/closeout-merged-diff-ambiguous.test.ts"
+      - "bun test tests/behaviour/closeout-worktree.test.ts tests/behaviour/closeout-worktree-refusal.test.ts"
+      - "bun test tests/behaviour/capsule-phase-producer.test.ts tests/behaviour/closeout-capsule-gap.test.ts tests/behaviour/closeout-attention-exit.test.ts"
+      - "bun test tests/structure/closeout-contracts-git.test.ts tests/structure/capsule-contract.test.ts tests/structure/closeout-imports.test.ts"
+      - "bun test tests/golden/closeout-envelope.test.ts tests/golden/closeout-human.test.ts tests/golden/closeout-residue.test.ts"
+      - "bun test tests/checks/capsule-mutants.test.ts tests/checks/capsule-determinism.test.ts"
+      - "bun test tests/behaviour/closeout"
+      - "pnpm check:boundaries"
+      - "bun run scripts/checks/error-table-sync.ts"
+    invariants:
+      - "F-1: absent/unknown authorship is human (fail-closed); no resolve-all path; the production composition supplies thread author facts"
+      - "F-2: the full capsule pre-flight runs before any provider write, git mutation, or state append in plan and apply"
+      - "F-3: retro coverage is read from the delivered registry by the production composition; injected facts are a test seam only"
+      - "F-5: residue is deduplicated by (kind, location, item); retro/session gap items appear exactly once"
+      - "F-6: diff evidence is keyed by content hash plus file/kind/ref; the declared action token is authoritative; out-of-vocabulary/kind-mismatch is ambiguous"
+      - "F-8: plan mode renders bounded ambiguous-flip-hit locations"
+      - "F-9: remove-worktree records under the local git engine"
+      - "F-10: contract data is the sole source of caps/schema/step ids; no index-based stepId remap"
+      - "F-11: worktree removal re-reads head/cleanliness immediately before the destructive argv"
+      - "F-12: phase-reopen event keys are deterministic without occurredAt"
+      - "F-13: the production capsuleExpectedEvents derivation is exercised end-to-end"
+      - "F-14/F-15 and F-7 are recorded handoffs, not code; no completing TC marker moved by P12"

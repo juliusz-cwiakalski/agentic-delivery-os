@@ -48,7 +48,12 @@ const EXPECTED_STEPS = [
   "owed-flip-sweep",
   "comment-resolution",
   "checkout-restore",
+  "worktree-cleanup",
   "branch-cleanup",
+  "merged-diff-sweep",
+  "retro-coverage-move",
+  "session-compaction",
+  "capsule",
 ];
 
 const EXPECTED_DISPOSITIONS = [
@@ -136,7 +141,7 @@ const partitionViolations = (
 describe("TC-CLOSE-001 closeout contract vocabulary", () => {
   test("the seven step ids are exact and ordered", () => {
     expect([...CLOSEOUT_STEP_IDS]).toEqual(EXPECTED_STEPS);
-    expect(CLOSEOUT_STEP_IDS).toHaveLength(7);
+    expect(CLOSEOUT_STEP_IDS).toHaveLength(12);
   });
 
   test("the label disposition table is exact and ordered", () => {
@@ -181,6 +186,7 @@ describe("TC-CLOSE-001 closeout contract vocabulary", () => {
       "resolve-delivery-thread",
       "restore-checkout",
       "delete-branch",
+      "remove-worktree",
     ]);
     expect([...CLOSEOUT_READ_OBSERVATIONS]).toEqual([
       "observed",

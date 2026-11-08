@@ -18,6 +18,11 @@ delivery: 504 feat/GH-183/closeout-v1-branch-cleanup -> main-tools
    - resolve-delivery-thread 504 0eea6e915f44
 6. checkout-restore: would-apply
    - restore-checkout main-tools df75e6f6076c
-7. branch-cleanup: would-apply
+7. worktree-cleanup: satisfied no-worktree
+8. branch-cleanup: would-apply
    - delete-branch feat/GH-183/closeout-v1-branch-cleanup f29b39c9f0e1
-summary: satisfied=1 would-apply=6
+9. merged-diff-sweep: skipped-gap merged-diff-unavailable
+10. retro-coverage-move: would-apply
+11. session-compaction: skipped-noop no-sessions
+12. capsule: would-apply
+summary: satisfied=2 skipped-gap=1 skipped-noop=1 would-apply=8

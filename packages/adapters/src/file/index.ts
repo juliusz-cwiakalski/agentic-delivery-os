@@ -4,10 +4,12 @@
  */
 
 export {
+  type ChangeFolderFileSystem,
   type ChangeFolderLookup,
   type ChangeFolderRequest,
   locateChangeFolder,
   relativeChangeFolder,
+  resolveChangeFolder,
 } from "./change-folder.js";
 export { type CiWorkflowJobNamesRead, readCiWorkflowJobNames } from "./ci-workflow.js";
 export {
@@ -27,6 +29,18 @@ export {
   type RuntimePlatform,
   runtimePlatform,
 } from "./config-source.js";
+export {
+  type CapsuleRuntimeOptions,
+  createCapsuleFileRuntime,
+  nodeCapsuleFileSystemFacts,
+} from "./capsule.js";
+export {
+  applyPromotionWrite,
+  checkPromotionConfinement,
+  type MemoryReadFileSystem,
+  type PromotionWriteResult,
+  readMemoryFacts,
+} from "./memory-promotion.js";
 export {
   type PlanArtifactRequest,
   readPlanArtifact,

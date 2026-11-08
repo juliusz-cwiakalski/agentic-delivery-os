@@ -25,6 +25,7 @@ import {
   MERGE_GATE_ERROR_SUFFIX,
   MERGE_GATE_ERROR_TEMPLATE,
 } from "../../packages/core/src/contracts/merge.js";
+import { CLOSEOUT_STEP_IDS } from "../../packages/core/src/contracts/closeout.js";
 import {
   BOARD_COLLECTOR_ERROR_PREFIX,
   BOARD_COLLECTOR_ERROR_SUFFIX,
@@ -89,6 +90,38 @@ export const isDeclaredMergeGateFamilyCode = (
   return id !== undefined && declaredIds.includes(id);
 };
 
+export const CLOSEOUT_STEP_ERROR_PREFIX = "closeout.step." as const;
+export const CLOSEOUT_STEP_ERROR_SUFFIX = ".failed" as const;
+
+/** The declared `closeout.step.<id>.failed` family slot (GH-240 DEC-15). */
+export const closeoutStepIdOfFamilyCode = (code: string): string | undefined => {
+  if (!code.startsWith(CLOSEOUT_STEP_ERROR_PREFIX)) return undefined;
+  if (!code.endsWith(CLOSEOUT_STEP_ERROR_SUFFIX)) return undefined;
+  const id = code.slice(
+    CLOSEOUT_STEP_ERROR_PREFIX.length,
+    code.length - CLOSEOUT_STEP_ERROR_SUFFIX.length,
+  );
+  return /^[a-z][a-z0-9-]*$/.test(id) ? id : undefined;
+};
+
+export const isDeclaredCloseoutStepFamilyCode = (
+  code: string,
+  declaredIds: readonly string[] = CLOSEOUT_STEP_IDS,
+): boolean => {
+  const id = closeoutStepIdOfFamilyCode(code);
+  return id !== undefined && declaredIds.includes(id);
+};
+
+const FAMILY_SHAPES: Readonly<
+  Record<string, { readonly prefix: string; readonly suffix: string }>
+> = {
+  [MERGE_GATE_ERROR_TEMPLATE]: { prefix: MERGE_GATE_ERROR_PREFIX, suffix: MERGE_GATE_ERROR_SUFFIX },
+  "closeout.step.<id>.failed": {
+    prefix: CLOSEOUT_STEP_ERROR_PREFIX,
+    suffix: CLOSEOUT_STEP_ERROR_SUFFIX,
+  },
+};
+
 const familyForTemplate = (code: string): ErrorTableFamily | undefined =>
   (ERROR_TABLE_FAMILIES as readonly ErrorTableFamily[]).find((family) => family.template === code);
 
@@ -130,6 +163,8 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "commit.staging-blocked-untracked",
   "commit.commitlint-failed",
   "commit.atomic-abort",
+  // GH-240 pins the capsule-invalid identity exactly; it is a two-segment code.
+  "closeout.capsule-invalid",
   // GH-225 pins the merge identities exactly; they are two-segment codes.
   "merge.gates-stale",
   "merge.waiver-unauthorized",
@@ -324,14 +359,16 @@ const validateFamilies = (
   const templates = new Set<string>();
   families.forEach((family, index) => {
     const label = `family[${index}] ${family.template ?? "<missing template>"}`;
-    if (family.template !== MERGE_GATE_ERROR_TEMPLATE) {
-      failures.push(`${label}: only ${MERGE_GATE_ERROR_TEMPLATE} is declared`);
-    }
-    if (family.slotPrefix !== MERGE_GATE_ERROR_PREFIX) {
-      failures.push(`${label}: slot prefix is not the declared family prefix`);
-    }
-    if (family.slotSuffix !== MERGE_GATE_ERROR_SUFFIX) {
-      failures.push(`${label}: slot suffix is not the declared family suffix`);
+    const shape = FAMILY_SHAPES[family.template];
+    if (shape === undefined) {
+      failures.push(`${label}: template is not a declared family`);
+    } else {
+      if (family.slotPrefix !== shape.prefix) {
+        failures.push(`${label}: slot prefix is not the declared family prefix`);
+      }
+      if (family.slotSuffix !== shape.suffix) {
+        failures.push(`${label}: slot suffix is not the declared family suffix`);
+      }
     }
     if (!domainKinds.includes(family.domainKind)) {
       failures.push(`${label}: undeclared namespace ${family.domainKind}`);
@@ -479,7 +516,8 @@ const validateCorpus = (
           (reference) =>
             codes.has(reference.code) ||
             isDeclaredMergeGateFamilyCode(reference.code) ||
-            isDeclaredCollectorFamilyCode(reference.code),
+            isDeclaredCollectorFamilyCode(reference.code) ||
+            isDeclaredCloseoutStepFamilyCode(reference.code),
         );
       for (const reference of recognized) {
         const familyShape = mergeGateIdOfFamilyCode(reference.code) !== undefined;
@@ -487,7 +525,8 @@ const validateCorpus = (
           !codes.has(reference.code) &&
           !familyShape &&
           !isDeclaredMergeGateFamilyCode(reference.code) &&
-          !isDeclaredCollectorFamilyCode(reference.code)
+          !isDeclaredCollectorFamilyCode(reference.code) &&
+          !isDeclaredCloseoutStepFamilyCode(reference.code)
         ) {
           failures.push(`${label}: recognized code ${reference.code} has no table entry`);
         }
@@ -542,6 +581,13 @@ const validateScan = (
               `${file}:${reference.line} ${surface}: recognized collector-family code ${reference.code} has no table entry`,
             );
           }
+          continue;
+        }
+        if (isDeclaredCloseoutStepFamilyCode(reference.code)) continue;
+        if (closeoutStepIdOfFamilyCode(reference.code) !== undefined) {
+          failures.push(
+            `${file}:${reference.line} ${surface}: recognized closeout-step-family code ${reference.code} has no table entry`,
+          );
           continue;
         }
         if (isDeclaredMergeGateFamilyCode(reference.code)) continue;

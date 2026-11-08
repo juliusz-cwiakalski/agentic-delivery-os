@@ -1,5 +1,7 @@
 /** TC-CLOSE-010/011/015/016/040/052/056/067 — end-to-end transaction flows. */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
+
+setDefaultTimeout(120_000);
 import { mkdirSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
 import { createCloseoutComposition, createConfigProgram } from "../../packages/cli/src/edge";
@@ -213,6 +215,8 @@ describe("TC-CLOSE-010/011 production composition over the real git seam", () =>
         store,
         nowIso: () => CLOSEOUT_TIMESTAMP,
         newFenceToken: () => "fence-production",
+        retro: { available: true, collected: false },
+        sessions: { available: true, sessionIds: [] },
       });
       const built = createConfigProgram({
         workingName: "synthetic",

@@ -8,12 +8,34 @@
             {
               "id": "PRRT_1",
               "isResolved": true,
-              "comments": { "totalCount": 2 }
+              "comments": {
+                "totalCount": 2,
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "octocat",
+                      "__typename": "User"
+                    },
+                    "authorAssociation": "MEMBER"
+                  }
+                ]
+              }
             },
             {
               "id": "PRRT_2",
               "isResolved": false,
-              "comments": { "totalCount": 1 }
+              "comments": {
+                "totalCount": 1,
+                "nodes": [
+                  {
+                    "author": {
+                      "login": "dependabot[bot]",
+                      "__typename": "Bot"
+                    },
+                    "authorAssociation": "NONE"
+                  }
+                ]
+              }
             }
           ]
         }

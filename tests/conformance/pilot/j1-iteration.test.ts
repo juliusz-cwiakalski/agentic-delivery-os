@@ -92,10 +92,16 @@ describe("TC-PILOT-002 J1 sequence", () => {
   });
 
   test("closeout applies the mechanical sweep through the real state ledger", () => {
+    // GH-240: an applied run that leaves judgment residue returns the additive
+    // data-bearing `attention` outcome (exit 1). The pilot fixture does not
+    // configure a retro registry, so the retro-coverage step reports a gap and
+    // that gap is disclosed as residue; the sweep itself still applies.
     const run = sequenceOf().closeout;
-    expect(run.exitCode).toBe(0);
+    expect(run.exitCode).toBe(1);
     const data = dataOf(run.envelope);
     expect(data.mode).toBe("applied");
+    const residue = data.residue as readonly { readonly kind?: string }[] | undefined;
+    expect(residue?.some((item) => item.kind === "retro-coverage-unavailable")).toBe(true);
     const history = readCloseoutHistory(fixture().store, PILOT_REF);
     expect(history.ok).toBe(true);
     if (history.ok) expect(history.value.length).toBeGreaterThan(0);
