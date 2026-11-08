@@ -369,3 +369,65 @@ notes:
       @doc-syncer if behavior changed, then @reviewer iteration 2."
     type: info
     date: "2026-11-08"
+  - text: "Review iteration 1 remediation complete in one pass. Delivery commit
+      27f791b9 (production composition, corroboration/identity/watch policy, tests,
+      spec/plan reconciliation, registry bookkeeping). F-1 FIXED: the shipped
+      createProductionComposer now composes the evidence gate (scope production,
+      principal local-same-user, resolveRepository via resolveDispatchIdentity), and
+      dual-run summary, dual-run resolve, and handover [--revert] all run through
+      createDispatchComposer in the new production-composition suite (proven, not
+      just advertised). F-2 FIXED: existingLane is composed from the latest
+      resumable daemon lane record (session, folded completed phases, adapter
+      resume-injection capability, persisted restart count), restartBudget and
+      livenessIntervalMs resolve from lane.restart-budget / lane.liveness-interval,
+      --resume-prompt now resumes the existing session (asserted --session <id>, no
+      fresh spawn), and a restart-budget refusal appends the delivered terminal
+      exhaustion record via ensureEconomicsExhaustionRecord (asserted through the
+      production composer). F-3 FIXED: repository identity resolves through
+      resolveDispatchIdentity (scheduler key -> normalized remote -> persisted
+      first-use marker), persists the binding with
+      ensureDispatchIdentityMarkerText, and refuses cleanly when nothing resolves; a
+      rename/remote-change production test proves the persisted binding governs and
+      attempts are not re-keyed. F-4 FIXED: handoverDispatchEvidence folds the
+      authority ledger before appending and returns {recorded:false,noop:true} when
+      already authoritative; an advancing-clock test asserts exactly one handover
+      record. F-5 FIXED: trackerTokenOf returns pr-open for any open PR and
+      urlResolved is the comparison attribute; the production test asserts
+      comparison.token pr-open with urlResolved false and falseSuccess false. F-6
+      FIXED: corroboration facts carry an explicit unreadable marker; only a
+      readable contradiction is a false-success incident, so an unreadable source
+      blocks corroboration without resetting the window; a merged + unreadable-CI
+      test proves falseSuccess false and corroboration unsatisfied with no
+      divergence. F-7 FIXED: the one-shot path polls harness.liveness at
+      lane.liveness-interval while collect is pending, carries the previous
+      observation, records the verdict trail as attempt liveness evidence
+      (liveness:*), and routes a corroborated stall through restart admission
+      (max-restarts + terminal exhaustion at/above the bound); below the bound the
+      stall is recorded and the delivered port (no kill) never leaks a second
+      session, documented in the spec F-1 and the dispatch reference page. F-8
+      DISPOSITIONED: the lane-plan/executor seam and daemon-path attempt record are
+      delivered and proven at the factory; the production daemon entry is owned by
+      the GH-238 follow-up, so AC-F10-1 is now stated as seam-level proof and this
+      note records the accepted disposition rather than inventing a daemon command.
+      F-9 FIXED: a post-spawn harness.collect failure is pinned as an attempt-stage
+      Appendix G row (state-unverified/failed at exit 2, one record,
+      not-applicable comparison) and tested. F-10 FIXED: DM-5 documents the
+      attempt-stage data.error envelope extension and the data.result + data.error
+      read. F-11 FIXED: NFR-4 documents the delivered store read as the bound and
+      the newest-5,000 retained fold, and a >5,000-record test proves the declared
+      truncation (bound 5000, omitted 10). F-12 FIXED: the production-composition
+      suite injects repository facts (no real origin dependency). F-13 FIXED: plan
+      phase 10 tests now name dispatch-gate-evidence and dispatch-evidence-class,
+      phase 1 owns the TC-HELP-003 harness slice, phase 4 confirms the pre-inversion
+      entrypoint run, and the four bookkeeping files plus the new watch suite are
+      declared in the owning phase scopes and the header cross-phase note (R2/R7
+      applied). F-14 informational (auto-generated commit subjects), noted only.
+      Doc-sync follow-up also registered feature-dispatch-engine.md and
+      test-spec-dispatch-engine.md in the forbidden-literals registry, which the
+      unregistered-doc scan required. Tests: dispatch behaviour/structure/golden/
+      conformance suites (302), daemon/entrypoint suites, pnpm typecheck,
+      pnpm check:boundaries, and the aggregate pnpm check (TMPDIR in-repo) green:
+      6439 pass, 4 skip, 0 fail; prompt conformance, help coverage, and exports
+      parity green."
+    type: info
+    date: "2026-11-08"
