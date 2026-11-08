@@ -431,3 +431,14 @@ notes:
       parity green."
     type: info
     date: "2026-11-08"
+  - text: "Review iteration 1 remediation follow-ups: aaa603a6 (pm-notes evidence
+      note for the iteration) and 00ac214b (the merged-plus-unreadable-CI test also
+      asserts the gate: incidents 0, windowStartReason first-counted-dispatch,
+      corroboration unsatisfied >= 1, eligibility false). Final aggregate
+      pnpm check with TMPDIR in-repo is green: 6439 pass, 4 skip, 0 fail (767
+      files); typecheck, boundaries, prompt conformance, help coverage, and exports
+      parity green. One review artifact,
+      code-review/review-iter-1.yaml, stays untracked because the commit primitive
+      does not stage the review folder; it is the reviewer-owned record."
+    type: info
+    date: "2026-11-08"
