@@ -1,8 +1,8 @@
 ---
 id: chg-GH-273-test-plan
-status: Proposed
+status: Updated
 created: 2026-11-08
-last_updated: 2026-11-08
+last_updated: 2026-11-08T17:54:35Z
 owners: [engineering]
 service: delivery-os
 labels: [bug, queue, scheduling, cli-composition, m1-s9, regression]
@@ -59,28 +59,32 @@ The plan's central discipline is the one called out by spec DEC-5 / RSK-4: compo
 
 ### 3.1 Functional Coverage (F-#, AC-#)
 
-| AC ID | Criterion (abridged) | TC ID(s) | Status |
-|-------|----------------------|----------|--------|
-| AC-F1-1 | Production composition over a resolvable GitHub origin: add is `added`/`noop` at exit 0 and the entry carries both `repository` and `repositoryRoot`. | TC-BIND-001, TC-BIND-010 | Covered |
-| AC-F1-2 | Key unresolved while a root exists: no binding (no root-only record), add succeeds, entry carries neither field. | TC-BIND-002 (cell C) | Covered — forward guard, see §8.3 OQ-A |
-| AC-F1-3 | Root unresolved while an origin is supplied: no binding (no key-only record), add succeeds, entry carries neither field. | TC-BIND-002 (cell B) | Covered |
-| AC-F1-4 | Exactly one queue repository-binding derivation site; pair-or-absent; no other site constructs a queue composition with a binding literal. | TC-BIND-014 | Covered |
-| AC-F2-1 | Nested working directory: recorded root is the checkout root, not the nested directory. | TC-BIND-003 | Covered |
-| AC-F2-2 | Linked worktree records its own root; top-level and nested invocations of the same checkout record the same absolute root. | TC-BIND-004 | Covered |
-| AC-F2-3 | Recorded root is absolute; no additional repository-facts resolution and no process spawn on add. | TC-BIND-001, TC-BIND-005, TC-BIND-016 | Covered (single-resolution half is structural, §8.3 OQ-D) |
-| AC-F3-1 | HTTPS ± `.git`, SSH URL, scp-style, mixed case all record the same lowercase `host/owner/name`, consistent with the normalized remote of the recorded root. | TC-BIND-006 | Covered |
-| AC-F3-2 | With no persisted identity marker, dispatch identity resolves from the entry's scheduler key (source `scheduler`), not the remote. | TC-BIND-007 | Covered |
-| AC-F4-1 | `queue list` observes the entry with the normalized key; the root appears nowhere in JSON/text output or other read surfaces. | TC-BIND-008 | Covered |
-| AC-F4-2 | `queue claim`/`queue plan` observe the ref and `dispatch` no longer refuses with `queue.entry.unobserved`. | TC-BIND-009 | Covered |
-| AC-F5-1 | Key-only and root-only add requests are refused with `input.value.rejected` naming the invariant. | TC-BIND-011 | Covered |
-| AC-F5-2 | A stored record with exactly one field fails the read closed as a torn store; nothing fabricated or dropped. | TC-BIND-012 | Covered |
-| AC-F5-3 | No error row added/retired; invariant branches unchanged (diff-level review). | TC-BIND-013 | Covered (existing automated set + review) |
-| AC-F6-1 | Reverting the producer fix in place makes the add test and the guard-branch tests fail; restoring makes them pass. | TC-BIND-018 | Covered (manual gate; not a permanent suite) |
-| AC-F6-2 | Both one-sided request shapes and the one-sided record read are covered by explicit assertions. | TC-BIND-011, TC-BIND-012 | Covered |
-| AC-F6-3 | Every fixture composing a binding supplies both fields or none; the pilot binding's key equals its ledger seeds' key. | TC-BIND-015 | Covered |
-| AC-F6-4 | Ticket repro (add → list → dispatch) passes after the fix; the pre-fix expectations are the failure the tests detect. | TC-BIND-010 | Covered |
+Every AC is mapped below to the TC that satisfies it and to its evidence class, per spec §17 "Verification method": **permanent suite** (a committed assertion that runs in `pnpm check`), **mutation-verified** (a committed assertion whose detection is demonstrated by a named in-review mutation, because the pre-fix code already exhibits the guarded behaviour), or **review-verified** (diff-level evidence recorded in the change review, backed by the existing pinned tests).
 
-Functional capabilities F-1…F-6 are covered transitively: F-1 → TC-BIND-001/002/014; F-2 → TC-BIND-003/004/005; F-3 → TC-BIND-006/007; F-4 → TC-BIND-008/009/010; F-5 → TC-BIND-011/012/013; F-6 → TC-BIND-010/011/012/014/015/018.
+| AC ID | Criterion (abridged) | TC ID(s) | Evidence class | Status |
+|-------|----------------------|----------|----------------|--------|
+| AC-F1-1 | Production composition over a resolvable GitHub origin: add is `added`/`noop` at exit 0 and the entry carries both `repository` and `repositoryRoot`. | TC-BIND-001, TC-BIND-010 | Permanent suite (+ revert check) | Covered |
+| AC-F1-2 | Key unresolved while a root exists: no binding (no root-only record), add succeeds, entry carries neither field. | TC-BIND-002 (cell key✗/root✓) | Mutation-verified (asymmetry mutation, §8.3 OQ-A) | Covered — symmetry guard |
+| AC-F1-3 | Root unresolved while an origin is supplied: no binding (no key-only record), add succeeds, entry carries neither field. | TC-BIND-002 (cell key✓/root✗) | Permanent suite (+ revert check) | Covered — revert-detecting guard |
+| AC-F1-4 | Exactly one queue repository-binding derivation site; pair-or-absent; no other site constructs a queue composition with a binding literal. | TC-BIND-014 | Permanent suite (structural) | Covered |
+| AC-F2-1 | Nested working directory: recorded root is the checkout root, not the nested directory. | TC-BIND-003 | Permanent suite (+ revert check) | Covered |
+| AC-F2-2 | Linked worktree records its own root; top-level and nested invocations of the same checkout record the same absolute root. | TC-BIND-004 | Permanent suite (+ revert check) | Covered |
+| AC-F2-3 | Recorded root is absolute; the add performs no process spawn and no network call; the "no additional repository-facts resolution" half is carried by the structural single-resolution assertion instead of an unobservable runtime counter. | TC-BIND-001, TC-BIND-005, TC-BIND-016 | Permanent suite (runtime half) + permanent suite structural (resolution half) | Covered (§8.3 OQ-D) |
+| AC-F3-1 | HTTPS ± `.git`, SSH URL, scp-style, mixed case all record the same lowercase `host/owner/name`, consistent with the normalized remote of the recorded root. | TC-BIND-006 | Permanent suite (+ revert check) | Covered |
+| AC-F3-2 | With no persisted identity marker, dispatch identity resolves from the entry's scheduler key (source `scheduler`) when exercised directly at the resolver level against a disagreeing remote-derived identity. | TC-BIND-007 (resolver unit assertion) | Permanent suite (direct unit assertion) | Covered — end-to-end covers AC-F4-2 only (§8.3 OQ-E) |
+| AC-F4-1 | `queue list` observes the entry with the normalized key; the root appears nowhere in JSON/text output, nor in the `status`/`brief` renderings (absence only, no exit-code assertion). | TC-BIND-008 | Permanent suite (+ revert check) | Covered (§8.3 OQ-F) |
+| AC-F4-2 | `queue claim`/`queue plan` observe the ref and `dispatch` no longer refuses with `queue.entry.unobserved`. | TC-BIND-009 | Permanent suite (+ revert check) | Covered |
+| AC-F5-1 | Key-only and root-only add requests are refused with `input.value.rejected` naming the invariant. | TC-BIND-011 | Mutation-verified (write-side predicate mutation, §8.3 OQ-B) | Covered |
+| AC-F5-2 | A stored record with exactly one field fails the read closed as a torn store; nothing fabricated or dropped. | TC-BIND-012 | Mutation-verified (read-side predicate mutation, §8.3 OQ-B) | Covered |
+| AC-F5-3 | No error row added/retired; the invariant keeps both branches unchanged (no condition softened or removed). | TC-BIND-013 | Review-verified diff + existing pinned error-set suite | Covered (§8.3 OQ-E) |
+| AC-F6-1 | Reverting the producer fix in place makes the composition add test and the root-unresolved guard test fail; the key-unresolved guard is a symmetry guard detected by an in-place asymmetry mutation (root-only emission observed failing, then restored). | TC-BIND-018 | Review-verified (revert + asymmetry mutation procedure) | Covered — not a permanent suite |
+| AC-F6-2 | Both one-sided request shapes and the one-sided record read are covered by explicit assertions. | TC-BIND-011, TC-BIND-012 | Mutation-verified (one predicate mutation per layer) | Covered (§8.3 OQ-B) |
+| AC-F6-3 | Every fixture composing a binding supplies both fields or none; the pilot binding's key equals its ledger seeds' key. | TC-BIND-015 | Permanent suite (structural, revert-detecting) | Covered |
+| AC-F6-4 | Ticket repro (add → list → dispatch) passes after the fix; the pre-fix failure triple is encoded explicitly in the test rather than by running reverted code. | TC-BIND-010 | Permanent suite (encoded pre-fix triple) | Covered (§8.3 OQ-G) |
+
+All 18 acceptance criteria (AC-F1-1…AC-F6-4) are mapped; no AC is unmapped or marked TODO.
+
+Functional capabilities F-1…F-6 are covered transitively: F-1 → TC-BIND-001/002/014; F-2 → TC-BIND-003/004/005/016; F-3 → TC-BIND-006/007; F-4 → TC-BIND-008/009/010; F-5 → TC-BIND-011/012/013; F-6 → TC-BIND-010/011/012/014/015/018.
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -102,11 +106,11 @@ No API or EVT identifiers are declared by the spec (§8.1, §8.2 — none). Data
 | NFR ID | Requirement (threshold) | TC ID(s) | Notes |
 |--------|-------------------------|----------|-------|
 | NFR-1 | Binding totality: 0 one-sided bindings over the four-cell matrix. | TC-BIND-002 | Each cell asserted explicitly, not just "no throw". |
-| NFR-2 | Root never appears in envelopes, findings, incidents, logs, telemetry, or the derived graph. | TC-BIND-008, TC-BIND-009 | Behavioural absence over queue/lanes/plan/claim/release/status/brief/dispatch output + graph document; source allowlist guards new disclosure sites. |
-| NFR-3 | No grammar, envelope shape, key order, exit projection, or error-identity change. | TC-BIND-013 + existing goldens/error-table suites | Zero new/removed error rows asserted by the pinned queue-row fixture. |
-| NFR-4 | Every new composition-level regression fails against the pre-fix producer; 0 tests assert only a fixture-supplied pair. | TC-BIND-001/002/003/004/006/007/008/009/010/017 (pre-fix failure named per TC), TC-BIND-018 | In-place revert is a review gate, not a permanent test. See §8.3 OQ-B. |
-| NFR-5 | 0 spawns, 0 outbound calls, 1 facts resolution per invocation on the add path. | TC-BIND-005, TC-BIND-016 | Spawn/network asserted at runtime; "1 resolution" asserted structurally. |
-| NFR-6 | Deterministic binding and output for identical facts/arguments. | TC-BIND-006, TC-BIND-017 | Byte-identical replay of a wall-clock production envelope is not achievable; binding-level determinism is asserted (§8.3 OQ-C). |
+| NFR-2 | Root never appears in envelopes, findings, incidents, logs, telemetry, or the derived graph. | TC-BIND-008, TC-BIND-009 | Behavioural absence over queue/lanes/plan/claim/release/status/brief/dispatch output + graph document; `status`/`brief` asserted for absence only, with no exit-code assertion (§8.3 OQ-F). Source allowlist guards new disclosure sites. |
+| NFR-3 | No grammar, envelope shape, key order, exit projection, or error-identity change. | TC-BIND-013 + existing goldens/error-table suites | Review-verified diff plus the pinned queue-row fixture (zero new/removed error rows); no permanent suite asserts a diff against a moving base. |
+| NFR-4 | Coverage strength: every regression test over changed behaviour fails against the pre-fix producer; tests over unchanged behaviour are proven by a targeted mutation instead. Threshold: 1 in-place revert check per behaviour-changing layer (composition add, root-unresolved branch, fixture shape), 1 asymmetry mutation for the key-unresolved symmetry guard, 1 predicate mutation per domain-negative layer, 0 tests asserting only a fixture-supplied pair. | Revert: TC-BIND-001/002 (cell key✓/root✗)/003/004/005/006/007/008/009/010/014/015/017, executed through TC-BIND-018. Asymmetry mutation: TC-BIND-002 (cell key✗/root✓). Predicate mutations: TC-BIND-011 (write side), TC-BIND-012 (read side). | Revert and mutations are review gates, not permanent tests; the exact procedure is in TC-BIND-018 and §8.3 OQ-A/OQ-B. |
+| NFR-5 | 0 spawns, 0 outbound calls, 1 facts resolution per invocation on the add path. | TC-BIND-005, TC-BIND-016 | Spawn/network asserted at runtime; "1 resolution" asserted structurally. The runtime counters are the accepted observable proxy for the unobservable resolution count (§8.3 OQ-D). |
+| NFR-6 | Binding determinism: the same checkout (same key and root) yields the same binding under identical facts and arguments. | TC-BIND-006, TC-BIND-017 | Binding-level determinism only; byte-identical replay of wall-clock-derived envelope fields is out of scope for this change (§8.3 OQ-C). |
 | NFR-7 | Root absolute, identical from top level and nested, worktree-correct. | TC-BIND-003, TC-BIND-004, TC-BIND-005 | |
 | NFR-8 | No measurable added work; 0 additional git reads/spawns. | TC-BIND-005, TC-BIND-016 | Suite wall-clock recorded as informational in §10. |
 
@@ -118,7 +122,8 @@ All new tests are `bun:test` suites under `tests/**`, discovered by `bun test` /
 - **Integration / behaviour (`tests/behaviour`, real CLI + production composition):** `createProductionComposer` → `createConfigProgram` → `runCli`, with only external seams injected (origin remote, credential port, harness spawn runner, GitHub transport). The checkout, its `.git` metadata, the state store, and the queue ledger are real temp files. TC-BIND-001…TC-BIND-010, TC-BIND-017.
 - **Structural (`tests/structure`, source/AST + fixture invariants):** TypeScript AST assertions over `packages/cli/src` and `tests/fixtures/**`; no execution of the composition. TC-BIND-014, TC-BIND-015, TC-BIND-016.
 - **Existing automated invariants (no change):** TC-BIND-013 rides `tests/structure/queue-scheduling-contract.test.ts`, `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, and the queue golden suites.
-- **Manual / review:** TC-BIND-018 (in-place revert), the diff-level half of TC-BIND-013.
+- **Manual / review (evidence class: review-verified):** TC-BIND-018 (in-place producer revert plus the key-unresolved asymmetry mutation and the two domain-predicate mutations), and the diff-level half of TC-BIND-013.
+- **Evidence classes used in this plan:** permanent suite (TC-BIND-001…010, 014…017), mutation-verified (TC-BIND-002 cell key✗/root✓, TC-BIND-011, TC-BIND-012, TC-BIND-016), review-verified (TC-BIND-013, TC-BIND-018).
 - **Performance:** no new performance suite. NFR-8 is asserted as "no additional spawn/read" plus a recorded informational wall-clock.
 
 Runtime expectations: each new behaviour file under ~3 s locally on a warm bun cache (about 8–12 CLI invocations, no network, no sleep, no real git spawn in fixtures); each structural file under ~0.5 s (AST over a handful of files); all four new files under ~6 s combined. The pilot conformance suites keep their existing runtime and must stay green unchanged.
@@ -127,26 +132,26 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 
 ### 5.1 Scenario Index
 
-| TC ID | Title | Type | Level | Priority | AC Coverage |
-|-------|-------|------|-------|----------|-------------|
-| TC-BIND-001 | Production add records the atomic pair | Happy Path | Integration | High | AC-F1-1, AC-F2-3, DM-1, DM-2, DM-3 |
-| TC-BIND-002 | Binding totality across the four-cell resolution matrix | Regression | Integration | High | AC-F1-2, AC-F1-3, NFR-1, DM-3 |
-| TC-BIND-003 | Nested working directory records the checkout root | Edge Case | Integration | High | AC-F2-1, NFR-7 |
-| TC-BIND-004 | Linked worktree records its own root; top-level equals nested | Corner Case | Integration | High | AC-F2-2, NFR-7 |
-| TC-BIND-005 | Root is absolute and add performs no spawn or network call | Regression | Integration | High | AC-F2-3, NFR-5, NFR-8 |
-| TC-BIND-006 | Normalized key for every accepted remote form, mutually consistent | Regression | Integration | High | AC-F3-1, DM-1, NFR-6 |
-| TC-BIND-007 | Dispatch identity resolves from the recorded scheduler key | Regression | Integration + Unit | High | AC-F3-2, DM-1 |
-| TC-BIND-008 | List observes the entry and no read surface leaks the root | Happy Path + Negative | Integration | High | AC-F4-1, NFR-2, NFR-3 |
-| TC-BIND-009 | Claim/plan observe and dispatch passes the observation gate | Regression | Integration | High | AC-F4-2 |
-| TC-BIND-010 | Ticket repro sequence: add → list → dispatch | Regression | Integration | High | AC-F6-4, AC-F1-1, AC-F4-2 |
-| TC-BIND-011 | Domain refuses one-sided add requests (key-only, root-only) | Negative | Unit | High | AC-F5-1, AC-F6-2 |
-| TC-BIND-012 | One-sided stored record fails closed as a torn store | Negative | Unit + Integration | High | AC-F5-2, AC-F6-2 |
-| TC-BIND-013 | Queue error identities and invariant branches unchanged | Regression | Structural + Manual | Medium | AC-F5-3, NFR-3 |
-| TC-BIND-014 | Exactly one derivation site, never a partial binding literal | Regression | Structural | High | AC-F1-4 |
-| TC-BIND-015 | Fixture shape: both fields or none; pilot key matches seeds | Regression | Structural | Medium | AC-F6-3 |
-| TC-BIND-016 | One repository-facts resolution per composition | Regression | Structural | Medium | AC-F2-3, NFR-5 |
-| TC-BIND-017 | Binding determinism across replays | Edge Case | Integration | Medium | NFR-6 |
-| TC-BIND-018 | Pre-fix failure verification by in-place revert | Regression | Manual | High | AC-F6-1, NFR-4 |
+| TC ID | Title | Type | Level | Priority | Evidence Class | AC Coverage |
+|-------|-------|------|-------|----------|----------------|-------------|
+| TC-BIND-001 | Production add records the atomic pair | Happy Path | Integration | High | Permanent suite | AC-F1-1, AC-F2-3, DM-1, DM-2, DM-3 |
+| TC-BIND-002 | Binding totality across the four-cell resolution matrix | Regression | Integration | High | Permanent suite + mutation-verified (key-unresolved cell) | AC-F1-2, AC-F1-3, NFR-1, DM-3 |
+| TC-BIND-003 | Nested working directory records the checkout root | Edge Case | Integration | High | Permanent suite | AC-F2-1, NFR-7 |
+| TC-BIND-004 | Linked worktree records its own root; top-level equals nested | Corner Case | Integration | High | Permanent suite | AC-F2-2, NFR-7 |
+| TC-BIND-005 | Root is absolute and add performs no spawn or network call | Regression | Integration | High | Permanent suite | AC-F2-3, NFR-5, NFR-8 |
+| TC-BIND-006 | Normalized key for every accepted remote form, mutually consistent | Regression | Integration | High | Permanent suite | AC-F3-1, DM-1, NFR-6 |
+| TC-BIND-007 | Dispatch identity resolves from the recorded scheduler key | Regression | Integration + Unit | High | Permanent suite | AC-F3-2, AC-F4-2, DM-1 |
+| TC-BIND-008 | List observes the entry and no read surface leaks the root | Happy Path + Negative | Integration | High | Permanent suite | AC-F4-1, NFR-2, NFR-3 |
+| TC-BIND-009 | Claim/plan observe and dispatch passes the observation gate | Regression | Integration | High | Permanent suite | AC-F4-2 |
+| TC-BIND-010 | Ticket repro sequence: add → list → dispatch | Regression | Integration | High | Permanent suite (encoded pre-fix triple) | AC-F6-4, AC-F1-1, AC-F4-2 |
+| TC-BIND-011 | Domain refuses one-sided add requests (key-only, root-only) | Negative | Unit | High | Mutation-verified | AC-F5-1, AC-F6-2 |
+| TC-BIND-012 | One-sided stored record fails closed as a torn store | Negative | Unit + Integration | High | Mutation-verified | AC-F5-2, AC-F6-2 |
+| TC-BIND-013 | Queue error identities and invariant branches unchanged | Regression | Structural + Manual | Medium | Review-verified | AC-F5-3, NFR-3 |
+| TC-BIND-014 | Exactly one derivation site, never a partial binding literal | Regression | Structural | High | Permanent suite | AC-F1-4 |
+| TC-BIND-015 | Fixture shape: both fields or none; pilot key matches seeds | Regression | Structural | Medium | Permanent suite | AC-F6-3 |
+| TC-BIND-016 | One repository-facts resolution per composition | Regression | Structural | Medium | Permanent suite + mutation-verified | AC-F2-3, NFR-5 |
+| TC-BIND-017 | Binding determinism across replays | Edge Case | Integration | Medium | Permanent suite | NFR-6 |
+| TC-BIND-018 | Pre-fix failure verification by in-place revert and asymmetry mutation | Regression | Manual | High | Review-verified | AC-F6-1, NFR-4 |
 
 ### 5.2 Scenario Details
 
@@ -156,6 +161,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-1, F-4, AC-F1-1, AC-F2-3, DM-1, DM-2, DM-3, G-2
+**Evidence Class**: Permanent suite (revert-detecting: fails against the pre-fix producer)
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-production-binding.test.ts` over `tests/fixtures/queue/production/harness.ts`
@@ -193,6 +199,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-1, F-6, AC-F1-2, AC-F1-3, DM-3, NFR-1, G-1
+**Evidence Class**: Permanent suite; the key✗/root✓ cell is additionally mutation-verified (asymmetry mutation, §8.3 OQ-A)
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-production-binding.test.ts`
@@ -222,7 +229,8 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Notes / Clarifications**:
 
 - Pre-fix failure: key✓/root✓ is refused (exit 1, `input.value.rejected`) and key✓/root✗ is refused (the injected origin produces the key-only literal). key✗/root✓ and key✗/root✗ already succeed with no fields pre-fix.
-- Because the pre-fix code already yields "absent" for the two key-unresolved cells, cell key✗/root✓ cannot fail against the reverted producer; it is a **symmetry guard** and must be verified by an asymmetry mutation (make the derivation emit root-only and confirm the test fails). See §8.3 OQ-A.
+- Because the pre-fix code already yields "absent" for the two key-unresolved cells, cell key✗/root✓ cannot fail against the reverted producer. PM-ratified (§8.3 OQ-A): it is a **symmetry guard**, proven by an in-place **asymmetry mutation** — make the derivation emit a root-only binding when the key is unresolved, confirm this cell fails, then restore. Both key-unresolved cells remain inside the permanent suite.
+- The root-unresolved cell key✓/root✗ is the revert-detecting half required by AC-F6-1 and NFR-4 and is expected to fail against the pre-fix producer (key-only literal).
 - Root-unresolved cells must run outside the repository work tree: the repo's own `.git` would otherwise be found by the ascending search.
 
 #### TC-BIND-003 - Nested working directory records the checkout root
@@ -231,6 +239,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-2, AC-F2-1, NFR-7, RSK-2
+**Evidence Class**: Permanent suite (revert-detecting: fails against the pre-fix producer)
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-production-binding.test.ts`
@@ -263,6 +272,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-2, AC-F2-2, NFR-7, DEC-2
+**Evidence Class**: Permanent suite (revert-detecting: fails against the pre-fix producer)
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-production-binding.test.ts`
@@ -297,6 +307,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Important
 **Priority**: High
 **Related IDs**: F-2, AC-F2-3, NFR-5, NFR-8
+**Evidence Class**: Permanent suite (runtime half of AC-F2-3; revert-detecting)
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-production-binding.test.ts`
@@ -322,7 +333,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Notes / Clarifications**:
 
 - Pre-fix failure: the add is refused, so there is no entry to inspect.
-- "0 additional repository-facts resolution" is not observable from outside the composer (the adapter is a static import); it is asserted structurally in TC-BIND-016. See §8.3 OQ-D.
+- "0 additional repository-facts resolution" is not observable from outside the composer (the adapter is a static import). PM-ratified (§8.3 OQ-D): the accepted observable proxy is this test's 0-spawn / 0-network assertions plus the structural single-resolution assertion in TC-BIND-016 (with the single-derivation-site invariant in TC-BIND-014); AC-F2-3 states the structural carry instead of an unobservable runtime counter.
 
 #### TC-BIND-006 - Normalized key for every accepted remote form, mutually consistent
 
@@ -330,6 +341,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-3, AC-F3-1, DM-1, RSK-1, NFR-6
+**Evidence Class**: Permanent suite (revert-detecting; also carries the binding-level determinism half of NFR-6)
 **Test Type(s)**: Integration (plus pure normalizer rows)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-production-binding.test.ts`; remote-form rows sourced from `tests/fixtures/queue/graph/binding/cases.json`
@@ -364,7 +376,8 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, AC-F3-2, DM-1, RSK-1
+**Related IDs**: F-3, AC-F3-2, AC-F4-2, DM-1, RSK-1
+**Evidence Class**: Permanent suite (resolver unit assertion is the AC-F3-2 evidence; the end-to-end half covers AC-F4-2 only)
 **Test Type(s)**: Integration + Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-production-binding.test.ts` (integration), same file (unit assertion on `resolveDispatchIdentity`)
@@ -391,7 +404,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Notes / Clarifications**:
 
 - Pre-fix failure: the `queue add` in step 1 is refused, and (in the counterfactual where a host-less key were recorded) `normalizeDispatchRepositoryKey("owner/scheduler")` returns `undefined` because it has two segments, so resolution falls through to the remote and yields `github.com/owner/remote` with source `remote` — both the attempt and marker assertions fail.
-- `source` is not projected into any envelope; the exact source assertion is a unit assertion on the delivered resolver using the key the composition recorded. See §8.3 OQ-E.
+- `source` is not projected into any envelope. PM-ratified (§8.3 OQ-E): AC-F3-2 is asserted directly here, at the resolver unit level, using the key the composition recorded and a disagreeing remote-derived identity; the end-to-end `dispatch` half of this scenario covers only AC-F4-2 (proceeding past the observation gate).
 
 #### TC-BIND-008 - List observes the entry and no read surface leaks the root
 
@@ -399,6 +412,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-4, AC-F4-1, NFR-2, NFR-3, RSK-6
+**Evidence Class**: Permanent suite (revert-detecting)
 **Test Type(s)**: Integration + Structural (source allowlist)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-production-binding.test.ts`; source allowlist assertion in `tests/structure/queue-binding-derivation.test.ts`
@@ -425,7 +439,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Notes / Clarifications**:
 
 - Pre-fix failure: `queue list` is empty, so the entry assertion fails before the leak assertions.
-- `status`/`brief` are asserted for **absence only**; their exit code is not asserted because the composition is deliberately credential-degraded (§8.3 OQ-F).
+- `status`/`brief` are asserted for **absence only**; their exit code is not asserted because the composition is deliberately credential-degraded. PM-ratified (§8.3 OQ-F): root absence is asserted on `queue list`, `status` **and** `brief` (JSON and text), with no exit-code assertions on the credential-degraded surfaces; the AC-F4-1 wording carries the same absence-only qualifier.
 - The source allowlist is a proxy for "no new disclosure site", deliberately file-based (not line-based) and with a message naming the offending file; a legitimate new consumer (e.g. wiring the deploy-expectation port) updates it in review.
 - NFR-3's "0 diffs outside the recorded entry" is review evidence plus the unchanged golden suites, not a new assertion.
 
@@ -435,6 +449,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-4, AC-F4-2, G-3, RSK-8
+**Evidence Class**: Permanent suite (revert-detecting)
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-production-binding.test.ts`
@@ -468,6 +483,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-4, F-6, AC-F6-4, AC-F1-1, AC-F4-2, G-3, RSK-8
+**Evidence Class**: Permanent suite, with the pre-fix failure triple encoded explicitly (no reverted-code run)
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-production-binding.test.ts`
@@ -482,16 +498,17 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 1. `queue add GH-273 --json` → assert `added`, exit 0, ledger pair recorded.
 2. `queue list --json` → assert the entry is observed with the normalized key.
 3. `dispatch GH-273 --json` → assert no `queue.entry.unobserved` and one attempt appended.
+4. Compare the observed outcomes element-by-element against the encoded `PRE_FIX_FAILURE_TRIPLE` constant declared in the test file: `{ addRefusalCode: "input.value.rejected", entryCount: 0, dispatchErrorCode: "queue.entry.unobserved" }`.
 
 **Expected Outcome**:
 
 - All three invocations succeed in the fixed sense; the ledger contains the pair; the list shows the entry; dispatch passes the observation gate.
-- The test's comment block names the pre-fix triple (refusal, zero entries, unobserved) so the failure mode is recorded with the test.
+- Step 4: each observed value **differs** from its pre-fix expectation — the add did not refuse with `input.value.rejected`, the entry count is 1 (not the encoded 0), and the dispatch error code is not `queue.entry.unobserved`.
 
 **Notes / Clarifications**:
 
-- Pre-fix failure: the first step fails with `input.value.rejected`; even if it did not, list would be empty and dispatch would return `queue.entry.unobserved`.
-- This is the AC-F6-4 repro chain; it intentionally overlaps TC-BIND-001/008/009 and is the end-to-end statement of the ticket.
+- PM-ratified (§8.3 OQ-G): the pre-fix failure triple is encoded explicitly in this test as the `PRE_FIX_FAILURE_TRIPLE` constant plus an element-wise difference assertion, rather than requiring the test to run against reverted code. The triple is the ticket's evidence: refusal on add, zero entries on list, `queue.entry.unobserved` on dispatch.
+- This is the AC-F6-4 repro chain; it intentionally overlaps TC-BIND-001/008/009 and is the end-to-end statement of the ticket. The revert evidence for the same paths is recorded separately by TC-BIND-018.
 
 #### TC-BIND-011 - Domain refuses one-sided add requests (key-only, root-only)
 
@@ -499,6 +516,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-5, AC-F5-1, AC-F6-2, DM-1, DM-2, RSK-5
+**Evidence Class**: Mutation-verified (write-side predicate mutation; cannot fail on a producer revert)
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-binding-invariant.test.ts` using `makeAuditStore` from `tests/fixtures/state/harness.ts`
@@ -524,7 +542,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 
 **Notes / Clarifications**:
 
-- This behaviour is unchanged by the fix, so it passes pre-fix; it is new **coverage** (AC-F6-2) and its strength must be verified by a mutation check in review (temporarily remove the mutual-presence branch and confirm the test fails). See §8.3 OQ-B.
+- This behaviour is unchanged by the fix, so it passes pre-fix. PM-ratified (§8.3 OQ-B): its adequacy is proven by **predicate mutation, not revert** — soften or delete the write-side mutual-presence branch (the `desiredEntry` predicate), run this suite, confirm both one-sided cases fail, then restore. The mutation and its red result are recorded in the change review; the test stays a permanent suite assertion.
 - This is the "do not change domain code" guard: any diff to the predicate is visible in review.
 
 #### TC-BIND-012 - One-sided stored record fails closed as a torn store
@@ -533,6 +551,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-5, AC-F5-2, AC-F6-2, DEC-6
+**Evidence Class**: Mutation-verified (read-side predicate mutation; cannot fail on a producer revert)
 **Test Type(s)**: Unit + Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-binding-invariant.test.ts` (domain read) and the queue edge harness in `tests/fixtures/queue/cli/harness.ts` (CLI projection)
@@ -558,7 +577,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 
 **Notes / Clarifications**:
 
-- Passes pre-fix (behaviour unchanged); it is the first explicit coverage of the read-side branch (AC-F6-2). Mutation-verify in review by deleting the read-side mutual-presence predicate.
+- Passes pre-fix (behaviour unchanged); it is the first explicit coverage of the read-side branch (AC-F6-2). PM-ratified (§8.3 OQ-B): verify with the **second** predicate mutation — delete the read-side mutual-presence predicate in `isEntryRecord`, run this suite, confirm both one-sided shapes fail (not silently become entries), then restore. Write-side and read-side mutations are applied one after the other so each layer's red result is attributable.
 - Do not "fix" this by adding an error identity — DEC-6 and NG-6 forbid it.
 
 #### TC-BIND-013 - Queue error identities and invariant branches unchanged
@@ -567,6 +586,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Important
 **Priority**: Medium
 **Related IDs**: F-5, AC-F5-3, NFR-3, NG-1, NG-6
+**Evidence Class**: Review-verified (diff-level inspection recorded in the change review) + existing pinned error-set suite
 **Test Type(s)**: Structural (existing) + Manual review
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `tests/structure/queue-scheduling-contract.test.ts` (TC-VOCAB-002), `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/golden/queue-*.test.ts`; plus the review verdict
@@ -590,7 +610,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 
 **Notes / Clarifications**:
 
-- AC-F5-3 is a **diff-level** assertion. The repository testing strategy forbids permanent suites that assert a diff against a moving base, so this cannot become a new permanent test; the automated half is the existing pinned invariant and the predicate half is review evidence. See §8.3 OQ-E.
+- PM-ratified (§8.3 OQ-E): AC-F5-3 is **review-verified**. The diff-level evidence (unchanged error table, unchanged invariant predicates) is recorded in the change review, and the existing pinned error-set test supplies the automated half. The repository testing strategy forbids permanent suites that assert a diff against a moving base, so no new permanent test is created here.
 
 #### TC-BIND-014 - Exactly one derivation site, never a partial binding literal
 
@@ -598,6 +618,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-1, F-6, AC-F1-4, NFR-4, RSK-3
+**Evidence Class**: Permanent suite (structural; revert-detecting via the partial-literal assertion)
 **Test Type(s)**: Structural
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/queue-binding-derivation.test.ts` (TypeScript AST via the `typescript` dev dependency already used by `tests/structure/queue-scheduling-contract.test.ts`)
@@ -633,6 +654,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Important
 **Priority**: Medium
 **Related IDs**: F-6, AC-F6-3, DEC-7, G-4, RSK-7
+**Evidence Class**: Permanent suite (structural; revert-detecting: the pre-fix pilot binding is one-sided)
 **Test Type(s)**: Structural
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/queue-binding-fixture-shape.test.ts`; AST scan of `tests/fixtures/**/*.ts`
@@ -668,6 +690,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Important
 **Priority**: Medium
 **Related IDs**: F-2, AC-F2-3, NFR-5
+**Evidence Class**: Permanent suite (structural) + mutation-verified (add a second resolution call, confirm red)
 **Test Type(s)**: Structural
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/queue-binding-derivation.test.ts`
@@ -690,7 +713,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 
 **Notes / Clarifications**:
 
-- This passes pre-fix and post-fix; it is an anti-recurrence guard so the fix cannot "solve" the root by adding a second read (NFR-5/NFR-8: 0 additional git reads).
+- This passes pre-fix and post-fix; it is an anti-recurrence guard so the fix cannot "solve" the root by adding a second read (NFR-5/NFR-8: 0 additional git reads). PM-ratified (§8.3 OQ-D): this structural assertion is the accepted carry for the "no additional repository-facts resolution" half of AC-F2-3, in place of an unobservable runtime counter. Its detection is mutation-verified by inserting a second `readRepositoryFacts` call and confirming the suite fails.
 - Runtime purity (0 spawns, 0 outbound calls) is the observable half, asserted in TC-BIND-005.
 
 #### TC-BIND-017 - Binding determinism across replays
@@ -699,6 +722,7 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Impact Level**: Important
 **Priority**: Medium
 **Related IDs**: NFR-6, DM-3
+**Evidence Class**: Permanent suite (binding-level determinism only)
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/queue-production-binding.test.ts`
@@ -722,15 +746,16 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 
 **Notes / Clarifications**:
 
-- Pre-fix failure: both adds are refused, so no pair exists.
-- NFR-6's "byte-identical replay" cannot hold for a wall-clock production envelope (`recordedAt` differs); the meaningful, testable threshold is binding determinism. See §8.3 OQ-C.
+- Pre-fix failure: both adds are refused (`input.value.rejected`), so no pair exists to compare.
+- PM-ratified (§8.3 OQ-C): determinism is **binding-level** — the same checkout (same key and root) yields the same `repository`/`repositoryRoot` under identical facts and arguments. Byte-identical replay of the wall-clock-derived production envelope (`recordedAt`) is explicitly out of scope for this change; envelope-shape stability remains covered by the unchanged golden suites.
 
-#### TC-BIND-018 - Pre-fix failure verification by in-place revert
+#### TC-BIND-018 - Pre-fix failure verification by in-place revert and asymmetry mutation
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
 **Related IDs**: F-6, AC-F6-1, NFR-4
+**Evidence Class**: Review-verified (revert and mutation procedure; evidence recorded in the change review and §10)
 **Test Type(s)**: Manual
 **Automation Level**: Manual
 **Target Layer / Location**: Execution procedure (no committed test); evidence recorded in the review verdict and §10
@@ -739,30 +764,38 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 **Preconditions**:
 
 - Green new suites on the fixed tree.
-- A clean working tree (or a scratch commit) so the producer change can be reverted and restored safely; never run this in CI.
+- A clean working tree (or a scratch commit) so the producer derivation and the invariant predicates can be mutated and restored safely; never run this in CI.
+- The three AC-F6-1 evidence paths are distinguished up front: **composition add** (revert-detecting), **root-unresolved guard** (revert-detecting), **key-unresolved guard** (symmetry guard, mutation-detected).
 
 **Steps**:
 
 1. Run the new behaviour and structural suites on the fixed tree; record the pass.
-2. Revert **only** the producer derivation in `packages/cli/src/production.ts` (leave the new tests and fixtures in place).
+2. **Revert check — changed-behaviour layer.** Revert **only** the producer derivation in `packages/cli/src/production.ts` (leave the new tests and fixtures in place).
 3. Re-run:
    - `bun test tests/behaviour/queue-production-binding.test.ts`
    - `bun test tests/behaviour/queue-binding-invariant.test.ts`
    - `bun test tests/structure/queue-binding-fixture-shape.test.ts`
    - `bun test tests/structure/queue-binding-derivation.test.ts`
-4. Record which TCs fail and with what message.
+4. Record which TCs fail and with what message. Expect the **composition add** path (TC-BIND-001 and its repro chain TC-BIND-010, plus TC-BIND-003/004/005/006/007/008/009/017) and the **root-unresolved guard** (TC-BIND-002, cell key✓/root✗) to fail, along with TC-BIND-014 and TC-BIND-015.
 5. Restore the producer change; re-run and confirm green.
+6. **Asymmetry mutation — key-unresolved symmetry guard.** With the fix in place, mutate the derivation so that an unresolved key combined with a resolved root emits a `repositoryBinding` carrying only `repositoryRoot` (re-introducing an asymmetric guard that produces a root-only binding).
+7. Re-run the focused cell: `bun test tests/behaviour/queue-production-binding.test.ts -t "TC-BIND-002"`.
+8. Record that **exactly** the key✗/root✓ cell fails, with the assertion naming a root-only binding (`repositoryRoot` present, `repository` absent). The other three cells must stay green. Restore the derivation and confirm green.
+9. **Predicate mutations — domain negatives (AC-F6-2).** Apply the write-side mutation first (soften or delete the mutual-presence branch in the `desiredEntry` predicate), run `bun test tests/behaviour/queue-binding-invariant.test.ts`, record that TC-BIND-011 fails, and restore; then apply the read-side mutation (delete the read-side mutual-presence predicate in `isEntryRecord`), record that TC-BIND-012 fails, and restore.
+10. Record every mutation, its red set, and the post-restore green run in the review verdict and §10.
 
 **Expected Outcome**:
 
-- Failures expected on revert: TC-BIND-001…010 and TC-BIND-017 (refusal / empty list / unobserved), TC-BIND-014 (partial literal), TC-BIND-015 (pilot one-sided binding).
-- Explicitly **not** expected to fail on revert: TC-BIND-002 cells key✗/root✓ and key✗/root✗, TC-BIND-011, TC-BIND-012, TC-BIND-013, TC-BIND-016 — these already hold pre-fix. Their strength is verified by the targeted mutations listed in §8.3.
-- After restore: all green again.
+- Revert failures are confined to the changed-behaviour layers: the composition add test (TC-BIND-001 with TC-BIND-010 and the other composition tests) and the **root-unresolved guard** (TC-BIND-002 cell key✓/root✗), plus TC-BIND-014 (partial literal) and TC-BIND-015 (pilot one-sided binding).
+- Explicitly **not** expected to fail on revert: TC-BIND-002 cell key✗/root✓ (the key-unresolved symmetry guard), cell key✗/root✗, TC-BIND-011, TC-BIND-012, TC-BIND-013, TC-BIND-016 — these already hold pre-fix.
+- Asymmetry mutation: the key✗/root✓ cell fails with a root-only-binding message and no other cell fails; this is the detection evidence for AC-F1-2/AC-F6-1.
+- Predicate mutations: write side → TC-BIND-011 red only; read side → TC-BIND-012 red only.
+- After each restore: all green again.
 
 **Notes / Clarifications**:
 
 - This is deliberately not a permanent suite: a test that rewrites source during its run is unsafe and would violate test isolation. It is a review gate, not an automated check.
-- The exact mutation for each "already-passes-pre-fix" layer is recorded in §8.3 so the PM/reviewer can execute it.
+- PM-ratified (§8.3 OQ-A, OQ-B): revert is the evidence for the composition add test and the root-unresolved guard only; the key-unresolved guard is proven by the in-place asymmetry mutation in steps 6–8, and the domain negatives by the write-side-then-read-side predicate mutations in step 9.
 
 ## 6. Environments and Test Data
 
@@ -778,26 +811,26 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 
 ## 7. Automation Plan and Implementation Mapping
 
-| TC ID | Test file | Implementation status | Execution command |
-|-------|-----------|-----------------------|-------------------|
-| TC-BIND-001 | `tests/behaviour/queue-production-binding.test.ts` | To Implement | `bun test tests/behaviour/queue-production-binding.test.ts` |
-| TC-BIND-002 | same | To Implement | same |
-| TC-BIND-003 | same | To Implement | same |
-| TC-BIND-004 | same | To Implement | same |
-| TC-BIND-005 | same | To Implement | same |
-| TC-BIND-006 | same | To Implement | same |
-| TC-BIND-007 | same | To Implement | same |
-| TC-BIND-008 | same + `tests/structure/queue-binding-derivation.test.ts` (source allowlist) | To Implement | same + `bun test tests/structure/queue-binding-derivation.test.ts` |
-| TC-BIND-009 | `tests/behaviour/queue-production-binding.test.ts` | To Implement | same |
-| TC-BIND-010 | same | To Implement | same |
-| TC-BIND-011 | `tests/behaviour/queue-binding-invariant.test.ts` | To Implement | `bun test tests/behaviour/queue-binding-invariant.test.ts` |
-| TC-BIND-012 | same | To Implement | same |
-| TC-BIND-013 | `tests/structure/queue-scheduling-contract.test.ts`, `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/golden/queue-*.test.ts` | Existing – No Change | `bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts tests/golden` |
-| TC-BIND-014 | `tests/structure/queue-binding-derivation.test.ts` | To Implement | `bun test tests/structure/queue-binding-derivation.test.ts` |
-| TC-BIND-015 | `tests/structure/queue-binding-fixture-shape.test.ts` | To Implement | `bun test tests/structure/queue-binding-fixture-shape.test.ts` |
-| TC-BIND-016 | `tests/structure/queue-binding-derivation.test.ts` | To Implement | same as TC-BIND-014 |
-| TC-BIND-017 | `tests/behaviour/queue-production-binding.test.ts` | To Implement | same as TC-BIND-001 |
-| TC-BIND-018 | none (manual) | Manual Only | `bun test tests/behaviour/queue-production-binding.test.ts` under a temporary producer revert |
+| TC ID | Test file | Implementation status | Evidence class | Execution command |
+|-------|-----------|-----------------------|----------------|-------------------|
+| TC-BIND-001 | `tests/behaviour/queue-production-binding.test.ts` | To Implement | Permanent suite | `bun test tests/behaviour/queue-production-binding.test.ts` |
+| TC-BIND-002 | same | To Implement | Permanent suite; key✗/root✓ cell mutation-verified | same |
+| TC-BIND-003 | same | To Implement | Permanent suite | same |
+| TC-BIND-004 | same | To Implement | Permanent suite | same |
+| TC-BIND-005 | same | To Implement | Permanent suite | same |
+| TC-BIND-006 | same | To Implement | Permanent suite | same |
+| TC-BIND-007 | same | To Implement | Permanent suite (resolver unit assertion) | same |
+| TC-BIND-008 | same + `tests/structure/queue-binding-derivation.test.ts` (source allowlist) | To Implement | Permanent suite | same + `bun test tests/structure/queue-binding-derivation.test.ts` |
+| TC-BIND-009 | `tests/behaviour/queue-production-binding.test.ts` | To Implement | Permanent suite | same |
+| TC-BIND-010 | same | To Implement | Permanent suite (encoded pre-fix triple) | same |
+| TC-BIND-011 | `tests/behaviour/queue-binding-invariant.test.ts` | To Implement | Mutation-verified (write side) | `bun test tests/behaviour/queue-binding-invariant.test.ts` |
+| TC-BIND-012 | same | To Implement | Mutation-verified (read side) | same |
+| TC-BIND-013 | `tests/structure/queue-scheduling-contract.test.ts`, `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/golden/queue-*.test.ts` | Existing – No Change | Review-verified (+ pinned suite) | `bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts tests/golden` |
+| TC-BIND-014 | `tests/structure/queue-binding-derivation.test.ts` | To Implement | Permanent suite (structural) | `bun test tests/structure/queue-binding-derivation.test.ts` |
+| TC-BIND-015 | `tests/structure/queue-binding-fixture-shape.test.ts` | To Implement | Permanent suite (structural) | `bun test tests/structure/queue-binding-fixture-shape.test.ts` |
+| TC-BIND-016 | `tests/structure/queue-binding-derivation.test.ts` | To Implement | Permanent suite (structural) + mutation-verified | same as TC-BIND-014 |
+| TC-BIND-017 | `tests/behaviour/queue-production-binding.test.ts` | To Implement | Permanent suite (binding-level determinism) | same as TC-BIND-001 |
+| TC-BIND-018 | none (manual) | Manual Only | Review-verified (revert + mutations) | `bun test tests/behaviour/queue-production-binding.test.ts` under a temporary producer revert; then the asymmetry mutation and the two predicate mutations |
 
 Supporting changes (not test cases):
 
@@ -843,29 +876,32 @@ Final verification: `pnpm check` (lint → format:check → typecheck → test �
 - The production composition under test writes no audit or telemetry record beyond the queue entry: audit emission belongs to the entrypoint dependency set, which the harness does not compose. NFR-2's telemetry clause is therefore covered by the source allowlist (TC-BIND-008) plus the existing audit and envelope contract suites, not by a new runtime assertion.
 - The four-cell matrix plus nested/worktree cases is sufficient evidence for totality; a generative property test is deferred per spec §7.3.
 
-### 8.3 Open Questions / Arbitration Required
+### 8.3 Resolved Questions and Resulting Test Obligations
 
-| ID | Question | Why it matters | Proposed resolution |
-|----|----------|----------------|---------------------|
-| OQ-A | AC-F1-2 (key unresolved, root resolved) cannot fail against the pre-fix code: the pre-fix composition already emits no binding when the target is unresolvable. AC-F6-1's "both guard-branch tests fail" is therefore not literally achievable. | The plan must not claim a pre-fix failure that does not exist. | Accept TC-BIND-002 cell key✗/root✓ as a **symmetry guard**, verified by an in-place asymmetry mutation (make the derivation emit a root-only literal, confirm the cell fails, restore). This is stronger than a revert check for this branch. PM to ratify. |
-| OQ-B | NFR-4 requires "1 in-place revert check per layer (…, domain negative, …)", but the domain negative tests assert **unchanged** behaviour and cannot fail on a producer revert. | Avoid reporting a false verification result. | Verify domain negatives by predicate mutation (delete/soften the mutual-presence branch or the read-side branch, confirm TC-BIND-011/012 fail, restore), not by producer revert. PM to ratify the substitution. |
-| OQ-C | NFR-6 asks for byte-identical replay, but the production composition uses the wall clock, so envelope bytes differ (`recordedAt`). | A literal assertion would be flaky or require a clock seam the spec forbids widening. | Assert binding-level determinism (identical `repository`/`repositoryRoot` across two independent harnesses and across replay) and keep envelope-shape stability in the unchanged golden suites. PM to ratify. |
-| OQ-D | AC-F2-3 / NFR-5 require "no additional repository-facts resolution", which is not observable from outside the composer without a new seam. | DEC-5 forbids widening the composition seam for test convenience. | Assert the observable half at runtime (0 spawns, 0 outbound calls) and the resolution count structurally in TC-BIND-016. State this limitation rather than claiming full behavioural coverage. PM to ratify. |
-| OQ-E | AC-F5-3 and NFR-3 include "verified in review as a diff-level assertion" and "0 diffs outside the recorded entry". AC-F3-2's `source: scheduler` is not projected into any envelope. | Permanent suites must not assert diffs against a moving base (testing strategy). | Keep the error-set half automated (existing pinned fixture), the predicate/diff half as review evidence, and assert `source` with a direct unit call on `resolveDispatchIdentity` using the composition-recorded key. PM to ratify. |
-| OQ-F | NFR-2 lists `status` and `brief` among surfaces that must not leak the root. | They are not part of the fix path and are credential-degraded in a hermetic harness. | Assert absence of the root substring in their JSON/text output without asserting exit codes, plus the source allowlist. If the PM prefers zero-degradation coverage, those two surfaces should be dropped from the matrix and named as a known gap instead. |
-| OQ-G | AC-F6-4 expects the pre-fix expectations "encoded as the failure the tests detect". | A test can encode expectations only as assertions, not as a historical run. | TC-BIND-010's comment block names the pre-fix triple and the assertions encode the fixed outcomes; TC-BIND-018 records the revert evidence. PM to confirm this satisfies the AC. |
+All seven items below were arbitrated by the PM after spec v1.1. Each is recorded as **RESOLVED** with the ruling and the test obligation it creates; none blocks implementation.
 
-No open question blocks implementation of the tests; OQ-A/B/C/E affect how the plan reports verification strength for AC-F1-2, AC-F5-1/2/3, and NFR-4/6.
+| ID | Question | PM ruling (RESOLVED) | Resulting test obligation |
+|----|----------|----------------------|---------------------------|
+| OQ-A | AC-F1-2 (key unresolved, root resolved) cannot fail against the pre-fix code: the pre-fix composition already emits no binding when the target is unresolvable. AC-F6-1's "both guard-branch tests fail" is therefore not literally achievable. | **RESOLVED.** AC-F6-1 now requires revert-failure only for the **composition add test** and the **root-unresolved guard**. The key-unresolved guard is a **symmetry guard**, proven by an in-place asymmetry mutation rather than by revert. | TC-BIND-002 keeps all four cells in the permanent suite. Cell key✓/root✗ (AC-F1-3) is the revert-detecting root-unresolved guard. Cell key✗/root✓ (AC-F1-2) is proven by TC-BIND-018 steps 6–8: mutate the derivation to emit a **root-only** binding when the key is unresolved, run `-t "TC-BIND-002"`, observe **exactly** the key✗/root✓ cell fail with a root-only-binding message, restore. |
+| OQ-B | NFR-4 requires "1 in-place revert check per layer (…, domain negative, …)", but the domain negative tests assert **unchanged** behaviour and cannot fail on a producer revert. | **RESOLVED.** Domain negatives are proven by **predicate mutation**, not revert: the write-side branch first, then the read-side branch. | TC-BIND-011 must turn red when the write-side mutual-presence branch (`desiredEntry`) is softened or deleted. TC-BIND-012 must turn red when the read-side mutual-presence predicate (`isEntryRecord`) is deleted. One mutation at a time, each restored, each red run recorded in the review (TC-BIND-018 step 9). NFR-4's threshold is restated as one predicate mutation per domain-negative layer. |
+| OQ-C | NFR-6 asks for byte-identical replay, but the production composition uses the wall clock, so envelope bytes differ (`recordedAt`). | **RESOLVED.** Determinism is **binding-level** for the same checkout (same key and root); byte-identical wall-clock replay is out of scope for this change. | TC-BIND-017 asserts identical `repository`/`repositoryRoot` across two independent harnesses over the same checkout and across replay; it makes **no** envelope-byte comparison and introduces no clock seam. TC-BIND-006 carries the cross-form consistency half. Envelope-shape stability stays with the unchanged golden suites. |
+| OQ-D | AC-F2-3 / NFR-5 require "no additional repository-facts resolution", which is not observable from outside the composer without a new seam. | **RESOLVED.** The observable proxy is accepted: **0 process spawns** and **0 network calls** on add, plus the **structural single-resolution assertion**. | TC-BIND-005 asserts the runtime counters (spawn runner, transport `send`, git child runner all zero). TC-BIND-016 asserts exactly one `readRepositoryFacts` call and no second `findGitRoot` in the production composition. TC-BIND-014 keeps the single-derivation-site invariant. No new seam is added and no behavioural claim is made beyond the proxy; AC-F2-3 states the structural carry. |
+| OQ-E | AC-F5-3 and NFR-3 include "verified in review as a diff-level assertion" and "0 diffs outside the recorded entry". AC-F3-2's `source: scheduler` is not projected into any envelope. | **RESOLVED.** AC-F5-3 is **review-verified**: diff-level evidence recorded in the change review plus the existing pinned error-set test. AC-F3-2 is asserted **directly at the resolver unit level**; the end-to-end path covers only AC-F4-2. | TC-BIND-013 keeps the pinned suite automated and records the unchanged error table and both unchanged invariant predicates in the review verdict; no permanent test asserts a diff against a moving base. TC-BIND-007 asserts `{ repository: <scheduler key>, source: "scheduler" }` through a direct `resolveDispatchIdentity` call, and its integration half is scoped to AC-F4-2 (proceeding past the observation gate). |
+| OQ-F | NFR-2 lists `status` and `brief` among surfaces that must not leak the root. | **RESOLVED.** Root absence is asserted on `queue list`, `status` **and** `brief`; **no exit-code assertions** on the credential-degraded surfaces. | TC-BIND-008 asserts the exact root string occurs zero times in `queue list`/`plan`, `lanes`, `claim`/`release`, `status` and `brief` output (JSON and text) and in the graph document, and asserts no exit code for `status`/`brief`. TC-BIND-009 asserts root absence in the dispatch envelope. If a surface proves non-hermetic, report a gap rather than dropping it (TR-5). |
+| OQ-G | AC-F6-4 expects the pre-fix expectations "encoded as the failure the tests detect". | **RESOLVED.** AC-F6-4 may encode the pre-fix failure triple explicitly — refusal on add, zero entries on list, `queue.entry.unobserved` on dispatch — instead of running reverted code. | TC-BIND-010 declares a `PRE_FIX_FAILURE_TRIPLE` constant with those three values and asserts each observed outcome **differs** from it element-by-element (step 4). Revert evidence for the same paths stays with TC-BIND-018; the two are complementary, not duplicated. |
+
+No item remains open; OQ-A/B/C/D/E/F/G are reflected in the spec v1.1 §17 acceptance criteria and in the TC rows named above.
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1 | 2026-11-08 | @test-plan-writer | Initial test plan for GH-273. |
+| 2 | 2026-11-08 | @test-plan-writer | Aligned with spec v1.1 §17 "Verification method": added an evidence class to every TC and to the coverage matrix; recorded PM rulings for OQ-A…OQ-G as RESOLVED in §8.3; re-specified TC-BIND-018 (revert for composition add + root-unresolved guard, asymmetry mutation for the key-unresolved guard, predicate mutations for domain negatives); re-specified TC-BIND-010 to encode the pre-fix failure triple; narrowed TC-BIND-017 to binding-level determinism; scoped TC-BIND-007's end-to-end half to AC-F4-2. No scope change. |
 
 ## 10. Test Execution Log
 
-Populated during delivery/review. Record the four focused files, the regression suite set, the aggregate gate, the informational wall-clock per file, and the TC-BIND-018 revert evidence.
+Populated during delivery/review. Record the four focused files, the regression suite set, the aggregate gate, the informational wall-clock per file, and the TC-BIND-018 evidence: the producer-revert failure set, the key-unresolved asymmetry mutation result, and the two domain predicate mutation results.
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
