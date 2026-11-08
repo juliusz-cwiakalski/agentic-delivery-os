@@ -163,6 +163,18 @@
       "resolves": true
     },
     {
+      "id": "dispatch-session-spawn-failed",
+      "text": "dispatch.session.spawn-failed",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "dispatch-state-unverified",
+      "text": "dispatch.state-unverified",
+      "recognized": true,
+      "resolves": true
+    },
+    {
       "id": "blockers-invalid-type",
       "text": "blockers.invalid-type",
       "recognized": true,

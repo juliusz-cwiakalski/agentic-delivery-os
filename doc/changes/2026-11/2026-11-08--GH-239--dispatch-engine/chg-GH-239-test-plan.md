@@ -3001,7 +3001,7 @@ The earliest executable phase and the per-phase slice split for every TC are dec
 | TC-DAEMON-003 | `tests/behaviour/dispatch-daemonless.test.ts` | `bun test tests/behaviour/dispatch-daemonless.test.ts` | To Implement | No-daemon state; unavailable planner |
 | TC-HELP-001 | `tests/structure/dispatch-help-inventory.test.ts`; `tests/checks/help-guide-coverage.test.ts`; `tests/checks/reference-page-parity.test.ts` | `bun test tests/structure/dispatch-help-inventory.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts` | To Implement | Help inventory; reference page |
 | TC-HELP-002 | `tests/behaviour/dispatch-help-version.test.ts` | `bun test tests/behaviour/dispatch-help-version.test.ts` | To Implement | Poisoned composer; recording ports |
-| TC-HELP-003 | `tests/behaviour/entrypoint-composition.test.ts` (updated); `tests/conformance/pilot/pilot-isolation.test.ts` (comment narrowed only); `tests/structure/harness-review-deferrals.test.ts` (updated) | `bun test tests/behaviour/entrypoint-composition.test.ts tests/conformance/pilot/pilot-isolation.test.ts tests/structure/harness-review-deferrals.test.ts` | Existing, updated | Inverted production-surface expectations; reduced pilot fixture kept; deferral record |
+| TC-HELP-003 | `tests/behaviour/entrypoint-composition.test.ts` (updated); `tests/conformance/pilot/pilot-isolation.test.ts` (comment narrowed only); `tests/structure/harness-review-deferrals.test.ts` (phase-1 record/assertion slice, updated) | `bun test tests/behaviour/entrypoint-composition.test.ts tests/conformance/pilot/pilot-isolation.test.ts tests/structure/harness-review-deferrals.test.ts` | Existing, updated | Inverted production-surface expectations; reduced pilot fixture kept; deferral record |
 | TC-PLANREC-001 | `tests/checks/dispatch-doc-conformance.test.ts` | `bun test tests/checks/dispatch-doc-conformance.test.ts` | To Implement | Stale and required phrase tables; file allowlist |
 | TC-ERR-001 | `tests/behaviour/dispatch-error-envelope.test.ts` | `bun test tests/behaviour/dispatch-error-envelope.test.ts` | To Implement | Spawn-failure fixture; both tables |
 | TC-ERR-002 | `tests/behaviour/dispatch-error-envelope.test.ts` | `bun test tests/behaviour/dispatch-error-envelope.test.ts` | To Implement | Unverifiable truth fixture; both tables |
@@ -3162,7 +3162,7 @@ Legend and rules:
 | TC-DAEMON-003 | 9 | P9 daemonless path | No |
 | TC-HELP-001 | 7 | P7 registration/help inventory | No |
 | TC-HELP-002 | 7 | P7 help/version purity | No |
-| TC-HELP-003 | 7 | P4 run executes the pre-inversion assertion; P7 is the earliest green for the inverted assertion and the narrowed pilot comment | Yes — P4 pre-inversion run |
+| TC-HELP-003 | 7 | P1 harness-review-deferrals record and assertion inversion (the spawn-failure row and the F-9 production-consumer outcome land together); P4 run executes the pre-inversion entrypoint assertion; P7 is the earliest green for the inverted entrypoint assertion and the narrowed pilot comment | Yes — P1 record slice, P4 pre-inversion run |
 | TC-PLANREC-001 | 7 | P7 doc conformance | No |
 | TC-ERR-001 | 4 | P4 command and ledger record | No |
 | TC-ERR-002 | 4 | P4 command and ledger record | No |

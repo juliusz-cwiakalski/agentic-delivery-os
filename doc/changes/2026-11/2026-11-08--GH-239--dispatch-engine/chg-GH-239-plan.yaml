@@ -118,6 +118,10 @@
 #   `tests/types/dispatch-contract.type-test.ts` (phase 1 record types, phase 3
 #   evidence-class and comparison unions).
 # - `tests/structure/harness-review-deferrals.test.ts` is phase-1-owned: phase 1
+#   delivers the phase-1 TC-HELP-003 harness-review-deferrals record slice (the
+#   F-9 production-consumer outcome and its inverted assertion land with the
+#   spawn-failure row); phase 7 owns only the inverted entrypoint assertion and
+#   the narrowed pilot comment.
 #   updates the F-9 deferral record and inverts its assertion in the same edit as
 #   the `dispatch.session.spawn-failed` row, so the row and the deferral record
 #   cannot contradict each other. No other phase declares this file, and phase 7

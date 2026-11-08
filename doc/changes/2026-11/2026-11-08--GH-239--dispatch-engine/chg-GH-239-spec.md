@@ -332,7 +332,7 @@ No schema-version bump is required: the three record kinds and the derived view 
 
 ## 12. ASSUMPTIONS
 
-- The dependency set (verify change, harness adapters, scheduling engine, resident daemon) is delivered and stable on the integration branch (D5).
+- The dependency set (verify change, harness adapters, scheduling engine, resident daemon) is delivered and stable on the integration branch (D5). The daemon-live capability (M1-S18) is a satisfied prerequisite that lets the daemon drive dispatch lanes; it is not a fifth handover-gate condition and its absence would not change the four-condition bar.
 - The eleven-token vocabulary, the TDR-0010 projection, and the two consumer rules are binding and unchanged.
 - `lane.restart-budget` (default 3) and `lane.liveness-interval` (default 30 s) remain the policy-as-data homes for restart and liveness cadence; no new policy key is required for the gate.
 - The harness branch already supplies kind selection, execution environment, store locations, and the declared environment allowlist; no new harness configuration shape is required.
