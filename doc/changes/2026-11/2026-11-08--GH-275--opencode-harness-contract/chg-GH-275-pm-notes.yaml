@@ -1,0 +1,51 @@
+change_id: GH-275
+title: "fix(harness): opencode adapter cannot spawn — JSONL stream and sessionID
+  not parsed, spawn blocks on full session"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-08T21:06:08.678Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "Clarify scope: ticket is prescriptive and consistent with delivered
+      behaviour. Confirmed in source: (a)
+      packages/adapters/src/harness/opencode.ts spawn does a single JSON.parse
+      over the whole stdout and sessionIdOf reads only session.id / sessionId /
+      id — never the top-level sessionID the real CLI emits; (b) the spawn
+      handler awaits HarnessSpawnRunner to process close, so the handle cannot
+      exist before the session ends; (c) the host runner enforces
+      options.timeout with SIGTERM (DEFAULT_TIMEOUT_MS = 300_000), so a real
+      lifecycle is killed at five minutes; (d) every spawn failure collapses to
+      dispatch.session.spawn-failed with lastMessage 'spawn failed before a
+      session existed' (packages/core/src/app/dispatch.ts). No blocking
+      question: the required behaviour, error identity, and acceptance are
+      stated."
+    type: info
+    date: "2026-11-08"
+  - text: "Doc impact to reconcile in phase 7: feature-harness-adapters.md §6
+      'host-runner semantics stay as delivered ... adds no invented runner API'
+      and §3 opencode adapter paragraph; feature-dispatch-engine.md §3.3 (spawn
+      through the port) and its timeout narrative. ADR-0008 DC-2 (session
+      lifecycle) is unaffected: the fix stays behind the adapter and the port. A
+      TDR may be warranted for the streaming handle-acquisition seam if the
+      spec/plan change the HarnessSpawnRunner contract shape."
+    type: info
+    date: "2026-11-08"
+  - text: "Risk recorded at intake: AC 'one real dispatch reaches classification'
+      spawns a nested lifecycle session. Plan must bound the proof (probe-scale
+      prompt or a dispatch run whose session is ended after the handle is
+      observed) and must not let a nested session mutate this change's
+      worktree."
+    type: risk
+    date: "2026-11-08"
