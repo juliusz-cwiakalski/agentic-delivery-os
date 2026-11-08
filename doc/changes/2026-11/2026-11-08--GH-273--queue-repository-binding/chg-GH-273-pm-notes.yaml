@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-08T20:37:40.208Z }
   quality_gates: { started: null, completed: 2026-11-08T20:44:54.831Z }
   dod_check: { started: null, completed: 2026-11-08T20:45:58.038Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-08T20:49:59.979Z }
 decisions:
   - text: "D1 — The recorded key is the normalized host/owner/name contention key,
       not the bare owner/name target; PM ratifies spec DEC-3. This is in-scope,
@@ -319,12 +319,19 @@ notes:
       docs)."
     type: info
     date: "2026-11-08"
-  - text: "DoD check verified: all prior phases completed in the registry
-      (e7c391b5 = dod_check); every declared plan phase 1-5 has a pm-notes entry
-      naming its id, commit (fa8ecd03, 7dc5d2f6, 08153dea, 939f2492, 83adb968)
-      and test result; 18/18 ACs satisfied per review-iter-1 PASS; document truth
-      reconciled with no residual gaps; aggregate gate green (6476 pass / 4 skip /
-      0 fail across 771 files, plus boundaries, prompt-conformance, help-guide
+  - text: "DoD check verified: all prior phases completed in the registry (e7c391b5
+      = dod_check); every declared plan phase 1-5 has a pm-notes entry naming
+      its id, commit (fa8ecd03, 7dc5d2f6, 08153dea, 939f2492, 83adb968) and test
+      result; 18/18 ACs satisfied per review-iter-1 PASS; document truth
+      reconciled with no residual gaps; aggregate gate green (6476 pass / 4 skip
+      / 0 fail across 771 files, plus boundaries, prompt-conformance, help-guide
       and exports-parity). No reopen required."
+    type: info
+    date: "2026-11-08"
+  - text: "PR created: #274
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/274
+      targeting main-tools from fix/GH-273/queue-repository-binding (title
+      'fix(GH-273): record queue repository key and checkout root atomically',
+      body closes #273). Left open for human review; not merged, no auto-merge."
     type: info
     date: "2026-11-08"
