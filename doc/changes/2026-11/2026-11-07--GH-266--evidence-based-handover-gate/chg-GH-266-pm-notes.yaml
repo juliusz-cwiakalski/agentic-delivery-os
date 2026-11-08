@@ -10,7 +10,7 @@ phases:
   delivery: { started: "2026-11-08T03:30:00Z", completed: "2026-11-08T03:58:00Z", status: "complete" }
   system_spec_update: { started: "2026-11-08T04:00:00Z", completed: "2026-11-08T04:12:00Z", status: "no-op-verified" }
   review_fix: { started: "2026-11-08T04:14:00Z", completed: "2026-11-08T04:34:00Z", status: "pass", iteration: 1 }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: "2026-11-08T04:36:00Z", completed: "2026-11-08T05:00:00Z", status: "pass" }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
@@ -140,4 +140,10 @@ notes:
     date: "2026-11-08"
   - text: "Correction for completeness: plan phase P3 landed at 5a00f77a502807fcb7615c770dd83dc6d64e2f9a (its own note could not cite its own SHA)."
     type: "resolved"
+    date: "2026-11-08"
+  - text: "Quality gates: PASS. doc-distribution exit 0 (81 in-scope docs, no drift); git diff --check exit 0; commitlint over the whole branch range exit 0 (15 commits, 0 problems, 0 warnings) so no >100-char body/footer blocker; aggregate `pnpm check` exit 0 with TMPDIR on the repository filesystem — 5828 pass, 4 skip, 0 fail across 642 files; lint 1781 files 0 errors (53 pre-existing warnings), format:check 1647 files, typecheck all six packages, boundaries 289 modules / 800 dependencies, exports parity 5 publishables."
+    type: "info"
+    date: "2026-11-08"
+  - text: "Environmental note for the PR body: the first `pnpm check` run exited 1 solely on tests/checks/ci-baseline-parity.test.ts, whose `git clone --local` uses hardlinks and fails with EXDEV because /tmp is tmpfs while the repo is on the root volume. The same suite passes in isolation when TMPDIR points at the repository filesystem, and the full aggregate then exits 0. This is the pre-existing noise already recorded on the GH-237 PR, not a regression from this change."
+    type: "info"
     date: "2026-11-08"
