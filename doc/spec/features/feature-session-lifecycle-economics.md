@@ -6,9 +6,9 @@ created: 2026-11-07
 last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "Session lifecycle economics: adapter-sourced progress signals (heartbeat age, session traffic, token delta) projected into the unchanged watchdog signal shape with the exact-three liveness-kind vocabulary untouched, source-less lanes still classifying `watchdog.signals-absent` and no CPU signal anywhere; prefill/resume safety so a rising token delta or traffic classifies `progressing` and a stall requires the full corroboration; the classified `watchdog.liveness-stalled` refusal at exit 1; capability-driven attach-and-continue versus classified uneconomical re-entry; a durable per-delivery restart budget consumed by supervised-style and one-shot-style compositions through one gate, with the budget gate evaluated before evidence completeness, a loud `dispatch.restart-budget-exceeded` refusal, a terminal exhaustion record carrying the restart history, and a failed terminal append surfaced as `terminalAppendError`; additive `economics.restart` and `economics.budget-exhaustion` record kinds with no schema-version bump; a rebuildable per-delivery economics view deriving restart count, ordered history, and the resume-amplification signal with null-with-warning degradation; and the typed `lane.liveness-interval` and `lane.restart-budget` configuration branch."
+summary: "Session lifecycle economics: adapter-sourced progress signals (heartbeat age, session traffic, token delta) projected into the unchanged watchdog signal shape with the exact-three liveness-kind vocabulary untouched, source-less lanes still classifying `watchdog.signals-absent` and no CPU signal anywhere; prefill/resume safety so a rising token delta or traffic classifies `progressing` and a stall requires the full corroboration; the classified `watchdog.liveness-stalled` refusal at exit 1; capability-driven attach-and-continue versus classified uneconomical re-entry; a durable per-delivery restart budget consumed by supervised-style and one-shot-style compositions through one gate, with the budget gate evaluated before evidence completeness, a loud `dispatch.restart-budget-exceeded` refusal, a terminal exhaustion record carrying the restart history, and a failed terminal append surfaced as `terminalAppendError`; additive `economics.restart` and `economics.budget-exhaustion` record kinds with no schema-version bump; a rebuildable per-delivery economics view deriving restart count, ordered history, and the resume-amplification signal with null-with-warning degradation; and the typed `lane.liveness-interval` and `lane.restart-budget` configuration branch; the dispatch engine composes the restart gate and resume admission for one-shot lanes with the pinned failure tokens."
 links:
-  related_changes: ["GH-235", "GH-237", "GH-238"]
+  related_changes: ["GH-235", "GH-237", "GH-238", "GH-239"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/economics.ts"
@@ -28,7 +28,7 @@ The session lifecycle economics surface kills the resume-loop amplification clas
 
 The machine surface stays inside the existing v1 envelope, the `{0, 1, 2}` exit taxonomy, and the closed error table. A fully corroborated stall is the classified refusal `watchdog.liveness-stalled` at exit `1`; `progressing` remains a success verdict at exit `0`; and a lane without signal sources keeps the `watchdog.signals-absent` answer at exit `2` — unknown, never guessed. Budget exhaustion is `dispatch.restart-budget-exceeded` and within-budget uneconomical re-entry is `dispatch.resume-uneconomical`, both at exit `1`, with bounded key=value evidence and the durable economics records as the resolvable full-history carrier.
 
-The surface classifies, records, and refuses. It exposes no spawn, kill, steer, restart-execution, or supervision capability; the dispatch command, scheduler, daemon, queue marking, typed-question channel, and spend rendering are separate consumers.
+The surface classifies, records, and refuses. It exposes no spawn, kill, steer, restart-execution, or supervision capability; the scheduler, daemon, queue marking, typed-question channel, and spend rendering are separate consumers. The dispatch engine composes this restart gate and resume admission for one-shot lanes, and the resident daemon composes the same gate for supervised lanes.
 
 ## 2. Business Context
 
@@ -226,7 +226,7 @@ The terminal record carries the fields the later consumers need: delivery identi
 
 ### 4.6 Error-table rows
 
-The error table declares the `dispatch` domain kind with exactly two economics identities and the fourth `watchdog` identity, bound in both directions with the documented rows in [Result Contract and Error Table](feature-result-contract.md):
+The error table declares the `dispatch` domain kind with four rows. This feature owns the two economics identities (`dispatch.restart-budget-exceeded`, `dispatch.resume-uneconomical`); the dispatch engine owns `dispatch.session.spawn-failed` and `dispatch.state-unverified` in the same kind. All four are documented in [Result Contract and Error Table](feature-result-contract.md) and bound in both directions:
 
 | Code | Kind | Category | Retryable | Consequence | Projection | Exit |
 |---|---|---|---|---|---|---|
@@ -234,7 +234,7 @@ The error table declares the `dispatch` domain kind with exactly two economics i
 | `dispatch.restart-budget-exceeded` | `dispatch` | `user` | `false` | `not_landed` | `user-validation` | `1` |
 | `dispatch.resume-uneconomical` | `dispatch` | `user` | `false` | `not_landed` | `user-validation` | `1` |
 
-Existing rows are unchanged. The dispatch command story's spawn-failure classification is not part of this table.
+Existing rows are unchanged. The dispatch engine's spawn-failure and state-unverified rows are documented with the dispatch result projection and use the pinned token/outcome pairs of the dispatch engine.
 
 ## 5. Non-Functional Requirements
 
@@ -277,7 +277,7 @@ The two record kinds are the observability substrate: restart count, per-restart
 
 ### 7.3 Consumers and boundaries
 
-The restart count, history, and amplification are the data the dispatch envelope declares (`restarts`, `resumeAmplification`), lane status renders, and spend consumes. Queue-entry failed-marking, typed-question publication and delivery, the daemon and its collection cycle, the dispatch command surface, and spend rendering are separate consumers of this substrate; the economics surface classifies, records, and refuses only.
+The restart count, history, and amplification are the data the dispatch envelope declares (`restarts`, `resumeAmplification`), lane status renders, and spend consumes. The dispatch engine composes this gate and admission for one-shot lanes and carries the recorded resume mode and admission verdict onto its attempt record; the daemon supervises lanes through the same gate. Queue-entry failed-marking, typed-question publication and delivery, and spend rendering are separate consumers of this substrate; the economics surface classifies, records, and refuses only.
 
 Worktree-activity sourcing remains the declared opencode gap, and Claude Code's liveness gaps remain gaps. No state schema-version change, migration, or watchdog corroboration change exists.
 
@@ -307,7 +307,7 @@ Worktree-activity sourcing remains the declared opencode gap, and Claude Code's 
 | Attach-and-continue | A resume that continues the existing session without re-paying prefill and without consuming a restart ordinal. |
 | Uneconomical resume | A re-entry that would re-pay more prefill than the observed unique progress justifies; refused with `dispatch.resume-uneconomical`. |
 
-See also: [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Harness Adapters](feature-harness-adapters.md), [Result Contract and Error Table](feature-result-contract.md), [State Layer](feature-state-layer.md), [Configuration Layer and Inspection](feature-config-layer.md), [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
+See also: [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Harness Adapters](feature-harness-adapters.md), [Dispatch Engine](feature-dispatch-engine.md), [Result Contract and Error Table](feature-result-contract.md), [State Layer](feature-state-layer.md), [Configuration Layer and Inspection](feature-config-layer.md), [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
 **Change record:** `doc/changes/2026-11/2026-11-07--GH-235--session-lifecycle-economics/`.
 
@@ -325,4 +325,8 @@ budget rule, and no amplification rule of its own. See
 
 ## GH-238 supervision
 
-The daemon is a supervised consumer of the restart gate: reconciliation consumes exactly one restart per interruption through the delivered gate, reattaches alive lanes with no increment, and applies prefill-safe liveness (rising token delta or traffic is never stalled). The full dispatch loop remains M1-S9.
+The daemon is a supervised consumer of the restart gate: reconciliation consumes exactly one restart per interruption through the delivered gate, reattaches alive lanes with no increment, and applies prefill-safe liveness (rising token delta or traffic is never stalled).
+
+## GH-239 dispatch integration
+
+The dispatch engine composes this feature's restart budget and resume economics for one-shot lanes. `--resume-prompt` resolves the existing lane, records `attach-continue` (no restart ordinal) or `resume-prompt-reentry` with the acknowledged prefill cost, and continues from the phase-ledger position. A restart at or above `lane.restart-budget` refuses `dispatch.restart-budget-exceeded` with result token `max-restarts`, outcome `failed`, exit `1`, the terminal exhaustion record, and exactly one attempt record. An uneconomical prefill re-pay refuses `dispatch.resume-uneconomical` with result token `failed`, outcome `failed`, exit `1`, and exactly one attempt record. Unreadable token or cost facts refuse rather than admit. Both refusals are attempt-stage failures; neither is a pre-session refusal. See [Dispatch Engine](feature-dispatch-engine.md).

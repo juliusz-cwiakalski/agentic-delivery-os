@@ -6,9 +6,9 @@ created: 2026-11-08
 last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The executable CLI surface: a non-installed Bun bin plus a `main` composition entry, working-name resolution (typed configuration, the non-empty `DELIVERY_OS_WORKING_NAME` override, then the neutral `delivery-os` default), root and per-command `--help` plus `--version` with no state, network, git, or configuration read, the exact prompt-required command composition, and fail-closed `fallback.internal` containment for an uncomposed invocation."
+summary: "The executable CLI surface: a non-installed Bun bin plus a `main` composition entry, working-name resolution (typed configuration, the non-empty `DELIVERY_OS_WORKING_NAME` override, then the neutral `delivery-os` default), root and per-command `--help` plus `--version` with no state, network, git, or configuration read, the exact prompt-required command composition including the `dispatch` family, and fail-closed `fallback.internal` containment for an uncomposed invocation."
 links:
-  related_changes: ["GH-242"]
+  related_changes: ["GH-242", "GH-239"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/cli/bin/delivery-os.ts"
@@ -59,8 +59,9 @@ Global flags on every surface are `--json`, `--verbose`, and `--pretty`. Command
 | `closeout` | — |
 | `spend` | — |
 | `retro` | `collect`, `report` |
+| `dispatch` | `dual-run` (`summary`, `resolve`), `handover` (`--revert`) |
 
-`state`, `mcp`, `dispatch`, and the resident daemon are not registered or claimed: the state layer ships no command surface, `mcp` is its own package surface, and `dispatch` (M1-S9) and the daemon (M1-S18) are undelivered. Other registered commands (`config`, `doctor`, `provider`, `db`, `watchdog`, `board`) are not prompt-required and are dropped from the composed program rather than advertised.
+`state` and `mcp` are not registered or claimed: the state layer ships no command surface and `mcp` is its own package surface. The resident daemon is not part of the prompt-required composition; it ships its own control surface. Other registered commands (`config`, `doctor`, `provider`, `db`, `watchdog`, `board`) are not prompt-required and are dropped from the composed program rather than advertised. `dispatch` is composed with its resolution, summary, and reversal forms, and its help entries point at the dispatch reference page.
 
 Program selection is strict. A missing prompt-required command is a composition gap and throws instead of shipping a partial surface; the entrypoint catches that throw and answers the invocation with the `fallback.internal` containment identity. Extra registrations are dropped. The production composer (`packages/cli/src/production.ts`) wires the delivered adapters — the state store, credential port, repository facts, git seams, GitHub client, and the command runtimes — and reuses the branding seam so the name has one source.
 
@@ -101,6 +102,7 @@ Help/version isolation is asserted with a throwing composer: the composer must n
 - [Branding Seam and Working Name](feature-branding-seam.md) — the injected identity and the working-name input.
 - [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md) — package layout, exports, and the content-inventory boundary.
 - [MCP Surface](feature-mcp-surface.md) — the separate read-only `mcp serve` package surface, which declares no `bin`.
+- [Dispatch Engine](feature-dispatch-engine.md) — the `dispatch` family composed by this entrypoint, its help entries, and the reference page.
 - [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md)
 
 **Change record:** `doc/changes/2026-11/2026-11-07--GH-242--agent-integration/`.

@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The typed blocker and question channel: the closed four-type question vocabulary with one answer channel per type, the `owner` | `coordinator` audience and the delegation policy-as-data confused-deputy guard, the layered credential guard (registered-secret-value refusal on every content path including lane/ref identifiers, the variable-name shape on credential-missing question text, no pattern layer per TDR-0012), the append-only question and answer intent records with derived open/answered closure, the recorded `laneResume` projection (boundary-note, attach-continue, or the resume-prompt-reentry fallback with its prefill cost) conditioned on the adapter resume-injection capability, the deliberate `applied: false` v0 posture, the single shared ranking consumed by the blockers list, the digest `typed-questions` section, and the brief blocker-questions anchor, the bounded deterministic `blockers list`/`answer`/`publish` surface and its exit matrix, and the four-row `blockers` error family."
 links:
-  related_changes: ["GH-230", "GH-238", "GH-242"]
+  related_changes: ["GH-230", "GH-238", "GH-242", "GH-239"]
   related_decisions: ["ADR-0003", "TDR-0012"]
   contracts:
     - "packages/core/src/contracts/blockers.ts"
@@ -239,7 +239,7 @@ The list renders at most eight rows across open and answered together; open ques
 | Lane resume (re-entry fallback) | Recorded with `sessionReentry: true` and the prefill cost | No |
 | Coordinator pickup | Predicate determinable from the digest payload | No wake, no iteration |
 
-The v0 production composition supplies no adapter capability fact, so a real published answer records `resume-prompt-reentry` with `prefillCost: full-context-reprefill` and `applied: false`. The `boundary-note` and `attach-continue` modes are exercisable over injected capability facts. The applying actors — the resident daemon (M1-S18), coordinator supervision (M1-S23), and the one-shot `dispatch --resume` path (M1-S9) — consume the recorded intent in later releases.
+The v0 production composition supplies no adapter capability fact, so a real published answer records `resume-prompt-reentry` with `prefillCost: full-context-reprefill` and `applied: false`. The `boundary-note` and `attach-continue` modes are exercisable over injected capability facts. The applying actors are the resident daemon, which consumes recorded answers on its heartbeat cadence, and coordinator supervision (M1-S23); the one-shot `dispatch <ref> --resume-prompt <text>` path supplies operator guidance at invocation.
 
 ## Technical Architecture & Codebase Map
 
@@ -361,7 +361,7 @@ One `blockers list`, `status`, or `brief` invocation performs one verified block
 - Adding or changing a delegation row is an owner-signed policy-data change; the four-row totality validator and the contract test move together.
 - Adding a surface consumes the existing shared ranking; a second comparator is never introduced.
 - The `blockers` error family stays closed at four rows; a further failure class requires a named consumer and a reviewed change. Malformed answer bodies continue to reuse `input.value.rejected`.
-- The applying actors (M1-S18, M1-S23, M1-S9) consume the recorded records without redefining their shapes or forking the ranking; the lifecycle prompts (GH-242) publish and answer through this channel today.
+- The applying actors (the resident daemon and coordinator supervision M1-S23) consume the recorded records without redefining their shapes or forking the ranking; the dispatch resume path accepts operator-supplied guidance at invocation; the lifecycle prompts (GH-242) publish and answer through this channel today.
 - The caller-audience fact is reconciled into the audit-identity convention when M1-S22 lands; that is a naming review, not a behavior change.
 
 ## Dependencies & Risks
@@ -373,7 +373,7 @@ One `blockers list`, `status`, or `brief` invocation performs one verified block
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, the `blockers` domain kind and its four rows, the `{0, 1, 2}` projection, and the registered-secrets record layer 1 consumes.
 - **Depends on** the branding seam ([feature-branding-seam.md](feature-branding-seam.md)) for the injected binary name and the environment-prefix naming discipline.
 - **Depends on** lane contracts ([feature-watchdog-lane-contracts.md](feature-watchdog-lane-contracts.md)) for the lane vocabulary behind `--lane`; lane-registry existence is not verified here.
-- **Feeds** the resident dispatch daemon (M1-S18), coordinator supervision (M1-S23), the one-shot `dispatch --resume` path (M1-S9), and the lifecycle prompts (GH-242), which consume the recorded intents and projections. The lifecycle prompts publish with `blockers publish` and answer with `blockers answer`; the pm-notes `blockers:` collection stays schema-allowed but is not an agent write target.
+- **Feeds** the resident dispatch daemon (M1-S18) and coordinator supervision (M1-S23), which consume the recorded intents and projections; the dispatch resume path accepts operator-supplied guidance at invocation; the lifecycle prompts (GH-242) publish with `blockers publish` and answer with `blockers answer`, and the pm-notes `blockers:` collection stays schema-allowed but is not an agent write target.
 - **Feeds** session-lifecycle economics (M1-S15), which raises typed questions through this channel on budget exhaustion, and status collector expansion (M1-S10), which builds around the ninth section.
 - **Risk — the ranking is forked per surface:** mitigated by one shared pure ranking consumed by the list, the digest section, and the brief anchor, with an equality test over identical facts.
 - **Risk — an unregistered credential value transits the channel:** accepted residual under TDR-0012, bounded by content caps, the local-first posture, layer 2 on the highest-temptation type, and the named revisit triggers; no channel-local pattern layer exists.

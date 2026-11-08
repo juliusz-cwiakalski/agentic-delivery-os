@@ -134,9 +134,11 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   producer-before-consumer deploy gating, close-first ranking, and parks that
   resume when their condition clears. The resident daemon (GH-238) is its
   production composition root and provides bounded live `queue`/`lanes` watch;
-  `dispatch` and the full delivery loop remain M1-S9. See [status](../spec/features/feature-status-digest.md),
-  [queue-ready](../spec/features/feature-queue-ready.md), and
-  [scheduling engine](../spec/features/feature-scheduling-engine.md).
+  the typed dispatch engine (GH-239) claims and releases the same repository
+  lease for one-shot delivery. See [status](../spec/features/feature-status-digest.md),
+  [queue-ready](../spec/features/feature-queue-ready.md),
+  [scheduling engine](../spec/features/feature-scheduling-engine.md), and
+  [dispatch engine](../spec/features/feature-dispatch-engine.md).
 - `board` is a bounded, render-once owner-gate aging grid: 24 h escalation,
   72 h default-on-expiry, declared collector unavailability, and at most eight
   ranked gates. An unwaived tracker-observed gate maps to `owner-review` and
@@ -233,8 +235,9 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   and uses the same extractors to attribute sessions for the compaction
   checkpoint; the Claude reader bounds the byte read before parsing and opencode
   discloses out-of-port orphans as store-level warnings. The GH-233 review
-  F-8/F-11 items are resolved and F-9 is re-deferred with M1-S9 as owner. No
-  dispatch engine ships; cross-harness dispatch parity belongs to M1-S9.
+  F-8/F-11 items and F-9 are resolved; dispatch (GH-239) is the first production
+  consumer of host-runner sessions, so cross-harness dispatch parity is exercised
+  through the delivered session port.
 - [Session lifecycle economics](../spec/features/feature-session-lifecycle-economics.md)
   ships the adapter-sourced liveness bridge, the prefill-safe corroboration rule,
   the classified `watchdog.liveness-stalled` identity, the single restart-budget
@@ -244,7 +247,9 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   and its `queue`/`lanes` surfaces ship separately (GH-237), the read-only
   spend fold ships separately (GH-236), and the resident daemon (GH-238)
   supplies the scheduling composition root, safe-boundary preemption, and live
-  watch. The `dispatch` command and full delivery-loop handover remain M1-S9.
+  watch. The dispatch engine (GH-239) composes the restart gate and resume
+  admission for one-shot lanes; per-repository handover is a recorded,
+  reversible authority operation rather than a delivery-loop remainder.
 - Accepted architecture calls for one shared composition root. Today the working
   compositions are command-specific CLI edge functions. Optional registrations
   require supplied ports. Production credential/quota factories and a spawn gate
@@ -422,4 +427,10 @@ Phase 6 report; no fresh runtime/pilot result is claimed by this reconstruction.
 
 ## Resident dispatch daemon (GH-238)
 
-The optional resident daemon sits above the delivered state, queue, economics, blockers, harness, and commit substrates. It owns the `daemon.lock`, durable instance/heartbeat/lane/reconciliation/preemption records, and a local control plane; it never writes a commit, runs a phase, or reaches merge execution. State remains the only shared truth, so every one-shot works with the daemon absent.
+The optional resident daemon sits above the delivered state, queue, economics, blockers, harness, and commit substrates. It owns the `daemon.lock`, durable instance/heartbeat/lane/reconciliation/preemption records, and a local control plane; it never writes a commit, runs a phase, or reaches merge execution. State remains the only shared truth, so every one-shot works with the daemon absent. Its production composition supplies the lane-launch planner and lane executor over the harness session port and records the same dispatch attempt as the one-shot path.
+
+## Typed dispatch engine (GH-239)
+
+The `dispatch` family is the typed per-ticket delivery path. One-shot dispatch resolves a harness, claims the repository queue lease, spawns or resumes through the harness session port, watches with progress-based liveness, classifies through the shared classifier, and derives the final token from artifact, tracker, ledger, and CI truth. Every dispatch that reaches classification appends one durable dual-run attempt record; a comparison mismatch appends a divergence, and a contradicted success claim is recorded as a false-success incident.
+
+Authority is per repository and defaults to `dual-run`, where the bash stack remains authoritative and dispatch records evidence only. The four-condition evidence gate (truth, class coverage as exposure, the exposure floor, and corroboration of success claims) governs `dispatch handover`; a met bar appends a handover record and the derived, atomically replaced authority view, and `--revert` restores `dual-run` without deleting history. The four bash entry points read the authority view as a plain file and keep running when the typed CLI is absent. See [dispatch engine](../spec/features/feature-dispatch-engine.md).

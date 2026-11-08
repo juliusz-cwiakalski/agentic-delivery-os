@@ -6,9 +6,9 @@ created: 2026-11-07
 last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; repo-exclusive leases with a fence-token claim, renewal, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change."
+summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; repo-exclusive leases with a fence-token claim, renewal, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
 links:
-  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242"]
+  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239"]
   related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003"]
   contracts:
     - "packages/core/src/contracts/queue.ts"
@@ -178,6 +178,12 @@ than discovering work by hand.
   `restart-budget-exhausted`. The fold is capped at 200 lanes and sets
   `truncated` on any drop; `lanes show <ref>` selects one lane or refuses
   `queue.entry.unobserved` at exit 1.
+- **Dispatch consumption.** The typed dispatch engine claims and releases the
+  same repository-exclusive lease for one-shot execution. A live conflicting
+  lease at dispatch start is a clean pre-session refusal at exit `1`; after a
+  completed or aborted run the lease is released through the same path. A
+  one-shot `dispatch <ref>` reads and writes scheduling state with no daemon,
+  control socket, or background process, so dispatch keeps working daemon-down.
 - **Additive vocabulary.** Five record kinds (`queue.entry`, `queue.dependency`,
   `queue.lease`, `queue.park`, `queue.incident`) plus the derived
   `delivery.queue.graph.v1` document; five `queue` rows; the collector-id set
@@ -263,10 +269,13 @@ caused by the serialized byte cap also sets `truncationReason:
 - **Production composition.** The resident daemon
   ([Resident Dispatch Daemon](feature-resident-daemon.md)) is the production
   composition root for this engine: it claims leases, supervises lanes, and
-  reconciles queue state from durable records. A standalone one-shot invocation
-  is composed through the same injected scheduling seams, so the engine and its
-  surfaces remain testable without an installed binary. The family is registered
-  only when a queue composition is supplied.
+  reconciles queue state from durable records. The typed dispatch engine
+  ([Dispatch Engine](feature-dispatch-engine.md)) is the other consumer: it
+  claims and releases one repository lease per one-shot delivery and reads the
+  same state with no daemon. A standalone one-shot invocation is composed through
+  the same injected scheduling seams, so the engine and its surfaces remain
+  testable without an installed binary. The family is registered only when a
+  queue composition is supplied.
 
 ## Configuration
 
@@ -367,9 +376,10 @@ resident daemon
 ([Resident Dispatch Daemon](feature-resident-daemon.md)) is its production
 composition root and consumes the delivered readiness, lease, park, rank, and
 weight contracts, applying preemption only at a safe boundary and streaming
-bounded `queue` and `lanes` watch frames. The engine does **not** ship
-`dispatch`, session spawn, harness selection, resume handling, or handover
-(M1-S9 / GH-239); M1-S9 composes the claim/release capability. It performs no
+bounded `queue` and `lanes` watch frames. The engine does **not** ship session spawn, harness selection, resume handling,
+or handover. The dispatch engine ([Dispatch Engine](feature-dispatch-engine.md))
+composes the claim/release capability and drives one-shot deliveries; the resident
+daemon composes it for supervised lanes. The engine performs no
 tracker, VCS, or CI write, no merge execution, no gate evaluation, no
 worktree-scoped lease, no capacity or bandwidth policy, and no fleet or
 multi-host coordination.
@@ -395,6 +405,8 @@ pointers remain a declared gap of the digest, not of this engine.
   and `merge.deploy-expectations` are read producer-bound.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the
   lane view consumes restart counts and the amplification signal.
+- [Dispatch Engine](feature-dispatch-engine.md) — the one-shot consumer of the
+  repository lease and the daemon lane composition.
 - [Result Contract and Error Table](feature-result-contract.md) — the five queue
   rows and the lanes collector row.
 - [Status Digest](feature-status-digest.md) — the `lanes-or-queue` section and

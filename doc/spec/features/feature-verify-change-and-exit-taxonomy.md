@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-VERIFY-CHANGE-AND-EXIT-TAXONOMY
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "The `verify` command family: ledger-only `verify change` verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, the verify.gates.* and verify.deploy.* rows of the sibling verify surfaces, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
 links:
-  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225", "GH-233", "GH-235"]
+  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225", "GH-233", "GH-235", "GH-239"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
@@ -302,6 +302,7 @@ The success envelope's structured tuple and the failure summary are the observab
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for verified reads, tear detection, evidence classes, and the append-only ledger substrate.
 - **Depends on** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) for package tiers and runtime-API confinement.
 - **Consumed by** lifecycle finalization, dual-run evidence, the verify-gates lifecycle gate, and later verify surfaces that interpret the result token or the structured `VerifyLedgerEvaluation`.
+- **Consumed by** the dispatch engine ([Dispatch Engine](feature-dispatch-engine.md)) for the eleven-token vocabulary and the verify-change ledger outcome used as the independent comparison baseline for verify-family dispatch attempts.
 - **Risk — stale declaration masks a reopen:** registry evidence overrides the declaration for every mentioned phase, so a hand edit cannot manufacture a false `finished`.
 - **Risk — declaration-only changes read as incomplete:** absent registry evidence is no evidence, so a change that never used the write path still verifies from its declaration.
 - **Risk — numeric dual-run comparison:** `state-unverified` exits `2` where bash exits `1`; the divergence is declared by TDR-0005, and dual-run consumers compare tokens, not digits.
@@ -325,6 +326,7 @@ See also:
 - [PM-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) — schema, variants, lint identities, registry and fold.
 - [State layer](feature-state-layer.md) — verified reads, fences, torn-state detection, and derived documents.
 - [Harness adapters](feature-harness-adapters.md) — the harness-neutral classifier that projects onto the `verify` and `dispatch-session` taxonomy rows at the adapter/port boundary.
+- [Dispatch engine](feature-dispatch-engine.md) — the per-ticket consumer that compares verify-family attempts against this surface's ledger outcome.
 - [Session lifecycle economics](feature-session-lifecycle-economics.md) — the restart-budget refusal identity and the economics outcome/identity/exit matrix, distinct from the `max-restarts` token.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — package tiers, boundary matrices, and the aggregate check.
 - [Change lifecycle guide](../../guides/change-lifecycle.md) — canonical eleven phases and the variant rule.

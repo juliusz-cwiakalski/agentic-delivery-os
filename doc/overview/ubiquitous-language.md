@@ -43,7 +43,7 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
 | Local operational state | Supplies verified ledger evidence and rebuildable projections to consumers; it does not own upstream session content. | [State layer](../spec/features/feature-state-layer.md), [session administration](../spec/features/feature-session-database-admin.md) |
 | Learning evidence and retrospection | Folds collector-truth evidence into level reports; the independent sidecar owns evidence integrity while the validated registry owns level and run data. | [Retro evidence pipeline](../spec/features/feature-retro-pipeline.md), [audit ledger](../spec/features/feature-audit-ledger.md) |
 | Memory and change capsule | The change folder is the episode capsule: append-only events plus candidates. Closeout is the consolidation ceremony that records promotion decisions, home-writes lessons/tacit, and records sanctioned handoffs; the curator owns cross-folder maintenance. | [Change capsule](../spec/features/feature-capsule.md), [closeout](../spec/features/feature-closeout.md), [`.ai/memory/README.md`](../../.ai/memory/README.md) |
-| Harness execution and surfaces | A host runs sessions; a surface exposes capabilities. Typed cross-harness adapter parity is delivered at the port boundary; the dispatch engine is planned, distinct from existing prompt/plugin distribution. | [Harness adapters](../spec/features/feature-harness-adapters.md), [primitive surface](../planning/concepts/agent-primitive-surface.md) |
+| Harness execution and surfaces | A host runs sessions; a surface exposes capabilities. Typed cross-harness adapter parity is delivered at the port boundary; the dispatch engine is the first production consumer of the session port. | [Harness adapters](../spec/features/feature-harness-adapters.md), [dispatch engine](../spec/features/feature-dispatch-engine.md) |
 
 ## Disambiguation at boundaries
 
@@ -57,7 +57,8 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
 - **Harness / session:** the harness is the execution host; a session is one
   hosted execution. Typed spawn and classification parity are delivered at the
   adapter boundary; resume/steer and liveness gaps are declared per adapter, and
-  configuration-driven dispatch remains planned. See the harness concept above.
+  the dispatch engine selects the configured harness and drives sessions through
+  the port. See the harness concept above.
 - **Model profile / profile class:** a profile is a named agent-to-model mapping;
   a class groups profiles by task difficulty. Class working names are not profiles
   or newly frozen names. Model policy is planned. Current provider v1 evaluates
