@@ -45,7 +45,7 @@ phases:
     }
   quality_gates: { started: "2026-11-08T02:02:00Z", completed: 2026-11-08T01:58:23.338Z }
   dod_check: { started: "2026-11-08T02:10:00Z", completed: 2026-11-08T01:59:51.505Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: "2026-11-08T02:10:00Z", completed: null }
 decisions:
   - text: "D1 — Scope includes the minimum executable and self-description surface
       the prompts need: a neutral CLI entrypoint plus --help/--version. The
