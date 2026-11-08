@@ -88,6 +88,8 @@
     "src/domain/daemon-reconcile.ts",
     "src/domain/daemon-status.ts",
     "src/domain/daemon-supervisor.ts",
+    "src/domain/dispatch-liveness.ts",
+    "src/domain/dispatch-result.ts",
     "src/domain/doctor.ts",
     "src/domain/economics-budget.ts",
     "src/domain/economics-evidence.ts",

@@ -149,3 +149,17 @@ notes:
       DEC-, or TC- style refs other than GH-239, or the primitive refuses."
     type: retro
     date: "2026-11-08"
+  - text: "Delivery plan phase 1 (contracts, dispatch error identities, record
+      families, F-9 deferral update) complete. Commit 56e0588. Tests green:
+      dispatch-token-home, dispatch-error-identity, delivery-result-contract,
+      result-contract, error-table, error-table-sync, harness-review-deferrals,
+      exit-code-literals, decision-record, content-inventory, tests/types (no
+      discovered suites), scripts/checks/error-table-sync.ts (115 entries/115
+      documented), pnpm typecheck, pnpm check:boundaries. Table grew 113->115
+      identities; the three BASELINE_ROWS.length + 79 assertions moved to + 81;
+      the stale no-platform-provider-row title renamed. Scope note: the plan's
+      phase-1 file list omitted scripts/checks/error-table-sync.ts, which the
+      summary's reserved-set invariant requires; the primitive reported it as
+      scope drift and committed."
+    type: info
+    date: "2026-11-08"
