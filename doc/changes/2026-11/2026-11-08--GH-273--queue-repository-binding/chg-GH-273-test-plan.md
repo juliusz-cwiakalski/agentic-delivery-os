@@ -841,23 +841,23 @@ Runtime expectations: each new behaviour file under ~3 s locally on a warm bun c
 
 | TC ID | Test file | Implementation status | Evidence class | Execution command |
 |-------|-----------|-----------------------|----------------|-------------------|
-| TC-BIND-001 | `tests/behaviour/queue-production-binding.test.ts` | To Implement | Permanent suite | `bun test tests/behaviour/queue-production-binding.test.ts` |
-| TC-BIND-002 | same | To Implement | Permanent suite; key-unresolved cell mutation-verified | same |
-| TC-BIND-003 | same | To Implement | Permanent suite | same |
-| TC-BIND-004 | same | To Implement | Permanent suite | same |
-| TC-BIND-005 | same | To Implement | Permanent suite | same |
-| TC-BIND-006 | same | To Implement | Permanent suite (`normalizeRepositoryKey` authority) | same |
-| TC-BIND-007 | same | To Implement | Permanent suite (resolver unit assertion) | same |
-| TC-BIND-008 | same + `tests/structure/queue-binding-derivation.test.ts` (source allowlist) | To Implement | Permanent suite | same + `bun test tests/structure/queue-binding-derivation.test.ts` |
-| TC-BIND-009 | `tests/behaviour/queue-production-binding.test.ts` | To Implement | Permanent suite | same |
-| TC-BIND-010 | same | To Implement | Permanent suite (encoded pre-fix triple) | same |
-| TC-BIND-011 | `tests/behaviour/queue-binding-invariant.test.ts` | To Implement | Mutation-verified (write side) | `bun test tests/behaviour/queue-binding-invariant.test.ts` |
-| TC-BIND-012 | same | To Implement | Mutation-verified (read side) | same |
+| TC-BIND-001 | `tests/behaviour/queue-production-binding.test.ts` | Delivered | Permanent suite | `bun test tests/behaviour/queue-production-binding.test.ts` |
+| TC-BIND-002 | same | Delivered | Permanent suite; key-unresolved cell mutation-verified | same |
+| TC-BIND-003 | same | Delivered | Permanent suite | same |
+| TC-BIND-004 | same | Delivered | Permanent suite | same |
+| TC-BIND-005 | same | Delivered | Permanent suite | same |
+| TC-BIND-006 | same | Delivered | Permanent suite (`normalizeRepositoryKey` authority) | same |
+| TC-BIND-007 | same | Delivered | Permanent suite (resolver unit assertion) | same |
+| TC-BIND-008 | same + `tests/structure/queue-binding-derivation.test.ts` (source allowlist) | Delivered | Permanent suite | same + `bun test tests/structure/queue-binding-derivation.test.ts` |
+| TC-BIND-009 | `tests/behaviour/queue-production-binding.test.ts` | Delivered | Permanent suite | same |
+| TC-BIND-010 | same | Delivered | Permanent suite (encoded pre-fix triple) | same |
+| TC-BIND-011 | `tests/behaviour/queue-binding-invariant.test.ts` | Delivered | Mutation-verified (write side) | `bun test tests/behaviour/queue-binding-invariant.test.ts` |
+| TC-BIND-012 | same | Delivered | Mutation-verified (read side) | same |
 | TC-BIND-013 | `tests/structure/queue-scheduling-contract.test.ts`, `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/golden/queue-*.test.ts` | Existing – No Change | Review-verified (+ pinned suite) | `bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts tests/golden` |
-| TC-BIND-014 | `tests/structure/queue-binding-derivation.test.ts` | To Implement | Permanent suite (structural) | `bun test tests/structure/queue-binding-derivation.test.ts` |
-| TC-BIND-015 | `tests/structure/queue-binding-fixture-shape.test.ts` (AST half) + `tests/conformance/pilot/pilot-records.test.ts` (runtime half) | To Implement | Permanent suite (structural + conformance) | `bun test tests/structure/queue-binding-fixture-shape.test.ts` + `bun test tests/conformance/pilot` |
-| TC-BIND-016 | `tests/structure/queue-binding-derivation.test.ts` | To Implement | Permanent suite (structural) + mutation-verified | same as TC-BIND-014 |
-| TC-BIND-017 | `tests/behaviour/queue-production-binding.test.ts` | To Implement | Permanent suite (binding-level determinism) | same as TC-BIND-001 |
+| TC-BIND-014 | `tests/structure/queue-binding-derivation.test.ts` | Delivered | Permanent suite (structural) | `bun test tests/structure/queue-binding-derivation.test.ts` |
+| TC-BIND-015 | `tests/structure/queue-binding-fixture-shape.test.ts` (AST half) + `tests/conformance/pilot/pilot-records.test.ts` (runtime half) | Delivered | Permanent suite (structural + conformance) | `bun test tests/structure/queue-binding-fixture-shape.test.ts` + `bun test tests/conformance/pilot` |
+| TC-BIND-016 | `tests/structure/queue-binding-derivation.test.ts` | Delivered | Permanent suite (structural) + mutation-verified | same as TC-BIND-014 |
+| TC-BIND-017 | `tests/behaviour/queue-production-binding.test.ts` | Delivered | Permanent suite (binding-level determinism) | same as TC-BIND-001 |
 | TC-BIND-018 | none (manual) | Manual Only | Review-verified (four revert/mutation procedures) | P1: `bun test tests/behaviour/queue-production-binding.test.ts` + the invariant/derivation/fixture-shape files under a temporary producer revert; P2: `bun test tests/structure/queue-binding-fixture-shape.test.ts` under a temporary pilot-fixture revert; P3: `-t "TC-BIND-002"` under the asymmetry mutation; P4: `bun test tests/behaviour/queue-binding-invariant.test.ts` under each predicate mutation |
 
 Supporting changes (not test cases):

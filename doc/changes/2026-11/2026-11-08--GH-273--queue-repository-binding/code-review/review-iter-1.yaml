@@ -1,0 +1,176 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-273
+branch: fix/GH-273/queue-repository-binding
+status: PASS
+summary: >-
+  The producer fix is exactly the change the ticket and the spec describe: the
+  production composer now resolves repository facts once, lets an injected
+  origin replace only the remote, and derives the queue repository binding as
+  one total three-condition outcome (GitHub target AND normalizeRepositoryKey
+  AND resolved checkout root; otherwise absent), so a one-sided pair is
+  unreachable from the CLI composition. The key is the normalized lowercase
+  host/owner/name and the root is the declaring checkout root; the queue edge's
+  field-wise pass-through is untouched and the domain invariant, grammar,
+  envelopes, exits, and error table are byte-unchanged (only
+  packages/cli/src/production.ts changed under packages/). The regression
+  coverage is honest rather than fixture-supplied: the composition harness
+  exposes no root seam, all add/list/dispatch scenarios read the real ledger of
+  a real temp checkout, and the fixture-shape and domain-negative layers carry
+  their own artifact-specific evidence. I re-ran the four new suites (29/29),
+  the pilot conformance suite (4/4), the affected composition/queue suites
+  (70/70), the error-table/queue-contract suites (193/193), privacy-release +
+  doc-conformance + content-inventory (24/24), and fixture/privacy scans (7/7);
+  pnpm typecheck, biome on every changed source/test file, plan validate, and
+  git diff --check are clean. No blocking finding; seven advisory findings are
+  recorded (two artifact-hygiene, five informational).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 5
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: artifact-hygiene
+    location: doc/changes/2026-11/2026-11-08--GH-273--queue-repository-binding/chg-GH-273-pm-notes.yaml:276
+    message: >-
+      The lifecycle-phase-7 handoff note still says "no doc/spec/** edit in this
+      change", but the change does edit two system-spec pages
+      (doc/spec/features/feature-cli-entrypoint.md and
+      feature-scheduling-engine.md, commit d14b91f2), and pm-notes has no note
+      recording that doc-sync commit, while phases.system_spec_update is marked
+      completed. The statement was true when the phase-5 note was written but is
+      stale at HEAD; the registry records the completion, so this is a
+      record-keeping gap, not a behaviour or compliance defect.
+    suggestion: >-
+      Append one pm-notes note naming lifecycle phase 7, commit d14b91f2, and the
+      two reconciled pages (or reword the handoff note to "the delivery phases
+      edited no doc/spec file"), so the delivery record does not contradict the
+      diff at the DoD gate.
+    suppressed: false
+    published_url: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: artifact-hygiene
+    location: doc/changes/2026-11/2026-11-08--GH-273--queue-repository-binding/chg-GH-273-test-plan.md:844
+    message: >-
+      Section 7's "Implementation status" column still reads "To Implement" for
+      all 18 TCs (only TC-BIND-013 is "Existing – No Change"), although every
+      suite is delivered and section 10 records the execution evidence. The
+      test-plan template's status vocabulary exists so the delivered state is
+      visible in the mapping table; section 10 remains authoritative, so this is
+      cosmetic drift (GH-240 shipped the same way, GH-242 updated the column).
+    suggestion: >-
+      Set the 17 new TCs to "Implemented" (TC-BIND-013 to "Existing – No Change"
+      is already correct) in the same touch that populates section 10.
+    suppressed: false
+    published_url: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: test-quality
+    location: tests/behaviour/queue-production-binding.test.ts:543
+    message: >-
+      TC-BIND-008 asserts that the recorded root never appears in any read
+      surface, including the human `queue list` rendering, but it does not assert
+      that the human rendering omits the normalized repository key. AC-F4-1
+      requires both halves ("human rendering is unchanged — no repository key and
+      no root"); the no-key half is review-verified because the rendering code is
+      untouched, not suite-asserted.
+    suggestion: >-
+      Add one negative assertion that the text-mode `queue list` output does not
+      contain the normalized key (it already must not contain the root), closing
+      the AC-F4-1 half with a permanent assertion.
+    suppressed: false
+    published_url: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: test-quality
+    location: tests/structure/queue-binding-derivation.test.ts:230
+    message: >-
+      TC-BIND-016 proves "exactly one repository-facts resolution" by counting
+      direct `readRepositoryFacts` / `findGitRoot` identifier calls in
+      production.ts. A second resolution reached through an alias, a different
+      adapter entry point, or `resolveCheckoutGitDirectories` would not be
+      counted. This is the observable proxy explicitly PM-ratified in test-plan
+      section 8.3 OQ-D, so it is accepted, not a defect.
+    suggestion: >-
+      No action required for this change; if the rule is ever strengthened, match
+      on imported bindings rather than identifier text and assert the
+      composition's call graph contains no second facts read.
+    suppressed: false
+    published_url: null
+  - id: F-5
+    severity: info
+    confidence: medium
+    category: test-quality
+    location: tests/fixtures/queue/production/harness.ts:98
+    message: >-
+      The root-unresolved fixture first tries os.tmpdir(); when TMPDIR points
+      inside the checkout (the repo-local aggregate-gate setting) it creates the
+      throwaway directory in dirname(process.cwd()), outside the repository. That
+      fallback keeps the cell honest and is documented for gate parity, but it
+      makes the suite dependent on the checkout's parent directory being
+      writable; in a tightly sandboxed runner where neither the configured temp
+      dir nor the parent is usable the cell throws instead of skipping with a
+      reason.
+    suggestion: >-
+      Keep the current candidates but extend the failure message to name every
+      probed parent and the TMPDIR value (it already fails loudly), or add a
+      third candidate under an explicitly supplied temp root; no production
+      impact.
+    suppressed: false
+    published_url: null
+  - id: F-6
+    severity: info
+    confidence: medium
+    category: design
+    location: packages/cli/src/production.ts:257
+    message: >-
+      An injected `repositoryFacts` object with no `originUrl` (e.g. `{}`)
+      supersedes the checkout's real origin rather than overlaying nothing, so an
+      injected empty record produces no binding even when the checkout has an
+      origin. This matches the existing test usage (`dispatch-composition.test.ts`
+      treats `{}` as "no origin") and production never injects facts, but DEC-5's
+      "an injected origin replaces only the remote" does not state the
+      absence case, and the field's doc comment still describes injection only as
+      "a fixed remote".
+    suggestion: >-
+      Document the absence semantics on `ProductionCompositionFacts.repositoryFacts`
+      ("present = authoritative, including no origin") or fall back to the
+      resolved origin when the injected record omits `originUrl`; either is fine
+      today because the seam is test-facing only.
+    suppressed: false
+    published_url: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: test-quality
+    location: doc/changes/2026-11/2026-11-08--GH-273--queue-repository-binding/chg-GH-273-test-plan.md:941
+    message: >-
+      The recorded P1 red set for the derivation suite (3 pass / 2 fail) is only
+      reproducible with the documented minimal re-expression of the derivation
+      that keeps the single `repositoryBinding` variable/site; a whole-file
+      `git revert` of commit fa8ecd03 also removes that variable site, so
+      TC-BIND-014's "exactly one construction site" assertion would join the red
+      set (2 pass / 3 fail) without changing the composition-suite 3/12 split.
+      The recorded numbers are correct for the procedure as written, but the
+      procedure wording ("revert only the derivation") can be read as a
+      whole-file revert.
+    suggestion: >-
+      State in TC-BIND-018 P1 that the revert is a minimal re-expression of the
+      derivation (variable and property site preserved), or record both counts,
+      so a future re-verifier doing a whole-file revert does not misread a
+      legitimate 2/3 as an inconsistency.
+    suppressed: false
+    published_url: null
+reviewed_at: 2026-11-08T21:40:00Z
+next_step: PROCEED

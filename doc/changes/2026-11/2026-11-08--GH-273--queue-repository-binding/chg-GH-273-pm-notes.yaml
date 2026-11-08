@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-08T19:33:40.432Z }
   delivery: { started: null, completed: 2026-11-08T20:14:22.000Z }
   system_spec_update: { started: null, completed: 2026-11-08T20:22:39.592Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-08T20:37:40.208Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -273,8 +273,8 @@ notes:
       Post-restore four files 29 pass / 0 fail and pilot 29 pass / 0 fail."
     type: info
     date: "2026-11-08"
-  - text: "Lifecycle phase 7 handoff obligation (owned by @doc-syncer; no
-      doc/spec/** edit in this change): (i) re-verify
+  - text: "Lifecycle phase 7 handoff obligation (owned by @doc-syncer; this note was
+      written before phase 7 ran): (i) re-verify
       doc/spec/features/feature-scheduling-engine.md still states the
       key-and-root-together contract and the normalizeRepositoryKey
       host/owner/name form with no sentence contradicting the delivered
@@ -299,4 +299,23 @@ notes:
       is encoded in a release invariant, probe that invariant while planning the
       release step, not only the product behaviour."
     type: retro
+    date: "2026-11-08"
+  - text: "Review iteration 1 = PASS (code-review/review-iter-1.yaml), 0 blocking, 2
+      low + 5 info advisories. Verified: all 18 ACs traceable; one total
+      conjunction in the producer with no one-sided path;
+      domain/grammar/envelope/error table untouched; no root disclosure; harness
+      exposes no root seam; P1-P4 evidence arithmetic consistent; re-ran 29/29
+      new tests, 70/70 affected queue suites, 193/193 contract/error-table,
+      240/240 golden. Advisories F-1 (stale phase-7 handoff note) and F-2
+      (test-plan §7 status column) folded before closing the phase; F-3..F-7
+      accepted as informational."
+    type: info
+    date: "2026-11-08"
+  - text: "Phase 7 doc-sync completed by @doc-syncer: commit d14b91f2 updated
+      doc/spec/features/feature-cli-entrypoint.md (composition binding note +
+      quality evidence) and added GH-273 traceability to
+      feature-scheduling-engine.md, which needed no correction. Residual
+      documentation gaps: none. Doc distribution guard clean (81 in-scope
+      docs)."
+    type: info
     date: "2026-11-08"
