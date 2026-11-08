@@ -44,7 +44,7 @@ phases:
       iteration: 2
     }
   quality_gates: { started: "2026-11-08T02:02:00Z", completed: 2026-11-08T01:58:23.338Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: "2026-11-08T02:10:00Z", completed: 2026-11-08T01:59:51.505Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "D1 — Scope includes the minimum executable and self-description surface
@@ -256,6 +256,22 @@ notes:
       implemented, targeted suites green, aggregate gate green. Delivery marked
       complete before docs sync."
     type: info
+    date: "2026-11-08"
+  - text: "DoD check evidence: all 11 plan phases have pm-notes evidence with
+      commit+test results; spec ACs are covered by the iteration-2 PASS review;
+      doc-syncer reports no residual documentation gap; aggregate gate 6005 pass
+      / 4 skip / 0 fail; worktree clean. The delivery registry records only the
+      late lifecycle phases (delivery, system_spec_update, quality_gates)
+      because the phase tooling was itself being delivered in this change;
+      pm-notes remains the authoritative declaration for the earlier phases, and
+      the gap is recorded as a retro item."
+    type: info
+    date: "2026-11-08"
+  - text: "Retro: this change delivered the phase/commit tooling it should have
+      used. Phase state for phases 1-8 was necessarily hand-written before the
+      tooling existed, so the registry is partial. Future changes start with
+      phase complete from clarify_scope onward and should not repeat this."
+    type: retro
     date: "2026-11-08"
   - text: "Review iteration 1 FAIL: F-1/F-2 high — phase 8 replaced
       tests/checks/ci-checks.test.ts (37 to 2 tests) and
