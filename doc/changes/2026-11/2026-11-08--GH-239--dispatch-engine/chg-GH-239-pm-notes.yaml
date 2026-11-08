@@ -15,7 +15,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-08T16:52:12.898Z }
   quality_gates: { started: null, completed: 2026-11-08T17:06:38.001Z }
   dod_check: { started: null, completed: 2026-11-08T17:08:23.018Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-08T17:14:28.423Z }
 decisions:
   - text: "D1 — Handover gate definition follows the amended canonical backlog
       (GH-266 / CEO-D-073 evidence bar), not the stale two-week wording still
@@ -369,14 +369,12 @@ notes:
       re-run @doc-syncer if behavior changed, then @reviewer iteration 2."
     type: info
     date: "2026-11-08"
-  - text: "Review iteration 2 verdict FAIL (code-review/review-iter-2.yaml). F-1,
+  - text: "Review iteration 2 verdict FAIL (code-review/review-iter-2.yaml): F-1,
       F-2, F-4..F-13 CLOSED; F-14 OPEN (info); F-3 regression fixed but
-      introduced F-15 (high): the production identity marker is a single global
-      state document, so two repositories in one home collide and a read-only
-      summary can bind it; per-repository isolation is broken. F-16 (medium): a
-      transient stall is never cleared, so a completed session can still
-      classify max-restarts. Sending both back to @coder; review iteration 3 is
-      the last within budget."
+      introduced F-15 (high): the production identity marker was a single global
+      state document, so two repositories in one home collided and a read-only
+      summary could bind it. F-16 (medium): a transient stall was never cleared,
+      so a completed session could still classify max-restarts."
     type: blocker
     date: "2026-11-08"
   - text: "Review iteration 1 remediation complete in one pass. Delivery commit
@@ -522,5 +520,29 @@ notes:
       valid, and the aggregate `TMPDIR in-repo pnpm check` is green: 6446 pass,
       4 skip, 0 fail (767 files); typecheck, boundaries, prompt conformance,
       help coverage, and exports parity green."
+    type: info
+    date: "2026-11-08"
+  - text: "Review iteration 3 verdict PASS (code-review/review-iter-3.yaml): 0
+      critical, 0 high, 0 medium; six low hygiene findings (F-17..F-21, F-23)
+      applied in one hygiene pass, plus F-14 informational. Review loop closed
+      after 3 iterations."
+    type: info
+    date: "2026-11-08"
+  - text: "Quality gates passed on HEAD 58a3885a: pnpm check 6446 pass / 4 skip / 0
+      fail (767 files), 25/25 bash suites, doc distribution no drift (81 docs),
+      pm-notes and plan lint conform, verify change reports only pr_creation
+      missing (expected)."
+    type: info
+    date: "2026-11-08"
+  - text: "DoD passed: all 10 plan phases have pm-notes evidence notes (phase id,
+      commit hash, test result), review PASS, doc-syncer reports no gaps, and
+      verify change reports only pr_creation missing."
+    type: info
+    date: "2026-11-08"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/272 (base
+      main-tools, head feat/GH-239/dispatch-engine, HEAD b120035f, 50 commits).
+      Open for review; not merged, no auto-merge. TDR-0015 acceptance at this PR
+      is the merge gate."
     type: info
     date: "2026-11-08"
