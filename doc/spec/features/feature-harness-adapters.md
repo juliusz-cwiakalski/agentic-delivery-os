@@ -323,8 +323,8 @@ Worktree-activity sourcing and Claude Code liveness remain declared gaps.
 
 ## GH-238 lane executor
 
-The delivered lane-executor adapter composes `HarnessSessionPort` for spawn, observe, collect, and liveness plus an injected launch planner. The daemon composition supplies `createLaneLaunchPlanner`; a missing planner or declared capability gap reports unavailable, producing the declared `supervise-only` mode.
+The delivered lane-executor adapter composes `HarnessSessionPort` for spawn, observe, collect, and liveness plus an injected launch planner. The daemon composition supplies `createLaneLaunchPlanner`; a missing planner or declared capability gap reports unavailable, producing the declared `supervise-only` mode. The lane seam is factory-proven; the production daemon entry that supplies the lane composition is resident-daemon production scope (GH-238).
 
 ## GH-239 dispatch consumer
 
-The dispatch engine is the first production consumer of host-runner sessions. It resolves a harness, spawns or resumes through this port, watches with the adapter-sourced liveness facts, and classifies through the one shared harness-neutral classifier. The daemon lane executor composes the same port and planner, so a daemon-driven attempt and a one-shot dispatch over the same evidence produce the same token, outcome, and attempt record. The F-9 finding records this production-consumer outcome in `HARNESS_REVIEW_DEFERRALS`. See [Dispatch Engine](feature-dispatch-engine.md).
+The dispatch engine is the first production consumer of host-runner sessions. It resolves a harness, spawns or resumes through this port, watches with the adapter-sourced liveness facts, and classifies through the one shared harness-neutral classifier. The daemon lane executor composes the same port and planner at the daemon-composition factory, so a daemon-driven attempt and a one-shot dispatch over the same evidence produce the same token, outcome, and attempt record. The F-9 finding records this production-consumer outcome in `HARNESS_REVIEW_DEFERRALS`. See [Dispatch Engine](feature-dispatch-engine.md).

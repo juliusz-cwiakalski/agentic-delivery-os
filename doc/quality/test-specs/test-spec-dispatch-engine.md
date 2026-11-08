@@ -30,24 +30,25 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 - `tests/behaviour/dispatch-truth-derivation.test.ts` and `dispatch-state-unverified.test.ts` — artifact-first derivation, exit-0-with-no-artifact, tracker facts, and the unverifiable-truth token.
 - `tests/behaviour/dispatch-liveness.test.ts` — progress signals, absent readings, and the two-evaluation stall rule.
 - `tests/behaviour/dispatch-comparison.test.ts`, `dispatch-evidence-record.test.ts`, `dispatch-evidence-class.test.ts` — comparison shape invariants, evidence-class declaration and immutability, record completeness, and privacy bounds.
-- `tests/behaviour/dispatch-false-success.test.ts`, `dispatch-unevaluable.test.ts` — false-success classification and record-level versus window-level degradation.
+- `tests/behaviour/dispatch-false-success.test.ts`, `dispatch-unevaluable.test.ts` — false-success classification, the unreadable-versus-contradicted corroboration distinction, and record-level versus window-level degradation.
 - `tests/behaviour/dispatch-identity.test.ts` and `tests/structure/dispatch-authority-view.test.ts` — repository identity resolution, rename stability, marker reuse, and the atomic authority view.
 - `tests/behaviour/dispatch-dual-run-floor.test.ts`, `dispatch-gate-evidence.test.ts`, `dispatch-gate-window.test.ts`, `dispatch-divergence.test.ts` — floor-only semantics, corroboration, incident-exclusive window, and divergence folding.
 
 ### Command and ledger tests
 
 - `tests/behaviour/dispatch-harness-lease.test.ts` — harness resolution, lease claim, pre-session refusals, and spawn-refused recording.
-- `tests/behaviour/dispatch-envelope.test.ts`, `dispatch-error-envelope.test.ts`, `tests/golden/dispatch-text.test.ts`, `tests/golden/dispatch-errors.test.ts` — machine envelope fields, four-key text order, and classified failures.
+- `tests/behaviour/dispatch-watch.test.ts` — progress-based watching at the lane cadence, the recorded verdict trail, and routing of a corroborated terminal stall through restart admission with no silent second spawn.
+- `tests/behaviour/dispatch-envelope.test.ts`, `dispatch-error-envelope.test.ts`, `tests/golden/dispatch-text.test.ts`, `tests/golden/dispatch-errors.test.ts` — machine envelope fields, the data-bearing attempt-stage `data.error`, the post-spawn collection failure, four-key text order, and classified failures.
 - `tests/behaviour/dispatch-evidence-record.test.ts`, `dispatch-evidence-class.test.ts` — one attempt record per classified dispatch and one per attempt-stage failure.
-- `tests/behaviour/dispatch-resume.test.ts`, `dispatch-restart-budget.test.ts`, `dispatch-resume-economics.test.ts` — resume modes, phase-ledger continuity, restart-budget refusal, and resume-economics refusal.
-- `tests/behaviour/dispatch-dual-run-summary.test.ts`, `dispatch-handover.test.ts`, `tests/golden/dispatch-summary.test.ts` — summary reporting, readable-but-unmet refusal, handover, reversal, and idempotent replay.
-- `tests/behaviour/dispatch-merge-absence.test.ts`, `tests/structure/dispatch-merge-boundary.test.ts`, `dispatch-imports.test.ts`, `dispatch-composition.test.ts` — no merge path, composition honesty, and the production harness composition.
+- `tests/behaviour/dispatch-resume.test.ts`, `dispatch-restart-budget.test.ts`, `dispatch-resume-economics.test.ts` — resume modes, phase-ledger continuity, restart-budget refusal with the terminal exhaustion record, and resume-economics refusal.
+- `tests/behaviour/dispatch-dual-run-summary.test.ts`, `dispatch-handover.test.ts`, `tests/golden/dispatch-summary.test.ts` — summary reporting, readable-but-unmet refusal, handover, reversal, and idempotent replay under an advancing clock.
+- `tests/behaviour/dispatch-merge-absence.test.ts`, `tests/structure/dispatch-merge-boundary.test.ts`, `dispatch-imports.test.ts`, `dispatch-composition.test.ts` — no merge path, composition honesty, the production harness composition, and the production-composed gate, handover, resolve, resume-lane, and rename-invariant identity paths.
 
 ### Registration, fallback, and daemon tests
 
 - `tests/behaviour/entrypoint-composition.test.ts`, `entrypoint-help-coverage.test.ts`, `dispatch-help-version.test.ts`, `tests/structure/dispatch-help-inventory.test.ts`, `tests/checks/dispatch-doc-conformance.test.ts` — prompt-required registration, help paths, reference-page coverage, and the stale-ring reconciliation.
 - `scripts/.tests/test-dispatch-bash-fallback.sh` and `tests/structure/dispatch-bash-authority.test.ts` — the twelve-cell fallback matrix (four scripts × dual-run, authoritative, typed-CLI-absent/broken) and the no-typed-CLI source rule.
-- `tests/behaviour/dispatch-daemon-planner.test.ts`, `dispatch-daemonless.test.ts`, `tests/conformance/dispatch/dispatch-daemon-lane.test.ts` — planner output, executor composition, the daemon-path attempt record, and the daemon-less one-shot path.
+- `tests/behaviour/dispatch-daemon-planner.test.ts`, `dispatch-daemonless.test.ts`, `tests/conformance/dispatch/dispatch-daemon-lane.test.ts` — planner output, executor composition, the daemon-path attempt record, and the daemon-less one-shot path. The daemon lane seam is factory-proven here; the production daemon entry that supplies the lane composition is resident-daemon scope.
 
 ### Conformance and controlled proof
 
@@ -56,7 +57,7 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 
 ## Test Data
 
-Dispatch suites drive `runCli` with an injected command program and injected harness, tracker, CI, VCS, clock, run-id, and fence seams. Fixtures under `tests/fixtures/dispatch/` supply harness evidence, truth reads, ledger records, evidence windows, authority documents, bash authority files, golden text, and mutation cases. The controlled proof uses a real local state store and real change files with deterministic UTC date advance. No fixture writes an attempt, divergence, or handover record directly; the command path produces them.
+Dispatch suites drive `runCli` with an injected command program and injected harness, tracker, CI, VCS, clock, run-id, and fence seams. Fixtures under `tests/fixtures/dispatch/` supply harness evidence, truth reads, ledger records, evidence windows, authority documents, bash authority files, golden text, and mutation cases. The controlled proof uses a real local state store and real change files with deterministic UTC date advance; only the command path produces its attempt, divergence, and handover records. The production-composition proof seeds attempt records through the delivered ledger append to reach an eligible window, then drives `summary`, `resolve`, `handover`, and resume through the shipped production composer. No fixture fabricates a command outcome.
 
 ## Test Scenarios
 
@@ -70,7 +71,7 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 
 - **Given** a tracker fact that the PR is open but no resolvable URL
 - **When** truth is evaluated
-- **Then** the token is `pr-open-unverified`, `urlResolved` is `false`, the comparison is a tracker match, and no divergence is opened.
+- **Then** the result token is `pr-open-unverified`, `urlResolved` is `false`, the independent tracker comparison token is `pr-open` with outcome `match`, and no divergence is opened.
 
 ### Scenario: pre-session refusal versus attempt-stage failure
 
@@ -79,6 +80,16 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 - **Then** it emits the classified envelope at exit `1` and appends no attempt record.
 - **And given** a spawn failure, restart-budget refusal, resume-economics refusal, or harness spawn refusal
 - **Then** exactly one attempt record is appended with the pinned failure token and outcome.
+- **And given** a post-spawn `harness.collect` failure
+- **Then** exactly one attempt record is appended with token `state-unverified`, outcome `failed`, and exit `2`, and the envelope carries the classified error under `data.error`.
+
+### Scenario: unreadable corroboration is unevaluable
+
+- **Given** a success claim whose comparison matches but whose corroboration source cannot be read
+- **When** the attempt is classified
+- **Then** the source is recorded `unsatisfied`, the claim fails corroboration, no divergence is opened, and no false-success incident is recorded or evidence window reset.
+- **And given** a readable source that contradicts the claim
+- **Then** the attempt is a false-success incident and the window resets.
 
 ### Scenario: resume modes and admissions
 
@@ -89,6 +100,22 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 - **Then** the recorded mode is `resume-prompt-reentry` and the prefill cost is acknowledged.
 - **And when** the restart budget is exhausted or the re-entry is uneconomical
 - **Then** the attempt refuses at exit `1` with the pinned token and appends exactly one record.
+
+### Scenario: one-shot watch and restart admission
+
+- **Given** a running session whose evidence collection is pending
+- **When** the watcher polls at `lane.liveness-interval`
+- **Then** an advancing session records `progressing` and never stalls, and the verdict trail is recorded as attempt evidence.
+- **And given** two consecutive sourced no-advance readings
+- **Then** the stall is corroborated; at or above the restart bound the attempt is `max-restarts`/`failed` with the terminal exhaustion record and no second spawn, and below the bound the stall is recorded and left to lane supervision.
+
+### Scenario: production composition surfaces
+
+- **Given** the shipped production composer over an injected store, remote, and harness runner
+- **When** `dispatch dual-run summary`, `dispatch dual-run resolve`, `dispatch handover`, `dispatch handover --revert`, and `dispatch <ref> --resume-prompt` run
+- **Then** each surface runs through the delivered CLI, the resume uses the persisted session, the first-use identity marker binds the repository, and a renamed remote or changed scheduler key does not re-key history.
+- **And given** an unresolvable repository argument
+- **Then** the surface refuses cleanly at exit `1`.
 
 ### Scenario: incident-exclusive window
 
@@ -138,7 +165,7 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 
 ## Performance and Bounds Tests
 
-`tests/behaviour/dispatch-bounds.test.ts` asserts the bounded summary read, declared truncation, the 65,536-byte machine cap, the 40-line/8,192-byte human cap, and the p95 summary latency target. `dispatch-determinism.test.ts` asserts byte-identical replay; `dispatch-idempotency.test.ts` asserts no duplicate records; `dispatch-privacy.test.ts` and `tests/checks/fixture-privacy.test.ts` assert no secret, prompt, transcript, or raw payload enters output, records, or fixtures.
+`tests/behaviour/dispatch-bounds.test.ts` asserts the bounded summary read, the declared truncation above 5,000 records (`bound: 5000` and the omitted count), the 65,536-byte machine cap, the 40-line/8,192-byte human cap, and the p95 summary latency target. `dispatch-determinism.test.ts` asserts byte-identical replay; `dispatch-idempotency.test.ts` asserts no duplicate records, including a handover replay under an advancing clock; `dispatch-privacy.test.ts` and `tests/checks/fixture-privacy.test.ts` assert no secret, prompt, transcript, or raw payload enters output, records, or fixtures.
 
 ## CI Gates
 

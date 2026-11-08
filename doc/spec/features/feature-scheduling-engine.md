@@ -406,7 +406,7 @@ pointers remain a declared gap of the digest, not of this engine.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the
   lane view consumes restart counts and the amplification signal.
 - [Dispatch Engine](feature-dispatch-engine.md) — the one-shot consumer of the
-  repository lease and the daemon lane composition.
+  repository lease and the factory-proven daemon lane seam.
 - [Result Contract and Error Table](feature-result-contract.md) — the five queue
   rows and the lanes collector row.
 - [Status Digest](feature-status-digest.md) — the `lanes-or-queue` section and

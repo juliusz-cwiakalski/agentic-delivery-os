@@ -239,7 +239,7 @@ The list renders at most eight rows across open and answered together; open ques
 | Lane resume (re-entry fallback) | Recorded with `sessionReentry: true` and the prefill cost | No |
 | Coordinator pickup | Predicate determinable from the digest payload | No wake, no iteration |
 
-The v0 production composition supplies no adapter capability fact, so a real published answer records `resume-prompt-reentry` with `prefillCost: full-context-reprefill` and `applied: false`. The `boundary-note` and `attach-continue` modes are exercisable over injected capability facts. The applying actors are the resident daemon, which consumes recorded answers on its heartbeat cadence, and coordinator supervision (M1-S23); the one-shot `dispatch <ref> --resume-prompt <text>` path supplies operator guidance at invocation.
+The v0 production composition supplies no adapter capability fact, so a real published answer records `resume-prompt-reentry` with `prefillCost: full-context-reprefill` and `applied: false`. The `boundary-note` and `attach-continue` modes are exercisable over injected capability facts. The applying actors are the resident daemon, which consumes recorded answers on its heartbeat cadence, and coordinator supervision (M1-S23); the one-shot `dispatch <ref> --resume-prompt <text>` path resolves the delivered lane, records the resume mode, and supplies operator guidance at invocation.
 
 ## Technical Architecture & Codebase Map
 

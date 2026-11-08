@@ -55,7 +55,7 @@ The surface classifies, records, and refuses. It exposes no spawn, kill, steer, 
 - **Prefill/resume liveness safety:** `stalled` requires the full corroboration — heartbeat age at or beyond the declared bound **and** token delta `0` **and** traffic `0`. Any partial reading and any rising delta or traffic classifies `progressing`.
 - **Classified stall identity:** a fully corroborated stall returns `watchdog.liveness-stalled` on a failure envelope with no `data.verdict`, exit `1`, and the corroborating values in evidence.
 - **Resume economics:** a declared attach capability resumes the existing session without re-paying prefill and consumes no restart ordinal; a re-entry that must re-pay prefill is admitted only while within budget and economical, and is otherwise refused with a classified reason.
-- **Durable restart budget:** one `economics.restart` record per admitted restart, one terminal `economics.budget-exhaustion` record per delivery, and one admission gate composed by every resume path.
+- **Durable restart budget:** one `economics.restart` record per admitted restart, one terminal `economics.budget-exhaustion` record per delivery, and one admission gate composed by every resume path; the one-shot dispatch watcher polls at `lane.liveness-interval` and routes a corroborated terminal stall through that same gate.
 - **Economics view:** a rebuildable per-delivery fold yielding restart count, ordered restart history, the resume-amplification ratio, the `restart-loop` flag, degradation warnings, and the terminal record.
 - **Lane configuration:** `lane.liveness-interval` (default `30000` ms) and `lane.restart-budget` (default `3` restarts per delivery) with existing configuration identities for invalid input.
 
@@ -80,6 +80,8 @@ The classification is deterministic over the populated keys:
 | The declared signal values are absent | Absent outcome, mapped to `watchdog.signals-absent` |
 
 A large session that is prefilling or resuming has a rising token delta and/or traffic, so it classifies `progressing` at exit `0` with no kill and no restart event, regardless of its size or how long prefill takes. A corroborated stall is a classified refusal at exit `1`; absence remains the exit-`2` unknown answer and never triggers a stall response.
+
+The one-shot dispatch path watches with the same evaluator and cadence: it polls `harness.liveness` at `lane.liveness-interval` while evidence collection is pending, carries the previous observation so a stall needs two consecutive sourced no-advance readings, and records the observed verdict trail as attempt liveness evidence. A corroborated terminal stall is routed through the restart-admission gate. At or above `lane.restart-budget` the attempt is the restart-budget refusal with the terminal exhaustion record and no second spawn; below the bound the stall is recorded and left to lane supervision, because the delivered session port exposes no kill operation and the command never leaks a silent replacement session.
 
 The watchdog composition accepts an injected `readSourcedSignals(lane)` seam over adapter-sourced facts. When the seam is supplied, the runtime composes the sourced bridge; when it is omitted, no source is declared and liveness keeps the absent answer. Lane-to-session fact acquisition belongs to the dispatch and session surfaces, not to the watchdog command.
 
@@ -170,6 +172,8 @@ An absent `lane` branch resolves to both shipped defaults with `defaults` origin
 - An unreadable economics store refuses; it is never read as an empty history.
 - A duplicate or gapped restart ordinal is torn state, not a count.
 - A restart past budget appends no restart event and performs no spawn.
+- A one-shot stall below the restart bound is recorded as liveness evidence and left to lane supervision; the delivered session port exposes no kill operation, so the command never spawns a silent replacement session.
+- A one-shot stall at or above the restart bound is the restart-budget refusal with its terminal exhaustion record and no second spawn.
 - An uneconomical refusal leaves the existing session identity and records unchanged; it is a recorded decision, not a destructive act.
 - A terminal exhaustion record is idempotent per delivery; a second refusal does not fork it.
 - A failed terminal exhaustion append surfaces `terminalAppendError` on the budget refusal while the refusal identity, exit, and corpus stay unchanged.
@@ -214,6 +218,7 @@ The domain modules are pure: no clock, randomness, environment, filesystem, or n
 - `packages/adapters/src/harness/claude.ts` declares every liveness kind and both sourced-signal kinds as gaps (`provider-unsupported` / `headless-mode-limitation`). Declared gaps stay gaps.
 - `packages/cli/src/commands/watchdog.ts` maps a fully corroborated stall to `watchdog.liveness-stalled` with the stall corpus, keeps `progressing` as success data, and keeps absent sources at `watchdog.signals-absent`.
 - `packages/cli/src/edge.ts` composes the watchdog runtime; a supplied `readSourcedSignals` seam wires the sourced bridge over adapter facts.
+- `packages/cli/src/production.ts` resolves the lane policy branch and composes the persisted restart count, the cancellable cadence timer, and the terminal exhaustion append into the dispatch runtime, so the one-shot path uses the same restart-admission gate and resume admission as the daemon path.
 
 ### 4.5 Data model
 

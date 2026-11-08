@@ -6,7 +6,7 @@ created: 2026-11-08
 last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The resident dispatch daemon: the start/stop/status/install family, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
+summary: "The resident dispatch daemon: the start/stop/status/install family, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
   related_changes: ["GH-238", "GH-239"]
   related_decisions: ["ADR-0003", "TDR-0014", "TDR-0004", "TDR-0015"]
@@ -150,12 +150,17 @@ returns `0` only when it found no such duplicate.
 The daemon computes the next action, claims the lease through the delivered
 fenced claim path, asks the lane executor to start, records one
 `daemon.lane` delivering record, observes, and releases or parks. It performs no
-delivery work in-process: no phase run, no commit, no gate. The production
+delivery work in-process: no phase run, no commit, no gate. The daemon
 composition supplies `createLaneLaunchPlanner`, which returns the lifecycle
 prompt and only the declared execution-environment variable names, and composes
 `createLaneExecutor` over the selected harness session port and descriptor, so a
 planned lane starts, records the delivered lane record, observes progress,
-collects the outcome, and resumes through the same executor.
+collects the outcome, and resumes through the same executor. The lane seam is
+factory-proven: the daemon composition composes it when a lane composition is
+supplied. The production daemon entry that supplies the lane composition and
+registers the daemon command remains the resident-daemon production scope
+(GH-238); the dispatch engine proves the seam and the daemon-path attempt
+producer, not a resident production daemon that launches lanes.
 
 The daemon path hands the same observation and collection evidence to
 `recordDaemonDispatchResult`, which derives the outcome and token through the
@@ -268,6 +273,8 @@ The daemon-side dispatch composition is covered by the
 
 The dispatch loop, prompt selection, dual-run evidence, per-repo handover, and
 session resume are delivered by the dispatch engine ([Dispatch Engine](feature-dispatch-engine.md)).
-launchd and Windows supervisor adapters, remote/container transports,
-status-watch, lane-scoped authorization, and the OQ-5 full session-resume
-remainder are future work.
+The dispatch engine composes the lane seam and proves the daemon-path attempt
+producer; the production daemon entry that supplies the lane composition remains
+resident-daemon production scope (GH-238). launchd and Windows supervisor
+adapters, remote/container transports, status-watch, lane-scoped authorization,
+and the OQ-5 full session-resume remainder are future work.
