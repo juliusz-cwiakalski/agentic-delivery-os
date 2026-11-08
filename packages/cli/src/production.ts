@@ -473,6 +473,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
      * The pull-request truth: an open request whose head is the change branch
      * first, then an already-merged request for the same ref. Neither the open
      * nor the merged read may be silently degraded to a narrower fact.
+     *
+     * The delivered client exposes the open-request list and the merged-request
+     * lookup only, so a closed-unmerged request is not observable: it reads as
+     * no request, which the derivation treats the same as `closed`.
      */
     const readPullTruth = async (
       changeRef: string,
