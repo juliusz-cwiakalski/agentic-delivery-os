@@ -8,7 +8,7 @@ change:
   owners: [engineering]
   service: delivery-os harness adapters
   labels: [change, harness, bug, dispatch]
-  version_impact: patch
+  version_impact: minor
   audience: internal
   security_impact: low
   risk_level: medium
@@ -302,7 +302,7 @@ None. Every decision needed for delivery is resolved in §15. No `@decision-advi
 | DEC-5 | Evidence and collect: the adapter stores a per-session completion promise; `collect` awaits it and returns evidence only at completion. `completionMarker` is true only when exit status is 0, the session did not time out, and the final decoded `step_finish` carries `part.reason === "stop"`. `exitStatus` is the close status; `timedOut` is the host kill flag; `spawnRefused` is never set on a session that produced an identifier; `failureReported` and `toolFailure` are set only from explicit failure/tool-error facts present in the pinned stream, otherwise false. An abnormal end never reports completion. Liveness stays sourced from injected facts as today. | Evidence must describe a finished session and must not fabricate completion. Reusing the unchanged evidence type avoids a new classification path. | 2026-11-08 |
 | DEC-6 | Process hygiene: the host streaming starter is the only child-process site and implements an idempotent `kill`. The adapter calls `kill` on every failed acquisition and on abandonment; completion resolves on close or error and never rejects. Kill sends `SIGTERM` and escalates to `SIGKILL` after a short grace period, so an unresponsive child cannot outlive the stream. No direct spawn is added to the adapter. | Prevents orphaned children and preserves the single-site conformance invariant. | 2026-11-08 |
 | DEC-7 | The dispatch engine needs no change. `packages/core/src/app/dispatch.ts` is not modified; its collapse of any pre-session spawn/resume failure to `dispatch.session.spawn-failed` remains correct because a healthy CLI now returns a handle before that branch. The error vocabulary, classifier, result tokens, queue, scheduler, and command surface are untouched. | Explicit scope boundary requested by the ticket and the PM intake. Keeps the fix behind the adapter and the port. | 2026-11-08 |
-| DEC-8 | `version_impact` is `patch`: the change fixes delivered behavior and adds an internal contract type without changing any public CLI, token, error, or persisted contract. | Semver reflects consumer-visible behavior; no consumer-visible contract is added or broken. | 2026-11-08 |
+| DEC-8 | `version_impact` is `minor`. The binding reason is the `TC-RELEASE-001` release invariant (`tests/checks/privacy-release.test.ts`): any branch whose diff touches `packages/**` must add exactly one changeset declaring exactly the five fixed-group packages — `@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, `@delivery-os/opencode` (testkit excluded) — at `minor`, and a `patch` entry for any of them fails validation. This change touches `packages/core`, `packages/adapters`, `packages/cli`, and `packages/testkit`, so the gate applies. The separate judgment still holds: the change fixes delivered behavior and adds an internal contract type without changing any public CLI, token, error, or persisted contract. | The changeset gate, not a consumer-visible semantic change, binds the declared impact: the fixed five-package `minor` block is the repository's lockstep release convention (precedent: `.changeset/gh-273-queue-repository-binding-minor.md`, also a `fix` change). Note: `minor` therefore reflects the lockstep release convention rather than a consumer-visible API addition. | 2026-11-08 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
@@ -315,6 +315,7 @@ None. Every decision needed for delivery is resolved in §15. No `@decision-advi
 | CLI production composition (`packages/cli/src/production.ts`) | Updated: bind the streaming starter for opencode; keep the one-shot runner for listing. |
 | Adapter conformance registry (`packages/testkit/src/conformance/harness.ts`) | Updated: opencode registration builds over the streaming seam and JSONL fixtures; Claude registration unchanged. |
 | Harness test suites (`tests/behaviour`, `tests/structure`, `tests/types`, `tests/fixtures/harness`) | Updated/new: real-shape JSONL, non-blocking acquisition, long-running simulation, malformed/no-id/non-zero/truncated cases, type coverage. |
+| Release metadata (`.changeset/gh-275-opencode-harness-contract-minor.md`) | Added: exactly one changeset declaring the five fixed-group packages (`@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, `@delivery-os/opencode`) at `minor` with a non-empty body; no pre-existing changeset modified (TC-RELEASE-001). |
 | Dispatch engine (`packages/core/src/app/dispatch.ts`) | Unchanged; no branch, error, or token change. |
 | Current-truth feature specs (`doc/spec/features/feature-harness-adapters.md`, `feature-dispatch-engine.md`, adapter ports if the contract table lists the seam) | Updated in the `system_spec_update` phase. |
 
@@ -366,6 +367,7 @@ None. Every decision needed for delivery is resolved in §15. No `@decision-advi
 
 - Deliver as one change on `fix/GH-275/opencode-harness-contract` with a single pull request to `main-tools`.
 - No migration, feature flag, staged rollout, or configuration change is required. The fix takes effect when the adapter and composition ship.
+- Release obligation: add exactly one changeset, `.changeset/gh-275-opencode-harness-contract-minor.md`, declaring the five fixed-group packages (`@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, `@delivery-os/opencode`) at `minor`, with a non-empty body, and modify no pre-existing changeset. This satisfies the `TC-RELEASE-001` invariant that binds any branch touching `packages/**`; the plan owns the file.
 - The change is independently shippable: it does not depend on another in-flight change and does not require the dispatch engine to move first.
 - After merge, re-run one real dispatch as the production proof and record the observed result token.
 - Communicate the operational consequence: a healthy spawn now returns before completion, so the dispatch liveness watch becomes observable during the session; a hard-stalled session without a session bound is handled by liveness and restart policy, not by a five-minute process kill.
@@ -468,6 +470,7 @@ The root-cause and current-state evidence in §2.1 cites the adapter, host runne
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-11-08 | `@spec-writer` | Initial specification for GH-275. |
+| 1.1 | 2026-11-08 | `@spec-writer` | Corrected `version_impact` from `patch` to `minor` (front matter and DEC-8), added the changeset release obligation in §18, and added the changeset to the affected list in §16. Evidence: the `TC-RELEASE-001` invariant in `tests/checks/privacy-release.test.ts` requires exactly one added changeset declaring the five fixed-group packages at `minor` for any branch whose diff touches `packages/**`; precedent `.changeset/gh-273-queue-repository-binding-minor.md`. No AC, F-, NFR-, RSK-, or DEC identifier changed; the 30 acceptance criteria and the traceability table are unchanged. |
 
 ---
 
