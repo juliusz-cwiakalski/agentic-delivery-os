@@ -19,7 +19,7 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 
 ## Test Scope
 
-- Components under test: the dispatch contracts (`packages/core/src/contracts/dispatch.ts`), the pure domain (`dispatch-result`, `dispatch-liveness`, `dispatch-comparison`, `dispatch-identity`, `dispatch-authority`, `dispatch-gate`, `dispatch-resume`, `lane-launch-plan`), the app tier (`dispatch`, `dispatch-ledger`, `dispatch-gate`, `daemon-dispatch-result`, `daemon-supervision`), the CLI surface (`packages/cli/src/commands/dispatch.ts`, `output/dispatch-text.ts`, `edge.ts`, `production.ts`, `daemon-compose.ts`), the help and prompt-required inventory, the four bash entry points plus `scripts/lib/dispatch-authority.sh`, and the four `dispatch` error rows.
+- Components under test: the dispatch contracts (`packages/core/src/contracts/dispatch.ts`), the pure domain (`dispatch-result`, `dispatch-liveness`, `dispatch-comparison`, `dispatch-identity`, `dispatch-authority`, `dispatch-gate`, `dispatch-resume`, `lane-launch-plan`), the app tier (`dispatch`, `dispatch-ledger`, `dispatch-gate`, `daemon-dispatch-result`, `daemon-supervision`), the checkout identity adapters (`packages/adapters/src/file/dispatch-identity.ts`, `packages/adapters/src/repo/index.ts`), the CLI surface (`packages/cli/src/commands/dispatch.ts`, `output/dispatch-text.ts`, `edge.ts`, `production.ts`, `daemon-compose.ts`), the help and prompt-required inventory, the four bash entry points plus `scripts/lib/dispatch-authority.sh`, and the four `dispatch` error rows.
 - Contracts under test: the three additive record kinds and the derived authority document, the closed evidence-class and comparison vocabularies, the eleven-token taxonomy with its projection and derivation classes, the pinned failure-token pairs, the four-condition handover gate, and the bounded read/output constants.
 - Exclusions: no real repository is flipped and no real pilot evidence is accrued; the controlled proof uses the real state store and command path with injected harness, tracker, CI, and VCS ports. No live network, live model, or real merge is exercised. Evidence retention and cross-host authority are out of scope.
 
@@ -31,18 +31,18 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 - `tests/behaviour/dispatch-liveness.test.ts` — progress signals, absent readings, and the two-evaluation stall rule.
 - `tests/behaviour/dispatch-comparison.test.ts`, `dispatch-evidence-record.test.ts`, `dispatch-evidence-class.test.ts` — comparison shape invariants, evidence-class declaration and immutability, record completeness, and privacy bounds.
 - `tests/behaviour/dispatch-false-success.test.ts`, `dispatch-unevaluable.test.ts` — false-success classification, the unreadable-versus-contradicted corroboration distinction, and record-level versus window-level degradation.
-- `tests/behaviour/dispatch-identity.test.ts` and `tests/structure/dispatch-authority-view.test.ts` — repository identity resolution, rename stability, marker reuse, and the atomic authority view.
+- `tests/behaviour/dispatch-identity.test.ts` and `tests/structure/dispatch-authority-view.test.ts` — repository identity resolution, rename stability, checkout-scoped marker reuse, and the atomic authority view.
 - `tests/behaviour/dispatch-dual-run-floor.test.ts`, `dispatch-gate-evidence.test.ts`, `dispatch-gate-window.test.ts`, `dispatch-divergence.test.ts` — floor-only semantics, corroboration, incident-exclusive window, and divergence folding.
 
 ### Command and ledger tests
 
 - `tests/behaviour/dispatch-harness-lease.test.ts` — harness resolution, lease claim, pre-session refusals, and spawn-refused recording.
-- `tests/behaviour/dispatch-watch.test.ts` — progress-based watching at the lane cadence, the recorded verdict trail, and routing of a corroborated terminal stall through restart admission with no silent second spawn.
+- `tests/behaviour/dispatch-watch.test.ts` — progress-based watching at the lane cadence, the recorded verdict trail, a transient stall cleared by later progress, and routing of a stall still current when collection resolves through restart admission with no silent second spawn.
 - `tests/behaviour/dispatch-envelope.test.ts`, `dispatch-error-envelope.test.ts`, `tests/golden/dispatch-text.test.ts`, `tests/golden/dispatch-errors.test.ts` — machine envelope fields, the data-bearing attempt-stage `data.error`, the post-spawn collection failure, four-key text order, and classified failures.
 - `tests/behaviour/dispatch-evidence-record.test.ts`, `dispatch-evidence-class.test.ts` — one attempt record per classified dispatch and one per attempt-stage failure.
 - `tests/behaviour/dispatch-resume.test.ts`, `dispatch-restart-budget.test.ts`, `dispatch-resume-economics.test.ts` — resume modes, phase-ledger continuity, restart-budget refusal with the terminal exhaustion record, and resume-economics refusal.
 - `tests/behaviour/dispatch-dual-run-summary.test.ts`, `dispatch-handover.test.ts`, `tests/golden/dispatch-summary.test.ts` — summary reporting, readable-but-unmet refusal, handover, reversal, and idempotent replay under an advancing clock.
-- `tests/behaviour/dispatch-merge-absence.test.ts`, `tests/structure/dispatch-merge-boundary.test.ts`, `dispatch-imports.test.ts`, `dispatch-composition.test.ts` — no merge path, composition honesty, the production harness composition, and the production-composed gate, handover, resolve, resume-lane, and rename-invariant identity paths.
+- `tests/behaviour/dispatch-merge-absence.test.ts`, `tests/structure/dispatch-merge-boundary.test.ts`, `dispatch-imports.test.ts`, `dispatch-composition.test.ts` — no merge path, composition honesty, the production harness composition, and the production-composed gate, handover, resolve, resume-lane, rename-invariant identity, and per-repository identity isolation paths.
 
 ### Registration, fallback, and daemon tests
 
@@ -106,8 +106,10 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 - **Given** a running session whose evidence collection is pending
 - **When** the watcher polls at `lane.liveness-interval`
 - **Then** an advancing session records `progressing` and never stalls, and the verdict trail is recorded as attempt evidence.
-- **And given** two consecutive sourced no-advance readings
-- **Then** the stall is corroborated; at or above the restart bound the attempt is `max-restarts`/`failed` with the terminal exhaustion record and no second spawn, and below the bound the stall is recorded and left to lane supervision.
+- **And given** two consecutive sourced no-advance readings followed by an advancing observation and completed evidence
+- **Then** the transient stall clears, both verdicts stay recorded as liveness evidence, and the completed session classifies normally rather than `max-restarts`, even when the restart count has reached the bound.
+- **And given** a stall still current when evidence collection resolves
+- **Then** at or above the restart bound the attempt is `max-restarts`/`failed` with the terminal exhaustion record and no second spawn, and below the bound the stall is recorded and left to lane supervision.
 
 ### Scenario: production composition surfaces
 

@@ -56,8 +56,8 @@ revisit_triggers:
   - "A consumer needs class coverage to mean corroborated success rather than exposure: that reopens finding F1 and the gate-reachability constraint, and requires an owner decision, not a consumer-local reinterpretation."
   - "A production handover is blocked by a class that cannot be produced on a pilot path without manufacturing the condition: revisit the class-coverage definition or add a declared safe-exercise rule for that class."
   - "The controlled-proof E2E can no longer reach eligibility under its own evidence class, or a real repository identity collides with a controlled one: revisit the evidence-class scoping rule."
-  - "Repository identity resolution changes (a new remote form, workspace-scoped binding, or cross-host authority): revisit the resolution order, the persisted marker, and the refusal behavior together."
-  - "The state layer changes its store-managed artifact or fence semantics: revisit the persisted-identity marker and the atomic authority-view replacement."
+  - "Repository identity resolution changes (a new remote form, checkout-scoped binding, or cross-host authority): revisit the resolution order, the persisted marker, and the refusal behavior together."
+  - "The checkout's git common directory layout changes, or the delivered VCS-remote normalization changes: revisit the checkout-scoped identity marker. The state layer changes its fence or derived-document replacement semantics: revisit the atomic authority-view replacement."
   - "A handover or reversal replay ever appends a duplicate record or produces a non-dual-run default from an unreadable view: reopen the idempotency and fail-safe rules."
 links:
   related_changes: ["GH-239", "GH-266", "GH-233"]
@@ -90,7 +90,7 @@ links:
 - **FACT:** TDR-0005 adopts the closed eleven-token delivery-result vocabulary with one projection class and one derivation class per token; token-level parity is the dual-run comparison unit, and `state-unverified` deliberately projects to exit 2 (`packages/core/src/contracts/delivery-result.ts`; TDR-0005). The eleven tokens and derivation classes are: `merged`/`blocked`/`pr-open`/`pr-open-unverified` (`tracker-pr`), `failed`/`finished`/`state-unverified`/`partial` (`verify`), and `max-restarts`/`noop-lane-permission`/`noop-lane-nothing-to-do` (`dispatch-session`) — Appendix A of the spec.
 - **FACT:** TDR-0010 ratifies the six-row dispatch-session projection and binds two consumer rules: `outcome` must be read beside any `partial`, and harness-path `noop-lane-permission` means spawn-refused, never a lane-permission verdict (TDR-0010). `noop-lane-nothing-to-do` is derived by dispatch outside the shared classifier (spec DEC-14).
 - **FACT:** The scheduling engine already owns a deterministic repository-key normalizer: `normalizeRepositoryKey(remote)` strips protocol, credentials, userinfo, and a `.git` suffix, reduces the remote to `host/owner/name`, and lowercases it (`packages/core/src/domain/queue-graph.ts`). Queue entries, leases, parks, and incidents carry that `repository` value as their contention-domain identity (`packages/core/src/contracts/queue.ts`).
-- **FACT:** The state layer can persist a store-managed artifact once and refuse to regenerate it silently: `ensureStoreArtifact` takes runtime-edge random material and `guardKinds`, and returns `state.keys.missing` when the artifact is absent while guarded records exist (`packages/core/src/contracts/state.ts`). An identity marker can therefore be created on first use without deriving it from a path.
+- **FACT:** The state layer can persist a store-managed artifact once and refuse to regenerate it silently: `ensureStoreArtifact` takes runtime-edge random material and `guardKinds`, and returns `state.keys.missing` when the artifact is absent while guarded records exist (`packages/core/src/contracts/state.ts`). The delivered identity marker instead lives with the checkout inside its git common directory, where a create-once file gives the same never-regenerate guarantee without binding the shared state scope (§6).
 - **Trigger:** GH-239 delivery is blocked at the Definition-of-Ready gate until these system-wide gate semantics have an owner-visible durable record (readiness finding F9). The record must also resolve the gate-reachability, evidence-class, window, floor, comparison, identity, and reversal findings so the spec and test plan can be made jointly satisfiable before delivery.
 
 ## Problem Framing (Clarified)
@@ -205,7 +205,7 @@ The failure mode to prevent is a gate that is semantically strict but operationa
 | `normalizeRepositoryKey` produces a lowercased `host/owner/name` key, independent of the checkout path. | FACT | `packages/core/src/domain/queue-graph.ts:76` | The primary identity claim would be wrong | High |
 | The state layer supports a one-time store-managed artifact with guard kinds and runtime-edge randomness. | FACT | `packages/core/src/contracts/state.ts` `ensureStoreArtifact` | A persisted first-use identity marker would need another mechanism | High |
 | The controlled proof runs real state and command paths with injected harness/tracker/CI/VCS ports, and no real repository is flipped in the PR. | ASSUMPTION | `chg-GH-239-spec` F-8, AC-F8-1, NG-1, D2 | The E2E could not satisfy C-1/C-4 as scoped | Medium |
-| The exact `--evidence-class` surface (flag vs. configured default) and the marker's storage name/location are not yet pinned by the spec. | TO-CONFIRM | `chg-GH-239-spec` F-4/DM-1/EVT-1; `chg-GH-239-plan` phase 3 | The counting rule could be implemented ambiguously | Medium |
+| The exact `--evidence-class` surface (flag vs. configured default) is not yet pinned by the spec. | TO-CONFIRM | `chg-GH-239-spec` F-4/DM-1/EVT-1; `chg-GH-239-plan` phase 3 | The counting rule could be implemented ambiguously | Medium |
 | The window and UTC-day attribution use the attempt's completion/recorded timestamp, not the start timestamp. | TO-CONFIRM | `chg-GH-239-spec` DM-1; test plan TC-GATE-009 | A start-vs-finish choice changes day boundaries and incident ties | Medium |
 | `merged` corroboration requires the pushed head, CI on that head, tracker state, and completed phases. | FACT | backlog §M1-S9; spec Appendix B; GH-266 F-3 | The corroboration matrix would be under-specified | High |
 
@@ -456,7 +456,7 @@ The selected composite satisfies all constraints C-1…C-9. It keeps every class
 - The attempt record gains declared fields (evidence class, comparison shape, window reason, identity binding), increasing the contract surface and the test matrix.
 - The controlled proof must demonstrate the counting rule and the provenance guard, not just the happy path.
 - A `pilot` run that cannot corroborate a success claim blocks eligibility as an unmet condition until it is re-run or resolved; this is deliberate but adds operational work.
-- A repository with no remote must establish and preserve a persisted marker; losing that marker's state scope means a new binding rather than silent continuity.
+- A repository with no remote must establish and preserve a persisted marker; losing the checkout's marker means a new binding rather than silent continuity.
 
 ### Unresolved Questions
 
@@ -500,5 +500,6 @@ The selected composite satisfies all constraints C-1…C-9. It keeps every class
 - [TDR-0014](TDR-0014-commit-effect-crash-safety-message-independent-identity.md) — additive-field, append-only, and fail-safe precedent for durable operational records.
 - `packages/core/src/contracts/delivery-result.ts` — `DELIVERY_RESULT_TOKENS`, `DELIVERY_RESULT_TAXONOMY`.
 - `packages/core/src/contracts/queue.ts` — the `repository` identity field on entries and leases.
-- `packages/core/src/contracts/state.ts` — `ensureStoreArtifact` (one-time get-or-create with guard kinds) for the persisted identity marker.
+- `packages/adapters/src/file/dispatch-identity.ts` — the checkout-scoped first-use identity marker inside `<git-common-dir>/dispatch-identity.json`, created once and never overwritten.
+- `packages/adapters/src/repo/index.ts` — `resolveCheckoutGitDirectories`, which supplies the checkout's git common directory.
 - `packages/core/src/domain/queue-graph.ts` — `normalizeRepositoryKey` (`host/owner/name`, rename-independent).
