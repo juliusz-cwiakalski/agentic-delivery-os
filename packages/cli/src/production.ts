@@ -8,24 +8,58 @@
  * command is claimed that is not composed.
  */
 import { writeFileSync } from "node:fs";
-import { createProcessCredentialPort } from "@delivery-os/adapters/credentials";
 import {
+  createEnvironmentCredentialPort,
+  createProcessCredentialPort,
+} from "@delivery-os/adapters/credentials";
+import {
+  acquireFileConfig,
   nodeFileSystemFacts,
   nodePmNotesFileSystemFacts,
   readPmNotesText,
   relativeChangeFolder,
+  runtimePlatform,
 } from "@delivery-os/adapters/file";
 import { createGitBranchSeam, createGitMergeSeam } from "@delivery-os/adapters/git";
 import { createGitHubClient, type GithubClientOptions } from "@delivery-os/adapters/github";
+import { createClaudeSession, createOpencodeSession } from "@delivery-os/adapters/harness";
+import { createHostSpawnRunner } from "@delivery-os/adapters/host";
 import {
+  findGitRoot,
   nodeRepositoryIo,
   parseGitHubRemote,
   readRepositoryFacts,
 } from "@delivery-os/adapters/repo";
-import type { BrandIdentity, ExternalSystemInstance } from "@delivery-os/core/contracts";
+import {
+  assembleHarnessLiveness,
+  buildHarnessSpawnEnvironment,
+  claimQueueLease,
+  classifyHarnessEvidence,
+  type DispatchLedgerFacts,
+  type DispatchRead,
+  type DispatchTruthReads,
+  type HarnessSettings,
+  normalizeRepositoryRemote,
+  releaseQueueLease,
+  resolveConfig,
+  resolveHarnessSettings,
+} from "@delivery-os/core";
+import {
+  type BrandIdentity,
+  DISPATCH_DEFAULT_EVIDENCE_CLASS,
+  type DispatchLedgerVariant,
+  type DispatchPhaseLedger,
+  type ExternalSystemInstance,
+  type HarnessEnvironmentEntry,
+  type HarnessEnvironmentBuilder,
+  type HarnessKind,
+  type HarnessSessionPort,
+  type HarnessSpawnRunner,
+} from "@delivery-os/core/contracts";
 import {
   createNodeStateEdge,
   createStateStore,
+  foldPhaseState,
   readChangeTransitionsTolerant,
   STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
@@ -33,7 +67,9 @@ import {
   type ConfigProgramOptions,
   createCloseoutComposition,
   type DispatchCommandRuntime,
+  type DispatchComposition,
   createConfigProgram,
+  createDispatchCommandRuntime,
   createMergeCommandRuntime,
   createPhaseCommandRuntime,
   createPhaseCommitExtension,
@@ -82,9 +118,8 @@ const nativeTransport: NonNullable<GithubClientOptions["transport"]> = {
   },
 };
 
-const repositoryTargetOf = (cwd: string): RepositoryTarget | undefined => {
-  const facts = readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
-  const parsed = parseGitHubRemote(facts.originUrl);
+const repositoryTargetOf = (originUrl: string | undefined): RepositoryTarget | undefined => {
+  const parsed = parseGitHubRemote(originUrl);
   return parsed.ok ? { owner: parsed.owner, name: parsed.name } : undefined;
 };
 
@@ -94,6 +129,17 @@ export type ProductionCompositionFacts = {
   readonly cwd: string;
   readonly homeDirectory: string;
   readonly workingName: string;
+  /**
+   * The injected harness spawn runner. Production uses the host runner; tests
+   * inject a recording runner so composition is proven without a harness process.
+   */
+  readonly harnessSpawnRunner?: HarnessSpawnRunner;
+  /**
+   * The resolved harness settings. Production resolves the typed configuration
+   * branch; an embedder or composition test may supply the already-resolved
+   * settings instead.
+   */
+  readonly harnessSettings?: HarnessSettings;
 };
 
 /**
@@ -128,9 +174,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       { driver: "jsonl", edge: createNodeStateEdge() },
     );
     const credentials = createProcessCredentialPort(brand);
+    const harnessCredentials = createEnvironmentCredentialPort({ environment, brand });
     const instance = githubInstance();
     const transport = nativeTransport;
-    const target = repositoryTargetOf(cwd);
+    const repositoryFacts = readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
+    const target = repositoryTargetOf(repositoryFacts.originUrl);
+    const dispatchRepository = normalizeRepositoryRemote(repositoryFacts.originUrl);
+    const harnessSpawnRunner = facts.harnessSpawnRunner ?? createHostSpawnRunner();
     const clientTarget = target ?? { owner: "unresolved", name: "unresolved" };
     const client = createGitHubClient({
       instance,
@@ -257,15 +307,219 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       newFenceToken,
     });
 
-    // The dispatch run surface is composed with the declared production evidence
-    // class; harness session ports are supplied by the lane composition and an
-    // uncomposed harness degrades honestly rather than fabricating a session.
+    /** Map the resolved allowlist onto descriptor entries (names and references only). */
+    const harnessEnvironmentEntries = (
+      settings: HarnessSettings,
+    ): readonly HarnessEnvironmentEntry[] =>
+      settings.environment.map((entry) =>
+        "credentialRef" in entry
+          ? {
+              kind: "credential" as const,
+              name: entry.name,
+              reference: {
+                referenceName: entry.credentialRef,
+                sourceKey: { style: "literal" as const, name: entry.credentialRef },
+              },
+            }
+          : { kind: "variable" as const, name: entry.name },
+      );
+
+    /** The bound deny-by-default environment builder over the injected parent environment. */
+    const buildHarnessEnvironment: HarnessEnvironmentBuilder = (descriptor) =>
+      buildHarnessSpawnEnvironment({
+        descriptor,
+        parentEnvironment: environment,
+        credentials: harnessCredentials,
+        record: { DELIVERY_WORK_PATH: descriptor.workDirectory },
+      });
+
+    /** Build the delivered session port for one configured kind. */
+    const harnessFor = (kind: HarnessKind): HarnessSessionPort => {
+      const common = {
+        runner: harnessSpawnRunner,
+        buildEnvironment: buildHarnessEnvironment,
+        classify: classifyHarnessEvidence,
+        assembleLiveness: assembleHarnessLiveness,
+        now: nowIso,
+      };
+      return kind === "opencode"
+        ? createOpencodeSession({
+            ...common,
+            command: "opencode",
+            spawnArgs: ["run", "--format", "json"],
+            resumeArgs: ["run", "--format", "json", "--session"],
+            listArgs: ["session", "list", "--format", "json"],
+          })
+        : createClaudeSession({
+            ...common,
+            command: "claude",
+            headlessArgs: ["--print", "--output-format", "json"],
+          });
+    };
+
+    const phaseSummary = (changeRef: string): DispatchPhaseLedger => {
+      const transitions = readChangeTransitionsTolerant(store, changeRef);
+      const completed = transitions.ok
+        ? Object.values(foldPhaseState(changeRef, transitions.value.transitions).phases).filter(
+            (phase) => phase.completed !== null,
+          ).length
+        : 0;
+      let total = completed;
+      let variant: DispatchLedgerVariant = "unknown";
+      const artifact = plan.readPlan(changeRef);
+      if (artifact.ok) {
+        const parsed = plan.parseYaml(artifact.text);
+        if (parsed.ok) {
+          const phases = (parsed.value as { readonly phases?: unknown }).phases;
+          if (Array.isArray(phases)) {
+            total = Math.max(phases.length, completed);
+            variant = "full";
+          }
+        }
+      }
+      return { completed, total, variant };
+    };
+
+    /**
+     * The production truth read. The phase ledger is read from the state store
+     * and plan artifact; the externally-owned sources this composition does not
+     * read stay explicitly unreadable rather than fabricated.
+     */
+    const dispatchTruth = async (changeRef: string): Promise<DispatchTruthReads> => {
+      const summary = phaseSummary(changeRef);
+      const transitions = readChangeTransitionsTolerant(store, changeRef);
+      const ledger: DispatchRead<DispatchLedgerFacts> = transitions.ok
+        ? {
+            ok: true,
+            value: {
+              completed: summary.completed,
+              total: summary.total,
+              progressed: summary.completed > 0,
+              workRemaining: summary.completed < summary.total,
+            },
+          }
+        : { ok: false, reason: "ledger", identity: transitions.error.code };
+      return {
+        artifacts: { ok: false, reason: "artifact", identity: "branch-and-pr-not-read" },
+        ledger,
+        tracker: { ok: false, reason: "tracker", identity: "tracker-not-read" },
+        ci: { ok: false, reason: "state", identity: "ci-not-read" },
+        verifyOutcome: null,
+        trackerToken: null,
+        phasesComplete: summary.total > 0 && summary.completed >= summary.total,
+      };
+    };
+
+    const dispatchComposition = (
+      settings: HarnessSettings,
+      repository: string,
+    ): DispatchComposition => ({
+      store,
+      stateRoot: stateDirectory,
+      fenceToken: newFenceToken(),
+      nowIso,
+      newAttemptId: (ref) => `attempt-${ref}-${nowMs()}-${newFenceToken()}`,
+      newDivergenceId: (ref) => `DIV-${ref}-${newFenceToken()}`,
+      harnesses: { opencode: harnessFor("opencode"), "claude-code": harnessFor("claude-code") },
+      defaultHarness: settings.kind,
+      descriptor: {
+        kind: settings.executionKind,
+        workDirectory: cwd,
+        environment: harnessEnvironmentEntries(settings),
+      },
+      prompt: (ref) => `Deliver change ${ref} through the delivery lifecycle.`,
+      evidenceClass: DISPATCH_DEFAULT_EVIDENCE_CLASS,
+      repository: () => repository,
+      readTruth: dispatchTruth,
+      claimLease: (ref) => {
+        const claimed = claimQueueLease(store, {
+          ref,
+          holder: "dispatch",
+          runner: "dispatch",
+          weightClass: "standard",
+          nowIso: nowIso(),
+          nowMs: nowMs(),
+          fenceToken: newFenceToken(),
+        });
+        return claimed.ok
+          ? { ok: true, leaseId: claimed.value.lease.leaseId }
+          : { ok: false, code: claimed.code };
+      },
+      releaseLease: (ref) => {
+        const released = releaseQueueLease(store, {
+          ref,
+          holder: "dispatch",
+          nowIso: nowIso(),
+          nowMs: nowMs(),
+          fenceToken: newFenceToken(),
+        });
+        return released.ok;
+      },
+      phaseLedger: phaseSummary,
+    });
+
+    /**
+     * Resolve the typed harness configuration branch. An injected resolution
+     * wins for embedding/tests; otherwise the layered configuration is acquired
+     * and projected through the delivered resolver.
+     */
+    const resolveProductionHarnessSettings = ():
+      | { readonly ok: true; readonly settings: HarnessSettings }
+      | { readonly ok: false; readonly code: string } => {
+      if (facts.harnessSettings !== undefined) return { ok: true, settings: facts.harnessSettings };
+      const gitRoot = findGitRoot(cwd, nodeRepositoryIo());
+      const acquired = acquireFileConfig({
+        platform: runtimePlatform(),
+        homeDirectory,
+        environment,
+        ...(gitRoot === undefined ? {} : { gitRoot }),
+        enableSystemConfig: true,
+        enableUserConfig: true,
+        enableProjectLocalConfig: true,
+        configurationDirectoryName: brand.configDirectoryName,
+        fs: localFs,
+      });
+      if (!acquired.ok) return { ok: false, code: acquired.error.code };
+      const resolved = resolveConfig({ sources: acquired.sources });
+      if (!resolved.ok) return { ok: false, code: resolved.error.code };
+      const settings = resolveHarnessSettings(resolved.value.values, resolved.value.origins);
+      return settings.ok
+        ? { ok: true, settings: settings.value }
+        : { ok: false, code: settings.error.code };
+    };
+
+    // The dispatch run surface resolves the typed harness settings per
+    // invocation, composes both delivered session ports over the host runner,
+    // and declares the production evidence class. A configured default path
+    // spawns; an invalid configuration is its delivered classified error.
     const dispatch: DispatchCommandRuntime = {
       run: {
-        run: async () => ({
-          ok: false,
-          error: { kind: "harness", code: "harness.capability.gap" },
-        }),
+        run: async (input) => {
+          const resolution = resolveProductionHarnessSettings();
+          if (!resolution.ok) {
+            return {
+              ok: false,
+              error: {
+                kind: "input",
+                code: resolution.code,
+                summary: `harness configuration rejected (${resolution.code})`,
+              },
+            };
+          }
+          if (dispatchRepository === undefined) {
+            return {
+              ok: false,
+              error: {
+                kind: "input",
+                code: "input.value.rejected",
+                summary: "repository identity is unresolvable",
+              },
+            };
+          }
+          return createDispatchCommandRuntime(
+            dispatchComposition(resolution.settings, dispatchRepository),
+          ).run.run(input);
+        },
       },
     };
 

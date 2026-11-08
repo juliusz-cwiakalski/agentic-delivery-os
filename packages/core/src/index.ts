@@ -603,6 +603,11 @@ export {
   weightLoads,
 } from "./domain/index.js";
 export {
+  assembleHarnessLiveness,
+  buildHarnessSpawnEnvironment,
+  classifyHarnessEvidence,
+} from "./domain/index.js";
+export {
   attemptOutOfSeamEvidenceWrite,
   collectRetro,
   evaluateRetroTruthChecks,

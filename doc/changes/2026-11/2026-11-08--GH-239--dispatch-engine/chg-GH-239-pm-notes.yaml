@@ -134,10 +134,20 @@ notes:
       tests."
     type: decision
     date: "2026-11-08"
-  - text: "DoR gate cleared after 3 iterations. Proceeding to delivery. Total
-      artifact cost of the gate: 3 spec revisions, 3 test-plan revisions, 3 plan
-      revisions, 1 decision record. All findings were real; none was noise."
+  - text: "DoR gate cleared after 3 iterations (spec v1.2, test plan, plan all
+      green; TDR-0015 authored). Proceeding to delivery."
     type: info
+    date: "2026-11-08"
+  - text: "Delivery pass 1 complete (10 plan phases, commits 56e0588..c5e38c9,
+      pnpm check green: 6417 pass). Two gaps found on PM validation before the
+      delivery checkpoint: (1) production.ts is a stub returning
+      harness.capability.gap, so the shipped dispatch command cannot spawn;
+      the plan requires spawning through the delivered HarnessSessionPort and a
+      production evidenceClass: pilot composition. (2) attempt-stage failures
+      use a nested data.error envelope, which is a deviation from the
+      data|error exclusivity that the reviewer must judge. Sending (1) back to
+      @coder as incomplete delivery; (2) will be reviewed."
+    type: blocker
     date: "2026-11-08"
   - text: "Commit-primitive friction observed (retro): committing the decision
       record as the sole pending path failed twice: first a secret-scan false
