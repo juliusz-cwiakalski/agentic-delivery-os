@@ -47,4 +47,28 @@ describe("TC-PSCAN-005 mutants fail by rule", () => {
     const findings = scanPromptText("mutant.md", 'Run git commit -m "x" and git add -A.');
     expect(findings.map((finding) => finding.rule)).toContain("git.no-raw-write");
   });
+
+  test("negation exempts only its own sentence, not the whole line", () => {
+    const mutant = `${MUTANTS}/raw-git-negated.md`;
+    const text = readFileSync(join(ROOT, mutant), "utf8");
+    const rules = scanPromptText(mutant, text).map((finding) => finding.rule);
+    expect(rules).toContain("git.no-raw-write");
+
+    const lineWide = 'There is no exception. Run git commit -m "x" and git add -A.';
+    expect(scanPromptText("mutant.md", lineWide).map((finding) => finding.rule)).toContain(
+      "git.no-raw-write",
+    );
+
+    const laterInstruction = 'Never run git add. Then run git commit -m "x".';
+    expect(scanPromptText("mutant.md", laterInstruction).map((finding) => finding.rule)).toContain(
+      "git.no-raw-write",
+    );
+  });
+
+  test("a prohibition in the same sentence stays exempt", () => {
+    expect(scanPromptText("prompt.md", "Never run git add or git commit.")).toEqual([]);
+    expect(scanPromptText("prompt.md", "The commit primitive stages; do not run git add.")).toEqual(
+      [],
+    );
+  });
 });

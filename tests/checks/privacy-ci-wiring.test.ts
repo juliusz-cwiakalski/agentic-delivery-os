@@ -32,6 +32,7 @@ const NEW_SUITES = [
   "tests/checks/privacy-scope.test.ts",
   "tests/checks/privacy-reporting.test.ts",
   "tests/checks/privacy-authoring.test.ts",
+  "tests/checks/fixture-privacy.test.ts",
   "tests/checks/privacy-performance.test.ts",
   "tests/behaviour/envelope-content-policy.test.ts",
 ] as const;
@@ -261,7 +262,9 @@ describe("TC-WIRE-003 new suites run under the binding test job", () => {
     "tests/checks/privacy-registry.test.ts": "the valid control",
     "tests/checks/privacy-scope.test.ts": "an untracked-but-not-ignored value is scanned",
     "tests/checks/privacy-reporting.test.ts": "two runs in each mode",
-    "tests/checks/privacy-authoring.test.ts": "no fixture carries a real secret shape",
+    "tests/checks/privacy-authoring.test.ts":
+      "a piped literal yields exactly the registry-entry-shaped record",
+    "tests/checks/fixture-privacy.test.ts": "no fixture carries a real secret shape",
     "tests/checks/privacy-performance.test.ts": "the distinct-length envelope",
     "tests/behaviour/envelope-content-policy.test.ts": "clean envelopes",
   };

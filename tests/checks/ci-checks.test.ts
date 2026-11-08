@@ -1,36 +1,687 @@
 /**
- * TC-PSCAN-005 / help coverage — both deterministic scans are wired into CI and
- * the aggregate gate so later prompt or guide edits cannot drift.
+ * TC-SCAFFOLD-018 / 024 / 037 / 038 — CI check mutations.
+ *
+ * Each check passes on the live tree and fails on a mutated temp copy, naming
+ * the diverging location (pins), the injected construct (bindingness), the
+ * floating ref (supply chain), or the advisory (vulnerability gate).
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { execFileSync, spawnSync } from "node:child_process";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { parse as parseYaml } from "yaml";
+import {
+  scanText as scanBindingness,
+  validate as validateBindingness,
+} from "../../scripts/checks/ci-bindingness";
+import {
+  scanText as scanSupplyChain,
+  validate as validateSupplyChain,
+} from "../../scripts/checks/ci-supply-chain";
+import {
+  BASH_JOBS,
+  removedLineViolations,
+  TS_JOBS,
+  validate as validateTopology,
+} from "../../scripts/checks/ci-topology";
+import { runSyncCheck } from "../../scripts/checks/error-table-sync";
+import { validate as validatePins } from "../../scripts/checks/pin-equality";
+import { validate as validateScriptSurface } from "../../scripts/checks/script-surface";
+import {
+  validateFixture,
+  validate as validateVulnerabilities,
+} from "../../scripts/checks/vulnerability-gate";
 
 const ROOT = process.cwd();
-const ci = readFileSync(join(ROOT, ".github/workflows/ci.yml"), "utf8");
-const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
-  readonly scripts: Readonly<Record<string, string>>;
+const PIN_FILES = [
+  ".bun-version",
+  "package.json",
+  ".github/workflows/ci.yml",
+  ".github/workflows/release.yml",
+];
+
+const makePinTree = (): string => {
+  const directory = mkdtempSync(join(tmpdir(), "pins-"));
+  for (const relative of PIN_FILES) {
+    const target = join(directory, relative);
+    mkdirSync(dirname(target), { recursive: true });
+    cpSync(join(ROOT, relative), target);
+  }
+  return directory;
 };
 
-describe("ci checks wiring", () => {
-  test("CI runs the aggregate gate that includes both scans", () => {
-    expect(ci).toContain("pnpm check");
-    expect(ci).toContain("scripts/checks/prompt-conformance.ts");
-    expect(ci).toContain("scripts/checks/help-guide-coverage.ts");
-    expect(manifest.scripts.check).toContain("scripts/checks/prompt-conformance.ts");
-    expect(manifest.scripts.check).toContain("scripts/checks/help-guide-coverage.ts");
+describe("pin equality", () => {
+  test("live tree passes", () => {
+    expect(validatePins(ROOT)).toEqual([]);
   });
 
-  test("both scans have a dedicated script and a test suite", () => {
-    expect(manifest.scripts["check:prompt"]).toContain("prompt-conformance");
-    expect(manifest.scripts["check:help"]).toContain("help-guide-coverage");
-    for (const file of [
-      "tests/checks/prompt-conformance.test.ts",
-      "tests/checks/prompt-conformance-mutants.test.ts",
-      "tests/checks/help-guide-coverage.test.ts",
-      "tests/checks/help-guide-coverage-mutants.test.ts",
-    ]) {
-      expect(readFileSync(join(ROOT, file), "utf8").length).toBeGreaterThan(0);
+  test("each of the four copies diverges by name", () => {
+    const mutations: Array<[string, (directory: string) => void, string]> = [
+      [
+        ".bun-version",
+        (directory) => writeFileSync(join(directory, ".bun-version"), "9.9.9\n"),
+        "engines.bun",
+      ],
+      [
+        "package.json engines.bun",
+        (directory) => {
+          const path = join(directory, "package.json");
+          const manifest = JSON.parse(readFileSync(path, "utf8")) as {
+            engines: { bun: string };
+          };
+          manifest.engines.bun = "9.9.9";
+          writeFileSync(path, JSON.stringify(manifest, null, 2));
+        },
+        "engines.bun",
+      ],
+      [
+        "ci.yml env.BUN_VERSION",
+        (directory) => {
+          const path = join(directory, ".github/workflows/ci.yml");
+          writeFileSync(
+            path,
+            readFileSync(path, "utf8").replace('BUN_VERSION: "1.4.4"', 'BUN_VERSION: "9.9.9"'),
+          );
+        },
+        "ci.yml env.BUN_VERSION",
+      ],
+      [
+        "release.yml bun-version",
+        (directory) => {
+          const path = join(directory, ".github/workflows/release.yml");
+          writeFileSync(
+            path,
+            readFileSync(path, "utf8").replaceAll('bun-version: "1.4.4"', 'bun-version: "9.9.9"'),
+          );
+        },
+        "release.yml bun-version",
+      ],
+    ];
+    for (const [label, mutate, expected] of mutations) {
+      const directory = makePinTree();
+      try {
+        mutate(directory);
+        const failures = validatePins(directory);
+        expect(
+          failures.some((message) => message.includes(expected)),
+          label,
+        ).toBe(true);
+        expect(
+          failures.some((message) => message.includes("9.9.9")),
+          label,
+        ).toBe(true);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
     }
+  });
+
+  test("range and latest shapes are rejected", () => {
+    const shape = JSON.parse(
+      readFileSync(join(ROOT, "tests/fixtures/pins/shape.json"), "utf8"),
+    ) as { rejected: string[] };
+    for (const value of shape.rejected) {
+      const directory = makePinTree();
+      try {
+        writeFileSync(join(directory, ".bun-version"), `${value}\n`);
+        expect(
+          validatePins(directory).some((message) => message.includes("must be an exact")),
+          value,
+        ).toBe(true);
+      } finally {
+        rmSync(directory, { recursive: true, force: true });
+      }
+    }
+  });
+});
+
+describe("CI bindingness", () => {
+  test("live workflow is binding", () => {
+    expect(validateBindingness(ROOT)).toEqual([]);
+  });
+
+  test("an injected continue-on-error is caught by job name", () => {
+    const text = readFileSync(join(ROOT, ".github/workflows/ci.yml"), "utf8").replace(
+      "  ts-boundaries:\n",
+      "  ts-boundaries:\n    continue-on-error: true\n",
+    );
+    const failures = scanBindingness(text);
+    expect(failures.some((message) => message.includes("ts-boundaries"))).toBe(true);
+    expect(failures.some((message) => message.includes("continue-on-error"))).toBe(true);
+  });
+});
+
+describe("CI supply chain", () => {
+  test("live workflow is SHA-pinned with least privilege", () => {
+    expect(validateSupplyChain(ROOT)).toEqual([]);
+  });
+
+  test("a floating tag is caught by name", () => {
+    const text = readFileSync(join(ROOT, ".github/workflows/ci.yml"), "utf8").replace(
+      "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+      "actions/checkout@v4",
+    );
+    const failures = scanSupplyChain(text);
+    expect(failures.some((message) => message.includes("actions/checkout@v4"))).toBe(true);
+  });
+});
+
+describe("vulnerability gate", () => {
+  test("the committed lockfile has no high/critical advisories", () => {
+    expect(validateVulnerabilities(ROOT)).toEqual([]);
+  }, 240_000);
+
+  test("a fixture advisory makes the gate fail", () => {
+    const failures = validateFixture(ROOT);
+    expect(failures.some((message) => message.includes("high"))).toBe(true);
+  });
+});
+
+describe("CI topology", () => {
+  test("bash jobs intact, TS jobs complete, triggers and wiring correct", () => {
+    expect(validateTopology(ROOT)).toEqual([]);
+  });
+});
+
+const CI_PATH = ".github/workflows/ci.yml";
+const SCAN_JOB = "ts-forbidden-literals";
+
+const jobBlock = (text: string, jobId: string): string => {
+  const lines = text.split("\n");
+  const start = lines.findIndex((line) => line === `  ${jobId}:`);
+  if (start < 0) return "";
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (/^ {2}[a-z0-9-]+:\s*$/.test(lines[index] as string)) {
+      end = index;
+      break;
+    }
+  }
+  return lines.slice(start, end).join("\n");
+};
+
+const replaceInJob = (text: string, jobId: string, search: string, replacement: string): string => {
+  const block = jobBlock(text, jobId);
+  return block.length === 0 ? text : text.replace(block, block.replace(search, replacement));
+};
+
+const makeWorkflowTree = (mutate: (text: string) => string): string => {
+  const directory = mkdtempSync(join(tmpdir(), "ci-forbidden-job-"));
+  mkdirSync(join(directory, ".github/workflows"), { recursive: true });
+  cpSync(join(ROOT, "scripts/checks"), join(directory, "scripts/checks"), { recursive: true });
+  cpSync(join(ROOT, "package.json"), join(directory, "package.json"));
+  const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+  writeFileSync(join(directory, CI_PATH), mutate(text));
+  return directory;
+};
+
+const BASELINE_FETCH_STEP =
+  "      - name: Fetch the recorded corpus baseline\n        run: git fetch --no-tags origin 32784affbb8a1b82a57b6c4578a331b8bd99b4c4\n";
+
+describe("forbidden-literal CI job", () => {
+  test("live job is declared with full history, baseline fetch, and the gate command", () => {
+    expect(validateTopology(ROOT)).toEqual([]);
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    const block = jobBlock(text, SCAN_JOB);
+    expect(block).toContain("fetch-depth: 0");
+    expect(block).toContain("32784affbb8a1b82a57b6c4578a331b8bd99b4c4");
+    expect(block).toContain("bun run scripts/checks/forbidden-literals.ts");
+    expect(block).not.toContain("continue-on-error");
+  });
+
+  test("continue-on-error on the scan job fails bindingness naming the job", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8").replace(
+      `  ${SCAN_JOB}:\n`,
+      `  ${SCAN_JOB}:\n    continue-on-error: true\n`,
+    );
+    const failures = scanBindingness(text);
+    expect(failures.some((message) => message.includes(SCAN_JOB))).toBe(true);
+    expect(failures.some((message) => message.includes("continue-on-error"))).toBe(true);
+  });
+
+  test("removing the job from ci.yml fails topology naming it", () => {
+    const directory = makeWorkflowTree((text) => text.replace(jobBlock(text, SCAN_JOB), ""));
+    try {
+      expect(validateTopology(directory).some((message) => message.includes(SCAN_JOB))).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("removing the baseline fetch step fails naming the missing baseline fetch", () => {
+    const directory = makeWorkflowTree((text) => text.replace(BASELINE_FETCH_STEP, ""));
+    try {
+      expect(
+        validateTopology(directory).some((message) => message.includes("missing baseline fetch")),
+      ).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("a shallow checkout without the baseline fetch fails closed", () => {
+    const directory = makeWorkflowTree((text) =>
+      replaceInJob(
+        text.replace(BASELINE_FETCH_STEP, ""),
+        SCAN_JOB,
+        "fetch-depth: 0",
+        "fetch-depth: 1",
+      ),
+    );
+    try {
+      const failures = validateTopology(directory);
+      expect(failures.some((message) => message.includes("full history"))).toBe(true);
+      expect(failures.some((message) => message.includes("missing baseline fetch"))).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("aggregate chain stays five steps and ts-invariants changes are additions-only", () => {
+    expect(validateScriptSurface(ROOT)).toEqual([]);
+    const head = readFileSync(join(ROOT, CI_PATH), "utf8");
+    const base = execFileSync("git", ["show", "origin/main-tools:.github/workflows/ci.yml"], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+    const headJob = jobBlock(head, "ts-invariants");
+    const baseJob = jobBlock(base, "ts-invariants");
+    for (const line of baseJob.split("\n").filter((entry) => entry.length > 0)) {
+      expect(headJob).toContain(line);
+    }
+    expect(headJob).toContain("bun run scripts/checks/error-table-sync.ts");
+    expect(headJob).toContain("bun run scripts/checks/exit-code-literals.ts");
+    const diff = execFileSync(
+      "git",
+      ["diff", "--unified=0", "origin/main-tools...HEAD", "--", CI_PATH],
+      { cwd: ROOT, encoding: "utf8" },
+    );
+    expect(removedLineViolations(base, diff)).toEqual([]);
+  });
+});
+
+const BASE_REPAIR_WORKFLOW = `name: CI
+on:
+  push:
+    branches: [main-tools]
+  pull_request:
+    branches: [main-tools]
+jobs:
+  bash-tests:
+    name: Bash test suites
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # GH-124: the old comment claims set -e fails the job on a failing suite.
+      # Exclusions are documented here.
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run all bash test suites
+        run: |
+          set -e
+          echo "=== Running all test suites ==="
+          find . -path '*/.tests/test-*.sh' \\
+            -not -path './tmp/*' \\
+            -print -exec bash {} \\;
+          echo "=== All test suites passed ==="
+
+  # A comment describing the next job, directly above its key.
+  result-tuple-guard:
+    name: Result tuple guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run guard
+        run: bash scripts/.tests/test-deliver-ticket-result-tuples-modes.sh
+
+  ts-invariants:
+    name: TS invariants
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run invariants
+        run: bun run scripts/checks/ci-topology.ts
+`;
+
+const HEAD_REPAIR_WORKFLOW = `name: CI
+on:
+  push:
+    branches: [main-tools]
+  pull_request:
+    branches: [main-tools]
+jobs:
+  bash-tests:
+    name: Bash test suites
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # GH-251: the runner discovers every CI-safe suite, executes each, and
+      # aggregates child statuses, so the job fails iff any suite fails.
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run all bash test suites
+        run: |
+          set -e
+          bash scripts/run-bash-suites.sh
+
+  result-tuple-guard:
+    name: Result tuple guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run guard
+        run: bash scripts/.tests/test-deliver-ticket-result-tuples-modes.sh
+
+  ts-invariants:
+    name: TS invariants
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run invariants
+        run: bun run scripts/checks/ci-topology.ts
+`;
+
+const unifiedDiff = (base: string, head: string): string => {
+  const directory = mkdtempSync(join(tmpdir(), "gh251-diff-"));
+  try {
+    const basePath = join(directory, "base.yml");
+    const headPath = join(directory, "head.yml");
+    writeFileSync(basePath, base);
+    writeFileSync(headPath, head);
+    const result = spawnSync(
+      "git",
+      ["diff", "--no-index", "--unified=0", "--", basePath, headPath],
+      { encoding: "utf8" },
+    );
+    return result.stdout ?? "";
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+};
+
+const makeWorkflowTreeFromText = (text: string): string => {
+  const directory = mkdtempSync(join(tmpdir(), "gh251-workflow-"));
+  mkdirSync(join(directory, ".github/workflows"), { recursive: true });
+  cpSync(join(ROOT, "scripts/checks"), join(directory, "scripts/checks"), { recursive: true });
+  cpSync(join(ROOT, "package.json"), join(directory, "package.json"));
+  writeFileSync(join(directory, CI_PATH), text);
+  return directory;
+};
+
+describe("DEC-7 scoped ci-topology allowance", () => {
+  test("fixture A: bash-tests execution-block and comment removals are allowed", () => {
+    const diff = unifiedDiff(BASE_REPAIR_WORKFLOW, HEAD_REPAIR_WORKFLOW);
+    expect(diff).toContain("@@");
+    expect(removedLineViolations(BASE_REPAIR_WORKFLOW, diff)).toEqual([]);
+    expect(HEAD_REPAIR_WORKFLOW).toContain("  bash-tests:");
+    expect(HEAD_REPAIR_WORKFLOW).toContain("bash scripts/run-bash-suites.sh");
+  });
+
+  test("fixture A non-vacuity: the same diff fails when the allowance is disabled", () => {
+    const diff = unifiedDiff(BASE_REPAIR_WORKFLOW, HEAD_REPAIR_WORKFLOW);
+    const violations = removedLineViolations(BASE_REPAIR_WORKFLOW, diff, {
+      allowBashTestsExecutionBlockRemovals: false,
+    });
+    expect(violations.length).toBeGreaterThan(0);
+    expect(violations.some((message) => message.includes("set -e"))).toBe(true);
+  });
+
+  test("fixture B: a removal outside the bash-tests block still fails by line", () => {
+    const head = HEAD_REPAIR_WORKFLOW.replace(
+      "        run: bun run scripts/checks/ci-topology.ts\n",
+      "",
+    );
+    const violations = removedLineViolations(
+      BASE_REPAIR_WORKFLOW,
+      unifiedDiff(BASE_REPAIR_WORKFLOW, head),
+    );
+    expect(violations).toHaveLength(1);
+    expect(violations[0]).toContain("ci-topology.ts");
+  });
+
+  test("fixture C: deleting the whole bash-tests job still fails job presence", () => {
+    const head = BASE_REPAIR_WORKFLOW.replace(jobBlock(BASE_REPAIR_WORKFLOW, "bash-tests"), "");
+    const directory = makeWorkflowTreeFromText(head);
+    try {
+      expect(
+        validateTopology(directory).some((message) =>
+          message.includes("existing bash job bash-tests is missing"),
+        ),
+      ).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("fixture D: removing a ts job id fails by name", () => {
+    const head = BASE_REPAIR_WORKFLOW.replace(jobBlock(BASE_REPAIR_WORKFLOW, "ts-invariants"), "");
+    const directory = makeWorkflowTreeFromText(head);
+    try {
+      expect(
+        validateTopology(directory).some((message) =>
+          message.includes("required TypeScript job ts-invariants is missing"),
+        ),
+      ).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("fixture D: removing another bash job id fails by name", () => {
+    const head = BASE_REPAIR_WORKFLOW.replace(
+      jobBlock(BASE_REPAIR_WORKFLOW, "result-tuple-guard"),
+      "",
+    );
+    const directory = makeWorkflowTreeFromText(head);
+    try {
+      expect(
+        validateTopology(directory).some((message) =>
+          message.includes("existing bash job result-tuple-guard is missing"),
+        ),
+      ).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("fixture E: a line adjacent to but outside the allowed block still fails", () => {
+    const head = HEAD_REPAIR_WORKFLOW.replace(
+      "      - name: Run all bash test suites\n",
+      "      # name removed\n",
+    );
+    const violations = removedLineViolations(
+      BASE_REPAIR_WORKFLOW,
+      unifiedDiff(BASE_REPAIR_WORKFLOW, head),
+    );
+    expect(violations.some((message) => message.includes("Run all bash test suites"))).toBe(true);
+  });
+
+  test("fixture F: a comment directly above the next job key is part of the footprint", () => {
+    const comment = "  # A comment describing the next job, directly above its key.\n";
+    const head = BASE_REPAIR_WORKFLOW.replace(comment, "");
+    const diff = unifiedDiff(BASE_REPAIR_WORKFLOW, head);
+    expect(removedLineViolations(BASE_REPAIR_WORKFLOW, diff)).toEqual([]);
+    const disabled = removedLineViolations(BASE_REPAIR_WORKFLOW, diff, {
+      allowBashTestsExecutionBlockRemovals: false,
+    });
+    expect(disabled.some((message) => message.includes("A comment describing the next job"))).toBe(
+      true,
+    );
+  });
+
+  test("fixture G: the Install jq run body is part of the footprint", () => {
+    const installLine = "        run: sudo apt-get update && sudo apt-get install -y jq\n";
+    const head = HEAD_REPAIR_WORKFLOW.replace(installLine, "");
+    const diff = unifiedDiff(BASE_REPAIR_WORKFLOW, head);
+    expect(removedLineViolations(BASE_REPAIR_WORKFLOW, diff)).toEqual([]);
+    const disabled = removedLineViolations(BASE_REPAIR_WORKFLOW, diff, {
+      allowBashTestsExecutionBlockRemovals: false,
+    });
+    expect(disabled.some((message) => message.includes("sudo apt-get"))).toBe(true);
+  });
+
+  test("live tree stays green under the allowance and exposes no bypass flag", () => {
+    expect(validateTopology(ROOT)).toEqual([]);
+    const source = readFileSync(join(ROOT, "scripts/checks/ci-topology.ts"), "utf8");
+    expect(source).not.toContain("process.argv");
+    expect(source).not.toContain("skip-diff");
+  });
+});
+
+describe("GH-172 CI binding", () => {
+  const NEW_CHECKS = [
+    "bun run scripts/checks/error-table-sync.ts",
+    "bun run scripts/checks/exit-code-literals.ts",
+  ];
+
+  test("both new checks are invoked by name from ts-invariants", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    const job = jobBlock(text, "ts-invariants");
+    for (const check of NEW_CHECKS) expect(job).toContain(check);
+  });
+
+  test("TS_JOBS is unchanged and no new job id appears", () => {
+    expect(TS_JOBS).toEqual([
+      "ts-fresh-clone",
+      "ts-invariants",
+      "ts-typecheck",
+      "ts-lint",
+      "ts-format",
+      "ts-test",
+      "ts-boundaries",
+      "ts-build",
+      "ts-exports",
+      "ts-pins",
+      "ts-publish-guard",
+      "ts-license-audit",
+      "ts-vuln",
+      "ts-aggregate",
+      "ts-commitlint",
+      "ts-forbidden-literals",
+    ]);
+    const workflow = parseYaml(readFileSync(join(ROOT, CI_PATH), "utf8")) as {
+      jobs?: Record<string, unknown>;
+    };
+    expect(Object.keys(workflow.jobs ?? {}).sort()).toEqual([...TS_JOBS, ...BASH_JOBS].sort());
+  });
+
+  test("the aggregate chain keeps the GH-172 checks out and ends with the exports parity gate", () => {
+    const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(manifest.scripts.check).toBe(
+      "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts",
+    );
+    expect(manifest.scripts.check).not.toContain("error-table-sync");
+    expect(manifest.scripts.check).not.toContain("exit-code-literals");
+  });
+
+  test("ci-bindingness reports no bypass in the invariant job", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    const job = jobBlock(text, "ts-invariants");
+    for (const bypass of ["continue-on-error", "|| true", "set +e", "exit 0"]) {
+      expect(job).not.toContain(bypass);
+    }
+    expect(validateTopology(ROOT)).toEqual([]);
+  });
+
+  test("a drift mutation produces the non-zero exit CI would surface", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "ci-sync-drift-"));
+    try {
+      cpSync(
+        join(ROOT, "packages/core/src/contracts"),
+        join(directory, "packages/core/src/contracts"),
+        {
+          recursive: true,
+        },
+      );
+      cpSync(join(ROOT, "packages/cli/src"), join(directory, "packages/cli/src"), {
+        recursive: true,
+      });
+      cpSync(join(ROOT, "tests/fixtures/result"), join(directory, "tests/fixtures/result"), {
+        recursive: true,
+      });
+      mkdirSync(join(directory, "doc/spec/features"), { recursive: true });
+      cpSync(
+        join(ROOT, "doc/spec/features/feature-result-contract.md"),
+        join(directory, "doc/spec/features/feature-result-contract.md"),
+      );
+      writeFileSync(
+        join(directory, "packages/cli/src/index.ts"),
+        `${readFileSync(join(directory, "packages/cli/src/index.ts"), "utf8")}\nconst drift = "input.ci.drift";\n`,
+      );
+      const live = await runSyncCheck({ root: ROOT });
+      expect(live.failures).toEqual([]);
+      const drifted = await runSyncCheck({ root: directory });
+      expect(drifted.failures.length).toBeGreaterThan(0);
+      const spawned = spawnSync("bun", ["run", join(ROOT, "scripts/checks/error-table-sync.ts")], {
+        cwd: directory,
+        encoding: "utf8",
+      });
+      expect(spawned.status).not.toBe(0);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("the exit-literal check is invoked by name (TC-EXIT-002 step 7)", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    expect(jobBlock(text, "ts-invariants")).toContain(
+      "bun run scripts/checks/exit-code-literals.ts",
+    );
+  });
+});
+
+describe("GH-181 secret-read invariant binding", () => {
+  const SECRET_COMMAND = "bun run scripts/checks/secret-read-boundary.ts";
+
+  const chainCommands = (manifest: { scripts: Record<string, string> }): string[] =>
+    (manifest.scripts["check:boundaries"] ?? "").split("&&").map((command) => command.trim());
+
+  test("the invariant is invoked by name from ts-invariants", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    expect(jobBlock(text, "ts-invariants")).toContain(SECRET_COMMAND);
+  });
+
+  test("the invariant is part of the local boundary chain", () => {
+    const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(chainCommands(manifest)).toContain(SECRET_COMMAND);
+  });
+
+  test("removing the command from a temp workflow copy fails by name", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    const mutated = replaceInJob(text, "ts-invariants", `${SECRET_COMMAND}\n`, "");
+    expect(jobBlock(mutated, "ts-invariants")).not.toContain(SECRET_COMMAND);
+    expect(
+      jobBlock(mutated, "ts-invariants").includes(SECRET_COMMAND)
+        ? []
+        : [`ts-invariants: missing ${SECRET_COMMAND}`],
+    ).toEqual([`ts-invariants: missing ${SECRET_COMMAND}`]);
+  });
+
+  test("removing the command from a temp package.json copy fails the local-chain assertion", () => {
+    const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    manifest.scripts["check:boundaries"] = manifest.scripts["check:boundaries"]?.replace(
+      ` && ${SECRET_COMMAND}`,
+      "",
+    );
+    const missing = chainCommands(manifest).includes(SECRET_COMMAND)
+      ? []
+      : [`check:boundaries: missing ${SECRET_COMMAND}`];
+    expect(missing).toEqual([`check:boundaries: missing ${SECRET_COMMAND}`]);
+  });
+
+  test("the invariant introduces no bypass construct and no new job", () => {
+    const text = readFileSync(join(ROOT, CI_PATH), "utf8");
+    expect(scanBindingness(text)).toEqual([]);
+    const workflow = parseYaml(text) as { jobs?: Record<string, unknown> };
+    expect(Object.keys(workflow.jobs ?? {}).sort()).toEqual([...TS_JOBS, ...BASH_JOBS].sort());
   });
 });

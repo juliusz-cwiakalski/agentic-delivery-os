@@ -42,14 +42,55 @@ const NEGATIONS = [
   /\bno\b/i,
 ];
 
-const isNegated = (text: string): boolean => NEGATIONS.some((pattern) => pattern.test(text));
+const SENTENCE_BOUNDARY = /[.!?;](?=\s|$)/g;
+
+/** The sentence that contains `index`; negation exempts a sentence, not a line. */
+const sentenceAt = (text: string, index: number): string => {
+  let start = 0;
+  let end = text.length;
+  for (const boundary of text.matchAll(SENTENCE_BOUNDARY)) {
+    const at = boundary.index ?? 0;
+    if (at < index) {
+      start = at + 1;
+      continue;
+    }
+    end = at + 1;
+    break;
+  }
+  return text.slice(start, end);
+};
+
+const isNegated = (text: string, index = 0): boolean =>
+  NEGATIONS.some((pattern) => pattern.test(sentenceAt(text, index)));
+
+/** Every match of a rule on one line, in order. */
+const matchesOf = (pattern: RegExp, line: string): readonly RegExpExecArray[] => {
+  const global = new RegExp(
+    pattern.source,
+    pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`,
+  );
+  return [...line.matchAll(global)];
+};
+
+/** The first occurrence of `literal` that its own sentence does not negate. */
+const firstVisibleOccurrence = (text: string, literal: string): number => {
+  const haystack = text.toLowerCase();
+  const needle = literal.toLowerCase();
+  let from = 0;
+  for (;;) {
+    const found = haystack.indexOf(needle, from);
+    if (found < 0) return -1;
+    if (!isNegated(text, found)) return found;
+    from = found + needle.length;
+  }
+};
 
 const RULES: readonly { readonly id: string; readonly pattern: RegExp }[] = [
   // Plan progress must not be written into the plan.
   {
     id: "plan.no-progress",
     pattern:
-      /\b(tasks\s*:|add a `tasks` key|update (the )?plan file|plan update|mark .*(plan .*(complete|done)|(complete|done).*plan))/i,
+      /\b(tasks\s*:|add a `tasks` key|update (the )?plan file|\bplan update\b(?!s)|mark .*(plan .*(complete|done)|(complete|done).*plan))/i,
   },
   // Phase state is written only through the phase family.
   {
@@ -68,11 +109,12 @@ export const scanPromptText = (file: string, text: string): readonly PromptFindi
   const findings: PromptFinding[] = [];
   const lines = text.split("\n");
   for (const [index, line] of lines.entries()) {
-    if (isNegated(line)) continue;
     for (const rule of RULES) {
-      if (rule.pattern.test(line)) {
-        findings.push({ file, rule: rule.id, line: index + 1, text: line.trim() });
-      }
+      const offending = matchesOf(rule.pattern, line).find(
+        (match) => !isNegated(line, match.index),
+      );
+      if (offending === undefined) continue;
+      findings.push({ file, rule: rule.id, line: index + 1, text: line.trim() });
     }
   }
   return findings;
@@ -100,9 +142,7 @@ export const scanInventory = (
     for (const forbidden of prompt.forbidden ?? []) {
       const offending = text
         .split("\n")
-        .findIndex(
-          (line) => !isNegated(line) && line.toLowerCase().includes(forbidden.toLowerCase()),
-        );
+        .findIndex((line) => firstVisibleOccurrence(line, forbidden) >= 0);
       if (offending >= 0) {
         findings.push({
           file: prompt.path,
@@ -160,16 +200,14 @@ export const scanAllPrompts = (root = process.cwd()): readonly PromptFinding[] =
     for (const file of promptFiles(root, directory)) {
       const lines = find(file).split("\n");
       for (const [index, line] of lines.entries()) {
-        if (isNegated(line)) continue;
         for (const entry of retired.retired) {
-          if (line.includes(entry.literal)) {
-            findings.push({
-              file,
-              rule: "retired.literal",
-              line: index + 1,
-              text: entry.literal,
-            });
-          }
+          if (firstVisibleOccurrence(line, entry.literal) < 0) continue;
+          findings.push({
+            file,
+            rule: "retired.literal",
+            line: index + 1,
+            text: entry.literal,
+          });
         }
       }
     }
