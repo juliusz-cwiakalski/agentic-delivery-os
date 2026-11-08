@@ -6,94 +6,248 @@ story_code: M1-S20
 variant: full
 phases:
   clarify_scope: { started: "2026-11-07T18:20:00Z", completed: "2026-11-07T18:28:11Z" }
-  specification: { started: "2026-11-07T18:28:11Z", completed: "2026-11-07T21:40:00Z", reopened: "2026-11-07T21:20:00Z", iteration: 3 }
-  test_planning: { started: "2026-11-07T18:42:00Z", completed: "2026-11-07T21:44:00Z", reopened: "2026-11-07T21:20:00Z", iteration: 3 }
-  delivery_planning: { started: "2026-11-07T18:52:00Z", completed: "2026-11-07T21:48:00Z", reopened: "2026-11-07T21:20:00Z", iteration: 3 }
-  dor_check: { started: "2026-11-07T21:49:00Z", completed: "2026-11-07T22:05:00Z", verdict: "READY", iteration: 3 }
-  delivery: { started: "2026-11-07T22:10:00Z", completed: null }
+  specification:
+    {
+      started: "2026-11-07T18:28:11Z",
+      completed: "2026-11-07T21:40:00Z",
+      reopened: "2026-11-07T21:20:00Z",
+      iteration: 3
+    }
+  test_planning:
+    {
+      started: "2026-11-07T18:42:00Z",
+      completed: "2026-11-07T21:44:00Z",
+      reopened: "2026-11-07T21:20:00Z",
+      iteration: 3
+    }
+  delivery_planning:
+    {
+      started: "2026-11-07T18:52:00Z",
+      completed: "2026-11-07T21:48:00Z",
+      reopened: "2026-11-07T21:20:00Z",
+      iteration: 3
+    }
+  dor_check:
+    {
+      started: "2026-11-07T21:49:00Z",
+      completed: "2026-11-07T22:05:00Z",
+      verdict: "READY",
+      iteration: 3
+    }
+  delivery: { started: "2026-11-07T22:10:00Z", completed: "2026-11-08T00:13:14.519Z" }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
-  - text: "D1 — Scope includes the minimum executable and self-description surface the prompts need: a neutral CLI entrypoint plus --help/--version. The prompts cannot consume a primitive with no invocation path or help."
+  - text: "D1 — Scope includes the minimum executable and self-description surface
+      the prompts need: a neutral CLI entrypoint plus --help/--version. The
+      prompts cannot consume a primitive with no invocation path or help."
     date: "2026-11-07"
-  - text: "D2 — Lifecycle phase state is written only through the phase family. The PM stops hand-editing started/completed fields; completion is the only transition needed, and the tool creates the entry. PR URL is recorded as a note, not as hand-written phase state."
+  - text: "D2 — Lifecycle phase state is written only through the phase family. The
+      PM stops hand-editing started/completed fields; completion is the only
+      transition needed, and the tool creates the entry. PR URL is recorded as a
+      note, not as hand-written phase state."
     date: "2026-11-07"
-  - text: "D3 — Reverses GH-227 DEC-6 for agent adoption: commit and phase complete must run inside lifecycle sessions, because that is where PM and coder operate. The delivery-session refusal is removed; the harness one-shot still runs in a sanitized empty project context."
+  - text: "D3 — Reverses GH-227 DEC-6 for agent adoption: commit and phase complete
+      must run inside lifecycle sessions, because that is where PM and coder
+      operate. The delivery-session refusal is removed; the harness one-shot
+      still runs in a sanitized empty project context."
     date: "2026-11-07"
-  - text: "D4 — Lifecycle completion staging scope is the mapped plan-phase scope UNION the change folder, so artifact phases (spec, test plan, plan, review notes, pm-notes) commit atomically with their transition."
+  - text: "D4 — Lifecycle completion staging scope is the mapped plan-phase scope
+      UNION the change folder, so artifact phases (spec, test plan, plan, review
+      notes, pm-notes) commit atomically with their transition."
     date: "2026-11-07"
-  - text: "D5 — @committer stops hand-crafting raw-git commits: its instruction becomes a thin executor of the typed commit primitive. Every lifecycle prompt calls the primitive directly or delegates to the primitive-backed committer."
+  - text: "D5 — @committer stops hand-crafting raw-git commits: its instruction
+      becomes a thin executor of the typed commit primitive. Every lifecycle
+      prompt calls the primitive directly or delegates to the primitive-backed
+      committer."
     date: "2026-11-07"
-  - text: "D6 — Typed blockers are the only blocker channel for lifecycle agents: publish via blockers publish, consume via blockers list/answer. The pm-notes blockers collection stays schema-allowed but is no longer an agent write target."
+  - text: "D6 — Typed blockers are the only blocker channel for lifecycle agents:
+      publish via blockers publish, consume via blockers list/answer. The
+      pm-notes blockers collection stays schema-allowed but is no longer an
+      agent write target."
     date: "2026-11-07"
-  - text: "D7 — Coordinator J1 iteration is expressed with status, blockers, merge, closeout, and queue plan. Per-ticket delivery still calls the bash dispatch until M1-S9 lands; that entry point is not retired, so it is not demoted from a primary path."
+  - text: "D7 — Coordinator J1 iteration is expressed with status, blockers, merge,
+      closeout, and queue plan. Per-ticket delivery still calls the bash
+      dispatch until M1-S9 lands; that entry point is not retired, so it is not
+      demoted from a primary path."
     date: "2026-11-07"
 open_questions: []
 blockers:
-  - text: "DoR iteration 1 NOT_READY: RR-1 missing DoD; RR-2 reverse failure window in completion ordering; RR-3/4/5 hidden phase dependencies; RR-6 state/mcp misclassification; RR-7 four current-truth specs omitted; RR-8 fixture inventory gaps/name mismatches; RR-9 entrypoint/no-config identity undefined; RR-10 non-deterministic thresholds and unowned composition AC; RR-11 one-PR risk acceptance missing."
+  - text: "DoR iteration 1 NOT_READY: RR-1 missing DoD; RR-2 reverse failure window
+      in completion ordering; RR-3/4/5 hidden phase dependencies; RR-6 state/mcp
+      misclassification; RR-7 four current-truth specs omitted; RR-8 fixture
+      inventory gaps/name mismatches; RR-9 entrypoint/no-config identity
+      undefined; RR-10 non-deterministic thresholds and unowned composition AC;
+      RR-11 one-PR risk acceptance missing."
     date: "2026-11-07"
     resolved_date: "2026-11-07"
 notes:
-  - text: "Clarify-scope cross-check found no requirement contradiction with doc/spec: the typed primitives exist (phase, commit, plan, blockers, status, merge, closeout, queue), but their agent adoption is explicitly deferred by GH-227 NG-1 and is this ticket's job."
+  - text: "Clarify-scope cross-check found no requirement contradiction with
+      doc/spec: the typed primitives exist (phase, commit, plan, blockers,
+      status, merge, closeout, queue), but their agent adoption is explicitly
+      deferred by GH-227 NG-1 and is this ticket's job."
     type: info
     date: "2026-11-07"
-  - text: "Doc impact: doc/spec feature pages for commit, pm-notes/phase, result contract, status/blockers, and the guides change-lifecycle, AGENTS.md, and autonomous-batch-delivery must be reconciled. New guide required for agent-facing primitive calls."
+  - text: "Doc impact: doc/spec feature pages for commit, pm-notes/phase, result
+      contract, status/blockers, and the guides change-lifecycle, AGENTS.md, and
+      autonomous-batch-delivery must be reconciled. New guide required for
+      agent-facing primitive calls."
     type: risk
     date: "2026-11-07"
-  - text: "Retro: state detection took an extra pass because the GitHub default branch (main) is stale while delivery truth is main-tools; git/gh local checks were required."
+  - text: "Retro: state detection took an extra pass because the GitHub default
+      branch (main) is stale while delivery truth is main-tools; git/gh local
+      checks were required."
     type: retro
     date: "2026-11-07"
-  - text: "OQ resolution: no split; TDR-0013 authored for the session-guard reversal; help + reconciled reference pages satisfy the guide obligation; prompt-required composition subset."
+  - text: "OQ resolution: no split; TDR-0013 authored for the session-guard
+      reversal; help + reconciled reference pages satisfy the guide obligation;
+      prompt-required composition subset."
     type: decision
     date: "2026-11-07"
-  - text: "PM decision after DoR iter-1: keep one ticket/PR (delivery brief requires exactly one work item), accept the review-risk explicitly, and repair hidden dependencies by reordering phase tests and moving prompt/doc scans after their inputs. Reopen specification, test_planning, and delivery_planning."
+  - text: "PM decision after DoR iter-1: keep one ticket/PR (delivery brief requires
+      exactly one work item), accept the review-risk explicitly, and repair
+      hidden dependencies by reordering phase tests and moving prompt/doc scans
+      after their inputs. Reopen specification, test_planning, and
+      delivery_planning."
     type: decision
     date: "2026-11-07"
-  - text: "PM decision after DoR iter-2: close the residual forward dependencies in one pass — move pilot-fixture privacy/safety scanning into phase 9/final, add edge.ts and the commit/phase feature specs to their owning phases, use the existing platform-classified fallback.internal identity instead of inventing a config composition row, scope system-spec scans after reconciliation, and split the help coverage test from reference-page reconciliation."
+  - text: "PM decision after DoR iter-2: close the residual forward dependencies in
+      one pass — move pilot-fixture privacy/safety scanning into phase 9/final,
+      add edge.ts and the commit/phase feature specs to their owning phases, use
+      the existing platform-classified fallback.internal identity instead of
+      inventing a config composition row, scope system-spec scans after
+      reconciliation, and split the help coverage test from reference-page
+      reconciliation."
     type: decision
     date: "2026-11-07"
-  - text: "Retro: DoR caught a real atomicity hole (document written, commit failed) and several forward dependencies; the plan was too eager to put conformance scans before the artifacts they scan. Reopening is cheaper than discovering this in review."
+  - text: "Retro: DoR caught a real atomicity hole (document written, commit failed)
+      and several forward dependencies; the plan was too eager to put
+      conformance scans before the artifacts they scan. Reopening is cheaper
+      than discovering this in review."
     type: retro
     date: "2026-11-07"
-  - text: "Retro: DoR iteration 2 found that moving scans to later phases created new ownership gaps (pilot data in phase 8, system specs in phase 8, reference-page inventory in phase 1). The plan needs a single explicit 'who owns which artifact' matrix before re-entry, not piecemeal moves."
+  - text: "Retro: DoR iteration 2 found that moving scans to later phases created
+      new ownership gaps (pilot data in phase 8, system specs in phase 8,
+      reference-page inventory in phase 1). The plan needs a single explicit
+      'who owns which artifact' matrix before re-entry, not piecemeal moves."
     type: retro
     date: "2026-11-07"
-  - text: "DoR iteration 3: READY. Non-blocking RR-28..RR-31 fixed in spec v1.3 as an ownership/phrase consistency pass; no behavior or AC change."
+  - text: "DoR iteration 3: READY. Non-blocking RR-28..RR-31 fixed in spec v1.3 as
+      an ownership/phrase consistency pass; no behavior or AC change."
     type: info
     date: "2026-11-07"
-  - text: "Plan phase 1 complete: executable entrypoint, root/command help and version, fallback.internal composition honesty, static help coverage inventory. Commit 9b6fdbfc. Tests: 150 pass / 0 fail across the phase-1 suites; forbidden-literals 27 pass; install 55/55; pnpm typecheck green."
+  - text: "Plan phase 1 complete: executable entrypoint, root/command help and
+      version, fallback.internal composition honesty, static help coverage
+      inventory. Commit 9b6fdbfc. Tests: 150 pass / 0 fail across the phase-1
+      suites; forbidden-literals 27 pass; install 55/55; pnpm typecheck green."
     type: info
     date: "2026-11-07"
-  - text: "Plan phase 2 complete: delivery-session guard reversal and commit.session.context-refused retirement (commit domain six rows to five; machine table, documented table, corpora, fixtures, and sync check aligned); harness one-shot isolation retained. Commit 771acc8a. Tests: 219 pass / 0 fail across the phase-2 suites; error-table-sync entries=104 documented=104; pnpm typecheck green."
+  - text: "Plan phase 2 complete: delivery-session guard reversal and
+      commit.session.context-refused retirement (commit domain six rows to five;
+      machine table, documented table, corpora, fixtures, and sync check
+      aligned); harness one-shot isolation retained. Commit 771acc8a. Tests: 219
+      pass / 0 fail across the phase-2 suites; error-table-sync entries=104
+      documented=104; pnpm typecheck green."
     type: info
     date: "2026-11-07"
-  - text: "Plan phase 3 complete: completion stages plan scope union the change folder, plan-absent standalone commit stages the change folder, the pm-notes transition is written before the commit act with pre-write restore on failure, and the legacy post-commit window converges without a second commit. Commit 6d743956. Tests: 358 pass / 0 fail across commit/phase/pm-notes suites; phase-3 suites 37 pass; doc-conformance scope: behavior-spec 3 pass; pnpm typecheck green."
+  - text: "Plan phase 3 complete: completion stages plan scope union the change
+      folder, plan-absent standalone commit stages the change folder, the
+      pm-notes transition is written before the commit act with pre-write
+      restore on failure, and the legacy post-commit window converges without a
+      second commit. Commit 6d743956. Tests: 358 pass / 0 fail across
+      commit/phase/pm-notes suites; phase-3 suites 37 pass; doc-conformance
+      scope: behavior-spec 3 pass; pnpm typecheck green."
     type: info
     date: "2026-11-07"
-  - text: "Plan phase 4 complete: optional non-empty phases[].summary accepted and echoed by plan validate, plan-writer and template adoption, no tasks key. Commit 910e9533. Tests: 59 pass / 0 fail across plan and commit-message suites; build-claude-plugin 16/16; typecheck green."
+  - text: "Plan phase 4 complete: optional non-empty phases[].summary accepted and
+      echoed by plan validate, plan-writer and template adoption, no tasks key.
+      Commit 910e9533. Tests: 59 pass / 0 fail across plan and commit-message
+      suites; build-claude-plugin 16/16; typecheck green."
     type: info
     date: "2026-11-07"
-  - text: "Plan phase 5 complete: PM, coder, committer, commit, and run-plan adopt phase/commit/typed-blocker primitives; prompt-conformance plan-progress rule and lifecycle inventory added; Claude plugin regenerated. Commit b35f05d3. Tests: prompt/role conformance 13 pass; commit-command, phase-write-path-lint, pm-notes-lint 48 pass; build-claude-plugin 16/16; typecheck green."
+  - text: "Plan phase 5 complete: PM, coder, committer, commit, and run-plan adopt
+      phase/commit/typed-blocker primitives; prompt-conformance plan-progress
+      rule and lifecycle inventory added; Claude plugin regenerated. Commit
+      b35f05d3. Tests: prompt/role conformance 13 pass; commit-command,
+      phase-write-path-lint, pm-notes-lint 48 pass; build-claude-plugin 16/16;
+      typecheck green."
     type: info
     date: "2026-11-07"
-  - text: "Plan phase 6 complete: CEO J1 loop via status/blockers answer/verify change/phase list/merge/closeout/queue plan; review and writer roles stay pure and commit through the primitive; PR manager never merges; retained/retired fixture and coordinator suite added; Claude plugin regenerated. Commit 9e39741b. Tests: role/coordinator/blocker adoption 81 pass; build-claude-plugin 16/16; biome clean."
+  - text: "Plan phase 6 complete: CEO J1 loop via status/blockers answer/verify
+      change/phase list/merge/closeout/queue plan; review and writer roles stay
+      pure and commit through the primitive; PR manager never merges;
+      retained/retired fixture and coordinator suite added; Claude plugin
+      regenerated. Commit 9e39741b. Tests: role/coordinator/blocker adoption 81
+      pass; build-claude-plugin 16/16; biome clean."
     type: info
     date: "2026-11-07"
-  - text: "Plan phase 7 complete: AGENTS.md, guides, M1 man page, and all prompt-required command reference pages reconciled to the commit primitive, phase family, typed blockers, retained bash, session-guard reversal, staging scope, and plan summary; entrypoint page added; doc-conformance scope: docs added. Commit 1e9168fb. Tests: doc-conformance 6 pass (scope: docs 3 pass); biome clean. Necessary defect fix d2644ee4 makes the template commit subject conventional."
+  - text: "Plan phase 7 complete: AGENTS.md, guides, M1 man page, and all
+      prompt-required command reference pages reconciled to the commit
+      primitive, phase family, typed blockers, retained bash, session-guard
+      reversal, staging scope, and plan summary; entrypoint page added;
+      doc-conformance scope: docs added. Commit 1e9168fb. Tests: doc-conformance
+      6 pass (scope: docs 3 pass); biome clean. Necessary defect fix d2644ee4
+      makes the template commit subject conventional."
     type: info
     date: "2026-11-07"
-  - text: "Plan phase 8 complete: full PSCAN rule set over every agent/command with mutants and repeat runs; help/guide coverage matrix and mutants; reference-page parity; prompt and fixture secret scans; key=value/plan/verify goldens; scans wired into pnpm check and the CI aggregate job. Commit 41c7e38d. Tests: 93 phase-8 tests pass; scanners clean; retained bash suites 54 pass; plugin 16/16; typecheck and biome green."
+  - text: "Plan phase 8 complete: full PSCAN rule set over every agent/command with
+      mutants and repeat runs; help/guide coverage matrix and mutants;
+      reference-page parity; prompt and fixture secret scans;
+      key=value/plan/verify goldens; scans wired into pnpm check and the CI
+      aggregate job. Commit 41c7e38d. Tests: 93 phase-8 tests pass; scanners
+      clean; retained bash suites 54 pass; plugin 16/16; typecheck and biome
+      green."
     type: info
     date: "2026-11-07"
-  - text: "Plan phase 9 complete: fixture-backed pilot J1 conformance suite (real temp repository, bare mirror, JSONL state ledger, seeded change folder/plan/pm-notes, fixed clock/ids/fence tokens, recording tracker/CI/PR-platform/provider stubs, real merge squash landing and closeout sweep, real envelopes/exits) plus TC-PSCAN-010 pilot privacy and commit-safety scan. Commit 60d17369. Tests: 54 pass / 0 fail across the phase-9 suites (TC-PILOT-001..006, TC-PSCAN-010); zero outbound calls, zero sleeps, byte-identical double replay, expected next ref GH-320."
+  - text: "Plan phase 9 complete: fixture-backed pilot J1 conformance suite (real
+      temp repository, bare mirror, JSONL state ledger, seeded change
+      folder/plan/pm-notes, fixed clock/ids/fence tokens, recording
+      tracker/CI/PR-platform/provider stubs, real merge squash landing and
+      closeout sweep, real envelopes/exits) plus TC-PSCAN-010 pilot privacy and
+      commit-safety scan. Commit 60d17369. Tests: 54 pass / 0 fail across the
+      phase-9 suites (TC-PILOT-001..006, TC-PSCAN-010); zero outbound calls,
+      zero sleeps, byte-identical double replay, expected next ref GH-320."
     type: info
     date: "2026-11-07"
-  - text: "Plan phase 10 complete: Claude plugin regenerated byte-current (no drift), §16.1.1 phrase-table rows reconciled (commit-primitive, pm-notes transitions, result contract, delivery lifecycle, quality-gates-and-pr, autonomous delivery, local code review, and the generic behavioral-primitives row), doc-conformance scope: full green, and the aggregate gate green. Commit 557c8beb. Tests: pnpm check 5730 pass / 4 skip / 0 fail across 5734 tests (620 files); boundaries, ambient globals, workspace entrypoints, secret-read boundary, prompt-conformance, help/guide coverage, and exports parity green; doc-conformance 11 pass (scope: full 5 pass); build-claude-plugin 16/16; install and retained-bash suites 54 pass; pilot suite 28 pass. Gate remediation included a minor five-package changeset, the entrypoint.md forbidden-literals registry row, a branding-seam export refactor (behavioral accessors instead of exported string constants), stale aggregate-string pins in privacy-ci-wiring/license-ci-binding, and a lint typing fix in prompt-secret-scan."
+  - text: "Plan phase 10 complete: Claude plugin regenerated byte-current (no
+      drift), §16.1.1 phrase-table rows reconciled (commit-primitive, pm-notes
+      transitions, result contract, delivery lifecycle, quality-gates-and-pr,
+      autonomous delivery, local code review, and the generic
+      behavioral-primitives row), doc-conformance scope: full green, and the
+      aggregate gate green. Commit 557c8beb. Tests: pnpm check 5730 pass / 4
+      skip / 0 fail across 5734 tests (620 files); boundaries, ambient globals,
+      workspace entrypoints, secret-read boundary, prompt-conformance,
+      help/guide coverage, and exports parity green; doc-conformance 11 pass
+      (scope: full 5 pass); build-claude-plugin 16/16; install and retained-bash
+      suites 54 pass; pilot suite 28 pass. Gate remediation included a minor
+      five-package changeset, the entrypoint.md forbidden-literals registry row,
+      a branding-seam export refactor (behavioral accessors instead of exported
+      string constants), stale aggregate-string pins in
+      privacy-ci-wiring/license-ci-binding, and a lint typing fix in
+      prompt-secret-scan."
     type: info
     date: "2026-11-08"
-  - text: "Phase-10 gate note: pnpm check was executed with TMPDIR=./tmp/tmpdir because the host system /tmp lives on a different filesystem than the repository and the hermetic ci-baseline-parity test uses `git clone --local` hardlinks. With the repo-local TMPDIR the gate is green; CI uses a same-filesystem checkout and is unaffected by the host-specific limitation."
+  - text: "Phase-10 gate note: pnpm check was executed with TMPDIR=./tmp/tmpdir
+      because the host system /tmp lives on a different filesystem than the
+      repository and the hermetic ci-baseline-parity test uses `git clone
+      --local` hardlinks. With the repo-local TMPDIR the gate is green; CI uses
+      a same-filesystem checkout and is unaffected by the host-specific
+      limitation."
     type: risk
+    date: "2026-11-08"
+  - text: "Resume sync merged origin/main-tools (GH-240 capsule completion,
+      f87ec185) into the change branch as merge commit 82affdd4. Conflicts in 11
+      files were resolved preserving both feature sets: GH-242 five-row commit
+      domain/staging/ordering and GH-240 capsule/closeout; error-table count 105
+      identities; full suite 5948 pass / 4 skip / 0 fail with repo-local
+      TMPDIR."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 10 complete and delivery boundary reached: all ten plan phases
+      implemented, targeted suites green, aggregate gate green. Delivery marked
+      complete before docs sync."
+    type: info
     date: "2026-11-08"
