@@ -1,0 +1,273 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-239
+branch: feat/GH-239/dispatch-engine
+status: PASS
+summary: >-
+  Third and final review, after remediation commits 10857a2c (F-15, F-16,
+  tests, spec/TDR/feature reconciliation), 74412769 (pm-notes evidence) and the
+  doc-verification pass 44ad1208. Both blocking findings are closed and I
+  re-proved them myself rather than trusting the added suites. F-15: the
+  identity binding is now a create-once marker inside the checkout's git common
+  directory (`<git-common-dir>/dispatch-identity.json`); through
+  `createProductionComposer` two checkouts in one home recorded GH-901 under
+  acme/alpha and GH-902 under acme/beta with distinct markers, a third
+  checkout's read-only `dual-run summary --repo` (foreign and own repo) created
+  no marker and never re-keyed a later dispatch (the exact F-15 regression
+  shape now records acme/gamma), a renamed checkout with a changed remote and
+  scheduler key kept its acme/alpha binding, and a linked worktree resolved the
+  main checkout's common directory and shared its marker (24/24 probes). F-16:
+  a latching stall is gone (a `progressing` verdict clears it) and
+  `deriveDispatchResult` no longer re-keys a completed session to
+  `max-restarts`; a transient stall followed by progress classifies `finished`
+  at an exhausted budget, while a persistently stalled session at the bound
+  still refuses `max-restarts` with the terminal exhaustion record and one
+  attempt record. No regression found in the adapter read/write paths (no
+  marker was written into the real repository's git dir by any suite or probe),
+  the `persist` gate-read separation, secret/privacy bounds, or the merge
+  absence. `TMPDIR="$PWD/tmp/tmpdir" pnpm check` is EXIT 0 (6442 pass / 4 skip /
+  0 fail across 767 files; boundaries, ambient globals, workspace entrypoints,
+  secret-read boundary, prompt conformance, help coverage, exports parity
+  green); the dispatch suites (246 pass across 44 files), the watch/identity/
+  composition trio (34 pass), dispatch conformance plus doc conformance (12
+  pass) and the bash fallback matrix (5/5) all pass. Remaining findings are
+  hygiene only: two stale code docblocks that still describe a store-managed
+  marker, one undeclared supporting adapter file in the plan scope, one lost
+  derivation-level assertion for the restart-budget branch, a non-atomic
+  create-once marker write, a command reference page that still describes the
+  latched stall, an unimplemented "recorded discrepancy" sentence in TDR-0015
+  §6 with a dead `engineIdentity` field, and the still-untracked review
+  artifacts. Severity: 0 critical / 0 high / 0 medium / 6 low / 1 info, with
+  F-14 carried as an open info item from the prior iteration.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 6
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+blocking: []
+
+verification:
+  diff_base: "main-tools...HEAD (163 files, 0 behind)"
+  remediation_commits: ["10857a2c", "74412769", "44ad1208"]
+  commands_run:
+    - command: "bun test tests/behaviour/dispatch-*.test.ts tests/structure/dispatch-*.test.ts tests/golden/dispatch-*.test.ts"
+      result: "246 pass / 0 fail across 44 files (1444 expects)."
+    - command: "bun test tests/behaviour/dispatch-watch.test.ts tests/behaviour/dispatch-identity.test.ts tests/structure/dispatch-composition.test.ts"
+      result: "34 pass / 0 fail (239 expects): transient-stall-clears, persistent-stall-refuses, per-checkout marker, rename invariance, two-repository isolation, read-only-no-bind."
+    - command: "bun test tests/conformance/dispatch/ tests/checks/dispatch-doc-conformance.test.ts"
+      result: "12 pass / 0 fail across 4 files (93 expects)."
+    - command: "bash scripts/.tests/test-dispatch-bash-fallback.sh"
+      result: "5 tests, 5 passed, 0 failed (dual-run/authoritative/absent matrix deterministic on rerun)."
+    - command: "TMPDIR=\"$PWD/tmp/tmpdir\" pnpm check"
+      result: "EXIT 0 — lint, format, typecheck, 6442 pass / 4 skip / 0 fail (767 files); boundaries (356 modules), ambient-globals (162 files), workspace-entrypoints, secret-read-boundary (325 files), prompt-conformance (5 prompts), help-guide-coverage, exports-parity all green."
+    - command: "delivery-os plan validate GH-239"
+      result: "verdict=valid, artifact=yaml:chg-GH-239-plan.yaml, tier=full, readyForDevelopment=true."
+    - command: "delivery-os plan diff GH-239 --against main-tools"
+      result: "input.value.rejected ('repository diff for GH-239 could not be read') although `git diff --name-only main-tools...HEAD` works; plan-diff tooling limitation in this linked-worktree environment, so scope was audited manually (see F-18)."
+    - command: "ad-hoc production-composer probe (tmp/probe-iter3.ts, deleted after)"
+      result: "24/24 probes passed: (a) two checkouts in one home record GH-901->acme/alpha, GH-902->acme/beta with distinct markers; (b) read-only `summary --repo github.com/acme/other` and `--repo github.com/acme/alpha` both exit 0, name the requested repo, and create no marker, and a later dispatch in that checkout records acme/gamma (the exact F-15 regression shape is gone); (c) rename + remote change keeps the acme/alpha marker and the summary/record stay alpha; (d) a linked-worktree `.git` file + `commondir` resolves to the main checkout's `.git` and shares its marker; (e) the real repository git dir holds no `dispatch-identity.json` after all probes."
+    - command: "ad-hoc derivation probe (tmp/probe-derive.ts, deleted after)"
+      result: "completed@bound -> pr-open/complete; timed-out@bound -> max-restarts/failed dispatch.restart-budget-exceeded; premature-end@bound -> max-restarts/failed; completed@bound-1 -> pr-open. F-16 semantics hold and the branch is still reachable for non-completed outcomes (see F-19)."
+  cross_repository_proof: "F-15 closed: marker is checkout-scoped in the git common directory, create-once (flag 'wx'), never overwritten, gate reads use persist:false so only the run path persists, and linked worktrees share it via resolveCheckoutGitDirectories/resolveGitDir commondir."
+  watch_semantics_proof: "F-16 closed: dispatch.ts observeLiveness now clears a stall on a later `progressing` verdict; dispatch.ts:582 still routes a stall that is current at collect resolution through admitDispatchRestart; dispatch-result.ts:190-202 exempts a completed harness from the restart-budget refusal."
+  leak_check: "No `dispatch-identity.json` in the real repository git dir before or after all suites/probes; marker payload is {schema, repository} only — no path digest, no secret, no credential. No merge port/path added (TC-MERGE-004 suites green)."
+  untracked_check: "git status --porcelain shows exactly one entry: `?? doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/code-review/` (iter-1, iter-2, and now iter-3). No other untracked or modified files."
+
+prior_findings_disposition:
+  F-15: "CLOSED — verified in code (adapters/src/file/dispatch-identity.ts create-once marker in the git common dir; adapters/src/repo/index.ts resolveCheckoutGitDirectories; cli/src/production.ts:254-261, 476-498 persist switch; gate readers persist:false at 941-942, 986-987; run persists at 1003-1005) and re-proved through createProductionComposer with two repositories in one home, a read-only summary of a foreign --repo, a rename plus remote change, and a linked worktree. Spec (F-6/DEC-13/AC-F6-6), TDR-0015 §6, feature doc, glossary, architecture overview and test spec all state the new location."
+  F-16: "CLOSED — dispatch.ts:505-509 clears the stall on progress, dispatch-result.ts:187-202 exempts a completed session; the watch suites assert finished-at-exhausted-budget (transient) and max-restarts-with-terminal-exhaustion (persistent), and my own derivation probe confirms the non-completed branch still refuses."
+  F-14: "OPEN (info) — the remediation commits 10857a2c, 74412769 and 44ad1208 still carry the primitive's auto-generated `docs(GH-239): update <path>` subjects even though 10857a2c changes production code; auditability note only, unchanged from iteration 2."
+
+findings:
+  - id: F-17
+    severity: low
+    confidence: high
+    category: documentation
+    location: packages/core/src/domain/dispatch-identity.ts:5-9
+    message: >-
+      Two code docblocks still describe the superseded mechanism: the domain
+      policy header says the marker is "created through store-managed artifact
+      semantics", and contracts/dispatch.ts:38 calls
+      `DISPATCH_IDENTITY_MARKER_NAME` "the store-managed first-use identity
+      marker name". The delivered marker is a create-once file in the checkout's
+      git common directory, and the adapter, spec, TDR-0015 §6 and the feature
+      doc were all updated — these two comments were not, so the code now
+      contradicts its own reconciled documentation.
+    suggestion: >-
+      Reword both docblocks to the checkout-scoped
+      `<git-common-dir>/dispatch-identity.json` create-once file (no
+      store-managed artifact), matching the adapter header and TDR-0015 §6.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-18
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/chg-GH-239-plan.yaml:272-320
+    message: >-
+      Remediation 10857a2c adds production surface to
+      `packages/adapters/src/repo/index.ts` (`CheckoutGitDirectories` and
+      `resolveCheckoutGitDirectories`), which appears in no phase's
+      `scope.files`/`folders` and in no entry of the plan's cross-phase
+      file-ownership note; phase 3's summary still attributes common-dir
+      discovery to `file/dispatch-identity.ts`. Unlike the phase-1 precedent,
+      where the omitted `scripts/checks/error-table-sync.ts` was recorded as a
+      scope-drift note in pm-notes, this file went in undeclared and
+      unrecorded. `plan validate` still returns `valid`. This is a declaration
+      gap, not a behavioral scope violation: every delivered phase remains
+      complete with test evidence.
+    suggestion: >-
+      Add `packages/adapters/src/repo/index.ts` to phase 3's `scope.files` (and
+      the cross-phase ownership note), correct the phase-3 summary to name
+      `resolveCheckoutGitDirectories` as the common-dir source, or record the
+      drift in pm-notes as the phase-1 precedent did.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-19
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/behaviour/dispatch-token-closure.test.ts:51
+    message: >-
+      The `harnessCompleted` exemption in `deriveDispatchResult` removed the
+      only direct assertion of the derivation-level restart-budget branch: the
+      matrix case `truthInput({ restarts: { count: 3, bound: 3 } })` feeds the
+      default completed evidence, so it now derives `pr-open` instead of
+      `max-restarts`, while the test only asserts membership in the closed token
+      set. The branch stays reachable (verified: timed-out and premature-end at
+      the bound both derive `max-restarts`/`dispatch.restart-budget-exceeded`),
+      but nothing asserts it, so a future removal of the refusal would stay
+      green.
+    suggestion: >-
+      Add an explicit case using `TIMED_OUT_EVIDENCE` (or premature-end) with
+      `restarts: { count: 3, bound: 3 }` asserting
+      `max-restarts`/`failed`/`dispatch.restart-budget-exceeded`, and keep the
+      completed-evidence case asserting `pr-open` as the F-16 contract.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-20
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/adapters/src/file/dispatch-identity.ts:41-53
+    message: >-
+      The create-once marker is written non-atomically with a single
+      `writeFileSync(path, content, { flag: "wx" })`, and every write error is
+      swallowed. Because the file is never overwritten, a crash or partial write
+      that leaves a torn marker is permanent: `parseIdentityMarker` returns
+      undefined, `resolveDispatchIdentity` falls back to the scheduler key/remote
+      (ungoverned, so a later remote change can re-key history), and `ensure`
+      can never repair it because `wx` fails on the existing file and the
+      read-back returns the torn content unexamined. The doc already states an
+      unpersistable marker never changes the resolved identity, so silent
+      degradation is intended; the unrepairable state is not.
+    suggestion: >-
+      Write to a sibling temporary file and hard-link/rename it into place (or
+      open with 'wx', write, fsync, close, and delete on failure), and treat an
+      unparseable existing marker as absent-and-replaceable while keeping
+      create-once for a valid marker.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-21
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/planning/oss-tooling/milestones/m1/commands/dispatch.md:31-38
+    message: >-
+      The dispatch command reference page still states "A corroborated stall at
+      or above `lane.restart-budget` is the restart-budget refusal" with no
+      qualifier, so it describes the pre-F-16 latched semantics: it omits both
+      that a later `progressing` observation clears a transient stall and that a
+      completed session is never re-keyed to `max-restarts` by an
+      already-reached bound. `feature-dispatch-engine.md`,
+      `feature-session-lifecycle-economics.md` and the test spec were
+      reconciled; this help-linked page (the entrypoint's help entries point at
+      it) was not.
+    suggestion: >-
+      Add the "stall that is still current when evidence collection resolves"
+      qualifier and the completed-session exemption to the reference page — it
+      is one of the two planning files the change is allowed to reconcile
+      (OQ-T6).
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-23
+    severity: low
+    confidence: medium
+    category: spec-compliance
+    location: doc/decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md:427
+    message: >-
+      TDR-0015 §6 states that when a later derived value disagrees with the
+      persisted binding, "the discrepancy is recorded as a bounded attribute,
+      not a new repository identity". No record carries that attribute:
+      `DispatchAttemptRecord.engineIdentity` (contracts/dispatch.ts:205) is
+      declared and never produced anywhere in `packages/**`, and
+      `resolveProductionRepository` discards the source and any disagreement.
+      Because the marker now governs over a disagreeing scheduler key, a
+      dispatch of a ref queued for another repository is silently attributed to
+      the checkout's binding with no trace. No AC requires the attribute, so
+      this is record-completeness rather than behavior.
+    suggestion: >-
+      Either populate `engineIdentity` with the scheduler key when it differs
+      from the governing binding (and document that it is the recorded
+      discrepancy), or narrow the TDR §6 sentence to the behavior actually
+      delivered so the record and the code agree.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-22
+    severity: info
+    confidence: high
+    category: process
+    location: doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/code-review/
+    message: >-
+      `code-review/review-iter-1.yaml`, `review-iter-2.yaml` and now
+      `review-iter-3.yaml` are the only untracked paths in the tree, and no
+      plan phase declares `code-review/` in its scope. The pm-notes iteration-1
+      entry already records that the commit primitive does not stage the review
+      folder, so the durable review record for this change will not land in the
+      PR unless the review-phase commit is given the folder explicitly.
+    suggestion: >-
+      Include `doc/changes/.../code-review/` in the review-phase commit (or
+      declare it in the plan) so the review gate evidence travels with the PR.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+accepted_residuals:
+  - "TDR-0015 remains `Proposed`; owner acceptance at PR review is a merge gate (DEC-20), not a code defect."
+  - "F-14 stays open as info: remediation commit subjects are the primitive's auto-generated `docs(GH-239): update <path>` form, including the code-changing 10857a2c."
+  - "No real repository is flipped and no real pilot evidence is accrued; the controlled proof is the PR-scope instrument (NG-1/NG-9)."
+  - "The daemon production entry that supplies the lane composition stays GH-238 scope; GH-239 proves the seam and the daemon-path attempt producer (F-8 disposition)."
+  - "The `data.error` nesting on attempt-stage failures is a documented, type-safe extension of the result envelope (DM-5, feature-result-contract)."
+  - "Evidence retention/compaction, cross-host authority, and real-provider latency remain out of scope (NG-6/NG-11)."
+  - "`plan diff` could not run in this environment (input.value.rejected though plain `git diff main-tools...HEAD` works); `plan validate` returned valid and the scope audit was done manually."
+
+reviewed_at: 2026-11-08T18:10:00Z
+next_step: >-
+  PROCEED. F-15 and F-16 are closed and re-proved through
+  createProductionComposer and the watch suites; the aggregate gate is green and
+  no regression was found in the identity adapter, worktree handling, persist
+  separation, privacy, or merge absence. No finding blocks the change. Before or
+  with the PR, the low/info hygiene items remain optional: refresh the two stale
+  marker docblocks (F-17), declare `packages/adapters/src/repo/index.ts` in the
+  plan scope or record the drift (F-18), add the non-completed-at-bound
+  derivation assertion (F-19), make the marker write atomic and torn-tolerant
+  (F-20), add the transient-stall/completed-session qualifier to the dispatch
+  reference page (F-21), reconcile TDR-0015 §6 with the delivered record or
+  populate `engineIdentity` (F-23), and include the `code-review/` folder in the
+  review-phase commit (F-22).

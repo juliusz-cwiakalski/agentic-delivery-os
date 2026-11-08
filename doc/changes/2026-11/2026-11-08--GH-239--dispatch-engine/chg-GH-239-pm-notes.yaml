@@ -12,7 +12,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-08T09:36:33.945Z }
   delivery: { started: null, completed: 2026-11-08T13:53:26.334Z }
   system_spec_update: { started: null, completed: 2026-11-08T14:15:26.682Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-08T16:52:12.898Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -351,8 +351,8 @@ notes:
       and exports parity all green)."
     type: info
     date: "2026-11-08"
-  - text: "Review iteration 1 verdict FAIL (code-review/review-iter-1.yaml):
-      0 critical, 3 high, 5 medium, 5 low, 1 info. High findings are production
+  - text: "Review iteration 1 verdict FAIL (code-review/review-iter-1.yaml): 0
+      critical, 3 high, 5 medium, 5 low, 1 info. High findings are production
       composition gaps: F-1 the gate (summary/resolve/handover) is not composed,
       so the shipped CLI refuses input.value.rejected; F-2 existingLane and
       restartBudget are not composed, so --resume-prompt spawns fresh and the
@@ -363,10 +363,10 @@ notes:
     date: "2026-11-08"
   - text: "Remediation routing for review iteration 1: @coder fixes F-1..F-9 and
       F-11..F-13 in one pass; F-8 (daemon production entry) is partially
-      GH-238-owned and must be explicitly dispositioned; F-10 (nested data.error)
-      is accepted as a documented extension, requiring one spec/DM-5 sentence;
-      F-14 is informational (auto-generated commit subjects). Then re-run
-      @doc-syncer if behavior changed, then @reviewer iteration 2."
+      GH-238-owned and must be explicitly dispositioned; F-10 (nested
+      data.error) is accepted as a documented extension, requiring one spec/DM-5
+      sentence; F-14 is informational (auto-generated commit subjects). Then
+      re-run @doc-syncer if behavior changed, then @reviewer iteration 2."
     type: info
     date: "2026-11-08"
   - text: "Review iteration 2 verdict FAIL (code-review/review-iter-2.yaml). F-1,
@@ -380,104 +380,108 @@ notes:
     type: blocker
     date: "2026-11-08"
   - text: "Review iteration 1 remediation complete in one pass. Delivery commit
-      27f791b9 (production composition, corroboration/identity/watch policy, tests,
-      spec/plan reconciliation, registry bookkeeping). F-1 FIXED: the shipped
-      createProductionComposer now composes the evidence gate (scope production,
-      principal local-same-user, resolveRepository via resolveDispatchIdentity), and
-      dual-run summary, dual-run resolve, and handover [--revert] all run through
-      createDispatchComposer in the new production-composition suite (proven, not
-      just advertised). F-2 FIXED: existingLane is composed from the latest
-      resumable daemon lane record (session, folded completed phases, adapter
-      resume-injection capability, persisted restart count), restartBudget and
-      livenessIntervalMs resolve from lane.restart-budget / lane.liveness-interval,
-      --resume-prompt now resumes the existing session (asserted --session <id>, no
-      fresh spawn), and a restart-budget refusal appends the delivered terminal
-      exhaustion record via ensureEconomicsExhaustionRecord (asserted through the
+      27f791b9 (production composition, corroboration/identity/watch policy,
+      tests, spec/plan reconciliation, registry bookkeeping). F-1 FIXED: the
+      shipped createProductionComposer now composes the evidence gate (scope
+      production, principal local-same-user, resolveRepository via
+      resolveDispatchIdentity), and dual-run summary, dual-run resolve, and
+      handover [--revert] all run through createDispatchComposer in the new
+      production-composition suite (proven, not just advertised). F-2 FIXED:
+      existingLane is composed from the latest resumable daemon lane record
+      (session, folded completed phases, adapter resume-injection capability,
+      persisted restart count), restartBudget and livenessIntervalMs resolve
+      from lane.restart-budget / lane.liveness-interval, --resume-prompt now
+      resumes the existing session (asserted --session <id>, no fresh spawn),
+      and a restart-budget refusal appends the delivered terminal exhaustion
+      record via ensureEconomicsExhaustionRecord (asserted through the
       production composer). F-3 FIXED: repository identity resolves through
       resolveDispatchIdentity (scheduler key -> normalized remote -> persisted
       first-use marker), persists the binding with
-      ensureDispatchIdentityMarkerText, and refuses cleanly when nothing resolves; a
-      rename/remote-change production test proves the persisted binding governs and
-      attempts are not re-keyed. F-4 FIXED: handoverDispatchEvidence folds the
-      authority ledger before appending and returns {recorded:false,noop:true} when
-      already authoritative; an advancing-clock test asserts exactly one handover
-      record. F-5 FIXED: trackerTokenOf returns pr-open for any open PR and
-      urlResolved is the comparison attribute; the production test asserts
-      comparison.token pr-open with urlResolved false and falseSuccess false. F-6
-      FIXED: corroboration facts carry an explicit unreadable marker; only a
-      readable contradiction is a false-success incident, so an unreadable source
-      blocks corroboration without resetting the window; a merged + unreadable-CI
-      test proves falseSuccess false and corroboration unsatisfied with no
-      divergence. F-7 FIXED: the one-shot path polls harness.liveness at
-      lane.liveness-interval while collect is pending, carries the previous
-      observation, records the verdict trail as attempt liveness evidence
-      (liveness:*), and routes a corroborated stall through restart admission
-      (max-restarts + terminal exhaustion at/above the bound); below the bound the
-      stall is recorded and the delivered port (no kill) never leaks a second
-      session, documented in the spec F-1 and the dispatch reference page. F-8
-      DISPOSITIONED: the lane-plan/executor seam and daemon-path attempt record are
-      delivered and proven at the factory; the production daemon entry is owned by
-      the GH-238 follow-up, so AC-F10-1 is now stated as seam-level proof and this
-      note records the accepted disposition rather than inventing a daemon command.
-      F-9 FIXED: a post-spawn harness.collect failure is pinned as an attempt-stage
-      Appendix G row (state-unverified/failed at exit 2, one record,
-      not-applicable comparison) and tested. F-10 FIXED: DM-5 documents the
-      attempt-stage data.error envelope extension and the data.result + data.error
-      read. F-11 FIXED: NFR-4 documents the delivered store read as the bound and
-      the newest-5,000 retained fold, and a >5,000-record test proves the declared
-      truncation (bound 5000, omitted 10). F-12 FIXED: the production-composition
-      suite injects repository facts (no real origin dependency). F-13 FIXED: plan
-      phase 10 tests now name dispatch-gate-evidence and dispatch-evidence-class,
-      phase 1 owns the TC-HELP-003 harness slice, phase 4 confirms the pre-inversion
-      entrypoint run, and the four bookkeeping files plus the new watch suite are
-      declared in the owning phase scopes and the header cross-phase note (R2/R7
+      ensureDispatchIdentityMarkerText, and refuses cleanly when nothing
+      resolves; a rename/remote-change production test proves the persisted
+      binding governs and attempts are not re-keyed. F-4 FIXED:
+      handoverDispatchEvidence folds the authority ledger before appending and
+      returns {recorded:false,noop:true} when already authoritative; an
+      advancing-clock test asserts exactly one handover record. F-5 FIXED:
+      trackerTokenOf returns pr-open for any open PR and urlResolved is the
+      comparison attribute; the production test asserts comparison.token pr-open
+      with urlResolved false and falseSuccess false. F-6 FIXED: corroboration
+      facts carry an explicit unreadable marker; only a readable contradiction
+      is a false-success incident, so an unreadable source blocks corroboration
+      without resetting the window; a merged + unreadable-CI test proves
+      falseSuccess false and corroboration unsatisfied with no divergence. F-7
+      FIXED: the one-shot path polls harness.liveness at lane.liveness-interval
+      while collect is pending, carries the previous observation, records the
+      verdict trail as attempt liveness evidence (liveness:*), and routes a
+      corroborated stall through restart admission (max-restarts + terminal
+      exhaustion at/above the bound); below the bound the stall is recorded and
+      the delivered port (no kill) never leaks a second session, documented in
+      the spec F-1 and the dispatch reference page. F-8 DISPOSITIONED: the
+      lane-plan/executor seam and daemon-path attempt record are delivered and
+      proven at the factory; the production daemon entry is owned by the GH-238
+      follow-up, so AC-F10-1 is now stated as seam-level proof and this note
+      records the accepted disposition rather than inventing a daemon command.
+      F-9 FIXED: a post-spawn harness.collect failure is pinned as an
+      attempt-stage Appendix G row (state-unverified/failed at exit 2, one
+      record, not-applicable comparison) and tested. F-10 FIXED: DM-5 documents
+      the attempt-stage data.error envelope extension and the data.result +
+      data.error read. F-11 FIXED: NFR-4 documents the delivered store read as
+      the bound and the newest-5,000 retained fold, and a >5,000-record test
+      proves the declared truncation (bound 5000, omitted 10). F-12 FIXED: the
+      production-composition suite injects repository facts (no real origin
+      dependency). F-13 FIXED: plan phase 10 tests now name
+      dispatch-gate-evidence and dispatch-evidence-class, phase 1 owns the
+      TC-HELP-003 harness slice, phase 4 confirms the pre-inversion entrypoint
+      run, and the four bookkeeping files plus the new watch suite are declared
+      in the owning phase scopes and the header cross-phase note (R2/R7
       applied). F-14 informational (auto-generated commit subjects), noted only.
       Doc-sync follow-up also registered feature-dispatch-engine.md and
       test-spec-dispatch-engine.md in the forbidden-literals registry, which the
-      unregistered-doc scan required. Tests: dispatch behaviour/structure/golden/
-      conformance suites (302), daemon/entrypoint suites, pnpm typecheck,
-      pnpm check:boundaries, and the aggregate pnpm check (TMPDIR in-repo) green:
-      6439 pass, 4 skip, 0 fail; prompt conformance, help coverage, and exports
-      parity green."
+      unregistered-doc scan required. Tests: dispatch
+      behaviour/structure/golden/ conformance suites (302), daemon/entrypoint
+      suites, pnpm typecheck, pnpm check:boundaries, and the aggregate pnpm
+      check (TMPDIR in-repo) green: 6439 pass, 4 skip, 0 fail; prompt
+      conformance, help coverage, and exports parity green."
     type: info
     date: "2026-11-08"
   - text: "Review iteration 1 remediation follow-ups: aaa603a6 (pm-notes evidence
-      note for the iteration) and 00ac214b (the merged-plus-unreadable-CI test also
-      asserts the gate: incidents 0, windowStartReason first-counted-dispatch,
-      corroboration unsatisfied >= 1, eligibility false). Final aggregate
-      pnpm check with TMPDIR in-repo is green: 6439 pass, 4 skip, 0 fail (767
-      files); typecheck, boundaries, prompt conformance, help coverage, and exports
-      parity green. One review artifact,
-      code-review/review-iter-1.yaml, stays untracked because the commit primitive
-      does not stage the review folder; it is the reviewer-owned record."
+      note for the iteration) and 00ac214b (the merged-plus-unreadable-CI test
+      also asserts the gate: incidents 0, windowStartReason
+      first-counted-dispatch, corroboration unsatisfied >= 1, eligibility
+      false). Final aggregate pnpm check with TMPDIR in-repo is green: 6439
+      pass, 4 skip, 0 fail (767 files); typecheck, boundaries, prompt
+      conformance, help coverage, and exports parity green. One review artifact,
+      code-review/review-iter-1.yaml, stays untracked because the commit
+      primitive does not stage the review folder; it is the reviewer-owned
+      record."
     type: info
     date: "2026-11-08"
-  - text: "Review iteration 2 remediation complete in one pass (review iteration
-      3 is the final review pass). Delivery commit 10857a2c. F-15 FIXED (high):
+  - text: "Review iteration 2 remediation complete in one pass (review iteration 3
+      is the final review pass). Delivery commit 10857a2c. F-15 FIXED (high):
       the repository identity binding is now checkout-scoped — the first-use
       marker lives at `<git-common-dir>/dispatch-identity.json`, is created once
       and never overwritten, so two repositories in one home never collide, a
       working-directory rename or remote change of one checkout never re-keys
       its evidence, and a read-only `dual-run summary`/`resolve`/`handover`
       never persists a binding from an arbitrary `--repo` (only a dispatch on
-      the current checkout persists). A two-repository
-      production-composition test through `createProductionComposer` proves that
-      alpha and beta record under their own identities, a third checkout's
-      read-only summary cannot rebind, and the renamed checkout with a changed
-      remote still resolves to its own binding; the clean refusal when nothing
-      resolves is unchanged. F-16 FIXED (medium): a later progress verdict clears
-      the corroborated stall, so a transient stall followed by completion
-      classifies `finished`, while a persistent stall at the budget still
-      classifies `max-restarts` with the terminal exhaustion record; the
-      restart-budget derivation no longer overrides a completed session.
-      Identity location and per-repository scoping are reconciled in the change
-      spec (F-6, DEC-13, AC-F6-6), TDR-0015 §6, the plan and test plan,
-      feature-dispatch-engine, the glossary, the architecture overview, and the
-      dispatch test spec. Tests: identity/watch/composition suites green, all
-      dispatch suites 279 pass, dispatch conformance 12 pass, bash fallback 5/5;
-      the aggregate `TMPDIR in-repo pnpm check` is green: 6442 pass, 4 skip,
-      0 fail (767 files); typecheck, boundaries, prompt conformance, help
-      coverage, and exports parity green."
+      the current checkout persists). A two-repository production-composition
+      test through `createProductionComposer` proves that alpha and beta record
+      under their own identities, a third checkout's read-only summary cannot
+      rebind, and the renamed checkout with a changed remote still resolves to
+      its own binding; the clean refusal when nothing resolves is unchanged.
+      F-16 FIXED (medium): a later progress verdict clears the corroborated
+      stall, so a transient stall followed by completion classifies `finished`,
+      while a persistent stall at the budget still classifies `max-restarts`
+      with the terminal exhaustion record; the restart-budget derivation no
+      longer overrides a completed session. Identity location and per-repository
+      scoping are reconciled in the change spec (F-6, DEC-13, AC-F6-6), TDR-0015
+      §6, the plan and test plan, feature-dispatch-engine, the glossary, the
+      architecture overview, and the dispatch test spec. Tests:
+      identity/watch/composition suites green, all dispatch suites 279 pass,
+      dispatch conformance 12 pass, bash fallback 5/5; the aggregate `TMPDIR
+      in-repo pnpm check` is green: 6442 pass, 4 skip, 0 fail (767 files);
+      typecheck, boundaries, prompt conformance, help coverage, and exports
+      parity green."
     type: info
     date: "2026-11-08"
   - text: "Review iteration 3 hygiene pass complete in one commit, 74458bc (no
@@ -490,32 +494,31 @@ notes:
       scope, the header cross-phase ownership note records
       `CheckoutGitDirectories`/`resolveCheckoutGitDirectories`, and the phase-3
       summary names that resolver as the common-directory source. F-19 FIXED:
-      the token-closure suite again asserts the derivation-level
-      restart-budget branch (timed-out and premature-end at
-      count = bound = 3 derive `max-restarts`/`failed` with
-      `dispatch.restart-budget-exceeded`) while keeping the F-16
-      completed-session exemption (`pr-open` at an already-reached bound).
-      F-20 FIXED: the marker is now written atomically — a synced sibling file
-      is linked into place (exclusive create, so no torn final file and no
-      lost create-once race) and the repair write renames a synced sibling over
-      the final path; a marker that carries no binding is repaired in place by
-      the next persisting dispatch instead of staying permanently unreadable,
-      and read-only surfaces still never persist. Covered by a torn-marker
-      adapter test (plus an unwritable-path test) and a production-composition
-      torn-marker repair proof; the marker location/repair behavior is stated
-      in the spec and TDR-0015 §6. F-21 FIXED: the dispatch reference page now
-      says a stall is a current-state verdict cleared by later progress, that
-      only a stall still current at collection resolution is the
-      restart-budget refusal, and that a completed session is never re-keyed to
-      `max-restarts`. F-23 FIXED by choosing the honest reconciliation: the TDR
-      §6 sentence now states that a disagreeing scheduler key or remote is not
-      recorded as a separate attribute (marker governs silently), matching the
-      delivered behavior, and the unimplemented `DispatchAttemptRecord.engineIdentity`
-      field was removed so the contract carries no dead surface. The landed
-      commit message carries no decision-record or test-case identifiers.
-      Gates: the affected
-      dispatch suites (256 pass), identity/closure/composition/inventory suites
-      (51 pass), dispatch and doc conformance (27 pass), `plan validate GH-239`
+      the token-closure suite again asserts the derivation-level restart-budget
+      branch (timed-out and premature-end at count = bound = 3 derive
+      `max-restarts`/`failed` with `dispatch.restart-budget-exceeded`) while
+      keeping the F-16 completed-session exemption (`pr-open` at an
+      already-reached bound). F-20 FIXED: the marker is now written atomically —
+      a synced sibling file is linked into place (exclusive create, so no torn
+      final file and no lost create-once race) and the repair write renames a
+      synced sibling over the final path; a marker that carries no binding is
+      repaired in place by the next persisting dispatch instead of staying
+      permanently unreadable, and read-only surfaces still never persist.
+      Covered by a torn-marker adapter test (plus an unwritable-path test) and a
+      production-composition torn-marker repair proof; the marker
+      location/repair behavior is stated in the spec and TDR-0015 §6. F-21
+      FIXED: the dispatch reference page now says a stall is a current-state
+      verdict cleared by later progress, that only a stall still current at
+      collection resolution is the restart-budget refusal, and that a completed
+      session is never re-keyed to `max-restarts`. F-23 FIXED by choosing the
+      honest reconciliation: the TDR §6 sentence now states that a disagreeing
+      scheduler key or remote is not recorded as a separate attribute (marker
+      governs silently), matching the delivered behavior, and the unimplemented
+      `DispatchAttemptRecord.engineIdentity` field was removed so the contract
+      carries no dead surface. The landed commit message carries no
+      decision-record or test-case identifiers. Gates: the affected dispatch
+      suites (256 pass), identity/closure/composition/inventory suites (51
+      pass), dispatch and doc conformance (27 pass), `plan validate GH-239`
       valid, and the aggregate `TMPDIR in-repo pnpm check` is green: 6446 pass,
       4 skip, 0 fail (767 files); typecheck, boundaries, prompt conformance,
       help coverage, and exports parity green."
