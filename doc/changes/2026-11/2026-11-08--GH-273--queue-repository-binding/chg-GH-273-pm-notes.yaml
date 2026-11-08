@@ -319,3 +319,12 @@ notes:
       docs)."
     type: info
     date: "2026-11-08"
+  - text: "DoD check verified: all prior phases completed in the registry
+      (e7c391b5 = dod_check); every declared plan phase 1-5 has a pm-notes entry
+      naming its id, commit (fa8ecd03, 7dc5d2f6, 08153dea, 939f2492, 83adb968)
+      and test result; 18/18 ACs satisfied per review-iter-1 PASS; document truth
+      reconciled with no residual gaps; aggregate gate green (6476 pass / 4 skip /
+      0 fail across 771 files, plus boundaries, prompt-conformance, help-guide
+      and exports-parity). No reopen required."
+    type: info
+    date: "2026-11-08"
