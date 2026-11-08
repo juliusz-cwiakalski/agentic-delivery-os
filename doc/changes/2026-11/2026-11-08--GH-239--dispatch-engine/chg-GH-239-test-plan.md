@@ -1,13 +1,13 @@
 ---
 id: chg-GH-239-test-plan
-status: Proposed
+status: Updated
 created: 2026-11-08T00:00:00Z
-last_updated: 2026-11-08T00:00:00Z
+last_updated: 2026-11-08T09:30:00Z
 owners: [engineering]
 service: delivery-os dispatch engine
 labels: [change, planning, m1, m1-s9, dispatch, dual-run, handover]
 version_impact: minor
-summary: "Seventy-eight scenarios verifying GH-239: one-shot typed dispatch with harness resolution and lease claim, progress-based liveness, truth-bound token derivation, resume and restart economics, durable dual-run evidence, the four-condition handover gate with per-repository reversible handover, CLI-independent bash fallback, daemon lane integration, dispatch registration and error identities, and a controlled-repository end-to-end proof that never fires a merge."
+summary: "Eighty-two scenarios verifying GH-239: one-shot typed dispatch with harness resolution and lease claim, progress-based liveness, truth-bound token derivation, resume and restart economics, durable dual-run evidence carrying a declared evidence class and one comparison record, an incident-exclusive evidence window, a reachable four-condition handover gate with per-repository reversible handover and rename-invariant identity, CLI-independent bash fallback, daemon lane integration with an attempt record, dispatch registration and error identities, and a controlled-proof end-to-end proof that reaches eligibility with all eleven classes and never fires a merge."
 links:
   change_spec: ./chg-GH-239-spec.md
   implementation_plan: ./chg-GH-239-plan.yaml
@@ -18,23 +18,27 @@ links:
 
 ## 1. Scope and Objectives
 
-This plan protects the typed per-ticket dispatch loop and the evidence-based authority mechanism that lets one repository move from bash-authoritative to engine-authoritative and back. The core behaviors to protect are: (a) result derivation is bound to artifact, tracker, ledger, and CI truth rather than an exit code; (b) every dispatch leaves exactly one durable, bounded evidence record whose comparison and corroboration fields are complete; (c) eligibility is a four-condition conjunction whose floor is the only place "whichever comes first" applies; (d) authority transfer is recorded, per-repository, reversible, and readable by the four bash entry points without invoking the typed CLI; and (e) dispatch never fires a merge.
+This plan protects the typed per-ticket dispatch loop and the evidence-based authority mechanism that lets one repository move from bash-authoritative to engine-authoritative and back. The core behaviors to protect are: (a) result derivation is bound to artifact, tracker, ledger, and CI truth rather than an exit code; (b) every dispatch that reaches classification leaves exactly one durable, bounded evidence record whose evidence class, comparison record, and corroboration fields are complete; (c) eligibility is a four-condition conjunction whose floor is the only place "whichever comes first" applies, whose class coverage is exposure rather than a success claim, and whose incident lower bound is exclusive so recovery is possible; (d) authority transfer is recorded, per-repository, reversible, and readable by the four bash entry points without invoking the typed CLI; and (e) dispatch never fires a merge.
 
-The highest integrity risks are an exit-0-with-no-artifact run counted as clean, a false-success incident silently zeroed, an unresolved divergence dropped from eligibility, a handover that flips the wrong repository, a bash fallback that breaks when the typed CLI is absent, and a corroboration claim accepted on the engine token alone. These are must-pass gates, not review notes. The change is proven on a controlled repository or injected fixture; no real repository is flipped (D2, NG-1, NG-9).
+The highest integrity risks are an exit-0-with-no-artifact run counted as clean, a false-success incident silently zeroed, an unresolved divergence dropped from eligibility, a gate made unreachable by treating rare classes as success claims, fixture or controlled-proof evidence counted as production evidence, a handover that flips the wrong repository or re-keys on a checkout rename, a bash fallback that breaks when the typed CLI is absent, and a corroboration claim accepted on the engine token alone. These are must-pass gates, not review notes. The change is proven on a controlled repository or injected fixture declaring `controlled-proof` evidence; no real repository is flipped and no evidence is hand-inserted into the ledger (D2, NG-1, NG-9, TDR-0015).
 
 ### 1.1 In Scope
 
 - `dispatch REF`, including `--harness NAME` and `--resume-prompt TEXT`: harness resolution, repository lease claim, fresh spawn, resume, progress-based liveness, shared classification, truth-bound token derivation, exit projection, and the machine envelope.
+- Pre-session refusals — unknown harness, rejected input, and a conflicting lease before any spawn — are envelope-only: they emit the classified envelope at exit 1 and append no attempt record (AC-F1-1, AC-F4-1, DEC-19).
 - Text mode's exactly four keys (`result=`, `pr_url=`, `exit_code=`, `last_message=`) in order, with no fifth key; the bash-internal `closeout_unverified=` is not emitted (DEC-8).
 - The `outcome` field as mandatory envelope data beside `result`, and the TDR-0010 rule that harness-path `noop-lane-permission` means spawn-refused.
 - Three additive state record kinds (`dispatch.attempt`, `dispatch.divergence`, `dispatch.handover`), their payload schemas, and the derived per-repository authority view (`delivery.dispatch.authority.v1`) including its fail-safe absent/unreadable/malformed default of `dual-run`.
+- The declared `evidenceClass` on every attempt record (`pilot | controlled-proof | smoke | fixture`), attached at record creation from a declared invocation or composition input, immutable after append, and never inferred from the outcome; the counting rule that production handover counts only `pilot`, the controlled proof counts only `controlled-proof` in its own scope, and `smoke`/`fixture` never count (TDR-0015 §2).
+- The one declared comparison record: class (`verify-change`, `tracker-truth`, or `not-applicable`), token or null, outcome (`match`, `mismatch`, or `not-applicable`), optional reason, and `urlResolved` for tracker facts; a divergence exists if and only if the outcome is `mismatch` (TDR-0015 §5).
 - `dispatch dual-run summary --repo REPO`, `dispatch dual-run resolve DIVERGENCE_ID --note TEXT`, `dispatch handover REPO`, and `dispatch handover REPO --revert` (DEC-6, DEC-7).
-- The four-condition gate: zero false-success incidents and zero unresolved divergences in the window; all eleven TDR-0005 classes covered; at least 20 counted dispatches or at least 7 consecutive UTC dates with at least one counted dispatch, whichever comes first, binding only the floor; corroboration from completed pm-notes phases, tracker state, and CI on the pushed head.
-- The family-wise comparison baseline: verify-class tokens compare to the verify-change ledger outcome; tracker-pr tokens compare to independent tracker truth; dispatch-session tokens compare at outcome level with an explicit not-applicable token baseline (DEC-3).
-- Incident-reset window semantics: a false-success incident resets the window lower bound and forces floor and class coverage to re-accrue; a resolved divergence does not (DEC-10).
+- The four-condition gate: zero false-success incidents and zero unresolved divergences in the window; all eleven TDR-0005 classes covered as exposure; at least 20 counted dispatches or at least 7 consecutive UTC dates with at least one counted dispatch, whichever comes first, binding only the floor; corroboration from completed pm-notes phases, tracker state, and CI on the pushed head.
+- Record-level degradation versus window-level unreadability: an attempt whose comparison or corroboration source cannot be read degrades only that record; an unreadable, torn, or truncated evidence-stream read makes eligibility unverifiable (TDR-0015 §1).
+- Incident-exclusive window semantics: a false-success incident recorded at T is the exclusive lower bound, a record recorded exactly at T is excluded, post-incident recovery can reach eligibility, and a resolved divergence does not reset the window (DEC-10, TDR-0015 §3).
+- Rename-invariant repository identity: the normalized scheduling `repository` key, then the normalized VCS remote, then a persisted first-use marker, with a clean refusal at exit 1 when none resolves and never a checkout-path digest presented as identity (DEC-13, TDR-0015 §6).
 - Bash fallback in all four entry points (`deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, `ceo-loop.sh`) in dual-run, authoritative, and typed-CLI-absent conditions, with no new required arguments and no typed CLI invocation in the authority decision.
-- Daemon lane integration: the production `LaneLaunchPlanner` and `createLaneExecutor` availability through the delivered `LaneExecutorPort`, plus the daemon-less one-shot path.
-- Dispatch registration in the prompt-required composition, root and command help, the reference page, the two new error rows, and the retirement or inversion of the three delivered absence assertions.
+- Daemon lane integration: the production `LaneLaunchPlanner` and `createLaneExecutor` availability through the delivered `LaneExecutorPort`, the daemon path's final token, outcome, and attempt record, and the daemon-less one-shot path.
+- Dispatch registration in the prompt-required composition, root and command help, the reference page, the two new error rows, and the retirement or inversion of the two production-surface absence assertions.
 - The F-9 host-runner deferral revisit: the record states the production-consumer outcome and is no longer a blanket "no dispatch surface" claim.
 - Story-owned planning reconciliation: the dispatch reference page and seeded scenarios SC-M1-29 and SC-M1-30 carry the amended four-condition bar, not the superseded calendar proxy.
 
@@ -46,16 +50,17 @@ The highest integrity risks are an exit-0-with-no-artifact run counted as clean,
 - **No coordinator supervision.** `ceo-loop.sh`'s loop-driving function belongs to M1-S23 (NG-4).
 - **No tracker or PR label migration at handover**, no cross-host authority sharing, no containerized or remote lane execution, and no bash re-architecture (NG-5 through NG-8).
 - **No evidence retention, compaction, pruning, or import of pre-dispatch bash logs** (NG-11, Section 7.3 of the spec).
-- **No `doc/spec/**` edits.** Current-truth reconciliation is phase 7 (NG-10).
+- **No `doc/spec/**` current-truth reconciliation during delivery.** The only planned `doc/spec/**` edit is the two documented error rows in `doc/spec/features/feature-result-contract.md` that the two-way error-table sync mechanically requires; every other `doc/spec/**` change belongs to the `system_spec_update` phase (NG-10, AC-F12-1).
 - **Only the story-owned reference page and SC-M1-29/SC-M1-30 may be reconciled.** The GH-239 ticket body, `backlog-ranking.md`, `roadmap.md`, `cli-command-registry.md`, milestone journeys, user journeys, and the operator-input record remain unchanged and are reported, not edited.
 - **Reference-host latency is not a shared-CI wall-clock gate.** The p95 summary bound is measured on the declared reference host; the deterministic bounded-read assertion is the default-suite gate (see OQ-T3).
-- **Pre-session input refusals are envelope-only by interpretation.** AC-F4-1's "any dispatch" is read as any dispatch that reaches classification, because an attempt record requires an engine outcome and token (OQ-T2).
+- **No historical evidence is imported or reclassified.** Bash delivery logs and tracker history before this change are not scored, and no record is backfilled into a counted evidence class (spec Section 19).
+- **The `--evidence-class` surface and the persisted identity marker's storage name are implementation-plan details.** The plan declares one surface and one name; the scenarios assert the declared behavior, not a literal flag spelling (see OQ-T7 and OQ-T8).
 
 ### 1.3 Risk-Based Prioritization
 
-**Must-pass (AC-gating).** A failure blocks delivery: `TC-DISP-001` through `TC-DISP-004`, `TC-DISP-006` through `TC-DISP-011`; `TC-TRUTH-001` through `TC-TRUTH-004`, `TC-TRUTH-006`; `TC-RESUME-001` through `TC-RESUME-004`; `TC-EVID-001` through `TC-EVID-005`; `TC-GATE-001` through `TC-GATE-010`; `TC-HAND-001` through `TC-HAND-006`; `TC-BASH-001` through `TC-BASH-005`; `TC-E2E-001`, `TC-E2E-002`; `TC-MERGE-001` through `TC-MERGE-004`; `TC-DAEMON-001` through `TC-DAEMON-003`; `TC-HELP-001` through `TC-HELP-003`; `TC-PLANREC-001`; `TC-ERR-001` through `TC-ERR-005`; `TC-TOKEN-001`, `TC-TOKEN-002`; `TC-NFR-001`, `TC-NFR-002`, `TC-NFR-003`, `TC-NFR-005`, `TC-NFR-006`, `TC-NFR-007`; `TC-REG-001`.
+**Must-pass (AC-gating).** A failure blocks delivery: `TC-DISP-001` through `TC-DISP-004`, `TC-DISP-006` through `TC-DISP-011`; `TC-TRUTH-001` through `TC-TRUTH-004`, `TC-TRUTH-006`; `TC-RESUME-001` through `TC-RESUME-004`; `TC-EVID-001` through `TC-EVID-007`; `TC-GATE-001` through `TC-GATE-011`; `TC-HAND-001` through `TC-HAND-007`; `TC-BASH-001` through `TC-BASH-005`; `TC-E2E-001`, `TC-E2E-002`; `TC-MERGE-001` through `TC-MERGE-004`; `TC-DAEMON-001` through `TC-DAEMON-003`; `TC-HELP-001` through `TC-HELP-003`; `TC-PLANREC-001`; `TC-ERR-001` through `TC-ERR-005`; `TC-TOKEN-001`, `TC-TOKEN-002`; `TC-NFR-001`, `TC-NFR-002`, `TC-NFR-003`, `TC-NFR-005`, `TC-NFR-006`, `TC-NFR-007`; `TC-REG-001`.
 
-**Nice-to-have (supplemental).** A failure improves diagnosis or exposes over-generalization but does not reopen an AC whose primary evidence is elsewhere: `TC-DISP-005` (stall corner; AC-F1-2 also carried by `TC-DISP-003` and `TC-DISP-004`), `TC-DISP-012` (noop nothing-to-do negative control; AC-F2-4 also carried by `TC-DISP-008` and `TC-DISP-011`), `TC-TRUTH-005` (blocked tracker case; AC-F2-2 also carried by `TC-TRUTH-002` through `TC-TRUTH-004`), `TC-DET-001` (determinism control; AC-F11-2 also carried by `TC-HELP-002`), `TC-E2E-003` (hand-insertion guard; AC-F8-1 also carried by `TC-E2E-001`), `TC-NFR-004` (truncation declaration; AC-F5-4 also carried by `TC-GATE-006`).
+**Nice-to-have (supplemental).** A failure improves diagnosis or exposes over-generalization but does not reopen an AC whose primary evidence is elsewhere: `TC-DISP-005` (stall corner; AC-F1-2 also carried by `TC-DISP-003` and `TC-DISP-004`), `TC-DISP-012` (noop nothing-to-do negative control; AC-F2-4 also carried by `TC-DISP-008` and `TC-DISP-011`), `TC-TRUTH-005` (blocked tracker case; AC-F2-2 also carried by `TC-TRUTH-002` through `TC-TRUTH-004`), `TC-DET-001` (determinism control; AC-F11-2 also carried by `TC-HELP-002`), `TC-E2E-003` (hand-insertion and cross-class guard; AC-F8-1 and AC-F8-3 also carried by `TC-E2E-001` and `TC-GATE-011`), `TC-NFR-004` (truncation declaration; AC-F5-4 also carried by `TC-GATE-006`).
 
 ### 1.4 Binding Judgment Calls Enforced by This Plan
 
@@ -63,15 +68,21 @@ The highest integrity risks are an exit-0-with-no-artifact run counted as clean,
 |---|---|---|
 | 1 | Two surfaces beyond the synopsis exist: `dispatch handover REPO --revert` and `dispatch dual-run resolve DIVERGENCE_ID --note TEXT`. | `TC-HELP-001`, `TC-HAND-003`, `TC-EVID-002`, `TC-PLANREC-001` |
 | 2 | Text mode emits exactly four keys; `closeout_unverified=` is not emitted; unverified state rides `pr-open-unverified` and `state-unverified`. | `TC-DISP-007`, `TC-DISP-011`, `TC-TRUTH-003`, `TC-TRUTH-006` |
-| 3 | Family-wise comparison baseline; never assert a verify-change token against a `pr-open` result. | `TC-GATE-008`, `TC-EVID-002` |
-| 4 | A false-success incident resets the evidence window lower bound; a resolved divergence does not. | `TC-EVID-003`, `TC-GATE-009` |
-| 5 | Day floor = distinct UTC dates with at least one counted dispatch, in a run of at least 7 consecutive dates; "whichever comes first" binds only the floor. | `TC-GATE-003`, `TC-GATE-004`, `TC-GATE-005` |
-| 6 | `outcome` is mandatory in envelope `data` beside `result`. | `TC-DISP-006`, `TC-DISP-011` |
-| 7 | `dispatch.session.spawn-failed` exits 1; `dispatch.state-unverified` exits 2; existing dispatch rows are unchanged. | `TC-ERR-001`, `TC-ERR-002`, `TC-ERR-003` |
-| 8 | Story-owned planning reconciliation is limited to the reference page and SC-M1-29/SC-M1-30. | `TC-PLANREC-001` |
-| 9 | The F-9 host-runner deferral is revisited and recorded; the absence assertion is inverted, but F-9 need not be fully resolved. | `TC-HELP-003` |
-| 10 | Proof boundary: end-to-end on a controlled repository/fixture with injected harness, tracker, CI, and state ports; no real repository flipped. | `TC-E2E-001`, `TC-E2E-002`, `TC-E2E-003` |
-| 11 | `dispatch dual-run summary` exits 0 even when ineligible; handover refusal exits 1; noop reversal exits 0. | `TC-GATE-002`, `TC-HAND-001`, `TC-HAND-003` |
+| 3 | One declared comparison record per counted attempt; family-wise baseline; never compare a verify-change token against a `pr-open` result; a divergence exists if and only if the outcome is `mismatch`. | `TC-EVID-007`, `TC-GATE-008`, `TC-EVID-002` |
+| 4 | `pr-open-unverified` corroborates on the tracker fact (PR open) with `urlResolved: false` as an attribute; it is not an unresolved divergence and not a permanently unsatisfied corroboration. | `TC-TRUTH-003`, `TC-GATE-007`, `TC-GATE-010` |
+| 5 | `state-unverified` is exposure-only: it counts for class coverage, makes no success claim, creates no divergence, and does not by itself block eligibility; only that record degrades. | `TC-TRUTH-006`, `TC-EVID-004`, `TC-GATE-007` |
+| 6 | A false-success incident at T is the exclusive lower bound; a record recorded exactly at T is excluded; post-incident re-accrual can reach eligibility; a resolved divergence does not reset the window. | `TC-EVID-003`, `TC-GATE-009` |
+| 7 | Day floor = distinct UTC dates with at least one counted dispatch, in a run of at least 7 consecutive dates; "whichever comes first" binds only the floor. | `TC-GATE-003`, `TC-GATE-004`, `TC-GATE-005` |
+| 8 | `outcome` is mandatory in envelope `data` beside `result`. | `TC-DISP-006`, `TC-DISP-011` |
+| 9 | `dispatch.session.spawn-failed` exits 1; `dispatch.state-unverified` exits 2; existing dispatch rows are unchanged. | `TC-ERR-001`, `TC-ERR-002`, `TC-ERR-003` |
+| 10 | Degraded exits are pinned: unreadable, torn, or malformed read exits 2; bounded-but-truncated valid read exits 0 with an unverifiable verdict; handover unreadable exits 2; handover readable-but-unmet exits 1. | `TC-GATE-006`, `TC-HAND-001`, `TC-NFR-004` |
+| 11 | Story-owned planning reconciliation is limited to the reference page and SC-M1-29/SC-M1-30. | `TC-PLANREC-001` |
+| 12 | The pilot-isolation test guards a deliberately reduced test-only fixture: it is not a production-surface absence claim, dispatch is not composed into it, and only its stale comment is narrowed. The two production-surface assertions (entrypoint composition, harness-review deferrals) are the only ones retired or inverted; F-9 still need not be fully resolved. | `TC-HELP-003` |
+| 13 | Evidence class is declared, closed (`pilot`, `controlled-proof`, `smoke`, `fixture`), immutable, and never escalated; production counts only `pilot`, the controlled scope counts only `controlled-proof`, and `smoke`/`fixture` never count. | `TC-EVID-006`, `TC-GATE-011`, `TC-E2E-001`, `TC-E2E-003` |
+| 14 | Pre-session refusals (unknown harness, rejected input, conflicting lease before a spawn) emit the classified envelope at exit 1 and append no attempt record (D6, DEC-19). | `TC-DISP-002`, `TC-DISP-001`, `TC-EVID-001` |
+| 15 | Repository identity resolves in order from the normalized `repository` key, the normalized VCS remote, then a persisted first-use marker; a path digest is never presented as identity and an unresolvable identity refuses at exit 1. | `TC-HAND-007`, `TC-HAND-006`, `TC-GATE-006` |
+| 16 | The controlled proof runs real state and command paths with injected harness, tracker, CI, and VCS ports under `controlled-proof` evidence, with a provenance guard; no real repository is flipped and no evidence is hand-inserted. | `TC-E2E-001`, `TC-E2E-002`, `TC-E2E-003` |
+| 17 | `dispatch dual-run summary` exits 0 even when ineligible; handover refusal exits 1; noop reversal exits 0; the daemon path appends its own attempt record that agrees with one-shot dispatch. | `TC-GATE-002`, `TC-HAND-001`, `TC-HAND-003`, `TC-DAEMON-002` |
 
 ### 1.5 Test-Facing Names and Test Infrastructure Summary
 
@@ -84,6 +95,9 @@ The scenarios below bind behavior, commands, outputs, records, and exits. They a
 | Failure classification | `classifyDispatchFailure(...)` |
 | Gate predicate | `evaluateHandoverGate(...)` |
 | Evidence fold | `foldEvidenceWindow(...)` |
+| Evidence-class counting | `countedEvidenceClass(repositoryScope)` |
+| Comparison record | `buildComparisonRecord(...)` |
+| Repository identity | `resolveDispatchIdentity(checkout)` |
 | Authority read | `readDispatchAuthority(stateRoot, repository)` |
 | Attempt append | `appendDispatchAttempt(...)` |
 | Divergence append | `appendDispatchDivergence(...)`, `resolveDispatchDivergence(...)` |
@@ -92,13 +106,14 @@ The scenarios below bind behavior, commands, outputs, records, and exits. They a
 | Record schemas | `delivery.dispatch.attempt.v1`, `delivery.dispatch.divergence.v1`, `delivery.dispatch.handover.v1`, `delivery.dispatch.authority.v1` |
 | Derived authority view fixture path | `dispatch/authority.json` under the temporary state root (the plan declares the production path; bash reads the same document) |
 
-Test infrastructure in one paragraph: every TypeScript scenario runs in process with `bun:test` through `runEntrypoint` and injected `CliDependencies`; the harness session port is a scripted fake that supplies neutral evidence and the **real** shared classifier is used, so classification is never faked; tracker, CI, and VCS reads are injected read ports with recording fakes and deterministic truth fixtures; state is the real store over the existing test edge with fault injection for torn/failed appends; the clock, run-id sequence, and repository identities are injected; no test touches the live state directory, a live remote, the network, or a model. Bash scenarios run the four scripts against a temporary state root and a sanitized `PATH`, with the typed binary absent or present as the condition requires.
+Test infrastructure in one paragraph: every TypeScript scenario runs in process with `bun:test` through `runEntrypoint` and injected `CliDependencies`; the harness session port is a scripted fake that supplies neutral evidence and the **real** shared classifier is used, so classification is never faked; tracker, CI, and VCS reads are injected read ports with recording fakes and deterministic truth fixtures; state is the real store over the existing test edge with fault injection for torn/failed appends and for one deliberately unreadable truth read; the clock, run-id sequence, and repository identities are injected, and the evidence class is a declared composition input rather than a test-side record field; the controlled-proof composition declares `controlled-proof` and its provenance guard counts command-originated appends; no test touches the live state directory, a live remote, the network, or a model. Bash scenarios run the four scripts against a temporary state root and a sanitized `PATH`, with the typed binary absent or present as the condition requires.
 
 ## 2. References
 
-- Change specification: [chg-GH-239-spec.md](./chg-GH-239-spec.md) (Section 17 acceptance criteria, Section 17.1 Definition of Done, Appendix B gate predicate, Appendix C seeded inheritance, Appendix D bash-continuity summary).
-- Implementation plan: `./chg-GH-239-plan.yaml` (authored in phase 4; this plan names behavior, commands, and fixture contracts, not final internal code paths).
-- PM binding decisions D1-D5: [chg-GH-239-pm-notes.yaml](./chg-GH-239-pm-notes.yaml).
+- Change specification: [chg-GH-239-spec.md](./chg-GH-239-spec.md) (Section 5.1 F-1 through F-12, Section 17 acceptance criteria — 53 ACs, Section 17.1 Definition of Done, Section 8.3 DM-1/DM-6/DM-7, Appendix B gate predicate, Appendix C seeded inheritance, Appendix D bash-continuity summary).
+- Implementation plan: `./chg-GH-239-plan.yaml` (this plan names behavior, commands, record shapes, and fixture contracts, not final internal code paths; phase 9 owns the daemon-path attempt-record producer).
+- Handover-gate operational semantics: [TDR-0015](../../../decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md) (gate reachability, evidence class, exclusive window, floor, comparison shape, identity, reversal).
+- PM binding decisions D1-D6: [chg-GH-239-pm-notes.yaml](./chg-GH-239-pm-notes.yaml).
 - Repository testing strategy: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md).
 - TypeScript workspace rules: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md).
 - M1 dispatch contract: [contracts.md, section `dispatch`](../../../planning/oss-tooling/milestones/m1/contracts.md).
@@ -114,48 +129,54 @@ Test infrastructure in one paragraph: every TypeScript scenario runs in process 
 
 ### 3.1 Functional Coverage (F-#, AC-#)
 
-All 47 acceptance criteria are covered. There are zero unassigned rows and zero unassigned ACs.
+All 53 acceptance criteria are covered. There are zero unassigned rows and zero unassigned ACs.
 
 | AC ID | Criterion (abbreviated) | TC ID(s) | Status |
 |---|---|---|---|
-| AC-F1-1 | Harness from flag then config; unknown harness refuses; repository lease claimed; fresh spawn; conflicting lease refuses without spawning | TC-DISP-001, TC-DISP-002 | Covered |
+| AC-F1-1 | Harness from flag then config; repository lease claimed; fresh spawn; exactly one attempt record once classification is reached; unknown harness, rejected input, or conflicting lease before a spawn emits the classified envelope at exit 1 and appends no attempt record | TC-DISP-001, TC-DISP-002 | Covered |
 | AC-F1-2 | Progress signals keep a session live; absent readings stay absent or unknown; stall needs no progress across two sourced evaluations, never elapsed time alone | TC-DISP-003, TC-DISP-004, TC-DISP-005 | Covered |
 | AC-F1-3 | One of eleven tokens; `partial` carries `outcome`; envelope data carries the declared fields; text emits exactly four ordered keys | TC-DISP-006, TC-DISP-007, TC-DISP-008, TC-DISP-011 | Covered |
 | AC-F1-4 | Full exit projection; failing run still emits a valid envelope with full error fields | TC-DISP-009, TC-DISP-010 | Covered |
 | AC-F2-1 | Exit-0 with no branch commit, PR, or ledger progress is `failed` at exit 1; missing artifact named | TC-TRUTH-001 | Covered |
-| AC-F2-2 | Open PR, unresolvable URL, already merged, blocking tracker map to the four tokens; tracker-derived tokens corroborated; missing tracker fact never clean | TC-TRUTH-002, TC-TRUTH-003, TC-TRUTH-004, TC-TRUTH-005 | Covered |
+| AC-F2-2 | Open PR, unresolvable URL, already merged, blocking tracker map to the four tokens; `merged` only after independent observation; tracker-derived tokens corroborated by the tracker fact; `pr-open-unverified` records `urlResolved: false` and is not a divergence; missing tracker fact never clean | TC-TRUTH-002, TC-TRUTH-003, TC-TRUTH-004, TC-TRUTH-005 | Covered |
 | AC-F2-3 | Unreadable ledger, tracker, artifact, or state read is `state-unverified` at exit 2 with a classified identity and remediation hint | TC-TRUTH-006 | Covered |
 | AC-F2-4 | No token outside the eleven; `noop-lane-permission` is spawn-refused; `noop-lane-nothing-to-do` only when no work remains | TC-DISP-008, TC-DISP-011, TC-DISP-012 | Covered |
 | AC-F3-1 | Resume records the mode, skips completed phases, continues from the ledger; no injection means `resume-prompt-reentry` with prefill cost acknowledged | TC-RESUME-001 | Covered |
 | AC-F3-2 | At `lane.restart-budget`, another restart refuses at exit 1 with `dispatch.restart-budget-exceeded`, terminal record, escalation, no spawn, no requeue | TC-RESUME-002 | Covered |
 | AC-F3-3 | Uneconomical prefill refuses with `dispatch.resume-uneconomical`; unreadable cost facts refuse; attach-and-continue consumes no ordinal | TC-RESUME-003 | Covered |
 | AC-F3-4 | Identical resume replay consumes no duplicate ordinal, re-executes no phase, and does not spawn twice | TC-RESUME-004 | Covered |
-| AC-F4-1 | Exactly one complete attempt record per dispatch; no prompt, transcript, credential, or raw payload | TC-EVID-001, TC-EVID-005 | Covered |
-| AC-F4-2 | Comparison disagreement opens a divergence; resolution folds to resolved; the original open record remains; the summary reports both totals | TC-EVID-002, TC-GATE-008 | Covered |
-| AC-F4-3 | A contradicted success claim is a false-success incident with bounded evidence; never clean; resets the window lower bound | TC-EVID-003, TC-GATE-009 | Covered |
-| AC-F4-4 | Unevaluable comparison or corroboration is recorded with a classified identity; the gate does not treat it as clean; truncation is declared | TC-EVID-004, TC-GATE-006 | Covered |
-| AC-F5-1 | Summary reports window start and reason, days, counted deliveries, incidents, divergences and identifiers, class coverage, corroboration, verdict | TC-GATE-001, TC-GATE-009 | Covered |
-| AC-F5-2 | Eligibility is the four-condition conjunction; every unmet condition is named | TC-GATE-002, TC-GATE-005, TC-GATE-007, TC-GATE-008, TC-GATE-010 | Covered |
+| AC-F4-1 | Exactly one complete attempt record per dispatch that reaches classification, carrying evidence class and comparison record; a pre-session refusal appends none; no prompt, transcript, credential, or raw payload | TC-EVID-001, TC-EVID-005, TC-DISP-002 | Covered |
+| AC-F4-2 | Comparison disagreement opens a divergence; resolution folds to resolved; the original open record remains; the summary reports both totals | TC-EVID-002, TC-EVID-007, TC-GATE-008 | Covered |
+| AC-F4-3 | A contradicted success claim is a false-success incident with bounded evidence; never clean; its timestamp is the exclusive window lower bound, so floor and coverage re-accrue strictly after it | TC-EVID-003, TC-GATE-009 | Covered |
+| AC-F4-4 | An unreadable comparison or corroboration source degrades only that attempt: a non-success token still counts for coverage and does not block; an uncorroborated success claim is one named unmet condition without a divergence or window reset; a window-level unreadable, torn, or truncated read is unverifiable and declared | TC-EVID-004, TC-TRUTH-006, TC-GATE-006 | Covered |
+| AC-F4-5 | Exactly one declared `evidenceClass` (`pilot`, `controlled-proof`, `smoke`, `fixture`) attached at record creation from a declared input, never inferred, never read from user-editable content, immutable, not escalatable; production counts only `pilot` | TC-EVID-006, TC-GATE-011, TC-E2E-001 | Covered |
+| AC-F4-6 | Comparison record shape: class, token or null, outcome; token null iff not-applicable; outcome not-applicable iff class; divergence iff mismatch; `pr-open-unverified` compares to tracker truth `pr-open` with `urlResolved`; dispatch-session tokens are not-applicable and exposure-only | TC-EVID-007, TC-GATE-008 | Covered |
+| AC-F5-1 | Summary reports window start and reason, days, counted deliveries, evidence classes counted and exclusions, incidents, divergences and identifiers, class coverage with missing classes, corroboration, verdict | TC-GATE-001, TC-GATE-009, TC-GATE-011 | Covered |
+| AC-F5-2 | Eligibility is the four-condition conjunction; coverage is exposure so `state-unverified` and dispatch-session tokens count without blocking; every unmet condition is named | TC-GATE-002, TC-GATE-005, TC-GATE-007, TC-GATE-008, TC-GATE-010 | Covered |
 | AC-F5-3 | 20 counted dispatches or 7 consecutive UTC dates, whichever comes first; floor-only | TC-GATE-003, TC-GATE-004, TC-GATE-005 | Covered |
-| AC-F5-4 | Unreadable, torn, or truncated evidence declares degradation and is unverifiable; an unresolvable repository identity is a clean refusal | TC-GATE-006, TC-NFR-004 | Covered |
-| AC-F6-1 | Unmet gate refuses at exit 1, names every unmet condition, appends no authority-changing record, bash stays authoritative | TC-HAND-001 | Covered |
-| AC-F6-2 | Met gate appends one handover record, flips only that repository, updates the view atomically, reports reversible; other repositories stay dual-run | TC-HAND-002, TC-HAND-006 | Covered |
+| AC-F5-4 | Unreadable, torn, or malformed evidence read exits 2 with `dispatch.state-unverified` or `state.*`; a bounded-but-truncated valid read exits 0 with a false/unverifiable verdict, declared truncation, and every unmet condition named; no fabricated zeros; an unresolvable repository identity refuses cleanly at exit 1 | TC-GATE-006, TC-NFR-004 | Covered |
+| AC-F5-5 | Controlled-scope reachability: all eleven classes present — including `state-unverified` (exposure-only) and `pr-open-unverified` (tracker-corroborated, `urlResolved: false`) — with zero incidents, zero unresolved divergences, floor met, and every success claim corroborated yields eligibility true with no unmet condition | TC-GATE-007, TC-E2E-001 | Covered |
+| AC-F5-6 | Incident at T is the exclusive lower bound (`windowStart = T`, `windowStartReason = false-success-incident-reset`), the incident and any same-instant record are outside the window, and sufficient post-T evidence yields eligibility true | TC-GATE-009, TC-EVID-003 | Covered |
+| AC-F6-1 | Readable-but-unmet bar refuses at exit 1 as a clean verification negative, names every unmet condition, appends no authority-changing record, leaves bash authoritative; an unreadable or torn read refuses at exit 2 with a classified identity and appends no authority-changing record | TC-HAND-001 | Covered |
+| AC-F6-2 | Met gate appends one handover record, flips only the repository identified by the resolved identity, updates the view atomically, reports reversible; other repositories stay dual-run | TC-HAND-002, TC-HAND-006, TC-HAND-007 | Covered |
 | AC-F6-3 | Reversal appends a reversal record, restores dual-run, preserves history; already dual-run is an idempotent noop at exit 0 | TC-HAND-003 | Covered |
-| AC-F6-4 | Derived view names repository, authority, handover reference, time, reversal availability; atomic; absent or malformed means dual-run | TC-HAND-004 | Covered |
+| AC-F6-4 | Derived view matches the folded ledger, names the resolved repository identity, authority, handover reference, time, reversal availability; atomic; absent, unreadable, or malformed means dual-run | TC-HAND-004, TC-HAND-007 | Covered |
 | AC-F6-5 | Dual-run dispatch reports `handoverState: dual-run`, records evidence, claims no authority, blocks no bash path, fires no merge | TC-HAND-005 | Covered |
+| AC-F6-6 | A persisted identity binding survives a checkout rename, a remote change, and a restart without re-keying; with no scheduler key, remote, or persisted marker, summary and handover refuse cleanly at exit 1 and never present a checkout-path digest | TC-HAND-007 | Covered |
 | AC-F7-1 | Dual-run bash entry points keep arguments and exit behavior, print no deprecation pointer, need no typed CLI | TC-BASH-001 | Covered |
 | AC-F7-2 | Authoritative bash entry points print a deprecation pointer naming `dispatch` and reversal, remain executable | TC-BASH-002 | Covered |
 | AC-F7-3 | Typed CLI absent or broken: bash runs normally; pure file read; absent, unreadable, or malformed view means dual-run | TC-BASH-003, TC-BASH-005 | Covered |
-| AC-F8-1 | Controlled repository accrues genuine evidence to eligibility, flips, then dispatches end to end; no hand-inserted evidence | TC-E2E-001, TC-E2E-003 | Covered |
+| AC-F8-1 | A controlled repository scope runs the real state store and command path with injected external ports: `controlled-proof` dispatches accrue to eligibility, the repository flips, a later dispatch runs end to end, and a provenance guard proves no hand-inserted evidence | TC-E2E-001, TC-E2E-003 | Covered |
 | AC-F8-2 | Reversal returns the repository to dual-run, bash runs normally, handover and reversal records remain | TC-E2E-002 | Covered |
+| AC-F8-3 | Production counts zero non-`pilot` attempts; the controlled scope counts zero non-`controlled-proof` attempts; a controlled-proof attempt under a production identity is surfaced and not counted; `smoke` and `fixture` count toward no handover | TC-GATE-011, TC-E2E-001, TC-E2E-003 | Covered |
 | AC-F9-1 | Merge-ready PR emits `pr-open` or `pr-open-unverified` and fires no merge; structural boundary proves no merge path | TC-MERGE-001, TC-MERGE-003 | Covered |
 | AC-F9-2 | Already-merged PR may report `merged` as detection with observed evidence; still no merge | TC-TRUTH-004, TC-MERGE-002 | Covered |
 | AC-F10-1 | Planner returns the lifecycle prompt and declared environment allowlist; resolves no secret; executor reports available | TC-DAEMON-001 | Covered |
-| AC-F10-2 | Daemon starts, records, observes, collects, and resumes a lane; final token and outcome agree with one-shot | TC-DAEMON-002 | Covered |
+| AC-F10-2 | Daemon starts, records, observes, collects, and resumes a lane; final token and outcome agree with one-shot, and the daemon path appends one attempt record that agrees with the one-shot record | TC-DAEMON-002 | Covered |
 | AC-F10-3 | With no daemon, dispatch completes from state, appends the record, claims no daemon dependency; unavailable planner means supervise-only | TC-DAEMON-003 | Covered |
-| AC-F11-1 | Dispatch present in prompt-required set, root and command help, and reference page with three execution forms plus resolution and reversal; page describes the evidence bar | TC-HELP-001, TC-PLANREC-001 | Covered |
+| AC-F11-1 | Dispatch present in prompt-required set, root and command help, and reference page with three execution forms plus resolution and reversal; page describes the evidence-based handover bar | TC-HELP-001, TC-PLANREC-001 | Covered |
 | AC-F11-2 | Help and version perform no state, network, git, configuration, or model read and exit 0 | TC-HELP-002, TC-DET-001 | Covered |
-| AC-F11-3 | Three absence assertions retired or inverted; F-9 deferral records the production-consumer outcome | TC-HELP-003 | Covered |
+| AC-F11-3 | The two production-surface absence assertions are retired or inverted; the pilot-isolation test keeps its deliberately reduced test-only fixture with a narrowed comment and is not required to compose dispatch; F-9 records the production-consumer outcome | TC-HELP-003 | Covered |
 | AC-F12-1 | Spawn failure is `dispatch.session.spawn-failed` at exit 1; unverifiable truth is `dispatch.state-unverified` at exit 2; both tables carry both rows | TC-ERR-001, TC-ERR-002, TC-ERR-005 | Covered |
 | AC-F12-2 | Existing dispatch rows unchanged; exact-code resolution; no kind-only single-row assumption | TC-ERR-003, TC-ERR-005, TC-REG-001 | Covered |
 | AC-F12-3 | Every dispatch failure envelope carries a stable code, category, retryable flag, consequence, remediation hint, and summary; no prose identity; exit in 0, 1, 2 | TC-DISP-010, TC-ERR-004 | Covered |
@@ -166,15 +187,17 @@ All 47 acceptance criteria are covered. There are zero unassigned rows and zero 
 | AC-NFR8-1 | Four scripts across dual-run, authoritative, and typed-CLI-absent all complete with declared behavior and no new required argument | TC-BASH-004 | Covered |
 | AC-NFR9-1 | No merge executor, port, or invocation reachable from dispatch composition; a source-level merge import fails the boundary check | TC-MERGE-003, TC-MERGE-004 | Covered |
 
+Traceability statement: all 53 ACs map to at least one TC; every TC in Section 5 maps to at least one AC (zero orphan TCs); the 82 TCs are enumerated in the Section 5.1 index and the Section 7.1 mapping. The two newly traced classes — `state-unverified` and `pr-open-unverified` — are covered positively by `TC-GATE-007` and `TC-E2E-001` and negatively by `TC-TRUTH-003`, `TC-TRUTH-006`, and `TC-EVID-004`.
+
 #### 3.1.1 Seeded Scenario Inheritance (SC-M1-26 through SC-M1-30)
 
 | Seeded scenario | Inherited assertion | TC ID(s) | Reconciliation note |
 |---|---|---|---|
-| SC-M1-26 | Happy path classifies `pr-open`; the four key=value keys match the bash shape; token parity with TDR-0005 | TC-TRUTH-002, TC-DISP-007 | Unchanged in substance. The attempt record and the mandatory `outcome` field are additive. |
+| SC-M1-26 | Happy path classifies `pr-open`; the four key=value keys match the bash shape; token parity with TDR-0005 | TC-TRUTH-002, TC-DISP-007 | Unchanged in substance. The attempt record with its evidence class, comparison record, and the mandatory `outcome` field are additive. |
 | SC-M1-27 | Exit-0-with-no-artifact classifies `failed` at exit 1 and names the missing artifact | TC-TRUTH-001 | Unchanged. The attempt record adds the durable incident and evidence fields. |
 | SC-M1-28 | Resume records `resume-prompt-reentry`, acknowledges prefill cost, and does not re-execute completed phases | TC-RESUME-001 | Unchanged. The resume mode also rides the attempt record. |
-| SC-M1-29 | Handover flips one repository and leaves the other authoritative state untouched | TC-HAND-001, TC-HAND-002, TC-HAND-006, TC-E2E-001, TC-E2E-002, TC-BASH-001, TC-BASH-002 | **Reconciled.** The seeded parenthetical "two weeks, zero false-success, zero unresolved divergences" is superseded by the four-condition bar (DEC-1). The tests assert the evidence gate and per-repo isolation, never a calendar proxy. Delivery must edit SC-M1-29's wording in `test-scenarios.md` (story-owned) to name the four-condition bar; no other planning doc is edited. |
-| SC-M1-30 | Summary counts days, deliveries, incidents, divergences, and states eligibility; an unresolved divergence blocks | TC-GATE-001, TC-GATE-002, TC-GATE-003, TC-GATE-004, TC-GATE-005, TC-GATE-007, TC-GATE-009 | **Reconciled.** The seeded "fourteen days" and "eligibility logic = clean window met" wording is superseded. The summary additionally reports class coverage, corroboration, window start and reason, and named unmet conditions; the floor is the only either/or. Delivery must edit SC-M1-30's wording in `test-scenarios.md` (story-owned); no other planning doc is edited. |
+| SC-M1-29 | Handover flips one repository and leaves the other authoritative state untouched | TC-HAND-001, TC-HAND-002, TC-HAND-006, TC-HAND-007, TC-E2E-001, TC-E2E-002, TC-BASH-001, TC-BASH-002 | **Reconciled.** The seeded parenthetical "two weeks, zero false-success, zero unresolved divergences" is superseded by the four-condition bar (DEC-1). The tests assert the evidence gate (truth, coverage as exposure, floor-only, corroboration), rename-invariant per-repository isolation, and the controlled-proof path, never a calendar proxy. Delivery must edit SC-M1-29's wording in `test-scenarios.md` (story-owned) to name the four-condition bar; no other planning doc is edited. |
+| SC-M1-30 | Summary counts days, deliveries, incidents, divergences, and states eligibility; an unresolved divergence blocks | TC-GATE-001, TC-GATE-002, TC-GATE-003, TC-GATE-004, TC-GATE-005, TC-GATE-007, TC-GATE-009, TC-GATE-011 | **Reconciled.** The seeded "fourteen days" and "eligibility logic = clean window met" wording is superseded. The summary additionally reports window start and reason, class coverage as exposure, evidence classes counted with cross-class exclusions, corroboration of success claims only, and named unmet conditions; the floor is the only either/or. Delivery must edit SC-M1-30's wording in `test-scenarios.md` (story-owned); no other planning doc is edited. |
 
 Inheritance rule: this plan inherits all five scenarios and may extend them. It does not weaken any inherited assertion. The two reconciled scenarios are the only planning surfaces this story may edit; `TC-PLANREC-001` asserts the reconciled content, and the "no other planning doc edited" obligation is a review gate recorded in Section 8. This test-plan author does not edit `test-scenarios.md`: the two-scenario reconciliation is a delivery action owned by the story and is a named dependency in the final report.
 
@@ -182,17 +205,17 @@ Inheritance rule: this plan inherits all five scenarios and may extend them. It 
 
 | Interface | Element | TC ID(s) | Evidence |
 |---|---|---|---|
-| EVT-1 | `dispatch.attempt` record, schema `delivery.dispatch.attempt.v1`, appended once per classified dispatch under the fence | TC-EVID-001, TC-EVID-005, TC-DISP-006 | Record count, field completeness, canary absence, fenced append and torn-read behavior |
-| EVT-2 | `dispatch.divergence` record, schema `delivery.dispatch.divergence.v1`, open then resolved, never rewritten or deleted | TC-EVID-002 | Open record retained after resolution; latest-per-divergence fold; summary totals |
-| EVT-3 | `dispatch.handover` record, schema `delivery.dispatch.handover.v1`, flip and reversal, conditions snapshot and evidence references | TC-HAND-002, TC-HAND-003, TC-HAND-004 | Record count, snapshot fields, history retention, folded latest per repository |
-| DM-1 | Dispatch attempt record fields, including comparison token or not-applicable and tri-state corroboration | TC-EVID-001, TC-TRUTH-001, TC-GATE-008 | Field-level assertions and schema validation |
-| DM-2 | Divergence record state vocabulary and bounded resolution note | TC-EVID-002 | `open` then `resolved`; principal and timestamp; bounded note |
+| EVT-1 | `dispatch.attempt` record, schema `delivery.dispatch.attempt.v1`, appended once per dispatch that reaches classification under the fence; pre-session refusals append none; carries `evidenceClass` and the comparison record | TC-EVID-001, TC-EVID-005, TC-EVID-006, TC-EVID-007, TC-DISP-002 | Record count, field completeness, declared evidence class, comparison shape, canary absence, fenced append and torn-read behavior |
+| EVT-2 | `dispatch.divergence` record, schema `delivery.dispatch.divergence.v1`, open then resolved, never rewritten or deleted; appended if and only if a comparison outcome is `mismatch` | TC-EVID-002, TC-EVID-007 | Open record retained after resolution; latest-per-divergence fold; summary totals; no divergence for `match` or `not-applicable` |
+| EVT-3 | `dispatch.handover` record, schema `delivery.dispatch.handover.v1`, flip and reversal, conditions snapshot and evidence references, resolved repository identity | TC-HAND-002, TC-HAND-003, TC-HAND-004, TC-HAND-007 | Record count, snapshot fields, history retention, folded latest per repository |
+| DM-1 | Dispatch attempt record fields, including `evidenceClass`, comparison record (class, token or null, outcome, reason, `urlResolved`), and tri-state corroboration | TC-EVID-001, TC-EVID-006, TC-EVID-007, TC-TRUTH-001, TC-TRUTH-003, TC-TRUTH-006 | Field-level assertions and schema validation |
+| DM-2 | Divergence record state vocabulary and bounded resolution note | TC-EVID-002, TC-EVID-007 | `open` then `resolved`; principal and timestamp; bounded note; divergence-iff-mismatch |
 | DM-3 | Handover record operations and conditions snapshot | TC-HAND-002, TC-HAND-003 | `authoritative` then `dual-run`; snapshot present |
-| DM-4 | Derived repository authority view; absent or unreadable means dual-run | TC-HAND-004, TC-HAND-005, TC-BASH-003 | Field assertions, atomic replacement, fail-safe default |
+| DM-4 | Derived repository authority view; derived from the folded ledger; absent or unreadable means dual-run | TC-HAND-004, TC-HAND-005, TC-HAND-007, TC-BASH-003 | Field assertions, atomic replacement, fail-safe default, resolved identity |
 | DM-5 | Dispatch envelope data, including mandatory `outcome` | TC-DISP-006, TC-DISP-009, TC-DISP-010 | Key set, token/exit matrix, failure envelope |
-| DM-6 | Dual-run summary data: window, counts, class coverage, corroboration, verdict, unmet conditions | TC-GATE-001, TC-GATE-006 | Text and envelope assertions against the summary fixture set |
-| DM-7 | Handover gate predicate, one declared home shared by summary and handover | TC-GATE-002, TC-GATE-005, TC-GATE-007, TC-HAND-001 | Same fixture yields the same verdict from both surfaces |
-| DM-8 | Corroboration evidence set: completed phases, tracker state, CI on pushed head; family-wise sufficiency | TC-GATE-008, TC-GATE-010, TC-EVID-003 | Per-family sufficiency matrix and contradiction detection |
+| DM-6 | Dual-run summary data: window start and reason, counts, evidence classes counted and cross-class exclusions, class coverage as exposure, corroboration, verdict, unmet conditions | TC-GATE-001, TC-GATE-006, TC-GATE-011 | Text and envelope assertions against the summary fixture set |
+| DM-7 | Handover gate predicate, one declared home shared by summary and handover; the comparison record shape and evidence-class counting rule are declared with it | TC-GATE-002, TC-GATE-005, TC-GATE-007, TC-GATE-011, TC-HAND-001 | Same fixture yields the same verdict from both surfaces; one counting rule and one comparison shape |
+| DM-8 | Corroboration evidence set: completed phases, tracker state, CI on pushed head; family-wise sufficiency; `pr-open-unverified` corroborates on the tracker fact; non-success tokens satisfy it vacuously | TC-GATE-008, TC-GATE-010, TC-EVID-003, TC-TRUTH-003 | Per-family sufficiency matrix and contradiction detection |
 | Section 8.5 | Backward compatibility: four bash keys, retained error rows, bash arguments and exits | TC-DISP-007, TC-ERR-003, TC-BASH-001 | Golden keys, unchanged rows, unchanged script behavior |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
@@ -202,28 +225,28 @@ Inheritance rule: this plan inherits all five scenarios and may extend them. It 
 | NFR-1 | Token and exit closure; no call-site exit literal | TC-DISP-008, TC-DISP-009, TC-TOKEN-001, TC-TOKEN-002, TC-ERR-004 | Covered |
 | NFR-2 | Progress-based liveness truth; absent readings never zero; cadence from policy | TC-DISP-003, TC-DISP-004, TC-DISP-005 | Covered |
 | NFR-3 | Determinism and zero model calls in help, summary, gate, classification, and render | TC-HELP-002, TC-DET-001 | Covered |
-| NFR-4 | Bounded reads and output | TC-NFR-001, TC-NFR-002, TC-NFR-003, TC-NFR-004 | Covered |
-| NFR-5 | Durable fenced appends; no clean verdict from a torn or unreadable read; atomic derived view | TC-EVID-005, TC-EVID-004, TC-HAND-004 | Covered |
+| NFR-4 | Bounded reads and output; declared truncation with a non-eligible verdict | TC-NFR-001, TC-NFR-002, TC-NFR-003, TC-NFR-004, TC-GATE-006 | Covered |
+| NFR-5 | Durable fenced appends; no clean verdict from a torn or unreadable read; atomic derived view | TC-EVID-005, TC-EVID-004, TC-TRUTH-006, TC-HAND-004, TC-GATE-006 | Covered |
 | NFR-6 | Idempotent convergence | TC-NFR-005, TC-RESUME-004, TC-HAND-003 | Covered |
 | NFR-7 | Secret containment and deny-by-default spawn environment | TC-NFR-006, TC-NFR-007, TC-EVID-001 | Covered |
 | NFR-8 | Bash fallback compatibility in all four entry points | TC-BASH-001, TC-BASH-002, TC-BASH-003, TC-BASH-004, TC-BASH-005 | Covered |
 | NFR-9 | Merge absence: no port, no code path, boundary check | TC-MERGE-001, TC-MERGE-002, TC-MERGE-003, TC-MERGE-004 | Covered |
-| NFR-10 | Evidence completeness: comparison field and tri-state corroboration on every counted dispatch; no omitted unresolved divergence | TC-EVID-001, TC-EVID-002, TC-EVID-004, TC-GATE-007, TC-GATE-010 | Covered |
+| NFR-10 | Evidence completeness: declared evidence class, comparison record, and tri-state corroboration on every counted dispatch; zero non-`pilot` production counts; zero out-of-scope `controlled-proof` counts; no omitted unresolved divergence | TC-EVID-001, TC-EVID-002, TC-EVID-004, TC-EVID-006, TC-EVID-007, TC-GATE-007, TC-GATE-010, TC-GATE-011 | Covered |
 
 ## 4. Test Types and Layers
 
 | Layer | Framework / location | Purpose in this change |
 |---|---|---|
-| Unit / pure domain | `bun:test`, `tests/behaviour/dispatch-*.test.ts` importing `packages/core/src/domain` | Token derivation, liveness assembly, gate predicate, window fold, family comparison, classification dispatch. No I/O. |
-| Behaviour | `bun:test`, `tests/behaviour/dispatch-*.test.ts`, in-process `runEntrypoint` with injected dependencies | Command-level dispatch, summary, resolve, handover, reversal, help, error envelopes, idempotency, privacy, bounds. |
-| Structure | `bun:test`, `tests/structure/dispatch-*.test.ts` | Contracts (record kinds, payload schemas, gate predicate home), composition membership, import boundaries, merge absence, token and exit literal homes. |
-| Types | `bun:test` type tests, `tests/types/dispatch-contract.type-test.ts` | Compile-time shape of attempt, divergence, handover, authority view, summary, and envelope data. |
+| Unit / pure domain | `bun:test`, `tests/behaviour/dispatch-*.test.ts` importing `packages/core/src/domain` | Token derivation, liveness assembly, gate predicate, window fold (inclusive/exclusive bounds), evidence-class counting, comparison record shape, family comparison, classification dispatch. No I/O. |
+| Behaviour | `bun:test`, `tests/behaviour/dispatch-*.test.ts`, in-process `runEntrypoint` with injected dependencies | Command-level dispatch, summary, resolve, handover, reversal, help, error envelopes, idempotency, privacy, bounds, pre-session refusal envelopes, identity resolution. |
+| Structure | `bun:test`, `tests/structure/dispatch-*.test.ts` | Contracts (record kinds, payload schemas, evidence-class closure, comparison record shape, gate predicate home), composition membership, import boundaries, merge absence, token and exit literal homes. |
+| Types | `bun:test` type tests, `tests/types/dispatch-contract.type-test.ts` | Compile-time shape of attempt, comparison record, divergence, handover, authority view, summary, and envelope data. |
 | Repository invariants | `bun run scripts/checks/*.ts`, mutation-tested by `tests/checks/*.test.ts` | Error-table sync, exit-code literals, help/guide coverage, reference-page parity, doc conformance for the story-owned planning surfaces, privacy scans, boundary checks. |
 | Golden | `bun:test`, `tests/golden/dispatch-*.test.ts` over committed fixtures | Byte-pinned four-key text, summary text, handover text, error envelopes. |
-| Conformance / integration | `bun:test`, `tests/conformance/dispatch/*.test.ts` | Controlled-repository end-to-end proof, daemon lane cycle, bash matrix over temporary state roots. |
+| Conformance / integration | `bun:test`, `tests/conformance/dispatch/*.test.ts` | Controlled-proof end-to-end proof with a provenance guard, daemon lane cycle with its attempt record, bash matrix over temporary state roots. |
 | Shell | `bash scripts/.tests/test-dispatch-bash-fallback.sh` plus the four retained script suites | Four scripts x three authority conditions, typed CLI absence, no new arguments. |
 | Performance | `bun:test` tagged `@perf` in `tests/behaviour/dispatch-bounds.test.ts` | 5,000-record summary read and p95 latency on the reference host; deterministic bounded-read assertion stays in the default suite. |
-| Manual | Review checklist in the PR | Reference-page readability, F-9 deferral wording, planning-scope diff, no real repository flip. |
+| Manual | Review checklist in the PR | Reference-page readability, F-9 deferral wording, planning-scope diff, no real repository flip, pilot fixture left reduced. |
 
 Test IDs follow `TC-FEATURE-NNN`. Each test file carries its TC IDs in a header comment so traceability survives file moves. Fixtures are never named `*.test.ts`.
 
@@ -233,8 +256,8 @@ Test IDs follow `TC-FEATURE-NNN`. Each test file carries its TC IDs in a header 
 
 | TC ID | Title | Scenario Type | Test Level | Priority | AC Coverage |
 |---|---|---|---|---|---|
-| TC-DISP-001 | Harness resolution, lease claim, fresh spawn | Happy Path | Behaviour | High | AC-F1-1 |
-| TC-DISP-002 | Conflicting lease refusal without spawn | Negative | Behaviour | High | AC-F1-1 |
+| TC-DISP-001 | Harness resolution, lease claim, fresh spawn, one attempt record | Happy Path | Behaviour | High | AC-F1-1, AC-F4-1 |
+| TC-DISP-002 | Pre-session refusal: classified envelope and no attempt record | Negative | Behaviour | High | AC-F1-1, AC-F4-1 |
 | TC-DISP-003 | Progress signals keep a session live | Happy Path | Unit | High | AC-F1-2, NFR-2 |
 | TC-DISP-004 | Absent liveness readings stay unknown | Corner Case | Unit | High | AC-F1-2, NFR-2 |
 | TC-DISP-005 | Stall requires two sourced evaluations | Edge Case | Unit | Medium | AC-F1-2, NFR-2 |
@@ -246,54 +269,58 @@ Test IDs follow `TC-FEATURE-NNN`. Each test file carries its TC IDs in a header 
 | TC-DISP-011 | `partial` carries outcome; `noop-lane-permission` is spawn-refused | Corner Case | Unit | High | AC-F1-3, AC-F2-4 |
 | TC-DISP-012 | `noop-lane-nothing-to-do` only with no remaining work | Negative | Unit | Medium | AC-F2-4 |
 | TC-TRUTH-001 | Exit-0 with no artifact is `failed` | Negative | Behaviour | High | AC-F2-1 |
-| TC-TRUTH-002 | Open PR is `pr-open` | Happy Path | Behaviour | High | AC-F2-2 |
-| TC-TRUTH-003 | Unresolvable PR URL is `pr-open-unverified` | Edge Case | Behaviour | High | AC-F2-2 |
+| TC-TRUTH-002 | Open PR is `pr-open` with a tracker-truth match | Happy Path | Behaviour | High | AC-F2-2, AC-F4-6 |
+| TC-TRUTH-003 | Unresolvable PR URL is `pr-open-unverified`, corroborated by the tracker fact | Edge Case | Behaviour | High | AC-F2-2, AC-F4-6, AC-F5-2 |
 | TC-TRUTH-004 | Already-merged PR is detection-only `merged` | Edge Case | Behaviour | High | AC-F2-2, AC-F9-2 |
 | TC-TRUTH-005 | Blocking tracker state is `blocked`; missing fact is not success | Negative | Behaviour | Medium | AC-F2-2 |
-| TC-TRUTH-006 | Unreadable truth is `state-unverified` at exit 2 | Negative | Behaviour | High | AC-F2-3 |
+| TC-TRUTH-006 | `state-unverified` degrades one record, not the window | Negative | Behaviour | High | AC-F2-3, AC-F4-4, AC-F5-2 |
 | TC-RESUME-001 | Resume prompt records re-entry mode and skips completed phases | Happy Path | Behaviour | High | AC-F3-1 |
 | TC-RESUME-002 | Restart budget exhaustion refuses loudly and never requeues | Negative | Behaviour | High | AC-F3-2 |
 | TC-RESUME-003 | Resume economics refuses uneconomical re-pay | Negative | Behaviour | High | AC-F3-3 |
 | TC-RESUME-004 | Identical resume replay converges without a second effect | Regression | Behaviour | High | AC-F3-4, AC-NFR6-1 |
-| TC-EVID-001 | Exactly one complete attempt record per dispatch | Happy Path | Behaviour | High | AC-F4-1, AC-NFR7-1, NFR-10 |
-| TC-EVID-002 | Divergence opens on disagreement and resolves append-only | Happy Path | Behaviour | High | AC-F4-2 |
-| TC-EVID-003 | False success is recorded and resets the window | Negative | Behaviour | High | AC-F4-3 |
-| TC-EVID-004 | Unevaluable evidence is recorded and blocks the gate | Negative | Behaviour | High | AC-F4-4 |
+| TC-EVID-001 | Exactly one complete attempt record per classified dispatch | Happy Path | Behaviour | High | AC-F4-1, AC-NFR7-1, NFR-10 |
+| TC-EVID-002 | Divergence opens on disagreement and resolves append-only | Happy Path | Behaviour | High | AC-F4-2, AC-F4-6 |
+| TC-EVID-003 | False success is recorded; the incident resets the exclusive window | Negative | Behaviour | High | AC-F4-3, AC-F5-6 |
+| TC-EVID-004 | Record-level degradation versus window-level unverifiability | Negative | Behaviour | High | AC-F4-4, AC-F5-4 |
 | TC-EVID-005 | Fenced append and torn reads never become clean | Negative | Behaviour | High | AC-F4-1, NFR-5 |
+| TC-EVID-006 | Evidence class is declared, closed, immutable, and never escalated | Negative | Behaviour | High | AC-F4-5, NFR-10 |
+| TC-EVID-007 | Comparison record shape and divergence-iff-mismatch | Negative | Unit | High | AC-F4-6, AC-F4-2, NFR-10 |
 | TC-GATE-001 | Summary reports the full evidence window | Happy Path | Behaviour | High | AC-F5-1 |
 | TC-GATE-002 | Eligibility is the four-condition conjunction | Happy Path | Unit | High | AC-F5-2 |
 | TC-GATE-003 | Floor variant: 20 counted dispatches | Edge Case | Unit | High | AC-F5-3 |
 | TC-GATE-004 | Floor variant: 7 consecutive UTC dates | Edge Case | Unit | High | AC-F5-3 |
 | TC-GATE-005 | Floor never substitutes for the other conditions | Negative | Unit | High | AC-F5-2, AC-F5-3 |
-| TC-GATE-006 | Unreadable or truncated evidence is unverifiable | Negative | Behaviour | High | AC-F5-4, AC-F4-4 |
-| TC-GATE-007 | All eleven classes must be covered | Negative | Unit | High | AC-F5-2 |
-| TC-GATE-008 | Family-wise comparison baseline | Corner Case | Unit | High | AC-F4-2, AC-F5-2 |
-| TC-GATE-009 | Incident resets the window; resolved divergence does not | Corner Case | Unit | High | AC-F4-3, AC-F5-1 |
+| TC-GATE-006 | Degraded evidence reads have pinned exits | Negative | Behaviour | High | AC-F5-4, AC-F4-4, AC-F6-1 |
+| TC-GATE-007 | All eleven classes are coverable; full coverage is eligible | Corner Case | Unit | High | AC-F5-2, AC-F5-5 |
+| TC-GATE-008 | Family-wise comparison record shape | Corner Case | Unit | High | AC-F4-2, AC-F4-6, AC-F5-2 |
+| TC-GATE-009 | Incident lower bound is exclusive; post-incident recovery is eligible | Corner Case | Unit | High | AC-F4-3, AC-F5-1, AC-F5-6 |
 | TC-GATE-010 | Corroboration sufficiency per outcome family | Negative | Unit | High | AC-F5-2 |
-| TC-HAND-001 | Unmet gate is a clean refusal | Negative | Behaviour | High | AC-F6-1 |
+| TC-GATE-011 | Evidence-class counting per repository scope | Negative | Unit | High | AC-F8-3, AC-F4-5, AC-F5-1 |
+| TC-HAND-001 | Readable-but-unmet refuses at exit 1; unreadable evidence at exit 2 | Negative | Behaviour | High | AC-F6-1 |
 | TC-HAND-002 | Met gate flips one repository and records it | Happy Path | Behaviour | High | AC-F6-2 |
 | TC-HAND-003 | Reversal restores dual-run; second reversal is a noop | Happy Path | Behaviour | High | AC-F6-3, AC-NFR6-1 |
 | TC-HAND-004 | Derived authority view is complete, atomic, and fail-safe | Corner Case | Structure | High | AC-F6-4 |
 | TC-HAND-005 | Dual-run dispatch claims no authority | Regression | Behaviour | High | AC-F6-5 |
 | TC-HAND-006 | Handover is isolated per repository | Negative | Behaviour | High | AC-F6-2 |
+| TC-HAND-007 | Repository identity is rename-invariant; unresolvable identity refuses | Corner Case | Behaviour | High | AC-F6-6, AC-F6-2, AC-F6-4 |
 | TC-BASH-001 | Dual-run bash entry points are unchanged | Regression | Shell | High | AC-F7-1, NFR-8 |
 | TC-BASH-002 | Authoritative bash entry points print the deprecation pointer | Happy Path | Shell | High | AC-F7-2, NFR-8 |
 | TC-BASH-003 | Bash fallback works with the typed CLI absent or broken | Corner Case | Shell | High | AC-F7-3, NFR-8 |
 | TC-BASH-004 | Four scripts across three conditions all complete | Regression | Shell | High | AC-NFR8-1 |
 | TC-BASH-005 | Bash never invokes the typed CLI to decide authority | Negative | Structure | High | AC-F7-3, NFR-8 |
-| TC-E2E-001 | Controlled repository accrues evidence, flips, and dispatches | Happy Path | Conformance | High | AC-F8-1 |
+| TC-E2E-001 | Controlled-proof evidence reaches eligibility, flips, and dispatches | Happy Path | Conformance | High | AC-F8-1, AC-F5-5, AC-F4-5, AC-F8-3 |
 | TC-E2E-002 | Reversal returns the repository to bash-authoritative | Happy Path | Conformance | High | AC-F8-2 |
-| TC-E2E-003 | Fixture evidence is command-produced, never hand-inserted | Negative | Conformance | Medium | AC-F8-1 |
+| TC-E2E-003 | Fixture evidence is command-produced and never counted cross-scope | Negative | Conformance | Medium | AC-F8-1, AC-F8-3 |
 | TC-MERGE-001 | Merge-ready PR stays `pr-open`; no merge fires | Negative | Behaviour | High | AC-F9-1 |
 | TC-MERGE-002 | Already-merged detection records observed evidence only | Edge Case | Behaviour | High | AC-F9-2 |
 | TC-MERGE-003 | Structural boundary proves no merge path | Negative | Structure | High | AC-F9-1, AC-NFR9-1 |
 | TC-MERGE-004 | Production composition has no reachable merge port | Negative | Structure | High | AC-NFR9-1 |
 | TC-DAEMON-001 | Planner produces prompt and declared environment; executor available | Happy Path | Behaviour | High | AC-F10-1 |
-| TC-DAEMON-002 | Daemon spawns, observes, collects, resumes a dispatch lane | Happy Path | Conformance | High | AC-F10-2 |
+| TC-DAEMON-002 | Daemon lane produces the same token, outcome, and attempt record as one-shot | Happy Path | Conformance | High | AC-F10-2 |
 | TC-DAEMON-003 | One-shot dispatch works with no daemon | Corner Case | Behaviour | High | AC-F10-3 |
 | TC-HELP-001 | Dispatch is registered and documented with the evidence bar | Happy Path | Structure | High | AC-F11-1 |
 | TC-HELP-002 | Help and version remain pure and side-effect free | Negative | Behaviour | High | AC-F11-2, NFR-3 |
-| TC-HELP-003 | Absence assertions are retired; F-9 is revisited | Regression | Structure | High | AC-F11-3 |
+| TC-HELP-003 | Production-surface absence assertions are inverted; the pilot fixture stays reduced | Regression | Structure | High | AC-F11-3 |
 | TC-PLANREC-001 | Story-owned planning surfaces carry the evidence bar | Regression | Structure | High | AC-F11-1 |
 | TC-ERR-001 | Spawn failure classifies as `dispatch.session.spawn-failed` | Negative | Behaviour | High | AC-F12-1 |
 | TC-ERR-002 | Dispatch state failure classifies as `dispatch.state-unverified` | Negative | Behaviour | High | AC-F12-1 |
@@ -312,18 +339,18 @@ Test IDs follow `TC-FEATURE-NNN`. Each test file carries its TC IDs in a header 
 | TC-DET-001 | Deterministic render with zero model calls | Regression | Behaviour | Medium | AC-F11-2, NFR-3 |
 | TC-REG-001 | Existing suites and rows stay green | Regression | Checks | High | AC-F12-2, AC-NFR1-1, NFR-8 |
 
-**Scenario counts:** 78 total, 72 must-pass and 6 nice-to-have. Families: DISP 12, TRUTH 6, RESUME 4, EVID 5, GATE 10, HAND 6, BASH 5, E2E 3, MERGE 4, DAEMON 3, HELP 3, PLANREC 1, ERR 5, TOKEN 2, NFR 7, DET 1, REG 1.
+**Scenario counts:** 82 total, 76 must-pass and 6 nice-to-have. Families: DISP 12, TRUTH 6, RESUME 4, EVID 7, GATE 11, HAND 7, BASH 5, E2E 3, MERGE 4, DAEMON 3, HELP 3, PLANREC 1, ERR 5, TOKEN 2, NFR 7, DET 1, REG 1.
 
 ### 5.2 Scenario Details
 
 Each scenario uses the template's Preconditions / Steps / Expected Outcome form, which encodes Given / When / Then: the preconditions are the Given, the steps are the When, and the expected outcome is the Then. Every scenario names the exact CLI command or test-facing function, the expected output or exit code, the expected record effects, and its test file placement.
 
-#### TC-DISP-001 - Harness resolution, lease claim, fresh spawn
+#### TC-DISP-001 - Harness resolution, lease claim, fresh spawn, one attempt record
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-1, F-12, AC-F1-1, DM-5
+**Related IDs**: F-1, F-4, F-12, AC-F1-1, AC-F4-1, DM-5, EVT-1, DEC-19
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-harness-lease.test.ts`
@@ -333,28 +360,30 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 - A temporary state root with an empty queue ledger and a configured default harness of `opencode`.
 - A scripted `HarnessSessionPort` whose `spawn` records its input and returns a session handle.
 - Tracker, CI, and VCS read ports return a consistent open-PR truth fixture.
+- A recording attempt-ledger reader over the same temp root.
 
 **Steps**:
 1. Invoke `dispatch GH-301` through `runEntrypoint` with configuration selecting `opencode`.
 2. Invoke `dispatch GH-302 --harness claude-code` and assert the flag wins over configuration.
 3. Invoke `dispatch GH-303 --harness unknown-harness` and assert refusal.
-4. Read the queue lease ledger and the harness spawn recorder after each invocation.
+4. Read the queue lease ledger, the harness spawn recorder, and the attempt ledger after each invocation.
 
 **Expected Outcome**:
 - Runs 1 and 2 each claim the repository lease through `claimQueueLease`, spawn exactly once through the port, and record the harness name in the envelope.
+- Runs 1 and 2 each append exactly one attempt record after classification, carrying the harness, the resolved repository identity, and a complete comparison record.
 - Run 2's spawn input names `claude-code`; the configured default is not used.
-- Run 3 exits `1` with a declared user-validation code (an identity, not prose), does not claim a lease, and does not spawn.
+- Run 3 exits `1` with a declared input-refusal code (an identity, not prose), does not claim a lease, does not spawn, and appends no attempt record (DEC-19; the detailed assertion is `TC-DISP-002`).
 - No invocation touches the network or a live remote.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-harness-lease.test.ts` exits 0; any missing lease claim, wrong harness, or spawn on the unknown-harness case fails.
+- `bun test tests/behaviour/dispatch-harness-lease.test.ts` exits 0; any missing lease claim, wrong harness, spawn on the unknown-harness case, or attempt record for a refused dispatch fails.
 
-#### TC-DISP-002 - Conflicting lease refusal without spawn
+#### TC-DISP-002 - Pre-session refusal: classified envelope and no attempt record
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-1, F-12, AC-F1-1
+**Related IDs**: F-1, F-4, F-12, AC-F1-1, AC-F4-1, DEC-19, D6
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-harness-lease.test.ts`
@@ -362,22 +391,25 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 
 **Preconditions**:
 - The state root holds an active repository lease for `GH-301` held by another runner.
-- A scripted harness port counts every spawn.
-- A pre-session input refusal is envelope-only by interpretation OQ-T2.
+- A scripted harness port counts every spawn and resume.
+- Three refusal shapes are available: an active conflicting lease, an unknown harness name, and a rejected input value.
+- A recording attempt ledger and a recording authority-view reader.
 
 **Steps**:
-1. Invoke `dispatch GH-301`.
+1. Invoke `dispatch GH-301` against the held lease.
 2. Assert the exit code, the error envelope, the spawn count, and the lease ledger.
-3. Assert the attempt-record count and that the authority view did not change.
+3. Assert the attempt-record count is unchanged and that the authority view did not change.
+4. Repeat steps 1-3 with the unknown-harness and rejected-input shapes.
 
 **Expected Outcome**:
-- Exit `1`; the envelope carries the delivered queue lease-conflict identity (or the declared input/refusal identity), category `user-validation`, and a remediation hint.
-- Spawn count is `0`; the existing lease is unchanged; no second lease is created.
-- No handover record and no authority change; if the record policy appends an attempt per OQ-T2, the record is a refusal, never a success.
+- Exit `1`; the envelope carries the delivered queue lease-conflict identity (or the declared input-refusal identity), category `user-validation`, and a remediation hint; every envelope field is present.
+- Spawn count is `0`; resume count is `0`; the existing lease is unchanged; no second lease is created.
+- Zero attempt records are appended for all three pre-session refusal shapes, deterministically (DEC-19, PM D6): a refusal with no engine outcome and token cannot produce an attempt record, so the envelope is the only record.
+- No divergence, no handover record, and no authority change.
 - The bash stack remains authoritative and unblocked.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-harness-lease.test.ts` exits 0; a spawn, a stolen lease, or an authority change fails.
+- `bun test tests/behaviour/dispatch-harness-lease.test.ts` exits 0; a spawn, a stolen lease, a missing envelope field, or any attempt record for a pre-session refusal fails.
 
 #### TC-DISP-003 - Progress signals keep a session live
 
@@ -686,12 +718,12 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Pass/Fail Evidence**:
 - `bun test tests/behaviour/dispatch-truth-derivation.test.ts` exits 0; an exit-0 success classification fails.
 
-#### TC-TRUTH-002 - Open PR is `pr-open`
+#### TC-TRUTH-002 - Open PR is `pr-open` with a tracker-truth match
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-2, AC-F2-2, DM-1, DM-8, SC-M1-26
+**Related IDs**: F-2, AC-F2-2, AC-F4-6, DM-1, DM-8, SC-M1-26
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-truth-derivation.test.ts`
@@ -704,43 +736,51 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Steps**:
 1. Invoke `dispatch GH-301`.
 2. Assert the token and the URL.
-3. Read the attempt record and the corroboration tri-state.
+3. Read the attempt record, the comparison record, and the corroboration tri-state.
 
 **Expected Outcome**:
 - Result `pr-open`, exit `0`, `prUrl` set, `handoverState` `dual-run`.
-- The attempt record's comparison field and corroboration tri-state are complete.
-- The tracker-pr comparison baseline is the independent tracker fact, not the engine token.
+- The comparison record is `class: tracker-truth`, `token: pr-open`, `outcome: match`, and `urlResolved: true`; no divergence is appended.
+- The corroboration tri-state is complete and satisfied by the tracker fact; the tracker-truth comparison baseline is independent tracker truth, not the engine token.
+- The attempt record carries the declared evidence class.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-truth-derivation.test.ts` exits 0; a missing URL or an incomplete corroboration record fails.
+- `bun test tests/behaviour/dispatch-truth-derivation.test.ts` exits 0; a missing URL, an incomplete comparison record, or an incomplete corroboration record fails.
 
-#### TC-TRUTH-003 - Unresolvable PR URL is `pr-open-unverified`
+#### TC-TRUTH-003 - Unresolvable PR URL is `pr-open-unverified`, corroborated by the tracker fact
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-2, AC-F2-2
+**Related IDs**: F-2, F-4, F-5, AC-F2-2, AC-F4-6, AC-F5-2, DEC-3, TDR-0015
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-truth-derivation.test.ts`
 **Tags**: @backend, @dispatch, @truth
 
 **Preconditions**:
-- The tracker reports an open PR but the URL read fails or returns empty.
+- The tracker reports an open PR (the independent tracker fact is "PR open, state `open`"), but the URL read fails or returns empty.
 - The branch and phase ledger are otherwise consistent.
+- An attempt ledger, a divergence ledger, and a summary reader are available.
 
 **Steps**:
 1. Invoke `dispatch GH-301`.
 2. Assert the token, exit, `pr_url=` value, and `last_message`.
 3. Assert no `closeout_unverified=` key appears.
+4. Read the attempt record's comparison record and corroboration tri-state.
+5. Read the divergence ledger and run `dispatch dual-run summary --repo REPO`.
+6. Evaluate the gate over a window in which this is the only `pr-open-unverified` record and every other condition holds.
 
 **Expected Outcome**:
 - Result `pr-open-unverified`, exit `0`, `pr_url=` empty.
-- The unverified reason rides the token, the `last_message`, and the attempt record; no extra bash key is emitted.
-- The record is counted as exposure but its corroboration is explicitly unsatisfied.
+- Comparison record asserted exactly: `class: tracker-truth`, `token: pr-open` (independent tracker truth, at tracker-state granularity), `outcome: match`, `urlResolved: false`. URL resolution is an engine-side attribute, never part of the comparison and never a mismatch trigger.
+- Zero divergence records are appended; the summary reports zero unresolved divergences attributable to this record.
+- Corroboration for this success claim is **satisfied by the tracker fact** (the PR is open). The record is not "permanently uncorroborated" and its corroboration is not an unmet condition; only the URL remained unresolved.
+- The unverified reason rides the token and `last_message`; no extra bash key is emitted.
+- The gate does not treat this class as blocking: a window containing it can be eligible (`TC-GATE-007`, `TC-E2E-001`).
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-truth-derivation.test.ts` exits 0; a fabricated URL or an extra key fails.
+- `bun test tests/behaviour/dispatch-truth-derivation.test.ts` exits 0; a fabricated URL, an extra key, a `mismatch`, a divergence for the unresolved URL, or an unsatisfied corroboration on the tracker fact fails.
 
 #### TC-TRUTH-004 - Already-merged PR is detection-only `merged`
 
@@ -798,32 +838,41 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Pass/Fail Evidence**:
 - `bun test tests/behaviour/dispatch-truth-derivation.test.ts` exits 0; a missing tracker fact producing a success token fails.
 
-#### TC-TRUTH-006 - Unreadable truth is `state-unverified` at exit 2
+#### TC-TRUTH-006 - `state-unverified` degrades one record, not the window
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-2, F-12, AC-F2-3, NFR-1
+**Related IDs**: F-2, F-4, F-5, F-12, AC-F2-3, AC-F4-4, AC-F5-2, NFR-1, NFR-5, TDR-0015
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-state-unverified.test.ts`
 **Tags**: @backend, @dispatch, @truth, @errors
 
 **Preconditions**:
-- Four fixtures: unreadable ledger, unreadable tracker, unreadable artifact read, and torn state read.
+- Four blocking-verdict fixtures: unreadable ledger, unreadable tracker, unreadable artifact read, and torn state read.
+- A fifth fixture where the verdict itself is derivable as non-success but the comparison source is unreadable (the record-level case).
+- A window fixture in which that `state-unverified` record supplies the otherwise-missing class, so the window reaches full eleven-class coverage only through this exposure record; every other condition holds.
+- A window-level fixture where the attempt ledger itself cannot be read.
 
 **Steps**:
-1. Invoke each fixture with `--json`.
+1. Invoke each blocking-verdict fixture with `--json`.
 2. Assert the token, exit, identity, and remediation hint.
-3. Assert the bash fallback still runs for the same repository.
+3. Read each attempt record and assert the comparison record and corroboration tri-state.
+4. Run the summary over the window containing the `state-unverified` record and evaluate the gate.
+5. Run the summary over the unreadable evidence stream and assert the verdict and exit.
+6. Assert the bash fallback still runs for the same repository.
 
 **Expected Outcome**:
 - Result `state-unverified`, exit `2`; never exit `0`, never silently `failed`.
-- The envelope carries `dispatch.state-unverified` (or a delivered `state.*` identity) and a remediation hint.
-- The attempt record is unevaluable and blocks eligibility; the bash stack is not suppressed.
+- The envelope carries `dispatch.state-unverified` (or a delivered `state.*` identity) and a remediation hint; category is `platform-provider`.
+- Record-level: the attempt's comparison record is `class: not-applicable`, `token: null`, `outcome: not-applicable`, `reason: comparison-source-unavailable`. No divergence is appended.
+- Record-level: the record makes no success claim, so it counts for class coverage as exposure, creates no divergence, and does not by itself block eligibility — the gate over a window whose other conditions hold returns eligible true with this class present.
+- Window-level: an unreadable, torn, or malformed evidence-stream read makes eligibility `unverifiable` with the degradation declared and exit `2`; it never returns eligible and never fabricates zeros. The two scopes are asserted separately and are not conflated.
+- The attempt record is durable and is not a fabricated success; the bash stack is not suppressed.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-state-unverified.test.ts` exits 0; exit `0` or `failed` on an unreadable truth read fails.
+- `bun test tests/behaviour/dispatch-state-unverified.test.ts` exits 0; exit `0` or `failed` on an unreadable truth read, a divergence for a not-applicable comparison, the record blocking a window by itself, or an eligible/zeroed window-level read fails.
 
 #### TC-RESUME-001 - Resume prompt records re-entry mode and skips completed phases
 
@@ -938,70 +987,73 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Pass/Fail Evidence**:
 - `bun test tests/behaviour/dispatch-resume-economics.test.ts` exits 0; a duplicate ordinal or a second spawn fails.
 
-#### TC-EVID-001 - Exactly one complete attempt record per dispatch
+#### TC-EVID-001 - Exactly one complete attempt record per classified dispatch
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4, AC-F4-1, DM-1, DM-8, EVT-1, NFR-7, NFR-10
+**Related IDs**: F-4, AC-F4-1, AC-F4-5, DM-1, DM-8, EVT-1, NFR-7, NFR-10
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-evidence-record.test.ts` and `tests/types/dispatch-contract.type-test.ts`
 **Tags**: @backend, @dispatch, @evidence
 
 **Preconditions**:
-- Success, failure, and refusal fixtures.
+- Success, failure, and **post-spawn** refusal fixtures only: a restart-budget exhaustion and a resume-economics refusal, both of which reach classification. Pre-session refusals are excluded here and asserted by `TC-DISP-002`.
 - Canary prompt, transcript, credential, and raw payload strings are placed in harness evidence and parent environment.
 - The type test imports the declared record types.
 
 **Steps**:
 1. Run each fixture once and read the attempt ledger.
-2. Assert exactly one record per classified dispatch and validate every required field.
+2. Assert exactly one record per classified dispatch and validate every required field, including `evidenceClass` and the comparison record.
 3. Serialize each record and scan for the canaries.
 4. Compile the type test against the declared record and summary shapes.
 
 **Expected Outcome**:
-- Exactly one record per dispatch with repository, reference, start/finish, harness, handover state, outcome and token, comparison token or not-applicable, divergence reference, false-success classification, corroboration tri-state, and resume mode when applicable.
+- Exactly one record per dispatch that reaches classification, with repository identity, reference, start/finish, harness, declared `evidenceClass` (one of the four closed values), handover state, outcome and token, the comparison record (class, token or null, outcome, reason, `urlResolved`), divergence reference, false-success classification, corroboration tri-state, and resume mode when applicable.
+- The two post-spawn refusals each append one record; no pre-session refusal fixture is used in this scenario.
 - No canary appears in any record.
 - The type test fails if a required field is removed or widened.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-evidence-record.test.ts` and `bun test tests/types` exit 0; a missing field, a duplicate record, or a canary fails.
+- `bun test tests/behaviour/dispatch-evidence-record.test.ts` and `bun test tests/types` exit 0; a missing field, a duplicate record, a pre-session refusal fixture, or a canary fails.
 
 #### TC-EVID-002 - Divergence opens on disagreement and resolves append-only
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4, AC-F4-2, DM-2, EVT-2, DM-6
+**Related IDs**: F-4, AC-F4-2, AC-F4-6, DM-2, EVT-2, DM-6
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-divergence.test.ts`
 **Tags**: @backend, @dispatch, @divergence
 
 **Preconditions**:
-- Engine token `pr-open`, independent tracker truth `blocked` (or a verify-class token versus a contradicting ledger outcome).
+- Engine token `pr-open`, independent tracker truth `blocked` (a `tracker-truth` mismatch), or a verify-class token versus a contradicting ledger outcome (a `verify-change` mismatch).
 - A deterministic divergence id sequence.
 
 **Steps**:
-1. Dispatch and assert an open divergence record.
-2. Invoke `dispatch dual-run resolve DIV-1 --note "tracker was stale; PR reopened"`.
-3. Read the divergence ledger and run `dispatch dual-run summary --repo REPO`.
+1. Dispatch and assert an open divergence record and the comparison record that produced it (`outcome: mismatch`).
+2. Assert no divergence is appended for a `match` and for a `not-applicable` comparison in the same fixture family.
+3. Invoke `dispatch dual-run resolve DIV-1 --note "tracker was stale; PR reopened"`.
+4. Read the divergence ledger and run `dispatch dual-run summary --repo REPO`.
 
 **Expected Outcome**:
-- The open record is appended with both tokens and evidence references.
+- The open record is appended with both tokens, the comparison class, and evidence references; it exists because and only because the comparison outcome was `mismatch`.
 - Resolution appends a `resolved` record with a bounded note, principal, and timestamp; the original open record remains byte-identical.
 - The summary reports reported `1`, resolved `1`, unresolved `0`, and names the identifier only while unresolved.
+- A `match` or `not-applicable` comparison in the same run produced zero divergence records.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-divergence.test.ts` exits 0; a rewritten or deleted open record fails.
+- `bun test tests/behaviour/dispatch-divergence.test.ts` exits 0; a rewritten or deleted open record, a divergence for a non-mismatch, or a missing divergence for a mismatch fails.
 
-#### TC-EVID-003 - False success is recorded and resets the window
+#### TC-EVID-003 - False success is recorded; the incident resets the exclusive window
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4, F-5, AC-F4-3, DM-1, DM-8, NFR-10
+**Related IDs**: F-4, F-5, AC-F4-3, AC-F5-6, DM-1, DM-8, NFR-10, DEC-10
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-false-success.test.ts`
@@ -1009,48 +1061,57 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 
 **Preconditions**:
 - Engine claims `pr-open`, but the tracker shows no PR and CI shows no pushed head.
-- An earlier evidence set exists before the incident.
+- An earlier evidence set exists strictly before the incident timestamp T.
+- A post-incident evidence set exists that covers all eleven classes, meets the floor, has no further incident or unresolved divergence, and corroborates every success claim.
 
 **Steps**:
-1. Dispatch and assert the record's false-success classification and bounded evidence references.
-2. Run the summary and assert the incident count and the window start.
-3. Add evidence before the incident and re-evaluate.
+1. Dispatch and assert the record's false-success classification, bounded evidence references, and recorded completion timestamp T.
+2. Run the summary and assert the incident count, `windowStart = T`, and `windowStartReason = false-success-incident-reset`.
+3. Add attempts strictly before T and assert they remain excluded from floor, coverage, and counts.
+4. Add an attempt recorded at exactly T and assert it is excluded as well (`>` comparison, not `>=`).
+5. Evaluate the post-incident recovery set and assert eligibility.
 
 **Expected Outcome**:
 - The record is a false-success incident, never clean, with bounded references (no raw payload).
-- The summary counts the incident and starts the window at the incident, excluding earlier evidence.
-- Floor and class coverage must re-accrue after the incident.
+- The lower bound is exclusive: the incident at T and any same-instant record are outside the evaluated window and never counted; pre-incident evidence is excluded.
+- Floor and class coverage re-accrue strictly after T; with sufficient post-T evidence the gate returns eligible true with zero in-window incidents.
+- The summary always reports the window start and the reset reason.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-false-success.test.ts` exits 0; a zeroed incident or a pre-incident window fails.
+- `bun test tests/behaviour/dispatch-false-success.test.ts` exits 0; a zeroed incident, an inclusive bound, an in-window incident, or an unrecoverable window fails.
 
-#### TC-EVID-004 - Unevaluable evidence is recorded and blocks the gate
+#### TC-EVID-004 - Record-level degradation versus window-level unverifiability
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4, F-5, AC-F4-4, NFR-5, NFR-10
+**Related IDs**: F-4, F-5, AC-F4-4, AC-F5-4, NFR-5, NFR-10, TDR-0015
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-unevaluable.test.ts`
 **Tags**: @backend, @dispatch, @evidence
 
 **Preconditions**:
-- The comparison token cannot be derived, or corroboration cannot be read.
-- A bounded read omits some records.
+- Fixture A: a non-success token whose comparison source cannot be read (`class: not-applicable`, `reason: comparison-source-unavailable`).
+- Fixture B: a success-claimed token whose corroboration source cannot be read.
+- Fixture C: a bounded valid read that omits some records (truncation).
+- Fixture D: an unreadable or torn attempt-ledger read.
 
 **Steps**:
-1. Dispatch and read the attempt record.
-2. Run the summary over the bounded/truncated set.
-3. Assert the gate verdict and the declaration.
+1. Dispatch fixture A and read the attempt record; run the summary and evaluate the gate over a window whose other conditions hold.
+2. Dispatch fixture B and read the attempt record; run the summary and evaluate the gate.
+3. Run the summary over fixture C.
+4. Run the summary over fixture D.
 
 **Expected Outcome**:
-- The record is `unevaluable` and carries the classified state or provider identity.
-- The gate never treats the record as clean; the summary declares truncation rather than reporting zero.
-- Eligibility is unverifiable, not eligible.
+- Fixture A: the record is recorded unevaluable with its classified state or provider identity; it still counts for class coverage as exposure, creates no divergence, and does not by itself block eligibility — the gate can return eligible with this record present.
+- Fixture B: the success claim fails corroboration as exactly one named unmet condition; no divergence is created and the evidence window start does not move. The record is not a false-success incident.
+- Fixture C: the summary declares the truncation and the omitted range, reports eligibility false/unverifiable, names every unmet condition, and exits `0` with no fabricated zeros (the pinned exit is asserted in `TC-GATE-006`).
+- Fixture D: the summary declares the degradation, reports eligibility unverifiable, exits `2`, and never returns eligible.
+- Record-level and window-level outcomes are asserted as distinct; no single degraded record makes the whole window unverifiable.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-unevaluable.test.ts` exits 0; an unevaluable record counted clean fails.
+- `bun test tests/behaviour/dispatch-unevaluable.test.ts` exits 0; a record-level degradation escalated to the window, a success claim silently counted clean, a divergence for an unevaluable record, or a truncated/unreadable window returning eligible fails.
 
 #### TC-EVID-005 - Fenced append and torn reads never become clean
 
@@ -1080,6 +1141,73 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Pass/Fail Evidence**:
 - `bun test tests/behaviour/dispatch-evidence-record.test.ts` exits 0; a clean verdict from a torn read or a failed append fails.
 
+#### TC-EVID-006 - Evidence class is declared, closed, immutable, and never escalated
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-4, F-5, AC-F4-5, AC-F8-3, DM-1, EVT-1, NFR-10, TDR-0015
+**Test Type(s)**: Unit
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/dispatch-evidence-class.test.ts` and `tests/types/dispatch-contract.type-test.ts`
+**Tags**: @backend, @dispatch, @evidence, @provenance
+
+**Preconditions**:
+- A production-default composition (no explicit class) and explicit compositions declaring `controlled-proof`, `smoke`, and `fixture`.
+- A tampered-record fixture whose stored payload claims a different class than the one declared at creation.
+- A record whose outcome is a success token but whose declaration is `fixture`.
+
+**Steps**:
+1. Dispatch under the production default and assert `evidenceClass` is `pilot`.
+2. Dispatch under each explicit declaration and assert the record carries exactly that value.
+3. Assert the stored value is one of the four closed literals; a fifth value is rejected at the contract boundary.
+4. Run the same outcome under two different declarations and assert the classes differ, proving the class is not inferred from the outcome.
+5. Append a record, then attempt an in-place class mutation and a second append that escalates the class; assert both are refused and the original record is byte-identical.
+6. Supply a user-editable record payload that declares `pilot` from a `fixture` composition and assert the declared composition value wins or the payload is rejected.
+7. Compile the type test against the closed union.
+
+**Expected Outcome**:
+- Exactly one declared class per attempt record, sourced from the declared invocation or composition input (or the documented configuration default), never inferred from the outcome and never read from record content.
+- Immutable after append; no escalation path from `fixture`/`smoke`/`controlled-proof` to `pilot`.
+- The type test fails if the union is widened or a class becomes optional.
+- A production repository's counted window accepts only `pilot` records (the counting assertion is in `TC-GATE-011`).
+
+**Pass/Fail Evidence**:
+- `bun test tests/behaviour/dispatch-evidence-class.test.ts tests/types` exits 0; a missing class, an inferred class, an accepted escalation, or an out-of-set value fails.
+
+#### TC-EVID-007 - Comparison record shape and divergence-iff-mismatch
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-4, AC-F4-6, AC-F4-2, DM-1, DM-2, DM-7, NFR-10, TDR-0015
+**Test Type(s)**: Unit
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/dispatch-comparison.test.ts` and `tests/types/dispatch-contract.type-test.ts`
+**Tags**: @backend, @dispatch, @comparison
+
+**Preconditions**:
+- One attempt record per token family, covering all eleven tokens.
+- A declared comparison record type in the contracts tier.
+- A deterministic divergence-id sequence.
+
+**Steps**:
+1. For each of the eleven tokens, read the comparison record and assert `class`, `token`, and `outcome`.
+2. Assert the invariants: `token === null` if and only if `class === "not-applicable"`; `outcome === "not-applicable"` if and only if `class === "not-applicable"`.
+3. Assert a divergence record is appended if and only if `outcome === "mismatch"`, and that `match` and `not-applicable` append none.
+4. Assert `state-unverified` carries `reason: comparison-source-unavailable`; dispatch-session tokens carry `reason: dispatch-session-family`.
+5. Assert the summary and the handover read the same comparison classification for the same attempt.
+6. Compile the type test against the record shape.
+
+**Expected Outcome**:
+- Exactly one declared shape: `class` in {`verify-change`, `tracker-truth`, `not-applicable`}, `token` a TDR-0005 token or null, `outcome` in {`match`, `mismatch`, `not-applicable`}, optional `reason`, and `urlResolved` present for tracker facts.
+- All four invariants hold for all eleven tokens; a violation fails with the token named.
+- No consumer re-derives family membership: both surfaces agree.
+- The type test fails if the shape is widened or a field becomes optional.
+
+**Pass/Fail Evidence**:
+- `bun test tests/behaviour/dispatch-comparison.test.ts tests/types` exits 0; an invariant violation, a divergence for a non-mismatch, or a re-derived comparison fails.
+
 #### TC-GATE-001 - Summary reports the full evidence window
 
 **Scenario Type**: Happy Path
@@ -1092,35 +1220,36 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Tags**: @backend, @dispatch, @summary
 
 **Preconditions**:
-- A seeded evidence window spanning several UTC dates with counted dispatches, incidents, and resolved and unresolved divergences.
+- A seeded evidence window spanning several UTC dates with counted `pilot` dispatches, incidents, resolved and unresolved divergences, and a mix of counted and excluded evidence classes.
 
 **Steps**:
 1. Invoke `dispatch dual-run summary --repo REPO` in text and JSON modes.
-2. Assert every DM-6 field.
+2. Assert every DM-6 field, including the evidence classes counted and the cross-class exclusions.
 3. Compare the text with the committed golden.
 
 **Expected Outcome**:
-- The summary reports window start and reason, elapsed days, counted deliveries, false-success incidents, divergences (reported, resolved, unresolved) with identifiers, class coverage with missing classes, corroboration satisfaction, eligibility verdict, and every unmet condition.
+- The summary reports window start and reason, elapsed days, counted deliveries, evidence classes counted with their exclusions, false-success incidents, divergences (reported, resolved, unresolved) with identifiers, class coverage as exposure with missing classes named, corroboration satisfaction for success claims, eligibility verdict, and every unmet condition.
 - Text and envelope agree; the text is byte-identical to the golden.
 - Exit `0` even when ineligible.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-dual-run-summary.test.ts tests/golden/dispatch-summary.test.ts` exits 0; a missing field or a non-zero exit on an ineligible verdict fails.
+- `bun test tests/behaviour/dispatch-dual-run-summary.test.ts tests/golden/dispatch-summary.test.ts` exits 0; a missing field, an unreported class exclusion, or a non-zero exit on an ineligible verdict fails.
 
 #### TC-GATE-002 - Eligibility is the four-condition conjunction
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-5, AC-F5-2, DM-7
+**Related IDs**: F-5, AC-F5-2, AC-F5-5, DM-7, DEC-11, TDR-0015
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-dual-run-summary.test.ts`
 **Tags**: @backend, @dispatch, @gate
 
 **Preconditions**:
-- A fully eligible evidence fixture: zero incidents, zero unresolved divergences, all eleven classes, floor met, every success claim corroborated.
-- Four mutants, each breaking exactly one condition.
+- A fully eligible evidence fixture inside one evidence-class scope: zero incidents, zero unresolved divergences, all eleven classes including `state-unverified` and `pr-open-unverified`, floor met, every success claim corroborated.
+- Four mutants, each breaking exactly one condition: a false-success incident, an unresolved divergence, a missing class, and an uncorroborated success claim.
+- A floor-only mutant that meets the floor but fails coverage, to show the conjunction.
 
 **Steps**:
 1. Call `evaluateHandoverGate(evidence)` on the eligible fixture.
@@ -1128,12 +1257,12 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 3. Assert the verdict and the named conditions.
 
 **Expected Outcome**:
-- The eligible fixture returns eligible with no unmet condition.
-- Each mutant returns ineligible and names exactly the broken condition.
+- The eligible fixture returns eligible `true` with no unmet condition, proving the conjunction is satisfiable.
+- Each mutant returns ineligible and names exactly the broken condition; the rare classes never appear as unmet in the eligible fixture.
 - The summary and handover evaluate the same predicate and produce the same verdict for the same fixture.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-dual-run-summary.test.ts` exits 0; a single unmet condition accepted as eligible fails.
+- `bun test tests/behaviour/dispatch-dual-run-summary.test.ts` exits 0; a single unmet condition accepted as eligible, or an eligible fixture blocked by a rare class, fails.
 
 #### TC-GATE-003 - Floor variant: 20 counted dispatches
 
@@ -1147,7 +1276,7 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Tags**: @backend, @dispatch, @gate, @floor
 
 **Preconditions**:
-- Evidence with 20 counted dispatches across 6 distinct UTC dates, all eleven classes covered, zero incidents, zero unresolved divergences, and full corroboration.
+- Evidence with 20 counted `pilot`-class dispatches across 6 distinct UTC dates, all eleven classes covered, zero incidents, zero unresolved divergences, and full corroboration.
 - A companion set with 19 counted dispatches on the same 6 dates.
 
 **Steps**:
@@ -1175,7 +1304,7 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Tags**: @backend, @dispatch, @gate, @floor
 
 **Preconditions**:
-- Evidence with 14 counted dispatches (2 per date) on 7 consecutive UTC dates, all other conditions satisfied.
+- Evidence with 14 counted `pilot`-class dispatches (2 per date) on 7 consecutive UTC dates, all other conditions satisfied.
 - A companion set with 6 consecutive dates, a one-day gap, and then a seventh date.
 
 **Steps**:
@@ -1218,201 +1347,269 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Pass/Fail Evidence**:
 - `bun test tests/behaviour/dispatch-dual-run-floor.test.ts` exits 0; any fixture passing on the floor alone fails.
 
-#### TC-GATE-006 - Unreadable or truncated evidence is unverifiable
+#### TC-GATE-006 - Degraded evidence reads have pinned exits
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-5, AC-F5-4, NFR-4, NFR-5
+**Related IDs**: F-5, F-6, AC-F5-4, AC-F4-4, AC-F6-1, NFR-4, NFR-5
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-gate-evidence.test.ts`
 **Tags**: @backend, @dispatch, @gate, @fault
 
 **Preconditions**:
-- An unreadable evidence ledger; a torn record; a truncated read at the 5,000-record bound.
+- An unreadable evidence ledger; a torn record; a malformed payload.
+- A valid but bounded read truncated at the 5,000-record bound, where more records exist.
 - A repository identity that cannot be resolved.
+- A handover over an unreadable evidence read and a handover over a readable-but-unmet bar.
 
 **Steps**:
-1. Run the summary against each degraded fixture.
-2. Assert the declaration, the counts, and the verdict.
-3. Run handover against the unresolvable-identity fixture.
+1. Run `dispatch dual-run summary --repo REPO` against the unreadable, torn, and malformed fixtures.
+2. Run the summary against the bounded-but-truncated valid fixture.
+3. Run `dispatch handover REPO` against the unreadable read and against the readable-but-unmet bar.
+4. Run the summary and handover against the unresolvable-identity fixture.
 
 **Expected Outcome**:
-- Degraded runs declare the degradation or truncation, do not fabricate zeros, and report `unverifiable`.
-- The unresolvable repository identity is a clean refusal at exit `1`, not an empty success.
-- No degraded case returns eligible.
+- Unreadable, torn, or malformed summary read: exit `2` with `dispatch.state-unverified` or a delivered `state.*` identity, the degraded field named, no fabricated zeros, and verdict `unverifiable`.
+- Bounded-but-truncated valid read: exit `0`; the truncation and the omitted range are declared; eligibility is `false`/`unverifiable`; every unmet condition is named; no category is reported as zero merely because it was omitted.
+- Handover with an unreadable or torn read: exit `2` with the classified identity and zero authority-changing records.
+- Handover with a readable-but-unmet bar: exit `1` as a clean verification negative (asserted in detail by `TC-HAND-001`).
+- Unresolvable repository identity: exit `1` clean refusal, not an empty success.
+- No degraded case returns eligible, and no exit falls outside `0`, `1`, `2`.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-gate-evidence.test.ts` exits 0; fabricated zeros, an eligible degraded verdict, or an empty success fails.
+- `bun test tests/behaviour/dispatch-gate-evidence.test.ts` exits 0; an unpinned exit, fabricated zeros, an eligible degraded verdict, or an empty success fails.
 
-#### TC-GATE-007 - All eleven classes must be covered
+#### TC-GATE-007 - All eleven classes are coverable; full coverage is eligible
 
-**Scenario Type**: Negative
+**Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-5, AC-F5-2, DM-7, DEC-11
+**Related IDs**: F-4, F-5, F-8, AC-F5-2, AC-F5-5, DM-7, DEC-11, TDR-0015
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-dual-run-summary.test.ts`
 **Tags**: @backend, @dispatch, @gate, @coverage
 
 **Preconditions**:
-- A fixture covering all eleven tokens across counted dispatches.
-- Eleven mutants, each removing one class.
-- A fixture where dispatch-session tokens carry an explicit not-applicable token baseline.
+- A positive fixture inside the controlled-proof scope covering all eleven tokens among counted dispatches, including:
+  - a `state-unverified` record whose comparison is `not-applicable` and which creates no divergence;
+  - a `pr-open-unverified` record whose comparison is `token: pr-open`, `outcome: match`, `urlResolved: false`.
+- The same positive fixture has zero false-success incidents, zero unresolved divergences, the floor met, and every success claim corroborated.
+- Eleven mutants, each removing exactly one class from the positive fixture.
+- A fixture where dispatch-session tokens carry an explicit not-applicable comparison.
 
-**Steps**:
-1. Evaluate the full-coverage fixture.
-2. Evaluate each single-class-removal mutant.
-3. Assert the missing class naming and the dispatch-session exposure rule.
+****Steps**:
+1. Evaluate the positive fixture through `evaluateHandoverGate` and through `dispatch dual-run summary`.
+2. Assert eligibility, the unmet-condition list, the class-coverage set, and the summary counts for the two previously unreachable classes.
+3. Assert the same fixture is not refused by the handover surface: `dispatch handover` reads the same predicate and proceeds to the recorded flip (the full controlled-path flip is asserted by `TC-E2E-001` and `TC-HAND-002`).
+4. Evaluate each single-class-removal mutant.
+5. Assert the missing-class naming and the dispatch-session exposure rule.
+6. Assert neither `state-unverified` nor `pr-open-unverified` produces a divergence or an unmet corroboration condition in the positive fixture.
 
 **Expected Outcome**:
-- Full coverage satisfies the class condition; `present` equals the eleven-token set.
+- The positive fixture returns eligible `true` with zero unmet conditions: coverage is exposure only, and both rare classes are simultaneously coverable, comparable, and (for `pr-open-unverified`) corroborable.
+- `present` equals the eleven-token set; the two rare classes are named as present, not as missing or blocking.
 - Each mutant names exactly the removed class and is ineligible.
+- `state-unverified` counts for coverage, makes no success claim, and creates no divergence; `pr-open-unverified` counts as a corroborated success claim via the tracker fact.
 - Dispatch-session tokens count as class exposure even though their token baseline is not-applicable.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-dual-run-summary.test.ts` exits 0; a missing class not named or a dispatch-session class excluded fails.
+- `bun test tests/behaviour/dispatch-dual-run-summary.test.ts` exits 0; a full-coverage fixture that is not eligible, a missing class not named, or a dispatch-session class excluded fails.
 
-#### TC-GATE-008 - Family-wise comparison baseline
+#### TC-GATE-008 - Family-wise comparison record shape
 
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4, F-5, AC-F4-2, AC-F5-2, DEC-3
+**Related IDs**: F-4, F-5, AC-F4-2, AC-F4-6, AC-F5-2, DM-1, DM-7, DEC-3, TDR-0015
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-gate-evidence.test.ts`
 **Tags**: @backend, @dispatch, @comparison
 
 **Preconditions**:
-- Three fixture families: a verify-class token with a verify-change ledger outcome, a tracker-pr token with independent tracker truth, and a dispatch-session token with an outcome-level comparison.
+- Three fixture families with their attempt records: a verify-class token with a verify-change ledger outcome, a tracker-pr token with independent tracker truth, and a dispatch-session token.
+- The one declared comparison record builder and its shape declaration.
 
 **Steps**:
-1. Derive the comparison for each family.
-2. Assert which independent source is consulted.
-3. Assert the dispatch-session comparison is outcome-level with an explicit not-applicable token baseline.
-4. Assert a verify-class token is never compared against a `pr-open` result.
+1. Derive the comparison record for each family and assert the field values, not prose: `class`, `token`, `outcome`, `reason`, `urlResolved`.
+2. Assert the `verify-change` family compares the engine token to the verify-change ledger outcome token by exact equality.
+3. Assert the `tracker-truth` family compares at PR-state granularity: `pr-open-unverified` yields `token: pr-open`, `outcome: match`, `urlResolved: false`, and appends no divergence.
+4. Assert the `dispatch-session` family yields `class: not-applicable`, `token: null`, `outcome: not-applicable`, `reason: dispatch-session-family`, and is exposure-only (no corroboration requirement, no divergence).
+5. Assert a verify-class token is never compared against a `pr-open` result, and that a cross-family pairing is rejected as a fixture error.
+6. Assert the summary and handover read the same comparison classification for each attempt.
 
 **Expected Outcome**:
-- Verify-class compares to the ledger outcome; tracker-pr compares to tracker truth; dispatch-session compares outcomes with a not-applicable token baseline.
-- A cross-family comparison is rejected as a fixture error, not counted as agreement.
-- No divergence is recorded for a deliberately not-applicable token baseline.
+- Each family yields the declared record shape with the documented independent source; no comparison is asserted through prose or a free-text reason.
+- `pr-open-unverified` produces a `match` at tracker-state granularity, never a permanent divergence.
+- A not-applicable comparison is recorded as not-applicable, never as agreement and never as a divergence.
+- Cross-family comparison is rejected as a fixture/contract error, not counted as agreement.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-gate-evidence.test.ts` exits 0; a cross-family comparison or a not-applicable treated as divergence fails.
+- `bun test tests/behaviour/dispatch-gate-evidence.test.ts` exits 0; a cross-family comparison, a prose assertion, or a `pr-open-unverified` mismatch/divergence fails.
 
-#### TC-GATE-009 - Incident resets the window; resolved divergence does not
+#### TC-GATE-009 - Incident lower bound is exclusive; post-incident recovery is eligible
 
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4, F-5, AC-F4-3, AC-F5-1, DEC-10
+**Related IDs**: F-4, F-5, AC-F4-3, AC-F5-1, AC-F5-6, DEC-10, TDR-0015
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-gate-window.test.ts`
 **Tags**: @backend, @dispatch, @gate, @window
 
 **Preconditions**:
-- An evidence set with 20 dispatches before a false-success incident and 5 after.
-- A second set with a resolved divergence in the middle of the window.
+- An incident set: 20 dispatches strictly before a false-success incident at T, 5 after.
+- A recovery set: incident at T, then counted dispatches strictly after T covering all eleven classes, meeting the floor, with no further incidents or unresolved divergences and every success claim corroborated.
+- A tie fixture: one dispatch recorded at exactly T.
+- A resolved-divergence set with a resolution in the middle of the window.
 
 **Steps**:
-1. Evaluate the incident set and assert the window start and counts.
-2. Evaluate the resolved-divergence set.
-3. Assert the floor and class coverage re-accrual.
+1. Evaluate the incident set and assert `windowStart`, `windowStartReason`, and counts.
+2. Evaluate the recovery set and assert eligibility.
+3. Evaluate the tie fixture and assert the same-instant dispatch is excluded.
+4. Evaluate the resolved-divergence set.
+5. Assert the floor and class-coverage re-accrual in each case.
 
 **Expected Outcome**:
-- The incident set's window starts at the incident; pre-incident dispatches are excluded from the floor and coverage.
+- The window lower bound is the most recent incident timestamp T, **exclusive**: `windowStart = T`, `windowStartReason = false-success-incident-reset`, and pre-incident dispatches are excluded from floor and coverage.
+- The resetting incident never sits inside the evaluated window; the same-instant record at T is also excluded (`>` comparison, not `>=`).
+- The recovery set returns eligible `true` with zero in-window incidents, all eleven classes, and the floor met.
 - The resolved-divergence set keeps its original window start; the resolution does not reset it.
-- The summary reports the window start and reason in both cases.
+- The summary reports the window start and reason in every case.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-gate-window.test.ts` exits 0; an incident inside an eligible window or a resolved divergence resetting the window fails.
+- `bun test tests/behaviour/dispatch-gate-window.test.ts` exits 0; an inclusive bound, a same-instant record counted, an unrecoverable window, or a resolved divergence resetting the window fails.
 
 #### TC-GATE-010 - Corroboration sufficiency per outcome family
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-5, AC-F5-2, DM-8
+**Related IDs**: F-5, F-8, AC-F5-2, AC-F5-5, DM-8, TDR-0015
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-gate-evidence.test.ts`
 **Tags**: @backend, @dispatch, @gate, @corroboration
 
 **Preconditions**:
-- A table of success-claimed outcomes and their required evidence: `merged` needs pushed head, CI on that head, tracker state, and completed phases; tracker-derived tokens need the tracker fact; `finished` needs the completed phase ledger; `noop-lane-nothing-to-do` needs the ledger or queue fact.
+- A table of success-claimed outcomes and their required evidence: `merged` needs pushed head, CI on that head, tracker state, and completed phases; `pr-open` and `pr-open-unverified` need the tracker fact that the PR is open (not URL resolution); `blocked` needs the blocking tracker fact; `finished` needs the completed phase ledger; `noop-lane-nothing-to-do` needs the ledger or queue fact.
+- A table of non-success tokens (`failed`, `partial`, `max-restarts`, `state-unverified`, `noop-lane-permission`) that make no success claim.
 
 **Steps**:
-1. For each family, evaluate with all required evidence present.
+1. For each success family, evaluate with all required evidence present.
 2. Remove exactly one required source and re-evaluate.
 3. Assert the corroboration tri-state and the gate verdict.
+4. Evaluate the non-success tokens with no corroboration source at all.
+5. Remove URL resolution from the `pr-open-unverified` fixture while keeping the tracker fact and re-evaluate.
 
 **Expected Outcome**:
-- Complete evidence satisfies corroboration; a missing required source is explicitly unsatisfied and blocks eligibility.
+- Complete evidence satisfies corroboration; a missing required source is explicitly unsatisfied and blocks eligibility as one named condition.
+- `pr-open-unverified` corroborates on the tracker fact; an unresolved URL alone never makes it unsatisfied and never creates a divergence.
+- Non-success tokens satisfy corroboration vacuously and are never treated as uncorroborated success claims.
 - The engine token alone never satisfies corroboration for any family.
 - The summary lists satisfied and unsatisfied corroboration per family.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-gate-evidence.test.ts` exits 0; a token-only success satisfying corroboration fails.
+- `bun test tests/behaviour/dispatch-gate-evidence.test.ts` exits 0; a token-only success satisfying corroboration, an unresolved URL blocking the tracker fact, or a non-success token counted as an uncorroborated claim fails.
 
-#### TC-HAND-001 - Unmet gate is a clean refusal
+#### TC-GATE-011 - Evidence-class counting per repository scope
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-6, AC-F6-1, DM-7, EVT-3, SC-M1-29
+**Related IDs**: F-4, F-5, F-8, AC-F8-3, AC-F4-5, AC-F5-1, DM-6, DM-7, NFR-10, TDR-0015
+**Test Type(s)**: Unit
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/dispatch-evidence-class.test.ts`
+**Tags**: @backend, @dispatch, @gate, @provenance
+
+**Preconditions**:
+- A production repository identity whose ledger mixes `pilot` attempts with `controlled-proof`, `smoke`, and `fixture` attempts, where the non-pilot attempts alone would supply several missing classes and part of the floor.
+- A controlled repository scope whose ledger mixes `controlled-proof` attempts with one `pilot` and one `fixture` attempt.
+- A controlled-proof attempt recorded under the production repository identity.
+- A summary reader over each scope.
+
+**Steps**:
+1. Run `dispatch dual-run summary --repo PROD`; assert the counted dispatch population and the excluded classes.
+2. Build a variant where the production window can only reach full coverage and the floor by counting non-`pilot` records, and assert ineligibility with coverage and floor named.
+3. Run the summary over the controlled scope; assert only `controlled-proof` attempts count and zero non-`controlled-proof` attempts count.
+4. Assert `smoke` and `fixture` attempts contribute to no floor, no coverage, no incident count, and no corroboration in either scope.
+5. Assert the cross-scope controlled-proof record under the production identity is surfaced as excluded rather than silently accepted.
+
+**Expected Outcome**:
+- Production counts exactly the `pilot` population; zero non-`pilot` attempts are counted; every excluded class is reported.
+- The controlled scope counts exactly the `controlled-proof` population; zero non-`controlled-proof` attempts are counted.
+- `smoke` and `fixture` evidence never advances a handover in any scope.
+- A cross-scope count is surfaced in the summary and does not make the production repository eligible.
+- The counting rule is the same predicate, differing only by the scope's counted class.
+
+**Pass/Fail Evidence**:
+- `bun test tests/behaviour/dispatch-evidence-class.test.ts` exits 0; a non-pilot production count, a non-controlled-proof controlled count, a silent cross-scope acceptance, or a fixture/smoke count fails.
+
+#### TC-HAND-001 - Readable-but-unmet refuses at exit 1; unreadable evidence at exit 2
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-6, AC-F6-1, AC-F5-4, DM-7, EVT-3, SC-M1-29
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-handover.test.ts`
 **Tags**: @backend, @dispatch, @handover
 
 **Preconditions**:
-- A repository whose evidence is missing one class, has one unresolved divergence, and has not met the floor.
+- A readable-but-unmet repository whose evidence is missing one class, has one unresolved divergence, and has not met the floor.
+- A second repository whose evidence read is unreadable or torn.
 - A recording authority-view writer and a recording handover appender.
 
 **Steps**:
-1. Invoke `dispatch handover REPO`.
+1. Invoke `dispatch handover REPO` on the readable-but-unmet repository.
 2. Assert the exit, the negative verdict, and the named conditions.
 3. Assert the handover ledger and the authority view.
+4. Invoke `dispatch handover REPO` on the unreadable/torn repository.
+5. Assert the exit, the classified identity, the handover ledger, and the authority view again.
 
 **Expected Outcome**:
-- Exit `1` with a clean verification negative verdict; every unmet condition is named.
-- Zero handover records are appended; the authority view is absent or unchanged and therefore `dual-run`.
-- The bash stack remains authoritative and prints no deprecation pointer.
+- Readable-but-unmet: exit `1` with a clean verification negative verdict; every unmet condition is named (including the missing class, the unresolved divergence identifier, the floor, and any uncorroborated success claim); zero authority-changing records are appended; the view stays absent or unchanged and therefore `dual-run`.
+- Unreadable or torn: exit `2` with `dispatch.state-unverified` or a delivered `state.*` identity and a remediation hint; zero authority-changing records are appended; the view stays `dual-run`.
+- In both cases the bash stack remains authoritative and prints no deprecation pointer.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-handover.test.ts` exits 0; an authority change on refusal or an unnamed condition fails.
+- `bun test tests/behaviour/dispatch-handover.test.ts` exits 0; an authority change on refusal, an unnamed condition, exit `1` for an unreadable read, or exit `2` for a readable-but-unmet bar fails.
 
 #### TC-HAND-002 - Met gate flips one repository and records it
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-6, AC-F6-2, DM-3, DM-4, EVT-3, SC-M1-29
+**Related IDs**: F-6, AC-F6-2, DM-3, DM-4, EVT-3, SC-M1-29, DEC-13
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-handover.test.ts`
 **Tags**: @backend, @dispatch, @handover
 
 **Preconditions**:
-- Repo-alpha meets all four conditions; repo-beta does not.
+- Repo-alpha meets all four conditions, including all eleven classes with a `state-unverified` exposure record and a tracker-corroborated `pr-open-unverified` record; repo-beta does not.
+- Both repositories resolve an identity through the declared resolution order (scheduler key first).
 - A recording authority-view writer.
 
 **Steps**:
 1. Invoke `dispatch handover REPO-ALPHA`.
-2. Assert the handover record, the authority view, and the reported flip.
+2. Assert the handover record, the recorded resolved identity, the authority view, and the reported flip.
 3. Inspect repo-beta's authority.
 
 **Expected Outcome**:
-- One handover record with the conditions snapshot, evidence references, principal, and timestamp.
+- One handover record with the conditions snapshot, bounded evidence references, the recording principal, the timestamp, and the resolved repository identity (`host/owner/name` form, not a checkout path).
 - Repo-alpha's view is `authoritative` with the handover reference, recorded time, and reversal availability; the write is atomic.
-- Repo-beta remains `dual-run`; the announcement says the flip is recorded and reversible.
+- Repo-beta remains `dual-run` and is byte-identical before and after.
+- The announcement says the flip is recorded and reversible.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-handover.test.ts` exits 0; a second record, a non-atomic write, or a beta flip fails.
+- `bun test tests/behaviour/dispatch-handover.test.ts` exits 0; a second record, a non-atomic write, a path-shaped identity, or a beta flip fails.
 
 #### TC-HAND-003 - Reversal restores dual-run; second reversal is a noop
 
@@ -1447,7 +1644,7 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-6, F-7, AC-F6-4, DM-4, NFR-5
+**Related IDs**: F-6, F-7, AC-F6-4, DM-4, NFR-5, DEC-13
 **Test Type(s)**: Structure
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/dispatch-authority-view.test.ts`
@@ -1455,20 +1652,23 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 
 **Preconditions**:
 - Fixtures for a valid dual-run view, a valid authoritative view, an absent view, an unreadable view, a malformed JSON view, and a torn pair of prior and next files.
+- A folded handover ledger with one flip and one reversal.
 - An injected atomic writer.
 
 **Steps**:
 1. Validate the view fields against `delivery.dispatch.authority.v1`.
-2. Replace the view and assert the reader observes only a complete prior or next version.
-3. Read each degraded fixture through `readDispatchAuthority`.
+2. Rebuild the view from the folded ledger and assert it equals the folded truth after the flip and after the reversal.
+3. Replace the view and assert the reader observes only a complete prior or next version.
+4. Read each degraded fixture through `readDispatchAuthority`.
 
 **Expected Outcome**:
-- The view names repository, authority, handover reference, recorded time, and reversal availability.
+- The view names the resolved repository identity, authority, handover reference, recorded time, and reversal availability.
+- After any flip or reversal the view equals the folded ledger truth: no stale handover reference, no stale authority, no torn mix.
 - Replacement is atomic; no torn mix is observed.
 - Absent, unreadable, or malformed resolves to `dual-run`; no throw escapes to callers.
 
 **Pass/Fail Evidence**:
-- `bun test tests/structure/dispatch-authority-view.test.ts` exits 0; a torn read or a non-dual-run default fails.
+- `bun test tests/structure/dispatch-authority-view.test.ts` exits 0; a torn read, a view that disagrees with the fold, or a non-dual-run default fails.
 
 #### TC-HAND-005 - Dual-run dispatch claims no authority
 
@@ -1503,7 +1703,7 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-6, AC-F6-2, DEC-13
+**Related IDs**: F-6, AC-F6-2, DEC-13, TDR-0015
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-handover.test.ts`
@@ -1511,20 +1711,56 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 
 **Preconditions**:
 - Repo-alpha and repo-beta both have evidence; alpha meets the gate, beta does not.
-- Repository identity resolves from the scheduling engine's `repository` field; a second case has no field and falls back to the checkout-root digest.
+- Both identities resolve from the scheduling engine's normalized `repository` field.
+- A second fixture where the identity resolves from the normalized VCS remote, and a third where it resolves from the persisted first-use marker.
 
 **Steps**:
-1. Flip alpha and assert both authority views.
+1. Flip alpha and assert both authority views and both handover ledgers.
 2. Revert alpha and assert both views again.
-3. Repeat with the checkout-root fallback identity.
+3. Repeat with the remote-derived and marker-derived identities.
+4. Assert no aggregate or global authority record exists.
 
 **Expected Outcome**:
-- Every operation touches only the named repository; beta is byte-identical before and after.
-- The fallback identity is stable across a checkout rename of the same root digest.
-- No aggregate or global authority record is written.
+- Every operation touches only the named repository; beta's view and ledger are byte-identical before and after.
+- The identity is the resolved `host/owner/name` form (or the persisted marker's binding), never a checkout-path digest.
+- No aggregate, global, or wildcard authority record is written.
+- A flip or reversal for one repository never changes another's authority or evidence window.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-handover.test.ts` exits 0; a beta change or a global flip fails.
+- `bun test tests/behaviour/dispatch-handover.test.ts` exits 0; a beta change, a global flip, or a path-derived identity fails.
+
+#### TC-HAND-007 - Repository identity is rename-invariant; unresolvable identity refuses
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-6, AC-F6-2, AC-F6-4, AC-F6-6, DM-4, DEC-13, TDR-0015
+**Test Type(s)**: Behaviour
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/dispatch-identity.test.ts`
+**Tags**: @backend, @dispatch, @identity, @handover
+
+**Preconditions**:
+- A temporary checkout with a configured local bare remote and a state root.
+- Three resolution paths available in order: the scheduling engine's normalized `repository` key, the normalized VCS remote, and a persisted first-use marker created through the store-managed artifact.
+- A fixture where none of the three resolves.
+
+**Steps**:
+1. Establish a binding from the scheduler key; dispatch, flip, then rename the checkout path and change the remote; assert the identity, the evidence window, and the authority are unchanged and no record is re-keyed.
+2. Establish a binding from the normalized remote with no scheduler key; restart the process; assert the same identity and binding are reused.
+3. Establish a binding from the persisted marker with no scheduler key and no remote; rename the checkout and restart; assert the marker is reused and never regenerated.
+4. Assert that no record, summary field, or authority view ever carries a checkout-path digest as the repository identity.
+5. Run `dispatch dual-run summary` and `dispatch handover` with none of the three resolvable.
+
+**Expected Outcome**:
+- Resolution follows the declared order; the first successful step is persisted and reused.
+- A checkout rename, a remote change, or a restart does not re-key history: the same evidence window, authority, and record identities are observed.
+- The persisted marker is created once and refused a silent regeneration while guarded records exist.
+- A checkout-path digest is never presented as a stable identity.
+- With no resolvable identity, summary and handover exit `1` as a clean refusal with a classified identity and append no authority-changing record; neither reports an empty success.
+
+**Pass/Fail Evidence**:
+- `bun test tests/behaviour/dispatch-identity.test.ts` exits 0; a re-keyed window after rename/restart, a regenerated marker, a path-digest identity, or an empty success on an unresolvable identity fails.
 
 #### TC-BASH-001 - Dual-run bash entry points are unchanged
 
@@ -1664,36 +1900,43 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Pass/Fail Evidence**:
 - `bun test tests/structure/dispatch-bash-authority.test.ts` exits 0; an invocation or an undetected mutant fails.
 
-#### TC-E2E-001 - Controlled repository accrues evidence, flips, and dispatches
+#### TC-E2E-001 - Controlled-proof evidence reaches eligibility, flips, and dispatches
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-8, F-1, F-5, F-6, AC-F8-1, SC-M1-29
+**Related IDs**: F-8, F-1, F-4, F-5, F-6, AC-F8-1, AC-F8-3, AC-F5-5, AC-F4-5, SC-M1-29, TDR-0015
 **Test Type(s)**: Conformance
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-e2e.test.ts`
 **Tags**: @conformance, @dispatch, @handover
 
 **Preconditions**:
-- A controlled temporary repository with real state, git, and change files, plus injected harness, tracker, CI, and VCS read ports.
+- A controlled temporary repository with the real state store, real local git, and real change files, plus injected harness, tracker, CI, and VCS read ports.
+- A controlled composition that declares `evidenceClass: controlled-proof` for every dispatch it drives; a provenance guard counts command-originated appends and rejects test-local ledger writes.
 - A deterministic clock able to advance UTC dates without sleeping.
-- A scripted harness evidence set able to produce all eleven classes across dispatches.
+- A scripted harness evidence set able to produce all eleven classes across real dispatch invocations, including:
+  - one dispatch whose truth read is fault-injected so it classifies `state-unverified` (exposure-only, not-applicable comparison, no divergence);
+  - one dispatch whose URL read returns empty while the tracker reports an open PR, so it classifies `pr-open-unverified` (tracker-truth match with `urlResolved: false`).
 
 **Steps**:
-1. Run genuine `dispatch` invocations through the real command path until the gate is met (all eleven classes, floor met, zero incidents, zero unresolved divergences, corroboration satisfied).
-2. Run `dispatch dual-run summary --repo REPO` and assert eligibility.
-3. Run `dispatch handover REPO` and assert the flip.
-4. Run one more dispatch and assert a valid token, summary, and attempt record.
+1. Run real `dispatch` invocations through the command path until the gate is met inside the controlled scope: all eleven classes, floor met, zero incidents, zero unresolved divergences, every success claim corroborated.
+2. Assert every produced attempt record carries `evidenceClass: controlled-proof`; assert the provenance guard shows attempt count equals dispatch count and that no record was hand-inserted.
+3. Run `dispatch dual-run summary --repo REPO` and assert eligibility `true` with no unmet condition, `windowStart`, and `windowStartReason`.
+4. Run `dispatch handover REPO` and assert the flip and the handover record.
+5. Run one more dispatch and assert a valid token, the summary, and one new attempt record.
+6. Assert zero non-`controlled-proof` attempts were counted in this scope and no record was counted toward a production repository identity.
 
 **Expected Outcome**:
-- Every record is produced by the commands; the summary reaches eligibility with named conditions.
+- Every record is produced by the real commands; the summary reaches eligibility through real dispatch invocations with injected external ports, not by seeding the ledger.
+- All eleven classes are present, including `state-unverified` (coverage only) and `pr-open-unverified` (tracker-corroborated); neither blocks eligibility.
 - Handover flips only the controlled repository and records the conditions snapshot.
 - The post-handover dispatch completes end to end through the typed stack with a valid token and record.
+- The provenance guard proves no hand-inserted evidence; the controlled scope counts zero non-`controlled-proof` attempts.
 - No real remote, network, or model is touched.
 
 **Pass/Fail Evidence**:
-- `bun test tests/conformance/dispatch/dispatch-e2e.test.ts` exits 0; hand-inserted evidence, a pre-eligible flip, or a failed post-handover dispatch fails.
+- `bun test tests/conformance/dispatch/dispatch-e2e.test.ts` exits 0; hand-inserted evidence, an unreachable eligibility, a pre-eligible flip, a mis-declared evidence class, a cross-scope count, or a failed post-handover dispatch fails.
 
 #### TC-E2E-002 - Reversal returns the repository to bash-authoritative
 
@@ -1722,12 +1965,12 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Pass/Fail Evidence**:
 - `bun test tests/conformance/dispatch/dispatch-e2e.test.ts` exits 0; lost history or a still-authoritative view fails.
 
-#### TC-E2E-003 - Fixture evidence is command-produced, never hand-inserted
+#### TC-E2E-003 - Fixture evidence is command-produced and never counted cross-scope
 
 **Scenario Type**: Negative
 **Impact Level**: Important
 **Priority**: Medium
-**Related IDs**: F-8, AC-F8-1
+**Related IDs**: F-8, F-4, F-5, AC-F8-1, AC-F8-3, AC-F4-5
 **Test Type(s)**: Conformance
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-fixture.test.ts`
@@ -1735,20 +1978,24 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 
 **Preconditions**:
 - The controlled fixture exposes no direct attempt, divergence, or handover append helper to test bodies.
-- A guard counts command-originated appends.
+- A provenance guard counts command-originated appends and their declared evidence class.
+- A controlled-proof record produced under a production repository identity is available as a fixture case.
 
 **Steps**:
 1. Assert the fixture API surface has no ledger writer.
-2. Assert the attempt count equals the number of dispatch invocations.
+2. Assert the attempt count equals the number of real dispatch invocations and that every record carries `controlled-proof`.
 3. Attempt a test-local direct record write and assert the fixture guard rejects it or the record is not counted.
+4. Record a controlled-proof attempt under a production repository identity, then run the production summary and assert the record is surfaced as excluded and does not count toward floor, coverage, incidents, or corroboration.
+5. Repeat with `smoke` and `fixture` attempts and assert they count toward no handover in either scope.
 
 **Expected Outcome**:
 - No test can hand-insert evidence through the fixture.
-- Every counted record carries command-produced provenance (run id and attempt identity).
+- Every counted record carries command-produced provenance (run id and attempt identity) and the composition's declared evidence class.
 - A hand-inserted record is either impossible or explicitly excluded from the gate.
+- A cross-scope controlled-proof or smoke/fixture record is surfaced and never counted for the production repository.
 
 **Pass/Fail Evidence**:
-- `bun test tests/conformance/dispatch/dispatch-fixture.test.ts` exits 0; a fixture writer or a mismatch between dispatches and records fails.
+- `bun test tests/conformance/dispatch/dispatch-fixture.test.ts` exits 0; a fixture writer, a mismatch between dispatches and records, or a counted cross-scope record fails.
 
 #### TC-MERGE-001 - Merge-ready PR stays `pr-open`; no merge fires
 
@@ -1891,33 +2138,39 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Pass/Fail Evidence**:
 - `bun test tests/behaviour/dispatch-daemon-planner.test.ts` exits 0; a secret value or an unavailable executor with a valid plan fails.
 
-#### TC-DAEMON-002 - Daemon spawns, observes, collects, resumes a dispatch lane
+#### TC-DAEMON-002 - Daemon lane produces the same token, outcome, and attempt record as one-shot
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-10, F-1, AC-F10-2, EVT-1
+**Related IDs**: F-10, F-1, F-4, AC-F10-2, AC-F4-1, EVT-1, NFR-10
 **Test Type(s)**: Conformance
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-daemon-lane.test.ts`
 **Tags**: @conformance, @dispatch, @daemon
 
 **Preconditions**:
-- The real planner and executor composition over a scripted harness port.
+- The real planner and executor composition over a scripted harness port, sharing the harness port and the shared classifier with the one-shot path.
 - A temporary state root with a lane record and a queue action.
+- A one-shot dispatch fixture over the same evidence set.
+- A recording attempt-ledger reader and a deterministic clock and id sequence.
 
 **Steps**:
 1. Call `runSupervisionCycle(...)` with the production planner and executor.
-2. Assert start, the lane record, observation, and collection.
-3. Resume the lane through the executor and compare the final token and outcome with a one-shot dispatch over the same evidence.
+2. Assert start, the delivered lane record, observation, and collection.
+3. Assert the daemon path produces a final token and outcome and appends exactly one attempt record carrying the same derived fields as the one-shot record.
+4. Compare final token, outcome, comparison record, evidence class, and corroboration tri-state with the one-shot dispatch over the same evidence.
+5. Resume the lane through the executor and assert no second attempt record and no second effect for the same attempt.
+6. Assert the attempt count equals the number of daemon-driven dispatch attempts that reached classification (the resume in step 5 adds none).
 
 **Expected Outcome**:
 - The lane is started, recorded, observed, collected, and resumed through the delivered seam.
-- The daemon path and one-shot path agree on the final token and outcome for the same evidence.
+- The daemon path and the one-shot path agree on the final token, outcome, comparison record, and corroboration tri-state for the same evidence; no second classification exists.
+- The daemon path appends exactly one attempt record per attempt (the producer introduced in plan phase 9); a replay or resume appends none.
 - No duplicate lane record and no divergent classification.
 
 **Pass/Fail Evidence**:
-- `bun test tests/conformance/dispatch/dispatch-daemon-lane.test.ts` exits 0; a missing lane record or a token mismatch fails.
+- `bun test tests/conformance/dispatch/dispatch-daemon-lane.test.ts` exits 0; a missing lane record, a missing or duplicated attempt record, or a token/comparison mismatch against one-shot fails.
 
 #### TC-DAEMON-003 - One-shot dispatch works with no daemon
 
@@ -2004,33 +2257,36 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Pass/Fail Evidence**:
 - `bun test tests/behaviour/dispatch-help-version.test.ts` exits 0; any non-zero recorder count or composer invocation fails.
 
-#### TC-HELP-003 - Absence assertions are retired; F-9 is revisited
+#### TC-HELP-003 - Production-surface absence assertions are inverted; the pilot fixture stays reduced
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-11, F-12, AC-F11-3, DEC-4
+**Related IDs**: F-11, F-12, AC-F11-3, DEC-4, RSK-12
 **Test Type(s)**: Structure
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/entrypoint-composition.test.ts` (updated), `tests/conformance/pilot/pilot-isolation.test.ts` (updated), and `tests/structure/harness-review-deferrals.test.ts` (updated)
+**Target Layer / Location**: `tests/behaviour/entrypoint-composition.test.ts` (updated), `tests/conformance/pilot/pilot-isolation.test.ts` (comment narrowed only), and `tests/structure/harness-review-deferrals.test.ts` (updated)
 **Tags**: @backend, @dispatch, @structure, @deferral
 
 **Preconditions**:
-- The three delivered assertions exist in the current tree.
+- The two production-surface absence assertions exist in the current tree: the entrypoint-composition expectation and the harness-review-deferrals assertion.
+- `tests/conformance/pilot/pilot-isolation.test.ts` guards a deliberately reduced, test-only pilot fixture: an exact reduced command list and the fixture's non-import of production/entrypoint modules. It is not a production-surface absence claim.
 
 **Steps**:
-1. Assert the entrypoint composition test expects `dispatch` present and no longer asserts its absence.
-2. Assert the pilot-isolation test expects dispatch composed and does not scan it as absent.
-3. Assert the harness-review-deferrals test no longer asserts "no dispatch surface or spawn-failure row"; it asserts the F-9 record names dispatch as the production consumer and carries a status and revisit trigger.
-4. Assert the F-9 status is either resolved or explicitly a follow-up, never the blanket absence claim.
+1. Assert the entrypoint-composition test expects `dispatch` present and no longer asserts its absence.
+2. Assert the harness-review-deferrals test no longer asserts "no dispatch surface or spawn-failure row"; it asserts the F-9 record names dispatch as the production consumer and carries a status and revisit trigger.
+3. Assert the pilot-isolation test still guards the reduced fixture: the exact reduced command list is asserted, the fixture still does not import production/entrypoint modules, and `dispatch` is **not** composed into that fixture.
+4. Assert the pilot-isolation test's stale "no dispatch" comment is narrowed and that its assertion set is not weakened or widened.
+5. Assert the F-9 status is either resolved or explicitly a follow-up, never the blanket absence claim.
 
 **Expected Outcome**:
-- None of the three assertions contradicts the delivered command.
+- Only the two production-surface assertions are retired or inverted; neither contradicts the delivered command.
+- The pilot-isolation fixture stays reduced and is **not** required to compose dispatch; composing dispatch into it fails the isolation guard.
 - The F-9 record states the production-consumer outcome and a revisit trigger; full resolution is not required.
-- A re-introduced absence assertion fails the suite.
+- Re-introducing a production-surface absence assertion fails the suite.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/entrypoint-composition.test.ts tests/conformance/pilot/pilot-isolation.test.ts tests/structure/harness-review-deferrals.test.ts` exits 0; a stale absence assertion or a blanket deferral claim fails.
+- `bun test tests/behaviour/entrypoint-composition.test.ts tests/conformance/pilot/pilot-isolation.test.ts tests/structure/harness-review-deferrals.test.ts` exits 0; a stale production-surface absence assertion, a blanket deferral claim, a weakened isolation fixture, or dispatch composed into the reduced fixture fails.
 
 #### TC-PLANREC-001 - Story-owned planning surfaces carry the evidence bar
 
@@ -2356,16 +2612,17 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 
 **Steps**:
 1. Run the summary.
-2. Assert the truncation declaration and the counts.
-3. Assert the verdict.
+2. Assert the truncation declaration, the omitted range, and the counts.
+3. Assert the verdict and the exit code.
 
 **Expected Outcome**:
 - The summary declares truncation and the omitted range; it does not report zero for an omitted category.
-- Eligibility is unverifiable, not eligible.
+- Eligibility is reported false/unverifiable with every unmet condition named; it is never eligible.
+- Exit is `0` for this bounded-but-truncated **valid** read (a truncated read is not an unreadable stream; the `2` case is pinned in `TC-GATE-006`).
 - The bounded window is named in the output.
 
 **Pass/Fail Evidence**:
-- `bun test tests/behaviour/dispatch-gate-evidence.test.ts` exits 0; a silent omission or a fabricated zero fails.
+- `bun test tests/behaviour/dispatch-gate-evidence.test.ts` exits 0; a silent omission, a fabricated zero, an eligible verdict, or a non-zero exit for a truncated valid read fails.
 
 #### TC-NFR-005 - Replays append no duplicate records
 
@@ -2513,7 +2770,9 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 - **Temporary roots.** Every file-touching suite uses `mkdtempSync` under `os.tmpdir()` (or the existing `makeTempRoot`) and removes the root in `afterAll` or `finally`.
 - **Fixed clock and ids.** The dispatch suites use a fixed clock constant and a deterministic run-id and attempt-id sequence. UTC date advancement for the floor tests is a deterministic clock advance, never a sleep.
 - **Sanitized environment.** Spawn-environment tests pass an explicit environment record; no test mutates `process.env` for another test.
+- **Declared evidence class.** The evidence class is supplied by the composition under test (production default `pilot`, the controlled proof `controlled-proof`, explicit `smoke`/`fixture`), never by a test-side record field. A provenance guard counts command-originated appends and fails if a test writes the ledger directly.
 - **Real state and local git.** Conformance suites use the real state store over the existing test edge and a local temporary git repository; only harness, tracker, CI, VCS, and provider surfaces are injected.
+- **Deterministic identity fixtures.** Repository identity comes from injected scheduler keys, a local bare-remote configuration, and the store-managed persisted marker; tests rename the checkout and restart the process explicitly rather than mutating a path digest.
 - **Bash isolation.** Bash suites use a temporary state root, a sanitized `PATH`, and a copy of the script under test when a mutation is required. The live tree is never written.
 - **Determinism.** Two runs over the same state produce byte-identical text and envelope output. The p95 case records host metadata; wall-clock duration never gates any other scenario.
 - **CI.** New invariants run with `bun run scripts/checks/*.ts` and are mutation-tested in `tests/checks/**`; the aggregate gate is `pnpm check`. Bash suites run via `bash scripts/.tests/test-*.sh`.
@@ -2529,6 +2788,8 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 | VCS reads | An injected read port returns branch commits, PR state, and merged state; it records every query. | Truth fixtures per scenario; local git only where the conformance path needs real objects. |
 | State | The real `StateStorePort` over the existing test edge (`tests/fixtures/state/harness.ts`), with fault injection for pre-append, post-append, torn read, and read failure. | Temp root per case; fence token fixed; no test writes the live tree. |
 | Queue lease | The real `claimQueueLease` over the temp store. | Fixed holder/runner identities and clock. |
+| Evidence class | Declared by the composition under test (`pilot` default, `controlled-proof`, `smoke`, `fixture`); never written by a test body. | Closed union assertion; provenance guard counts command-originated appends only. |
+| Repository identity | Injected scheduler `repository` key, a local bare-remote configuration for the normalized remote path, and the real store-managed persisted marker for the third path. | Fixed identities; explicit rename and restart steps; no checkout-path digest in any assertion. |
 | Clock and ids | Injected `nowIso`, date advance, and id sequence. | No `Date.now()` or random id in an assertion path. |
 | Model and provider | Recording ports that fail the test if called. | Zero-call assertions in help, summary, gate, classification, and render. |
 | Bash typed CLI | `PATH` excludes the binary, or points to a stub that exits non-zero or hangs. | Absence, broken, and hanging conditions; a bounded guard fails on hang. |
@@ -2539,17 +2800,20 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 | Fixture / data | Status | Purpose |
 |---|---|---|
 | `tests/fixtures/dispatch/harness.ts` | New | Temp state root, fixed clock, scripted harness session port, recording tracker/CI/VCS/model ports, id sequence. |
-| `tests/fixtures/dispatch/ledger.ts` | New | Builders for attempt, divergence, handover, and authority-view records with deterministic identities. |
-| `tests/fixtures/dispatch/evidence-windows.ts` | New | Window cases: 20 dispatches on 6 dates; 19 dispatches; 14 dispatches on 7 consecutive dates; gapped dates; incident reset; resolved divergence; all-eleven coverage; one-class-missing mutants; uncorroborated success. |
-| `tests/fixtures/dispatch/truth.ts` | New | Tracker, CI, VCS, ledger, and phase truth fixtures for every token family and every contradiction case. |
+| `tests/fixtures/dispatch/ledger.ts` | New | Builders for attempt, comparison, divergence, handover, and authority-view records with deterministic identities. |
+| `tests/fixtures/dispatch/evidence-windows.ts` | New | Window cases: 20 dispatches on 6 dates; 19 dispatches; 14 dispatches on 7 consecutive dates; gapped dates; incident reset at T; same-instant record at T; post-incident recovery; resolved divergence; all-eleven coverage including `state-unverified` and `pr-open-unverified`; one-class-missing mutants; uncorroborated success; bounded-but-truncated read. |
+| `tests/fixtures/dispatch/evidence-classes.ts` | New | Mixed-class ledgers per repository scope: production `pilot` only, controlled `controlled-proof` only, mixed with `smoke`/`fixture`, and a controlled-proof record under a production identity. |
+| `tests/fixtures/dispatch/truth.ts` | New | Tracker, CI, VCS, ledger, and phase truth fixtures for every token family and every contradiction case, including an open-PR fact with an empty URL read and an unreadable truth read for the `state-unverified` record. |
+| `tests/fixtures/dispatch/identity.ts` | New | Scheduler-key, normalized-remote, persisted-marker, and unresolvable repository identity fixtures, with rename and restart steps. |
+| `tests/fixtures/dispatch/comparison.ts` | New | One declared comparison record per family and per token, plus the `mismatch` and `not-applicable` negatives. |
 | `tests/fixtures/dispatch/authority/` | New | Valid dual-run, valid authoritative, absent, unreadable, malformed, and torn authority-view fixtures. |
 | `tests/fixtures/dispatch/golden/` | New | Byte-pinned four-key text, summary text, handover text, and error envelopes. |
-| `tests/fixtures/dispatch/mutants/` | New | One mutant per negative rule: extra key, second token list, exit literal, merge import, stale planning phrase, silent truncation. |
+| `tests/fixtures/dispatch/mutants/` | New | One mutant per negative rule: extra key, second token list, exit literal, merge import, stale planning phrase, silent truncation, escalated evidence class, inclusive incident bound. |
 | `tests/fixtures/dispatch/bash/` | New | Temp state roots and authority-view fixtures for the twelve-cell bash matrix. |
-| `tests/conformance/dispatch/controlled-repo.ts` | New | Controlled repository with real state, git, and change files; injected external ports; deterministic date advance. |
+| `tests/conformance/dispatch/controlled-repo.ts` | New | Controlled repository with real state, git, and change files; injected external ports; `controlled-proof` declaration; provenance guard; deterministic date advance; fault-injected unreadable read and empty URL read for the two rare classes. |
 | `tests/fixtures/state/harness.ts` | Existing | Real state store, fault injection, temp roots. |
 | `tests/fixtures/economics/harness.ts` | Existing | Restart budget and resume economics fixtures reused by the resume scenarios. |
-| `tests/fixtures/pilot/*` | Existing | Stub/real matrix and isolation guards reused by the conformance suite where the controlled repository needs the same no-spawn guard. |
+| `tests/fixtures/pilot/*` | Existing | Stub/real matrix and isolation guards reused by the conformance suite where the controlled repository needs the same no-spawn guard; the pilot fixture itself stays reduced and does not compose dispatch. |
 | `tests/fixtures/result/code-corpora/` | Existing, updated | Add the two dispatch codes; keep the existing two. |
 | `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md` | Story-owned, updated | Reference page reconciled to the evidence bar and the two extra surfaces. |
 | `doc/planning/oss-tooling/milestones/m1/test-scenarios.md` | Story-owned, two scenarios updated | SC-M1-29 and SC-M1-30 reconciled; no other scenario and no other planning file edited. |
@@ -2591,45 +2855,49 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 | TC-RESUME-002 | `tests/behaviour/dispatch-restart-budget.test.ts` | `bun test tests/behaviour/dispatch-restart-budget.test.ts` | To Implement | Budget fixture; exhaustion record; escalation recorder |
 | TC-RESUME-003 | `tests/behaviour/dispatch-resume-economics.test.ts` | `bun test tests/behaviour/dispatch-resume-economics.test.ts` | To Implement | Economics fixtures; unreadable-facts fixture |
 | TC-RESUME-004 | `tests/behaviour/dispatch-resume-economics.test.ts` | `bun test tests/behaviour/dispatch-resume-economics.test.ts` | To Implement | Fixed clock/ids; replay harness |
-| TC-EVID-001 | `tests/behaviour/dispatch-evidence-record.test.ts`; `tests/types/dispatch-contract.type-test.ts` | `bun test tests/behaviour/dispatch-evidence-record.test.ts tests/types` | To Implement | Record builders; canaries; declared types |
-| TC-EVID-002 | `tests/behaviour/dispatch-divergence.test.ts` | `bun test tests/behaviour/dispatch-divergence.test.ts` | To Implement | Divergence fixture; resolve command; summary |
-| TC-EVID-003 | `tests/behaviour/dispatch-false-success.test.ts` | `bun test tests/behaviour/dispatch-false-success.test.ts` | To Implement | Contradicting truth; prior-window fixture |
-| TC-EVID-004 | `tests/behaviour/dispatch-unevaluable.test.ts` | `bun test tests/behaviour/dispatch-unevaluable.test.ts` | To Implement | Unresolvable comparison; bounded read |
+| TC-EVID-001 | `tests/behaviour/dispatch-evidence-record.test.ts`; `tests/types/dispatch-contract.type-test.ts` | `bun test tests/behaviour/dispatch-evidence-record.test.ts tests/types` | To Implement | Record builders; post-spawn refusal fixtures only; canaries; declared types |
+| TC-EVID-002 | `tests/behaviour/dispatch-divergence.test.ts` | `bun test tests/behaviour/dispatch-divergence.test.ts` | To Implement | Mismatch and non-mismatch fixtures; resolve command; summary |
+| TC-EVID-003 | `tests/behaviour/dispatch-false-success.test.ts` | `bun test tests/behaviour/dispatch-false-success.test.ts` | To Implement | Contradicting truth; pre-incident, tie-at-T, and post-incident recovery fixtures |
+| TC-EVID-004 | `tests/behaviour/dispatch-unevaluable.test.ts` | `bun test tests/behaviour/dispatch-unevaluable.test.ts` | To Implement | Unreadable comparison; unreadable corroboration; truncated and unreadable windows |
 | TC-EVID-005 | `tests/behaviour/dispatch-evidence-record.test.ts` | `bun test tests/behaviour/dispatch-evidence-record.test.ts` | To Implement | Test state edge faults; torn payload |
+| TC-EVID-006 | `tests/behaviour/dispatch-evidence-class.test.ts`; `tests/types/dispatch-contract.type-test.ts` | `bun test tests/behaviour/dispatch-evidence-class.test.ts tests/types` | To Implement | Declared-class compositions; tampered payload; escalation mutant |
+| TC-EVID-007 | `tests/behaviour/dispatch-comparison.test.ts`; `tests/types/dispatch-contract.type-test.ts` | `bun test tests/behaviour/dispatch-comparison.test.ts tests/types` | To Implement | One record per token family; shape declaration; divergence counter |
 | TC-GATE-001 | `tests/behaviour/dispatch-dual-run-summary.test.ts`; `tests/golden/dispatch-summary.test.ts` | `bun test tests/behaviour/dispatch-dual-run-summary.test.ts tests/golden/dispatch-summary.test.ts` | To Implement | Seeded window; text/envelope goldens |
 | TC-GATE-002 | `tests/behaviour/dispatch-dual-run-summary.test.ts` | `bun test tests/behaviour/dispatch-dual-run-summary.test.ts` | To Implement | Eligible fixture plus four single-condition mutants |
 | TC-GATE-003 | `tests/behaviour/dispatch-dual-run-floor.test.ts` | `bun test tests/behaviour/dispatch-dual-run-floor.test.ts` | To Implement | 20/19-dispatch fixtures on 6 dates |
 | TC-GATE-004 | `tests/behaviour/dispatch-dual-run-floor.test.ts` | `bun test tests/behaviour/dispatch-dual-run-floor.test.ts` | To Implement | 7-consecutive-date and gapped fixtures |
 | TC-GATE-005 | `tests/behaviour/dispatch-dual-run-floor.test.ts` | `bun test tests/behaviour/dispatch-dual-run-floor.test.ts` | To Implement | Floor-met mutants |
-| TC-GATE-006 | `tests/behaviour/dispatch-gate-evidence.test.ts` | `bun test tests/behaviour/dispatch-gate-evidence.test.ts` | To Implement | Unreadable, torn, truncated, unresolvable-identity fixtures |
-| TC-GATE-007 | `tests/behaviour/dispatch-dual-run-summary.test.ts` | `bun test tests/behaviour/dispatch-dual-run-summary.test.ts` | To Implement | All-eleven fixture plus eleven removal mutants |
-| TC-GATE-008 | `tests/behaviour/dispatch-gate-evidence.test.ts` | `bun test tests/behaviour/dispatch-gate-evidence.test.ts` | To Implement | Three family fixtures; not-applicable baseline |
-| TC-GATE-009 | `tests/behaviour/dispatch-gate-window.test.ts` | `bun test tests/behaviour/dispatch-gate-window.test.ts` | To Implement | Pre/post-incident fixture; resolved-divergence fixture |
-| TC-GATE-010 | `tests/behaviour/dispatch-gate-evidence.test.ts` | `bun test tests/behaviour/dispatch-gate-evidence.test.ts` | To Implement | Family sufficiency matrix |
-| TC-HAND-001 | `tests/behaviour/dispatch-handover.test.ts` | `bun test tests/behaviour/dispatch-handover.test.ts` | To Implement | Unmet fixture; recording writers |
-| TC-HAND-002 | `tests/behaviour/dispatch-handover.test.ts` | `bun test tests/behaviour/dispatch-handover.test.ts` | To Implement | Alpha-met/beta-unmet fixtures |
+| TC-GATE-006 | `tests/behaviour/dispatch-gate-evidence.test.ts` | `bun test tests/behaviour/dispatch-gate-evidence.test.ts` | To Implement | Unreadable, torn, malformed, truncated, unresolvable-identity fixtures; unreadable and unmet handover fixtures |
+| TC-GATE-007 | `tests/behaviour/dispatch-dual-run-summary.test.ts` | `bun test tests/behaviour/dispatch-dual-run-summary.test.ts` | To Implement | Positive all-eleven fixture (incl. both rare classes) plus eleven removal mutants |
+| TC-GATE-008 | `tests/behaviour/dispatch-gate-evidence.test.ts` | `bun test tests/behaviour/dispatch-gate-evidence.test.ts` | To Implement | Three family fixtures; record-shape declaration; not-applicable baseline |
+| TC-GATE-009 | `tests/behaviour/dispatch-gate-window.test.ts` | `bun test tests/behaviour/dispatch-gate-window.test.ts` | To Implement | Pre/post-incident fixture; same-instant tie; post-incident recovery; resolved divergence |
+| TC-GATE-010 | `tests/behaviour/dispatch-gate-evidence.test.ts` | `bun test tests/behaviour/dispatch-gate-evidence.test.ts` | To Implement | Family sufficiency matrix; pr-open-unverified tracker fact; non-success vacuous case |
+| TC-GATE-011 | `tests/behaviour/dispatch-evidence-class.test.ts` | `bun test tests/behaviour/dispatch-evidence-class.test.ts` | To Implement | Mixed-class ledgers per scope; cross-scope record; summary reader |
+| TC-HAND-001 | `tests/behaviour/dispatch-handover.test.ts` | `bun test tests/behaviour/dispatch-handover.test.ts` | To Implement | Readable-but-unmet and unreadable fixtures; recording writers |
+| TC-HAND-002 | `tests/behaviour/dispatch-handover.test.ts` | `bun test tests/behaviour/dispatch-handover.test.ts` | To Implement | Alpha-met/beta-unmet fixtures; resolved identities |
 | TC-HAND-003 | `tests/behaviour/dispatch-handover.test.ts` | `bun test tests/behaviour/dispatch-handover.test.ts` | To Implement | Authoritative fixture; replay |
-| TC-HAND-004 | `tests/structure/dispatch-authority-view.test.ts` | `bun test tests/structure/dispatch-authority-view.test.ts` | To Implement | Valid and degraded view fixtures; atomic writer |
+| TC-HAND-004 | `tests/structure/dispatch-authority-view.test.ts` | `bun test tests/structure/dispatch-authority-view.test.ts` | To Implement | Valid and degraded view fixtures; folded ledger; atomic writer |
 | TC-HAND-005 | `tests/behaviour/dispatch-authority-view.test.ts` | `bun test tests/behaviour/dispatch-authority-view.test.ts` | To Implement | Dual-run fixture; merge and bash recorders |
-| TC-HAND-006 | `tests/behaviour/dispatch-handover.test.ts` | `bun test tests/behaviour/dispatch-handover.test.ts` | To Implement | Two-repo fixtures; fallback identity case |
+| TC-HAND-006 | `tests/behaviour/dispatch-handover.test.ts` | `bun test tests/behaviour/dispatch-handover.test.ts` | To Implement | Two-repo fixtures; scheduler/remote/marker identities |
+| TC-HAND-007 | `tests/behaviour/dispatch-identity.test.ts` | `bun test tests/behaviour/dispatch-identity.test.ts` | To Implement | Scheduler-key, remote, persisted-marker, unresolvable fixtures; rename and restart steps |
 | TC-BASH-001 | `scripts/.tests/test-dispatch-bash-fallback.sh` | `bash scripts/.tests/test-dispatch-bash-fallback.sh` | To Implement | Temp state root; sanitized PATH |
 | TC-BASH-002 | `scripts/.tests/test-dispatch-bash-fallback.sh` | `bash scripts/.tests/test-dispatch-bash-fallback.sh` | To Implement | Authoritative view fixture |
 | TC-BASH-003 | `scripts/.tests/test-dispatch-bash-fallback.sh` | `bash scripts/.tests/test-dispatch-bash-fallback.sh` | To Implement | Absent/broken/hanging CLI; degraded views |
 | TC-BASH-004 | `scripts/.tests/test-dispatch-bash-fallback.sh` | `bash scripts/.tests/test-dispatch-bash-fallback.sh` | To Implement | Twelve-cell matrix |
 | TC-BASH-005 | `tests/structure/dispatch-bash-authority.test.ts` | `bun test tests/structure/dispatch-bash-authority.test.ts` | To Implement | Source scan; temp-copy mutant |
-| TC-E2E-001 | `tests/conformance/dispatch/dispatch-e2e.test.ts` | `bun test tests/conformance/dispatch/dispatch-e2e.test.ts` | To Implement | Controlled repo; injected ports; deterministic dates |
+| TC-E2E-001 | `tests/conformance/dispatch/dispatch-e2e.test.ts` | `bun test tests/conformance/dispatch/dispatch-e2e.test.ts` | To Implement | Controlled repo; injected ports; `controlled-proof` declaration; provenance guard; rare-class injections; deterministic dates |
 | TC-E2E-002 | `tests/conformance/dispatch/dispatch-e2e.test.ts` | `bun test tests/conformance/dispatch/dispatch-e2e.test.ts` | To Implement | Handed-over controlled repo; bash runner |
-| TC-E2E-003 | `tests/conformance/dispatch/dispatch-fixture.test.ts` | `bun test tests/conformance/dispatch/dispatch-fixture.test.ts` | To Implement | Fixture API guard; provenance counter |
+| TC-E2E-003 | `tests/conformance/dispatch/dispatch-fixture.test.ts` | `bun test tests/conformance/dispatch/dispatch-fixture.test.ts` | To Implement | Fixture API guard; provenance counter; cross-scope cases |
 | TC-MERGE-001 | `tests/behaviour/dispatch-merge-absence.test.ts` | `bun test tests/behaviour/dispatch-merge-absence.test.ts` | To Implement | Merge-ready truth; merge recorder |
 | TC-MERGE-002 | `tests/behaviour/dispatch-merge-absence.test.ts` | `bun test tests/behaviour/dispatch-merge-absence.test.ts` | To Implement | Independently merged truth |
 | TC-MERGE-003 | `tests/structure/dispatch-merge-boundary.test.ts`; `tests/structure/dispatch-imports.test.ts`; `tests/boundaries` | `bun test tests/structure/dispatch-merge-boundary.test.ts tests/structure/dispatch-imports.test.ts tests/boundaries` | To Implement | Dependency-cruiser rules; negative fixture |
 | TC-MERGE-004 | `tests/structure/dispatch-composition.test.ts` | `bun test tests/structure/dispatch-composition.test.ts` | To Implement | Production composition dependency record |
 | TC-DAEMON-001 | `tests/behaviour/dispatch-daemon-planner.test.ts` | `bun test tests/behaviour/dispatch-daemon-planner.test.ts` | To Implement | `LaneLaunchRequest`; descriptor; recording port |
-| TC-DAEMON-002 | `tests/conformance/dispatch/dispatch-daemon-lane.test.ts` | `bun test tests/conformance/dispatch/dispatch-daemon-lane.test.ts` | To Implement | Real planner/executor; scripted harness; temp lane ledger |
+| TC-DAEMON-002 | `tests/conformance/dispatch/dispatch-daemon-lane.test.ts` | `bun test tests/conformance/dispatch/dispatch-daemon-lane.test.ts` | To Implement | Real planner/executor; scripted harness; temp lane ledger; one-shot comparison fixture; attempt ledger reader |
 | TC-DAEMON-003 | `tests/behaviour/dispatch-daemonless.test.ts` | `bun test tests/behaviour/dispatch-daemonless.test.ts` | To Implement | No-daemon state; unavailable planner |
 | TC-HELP-001 | `tests/structure/dispatch-help-inventory.test.ts`; `tests/checks/help-guide-coverage.test.ts`; `tests/checks/reference-page-parity.test.ts` | `bun test tests/structure/dispatch-help-inventory.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts` | To Implement | Help inventory; reference page |
 | TC-HELP-002 | `tests/behaviour/dispatch-help-version.test.ts` | `bun test tests/behaviour/dispatch-help-version.test.ts` | To Implement | Poisoned composer; recording ports |
-| TC-HELP-003 | `tests/behaviour/entrypoint-composition.test.ts` (updated); `tests/conformance/pilot/pilot-isolation.test.ts` (updated); `tests/structure/harness-review-deferrals.test.ts` (updated) | `bun test tests/behaviour/entrypoint-composition.test.ts tests/conformance/pilot/pilot-isolation.test.ts tests/structure/harness-review-deferrals.test.ts` | Existing, updated | Updated expectations; deferral record |
+| TC-HELP-003 | `tests/behaviour/entrypoint-composition.test.ts` (updated); `tests/conformance/pilot/pilot-isolation.test.ts` (comment narrowed only); `tests/structure/harness-review-deferrals.test.ts` (updated) | `bun test tests/behaviour/entrypoint-composition.test.ts tests/conformance/pilot/pilot-isolation.test.ts tests/structure/harness-review-deferrals.test.ts` | Existing, updated | Inverted production-surface expectations; reduced pilot fixture kept; deferral record |
 | TC-PLANREC-001 | `tests/checks/dispatch-doc-conformance.test.ts` | `bun test tests/checks/dispatch-doc-conformance.test.ts` | To Implement | Stale and required phrase tables; file allowlist |
 | TC-ERR-001 | `tests/behaviour/dispatch-error-envelope.test.ts` | `bun test tests/behaviour/dispatch-error-envelope.test.ts` | To Implement | Spawn-failure fixture; both tables |
 | TC-ERR-002 | `tests/behaviour/dispatch-error-envelope.test.ts` | `bun test tests/behaviour/dispatch-error-envelope.test.ts` | To Implement | Unverifiable truth fixture; both tables |
@@ -2665,32 +2933,38 @@ The implementation plan (phase 4) will declare the real phases. This plan's prov
 
 | Provisional slice | Scope | TC IDs |
 |---|---|---|
-| A - Contracts and state | Token/gate declarations, record schemas, authority view, error rows, boundary rules | TC-DISP-008, TC-DISP-011, TC-DISP-012, TC-EVID-005, TC-ERR-001 through TC-ERR-005, TC-TOKEN-001, TC-TOKEN-002, TC-MERGE-003, TC-MERGE-004, TC-HAND-004 |
-| B - One-shot core | Harness resolution, lease, spawn, liveness, classification, truth derivation, envelope, exits | TC-DISP-001 through TC-DISP-010, TC-TRUTH-001 through TC-TRUTH-006, TC-MERGE-001, TC-MERGE-002 |
-| C - Resume and evidence | Resume modes, restart budget, economics, attempt and divergence records, false success, unevaluable | TC-RESUME-001 through TC-RESUME-004, TC-EVID-001 through TC-EVID-004, TC-NFR-006, TC-NFR-007, TC-DET-001 |
-| D - Gate, handover, fallback | Window, floor, coverage, corroboration, summary, resolve, flip, revert, authority view, bash matrix | TC-GATE-001 through TC-GATE-010, TC-HAND-001, TC-HAND-002, TC-HAND-003, TC-HAND-005, TC-HAND-006, TC-BASH-001 through TC-BASH-005 |
-| E - Daemon, registration, docs | Planner, executor, daemon lanes, daemonless path, prompt-required set, help, reference page, planning reconciliation, absence assertions | TC-DAEMON-001 through TC-DAEMON-003, TC-HELP-001 through TC-HELP-003, TC-PLANREC-001 |
-| F - End-to-end and regression | Controlled repository proof, reversal proof, fixture guard, bounds, idempotency, aggregate gate | TC-E2E-001 through TC-E2E-003, TC-NFR-001 through TC-NFR-005, TC-REG-001 |
+| A - Contracts and state | Token/gate declarations, record schemas (including `evidenceClass` and the comparison record shape), authority view, error rows, boundary rules | TC-DISP-008, TC-DISP-011, TC-DISP-012, TC-EVID-005, TC-EVID-007, TC-ERR-001 through TC-ERR-005, TC-TOKEN-001, TC-TOKEN-002, TC-MERGE-003, TC-MERGE-004, TC-HAND-004 |
+| B - One-shot core | Harness resolution, lease, pre-session refusal, spawn, liveness, classification, truth derivation, envelope, exits | TC-DISP-001 through TC-DISP-010, TC-TRUTH-001 through TC-TRUTH-006, TC-MERGE-001, TC-MERGE-002 |
+| C - Resume and evidence | Resume modes, restart budget, economics, attempt and divergence records, evidence class, false success, record-level degradation | TC-RESUME-001 through TC-RESUME-004, TC-EVID-001 through TC-EVID-006, TC-NFR-006, TC-NFR-007, TC-DET-001 |
+| D - Gate, handover, fallback | Window (exclusive bound and recovery), floor, coverage (positive case), corroboration, comparison families, evidence-class counting, summary, resolve, flip, revert, identity, authority view, bash matrix | TC-GATE-001 through TC-GATE-011, TC-HAND-001, TC-HAND-002, TC-HAND-003, TC-HAND-005, TC-HAND-006, TC-HAND-007, TC-BASH-001 through TC-BASH-005 |
+| E - Daemon, registration, docs | Planner, executor, daemon lanes with their attempt record, daemonless path, prompt-required set, help, reference page, planning reconciliation, production-surface absence assertions | TC-DAEMON-001 through TC-DAEMON-003, TC-HELP-001 through TC-HELP-003, TC-PLANREC-001 |
+| F - End-to-end and regression | Controlled-proof proof (all eleven classes, provenance guard, cross-scope counting), reversal proof, fixture guard, bounds, idempotency, aggregate gate | TC-E2E-001 through TC-E2E-003, TC-NFR-001 through TC-NFR-005, TC-REG-001 |
 
 ### 7.4 Entry and Exit Criteria
 
 **Entry criteria (before delivery starts):**
 
 - The change specification is approved and the DoR gate passes.
-- The implementation plan names the dispatch composition, record kinds, gate predicate home, and test files consistently with Sections 1.5, 6.3, and 7.1.
+- The implementation plan names the dispatch composition, record kinds (including `evidenceClass` and the comparison record), gate predicate home, evidence-class counting home, identity resolution home, and test files consistently with Sections 1.5, 6.3, and 7.1.
+- The implementation plan's phase 9 names the daemon-path classification and attempt-record append producer.
 - The dependency set (verify change, harness adapters, scheduling engine, resident daemon, state layer, economics, CLI composition) is present on the integration branch (D5).
-- The controlled-repository fixture design is accepted: injected harness, tracker, CI, and state ports; no real remote or model.
+- The controlled-proof fixture design is accepted: real state and command path, injected harness/tracker/CI/VCS ports, a `controlled-proof` declaration, and a provenance guard; no real remote or model.
+- TDR-0015 is referenced by the spec and this plan; its acceptance at PR review is tracked but does not block delivery.
 
 **Exit criteria (before the change is done):**
 
-- Every AC in Section 3.1 is `Covered` by a passing TC; zero unassigned rows; zero orphan TCs.
+- Every AC in Section 3.1 is `Covered` by a passing TC; zero unassigned rows (53/53); zero orphan TCs; all 82 TCs appear in the Section 5.1 index and the Section 7.1 mapping.
 - Every must-pass TC passes; the six nice-to-have failures are triaged and recorded.
 - `pnpm check` passes, including lint, format, typecheck, `bun test`, and boundaries.
 - The four retained bash suites and the new bash matrix suite pass.
-- The controlled-repository E2E proof runs evidence, eligibility, handover, authoritative dispatch, and reversal without hand-inserted evidence.
+- The controlled-proof E2E proof runs evidence, eligibility, handover, authoritative dispatch, and reversal without hand-inserted evidence, reaching eligibility with all eleven classes including `state-unverified` and `pr-open-unverified`.
+- Production counting excludes every non-`pilot` evidence class, the controlled scope excludes every non-`controlled-proof` attempt, and a cross-scope controlled-proof record is surfaced and not counted.
+- Post-incident recovery reaches eligibility with zero in-window incidents, and the same-instant record is excluded.
+- Degraded exits are pinned: unreadable/torn/malformed summary exits `2`; truncated valid summary exits `0` with declared truncation; unreadable handover exits `2`; readable-but-unmet handover exits `1`.
+- Pre-session refusals emit an envelope and append no attempt record; post-spawn refusals append one record.
 - The reference page and SC-M1-29/SC-M1-30 carry the amended bar; no other planning doc is edited.
-- The F-9 deferral record carries the production-consumer outcome and a revisit trigger.
-- The two new error rows are sync-checked in both directions; the two existing rows are unchanged.
+- The F-9 deferral record carries the production-consumer outcome and a revisit trigger; the pilot-isolation fixture stays reduced with a narrowed comment.
+- The two new error rows are sync-checked in both directions; the two existing rows are unchanged; the only `doc/spec/**` edit is the two documented error rows in `feature-result-contract.md`.
 - The execution log in Section 10 is populated with family-level commands and results, and pm-notes `notes:` carries the per-phase evidence.
 
 ## 8. Risks, Assumptions, and Open Questions
@@ -2703,46 +2977,56 @@ The implementation plan (phase 4) will declare the real phases. This plan's prov
 | TR-2 | The floor is misread as an alternative to class coverage, incident truth, or corroboration | H | M | One predicate, one fixture family, `TC-GATE-005` mutants; the floor-only sentence is asserted |
 | TR-3 | An exit-0-with-no-artifact run is counted clean | H | M | `TC-TRUTH-001` plus `TC-EVID-003`; the attempt record must name the missing artifact |
 | TR-4 | An uncorroborated success claim passes the gate | H | M | `TC-GATE-010` family matrix; `TC-EVID-003` contradiction; the token alone is never sufficient |
-| TR-5 | Handover flips the wrong repository or leaks authority | H | L | `TC-HAND-006` two-repo isolation and the fallback identity case; every record carries repository identity |
+| TR-5 | Handover flips the wrong repository, leaks authority, or re-keys on rename | H | L | `TC-HAND-006` two-repo isolation; `TC-HAND-007` rename/remote/restart binding and clean refusal; every record carries the resolved repository identity |
 | TR-6 | Reversal loses history or is not idempotent | M | M | `TC-HAND-003` append-only history and noop replay; `TC-NFR-005` |
 | TR-7 | Bash fallback depends on the typed CLI | H | M | `TC-BASH-003`, `TC-BASH-005`; pure file read; typed CLI absent, broken, and hanging |
 | TR-8 | Dispatch accidentally fires a merge | H | L | `TC-MERGE-001` through `TC-MERGE-004`; recording merge port; structural boundary check |
 | TR-9 | Evidence records leak prompts, transcripts, or secrets | H | L | `TC-NFR-006`, `TC-NFR-007`, `TC-EVID-001`; canaries and the deny-by-default spawn environment |
-| TR-10 | Daemon and one-shot paths classify the same evidence differently | M | M | `TC-DAEMON-002` compares final token and outcome; both paths use the same classifier |
+| TR-10 | Daemon and one-shot paths classify the same evidence differently, or the daemon path appends no attempt record | M | M | `TC-DAEMON-002` compares final token, outcome, comparison record, and attempt record against one-shot; plan phase 9 owns the producer |
 | TR-11 | The controlled fixture hand-inserts evidence, making the E2E proof vacuous | H | M | `TC-E2E-003` fixture API guard and command-provenance count; the fixture exposes no ledger writer |
 | TR-12 | The p95 latency gate is flaky on shared CI | M | M | `TC-NFR-003` keeps the bounded-read assertion in the default suite and measures p95 on the reference host; host metadata is recorded |
-| TR-13 | The family comparison baseline is crossed, producing false divergences | M | M | `TC-GATE-008` rejects cross-family comparison and treats not-applicable as not-applicable |
+| TR-13 | The family comparison baseline is crossed, producing false divergences | M | M | `TC-GATE-008` and `TC-EVID-007` reject cross-family comparison and treat not-applicable as not-applicable |
 | TR-14 | The two reconciled scenarios or the reference page drift back to the calendar proxy | M | L | `TC-PLANREC-001` scans for stale phrases and missing required phrases with the file named |
-| TR-15 | The F-9 deferral is either silently resolved or left as a blanket absence claim | M | L | `TC-HELP-003` asserts a status, a production-consumer reason, and a revisit trigger, and rejects the blanket claim |
-| TR-16 | Pre-session refusals are recorded inconsistently (attempt or envelope only) | M | L | OQ-T2 fixes the interpretation; `TC-DISP-002` asserts no success record and no authority change either way |
+| TR-15 | The F-9 deferral is either silently resolved or left as a blanket absence claim, or the pilot fixture is wrongly forced to compose dispatch | M | L | `TC-HELP-003` asserts a status, a production-consumer reason, and a revisit trigger; it keeps the pilot fixture reduced and rejects composing dispatch into it |
+| TR-16 | Pre-session refusals drift back to appending an attempt record | M | L | DEC-19 and PM D6 fix the rule; `TC-DISP-002` asserts deterministically that the envelope is emitted and no attempt record is appended for all three refusal shapes |
+| TR-17 | The gate becomes unreachable again because a rare class cannot be a success claim or a comparison | H | M | `TC-GATE-007` positive all-eleven fixture and `TC-E2E-001`; `state-unverified` is exposure-only and `pr-open-unverified` corroborates on the tracker fact |
+| TR-18 | Fixture, smoke, or controlled-proof evidence inflates a production window | H | M | `TC-EVID-006` declaration/immutability, `TC-GATE-011` per-scope counting, `TC-E2E-003` cross-scope exclusion, and the provenance guard |
+| TR-19 | Record-level degradation is conflated with window-level unreadability (either blocking forever or hiding a broken read) | H | M | `TC-TRUTH-006` and `TC-EVID-004` assert both scopes separately; `TC-GATE-006` pins the exits |
+| TR-20 | The incident lower bound is implemented inclusively, so recovery is impossible | M | M | `TC-GATE-009` and `TC-EVID-003` assert `>` semantics, the same-instant exclusion, and the post-incident recovery case |
 
 ### 8.2 Assumptions
 
 - The dependency set is delivered and stable on the integration branch (D5).
 - The state layer admits the three additive record kinds and the derived document without a schema bump (DEC-18).
-- Repository identity resolves from the scheduling engine's `repository` field, with a stable checkout-root digest fallback (DEC-13).
+- Repository identity resolves from the normalized scheduling `repository` key, then the normalized VCS remote, then a persisted first-use marker created through the store-managed artifact; an unresolvable identity is a clean refusal and a checkout-path digest is never the identity (DEC-13, TDR-0015 §6).
+- Every dispatch composition declares its evidence class: production defaults to `pilot`, the controlled proof declares `controlled-proof`, and `smoke`/`fixture` never count (TDR-0015 §2).
+- The daemon path shares the harness port and the shared classifier with the one-shot path, and plan phase 9 supplies the classification and attempt-record append point in the daemon composition; this plan asserts the behavior regardless of the chosen home symbol.
 - The four bash entry points can read and parse the derived authority document with ordinary shell tooling and default to dual-run on any failure.
-- A controlled fixture can exercise all eleven result classes and the floor without touching real pilot tickets.
+- A controlled fixture can exercise all eleven result classes and the floor without touching real pilot tickets, including a fault-injected `state-unverified` run and an empty-URL `pr-open-unverified` run.
 - The real shared classifier is the only classification implementation; tests supply evidence, never classification.
 - The test-facing names in Section 1.5 are the contract; the implementation plan may rename symbols but must update Section 7.1 and keep the scenarios binding.
 - Goldens are byte-pinned and regenerated only by an explicit command with a reviewed diff.
 
 ### 8.3 Open Questions
 
-| ID | Question | Proposed answer | Blocking? | Owner |
+| ID | Question | Proposed answer | Blocking? | Status / Owner |
 |---|---|---|---|---|
-| OQ-T1 | What is the exact production path and encoding of the derived authority view? | The plan declares one path and schema; the test fixtures use `dispatch/authority.json` under the temp state root; bash reads the same document. | No; behavior is fixed, the path is a plan detail | engineering |
-| OQ-T2 | Does a pre-session input refusal (unknown harness, lease conflict) append an attempt record? | No attempt record for refusals that never reach classification, because an attempt requires an engine outcome and token; the envelope is the record. `TC-DISP-002` asserts no success record and no authority change under either policy. | No; interpretation recorded | spec/plan owner |
-| OQ-T3 | Is the p95 latency assertion gated on shared CI? | The bounded 5,000-record read is the default hard gate; p95 is measured on the declared reference host and recorded, with host metadata. | No; the AC bound is met on the reference host | engineering |
-| OQ-T4 | Where does the resolution principal come from for `dispatch dual-run resolve`? | The delivered principal port; the fixture injects a fixed principal. | No | engineering |
-| OQ-T5 | Is the F-9 deferral "resolved" or "resolved with follow-up"? | Either is accepted if the record names the production-consumer outcome and a revisit trigger; AC-F11-3 does not require full resolution. | No | engineering |
-| OQ-T6 | Which planning files may the delivery edit? | Only the dispatch reference page and SC-M1-29/SC-M1-30. The ticket body and every other planning file remain unchanged and are reported. | No; review gate | pm |
+| OQ-T1 | What is the exact production path and encoding of the derived authority view? | The plan declares one path and schema; the test fixtures use `dispatch/authority.json` under the temp state root; bash reads the same document. | No; behavior is fixed, the path is a plan detail | Open — engineering |
+| OQ-T2 | Does a pre-session input refusal (unknown harness, lease conflict, rejected input) append an attempt record? | **Resolved by PM D6 and spec DEC-19:** a pre-session refusal emits the classified envelope at exit 1 and appends no attempt record. `TC-DISP-002` asserts this deterministically for all three refusal shapes. | No | **Resolved** — spec/plan owner |
+| OQ-T3 | Is the p95 latency assertion gated on shared CI? | The bounded 5,000-record read is the default hard gate; p95 is measured on the declared reference host and recorded, with host metadata. | No; the AC bound is met on the reference host | Open — engineering |
+| OQ-T4 | Where does the resolution principal come from for `dispatch dual-run resolve`? | The delivered principal port; the fixture injects a fixed principal. | No | Open — engineering |
+| OQ-T5 | Is the F-9 deferral "resolved" or "resolved with follow-up"? | Either is accepted if the record names the production-consumer outcome and a revisit trigger; AC-F11-3 does not require full resolution. | No | Open — engineering |
+| OQ-T6 | Which planning files may the delivery edit? | Only the dispatch reference page and SC-M1-29/SC-M1-30. The ticket body and every other planning file remain unchanged and are reported. | No; review gate | Open — pm |
+| OQ-T7 | What is the `--evidence-class` surface (flag vs configured default) and the controlled composition's declaration point? | The implementation plan declares one surface and one declaration point; the tests drive the declared composition input and assert the recorded class, not a literal flag spelling. | No; behavior is fixed by AC-F4-5 | Open — engineering / TDR-0015 unresolved item |
+| OQ-T8 | What is the persisted identity marker's storage name/location, and what happens when a later derived key disagrees with the persisted binding? | The store-managed artifact owns the name; the persisted binding governs and the discrepancy is recorded as a bounded attribute, not a new identity (TDR-0015 §6). Tests assert behavior through the store edge, not the name. | No | Open — engineering / TDR-0015 unresolved item |
+| OQ-T9 | Which timestamp drives the window lower bound and UTC-date attribution (start vs completion/recorded)? | The completion/recorded timestamp of the attempt record, per TDR-0015 §3; the incident tie uses a strict `>` comparison. Tests use the record's completion timestamp. | No | Open — engineering / TDR-0015 unresolved item |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 0.1 | 2026-11-08 | test-plan-writer | Initial test plan derived from the GH-239 specification (47 ACs), PM decisions D1-D5, the M1 dispatch contract and reference page, TDR-0005/TDR-0010, seeded scenarios SC-M1-26..SC-M1-30, and the repository testing strategy. 78 TCs; 47/47 ACs covered; SC-M1-29/SC-M1-30 reconciled to the four-condition evidence bar. |
+| 0.2 | 2026-11-08 | test-plan-writer | Revised to the GH-239 spec iteration 2 (53 ACs), TDR-0015, and PM decisions D1-D6; closes readiness iteration 1 findings F1, F2, F3, F4, F5, F6, F7, F11, F13, and F16 as they apply to test planning. Added `TC-EVID-006` (evidence class), `TC-EVID-007` (comparison record shape), `TC-GATE-011` (evidence-class counting), and `TC-HAND-007` (rename-invariant identity); 82 TCs, 53/53 ACs covered, zero orphans. TC-TRUTH-003 now asserts `pr-open-unverified` corroborates on the tracker fact with `urlResolved: false`; TC-TRUTH-006 separates record-level degradation from window-level unverifiability; TC-GATE-007 adds the positive all-eleven reachability case; TC-GATE-009 and TC-EVID-003 pin the exclusive incident bound and post-incident recovery; TC-DISP-002 closes OQ-T2 and asserts no attempt record for a pre-session refusal; TC-DAEMON-002 asserts the daemon-path attempt record; TC-HELP-003 keeps the pilot-isolation fixture reduced and inverts only the two production-surface assertions; TC-GATE-008 asserts the comparison record shape; TC-GATE-006 and TC-NFR-004 pin the degraded exits; TC-E2E-001 runs under `controlled-proof` with a provenance guard. Section 1.2 now allows only the two documented error rows as a `doc/spec/**` edit. |
 
 ## 10. Test Execution Log
 
@@ -2752,9 +3036,9 @@ Populated during delivery. The per-phase command log is the `notes:` ledger in `
 |---|---|---|---|---|
 | Contracts, state, error rows, boundaries | `bun test tests/structure tests/checks tests/types` | TBD | Not run | Slice A |
 | One-shot dispatch and truth derivation | `bun test tests/behaviour/dispatch-*.test.ts` | TBD | Not run | Slice B |
-| Resume and evidence | `bun test tests/behaviour/dispatch-resume*.test.ts tests/behaviour/dispatch-evid*.test.ts` | TBD | Not run | Slice C |
-| Gate, handover, fallback | `bun test tests/behaviour/dispatch-gate*.test.ts tests/behaviour/dispatch-handover.test.ts tests/behaviour/dispatch-authority-view.test.ts`; `bash scripts/.tests/test-dispatch-bash-fallback.sh` | TBD | Not run | Slice D |
-| Daemon, help, planning reconciliation | `bun test tests/behaviour/dispatch-daemon*.test.ts tests/structure/dispatch-help-inventory.test.ts tests/checks/dispatch-doc-conformance.test.ts` | TBD | Not run | Slice E |
-| Controlled E2E and bounds | `bun test tests/conformance/dispatch tests/behaviour/dispatch-bounds.test.ts tests/behaviour/dispatch-idempotency.test.ts` | TBD | Not run | Slice F |
+| Resume and evidence | `bun test tests/behaviour/dispatch-resume*.test.ts tests/behaviour/dispatch-evidence-*.test.ts tests/behaviour/dispatch-comparison.test.ts tests/behaviour/dispatch-unevaluable.test.ts tests/behaviour/dispatch-false-success.test.ts tests/behaviour/dispatch-divergence.test.ts` | TBD | Not run | Slice C |
+| Gate, handover, fallback, identity | `bun test tests/behaviour/dispatch-gate*.test.ts tests/behaviour/dispatch-dual-run-*.test.ts tests/behaviour/dispatch-handover.test.ts tests/behaviour/dispatch-identity.test.ts tests/behaviour/dispatch-authority-view.test.ts`; `bash scripts/.tests/test-dispatch-bash-fallback.sh` | TBD | Not run | Slice D |
+| Daemon, help, planning reconciliation | `bun test tests/behaviour/dispatch-daemon*.test.ts tests/conformance/dispatch/dispatch-daemon-lane.test.ts tests/structure/dispatch-help-inventory.test.ts tests/checks/dispatch-doc-conformance.test.ts` | TBD | Not run | Slice E |
+| Controlled-proof E2E and bounds | `bun test tests/conformance/dispatch tests/behaviour/dispatch-bounds.test.ts tests/behaviour/dispatch-idempotency.test.ts` | TBD | Not run | Slice F; assert `controlled-proof` class and provenance guard |
 | Aggregate gate | `pnpm check` | TBD | Not run | Final |
 | Reference-host performance | `bun test tests/behaviour/dispatch-bounds.test.ts -t "@perf"` | TBD | Not run | Record host metadata |

@@ -7,9 +7,38 @@
 # orchestration, orchestration before the gate and handover, and the end-to-end
 # proof last. No phase depends on a later phase to compile.
 #
+# Coverage: 53/53 spec acceptance criteria (Section 17, AC-F1-1 through
+# AC-NFR9-1) and 82/82 test-plan TCs (TC-DISP-001 through TC-REG-001) are mapped
+# to exactly one owning phase each. Owning phase per TC:
+#   phase 1  (2 ACs, 5 TCs): AC-F12-2, AC-NFR1-1; TC-DISP-008, TC-ERR-003,
+#            TC-ERR-005, TC-TOKEN-001, TC-TOKEN-002
+#   phase 2  (5 ACs, 12 TCs): AC-F1-2, AC-F2-1..AC-F2-4; TC-DISP-003/004/005/
+#            009/011/012, TC-TRUTH-001..TC-TRUTH-006
+#   phase 3  (6 ACs, 8 TCs): AC-F4-1..AC-F4-6; TC-EVID-001..TC-EVID-007,
+#            TC-HAND-004
+#   phase 4  (8 ACs, 12 TCs): AC-F1-1, AC-F1-3, AC-F1-4, AC-F9-1, AC-F9-2,
+#            AC-F12-1, AC-F12-3, AC-NFR9-1; TC-DISP-001/002/006/007/010,
+#            TC-MERGE-001..TC-MERGE-004, TC-ERR-001/002/004
+#   phase 5  (4 ACs, 4 TCs): AC-F3-1..AC-F3-4; TC-RESUME-001..TC-RESUME-004
+#   phase 6  (13 ACs, 17 TCs): AC-F5-1..AC-F5-6, AC-F6-1..AC-F6-6, AC-F8-3;
+#            TC-GATE-001..TC-GATE-011, TC-HAND-001/002/003/005/006/007
+#   phase 7  (3 ACs, 4 TCs): AC-F11-1..AC-F11-3; TC-HELP-001..TC-HELP-003,
+#            TC-PLANREC-001
+#   phase 8  (4 ACs, 5 TCs): AC-F7-1..AC-F7-3, AC-NFR8-1; TC-BASH-001..TC-BASH-005
+#   phase 9  (3 ACs, 3 TCs): AC-F10-1..AC-F10-3; TC-DAEMON-001..TC-DAEMON-003
+#   phase 10 (5 ACs, 12 TCs): AC-F8-1, AC-F8-2, AC-NFR4-1, AC-NFR6-1, AC-NFR7-1;
+#            TC-E2E-001..TC-E2E-003, TC-NFR-001..TC-NFR-007, TC-DET-001,
+#            TC-REG-001
+# Cross-phase AC/TC confirmation is deliberate and additive: AC-F5-5 is owned by
+# the phase-6 positive gate case and confirmed by the phase-10 controlled proof;
+# AC-F12-1 rows land in phase 1 and its classification in phase 4; AC-F8-3
+# counting is owned by the phase-6 predicate and confirmed by the phase-10 proof.
+#
 # Cross-phase file ownership (declared because these files are touched by more
-# than one phase; the phase-4 declaration is the shared interface and later
-# phases extend it additively):
+# than one phase, or are delivered files one phase extends; the earliest
+# declaration is the shared interface and every later phase extends it
+# additively — no later phase may rewrite, reorder, or remove an earlier phase's
+# declaration):
 # - `packages/core/src/app/dispatch.ts` — phase 4 creates the fresh-run loop,
 #   phase 5 adds resume admission to the same loop.
 # - `packages/cli/src/commands/dispatch.ts` — phase 4 creates the run form,
@@ -19,10 +48,21 @@
 #   error renderers, phase 6 adds the summary and handover renderers.
 # - `packages/cli/src/edge.ts` — phase 4 creates the dispatch runtime factory,
 #   phases 5 and 6 extend it with the resume and gate/handover capabilities.
-# - `tests/structure/inventory.json` and the `EXECUTABLE_ALLOWANCES` table in
-#   `tests/structure/content-inventory.test.ts` are the mechanical new-file and
-#   executable-export manifests; every phase that adds a source file updates the
-#   same two entries. This is bookkeeping, never behavior.
+# - `packages/core/src/app/daemon-supervision.ts` — phase 9 adds one optional
+#   collection seam additively; the delivered supervision modes are unchanged.
+# - `packages/core/src/index.ts`, `packages/core/src/domain/index.ts`, and
+#   `packages/core/src/app/index.ts` are the shared barrels: phases 2 through 9
+#   each append their own export line and no phase rewrites or re-orders another
+#   phase's line. The same additive-extend rule applies to the test inventory
+#   manifests (`tests/structure/inventory.json` and the `EXECUTABLE_ALLOWANCES`
+#   table in `tests/structure/content-inventory.test.ts`): every phase that adds
+#   a source file adds its own two entries; this is bookkeeping, never behavior.
+# - Shared test files, extended additively: `tests/behaviour/dispatch-evidence-class.test.ts`
+#   (phase 3 record-level rules, phase 4 production default, phase 10 controlled
+#   declaration), `tests/behaviour/dispatch-identity.test.ts` (phase 3 resolution
+#   order and marker reuse, phase 6 unresolvable-identity refusal), and
+#   `tests/types/dispatch-contract.type-test.ts` (phase 1 record types, phase 3
+#   evidence-class and comparison unions).
 #
 # Test harness note: dispatch behaviour suites drive `runCli` with an injected
 # command program, which is the same surface `runEntrypoint` delegates to and the
@@ -31,12 +71,26 @@
 # updated composition and help-coverage suites; the behavior, command, output,
 # record, and exit assertions of every scenario stay binding from phase 4.
 #
-# Documentation boundary: the only planned `doc/spec/**` touch is the two
-# documented error-table rows in `feature-result-contract.md` (phase 1), because
-# the delivered two-way error-table sync refuses a machine row with no documented
-# row and a green phase requires it. That is row data, not current-truth
-# reconciliation: every other `doc/spec/**` change stays with the lifecycle
-# system_spec_update phase owned by @doc-syncer.
+# Absence-assertion note: only the two production-surface assertions are retired
+# or inverted (`tests/behaviour/entrypoint-composition.test.ts` and
+# `tests/structure/harness-review-deferrals.test.ts`).
+# `tests/conformance/pilot/pilot-isolation.test.ts` guards a deliberately reduced
+# test-only fixture: its exact command list and its non-import of
+# production/entrypoint stay unchanged, dispatch is never composed into it, and
+# only the stale name/comment is narrowed.
+#
+# Evidence-semantics note: the gate's durable operational semantics are TDR-0015
+# (evidence-class counting, incident-exclusive window, floor, comparison shape,
+# repository identity, reversal idempotency). This plan applies them; it does not
+# restate or reinterpret them, and no phase re-derives family membership.
+#
+# Documentation boundary: the only planned `doc/spec/**` touch is the documented
+# error-table rows and their prose in `feature-result-contract.md` (phase 1),
+# because the delivered two-way error-table sync refuses a machine row with no
+# documented row and a green phase requires it. That is row data plus the counts
+# the same phase's tests assert, not current-truth reconciliation: every other
+# `doc/spec/**` change stays with the lifecycle system_spec_update phase owned by
+# @doc-syncer.
 #
 # Planning reconciliation is limited to the two story-owned surfaces the spec
 # names (`commands/dispatch.md` and SC-M1-29/SC-M1-30 in `test-scenarios.md`);
@@ -52,6 +106,8 @@ tier:
     - token-or-exit-closure-regression
     - bash-fallback-behaviour-change
     - documented-error-table-drift
+    - evidence-class-miscount
+    - repository-identity-rekey
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -65,6 +121,9 @@ phases:
         - packages/core/src/contracts/error-table.ts
         - packages/core/src/contracts/index.ts
         - packages/adapters/src/harness/review-deferrals.ts
+        - doc/decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md
+        - doc/decisions/00-index.md
+        - doc/decisions/00-register.md
         - doc/spec/features/feature-result-contract.md
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
@@ -75,6 +134,7 @@ phases:
         - tests/structure/delivery-result-contract.test.ts
         - tests/structure/harness-review-deferrals.test.ts
         - tests/checks/error-table-sync.test.ts
+        - tests/checks/exit-code-literals.test.ts
         - tests/types/dispatch-contract.type-test.ts
         - tests/fixtures/result/code-corpora/true-positives.json
         - tests/fixtures/result/code-corpora/false-positives.json
@@ -86,16 +146,17 @@ phases:
         target: packages/core/src/contracts/error-table.ts
         role: producer
     doneArtifacts:
-      trackerTransition: "GH-239 in progress; phase 1 evidence recorded in pm-notes notes (contracts, two dispatch error rows, F-9 production-consumer outcome)"
+      trackerTransition: "GH-239 in progress; phase 1 evidence recorded in pm-notes notes (contracts, four dispatch error rows, F-9 production-consumer outcome)"
     leases:
       - lease:core-contracts
     weightClass: heavy
-    summary: "Declare the dispatch language once in the runtime-neutral contracts tier: the three additive record kinds with payload schemas and key prefixes (`dispatch.attempt` / `delivery.dispatch.attempt.v1`, `dispatch.divergence` / `delivery.dispatch.divergence.v1`, `dispatch.handover` / `delivery.dispatch.handover.v1`), the derived `delivery.dispatch.authority.v1` view schema and its single production document name, the dispatch envelope data (`result`, `prUrl`, `phaseLedger{completed,total,variant}`, `restarts`, `resumeAmplification`, `harness`, `handoverState`, `outcome`), the summary data (window start and reason, UTC day count, counted deliveries, incidents, divergences, class coverage, corroboration, eligibility, unmet conditions), the four handover condition identifiers, the corroboration family sufficiency map, the bounded constants (5,000 attempt records per read, 65,536 machine bytes, 40 human lines, 8,192 human bytes, 20 dispatches, 7 consecutive UTC dates) and the injected authority-read port; the eleven tokens are imported from `DELIVERY_RESULT_TOKENS` and no second token list exists. Add `dispatch.session.spawn-failed` (category user, non-retryable, `not_landed`, user-validation, exit 1) and `dispatch.state-unverified` (platform, exit 2) to the machine table and to the documented rows in `doc/spec/features/feature-result-contract.md`; the two existing dispatch rows stay unchanged and resolve by exact code. This is the only planned `doc/spec/**` touch: the two documented rows are mechanically required by the two-way sync (AC-F12-1, TC-ERR-005) and carry no current-truth reconciliation, which stays with the system_spec_update phase. It also records the F-9 production-consumer outcome in `HARNESS_REVIEW_DEFERRALS` and inverts the delivered no-dispatch-surface/no-spawn-failure-row assertion, so the error row and the deferral record cannot contradict each other. No new configuration key is introduced (DEC-17): `lane.restart-budget` and `lane.liveness-interval` remain the policy homes and the evidence bounds are contract constants."
+    summary: "Declare the dispatch language once in the runtime-neutral contracts tier: the three additive record kinds with payload schemas and key prefixes (`dispatch.attempt` / `delivery.dispatch.attempt.v1`, `dispatch.divergence` / `delivery.dispatch.divergence.v1`, `dispatch.handover` / `delivery.dispatch.handover.v1`), the derived `delivery.dispatch.authority.v1` view schema and its single production document name, the dispatch envelope data (`result`, `prUrl`, `phaseLedger{completed,total,variant}`, `restarts`, `resumeAmplification`, `harness`, `handoverState`, `outcome`), the summary data (window start and reason, UTC day count, counted deliveries, counted evidence class and cross-class exclusions, incidents, divergences, class coverage, corroboration, eligibility, unmet conditions), the four handover condition identifiers, the corroboration family sufficiency map, the bounded constants (5,000 attempt records per read, 65,536 machine bytes, 40 human lines, 8,192 human bytes, 20 dispatches, 7 consecutive UTC dates) and the injected authority-read port; the eleven tokens are imported from `DELIVERY_RESULT_TOKENS` and no second token list exists. Declare the closed `evidenceClass` union (`pilot | controlled-proof | smoke | fixture`) and the comparison record shape (class, token or null, outcome, optional reason, `urlResolved`) as contract types, so every later phase consumes one declaration. Add `dispatch.session.spawn-failed` (category user, non-retryable, `not_landed`, user-validation, exit 1) and `dispatch.state-unverified` (platform, non-retryable, `not_landed`, platform-provider, exit 2) to the machine table after the two existing rows, and mirror all four dispatch rows in `doc/spec/features/feature-result-contract.md`; the two existing dispatch rows stay byte-identical and every dispatch failure resolves by exact code. The table grows from 113 to 115 identities, so this phase must change every count and row invariant the same phase's tests enforce, in one edit: the four `toHaveLength(113)` assertions in `tests/structure/error-table.test.ts` become 115; the `expect(doc).toContain(...)` assertion that pins the `113 identities` phrase becomes 115; `DISPATCH_ROWS` grows from two to four rows in table order; the `dispatch` kind assertions `toHaveLength(2)` and the prose expectation `dispatch` kind carries exactly the two economics identities become four; and the same table's documented-row, hint, projection, and byte-identity rows for the two existing codes stay unchanged. In the documented spec, the four dispatch rows, the frontmatter summary phrase the two dispatch economics rows, and the two prose counts (113 machine identities and the same 113 identities, plus the two dispatch economics rows enumeration) change together, and the sentence `dispatch.session.spawn-failed` is not yet declared (M1-S9) is replaced by the declared four-row description. `tests/checks/error-table-sync.test.ts` updates its live kind-count expectation `dispatch: 2` to 4. The phase cannot go green on an incomplete documented table: the structure count assertions, the documented-row assertions, the two-way sync check, and the standalone sync script all run here, so a machine row without its documented row (or a stale 113) fails the phase. This is the only planned `doc/spec/**` touch and carries no current-truth reconciliation, which stays with the system_spec_update phase. It also records the F-9 production-consumer outcome in `HARNESS_REVIEW_DEFERRALS` and inverts the delivered no-dispatch-surface/no-spawn-failure-row assertion, so the error rows and the deferral record cannot contradict each other. No new configuration key is introduced (DEC-17): `lane.restart-budget` and `lane.liveness-interval` remain the policy homes and the evidence bounds are contract constants."
     tests:
       - "bun test tests/structure/dispatch-token-home.test.ts tests/structure/delivery-result-contract.test.ts tests/structure/result-contract.test.ts"
       - "bun test tests/structure/dispatch-error-identity.test.ts tests/structure/error-table.test.ts"
       - "bun test tests/structure/harness-review-deferrals.test.ts"
-      - "bun test tests/checks/error-table-sync.test.ts"
+      - "bun test tests/checks/error-table-sync.test.ts tests/checks/exit-code-literals.test.ts"
+      - "bun test tests/checks/decision-record.test.ts"
       - "bun test tests/types"
       - "bun run scripts/checks/error-table-sync.ts"
       - "pnpm typecheck"
@@ -123,7 +184,7 @@ phases:
     leases:
       - lease:core-domain
     weightClass: heavy
-    summary: "Implement the pure dispatch domain over the phase-1 vocabulary. `deriveDispatchResult(...)` is artifact-first: an exit-0 session with no branch commit, no PR, and no ledger progress is `failed` with the missing artifact named; an open PR is `pr-open`, an unresolvable PR URL `pr-open-unverified`, an independently observed merged PR `merged` as detection only, a blocking tracker state `blocked`, an exhausted lane `noop-lane-nothing-to-do` only when no work remains, a pre-session harness refusal `noop-lane-permission` meaning spawn-refused, and a timeout that exhausts liveness `max-restarts` through the restart admission path. Every branch returns a TDR-0005 token plus its harness `outcome`, so `partial` never travels alone and `noop-lane-nothing-to-do` is derived outside the shared classifier (DEC-14). `classifyDispatchFailure(...)` maps a spawn failure before a session to `dispatch.session.spawn-failed` at exit 1 and an unverifiable ledger, tracker, artifact, or state read to `dispatch.state-unverified` at exit 2, and reuses the delivered projection module instead of any call-site exit literal. The progress verdict (`lane.liveness-interval` cadence supplied as data) requires two consecutive sourced evaluations with no advance before a stalled verdict; an advancing token delta, traffic, worktree, or prefill signal keeps the lane progressing; all-absent readings report unknown/absent with their reasons, no absent reading is coerced to zero, and elapsed time alone never stalls. Nothing in the module declares a token or an exit literal outside the contracts home."
+    summary: "Implement the pure dispatch domain over the phase-1 vocabulary. `deriveDispatchResult(...)` is artifact-first: an exit-0 session with no branch commit, no PR, and no ledger progress is `failed` with the missing artifact named; an open PR is `pr-open`, an open PR whose URL cannot be resolved is `pr-open-unverified` with `urlResolved: false` recorded as an engine-side attribute (a success claim corroborated by the tracker fact, never an unresolved divergence), an independently observed merged PR `merged` as detection only, a blocking tracker state `blocked`, an exhausted lane `noop-lane-nothing-to-do` only when no work remains, a pre-session harness refusal `noop-lane-permission` meaning spawn-refused, and a timeout that exhausts liveness `max-restarts` through the restart admission path. Every branch returns a TDR-0005 token plus its harness `outcome`, so `partial` never travels alone and `noop-lane-nothing-to-do` is derived outside the shared classifier (DEC-14). `classifyDispatchFailure(...)` maps a spawn failure before a session to `dispatch.session.spawn-failed` at exit 1 and an unverifiable ledger, tracker, artifact, or state read to `dispatch.state-unverified` at exit 2, and reuses the delivered projection module instead of any call-site exit literal. The progress verdict (`lane.liveness-interval` cadence supplied as data) requires two consecutive sourced evaluations with no advance before a stalled verdict; an advancing token delta, traffic, worktree, or prefill signal keeps the lane progressing; all-absent readings report unknown/absent with their reasons, no absent reading is coerced to zero, and elapsed time alone never stalls. Nothing in the module declares a token or an exit literal outside the contracts home."
     tests:
       - "bun test tests/behaviour/dispatch-truth-derivation.test.ts tests/behaviour/dispatch-state-unverified.test.ts"
       - "bun test tests/behaviour/dispatch-liveness.test.ts"
@@ -131,7 +192,7 @@ phases:
       - "bun test tests/structure/delivery-result-contract.test.ts tests/structure/result-contract.test.ts"
       - "pnpm typecheck"
   - id: 3
-    title: "Durable dispatch evidence ledger and CLI-independent authority view"
+    title: "Durable dispatch evidence ledger, declared evidence class, comparison record, and repository identity"
     kind: delivery
     scope:
       files:
@@ -139,13 +200,20 @@ phases:
         - packages/core/src/app/index.ts
         - packages/core/src/index.ts
         - packages/core/src/domain/dispatch-authority.ts
+        - packages/core/src/domain/dispatch-identity.ts
+        - packages/core/src/domain/dispatch-comparison.ts
         - packages/core/src/domain/index.ts
         - packages/adapters/src/file/dispatch-authority.ts
+        - packages/adapters/src/file/dispatch-identity.ts
         - packages/adapters/src/file/index.ts
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
         - tests/fixtures/dispatch/ledger.ts
+        - tests/types/dispatch-contract.type-test.ts
         - tests/behaviour/dispatch-evidence-record.test.ts
+        - tests/behaviour/dispatch-evidence-class.test.ts
+        - tests/behaviour/dispatch-comparison.test.ts
+        - tests/behaviour/dispatch-identity.test.ts
         - tests/behaviour/dispatch-false-success.test.ts
         - tests/behaviour/dispatch-unevaluable.test.ts
         - tests/structure/dispatch-authority-view.test.ts
@@ -154,19 +222,28 @@ phases:
         target: packages/core/src/app/dispatch-ledger.ts
         role: producer
       - kind: contract-file
+        target: packages/core/src/domain/dispatch-identity.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/domain/dispatch-comparison.ts
+        role: producer
+      - kind: contract-file
         target: packages/adapters/src/file/dispatch-authority.ts
         role: producer
     doneArtifacts:
-      trackerTransition: "GH-239 in progress; phase 3 evidence recorded in pm-notes notes (attempt/divergence/handover ledgers, atomic authority view)"
+      trackerTransition: "GH-239 in progress; phase 3 evidence recorded in pm-notes notes (attempt/divergence/handover ledgers, evidence class, comparison record, rename-invariant identity, atomic authority view)"
     leases:
       - lease:dispatch-evidence
     weightClass: heavy
-    summary: "Add the durable dispatch evidence ledger over the injected state port: one fenced append plus a verified post-append read per attempt, divergence, and handover record; a fold that keeps the latest state per divergence identifier and per repository while preserving every original record; and exactly one attempt record per dispatch carrying repository identity, reference, start and finish timestamps, harness, handover state at run, engine outcome and token, comparison token or explicit not-applicable marker, divergence reference, false-success classification, tri-state corroboration, resume mode, and bounded evidence references, with no prompt, transcript, diff, credential, or raw payload. A disagreement appends an open divergence and a resolution appends a resolved record with a bounded note, principal, and timestamp without rewriting the open record; a contradicted success claim is recorded as a false-success incident and an unevaluable comparison is recorded with its classified state or provider identity. The derived per-repository authority view is rebuilt from the folded handover ledger and replaced atomically through the store document replace, under one declared production document name, and `readDispatchAuthority(stateRoot, repository)` reads that document as a plain file so a non-typed consumer needs no CLI: absent, unreadable, or malformed resolves to dual-run. Repository identity is the scheduling `repository` value with a stable checkout-root digest fallback (DEC-13), the read is bounded at 5,000 attempt records and declares truncation instead of zero, and an identical replay appends no duplicate. Fault-injection coverage proves a failed append or torn read is a classified state failure and never a clean verdict or a fabricated record."
+    summary: "Add the durable dispatch evidence ledger over the injected state port: one fenced append plus a verified post-append read per attempt, divergence, and handover record; a fold that keeps the latest state per divergence identifier and per repository while preserving every original record; and exactly one attempt record per dispatch that reaches classification, carrying repository identity, reference, start and finish timestamps, harness, the declared `evidenceClass`, handover state at run, engine outcome and token, the comparison record, divergence reference, false-success classification, tri-state corroboration, resume mode, and bounded evidence references, with no prompt, transcript, diff, credential, or raw payload. `evidenceClass` is a closed union of exactly `pilot`, `controlled-proof`, `smoke`, and `fixture`: it is attached at record creation from a declared invocation/composition input or the documented configuration default, validated at the append boundary, never inferred from the outcome, never read from a supplied record payload, and immutable after append — a second append or in-place mutation that escalates `fixture`, `smoke`, or `controlled-proof` to `pilot` is refused and the original record stays byte-identical. `buildComparisonRecord(...)` is the one declared comparison shape and the only family classifier: `class` in `verify-change | tracker-truth | not-applicable`, `token` a TDR-0005 token or null, `outcome` in `match | mismatch | not-applicable`, optional `reason`, and `urlResolved` for tracker facts, with `token = null` if and only if the class is `not-applicable`, `outcome = not-applicable` if and only if the class is, and a divergence appended if and only if the outcome is `mismatch`. Verify-class tokens (`failed`, `finished`, `partial`) compare by exact token equality with the verify-change ledger outcome for the same reference; `state-unverified` carries `not-applicable` with reason `comparison-source-unavailable` and is exposure-only; tracker-pr tokens (`merged`, `blocked`, `pr-open`) compare to independent tracker truth at PR-state granularity, and `pr-open-unverified` equals tracker truth `pr-open` with `urlResolved: false` and no divergence; dispatch-session tokens (`max-restarts`, `noop-lane-permission`, `noop-lane-nothing-to-do`) carry `not-applicable` with reason `dispatch-session-family` and are exposure-only. Repository identity is resolved by `resolveDispatchIdentity(...)` in the TDR-0015 order: the scheduling engine's normalized `repository` key (`host/owner/name`) first, then the checkout's configured VCS remote normalized through the delivered `normalizeRepositoryKey`, then a persisted first-use identity marker created once through the state layer's store-managed artifact get-or-create with guard kinds and runtime-edge random material (adapter `file/dispatch-identity.ts`) and never derived from the checkout path. The first successful step is persisted as the checkout binding and reused across a checkout rename, a remote change, and a restart without re-keying history; when none resolves, the caller refuses cleanly at exit 1 with a classified exit-1 identity refusal reusing the delivered `input.value.rejected` user-validation identity and appends nothing. A checkout-path digest is never recorded, persisted, or presented as a repository identity, and the withdrawn DEC-13 path-digest fallback appears nowhere in the code or records. A disagreement appends an open divergence and a resolution appends a resolved record with a bounded note, principal, and timestamp without rewriting the open record; a contradicted success claim is recorded as a false-success incident and an unevaluable comparison is recorded with its classified state or provider identity, degrading only that record. The derived per-repository authority view is rebuilt from the folded handover ledger and replaced atomically through the store document replace, under one declared production document name, and `readDispatchAuthority(stateRoot, repository)` reads that document as a plain file so a non-typed consumer needs no CLI: absent, unreadable, or malformed resolves to dual-run. The read is bounded at 5,000 attempt records and declares truncation instead of zero, and an identical replay appends no duplicate. Fault-injection coverage proves a failed append or torn read is a classified state failure and never a clean verdict or a fabricated record. The production-default `pilot` declaration is wired in phase 4 and the controlled `controlled-proof` declaration in phase 10; this phase asserts the record-level rules with injected declarations."
     tests:
-      - "bun test tests/behaviour/dispatch-evidence-record.test.ts"
+      - "bun test tests/behaviour/dispatch-evidence-record.test.ts tests/behaviour/dispatch-evidence-class.test.ts"
+      - "bun test tests/behaviour/dispatch-comparison.test.ts"
+      - "bun test tests/behaviour/dispatch-identity.test.ts"
       - "bun test tests/behaviour/dispatch-false-success.test.ts tests/behaviour/dispatch-unevaluable.test.ts"
       - "bun test tests/structure/dispatch-authority-view.test.ts"
       - "bun test tests/behaviour/state-atomic-replace.test.ts tests/behaviour/state-ledger.test.ts"
+      - "bun test tests/types"
       - "pnpm typecheck"
   - id: 4
     title: "One-shot dispatch command: harness resolution, lease claim, spawn, watch, classification, envelope, and exits"
@@ -193,6 +270,7 @@ phases:
         - tests/behaviour/dispatch-harness-lease.test.ts
         - tests/behaviour/dispatch-envelope.test.ts
         - tests/behaviour/dispatch-error-envelope.test.ts
+        - tests/behaviour/dispatch-evidence-class.test.ts
         - tests/behaviour/dispatch-merge-absence.test.ts
         - tests/golden/dispatch-text.test.ts
         - tests/golden/dispatch-errors.test.ts
@@ -222,10 +300,11 @@ phases:
     leases:
       - lease:dispatch-command
     weightClass: heavy
-    summary: "Deliver the one-shot `dispatch <ref> [--harness <name>]` path end to end. Resolve the harness from the flag then configuration, refuse an unknown name as a classified input error without claiming a lease or spawning, claim the repository lease through the delivered scheduling engine, refuse an active conflicting lease without spawning, spawn through the delivered `HarnessSessionPort`, watch with the phase-2 progress verdict at the `lane.liveness-interval` cadence, classify through the shared classifier, derive truth through injected read ports, append exactly one attempt record through the phase-3 ledger, and emit the machine envelope (`result`, `prUrl`, `phaseLedger`, `restarts`, `resumeAmplification`, `harness`, `handoverState`, `outcome`) or, in text mode, exactly `result=`, `pr_url=`, `exit_code=`, `last_message=` in bash order with no fifth key and no `closeout_unverified=`. The handler returns data or a classified failure and never chooses an exit literal; the definition supplies the TDR-0005 token projection, and a failing run still emits a complete error envelope with the full error fields. A merge-ready PR stays `pr-open`/`pr-open-unverified` and no merge is fired: a declared dependency-cruiser merge-absence rule with a registered negative fixture, a source-level import scan, and a production-composition check together prove no merge port or code path is reachable (AC-F9-1, NFR-9). The phase adds the command definition, the four-key and error goldens, the dispatch runtime factory in `edge.ts`, and the `production.ts` composition (harness session ports, host spawn runner, read-only tracker/CI/VCS ports, queue lease, state store, evidence ledger); because the prompt-required set is unchanged until phase 7, the composed command is dropped from the advertised surface and composition honesty stays green."
+    summary: "Deliver the one-shot `dispatch <ref> [--harness <name>]` path end to end. Resolve the harness from the flag then configuration, refuse an unknown name as a classified input error without claiming a lease or spawning, claim the repository lease through the delivered scheduling engine, refuse an active conflicting lease without spawning, spawn through the delivered `HarnessSessionPort`, watch with the phase-2 progress verdict at the `lane.liveness-interval` cadence, classify through the shared classifier, derive truth through injected read ports, append exactly one attempt record through the phase-3 ledger, and emit the machine envelope (`result`, `prUrl`, `phaseLedger`, `restarts`, `resumeAmplification`, `harness`, `handoverState`, `outcome`) or, in text mode, exactly `result=`, `pr_url=`, `exit_code=`, `last_message=` in bash order with no fifth key and no `closeout_unverified=`. A pre-session refusal (unknown harness, rejected input, or a conflicting lease before any spawn) emits the classified envelope at exit 1 and appends no attempt record; a post-spawn refusal (restart budget, resume economics) is a later phase and still appends one. The production composition declares `evidenceClass: pilot` for every dispatch it drives as a declared composition input, never inferred from the outcome; the controlled composition declares `controlled-proof` in phase 10. The handler returns data or a classified failure and never chooses an exit literal; the definition supplies the TDR-0005 token projection, and a failing run still emits a complete error envelope with the full error fields. A merge-ready PR stays `pr-open`/`pr-open-unverified` and no merge is fired: a declared dependency-cruiser merge-absence rule with a registered negative fixture, a source-level import scan, and a production-composition check together prove no merge port or code path is reachable (AC-F9-1, NFR-9). The phase adds the command definition, the four-key and error goldens, the dispatch runtime factory in `edge.ts`, and the `production.ts` composition (harness session ports, host spawn runner, read-only tracker/CI/VCS ports, queue lease, state store, evidence ledger, identity resolver); because the prompt-required set is unchanged until phase 7, the composed command is dropped from the advertised surface and composition honesty stays green."
     tests:
       - "bun test tests/behaviour/dispatch-harness-lease.test.ts tests/behaviour/dispatch-envelope.test.ts"
       - "bun test tests/behaviour/dispatch-error-envelope.test.ts tests/behaviour/dispatch-merge-absence.test.ts"
+      - "bun test tests/behaviour/dispatch-evidence-class.test.ts"
       - "bun test tests/golden/dispatch-text.test.ts tests/golden/dispatch-errors.test.ts"
       - "bun test tests/structure/dispatch-merge-boundary.test.ts tests/structure/dispatch-imports.test.ts tests/structure/dispatch-composition.test.ts"
       - "bun test tests/boundaries"
@@ -272,7 +351,7 @@ phases:
       - "bun test tests/behaviour/economics-budget-exhaustion.test.ts tests/behaviour/economics-resume-attach.test.ts tests/behaviour/economics-restart-durability.test.ts"
       - "pnpm typecheck"
   - id: 6
-    title: "Dual-run gate: evidence window, summary, divergence resolution, handover, and reversal"
+    title: "Dual-run gate: incident-exclusive window, evidence-class counting, summary, divergence resolution, handover, and reversal"
     kind: delivery
     scope:
       files:
@@ -287,6 +366,8 @@ phases:
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
         - tests/fixtures/dispatch/evidence-windows.ts
+        - tests/behaviour/dispatch-evidence-class.test.ts
+        - tests/behaviour/dispatch-identity.test.ts
         - tests/behaviour/dispatch-divergence.test.ts
         - tests/behaviour/dispatch-dual-run-summary.test.ts
         - tests/behaviour/dispatch-dual-run-floor.test.ts
@@ -315,16 +396,17 @@ phases:
     leases:
       - lease:dispatch-gate
     weightClass: heavy
-    summary: "Deliver the evidence gate and the authority mechanism with one declared predicate home. `foldEvidenceWindow(...)` folds the bounded attempt, divergence, and handover ledgers into the window (start is the later of the first counted dispatch and the most recent false-success incident, with the reason reported), the UTC day count over distinct dates in a run of at least seven consecutive dates, counted deliveries, incidents, reported/resolved/unresolved divergences with identifiers, class coverage over the eleven TDR-0005 tokens with missing classes named, and per-family corroboration; an unreadable, torn, or truncated read is unverifiable and never eligible, and an unresolvable repository identity is a clean refusal. `evaluateHandoverGate(...)` returns the four-condition conjunction — zero false-success incidents and zero unresolved divergences, all eleven classes, floor-only exposure (20 counted dispatches or 7 consecutive UTC dates), and corroboration per outcome family — with every unmet condition named. `dispatch dual-run summary --repo <repo>` reports the window, counts, coverage, corroboration, verdict, and unmet conditions at exit 0 even when ineligible; `dispatch dual-run resolve <divergence-id> --note <text>` appends the resolution; `dispatch handover <repo>` refuses at exit 1 as a clean verification with no authority record when the bar is unmet, and on a met gate appends one handover record with the conditions snapshot and bounded evidence references, flips only that repository, replaces the derived view atomically, and reports the flip as recorded and reversible; `dispatch handover <repo> --revert` appends a reversal that restores dual-run, preserves the full history, and is an idempotent noop at exit 0 when the repository is already dual-run. Every dispatch reports `handoverState` from the folded ledger, claims no authority in dual-run, suppresses no bash path, and fires no merge."
+    summary: "Deliver the evidence gate and the authority mechanism with one declared predicate home. `foldEvidenceWindow(...)` folds the bounded attempt, divergence, and handover ledgers into the window: when a false-success incident exists the lower bound is that incident's recorded timestamp, EXCLUSIVE (strictly-greater comparison), so the resetting incident and any same-instant record sit outside the evaluated window; otherwise the bound is the first counted dispatch, inclusive; `windowStart` and `windowStartReason` are always reported with the closed reasons `first-counted-dispatch`, `false-success-incident-reset`, and `no-counted-dispatch`. Counting is one declared rule with one scope parameter, `countedEvidenceClass(repositoryScope)`: a production repository counts only `pilot`, a controlled scope counts only `controlled-proof`, `smoke` and `fixture` count toward no handover, and a record whose class does not match the scope is surfaced as excluded rather than silently accepted. The fold reports the UTC day count as the longest run of consecutive dates each carrying at least one counted dispatch, counted deliveries, incidents, reported/resolved/unresolved divergences with identifiers, class coverage over the eleven TDR-0005 tokens with missing classes named, and per-family corroboration. Class coverage is exposure only and independent of clean or corroborated success: a `state-unverified` attempt counts for coverage, makes no success claim, creates no divergence, and is non-blocking at window level; a success-claimed attempt that cannot be corroborated fails corroboration as one named unmet condition without a divergence and without resetting the window; a record-level unevaluable read degrades only that record, while an unreadable, torn, or malformed evidence-stream read is window-level. The phase consumes the phase-3 comparison record and never re-derives family membership: verify-class attempts compare to the verify-change ledger outcome, tracker-pr attempts to independent tracker truth (with `pr-open-unverified` equal to tracker `pr-open` plus `urlResolved: false` and no divergence), and dispatch-session attempts carry the declared not-applicable marker and are exposure-only. Degraded reads have pinned exits: an unreadable, torn, or malformed summary read exits 2 with `dispatch.state-unverified` or a delivered `state.*` identity and a verdict of unverifiable; a bounded-but-truncated valid read exits 0 with eligibility false/unverifiable, the truncation and omitted range declared, and every unmet condition named; `dispatch handover` over an unreadable or torn read exits 2 with the classified identity and no authority-changing record; `dispatch handover` over a readable-but-unmet bar exits 1 as a clean verification negative. No degraded case is eligible, no fabricated zeros are reported, and an unresolvable repository identity is the phase-3 clean exit-1 refusal. `evaluateHandoverGate(...)` returns the four-condition conjunction — zero false-success incidents and zero unresolved divergences in the window, all eleven classes as exposure, floor-only exposure (20 counted dispatches or 7 consecutive UTC dates), and corroboration of every success-claimed counted dispatch — with every unmet condition named. The positive reachability case (a controlled-scope window carrying all eleven classes, including an exposure-only `state-unverified` and a tracker-corroborated `pr-open-unverified`, with zero incidents, zero unresolved divergences, the floor met, and every success claim corroborated, evaluates eligible with no unmet condition) and the post-incident recovery case (an incident at T, then sufficient counted evidence strictly after T, evaluates eligible with zero in-window incidents and excludes the same-instant record) are named verification, not review notes. `dispatch dual-run summary --repo <repo>` reports the window, counts, coverage, corroboration, verdict, and unmet conditions at exit 0 even when ineligible; `dispatch dual-run resolve <divergence-id> --note <text>` appends the resolution; `dispatch handover <repo>` resolves the repository through the phase-3 identity resolver, refuses at exit 1 as a clean verification with no authority record when the bar is unmet, and on a met gate appends one handover record with the conditions snapshot and bounded evidence references, flips only that repository, replaces the derived view atomically, and reports the flip as recorded and reversible; `dispatch handover <repo> --revert` appends a reversal that restores dual-run, preserves the full history, and is an idempotent noop at exit 0 when the repository is already dual-run. Every dispatch reports `handoverState` from the folded ledger, claims no authority in dual-run, suppresses no bash path, and fires no merge."
     tests:
       - "bun test tests/behaviour/dispatch-dual-run-summary.test.ts tests/behaviour/dispatch-divergence.test.ts"
       - "bun test tests/behaviour/dispatch-dual-run-floor.test.ts tests/behaviour/dispatch-gate-evidence.test.ts tests/behaviour/dispatch-gate-window.test.ts"
-      - "bun test tests/behaviour/dispatch-handover.test.ts tests/behaviour/dispatch-authority-view.test.ts"
+      - "bun test tests/behaviour/dispatch-evidence-class.test.ts"
+      - "bun test tests/behaviour/dispatch-handover.test.ts tests/behaviour/dispatch-authority-view.test.ts tests/behaviour/dispatch-identity.test.ts"
       - "bun test tests/golden/dispatch-summary.test.ts"
       - "bun test tests/structure/dispatch-authority-view.test.ts"
       - "pnpm typecheck"
   - id: 7
-    title: "Registration, help, reference page, planning reconciliation, and absence inversion"
+    title: "Registration, help, reference page, planning reconciliation, and production-surface absence inversion"
     kind: delivery
     scope:
       files:
@@ -334,6 +416,7 @@ phases:
         - tests/behaviour/entrypoint-composition.test.ts
         - tests/behaviour/entrypoint-help-coverage.test.ts
         - tests/conformance/pilot/pilot-isolation.test.ts
+        - tests/structure/harness-review-deferrals.test.ts
         - tests/behaviour/dispatch-help-version.test.ts
         - tests/structure/dispatch-help-inventory.test.ts
         - tests/checks/dispatch-doc-conformance.test.ts
@@ -350,16 +433,16 @@ phases:
         target: doc/planning/oss-tooling/milestones/m1/commands/dispatch.md
         role: producer
     doneArtifacts:
-      trackerTransition: "GH-239 in progress; phase 7 evidence recorded in pm-notes notes (dispatch registered, help and page reconciled, absence assertions inverted)"
+      trackerTransition: "GH-239 in progress; phase 7 evidence recorded in pm-notes notes (dispatch registered, help and page reconciled, production-surface assertions inverted, reduced pilot fixture unchanged)"
     leases:
       - lease:cli-surface
     weightClass: heavy
-    summary: "Register the delivered surface and reconcile only the story-owned planning artifacts. Add `dispatch` to `PROMPT_REQUIRED_COMMANDS` and the static help coverage inventory, add the root and command help entries for `dispatch`, `dispatch dual-run`, `dispatch dual-run summary`, `dispatch dual-run resolve`, and `dispatch handover` (with `--revert`), each pointing at the reference page, so the phase-4 production composition becomes the live advertised surface. Rewrite `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md` to the four-condition evidence bar with the resolution and reversal forms and with `--help`/`--version`, and reconcile SC-M1-29 and SC-M1-30 in `test-scenarios.md` to the amended bar; the scan's file allowlist proves it never inspects the GH-239 ticket body or any other planning file, and the remaining planning residual stays reported, not edited. Invert the two remaining delivered absence assertions — the entrypoint-composition set and the pilot-isolation claimed-command list — so none contradicts the delivered command, and re-run the F-9 deferral assertion inverted in phase 1. Add the story-owned doc-conformance check for the stale phrase table (`two clean weeks`, two-week window, fourteen days, clean-window eligibility) and the required phrase table (zero false-success incidents, zero unresolved divergences, all eleven, 20 counted dispatches, 7 consecutive UTC dates, corroboration, floor). Help and version stay pure data lookups: no state, network, git, configuration, or model read, zero writes, and the composer is never invoked."
+    summary: "Register the delivered surface and reconcile only the story-owned planning artifacts. Add `dispatch` to `PROMPT_REQUIRED_COMMANDS` and the static help coverage inventory, add the root and command help entries for `dispatch`, `dispatch dual-run`, `dispatch dual-run summary`, `dispatch dual-run resolve`, and `dispatch handover` (with `--revert`), each pointing at the reference page, so the phase-4 production composition becomes the live advertised surface. Rewrite `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md` to the four-condition evidence bar with the resolution and reversal forms and with `--help`/`--version`, and reconcile SC-M1-29 and SC-M1-30 in `test-scenarios.md` to the amended bar; the scan's file allowlist proves it never inspects the GH-239 ticket body or any other planning file, and the remaining planning residual stays reported, not edited. Invert exactly the two production-surface absence assertions: `tests/behaviour/entrypoint-composition.test.ts` expects `dispatch` present in the prompt-required set, and `tests/structure/harness-review-deferrals.test.ts` asserts the F-9 record names dispatch as the first production consumer with a status and a revisit trigger instead of asserting no dispatch surface or spawn-failure row. `tests/conformance/pilot/pilot-isolation.test.ts` is not a production-surface absence claim: its deliberately reduced test-only fixture keeps its exact command list and its non-import of production/entrypoint, dispatch is NOT composed into that fixture, no fixture runtime or port is added, and only the stale name/comment (claims no state/mcp/dispatch command) is narrowed to say the reduced fixture deliberately omits those surfaces; the suite runs here as the guard that the fixture stayed reduced and its assertion set was neither weakened nor widened. Add the story-owned doc-conformance check for the stale phrase table (`two clean weeks`, two-week window, fourteen days, clean-window eligibility) and the required phrase table (zero false-success incidents, zero unresolved divergences, all eleven, 20 counted dispatches, 7 consecutive UTC dates, corroboration, floor). Help and version stay pure data lookups: no state, network, git, configuration, or model read, zero writes, and the composer is never invoked."
     tests:
       - "bun test tests/structure/dispatch-help-inventory.test.ts tests/behaviour/dispatch-help-version.test.ts"
       - "bun test tests/checks/dispatch-doc-conformance.test.ts"
-      - "bun test tests/behaviour/entrypoint-composition.test.ts tests/behaviour/entrypoint-help-coverage.test.ts"
-      - "bun test tests/conformance/pilot/pilot-isolation.test.ts tests/structure/harness-review-deferrals.test.ts"
+      - "bun test tests/behaviour/entrypoint-composition.test.ts tests/behaviour/entrypoint-help-coverage.test.ts tests/structure/harness-review-deferrals.test.ts"
+      - "bun test tests/conformance/pilot/pilot-isolation.test.ts"
       - "bun test tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts tests/checks/help-guide-coverage-mutants.test.ts"
       - "pnpm check:help"
       - "pnpm check:prompt"
@@ -399,13 +482,16 @@ phases:
       - "bash scripts/.tests/test-deliver-ticket-result-tuples.sh"
       - "bash scripts/.tests/test-install.sh"
   - id: 9
-    title: "Daemon lane planner, executor composition, and supervision wiring"
+    title: "Daemon lane planner, executor composition, supervision wiring, and the daemon-path attempt-record producer"
     kind: delivery
     scope:
       files:
         - packages/core/src/domain/lane-launch-plan.ts
         - packages/core/src/domain/index.ts
         - packages/core/src/index.ts
+        - packages/core/src/app/daemon-dispatch-result.ts
+        - packages/core/src/app/daemon-supervision.ts
+        - packages/core/src/app/index.ts
         - packages/cli/src/daemon-compose.ts
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
@@ -417,14 +503,17 @@ phases:
         target: packages/core/src/domain/lane-launch-plan.ts
         role: producer
       - kind: contract-file
+        target: packages/core/src/app/daemon-dispatch-result.ts
+        role: producer
+      - kind: contract-file
         target: packages/cli/src/daemon-compose.ts
         role: producer
     doneArtifacts:
-      trackerTransition: "GH-239 in progress; phase 9 evidence recorded in pm-notes notes (lane planner, executor composition, daemon lane)"
+      trackerTransition: "GH-239 in progress; phase 9 evidence recorded in pm-notes notes (lane planner, executor composition, daemon lane, daemon-path attempt record)"
     leases:
       - lease:daemon
-    weightClass: standard
-    summary: "Fill the daemon lane seam that the resident daemon has left unowned. Implement the production planner as a pure `planLaneLaunch(request)` that returns the lifecycle prompt and only the declared execution-environment variable names, resolving no secret value, reading no parent environment, and carrying no credential material. Compose `createLaneExecutor` over the selected harness session port and the execution-environment descriptor in the daemon composition, and wire the delivered supervision cycle's next-action, claim, and release ports so a planned lane starts, records the delivered daemon lane record, observes progress, collects the outcome, and resumes through the same executor. The daemon path and the one-shot path share the harness port and the shared classifier, so the final token and outcome agree for the same evidence and no second classification exists. An unavailable planner, a missing descriptor, or a declared capability gap still reports honest supervise-only mode; a one-shot dispatch with no daemon completes from state alone, appends its attempt record, and claims no daemon dependency (AC-F10-3)."
+    weightClass: heavy
+    summary: "Fill the daemon lane seam that the resident daemon has left unowned and give the daemon path the same delivery verdict and record as the one-shot path. Implement the production planner as a pure `planLaneLaunch(request)` that returns the lifecycle prompt and only the declared execution-environment variable names, resolving no secret value, reading no parent environment, and carrying no credential material. Compose `createLaneExecutor` over the selected harness session port and the execution-environment descriptor in the daemon composition, and wire the delivered supervision cycle's next-action, claim, and release ports so a planned lane starts, records the delivered daemon lane record, observes progress, collects the outcome, and resumes through the same executor. Add the daemon-path classification and attempt-record producer as `recordDaemonDispatchResult(...)` in `packages/core/src/app/daemon-dispatch-result.ts`, invoked from `daemon-compose.ts` through one optional collection seam added additively to `app/daemon-supervision.ts`: the cycle hands the producer the same lane observation and collection evidence it already receives, the producer derives the outcome and token through the shared classifier plus the phase-2 truth derivation, builds the phase-3 comparison record and evidence class from the daemon composition's declared class (production default `pilot`), and appends exactly one attempt record through the phase-3 ledger, so the daemon record agrees field-for-field with a one-shot dispatch over the same evidence and no second classification exists. Exactly one record is appended per daemon-driven attempt that reaches classification; a resume of the same attempt appends none, and a lane that re-enters supervision adds none until a verdict exists. An unavailable planner, a missing descriptor, or a declared capability gap still reports honest supervise-only mode and appends no record; a one-shot dispatch with no daemon completes from state alone, appends its attempt record, and claims no daemon dependency (AC-F10-3)."
     tests:
       - "bun test tests/behaviour/dispatch-daemon-planner.test.ts tests/behaviour/dispatch-daemonless.test.ts"
       - "bun test tests/conformance/dispatch/dispatch-daemon-lane.test.ts"
@@ -432,7 +521,7 @@ phases:
       - "bun test tests/structure/daemon-contract.test.ts tests/structure/daemon-imports.test.ts"
       - "pnpm typecheck"
   - id: 10
-    title: "Controlled-repository end-to-end proof, bounds, determinism, idempotency, and release gate"
+    title: "Controlled-proof end-to-end proof, evidence-class counting, bounds, determinism, idempotency, and release gate"
     kind: delivery
     scope:
       files:
@@ -458,7 +547,7 @@ phases:
     leases:
       - lease:conformance
     weightClass: heavy
-    summary: "Prove the mechanism and release the change. Add the controlled-repository conformance suite (real state store, real local git, real change files; injected harness, tracker, CI, and VCS read ports; deterministic UTC date advance) that accrues evidence through genuine `dispatch` invocations until the gate is met, runs the summary, flips the repository, dispatches once more end to end, reverses the flip, and invokes a bash entry point after reversal — with a provenance guard proving no step hand-installs an attempt, divergence, or handover record and that no real repository, network, or model is touched (D2). Add the bounds suite (machine payload at most 65,536 bytes, human output at most 40 lines and 8,192 bytes, the bounded summary read with declared truncation instead of fabricated zeros, and p95 summary within 5 s on the reference host), the determinism suite (byte-identical repeats and zero model calls in help, summary, gate, classification, and render paths), the idempotency suite (replayed summary, handover, reversal, and resume append nothing, report noop, and consume no duplicate ordinal), and the privacy suite (no secret, credential, prompt, transcript, diff, or raw payload in output, records, help, or logs; every child environment variable declared). Then run the aggregate gate and add the minor changeset. Release obligations: exactly one PR to main-tools, a description naming the new command family, the two new error rows and the two documented rows, the controlled-repository proof boundary, the D1 four-condition bar and D3 comparison baseline, and every Section 17 AC covered by passing evidence with the execution log populated."
+    summary: "Prove the mechanism and release the change. Add the controlled-repository conformance suite (real state store, real local git, real change files; injected harness, tracker, CI, and VCS read ports; deterministic UTC date advance) under a composition that declares `evidenceClass: controlled-proof` for every dispatch it drives, so no dispatch is declared by a test body or read from record content. The suite accrues evidence through genuine `dispatch` invocations until the gate is met, runs the summary, flips the repository, dispatches once more end to end, reverses the flip, and invokes a bash entry point after reversal. The controlled proof must reach eligibility with all eleven classes, including an exposure-only `state-unverified` attempt (not-applicable comparison, no divergence, not blocking) and a tracker-corroborated `pr-open-unverified` attempt (`token: pr-open`, `outcome: match`, `urlResolved: false`, no divergence), with zero incidents, zero unresolved divergences, the floor met, and every success claim corroborated. Evidence-class counting is proven at both scopes: a production repository counts only `pilot` attempts and zero `controlled-proof`, `smoke`, or `fixture`; the controlled repository counts only `controlled-proof` attempts and zero `pilot`, `smoke`, or `fixture`; `smoke` and `fixture` advance no handover in either scope; and a `controlled-proof` record recorded under a production repository identity is surfaced as excluded and counts toward no floor, coverage, incident, or corroboration. A provenance guard proves every attempt, divergence, and handover record came from a real command invocation with the declared class, that the fixture API exposes no ledger writer, that the attempt count equals the dispatch count, and that no real repository, network, or model is touched (D2). Add the bounds suite (machine payload at most 65,536 bytes, human output at most 40 lines and 8,192 bytes, the bounded summary read with declared truncation instead of fabricated zeros, and p95 summary within 5 s on the reference host), the determinism suite (byte-identical repeats and zero model calls in help, summary, gate, classification, and render paths), the idempotency suite (replayed summary, handover, reversal, and resume append nothing, report noop, and consume no duplicate ordinal), and the privacy suite (no secret, credential, prompt, transcript, diff, or raw payload in output, records, help, or logs; every child environment variable declared). Then run the aggregate gate and add the minor changeset. Release obligations: exactly one PR to main-tools, a description naming the new command family, the four dispatch error rows in both the machine and documented tables, the controlled-repository proof boundary, the evidence-class counting rule, the D1 four-condition bar and D3 comparison baseline, and every Section 17 AC covered by passing evidence with the execution log populated."
     tests:
       - "bun test tests/conformance/dispatch"
       - "bun test tests/behaviour/dispatch-bounds.test.ts"

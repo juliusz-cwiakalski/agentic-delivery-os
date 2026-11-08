@@ -1,0 +1,389 @@
+schema: readiness-review.v1
+iteration: 1
+verdict: NOT_READY
+workItemRef: GH-239
+date: 2026-11-08
+pause_required: false
+gate: dor_check
+authority: .opencode/agent/readiness-reviewer.md
+artifact_set:
+  spec: chg-GH-239-spec.md
+  test_plan: chg-GH-239-test-plan.md
+  plan: chg-GH-239-plan.yaml
+  pm_notes: chg-GH-239-pm-notes.yaml
+  ticket: "GH-239 (GitHub issue 239, juliusz-cwiakalski/agentic-delivery-os)"
+  canonical_scope: "doc/planning/oss-tooling/backlog.md#M1-S9 (as amended by GH-266)"
+verdict_basis: >-
+  NOT_READY. The gate logic is not jointly satisfiable as specified: two mandatory
+  TDR-0005 classes (state-unverified, pr-open-unverified) are, by definition,
+  records the current rules cannot count as clean/corroborated, while all eleven
+  classes must be covered for eligibility. Independently, the controlled-repository
+  proof must reach eligibility with fixture dispatches that the "counted dispatch"
+  definition excludes, and the attempt record has no field to distinguish a counted
+  pilot run from a fixture/smoke run. Several definitional and cross-artifact gaps
+  follow from those two root causes.
+
+facets:
+  spec_completeness: FAIL
+  ac_quality: FAIL
+  plan_coverage: FAIL
+  test_traceability: PASS
+  cross_artifact_consistency: FAIL
+  decision_capture: FAIL
+  system_spec_consistency: PASS
+  plan_doc_update_coverage: PASS
+  plan_code_area_coverage: PASS
+  dod_defined: FAIL
+
+counts:
+  critical: 2
+  major: 7
+  minor: 5
+  nit: 2
+
+findings:
+  - id: F1
+    severity: critical
+    facet: ac_quality
+    artifact: >-
+      chg-GH-239-spec.md §5.1 F-4, §17 AC-F4-4 and AC-F5-2, §7.1 Glossary
+      "Counted dispatch", §15 DEC-11, Appendix B; chg-GH-239-test-plan.md
+      TC-TRUTH-003, TC-TRUTH-006, TC-GATE-007, TC-E2E-001
+    gap: >-
+      The four-condition gate can never be true. Class coverage requires all eleven
+      TDR-0005 tokens, including state-unverified and pr-open-unverified. A
+      state-unverified result exists only because a ledger/tracker/artifact/state
+      read failed, so no independent comparison token can be derived; the attempt
+      is therefore "unevaluable" and, per TC-TRUTH-006, "blocks eligibility" (and the
+      glossary's counted-dispatch definition requires a complete comparison field,
+      so it cannot be counted). pr-open-unverified is required for coverage but
+      TC-TRUTH-003 states its "corroboration is explicitly unsatisfied", which fails
+      AC-F5-2's corroboration condition. Either path alone makes eligibility
+      unreachable; together they make the controlled E2E proof (AC-F8-1 /
+      TC-E2E-001, which must reach eligibility with all eleven classes) impossible.
+      The spec never defines an exposure-only treatment for non-success or
+      non-comparable classes, and the divergence surface cannot resolve an
+      unevaluable record (only divergence ids can be resolved).
+    remediation_target: specification
+    fix: >-
+      Define, in F-4/AC-F4-4 and AC-F5-2 (and DM-1/EVT-1), that class exposure and
+      "clean/corroborated success" are distinct: a state-unverified record counts
+      for class coverage, is not a success claim, creates no divergence, and does not
+      by itself block eligibility; an unevaluable read degrades only that record, not
+      the whole window. Make pr-open-unverified corroboration the tracker fact per
+      Appendix B, and record the URL-resolution failure as an attribute (not a
+      divergence or a permanently unsatisfied corroboration). Add a positive gate and
+      E2E case proving eligibility with all eleven classes including those two.
+      Update TC-TRUTH-003, TC-TRUTH-006, TC-GATE-007, and TC-E2E-001 to match.
+
+  - id: F2
+    severity: critical
+    facet: spec_completeness
+    artifact: >-
+      chg-GH-239-spec.md §7.1 Glossary "Counted dispatch", §5.1 F-8, AC-F8-1, DM-1,
+      EVT-1, §4.1 KPI; chg-GH-239-test-plan.md TC-E2E-001 and §6.3; chg-GH-239-plan.yaml
+      phase 10 summary
+    gap: >-
+      The end-to-end proof reaches eligibility only with dispatches produced against a
+      controlled test repository/fixture, but the glossary excludes "fixture or smoke
+      runs" from counted dispatches. The attempt record (DM-1/EVT-1) has no field that
+      distinguishes a counted pilot-path dispatch from a fixture/smoke/controlled-proof
+      run, so the gate cannot know whether to count the E2E dispatches. The plan's
+      phase 10 ("accrues evidence through genuine dispatch invocations until the gate is
+      met") therefore contradicts the spec's counting rule.
+    remediation_target: specification
+    fix: >-
+      Add a declared evidence-class/counted discriminator to the attempt record
+      (e.g. evidenceClass: pilot | controlled-proof | smoke | fixture), define the
+      gate's counting rule over it, and state how the controlled-proof runs are
+      designated (or explicitly permit a controlled-pilot designation for proof runs).
+      Align the glossary, AC-F8-1, DM-1/EVT-1, plan phase 10, and TC-E2E-001.
+
+  - id: F3
+    severity: major
+    facet: spec_completeness
+    artifact: >-
+      chg-GH-239-spec.md §15 DEC-10, §17 AC-F4-3 and AC-F5-2, Appendix B;
+      chg-GH-239-test-plan.md TC-GATE-009 and TC-EVID-003
+    gap: >-
+      The evidence-window lower bound is "the later of the first counted dispatch and
+      the most recent false-success incident", but inclusivity is undefined. If the
+      interval is inclusive of the incident, the resetting incident sits inside the
+      window forever, zero-incidents-in-window can never hold, and DEC-10's stated
+      rationale ("a permanent incident bar would make recovery impossible") is
+      contradicted. No test asserts that post-incident re-accrual can make the gate
+      eligible; TC-GATE-009 only asserts that pre-incident dispatches are excluded.
+    remediation_target: specification
+    fix: >-
+      Define the window as exclusive of the resetting incident (for example
+      (incidentTime, now]) and name the incident as the start reason. Add a recovery
+      test: incident at T, then sufficient post-T counted evidence, then eligibility
+      is true with zero in-window incidents. Update TC-GATE-009 and TC-EVID-003.
+
+  - id: F4
+    severity: major
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-239-spec.md §5.1 F-4 and AC-F4-1; chg-GH-239-pm-notes.yaml D6;
+      chg-GH-239-test-plan.md §1.2, §8.3 OQ-T2, TC-DISP-002, TC-EVID-001
+    gap: >-
+      The spec says "Every dispatch appends exactly one attempt record" and AC-F4-1
+      says "Given any dispatch". PM decision D6 says pre-session refusals (unknown
+      harness, input rejection, lease conflict before a spawn) emit the envelope and
+      append no attempt record. The test plan restates this only as an interpretation
+      in §1.2, still lists OQ-T2 as open in §8.3, and TC-DISP-002 keeps the record
+      policy conditional ("if the record policy appends an attempt per OQ-T2").
+      D6 is therefore unenforced and the spec contradicts a binding PM decision.
+    remediation_target: specification
+    fix: >-
+      Fold D6 into F-4/AC-F4-1 ("every dispatch that reaches classification; pre-session
+      harness/input/lease refusals are envelope-only"), close OQ-T2, and make
+      TC-DISP-002 assert the chosen policy deterministically (no attempt record for a
+      pre-session refusal). Restrict TC-EVID-001's refusal fixtures to post-spawn
+      refusals (restart budget, resume economics).
+
+  - id: F5
+    severity: major
+    facet: dod_defined
+    artifact: >-
+      chg-GH-239-spec.md §17.1 DoD bullet "No doc/spec/** file is modified in this
+      change", §7.2 out-of-scope bullet, §16 row; chg-GH-239-test-plan.md §1.2;
+      chg-GH-239-plan.yaml phase 1 and header comment
+    gap: >-
+      The DoD forbids modifying any doc/spec file "in this change", the test plan says
+      "No doc/spec/** edits", and §7.2 labels doc/spec reconciliation out of scope
+      "(phase 7)" - yet plan phase 1 modifies doc/spec/features/feature-result-contract.md
+      (the two documented dispatch error rows), and spec §22 requires the
+      system_spec_update phase to reconcile several stale specs. The DoD as written is
+      false, and the scope language is self-contradictory. (The plan's single doc/spec
+      touch is justified: the two-way error-table sync refuses a machine row without a
+      documented row, and tests/structure/error-table.test.ts pins the documented total.)
+    remediation_target: specification
+    fix: >-
+      Reword the DoD to: "no current-truth doc/spec reconciliation during delivery; the
+      only doc/spec touch is the two documented error rows mechanically required by the
+      two-way error-table sync; all other doc/spec reconciliation belongs to the
+      system_spec_update phase." Align §7.2/§16 and test-plan §1.2. Keep the plan's
+      error-row edit.
+
+  - id: F6
+    severity: major
+    facet: plan_coverage
+    artifact: >-
+      chg-GH-239-spec.md AC-F10-2 and §10 telemetry, AC-F4-1; chg-GH-239-plan.yaml
+      phase 9 scope and summary; chg-GH-239-test-plan.md TC-DAEMON-002
+    gap: >-
+      AC-F10-2 requires the daemon path to produce a final token/outcome that agrees
+      with a one-shot dispatch over the same evidence, and §10 says daemon-driven
+      dispatches additionally leave the attempt record. The delivered daemon lane
+      record carries only alive/interrupted/crashed classification, not a delivery
+      token; phase 9 names the planner/executor composition but no classification +
+      attempt-record append point. TC-DAEMON-002's "compare the final token and
+      outcome" has no owned producer, so the AC-bearing behavior is unplanned.
+    remediation_target: delivery_planning
+    fix: >-
+      Add the classification and attempt-record append step (and its home, e.g. in
+      daemon-compose.ts or a new app function) to phase 9, with a test proving the
+      daemon lane's token/outcome and attempt record match a one-shot dispatch. Or
+      explicitly reconcile that daemon lanes do not append attempt records and amend
+      AC-F10-2/§10.
+
+  - id: F7
+    severity: major
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-239-plan.yaml phase 7; chg-GH-239-spec.md §2.1 and AC-F11-3;
+      chg-GH-239-test-plan.md TC-HELP-003
+    gap: >-
+      The plan treats tests/conformance/pilot/pilot-isolation.test.ts as a
+      production-surface dispatch-absence assertion. In fact it asserts a deliberately
+      reduced, test-only pilot fixture's exact command list and that the fixture does
+      not import production/entrypoint. Delivering the production command does not
+      contradict that reduced fixture. Requiring the test to "expect dispatch composed"
+      would force the dispatch runtime into an isolation fixture, expand scope, and
+      weaken the isolation guard. The other two absence assertions (entrypoint
+      composition, harness-review deferrals) are genuine and must be inverted.
+    remediation_target: specification
+    fix: >-
+      Retire/narrow only the "dispatch absence" claim in the pilot-isolation test's
+      name/comment while keeping the reduced fixture (or explicitly justify composing
+      dispatch there with its runtime fixtures). Adjust AC-F11-3 and TC-HELP-003 so
+      the third assertion is not treated as a production-surface contradiction.
+
+  - id: F8
+    severity: major
+    facet: ac_quality
+    artifact: >-
+      chg-GH-239-spec.md §15 DEC-13, §12 assumption, AC-F6-2/AC-F6-4;
+      chg-GH-239-test-plan.md TC-HAND-006
+    gap: >-
+      DEC-13's rationale says repository identity must survive "renames of the checkout
+      path", but its fallback rule is "a stable digest of the declared checkout root".
+      A digest of a path changes when the path is renamed, so the fallback cannot
+      satisfy the stated rationale. The primary value (the scheduling engine's
+      normalized `repository` key, host/owner/name) is rename-stable; the no-remote
+      fallback is not. TC-HAND-006 is a must-pass test and asserts "the fallback
+      identity is stable across a checkout rename of the same root digest", which is
+      undefined/self-contradictory.
+    remediation_target: specification
+    fix: >-
+      Either define the fallback over a rename-invariant anchor (a persisted identity
+      marker or a stable remote/fixture key) or state explicitly that the path-derived
+      fallback changes on rename and remove the stability claim from DEC-13/rationale
+      and TC-HAND-006. Keep the primary `repository` rule.
+
+  - id: F9
+    severity: major
+    facet: decision_capture
+    artifact: >-
+      chg-GH-239-spec.md §15 DEC-10, DEC-12, DEC-13 and §7.3; no doc/decisions/**
+      record
+    gap: >-
+      DEC-10 (incident-reset window), DEC-12 (UTC day floor) and DEC-13 (repository
+      identity) define durable, system-wide handover-gate semantics that will govern
+      operations long after this change folder is archived, but they live only in the
+      temporary change spec. The backlog amendment (GH-266) defines the four-condition
+      bar, not these refinements.
+    remediation_target: specification
+    fix: >-
+      Record a decision-record proposal (TDR/ADR) or a sanctioned handoff for the gate
+      window, floor, and identity semantics; @pm should delegate authoring to
+      @decision-advisor before delivery. At minimum, add the handoff to the spec's
+      decision log and pm-notes.
+
+  - id: F10
+    severity: minor
+    facet: plan_code_area_coverage
+    artifact: chg-GH-239-plan.yaml phase 1 scope/summary
+    gap: >-
+      Phase 1 edits the error table and doc/spec, but does not name the mechanical
+      count/prose invariants the same phase's tests enforce: four toHaveLength(113)
+      assertions and the "113 identities" assertion in
+      tests/structure/error-table.test.ts, plus the doc's frontmatter/prose
+      ("two dispatch economics rows", "113 identities") and the "dispatch.session.spawn-failed
+      is not yet declared (M1-S9)" sentence. The table grows 113 -> 115.
+    remediation_target: delivery_planning
+    fix: >-
+      Name the 113 -> 115 updates and the doc prose/summary edits in phase 1 so the
+      phase cannot go green on an incomplete documented table.
+
+  - id: F11
+    severity: minor
+    facet: ac_quality
+    artifact: >-
+      chg-GH-239-spec.md §15 DEC-3 and Appendix B; chg-GH-239-test-plan.md TC-GATE-008
+    gap: >-
+      The family-wise comparison is undefined for pr-open-unverified: comparing the
+      engine's unverified token with independent tracker truth (pr-open) yields a
+      permanent divergence, while comparing it with the same failed URL read is not
+      independent. "Outcome-level comparison with a not-applicable token baseline" for
+      dispatch-session tokens is also undefined (no comparison-outcome field; TC-GATE-008
+      says no divergence is recorded for not-applicable, making "outcome-level" vacuous).
+    remediation_target: specification
+    fix: >-
+      State the exact comparison record for pr-open-unverified (tracker fact plus a
+      url-unresolved attribute; no divergence) and state that dispatch-session tokens
+      carry an explicit not-applicable comparison and are exposure-only. Update
+      TC-GATE-008 accordingly.
+
+  - id: F12
+    severity: minor
+    facet: ac_quality
+    artifact: chg-GH-239-spec.md AC-F8-1 and §5.1 F-8
+    gap: >-
+      AC-F8-1 says the controlled proof uses "genuine harness, tracker, CI, and state
+      ports", while F-8 and the plan use injected harness/tracker/CI/VCS ports and real
+      state/git. "Genuine" reads as "real external adapters", which would violate the
+      proof boundary (NG-9/RSK-10).
+    remediation_target: specification
+    fix: >-
+      Reword AC-F8-1 to "real state and command path with injected external harness,
+      tracker, CI, and VCS ports, and a provenance guard proving no hand-inserted
+      evidence", matching F-8 and plan phase 10.
+
+  - id: F13
+    severity: minor
+    facet: ac_quality
+    artifact: chg-GH-239-spec.md AC-F5-4; chg-GH-239-test-plan.md TC-GATE-006
+    gap: >-
+      The exit code for an unreadable/torn/truncated summary (eligibility unverifiable)
+      is not pinned; 0 with an unverifiable verdict and 2 with a state identity are both
+      consistent with the current text, so the AC cannot fail on the exit dimension.
+    remediation_target: specification
+    fix: >-
+      Pin the exit code for degraded summary reads (and for handover) in AC-F5-4 and
+      TC-GATE-006, consistent with the {0,1,2} taxonomy.
+
+  - id: F14
+    severity: nit
+    facet: cross_artifact_consistency
+    artifact: >-
+      GH-239 ticket "key=value summary contract is preserved exactly"; bash five-key
+      order incl. closeout_unverified; chg-GH-239-spec.md DEC-8/Appendix D
+    gap: >-
+      The ticket's "preserved exactly" and the bash implementation's five keys conflict
+      with DEC-8's exactly-four contract. DEC-8 is consistent with the canonical M1
+      contracts.md §dispatch (which lists four keys), but the ticket-to-spec trace does
+      not record that "exactly" is superseded the way the two-week wording is.
+    remediation_target: specification
+    fix: >-
+      Add one line to DEC-8/§2.1 recording that the ticket's "preserved exactly" is read
+      against the canonical four-key M1 dispatch contract (contracts.md §dispatch) and
+      that closeout_unverified is bash-internal, so the deviation is explicit in the
+      trace.
+
+  - id: F15
+    severity: nit
+    facet: plan_code_area_coverage
+    artifact: chg-GH-239-plan.yaml header "Cross-phase file ownership"
+    gap: >-
+      The shared barrel/index files touched by four to five phases
+      (packages/core/src/index.ts, packages/core/src/domain/index.ts,
+      packages/core/src/app/index.ts, and the inventory manifests beyond the stated
+      two) are not listed in the cross-phase ownership declaration.
+    remediation_target: delivery_planning
+    fix: >-
+      Add the shared barrels to the ownership note and state the additive-extend rule
+      for them, matching the existing note for dispatch.ts/dispatch-text.ts/edge.ts.
+
+  - id: F16
+    severity: nit
+    facet: test_traceability
+    artifact: chg-GH-239-test-plan.md §8.3 OQ-T2; chg-GH-239-pm-notes.yaml D6
+    gap: >-
+      OQ-T2 is still listed as an open question with a proposed answer while pm-notes
+      D6 claims to resolve it, and TC-DISP-002 retains conditional wording. The
+      traceability matrix itself is complete (47/47 ACs, 78 TCs, SC-M1-26..30 mapped).
+    remediation_target: test_planning
+    fix: >-
+      Close OQ-T2 as resolved by D6 and remove the conditional record wording from
+      TC-DISP-002 (see also F4).
+
+verification_notes:
+  plan_schema: >-
+    chg-GH-239-plan.yaml parses and passes validatePlanValue with zero errors
+    (schemaVersion delivery.plan.v1, tier full, 10 phases, per-phase scope/interactions).
+  delivered_infrastructure_checked:
+    - "DELIVERY_RESULT_TOKENS / DELIVERY_RESULT_TAXONOMY match spec Appendix A exactly (11 tokens, projection and derivation classes)."
+    - "ERROR_TABLE has exactly dispatch.restart-budget-exceeded and dispatch.resume-uneconomical; dispatch.session.spawn-failed and dispatch.state-unverified are absent as the spec states."
+    - "LaneLaunchPlanner, LaneLaunchRequest, LaneLaunchPlan, LaneExecutorPort and createLaneExecutor exist; the lane executor reports unavailable without planner/descriptor, matching the supervise-only premise."
+    - "runSupervisionCycle exists with injected nextAction/claim/release ports; the daemon lane record carries no delivery token (see F6)."
+    - "HarnessSessionPort has spawn/deliver/resume/collect/classify/liveness/listSessions and resume modes attach-continue / resume-prompt-reentry exist."
+    - "lane.restart-budget (default 3) and lane.liveness-interval exist in the config catalog/defaults."
+    - "The four bash entry points emit result=, pr_url=, exit_code=, closeout_unverified=, last_message= in that order; DEC-8's four-key contract is consistent with contracts.md section dispatch."
+    - "The three absence assertions exist: entrypoint-composition, pilot-isolation, harness-review-deferrals; the pilot-isolation assertion is about a reduced test-only fixture (see F7)."
+    - "All test files named as existing in the plan/test plan exist; all new files are plausible under the declared package layout."
+  traceability:
+    ticket_acs_covered: "all ticket acceptance criteria map to spec ACs (F-4/F-2/F-1/F-6/F-8/F-7/F-6)"
+    seeded_scenarios: "SC-M1-26..30 map to TC-TRUTH-002/TC-DISP-007, TC-TRUTH-001, TC-RESUME-001, TC-HAND-*/TC-E2E-*, TC-GATE-*."
+    ac_to_tc: "47/47 ACs have at least one TC; 78 TCs, 0 orphan TCs by the plan's own matrix."
+    gaps: "The matrix is complete but three must-pass TCs encode contradictory or conditional assertions (TC-TRUTH-003/006, TC-DISP-002)."
+  forbidden_edits: >-
+    No plan phase edits the GH-239 ticket body, backlog-ranking, roadmap,
+    cli-command-registry, milestone journeys, user journeys, or the dated operator
+    record. Phase 7 edits only the story-owned commands/dispatch.md and the two seeded
+    scenarios, as the spec allows. This pass made no changes to spec/test-plan/plan.
+  decisions_routing:
+    change: "F4 (D6 into the spec) and F3/F11/F12/F13 (spec wording) stay in change docs."
+    system: "F9: propose a decision record for the handover window/floor/identity semantics; @pm to delegate to @decision-advisor."
+    needs_human_input: "none recorded; no pause flag."

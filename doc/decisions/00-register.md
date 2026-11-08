@@ -6,13 +6,13 @@ ados_distribution: project-generated
 id: DECISION-REGISTER
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["Juliusz Ćwiąkalski"]
 service: delivery-os decision substrate
 links:
-  related_changes: ["GH-186", "GH-233"]
-  decisions: ["ADR-0003", "ADR-0005", "ADR-0007", "ADR-0008", "ADR-0009", "ODR-0002", "ODR-0003", "TDR-0003", "TDR-0004"]
-summary: "A binding projection that maps each M0-S17 foundational topic to the record(s) and anchor(s) that decide it. It carries no decision text."
+  related_changes: ["GH-186", "GH-233", "GH-239", "GH-266"]
+  decisions: ["ADR-0003", "ADR-0005", "ADR-0007", "ADR-0008", "ADR-0009", "ODR-0002", "ODR-0003", "TDR-0003", "TDR-0004", "TDR-0015"]
+summary: "A binding projection that maps each foundational topic to the record(s) and anchor(s) that decide it. It carries no decision text."
 ---
 
 # Foundational Decision Binding Register
@@ -31,10 +31,11 @@ summary: "A binding projection that maps each M0-S17 foundational topic to the r
 | Release model | [ADR-0003](ADR-0003-oss-monorepo-structure.md) + [ADR-0009](ADR-0009-release-model-v1.md) | `DEC-3` (versioning and release bullets); ADR-0009 §Decision | Accepted (ADR-0003); Proposed (ADR-0009) | The lockstep release direction and its v1 lock; M4-S2 elaborates automation. |
 | ID prefix scheme | [ODR-0002](ODR-0002-id-prefix-scheme-and-project-catalog.md) + [id-prefix-catalog.md](../planning/concepts/id-prefix-catalog.md) | ODR-0002 §Decision; catalog §ADOS base registry and §Customization model | Proposed | Adopted base registry and project catalog (per-type decision ranges, `MET-` allocator). |
 | Command naming convention | [ODR-0003](ODR-0003-cli-command-naming-v1-lock.md) + [cli-command-registry.md](../planning/oss-tooling/cli-command-registry.md) | ODR-0003 §Decision; registry §Naming audit | Proposed | The prospective v1 command-name lock and its confirmations. |
+| Dispatch handover gate | [TDR-0015](TDR-0015-dispatch-handover-gate-operational-semantics.md) | §Decision `1`…`7` | Proposed | Class exposure versus clean success, evidence class, incident-exclusive window, UTC floor, family-wise comparison, repository identity, and reversible per-repository authority. |
 
 ## Status and acceptance
 
-- Record statuses mirror the linked records. [ADR-0003](ADR-0003-oss-monorepo-structure.md) and [ADR-0008](ADR-0008-harness-adapter-contract.md) are `Accepted`; [ADR-0005](ADR-0005-runtime-confinement-provider-client-subpaths.md), [ADR-0007](ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md), [TDR-0003](TDR-0003-config-parser-schema-and-acquisition.md), [TDR-0004](TDR-0004-state-storage-engine.md), [ADR-0009](ADR-0009-release-model-v1.md), [ODR-0002](ODR-0002-id-prefix-scheme-and-project-catalog.md), and [ODR-0003](ODR-0003-cli-command-naming-v1-lock.md) are `Proposed`.
+- Record statuses mirror the linked records. [ADR-0003](ADR-0003-oss-monorepo-structure.md) and [ADR-0008](ADR-0008-harness-adapter-contract.md) are `Accepted`; [ADR-0005](ADR-0005-runtime-confinement-provider-client-subpaths.md), [ADR-0007](ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md), [TDR-0003](TDR-0003-config-parser-schema-and-acquisition.md), [TDR-0004](TDR-0004-state-storage-engine.md), [ADR-0009](ADR-0009-release-model-v1.md), [ODR-0002](ODR-0002-id-prefix-scheme-and-project-catalog.md), [ODR-0003](ODR-0003-cli-command-naming-v1-lock.md), and [TDR-0015](TDR-0015-dispatch-handover-gate-operational-semantics.md) are `Proposed`.
 - [ADR-0008](ADR-0008-harness-adapter-contract.md) was ratified via the M0-S17 delivery: GH-186's PR #207 was merged to `main-tools` by the owner on 2026-10-31; the ratification evidence is recorded in the record's Acceptance section, and the status flip is routed from the GH-233 DoR gate. Owner acceptance of the other three GH-186 records (ADR-0009, ODR-0002, ODR-0003) is **pending**. Merge does not auto-accept a record.
 
 ## Update rule
