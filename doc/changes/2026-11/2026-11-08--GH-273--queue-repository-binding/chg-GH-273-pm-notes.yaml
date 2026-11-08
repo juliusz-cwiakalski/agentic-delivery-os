@@ -4,7 +4,7 @@ title: "fix(queue): production binding sends repository key without root, so
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-08T17:26:00Z", completed: 2026-11-08T17:28:56.048Z }
-  specification: { started: null, completed: 2026-11-08T19:26:25.475Z }
+  specification: { started: null, completed: 2026-11-08T20:17:27.772Z }
   test_planning: { started: null, completed: 2026-11-08T19:26:30.381Z }
   delivery_planning: { started: null, completed: 2026-11-08T19:26:38.537Z }
   dor_check: { started: null, completed: 2026-11-08T19:33:40.432Z }
@@ -34,6 +34,13 @@ decisions:
       one-line inconsistency with no open design question. All findings are
       applied before re-gating; no scope or architecture change is introduced by
       the fixes."
+    date: "2026-11-08"
+  - text: "D4 — Release version impact is minor, not patch. TC-RELEASE-001 (pinned)
+      requires every added changeset to declare exactly the five fixed-group
+      packages at minor; a patch entry fails the release gate. Spec
+      version_impact corrected patch -> minor (spec v1.5), the changeset renamed
+      to .changeset/gh-273-queue-repository-binding-minor.md, and plan phase 5
+      wording aligned. No AC or behaviour change."
     date: "2026-11-08"
 open_questions: []
 blockers: []
