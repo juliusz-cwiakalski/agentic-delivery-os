@@ -22,6 +22,7 @@ const ADAPTER_SUBPATHS = [
   "./credentials",
   "./provider-quota",
   "./git",
+  "./daemon",
 ];
 
 export const EXPECTED_ENTRYPOINTS: Record<string, Record<string, string[]>> = {

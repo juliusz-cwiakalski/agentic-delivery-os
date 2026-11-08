@@ -192,6 +192,8 @@ export type QueueCommandRuntime = {
   }) => QueueRuntimeRelease;
   /** The delivered ready-only definition, preserved byte-for-byte. */
   readonly readyDefinition?: CommandDefinition;
+  /** The additive live watch stream (GH-238 F-13); absent stays truthful. */
+  readonly watch?: () => AsyncIterable<string>;
 };
 
 const runtimeFailure = (failure: QueueRuntimeFailure): { readonly error: QueueRuntimeFailure } => ({
@@ -337,12 +339,21 @@ const humanFailure = (): string => "result=refused\n";
  */
 export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): CommandDefinition => ({
   flags: ["--next", "--priority", "--dep", "--holder", "--park", "--until", "--watch"],
+  ...(runtime.watch === undefined
+    ? {}
+    : {
+        stream: (invocation: { readonly flags: Readonly<Record<string, string | true>> }) =>
+          invocation.flags["--watch"] !== undefined ? runtime.watch!() : (async function* () {})(),
+      }),
   requiresValue: ["--next", "--priority", "--dep", "--holder", "--park", "--until"],
   positionals: { max: QUEUE_READY_MAX_POSITIONALS },
   humanText: (data: unknown): string => renderQueueHuman(data as never),
   humanFailureText: (): string => humanFailure(),
   handler: (invocation) => {
-    if (invocation.flags["--watch"] !== undefined) return watchRefusal();
+    if (invocation.flags["--watch"] !== undefined) {
+      if (runtime.watch === undefined) return watchRefusal();
+      return { data: { watch: true, topic: "queue" } };
+    }
     const [subcommand, first, second, ...extra] = invocation.positionals;
     if (subcommand === "ready") {
       if (runtime.readyDefinition === undefined) {

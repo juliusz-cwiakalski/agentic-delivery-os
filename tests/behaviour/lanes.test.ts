@@ -10,6 +10,7 @@ import {
 } from "../../packages/cli/src/commands/lanes";
 import {
   QUEUE_LANES_SCHEMA_VERSION,
+  type DaemonLaneRecord,
   type QueueLanesData,
 } from "../../packages/core/src/contracts/index";
 import { foldLanes, selectLane } from "../../packages/core/src/domain/index";
@@ -211,5 +212,29 @@ describe("TC-SCHED-012 lanes command-level zero-write reads", () => {
     expect((await harness.run(["lanes", "list", "--json"])).exitCode).toBe(0);
     expect((await harness.run(["lanes", "show", "GH-320", "--json"])).exitCode).toBe(0);
     expect(log).toEqual({ appends: 0, replaces: 0, fences: 0, releases: 0 });
+  });
+});
+
+describe("GH-238 daemon evidence folded into the unchanged lanes payload", () => {
+  test("daemon failed/delivering evidence changes the state without a payload-shape change", () => {
+    const input = laneFacts();
+    const schedule = computeQueueSchedule(input.facts, { next: 20 });
+    const baseline = foldLanes({ schedule, economics: input.economics, degraded: input.degraded });
+    const daemonLane: DaemonLaneRecord = {
+      schema: "delivery.daemon.lane.v1",
+      ref: "GH-320",
+      state: "failed",
+      spawnOrdinal: 1,
+      recordedAt: "2026-11-08T10:00:00Z",
+    };
+    const folded = foldLanes({
+      schedule,
+      economics: input.economics,
+      degraded: input.degraded,
+      daemonLanes: [daemonLane],
+    });
+    expect(Object.keys(folded).sort()).toEqual(Object.keys(baseline).sort());
+    const lane = folded.lanes.find((candidate) => candidate.ref === "GH-320");
+    expect(lane?.state).toBe("failed");
   });
 });

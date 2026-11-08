@@ -17,6 +17,7 @@ ados_distribution: redistributable
 | [System Spec](spec/) | Current truth — feature specs, API descriptions, NFRs |
 | [Adapter Conformance Suite](spec/features/feature-adapter-conformance.md) | The three provider-agnostic flows, capability-gated skips, coverage gates, `delivery.conformance.v1` artifact, and the scheduled read-only live tier |
 | [Status Digest](spec/features/feature-status-digest.md) | The read-only nine-section attention-state delivery digest: closed finding-code registry, grouped ranked findings, evidence states, bounds, and declared gaps |
+| [Resident Dispatch Daemon](spec/features/feature-resident-daemon.md) | The daemon lifecycle, lock/heartbeat, control protocol v1, reconciliation, lane supervision, external effects and commit crash safety, preemption, watch, polling, and supervisor install |
 | [Brief](spec/features/feature-brief.md) | The read-only one-screen owner render: nine surfaces, two named placeholders, three anchored-action groups, and collector failure as evidence at exit `0` |
 | [Typed Blocker and Question Channel](spec/features/feature-blockers.md) | The typed question channel: four question types, audience routing, the layered credential guard, recorded answers and resume projections, and the shared ranking on the list, digest, and brief |
 | [Queue Ready](spec/features/feature-queue-ready.md) | The read-only ready set: six tri-state readiness conditions, close classification and ranking, identity resolution, bounds, and evidence model |

@@ -110,6 +110,8 @@ export type PhaseCommitEvidence = {
   readonly transitionId?: string;
   readonly commitPresent: boolean;
   readonly commitSha?: string;
+  /** Additive redrive evidence source (TDR-0014 INV-8). */
+  readonly evidenceSource?: "redrive";
   /**
    * Set when durable evidence could not be read (a torn state record). The
    * command classifies it as a platform fault instead of treating a missing
@@ -431,6 +433,7 @@ const completeWithCommit = async (
     timestamp,
     variant,
     ...(advisory === undefined ? {} : { advisory }),
+    ...(evidence.evidenceSource === undefined ? {} : { evidenceSource: evidence.evidenceSource }),
   } as const;
 
   const recordOnly = (basis: CommitIntentBasis): TargetSuccess | TargetFailure => {

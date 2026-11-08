@@ -8,13 +8,19 @@ export {
   type CatalogField,
   type ConfigCatalog,
   catalogPaths,
+  DAEMON_BRANCH,
   LANE_BRANCH,
   type LaneSettings,
+  POLL_BRANCH,
   PRODUCTION_CATALOG,
   QUEUE_BRANCH,
   type QueueSettings,
+  resolveDaemonSettings,
   resolveLaneSettings,
+  resolvePollSettings,
   resolveQueueSettings,
+  type StateDirectoryScopeInput,
+  resolveStateDirectoryScope,
 } from "./catalog.js";
 export { defaultsFor, PRODUCTION_DEFAULTS } from "./defaults.js";
 export {

@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-HARNESS-ADAPTERS
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (spawn, resume/steer, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the unchanged exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and store-scoped orphan/invalid-identity disclosure; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, harness-store session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record."
 links:
-  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240"]
+  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238"]
   related_decisions: ["ADR-0008", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/harness.ts"
@@ -314,3 +314,7 @@ Worktree-activity sourcing and Claude Code liveness remain declared gaps.
   identity built on this seam.
 - [ADR-0008](../../decisions/ADR-0008-harness-adapter-contract.md) — the binding
   harness adapter contract.
+
+## GH-238 lane executor
+
+The delivered lane-executor adapter composes `HarnessSessionPort` for spawn, observe, collect, and liveness plus an injected launch planner (the M1-S9 seam). A missing planner or declared capability gap reports unavailable, producing the declared `supervise-only` mode.

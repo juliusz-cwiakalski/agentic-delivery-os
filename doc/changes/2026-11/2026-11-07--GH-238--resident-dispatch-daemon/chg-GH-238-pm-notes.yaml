@@ -1,0 +1,206 @@
+change_id: GH-238
+title: "M1-S18: Resident dispatch daemon"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-07T19:30:00Z", completed: "2026-11-07T19:55:00Z" }
+  specification: { started: "2026-11-07T19:58:00Z", completed: "2026-11-07T20:40:00Z" }
+  test_planning: { started: "2026-11-07T20:42:00Z", completed: "2026-11-07T21:35:00Z" }
+  delivery_planning: { started: "2026-11-07T21:38:00Z", completed: "2026-11-07T22:25:00Z" }
+  dor_check: { started: "2026-11-08T01:00:00Z", completed: "2026-11-08T01:20:00Z", iteration: 3, verdict: "READY_WITH_RISKS", previous_verdict: "NOT_READY" }
+  delivery: { started: "2026-11-08T01:35:00Z", completed: "2026-11-09T01:20:00Z", reopened_at: "2026-11-09T00:50:00Z", iterations: 4 }
+  system_spec_update: { started: "2026-11-09T01:25:00Z", completed: "2026-11-09T01:55:00Z", reopened_at: "2026-11-09T01:25:00Z" }
+  review_fix: { started: "2026-11-09T02:00:00Z", completed: "2026-11-09T02:30:00Z", iteration: 2, verdict: "PASS", previous_verdict: "FAIL" }
+  quality_gates: { started: "2026-11-09T02:35:00Z", completed: "2026-11-09T02:50:00Z", verdict: "PASS" }
+  dod_check: { started: "2026-11-09T03:00:00Z", completed: "2026-11-09T03:10:00Z", verdict: "PASS" }
+  pr_creation: { started: "2026-11-09T03:15:00Z", completed: "2026-11-09T03:35:00Z", url: "https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/271" }
+decisions:
+  - text: "Lane execution seam: the daemon spawns and observes lanes through the delivered HarnessSessionPort (M1-S11) and records lane execution state through the state layer. The full typed dispatch loop with dual-run evidence and per-repo handover, and the `dispatch` command itself, remain M1-S9 (GH-239). This follows backlog rank 38 before rank 39 and the ticket's dependency list, which excludes M1-S9. The daemon is proven against an injected lane-executor port in tests."
+    date: "2026-11-07"
+  - text: "Automatic preemption is in scope here (GH-237 deferred its execution to M1-S18). The daemon applies a computed preemption only at a safe boundary: it never kills a live session. When the preempted lane has an active session it records the pending preemption and parks/releases at the next phase boundary or on session completion; when no session is active it releases the lease and records the park immediately, with the preemption incident naming the close item."
+    date: "2026-11-07"
+  - text: "Supervisor install: M1 ships the systemd user unit with linger as the concrete adapter (Linux), scoped to the state dir. launchd and Windows equivalents are declared platform adapters with an explicit classified unsupported outcome on those platforms, never a silent no-op. Installation is optional and changes nothing for one-shot operation."
+    date: "2026-11-07"
+  - text: "External-effect protocol: CommandReceipt and OutboxEffect are delivered as additive state record kinds plus a domain protocol primitive with query-based check-before-reapply and first-class `unknown` consequence, over injected external-effect ports. No tracker/VCS write path is introduced by this change (the delivered scheduler is read-only against trackers); commits are protected by the delivered atomic commit primitive plus the TDR-0014 message-independent outbox identity and owner-side recovery."
+    date: "2026-11-07"
+  - text: "Live watch: `queue --watch` and `lanes --watch` are accepted when the daemon is reachable and stream bounded subscribe frames; when the daemon is absent they degrade to bounded state polling in a declared degraded mode at exit 0, never a silent empty stream and never a failure. This supersedes GH-237's temporary `--watch` refusal while preserving its truthfulness requirement."
+    date: "2026-11-07"
+  - text: "Test posture: no live network, real credentials, or unbounded sleeps. Protocol conformance runs over stdio in-process; daemon lifecycle, reconciliation, supervisor, and preemption are exercised with injected clock, transport, process-supervisor, and lane-executor seams. A bounded real-child-process smoke test may exist for start/stop if it is hermetic and timeout-guarded."
+    date: "2026-11-07"
+  - text: "DoR iteration 1 PM decision on R-01: choose narrowing (b). Control protocol v1 carries no mutating wire class; at-most-once mutation is a state-path property. Restate F-6/AC-F6-2 so CLI intent records carry the idempotency key and serialize through the single-writer fence, while control frames are at-most-once by `id` plus the lock token. Do not invent an `intent` frame class in M1."
+    date: "2026-11-07"
+  - text: "DoR iteration 1 PM decision on R-02: choose mechanism (a), not a narrowing. The commit effect wrapper writes an `outbox.effect` intent before invoking the delivered commit primitive, carrying the baseline HEAD and the deterministic expected commit identity (ref + phase + subject/body evidence). On restart, reconciliation queries `git log <baselineHead>..HEAD` for that identity, records the landed SHA as `applied`, and never creates a second commit. This uses the existing git adapter with an additive log-since query and does not change M1-S14's commit format or atomic record+commit primitive. (Superseded by the iteration-2 N-01 decision below: the message is model-authored, so the identity is the path set, not the message.)"
+    date: "2026-11-07"
+  - text: "DoR iteration 1 PM decision on R-06: narrow with explicit acknowledgement. A blocker answer written while the daemon is down is durable and lossless; reconciliation makes it visible and records the resume/application intent. Actual lane application happens at the next safe phase boundary when a lane exists; full session resume remains M1-S9. The spec, test plan, and plan must state this consistently and TC-STATE-003 must assert the specified behavior rather than an invented 'application' step."
+    date: "2026-11-07"
+  - text: "DoR iteration 2 PM decision on N-01: choose message-independent identity (b). The pre-commit outbox intent records baselineHead, changeRef, phase, and the sorted normalized staged path set. Recovery queries bounded `logSince(baselineHead)` and matches exactly one new commit whose changed path set equals the recorded set. No dependence on the model-authored commit message; no template-only change to the commit primitive; zero new commits or multiple/ambiguous matches resolve to `unknown` and require human/owner action, never a silent re-apply."
+    date: "2026-11-08"
+  - text: "DoR iteration 2 PM decision on N-02: the effect owner is the lane/one-shot process, not the daemon. The daemon detects and records a durable redrive request with the discovered SHA (or `unknown`), but never writes a commit or runs a phase. The owning process restores the phase-transition binding by re-running phase completion with the discovered SHA evidence. `packages/cli/src/commands/phase.ts` and the evidence contract are declared in the plan scope. F-9/AC-F9-1 remain intact."
+    date: "2026-11-08"
+  - text: "DoR iteration 2 PM decision on N-03: pin a brand-derived `<PREFIX>_STATE_DIR` environment variable as the state-directory scope contract, read by the resolver and set explicitly by the supervisor unit (`Environment=`), with the unit command keeping `daemon start --foreground`. Do not add a `--state-dir` CLI flag. Tests assert two state dirs route to their own locks/sockets and a wrong-scope negative."
+    date: "2026-11-08"
+  - text: "DoR iteration 2 PM decision on N-05: remove `instance.fence` (the daemon lock token) from `daemon start` and `daemon status` command envelopes. The lock token remains durable-only and in the three control-frame payloads. Goldens and AC-F1-1/AC-F4-4/NFR-12/§21/Appendix C are aligned; no golden placeholder is needed."
+    date: "2026-11-08"
+  - text: "DoR iteration 2 PM decision on N-08: control-frame at-most-once is keyed on (connection identity, `id`, lock token). Same-connection replay is deduped; a cross-connection collision is a distinct new request and is never silently answered as already applied. TC-CONC-005 splits the two cases."
+    date: "2026-11-08"
+  - text: "Ticket-pin supersession acknowledgement (DoR N-07): the GH-238 ticket's binding pin 'commits are additionally protected structurally by M1-S14 atomicity and SHA idempotency' is superseded as a MECHANISM by TDR-0014 (message-independent path-set identity + bounded logSince + owner-side restoration), because the delivered commit primitive resolves its message through a model call and cannot yield a pre-commit message identity. The pin's INTENT is preserved: no duplicate commit, no lost phase binding, first-class unknown on ambiguity. The human owner retains the final ratification at the open-PR review gate; TDR-0014 is Proposed pending that acceptance."
+    date: "2026-11-08"
+blockers: []
+notes:
+  - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/271 (base main-tools, head feat/GH-238/resident-dispatch-daemon; labels change+review; assignee juliusz-cwiakalski; MERGEABLE, not merged; issue GH-238 remains open). Branch pushed with no force. CI caveat: the `TS commitlint (CI authority)` check fails on four pre-existing branch commit headers over 100 chars (98b0c44 113, 15e6dbe 102, f815fb9 103, 0c8e2d1 126). Fixing requires a header-only history rewrite + force-push (invalidates evidence SHAs) or a commitlint header-max-length policy change; left for owner decision at review. Other CI checks were still running at handoff. TDR-0014 remains Proposed and needs owner ratification before merge."
+    type: info
+    date: "2026-11-09"
+  - text: "DoD check complete: all lifecycle phases recorded with completion timestamps (clarify_scope, specification, test_planning, delivery_planning, dor_check, delivery, system_spec_update, review_fix, quality_gates, dod_check); plan has 14 phases and every phase has pm-notes evidence naming its id, commit(s), and gate (Phase 12 is the conditional no-findings closure with evidence commit 8a8514f2; Phases 13/14 are remediation phases with commits ef92b2e7/31a3efe8/b4ed8628/7d5470bb/dea1b623/c2cf4141). Review iteration 2 PASS verifies 36/36 ACs; test plan records 102/102 TCs (100 PASS, 2 accepted named gaps TC-STATE-004/005); doc-sync reports no residual current-truth documentation gaps; one changeset gh-238-resident-dispatch-daemon-minor.md exists; post-merge aggregate gate 6003 pass / 4 skip / 0 fail; branch level with main-tools and worktree clean. Accepted residuals: TDR-0014 Proposed (owner ratification at PR), TC-STATE-004/005, foreground cross-process mode nuance, fail-safe false-unknown, host-composed ports."
+    type: info
+    date: "2026-11-09"
+  - text: "Quality gates complete: `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 with 6003 pass / 4 skip / 0 fail across 678 files; lint 0 errors (60 warnings), format clean, 6/6 typecheck/build, boundaries no violations, exports parity OK; doc-distribution no drift (81 docs); error-table-sync 114/114; privacy-literals 0 violations; forbidden-literals 0 violations. No failing suites."
+    type: info
+    date: "2026-11-09"
+  - text: "Review iteration 2: PASS (0 critical/high/medium; 3 low, 2 info; 0 blocking). All F-1..F-8 findings verified fixed in production code: commit-effect wrapper wired in runAct with baseline/path-set intent + DM-18 redrive evidence and a production-path crash test; ADOS_STATE_DIR exact spelling with unit round-trip; detection path-set match; fenced outbox dedupe; bounded content-change watch publication; verdicts/docs/duplicates. New non-blocking F-9 (frame cap overhead/truncation branch), F-10 (Phase 14 scope omits refreshed commit goldens), F-11 (stale TC-CONFIG-002 reference), F-12 (stale effects.ts header), F-13 (env name host-injected). Regression evidence: 6003 pass / 4 skip / 0 fail; 161 structure/boundaries; typecheck/lint/format/boundaries/error-table/doc-distribution/privacy green; 36/36 ACs, 14/14 phases, 102/102 TCs (2 named gaps). Accepted residuals: TDR-0014 Proposed (PR gate), TC-STATE-004/005, fail-safe false-unknown, fence-busy abort, host-composed ports. Review complete; quality gates next."
+    type: info
+    date: "2026-11-09"
+  - text: "After review-iteration-1 remediation, doc-sync re-verified the changed behavior and updated feature-resident-daemon, feature-commit-primitive, feature-config-layer, feature-state-layer, nonfunctional, and the resident-daemon test spec. It found one residual code gap (production watch stateChanges published count-only snapshots), fixed in c2cf4141 with a bounded content projection shared by the subscribe snapshot and live frames and a three-case production-path test. Aggregate gate after the fix: 6003 pass / 4 skip / 0 fail; doc-distribution, error-table-sync, and privacy checks green. System spec update complete; review iteration 2 next."
+    type: info
+    date: "2026-11-09"
+  - text: "Phase 14 task 14.9 (F-5 residual) complete at commit c2cf4141. The composed daemon stateChanges source now builds one bounded queue/lanes watch projection from the verified ledgers (queue latest entries; latest daemon.lane per ref; repositoryRoot and raw state-directory paths excluded), caps it by the declared count bound and the frame byte bound with an explicit truncated/truncationReason, and uses the same projection for the initial subscribe snapshot and live events. It compares recursively key-sorted serialized content per topic: the first observation is a baseline, a subscribe primes it, and only changed content emits; the control server's dedupe digest is key-sorted too. New production-path suite tests/behaviour/daemon-watch-state-changes.test.ts: 3 pass (queue priority content-only change with unchanged count, lane state content-only change with unchanged count, no-change negative control, bounded 200-row lanes snapshot). Focused watch/lifecycle/control batch: 51 pass, 0 fail. Plan Phase 14 re-validated: verdict valid, readyForDevelopment true, 0 errors. TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT 0 (6003 pass, 4 skip, 0 fail; lint/format/typecheck/boundaries/exports parity green). No lifecycle phase was marked and nothing was pushed."
+    type: info
+    date: "2026-11-08"
+  - text: "Phase 14 review-iteration-1 remediation complete at commit dea1b623. Tasks 14.1-14.8: (1) F-1 production commit path now reads HEAD once, computes the sorted normalized staged path set with computeStagingPlan, appends the outbox.effect intent plus in-flight transition before runCommitAct, closes it with a receipt/terminal state, and createProductionCommitRuntimeOptions supplies the baseline-checked DM-18 readRedriveEvidence; (2) F-2 resolver reads ADOS_STATE_DIR (one separator) with a unit Environment= round-trip, two-scope positive, and wrong-spelling negative; (3) F-3 detectDaemonEffects reuses resolveCommitEffect (path-set match, no SHA on zero/multiple/mismatch); (4) F-4 appendOutboxEffect dedupes inside the fence with a deterministic interleaving test; (5) F-5 the control server publishes deduplicated stateChanges on each resident tick and watch consumes the second bounded line; (6) F-8 reconciliation duplicates are computed from identical kind+key+payload records with a duplicate fixture proving non-zero; (7) F-6 mismatch -> not-found and multiple/unverifiable -> unreadable with no SHA, and F-7 documents daemon.subscription-buffer as the single frame-buffer and per-connection subscription-count bound. Gate: focused suites PASS (commit 79, daemon/control/watch/recon 103, structure 161); TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT 0 (6000 pass, 4 skip, 0 fail; lint/format/typecheck/boundaries/exports green); error-table-sync 114/114; doc-distribution 81 docs no drift; privacy-literals 0 violations; check:boundaries no violations. No new TC id, 102/102 TC coverage and 36/36 AC mapping preserved; no lifecycle phase was marked and nothing was pushed."
+    type: info
+    date: "2026-11-09"
+  - text: "Review iteration 1: FAIL (0 critical, 2 high, 3 medium, 1 low, 2 info). Blocking: F-1 the TDR-0014 commit-effect wrapper is unwired in production (no pre-commit outbox intent, no redrive evidence provider; AC-F10-2 holds only in tests); F-2 the state-dir resolver reads ADOS__STATE_DIR (double underscore) while the spec/unit/tests pin ADOS_STATE_DIR, so an installed unit silently uses the default store (AC-F15-1). Medium: F-3 daemon effect detection records found+SHA without the path-set match; F-4 outbox dedupe is a read-before-fence race; F-5 reachable-daemon watch never publishes on state change. Low/info: F-6 verdict mapping, F-7 document buffer-as-cap, F-8 reconciliation duplicates hardcoded 0. Delivery reopened for remediation; review will re-run after code + doc-sync."
+    type: retro
+    date: "2026-11-09"
+  - text: "Doc-sync re-verification after Phase 13: all nine code gaps fixed and verified against the delivered code (watch subscription/transport + human drain; status restart counts/degradation/live transport probe/mode; resident heartbeat/supervision/effect/wake cadence + supervise-only; blocker resumeIntent consumer; folded park counts; failed-start instance recovery; truthful supervisor install; outbox replay idempotency; already-running evidence + stall restart admission). Residual documentation gaps: none. Doc-distribution PASS (81 docs); error-table-sync 114/114; 73 targeted daemon tests PASS; privacy/forbidden-literals PASS. Non-blocking nuance: cross-process status reports `resident` for a foreground daemon because foreground is an attachment property and is not persisted; spec does not pin a durable mode. System spec update complete; delivery complete after remediation iteration 2."
+    type: info
+    date: "2026-11-09"
+  - text: "Phase 13 doc-sync code remediation complete. Commits: ef92b2e7 (watch subscription through the control transport, human-mode drain), 31a3efe8 (truthful status evidence, resident cadence, blocker resume intents, park counts, failed-start recovery, real supervisor composition, stall restart admission, already-running evidence), b4ed8628 (outbox intent replay idempotency), 7d5470bb (already-running holder evidence regression). Focused gates: bun test watch/queue-watch/lanes-watch + daemon lifecycle/degradation/lane-supervision/state-mediation/effects/reconciliation/supervisor-install + daemon status/lifecycle goldens PASS (173+); TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT 0 (5994 pass, 4 skip, 0 fail); error-table-sync, doc-distribution, privacy-literals, and check:boundaries PASS. No lifecycle phase was marked; no new TC id was added and 102/102 TC coverage is preserved. The prior watch-refusal and hardcoded-status deviations are closed."
+    type: info
+    date: "2026-11-08"
+  - text: "Doc-sync (system_spec_update) found nine code gaps that contradict the contracted behavior: (1) production composition never supplies a watch runtime, so queue/lanes --watch still refuses, and app/watch never opens a transport or sends subscribe; (2) daemon status hardcodes restartCounts {}, omits plain-status degradation, and --live checks only the in-process runtime; (3) the resident runtime never schedules heartbeat cadence, supervision cycles, effect detection, or wake, and conflates transport-degraded with missing-executor supervise-only; (4) blocker answers never produce a resumeIntent in the delivered composition; (5) reconciliation hardcodes queue.parks=0; (6) a failed start can leave an unreleasable acquired instance record; (7) daemon install without a composed supervisor can report installed on unsupported platforms; (8) outbox.effect append is not replay-idempotent; (9) status mode is hardcoded resident, already-running evidence omits acquisition time, and a corroborated stall does not invoke restart admission/economics. Delivery reopened for remediation; docs were reconciled to the contracted behavior but must be re-verified after the fixes."
+    type: retro
+    date: "2026-11-08"
+  - text: "Plan phase 11 (documentation, changeset, execution log, aggregate battery) complete at commits 97856c08 + ac046fa9. The new feature-resident-daemon spec declares internal; neighbor specs, glossary, architecture, index, man page, command registry, and NFR evidence were reconciled; exactly one five-package minor changeset exists. Test-plan §10.1 records 102/102 TCs (100 PASS, 2 named gaps: TC-STATE-004/005 wake durability has no dedicated suite). doc-distribution PASS; error-table-sync PASS; privacy-literals PASS. Aggregate `TMPDIR=$PWD/tmp/tmpdir pnpm check` EXIT 0: 5979 pass, 4 skip, 0 fail; boundaries and exports parity green."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 12 (review remediation) closed on the no-findings path: the caller requested execution without review, so there are no findings to triage. The full aggregate battery was re-run once after the final formatting commit and is green. No assertion was weakened and no manufactured change was made. PR creation, push, and tracker mutation were explicitly out of scope; the branch remains local and ahead of main-tools."
+    type: info
+    date: "2026-11-08"
+  - text: "PR-ready checklist: 36/36 ACs traced; 102/102 TCs recorded (2 named gaps); 18/18 NFRs evidenced or boundaried; SC-M1-14/15/16/17/17b/18/20 covered; eight daemon rows, seven record kinds, two config branches, callerPrincipal, and --watch agree in both directions; one changeset; declared residuals (M1-S9 full dispatch loop, launchd/Windows, remote transport, status watch, lane-scoped authorization, OQ-5) are recorded. Known deviations: (1) the app tier consumes delivered restart/blocker/effect persistence through injected ports rather than importing the state tier, preserving ADR-0003 DEC-2; (2) a queue/lanes --watch invocation with no composed watch runtime still refuses through fallback.invocation, while the production intent is acceptance with a composed watch; (3) the commit-crash-safety read is delivered on the git port and the owner restoration is wired through readRedriveEvidence, with the daemon recording only DM-18; (4) TC-STATE-004/005 remain named gaps."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 10 (scoped supervisor installation) complete at commit 8b11d989. Gate: pnpm typecheck PASS; bun test daemon-supervisor-install/daemon-install-golden/daemon-lifecycle/daemon-degradation/secret-read-boundary/daemon-hermetic/content-inventory PASS (52); privacy-literals PASS; bun test tests/boundaries PASS (145); pnpm check:boundaries PASS. Added the pure systemd unit renderer/ownership marker, the install/uninstall orchestration, the systemd-user adapter with linger rollback and marker-scoped removal, launchd/Windows classified unsupported outcomes, two-scope isolation and the foreground residency assertion. The adapter imports core ./contracts only; rendering is kept at the core domain and mirrored locally to preserve the subpath boundary."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 9 (bounded watch and truthful degradation) complete at commits a5a6e9dc + da8e5ff9 (inventory allowance). Gate: pnpm typecheck PASS; bun test queue-watch/lanes-watch/watch-stream/daemon-degradation/daemon-state-mediation/queue-cli/lanes/watch-unreadable/watch-refusal-absent/lanes-watch-accepted/daemon-status-matrix/daemon-bounds/daemon-hermetic/daemon-determinism/content-inventory PASS (65+); pnpm check:boundaries PASS. Added the deduplicating bounded watch projection, the degraded polling generator, the additive CLI stream seam through the serializer/redaction chokepoint, queue/lanes --watch acceptance with an injected watch runtime, the renamed lanes-watch-accepted golden, the unreadable/absent watch goldens, and the 3x2 status matrix. The no-watch fallback refusal remains only when no watch runtime is composed (reported deviation)."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 8 (safe-boundary preemption) complete at commit 0cca38de. Gate: pnpm typecheck PASS; bun test daemon-preemption/daemon-reconciliation/daemon-lifecycle/daemon-determinism/daemon-bounds/daemon-contract/content-inventory PASS (34); pnpm check:boundaries PASS. Added the pure preemption rule and the apply orchestration: active session → durable pending with zero signals; boundary or completion → release/park naming the close item; no session → immediate; restart re-evaluation; single target/close pair never duplicates a record; withdrawn remains read-only."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 7 (external-effect protocol and commit crash safety) complete at commit 0c8e2d1c. Gate: pnpm typecheck PASS; bun test daemon-effects/daemon-reconciliation-crash/daemon-reconciliation/commit-act/commit-convergence/phase-atomic/daemon-contract/daemon-imports/daemon-hermetic/content-inventory PASS (71); error-table-sync PASS; pnpm check:boundaries PASS; bun test tests/boundaries PASS (145). Added the Appendix I state machine, outbox/receipt ledgers, pre-commit intent with (baselineHead, changeRef, phase, sorted normalized staged paths), one bounded CommitGitPort.logSince, four fail-closed unknown outcomes, the DM-18 detection request (attempt 0), and the owner-side redrive evidence restoration so a recovered phase reads both. Three mechanism controls and the owner-restoration control are covered."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 6 (lane supervision) complete at commit 3026f67c. Gate: pnpm typecheck PASS; bun test daemon-lane-supervision/daemon-state-mediation/lanes/blockers-publish/lanes goldens/daemon-contract/daemon-imports/daemon-hermetic/content-inventory PASS (46); bun test tests/boundaries PASS (145); pnpm check:boundaries PASS. Added the daemon lane state machine and prefill-safe liveness, the supervision cycle over injected executor/scheduling/claim/release seams, the lane-executor adapter over HarnessSessionPort, the daemon-evidence lane fold with an unchanged payload shape, and the resumeIntent boundary record. The daemon performs no delivery work in-process."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 5 (resident runtime and daemon command family) complete at commit 15e6dbe4. Gate: pnpm typecheck PASS; bun test daemon-lifecycle/daemon-polling/daemon-degradation/daemon-state-mediation/daemon-lifecycle-golden/daemon-determinism/daemon-bounds/daemon-hermetic/daemon-contract/daemon-imports/content-inventory PASS (40); pnpm check:boundaries PASS. Added the status fold and bounded human render, polling policy, resident lifecycle (lock/reconcile/heartbeat/serve, drain and immediate stop), status use case, node clock/wake/process adapters, the daemon command grammar/envelopes, and the brand-derived state-directory env resolution in the CLI edge. Resident spawn and readiness polling are wired; production transport composition is injected."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 4 (startup reconciliation) complete at commit f815fb90. Gate: pnpm typecheck PASS; bun test daemon-reconciliation/daemon-reconciliation-crash/daemon-state-mediation/daemon-bounds PASS (26); daemon-contract/content-inventory PASS; error-table-sync PASS. Added the pure classification engine, the reconcile orchestration with injected recovery persistence (layering: app does not import state), replay idempotence, terminal budget exhaustion with a typed question, and fail-closed unreadable state. Reconciliation lane bound truncation is explicit."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 3 (control protocol v1) complete at commit 32b96072. Gate: pnpm typecheck PASS; bun test control-codec/session/connection/conformance/transport PASS (28); daemon-hermetic/daemon-bounds/secret-read-boundary PASS; daemon-contract/daemon-imports/content-inventory PASS; bun test tests/boundaries PASS (145); pnpm check:boundaries PASS. Added the transport-free codec/session, the multi-connection dispatcher with (connection,id,token) dedupe, stdio and unix bindings, the ./daemon adapter subpath with workspace edges, and the conformance proof."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 2 (fence-style daemon lock, instance ledger, heartbeat liveness) complete at commit c48ee0c3. Gate: pnpm typecheck PASS; bun test daemon-lock/daemon-lock-concurrency/daemon-heartbeat PASS (14); bun test daemon-contract/content-inventory PASS; pnpm check:boundaries PASS. Lock policy is a distinct artifact/token from the state fence; staleness is at-bound stale; 100 contenders yield one acquisition and 99 refusals."
+    type: info
+    date: "2026-11-08"
+  - text: "Plan phase 1 (vocabulary/config/error/boundary scaffolding) complete at commit 98b0c443. Gate: pnpm typecheck PASS; bun test daemon-contract/daemon-vocabulary/error-table/state-contract/config-contract/queue-scheduling-contract/content-inventory PASS; bun test config-schema/config-resolver PASS; checks daemon-vocabulary/error-table-sync PASS; bun test tests/boundaries PASS (145); pnpm check:boundaries PASS. Added principal/daemon/control/effects contracts, daemon+poll config branches, eight daemon error rows, and the daemon-merge-absence boundary rule with four failing fixtures."
+    type: info
+    date: "2026-11-08"
+  - text: "DoR iteration 3: READY_WITH_RISKS (0 blocking; 8 non-blocking NF-1..NF-8). All 14 iteration-2 findings resolved and 0/19 iteration-1 regressions. Accepted residuals: TDR-0014 remains Proposed pending owner ratification at the PR gate; false-unknown from working-tree drift is fail-safe and documented. Non-blocking follow-ups to close in delivery: NF-1 subscriber-degraded capacity tension, NF-2 logSince-read ownership wording, NF-3 queryVerdict values, NF-4 stale test-plan obligation phrasing (Phase 11), NF-5 state-dir precedence/invalid-value TC, NF-6 brand.environmentPrefix pin, NF-7 TDR unresolved-question cleanup, NF-8 task-number reference. Delivery may proceed; the TDR ratification is a hard human gate at PR review."
+    type: info
+    date: "2026-11-08"
+  - text: "DoR iteration 2 remediation complete. Spec v1.2 replaces the message identity with TDR-0014 INV-1..INV-8 (path-set identity, bounded logSince, owner-side restoration), pins the lane/one-shot effect owner, the brand-derived `<PREFIX>_STATE_DIR` scope, removal of `instance.fence` from envelopes, (connection,id,token) control dedupe, the adapters-daemon merge-absence boundary, and DM-18 redrive. Test plan v1.3 rewrites EFFECT/RECON/CONC/STATE/MERGEABS oracles with three negative controls, splits watch goldens, and names concrete config suites. Plan v1.3 is 12 phases / 85 tasks, 102/102 TCs, with Phase 7 rewritten to the path-set mechanism and new owner-side files, Phase 1 config suites, Phase 9 renamed goldens, Phase 10 env-var scope, Phase 11 commit-primitive doc, and corrected gate suites; validator verdict valid/readyForDevelopment true/0 errors."
+    type: info
+    date: "2026-11-08"
+  - text: "DoR iteration 2: NOT_READY (1 critical, 6 major, 6 minor, 1 nit; 5 blocking N-01..N-05). 15/19 iteration-1 findings resolved; R-02 still unresolved via N-01 (commit identity not derivable from the model-message path) and N-02 (effect ownership/transition recovery), R-03 partially via N-05 (lock token in start envelope), R-07 partially via N-03 (state-dir scope has no mechanism), R-13 partially via N-10 (config wildcard). New non-blocking N-06..N-14. Reopened specification, test_planning, delivery_planning; a system decision record is required for N-07. PM decisions recorded: N-01 message-independent identity, N-02 owner=lane/one-shot, N-03 brand-derived state-dir env var, N-05 remove fence from envelopes, N-08 (connection,id,token) dedupe."
+    type: retro
+    date: "2026-11-08"
+  - text: "DoR iteration 1 remediation complete across all three reopened artifacts. Spec: R-01 state-path at-most-once, R-02 outbox baselineHead + bounded logSince mechanism replaces the SHA-idempotency overclaim, R-03 lock-token exemption, R-04 v1/v0 + wire-type + additive-only corrections, R-05 outbox callerPrincipal, R-06 resumeIntent/boundary semantics, R-07 systemd --foreground unit, R-14 mergeCodePath closed set, R-15 state.permission.denied, R-16 normalized socket golden, R-17 scope digest, R-18 split takeover AC and seven seeds. Test plan: 102 TCs (added TC-CONC-005, TC-INSTALL-007), rewritten CONC/RECON/EFFECT/STATE/WIRE/INSTALL oracles with negative controls, plan alignment. Plan: 12 phases / 84 tasks, 102/102 TCs mapped, TC-META-001 added, premature full flags fixed, watch-refusal golden scoped into Phase 9, undeclared files added, gate paths fixed, test doubles moved to fixtures, validator verdict valid/readyForDevelopment true/0 errors."
+    type: info
+    date: "2026-11-07"
+  - text: "DoR iteration 1: NOT_READY (2 critical, 10 major, 6 minor, 1 nit; 10 blocking R-01..R-10). Blocking themes: (R-01) AC-F6-2 invents a mutating wire request the closed protocol does not have; (R-02) commit 'SHA idempotency' overclaims the delivered primitive and the kill-after-commit-before-record window is invisible; (R-03) control frames carry a lock token while the spec forbids tokens on the wire; (R-04) three spec contradictions resolved only in the plan header; (R-05) outbox.effect omits callerPrincipal; (R-06) blocker-answer 'applied' is unimplementable without a lane; (R-07) systemd unit command form unpinned so the unit cannot supervise a resident daemon; (R-08) TC-META-001 unmapped (99/100); (R-09) premature 'full' TC flags; (R-10) delivered lanes-watch-refusal golden left out of Phase 9 scope/gate. Reopened specification, test_planning, delivery_planning; delivery not reopened. PM decisions recorded for R-01 (state-path at-most-once), R-02 (outbox-intent baseline-head + git-log query mechanism), R-06 (durable answer, boundary application when a lane exists; full resume M1-S9)."
+    type: retro
+    date: "2026-11-07"
+  - text: "State detection: issue GH-238 open with labels change,review; no PR in any state for feat/GH-238/resident-dispatch-daemon; branch clean and zero commits ahead of origin/main-tools; no change artifacts existed. Treated as fresh delivery."
+    type: info
+    date: "2026-11-07"
+  - text: "Specification complete: chg-GH-238-spec.md authored with 17 functional capabilities, 36 acceptance criteria, 18 NFRs, 9 events, 10 appendices, and a full ticket-AC map. Open questions OQ-1..OQ-6 are explicitly deferred or resolved in-spec; OQ-5 (blocker-answer application timing) is a pre-M1-S9 decision, not a blocker for this delivery."
+    type: info
+    date: "2026-11-07"
+  - text: "Test planning complete: 100 test cases covering 36/36 ACs, 18/18 NFRs, EVT-1..EVT-9, DM-1..DM-16, with explicit seeded-scenario mapping (SC-M1-15/16/17/17b/18/20). Two non-blocking spec clarifications recorded by the author: AC-F15-1 uses daemon.supervisor-unsupported for a linger-enablement failure as well as a missing adapter, and plain status uptime is derived from durable heartbeat/instance records rather than process introspection. Neither blocks planning."
+    type: info
+    date: "2026-11-07"
+  - text: "Delivery planning complete: chg-GH-238-plan.yaml (delivery.plan.v1), 12 phases / 83 tasks, tier full, machine validator verdict valid and readyForDevelopment true. 36/36 ACs and 100/100 TCs mapped; dependency ordering puts state ownership before protocol, reconciliation before the start command, supervision before effects/preemption, and watch after the state it projects. Delivery-bound pins recorded by the author: additive callerPrincipal; v1-only principal requirement with v0 compatibility; query as a class not a wire type; daemon.preemption.withdrawn unreachable and not written; poll platform set {github,gitlab,jira}; heartbeat laneCounts uses `idle`; safe-boundary blocker application; linger failure keeps daemon.supervisor-unsupported; new additive ./daemon adapter subpath."
+    type: info
+    date: "2026-11-07"
+  - text: "Design baseline read: doc/planning/oss-tooling/milestones/m1/{architecture.md,commands/daemon.md,interactions.md,contracts.md,test-scenarios.md}, doc/planning/oss-tooling/backlog.md M1-S18, doc/spec/features/feature-scheduling-engine.md, packages/core/src/contracts/{harness,state}.ts, packages core/adapters/cli layout. Seeded scenarios SC-M1-15..18, SC-M1-20."
+    type: info
+    date: "2026-11-07"
+  - text: >-
+      TDR renumber after merging origin/main-tools (GH-242, 0d6d4b0c): GH-242 added
+      its own TDR-0013 (agent-session commit guard reversal), so the GH-238
+      commit-effect crash-safety record was renumbered from TDR-0013 to
+      TDR-0014-commit-effect-crash-safety-message-independent-identity.md. Its
+      frontmatter id, title, and self-references now read TDR-0014; doc/decisions/00-index.md
+      lists TDR-0013 (GH-242) and TDR-0014 (GH-238) in order. All live references in the
+      GH-238 spec, test plan, plan, pm-notes, current-truth specs, and code/test comments
+      were updated. Historical readiness-review/ and code-review/ artifacts retain the
+      former TDR-0013 reference and are intentionally left unchanged as immutable records.
+      The decision content, INV-1..INV-8 contract, and Proposed status are unchanged.
+    type: info
+    date: "2026-11-08"
+  - text: >-
+      Merge of origin/main-tools (GH-242 agent integration, 0d6d4b0c) into
+      feat/GH-238/resident-dispatch-daemon resolved 14 unmerged paths without
+      aborting or squashing, preserving both sides' current truth. Unioned the
+      decision index, architecture overview, glossary, lanes command doc, and the
+      blockers/commit-primitive/result-contract/scheduling-engine/nonfunctional
+      specs (GH-242 entrypoint/prompt/commit-guard text plus GH-238 daemon/effect/
+      watch rows; the accepted `--watch` surface and the HELP section both remain).
+      edge.ts keeps GH-242's harness imports and readChangeFolder staging scope and
+      GH-238's commit-effect wrapper, createRedriveEvidenceReader, and
+      readRedriveEvidence option on both commit runtimes. The `createDeliverySessionFacts`
+      import was dropped: GH-242's guard reversal removed its only production use,
+      strict noUnusedLocals would fail, and the merged commit-contract test asserts
+      edge.ts no longer references it. The commit harness combines HEAD's
+      afterCommitLand hit with GH-242's stage fault injection and events log. The
+      error table resolves to 113 identities (five commit rows after GH-242 retired
+      commit.session.context-refused, eight GH-238 daemon rows), and both doc and
+      structure tests were updated with it. commit-phase-skipped.json was accepted as
+      deleted (GH-242 replaced the scenario with commit-phase-transition-only); its
+      new golden's totalMs was aligned to the split-counter harness clock (1000).
+      Semantic reconciliation: GH-242 writes the pm-notes transition before the
+      commit act, so a completion with no redrive evidence now lands a fresh
+      transition commit instead of a record-only no-op. The GH-238 owner-restoration
+      negative control was updated (test and test plan) to assert the orphan SHA is
+      never adopted and a fresh atomic transition commit is landed; the redrive
+      contract (INV-8) is unchanged. Full gates after resolution: pnpm check,
+      check:prompt, check:help, doc-distribution, forbidden-literals, and
+      privacy-literals all exit 0 (6180 pass / 4 skip / 0 fail).
+    type: info
+    date: "2026-11-08"
+  - text: >-
+      Test-timeout fix: the GH-238 reconciliation lane-bound test
+      (tests/checks/daemon-bounds.test.ts, "excess lanes are reported truncated,
+      never silently dropped") appends 205 durable lane records and reconciles
+      through real filesystem I/O, so it is load-sensitive: it completes in
+      ~2.4-2.5s alone locally but exceeded Bun's 5s default under full-suite load
+      (observed 5582ms). The 200-lane bound and the 205-record setup are unchanged;
+      the test now carries an explicit 20_000ms per-test timeout justified by the
+      205 durable appends plus reconciliation on CI hardware. Verified by running
+      the single test repeatedly (3/3 pass) and the full aggregate suite
+      (6180 pass / 4 skip / 0 fail).
+    type: info
+    date: "2026-11-08"

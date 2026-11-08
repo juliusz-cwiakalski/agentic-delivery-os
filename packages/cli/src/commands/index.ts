@@ -15,6 +15,8 @@ export type { CommitCommandRuntime, CommitContext } from "./commit.js";
 export { createCommitCommandDefinition } from "./commit.js";
 export type { ConfigCommandRuntime } from "./config.js";
 export { createConfigCommandDefinition } from "./config.js";
+export type { DaemonCommandRuntime } from "./daemon.js";
+export { createDaemonCommandDefinition } from "./daemon.js";
 export type { DbCommandRuntime } from "./db.js";
 export { createDbCommandDefinition } from "./db.js";
 export type { DoctorCommandRuntime } from "./doctor.js";

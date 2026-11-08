@@ -76,16 +76,17 @@ omission stays valid.
 |---|---|
 | `status` (M0-S6, M1-S10) | `<binary> status [--repo <path>]... [--json]` |
 | `queue ready` (M0-S7) | `<binary> queue ready <ref>... (1..8 refs)` |
-| `queue` (M1-S17) | `<binary> queue [list\|plan\|add\|prioritize\|dep\|claim\|release]` |
-| `lanes` (M1-S17) | `<binary> lanes list\|show <ref>` |
+| `queue` (M1-S17; `--watch` GH-238) | `<binary> queue [list\|plan\|add\|prioritize\|dep\|claim\|release] [--watch]` |
+| `lanes` (M1-S17; `--watch` GH-238) | `<binary> lanes list\|show <ref> [--watch]` |
 | `blockers list` (M1-S16) | `<binary> blockers list [--open]` |
 | `blockers answer` (M1-S16) | `<binary> blockers answer <id> [--choice <n>] [--text <s>]` |
 | `board` (M1-S5) | `<binary> board [--watch]` |
 | `brief` (M1-S6) | `<binary> brief` |
 
-`--watch` is refused on `lanes` and `queue` in this release (invocation error at
-exit 1 with a remediation hint naming the resident daemon); live streaming
-belongs to the resident daemon (M1-S18).
+`--watch` is accepted on `lanes` and `queue` (GH-238): it streams bounded daemon
+frames when the resident daemon is reachable and declares degraded bounded state
+polling at exit 0 when it is not; it never fails and never emits a silent empty
+stream.
 
 ### Operate
 

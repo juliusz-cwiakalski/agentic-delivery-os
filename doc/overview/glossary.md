@@ -9,8 +9,8 @@ area: domain
 document_classification: current-truth
 links:
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008", "TDR-0009", "TDR-0011", "TDR-0012"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-226", "GH-227", "GH-228", "GH-229", "GH-223", "GH-231", "GH-225", "GH-233", "GH-232", "GH-243", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-242"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, provider-client-seed, provider-profile, session-lifecycle-economics, status-digest and attention-state, typed blocker channel, spend-read-side, closeout, change-capsule, judgment-residue, queue-readiness, queue-scheduling, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, merge/verify-deploy, and harness-adapter terms used across the repository."
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-226", "GH-227", "GH-228", "GH-229", "GH-223", "GH-231", "GH-225", "GH-233", "GH-232", "GH-243", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-242"]
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, provider-client-seed, provider-profile, session-lifecycle-economics, status-digest and attention-state, typed blocker channel, spend-read-side, closeout, change-capsule, judgment-residue, queue-readiness, queue-scheduling, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, merge/verify-deploy, entrypoint, prompt-conformance, resident-daemon, and harness-adapter terms used across the repository."
 ---
 
 # Glossary
@@ -387,12 +387,24 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Observation gap | The elapsed time between a park's previous evaluation and the recovering pass; named in the recovery incident. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
 | Stuck park | A durable `clear-observed` marker with no later `recovered` record; report-only on reads and a refusal on a claim. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
 | Clear-observed marker | The durable prior-pass `queue.park` record that makes stuck detection possible without a read writing. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
-| Preemption | A computed proposal to release a new start's lease so a close item may schedule; execution is explicit and belongs to the daemon story. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Preemption | A computed proposal to release a new start's lease so a close item may schedule; the daemon applies it only at a safe boundary or on session completion, never by signalling a live session. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
 | Runner (scheduling) | The declared execution-environment identity; one host runner exists today. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
 | Scheduling lane | The canonical-ref observation of one entry's delivery state; no lane record kind or stored lane state exists. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
 | Degraded marker (queue) | A declared `degraded[]` value such as `daemon-unreachable`, reported at exit 0 rather than as a silent failure. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
 | Queue incident | The durable event surface for park auto-recovery and stale-lease takeover. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
 | One-shot scheduling step | The plan, claim, and release sequence with no daemon, control socket, or background process. | Scheduling | [Scheduling Engine](../spec/features/feature-scheduling-engine.md) |
+| Resident daemon | The optional supervisor process that owns the daemon lock and serves status/control while the state layer remains the only truth. | Resident daemon | [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md) |
+| Fence-style daemon lock | The daemon-owned `daemon.lock` artifact with a unique token, distinct from the short-lived state writer fence; a stale lock is takeover-eligible. | Resident daemon | [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md) |
+| Takeover | Acquisition of a stale daemon lock with previous instance, token, last heartbeat, heartbeat age, and takeover time as evidence. | Resident daemon | [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md) |
+| Heartbeat | The durable liveness record with a monotone ordinal, uptime, queue depth, lane counts, current spawn, and consumed cursor; it never authorizes anything. | Resident daemon | [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md) |
+| State-mediated truth | The rule that every interaction is derivable from state and survives daemon absence; the control socket only optimizes. | Resident daemon | [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md) |
+| Reconciliation | The bounded startup reconstruction that classifies every in-flight lane alive/interrupted/crashed, resumes from the ledger, and accounts restarts exactly once. | Resident daemon | [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md) |
+| Outbox effect | The durable pre-effect intent carrying identity, bounded target, payload digest, idempotency key, and state; a commit intent carries the baseline, ref, phase, and normalized staged path set. | Resident daemon | [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md) |
+| Command receipt | The durable effect outcome carrying attempt, query verdict, status, bounded evidence, and the discovered SHA when proven. | Resident daemon | [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md) |
+| Check-before-reapply | One bounded query by stable identity before any re-apply; ambiguity stays `unknown` with no automatic apply. | Resident daemon | [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md) |
+| Pending preemption | A computed preemption of an active session recorded durably and applied only at a phase boundary or completion, never by signalling. | Resident daemon | [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md) |
+| Degraded watch | Bounded state polling with a declared `daemon-unreachable` marker when no daemon is reachable; never a silent empty stream. | Resident daemon | [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md) |
+| Merge absence | The structural property that no daemon path imports merge execution; reachability is a separate injected-executor assertion. | Resident daemon | [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md) |
 
 ## Acronyms
 
@@ -442,4 +454,4 @@ _Expand every acronym at first use; keep the expanded list here._
 - [Session Lifecycle Economics](../spec/features/feature-session-lifecycle-economics.md)
 - [ADR-0003 — OSS Tooling Monorepo Structure](../decisions/ADR-0003-oss-monorepo-structure.md)
 - [TDR-0005 — Delivery Result Enum and CLI Exit Taxonomy](../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md)
-
+- [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md)

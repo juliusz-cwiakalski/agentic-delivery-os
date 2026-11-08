@@ -198,6 +198,21 @@ module.exports = {
       to: { path: "^packages/cli/(src|dist)/projection\\." },
     },
 
+    // --- GH-238 F-17: structural absence of a merge code path in the daemon.
+    // The from-set covers the core daemon app/domain modules, the CLI daemon
+    // surface, and the adapters daemon subpath. Only source-level imports are
+    // proven; runtime injection of a merge executor adds no import edge.
+    {
+      name: "daemon-merge-absence",
+      severity: "error",
+      comment:
+        "GH-238 F-17: no daemon path may import merge execution; the daemon may read readiness and rank a merge-ready entry but cannot invoke the transaction or evaluate a gate.",
+      from: {
+        path: "^packages/(core/src/(app|domain)/daemon|cli/src/(daemon|commands/daemon)|adapters/src/daemon/)",
+      },
+      to: { path: "^packages/(core/src/(domain/merge-|state/merge)|cli/src/commands/merge)" },
+    },
+
     // --- DEC-2 Additional rules bullet 6: runtime-API confinement.
     // Allowlist (ADR verbatim): the `core ./state` driver code, the adapter I/O
     // subpaths, the CLI build, and the OpenCode host integration. Nothing else.
@@ -244,6 +259,10 @@ module.exports = {
           // git repositories; it is excluded from every production graph.
           // Exact path only.
           "^packages/testkit/src/commit/",
+          // GH-238: the adapters daemon subpath is the declared non-provider
+          // local-I/O edge (unix/stdio transports, detached supervisor, event
+          // log tail, clock). Exact path only.
+          "^packages/adapters/src/daemon/",
           // GH-231: the mcp serve composition root is the one Node stdio edge
           // and the single startup configuration-environment read. Exact path
           // only; every other mcp module stays runtime-neutral.

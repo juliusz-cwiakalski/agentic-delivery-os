@@ -49,6 +49,7 @@ describe("TC-BLK-009 publish happy path", () => {
         [
           "askedAt",
           "audience",
+          "callerPrincipal",
           "id",
           "lane",
           "options",

@@ -25,6 +25,7 @@ const ADAPTER_SUBPATHS = [
   "./provider-quota",
   "./git",
   "./inference",
+  "./daemon",
 ];
 
 const EXPECTED: Record<string, Record<string, string>> = {
@@ -38,7 +39,7 @@ const EXPECTED: Record<string, Record<string, string>> = {
   adapters: Object.fromEntries(
     ADAPTER_SUBPATHS.map((subpath) => [subpath, `src/${subpath.slice(2)}/index.ts`]),
   ),
-  cli: { ".": "src/index.ts" },
+  cli: { ".": "src/index.ts", "./daemon": "src/daemon-main.ts" },
   mcp: { ".": "src/index.ts", "./serve": "src/serve.ts" },
   opencode: { ".": "src/index.ts" },
   testkit: { ".": "src/index.ts", "./commit": "src/commit/index.ts" },

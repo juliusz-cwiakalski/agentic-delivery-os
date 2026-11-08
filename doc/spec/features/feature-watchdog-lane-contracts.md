@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-WATCHDOG-LANE-CONTRACTS
 status: Current
 created: 2026-11-05
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "The watchdog check family: `watchdog preflight <lane>` refuses dirty or non-base checkouts with named evidence and mutates nothing, `watchdog teardown <lane>` restores the lane's base checkout on every caller-invoked exit path and reports each action while verifying that agent-memory publications are committed or preserved (never discarded), and `watchdog liveness <lane>` evaluates adapter-sourced heartbeat age, session traffic, and token delta through the neutral harness-liveness bridge: a fully corroborated stall is the classified refusal `watchdog.liveness-stalled` at exit `1`, `progressing` is a success verdict at exit `0`, and genuinely absent sources keep `watchdog.signals-absent` at exit `2` (unknown, never guessed; CPU is never a signal). A `watchdog` domain kind joins the closed error-table union with exactly four identities, every probe projects through the v1 envelope and the `{0, 1, 2}` exit taxonomy, and the surface checks rather than runs."
 links:
-  related_changes: ["GH-221", "GH-235"]
+  related_changes: ["GH-221", "GH-235", "GH-238"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/watchdog.ts"
@@ -186,3 +186,7 @@ See also: [Session Lifecycle Economics](feature-session-lifecycle-economics.md),
 
 - [Harness Adapters](feature-harness-adapters.md) provides the adapter-level liveness signal surface (session traffic, worktree activity, process) and the additive sourced-signal declarations; the watchdog composes those facts and leaves absent sources at the exit-`2` unknown answer.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) documents the restart budget, resume economics, amplification derivation, and the outcome/identity/exit matrix that includes this family's stall refusal.
+
+## GH-238 consumption
+
+The daemon consumes the delivered liveness classification and prefill-safe rules; only a fully corroborated stall applies `watchdog.liveness-stalled` and restart admission. The deliverables themselves are unchanged.

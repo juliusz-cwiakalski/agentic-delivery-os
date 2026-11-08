@@ -330,6 +330,7 @@ describe("TC-DB-002 contract and domain tier discipline", () => {
         "./azure",
         "./ci",
         "./credentials",
+        "./daemon",
         "./file",
         "./git",
         "./inference",
@@ -354,7 +355,7 @@ describe("TC-DB-002 contract and domain tier discipline", () => {
     const cli = JSON.parse(readFileSync(join(ROOT, "packages/cli/package.json"), "utf8")) as {
       exports: Record<string, unknown>;
     };
-    expect(Object.keys(cli.exports)).toEqual(["."]);
+    expect(Object.keys(cli.exports).sort()).toEqual([".", "./daemon"].sort());
   });
 
   test("seeded runtime, ambient, driver, and pure-domain violations fail by name", () => {

@@ -16,9 +16,9 @@ import {
   createCapsuleFileRuntime,
   createCommitlintProbe,
   createSecretScanner,
-  nodeCapsuleFileSystemFacts,
   type FileSystemFacts,
   neutralEnvironmentFacts,
+  nodeCapsuleFileSystemFacts,
   nodeFileSystemFacts,
   type PmNotesFileSystemFacts,
   parseConfigYaml,
@@ -47,6 +47,12 @@ import {
   type GithubClientOptions,
 } from "@delivery-os/adapters/github";
 import { GITLAB_ADAPTER_CONTRACT, type GitLabClient } from "@delivery-os/adapters/gitlab";
+import {
+  createBunSqliteStoreOpener,
+  createClaudeTelemetryExtractor,
+  createNodeFileReader,
+  createOpencodeTelemetryExtractor,
+} from "@delivery-os/adapters/harness";
 import { JIRA_ADAPTER_CONTRACT, type JiraClient } from "@delivery-os/adapters/jira";
 import { createLegacyCompat } from "@delivery-os/adapters/legacy";
 import { createProviderWatchMappings } from "@delivery-os/adapters/provider-quota";
@@ -59,12 +65,6 @@ import {
   readRepositoryFacts,
 } from "@delivery-os/adapters/repo";
 import {
-  createBunSqliteStoreOpener,
-  createClaudeTelemetryExtractor,
-  createNodeFileReader,
-  createOpencodeTelemetryExtractor,
-} from "@delivery-os/adapters/harness";
-import {
   createSessionAdmin,
   createSessionStore,
   type OpencodeSessionIo,
@@ -72,15 +72,19 @@ import {
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
   addQueueDependency,
+  appendCommandReceipt,
+  appendOutboxEffect,
+  beginCommitEffect,
   buildCloseoutPlan,
-  capsuleGateEventKey,
-  capsulePhaseEventKey,
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
   type CloseoutTelemetryRuntime,
+  type CommitActOutcome,
   type CommitActRequest,
   type CommitTransportPorts,
   callerAudienceVariableName,
+  capsuleGateEventKey,
+  capsulePhaseEventKey,
   catalogPaths,
   claimQueueLease,
   classifyPruneCandidate,
@@ -89,23 +93,25 @@ import {
   computeDbLiveBoundaryMs,
   computeQueueSchedule,
   computeSpendReport,
+  computeStagingPlan,
   createSourcedWatchdogSignalSource,
-  deriveCapsuleEventKey,
-  evaluateDiffSweep,
-  evaluateWorktreeSafety,
   declareQueueEntry,
   defaultParkRecheckMs,
+  deriveCapsuleEventKey,
   evaluateClaimPreconditions,
+  evaluateDiffSweep,
+  evaluateWorktreeSafety,
   foldLanes,
+  type HarnessSettings,
   isHeldByWeight,
   isLiveDbSession,
-  type HarnessSettings,
   type MergeTransactionPorts,
   newestWaiverByGate,
-  parseCapsuleEvents,
-  payloadFieldViolations,
+  normalizeStagedPaths,
   PRODUCTION_CATALOG,
   parkConditionForCause,
+  parseCapsuleEvents,
+  payloadFieldViolations,
   prioritizeQueueEntry,
   type QueueCiFact,
   type QueueCloseFact,
@@ -122,6 +128,9 @@ import {
   type QueueSchedulerFacts,
   type QueueWorkItemFact,
   readActiveLeases,
+  readCommandReceipts,
+  readDaemonLanes,
+  readOutboxEffects,
   readQueueFold,
   readQueueParkPass,
   recoverQueueParks,
@@ -132,10 +141,12 @@ import {
   resolveMergeGateSet,
   resolveQueueSettings,
   resolveQueueWeight,
+  resolveStateDirectoryScope,
   runCloseout,
   runCommitAct,
   selectPruneCandidates,
   serializeCapsuleEvent,
+  sha256Hex,
   spendDigestSection,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
@@ -144,6 +155,8 @@ import {
   type VerifyGatesRepositoryFacts,
   type VerifyGatesWorkflowFacts,
   type VerifyGatesWorkItem,
+  type WatchRead,
+  watchLines,
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
@@ -156,23 +169,23 @@ import {
   type BlockerCapabilityFact,
   type BlockerDelegationPolicy,
   type BrandIdentity,
-  CLOSEOUT_MAX_DEPENDENTS,
-  HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
   type CapsuleFileRuntime,
   type CapsuleFileSystemFacts,
   type CapsuleProducerPort,
+  CLOSEOUT_MAX_DEPENDENTS,
   type CloseoutDiffRead,
   type CloseoutExpectedCapsuleEvent,
-  type CloseoutWorktreeFacts,
-  type CloseoutPromotionRuntime,
-  type CloseoutRetroFacts,
-  type CloseoutSessionFacts,
   type CloseoutGitRuntime,
+  type CloseoutPromotionRuntime,
   type CloseoutProviderRuntime,
   type CloseoutReadObservation,
+  type CloseoutRetroFacts,
   type CloseoutReverseDependentObservation,
+  type CloseoutSessionFacts,
   type CloseoutStateRuntime,
+  type CloseoutWorktreeFacts,
   type CloseoutWriteOutcome,
+  COMMAND_RECEIPT_PAYLOAD_SCHEMA,
   type CommitGitPort,
   type CommitlintPort,
   type CommitPlanPhaseContext,
@@ -181,7 +194,9 @@ import {
   type CommitTelemetryRecord,
   type CommitTransportAvailability,
   type ConfigFailure,
+  type ControlTransport,
   type CredentialPort,
+  type DaemonClockPort,
   type DeliveryRequest,
   type DoctorCheckoutFacts,
   type DoctorCommitResolution,
@@ -191,6 +206,7 @@ import {
   type DoctorStateStoresRead,
   type DoctorWiringRead,
   type ExternalSystemInstance,
+  HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
   type HarnessLivenessFacts,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
@@ -243,10 +259,10 @@ import {
   appendBlockerQuestion,
   appendCloseoutOutcome,
   appendCommitTelemetry,
-  appendMergeGateVerification,
-  appendMergeTransaction,
   appendHarnessCaptureOutcome,
   appendHarnessTelemetry,
+  appendMergeGateVerification,
+  appendMergeTransaction,
   appendMergeWaiver,
   appendOwnerGateSlaDecision,
   appendPhaseTransition,
@@ -294,6 +310,7 @@ import {
   type ConfigResolvedSnapshot,
   createConfigCommandDefinition,
 } from "./commands/config.js";
+import { createDaemonCommandDefinition, type DaemonCommandRuntime } from "./commands/daemon.js";
 import { createDbCommandDefinition, type DbCommandRuntime } from "./commands/db.js";
 import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
 import { createLanesCommandDefinition } from "./commands/lanes.js";
@@ -323,6 +340,7 @@ import {
   type QueueRuntimeFailure,
   type QueueRuntimeMutation,
   type QueueRuntimeSchedule,
+  toQueueReadData,
 } from "./commands/queue.js";
 import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
@@ -476,6 +494,14 @@ export type PhaseRuntimeOptions = {
   readonly readChangeFolder?: (changeRef: string) => string | undefined;
   /** The non-gating capsule producer port (GH-240 F-2). */
   readonly capsule?: CapsuleProducerPort;
+  /**
+   * Additive redrive evidence source (TDR-0014 INV-8): the durable DM-18 receipt
+   * for the change ref and phase, supplying the proven discovered SHA.
+   */
+  readonly readRedriveEvidence?: (
+    changeRef: string,
+    phaseId: string,
+  ) => Promise<{ readonly commitSha: string; readonly source: "redrive" } | undefined>;
 };
 
 export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCommandRuntime => ({
@@ -536,6 +562,14 @@ export type CommitRuntimeOptions = {
   >;
   /** The non-gating capsule producer port (GH-240 F-2). */
   readonly capsule?: CapsuleProducerPort;
+  /**
+   * Additive redrive evidence source (TDR-0014 INV-8): the durable DM-18 receipt
+   * for the change ref and phase, supplying the proven discovered SHA.
+   */
+  readonly readRedriveEvidence?: (
+    changeRef: string,
+    phaseId: string,
+  ) => Promise<{ readonly commitSha: string; readonly source: "redrive" } | undefined>;
 };
 
 const scopePathsOf = (scope: unknown): readonly string[] => {
@@ -612,6 +646,143 @@ const commitActPorts = (options: CommitRuntimeOptions): Parameters<typeof runCom
   },
 });
 
+/**
+ * The TDR-0014 owner-side commit-effect wrapper (INV-1..INV-4).
+ *
+ * Reads HEAD once for the intent and the act's reset baseline, computes the
+ * sorted normalized staged path set with the same pure staging computation the
+ * act uses over the same scope, and appends the `outbox.effect` intent before
+ * the delivered commit primitive runs. A HEAD read failure starts no effect.
+ * The act's message composition, format, and landing order are untouched.
+ */
+const createCommitActRunner = (
+  options: CommitRuntimeOptions,
+  contextOf: (request: CommitActRequest) => { readonly changeRef: string; readonly phase: string },
+): ((request: CommitActRequest) => Promise<CommitActOutcome>) => {
+  const ports = commitActPorts(options);
+  return async (request) => {
+    if (request.dryRun) return runCommitAct(request, ports);
+    const context = contextOf(request);
+    const head = await options.git.head();
+    if (head === undefined) {
+      return { kind: "failure", code: "commit.atomic-abort", detail: "baseline HEAD unreadable" };
+    }
+    const tree = await options.git.readTree();
+    const staging = computeStagingPlan({
+      files: tree.files,
+      scopePaths: request.scope.paths,
+      scopeSource: request.scope.source,
+    });
+    const stagedPaths = normalizeStagedPaths(staging.include.map((entry) => entry.path));
+    let effectId: string | undefined;
+    if (stagedPaths.length > 0) {
+      effectId = `commit:${context.changeRef}:${context.phase}:${head}`;
+      const intent = beginCommitEffect({
+        store: options.store,
+        fenceToken: options.newFenceToken(),
+        effectId,
+        intentId: effectId,
+        ref: request.skeleton.ref,
+        changeRef: context.changeRef,
+        phase: context.phase,
+        baselineHead: head,
+        stagedPaths,
+        payloadDigest: sha256Hex(JSON.stringify({ effectId, baselineHead: head, stagedPaths })),
+        nowIso: options.nowIso(),
+      });
+      if (!intent.ok) {
+        return { kind: "failure", code: "commit.atomic-abort", detail: intent.code };
+      }
+      // Appendix I: the effect is `in-flight` while the primitive runs. A kill in
+      // the commit window therefore leaves the daemon something to detect.
+      const dispatched = appendOutboxEffect(options.store, options.newFenceToken(), {
+        ...intent.record,
+        state: "in-flight",
+        attempts: Math.max(1, intent.record.attempts),
+        recordedAt: options.nowIso(),
+      });
+      if (!dispatched.ok) {
+        return { kind: "failure", code: "commit.atomic-abort", detail: dispatched.code };
+      }
+    }
+    const outcome = await runCommitAct({ ...request, baselineHead: head }, ports);
+    if (
+      effectId !== undefined &&
+      (outcome.kind === "landed" ||
+        outcome.kind === "failure" ||
+        outcome.kind === "no-pending-work")
+    ) {
+      // The act returned (no kill): close the effect with a per-attempt receipt
+      // and its terminal state. A failed closure leaves it `in-flight`, which is
+      // safe: detection resolves it from the bounded log read.
+      const applied = outcome.kind === "landed" && outcome.commitSha !== undefined;
+      const appliedSha = applied ? outcome.commitSha : undefined;
+      appendCommandReceipt(options.store, options.newFenceToken(), {
+        schema: COMMAND_RECEIPT_PAYLOAD_SCHEMA,
+        effectId,
+        attempt: 1,
+        queryVerdict: applied ? "found" : "not-found",
+        status: applied ? "applied" : "failed",
+        evidence: [{ key: "check", value: "query-by-log-since" }],
+        ...(appliedSha === undefined ? {} : { discoveredSha: appliedSha }),
+        baselineHead: head,
+        recordedAt: options.nowIso(),
+      });
+      const effects = readOutboxEffects(options.store);
+      const prior = effects.ok ? effects.latest.get(effectId) : undefined;
+      if (prior !== undefined) {
+        appendOutboxEffect(options.store, options.newFenceToken(), {
+          ...prior,
+          state: applied ? "applied" : "failed",
+          attempts: 1,
+          recordedAt: options.nowIso(),
+        });
+      }
+    }
+    return outcome;
+  };
+};
+
+/**
+ * The durable DM-18 redrive receipt reader (TDR-0014 INV-7/INV-8).
+ *
+ * Only an attempt-0 redrive receipt whose effect belongs to the change ref and
+ * phase and whose recorded baseline equals the effect's baseline yields a SHA.
+ * Absent, foreign, or unknown evidence never fabricates one.
+ */
+export const createRedriveEvidenceReader = (
+  store: StateStorePort,
+): ((
+  changeRef: string,
+  phaseId: string,
+) => Promise<{ readonly commitSha: string; readonly source: "redrive" } | undefined>) => {
+  return async (changeRef, phaseId) => {
+    const effects = readOutboxEffects(store);
+    if (!effects.ok) return undefined;
+    const receipts = readCommandReceipts(store);
+    if (!receipts.ok) return undefined;
+    const receiptByEffect = new Map<string, (typeof receipts.records)[number]>();
+    for (const receipt of receipts.records) receiptByEffect.set(receipt.effectId, receipt);
+    for (const effect of [...effects.records].reverse()) {
+      if (effect.effectKind !== "commit") continue;
+      if (effect.changeRef !== changeRef || effect.phase !== phaseId) continue;
+      if (effect.baselineHead === undefined) continue;
+      const receipt = receiptByEffect.get(effect.effectId);
+      if (receipt === undefined) continue;
+      if (receipt.attempt !== 0) continue;
+      if (receipt.queryVerdict !== "found" || receipt.status !== "unknown") continue;
+      if (receipt.discoveredSha === undefined) continue;
+      if (receipt.baselineHead !== effect.baselineHead) continue;
+      const redrive = receipt.evidence.some(
+        (entry) => entry.key === "redrive" && entry.value === "DM-18",
+      );
+      if (!redrive) continue;
+      return { commitSha: receipt.discoveredSha, source: "redrive" };
+    }
+    return undefined;
+  };
+};
+
 /** Compose the phase-side atomic completion extension (GH-227 F-6/F-7). */
 export const createPhaseCommitExtension = (
   options: CommitRuntimeOptions,
@@ -672,6 +843,22 @@ export const createPhaseCommitExtension = (
       };
     }
     const commitSha = event?.commitSha ?? recordSha;
+    if (!commitPresent && options.readRedriveEvidence !== undefined) {
+      const redrive = await options.readRedriveEvidence(changeRef, phaseId);
+      if (redrive !== undefined) {
+        return {
+          recordPresent: record !== undefined,
+          ...(record?.commitIntent === undefined ? {} : { recordIntent: record.commitIntent }),
+          ...(record?.commitIntentBasis === undefined
+            ? {}
+            : { recordBasis: record.commitIntentBasis }),
+          ...(record?.timestamp === undefined ? {} : { transitionId: record.timestamp }),
+          commitPresent: true,
+          commitSha: redrive.commitSha,
+          evidenceSource: "redrive",
+        };
+      }
+    }
     return {
       recordPresent: record !== undefined,
       ...(record?.commitIntent === undefined ? {} : { recordIntent: record.commitIntent }),
@@ -682,7 +869,10 @@ export const createPhaseCommitExtension = (
     };
   },
   currentHead: () => options.git.head(),
-  runAct: (request: CommitActRequest) => runCommitAct(request, commitActPorts(options)),
+  runAct: createCommitActRunner(options, (request) => ({
+    changeRef: request.skeleton.ref,
+    phase: request.skeleton.phaseId ?? "delivery",
+  })),
 });
 
 /**
@@ -723,6 +913,7 @@ export const createProductionCommitRuntimeOptions = (
   phaseCommit: options.phaseCommit,
   nowIso: options.nowIso,
   newFenceToken: options.newFenceToken,
+  readRedriveEvidence: createRedriveEvidenceReader(options.store),
   ...(options.readChangeFolder === undefined ? {} : { readChangeFolder: options.readChangeFolder }),
 });
 
@@ -751,7 +942,10 @@ export const createCommitCommandRuntime = (
       phases: plan.phases,
     };
   },
-  runAct: (request) => runCommitAct(request, commitActPorts(options)),
+  runAct: createCommitActRunner(options, (request) => ({
+    changeRef: request.skeleton.ref,
+    phase: request.skeleton.phaseId ?? "standalone",
+  })),
   currentHead: () => options.git.head(),
   ...(phase === undefined ? {} : { phase }),
   ...(options.capsule === undefined ? {} : { capsule: options.capsule }),
@@ -806,6 +1000,14 @@ export type VerifyGatesRuntimeOptions = {
   readonly nowMs?: () => number;
   /** The non-gating capsule producer port (GH-240 F-2). */
   readonly capsule?: CapsuleProducerPort;
+  /**
+   * Additive redrive evidence source (TDR-0014 INV-8): the durable DM-18 receipt
+   * for the change ref and phase, supplying the proven discovered SHA.
+   */
+  readonly readRedriveEvidence?: (
+    changeRef: string,
+    phaseId: string,
+  ) => Promise<{ readonly commitSha: string; readonly source: "redrive" } | undefined>;
 };
 
 type ProviderFailureLike = { readonly ok: false; readonly code: string };
@@ -1153,14 +1355,16 @@ export type EdgeOptions = {
   readonly fenceNamespace?: string;
 };
 
-const trimTrailingSeparators = (path: string): string => path.replace(/[\\/]+$/u, "");
-
 const stateDirectoryFor = (options: EdgeOptions): string | undefined => {
   if (options.stateDirectory !== undefined) return options.stateDirectory;
   const environment = options.environment ?? {};
-  const home = options.homeDirectory ?? environment.HOME ?? environment.USERPROFILE;
-  if (home === undefined || home.length === 0) return undefined;
-  return `${trimTrailingSeparators(home)}/${options.brand.stateDirectoryName}`;
+  const scope = resolveStateDirectoryScope({
+    environment,
+    environmentPrefix: options.brand.environmentPrefix,
+    stateDirectoryName: options.brand.stateDirectoryName,
+    ...(options.homeDirectory === undefined ? {} : { homeDirectory: options.homeDirectory }),
+  });
+  return scope.ok ? scope.value : undefined;
 };
 
 /**
@@ -2720,6 +2924,7 @@ export type ConfigProgramOptions = {
   readonly board?: BoardComposition;
   readonly blockers?: BlockersComposition;
   readonly merge?: MergeCommandRuntime;
+  readonly daemon?: DaemonCommandRuntime;
   readonly retro?: RetroCompositionOptions;
   readonly spend?: SpendCompositionOptions;
 };
@@ -3292,6 +3497,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   if (options.spend !== undefined) {
     commands.spend = createSpendCommandDefinition(createSpendCommandRuntime(options.spend));
   }
+  if (options.daemon !== undefined) {
+    commands.daemon = createDaemonCommandDefinition(options.daemon);
+  }
   return {
     ok: true,
     brand,
@@ -3608,6 +3816,14 @@ export type QueueComposition = {
   readonly degraded?: readonly QueueDegradationReason[];
   readonly economics?: Readonly<Record<string, QueueLaneEconomics>>;
   readonly readyRuntime?: QueueReadyCommandRuntime;
+  /** The additive live-watch seam (GH-238 F-13); absent degrades to polling. */
+  readonly watch?: {
+    readonly transport?: ControlTransport;
+    readonly clock?: DaemonClockPort;
+    readonly signal?: { readonly interrupted: () => boolean };
+    readonly intervalMs?: number;
+    readonly maxIterations?: number;
+  };
 };
 
 type QueueBuilt =
@@ -3909,6 +4125,40 @@ const mutationOutcome = (
   };
 };
 
+/** The additive live-watch composition shared by queue and lanes (F-13). */
+const watchClockFor = (composition: QueueComposition): DaemonClockPort =>
+  composition.watch?.clock ?? {
+    nowMs: composition.nowMs,
+    nowIso: composition.nowIso,
+    sleep: (ms, signal) =>
+      new Promise((resolve) => {
+        const timer = setTimeout(resolve, ms);
+        if (signal?.cancelled() === true) {
+          clearTimeout(timer);
+          resolve();
+        }
+      }),
+  };
+
+const watchStreamFor = (
+  composition: QueueComposition,
+  topic: "queue" | "lanes",
+  read: () => WatchRead,
+): (() => AsyncIterable<string>) => {
+  const config = composition.watch;
+  const clock = watchClockFor(composition);
+  return () =>
+    watchLines({
+      topic,
+      read,
+      clock,
+      intervalMs: config?.intervalMs ?? 5_000,
+      signal: config?.signal ?? { interrupted: () => false },
+      ...(config?.transport === undefined ? {} : { transport: config.transport }),
+      ...(config?.maxIterations === undefined ? {} : { maxIterations: config.maxIterations }),
+    });
+};
+
 /** Compose the full queue command runtime from the injected state and facts. */
 export const createQueueCommandRuntime = (composition: QueueComposition): QueueCommandRuntime => {
   const degraded = composition.degraded ?? (["daemon-unreachable"] as const);
@@ -3930,6 +4180,12 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
   };
   return {
     readSchedule,
+    watch: watchStreamFor(composition, "queue", () => {
+      const read = readSchedule(20);
+      return read.ok
+        ? { ok: true as const, data: toQueueReadData(read.schedule, []) }
+        : { ok: false as const, code: read.code };
+    }),
     add: (input) =>
       mutate(() =>
         declareQueueEntry(composition.store, {
@@ -4113,24 +4369,33 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
 /** Compose the lanes command runtime from the same scheduling seams. */
 export const createLanesCommandRuntime = (
   composition: QueueComposition,
-): import("./commands/lanes.js").LanesCommandRuntime => ({
-  readLanes: () => {
+): import("./commands/lanes.js").LanesCommandRuntime => {
+  const readLanes = () => {
     const built = buildQueueFacts(composition, parkContextFor(composition));
     if (!built.ok) {
       return {
-        ok: false,
+        ok: false as const,
         code: "status.collector.lanes.unavailable",
         summary: `queue store is unreadable (${built.code})`,
       };
     }
     const schedule = computeQueueSchedule(built.facts, { next: 20 });
+    const daemon = readDaemonLanes(composition.store);
     return {
-      ok: true,
+      ok: true as const,
       data: foldLanes({
         schedule,
         economics: composition.economics ?? {},
         degraded: composition.degraded ?? (["daemon-unreachable"] as const),
+        ...(daemon.ok ? { daemonLanes: daemon.records } : {}),
       }),
     };
-  },
-});
+  };
+  return {
+    readLanes,
+    watch: watchStreamFor(composition, "lanes", () => {
+      const read = readLanes();
+      return read.ok ? { ok: true, data: read.data } : { ok: false, code: read.code };
+    }),
+  };
+};

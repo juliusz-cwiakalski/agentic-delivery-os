@@ -115,6 +115,7 @@ describe("ADR-verbatim scope and allowlist assertions", () => {
       "^packages/adapters/src/git/",
       "^packages/adapters/src/inference/",
       "^packages/testkit/src/commit/",
+      "^packages/adapters/src/daemon/",
       "^packages/mcp/src/serve\\.ts$",
       "^packages/cli/",
       "^packages/opencode/",

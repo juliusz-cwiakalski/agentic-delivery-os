@@ -1,0 +1,300 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-238
+branch: feat/GH-238/resident-dispatch-daemon
+status: PASS
+summary: >-
+  Second substantive review after the Phase 14 review-iteration-1 remediation (dea1b623,
+  97ca3cb3, c2cf4141, 85916605, ccb0b521). Both blocking findings are genuinely fixed in
+  production code rather than only in fixtures. F-1: `createPhaseCommitExtension` and
+  `createCommitCommandRuntime` now compose `createCommitActRunner`, which reads HEAD once,
+  computes the sorted normalized staged path set with the same `computeStagingPlan` the act uses,
+  appends the `outbox.effect` intent plus its `in-flight` transition before `runCommitAct`, closes
+  it with a per-attempt receipt and terminal state, and `createProductionCommitRuntimeOptions`
+  supplies `createRedriveEvidenceReader`; the new production-path test drives the harness's
+  `runPhase` (which builds the real extension) and proves the intent is durable before the commit
+  lands and that a post-crash run resolves the landed SHA with no second commit and an atomic
+  transition. F-2: `resolveStateDirectoryScope` strips the brand prefix's single trailing `_` and
+  reads exactly `<PREFIX>_STATE_DIR`; the tests now use the production prefix shape ("ADOS_"), the
+  unit's rendered `Environment=` name round-trips through the resolver, two scopes select two
+  paths, and the double-separator spelling is ignored, with no `--state-dir` flag. F-3 detection
+  reuses `resolveCommitEffect` (path-set match; zero/mismatch -> not-found, multiple -> unreadable,
+  no SHA) and has negative controls; F-4 dedupe runs under one fence acquisition with a
+  deterministic interleaving test; F-5 the resident tick publishes deduplicated bounded content
+  snapshots (queue/lanes) that are path/secret-free and shared with the initial subscribe snapshot,
+  proven through `createDaemonCommandRuntime` plus the real control server; F-6/F-7/F-8 map the
+  verdicts, document the buffer-as-cap, and compute reconciliation duplicates from the verified
+  ledger. Regressions are clean: 36/36 ACs mapped, 14/14 plan phases (103 tasks, phase 14
+  tasks 14.1-14.9 committed with evidence), 102/102 local TCs (100 PASS, TC-STATE-004/005 named
+  gaps, plus one inherited GH-237 reference), full `bun test` 6003 pass / 4 skip / 0 fail across
+  678 files, typecheck, lint, format, boundaries, error-table (114/114), doc-distribution (81
+  docs), privacy (0), and forbidden-literals (5/5) all green. No assertion was removed; the only
+  modified expectation is the four commit-envelope goldens' `timing.totalMs` 2000 -> 1000, a
+  correct consequence of splitting the harness clock's iso/ms counters, not a weakened check.
+  Five new non-blocking notes remain (0 critical/high/medium; 3 low, 2 info): the watch snapshot is
+  byte-bounded before envelope overhead is added and the frame-max-bytes truncation branch is
+  untested; phase 14 scope omits the four changed golden fixtures; a plan traceability reference
+  cites a non-existent TC-CONFIG-002; the effects module header still claims the module is never
+  imported by the daemon; and the `<PREFIX>_STATE_DIR` name remains host-injected rather than
+  derived from the brand. Verdict PASS; TDR-0013 owner ratification is still a hard PR-merge gate,
+  not a code defect.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 3
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+blocking: []
+
+verification:
+  diff_base: "origin/main-tools...HEAD (merge-base f87ec185 = GH-240; remediation delta reviewed is 284067c0..HEAD, 29 files, +1454/-112; GH-240 capsule/closeout files absent)"
+  commands_run:
+    - command: "bun test tests/behaviour/commit-act.test.ts tests/behaviour/daemon-effects.test.ts tests/behaviour/daemon-reconciliation.test.ts tests/behaviour/config-resolver.test.ts tests/behaviour/watch-stream.test.ts tests/behaviour/daemon-watch-state-changes.test.ts tests/behaviour/daemon-lifecycle.test.ts"
+      result: "52 pass, 0 fail, 482 expect() calls, 1.42s"
+    - command: "bun test tests/structure/content-inventory.test.ts tests/structure/daemon-contract.test.ts tests/structure/daemon-imports.test.ts tests/boundaries"
+      result: "161 pass, 0 fail, 66.22s"
+    - command: "bun test (full repository)"
+      result: "6003 pass, 4 skip, 0 fail; 6007 tests across 678 files (301.08s)"
+    - command: "pnpm typecheck"
+      result: "exit 0 (all packages)"
+    - command: "pnpm lint"
+      result: "exit 0 (60 warnings, 12 infos, 0 errors; diagnostics limit reached but no errors)"
+    - command: "pnpm format:check"
+      result: "exit 0 (1725 files)"
+    - command: "pnpm check:boundaries"
+      result: "exit 0 (333 modules, 946 dependencies; ambient-globals, workspace-entrypoints, secret-read-boundary OK)"
+    - command: "bun run scripts/checks/error-table-sync.ts"
+      result: "exit 0 (entries=114 documented=114 corpus=49)"
+    - command: "bash scripts/.tests/test-doc-distribution.sh"
+      result: "exit 0 (no drift; 81 in-scope docs)"
+    - command: "bun run scripts/checks/privacy-literals.ts"
+      result: "exit 0 (3036 files scanned, 0 violations)"
+    - command: "bun run scripts/checks/forbidden-literals.ts"
+      result: "exit 0 (5/5 scope classes, 0 violations)"
+    - command: "plan/spec parse (bun + YAML)"
+      result: "14 phases, 103 tasks, 36 distinct ACs in the spec, 36/36 ACs in the plan, 102 local TC ids (+1 inherited TC-LEASE-002 reference)"
+    - command: "git status --porcelain"
+      result: "clean after the full battery (no source, test, or artifact modified by this review)"
+  ac_verification:
+    traced: "36/36 ACs appear in the plan; 102/102 local TCs recorded in test-plan §; 100 PASS, 2 named gaps (TC-STATE-004, TC-STATE-005); TC-LEASE-002 is an inherited GH-237 reference, not a local TC."
+    verified_remediated:
+      - "AC-F10-2 / AC-F8-4: production `phase complete` and `commit` wrappers write the pre-commit intent, supply the DM-18 reader, and converge after a kill with the landed SHA and no second commit (commit-act.test.ts:102)."
+      - "AC-F15-1: the resolver and the installed unit agree on `<PREFIX>_STATE_DIR` with one separator; two scopes select two paths and a wrong spelling is ignored (config-resolver.test.ts:252)."
+      - "AC-F10-2 detection half: mismatch/zero -> not-found, multiple/unverifiable -> unreadable, no discovered SHA (daemon-effects.test.ts:229)."
+      - "AC-F6-2: same-key appends yield exactly one intent under an interleaved race (daemon-effects.test.ts:299)."
+      - "AC-F13-1: reachable-daemon watches receive a second bounded line on content change and nothing on an unchanged tick (daemon-watch-state-changes.test.ts:191, watch-stream.test.ts:142)."
+      - "AC-F8-1: reconciliation `duplicates` is measured from the verified ledger and non-zero when a duplicate identity is appended (daemon-reconciliation.test.ts:286)."
+    plan_phases: "14/14 present; 103 tasks; phase 14 tasks 14.1-14.9 have commits (dea1b623 for 14.1-14.8, 97ca3cb3 evidence, c2cf4141 for 14.9) and pm-notes entries naming phase 14, the commit, and the gate result. No OPEN_PHASES or EVIDENCE_MISSING. One minor SCOPE_DEVIATION recorded as F-10."
+    named_tc_gaps: ["TC-STATE-004", "TC-STATE-005"]
+
+previous_findings_resolution:
+  - id: F-1
+    severity: high
+    status: resolved
+    evidence: >-
+      `packages/cli/src/edge.ts:654` `createCommitActRunner` is now the `runAct` of both
+      `createPhaseCommitExtension` (edge.ts:868) and `createCommitCommandRuntime` (edge.ts:943); it
+      returns early on dryRun, reads HEAD once, computes `stagedPaths` with `computeStagingPlan`
+      over `request.scope`, calls `beginCommitEffect` then `appendOutboxEffect` with state
+      `in-flight` before `runCommitAct({...request, baselineHead: head})`, and closes the effect with
+      `appendCommandReceipt` (attempt 1) plus the terminal outbox state. `createProductionCommitRuntimeOptions`
+      (edge.ts:916) supplies `readRedriveEvidence: createRedriveEvidenceReader(options.store)`
+      (edge.ts:749), which yields a SHA only from an `attempt: 0`, `found`, `unknown` receipt whose
+      effect/changeRef/phase/baseline match and whose evidence names `redrive`/`DM-18`. The new
+      production-path test `tests/behaviour/commit-act.test.ts:102` runs the real
+      `createPhaseCommitExtension` through the harness `runPhase`, observes an `in-flight` intent
+      after the commit object lands and before the kill, detects the effect with
+      `detectDaemonEffects`/`recordRedriveRequest`, then re-runs completion and asserts
+      `data.commitSha === orphan`, `reconciliation.completed === "transition"`, an unchanged commit
+      count, and an atomic transition carrying the orphan SHA. Not fixture-only: the harness composes
+      the real factories, and the reader is the production one.
+  - id: F-2
+    severity: high
+    status: resolved
+    evidence: >-
+      `packages/core/src/config/catalog.ts:775` derives
+      `prefix = environmentPrefix.toUpperCase().replace(/_+$/u, "")` and
+      `name = prefix + "_STATE_DIR"`,
+      so the production brand prefix "ADOS_" reads `ADOS_STATE_DIR` (one separator) and ignores
+      `ADOS__STATE_DIR`. `tests/behaviour/config-resolver.test.ts:215` uses the production prefix
+      shape, a double-separator negative, and a `renderSystemdUnit` `Environment=` name round-trip
+      (line 252) plus a two-scope positive (line 273). No `--state-dir` flag or state-directory config
+      key exists (spec + catalog). The formerly uncaught shape (`environmentPrefix: "ados"`) is gone.
+  - id: F-3
+    severity: medium
+    status: resolved
+    evidence: >-
+      `packages/core/src/app/effects.ts:327` `detectDaemonEffects` now calls `resolveCommitEffect`
+      with the recorded `baselineHead`/`stagedPaths`; `packages/core/src/domain/effect-protocol.ts:62`
+      returns `not-found` for a zero-commit read or a path-set mismatch and `unreadable` for multiple
+      commits or a missing recorded set, always `status: unknown` with no SHA; a SHA is passed only
+      when the outcome is `already-applied`. `tests/behaviour/daemon-effects.test.ts:229` is the
+      negative control: a single mismatched commit records `not-found` with no `discoveredSha`, zero
+      commits records `not-found`, multiple commits records `unreadable`.
+  - id: F-4
+    severity: medium
+    status: resolved
+    evidence: >-
+      `packages/core/src/app/effects.ts:135` `appendOutboxEffect` now acquires the fence first, then
+      performs the dedupe read, then appends, then releases; a caller that loses the fence re-reads
+      once and returns the identical prior intent if present, otherwise the busy failure stands. The
+      store's fence is an exclusive file lock (`state/index.ts` semantics), so two writers cannot both
+      observe "no prior". `tests/behaviour/daemon-effects.test.ts:299` deterministically re-enters the
+      second append from the first caller's dedupe read and asserts exactly one intent remains (the
+      second caller gets the busy failure, never a second record). AC-F6-2 holds.
+  - id: F-5
+    severity: medium
+    status: resolved
+    evidence: >-
+      `packages/core/src/app/control-server.ts:317` adds `publishState`, driven by an injected
+      `stateChanges` source, emitting one deduplicated event per changed topic with a monotonic
+      cursor. `packages/core/src/app/daemon-runtime.ts:239` calls it on every resident tick.
+      `packages/cli/src/daemon-compose.ts:249` composes one bounded projection shared by the initial
+      `subscribe` snapshot and the live source: queue rows are `{ref, repository, priority}` and lanes
+      are `{ref, state, harnessKind, sessionId, classification}`, so `repositoryRoot`, caller
+      principal, and the raw state directory are excluded; `boundedProjection` (daemon-compose.ts:186)
+      caps by count (`QUEUE_MAX_ENTRIES`, `DAEMON_MAX_STATUS_LANES`) and serialized bytes with
+      `truncated`/`truncationReason`; content equality uses recursively sorted keys so a reordering is
+      not a change. `tests/behaviour/daemon-watch-state-changes.test.ts` drives the production
+      `createDaemonCommandRuntime` plus the real control server across queue-priority, lane-state,
+      no-change, and 200-row truncation cases, and `tests/behaviour/watch-stream.test.ts:142` proves a
+      second bounded line through the real server.
+  - id: F-6
+    severity: low
+    status: resolved
+    evidence: >-
+      The recommended option was implemented and pinned: `effect-protocol.ts:62` maps a path-set
+      mismatch to `not-found` and multiple commits or an unverifiable recorded set to `unreadable`,
+      neither carrying a SHA; `doc/spec/features/feature-resident-daemon.md`,
+      `feature-commit-primitive.md`, the test spec, and `daemon-effects.test.ts` state and assert the
+      mapping. Residual behavioral truth (stays `unknown`, no re-apply) is unchanged.
+  - id: F-7
+    severity: info
+    status: resolved
+    evidence: >-
+      `daemon.subscription-buffer` is now documented as the single capacity bound for both the
+      per-subscription frame buffer and the per-connection subscription count in
+      `doc/spec/features/feature-config-layer.md`, `feature-resident-daemon.md`, and
+      `doc/spec/nonfunctional.md`, matching `control-session.ts:187`. No new configuration key was
+      added.
+  - id: F-8
+    severity: info
+    status: resolved
+    evidence: >-
+      `packages/core/src/app/daemon-reconcile.ts:92` `countDuplicateIdentities` counts a second record
+      of the same kind and key whose payload is identical to the first, across queue entry/dependency/
+      park, daemon lane, blocker question, outbox effect, and command receipt kinds; the result is
+      wired at line 304. `tests/behaviour/daemon-reconciliation.test.ts:286` appends a duplicate lane
+      identity and asserts `duplicates: 1`. The value is measured, not a constant, and the system spec
+      is reconciled.
+
+findings:
+  - id: F-9
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/cli/src/daemon-compose.ts:186
+    message: >-
+      `boundedProjection` bounds the snapshot's serialized bytes to `DAEMON_MAX_FRAME_BYTES`, but the
+      control frame that carries it adds the event envelope (v/kind/type/topic/cursor) and
+      `callerPrincipal`. A count-capped snapshot between roughly 65,400 and 65,536 bytes therefore
+      encodes to a frame just over `daemon.frame-max-bytes`; `decodeControlLine` rejects it and
+      `watch.ts` silently drops it (`if (decoded.ok) queue.push(...)`), and the reachable path does not
+      poll, so that change is never printed. The byte-bound (halving) branch is not exercised: the new
+      tests only reach the 200-row count cap.
+    suggestion: >-
+      Reserve the envelope overhead in the projection bound (e.g. cap at `DAEMON_MAX_FRAME_BYTES`
+      minus a fixed overhead budget) or bound the encoded frame, and add a test that forces the
+      `frame-max-bytes` branch and asserts the whole encoded event line is at or under the bound.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-07--GH-238--resident-dispatch-daemon/chg-GH-238-plan.yaml:2176
+    message: >-
+      Phase 14's declared `scope.files` lists `tests/fixtures/commit/harness.ts` but not the four
+      `tests/fixtures/envelope/golden/commit-*.json` files changed in the same commit (dea1b623) when
+      the harness clock split its iso and ms counters. This is a minor SCOPE_DEVIATION in the plan
+      record; the change itself is a legitimate fixture refresh (only `timing.totalMs` 2000 -> 1000),
+      not an assertion weakening.
+    suggestion: >-
+      Add the four golden fixtures to phase 14 `scope.files` (or note the harness clock split as the
+      cause) so the plan record matches the delivered diff.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-07--GH-238--resident-dispatch-daemon/chg-GH-238-plan.yaml:2227
+    message: >-
+      Phase 14 task 14.2 and the phase 14 coverage bullet (line 2283) cite `TC-CONFIG-001/002`, but the
+      test plan defines only `TC-CONFIG-001`; `TC-CONFIG-002` does not exist, so the traceability
+      reference is dangling. The 102/102 local TC count itself is unaffected.
+    suggestion: >-
+      Drop the `/002` reference or add the TC to the test plan, keeping the 102/102 count accurate.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: info
+    confidence: high
+    category: clarity
+    location: packages/core/src/app/effects.ts:7
+    message: >-
+      The module header states the composition "is the lane/one-shot owner path and is never imported
+      by the daemon", but the same module exports `detectDaemonEffects` and `recordRedriveRequest`, and
+      `packages/cli/src/daemon-compose.ts` imports `detectDaemonEffects` from the core app barrel. The
+      sentence is true only of the owner-side ledger functions, not of the module.
+    suggestion: >-
+      Reword the header to separate the owner-side ledger API (not used by the daemon) from the daemon
+      detection API that shares the module, so the boundary statement is accurate.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-13
+    severity: info
+    confidence: medium
+    category: architecture
+    location: packages/cli/src/daemon-compose.ts:78
+    message: >-
+      The unit's `<PREFIX>_STATE_DIR` name is a required host-injected `DaemonComposition.environmentName`
+      (also used to spawn the detached child), and no in-repo code derives it from
+      `brand.environmentPrefix`; resolver/unit agreement is proven by the round-trip test rather than
+      enforced by one shared derivation. The daemon's `effects` port (list/logSince/record) is likewise
+      host-composed.
+    suggestion: >-
+      Optionally export a `daemonStateDirectoryEnvironmentName(brand)` helper (prefix plus `STATE_DIR`
+      with one separator) and use it for the composition field and the resolver input so the two
+      cannot drift; otherwise record the host-composition boundary as an accepted residual.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+accepted_residuals:
+  - "TDR-0013 remains `Proposed` (decision_date null). Owner ratification is a hard PR-merge gate, not a code defect; do not merge until the record is accepted and its status flips."
+  - "TC-STATE-004/TC-STATE-005 remain named gaps in the test plan (no dedicated wake-durability suite); the wake port is delivered, injected, and structurally re-read on the next wake."
+  - "Cross-process status reports `resident` for a foreground daemon because foreground is an attachment property and is not persisted; the spec pins no durable mode."
+  - "The wrapper's staging pre-read and the act's own tree read are two reads; working-tree drift between them can only produce a false `unknown`/`failed` effect (no second commit, no guessed SHA), which is fail-safe and covered by TDR-0013's negative outcomes."
+  - "An outbox effect identity accumulates `accepted` -> `in-flight` -> terminal records under one `recordKey` (append log, latest wins); the reconciliation duplicate counter only flags identical-payload repeats, so these state transitions are not reported as duplicates."
+  - "If another writer holds the state fence, the pre-commit intent append returns `state.lock.busy` and the wrapper aborts the commit with `commit.atomic-abort`. This is fail-closed per TDR-0013 INV-1 (the primitive is not invoked without a durable intent) and retryable; it is not a second commit."
+  - "The daemon composition ports (`effects` list/logSince/record and `environmentName`) are supplied by the external host composition root; in-repo proof is at the delivered factories/composition functions and the production-path tests, consistent with the test plan's accepted residual that no live binary composition root is exercised (F-13)."
+  - "The four commit-envelope goldens changed only `timing.totalMs` 2000 -> 1000 after the harness clock split its iso/ms counters; the elapsed-time measurement is now independent of the number of record timestamps, which is more correct, and no assertion was removed or relaxed."
+  - "Algorithmic (not OS-level) concurrency, environment-sensitive latency, real cross-user/systemd/launchd exercises, and the injected-tracker-effect tier remain the DoR-3 accepted boundaries."
+  - "The merged GH-240 capsule/closeout feature is untouched by the GH-238 delta; the full battery including capsule suites is green."
+  - "No business-truth or merge path was added: no `doc/business/**`, no cloud names, no merge invocation; forbidden-literals 5/5 and the daemon import/boundary checks are green."
+
+reviewed_at: 2026-11-08T04:20:00Z
+next_step: >-
+  PROCEED. The two former blockers are genuinely fixed in production code and the regression battery
+  is green; TDR-0013 owner ratification remains the only PR-merge gate. F-9 (watch frame byte bound
+  including envelope overhead and its untested truncation branch) is the one worth a follow-up commit
+  in the same change; F-10/F-11 are plan-record bookkeeping fixes; F-12/F-13 are clarity/residual
+  notes. No CALL_CODER round is required for merge readiness.

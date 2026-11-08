@@ -14,6 +14,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./daemon": {
+      "types": "./dist/daemon-main.d.ts",
+      "default": "./dist/daemon-main.js"
     }
   },
   "imports": {
@@ -32,6 +36,7 @@
       "./azure",
       "./ci",
       "./credentials",
+      "./daemon",
       "./file",
       "./git",
       "./github",

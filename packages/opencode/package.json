@@ -27,6 +27,7 @@
       "./azure",
       "./ci",
       "./credentials",
+      "./daemon",
       "./file",
       "./git",
       "./github",

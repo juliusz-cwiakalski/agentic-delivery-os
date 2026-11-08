@@ -7,7 +7,7 @@
  * safety, commitlint, and session facts are injected fakes.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import {
   nodePmNotesFileSystemFacts,
   parseConfigYaml,
@@ -19,6 +19,7 @@ import { createPhaseCommandDefinition } from "../../../packages/cli/src/commands
 import {
   createCommitCommandRuntime,
   createPhaseCommitExtension,
+  createRedriveEvidenceReader,
 } from "../../../packages/cli/src/edge";
 import type { CommandDefinition } from "../../../packages/cli/src/index";
 import { type CliDependencies, runCli } from "../../../packages/cli/src/index";
@@ -124,17 +125,23 @@ export type HarnessClock = {
 
 export const makeHarnessClock = (): HarnessClock => {
   const issued: string[] = [];
-  let index = 0;
+  // Elapsed time and record timestamps are separate counters: a durable record
+  // timestamp is not elapsed runtime, so extra `nowIso` reads must not shift the
+  // envelope's measured `totalMs`.
+  let isoIndex = 0;
+  let msIndex = 0;
   return {
     nextIso: () => {
-      const iso = new Date(Date.UTC(2026, 10, 5, 12, index, 0)).toISOString().replace(".000Z", "Z");
-      index += 1;
+      isoIndex += 1;
+      const iso = new Date(Date.UTC(2026, 10, 5, 12, isoIndex, 0))
+        .toISOString()
+        .replace(".000Z", "Z");
       issued.push(iso);
       return iso;
     },
     nowMs: () => {
-      index += 1;
-      return index * 1_000;
+      msIndex += 1;
+      return msIndex * 1_000;
     },
     get issued() {
       return [...issued];
@@ -159,6 +166,15 @@ export type CommitHarnessOptions = {
   readonly phaseCommit?: boolean;
   /** The non-gating capsule producer port (GH-240 F-2). */
   readonly capsule?: CapsuleProducerPort;
+  /** The additive redrive evidence source (TDR-0014 INV-8). */
+  readonly readRedriveEvidence?: (
+    changeRef: string,
+    phaseId: string,
+  ) => Promise<{ readonly commitSha: string; readonly source: "redrive" } | undefined>;
+  /** Compose the production DM-18 receipt reader over the harness store. */
+  readonly readRedriveEvidenceFromStore?: boolean;
+  /** Runs after the real commit object lands; throwing simulates a kill window. */
+  readonly afterCommitLand?: (sha: string) => void;
   /** `null` makes ref resolution fail; omitted resolves the fixture ref. */
   readonly resolvedRef?: {
     readonly ref: string;
@@ -254,7 +270,9 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
   repo.run(["add", "-A", "--", "doc"]);
   repo.run(["commit", "--no-verify", "--no-gpg-sign", "-m", "docs: seed change artifacts"]);
 
-  const stateRoot = join(repo.root, "state");
+  // State lives outside the fixture checkout: durable evidence written before a
+  // commit must never appear as untracked working-tree material.
+  const stateRoot = join(tempRoot, `${basename(repo.root)}-state`);
   const identity = makeIdentity(stateRoot, { workspaceId: "commit-fixture" });
   const store = openStore(identity).store;
   const clock = makeHarnessClock();
@@ -292,9 +310,12 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
       if (faults.commitObject) {
         return { ok: false as const, detail: "injected commit-object failure" };
       }
-      const committed = await git.commit(message);
-      if (committed.ok) events.push("commit-object");
-      return committed;
+      const landed = await git.commit(message);
+      if (landed.ok) {
+        events.push("commit-object");
+        options.afterCommitLand?.(landed.sha);
+      }
+      return landed;
     },
   };
   const commitStore: StateStorePort = {
@@ -385,6 +406,11 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
     phaseCommit: options.phaseCommit ?? true,
     nowIso: () => clock.nextIso(),
     newFenceToken,
+    ...(options.readRedriveEvidence === undefined
+      ? options.readRedriveEvidenceFromStore === true
+        ? { readRedriveEvidence: createRedriveEvidenceReader(commitStore) }
+        : {}
+      : { readRedriveEvidence: options.readRedriveEvidence }),
   });
   const phaseRuntimeWithCommit = { ...facts, commit: extension };
   const phaseAtomicDefinition = createPhaseCommandDefinition(phaseRuntimeWithCommit);
@@ -508,7 +534,7 @@ export const createCommitHarness = (options: CommitHarnessOptions = {}): CommitH
     planPhase,
     cleanup: () => {
       repo.cleanup();
-      removeRoot(join(repo.root, "state"));
+      removeRoot(stateRoot);
     },
   };
 };

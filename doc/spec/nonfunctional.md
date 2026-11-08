@@ -6,7 +6,7 @@ last_updated: 2026-11-08
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-242]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -389,3 +389,7 @@ performance/platform reference evidence, terminal accessibility criteria, restar
 matrix ownership, and an early local-operability check. Deferred Phase 2 routes remain
 open. See the [FSE audit](../inception/analysis/fse-audit.md) for environment findings;
 docs-only review does not establish product test results or branch-wide green CI.
+
+## GH-238 NFR evidence
+
+No live network, real credentials, or unbounded sleeps in tests; injected clock/transport/supervisor/lane-executor/external-effect seams. Bounded frames (65 536 bytes), subscription frame buffers and per-connection subscription capacity (256), status lanes (200), reconciliation lanes (200), human output (40 lines/8 192 bytes), receipt evidence (512 bytes), and response timeouts (2 000 ms). The daemon lock token is a same-user ownership capability, not a credential, and is excluded from command envelopes and goldens.

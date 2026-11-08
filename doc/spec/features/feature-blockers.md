@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The typed blocker and question channel: the closed four-type question vocabulary with one answer channel per type, the `owner` | `coordinator` audience and the delegation policy-as-data confused-deputy guard, the layered credential guard (registered-secret-value refusal on every content path including lane/ref identifiers, the variable-name shape on credential-missing question text, no pattern layer per TDR-0012), the append-only question and answer intent records with derived open/answered closure, the recorded `laneResume` projection (boundary-note, attach-continue, or the resume-prompt-reentry fallback with its prefill cost) conditioned on the adapter resume-injection capability, the deliberate `applied: false` v0 posture, the single shared ranking consumed by the blockers list, the digest `typed-questions` section, and the brief blocker-questions anchor, the bounded deterministic `blockers list`/`answer`/`publish` surface and its exit matrix, and the four-row `blockers` error family."
 links:
-  related_changes: ["GH-230", "GH-242"]
+  related_changes: ["GH-230", "GH-238", "GH-242"]
   related_decisions: ["ADR-0003", "TDR-0012"]
   contracts:
     - "packages/core/src/contracts/blockers.ts"
@@ -406,3 +406,7 @@ One `blockers list`, `status`, or `brief` invocation performs one verified block
 See also: [Status Digest](feature-status-digest.md), [Brief](feature-brief.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Owner-Gate SLA](feature-owner-gate-sla.md), [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Branding Seam and Working Name](feature-branding-seam.md), [TDR-0012](../../decisions/TDR-0012-blockers-credential-guard-pattern-deferral.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), and the [repository glossary](../../overview/glossary.md).
 
 **Change record:** `doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/`.
+
+## GH-238 applying consumer
+
+The blocker channel remains the only writer. A durable answer stays visible with `applied: false`; the daemon records a pending `resumeIntent` on the lane execution record only when a lane exists and applies at the next safe boundary. With no lane no intent or application step is fabricated.

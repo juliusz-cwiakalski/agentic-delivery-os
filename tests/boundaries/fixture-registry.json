@@ -515,5 +515,27 @@
       "tc": "TC-EXIT-003",
       "path": "packages/adapters/src/probe.ts"
     }
+  ],
+  "daemon-merge-absence": [
+    {
+      "id": "daemon-core-app-merge",
+      "tc": "TC-MERGEABS-001",
+      "path": "packages/core/src/app/daemon-merge-probe.ts"
+    },
+    {
+      "id": "daemon-core-domain-merge",
+      "tc": "TC-MERGEABS-001",
+      "path": "packages/core/src/domain/daemon-merge-probe.ts"
+    },
+    {
+      "id": "daemon-cli-merge",
+      "tc": "TC-MERGEABS-001",
+      "path": "packages/cli/src/daemon-compose.ts"
+    },
+    {
+      "id": "daemon-adapters-merge",
+      "tc": "TC-MERGEABS-001",
+      "path": "packages/adapters/src/daemon/probe.ts"
+    }
   ]
 }

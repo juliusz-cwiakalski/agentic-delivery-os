@@ -21,6 +21,7 @@ import {
   type QueueLanesData,
   type QueueParkedReason,
   type QueueWeightClass,
+  type DaemonLaneRecord,
 } from "#contracts";
 import type { QueueSchedule } from "./queue-precedence.js";
 
@@ -37,6 +38,8 @@ export type QueueLaneFoldInput = {
   readonly schedule: QueueSchedule;
   readonly economics: Readonly<Record<string, QueueLaneEconomics>>;
   readonly degraded: readonly QueueDegradationReason[];
+  /** Daemon execution evidence folded beside the queue truth (F-9, DM-13). */
+  readonly daemonLanes?: readonly DaemonLaneRecord[];
 };
 
 const UNDERIVABLE_WARNING = "economics-underivable" as const;
@@ -98,11 +101,24 @@ export const foldLanes = (input: QueueLaneFoldInput): QueueLanesData => {
   const leaseByRepository = new Map(
     input.schedule.leases.map((lease) => [lease.repository, lease]),
   );
+  const daemonByRef = new Map<string, DaemonLaneRecord>();
+  for (const lane of input.daemonLanes ?? []) daemonByRef.set(lane.ref, lane);
   const lanes: QueueLane[] = entries.map((entry) => {
     const lease =
       entry.repository === undefined ? undefined : leaseByRepository.get(entry.repository);
     const economics = input.economics[entry.ref];
+    const daemon = daemonByRef.get(entry.ref);
     const resolved = laneStateFor(entry, lease !== undefined, economics);
+    if (daemon?.state === "failed") {
+      resolved.state = "failed";
+      resolved.reason = "restart-budget-exhausted";
+    } else if (daemon?.state === "delivering") {
+      resolved.state = "delivering";
+      delete resolved.reason;
+    } else if (daemon?.state === "preempted") {
+      resolved.state = "parked";
+      resolved.reason = "parked:preempted-for-close-item";
+    }
     const amplificationWarning =
       economics?.amplificationWarning ??
       (economics === undefined || economics.restarts === null || economics.amplification === null

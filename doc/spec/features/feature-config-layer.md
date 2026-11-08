@@ -2,13 +2,13 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys) and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003"]
 ---
 
@@ -316,3 +316,47 @@ concurrency, or CI-slot key is declared or reserved. See
 - [Harness Adapters](feature-harness-adapters.md) adds the typed `harness` branch (selected kind, execution kind, store locations, deny-by-default environment allowlist); a literal value in an allowlist entry is rejected by `config.secret.forbidden`.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) documents the `lane` branch (liveness interval and restart budget) and consumes the resolved values as policy data.
 - [Scheduling Engine](feature-scheduling-engine.md) documents the `queue` branch (lease TTL and per-condition-type park recheck) and consumes the resolved values as policy data.
+
+## The daemon configuration branch
+
+The typed `daemon` branch carries eleven keys with shipped defaults. An absent
+branch resolves to the defaults with `defaults` origins. An unknown key is
+`config.key.unknown`; a non-integer, zero, or negative interval or bound is
+`config.value.invalid` naming the key. No invalid input silently falls back.
+
+| Key | Shape | Default | Semantics |
+|---|---|---|---|
+| `daemon.heartbeat-interval` | integer milliseconds | `5000` | Heartbeat write cadence. |
+| `daemon.heartbeat-cycle` | integer milliseconds | `60000` | Collection cycle used for the typed-question surfacing bound and dashboard staleness. |
+| `daemon.lock-staleness` | integer milliseconds | `30000` | A lock whose heartbeat age is at or beyond this bound is stale and takeover-eligible. Distinct from the state fence staleness window. |
+| `daemon.poll-interval` | integer milliseconds | `60000` | Bounded fallback wake interval when poke and event-log tail are unavailable. |
+| `daemon.watch-poll-interval` | integer milliseconds | `5000` | State polling cadence for a watch in declared degraded mode. |
+| `daemon.response-timeout` | integer milliseconds | `2000` | Bounded response timeout before a CLI falls back to state. |
+| `daemon.subscription-buffer` | integer frames | `256` | Per-subscription bounded frame buffer and the per-connection subscription-count capacity bound; overflow or over-cap refuses/degrades that subscriber. |
+| `daemon.frame-max-bytes` | integer bytes | `65536` | Maximum accepted control frame size. |
+| `daemon.reconcile-max-lanes` | integer lanes | `200` | Reconciliation bound; excess lanes are reported truncated, never silently dropped. |
+| `daemon.transport` | enum | `unix` | `unix` and `stdio` are implemented; `tcp`, `tls`, `ssh`, and `container-pipe` are declared but not delivered and are refused with `config.value.invalid` naming the implemented set. |
+| `daemon.socket-path` | string path | `<state-dir>/daemon.sock` | Must resolve inside the state directory; an outside path is `config.value.invalid`. The literal value appears in envelopes and only as the normalized `<state-dir>/daemon.sock` placeholder in goldens. |
+
+## The poll configuration branch
+
+The typed `poll` branch is a dynamic-name record over the closed platform set
+`{github, gitlab, jira}`. Each platform object carries `base-interval`,
+`max-interval`, and `min-spacing` as integer milliseconds, defaulting to
+`5000`, `60000`, and `1000`. An unknown platform or key is `config.key.unknown`;
+a non-integer, zero, or negative value, or a `base-interval` above
+`max-interval`, is `config.value.invalid`. A one-shot read is not subject to the
+resident backoff state and reads once.
+
+The state-directory scope is the process-environment variable
+`<PREFIX>_STATE_DIR`, formed from the brand `environmentPrefix` — whose single
+trailing `_` is the prefix separator — plus `STATE_DIR`. The name carries exactly
+one underscore between prefix and suffix, so a double-separator spelling is not
+honoured and leaves the default in effect. An explicitly set absolute value wins
+outright and is never merged with the default; a non-absolute value is
+`config.value.invalid`. The default when the variable is unset is
+`<home>/<brand.stateDirectoryName>`. No `--state-dir` flag and no
+state-directory configuration key exist. The supervisor unit writes its
+`Environment=` binding under the same name, so the installed unit and the
+resolver agree on the scope. See [Resident Dispatch
+Daemon](feature-resident-daemon.md).

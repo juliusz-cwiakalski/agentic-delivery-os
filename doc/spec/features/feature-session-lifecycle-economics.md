@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SESSION-LIFECYCLE-ECONOMICS
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "Session lifecycle economics: adapter-sourced progress signals (heartbeat age, session traffic, token delta) projected into the unchanged watchdog signal shape with the exact-three liveness-kind vocabulary untouched, source-less lanes still classifying `watchdog.signals-absent` and no CPU signal anywhere; prefill/resume safety so a rising token delta or traffic classifies `progressing` and a stall requires the full corroboration; the classified `watchdog.liveness-stalled` refusal at exit 1; capability-driven attach-and-continue versus classified uneconomical re-entry; a durable per-delivery restart budget consumed by supervised-style and one-shot-style compositions through one gate, with the budget gate evaluated before evidence completeness, a loud `dispatch.restart-budget-exceeded` refusal, a terminal exhaustion record carrying the restart history, and a failed terminal append surfaced as `terminalAppendError`; additive `economics.restart` and `economics.budget-exhaustion` record kinds with no schema-version bump; a rebuildable per-delivery economics view deriving restart count, ordered history, and the resume-amplification signal with null-with-warning degradation; and the typed `lane.liveness-interval` and `lane.restart-budget` configuration branch."
 links:
-  related_changes: ["GH-235", "GH-237"]
+  related_changes: ["GH-235", "GH-237", "GH-238"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/economics.ts"
@@ -322,3 +322,7 @@ its restart budget projects the closed lane state `failed` with reason
 looks without a second read path. The scheduler adds no restart record, no
 budget rule, and no amplification rule of its own. See
 [Scheduling Engine](feature-scheduling-engine.md).
+
+## GH-238 supervision
+
+The daemon is a supervised consumer of the restart gate: reconciliation consumes exactly one restart per interruption through the delivered gate, reattaches alive lanes with no increment, and applies prefill-safe liveness (rising token delta or traffic is never stalled). The full dispatch loop remains M1-S9.

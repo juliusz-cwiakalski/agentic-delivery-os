@@ -31,6 +31,7 @@ export const DOMAIN_KINDS = [
   "spend",
   "queue",
   "dispatch",
+  "daemon",
 ] as const;
 
 /**
@@ -1249,5 +1250,93 @@ export const ERROR_TABLE = [
       "Answer from the question's audience (or an identity the delegation policy allows); the shipped policy refuses coordinator answering an owner-audience question (delegation policy: none).",
     projectionClass: "user-validation",
     summary: "The answerer may not answer this question's audience.",
+  },
+  {
+    code: "daemon.already-running",
+    domainKind: "daemon",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Use the running daemon or stop it before starting another; the live holder is named with its instance, process, acquisition time, and heartbeat age.",
+    projectionClass: "user-validation",
+    summary: "A live daemon instance holds the single-instance lock.",
+  },
+  {
+    code: "daemon.takeover-refused",
+    domainKind: "daemon",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Wait until the lock heartbeat reaches daemon.lock-staleness before requesting a takeover; nothing was appended.",
+    projectionClass: "user-validation",
+    summary: "An explicit takeover targeted a live daemon lock.",
+  },
+  {
+    code: "daemon.heartbeat-stale",
+    domainKind: "daemon",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Start or restart the daemon, or use plain status for a degraded success; the heartbeat age is at or beyond the staleness bound.",
+    projectionClass: "platform-provider",
+    summary: "The daemon heartbeat is stale.",
+  },
+  {
+    code: "daemon.state-recovery-failed",
+    domainKind: "daemon",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair or salvage the named state path and retry the start; one-shot commands remain available and the daemon never starts half-reconciled.",
+    projectionClass: "platform-provider",
+    summary: "Startup reconciliation could not read the durable world.",
+  },
+  {
+    code: "daemon.protocol.unsupported",
+    domainKind: "daemon",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Use a protocol version in the offered set [1, 0] and reconnect; the frame was refused before any action.",
+    projectionClass: "user-validation",
+    summary: "A control frame carried an unsupported protocol version.",
+  },
+  {
+    code: "daemon.socket-unreachable",
+    domainKind: "daemon",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Start the daemon or use a state-derived command; only status --live fails closed on an unreachable transport.",
+    projectionClass: "platform-provider",
+    summary: "The configured control transport cannot be reached.",
+  },
+  {
+    code: "daemon.subscriber-degraded",
+    domainKind: "daemon",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Retry the subscription later or use the bounded degraded polling mode; subscription capacity was exhausted before any event.",
+    projectionClass: "platform-provider",
+    summary: "A subscription was refused for capacity.",
+  },
+  {
+    code: "daemon.supervisor-unsupported",
+    domainKind: "daemon",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Use the interactive daemon start on this platform or install a supported unit manually; no supervisor adapter is delivered here.",
+    projectionClass: "platform-provider",
+    summary: "No supervisor adapter is available on this platform.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

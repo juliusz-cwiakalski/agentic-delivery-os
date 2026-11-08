@@ -20,7 +20,7 @@ import {
   RESULT_SCHEMA_VERSION,
 } from "@delivery-os/core/contracts";
 import { classifyThrown, resolveAppErrorCode } from "./classify.js";
-import { type CliStreams, redact, writeOutput } from "./output/serialize.js";
+import { type CliStreams, redact, serializeStreamLine, writeOutput } from "./output/serialize.js";
 import { projectExitCode } from "./projection.js";
 
 export type { CliSink, CliStreams } from "./output/serialize.js";
@@ -61,6 +61,11 @@ export type CommandDefinition = {
    * comes from this projection. Handlers never choose an exit literal.
    */
   readonly exitProjection?: (data: unknown, brand: BrandIdentity) => ProjectionClass;
+  /**
+   * An additive line stream drained after the one envelope (GH-238 F-13). Every
+   * line passes the single serialization/redaction chokepoint.
+   */
+  readonly stream?: (invocation: CommandInvocation) => AsyncIterable<string>;
 };
 
 /** The injected command program. */
@@ -318,6 +323,7 @@ export async function runCli(
   let humanSuccess = false;
   let humanText: string | undefined;
   let successProjection: ProjectionClass = "success";
+  let stream: AsyncIterable<string> | undefined;
 
   try {
     const parsed = parseInvocation(argv, deps.program);
@@ -328,13 +334,14 @@ export async function runCli(
       if (definition === undefined) throw new Error("command definition disappeared");
       humanSuccess = definition.humanSuccess === true;
       try {
-        const result = await definition.handler({
+        const invocation: CommandInvocation = {
           command: parsed.command,
           flags: parsed.flags,
           argv: parsed.tokens,
           positionals: parsed.positionals,
           brand: deps.brand,
-        });
+        };
+        const result = await definition.handler(invocation);
         outcome = outcomeFromResult(result);
         if (outcome.type === "success") {
           successProjection =
@@ -343,6 +350,9 @@ export async function runCli(
               : definition.exitProjection(outcome.data, deps.brand);
           if (definition.humanText !== undefined && !emitEnvelope) {
             humanText = definition.humanText(outcome.data, deps.brand);
+          }
+          if (definition.stream !== undefined) {
+            stream = definition.stream(invocation);
           }
         }
       } catch (thrown) {
@@ -440,5 +450,16 @@ export async function runCli(
     exitCode = fallback.exitCode;
   }
 
+  if (exitCode === 0 && outcome.type === "success" && stream !== undefined) {
+    try {
+      for await (const line of stream) {
+        const serialized = serializeStreamLine(line, deps.secrets);
+        if (serialized !== undefined) streams.stdout.write(serialized);
+      }
+    } catch (thrown) {
+      const classified = classifyThrown(thrown);
+      streams.stderr.write(`${deps.brand.binaryName}: ${classified.code}\n`);
+    }
+  }
   return exitCode;
 }
