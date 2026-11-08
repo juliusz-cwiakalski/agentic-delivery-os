@@ -131,3 +131,20 @@ notes:
       plan phase 1."
     type: info
     date: "2026-11-08"
+  - text: "Plan phase 1 complete (producer fix, commit fa8ecd03f0013581cbc7485e0c588842263e1350).
+      packages/cli/src/production.ts resolves repository facts once, lets an
+      injected originUrl replace only the remote, takes the recorded root from
+      the resolved facts root, and derives the pair-or-absent queue binding with
+      normalizeRepositoryKey guarded by the existing parseGitHubRemote target
+      gate. Gates green: pnpm typecheck (0 diagnostics); pnpm check:boundaries
+      (356 modules, 1041 deps, 0 violations; ambient-globals 162 clean;
+      workspace-entrypoints OK; secret-read-boundary 325 clean); bun test
+      tests/behaviour/production-composition.test.ts
+      tests/behaviour/entrypoint-composition.test.ts (12 pass / 0 fail);
+      bun test tests/behaviour/queue-*.test.ts
+      tests/structure/dispatch-composition.test.ts (333 pass / 0 fail / 1
+      intentional skip); bun test tests/structure/content-inventory.test.ts
+      tests/structure/subpaths.test.ts (10 pass / 0 fail); biome check
+      packages/cli/src/production.ts (clean)."
+    type: info
+    date: "2026-11-08"
