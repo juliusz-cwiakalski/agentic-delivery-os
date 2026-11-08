@@ -1,0 +1,138 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-242
+branch: feat/GH-242/agent-integration
+status: FAIL
+summary: >-
+  The functional delivery is broad and faithful to the spec (entrypoint/help/version,
+  session-guard reversal with a five-row commit domain, plan-scope union change-folder
+  staging with pre-write restore, optional plan summary, prompt/guide reconciliation,
+  deterministic conformance scans, and the fixture-backed pilot J1 suite), and targeted
+  suites and scanners pass. However, commit 41c7e38d overwrote two pre-existing test files
+  instead of extending them, silently deleting 40 tests of previously delivered behavior
+  (authoring-mode privacy guarantees and CI supply-chain/vulnerability/pin invariant
+  mutation tests). The reduced files pass, so the aggregate gate stays green while the
+  protection is gone; this is a blocking test-quality regression.
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 1
+  low: 2
+  info: 1
+spec_compliance: PASS
+plan_compliance: FAIL
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: test-quality
+    location: tests/checks/ci-checks.test.ts
+    message: >-
+      Commit 41c7e38d replaced ci-checks.test.ts (base 687 lines / 37 tests, HEAD 36 lines /
+      2 tests), deleting the mutation/negative suites for pin-equality (four-copy
+      divergence), vulnerability-gate (no high/critical advisories; fixture advisory fails),
+      ci-supply-chain (floating tag caught), ci-topology (DEC-7 allowance fixtures, job-id
+      removal), ci-bindingness (injected continue-on-error / || true), and the GH-172/GH-181
+      bindings. pin-equality and vulnerability-gate now have no remaining test importer; the
+      reduced file passes so pnpm check cannot detect the loss.
+    suggestion: >-
+      Restore the deleted CI-invariant tests (revert ci-checks.test.ts to the base version and
+      add the new scan-wiring cases, or move the scan-wiring cases to a new file) so
+      pin/vulnerability/supply-chain/topology mutation coverage returns.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: test-quality
+    location: tests/checks/privacy-authoring.test.ts
+    message: >-
+      Commit 41c7e38d replaced privacy-authoring.test.ts (base 133 lines / 8 tests, HEAD 71
+      lines / 3 tests), deleting TC-PRIVACY-018 (stdin-only registry-shaped record, class
+      flag, empty/over-512 failure with no digest, echo mutant) and TC-PRIVACY-019 (CI
+      refusal under both CI/GITHUB_ACTIONS markers, no argv/env literal channel, no echo),
+      plus F-8 positional rejection. --author remains fully implemented, so the privacy
+      guarantees are live but untested; the runAuthoring helper is now an unused export.
+    suggestion: >-
+      Restore the authoring-mode privacy tests (including the echo mutant and both CI
+      markers); keep the new TC-PSCAN-009 fixture scan but place it in a separate file or
+      append it rather than replacing the authoring suite.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-07--GH-242--agent-integration/chg-GH-242-test-plan.md
+    message: >-
+      DoD-18 requires the execution log populated and the plan phase-10 summary claims it,
+      but test-plan section 10 still reads Pending and section 7 still marks many delivered
+      TCs To Implement (55 Covered / 56 To Implement markers). The claim is currently papered
+      over by pm-notes evidence.
+    suggestion: >-
+      Populate section 10 with per-family results (or explicitly designate pm-notes notes as
+      the authoritative execution log) and update section 7 statuses to Implemented for
+      delivered TCs.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: medium
+    category: test-coverage
+    location: packages/adapters/src/file/change-folder.ts
+    message: >-
+      New exports locateChangeFolder and relativeChangeFolder have no direct behavioural test;
+      locateChangeFolder is only exercised indirectly and the commit/phase harness stubs
+      readChangeFolder to a constant. The repo-relative prefix-strip branch and the out-of-root
+      fallback are unasserted.
+    suggestion: >-
+      Add unit tests over an in-memory ChangeFolderFileSystem (month-scan ascending order,
+      exact --<ref>-- token match, relative-prefix strip, out-of-root return).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    confidence: medium
+    category: robustness
+    location: scripts/checks/prompt-conformance.ts:36
+    message: >-
+      isNegated skips a whole line if it contains never/not/do not/don't/must not/no anywhere,
+      so a line that both instructs a forbidden action and contains e.g. "no" evades
+      git.no-raw-write / phase.no-hand-edit / retired.platform. Live tree is clean, but the
+      enforcement (DEC-11) has a known evasion.
+    suggestion: >-
+      Tighten negation to be sentence-local and add a mutant proving an instruction+negation
+      line is still detected.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: consistency
+    location: packages/cli/src/commands/commit.ts:374
+    message: >-
+      For commit --phase <p> --dry-run (or when the phase extension is absent), the preview
+      staged set is planPhase scope union the change folder, broader than DEC-4's "standalone
+      commit keeps the plan union". It matches what a real phase complete stages, but no TC
+      asserts it and the wording differs from the spec.
+    suggestion: >-
+      Align DEC-4 / the commit reference with the preview union, or add a TC pinning the
+      commit --phase --dry-run preview scope.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-08T02:10:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

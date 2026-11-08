@@ -542,6 +542,8 @@ phases:
         - tests/checks/prompt-conformance-mutants.test.ts
         - tests/fixtures/prompt-inventory/mutants/raw-git-negated.md
         - doc/changes/2026-11/2026-11-07--GH-242--agent-integration/chg-GH-242-test-plan.md
+      folders:
+        - doc/changes/2026-11/2026-11-07--GH-242--agent-integration/code-review
     interactions:
       - kind: contract-file
         target: tests/checks/ci-checks.test.ts
