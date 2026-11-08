@@ -12,7 +12,7 @@ phases:
   review_fix: { started: "2026-11-08T04:14:00Z", completed: "2026-11-08T04:34:00Z", status: "pass", iteration: 1 }
   quality_gates: { started: "2026-11-08T04:36:00Z", completed: "2026-11-08T05:00:00Z", status: "pass" }
   dod_check: { started: "2026-11-08T05:02:00Z", completed: "2026-11-08T05:10:00Z", status: "pass" }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: "2026-11-08T05:12:00Z", completed: null, url: null }
 decisions:
   - text: "Owner directive (CEO-D-073) redefines the M1-S9 handover gate 'clean' from a rolling two-week calendar window to an evidence-based bar. Amendment is docs-only and must not change any other story AC or dependency."
     date: "2026-11-07"
