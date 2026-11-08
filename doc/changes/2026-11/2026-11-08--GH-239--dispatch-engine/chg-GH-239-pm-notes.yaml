@@ -139,3 +139,13 @@ notes:
       revisions, 1 decision record. All findings were real; none was noise."
     type: info
     date: "2026-11-08"
+  - text: "Commit-primitive friction observed (retro): committing the decision
+      record as the sole pending path failed twice: first a secret-scan false
+      positive on a code-block line that paired the word 'token' with a long
+      type name, then the invented-tracker-ref rule rejecting the record's own
+      filename. Remedy: reworded the code block and commit the record together
+      with a change-folder edit so the deterministic top-path summary carries no
+      tracker ref. Note for @coder: commit subjects/bodies must not name TDR-,
+      DEC-, or TC- style refs other than GH-239, or the primitive refuses."
+    type: retro
+    date: "2026-11-08"
