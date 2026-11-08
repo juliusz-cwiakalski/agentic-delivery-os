@@ -42,7 +42,7 @@ describe("TC-ENTRY-010 non-installed bin", () => {
   });
 
   test("the main composition entry exists and is shared with the behaviour suites", () => {
-    expect(manifest.main).toBe("./src/entrypoint.ts");
+    expect(manifest.main).toBe("./dist/entrypoint.js");
     const entrypoint = readFileSync(join(ROOT, "packages/cli/src/entrypoint.ts"), "utf8");
     expect(entrypoint).toContain("export const runEntrypoint");
     expect(entrypoint).toContain("PROMPT_REQUIRED_COMMANDS");

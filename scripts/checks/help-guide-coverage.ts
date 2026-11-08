@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/entrypoint";
+import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
 
 export const COVERAGE_PATH = "tests/fixtures/help-guide/coverage.json";
 const PAGE_ROOT = "doc/planning/oss-tooling/milestones/m1/commands";

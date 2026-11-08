@@ -51,6 +51,7 @@ phases:
         - packages/cli/package.json
         - packages/cli/src/entrypoint.ts
         - packages/cli/src/help.ts
+        - packages/cli/src/help/prompt-required-commands.ts
         - packages/cli/src/edge.ts
         - packages/cli/src/index.ts
         - tests/behaviour/entrypoint-version.test.ts

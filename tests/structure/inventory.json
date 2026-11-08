@@ -233,6 +233,7 @@
     "src/edge.ts",
     "src/entrypoint.ts",
     "src/help.ts",
+    "src/help/prompt-required-commands.ts",
     "src/index.ts",
     "src/output/commit-text.ts",
     "src/output/deploy-text.ts",

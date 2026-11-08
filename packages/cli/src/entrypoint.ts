@@ -15,6 +15,10 @@ import {
   type CommandResult,
   FALLBACK_INTERNAL_CODE,
 } from "@delivery-os/core/contracts";
+import {
+  PROMPT_REQUIRED_COMMANDS,
+  type PromptRequiredCommand,
+} from "./help/prompt-required-commands.js";
 import { allHelpEntries, helpEntryFor, renderHelp, renderRootHelp } from "./help.js";
 import {
   type CliDependencies,
@@ -37,25 +41,7 @@ export const neutralWorkingName = (): string => NEUTRAL_WORKING_NAME;
 /** The working-name environment variable name, exposed as behavior. */
 export const workingNameEnvironmentVariable = (): string => WORKING_NAME_ENVIRONMENT;
 
-/** The exact §8.1 prompt-required command set composed by the entrypoint. */
-export const PROMPT_REQUIRED_COMMANDS = [
-  "status",
-  "brief",
-  "queue",
-  "lanes",
-  "blockers",
-  "phase",
-  "commit",
-  "lint",
-  "plan",
-  "verify",
-  "merge",
-  "closeout",
-  "spend",
-  "retro",
-] as const;
-
-export type PromptRequiredCommand = (typeof PROMPT_REQUIRED_COMMANDS)[number];
+export { PROMPT_REQUIRED_COMMANDS, type PromptRequiredCommand };
 
 /** Composes the prompt-required program; help/version never calls it. */
 export type EntrypointComposer = (brand: BrandIdentity) => CommandProgram;

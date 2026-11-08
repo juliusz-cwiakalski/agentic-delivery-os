@@ -1291,6 +1291,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renderHelp",
     "renderRootHelp",
   ],
+  "cli/src/help/prompt-required-commands.ts": ["PROMPT_REQUIRED_COMMANDS"],
   "cli/src/production.ts": ["createProductionComposer"],
   "cli/src/output/commit-text.ts": ["renderCommitHuman"],
   "cli/src/output/plan-text.ts": [
