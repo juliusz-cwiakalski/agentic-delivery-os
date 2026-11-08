@@ -1,14 +1,14 @@
 ---
 id: chg-GH-266-test-plan
 status: Updated
-version: 1.2
+version: 1.3
 created: 2026-11-07T00:00:00Z
 last_updated: 2026-11-08T00:00:00Z
 owners: [engineering]
 service: delivery-os-planning
 labels: [change, docs]
 version_impact: none
-summary: "Docs-only verification of the M1-S9 handover-gate amendment, aligned to spec v1.2. Prove by direct inspection of the diff and the two amended planning files that `clean` is the conjunction of pilot-path truth, eleven-class TDR-0005 coverage on real tickets, the exposure floor, and corroboration; that the superseded rolling two-week window no longer defines the gate while every historical statement stays byte-exact under comparison with no whitespace normalisation (the 2026-11-03 bullets, the M0 exit-criteria lead-in, and the pilot, adoption and decision-acceptance bullets); that every `backlog.md` diff hunk lies inside the M1-S9 entry and every other story's `- AC:`/`- Depends on:` block is byte-identical, and that the five M1-S9 prose regions the spec freezes (Goal, Ticket, phase (a), handover-flips, covers-functions) are byte-identical with two mutants proving the oracle fires (TC-GATE-022); that the eleven enumerated classes are set-equal to `DELIVERY_RESULT_TOKENS` (including `pr-open-unverified`, DEC-3); that the corroboration rule names exactly pm-notes phases, tracker state, and CI on the pushed head in both files; that the amendment adjudicates the dated 2026-11-03 per-engine sentence as the same gate superseded not waived, says the gate is no longer defined by a calendar window alone with the floor-only `whichever comes first` retained, and cites `CEO-D-073 (GH-266, 2026-11-07)`; that the diff is exactly two product files outside `doc/changes/**` under `doc/planning/oss-tooling/` with unchanged `backlog.md` frontmatter, no `ados_distribution` marker, unchanged M1-S9 heading, and no source/test/spec change; and that the doc-distribution, forbidden-literals and link guards stay green, with a direct added-line seed-literal scan compensating for the guard's registered-doc-only scan set. No test code, suite, or runtime harness is added: 22 TCs are reproducible inspection procedures with recorded commands and observed expected values, plus three honestly declared gaps. Revision 1.1 closed readiness-review iteration 1 findings 2, 4 and 5; revision 1.2 closes iteration 2 findings N1 (hunk-boundary precision), N2 (byte identity of the two forward-looking status statements plus the pointer-shape rule), N4 (M1-S9 inside-entry preservation oracle) and N6 (wrap-proof lead-in negative control), and is aligned to spec v1.2 (AC-F1-3 five-region freeze, DEC-12) through TC-GATE-022."
+summary: "Docs-only verification of the M1-S9 handover-gate amendment, aligned to spec v1.3. Prove by direct inspection of the diff and the two amended planning files that `clean` is the conjunction of pilot-path truth, eleven-class TDR-0005 coverage on real tickets, the exposure floor, and corroboration; that the superseded rolling two-week window no longer defines the gate while every historical statement stays byte-exact under comparison with no whitespace normalisation (the 2026-11-03 bullets, the M0 exit-criteria lead-in, and the pilot, adoption and decision-acceptance bullets); that every `backlog.md` diff hunk lies inside the M1-S9 entry and every other story's `- AC:`/`- Depends on:` block is byte-identical, and that the five M1-S9 prose regions the spec freezes (Goal, Ticket, phase (a), handover-flips, covers-functions) are byte-identical with two mutants proving the oracle fires (TC-GATE-022); that the eleven enumerated classes are set-equal to `DELIVERY_RESULT_TOKENS` (including `pr-open-unverified`, DEC-3); that the corroboration rule names exactly pm-notes phases, tracker state, and CI on the pushed head in both files; that the amendment adjudicates the dated 2026-11-03 per-engine sentence as the same gate superseded not waived, says the gate is no longer defined by a calendar window alone with the floor-only `whichever comes first` retained, and cites `CEO-D-073 (GH-266, 2026-11-07)`; that the diff is exactly two product files outside `doc/changes/**` under `doc/planning/oss-tooling/` with unchanged `backlog.md` frontmatter, no `ados_distribution` marker, unchanged M1-S9 heading, and no source/test/spec change; and that the doc-distribution, forbidden-literals and link guards stay green, with a direct added-line seed-literal scan compensating for the guard's registered-doc-only scan set. No test code, suite, or runtime harness is added: 22 TCs are reproducible inspection procedures with recorded commands and observed expected values, plus three honestly declared gaps. Revision 1.1 closed readiness-review iteration 1 findings 2, 4 and 5; revision 1.2 closes iteration 2 findings N1 (hunk-boundary precision), N2 (byte identity of the two forward-looking status statements plus the pointer-shape rule), N4 (M1-S9 inside-entry preservation oracle) and N6 (wrap-proof lead-in negative control), and was aligned to the then-current spec v1.2 (AC-F1-3 five-region freeze, DEC-12) through TC-GATE-022. Revision 1.3 is a precision pass: the P15 boundary self-tests now derive their coordinates from the computed entry end (so the next-heading probe is correct at any amended length, readiness N8) and the far probe is `end+50` rather than a fixed line (N14), and the AC-F1-3 forward row now also traces TC-GATE-005 for the heading clause it names (N9). It also aligns the plan to spec v1.3: the narrowed editable-prose claim in AC-F1-3/F-5/DEC-12, the `calendar-only window` wording in F-2/AC-F2-4/DEC-10, and AC-F2-2's byte-retention clause, which TC-GATE-007 already verifies."
 links:
   change_spec: ./chg-GH-266-spec.md
   implementation_plan: ./chg-GH-266-plan.yaml
@@ -45,7 +45,7 @@ Three properties are load-bearing and are tested independently so that one canno
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-266-spec.md`](./chg-GH-266-spec.md) v1.2 | Binding source for F-1..F-5, AC-F1-1..AC-NFR3-1 (17 ACs; AC-F5-3 and AC-F2-4/5/6 added in v1.1, AC-F1-3 extended in v1.2 to freeze five M1-S9 prose regions), NFR-1..NFR-6, DM-1..DM-3, DEC-1..DEC-12 |
+| [`chg-GH-266-spec.md`](./chg-GH-266-spec.md) v1.3 | Binding source for F-1..F-5, AC-F1-1..AC-NFR3-1 (17 ACs; AC-F5-3 and AC-F2-4/5/6 added in v1.1, AC-F1-3 extended in v1.2 to freeze five M1-S9 prose regions, v1.3 narrowed that editable-prose claim and added AC-F2-2 byte retention), NFR-1..NFR-6, DM-1..DM-3, DEC-1..DEC-12 |
 | [`chg-GH-266-plan.yaml`](./chg-GH-266-plan.yaml) | Delivery plan: materialises these procedures as `p00.sh`…`p17.sh` under `/tmp/gh266-procedures/` and gates each phase on them |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | Test layers: static/diff and content checks for `doc/**`; fallback rule for docs-only changes (automated tests **N/A**, manual verification + `git diff --check` required); invariant-test rule (branch-diff shape checks belong to review gates, not the permanent suite) |
 | [`doc/planning/oss-tooling/backlog.md`](../../../planning/oss-tooling/backlog.md) | File under test (M1-S9 entry) |
@@ -67,7 +67,7 @@ Forward traceability (every AC appears exactly once in this table):
 |---|---|---|---|
 | AC-F1-1 | M1-S9 `clean` states all four conditions (truth, class coverage, floor, corroboration) | TC-GATE-001 | Covered |
 | AC-F1-2 | "rolling two-week window" / "two clean weeks" no longer define the gate; "whichever comes first" applies only to the floor | TC-GATE-002, TC-GATE-003 | Covered |
-| AC-F1-3 | M1-S9 acceptance criteria and dependency line unchanged (incl. "clean window", refusal/offer, reversibility, bash fallback); the rest of the entry the plan freezes (Goal, Ticket, phase (a), handover-flips, covers-functions) also byte-identical | TC-GATE-004, TC-GATE-022 | Covered |
+| AC-F1-3 | M1-S9 heading, acceptance criteria and dependency line unchanged (incl. "clean window", refusal/offer, reversibility, bash fallback); the five frozen prose regions (Goal, Ticket, phase (a), handover-flips, covers-functions) also byte-identical | TC-GATE-004, TC-GATE-005, TC-GATE-022 | Covered |
 | AC-F2-1 | One new dated CEO-D-073 amendment section: composite bar, corroboration rule, canonical pointer, declared residual | TC-GATE-006 | Covered |
 | AC-F2-2 | Both forward-looking restatements of the two-clean-weeks rule carry a supersession pointer | TC-GATE-007 | Covered |
 | AC-F2-3 | Byte for byte (no whitespace normalisation): the 2026-11-03 amendment bullets; the M0 exit-criteria lead-in sentence; and the pilot, adoption and decision-acceptance bullets | TC-GATE-008 | Covered |
@@ -91,7 +91,7 @@ Reverse traceability (no orphan test cases):
 | TC-GATE-002 | AC-F1-2 |
 | TC-GATE-003 | AC-F1-2 |
 | TC-GATE-004 | AC-F1-3 |
-| TC-GATE-005 | AC-F5-1 |
+| TC-GATE-005 | AC-F5-1, AC-F1-3 |
 | TC-GATE-006 | AC-F2-1 |
 | TC-GATE-007 | AC-F2-2 |
 | TC-GATE-008 | AC-F2-3 |
@@ -164,7 +164,7 @@ The procedures below are therefore **uncommitted, reproducible inspection comman
 | TC-GATE-002 | Superseded calendar phrasing no longer defines the M1-S9 gate | Negative | Critical | High | AC-F1-2 | Content |
 | TC-GATE-003 | "Whichever comes first" is scoped to the floor only | Corner Case | Critical | High | AC-F1-2 | Content |
 | TC-GATE-004 | M1-S9 acceptance criteria and dependency line byte-identical | Regression | Critical | High | AC-F1-3 | Static/diff |
-| TC-GATE-005 | M1-S9 heading text unchanged | Regression | Important | High | AC-F5-1 | Static/diff |
+| TC-GATE-005 | M1-S9 heading text unchanged | Regression | Important | High | AC-F5-1, AC-F1-3 | Static/diff |
 | TC-GATE-006 | Dated CEO-D-073 amendment section present with bar, corroboration, pointer, residual | Happy Path | Critical | High | AC-F2-1 | Content |
 | TC-GATE-007 | Supersession pointers on the two forward-looking status statements | Happy Path | Important | High | AC-F2-2 | Content |
 | TC-GATE-008 | status.md dated history and M0 exit/pilot statements byte-identical | Regression | Critical | High | AC-F2-3 | Static/diff |
@@ -313,7 +313,7 @@ The procedures below are therefore **uncommitted, reproducible inspection comman
 **Scenario Type**: Regression
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: F-5, DEC-8, AC-F5-1
+**Related IDs**: F-5, DEC-8, AC-F5-1, AC-F1-3
 **Test Type(s)**: Manual (static/diff inspection)
 **Automation Level**: Semi-automated
 **Target Layer / Location**: `doc/planning/oss-tooling/backlog.md`, heading line 529
@@ -747,7 +747,7 @@ doc/planning/oss-tooling/status.md
 1. Run **P15a**: it derives the M1-S9 entry range in HEAD (the `### M1-S9 ` heading line through the line before the next `### ` heading), then classifies every added-side hunk range from `git diff -U0` against that range.
 2. Confirm `hunks: inside=N outside=0` and `hunk confinement OK`.
 3. Confirm non-vacuity: `backlog.md hunks: N` with `N>=1`. Zero hunks means the amendment is absent, not that containment holds.
-4. Run the four **P15a matcher self-tests**: `+600,1` (well outside) and `+560,0` (a deletion of the next `### M1-S10` heading line, i.e. the first line after the entry) must both report `OUTSIDE` / `hunk confinement FAILED`; `+559,0` (a deletion of the entry's last line) and `+541,9` (an addition inside the anchor) must report `hunks: inside=1 outside=0` / `hunk confinement OK`.
+4. Run the four **P15a matcher self-tests**, whose coordinates P15 derives from the computed entry end (`boundary=$((end+1))`, `probe_far=$((end+50))`): `end+50` (well outside) and `end+1` (a deletion of the next `###` heading line) must both report `OUTSIDE` / `hunk confinement FAILED`; `end` (a deletion of the entry's own last line) and `start` (a `3 → 9` addition inside the entry) must report `hunks: inside=1 outside=0` / `hunk confinement OK`. Never hardcode `560`: on the reference amended tree the entry ends at 578, so the next heading line is 579.
 5. Run **P15b**: extract, for every story except M1-S9, the full block from its `- AC:` line through its `- Depends on:` line (multi-line blocks included) from the base snapshot and from HEAD, then `diff -u` the two extractions.
 6. Run the **P15b negative control**: apply a one-line edit to M1-S8's acceptance criterion in a `/tmp` copy (`retro output survives a malformed entry without data loss` → `retro output survives a malformed entry`) and re-extract; the comparison must now differ at exactly that line.
 
@@ -756,7 +756,8 @@ doc/planning/oss-tooling/status.md
 - `M1-S9 entry lines: 529..559` at authoring time (derived, not hardcoded; the heading line stays 529 because the amendment adds no line before it).
 - `hunks: inside=N outside=0`, `hunk confinement OK`, `backlog.md hunks: N` with `N>=1`.
 - `P15 verdict: OK`, exit 0.
-- Self-tests, in order: `+600,1` → `OUTSIDE: @@ -600,1 +600,1 @@ (added 600..600, entry 529..559)` + `hunks: inside=0 outside=1` + `hunk confinement FAILED`; `+560,0` → `OUTSIDE: @@ -560,1 +560,0 @@ (added 560..560, entry 529..559)` + `hunks: inside=0 outside=1` + `hunk confinement FAILED`; `+559,0` → `hunks: inside=1 outside=0` + `hunk confinement OK`; `+541,9` → `hunks: inside=1 outside=0` + `hunk confinement OK`.
+- Self-tests, in order and with coordinates derived from the entry's own range: `end+50` prints an `OUTSIDE:` line for that line number, then `hunks: inside=0 outside=1` and `hunk confinement FAILED`; `end+1` prints `OUTSIDE:` for that line number, then the same two lines; `end` prints `hunks: inside=1 outside=0` and `hunk confinement OK`; `start` prints `hunks: inside=1 outside=0` and `hunk confinement OK`.
+- Concrete values at the two lengths this plan documents: base tree (`529..559`) → `609` and `560` print `OUTSIDE`, `559` and `529` print inside; reference amended tree (`529..578`) → `628` and `579` print `OUTSIDE`, `578` and `529` print inside. v1.2 hardcoded `+560,0` as "the next heading", which is an inside line at the amended length (readiness N8); the derivation removes that class of error.
 - `other-story AC/Depends byte-identical`, `stories compared: 66` (observed at authoring time).
 - Negative control: `negative control detected the M1-S8 edit` with a one-line diff naming the M1-S8 `- AC:` line.
 
@@ -764,7 +765,7 @@ doc/planning/oss-tooling/status.md
 
 - This is the requirement readiness finding 2 found claimed but unimplemented: every other story's `- AC:` and `- Depends on:` line, plus hunk confinement, is AC-F5-3 and lives here; TC-GATE-004 no longer asserts it.
 - The entry range includes the blank separator line before the next `###` heading because AC-F5-3 defines the entry as "from its heading to the line before the next `###` heading".
-- A pure deletion hunk (`+c,0`) has an empty added range and is accepted only when `c` is within the entry's own lines (`c <= e`), not on the next heading line. Revision 1.2 tightened this: v1.1 accepted `c <= e+1`, so `@@ -560,1 +560,0 @@` (the `### M1-S10` heading line) was misclassified `inside` (readiness N1). The `+560,0` self-test pins the boundary.
+- A pure deletion hunk (`+c,0`) has an empty added range and is accepted only when `c` is within the entry's own lines (`c <= e`), not on the next heading line. Revision 1.2 tightened the predicate from `c <= e+1` (readiness N1); revision 1.3 derives the self-test coordinates from `end`, because v1.2's hardcoded `+560,0` was the *base* next heading line and became an inside line once the amendment extended the entry to 578 (readiness N8). The `end+1` / `end` pair now pins both sides of the boundary at whatever length the tree has, and `end+50` keeps the far probe outside a growing amendment (readiness N14).
 - Observed on the unamended tree: no `backlog.md` hunk (`backlog.md hunks: 0`), so step 3 fails by design — the containment check only becomes meaningful once the amendment exists.
 
 #### TC-GATE-019 - 2026-11-03 per-engine sentence adjudicated as the same gate, superseded not waived, bytes unchanged
@@ -1441,13 +1442,17 @@ else
   echo "hunk confinement: SKIPPED (vacuous without a backlog.md hunk)"
 fi
 
-# P15a matcher self-tests. Outside must be reported: a hunk well away from the
-# entry, and a deletion of the next heading line (the first line after the entry,
-# which AC-F5-3 excludes). Inside must pass on both boundary sides.
-printf '@@ -600,1 +600,1 @@\n' | hunk_guard "$start" "$end" || true
-printf '@@ -560,1 +560,0 @@\n' | hunk_guard "$start" "$end" || true
-printf '@@ -559,1 +559,0 @@\n' | hunk_guard "$start" "$end" || true
-printf '@@ -541,3 +541,9 @@\n' | hunk_guard "$start" "$end"
+# P15a matcher self-tests. All coordinates are DERIVED from the computed entry end,
+# so they stay correct at any amended length (readiness N8): the next heading line
+# is end+1 and must be OUTSIDE, the entry's own last line is end and must be
+# INSIDE. The "well outside" probe is end+50 rather than a fixed line, so a larger
+# amendment cannot move it inside (readiness N14).
+boundary=$((end + 1))
+probe_far=$((end + 50))
+printf '@@ -%d,1 +%d,1 @@\n' "$probe_far" "$probe_far" | hunk_guard "$start" "$end" || true   # OUTSIDE: far away
+printf '@@ -%d,1 +%d,0 @@\n' "$boundary" "$boundary" | hunk_guard "$start" "$end" || true     # OUTSIDE: next heading line
+printf '@@ -%d,1 +%d,0 @@\n' "$end" "$end" | hunk_guard "$start" "$end" || true               # inside: entry's last line
+printf '@@ -%d,3 +%d,9 @@\n' "$start" "$start" | hunk_guard "$start" "$end"                   # inside: within the entry
 
 # P15b: every other story's - AC: .. - Depends on: block, byte for byte
 extract_other_story_ac() {
@@ -1486,15 +1491,15 @@ else
 fi
 ```
 
-Expected after the amendment (exit 0): `backlog.md hunks: N` with `N>=1`, `non-vacuous: backlog.md changed`, `hunks: inside=N outside=0`, `hunk confinement OK`, then the four boundary self-tests — `+600,1` and `+560,0` each `OUTSIDE` + `hunks: inside=0 outside=1` + `hunk confinement FAILED`, then `+559,0` and `+541,9` each `hunks: inside=1 outside=0` + `hunk confinement OK` — then `other-story AC/Depends byte-identical`, `stories compared: 66`, `negative control detected the M1-S8 edit` with a one-line diff, and `P15 verdict: OK`.
+Expected after the amendment (exit 0): `backlog.md hunks: N` with `N>=1`, `non-vacuous: backlog.md changed`, `hunks: inside=N outside=0`, `hunk confinement OK`, then the four **derived** boundary self-tests — `end+50` (`OUTSIDE`) and `end+1` (the next heading line, `OUTSIDE`) each followed by `hunks: inside=0 outside=1` + `hunk confinement FAILED`, then `end` (the entry's own last line, `hunks: inside=1 outside=0` + `hunk confinement OK`) and `start` (an addition inside the entry, `hunks: inside=1 outside=0` + `hunk confinement OK`) — then `other-story AC/Depends byte-identical`, `stories compared: 66`, `negative control detected the M1-S8 edit` with a one-line diff, and `P15 verdict: OK`.
 
-Observed on the unamended tree (exit 1, by design), verbatim:
+Observed on the unamended tree (exit 1, by design; entry `529..559`, so `end+1=560`, `end+50=609`), verbatim:
 ```
 M1-S9 entry lines: 529..559
 backlog.md hunks: 0
 FAIL: no backlog.md hunk (amendment missing)
 hunk confinement: SKIPPED (vacuous without a backlog.md hunk)
-OUTSIDE: @@ -600,1 +600,1 @@ (added 600..600, entry 529..559)
+OUTSIDE: @@ -609,1 +609,1 @@ (added 609..609, entry 529..559)
 hunks: inside=0 outside=1
 hunk confinement FAILED
 OUTSIDE: @@ -560,1 +560,0 @@ (added 560..560, entry 529..559)
@@ -1513,6 +1518,33 @@ negative control detected the M1-S8 edit
 > - AC: retro output survives a malformed entry; evidence
 P15 verdict: FAILED
 ```
+
+Observed against a reconstructed amended tree whose M1-S9 entry ends at line 578 (`_### M1-S10_` at 579), verbatim — this is the case the v1.2 self-test got wrong (readiness N8):
+```
+M1-S9 entry lines: 529..578
+backlog.md hunks: 0
+FAIL: no backlog.md hunk (amendment missing)
+hunk confinement: SKIPPED (vacuous without a backlog.md hunk)
+OUTSIDE: @@ -628,1 +628,1 @@ (added 628..628, entry 529..578)
+hunks: inside=0 outside=1
+hunk confinement FAILED
+OUTSIDE: @@ -579,1 +579,0 @@ (added 579..579, entry 529..578)
+hunks: inside=0 outside=1
+hunk confinement FAILED
+hunks: inside=1 outside=0
+hunk confinement OK
+hunks: inside=1 outside=0
+hunk confinement OK
+other-story AC/Depends byte-identical
+stories compared: 66
+negative control detected the M1-S8 edit
+154c154
+< - AC: retro output survives a malformed entry without data loss; evidence
+---
+> - AC: retro output survives a malformed entry; evidence
+P15 verdict: FAILED
+```
+The `git diff` section is inapplicable in that reconstruction (the file is a `/tmp` copy outside the repository, so `backlog.md hunks: 0`), which is why the verdict is `FAILED`; the point of the run is the derived self-test coordinates: `+579,0` is `OUTSIDE` and `+578,0` is inside, at a length where the v1.1/v1.2 hardcoded `+560,0` would have been inside.
 
 **P16 — status amendment adjudication, lead-in wording, citation (TC-GATE-019, TC-GATE-020, TC-GATE-021):**
 
@@ -1656,7 +1688,7 @@ Observed on the unamended tree (exit 1, by design): `added-lines=0 seed-hits=0`,
 | TC-GATE-015 | P13a/P13b | `git diff \| grep -oE` + existence loop | Manual Only — uncommitted inspection | `broken=0` |
 | TC-GATE-016 | P14 + read | `bun -e '…'` on both files | Semi-automated (presence) + Manual (contradiction read) | two summary lines + read note |
 | TC-GATE-017 | P1c + `--stat` | `git diff --check` | Manual Only — uncommitted inspection | `exit=0`, stat review |
-| TC-GATE-018 | P15a/P15b | hunk-header classifier + `awk` extraction + `diff -u`, with four boundary self-tests and a one-line negative control | Manual Only — uncommitted inspection | `hunks: inside=N outside=0`, `hunk confinement OK`, boundary self-tests for `+600,1`, `+560,0`, `+559,0`, `+541,9`, `other-story AC/Depends byte-identical`, `stories compared: 66`, `negative control detected the M1-S8 edit` |
+| TC-GATE-018 | P15a/P15b | hunk-header classifier + `awk` extraction + `diff -u`, with four length-derived boundary self-tests (`end+50`, `end+1`, `end`, `start`) and a one-line negative control | Manual Only — uncommitted inspection | `hunks: inside=N outside=0`, `hunk confinement OK`, derived boundary self-tests, `other-story AC/Depends byte-identical`, `stories compared: 66`, `negative control detected the M1-S8 edit` |
 | TC-GATE-019 | P7a + P16 (`adjudication`) | `cmp` of the dated section + `bun -e` marker check with a built-in mutant | Semi-automated (byte compare + content markers) + Manual (substance read) | `2026-11-03 section byte-identical`, `adjudication: missing=0`, `mutant coverage: changed=true adjudication-missing=stricter-coverage` |
 | TC-GATE-020 | P16 (`lead-in`) | `bun -e` marker check with two built-in mutants on the flattened form | Manual Only — uncommitted inspection | `calendar-window-alone=OK elapsed-only-phrase=ABSENT floor-scope=OK`; `mutant lead-in: changed=true raw-single-line-noop=true calendar-window-alone=MISSING`; `mutant elapsed-only-phrase: changed=true elapsed-only-phrase=PRESENT` |
 | TC-GATE-021 | P16 (`citation`) | `bun -e` exact-literal check with a built-in mutant | Manual Only — uncommitted inspection | `citation: OK`; `mutant citation: changed=true citation=MISSING` |
@@ -1680,7 +1712,7 @@ No test file is created or updated: **no permanent suite change is permitted or 
 | P15a prints `OUTSIDE` or `hunk confinement FAILED` | A `backlog.md` hunk escaped the M1-S9 entry (AC-F5-3) | Revert the out-of-entry hunk; re-run P15a. Do not "tidy" a neighbouring story. |
 | P15b `diff -u` is non-empty | Another story's `- AC:` or `- Depends on:` block changed (AC-F5-3) | Restore that block byte for byte; the diff names the story and line. |
 | P15a prints `FAIL: no backlog.md hunk` | The backlog amendment is absent, so containment is vacuous | This is a missing deliverable, not a containment pass. |
-| P15a's `+560,0` self-test prints `inside` | The hunk boundary regressed (readiness N1): a deletion of the next heading line must be `outside` | Restore the `d=0` predicate to `c <= e` (entry's last line), not `c <= e+1`. |
+| P15a's next-heading probe prints `inside`, or the printed boundary coordinate is not `end+1` | Hunk-boundary regression (readiness N1/N8). The probes are derived from the entry's end, so on the reference amended tree `end+1` is `+579,0` and must be `OUTSIDE`; `+560,0` is inside there by design and is not a failure | Confirm `M1-S9 entry lines` ends at the entry's last line and that the probe uses `boundary=$((end+1))`; restore the `d=0` predicate to `c <= e` (entry's last line), not `c <= e+1`. |
 | P6 prints `FAIL pointer contains CEO-D-073` | A forward pointer carries the directive id, so P5/P16 could select the wrong section (D-6) | Reword the pointer to cite the amendment ("superseded by the evidence-based handover amendment"), never the id. |
 | P6 prints `FAIL …: bytes changed` naming a forward statement | A forward statement was edited while gaining its pointer (AC-F2-2, N2) | Restore the statement's bytes and append the pointer after them; a reflow also fails. |
 | P6 prints `forward≠2` or `pointer-shape≠2/2` | A unit lost its pointer, or a third forward unit appeared | Restore the pointer inside the named unit; confirm the amendment did not acquire the hyphenated token as a *forward* unit (it is skipped and labelled). |
@@ -1753,6 +1785,7 @@ No test file is created or updated: **no permanent suite change is permitted or 
 | 1.0 | 2026-11-07 | @test-plan-writer | Initial test plan for spec v1.0: 13 ACs covered by 17 TCs (bidirectional traceability, no orphans), 14 uncommitted inspection procedures with validated base-revision failing values, 3 doc guards, run order, failure triage, and two declared gaps (G-1 future enforcement, G-2 declared residual). |
 | 1.1 | 2026-11-07 | @test-plan-writer | Aligned to spec v1.1 and readiness-review iteration 1. **Finding 2 (critical, closed):** TC-GATE-004 no longer claims out-of-entry preservation it did not check; new TC-GATE-018 + P15 verify every `backlog.md` `-U0` hunk lies inside the M1-S9 entry and every other story's `- AC:`/`- Depends on:` block is byte-identical, with two matcher self-tests and a one-line negative control. **Finding 4 (major, closed):** P7c's whitespace-normalised `grep -F` replaced by byte-exact extraction of the lead-in and the three M0 exit-criteria statements (P7b/P7c) plus a reflow negative control (P7d); new TC-GATE-019/020/021 + P16 cover AC-F2-4 (2026-11-03 per-engine adjudication, superseded not waived), AC-F2-5 (calendar window alone, floor-only retained) and AC-F2-6 (`CEO-D-073 (GH-266, 2026-11-07)`). **Finding 5 (minor, closed):** TC-GATE-014 records that the guard scans registered docs only and never reads `backlog.md`; new P17 applies the production `matchSeedLiteral` to added lines with a non-vacuity guard and matcher self-tests. Traceability extended to 17 ACs / 21 TCs (AC-F5-3, AC-F2-4/5/6 added; AC-F2-3 and AC-NFR1-1 reworded). Every new or changed procedure was run on the unamended tree and its observed output recorded. Open question OQ-5 records the residual AC-NFR5-1 wording mismatch. |
 | 1.2 | 2026-11-08 | @test-plan-writer | DoR iteration 2 remediation (final iteration). **N1 (closed):** P15a's pure-deletion branch tightened from `c <= e+1` to `c <= e`, and a `+560,0` boundary self-test added (a deletion of the next `###` heading line is now `outside`), with a `+559,0` counter-test proving the entry's own last line stays `inside`; observed `OUTSIDE: @@ -560,1 +560,0 @@ (added 560..560, entry 529..559)` + `hunk confinement FAILED`. **N2 (closed, test-plan side):** P6 extended with P6b, a byte-exact oracle for the two forward-looking status statements (`forward bytes milestone-exit-forward: byte-identical (332 bytes)`, `forward bytes next-steps-item-3: byte-identical (247 bytes)`), and with the pointer-shape rule enforced (`CEO-D-073` removed from the accepted pointer markers and its presence in a pointer unit made a FAIL); unit scoping now splits ordered-list items and skips the amendment section. **N4 (closed):** P4 extended with P4c/P4d — the five frozen M1-S9 regions compared byte for byte from raw text — and new TC-GATE-022 bound to AC-F1-3 (spec v1.2 extends AC-F1-3 to name the same five regions under DEC-12; OQ-6 is resolved). **N6 (closed):** TC-GATE-020's lead-in control replaced by P16 built-in mutants that run on the flattened amendment; the output now prints `raw-single-line-noop=true` next to `mutant lead-in: changed=true`, proving the wrapped phrase would have defeated a raw single-line replacement. Traceability 17 ACs / 22 TCs / 18 procedure blocks (P0-P17, with P4 and P6 extended in place so the plan's p00-p17 list stays valid). |
+| 1.3 | 2026-11-08 | @test-plan-writer | DoR iteration 3 precision pass; no oracle strength or AC mapping changed. **N8 (blocking, closed):** P15's boundary self-test no longer hardcodes base-tree line 560. The guard now derives `boundary=$((end+1))` and `probe_far=$((end+50))`, so the next-heading probe is `+560,0` on the base tree and `+579,0` on the reference amended tree (entry `529..578`), where `+560,0` is an inside line. TC-GATE-018's step and expected strings, and P15's expected/observed blocks, now state the derived coordinates plus both observed runs (`+560,0` OUTSIDE at `529..559`; `+579,0` OUTSIDE and `+578,0` inside at `529..578`). **N14 (closed):** the "well outside" probe is `end+50` (`609` base, `628` amended) instead of a fixed `600`, so a larger amendment cannot pull it inside. **N9 (closed):** the AC-F1-3 forward row now lists TC-GATE-004, TC-GATE-005 and TC-GATE-022, the AC-F1-3 row text names the heading, TC-GATE-005's Related IDs add AC-F1-3, and the reverse table row reads `AC-F5-1, AC-F1-3`. Traceability unchanged at 17 ACs / 22 TCs / 18 procedure blocks (P0-P17). |
 
 ## 10. Test Execution Log
 

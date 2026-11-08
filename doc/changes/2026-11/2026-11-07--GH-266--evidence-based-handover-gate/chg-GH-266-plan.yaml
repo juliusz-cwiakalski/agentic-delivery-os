@@ -1,60 +1,67 @@
 # GH-266 implementation plan — Amend the M1-S9 handover gate to an evidence-based clean bar
 #
-# Plan revision: v1.2 (2026-11-08). Final DoR remediation pass. Aligned to
-# spec v1.2 and test plan v1.2, and to readiness-review iterations 1 and 2.
+# Plan revision: v1.3 (2026-11-08). Final mechanical revision. Aligned to
+# spec v1.3 and test plan v1.3, and to readiness-review iteration 3.
 #
-# Revision v1.2 closes every plan-owned finding from readiness iteration 2
-# and refreshes every gate string for test plan v1.2:
-#   - N3 (major, blocking): the P1 backlog corroboration gate is now
-#     REGION-SCOPED. It extracts the M1-S9 section exactly as P3/P8 do and
-#     checks pm-notes, tracker state, CI on the pushed head, and the
-#     insufficiency marker inside that region only, with an explicit
-#     expected line. P1 also runs p10 (P10a backlog frontmatter plus the
-#     status-side P10b/P10c) so the backlog frontmatter is verified in the
-#     phase whose scope can repair it. TC-GATE-011 still completes in P2
-#     because its status halves only become meaningful after P2; P1 runs
-#     p10 for early backlog detection and the split is stated here.
-#   - N2 (plan side): task 2.2 no longer cites the byte oracle as P7c. The
-#     forward-statement bytes are P6b, and the pointer-shape rule (no
-#     CEO-D-073 in a pointer) is enforced by P6a; the task cites both.
-#   - N5 (nit): the adjudication wording is now "replaces the calendar-only
-#     window with an exposure floor", which does not imply removing the
-#     >=7-consecutive-days alternative. P16's elapsed-to-floor marker group
-#     is satisfied by "calendar" + "floor".
-#   - N7 (nit): D-12 no longer says P1 runs P16. P1 runs P15; P2 runs P16;
-#     P3 re-runs P15 and P16 at the final HEAD.
-#   - Gate-drift refresh: p04 now emits five frozen-region lines plus
-#     P4 verdict; p06 takes the base snapshot as its second argument and
-#     emits pointer-shape/bytes; p15 emits four boundary self-tests; p16
-#     emits four mutant lines plus P16 verdict. Every expected string in
-#     P1/P2/P3 was refreshed to test plan v1.2.
-#   - N4 (test-plan side, closed by TC-GATE-022): p04c/p04d freeze the five
-#     M1-S9 prose regions (Goal, Ticket, phase (a), handover-flips,
-#     covers-functions). P1's gate now runs the full p04, so the plan no
-#     longer claims inside-entry preservation is unchecked.
-# Findings 3, 6, 7 and 12 from iteration 1 stay closed; iteration-2 N1 and
-# N6 were closed in test plan v1.2 (P15 boundary pins and P16 flattened
-# mutants). No finding is silently absorbed.
+# Revision history:
+#   v1.0  2026-11-07  initial plan
+#   v1.1  2026-11-07  DoR iteration 1: findings 3, 6, 7 and 12
+#   v1.2  2026-11-08  DoR iteration 2: N2, N3, N5, N7 plus gate-drift refresh
+#   v1.3  2026-11-08  DoR iteration 3: N8 (derived P15 self-tests) and N13
+#                     (P10a split), plus spec v1.3 / test plan v1.3 alignment
+#
+# Revision v1.3 closes the iteration-3 plan-owned findings and refreshes the
+# P15 expected strings for test plan v1.3:
+#   - N8 (blocking, plan side): the P1 and P3 p15 expected strings no longer
+#     assert that a literal line 560 is OUTSIDE. Test plan v1.3 derives
+#     boundary=$((end+1)) and probe_far=$((end+50)); the gate contract is now
+#     "the printed boundary coordinate equals the derived end+1 and is
+#     classified OUTSIDE", with both observed runs recorded: base range
+#     529..559 -> OUTSIDE @@ -609,1 +609,1 @@ and @@ -560,1 +560,0 @@,
+#     inside +559,0 and +529,9; reference amended range 529..578 ->
+#     OUTSIDE @@ -628,1 +628,1 @@ and @@ -579,1 +579,0 @@, inside +578,0
+#     and +529,9. A hardcoded 560 is explicitly forbidden.
+#   - N13 (nit): P1 now runs the P10a backlog-frontmatter half only. P10b
+#     (status has no frontmatter) and P10c (no added ados_distribution
+#     marker) are status-side and run in P2; the full p10 re-runs in P3.
+#     TC-GATE-011 completes in P2 with P10a's P1 evidence plus P10b/P10c.
+#     This keeps each gate inside its phase's declared scope and removes the
+#     trivial cross-file no-ops from P1 and P2.
+#   - Spec v1.3 alignment: F-2/AC-F2-4/DEC-10 now say "replaces the
+#     calendar-only window with an exposure floor", matching the plan's
+#     reference; AC-F2-2 now requires the two forward statements to retain
+#     their bytes, matching P6b/task 2.2; AC-F1-3/F-5/DEC-12 narrow the
+#     editable-prose claim to the tasks clause that defines clean, matching
+#     task 1.6 and P4c. The plan's reference text already used the v1.3
+#     wording, so no prose change was needed.
+#   - Gate-drift refresh: p15 now emits four length-derived boundary
+#     self-tests (end+50, end+1, end, start). All other v1.2 gate strings
+#     (p04, p06, p16) remain current against test plan v1.3.
+# Findings N1-N7 and N9-N14 are closed in the spec/test plan or were never
+# plan-owned; the iteration-1 findings 1, 2, 3, 6, 7 and 12 remain closed.
+# No finding is silently absorbed.
 #
 # Sources (single source of truth):
-#   - Spec:  ./chg-GH-266-spec.md (v1.2; F-1..F-5; 17 ACs
-#     AC-F1-1..AC-NFR3-1 including AC-F5-3 and AC-F2-4/5/6; AC-F1-3 now
-#     freezes five M1-S9 prose regions; NFR-1..NFR-6; DM-1..DM-3;
-#     DEC-1..DEC-12; RSK-1..RSK-8; NG-1..NG-5; §7.2 out-of-scope;
-#     §17.1 DoD; §24 appendices with the verbatim superseded sentence and
-#     the canonical eleven-token set).
-#   - Test plan: ./chg-GH-266-test-plan.md (v1.2; 22 TCs
+#   - Spec:  ./chg-GH-266-spec.md (v1.3; F-1..F-5; 17 ACs
+#     AC-F1-1..AC-NFR3-1 including AC-F5-3 and AC-F2-4/5/6; AC-F1-3
+#     freezes five M1-S9 prose regions and narrows the editable prose to
+#     the tasks clause; AC-F2-2 now includes forward-statement byte
+#     identity; NFR-1..NFR-6; DM-1..DM-3; DEC-1..DEC-12; RSK-1..RSK-8;
+#     NG-1..NG-5; §7.2 out-of-scope; §17.1 DoD; §24 appendices with the
+#     verbatim superseded sentence and the canonical eleven-token set).
+#   - Test plan: ./chg-GH-266-test-plan.md (v1.3; 22 TCs
 #     TC-GATE-001..022; 18 procedure blocks P0..P17 in §7.1; §7.2
 #     TC-to-procedure map; §7.3 failure triage; §8.3 OQ-1..OQ-6;
 #     §1.2 declared gaps G-1..G-3 plus the compensated guard-scope gap).
-#     v1.2 extends P4 (five frozen-region lines plus P4 verdict), P6
-#     (base-snapshot argument, pointer-shape, forward-statement bytes,
-#     last CEO-D-073 section), P15 (four boundary self-tests) and P16
-#     (four flattened mutants plus P16 verdict); adds TC-GATE-022; P7 is
-#     unchanged from v1.1 but its lines are per-statement plus P7 verdict.
+#     v1.3 derives P15's boundary self-test coordinates from the computed
+#     entry end (boundary=end+1, probe_far=end+50) and records both the
+#     base-range and reference-amended runs; the AC-F1-3 row also traces
+#     TC-GATE-005 for the heading. P4, P6, P7, P16 are unchanged from
+#     v1.2.
 #   - Readiness review: ./readiness-review/readiness-iter-1.md (findings
-#     3, 6, 7 and 12, closed in v1.1) and readiness-iter-2.md (N3 blocking,
-#     N2, N5, N7 and the gate-drift items, closed here).
+#     3, 6, 7 and 12, closed in v1.1), readiness-iter-2.md (N3 blocking,
+#     N2, N5, N7, closed in v1.2) and readiness-iter-3.md (N8 blocking and
+#     N13, closed here).
 #   - PM notes: ./chg-GH-266-pm-notes.yaml (binding decisions: composite
 #     bar, eleven-token resolution, two-file scope, history handling,
 #     residual, adjudication of the 2026-11-03 sentence).
@@ -91,7 +98,7 @@
 # both amended files first exist. P1 observes the backlog half through the
 # REGION-SCOPED backlog corroboration gate but claims no completing marker
 # for TC-GATE-009. TC-GATE-011 likewise completes in P2 even though P1
-# runs p10 for early backlog-frontmatter detection.
+# runs the P10a backlog-frontmatter half for early detection.
 #
 # AC coverage (17/17, each AC appears once):
 #   AC-F1-1   -> TC-GATE-001                   -> P1
@@ -197,9 +204,11 @@
 #       target.
 #   N-4 Inside-entry preservation — the five M1-S9 prose regions (Goal,
 #       Ticket, phase (a), handover-flips, covers-functions) are frozen by
-#       AC-F1-3/DEC-12; P4c/P4d prove them byte for byte with two mutants,
-#       and TC-GATE-022 completes in P1. P15 separately proves out-of-entry
-#       containment and other-story byte identity.
+#       AC-F1-3/DEC-12; spec v1.3 narrows the editable prose to the tasks
+#       clause that defines clean. P4c/P4d prove the five regions byte for
+#       byte with two mutants, and TC-GATE-022 completes in P1. P15
+#       separately proves out-of-entry containment and other-story byte
+#       identity.
 #
 # Delivery-planning decisions (placement, wording, sequencing; no
 # behavioural deviation):
@@ -306,7 +315,7 @@
 #   - Record the observed output line for every gate in the P3 evidence
 #     file and in the PR body (test plan §6; spec §17.1 DoD).
 #
-# Validation record (2026-11-08, plan revision v1.2):
+# Validation record (2026-11-08, plan revision v1.3):
 #   verdict=valid, readyForDevelopment=true, totalErrors=0,
 #   artifact=chg-GH-266-plan.yaml (kind=yaml),
 #   schemaVersion=delivery.plan.v1, tier=lite, phases=1..3.
@@ -482,18 +491,38 @@ phases:
         -> M1-S9 entry lines: 529..N (N derived from the next heading;
         529 is stable; N grows with the amendment); backlog.md hunks: M
         with M>=1; non-vacuous: backlog.md changed;
-        hunks: inside=M outside=0; hunk confinement OK;
-        the four boundary self-tests: +600,1 and +560,0 each OUTSIDE +
-        hunks: inside=0 outside=1 + hunk confinement FAILED, then +559,0
-        and +541,9 each hunks: inside=1 outside=0 + hunk confinement OK;
-        other-story AC/Depends byte-identical; stories compared: 66;
+        hunks: inside=M outside=0; hunk confinement OK.
+        The four boundary self-tests are LENGTH-DERIVED (N8): boundary =
+        end+1, probe_far = end+50, and the gate must assert that the
+        printed boundary coordinate equals the derived end+1 and is
+        classified OUTSIDE. Never assert a literal 560. Base range
+        529..559: OUTSIDE @@ -609,1 +609,1 @@ and @@ -560,1 +560,0 @@,
+        then inside +559,0 and +529,9. Reference amended range 529..578:
+        OUTSIDE @@ -628,1 +628,1 @@ and @@ -579,1 +579,0 @@, then inside
+        +578,0 and +529,9. Each OUTSIDE block is followed by
+        hunks: inside=0 outside=1 + hunk confinement FAILED; each inside
+        block by hunks: inside=1 outside=0 + hunk confinement OK.
+        Then other-story AC/Depends byte-identical; stories compared: 66;
         negative control detected the M1-S8 edit; P15 verdict: OK; exit 0
+        (the four self-tests are output-only; the verdict itself comes
+        from confine_ok/present/stories_ok).
+        Explicit derived-boundary assertion (capture the run above to
+        /tmp/gh266-p15.txt, then):
+        end=$(awk '/^### M1-S9 /{s=NR} s&&/^### /&&NR>s{print NR-1; exit}' doc/planning/oss-tooling/backlog.md);
+        boundary=$((end+1));
+        grep -Fq "OUTSIDE: @@ -${boundary},1 +${boundary},0 @@" /tmp/gh266-p15.txt
+        -> the printed boundary coordinate equals the derived end+1 and is
+        classified OUTSIDE. A hardcoded 560 assertion is forbidden.
       - >-
-        BASE=origin/main-tools bash /tmp/gh266-procedures/p10.sh
-        -> backlog frontmatter byte-identical; status has no frontmatter;
-        0 added ados_distribution lines (P10a is the backlog half; the
-        status halves are re-run in P2. TC-GATE-011 still completes in P2,
-        but a backlog frontmatter defect is now caught and fixable in P1.)
+        Backlog-only P10a frontmatter gate (N13: the status-side P10b/P10c
+        are deliberately not run in P1, whose scope is backlog.md):
+        extract_fm() { awk 'NR==1&&$0=="---"{f=1} f{print} f&&NR>1&&$0=="---"{exit}' "$1"; };
+        extract_fm /tmp/gh266-base-backlog.md > /tmp/gh266-fm-base.txt;
+        extract_fm doc/planning/oss-tooling/backlog.md > /tmp/gh266-fm-head.txt;
+        cmp /tmp/gh266-fm-base.txt /tmp/gh266-fm-head.txt
+        -> backlog frontmatter byte-identical; exit 0. P10b/P10c run in
+        P2; the full p10 (P10a re-check + P10b + P10c) re-runs in P3.
+        TC-GATE-011 completes in P2 with this P1 evidence plus P10b/P10c.
       - >-
         BASE=origin/main-tools bash /tmp/gh266-procedures/p03.sh
         doc/planning/oss-tooling/backlog.md
@@ -703,7 +732,7 @@ phases:
       - "TC-GATE-007 (complete: forward=2 pointed=2 pointer-shape=2/2 bytes=2/2; forward bytes milestone-exit-forward=332, next-steps-item-3=247)"
       - "TC-GATE-008 (complete: 2026-11-03 section byte-identical, lead-in byte-identical, statements 1/2/3 byte-identical, reflow negative control detected, P7 verdict: OK)"
       - "TC-GATE-009 (complete: status.md sources=3/3 insufficiency=OK; backlog half was P1)"
-      - "TC-GATE-011 (complete: backlog frontmatter byte-identical, status has no frontmatter, 0 added ados_distribution lines; P1 ran p10 for early backlog detection, the status halves complete here)"
+      - "TC-GATE-011 (complete: backlog frontmatter byte-identical from P1's P10a; status has no frontmatter and 0 added ados_distribution lines from P10b/P10c here; the full p10 re-runs in P3)"
       - "TC-GATE-019 (complete: adjudication missing=0, 2026-11-03 section byte-identical, negative control missing=1 -> stricter-coverage)"
       - "TC-GATE-020 (complete: calendar-window-alone=OK, elapsed-only-phrase=ABSENT, floor-scope=OK, negative control MISSING/PRESENT)"
       - "TC-GATE-021 (complete: citation: OK, negative control MISSING)"
@@ -750,9 +779,16 @@ phases:
         -> backlog.md: sources=3/3 insufficiency=OK and status.md:
         sources=3/3 insufficiency=OK; both exit 0
       - >-
-        BASE=origin/main-tools bash /tmp/gh266-procedures/p10.sh
-        -> "backlog frontmatter byte-identical"; "status has no
-        frontmatter"; 0 added ados_distribution lines
+        Status-side P10b/P10c gate (N13: P10a is the backlog half and was
+        proven in P1; the full p10 re-runs in P3):
+        head -1 doc/planning/oss-tooling/status.md | grep -qx -- '---'
+        && { echo "FAIL: status frontmatter added"; exit 1; }
+        || echo "status has no frontmatter";
+        git diff "${BASE:-origin/main-tools}"...HEAD -- doc/planning/oss-tooling/
+        | grep -c '^+ados_distribution' || true
+        -> status has no frontmatter; 0 added ados_distribution lines;
+        exit 0. The backlog frontmatter byte-identical line comes from
+        P1's P10a gate; the full p10 in P3 re-checks all three.
     invariants:
       - "F-2/DEC-6: the amendment is additive and dated; the two pointers are additive and sit inside the original paragraphs; no historical region is rewritten"
       - "F-2/DEC-10/AC-F2-4: the 2026-11-03 per-engine sentence is adjudicated as the same gate, superseded not waived, with the coverage and elapsed-to-floor reasons; the dated bytes are untouched"
@@ -813,8 +849,10 @@ phases:
         phase-1 and phase-2 gate lists. P14 must print backlog.md
         corroboration=3/3 incident=OK classes=OK floor=OK and status.md
         corroboration=3/3 incident=OK classes=OK floor=OK|n/a and exit 0.
-        P15 must still print the four boundary self-tests and P15 verdict:
-        OK; P16 must still print adjudication: missing=0, citation: OK,
+        P15 must still print the four length-derived boundary self-tests
+        (the printed boundary coordinate equals the derived end+1, never a
+        literal 560, and is OUTSIDE) and P15 verdict: OK; P16 must still
+        print adjudication: missing=0, citation: OK,
         the four mutant lines and P16 verdict: OK; P04 must still print the
         five frozen-region byte counts and P4 verdict: OK; P06 must still
         print the two forward-statement byte counts, pointer-shape=2/2 and
@@ -874,12 +912,24 @@ phases:
       - >-
         BASE=origin/main-tools bash /tmp/gh266-procedures/p15.sh
         -> M1-S9 entry lines: 529..N; backlog.md hunks: M with M>=1;
-        hunks: inside=M outside=0; hunk confinement OK; four boundary
-        self-tests: +600,1 and +560,0 each OUTSIDE + hunks: inside=0
-        outside=1 + hunk confinement FAILED, then +559,0 and +541,9 each
-        hunks: inside=1 outside=0 + hunk confinement OK; other-story
-        AC/Depends byte-identical; stories compared: 66; negative control
-        detected the M1-S8 edit; P15 verdict: OK; exit 0
+        hunks: inside=M outside=0; hunk confinement OK. Four
+        length-derived boundary self-tests (N8): boundary = end+1, probe_far =
+        end+50; assert the printed boundary coordinate equals the derived
+        end+1 and is OUTSIDE (never a literal 560). Reference amended
+        range 529..578: OUTSIDE @@ -628,1 +628,1 @@ and
+        @@ -579,1 +579,0 @@, then inside +578,0 and +529,9; each
+        OUTSIDE block followed by hunks: inside=0 outside=1 + hunk
+        confinement FAILED, each inside block by hunks: inside=1
+        outside=0 + hunk confinement OK. Then other-story AC/Depends
+        byte-identical; stories compared: 66; negative control detected
+        the M1-S8 edit; P15 verdict: OK; exit 0.
+        Explicit derived-boundary assertion (capture the run above to
+        /tmp/gh266-p15.txt, then):
+        end=$(awk '/^### M1-S9 /{s=NR} s&&/^### /&&NR>s{print NR-1; exit}' doc/planning/oss-tooling/backlog.md);
+        boundary=$((end+1));
+        grep -Fq "OUTSIDE: @@ -${boundary},1 +${boundary},0 @@" /tmp/gh266-p15.txt
+        -> the printed boundary coordinate equals the derived end+1 and is
+        classified OUTSIDE. A hardcoded 560 assertion is forbidden.
       - >-
         BASE=origin/main-tools bash /tmp/gh266-procedures/p16.sh
         doc/planning/oss-tooling/status.md
