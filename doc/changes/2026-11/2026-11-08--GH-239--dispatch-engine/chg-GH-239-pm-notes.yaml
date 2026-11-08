@@ -1,0 +1,67 @@
+change_id: GH-239
+title: "M1-S9: Dispatch engine: dual-run evidence and per-repo handover"
+delivery_mode: autonomous
+milestone: M1
+story_code: M1-S9
+variant: full
+phases:
+  clarify_scope: { started: "2026-11-08T07:55:00Z", completed: 2026-11-08T06:52:47.123Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "D1 — Handover gate definition follows the amended canonical backlog
+      (GH-266 / CEO-D-073 evidence bar), not the stale two-week wording still
+      quoted in the GH-239 ticket body. The backlog is canonical; the ticket
+      body is reported, not edited."
+    date: "2026-11-08"
+  - text: "D2 — The deliverable is the handover mechanism plus its gate and records;
+      actually flipping this repository to engine-authoritative is an
+      operational act after real pilot evidence, not something a PR can satisfy.
+      End-to-end 'handed-over repository dispatches through the new stack' is
+      demonstrated on a controlled test repository/fixture."
+    date: "2026-11-08"
+  - text: "D3 — Dual-run comparison baseline is the token independently derived by
+      verify-change (ledger/tracker truth), consistent with SC-M1-30 and
+      TDR-0005 token-level parity. 'Bash stack authoritative' means dispatch
+      never claims authority and never merges while the repository is in
+      dual-run; it does not mean both stacks deliver the same ticket twice."
+    date: "2026-11-08"
+  - text: "D4 — 'dispatch' joins the prompt-required CLI composition so agents and
+      the coordinator can consume it; the entrypoint, help inventory, and
+      reference-page coverage are updated together, and the tests that assert
+      dispatch absence are retired or inverted."
+    date: "2026-11-08"
+  - text: "D5 — Dependency set (M0-S8, M1-S11, M1-S17, M1-S18) is delivered on
+      main-tools: verify change, harness adapters, scheduling engine, and
+      resident daemon are all present, so the story is not blocked."
+    date: "2026-11-08"
+open_questions: []
+blockers: []
+notes:
+  - text: "Clarify-scope read: GH-239 body, backlog M1-S9 (canonical, amended),
+      roadmap M1 exit evidence, m1
+      contracts/commands/interactions/test-scenarios (SC-M1-26..30), TDR-0005,
+      TDR-0010, GH-266 handover-gate spec, and the delivered infrastructure
+      (queue, daemon, harness adapters, result contract, state layer)."
+    type: info
+    date: "2026-11-08"
+  - text: "Contradiction resolved: GH-239 ticket body still quotes the superseded
+      rolling-two-week clean window; backlog.md now defines a composite evidence
+      bar. GH-266 explicitly declares the ticket body stale and out of scope for
+      editing; backlog is canonical."
+    type: decision
+    date: "2026-11-08"
+  - text: "Scope risk (retro): GH-239 is the milestone-closer with a very large
+      surface (new command, state record families, daemon planner seam, bash
+      deprecation integration, 11-class gate, docs). Watch for plan phasing that
+      defers AC-bearing behavior into 'documentation/tests only'."
+    type: risk
+    date: "2026-11-08"
