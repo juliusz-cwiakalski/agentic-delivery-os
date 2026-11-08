@@ -537,10 +537,29 @@ the M1 redefinition).
   its one-shot mode (M1-S17): dual-run on pilot tickets with the bash
   stack authoritative, verify-change evidence recorded per ticket,
   divergences reported; (b) **handover per repository** additionally
-  requires the resident daemon live (M1-S18) and the evidence window
-  elapsed. Clean is defined: a rolling two-week window with zero
+  requires the resident daemon live (M1-S18) and the evidence-based clean
+  bar met. Clean is the conjunction of four conditions: (a) zero
   false-success incidents and zero unresolved divergences on the
-  repository's pilot paths. Handover flips the repository to the engine
+  repository's pilot paths; (b) dispatch evidence exercising every
+  TDR-0005 result class on real tickets; (c) an exposure floor of at
+  least 20 dispatches or at least 7 consecutive days, whichever comes first,
+  where that either/or binds only the floor and never substitutes
+  for class coverage, incident truth, or corroboration; (d) corroboration,
+  where an engine-claimed success is never sufficient and a dispatch
+  counts clean only when artifact and tracker truth agree.
+
+  The result-class condition is total over the vocabulary the classifier
+  can emit, enumerated here for set comparison against the typed contract:
+  `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `failed`,
+  `finished`, `max-restarts`, `state-unverified`, `partial`,
+  `noop-lane-permission`, `noop-lane-nothing-to-do`.
+
+  Corroboration is exactly three evidence sources: completed pm-notes
+  phases, tracker state, and CI on the pushed head. A success claim such
+  as merged needs the pushed head, CI on that head, the tracker state,
+  and completed phases; a tracker-derived claim such as pr-open,
+  blocked, or pr-open-unverified needs the tracker fact. A result
+  token alone never counts. Handover flips the repository to the engine
   as authoritative (recorded, reversible), and the bash entry points
   print deprecation pointers and remain reachable as fallback. Covers
   the functions of `deliver-ticket.sh`, `batch-deliver.sh`,
