@@ -39,6 +39,7 @@ export const ADAPTER_SUBPATHS = [
   "legacy",
   "credentials",
   "provider-quota",
+  "daemon",
 ];
 
 export type Violation = { rule: string; from: string; to: string };

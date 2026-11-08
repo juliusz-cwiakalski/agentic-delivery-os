@@ -32,8 +32,11 @@ as resource classes, producers before consumers, closing beats opening,
 parks that resume exactly when their condition clears, and one-shot
 operation without the daemon. Mutating subcommands append intent under
 the state layer's fence and land durably; no resident daemon or control
-socket is involved, and every successful queue/lanes payload reports
-`degraded: ["daemon-unreachable"]` at exit 0. `--watch` is not accepted.
+socket is required, and every successful queue/lanes payload carries
+`degraded: ["daemon-unreachable"]` at exit 0 when no daemon is reachable.
+`--watch` is accepted: it streams bounded daemon frames when the daemon is
+reachable and degrades to bounded state polling at `daemon.watch-poll-interval`
+when it is not.
 
 ## OUTPUT
 
@@ -49,8 +52,8 @@ and, for `plan`, `nextActions[]` with `ref`, `repository`, `rankClass`,
 ## EXIT STATUS
 
 0 read, landed mutation, observed-empty queue, or report-only stuck-park
-finding; 1 invocation rejection (including `--watch`), dependency cycle,
-lease conflict, unmet claim precondition, stuck-park claim refusal, or
+finding; 1 invocation rejection (such as an unknown park cause), dependency
+cycle, lease conflict, unmet claim precondition, stuck-park claim refusal, or
 unobserved entry; 2 platform or state read failure, including
 `list`/`plan` over unreadable, torn, or unknown-kind history.
 
@@ -128,9 +131,10 @@ $ <binary> queue dep GH-306 GH-307 --json
 
 `queue.dependency-cycle`, `queue.lease-conflict`,
 `queue.park-condition-stuck`, `queue.entry.unobserved`,
-`queue.precondition.unmet`. An invocation rejection such as `--watch` or an
+`queue.precondition.unmet`. An invocation rejection such as an
 unknown park cause reuses `fallback.invocation` at exit 1; unreadable lease,
 park, or entry history reuses the delivered `state.*` identities at exit 2.
+A watch over unreadable state exits 2 with the delivered `state.*` identity.
 
 ## SEE ALSO
 
@@ -152,9 +156,13 @@ The full family ships as `ready`, `list`, `plan`, `add`, `prioritize`, `dep`,
 <binary> queue release <ref> [--holder <id>] [--park <cause>] [--until <iso>]
 ```
 
-`--watch` is not accepted on any queue subcommand; it is an invocation rejection
-at exit 1 through `fallback.invocation`, with a remediation hint naming the
-resident daemon (M1-S18).
+`--watch` is accepted on `queue` (GH-238) as an additive flag. With a reachable
+daemon the invocation subscribes to the closed `queue` topic, prints one bounded
+initial snapshot, then one deduplicated bounded event frame per line, and exits
+0 on interruption. With no reachable daemon it enters declared degraded polling
+at `daemon.watch-poll-interval`, names `daemon-unreachable`, prints only changed
+snapshots, and exits 0; unreadable state exits 2 with the delivered `state.*`
+identity.
 
 Machine envelopes follow the contract-level shapes:
 

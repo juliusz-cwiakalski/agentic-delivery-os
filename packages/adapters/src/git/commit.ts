@@ -281,5 +281,43 @@ export const createGitCommitSeam = (options: GitCommitSeamOptions = {}): CommitG
       const result = await git(["cat-file", "-e", `${sha}^{commit}`]);
       return result.status === 0;
     },
+    logSince: async (baselineHead, cap = 32) => {
+      if (!SAFE_SHA.test(baselineHead)) {
+        return { ok: false, detail: "baseline-not-placeable" };
+      }
+      const result = await git([
+        "log",
+        "--no-renames",
+        "--name-only",
+        "--format=%H",
+        `${baselineHead}..HEAD`,
+      ]);
+      if (result.status !== 0) {
+        return { ok: false, detail: "log-read-failed" };
+      }
+      const commits: { sha: string; changedPaths: string[] }[] = [];
+      let current: { sha: string; changedPaths: string[] } | undefined;
+      for (const rawLine of result.stdout.split("\n")) {
+        const line = rawLine.trim();
+        if (line.length === 0) continue;
+        if (SAFE_SHA.test(line)) {
+          current = { sha: line, changedPaths: [] };
+          commits.push(current);
+          continue;
+        }
+        current?.changedPaths.push(line.replaceAll("\\", "/").replace(/^\.\//u, ""));
+      }
+      if (commits.length > cap) {
+        return { ok: false, detail: "over-cap" };
+      }
+      return {
+        ok: true,
+        commits: commits.map((commit) => ({
+          sha: commit.sha,
+          changedPaths: [...new Set(commit.changedPaths)].sort(),
+        })),
+        capped: false,
+      };
+    },
   };
 };

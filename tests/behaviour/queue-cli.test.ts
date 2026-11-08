@@ -14,7 +14,12 @@ import {
 } from "../../packages/core/src/contracts/index";
 import { createParkRecord } from "../../packages/core/src/domain/index";
 import type { StoreWriteLog } from "../fixtures/queue/cli/harness";
-import { createQueueEdgeHarness, NOW_ISO, trackingStore } from "../fixtures/queue/cli/harness";
+import {
+  createQueueEdgeHarness,
+  NOW_ISO,
+  NOW_MS,
+  trackingStore,
+} from "../fixtures/queue/cli/harness";
 
 const ROOT = process.cwd();
 const json = (text: string): Record<string, unknown> => JSON.parse(text) as Record<string, unknown>;
@@ -512,17 +517,26 @@ describe("TC-SCHED-012 command-level zero-write reads", () => {
 });
 
 describe("TC-SCHED-016 invocation rejection and --json envelope", () => {
-  test("--watch on any queue subcommand is fallback.invocation with a resident-daemon hint", async () => {
-    const harness = createQueueEdgeHarness("watch");
-    const refused = await harness.run(["queue", "list", "--watch", "--json"]);
-    expect(refused.exitCode).toBe(1);
-    expect(error(refused.stdout)?.code).toBe("fallback.invocation");
-    expect(String(error(refused.stdout)?.remediationHint)).toContain("resident daemon (M1-S18)");
-    expect(json(refused.stdout).data).toBeUndefined();
+  test("--watch on any queue subcommand is accepted and degrades at exit 0", async () => {
+    const watch = {
+      maxIterations: 1,
+      clock: {
+        nowMs: () => NOW_MS,
+        nowIso: () => NOW_ISO,
+        sleep: async () => undefined,
+      },
+    };
+    const harness = createQueueEdgeHarness("watch", { overrides: { watch } });
+    const accepted = await harness.run(["queue", "list", "--watch", "--json"]);
+    expect(accepted.exitCode).toBe(0);
+    expect(accepted.stdout).toContain("daemon-unreachable");
+    expect(accepted.stdout).toContain('"watch": true');
+    expect(accepted.stdout).toContain('"topic": "queue"');
     const plan = await harness.run(["queue", "plan", "--watch", "--json"]);
-    expect(plan.exitCode).toBe(1);
-    expect(error(plan.stdout)?.code).toBe("fallback.invocation");
-    expect(String(error(plan.stdout)?.remediationHint)).toContain("resident daemon (M1-S18)");
+    expect(plan.exitCode).toBe(0);
+    expect(plan.stdout).toContain("daemon-unreachable");
+    expect(plan.stdout).toContain('"watch": true');
+    expect(plan.stdout).toContain('"topic": "queue"');
   });
 
   test("the machine envelope is parseable and carries a schemaVersion", async () => {

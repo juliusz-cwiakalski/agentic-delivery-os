@@ -13,6 +13,7 @@
  * exists in this module.
  */
 
+import type { CallerPrincipal } from "./principal.js";
 import type { QueueReadyCondition, QueueReadyConditionId } from "./queue-ready.js";
 import type { StateJsonValue } from "./state.js";
 
@@ -324,6 +325,8 @@ export type QueueEntryRecord = {
   readonly repositoryRoot?: string;
   readonly priority: number;
   readonly recordedAt: string;
+  /** Additive optional caller principal (C-2); historical records omit it. */
+  readonly callerPrincipal?: CallerPrincipal;
 };
 
 /** The dependency record shape carrying the folded edges originating at ref. */
@@ -332,6 +335,8 @@ export type QueueDependencyRecord = {
   readonly ref: string;
   readonly edges: readonly string[];
   readonly recordedAt: string;
+  /** Additive optional caller principal (C-2); historical records omit it. */
+  readonly callerPrincipal?: CallerPrincipal;
 };
 
 /** The rebuilt graph entry projection (the derived document folds no root). */
@@ -368,14 +373,22 @@ export const QUEUE_RECORD_DECLARATIONS = [
     payloadSchema: QUEUE_ENTRY_SCHEMA,
     keyPrefix: QUEUE_ENTRY_KEY_PREFIX,
     identityField: "ref",
-    fields: ["schema", "ref", "repository", "repositoryRoot", "priority", "recordedAt"],
+    fields: [
+      "schema",
+      "ref",
+      "repository",
+      "repositoryRoot",
+      "priority",
+      "recordedAt",
+      "callerPrincipal",
+    ],
   },
   {
     kind: QUEUE_DEPENDENCY_RECORD_KIND,
     payloadSchema: QUEUE_DEPENDENCY_SCHEMA,
     keyPrefix: QUEUE_DEPENDENCY_KEY_PREFIX,
     identityField: "ref",
-    fields: ["schema", "ref", "edges", "recordedAt"],
+    fields: ["schema", "ref", "edges", "recordedAt", "callerPrincipal"],
   },
   {
     kind: QUEUE_LEASE_RECORD_KIND,

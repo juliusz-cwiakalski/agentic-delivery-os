@@ -587,6 +587,7 @@ describe("TC-VERIFY-020 inventory registration", () => {
 });
 
 const DEPCRUISE_RULES = [
+  "daemon-merge-absence",
   "matrix-adapters-importer",
   "matrix-cli-importer",
   "matrix-core-importer",
@@ -621,6 +622,7 @@ const RUNTIME_ALLOWLIST = [
   "^packages/adapters/src/git/",
   "^packages/adapters/src/inference/",
   "^packages/testkit/src/commit/",
+  "^packages/adapters/src/daemon/",
   "^packages/mcp/src/serve\\.ts$",
   "^packages/cli/",
   "^packages/opencode/",

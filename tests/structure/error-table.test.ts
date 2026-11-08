@@ -89,6 +89,15 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "queue.lease-conflict",
   "queue.park-condition-stuck",
   "queue.entry.unobserved",
+  // GH-238 pins the eight resident-daemon identities exactly.
+  "daemon.already-running",
+  "daemon.takeover-refused",
+  "daemon.heartbeat-stale",
+  "daemon.state-recovery-failed",
+  "daemon.protocol.unsupported",
+  "daemon.socket-unreachable",
+  "daemon.subscriber-degraded",
+  "daemon.supervisor-unsupported",
 ]);
 
 const isValidCode = (code: string): boolean =>
@@ -759,7 +768,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, `spend`, `dispatch`, and `queue`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, `spend`, `dispatch`, `queue`, and `daemon`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -777,7 +786,8 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "blockers")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "spend")).toHaveLength(1);
-    expect(entries).toHaveLength(105);
+    expect(entries.filter((entry) => entry.domainKind === "daemon")).toHaveLength(8);
+    expect(entries).toHaveLength(113);
   });
 });
 
@@ -853,7 +863,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(105);
+    expect(entries).toHaveLength(113);
     expect(db).toHaveLength(4);
   });
 
@@ -1087,7 +1097,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(105);
+    expect(entries).toHaveLength(113);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1361,7 +1371,7 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(27);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(35);
   });
 });
 
@@ -1568,9 +1578,11 @@ const DISPATCH_ROWS = [
 ] as const;
 
 describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (three economics additions)", () => {
-  test("dispatch is the appended declared kind with exactly the two pinned identities in order", () => {
+  test("dispatch is a declared kind with exactly the two pinned identities in order", () => {
     expect(DOMAIN_KINDS).toContain("dispatch");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 1]).toBe("dispatch");
+    // GH-238 appends the daemon kind after dispatch; dispatch itself is unchanged.
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 2]).toBe("dispatch");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 1]).toBe("daemon");
     const dispatch = entries.filter((entry) => entry.domainKind === "dispatch");
     expect(dispatch.map((entry) => entry.code)).toEqual(DISPATCH_ROWS.map(([code]) => code));
     for (const [
@@ -1653,7 +1665,7 @@ describe("TC-ECON-003 the dispatch kind carries exactly the two economics rows (
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(105);
+    expect(entries).toHaveLength(113);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1746,7 +1758,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(104);
+    expect(delivered).toHaveLength(112);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1765,7 +1777,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("105 identities");
+    expect(doc).toContain("113 identities");
   });
 
   test("the documented table is complete in both directions", () => {

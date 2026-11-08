@@ -103,6 +103,8 @@ describe("TC-BLK-039 privacy", () => {
         "question",
         "options",
         "askedAt",
+        "callerPrincipal",
+        "kind",
         "questionId",
         "answeringAudience",
         "choice",

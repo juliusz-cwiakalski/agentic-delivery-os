@@ -25,6 +25,8 @@ export type LanesRuntimeRead =
 /** Everything the lanes handler reads, injected at the edge. */
 export type LanesCommandRuntime = {
   readonly readLanes: () => LanesRuntimeRead;
+  /** The additive live watch stream (GH-238 F-13); absent stays truthful. */
+  readonly watch?: () => AsyncIterable<string>;
 };
 
 type Failure = {
@@ -87,10 +89,21 @@ const oneLaneData = (data: QueueLanesData, ref: string): QueueLanesData => {
 /** Build the `lanes` command definition over an injected lane read. */
 export const createLanesCommandDefinition = (runtime: LanesCommandRuntime): CommandDefinition => ({
   flags: ["--watch"],
+  ...(runtime.watch === undefined
+    ? {}
+    : {
+        stream: (invocation: { readonly flags: Readonly<Record<string, string | true>> }) =>
+          invocation.flags["--watch"] !== undefined ? runtime.watch!() : (async function* () {})(),
+      }),
   positionals: { max: 2 },
   humanText: (data: unknown): string => renderLanesHuman(data as QueueLanesData),
   handler: (invocation) => {
-    if (invocation.flags["--watch"] !== undefined) return watchRefusal();
+    if (invocation.flags["--watch"] !== undefined) {
+      if (runtime.watch === undefined) return watchRefusal();
+      const read = runtime.readLanes();
+      if (!read.ok) return failure("status", read.code, read.summary);
+      return { data: { watch: true, topic: "lanes" } };
+    }
     const grammar = parseGrammar(invocation.positionals);
     if (!grammar.ok) {
       return failure("input", "input.value.rejected", "result=refused; reason=grammar");

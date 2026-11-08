@@ -9,7 +9,7 @@ area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010]
-  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237, GH-240, GH-242]
+  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237, GH-240, GH-238, GH-242]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -132,8 +132,9 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   and `lanes list|show`: a daemon-free one-shot queue graph with repo-exclusive
   fence-token leases and stale takeover, per-runner build-weight classes,
   producer-before-consumer deploy gating, close-first ranking, and parks that
-  resume when their condition clears. No resident daemon, `dispatch`, or live
-  `--watch` streaming ships with it. See [status](../spec/features/feature-status-digest.md),
+  resume when their condition clears. The resident daemon (GH-238) is its
+  production composition root and provides bounded live `queue`/`lanes` watch;
+  `dispatch` and the full delivery loop remain M1-S9. See [status](../spec/features/feature-status-digest.md),
   [queue-ready](../spec/features/feature-queue-ready.md), and
   [scheduling engine](../spec/features/feature-scheduling-engine.md).
 - `board` is a bounded, render-once owner-gate aging grid: 24 h escalation,
@@ -240,9 +241,10 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   gate and its supervised-style and one-shot-style compositions, the additive
   `economics.restart` and `economics.budget-exhaustion` records, the per-delivery
   amplification fold, and the lane configuration branch. The scheduling engine
-  and its `queue`/`lanes` surfaces ship separately (GH-237), and the read-only
-  spend fold ships separately (GH-236). No resident daemon, `dispatch` command,
-  or live `--watch` stream ships with any of them.
+  and its `queue`/`lanes` surfaces ship separately (GH-237), the read-only
+  spend fold ships separately (GH-236), and the resident daemon (GH-238)
+  supplies the scheduling composition root, safe-boundary preemption, and live
+  watch. The `dispatch` command and full delivery-loop handover remain M1-S9.
 - Accepted architecture calls for one shared composition root. Today the working
   compositions are command-specific CLI edge functions. Optional registrations
   require supplied ports. Production credential/quota factories and a spawn gate
@@ -417,3 +419,7 @@ Draft checks: relative source links resolve and frontmatter parses. The privacy
 working-tree scan reports zero violations with the vacuous classes noted above.
 Branding membership remediation and fresh mechanical results are recorded in the
 Phase 6 report; no fresh runtime/pilot result is claimed by this reconstruction.
+
+## Resident dispatch daemon (GH-238)
+
+The optional resident daemon sits above the delivered state, queue, economics, blockers, harness, and commit substrates. It owns the `daemon.lock`, durable instance/heartbeat/lane/reconciliation/preemption records, and a local control plane; it never writes a commit, runs a phase, or reaches merge execution. State remains the only shared truth, so every one-shot works with the daemon absent.

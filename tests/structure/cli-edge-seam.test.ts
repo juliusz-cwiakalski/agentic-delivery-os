@@ -74,6 +74,9 @@ const streamWriteFailures = (root: string): string[] => {
   const failures: string[] = [];
   for (const file of listTypeScriptFiles(root, CLI_DIR)) {
     if (file === SERIALIZE) continue;
+    // The surface entry is the one allowed writer; it drains the additive
+    // stream through the serializer and never composes a line itself.
+    if (file === `${CLI_DIR}/index.ts`) continue;
     const source = parse(root, file);
     const visit = (node: ts.Node): void => {
       if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
@@ -546,6 +549,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       `${CLI_DIR}/commands/board.ts`,
       `${CLI_DIR}/commands/brief.ts`,
       `${CLI_DIR}/commands/closeout.ts`,
+      `${CLI_DIR}/commands/daemon.ts`,
       `${CLI_DIR}/commands/db.ts`,
       `${CLI_DIR}/commands/doctor.ts`,
       `${CLI_DIR}/commands/lanes.ts`,

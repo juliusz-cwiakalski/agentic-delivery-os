@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-STATE-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The implemented state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, rebuild from the ledger alone including a post-salvage ledger, classified torn/unknown detection with verified-empty evidence, explicit guided terminal-tail salvage with quarantine, reusable validated artifact-boundary contracts, store-managed artifact read/get-or-create with runtime-edge random material, fail-closed storage exhaustion, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, the provider park/announcement record kinds with the rebuildable provider-parks.json projection, the additive provider.profile-target lifecycle record kind, the additive closeout.operation outcome ledger, the additive commit.telemetry event ledger, the additive owner-gate.decision default-application ledger, the additive audit reservation/invocation kinds with a keyed chain and bounded read surface, the additive merge-domain gate-verification, waiver, and transaction kinds, the additive harness.telemetry session-group and capture-outcome kinds, the additive economics.restart and economics.budget-exhaustion record kinds with the per-delivery economics fold, the spend read side's verified read-only consumer over those telemetry and transition records, the five additive queue scheduling kinds with the rebuildable queue-graph document, and the retro registry's three validated record kinds beside the independent evidence sidecar artifact family, the additive blocker.question and blocker.answer question-channel records, and the change capsule's events.jsonl and candidates/ as file artifacts in the change folder, not state record kinds."
+summary: "The implemented state layer: an injected store identity, an append-only schema-versioned JSONL ledger as durable truth, disposable JSONL-scan and SQLite-index driver kinds over the same ledger, rebuild from the ledger alone including a post-salvage ledger, classified torn/unknown detection with verified-empty evidence, explicit guided terminal-tail salvage with quarantine, reusable validated artifact-boundary contracts, store-managed artifact read/get-or-create with runtime-edge random material, fail-closed storage exhaustion, key-set assertions with no default substitution, single-writer fences with explicit reported recovery, atomic derived-document replace, least-privilege permissions with a documented Windows ACL contract, the provider park/announcement record kinds with the rebuildable provider-parks.json projection, the additive provider.profile-target lifecycle record kind, the additive closeout.operation outcome ledger, the additive commit.telemetry event ledger, the additive owner-gate.decision default-application ledger, the additive audit reservation/invocation kinds with a keyed chain and bounded read surface, the additive merge-domain gate-verification, waiver, and transaction kinds, the additive harness.telemetry session-group and capture-outcome kinds, the additive economics.restart and economics.budget-exhaustion record kinds with the per-delivery economics fold, the spend read side's verified read-only consumer over those telemetry and transition records, the five additive queue scheduling kinds with the rebuildable queue-graph document, and the retro registry's three validated record kinds beside the independent evidence sidecar artifact family, the additive blocker.question and blocker.answer question-channel records, the seven additive daemon and external-effect record kinds, and the change capsule's events.jsonl and candidates/ as file artifacts in the change folder, not state record kinds."
 links:
-  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224", "GH-225", "GH-233", "GH-232", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240"]
+  related_changes: ["GH-174", "GH-177", "GH-179", "GH-181", "GH-182", "GH-175", "GH-176", "GH-183", "GH-222", "GH-227", "GH-229", "GH-223", "GH-224", "GH-225", "GH-233", "GH-232", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238"]
   related_decisions: ["ADR-0003", "TDR-0004", "TDR-0005"]
 ---
 
@@ -257,6 +257,7 @@ Fault injection is a fixture contract: `tests/fixtures/state/harness.ts` supplie
 - [Verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md) — the read-only verification consumer and the delivery-result exit taxonomy.
 - [Session lifecycle economics](feature-session-lifecycle-economics.md) — the `economics.restart` and `economics.budget-exhaustion` record kinds and the per-delivery economics fold.
 - [Scheduling engine](feature-scheduling-engine.md) — the five `queue.*` record kinds, the derived queue graph, and the claim/release ledgers over this port.
+- [Resident dispatch daemon](feature-resident-daemon.md) — the seven additive daemon and external-effect record kinds, the daemon lock artifact, and the DM-18 redrive detection.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — tier and runtime-API boundaries.
 - [Branding seam](feature-branding-seam.md) — `stateDirectoryName` is consumed as an injected parameter, never imported here.
 - [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0004](../../decisions/TDR-0004-state-storage-engine.md).
@@ -337,3 +338,71 @@ record reads verified-empty.
 The queue ledgers are orchestrated in the app tier
 (`packages/core/src/app/queue.ts`) over the injected state port; the state tier
 remains contract-only. See [Scheduling Engine](feature-scheduling-engine.md).
+
+## GH-238 additive daemon records
+
+Seven additive kinds join `delivery.state.v1` with no schema-version bump,
+migration, or backfill. A store that has never seen a daemon record reads
+verified-empty.
+
+| Kind | Payload schema | Store-scoped key | Writer / reader |
+|---|---|---|---|
+| `daemon.instance` | `delivery.daemon.instance.v1` | `daemon.instance` | `daemon start`/`daemon stop`; lock ownership, status, takeover evidence |
+| `daemon.heartbeat` | `delivery.daemon.heartbeat.v1` | `daemon.heartbeat` | the resident daemon; liveness, staleness, diagnostics |
+| `daemon.lane` | `delivery.daemon.lane.v1` | `daemon.lanes:<REF>` | the resident daemon; reconciliation, status, the lane projection |
+| `daemon.reconciliation` | `delivery.daemon.reconciliation.v1` | `daemon.reconciliations:<instanceId>` | `daemon start`; start report and diagnostics |
+| `daemon.preemption` | `delivery.daemon.preemption.v1` | `daemon.preemptions:<REF>` | the resident daemon; preemption application |
+| `command.receipt` | `delivery.command.receipt.v1` | `command.receipts:<effectId>` | the external-effect primitive and the daemon's DM-18 redrive detection |
+| `outbox.effect` | `delivery.outbox.effect.v1` | `outbox.effects:<effectId>` | the external-effect primitive and the production commit/phase-complete path; intent, state machine, recovery |
+
+- `daemon.instance` carries `schema`, `instanceId`, `pid`, the non-path `scope`
+  digest, `lockToken`, `operation` (`acquired`, `taken-over`, `released`,
+  `immediate-stop`), `acquiredAt`, `heartbeatAt`, optional `releaseReason`, and
+  optional `takeover` evidence (previous instance, previous token, last
+  heartbeat, heartbeat age, takeover time). The latest record wins; a live
+  instance is never silently replaced.
+- `daemon.heartbeat` carries `schema`, `instanceId`, a monotone `ordinal`,
+  `beatAt`, `uptimeMs`, `queueDepth`, `laneCounts` (`delivering`, `idle`,
+  `parked`, `failed`), optional `currentSpawn` (`ref`, `sessionId`), `cursor`,
+  and `recordedAt`. A reader never fabricates a beat.
+- `daemon.lane` carries `schema`, `ref`, the daemon execution `state`
+  (`delivering`, `detached`, `completed`, `failed`, `preempted`), optional
+  harness/session/process identity, optional `ledgerPosition`
+  (`lastCompletedPhase`), `spawnOrdinal`, optional `liveness` (`classification`,
+  `observedAt`), optional `detachedAt`, optional `classification` (`alive`,
+  `interrupted`, `crashed`), optional `resumeIntent` (`questionId`, `mode`), and
+  `recordedAt`. One current record per ref.
+- `daemon.reconciliation` carries `schema`, `instanceId`, `queue` counts
+  (`entries`, `edges`, `parks`), `lanes[]` (`ref`, `classification?`, `action`,
+  `restarts`, `reason?`), `duplicates`, `questions[]`, `startedAt`,
+  `completedAt`, `truncated`, and `recordedAt`. `duplicates` is measured from
+  the verified ledger across the queue, lane, blocker, outbox, and receipt
+  identity kinds: a repeated kind plus identity whose payload is identical to
+  the first is a duplicate append, while a payload-changing update is not; a
+  checked read returns `0` only when it found none. A replay of the same instance
+  appends no second report.
+- `daemon.preemption` carries `schema`, `ref`, `repository`, `closeRef`,
+  `parkCause` (`preempted-for-close-item`), `conditionType` (`preemption`),
+  `holder`, `state` (`pending`, `applied`, `withdrawn`; only `pending` and
+  `applied` are written), `requestedAt`, optional `appliedAt` and `boundary`,
+  `evidence[]`, and `recordedAt`.
+- `command.receipt` carries `schema`, `effectId`, `attempt`, `queryVerdict`
+  (`found`, `not-found`, `unreadable`), `status` (`applied`, `already-applied`,
+  `failed`, `unknown`), bounded `evidence[]`, optional `discoveredSha` and
+  `baselineHead`, and `recordedAt`. A DM-18 redrive detection uses `attempt: 0`
+  and never advances the effect's attempt count or state.
+- `outbox.effect` carries `schema`, `effectId`, `intentId`, `ref`, `effectKind`
+  (`tracker-transition`, `tracker-comment`, `commit`), `target`,
+  `payloadDigest`, `idempotencyKey`, optional `callerPrincipal`, `state`
+  (`accepted`, `in-flight`, `applied`, `failed`, `unknown`), `attempts`,
+  `checkStrategy` (`query-by-id`, `query-by-log-since`), and `recordedAt`; for
+  `effectKind: commit` it also carries `baselineHead`, `changeRef`, `phase`, and
+  the sorted normalized `stagedPaths`. It never carries a message, subject,
+  body, or fingerprint. An identical intent replay appends no second record; the
+  dedupe read and the append execute under one fence acquisition, so concurrent
+  same-key replays cannot both append. Receipts remain per-attempt.
+
+`callerPrincipal` is an optional additive field on intent records; a historical
+record without it reads exactly as before. The daemon records the DM-18 redrive
+detection under the existing `command.receipt` kind. The state schema version,
+existing record kinds, and boundary declarations are unchanged.

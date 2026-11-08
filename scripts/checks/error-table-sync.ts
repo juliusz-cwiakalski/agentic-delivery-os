@@ -180,6 +180,15 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "queue.lease-conflict",
   "queue.park-condition-stuck",
   "queue.entry.unobserved",
+  // GH-238 pins the eight resident-daemon identities exactly.
+  "daemon.already-running",
+  "daemon.takeover-refused",
+  "daemon.heartbeat-stale",
+  "daemon.state-recovery-failed",
+  "daemon.protocol.unsupported",
+  "daemon.socket-unreachable",
+  "daemon.subscriber-degraded",
+  "daemon.supervisor-unsupported",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;

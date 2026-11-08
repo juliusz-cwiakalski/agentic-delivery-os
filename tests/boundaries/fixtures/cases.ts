@@ -787,6 +787,66 @@ export const RULE_CASES: RuleCase[] = [
       },
     },
   ),
+  // --- GH-238 F-17: daemon merge absence (four from-paths; one clean control).
+  dep(
+    "daemon-core-app-merge",
+    "TC-MERGEABS-001",
+    "daemon-merge-absence",
+    ["core"],
+    "packages/core/src/app/daemon-merge-probe.ts",
+    'import "../domain/merge-transaction";\n',
+    {
+      extraFiles: {
+        "packages/core/src/domain/merge-transaction.ts": "export {};\n",
+      },
+    },
+  ),
+  dep(
+    "daemon-core-domain-merge",
+    "TC-MERGEABS-001",
+    "daemon-merge-absence",
+    ["core"],
+    "packages/core/src/domain/daemon-merge-probe.ts",
+    'import "./merge-proposal";\n',
+    {
+      extraFiles: {
+        "packages/core/src/domain/merge-proposal.ts": "export {};\n",
+      },
+    },
+  ),
+  dep(
+    "daemon-cli-merge",
+    "TC-MERGEABS-001",
+    "daemon-merge-absence",
+    ["cli"],
+    "packages/cli/src/daemon-compose.ts",
+    'import "./commands/merge";\n',
+    {
+      extraFiles: {
+        "packages/cli/src/commands/merge.ts": "export {};\n",
+      },
+    },
+  ),
+  dep(
+    "daemon-adapters-merge",
+    "TC-MERGEABS-001",
+    "daemon-merge-absence",
+    ["core", "adapters"],
+    "packages/adapters/src/daemon/probe.ts",
+    'import "../../../core/src/state/merge";\n',
+    {
+      extraFiles: {
+        "packages/core/src/state/merge.ts": "export {};\n",
+      },
+    },
+  ),
+  clean(
+    "daemon-clean-contracts",
+    "TC-MERGEABS-001",
+    ["core"],
+    "packages/core/src/app/daemon-clean.ts",
+    'import "../contracts/index";\n',
+  ),
 ];
 
 export type AmbientCase = {

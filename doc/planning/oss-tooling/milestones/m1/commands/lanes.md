@@ -1,7 +1,6 @@
 # lanes(1)
 
-Status: shipped by GH-237 (M1-S17). `--watch` is refused in this release;
-live streaming belongs to the resident daemon (M1-S18).
+Status: shipped by GH-237 (M1-S17); `--watch` is accepted by GH-238 (M1-S18).
 
 ## NAME
 
@@ -13,16 +12,20 @@ live streaming belongs to the resident daemon (M1-S18).
 <binary> lanes list|show <ref> [--json]
 ```
 
-`--watch` is refused in this release: it is not in the accepted grammar, the
-invocation fails at exit 1 through `fallback.invocation`, the remediation hint
-names the resident daemon (M1-S18), and no stream or frame is emitted.
+`--watch` is accepted: with a reachable daemon the invocation subscribes to the
+closed `lanes` topic, prints one bounded initial snapshot, then one deduplicated
+bounded event frame per line, and exits 0 on interruption. With no reachable
+daemon it enters declared degraded polling at `daemon.watch-poll-interval`,
+names `daemon-unreachable`, prints only changed snapshots, and exits 0; unreadable
+state exits 2 with the delivered `state.*` identity.
 
 ## DESCRIPTION
 
 Read view over lanes: state (delivering, idle-with-reason, parked,
 merge-ready, in-review, failed), lease scope and holder, restart
-counters, resume-amplification signal. `--watch` is refused in this
-release; live streaming belongs to the resident daemon (M1-S18).
+counters, resume-amplification signal. `--watch` streams bounded daemon
+frames when the daemon is reachable and declares degraded bounded polling
+when it is not.
 
 ## OUTPUT
 
@@ -33,8 +36,9 @@ Text: one line per lane with state and reason. Envelope `data` (schema
 
 ## EXIT STATUS
 
-0 read or observed-empty; 1 invocation refusal (including `--watch`) or an
-unobserved ref from `show`; 2 collection impossible.
+0 read, observed-empty, or an interrupted watch; 1 invocation refusal or an
+unobserved ref from `show`; 2 collection impossible or unreadable state on a
+watch.
 
 ## EXAMPLES
 
@@ -69,24 +73,19 @@ $ <binary> lanes list --json
 }
 ```
 
-`--watch` refused:
+`--watch` with no reachable daemon (declared degraded polling, exit 0):
 
 ```
 $ <binary> lanes list --watch --json
 {
   "schemaVersion": "delivery.result.v1",
   "runId": "run-lanes-example",
-  "exitCode": 1,
+  "exitCode": 0,
   "timing": { "totalMs": 10 },
-  "error": {
-    "code": "fallback.invocation",
-    "category": "user",
-    "retryable": false,
-    "consequence": "unknown",
-    "remediationHint": "Live --watch streaming is provided by the resident daemon (M1-S18), which is not part of this one-shot release; rerun without --watch.",
-    "summary": "result=refused; reason=watch-unsupported"
-  }
+  "data": { "watch": true, "topic": "lanes" }
 }
+{"kind":"event","type":"frame","topic":"lanes","cursor":0,"degraded":["daemon-unreachable"],"data":{"lanes":1}}
+{"kind":"event","type":"frame","topic":"lanes","cursor":1,"degraded":["daemon-unreachable"],"data":{"lanes":2}}
 ```
 
 ## ERRORS
@@ -114,10 +113,12 @@ An empty queue is an explicit observed-empty with counts. `show` returns one
 lane or `queue.entry.unobserved` at exit 1. An unreadable queue store projects
 `status.collector.lanes.unavailable` at exit 2, never a zero-lane view.
 
-`--watch` is **refused** in this release. The flag is not in the accepted
-grammar; the invocation fails at exit 1 through `fallback.invocation` with a
-remediation hint naming the resident daemon (M1-S18), and no stream or frame is
-emitted. Live streaming belongs to the resident daemon (M1-S18).
+`--watch` is accepted as an additive flag (GH-238). With a reachable daemon the
+invocation subscribes to the closed `lanes` topic and streams bounded event
+frames; with none it enters declared degraded polling at
+`daemon.watch-poll-interval`, names `daemon-unreachable`, prints only changed
+snapshots, and exits 0 on interruption. Live streaming is the resident daemon's
+surface, and an absent daemon is always declared, never hidden.
 
 ## HELP
 
@@ -126,4 +127,3 @@ and a see-also pointer. Root `<binary> --help` and `<binary> --version` are
 self-description only: zero state, network, git, or configuration reads and
 zero writes. The executable is a non-installed Bun bin; see the
 [man page](../man-page.md).
-

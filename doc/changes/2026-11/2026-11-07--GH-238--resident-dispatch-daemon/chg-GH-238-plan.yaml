@@ -1,0 +1,2300 @@
+# GH-238 implementation plan — M1-S18: Resident dispatch daemon
+#
+# Sources (single source of truth):
+#   - Spec: ./chg-GH-238-spec.md (v1.2 or later; F-1..F-17; C-1..C-4;
+#     EVT-1..EVT-9; DM-1..DM-18; NFR-1..NFR-18; RSK-1..RSK-13;
+#     DEC-1..DEC-19; TDR-0014 INV-1..INV-8; 36 ACs AC-F1-1..AC-F17-1; §18
+#     delivery order; §16.1 documentation impact; Appendix A seeded scenarios;
+#     Appendix B frame table; Appendix C command envelopes; Appendix D record
+#     kinds; Appendix E configuration keys; Appendix F error identities;
+#     Appendix G ticket-AC map; Appendix H reconciliation algorithm;
+#     Appendix I effect state machine; Appendix J bounds)
+#   - Test plan: ./chg-GH-238-test-plan.md (v1.3 or later; 102 TCs
+#     TC-LIFE-001..008, TC-LOCK-001..006, TC-STATE-001..006,
+#     TC-WIRE-001..008, TC-TRANSPORT-001..005, TC-CONC-001..005,
+#     TC-HEART-001..002, TC-RECON-001..009, TC-LANE-001..006,
+#     TC-EFFECT-001..006, TC-PREEMPT-001..005, TC-DEGRADE-001..004,
+#     TC-WATCH-001..005, TC-POLL-001..004, TC-INSTALL-001..007,
+#     TC-VOCAB-001..008, TC-MERGEABS-001..002, TC-DET-001,
+#     TC-HERMETIC-001, TC-BOUNDS-001, TC-PRIVACY-001, TC-META-001,
+#     TC-CONFIG-001; §3 coverage; §4 layer table; §5.1 index; §5.2 details;
+#     §6 fixture corpus; §7 automation mapping; §7.1 phase-surface note and
+#     its plan v1.3 obligations; §7.2 implementation-order mapping; §8.3 gaps
+#     and findings)
+#   - PM record: ./chg-GH-238-pm-notes.yaml (context only)
+#   - Design pack: doc/planning/oss-tooling/milestones/m1/architecture.md,
+#     commands/daemon.md, interactions.md Session D, contracts.md,
+#     test-scenarios.md (SC-M1-14/15/16/17/17b/18/20), man-page.md;
+#     doc/planning/oss-tooling/backlog.md §M1-S18 (rank 38);
+#     doc/planning/oss-tooling/cli-command-registry.md
+#   - Delivered substrate reused, never re-implemented:
+#     contracts/{state,result,error-table,envelope,config,queue,queue-ready,
+#     harness,economics,blockers,commit,merge,owner-gate-sla}.ts;
+#     state/{index,artifact-boundary,registry,economics,blockers,commit-telemetry,
+#     merge}.ts; app/queue.ts; domain/{queue-*,economics-*}.ts;
+#     config/{catalog,defaults,schema,resolver}.ts; cli/{index,edge,classify,
+#     projection}.ts; packages/adapters per-I/O subpaths.
+#
+# Ordering (dependency-driven; supersedes the spec's §18 narrative order where
+# the dependency argument is stronger, with no assertion reshaped):
+#   Phase 1 vocabulary → Phase 2 state ownership → Phase 3 protocol →
+#   Phase 4 reconciliation → Phase 5 runtime/lifecycle → Phase 6 supervision →
+#   Phase 7 effects → Phase 8 preemption → Phase 9 watch/degradation →
+#   Phase 10 supervisor install → Phase 11 docs/gates → Phase 12 review closure.
+#   - Lock/instance/heartbeat (Phase 2) land before the protocol (Phase 3) and
+#     before reconciliation (Phase 4) because every later phase reads the
+#     durable owner and liveness evidence; the protocol depends only on
+#     contracts, not on state.
+#   - Reconciliation (Phase 4) lands before the lifecycle command (Phase 5) so
+#     `daemon start` never ships a half-honest start: AC-F1-1 makes reconciliation
+#     part of `start`, and phase 4's engine is independently testable and
+#     revertible without the command. This merges test-plan §7.2 stages 3 and 4
+#     by dependency, not by weakening a TC: LIFE rows complete in Phase 5, RECON
+#     rows in Phase 4.
+#   - Lane supervision (Phase 6) lands after the lifecycle because supervision is
+#     driven by the resident loop and needs a runnable daemon; effects (Phase 7)
+#     land after supervision because crash convergence consumes both classification
+#     and lane records; preemption (Phase 8) needs effects' durable record pattern
+#     and supervision's safe-boundary hooks; watch (Phase 9) projects the state
+#     that supervision and preemption write.
+#   - Supervisor install (Phase 10) is independent of behaviour and last among
+#     delivery phases so a platform-adapter defect cannot block the core story.
+#   - No planning phase is declared: this change creates no package or workspace
+#     scaffolding (the ./daemon adapter subpath is additive inside the existing
+#     adapters package), so Phase 1 is already a committable delivery slice.
+#     Every phase is `kind: delivery`, lease-taking, and inherits
+#     `defaultLeases: ["repo:main-tools"]` plus `defaultWeightClass: standard`;
+#     Phases 4, 5, 6, 7, 9, 11, and 12 declare `weightClass: heavy` because they
+#     carry the concurrency, crash, performance, and aggregate batteries.
+#
+# TC-mapping obligation: all 102 TCs are mapped onto Phases 1-12. TCs whose
+# halves land in different phases are marked in `coverage` with the completing
+# phase; no TC is marked "full" before its real surface lands. Phase 11 adds no
+# new TC (it re-verifies the documented-table, changeset, hermetic, determinism,
+# bounds, privacy, mutation, and aggregate rows); Phase 12 adds no new TC id and
+# is conditional on review findings.
+#
+# Delivery decisions recorded by this plan (spec/test-plan leave them
+# delivery-bound; each is a placement, spelling, or composition pin, never a
+# behaviour change):
+#   - Placement: NEW data-only contract modules under
+#     packages/core/src/contracts/ — principal.ts (the reserved caller principal),
+#     daemon.ts (records, status/envelope types, bounds, and the daemon-owned
+#     ports), control.ts (protocol v1 frames, session, transport interface),
+#     effects.ts (outbox/receipt vocabulary and effect ports). Additive edits
+#     only in queue.ts, blockers.ts, error-table.ts, and index.ts.
+#   - Placement: pure policy lives in NEW flat modules under
+#     packages/core/src/domain/ — daemon-lock.ts, daemon-heartbeat.ts,
+#     daemon-status.ts, control-codec.ts, control-session.ts,
+#     daemon-reconcile.ts, daemon-lane.ts, effect-protocol.ts,
+#     daemon-preemption.ts, poll-policy.ts, watch-stream.ts, daemon-supervisor.ts.
+#   - Placement: use-case orchestration lives in NEW flat modules under
+#     packages/core/src/app/ — daemon.ts (instance/heartbeat/lane/reconciliation/
+#     preemption ledgers), daemon-reconcile.ts, daemon-runtime.ts,
+#     daemon-status.ts, daemon-supervision.ts, effects.ts, daemon-preemption.ts,
+#     polling.ts, watch.ts, daemon-supervisor.ts, control-server.ts
+#     (ADR-0003 DEC-2: app imports contracts + domain; state imports contracts
+#     only; domain imports contracts only).
+#   - Placement: the daemon lock artifact is a state-tier module
+#     (packages/core/src/state/daemon-lock.ts) over the injected
+#     StateRuntimeEdge — the same permission and exclusive-create contract as the
+#     store, but a DIFFERENT artifact (`daemon.lock`) and a different token from
+#     the short-lived state fence (`fence.<workspace>.lock`). The lock is never
+#     held for the daemon lifetime through the state fence.
+#   - Placement: a NEW non-provider I/O adapter subpath `@delivery-os/adapters/daemon`
+#     (packages/adapters/src/daemon/**) owns the local control transports
+#     (unix + stdio), the detached process supervisor and readiness channel, the
+#     event-log tail, the lane-executor composition over HarnessSessionPort, the
+#     injected clock/sleep edge, and the systemd/launchd/windows supervisor
+#     adapters. It owns no commit-effect wrapper: the daemon never writes a
+#     commit, and the pre-commit intent + commit invocation composition lives in
+#     packages/core/src/app/effects.ts with the owner-side CLI path.
+#     This is additive inside ADR-0003 DEC-6's non-provider I/O family and needs
+#     the runtime-API allowlist entry, package exports/imports, the CLI
+#     workspaceImports edge, and the workspace-entrypoints list in the same change.
+#     The in-memory transport pair used by the conformance suite is a test double:
+#     it lives in tests/fixtures/daemon/transport/ and is imported by the suite,
+#     never inside the published ./daemon subpath.
+#   - Placement: the resident process entry is a NEW `@delivery-os/cli/daemon`
+#     export (packages/cli/src/daemon-main.ts). The CLI remains a library; no
+#     `bin` is introduced. `daemon start` (resident, default) spawns this entry
+#     through the injected process supervisor and waits for a bounded one-line
+#     readiness handshake, then reads the durable instance/reconciliation/
+#     heartbeat records for the envelope. `--foreground` runs the same loop in the
+#     invoking process. The handshake carries no durable fact; its loss falls back
+#     to a bounded state poll.
+#   - Record kinds, payload schemas, and keys are the Appendix D spellings
+#     verbatim: daemon.instance / delivery.daemon.instance.v1 / daemon.instance;
+#     daemon.heartbeat / delivery.daemon.heartbeat.v1 / daemon.heartbeat;
+#     daemon.lane / delivery.daemon.lane.v1 / daemon.lanes:<REF>;
+#     daemon.reconciliation / delivery.daemon.reconciliation.v1 /
+#     daemon.reconciliations:<instanceId>; daemon.preemption /
+#     delivery.daemon.preemption.v1 / daemon.preemptions:<REF>;
+#     command.receipt / delivery.command.receipt.v1 / command.receipts:<effectId>;
+#     outbox.effect / delivery.outbox.effect.v1 / outbox.effects:<effectId>.
+#     No schema-version bump, migration, or backfill; STATE_SCHEMA_VERSION is
+#     untouched.
+#   - Protocol pin (reported spec conflict, resolved to the more specific
+#     Appendix B): wire `type` values are exactly {poke, status, lane, subscribe,
+#     drain, stop, takeover, frame, degraded}; interaction classes are exactly
+#     {poke, query, subscribe, control} and are derived, never a wire value. A
+#     query request carries type `status` or `lane`. Version 1 requires
+#     callerPrincipal; version 0 is the v1 shape without the reserved fields and
+#     is accepted only where its fields are sufficient (TC-WIRE-002). The daemon
+#     lock token is the sole exempt same-user ownership capability, never a
+#     credential: it appears only in the drain/stop/takeover wire payloads and in
+#     durable lock/instance records and is excluded from the secret canary while
+#     every credential-shaped value still fails it (TC-WIRE-006). It is never
+#     projected into the `daemon start`, `daemon stop`, or `daemon status`
+#     command envelopes (`instance.fence` is absent) or their goldens (N-05).
+#   - Scope pin (DM-1 / §20): the durable state-directory scope identifier is the
+#     first 16 lowercase hex characters of SHA-256 over the canonical absolute
+#     state-directory path. No raw path is stored in a record, frame, golden, log
+#     line, or telemetry event; the path-to-scope mapping is recoverable by
+#     recomputing the digest for a candidate state directory (TC-PRIVACY-001).
+#   - Commit protection pin (DEC-15 / TDR-0014 INV-1..INV-8): before the
+#     delivered commit primitive is invoked, the owning lane/one-shot process
+#     appends exactly one `outbox.effect` intent carrying `effectId`,
+#     `intentId`, an idempotency key derived deterministically from
+#     (changeRef, phase, baselineHead), the change ref, the phase, the single
+#     baseline HEAD also passed to the primitive, and the sorted normalized
+#     staged path set computed pre-commit with the delivered pure staging
+#     computation; it carries no message, subject, body, or fingerprint.
+#     Recovery performs exactly one bounded `CommitGitPort.logSince(baselineHead)`
+#     read returning each commit's SHA and normalized changed-path set, and
+#     resolves `applied`/`already-applied` with the landed SHA only when the
+#     read yields exactly one new commit whose set equals the recorded set; a
+#     matched effect creates no second commit. Zero commits, more than one
+#     commit, a path-set mismatch, an unreadable/over-cap read, or an
+#     unplaceable baseline leaves the effect `unknown` with no automatic
+#     re-apply and no guessed SHA. The daemon only detects, queries once, and
+#     records the durable DM-18 redrive request; it never creates a commit,
+#     runs a phase, or appends a transition. The lane/one-shot owner restores
+#     the phase binding by re-running phase completion with the discovered SHA
+#     as commit evidence through the delivered `commit-without-record`
+#     convergence row, so the phase reads `both`, never `record-only`. The
+#     delivered commit format, message composition (model path plus template
+#     fallback), and atomic record-plus-commit primitive are unchanged; the
+#     only additive contract surface is the bounded git-port read. Three
+#     negative controls each make the convergence test fail: break the path-set
+#     derivation, remove the log query, and break the path-set match rule.
+#   - Polling pin (reported gap): `poll.<platform>` ranges over the closed set
+#     {github, gitlab, jira} — the delivered tracker/VCS read clients. Azure and
+#     the CI subpath declare no read client yet; a `poll.azure` key is
+#     config.key.unknown until that adapter ships, and adding it later is
+#     additive. The per-platform policy lives with the resident loop (Phase 5),
+#     not with the watch surface.
+#   - Preemption pin (reported gap): `withdrawn` is a declared read state but is
+#     never written by this change; no cancellation trigger exists in the spec. A
+#     pending preemption whose close item is no longer eligible stays pending and
+#     is re-evaluated; cancellation remains out of scope.
+#   - Blocker-answer pin (OQ-5): a durable answer stays visible with `applied`
+#     false and its delivered `laneResume` projection unchanged. On its next wake
+#     or on start the daemon records the pending resume/application intent as
+#     `resumeIntent` (`questionId`, `mode` from the delivered `laneResume` closed
+#     set) on the lane execution record only when a lane exists, and actual lane
+#     application happens only at the next safe phase boundary when a lane
+#     exists. The answer record is never rewritten; with no lane no intent or
+#     application step is fabricated; the full session resume remains M1-S9.
+#   - Install pin (OQ-4 / GAP-T5 / DEC-18): the state-directory scope is a
+#     process-environment contract — the brand-derived `<PREFIX>_STATE_DIR`
+#     (uppercase prefix from the brand, never a hardcoded product name) when
+#     set, otherwise `<home>/<brand.stateDirectoryName>`. There is no
+#     `--state-dir` flag and no state-directory configuration key. The Linux
+#     unit writes `Environment=<PREFIX>_STATE_DIR=<canonical absolute state
+#     directory>`, `ExecStart=<binary> daemon start --foreground`,
+#     `Type=simple`, and `Restart=on-failure`, so the installed process is
+#     resident and scoped without an ambient working directory. The unit name is
+#     brand-derived, never a hardcoded product token; a sidecar ownership marker
+#     (<config-dir>/<binary>.daemon-install.json, secret-free) records unit
+#     identity, scope, and whether this installation enabled linger, so
+#     uninstall removes only what it created.
+#   - Status pin (test-plan OQ-T2): uptime, queue depth, lanes, and restart
+#     reasons are derived from durable instance/heartbeat/daemon.lane/economics
+#     records, never from process introspection. `queueDepth` is the queue graph
+#     entry count.
+#   - The MCP surface is not rewired: the spec requires no MCP mirror. The
+#     `.ados-claude/` plugin and scripts/build-claude-plugin.sh are untouched
+#     because no .opencode/** file changes.
+#
+# Iteration-1 spec points pinned by this plan (spec v1.2 now states S-1, S-2,
+# S-3, and S-7 explicitly; the rest remain declared gaps). They are retained as
+# the implementation pin, not as a live contradiction:
+#   S-1 AC-F16-1 says "no existing ... payload shape changed", while C-2/F-16
+#       require the additive optional callerPrincipal on existing intent records.
+#       Resolution: no required field, schema id, vocabulary, key, collector id,
+#       or read behavior changes; only an optional additive field is added, and a
+#       historical record without it reads exactly as before.
+#   S-2 EVT-8/F-4 list `query` among the closed frame types, while Appendix B
+#       types query requests as `status`/`lane` and event frames as
+#       `frame`/`degraded`. Resolution: see the protocol pin; `query` is a class.
+#   S-3 AC-F4-1 says every frame carries callerPrincipal, while F-4 and
+#       TC-WIRE-002 describe v0 as the v1 shape without the additive reserved
+#       fields. Resolution: v1 requires it; v0 omits it and is accepted only
+#       where sufficient.
+#   S-4 daemon.preemption declares `withdrawn` with no reachable trigger (see the
+#       preemption pin).
+#   S-5 Appendix E leaves `poll.<platform>` unenumerated and no delivered closed
+#       platform-id set exists in core (see the polling pin).
+#   S-6 Appendix D spells daemon.heartbeat lane counts as {delivering, idle,
+#       parked, failed} while the lanes projection uses `idle-with-reason`.
+#       Resolution: the heartbeat count set is the Appendix D spelling; it is a
+#       separate closed set and does not redefine the lane-state vocabulary.
+#   S-7 No durable "answer applied" marker kind exists for blocker answers
+#       (applied is contractually false) (see the blocker-answer pin).
+#   S-8 AC-F15-1 classifies linger-enablement failure as
+#       daemon.supervisor-unsupported, conflating "no adapter" with "linger
+#       failed" (test-plan OQ-T1). Implemented exactly as written and flagged to
+#       the spec owner.
+#
+# Repository realities accounted for:
+#   - `pnpm check` is the aggregate gate; local runs use a repo-local TMPDIR
+#     (mkdir -p tmp/tmpdir; TMPDIR=$PWD/tmp/tmpdir pnpm check) because
+#     ci-baseline-parity clones with hardlinks and fails across filesystems.
+#   - No live network, credentials, real sockets, real systemd, or unbounded
+#     sleeps; the single optional real-child smoke is timeout-guarded.
+#   - Adding a dependency-cruiser rule requires a failing fixture and its registry
+#     entry (tests/boundaries fixture-coverage meta-check).
+#   - Every new packages/** source file must be registered in
+#     tests/structure/inventory.json with executable allowances in
+#     tests/structure/content-inventory.test.ts.
+#   - No .opencode/** change and no generated .ados-claude/ output.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-238
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+  escalationTriggers:
+    - "a live daemon lock is taken over, or a stale takeover lacks previous instance, lock token, last heartbeat time, and heartbeat age"
+    - "two daemons can drive one state directory, or the daemon lock is conflated with the state writer fence"
+    - "any command interaction requires the control socket, or a daemon-down one-shot fails, blocks, or reports an all-clear"
+    - "a control frame carries a credential, prompt, body, transcript, diff, or fact not derivable from state"
+    - "a subscription overflow blocks the dispatcher or drops a connection other than the overflowing subscriber"
+    - "an in-flight lane is left unclassified, a completed phase is re-executed, or a restart counter increments twice for one interruption"
+    - "an unknown external effect is re-applied without a query, or a second commit/tracker effect is created for one effect id"
+    - "a preemption signals or kills a live session, or a pending preemption is lost across restart"
+    - "a merge invocation becomes reachable from the daemon composition, or the dependency boundary and absence test disagree"
+    - "a new adapter subpath or dependency-boundary rule is required and the reviewer treats ADR-0003's subpath set as closed rather than additive"
+    - "the state schema version bumps, a migration or backfill is introduced, an existing error row changes, or the collector-id set grows"
+    - "a poll exceeds its configured per-platform rate, or a poll bypasses a delivered read seam"
+defaultLeases:
+  - "repo:main-tools"
+defaultWeightClass: "standard"
+phases:
+  - id: 1
+    title: "Daemon vocabulary, protocol/effect contracts, typed daemon and poll configuration, seven additive record kinds, eight daemon error rows, and boundary scaffolding"
+    kind: delivery
+    objective: "Declare the complete daemon vocabulary, protocol and effect contracts, typed configuration, record kinds, and error rows before any behaviour, so every later phase builds on closed sets and one synchronized error table."
+    scope:
+      files:
+        - "packages/core/src/contracts/principal.ts"
+        - "packages/core/src/contracts/daemon.ts"
+        - "packages/core/src/contracts/control.ts"
+        - "packages/core/src/contracts/effects.ts"
+        - "packages/core/src/contracts/queue.ts"
+        - "packages/core/src/contracts/blockers.ts"
+        - "packages/core/src/contracts/error-table.ts"
+        - "packages/core/src/contracts/index.ts"
+        - "packages/core/src/config/catalog.ts"
+        - "packages/core/src/config/defaults.ts"
+        - "packages/core/src/config/schema.ts"
+        - "packages/core/src/config/index.ts"
+        - "packages/core/src/app/queue.ts"
+        - "packages/core/src/state/blockers.ts"
+        - "packages/core/src/index.ts"
+        - "doc/spec/features/feature-result-contract.md"
+        - ".dependency-cruiser.cjs"
+        - "tests/boundaries/fixtures/cases.ts"
+        - "tests/boundaries/fixture-registry.json"
+        - "tests/structure/daemon-contract.test.ts"
+        - "tests/structure/daemon-vocabulary.test.ts"
+        - "tests/structure/error-table.test.ts"
+        - "tests/structure/state-contract.test.ts"
+        - "tests/structure/config-contract.test.ts"
+        - "tests/structure/queue-scheduling-contract.test.ts"
+        - "tests/behaviour/config-cli.test.ts"
+        - "tests/behaviour/config-provenance.test.ts"
+        - "tests/behaviour/config-resolver.test.ts"
+        - "tests/behaviour/config-restrictions.test.ts"
+        - "tests/behaviour/config-schema.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+        - "tests/structure/inventory.json"
+        - "tests/checks/error-table-sync.test.ts"
+        - "tests/checks/daemon-vocabulary.test.ts"
+        - "tests/types/daemon-protocol.type-test.ts"
+      folders:
+        - "tests/fixtures/daemon/vocabulary"
+        - "tests/fixtures/daemon/errors"
+        - "tests/fixtures/daemon/config"
+    interactions:
+      - kind: contract-file
+        target: "packages/core/src/contracts/daemon.ts"
+        role: producer
+      - kind: contract-file
+        target: "packages/core/src/contracts/control.ts"
+        role: producer
+      - kind: contract-file
+        target: "packages/core/src/contracts/effects.ts"
+        role: producer
+      - kind: contract-file
+        target: "packages/core/src/contracts/error-table.ts"
+        role: producer
+      - kind: contract-file
+        target: "tests/behaviour/config-cli.test.ts"
+        role: consumer
+      - kind: contract-file
+        target: "tests/behaviour/config-provenance.test.ts"
+        role: consumer
+      - kind: contract-file
+        target: "tests/behaviour/config-restrictions.test.ts"
+        role: consumer
+    weightClass: standard
+    doneArtifacts:
+      pipelineId: "phase 1 vocabulary/config/error gate green locally; GH-238 PR CI matrix green"
+      trackerTransition: "phase 1 committed on feat/GH-238/resident-dispatch-daemon; GH-238 remains In Progress"
+    summary: "feat(GH-238): daemon vocabulary, protocol and effect contracts, typed configuration, record kinds, and error rows"
+    tasks:
+      - >-
+        1.1 packages/core/src/contracts/principal.ts — NEW data-only module for the reserved caller principal:
+        CALLER_PRINCIPAL_KINDS exactly {local-same-user}, CallerPrincipal {kind, id: string | null},
+        a bounded id length, and a constructor-free shape. Add the additive optional `callerPrincipal`
+        field to QueueEntryRecord and QueueDependencyRecord (contracts/queue.ts) and to
+        BlockerQuestionRecord and BlockerAnswerRecord (contracts/blockers.ts); update the queue app
+        payload builders/readers (packages/core/src/app/queue.ts) and the blocker ledger
+        key allow-lists, payload shapers, and read validators (packages/core/src/state/blockers.ts and
+        its readers) so a writer always emits the field and a historical record without it still reads
+        exactly as before. No payload schema id changes, no required field, no code path branches on
+        the value for access. [C-2, F-4, DM-8, NFR-8, AC-F4-5, AC-F16-1; TC-VOCAB-004, TC-WIRE-007 structure half]
+      - >-
+        1.2 packages/core/src/contracts/daemon.ts — NEW data-only module: the seven record kinds with their
+        payload schema ids and store-scoped key prefixes (Appendix D verbatim); the closed sets instance
+        operations {acquired, taken-over, released, immediate-stop}, daemon lane execution states
+        {delivering, detached, completed, failed, preempted}, lane classifications {alive, interrupted,
+        crashed}, heartbeat lane counts {delivering, idle, parked, failed}, supervisor kinds
+        {systemd-user, launchd, windows-service}, preemption states {pending, applied, withdrawn}, and
+        degradation markers {daemon-unreachable, daemon-heartbeat-stale, daemon-socket-unreachable,
+        lane-executor-unavailable, subscriber-overflow}; the DM-1..DM-5, DM-12..DM-17 record and
+        projection shapes (DM-1 carries the 16-hex SHA-256 state-directory scope digest, never the raw
+        path; DM-17 carries the intent idempotency key on the record, never the envelope); the
+        daemon/poll typed settings; the command envelope data types for start,
+        stop, status, install, and uninstall (Appendix C); and the daemon-owned ports DaemonLockPort,
+        DaemonProcessPort, DaemonClockPort (nowMs plus a bounded, cancellable sleep so core reads no
+        ambient timer), DaemonWakePort (the event-log tail subscription with a poll fallback),
+        LaneExecutorPort, LaneLaunchPlanner, and SupervisorPort. Every bound of
+        Appendix J is a declared constant. [F-1, F-2, F-7, F-8, F-9, F-11, F-15; EVT-1..EVT-5;
+        DM-1..DM-5, DM-12..DM-16; NFR-9, NFR-14; TC-VOCAB-001, TC-VOCAB-007, TC-LANE-006 structure half]
+      - >-
+        1.3 packages/core/src/contracts/control.ts — NEW data-only module: CONTROL_PROTOCOL_CURRENT = 1,
+        CONTROL_PROTOCOL_FLOOR = 0, the offered set [1, 0]; frame kinds {request, response, event, error};
+        interaction classes {poke, query, subscribe, control}; wire types exactly {poke, status, lane,
+        subscribe, drain, stop, takeover, frame, degraded} per Appendix B; closed topics {queue, lanes};
+        the frame envelope {v, id?, kind, type, callerPrincipal, payload?|data?|error?} with exactly one
+        body field; the request/response/event/error payload shapes; the degraded event reasons; the
+        ControlTransport / ControlListener / ControlConnection / ControlSubscription interfaces over an
+        ordered byte stream; and the frame, buffer, and timeout bounds. `callerPrincipal` is required on
+        v1 frames and absent on v0 frames. [F-4, F-5, F-6; EVT-8, EVT-9; DM-6, DM-7; NFR-5, NFR-9,
+        NFR-12, NFR-14; TC-WIRE-001, TC-WIRE-002, TC-WIRE-007, TC-WIRE-008 structure rows]
+      - >-
+        1.4 packages/core/src/contracts/effects.ts — NEW data-only module: effect kinds exactly
+        {tracker-transition, tracker-comment, commit}; effect states exactly {accepted, in-flight, applied,
+        failed, unknown}; receipt statuses exactly {applied, already-applied, failed, unknown}; query
+        verdicts exactly {found, not-found, unreadable}; check strategies exactly {query-by-id,
+        query-by-log-since}; the OutboxEffectRecord and CommandReceiptRecord shapes (identity,
+        originating intent id, ref, bounded target, payload digest, idempotency key, optional
+        callerPrincipal under the same optional/backward-compatible rule as every other intent kind,
+        state, attempts, strategy, bounded evidence, times), with a commit intent also carrying baseline
+        HEAD, change ref, phase, and the sorted normalized staged path set (the message-independent
+        identity per TDR-0014 INV-1..INV-3), never a message, subject, body, or fingerprint; the
+        CommandReceipt redrive-detection shape for DM-18 (effect identity, `attempt: 0`, queried baseline,
+        query verdict, discovered SHA when proven, time; evidence only, never an attempt); and the injected
+        ExternalEffectPort (apply/query) and EffectIntentPort (resolve
+        the bounded content from the durable originating intent at apply time). No free-form effect
+        content is representable. [F-10; EVT-6, EVT-7; DM-9, DM-10, DM-11, DM-18; TDR-0014 INV-1..INV-3;
+        NFR-12, NFR-15; TC-EFFECT-001, TC-VOCAB-001, TC-VOCAB-004]
+      - >-
+        1.5 packages/core/src/contracts/error-table.ts — add the `daemon` domain kind and exactly eight rows
+        with the Appendix F category, retryable, consequence, projection, summary, and remediation hint:
+        daemon.already-running, daemon.takeover-refused, daemon.heartbeat-stale,
+        daemon.state-recovery-failed, daemon.protocol.unsupported, daemon.socket-unreachable,
+        daemon.subscriber-degraded, daemon.supervisor-unsupported. Assert the {0, 1, 2} projection through
+        the delivered taxonomy; leave every existing row unchanged; confirm the collector-id set stays
+        {tracker, lanes}. Update doc/spec/features/feature-result-contract.md with the eight rows in the
+        SAME commit (bidirectional sync). [F-16; NFR-11, NFR-14; Appendix F; TC-VOCAB-002]
+      - >-
+        1.6 Typed configuration (Appendix E, NFR-10) — packages/core/src/config/catalog.ts gains DAEMON_BRANCH
+        with exactly eleven keys (heartbeat-interval 5000, heartbeat-cycle 60000, lock-staleness 30000,
+        poll-interval 60000, watch-poll-interval 5000, response-timeout 2000, subscription-buffer 256,
+        frame-max-bytes 65536, reconcile-max-lanes 200, transport enum {unix, stdio, tcp, tls, ssh,
+        container-pipe}, socket-path string) and POLL_BRANCH as a record whose members are objects with
+        base-interval/max-interval/min-spacing; packages/core/src/config/defaults.ts ships the defaults so an
+        absent branch is valid with `defaults` origins. Add resolveDaemonSettings(values, origins,
+        {stateDirectory}) enforcing integer > 0 domains, the implemented transport set {unix, stdio} with
+        the declared values refused as config.value.invalid naming the implemented set, and a socket path
+        that resolves inside the state directory; add resolvePollSettings(values, origins) enforcing the
+        closed platform set {github, gitlab, jira} and each key's integer domain. The state-directory scope
+        is a process-environment contract (DEC-18, Appendix E): `<PREFIX>_STATE_DIR` (the brand-derived
+        uppercase prefix, never a hardcoded product name) when set, otherwise
+        `<home>/<brand.stateDirectoryName>`; an explicitly set value wins outright, the two are never
+        merged, an absolute-path violation is config.value.invalid at exit 1, and there is NO `--state-dir`
+        flag and NO state-directory configuration key; `resolveDaemonSettings` receives that resolved
+        canonical absolute directory. An unknown key is config.key.unknown; no invalid input silently
+        falls back. [F-1, F-5, F-14; DEC-18; NFR-10, NFR-14; Appendix E;
+        TC-VOCAB-003, TC-CONFIG-001 config half, TC-POLL-003 config half]
+      - >-
+        1.7 Boundary scaffolding (F-17, NFR-17) — add a `daemon-merge-absence` dependency-cruiser rule
+        forbidding the daemon surface (^packages/core/src/(app|domain)/daemon, ^packages/cli/src/daemon,
+        and ^packages/adapters/src/daemon/) from importing any merge execution module (core
+        domain/merge-* and state/merge, cli commands/merge); the adapters-daemon path is part of the
+        `from` set so the proof covers the subpath that later phases populate, and its failing fixture
+        proves an adapters-daemon import of merge is rejected. The rule proves source-level imports only:
+        an injected merge executor computes `mergeCodePath: "present"` at runtime without adding an
+        import edge (TC-MERGEABS-002), so runtime injection is not claimed as a boundary violation.
+        Add ^packages/adapters/src/daemon/ to the runtime-API confinement allowlist as the declared
+        non-provider I/O subpath (the rule admits the path before its files exist; the package exports and
+        the CLI workspaceImports edge land with the files in Phase 3 so no export points at a missing dist
+        target). Add a failing fixture and its tests/boundaries/fixture-registry.json entry for each new
+        `from` path, including the adapters-daemon case (the fixture-coverage meta-check fails an
+        unenforced rule). [F-17; NFR-17; ADR-0003 DEC-2/DEC-6;
+        TC-MERGEABS-001 boundary half, TC-MERGEABS-002]
+      - >-
+        1.8 Structure and type tests — tests/structure/daemon-contract.test.ts and
+        tests/structure/daemon-vocabulary.test.ts assert every closed set, the seven kinds with distinct
+        schema ids and key prefixes, the eight error rows in both directions, the additive optional
+        callerPrincipal (present on new writes, absent on historical records, never authorization), the
+        v0/v1 frame difference, and the daemon execution set's distinctness from the delivered lane-state
+        set; extend error-table.test.ts, state-contract.test.ts, config-contract.test.ts,
+        queue-scheduling-contract.test.ts, and content-inventory.test.ts; update
+        tests/behaviour/config-schema.test.ts and tests/behaviour/config-resolver.test.ts for the additive
+        daemon/poll branches (both assert exact catalog shapes; config-contract.test.ts asserts the exact
+        six-key production catalog and changes with the two new keys), and re-audit the declared read-only
+        consumer suites tests/behaviour/config-provenance.test.ts, tests/behaviour/config-cli.test.ts, and
+        tests/behaviour/config-restrictions.test.ts, which resolve against the fixture catalog; they are
+        edited only if the exact-set catalog assertion proves the catalog change reaches them, and their
+        suites join the test gate only when edited (the Phase 1 gate has no run-if-edited mechanism, so it
+        stays unchanged); register every new source file in
+        tests/structure/inventory.json with its executable allowances; add
+        tests/types/daemon-protocol.type-test.ts as a compile-only probe (compiled by `pnpm typecheck`
+        through tests/types/tsconfig.json, never invoked by `bun test`). The draft changeset is deferred to
+        Phase 11 (TC-VOCAB-006 completes there). [NFR-8, NFR-11, NFR-14; TC-VOCAB-001/002/003/004/005/007/008,
+        TC-CONFIG-001 config half]
+    coverage:
+      - "TC-VOCAB-001 (structure half: seven record kinds plus payload schemas and store keys declared; instance/heartbeat round-trip continues in Phase 2, reconciliation in Phase 4, lane in Phase 6, receipt/outbox in Phase 7, preemption in Phase 8)"
+      - "TC-VOCAB-002 (full: exactly eight daemon rows agree across the machine table, documented table, source references, and fixtures; re-verified in Phase 11 after the docs pass)"
+      - "TC-VOCAB-003 (full: daemon and poll branches accept, default, and refuse exactly as Appendix E pins; concrete suites tests/behaviour/config-schema.test.ts, tests/behaviour/config-resolver.test.ts, and tests/structure/config-contract.test.ts)"
+      - "TC-VOCAB-004 (structure half: callerPrincipal is declared additive on intent records including outbox.effect, backward-compatible, and never authorization; the behavioural intent-record round-trip completes in Phase 4)"
+      - "TC-VOCAB-005 (structure half: the `--watch` acceptance is representable in the queue/lanes surfaces without a payload change; CLI behaviour completes in Phase 9)"
+      - "TC-VOCAB-006 (partial: additive state with no schema bump and no migration; the single five-package changeset completes in Phase 11)"
+      - "TC-VOCAB-007 (full: every frame, record, effect, classification, and configuration set is closed)"
+      - "TC-VOCAB-008 (structure half: the additive-only rule is declared; the existing-store open, verified-empty daemon reads, and historical-record compatibility complete in Phase 4)"
+      - "TC-CONFIG-001 (config half: every daemon.* and poll.<platform>.* key is declarable, defaulted, and fail-closed; behaviour completes in Phases 4, 5, and 9)"
+      - "TC-WIRE-001 (contract half: frame kinds/types/classes and the envelope are declared; codec round-trip completes in Phase 3)"
+      - "TC-WIRE-002 (contract half: the offered version set and the v0/v1 difference are declared; negotiation completes in Phase 3)"
+      - "TC-WIRE-007 (structure half: the principal shape and its presence rule are declared; codec/frame presence completes in Phase 3)"
+      - "TC-LANE-006 (structure half: the daemon execution set is distinct from the delivered lane-state set; behaviour completes in Phase 6)"
+      - "TC-MERGEABS-001 (boundary half: the rule and its failing fixture exist; reachability from the composed daemon completes in Phase 6)"
+    acCoverage:
+      - "AC-F4-5"
+      - "AC-F16-1"
+      - "AC-F17-1"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/structure/daemon-contract.test.ts tests/structure/daemon-vocabulary.test.ts tests/structure/error-table.test.ts tests/structure/state-contract.test.ts tests/structure/config-contract.test.ts tests/structure/queue-scheduling-contract.test.ts tests/structure/content-inventory.test.ts"
+      - "bun test tests/behaviour/config-schema.test.ts tests/behaviour/config-resolver.test.ts"
+      - "bun test tests/checks/daemon-vocabulary.test.ts tests/checks/error-table-sync.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts"
+      - "bun test tests/boundaries && pnpm check:boundaries && bun run scripts/checks/workspace-entrypoints.ts"
+
+  - id: 2
+    title: "Fence-style daemon lock with evidenced stale takeover, the durable instance ledger, and the heartbeat record with its three-state liveness fold"
+    kind: delivery
+    objective: "Make single-instance ownership and liveness durable and testable before anything runs: the fence-style lock, the instance ledger, and the heartbeat."
+    scope:
+      files:
+        - "packages/core/src/domain/daemon-lock.ts"
+        - "packages/core/src/domain/daemon-heartbeat.ts"
+        - "packages/core/src/app/daemon.ts"
+        - "packages/core/src/app/index.ts"
+        - "packages/core/src/state/daemon-lock.ts"
+        - "packages/core/src/state/index.ts"
+        - "packages/core/src/index.ts"
+        - "packages/core/src/contracts/daemon.ts"
+        - "tests/behaviour/daemon-lock.test.ts"
+        - "tests/behaviour/daemon-lock-concurrency.test.ts"
+        - "tests/behaviour/daemon-heartbeat.test.ts"
+        - "tests/structure/daemon-contract.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+        - "tests/structure/inventory.json"
+        - "tests/types/daemon-protocol.type-test.ts"
+      folders:
+        - "tests/fixtures/daemon/lock"
+        - "tests/fixtures/daemon/heartbeat"
+    interactions:
+      - kind: contract-file
+        target: "packages/core/src/contracts/daemon.ts"
+        role: consumer
+    weightClass: standard
+    doneArtifacts:
+      pipelineId: "phase 2 lock/instance/heartbeat gate green locally; GH-238 PR CI matrix green"
+      trackerTransition: "phase 2 committed on feat/GH-238/resident-dispatch-daemon; GH-238 remains In Progress"
+    summary: "feat(GH-238): fence-style daemon lock, durable instance ledger, and heartbeat liveness"
+    tasks:
+      - >-
+        2.1 packages/core/src/domain/daemon-lock.ts — pure lock policy: a lock record carries a unique lock
+        token, instance id, pid, the state-directory scope digest (the first 16 lowercase hex characters of
+        SHA-256 over the canonical absolute state-directory path; no raw path is stored and the mapping is
+        recoverable by recomputation), acquiredAt, and heartbeatAt; staleness is `heartbeat age >=
+        daemon.lock-staleness` with the at-bound value stale and `bound - 1` live; a live holder refuses with
+        daemon.already-running and zero appends; a stale holder is takeover-eligible and produces
+        operation `taken-over` evidence (previousInstanceId, previousLockToken, lastHeartbeatAt,
+        heartbeatAgeMs, takenOverAt). The lock token and staleness window are explicitly distinct types
+        from the delivered state fence handle and fence staleness; no wall clock is read (nowMs is
+        injected). [F-2; DM-1; NFR-3; AC-F2-1, AC-F2-2; TC-LOCK-001/002/003/006]
+      - >-
+        2.2 packages/core/src/state/daemon-lock.ts — the daemon-owned lock artifact `daemon.lock` in the
+        state directory over the injected StateRuntimeEdge: exclusive create (wx) with 0600, a 0700
+        directory verified before use, a verified read that classifies torn/unreadable/permission failures
+        through the delivered state.* identities, and removal only by the token holder. The state tier
+        imports contracts only; runtime APIs stay in the driver edge. The lock is acquired for the daemon
+        lifetime while the state writer fence is acquired only for each append and never for a heartbeat
+        or idle period. [F-2, F-3; TDR-0004; NFR-3, NFR-13; AC-F2-2; TC-LOCK-006]
+      - >-
+        2.3 packages/core/src/app/daemon.ts — the instance ledger over the injected StateStorePort:
+        appendDaemonInstance/readDaemonInstance for operations acquired, taken-over, released, and
+        immediate-stop under a short fenced append with a verified post-append read; latest record wins;
+        an identical replay appends nothing; a second live acquisition for one scope is a classified
+        state.* failure and never a fabricated owner; takeover evidence is carried only on `taken-over`.
+        The instance record stores the same non-path scope digest as the lock (DM-1 derivation), never the
+        absolute state-directory path. [F-2, F-7; EVT-1; DM-1; NFR-2, NFR-9; AC-F2-1, AC-F2-2;
+        TC-LOCK-001/002, TC-VOCAB-001 instance round-trip]
+      - >-
+        2.4 packages/core/src/domain/daemon-heartbeat.ts + app/daemon.ts — the heartbeat record builder
+        (instanceId, monotone ordinal, beatAt, uptimeMs, queueDepth, laneCounts {delivering, idle, parked,
+        failed}, optional currentSpawn {ref, sessionId}, consumed cursor, recordedAt) and the three-state
+        liveness fold: running below daemon.lock-staleness, stale at or beyond it, stopped when the latest
+        instance record is `released` or `immediate-stop`. A gap is stale evidence and is never filled by a
+        fabricated beat; a reader never synthesizes one. [F-7; EVT-2; DM-2; NFR-1, NFR-2; AC-F7-1;
+        TC-HEART-001/002]
+      - >-
+        2.5 Lock and heartbeat behaviour suites — tests/behaviour/daemon-lock.test.ts covers live refusal
+        with the holder's identity/pid/acquisition/heartbeat age, stale takeover with full evidence, live
+        takeover refusal at exit-class 1 with zero appends, two independent state directories, and the
+        lock-vs-fence separation (short append-only fence windows, distinct tokens, distinct error
+        identities). tests/behaviour/daemon-lock-concurrency.test.ts releases 100 scheduled contenders at
+        a staleness read barrier and asserts exactly one acquisition and 99 evidenced refusals, plus a
+        same-holder control. tests/behaviour/daemon-heartbeat.test.ts covers ordinal monotonicity, interval
+        boundaries at bound-1/bound/bound+1, no fabrication, and queue depth/lane counts/cursor content.
+        [F-2, F-7; NFR-3; AC-F2-1..AC-F2-3, AC-F7-1; TC-LOCK-001..006, TC-HEART-001/002]
+      - >-
+        2.6 Register packages/core/src/{domain/daemon-lock,domain/daemon-heartbeat,app/daemon,state/daemon-lock}.ts
+        in tests/structure/inventory.json with executable allowances; extend the contract test with the
+        record round-trips; keep tests/types/daemon-protocol.type-test.ts literal-typed for the lock and
+        instance operation unions. [NFR-14; TC-VOCAB-001 instance/heartbeat round-trip, TC-LANE-006 structure]
+    coverage:
+      - "TC-LOCK-001 (engine half: live refusal with holder evidence and zero appends; CLI envelope and golden complete in Phase 5)"
+      - "TC-LOCK-002 (engine half: stale takeover with complete previous-instance evidence; CLI envelope and golden complete in Phase 5)"
+      - "TC-LOCK-003 (full: a live-lock takeover is refused with zero appends)"
+      - "TC-LOCK-004 (partial: lock/instance/heartbeat isolation across two state directories, each record carrying the first-16-hex SHA-256 scope digest and never the absolute path; frame isolation completes in Phase 3)"
+      - "TC-LOCK-005 (full: 100 scheduled starts yield exactly one live daemon)"
+      - "TC-LOCK-006 (full: the daemon lock is not the state write fence)"
+      - "TC-HEART-001 (full: ordinal, depth, lane counts, current spawn, and cursor are recorded)"
+      - "TC-HEART-002 (state half: no reader fabricates a beat; the stop release record completes in Phase 5)"
+      - "TC-VOCAB-001 (instance and heartbeat round-trip rows)"
+    acCoverage:
+      - "AC-F2-1"
+      - "AC-F2-2"
+      - "AC-F2-3"
+      - "AC-F7-1"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/daemon-lock.test.ts tests/behaviour/daemon-lock-concurrency.test.ts tests/behaviour/daemon-heartbeat.test.ts"
+      - "bun test tests/structure/daemon-contract.test.ts tests/structure/content-inventory.test.ts"
+      - "pnpm check:boundaries"
+
+  - id: 3
+    title: "Control protocol v1 — transport-free codec, session layer with correlation/subscriptions/overflow/timeouts, multi-connection dispatcher, and stdio plus unix transports with the conformance proof"
+    kind: delivery
+    objective: "Deliver the transport-free protocol and its two local transports with a conformance proof, so the control plane is stable before the daemon serves it."
+    scope:
+      files:
+        - "packages/core/src/domain/control-codec.ts"
+        - "packages/core/src/domain/control-session.ts"
+        - "packages/core/src/app/control-server.ts"
+        - "packages/core/src/app/index.ts"
+        - "packages/core/src/index.ts"
+        - "packages/core/src/contracts/control.ts"
+        - "packages/adapters/src/daemon/index.ts"
+        - "packages/adapters/src/daemon/transport.ts"
+        - "packages/adapters/src/daemon/stdio.ts"
+        - "packages/adapters/src/daemon/unix.ts"
+        - "packages/adapters/src/daemon/errors.ts"
+        - "packages/adapters/package.json"
+        - "packages/cli/package.json"
+        - "packages/mcp/package.json"
+        - "packages/opencode/package.json"
+        - "packages/testkit/package.json"
+        - "scripts/checks/workspace-entrypoints.ts"
+        - "tests/behaviour/control-codec.test.ts"
+        - "tests/behaviour/control-session.test.ts"
+        - "tests/behaviour/control-connection.test.ts"
+        - "tests/behaviour/control-conformance.test.ts"
+        - "tests/behaviour/control-transport.test.ts"
+        - "tests/checks/daemon-hermetic.test.ts"
+        - "tests/checks/daemon-bounds.test.ts"
+        - "tests/structure/daemon-contract.test.ts"
+        - "tests/structure/daemon-imports.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+        - "tests/structure/inventory.json"
+      folders:
+        - "tests/fixtures/daemon/wire"
+        - "tests/fixtures/daemon/transport"
+        - "tests/fixtures/daemon/hermetic"
+        - "tests/fixtures/daemon/privacy"
+        - "tests/fixtures/daemon/bounds"
+    interactions:
+      - kind: contract-file
+        target: "packages/core/src/contracts/control.ts"
+        role: consumer
+    weightClass: standard
+    doneArtifacts:
+      pipelineId: "phase 3 protocol and transport gate green locally; GH-238 PR CI matrix green"
+      trackerTransition: "phase 3 committed on feat/GH-238/resident-dispatch-daemon; GH-238 remains In Progress"
+    summary: "feat(GH-238): control protocol v1 codec, session layer, dispatcher, and stdio/unix transports"
+    tasks:
+      - >-
+        3.1 packages/core/src/domain/control-codec.ts — a total NDJSON codec that knows nothing about
+        sockets, files, or processes: encode to exactly one JSON object plus one trailing newline; decode
+        and validate v/id/kind/type/callerPrincipal and exactly one of payload|data|error; refuse an unknown
+        kind, type, topic, version, or a frame over daemon.frame-max-bytes BEFORE parsing into an action;
+        map every refusal to the delivered error table. Round-trip is byte-identical for canonical input.
+        [F-4, F-5; EVT-8; DM-6; NFR-9, NFR-14; TC-WIRE-001, TC-WIRE-005]
+      - >-
+        3.2 packages/core/src/domain/control-session.ts — the session layer over frames, not bytes: one
+        connection owns its correlation ids (never cross-connection), version negotiation serves 1 and floor
+        0 and refuses anything else with daemon.protocol.unsupported plus the offered set [1, 0] before any
+        action, every subscription owns a bounded buffer and the last delivered cursor, a full buffer emits
+        exactly one degraded event carrying subscriber-overflow and drops only that subscription, and every
+        request has a bounded response timeout driven by the injected DaemonClockPort (no ambient timer). Control frames (drain, stop, takeover) delegate a
+        token-guarded at-most-once action. No codec or session branch reads a transport identity.
+        [F-4, F-6; EVT-8, EVT-9; DM-7; NFR-5, NFR-6, NFR-15; AC-F4-1, AC-F4-3, AC-F4-4, AC-F6-1,
+        AC-F6-2; TC-WIRE-002/003/004/005/008, TC-CONC-001/004/005]
+      - >-
+        3.3 packages/core/src/app/control-server.ts — the multi-connection, single-event-loop dispatcher:
+        accepts frames from every connection, mutates shared in-memory state only on the loop, routes each
+        response only to the asking connection, serializes control actions through an injected at-most-once
+        control store keyed on (connection identity, frame `id`, lock token): a replay on the SAME
+        connection with the same `id` returns the prior acknowledgement and performs no second action,
+        while an `id` reused on a DIFFERENT connection is a distinct new request that is executed and
+        answered on its own merits, never answered as already applied; a same-connection replay with a
+        different type or payload and any wrong/absent lock token are refused. The dispatcher invokes
+        injected callbacks for poke/query/subscribe/drain/stop/takeover. It never invents a mutating wire
+        request or an idempotency key on the envelope; state-path intent application under DM-17 is
+        Phase 4. No state write happens in the dispatcher; it calls the injected application ports.
+        [F-4, F-6; DM-6, DM-7, DM-9, DM-10, DM-17; NFR-6, NFR-15; AC-F4-3, AC-F6-1, AC-F6-2;
+        TC-WIRE-003/004/008, TC-CONC-001/004/005]
+      - >-
+        3.4 packages/adapters/src/daemon/{transport,stdio,unix,errors}.ts — the production ordered
+        byte-stream bindings behind ControlTransport: the transport binding itself, a stdio adapter, and
+        a unix adapter that binds `<state-dir>/daemon.sock` only after verifying the 0700
+        directory, applies 0600 to the socket, refuses a path or mode that escapes the contract, removes a
+        stale socket file only after the daemon lock is owned, and classifies an unopenable transport as a
+        declared degradation rather than a fallback. Same-user enforcement is the permission contract (the
+        0700 directory is the kernel denial); no in-process credential inspection and no shell. The
+        in-memory transport pair used by tests lives in tests/fixtures/daemon/transport/ (declared in this
+        phase), is imported by the conformance and connection suites, and is never exported from the
+        published `@delivery-os/adapters/daemon` subpath. [F-5; DM-6, DM-14; NFR-12; AC-F5-1;
+        TC-TRANSPORT-001/002/003/004/005]
+      - >-
+        3.5 Conformance and transport-independence proof — tests/behaviour/control-conformance.test.ts drives
+        the identical request, response, event, error, poke, query, subscribe, and control frames over the
+        production stdio and unix bindings plus the in-memory pair imported from
+        tests/fixtures/daemon/transport/ and asserts identical behaviour; tests/structure/daemon-imports.test.ts
+        asserts the codec imports no transport, the session imports no socket/file/process module, and no
+        test double is exported from the production subpath. [F-4, F-5; AC-F4-2; NFR-5; TC-TRANSPORT-001]
+      - >-
+        3.6 Connection and concurrency suites — tests/behaviour/control-connection.test.ts asserts two
+        simultaneous `status --live` invocations each receive their own id-correlated response with zero
+        frame leakage; a duplicated control frame replayed on the same connection with the same `id` and a
+        valid lock token performs exactly one drain/stop/takeover action (with a response per request id and
+        no second transition); the same `id` sent on a second connection is a distinct new request that is
+        executed and answered independently, never answered as already applied; a same-connection replay
+        with the same `id` but a different type or payload, and any wrong or absent token, are refused; a
+        timeout degrades instead of blocking. The session suite asserts 100 slow subscribers keep
+        dispatcher latency bounded and each overflowing subscription receives exactly one degraded event.
+        The state-path same-key/different-key intent application, and therefore TC-CONC-002/003, lands in
+        Phase 4. [F-4, F-6; DM-6, DM-7, DM-9, DM-10, DM-17; NFR-5, NFR-6, NFR-15; AC-F4-3, AC-F6-1,
+        AC-F6-2; TC-WIRE-003/004, TC-CONC-001/004/005]
+      - >-
+        3.7 Hermetic, bounds, and privacy guards — tests/checks/daemon-hermetic.test.ts arms a throwing
+        globalThis.fetch guard and asserts zero real sockets, network calls, credential reads, or unbounded
+        sleeps in the protocol suites; tests/checks/daemon-bounds.test.ts asserts the frame-size refusal
+        happens before parsing and the per-subscription buffer never exceeds its bound; canaries assert no
+        credential value, credential token, secret material, prompt, body, transcript, diff, or provider
+        payload can appear in a frame or golden. The daemon lock token is explicitly outside the canary
+        set as a same-user ownership capability and must carry no credential-shaped value; the canary
+        fails if any other credential value transits. [NFR-7, NFR-9, NFR-12; TC-WIRE-006, TC-BOUNDS-001
+        frame half, TC-PRIVACY-001 wire half, TC-HERMETIC-001 wire half]
+      - >-
+        3.8 Declare the adapter subpath and register the new files — packages/adapters/package.json gains the
+        ./daemon export (types + default under dist) and the #daemon/* import alias;
+        packages/cli/package.json, packages/mcp/package.json, packages/opencode/package.json, and
+        packages/testkit/package.json each gain the @delivery-os/adapters ./daemon workspaceImports edge;
+        scripts/checks/workspace-entrypoints.ts adds ./daemon to ADAPTER_SUBPATHS (the shared list means all
+        four surfaces must declare the edge or the equality check fails); register
+        packages/core/src/{domain/control-codec,domain/control-session,app/control-server}.ts and
+        packages/adapters/src/daemon/{index,transport,stdio,unix,errors}.ts in
+        tests/structure/inventory.json with executable allowances. Run the entrypoint check so no export
+        points at a missing dist target and no package imports an undeclared subpath. [ADR-0003 DEC-2/DEC-6;
+        inventory/entrypoint obligation]
+    coverage:
+      - "TC-WIRE-001 (full: envelope and closed kinds/types round-trip, malformed frames refused before action)"
+      - "TC-WIRE-002 (full: version 1/0 served, unsupported version refused with [1, 0] and no action)"
+      - "TC-WIRE-003 (full: subscription overflow degrades only the subscriber)"
+      - "TC-WIRE-004 (full: dispatcher latency stays bounded under 100 slow subscribers; the measured p99 baseline is recorded in Phase 11)"
+      - "TC-WIRE-005 (full: no business truth on the wire; a lost frame changes nothing)"
+      - "TC-WIRE-006 (full: no credential value, credential token, secret material, prompt, body, transcript, diff, or provider payload transits the wire; the daemon lock token is the sole exempt same-user ownership capability and carries no credential-shaped value)"
+      - "TC-WIRE-007 (full: callerPrincipal is present on v1 frames, absent on v0, and never authorization)"
+      - "TC-WIRE-008 (session half: drain/stop/takeover are token-guarded and at-most-once; the signal/state expression and daemon release complete in Phase 5)"
+      - "TC-TRANSPORT-001 (full: stdio conformance is identical and transport-agnostic)"
+      - "TC-LOCK-004 (completes: frame isolation across two state directories; no record, lane, lease, or frame from one scope is visible in the other)"
+      - "TC-TRANSPORT-002 (full: unix default binds a 0700 directory and 0600 socket with the same-user policy)"
+      - "TC-TRANSPORT-003 (full: a socket path outside the state directory is refused with config.value.invalid)"
+      - "TC-TRANSPORT-004 (full: declared-not-delivered transports are refused, not silently downgraded)"
+      - "TC-TRANSPORT-005 (transport half: the open failure is classified daemon-socket-unreachable; the degraded start envelope completes in Phase 5)"
+      - "TC-CONC-001 (full: concurrent status --live connections never cross-talk)"
+      - "TC-CONC-002 (partial: no assertion is claimed in this phase; the state-path same-key intent application and its daemon-state-mediation suite land in Phase 4)"
+      - "TC-CONC-003 (partial: no assertion is claimed in this phase; the state-path different-key intent application and its daemon-state-mediation suite land in Phase 4)"
+      - "TC-CONC-004 (session half: the response timeout degrades; the CLI fallback completes in Phase 5)"
+      - "TC-CONC-005 (full: control dedupe is keyed on (connection identity, id, lock token) — a same-connection replay performs exactly one action, while a cross-connection id collision is a distinct new request, never answered as already applied; a same-connection type/payload replay or a wrong/absent token is refused)"
+      - "TC-HERMETIC-001 (wire half: no real sockets, network, credentials, or sleeps)"
+      - "TC-BOUNDS-001 (frame and buffer half; status/watch bounds complete in Phases 5 and 9)"
+      - "TC-PRIVACY-001 (wire half: frame and golden canaries hold)"
+    acCoverage:
+      - "AC-F2-3"
+      - "AC-F4-1"
+      - "AC-F4-2"
+      - "AC-F4-3"
+      - "AC-F4-4"
+      - "AC-F4-5"
+      - "AC-F5-1"
+      - "AC-F6-1"
+      - "AC-F6-2"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/control-codec.test.ts tests/behaviour/control-session.test.ts tests/behaviour/control-connection.test.ts tests/behaviour/control-conformance.test.ts tests/behaviour/control-transport.test.ts"
+      - "bun test tests/checks/daemon-hermetic.test.ts tests/checks/daemon-bounds.test.ts tests/checks/secret-read-boundary.test.ts"
+      - "bun test tests/structure/daemon-contract.test.ts tests/structure/daemon-imports.test.ts tests/structure/content-inventory.test.ts"
+      - "pnpm check:boundaries"
+
+  - id: 4
+    title: "Startup reconciliation — artifact-evidenced alive/interrupted/crashed classification, evidence-insufficient hold, ledger resume with completed-phase skip, one restart per interruption, terminal budget exhaustion with a typed question, and fail-closed unreadable state"
+    kind: delivery
+    objective: "Make a restart reconstruct and classify the world from artifacts before the start command exists, so `daemon start` is never half-honest."
+    scope:
+      files:
+        - "packages/core/src/domain/daemon-reconcile.ts"
+        - "packages/core/src/app/daemon-reconcile.ts"
+        - "packages/core/src/app/daemon.ts"
+        - "packages/core/src/app/index.ts"
+        - "packages/core/src/index.ts"
+        - "packages/core/src/state/registry.ts"
+        - "packages/core/src/state/economics.ts"
+        - "packages/core/src/state/blockers.ts"
+        - "packages/core/src/contracts/daemon.ts"
+        - "tests/behaviour/daemon-reconciliation.test.ts"
+        - "tests/behaviour/daemon-reconciliation-crash.test.ts"
+        - "tests/behaviour/daemon-state-mediation.test.ts"
+        - "tests/checks/daemon-bounds.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+        - "tests/structure/inventory.json"
+      folders:
+        - "tests/fixtures/daemon/reconciliation"
+        - "tests/fixtures/daemon/state"
+        - "tests/fixtures/daemon/bounds"
+    interactions:
+      - kind: contract-file
+        target: "packages/core/src/contracts/daemon.ts"
+        role: consumer
+    weightClass: heavy
+    doneArtifacts:
+      pipelineId: "phase 4 reconciliation gate green locally; GH-238 PR CI matrix green"
+      trackerTransition: "phase 4 committed on feat/GH-238/resident-dispatch-daemon; GH-238 remains In Progress"
+    summary: "feat(GH-238): startup reconciliation, ledger resume, restart accounting, and terminal budget exhaustion"
+    tasks:
+      - >-
+        4.1 packages/core/src/domain/daemon-reconcile.ts — the pure classification engine of Appendix H
+        steps 3-8: for a lane whose last daemon record is delivering or detached, gather artifact evidence
+        (recorded process identity, harness session observability, last completed ledger phase, presence of
+        a failure record) and classify exactly once: alive (observable; reattach; no restart increment),
+        interrupted (process and session gone with no failure record; resume from the ledger position;
+        consume one restart through the delivered gate), crashed (failure record present; classify the
+        recorded reason; resume per budget). Insufficient evidence is held with `evidence-insufficient` and
+        re-evaluated next pass; it is never guessed. The engine is pure over injected facts and uses the
+        delivered evaluateRestartBudget gate; it invents no second counter. [F-8; DEC-9, DEC-10; DM-3, DM-4;
+        NFR-4; AC-F8-1, AC-F8-2, AC-F8-3; TC-RECON-001/002/003/004/005]
+      - >-
+        4.2 packages/core/src/app/daemon-reconcile.ts — the orchestration: read the queue fold, active leases,
+        park pass, daemon lane records, phase transitions (last completed phase per ref), economics restart
+        history, and blocker questions from verified state; for every in-flight lane call the engine and
+        append one `daemon.lane` classification/action record; append exactly one
+        `daemon.reconciliation` record per instance with queue counts (entries, edges, parks), per-lane
+        classification/action/restarts/reason, duplicates (must be 0), question identities, startedAt,
+        completedAt, and truncation; bounded by daemon.reconcile-max-lanes (excess reported truncated, never
+        silently dropped); a replay of the same instance appends no second report and no duplicate
+        decision. [F-8; EVT-3, EVT-4; DM-3, DM-4; NFR-2, NFR-4, NFR-9; AC-F8-1, AC-F8-2; TC-RECON-001/004]
+      - >-
+        4.3 Resume decisions and restart accounting — interrupted and crashed lanes resume from the ledger
+        position (phase 7 completed → resume at phase 8), completed phases are skipped idempotently, and
+        exactly one restart is consumed through the delivered restart gate and `appendEconomicsRestartEvent`
+        (one record per interruption; a replay increments nothing). An alive lane is reattached with an
+        unchanged counter and no restart event. The decision is recorded on the lane record and the
+        reconciliation report; no restart counter is stored outside the delivered economics records.
+        [F-8, F-9; DEC-10; NFR-4; AC-F8-2; TC-RECON-003/004]
+      - >-
+        4.4 Terminal budget exhaustion (SC-M1-15) — at or past lane.restart-budget the lane projection
+        becomes terminal `failed` with a classified reason, the queue entry is held terminal with
+        `restart-budget-exhausted`, the delivered `economics.budget-exhaustion` record is present with the
+        restart history, no further spawn is allowed, and a typed blocker question carrying the delivered
+        exhaustion options is raised within one `daemon.heartbeat-cycle`; exhaustion never silently
+        requeues. The terminal append failure path surfaces the error and does not requeue. [F-8; EVT-3,
+        EVT-4; NFR-4, NFR-15; AC-F8-3; TC-RECON-005/006]
+      - >-
+        4.5 Fail-closed start — an unreadable, torn, or unknown queue/lane/lease/park/budget read refuses the
+        start with `daemon.state-recovery-failed` (or the delivered state.* identity) at exit 2, appends no
+        partial reconciliation, and leaves every one-shot path available. The daemon never starts
+        half-reconciled and never reports an all-clear over unreadable state. [F-8, F-12; NFR-13;
+        AC-F8-1, AC-F12-2; TC-RECON-009]
+      - >-
+        4.6 Daemon-down intent application — queue entries/dependencies/priorities are already durable at
+        write time; reconciliation sees each and applies it exactly once under the DM-17 client idempotency
+        key (the fold is idempotent and a replay appends nothing). A blocker answer stays durable and
+        visible with `applied: false` and its delivered `laneResume` projection byte-identical; this phase
+        records the intent visibility and question identity in the report, and the pending
+        resume/application intent (`resumeIntent` = questionId plus mode from the delivered `laneResume`
+        closed set) is recorded on the lane execution record in Phase 6 only when a lane exists. With no
+        lane, no `resumeIntent` and no application step are fabricated. Zero loss and zero duplicate
+        application; the full session resume remains M1-S9. [F-3; EVT-2, EVT-3; DM-3, DM-17; AC-F3-1;
+        TC-STATE-003]
+      - >-
+        4.7 Reconciliation suites — tests/behaviour/daemon-reconciliation.test.ts covers SC-M1-16
+        (L1 alive/reattach, L2 interrupted/resume-at-phase-8 with restarts+1, L3 crashed with its recorded
+        reason), evidence-insufficient hold, replayed reconciliation (no second report, no second increment),
+        budget exhaustion and the typed question, and unreadable-state refusal;
+        tests/behaviour/daemon-reconciliation-crash.test.ts covers the classification/decision half of
+        kill-and-restart; tests/behaviour/daemon-state-mediation.test.ts covers intents applied exactly
+        once, same-key and different-key concurrent state-path application with the daemon down and up
+        (one effective intent, ordered fence appends, no wire mutation), the additive `callerPrincipal`
+        round-trip on every intent kind including `outbox.effect`, historical records without it, an
+        existing store opening verified-empty with daemon keys unmodified, and the world fold from state.
+        tests/checks/daemon-bounds.test.ts asserts the 200-lane bound and the explicit truncation marker.
+        [NFR-4, NFR-9, NFR-13, NFR-15; SC-M1-15, SC-M1-16; TC-RECON-001..009, TC-STATE-003/006 state half,
+        TC-CONC-002/003 state half, TC-VOCAB-004/008 completion, TC-BOUNDS-001 reconciliation half]
+      - >-
+        4.8 Register packages/core/src/{domain/daemon-reconcile,app/daemon-reconcile}.ts in
+        tests/structure/inventory.json with executable allowances; keep the reconciliation record and lane
+        classification round-trips in the contract test. [NFR-14; TC-VOCAB-001 reconciliation round-trip]
+    coverage:
+      - "TC-RECON-001 (full: alive, interrupted, and crashed are classified from artifact evidence and every lane is accounted for)"
+      - "TC-RECON-002 (full: insufficient evidence holds the lane instead of guessing)"
+      - "TC-RECON-003 (full: an interrupted lane resumes at phase 8, skips completed phases, and increments once)"
+      - "TC-RECON-004 (full: a replayed reconciliation increments nothing and appends no second report)"
+      - "TC-RECON-005 (full: budget exhaustion is terminal with the delivered economics record and no fourth spawn)"
+      - "TC-RECON-006 (partial: exhaustion is detected and the typed question identity is recorded; the question-surface and no-silent-requeue assertion through blockers-publish completes in Phase 6)"
+      - "TC-RECON-007 (classification/decision half: the kill points and restart decisions are covered; zero duplicated commits completes in Phase 7)"
+      - "TC-RECON-008 (classification/decision half: the effect intents are accounted for; zero duplicated tickets/comments completes in Phase 7)"
+      - "TC-RECON-009 (full: unreadable state refuses the start with daemon.state-recovery-failed)"
+      - "TC-STATE-003 (full: startup reconciliation applies each daemon-down intent exactly once; a blocker answer stays applied:false with its laneResume projection and gets a resumeIntent only when a lane exists)"
+      - "TC-CONC-002 (completes: the same idempotency key yields one effective intent with zero loss, daemon down and daemon up; no business mutation is a wire frame)"
+      - "TC-CONC-003 (completes: different-key intents serialize through the state fence with zero loss and at-most-once application in both daemon states)"
+      - "TC-VOCAB-004 (completes: the behavioural intent-record round-trip proves callerPrincipal is additive on every intent kind including outbox.effect and never authorization)"
+      - "TC-VOCAB-008 (completes: an existing store opens unmodified, daemon keys read verified-empty, and historical records without callerPrincipal read unchanged)"
+      - "TC-STATE-006 (state fold half: the world rebuilds from verified records; lane records and no-module-state complete in Phase 6)"
+      - "TC-BOUNDS-001 (reconciliation lane bound half; status and watch bounds complete in Phases 5 and 9)"
+      - "TC-VOCAB-001 (reconciliation round-trip row)"
+    acCoverage:
+      - "AC-F3-1"
+      - "AC-F8-1"
+      - "AC-F8-2"
+      - "AC-F8-3"
+      - "AC-F16-1"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/daemon-reconciliation.test.ts tests/behaviour/daemon-reconciliation-crash.test.ts tests/behaviour/daemon-state-mediation.test.ts"
+      - "bun test tests/checks/daemon-bounds.test.ts tests/structure/daemon-contract.test.ts tests/structure/content-inventory.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts"
+
+  - id: 5
+    title: "Resident runtime and the daemon command family — lock/reconcile/heartbeat/serve lifecycle, resident and foreground start, state-first stop, the status projection, the exit matrix, and per-platform polling discipline"
+    kind: delivery
+    objective: "Turn the durable pieces into a resident daemon and the scriptable start/stop/status surface, with bounded polling and a truthful exit matrix."
+    scope:
+      files:
+        - "packages/core/src/domain/daemon-status.ts"
+        - "packages/core/src/domain/poll-policy.ts"
+        - "packages/core/src/app/daemon-runtime.ts"
+        - "packages/core/src/app/daemon-status.ts"
+        - "packages/core/src/app/polling.ts"
+        - "packages/core/src/app/index.ts"
+        - "packages/core/src/index.ts"
+        - "packages/core/src/contracts/daemon.ts"
+        - "packages/core/src/contracts/control.ts"
+        - "packages/adapters/src/daemon/process.ts"
+        - "packages/adapters/src/daemon/clock.ts"
+        - "packages/adapters/src/daemon/wake.ts"
+        - "packages/adapters/src/daemon/index.ts"
+        - "packages/cli/src/commands/daemon.ts"
+        - "packages/cli/src/commands/index.ts"
+        - "packages/cli/src/daemon-compose.ts"
+        - "packages/cli/src/daemon-main.ts"
+        - "packages/cli/src/edge.ts"
+        - "packages/cli/package.json"
+        - "tests/behaviour/daemon-lifecycle.test.ts"
+        - "tests/behaviour/daemon-polling.test.ts"
+        - "tests/behaviour/daemon-degradation.test.ts"
+        - "tests/behaviour/daemon-state-mediation.test.ts"
+        - "tests/golden/daemon-lifecycle.test.ts"
+        - "tests/checks/daemon-bounds.test.ts"
+        - "tests/checks/daemon-determinism.test.ts"
+        - "tests/structure/daemon-contract.test.ts"
+        - "tests/structure/daemon-imports.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+        - "tests/structure/inventory.json"
+      folders:
+        - "tests/fixtures/daemon/lifecycle"
+        - "tests/fixtures/daemon/polling"
+        - "tests/fixtures/daemon/golden"
+        - "tests/fixtures/daemon/degradation"
+        - "tests/fixtures/daemon/determinism"
+        - "tests/fixtures/daemon/bounds"
+    interactions:
+      - kind: contract-file
+        target: "packages/core/src/contracts/daemon.ts"
+        role: consumer
+      - kind: contract-file
+        target: "packages/core/src/contracts/control.ts"
+        role: consumer
+      - kind: contract-file
+        target: "tests/structure/daemon-contract.test.ts"
+        role: consumer
+    weightClass: heavy
+    doneArtifacts:
+      pipelineId: "phase 5 lifecycle/runtime/polling gate green locally; GH-238 PR CI matrix green"
+      trackerTransition: "phase 5 committed on feat/GH-238/resident-dispatch-daemon; GH-238 remains In Progress"
+    summary: "feat(GH-238): resident daemon runtime and the start/stop/status command family with polling discipline"
+    tasks:
+      - >-
+        5.1 packages/core/src/domain/daemon-status.ts — the pure status fold of DM-13: instance or null,
+        uptimeMs, queueDepth (the queue graph entry count), lanes, restarts with classified reasons,
+        heartbeat {ageMs, intervalMs, state running|stale|stopped}, socket {path, transport, reachable},
+        supervisor {kind, installed, unit, linger}, reconciliation summary or null,
+        mergeCodePath from the closed set {"absent", "present"} (the production composition always
+        supplies "absent"; an injected merge executor supplies "present" at runtime without adding an
+        import edge — only a source-level import of merge execution fails the boundary rule),
+        degraded[], and truncated/truncationReason. Every value is derived from durable records; no
+        process introspection.
+        Bounds: status lanes ≤ 200, data ≤ 65536 bytes, human ≤ 40 lines and 8192 bytes with explicit
+        truncation. [F-1, F-7, F-12, F-17; DM-13, DM-14; NFR-1, NFR-9; AC-F1-1, AC-F1-2, AC-F17-1;
+        TC-LIFE-003, TC-DEGRADE-003, TC-MERGEABS-002, TC-BOUNDS-001 status half]
+      - >-
+        5.2 packages/core/src/domain/poll-policy.ts + app/polling.ts — the per-platform policy as data: base
+        interval, maximum interval, and minimum request spacing from the resolved poll branch; exponential
+        backoff from base to max on failure, reset to base on success, no interval below the minimum spacing
+        and no request above the configured rate; the injected clock drives every boundary; a one-shot read
+        bypasses resident backoff state. Polling goes only through an injected read seam, never performs a
+        write, and has no unbounded loop. [F-14; DEC-11; DM-15; NFR-10, NFR-16; AC-F14-1;
+        TC-POLL-001/002/003/004]
+      - >-
+        5.3 packages/core/src/app/daemon-runtime.ts — the resident lifecycle over injected ports: acquire the
+        daemon lock (refuse live with holder evidence; take over stale with evidence), rebuild and reconcile
+        (Phase 4), append the instance acquisition, open the configured transport (a failed open is a
+        declared daemon-socket-unreachable degradation, state-mediated operation continues), begin the
+        heartbeat, and serve. Wake order is poke, then event-log tail, then bounded poll; losing any wake
+        changes nothing durable. `drain` refuses new spawn decisions, lets lane bookkeeping reach a boundary,
+        records live lanes detached, appends operation `released`, removes the lock artifact, and exits;
+        `immediate` stops the loop, appends operation `immediate-stop`, removes the lock artifact, and
+        signals no lane. A clean stop never writes a false release for another actor; an unclean exit appends
+        nothing and leaves a stale lock for the next start to take over. Every interval, timeout, and
+        backoff advances only through the injected DaemonClockPort (no ambient setTimeout/setInterval in
+        core); the loop is cancellable and has no unbounded wait. Readiness is signalled only after
+        instance + reconciliation + heartbeat + transport open. [F-1, F-2, F-3, F-7, F-12; EVT-1, EVT-2;
+        DM-1, DM-2; NFR-2, NFR-5; AC-F1-1, AC-F3-2, AC-F5-1, AC-F12-2; TC-LIFE-001/006/007,
+        TC-STATE-004/005, TC-TRANSPORT-005]
+      - >-
+        5.4 packages/core/src/app/daemon-status.ts — the status use case: read the latest instance,
+        heartbeat, daemon lanes, economics restarts, supervisor inspection, and the reconciliation record;
+        fold them with the pure status module; classify running/stale/stopped; expose the degraded markers
+        truthfully. `status --live` queries the control socket for immediate facts and fails closed with
+        daemon.socket-unreachable or daemon.heartbeat-stale at exit 2; plain status always exits 0 with a
+        declared degradation. `daemon stop` against an absent daemon is an idempotent noop at exit 0.
+        [F-1, F-7, F-12; AC-F1-1, AC-F1-2, AC-F12-2; TC-LIFE-002/003/004/005/008, TC-DEGRADE-003]
+      - >-
+        5.5 packages/adapters/src/daemon/{process,wake,clock}.ts — the detached process supervisor, the wake
+        source, and the clock edge: spawn the CLI daemon entry detached with a deny-by-default environment,
+        return pid identity, a bounded one-line readiness channel, a signal operation that NEVER targets a
+        lane session, and a liveness check; implement DaemonWakePort as a state event-log tail with a
+        bounded poll fallback; implement DaemonClockPort over node:timers with a cancellable bounded sleep
+        and a monotonic nowMs, injected into the app runtime and the control session. No shell evaluation,
+        no ambient environment read, no absolute repository root in any record or log; tests inject a
+        deterministic clock and never sleep. [F-1, F-3, F-9; DEC-6; DM-14; NFR-7, NFR-12; AC-F1-1,
+        AC-F3-2; TC-LIFE-001/007, TC-STATE-004/005]
+      - >-
+        5.6 packages/cli/src/commands/daemon.ts + commands/index.ts + daemon-compose.ts + daemon-main.ts +
+        edge.ts + package.json — the command family with the delivered envelope discipline: grammar
+        `daemon start [--foreground]`, `daemon stop [--mode drain|immediate]`, `daemon status [--live]`,
+        `daemon install`, `daemon uninstall`; deterministic human key=value summary
+        (result=, instance=, pid=, heartbeat=, degraded=, merge_code_path=) before detail; the {0,1,2}
+        exit projection from the error table; resident start spawns the `./daemon` process entry and waits
+        for readiness, foreground runs in-process; stop is state-first (control frame when reachable, else
+        the recorded process signal, never a false release); status reads state, `--live` queries with a
+        bounded timeout and falls back truthfully. The state-directory scope resolver (edge.ts,
+        stateDirectoryFor) reads the brand-derived `<PREFIX>_STATE_DIR` process environment when set and
+        otherwise derives `<home>/<brand.stateDirectoryName>`; an explicitly set value wins outright and is
+        never merged with the default, a non-absolute or unusable value is config.value.invalid at exit 1,
+        and there is NO `--state-dir` flag and NO state-directory configuration key (DEC-18, F-1,
+        Appendix E). packages/cli/package.json declares a `./daemon` export
+        (types + default under dist) for the process entry so the supervisor can resolve the built
+        daemon-main module; the CLI introduces no `bin`. The daemon composition is a separate module that
+        imports no merge execution; `mergeCodePath: "absent"` is computed from that composition.
+        [F-1, F-12, F-17;
+        DM-13, DM-14; NFR-5, NFR-9, NFR-17; AC-F1-1, AC-F1-2, AC-F12-2, AC-F17-1; TC-LIFE-001..008,
+        TC-MERGEABS-002, TC-CONC-004]
+      - >-
+        5.7 Lifecycle, polling, and status suites — tests/behaviour/daemon-lifecycle.test.ts covers
+        start readiness/envelope/foreground-vs-resident, stop noop/absent/drain/immediate with no lane
+        signal and no false release, status projection, and the exit matrix; tests/golden/daemon-lifecycle.test.ts
+        pins deterministic human and machine output (no absolute paths, wall-clock values, hostnames, user
+        names, or product tokens); tests/behaviour/daemon-polling.test.ts covers backoff/reset/spacing,
+        configuration-only cadence, and seam confinement; tests/structure/daemon-imports.test.ts asserts no
+        unbounded polling path and no poll outside a delivered read seam (the TC-POLL-004 structure half);
+        tests/behaviour/daemon-degradation.test.ts covers
+        the plain status versus --live matrix; tests/checks/daemon-determinism.test.ts asserts 100 identical
+        runs of status and reconciliation with an injected clock/state; tests/checks/daemon-bounds.test.ts
+        covers the status/human bounds. [NFR-1, NFR-5, NFR-9, NFR-10, NFR-16; AC-F1-1, AC-F1-2, AC-F7-1,
+        AC-F14-1; TC-LIFE-001..008, TC-POLL-001..004, TC-DEGRADE-003, TC-BOUNDS-001, TC-DET-001 status half]
+      - >-
+        5.8 Register packages/core/src/{domain/daemon-status,domain/poll-policy,app/daemon-runtime,app/daemon-status,app/polling}.ts,
+        packages/adapters/src/daemon/{process,wake,clock}.ts, and packages/cli/src/{commands/daemon,daemon-compose,daemon-main}.ts
+        in tests/structure/inventory.json with executable allowances; keep the `./daemon` CLI export and the
+        daemon adapter subpath resolving through the entrypoint check. [inventory/entrypoint obligation]
+    coverage:
+      - "TC-LIFE-001 (full: start acquires, reconciles, opens, and returns ready with a complete truthful envelope)"
+      - "TC-LIFE-002 (full: stop with no daemon is an idempotent noop at exit 0)"
+      - "TC-LIFE-003 (full: status reports the full state-derived projection)"
+      - "TC-LIFE-004 (full: plain status over an absent/stale heartbeat degrades at exit 0)"
+      - "TC-LIFE-005 (behaviour half: status --live fails closed on an unreachable socket or stale heartbeat; the 3x2 machine/human matrix golden completes in Phase 9)"
+      - "TC-LIFE-006 (full: drain/immediate is state-first, signals no lane, and leaves no false release)"
+      - "TC-LIFE-007 (full: foreground versus resident start returns at readiness)"
+      - "TC-LIFE-008 (full: envelope, exit projection, and deterministic human summary)"
+      - "TC-LOCK-001 (completes: the CLI refusal envelope names the holder with evidence and appends nothing)"
+      - "TC-LOCK-002 (completes: the CLI takeover envelope carries the previous-instance evidence)"
+      - "TC-HEART-002 (completes: stop records the release reason and status reports stopped)"
+      - "TC-STATE-004 (full: poke, tail, and bounded poll each wake the daemon)"
+      - "TC-STATE-005 (full: a lost poke/tail/poll changes no durable outcome)"
+      - "TC-TRANSPORT-005 (completes: an unopenable transport starts in declared degraded mode at exit 0)"
+      - "TC-CONC-004 (completes: the CLI times out to the state path and never blocks)"
+      - "TC-WIRE-008 (completes: control is also expressible through the state/signal path)"
+      - "TC-DEGRADE-003 (behaviour half: plain status degrades at exit 0 and only --live fails at exit 2; the machine/human status-matrix golden completes in Phase 9)"
+      - "TC-POLL-001 (full: failure backs off base→max and success resets)"
+      - "TC-POLL-002 (full: minimum spacing/rate are honoured and reads stay on delivered seams)"
+      - "TC-POLL-003 (full: polling and one-shot cadence are configuration-only; the runtime cadence is gated by tests/behaviour/daemon-polling.test.ts here and the configuration declaration by tests/behaviour/config-resolver.test.ts in Phase 1)"
+      - "TC-POLL-004 (full: no unbounded polling path or non-seam read exists; tests/structure/daemon-imports.test.ts)"
+      - "TC-MERGEABS-002 (full: mergeCodePath is computed from the closed set {absent, present}; the production composition reports absent and an injected merge executor reports present)"
+      - "TC-CONFIG-001 (behaviour half: heartbeat/lock/poll/response/reconcile tuning takes effect at runtime; the key declaration/refusal half is gated by tests/behaviour/config-schema.test.ts and config-resolver.test.ts in Phase 1, and the watch keys complete in Phase 9)"
+      - "TC-BOUNDS-001 (status, data, and human bounds)"
+      - "TC-DET-001 (status/reconciliation determinism half; the aggregate 100-run sweep completes in Phase 11)"
+      - "TC-VOCAB-001 (instance/heartbeat/status round-trip re-verified)"
+    acCoverage:
+      - "AC-F1-1"
+      - "AC-F1-2"
+      - "AC-F3-2"
+      - "AC-F5-1"
+      - "AC-F7-1"
+      - "AC-F12-2"
+      - "AC-F14-1"
+      - "AC-F17-1"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/daemon-lifecycle.test.ts tests/behaviour/daemon-polling.test.ts tests/behaviour/daemon-degradation.test.ts tests/behaviour/daemon-state-mediation.test.ts"
+      - "bun test tests/golden/daemon-lifecycle.test.ts"
+      - "bun test tests/checks/daemon-determinism.test.ts tests/checks/daemon-bounds.test.ts tests/checks/daemon-hermetic.test.ts"
+      - "bun test tests/structure/daemon-contract.test.ts tests/structure/daemon-imports.test.ts tests/structure/content-inventory.test.ts && pnpm check:boundaries && bun run scripts/checks/workspace-entrypoints.ts"
+
+  - id: 6
+    title: "Lane supervision through the injected executor over HarnessSessionPort — claim/spawn/record/observe/release, no in-process delivery and no merge, prefill-safe liveness, supervise-only degradation, and the lanes evidence fold"
+    kind: delivery
+    objective: "Prove the daemon supervises lanes through the injected executor, never becomes a lane, never merges, and degrades to supervise-only."
+    scope:
+      files:
+        - "packages/core/src/domain/daemon-lane.ts"
+        - "packages/core/src/domain/queue-lanes.ts"
+        - "packages/core/src/app/daemon-supervision.ts"
+        - "packages/core/src/app/daemon.ts"
+        - "packages/core/src/app/daemon-runtime.ts"
+        - "packages/core/src/app/index.ts"
+        - "packages/core/src/index.ts"
+        - "packages/core/src/contracts/daemon.ts"
+        - "packages/core/src/contracts/harness.ts"
+        - "packages/adapters/src/daemon/lane-executor.ts"
+        - "packages/adapters/src/daemon/index.ts"
+        - "packages/cli/src/daemon-compose.ts"
+        - "packages/cli/src/edge.ts"
+        - "packages/cli/src/commands/lanes.ts"
+        - "tests/behaviour/daemon-lane-supervision.test.ts"
+        - "tests/behaviour/lanes.test.ts"
+        - "tests/behaviour/blockers-publish.test.ts"
+        - "tests/golden/lanes-list.test.ts"
+        - "tests/golden/lanes-show.test.ts"
+        - "tests/structure/daemon-imports.test.ts"
+        - "tests/checks/daemon-hermetic.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+        - "tests/structure/inventory.json"
+      folders:
+        - "tests/fixtures/daemon/lanes"
+        - "tests/fixtures/blockers"
+    interactions:
+      - kind: contract-file
+        target: "packages/core/src/contracts/daemon.ts"
+        role: consumer
+      - kind: contract-file
+        target: "packages/core/src/contracts/harness.ts"
+        role: consumer
+    weightClass: heavy
+    doneArtifacts:
+      pipelineId: "phase 6 lane supervision gate green locally; GH-238 PR CI matrix green"
+      trackerTransition: "phase 6 committed on feat/GH-238/resident-dispatch-daemon; GH-238 remains In Progress"
+    summary: "feat(GH-238): lane supervision over the injected executor with supervise-only degradation"
+    tasks:
+      - >-
+        6.1 packages/core/src/domain/daemon-lane.ts — the lane execution state machine and shaping:
+        delivering, detached, completed, failed, preempted; harness kind/session identity, recorded process
+        identity, ledger position, spawn ordinal, liveness outcome, detach marker, classification, and an
+        optional pending resume intent (`resumeIntent`: questionId plus mode from the delivered
+        `laneResume` closed set) for a durable blocker answer awaiting its safe boundary; one current
+        record per ref; the daemon execution set is distinct from the delivered six-value lanes projection
+        and never redefines it. Liveness classification consumes the delivered prefill-safe rule
+        and progress signals: rising token delta or traffic during prefill/resume is `progressing` with no
+        restart; only a fully corroborated stall applies the delivered watchdog.liveness-stalled
+        classification and restart admission. [F-9; DM-3, DM-16; NFR-14; AC-F9-1, AC-F9-2;
+        TC-LANE-004/005, TC-LANE-006 behaviour]
+      - >-
+        6.2 packages/core/src/app/daemon-supervision.ts — the supervision cycle: compute the next action with
+        the delivered scheduling engine over the shared facts path (no second scheduler), claim the lease
+        through the delivered fenced claim path, ask the injected LaneExecutorPort to start, record one
+        daemon.lane delivering record, observe/collect/liveness at lane.liveness-interval, and release or
+        park on termination or preemption. The daemon performs no delivery work in-process: it does not read
+        repository code, run a phase, write a commit, or evaluate a gate; its effect duty stops at detection,
+        one bounded query, and a durable DM-18 redrive request, while the lane/one-shot owner applies and
+        restores the phase binding (DEC-19, TDR-0014 INV-7/INV-8); a missing executor runs the
+        declared `supervise-only` mode, reports degraded ["lane-executor-unavailable"], publishes the next
+        action, and never claims to have spawned. With a lane present, the daemon records the pending
+        blocker-answer resume/application intent as `resumeIntent` on the lane execution record; a
+        lane-holding answer is applied only at a safe boundary via the executor, no-lane answers stay
+        visible with `applied: false` and no fabricated application step, and the answer record is never
+        rewritten. [F-9, F-3; C-1; DEC-1, DEC-13, DEC-16; DM-3, DM-16; NFR-2, NFR-17; AC-F9-1, AC-F3-1;
+        TC-LANE-001/002/003, TC-STATE-002]
+      - >-
+        6.3 packages/adapters/src/daemon/lane-executor.ts — the delivered lane-executor adapter composing
+        HarnessSessionPort for spawn, deliver/resume, collect, classify, and liveness, plus an injected
+        LaneLaunchPlanner for the prompt and execution-environment descriptor (the M1-S9 seam). It reports
+        availability honestly: without a planner or with a declared harness capability gap it is
+        unavailable, which produces supervise-only. It never surfaces a treeRoot, prompt, transcript, or
+        raw provider payload into a record, log, or frame [F-9; C-1; DM-16; NFR-12; AC-F9-1;
+        TC-LANE-001/003]
+      - >-
+        6.4 Lanes evidence fold — extend packages/core/src/domain/queue-lanes.ts to fold the current
+        daemon.lane record into the existing six-value lane projection (delivering/preempted/failed map to
+        the delivered vocabulary; no new field and no payload-shape change) and extend the CLI lanes runtime
+        in packages/cli/src/edge.ts to read daemon lanes beside the queue and economics folds. The daemon is
+        the only writer of daemon.lane; lanes never writes. [F-9, F-12; DM-13; NG-8; AC-F9-1;
+        TC-LANE-006, TC-VOCAB-001 lane round-trip]
+      - >-
+        6.5 Supervision and structure suites — tests/behaviour/daemon-lane-supervision.test.ts covers
+        claim→spawn→record→observe→release, the no-executor supervise-only mode, prefill/resume progressing,
+        a corroborated stall with the delivered restart admission, and the distinct daemon.lane state;
+        tests/structure/daemon-imports.test.ts proves no merge execution is reachable from the composed
+        daemon (the Phase 1 rule's reachability half); tests/checks/daemon-hermetic.test.ts asserts no
+        in-process delivery work and no real harness spawn; tests/behaviour/lanes.test.ts plus the lanes
+        goldens assert the payload shape is unchanged while daemon evidence is folded. [F-9, F-17; NFR-2,
+        NFR-17; AC-F9-1, AC-F9-2, AC-F17-1; TC-LANE-001..006, TC-MERGEABS-001, TC-STATE-006 complete]
+      - >-
+        6.6 Extend tests/behaviour/daemon-state-mediation.test.ts to complete TC-STATE-006: kill at each
+        declared point (after lock, after heartbeat, after lane record) and assert the reconstruction of
+        instance, queue, lanes, leases, parks, budgets from state, an empty in-memory singleton at start, and
+        no daemon module holding durable facts in module-level mutable state. Extend
+        tests/behaviour/blockers-publish.test.ts for the unchanged blocker shape, the durable
+        `applied: false` answer with its `laneResume` projection, the `resumeIntent` recorded on the lane
+        record only when a lane exists, the no-lane case with no fabricated intent, the safe-boundary apply
+        path, and the typed exhaustion question surfacing (the full resume remains M1-S9). [F-3, F-8;
+        NFR-2; AC-F3-1, AC-F8-3; TC-STATE-002/006, TC-RECON-006]
+      - >-
+        6.7 Register packages/core/src/{domain/daemon-lane,app/daemon-supervision}.ts and
+        packages/adapters/src/daemon/lane-executor.ts in tests/structure/inventory.json with executable
+        allowances; re-run the boundary and entrypoint checks. [inventory obligation]
+    coverage:
+      - "TC-LANE-001 (full: supervision claims, spawns, records, observes, and releases through the injected executor)"
+      - "TC-LANE-002 (full: the daemon performs no delivery work in-process; commit/phase/transition ports stay at zero, the effect duty is detection + one bounded query + the DM-18 redrive request, and only the lane/one-shot owner restores the phase binding)"
+      - "TC-LANE-003 (full: a missing executor runs supervise-only and declares it)"
+      - "TC-LANE-004 (full: a prefilling/resuming lane is progressing, never stalled)"
+      - "TC-LANE-005 (full: a corroborated stall applies the delivered watchdog classification and restart)"
+      - "TC-LANE-006 (full: daemon.lane state is distinct and written only by the daemon)"
+      - "TC-STATE-002 (completes: blocker publish/answer land daemon-down with an unchanged shape and apply at a safe boundary; the session resume remains M1-S9)"
+      - "TC-STATE-006 (completes: kill/restart reconstructs the world from state with no module-level durable state)"
+      - "TC-MERGEABS-001 (completes: no daemon path imports or reaches merge execution from the composed daemon)"
+      - "TC-RECON-006 (completes: exhaustion raises a typed question on the blocker surface within one cycle and never silently requeues)"
+      - "TC-DEGRADE-002 (supervise-only half; the absent/stale/crashed one-shot matrix completes in Phase 9)"
+      - "TC-VOCAB-001 (lane round-trip)"
+    acCoverage:
+      - "AC-F3-1"
+      - "AC-F3-2"
+      - "AC-F9-1"
+      - "AC-F9-2"
+      - "AC-F17-1"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/daemon-lane-supervision.test.ts tests/behaviour/daemon-state-mediation.test.ts tests/behaviour/lanes.test.ts tests/behaviour/blockers-publish.test.ts"
+      - "bun test tests/golden/lanes-list.test.ts tests/golden/lanes-show.test.ts"
+      - "bun test tests/structure/daemon-contract.test.ts tests/structure/daemon-imports.test.ts tests/checks/daemon-hermetic.test.ts"
+      - "bun test tests/boundaries && pnpm check:boundaries"
+
+  - id: 7
+    title: "External-effect protocol — outbox intent and command receipt records, the legal state machine, first-class unknown, one query-based check before re-apply, and commit crash safety through a pre-commit outbox intent with a message-independent path-set identity matched by a bounded logSince(baselineHead) read"
+    kind: delivery
+    objective: "Make externally visible effects crash-safe with intent, receipt, unknown, check-before-reapply, and commit crash protection through a durable pre-commit intent whose (baselineHead, changeRef, phase, sorted normalized staged path set) identity is matched by one bounded logSince(baselineHead) read; the lane/one-shot owner applies and restores the binding, while the daemon only records a DM-18 redrive request."
+    scope:
+      files:
+        - "packages/core/src/domain/effect-protocol.ts"
+        - "packages/core/src/app/effects.ts"
+        - "packages/core/src/app/daemon-reconcile.ts"
+        - "packages/core/src/app/index.ts"
+        - "packages/core/src/index.ts"
+        - "packages/core/src/contracts/effects.ts"
+        - "packages/core/src/contracts/commit.ts"
+        - "packages/adapters/src/git/commit.ts"
+        - "packages/cli/src/commands/phase.ts"
+        - "packages/cli/src/edge.ts"
+        - "packages/cli/src/daemon-compose.ts"
+        - "tests/behaviour/daemon-effects.test.ts"
+        - "tests/behaviour/daemon-reconciliation-crash.test.ts"
+        - "tests/behaviour/daemon-reconciliation.test.ts"
+        - "tests/behaviour/commit-act.test.ts"
+        - "tests/behaviour/commit-convergence.test.ts"
+        - "tests/behaviour/phase-atomic.test.ts"
+        - "tests/structure/daemon-imports.test.ts"
+        - "tests/structure/daemon-contract.test.ts"
+        - "tests/checks/daemon-hermetic.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+        - "tests/structure/inventory.json"
+      folders:
+        - "tests/fixtures/daemon/effects"
+    interactions:
+      - kind: contract-file
+        target: "packages/core/src/contracts/effects.ts"
+        role: producer
+      - kind: contract-file
+        target: "packages/core/src/contracts/commit.ts"
+        role: producer
+      - kind: contract-file
+        target: "packages/adapters/src/git/commit.ts"
+        role: producer
+      - kind: contract-file
+        target: "packages/cli/src/commands/phase.ts"
+        role: producer
+      - kind: contract-file
+        target: "packages/cli/src/edge.ts"
+        role: producer
+    weightClass: heavy
+    doneArtifacts:
+      pipelineId: "phase 7 external-effect gate green locally; GH-238 PR CI matrix green"
+      trackerTransition: "phase 7 committed on feat/GH-238/resident-dispatch-daemon; GH-238 remains In Progress"
+    summary: "feat(GH-238): external-effect protocol with receipts, unknown, check-before-reapply, and message-independent commit protection"
+    tasks:
+      - >-
+        7.1 packages/core/src/domain/effect-protocol.ts — the pure Appendix I state machine: accepted →
+        in-flight → applied|failed|unknown; unknown is first-class; before any re-apply exactly one bounded
+        query by stable identity is required. For a tracker transition or comment the query is the
+        comment/transition identity: found → applied/already-applied with no second effect; not-found → one
+        re-apply with a new receipt; unreadable → stays unknown with no blind retry. For a commit the query
+        is exactly one bounded `logSince(baselineHead)` read and the verdict is applied/already-applied only
+        when the read yields exactly one new commit AND that commit's normalized changed-path set equals
+        the recorded set; the receipt records the discovered SHA and no second commit is created. Zero
+        commits, more than one commit, a path-set mismatch, an unreadable or over-cap read, or a baseline
+        that cannot be placed in HEAD's ancestry leaves the effect unknown with NO automatic re-apply and
+        NO guessed SHA. The identity is message-independent — (baselineHead, changeRef, phase, sorted
+        normalized staged path set); no recorded identity, match input, or match rule reads the commit
+        message or any model output; the idempotency key is derived deterministically from (changeRef,
+        phase, baselineHead) and every re-drive reuses it verbatim. An illegal transition is a classified
+        state.* failure, never a fabricated value. Three negative controls must each fail the convergence
+        test: break the recorded path-set derivation, remove the log query, and accept a path-set mismatch
+        as a match. [F-9, F-10; DEC-4, DEC-15, DEC-19; TDR-0014 INV-1..INV-8; DM-9, DM-10, DM-11, DM-18;
+        NFR-4, NFR-15; AC-F8-4, AC-F10-1, AC-F10-2; TC-EFFECT-001/002/003/004/005, TC-RECON-007]
+      - >-
+        7.2 packages/core/src/app/effects.ts — the owner-side outbox and receipt ledgers over the injected
+        StateStorePort: append exactly one `outbox.effect` intent BEFORE the delivered commit primitive is
+        invoked (effectId, originating intentId, ref, closed kind, bounded target, payload digest,
+        idempotency key, optional additive `callerPrincipal`, state, attempts, check strategy
+        (query-by-id for a tracker effect, query-by-log-since for a commit), time; a commit intent also
+        carries changeRef, phase, the single baselineHead
+        read used both for the intent and the primitive's reset baseline, and the sorted normalized staged
+        path set computed pre-commit with the delivered pure staging computation over one tree read and the
+        same scope request the primitive receives; repo-relative paths, `/` separators, no leading `./`,
+        deduplicated, sorted; only paths, never content). It carries no message, subject, body, or
+        fingerprint. If HEAD cannot be read, no effect starts and the primitive is not invoked. Append
+        terminal/attempt receipts with bounded evidence; latest outbox record per effect id wins; the first
+        terminal receipt per effect and attempt is authoritative; bounded content is resolved from the
+        durable originating intent at apply time through EffectIntentPort. This composition is the
+        lane/one-shot owner path and is never imported by the daemon composition. [F-9, F-10; EVT-6, EVT-7;
+        DM-9, DM-10, DM-18; TDR-0014 INV-1..INV-3; NFR-12, NFR-15; AC-F10-1, AC-F10-2;
+        TC-EFFECT-001/002/005, TC-LANE-002, TC-VOCAB-001 receipt/outbox]
+      - >-
+        7.3 Reconciliation detection — extend packages/core/src/app/daemon-reconcile.ts to scan effects in
+        in-flight or unknown state and perform exactly one bounded query per effect: one bounded
+        `logSince(baselineHead)` read plus path-set match for a commit, one query by stable identity for a
+        tracker effect. For each unresolved effect it appends the durable DM-18 redrive request, carried by
+        the existing `command.receipt` kind (no new record kind): effect identity, `attempt: 0`, the
+        baseline it queried, the observed verdict (`found`, `not-found`, `unreadable`), the discovered SHA
+        when one was proven, and the time. The redrive request is evidence only: it does not advance the
+        effect state machine, does not count as an attempt, creates no commit, runs no phase, appends no
+        transition, and never re-applies or guesses a SHA. The daemon only detects and records; the
+        lane/one-shot owner applies and restores the binding (DEC-19). Include the effect outcomes in the
+        reconciliation report evidence. The pass must converge tracker transitions/comments through receipts
+        with zero duplicated tickets, comments, or commits after a kill and restart. Controls: removing the
+        log query must fail the convergence assertion, and a daemon-boundary control must leave the
+        recording commit/phase/transition ports at zero. [F-8, F-9, F-10; DEC-19; TDR-0014 INV-6/INV-7;
+        DM-10, DM-11, DM-18; NFR-4, NFR-15; AC-F8-4, AC-F9-1, AC-F10-1, AC-F10-2;
+        TC-RECON-007/008, TC-EFFECT-002/003/004/005, TC-LANE-002]
+      - >-
+        7.4 packages/core/src/contracts/commit.ts + packages/adapters/src/git/commit.ts — the one additive
+        contract surface: `CommitGitPort.logSince(baselineHead)` returns the ordered commits after the
+        baseline, each with its SHA and normalized changed-path set, capped at a declared maximum, with a
+        deterministic rename representation (a rename contributes its delete and add paths, never a
+        rename-detection heuristic). The read changes no ref and writes nothing. `createGitCommitSeam` in
+        packages/adapters/src/git/commit.ts is the only production implementor (it already owns the local
+        child-runner seam) and implements the read over `git log --no-renames --name-only
+        <baseline>..HEAD`-style facts with the exact argv pinned and a recorded fixture proving the rename
+        shape; test doubles implement the same member. The commit message composition, commit format, and
+        landing order (commit object → transition append → telemetry) are unchanged; no template is forced,
+        no model call is added or suppressed, and no message, subject, body, or fingerprint is read or
+        recorded. [F-10; DEC-15; TDR-0014 INV-2..INV-5; DM-10; NFR-4; AC-F10-2;
+        TC-EFFECT-005, TC-RECON-007, TC-VOCAB-001]
+      - >-
+        7.5 Owner-side binding restoration — packages/cli/src/edge.ts `readEvidence` gains the additive
+        redrive evidence source: it reads the durable DM-18 receipt for the change ref and phase, verifies
+        the receipt's baseline belongs to the effect, and supplies `commitPresent`/`commitSha` from the
+        proven discovered SHA; an `unknown` verdict, an absent receipt, or an unreadable receipt is never
+        converted into a fabricated SHA, and no transition is appended without proven evidence.
+        packages/cli/src/commands/phase.ts gains the additive evidence discriminator on the existing
+        `PhaseCommitEvidence` (the discovered SHA's source, e.g. `"redrive"`) and, where the classifier needs
+        it, an additive optional field on `CommitDurableEvidence` in packages/core/src/contracts/commit.ts;
+        the discriminator is disclosed in the completion envelope/reconciliation, and the delivered
+        four-state `classifyCommitDelta` in packages/core/src/domain/commit-converge.ts is reused unchanged.
+        It then returns `commit-without-record`,
+        and the delivered convergence row appends the transition with `commitIntent: "atomic"` and the
+        discovered SHA, so the phase reads `both` and never `record-only`; no commit is created and no
+        second effect is appended. Negative control: withholding the discovered SHA (skipping the restore)
+        leaves the phase `record-only` and the required `both` assertion fails. [F-9, F-10; DEC-19;
+        TDR-0014 INV-8; DM-18; AC-F8-4, AC-F10-2; TC-RECON-007, TC-EFFECT-005]
+      - >-
+        7.6 Effect, convergence, and phase-evidence suites — tests/behaviour/daemon-effects.test.ts covers
+        the legal transitions, unknown + query found/not-found/unreadable, the commit re-drive through one
+        bounded `logSince(baselineHead)` path-set match (model-path fixture whose message no template would
+        produce; no expected subject or body is supplied or asserted; commit counter stays 1; one ledger
+        record bound to the landed SHA; repeat after a second unclean stop), the four fail-closed unknown
+        outcomes, the three mechanism negative controls (derivation, query, match rule), the
+        owner-restoration control, and the adapter inventory.
+        tests/behaviour/daemon-reconciliation-crash.test.ts completes SC-M1-16's zero-duplicate claim with
+        the receipt and commit halves and asserts the daemon records only the DM-18 redrive request.
+        tests/behaviour/commit-convergence.test.ts extends the delivered `commit-without-record` row to the
+        discovered-SHA evidence path, and tests/behaviour/phase-atomic.test.ts asserts the owner-completed
+        phase reads `both` with durable intent `atomic`. tests/structure/daemon-contract.test.ts asserts the
+        additive port member and normalized path-set types; tests/structure/daemon-imports.test.ts proves no
+        commit, phase, or transition path is reachable from the daemon composition;
+        tests/checks/daemon-hermetic.test.ts asserts only injected adapters are exercised. [F-9, F-10;
+        NFR-4, NFR-15; AC-F8-4, AC-F9-1, AC-F10-1..AC-F10-3;
+        TC-EFFECT-001..006, TC-RECON-007/008, TC-LANE-002]
+      - >-
+        7.7 Create tests/behaviour/commit-act.test.ts — the delivered commit primitive's contract at the
+        crash window: one durable pre-commit `outbox.effect` intent (baselineHead, changeRef, phase, sorted
+        normalized staged path set; no message, subject, body, or fingerprint) is written before the
+        commit; a kill after the commit object lands but before the transition record and telemetry is
+        simulated; the owning lane/one-shot re-drive performs exactly one bounded `logSince(baselineHead)`
+        read, resolves applied only when exactly one new commit's normalized changed-path set equals the
+        recorded set, records the landed SHA, creates no second commit, and restores the phase binding
+        through `commit-without-record` so the phase reads `both`; zero/multiple/mismatch/unreadable stays
+        unknown with no automatic re-apply; the three mechanism controls and the owner-restoration control
+        each fail the test when broken. The delivered atomic record-plus-commit primitive, commit format,
+        message composition, and landing order are exercised unchanged. [F-10; DEC-15, DEC-19; NFR-4,
+        NFR-15; AC-F8-4, AC-F10-2; TC-RECON-007, TC-EFFECT-005]
+      - >-
+        7.8 Register packages/core/src/{domain/effect-protocol,app/effects}.ts in
+        tests/structure/inventory.json with executable allowances and update the content inventory for the
+        additive `CommitGitPort.logSince` member; re-run the merge-absence and daemon-import boundaries (the
+        owner effect path imports no merge execution, and no daemon path imports the git commit seam or the
+        phase-completion path). [inventory/boundary obligation]
+    coverage:
+      - "TC-EFFECT-001 (full: only legal transitions are accepted)"
+      - "TC-EFFECT-002 (full: unknown + query found records already-applied with no second effect)"
+      - "TC-EFFECT-003 (full: unknown + query not-found re-applies exactly once)"
+      - "TC-EFFECT-004 (full: unknown + unreadable query stays unknown with no blind retry)"
+      - "TC-EFFECT-005 (full: the commit re-drive performs one bounded logSince(baselineHead) read and resolves applied only for exactly one new commit whose normalized changed-path set equals the recorded set, records the landed SHA, creates no second commit, and leaves zero/multiple/mismatch/unreadable unknown with no automatic re-apply; three mechanism negative controls and the owner-restoration control each fail the test when broken)"
+      - "TC-EFFECT-006 (full: no tracker/VCS write adapter ships; commit is the only production adapter)"
+      - "TC-RECON-007 (completes: kill/restart detects the unresolved commit, the daemon records one DM-18 redrive request with the discovered SHA or unknown and creates/runs/appends nothing, the lane/one-shot owner restores the phase binding through commit-without-record so the phase reads both, and zero commits are duplicated; tests/behaviour/commit-act.test.ts proves the crash window)"
+      - "TC-RECON-008 (completes: kill/restart duplicates zero tickets/comments)"
+      - "TC-VOCAB-001 (receipt and outbox round-trip)"
+    acCoverage:
+      - "AC-F8-4"
+      - "AC-F10-1"
+      - "AC-F10-2"
+      - "AC-F10-3"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/daemon-effects.test.ts tests/behaviour/daemon-reconciliation-crash.test.ts tests/behaviour/daemon-reconciliation.test.ts"
+      - "bun test tests/behaviour/commit-act.test.ts tests/behaviour/commit-convergence.test.ts tests/behaviour/phase-atomic.test.ts"
+      - "bun test tests/structure/daemon-contract.test.ts tests/structure/daemon-imports.test.ts tests/checks/daemon-hermetic.test.ts tests/structure/content-inventory.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts && pnpm check:boundaries"
+
+  - id: 8
+    title: "Safe-boundary automatic preemption — durable pending intent, no signal or kill path, boundary-or-completion release and park, immediate no-session release, close-item naming, and single-flight"
+    kind: delivery
+    objective: "Apply computed preemption only at safe boundaries, durably and without ever signalling a live session."
+    scope:
+      files:
+        - "packages/core/src/domain/daemon-preemption.ts"
+        - "packages/core/src/app/daemon-preemption.ts"
+        - "packages/core/src/app/daemon-runtime.ts"
+        - "packages/core/src/app/daemon-reconcile.ts"
+        - "packages/core/src/app/index.ts"
+        - "packages/core/src/index.ts"
+        - "packages/core/src/contracts/daemon.ts"
+        - "packages/core/src/contracts/queue.ts"
+        - "packages/cli/src/daemon-compose.ts"
+        - "tests/behaviour/daemon-preemption.test.ts"
+        - "tests/behaviour/daemon-reconciliation.test.ts"
+        - "tests/behaviour/daemon-lifecycle.test.ts"
+        - "tests/checks/daemon-determinism.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+        - "tests/structure/inventory.json"
+      folders:
+        - "tests/fixtures/daemon/preemption"
+        - "tests/fixtures/daemon/determinism"
+    interactions:
+      - kind: contract-file
+        target: "packages/core/src/contracts/queue.ts"
+        role: consumer
+    weightClass: standard
+    doneArtifacts:
+      pipelineId: "phase 8 preemption gate green locally; GH-238 PR CI matrix green"
+      trackerTransition: "phase 8 committed on feat/GH-238/resident-dispatch-daemon; GH-238 remains In Progress"
+    summary: "feat(GH-238): safe-boundary automatic preemption with durable pending intent"
+    tasks:
+      - >-
+        8.1 packages/core/src/domain/daemon-preemption.ts — the pure rule: a computed preemption of a close
+        item is applied only at a safe boundary (a phase boundary or session completion); a live session is
+        never signalled or killed; no active session means an immediate release and park with cause
+        preempted-for-close-item and condition type preemption; an active session records a durable pending
+        preemption and re-evaluates later; single-flight holds until the release lands and the close item is
+        not scheduled in the same pass; the applied record names the close item and the boundary evidence.
+        `withdrawn` is a read-only declared state in this change. [F-11; DEC-2; DM-5, EVT-5; NFR-4,
+        NFR-14; AC-F11-1, AC-F11-2; TC-PREEMPT-001/002/004/005]
+      - >-
+        8.2 packages/core/src/app/daemon-preemption.ts — apply the computed preemption through the delivered
+        release-and-park path (releaseQueueLease with park cause preempted-for-close-item, condition
+        preemption), append the daemon.preemption record (target, repository, closeRef, holder, state,
+        requestedAt, appliedAt, boundary, bounded evidence), and never duplicate a record for the same
+        target/close pair. The explicit `queue release --park preempted-for-close-item` path remains the
+        same fenced semantics; the daemon is not a second implementation. [F-11; EVT-5; DM-5; NFR-4;
+        AC-F11-1, AC-F11-2; TC-PREEMPT-002/004/005]
+      - >-
+        8.3 Restart durability — a pending preemption is re-read during reconciliation and re-evaluated: a
+        gone session applies the release/park immediately; an observable session stays pending and untouched;
+        the pending state is never lost, duplicated, or silently withdrawn. The runtime re-evaluates pending
+        records on each boundary/completion observation. [F-8, F-11; NFR-2, NFR-4; AC-F11-1;
+        TC-PREEMPT-003]
+      - >-
+        8.4 Preemption suites — tests/behaviour/daemon-preemption.test.ts covers an active session recording
+        pending with zero signals/kills, boundary apply releasing/parking/naming the close item, restart
+        survival and re-evaluation, the no-session immediate path with explicit-path equivalence, and
+        single-flight (the close item is not scheduled in the same pass). tests/checks/daemon-determinism.test.ts
+        adds the preemption record to the identical-run corpus. [F-11; NFR-1, NFR-2, NFR-4;
+        AC-F11-1, AC-F11-2; TC-PREEMPT-001..005]
+      - >-
+        8.5 Register packages/core/src/{domain/daemon-preemption,app/daemon-preemption}.ts in
+        tests/structure/inventory.json with executable allowances; keep the preemption state union literal
+        typed in tests/types/daemon-protocol.type-test.ts. [NFR-14; TC-VOCAB-001 preemption round-trip]
+    coverage:
+      - "TC-PREEMPT-001 (full: active-session preemption is pending and never signals/kills)"
+      - "TC-PREEMPT-002 (full: boundary apply releases, parks, and names the close item)"
+      - "TC-PREEMPT-003 (full: pending preemption survives restart and re-evaluates)"
+      - "TC-PREEMPT-004 (full: no-session preemption releases and parks immediately; the explicit path is equivalent)"
+      - "TC-PREEMPT-005 (full: single-flight holds until release; the close item is not scheduled in the same pass)"
+      - "TC-VOCAB-001 (completes: seven-kind round-trip across instance, heartbeat, lane, reconciliation, receipt, outbox, and preemption)"
+    acCoverage:
+      - "AC-F11-1"
+      - "AC-F11-2"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/daemon-preemption.test.ts tests/behaviour/daemon-reconciliation.test.ts tests/behaviour/daemon-lifecycle.test.ts"
+      - "bun test tests/checks/daemon-determinism.test.ts tests/checks/daemon-bounds.test.ts"
+      - "bun test tests/structure/daemon-contract.test.ts tests/structure/content-inventory.test.ts"
+
+  - id: 9
+    title: "Bounded live watch and truthful degradation — queue/lanes subscribe streams with dedupe, finding codes, and bounds, declared degraded polling without a daemon, mid-stream overflow fallback, and the daemon-down one-shot matrix"
+    kind: delivery
+    objective: "Close GH-237's watch refusal truthfully and prove the whole one-shot surface survives a daemon that is absent, stale, crashed, or unreadable."
+    scope:
+      files:
+        - "packages/core/src/domain/watch-stream.ts"
+        - "packages/core/src/app/watch.ts"
+        - "packages/core/src/app/index.ts"
+        - "packages/core/src/index.ts"
+        - "packages/core/src/contracts/control.ts"
+        - "packages/core/src/contracts/queue.ts"
+        - "packages/cli/src/commands/queue.ts"
+        - "packages/cli/src/commands/lanes.ts"
+        - "packages/cli/src/commands/watch.ts"
+        - "packages/cli/src/commands/index.ts"
+        - "packages/cli/src/edge.ts"
+        - "packages/cli/src/index.ts"
+        - "packages/cli/src/output/serialize.ts"
+        - "tests/behaviour/queue-watch.test.ts"
+        - "tests/behaviour/lanes-watch.test.ts"
+        - "tests/behaviour/watch-stream.test.ts"
+        - "tests/behaviour/daemon-degradation.test.ts"
+        - "tests/behaviour/daemon-state-mediation.test.ts"
+        - "tests/behaviour/queue-cli.test.ts"
+        - "tests/behaviour/lanes.test.ts"
+        - "tests/golden/watch-queue.test.ts"
+        - "tests/golden/watch-lanes.test.ts"
+        - "tests/golden/watch-unreadable.test.ts"
+        - "tests/golden/watch-refusal-absent.test.ts"
+        - "tests/golden/lanes-watch-accepted.test.ts"
+        - "tests/golden/daemon-status-matrix.test.ts"
+        - "tests/fixtures/queue/golden/lanes-watch-accepted.json"
+        - "tests/checks/daemon-bounds.test.ts"
+        - "tests/checks/daemon-hermetic.test.ts"
+        - "tests/checks/daemon-determinism.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+        - "tests/structure/inventory.json"
+      folders:
+        - "tests/fixtures/daemon/watch"
+        - "tests/fixtures/daemon/bounds"
+        - "tests/fixtures/daemon/determinism"
+        - "tests/fixtures/queue/golden"
+        - "tests/fixtures/queue/e2e"
+    interactions:
+      - kind: contract-file
+        target: "packages/core/src/contracts/control.ts"
+        role: consumer
+      - kind: contract-file
+        target: "packages/core/src/contracts/queue.ts"
+        role: consumer
+    weightClass: heavy
+    doneArtifacts:
+      pipelineId: "phase 9 watch/degradation gate green locally; GH-238 PR CI matrix green"
+      trackerTransition: "phase 9 committed on feat/GH-238/resident-dispatch-daemon; GH-238 remains In Progress"
+    summary: "feat(GH-238): bounded live watch for queue and lanes with truthful degraded polling"
+    tasks:
+      - >-
+        9.1 packages/core/src/domain/watch-stream.ts — the pure watch projection: a bounded initial
+        snapshot, one bounded event per line, deduplication by cursor/finding identity, preserved finding
+        codes, the frame/line bound, and the degraded transition markers (subscriber-overflow,
+        daemon-unreachable, daemon-heartbeat-stale). No snapshot or event can exceed the frame bound; a
+        bound reached sets an explicit truncation marker rather than dropping silently. [F-13; C-4; DM-7,
+        DM-14, EVT-9; NFR-9; AC-F13-1, AC-F13-2; TC-WATCH-001/002/005]
+      - >-
+        9.2 packages/core/src/app/watch.ts — the watch use case: with a reachable daemon, open one
+        connection, subscribe to the closed topic queue or lanes, print the initial snapshot, then stream
+        deduplicated bounded events until interrupted; with no reachable daemon, enter declared degraded
+        mode, poll state at daemon.watch-poll-interval, print the daemon-unreachable marker, print only
+        changed snapshots, and exit 0 on interrupt; mid-stream overflow drops that subscription to the same
+        bounded polling with a subscriber-overflow marker; unreadable state exits 2 with the delivered
+        state.* identity. It never emits a silent empty stream and never reports an all-clear.
+        [F-13; DM-7, DM-14; NFR-9, NFR-13; AC-F13-1, AC-F13-2; TC-WATCH-001..005]
+      - >-
+        9.3 The CLI streaming seam — add an additive `stream` member to CommandDefinition in
+        packages/cli/src/index.ts and have runCli drain it after writing the one envelope; add a
+        line-oriented writer to packages/cli/src/output/serialize.ts (the single serialization/redaction
+        chokepoint) so handlers still never write streams and every line is redacted before it reaches the
+        sink. Interruption is an injected signal that ends the iteration at exit 0; a non-JSON line is never
+        emitted in machine mode. This seam is the only CLI-surface change beyond the additive flags.
+        [NG-8; NFR-9, NFR-12; AC-F13-1, AC-F13-2; TC-WATCH-001/002]
+      - >-
+        9.4 `queue --watch` and `lanes --watch` acceptance — remove GH-237's watchRefusal from
+        packages/cli/src/commands/queue.ts and lanes.ts, accept the flag in the grammar, and route it to the
+        watch runtime through a NEW options.watch edge seam; the delivered payloads, grammars (other than
+        the additive flag), and exits are unchanged for non-watch invocations. The refusal is superseded
+        explicitly and its truthfulness requirement is preserved: an absent daemon is always named. Rename
+        the delivered `tests/golden/lanes-watch-refusal.test.ts` to
+        `tests/golden/lanes-watch-accepted.test.ts` and its fixture
+        `tests/fixtures/queue/golden/lanes-watch-refusal.json` to
+        `tests/fixtures/queue/golden/lanes-watch-accepted.json`; the renamed golden asserts the accepted
+        `--watch` degraded-polling behaviour (exit 0, `daemon-unreachable` named, no refusal), and the old
+        names are removed. `tests/golden/watch-refusal-absent.test.ts` remains a distinct suite for the
+        queue/lanes absent-daemon acceptance and degraded-marker assertion. All watch suites
+        (`watch-queue`, `watch-lanes`, `lanes-watch-accepted`, `watch-refusal-absent`, `watch-unreadable`)
+        and `tests/golden/daemon-status-matrix.test.ts` are declared and gated. [F-13; DEC-5; NG-8;
+        AC-F13-1, AC-F13-2; TC-WATCH-001/002/003/004, TC-VOCAB-005 complete]
+      - >-
+        9.5 Daemon-down one-shot matrix — tests/behaviour/daemon-degradation.test.ts covers the full
+        one-shot surface with the daemon stopped (queue plan/claim/release, blockers answer, lanes list),
+        the absent/stale/crashed continuity matrix, the plain status versus --live split, and unreadable
+        state; each successful queue surface carries degraded ["daemon-unreachable"], blockers keep their
+        delivered shape, and the marker is ABSENT when the daemon is reachable. daemon status without a
+        daemon is stopped/stale at exit 0; only status --live fails closed. This task creates the 3x2
+        machine/human `tests/golden/daemon-status-matrix.test.ts` matrix that completes TC-LIFE-005 and
+        TC-DEGRADE-003. [F-12; DM-13, DM-14; NFR-13; AC-F1-2, AC-F3-1, AC-F12-1, AC-F12-2;
+        TC-DEGRADE-001/002/003/004, TC-LIFE-005, TC-STATE-001]
+      - >-
+        9.6 Watch, degradation, and bounds suites — tests/behaviour/queue-watch.test.ts and
+        lanes-watch.test.ts cover reachable streaming, dedupe, finding codes, the frame bound, and interrupt
+        exit 0; watch-stream.test.ts covers the mid-stream overflow fallback (one degraded event, only that
+        subscription drops, the dispatcher keeps serving); the unreadable-state golden proves exit 2 with a
+        state.* identity; tests/checks/daemon-bounds.test.ts completes the watch snapshot/line/human bounds;
+        daemon-determinism adds the watch snapshot to the identical-run corpus; config tuning for
+        watch-poll-interval, subscription-buffer, and frame-max-bytes is exercised end to end. [F-13;
+        NFR-1, NFR-9, NFR-10, NFR-13; AC-F13-1, AC-F13-2; TC-WATCH-001..005, TC-BOUNDS-001,
+        TC-CONFIG-001 watch keys, TC-DET-001]
+      - >-
+        9.7 Register packages/core/src/{domain/watch-stream,app/watch}.ts and
+        packages/cli/src/commands/watch.ts in tests/structure/inventory.json with executable allowances;
+        re-run the boundary, entrypoint, and doc-literal checks. [inventory obligation]
+    coverage:
+      - "TC-WATCH-001 (full: queue --watch streams a bounded snapshot and deduplicated events)"
+      - "TC-WATCH-002 (full: lanes --watch keeps finding codes and honours the frame bound)"
+      - "TC-WATCH-003 (full: watch without a daemon is declared degraded polling at exit 0)"
+      - "TC-WATCH-004 (full: watch over unreadable state exits 2 with a state.* identity)"
+      - "TC-WATCH-005 (full: mid-stream overflow drops to polling with a degraded marker)"
+      - "TC-DEGRADE-001 (full: the full one-shot surface works daemon-down with truthful markers)"
+      - "TC-DEGRADE-002 (completes: absent, stale, and crashed daemons never fail or idle a one-shot)"
+      - "TC-DEGRADE-003 (completes: the 3x2 machine/human status-matrix goldens prove plain status exits 0 and only status --live exits 2 across the matrix)"
+      - "TC-DEGRADE-004 (full: unreadable state yields a classified exit 2, never an all-clear)"
+      - "TC-LIFE-005 (completes: the 3x2 machine/human status-matrix goldens prove status --live fails closed on every unreachable/stale cell and never exits 0)"
+      - "TC-STATE-001 (full: queue mutations land daemon-down with the degraded marker; delivered base re-verified; tests/behaviour/daemon-state-mediation.test.ts)"
+      - "TC-VOCAB-005 (completes: --watch is accepted without changing delivered payloads)"
+      - "TC-BOUNDS-001 (completes: watch snapshot/frame/line/human bounds)"
+      - "TC-CONFIG-001 (completes: watch-poll/subscription-buffer/frame-max tuning)"
+      - "TC-DET-001 (watch snapshot added to the identical-run corpus)"
+    acCoverage:
+      - "AC-F12-1"
+      - "AC-F12-2"
+      - "AC-F13-1"
+      - "AC-F13-2"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/queue-watch.test.ts tests/behaviour/lanes-watch.test.ts tests/behaviour/watch-stream.test.ts tests/behaviour/daemon-degradation.test.ts tests/behaviour/daemon-state-mediation.test.ts tests/behaviour/queue-cli.test.ts tests/behaviour/lanes.test.ts"
+      - "bun test tests/golden/watch-queue.test.ts tests/golden/watch-lanes.test.ts tests/golden/watch-unreadable.test.ts tests/golden/watch-refusal-absent.test.ts tests/golden/lanes-watch-accepted.test.ts tests/golden/daemon-status-matrix.test.ts"
+      - "bun test tests/checks/daemon-bounds.test.ts tests/checks/daemon-hermetic.test.ts tests/checks/daemon-determinism.test.ts"
+      - "pnpm check:boundaries"
+
+  - id: 10
+    title: "Optional scoped supervisor installation — the Linux systemd user unit with linger, the ownership marker, idempotent install/uninstall, rollback on linger failure, and classified unsupported outcomes on macOS and Windows"
+    kind: delivery
+    objective: "Ship the optional Linux login unit with honest unsupported outcomes on other platforms, without changing one-shot behaviour."
+    scope:
+      files:
+        - "packages/core/src/domain/daemon-supervisor.ts"
+        - "packages/core/src/app/daemon-supervisor.ts"
+        - "packages/core/src/app/index.ts"
+        - "packages/core/src/index.ts"
+        - "packages/core/src/contracts/daemon.ts"
+        - "packages/adapters/src/daemon/supervisor.ts"
+        - "packages/adapters/src/daemon/index.ts"
+        - "packages/cli/src/commands/daemon.ts"
+        - "packages/cli/src/daemon-compose.ts"
+        - "tests/behaviour/daemon-supervisor-install.test.ts"
+        - "tests/behaviour/daemon-degradation.test.ts"
+        - "tests/golden/daemon-install.test.ts"
+        - "tests/behaviour/daemon-lifecycle.test.ts"
+        - "tests/checks/secret-read-boundary.test.ts"
+        - "tests/checks/daemon-hermetic.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+        - "tests/structure/inventory.json"
+      folders:
+        - "tests/fixtures/daemon/supervisor"
+        - "tests/fixtures/daemon/privacy"
+    interactions:
+      - kind: contract-file
+        target: "packages/core/src/contracts/daemon.ts"
+        role: consumer
+    weightClass: standard
+    doneArtifacts:
+      pipelineId: "phase 10 supervisor-install gate green locally; GH-238 PR CI matrix green"
+      trackerTransition: "phase 10 committed on feat/GH-238/resident-dispatch-daemon; GH-238 remains In Progress"
+    summary: "feat(GH-238): optional scoped systemd supervisor install with classified unsupported platforms"
+    tasks:
+      - >-
+        10.1 packages/core/src/domain/daemon-supervisor.ts — the pure supervisor descriptor and rendering:
+        platform, adapter kind (systemd-user, launchd, windows-service), unit identity derived from the brand
+        and state-dir scope, scope, linger decision, installed state, the pinned command form
+        (`daemon start --foreground`), service type (`simple`), restart policy (`on-failure`), and the
+        classified unsupported reason when no adapter exists. The unit content is data only and binds the
+        state-directory scope explicitly through `Environment=<PREFIX>_STATE_DIR=<canonical absolute state
+        directory>` (no `--state-dir` flag, no state-directory config key, and no ambient working-directory
+        assumption); it carries no secret, no shell-evaluated content, and no hardcoded product token. The
+        foreground form keeps the supervised process attached and resident after readiness; the default
+        `daemon start` remains the interactive spawn-and-return form. Uninstall removes only what this
+        installation created (the sidecar ownership marker decides), disables linger only when this
+        installation enabled it, and is an idempotent noop otherwise.
+        [F-15; DEC-3, DEC-17, DEC-18; DM-12; NFR-12, NFR-18; AC-F15-1, AC-F15-2;
+        TC-INSTALL-001/002/003/004/007]
+      - >-
+        10.2 packages/core/src/app/daemon-supervisor.ts — install/uninstall orchestration over the injected
+        SupervisorPort: write the unit, enable linger, report unit + linger + scope; a linger failure
+        removes the just-written unit and the marker and returns daemon.supervisor-unsupported with platform
+        evidence (no partial success); a repeated install is idempotent; an absent install is a noop; status
+        inspects the descriptor without changing one-shot behavior. [F-15; DM-12; NFR-18; AC-F15-1;
+        TC-INSTALL-002/003/004/005/007]
+      - >-
+        10.3 packages/adapters/src/daemon/supervisor.ts — the Linux systemd user adapter (unit writer with
+        `ExecStart=<binary> daemon start --foreground`, `Type=simple`, `Restart=on-failure`, and the
+        explicit `Environment=<PREFIX>_STATE_DIR=<canonical absolute state directory>` binding;
+        systemctl --user enable; loginctl enable-linger), the launchd and Windows service adapters that
+        return daemon.supervisor-unsupported with the platform and missing adapter, and the ownership
+        marker writer/reader. The unit's argument vector is written as data and never shell-evaluated; the
+        only scope binding is the `Environment=` entry. The adapter exposes the installed unit's command
+        form, service type, restart policy, and `Environment=` binding to the injected supervisor seam so
+        residency is asserted distinctly from installation success and the scope is inspectable. All
+        filesystem and process calls are injected; no real host unit is read or written by tests; no shell
+        evaluation; no secret. [F-15; DEC-3, DEC-17, DEC-18; NFR-7, NFR-12, NFR-18;
+        AC-F15-1, AC-F15-2; TC-INSTALL-001/003/006/007]
+      - >-
+        10.4 CLI install/uninstall — the daemon command's install and uninstall handlers, envelopes, human
+        summaries, and exit projection: exit 0 for an installed/removed/noop unit, exit 2 for
+        daemon.supervisor-unsupported, never a silent exit 0 on an unsupported platform, and status reports
+        the supervisor descriptor. Installation remains optional: with no unit every one-shot is identical.
+        [F-15; DM-12; NFR-18; AC-F15-1, AC-F15-2; TC-INSTALL-002..007]
+      - >-
+        10.5 Supervisor suites — tests/behaviour/daemon-supervisor-install.test.ts covers the unit content
+        (foreground command, `Type=simple`, `Restart=on-failure`, the explicit
+        `Environment=<PREFIX>_STATE_DIR=<canonical absolute state directory>` binding, data-only,
+        secret-free), linger enable/report, idempotent re-run, linger-failure rollback to a truthful no-unit
+        state, uninstall removal/noop, absent-unit one-shot identity, macOS/Windows refusal, and the
+        residency proof over the injected supervisor seam (the unit stays active after readiness and is not
+        restarted in a loop; the default spawn-and-return form is the negative control). The scope-binding
+        cases are explicit: a two-scope positive (two `<PREFIX>_STATE_DIR` values each install a unit with
+        its own canonical binding, each daemon acquires its own lock and socket, and neither sees the
+        other's records) and a wrong-scope negative (inspecting a unit bound to a different scope observes
+        no daemon at exit 0, and a socket path resolving outside the resolved state directory is refused
+        with config.value.invalid at exit 1). tests/golden/daemon-install.test.ts pins deterministic output
+        with no product token or host path; tests/behaviour/daemon-lifecycle.test.ts keeps the interactive
+        spawn-and-return form distinct; tests/behaviour/daemon-degradation.test.ts covers the absent-unit
+        one-shot identity (TC-INSTALL-005); privacy and secret-boundary checks cover the unit and marker.
+        [F-15; NFR-7, NFR-12, NFR-18; AC-F15-1, AC-F15-2; TC-INSTALL-001..007]
+      - >-
+        10.6 Register packages/core/src/{domain/daemon-supervisor,app/daemon-supervisor}.ts and
+        packages/adapters/src/daemon/supervisor.ts in tests/structure/inventory.json with executable
+        allowances; re-run the entrypoint and boundary checks. [inventory obligation]
+    coverage:
+      - "TC-INSTALL-001 (full: the systemd user unit uses the foreground entry, Type=simple, Restart=on-failure, the explicit Environment=<PREFIX>_STATE_DIR=<canonical absolute state directory> binding, two-scope lock/socket isolation, a wrong-scope negative, is data-only, and is secret-free)"
+      - "TC-INSTALL-002 (full: install enables linger, reports it, and is idempotent)"
+      - "TC-INSTALL-003 (full: a linger failure removes the unit and exits 2 with daemon.supervisor-unsupported)"
+      - "TC-INSTALL-004 (full: uninstall removes only what it created and noops when absent)"
+      - "TC-INSTALL-005 (full: an absent unit changes nothing for one-shots; tests/behaviour/daemon-degradation.test.ts)"
+      - "TC-INSTALL-006 (full: unsupported platforms exit 2 and write no unit)"
+      - "TC-INSTALL-007 (full: the installed foreground unit keeps the daemon active and resident, and a unit using the spawn-and-return form fails the residency assertion)"
+    acCoverage:
+      - "AC-F15-1"
+      - "AC-F15-2"
+    testGate:
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/daemon-supervisor-install.test.ts tests/golden/daemon-install.test.ts tests/behaviour/daemon-lifecycle.test.ts tests/behaviour/daemon-degradation.test.ts"
+      - "bun test tests/checks/secret-read-boundary.test.ts tests/checks/daemon-hermetic.test.ts"
+      - "bun run scripts/checks/privacy-literals.ts && pnpm check:boundaries"
+
+  - id: 11
+    title: "Documentation reconciliation, one five-package lockstep changeset, doc-distribution compliance, the aggregate gate battery, the test-plan execution log, and the PR-ready checklist"
+    kind: delivery
+    objective: "Reconcile every affected current-truth document, land one lockstep changeset, and prove the aggregate gate and all evidence."
+    scope:
+      files:
+        - ".changeset/gh-238-resident-dispatch-daemon-minor.md"
+        - "doc/spec/features/feature-resident-daemon.md"
+        - "doc/spec/features/feature-state-layer.md"
+        - "doc/spec/features/feature-config-layer.md"
+        - "doc/spec/features/feature-result-contract.md"
+        - "doc/spec/features/feature-commit-primitive.md"
+        - "doc/spec/features/feature-scheduling-engine.md"
+        - "doc/spec/features/feature-session-lifecycle-economics.md"
+        - "doc/spec/features/feature-blockers.md"
+        - "doc/spec/features/feature-harness-adapters.md"
+        - "doc/spec/features/feature-queue-ready.md"
+        - "doc/spec/features/feature-watchdog-lane-contracts.md"
+        - "doc/spec/features/feature-adapter-ports.md"
+        - "doc/spec/nonfunctional.md"
+        - "doc/overview/architecture-overview.md"
+        - "doc/overview/glossary.md"
+        - "doc/planning/oss-tooling/cli-command-registry.md"
+        - "doc/planning/oss-tooling/milestones/m1/commands/daemon.md"
+        - "doc/00-index.md"
+        - "doc/changes/2026-11/2026-11-07--GH-238--resident-dispatch-daemon/chg-GH-238-test-plan.md"
+        - "doc/changes/2026-11/2026-11-07--GH-238--resident-dispatch-daemon/chg-GH-238-plan.yaml"
+        - "tests/checks/daemon-mutants.test.ts"
+      folders:
+        - "tests/checks"
+        - "tests/fixtures/daemon/mutants"
+    weightClass: heavy
+    doneArtifacts:
+      mergeRequestUrl: "PR targeting main-tools opened at lifecycle phase 11 (URL recorded in pm-notes)"
+      pipelineId: "aggregate pnpm check and the GH-238 PR CI matrix green"
+      trackerTransition: "GH-238 ready for review; PR opened against main-tools"
+    summary: "chore(GH-238): reconcile resident-daemon docs, changeset, execution log, and release evidence"
+    tasks:
+      - >-
+        11.1 NEW doc/spec/features/feature-resident-daemon.md (frontmatter ados_distribution: internal;
+        links to the change, state/config/result contracts) — current truth for the daemon lifecycle
+        (start/stop/status/install/uninstall and the exit matrix), the fence-style lock and evidenced
+        takeover, the durable instance/heartbeat records, control protocol v1 (frames, classes, versions,
+        subscriptions, bounds), state-mediated truth and the state-only fallback, startup reconciliation
+        (alive/interrupted/crashed/evidence-insufficient, ledger resume, restart budget, terminal question),
+        lane supervision through the injected executor and supervise-only mode, the external-effect protocol
+        (outbox/receipt/unknown/check-before-reapply, commit crash safety through a pre-commit outbox intent
+        with the message-independent (baselineHead, changeRef, phase, normalized staged path set) identity
+        matched by one bounded logSince(baselineHead) read, the four fail-closed unknown outcomes, the
+        lane/one-shot owner rule, and the DM-18 redrive request), safe-boundary preemption, watch and
+        degraded polling, per-platform polling policy, the supervisor install with the
+        Environment=<PREFIX>_STATE_DIR scope binding, merge absence, and the
+        declared residuals (M1-S9, launchd/Windows, remote transport, status watch, lane-scoped
+        authorization, OQ-5). No claim beyond the shipped behaviour. [Spec §16.1, §18, §22; §24 Appendices]
+      - >-
+        11.2 Reconcile the neighbour specs: feature-state-layer.md (the seven additive kinds, their payload
+        schemas/keys, and the additive optional callerPrincipal; record the daemon's DM-18 redrive
+        detection under the existing command.receipt kind; no schema bump); feature-config-layer.md
+        (the daemon and poll branches, defaults, transport/path/poll validation, and the brand-derived
+        `<PREFIX>_STATE_DIR` process-environment scope selector with its default and its absolute-path
+        validation); feature-result-contract.md
+        (re-verify the eight daemon rows and the unchanged collector-id set after any docs edit);
+        feature-commit-primitive.md (additive only: one bounded `logSince(baselineHead)` read on the git
+        commit port with its path normalization and deterministic rename representation; a cross-reference
+        to the external-effect intent/receipt protocol and its lane/one-shot ownership; and the crash-window
+        recovery rule — the daemon detects and records a DM-18 redrive request, the owning lane/one-shot
+        process restores the binding through the delivered `commit-without-record` convergence row; message
+        composition, commit format, and landing order remain unchanged);
+        feature-scheduling-engine.md (remove the "no production composition root" and `--watch` refusal
+        limits; record the daemon as the composition root and watch surface, with watch/polling remaining
+        one-shot-safe); feature-session-lifecycle-economics.md (the daemon as a supervised consumer of the
+        restart gate and prefill-safe liveness); feature-blockers.md (the daemon as an applying consumer at
+        safe boundaries; the channel remains the only writer); feature-harness-adapters.md (the
+        lane-executor composition of HarnessSessionPort); feature-queue-ready.md and
+        feature-watchdog-lane-contracts.md (the daemon consumes, and does not redefine, the delivered
+        contracts); feature-adapter-ports.md (the additive ./daemon non-provider I/O subpath and its
+        runtime-confinement entry). [Spec §16.1, §22]
+      - >-
+        11.3 Man page, registry, glossary, and index: flip doc/planning/oss-tooling/milestones/m1/commands/daemon.md
+        to shipped with the exact Appendix C envelopes, exit statuses, eight error codes, degradation
+        markers, and start/stop/status/install examples; register the daemon family and the `--watch`
+        acceptance in doc/planning/oss-tooling/cli-command-registry.md; add resident daemon, fence-style
+        lock, stale lock, takeover, heartbeat, state-mediated truth, poke/query/subscribe, bounded
+        subscriber, codec/session/transport, caller principal, reconciliation, alive/interrupted/crashed,
+        lane executor, supervise-only, preemption, pending preemption, outbox effect, command receipt,
+        unknown consequence, check-before-reapply, safe boundary, degraded, and merge absence to
+        doc/overview/glossary.md; add the daemon and protocol to doc/overview/architecture-overview.md;
+        update doc/00-index.md. The status digest is NOT edited (NG-6/NG-10): its lanes-or-queue gap stays
+        its own reconciliation and the follow-up is named, not assumed away. [Spec §16.1, §18, §22, §23;
+        NG-6, NG-10]
+      - >-
+        11.4 Exactly one lockstep changeset `.changeset/gh-238-resident-dispatch-daemon-minor.md` with
+        @delivery-os/core, @delivery-os/adapters, @delivery-os/cli, @delivery-os/mcp, and
+        @delivery-os/opencode at `minor` (the .changeset/config.json fixed group) and a summary naming the
+        daemon, protocol, records, errors, configuration, and watch acceptance. No second changeset; no
+        major or patch entry. [Spec front matter version_impact: minor; release obligation]
+      - >-
+        11.5 Doc-distribution compliance: run `bash scripts/.tests/test-doc-distribution.sh` and record the
+        checked paths. Every marker-scoped document touched here keeps or gains the correct
+        ados_distribution value (doc/00-index.md is redistributable; doc/spec/features/** is internal);
+        the new resident-daemon feature spec declares internal. Confirm no `.opencode/**` change and no
+        regenerated `.ados-claude/**`. [Doc-distribution marker rule]
+      - >-
+        11.6 Reconcile the test-plan execution log (§10) with the actual runs: every TC row gets a run date,
+        result, and notes; a missing fixture is recorded as a named failure, never a skip; record the NFR-6
+        measured baseline on the reference CI class, the 100-start concurrency result, the stale-takeover
+        tally, the 100-run determinism result, the bounds/truncation observations, and the hermeticity
+        result. Reconcile the plan's declared-versus-actual scope observationally (record additions; do not
+        rewrite phases). Update the plan's coverage only where a completed TC moved phase. Never record an
+        unrun or environmentally failed result as passing. [Testing strategy evidence obligation;
+        GAP-T1..GAP-T7]
+      - >-
+        11.7 Aggregate gate battery: `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`
+        (lint, format, typecheck, tests, boundaries, exports parity), `bun run scripts/checks/error-table-sync.ts`
+        in both directions, `bash scripts/.tests/test-doc-distribution.sh`, focused hermetic/determinism/
+        bounds/mutation/privacy suites, and `git diff --check && git status --porcelain` at the phase
+        boundary. Record commands, versions, and outcomes in the execution log. [Testing strategy;
+        repo reality: repo-local TMPDIR]
+      - >-
+        11.8 PR-ready checklist — 36/36 AC rows traceable to named TCs; 102/102 TCs with a recorded
+        result or a named gap; all 18 NFRs evidenced or boundaried; the seven seeded scenarios
+        (SC-M1-14/15/16/17/17b/18/20 as applicable) explicitly closed; the eight daemon rows, seven
+        record kinds, two configuration branches, the callerPrincipal field, and the `--watch` acceptance
+        agree in both directions; the changeset is exactly one; the docs list from §16.1 is complete; the
+        named follow-ups (M1-S9, launchd/Windows, M4-S6 remote transport, status watch, OQ-5) are recorded,
+        not silently dropped. Produce the checklist as the phase's final task evidence. [Spec §17,
+        Appendix G; dod_check input]
+    coverage:
+      - "TC-META-001 (completes: the mutation fixtures prove each key rule fails when broken — live-lock takeover, double restart, phase re-execution, merge reachability, subscriber stall, blind unknown retry, fabricated heartbeat — and the unmutated baseline passes; tests/checks/daemon-mutants.test.ts is a Phase 11 gate)"
+      - "TC-VOCAB-002 (documented-table direction: the eight daemon rows agree in the documented table after the docs pass)"
+      - "TC-VOCAB-005 (doc direction: the --watch acceptance is documented without a delivered payload change)"
+      - "TC-VOCAB-006 (completes: exactly one five-package lockstep changeset with no schema-version bump, migration, or backfill)"
+      - "TC-MERGEABS-001 (re-verified after the docs/boundary pass: no daemon path reaches merge execution)"
+      - "TC-MERGEABS-002 (re-verified after the docs/boundary pass: mergeCodePath remains the computed closed set {absent, present})"
+      - "TC-DET-001 (completes: the 100-run determinism sweep across status, reconciliation, preemption, and watch snapshots)"
+      - "TC-HERMETIC-001 (completes: the aggregate hermetic sweep)"
+      - "TC-PRIVACY-001 (completes: the aggregate privacy and secret-boundary sweep, including the privacy-literals check)"
+      - "TC-BOUNDS-001 (re-verified: every declared bound truncates explicitly)"
+      - "TC-CONFIG-001 (re-verified: every daemon/poll/watch key is configuration-only and fail-closed)"
+      - "No new TC id is added by this phase; the queue/lanes payload-preservation compatibility assertion is re-verified with the docs/config edits."
+      - "All 102 TCs gate through the aggregate battery; the execution log records the external-evidence boundaries (GAP-T1..GAP-T7) rather than asserting them."
+    acCoverage:
+      - "AC-F16-1"
+      - "AC-F17-1"
+    testGate:
+      - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check"
+      - "bun run scripts/checks/error-table-sync.ts && bash scripts/.tests/test-doc-distribution.sh"
+      - "bun run scripts/checks/privacy-literals.ts"
+      - "bun test tests/checks/daemon-determinism.test.ts tests/checks/daemon-bounds.test.ts tests/checks/daemon-mutants.test.ts tests/checks/daemon-hermetic.test.ts tests/checks/secret-read-boundary.test.ts"
+      - "bun test tests/boundaries && bun test tests/structure"
+      - "git diff --check && git status --porcelain"
+
+  - id: 12
+    title: "Code review remediation and release closure (conditional) — triage findings, apply fixes with regression evidence, re-run the full battery, reconcile the execution log, and finalize the PR-ready checklist"
+    kind: delivery
+    objective: "Close review findings without weakening an assertion, then re-run the full battery and finalize PR evidence."
+    scope:
+      files:
+        - "doc/changes/2026-11/2026-11-07--GH-238--resident-dispatch-daemon/chg-GH-238-test-plan.md"
+        - "doc/changes/2026-11/2026-11-07--GH-238--resident-dispatch-daemon/chg-GH-238-plan.yaml"
+        - ".changeset/gh-238-resident-dispatch-daemon-minor.md"
+        - "doc/spec/features/feature-resident-daemon.md"
+      folders:
+        - "packages/core/src"
+        - "packages/adapters/src"
+        - "packages/cli/src"
+        - "tests"
+        - "doc/spec/features"
+    weightClass: heavy
+    doneArtifacts:
+      mergeRequestUrl: "PR targeting main-tools remains open with all review findings resolved or explicitly deferred"
+      pipelineId: "final aggregate pnpm check and the GH-238 PR CI matrix green after remediation"
+      trackerTransition: "GH-238 ready for dod_check and human review"
+    summary: "fix(GH-238): remediate review findings and close the release evidence"
+    tasks:
+      - >-
+        12.1 Triage every reviewer finding against the spec, test plan, and plan: classify it as contract
+        drift, test gap, docs drift, or style, name the owning phase/file, and reject a finding that would
+        weaken an AC or TC (record the rationale instead of silently complying). No new TC id is invented;
+        a gap extends or rewrites an existing TC. [Review discipline; no assertion weakened]
+      - >-
+        12.2 Apply each accepted finding as the smallest change inside the change's own surfaces, with a
+        regression assertion that fails before the fix and passes after; keep the merge-absence boundary,
+        the closed vocabularies, the state schema version, and the error table stable; re-run the owning
+        phase's gate before moving on. [All phase gates]
+      - >-
+        12.3 Re-run the full battery: `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`,
+        `bun run scripts/checks/error-table-sync.ts`, `bash scripts/.tests/test-doc-distribution.sh`,
+        focused determinism/bounds/hermetic/privacy suites, and `git diff --check && git status --porcelain`.
+        Record the exact commands and outcomes. [Testing strategy; repo reality]
+      - >-
+        12.4 Reconcile the test-plan execution log and the plan's coverage/scope with the remediation:
+        record every remediated TC and its new evidence; never mark an unrun row passing; re-check that the
+        documented error table, fixtures, source references, and changeset still agree in both directions.
+        [NFR-11 sync discipline]
+      - >-
+        12.5 Finalize the PR-ready checklist: 36/36 ACs, 102/102 TCs (run or named gap), 18/18 NFRs, the
+        seven seeded scenarios, the docs list, the single changeset, the named follow-ups, and the reviewer
+        disposition. Hand off to dod_check and the human reviewer; do not merge. [Spec §17, Appendix G;
+        lifecycle phases 10-11]
+      - >-
+        12.6 No-findings path: if the reviewer reports no findings, record that fact, re-run the full battery
+        once, and close the phase without manufacturing changes. The phase is conditional; its absence is
+        recorded in pm-notes, never silently skipped. [Review discipline]
+    coverage:
+      - "No new TC id is added by this phase. Remediation-completing rows are the named TCs whose surface a finding touched; every accepted fix carries a regression assertion on that TC."
+      - "All 102 TCs and all 36 ACs are re-verified through the final aggregate battery and the execution log."
+    acCoverage:
+      - "AC-F1-1"
+      - "AC-F1-2"
+      - "AC-F2-1"
+      - "AC-F2-2"
+      - "AC-F2-3"
+      - "AC-F3-1"
+      - "AC-F3-2"
+      - "AC-F4-1"
+      - "AC-F4-2"
+      - "AC-F4-3"
+      - "AC-F4-4"
+      - "AC-F4-5"
+      - "AC-F5-1"
+      - "AC-F6-1"
+      - "AC-F6-2"
+      - "AC-F7-1"
+      - "AC-F8-1"
+      - "AC-F8-2"
+      - "AC-F8-3"
+      - "AC-F8-4"
+      - "AC-F9-1"
+      - "AC-F9-2"
+      - "AC-F10-1"
+      - "AC-F10-2"
+      - "AC-F10-3"
+      - "AC-F11-1"
+      - "AC-F11-2"
+      - "AC-F12-1"
+      - "AC-F12-2"
+      - "AC-F13-1"
+      - "AC-F13-2"
+      - "AC-F14-1"
+      - "AC-F15-1"
+      - "AC-F15-2"
+      - "AC-F16-1"
+      - "AC-F17-1"
+    testGate:
+      - "mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check"
+      - "bun run scripts/checks/error-table-sync.ts && bash scripts/.tests/test-doc-distribution.sh"
+      - "bun test tests/checks/daemon-determinism.test.ts tests/checks/daemon-bounds.test.ts tests/checks/daemon-mutants.test.ts tests/checks/daemon-hermetic.test.ts"
+      - "git diff --check && git status --porcelain"
+
+  - id: 13
+    title: "Doc-sync code remediation — close the nine behavioural gaps found after doc reconciliation without changing an accepted product decision"
+    kind: delivery
+    objective: "Make every delivered daemon behaviour match the accepted spec/plan/test-plan contract: real watch subscription, truthful status evidence, resident cadence, blocker-answer resume intent, real park counts, failed-start recovery, supervisor truthfulness, effect replay idempotency, and status/evidence details."
+    scope:
+      files:
+        - "packages/core/src/app/watch.ts"
+        - "packages/core/src/app/daemon-runtime.ts"
+        - "packages/core/src/app/daemon-status.ts"
+        - "packages/core/src/app/daemon-supervision.ts"
+        - "packages/core/src/app/daemon-reconcile.ts"
+        - "packages/core/src/app/effects.ts"
+        - "packages/core/src/app/index.ts"
+        - "packages/core/src/index.ts"
+        - "packages/core/src/domain/daemon-status.ts"
+        - "packages/core/src/contracts/daemon.ts"
+        - "packages/cli/src/edge.ts"
+        - "packages/cli/src/index.ts"
+        - "packages/cli/src/daemon-compose.ts"
+        - "packages/cli/src/daemon-main.ts"
+        - "packages/cli/src/commands/queue.ts"
+        - "packages/cli/src/commands/lanes.ts"
+        - "tests/behaviour/watch-stream.test.ts"
+        - "tests/behaviour/queue-watch.test.ts"
+        - "tests/behaviour/lanes-watch.test.ts"
+        - "tests/behaviour/daemon-lifecycle.test.ts"
+        - "tests/behaviour/daemon-degradation.test.ts"
+        - "tests/behaviour/daemon-lane-supervision.test.ts"
+        - "tests/behaviour/daemon-state-mediation.test.ts"
+        - "tests/behaviour/daemon-effects.test.ts"
+        - "tests/behaviour/daemon-reconciliation.test.ts"
+        - "tests/behaviour/daemon-supervisor-install.test.ts"
+        - "tests/golden/daemon-status-matrix.test.ts"
+        - "tests/golden/daemon-lifecycle.test.ts"
+        - "tests/structure/inventory.json"
+        - "tests/structure/content-inventory.test.ts"
+        - "doc/changes/2026-11/2026-11-07--GH-238--resident-dispatch-daemon/chg-GH-238-plan.yaml"
+        - "doc/changes/2026-11/2026-11-07--GH-238--resident-dispatch-daemon/chg-GH-238-pm-notes.yaml"
+      folders:
+        - "tests/fixtures/daemon"
+    weightClass: heavy
+    doneArtifacts:
+      pipelineId: "phase 13 remediation gate green locally; TMPDIR=$PWD/tmp/tmpdir pnpm check exits 0"
+      trackerTransition: "GH-238 remains In Progress on feat/GH-238/resident-dispatch-daemon; no tracker mutation"
+    summary: "fix(GH-238): close doc-sync code gaps in the resident daemon"
+    tasks:
+      - >-
+        13.1 Watch composition and subscription — compose a watch runtime for `queue` and `lanes` in
+        packages/cli/src/edge.ts; make packages/core/src/app/watch.ts open the configured transport, send a
+        `subscribe` request frame through the session/transport interfaces, and consume bounded event frames
+        with dedupe, overflow fallback, and the `daemon-unreachable` marker; drain the stream in human mode as
+        well as `--json` in packages/cli/src/index.ts. No silent empty stream; unreadable state exits 2 with
+        the delivered `state.*` identity. [F-13; C-4; DM-7, DM-14; AC-F13-1, AC-F13-2; TC-WATCH-001..005]
+      - >-
+        13.2 `daemon status` evidence — populate `restartCounts` from the delivered economics restart records,
+        emit `daemon-heartbeat-stale` / `daemon-unreachable` for absent or stale liveness on plain status at
+        exit 0, probe the actual socket/transport for `status --live` with a bounded query so an external
+        daemon works, and project `mode` truthfully as `resident` | `foreground` | `supervise-only`.
+        [F-1, F-7, F-12; DM-13, DM-14; AC-F1-1, AC-F1-2; TC-LIFE-003/004/005, TC-DEGRADE-003]
+      - >-
+        13.3 Resident cadence and supervision — schedule subsequent heartbeats at
+        `daemon.heartbeat-interval`, run `expire`, the supervision cycle, and `detectDaemonEffects` on the
+        declared cadence, process wake/poke events through the injected wake/clock ports, and never busy-loop.
+        Emit `lane-executor-unavailable` and `mode: supervise-only` when no executor is composed without
+        conflating a transport degradation. The daemon still never writes a commit or runs a phase
+        (TDR-0014 INV-7). [F-1, F-3, F-7, F-9; C-1; DM-2, DM-16; AC-F1-1, AC-F3-2, AC-F7-1, AC-F9-1;
+        TC-LIFE-001/007, TC-HEART-001, TC-LANE-001..005, TC-STATE-004]
+      - >-
+        13.4 Blocker answer resume intent — compose a consumer that reads `blocker.answer` records, finds the
+        question's lane, and calls `recordResumeIntent` when a lane has an active session; the no-lane case
+        records nothing, the answer record stays `applied: false`, and the observable is asserted.
+        [F-3; DEC-16; DM-3; AC-F3-1; TC-STATE-002/003]
+      - >-
+        13.5 Reconciliation park counts — replace the hardcoded `queue.parks: 0` with the folded readable
+        active park count from the delivered queue park records; an unreadable park ledger fails the start
+        closed with `daemon.state-recovery-failed`. [F-8; EVT-4, DM-4; AC-F8-1; TC-RECON-001/009]
+      - >-
+        13.6 Failed-start lock/instance recovery — if reconciliation or the first heartbeat fails after the
+        lock is acquired, release the lock and append a terminal `released` instance record so a later
+        `start` is not blocked by an unreleasable `acquired` record; add the state-recovery test.
+        [F-2, F-8; EVT-1; AC-F1-1, AC-F2-1; TC-LIFE-001, TC-STATE-006]
+      - >-
+        13.7 Supervisor install truthfulness — with no composed supervisor, `daemon install` must not report
+        `installed: true`; on a platform without an adapter it exits 2 with `daemon.supervisor-unsupported`
+        naming the platform and missing adapter, while Linux composes the real systemd user adapter. Add the
+        negative test. [F-15; DM-12; NFR-18; AC-F15-1, AC-F15-2; TC-INSTALL-001/003/006]
+      - >-
+        13.8 Outbox replay idempotency — make `outbox.effect` intent append idempotent for one `effectId`:
+        an identical replay appends no second intent record while receipts remain per-attempt. Add the replay
+        test. [F-10; DM-10, DM-17; NFR-15; AC-F6-2, AC-F10-1; TC-EFFECT-001/005, TC-CONC-002]
+      - >-
+        13.9 Status evidence details — include the holder's acquisition time (with heartbeat age/time and the
+        takeover timestamp where relevant) in `daemon.already-running` evidence, invoke the delivered restart
+        admission / economics append for a corroborated stall or report why it cannot, and reconcile any
+        remaining status/mode/evidence mismatch found by the suites. [F-1, F-2, F-9; DM-13; AC-F2-1,
+        AC-F9-2; TC-LOCK-001, TC-LANE-005]
+    coverage:
+      - "No new TC id is added. Existing TCs are extended: TC-WATCH-001..005, TC-LIFE-003/004/005/007, TC-DEGRADE-003/004, TC-STATE-002/003/004/006, TC-RECON-001/009, TC-LANE-001..005, TC-EFFECT-001/005, TC-CONC-002, TC-INSTALL-001/003/006, TC-LOCK-001."
+      - "All 102 TCs and all 36 ACs remain mapped; the remediation changes no AC/TC assertion and adds no new contract surface."
+    acCoverage:
+      - "AC-F1-1"
+      - "AC-F1-2"
+      - "AC-F2-1"
+      - "AC-F3-1"
+      - "AC-F3-2"
+      - "AC-F6-2"
+      - "AC-F7-1"
+      - "AC-F8-1"
+      - "AC-F9-1"
+      - "AC-F9-2"
+      - "AC-F10-1"
+      - "AC-F13-1"
+      - "AC-F13-2"
+      - "AC-F15-1"
+      - "AC-F15-2"
+    testGate:
+      - "bun test tests/behaviour/watch-stream.test.ts tests/behaviour/queue-watch.test.ts tests/behaviour/lanes-watch.test.ts"
+      - "bun test tests/behaviour/daemon-lifecycle.test.ts tests/behaviour/daemon-degradation.test.ts tests/behaviour/daemon-lane-supervision.test.ts tests/behaviour/daemon-state-mediation.test.ts"
+      - "bun test tests/behaviour/daemon-effects.test.ts tests/behaviour/daemon-reconciliation.test.ts tests/behaviour/daemon-supervisor-install.test.ts"
+      - "bun test tests/golden/daemon-status-matrix.test.ts tests/golden/daemon-lifecycle.test.ts"
+      - "TMPDIR=$PWD/tmp/tmpdir pnpm check"
+      - "bun run scripts/checks/error-table-sync.ts && bash scripts/.tests/test-doc-distribution.sh && bun run scripts/checks/privacy-literals.ts && pnpm check:boundaries"
+
+  - id: 14
+    title: "Review iteration 1 remediation — wire the TDR-0014 wrapper, fix the state-dir scope, and close the medium evidence gaps"
+    kind: delivery
+    objective: "Remove the two blocking review-iteration-1 defects (the production commit path never appends the pre-commit outbox intent or supplies the redrive provider; the state-directory resolver reads ADOS__STATE_DIR while the unit writes ADOS_STATE_DIR) and close the three medium gaps (effect detection ignores the path-set match, outbox dedupe is a read-before-fence race, a reachable-daemon watch never publishes state changes), plus the low/info verdict-mapping, buffer-capacity documentation, and reconciliation duplicate-count notes. No accepted product decision changes."
+    scope:
+      files:
+        - "packages/cli/src/edge.ts"
+        - "packages/cli/src/daemon-compose.ts"
+        - "packages/core/src/app/effects.ts"
+        - "packages/core/src/app/control-server.ts"
+        - "packages/core/src/app/daemon-runtime.ts"
+        - "packages/core/src/app/daemon-reconcile.ts"
+        - "packages/core/src/config/catalog.ts"
+        - "packages/core/src/domain/effect-protocol.ts"
+        - "tests/fixtures/commit/harness.ts"
+        - "tests/behaviour/commit-act.test.ts"
+        - "tests/behaviour/config-resolver.test.ts"
+        - "tests/behaviour/daemon-effects.test.ts"
+        - "tests/behaviour/daemon-reconciliation.test.ts"
+        - "tests/behaviour/daemon-lifecycle.test.ts"
+        - "tests/behaviour/watch-stream.test.ts"
+        - "tests/behaviour/daemon-watch-state-changes.test.ts"
+        - "tests/structure/content-inventory.test.ts"
+        - "doc/spec/features/feature-resident-daemon.md"
+        - "doc/spec/features/feature-config-layer.md"
+        - "doc/changes/2026-11/2026-11-07--GH-238--resident-dispatch-daemon/chg-GH-238-plan.yaml"
+        - "doc/changes/2026-11/2026-11-07--GH-238--resident-dispatch-daemon/chg-GH-238-pm-notes.yaml"
+    weightClass: heavy
+    doneArtifacts:
+      pipelineId: "review iteration 1 remediation gate green locally; TMPDIR=$PWD/tmp/tmpdir pnpm check exits 0"
+      trackerTransition: "GH-238 remains In Progress on feat/GH-238/resident-dispatch-daemon; no tracker mutation"
+    summary: "fix(GH-238): wire the commit-effect wrapper and close review iteration 1 gaps"
+    tasks:
+      - >-
+        14.1 F-1 (high) — compose the TDR-0014 commit-effect wrapper on the production commit path.
+        `createPhaseCommitExtension` and `createCommitCommandRuntime` must read HEAD once for
+        `baselineHead`, compute the sorted normalized staged path set with `computeStagingPlan` over the
+        same scope, append the `outbox.effect` intent with `beginCommitEffect` (then the `in-flight`
+        transition) before `runCommitAct`, close the effect with a per-attempt receipt and terminal state
+        after the act returns, and `createProductionCommitRuntimeOptions` must supply
+        `readRedriveEvidence` from the durable DM-18 receipt (baseline-checked; absent/unknown never
+        fabricates a SHA). Keep the atomic record+commit primitive and owner-side restoration semantics.
+        Add a production-path test (through `createPhaseCommitExtension`, never a direct
+        `beginCommitEffect`) proving the intent exists at commit time and a post-crash run resolves
+        `applied` with the discovered SHA and no second commit. [F-10; TDR-0014 INV-1..INV-8; AC-F10-2,
+        AC-F8-4; TC-EFFECT-005, TC-RECON-007]
+      - >-
+        14.2 F-2 (high) — derive the state-directory variable as the brand prefix plus `STATE_DIR` with
+        exactly one separator, so the resolver and the systemd unit agree on `ADOS_STATE_DIR`. Add a
+        resolver test using the real `brand.environmentPrefix` ("ADOS_"), a unit-`Environment=` name
+        round-trip, the two-scope positive, and the wrong-spelling negative. Do not add a `--state-dir`
+        flag. [DEC-18; AC-F15-1; NF-5/NF-6; TC-CONFIG-001/002, TC-INSTALL-001]
+      - >-
+        14.3 F-3 (medium) — make `detectDaemonEffects` reuse `resolveCommitEffect` so `found` plus a SHA
+        is recorded only for exactly one commit whose normalized changed-path set equals `stagedPaths`;
+        zero, multiple, and mismatch record `not-found`/`unreadable` with no SHA. Add a negative control
+        that a mismatched single commit never records `found`+SHA. [TDR-0014 INV-5/INV-6; AC-F10-2,
+        AC-F8-4; TC-RECON-007, TC-EFFECT-005]
+      - >-
+        14.4 F-4 (medium) — make `appendOutboxEffect` idempotent under concurrency by performing the
+        dedupe read and the append under one fence acquisition; a racing caller that loses the fence
+        re-reads once for an identical prior intent. Add a deterministic interleaving test where the
+        second caller runs between the first caller's read and append and exactly one intent remains.
+        [AC-F6-2; TC-EFFECT-001/005, TC-CONC-002]
+      - >-
+        14.5 F-5 (medium) — publish live state changes to reachable-daemon subscribers. Add a bounded,
+        deduplicated `publishState` to the control server over an injected `stateChanges` source, call it
+        from the resident tick after supervision/effect/heartbeat work, and compose queue/lanes snapshot
+        changes in the daemon command runtime. Keep bounded buffers, overflow degradation, and no
+        dispatcher blocking. Add a test where a state change after subscribe yields a second bounded
+        line. [F-13; C-4; AC-F13-1; TC-WATCH-001/002/005]
+      - >-
+        14.6 F-8 (info) — replace the hardcoded reconciliation `duplicates: 0` with a count computed
+        from the verified ledger: a second kind+identity record with an identical payload is a duplicate
+        append, while a payload-changing update is not. Zero is returned only after the ledger read was
+        checked. Add a fixture that appends a duplicate identity and asserts a non-zero count.
+        [F-8; DM-4; AC-F8-1; TC-RECON-001/009]
+      - >-
+        14.7 F-6/F-7 (low/info) — map a commit path-set mismatch to `not-found` and a multi-commit or
+        unverifiable read to `unreadable`, with no discovered SHA on either, and assert the mapping;
+        document that `daemon.subscription-buffer` is the single capacity bound for both the
+        per-subscription frame buffer and the per-connection subscription count (no separate capacity
+        key). [NF-3; NF-1; Appendix J; TC-EFFECT-002/003/004, TC-WIRE-004, TC-BOUNDS-001]
+      - >-
+        14.8 Re-run the focused suites (`commit-act`, `daemon-effects`, `daemon-reconciliation`,
+        `daemon-lifecycle`, `watch-stream`, `config-resolver`, `control-*`, structure/boundaries), then
+        `TMPDIR=$PWD/tmp/tmpdir pnpm check`, `bun run scripts/checks/error-table-sync.ts`,
+        `bash scripts/.tests/test-doc-distribution.sh`, `bun run scripts/checks/privacy-literals.ts`,
+        and `pnpm check:boundaries`. Record each result and confirm 102/102 TC coverage and 36/36 ACs
+        remain mapped. [All phase gates; testing-strategy]
+      - >-
+        14.9 F-5 residual (medium) — make the composed `stateChanges` source publish content, not
+        counts. Build one bounded daemon watch projection for the closed `queue` and `lanes` topics
+        from the verified ledgers (`readQueueEntries().latest`, latest `daemon.lane` per ref, no
+        `repositoryRoot` and no raw state-directory path), cap it by the declared count bound and the
+        frame byte bound with an explicit `truncated`/`truncationReason`, and use the SAME projection
+        for the initial `subscribe` snapshot and the live event frames. Compare stable serialized
+        content (recursively sorted object keys) to the last observed value per topic: the first
+        observation is a baseline, a subscribe primes the baseline, and only changed content emits.
+        A content-only change with an unchanged row count yields exactly one second bounded event; a
+        no-change tick yields no duplicate. Add the production-path test
+        `tests/behaviour/daemon-watch-state-changes.test.ts` through
+        `createDaemonCommandRuntime` + the composed control server (never a fixture-only
+        `stateChanges`), covering queue priority, lane state, the no-change negative control, and the
+        bounded lanes snapshot. [F-13; C-4; DM-7, DM-14; EVT-8, EVT-9; NFR-9, NFR-13; AC-F13-1;
+        TC-WATCH-001/002/005, TC-BOUNDS-001]
+    coverage:
+      - "No new TC id is added. The remediation extends: TC-EFFECT-005, TC-RECON-007, TC-EFFECT-001/002/003/004, TC-CONC-002, TC-WATCH-001/002/005, TC-CONFIG-001/002, TC-INSTALL-001, TC-RECON-001/009, TC-WIRE-004, TC-BOUNDS-001. Task 14.9 additionally re-verifies TC-WATCH-001/002/005 and TC-BOUNDS-001 through the production composition."
+      - "All 102 TCs remain mapped (100 PASS, 2 named gaps TC-STATE-004/005); no assertion is weakened and no AC is renumbered."
+    acCoverage:
+      - "AC-F6-2"
+      - "AC-F8-1"
+      - "AC-F8-4"
+      - "AC-F10-1"
+      - "AC-F10-2"
+      - "AC-F13-1"
+      - "AC-F13-2"
+      - "AC-F15-1"
+    testGate:
+      - "bun test tests/behaviour/commit-act.test.ts tests/behaviour/daemon-effects.test.ts tests/behaviour/daemon-reconciliation.test.ts"
+      - "bun test tests/behaviour/watch-stream.test.ts tests/behaviour/daemon-watch-state-changes.test.ts tests/behaviour/daemon-lifecycle.test.ts tests/behaviour/config-resolver.test.ts"
+      - "bun test tests/behaviour/control-connection.test.ts tests/behaviour/control-conformance.test.ts tests/behaviour/control-transport.test.ts tests/golden/daemon-lifecycle.test.ts"
+      - "bun test tests/structure/content-inventory.test.ts tests/structure/daemon-contract.test.ts tests/structure/daemon-imports.test.ts tests/boundaries"
+      - "TMPDIR=$PWD/tmp/tmpdir pnpm check"
+      - "bun run scripts/checks/error-table-sync.ts && bash scripts/.tests/test-doc-distribution.sh && bun run scripts/checks/privacy-literals.ts && pnpm check:boundaries"

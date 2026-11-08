@@ -37,6 +37,7 @@ import {
   QUEUE_PARK_RECOVERY_STATES,
   QUEUE_PARK_SCHEMA,
   QUEUE_WEIGHT_CLASSES,
+  LOCAL_CALLER_PRINCIPAL,
   type QueueActiveLease,
   type QueueDependencyRecord,
   type QueueEntryRecord,
@@ -184,8 +185,9 @@ const ENTRY_KEYS = [
   "repositoryRoot",
   "priority",
   "recordedAt",
+  "callerPrincipal",
 ] as const;
-const DEPENDENCY_KEYS = ["schema", "ref", "edges", "recordedAt"] as const;
+const DEPENDENCY_KEYS = ["schema", "ref", "edges", "recordedAt", "callerPrincipal"] as const;
 const LEASE_KEYS = [
   "schema",
   "leaseId",
@@ -635,6 +637,7 @@ const desiredEntry = (
     ...(repositoryRoot === undefined ? {} : { repositoryRoot }),
     priority,
     recordedAt: request.recordedAt,
+    callerPrincipal: LOCAL_CALLER_PRINCIPAL,
   };
   const entryChanged =
     current === undefined ||
@@ -760,6 +763,7 @@ const mutateIntent = (
           ref,
           edges: desiredInside.edges,
           recordedAt: request.recordedAt,
+          callerPrincipal: LOCAL_CALLER_PRINCIPAL,
         } satisfies QueueDependencyRecord as unknown as StateJsonValue,
       });
     }

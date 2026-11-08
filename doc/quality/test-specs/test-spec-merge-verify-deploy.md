@@ -3,12 +3,12 @@ ados_distribution: internal
 id: TEST-SPEC-MERGE-VERIFY-DEPLOY
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-06
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "Nonfunctional test specification for the merge and verify-deploy engine: freshness and probe determinism, read budgets, output bounds, state-write discipline, error-identity stability, idempotency, no-force and coordinator-only invariants, privacy, and the byte-pinned verify-gates non-regression."
 links:
-  related_changes: ["GH-225"]
+  related_changes: ["GH-225", "GH-238"]
 ---
 
 # Test Specification: Merge and Verify Deploy
@@ -25,7 +25,7 @@ links:
 | Error-identity stability | Eleven new identities documented and machine-declared together; family slot registry-validated; sync green both ways | `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `scripts/checks/error-table-sync.ts` |
 | Idempotency | Recorded contained landing replays with no second landing; waiver authorization deterministic per (record, policy) | `tests/behaviour/merge-convergence.test.ts`, `tests/behaviour/merge-waivers.test.ts` |
 | No force | Operation union declares no force variant; production scan with a mandatory failing control | `tests/behaviour/merge-rebase.test.ts`, `tests/structure/merge-contract.test.ts` |
-| Coordinator-only | No daemon/dispatch composition; the merge command is the only landing producer | `tests/behaviour/merge-coordinator-boundary.test.ts` |
+| Coordinator-only | No daemon/dispatch merge composition (the daemon has no merge code path and never fires a merge); the merge command is the only landing producer | `tests/behaviour/merge-coordinator-boundary.test.ts` |
 | Privacy | No secret, title, body, comment, raw payload, or log body in any output or record; allowlist unchanged | `tests/behaviour/merge-privacy.test.ts`, `tests/checks/secret-read-boundary.test.ts` |
 | No live calls | Static scan plus a throwing fetch guard with zero calls and a deliberate-call control | `tests/checks/merge-deploy-no-live-calls.test.ts` |
 | verify-gates non-regression | Pre-change verdict/citation/order/human bytes remain golden-identical; exactly one appended record per full battery evaluation | `tests/golden/verify-gates.test.ts`, `tests/behaviour/merge-verification-record.test.ts` |

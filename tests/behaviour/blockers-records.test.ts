@@ -126,7 +126,10 @@ describe("TC-BLK-005 state consumer behind the injected port", () => {
       const second = openStore(state.identity, { edge: createTestEdge() });
       const read = readBlockerLedger(second.store);
       expect(read.ok).toBe(true);
-      if (read.ok) expect(read.value.questions).toEqual([record]);
+      if (read.ok)
+        expect(read.value.questions).toEqual([
+          { ...record, callerPrincipal: { kind: "local-same-user", id: null } },
+        ]);
     } finally {
       state.cleanup();
     }
@@ -150,7 +153,9 @@ describe("TC-BLK-005 state consumer behind the injected port", () => {
       const read = readBlockerLedger(store);
       expect(read.ok).toBe(true);
       if (read.ok) {
-        expect(read.value.questions).toEqual([question]);
+        expect(read.value.questions).toEqual([
+          { ...question, callerPrincipal: { kind: "local-same-user", id: null } },
+        ]);
         expect(read.value.answers).toHaveLength(1);
       }
     } finally {
@@ -387,6 +392,7 @@ describe("TC-BLK-010/013 runCli halves: identity and answer intent records", () 
           "answeringAudience",
           "answeredAt",
           "applied",
+          "callerPrincipal",
           "choice",
           "laneResume",
           "questionId",

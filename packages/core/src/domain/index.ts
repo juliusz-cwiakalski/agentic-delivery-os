@@ -507,3 +507,91 @@ export {
   type WatchdogRestorationPlan,
   watchdogPreservedRefName,
 } from "./watchdog.js";
+export {
+  daemonScopeDigest,
+  evaluateDaemonLock,
+  takeoverEvidence,
+  type DaemonLockRefusal,
+} from "./daemon-lock.js";
+export {
+  buildHeartbeat,
+  foldDaemonLiveness,
+  type DaemonHeartbeatInput,
+  type DaemonLiveness,
+} from "./daemon-heartbeat.js";
+export {
+  controlOfferedVersions,
+  decodeControlLine,
+  encodeControlFrame,
+  unsupportedVersionError,
+} from "./control-codec.js";
+export {
+  createControlSession,
+  type ControlSessionApi,
+  type ControlSessionOptions,
+  type ControlSessionReceive,
+  type ControlSubscriptionView,
+} from "./control-session.js";
+export {
+  decideDaemonLane,
+  type DaemonLaneDecision,
+  type DaemonLaneEvidence,
+} from "./daemon-reconcile.js";
+export {
+  foldDaemonStatus,
+  renderDaemonStatusHuman,
+  type DaemonStatusFoldInput,
+} from "./daemon-status.js";
+export {
+  initialPollState,
+  nextPollDelayMs,
+  oneShotPollPlan,
+  pollDue,
+  pollFailure,
+  pollIssued,
+  pollSuccess,
+  type PollPolicyState,
+} from "./poll-policy.js";
+export {
+  classifyLaneProgress,
+  nextSpawnOrdinal,
+  shapeDaemonLane,
+  type LaneProgressInput,
+  type LaneShapingInput,
+} from "./daemon-lane.js";
+export {
+  EFFECT_LEGAL_TRANSITIONS,
+  commitIdempotencyKey,
+  mayReapply,
+  normalizeStagedPaths,
+  pathSetsEqual,
+  resolveCommitEffect,
+  resolveTrackerEffect,
+  transitionEffect,
+  type CommitQueryOutcome,
+  type EffectTransitionDecision,
+  type TrackerQueryOutcome,
+} from "./effect-protocol.js";
+export {
+  decidePreemption,
+  PREEMPTION_WRITABLE_STATES,
+  type PreemptionDecision,
+  type PreemptionInput,
+} from "./daemon-preemption.js";
+export {
+  boundWatchLine,
+  createWatchProjection,
+  type WatchLine,
+  type WatchProjection,
+} from "./watch-stream.js";
+export {
+  describeSupervisor,
+  renderOwnershipMarker,
+  renderSystemdUnit,
+  supervisorKindFor,
+  supervisorSupported,
+  type SupervisorDescriptorInput,
+  type SupervisorOwnershipMarker,
+  type SupervisorPlatform,
+  type SystemdUnitInput,
+} from "./daemon-supervisor.js";

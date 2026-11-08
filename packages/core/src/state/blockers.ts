@@ -19,6 +19,9 @@ import {
   BLOCKER_QUESTION_TYPES,
   BLOCKER_RESUME_MODES,
   BLOCKER_SESSION_REENTRY_BY_MODE,
+  CALLER_PRINCIPAL_KINDS,
+  CALLER_PRINCIPAL_MAX_ID_CHARS,
+  LOCAL_CALLER_PRINCIPAL,
   type BlockerAnswerRecord,
   type BlockerLaneResume,
   type BlockerQuestionRecord,
@@ -64,6 +67,7 @@ export const BLOCKERS_ARTIFACT_BOUNDARY: StateArtifactBoundaryDeclaration = {
         { name: "question", type: "string", required: true },
         { name: "options", type: "array", required: true },
         { name: "askedAt", type: "string", required: true },
+        { name: "callerPrincipal", type: "object", required: false },
       ],
       vocabularies: [
         { field: "type", values: BLOCKER_QUESTION_TYPES },
@@ -81,6 +85,7 @@ export const BLOCKERS_ARTIFACT_BOUNDARY: StateArtifactBoundaryDeclaration = {
         { name: "answeredAt", type: "string", required: true },
         { name: "applied", type: "boolean", required: true },
         { name: "laneResume", type: "object", required: true },
+        { name: "callerPrincipal", type: "object", required: false },
       ],
       vocabularies: [{ field: "answeringAudience", values: BLOCKER_AUDIENCES }],
     },
@@ -138,6 +143,7 @@ const QUESTION_KEYS = [
   "question",
   "options",
   "askedAt",
+  "callerPrincipal",
 ] as const;
 
 const ANSWER_KEYS = [
@@ -149,9 +155,18 @@ const ANSWER_KEYS = [
   "answeredAt",
   "applied",
   "laneResume",
+  "callerPrincipal",
 ] as const;
 
 const RESUME_KEYS = ["mode", "sessionReentry", "capabilitySource", "prefillCost"] as const;
+
+const isPrincipal = (value: unknown): boolean =>
+  isRecord(value) &&
+  hasOnlyKeys(value, ["kind", "id"]) &&
+  typeof value.kind === "string" &&
+  (CALLER_PRINCIPAL_KINDS as readonly string[]).includes(value.kind) &&
+  (value.id === null ||
+    (typeof value.id === "string" && value.id.length <= CALLER_PRINCIPAL_MAX_ID_CHARS));
 
 const questionPayload = (record: BlockerQuestionRecord): StateJsonValue => ({
   schemaId: record.schemaId,
@@ -163,6 +178,7 @@ const questionPayload = (record: BlockerQuestionRecord): StateJsonValue => ({
   question: record.question,
   options: [...record.options],
   askedAt: record.askedAt,
+  callerPrincipal: record.callerPrincipal ?? LOCAL_CALLER_PRINCIPAL,
 });
 
 const laneResumePayload = (resume: BlockerLaneResume): StateJsonValue => ({
@@ -181,6 +197,7 @@ const answerPayload = (record: BlockerAnswerRecord): StateJsonValue => ({
   answeredAt: record.answeredAt,
   applied: record.applied,
   laneResume: laneResumePayload(record.laneResume),
+  callerPrincipal: record.callerPrincipal ?? LOCAL_CALLER_PRINCIPAL,
 });
 
 const laneResumeFrom = (
@@ -255,6 +272,9 @@ const questionFrom = (
   if (!Array.isArray(value.options) || value.options.some((option) => typeof option !== "string")) {
     return fail("state.store.torn", location);
   }
+  if (value.callerPrincipal !== undefined && !isPrincipal(value.callerPrincipal)) {
+    return fail("state.store.torn", location);
+  }
   return ok(value as unknown as BlockerQuestionRecord);
 };
 
@@ -282,6 +302,9 @@ const answerFrom = (
   if (!isNonEmptyString(value.answeredAt)) return fail("state.store.unknown", location);
   if (!isParseableInstant(value.answeredAt)) return fail("state.store.torn", location);
   if (value.applied !== false) return fail("state.store.torn", location);
+  if (value.callerPrincipal !== undefined && !isPrincipal(value.callerPrincipal)) {
+    return fail("state.store.torn", location);
+  }
   const resume = laneResumeFrom(value.laneResume, location);
   if (!resume.ok) return resume;
   return ok({
@@ -293,6 +316,13 @@ const answerFrom = (
     answeredAt: value.answeredAt,
     applied: false,
     laneResume: resume.value,
+    ...(value.callerPrincipal === undefined
+      ? {}
+      : {
+          callerPrincipal: value.callerPrincipal as NonNullable<
+            BlockerAnswerRecord["callerPrincipal"]
+          >,
+        }),
   });
 };
 

@@ -3,7 +3,7 @@
   "runId": "run-commit-fixture",
   "exitCode": 0,
   "timing": {
-    "totalMs": 3000
+    "totalMs": 1000
   },
   "data": {
     "changeRef": "GH-310",

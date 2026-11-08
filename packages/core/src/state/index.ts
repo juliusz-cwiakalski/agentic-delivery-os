@@ -853,3 +853,6 @@ export const createStateStore = (
     },
   };
 };
+
+/** The daemon-owned lock artifact (GH-238 F-2), distinct from the state fence. */
+export { createDaemonLockPort } from "./daemon-lock.js";

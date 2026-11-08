@@ -7,6 +7,7 @@
  * generated behind the transport seam. No clock, randomness, environment,
  * filesystem, or network access is declared here.
  */
+import type { CommitLogRead } from "./effects.js";
 import type { StateJsonValue, StateReadEvidence } from "./state.js";
 
 /** The two durable commit intents a completion record can carry (DEC-7). */
@@ -324,6 +325,11 @@ export type CommitGitPort = {
   readonly resetTo: (sha: string) => Promise<boolean>;
   /** Whether the named commit object exists locally (convergence corroboration). */
   readonly commitExists: (sha: string) => Promise<boolean>;
+  /**
+   * One bounded read of commits after the baseline (TDR-0014 INV-4): each
+   * commit's SHA and normalized changed-path set. Changes no ref, writes nothing.
+   */
+  readonly logSince: (baselineHead: string, cap?: number) => Promise<CommitLogRead>;
 };
 
 /** The safety port; unavailable is a classified fail-closed result. */
@@ -435,6 +441,8 @@ export type CommitDurableEvidence = {
   readonly recordTransitionId?: string;
   readonly commitPresent: boolean;
   readonly commitSha?: string;
+  /** Additive redrive evidence source (TDR-0014 INV-8). */
+  readonly evidenceSource?: "redrive";
 };
 
 /** The four-state convergence classification (total over the evidence). */

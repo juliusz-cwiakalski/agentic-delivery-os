@@ -70,6 +70,10 @@
     "./inference": {
       "types": "./dist/inference/index.d.ts",
       "default": "./dist/inference/index.js"
+    },
+    "./daemon": {
+      "types": "./dist/daemon/index.d.ts",
+      "default": "./dist/daemon/index.js"
     }
   },
   "imports": {
@@ -83,7 +87,8 @@
     "#registry": "./src/registry/index.ts",
     "#credentials/*": "./src/credentials/*.ts",
     "#provider-quota/*": "./src/provider-quota/*.ts",
-    "#inference/*": "./src/inference/*.ts"
+    "#inference/*": "./src/inference/*.ts",
+    "#daemon/*": "./src/daemon/*.ts"
   },
   "workspaceImports": {
     "@delivery-os/core": [

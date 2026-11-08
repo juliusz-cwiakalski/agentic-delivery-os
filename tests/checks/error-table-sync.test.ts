@@ -690,15 +690,18 @@ const ROW_VERIFY =
 /**
  * Frozen oracle of every row except the rows added after the baseline was
  * frozen (full column set). GH-180 pinned the four db rows here when it added
- * them. The eighteen later rows are the three verify rows, the four closeout
- * rows, the lint-document-unreadable row, the two GH-222 state rows
- * (`state.storage.exhausted`, `state.store.unknown`), the three GH-221 watchdog
- * lane-safety rows, the five GH-226 machine-readable delivery-plan rows, the
- * six GH-227 commit-primitive rows, the GH-228/GH-229 status collector row,
- * the GH-224 doctor row, the four GH-230 blocker-channel rows, the GH-234
- * provider-profile and env-record rows, the GH-235 watchdog-stall and dispatch
- * economics rows, and the GH-236 spend read-side row,
- * so the frozen baseline plus those sixty-five later rows equals the live table;
+ * them. The seventy-nine later rows are the eight GH-234 provider-profile and
+ * env-record rows, the two GH-222 state rows (`state.storage.exhausted`,
+ * `state.store.unknown`), the lint-document-unreadable row, the six verify
+ * rows, the five closeout rows, the five GH-226 machine-readable delivery-plan
+ * rows, the four GH-221/GH-235 watchdog lane-safety and stall rows, the five
+ * GH-227 commit-primitive rows (GH-242 retired `commit.session.context-refused`),
+ * the two GH-228/GH-229 status collector rows, the seven concrete merge rows,
+ * the GH-224 doctor row, the nine harness-primitive rows, the four retro
+ * evidence rows, the GH-236 spend read-side row, the two dispatch economics
+ * rows, the five GH-237 queue rows, the four GH-230 blocker-channel rows, and
+ * the eight GH-238 resident-daemon rows,
+ * so the frozen baseline plus those seventy-nine later rows equals the live table;
  * a changed baseline row fails naming it.
  */
 const BASELINE_ROWS: ReadonlyArray<
@@ -1073,8 +1076,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 71) {
-    failures.push(`table length ${live.length} != baseline + 71 (${BASELINE_ROWS.length + 71})`);
+  if (live.length !== BASELINE_ROWS.length + 79) {
+    failures.push(`table length ${live.length} != baseline + 79 (${BASELINE_ROWS.length + 79})`);
   }
   return failures;
 };
@@ -1154,7 +1157,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 71,
+      BASELINE_ROWS.length + 79,
     );
   });
 
@@ -1177,7 +1180,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 71);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 79);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);

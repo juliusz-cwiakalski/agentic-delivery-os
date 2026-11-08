@@ -3,10 +3,30 @@ import type {
   ConfigNodeOrigins,
   ConfigOrigin,
   ConfigValue,
+  DaemonImplementedTransport,
+  DaemonSettings,
+  PlatformPollSettings,
+  PollPlatform,
+  PollSettings,
   QueueParkConditionType,
   Result,
 } from "#contracts";
-import { QUEUE_PARK_CONDITION_TYPES, QUEUE_PARK_RECHECK_DEFAULTS } from "#contracts";
+import {
+  DAEMON_DECLARED_TRANSPORTS,
+  DAEMON_DEFAULT_HEARTBEAT_CYCLE_MS,
+  DAEMON_DEFAULT_HEARTBEAT_INTERVAL_MS,
+  DAEMON_DEFAULT_LOCK_STALENESS_MS,
+  DAEMON_DEFAULT_POLL_INTERVAL_MS,
+  DAEMON_DEFAULT_RECONCILE_MAX_LANES,
+  DAEMON_DEFAULT_RESPONSE_TIMEOUT_MS,
+  DAEMON_DEFAULT_SUBSCRIPTION_BUFFER,
+  DAEMON_DEFAULT_WATCH_POLL_INTERVAL_MS,
+  DAEMON_IMPLEMENTED_TRANSPORTS,
+  DAEMON_MAX_FRAME_BYTES,
+  POLL_PLATFORMS,
+  QUEUE_PARK_CONDITION_TYPES,
+  QUEUE_PARK_RECHECK_DEFAULTS,
+} from "#contracts";
 
 type DefaultMetadata = { readonly defaultOrigin?: ConfigOrigin & { readonly layer: "defaults" } };
 
@@ -332,6 +352,45 @@ export const QUEUE_BRANCH = {
 } as const satisfies CatalogField;
 
 /**
+ * The typed `daemon` branch (GH-238 F-1, F-5, F-14; Appendix E).
+ *
+ * Eleven keys with integer/string shapes; the transport/implemented-set and
+ * socket-path rules are semantic and validated by `resolveDaemonSettings`.
+ */
+export const DAEMON_BRANCH = {
+  type: "object",
+  fields: {
+    "heartbeat-interval": { type: "number" },
+    "heartbeat-cycle": { type: "number" },
+    "lock-staleness": { type: "number" },
+    "poll-interval": { type: "number" },
+    "watch-poll-interval": { type: "number" },
+    "response-timeout": { type: "number" },
+    "subscription-buffer": { type: "number" },
+    "frame-max-bytes": { type: "number" },
+    "reconcile-max-lanes": { type: "number" },
+    transport: { type: "string" },
+    "socket-path": { type: "string" },
+  },
+} as const satisfies CatalogField;
+
+/**
+ * The typed `poll` branch: a dynamic-name record over the closed platform set,
+ * each member an object with base/max/spacing integer milliseconds.
+ */
+export const POLL_BRANCH = {
+  type: "record",
+  value: {
+    type: "object",
+    fields: {
+      "base-interval": { type: "number" },
+      "max-interval": { type: "number" },
+      "min-spacing": { type: "number" },
+    },
+  },
+} as const satisfies CatalogField;
+
+/**
  * The production catalog. `provider` is a typed branch (GH-182 F-1); its
  * dynamic-name maps use the additive record field kind (PD-F), while every
  * fixed branch keeps exact unknown-key discipline.
@@ -357,6 +416,8 @@ export const PRODUCTION_CATALOG = {
   harness: HARNESS_BRANCH,
   lane: LANE_BRANCH,
   queue: QUEUE_BRANCH,
+  daemon: DAEMON_BRANCH,
+  poll: POLL_BRANCH,
 } as const satisfies ConfigCatalog;
 
 export const fieldAt = (
@@ -507,4 +568,228 @@ export const resolveQueueSettings = (
     }
   }
   return { ok: true, value: { leaseTtlMs: ttl, parkRecheckMs: recheck } };
+};
+
+/* ------------------------------- daemon ---------------------------------- */
+
+const DAEMON_DEFAULT_SOCKET_NAME = "daemon.sock" as const;
+
+const isAbsolutePath = (path: string): boolean =>
+  path.startsWith("/") || /^[A-Za-z]:[\\/]/u.test(path);
+
+/** Lexically normalize separators and dot segments; no filesystem access. */
+const normalizePath = (path: string): string => {
+  const unified = path.replaceAll("\\", "/");
+  const absolute = unified.startsWith("/");
+  const segments: string[] = [];
+  for (const segment of unified.split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") {
+      if (segments.length > 0 && segments[segments.length - 1] !== "..") segments.pop();
+      else if (!absolute) segments.push("..");
+      continue;
+    }
+    segments.push(segment);
+  }
+  const joined = segments.join("/");
+  return absolute ? `/${joined}` : joined;
+};
+
+const isInside = (path: string, directory: string): boolean => {
+  const normalizedDirectory = normalizePath(directory).replace(/\/+$/u, "");
+  return path === normalizedDirectory || path.startsWith(`${normalizedDirectory}/`);
+};
+
+const positiveInteger = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value > 0;
+
+/**
+ * Validate the resolved `daemon` branch and project it into typed settings.
+ *
+ * The transport must be implemented (`unix` or `stdio`); a declared-but-not-
+ * delivered value is refused naming the implemented set. The socket path
+ * resolves inside the injected state directory; an outside path is
+ * `config.value.invalid`.
+ */
+export const resolveDaemonSettings = (
+  values: Readonly<Record<string, ConfigValue>>,
+  origins: ConfigNodeOrigins = {},
+  options: { readonly stateDirectory: string },
+): Result<DaemonSettings, ConfigFailure> => {
+  const branch = values.daemon;
+  const merged: Record<string, unknown> = {
+    "heartbeat-interval": DAEMON_DEFAULT_HEARTBEAT_INTERVAL_MS,
+    "heartbeat-cycle": DAEMON_DEFAULT_HEARTBEAT_CYCLE_MS,
+    "lock-staleness": DAEMON_DEFAULT_LOCK_STALENESS_MS,
+    "poll-interval": DAEMON_DEFAULT_POLL_INTERVAL_MS,
+    "watch-poll-interval": DAEMON_DEFAULT_WATCH_POLL_INTERVAL_MS,
+    "response-timeout": DAEMON_DEFAULT_RESPONSE_TIMEOUT_MS,
+    "subscription-buffer": DAEMON_DEFAULT_SUBSCRIPTION_BUFFER,
+    "frame-max-bytes": DAEMON_MAX_FRAME_BYTES,
+    "reconcile-max-lanes": DAEMON_DEFAULT_RECONCILE_MAX_LANES,
+    transport: "unix",
+  };
+  if (branch !== undefined) {
+    if (!isPlainRecord(branch)) return laneFailure("config.value.invalid", origins, "daemon");
+    for (const [key, value] of Object.entries(branch)) {
+      if (!(key in merged) && key !== "socket-path") {
+        return laneFailure("config.key.unknown", origins, `daemon.${key}`);
+      }
+      merged[key] = value;
+    }
+  }
+  for (const key of [
+    "heartbeat-interval",
+    "heartbeat-cycle",
+    "lock-staleness",
+    "poll-interval",
+    "watch-poll-interval",
+    "response-timeout",
+    "subscription-buffer",
+    "frame-max-bytes",
+    "reconcile-max-lanes",
+  ]) {
+    if (!positiveInteger(merged[key])) {
+      return laneFailure("config.value.invalid", origins, `daemon.${key}`);
+    }
+  }
+  const transport = merged.transport;
+  if (typeof transport !== "string") {
+    return laneFailure("config.value.invalid", origins, "daemon.transport");
+  }
+  if (!(DAEMON_DECLARED_TRANSPORTS as readonly string[]).includes(transport)) {
+    return laneFailure("config.value.invalid", origins, "daemon.transport");
+  }
+  if (!(DAEMON_IMPLEMENTED_TRANSPORTS as readonly string[]).includes(transport)) {
+    return laneFailure("config.value.invalid", origins, "daemon.transport");
+  }
+  const stateDirectory = normalizePath(options.stateDirectory).replace(/\/+$/u, "");
+  const rawSocket = merged["socket-path"];
+  let socketPath: string;
+  if (rawSocket === undefined) {
+    socketPath = `${stateDirectory}/${DAEMON_DEFAULT_SOCKET_NAME}`;
+  } else {
+    if (typeof rawSocket !== "string" || rawSocket.length === 0) {
+      return laneFailure("config.value.invalid", origins, "daemon.socket-path");
+    }
+    socketPath = isAbsolutePath(rawSocket)
+      ? normalizePath(rawSocket)
+      : `${stateDirectory}/${normalizePath(rawSocket)}`;
+    if (!isInside(socketPath, stateDirectory)) {
+      return laneFailure("config.value.invalid", origins, "daemon.socket-path");
+    }
+  }
+  return {
+    ok: true,
+    value: {
+      heartbeatIntervalMs: merged["heartbeat-interval"] as number,
+      heartbeatCycleMs: merged["heartbeat-cycle"] as number,
+      lockStalenessMs: merged["lock-staleness"] as number,
+      pollIntervalMs: merged["poll-interval"] as number,
+      watchPollIntervalMs: merged["watch-poll-interval"] as number,
+      responseTimeoutMs: merged["response-timeout"] as number,
+      subscriptionBuffer: merged["subscription-buffer"] as number,
+      frameMaxBytes: merged["frame-max-bytes"] as number,
+      reconcileMaxLanes: merged["reconcile-max-lanes"] as number,
+      transport: transport as DaemonImplementedTransport,
+      socketPath,
+    },
+  };
+};
+
+const POLL_KEY_NAMES = ["base-interval", "max-interval", "min-spacing"] as const;
+
+const pollDefaults = (): Record<PollPlatform, PlatformPollSettings> => ({
+  github: { baseIntervalMs: 5_000, maxIntervalMs: 60_000, minSpacingMs: 1_000 },
+  gitlab: { baseIntervalMs: 5_000, maxIntervalMs: 60_000, minSpacingMs: 1_000 },
+  jira: { baseIntervalMs: 5_000, maxIntervalMs: 60_000, minSpacingMs: 1_000 },
+});
+
+/**
+ * Validate the resolved `poll` branch: the closed platform set and each key's
+ * positive-integer domain. An unknown platform or key is `config.key.unknown`;
+ * a bad value or base above max is `config.value.invalid`.
+ */
+export const resolvePollSettings = (
+  values: Readonly<Record<string, ConfigValue>>,
+  origins: ConfigNodeOrigins = {},
+): Result<PollSettings, ConfigFailure> => {
+  const branch = values.poll;
+  const resolved = pollDefaults();
+  if (branch === undefined) return { ok: true, value: resolved };
+  if (!isPlainRecord(branch)) return laneFailure("config.value.invalid", origins, "poll");
+  for (const [platform, settings] of Object.entries(branch)) {
+    if (!(POLL_PLATFORMS as readonly string[]).includes(platform)) {
+      return laneFailure("config.key.unknown", origins, `poll.${platform}`);
+    }
+    if (!isPlainRecord(settings)) {
+      return laneFailure("config.value.invalid", origins, `poll.${platform}`);
+    }
+    for (const key of Object.keys(settings)) {
+      if (!(POLL_KEY_NAMES as readonly string[]).includes(key)) {
+        return laneFailure("config.key.unknown", origins, `poll.${platform}.${key}`);
+      }
+    }
+    for (const key of POLL_KEY_NAMES) {
+      if (!positiveInteger(settings[key])) {
+        return laneFailure("config.value.invalid", origins, `poll.${platform}.${key}`);
+      }
+    }
+    const base = settings["base-interval"] as number;
+    const max = settings["max-interval"] as number;
+    if (base > max) {
+      return laneFailure("config.value.invalid", origins, `poll.${platform}.base-interval`);
+    }
+    resolved[platform as PollPlatform] = {
+      baseIntervalMs: base,
+      maxIntervalMs: max,
+      minSpacingMs: settings["min-spacing"] as number,
+    };
+  }
+  return { ok: true, value: resolved };
+};
+
+/* --------------------------- state-directory scope ----------------------- */
+
+export type StateDirectoryScopeInput = {
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  /** The brand-derived uppercase prefix (the product name is never hardcoded). */
+  readonly environmentPrefix: string;
+  /** The brand-derived default directory name. */
+  readonly stateDirectoryName: string;
+  readonly homeDirectory?: string;
+};
+
+/**
+ * Resolve the process-environment state-directory scope (DEC-18, Appendix E).
+ *
+ * `<PREFIX>_STATE_DIR` wins outright when set; the default is
+ * `<home>/<brand.stateDirectoryName>`. `brand.environmentPrefix` already ends in
+ * one `_`, so the variable is its exact uppercase form plus `STATE_DIR` (one
+ * separator, never two). The two are never merged, no ambient working directory
+ * participates, and a non-absolute value is `config.value.invalid`.
+ */
+export const resolveStateDirectoryScope = (
+  input: StateDirectoryScopeInput,
+): Result<string, ConfigFailure> => {
+  const prefix = input.environmentPrefix.toUpperCase().replace(/_+$/u, "");
+  const name = `${prefix}_STATE_DIR`;
+  const explicit = input.environment[name];
+  if (explicit !== undefined && explicit.length > 0) {
+    if (!isAbsolutePath(explicit)) {
+      return {
+        ok: false,
+        error: { kind: "config", code: "config.value.invalid", key: name },
+      };
+    }
+    return { ok: true, value: normalizePath(explicit).replace(/\/+$/u, "") };
+  }
+  const home = input.homeDirectory ?? input.environment.HOME ?? input.environment.USERPROFILE;
+  if (home === undefined || home.length === 0) {
+    return { ok: false, error: { kind: "config", code: "config.value.invalid", key: name } };
+  }
+  return {
+    ok: true,
+    value: `${normalizePath(home).replace(/\/+$/u, "")}/${input.stateDirectoryName}`,
+  };
 };

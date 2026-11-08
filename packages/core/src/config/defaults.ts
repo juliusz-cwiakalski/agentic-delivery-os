@@ -73,6 +73,23 @@ export const PRODUCTION_DEFAULTS = {
       preemption: 60000,
     },
   },
+  daemon: {
+    "heartbeat-interval": 5000,
+    "heartbeat-cycle": 60000,
+    "lock-staleness": 30000,
+    "poll-interval": 60000,
+    "watch-poll-interval": 5000,
+    "response-timeout": 2000,
+    "subscription-buffer": 256,
+    "frame-max-bytes": 65536,
+    "reconcile-max-lanes": 200,
+    transport: "unix",
+  },
+  poll: {
+    github: { "base-interval": 5000, "max-interval": 60000, "min-spacing": 1000 },
+    gitlab: { "base-interval": 5000, "max-interval": 60000, "min-spacing": 1000 },
+    jira: { "base-interval": 5000, "max-interval": 60000, "min-spacing": 1000 },
+  },
 } as const;
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>

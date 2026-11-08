@@ -1,0 +1,281 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-238
+branch: feat/GH-238/resident-dispatch-daemon
+status: FAIL
+summary: >-
+  First substantive review after delivery + Phase 13 doc-sync remediation (base origin/main-tools,
+  merge-base GH-240, so the delta is GH-238 plus the merge resolution only). The mechanical contracts
+  hold: all 13 plan phases are present and committed, 36/36 ACs are traced and 102/102 TCs are
+  recorded (100 PASS, 2 named gaps TC-STATE-004/005), and the aggregate battery is green (full
+  `bun test` 5994 pass / 4 skip / 0 fail; typecheck, boundaries, error-table-sync 114/114,
+  doc-distribution 81 docs, privacy/forbidden-literals all PASS). The daemon runtime/cadence, status
+  projection, reconciliation park counts, failed-start recovery, supervisor truthfulness, lock/
+  heartbeat evidence, preemption, control transport, and the GH-240 capsule feature are correctly
+  delivered and unbroken. Two blocking defects remain, both proven against the delivered
+  production composition rather than the fixtures: (1) the TDR-0013 commit-effect wrapper is
+  delivered as unwired library functions — no production path appends the pre-commit `outbox.effect`
+  intent or supplies the `readRedriveEvidence` provider, so AC-F10-2/INV-1/INV-8 hold only inside
+  tests that call `beginCommitEffect`/`recoverCommitEffect` directly; (2) the `<PREFIX>_STATE_DIR`
+  resolver builds `ADOS__STATE_DIR` (the brand prefix already ends in `_`) while the spec, unit
+  golden, and `resolveStateDirectoryScope` test use `ADOS_STATE_DIR`, so a unit-installed daemon
+  ignores its `Environment=` scope and silently falls back to the default store — the exact
+  wrong-scope sharing AC-F15-1 forbids. Three medium findings (daemon effect-detection ignores the
+  path-set match; outbox intent dedupe is a read-then-append race; a reachable-daemon watch never
+  receives live updates) and three low/info notes follow. Verdict FAIL: fix F-1 and F-2 (and ideally
+  F-3) before merge; TDR-0013 owner ratification remains a PR gate, not a code defect.
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 3
+  low: 1
+  info: 2
+spec_compliance: FAIL
+plan_compliance: FAIL
+blocking:
+  - F-1
+  - F-2
+
+verification:
+  diff_base: "origin/main-tools...HEAD (merge-base f87ec185 = GH-240; 172 files, 22410 insertions, 311 deletions; GH-240 capsule/closeout files absent from the delta)"
+  commands_run:
+    - command: "bun run scripts/checks/error-table-sync.ts"
+      result: "OK: entries=114 documented=114 corpus=49; exit 0"
+    - command: "bun test targeted daemon/effect/commit/reconciliation/golden suites (7 files)"
+      result: "42 pass, 0 fail"
+    - command: "bun test watch/control/lock/supervisor/preemption/supervision/config-resolver suites (14 files)"
+      result: "70 pass, 0 fail"
+    - command: "bun test tests/checks/daemon-* + tests/structure/daemon-* (8 files)"
+      result: "32 pass, 0 fail"
+    - command: "bun test (full repository)"
+      result: "5994 pass, 4 skip, 0 fail across 677 files (310s)"
+    - command: "pnpm typecheck"
+      result: "exit 0 (all six packages + tests/types)"
+    - command: "pnpm check:boundaries"
+      result: "no dependency violations (333 modules, 946 deps); ambient-globals, workspace-entrypoints, secret-read-boundary OK"
+    - command: "bun run scripts/checks/privacy-literals.ts"
+      result: "0 violations (3034 files scanned)"
+    - command: "bun run scripts/checks/forbidden-literals.ts"
+      result: "0 violations (5/5 scope classes)"
+    - command: "bash scripts/.tests/test-doc-distribution.sh"
+      result: "OK no drift, 81 in-scope docs; exit 0"
+    - command: "bun -e <resolveStateDirectoryScope + resolveBrandIdentity repro>"
+      result: "brand.environmentPrefix='ADOS_'; ADOS_STATE_DIR=/srv/one -> falls back to /home/u/.ados-state; ADOS__STATE_DIR=/srv/one -> /srv/one"
+
+ac_verification:
+  traced: "36/36 ACs appear in the plan; 102/102 TCs recorded in test-plan §10.1 (100 PASS, 2 named gaps)"
+  verified_implemented:
+    - "AC-F1-1/F1-2/F2-1/F2-2/F2-3/F3-1/F3-2/F4-1..F4-5/F5-1/F6-1/F6-2(control half)/F7-1/F8-1/F8-2/F8-3/F9-1/F9-2/F10-1/F10-3/F11-1/F11-2/F12-1/F12-2/F13-1/F13-2/F14-1/F15-2/F16-1/F17-1: implemented; representative suites and full battery green"
+  failed:
+    - id: F-1
+      acs: ["AC-F10-2", "AC-F8-4 (owner-restore half)"]
+      plan_tasks: ["7.2", "7.5"]
+      note: "pre-commit intent and redrive evidence provider not composed on the production commit path"
+    - id: F-2
+      acs: ["AC-F15-1"]
+      plan_tasks: ["5.6", "10.1", "10.3"]
+      note: "resolver reads ADOS__STATE_DIR; unit sets ADOS_STATE_DIR"
+  plan_phases: "13/13 present and committed; Phase 13's nine remediation tasks (13.1-13.9) all have commits; tasks 7.2/7.5 owner wiring incomplete (F-1) and 7.3 path-set match incomplete (F-3)"
+  named_tc_gaps: ["TC-STATE-004", "TC-STATE-005"]
+
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/edge.ts:721
+    message: >-
+      The TDR-0013 commit-effect wrapper is not wired into the production commit path. `runAct`
+      invokes `runCommitAct` directly (edge.ts:721 and edge.ts:792) and `createProductionCommitRuntimeOptions`
+      (edge.ts:745-766) composes neither a pre-commit `beginCommitEffect` call nor a
+      `readRedriveEvidence` provider. `beginCommitEffect`/`recoverCommitEffect` and `readRedriveEvidence`
+      are referenced only from tests (tests/behaviour/commit-act.test.ts:25,71;
+      tests/behaviour/daemon-effects.test.ts:46,233; tests/fixtures/commit/harness.ts:374), so the
+      crash window (commit lands, transition record and telemetry do not) still classifies
+      `record-only` in production and no `outbox.effect` commit intent is ever written, leaving the
+      daemon's detection duty with nothing to detect. AC-F10-2 and TDR-0013 INV-1/INV-2/INV-8 hold
+      only against fixtures that call the functions manually, not against the delivered production
+      path the AC's "Given" presupposes.
+    suggestion: >-
+      Compose the wrapper where the commit primitive is actually invoked: read HEAD once for
+      `baselineHead` and the reset baseline, compute the sorted normalized staged path set with the
+      delivered pure staging computation over the same scope, append `beginCommitEffect` before
+      `runCommitAct`, and supply `readRedriveEvidence` from the durable DM-18 receipt (verify the
+      receipt baseline belongs to the effect; `unknown`/absent never fabricates a SHA). Alternatively,
+      if the owner is genuinely deferred to M1-S9, remove the AC-F10-2 "on the production message
+      path" claim and the pm-notes "owner-side redrive evidence restoration" claim and record the
+      deferral explicitly — but that contradicts the spec, so wiring is the correct fix.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/core/src/config/catalog.ts:774
+    message: >-
+      The state-directory scope selector is spelled two different ways. `resolveStateDirectoryScope`
+      builds `${environmentPrefix.toUpperCase()}_STATE_DIR` (catalog.ts:774), but
+      `brand.environmentPrefix` already ends in one `_` (branding/index.ts:126 -> "ADOS_"), so the
+      resolver reads `ADOS__STATE_DIR` (double underscore). The spec (F-1, F-15, Appendix E, AC-F15-1),
+      the systemd unit golden, and DAEMON_SUPERVISOR tests pin `Environment=ADOS_STATE_DIR=...`
+      (tests/behaviour/daemon-supervisor-install.test.ts:80; daemon-lifecycle.test.ts:214). Runtime
+      repro: with `ADOS_STATE_DIR=/srv/one` set the resolver returns the default
+      `/home/u/.ados-state`; only `ADOS__STATE_DIR` is honored. A unit-installed daemon therefore
+      ignores its own `Environment=` binding and runs against the default store — the silent
+      wrong-scope sharing AC-F15-1 explicitly forbids. The only resolver test uses
+      `environmentPrefix: "ados"` (no trailing `_`, config-resolver.test.ts:216), a shape production
+      never produces, so it never catches the mismatch.
+    suggestion: >-
+      Derive the variable as `brand.environmentPrefix + "STATE_DIR"` (strip or do not add the extra
+      separator) so the resolver and the unit agree on `ADOS_STATE_DIR`; add a resolver test that uses
+      the real `brand.environmentPrefix` ("ADOS_") and asserts the unit-rendered `Environment=` name
+      reads back through `resolveStateDirectoryScope`, plus the AC-F15-1 two-scope positive and
+      wrong-scope negative (NF-5/NF-6).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/effects.ts:294
+    message: >-
+      The daemon's effect detection records `queryVerdict: "found"` with a `discoveredSha` for any
+      single commit after the baseline without comparing that commit's changed-path set to the
+      recorded `stagedPaths` (effects.ts:294-309). Plan task 7.3 requires "one bounded
+      logSince(baselineHead) read plus path-set match for a commit", and TDR-0013 INV-5/INV-6 require
+      a path-set mismatch to stay `unknown` with no guessed SHA. A mismatch or one unrelated commit is
+      reported as `found` with a SHA; an owner that trusts the DM-18 receipt's SHA could bind the
+      phase to a commit that is not the effect's. Mitigated only because the wired owner path
+      (`recoverCommitEffect`) re-reads and checks path sets — but the detection evidence itself
+      violates the match rule it is supposed to carry.
+    suggestion: >-
+      Reuse `resolveCommitEffect` (or the same `pathSetsEqual` comparison) in `detectDaemonEffects` so
+      a single commit whose path set differs resolves `not-found`/`unknown` without a SHA, and add a
+      negative control asserting a mismatched single commit never records a `found`+SHA redrive request
+      (TC-RECON-007, TC-EFFECT-005).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: medium
+    confidence: medium
+    category: concurrency
+    location: packages/core/src/app/effects.ts:133
+    message: >-
+      `appendOutboxEffect` dedupes an identical replay by reading prior records before acquiring the
+      fence and then appending (effects.ts:133-145), and the state store's `appendRecord` does not
+      reject a duplicate `recordKey` (it appends a new sequence, state/index.ts:426-451). Two
+      concurrent same-`effectId` replays can both observe "no prior" and both append a second intent,
+      violating AC-F6-2 "the same-key replay appends no second intent record". The covering test
+      (daemon-effects.test.ts:228-253) runs the two appends sequentially, so the concurrency clause is
+      fixture-granted.
+    suggestion: >-
+      Perform the read-and-append while holding one fence acquisition (or have the store reject a
+      duplicate `recordKey`), and add a deterministic interleaving test where both callers read before
+      either appends and assert exactly one intent record remains.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: medium
+    confidence: medium
+    category: correctness
+    location: packages/core/src/app/control-server.ts:216
+    message: >-
+      A reachable-daemon watch never streams live updates. `createControlServer` publishes only in the
+      `subscribe` handler (control-server.ts:216-222); the runtime tick calls `server.expire()` but
+      never publishes on state change (daemon-runtime.ts:245-263), and no other `session.publish` call
+      exists in the tree. So `queue/lanes --watch` against a reachable daemon prints the initial
+      snapshot (at most one `event` frame) and then blocks until interrupted, while the degraded
+      polling path does print changed snapshots — the reachable path is strictly less live than the
+      fallback, contrary to F-13's "one bounded event frame per line until interrupted". The reachable
+      path is only proven with a fake transport that pushes its own events (watch-stream.test.ts:81-138)
+      and the edge tests only cover the degraded path.
+    suggestion: >-
+      Publish topic events from the resident loop when queue/lanes state changes (or have the watch
+      poll state on a bounded cadence inside the subscription path as well), and add an integration
+      test driving the real control server + a real subscriber across two state changes.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/effect-protocol.ts:66
+    message: >-
+      Residual NF-3: `resolveCommitEffect` maps "more than one commit" and a path-set mismatch to
+      `verdict: "unreadable"` (effect-protocol.ts:66,73) rather than `not-found` ("mismatch is not
+      ours"), and the daemon detection inherits the same collapse. Behavior is correct (every outcome
+      stays `unknown`, no re-apply, no guessed SHA), so only the verdict vocabulary differs from the
+      NF-3 recommendation.
+    suggestion: >-
+      Either pin the mapping in Appendix D/DM-18 (mismatch -> `not-found`; multiple -> `unreadable`)
+      and assert it, or record the current mapping as the contract so the artifacts agree.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/control-session.ts:187
+    message: >-
+      Residual NF-1 resolved by reuse: `daemon.subscriber-degraded` is reachable — `subscribe` refuses
+      when `subscriptions.size >= daemon.subscription-buffer` (control-session.ts:187), so the row is
+      not dead vocabulary. No new configuration key was added, and TC-WIRE-004 (100 subscriptions)
+      passes because the default buffer (256) exceeds 100. The only wrinkle is that the buffer-size key
+      doubles as a subscription-count cap without being documented in Appendix J.
+    suggestion: >-
+      Document in Appendix J that `daemon.subscription-buffer` also bounds the per-connection
+      subscription count, and assert the over-cap refusal without a new TC id.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: test-efficacy
+    location: packages/core/src/app/daemon-reconcile.ts:256
+    message: >-
+      The reconciliation report hardcodes `duplicates: 0` (daemon-reconcile.ts:256). The spec phrases
+      the field as the "duplicate count (which must be zero)", so a constant is defensible, but it is
+      a tautological evidence value that can never surface a non-zero duplicate count if one occurred.
+    suggestion: >-
+      Either compute it from the duplicate-detection pass or annotate the field as a guaranteed-zero
+      invariant in the record comment so it is not read as measured evidence.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+accepted_residuals:
+  - "TDR-0013 is Proposed (decision_date null); owner ratification is a hard PR-merge gate, not a code defect. Do not merge until the record is accepted and its status flips."
+  - "TC-STATE-004/TC-STATE-005 have no dedicated wake-durability suite (named gaps in test-plan §10.1); the wake port is delivered and injected and the structural next-wake re-read is present."
+  - "Cross-process status reports `resident` for a foreground daemon because foreground is an attachment property and is not persisted; the spec pins no durable mode."
+  - "DoR NF-1 (subscriber capacity vs buffer) is reachable via the subscription-buffer cap (F-7 info); NF-3 verdict values differ from the recommendation (F-6 low); NF-2/NF-4/NF-5/NF-6/NF-7/NF-8 remain documentation/coverage nuance — NF-6 is in fact not closed because of F-2."
+  - "False-`unknown` from working-tree drift between the wrapper pre-read and the act read is fail-safe and documented (TDR-0013 negative outcomes)."
+  - "Algorithmic (not OS-level) concurrency, environment-sensitive latency, real cross-user/systemd/launchd exercises, and the injected-tracker-effect tier remain the DoR-3 accepted boundaries."
+  - "The merged GH-240 capsule/closeout feature is untouched by the GH-238 delta (no capsule/closeout files in the diff) and the full battery including capsule suites is green."
+
+previous_findings_resolution:
+  - id: "phase-12 placeholder (no-findings path)"
+    status: superseded
+    evidence: >-
+      The prior phase-12 review was executed without an actual review (pm-notes 2026-11-08). This
+      iteration is the substantive first review after the nine Phase 13 doc-sync code gaps were
+      remediated (ef92b2e7, 31a3efe8, b4ed8628, 7d5470bb). Gaps (1)-(6),(8),(9) are verified fixed;
+      gap (7) supervisor-truthfulness is fixed; gaps that remain are recorded above as F-1 (owner
+      wiring), F-3 (detection path-set), and F-5 (reachable watch liveness), which were not in the
+      doc-sync gap list.
+
+reviewed_at: 2026-11-09T00:45:00Z
+next_step: >-
+  CALL_CODER — fix F-1 (compose the pre-commit intent + readRedriveEvidence into the production commit
+  path, or formally re-scope the AC) and F-2 (single-separator `<PREFIX>_STATE_DIR` and a production-
+  shape resolver/unit cross-test); then re-run the daemon effect/commit and config-resolver/supervisor
+  suites plus the aggregate battery, and re-review. F-3/F-4/F-5 are recommended in the same pass but
+  are not individually blocking; F-6/F-7/F-8 are documentation/evidence notes. EXECUTE_REMEDIATION_PHASE
+  if the plan is to record a new remediation phase rather than amend Phase 13.

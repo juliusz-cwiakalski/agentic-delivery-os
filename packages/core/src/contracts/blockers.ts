@@ -12,6 +12,7 @@
  * this module.
  */
 import { OWNER_GATE_SLA_AUDIENCES } from "./owner-gate-sla.js";
+import type { CallerPrincipal } from "./principal.js";
 import {
   STATUS_MAX_HUMAN_BYTES,
   STATUS_MAX_HUMAN_LINES,
@@ -206,6 +207,8 @@ export type BlockerQuestionRecord = {
   readonly question: string;
   readonly options: readonly string[];
   readonly askedAt: string;
+  /** Additive optional caller principal (C-2); historical records omit it. */
+  readonly callerPrincipal?: CallerPrincipal;
 };
 
 /** The recorded resume projection embedded in every answer (DM-3). */
@@ -226,6 +229,8 @@ export type BlockerAnswerRecord = {
   readonly answeredAt: string;
   readonly applied: false;
   readonly laneResume: BlockerLaneResume;
+  /** Additive optional caller principal (C-2); historical records omit it. */
+  readonly callerPrincipal?: CallerPrincipal;
 };
 
 /** The published-question view shared by every ranked surface (GAP-6/GAP-11). */

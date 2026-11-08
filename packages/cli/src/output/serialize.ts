@@ -115,3 +115,16 @@ export function writeOutput(
     writeText(streams.stderr, `${redact(warning, secrets)}\n`);
   }
 }
+
+/**
+ * Serialize one watch line through the single redaction chokepoint (GH-238 F-13).
+ * A non-JSON line is never emitted in machine mode.
+ */
+export function serializeStreamLine(line: string, secrets: readonly string[]): string | undefined {
+  try {
+    const parsed: unknown = JSON.parse(line);
+    return `${JSON.stringify(redact(parsed, secrets))}\n`;
+  } catch {
+    return undefined;
+  }
+}

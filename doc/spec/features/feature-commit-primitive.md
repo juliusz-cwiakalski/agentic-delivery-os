@@ -8,8 +8,8 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The delivered commit primitive: a `commit` command that computes a conventional commit from the working tree plus change context (deterministic skeleton, precise staging, deterministic safety, one constrained message call behind an ordered transport seam with a marked template fallback), default-on atomic record-plus-commit inside `phase complete` with per-call and per-project opt-outs, the completion staging set of mapped plan-phase scope union the change folder with the pm-notes transition written before the commit act and restored on failure, total four-state re-run convergence over durable commit-intent evidence, the `commit.telemetry` state-layer record kind, the non-gating capsule `commit.landed` append with a bounded disclosure, the typed `commit.phaseCommit` configuration key, and the five `commit.*` error identities."
 links:
-  related_changes: ["GH-227", "GH-240", "GH-242"]
-  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0013"]
+  related_changes: ["GH-227", "GH-240", "GH-238", "GH-242"]
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0013", "TDR-0014"]
   contracts:
     - "packages/core/src/contracts/commit.ts"
     - "packages/core/src/contracts/error-table.ts"
@@ -172,7 +172,7 @@ The commit surface runs inside a delivery session: `commit`, `commit --dry-run`,
 | `packages/cli/src/commands/commit.ts` | The `commit` command: grammar, ref resolution, context read, skeleton and scope selection, the shared act, and the success envelope. |
 | `packages/cli/src/commands/phase.ts` | The phase family with the atomic completion extension: grammar-first validation, staged lint, durable evidence read, convergence, pre-write snapshot, transition write before the act, restore on failure, atomic act, projection replace, and the completion envelope. |
 | `packages/cli/src/output/commit-text.ts` | Deterministic human rendering of a commit outcome from the same data. |
-| `packages/cli/src/edge.ts` | Composition root: git seam, scanner, commitlint probe, transports and availability, session facts, the phase commit extension, telemetry append/read, and the `commit` command registration. |
+| `packages/cli/src/edge.ts` | Composition root: git seam, scanner, commitlint probe, transports and availability, session facts, the phase commit extension, telemetry append/read, the commit-effect wrapper with its pre-commit intent and DM-18 redrive-evidence reader, and the `commit` command registration. |
 | `packages/testkit/src/commit/**` | Dev-only harness: temporary real git repositories, transport fakes, and an in-process runner. |
 
 ### Invariants
@@ -210,3 +210,7 @@ The commit surface runs inside a delivery session: `commit`, `commit --dry-run`,
 - [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md) and [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md) — the runtime-edge allowances for the commit seam and the inference transport.
 - [Branding Seam and Working Name](feature-branding-seam.md) — the injected identity behind the CLI surface.
 - [Glossary](../../overview/glossary.md) — commit primitive, skeleton, transport seam, message source, staging set, stray, atomic completion, and convergence terms.
+
+## GH-238 additive crash-safety surface
+
+`CommitGitPort` gains one bounded `logSince(baselineHead)` read returning each commit SHA and normalized changed-path set (deterministic rename representation: delete plus add). The production `commit` and `phase complete` paths read HEAD once, compute the sorted normalized staged path set with the same pure staging computation the act uses, and append the `outbox.effect` intent and its `in-flight` transition before the commit primitive runs; when an effect was started, they finish it with a per-attempt receipt and a terminal state after the act returns. They supply the DM-18 redrive-evidence reader, which yields a SHA only from an `attempt: 0` receipt whose effect and recorded baseline belong to the change ref and phase. The pre-commit intent carries the message-independent identity; the daemon records only a DM-18 redrive request, and the owning lane/one-shot restores the binding through the delivered `commit-without-record` row so the phase reads `both`. Recovery resolves `already-applied` only for exactly one new commit whose changed-path set matches; a mismatch records `not-found` and multiple commits record `unreadable`, and neither carries a SHA. Message composition, commit format, and landing order are unchanged.

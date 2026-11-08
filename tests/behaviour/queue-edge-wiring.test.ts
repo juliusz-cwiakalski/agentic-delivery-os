@@ -270,12 +270,24 @@ describe("edge wiring: lanes list/show and --watch refusal", () => {
     expect((data(shown.stdout).lanes as Array<Record<string, unknown>>).length).toBe(1);
   });
 
-  test("lanes --watch is refused through fallback.invocation with a resident-daemon hint", async () => {
-    const harness = createQueueEdgeHarness("wiring-lanes-watch");
-    const refused = await harness.run(["lanes", "list", "--watch", "--json"]);
-    expect(refused.exitCode).toBe(1);
-    expect(error(refused.stdout)?.code).toBe("fallback.invocation");
-    expect(String(error(refused.stdout)?.remediationHint)).toContain("resident daemon (M1-S18)");
+  test("lanes --watch is accepted and degrades at exit 0", async () => {
+    const harness = createQueueEdgeHarness("wiring-lanes-watch", {
+      overrides: {
+        watch: {
+          maxIterations: 1,
+          clock: {
+            nowMs: () => Date.parse("2026-11-07T10:00:00Z"),
+            nowIso: () => "2026-11-07T10:00:00Z",
+            sleep: async () => undefined,
+          },
+        },
+      },
+    });
+    const accepted = await harness.run(["lanes", "list", "--watch", "--json"]);
+    expect(accepted.exitCode).toBe(0);
+    expect(accepted.stdout).toContain("daemon-unreachable");
+    expect(accepted.stdout).toContain('"watch": true');
+    expect(accepted.stdout).toContain('"topic": "lanes"');
   });
 });
 

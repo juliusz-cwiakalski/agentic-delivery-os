@@ -171,8 +171,8 @@ exit-code projection; secret redaction; bounded output.
 
 - Inputs: `--repo <path>` repeated; `--json`. `--watch` (bounded live
   stream through the daemon control socket; degrades to state polling in a
-  declared degraded mode when the daemon is down) is planned with the
-  daemon story M1-S18, not delivered by M1-S10.
+  declared degraded mode when the daemon is down) remains future work and is
+  not delivered by M1-S10 or M1-S18.
 - Outputs (delivered expansion): nine fixed sections in order (tracker,
   changes and PRs, CI, lanes or queue, providers, parked work,
   ready-to-merge, spend, typed-questions); grouped, ranked findings with stable
@@ -200,13 +200,14 @@ exit-code projection; secret redaction; bounded output.
   Mutating subcommands append intent under
   the state fence and land durably without a resident daemon; no control
   socket is involved, and every payload reports
-  `degraded: ["daemon-unreachable"]` at exit 0. `release --park` appends the
+  `degraded: ["daemon-unreachable"]` at exit 0 when no daemon is reachable.
+  `release --park` appends the
   park first and withdraws it with a `released` park record when the
-  lease-release append fails.
+  lease-release append fails. `--watch` is accepted (GH-238).
 - Errors: `queue.dependency-cycle`, `queue.lease-conflict`,
   `queue.park-condition-stuck`, `queue.entry.unobserved`, and
-  `queue.precondition.unmet`; invocation rejections such as `--watch`
-  reuse `fallback.invocation`.
+  `queue.precondition.unmet`; invocation rejections such as an unknown park
+  cause reuse `fallback.invocation`.
 - Scenarios: same-repo concurrency refused; heavy build not co-scheduled;
   producer before consumer; close items rank above new starts; park
   resumes exactly when condition clears; full operation one-shot without
@@ -217,9 +218,9 @@ exit-code projection; secret redaction; bounded output.
 - Inputs: `list | show <ref>`.
 - Outputs: lane list with state (delivering, idle-with-reason, parked,
   merge-ready, in-review, failed), lease holder and scope, restart counts,
-  amplification signal, and weight class. `--watch` is refused at exit 1 with
-  a remediation hint naming the resident daemon (M1-S18); live streaming
-  belongs to the resident daemon (M1-S18).
+  amplification signal, and weight class. `--watch` is accepted (GH-238): it
+  streams bounded daemon frames when the daemon is reachable and declares
+  degraded bounded state polling at exit 0 when it is not.
 
 ### `blockers` (M1-S16, proposed)
 
@@ -279,7 +280,7 @@ exit-code projection; secret redaction; bounded output.
 - Scenarios: each failing check names its fix hint; doctor exits 1 with
   classified errors, never crashes.
 
-### `daemon` (M1-S18, proposed)
+### `daemon` (M1-S18, delivered GH-238)
 
 - Inputs: `start [--foreground] | stop | status [--live] | install |
   uninstall`. `install` registers a user-level supervisor unit (systemd
@@ -330,13 +331,14 @@ exit-code projection; secret redaction; bounded output.
   failed in the queue (terminal, classified reason, restart history)
   with a typed question surfaced to the coordinator within one
   collection cycle; exhaustion never silently requeues.
-- Errors: `daemon.already-running`, `daemon.heartbeat-stale` (reads
-  declare degraded, never block), `daemon.state-recovery-failed`
-  (degrades to one-shot guidance), `daemon.protocol.unsupported`
-  (version refused, versions offered), `daemon.socket-unreachable`
-  (intent writes still succeed via state; `--live` and `--watch` report
-  it with a fallback hint), `daemon.subscriber-degraded` (slow consumer
-  dropped to state polling; dispatch never stalls).
+- Errors: `daemon.already-running`, `daemon.takeover-refused`,
+  `daemon.heartbeat-stale` (reads declare degraded, never block),
+  `daemon.state-recovery-failed` (degrades to one-shot guidance),
+  `daemon.protocol.unsupported` (version refused, versions offered),
+  `daemon.socket-unreachable` (intent writes still succeed via state; `--live`
+  and a watch report it with a fallback hint), `daemon.subscriber-degraded`
+  (capacity refusal before any event; an established subscriber overflow drops
+  to state polling), and `daemon.supervisor-unsupported` (no platform adapter).
 - Scenarios: kill-and-restart converges without duplicated work; commands
   complete via the state path while the daemon is down (queue add, plan,
   blockers answer, status); a second instance is refused or takes over

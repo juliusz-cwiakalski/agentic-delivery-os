@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { type ConfigCatalog, resolveConfig } from "../../packages/core/src/index";
+import {
+  resolveDaemonSettings,
+  resolvePollSettings,
+  resolveStateDirectoryScope,
+} from "../../packages/core/src/config/index";
+import {
+  type ConfigCatalog,
+  renderSystemdUnit,
+  resolveConfig,
+} from "../../packages/core/src/index";
 import { fileFacts } from "../fixtures/config/facts";
 
 const winners = {
@@ -157,5 +166,125 @@ describe("TC-PROV-003 provider provenance through the layered resolver", () => {
       );
       expect(resolved.value.origins["provider.defaultChain"]?.layer).toBe("system");
     }
+  });
+});
+
+describe("GH-238 daemon and poll branches", () => {
+  test("an absent daemon branch resolves the Appendix E defaults", () => {
+    const resolved = resolveDaemonSettings({}, {}, { stateDirectory: "/var/lib/ados" });
+    expect(resolved.ok).toBe(true);
+    if (resolved.ok) {
+      expect(resolved.value.heartbeatIntervalMs).toBe(5000);
+      expect(resolved.value.lockStalenessMs).toBe(30000);
+      expect(resolved.value.transport).toBe("unix");
+      expect(resolved.value.socketPath).toBe("/var/lib/ados/daemon.sock");
+    }
+  });
+
+  test("declared-not-delivered transports and outside socket paths are refused", () => {
+    const transport = resolveDaemonSettings(
+      { daemon: { transport: "tcp" } },
+      {},
+      { stateDirectory: "/var/lib/ados" },
+    );
+    expect(transport.ok).toBe(false);
+    if (!transport.ok) expect(transport.error.code).toBe("config.value.invalid");
+    const outside = resolveDaemonSettings(
+      { daemon: { "socket-path": "/tmp/elsewhere.sock" } },
+      {},
+      { stateDirectory: "/var/lib/ados" },
+    );
+    expect(outside.ok).toBe(false);
+    if (!outside.ok) expect(outside.error.code).toBe("config.value.invalid");
+    const invalid = resolveDaemonSettings(
+      { daemon: { "heartbeat-interval": 0 } },
+      {},
+      { stateDirectory: "/var/lib/ados" },
+    );
+    expect(invalid.ok).toBe(false);
+  });
+
+  test("poll settings validate the closed platform set and integer domains", () => {
+    const ok = resolvePollSettings({
+      poll: { github: { "base-interval": 1000, "max-interval": 5000, "min-spacing": 500 } },
+    });
+    expect(ok.ok).toBe(true);
+    const unknown = resolvePollSettings({ poll: { azure: {} } });
+    expect(unknown.ok).toBe(false);
+    if (!unknown.ok) expect(unknown.error.code).toBe("config.key.unknown");
+  });
+
+  test("state-directory scope precedence is exact and absolute-only", () => {
+    // The production brand prefix ends in one underscore ("ADOS_"); the resolver
+    // must read exactly one separator, never ADOS__STATE_DIR.
+    const explicit = resolveStateDirectoryScope({
+      environment: { ADOS_STATE_DIR: "/srv/one" },
+      environmentPrefix: "ADOS_",
+      stateDirectoryName: "ados",
+      homeDirectory: "/srv/me",
+    });
+    expect(explicit).toEqual({ ok: true, value: "/srv/one" });
+    const fallback = resolveStateDirectoryScope({
+      environment: {},
+      environmentPrefix: "ADOS_",
+      stateDirectoryName: "ados",
+      homeDirectory: "/srv/me",
+    });
+    expect(fallback).toEqual({ ok: true, value: "/srv/me/ados" });
+    const invalid = resolveStateDirectoryScope({
+      environment: { ADOS_STATE_DIR: "relative/path" },
+      environmentPrefix: "ADOS_",
+      stateDirectoryName: "ados",
+      homeDirectory: "/srv/me",
+    });
+    expect(invalid.ok).toBe(false);
+    if (!invalid.ok) expect(invalid.error.code).toBe("config.value.invalid");
+    // A double separator is not a second scope: the wrong spelling is ignored.
+    const wrong = resolveStateDirectoryScope({
+      environment: { ADOS__STATE_DIR: "/srv/two" },
+      environmentPrefix: "ADOS_",
+      stateDirectoryName: "ados",
+      homeDirectory: "/srv/me",
+    });
+    expect(wrong).toEqual({ ok: true, value: "/srv/me/ados" });
+  });
+
+  test("the installed unit's Environment= name reads back through the resolver", () => {
+    const unit = renderSystemdUnit({
+      binary: "ados",
+      stateDirectory: "/srv/one",
+      environmentName: "ADOS_STATE_DIR",
+      unit: "ados.service",
+    });
+    const binding = /^Environment=([^=]+)=(.+)$/mu.exec(unit);
+    expect(binding).not.toBeNull();
+    const name = binding?.[1] ?? "";
+    const value = binding?.[2] ?? "";
+    expect(name).toBe("ADOS_STATE_DIR");
+    // Round-trip: the exact name the unit writes is the name the resolver reads.
+    expect(
+      resolveStateDirectoryScope({
+        environment: { [name]: value },
+        environmentPrefix: "ADOS_",
+        stateDirectoryName: "ados",
+        homeDirectory: "/srv/me",
+      }),
+    ).toEqual({ ok: true, value: "/srv/one" });
+    // Two scopes select two paths; a third spelling selects neither.
+    const one = resolveStateDirectoryScope({
+      environment: { ADOS_STATE_DIR: "/srv/one" },
+      environmentPrefix: "ADOS_",
+      stateDirectoryName: "ados",
+      homeDirectory: "/srv/me",
+    });
+    const two = resolveStateDirectoryScope({
+      environment: { ADOS_STATE_DIR: "/srv/two" },
+      environmentPrefix: "ADOS_",
+      stateDirectoryName: "ados",
+      homeDirectory: "/srv/me",
+    });
+    expect(one).toEqual({ ok: true, value: "/srv/one" });
+    expect(two).toEqual({ ok: true, value: "/srv/two" });
+    expect(one).not.toEqual(two);
   });
 });

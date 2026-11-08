@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; repo-exclusive leases with a fence-token claim, renewal, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change."
 links:
-  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-242"]
+  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242"]
   related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003"]
   contracts:
     - "packages/core/src/contracts/queue.ts"
@@ -148,17 +148,21 @@ than discovering work by hand.
   `queue plan` takes `--next <n>` (default 3, maximum 20); `queue prioritize`
   and `queue dep` take two positionals; `queue claim` takes an optional ref and
   `--holder` (default `local`). Every queue and lanes payload carries a
-  `degraded[]` marker: the shipped composition reports `daemon-unreachable`
-  because this release has no resident daemon, and the payload is still a
-  complete one-shot result at exit 0. `queue list|plan` and `lanes list|show`
+  `degraded[]` marker: a surface with no reachable daemon reports
+  `daemon-unreachable`, the marker is absent when the daemon is reachable, and
+  the payload is a complete one-shot result at exit 0 either way.
+  `queue list|plan` and `lanes list|show`
   exit 2 with the classified `state.*` or
   `status.collector.lanes.unavailable` identity when lease, park, or entry
   history is unreadable, torn, or of unknown kind, presenting no success verdict
   and no partial or empty view as a schedule. A report-only stuck-park finding
-  never fails a read. `--watch` is not in the accepted grammar of any queue or
-  lanes subcommand and is refused through `fallback.invocation` at exit 1 with a
-  remediation hint naming the resident daemon (M1-S18) and no stream
-  representable.
+  never fails a read. `--watch` is accepted on `queue` and `lanes`: with a
+  reachable daemon the invocation subscribes to the closed `queue` or `lanes`
+  topic and prints a bounded initial snapshot followed by deduplicated bounded
+  event frames; with no reachable daemon it enters declared degraded polling at
+  `daemon.watch-poll-interval`, names `daemon-unreachable`, prints only changed
+  snapshots, and exits 0 on interruption. Unreadable state exits 2 with the
+  delivered `state.*` identity instead of polling a lie.
 - **One lane fold.** `lanes list|show` projects the same schedule: identity is
   the canonical work-item ref, and no lane record kind or stored lane state
   exists. The closed state set is `delivering`, `idle-with-reason`, `parked`,
@@ -213,7 +217,7 @@ prints a bounded deterministic summary and one line per entry, action, or lane.
 | Condition | Exit |
 |---|---|
 | A read, a landed mutation, an observed-empty queue, or a report-only stuck-park finding | 0 |
-| An invocation rejection (including `--watch` and an unknown park cause), a dependency cycle, a lease conflict, an unmet claim precondition, a stuck-park claim refusal, or an unobserved entry | 1 |
+| An invocation rejection (such as an unknown park cause), a dependency cycle, a lease conflict, an unmet claim precondition, a stuck-park claim refusal, or an unobserved entry | 1 |
 | A platform or state read failure, including `list`, `plan`, `claim`, `release`, and `lanes` over unreadable, torn, or unknown-kind history | 2 |
 
 A refused mutation lands nothing and its consequence stays `not_landed`. A
@@ -256,13 +260,13 @@ caused by the serialized byte cap also sets `truncationReason:
   checkout's configuration is never used for a producer. When no producer-root
   port is supplied, the caller's pre-resolved expectations are consumed
   unchanged.
-- **Deferred production composition.** No shipped binary wires `options.queue`
-  or `options.lanes` yet. The engine runs only through an injected composition,
-  so AC-F10-1's "state is consistent for later daemon reconciliation" holds at
-  the injected-fixture tier in this release; the resident daemon (M1-S18) will
-  supply the production composition root. The family is registered only when a
-  queue composition is supplied, which keeps the engine and its surfaces
-  testable without an installed binary.
+- **Production composition.** The resident daemon
+  ([Resident Dispatch Daemon](feature-resident-daemon.md)) is the production
+  composition root for this engine: it claims leases, supervises lanes, and
+  reconciles queue state from durable records. A standalone one-shot invocation
+  is composed through the same injected scheduling seams, so the engine and its
+  surfaces remain testable without an installed binary. The family is registered
+  only when a queue composition is supplied.
 
 ## Configuration
 
@@ -353,18 +357,22 @@ and `lanes`; `lanes` names the queue/lane read surface.
 An unreadable or torn lease or park history reuses the delivered `state.*`
 identity at exit 2; an unreadable queue store on the lane surfaces reuses
 `status.collector.lanes.unavailable` at exit 2; an invocation rejection such as
-`--watch` reuses `fallback.invocation` at exit 1. `queue ready` gains no row.
+an unknown park cause reuses `fallback.invocation` at exit 1. `queue ready`
+gains no row.
 
 ## Honest boundaries
 
-This delivery is one-shot scheduling only. It does **not** ship the resident
-daemon, control socket, NDJSON wire protocol, install/uninstall, startup
-reconciliation, automatic preemption execution, or live `--watch` streaming
-(M1-S18 / GH-238). It does **not** ship `dispatch`, session spawn, harness
-selection, resume handling, or handover (M1-S9 / GH-239); M1-S9 composes the
-claim/release capability. It performs no tracker, VCS, or CI write, no merge
-execution, no gate evaluation, no worktree-scoped lease, no capacity or
-bandwidth policy, and no fleet or multi-host coordination.
+The engine is a stateless scheduling computation over durable state. The
+resident daemon
+([Resident Dispatch Daemon](feature-resident-daemon.md)) is its production
+composition root and consumes the delivered readiness, lease, park, rank, and
+weight contracts, applying preemption only at a safe boundary and streaming
+bounded `queue` and `lanes` watch frames. The engine does **not** ship
+`dispatch`, session spawn, harness selection, resume handling, or handover
+(M1-S9 / GH-239); M1-S9 composes the claim/release capability. It performs no
+tracker, VCS, or CI write, no merge execution, no gate evaluation, no
+worktree-scoped lease, no capacity or bandwidth policy, and no fleet or
+multi-host coordination.
 
 The status digest's `lanes-or-queue` section is not wired to this engine: the
 digest still emits its declared `not-delivered` gap with the code-owned
