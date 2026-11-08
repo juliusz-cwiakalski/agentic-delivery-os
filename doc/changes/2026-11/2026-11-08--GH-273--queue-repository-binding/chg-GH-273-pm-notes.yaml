@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-08T19:26:30.381Z }
   delivery_planning: { started: null, completed: 2026-11-08T19:26:38.537Z }
   dor_check: { started: null, completed: 2026-11-08T19:33:40.432Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-08T20:14:22.000Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -131,17 +131,18 @@ notes:
       plan phase 1."
     type: info
     date: "2026-11-08"
-  - text: "Plan phase 1 complete (producer fix, commit fa8ecd03f0013581cbc7485e0c588842263e1350).
-      packages/cli/src/production.ts resolves repository facts once, lets an
-      injected originUrl replace only the remote, takes the recorded root from
-      the resolved facts root, and derives the pair-or-absent queue binding with
-      normalizeRepositoryKey guarded by the existing parseGitHubRemote target
-      gate. Gates green: pnpm typecheck (0 diagnostics); pnpm check:boundaries
-      (356 modules, 1041 deps, 0 violations; ambient-globals 162 clean;
-      workspace-entrypoints OK; secret-read-boundary 325 clean); bun test
+  - text: "Plan phase 1 complete (producer fix, commit
+      fa8ecd03f0013581cbc7485e0c588842263e1350). packages/cli/src/production.ts
+      resolves repository facts once, lets an injected originUrl replace only
+      the remote, takes the recorded root from the resolved facts root, and
+      derives the pair-or-absent queue binding with normalizeRepositoryKey
+      guarded by the existing parseGitHubRemote target gate. Gates green: pnpm
+      typecheck (0 diagnostics); pnpm check:boundaries (356 modules, 1041 deps,
+      0 violations; ambient-globals 162 clean; workspace-entrypoints OK;
+      secret-read-boundary 325 clean); bun test
       tests/behaviour/production-composition.test.ts
-      tests/behaviour/entrypoint-composition.test.ts (12 pass / 0 fail);
-      bun test tests/behaviour/queue-*.test.ts
+      tests/behaviour/entrypoint-composition.test.ts (12 pass / 0 fail); bun
+      test tests/behaviour/queue-*.test.ts
       tests/structure/dispatch-composition.test.ts (333 pass / 0 fail / 1
       intentional skip); bun test tests/structure/content-inventory.test.ts
       tests/structure/subpaths.test.ts (10 pass / 0 fail); biome check
@@ -153,10 +154,10 @@ notes:
       tests/fixtures/queue/production/harness.ts (real production composer over
       real fabricated .git metadata; injects only repositoryFacts.originUrl and
       exposes no root seam) and tests/behaviour/queue-production-binding.test.ts
-      (TC-BIND-001/002/003/004/005/006/007/008/009/010/017). Green:
-      bun test tests/behaviour/queue-production-binding.test.ts (15 pass / 0
-      fail); -t TC-BIND-002 (4 pass / 0 fail); -t TC-BIND-006 (2 pass / 0 fail);
-      bun test tests/behaviour/queue-cli.test.ts
+      (TC-BIND-001/002/003/004/005/006/007/008/009/010/017). Green: bun test
+      tests/behaviour/queue-production-binding.test.ts (15 pass / 0 fail); -t
+      TC-BIND-002 (4 pass / 0 fail); -t TC-BIND-006 (2 pass / 0 fail); bun test
+      tests/behaviour/queue-cli.test.ts
       tests/behaviour/queue-edge-wiring.test.ts (39 pass / 0 fail); biome check
       on both new files (clean)."
     type: info
@@ -181,8 +182,8 @@ notes:
       scanned on the recorded checkout cwd."
     type: retro
     date: "2026-11-08"
-  - text: "Plan phase 3 complete (invariant preservation + structural anti-recurrence,
-      commit 08153dead338524be90d0f78b9e6e4ba7f1cf105). Added
+  - text: "Plan phase 3 complete (invariant preservation + structural
+      anti-recurrence, commit 08153dead338524be90d0f78b9e6e4ba7f1cf105). Added
       tests/behaviour/queue-binding-invariant.test.ts (TC-BIND-011 write-side
       negatives + pair control; TC-BIND-012 key-only and root-only raw payloads
       read as state.store.torn, raw records stay readable, no entry fabricated,
@@ -191,13 +192,12 @@ notes:
       construction site, exactly one pair literal, no one-sided literal, the
       queue/lanes composition shared once; TC-BIND-016 one readRepositoryFacts
       and one findGitRoot call; TC-BIND-008 source allowlist for repositoryRoot
-      over packages/**/src). No domain file changed. Green:
-      bun test tests/behaviour/queue-binding-invariant.test.ts (3 pass / 0 fail);
-      bun test tests/structure/queue-binding-derivation.test.ts (5 pass / 0
-      fail); bun test tests/structure/queue-scheduling-contract.test.ts
-      tests/structure/error-table.test.ts
-      tests/checks/error-table-sync.test.ts (193 pass / 0 fail); bun test
-      tests/golden (240 pass / 0 fail); bun run
+      over packages/**/src). No domain file changed. Green: bun test
+      tests/behaviour/queue-binding-invariant.test.ts (3 pass / 0 fail); bun
+      test tests/structure/queue-binding-derivation.test.ts (5 pass / 0 fail);
+      bun test tests/structure/queue-scheduling-contract.test.ts
+      tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts
+      (193 pass / 0 fail); bun test tests/golden (240 pass / 0 fail); bun run
       scripts/checks/error-table-sync.ts (entries=115 documented=115, OK); biome
       check both new files (clean)."
     type: info
@@ -214,12 +214,82 @@ notes:
       queue CLI harness ?? fallback stays accepted) and added the runtime
       seeded-entry assertions to tests/conformance/pilot/pilot-records.test.ts
       (every seeded entry carries both fields with the pilot key and
-      /pilot/${PILOT_REPOSITORY}). Green:
-      bun test tests/structure/queue-binding-fixture-shape.test.ts (6 pass / 0
-      fail); bun test tests/conformance/pilot/pilot-records.test.ts (4 pass / 0
-      fail); bun test tests/conformance/pilot (29 pass / 0 fail);
-      bun test tests/checks/pilot-privacy.test.ts (4 pass / 0 fail);
-      bun test tests/behaviour/queue-cli.test.ts (24 pass / 0 fail); biome check
-      on the three files (clean)."
+      /pilot/${PILOT_REPOSITORY}). Green: bun test
+      tests/structure/queue-binding-fixture-shape.test.ts (6 pass / 0 fail); bun
+      test tests/conformance/pilot/pilot-records.test.ts (4 pass / 0 fail); bun
+      test tests/conformance/pilot (29 pass / 0 fail); bun test
+      tests/checks/pilot-privacy.test.ts (4 pass / 0 fail); bun test
+      tests/behaviour/queue-cli.test.ts (24 pass / 0 fail); biome check on the
+      three files (clean)."
     type: info
+    date: "2026-11-08"
+  - text: "Plan phase 5 complete (release, commit
+      83adb96866d6a253deb0743fd9029237045403c3). Added
+      .changeset/gh-273-queue-repository-binding-patch.md (lockstep changeset
+      for the five fixed-group @delivery-os packages), populated test-plan
+      section 10 with the execution evidence for every TC, the four TC-BIND-018
+      procedures, and the informational per-file wall-clock, and adjusted the
+      root-unresolved fixture to fall back to the repository parent directory
+      when TMPDIR points inside the work tree (aggregate-gate parity). Aggregate
+      gate: TMPDIR=\"$PWD/tmp/tmpdir\" pnpm check exit 0 (lint 60 warnings / 0
+      errors; format:check clean; typecheck clean; bun test 6476 pass / 0 fail /
+      4 skip across 771 files in 318.83s; check:boundaries 356 modules 0
+      violations; prompt-conformance 5 prompts clean; help-guide-coverage all
+      covered; exports-parity 5 publishables). Without the repo-local TMPDIR the
+      only failures are the pre-existing cross-device git clone --local in
+      tests/checks/ci-baseline-parity.test.ts (/tmp is a separate filesystem);
+      the targeted run with the repo-local TMPDIR is 8 pass / 0 fail. plan
+      validate GH-273 --json valid; git diff --check clean. All 18 ACs
+      re-confirmed by the full battery. No doc/spec/** file was edited."
+    type: info
+    date: "2026-11-08"
+  - text: "TC-BIND-018 revert/mutation evidence (four separate procedures, each
+      restored; full record in test-plan section 10). P1 producer revert
+      (packages/cli/src/production.ts only): composition suite 3 pass / 12 fail
+      (TC-BIND-001, TC-BIND-003..009, TC-BIND-010, TC-BIND-017 and the present
+      and root-unresolved cells of TC-BIND-002); derivation suite 3 pass / 2
+      fail (TC-BIND-014 pair/partial assertions plus the consequent
+      repositoryRoot allowlist change); green: key-unresolved and
+      target-unresolved cells, TC-BIND-006 pure rows, TC-BIND-011/012,
+      TC-BIND-015 shape suite 6 pass, tests/conformance/pilot 29 pass. P2
+      fixture revert (tests/fixtures/pilot/ harness.ts only): shape suite 4 pass
+      / 2 fail naming tests/fixtures/pilot/harness.ts and { repository }; all
+      production-side files 23 pass and pilot 29 pass. P3 asymmetry mutation
+      (root-only branch inserted ahead of the unchanged GitHub target gate,
+      restored): -t TC-BIND-002 3 pass / 1 fail, exactly the key-unresolved
+      cell, red at its expected-success assertion (Observed exit 1, domain
+      input.value.rejected); present/target-unresolved/root-unresolved green. P4
+      write-side desiredEntry predicate deletion: invariant suite 2 pass / 1
+      fail (TC-BIND-011 only); read-side isEntryRecord predicate deletion: 1
+      pass / 2 fail (both TC-BIND-012 shapes only); second readRepositoryFacts
+      insertion: derivation suite 4 pass / 1 fail (TC-BIND-016 only).
+      Post-restore four files 29 pass / 0 fail and pilot 29 pass / 0 fail."
+    type: info
+    date: "2026-11-08"
+  - text: "Lifecycle phase 7 handoff obligation (owned by @doc-syncer; no
+      doc/spec/** edit in this change): (i) re-verify
+      doc/spec/features/feature-scheduling-engine.md still states the
+      key-and-root-together contract and the normalizeRepositoryKey
+      host/owner/name form with no sentence contradicting the delivered
+      producer; (ii) add the composition note to
+      doc/spec/features/feature-cli-entrypoint.md that the production composer
+      derives the queue repository binding from the single repository-facts
+      resolution, present only when the existing GitHub target resolution
+      succeeds, normalizeRepositoryKey(origin) is defined, and the resolved
+      checkout root is defined; an injected origin replaces only the remote and
+      the root always comes from the working directory; the recorded root stays
+      internal (NFR-2, NFR-3, DEC-5, spec F-1)."
+    type: info
+    date: "2026-11-08"
+  - text: "Retro: the plan and spec declare version_impact patch, but the
+      repository's permanent TC-RELEASE-001 gate
+      (tests/checks/privacy-release.test.ts) requires the single added
+      fixed-group changeset to declare all five @delivery-os packages as minor;
+      a patch changeset fails two assertions of that gate (validateChangeset and
+      its mutation probe). The changeset therefore carries minor bumps (a
+      stronger, not weaker, version outcome) under the plan-scoped file name; no
+      pinned test was weakened or modified. Lesson: when a spec's version impact
+      is encoded in a release invariant, probe that invariant while planning the
+      release step, not only the product behaviour."
+    type: retro
     date: "2026-11-08"
