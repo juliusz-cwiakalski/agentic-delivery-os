@@ -1,0 +1,220 @@
+# GH-273 delivery plan — fix the production queue repository binding so the key
+# and the declaring checkout's root always travel together.
+#
+# Sources (single source of truth):
+#   - Spec:      ./chg-GH-273-spec.md (v1.1; F-1..F-6; AC-F1-1..AC-F6-4;
+#                DM-1..DM-3; NFR-1..NFR-8; DEC-1..DEC-8; RSK-1..RSK-8; §18 order)
+#   - Test plan: ./chg-GH-273-test-plan.md (v2; TC-BIND-001..TC-BIND-018;
+#                §3 coverage, §4 layers, §5 scenarios, §6 environments,
+#                §7 automation mapping, §8.3 resolved OQ-A..OQ-G)
+#   - Ticket:    GH-273.
+#
+# `tests` is delivery evidence for plan review; it is not a `delivery.plan.v1`
+# schema field. The schema-validated keys are schemaVersion, workItemRef, tier,
+# defaultLeases, defaultWeightClass, and phases (id, title, kind, summary, scope,
+# interactions, doneArtifacts, leases, weightClass, leaseClass). Phase progress
+# never lives here; it belongs in pm-notes `notes:` entries.
+#
+# Ceremony: one ticket, one PR targeting main-tools, five delivery phases. Phase 1
+# restores the producer; phases 2-4 add the regression coverage layer by layer;
+# phase 5 reconciles docs and closes the release. Each phase is independently
+# green on its own slice: no phase needs a later phase to compile or to assert.
+# The suite is green after every phase — phase 1 changes behaviour that no
+# existing test exercises through the production composition (the queue CLI
+# fixture already supplies a pair), and each coverage phase adds only the suite
+# it names.
+#
+# AC ownership (every AC has exactly one owning phase; cross-phase confirmation
+# is additive and never transfers ownership):
+#   phase 1  restores behaviour for AC-F1-1, AC-F1-3, AC-F2-1, AC-F2-2,
+#            AC-F2-3, AC-F3-1 and creates the single derivation site AC-F1-4
+#            asserts; it adds no assertion.
+#   phase 2  AC-F1-1, AC-F1-2, AC-F1-3, AC-F2-1, AC-F2-2, AC-F2-3, AC-F3-1,
+#            AC-F3-2, AC-F4-1, AC-F4-2, AC-F6-1, AC-F6-4
+#            (TC-BIND-001..TC-BIND-010, TC-BIND-017).
+#   phase 3  AC-F1-4, AC-F5-1, AC-F5-2, AC-F5-3, AC-F6-2 (TC-BIND-011..014,
+#            TC-BIND-016) plus the source-allowlist half of TC-BIND-008.
+#   phase 4  AC-F6-3 (TC-BIND-015).
+#   phase 5  release obligations and the all-AC confirmation; TC-BIND-018's
+#            revert/mutation evidence is recorded here (procedure executed in
+#            review).
+# All 18 ACs are mapped; no AC is unmapped and no AC id is invented.
+#
+# TC ownership: TC-BIND-001..010 and 017 (phase 2), TC-BIND-011..014 and 016
+# plus the TC-BIND-008 source-allowlist half (phase 3), TC-BIND-015 (phase 4),
+# TC-BIND-018 (phase 5 evidence recording). TC-BIND-013's automated half is the
+# existing pinned error-set and golden suites, re-run unchanged in phase 3.
+#
+# Conformance / registration check performed at planning time (no new
+# registration is required by this change, and each finding is why):
+#   - `tests/structure/inventory.json` and `tests/structure/content-inventory.test.ts`
+#     enumerate `packages/**` only; this change creates files under `tests/**`
+#     and touches one existing `packages/cli` file, so no inventory row or
+#     executable allowance is added.
+#   - `tests/checks/fixture-privacy.test.ts` scans a fixed fixture allowed-list
+#     that does not include `tests/fixtures/queue/**` or `tests/fixtures/pilot`;
+#     no fixture contains a secret shape, so no registration and no new scan row.
+#   - `tests/boundaries/fixture-coverage.test.ts` covers `.dependency-cruiser.cjs`
+#     forbidden rules over `packages/**`; tests are not cruised, so a new fixture
+#     directory needs no case.
+#   - `scripts/checks/*` scans (`ambient-globals`, `workspace-entrypoints`,
+#     `secret-read-boundary`, `exports-parity`, `prompt-conformance`,
+#     `help-guide-coverage`, `forbidden-literals`) are scoped to packages,
+#     `.opencode/**`, and registered docs; no new test or fixture path needs an
+#     entry. `biome` lint/format applies to the new files and runs in every
+#     phase gate.
+#   - `tests/types/tsconfig.json` compiles `*.type-test.ts` only, so the new
+#     suites need no type-probe entry; `pnpm typecheck` still runs in the
+#     phase-1 gate because the producer changes.
+#
+# Evidence obligations carried, not silently dropped:
+#   - AC-F6-1 / TC-BIND-018: the composition add test (TC-BIND-001, with
+#     TC-BIND-010 and the other composition tests) and the root-unresolved guard
+#     (TC-BIND-002, cell key resolved / root unresolved) must be shown RED by
+#     reverting only the producer derivation in `packages/cli/src/production.ts`,
+#     then GREEN after restoring it. The key-unresolved guard (cell key
+#     unresolved / root resolved) already holds pre-fix and is proven instead by
+#     an in-place ASYMMETRY mutation that emits a root-only binding; exactly that
+#     cell must fail.
+#   - AC-F6-2: the domain negatives cannot fail on a producer revert. They are
+#     proven by two separate predicate mutations — the write-side mutual-presence
+#     branch (`desiredEntry`) turns TC-BIND-011 red, the read-side predicate
+#     (`isEntryRecord`) turns TC-BIND-012 red — each applied and restored alone.
+#   - TC-BIND-016's structural assertion is mutation-verified by inserting a
+#     second `readRepositoryFacts` call.
+#   - Every mutation, its red set, and the post-restore green run are recorded in
+#     pm-notes `notes:` at the delivery boundary and in test-plan §10.
+#
+# Rollback: reverting the phase-1 derivation restores the previous (broken)
+# behaviour. The domain, schema, envelopes, exits, error table, and recorded
+# state are unchanged, so no state or data rollback and no feature flag apply.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-273
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5]
+  escalationTriggers:
+    - domain-invariant-or-read-predicate-changed
+    - recorded-root-disclosed-in-output
+    - second-binding-derivation-or-second-facts-resolution
+    - queue-grammar-envelope-exit-or-error-identity-changed
+    - composition-test-supplies-a-synthetic-root
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Producer fix: one total queue repository-binding derivation in the production composition"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/production.ts
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/production.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-273 in progress; phase 1 evidence recorded in pm-notes notes"
+    weightClass: standard
+    summary: "Replace the one-sided queue binding with a single total derivation at the composition's one construction site: resolve repository facts once for the invocation with an injected originUrl replacing only the remote (DEC-5) while the checkout root is always resolved from cwd (DEC-2, so composition tests execute the real root path and cannot go false-green), take root from the resolved facts root rather than the raw working directory, and normalize the key from the same origin resolution with the delivered remote normalizer (no new parsing rule). The derivation emits either both repository fields or no repositoryBinding at all, symmetrically for an unresolved key and an unresolved root (DEC-4); no third state exists. The queue edge, the queue application layer's write-side and read-side invariant predicates, readiness, dispatch identity, the error table, the envelopes, the exits, and the CLI grammar stay untouched (DEC-1, NG-1..NG-6); no error code, field, flag, configuration key, or schema version is added, and repositoryRoot is neither projected nor logged (NFR-2). This phase restores producer conformance for AC-F1-1, AC-F1-3, AC-F2-1, AC-F2-2, AC-F2-3, AC-F3-1 and creates the single derivation site AC-F1-4 asserts; it deliberately adds no test file, and the suite stays green because no existing test exercises queue add through the production composition. NFR-5/NFR-8 hold: the fix reuses the facts already read and adds no spawn, no network call, and no second resolution."
+    tests:
+      - "pnpm typecheck"
+      - "pnpm check:boundaries"
+      - "bun test tests/behaviour/production-composition.test.ts tests/behaviour/entrypoint-composition.test.ts"
+      - "bun test tests/behaviour/queue-*.test.ts tests/structure/dispatch-composition.test.ts"
+      - "bun test tests/structure/content-inventory.test.ts tests/structure/subpaths.test.ts"
+      - "pnpm exec biome check packages/cli/src/production.ts"
+  - id: 2
+    title: "Production-composition regression suite: real derivation, four-cell matrix, root sourcing, key form, and the repro chain"
+    kind: delivery
+    scope:
+      files:
+        - tests/fixtures/queue/production/harness.ts
+        - tests/behaviour/queue-production-binding.test.ts
+    interactions:
+      - kind: contract-file
+        target: tests/fixtures/queue/production/harness.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-273 in progress; phase 2 evidence recorded in pm-notes notes, including the TC-BIND-018 producer-revert red set for the composition add path and the root-unresolved matrix cell"
+    weightClass: heavy
+    summary: "Add the harness and behaviour suite that compose the real production program over a real temporary checkout whose .git metadata is fabricated on disk, injecting only the origin remote — the harness exposes no way to pass a repositoryRoot, so every assertion reads the pair the production derivation actually wrote (spec DEC-5, test plan TR-1/TR-2). Covers: AC-F1-1 atomic pair recorded with added/noop on replay (TC-BIND-001); AC-F1-2/AC-F1-3 and NFR-1 totality across all four key-resolved x root-resolved cells with an unbound entry reporting the existing not-ready/addressing-unresolved state and a matrix one-sided count of zero (TC-BIND-002); AC-F2-1 nested working directory records the checkout root, not the nested path (TC-BIND-003); AC-F2-2 linked-worktree root plus top-level/nested equality (TC-BIND-004); AC-F2-3 absolute root with zero spawns, zero transport calls, and zero git child calls (TC-BIND-005); AC-F3-1 the normalized lowercase host/owner/name for HTTPS with and without .git, ssh URL, scp-style, and mixed case, each mutually consistent with the normalized remote of the recorded root (TC-BIND-006); AC-F3-2 dispatch identity resolving from the recorded scheduler key with source scheduler, asserted directly at the resolver level against a disagreeing remote (TC-BIND-007); AC-F4-1 the entry observed on queue list with the normalized key and the exact root string absent from list/plan/lanes/claim/release/status/brief JSON and text output and from the derived graph document, with no exit-code assertion on the credential-degraded status/brief surfaces (TC-BIND-008 behaviour half); AC-F4-2 plan observes the ref and dispatch appends an attempt instead of refusing with queue.entry.unobserved (TC-BIND-009); AC-F6-4 the ticket repro chain add -> list -> dispatch with the pre-fix failure triple encoded as a PRE_FIX_FAILURE_TRIPLE constant and asserted element-by-element as passed, not by running reverted code (TC-BIND-010); and NFR-6 binding determinism across two independent harnesses over the same checkout and across replay, with no envelope-byte comparison (TC-BIND-017). Also carries the phase exit evidence obligation for AC-F6-1: this suite's composition add path and its root-unresolved matrix cell must be shown red under an in-place revert of the phase-1 derivation (TC-BIND-018)."
+    tests:
+      - "bun test tests/behaviour/queue-production-binding.test.ts"
+      - "bun test tests/behaviour/queue-production-binding.test.ts -t \"TC-BIND-002\""
+      - "bun test tests/behaviour/queue-production-binding.test.ts -t \"TC-BIND-006\""
+      - "bun test tests/behaviour/queue-cli.test.ts tests/behaviour/queue-edge-wiring.test.ts"
+      - "pnpm exec biome check tests/fixtures/queue/production/harness.ts tests/behaviour/queue-production-binding.test.ts"
+  - id: 3
+    title: "Invariant preservation and structural anti-recurrence: domain negatives, one derivation site, one facts resolution, source allowlist"
+    kind: delivery
+    scope:
+      files:
+        - tests/behaviour/queue-binding-invariant.test.ts
+        - tests/structure/queue-binding-derivation.test.ts
+    interactions:
+      - kind: contract-file
+        target: tests/structure/queue-binding-derivation.test.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-273 in progress; phase 3 evidence recorded in pm-notes notes, including the TC-BIND-018 key-unresolved asymmetry-mutation cell, both domain predicate mutations, and the second-readRepositoryFacts mutation"
+    weightClass: standard
+    summary: "Close the coverage gap that let a one-sided producer survive a green suite, without changing the domain. `tests/behaviour/queue-binding-invariant.test.ts` adds the first explicit negative coverage for the unchanged rule: AC-F5-1 a key-only and a root-only add request are both refused with input.value.rejected and the exact 'repository key and recorded root must be present together' summary, with zero ledger appends and a both-fields control that succeeds (TC-BIND-011); AC-F5-2 a stored record carrying exactly one field fails the read closed as reason torn / state.store.torn, the raw record stays readable, no entry is fabricated, and the same shape projects to queue list --json exit 2 with no data (TC-BIND-012). `tests/structure/queue-binding-derivation.test.ts` adds the AST anti-recurrence assertions: AC-F1-4 exactly one queue repository-binding construction site in packages/cli/src, no repositoryBinding initializer that is an object literal holding only one of the two keys, and the queue composition constructed once; and TC-BIND-016 exactly one readRepositoryFacts call with the pre-existing single findGitRoot call unchanged (the config-resolution call at the composition's config seam is not a second resolution and must not be counted as one), plus the TC-BIND-008 source allowlist that pins repositoryRoot references to packages/cli/src/edge.ts, packages/cli/src/production.ts, packages/core/src/app/queue.ts, and packages/core/src/contracts/queue.ts so a new disclosure site fails by name. AC-F5-3 stays review-verified: re-run the pinned queue error-set, error-table sync, and queue golden suites unchanged and inspect the diff for an untouched error table and untouched invariants (TC-BIND-013). Phase exit evidence obligation for AC-F6-2: the write-side and read-side predicate mutations (one at a time, each restored) must turn TC-BIND-011 and TC-BIND-012 red respectively (TC-BIND-018 step 9), and the second-readRepositoryFacts mutation must turn TC-BIND-016 red."
+    tests:
+      - "bun test tests/behaviour/queue-binding-invariant.test.ts"
+      - "bun test tests/structure/queue-binding-derivation.test.ts"
+      - "bun test tests/structure/queue-scheduling-contract.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts"
+      - "bun test tests/golden"
+      - "bun run scripts/checks/error-table-sync.ts"
+      - "pnpm exec biome check tests/behaviour/queue-binding-invariant.test.ts tests/structure/queue-binding-derivation.test.ts"
+  - id: 4
+    title: "Fixture honesty: pilot composition binding becomes a pair and every fixture binding is shape-asserted"
+    kind: delivery
+    scope:
+      files:
+        - tests/fixtures/pilot/harness.ts
+        - tests/structure/queue-binding-fixture-shape.test.ts
+    interactions:
+      - kind: contract-file
+        target: tests/fixtures/pilot/harness.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-273 in progress; phase 4 evidence recorded in pm-notes notes"
+    weightClass: standard
+    summary: "Correct the second one-sided producer and pin the whole fixture class. `tests/fixtures/pilot/harness.ts` composes the queue repository binding as the pair its ledger seeds already use — repository PILOT_REPOSITORY with repositoryRoot `/pilot/${PILOT_REPOSITORY}` (DEC-7) — so the pilot models a shape production can still produce; the pilot's synthetic host-less key domain is not normalized here (deferred by DEC-7) and no golden is regenerated, because the pilot never calls queue add (RSK-7). `tests/structure/queue-binding-fixture-shape.test.ts` then asserts AC-F6-3 over every tests/fixtures/**/*.ts file: each repositoryBinding is an object literal with both keys or a reference to a same-file declaration that is such a literal; the pilot binding key is the same identifier (PILOT_REPOSITORY) the seeds use; the queue CLI harness default pair stays a pair; and at runtime the pilot's seeded entries all carry both fields with the seed key. Failure messages name the offending file. This is the revert-detecting half of AC-F6-3 and TC-BIND-015: the pre-fix pilot binding is one field, so the test fails against the pre-fix fixture."
+    tests:
+      - "bun test tests/structure/queue-binding-fixture-shape.test.ts"
+      - "bun test tests/conformance/pilot"
+      - "bun test tests/checks/pilot-privacy.test.ts"
+      - "bun test tests/behaviour/queue-cli.test.ts"
+      - "pnpm exec biome check tests/fixtures/pilot/harness.ts tests/structure/queue-binding-fixture-shape.test.ts"
+  - id: 5
+    title: "Documentation truth, evidence log, and release: spec reconciliation scope, changeset, full gate"
+    kind: delivery
+    scope:
+      files:
+        - doc/spec/features/feature-scheduling-engine.md
+        - doc/spec/features/feature-cli-entrypoint.md
+        - .changeset/gh-273-queue-repository-binding-patch.md
+        - doc/changes/2026-11/2026-11-08--GH-273--queue-repository-binding/chg-GH-273-test-plan.md
+        - doc/changes/2026-11/2026-11-08--GH-273--queue-repository-binding/chg-GH-273-plan.yaml
+    interactions:
+      - kind: contract-file
+        target: doc/spec/features/feature-scheduling-engine.md
+        role: producer
+      - kind: contract-file
+        target: doc/spec/features/feature-cli-entrypoint.md
+        role: producer
+    doneArtifacts:
+      mergeRequestUrl: "PR for fix/GH-273/queue-repository-binding targeting main-tools"
+      pipelineId: "pnpm check aggregate gate green"
+      trackerTransition: "GH-273 in review"
+    weightClass: standard
+    summary: "Declare and discharge the release and spec-reconciliation obligations. The scheduling-engine page already states the key-and-root-together contract and the normalized key, so its pass is a consistency check that no sentence contradicts the delivered producer; the CLI-entrypoint page gains the one composition note that the production composer derives the queue repository binding from the single repository-facts resolution, that an injected origin replaces only the remote, and that the checkout root always comes from the working directory, with the recorded root remaining internal (NFR-2, NFR-3). Add the lockstep patch changeset for the fixed group (.changeset/gh-273-queue-repository-binding-patch.md, spec version_impact patch). Populate test-plan section 10 with the execution evidence for every TC, the informational wall-clock per new file, and the TC-BIND-018 record: the producer-revert red set (composition add plus the root-unresolved matrix cell), the asymmetry-mutation red cell (key unresolved / root resolved, exactly one cell red), the two domain predicate mutation results, and the second-readRepositoryFacts mutation — the same record PM writes to pm-notes notes at the delivery boundary. Reconcile the plan to what actually landed if review changed placement, and run the aggregate gate. All 18 ACs are re-confirmed here by the full battery; nothing in this phase changes product behaviour."
+    tests:
+      - "pnpm check"
+      - "pnpm typecheck"
+      - "bun test tests/behaviour/queue-production-binding.test.ts tests/behaviour/queue-binding-invariant.test.ts tests/structure/queue-binding-derivation.test.ts tests/structure/queue-binding-fixture-shape.test.ts"
+      - "bun test tests/conformance/pilot"
+      - "bun packages/cli/bin/delivery-os.ts plan validate GH-273 --json"
+      - "git diff --check"

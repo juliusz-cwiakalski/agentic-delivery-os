@@ -6,7 +6,7 @@ phases:
   clarify_scope: { started: "2026-11-08T17:26:00Z", completed: 2026-11-08T17:28:56.048Z }
   specification: { started: null, completed: 2026-11-08T17:53:29.871Z }
   test_planning: { started: null, completed: 2026-11-08T18:00:32.905Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-08T18:09:14.327Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -35,5 +35,20 @@ notes:
       keep resolving root from cwd (spec DEC-5) or tests would go false-green.
       Second defect found: key form is host-less in production while all
       consumers/fixtures use host/owner/name."
+    type: info
+    date: "2026-11-08"
+  - text: "Retro: spec v1.0 asserted AC-F6-1 that the key-unresolved guard fails on
+      revert, which is impossible (pre-fix already emits no binding), and
+      asserted a permanent-suite diff check. Test planning caught it before DoR;
+      specification reopened (iteration 1) and revised to name per-AC evidence
+      classes (suite / mutation-verified / review-verified). Cost: one reopen
+      cycle. Lesson: assign an evidence class when authoring an AC whose pre-fix
+      behaviour already satisfies one branch."
+    type: retro
+    date: "2026-11-08"
+  - text: "Specification re-completed at iteration 1 (commit e5e51e43); test plan
+      realigned and completed (commit f6db33ea). Plan declares 5 phases:
+      producer fix, composition regression suite, invariant + structural
+      anti-recurrence, fixture honesty, docs + changeset + aggregate gate."
     type: info
     date: "2026-11-08"
