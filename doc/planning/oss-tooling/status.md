@@ -49,7 +49,8 @@ Per backlog-ranking.md reading notes and the recorded M0 exit amendment
 (above), M1 delivery starts now and runs beside the pilot: stories that do
 not touch dispatch are unconstrained, and dispatch handover (M1-S9) still
 requires its per-repository two-clean-weeks evidence. The dual-run pilot
-remains the critical path for M0 exit.
+remains the critical path for M0 exit. The M1-S9 half is superseded by the
+2026-11-07 M1-S9 handover amendment below.
 
 | Story | Delivery | Story | Delivery |
 |---|---|---|---|
@@ -94,7 +95,9 @@ invariants, never moving-base diffs.
 3. **M1 delivery start**: milestone and 23 tickets created (GH-221
    through GH-243; map below); dispatch in ranking order under the
    recorded gate amendment, with dispatch handover (M1-S9) still
-   respecting the per-repo two-clean-weeks rule.
+   respecting the per-repo two-clean-weeks rule. M1-S9 handover is now
+   governed by the evidence-based clean bar recorded in the 2026-11-07
+   amendment below, which supersedes the per-repo rule named here.
 4. **Memory consolidation pass** (housekeeping): run the consolidation
    curator over `.ai/memory` to promote the CEO's M0 captures into
    `lessons/` with proper ids and rebuild the index.
@@ -142,3 +145,37 @@ degradation marker. The resident daemon and its control protocol (M1-S18),
 story. See [feature-scheduling-engine.md](../../spec/features/feature-scheduling-engine.md)
 and the M1 command pages [queue.md](milestones/m1/commands/queue.md) and
 [lanes.md](milestones/m1/commands/lanes.md).
+
+## M1-S9 handover amendment: evidence-based clean bar (2026-11-07, CEO-D-073)
+
+Recorded under the owner directive CEO-D-073 (GH-266, 2026-11-07). The
+M1-S9 per-repository handover gate is no longer defined by a calendar
+window alone. Clean is the conjunction of four conditions: (a) zero
+false-success incidents and zero unresolved divergences on the repository's
+pilot paths; (b) dispatch evidence exercising every TDR-0005 result class
+on real tickets; (c) an exposure floor of at least 20 dispatches or at
+least 7 consecutive days, whichever comes first, where that either/or
+binds only the floor and never substitutes for class coverage, incident
+truth, or corroboration; (d) corroboration, where an engine-claimed
+success is never sufficient and a dispatch counts clean only when artifact
+and tracker truth agree.
+
+Corroboration is exactly three evidence sources: completed pm-notes phases,
+tracker state, and CI on the pushed head. A result token on its own never
+counts.
+
+The dated 2026-11-03 per-engine sentence describes the same M1-S9 handover
+gate. For that gate its formulation is superseded, not waived: the
+replacement bar is stricter on coverage, because it requires all eleven
+result classes plus corroboration, and it replaces the calendar-only window
+with an exposure floor.
+
+The canonical definition is the M1-S9 entry in [backlog.md](backlog.md);
+this section records the amendment and defers to that entry for the
+normative wording. Declared residual: the amendment is not yet propagated
+to backlog-ranking.md, roadmap.md, cli-command-registry.md,
+milestones/m1/commands/dispatch.md, milestones/m1/journeys.md,
+user-journeys.md, and milestones/m1/test-scenarios.md, which still carry
+the superseded calendar phrasing; operator-requirements-2026-11.md is a
+dated historical record and stays as written. A follow-up change refreshes
+them.

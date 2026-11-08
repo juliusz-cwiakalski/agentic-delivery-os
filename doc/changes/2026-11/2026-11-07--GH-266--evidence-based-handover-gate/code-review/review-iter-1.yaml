@@ -1,0 +1,131 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-266
+branch: docs/GH-266/evidence-based-handover-gate
+status: PASS
+summary: >-
+  Docs-only amendment of exactly two product files (backlog.md M1-S9 entry and a
+  new dated status.md amendment). Diff-verified against every spec AC and plan
+  phase: the four-condition clean bar, the eleven-token set equality, the
+  floor-only "whichever comes first", and the three-source corroboration rule are
+  present in both files and mutually consistent. Preservation holds (M1-S9
+  heading, AC block, Depends line, all other stories' AC/Depends lines, backlog
+  frontmatter, no status frontmatter, the 2026-11-03 bullets, and the three M0
+  exit statements are byte-identical; every backlog hunk is inside M1-S9; both
+  forward-looking status sentences retain their bytes with appended pointers that
+  do not contain CEO-D-073). Doc guards are green. One low-severity residual
+  disclosure gap and two info observations remain; none blocks, and the low gap is
+  a deferred follow-up the PM already recorded.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+verification:
+  product_files_changed:
+    - doc/planning/oss-tooling/backlog.md
+    - doc/planning/oss-tooling/status.md
+  product_diffstat: "2 files changed, 61 insertions(+), 5 deletions(-)"
+  backlog_hunks:
+    total: 2
+    inside_m1s9_entry: 2
+    outside_m1s9_entry: 0
+    m1s9_entry_range_head: "529..578 (next heading M1-S10 at 579)"
+  eleven_token_set_comparison:
+    source: packages/core/src/contracts/delivery-result.ts (DELIVERY_RESULT_TOKENS)
+    count: 11
+    missing: 0
+    extra: 0
+    duplicates: 0
+    bash_order_match: true
+  m1s9_heading_byte_identical: true
+  m1s9_ac_block_and_depends_byte_identical: true
+  all_other_story_ac_depends_byte_identical: true
+  backlog_frontmatter_byte_identical: true
+  status_frontmatter_added: false
+  ados_distribution_added: false
+  status_2026_11_03_amendment_section_byte_identical: true
+  status_m0_exit_leadin_and_three_statements_byte_identical: true
+  forward_status_sentences_bytes_retained: true
+  forward_pointers_contain_ceo_d073: false
+  added_links: "[backlog.md](backlog.md) resolves from doc/planning/oss-tooling/"
+  doc_distribution_guard: "exit 0 (81 in-scope docs, no drift)"
+  forbidden_literals_guard: "5/5 scope classes, 0 violations, exit 0"
+  git_diff_check: "exit 0"
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/status.md:175-181
+    message: >-
+      The declared residual enumerates seven documents "which still carry the
+      superseded calendar phrasing" plus the historical operator record, but
+      doc/planning/oss-tooling/milestones/m1/interactions.md also depicts the
+      superseded calendar gate (Session G at lines 269-276: "14 days 41
+      deliveries", "verify-change token-level comparison clean 14/14 days",
+      "eligible for handover: yes") and is not named. The list is not false (every
+      named document does still carry the phrasing) but reads as exhaustive, so the
+      disclosure that stale secondary docs are visible is incomplete.
+    suggestion: >-
+      Include interactions.md in the follow-up propagation change and list it in
+      the PR body's residual list (the plan's P3 doneArtifact requires the PR body
+      to carry the residual list; pm-notes line 135 already records this omission).
+      Do not extend the status amendment here: the spec §7.2 residual set and the
+      plan's authoritative reference text both omit interactions.md, so changing it
+      now would desynchronise the delivered text from spec v1.3 and the recorded
+      residual-named evidence.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: info
+    confidence: medium
+    category: doc-quality
+    location: doc/planning/oss-tooling/backlog.md:557-560
+    message: >-
+      "Corroboration is exactly three evidence sources ..." is followed by the
+      merged example "needs the pushed head, CI on that head, the tracker state,
+      and completed phases", which lists the pushed head as a fourth noun. This is
+      not a contradiction (the pushed head is the CI subject and is one of the
+      ticket's named evidence inputs), and the exact wording is mandated by spec
+      F-3/DM-3 and the ticket, but a skimming evaluator could miscount three versus
+      four.
+    suggestion: >-
+      No action required; the text matches the ticket and spec. Optionally read
+      "the pushed head" together with "CI on that head" as a single evidence
+      source, or parenthesise it in a future amendment.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: info
+    confidence: medium
+    category: doc-quality
+    location: doc/planning/oss-tooling/backlog.md:539-547
+    message: >-
+      The M1-S9 entry labels its two phases (a)/(b) and then labels the four clean
+      conditions (a)-(d), so phase (b) contains a nested condition (a) and (b).
+      The "Clean is the conjunction of four conditions:" lead-in scopes the nested
+      labels, so it is unambiguous on a full read; only a fast scan can confuse the
+      scopes.
+    suggestion: >-
+      No action required; the (a)-(d) condition labels are mandated by spec F-1.
+      If a later edit touches this entry, numbering the four conditions (1)-(4)
+      would remove the nesting.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-08T00:41:22Z
+next_step: >-
+  PROCEED. No remediation phase is added: the only low finding (interactions.md
+  omission) is a deliberate, PM-recorded follow-up outside the ticket's two-file
+  scope, and the two info findings need no action. At pr_creation, ensure the PR
+  body carries the declared residual list (now including interactions.md), the
+  GH-239 staleness note, and the DEC-3 disclosure that pr-open-unverified was
+  added on the authority of the normative clause; then run quality_gates and
+  dod_check.
