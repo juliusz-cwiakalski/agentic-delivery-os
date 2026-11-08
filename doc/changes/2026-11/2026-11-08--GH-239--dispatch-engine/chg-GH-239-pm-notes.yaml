@@ -301,3 +301,11 @@ notes:
       0 fail) are green."
     type: info
     date: "2026-11-08"
+  - text: "Pass 2 finalization commit d93658b: the production composition
+      resolves the harness settings from the real typed configuration branch
+      with no injected settings override, and the composition test injects only
+      the spawn runner. Re-ran the dispatch-*, daemon-*, and
+      entrypoint-composition suites, pnpm typecheck, pnpm check:boundaries, and
+      the full pnpm check (6418 pass, 4 skip, 0 fail)."
+    type: info
+    date: "2026-11-08"
