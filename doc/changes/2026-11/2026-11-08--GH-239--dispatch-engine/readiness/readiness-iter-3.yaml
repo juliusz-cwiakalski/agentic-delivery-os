@@ -1,0 +1,332 @@
+schema: readiness-review.v1
+iteration: 3
+verdict: READY
+workItemRef: GH-239
+date: 2026-11-08
+pause_required: false
+gate: dor_check
+authority: .opencode/agent/readiness-reviewer.md
+artifact_set:
+  spec: chg-GH-239-spec.md (v1.2)
+  test_plan: chg-GH-239-test-plan.md (v0.3, incl. Section 7.5)
+  plan: chg-GH-239-plan.yaml (schemaVersion delivery.plan.v1, 10 phases)
+  pm_notes: chg-GH-239-pm-notes.yaml
+  ticket: "GH-239 (GitHub issue 239, juliusz-cwiakalski/agentic-delivery-os)"
+  canonical_scope: "doc/planning/oss-tooling/backlog.md#M1-S9 (as amended by GH-266)"
+  decision_record: doc/decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md (Proposed)
+  prior_records: [readiness/readiness-iter-1.yaml, readiness/readiness-iter-2.yaml]
+verdict_basis: >-
+  READY. All six iteration-2 findings are resolved: N1 (phase independence vs TC
+  ownership) is closed by test-plan Section 7.5 plus the plan's per-phase
+  executable/confirmation declaration, and the mechanical re-check confirms phases
+  2-3 run only pure-domain/ledger files with no command, summary, handover, or bash
+  step; N2's named count invariants are pinned and verified in code; N3 has a single
+  phase-1 owner with phase 7 explicitly barred; N4 pins every failure class's token,
+  outcome, exit, record policy, and comparison treatment in Appendix G and carries
+  them into the ACs, DM/EVT, DEC-19, and the TCs; N5 separates the recorded harness
+  spawn refusal from the three unrecorded pre-session refusals everywhere; N6 defines
+  "complete" as present-with-explicit-marker. Iteration-1 F1-F16 remain closed with
+  no regression (F10 is now fully closed). The ticket's seven acceptance criteria,
+  its pinned decisions, and SC-M1-26..30 trace through 53 spec ACs, 82 TCs, and the
+  ten plan phases with zero orphans; the gate is reachable including
+  state-unverified and pr-open-unverified; evidence-class counting, the
+  incident-exclusive window, corroboration, the controlled-proof E2E, bash fallback,
+  registration, the single justified doc/spec touch, the decision-record files in
+  phase-1 scope, and the forbidden-edit boundary all verify. Seven non-blocking
+  residual findings remain (2 minor, 5 nit), each with an in-scope fix; none makes a
+  phase non-green or leaves a requirement unowned.
+
+facets:
+  spec_completeness: PASS
+  ac_quality: PASS
+  plan_coverage: PASS
+  test_traceability: PASS
+  cross_artifact_consistency: PASS
+  decision_capture: PASS
+  system_spec_consistency: PASS
+  plan_doc_update_coverage: PASS
+  plan_code_area_coverage: PASS
+  dod_defined: PASS
+
+counts:
+  critical: 0
+  major: 0
+  minor: 2
+  nit: 5
+
+iteration_2_dispositions:
+  - id: N1
+    status: CLOSED
+    evidence: >-
+      test-plan Section 7.5 declares the earliest executable phase, per-phase
+      executable slices, and cross-phase confirmations for all 82 TCs, with per-phase
+      counts 5/12/8/12/4/17/4/5/3/12 (sum 82). Mechanical re-check of every plan
+      phase `tests` command against the Section 7.5 ownership: phases 2-3 run only
+      pure-domain and ledger files (liveness, token-closure, exit-projection,
+      truth-derivation, state-unverified, evidence-record, evidence-class,
+      comparison, identity, false-success, unevaluable, authority-view) with no
+      `dispatch`, `dual-run summary`, `handover`, or bash invocation; command slices
+      start at phase 4 and summary/gate at phase 6. TC-EVID-002 is owned by phase 6
+      while the phase-3 divergence-append primitive is TC-EVID-005. The plan header,
+      the per-phase declarations, and Section 7.5 agree on ownership lists and
+      counts. Residual slice-declaration omissions for TC-HELP-003 and two delivered
+      regression files are logged separately as R2/R7; neither makes a phase red.
+  - id: N2
+    status: CLOSED
+    evidence: >-
+      Plan phase 1 now names, and the delivered code confirms:
+      `RESERVED_TWO_SEGMENT_CODES` gains `dispatch.state-unverified` and its
+      `toHaveLength(35)` at tests/structure/error-table.test.ts:1374 becomes 36
+      (CODE_PATTERN requires >=3 segments, so the 2-segment code is unreservable
+      otherwise); the delivered-table `toHaveLength(112)` at line 1761 becomes 114;
+      the four `toHaveLength(113)` assertions (790, 866, 1100, 1668) become 115; the
+      `113 identities` phrase assertion (1780) becomes 115; DISPATCH_ROWS grows to
+      four; the dispatch kind `toHaveLength(2)` and the "exactly the two economics
+      identities" prose expectation become four; the two-way sync and the
+      `dispatch: 2 -> 4` kind count (tests/checks/error-table-sync.test.ts:1112) are
+      named. A same-class residual (three `BASELINE_ROWS.length + 79` assertions in
+      the same sync file) is logged as R1.
+  - id: N3
+    status: CLOSED
+    evidence: >-
+      `tests/structure/harness-review-deferrals.test.ts` is phase-1-owned and in the
+      header cross-phase ownership note; phase 1 updates the F-9 deferral record and
+      inverts the assertion in the same edit as the spawn-failure row; phase 7's
+      scope no longer lists the file and its summary says "must not edit or re-run
+      that file". Phase 7 owns only the entrypoint-composition inversion and the
+      narrowed pilot-isolation comment.
+  - id: N4
+    status: CLOSED
+    evidence: >-
+      Spec Appendix G pins, per failure class, the attempt-record policy, result
+      token, engine outcome, exit, and comparison treatment (spawn failure
+      failed/failed/1/comparison-source-unavailable; restart-budget
+      max-restarts/failed/1/dispatch-session-family; resume-economics
+      failed/failed/1/comparison-source-unavailable; harness spawn refusal
+      noop-lane-permission/refused/1/dispatch-session-family; the three pre-session
+      refusals unrecorded). It is referenced from F-2, F-3, F-4, F-12, DM-1, EVT-1,
+      DEC-19, AC-F2-4, AC-F4-1, AC-F12-1, AC-F12-2 and the DoD; the test plan
+      asserts the same pairs in TC-DISP-009/010/011, TC-EVID-001, TC-ERR-001/002,
+      TC-RESUME-002/003; plan phases 2/4/5 restate them consistently.
+  - id: N5
+    status: CLOSED
+    evidence: >-
+      No artifact calls a spawn refusal "pre-session". Spec glossary separates
+      "Pre-session refusal" (envelope-only, no record, no token) from "Spawn-refused"
+      (recorded attempt, noop-lane-permission/refused, exit 1); F-4/AC-F2-4/DEC-19
+      say an attempt-stage failure is never a pre-session refusal; plan phase 2 says
+      "a harness refusal before a session exists (spawn-refused)"; test-plan judgment
+      call 19 forbids the wording and TC-DISP-002/TC-DISP-011 assert the contrast.
+  - id: N6
+    status: CLOSED
+    evidence: >-
+      Spec glossary "Counted dispatch" now defines complete as every declared field
+      present with an explicit value or explicit not-applicable marker, never that
+      the comparison matched or corroboration was satisfied, and states that an
+      unevaluable non-success record still counts for coverage as exposure; DM-6 and
+      NFR-10 carry the same definition.
+
+iteration_1_regression:
+  verdict: NO_REGRESSION
+  detail: >-
+    F1 (exposure vs clean), F2 (evidence class), F3 (exclusive incident window),
+    F4 (DEC-19 record policy), F5 (single doc/spec touch), F6 (daemon-path
+    attempt-record producer), F7 (pilot fixture stays reduced), F8 (rename-invariant
+    identity), F9 (TDR-0015 as durable home), F10 (count invariants; now fully
+    closed), F11 (comparison record shape), F12 (real state + injected external
+    ports), F13 (pinned degraded exits), F14 (four-key trace), F15 (shared barrels
+    in cross-phase ownership), F16 (OQ-T2 resolved) all still verify in the current
+    artifact set.
+
+findings:
+  - id: R1
+    severity: minor
+    facet: plan_code_area_coverage
+    artifact: chg-GH-239-plan.yaml phase 1 summary; tests/checks/error-table-sync.test.ts:1079,1080,1160,1183
+    gap: >-
+      Phase 1 enumerates the count invariants it must update but omits the three
+      `BASELINE_ROWS.length + 79` assertions in tests/checks/error-table-sync.test.ts
+      (baselineViolations, the unchanged-copy control, and the db suite). With the
+      table at 115 instead of 113 these three fail, so phase 1 is green only after an
+      edit the enumeration does not name. The plan's binding general clause ("must
+      change every count, reserved-set, and row invariant the same phase's tests
+      enforce") does cover it, and the file is already in phase 1 scope, so this is
+      non-blocking.
+    remediation_target: delivery_planning
+    fix: >-
+      Add to the phase-1 summary: `BASELINE_ROWS.length + 79` becomes `+ 81` at all
+      three sites (including the failure message), alongside the already-named
+      `dispatch: 2 -> 4`.
+
+  - id: R2
+    severity: minor
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-239-test-plan.md Section 7.5 (TC-HELP-003 row) and Section 7.1;
+      chg-GH-239-plan.yaml header phase lists, phase 1 and phase 4 tests
+    gap: >-
+      TC-HELP-003 spans `tests/structure/harness-review-deferrals.test.ts` (inverted
+      in phase 1), `tests/behaviour/entrypoint-composition.test.ts` (pre-inversion
+      run in phase 4, inverted in phase 7), and `tests/conformance/pilot/
+      pilot-isolation.test.ts` (phase 7). Section 7.5 gives the TC earliest phase 7
+      and lists only the P4 pre-inversion run and the P7 completion, so the phase-1
+      inversion slice is undeclared; the plan's phase-1 declaration says
+      "confirmations: none" while its test list runs and inverts that file, and phase
+      4 runs the entrypoint-composition file without listing TC-HELP-003 in its
+      confirmations. No phase goes red under the plan's explicit phase-1/phase-7
+      instructions, so this is a declaration gap, not an execution defect.
+    remediation_target: test_planning
+    fix: >-
+      In Section 7.5's TC-HELP-003 row add "P1 inverts
+      tests/structure/harness-review-deferrals.test.ts" to the executable slices and
+      to the cross-phase column; in the plan add TC-HELP-003 (harness-review-deferrals
+      slice) to phase 1's executable/confirmation declaration and TC-HELP-003
+      (pre-inversion entrypoint run) to phase 4's confirmations. TC ownership and the
+      per-phase counts are unchanged.
+
+  - id: R3
+    severity: nit
+    facet: decision_capture
+    artifact: doc/decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md; doc/decisions/00-index.md:41; doc/decisions/00-register.md:14,34,38
+    gap: >-
+      TDR-0015 exists only in the working tree (untracked) while 00-index.md and
+      00-register.md, already committed in adcc7d83, reference it. Until the record is
+      added, the branch carries a committed dangling link to a Proposed record.
+    remediation_target: delivery_planning
+    fix: >-
+      Commit the TDR together with this verdict (or confirm phase 1's commit adds it)
+      before any PR is opened.
+
+  - id: R4
+    severity: nit
+    facet: decision_capture
+    artifact: doc/decisions/TDR-0015 Section 5; chg-GH-239-spec.md Appendix G
+    gap: >-
+      Appendix G sends the two dispatch-derived `failed` pairs (spawn failure and
+      resume-economics refusal) to a not-applicable comparison with reason
+      `comparison-source-unavailable`, while TDR-0015 Section 5 declares only
+      `state-unverified` as the not-applicable exception inside the verify-change
+      family. A consumer implementing only TDR-0015 re-derives the family and reaches
+      the same record-level degradation, so the outcome agrees, but the durable home
+      of the comparison shape is under-declared.
+    remediation_target: specification
+    fix: >-
+      Add one clause to TDR-0015 Section 5 naming the two dispatch-derived `failed`
+      pairs as not-applicable/comparison-source-unavailable (the file is already in
+      plan phase-1 scope).
+
+  - id: R5
+    severity: nit
+    facet: spec_completeness
+    artifact: >-
+      chg-GH-239-spec.md Section 2.1 / Section 5.1 F-6; GH-239 body; backlog.md
+      M1-S9 phasing sentence; chg-GH-266-spec.md:33
+    gap: >-
+      The ticket and the canonical backlog state that per-repository handover
+      "additionally requires the resident daemon live (M1-S18) and the evidence
+      window elapsed". The spec supersedes the window wording (DEC-1) and delivers the
+      daemon seam (F-10/D5), but never states whether the daemon-live clause is a
+      satisfied sequencing prerequisite or a fifth gate condition. The gate is
+      correctly the backlog's four-condition `clean` definition and handover is
+      state-based per contracts.md, so the reading is inferable but untraced.
+    remediation_target: specification
+    fix: >-
+      Add one sentence (Section 2.1 or a DEC) recording that M1-S18 is delivered
+      (D5), that the daemon-live clause is a satisfied sequencing prerequisite rather
+      than a fifth gate condition, and that `dispatch handover` therefore evaluates the
+      four conditions only.
+
+  - id: R6
+    severity: nit
+    facet: plan_code_area_coverage
+    artifact: tests/structure/error-table.test.ts:1611; chg-GH-239-plan.yaml phase 1
+    gap: >-
+      The delivered test title "every new row projects user-validation and no new
+      platform-provider row exists" becomes false once `dispatch.state-unverified`
+      (platform-provider) is added. The assertion body only checks the three
+      previously added codes, so it still passes; the title would carry a stale truth
+      claim.
+    remediation_target: delivery_planning
+    fix: >-
+      Rename that test in the same phase-1 edit (for example "every pinned economics
+      row projects user-validation and only the declared dispatch state row is
+      platform-provider").
+
+  - id: R7
+    severity: nit
+    facet: plan_coverage
+    artifact: chg-GH-239-plan.yaml phase 10 tests; chg-GH-239-test-plan.md TC-NFR-004, TC-EVID-006/TC-GATE-011 P10 slices
+    gap: >-
+      Phase 10 extends `tests/behaviour/dispatch-gate-evidence.test.ts` (TC-NFR-004's
+      truncation slice) and `tests/behaviour/dispatch-evidence-class.test.ts` (the
+      controlled-class declaration) but its test list runs neither file explicitly;
+      both are covered only by the trailing `pnpm check`.
+    remediation_target: delivery_planning
+    fix: >-
+      Add "bun test tests/behaviour/dispatch-gate-evidence.test.ts
+      tests/behaviour/dispatch-evidence-class.test.ts" to phase 10's tests.
+
+verification_notes:
+  plan_schema: >-
+    chg-GH-239-plan.yaml parses and passes validatePlanValue with zero errors
+    (schemaVersion delivery.plan.v1, tier full, phases 1-10, per-phase
+    scope/interactions).
+  counts_and_traceability:
+    ac_count: "53 spec AC rows in Section 17, unique, all present in test-plan Section 3.1 (0 missing, 0 extra)."
+    tc_count: "82 TCs; the Section 5.1 index, Section 7.1 mapping, and Section 7.5 executability table each contain the same 82 unique IDs (set equality verified)."
+    families: "DISP 12, TRUTH 6, RESUME 4, EVID 7, GATE 11, HAND 7, BASH 5, E2E 3, MERGE 4, DAEMON 3, HELP 3, PLANREC 1, ERR 5, TOKEN 2, NFR 7, DET 1, REG 1 = 82 (76 must-pass, 6 nice-to-have)."
+    orphans: "Every 5.1 row carries at least one AC; every TC ID appears in the 3.1 mapping; zero orphan TCs."
+    phase_ownership: "Plan per-phase owning counts 5/12/8/12/4/17/4/5/3/12 = 82; plan AC ownership union is exactly the 53 ACs with no duplicate assignment."
+    seeded_scenarios: "SC-M1-26 (TC-TRUTH-002, TC-DISP-007), SC-M1-27 (TC-TRUTH-001), SC-M1-28 (TC-RESUME-001), SC-M1-29 (TC-HAND-001/002/006/007, TC-E2E-001/002, TC-BASH-001/002), SC-M1-30 (TC-GATE-001..005/007/009/011); all cells have an owning phase."
+    ticket_trace: >-
+      All seven ticket ACs and the pinned decisions (token parity, merged-as-detection,
+      no merge, exit-0-with-no-artifact, per-repo reversible handover, four-key
+      summary) map to spec ACs, TCs, and phases; the stale two-week wording is traced
+      to DEC-1/D1 and the amended backlog; the "preserved exactly" reading is traced to
+      DEC-8/contracts.md Section dispatch (R5 covers the remaining daemon clause).
+  phase_independence_check: >-
+    Each phase's `tests` commands were mapped to files, files to TCs, and TCs to the
+    earliest executable phase in Section 7.5. Phases 2 and 3 execute only pure-domain
+    and durable-ledger files: no `dispatch` command, no `dual-run summary`, no
+    `handover`, no bash invocation. Command/output/error/exit/golden slices start at
+    phase 4, summary/gate/divergence/handover at phase 6, registration at phase 7,
+    bash at phase 8, daemon at phase 9, and the controlled proof at phase 10; all
+    later-layer assertions are declared cross-phase confirmations. Files hosting
+    slices for several phases are declared additively in the header. Residual
+    omissions are R2/R7 (declaration only).
+  reachability_check: >-
+    All-eleven coverage is reachable: AC-F5-5 and TC-GATE-007/TC-E2E-001 carry the
+    positive case including exposure-only `state-unverified` and tracker-corroborated
+    `pr-open-unverified` (urlResolved false); AC-F5-6/TC-GATE-009/TC-EVID-003 pin the
+    exclusive incident bound, same-instant exclusion, and post-incident recovery;
+    AC-F8-3/TC-GATE-011/TC-E2E-003 pin per-scope evidence-class counting and the
+    cross-scope exclusion; DM-8/TC-GATE-010 pin family-wise corroboration;
+    TC-E2E-001/TC-E2E-003 pin the provenance guard and the controlled-proof
+    declaration. No condition is defined over a fact a legitimate class cannot
+    supply.
+  delivered_infrastructure_checked:
+    - "DELIVERY_RESULT_TOKENS matches spec Appendix A exactly (11 tokens, same order); projection/derivation rows unchanged."
+    - "ERROR_TABLE has exactly the two dispatch economics rows; the two new identities are absent as the spec states."
+    - "tests/structure/error-table.test.ts has four toHaveLength(113), one delivered toHaveLength(112), RESERVED_TWO_SEGMENT_CODES.toHaveLength(35), and the dispatch kind toHaveLength(2); tests/checks/error-table-sync.test.ts has dispatch: 2 and three BASELINE_ROWS.length + 79 assertions (R1)."
+    - "CODE_PATTERN requires >=3 dot segments, so dispatch.state-unverified must be reserved; dispatch.session.spawn-failed passes the pattern."
+    - "doc/spec/features/feature-result-contract.md has the two dispatch rows, '113 machine identities'/'same 113 identities', 'exactly the two economics identities', and the 'not yet declared (M1-S9)' sentence phase 1 targets."
+    - "HARNESS_REVIEW_DEFERRALS and its assertion (no dispatch surface/spawn-failure row), entrypoint-composition (dispatch absent), and the reduced pilot-isolation fixture are present as described."
+    - "LaneLaunchPlanner/LaneLaunchPlan/LaneExecutorPort exist; createLaneExecutor is in packages/adapters/src/daemon/lane-executor.ts and reports unavailable without planner/descriptor; daemon-compose.ts and runSupervisionCycle exist; daemon-dispatch-result.ts does not yet exist (planned phase 9)."
+    - "normalizeRepositoryKey (host/owner/name) and ensureStoreArtifact exist; lane.restart-budget and lane.liveness-interval are the declared policy keys."
+    - "TDR-0015 passes tests/checks/decision-record.test.ts and is registered as Proposed in 00-index.md/00-register.md, but is untracked (R3)."
+    - "Baseline suites for phase 1 (tests/structure/error-table.test.ts 80 pass; tests/checks/decision-record.test.ts 4 pass) are green before delivery."
+  forbidden_edits: >-
+    No plan phase edits the GH-239 ticket body, backlog-ranking.md, roadmap.md,
+    cli-command-registry.md, milestone journeys, user journeys, the dated operator
+    record, or any other planning residual. Phase 7 edits only the story-owned
+    commands/dispatch.md and SC-M1-29/SC-M1-30 in test-scenarios.md, with a file
+    allowlist that never inspects the ticket body. The only doc/spec touch is
+    doc/spec/features/feature-result-contract.md in phase 1 (the two documented error
+    rows plus the count/prose assertions the same phase's tests enforce); all other
+    current-truth reconciliation stays with system_spec_update. Decision-record files
+    (TDR-0015, 00-index.md, 00-register.md) are in phase-1 scope. This pass modified
+    no spec, test plan, or plan, and performed no git operation.
+  decision_routing:
+    change: "R1, R2, R4, R5, R6, R7 stay in the change artifacts (plan/test-plan/spec wording and phase declarations)."
+    system: "R3 is repository bookkeeping (commit the Proposed TDR-0015); no new decision record is required. TDR-0015 remains Proposed pending owner acceptance at the PR review."
+    needs_human_input: "none; no pause flag. Verification of the delivery scope requires no human decision."

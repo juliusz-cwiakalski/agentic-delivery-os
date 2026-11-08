@@ -1,0 +1,433 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-239
+branch: feat/GH-239/dispatch-engine
+status: FAIL
+summary: >-
+  First substantive review. The delivered library surface is strong: the closed
+  token taxonomy is untouched (11/11), the four-key text summary is exact, the
+  Appendix G failure-token mapping (spawn-failed, restart-budget, resume-economics,
+  spawn-refused, and the three unrecorded pre-session refusals) is implemented and
+  tested, the evidence-class counting and incident-exclusive window are correct,
+  the four-condition gate is reachable (including exposure-only `state-unverified`
+  and tracker-corroborated `pr-open-unverified`), the controlled-proof E2E runs
+  through the real state store and command path, the bash fallback is CLI-independent
+  and the three absence assertions are handled correctly (only the two
+  production-surface assertions are inverted; pilot-isolation stays reduced), and
+  `dispatch` is registered in the prompt-required surface. The blocker is the
+  production composition: `createProductionComposer`/`packages/cli/bin/delivery-os.ts`
+  builds a run-only dispatch runtime. It composes the real harness ports and real
+  truth reads, but it does NOT compose `gate`, `existingLane`, `restartBudget`, or the
+  repository-identity resolver. Empirically (probes run for this review),
+  `dispatch dual-run summary|resolve` and `dispatch handover` return
+  `input.value.rejected` at exit 1 in the shipped CLI, and `dispatch <ref>
+  --resume-prompt` spawns a fresh `opencode run --format json` with no `resumeMode`
+  recorded. So F-5/F-6/F-11 and the entire resume path (F-3) are proven only through
+  the edge factory in tests, not delivered by the product. Additionally the handover
+  is not idempotent under a real clock, the `pr-open-unverified` comparison baseline
+  is not independent, and an unreadable corroboration source resets the evidence
+  window. Severity: 0 critical / 3 high / 5 medium / 5 low / 1 info.
+severity_breakdown:
+  critical: 0
+  high: 3
+  medium: 5
+  low: 5
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+blocking: [F-1, F-2, F-3]
+
+verification:
+  diff_base: "main-tools...HEAD (0 behind, 35 commits ahead; 160 files, +21533/-430)"
+  commands_run:
+    - command: "git status --porcelain && git log --oneline main-tools..HEAD"
+      result: "clean tree; 35 commits, phase-sized commits present (56e0588, b24e8ae, 0deac5b, 540fa20, 18a9c13, 93d9d12, ef39d51, 9aba4b1, cfbc568, c5e38c9, fd1200e, d93658b, 8e8dd54) interleaved with small pm-notes/doc commits"
+    - command: "bun tmp/probe-gh239.ts (ad-hoc, deleted after)"
+      result: "production `dispatch dual-run summary --repo X`, `dispatch handover X`, `dispatch dual-run resolve DIV-1` each exit 1 with error.code=input.value.rejected"
+    - command: "bun tmp/probe-resume.ts (ad-hoc, deleted after)"
+      result: "production `dispatch GH-301 --resume-prompt 'keep going'` invoked `opencode run --format json` (fresh spawn, no --session) and the attempt record's resumeMode was undefined"
+    - command: "bun tmp/probe-idem.ts (ad-hoc, deleted after) — two handoverDispatchEvidence calls at t and t+5min"
+      result: "both returned {recorded:true, noop:false}; 2 handover records appended (not idempotent)"
+    - command: "static review of packages/core/src/**, packages/cli/src/**, scripts/lib/dispatch-authority.sh, the plan/spec/test-plan, and the diff"
+      result: "findings below; the full pnpm check battery was not re-run in this pass (pm-notes claim 6426 pass / 4 skip / 0 fail is taken as reported, not independently reproduced)"
+  ac_verification:
+    traced: "53 spec ACs and the 7 ticket ACs trace to the plan; the pure-domain and ledger ACs verify. The composition-level ACs (F-3 resume, F-5 summary, F-6 handover/identity) do not verify against the shipped production composition."
+    verified_ok:
+      - "AC-F2-1 exit-0-with-no-artifact -> failed (dispatch-result.ts:281-295; dispatch-truth-derivation/e2e)."
+      - "AC-F1-3/AC-F1-4 four-key text order and the eleven-token closure (dispatch-text.ts:28-34; token-home/token-closure/golden)."
+      - "AC-F4-1/AC-F12-1/AC-F12-2 Appendix G pairs: spawn-failed(failed/failed), restart-budget(max-restarts/failed), resume-uneconomical(failed/failed), spawn refusal(noop-lane-permission/refused), three unrecorded pre-session refusals (error-envelope/harness-lease tests)."
+      - "AC-F5-5/AC-F5-6/AC-F8-3 reachability, incident-exclusive window, per-scope evidence-class counting (dispatch-gate-evidence, dispatch-gate-window, dispatch-evidence-class, controlled e2e)."
+      - "AC-F7-1..3 / AC-NFR8-1 bash fallback is a pure file read with no typed CLI, dual-run on absence, 12-cell matrix (scripts/lib/dispatch-authority.sh; test-dispatch-bash-fallback.sh)."
+      - "AC-F11-3 the two production-surface absence assertions are inverted; pilot-isolation fixture stays reduced with a narrowed title only."
+      - "AC-F9-1/NFR-9 no merge path: dependency-cruiser dispatch-merge-absence rule + dispatch-merge-boundary test + composition type scan."
+    failed_in_production:
+      - "AC-F3-1..4 (resume mode/restart budget/economics/idempotent replay): production never composes existingLane/restartBudget; --resume-prompt spawns fresh (F-2)."
+      - "AC-F5-1..4, AC-F6-1..6, AC-F11-1 (summary/resolve/handover): production runtime has only `run`; commands refuse input.value.rejected (F-1)."
+      - "AC-F6-2/AC-F6-6 (identity order and rename/remote-change invariance): production uses normalizeRepositoryRemote(originUrl) only; resolveDispatchIdentity/marker unused (F-3)."
+  plan_phases: >-
+    Most phases match delivered scope. Drift: phase 4 declared the production
+    composition to include "the identity resolver" (absent); phase 4 declared
+    "watch with the phase-2 progress verdict at the lane.liveness-interval cadence"
+    (a single post-collect read is discarded); phase 6/7 assume "the phase-4
+    production composition becomes the live advertised surface" (the gate was never
+    composed into it). Bookkeeping test files changed outside declared scope
+    (cli-edge-seam, harness-neutrality, provider-surface hash, verify-imports) and
+    readiness residuals R2/R7 remain (F-13).
+
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:702-808
+    message: >-
+      The shipped production composition (`createProductionComposer`, used by
+      `packages/cli/bin/delivery-os.ts`) constructs `const dispatch =
+      { run: {...} }` only. `dispatchComposition` passes no `gate`, so
+      `createDispatchCommandRuntime` exposes no `summary`, `resolve`, or `handover`
+      capability (edge.ts:4587), and the command handler returns
+      `input.value.rejected` for all three. Empirically, `dispatch dual-run summary
+      --repo X`, `dispatch dual-run resolve DIV-1 --note x`, and `dispatch handover X`
+      all exit 1 with `error.code=input.value.rejected` against the real production
+      composer. F-5, F-6, and F-11 and AC-F5-1..4 / AC-F6-1..6 / AC-F11-1 are only
+      proven through the test fixture/edge composition; the delivered CLI advertises
+      them in help but cannot run them. The controlled-proof E2E uses
+      `createControlledRepo` (edge composition with `gate`), so it does not catch
+      this.
+    suggestion: >-
+      Compose the gate in the production dispatch runtime: set `gate: { scope:
+      "production", principal: <resolved principal>, resolveRepository: <resolve via
+      resolveDispatchIdentity> }` in `dispatchComposition`, and add a
+      production-composition test that drives `summary`/`handover`/`resolve` through
+      `createProductionComposer` (as `dispatch-composition.test.ts` already does for
+      `run`). Do not advertise the surfaces in help until they are composed.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-2
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:702-748
+    message: >-
+      `dispatchComposition` provides no `existingLane` and no `restartBudget`
+      (production.ts), so in the shipped CLI `createDispatchCommandRuntime`
+      (edge.ts:4512-4513) never resolves a lane, `admission` is never computed
+      (edge.ts:4517-4551), and `runDispatch` sees `resumePrompt` but no
+      `existingHandle`, so it spawns fresh. Empirically `dispatch GH-301
+      --resume-prompt 'keep going'` executed `opencode run --format json` (a spawn,
+      not `--session` resume) and the attempt record had `resumeMode: undefined`.
+      Consequently AC-F3-1 (resume existing lane + recorded mode), AC-F3-2
+      (restart-budget refusal with the terminal exhaustion record — the one-shot path
+      never calls `ensureEconomicsExhaustionRecord`), AC-F3-3 (resume economics), and
+      AC-F3-4 (idempotent replay) are not enforced in the product. `lane.restart-budget`
+      is never resolved. The controlled-proof/harness-resume tests pass only because
+      the fixture supplies `existingLane`/`restartBudget` directly to the edge factory.
+    suggestion: >-
+      Compose `existingLane` from the delivered lane facts (and/or `readDaemonLanes`)
+      and resolve `lane.restart-budget` into `restartBudget` in `dispatchComposition`;
+      ensure a restart-budget refusal appends the delivered terminal exhaustion
+      record in the one-shot path (as the daemon path does with
+      `ensureEconomicsExhaustionRecord`); add a production-composition resume test.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-3
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:223
+    message: >-
+      Production resolves repository identity with
+      `normalizeRepositoryRemote(repositoryFacts.originUrl)` only. The delivered
+      `resolveDispatchIdentity` (scheduler key -> normalized remote -> persisted
+      first-use marker) and `ensureDispatchIdentityMarkerText` are implemented and
+      unit-tested but never called from any composition (only domain exports and
+      tests reference them). Therefore AC-F6-2's declared identity resolution order
+      and AC-F6-6's rename/remote-change/restart invariance are not satisfied by the
+      command: a remote change re-keys `repository` on subsequent attempt records and
+      authority, exactly what DEC-13/TDR-0015 §6 forbid. Plan phase 4 explicitly
+      declared the production composition to include "the identity resolver".
+    suggestion: >-
+      Resolve identity in the composition via `resolveDispatchIdentity({ schedulerKey,
+      remoteUrl, persistedMarker })` using the scheduling engine's normalized key, the
+      normalized remote, and the store-managed marker (`readDispatchIdentityMarkerText`
+      / `ensureDispatchIdentityMarkerText`), persisting the first successful binding and
+      refusing cleanly when none resolves; add a production-path rename/remote-change
+      test.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/dispatch-gate.ts:188-239
+    message: >-
+      `handoverDispatchEvidence` does not consult the current authority before
+      appending; `appendDispatchHandover` (dispatch-ledger.ts:351-373) de-duplicates
+      only an identical `(repository, operation, recordedAt)`. Under a real clock a
+      second identical `dispatch handover` appends a second handover record and
+      reports `{recorded:true, noop:false}` (probe: two calls at t and t+5min -> 2
+      records), violating AC-NFR6-1 / NFR-6 ("Replaying an identical handover appends
+      0 duplicate records ... a noop is reported instead of a second effect"). The
+      idempotency test (tests/behaviour/dispatch-idempotency.test.ts:44-58) passes
+      only because tests/fixtures/dispatch/golden/harness.ts:149 freezes `nowIso`, so
+      the second append is byte-identical; the assertion is weakened and does not
+      exercise a real replay.
+    suggestion: >-
+      Before appending, fold the handover ledger; if the repository is already
+      `authoritative` return `{recorded:false, noop:true, verdict}` without a new
+      record. Add an idempotency test with an advancing clock (or two distinct
+      `nowIso` values) asserting exactly one handover record.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:632-642
+    message: >-
+      `trackerTokenOf` maps an open PR with an unresolved URL to
+      `pr-open-unverified`, and `comparisonFor` (app/dispatch.ts:198-206) uses
+      `reads.trackerToken` as the "independent" baseline. So in production a
+      `pr-open-unverified` attempt records a comparison row whose token is
+      `pr-open-unverified` with outcome `match`
+      (codified by tests/structure/dispatch-composition.test.ts:516-521), whereas
+      AC-F4-6/DEC-3 require it to compare to independent tracker truth `pr-open` with
+      `urlResolved:false` as an attribute. The fixture path
+      (tests/fixtures/dispatch/ledger.ts:52) uses `pr-open`, so the production
+      behaviour is not exercised by the gate/E2E fixtures.
+    suggestion: >-
+      Return `pr-open` from `trackerTokenOf` for an open PR regardless of URL
+      resolution (keep `urlResolved:false` as the comparison attribute), and change
+      the production-composition test to assert `comparison.token === "pr-open"`.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-6
+    severity: medium
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/dispatch-comparison.ts:187-194
+    message: >-
+      `classifyFalseSuccess` returns true for any success-class token with any
+      unsatisfied corroboration source. The app collapses an unreadable source, a
+      pending source, and a contradictory source into `"unsatisfied"`
+      (app/dispatch.ts:487-499). AC-F4-4 requires an attempt "whose ... corroboration
+      source cannot be read" to fail corroboration "without creating a divergence or
+      resetting the window"; a `merged` claim with an absent/failed CI read therefore
+      becomes a false-success incident and resets the evidence window, which AC-F4-4
+      forbids. This is reachable in production (`readCiTruth` returns `ok:false` for
+      absent/non-success check-runs) and is not covered by a test that runs
+      `classifyFalseSuccess`.
+    suggestion: >-
+      Distinguish "unreadable" from "contradicted" in the corroboration facts (e.g.
+      a fourth state or an explicit unreadable marker) and only set
+      `falseSuccess=true` for a genuine contradiction; or record unreadable
+      corroboration as an unevaluable success claim that blocks eligibility without
+      resetting the window. Add a merged+unreadable-CI test.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-7
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: packages/core/src/app/dispatch.ts:429-441
+    message: >-
+      The one-shot path does not watch the session. It spawns, awaits
+      `ports.harness.collect` to completion, then performs a single `liveness` read
+      whose verdict is discarded (`evaluateDispatchLiveness(...)` result unused; no
+      `previous` observation is ever supplied). There is no cadence loop and no
+      liveness-driven stall/`max-restarts` classification. Plan phase 4 declared
+      "watch with the phase-2 progress verdict at the `lane.liveness-interval`
+      cadence", and F-1 states the command "watches it with progress-based liveness".
+      The pure evaluator and its tests are correct, but the command does not use it.
+    suggestion: >-
+      Poll `harness.liveness` at `lane.liveness-interval` while the session runs,
+      carry the previous observation, and route a stalled verdict through restart
+      admission; or narrow F-1/the plan to state that one-shot watching is delegated
+      to `collect`. As delivered, the "watch" capability is not present.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-8
+    severity: medium
+    confidence: medium
+    category: spec-compliance
+    location: packages/cli/src/daemon-compose.ts:394-448
+    message: >-
+      The daemon lane seam (`createLaneExecutor` + `recordDaemonDispatchResult`) is
+      composed only when `DaemonComposition.lane` is provided, and no production
+      composition supplies it: `createProductionComposer` registers no `daemon`
+      command and no entry passes `lane`. AC-F10-1 says "the production composition
+      supplies a `LaneLaunchPlanner` ... and `createLaneExecutor` reports available";
+      as delivered this is proven only at the factory/edge level (dispatch-daemon-lane
+      conformance) and the shipped daemon remains supervise-only. Some of this is
+      inherited GH-238 production-entry scope, but GH-239 phase 9 owns filling the
+      seam and claims "no placeholder remains".
+    suggestion: >-
+      Compose `lane` (session port, descriptor, declared environment, prompt,
+      repository/handover, `readTruth`, `collectEvidence`) in the daemon production
+      composition and add a production-path lane test; or record explicitly that the
+      daemon production entry is owned by a follow-up and mark AC-F10-1 as a seam-level
+      proof only.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-9
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/app/dispatch.ts:421-424
+    message: >-
+      After a successful spawn, a `harness.collect` failure returns
+      `{ok:false, error:{kind:"harness", code}}` and appends no attempt record. This
+      is an attempt-stage outcome (a session existed) that is not one of the three
+      pre-session refusals, so it contradicts DEC-19/AC-F4-1's "only the three
+      pre-session refusals append none" and Appendix G pins no token/outcome for it.
+    suggestion: >-
+      Pin a token/outcome/record policy for a post-spawn collection failure (e.g. an
+      attempt record with a classified harness identity, or map it to
+      `state-unverified`), and test it; or state that collect failure is a pre-classification
+      abort that is exempt and update DEC-19 accordingly.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-10
+    severity: low
+    confidence: medium
+    category: architecture
+    location: packages/core/src/contracts/dispatch.ts:285-286
+    message: >-
+      Attempt-stage classified failures carry `error` nested inside the success-shaped
+      `data` (`DispatchEnvelopeData.error`) while the top-level envelope stays
+      `CommandResultSuccess` with exit 1/2. This keeps the type-level `data XOR error`
+      invariant and is documented in the type, but it is a deliberate deviation the
+      spec does not name: DM-5 says "error envelopes keep the full error-table fields"
+      and AC-F12-3/AC-F1-4 read as a failure envelope. A generic `CommandResult`
+      consumer sees a success envelope on a failing dispatch and may not surface the
+      nested error. Judgment: not a contract violation, but an undocumented contract
+      extension.
+    suggestion: >-
+      Add one sentence to spec DM-5 (or a decision) stating that an attempt-stage
+      classified failure is a data-bearing success envelope whose `data.error` carries
+      the full error fields, and that consumers read `data.result` + `data.error`
+      together; alternatively rename the field (`failure`) to avoid overloading
+      "error".
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-11
+    severity: low
+    confidence: high
+    category: performance
+    location: packages/core/src/app/dispatch-ledger.ts:140-160
+    message: >-
+      `readLedger` calls `store.readRecords()` (the whole store) and only bounds the
+      returned slice to `DISPATCH_MAX_ATTEMPT_RECORDS`. NFR-4's "reads at most 5,000
+      attempt records" is therefore a returned-set bound, not a read bound, and the
+      p95 test (dispatch-bounds.test.ts:86-135) uses a pre-bounded 5,000-record fake
+      store, so it cannot detect an unbounded real read.
+    suggestion: >-
+      Bound at the store read where the delivered store supports it, or document that
+      the delivered JSONL read is the bound and that truncation is declared; add a
+      test over a >5,000-record store with an advancing read to prove the declared
+      truncation path.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-12
+    severity: low
+    confidence: medium
+    category: testing
+    location: tests/structure/dispatch-composition.test.ts:110-111
+    message: >-
+      The production-composition test derives the expected PR URL from the checkout's
+      real `origin` remote (`readRepositoryFacts` + `parseGitHubRemote`) and asserts
+      `https://github.com/<owner>/<name>/pull`. It therefore depends on the local
+      checkout having a parseable GitHub origin — an undeclared environment contract
+      (the repo rules require such a check to declare and satisfy it in CI), and it
+      cannot run in a fork/remote-less clone.
+    suggestion: >-
+      Declare the environment contract in the suite header and CI, or inject the
+      repository facts/target rather than reading the real origin.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-13
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/chg-GH-239-plan.yaml
+    message: >-
+      Plan-record drift: phase 10's `tests` list omits
+      `tests/behaviour/dispatch-gate-evidence.test.ts` and
+      `dispatch-evidence-class.test.ts` (readiness R7, still open); phase 1's
+      executable list omits the phase-1 TC-HELP-003 harness-review-deferrals slice
+      named in the cross-phase note (readiness R2); and several changed bookkeeping
+      files are outside declared `scope.files` (`tests/structure/cli-edge-seam.test.ts`,
+      `harness-neutrality.test.ts`, `provider-surface.test.ts` legacy-hook hash,
+      `verify-imports.test.ts`). pm-notes acknowledges these as bookkeeping, but the
+      plan record does not.
+    suggestion: >-
+      Add the two phase-10 suites and the phase-1 TC-HELP-003 slice to the plan, and
+      add the four bookkeeping files to their owning phase `scope.files` (or the
+      header cross-phase note), so the plan matches the delivered diff.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-14
+    severity: info
+    confidence: high
+    category: clarity
+    location: "git log main-tools..HEAD"
+    message: >-
+      The history is mostly phase-atomic with conventional prefixes, but nearly every
+      subject is the commit primitive's auto-generated "update <path>" with a
+      truncated path (e.g. `docs(GH-239): update doc/changes/...dispatch-e…`), so
+      subjects do not describe the change; several are duplicates. `c5e38c93` labels a
+      71-file phase commit as "update .changeset/gh-239-dispatch-engine-minor.md".
+      Not a code defect, but it reduces auditability.
+    suggestion: >-
+      Prefer phase-level descriptive subjects (e.g. `feat(GH-239): contracts, dispatch
+      error identities, and record families`) over per-path `update …` subjects in
+      future deliveries.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+accepted_residuals:
+  - "TDR-0015 remains `Proposed`; owner acceptance at the PR review is a merge gate, not a code defect (DEC-20)."
+  - "No real repository is flipped and no real pilot evidence is accrued; the controlled proof is the PR-scope instrument (NG-1/NG-9)."
+  - "The daemon production entry is entangled with GH-238 scope; F-8 records the seam-vs-production gap rather than asserting a GH-239-only defect."
+  - "The `data.error` nesting is accepted as a documented, type-safe extension of the result envelope (F-10); the only required follow-up is a spec/decision sentence."
+  - "Evidence retention/compaction, cross-host authority, and real-provider latency remain out of scope (NG-6/NG-11)."
+
+reviewed_at: 2026-11-08T16:00:00Z
+next_step: >-
+  CALL_CODER. The three high findings are all production-composition gaps: compose
+  the gate (F-1), the resume/lane/restart-budget facts (F-2), and the repository
+  identity resolver + persisted marker (F-3) in `packages/cli/src/production.ts`, then
+  add production-composition tests for summary/handover/resolve, resume, and
+  identity. In the same pass fix the handover idempotency under a real clock (F-4)
+  and the `pr-open-unverified` comparison baseline (F-5). F-6/F-7/F-8 are medium and
+  should be resolved or explicitly dispositioned before the DoD check; F-9..F-14 are
+  low/info. Status stays FAIL until F-1..F-3 are fixed in production code and proven
+  through the production composer (not only the edge fixture).

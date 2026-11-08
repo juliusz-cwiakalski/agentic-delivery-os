@@ -18,7 +18,8 @@
     "doc/planning/oss-tooling/milestones/m1/commands/merge.md",
     "doc/planning/oss-tooling/milestones/m1/commands/closeout.md",
     "doc/planning/oss-tooling/milestones/m1/commands/spend.md",
-    "doc/planning/oss-tooling/milestones/m1/commands/retro.md"
+    "doc/planning/oss-tooling/milestones/m1/commands/retro.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/dispatch.md"
   ],
   "commands": [
     "status",
@@ -34,6 +35,7 @@
     "merge",
     "closeout",
     "spend",
-    "retro"
+    "retro",
+    "dispatch"
   ]
 }

@@ -6,9 +6,9 @@ created: 2026-11-06
 last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (spawn, resume/steer, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the unchanged exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and store-scoped orphan/invalid-identity disclosure; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, harness-store session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record."
+summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (spawn, resume/steer, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the unchanged exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and store-scoped orphan/invalid-identity disclosure; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, harness-store session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the typed dispatch engine is the first production consumer of the session port."
 links:
-  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238"]
+  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239"]
   related_decisions: ["ADR-0008", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/harness.ts"
@@ -60,9 +60,12 @@ the neutral liveness report beside the unchanged readings, and projected into
 the watchdog signal shape when a source exists. An unsourced signal stays
 absent; it is never coerced to zero.
 
-**No dispatch engine ships here** (DEC-1). The "same delivery through either
-adapter" property is proven at the adapter/port boundary; the dispatch pilot is
-the consumer.
+**The harness adapter ships no dispatch engine** (DEC-1); the dispatch engine
+is its first production consumer. One-shot `dispatch` and the daemon lane
+executor spawn, resume, observe, collect, and classify through the same
+`HarnessSessionPort` and the same shared classifier. The "same delivery through
+either adapter" property is proven at the adapter/port boundary and exercised by
+the dispatch composition; the adapters add no dispatch branch of their own.
 
 ## 2. Port surface
 
@@ -245,20 +248,21 @@ with a status, reason, owning story, and revisit trigger:
 |---|---|---|
 | F-8 (Claude Code file-read budget) | resolved | The reader checks the declared byte cap before the read and reads at most that many encoded bytes. Owner: GH-240. |
 | F-11 (store-scoped orphan/invalid disclosure) | resolved | Parentless sessions without a work-item port are a bounded store-level warning; only the capturing delivery's own unattributable or invalid sessions are failed sessions. Owner: GH-240. |
-| F-9 (host-runner semantics) | re-deferred | The host runner is not on the closeout extraction path, and no production consumer exists until dispatch (M1-S9). Owner: M1-S9. |
+| F-9 (host-runner semantics) | resolved | Dispatch (GH-239) is the first production consumer of host-runner sessions and drives them through the declared harness session port; the closeout extraction path is unaffected and consumes no host runner. Owner: GH-239. |
 
 The host-runner semantics stay as delivered: an external `SIGTERM` sets
 `timedOut`, `stderr` truncation lacks the stdout marker, and the output bound is
-measured in UTF-16 units. These are characterized as the deferred defect; no
-dispatch surface, queue, spawn-failure row, or invented runner API is added.
+measured in UTF-16 units. The dispatch composition drives host-runner sessions
+through the declared session port and adds no invented runner API, queue, or
+spawn-failure surface.
 
 ## 7. Out of scope
 
-No dispatch engine or dispatch command (M1-S9), no plugin generation (M3-S1), no
+No plugin generation (M3-S1), no
 containerized executor implementation, no spend projection or retro pipeline
 (M1-S19/M1-S8), no model-profile selection or pacing (specified in
-[Provider Profiles and Watching](feature-provider-profiles.md)), and no new CLI
-command surface. The spend read side is delivered separately and consumes the
+[Provider Profiles and Watching](feature-provider-profiles.md)), and adds no CLI
+command surface of its own. The spend read side is delivered separately and consumes the
 captured `harness.telemetry` records from the state ledger without re-querying a
 harness store; this seam keeps its extraction, capture, and composer boundary
 unchanged. The watchdog consumes the adapter-sourced liveness facts; the
@@ -312,9 +316,15 @@ Worktree-activity sourcing and Claude Code liveness remain declared gaps.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the
   restart budget, resume economics, amplification derivation, and sourced stall
   identity built on this seam.
+- [Dispatch Engine](feature-dispatch-engine.md) — the first production consumer
+  of the session port.
 - [ADR-0008](../../decisions/ADR-0008-harness-adapter-contract.md) — the binding
   harness adapter contract.
 
 ## GH-238 lane executor
 
-The delivered lane-executor adapter composes `HarnessSessionPort` for spawn, observe, collect, and liveness plus an injected launch planner (the M1-S9 seam). A missing planner or declared capability gap reports unavailable, producing the declared `supervise-only` mode.
+The delivered lane-executor adapter composes `HarnessSessionPort` for spawn, observe, collect, and liveness plus an injected launch planner. The daemon composition supplies `createLaneLaunchPlanner`; a missing planner or declared capability gap reports unavailable, producing the declared `supervise-only` mode. The lane seam is factory-proven; the production daemon entry that supplies the lane composition is resident-daemon production scope (GH-238).
+
+## GH-239 dispatch consumer
+
+The dispatch engine is the first production consumer of host-runner sessions. It resolves a harness, spawns or resumes through this port, watches with the adapter-sourced liveness facts, and classifies through the one shared harness-neutral classifier. The daemon lane executor composes the same port and planner at the daemon-composition factory, so a daemon-driven attempt and a one-shot dispatch over the same evidence produce the same token, outcome, and attempt record. The F-9 finding records this production-consumer outcome in `HARNESS_REVIEW_DEFERRALS`. See [Dispatch Engine](feature-dispatch-engine.md).

@@ -71,3 +71,15 @@ export {
   parseConfigYaml,
   parserHostSwitchBlocked,
 } from "./yaml-parser.js";
+export {
+  dualRunDispatchAuthority,
+  dispatchAuthorityDocumentName,
+  listDispatchAuthority,
+  readDispatchAuthority,
+} from "./dispatch-authority.js";
+export {
+  dispatchIdentityMarkerPath,
+  ensureDispatchIdentityMarkerText,
+  readDispatchIdentityMarkerText,
+  replaceDispatchIdentityMarkerText,
+} from "./dispatch-identity.js";

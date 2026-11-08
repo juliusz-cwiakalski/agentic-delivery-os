@@ -1,0 +1,7 @@
+{
+  "schema": "delivery.dispatch.authority.v1",
+  "repository": "github.com/owner/repo",
+  "authority": "dual-run",
+  "recordedAt": "2026-11-08T10:00:00.000Z",
+  "reversalAvailable": false
+}

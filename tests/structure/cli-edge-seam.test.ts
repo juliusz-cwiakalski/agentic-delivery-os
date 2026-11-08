@@ -551,6 +551,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       `${CLI_DIR}/commands/closeout.ts`,
       `${CLI_DIR}/commands/daemon.ts`,
       `${CLI_DIR}/commands/db.ts`,
+      `${CLI_DIR}/commands/dispatch.ts`,
       `${CLI_DIR}/commands/doctor.ts`,
       `${CLI_DIR}/commands/lanes.ts`,
       `${CLI_DIR}/commands/merge.ts`,

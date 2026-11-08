@@ -24,6 +24,7 @@ import {
   parseConfigYaml,
   type RuntimePlatform,
   readCiWorkflowJobNames,
+  readDispatchAuthority,
   readLocalPmContext,
   readMemoryFacts,
   readPlanArtifact,
@@ -72,6 +73,7 @@ import {
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
   addQueueDependency,
+  admitDispatchRestart,
   appendCommandReceipt,
   appendOutboxEffect,
   beginCommitEffect,
@@ -95,14 +97,21 @@ import {
   computeSpendReport,
   computeStagingPlan,
   createSourcedWatchdogSignalSource,
+  type DispatchAdmission,
+  type DispatchLeaseClaim,
+  type DispatchPorts,
+  type DispatchRepositoryScope,
+  type DispatchTruthReads,
   declareQueueEntry,
   defaultParkRecheckMs,
   deriveCapsuleEventKey,
   evaluateClaimPreconditions,
   evaluateDiffSweep,
+  evaluateDispatchResumeEconomics,
   evaluateWorktreeSafety,
   foldLanes,
   type HarnessSettings,
+  handoverDispatchEvidence,
   isHeldByWeight,
   isLiveDbSession,
   type MergeTransactionPorts,
@@ -112,6 +121,7 @@ import {
   parkConditionForCause,
   parseCapsuleEvents,
   payloadFieldViolations,
+  planDispatchResume,
   prioritizeQueueEntry,
   type QueueCiFact,
   type QueueCloseFact,
@@ -138,16 +148,20 @@ import {
   reportRetro,
   resolveCloseoutBaseRef,
   resolveConfig,
+  resolveDispatchDivergenceEvidence,
   resolveMergeGateSet,
   resolveQueueSettings,
   resolveQueueWeight,
   resolveStateDirectoryScope,
+  revertDispatchHandoverEvidence,
   runCloseout,
   runCommitAct,
+  runDispatch,
   selectPruneCandidates,
   serializeCapsuleEvent,
   sha256Hex,
   spendDigestSection,
+  summarizeDispatchEvidence,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
   type VerifyGatesOpenPrPage,
@@ -198,6 +212,11 @@ import {
   type CredentialPort,
   type DaemonClockPort,
   type DeliveryRequest,
+  DISPATCH_DEFAULT_EVIDENCE_CLASS,
+  type DispatchEvidenceClass,
+  type DispatchHandoverState,
+  type DispatchPhaseLedger,
+  type DispatchResumeMode,
   type DoctorCheckoutFacts,
   type DoctorCommitResolution,
   type DoctorCredentialPresence,
@@ -206,8 +225,13 @@ import {
   type DoctorStateStoresRead,
   type DoctorWiringRead,
   type ExternalSystemInstance,
+  HARNESS_KINDS,
   HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
+  type HarnessExecutionEnvironmentDescriptor,
+  type HarnessKind,
   type HarnessLivenessFacts,
+  type HarnessSessionHandle,
+  type HarnessSessionPort,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
   PHASE_STATE_DOCUMENT_PREFIX,
@@ -312,6 +336,10 @@ import {
 } from "./commands/config.js";
 import { createDaemonCommandDefinition, type DaemonCommandRuntime } from "./commands/daemon.js";
 import { createDbCommandDefinition, type DbCommandRuntime } from "./commands/db.js";
+import {
+  createDispatchCommandDefinition,
+  type DispatchCommandRuntime,
+} from "./commands/dispatch.js";
 import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
 import { createLanesCommandDefinition } from "./commands/lanes.js";
 import {
@@ -346,6 +374,9 @@ import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
+
+export type { DispatchCommandRuntime } from "./commands/dispatch.js";
+
 import type { VerifyDeployRuntime } from "./commands/verify-deploy.js";
 import type { VerifyGatesCommandRuntime } from "./commands/verify-gates.js";
 import {
@@ -2912,6 +2943,7 @@ export type ConfigProgramOptions = {
   readonly commit?: CommitRuntimeOptions;
   readonly provider?: ProviderComposition;
   readonly verify?: VerifyCommandRuntime;
+  readonly dispatch?: DispatchCommandRuntime;
   readonly status?: StatusComposition;
   readonly brief?: StatusComposition;
   readonly queueReady?: StatusComposition;
@@ -3460,6 +3492,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.verify !== undefined) {
     commands.verify = createVerifyCommandDefinition(options.verify);
+  }
+  if (options.dispatch !== undefined) {
+    commands.dispatch = createDispatchCommandDefinition(options.dispatch);
   }
   if (options.doctor !== undefined) {
     commands.doctor = createDoctorCommandDefinition(
@@ -4399,3 +4434,268 @@ export const createLanesCommandRuntime = (
     }),
   };
 };
+
+/**
+ * The dispatch composition seam (GH-239 F-1, F-4, F-5, F-6).
+ *
+ * Every fact is injected: the fenced store, the selected harness session port
+ * and descriptor, the truth reads, the lease claim/release pair, and the
+ * declared evidence class. The runtime never invents an exit literal and never
+ * composes a merge port.
+ */
+export type DispatchComposition = {
+  readonly store: DispatchPorts["store"];
+  readonly stateRoot: string;
+  readonly fenceToken: string;
+  readonly nowIso: () => string;
+  readonly newAttemptId: (ref: string) => string;
+  readonly newDivergenceId: (ref: string) => string;
+  readonly harnesses: Readonly<Partial<Record<HarnessKind, HarnessSessionPort>>>;
+  readonly defaultHarness: HarnessKind;
+  readonly descriptor: HarnessExecutionEnvironmentDescriptor;
+  readonly prompt: (ref: string) => string;
+  readonly evidenceClass?: DispatchEvidenceClass;
+  readonly repository: (ref: string) => string;
+  readonly readTruth: (ref: string) => Promise<DispatchTruthReads>;
+  readonly claimLease: (ref: string, repository: string) => DispatchLeaseClaim;
+  readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
+  readonly phaseLedger: (ref: string) => DispatchPhaseLedger;
+  readonly restartBudget?: number;
+  /** The delivery's persisted restart count, read at run time (AC-F3-2). */
+  readonly restartCount?: (ref: string) => number;
+  readonly livenessIntervalMs?: number;
+  readonly resumeAmplification?: string;
+  readonly existingLane?: (ref: string) => DispatchLaneFacts | undefined;
+  /**
+   * The cancellable cadence wait the one-shot watcher polls on. Absence means
+   * the session is not watched while it runs; the composition owns the timer.
+   */
+  readonly waitForCadence?: (cadenceMs: number) => {
+    readonly promise: Promise<void>;
+    readonly cancel: () => void;
+  };
+  /**
+   * The delivered terminal restart-budget exhaustion append. Absence leaves the
+   * refusal recorded with an unrecorded-exhaustion evidence reference.
+   */
+  readonly ensureRestartExhaustion?: (input: {
+    readonly ref: string;
+    readonly runId: string;
+    readonly restarts: number;
+    readonly recordedAt: string;
+  }) => boolean;
+  readonly gate?: {
+    readonly scope: DispatchRepositoryScope;
+    readonly principal: string;
+    readonly max?: number;
+    readonly resolveRepository: (repo: string) => string | undefined;
+  };
+};
+
+/** The delivered lane facts a resume admits against. */
+export type DispatchLaneFacts = {
+  readonly handle: HarnessSessionHandle;
+  readonly completedPhases: readonly string[];
+  readonly adapterSupportsResumeInjection: boolean;
+  readonly restartCount: number;
+  readonly prefillCost?: number | null;
+  readonly uniqueProgress?: number | null;
+};
+
+const isHarnessKind = (value: string): value is HarnessKind =>
+  (HARNESS_KINDS as readonly string[]).includes(value);
+
+/** The composition surface the evidence-gate command family needs. */
+export type DispatchGateComposition = {
+  readonly store: DispatchPorts["store"];
+  readonly stateRoot: string;
+  readonly fenceToken: string;
+  readonly nowIso: () => string;
+  readonly gate: NonNullable<DispatchComposition["gate"]>;
+};
+
+/**
+ * Build the typed evidence-gate runtime (`dual-run summary`, `dual-run resolve`,
+ * `handover [--revert]`) over the injected store and identity resolver. It needs
+ * no harness settings, so a composition can expose it without resolving them.
+ */
+export const createDispatchGateRuntime = (
+  composition: DispatchGateComposition,
+): Required<
+  Pick<import("./commands/dispatch.js").DispatchCommandRuntime, "summary" | "resolve" | "handover">
+> => ({
+  summary: {
+    summarize: async (repo: string) => {
+      const repository = composition.gate.resolveRepository(repo);
+      if (repository === undefined) {
+        return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
+      }
+      const result = summarizeDispatchEvidence({
+        store: composition.store,
+        repository,
+        scope: composition.gate.scope,
+        nowIso: composition.nowIso(),
+        ...(composition.gate.max === undefined ? {} : { max: composition.gate.max }),
+      });
+      return result.ok
+        ? { ok: true as const, data: result.data }
+        : { ok: false as const, error: result.error };
+    },
+  },
+  resolve: {
+    resolve: async (input: { readonly divergenceId: string; readonly note: string }) =>
+      resolveDispatchDivergenceEvidence({
+        store: composition.store,
+        fenceToken: composition.fenceToken,
+        divergenceId: input.divergenceId,
+        note: input.note,
+        principal: composition.gate.principal,
+        nowIso: composition.nowIso(),
+      }),
+  },
+  handover: {
+    handover: async (input: { readonly repo: string; readonly revert: boolean }) => {
+      const repository = composition.gate.resolveRepository(input.repo);
+      if (repository === undefined) {
+        return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
+      }
+      return input.revert
+        ? revertDispatchHandoverEvidence({
+            store: composition.store,
+            fenceToken: composition.fenceToken,
+            repository,
+            scope: composition.gate.scope,
+            nowIso: composition.nowIso(),
+            principal: composition.gate.principal,
+          })
+        : handoverDispatchEvidence({
+            store: composition.store,
+            fenceToken: composition.fenceToken,
+            repository,
+            scope: composition.gate.scope,
+            nowIso: composition.nowIso(),
+            principal: composition.gate.principal,
+          });
+    },
+  },
+});
+
+/**
+ * Build the dispatch command runtime. An unknown or uncomposed harness is a
+ * classified refusal, never a crash; the production default class is `pilot`.
+ */
+export const createDispatchCommandRuntime = (
+  composition: DispatchComposition,
+): DispatchCommandRuntime => ({
+  run: {
+    run: async (input) => {
+      const selected = input.harness ?? composition.defaultHarness;
+      if (!isHarnessKind(selected)) {
+        return { ok: false, error: { kind: "input", code: "input.value.rejected" } };
+      }
+      const harness = composition.harnesses[selected];
+      if (harness === undefined) {
+        return {
+          ok: false,
+          error: { kind: "harness", code: "harness.capability.gap", summary: selected },
+        };
+      }
+      const repository = composition.repository(input.ref);
+      const handover: DispatchHandoverState = readDispatchAuthority(
+        composition.stateRoot,
+        repository,
+      ).authority;
+      const lane =
+        input.resumePrompt === undefined ? undefined : composition.existingLane?.(input.ref);
+      let admission: DispatchAdmission | undefined;
+      let resumeMode: DispatchResumeMode | undefined;
+      let prefillCostAcknowledged: boolean | undefined;
+      if (lane !== undefined) {
+        const plan = planDispatchResume({
+          adapterSupportsResumeInjection: lane.adapterSupportsResumeInjection,
+          completedPhases: lane.completedPhases,
+        });
+        resumeMode = plan.mode;
+        prefillCostAcknowledged = plan.prefillCostAcknowledged;
+        const restart = admitDispatchRestart({
+          count: lane.restartCount,
+          bound: composition.restartBudget ?? 0,
+        });
+        if (!restart.admitted) {
+          admission = {
+            admitted: false,
+            code: restart.reason,
+            terminal: true,
+            escalation: restart.escalation,
+            resumeMode: plan.mode,
+          };
+        } else {
+          const economics = evaluateDispatchResumeEconomics({
+            mode: plan.mode,
+            ...(lane.prefillCost === undefined ? {} : { prefillCost: lane.prefillCost }),
+            ...(lane.uniqueProgress === undefined ? {} : { uniqueProgress: lane.uniqueProgress }),
+          });
+          admission = economics.admitted
+            ? {
+                admitted: true,
+                resumeMode: plan.mode,
+                prefillCostAcknowledged: plan.prefillCostAcknowledged,
+                restarts: lane.restartCount,
+              }
+            : { admitted: false, code: economics.code, resumeMode: plan.mode };
+        }
+      }
+      return runDispatch({
+        store: composition.store,
+        fenceToken: composition.fenceToken,
+        harness,
+        harnessKind: selected,
+        descriptor: composition.descriptor,
+        prompt: composition.prompt(input.ref),
+        ref: input.ref,
+        evidenceClass: composition.evidenceClass ?? DISPATCH_DEFAULT_EVIDENCE_CLASS,
+        repository,
+        handoverState: handover,
+        nowIso: composition.nowIso,
+        newAttemptId: () => composition.newAttemptId(input.ref),
+        newDivergenceId: () => composition.newDivergenceId(input.ref),
+        readTruth: () => composition.readTruth(input.ref),
+        claimLease: () => composition.claimLease(input.ref, repository),
+        releaseLease: (cause) => composition.releaseLease(input.ref, cause),
+        phaseLedger: composition.phaseLedger(input.ref),
+        ...(composition.restartBudget === undefined
+          ? {}
+          : { restartBudget: composition.restartBudget }),
+        ...(composition.restartCount === undefined
+          ? {}
+          : { initialRestarts: composition.restartCount(input.ref) }),
+        ...(composition.livenessIntervalMs === undefined
+          ? {}
+          : { livenessIntervalMs: composition.livenessIntervalMs }),
+        ...(composition.waitForCadence === undefined
+          ? {}
+          : { waitForCadence: composition.waitForCadence }),
+        ...(composition.ensureRestartExhaustion === undefined
+          ? {}
+          : { ensureRestartExhaustion: composition.ensureRestartExhaustion }),
+        ...(composition.resumeAmplification === undefined
+          ? {}
+          : { resumeAmplification: composition.resumeAmplification }),
+        ...(input.resumePrompt === undefined ? {} : { resumePrompt: input.resumePrompt }),
+        ...(lane === undefined ? {} : { existingHandle: lane.handle }),
+        ...(admission === undefined ? {} : { admission: () => admission }),
+        ...(resumeMode === undefined ? {} : { resumeMode }),
+        ...(prefillCostAcknowledged === undefined ? {} : { prefillCostAcknowledged }),
+      });
+    },
+  },
+  ...(composition.gate === undefined
+    ? {}
+    : createDispatchGateRuntime({
+        store: composition.store,
+        stateRoot: composition.stateRoot,
+        fenceToken: composition.fenceToken,
+        nowIso: composition.nowIso,
+        gate: composition.gate,
+      })),
+});

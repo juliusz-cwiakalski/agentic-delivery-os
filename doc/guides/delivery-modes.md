@@ -308,7 +308,7 @@ scriptable facts by burning tokens.
 | Spawn & monitor PM opencode (liveness, restart) | No | `deliver-ticket.sh` |
 | Run the ADOS 11-phase lifecycle | **Yes** | PM opencode + subagents |
 | Review PR vs spec/plan | **Yes** | `@reviewer` (inside the PM lifecycle) |
-| Approve + merge PR (Mode A) | **Yes** (authority + judgement) | `@ceo` verifies finalization with `verify change` and `phase list`, then merges through the `merge` primitive. `deliver-ticket.sh` returns `pr-open`; it does **not** merge in Mode A. `deliver-ticket.sh` and `ceo-loop.sh` remain retained primary entry points |
+| Approve + merge PR (Mode A) | **Yes** (authority + judgement) | `@ceo` verifies finalization with `verify change` and `phase list`, then merges through the `merge` primitive. `deliver-ticket.sh` returns `pr-open`; it does **not** merge in Mode A. `deliver-ticket.sh` and `ceo-loop.sh` remain retained entry points, authoritative while a repository is in `dual-run` |
 | Rebase before merge (Mode B batch) | No (happy path); **Yes** only on conflict | `deliver-ticket.sh` / `batch-deliver.sh`; AI resolves rebase conflicts, then gates re-run |
 | Wait for PR quality gates to go green after rebase | No | `deliver-ticket.sh` / `batch-deliver.sh` |
 | Branch hygiene (fetch / prune / delete merged) | No | `tools/clean-merged-branches` |
@@ -504,7 +504,7 @@ states who maintains the ledger, when, and why.
 
 ### Interim mitigations: permission denial and the JOIN warning
 
-Two bash-era rough edges have a documented recognition-and-recovery path here. Both are interim: they disappear when the typed engines replace the shell loop.
+Two bash-era rough edges have a documented recognition-and-recovery path here. The typed `dispatch` path classifies the same outcomes; the bash loop remains the installed fallback, so these recognitions stay its documented recovery path.
 
 **Headless permission denial (`noop-lane-permission`).** When the PM exits cleanly with **zero branch commits** and the per-ticket lane log carries a **headless permission auto-reject signature** (a permission request raised in an unattended session and auto-rejected by the harness), the close-out classifies the delivery as `noop-lane-permission`, exits 1, and prints "re-dispatch with a corrected prompt". Recognize it from the delivery-summary result token, and confirm the signature in the per-ticket lane log. Recover by correcting the dispatch rather than repeating it unchanged: adjust the prompt/context so the work needs no interactive permission acceptance — re-scope the task, or grant the needed permission out-of-band per operator policy — then re-dispatch the same ticket.
 

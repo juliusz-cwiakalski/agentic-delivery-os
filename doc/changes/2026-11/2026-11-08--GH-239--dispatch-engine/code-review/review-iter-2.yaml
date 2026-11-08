@@ -1,0 +1,162 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-239
+branch: feat/GH-239/dispatch-engine
+status: FAIL
+summary: >-
+  Second review after remediation of F-1..F-14. The production composition is now
+  real: `createProductionComposer` composes the evidence gate (summary/resolve/
+  handover/--revert), the resume lane + restart budget + restart count + cadence
+  timer + terminal exhaustion append, and the identity resolver with a persisted
+  first-use marker; the four requested production probes (summary, resolve,
+  handover, --revert), `--resume-prompt` resuming `--session ses-existing`, the
+  restart-budget refusal (terminal exhaustion record, zero spawns), marker-governed
+  rename invariance, and advancing-clock handover idempotency all pass through the
+  shipped CLI. The handover fold, `pr-open` comparison baseline, unreadable-vs-
+  contradicted corroboration, one-shot watch, post-spawn collect-failure envelope,
+  and declared 5,000-record truncation verify. One new high regression blocks: the
+  persisted identity marker is a single global artifact in the shared per-user
+  state store, so the first dispatch in any repository binds it and every later
+  dispatch/summary/handover in a different repository resolves to that first
+  identity (evidence mis-attribution; per-repository isolation broken), and a
+  read-only `dispatch dual-run summary --repo` also binds it. A medium watch-
+  semantics issue is also recorded. Aggregate `pnpm check` is green (6439 pass /
+  4 skip / 0 fail) but does not exercise either concern. Severity: 0 critical /
+  1 high / 1 medium / 0 low / 0 info.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 1
+  low: 0
+  info: 0
+spec_compliance: FAIL
+plan_compliance: PASS
+blocking: [F-15]
+
+verification:
+  diff_base: "main-tools...HEAD (0 behind, 52 commits ahead; 162 files, +23118/-553)"
+  remediation_commits: ["27f791b9", "aaa603a6", "00ac214b", "7e100c89", "af87f413", "c4027ee3", "edbc76af"]
+  commands_run:
+    - command: "bun test tests/structure/dispatch-composition.test.ts tests/behaviour/dispatch-watch.test.ts tests/behaviour/dispatch-idempotency.test.ts tests/behaviour/dispatch-false-success.test.ts"
+      result: "29 pass / 0 fail (222 expects). Production-composition gate+handover, resume, restart-budget, advancing-clock idempotency, TC-EVID-004 all green."
+    - command: "bun test tests/behaviour/dispatch-*.test.ts tests/structure/dispatch-*.test.ts tests/golden/dispatch-*.test.ts"
+      result: "243 pass / 0 fail across 44 files (1415 expects)."
+    - command: "bun test tests/conformance/dispatch/ tests/checks/dispatch-doc-conformance.test.ts"
+      result: "12 pass / 0 fail across 4 files."
+    - command: "bash scripts/.tests/test-dispatch-bash-fallback.sh"
+      result: "5/5 pass (dual-run on absence, 12-cell matrix deterministic)."
+    - command: "TMPDIR=\"$PWD/tmp/tmpdir\" pnpm check"
+      result: "EXIT 0 — lint, format, typecheck, 6439 pass / 4 skip / 0 fail (767 files), boundaries, prompt-conformance (5 prompts clean), help-guide coverage, exports parity all green."
+    - command: "ad-hoc production-composer probes (bun, deleted after)"
+      result: "Probe 1: fresh store + `dispatch dual-run summary --repo github.com/owner/other` left markerBefore=undefined, markerAfter={repo:github.com/owner/other}; a following `dispatch GH-900` (queued repository github.com/owner/project) recorded the attempt under github.com/owner/other. Probe 2 (shared home): `dispatch GH-903` (acme/alpha) then `dispatch GH-905` (acme/beta) recorded BOTH attempts under github.com/acme/alpha; marker=alpha. Control: with no summary and a single repo, the attempt and marker are the correct repo."
+  prior_suite_note: "green suites do not cover cross-repository identity because every production identity test shares one home and one ref (rename case only)."
+  ac_verification:
+    verified_ok:
+      - "AC-F3-1..4 resume mode/session, restart budget + terminal exhaustion + zero spawns, economics, idempotent replay (production.ts:889-931; dispatch-composition.test.ts:801-905)."
+      - "AC-F5-1..4 / AC-F6-1..6 / AC-F11-1 summary, resolve, handover, reversal through createProductionComposer (production.ts:952-990; dispatch-composition.test.ts:531-585)."
+      - "AC-F4-6/DEC-3 pr-open-unverified compares to independent pr-open with urlResolved:false (production.ts:760-770; dispatch-composition.test.ts:523-528)."
+      - "AC-F4-4 unreadable corroboration blocks without resetting the window (dispatch-comparison.ts:153-229; dispatch-false-success.test.ts TC-EVID-004 + gate assertions)."
+      - "AC-F12-1/2 + post-spawn collect failure = state-unverified/failed/exit 2, one record (dispatch.ts:552-574; dispatch-error-envelope.test.ts)."
+      - "NFR-6 advancing-clock handover replay = one record + noop (dispatch-gate.ts:200-222; dispatch-idempotency.test.ts:60-91)."
+      - "NFR-4 declared truncation above 5,000 records (dispatch-ledger.ts:151-167; dispatch-bounds.test.ts TC-NFR-004)."
+      - "NFR-2 one-shot watch cadence + verdict trail + admission routing (dispatch.ts:487-609; dispatch-watch.test.ts)."
+    failed:
+      - "AC-F6-2 / AC-F6-6 / DEC-13 per-repository isolation: a second repository in the shared store is re-keyed to the first repository's marker (F-15)."
+      - "F-1 'A corroborated terminal stall': a successfully collected session is classified max-restarts on any observed (possibly transient) stall at/above budget (F-16)."
+
+prior_findings_disposition:
+  F-1: "CLOSED — gate composed (production.ts:952-970 createDispatchGateRuntime); summary/resolve/handover run through createProductionComposer and the shipped CLI (probe 1 summary exit 0; dispatch-composition.test.ts:531-585)."
+  F-2: "CLOSED — existingLane/restartBudget/restartCount/waitForCadence/ensureRestartExhaustion composed (production.ts:889-931); --resume-prompt passes --session ses-existing with resumeMode attach-continue, and restart refusal writes the terminal exhaustion record with zero spawns (dispatch-composition.test.ts:801-905)."
+  F-3: "CLOSED for the reported gap — resolveDispatchIdentity + persisted marker now wired (production.ts:465-479); rename/remote-change invariance proven (dispatch-composition.test.ts:907-970). However the fix introduced a new cross-repository regression (F-15)."
+  F-4: "CLOSED — handover folds authority before appending (dispatch-gate.ts:200-222); advancing-clock replay appends exactly one record and reports noop (dispatch-idempotency.test.ts:60-91)."
+  F-5: "CLOSED — trackerTokenOf returns pr-open for any open PR and urlResolved is the comparison attribute (production.ts:760-770); production test asserts token pr-open, urlResolved false, falseSuccess false (dispatch-composition.test.ts:523-528)."
+  F-6: "CLOSED — explicit unreadable corroboration marker; only a readable contradiction is a false-success incident (dispatch-comparison.ts:153-229); TC-EVID-004 merged+unreadable-CI => falseSuccess false, corroboration unsatisfied, window not reset (dispatch-false-success.test.ts)."
+  F-7: "CLOSED — one-shot watcher polls harness.liveness at lane.liveness-interval while collect is pending, carries previous readings, records liveness:* evidence, and routes a stall through restart admission (dispatch.ts:487-609; dispatch-watch.test.ts 3 tests). Note F-16 on transient-vs-terminal semantics."
+  F-8: "CLOSED (dispositioned) — AC-F10-1 re-scoped to seam-level proof; production daemon entry explicitly assigned to GH-238 in spec/plan/pm-notes and feature-resident-daemon/feature-harness-adapters (spec:451, feature-dispatch-engine.md)."
+  F-9: "CLOSED — post-spawn harness.collect failure records state-unverified/failed at exit 2 with harness:collect-failed (dispatch.ts:552-574; dispatch-error-envelope.test.ts)."
+  F-10: "CLOSED — DM-5, feature-result-contract, and feature-dispatch-engine document the data-bearing attempt-stage failure; spawn refusal documented as no nested error identity."
+  F-11: "CLOSED (accepted alternative) — NFR-4 now declares the delivered JSONL read as the bound and the newest-5,000 retained fold with omittedRecords; >5,000-record test proves the declaration (dispatch-bounds.test.ts TC-NFR-004)."
+  F-12: "CLOSED — production-composition suite injects repositoryFacts instead of reading the checkout origin (dispatch-composition.test.ts header + createProductionHarness)."
+  F-13: "CLOSED — plan phase 4 owns dispatch-watch, phase 6 owns the gate/evidence suites, phase 10 tests list names them, the four bookkeeping files are in phase-10 scope.files, phase 1 carries the TC-HELP-003 slice, and the header cross-phase note is updated."
+  F-14: "OPEN (info, non-blocking) — remediation commits still use the primitive's auto-generated `docs(GH-239): update <path>` subjects; auditability note only."
+
+findings:
+  - id: F-15
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/cli/src/production.ts:465-479
+    message: >-
+      The persisted first-use identity marker is a single global artifact
+      (`DISPATCH_IDENTITY_MARKER_NAME = "dispatch-identity.json"`,
+      contracts/dispatch.ts:39) in the shared per-user state store
+      (`stateDirectory = ${homeDirectory}/${brand.stateDirectoryName}`, production.ts:224).
+      `resolveProductionRepository` reads the marker first and writes it on every
+      resolution, so the first dispatch in any repository binds the store to that
+      identity and every later dispatch/summary/handover for a different repository
+      in the same HOME resolves to the first identity. Probes through
+      `createProductionComposer`: `dispatch GH-903` (acme/alpha) then `dispatch
+      GH-905` (acme/beta) recorded BOTH attempts under `github.com/acme/alpha`; and a
+      read-only `dispatch dual-run summary --repo github.com/owner/other` bound the
+      marker before any dispatch, after which `dispatch GH-900` (queued
+      `github.com/owner/project`) recorded under `github.com/owner/other`. This
+      breaks DEC-13 / AC-F6-2 / AC-F6-6 per-repository isolation (evidence and
+      authority are attributed to the wrong repository), and the green suites miss
+      it because every production identity test shares one home and one ref (rename
+      only).
+    suggestion: >-
+      Scope the identity binding per repository/checkout so one repository can never
+      re-key another (for example key the marker by a repository/checkout discriminator,
+      or consult and persist it only as a fallback for the checkout's own facts), and
+      do not persist the marker from read-only gate commands using an arbitrary
+      `--repo` argument. Reconcile the spec identity paragraph with per-repository
+      isolation, and add a two-repository production-composition test asserting each
+      repository records and summarizes only its own evidence.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-16
+    severity: medium
+    confidence: medium
+    category: correctness
+    location: packages/core/src/app/dispatch.ts:577-609
+    message: >-
+      The one-shot watcher sets `stalled` on any two consecutive no-advance sourced
+      readings and never clears it on later progress; after `collect` resolves
+      successfully, `if (stalled)` still routes to restart admission and, at or above
+      `lane.restart-budget`, returns the `max-restarts`/failed refusal and discards
+      the successful collected evidence. A transient mid-run stall therefore turns a
+      completed session into a restart-budget refusal. This deviates from the
+      remediated F-1 wording ("a corroborated *terminal* stall") and is codified by
+      the new test, which feeds `COMPLETED_EVIDENCE` yet expects `max-restarts`
+      (dispatch-watch.test.ts:59-84). Reachable for a plain `dispatch` whose persisted
+      restart count already equals the budget (initialRestarts = restartCount).
+    suggestion: >-
+      Treat a stall as terminal only when it accompanies a failed/timed-out
+      collection (or abort/stop the session on a corroborated stall), and otherwise
+      record the transient stall as liveness evidence while classifying the collected
+      evidence normally. Update the dispatch-watch test to assert a completed session
+      is not reclassified `max-restarts` solely from an observed transient stall.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+accepted_residuals:
+  - "TDR-0015 remains `Proposed`; owner acceptance at PR review is a merge gate (DEC-20), not a code defect."
+  - "No real repository is flipped and no real pilot evidence is accrued; the controlled proof is the PR-scope instrument (NG-1/NG-9)."
+  - "The daemon production entry that supplies the lane composition stays GH-238 scope; GH-239 proves the seam and the daemon-path attempt producer (F-8 disposition)."
+  - "The `data.error` nesting on attempt-stage failures is a documented, type-safe extension of the result envelope; DM-5 and feature-result-contract now state it."
+  - "Evidence retention/compaction, cross-host authority, and real-provider latency remain out of scope (NG-6/NG-11)."
+  - "The forbidden-literals registry additions (feature-dispatch-engine.md, test-spec-dispatch-engine.md) and the executable-allowance additions are bookkeeping required by the doc/conformance scans; they weaken no behaviour test."
+
+reviewed_at: 2026-11-08T16:50:00Z
+next_step: >-
+  CALL_CODER. F-1, F-2, F-4..F-13 are closed and the production composer now runs
+  the advertised surfaces. The block is F-15: scope the persisted identity marker
+  per repository/checkout and stop binding it from arbitrary `--repo` gate reads,
+  then add a two-repository production-composition test. Also fix F-16 (terminal vs
+  transient stall) so a successfully collected session is not reclassified
+  `max-restarts`. F-14 stays informational. Status stays FAIL until F-15 is fixed and
+  proven through `createProductionComposer` with two repositories in one store.

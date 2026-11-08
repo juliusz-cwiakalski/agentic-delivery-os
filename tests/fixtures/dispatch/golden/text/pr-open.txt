@@ -1,0 +1,4 @@
+result=pr-open
+pr_url=https://example.test/owner/repo/pull/1
+exit_code=0
+last_message=the pull request is open and awaits the coordinator's merge decision

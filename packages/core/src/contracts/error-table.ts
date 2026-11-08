@@ -1153,6 +1153,28 @@ export const ERROR_TABLE = [
     summary: "The resume path would re-pay prefill and is uneconomical.",
   },
   {
+    code: "dispatch.session.spawn-failed",
+    domainKind: "dispatch",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Inspect the harness selection and execution environment, then retry the dispatch; no session was created and the attempt stays recorded.",
+    projectionClass: "user-validation",
+    summary: "The harness or process failed before a session existed.",
+  },
+  {
+    code: "dispatch.state-unverified",
+    domainKind: "dispatch",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair the named unreadable ledger, tracker, artifact, or state read and re-run the dispatch; a verdict requires readable truth.",
+    projectionClass: "platform-provider",
+    summary: "Dispatch truth could not be read, so no verdict was derived.",
+  },
+  {
     code: "queue.dependency-cycle",
     domainKind: "queue",
     category: "user",

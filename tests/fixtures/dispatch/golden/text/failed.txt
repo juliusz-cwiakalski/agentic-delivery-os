@@ -1,0 +1,4 @@
+result=failed
+pr_url=
+exit_code=1
+last_message=the session exited 0 with no branch commit, no pull request, and no ledger progress

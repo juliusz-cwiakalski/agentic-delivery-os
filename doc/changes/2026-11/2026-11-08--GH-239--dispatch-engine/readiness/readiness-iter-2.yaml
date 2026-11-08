@@ -1,0 +1,342 @@
+schema: readiness-review.v1
+iteration: 2
+verdict: NOT_READY
+workItemRef: GH-239
+date: 2026-11-08
+pause_required: false
+gate: dor_check
+authority: .opencode/agent/readiness-reviewer.md
+artifact_set:
+  spec: chg-GH-239-spec.md
+  test_plan: chg-GH-239-test-plan.md
+  plan: chg-GH-239-plan.yaml
+  pm_notes: chg-GH-239-pm-notes.yaml
+  ticket: "GH-239 (GitHub issue 239, juliusz-cwiakalski/agentic-delivery-os)"
+  canonical_scope: "doc/planning/oss-tooling/backlog.md#M1-S9 (as amended by GH-266)"
+  decision_record: doc/decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md
+verdict_basis: >-
+  NOT_READY. Iteration-1 findings F1-F9 and F11-F16 are CLOSED and F10 is
+  PARTIALLY CLOSED. A new major plan-coverage defect remains: the plan assigns
+  behaviour-level test cases that require the phase-4 one-shot dispatch command,
+  the phase-6 summary/gate, and the phase-8 bash fallback to phase 2 and phase 3,
+  so those phases cannot be independently green as the plan claims. The plan also
+  contradicts its own TC ownership statement by placing TC-EVID-002 in phase 6
+  while the header assigns it to phase 3. Minor residual issues remain in the
+  phase-1 count invariants, a phase-1/7 duplicate inversion claim, and an
+  unpinned result token for three classified failure identities. The core
+  iteration-1 root causes (unreachable gate, uncountable controlled-proof
+  evidence, undefined window/identity/comparison semantics) are resolved and
+  TDR-0015 is Proposed with owner acceptance at PR review.
+
+facets:
+  spec_completeness: PASS
+  ac_quality: PASS
+  plan_coverage: FAIL
+  test_traceability: PASS
+  cross_artifact_consistency: FAIL
+  decision_capture: PASS
+  system_spec_consistency: PASS
+  plan_doc_update_coverage: PASS
+  plan_code_area_coverage: PASS
+  dod_defined: PASS
+
+counts:
+  critical: 0
+  major: 1
+  minor: 3
+  nit: 2
+
+iteration_1_dispositions:
+  - id: F1
+    status: CLOSED
+    evidence: >-
+      spec §5.1 F-4 (record-level degradation: non-success token counts for
+      coverage, uncorroborated success fails corroboration without a divergence
+      or window reset), AC-F4-4, AC-F5-2, AC-F5-5, Appendix B items 1-2,
+      Glossary "Counted dispatch"; test plan TC-TRUTH-003 (pr-open-unverified
+      corroborated by tracker fact), TC-TRUTH-006 (record vs window split),
+      TC-GATE-007 (positive all-eleven eligibility). TDR-0015 §1 resolves the
+      same root.
+  - id: F2
+    status: CLOSED
+    evidence: >-
+      spec F-4/DM-1/EVT-1 add declared evidenceClass (pilot/controlled-proof/
+      smoke/fixture), AC-F4-5, AC-F8-3, F-5 counting rule, Appendix B evidence
+      scoping; test plan TC-EVID-006, TC-GATE-011, TC-E2E-001; plan phase 10
+      declares controlled-proof and a provenance guard; TDR-0015 §2.
+  - id: F3
+    status: CLOSED
+    evidence: >-
+      spec DEC-10 and Appendix B define the incident lower bound as exclusive;
+      AC-F5-6 pins same-instant exclusion and post-incident recovery; test plan
+      TC-GATE-009 and TC-EVID-003 assert > semantics and recovery; TDR-0015 §3.
+  - id: F4
+    status: CLOSED
+    evidence: >-
+      spec AC-F4-1 now scopes the record to "any dispatch that reaches
+      classification" and exempts pre-session refusals; DEC-19 and Appendix E D6
+      record the policy; test plan §1.2, OQ-T2 marked Resolved, TC-DISP-002
+      asserts deterministic zero records for all three refusal shapes, and
+      TC-EVID-001 restricts its fixtures to post-spawn refusals.
+  - id: F5
+    status: CLOSED
+    evidence: >-
+      spec §17.1 DoD bullet now permits only the two documented error rows in
+      doc/spec/features/feature-result-contract.md and assigns the rest to
+      system_spec_update; §7.2 and §16 aligned; test plan §1.2 aligned; plan
+      header and phase 1 scope name the same single doc/spec touch.
+  - id: F6
+    status: CLOSED
+    evidence: >-
+      plan phase 9 now names packages/core/src/app/daemon-dispatch-result.ts and
+      recordDaemonDispatchResult(...), invoked from daemon-compose.ts through an
+      additive collection seam, with one attempt record per daemon attempt;
+      test plan TC-DAEMON-002 compares final token, outcome, comparison record,
+      and attempt record against one-shot dispatch; test plan §7.4 entry
+      criterion requires the phase-9 producer.
+  - id: F7
+    status: CLOSED
+    evidence: >-
+      spec §2.1, F-11, AC-F11-3, DEC-4, RSK-12 now treat pilot-isolation as a
+      reduced test-only fixture that stays reduced; only its stale comment is
+      narrowed. Test plan §1.4 row 12 and TC-HELP-003 match; plan phase 7 note
+      matches. Verified in tests/conformance/pilot/pilot-isolation.test.ts
+      (reduced command list and non-import of production/entrypoint).
+  - id: F8
+    status: CLOSED
+    evidence: >-
+      spec DEC-13 and §12 replace the path digest with the normalized repository
+      key, normalized VCS remote, then a persisted first-use store-managed marker
+      or a clean refusal; AC-F6-6 pins rename/remote/restart stability and
+      refusal; test plan TC-HAND-007 asserts rename-invariant binding, marker
+      reuse, and rejection of a path digest; TDR-0015 §6. normalizeRepositoryKey
+      and ensureStoreArtifact exist in the delivered code.
+  - id: F9
+    status: CLOSED
+    evidence: >-
+      doc/decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md
+      exists with status Proposed and owns evidence-class counting, the
+      incident-exclusive window, floor, comparison shape, repository identity,
+      and reversal idempotency; spec DEC-20 and §5/§22 reference it; plan phase 1
+      scope includes the TDR file and doc/decisions index/register; the record is
+      registered in 00-index.md and 00-register.md as Proposed.
+  - id: F10
+    status: PARTIALLY CLOSED
+    evidence: >-
+      plan phase 1 now names the four toHaveLength(113) assertions, the
+      "113 identities" phrase, DISPATCH_ROWS growing to four, the dispatch-kind
+      toHaveLength(2) -> 4 assertion, the tests/checks/error-table-sync.test.ts
+      dispatch:2 -> 4 expectation, and the documented-spec prose/frontmatter
+      edits. It still omits two count/validity invariants in the same phase's
+      owned test file: RESERVED_TWO_SEGMENT_CODES must gain
+      dispatch.state-unverified (two-segment code) and its
+      toHaveLength(35) -> 36 assertion (tests/structure/error-table.test.ts:1374),
+      and the spend test's delivered toHaveLength(112) -> 114 assertion
+      (tests/structure/error-table.test.ts:1761). Both fail when the table grows
+      to 115. See N2.
+  - id: F11
+    status: CLOSED
+    evidence: >-
+      spec DEC-3 and AC-F4-6 define the one comparison record shape; Appendix B
+      item 4 makes pr-open-unverified a tracker-truth match with urlResolved:
+      false and no divergence, and dispatch-session tokens not-applicable and
+      exposure-only; test plan TC-GATE-008 and TC-EVID-007 assert the exact
+      records; TDR-0015 §5.
+  - id: F12
+    status: CLOSED
+    evidence: >-
+      spec AC-F8-1 and F-8 now say "real state store and command path with
+      injected external harness, tracker, CI, and VCS ports"; test plan
+      TC-E2E-001/TC-E2E-003 and plan phase 10 use the same boundary.
+  - id: F13
+    status: CLOSED
+    evidence: >-
+      spec AC-F5-4 pins unreadable/torn/malformed -> exit 2, truncated valid ->
+      exit 0 with a false/unverifiable verdict, unresolvable identity -> exit 1;
+      test plan TC-GATE-006 and TC-NFR-004 pin the same; spec §17.1 DoD bullet
+      repeats the pinned exits.
+  - id: F14
+    status: CLOSED
+    evidence: >-
+      spec §2.1, DEC-8, and Appendix D record that the ticket's "preserved
+      exactly" is read against the canonical four-key M1 dispatch contract
+      (contracts.md §dispatch) and that closeout_unverified is bash-internal.
+  - id: F15
+    status: CLOSED
+    evidence: >-
+      plan header "Cross-phase file ownership" now lists packages/core/src/index.ts,
+      packages/core/src/domain/index.ts, packages/core/src/app/index.ts, and the
+      inventory manifests with the additive-extend rule.
+  - id: F16
+    status: CLOSED
+    evidence: >-
+      test plan §8.3 OQ-T2 is marked Resolved with DEC-19/D6; TC-DISP-002 asserts
+      the no-record policy deterministically; the traceability matrix is
+      complete (53/53 ACs, 82 TCs, SC-M1-26..30 mapped).
+
+findings:
+  - id: N1
+    severity: major
+    facet: plan_coverage
+    artifact: >-
+      chg-GH-239-plan.yaml header (phase ownership and "independently green"),
+      phase 2 scope/tests, phase 3 scope/tests, phase 6 scope/tests;
+      chg-GH-239-test-plan.md TC-TRUTH-001..006, TC-EVID-001..005, TC-EVID-002,
+      TC-EVID-007
+    gap: >-
+      The plan claims each phase is independently green, but phase 2 owns
+      behaviour-level TCs that require later phases. TC-TRUTH-001..005 each
+      invoke `dispatch <ref>` (test plan steps at lines 709, 737, 767, 801, 829),
+      but dispatch is the phase-4 command; phase 2 implements only
+      dispatch-result.ts and dispatch-liveness.ts. TC-TRUTH-006 (phase 2) runs the
+      summary, evaluates the gate, and invokes a bash entry point (steps 4-6),
+      which are phase 6 and phase 8 surfaces. Phase 3 similarly owns
+      TC-EVID-003 and TC-EVID-004 (behaviour: dispatch + summary + gate) and
+      TC-EVID-007 step 5 (summary/handover parity), none of which exist until
+      phase 4/6. In addition, the header assigns TC-EVID-001..007 to phase 3, but
+      the TC-EVID-002 file tests/behaviour/dispatch-divergence.test.ts is scoped
+      and run in phase 6, not phase 3. The plan's own test-harness note says the
+      command/output/record assertions bind "from phase 4", which contradicts
+      running those files in phases 2-3. The per-phase TC counts (phase 2: 12,
+      phase 3: 8) are therefore also inaccurate.
+    remediation_target: delivery_planning
+    fix: >-
+      Rebalance phase ownership and test commands: split the scenarios so
+      phases 2-3 keep only pure-domain/ledger-level assertions and move the
+      behaviour-level parts of TC-TRUTH-001..006 and TC-EVID-001..005/007 to the
+      phase that owns the dispatch command (phase 4) and the summary/gate/
+      handover (phase 6), or reorder the phases so those surfaces exist before
+      the behaviour TCs run. Reconcile the header TC ownership (including
+      TC-EVID-002) and the per-phase counts with @test-plan-writer.
+
+  - id: N2
+    severity: minor
+    facet: plan_code_area_coverage
+    artifact: >-
+      chg-GH-239-plan.yaml phase 1 summary; tests/structure/error-table.test.ts
+      lines 1374 and 1761
+    gap: >-
+      F10 remains partially closed. Phase 1 names the 113-count and dispatch-row
+      invariants but not the RESERVED_TWO_SEGMENT_CODES update (adding
+      dispatch.state-unverified, which is a two-segment code that fails
+      CODE_PATTERN unless reserved) and its toHaveLength(35) -> 36 assertion, nor
+      the spend test's delivered toHaveLength(112) -> 114 assertion. Both files
+      are in phase 1 scope and both fail when the table grows to 115, so the
+      phase-1 claim to change "every count and row invariant" is false.
+    remediation_target: delivery_planning
+    fix: >-
+      Add the reserved-set entry and both assertions to the phase-1 summary and
+      test plan, or explicitly require the phase to update every count/validity
+      invariant in tests/structure/error-table.test.ts.
+
+  - id: N3
+    severity: minor
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-239-plan.yaml phase 1 scope (tests/structure/harness-review-deferrals.test.ts)
+      and phase 7 scope; header cross-phase ownership note
+    gap: >-
+      Phase 1 and phase 7 both claim to invert the same harness-review-deferrals
+      production-absence assertion, and the test file is not listed in the
+      cross-phase ownership declaration. Phase 1 must invert it because it adds
+      the dispatch.session.spawn-failed row, so phase 7's claim is redundant and
+      the ownership is ambiguous.
+    remediation_target: delivery_planning
+    fix: >-
+      Assign the harness-review-deferrals inversion to exactly one phase (phase
+      1) and list the file in the cross-phase ownership note; remove the
+      duplicate claim from phase 7 or narrow phase 7 to the entrypoint
+      composition assertion.
+
+  - id: N4
+    severity: minor
+    facet: spec_completeness
+    artifact: >-
+      chg-GH-239-spec.md F-4/AC-F4-1, AC-F1-4, F-12; chg-GH-239-test-plan.md
+      TC-EVID-001, TC-ERR-001, TC-DISP-009
+    gap: >-
+      The result token for three classified failure identities is not declared:
+      dispatch.session.spawn-failed, dispatch.restart-budget-exceeded, and
+      dispatch.resume-uneconomical. F-4/AC-F4-1 require every attempt record to
+      carry "engine outcome and token"; TC-EVID-001 expects the restart-budget and
+      resume-economics refusals to append a record carrying a token; TC-ERR-001
+      leaves the spawn-failure record policy as "if any". The spec does not pin
+      which of the eleven tokens these refusals emit, whether a spawn failure
+      appends a record, or the comparison family for those tokens.
+    remediation_target: specification
+    fix: >-
+      Declare the result token and comparison treatment for each of the three
+      failure identities, and state explicitly whether dispatch.session.spawn-failed
+      appends an attempt record or is a pre-session refusal under DEC-19. Align
+      TC-EVID-001 and TC-ERR-001.
+
+  - id: N5
+    severity: nit
+    facet: plan_coverage
+    artifact: chg-GH-239-plan.yaml phase 2 summary
+    gap: >-
+      Phase 2 calls noop-lane-permission a "pre-session harness refusal", while
+      the glossary reserves "Pre-session refusal" for the three DEC-19 cases that
+      append no record. The phrase risks conflating spawn-refused (a recorded,
+      classified token) with the unrecorded DEC-19 refusals.
+    remediation_target: delivery_planning
+    fix: >-
+      Reword phase 2 to "a harness refusal before a session exists
+      (spawn-refused)" and keep "pre-session refusal" for the DEC-19 envelope-only
+      cases.
+
+  - id: N6
+    severity: nit
+    facet: spec_completeness
+    artifact: chg-GH-239-spec.md §23 Glossary "Counted dispatch"
+    gap: >-
+      The glossary requires a counted dispatch's "comparison record and
+      corroboration tri-state [to be] complete", while F-4/AC-F4-4 and TDR-0015 §1
+      explicitly count unevaluable non-success records (for example
+      state-unverified) for coverage. "Complete" should mean the fields are
+      present with an explicit unknown/not-applicable marker, not fully satisfied.
+    remediation_target: specification
+    fix: >-
+      Clarify the glossary (and DM-6 wording) that "complete" means present with
+      an explicit value, and that an unevaluable non-success record remains
+      counted for exposure.
+
+verification_notes:
+  plan_schema: >-
+    chg-GH-239-plan.yaml parses and passes validatePlanValue with zero errors
+    (schemaVersion delivery.plan.v1, tier full, phases 1-10, per-phase
+    scope/interactions). Verified with the repository's plan validator.
+  counts_and_traceability:
+    ac_count: "53/53 spec ACs (AC-F1-1..AC-NFR9-1) present; test plan and plan both state 53."
+    tc_count: "82 TCs (12 DISP, 6 TRUTH, 4 RESUME, 7 EVID, 11 GATE, 7 HAND, 5 BASH, 3 E2E, 4 MERGE, 3 DAEMON, 3 HELP, 1 PLANREC, 5 ERR, 2 TOKEN, 7 NFR, 1 DET, 1 REG); 76 must-pass, 6 nice-to-have."
+    ac_to_tc: "All 53 ACs map to at least one TC; zero orphan TCs by the test plan matrix."
+    seeded_scenarios: "SC-M1-26..30 are mapped to TCs and ACs; SC-M1-29/30 are reconciled to the evidence bar."
+    ticket_trace: >-
+      All seven ticket acceptance criteria and the pinned decisions (token
+      parity, merged-as-detection, no merge, exit-0-with-no-artifact, per-repo
+      reversible handover, four-key summary) map to spec ACs, TCs, and phases;
+      the ticket's stale two-week wording is traced to DEC-1/D1 and the amended
+      backlog M1-S9.
+  delivered_infrastructure_checked:
+    - "ERROR_TABLE has exactly dispatch.restart-budget-exceeded and dispatch.resume-uneconomical; dispatch.session.spawn-failed and dispatch.state-unverified are absent as the spec states."
+    - "The documented spec feature-result-contract.md has the two dispatch economics rows, the 113-identity prose, and the 'not yet declared (M1-S9)' sentence phase 1 targets."
+    - "tests/structure/error-table.test.ts has four toHaveLength(113) assertions, one toContain('113 identities'), one delivered toHaveLength(112), and RESERVED_TWO_SEGMENT_CODES with toHaveLength(35)."
+    - "tests/checks/error-table-sync.test.ts has the live dispatch: 2 kind count."
+    - "LaneLaunchPlanner, LaneLaunchRequest, LaneLaunchPlan, LaneExecutorPort, and createLaneExecutor exist; DaemonLaneRecord carries classification but no delivery token."
+    - "runSupervisionCycle and daemon-compose.ts exist; daemon-dispatch-result.ts does not yet exist (planned phase 9)."
+    - "normalizeRepositoryKey (host/owner/name) and ensureStoreArtifact exist."
+    - "lane.restart-budget and lane.liveness-interval exist in the config/economics contracts."
+    - "tests/conformance/pilot/pilot-isolation.test.ts asserts a reduced test-only command list and non-import of production/entrypoint; tests/structure/harness-review-deferrals.test.ts asserts no dispatch surface/spawn-failure row; tests/behaviour/entrypoint-composition.test.ts asserts dispatch absent."
+    - "doc/decisions/TDR-0015 has status Proposed, is listed in 00-index.md and 00-register.md as Proposed, and is in plan phase 1 scope."
+  forbidden_edits: >-
+    No plan phase edits the GH-239 ticket body, backlog-ranking.md, roadmap.md,
+    cli-command-registry.md, milestone journeys, user journeys, or the dated
+    operator record. Phase 7 edits only the story-owned commands/dispatch.md and
+    SC-M1-29/SC-M1-30 in test-scenarios.md. The only doc/spec touch is
+    doc/spec/features/feature-result-contract.md (phase 1), mechanically required
+    by the two-way error-table sync. This pass made no changes to spec, test
+    plan, or plan.
+  decision_routing:
+    change: "N2, N3, N4, N5 (minor/nit wording and plan/test-plan alignment) stay in change docs."
+    system: "No new system decision required; TDR-0015 already owns the gate semantics and remains Proposed."
+    needs_human_input: "none recorded; no pause flag."

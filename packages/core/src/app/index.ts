@@ -149,3 +149,45 @@ export {
   type SupervisorResult,
   uninstallSupervisor,
 } from "./daemon-supervisor.js";
+
+export {
+  appendDispatchAttempt,
+  appendDispatchDivergence,
+  appendDispatchHandover,
+  foldDispatchDivergences,
+  isEvidenceClass,
+  readDispatchAttempts,
+  readDispatchDivergences,
+  readDispatchHandover,
+  resolveDispatchDivergence,
+  summarizeDispatchDivergences,
+  writeDispatchAuthority,
+  type DispatchAppendResult,
+  type DispatchDivergenceSummary,
+  type DispatchLedgerRead,
+} from "./dispatch-ledger.js";
+export {
+  boundLastMessage,
+  runDispatch,
+  type DispatchAdmission,
+  type DispatchLeaseClaim,
+  type DispatchPorts,
+  type DispatchRunResult,
+  type DispatchTruthReads,
+} from "./dispatch.js";
+export {
+  handoverDispatchEvidence,
+  readDispatchGate,
+  resolveDispatchDivergenceEvidence,
+  revertDispatchHandoverEvidence,
+  summarizeDispatchEvidence,
+  type DispatchGateRead,
+  type DispatchHandoverResult,
+  type DispatchSummaryResult,
+} from "./dispatch-gate.js";
+export {
+  daemonAttemptId,
+  recordDaemonDispatchResult,
+  type DaemonDispatchResultInput,
+  type DaemonDispatchResultOutcome,
+} from "./daemon-dispatch-result.js";

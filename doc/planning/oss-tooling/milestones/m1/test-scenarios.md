@@ -305,23 +305,34 @@ cost acknowledged; the lane continues from its ledger position.
 Assert: mode recorded; phases before the block are not re-executed.
 
 ### SC-M1-29: handover flips one repository (M1-S9)
-Given: repo-alpha's clean window met (two weeks, zero false-success,
-zero unresolved divergences); repo-beta's not.
-When: handover runs
-Then: repo-alpha flips to engine-authoritative (recorded, reversible)
-with bash fallback notices; repo-beta does not flip and names its
-remaining window.
-Assert: per-repo isolation of the flip; bash entry points still execute
-for repo-beta.
+Given: repo-alpha meets the evidence-based bar in its evaluated window
+(zero false-success incidents, zero unresolved divergences, all eleven
+delivery-result classes exercised as exposure, the floor of 20 counted
+dispatches or 7 consecutive UTC dates with at least one counted dispatch
+met, and every success claim corroborated by completed pm-notes phases,
+tracker state, and CI on the pushed head); repo-beta does not.
+When: `<binary> dispatch handover repo-alpha` runs
+Then: repo-alpha flips to engine-authoritative (recorded and reversible
+with `<binary> dispatch handover repo-alpha --revert`); repo-beta does
+not flip and names every unmet condition.
+Assert: per-repo isolation of the flip; the derived authority view is
+readable without the typed CLI; bash entry points still execute for
+repo-beta; `--revert` restores dual-run and preserves history.
 
 ### SC-M1-30: dual-run summary counts evidence (M1-S9)
-Given: fourteen days of dual-run evidence with two reported divergences,
-both resolved.
+Given: dual-run evidence with two reported divergences, both resolved.
 When: `<binary> dispatch dual-run summary --repo <repo>`
-Then: the summary counts days, deliveries, incidents (zero
-false-success), divergences (two, resolved), and states eligibility.
-Assert: eligibility logic = clean window met; unresolved divergence
-blocks eligibility.
+Then: the summary reports the window start and reason, the day count,
+counted deliveries, counted evidence class and cross-class exclusions,
+false-success incidents, divergences (reported, resolved, unresolved,
+identifiers), all eleven classes as exposure with missing classes named,
+corroboration of success claims, the floor-only marker, and the
+eligibility verdict.
+Assert: eligibility requires zero false-success incidents, zero
+unresolved divergences, all eleven classes, the floor of 20 counted
+dispatches or 7 consecutive UTC dates, and corroborated success claims;
+an unresolved divergence blocks eligibility and the floor never
+substitutes for the other conditions.
 
 ## Coverage map
 

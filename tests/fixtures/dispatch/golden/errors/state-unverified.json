@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-fixed",
+  "exitCode": 2,
+  "timing": {
+    "totalMs": 0
+  },
+  "data": {
+    "result": "state-unverified",
+    "prUrl": "",
+    "phaseLedger": {
+      "completed": 3,
+      "total": 9,
+      "variant": "full"
+    },
+    "restarts": 0,
+    "resumeAmplification": "none",
+    "harness": "opencode",
+    "handoverState": "dual-run",
+    "outcome": "failed",
+    "error": {
+      "code": "dispatch.state-unverified",
+      "category": "platform",
+      "retryable": false,
+      "consequence": "not_landed",
+      "remediationHint": "Repair the named unreadable read and re-run the dispatch; a verdict requires readable truth.",
+      "summary": "truth read unreadable (tracker.read-unreadable)"
+    },
+    "lastMessage": "truth read unreadable (tracker.read-unreadable)"
+  }
+}

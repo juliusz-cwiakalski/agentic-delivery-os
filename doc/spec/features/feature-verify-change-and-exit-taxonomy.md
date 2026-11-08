@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-VERIFY-CHANGE-AND-EXIT-TAXONOMY
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "The `verify` command family: ledger-only `verify change` verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, the verify.gates.* and verify.deploy.* rows of the sibling verify surfaces, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
 links:
-  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225", "GH-233", "GH-235"]
+  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225", "GH-233", "GH-235", "GH-239"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
@@ -115,6 +115,8 @@ The eleven tokens are the bash-era delivery summary vocabulary, adopted verbatim
 | `noop-lane-nothing-to-do` | Nothing was attempted in the lane | Reserved: tracker/dispatch evidence | none | `success` | `0` |
 
 Pinned derivation mapping: `verify` derives `finished`, `partial`, `failed`, and `state-unverified`; `tracker-pr` derives `merged`, `blocked`, `pr-open`, and `pr-open-unverified`; `dispatch-session` derives `max-restarts`, `noop-lane-permission`, and `noop-lane-nothing-to-do`. Reserving a token never makes it reachable, so a tracker-derived success cannot leak into a ledger-only verdict. The session lifecycle economics restart budget is a separate classified refusal (`dispatch.restart-budget-exceeded`), not this token; `max-restarts` is derived by a dispatch/session bound such as a harness timeout.
+
+For a dispatch comparison, the independent tracker baseline for an open request is `pr-open` whether or not its concrete URL resolved. An open request whose URL cannot be resolved is the dispatch result token `pr-open-unverified`, and the comparison carries `urlResolved: false` as an attribute. URL resolution never changes the compared token, so it never creates a divergence.
 
 At the adapter/port boundary, the harness-neutral classifier projects its closed outcomes onto existing taxonomy rows: a spawn refusal projects `noop-lane-permission`, a timeout projects `max-restarts`, completion projects `finished` (or `partial` on a tool failure), premature end projects `partial`, and a failure projects `failed`. These are the shared taxonomy tokens; there is no dispatch-session-class completion token. The projection is lossy on the token alone: premature end and a completed run with a reported tool failure both project `partial`, so the harness outcome field is authoritative for disambiguation. From the harness path, `noop-lane-permission` means the spawn was refused before a session existed, not a lane-permission policy verdict. The mapping is declared once in the harness contracts and the derivation class is read from this taxonomy; adapters normalize evidence and never classify. The harness surface is described in [Harness Adapters](feature-harness-adapters.md).
 
@@ -302,6 +304,7 @@ The success envelope's structured tuple and the failure summary are the observab
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for verified reads, tear detection, evidence classes, and the append-only ledger substrate.
 - **Depends on** [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) for package tiers and runtime-API confinement.
 - **Consumed by** lifecycle finalization, dual-run evidence, the verify-gates lifecycle gate, and later verify surfaces that interpret the result token or the structured `VerifyLedgerEvaluation`.
+- **Consumed by** the dispatch engine ([Dispatch Engine](feature-dispatch-engine.md)) for the eleven-token vocabulary and the verify-change ledger outcome used as the independent comparison baseline for verify-family dispatch attempts.
 - **Risk — stale declaration masks a reopen:** registry evidence overrides the declaration for every mentioned phase, so a hand edit cannot manufacture a false `finished`.
 - **Risk — declaration-only changes read as incomplete:** absent registry evidence is no evidence, so a change that never used the write path still verifies from its declaration.
 - **Risk — numeric dual-run comparison:** `state-unverified` exits `2` where bash exits `1`; the divergence is declared by TDR-0005, and dual-run consumers compare tokens, not digits.
@@ -325,6 +328,7 @@ See also:
 - [PM-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md) — schema, variants, lint identities, registry and fold.
 - [State layer](feature-state-layer.md) — verified reads, fences, torn-state detection, and derived documents.
 - [Harness adapters](feature-harness-adapters.md) — the harness-neutral classifier that projects onto the `verify` and `dispatch-session` taxonomy rows at the adapter/port boundary.
+- [Dispatch engine](feature-dispatch-engine.md) — the per-ticket consumer that compares verify-family attempts against this surface's ledger outcome.
 - [Session lifecycle economics](feature-session-lifecycle-economics.md) — the restart-budget refusal identity and the economics outcome/identity/exit matrix, distinct from the `max-restarts` token.
 - [Monorepo scaffold and toolchain](feature-monorepo-scaffold-toolchain.md) — package tiers, boundary matrices, and the aggregate check.
 - [Change lifecycle guide](../../guides/change-lifecycle.md) — canonical eleven phases and the variant rule.

@@ -38,3 +38,4 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0012](TDR-0012-blockers-credential-guard-pattern-deferral.md) | TDR | Blockers Credential Guard Boundary — Registered Values and Name-Shape Only; Pattern Layer Deferred | Proposed | 2026-11-06 | Juliusz Ćwiąkalski |
 | [TDR-0013](TDR-0013-agent-session-commit-guard-reversal.md) | TDR | Agent-Session Commit Guard Reversal — Remove the Delivery-Session Refusal and Retire `commit.session.context-refused` | Proposed | 2026-11-07 | Juliusz Ćwiąkalski |
 | [TDR-0014](TDR-0014-commit-effect-crash-safety-message-independent-identity.md) | TDR | Commit External-Effect Crash Safety — Message-Independent Identity, Effect Owner, and Check-Before-Reapply | Proposed | 2026-11-07 | Juliusz Ćwiąkalski |
+| [TDR-0015](TDR-0015-dispatch-handover-gate-operational-semantics.md) | TDR | Dispatch Handover Gate — Durable Operational Semantics | Proposed | 2026-11-08 | Juliusz Ćwiąkalski |

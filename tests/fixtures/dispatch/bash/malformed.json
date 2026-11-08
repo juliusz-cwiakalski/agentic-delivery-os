@@ -1,0 +1,7 @@
+{
+  "schema": "delivery.dispatch.authority.v1",
+  "repository": "github.com/owner/repo",
+  "authority": "maybe",
+  "recordedAt": "not-an-instant",
+  "reversalAvailable": false
+}

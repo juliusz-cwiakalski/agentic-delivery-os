@@ -33,6 +33,14 @@ readonly SCRIPT_DIR
 ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)"
 readonly ROOT_DIR
 
+# CLI-independent dispatch authority read (GH-239 F-7). The fallback never
+# invokes the typed CLI to decide authority; a missing resolver is a no-op.
+if [[ -r "${SCRIPT_DIR}/lib/dispatch-authority.sh" ]]; then
+  # shellcheck source=lib/dispatch-authority.sh
+  # shellcheck disable=SC1091
+  source "${SCRIPT_DIR}/lib/dispatch-authority.sh"
+fi
+
 DELIVER_SCRIPT="${SCRIPT_DIR}/deliver-ticket.sh"
 CLEAN_TOOL="${ROOT_DIR}/tools/clean-merged-branches"
 readonly SUMMARY_LOG="${ROOT_DIR}/tmp/batch-deliver-summary.log"
@@ -1057,6 +1065,9 @@ parse_args() {
 # MAIN
 # ============================================================================
 main() {
+  if declare -F dispatch_authority_announce >/dev/null 2>&1; then
+    dispatch_authority_announce || true
+  fi
   parse_args "$@"
 
   # F-1: Platform detection (must run before require_cmd)

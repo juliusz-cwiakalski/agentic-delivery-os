@@ -6,10 +6,10 @@ created: 2026-11-08
 last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The resident dispatch daemon: the start/stop/status/install family, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through an injected executor, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, and the optional systemd user unit."
+summary: "The resident dispatch daemon: the start/stop/status/install family, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix, state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238"]
-  related_decisions: ["ADR-0003", "TDR-0014", "TDR-0004"]
+  related_changes: ["GH-238", "GH-239"]
+  related_decisions: ["ADR-0003", "TDR-0014", "TDR-0004", "TDR-0015"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
     - "packages/core/src/contracts/control.ts"
@@ -148,12 +148,28 @@ returns `0` only when it found no such duplicate.
 ## Lane supervision
 
 The daemon computes the next action, claims the lease through the delivered
-fenced claim path, asks the injected lane executor to start, records one
+fenced claim path, asks the lane executor to start, records one
 `daemon.lane` delivering record, observes, and releases or parks. It performs no
-delivery work in-process: no phase run, no commit, no gate. A missing executor
-runs the declared `supervise-only` mode with
-`degraded: ["lane-executor-unavailable"]`. Prefill and resume progress is never
-stalled; only a fully corroborated stall applies the delivered
+delivery work in-process: no phase run, no commit, no gate. The daemon
+composition supplies `createLaneLaunchPlanner`, which returns the lifecycle
+prompt and only the declared execution-environment variable names, and composes
+`createLaneExecutor` over the selected harness session port and descriptor, so a
+planned lane starts, records the delivered lane record, observes progress,
+collects the outcome, and resumes through the same executor. The lane seam is
+factory-proven: the daemon composition composes it when a lane composition is
+supplied. The production daemon entry that supplies the lane composition and
+registers the daemon command remains the resident-daemon production scope
+(GH-238); the dispatch engine proves the seam and the daemon-path attempt
+producer, not a resident production daemon that launches lanes.
+
+The daemon path hands the same observation and collection evidence to
+`recordDaemonDispatchResult`, which derives the outcome and token through the
+shared classifier and truth derivation, builds the same comparison and
+corroboration records, and appends exactly one dispatch attempt record through
+the same ledger as a one-shot dispatch. A resume or replay of the same attempt
+appends no second record. A missing executor runs the declared `supervise-only`
+mode with `degraded: ["lane-executor-unavailable"]`. Prefill and resume progress
+is never stalled; only a fully corroborated stall applies the delivered
 `watchdog.liveness-stalled` classification and restart admission. Admission
 consults the delivered restart budget: an admitted restart appends the
 `economics.restart` record, while budget exhaustion appends the terminal
@@ -250,10 +266,15 @@ the production composition always computes `"absent"`.
 ## Testing
 
 The enduring coverage map is the [resident daemon test specification](../../quality/test-specs/test-spec-resident-daemon.md).
+The daemon-side dispatch composition is covered by the
+[dispatch engine test specification](../../quality/test-specs/test-spec-dispatch-engine.md).
 
 ## Declared residuals
 
-M1-S9 owns the full dispatch loop, prompt selection, dual-run evidence, per-repo
-handover, and full session resume. launchd and Windows supervisor adapters,
-remote/container transports, status-watch, lane-scoped authorization, and the
-OQ-5 full session-resume remainder are future work.
+The dispatch loop, prompt selection, dual-run evidence, per-repo handover, and
+session resume are delivered by the dispatch engine ([Dispatch Engine](feature-dispatch-engine.md)).
+The dispatch engine composes the lane seam and proves the daemon-path attempt
+producer; the production daemon entry that supplies the lane composition remains
+resident-daemon production scope (GH-238). launchd and Windows supervisor
+adapters, remote/container transports, status-watch, lane-scoped authorization,
+and the OQ-5 full session-resume remainder are future work.
