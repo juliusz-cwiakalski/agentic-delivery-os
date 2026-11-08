@@ -89,18 +89,20 @@ export const makeLinkedWorktree = (
 };
 
 /**
- * Create a directory under the OS temp root that is outside every git work
- * tree, so `findGitRoot` cannot ascend into this repository's own checkout.
+ * Create a directory outside every git work tree, so `findGitRoot` cannot
+ * ascend into this repository's own checkout. The OS temp root is the primary
+ * choice; when the environment points `TMPDIR` inside the repository (the
+ * aggregate gate's repo-local temp), the repository's parent directory is the
+ * same-filesystem fallback and is still outside the work tree.
  */
 export const makeNonCheckoutDirectory = (label: string): string => {
-  const directory = mkdtempSync(join(tmpdir(), `gh273-${label}-`));
-  if (findGitRoot(directory, nodeRepositoryIo()) !== undefined) {
+  const candidates = [tmpdir(), dirname(process.cwd())];
+  for (const parent of candidates) {
+    const directory = mkdtempSync(join(parent, `gh273-${label}-`));
+    if (findGitRoot(directory, nodeRepositoryIo()) === undefined) return directory;
     rmSync(directory, { recursive: true, force: true });
-    throw new Error(
-      `the root-unresolved fixture ${directory} sits inside a git work tree; use the OS temp root`,
-    );
   }
-  return directory;
+  throw new Error(`no directory outside every git work tree is available for the ${label} fixture`);
 };
 
 /** The origin URL written into a fabricated `.git/config`. */

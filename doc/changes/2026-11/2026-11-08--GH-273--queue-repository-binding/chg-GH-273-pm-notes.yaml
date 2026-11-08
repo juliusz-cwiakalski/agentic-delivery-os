@@ -202,3 +202,24 @@ notes:
       check both new files (clean)."
     type: info
     date: "2026-11-08"
+  - text: "Plan phase 4 complete (fixture honesty, commit
+      939f2492345333ac70397daf2f7489efb7a96576). tests/fixtures/pilot/harness.ts
+      now composes repositoryBinding as the pair { repository: PILOT_REPOSITORY,
+      repositoryRoot: `/pilot/${PILOT_REPOSITORY}` }, matching its ledger seeds
+      (DEC-7; no golden regeneration; the pilot never calls queue add). Added
+      tests/structure/queue-binding-fixture-shape.test.ts (TC-BIND-015 AST half:
+      forms (a) literal pair, (b) same-file identifier/member reference, (c)
+      ??/conditional fallback pair; independent one-field literal negative
+      assertion; pilot key identifier equals the seed identifier; the unchanged
+      queue CLI harness ?? fallback stays accepted) and added the runtime
+      seeded-entry assertions to tests/conformance/pilot/pilot-records.test.ts
+      (every seeded entry carries both fields with the pilot key and
+      /pilot/${PILOT_REPOSITORY}). Green:
+      bun test tests/structure/queue-binding-fixture-shape.test.ts (6 pass / 0
+      fail); bun test tests/conformance/pilot/pilot-records.test.ts (4 pass / 0
+      fail); bun test tests/conformance/pilot (29 pass / 0 fail);
+      bun test tests/checks/pilot-privacy.test.ts (4 pass / 0 fail);
+      bun test tests/behaviour/queue-cli.test.ts (24 pass / 0 fail); biome check
+      on the three files (clean)."
+    type: info
+    date: "2026-11-08"
