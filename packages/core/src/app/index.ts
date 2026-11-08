@@ -166,3 +166,11 @@ export {
   type DispatchDivergenceSummary,
   type DispatchLedgerRead,
 } from "./dispatch-ledger.js";
+export {
+  boundLastMessage,
+  runDispatch,
+  type DispatchLeaseClaim,
+  type DispatchPorts,
+  type DispatchRunResult,
+  type DispatchTruthReads,
+} from "./dispatch.js";

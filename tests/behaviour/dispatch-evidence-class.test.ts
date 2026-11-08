@@ -125,3 +125,22 @@ describe("TC-EVID-006 declared, closed, and immutable evidence class", () => {
     });
   });
 });
+
+describe("TC-EVID-006 phase-4 confirmation: the production composition declares pilot", () => {
+  test("a real dispatch under the production default records pilot", async () => {
+    const { createCommandScenario } = await import("../fixtures/dispatch/golden/harness");
+    const { COMPLETED_EVIDENCE } = await import("../fixtures/dispatch/harness");
+    const scenario = createCommandScenario({ evidence: COMPLETED_EVIDENCE });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+      expect(run.exit).toBe(0);
+      const read = readDispatchAttempts(scenario.state.store);
+      expect(read.ok).toBe(true);
+      if (!read.ok) return;
+      expect(read.records).toHaveLength(1);
+      expect(read.records[0]?.evidenceClass).toBe("pilot");
+    } finally {
+      scenario.dispose();
+    }
+  });
+});

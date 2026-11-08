@@ -1,0 +1,4 @@
+result=pr-open-unverified
+pr_url=
+exit_code=0
+last_message=the pull request is open; its URL could not be resolved

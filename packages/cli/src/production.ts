@@ -32,6 +32,7 @@ import {
 import {
   type ConfigProgramOptions,
   createCloseoutComposition,
+  type DispatchCommandRuntime,
   createConfigProgram,
   createMergeCommandRuntime,
   createPhaseCommandRuntime,
@@ -256,6 +257,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       newFenceToken,
     });
 
+    // The dispatch run surface is composed with the declared production evidence
+    // class; harness session ports are supplied by the lane composition and an
+    // uncomposed harness degrades honestly rather than fabricating a session.
+    const dispatch: DispatchCommandRuntime = {
+      run: {
+        run: async () => ({
+          ok: false,
+          error: { kind: "harness", code: "harness.capability.gap" },
+        }),
+      },
+    };
+
     const configured: ConfigProgramOptions = {
       workingName: facts.workingName,
       environment,
@@ -275,6 +288,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         clock: { nowMs, nowIso },
         newFenceToken,
       },
+      dispatch,
       verify: {
         ...createVerifyCommandRuntime({
           store,

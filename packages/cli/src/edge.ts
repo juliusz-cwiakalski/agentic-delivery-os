@@ -26,6 +26,7 @@ import {
   readCiWorkflowJobNames,
   readLocalPmContext,
   readMemoryFacts,
+  readDispatchAuthority,
   readPlanArtifact,
   readPmNotesText,
   runtimePlatform,
@@ -143,6 +144,11 @@ import {
   resolveQueueWeight,
   resolveStateDirectoryScope,
   runCloseout,
+  runDispatch,
+  type DispatchLeaseClaim,
+  type DispatchPorts,
+  type DispatchRunResult,
+  type DispatchTruthReads,
   runCommitAct,
   selectPruneCandidates,
   serializeCapsuleEvent,
@@ -198,6 +204,14 @@ import {
   type CredentialPort,
   type DaemonClockPort,
   type DeliveryRequest,
+  DISPATCH_DEFAULT_EVIDENCE_CLASS,
+  type DispatchEvidenceClass,
+  type DispatchHandoverState,
+  type DispatchPhaseLedger,
+  HARNESS_KINDS,
+  type HarnessExecutionEnvironmentDescriptor,
+  type HarnessKind,
+  type HarnessSessionPort,
   type DoctorCheckoutFacts,
   type DoctorCommitResolution,
   type DoctorCredentialPresence,
@@ -346,6 +360,12 @@ import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
+import {
+  createDispatchCommandDefinition,
+  type DispatchCommandRuntime,
+} from "./commands/dispatch.js";
+
+export type { DispatchCommandRuntime } from "./commands/dispatch.js";
 import type { VerifyDeployRuntime } from "./commands/verify-deploy.js";
 import type { VerifyGatesCommandRuntime } from "./commands/verify-gates.js";
 import {
@@ -2912,6 +2932,7 @@ export type ConfigProgramOptions = {
   readonly commit?: CommitRuntimeOptions;
   readonly provider?: ProviderComposition;
   readonly verify?: VerifyCommandRuntime;
+  readonly dispatch?: DispatchCommandRuntime;
   readonly status?: StatusComposition;
   readonly brief?: StatusComposition;
   readonly queueReady?: StatusComposition;
@@ -3460,6 +3481,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.verify !== undefined) {
     commands.verify = createVerifyCommandDefinition(options.verify);
+  }
+  if (options.dispatch !== undefined) {
+    commands.dispatch = createDispatchCommandDefinition(options.dispatch);
   }
   if (options.doctor !== undefined) {
     commands.doctor = createDoctorCommandDefinition(
@@ -4399,3 +4423,102 @@ export const createLanesCommandRuntime = (
     }),
   };
 };
+
+/**
+ * The dispatch composition seam (GH-239 F-1, F-4, F-5, F-6).
+ *
+ * Every fact is injected: the fenced store, the selected harness session port
+ * and descriptor, the truth reads, the lease claim/release pair, and the
+ * declared evidence class. The runtime never invents an exit literal and never
+ * composes a merge port.
+ */
+export type DispatchComposition = {
+  readonly store: DispatchPorts["store"];
+  readonly stateRoot: string;
+  readonly fenceToken: string;
+  readonly nowIso: () => string;
+  readonly newAttemptId: (ref: string) => string;
+  readonly newDivergenceId: (ref: string) => string;
+  readonly harnesses: Readonly<Partial<Record<HarnessKind, HarnessSessionPort>>>;
+  readonly defaultHarness: HarnessKind;
+  readonly descriptor: HarnessExecutionEnvironmentDescriptor;
+  readonly prompt: (ref: string) => string;
+  readonly evidenceClass?: DispatchEvidenceClass;
+  readonly repository: (ref: string) => string;
+  readonly readTruth: (ref: string) => Promise<DispatchTruthReads>;
+  readonly claimLease: (ref: string, repository: string) => DispatchLeaseClaim;
+  readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
+  readonly phaseLedger: (ref: string) => DispatchPhaseLedger;
+  readonly restartBudget?: number;
+  readonly livenessIntervalMs?: number;
+  readonly resumeAmplification?: string;
+};
+
+const isHarnessKind = (value: string): value is HarnessKind =>
+  (HARNESS_KINDS as readonly string[]).includes(value);
+
+/**
+ * Build the dispatch command runtime. An unknown or uncomposed harness is a
+ * classified refusal, never a crash; the production default class is `pilot`.
+ */
+export const createDispatchCommandRuntime = (
+  composition: DispatchComposition,
+): {
+  readonly run: {
+    readonly run: (input: {
+      readonly ref: string;
+      readonly harness?: string;
+      readonly resumePrompt?: string;
+    }) => Promise<DispatchRunResult>;
+  };
+} => ({
+  run: {
+    run: async (input) => {
+    const selected = input.harness ?? composition.defaultHarness;
+    if (!isHarnessKind(selected)) {
+      return { ok: false, error: { kind: "input", code: "input.value.rejected" } };
+    }
+    const harness = composition.harnesses[selected];
+    if (harness === undefined) {
+      return {
+        ok: false,
+        error: { kind: "harness", code: "harness.capability.gap", summary: selected },
+      };
+    }
+    const repository = composition.repository(input.ref);
+    const handover: DispatchHandoverState = readDispatchAuthority(
+      composition.stateRoot,
+      repository,
+    ).authority;
+    return runDispatch({
+      store: composition.store,
+      fenceToken: composition.fenceToken,
+      harness,
+      harnessKind: selected,
+      descriptor: composition.descriptor,
+      prompt: composition.prompt(input.ref),
+      ref: input.ref,
+      evidenceClass: composition.evidenceClass ?? DISPATCH_DEFAULT_EVIDENCE_CLASS,
+      repository,
+      handoverState: handover,
+      nowIso: composition.nowIso,
+      newAttemptId: () => composition.newAttemptId(input.ref),
+      newDivergenceId: () => composition.newDivergenceId(input.ref),
+      readTruth: () => composition.readTruth(input.ref),
+      claimLease: () => composition.claimLease(input.ref, repository),
+      releaseLease: (cause) => composition.releaseLease(input.ref, cause),
+      phaseLedger: composition.phaseLedger(input.ref),
+      ...(composition.restartBudget === undefined
+        ? {}
+        : { restartBudget: composition.restartBudget }),
+      ...(composition.livenessIntervalMs === undefined
+        ? {}
+        : { livenessIntervalMs: composition.livenessIntervalMs }),
+      ...(composition.resumeAmplification === undefined
+        ? {}
+        : { resumeAmplification: composition.resumeAmplification }),
+      ...(input.resumePrompt === undefined ? {} : { resumePrompt: input.resumePrompt }),
+    });
+    },
+  },
+});

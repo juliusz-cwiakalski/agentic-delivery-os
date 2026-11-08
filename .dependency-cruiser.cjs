@@ -213,6 +213,21 @@ module.exports = {
       to: { path: "^packages/(core/src/(domain/merge-|state/merge)|cli/src/commands/merge)" },
     },
 
+    // --- GH-239 F-9 / NFR-9: structural absence of a merge code path in dispatch.
+    // The from-set covers the dispatch-named core modules and the CLI dispatch
+    // surface only; the CLI edge composes merge for other commands and is
+    // deliberately out of scope. Only source-level imports are proven.
+    {
+      name: "dispatch-merge-absence",
+      severity: "error",
+      comment:
+        "GH-239 F-9: no dispatch path may import merge execution; dispatch never fires a merge and `merged` is already-merged detection only.",
+      from: {
+        path: "^packages/(core/src/(app|domain)/dispatch|cli/src/(commands/dispatch|output/dispatch-text|dispatch[^/]*))",
+      },
+      to: { path: "^packages/(core/src/(domain/merge-|state/merge)|cli/src/commands/merge)" },
+    },
+
     // --- DEC-2 Additional rules bullet 6: runtime-API confinement.
     // Allowlist (ADR verbatim): the `core ./state` driver code, the adapter I/O
     // subpaths, the CLI build, and the OpenCode host integration. Nothing else.

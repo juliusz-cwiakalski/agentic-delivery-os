@@ -185,3 +185,17 @@ notes:
       store-artifact seam because adapters cannot import the core domain tier."
     type: info
     date: "2026-11-08"
+  - text: "Delivery plan phase 4 (one-shot dispatch command) complete. Tests green:
+      dispatch-harness-lease, dispatch-envelope, dispatch-error-envelope,
+      dispatch-merge-absence, dispatch-evidence-class (phase-4 confirmation),
+      golden dispatch-text and dispatch-errors, structure dispatch-merge-boundary,
+      dispatch-imports, dispatch-composition, tests/boundaries (149),
+      harness-spawn-env, entrypoint-composition, content-inventory,
+      dispatch-token-home, pnpm typecheck, pnpm check:boundaries. The dispatch
+      merge-absence boundary rule and its app/domain/cli fixtures are declared.
+      Envelope note: an attempt-stage classified failure carries result/outcome
+      plus a nested data.error (six fields); a pre-session refusal uses the
+      standard top-level error envelope. Production.ts composes only an honest
+      harness.capability.gap run surface until lane harness ports are composed."
+    type: info
+    date: "2026-11-08"

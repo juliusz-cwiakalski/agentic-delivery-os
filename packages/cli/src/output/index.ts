@@ -4,6 +4,11 @@
  */
 
 export { renderCommitHuman } from "./commit-text.js";
+export {
+  renderDispatchHandoverText,
+  renderDispatchSummaryText,
+  renderDispatchText,
+} from "./dispatch-text.js";
 
 /** Placeholder marker for the CLI output tier. */
 export type CliOutputPlaceholder = { readonly __tier: "output" };

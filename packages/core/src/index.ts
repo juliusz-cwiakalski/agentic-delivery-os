@@ -727,3 +727,11 @@ export {
   type DispatchDivergenceSummary,
   type DispatchLedgerRead,
 } from "./app/dispatch-ledger.js";
+export {
+  boundLastMessage,
+  runDispatch,
+  type DispatchLeaseClaim,
+  type DispatchPorts,
+  type DispatchRunResult,
+  type DispatchTruthReads,
+} from "./app/dispatch.js";

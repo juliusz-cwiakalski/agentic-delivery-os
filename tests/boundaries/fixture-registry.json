@@ -537,5 +537,22 @@
       "tc": "TC-MERGEABS-001",
       "path": "packages/adapters/src/daemon/probe.ts"
     }
+  ],
+  "dispatch-merge-absence": [
+    {
+      "id": "dispatch-core-app-merge",
+      "tc": "TC-MERGEABS-002",
+      "path": "packages/core/src/app/dispatch-merge-probe.ts"
+    },
+    {
+      "id": "dispatch-core-domain-merge",
+      "tc": "TC-MERGEABS-002",
+      "path": "packages/core/src/domain/dispatch-merge-probe.ts"
+    },
+    {
+      "id": "dispatch-cli-merge",
+      "tc": "TC-MERGEABS-002",
+      "path": "packages/cli/src/commands/dispatch.ts"
+    }
   ]
 }

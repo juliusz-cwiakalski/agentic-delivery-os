@@ -184,7 +184,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
     });
   }
 
-  if (input.restarts.count >= input.restarts.bound) {
+  if (input.restarts.bound > 0 && input.restarts.count >= input.restarts.bound) {
     return base(input, {
       token: mr,
       outcome: O_FAILED,

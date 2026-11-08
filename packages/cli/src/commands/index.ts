@@ -16,6 +16,15 @@ export { createCommitCommandDefinition } from "./commit.js";
 export type { ConfigCommandRuntime } from "./config.js";
 export { createConfigCommandDefinition } from "./config.js";
 export type { DaemonCommandRuntime } from "./daemon.js";
+export type {
+  DispatchCommandRuntime,
+  DispatchHandoverRuntime,
+  DispatchResolveRuntime,
+  DispatchRunRuntime,
+  DispatchSummaryRuntime,
+} from "./dispatch.js";
+export { createDispatchCommandDefinition } from "./dispatch.js";
+
 export { createDaemonCommandDefinition } from "./daemon.js";
 export type { DbCommandRuntime } from "./db.js";
 export { createDbCommandDefinition } from "./db.js";

@@ -96,6 +96,10 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "resolveDispatchIdentity",
     "serializeIdentityMarker",
   ],
+  "core/src/app/dispatch.ts": [
+    "boundLastMessage",
+    "runDispatch",
+  ],
   "core/src/app/dispatch-ledger.ts": [
     "appendDispatchAttempt",
     "appendDispatchDivergence",
@@ -138,6 +142,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "adapters/src/daemon/clock.ts": ["createNodeClock"],
   "adapters/src/daemon/process.ts": ["createNodeProcessPort"],
   "adapters/src/daemon/wake.ts": ["createEventLogWake"],
+  "cli/src/commands/dispatch.ts": ["createDispatchCommandDefinition"],
+  "cli/src/output/dispatch-text.ts": [
+    "renderDispatchHandoverText",
+    "renderDispatchSummaryText",
+    "renderDispatchText",
+  ],
   "cli/src/commands/daemon.ts": ["createDaemonCommandDefinition"],
   "cli/src/daemon-compose.ts": ["createBlockerAnswerConsumer", "createDaemonCommandRuntime"],
   "cli/src/daemon-main.ts": ["createDaemonMainEntry"],
@@ -1579,6 +1589,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "resolveAgentIdentity",
     "resolveCliMode",
     "createBlockersCommandRuntime",
+    "createDispatchCommandRuntime",
   ],
   "cli/src/index.ts": ["runCli"],
   "cli/bin/delivery-os.ts": ["completion"],

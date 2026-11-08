@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-fixed",
+  "exitCode": 1,
+  "timing": {
+    "totalMs": 0
+  },
+  "data": {
+    "result": "failed",
+    "prUrl": "",
+    "phaseLedger": {
+      "completed": 3,
+      "total": 9,
+      "variant": "full"
+    },
+    "restarts": 0,
+    "resumeAmplification": "none",
+    "harness": "opencode",
+    "handoverState": "dual-run",
+    "outcome": "failed",
+    "error": {
+      "code": "dispatch.session.spawn-failed",
+      "category": "user",
+      "retryable": false,
+      "consequence": "not_landed",
+      "remediationHint": "Resolve the named dispatch condition and retry; the attempt was recorded.",
+      "summary": "spawn failed before a session existed"
+    },
+    "lastMessage": "spawn failed before a session existed"
+  }
+}

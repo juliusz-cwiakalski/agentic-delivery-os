@@ -828,6 +828,52 @@ export const RULE_CASES: RuleCase[] = [
     },
   ),
   dep(
+    "dispatch-core-app-merge",
+    "TC-MERGEABS-002",
+    "dispatch-merge-absence",
+    ["core"],
+    "packages/core/src/app/dispatch-merge-probe.ts",
+    'import "../domain/merge-transaction";\n',
+    {
+      extraFiles: {
+        "packages/core/src/domain/merge-transaction.ts": "export {};\n",
+      },
+    },
+  ),
+  dep(
+    "dispatch-core-domain-merge",
+    "TC-MERGEABS-002",
+    "dispatch-merge-absence",
+    ["core"],
+    "packages/core/src/domain/dispatch-merge-probe.ts",
+    'import "./merge-proposal";\n',
+    {
+      extraFiles: {
+        "packages/core/src/domain/merge-proposal.ts": "export {};\n",
+      },
+    },
+  ),
+  dep(
+    "dispatch-cli-merge",
+    "TC-MERGEABS-002",
+    "dispatch-merge-absence",
+    ["cli"],
+    "packages/cli/src/commands/dispatch.ts",
+    'import "./merge";\n',
+    {
+      extraFiles: {
+        "packages/cli/src/commands/merge.ts": "export {};\n",
+      },
+    },
+  ),
+  clean(
+    "dispatch-clean-contracts",
+    "TC-MERGEABS-002",
+    ["core"],
+    "packages/core/src/app/dispatch-compose-probe.ts",
+    'import "@delivery-os/core/contracts";\n',
+  ),
+  dep(
     "daemon-adapters-merge",
     "TC-MERGEABS-001",
     "daemon-merge-absence",
