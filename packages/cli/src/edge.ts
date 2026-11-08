@@ -148,10 +148,14 @@ import {
   admitDispatchRestart,
   evaluateDispatchResumeEconomics,
   planDispatchResume,
+  handoverDispatchEvidence,
+  revertDispatchHandoverEvidence,
+  summarizeDispatchEvidence,
+  resolveDispatchDivergenceEvidence,
   type DispatchAdmission,
+  type DispatchRepositoryScope,
   type DispatchLeaseClaim,
   type DispatchPorts,
-  type DispatchRunResult,
   type DispatchTruthReads,
   runCommitAct,
   selectPruneCandidates,
@@ -4459,6 +4463,12 @@ export type DispatchComposition = {
   readonly livenessIntervalMs?: number;
   readonly resumeAmplification?: string;
   readonly existingLane?: (ref: string) => DispatchLaneFacts | undefined;
+  readonly gate?: {
+    readonly scope: DispatchRepositoryScope;
+    readonly principal: string;
+    readonly max?: number;
+    readonly resolveRepository: (repo: string) => string | undefined;
+  };
 };
 
 /** The delivered lane facts a resume admits against. */
@@ -4480,15 +4490,7 @@ const isHarnessKind = (value: string): value is HarnessKind =>
  */
 export const createDispatchCommandRuntime = (
   composition: DispatchComposition,
-): {
-  readonly run: {
-    readonly run: (input: {
-      readonly ref: string;
-      readonly harness?: string;
-      readonly resumePrompt?: string;
-    }) => Promise<DispatchRunResult>;
-  };
-} => ({
+): DispatchCommandRuntime => ({
   run: {
     run: async (input) => {
     const selected = input.harness ?? composition.defaultHarness;
@@ -4582,4 +4584,69 @@ export const createDispatchCommandRuntime = (
     });
     },
   },
+  ...(composition.gate === undefined
+    ? {}
+    : {
+        summary: {
+          summarize: async (repo: string) => {
+            const repository = composition.gate?.resolveRepository(repo);
+            if (repository === undefined || composition.gate === undefined) {
+              return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
+            }
+            const result = summarizeDispatchEvidence({
+              store: composition.store,
+              repository,
+              scope: composition.gate.scope,
+              nowIso: composition.nowIso(),
+              ...(composition.gate.max === undefined ? {} : { max: composition.gate.max }),
+            });
+            return result.ok ? { ok: true as const, data: result.data } : { ok: false as const, error: result.error };
+          },
+        },
+        resolve: {
+          resolve: async (input: { readonly divergenceId: string; readonly note: string }) => {
+            if (composition.gate === undefined) {
+              return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
+            }
+            return resolveDispatchDivergenceEvidence({
+              store: composition.store,
+              fenceToken: composition.fenceToken,
+              divergenceId: input.divergenceId,
+              note: input.note,
+              principal: composition.gate.principal,
+              nowIso: composition.nowIso(),
+            });
+          },
+        },
+        handover: {
+          handover: async (input: { readonly repo: string; readonly revert: boolean }) => {
+            const gate = composition.gate;
+            if (gate === undefined) {
+              return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
+            }
+            const repository = gate.resolveRepository(input.repo);
+            if (repository === undefined) {
+              return { ok: false as const, error: { kind: "input", code: "input.value.rejected" } };
+            }
+            const result = input.revert
+              ? revertDispatchHandoverEvidence({
+                  store: composition.store,
+                  fenceToken: composition.fenceToken,
+                  repository,
+                  scope: gate.scope,
+                  nowIso: composition.nowIso(),
+                  principal: gate.principal,
+                })
+              : handoverDispatchEvidence({
+                  store: composition.store,
+                  fenceToken: composition.fenceToken,
+                  repository,
+                  scope: gate.scope,
+                  nowIso: composition.nowIso(),
+                  principal: gate.principal,
+                });
+            return result;
+          },
+        },
+      }),
 });

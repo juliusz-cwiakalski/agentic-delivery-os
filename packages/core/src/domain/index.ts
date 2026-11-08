@@ -675,3 +675,15 @@ export {
   type DispatchResumeEconomics,
   type DispatchResumePlan,
 } from "./dispatch-resume.js";
+export {
+  countedEvidenceClass,
+  COUNTED_EVIDENCE_CLASS,
+  evaluateHandoverGate,
+  foldEvidenceWindow,
+  handoverConditionsSnapshot,
+  longestConsecutiveRun as dispatchLongestConsecutiveRun,
+  toSummaryData,
+  type DispatchEvidenceWindow,
+  type DispatchGateEvaluation,
+  type DispatchRepositoryScope,
+} from "./dispatch-gate.js";

@@ -100,6 +100,22 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "boundLastMessage",
     "runDispatch",
   ],
+  "core/src/app/dispatch-gate.ts": [
+    "handoverDispatchEvidence",
+    "readDispatchGate",
+    "resolveDispatchDivergenceEvidence",
+    "revertDispatchHandoverEvidence",
+    "summarizeDispatchEvidence",
+  ],
+  "core/src/domain/dispatch-gate.ts": [
+    "COUNTED_EVIDENCE_CLASS",
+    "countedEvidenceClass",
+    "evaluateHandoverGate",
+    "foldEvidenceWindow",
+    "handoverConditionsSnapshot",
+    "longestConsecutiveRun",
+    "toSummaryData",
+  ],
   "core/src/app/dispatch-ledger.ts": [
     "appendDispatchAttempt",
     "appendDispatchDivergence",

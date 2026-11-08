@@ -144,3 +144,70 @@ describe("TC-EVID-006 phase-4 confirmation: the production composition declares 
     }
   });
 });
+
+describe("TC-GATE-011 evidence-class counting per repository scope", () => {
+  test("a production repository counts only pilot and reports every excluded class", async () => {
+    const { evaluateSpecs, eligibleSpecs } = await import("../fixtures/dispatch/evidence-windows");
+    const specs = eligibleSpecs().map((spec, index) => ({
+      ...spec,
+      evidenceClass: (["pilot", "controlled-proof", "smoke", "fixture"] as const)[index % 4],
+    }));
+    const { window } = evaluateSpecs(specs, { scope: "production" });
+    expect(window.countedEvidenceClass).toBe("pilot");
+    expect(window.excludedEvidenceClasses.map((entry) => entry.evidenceClass).sort()).toEqual([
+      "controlled-proof",
+      "fixture",
+      "smoke",
+    ]);
+    expect(window.countedInWindow.every((attempt) => attempt.evidenceClass === "pilot")).toBe(true);
+  });
+
+  test("the controlled scope counts only controlled-proof", async () => {
+    const { evaluateSpecs, eligibleSpecs } = await import("../fixtures/dispatch/evidence-windows");
+    const specs = eligibleSpecs({ evidenceClass: "controlled-proof" }).map((spec, index) =>
+      index % 5 === 0 ? { ...spec, evidenceClass: "pilot" as const } : spec,
+    );
+    const { window, evaluation } = evaluateSpecs(specs, { scope: "controlled" });
+    expect(window.countedEvidenceClass).toBe("controlled-proof");
+    expect(window.countedInWindow.every((attempt) => attempt.evidenceClass === "controlled-proof")).toBe(
+      true,
+    );
+    expect(window.excludedEvidenceClasses).toEqual([{ evidenceClass: "pilot", count: 4 }]);
+    expect(evaluation.eligibility).toBe(false);
+    expect(evaluation.unmetConditions.map((entry) => entry.condition)).toContain("coverage");
+  });
+
+  test("smoke and fixture evidence advances no floor, coverage, incident, or corroboration", async () => {
+    const { evaluateSpecs } = await import("../fixtures/dispatch/evidence-windows");
+    const specs = Array.from({ length: 25 }, (_, index) => ({
+      token: "pr-open" as const,
+      id: `smoke-${index}`,
+      day: index % 7,
+      evidenceClass: index % 2 === 0 ? ("smoke" as const) : ("fixture" as const),
+    }));
+    const { window, evaluation } = evaluateSpecs(specs, { scope: "production" });
+    expect(window.countedInWindow).toEqual([]);
+    expect(window.floorMet).toBe(false);
+    expect(window.coverage.present).toEqual([]);
+    expect(evaluation.eligibility).toBe(false);
+  });
+
+  test("a controlled-proof attempt under a production identity is surfaced and not counted", async () => {
+    const { evaluateSpecs, eligibleSpecs } = await import("../fixtures/dispatch/evidence-windows");
+    const specs = [
+      ...eligibleSpecs(),
+      {
+        token: "merged" as const,
+        id: "cross-scope",
+        day: 0,
+        evidenceClass: "controlled-proof" as const,
+      },
+    ];
+    const { window, evaluation } = evaluateSpecs(specs, { scope: "production" });
+    expect(window.excludedEvidenceClasses).toEqual([
+      { evidenceClass: "controlled-proof", count: 1 },
+    ]);
+    expect(window.countedInWindow.some((attempt) => attempt.attemptId === "cross-scope")).toBe(false);
+    expect(evaluation.eligibility).toBe(true);
+  });
+});

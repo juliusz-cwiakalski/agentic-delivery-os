@@ -745,3 +745,25 @@ export {
   type DispatchResumeEconomics,
   type DispatchResumePlan,
 } from "./domain/dispatch-resume.js";
+export {
+  countedEvidenceClass,
+  COUNTED_EVIDENCE_CLASS,
+  evaluateHandoverGate,
+  foldEvidenceWindow,
+  handoverConditionsSnapshot,
+  longestConsecutiveRun as dispatchLongestConsecutiveRun,
+  toSummaryData,
+  type DispatchEvidenceWindow,
+  type DispatchGateEvaluation,
+  type DispatchRepositoryScope,
+} from "./domain/dispatch-gate.js";
+export {
+  handoverDispatchEvidence,
+  readDispatchGate,
+  resolveDispatchDivergenceEvidence,
+  revertDispatchHandoverEvidence,
+  summarizeDispatchEvidence,
+  type DispatchGateRead,
+  type DispatchHandoverResult,
+  type DispatchSummaryResult,
+} from "./app/dispatch-gate.js";

@@ -105,7 +105,9 @@ const isSummaryData = (data: unknown): data is DispatchSummaryData =>
   typeof data === "object" &&
   data !== null &&
   (data as { readonly repository?: unknown }).repository !== undefined &&
-  (data as { readonly verdict?: unknown }).verdict !== undefined;
+  (data as { readonly verdict?: unknown }).verdict !== undefined &&
+  typeof (data as { readonly eligibility?: unknown }).eligibility === "boolean" &&
+  (data as { readonly coverage?: unknown }).coverage !== undefined;
 
 /** Build the one dispatch command definition over the injected runtime. */
 export const createDispatchCommandDefinition = (
@@ -117,6 +119,17 @@ export const createDispatchCommandDefinition = (
   humanSuccess: true,
   exitProjection: (data) => {
     if (isSummaryData(data)) return "success";
+    const handover = data as {
+      readonly verdict?: unknown;
+      readonly recorded?: unknown;
+    };
+    if (
+      handover.verdict !== undefined &&
+      handover.verdict !== "eligible" &&
+      handover.recorded !== true
+    ) {
+      return "user-validation";
+    }
     const result = (data as { readonly result?: DeliveryResultToken }).result;
     return result === undefined ? "success" : projectionOf(result);
   },

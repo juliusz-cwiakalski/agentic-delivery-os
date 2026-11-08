@@ -53,6 +53,7 @@ export const renderDispatchSummaryText = (data: DispatchSummaryData): string => 
     `corroboration=${data.corroboration.satisfied}/${data.corroboration.unsatisfied}`,
     `floor=${data.floor.met ? "met" : "unmet"}`,
     `floor_only=true`,
+    `floor_rule=floor-only; never substitutes for coverage, incident truth, or corroboration`,
     `eligibility=${data.eligibility ? "true" : "false"}`,
     `verdict=${data.verdict}`,
     `unmet_conditions=${data.unmetConditions.map((entry) => entry.condition).join(",") || "none"}`,

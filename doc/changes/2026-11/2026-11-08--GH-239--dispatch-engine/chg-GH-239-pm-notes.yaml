@@ -208,3 +208,16 @@ notes:
       attempt-stage records (one each) with the Appendix G pairs."
     type: info
     date: "2026-11-08"
+  - text: "Delivery plan phase 6 (dual-run gate, summary, resolve, handover,
+      reversal) complete. Tests green: dispatch-dual-run-summary,
+      dispatch-divergence, dispatch-dual-run-floor, dispatch-gate-evidence,
+      dispatch-gate-window, dispatch-evidence-class, dispatch-handover,
+      dispatch-authority-view, dispatch-identity, golden dispatch-summary,
+      structure dispatch-authority-view, content-inventory, dispatch-token-home,
+      pnpm typecheck. One predicate home (foldEvidenceWindow +
+      evaluateHandoverGate); the summary and handover read it directly. A
+      truncated valid read is unverifiable at exit 0; an unreadable/torn stream
+      exits 2; a readable-but-unmet handover exits 1; an unresolvable identity
+      exits 1."
+    type: info
+    date: "2026-11-08"

@@ -130,3 +130,18 @@ describe("TC-HAND-004 the derived view is complete and fail-safe", () => {
     expect(listDispatchAuthority("/nonexistent-root")).toEqual([]);
   });
 });
+
+describe("TC-HAND-004 declared authority fixtures", () => {
+  test("the valid authoritative and dual-run fixtures parse, and the malformed one defaults to dual-run", async () => {
+    const { readFileSync } = await import("node:fs");
+    const fixture = (name: string) =>
+      readFileSync(join(process.cwd(), "tests/fixtures/dispatch/authority", name), "utf8");
+    const authoritative = parseDispatchAuthorityText(REPOSITORY, fixture("authoritative.json"));
+    expect(authoritative.authority).toBe("authoritative");
+    expect(authoritative.reversalAvailable).toBe(true);
+    const dualRun = parseDispatchAuthorityText(REPOSITORY, fixture("dual-run.json"));
+    expect(dualRun.authority).toBe("dual-run");
+    const malformed = parseDispatchAuthorityText(REPOSITORY, fixture("malformed.json"));
+    expect(malformed).toEqual(dualRunAuthority(REPOSITORY));
+  });
+});

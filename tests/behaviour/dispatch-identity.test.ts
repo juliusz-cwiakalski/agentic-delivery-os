@@ -186,3 +186,34 @@ describe("TC-HAND-007 resolution order and persisted binding", () => {
     expect(marker.includes("/home/")).toBe(false);
   });
 });
+
+describe("TC-HAND-007 phase-6 confirmation: an unresolvable identity refuses", () => {
+  test("summary and handover refuse cleanly at exit 1 and append no authority record", async () => {
+    const { createCommandScenario } = await import("../fixtures/dispatch/golden/harness");
+    const scenario = createCommandScenario({
+      gate: { resolveRepository: () => undefined },
+    });
+    try {
+      const summary = await scenario.invoke([
+        "dispatch",
+        "dual-run",
+        "summary",
+        "--repo",
+        "a-checkout-path",
+        "--json",
+      ]);
+      expect(summary.exit).toBe(1);
+      expect(summary.envelope?.error?.code).toBe("input.value.rejected");
+      const handover = await scenario.invoke([
+        "dispatch",
+        "handover",
+        "a-checkout-path",
+        "--json",
+      ]);
+      expect(handover.exit).toBe(1);
+      expect(handover.envelope?.error?.code).toBe("input.value.rejected");
+    } finally {
+      scenario.dispose();
+    }
+  });
+});

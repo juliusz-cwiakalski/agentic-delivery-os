@@ -63,6 +63,12 @@ export type CommandScenarioOptions = {
   readonly handover?: "dual-run" | "authoritative";
   readonly restartBudget?: number;
   readonly initialRestarts?: number;
+  readonly gate?: {
+    readonly scope?: "production" | "controlled";
+    readonly principal?: string;
+    readonly max?: number;
+    readonly resolveRepository?: (repo: string) => string | undefined;
+  };
   readonly lane?: {
     readonly completedPhases?: readonly string[];
     readonly adapterSupportsResumeInjection?: boolean;
@@ -110,6 +116,7 @@ export const readsFrom = (
     tracker: base.tracker,
     ci: { ok: true, value: { verdict: "success" } },
     verifyOutcome: null,
+    trackerToken: null,
     phasesComplete: true,
     ...overrides,
   };
@@ -171,6 +178,16 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
     },
     phaseLedger: () => ({ completed: 3, total: 9, variant: "full" }),
     ...(options.restartBudget === undefined ? {} : { restartBudget: options.restartBudget }),
+    ...(options.gate === undefined
+      ? {}
+      : {
+          gate: {
+            scope: options.gate.scope ?? "production",
+            principal: options.gate.principal ?? "coder@local",
+            ...(options.gate.max === undefined ? {} : { max: options.gate.max }),
+            resolveRepository: options.gate.resolveRepository ?? ((repo: string) => repo),
+          },
+        }),
     ...(options.lane === undefined
       ? {}
       : {

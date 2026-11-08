@@ -175,3 +175,13 @@ export {
   type DispatchRunResult,
   type DispatchTruthReads,
 } from "./dispatch.js";
+export {
+  handoverDispatchEvidence,
+  readDispatchGate,
+  resolveDispatchDivergenceEvidence,
+  revertDispatchHandoverEvidence,
+  summarizeDispatchEvidence,
+  type DispatchGateRead,
+  type DispatchHandoverResult,
+  type DispatchSummaryResult,
+} from "./dispatch-gate.js";

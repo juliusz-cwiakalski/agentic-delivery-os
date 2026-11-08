@@ -66,6 +66,8 @@ export type DispatchTruthReads = {
   readonly tracker: DispatchRead<DispatchTrackerFacts>;
   readonly ci: DispatchRead<{ readonly verdict: "success" | "failure" }>;
   readonly verifyOutcome: DeliveryResultToken | null;
+  /** The independently derived tracker truth token, when one was observed. */
+  readonly trackerToken: DeliveryResultToken | null;
   readonly phasesComplete: boolean;
 };
 
@@ -191,10 +193,12 @@ const comparisonFor = (input: {
   }
   const family = dispatchFamilyOf(input.token);
   if (family === "tracker-pr") {
+    const independent =
+      input.reads.trackerToken ?? (input.token === pou ? po : input.token);
     return buildComparisonRecord({
       kind: "tracker-truth",
       engineToken: input.token,
-      trackerToken: input.token === pou ? po : input.token,
+      trackerToken: independent,
       urlResolved: input.urlResolved,
     });
   }
@@ -224,6 +228,7 @@ const staleReads = (): DispatchTruthReads => ({
   tracker: { ok: false, reason: "tracker" },
   ci: { ok: false, reason: "state" },
   verifyOutcome: null,
+  trackerToken: null,
   phasesComplete: false,
 });
 
