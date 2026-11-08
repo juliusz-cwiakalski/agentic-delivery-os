@@ -45,7 +45,7 @@ phases:
     }
   quality_gates: { started: "2026-11-08T02:02:00Z", completed: 2026-11-08T01:58:23.338Z }
   dod_check: { started: "2026-11-08T02:10:00Z", completed: 2026-11-08T01:59:51.505Z }
-  pr_creation: { started: "2026-11-08T02:10:00Z", completed: null }
+  pr_creation: { started: "2026-11-08T02:10:00Z", completed: "2026-11-08T02:30:37.378Z" }
 decisions:
   - text: "D1 — Scope includes the minimum executable and self-description surface
       the prompts need: a neutral CLI entrypoint plus --help/--version. The
@@ -255,6 +255,15 @@ notes:
   - text: "Plan phase 10 complete and delivery boundary reached: all ten plan phases
       implemented, targeted suites green, aggregate gate green. Delivery marked
       complete before docs sync."
+    type: info
+    date: "2026-11-08"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/270 (base
+      main-tools, head feat/GH-242/agent-integration). CI 47/47 green after
+      fixing two packaging/import defects the local aggregate gate did not catch
+      (packages/cli main under dist; help-guide-coverage dependency-free command
+      list). The only PR comment is a Copilot quota notice, not a review
+      finding. Issue labels: change + review; assigned to owner."
     type: info
     date: "2026-11-08"
   - text: "DoD check evidence: all 11 plan phases have pm-notes evidence with
