@@ -6,7 +6,7 @@ phases:
   specification: { started: "2026-11-07T23:06:00Z", completed: "2026-11-08T02:52:00Z", reopened: "2026-11-08T01:40:00Z", reopen_count: 2, revision: "v1.3" }
   test_planning: { started: "2026-11-07T23:25:00Z", completed: "2026-11-08T03:02:00Z", reopened: "2026-11-08T01:40:00Z", reopen_count: 2, revision: "v1.3" }
   delivery_planning: { started: "2026-11-07T23:42:00Z", completed: "2026-11-08T03:12:00Z", reopened: "2026-11-08T01:40:00Z", reopen_count: 2, revision: "v1.3" }
-  dor_check: { started: "2026-11-07T23:59:00Z", completed: null, iterations: 3, status: "not_ready" }
+  dor_check: { started: "2026-11-07T23:59:00Z", completed: "2026-11-08T03:28:00Z", iterations: 4, status: "ready" }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -113,4 +113,10 @@ notes:
     date: "2026-11-08"
   - text: "RETRO: the DoR gate needed three remediation cycles, and every cycle found a genuine defect class rather than nitpicking — an untestable preservation clause, then a file-wide gate that could not catch a scoped omission, then a base-anchored line number in an expected-output string. The common cause is that each artifact asserted an outcome (unchanged content, corroboration present, boundary outside) without pinning the coordinate or scope its own oracle would later need. Improvement for future doc amendments: when an oracle needs a line number, scope boundary or section, require the artifact to derive it from the document structure at run time and to name one negative control that would fire; never let a plan or test plan hardcode a coordinate."
     type: "retro"
+    date: "2026-11-08"
+  - text: "DoR confirmation pass (iteration 4, PM-authorized after the third NOT_READY): READY — 10/10 facets PASS, record at readiness-review/readiness-iter-4.md. N8 verified closed by running the derived guard on a reconstructed amended tree: +579 and +628 print OUTSIDE while +578 (entry last line) and +529 print inside, at both the base range and the amended range. N9-N14 verified closed. All three iteration-1 blockers and all seven iteration-2 findings verified still intact after the v1.3 edits. The gate is cleared for delivery."
+    type: "info"
+    date: "2026-11-08"
+  - text: "DoR residual nits accepted without further artifact churn, both comment-only and both already correct in the executable oracles: R1 the plan header's AC summary line lists AC-F1-3 -> TC-GATE-004/TC-GATE-022 without TC-GATE-005 (the test plan row and the phase-1 coverage both include it); R2 the test plan's AC-F2-2 summary row still describes only the pointer, while the byte-retention clause is enforced by TC-GATE-007/P6b. Neither changes an oracle, a mapping or a gate outcome."
+    type: "decision"
     date: "2026-11-08"
