@@ -309,3 +309,10 @@ notes:
       the full pnpm check (6418 pass, 4 skip, 0 fail)."
     type: info
     date: "2026-11-08"
+  - text: "Pass 2 test strengthening commit 43b6567: the production composition
+      test now also asserts the spawned environment is exactly the declared
+      allowlist (DELIVERY_WORK_PATH, HARNESS_MODEL, HARNESS_SMALL_MODEL) and
+      that the appended attempt carries evidenceClass pilot. Full pnpm check
+      re-run green (6418 pass, 4 skip, 0 fail)."
+    type: info
+    date: "2026-11-08"
