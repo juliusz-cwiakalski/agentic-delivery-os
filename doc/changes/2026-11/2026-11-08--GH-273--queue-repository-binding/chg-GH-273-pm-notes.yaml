@@ -148,3 +148,36 @@ notes:
       packages/cli/src/production.ts (clean)."
     type: info
     date: "2026-11-08"
+  - text: "Plan phase 2 complete (production-composition regression suite, commit
+      7dc5d2f6339bcee0197864de731f7c558a640a37). Added
+      tests/fixtures/queue/production/harness.ts (real production composer over
+      real fabricated .git metadata; injects only repositoryFacts.originUrl and
+      exposes no root seam) and tests/behaviour/queue-production-binding.test.ts
+      (TC-BIND-001/002/003/004/005/006/007/008/009/010/017). Green:
+      bun test tests/behaviour/queue-production-binding.test.ts (15 pass / 0
+      fail); -t TC-BIND-002 (4 pass / 0 fail); -t TC-BIND-006 (2 pass / 0 fail);
+      bun test tests/behaviour/queue-cli.test.ts
+      tests/behaviour/queue-edge-wiring.test.ts (39 pass / 0 fail); biome check
+      on both new files (clean)."
+    type: info
+    date: "2026-11-08"
+  - text: "Retro: TC-BIND-002's stated projection 'entry state not-ready with
+      blocking detail repository-binding-unresolved' is not producible through
+      the real production composition: its queue fact source has no work-item
+      facts, so the scheduler's deps-satisfied condition is unknown and the
+      precedence folds the entry to held/dependency-unobserved before the
+      repo-free step runs. The suite therefore asserts the binding-relevant
+      facts at the layers that actually emit them: the add outcome, the absent
+      pair in the ledger (no one-sided record), the repo-free readiness evidence
+      (unknown; source repository-binding; reason addressing-unresolved) via
+      evaluateQueueReadiness over the production fact surface, and the
+      repository-binding-unresolved blocking detail via the domain claim
+      precondition (queue.precondition.unmet). AC-F1-2's required outcome is
+      unchanged and still asserted. Second finding: status renders the
+      pre-existing local-context path from its own cwd, which embeds the
+      checkout path when cwd is the checkout, so TC-BIND-008's status/brief
+      absence assertion runs over the same state with a working directory
+      outside the checkout; all queue/lanes surfaces and the graph document are
+      scanned on the recorded checkout cwd."
+    type: retro
+    date: "2026-11-08"
