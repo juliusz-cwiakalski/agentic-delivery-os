@@ -480,3 +480,44 @@ notes:
       coverage, and exports parity green."
     type: info
     date: "2026-11-08"
+  - text: "Review iteration 3 hygiene pass complete in one commit, 74458bc (no
+      behavior change beyond the marker-write robustness of F-20). F-17 FIXED:
+      the stale store-managed docblocks now state the checkout-scoped
+      create-once `<git-common-dir>/dispatch-identity.json` reality
+      (core/domain/dispatch-identity.ts header and the contracts
+      `DISPATCH_IDENTITY_MARKER_NAME` comment). F-18 FIXED: the owning plan
+      phase now declares `packages/adapters/src/repo/index.ts` in phase 3's
+      scope, the header cross-phase ownership note records
+      `CheckoutGitDirectories`/`resolveCheckoutGitDirectories`, and the phase-3
+      summary names that resolver as the common-directory source. F-19 FIXED:
+      the token-closure suite again asserts the derivation-level
+      restart-budget branch (timed-out and premature-end at
+      count = bound = 3 derive `max-restarts`/`failed` with
+      `dispatch.restart-budget-exceeded`) while keeping the F-16
+      completed-session exemption (`pr-open` at an already-reached bound).
+      F-20 FIXED: the marker is now written atomically — a synced sibling file
+      is linked into place (exclusive create, so no torn final file and no
+      lost create-once race) and the repair write renames a synced sibling over
+      the final path; a marker that carries no binding is repaired in place by
+      the next persisting dispatch instead of staying permanently unreadable,
+      and read-only surfaces still never persist. Covered by a torn-marker
+      adapter test (plus an unwritable-path test) and a production-composition
+      torn-marker repair proof; the marker location/repair behavior is stated
+      in the spec and TDR-0015 §6. F-21 FIXED: the dispatch reference page now
+      says a stall is a current-state verdict cleared by later progress, that
+      only a stall still current at collection resolution is the
+      restart-budget refusal, and that a completed session is never re-keyed to
+      `max-restarts`. F-23 FIXED by choosing the honest reconciliation: the TDR
+      §6 sentence now states that a disagreeing scheduler key or remote is not
+      recorded as a separate attribute (marker governs silently), matching the
+      delivered behavior, and the unimplemented `DispatchAttemptRecord.engineIdentity`
+      field was removed so the contract carries no dead surface. The landed
+      commit message carries no decision-record or test-case identifiers.
+      Gates: the affected
+      dispatch suites (256 pass), identity/closure/composition/inventory suites
+      (51 pass), dispatch and doc conformance (27 pass), `plan validate GH-239`
+      valid, and the aggregate `TMPDIR in-repo pnpm check` is green: 6446 pass,
+      4 skip, 0 fail (767 files); typecheck, boundaries, prompt conformance,
+      help coverage, and exports parity green."
+    type: info
+    date: "2026-11-08"
