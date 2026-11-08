@@ -165,6 +165,26 @@ describe("TC-EVID-004 an unreadable corroboration source is unevaluable, not a c
       expect(record?.corroboration.ci).toBe("unsatisfied");
       expect(record?.falseSuccess).toBe(false);
       expect(record?.divergenceRef).toBeUndefined();
+
+      const summary = await scenario.invoke([
+        "dispatch",
+        "dual-run",
+        "summary",
+        "--repo",
+        "github.com/owner/repo",
+        "--json",
+      ]);
+      const data = summary.envelope?.data as {
+        readonly incidents?: number;
+        readonly windowStartReason?: string;
+        readonly eligibility?: boolean;
+        readonly corroboration?: { readonly unsatisfied?: number };
+      };
+      expect(data.incidents).toBe(0);
+      // No reset: the unreadable source did not become a false-success incident.
+      expect(data.windowStartReason).toBe("first-counted-dispatch");
+      expect(data.corroboration?.unsatisfied).toBeGreaterThanOrEqual(1);
+      expect(data.eligibility).toBe(false);
     } finally {
       scenario.dispose();
     }
