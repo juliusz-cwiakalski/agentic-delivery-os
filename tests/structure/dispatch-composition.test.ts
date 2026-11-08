@@ -125,13 +125,6 @@ describe("the production composer builds a real harness session port", () => {
         homeDirectory: home,
         workingName: "delivery-os",
         harnessSpawnRunner: runner,
-        harnessSettings: {
-          kind: "opencode",
-          executionKind: "host",
-          opencodeDatabasePath: join(home, "opencode.db"),
-          claudeCodeSessionDirectory: join(home, "claude-code"),
-          environment: [{ name: "HARNESS_MODEL" }, { name: "HARNESS_SMALL_MODEL" }],
-        },
       })(brand);
 
       const definition = program.commands.dispatch;

@@ -134,12 +134,6 @@ export type ProductionCompositionFacts = {
    * inject a recording runner so composition is proven without a harness process.
    */
   readonly harnessSpawnRunner?: HarnessSpawnRunner;
-  /**
-   * The resolved harness settings. Production resolves the typed configuration
-   * branch; an embedder or composition test may supply the already-resolved
-   * settings instead.
-   */
-  readonly harnessSettings?: HarnessSettings;
 };
 
 /**
@@ -458,15 +452,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       phaseLedger: phaseSummary,
     });
 
-    /**
-     * Resolve the typed harness configuration branch. An injected resolution
-     * wins for embedding/tests; otherwise the layered configuration is acquired
-     * and projected through the delivered resolver.
-     */
+    /** Resolve the typed harness configuration branch through the delivered resolver. */
     const resolveProductionHarnessSettings = ():
       | { readonly ok: true; readonly settings: HarnessSettings }
       | { readonly ok: false; readonly code: string } => {
-      if (facts.harnessSettings !== undefined) return { ok: true, settings: facts.harnessSettings };
       const gitRoot = findGitRoot(cwd, nodeRepositoryIo());
       const acquired = acquireFileConfig({
         platform: runtimePlatform(),
