@@ -36,8 +36,14 @@ phases:
     }
   delivery: { started: "2026-11-07T22:10:00Z", completed: "2026-11-08T00:13:14.519Z" }
   system_spec_update: { started: "2026-11-08T00:50:00Z", completed: "2026-11-08T00:55:18.321Z" }
-  review_fix: { started: "2026-11-08T01:00:00Z", completed: "2026-11-08T02:00:00Z", verdict: "PASS", iteration: 2 }
-  quality_gates: { started: null, completed: null }
+  review_fix:
+    {
+      started: "2026-11-08T01:00:00Z",
+      completed: "2026-11-08T02:00:00Z",
+      verdict: "PASS",
+      iteration: 2
+    }
+  quality_gates: { started: "2026-11-08T02:02:00Z", completed: 2026-11-08T01:58:23.338Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -253,12 +259,12 @@ notes:
     date: "2026-11-08"
   - text: "Review iteration 1 FAIL: F-1/F-2 high — phase 8 replaced
       tests/checks/ci-checks.test.ts (37 to 2 tests) and
-      tests/checks/privacy-authoring.test.ts (8 to 3 tests), silently deleting 40
-      pre-existing regression tests of CI invariants and authoring privacy. F-3
-      test-plan execution log still Pending. F-4 change-folder helpers untested.
-      F-5 prompt-conformance negation evasion. F-6 dry-run scope wording.
-      Functional code and all AC evidence are otherwise green. Remediation phase
-      11 added; re-review required."
+      tests/checks/privacy-authoring.test.ts (8 to 3 tests), silently deleting
+      40 pre-existing regression tests of CI invariants and authoring privacy.
+      F-3 test-plan execution log still Pending. F-4 change-folder helpers
+      untested. F-5 prompt-conformance negation evasion. F-6 dry-run scope
+      wording. Functional code and all AC evidence are otherwise green.
+      Remediation phase 11 added; re-review required."
     type: blocker
     date: "2026-11-08"
   - text: "Retro: a green aggregate gate hid deleted security/supply-chain
@@ -273,14 +279,15 @@ notes:
       and F-8 and moved the non-pilot fixture scan to
       tests/checks/fixture-privacy.test.ts, so runAuthoring is used again; F-3
       set the test-plan section 7 statuses and populated section 10 (plus 7.4
-      remediation coverage); F-4 added tests/behaviour/change-folder-locate.test.ts;
-      F-5 made prompt-conformance negation sentence-local for rules and literals
-      and added the raw-git-negated mutant; F-6 pinned the commit --phase
-      --dry-run DEC-4 union in tests/behaviour/commit-staging-scope.test.ts.
-      privacy-ci-wiring's suite-filter pin was updated for the moved fixture
-      scan. Commit 97dad325. Tests: pnpm check 6005 pass / 4 skip / 0 fail
-      across 6009 tests (683 files); restored/updated suites ci-checks+ci-wiring
-      39, privacy-authoring+fixture-privacy 11, prompt-conformance+muntants 11,
+      remediation coverage); F-4 added
+      tests/behaviour/change-folder-locate.test.ts; F-5 made prompt-conformance
+      negation sentence-local for rules and literals and added the
+      raw-git-negated mutant; F-6 pinned the commit --phase --dry-run DEC-4
+      union in tests/behaviour/commit-staging-scope.test.ts. privacy-ci-wiring's
+      suite-filter pin was updated for the moved fixture scan. Commit 97dad325.
+      Tests: pnpm check 6005 pass / 4 skip / 0 fail across 6009 tests (683
+      files); restored/updated suites ci-checks+ci-wiring 39,
+      privacy-authoring+fixture-privacy 11, prompt-conformance+muntants 11,
       change-folder-locate 9, commit-staging-scope 3, privacy-ci-wiring 14;
       typecheck, lint, format, boundaries, prompt/help scans, plugin 16/16, and
       plan validate all green."
