@@ -59,6 +59,14 @@ readonly SCRIPT_DIR
 # and never reassigned.
 ROOT_DIR="${ROOT_DIR:-$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)}"
 
+# CLI-independent dispatch authority read (GH-239 F-7). The fallback never
+# invokes the typed CLI to decide authority; a missing resolver is a no-op.
+if [[ -r "${SCRIPT_DIR}/lib/dispatch-authority.sh" ]]; then
+  # shellcheck source=lib/dispatch-authority.sh
+  # shellcheck disable=SC1091
+  source "${SCRIPT_DIR}/lib/dispatch-authority.sh"
+fi
+
 # Stall threshold (minutes). Read lazily inside main() so tests can override
 # CEO_LOOP_STALL_MINUTES per-invocation without re-sourcing the script.
 # deliver-ticket.sh aligns this with DELIVER_STUCK_MINUTES by exporting
@@ -323,6 +331,9 @@ EOF
 # Fetch + decide inline (no pipes) so set -e/pipefail and variable scope
 # behave predictably. `main()` is the testable entry point.
 main() {
+  if declare -F dispatch_authority_announce >/dev/null 2>&1; then
+    dispatch_authority_announce || true
+  fi
   local session_id="${1:-}"
   case "${session_id}" in
     -h|--help) usage; exit 0 ;;

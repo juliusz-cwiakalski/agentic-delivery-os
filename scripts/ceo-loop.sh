@@ -47,6 +47,14 @@ readonly SCRIPT_DIR
 ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)"
 readonly ROOT_DIR
 
+# CLI-independent dispatch authority read (GH-239 F-7). The fallback never
+# invokes the typed CLI to decide authority; a missing resolver is a no-op.
+if [[ -r "${SCRIPT_DIR}/lib/dispatch-authority.sh" ]]; then
+  # shellcheck source=lib/dispatch-authority.sh
+  # shellcheck disable=SC1091
+  source "${SCRIPT_DIR}/lib/dispatch-authority.sh"
+fi
+
 # Stall threshold (minutes). Read lazily so tests can override per-invocation.
 # F-7 context-size proxy columns: tokens_input + tokens_cache_read +
 # tokens_output + tokens_reasoning (cache-read is a large fraction of the live
@@ -839,6 +847,9 @@ EOF
 }
 
 main() {
+  if declare -F dispatch_authority_announce >/dev/null 2>&1; then
+    dispatch_authority_announce || true
+  fi
   validate_positive_uint ADOS_HOOK_SHUTDOWN_GRACE_SECONDS "${HOOK_SHUTDOWN_GRACE_SECONDS}"
   validate_positive_uint ADOS_HOOK_MAX_FAILURES "${HOOK_MAX_FAILURES}"
   [[ "${HOOK_RETRY_SECONDS}" =~ ^[0-9]+([.][0-9]+)?$ ]] || die "ADOS_HOOK_RETRY_SECONDS must be a non-negative decimal"

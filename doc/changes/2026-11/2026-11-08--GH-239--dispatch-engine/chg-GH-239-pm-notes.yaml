@@ -233,3 +233,14 @@ notes:
       without composing dispatch into it."
     type: info
     date: "2026-11-08"
+  - text: "Delivery plan phase 8 (bash fallback) complete. Tests green:
+      test-dispatch-bash-fallback (12-cell matrix: four scripts x dual-run,
+      authoritative, typed-CLI-absent/broken), dispatch-bash-authority,
+      test-deliver-ticket (135), test-batch-deliver (47), test-pm-liveness (18),
+      test-ceo-loop (54), test-deliver-ticket-result-tuples, test-install (55).
+      The resolver reads the derived document with ordinary shell tooling and
+      defaults to dual-run on any absence, malformed content, or read failure;
+      the pointer names dispatch and dispatch handover REPO --revert and the
+      scripts remain executable."
+    type: info
+    date: "2026-11-08"

@@ -123,6 +123,7 @@ readonly ADOS_USER_MODIFIABLE_FILES=(
 readonly ADOS_DELIVERY_SCRIPTS=(
   "scripts/opencode-session.sh"
   "scripts/deliver-ticket.sh"
+  "scripts/lib/dispatch-authority.sh"
   "scripts/batch-deliver.sh"
   "scripts/ceo-loop.sh"
   "scripts/pm-liveness.sh"

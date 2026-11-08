@@ -47,6 +47,14 @@ readonly SCRIPT_DIR
 ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd -P)"
 readonly ROOT_DIR
 
+# CLI-independent dispatch authority read (GH-239 F-7). The fallback never
+# invokes the typed CLI to decide authority; a missing resolver is a no-op.
+if [[ -r "${SCRIPT_DIR}/lib/dispatch-authority.sh" ]]; then
+  # shellcheck source=lib/dispatch-authority.sh
+  # shellcheck disable=SC1091
+  source "${SCRIPT_DIR}/lib/dispatch-authority.sh"
+fi
+
 # Configurable via environment and CLI flags
 MAX_RESTARTS="${DELIVER_MAX_RESTARTS:-10}"
 # OQ-DM-3 / INV-DM-5: session-traffic liveness replaces the old 30-min
@@ -2430,6 +2438,9 @@ run_delivery() {
 }
 
 main() {
+  if declare -F dispatch_authority_announce >/dev/null 2>&1; then
+    dispatch_authority_announce || true
+  fi
   [[ "${HOOK_SHUTDOWN_GRACE_SECONDS}" =~ ^[1-9][0-9]*$ ]] || die "ADOS_HOOK_SHUTDOWN_GRACE_SECONDS must be a positive base-10 integer"
   validate_hook_allowlist
   # Subcommand dispatch (before flag parsing) — locked names (Phase 2/3 depend).
