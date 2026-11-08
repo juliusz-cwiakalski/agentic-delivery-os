@@ -283,3 +283,21 @@ notes:
       classifier exemption for the two delegating dispatch modules."
     type: info
     date: "2026-11-08"
+  - text: "Delivery pass 2 (plan phases 4 and 9 re-validation) complete. Commit
+      fd1200e: production.ts resolves the typed harness settings (kind,
+      execution descriptor, both store paths, allowlist) and composes the real
+      HarnessSessionPort for the configured kind - opencode over the host spawn
+      runner with the deny-by-default environment builder and the shared
+      classifier/liveness assembler, claude-code with its declared
+      spawn/collect capabilities - wired into the phase-4
+      createDispatchCommandRuntime with evidenceClass pilot and the
+      execution-environment descriptor. The daemon lane composition already
+      uses the same session port + descriptor + createLaneLaunchPlanner and
+      recordDaemonDispatchResult; no placeholder remains. Test:
+      tests/structure/dispatch-composition.test.ts proves a
+      production-composed dispatch spawns through an injected runner; the
+      dispatch-* suites (55 files, 306 tests), daemon-*, entrypoint-composition,
+      pnpm typecheck, pnpm check:boundaries, and pnpm check (6418 pass, 4 skip,
+      0 fail) are green."
+    type: info
+    date: "2026-11-08"
