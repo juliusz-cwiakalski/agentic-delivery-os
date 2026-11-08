@@ -452,3 +452,31 @@ notes:
       does not stage the review folder; it is the reviewer-owned record."
     type: info
     date: "2026-11-08"
+  - text: "Review iteration 2 remediation complete in one pass (review iteration
+      3 is the final review pass). Delivery commit 10857a2c. F-15 FIXED (high):
+      the repository identity binding is now checkout-scoped — the first-use
+      marker lives at `<git-common-dir>/dispatch-identity.json`, is created once
+      and never overwritten, so two repositories in one home never collide, a
+      working-directory rename or remote change of one checkout never re-keys
+      its evidence, and a read-only `dual-run summary`/`resolve`/`handover`
+      never persists a binding from an arbitrary `--repo` (only a dispatch on
+      the current checkout persists). A two-repository
+      production-composition test through `createProductionComposer` proves that
+      alpha and beta record under their own identities, a third checkout's
+      read-only summary cannot rebind, and the renamed checkout with a changed
+      remote still resolves to its own binding; the clean refusal when nothing
+      resolves is unchanged. F-16 FIXED (medium): a later progress verdict clears
+      the corroborated stall, so a transient stall followed by completion
+      classifies `finished`, while a persistent stall at the budget still
+      classifies `max-restarts` with the terminal exhaustion record; the
+      restart-budget derivation no longer overrides a completed session.
+      Identity location and per-repository scoping are reconciled in the change
+      spec (F-6, DEC-13, AC-F6-6), TDR-0015 §6, the plan and test plan,
+      feature-dispatch-engine, the glossary, the architecture overview, and the
+      dispatch test spec. Tests: identity/watch/composition suites green, all
+      dispatch suites 279 pass, dispatch conformance 12 pass, bash fallback 5/5;
+      the aggregate `TMPDIR in-repo pnpm check` is green: 6442 pass, 4 skip,
+      0 fail (767 files); typecheck, boundaries, prompt conformance, help
+      coverage, and exports parity green."
+    type: info
+    date: "2026-11-08"
