@@ -184,7 +184,15 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
     });
   }
 
-  if (input.restarts.bound > 0 && input.restarts.count >= input.restarts.bound) {
+  // The budget governs admission of a further attempt, never a session that
+  // already completed successfully: a completed session keeps its own
+  // classification instead of being re-keyed to a restart refusal.
+  const harnessCompleted = input.harness.ok && input.harness.value.outcome === HARNESS_OUTCOMES[0];
+  if (
+    input.restarts.bound > 0 &&
+    input.restarts.count >= input.restarts.bound &&
+    !harnessCompleted
+  ) {
     return base(input, {
       token: mr,
       outcome: O_FAILED,

@@ -36,7 +36,7 @@ The highest integrity risks are an exit-0-with-no-artifact run counted as clean,
 - The four-condition gate: zero false-success incidents and zero unresolved divergences in the window; all eleven TDR-0005 classes covered as exposure; at least 20 counted dispatches or at least 7 consecutive UTC dates with at least one counted dispatch, whichever comes first, binding only the floor; corroboration from completed pm-notes phases, tracker state, and CI on the pushed head.
 - Record-level degradation versus window-level unreadability: an attempt whose comparison or corroboration source cannot be read degrades only that record; an unreadable, torn, or truncated evidence-stream read makes eligibility unverifiable (TDR-0015 §1).
 - Incident-exclusive window semantics: a false-success incident recorded at T is the exclusive lower bound, a record recorded exactly at T is excluded, post-incident recovery can reach eligibility, and a resolved divergence does not reset the window (DEC-10, TDR-0015 §3).
-- Rename-invariant repository identity: the normalized scheduling `repository` key, then the normalized VCS remote, then a persisted first-use marker, with a clean refusal at exit 1 when none resolves and never a checkout-path digest presented as identity (DEC-13, TDR-0015 §6).
+- Rename-invariant repository identity: the normalized scheduling `repository` key, then the normalized VCS remote, then a checkout-scoped first-use marker stored in the checkout's git common directory, with a clean refusal at exit 1 when none resolves, per-repository isolation across two repositories in one home, no binding from a read-only gate read, and never a checkout-path digest presented as identity (DEC-13, TDR-0015 §6).
 - Bash fallback in all four entry points (`deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, `ceo-loop.sh`) in dual-run, authoritative, and typed-CLI-absent conditions, with no new required arguments and no typed CLI invocation in the authority decision.
 - Daemon lane integration: the production `LaneLaunchPlanner` and `createLaneExecutor` availability through the delivered `LaneExecutorPort`, the daemon path's final token, outcome, and attempt record, and the daemon-less one-shot path.
 - Dispatch registration in the prompt-required composition, root and command help, the reference page, the two new error rows, and the retirement or inversion of the two production-surface absence assertions.
@@ -55,7 +55,7 @@ The highest integrity risks are an exit-0-with-no-artifact run counted as clean,
 - **Only the story-owned reference page and SC-M1-29/SC-M1-30 may be reconciled.** The GH-239 ticket body, `backlog-ranking.md`, `roadmap.md`, `cli-command-registry.md`, milestone journeys, user journeys, and the operator-input record remain unchanged and are reported, not edited.
 - **Reference-host latency is not a shared-CI wall-clock gate.** The p95 summary bound is measured on the declared reference host; the deterministic bounded-read assertion is the default-suite gate (see OQ-T3).
 - **No historical evidence is imported or reclassified.** Bash delivery logs and tracker history before this change are not scored, and no record is backfilled into a counted evidence class (spec Section 19).
-- **The `--evidence-class` surface and the persisted identity marker's storage name are implementation-plan details.** The plan declares one surface and one name; the scenarios assert the declared behavior, not a literal flag spelling (see OQ-T7 and OQ-T8).
+- **The `--evidence-class` surface and the identity marker's storage location are implementation-plan details.** The plan declares one surface and one checkout-scoped location (`<git-common-dir>/dispatch-identity.json`); the scenarios assert the declared behavior, not a literal flag spelling (see OQ-T7 and OQ-T8).
 
 ### 1.3 Risk-Based Prioritization
 
@@ -81,7 +81,7 @@ The highest integrity risks are an exit-0-with-no-artifact run counted as clean,
 | 12 | The pilot-isolation test guards a deliberately reduced test-only fixture: it is not a production-surface absence claim, dispatch is not composed into it, and only its stale comment is narrowed. The two production-surface assertions (entrypoint composition, harness-review deferrals) are the only ones retired or inverted; F-9 still need not be fully resolved. | `TC-HELP-003` |
 | 13 | Evidence class is declared, closed (`pilot`, `controlled-proof`, `smoke`, `fixture`), immutable, and never escalated; production counts only `pilot`, the controlled scope counts only `controlled-proof`, and `smoke`/`fixture` never count. | `TC-EVID-006`, `TC-GATE-011`, `TC-E2E-001`, `TC-E2E-003` |
 | 14 | Pre-session refusals (unknown harness, rejected input, conflicting lease before a spawn) emit the classified envelope at exit 1 and append no attempt record (D6, DEC-19). A harness spawn refusal is not one of them: it is a recorded attempt. | `TC-DISP-002`, `TC-DISP-001`, `TC-DISP-011`, `TC-EVID-001` |
-| 15 | Repository identity resolves in order from the normalized `repository` key, the normalized VCS remote, then a persisted first-use marker; a path digest is never presented as identity and an unresolvable identity refuses at exit 1. | `TC-HAND-007`, `TC-HAND-006`, `TC-GATE-006` |
+| 15 | Repository identity resolves in order from the normalized `repository` key, the normalized VCS remote, then a checkout-scoped first-use marker; a path digest is never presented as identity, two repositories in one home keep separate bindings, a read-only gate read never binds an arbitrary `--repo`, and an unresolvable identity refuses at exit 1. | `TC-HAND-007`, `TC-HAND-006`, `TC-GATE-006` |
 | 16 | The controlled proof runs real state and command paths with injected harness, tracker, CI, and VCS ports under `controlled-proof` evidence, with a provenance guard; no real repository is flipped and no evidence is hand-inserted. | `TC-E2E-001`, `TC-E2E-002`, `TC-E2E-003` |
 | 17 | `dispatch dual-run summary` exits 0 even when ineligible; handover refusal exits 1; noop reversal exits 0; the daemon path appends its own attempt record that agrees with one-shot dispatch. | `TC-GATE-002`, `TC-HAND-001`, `TC-HAND-003`, `TC-DAEMON-002` |
 | 18 | Appendix G pins every failure class's result token, engine outcome, exit, attempt-record policy, and comparison treatment. No scenario invents a different pair or re-derives a comparison family. | `TC-EVID-001`, `TC-ERR-001`, `TC-ERR-002`, `TC-RESUME-002`, `TC-RESUME-003`, `TC-DISP-009`, `TC-DISP-011` |
@@ -1803,7 +1803,7 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 **Preconditions**:
 - Repo-alpha and repo-beta both have evidence; alpha meets the gate, beta does not.
 - Both identities resolve from the scheduling engine's normalized `repository` field.
-- A second fixture where the identity resolves from the normalized VCS remote, and a third where it resolves from the persisted first-use marker.
+- A second fixture where the identity resolves from the normalized VCS remote, and a third where it resolves from the checkout-scoped first-use marker.
 
 **Steps**:
 1. Flip alpha and assert both authority views and both handover ledgers.
@@ -1836,13 +1836,13 @@ Each scenario uses the template's Preconditions / Steps / Expected Outcome form,
 
 **Preconditions**:
 - A temporary checkout with a configured local bare remote and a state root.
-- Three resolution paths available in order: the scheduling engine's normalized `repository` key, the normalized VCS remote, and a persisted first-use marker created through the store-managed artifact.
+- Three resolution paths available in order: the scheduling engine's normalized `repository` key, the normalized VCS remote, and a checkout-scoped first-use marker stored in the checkout's git common directory.
 - A fixture where none of the three resolves.
 
 **Steps**:
 1. Phase-3 slice: call `resolveDispatchIdentity(...)` with the scheduler `repository` key present; assert the normalized `host/owner/name` identity.
 2. Phase-3 slice: with no scheduler key, configure the local bare remote and assert the normalized remote identity; restart the process and assert the same identity is reused.
-3. Phase-3 slice: with no scheduler key and no remote, create the persisted first-use marker through the store-managed artifact; rename the checkout and restart; assert the marker is reused and never regenerated.
+3. Phase-3 slice: with no scheduler key and no remote, create the checkout-scoped first-use marker in the checkout's git common directory; rename the checkout and restart; assert the marker is reused and never overwritten, and that a second repository in one home keeps its own binding.
 4. Phase-3 slice: assert that no identity field or resolved value is ever a checkout-path digest.
 5. Phase-6 slice: run `dispatch dual-run summary` and `dispatch handover` with none of the three resolvable, in `dispatch-dual-run-summary.test.ts` and `dispatch-handover.test.ts`.
 
@@ -3233,7 +3233,7 @@ Note the deliberate reconciliations: `TC-EVID-002` is owned by phase 6 (its reso
 
 - The dependency set is delivered and stable on the integration branch (D5).
 - The state layer admits the three additive record kinds and the derived document without a schema bump (DEC-18).
-- Repository identity resolves from the normalized scheduling `repository` key, then the normalized VCS remote, then a persisted first-use marker created through the store-managed artifact; an unresolvable identity is a clean refusal and a checkout-path digest is never the identity (DEC-13, TDR-0015 §6).
+- Repository identity resolves from the normalized scheduling `repository` key, then the normalized VCS remote, then a checkout-scoped first-use marker stored in the checkout's git common directory; an unresolvable identity is a clean refusal, a checkout-path digest is never the identity, and two repositories in one home keep separate bindings (DEC-13, TDR-0015 §6).
 - Every dispatch composition declares its evidence class: production defaults to `pilot`, the controlled proof declares `controlled-proof`, and `smoke`/`fixture` never count (TDR-0015 §2).
 - The daemon path shares the harness port and the shared classifier with the one-shot path, and plan phase 9 supplies the classification and attempt-record append point in the daemon composition; this plan asserts the behavior regardless of the chosen home symbol.
 - The four bash entry points can read and parse the derived authority document with ordinary shell tooling and default to dual-run on any failure.
@@ -3255,7 +3255,7 @@ Note the deliberate reconciliations: `TC-EVID-002` is owned by phase 6 (its reso
 | OQ-T5 | Is the F-9 deferral "resolved" or "resolved with follow-up"? | Either is accepted if the record names the production-consumer outcome and a revisit trigger; AC-F11-3 does not require full resolution. | No | Open — engineering |
 | OQ-T6 | Which planning files may the delivery edit? | Only the dispatch reference page and SC-M1-29/SC-M1-30. The ticket body and every other planning file remain unchanged and are reported. | No; review gate | Open — pm |
 | OQ-T7 | What is the `--evidence-class` surface (flag vs configured default) and the controlled composition's declaration point? | The implementation plan declares one surface and one declaration point; the tests drive the declared composition input and assert the recorded class, not a literal flag spelling. | No; behavior is fixed by AC-F4-5 | Open — engineering / TDR-0015 unresolved item |
-| OQ-T8 | What is the persisted identity marker's storage name/location, and what happens when a later derived key disagrees with the persisted binding? | The store-managed artifact owns the name; the persisted binding governs and the discrepancy is recorded as a bounded attribute, not a new identity (TDR-0015 §6). Tests assert behavior through the store edge, not the name. | No | Open — engineering / TDR-0015 unresolved item |
+| OQ-T8 | What is the identity marker's storage location, and what happens when a later derived key disagrees with the persisted binding? | The checkout owns the marker: `<git-common-dir>/dispatch-identity.json`, created once and never overwritten, so a rename or remote change keeps the binding and a second repository in one home keeps its own; a later derived key never re-keys it. Tests assert the behavior through the checkout marker edge. | No | Closed — pinned in TDR-0015 §6 |
 | OQ-T9 | Which timestamp drives the window lower bound and UTC-date attribution (start vs completion/recorded)? | The completion/recorded timestamp of the attempt record, per TDR-0015 §3; the incident tie uses a strict `>` comparison. Tests use the record's completion timestamp. | No | Open — engineering / TDR-0015 unresolved item |
 
 ## 9. Plan Revision Log

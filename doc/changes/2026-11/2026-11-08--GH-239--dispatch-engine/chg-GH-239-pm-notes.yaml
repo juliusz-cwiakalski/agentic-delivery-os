@@ -369,6 +369,16 @@ notes:
       @doc-syncer if behavior changed, then @reviewer iteration 2."
     type: info
     date: "2026-11-08"
+  - text: "Review iteration 2 verdict FAIL (code-review/review-iter-2.yaml). F-1,
+      F-2, F-4..F-13 CLOSED; F-14 OPEN (info); F-3 regression fixed but
+      introduced F-15 (high): the production identity marker is a single global
+      state document, so two repositories in one home collide and a read-only
+      summary can bind it; per-repository isolation is broken. F-16 (medium): a
+      transient stall is never cleared, so a completed session can still
+      classify max-restarts. Sending both back to @coder; review iteration 3 is
+      the last within budget."
+    type: blocker
+    date: "2026-11-08"
   - text: "Review iteration 1 remediation complete in one pass. Delivery commit
       27f791b9 (production composition, corroboration/identity/watch policy, tests,
       spec/plan reconciliation, registry bookkeeping). F-1 FIXED: the shipped

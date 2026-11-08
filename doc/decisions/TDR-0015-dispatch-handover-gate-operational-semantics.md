@@ -417,14 +417,14 @@ Two consumers reading the same attempt therefore obtain the same comparison clas
 
 ### 6. Repository identity
 
-**Resolution order** (first successful step wins; the result is persisted as the repository binding for the checkout within the state scope):
+**Resolution order** (first successful step wins; the result is persisted as the repository binding for that checkout, scoped to the checkout rather than to the shared per-user state root):
 
 1. The scheduling engine's `repository` value on the queue entry/lease (already normalized `host/owner/name`).
 2. The checkout's configured VCS remote normalized through `normalizeRepositoryKey` (strips protocol, credentials, userinfo, `.git`; lowercases; yields `host/owner/name`).
-3. A persisted identity marker created on first use for that checkout: a store-managed artifact created once with runtime-edge random material and guards that refuse silent regeneration (the state layer's get-or-create artifact semantics). It is never derived from the checkout path.
+3. A persisted identity marker created on first use for that checkout: stored with the checkout in its git common directory (`<git-common-dir>/dispatch-identity.json`), created once and never overwritten, so it survives a working-directory rename, is shared by the checkout's linked worktrees, and is never shared with or overwritten by another repository in the same home. It is created only by a dispatch operating on the current checkout, never by a read-only summary, resolve, or handover read of an arbitrary `--repo` argument. It is never derived from the checkout path.
 4. **Clean refusal.** If none of the above resolves, the summary/handover refuses at exit 1 with a classified identity error and appends no authority-changing record. It never reports an empty success and never falls back to a path digest.
 
-**Stability:** once a binding is established within a state scope, it is reused, so a checkout rename, a remote change, or a restart does not re-key history. If a later derived value disagrees with the persisted binding, the binding governs and the discrepancy is recorded as a bounded attribute, not a new repository identity.
+**Stability:** once a binding is established for a checkout, it is reused, so a checkout rename, a remote change, or a restart does not re-key history. Bindings are per checkout: two repositories in one home keep separate markers and neither can rebind the other. If a later derived value disagrees with the persisted binding, the binding governs and the discrepancy is recorded as a bounded attribute, not a new repository identity.
 
 A digest of the checkout path is explicitly **not** an acceptable identity: it changes on rename, so it cannot carry the rename-stability claim (readiness F8).
 
@@ -461,7 +461,7 @@ The selected composite satisfies all constraints C-1…C-9. It keeps every class
 ### Unresolved Questions
 
 - [ ] Pin the `--evidence-class` surface (explicit flag vs. configured default) and the controlled composition's declaration point (owner: `@spec-writer`, GH-239 spec F-4/DM-1/EVT-1).
-- [ ] Pin the persisted identity marker's storage name/location and the exact behavior when a persisted binding disagrees with a later derived key (owner: `@spec-writer` + `@plan-writer`, GH-239 phase 3).
+- [x] Pin the persisted identity marker's storage name/location and the exact behavior when a persisted binding disagrees with a later derived key (owner: `@spec-writer` + `@plan-writer`, GH-239 phase 3). Pinned in §6: a checkout-scoped `<git-common-dir>/dispatch-identity.json` created once and never overwritten; the persisted binding governs a later disagreement.
 - [ ] Pin the timestamp field used for the window lower bound and the UTC-date attribution (completion vs. recorded) and the incident-tie rule (owner: `@test-plan-writer`, TC-GATE-009).
 - [ ] Confirm that `merged` corroboration always requires the pushed head, CI on that head, tracker state, and completed phases in the controlled fixture (owner: `@test-plan-writer`).
 

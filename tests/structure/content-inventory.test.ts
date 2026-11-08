@@ -134,7 +134,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readDispatchAuthority",
   ],
   "adapters/src/file/dispatch-identity.ts": [
-    "DISPATCH_IDENTITY_GUARD_KINDS",
+    "dispatchIdentityMarkerPath",
     "ensureDispatchIdentityMarkerText",
     "readDispatchIdentityMarkerText",
   ],
@@ -2087,6 +2087,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "nodeRepositoryIo",
     "parseGitHubRemote",
     "readRepositoryFacts",
+    "resolveCheckoutGitDirectories",
     "resolveRepositoryRoot",
   ],
   "adapters/src/file/plan-artifact.ts": ["readPlanArtifact"],

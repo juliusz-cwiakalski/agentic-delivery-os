@@ -78,7 +78,7 @@ export {
   readDispatchAuthority,
 } from "./dispatch-authority.js";
 export {
-  DISPATCH_IDENTITY_GUARD_KINDS,
+  dispatchIdentityMarkerPath,
   ensureDispatchIdentityMarkerText,
   readDispatchIdentityMarkerText,
 } from "./dispatch-identity.js";

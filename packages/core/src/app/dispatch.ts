@@ -489,8 +489,9 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     // Progress-based liveness (NFR-2, DEC-9): poll at the `lane.liveness-interval`
     // cadence while `collect` is pending, carrying the previous observation so a
     // stall needs two consecutive sourced no-advance readings. The verdict trail
-    // is recorded as attempt liveness evidence; a corroborated terminal stall is
-    // routed through restart admission below.
+    // is recorded as attempt liveness evidence; a stall that is still current
+    // when collection resolves is routed through restart admission below, while
+    // any later progress clears it.
     const verdicts: DispatchLivenessVerdict[] = [];
     let stalled = false;
     let previousReadings: readonly DispatchLivenessReading[] | undefined;
@@ -501,7 +502,11 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         cadenceMs: ports.livenessIntervalMs ?? 30_000,
       });
       if (!verdicts.includes(evaluation.verdict)) verdicts.push(evaluation.verdict);
-      if (evaluation.verdict === "stalled") stalled = true;
+      // A stall is a current-state verdict, not a latch: any later advancing
+      // observation clears it, so a transient mid-run stall is recorded as
+      // liveness evidence and the collected evidence still classifies normally.
+      if (evaluation.verdict === "progressing") stalled = false;
+      else if (evaluation.verdict === "stalled") stalled = true;
       previousReadings = readings;
     };
 

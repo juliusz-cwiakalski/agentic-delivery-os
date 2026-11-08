@@ -24,6 +24,12 @@ export type RepositoryRootFacts = {
   readonly explicitRoot?: string;
 };
 
+/** The checkout's per-worktree git directory and the shared common directory. */
+export type CheckoutGitDirectories = {
+  readonly gitDir: string;
+  readonly commonDir: string;
+};
+
 const gitDirectoryFile = (path: string, io: RepositoryIo): boolean =>
   io.isFile(path) && io.readText(path).trimStart().startsWith("gitdir:");
 
@@ -53,6 +59,21 @@ export const resolveRepositoryRoot = (input: RepositoryRootInput): RepositoryRoo
     ...(gitRoot !== undefined ? { gitRoot } : {}),
     ...(input.explicitRoot !== undefined ? { explicitRoot: input.explicitRoot } : {}),
   };
+};
+
+/**
+ * Resolve the checkout's git directories from `cwd`.
+ *
+ * The common directory is shared by every linked worktree of one repository,
+ * so a checkout-scoped artifact stored beside it survives a working-directory
+ * rename and is never shared with a second repository.
+ */
+export const resolveCheckoutGitDirectories = (input: {
+  readonly cwd: string;
+  readonly io: RepositoryIo;
+}): CheckoutGitDirectories | undefined => {
+  const root = findGitRoot(input.cwd, input.io);
+  return root === undefined ? undefined : resolveGitDir(root, input.io);
 };
 
 /** The checkout HEAD facts (branch, full SHA, detached marker). */

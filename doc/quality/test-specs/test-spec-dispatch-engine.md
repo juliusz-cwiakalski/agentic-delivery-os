@@ -113,7 +113,7 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 
 - **Given** the shipped production composer over an injected store, remote, and harness runner
 - **When** `dispatch dual-run summary`, `dispatch dual-run resolve`, `dispatch handover`, `dispatch handover --revert`, and `dispatch <ref> --resume-prompt` run
-- **Then** each surface runs through the delivered CLI, the resume uses the persisted session, the first-use identity marker binds the repository, and a renamed remote or changed scheduler key does not re-key history.
+- **Then** each surface runs through the delivered CLI, the resume uses the persisted session, the checkout-scoped first-use identity marker binds the repository, two repositories in one home keep separate bindings, a read-only summary never binds an arbitrary `--repo`, and a renamed remote or changed scheduler key does not re-key history.
 - **And given** an unresolvable repository argument
 - **Then** the surface refuses cleanly at exit `1`.
 

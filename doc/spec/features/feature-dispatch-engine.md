@@ -6,7 +6,7 @@ created: 2026-11-08
 last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution and queue-lease claim, spawn or resume through the harness session port, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records and the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its persisted first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, and the CLI-independent bash fallback authority read."
+summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution and queue-lease claim, spawn or resume through the harness session port, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records and the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, and the CLI-independent bash fallback authority read."
 links:
   related_changes: ["GH-239"]
   related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008"]
@@ -33,7 +33,7 @@ A repository is either `dual-run` (bash authoritative, dispatch evidence only) o
 
 `dispatch` is part of the prompt-required CLI composition and has root help, command help, and reference-page coverage. The same harness session port, classifier, truth derivation, and attempt-record ledger serve one-shot dispatches and daemon-driven lanes.
 
-The shipped production composition wires the one-shot run path, the evidence-gate runtime (`dual-run summary`, `dual-run resolve`, and `handover [--revert]`), the resume lane and restart-budget facts, and the repository identity resolver with its persisted first-use marker. The daemon lane seam is composed at the CLI/daemon factory; the production daemon entry that supplies that seam is owned by the resident-daemon change.
+The shipped production composition wires the one-shot run path, the evidence-gate runtime (`dual-run summary`, `dual-run resolve`, and `handover [--revert]`), the resume lane and restart-budget facts, and the repository identity resolver with its checkout-scoped first-use marker. The daemon lane seam is composed at the CLI/daemon factory; the production daemon entry that supplies that seam is owned by the resident-daemon change.
 
 ## Command grammar
 
@@ -177,7 +177,7 @@ Eligibility for a repository is the conjunction of four separated facts over the
 
 `dispatch handover <repo> --revert` appends a reversal record and restores `dual-run` while preserving history. Reverting a repository already in `dual-run` is an idempotent noop at exit `0`. Replaying the same handover or reversal record appends no duplicate record.
 
-Repository identity is rename-invariant. The first successful resolution binds a persisted first-use marker through store-managed artifact semantics; once written, the marker governs, so a later checkout rename, remote change, or scheduler re-key never re-keys history. Without a marker, the scheduling engine's normalized `repository` key is tried first, then the checkout's configured VCS remote normalized to `host/owner/name`. A checkout-path digest is never presented as identity. An unresolvable identity is a clean refusal at exit `1`.
+Repository identity is rename-invariant and scoped to the checkout. The first successful resolution binds a first-use marker stored with the checkout inside its git common directory (`<git-common-dir>/dispatch-identity.json`); the marker is created once and never overwritten, so it travels with the checkout across a working-directory rename and is shared by every linked worktree of that repository. Two repositories in one home therefore never share or overwrite each other's binding, and a rename, remote change, or scheduler re-key never re-keys history. Only a dispatch operating on the current checkout creates the marker: the read-only `dual-run summary`, `dual-run resolve`, and `handover` surfaces read the binding when present and never persist one from an arbitrary `--repo` argument. Without a marker, the scheduling engine's normalized `repository` key is tried first, then the checkout's configured VCS remote normalized to `host/owner/name`. A checkout-path digest is never presented as identity. An unresolvable identity is a clean refusal at exit `1`.
 
 ## Harness and daemon composition
 

@@ -35,6 +35,7 @@ import {
   nodeRepositoryIo,
   parseGitHubRemote,
   readRepositoryFacts,
+  resolveCheckoutGitDirectories,
 } from "@delivery-os/adapters/repo";
 import {
   assembleHarnessLiveness,
@@ -250,6 +251,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     });
     const repositoryFacts =
       facts.repositoryFacts ?? readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
+    // The identity binding is scoped to this checkout, not the shared per-user
+    // state root: its marker lives in the checkout's git common directory, so
+    // two repositories in one home never collide and a rename or remote change
+    // of one checkout never re-keys another's evidence.
+    const identityMarkerDirectory = resolveCheckoutGitDirectories({
+      cwd,
+      io: nodeRepositoryIo(),
+    })?.commonDir;
     const target = repositoryTargetOf(repositoryFacts.originUrl);
     const harnessSpawnRunner = facts.harnessSpawnRunner ?? createHostSpawnRunner();
     const clientTarget = target ?? { owner: "unresolved", name: "unresolved" };
@@ -459,11 +468,16 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     /**
      * The persisted first-use repository identity, resolved through the delivered
      * policy (persisted marker, scheduler key, normalized remote — in that order
-     * of authority) and bound on first use so a later rename or remote change
-     * never re-keys history (AC-F6-2, AC-F6-6).
+     * of authority). The binding is scoped to this checkout's git common
+     * directory and is created only by a dispatch operating on this checkout, so
+     * a read-only gate read never binds an arbitrary `--repo` argument and a
+     * later rename or remote change never re-keys history (AC-F6-2, AC-F6-6).
      */
-    const resolveProductionRepository = (schedulerKey: string | undefined): string | undefined => {
-      const persistedMarker = readDispatchIdentityMarkerText(store);
+    const resolveProductionRepository = (
+      schedulerKey: string | undefined,
+      options: { readonly persist: boolean },
+    ): string | undefined => {
+      const persistedMarker = readDispatchIdentityMarkerText(identityMarkerDirectory);
       const resolution = resolveDispatchIdentity({
         ...(schedulerKey === undefined ? {} : { schedulerKey }),
         ...(repositoryFacts.originUrl === undefined
@@ -472,9 +486,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         ...(persistedMarker === undefined ? {} : { persistedMarker }),
       });
       if (!resolution.ok) return undefined;
-      // Persist the binding; an unpersistable marker never changes the resolved
-      // identity, so the caller still records under the same key.
-      ensureDispatchIdentityMarkerText(store, serializeIdentityMarker(resolution.repository));
+      if (options.persist) {
+        // Persist the binding; an unpersistable marker never changes the
+        // resolved identity, so the caller still records under the same key.
+        ensureDispatchIdentityMarkerText(
+          identityMarkerDirectory,
+          serializeIdentityMarker(resolution.repository),
+        );
+      }
       return resolution.repository;
     };
 
@@ -919,7 +938,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       gate: {
         scope: "production",
         principal: DISPATCH_PRINCIPAL,
-        resolveRepository: (repo) => resolveProductionRepository(schedulerKeyOf(repo)),
+        resolveRepository: (repo) =>
+          resolveProductionRepository(schedulerKeyOf(repo), { persist: false }),
       },
     });
 
@@ -963,7 +983,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         gate: {
           scope: "production",
           principal: DISPATCH_PRINCIPAL,
-          resolveRepository: (repo) => resolveProductionRepository(schedulerKeyOf(repo)),
+          resolveRepository: (repo) =>
+            resolveProductionRepository(schedulerKeyOf(repo), { persist: false }),
         },
       }),
       run: {
@@ -979,7 +1000,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               },
             };
           }
-          const repository = resolveProductionRepository(schedulerKeyForRef(input.ref));
+          const repository = resolveProductionRepository(schedulerKeyForRef(input.ref), {
+            persist: true,
+          });
           if (repository === undefined) {
             return {
               ok: false,

@@ -14,7 +14,7 @@
  * environment-dependent on a parseable origin remote.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readDispatchIdentityMarkerText } from "../../packages/adapters/src/file/dispatch-identity";
 import type { GitChildRunner, GitChildRunnerResult } from "../../packages/adapters/src/git/index";
@@ -56,6 +56,29 @@ const ROOT = process.cwd();
 
 /** The injected checkout remote and the derived identity it normalizes to. */
 const GITHUB_ORIGIN = "https://github.com/owner/repo.git";
+
+/**
+ * Create a minimal checkout whose git common directory carries the given
+ * origin. The identity marker is checkout-scoped, so the harness composes over
+ * a real (temporary) checkout instead of the repository under test.
+ */
+const createCheckout = (
+  parent: string,
+  name: string,
+  originUrl?: string,
+): { readonly directory: string; readonly commonDir: string } => {
+  const directory = join(parent, name);
+  const commonDir = join(directory, ".git");
+  mkdirSync(commonDir, { recursive: true });
+  if (originUrl !== undefined) {
+    writeFileSync(join(commonDir, "config"), `[remote "origin"]\n\turl = ${originUrl}\n`);
+  }
+  return { directory, commonDir };
+};
+
+/** Read the checkout-scoped identity marker through the delivered adapter. */
+const markerOf = (commonDir: string): string | undefined =>
+  readDispatchIdentityMarkerText(commonDir);
 
 describe("TC-MERGE-004 the production composition has no reachable merge port", () => {
   test("the composition type declares no merge member", () => {
@@ -104,6 +127,7 @@ describe("the production composer builds a real harness session port", () => {
     const base = join(ROOT, "tmp", "tmpdir");
     mkdirSync(base, { recursive: true });
     const home = mkdtempSync(join(base, "gh239-production-"));
+    const checkout = createCheckout(home, "checkout", GITHUB_ORIGIN);
     try {
       const brandResult = resolveBrandIdentity({ workingName: "delivery-os" });
       expect(brandResult.ok).toBe(true);
@@ -156,7 +180,7 @@ describe("the production composer builds a real harness session port", () => {
           HARNESS_MODEL: "synthetic/model-large",
           HARNESS_SMALL_MODEL: "synthetic/model-small",
         },
-        cwd: ROOT,
+        cwd: checkout.directory,
         homeDirectory: home,
         workingName: "delivery-os",
         repositoryFacts: { originUrl: GITHUB_ORIGIN },
@@ -320,6 +344,7 @@ const observeTruth = async (scenario: TruthScenario): Promise<TruthObservation> 
   const base = join(ROOT, "tmp", "tmpdir");
   mkdirSync(base, { recursive: true });
   const home = mkdtempSync(join(base, "gh239-truth-"));
+  const checkout = createCheckout(home, "checkout", GITHUB_ORIGIN);
   const requests: string[] = [];
   const gitArgv: string[] = [];
   try {
@@ -385,7 +410,7 @@ const observeTruth = async (scenario: TruthScenario): Promise<TruthObservation> 
         HARNESS_MODEL: "synthetic/model-large",
         HARNESS_SMALL_MODEL: "synthetic/model-small",
       },
-      cwd: ROOT,
+      cwd: checkout.directory,
       homeDirectory: home,
       workingName: "delivery-os",
       repositoryFacts: facts,
@@ -592,6 +617,8 @@ describe("the production truth read keeps honest failure classified", () => {
 type ProductionHarness = {
   readonly brand: BrandIdentity;
   readonly home: string;
+  readonly checkout: string;
+  readonly commonDir: string;
   readonly store: StateStorePort;
   readonly program: ReturnType<ReturnType<typeof createProductionComposer>>;
   readonly spawns: readonly { readonly command: string; readonly args: readonly string[] }[];
@@ -606,6 +633,8 @@ type ProductionHarness = {
 const createProductionHarness = (input: {
   readonly label: string;
   readonly home?: string;
+  /** An existing checkout directory; a fresh one is created under the home. */
+  readonly checkout?: string;
   readonly originUrl?: string;
   readonly credentialMissing?: boolean;
   readonly transport?: { send: (request: { readonly url: string }) => Promise<unknown> };
@@ -617,6 +646,10 @@ const createProductionHarness = (input: {
   const base = join(ROOT, "tmp", "tmpdir");
   mkdirSync(base, { recursive: true });
   const home = input.home ?? mkdtempSync(join(base, input.label));
+  const checkout =
+    input.checkout === undefined
+      ? createCheckout(home, `${input.label}checkout`, input.originUrl)
+      : { directory: input.checkout, commonDir: join(input.checkout, ".git") };
   const store = createStateStore(
     {
       level: "local",
@@ -646,7 +679,7 @@ const createProductionHarness = (input: {
       HARNESS_MODEL: "synthetic/model-large",
       HARNESS_SMALL_MODEL: "synthetic/model-small",
     },
-    cwd: ROOT,
+    cwd: checkout.directory,
     homeDirectory: home,
     workingName: "delivery-os",
     ...(input.originUrl === undefined
@@ -673,6 +706,8 @@ const createProductionHarness = (input: {
   return {
     brand,
     home,
+    checkout: checkout.directory,
+    commonDir: checkout.commonDir,
     store,
     program,
     spawns,
@@ -905,13 +940,13 @@ describe("the production composer resumes the existing lane", () => {
 });
 
 describe("the production composer keeps the repository identity rename-invariant", () => {
-  test("a changed remote and scheduler key reuse the persisted binding", async () => {
+  test("a renamed checkout with a changed remote and scheduler key reuses its binding", async () => {
     const first = createProductionHarness({ label: "gh239-identity-", originUrl: GITHUB_ORIGIN });
     try {
       const seeded = declareQueueEntry(first.store, {
         ref: CHANGE_REF,
         repository: "github.com/owner/alpha",
-        repositoryRoot: ROOT,
+        repositoryRoot: first.checkout,
         recordedAt: new Date().toISOString(),
         fenceToken: "seed-fence",
       });
@@ -920,23 +955,30 @@ describe("the production composer keeps the repository identity rename-invariant
       expect(run.exit).toBe(2);
       const attempts = readDispatchAttempts(first.store);
       expect(attempts.ok && attempts.records[0]?.repository).toBe("github.com/owner/alpha");
-      // First use persisted the binding.
-      expect(readDispatchIdentityMarkerText(first.store)).toBe(
-        serializeIdentityMarker("github.com/owner/alpha"),
-      );
+      // The binding lives with this checkout, not in the shared state root.
+      expect(markerOf(first.commonDir)).toBe(serializeIdentityMarker("github.com/owner/alpha"));
 
-      // Same state root, renamed checkout remote, changed scheduler key. The
-      // persisted marker governs, so history is never re-keyed (AC-F6-6).
+      // Rename the checkout directory and change its remote, keeping the same
+      // home/state root. The checkout-scoped marker governs, so history is
+      // never re-keyed (AC-F6-6).
+      const renamedDirectory = join(first.home, "renamed");
+      renameSync(first.checkout, renamedDirectory);
+      writeFileSync(
+        join(renamedDirectory, ".git", "config"),
+        `[remote "origin"]\n\turl = https://github.com/owner/renamed.git\n`,
+      );
       const renamed = createProductionHarness({
         label: "gh239-identity-renamed-",
         home: first.home,
+        checkout: renamedDirectory,
         originUrl: "https://github.com/owner/renamed.git",
       });
       try {
+        expect(markerOf(renamed.commonDir)).toBe(serializeIdentityMarker("github.com/owner/alpha"));
         const requeued = declareQueueEntry(renamed.store, {
           ref: CHANGE_REF,
           repository: "github.com/owner/renamed",
-          repositoryRoot: ROOT,
+          repositoryRoot: renamed.checkout,
           recordedAt: new Date(Date.now() + 1000).toISOString(),
           fenceToken: "seed-fence-2",
         });
@@ -965,6 +1007,95 @@ describe("the production composer keeps the repository identity rename-invariant
       }
     } finally {
       first.dispose();
+    }
+  });
+
+  test("two checkouts in one home bind and record under their own identities", async () => {
+    const alpha = createProductionHarness({
+      label: "gh239-iso-alpha-",
+      originUrl: "https://github.com/acme/alpha.git",
+    });
+    try {
+      const beta = createProductionHarness({
+        label: "gh239-iso-beta-",
+        home: alpha.home,
+        originUrl: "https://github.com/acme/beta.git",
+      });
+      try {
+        // The same home/state root serves both checkouts; each queue entry names
+        // its own repository.
+        for (const [harness, ref, repository] of [
+          [alpha, "GH-901", "github.com/acme/alpha"],
+          [beta, "GH-902", "github.com/acme/beta"],
+        ] as const) {
+          const queued = declareQueueEntry(harness.store, {
+            ref,
+            repository,
+            repositoryRoot: harness.checkout,
+            recordedAt: new Date().toISOString(),
+            fenceToken: `seed-${ref}`,
+          });
+          expect(queued.ok).toBe(true);
+          const run = await invokeProduction(harness, ["dispatch", ref, "--json"]);
+          expect(run.exit).toBe(2);
+        }
+
+        const attempts = readDispatchAttempts(beta.store);
+        expect(attempts.ok).toBe(true);
+        const repositoryByRef = new Map(
+          attempts.ok ? attempts.records.map((record) => [record.ref, record.repository]) : [],
+        );
+        expect(repositoryByRef.get("GH-901")).toBe("github.com/acme/alpha");
+        expect(repositoryByRef.get("GH-902")).toBe("github.com/acme/beta");
+        expect(markerOf(alpha.commonDir)).toBe(serializeIdentityMarker("github.com/acme/alpha"));
+        expect(markerOf(beta.commonDir)).toBe(serializeIdentityMarker("github.com/acme/beta"));
+
+        // A third checkout's read-only summary must not bind its --repo argument.
+        const gamma = createCheckout(alpha.home, "gamma", "https://github.com/acme/gamma.git");
+        const gammaHarness = createProductionHarness({
+          label: "gh239-iso-gamma-",
+          home: alpha.home,
+          checkout: gamma.directory,
+          originUrl: "https://github.com/acme/gamma.git",
+        });
+        try {
+          const summary = await invokeProduction(gammaHarness, [
+            "dispatch",
+            "dual-run",
+            "summary",
+            "--repo",
+            "github.com/acme/other",
+            "--json",
+          ]);
+          expect(summary.error).toBeUndefined();
+          expect(summary.exit).toBe(0);
+          expect(markerOf(gamma.commonDir)).toBeUndefined();
+
+          const alphaSummary = await invokeProduction(gammaHarness, [
+            "dispatch",
+            "dual-run",
+            "summary",
+            "--repo",
+            "github.com/acme/alpha",
+            "--json",
+          ]);
+          expect(alphaSummary.exit).toBe(0);
+          expect(alphaSummary.data?.repository).toBe("github.com/acme/alpha");
+          expect(markerOf(gamma.commonDir)).toBeUndefined();
+        } finally {
+          // The gamma harness shares the home with alpha/beta; the outer dispose
+          // clears it, so only its own checkout is removed here.
+          rmSync(gamma.directory, { recursive: true, force: true });
+        }
+
+        // The read-only reads never re-keyed either checkout's binding.
+        expect(markerOf(alpha.commonDir)).toBe(serializeIdentityMarker("github.com/acme/alpha"));
+        expect(markerOf(beta.commonDir)).toBe(serializeIdentityMarker("github.com/acme/beta"));
+      } finally {
+        beta.dispose();
+      }
+    } finally {
+      alpha.dispose();
     }
   });
 

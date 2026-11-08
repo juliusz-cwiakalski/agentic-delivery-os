@@ -1,10 +1,11 @@
 /**
  * TC-HAND-007 (phase-3 identity slice) — resolution order, normalized remote,
- * persisted first-use marker reuse, rename/restart invariance, and the absence
- * of a checkout-path digest. No summary or handover command is invoked here.
+ * checkout-scoped first-use marker reuse, rename/restart invariance, and the
+ * absence of a checkout-path digest. No summary or handover command is invoked
+ * here.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -17,25 +18,30 @@ import {
   serializeIdentityMarker,
 } from "../../packages/core/src/domain/dispatch-identity";
 import {
+  dispatchIdentityMarkerPath,
   ensureDispatchIdentityMarkerText,
   readDispatchIdentityMarkerText,
 } from "../../packages/adapters/src/file/dispatch-identity";
-import { appendDispatchAttempt } from "../../packages/core/src/app/dispatch-ledger";
-import { makeIdentity, openStore } from "../fixtures/state/harness";
-import { makeAttemptFor } from "../fixtures/dispatch/ledger";
 
-const resolveWithStore = (
-  store: ReturnType<typeof openStore>["store"],
+/**
+ * Resolve through the delivered policy against one checkout's git common
+ * directory, persisting the first-use binding exactly as production does.
+ */
+const resolveWithCheckout = (
+  gitCommonDirectory: string,
   input: { readonly schedulerKey?: string; readonly remoteUrl?: string },
 ) => {
-  const marker = readDispatchIdentityMarkerText(store);
+  const marker = readDispatchIdentityMarkerText(gitCommonDirectory);
   const resolution = resolveDispatchIdentity({
     ...(input.schedulerKey === undefined ? {} : { schedulerKey: input.schedulerKey }),
     ...(input.remoteUrl === undefined ? {} : { remoteUrl: input.remoteUrl }),
     ...(marker === undefined ? {} : { persistedMarker: marker }),
   });
   if (resolution.ok && marker === undefined) {
-    ensureDispatchIdentityMarkerText(store, serializeIdentityMarker(resolution.repository));
+    ensureDispatchIdentityMarkerText(
+      gitCommonDirectory,
+      serializeIdentityMarker(resolution.repository),
+    );
   }
   return resolution;
 };
@@ -105,38 +111,52 @@ describe("TC-HAND-007 resolution order and persisted binding", () => {
     });
   });
 
-  test("the persisted marker is reused across a restart and never re-keyed", () => {
+  test("the marker lives in the checkout's git common directory", () => {
+    const root = mkdtempSync(join(tmpdir(), "gh239-identity-path-"));
+    try {
+      const commonDir = join(root, ".git");
+      mkdirSync(commonDir, { recursive: true });
+      expect(dispatchIdentityMarkerPath(commonDir)).toBe(join(commonDir, "dispatch-identity.json"));
+      expect(readDispatchIdentityMarkerText(commonDir)).toBeUndefined();
+      expect(readDispatchIdentityMarkerText(undefined)).toBeUndefined();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("the per-checkout marker is reused across a restart and never re-keyed", () => {
     const root = mkdtempSync(join(tmpdir(), "gh239-identity-"));
     try {
-      const first = openStore(makeIdentity(root, { workspaceId: "workspace-identity" }));
-      expect(resolveWithStore(first.store, { remoteUrl: "git@github.com:owner/repo.git" })).toEqual(
-        { ok: true, repository: "github.com/owner/repo", source: "remote" },
-      );
-      const marker = readDispatchIdentityMarkerText(first.store);
+      const commonDir = join(root, ".git");
+      mkdirSync(commonDir, { recursive: true });
+      expect(
+        resolveWithCheckout(commonDir, { remoteUrl: "git@github.com:owner/repo.git" }),
+      ).toEqual({ ok: true, repository: "github.com/owner/repo", source: "remote" });
+      const marker = readDispatchIdentityMarkerText(commonDir);
       expect(marker).toBeDefined();
       expect(marker !== undefined && parseIdentityMarker(marker)).toBe("github.com/owner/repo");
 
       // Restart with a changed remote and no scheduler key: the persisted
       // binding governs and the history is not re-keyed.
-      const second = openStore(makeIdentity(root, { workspaceId: "workspace-identity" }));
       expect(
-        resolveWithStore(second.store, { remoteUrl: "git@github.com:owner/renamed.git" }),
+        resolveWithCheckout(commonDir, { remoteUrl: "git@github.com:owner/renamed.git" }),
       ).toEqual({ ok: true, repository: "github.com/owner/repo", source: "marker" });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
-  test("a marker created through the store artifact is reused after a rename", () => {
+  test("a marker created on first use is reused after a checkout rename", () => {
     const root = mkdtempSync(join(tmpdir(), "gh239-identity-marker-"));
     try {
-      const store = openStore(makeIdentity(root, { workspaceId: "workspace-marker" })).store;
+      const commonDir = join(root, ".git");
+      mkdirSync(commonDir, { recursive: true });
       const created = ensureDispatchIdentityMarkerText(
-        store,
+        commonDir,
         serializeIdentityMarker("github.com/owner/marker"),
       );
       expect(created).toBeDefined();
-      const resolution = resolveWithStore(store, {});
+      const resolution = resolveWithCheckout(commonDir, {});
       expect(resolution).toEqual({
         ok: true,
         repository: "github.com/owner/marker",
@@ -147,30 +167,31 @@ describe("TC-HAND-007 resolution order and persisted binding", () => {
     }
   });
 
-  test("the marker is never silently regenerated while guarded records exist", () => {
+  test("the marker is never silently overwritten by a later resolution", () => {
     const root = mkdtempSync(join(tmpdir(), "gh239-identity-guard-"));
     try {
-      const { store } = openStore(makeIdentity(root, { workspaceId: "workspace-guard" }));
+      const commonDir = join(root, ".git");
+      mkdirSync(commonDir, { recursive: true });
       expect(
-        ensureDispatchIdentityMarkerText(store, serializeIdentityMarker("github.com/owner/first")),
+        ensureDispatchIdentityMarkerText(
+          commonDir,
+          serializeIdentityMarker("github.com/owner/first"),
+        ),
       ).toBeDefined();
-      const read = readDispatchIdentityMarkerText(store);
+      const read = readDispatchIdentityMarkerText(commonDir);
       expect(read !== undefined && parseIdentityMarker(read)).toBe("github.com/owner/first");
-      appendDispatchAttempt(
-        store,
-        "fence",
-        makeAttemptFor("pr-open", { repository: "github.com/owner/first" }),
-      );
-      // A guarded record exists; the artifact must not be regenerated, and the
-      // persisted binding still governs.
+      // A second create with a different identity returns the existing content
+      // and never rewrites the first-use binding.
       const recreated = ensureDispatchIdentityMarkerText(
-        store,
+        commonDir,
         serializeIdentityMarker("github.com/owner/second"),
       );
       expect(recreated !== undefined && parseIdentityMarker(recreated)).toBe(
         "github.com/owner/first",
       );
-      const resolution = resolveWithStore(store, { schedulerKey: "github.com/owner/second" });
+      const resolution = resolveWithCheckout(commonDir, {
+        schedulerKey: "github.com/owner/second",
+      });
       expect(resolution).toEqual({
         ok: true,
         repository: "github.com/owner/first",
