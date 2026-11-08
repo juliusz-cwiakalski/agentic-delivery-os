@@ -9,7 +9,7 @@ phases:
   dor_check: { started: "2026-11-07T23:59:00Z", completed: "2026-11-08T03:28:00Z", iterations: 4, status: "ready" }
   delivery: { started: "2026-11-08T03:30:00Z", completed: "2026-11-08T03:58:00Z", status: "complete" }
   system_spec_update: { started: "2026-11-08T04:00:00Z", completed: "2026-11-08T04:12:00Z", status: "no-op-verified" }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: "2026-11-08T04:14:00Z", completed: "2026-11-08T04:34:00Z", status: "pass", iteration: 1 }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null, url: null }
@@ -134,4 +134,10 @@ notes:
     date: "2026-11-08"
   - text: "New residual discovered during doc-sync: doc/planning/oss-tooling/milestones/m1/interactions.md (Session G 'handover day', ~lines 269-276) depicts handover eligibility from '14 days 41 deliveries', i.e. the superseded calendar gate, and is NOT in the spec's declared residual list or the status amendment's enumeration. Decision: do not extend the status amendment now, because the plan's reference text is authoritative and the test plan's p05 gate is calibrated to the eight named documents; instead disclose it in the PR body and add it to the follow-up propagation change together with the other seven planning documents. The delivered sentence is incomplete rather than false: every document it names does still carry the superseded phrasing."
     type: "decision"
+    date: "2026-11-08"
+  - text: "Review iteration 1: PASS (spec_compliance PASS, plan_compliance PASS, zero critical/high/medium findings). Record: code-review/review-iter-1.yaml. The reviewer re-derived the key facts from the diff rather than from artifact claims: eleven tokens exact and in bash order against DELIVERY_RESULT_TOKENS; 2 backlog hunks both inside the M1-S9 range 529..578; M1-S9 heading/AC/Depends byte-identical; 66 other stories content-identical; 2026-11-03 section 965 bytes unchanged; M0 statements and both forward sentences byte-identical; no pointer carries CEO-D-073; guards green. Findings: F-1 low (residual list omits milestones/m1/interactions.md; judged acceptable as a scoped disclosed gap to be carried into the PR body and the follow-up), F-2 and F-3 info (wording nested enumerations mandated by the spec, not contradictions)."
+    type: "info"
+    date: "2026-11-08"
+  - text: "Correction for completeness: plan phase P3 landed at 5a00f77a502807fcb7615c770dd83dc6d64e2f9a (its own note could not cite its own SHA)."
+    type: "resolved"
     date: "2026-11-08"
