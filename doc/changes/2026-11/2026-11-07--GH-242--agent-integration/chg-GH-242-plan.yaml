@@ -479,6 +479,14 @@ phases:
         - tests/checks/privacy-ci-wiring.test.ts
         - tests/checks/prompt-secret-scan.test.ts
         - tests/structure/content-inventory.test.ts
+        - doc/00-index.md
+        - doc/overview/architecture-overview.md
+        - doc/overview/glossary.md
+        - doc/spec/nonfunctional.md
+        - doc/spec/features/feature-cli-entrypoint.md
+        - doc/spec/features/feature-branding-seam.md
+        - doc/spec/features/feature-monorepo-scaffold-toolchain.md
+        - doc/spec/features/feature-provider-profiles.md
         - doc/spec/features/feature-commit-primitive.md
         - doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md
         - doc/spec/features/feature-result-contract.md
@@ -494,6 +502,8 @@ phases:
         - doc/spec/features/feature-quality-gates-and-pr.md
         - doc/spec/features/feature-autonomous-delivery.md
         - doc/spec/features/feature-local-code-review.md
+        - doc/guides/opencode-agents-and-commands-guide.md
+        - doc/guides/ados-processes.md
       folders:
         - .ados-claude
     interactions:

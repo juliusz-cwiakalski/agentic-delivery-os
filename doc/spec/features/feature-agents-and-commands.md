@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-AGENTS-AND-COMMANDS
 status: Current
 created: 2026-06-28
-last_updated: 2026-06-28
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The .opencode/ agent and command system is the product: a single source of truth for tool definitions, with a precise two-layer model-configuration mechanism and a no-hand-edit discipline for generated multi-tool plugins."
+summary: "The .opencode/ agent and command system is the product: a single source of truth for tool definitions, a precise two-layer model-configuration mechanism, a no-hand-edit discipline for generated multi-tool plugins, the delivery-integration invariants the lifecycle prompts follow, and the deterministic prompt, help/guide, and document conformance scans that enforce them."
 links:
-  related_changes: ["GH-79"]
+  related_changes: ["GH-79", "GH-242"]
   guides:
     - "doc/guides/opencode-model-configuration.md"
 ---
@@ -76,6 +76,31 @@ To change an agent, command, model assignment, or plugin behavior:
 
 Never hand-edit `.ados-claude/**`. Generated files include comments naming their source and regeneration command — treat those as authoritative. See [feature-claude-plugin-generation.md](feature-claude-plugin-generation.md) for the full generation contract.
 
+### Delivery-integration invariants (F-9)
+
+The lifecycle prompts are product code and follow these invariants. They are machine-checked, not prose-only.
+
+- **Commit path.** Lifecycle commits route through the `commit` primitive, directly or through the thin `@committer`, which only invokes `commit`. No lifecycle prompt teaches `git add`, `git commit`, `git reset`, `git stash`, or `git rebase`; read-only git inspection (`status`, `diff`, `log`, `rev-parse`, `branch --list`) stays allowed, and `git push` plus PR creation stay with `@pr-manager`.
+- **Phase state.** Phase state is written only through the `phase` family; no prompt writes `started`, `completed`, or `phases.pr_creation.url`. The PR URL is a pm-notes `notes:` entry.
+- **Typed blockers.** Lanes and the coordinator use `blockers publish`/`list`/`answer`; the pm-notes `blockers:` collection is not an agent write target.
+- **Plan progress.** Plans carry no `tasks` key and no progress log; plan-phase progress is a pm-notes `notes:` entry.
+- **Allowed command set.** Prompt-required invocations are the entrypoint's composed set — `status`, `brief`, `queue`, `lanes`, `blockers`, `phase`, `commit`, `lint`, `plan`, `verify`, `merge`, `closeout`, `spend`, and `retro` — plus the retained `scripts/deliver-ticket.sh` and `scripts/ceo-loop.sh`. `dispatch` and the resident daemon are not claimed.
+- **Self-description.** Every prompt-required command has a `--help` surface and a reference page; see [CLI Entrypoint and Self-Description](feature-cli-entrypoint.md).
+
+### Prompt and document conformance (F-9)
+
+Three deterministic checks enforce the invariants and keep them from decaying after a change lands.
+
+| Check | Scope | Failure |
+|---|---|---|
+| `scripts/checks/prompt-conformance.ts` (`pnpm check:prompt`) | Every `.md` under the declared scan roots `.opencode/agent` and `.opencode/command`, plus the required/forbidden phrase inventory in `tests/fixtures/prompt-inventory/lifecycle.json` | A non-negated line matching a rule, a missing required phrase, a forbidden literal, or a retired literal from `tests/fixtures/prompt-inventory/retained-retired.json` |
+| `scripts/checks/help-guide-coverage.ts` (`pnpm check:help`) | The `PROMPT_REQUIRED_COMMANDS` set against `tests/fixtures/help-guide/coverage.json` and the M1 reference pages under `doc/planning/oss-tooling/milestones/m1/commands/` | A missing command row, a missing page, a page without `--help` or `--version`, a missing entrypoint page, or an inventory row naming a non-prompt-required command |
+| `tests/checks/doc-conformance.test.ts` | The change spec's §16.1.1 stale/required phrase table (the single source for named phrases) over the affected `doc/spec/features/**` pages, plus the reconciled guides, man page, and reference pages | A stale phrase still present or a required current-truth phrase missing |
+
+The prompt rules reject plan progress (`plan.no-progress`), hand-edited phase state (`phase.no-hand-edit`), a written `phases.pr_creation.url` (`phase.no-pr-url-write`), raw git writes (`git.no-raw-write`), and platform merge or PR-list discovery (`retired.platform`). A line that is a negation — containing `never`, `not`, `do not`, `don't`, `must not`, or `no` — is allowed, so a prompt can teach the prohibition itself. The scan is deterministic and non-vacuous: identical trees yield identical findings, and a mutated fixture fails.
+
+Both scans run as standalone `bun run` steps before the aggregate `pnpm check` stage in the TypeScript CI job, and the doc conformance suite runs with the workspace tests. A new prompt or command must satisfy the scan, and a new prompt-required command must add its reference page and coverage row before merge.
+
 ### Edge Cases & Error Handling
 
 - **Changing one agent's output format may break a downstream consumer.** Mitigated by tuning related tools together and testing through a real delivery.
@@ -93,6 +118,11 @@ Never hand-edit `.ados-claude/**`. Generated files include comments naming their
 | `.ados-claude/**` | Generated Claude Code plugin | Build artifact; never hand-edited; regenerated by `scripts/build-claude-plugin.sh` |
 | `.opencode/README.md` | Inventory | Agent/command listing + conventions |
 | `.opencode/agent/toolsmith.md` | Toolsmith agent | Author/tune agents, commands, skills |
+| `scripts/checks/prompt-conformance.ts` | Prompt invariant scan | Rule regexes, required/forbidden phrase inventory, retired-literal scan |
+| `scripts/checks/help-guide-coverage.ts` | Help/guide matrix | Prompt-required set versus reference pages |
+| `tests/fixtures/prompt-inventory/` | Scan fixtures | `lifecycle.json`, `allowed-commands.json`, `retained-retired.json`, mutation controls |
+| `tests/fixtures/help-guide/coverage.json` | Coverage fixture | The command and reference-page inventory |
+| `tests/checks/doc-conformance.test.ts` | Current-truth scan | The §16.1.1 phrase table over specs, guides, man page, and reference pages |
 
 ## Non-Functional Requirements
 
@@ -109,6 +139,9 @@ Never hand-edit `.ados-claude/**`. Generated files include comments naming their
 | Level | Scope | Notes |
 |-------|-------|-------|
 | CI | Plugin freshness | `scripts/.tests/test-build-claude-plugin.sh` fails on stale `.ados-claude/` |
+| CI | Prompt invariants | `bun run scripts/checks/prompt-conformance.ts` fails on a rule match, a missing required phrase, or a retired literal; `pnpm check` also runs it |
+| CI | Help/guide coverage | `bun run scripts/checks/help-guide-coverage.ts` fails on a missing page or a page without `--help`/`--version` |
+| CI | Current-truth phrases | `tests/checks/doc-conformance.test.ts` fails on a stale or missing phrase-table phrase |
 | Manual | Model-config understanding | Read `.opencode/opencode.jsonc` line 25 + `opencode-model-configuration.md` |
 
 ## Dependencies & Risks
@@ -125,3 +158,4 @@ Never hand-edit `.ados-claude/**`. Generated files include comments naming their
 - **Repo config:** `.opencode/opencode.jsonc` (tool access; delegates models to user-global config — see line 25).
 - **Toolsmith agent:** `.opencode/agent/toolsmith.md` (authoring/tuning tools).
 - **Sibling spec:** [feature-claude-plugin-generation.md](feature-claude-plugin-generation.md) — the `.opencode/`→`.ados-claude/` build contract, idempotency, and CI freshness gate.
+- **Entrypoint and help surface:** [feature-cli-entrypoint.md](feature-cli-entrypoint.md) — the executable bin, the composed prompt-required set, and the `--help`/`--version` contract.

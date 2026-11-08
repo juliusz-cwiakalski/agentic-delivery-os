@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BRANDING-SEAM
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-06
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "The single branding seam: a pure, fail-closed resolver deriving the twelve brand values from one config-driven working name, the BrandIdentity contract in core ./contracts, reserved brand-neutral telemetry schema names, a CI-binding forbidden-literal scan anchored to a fixed corpus baseline, the distinct hashed-literal privacy registry that follows the same registry-as-authority precedent, a one-warning legacy compatibility adapter, and the documented rename drill."
 links:
-  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223", "GH-251"]
+  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223", "GH-251", "GH-242"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -50,6 +50,7 @@ The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-mon
 - **Single resolver seam:** `resolveBrandIdentity(input: ResolverInput)` returns `Result<BrandIdentity, BrandingInputError>`. `ResolverInput` carries the config-driven `workingName` and an optional `override`. A present `override` wins over `workingName`; the resolver applies precedence internally.
 - **Complete brand contract:** `BrandIdentity` is defined once in `core ./contracts` with the twelve DEC-8 values. The branding subpath imports `./contracts` for the type only and is the only construction site for the values.
 - **Neutral override channel:** The designated override variable is `DELIVERY_OS_WORKING_NAME`, a product-free token. A runtime-aware edge reads it and maps it to `ResolverInput.override`. The branding subpath never mentions or reads the variable; the ambient-environment guard forbids `process.env` and `Bun.env` in the tier.
+- **Neutral identity default at the edges:** The resolver applies no default. The CLI entrypoint and the MCP serve composition apply the neutral working name `delivery-os` at their own edges when neither typed configuration nor a non-empty override yields a name; the CLI uses it for `--help`/`--version` identity only. Every other consumer supplies a name. The neutral default is not a seed literal.
 - **Fail-closed validation:** An invalid or unusable name returns a deterministic `BrandingInputError` that names the field (`workingName` or `override`) and the reason code, never the value. There is no silent default and no fallback from an invalid override.
 - **Deterministic derivation:** The same input always yields the same output; no clock, randomness, environment, or runtime API is consulted. The returned identity is frozen.
 - **Forbidden-literal scan:** A repository check scans the five DEC-8 scope classes for the three seed literals and fails on any occurrence outside the DEC-8 allowlist. The registry is the single authority for scope, seed set, allowlist, corpus baseline, and registered user-facing docs. The scan binds in CI as `ts-forbidden-literals`.

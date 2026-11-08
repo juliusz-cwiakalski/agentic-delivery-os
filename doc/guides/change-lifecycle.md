@@ -9,7 +9,7 @@ created: 2026-02-03
 owners: ["engineering"]
 summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates and artifacts." 
 links:
-  related_changes: ["GH-177", "GH-185", "GH-226"]
+  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242"]
 ---
 
 # Change Lifecycle
@@ -257,7 +257,7 @@ flowchart TD
 - `@plan-writer` creates or updates `chg-<workItemRef>-plan.yaml`. When both plan formats exist, the YAML plan is authoritative; a legacy `chg-<workItemRef>-plan.md` remains readable through the classified `plan.format.legacy-markdown` verdict.
 - The plan validates with `plan validate <workItemRef>` and its write-time conformance is checked with `lint plan <workItemRef>`.
 
-**Outcome**: A phased, machine-readable implementation plan aligned with the spec and test plan, with declared per-phase scope, done-artifacts, leases, weight class, interactions, and ceremony tier.
+**Outcome**: A phased, machine-readable implementation plan aligned with the spec and test plan, with declared per-phase scope, an optional per-phase summary, done-artifacts, leases, weight class, interactions, and ceremony tier.
 
 **Exit criteria**:
 
@@ -272,7 +272,7 @@ flowchart TD
 
 **Actions**:
 
-- Confirm `delivery_planning` is completed and mark `dor_check` started in `chg-<workItemRef>-pm-notes.yaml`.
+- Confirm `delivery_planning` is completed with `phase list <workItemRef>` before the gate; do not hand-edit phase timestamps.
 - `@pm` delegates to `@readiness-reviewer` with `workItemRef`.
 - `@readiness-reviewer` critiques spec + test-plan + plan vs the ticket under an adversarial stance and emits `READY` or `NOT_READY` (with per-facet findings and a suggested remediation target phase).
 - **On `READY`**: record the verdict/iteration and complete `dor_check` in PM notes, then commit the verdict and notes transition before delivery.
@@ -286,7 +286,7 @@ flowchart TD
 **Exit criteria**:
 
 - `@readiness-reviewer` returns `READY` (or a valid trivial-change override is recorded).
-- `dor_check` marked completed in `chg-<workItemRef>-pm-notes.yaml`.
+- `phase list <workItemRef>` reports `dor_check` completed.
 
 ### 6) delivery
 
@@ -320,7 +320,7 @@ flowchart TD
 
 - `@pm` invokes `@doc-syncer` with `workItemRef`.
 - `@doc-syncer` reconciles all affected current-truth documentation in scope: `doc/00-index.md`, `doc/guides/**`, `doc/overview/**`, `doc/spec/**`, `doc/contracts/**`, `doc/domain/**`, `doc/quality/**`, `doc/ops/**`, `doc/diagrams/**`, and `doc/decisions/**`.
-- `@pm` inspects the report and re-runs `@doc-syncer` with explicit residual gaps until none remain. Only then does PM mark `system_spec_update` complete and commit the docs with the matching PM-notes transition.
+- `@pm` inspects the report and re-runs `@doc-syncer` with explicit residual gaps until none remain. Only then does PM run `phase complete <workItemRef> system_spec_update`, which lands the docs and the transition in one commit.
 - Missing/stale/incomplete docs are resolved in-change (reconcile existing docs or create missing docs when the change introduces/exposes an enduring concept).
 - Feature-spec coverage remains part of phase 7: when a modified feature area warrants `doc/spec/features/feature-<slug>.md` and none exists, `@doc-syncer` authors the missing first spec in-change; existing specs are reconciled, not re-authored.
 - Documentation gaps are resolved as doc artifacts in the same change; no tracker ticket is created for documentation coverage handoff.
@@ -343,8 +343,8 @@ flowchart TD
 
 - `@pm` invokes `@reviewer` with `workItemRef`.
 - `@reviewer` audits code vs. spec/plan, checks test coverage, identifies gaps.
-- After every result, `@pm` records the review iteration and verdict in PM notes before committing the review artifact and matching state.
-- On `Status=PASS`, PM marks `review_fix` complete before the commit.
+- After every result, `@pm` records the review iteration and verdict in a pm-notes `notes:` entry before running `phase complete` for the review artifact and matching state.
+- On `Status=PASS`, PM runs `phase complete <workItemRef> review_fix` before the next phase.
 - If reviewer returns `Status=FAIL` or adds remediation tasks:
   - Remediation phase is appended to the change's plan artifact (`chg-<workItemRef>-plan.yaml`; a legacy `chg-<workItemRef>-plan.md` stays readable during the transition).
   - PM records findings, remediation/reopen state, and a retrospective note, then commits that durable state before invoking `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`).
@@ -355,7 +355,7 @@ flowchart TD
 **Exit criteria**:
 
 - `@reviewer` returns `Status=PASS`.
-- No open remediation tasks in the plan.
+- No open remediation items remain in the plan.
 
 ### 9) quality_gates
 
@@ -388,7 +388,7 @@ flowchart TD
 **Actions**:
 
 - `@pm` performs a checklist review:
-  - All phases above completed (check `chg-<workItemRef>-pm-notes.yaml`).
+  - All phases above completed (verify with `phase list <workItemRef>`).
   - All delivery plan phases complete (every phase declared in `chg-<workItemRef>-plan.yaml` has completion evidence in the phase ledger and PM notes; a legacy markdown plan is read through the classified transition path).
   - All acceptance criteria satisfied (verify against `chg-<workItemRef>-spec.md`).
   - Current-truth documentation is complete and up to date for the delivered change (phase 7 has no unresolved documentation gaps).
@@ -404,7 +404,7 @@ flowchart TD
 **Exit criteria**:
 
 - DoD satisfied.
-- `chg-<workItemRef>-pm-notes.yaml` updated with all phases completed.
+- `phase list <workItemRef>` reports all phases completed for the declared variant.
 
 ### 11) pr_creation
 
@@ -509,16 +509,16 @@ phases:
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
 blockers: []
-notes: [] # { text, type, date }
+notes: [] # { text, type, date } — the PR URL is recorded here
 ```
 
 The enforced schema requires `change_id`, `title`, `delivery_mode`, and `phases`; `milestone`, `story_code`, and `variant` are optional typed keys, and the declared collections are validated when present. Extra phase or entry keys (for example `url`, `commits`, or `reopened`) are opaque and preserved.
 
-The default `full` variant requires the canonical eleven lifecycle phases. An explicit `variant: lite` declares the pinned six-phase required set (`clarify_scope`, `specification`, `delivery`, `quality_gates`, `dod_check`, `pr_creation`) for small changes; omission never yields LITE. The CLI tooling provides the `phase` command family as the schema-validated, idempotent write path for phase state, linting the post-transition document before mutating it. Lifecycle agents are the intended callers and adopt it through their prompts; prompt adoption is a separate operating-model change. The behavior is specified at `doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md`.
+The default `full` variant requires the canonical eleven lifecycle phases. An explicit `variant: lite` declares the pinned six-phase required set (`clarify_scope`, `specification`, `delivery`, `quality_gates`, `dod_check`, `pr_creation`) for small changes; omission never yields LITE. The CLI tooling provides the `phase` command family as the schema-validated, idempotent write path for phase state, linting the post-transition document before mutating it. Lifecycle agents are its callers: prompts complete phases with `phase complete <workItemRef> <phase>`, read with `phase list`, and reopen with `phase reopen`, recording the PR URL as a pm-notes `notes:` entry rather than a phase field. The behavior is specified at `doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md`.
 
 Finalization is variant-aware and read-only. `verify change <ref>` checks the effective variant's required set against the declaration plus the verified delivery registry, names any missing phases in required-set order, and classifies the delivery result. Only a fully completed declared variant yields `finished` and exit `0`; `partial`, malformed, missing-target, and unverifiable outcomes are non-zero failures. The surface is specified at `doc/spec/features/feature-verify-change-and-exit-taxonomy.md`.
 

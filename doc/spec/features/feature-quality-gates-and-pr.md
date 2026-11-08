@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-QUALITY-GATES-AND-PR
 status: Current
 created: 2026-06-28
-last_updated: 2026-06-28
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The verification-and-release neighborhood of the lifecycle: quality gates (/check, /check-fix), the one-Conventional-Commit workflow (@committer), and the PR/MR workflow (@pr-manager), with a platform/project configuration layer."
+summary: "The verification-and-release neighborhood of the lifecycle: quality gates (/check, /check-fix), the one-Conventional-Commit workflow through the commit primitive (@committer), and the PR/MR workflow (@pr-manager), with a platform/project configuration layer."
 links:
-  related_changes: ["GH-79"]
+  related_changes: ["GH-79", "GH-242"]
   guides:
     - "doc/guides/pr-platform-integration.md"
 ---
@@ -44,7 +44,7 @@ This spec covers the **verification and release neighborhood** of the delivery l
 - **Quality gates — run only (`/check`, F-1):** Runs the repository's configured quality gates command and returns a concise, high-signal summary with log pointers. It **does not attempt fixes** — it is run-only. It delegates execution to `@runner` and resolves the gates command from `AGENTS.md` (preferred) or defaults to `./scripts/quality-gates.sh`. Logs land under `tmp/run-logs-runner/<YYYY-MM-DD>/`. Intended for direct human invocation.
 - **Quality gates — run + fix (`/check-fix`, F-2):** Runs quality gates (fast gates first, then full gates when applicable), systematically fixes any issues found, then creates **a single** Conventional Commit summarizing the changes by delegating to `@committer`. Delegates to `@fixer` for the diagnosis/fix work.
 - **Commit workflow (`@committer`, F-3):** Produces exactly **one** high-quality Conventional Commit for all current, safe-to-commit worktree changes by invoking the `commit` primitive. `@committer` invokes the `commit` primitive and performs no direct staging, commit, re-stage, or amend; the primitive owns staging precision, the safety scan, message selection, validation, and the commit act. Never push, never rewrite history, never lose work, never include raw diff hunks in the body, STOP on suspected secrets, never commit `tmp/` or `.ai/local/`. Gate and PR obligations unchanged.
-- **PR/MR workflow (`@pr-manager`, F-4):** Ensures an **open** PR/MR exists for the current branch and its title + description are up to date. It **always checks for an existing open PR/MR before creating** (update vs create), generates `tmp/pr/<branchPath>/description.md` from the branch diff, detects GitHub vs GitLab from `origin`, and creates/updates via the platform tooling defined in `.ai/agent/pr-instructions.md`. Hard rule: **never merge** — it stops and asks the user to review + merge manually.
+- **PR/MR workflow (`@pr-manager`, F-4):** Ensures an **open** PR/MR exists for the current branch and its title + description are up to date. It **always checks for an existing open PR/MR before creating** (update vs create), generates `tmp/pr/<branchPath>/description.md` from the branch diff, detects GitHub vs GitLab from `origin`, and creates/updates via the platform tooling defined in `.ai/agent/pr-instructions.md`. Hard rules: **never merge** and no raw-git commit; when the worktree is dirty at PR time it invokes the `commit` primitive (or the thin `@committer`, which only invokes `commit`), so push and PR creation remain its only retained git writes. It stops and asks the user to review + merge manually.
 - **Runner role (`@runner`, F-5):** A subagent that executes commands for a parent agent/human, captures all output as log artifacts under `tmp/run-logs-runner/`, and returns a tight summary. It never proposes/implements code changes and never runs destructive commands unless explicitly requested.
 - **Fixer role (`@fixer`, F-6):** Reproduces failures and applies targeted fixes (invoked by `/check-fix` and the lifecycle when gates fail).
 - **Platform/project configuration layer (F-7):** Two repository-local files externalize platform and review specifics:

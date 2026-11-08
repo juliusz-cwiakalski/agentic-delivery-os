@@ -2,11 +2,11 @@
 id: SPEC-TOOLING-NONFUNCTIONAL
 status: Proposed
 created: 2026-11-01
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-242]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -34,8 +34,10 @@ Owners below are proposed accountable roles, not new assignments or tracker edit
 
 OPEN-Q20 reconciliation baseline: integrated `main-tools` `5330809`, including
 closeout PR #215 and verify-gates recovery PR #217. Shared `createRuntime` is
-declaration-only; CLI has no `bin`; the MCP package serves three read-only tools
-over local stdio; the typed OpenCode entry remains a placeholder.
+declaration-only; the baseline CLI has no `bin`; the MCP package serves three read-only tools
+over local stdio; the typed OpenCode entry remains a placeholder. The current
+tree also declares a non-installed CLI `bin` (`delivery-os`) beside the `main`
+composition entry; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.md).
 
 ## Existing contract index
 

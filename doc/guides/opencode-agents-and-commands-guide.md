@@ -9,7 +9,7 @@ created: 2026-01-09
 owners: ["engineering"]
 summary: "Comprehensive guide to Opencode AI agents and commands for manual and autopilot workflows."
 links:
-  related_changes: ["GH-185", "GH-226"]
+  related_changes: ["GH-185", "GH-226", "GH-242"]
 ---
 
 # Opencode Agents & Commands Guide
@@ -95,7 +95,7 @@ Use these when you need intelligent analysis or orchestration.
 | `@image-reviewer` | **Visual Reviewer**. Analyzes screenshots for visual bugs.                                 | Use to check UI artifacts or report glitches.   |
 | `@runner`         | **Runner**. Executes commands and summarizes logs to artifacts.                            | Use for log-heavy builds/tests/gates.           |
 | `@editor`         | **Writer**. Reviews, rewrites, and translates content per guidelines.                      | Use for docs/articles/i18n/UI copy.             |
-| `@committer`      | **Scribe**. Creates standardized commits.                                                  | Helper used by other agents/commands.           |
+| `@committer`      | **Scribe**. Thin executor of the `commit` primitive; reports its envelope.                   | Helper used by other agents/commands.           |
 | `@image-generator` | **Image Generator**. Generates AI images via text-to-image CLI.                            | Use when agents need generated images.          |
 | `@pr-manager`     | **PR/MR Manager**. Creates/updates PR/MR for current branch.                               | Use at the end of delivery; never merges.       |
 | `@toolsmith`      | **Toolsmith**. Creates and tunes OpenCode agents/commands/skills.                          | Use to create or improve tooling.               |
@@ -157,8 +157,7 @@ Execute the plan one phase at a time.
 /run-plan <ref>
 ```
 
-_Action_: The agent reads the plan, implements the current phase, records phase progress in the ledger and PM notes, and runs relevant
-validations (for log-heavy runs it may delegate to `@runner`).
+_Action_: The agent reads the plan, implements the current phase, records plan-phase progress as pm-notes `notes:` entries (plan phase id, commit hash, test result), commits each plan phase through the `commit` primitive, and runs relevant validations (for log-heavy runs it may delegate to `@runner`). At the end of the lifecycle delivery phase it runs `phase complete <ref> delivery`.
 
 ### Step 5: Review & Refine
 
@@ -197,7 +196,7 @@ Commit and prepare for merge.
 For large branches it may also create `tmp/pr/<branch>/review-plan.md` + `tmp/pr/<branch>/review-log.md` and reuse them
 incrementally on reruns. It will not merge; review and merge manually.
 
-If there are uncommitted changes, `/pr` will auto-commit via `@committer` and then push the branch.
+If there are uncommitted changes, `/pr` commits them through the `commit` primitive (or the thin `@committer`, which only invokes `commit`) and then pushes the branch.
 
 ---
 
@@ -256,10 +255,10 @@ The `@pm` will report back when the change is ready for final verification and t
 
 Before creating/updating the PR/MR, `@pm` runs the **dod_check** phase:
 
-1. Verify all phases completed (check `chg-<ref>-pm-notes.yaml`).
-2. Verify all delivery plan phases complete.
+1. Verify all phases completed (`phase list <ref>`, cross-checked with `chg-<ref>-pm-notes.yaml`).
+2. Verify all delivery plan phases complete (each has a `notes:` entry naming the plan phase id, commit hash, and test result).
 3. Verify all acceptance criteria satisfied.
-4. If any gap is found, reopen the appropriate phase.
+4. If any gap is found, reopen the appropriate phase with `phase reopen`.
 
 Then `@pm` creates/updates the PR/MR via `@pr-manager` and stops for user approval and manual merge.
 You review and merge manually.

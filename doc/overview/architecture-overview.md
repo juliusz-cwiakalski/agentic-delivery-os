@@ -3,13 +3,13 @@ ados_distribution: internal
 id: TOOLING-ARCHITECTURE-OVERVIEW
 status: Draft
 created: 2026-11-01
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010]
-  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237, GH-240]
+  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237, GH-240, GH-242]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -61,7 +61,7 @@ flowchart TB
     Harness["Existing harness and prompt/plugin stack"]
     Shell["scripts/ and tools/: running delivery automation"]
     Caller["Typed caller / test harness"]
-    CLI["CLI library: runCli plus optional edge composition"]
+    CLI["CLI: executable entrypoint (bin + help) over runCli and edge composition"]
     Core["Core policy, configuration and contracts"]
     IO["Adapters: files, repository, git, session, credentials, harness, provider reads/writes"]
     State["State facade and runtime driver"]
@@ -97,6 +97,7 @@ No typed daemon or background scheduler is established by `packages/`.
 | `core/src/provider/` | Availability chain, quota/peak evaluation, model-profile selection and pacing policy, `data-v1` env-record validation, expiring parks and announcements through injected ports. No session spawn. |
 | `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections, the economics restart/exhaustion ledger and view fold, the spend telemetry read consumer, the retro registry consumer, and the independent evidence sidecar consumer. Runtime APIs confined to `state/driver/`. |
 | `core/src/app/`, core `createRuntime` | Application tier is a type placeholder; `createRuntime` is an `export declare` signature, not a callable composition implementation. |
+| `cli/bin/`, `cli/src/entrypoint.ts`, `production.ts`, `help.ts` | Executable surface: the non-installed Bun bin, working-name resolution, root/command help and version, the prompt-required composition, and fail-closed containment for an uncomposed invocation. Help and version read no state, network, git, or configuration. |
 | `cli/src/index.ts`, `edge.ts`, `commands/` | In-process parser/result boundary; config acquisition and optional command registration; thin handlers plus bounded status collectors. |
 | `adapters/src/github/`, `gitlab/`, `jira/` | Normalized reads plus supported GitHub/Jira closeout writes. GitLab retains declared write gaps and no work-item read. GitHub reads feed status and gate composition, and the bounded deploy-job trace read feeds `verify deploy`. |
 | `adapters/src/git/` | Fixed-argv local process edge; protected-ref checks, merged-head equality, checkout/foreign-worktree safety, delete-time recheck, worktree listing/current/clean facts, no-force local worktree removal, and a bounded merged-diff read over the recorded squash landing. |
@@ -369,7 +370,7 @@ rules passing does not establish project-specific literal coverage.
 
 | Unit / dependency | Current topology, ownership and criticality |
 |---|---|
-| Standalone CLI target | Local Bun-targeted design; implemented runner is in-process with injected streams. CLI manifest has no `bin`; installed executable/bootstrap is not established by these modules. |
+| Standalone CLI target | Local Bun-targeted design; the implemented runner is the in-process `runCli` surface behind an executable entrypoint. The CLI manifest declares one non-installed `bin` (`delivery-os`) and a `main` composition entry; the bin is absent from the installer, so an installed executable/install path is not established by these modules. |
 | Harness adapter seam | The typed `HarnessInstance`/`HarnessSession` ports with the opencode and Claude Code delivery adapters, the deny-by-default execution-environment descriptor, read-only telemetry extraction with a bounded Claude byte read and store-scoped orphan disclosure, harness-store session attribution, and non-gating closeout capture constructed from the resolved harness settings. See [feature-harness-adapters.md](../spec/features/feature-harness-adapters.md). |
 | Change documents and capsule | Local operator-owned change folders. Each folder may carry the append-only capsule `events.jsonl` and `candidates/`; closeout validates and closes it and home-writes accepted lessons/tacit to `.ai/memory/`. See [feature-capsule.md](../spec/features/feature-capsule.md). |
 | Existing harness/prompt stack | Locally installed canonical `.opencode/` definitions, generated Claude Code plugin and shell automation. Independent of the empty typed integration package. See [plugin build](../../scripts/build-claude-plugin.sh). |

@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DELIVERY-LIFECYCLE
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-06
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, variant-aware read-only ledger verification at finalization, and phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed)."
 links:
-  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225"]
+  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225", "GH-242"]
   guides:
     - "doc/guides/change-lifecycle.md"
     - "doc/guides/definition-of-ready.md"
@@ -109,7 +109,7 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 
 ### Key Agent Boundaries
 
-- `@pm` orchestrates but does **not** implement, debug, run gates, or commit directly — it delegates to `@coder`, `@fixer`, `@runner`, `@committer`. In autonomous mode the PM ensures the change branch before its first delegation and triggers `@committer` after each delegated lifecycle phase returns.
+- `@pm` orchestrates but does **not** implement, debug, or run gates, and commits only through the `commit` primitive (directly or through the thin `@committer`); it delegates to `@coder`, `@fixer`, `@runner`. In autonomous mode the PM ensures the change branch before its first delegation and runs `phase complete <ref> <phase>` after each delegated lifecycle phase returns, so the phase's transition and its artifacts land in one commit.
 - Delegated artifact agents (`@spec-writer`, `@test-plan-writer`, `@plan-writer`, `@doc-syncer`, `@reviewer` local mode, `@decision-advisor`, `@readiness-reviewer`) are **pure writers**: they produce their artifact and return with zero git operations (no branch, staging, or commit logic). The orchestrator (PM, command, or `@coder`) owns the commit trigger.
 - `@committer` is a thin executor that invokes `commit`; it performs no direct staging, commit, re-stage, or amend, and every commit passes the primitive's secret/credential scan, `tmp/`/`.ai/local/` exclusion, and diff-derived Conventional Commit derivation.
 - `@doc-syncer` reconciles affected current-truth docs and closes documentation gaps in-change, including first-authoring a missing feature spec when a modified feature area warrants one. It never modifies source code or change artifacts, and never creates a tracker ticket for documentation coverage handoff.

@@ -113,7 +113,7 @@ Change Delivery can run from fully interactive to fully unattended. The two inte
 | **Mode A — Autonomous CEO loop** | `scripts/ceo-loop.sh` | None until they stop the loop; the `@ceo` agent is the merge authority | Overnight/weekend, unattended |
 | **Mode B — Manual batch** | `scripts/batch-deliver.sh GH-108 GH-110 GH-37` | Review PRs, approve, answer blocking questions | Curated batch with a human merge gate |
 
-The unattended modes wrap the 11-phase lifecycle with liveness monitoring (kill-and-restart on stalled **opencode session traffic**, not process-alive), single-flight + join per repo working tree, session resilience, and branch hygiene. The per-ticket engine (`deliver-ticket.sh`) **does not merge** — it returns `pr-open`; merge authority is the `@ceo` (Mode A, after PM-finalization verification) or `batch-deliver.sh` (Mode B, after the human approves + rebase + green quality gates).
+The unattended modes wrap the 11-phase lifecycle with liveness monitoring (kill-and-restart on stalled **opencode session traffic**, not process-alive), single-flight + join per repo working tree, session resilience, and branch hygiene. The per-ticket engine (`deliver-ticket.sh`) **does not merge** — it returns `pr-open`; merge authority is the `@ceo` (Mode A, after PM-finalization verification, through the `merge` primitive) or `batch-deliver.sh` (Mode B, after the human approves + rebase + green quality gates). Both bash entry points stay retained.
 
 **Canonical guide:** [delivery-modes.md](delivery-modes.md) (modes, component responsibilities, behavioral invariants INV-DM-1..6). **Mode B operations:** [autonomous-batch-delivery.md](autonomous-batch-delivery.md).
 

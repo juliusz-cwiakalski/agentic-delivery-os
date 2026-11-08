@@ -8,7 +8,7 @@ status: Draft
 created: 2026-07-03
 owners: ["engineering"]
 links:
-  related_changes: ["GH-146", "GH-148", "GH-185"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "GH-242"]
 summary: "Deliver multiple tickets unattended with liveness monitoring, session resilience, and push-to-completion PR feedback. Covers deliver-ticket.sh, batch-deliver.sh, and clean-merged-branches."
 ---
 
@@ -198,7 +198,7 @@ flowchart TD
     style STOP_BLK fill:#FF9800,color:#fff
 ```
 
- > **The PM does not merge.** `deliver-ticket.sh` returns `pr-open` (+ PR URL +
+> **The PM does not merge.** `deliver-ticket.sh` returns `pr-open` (+ PR URL +
 > PM last-message) and stops. The lifecycle merge path is the `merge` primitive
 > (Mode B's batch script remains retained for batch orchestration),
 > which acts **only** after the human approves and the rebase + green-gate checks

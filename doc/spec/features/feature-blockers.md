@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BLOCKERS
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-06
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "The typed blocker and question channel: the closed four-type question vocabulary with one answer channel per type, the `owner` | `coordinator` audience and the delegation policy-as-data confused-deputy guard, the layered credential guard (registered-secret-value refusal on every content path including lane/ref identifiers, the variable-name shape on credential-missing question text, no pattern layer per TDR-0012), the append-only question and answer intent records with derived open/answered closure, the recorded `laneResume` projection (boundary-note, attach-continue, or the resume-prompt-reentry fallback with its prefill cost) conditioned on the adapter resume-injection capability, the deliberate `applied: false` v0 posture, the single shared ranking consumed by the blockers list, the digest `typed-questions` section, and the brief blocker-questions anchor, the bounded deterministic `blockers list`/`answer`/`publish` surface and its exit matrix, and the four-row `blockers` error family."
 links:
-  related_changes: ["GH-230"]
+  related_changes: ["GH-230", "GH-242"]
   related_decisions: ["ADR-0003", "TDR-0012"]
   contracts:
     - "packages/core/src/contracts/blockers.ts"
@@ -304,7 +304,7 @@ Both record kinds are additive inside `delivery.state.v1`. No existing record ki
 - **Authority boundary:** the confused-deputy guard is structural for every answer. The answering audience is resolved from an injected fact and routed through the policy-as-data map; a coordinator identity answering an owner-audience question is refused with the policy named, and only an explicit policy row delegates. The handler holds no audience branch and takes its decision only from the injected map and the resolver.
 - **Claimed-not-proven identity:** the caller-audience fact is unauthenticated attribution consumed for routing. It is never rendered as proven identity and never persisted as authentication evidence. An absent or unrecognized fact resolves to `owner`, the un-agented human at the terminal. The residual — an agent running outside an identity-bearing shell defaults to owner — is accepted and revisited when the invocation audit ledger lands (M1-S22).
 - **Credential non-transit:** layer 1 refuses any registered secret value on the question text, the option values, the free-text answer, and the `lane` and `ref` identifier fields, with zero persisted bytes on refusal; layer 2 makes `credential-missing` question text structurally value-free. The guard reuses the delivered registered-secrets record and adds no secret-read allowlist entry. Content is capped at 120 characters for a question and 160 for an answer.
-- **Accepted residual (owner review):** a credential value that was never registered in the environment record can transit a non-`credential-missing` question, an option, or any free-text answer and would persist locally and render on the list, the digest, and the brief. This residual is the boundary recorded in [TDR-0012](../../decisions/TDR-0012-blockers-credential-guard-pattern-deferral.md); acceptance is pending the human owner. The guard carries no token-shape pattern layer. Revisit triggers are M1-S20 agent-authored publishing, the M1-S22 audit-identity review, availability of a shared system-level content policy (the preferred adoption shape), and any transit incident; adoption reuses the existing `blockers.credential-value-rejected` identity.
+- **Accepted residual (owner review):** a credential value that was never registered in the environment record can transit a non-`credential-missing` question, an option, or any free-text answer and would persist locally and render on the list, the digest, and the brief. This residual is the boundary recorded in [TDR-0012](../../decisions/TDR-0012-blockers-credential-guard-pattern-deferral.md); acceptance is pending the human owner. The guard carries no token-shape pattern layer. Revisit triggers are agent-authored publishing (delivered by GH-242), the M1-S22 audit-identity review, availability of a shared system-level content policy (the preferred adoption shape), and any transit incident; adoption reuses the existing `blockers.credential-value-rejected` identity.
 - **Owner-review flag:** the layer-1 scope extension to the `lane` and `ref` identifier fields is a change-scoped decision flagged for owner review. It uses the same registered-value match, cannot collide with system-generated lane ids or `<PREFIX>-<n>` refs, and is reversible.
 - **State integrity:** writes use one single-writer fence and a post-append verified coverage read that requires exactly one new record. Duplicate questions or answers, undeclared kinds or payload schemas, missing fields, malformed payloads, resume-projection inconsistencies, and non-`false` `applied` values fail closed as classified state failures and are never served as truth.
 - **Recorded intent, no execution:** the channel spawns no session, attaches nothing, resumes nothing, steers nothing, writes no control socket, and starts no timer or loop. An optional session port may be injected at the edge; the handler never calls it.
@@ -361,7 +361,7 @@ One `blockers list`, `status`, or `brief` invocation performs one verified block
 - Adding or changing a delegation row is an owner-signed policy-data change; the four-row totality validator and the contract test move together.
 - Adding a surface consumes the existing shared ranking; a second comparator is never introduced.
 - The `blockers` error family stays closed at four rows; a further failure class requires a named consumer and a reviewed change. Malformed answer bodies continue to reuse `input.value.rejected`.
-- The applying actors (M1-S18, M1-S23, M1-S9, M1-S20) consume the recorded records without redefining their shapes or forking the ranking.
+- The applying actors (M1-S18, M1-S23, M1-S9) consume the recorded records without redefining their shapes or forking the ranking; the lifecycle prompts (GH-242) publish and answer through this channel today.
 - The caller-audience fact is reconciled into the audit-identity convention when M1-S22 lands; that is a naming review, not a behavior change.
 
 ## Dependencies & Risks
@@ -373,7 +373,7 @@ One `blockers list`, `status`, or `brief` invocation performs one verified block
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, the `blockers` domain kind and its four rows, the `{0, 1, 2}` projection, and the registered-secrets record layer 1 consumes.
 - **Depends on** the branding seam ([feature-branding-seam.md](feature-branding-seam.md)) for the injected binary name and the environment-prefix naming discipline.
 - **Depends on** lane contracts ([feature-watchdog-lane-contracts.md](feature-watchdog-lane-contracts.md)) for the lane vocabulary behind `--lane`; lane-registry existence is not verified here.
-- **Feeds** the resident dispatch daemon (M1-S18), coordinator supervision (M1-S23), the one-shot `dispatch --resume` path (M1-S9), and agent integration (M1-S20), which consume the recorded intents and projections.
+- **Feeds** the resident dispatch daemon (M1-S18), coordinator supervision (M1-S23), the one-shot `dispatch --resume` path (M1-S9), and the lifecycle prompts (GH-242), which consume the recorded intents and projections. The lifecycle prompts publish with `blockers publish` and answer with `blockers answer`; the pm-notes `blockers:` collection stays schema-allowed but is not an agent write target.
 - **Feeds** session-lifecycle economics (M1-S15), which raises typed questions through this channel on budget exhaustion, and status collector expansion (M1-S10), which builds around the ninth section.
 - **Risk — the ranking is forked per surface:** mitigated by one shared pure ranking consumed by the list, the digest section, and the brief anchor, with an equality test over identical facts.
 - **Risk — an unregistered credential value transits the channel:** accepted residual under TDR-0012, bounded by content caps, the local-first posture, layer 2 on the highest-temptation type, and the named revisit triggers; no channel-local pattern layer exists.

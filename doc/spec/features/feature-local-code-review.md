@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-LOCAL-CODE-REVIEW
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-05
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "Local code review via /review and /review-deep: spec/plan compliance plus code-quality heuristics, with a remediation-phase append loop, handled by the unified @reviewer (distinct from the remote workflow)."
 links:
-  related_changes: ["GH-79", "GH-151", "GH-226"]
+  related_changes: ["GH-79", "GH-151", "GH-226", "GH-242"]
 ---
 
 # Feature: Local Code Review

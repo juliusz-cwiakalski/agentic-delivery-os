@@ -2,12 +2,12 @@
 id: SPEC-PM-NOTES-LINT-AND-PHASE-TRANSITIONS
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "The implemented M0-S10 surface: pm-notes schema and variant conformance through a read-only lint command with named targets, the phase command family as the only schema-validated write path for phase state with a nine-row idempotency matrix, default-on atomic record-plus-commit on completion with per-call and per-project opt-outs, total four-state re-run convergence over durable commit intent, delivery-registry transition records and a derived phase-state projection over the state layer, the non-gating capsule `phase.transition` append with a bounded disclosure, the pinned evidence vocabulary, the five pm-notes lint error rows, and the variant-era corpus boundary with an explicit exclusion manifest."
 links:
-  related_changes: ["GH-177", "GH-178", "GH-179", "GH-222", "GH-226", "GH-227", "GH-240"]
+  related_changes: ["GH-177", "GH-178", "GH-179", "GH-222", "GH-226", "GH-227", "GH-240", "GH-242"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -72,7 +72,7 @@ A landing writes only the target entry's `started`/`completed`; comments, extra 
 
 ### Atomic completion (default on)
 
-A completion adds the commit dimension to the matrix; the rows above keep their grammar, advisory, and reopen semantics. By default the completion lands the transition record and the conventional commit as one act: both land or neither. A completion with no stageable pending work lands the transition alone and discloses the basis; matrix row 2 (already completed) appends no record and creates no commit. `--no-commit` records the transition alone per call, and the project key `commit.phaseCommit: false` disables the atomic commit for the project; the flag never overrides an explicit project disable.
+A completion adds the commit dimension to the matrix; the rows above keep their grammar, advisory, and reopen semantics. By default the completion lands the transition record and the conventional commit as one act: both land or neither. The completion's staging set is the mapped plan-phase scope union the change folder for the change ref, so a phase's artifacts and its transition land in the same commit; the pm-notes transition is written before the commit act and the pre-write bytes are restored if the act fails, so a failed attempt never leaves the document ahead of the ledger. A completion with no stageable pending work lands the transition alone and discloses the basis; matrix row 2 (already completed) appends no record and creates no commit. `--no-commit` records the transition alone per call, and the project key `commit.phaseCommit: false` disables the atomic commit for the project; the flag never overrides an explicit project disable.
 
 The completion envelope extends the existing fields (`changeRef`, `phase`, `operation`, `outcome`, `timestamp`, `variant`, optional `advisory`, optional `reason`, and `evidence`) with `atomic`, an optional `commitSha`, optional `commitSkipped`, optional `reconciliation`, and, on a landed commit, a `commit` block carrying the message subject, staged files, exclusions, message source, transport, safety evidence, and telemetry evidence. `commitSkipped` uses one vocabulary for durable and envelope-only disclosures: `opt-out-flag`, `config-disabled`, and `skipped-no-pending-work` are exactly the durable record-only bases, while `no-op` (an already-converged completion) and `interrupted-atomic-no-pending-work` (an interrupted atomic completion re-run with no pending work left) are envelope-only and never written to a record. `reconciliation.completed` names what a re-run did: `commit`, `transition`, `intentional-no-op`, or `existing-completion`, with the stored basis for an intentional record-only convergence.
 
@@ -121,7 +121,7 @@ Corpus acceptance derives its member set at run time from change folders dated 2
 - `packages/core/src/domain/verify-change.ts` — pure verify classification that reuses the lint rules and fold semantics without performing I/O.
 - `packages/adapters/src/file/pm-notes-parser.ts` — target location under the change-artifact convention, YAML 1.2 core parse with bounded size/nodes/depth/aliases, and the document-edit staging used by the write path.
 - `packages/cli/src/commands/lint.ts` — target selector, rule invocation, and envelope-shaped data/error results.
-- `packages/cli/src/commands/phase.ts` — grammar-first command family, staged lint, durable-evidence convergence, the shared commit act on completion, advisories, document write, and projection replace.
+- `packages/cli/src/commands/phase.ts` — grammar-first command family, staged lint, durable-evidence convergence, the pre-write document snapshot, the transition write before the commit act, restore on failure, the shared commit act on completion, advisories, and projection replace.
 - `packages/cli/src/edge.ts` — composition root: pm-notes parser, registry reader/writer, clock, fence-token factories, and the optional atomic-completion extension composed beside `config`.
 
 ### Invariants
