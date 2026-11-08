@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "help.coverage.v1",
+  "referencePages": [
+    "doc/planning/oss-tooling/milestones/m1/man-page.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/entrypoint.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/status.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/brief.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/queue.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/lanes.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/blockers.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/phase.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/commit.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/lint.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/plan.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/verify-change.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/verify-gates.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/verify-deploy.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/merge.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/closeout.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/spend.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/retro.md"
+  ],
+  "commands": [
+    "status",
+    "brief",
+    "queue",
+    "lanes",
+    "blockers",
+    "phase",
+    "commit",
+    "lint",
+    "plan",
+    "verify",
+    "merge",
+    "closeout",
+    "spend",
+    "retro"
+  ]
+}

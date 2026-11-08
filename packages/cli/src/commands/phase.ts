@@ -25,6 +25,7 @@ import {
   CANONICAL_PHASE_IDS,
   type CommitIntentBasis,
   type CommitPlanPhaseContext,
+  FALLBACK_INTERNAL_CODE,
   type PhaseStateProjection,
   type PhaseTransitionOperation,
   type PhaseTransitionRecord,
@@ -145,6 +146,8 @@ export type PhaseCommitExtension = {
 /** Everything the phase surface touches; all I/O, time, and state are injected. */
 export type PhaseCommandRuntime = {
   readonly readPmNotes: (changeRef: string) => PhasePmNotesRead;
+  /** The repository-relative change folder for the ref, when present. */
+  readonly readChangeFolder?: (changeRef: string) => string | undefined;
   readonly stageEntry: (
     text: string,
     edit: {
@@ -367,7 +370,11 @@ const completeWithCommit = async (
 ): Promise<TargetSuccess | TargetFailure> => {
   const { changeRef, phaseId, timestamp, read, staged, variant, registry, advisory } = input;
   const plan = extension.readPlanPhase(changeRef, phaseId);
-  const scopePaths = plan.planPhase?.declaredScopePaths ?? [];
+  const changeFolder = runtime.readChangeFolder?.(changeRef);
+  const scopePaths = [
+    ...(plan.planPhase?.declaredScopePaths ?? []),
+    ...(changeFolder === undefined ? [] : [changeFolder]),
+  ];
   const skeleton = resolveCommitSkeleton({
     ref: changeRef,
     refSource: "argument",
@@ -393,6 +400,18 @@ const completeWithCommit = async (
   const writeDocument = (): TargetFailure | undefined => {
     const written = runtime.writePmNotes(read.file, staged.text);
     return written.ok ? undefined : internalFailure(written.message);
+  };
+  const restoreFailure = (file: string): TargetFailure => ({
+    ok: false,
+    error: {
+      kind: "fallback",
+      code: FALLBACK_INTERNAL_CODE,
+      summary: `pm-notes restore failed for ${file}; reconcile from the pre-write snapshot captured before the completion (source: in-memory pm-notes read)`,
+    },
+  });
+  const restoreDocument = (): TargetFailure | undefined => {
+    const restored = runtime.writePmNotes(read.file, read.text);
+    return restored.ok ? undefined : restoreFailure(read.file);
   };
   const replaceProjection = (
     transitions: readonly PhaseTransitionRecord[],
@@ -460,6 +479,16 @@ const completeWithCommit = async (
     const completedAt = registry.transitions.find(
       (record) => record.phaseId === phaseId && record.operation === "complete",
     )?.timestamp;
+    if (completedAt !== undefined && read.text !== staged.text) {
+      const convergence = runtime.stageEntry(read.text, {
+        phaseId,
+        operation: "complete",
+        timestamp: completedAt,
+      });
+      if (!convergence.ok) return internalFailure("convergence document is not parseable");
+      const converged = runtime.writePmNotes(read.file, convergence.text);
+      if (!converged.ok) return internalFailure(converged.message);
+    }
     return {
       ok: true,
       data: {
@@ -510,6 +539,14 @@ const completeWithCommit = async (
   }
 
   if (delta.state === "record-atomic-without-commit") {
+    const convergence = runtime.stageEntry(read.text, {
+      phaseId,
+      operation: "complete",
+      timestamp: evidence.transitionId ?? timestamp,
+    });
+    if (!convergence.ok) return internalFailure("convergence document is not parseable");
+    const preWritten = runtime.writePmNotes(read.file, convergence.text);
+    if (!preWritten.ok) return internalFailure(preWritten.message);
     const baselineHead = (await extension.currentHead()) ?? "";
     const act = await extension.runAct({
       mode: "phase",
@@ -521,8 +558,13 @@ const completeWithCommit = async (
       baselineHead,
       ...(delta.transitionId === undefined ? {} : { existingTransitionId: delta.transitionId }),
     });
-    if (act.kind === "failure") return actFailure(act);
+    if (act.kind === "failure") {
+      const restored = restoreDocument();
+      return restored ?? actFailure(act);
+    }
     if (act.kind === "no-pending-work") {
+      const restored = restoreDocument();
+      if (restored !== undefined) return restored;
       return {
         ok: true,
         data: {
@@ -535,16 +577,8 @@ const completeWithCommit = async (
         },
       };
     }
-    // The record already landed; complete the document with the stored
-    // transition timestamp so the projection fold stays byte-stable.
-    const convergence = runtime.stageEntry(read.text, {
-      phaseId,
-      operation: "complete",
-      timestamp: evidence.transitionId ?? timestamp,
-    });
-    if (!convergence.ok) return internalFailure("convergence document is not parseable");
-    const writtenDoc = runtime.writePmNotes(read.file, convergence.text);
-    if (!writtenDoc.ok) return internalFailure(writtenDoc.message);
+    // The record already landed; the convergence document was written before
+    // the act, so the recovered commit contains it.
     const projected = replaceProjection(registry.transitions);
     if (projected !== undefined) return projected;
     return {
@@ -574,6 +608,10 @@ const completeWithCommit = async (
     return recordOnly(input.noCommit ? "opt-out-flag" : "config-disabled");
   }
 
+  // DEC-16: the pm-notes transition is written before the commit act; the
+  // pre-write bytes are restored if the act fails.
+  const preWritten = writeDocument();
+  if (preWritten !== undefined) return preWritten;
   const baselineHead = (await extension.currentHead()) ?? "";
   let appendedTransitions: readonly PhaseTransitionRecord[] = registry.transitions;
   const act = await extension.runAct({
@@ -601,12 +639,15 @@ const completeWithCommit = async (
       return { ok: true, transitionId: appended.value.record.timestamp };
     },
   });
-  if (act.kind === "failure") return actFailure(act);
+  if (act.kind === "failure") {
+    const restored = restoreDocument();
+    return restored ?? actFailure(act);
+  }
   if (act.kind === "no-pending-work") {
+    const restored = restoreDocument();
+    if (restored !== undefined) return restored;
     return recordOnly("skipped-no-pending-work");
   }
-  const written = writeDocument();
-  if (written !== undefined) return written;
   const projected = replaceProjection(appendedTransitions);
   if (projected !== undefined) return projected;
   return {
@@ -709,16 +750,6 @@ const transitionTarget = async (
       ? { ok: true, data }
       : { ok: true, data: { ...data, capsule: disclosure } };
   };
-  if (kind === "complete" && runtime.sessionFacts?.().insideDeliverySession === true) {
-    return {
-      ok: false,
-      error: {
-        kind: "commit",
-        code: "commit.session.context-refused",
-        summary: "the commit primitive is invoked from outside a delivery session",
-      },
-    };
-  }
   const read = runtime.readPmNotes(changeRef);
   if (!read.ok) return targetFailure(read) ?? internalFailure("target read");
 

@@ -1,0 +1,96 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-242
+branch: feat/GH-242/agent-integration
+status: PASS
+summary: >-
+  Phase 11 restores the regression protection deleted by 41c7e38d and closes every
+  iteration-1 finding without touching delivered product code, prompts, or specs.
+  tests/checks/ci-checks.test.ts is back to the full 37-test invariant suite (687 lines)
+  with a single required one-line change to the GH-172 aggregate pin; the new prompt/help
+  scan wiring moved to tests/checks/ci-wiring.test.ts. privacy-authoring.test.ts is
+  byte-identical to its pre-41c7e38d state (8 tests: TC-PRIVACY-018/019, F-8), runAuthoring
+  is used again, and the non-pilot fixture scan moved to fixture-privacy.test.ts. The
+  test-plan is populated (section 7 statuses Implemented, section 10 family log, pm-notes
+  authoritative), the change-folder helpers have direct behavioural tests, prompt-conformance
+  negation is sentence-local with a mutant, and commit --phase --dry-run is pinned to the
+  DEC-4 union. Re-ran every restored/affected suite plus the full aggregate test battery:
+  targeted suites 39+25+17 pass, plan validate exit 0, bun test 6005 pass / 4 skip / 0 fail
+  across 6009 tests / 683 files. No weakened assertions, scope drift, or flakiness.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: NB-1
+    severity: info
+    confidence: high
+    category: robustness
+    location: scripts/checks/prompt-conformance.ts
+    message: >-
+      Sentence-local negation is not positional: a negation word after the offending token
+      in the same sentence (e.g. "Run git add, then never commit.") still exempts the
+      earlier forbidden token. This is the accepted "sentence-local" resolution F-5 permitted
+      and is strictly better than the prior whole-line skip; not a regression.
+    suggestion: >-
+      Optional future refinement — require the negation to precede the prohibited token
+      within the sentence.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: NB-2
+    severity: info
+    confidence: high
+    category: consistency
+    location: scripts/checks/prompt-conformance.ts
+    message: >-
+      The plan.no-progress rule now matches only the singular instruction phrase "plan update"
+      (the plural "plan updates" no longer matches), a deliberate and documented fix for the
+      legitimate noun phrase in pm.md's review step. Other alternatives still catch the
+      instruction; acceptable trade-off.
+    suggestion: >-
+      No action required; keep the documented narrowing recorded in plan phase 11 and test-plan 7.4.
+    suppressed: false
+    published_url: null
+    published_at: null
+resolutions:
+  - id: F-1
+    verdict: resolved
+    evidence: >-
+      ci-checks.test.ts 687 lines / 37 tests, identical to pre-41c7e38d except the GH-172
+      aggregate pin line; all mutation classes restored; scan wiring in ci-wiring.test.ts;
+      pin-equality and vulnerability-gate imported again; 39 pass.
+  - id: F-2
+    verdict: resolved
+    evidence: >-
+      privacy-authoring.test.ts byte-identical to pre-41c7e38d (8 tests incl. TC-PRIVACY-018/019
+      and F-8); runAuthoring used; fixture scan in fixture-privacy.test.ts; privacy-ci-wiring
+      re-pinned; 25 pass.
+  - id: F-3
+    verdict: resolved
+    evidence: >-
+      Test-plan section 7 all Implemented/Existing (0 To Implement), section 10 populated family
+      log (0 Pending) declaring pm-notes notes authoritative, section 7.4 remediation coverage.
+  - id: F-4
+    verdict: resolved
+    evidence: >-
+      tests/behaviour/change-folder-locate.test.ts, 9 tests over in-memory FS covering month/folder
+      scan order, exact --ref-- match, invalid ref, read-only, prefix strip, out-of-root, unresolved.
+  - id: F-5
+    verdict: resolved
+    evidence: >-
+      Sentence-local negation in prompt-conformance.ts with per-occurrence rule matching and
+      firstVisibleOccurrence for literals; raw-git-negated.md mutant proves a cross-sentence
+      instruction is still caught; live scan clean; mutants 11 pass.
+  - id: F-6
+    verdict: resolved
+    evidence: >-
+      commit-staging-scope.test.ts F-6 case pins commit --phase --dry-run to the DEC-4 union
+      (plan-phase scope plus change folder), excludes stray, tree untouched; 3 pass.
+reviewed_at: 2026-11-08T02:55:00Z
+next_step: PROCEED

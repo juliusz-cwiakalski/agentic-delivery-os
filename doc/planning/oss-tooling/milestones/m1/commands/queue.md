@@ -193,3 +193,12 @@ command returns the classified state failure. `--until <iso>` supplies the
 absolute window expiry for `--park provider-window`, where it is required; a
 missing `--until` or an `--until` paired with another park cause is refused
 through `fallback.invocation` at exit 1 and appends nothing.
+
+## HELP
+
+`<binary> queue --help` prints usage, options, at least one example, exit codes,
+and a see-also pointer. Root `<binary> --help` and `<binary> --version` are
+self-description only: zero state, network, git, or configuration reads and
+zero writes. The executable is a non-installed Bun bin; see the
+[man page](../man-page.md).
+

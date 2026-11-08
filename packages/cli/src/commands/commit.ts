@@ -45,6 +45,8 @@ export type CommitContext = {
 /** The injected commit surface runtime; all I/O and time are ports. */
 export type CommitCommandRuntime = {
   readonly sessionFacts: () => CommitSessionFacts;
+  /** The repository-relative change folder for the resolved ref, when present. */
+  readonly readChangeFolder?: (changeRef: string) => string | undefined;
   readonly resolveRef: () =>
     | { readonly ref: string; readonly refSource: CommitRefSource }
     | undefined
@@ -301,17 +303,6 @@ export const createCommitCommandDefinition = (
   requiresValue: ["--phase"],
   humanSuccess: true,
   handler: async ({ positionals, flags }) => {
-    const facts = runtime.sessionFacts();
-    if (facts.insideDeliverySession) {
-      return {
-        error: {
-          kind: "commit",
-          code: "commit.session.context-refused",
-          summary: "the commit primitive is invoked from outside a delivery session",
-        },
-      };
-    }
-
     const [explicitRef, ...extra] = positionals;
     if (extra.length > 0) return failure(`unexpected argument "${extra[0] as string}"`);
     if (explicitRef !== undefined && !REF_PATTERN.test(explicitRef)) {
@@ -382,8 +373,17 @@ export const createCommitCommandDefinition = (
 
     const scopePaths =
       phaseIdFlag === undefined
-        ? context.phases.flatMap((entry) => entry.declaredScopePaths)
-        : (planPhase?.declaredScopePaths ?? []);
+        ? context.planPresent
+          ? context.phases.flatMap((entry) => entry.declaredScopePaths)
+          : [runtime.readChangeFolder?.(changeRef)].filter(
+              (entry): entry is string => entry !== undefined,
+            )
+        : [
+            ...(planPhase?.declaredScopePaths ?? []),
+            ...[runtime.readChangeFolder?.(changeRef)].filter(
+              (entry): entry is string => entry !== undefined,
+            ),
+          ];
     const scopeSource = !context.planPresent
       ? "plan-absent"
       : phaseCentric

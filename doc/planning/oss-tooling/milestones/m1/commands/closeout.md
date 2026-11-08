@@ -78,3 +78,12 @@ $ <binary> closeout GH-301 --apply --json
 ## SEE ALSO
 
 [merge.md](merge.md), [retro.md](retro.md), [spend.md](spend.md)
+
+## HELP
+
+`<binary> closeout --help` prints usage, options, at least one example, exit codes,
+and a see-also pointer. Root `<binary> --help` and `<binary> --version` are
+self-description only: zero state, network, git, or configuration reads and
+zero writes. The executable is a non-installed Bun bin; see the
+[man page](../man-page.md).
+

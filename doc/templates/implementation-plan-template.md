@@ -47,6 +47,7 @@ phases:
   - id: 1
     title: <Planning phase title>
     kind: planning                # planning = lease-free
+    summary: <one-line phase summary consumed by the commit path>
     scope:
       files:
         - <concrete repository path>
@@ -61,6 +62,7 @@ phases:
   - id: 2
     title: <Delivery phase title>
     kind: delivery                # delivery = lease-taking
+    summary: <one-line phase summary consumed by the commit path>
     scope:
       files:
         - <concrete repository path>
@@ -88,6 +90,10 @@ phases:
   inert declarations; unknown tiers are rejected with `plan.tier.unknown`.
 - `doneArtifacts` are typed declaration slots echoed by `plan validate`; the
   verdict does not verify their reality.
+- `summary` is optional, non-empty, and echoed by `plan validate`; the commit
+  path consumes it for the plan-phase message context. Omission stays valid.
+- The plan declares phases and scope only. It carries no `tasks` key and no
+  progress log; progress belongs in pm-notes `notes:`.
 
 ## Validation
 

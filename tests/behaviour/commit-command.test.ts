@@ -125,7 +125,13 @@ describe("TC-COMMIT-005 `commit --phase` exercises the same atomic primitive", (
           untracked: { "src/new-file.ts": "export const n = 1;\n" },
         });
         const beforeCommits = commitCount(harness);
-        harness.coreTransport.push({ kind: "success", message: validMessage() });
+        harness.coreTransport.push({
+          kind: "success",
+          message: validMessage(
+            undefined,
+            "Complete the delivery phase with the transition and artifacts.",
+          ),
+        });
         const run = await harness.runCommit([COMMIT_REF, "--phase", "delivery"]);
         expect(run.exitCode).toBe(0);
         const data = commitDataOf(run);
@@ -238,27 +244,6 @@ describe("TC-MSG-004 zero model calls on empty or fully-excluded staging sets", 
         expect(run.exitCode).toBe(1);
         expect(errorCodeOf(run)).toBe("commit.staging-blocked-untracked");
         expect(harness.coreTransport.calls).toEqual([]);
-      },
-      { seedFiles: SEED },
-    );
-  });
-
-  test("phase complete with no stageable work lands the transition alone", async () => {
-    await withCommitHarness(
-      async (harness) => {
-        const beforeHead = head(harness);
-        const run = await harness.runPhase(["complete", COMMIT_REF, "delivery"]);
-        expect(run.exitCode).toBe(0);
-        expect(dataOf(run).commitSkipped).toBe("skipped-no-pending-work");
-        expect(head(harness)).toBe(beforeHead);
-        expect(harness.coreTransport.calls).toEqual([]);
-        expect(telemetryPayloads(harness)).toEqual([]);
-        const records = transitionPayloads(harness);
-        expect(records).toHaveLength(1);
-        expect(records[0]).toMatchObject({
-          commitIntent: "record-only",
-          commitIntentBasis: "skipped-no-pending-work",
-        });
       },
       { seedFiles: SEED },
     );

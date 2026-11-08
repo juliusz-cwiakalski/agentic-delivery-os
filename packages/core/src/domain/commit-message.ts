@@ -155,7 +155,8 @@ export const templateCommitMessage = (input: {
 }): CommitMessageDraft => ({
   subject: templateSubject(
     input.skeleton,
-    input.planSummary ?? input.topPath ?? "update the change workspace",
+    input.planSummary ??
+      (input.topPath === undefined ? "update the change workspace" : `update ${input.topPath}`),
   ),
   breaking: input.skeleton.breaking,
 });

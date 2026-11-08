@@ -11,6 +11,7 @@ import {
   ERROR_TABLE,
   type ErrorTableEntry,
   LINT_DOCUMENT_UNREADABLE_CODE,
+  leaseClassForPhaseKind,
   PLAN_DONE_ARTIFACT_SLOTS,
   PLAN_ERROR_CODES,
   PLAN_FILE_PREFIX,
@@ -22,7 +23,6 @@ import {
   PLAN_SCHEMA_VERSION,
   PLAN_SUPPORTED_SCHEMA_VERSIONS,
   type PlanDocument,
-  leaseClassForPhaseKind,
   planArtifactPath,
 } from "../../packages/core/src/contracts/index";
 
@@ -40,6 +40,7 @@ const PLAN_DOCUMENT = {
       id: 1,
       title: "Planning",
       kind: "planning",
+      summary: "Plan the change",
       scope: { files: ["doc/changes/plan.md"] },
       interactions: [
         { kind: "contract-file", target: "packages/core/src/contracts/queue.ts", role: "producer" },

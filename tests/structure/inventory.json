@@ -205,6 +205,7 @@
     "src/session/index.ts"
   ],
   "cli": [
+    "bin/delivery-os.ts",
     "src/classify.ts",
     "src/commands/blockers.ts",
     "src/commands/board.ts",
@@ -215,8 +216,8 @@
     "src/commands/db.ts",
     "src/commands/doctor.ts",
     "src/commands/index.ts",
-    "src/commands/lint.ts",
     "src/commands/lanes.ts",
+    "src/commands/lint.ts",
     "src/commands/merge.ts",
     "src/commands/phase.ts",
     "src/commands/plan.ts",
@@ -230,6 +231,9 @@
     "src/commands/verify.ts",
     "src/commands/watchdog.ts",
     "src/edge.ts",
+    "src/entrypoint.ts",
+    "src/help.ts",
+    "src/help/prompt-required-commands.ts",
     "src/index.ts",
     "src/output/commit-text.ts",
     "src/output/deploy-text.ts",
@@ -237,6 +241,7 @@
     "src/output/merge-text.ts",
     "src/output/plan-text.ts",
     "src/output/serialize.ts",
+    "src/production.ts",
     "src/projection.ts"
   ],
   "mcp": [

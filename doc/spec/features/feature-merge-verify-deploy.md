@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-MERGE-VERIFY-DEPLOY
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe, owner-gate classification as merge authority, recorded authorized waivers, the single rebase-refresh with no force path, the verified squash landing with idempotent convergence and dry-run, the verify deploy trace verdict taxonomy, the recorded squash SHA and parent that anchor closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
+summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe, owner-gate classification as merge authority, recorded authorized waivers, the single rebase-refresh with no force path, the verified squash landing with idempotent convergence and dry-run, the lifecycle merge path the coordinator uses, the verify deploy trace verdict taxonomy, the recorded squash SHA and parent that anchor closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
 links:
-  related_changes: ["GH-225", "GH-237", "GH-240"]
+  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242"]
   related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003"]
   contracts:
     - "packages/core/src/contracts/merge.ts"
@@ -31,6 +31,11 @@ waiver override against the gate class's declared policy, attempts exactly one
 rebase-refresh when the request is behind its base, lands one squash commit,
 verifies the landing, and records the outcome. No daemon path fires a merge and
 no force operation exists in the mutation vocabulary.
+
+`merge` is the lifecycle merge path. The coordinator verifies finalization with
+`verify change` and `phase list`, then runs `merge <ref>` for each ready item;
+the platform merge command (`gh pr merge`, `glab mr merge`) is not the primary
+path, and `@pr-manager` never merges.
 
 ## Command surfaces
 

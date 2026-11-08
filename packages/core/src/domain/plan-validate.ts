@@ -23,7 +23,6 @@ import {
   PLAN_SCHEMA_VERSION,
   PLAN_SCOPE_KEYS,
   PLAN_SUPPORTED_SCHEMA_VERSIONS,
-  planArtifactPath,
   type PlanArtifactRead,
   type PlanArtifactRef,
   type PlanDocument,
@@ -36,6 +35,7 @@ import {
   type PlanValidateData,
   type PlanValidationError,
   type PlanYamlParser,
+  planArtifactPath,
 } from "#contracts";
 import { scopeCoversPath } from "./plan-paths.js";
 
@@ -306,6 +306,15 @@ const parsePhase = (
   if (title === undefined) {
     errors.push(schemaError("title", "missing", { phase: id }));
   }
+  const summary = raw.summary;
+  if (summary !== undefined && nonEmptyString(summary) === undefined) {
+    errors.push(
+      schemaError("summary", "invalid", {
+        phase: id,
+        detail: "expected a non-empty string",
+      }),
+    );
+  }
   const kindRaw = raw.kind;
   if (!isMember(PLAN_PHASE_KINDS, kindRaw)) {
     errors.push(
@@ -352,6 +361,7 @@ const parsePhase = (
     title: title ?? "",
     kind,
     leaseClass: leaseClassForPhaseKind(kind),
+    ...(nonEmptyString(summary) === undefined ? {} : { summary: nonEmptyString(summary) ?? "" }),
     scope: scopeResult.scope,
     leases: effectiveLeases,
     interactions: interactions.value,
@@ -658,6 +668,7 @@ export const planDocumentFromValidateData = (data: PlanValidateData): PlanDocume
       id: phase.id,
       title: phase.title,
       kind: phase.kind,
+      ...(phase.summary === undefined ? {} : { summary: phase.summary }),
       scope: {
         files: phase.scope.files,
         packages: phase.scope.packages,

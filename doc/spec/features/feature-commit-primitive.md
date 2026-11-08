@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-COMMIT-PRIMITIVE
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered commit primitive: a `commit` command that computes a conventional commit from the working tree plus change context (deterministic skeleton, precise staging, deterministic safety, one constrained message call behind an ordered transport seam with a marked template fallback), default-on atomic record-plus-commit inside `phase complete` with per-call and per-project opt-outs, total four-state re-run convergence over durable commit-intent evidence, the `commit.telemetry` state-layer record kind, the non-gating capsule `commit.landed` append with a bounded disclosure, the typed `commit.phaseCommit` configuration key, and the six `commit.*` error identities."
+summary: "The delivered commit primitive: a `commit` command that computes a conventional commit from the working tree plus change context (deterministic skeleton, precise staging, deterministic safety, one constrained message call behind an ordered transport seam with a marked template fallback), default-on atomic record-plus-commit inside `phase complete` with per-call and per-project opt-outs, the completion staging set of mapped plan-phase scope union the change folder with the pm-notes transition written before the commit act and restored on failure, total four-state re-run convergence over durable commit-intent evidence, the `commit.telemetry` state-layer record kind, the non-gating capsule `commit.landed` append with a bounded disclosure, the typed `commit.phaseCommit` configuration key, and the five `commit.*` error identities."
 links:
-  related_changes: ["GH-227", "GH-240"]
-  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005"]
+  related_changes: ["GH-227", "GH-240", "GH-242"]
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0013"]
   contracts:
     - "packages/core/src/contracts/commit.ts"
     - "packages/core/src/contracts/error-table.ts"
@@ -22,9 +22,9 @@ links:
 
 The commit primitive turns the commit act into one tool capability. `commit [<ref>] [--phase <phase>] [--dry-run]` computes a conventional commit from the working tree plus change context: the ref, type candidate, scope, staging set, exclusions, and safety verdicts are computed facts; only the language part of the message comes from exactly one constrained model call, and even that call degrades to a deterministic, visibly marked template when no inference transport is available. `phase complete <ref> <phase>` lands the ledger transition and the conventional commit as one act by default, with `--no-commit` and the project-level `commit.phaseCommit` key as the opt-outs.
 
-Four properties define the surface. Staging is precise: tracked pending work is staged with scope drift disclosed, untracked work is staged only inside a declared scope, and untracked material outside every declared scope is a stray that is never staged. Safety is deterministic and never AI: the security scan, forbidden-path exclusions, and the binary size guard run over the candidate staging set before any transport is selected and before anything is staged, and a scan that cannot run refuses the operation. Convergence is total: a re-run classifies the durable delta between the persisted transition record (which for an atomic completion carries the landed commit SHA) and the persisted commit telemetry event, and completes exactly the missing side. Telemetry is durable and non-gating: one `commit.telemetry` record per landed commit carries the commit identity, message provenance, transport, and token spend.
+Four properties define the surface. Staging is precise: tracked pending work is staged with scope drift disclosed, untracked work is staged only inside a declared scope, and untracked material outside every declared scope is a stray that is never staged. A lifecycle completion's declared scope is the mapped plan-phase scope union the change folder for the change ref; a plan-absent standalone commit may stage the change folder. Safety is deterministic and never AI: the security scan, forbidden-path exclusions, and the binary size guard run over the candidate staging set before any transport is selected and before anything is staged, and a scan that cannot run refuses the operation. Convergence is total: a re-run classifies the durable delta between the persisted transition record (which for an atomic completion carries the landed commit SHA) and the persisted commit telemetry event, and completes exactly the missing side. Telemetry is durable and non-gating: one `commit.telemetry` record per landed commit carries the commit identity, message provenance, transport, and token spend.
 
-The primitive is a CLI surface. It performs local staging and local commit-object creation only, never pushes, and refuses to run inside a delivery session. It consumes the [result contract](feature-result-contract.md) envelope, error table, and `{0, 1, 2}` projection; the [phase command family](feature-pm-notes-lint-and-phase-transitions.md) write path and its nine-row idempotency matrix; the [machine-readable delivery plan](feature-plan-schema.md) for declared phase scope and phase summaries; the [state layer](feature-state-layer.md) for the verified ledger and the additive telemetry record kind; the [configuration layer](feature-config-layer.md) for the typed disable key; and the [provider engine](feature-provider-engine.md) availability facts behind the core-owned inference transport.
+The primitive is a CLI surface. It performs local staging and local commit-object creation only, never pushes, and runs inside a delivery session. It consumes the [result contract](feature-result-contract.md) envelope, error table, and `{0, 1, 2}` projection; the [phase command family](feature-pm-notes-lint-and-phase-transitions.md) write path and its nine-row idempotency matrix; the [machine-readable delivery plan](feature-plan-schema.md) for declared phase scope and phase summaries; the [state layer](feature-state-layer.md) for the verified ledger and the additive telemetry record kind; the [configuration layer](feature-config-layer.md) for the typed disable key; and the [provider engine](feature-provider-engine.md) availability facts behind the core-owned inference transport.
 
 ## Business Context
 
@@ -47,10 +47,10 @@ The primitive is a CLI surface. It performs local staging and local commit-objec
 
 | Invocation | Outcome | Exit |
 |---|---|---|
-| `commit [<ref>]` | Lands one computed conventional commit for the stageable pending work of the working tree. The ref comes from the argument when given, otherwise from the embedded ref resolver (the production composition derives it from the branch name). | `0` committed; `1` staging blocked, commitlint failure, safety STOP, session refusal; `2` platform fault |
-| `commit [<ref>] --phase <phase>` | Atomic record-plus-commit for that phase's pending work: the staging scope is the plan phases the lifecycle phase maps to (`delivery` covers every delivery-kind plan phase, `delivery_planning` the planning-kind phases; other lifecycle phases have no plan-phase correspondence and degrade with `plan-absent`), and the invocation runs the same atomic primitive as `phase complete`. | `0` landed; `1` as above; `2` atomic abort (neither side landed) |
+| `commit [<ref>]` | Lands one computed conventional commit for the stageable pending work of the working tree. The ref comes from the argument when given, otherwise from the embedded ref resolver (the production composition derives it from the branch name). | `0` committed; `1` staging blocked, commitlint failure, safety STOP; `2` platform fault |
+| `commit [<ref>] --phase <phase>` | Atomic record-plus-commit for that phase's pending work: the staging set is the mapped plan-phase scope union the change folder; a plan-absent standalone commit may stage the change folder; unrelated strays are never staged (`delivery` covers every delivery-kind plan phase, `delivery_planning` the planning-kind phases; other lifecycle phases contribute the change folder and degrade with `plan-absent`), and the invocation runs the same atomic primitive as `phase complete`. | `0` landed; `1` as above; `2` atomic abort (neither side landed) |
 | `commit [<ref>] --dry-run` | Prints the computed message, staging set, and exclusion disclosures; stages nothing, commits nothing, appends no ledger record, emits no telemetry. | `0` |
-| `phase complete <ref> <phase>` | Default-on atomic ledger transition plus conventional commit. | `0` completed (with or without a commit); `1` invalid phase, safety STOP, staging blocked, commitlint failure, session refusal; `2` atomic abort, safety scan unavailable, ledger unreachable |
+| `phase complete <ref> <phase>` | Default-on atomic ledger transition plus conventional commit. | `0` completed (with or without a commit); `1` invalid phase, safety STOP, staging blocked, commitlint failure; `2` atomic abort, safety scan unavailable, ledger unreachable, pm-notes restore failure |
 | `phase complete <ref> <phase> --no-commit` | Records the transition alone with durable intent `record-only` and basis `opt-out-flag`. | `0` |
 
 Grammar resolves through `input.value.rejected` (exit `1`) before any runtime call: an unknown phase id, a ref that does not match the work-item shape, or a surplus positional argument. `--phase` composes with `--dry-run`; `--dry-run` belongs to the `commit` surface only.
@@ -59,7 +59,7 @@ The `commit` success envelope carries `changeRef`, `subject`, an optional `body`
 
 Human output renders the same facts deterministically: the dry-run banner, the subject and body, the staged paths, one group per exclusion class, the scope-drift group, the message source, the transport, the commit identity when present, the atomic marker, and a telemetry note when the event was not recorded. Path ordering uses an explicit `en` collation; no path, ordering, or byte depends on a clock, the environment, or the process locale.
 
-A phase-mode invocation that lands the transition alone or is an already-completed no-op returns success with no `commitSha`, and its `ledgerTransition` cites the phase. A phase-mode dry run over a tree with no stageable work is a success that discloses `commitSkipped: "skipped-no-pending-work"` and the empty staging set, previewing the real transition-only outcome rather than refusing.
+A phase-mode invocation that lands no commit or is an already-completed no-op returns success with no `commitSha`, and its `ledgerTransition` cites the phase. Because the pm-notes transition is written before the commit act and the change folder is in the staging set, a completion whose only pending work is the transition commits it. A phase-mode dry run over a tree with no stageable work is a success that discloses `commitSkipped: "skipped-no-pending-work"` and the empty staging set, previewing the transition-only outcome rather than refusing.
 
 ### Deterministic context and skeleton
 
@@ -84,17 +84,17 @@ A template commit is a success (`exit 0`) whose data and event carry `messageSou
 The staging set is computed from the working-tree facts, never guessed:
 
 - Tracked pending work is staged, including work outside the declared scope; scope drift is disclosed in `excluded.scopeDrift` so it stays observable rather than silently dropped or silently committed.
-- Untracked files are staged only when they fall inside the declared scope (the plan phases the target lifecycle phase maps to in phase-centric mode, the union of every declared plan-phase scope in standalone mode). `delivery` maps to every delivery-kind plan phase and `delivery_planning` to the planning-kind phases; a lifecycle phase with no declared correspondence degrades to the `plan-absent` scope instead of borrowing another phase's scope. Untracked material outside every declared scope is a stray: excluded as `stray` and disclosed in `excluded.untrackedNotStaged`.
+- Untracked files are staged only when they fall inside the declared scope. In phase-centric mode the scope is the plan phases the target lifecycle phase maps to union the change folder for the change ref; in standalone mode with a plan it is the union of every declared plan-phase scope; in standalone mode without a plan it is the change folder for the change ref. `delivery` maps to every delivery-kind plan phase and `delivery_planning` to the planning-kind phases; a lifecycle phase with no declared plan-phase correspondence still contributes the change folder instead of borrowing another phase's scope. Untracked material outside every declared scope is a stray: excluded as `stray` and disclosed in `excluded.untrackedNotStaged`.
 - Forbidden paths (`tmp/`, `.ai/local/`, `.env` files, private key filenames) and oversized binaries (over 1 MiB) are excluded and disclosed as `forbiddenPaths` and `oversizedBinaries`.
-- Without a plan artifact the scope source is `plan-absent`, the scope is empty, and the envelope discloses `degradedScope: "plan-absent"`: tracked work is staged with drift disclosed and untracked work is not staged.
+- Without a plan artifact the scope source is `plan-absent` and the envelope discloses `degradedScope: "plan-absent"`: a standalone commit stages the change folder for the resolved ref, while a lifecycle completion stages the change folder beside its (absent) plan-phase scope; tracked work is staged with drift disclosed and unrelated untracked work is never staged.
 
 The deterministic safety pass runs over the candidate staging set before any transport is selected and before anything is staged. It scans content and filenames for secret-shaped material and checks the forbidden-path and binary guards. A suspected secret — confirmed or not — STOPs the operation with `commit.safety.secret-suspected` (exit `1`), reporting finding classes and paths but never the material, and the identity is not retryable so no caller can blind-retry it. A safety pass that cannot execute fails closed with `commit.safety.scan-unavailable` (exit `2`). Forbidden-path and oversized-binary findings are staging exclusions, not STOP classes. Only content that passed the scan enters the bundle, so secret-suspected material never reaches a provider or the headless one-shot.
 
-A standalone invocation whose staging set is empty — everything pending is stray, forbidden, or excluded — refuses with `commit.staging-blocked-untracked` (exit `1`) without selecting a transport. A phase completion in the same situation lands the transition alone; it never creates an empty commit.
+A standalone invocation whose staging set is empty — everything pending is stray, forbidden, or excluded — refuses with `commit.staging-blocked-untracked` (exit `1`) without selecting a transport. A phase completion in the same situation restores the pre-write pm-notes bytes and lands the transition alone; it never creates an empty commit.
 
 ### Atomic phase completion
 
-`phase complete` performs the ledger transition and the conventional commit as one act by default when the composed runtime includes the commit extension. The ordering is binding: compute the staging set, run the safety pass, build the bundle from scanned content, select a transport, generate and validate the message, stage precisely, create the commit object, append the transition record with durable intent `atomic` in the same ledger append, then write the pm-notes entry and replace the derived projection. The commit object and the ledger append are the atomic pair: a failed commit object or a failed append resets the checkout to the pre-act head with a mixed reset and returns `commit.atomic-abort` (exit `2`, `not_landed`), so neither side lands and a re-run converges through the normal path; a failed staging returns the same identity with no commit object and no record.
+`phase complete` performs the ledger transition and the conventional commit as one act by default when the composed runtime includes the commit extension. The ordering is binding: the pm-notes transition is written before the commit act and the pre-write bytes are restored if the act fails. The act then computes the staging set (the mapped plan-phase scope union the change folder), runs the safety pass, builds the bundle from scanned content, selects a transport, generates and validates the message, stages precisely, and creates the commit object; the transition record is appended with durable intent `atomic` only after the commit object exists, and the derived projection is replaced last. The commit object and the ledger append are the atomic pair: a failed commit object or a failed append resets the checkout to the pre-act head with a mixed reset and returns `commit.atomic-abort` (exit `2`, `not_landed`), and the pre-write pm-notes bytes are restored, so neither side lands and a re-run converges through the normal path. A failed staging returns the same identity with no commit object, no record, and the restored document. If the restoration itself fails, the completion returns the classified `fallback.internal` platform fault (exit `2`) naming the pm-notes path and the pre-write snapshot source; it never claims success. A phase is therefore complete only when the ledger transition lands.
 
 Opt-outs keep the caller's control:
 
@@ -134,7 +134,7 @@ The configuration catalog declares one typed `commit` branch: `commit.phaseCommi
 
 ### Error identities
 
-Six rows sit under the `commit` domain kind in both the machine error table and the documented table, sync-bound by the same invariant as every other kind:
+Five rows sit under the `commit` domain kind in both the machine error table and the documented table, sync-bound by the same invariant as every other kind:
 
 | Code | Category | Retryable | Exit | Fires when |
 |---|---|---|---|---|
@@ -143,17 +143,16 @@ Six rows sit under the `commit` domain kind in both the machine error table and 
 | `commit.safety.secret-suspected` | user | false | `1` | The secret scan flagged candidate content or a filename on suspicion; human review required |
 | `commit.safety.scan-unavailable` | platform | true | `2` | The deterministic safety pass could not run; nothing is staged or committed |
 | `commit.atomic-abort` | platform | true | `2` | The atomic act aborted; the clean abort restored both sides to neither-landed |
-| `commit.session.context-refused` | user | false | `1` | A commit-capable invocation ran inside a delivery session |
 
-### Session guard
+### Session context
 
-The commit surface refuses every invocation when the injected edge facts report an active delivery session: `commit`, `commit --dry-run`, `commit --phase`, and `phase complete` with or without `--no-commit` all return `commit.session.context-refused` (exit `1`) before any port is constructed, leaving the tree, the head, and the ledger untouched. The guard is mechanical — the runtime edge declares which injected environment keys mark a session and a non-empty value refuses — and the harness one-shot's temporary empty project context is deliberately not a delivery session. `phase list` and `phase reopen` are unaffected.
+The commit surface runs inside a delivery session: `commit`, `commit --dry-run`, `commit --phase`, and `phase complete` with or without `--no-commit` proceed under the primitive's normal grammar, safety, staging, and atomicity rules. The production commit composition supplies no active delivery-session fact and reads no session environment key, and the retired session-refusal identity is not returned. The harness one-shot still runs in its own sanitized, temporary empty project context with no delivery-session facts, and that context is removed after the attempt. `phase list` and `phase reopen` are unaffected.
 
 ## Technical Architecture & Codebase Map
 
 | Path | Responsibility |
 |---|---|
-| `packages/core/src/contracts/commit.ts` | The runtime-neutral vocabulary: commit intents and bases, message sources, transports, the telemetry kind and schema id, the six error codes, conventional types, the phase/type table, constrained-output caps, diff-budget and noise/forbidden data, exclusion and safety classes, skeleton/bundle/staging/message/safety/transport/envelope/telemetry types, and the git, safety, commitlint, transport, and session-fact ports. Types and `as const` data only. |
+| `packages/core/src/contracts/commit.ts` | The runtime-neutral vocabulary: commit intents and bases, message sources, transports, the telemetry kind and schema id, the five error codes, conventional types, the phase/type table, constrained-output caps, diff-budget and noise/forbidden data, exclusion and safety classes, skeleton/bundle/staging/message/safety/transport/envelope/telemetry types, and the git, safety, commitlint, transport, and session-fact ports. Types and `as const` data only. |
 | `packages/core/src/domain/commit-skeleton.ts` | Pure skeleton computation: phase→type candidate, scope = ref, breaking default, documented default type. |
 | `packages/core/src/domain/commit-staging.ts` | Pure staging-set computation and disclosures: tracked-with-drift, declared-scope untracked, strays, forbidden paths, oversized binaries, scope source. |
 | `packages/core/src/domain/commit-bundle.ts` | Deterministic model bundle: noise stripping, per-file cap, top-N full diffs, total input budget, normalized and sorted paths. |
@@ -168,10 +167,10 @@ The commit surface refuses every invocation when the injected edge facts report 
 | `packages/adapters/src/file/secret-scan.ts` | The deterministic scanner over committed content and filename patterns and the forbidden/binary guards; a read failure reports unavailable. |
 | `packages/adapters/src/file/commitlint.ts` | Repository commitlint discovery and the bounded `--edit` probe; absent configuration reports `absent`. |
 | `packages/adapters/src/session/commit-one-shot.ts` | The harness one-shot transport: temporary empty project directory, prompt file only, sanitized environment, bounded invocation, temp removal including on failure. |
-| `packages/adapters/src/session/delivery-session-facts.ts` | Edge-injected delivery-session facts over declared environment keys. |
+| `packages/adapters/src/session/delivery-session-facts.ts` | Edge-injected delivery-session facts over declared environment keys; the commit and phase commands do not consume them. |
 | `packages/adapters/src/inference/index.ts` | The core-owned inference transport: provider HTTP edge plus credential port, schema-constrained response parsing, classified failures, token-spend extraction. |
-| `packages/cli/src/commands/commit.ts` | The `commit` command: grammar, session guard, ref resolution, context read, skeleton and scope selection, the shared act, and the success envelope. |
-| `packages/cli/src/commands/phase.ts` | The phase family with the atomic completion extension: grammar-first validation, staged lint, durable evidence read, convergence, atomic act, pm-notes write, projection replace, and the completion envelope. |
+| `packages/cli/src/commands/commit.ts` | The `commit` command: grammar, ref resolution, context read, skeleton and scope selection, the shared act, and the success envelope. |
+| `packages/cli/src/commands/phase.ts` | The phase family with the atomic completion extension: grammar-first validation, staged lint, durable evidence read, convergence, pre-write snapshot, transition write before the act, restore on failure, atomic act, projection replace, and the completion envelope. |
 | `packages/cli/src/output/commit-text.ts` | Deterministic human rendering of a commit outcome from the same data. |
 | `packages/cli/src/edge.ts` | Composition root: git seam, scanner, commitlint probe, transports and availability, session facts, the phase commit extension, telemetry append/read, and the `commit` command registration. |
 | `packages/testkit/src/commit/**` | Dev-only harness: temporary real git repositories, transport fakes, and an in-process runner. |
@@ -202,7 +201,7 @@ The commit surface refuses every invocation when the injected edge facts report 
 ## Related
 
 - [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md) — the phase command family, the nine-row idempotency matrix, and the transition record the atomic completion extends.
-- [Result Contract and Error Table](feature-result-contract.md) — the envelope, the six `commit` rows, the classification chain, and the binding sync check.
+- [Result Contract and Error Table](feature-result-contract.md) — the envelope, the five `commit` rows, the classification chain, and the binding sync check.
 - [Machine-Readable Delivery Plan Schema](feature-plan-schema.md) — per-phase declared scope and summaries, the skeleton and staging scope input.
 - [State Layer](feature-state-layer.md) — the ledger substrate, verified reads, fences, and the additive record-kind contract behind `commit.telemetry`.
 - [Change Capsule](feature-capsule.md) — the non-gating `commit.landed` append point and its bounded disclosure.

@@ -76,7 +76,7 @@ Capture optional: `feature_spec`, `related_changes[]`, `adr_refs[]`, `external_r
 
 From TEST PLAN (`chg-<workItemRef>-test-plan.md`):
 
-- TC IDs (`TC-<FEATURE>-<NNN>`), AC↔TC coverage mappings, test scenarios, target layers, automation levels — align plan phases and test tasks to these.
+- TC IDs (`TC-<FEATURE>-<NNN>`), AC↔TC coverage mappings, test scenarios, target layers, automation levels — align plan phases and test scenarios to these.
   </field_extraction>
 
 <pure_writer_note>
@@ -93,6 +93,7 @@ Write one YAML document named `chg-<workItemRef>-plan.yaml` with these keys:
 4. `defaultLeases`, `defaultWeightClass`: optional plan-level defaults
 5. `phases`: non-empty ordered list; each phase declares:
    - `id` (unique positive integer), `title`, `kind` (`planning` | `delivery`)
+   - optional `summary`: one non-empty line echoed by `plan validate` and consumed by the commit path
    - `scope`: at least one non-empty `files`, `packages`, or `folders`
    - optional `interactions`: `kind` (`contract-file` | `generated-code`), `target`, `role` (`producer` | `consumer`)
    - optional `doneArtifacts`: `mergeRequestUrl`, `pipelineId`, `deployedEnvironment`, `trackerTransition`
@@ -114,6 +115,7 @@ phases:
   - id: 1
     title: <short title>
     kind: planning
+    summary: <one-line phase summary>
     scope:
       files: [<concrete path>]
       folders: [<boundary-aware prefix>]
@@ -130,6 +132,7 @@ Rules:
 - Declare a requirement only when the spec or test plan supports it; prose rationale belongs in the spec.
 - The plan filename is part of the contract: `chg-<workItemRef>-plan.yaml`.
 - The final phase declares the release and spec-reconciliation obligations as scope, not as prose sections.
+- The plan declares phases and scope only: never add a `tasks` key and never record progress in the plan. Progress is a pm-notes `notes:` entry.
   </authoring_rules>
 
 <phase_generation>
@@ -143,7 +146,7 @@ Initial phases in priority order:
 6. Post-Code Review Fixes (conditional)
 7. Finalize and Release
 
-Skip phases with no tasks; merge when task count < 3.
+Omit an empty phase and merge closely related phases; the plan declares phases, not a task log.
 </phase_generation>
 
 <update_behavior>

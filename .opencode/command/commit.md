@@ -3,14 +3,14 @@
 # Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/.opencode/command/commit.md
 #
-description: Delegate a single Conventional Commit.
+description: Create one Conventional Commit through the commit primitive.
 agent: committer
 subtask: true
 claude:
   model: sonnet
 ---
 
-<purpose>Trigger the @committer agent to create exactly one Conventional Commit.</purpose>
+<purpose>Create exactly one Conventional Commit through the `commit` primitive. Delegate to the thin `@committer` when a subagent is required; it only invokes `commit`.</purpose>
 
 <inputs>
   <arguments>$ARGUMENTS</arguments>
@@ -21,8 +21,8 @@ claude:
 </inputs>
 
 <instructions>
-  <rule>Pass all `$ARGUMENTS` to `@committer` without dropping free text or structured fields, then invoke it now.</rule>
-  <rule>Do not restate its workflow; do not add extra commentary.</rule>
+  <rule>Pass all `$ARGUMENTS` to the `commit` primitive (or the thin `@committer`) without dropping free text or structured fields, then invoke it now.</rule>
+  <rule>Do not stage files or compose the message; the primitive owns staging, safety, message selection, and validation.</rule>
   <rule>If blocked, surface the agent's message without alteration.</rule>
   <rule>If successful, return exactly the agent's output.</rule>
 </instructions>

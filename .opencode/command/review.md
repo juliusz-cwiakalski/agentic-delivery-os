@@ -97,7 +97,7 @@ If findings exist, append new phase to plan:
 ### Phase X: Code Review Remediation
 
 - Goal: Address code review findings.
-- Tasks:
+- Remediation items:
   - [ ] <precise fix per finding>
 - Acceptance criteria:
   - Must: All fixes implemented and validated.
@@ -116,7 +116,7 @@ Rules:
 
 <commit_behavior>
 
-The reviewer is a pure writer: it writes the review artifact and any remediation phase and returns with zero git operations (no staging, no commit). The command owns the commit trigger; @committer (via `/commit`) handles staging + committing.
+The reviewer is a pure writer: it writes the review artifact and any remediation phase and returns with zero git operations (no staging, no commit). The command owns the commit trigger; the `commit` primitive handles staging, safety, message selection, and committing.
 
 - Default: after @reviewer returns, trigger `/commit` using actual values: the resolved `workItemRef`, the specific verdict/remediation `outcome`, supported finding reason as `why`, and `verification` only when observed. Omit unknown fields; never pass template/placeholders or phase metadata.
 - `no commit`: skip the `/commit` trigger; show summary only.

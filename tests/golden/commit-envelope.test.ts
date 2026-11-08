@@ -45,13 +45,19 @@ const scenarios: readonly Scenario[] = [
     id: "phase-atomic",
     run: async (harness) => {
       seedDirtyTree(harness);
-      harness.coreTransport.push({ kind: "success", message: validMessage() });
+      harness.coreTransport.push({
+        kind: "success",
+        message: validMessage(undefined, "Complete the fixture delivery phase."),
+      });
       return (await harness.runPhase(["complete", COMMIT_REF, "delivery"])).stdout;
     },
   },
   {
-    id: "phase-skipped",
-    run: async (harness) => (await harness.runPhase(["complete", COMMIT_REF, "delivery"])).stdout,
+    id: "phase-transition-only",
+    run: async (harness) => {
+      harness.coreTransport.push({ kind: "success", message: validMessage() });
+      return (await harness.runPhase(["complete", COMMIT_REF, "delivery"])).stdout;
+    },
   },
   {
     id: "template-fallback",
@@ -129,14 +135,6 @@ describe("TC-ENV-002 the six commit failures project exactly", () => {
         setup: (harness) => {
           seedDirtyTree(harness);
           harness.safety.setFindings([{ class: "secret-content", path: "src/existing.ts" }]);
-        },
-        expectExit: 1,
-      },
-      {
-        code: "commit.session.context-refused",
-        setup: (harness) => {
-          seedDirtyTree(harness);
-          harness.sessionFacts = { insideDeliverySession: true, sessionId: "fixture" };
         },
         expectExit: 1,
       },

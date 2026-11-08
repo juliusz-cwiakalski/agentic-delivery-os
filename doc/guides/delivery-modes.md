@@ -279,7 +279,7 @@ selects that model.
                 │ PM opencode (AI, 11-phase lifecycle)                      │
                 │   │  → spec → plan → coder → review → … → PR              │
                 │   ▼                                                      │
-                │ squash-merge (gh pr merge --squash / glab mr merge --squash)      │
+                │ merge through the merge primitive      │
                 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -308,7 +308,7 @@ scriptable facts by burning tokens.
 | Spawn & monitor PM opencode (liveness, restart) | No | `deliver-ticket.sh` |
 | Run the ADOS 11-phase lifecycle | **Yes** | PM opencode + subagents |
 | Review PR vs spec/plan | **Yes** | `@reviewer` (inside the PM lifecycle) |
-| Approve + merge PR (Mode A) | **Yes** (authority + judgement) | `@ceo` verifies PM finalization (pm-notes), then executes the platform-appropriate squash-merge **directly** (`gh pr merge --squash` on GitHub, `glab mr merge --squash` on GitLab; the CEO reads `.ai/agent/pr-instructions.md` for the platform). `deliver-ticket.sh` returns `pr-open`; it does **not** merge in Mode A |
+| Approve + merge PR (Mode A) | **Yes** (authority + judgement) | `@ceo` verifies finalization with `verify change` and `phase list`, then merges through the `merge` primitive. `deliver-ticket.sh` returns `pr-open`; it does **not** merge in Mode A. `deliver-ticket.sh` and `ceo-loop.sh` remain retained primary entry points |
 | Rebase before merge (Mode B batch) | No (happy path); **Yes** only on conflict | `deliver-ticket.sh` / `batch-deliver.sh`; AI resolves rebase conflicts, then gates re-run |
 | Wait for PR quality gates to go green after rebase | No | `deliver-ticket.sh` / `batch-deliver.sh` |
 | Branch hygiene (fetch / prune / delete merged) | No | `tools/clean-merged-branches` |
@@ -389,10 +389,8 @@ In Mode A the `@ceo` agent is the merge authority. Before merging it must:
    `chg-<ref>-pm-notes.yaml`. (This check is AI-driven today, because pm-notes
    are authored by the PM and not yet schema-strict enough to script reliably.)
 
-When both hold, the CEO runs the final-check gate and squash-merges via the
-platform-appropriate command (`gh pr merge --squash` on GitHub, `glab mr merge
---squash` on GitLab — the CEO reads `.ai/agent/pr-instructions.md` for the
-platform). "Yield"
+When both hold, the CEO runs the final-check gate and merges through the
+`merge` primitive. "Yield"
 applies **only** when a PM is demonstrably alive and mid-delivery (process
 exists, no finalized PR). A sleeping process is not "actively delivering."
 This is the #99 "merge-not-yield" + "proceed-not-halt" backstop.

@@ -834,17 +834,6 @@ export const ERROR_TABLE = [
     summary: "The atomic phase completion aborted and restored both sides.",
   },
   {
-    code: "commit.session.context-refused",
-    domainKind: "commit",
-    category: "user",
-    retryable: false,
-    consequence: "not_landed",
-    remediationHint:
-      "Invoke the commit primitive from outside the delivery session (agents invoke it from a plain shell or subagent boundary).",
-    projectionClass: "user-validation",
-    summary: "The commit primitive refused to run inside a delivery session.",
-  },
-  {
     code: "status.collector.tracker.unavailable",
     domainKind: "status",
     category: "platform",

@@ -115,7 +115,7 @@ PM progress notes are stored directly in the change folder:
 
 This file is **mandatory** for every change. It serves as:
 - PM's long-term memory for the change
-- Status tracking across sessions (phases started/completed)
+- Status tracking across sessions (phase state written only through the `phase` family)
 - Traceability via git history
 - Decisions, open questions, and blockers log
 
@@ -141,12 +141,14 @@ phases:
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
 blockers: []
 notes: [] # { text, type, date }
 ```
+
+Phase state is read with `phase list <workItemRef>` and written with `phase complete`/`phase reopen`; agents never hand-edit phase timestamps. The PR URL is recorded as a pm-notes `notes:` entry, not as a phase field.
 
 ---
 
@@ -253,7 +255,7 @@ The PM agent (`@pm`) orchestrates these phases:
 8. **review_fix** — Review and fix cycle via `@reviewer`
 9. **quality_gates** — Run builds/tests via `@runner`
 10. **dod_check** — Final acceptance gate (PM verifies all phases complete)
-11. **pr_creation** — Create PR/MR via `@pr-manager`, assign to human, STOP
+11. **pr_creation** — Create PR/MR via `@pr-manager`; record the PR URL as a pm-notes `notes:` entry; STOP
 
 Phases can be reopened if gaps are discovered in later phases.
 

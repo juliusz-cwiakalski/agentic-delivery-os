@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-LOCAL-CODE-REVIEW
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-05
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "Local code review via /review and /review-deep: spec/plan compliance plus code-quality heuristics, with a remediation-phase append loop, handled by the unified @reviewer (distinct from the remote workflow)."
 links:
-  related_changes: ["GH-79", "GH-151", "GH-226"]
+  related_changes: ["GH-79", "GH-151", "GH-226", "GH-242"]
 ---
 
 # Feature: Local Code Review
@@ -65,7 +65,7 @@ The reviewer persists each review iteration as a single **`review-iter-<N>.yaml`
 ```
 /review GH-456           → @reviewer audits diff vs spec/plan + heuristics
                          → if findings: append "Code Review Remediation" phase to plan
-                         → /review triggers /commit (@committer) for the review artifact
+                         → review-triggered commit via the commit primitive
                          → next action: /run-plan GH-456 (remediation)
                          → re-run /review until PASS
 /review-deep GH-456      → same, stronger reasoning model
@@ -92,7 +92,7 @@ The reviewer persists each review iteration as a single **`review-iter-<N>.yaml`
 
 ### Plan Mutation Contract
 
-The reviewer only modifies the **plan artifact** (`chg-<workItemRef>-plan.yaml`, or a legacy `chg-<workItemRef>-plan.md` during the transition) — never the spec or code. It is a **pure writer**: it writes the `review-iter-<N>.yaml` artifact and (on findings) appends the remediation phase to the plan, then returns with zero git operations. The `/review` (or `/review-deep`) command triggers `/commit` (`@committer`) after the reviewer returns. It never uses `doc/changes/current` in paths.
+The reviewer only modifies the **plan artifact** (`chg-<workItemRef>-plan.yaml`, or a legacy `chg-<workItemRef>-plan.md` during the transition) — never the spec or code. It is a **pure writer**: it writes the `review-iter-<N>.yaml` artifact and (on findings) appends the remediation phase to the plan, then returns with zero git operations. After the reviewer returns, the review-triggered commit path is the primitive-backed `commit` or the thin `@committer`; no raw-git commit instruction remains. It never uses `doc/changes/current` in paths.
 
 ## Non-Functional Requirements
 

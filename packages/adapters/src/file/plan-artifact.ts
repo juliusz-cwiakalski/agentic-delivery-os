@@ -6,10 +6,13 @@
  * text, absence, or a classified unreadable outcome. No writes, no spawns, no
  * network, and no clock.
  */
-import { planArtifactPath } from "@delivery-os/core/contracts";
+
 import type { PlanArtifactRead } from "@delivery-os/core/contracts";
-import { resolveChangeFolder } from "./change-folder.js";
+import { planArtifactPath } from "@delivery-os/core/contracts";
+import { locateChangeFolder } from "./change-folder.js";
 import type { PmNotesFileSystemFacts } from "./pm-notes-parser.js";
+
+const REF_PATTERN = /^[A-Z]+-[0-9]+$/;
 
 export type PlanArtifactRequest = {
   readonly changeRef: string;
@@ -17,17 +20,11 @@ export type PlanArtifactRequest = {
   readonly fs: PmNotesFileSystemFacts;
 };
 
-const locateChangeFolder = (request: PlanArtifactRequest): string | undefined => {
-  const location = resolveChangeFolder({
-    changeRef: request.changeRef,
-    changesDirectory: request.changesDirectory,
-    fs: request.fs,
-  });
-  return location.ok ? location.folder : undefined;
-};
-
 /** Read one change ref's plan artifact with YAML-before-markdown precedence. */
 export const readPlanArtifact = (request: PlanArtifactRequest): PlanArtifactRead => {
+  if (!REF_PATTERN.test(request.changeRef)) {
+    return { ok: false, reason: "absent", workItemRef: request.changeRef };
+  }
   const folder = locateChangeFolder(request);
   if (folder === undefined) {
     return { ok: false, reason: "absent", workItemRef: request.changeRef };

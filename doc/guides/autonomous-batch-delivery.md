@@ -8,7 +8,7 @@ status: Draft
 created: 2026-07-03
 owners: ["engineering"]
 links:
-  related_changes: ["GH-146", "GH-148", "GH-185"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "GH-242"]
 summary: "Deliver multiple tickets unattended with liveness monitoring, session resilience, and push-to-completion PR feedback. Covers deliver-ticket.sh, batch-deliver.sh, and clean-merged-branches."
 ---
 
@@ -199,10 +199,11 @@ flowchart TD
 ```
 
 > **The PM does not merge.** `deliver-ticket.sh` returns `pr-open` (+ PR URL +
-> PM last-message) and stops. The merge is owned by `batch-deliver.sh` (Mode B),
+> PM last-message) and stops. The lifecycle merge path is the `merge` primitive
+> (Mode B's batch script remains retained for batch orchestration),
 > which acts **only** after the human approves and the rebase + green-gate checks
 > pass. The legacy auto-merge-on-`approved`-label path inside the PM is retired.
-> Keeping the merge out of the per-ticket engine is what lets `batch-deliver.sh`
+> Keeping the merge out of the per-ticket engine is what lets the batch script
 > verify the rebase + green CI before committing to the merge. See
 > [delivery-modes.md § INV-DM-4](delivery-modes.md#inv-dm-4-ceo-merges-approved-finalized-prs--does-not-yield-mode-a).
 

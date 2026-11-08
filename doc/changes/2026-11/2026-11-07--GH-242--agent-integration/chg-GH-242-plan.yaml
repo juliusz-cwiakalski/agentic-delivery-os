@@ -1,0 +1,569 @@
+# GH-242 delivery plan. `tests` is delivery evidence for plan review; it is not
+# a plan-schema field. Phase progress stays in pm-notes `notes:` entries.
+#
+# Ceremony: one ticket, one PR (DEC-15). The ten phases are sequenced so each one
+# is independently green, review is staged by commit (each phase's commit is the
+# reviewable unit), and the pilot suite is the end-to-end gate. The one-PR
+# review risk is accepted by the PM in DEC-15 / RSK-8; it is not mitigated by a
+# split and no split is planned. Foundation phases 1-5 land before coordination
+# phase 6; the conformance scans (phase 8) and the pilot (phase 9) follow the
+# artifacts they scan.
+#
+# Ownership split for cross-cutting scans:
+# - Phase 1 creates the static help coverage inventory
+#   (`tests/fixtures/help-guide/coverage.json`) and runs TC-ENTRY-004 against it;
+#   reconciled reference-page parity stays in phase 8 (TC-HELP-001/TC-HELP-003).
+# - Phase 4 owns the plan contract, the validator, the template, the plan-writer
+#   prompt, and the code/template consumer inventory only (TC-PLANSUM-001..004).
+# - Phase 5 owns the plan-progress prompt rule and runs TC-PLANSUM-005 once the
+#   foundation prompts are updated; phase 8 extends the scanner to the full
+#   PSCAN rule set and re-runs TC-PLANSUM-005.
+# - Phase 8 scans `.opencode/**` and the phase-7 guides/man/reference pages only.
+#   TC-PSCAN-009 covers non-pilot fixtures; it never reads `doc/spec/features/**`
+#   and never reads pilot data.
+# - Phase 9 owns the pilot data and runs TC-PSCAN-010 (pilot privacy/safety) after
+#   creating it.
+# - Phase 3 runs `doc-conformance` with the `scope: behavior-spec` parameter set
+#   (TC-DOCREC-004) for the two behavior-spec rows it reconciles.
+# - Phase 7 runs `doc-conformance` with the `scope: docs` parameter set only.
+# - Phase 10 runs `doc-conformance` with the `scope: full` parameter set after the
+#   phase-3 and phase-7 reconciliations; it re-asserts but does not solely own the
+#   phase-3 behavior-spec rows.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-242
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  escalationTriggers:
+    - tdr-acceptance-required-at-pr
+    - prompt-conformance-regression
+    - pilot-determinism-failure
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Executable entrypoint, root and command help, and version identity"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/bin/delivery-os.ts
+        - packages/cli/package.json
+        - packages/cli/src/entrypoint.ts
+        - packages/cli/src/help.ts
+        - packages/cli/src/help/prompt-required-commands.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/index.ts
+        - tests/behaviour/entrypoint-version.test.ts
+        - tests/behaviour/entrypoint-help.test.ts
+        - tests/behaviour/entrypoint-help-coverage.test.ts
+        - tests/behaviour/entrypoint-help-isolation.test.ts
+        - tests/behaviour/entrypoint-composition.test.ts
+        - tests/structure/entrypoint-bin.test.ts
+        - tests/structure/entrypoint-installer-absence.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+        - tests/fixtures/entrypoint/programs.ts
+        - tests/fixtures/help-guide/coverage.json
+      folders:
+        - packages/cli/bin
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/help.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/package.json
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-242 in progress; phase 1 evidence recorded in pm-notes notes (entrypoint, help/version, fallback.internal composition honesty, static help coverage inventory)"
+    leases:
+      - lease:cli-runtime
+    weightClass: standard
+    summary: "Deliver the executable as a non-installed Bun bin (`packages/cli/bin/delivery-os.ts`, Bun shebang, mapped in the package `bin` manifest next to the `main`/composition entry) plus the composition it invokes. The working name resolves configuration → non-empty DELIVERY_OS_WORKING_NAME override → neutral `delivery-os` default, the neutral default applies to --help/--version identity only when neither source yields a name, and it is not the seed literal. Root help, per-command help, and --version are asserted with zero state/network/git/configuration reads and zero writes inside the suite's fixed timeout; wall-clock timing is informational and never a gate. Composition honesty (TC-ENTRY-009) is a must-pass here: exactly the §8.1 prompt-required set, `state`/`mcp`/`dispatch`/daemon asserted absent (state-scope invariant re-run), and an uncomposed invocation fails closed through the existing `fallback.internal` containment identity (platform category, `retryable: false`, `consequence: unknown`, platform-provider projection → exit 2) with a summary naming the missing composition. It introduces no new error-table row and changes neither the machine nor the documented table; the only table change in this change is the `commit.session.context-refused` retirement in phase 2, and `fallback.internal` is already documented in `feature-result-contract.md`, so no documented-table count changes. `scripts/install.sh` and the installer tests are not modified; the bin is absent from the install set. This phase also creates the static help coverage inventory (`tests/fixtures/help-guide/coverage.json`): TC-ENTRY-004 asserts that each see-also target maps to an inventory row only; reconciled reference-page existence and parity stay in phase 7/8 (`TC-HELP-001`/`TC-HELP-003`)."
+    tests:
+      - "bun test tests/behaviour/entrypoint-version.test.ts"
+      - "bun test tests/behaviour/entrypoint-help.test.ts"
+      - "bun test tests/behaviour/entrypoint-help-coverage.test.ts"
+      - "bun test tests/behaviour/entrypoint-help-isolation.test.ts"
+      - "bun test tests/behaviour/entrypoint-composition.test.ts tests/structure/state-scope.test.ts tests/structure/error-table.test.ts"
+      - "bun test tests/structure/entrypoint-bin.test.ts"
+      - "bun test tests/checks/forbidden-literals.test.ts"
+      - "bun test tests/structure/entrypoint-installer-absence.test.ts"
+      - "bash scripts/.tests/test-install.sh"
+      - "bun test tests/structure/content-inventory.test.ts tests/structure/cli-edge-seam.test.ts"
+      - "pnpm typecheck"
+  - id: 2
+    title: "Delivery-session guard reversal and commit error-row retirement"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/commands/commit.ts
+        - packages/cli/src/commands/phase.ts
+        - packages/cli/src/edge.ts
+        - packages/core/src/contracts/commit.ts
+        - packages/core/src/contracts/error-table.ts
+        - doc/decisions/TDR-0013-agent-session-commit-guard-reversal.md
+        - doc/spec/features/feature-commit-primitive.md
+        - doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md
+        - doc/spec/features/feature-result-contract.md
+        - tests/behaviour/commit-session-guard.test.ts
+        - tests/behaviour/commit-session-adoption.test.ts
+        - tests/behaviour/phase-session-adoption.test.ts
+        - tests/behaviour/harness-oneshot-context.test.ts
+        - tests/behaviour/commit-telemetry.test.ts
+        - tests/structure/commit-contract.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/result-contract.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/checks/decision-record.test.ts
+        - tests/golden/commit-envelope.test.ts
+        - tests/fixtures/commit/harness.ts
+        - tests/fixtures/result/code-corpora/true-positives.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/commit.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-242 in progress; phase 2 evidence recorded in pm-notes notes"
+    leases:
+      - lease:cli-runtime
+    weightClass: heavy
+    summary: "Remove the delivery-session refusal from commit and phase complete and retire commit.session.context-refused across the machine table, documented table, corpora, fixtures, and goldens, shrinking the commit domain from six rows to five. This phase proves only the guard-removal half: in-session standalone commit and in-session phase complete no longer refuse, the harness one-shot stays sanitized in a temporary empty project context, and the error row is retired and in sync. It deliberately does not assert artifact/pm-notes staging, completion ordering, or --no-commit convergence; those are phase-3 assertions owned by TC-STAGE-001/003/006/009. The production composition no longer injects session keys into commit/phase: the sessionFacts wiring is removed from `packages/cli/src/edge.ts`, and the guard is removed from the commit and phase-complete handlers, not merely left unwired. The `CommitSessionFacts` contract and the `packages/adapters/src/session/delivery-session-facts.ts` export stay in place unchanged for compatibility. This phase co-owns the session-refusal/five-row text in `feature-pm-notes-lint-and-phase-transitions.md`; phase 3 owns the completion-ordering/staging text. TDR-0013 remains owner-controlled and acceptance-pending at PR review: the tier trigger is `tdr-acceptance-required-at-pr`, not an owner-approval gate."
+    tests:
+      - "bun test tests/behaviour/commit-session-adoption.test.ts"
+      - "bun test tests/behaviour/phase-session-adoption.test.ts"
+      - "bun test tests/behaviour/harness-oneshot-context.test.ts"
+      - "bun test tests/behaviour/commit-telemetry.test.ts"
+      - "bun test tests/structure/commit-contract.test.ts"
+      - "bun test tests/checks/error-table-sync.test.ts"
+      - "bun test tests/structure/error-table.test.ts tests/structure/result-contract.test.ts"
+      - "bun test tests/checks/decision-record.test.ts"
+      - "bun test tests/golden/commit-envelope.test.ts"
+      - "bun run scripts/checks/error-table-sync.ts"
+      - "pnpm typecheck"
+  - id: 3
+    title: "Lifecycle completion staging scope, plan-absent staging, transition ordering, and reverse-window convergence"
+    kind: delivery
+    scope:
+      files:
+        - packages/cli/src/commands/phase.ts
+        - packages/cli/src/commands/commit.ts
+        - packages/cli/src/edge.ts
+        - packages/adapters/src/file/change-folder.ts
+        - packages/adapters/src/file/plan-artifact.ts
+        - packages/adapters/src/file/pm-notes-parser.ts
+        - packages/adapters/src/file/index.ts
+        - doc/spec/features/feature-commit-primitive.md
+        - doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md
+        - tests/behaviour/phase-staging-scope.test.ts
+        - tests/behaviour/commit-staging-scope.test.ts
+        - tests/behaviour/phase-completion-ordering.test.ts
+        - tests/behaviour/phase-completion-convergence.test.ts
+        - tests/behaviour/phase-completion-reverse-window.test.ts
+        - tests/checks/doc-conformance.test.ts
+        - tests/fixtures/commit/harness.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/phase
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/file/change-folder.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-242 in progress; phase 3 evidence recorded in pm-notes notes"
+    leases:
+      - lease:cli-runtime
+    weightClass: heavy
+    summary: "Widen lifecycle completion staging to the mapped plan scope union the change folder, add plan-absent change-folder staging for standalone commit, and write the pm-notes transition before the commit act. The reverse window is specified and tested (AC-F2-4, DEC-16): the completion snapshots the pre-write pm-notes bytes; safety STOP, staging refusal, commitlint failure, or atomic abort after the document write restores those exact bytes, leaves no ledger transition and no commit, and returns the classified failure without claiming success; a failed restoration exits 2 with a classified platform fault carrying the affected pm-notes path and the snapshot source as its reconciliation instruction; a retry lands exactly one transition and exactly one commit, and a further run is a stable no-op. The legacy window (commit landed, document write later failed) still converges from the stored transition without a second commit. Unrelated strays, forbidden paths, and oversized binaries stay excluded and disclosed. Phase-session adoption staging assertions moved here from phase 2. This phase reconciles the two behavior-spec rows of §16.1.1 that it owns — `feature-commit-primitive.md` (completion ordering, staging scope, in-session execution, five-row domain) and `feature-pm-notes-lint-and-phase-transitions.md` (atomic ordering, restore semantics, five-row domain; the session-refusal/five-row text is co-owned with phase 2) — and runs the `scope: behavior-spec` doc-conformance case (TC-DOCREC-004), so phase 3 is green before the phase-10 full run."
+    tests:
+      - "bun test tests/behaviour/phase-staging-scope.test.ts"
+      - "bun test tests/behaviour/commit-staging-scope.test.ts"
+      - "bun test tests/behaviour/phase-completion-ordering.test.ts"
+      - "bun test tests/behaviour/phase-completion-convergence.test.ts"
+      - "bun test tests/behaviour/phase-completion-reverse-window.test.ts"
+      - "bun test tests/behaviour/phase-transitions.test.ts tests/behaviour/phase-idempotency.test.ts"
+      - "bun test tests/structure/content-inventory.test.ts"
+      - "bun test tests/checks/doc-conformance.test.ts -t \"scope: behavior-spec\""
+      - "pnpm typecheck"
+  - id: 4
+    title: "Plan schema optional phase summary and plan-writer adoption"
+    kind: delivery
+    scope:
+      files:
+        - packages/core/src/contracts/plan.ts
+        - packages/core/src/domain/plan-validate.ts
+        - doc/templates/implementation-plan-template.md
+        - .opencode/agent/plan-writer.md
+        - tests/structure/plan-contract.test.ts
+        - tests/structure/plan-writer-prompt.test.ts
+        - tests/behaviour/plan-summary.test.ts
+        - tests/behaviour/plan-validate.test.ts
+        - tests/behaviour/commit-message.test.ts
+        - tests/checks/plan-consumer-inventory.test.ts
+      folders:
+        - .ados-claude
+        - tests/fixtures/plan/summary
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/plan.ts
+        role: producer
+      - kind: contract-file
+        target: doc/templates/implementation-plan-template.md
+        role: producer
+      - kind: generated-code
+        target: .ados-claude/agents
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-242 in progress; phase 4 evidence recorded in pm-notes notes"
+    leases:
+      - lease:plan-contract
+      - lease:generated-plugin
+    weightClass: standard
+    summary: "Add optional non-empty phases[].summary to delivery.plan.v1, echo it in the validator verdict, teach the plan template and the plan-writer prompt to emit it, and keep tasks and progress out of the plan. Scope is deliberately limited to the plan code, the template, the plan-writer prompt, and the code/template consumer inventory (TC-PLANSUM-003): the prompt-text scan for plan progress is TC-PLANSUM-005 and runs in phase 5/8, after the coder, PM, and run-plan prompts are updated, so this phase never reads an un-updated prompt. The plan-writer-only structural assertion lives in `tests/structure/plan-writer-prompt.test.ts` (TC-PLANSUM-004) and does not depend on phase 5. The plan-writer prompt change regenerates the Claude plugin in the same commit."
+    tests:
+      - "bun test tests/behaviour/plan-summary.test.ts"
+      - "bun test tests/behaviour/plan-validate.test.ts tests/behaviour/plan-envelope.test.ts"
+      - "bun test tests/behaviour/commit-message.test.ts"
+      - "bun test tests/checks/plan-consumer-inventory.test.ts"
+      - "bun test tests/structure/plan-contract.test.ts tests/structure/plan-writer-prompt.test.ts"
+      - "bun test tests/behaviour/plan-determinism.test.ts"
+      - "bash scripts/.tests/test-build-claude-plugin.sh"
+  - id: 5
+    title: "Foundation prompt adoption: PM, coder, committer, commit, and run-plan"
+    kind: delivery
+    scope:
+      files:
+        - .opencode/agent/pm.md
+        - .opencode/agent/coder.md
+        - .opencode/agent/committer.md
+        - .opencode/command/commit.md
+        - .opencode/command/run-plan.md
+        - scripts/checks/prompt-conformance.ts
+        - tests/checks/prompt-conformance.test.ts
+        - tests/checks/agent-role-conformance.test.ts
+        - tests/fixtures/prompt-inventory/lifecycle.json
+        - tests/behaviour/commit-command.test.ts
+        - tests/behaviour/phase-write-path-lint.test.ts
+        - tests/behaviour/pm-notes-lint.test.ts
+      folders:
+        - .ados-claude
+        - tests/fixtures/pm-notes/valid
+    interactions:
+      - kind: contract-file
+        target: scripts/checks/prompt-conformance.ts
+        role: producer
+      - kind: generated-code
+        target: .ados-claude/agents
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-242 in progress; phase 5 evidence recorded in pm-notes notes"
+    leases:
+      - lease:prompts
+      - lease:generated-plugin
+    weightClass: heavy
+    summary: "Point the foundation prompts and commands at the phase family and commit primitive: PM completes phases and records the PR URL as a pm-notes `notes:` entry, the coder commits per plan phase and completes delivery at the boundary, @committer becomes a thin executor of `commit` with no staging or message composition, and commit/run-plan stop teaching raw git. The coder also publishes typed blockers instead of prose. This phase stands up the plan-progress rule of the prompt scanner over `tests/fixtures/prompt-inventory/lifecycle.json` and runs TC-PLANSUM-005 once the coder/PM/run-plan prompts no longer write plan progress; phase 8 extends the same scanner to the full PSCAN rule set, mutants, and the retained/retired scan. The Claude plugin is regenerated in the same commit."
+    tests:
+      - "bun test tests/checks/agent-role-conformance.test.ts"
+      - "bun test tests/checks/prompt-conformance.test.ts"
+      - "bun test tests/behaviour/commit-command.test.ts"
+      - "bun test tests/behaviour/phase-write-path-lint.test.ts"
+      - "bun test tests/behaviour/pm-notes-lint.test.ts"
+      - "bash scripts/.tests/test-build-claude-plugin.sh"
+  - id: 6
+    title: "Coordination prompt adoption: ceo J1 loop, lane agents, and remaining commands"
+    kind: delivery
+    scope:
+      files:
+        - .opencode/agent/ceo.md
+        - .opencode/agent/reviewer.md
+        - .opencode/agent/review-feedback-applier.md
+        - .opencode/agent/readiness-reviewer.md
+        - .opencode/agent/doc-syncer.md
+        - .opencode/agent/spec-writer.md
+        - .opencode/agent/test-plan-writer.md
+        - .opencode/agent/pr-manager.md
+        - .opencode/command/review.md
+        - .opencode/command/review-deep.md
+        - .opencode/command/check.md
+        - .opencode/command/check-fix.md
+        - .opencode/command/write-spec.md
+        - .opencode/command/write-test-plan.md
+        - .opencode/command/write-plan.md
+        - .opencode/command/sync-docs.md
+        - .opencode/command/check-readiness.md
+        - tests/checks/agent-role-conformance.test.ts
+        - tests/checks/coordinator-sequence.test.ts
+        - tests/behaviour/blockers-answer-adoption.test.ts
+        - tests/behaviour/blockers-credential.test.ts
+        - tests/behaviour/blockers-credential-shape.test.ts
+        - tests/behaviour/blockers-credential-negative-controls.test.ts
+        - tests/behaviour/blockers-digest.test.ts
+        - tests/behaviour/blockers-brief.test.ts
+        - tests/behaviour/pm-notes-lint.test.ts
+        - tests/fixtures/prompt-inventory/retained-retired.json
+      folders:
+        - .ados-claude
+        - tests/fixtures/pm-notes/valid
+    interactions:
+      - kind: generated-code
+        target: .ados-claude/agents
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-242 in progress; phase 6 evidence recorded in pm-notes notes"
+    leases:
+      - lease:prompts
+      - lease:generated-plugin
+    weightClass: heavy
+    summary: "Adopt the typed coordination loop in ceo and the remaining lane prompts and commands: status → (blockers answer when questions exist) → verify change and phase list for finalization → merge per ready item → closeout --apply → queue plan --next N, with brief, lanes, queue, spend, and retro in their declared roles. deliver-ticket.sh and ceo-loop.sh stay primary and labeled retained; no prompt claims dispatch or the daemon. The retained/retired classification fixture is created here and asserted locally by the coordinator sequence; the prompt-conformance scan over the same fixture is re-run in phase 8 so phase 6 does not depend on the phase-8 scanner rule set. The Claude plugin is regenerated in the same commit."
+    tests:
+      - "bun test tests/checks/agent-role-conformance.test.ts"
+      - "bun test tests/checks/coordinator-sequence.test.ts"
+      - "bun test tests/behaviour/blockers-answer-adoption.test.ts"
+      - "bun test tests/behaviour/blockers-credential.test.ts tests/behaviour/blockers-credential-shape.test.ts tests/behaviour/blockers-credential-negative-controls.test.ts"
+      - "bun test tests/behaviour/blockers-digest.test.ts tests/behaviour/blockers-brief.test.ts"
+      - "bun test tests/behaviour/pm-notes-lint.test.ts"
+      - "bash scripts/.tests/test-build-claude-plugin.sh"
+  - id: 7
+    title: "Guides, current-truth docs, man page, and command reference pages"
+    kind: delivery
+    scope:
+      files:
+        - AGENTS.md
+        - doc/guides/change-lifecycle.md
+        - doc/guides/unified-change-convention-tracker-agnostic-specification.md
+        - doc/guides/delivery-modes.md
+        - doc/guides/autonomous-batch-delivery.md
+        - doc/planning/concepts/automated-commit.md
+        - doc/planning/oss-tooling/milestones/m1/man-page.md
+        - doc/planning/oss-tooling/milestones/m1/commands/entrypoint.md
+        - doc/planning/oss-tooling/milestones/m1/commands/commit.md
+        - doc/planning/oss-tooling/milestones/m1/commands/phase.md
+        - doc/planning/oss-tooling/milestones/m1/commands/status.md
+        - doc/planning/oss-tooling/milestones/m1/commands/brief.md
+        - doc/planning/oss-tooling/milestones/m1/commands/queue.md
+        - doc/planning/oss-tooling/milestones/m1/commands/lanes.md
+        - doc/planning/oss-tooling/milestones/m1/commands/blockers.md
+        - doc/planning/oss-tooling/milestones/m1/commands/plan.md
+        - doc/planning/oss-tooling/milestones/m1/commands/lint.md
+        - doc/planning/oss-tooling/milestones/m1/commands/verify-change.md
+        - doc/planning/oss-tooling/milestones/m1/commands/verify-gates.md
+        - doc/planning/oss-tooling/milestones/m1/commands/verify-deploy.md
+        - doc/planning/oss-tooling/milestones/m1/commands/merge.md
+        - doc/planning/oss-tooling/milestones/m1/commands/closeout.md
+        - doc/planning/oss-tooling/milestones/m1/commands/spend.md
+        - doc/planning/oss-tooling/milestones/m1/commands/retro.md
+        - tests/checks/doc-conformance.test.ts
+    interactions:
+      - kind: contract-file
+        target: doc/planning/oss-tooling/milestones/m1/man-page.md
+        role: producer
+      - kind: contract-file
+        target: doc/planning/oss-tooling/milestones/m1/commands/entrypoint.md
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-242 in progress; phase 7 evidence recorded in pm-notes notes"
+    leases:
+      - lease:docs
+    weightClass: heavy
+    summary: "Reconcile the guides the prompts depend on: AGENTS.md, the change lifecycle, the unified change convention, delivery modes, autonomous batch delivery, the M1 man page, and every prompt-required command reference page including the new entrypoint page. The doc-conformance suite is parameterized by scope: this phase runs `scope: docs` only, covering exactly the documents updated here, and it must not read any `doc/spec/features/**` page, so the phase is green before phase 10. The full `scope: full` parameter set, including all feature specs, runs in phase 10. The lifecycle system_spec_update phase keeps ownership of doc/spec reconciliation."
+    tests:
+      - "bun test tests/checks/doc-conformance.test.ts -t \"scope: docs\""
+  - id: 8
+    title: "Mechanical conformance: prompt and doc scans, help coverage, key=value goldens"
+    kind: delivery
+    scope:
+      files:
+        - scripts/checks/prompt-conformance.ts
+        - scripts/checks/help-guide-coverage.ts
+        - tests/checks/prompt-conformance.test.ts
+        - tests/checks/prompt-conformance-mutants.test.ts
+        - tests/checks/prompt-secret-scan.test.ts
+        - tests/checks/privacy-authoring.test.ts
+        - tests/checks/help-guide-coverage.test.ts
+        - tests/checks/help-guide-coverage-mutants.test.ts
+        - tests/checks/reference-page-parity.test.ts
+        - tests/checks/ci-checks.test.ts
+        - tests/behaviour/commit-safety.test.ts
+        - tests/golden/plan-text.test.ts
+        - tests/golden/key-register.test.ts
+        - tests/golden/verify-change.test.ts
+        - tests/golden/merge.test.ts
+        - tests/golden/queue-list.test.ts
+        - tests/golden/queue-plan.test.ts
+        - tests/golden/verify-gates.test.ts
+        - tests/golden/verify-deploy.test.ts
+        - tests/golden/blockers.test.ts
+        - tests/golden/helpers.ts
+        - tests/fixtures/help-guide/coverage.json
+        - tests/fixtures/key-register/register.json
+        - tests/fixtures/prompt-inventory/lifecycle.json
+        - tests/fixtures/prompt-inventory/allowed-commands.json
+        - tests/fixtures/prompt-inventory/allowlist.json
+        - tests/fixtures/prompt-inventory/retained-retired.json
+        - .github/workflows/ci.yml
+        - package.json
+      folders:
+        - tests/fixtures/prompt-inventory/mutants
+        - tests/golden/fixtures
+        - tests/golden/plan
+    interactions:
+      - kind: contract-file
+        target: scripts/checks/prompt-conformance.ts
+        role: producer
+      - kind: contract-file
+        target: scripts/checks/help-guide-coverage.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-242 in progress; phase 8 evidence recorded in pm-notes notes"
+    leases:
+      - lease:conformance
+    weightClass: heavy
+    summary: "Extend the prompt scanner from the phase-5 plan-progress rule to the full deterministic prompt/doc scan and run the help/guide coverage matrix over the phase-1 inventory, reference-page parity, the prompt secret scan, and the key=value register goldens. The scan covers `.opencode/**` prompts and commands plus the phase-7 updated guides, man page, and reference pages only; it never reads `doc/spec/features/**` (the system-spec §16.1.1 phrase-table scan is TC-DOCREC-003 in phase 10). It covers the allowed command set, the read-only git and @pr-manager allowlist, the retained/retired classification, one mutant per rule, and identical counts with zero ambient reads on a repeat run; TC-PLANSUM-005 is re-run here over the complete rule set. The privacy and commit-safety re-runs (TC-PSCAN-009) cover every non-pilot fixture class: prompt inventory, key register, help coverage, entrypoint programs, plan summary, and plan goldens; pilot data is not scanned here and is covered by TC-PSCAN-010 in phase 9. Both scans are wired into CI and the aggregate gate so they fail loudly on mutants and later prompt edits cannot drift."
+    tests:
+      - "bun run scripts/checks/prompt-conformance.ts && bun test tests/checks/prompt-conformance.test.ts"
+      - "bun test tests/checks/prompt-conformance-mutants.test.ts"
+      - "bun test tests/checks/prompt-secret-scan.test.ts tests/checks/privacy-authoring.test.ts tests/behaviour/commit-safety.test.ts"
+      - "bun run scripts/checks/help-guide-coverage.ts && bun test tests/checks/help-guide-coverage.test.ts"
+      - "bun test tests/checks/help-guide-coverage-mutants.test.ts"
+      - "bun test tests/checks/reference-page-parity.test.ts"
+      - "bun test tests/golden/merge.test.ts tests/golden/queue-list.test.ts tests/golden/queue-plan.test.ts tests/golden/verify-gates.test.ts tests/golden/verify-deploy.test.ts tests/golden/verify-change.test.ts tests/golden/blockers.test.ts tests/golden/plan-text.test.ts tests/golden/key-register.test.ts"
+      - "bash scripts/.tests/test-deliver-ticket-result-tuples.sh"
+      - "bash scripts/.tests/test-ceo-loop.sh"
+      - "bash scripts/.tests/test-build-claude-plugin.sh"
+      - "bun test tests/checks/ci-checks.test.ts"
+  - id: 9
+    title: "Pilot J1 conformance suite on a fixture-backed repository"
+    kind: delivery
+    scope:
+      files:
+        - tests/fixtures/pilot/harness.ts
+        - tests/fixtures/pilot/repo.ts
+        - tests/fixtures/pilot/stubs.ts
+        - tests/fixtures/pilot/matrix.ts
+        - tests/conformance/pilot/pilot-fixture.test.ts
+        - tests/conformance/pilot/j1-iteration.test.ts
+        - tests/conformance/pilot/pilot-isolation.test.ts
+        - tests/conformance/pilot/pilot-determinism.test.ts
+        - tests/conformance/pilot/pilot-records.test.ts
+        - tests/conformance/pilot/pilot-runtime.test.ts
+        - tests/checks/pilot-privacy.test.ts
+      folders:
+        - tests/fixtures/pilot
+    doneArtifacts:
+      trackerTransition: "GH-242 in progress; phase 9 evidence recorded in pm-notes notes"
+    leases:
+      - lease:pilot
+    weightClass: heavy
+    summary: "Add the fixture-backed pilot J1 conformance suite: a temp repository, local bare remote, state store, change folder, validated plan, pm-notes, one ready item, and one open typed question. State ledger, git objects, change-folder files, envelopes, text renderers, and exit codes are real; tracker, CI, PR-platform, provider/network are stubbed; clock and ids are stubbed or deterministically injected. The suite drives the full J1 sequence — status → (blockers answer when questions exist) → verify change and phase list as the finalization check → merge per ready item → closeout --apply → queue plan --next N — and asserts each verdict, the state/git/file effects, the expected next ref with reasons, zero outbound calls, byte-identical replay across two runs, durable phase.transition/commit.telemetry records, and teardown. This phase also owns TC-PSCAN-010: after the pilot data exists, `tests/checks/pilot-privacy.test.ts` scans the pilot fixtures and suite data for secret-shaped values with canary mutants, and the commit safety scan is re-run, completing the pilot half of the privacy/safety split from phase 8 without requiring phase-8 pilot data."
+    tests:
+      - "bun test tests/conformance/pilot/pilot-fixture.test.ts"
+      - "bun test tests/conformance/pilot/j1-iteration.test.ts"
+      - "bun test tests/conformance/pilot/pilot-isolation.test.ts"
+      - "bun test tests/conformance/pilot/pilot-determinism.test.ts"
+      - "bun test tests/conformance/pilot/pilot-records.test.ts tests/conformance/pilot/pilot-runtime.test.ts"
+      - "bun test tests/checks/pilot-privacy.test.ts tests/checks/prompt-secret-scan.test.ts tests/checks/privacy-authoring.test.ts tests/behaviour/commit-safety.test.ts"
+      - "bun test tests/checks/merge-deploy-no-live-calls.test.ts"
+  - id: 10
+    title: "Finalize: plugin freshness, feature-spec reconciliation, and release gate"
+    kind: delivery
+    scope:
+      files:
+        - .changeset/gh-242-agent-integration-minor.md
+        - packages/cli/src/entrypoint.ts
+        - scripts/checks/forbidden-literals.registry.json
+        - tests/checks/doc-conformance.test.ts
+        - tests/checks/license-ci-binding.test.ts
+        - tests/checks/privacy-ci-wiring.test.ts
+        - tests/checks/prompt-secret-scan.test.ts
+        - tests/structure/content-inventory.test.ts
+        - doc/00-index.md
+        - doc/overview/architecture-overview.md
+        - doc/overview/glossary.md
+        - doc/spec/nonfunctional.md
+        - doc/spec/features/feature-cli-entrypoint.md
+        - doc/spec/features/feature-branding-seam.md
+        - doc/spec/features/feature-monorepo-scaffold-toolchain.md
+        - doc/spec/features/feature-provider-profiles.md
+        - doc/spec/features/feature-commit-primitive.md
+        - doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/spec/features/feature-plan-schema.md
+        - doc/spec/features/feature-blockers.md
+        - doc/spec/features/feature-status-digest.md
+        - doc/spec/features/feature-brief.md
+        - doc/spec/features/feature-merge-verify-deploy.md
+        - doc/spec/features/feature-closeout.md
+        - doc/spec/features/feature-scheduling-engine.md
+        - doc/spec/features/feature-agents-and-commands.md
+        - doc/spec/features/feature-delivery-lifecycle.md
+        - doc/spec/features/feature-quality-gates-and-pr.md
+        - doc/spec/features/feature-autonomous-delivery.md
+        - doc/spec/features/feature-local-code-review.md
+        - doc/guides/opencode-agents-and-commands-guide.md
+        - doc/guides/ados-processes.md
+      folders:
+        - .ados-claude
+    interactions:
+      - kind: generated-code
+        target: .ados-claude/agents
+        role: producer
+    doneArtifacts:
+      mergeRequestUrl: "PR for feat/GH-242/agent-integration targeting main-tools"
+      pipelineId: "pnpm check aggregate gate green"
+      trackerTransition: "GH-242 in review"
+    leases:
+      - lease:docs
+      - lease:generated-plugin
+    weightClass: heavy
+    summary: "Regenerate the Claude plugin from the final prompts so source and generated output are byte-current, reconcile the remaining feature specs to the delivered behavior alongside the lifecycle system_spec_update phase, run the full doc-conformance parameter set (`scope: full`, TC-DOCREC-003) over the complete §16.1.1 stale/required phrase table after phase 3 and phase 7 have reconciled their rows, run the aggregate gate, and leave the worktree clean. The full set includes the four previously omitted current-truth pages — feature-delivery-lifecycle, feature-quality-gates-and-pr, feature-autonomous-delivery, and feature-local-code-review — plus the phase-3 behavior-spec pages (feature-commit-primitive and feature-pm-notes-lint-and-phase-transitions) and feature-result-contract; each is asserted stale-absent and required-present per §16.1.1. Phase 10 re-asserts the phase-3 rows but does not own them alone. Phase 7 already ran the `scope: docs` subset, so this full run follows after phase 3 and phase 7 reconciliation and does not block on the guides. Release obligations: exactly one PR to main-tools (DEC-15, no split), a PR description stating the in-session commit/phase-complete behavioral change and the commit.session.context-refused retirement, the recorded one-PR review-risk acceptance, TDR-0013 presented for owner review with acceptance pending at PR, every §17 AC and NFR-1..NFR-13 covered by passing evidence with the execution log populated, and every §4.1 metric at target."
+    tests:
+      - "bash scripts/.tests/test-build-claude-plugin.sh"
+      - "bun test tests/checks/doc-conformance.test.ts -t \"scope: full\""
+      - "bash scripts/.tests/test-install.sh"
+      - "bash scripts/.tests/test-deliver-ticket-result-tuples.sh"
+      - "bash scripts/.tests/test-ceo-loop.sh"
+      - "bun test tests/conformance/pilot"
+      - "pnpm check"
+  - id: 11
+    title: "Code Review Remediation (Iteration 1)"
+    kind: delivery
+    scope:
+      files:
+        - tests/checks/ci-checks.test.ts
+        - tests/checks/privacy-authoring.test.ts
+        - tests/checks/fixture-privacy.test.ts
+        - tests/checks/ci-wiring.test.ts
+        - tests/checks/privacy-support.ts
+        - tests/checks/privacy-ci-wiring.test.ts
+        - tests/behaviour/change-folder-locate.test.ts
+        - tests/behaviour/commit-staging-scope.test.ts
+        - scripts/checks/prompt-conformance.ts
+        - tests/checks/prompt-conformance-mutants.test.ts
+        - tests/fixtures/prompt-inventory/mutants/raw-git-negated.md
+        - doc/changes/2026-11/2026-11-07--GH-242--agent-integration/chg-GH-242-test-plan.md
+        - doc/changes/2026-11/2026-11-07--GH-242--agent-integration/chg-GH-242-plan.yaml
+        - doc/changes/2026-11/2026-11-07--GH-242--agent-integration/chg-GH-242-pm-notes.yaml
+      folders:
+        - doc/changes/2026-11/2026-11-07--GH-242--agent-integration/code-review
+    interactions:
+      - kind: contract-file
+        target: tests/checks/ci-checks.test.ts
+        role: consumer
+    doneArtifacts:
+      trackerTransition: "GH-242 review remediation iteration 1 complete; F-1..F-6 resolved"
+    leases:
+      - lease:conformance
+    weightClass: standard
+    summary: "Remediate the iteration-1 review findings without rewriting delivered scope. F-1: restore the CI-invariant mutation/negative tests that commit 41c7e38d deleted from tests/checks/ci-checks.test.ts (pin-equality four-copy divergence, vulnerability-gate advisories, ci-supply-chain floating tag, ci-topology DEC-7 allowance and job-id removal, ci-bindingness injected continue-on-error/|| true, GH-172/GH-181 bindings) by reverting to the base suite and placing the new prompt/help scan-wiring assertions in a separate file (or by appending them). F-2: restore the authoring-mode privacy tests (TC-PRIVACY-018/019 and F-8) that 41c7e38d deleted from tests/checks/privacy-authoring.test.ts, keeping the new TC-PSCAN-009 fixture scan in a separate file; the runAuthoring helper returns to use. The privacy CI-wiring suite's suite-filter pin is updated to the moved fixture-scan test and the restored authoring suite. F-3: populate the test-plan execution log (section 10) and update section 7 implementation statuses, or explicitly declare pm-notes notes the authoritative execution log. F-4: add direct behavioural tests for locateChangeFolder/relativeChangeFolder (month-scan order, --<ref>-- token match, repo-relative prefix strip, out-of-root return). F-5: tighten the prompt-conformance negation check to be sentence-local and add a mutant. Sentence-local negation exposed a plural false positive on the legitimate noun phrase 'plan updates' in the pm review step, so the plan.no-progress alternative is narrowed to the singular 'plan update' instruction phrase; F-6: align the commit --phase preview-scope wording with DEC-4 or add a TC pinning it. This phase re-runs the restored suites and the aggregate gate; it does not modify prompts, specs, or delivered product code."
+    tests:
+      - "bun test tests/checks/ci-checks.test.ts tests/checks/ci-wiring.test.ts"
+      - "bun test tests/checks/privacy-authoring.test.ts"
+      - "bun test tests/checks/fixture-privacy.test.ts tests/checks/prompt-secret-scan.test.ts"
+      - "bun test tests/checks/prompt-conformance-mutants.test.ts"
+      - "bun test tests/behaviour/change-folder-locate.test.ts tests/behaviour/commit-staging-scope.test.ts"
+      - "bash scripts/.tests/test-build-claude-plugin.sh"
+      - "pnpm check"

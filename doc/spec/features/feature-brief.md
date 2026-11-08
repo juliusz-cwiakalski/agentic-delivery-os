@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BRIEF
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only brief command and its delivery.brief.v1 payload: one deterministic, decision-first, one-screen render projected from the same injected collector facts as the status digest; nine closed render surfaces (seven digest surfaces plus two named placeholders) as its own literal contract; three decision-first anchor groups (ready-to-merge, blocker-questions, owner-gate-ages) with a real ranked blocker group mirroring the digest items; the closed two-entry placeholder catalog; exit 0 on collector unavailability with no status.collector identity; digest vocabulary and bounds reused by reference; zero brief-specific reads; no LLM in the render path."
 links:
-  related_changes: ["GH-228", "GH-243", "GH-230"]
+  related_changes: ["GH-228", "GH-243", "GH-230", "GH-242"]
   contracts:
     - "packages/core/src/contracts/brief.ts"
 ---
@@ -23,7 +23,7 @@ The brief is a projection over the same collector state as the status digest. Th
 
 Collector unavailability is digest data, not a command failure. Every successful run returns all nine surfaces in the payload, and a failed, absent, unattempted, or unresolved read appears as the corresponding digest section state with the digest's reason. Only a rejected invocation (`fallback.invocation`, exit `1`) and containment (`fallback.internal`, exit `2`) can fail the command. The command adds no error-table row, no domain kind, no configuration key, no adapter read, and no new package or runtime-API location.
 
-The brief is the owner-facing render surface for the three v0 anchors. It is attention, not authority: ready-to-merge cites observed collector evidence and never issues a merge verdict, and merge readiness remains owned by the verify-gates battery and the merge transaction. The status digest remains the coordinator-facing evidence surface; its M1-S10 expansion exposes digest-native ready-to-merge and owner-gate-age fields from the same collector state, and the brief's projection agrees with them because both consume the same injected facts and the same status vocabulary. The brief's nine-surface catalog is its own literal contract and is not auto-derived from the digest section count, so the digest's growth to nine sections does not change the brief payload.
+The brief is the owner-facing render surface for the three v0 anchors. It is attention, not authority: ready-to-merge cites observed collector evidence and never issues a merge verdict, and merge readiness remains owned by the verify-gates battery and the merge transaction. The status digest remains the coordinator-facing evidence surface; its M1-S10 expansion exposes digest-native ready-to-merge and owner-gate-age fields from the same collector state, and the brief's projection agrees with them because both consume the same injected facts and the same status vocabulary. The coordinator reads `brief` for the owner-facing view while it drives the iteration from `status`; the brief performs no coordination action. The brief's nine-surface catalog is its own literal contract and is not auto-derived from the digest section count, so the digest's growth to nine sections does not change the brief payload.
 
 The surrounding contracts are described in [Status Digest](feature-status-digest.md), [Typed Blocker and Question Channel](feature-blockers.md), [Result Contract and Error Table](feature-result-contract.md), [Queue Ready](feature-queue-ready.md), [Verify Gates](feature-verify-gates.md), and [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md). Command naming follows [ODR-0003](../../decisions/ODR-0003-cli-command-naming-v1-lock.md), and package tiers follow [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 

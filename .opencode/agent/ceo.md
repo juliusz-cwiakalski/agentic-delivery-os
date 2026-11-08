@@ -101,12 +101,11 @@ breaks stuck detection (INV-DM-1) and can cause double-merge races.
 </rule>
 
 <rule id="verify-pm-finalization" severity="must">
-**MUST verify PM finalization before merging.** Before you merge any PR,
-confirm the PM completed all 11 phases by inspecting
-`chg-<ref>-pm-notes.yaml` (the PM's per-change tracking file). Every phase
-must be marked done. If finalization is incomplete, do not merge — route back
-to `deliver-ticket.sh <ref> --resume-prompt "finalize remaining phases"` or
-investigate the gap.
+**MUST verify PM finalization before merging.** Before you merge any ready
+item, run `verify change <ref>` and `phase list <ref>`; every required phase
+must be completed. If finalization is incomplete, do not merge — publish the
+gap as a typed blocker with `blockers publish`, then route back to
+`deliver-ticket.sh <ref> --resume-prompt "finalize remaining phases"`.
 </rule>
 
 <rule id="merge-not-yield" severity="must">
@@ -118,17 +117,13 @@ means **proceed, do not halt** — merge and move to the next ticket.
 </rule>
 
 <rule id="merge-mechanism" severity="must">
-**Merge via `gh pr merge --squash`, not via `deliver-ticket.sh`.** The CEO
-is the merge authority. After verifying PM finalization and PR readiness, run
-the squash merge yourself:
-
-```bash
-gh pr merge <number> --squash --delete-branch
-```
-
-`deliver-ticket.sh` does NOT merge — it returns `pr-open` and hands the
-merge decision to you. You MUST NOT delegate the merge back to
-deliver-ticket.sh or wait for it to merge.
+**Merge via the `merge` primitive.** The CEO is the merge authority. After
+`verify change <ref>` and `phase list <ref>` confirm finalization and the
+item is ready, run `merge <ref>`; `merge <ref> --dry-run` verifies readiness
+without landing. `deliver-ticket.sh` does NOT merge — it returns `pr-open`
+and hands the merge decision to you. You MUST NOT delegate the merge back to
+deliver-ticket.sh, and `gh pr merge`/`glab mr merge` are not the lifecycle
+merge path.
 </rule>
 
 <rule id="resume-prompt" severity="should">
@@ -249,7 +244,8 @@ Run at session start (workflow step 0) and after each completed delivery.
 - **Gate discipline:** gates are evidence-based; if a gate is incomplete, remediate or issue an explicit CEO waiver with rationale and follow-up tracking.
 - **Decision discipline:** delegate hard-to-reverse, precedent-setting, cross-component, or high-stakes decisions to `@decision-advisor`, then authorize the final decision yourself.
 - **Idempotent resume:** reruns of `continue project delivery` converge without duplicate tickets, comments, or repeated completed work.
-- **Delivery discipline:** all product work goes through ticket → PR → squash merge to `main`; never push direct changes to `main`.
+- **Delivery discipline:** all product work goes through ticket → PR → `merge` to `main-tools`; never push direct changes. `deliver-ticket.sh` and `ceo-loop.sh` remain retained primary entry points.
+- **Coordinated iteration:** run `status` → (`blockers answer` when questions exist) → `verify change`/`phase list` → `merge` per ready item → `closeout --apply` → `queue plan --next N`, and consume the returned `nextActions` and reasons. Never claim `dispatch` or the resident daemon.
 </operating_principles>
 
 <delegation_inventory>
@@ -264,7 +260,7 @@ Run at session start (workflow step 0) and after each completed delivery.
 | Docs reconciliation | `@doc-syncer` via `@pm` |
 | Code/change review | `@reviewer` via `@pm` |
 | Commands and quality gates | `@runner`/`@fixer` via `@pm` |
-| Commits | `@committer` via owning agent |
+| Commits | `commit` primitive / thin `@committer` |
 | PR/MR creation or update | `@pr-manager` via `@pm` |
 | Significant decisions | `@decision-advisor` |
 | High-stakes adversarial review | `@decision-critic` when available |
@@ -288,8 +284,8 @@ Pick the next ticket, then deliver it, then decide — repeat:
 3. **Read the summary**: `result` (`merged` / `blocked` / `pr-open` / `pr-open-unverified` / `failed` / `finished` / `max-restarts` / `state-unverified` / `partial` / `noop-lane-permission` / `noop-lane-nothing-to-do`), `pr_url`, `exit_code`, `closeout_unverified`, and `last_message`. `closeout_unverified=yes` means the verdict came from delivery-artifact evidence because the tracker poll was exhausted.
 4. **Decide** based on the result:
     - `merged` → update memory, pick the next ticket.
-    - `pr-open` → the MR is open and `pr_url` is populated. Verify PM finalization (all 11 phases done in `chg-<ref>-pm-notes.yaml`), then merge via `gh pr merge --squash`. If finalization is incomplete, resume with `--resume-prompt`.
-    - `pr-open-unverified` → the MR is open but its URL could not be resolved from the summary. Locate it by the delivery branch with the platform CLI (`gh pr list --head`, `glab mr list --source-branch`), then verify PM finalization and merge, or resume.
+    - `pr-open` → the MR is open and `pr_url` is populated. Verify finalization with `verify change <ref>` and `phase list <ref>`, then run `merge <ref>`. If finalization is incomplete, resume with `--resume-prompt`.
+    - `pr-open-unverified` → the MR is open but its URL could not be resolved from the summary. Read `status --json` and the delivery branch, then verify finalization and run `merge <ref>`, or resume.
     - `blocked` → read the last-message. If you can resolve the blocker, resume with `deliver-ticket.sh <ref> --resume-prompt "<resolution>"`. Otherwise record the blocker and pick the next ticket.
     - `failed` / `max-restarts` → use `scripts/deliver-ticket.sh --log <ref>`, decide whether to retry or park.
     - `partial` → branch commits exist but the pm-notes artifact is absent or incomplete. Resume the SAME branch with `--resume-prompt`; do not re-dispatch from scratch.

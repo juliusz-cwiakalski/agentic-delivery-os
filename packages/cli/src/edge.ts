@@ -65,7 +65,6 @@ import {
   createOpencodeTelemetryExtractor,
 } from "@delivery-os/adapters/harness";
 import {
-  createDeliverySessionFacts,
   createSessionAdmin,
   createSessionStore,
   type OpencodeSessionIo,
@@ -473,6 +472,8 @@ export type PhaseRuntimeOptions = {
   readonly writeFile: (file: string, text: string) => void;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
+  /** The repository-relative change folder for a ref (staging scope input). */
+  readonly readChangeFolder?: (changeRef: string) => string | undefined;
   /** The non-gating capsule producer port (GH-240 F-2). */
   readonly capsule?: CapsuleProducerPort;
 };
@@ -484,6 +485,7 @@ export const createPhaseCommandRuntime = (options: PhaseRuntimeOptions): PhaseCo
       changesDirectory: options.changesDirectory,
       fs: options.fs,
     }),
+  ...(options.readChangeFolder === undefined ? {} : { readChangeFolder: options.readChangeFolder }),
   stageEntry: (text, edit) => stagePmNotesPhaseEntry(text, edit),
   readRegistry: (changeRef) => {
     const read = readChangeTransitionsTolerant(options.store, changeRef);
@@ -527,6 +529,8 @@ export type CommitRuntimeOptions = {
   readonly phaseCommit: boolean;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
+  /** The repository-relative change folder for a ref (staging scope input). */
+  readonly readChangeFolder?: (changeRef: string) => string | undefined;
   readonly resolveRef?: () => Promise<
     { readonly ref: string; readonly refSource: "branch" | "change-folder" } | undefined
   >;
@@ -693,11 +697,10 @@ export type ProductionCommitRuntimeOptions = {
   readonly changesDirectory: string;
   readonly fs: PmNotesFileSystemFacts;
   readonly cwd: string;
-  readonly environment: Readonly<Record<string, string | undefined>>;
-  readonly sessionEnvironmentKeys: readonly string[];
   readonly phaseCommit: boolean;
   readonly nowIso: () => string;
   readonly newFenceToken: () => string;
+  readonly readChangeFolder?: (changeRef: string) => string | undefined;
   readonly transports?: CommitTransportPorts;
   readonly availability?: CommitTransportAvailability;
 };
@@ -716,13 +719,11 @@ export const createProductionCommitRuntimeOptions = (
     coreInference: { available: false, reason: "no-provider-route" },
     harnessOneShot: { available: false, reason: "no-harness-credentials" },
   },
-  sessionFacts: createDeliverySessionFacts({
-    environment: options.environment,
-    keys: options.sessionEnvironmentKeys,
-  }),
+  sessionFacts: { insideDeliverySession: false },
   phaseCommit: options.phaseCommit,
   nowIso: options.nowIso,
   newFenceToken: options.newFenceToken,
+  ...(options.readChangeFolder === undefined ? {} : { readChangeFolder: options.readChangeFolder }),
 });
 
 /** Compose the standalone `commit` surface (GH-227 F-1..F-5). */
@@ -732,6 +733,7 @@ export const createCommitCommandRuntime = (
 ): CommitCommandRuntime => ({
   sessionFacts: () =>
     typeof options.sessionFacts === "function" ? options.sessionFacts() : options.sessionFacts,
+  ...(options.readChangeFolder === undefined ? {} : { readChangeFolder: options.readChangeFolder }),
   resolveRef:
     options.resolveRef ??
     (async () => {
@@ -2912,18 +2914,7 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
       options.commit === undefined ? undefined : createPhaseCommitExtension(options.commit);
     const phaseRuntime =
       extension === undefined ? options.phase : { ...options.phase, commit: extension };
-    const committedPhaseRuntime =
-      options.commit === undefined
-        ? phaseRuntime
-        : {
-            ...phaseRuntime,
-            sessionFacts: () => {
-              const facts = options.commit?.sessionFacts;
-              return typeof facts === "function"
-                ? facts()
-                : (facts ?? { insideDeliverySession: false });
-            },
-          };
+    const committedPhaseRuntime = { ...phaseRuntime };
     commands.phase = createPhaseCommandDefinition(committedPhaseRuntime);
     if (options.commit !== undefined && extension !== undefined) {
       commands.commit = createCommitCommandDefinition(

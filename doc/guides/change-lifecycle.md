@@ -9,7 +9,7 @@ created: 2026-02-03
 owners: ["engineering"]
 summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates and artifacts." 
 links:
-  related_changes: ["GH-177", "GH-185", "GH-226"]
+  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242"]
 ---
 
 # Change Lifecycle
@@ -30,7 +30,7 @@ This guide defines the canonical change workflow for this repository. The PM age
 
 ## Branch and Commit Responsibility Model
 
-This repository enforces a single source of truth for git operations: the orchestrator of a phase owns the commit trigger for that phase's output, and all commits route through `@committer` (or the `/commit` command, which invokes `@committer`).
+This repository enforces a single source of truth for commits: the orchestrator of a phase owns the commit trigger for that phase's output, and all lifecycle commits route through the `commit` primitive (directly or through the thin `@committer`, which only invokes `commit`).
 
 ### Branch Ownership
 
@@ -47,53 +47,53 @@ This repository enforces a single source of truth for git operations: the orches
 ### Commit Trigger Ownership
 
 **Autonomous mode** (PM-driven delivery):
-- After a delegate returns, the PM validates the outcome and updates `chg-<workItemRef>-pm-notes.yaml` **before** triggering `@committer`. Success records phase completion; incomplete outcomes record the applicable iteration, verdict, reopened phase, blocker, remediation, and retrospective state.
+- After a delegate returns, the PM validates the outcome and runs `phase complete <workItemRef> <phase>`; the command writes the pm-notes transition and lands the completion commit atomically. Incomplete outcomes record the applicable iteration, verdict, reopened phase, blocker, remediation, and retrospective state, and publish a typed blocker.
 - The PM then commits the phase output and matching PM-notes transition together. The next phase or remediation is not delegated until the commit succeeds.
 - PM-owned commit checkpoints cover `specification`, `test_planning`, `delivery_planning`, each `dor_check` verdict, post-`@coder` delivery outcomes, completed `system_spec_update`, each `review_fix` verdict, completed `quality_gates`, and `dod_check` outcomes.
 - The PM commits the `@readiness-reviewer` verdict file for traceability of each DoR iteration.
 - The `no commit` directive (a bare string in the delegation request or command invocation) suppresses the trigger for a phase, but not the preceding PM-notes update; the checkpoint completes after that update and remote durability is intentionally waived.
 
 **Manual mode** (command-driven):
-- Each manual command triggers `/commit` (which invokes `@committer`) after the delegated agent returns, with an appropriate intent hint.
+- Each manual command invokes the `commit` primitive after the delegated agent returns, with an appropriate intent hint.
 - Phases with commit triggers: `/write-spec`, `/write-test-plan`, `/write-plan`, `/sync-docs`, `/write-decision`.
 - The `no commit` directive (bare string in the request) suppresses the `/commit` trigger.
 - `/commit` is the only command that creates commits in manual mode; agents never commit directly.
 
 **Delivery mode** (@coder executing a plan):
-- `@coder` owns `@committer` triggers per delivery plan phase for granular history.
+- `@coder` commits per plan phase through the `commit` primitive and runs `phase complete <workItemRef> delivery` at the lifecycle boundary.
 - Each phase completion produces one commit.
 - The PM delivery-transition checkpoint contains only PM-owned lifecycle state.
 
-### Universal `@committer` Routing
+### Commit Primitive Routing
 
-All commits across all agents and commands route through `@committer`. This ensures:
+All lifecycle commits route through the `commit` primitive, directly or through the thin `@committer`, which only invokes `commit`. This ensures:
 
 - Secret/credential scanning on every commit
-- `tmp/`/`.ai/local/` exclusion from staged files
-- `.gitignore` enforcement
-- Diff-derived Conventional Commit messages (informed by the caller's intent hint)
-- Breaking-change detection
+- `tmp/`/`.ai/local/` and other prohibited-path exclusion from staged files
+- Precise staging: plan scope, and for a completion the change folder; unrelated strays are never staged
+- Deterministic skeleton plus one constrained message call, with a marked template fallback
+- Breaking-change detection and classified failure identities
 
-No agent prompt other than `@committer` performs a direct `git commit`.
+Lifecycle phase state is written only through the `phase` family (`phase list`, `phase complete`, `phase reopen`). No prompt hand-edits phase timestamps or the PR-URL field; the PR URL is a pm-notes `notes:` entry. `deliver-ticket.sh` and `ceo-loop.sh` remain retained primary entry points.
 
 ### Pure-Writer Agents
 
 The following delegated agents are pure writers: they produce their artifact and return with zero git operations. The orchestrator handles branch setup (if applicable) and commits:
 
-- `@spec-writer` (writes spec; PM triggers @committer)
-- `@test-plan-writer` (writes test plan; PM triggers @committer)
-- `@plan-writer` (writes plan; PM triggers @committer)
-- `@doc-syncer` (writes docs; PM or `/sync-docs` triggers @committer)
-- `@reviewer` (local mode: writes review artifact; `/review` or `/review-deep` triggers `/commit`)
-- `@decision-advisor` (writes decision record; PM or `/write-decision` triggers @committer)
-- `@readiness-reviewer` (writes verdict; PM triggers @committer)
+- `@spec-writer` (writes spec; PM commits via the `commit` primitive)
+- `@test-plan-writer` (writes test plan; PM commits via the `commit` primitive)
+- `@plan-writer` (writes plan; PM commits via the `commit` primitive)
+- `@doc-syncer` (writes docs; PM or `/sync-docs` invokes the `commit` primitive)
+- `@reviewer` (local mode: writes review artifact; `/review` or `/review-deep` invokes the `commit` primitive)
+- `@decision-advisor` (writes decision record; PM or `/write-decision` invokes the `commit` primitive)
+- `@readiness-reviewer` (writes verdict; PM commits via the `commit` primitive)
 
 ### Traceability and History
 
 - Commit history is phase-aligned: at least one commit per lifecycle phase in autonomous mode, one commit per manual command invocation.
-- Each commit carries an intent hint so `@committer` derives meaningful Conventional Commit messages.
+- Each commit is produced by the `commit` primitive, which derives the Conventional Commit message from the staged bundle and caller context.
 - The PM commits `@readiness-reviewer` verdicts for DoR traceability.
-- Decision records and doc-spec reconciliation each become a single `@committer` commit.
+- Decision records and doc-spec reconciliation each become a single `commit` primitive commit.
 
 ## Required Artifacts (per change)
 
@@ -257,7 +257,7 @@ flowchart TD
 - `@plan-writer` creates or updates `chg-<workItemRef>-plan.yaml`. When both plan formats exist, the YAML plan is authoritative; a legacy `chg-<workItemRef>-plan.md` remains readable through the classified `plan.format.legacy-markdown` verdict.
 - The plan validates with `plan validate <workItemRef>` and its write-time conformance is checked with `lint plan <workItemRef>`.
 
-**Outcome**: A phased, machine-readable implementation plan aligned with the spec and test plan, with declared per-phase scope, done-artifacts, leases, weight class, interactions, and ceremony tier.
+**Outcome**: A phased, machine-readable implementation plan aligned with the spec and test plan, with declared per-phase scope, an optional per-phase summary, done-artifacts, leases, weight class, interactions, and ceremony tier.
 
 **Exit criteria**:
 
@@ -272,7 +272,7 @@ flowchart TD
 
 **Actions**:
 
-- Confirm `delivery_planning` is completed and mark `dor_check` started in `chg-<workItemRef>-pm-notes.yaml`.
+- Confirm `delivery_planning` is completed with `phase list <workItemRef>` before the gate; do not hand-edit phase timestamps.
 - `@pm` delegates to `@readiness-reviewer` with `workItemRef`.
 - `@readiness-reviewer` critiques spec + test-plan + plan vs the ticket under an adversarial stance and emits `READY` or `NOT_READY` (with per-facet findings and a suggested remediation target phase).
 - **On `READY`**: record the verdict/iteration and complete `dor_check` in PM notes, then commit the verdict and notes transition before delivery.
@@ -286,7 +286,7 @@ flowchart TD
 **Exit criteria**:
 
 - `@readiness-reviewer` returns `READY` (or a valid trivial-change override is recorded).
-- `dor_check` marked completed in `chg-<workItemRef>-pm-notes.yaml`.
+- `phase list <workItemRef>` reports `dor_check` completed.
 
 ### 6) delivery
 
@@ -300,7 +300,7 @@ flowchart TD
 - `@coder` executes all plan phases, delegating to:
   - `@designer` for UI/UX work
   - `@decision-advisor` for decisions (any type)
-  - `@committer` for checkpointing progress
+  - the `commit` primitive (or thin `@committer`) for checkpointing progress
   - `@runner` for heavy command execution (full builds, full test suites)
 
 **Outcome**: All implementation phases in the plan are complete with code changes committed.
@@ -320,7 +320,7 @@ flowchart TD
 
 - `@pm` invokes `@doc-syncer` with `workItemRef`.
 - `@doc-syncer` reconciles all affected current-truth documentation in scope: `doc/00-index.md`, `doc/guides/**`, `doc/overview/**`, `doc/spec/**`, `doc/contracts/**`, `doc/domain/**`, `doc/quality/**`, `doc/ops/**`, `doc/diagrams/**`, and `doc/decisions/**`.
-- `@pm` inspects the report and re-runs `@doc-syncer` with explicit residual gaps until none remain. Only then does PM mark `system_spec_update` complete and commit the docs with the matching PM-notes transition.
+- `@pm` inspects the report and re-runs `@doc-syncer` with explicit residual gaps until none remain. Only then does PM run `phase complete <workItemRef> system_spec_update`, which lands the docs and the transition in one commit.
 - Missing/stale/incomplete docs are resolved in-change (reconcile existing docs or create missing docs when the change introduces/exposes an enduring concept).
 - Feature-spec coverage remains part of phase 7: when a modified feature area warrants `doc/spec/features/feature-<slug>.md` and none exists, `@doc-syncer` authors the missing first spec in-change; existing specs are reconciled, not re-authored.
 - Documentation gaps are resolved as doc artifacts in the same change; no tracker ticket is created for documentation coverage handoff.
@@ -343,8 +343,8 @@ flowchart TD
 
 - `@pm` invokes `@reviewer` with `workItemRef`.
 - `@reviewer` audits code vs. spec/plan, checks test coverage, identifies gaps.
-- After every result, `@pm` records the review iteration and verdict in PM notes before committing the review artifact and matching state.
-- On `Status=PASS`, PM marks `review_fix` complete before the commit.
+- After every result, `@pm` records the review iteration and verdict in a pm-notes `notes:` entry before running `phase complete` for the review artifact and matching state.
+- On `Status=PASS`, PM runs `phase complete <workItemRef> review_fix` before the next phase.
 - If reviewer returns `Status=FAIL` or adds remediation tasks:
   - Remediation phase is appended to the change's plan artifact (`chg-<workItemRef>-plan.yaml`; a legacy `chg-<workItemRef>-plan.md` stays readable during the transition).
   - PM records findings, remediation/reopen state, and a retrospective note, then commits that durable state before invoking `@coder` (via `/run-plan <workItemRef> execute all remaining phases no review`).
@@ -355,7 +355,7 @@ flowchart TD
 **Exit criteria**:
 
 - `@reviewer` returns `Status=PASS`.
-- No open remediation tasks in the plan.
+- No open remediation items remain in the plan.
 
 ### 9) quality_gates
 
@@ -388,7 +388,7 @@ flowchart TD
 **Actions**:
 
 - `@pm` performs a checklist review:
-  - All phases above completed (check `chg-<workItemRef>-pm-notes.yaml`).
+  - All phases above completed (verify with `phase list <workItemRef>`).
   - All delivery plan phases complete (every phase declared in `chg-<workItemRef>-plan.yaml` has completion evidence in the phase ledger and PM notes; a legacy markdown plan is read through the classified transition path).
   - All acceptance criteria satisfied (verify against `chg-<workItemRef>-spec.md`).
   - Current-truth documentation is complete and up to date for the delivered change (phase 7 has no unresolved documentation gaps).
@@ -404,7 +404,7 @@ flowchart TD
 **Exit criteria**:
 
 - DoD satisfied.
-- `chg-<workItemRef>-pm-notes.yaml` updated with all phases completed.
+- `phase list <workItemRef>` reports all phases completed for the declared variant.
 
 ### 11) pr_creation
 
@@ -429,9 +429,7 @@ flowchart TD
 > **Mode A (autonomous CEO):** in autonomous mode, the `@ceo` agent is the
 > merge authority. After `pr_creation`, the CEO verifies PM finalization (all
 > 11 phases complete in `chg-<ref>-pm-notes.yaml`), then merges approved PRs
-> itself via the platform-appropriate squash-merge (`gh pr merge --squash` on
-> GitHub, `glab mr merge --squash` on GitLab; the CEO reads
-> `.ai/agent/pr-instructions.md` for the platform). The CEO **must merge, not yield** — a
+> through the `merge` primitive. The CEO **must merge, not yield** — a
 > ready, approved, PM-finalized PR is merged, not deferred indefinitely. Note
 > the per-ticket engine never merges: `deliver-ticket.sh` returns `pr-open`.
 > See `.opencode/agent/ceo.md` for the autonomous delivery model, and
@@ -486,7 +484,7 @@ This is a safety net, not a replacement for the adversarial `dor_check` gate. If
 
 The PM (`@pm`) is the **sole author** of `chg-<workItemRef>-pm-notes.yaml`.
 
-- **When:** at every phase transition — validate the phase outcome, then update the ledger before triggering `@committer` for that phase's commit. Reopening a phase also gets a retro note explaining why.
+- **When:** at every phase transition — validate the phase outcome, then run `phase complete <workItemRef> <phase>` so the ledger transition and its commit land atomically. Reopening a phase also gets a retro note explaining why.
 - **Who must not:** delivery agents (for example `@coder`) and other delegates never author or hand-edit pm-notes. They report outcomes to the PM, who records them.
 - **Why:** the file is the delivery ledger. The artifact-first close-out keys `finished` (exit 0) versus `partial` (exit 1, "resume the SAME branch") on pm-notes completeness; the CEO's merge-not-yield verification reads PM finalization from it; and `verify change <ref>` consumes the same ledger as its declaration evidence. The `lint` and `phase` command family is the schema-validated conformance and write path for phase state, and verify reuses it as a read-only consumer.
 
@@ -511,16 +509,16 @@ phases:
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
-  pr_creation: { started: null, completed: null, url: null }
+  pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
 blockers: []
-notes: [] # { text, type, date }
+notes: [] # { text, type, date } — the PR URL is recorded here
 ```
 
 The enforced schema requires `change_id`, `title`, `delivery_mode`, and `phases`; `milestone`, `story_code`, and `variant` are optional typed keys, and the declared collections are validated when present. Extra phase or entry keys (for example `url`, `commits`, or `reopened`) are opaque and preserved.
 
-The default `full` variant requires the canonical eleven lifecycle phases. An explicit `variant: lite` declares the pinned six-phase required set (`clarify_scope`, `specification`, `delivery`, `quality_gates`, `dod_check`, `pr_creation`) for small changes; omission never yields LITE. The CLI tooling provides the `phase` command family as the schema-validated, idempotent write path for phase state, linting the post-transition document before mutating it. Lifecycle agents are the intended callers and adopt it through their prompts; prompt adoption is a separate operating-model change. The behavior is specified at `doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md`.
+The default `full` variant requires the canonical eleven lifecycle phases. An explicit `variant: lite` declares the pinned six-phase required set (`clarify_scope`, `specification`, `delivery`, `quality_gates`, `dod_check`, `pr_creation`) for small changes; omission never yields LITE. The CLI tooling provides the `phase` command family as the schema-validated, idempotent write path for phase state, linting the post-transition document before mutating it. Lifecycle agents are its callers: prompts complete phases with `phase complete <workItemRef> <phase>`, read with `phase list`, and reopen with `phase reopen`, recording the PR URL as a pm-notes `notes:` entry rather than a phase field. The behavior is specified at `doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md`.
 
 Finalization is variant-aware and read-only. `verify change <ref>` checks the effective variant's required set against the declaration plus the verified delivery registry, names any missing phases in required-set order, and classifies the delivery result. Only a fully completed declared variant yields `finished` and exit `0`; `partial`, malformed, missing-target, and unverifiable outcomes are non-zero failures. The surface is specified at `doc/spec/features/feature-verify-change-and-exit-taxonomy.md`.
 
@@ -535,7 +533,7 @@ Finalization is variant-aware and read-only. `verify change <ref>` checks the ef
 | 3. test_planning | `@test-plan-writer` | — |
 | 4. delivery_planning | `@plan-writer` | — |
 | 5. dor_check | `@readiness-reviewer` | — |
-| 6. delivery | `@coder` | `@designer`, `@decision-advisor`, `@committer`, `@runner` |
+| 6. delivery | `@coder` | `@designer`, `@decision-advisor`, `commit`, `@runner` |
 | 7. system_spec_update | `@doc-syncer` | — |
 | 8. review_fix | `@reviewer` | `@coder` |
 | 9. quality_gates | `@runner` | `@fixer` |

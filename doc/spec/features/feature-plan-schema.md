@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-PLAN-SCHEMA
 status: Current
 created: 2026-11-05
-last_updated: 2026-11-05
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
-summary: "The versioned machine-readable delivery plan (`delivery.plan.v1`) and the `plan` command family: the YAML document shape (per-phase scope, typed done-artifacts, leases, weight class, interactions, and ceremony tier as data), the YAML-before-markdown artifact precedence with the classified legacy transition, the pure validate/diff/overlap verdicts (ready-for-development, per-path scope classification, pairwise sequence versus parallel with named overlapping paths and producer-first ordering), the shared `plan.*` error identities, the additive `lint plan` target, the DEC-1 exit projection, and the deterministic, read-only, bounded-output posture."
+summary: "The versioned machine-readable delivery plan (`delivery.plan.v1`) and the `plan` command family: the YAML document shape (per-phase optional summary, scope, typed done-artifacts, leases, weight class, interactions, and ceremony tier as data), the YAML-before-markdown artifact precedence with the classified legacy transition, the pure validate/diff/overlap verdicts (ready-for-development, per-path scope classification, pairwise sequence versus parallel with named overlapping paths and producer-first ordering), the shared `plan.*` error identities, the additive `lint plan` target, the DEC-1 exit projection, and the deterministic, read-only, bounded-output posture."
 links:
-  related_changes: ["GH-226"]
+  related_changes: ["GH-226", "GH-242"]
   related_decisions: ["ODR-0003"]
   contracts:
     - "packages/core/src/contracts/plan.ts"
@@ -21,7 +21,7 @@ links:
 
 ## Overview
 
-A delivery plan is the declared input the delivery engine computes against. It is a versioned YAML change artifact named `chg-<workItemRef>-plan.yaml`, stored with the change artifacts under the unified change convention. The document declares per-phase scope (files, packages, folders), typed done-artifacts, repository leases, a build-weight class, producer/consumer interactions, and the ceremony tier as data. The plan is inert declaration data: verdicts compare, echo, and order it; they never execute it or mutate the repository.
+A delivery plan is the declared input the delivery engine computes against. It is a versioned YAML change artifact named `chg-<workItemRef>-plan.yaml`, stored with the change artifacts under the unified change convention. The document declares per-phase scope (files, packages, folders), an optional per-phase summary, typed done-artifacts, repository leases, a build-weight class, producer/consumer interactions, and the ceremony tier as data. The plan declares phases and scope only: it carries no `tasks` key and no progress log, and plan-phase progress is recorded in pm-notes `notes:` entries naming the plan phase id, commit hash, and test result. The plan is inert declaration data: verdicts compare, echo, and order it; they never execute it or mutate the repository.
 
 Three read-only verdicts consume that document. `plan validate <ref>` answers schema conformance and the ready-for-development gate, with classified errors naming the phase and field and per-phase data echoed for downstream consumers. `plan diff <ref> [--against <base>]` compares declared scope against the actual branch diff and classifies each path `within`, `outside-declared`, or `undeclared-missing`. `plan overlap <refA> <refB>` answers `parallel` or `run-in-sequence`, naming every overlapping path, ordering a declared producer first, and stating a stable reason. `lint plan <ref>` runs the same schema conformance at write time with document locations.
 
@@ -76,6 +76,7 @@ A phase declares:
 |---|---|---|
 | `id` | Optional | Positive integer; defaults to the phase's 1-based position. Duplicate ids are `plan.schema.invalid`. |
 | `title` | Required | Non-empty string. |
+| `summary` | Optional | Non-empty one-line summary echoed by `plan validate` and consumed by the commit path as the plan-phase message context. Omission remains valid; a present but empty or non-string value is `plan.schema.invalid` naming `summary`. |
 | `kind` | Required | `planning` (lease-free) or `delivery` (lease-taking). |
 | `scope` | Required | Mapping of `files`, `packages`, and `folders`; at least one key must declare a non-empty list. Unknown scope keys are invalid. Each list holds at most 512 non-empty path strings of at most 512 characters. |
 | `leaseClass` | Optional | When present it must equal the class implied by `kind`: planning phases are `lease-free`, delivery phases are `lease-taking`. |
@@ -98,7 +99,7 @@ The payload carries `verdict`, `readyForDevelopment`, `perPhase`, `errors`, `tru
 
 Each error carries `code`, `field`, `problem` (`missing`, `invalid`, or `unsupported`), and—when the defect belongs to a phase—`phase` and a bounded `detail`. Errors are sorted by phase, then field, then code, and truncated deterministically at 32 entries with the total count preserved.
 
-Per-phase data echoes the declared shape for every parsed phase: `id`, `title`, `kind`, the implied `leaseClass`, normalized `scope`, effective `leases`, `interactions`, the declared `tier`, and, when declared, `doneArtifacts` and `weightClass`. Planning phases report no delivery artifacts without failing validation or inventing placeholders. Leases and weight are echoed, never re-derived.
+Per-phase data echoes the declared shape for every parsed phase: `id`, `title`, `kind`, the implied `leaseClass`, the optional `summary`, normalized `scope`, effective `leases`, `interactions`, the declared `tier`, and, when declared, `doneArtifacts` and `weightClass`. Planning phases report no delivery artifacts without failing validation or inventing placeholders. Leases and weight are echoed, never re-derived.
 
 The verdict never consults a built-in phase set. The declared tier is echoed verbatim; a tier outside the known set is rejected with `plan.tier.unknown`. Malformed or oversized documents (over 1,048,576 characters or beyond the parser bound) are classified `plan.schema.invalid`, never a stack trace.
 

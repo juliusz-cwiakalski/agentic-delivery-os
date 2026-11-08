@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-MONOREPO-SCAFFOLD-TOOLCHAIN
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "The packages/ pnpm-workspace monorepo: six typed packages with declared subpaths and alias-based internal layering, one createRuntime composition root, mechanically enforced boundary matrices with negative fixtures, the typed adapter-port substrate and secret-read boundary invariant, the binding privacy and no-cloud guard with its hashed-literal registry and envelope content policy, the durable local state layer, the provider engine and its confined quota transport, the dedicated git seam covering branch/checkout and commit operations, the declared inference network edge behind the commit primitive, the read-only owner-gate SLA board, the read-only doctor pre-flight diagnostic, pinned pnpm/Bun and strict TypeScript toolchain, one aggregate check with CI-parity invariants, dist-targeted exports with publint/attw against the packed artifact, a pre-freeze publish guard with lockstep changesets, a fail-closed license registry, and additive binding TypeScript CI jobs beside the authoritative bash stack."
 links:
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-183", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-178", "GH-221", "GH-227", "GH-228", "GH-229", "GH-224", "GH-231", "GH-225", "GH-251", "GH-233", "GH-235"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-183", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-178", "GH-221", "GH-227", "GH-228", "GH-229", "GH-224", "GH-231", "GH-225", "GH-251", "GH-233", "GH-235", "GH-242"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0006", "TDR-0007"]
 ---
 
@@ -164,7 +164,7 @@ The five named scripts exist at the root and in all six packages:
 4. `test`
 5. `check:boundaries`
 
-Exactly one aggregate `check` chains them in that order: `lint → format:check → typecheck → test → check:boundaries`, then appends the packed-exports invariant `bun run scripts/checks/exports-parity.ts` at the workspace root. No alternate aggregate or bypass flag exists. `pnpm check` is the single green/red signal for the workspace. The root also exposes `check:privacy-literals`, a standalone command that runs the privacy guard directly; it is deliberately not chained into the aggregate, so the aggregate contract stays exactly as pinned by the CI invariants. The guard itself is binding in the `ts-invariants` CI job.
+Exactly one aggregate `check` chains them in that order: `lint → format:check → typecheck → test → check:boundaries`, then the deterministic prompt conformance scan and help/guide coverage matrix (`scripts/checks/prompt-conformance.ts` and `scripts/checks/help-guide-coverage.ts`), then appends the packed-exports invariant `bun run scripts/checks/exports-parity.ts` at the workspace root. No alternate aggregate or bypass flag exists. `pnpm check` is the single green/red signal for the workspace. The root also exposes `check:privacy-literals`, a standalone command that runs the privacy guard directly; it is deliberately not chained into the aggregate, so the aggregate contract stays exactly as pinned by the CI invariants. The guard itself is binding in the `ts-invariants` CI job. The root also exposes `check:prompt` and `check:help` for the two conformance scans.
 
 The root `typecheck` runs `pnpm -r typecheck` and then compiles the `tests/types/tsconfig.json` type-probe project, so compile-time contract probes outside the package graph fail the aggregate. The root `typecheck` and `test` scripts each declare a `pnpm build` prerequisite (`pretypecheck` and `pretest`). The aggregate therefore builds every package before it typechecks and tests, so package-name specifiers, emitted declarations, and conditional `imports` aliases resolve against built `dist` targets. `check:boundaries` runs after them, so the aggregate cruises the built tree it just produced; `exports-parity` then packs each publishable from the same `dist/`.
 

@@ -118,3 +118,12 @@ lane or `queue.entry.unobserved` at exit 1. An unreadable queue store projects
 grammar; the invocation fails at exit 1 through `fallback.invocation` with a
 remediation hint naming the resident daemon (M1-S18), and no stream or frame is
 emitted. Live streaming belongs to the resident daemon (M1-S18).
+
+## HELP
+
+`<binary> lanes --help` prints usage, options, at least one example, exit codes,
+and a see-also pointer. Root `<binary> --help` and `<binary> --version` are
+self-description only: zero state, network, git, or configuration reads and
+zero writes. The executable is a non-installed Bun bin; see the
+[man page](../man-page.md).
+

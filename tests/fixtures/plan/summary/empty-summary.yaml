@@ -1,0 +1,13 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-310
+tier:
+  name: full
+  phases: [1]
+phases:
+  - id: 1
+    title: "Contracts"
+    kind: delivery
+    summary: ""
+    scope:
+      files:
+        - packages/core/src/contracts/plan.ts

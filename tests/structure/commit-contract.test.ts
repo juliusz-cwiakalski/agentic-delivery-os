@@ -101,7 +101,8 @@ describe("TC-TIER-001 commit contracts are data-only and inventoried", () => {
     expect(COMMIT_TELEMETRY_RECORD_KIND).toBe("commit.telemetry");
     expect(COMMIT_TELEMETRY_SCHEMA_ID).toBe("delivery.commit.telemetry.v1");
     expect(COMMIT_TELEMETRY_RECORD_KEY_PREFIX).toBe("commit.telemetry:");
-    expect([...COMMIT_ERROR_CODES]).toHaveLength(6);
+    expect([...COMMIT_ERROR_CODES]).toHaveLength(5);
+    expect([...COMMIT_ERROR_CODES]).not.toContain("commit.session.context-refused");
   });
 
   test("the ambient guard covers the new contracts file", () => {
@@ -134,5 +135,24 @@ describe("TC-TIER-001 commit contracts are data-only and inventoried", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  test("TC-SESS-005 no production branch returns the retired session refusal", () => {
+    const retired = "commit.session.context-refused";
+    const productionFiles = [
+      COMMIT_CONTRACT,
+      `${CONTRACTS_DIR}/error-table.ts`,
+      "packages/cli/src/commands/commit.ts",
+      "packages/cli/src/commands/phase.ts",
+      "packages/cli/src/edge.ts",
+    ];
+    for (const file of productionFiles) {
+      expect(readFileSync(join(ROOT, file), "utf8"), file).not.toContain(retired);
+    }
+    // The session-fact mechanism stays available; it no longer gates commit/phase.
+    expect(readFileSync(join(ROOT, COMMIT_CONTRACT), "utf8")).toContain("CommitSessionFacts");
+    expect(readFileSync(join(ROOT, "packages/cli/src/edge.ts"), "utf8")).not.toContain(
+      "createDeliverySessionFacts",
+    );
   });
 });

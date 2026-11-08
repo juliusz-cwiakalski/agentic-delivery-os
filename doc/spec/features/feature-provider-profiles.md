@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-PROVIDER-PROFILES
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-07
+last_updated: 2026-11-08
 owners: ["engineering"]
 service: delivery-os
 summary: "Model-profile selection and provider watching: the typed provider.profiles branch (tiers, profiles, seats with a typed pacingClass, preference chain, pacing rungs, watch targets, shipped empty), the pure selection engine (declarative heuristics, hard capability gate, lazy memoized eligibility probes), profile park/switch/revert with a persisted target record, the coding-plan/DeepSeek/OpenAI watch mappings, the provider profile resolve and provider watch status CLI surfaces, and resolve-before-spawn with a hardened data-v1 env-record contract."
 links:
-  related_changes: ["GH-234", "GH-182", "GH-233"]
+  related_changes: ["GH-234", "GH-182", "GH-233", "GH-242"]
   related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007"]
   contracts:
     - "packages/core/src/contracts/provider-profile.ts"
@@ -85,7 +85,7 @@ Profile resolution runs before any harness spawn. `provider profile resolve --fo
 
 The record contract enforces the legacy floor (exact header, only set/unset records, allowlist match, no duplicate names, final LF, CR/NUL rejection, byte/line/record limits) and the hardened ceiling (strict ASCII identifier, embedded equals rejected, homoglyph/non-ASCII rejected, metacharacters rejected, exact allowlist match). The configured header itself may not contain LF, CR, or NUL: such a value is a classified configuration error at parse time and is refused again when a record is serialized. The default header is `# model-env data-v1`, and the default allowlist pattern is `^OC_[A-Z][A-Z0-9]*_AGENT_[A-Z0-9_]+_MODEL$`: the concrete product prefix is a branding value, never hardcoded. The legacy surface selects its pre-freeze header and product-prefixed allowlist through the same injectable grammar options; production defaults stay brand-neutral. Values are data: no shell is invoked and no value is interpreted at any consumption point. A refusal is classified and never partially applied.
 
-The legacy bash hook remains the authoritative bash-surface executor: its versioned data-record contract governs that surface, and its file-metadata classes (safe regular file, ownership, permissions) govern the legacy path. M1-S9 and M1-S20 own surface rewiring.
+The legacy bash hook remains the authoritative bash-surface executor: its versioned data-record contract governs that surface, and its file-metadata classes (safe regular file, ownership, permissions) govern the legacy path. Rewiring that legacy surface remains with the dispatch work (M1-S9).
 
 ## CLI Surface
 
