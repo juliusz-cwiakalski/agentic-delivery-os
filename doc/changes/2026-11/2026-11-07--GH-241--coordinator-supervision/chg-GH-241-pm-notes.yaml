@@ -11,7 +11,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-09T07:34:32.052Z }
   review_fix: { started: null, completed: 2026-11-09T09:46:15.412Z }
   quality_gates: { started: null, completed: 2026-11-09T09:53:25.026Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-09T09:54:25.024Z }
   pr_creation: { started: null, completed: null, url: null }
 decisions:
   - text: "Delivery restarts from a clean branch:
