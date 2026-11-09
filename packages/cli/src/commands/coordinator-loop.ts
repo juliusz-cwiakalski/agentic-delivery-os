@@ -143,9 +143,9 @@ export type CoordinatorSupervisorPorts = {
     readonly read: () => CoordinatorSessionFacts;
     readonly apply: (
       effect: "attach" | "resume" | "spawn",
-    ) => { readonly ok: true } | { readonly ok: false; readonly code: string };
+    ) => Promise<{ readonly ok: true } | { readonly ok: false; readonly code: string }>;
     /** The explicit wake-effect port (F-7/AC-F7-1): live, resume, or spawn. */
-    readonly wake: (effect: CoordinatorWakeEffect) => { readonly ok: boolean };
+    readonly wake: (effect: CoordinatorWakeEffect) => Promise<{ readonly ok: boolean }>;
   };
   readonly loop: CoordinatorLoopPort;
 };
@@ -624,15 +624,16 @@ export const createCoordinatorSupervisor = (
   };
 
   /** Append one admitted restart and apply the recovery effect. */
-  const applyRecovery = (
+  const applyRecovery = async (
     read: OkRead,
     context: CycleContext,
     epoch: string,
     reason: string,
     effect: "resume" | "spawn",
-  ):
+  ): Promise<
     | { readonly ok: true; readonly read: OkRead }
-    | { readonly ok: false; readonly failure: CoordinatorFailure } => {
+    | { readonly ok: false; readonly failure: CoordinatorFailure }
+  > => {
     const admission = evaluateCoordinatorRestartAdmission({
       records: read.restarts,
       budgetEpochId: epoch,
@@ -671,7 +672,7 @@ export const createCoordinatorSupervisor = (
     if (!appended.ok) return { ok: false, failure: deliveredFailure(appended.code) };
     if (appended.appended) {
       context.appended += 1;
-      const applied = ports.session.apply(effect);
+      const applied = await ports.session.apply(effect);
       if (!applied.ok) return { ok: false, failure: failure("harness", applied.code) };
     }
     const nextRead = appended.appended ? { ...read, restarts: [...read.restarts, record] } : read;
@@ -679,14 +680,15 @@ export const createCoordinatorSupervisor = (
   };
 
   /** Apply the lifecycle decision; a live session records `join-live`. */
-  const applyLifecycle = (
+  const applyLifecycle = async (
     read: OkRead,
     context: CycleContext,
     epoch: string,
     trigger: CoordinatorIterationTrigger,
-  ):
+  ): Promise<
     | { readonly ok: true; readonly read: OkRead; readonly session: CoordinatorSessionFacts }
-    | { readonly ok: false; readonly failure: CoordinatorFailure } => {
+    | { readonly ok: false; readonly failure: CoordinatorFailure }
+  > => {
     const session = ports.session.read();
     const decision = decideLifecycle({
       live: session.liveness === "alive",
@@ -713,7 +715,7 @@ export const createCoordinatorSupervisor = (
       return { ok: true, read: recorded.read, session };
     }
     if (decision.consumesOrdinal === 1) {
-      const recovered = applyRecovery(
+      const recovered = await applyRecovery(
         read,
         context,
         epoch,
@@ -750,7 +752,7 @@ export const createCoordinatorSupervisor = (
       contextTokens: session.contextTokens,
     });
     if (!recorded.ok) return recorded;
-    const effect = ports.session.apply("spawn");
+    const effect = await ports.session.apply("spawn");
     if (!effect.ok) return { ok: false, failure: failure("harness", effect.code) };
     return { ok: true, read: recorded.read, session };
   };
@@ -876,7 +878,7 @@ export const createCoordinatorSupervisor = (
     ) {
       return { kind: "stop", read, tickVerdict, wakeOutcome };
     }
-    const lifecycle = applyLifecycle(read, context, epoch, trigger);
+    const lifecycle = await applyLifecycle(read, context, epoch, trigger);
     if (!lifecycle.ok) {
       return { kind: "failure", failure: lifecycle.failure, read, tickVerdict, wakeOutcome };
     }
@@ -917,7 +919,7 @@ export const createCoordinatorSupervisor = (
       };
       if (woken.outcome === "woken" && woken.question !== null) {
         const effect = wakeEffectFor(session);
-        const wake = ports.session.wake(effect);
+        const wake = await ports.session.wake(effect);
         if (!wake.ok) {
           return {
             kind: "failure",
@@ -1178,7 +1180,7 @@ export const createCoordinatorSupervisor = (
           };
         }
         // Budget check runs only after the outcome append.
-        const recovered = applyRecovery(
+        const recovered = await applyRecovery(
           current,
           context,
           epoch,
@@ -1423,7 +1425,7 @@ export const createCoordinatorSupervisor = (
       recordCount: startRaw.ok ? startRaw.value.records.length : 0,
       appended: 0,
     };
-    const lifecycle = applyLifecycle(claimed.claimed.read, startContext, epoch, "start");
+    const lifecycle = await applyLifecycle(claimed.claimed.read, startContext, epoch, "start");
     if (!lifecycle.ok) {
       appendReleased(claimed.claimed.identity, epoch);
       return lifecycle.failure;

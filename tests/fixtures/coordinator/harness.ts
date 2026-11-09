@@ -113,7 +113,9 @@ export type CoordinatorHarness = {
     resumeCalls: number;
     spawnCalls: number;
     wakeCalls: number;
-    apply(effect: "attach" | "resume" | "spawn"): { ok: true } | { ok: false; code: string };
+    apply(
+      effect: "attach" | "resume" | "spawn",
+    ): Promise<{ ok: true } | { ok: false; code: string }>;
     set(overrides: Partial<HarnessSessionState>): void;
   };
   readonly process: {
@@ -354,21 +356,21 @@ export const createCoordinatorHarness = (
     },
     session: {
       read: () => session.facts,
-      apply: (effect) => {
+      apply: async (effect) => {
         if (effect === "attach") {
           counterJoin();
-          return { ok: true };
+          return { ok: true as const };
         }
         if (effect === "resume") {
           counters.resumes += 1;
-          return { ok: true };
+          return { ok: true as const };
         }
         counters.spawns += 1;
         return options.spawnFails === true
           ? { ok: false as const, code: "harness.spawn.refused" }
           : { ok: true as const };
       },
-      wake: () => {
+      wake: async () => {
         counters.wakes += 1;
         return { ok: wakeFails !== true };
       },
