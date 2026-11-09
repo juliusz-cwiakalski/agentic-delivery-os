@@ -8,12 +8,11 @@
 - **Spec compliance:** PASS · **Plan compliance:** PASS
 - **Next step:** PROCEED (fix low/info items opportunistically; none blocking)
 
-> Environment note: the disposable review clone at `/tmp/opencode/gh275-e2e`
-> disappeared mid-review (external cleanup). The review was completed in the
-> authoritative source worktree `/home/juliusz/git/cwiakalski-pub-gh/agentic-delivery-os-gh-275`,
-> which is the same branch with the full P6 commit (`f4521ced`) plus the
-> phase-7 doc-sync commits (`08aed1fe`, `d5feb29b`). The adapter/host/composition/
-> test source tree is the same code lineage; only additional `doc/**` reconciliation
+> Environment note: the disposable review clone disappeared mid-review (external
+> cleanup). The review was completed in the primary change worktree on the same
+> branch, which carries the full P6 commit (`f4521ced`) plus the phase-7
+> doc-sync commits (`08aed1fe`, `d5feb29b`). The adapter/host/composition/test
+> source tree is the same code lineage; only additional `doc/**` reconciliation
 > commits differ from the clone tip. All probes below were run there.
 
 ## What the change does

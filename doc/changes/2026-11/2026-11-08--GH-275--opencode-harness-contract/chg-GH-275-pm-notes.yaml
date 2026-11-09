@@ -11,7 +11,7 @@ phases:
   delivery: { started: null, completed: 2026-11-09T01:45:29.051Z }
   system_spec_update: { started: null, completed: 2026-11-09T01:55:46.369Z }
   review_fix: { started: null, completed: 2026-11-09T02:09:21.950Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-09T02:27:13.870Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions: []
@@ -446,5 +446,44 @@ notes:
       P6 operator E2E evidence recorded in test plan §10; they are not
       re-executed in this review. Review verdict committed with the review
       artifact."
+    type: info
+    date: "2026-11-09"
+  - text: "Phase 9 quality_gates iteration 1 = FAIL on the aggregate `pnpm check`
+      (exit 1, 6554 pass / 4 skip / 4 fail, 777 files; lint, format:check, build
+      and typecheck green). Two root causes, neither a product defect. (A) Three
+      failures from one real privacy violation: the new tracked review artifact
+      code-review/review-iter-1.md carried two absolute workstation paths (the
+      disposable clone path and the primary worktree path) and
+      scripts/checks/privacy-literals.ts reported `private.absolute-user-path`
+      at line 13; TC-PRIVACY-020 and both TC-WIRE-002 cases assert the privacy
+      scan is green. Remediated by rewriting the environment note to name the
+      worktree without an absolute path; no product code, spec, plan or review
+      verdict changed. (B) One environmental failure: CI baseline parity clones
+      into a hardcoded system `/tmp`, which is a different filesystem from the
+      checkout and fails with `Invalid cross-device link`; it is a harness
+      filesystem limitation, not repository code. Re-run uses
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` so the parity fixture stays on the
+      same filesystem, matching the recorded P6 procedure. No phase reopen and
+      no @fixer delegation: the only tracked change is the review-artifact
+      privacy fix. Retro: privacy-literal scanning covers doc/changes/** and
+      catches operator paths in review artifacts, so review evidence must name
+      worktrees relatively from the start; and the parity fixture's hardcoded
+      /tmp is a recurring environment trap that the aggregate-gate procedure
+      already neutralizes with a checkout-local TMPDIR."
+    type: info
+    date: "2026-11-09"
+  - text: "Phase 9 quality_gates iteration 2 = PASS on the quiesced tree.
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 in 414 s: lint and format:check
+      clean; build and typecheck green; tests 6558 pass / 4 skip / 0 fail across
+      6562 tests and 777 files; check:boundaries green (depcruise 356 modules /
+      1041 dependencies, ambient-globals 162 files, workspace entrypoints,
+      secret-read 325 files); prompt-conformance 5 prompts clean;
+      help-guide-coverage all required commands covered; exports-parity 5
+      publishables pass attw. The privacy-literal fix removed the only
+      `private.absolute-user-path` violation and the checkout-local TMPDIR
+      removed the cross-device clone failure. plan validate GH-275 remains valid
+      with 0 errors. The committed review artifact and pm-notes carry the final
+      evidence; the quality-gates completion commit includes the sanitized
+      review artifact and this note."
     type: info
     date: "2026-11-09"
