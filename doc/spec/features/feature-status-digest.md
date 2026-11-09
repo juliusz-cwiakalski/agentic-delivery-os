@@ -72,6 +72,8 @@ The section ids and order are fixed:
 | 8 | `spend` | Spend | The spend read side's verified telemetry and transition fold over the state ledger |
 | 9 | `typed-questions` | Typed questions | One verified read of the blocker ledger |
 
+**Reserved escalation slot (GH-241).** Inside the `typed-questions` section one open owner-audience `decision-needed` question whose `lane` is `coordinator` and whose `ref` is `<coordinatorId>#<budgetEpochId>` (exactly one `#`, both sides non-empty) renders **first by index**, even when the ordinary eight-question cap is reached. The other questions follow in the delivered rank order, up to seven, and the lowest-ranked question is the one displaced and counted as omitted; the rendered bound therefore stays at eight and the omitted count stays exact. The slot is selected from the payload alone by that predicate and adds no coordinator-state read, no new section, no new digest schema, and no new evidence source. The control digest is unchanged.
+
 Every section has exactly one state:
 
 | State | Meaning |

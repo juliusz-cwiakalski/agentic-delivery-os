@@ -630,6 +630,40 @@ export const capSizedFacts = (): StatusFacts => {
   });
 };
 
+/**
+ * The cap-sized fact set plus one reserved escalation question ranked ninth
+ * (GH-241 TC-COORD-063/064): eight older `decision-needed` questions displace it
+ * from the ordinary first-eight window, so only the reserved slot can render it.
+ */
+export const reservedSlotFacts = (): StatusFacts => {
+  const questions: BlockerQuestionRecord[] = Array.from({ length: 8 }, (_value, index) => ({
+    schemaId: "delivery.blocker.question.v1",
+    id: `q-old-${index + 1}`,
+    type: "decision-needed",
+    audience: "coordinator",
+    lane: "coordinator",
+    ref: null,
+    question: `Older coordinator question ${index + 1}`,
+    options: ["continue"],
+    askedAt: `2026-10-0${index + 1}T00:00:00Z`,
+  }));
+  questions.push({
+    schemaId: "delivery.blocker.question.v1",
+    id: "q-escalation",
+    type: "decision-needed",
+    audience: "owner",
+    lane: "coordinator",
+    ref: "coordinator-main#epoch-1",
+    question: "Coordinator coordinator-main exhausted its restart budget (10/10).",
+    options: ["restart-fresh-budget", "park-owner-review"],
+    askedAt: "2026-10-09T00:00:00Z",
+  });
+  return baseFacts({
+    ...capSizedFacts(),
+    blockers: blockersRead(questions, []),
+  });
+};
+
 /** An all-caps fact set: every declared surface populated at its limit (TC-ATT-029). */
 export const allCapsFacts = (): StatusFacts => {
   const providerNames = Array.from({ length: 8 }, (_, index) => `provider-${index}`);

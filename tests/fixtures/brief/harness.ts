@@ -51,10 +51,14 @@ export {
   REVIEWS_AVAILABLE,
   REVIEWS_UNAVAILABLE,
   repository,
+  reservedSlotFacts,
   statusInstance,
   unavailableBinding,
   workItemRead,
 } from "../status/harness";
+
+/** Re-export the reserved-slot fact builder for the brief reserved golden. */
+export { reservedSlotFacts };
 
 /** The brief runtime is the status runtime: it exposes exactly the same members. */
 export const briefRuntime = statusRuntime;

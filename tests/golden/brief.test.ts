@@ -13,6 +13,7 @@ import {
   briefRuntime,
   capSizedFacts,
   makeWorkItem,
+  reservedSlotFacts,
   runBriefCli,
   workItemRead,
 } from "../fixtures/brief/harness";
@@ -134,5 +135,31 @@ describe("TC-BRIEF-015 golden machine envelope", () => {
     expect(changed.stdout).not.toBe(readFileSync(envelopePath, "utf8"));
     const restored = await runBriefCli(["--json", "brief"], briefRuntime(capSizedFacts()));
     expect(restored.stdout).toBe(readFileSync(envelopePath, "utf8"));
+  });
+});
+
+/**
+ * TC-COORD-064 (golden half, GH-241): the brief reserved-slot golden mirrors the
+ * digest; the control golden above is unchanged.
+ */
+describe("TC-COORD-064 reserved-slot brief golden", () => {
+  const reservedHuman = join(ROOT, GOLDEN, "reserved-human.txt");
+  const reservedEnvelope = join(ROOT, GOLDEN, "reserved-envelope.json");
+
+  test("the reserved-slot human bytes equal the committed golden", async () => {
+    const run = await runBriefCli(["brief"], briefRuntime(reservedSlotFacts()));
+    expect(run.exitCode).toBe(0);
+    expect(run.stdout).toBe(readFileSync(reservedHuman, "utf8"));
+  });
+
+  test("the reserved-slot envelope equals the committed golden", async () => {
+    const run = await runBriefCli(["--json", "brief"], briefRuntime(reservedSlotFacts()));
+    expect(run.exitCode).toBe(0);
+    expect(run.stdout).toBe(readFileSync(reservedEnvelope, "utf8"));
+    assertEnvelopeContract(JSON.parse(run.stdout));
+  });
+
+  test("the control brief golden is untouched by the slot addition", () => {
+    expect(readFileSync(humanPath, "utf8")).not.toContain("q-escalation");
   });
 });

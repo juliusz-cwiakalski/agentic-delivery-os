@@ -26,7 +26,6 @@ import {
   STATUS_MAX_FINDINGS_PER_SECTION,
   STATUS_MAX_HUMAN_BYTES,
   STATUS_MAX_HUMAN_LINES,
-  STATUS_MAX_ITEMS_PER_SECTION,
   STATUS_MAX_OPEN_PULL_REQUESTS,
   STATUS_MAX_PARKED_CHANGES,
   STATUS_MAX_PIPELINE_RUNS,
@@ -80,6 +79,10 @@ import {
   type WorkItem,
 } from "#contracts";
 import { rankBlockerQuestions } from "./blockers.js";
+import {
+  isReservedEscalationQuestion,
+  projectReservedSlotQuestions,
+} from "./coordinator-escalation.js";
 import { classifyPipelineRuns } from "./ci-result.js";
 import { evaluateOwnerGateSla } from "./owner-gate-sla.js";
 
@@ -689,11 +692,11 @@ const rankHygieneEntries = (
     .sort((left, right) => compareHygieneItems(left.item, right.item));
 
 const conformsEpic = (item: WorkItem): boolean => {
-  const token = STATUS_HYGIENE_LABEL_CONVENTIONS.epicToken.toLowerCase();
+  const epicToken = STATUS_HYGIENE_LABEL_CONVENTIONS.epicToken.toLowerCase();
   const prefix = STATUS_HYGIENE_LABEL_CONVENTIONS.epicPrefix.toLowerCase();
   return item.labels.some((label) => {
     const lower = label.toLowerCase();
-    return lower === token || lower.startsWith(prefix);
+    return lower === epicToken || lower.startsWith(prefix);
   });
 };
 
@@ -1662,8 +1665,26 @@ const typedQuestionsSection = (facts: StatusFacts): StatusSection => {
   }
   const ranking = rankBlockerQuestions(read.value.questions, read.value.answers, facts.nowMs);
   const open = ranking.open;
-  const rendered = capped(open, STATUS_MAX_ITEMS_PER_SECTION);
-  const omitted = open.length - rendered.length;
+  // The reserved escalation slot renders first by index even at the cap; up to
+  // seven other questions follow in rank order and the lowest-ranked is
+  // displaced and counted as omitted (GH-241 AC-F6-1). The predicate is
+  // payload-only: no coordinator state is read here.
+  const reserved = open.find((question) =>
+    isReservedEscalationQuestion({
+      type: question.type,
+      audience: question.audience,
+      lane: question.lane,
+      ref: question.ref,
+    }),
+  );
+  const slot = projectReservedSlotQuestions(
+    open.map((question, index) => ({ id: question.id, index })),
+    reserved?.id ?? null,
+  );
+  const rendered = slot.rendered
+    .map((entry) => open.find((question) => question.id === entry.id))
+    .filter((question): question is (typeof open)[number] => question !== undefined);
+  const omitted = slot.omitted;
   const reasons: StatusEvidenceReason[] = [open.length === 0 ? "observed-empty" : "observed"];
   if (omitted > 0) reasons.push("source-truncated");
   return {

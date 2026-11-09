@@ -8,6 +8,7 @@ import { join } from "node:path";
 import {
   capSizedFacts,
   makeWorkItem,
+  reservedSlotFacts,
   runStatusCli,
   statusRuntime,
   workItemRead,
@@ -82,5 +83,41 @@ describe("TC-STATUS-031 golden full-digest snapshot", () => {
     await runStatusCli(["status"], statusRuntime(capSizedFacts()));
     expect(statSync(digestPath).mtimeMs).toBe(beforeDigest);
     expect(statSync(humanPath).mtimeMs).toBe(beforeHuman);
+  });
+});
+
+/**
+ * TC-COORD-063 (golden half, GH-241): the reserved escalation slot golden is the
+ * only permitted digest diff; the control golden above is unchanged.
+ */
+describe("TC-COORD-063 reserved-slot digest golden", () => {
+  const reservedDigest = join(ROOT, GOLDEN, "reserved-digest.json");
+  const reservedHuman = join(ROOT, GOLDEN, "reserved-human.txt");
+
+  test("the reserved-slot machine digest equals its committed bytes", async () => {
+    const run = await runStatusCli(["--json", "status"], statusRuntime(reservedSlotFacts()));
+    expect(run.exitCode).toBe(0);
+    expect(run.stdout).toBe(readFileSync(reservedDigest, "utf8"));
+  });
+
+  test("the reserved-slot human text equals its committed bytes", async () => {
+    const run = await runStatusCli(["status"], statusRuntime(reservedSlotFacts()));
+    expect(run.exitCode).toBe(0);
+    expect(run.stdout).toBe(readFileSync(reservedHuman, "utf8"));
+  });
+
+  test("the reserved question is index 0 and one question is omitted", () => {
+    const digest = JSON.parse(readFileSync(reservedDigest, "utf8")) as {
+      data: { sections: { id: string; questions?: { id: string }[]; counts: { omitted: number } }[] };
+    };
+    const section = digest.data.sections.find((entry) => entry.id === "typed-questions");
+    expect(section?.questions?.[0]?.id).toBe("q-escalation");
+    expect(section?.counts.omitted).toBe(1);
+  });
+
+  test("the control golden is untouched by the slot addition", () => {
+    const control = readFileSync(digestPath, "utf8");
+    expect(control).not.toContain("q-escalation");
+    expect(control).not.toContain("coordinator-main#epoch-1");
   });
 });

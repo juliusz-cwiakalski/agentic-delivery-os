@@ -8,7 +8,7 @@
  */
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { briefRuntime, capSizedFacts, runBriefCli } from "../harness";
+import { briefRuntime, capSizedFacts, reservedSlotFacts, runBriefCli } from "../harness";
 
 const directory = import.meta.dir;
 
@@ -17,6 +17,12 @@ const main = async (): Promise<void> => {
   const machine = await runBriefCli(["--json", "brief"], briefRuntime(capSizedFacts()));
   writeFileSync(join(directory, "human.txt"), human.stdout, "utf8");
   writeFileSync(join(directory, "envelope.json"), machine.stdout, "utf8");
+  // GH-241: the reserved escalation-slot golden is regenerated explicitly here
+  // only; the control files above are never touched by the slot case.
+  const reservedHuman = await runBriefCli(["brief"], briefRuntime(reservedSlotFacts()));
+  const reservedMachine = await runBriefCli(["--json", "brief"], briefRuntime(reservedSlotFacts()));
+  writeFileSync(join(directory, "reserved-human.txt"), reservedHuman.stdout, "utf8");
+  writeFileSync(join(directory, "reserved-envelope.json"), reservedMachine.stdout, "utf8");
 };
 
 await main();

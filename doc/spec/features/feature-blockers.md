@@ -135,6 +135,8 @@ One pure ranking produces the order for every attention surface.
 
 The declared pickup predicate is payload-determinable: an open question carrying `rank: 1` and `audience: "coordinator"` at the head of the digest ranking is the coordinator pickup signal. The channel only makes the predicate determinable; it wakes nothing and starts no iteration.
 
+**Coordination supervision as the enforcement arm (GH-241).** Coordinator supervision consumes this channel as its enforcement arm: it performs one verified ledger read per collection cycle, applies the delivered `isCoordinatorPickup` predicate strictly (rank 1, open — an absent `status` counts as open — and `coordinator` audience), and wakes the coordinator within one collection cycle. Exactly one durable wake record per question lifetime is appended on a successful wake; `already-woken`, `answered-before-wake`, `delivery-failed`, and `no-pickup` are tick results that append nothing, so a retry cannot duplicate a record. Restart exhaustion publishes exactly one owner-audience `decision-needed` question with `lane` `coordinator` and `ref` `<coordinatorId>#<budgetEpochId>`, and the digest and brief keep a reserved render-first slot for it. The question vocabulary, ranking, audience routing, and command grammar are unchanged.
+
 ### List surface
 
 ```
