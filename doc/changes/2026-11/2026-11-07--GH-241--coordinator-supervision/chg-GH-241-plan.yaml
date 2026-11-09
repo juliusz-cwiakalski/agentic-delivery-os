@@ -7,7 +7,7 @@
 #             F-02/F-5, F-07/F-6, F-08/F-7, F-10/F-9, F-11, and D-6;
 #             F-1..F-10; 50 ACs; DEC-1..DEC-13; DM-1..DM-11; EVT-1..EVT-7;
 #             NFR-1..NFR-15; Appendix A..H)
-#   - Tests:  ./chg-GH-241-test-plan.md (v1.5; 76 TCs TC-COORD-001..099;
+#   - Tests:  ./chg-GH-241-test-plan.md (v1.6; 76 TCs TC-COORD-001..099;
 #             50/50 AC coverage; SC-M1-25 clause map in section 3.4; section 7
 #             is the file/command inventory this plan maps onto phases)
 #   - Review: ./review/review-iter-1.md (FAIL; 21 findings F-01..F-21;
@@ -275,7 +275,7 @@ tier:
   escalationTriggers:
     - "error-table-sync gate red after Phase 1 (exact two-code allowlist, set 36->38, table 115->121, or documented-row binding failed)"
     - "a status/brief golden diff outside the declared reserved escalation slot"
-    - "a TDR-0017/TDR-0018, spec v1.5, or test-plan v1.5 pinned contract requires reshaping (reopens the test plan per GAP-T1)"
+    - "a TDR-0017/TDR-0018, spec v1.6, or test-plan v1.6 pinned contract requires reshaping (reopens the test plan per GAP-T1)"
     - "the work begins to require a daemon command, control socket, lane supervision, OS installer, or dispatch surface (M1-S18 / M1-S9)"
     - "a coordinator record, error evidence, or rendered output contains prompt, transcript, secret, or credential content"
 defaultLeases:
