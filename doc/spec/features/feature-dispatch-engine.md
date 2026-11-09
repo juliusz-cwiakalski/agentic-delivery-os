@@ -8,8 +8,8 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution, the optional admission preflight (truth-read credential resolution plus one bounded work-item read) with status-keyed refusal identities, queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, and the CLI-independent bash fallback authority read."
 links:
-  related_changes: ["GH-239", "GH-275", "GH-279"]
-  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279"]
+  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021"]
   contracts:
     - "packages/core/src/contracts/dispatch.ts"
     - "packages/core/src/contracts/delivery-result.ts"
@@ -60,7 +60,7 @@ Four kinds of refusal happen before any session attempt exists: an unknown harne
 5. **Watch with progress-based liveness.** Token delta, session traffic, worktree activity, or prefill advancement anywhere in the observed session tree counts as progress. A stall requires two consecutive sourced evaluations with no advance; a bare elapsed timer never stalls a lane. An absent reading stays absent or unknown and is never coerced to zero. The evaluation cadence is `lane.liveness-interval`. In the shipped composition the watch polls at that cadence while evidence collection is pending, records the observed verdict trail as bounded `liveness:<verdict>` evidence, and cancels its timer when collection finishes. A stall is a current-state verdict, not a latch: any later advancing observation clears it, so a transient mid-run stall stays recorded as liveness evidence and the collected evidence still classifies normally.
 6. **Admit restarts and resumes.** Restart admission delegates to the delivered restart-budget gate with the bound from `lane.restart-budget` and the persisted restart count. At or above the bound, an attempt whose session has not completed refuses `dispatch.restart-budget-exceeded` with result token `max-restarts`, outcome `failed`, exit `1`, one attempt record, the delivered terminal exhaustion record, and a typed escalation; a completed harness session keeps its own classification and is never re-keyed to a restart refusal by an already-reached bound. Resume economics delegates to the delivered admission: attach-and-continue consumes no restart ordinal, an uneconomical prefill re-pay refuses `dispatch.resume-uneconomical` with token `failed`, outcome `failed`, exit `1`, and one attempt record, and unreadable token or cost facts refuse rather than admit. A stall that is still current when evidence collection resolves is routed through the same restart-admission gate: at or above the bound the attempt is the restart-budget refusal with no second spawn; below the bound the stall is recorded and left to lane supervision, because the delivered session port exposes no kill operation and the command never leaks a silent second session.
 7. **Classify and derive truth.** The shared classifier yields a harness outcome and token; truth derivation then decides the final token from branch commits, PR state and URL, ledger progress, tracker state, and CI. A success claim is never accepted on an exit code alone.
-8. **Record and render.** One attempt record is appended under the state fence, and the command renders either the four-key bash-continuity text or the machine envelope.
+8. **Record and render.** One attempt record is appended under the state fence, and the command renders either the four-key bash-continuity text (which gains one bounded `detail:` prose line in verbose human mode) or the machine envelope.
 
 ## Admission preflight
 
@@ -138,7 +138,11 @@ last_message=<bounded, redacted, single line>
 
 The bash-internal `closeout_unverified=` key is not part of this contract; dispatch expresses unverified outcomes through `pr-open-unverified` and `state-unverified`.
 
+Without `--verbose`, human text is exactly those four keys. With `--verbose`, the dispatch human-text selection renders the same four keys and, when the result carries the pre-session failure detail, appends one bounded `detail:` prose line naming the underlying harness failure `kind` and `code`, and the field when the failure carries one. The appended line is not a `key=value` line, so the non-verbose four-key contract is unchanged.
+
 Machine mode renders the standard command envelope. Dispatch `data` carries `result`, `prUrl`, `phaseLedger` (`completed`, `total`, `variant`), `restarts`, `resumeAmplification`, `harness`, `handoverState`, `outcome`, and `lastMessage`, plus a bounded `truncation` marker when a field is cut. An attempt-stage classified failure that carries an error identity is a data-bearing success envelope: the top-level envelope carries no `error`, while `data.error` carries the full error-table fields (`code`, `category`, `retryable`, `consequence`, `remediationHint`, and `summary`) beside `data.result` and `data.outcome`; consumers read `data.result` and `data.error` together. A recorded harness spawn refusal is a data-bearing success envelope with `data.result` and `data.outcome` and no error identity to nest. A pre-session refusal uses the standard top-level error envelope instead.
+
+A pre-session spawn failure types `data.error` as `DispatchEnvelopeError`: the delivered `CommandResultError` fields plus an additive `detail` carrying the underlying harness failure `kind` and `code`, with `field` present only when the failure carries one. The detail is always present on that path because the underlying `HarnessFailure` is always available there; it is identifiers only, single-line, bounded by `DISPATCH_MAX_ERROR_DETAIL_CHARS` (256), and never carries an environment value or secret. The `dispatch.session.spawn-failed` identity, category, retryability, consequence, remediation hint, result token, outcome, exit projection, and last message are unchanged, and the detail adds no new error code, delivery-result token, classifier row, or error-table row. It reaches machine JSON through the shared whole-envelope serializer and reaches verbose human output through the dispatch human-text selection.
 
 Dispatch has no merge port and no merge code path. A merge-ready PR stays `pr-open` or `pr-open-unverified` for the coordinator's `merge`.
 
@@ -231,7 +235,7 @@ The `dispatch` error kind carries four rows, all non-retryable with consequence 
 
 | Code | Category | Projection | Exit | Meaning |
 |---|---|---|---|---|
-| `dispatch.session.spawn-failed` | user | user-validation | 1 | The harness or process failed before a session existed. |
+| `dispatch.session.spawn-failed` | user | user-validation | 1 | The harness or process failed before a session existed; `data.error.detail` carries the underlying harness failure `kind` and `code`, plus `field` when the failure carries one. |
 | `dispatch.restart-budget-exceeded` | user | user-validation | 1 | Restart admission was refused on an existing lane. |
 | `dispatch.resume-uneconomical` | user | user-validation | 1 | Resume admission was refused on an existing lane. |
 | `dispatch.state-unverified` | platform | platform-provider | 2 | Dispatch truth could not be read, so no verdict was derived. |
@@ -248,6 +252,7 @@ The admission refusals and resolve failures add no `dispatch` row. An admission 
 | Machine `data` | 65,536 UTF-8 bytes |
 | Human output | 40 lines, 8,192 bytes |
 | `last_message` | 512 characters, single line, redacted |
+| `data.error.detail` | 256 characters, identifiers only, single line |
 | Evidence references per record | 16 |
 | Divergence resolution note | 240 characters |
 | Unresolved divergence ids in a summary | 20 |

@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The executable CLI surface: a non-installed Bun bin plus a `main` composition entry, working-name resolution (typed configuration, the non-empty `DELIVERY_OS_WORKING_NAME` override, then the neutral `delivery-os` default), root and per-command `--help` plus `--version` with no state, network, git, or configuration read, the exact prompt-required command composition including the `dispatch` and `coordinator` families, fail-closed `fallback.internal` containment for an uncomposed invocation, the declared credential references registered for serialization redaction from the injected environment, and the production composition's single repository-facts resolution that supplies the queue repository binding only as a complete key-and-root pair."
 links:
-  related_changes: ["GH-242", "GH-239", "GH-273", "GH-241", "GH-279"]
+  related_changes: ["GH-242", "GH-239", "GH-273", "GH-241", "GH-277", "GH-279"]
   related_decisions: ["ADR-0003", "TDR-0005", "TDR-0019"]
   contracts:
     - "packages/cli/bin/delivery-os.ts"
@@ -37,7 +37,7 @@ An invocation outside the composed set fails closed through the existing `fallba
 | `<binary> <command> [options] [args]` | The composed command runs through `runCli` | The command's own `{0, 1, 2}` projection |
 | `<binary> <uncomposed-command>` | Classified `fallback.internal` failure naming the missing composition | `2` |
 
-Global flags on every surface are `--json`, `--verbose`, and `--pretty`. Command help is served from a static inventory (`packages/cli/src/help.ts`); a global flag before `--help` does not prevent help resolution. An unknown `<command> --help` path has no help entry and falls through to the classified composition failure. The help inventory covers every prompt-required command and its subcommands.
+Global flags on every surface are `--json`, `--verbose`, and `--pretty`. `--json` selects the machine envelope; `--verbose` forces the full machine envelope in either machine mode and also selects a command's bounded verbose human diagnostic where one is supplied (the dispatch command names the underlying harness failure `kind`, `code`, and, when present, `field`); `--pretty` affects indentation only and never re-expands a scripted line. Command help is served from a static inventory (`packages/cli/src/help.ts`); a global flag before `--help` does not prevent help resolution. An unknown `<command> --help` path has no help entry and falls through to the classified composition failure. The help inventory covers every prompt-required command and its subcommands.
 
 ## Composition
 
