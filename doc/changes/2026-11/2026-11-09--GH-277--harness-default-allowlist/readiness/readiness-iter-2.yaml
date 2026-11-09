@@ -1,0 +1,298 @@
+schema: readiness-review.v1
+iteration: 2
+verdict: NOT_READY
+workItemRef: GH-277
+date: 2026-11-09
+pause_required: false
+gate: dor_check
+authority: .opencode/agent/readiness-reviewer.md
+artifact_set:
+  spec: chg-GH-277-spec.md (v1.2)
+  test_plan: chg-GH-277-test-plan.md (v1.2)
+  plan: chg-GH-277-plan.yaml
+  pm_notes: chg-GH-277-pm-notes.yaml
+  ticket: "GH-277 (GitHub issue 277, juliusz-cwiakalski/agentic-delivery-os)"
+  governing_decision: "doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md (status Proposed; owner acceptance at PR review)"
+
+verdict_basis: >-
+  NOT_READY. All six iteration-1 blocking findings are genuinely remediated at the
+  artifact level and were verified against delivered source: DM-4 declares the additive
+  optional `HumanTextContext` widening with a §8.5 compatibility bullet, a §16 seam row,
+  an Appendix D evidence row, and AC-F5-3; the byte-pinned spawn-failure golden and its
+  consumer are owned by plan phase P2; TC-HDA-030 step 8 now asserts the reachable
+  `harness.spawn.refused` no-field case; the end-to-end proof runs under the probe brand
+  `gh277-probe` with state root `$HOME/.gh277-probe-state` and never releases a live
+  lease; "byte-identical" is replaced by the achievable git-status/HEAD claim; and
+  spec §17.1 defines a 13-condition Definition of Done bound to named evidence. Three
+  new blocking gaps remain. (1) The E2E assertion is stated as absolute
+  `git status --porcelain` emptiness, which the change's own in-flight artifacts make
+  unsatisfiable during P4 (TDR-0017 is untracked until that phase's boundary commit).
+  (2) DoD-6 still claims the proof "mutates no file in this change's worktree", which
+  the procedure's own `pnpm build` in `$REPO` violates. (3) Two delivered contract-surface
+  inventory gates (`tests/structure/port-contract-inventory.test.ts` with
+  `tests/fixtures/ports/v1-contract-inventory.json`, and
+  `tests/structure/content-inventory.test.ts` executable allowances) pin the exact
+  `packages/core/src/contracts` export set and are in no phase scope, so DM-3's new
+  `DispatchEnvelopeError` export fails `pnpm test` only at the P4 aggregate gate.
+
+facets:
+  spec_completeness: PASS
+  ac_quality: PASS
+  plan_coverage: PASS
+  test_traceability: PASS
+  cross_artifact_consistency: FAIL
+  decision_capture: PASS
+  system_spec_consistency: PASS
+  plan_doc_update_coverage: PASS
+  plan_code_area_coverage: FAIL
+  dod_defined: FAIL
+
+counts:
+  critical: 0
+  major: 3
+  minor: 3
+  nit: 2
+
+iteration_1_verification:
+  - id: F1
+    subject: "DM-4 public-contract change (CommandDefinition.humanText / HumanTextContext)"
+    status: FIXED
+    evidence: >-
+      spec 240 (DM-4), 270 (§8.5), 369 (§16), 395 (AC-F5-3), 557 (Appendix D);
+      test plan 997 (TC-029 step 5 reworded), 1113 (TC-032 step 10 two-parameter clause),
+      53 (GAP-T5); plan 200-210, 222 (P2 owns packages/cli/src/index.ts).
+      Delivered seam confirmed at packages/cli/src/index.ts:51 and :351-353.
+  - id: F2
+    subject: "spawn-failure golden owned by plan P2 with its consumer"
+    status: FIXED
+    evidence: >-
+      plan 229-230 (P2 scope), 55-60 (golden pin), 207-212 (summary);
+      test plan 1580-1581 (§7.1), 1647/1650 (§7.2), 1544 (§6.4), 1038, 1150.
+      Probe: golden carries six error fields and no detail; consumer compares
+      stdout.trim() byte-for-byte (tests/golden/dispatch-errors.test.ts:53-57);
+      scenario failure is harness.spawn.refused with no field
+      (tests/fixtures/dispatch/harness.ts:158-162).
+  - id: F3
+    subject: "TC-HDA-030 step 8 reachable detail case aligned with F-5/Appendix C"
+    status: FIXED
+    evidence: >-
+      test plan 1037 (step 8), 1039 (step 10), 1048, 1320, 80; spec 145, 393, 530.
+  - id: F4
+    subject: "§6.3 E2E isolated from the live state root; never releases a real lease"
+    status: FIXED
+    evidence: >-
+      test plan 1336, 1346-1351, 1365-1380, 1388-1397, 1445-1448, 1476-1494, 1536,
+      1247/1280/1291/1300. Derivation confirmed: production.ts:233 +
+      branding/index.ts:78,128 -> $HOME/.gh277-probe-state; user config path matches
+      adapters/src/file/config-source.ts:54-59.
+  - id: F5
+    subject: "'byte-identical' replaced by achievable git status/HEAD claim"
+    status: PARTIALLY_FIXED
+    evidence: >-
+      Fixed in the test plan (1288, 1295, 1501-1503, 1522); not fixed in spec DoD-6
+      (430), which still asserts the proof mutates no file in the worktree.
+      Gitignored outputs confirmed at .gitignore:13-15.
+  - id: F6
+    subject: "§17.1 Definition of Done present and bindable"
+    status: FIXED
+    evidence: >-
+      spec 419-437, DoD-1..DoD-13; test plan 1799-1829 (29 log rows), 1831-1854
+      (M-1..M-20), 1856-1868 (§6.3 evidence). One condition not bindable as written
+      (DoD-6, new finding 2).
+
+findings:
+  - id: N1
+    severity: major
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-277-test-plan.md §6.3 step 0 (1352), step 8 (1504), TC-HDA-101 steps 1/4
+      (1285, 1288), §10 evidence line (1867); chg-GH-277-plan.yaml P4 scope (301-305)
+      and P4 doneArtifacts (315-325); chg-GH-277-pm-notes.yaml (66-73)
+    gap: >-
+      The isolation assertion is absolute git-status emptiness before and after the probe,
+      but this change's own artifacts are untracked/modified while P4 runs: TDR-0017 is
+      untracked until P4 lands it (pm-notes 66-73), P4 also adds the changeset and edits
+      the test plan (305), and a plan phase commits only at its boundary. Probed now:
+      `git status --porcelain` prints `?? doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md`.
+      Step 0 therefore fails its own comment with no declared action (it is neither the
+      FAIL condition nor a STOP), and step 8 fails deterministically, invalidating the
+      AC-F8-2 evidence DoD-6 reads.
+    remediation_target: test_planning
+    fix: >-
+      Record STATUS_BEFORE at step 0 and assert STATUS_AFTER == STATUS_BEFORE at step 8
+      (and in TC-HDA-101 steps 1/4 and the §10 line), naming the expected baseline entries
+      (untracked TDR-0017, untracked changeset, pending test-plan edit). If instead the
+      TDR/changeset commit is meant to precede the probe, restate the P4 single-commit
+      ordering in the plan too.
+
+  - id: N2
+    severity: major
+    facet: dod_defined
+    artifact: >-
+      chg-GH-277-spec.md §17.1 DoD-6 (430) vs chg-GH-277-test-plan.md §6.3 step 0 (1355)
+      and step 8 (1501-1503)
+    gap: >-
+      DoD-6 requires the proof to "mutate no file in this change's worktree", while the
+      procedure's step 0 runs pnpm build in $REPO, rewriting gitignored packages/*/dist and
+      *.tsbuildinfo inside that worktree. The test plan now explicitly disclaims byte
+      identity for this reason, so the DoD condition and the procedure assert incompatible
+      properties; dod_check cannot close AC-F8-2 through the literal wording.
+    remediation_target: specification
+    fix: >-
+      Reword DoD-6 to "no nested-lifecycle mutation: git status --porcelain equals the
+      recorded pre-run baseline and HEAD is unchanged, with only gitignored build outputs
+      rewritten by the deliberate build step". Keep AC-F8-2 unchanged.
+
+  - id: N3
+    severity: major
+    facet: plan_code_area_coverage
+    artifact: >-
+      chg-GH-277-plan.yaml P2 scope (217-230) and P2 gates (213-216); chg-GH-277-test-plan.md
+      §7.1 (1569-1602), §7.2 (1620-1654), §6.4 (1539-1550); delivered
+      tests/structure/port-contract-inventory.test.ts:84-109,134-136;
+      tests/fixtures/ports/v1-contract-inventory.json (modules["dispatch.ts"] 70 names,
+      modules["index.ts"] 1896 names); tests/structure/content-inventory.test.ts:466, 2166-2184
+    gap: >-
+      TC-PORT-001 compares the live contracts export surface to the committed fixture in
+      both directions, so adding DispatchEnvelopeError to contracts/dispatch.ts and
+      re-exporting it from contracts/index.ts (DM-3 239; TC-029 step 8) fails with
+      "dispatch.ts/index.ts: unexpected export DispatchEnvelopeError". content-inventory
+      restricts exported variables in contracts/dispatch.ts to a fixed allowance list, so
+      the named 256-character bound TC-034 step 3 must read (NFR-6 283, AC-F5-5 397) must
+      be added there too. Neither fixture nor suite appears in any phase scope, in
+      §7.1/§7.2, or in §6.4, and P2 does not run pnpm test, so both surface only at the P4
+      aggregate gate.
+    remediation_target: delivery_planning
+    fix: >-
+      Add tests/fixtures/ports/v1-contract-inventory.json (and the content-inventory
+      allowance if the bound is exported) to P2 scope with a deliberate-update note, list
+      them in §7.1/§7.2, add both suites as run-unchanged regressions in §6.4, add
+      `bun test tests/structure/port-contract-inventory.test.ts tests/structure/content-inventory.test.ts`
+      to P2's gates, and state in DM-3 whether the bound constant is exported (if not,
+      TC-034 step 3 must assert the literal 256 and say so).
+
+  - id: N4
+    severity: minor
+    facet: plan_code_area_coverage
+    persistent_from: 1-F10
+    artifact: >-
+      chg-GH-277-plan.yaml P1 summary (134-152); delivered
+      tests/structure/dispatch-composition.test.ts:211-216, 255-261, 445-450, 716-720,
+      908-911; tests/fixtures/queue/production/harness.ts:194-199
+    gap: >-
+      P1's summary still promises only "correct the composition key-set assertion", but
+      three composed parent environments carry { HOME, HARNESS_MODEL, HARNESS_SMALL_MODEL }
+      and no PATH, so after the repair starterInvocations (255) and the resume case's
+      spawns (908) go red, and the expected child key set becomes
+      ["DELIVERY_WORK_PATH","HOME","PATH"].
+    remediation_target: delivery_planning
+    fix: >-
+      Expand P1's summary to name all three parent-environment fact sets, the PATH
+      addition each needs, the two spawn-count assertions, and the new expected key set.
+
+  - id: N5
+    severity: minor
+    facet: test_traceability
+    artifact: >-
+      chg-GH-277-test-plan.md §3.5 (229-230), §5.2 notes (438, 458, 631, 937, 1082, 1177,
+      1195, 1231, 1265, 1301, 1324), §7.2 (1630, 1635, 1644, 1649, 1651, 1653, 1654)
+    gap: >-
+      §3.5 claims the spec line references are v1.2 but most were not re-based after v1.2
+      inserted the DM-4 row and the §8.5 bullet. Probed: NFR-6 is 283 (cited 281), NFR-7
+      284 (282), AC-F5-2 394 (392), AC-F5-5 397 (395), AC-F6-3 400 (398), AC-F7-2 402 (400),
+      AC-F8-1 406 (404), AC-F8-2 407 (405), Appendix A 488-500 (466-476), Appendix B
+      502-514 (480-490), Appendix C 516-540 (494-505 in two rows), §18 439-446 (417-424).
+      Ids all resolve, so execution is not blocked; the anchors are simply wrong.
+    remediation_target: test_planning
+    fix: >-
+      Re-base the listed spec line citations to v1.2, or cite section/id only as §7.2
+      already does for most source anchors.
+
+  - id: N6
+    severity: minor
+    facet: cross_artifact_consistency
+    persistent_from: 1-F12
+    artifact: chg-GH-277-pm-notes.yaml (17 decisions, 39-54 blockers); chg-GH-277-spec.md (21, 351)
+    gap: >-
+      OQ-1's status is now correct, but decisions is still empty although DEC-3 is governed
+      by TDR-0017 (spec links.decisions and §15), and the blocker entry still presents the
+      six iteration-1 findings as the live gate state without noting they were verified
+      remediated. At dod_check that reads as "no governing record, old gate still failing".
+    remediation_target: specification
+    fix: >-
+      Add a decisions entry naming TDR-0017 for DEC-3, and replace the blocker entry with
+      the iteration-2 verdict state once these findings are addressed (the iteration-1
+      record remains the audit trail).
+
+advisories:
+  - id: A1
+    severity: nit
+    facet: plan_doc_update_coverage
+    persistent_from: 1-A1
+    artifact: >-
+      chg-GH-277-plan.yaml phase-7 handoff (326-334);
+      doc/spec/features/feature-result-contract.md:25,84,365;
+      doc/spec/features/feature-cli-entrypoint.md:40; feature-doctor.md:233;
+      feature-brief.md:52,154; feature-status-digest.md:311; feature-owner-gate-sla.md:174
+    gap: >-
+      The handoff names feature-result-contract.md only for the "data-bearing error field
+      set", but that doc also states --verbose is the only full-envelope override, which
+      gains a human-mode meaning from DM-4; the humanText hook is described in four other
+      current-truth docs without arity.
+    fix: >-
+      Add feature-result-contract.md (verbosity/rendering), feature-cli-entrypoint.md, and
+      the humanText hook descriptions to the phase-7 handoff list.
+
+  - id: A2
+    severity: nit
+    facet: cross_artifact_consistency
+    artifact: >-
+      chg-GH-277-test-plan.md §6.3 step 1b (1402-1407);
+      packages/adapters/src/file/config-source.ts:178
+    gap: >-
+      The zero-configuration guard checks the user config and the project-committed configs
+      but not the project-local file (<root>/<configurationDirectoryName>/config.local.yaml),
+      so a clone-local config.local.yaml declaring harness would invalidate the proof while
+      the guard passed.
+    fix: >-
+      Add $E2E/.gh277-probe/config.local.yaml to the guard loop, or state that a fresh clone
+      cannot carry one.
+
+verification_notes:
+  plan_schema: >-
+    chg-GH-277-plan.yaml parses as delivery.plan.v1 with four delivery phases (scope file
+    counts 21/12/6/3); no file appears in two phases; AC ownership 14+2+11+2 and TC
+    ownership 16+2+8+3 both sum to 29 with no duplicates; cross-phase notes (AC-F1-1,
+    AC-F5-3, AC-F8-2) do not transfer ownership.
+  delivered_infrastructure_checked:
+    - "The byte-pinned spawn-failure golden has six error fields and no detail; the consumer compares stdout.trim() byte-for-byte (tests/fixtures/dispatch/golden/errors/spawn-failed.json; tests/golden/dispatch-errors.test.ts:53-57)."
+    - "The scripted harness's spawnFails path returns { kind: harness, code: harness.spawn.refused } with no field (tests/fixtures/dispatch/harness.ts:158-162), matching the retained no-field case."
+    - "HarnessFailure requires kind and code and makes field optional, so F-5/Appendix C's attachment rule is the only reachable one."
+    - "errorOf is shared by the state-unverified row, so the unchanged state-unverified golden is the anti-widening pin (tests/fixtures/dispatch/golden/errors/state-unverified.json)."
+    - "runDispatch claims the lease before anything else (app/dispatch.ts:333-336); claimQueueLease requires the queue entry (app/queue.ts:1116-1128), so the added queue preconditions in TC-010/035 are necessary."
+    - "The pre-session spawn branch returns a data-bearing success envelope (app/dispatch.ts:466-485), token failed projects user-validation -> exit 1, and writeOutput writes humanText only in non-envelope mode (serialize.ts:97-104)."
+    - "LEDGER path is ledger.<workspace>.jsonl (state/index.ts:234) with workspaceId default; record kind dispatch.attempt (contracts/dispatch.ts:20) and payload attemptId/token/outcome/evidenceRefs/ref (189-210)."
+    - "queue list data.leases[] carries repository/ref/leaseId/holder/scope (contracts/queue.ts:572-582); queue add and queue release --holder are valid grammar (commands/queue.ts:381-400, 431-456)."
+    - "The probe brand derivation is real: stateDirectory = homeDirectory/brand.stateDirectoryName (production.ts:233); dotDir + '-state' (branding/index.ts:78,128); user config under $XDG_CONFIG_HOME/.<name>/config.yaml and project-committed under <root>/.<name>/config.yaml, project-local config.local.yaml (adapters/src/file/config-source.ts:54-59,162,178)."
+    - "packages/*/dist and *.tsbuildinfo are gitignored (.gitignore:13-15); git check-ignore confirms both."
+    - "The working tree currently carries an untracked TDR-0017, which is the concrete evidence for finding N1."
+    - "TC-PORT-001 compares the contracts export surface in both directions against tests/fixtures/ports/v1-contract-inventory.json (84-109,134-136); no generator script exists, so the fixture is hand-maintained."
+    - "content-inventory pins exported variables of core/src/contracts/dispatch.ts to a fixed allowance list (466-…, 2166-2184) and inventories only packages sources, so new test files need no registration."
+    - "Config validation returns on the credentialRef branch before the unknown-key check (config/harness.ts:123-133); the catalog entry shape is at catalog.ts:276-284; the builder's single projection point is domain/harness-spawn-env.ts:44-66."
+    - "Every HARNESS_MODEL/HARNESS_SMALL_MODEL occurrence in delivered code/tests/doc-spec is in a phase scope or the phase-7 handoff (defaults.ts, default.resolved.json, spawn-env.ts, queue production harness, dispatch-composition.test.ts, harness-config.test.ts, harness-mutants.test.ts, feature-config-layer.md)."
+    - "TC-RELEASE-001 counts untracked changesets via git ls-files --others, so the gate can pass before the P4 commit (privacy-release.test.ts:19-38); validateChangeset pins five minor packages and a non-empty body (70-86)."
+    - "Commit staging locale-sorts the include list (commit-staging.ts:72), takes topPath from include[0] (commit-act.ts:289), excludes out-of-scope untracked files as stray (62-66), and TRACKER_REF rejects TDR-0017 as invented (commit-message.ts:21,123-129)."
+    - "tests/types/tsconfig.json compiles ./**/*.type-test.ts under pnpm typecheck, so the two new type tests are actually compiled; tests/types/dispatch-contract.type-test.ts makes no assertion on DispatchEnvelopeData['error'], so the DM-3 retype is safe."
+    - "tests/structure/cli-edge-seam.test.ts:545 pins which command files declare humanText, not the type arity, and no test enumerates packages/cli/src/index.ts exports, so DM-4 moves no delivered pin."
+  traceability:
+    ticket_acs_covered: "All five ticket acceptance bullets map to ACs via spec §17's table (F1-1/F2-1/F8-1; F1-2; F3-1/F5-1/F5-3; F7-1/F7-2/F7-3; F5-2/F5-3/F7-4)."
+    ac_to_tc: "29/29 ACs covered; 29 TCs; capability, decision, risk, DM, NFR and interface matrices complete; TC-HDA-006 is a declared release-obligation exception."
+    phase_ownership: "29/29 ACs and 29/29 TCs owned exactly once (P1 14+16, P2 2+2, P3 11+8, P4 2+3)."
+    gaps: "Matrix complete; the residual defects are two unsatisfiable E2E assertions (N1, N2) and one unowned delivered inventory surface (N3)."
+  decisions_routing:
+    change: "DEC-1, DEC-2, DEC-4, DEC-5, DEC-6 stay in the change spec; N6 asks pm-notes to record TDR-0017 as the governing record for DEC-3."
+    system: "DEC-3 is governed by TDR-0017 (status Proposed; owner acceptance at PR review). No new record is required before delivery."
+    needs_human_input: "none; no pause flag raised."
+  forbidden_edits: >-
+    This pass modified no spec, test-plan, plan, or source file and made no commit. It
+    wrote only readiness-review/readiness-iter-2.md and readiness/readiness-iter-2.yaml.

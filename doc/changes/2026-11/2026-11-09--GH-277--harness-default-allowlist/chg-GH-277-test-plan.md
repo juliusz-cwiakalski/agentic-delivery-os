@@ -1,9 +1,9 @@
 ---
 id: chg-GH-277-test-plan
 status: Updated
-version: 1.2
+version: 1.3
 created: 2026-11-09T04:10:00Z
-last_updated: 2026-11-09T07:10:00Z
+last_updated: 2026-11-09T08:10:00Z
 owners: [engineering]
 service: delivery-os harness adapters
 labels: [change, harness, bug, dispatch]
@@ -12,7 +12,7 @@ links:
   implementation_plan: ./chg-GH-277-plan.yaml
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 version_impact: minor
-summary: "Twenty-nine scenarios verifying GH-277: a viable zero-configuration default spawn allowlist (PATH and HOME required, TMPDIR optional, DELIVERY_WORK_PATH injected, no model variables), an additive variable-only optional marker with fail-closed required absence and strictly required credentials, deny-by-default with zero ambient leakage, an additive dispatch data.error.detail that is always present on the pre-session path with kind and code required and field present only when the harness failure carries one, in machine JSON and verbose human output while non-verbose text stays exactly four keys and the spawn-failed identity, token, exit, and last message are unchanged, the additive optional HumanTextContext third parameter of CommandDefinition.humanText (DM-4) with two-parameter definitions still compiling and behaving identically, configuration/schema/defaults and golden-envelope parity, the TC-RELEASE-001 changeset invariant, and one bounded operator-run real dispatch proof in a disposable clone under an isolated probe state root. Every automated scenario is hermetic: the only real child is a synthetic opencode script on a controlled PATH, no live harness CLI runs in CI, and all dispatch facts are injected. Plan v1.2 is aligned with change spec v1.2 and TDR-0017 and names the delivered seams: the verbose diagnostic is selected at the dispatch human-text seam (packages/cli/src/commands/dispatch.ts:133-149) through the additive HumanTextContext and rendered in packages/cli/src/output/dispatch-text.ts, the inspection surface is config get harness.environment --show-origin (packages/cli/src/commands/config.ts:96-155), and the dispatch error type is DispatchEnvelopeError (CommandResultError plus an optional detail), leaving CommandResultError and every other envelope unchanged."
+summary: "Twenty-nine scenarios verifying GH-277: a viable zero-configuration default spawn allowlist (PATH and HOME required, TMPDIR optional, DELIVERY_WORK_PATH injected, no model variables), an additive variable-only optional marker with fail-closed required absence and strictly required credentials, deny-by-default with zero ambient leakage, an additive dispatch data.error.detail that is always present on the pre-session path with kind and code required and field present only when the harness failure carries one, in machine JSON and verbose human output while non-verbose text stays exactly four keys and the spawn-failed identity, token, exit, and last message are unchanged, the additive optional HumanTextContext third parameter of CommandDefinition.humanText (DM-4) with two-parameter definitions still compiling and behaving identically, configuration/schema/defaults and golden-envelope parity, the TC-RELEASE-001 changeset invariant, the two delivered contract-inventory pins (the bidirectional v1 contract surface fixture gains the new DispatchEnvelopeError export and the content-inventory allowance registers the exported 256-character detail bound), and one bounded operator-run real dispatch proof in a disposable clone under an isolated probe state root whose post-run `git status --porcelain` must equal the pre-run baseline captured immediately before the probe while `HEAD` stays unchanged. Every automated scenario is hermetic: the only real child is a synthetic opencode script on a controlled PATH, no live harness CLI runs in CI, and all dispatch facts are injected. Plan v1.3 is aligned with change spec v1.3 and TDR-0017 and names the delivered seams: the verbose diagnostic is selected at the dispatch human-text seam (packages/cli/src/commands/dispatch.ts:133-149) through the additive HumanTextContext and rendered in packages/cli/src/output/dispatch-text.ts, the inspection surface is config get harness.environment --show-origin (packages/cli/src/commands/config.ts:96-155), and the dispatch error type is DispatchEnvelopeError (CommandResultError plus an optional detail), leaving CommandResultError and every other envelope unchanged."
 ---
 
 # Test Plan - Make the default harness spawn allowlist able to start opencode without user configuration
@@ -37,7 +37,8 @@ The most dangerous testing mistakes this plan is designed against are: proving t
 - Regression coverage for the default spawn path with a synthetic `opencode` executable on a controlled `PATH`, an absent-required field assertion in both the harness failure and the dispatch detail, an ambient-leak canary, paired optional-present/optional-absent cases, and machine/verbose/non-verbose assertions (F-7, AC-F7-1..AC-F7-5).
 - Configuration compatibility: `{ name: "X" }` keeps required semantics with no migration, `value` stays `config.secret.forbidden`, non-boolean marker and marker-plus-`credentialRef` stay `config.value.invalid`, and the generated schema/defaults manifest/source hashes pass parity (F-6, AC-F3-5, AC-F6-1..AC-F6-3, NFR-8).
 - The `TC-RELEASE-001` changeset invariant: exactly one added changeset, the five fixed-group packages at `minor`, a non-empty body, no pre-existing changeset modified, and no `@delivery-os/testkit` entry (DEC-5, spec §18).
-- One bounded operator-run real-CLI dispatch proof that reaches classification with any token other than `dispatch.session.spawn-failed` and writes an attempt record into an isolated probe state root, executed outside this change's worktree and without reading or mutating the live state root beyond a read-only lease precondition (F-8, AC-F8-1, AC-F8-2, RSK-6).
+- One bounded operator-run real-CLI dispatch proof that reaches classification with any token other than `dispatch.session.spawn-failed` and writes an attempt record into an isolated probe state root, executed outside this change's worktree and without reading or mutating the live state root beyond a read-only lease precondition, and leaves this worktree's `git status --porcelain` equal to the baseline captured immediately before the probe (expected uncommitted delivery artifacts are permitted baseline content) with `HEAD` unchanged (F-8, AC-F8-1, AC-F8-2, RSK-6, spec §17.1 DoD-6).
+- The two delivered contract-inventory pins: `tests/fixtures/ports/v1-contract-inventory.json` is updated deliberately for the new `DispatchEnvelopeError` export (both `dispatch.ts` and the `contracts/index.ts` re-export) and `tests/structure/content-inventory.test.ts` registers the exported 256-character detail bound in the `core/src/contracts/dispatch.ts` executable allowance (DM-3, NFR-6, spec Appendix C).
 
 ### 1.2 Out of Scope and Known Gaps
 
@@ -49,10 +50,11 @@ The most dangerous testing mistakes this plan is designed against are: proving t
 - **[OUT] No bash-stack changes.** `scripts/**` is not modified and no bash test is an oracle for the typed CLI (NG-7, §7.2). The typed path is proven in TypeScript.
 - **[OUT] No live harness tier in CI.** The automated suites never invoke the real `opencode` or `claude` CLI. The single real-CLI proof is the operator-run procedure in §6.3 (GAP-T1).
 - **[GAP-T1 — the real CLI is proven once, manually]** AC-F8-1/AC-F8-2 cannot run deterministically: they need a live model session and installed CLI. They are proven by the bounded §6.3 procedure during delivery and re-run after merge under an isolated probe state root, with evidence recorded in §10. No AC except AC-F8-1/AC-F8-2 depends on a live CLI.
-- **[GAP-T2 — the detail type is named by spec v1.2 and lands with the implementation]** Spec v1.2 DM-3 and Appendix C name the type: `DispatchEnvelopeError` in `packages/core/src/contracts/dispatch.ts` is the delivered `CommandResultError` (same six fields) plus `detail?: { kind: "harness" | "config"; code: string; field?: string }`, and `DispatchEnvelopeData.error` is retyped from `CommandResultError` to it. The type does not exist in the delivered tree yet, so until it lands the owning authority is spec DM-3/Appendix C; after it lands, every assertion must read the delivered contract. `CommandResultError` (`packages/core/src/contracts/result.ts:36-43`) stays at six fields, and every other envelope keeps its six-field error because it is built from the error table (`packages/cli/src/index.ts:262-272`). §3.5 and TC-HDA-029 record this boundary.
-- **[GAP-T5 — the published human-text type is widened additively by DM-4]** Spec v1.2 DM-4 adds an optional third `HumanTextContext = { readonly verbose: boolean }` parameter to `CommandDefinition.humanText` in `packages/cli/src/index.ts`. The type exists in the delivered tree only as the two-parameter form today; after the change lands, TC-HDA-032 must read the delivered signature and `pnpm typecheck` must accept a two-parameter definition and a direct two-argument call.
+- **[GAP-T2 — the detail type is named by spec v1.3 and lands with the implementation]** Spec v1.3 DM-3 and Appendix C name the type: `DispatchEnvelopeError` in `packages/core/src/contracts/dispatch.ts` is the delivered `CommandResultError` (same six fields) plus `detail?: { kind: "harness" | "config"; code: string; field?: string }`, and `DispatchEnvelopeData.error` is retyped from `CommandResultError` to it. The type does not exist in the delivered tree yet, so until it lands the owning authority is spec DM-3/Appendix C; after it lands, every assertion must read the delivered contract. `CommandResultError` (`packages/core/src/contracts/result.ts:36-43`) stays at six fields, and every other envelope keeps its six-field error because it is built from the error table (`packages/cli/src/index.ts:262-272`). Both contract-inventory pins named in GAP-T6 move with it. §3.5 and TC-HDA-029 record this boundary.
+- **[GAP-T5 — the published human-text type is widened additively by DM-4]** Spec v1.3 DM-4 adds an optional third `HumanTextContext = { readonly verbose: boolean }` parameter to `CommandDefinition.humanText` in `packages/cli/src/index.ts`. The type exists in the delivered tree only as the two-parameter form today; after the change lands, TC-HDA-032 must read the delivered signature and `pnpm typecheck` must accept a two-parameter definition and a direct two-argument call.
+- **[GAP-T6 — two delivered inventory gates pin the widened contract surface]** `tests/structure/port-contract-inventory.test.ts` (`TC-PORT-001`) compares the live export surface of `packages/core/src/contracts/*` against `tests/fixtures/ports/v1-contract-inventory.json` in both directions, so adding `DispatchEnvelopeError` to `packages/core/src/contracts/dispatch.ts` and re-exporting it from `packages/core/src/contracts/index.ts` fails with `dispatch.ts: unexpected export DispatchEnvelopeError` / `index.ts: unexpected export DispatchEnvelopeError` until the fixture is deliberately updated. `tests/structure/content-inventory.test.ts` restricts exported variables in `core/src/contracts/dispatch.ts` to a fixed executable allowance, so the exported 256-character detail bound that TC-HDA-034 reads must be registered there; no package source file is created, so `tests/structure/inventory.json` is unaffected. Both are deliberate pin updates named in §2, §6.4, §7.1, and §7.2 (TC-HDA-029/034), not regressions.
 - **[GAP-T3 — a real dispatch cannot dump the child environment]** The real proof proves a boot and an attempt record; the exact child environment is proven hermetically by the synthetic-CLI suite (TC-HDA-010/012), because a live `opencode` cannot be asked to print its environment. This split is intentional.
-- **[GAP-T4 — resolved by spec v1.2: the verbose rendering seam is named]** Spec v1.2 §2.1/§16 fixes the channel: `--verbose` is parsed in `packages/cli/src/index.ts:317`, passed to `writeOutput` (`packages/cli/src/output/serialize.ts:73, 97-113`), and handed to the dispatch command's human-text selection as the optional `HumanTextContext` (DM-4); the dispatch command selects its human text at `packages/cli/src/commands/dispatch.ts:133-149`, and `renderDispatchText` (`packages/cli/src/output/dispatch-text.ts:28-34`) keeps the four non-verbose keys while the dispatch text module renders the bounded verbose diagnostic. The shared stderr `diagnosticFor` (`packages/cli/src/index.ts:298-303`) stays non-verbose-gated and carries no dispatch envelope data. TC-HDA-032 asserts stdout verbose detail, the two-parameter compatibility clause under `pnpm typecheck`, four-key non-verbose text, and the absence of dispatch detail on stderr; OQ-T3 is closed.
+- **[GAP-T4 — resolved by spec v1.3: the verbose rendering seam is named]** Spec v1.3 §2.1/§16 fixes the channel: `--verbose` is parsed in `packages/cli/src/index.ts:317`, passed to `writeOutput` (`packages/cli/src/output/serialize.ts:73, 97-113`), and handed to the dispatch command's human-text selection as the optional `HumanTextContext` (DM-4); the dispatch command selects its human text at `packages/cli/src/commands/dispatch.ts:133-149`, and `renderDispatchText` (`packages/cli/src/output/dispatch-text.ts:28-34`) keeps the four non-verbose keys while the dispatch text module renders the bounded verbose diagnostic. The shared stderr `diagnosticFor` (`packages/cli/src/index.ts:298-303`) stays non-verbose-gated and carries no dispatch envelope data. TC-HDA-032 asserts stdout verbose detail, the two-parameter compatibility clause under `pnpm typecheck`, four-key non-verbose text, and the absence of dispatch detail on stderr; OQ-T3 is closed.
 
 ### 1.3 Risk-Based Prioritization
 
@@ -75,32 +77,35 @@ The most dangerous testing mistakes this plan is designed against are: proving t
 | 9 | No new failure code, delivery-result token, classifier rule, or error-table row; the four reused identities are `harness.spawn.variable-missing`, `config.credential.missing`, `config.value.invalid`, and `config.secret.forbidden` (spec NFR-4, TDR-0017 C-6). | `TC-HDA-021`, `TC-HDA-033` |
 | 10 | "The builder/composition reads no ambient environment" is a semantic tree invariant plus a negative fixture, not a file hash or a moving-base diff (testing-strategy §Invariant-test authoring). | `TC-HDA-004` |
 | 11 | The only real child in the automated battery is a synthetic `opencode` script on a controlled `PATH`; no real harness CLI runs in CI (spec F-7, NFR-5 analogue, GAP-T1). | `TC-HDA-010`, `TC-HDA-011`, §6.1 |
-| 12 | The end-to-end proof runs in a disposable clone outside this worktree under a probe-only brand (`DELIVERY_OS_WORKING_NAME=gh277-probe`) whose state root is `$LIVE_HOME/.gh277-probe-state`, kills only its own `opencode` child, never writes or releases anything in the live state root, and never lets a nested lifecycle touch this change's worktree (spec AC-F8-2, RSK-6). | `TC-HDA-100`, `TC-HDA-101`, §6.3 |
+| 12 | The end-to-end proof runs in a disposable clone outside this worktree under a probe-only brand (`DELIVERY_OS_WORKING_NAME=gh277-probe`) whose state root is `$LIVE_HOME/.gh277-probe-state`, kills only its own `opencode` child, never writes or releases anything in the live state root, and never lets a nested lifecycle touch this change's worktree: `STATUS_BEFORE` is captured immediately before the probe, the post-run `STATUS_AFTER` must equal it (expected uncommitted P4 artifacts — the untracked `doc/decisions/TDR-0017-…md` record and the new `.changeset/gh-277-…md` — are permitted baseline content), and `HEAD` must be unchanged (spec AC-F8-2, §17.1 DoD-6, RSK-6). | `TC-HDA-100`, `TC-HDA-101`, §6.3 |
 | 13 | The verbose diagnostic is selected at the dispatch human-text seam (`packages/cli/src/commands/dispatch.ts:133-149`) from the optional `HumanTextContext` third parameter (DM-4: `{ readonly verbose: boolean }`), uses the `--verbose` fact parsed at `packages/cli/src/index.ts:317`, and is rendered in `packages/cli/src/output/dispatch-text.ts`; two-parameter definitions and direct two-argument calls stay valid under `pnpm typecheck`; the shared stderr `diagnosticFor` stays non-verbose-gated and carries no dispatch envelope data (spec §2.1, §16, DM-4, AC-F5-3). | `TC-HDA-032` |
 | 14 | The delivered golden spawn-failure envelope gains the always-present detail for a `harness.spawn.refused` failure with no `field`, so the golden byte-equality consumer pins the repaired shape rather than the pre-change six-field error (spec F-5, Appendix C, DM-3). | `TC-HDA-030`, `TC-HDA-033` |
+| 15 | The widened contract surface is pinned by two delivered inventories: `tests/fixtures/ports/v1-contract-inventory.json` gains `DispatchEnvelopeError` under `dispatch.ts` and `index.ts`, and `tests/structure/content-inventory.test.ts` registers the exported 256-character detail bound in the `core/src/contracts/dispatch.ts` executable allowance (spec DM-3, NFR-6, Appendix C). | `TC-HDA-029`, `TC-HDA-034`, §6.4, §7.1, §7.2 |
 
 ## 2. References
 
-- **Change specification (v1.2)**: [chg-GH-277-spec.md](./chg-GH-277-spec.md) — F-1..F-8, AC-F1-1..AC-F8-2 (29 ACs), NFR-1..NFR-9, DEC-1..DEC-6, RSK-1..RSK-8, DM-1..DM-4, OQ-1 (resolved by TDR-0017), OQ-2 (open), §6 flows 1–6, §8.3 data-model impact (DM-3 names `DispatchEnvelopeError`, DM-4 names the additive `HumanTextContext`), §8.4 external contract, §8.5 backward compatibility, §17.1 Definition of Done, Appendix B (proposed default), Appendix C (diagnostic detail shape and the always-present pre-session attachment rule), Appendix D (source evidence index). Spec v1.2 retains the v1.1 decisions, resolves DoR iteration 1 (DM-4, the detail-attachment rule, and the Definition of Done), and keeps `config get harness.environment --show-origin` as the inspection surface (AC-F6-3).
-- **Implementation plan**: [chg-GH-277-plan.yaml](./chg-GH-277-plan.yaml) — authored after this file (phase 4). Where the plan and this test plan disagree on file placement, this plan's §7.1 names the required files and the plan owns sequencing.
+- **Change specification (v1.3)**: [chg-GH-277-spec.md](./chg-GH-277-spec.md) — F-1..F-8, AC-F1-1..AC-F8-2 (29 ACs), NFR-1..NFR-9, DEC-1..DEC-6, RSK-1..RSK-8, DM-1..DM-4, OQ-1 (resolved by TDR-0017), OQ-2 (open), §6 flows 1–6, §8.3 data-model impact (DM-3 names `DispatchEnvelopeError`, DM-4 names the additive `HumanTextContext`), §8.4 external contract, §8.5 backward compatibility, §17.1 Definition of Done (DoD-6 states the achievable worktree claim: post-run `git status --porcelain` equals the pre-run baseline, `HEAD` unchanged, only gitignored build outputs rewritten), Appendix B (proposed default), Appendix C (diagnostic detail shape and the always-present pre-session attachment rule), Appendix D (source evidence index). Spec v1.3 retains the v1.1/v1.2 decisions, resolves DoR iteration 2 (the precise DoD-6 baseline and the expanded current-truth handoff), and keeps `config get harness.environment --show-origin` as the inspection surface (AC-F6-3).
+- **Implementation plan**: [chg-GH-277-plan.yaml](./chg-GH-277-plan.yaml) — phase sequencing and per-phase evidence obligations. Where the plan and this test plan disagree on file placement, this plan's §7.1 names the required test files and the plan owns sequencing.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — `bun test` over `tests/**/*.test.ts`, fixtures never named `*.test.ts`, no moving-base diff assertions, permanent invariants as tree assertions, boundaries via `pnpm check:boundaries`, aggregate gate `pnpm check`.
 - **TypeScript rules**: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — strict typing, no `any`/`!`/unjustified `as`, injected fakes over `mock.module`, deterministic tests with no real clock/network/`$HOME`/sleeps, optional properties modelled as absent.
-- **Decision record (DEC-3 governance)**: [TDR-0017](../../../../doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md) — the additive `optional?: boolean` marker on `HarnessEnvironmentVariable`, absent/`false` = required, credential entries strictly required, no schema bump, and the exact constraints C-1..C-8 this plan verifies. Spec v1.2 lists `TDR-0017` in `links.decisions` and in the §13 "Governed by" row; this plan cites it as the governing record.
+- **Decision record (DEC-3 governance)**: [TDR-0017](../../../../doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md) — the additive `optional?: boolean` marker on `HarnessEnvironmentVariable`, absent/`false` = required, credential entries strictly required, no schema bump, and the exact constraints C-1..C-8 this plan verifies. Spec v1.3 lists `TDR-0017` in `links.decisions` and in the §13 "Governed by" row; this plan cites it as the governing record.
 - **Additive-contract rule**: [TDR-0008](../../../../doc/decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md) and [TDR-0016](../../../../doc/decisions/TDR-0016-harness-streaming-spawn-seam.md) — additive-within-v1, record-governed adapter-contract evolution.
 - **Delivered harness contract**: [packages/core/src/contracts/harness.ts](../../../../packages/core/src/contracts/harness.ts) — `HarnessEnvironmentVariable` (120-124), `HarnessEnvironmentCredential` (127-131), `HarnessEnvironmentEntry` (134), `HarnessExecutionEnvironmentDescriptor` (144-148), `HARNESS_FAILURE_CODES` (286-296), `HarnessFailure` (306-314).
 - **Delivered builder**: [packages/core/src/domain/harness-spawn-env.ts](../../../../packages/core/src/domain/harness-spawn-env.ts) — record-over-parent precedence (48), required-absence failure (49-56), credential failure (60-64).
 - **Delivered configuration**: [packages/core/src/config/defaults.ts](../../../../packages/core/src/config/defaults.ts) (harness branch 45-63; environment 58-62), [packages/core/src/config/harness.ts](../../../../packages/core/src/config/harness.ts) (setting 23-25; validation 110-134), [packages/core/src/config/catalog.ts](../../../../packages/core/src/config/catalog.ts) (entry fields 276-284), [packages/core/src/config/schema.ts](../../../../packages/core/src/config/schema.ts) (object schema and `additionalProperties: false` 19-33).
 - **Generated-artifact parity**: [scripts/checks/exports-parity.ts](../../../../scripts/checks/exports-parity.ts) — `config.schema.json`, `defaults-positions.json`, `schema-sources.json` (23-24, 54-58) and the generate flag (117); [tests/checks/config-default-positions.test.ts](../../../../tests/checks/config-default-positions.test.ts) (16, 18-35).
 - **Delivered composition**: [packages/cli/src/production.ts](../../../../packages/cli/src/production.ts) — allowlist mapping (423-438), `DELIVERY_WORK_PATH` record injection (441-447), bare `opencode` command and args (462-465).
-- **Delivered dispatch**: [packages/core/src/app/dispatch.ts](../../../../packages/core/src/app/dispatch.ts) — `errorOf` (185-200), attempt envelope assembly (347-400), pre-session spawn branch (466-485, message 482, evidence ref 483); [packages/core/src/contracts/dispatch.ts](../../../../packages/core/src/contracts/dispatch.ts) (attempt record 189-210; envelope `data` 277-296, `error?: CommandResultError` at 288; `DISPATCH_MAX_LAST_MESSAGE_CHARS` 356); [packages/core/src/contracts/result.ts](../../../../packages/core/src/contracts/result.ts) (36-43). Spec v1.2 DM-3 adds `DispatchEnvelopeError` in `dispatch.ts` and retypes `DispatchEnvelopeData.error` to it; `result.ts` `CommandResultError` stays unchanged.
+- **Delivered dispatch**: [packages/core/src/app/dispatch.ts](../../../../packages/core/src/app/dispatch.ts) — `errorOf` (185-200), attempt envelope assembly (347-400), pre-session spawn branch (466-485, message 482, evidence ref 483); [packages/core/src/contracts/dispatch.ts](../../../../packages/core/src/contracts/dispatch.ts) (attempt record 189-210; envelope `data` 277-296, `error?: CommandResultError` at 288; `DISPATCH_MAX_LAST_MESSAGE_CHARS` 356); [packages/core/src/contracts/result.ts](../../../../packages/core/src/contracts/result.ts) (36-43). Spec v1.3 DM-3 adds `DispatchEnvelopeError` in `dispatch.ts` and retypes `DispatchEnvelopeData.error` to it; `result.ts` `CommandResultError` stays unchanged.
 - **Delivered dispatch text and verbose seam**: [packages/cli/src/output/dispatch-text.ts](../../../../packages/cli/src/output/dispatch-text.ts) — `renderDispatchText` four keys (28-34); [packages/cli/src/commands/dispatch.ts](../../../../packages/cli/src/commands/dispatch.ts) — `humanText` selection (133-149), which is the dispatch-specific seam for the bounded verbose diagnostic (spec §16); [packages/cli/src/index.ts](../../../../packages/cli/src/index.ts) — the published `CommandDefinition.humanText` two-parameter type (51) and its two-argument call site (351-353), widened additively by DM-4 (`HumanTextContext = { readonly verbose: boolean }`).
 - **Configuration inspection surface**: [packages/cli/src/commands/config.ts](../../../../packages/cli/src/commands/config.ts) — `config get <key>` and `--show-origin` accepted only with `get` (96-99, 102-155), returning `{ key, value, origin }` (150) with `originLabel` (`layer=defaults file=... line=...`).
+- **Contract-surface inventories (deliberate pin updates)**: [tests/structure/port-contract-inventory.test.ts](../../../../tests/structure/port-contract-inventory.test.ts) — `TC-PORT-001` compares the live export surface of `packages/core/src/contracts/*` against [tests/fixtures/ports/v1-contract-inventory.json](../../../../tests/fixtures/ports/v1-contract-inventory.json) in both directions (`compareInventory`, 84-109, 134-136), so the fixture's `modules["dispatch.ts"]` and `modules["index.ts"]` lists must gain `DispatchEnvelopeError`; [tests/structure/content-inventory.test.ts](../../../../tests/structure/content-inventory.test.ts) — the `EXECUTABLE_ALLOWANCES["core/src/contracts/dispatch.ts"]` list (466-509) constrains exported variables (2145-2184), so the exported 256-character detail bound must be registered there; `tests/structure/inventory.json` is unaffected because no new package source file is created.
+- **Project-local configuration layer**: [packages/adapters/src/file/config-source.ts](../../../../packages/adapters/src/file/config-source.ts) — user-global and project-committed candidate shapes (54-59, 162), and the project-local `<root>/<configurationDirectoryName>/config.local.yaml` (178); the §6.3 zero-configuration guard checks the project-local path as well as the committed and user files.
 - **CLI flag plumbing**: [packages/cli/src/index.ts](../../../../packages/cli/src/index.ts) — `diagnosticFor` (298-303), `emitEnvelope`/`verbose` parse (316-317), `humanText` invocation (351-352), `writeOutput` call (413-435); [packages/cli/src/output/serialize.ts](../../../../packages/cli/src/output/serialize.ts) — `WriteOutputOptions.verbose` (73), `writeOutput` (89-115), machine-mode verbose selection (97-98), redacted `humanText` write (103-104).
 - **Error table**: [packages/core/src/contracts/error-table.ts](../../../../packages/core/src/contracts/error-table.ts) — `harness.spawn.variable-missing` row (1001-1011).
 - **Golden dispatch envelope**: [tests/fixtures/dispatch/golden/errors/spawn-failed.json](../../../../tests/fixtures/dispatch/golden/errors/spawn-failed.json) — the byte-pinned spawn-failure envelope consumed by [tests/golden/dispatch-errors.test.ts](../../../../tests/golden/dispatch-errors.test.ts:49-57); its scenario is `createScriptedHarness({ spawnFails: true })`, whose failure is `{ kind: "harness", code: "harness.spawn.refused" }` with no `field` ([tests/fixtures/dispatch/harness.ts](../../../../tests/fixtures/dispatch/harness.ts:158-162)). Under the always-present pre-session attachment rule the golden gains `data.error.detail` with `kind` and `code` and no `field`.
 - **Release invariant**: [tests/checks/privacy-release.test.ts](../../../../tests/checks/privacy-release.test.ts) — `TC-RELEASE-001` (133), fixed packages (42-49), `validateChangeset` (70-86).
 - **Child-process allowlist**: [tests/structure/harness-imports.test.ts](../../../../tests/structure/harness-imports.test.ts) — the exact 12 declared sites (26-40).
-- **Current system spec to reconcile later**: [feature-config-layer.md](../../../../doc/spec/features/feature-config-layer.md) (harness environment default/entry shape), [feature-harness-adapters.md](../../../../doc/spec/features/feature-harness-adapters.md) §1/§4 (deny-by-default descriptor and configuration), [feature-dispatch-engine.md](../../../../doc/spec/features/feature-dispatch-engine.md) (spawn-failure narrative and error table), [feature-result-contract.md](../../../../doc/spec/features/feature-result-contract.md) (error object field set), [feature-adapter-ports.md](../../../../doc/spec/features/feature-adapter-ports.md) (descriptor description and evolution rule).
+- **Current system spec to reconcile later**: [feature-config-layer.md](../../../../doc/spec/features/feature-config-layer.md) (harness environment default/entry shape), [feature-harness-adapters.md](../../../../doc/spec/features/feature-harness-adapters.md) §1/§4 (deny-by-default descriptor and configuration), [feature-dispatch-engine.md](../../../../doc/spec/features/feature-dispatch-engine.md) (spawn-failure narrative and error table), [feature-result-contract.md](../../../../doc/spec/features/feature-result-contract.md) (error object field set and the `--verbose` human-mode meaning), [feature-adapter-ports.md](../../../../doc/spec/features/feature-adapter-ports.md) (descriptor description and evolution rule), [feature-cli-entrypoint.md](../../../../doc/spec/features/feature-cli-entrypoint.md) (global flags), and the `CommandDefinition.humanText` hook descriptions in [feature-status-digest.md](../../../../doc/spec/features/feature-status-digest.md), [feature-brief.md](../../../../doc/spec/features/feature-brief.md), [feature-doctor.md](../../../../doc/spec/features/feature-doctor.md), and [feature-owner-gate-sla.md](../../../../doc/spec/features/feature-owner-gate-sla.md) (spec v1.3 §16/§22/DoD-9).
 - **Sibling precedent**: [chg-GH-275-test-plan.md](../2026-11-08--GH-275--opencode-harness-contract/chg-GH-275-test-plan.md) — the real-CLI proof procedure shape (§6.3), the mutation-evidence table (§7.3), and the execution-log skeleton (§10) reused here.
 
 ## 3. Coverage Overview
@@ -179,15 +184,16 @@ The spec declares no REST/HTTP endpoint (§8.1 N/A) and no event or message cont
 
 - **Uncovered ACs**: none. All 29 AC identifiers from spec §17 appear in §3.1 with at least one TC, and no AC identifier outside the spec is used.
 - **Orphan TCs**: none. Every functional TC names at least one AC in §5.1 and §5.2; TCs also name the F-/NFR-/DEC-/DM- they discharge. `TC-HDA-006` is the one deliberate exception: it names NFR-4/NFR-9 and spec §18 rather than a functional AC because the release invariant has no AC row in the spec; it is a declared delivery obligation (DEC-5), and the requirement to cover it comes from the ticket/spec rollout section, not from an invented AC.
-- **Partially testable, with the boundary recorded**: AC-F8-1/AC-F8-2 are operator-run once (GAP-T1); the exact child environment is proven hermetically rather than by the live CLI (GAP-T3); the named `DispatchEnvelopeError` type does not exist until the implementation lands, so its shape is spec-anchored until then (GAP-T2); the `HumanTextContext` third parameter is spec-anchored until the implementation lands (GAP-T5); the verbose rendering seam is now named by spec v1.2 and OQ-T3 is closed (GAP-T4); NFR-6's 256-character threshold is spec-derived until the delivered constant exists (TC-HDA-034, §3.5).
-- **Definition of Done binding**: spec §17.1 binds all 29 ACs, all 29 TCs, NFR-1..NFR-9, M-1..M-20, the single changeset, the bounded real dispatch, and the gate battery to named evidence. This plan's §10 execution log is the DoD-2 evidence, §7.3 plus the §10 mutation log is the DoD-4 evidence, and the §6.3 evidence block is the DoD-6 evidence.
+- **Partially testable, with the boundary recorded**: AC-F8-1/AC-F8-2 are operator-run once (GAP-T1); the exact child environment is proven hermetically rather than by the live CLI (GAP-T3); the named `DispatchEnvelopeError` type does not exist until the implementation lands, so its shape is spec-anchored until then (GAP-T2); the `HumanTextContext` third parameter is spec-anchored until the implementation lands (GAP-T5); the verbose rendering seam is now named by spec v1.3 and OQ-T3 is closed (GAP-T4); NFR-6's 256-character threshold is spec-derived until the delivered constant exists (TC-HDA-034, §3.5).
+- **Definition of Done binding**: spec §17.1 binds all 29 ACs, all 29 TCs, NFR-1..NFR-9, M-1..M-20, the single changeset, the bounded real dispatch, and the gate battery to named evidence. This plan's §10 execution log is the DoD-2 evidence, §7.3 plus the §10 mutation log is the DoD-4 evidence, and the §6.3 evidence block is the DoD-6 evidence: the post-run `git status --porcelain` equals the pre-run `STATUS_BEFORE`, `HEAD` equals `HEAD_BEFORE`, and only gitignored build outputs were rewritten (spec v1.3 DoD-6).
+- **Deliberate pin updates**: `tests/fixtures/ports/v1-contract-inventory.json` gains `DispatchEnvelopeError` under `dispatch.ts` and `index.ts`, and `tests/structure/content-inventory.test.ts` registers the exported 256-character detail bound; both are expected diffs against a delivered pin, not regressions, and both are named in §6.4/§7.1/§7.2 (TC-HDA-029/034).
 - **Intentional duplicate coverage**: AC-F4-1 spans TC-HDA-004 (static confinement) and TC-HDA-012 (behavioural canary) because a static scan and a real-child observation can regress independently. AC-F5-1 spans TC-HDA-029 (contract shape) and TC-HDA-030 (behavioural detail) because a type can admit detail that dispatch never attaches. AC-F6-1 spans TC-HDA-005 (resolution) and TC-HDA-003 (artifact parity) because the default can resolve while the generated artifacts drift. AC-F6-2 spans TC-HDA-020 (pure validation) and TC-HDA-023 (composition mapping) because an existing entry can keep its meaning at one layer while the production mapping drops it. AC-F7-4 spans TC-HDA-031 (machine) and TC-HDA-032 (verbose/non-verbose) because the two renderers fail differently.
 - **No moving-base diff assertion**: "the builder/composition reads no ambient environment" is enforced as a tree invariant plus a behavioural canary (TC-HDA-004/012), not a `origin/main-tools...HEAD` diff. The `TC-RELEASE-001` check is the repository's existing PR-time invariant; TC-HDA-006 executes it rather than duplicating it.
 - **Regression half**: the unchanged dispatch, harness, configuration, and structure suites run as-is; §6.4 lists the non-TC regression runs and the aggregate gate.
 
 ### 3.5 Source Anchors for Asserted Literals
 
-Every literal count, field name, or value a TC asserts is anchored to an executed read of the file that owns it. Fields introduced by this change are anchored to the change spec v1.2 until the delivered contract exists (GAP-T2), after which the test must read the delivered source. Line references to `chg-GH-277-spec.md` are for spec v1.2.
+Every literal count, field name, or value a TC asserts is anchored to an executed read of the file that owns it. Fields introduced by this change are anchored to the change spec v1.3 until the delivered contract exists (GAP-T2), after which the test must read the delivered source. Line references to `chg-GH-277-spec.md` are for spec v1.3.
 
 | Asserted fact | Owning source | Line(s) |
 |---|---|---|
@@ -211,7 +217,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 | The configured harness command is the bare string `"opencode"` with args `run --format json` | `packages/cli/src/production.ts` | 462-465 |
 | `errorOf` produces exactly `code`, `category`, `retryable`, `consequence`, `remediationHint`, `summary` | `packages/core/src/app/dispatch.ts` | 185-200 |
 | The pre-session branch returns `errorCode: "dispatch.session.spawn-failed"`, `outcome: O_FAILED`, `lastMessage: "spawn failed before a session existed"`, `evidenceRefs: ["harness:spawn-failed"]` | `packages/core/src/app/dispatch.ts` | 466-485 (message 482, ref 483) |
-| `DispatchEnvelopeData` carries `error?: CommandResultError` today; spec v1.2 retypes it to `DispatchEnvelopeError`; `lastMessage: string` | `packages/core/src/contracts/dispatch.ts` | 277-296 (error 288) |
+| `DispatchEnvelopeData` carries `error?: CommandResultError` today; spec v1.3 retypes it to `DispatchEnvelopeError`; `lastMessage: string` | `packages/core/src/contracts/dispatch.ts` | 277-296 (error 288) |
 | `CommandResultError` fields are `code`, `category`, `retryable`, `consequence`, `remediationHint`, `summary?` and stay unchanged | `packages/core/src/contracts/result.ts` | 36-43 |
 | `DispatchEnvelopeError` = `CommandResultError` + optional `detail { kind: "harness" \| "config"; code: string; field?: string }`; the detail is always present on the pre-session path, `kind`/`code` required and `field` only when carried; every other envelope's error is built from the error table and stays six fields | `chg-GH-277-spec.md` | DM-3 239; §8.5 261-271; Appendix C 516-540; F-5 145 |
 | `HumanTextContext = { readonly verbose: boolean }`; `CommandDefinition.humanText` gains an optional third context parameter; omitted context means non-verbose; two-parameter definitions and direct two-argument calls stay valid | `chg-GH-277-spec.md`; `packages/cli/src/index.ts` | DM-4 240; AC-F5-3 395; 51, 351-353 |
@@ -226,14 +232,17 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 | The `node:child_process` allowlist has exactly 12 declared sites and includes `packages/adapters/src/host/index.ts` | `tests/structure/harness-imports.test.ts` | 26-40 |
 | `pnpm check` runs lint → format:check → typecheck → test → check:boundaries → prompt/help/exports parity | `package.json` | 18 |
 | The repo-local temp dir `tmp/tmpdir` is created before temp-workspace tests | `tests/checks/config-default-positions.test.ts` | 16 |
-| The `data.error.detail` members `kind` and `code` (required) and `field` (optional), plus the 256-character bound | `chg-GH-277-spec.md` | DM-3 239; Appendix C 516-540; NFR-6 281; AC-F5-5 395 |
-| The exact default set `PATH`/`HOME`/`TMPDIR`/`DELIVERY_WORK_PATH` and the no-model rule | `chg-GH-277-spec.md` | F-1 141; AC-F1-3 379; Appendix B 480-490 |
+| The `data.error.detail` members `kind` and `code` (required) and `field` (optional), plus the 256-character bound | `chg-GH-277-spec.md` | DM-3 239; Appendix C 516-540; NFR-6 283; AC-F5-5 397 |
+| The exact default set `PATH`/`HOME`/`TMPDIR`/`DELIVERY_WORK_PATH` and the no-model rule | `chg-GH-277-spec.md` | F-1 141; AC-F1-3 381; Appendix B 502-514 |
+| The v1 contract surface is pinned by a bidirectional export fixture; the new `DispatchEnvelopeError` export must be added under `dispatch.ts` and `index.ts` | `tests/structure/port-contract-inventory.test.ts`; `tests/fixtures/ports/v1-contract-inventory.json` | test 84-109, 134-136; fixture `modules["dispatch.ts"]`, `modules["index.ts"]` |
+| Exported variables in `core/src/contracts/dispatch.ts` are restricted to a fixed executable allowance | `tests/structure/content-inventory.test.ts` | 466-509; 2145-2184 |
+| The project-local configuration file is `<root>/<configurationDirectoryName>/config.local.yaml` | `packages/adapters/src/file/config-source.ts` | 178 |
 
 ## 4. Test Types and Layers
 
 | Layer | What it proves | Runner / invocation | Location |
 |---|---|---|---|
-| Structure / contract (static) | The optional marker is additive and type-only; the credential form and union are unchanged; `DispatchEnvelopeError` is the dispatch-only additive error type with an optional `detail`, while `CommandResultError` and every other envelope keep their six fields; the published `humanText` type gains only the optional `HumanTextContext` third parameter | `bun test tests/structure/**/*.test.ts`; `pnpm typecheck` | `packages/core/src/contracts/harness.ts`, `packages/core/src/contracts/dispatch.ts`, `packages/core/src/contracts/result.ts`, `packages/cli/src/index.ts`, `tests/structure/**`, `tests/types/**` |
+| Structure / contract (static) | The optional marker is additive and type-only; the credential form and union are unchanged; `DispatchEnvelopeError` is the dispatch-only additive error type with an optional `detail`, while `CommandResultError` and every other envelope keep their six fields; the published `humanText` type gains only the optional `HumanTextContext` third parameter; the v1 contract-surface inventory and the `contracts/dispatch.ts` executable allowance match the widened surface | `bun test tests/structure/**/*.test.ts`; `pnpm typecheck` | `packages/core/src/contracts/harness.ts`, `packages/core/src/contracts/dispatch.ts`, `packages/core/src/contracts/result.ts`, `packages/cli/src/index.ts`, `tests/structure/**`, `tests/types/**`, `tests/fixtures/ports/v1-contract-inventory.json` |
 | Configuration and schema | The catalog admits the optional boolean; the generated schema has the property and still rejects unknown keys; literal `value` stays secret-forbidden; the default resolves with `defaults` origins; `config get harness.environment --show-origin` renders the branch; artifacts parity holds | `bun test tests/behaviour/harness-config.test.ts tests/behaviour/config-cli.test.ts tests/checks/config-default-positions.test.ts`; `pnpm typecheck` | `packages/core/src/config/**`, `packages/cli/src/commands/config.ts`, `tests/behaviour/**`, `tests/fixtures/harness/config/**`, `tests/checks/**` |
 | Behaviour — builder | Required absence fails closed naming `field`; optional absence is omitted; optional presence is forwarded; record wins; credential failure cannot be bypassed; no ambient leakage | `bun test tests/behaviour/harness-spawn-env.test.ts tests/behaviour/harness-spawn-credential.test.ts` | `tests/behaviour/**`, `tests/fixtures/harness/spawn-env.ts` |
 | Behaviour — composition | The production composition maps the marker to the descriptor, injects `DELIVERY_WORK_PATH` through the record, and keeps the bare `opencode` command | `bun test tests/structure/dispatch-composition.test.ts` | `packages/cli/src/production.ts`, `tests/structure/dispatch-composition.test.ts` |
@@ -272,15 +281,15 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 | TC-HDA-021 | Optional-marker validation: non-boolean, marker+`credentialRef`, unknown key, literal value | Negative | Critical | High | AC-F3-5; F-3, F-6; DM-1; NFR-4; TDR-0017 C-5/C-6 |
 | TC-HDA-022 | `config get harness.environment --show-origin` renders the new defaults and the optional marker with no secret value | Happy Path | Important | High | AC-F6-3; F-6; DM-1 |
 | TC-HDA-023 | Production composition maps the marker and injects `DELIVERY_WORK_PATH` through the record | Regression | Critical | High | AC-F1-1, AC-F6-2; F-1, F-6; DM-2; DEC-1 |
-| TC-HDA-029 | `DispatchEnvelopeError`: additive optional `detail` on the dispatch error; `CommandResultError` and every other envelope unchanged | Regression | Critical | High | AC-F5-1; F-5, F-6; DM-3; NFR-8; DEC-4 |
+| TC-HDA-029 | `DispatchEnvelopeError`: additive optional `detail` on the dispatch error; `CommandResultError` and every other envelope unchanged; v1 contract-inventory fixture updated | Regression | Critical | High | AC-F5-1; F-5, F-6; DM-3; NFR-8; DEC-4 |
 | TC-HDA-030 | Pre-session failure always carries underlying `kind`/`code` on `data.error.detail` (with `field` only when carried) while identity stays `dispatch.session.spawn-failed` | Happy Path | Critical | High | AC-F5-1; F-5; DM-3; NFR-5; DEC-4 |
 | TC-HDA-031 | `--json` machine output carries the detail and survives redaction | Regression | Critical | High | AC-F5-2, AC-F7-4; F-5, F-7; NFR-5; DEC-4 |
 | TC-HDA-032 | Verbose human output names the underlying code and field at the dispatch human-text seam; non-verbose text is exactly four keys | Regression | Critical | High | AC-F5-3, AC-F7-4; F-5, F-7; NFR-7; DEC-4 |
 | TC-HDA-033 | Spawn-failed identity, token, outcome, exit, and last message unchanged; no new vocabulary | Regression | Critical | High | AC-F5-4; F-5; NFR-4; DEC-4 |
-| TC-HDA-034 | Detail hygiene: identifiers only, single-line, bounded to 256 characters | Regression | Critical | High | AC-F5-5; F-5; NFR-6; DEC-4 |
+| TC-HDA-034 | Detail hygiene: identifiers only, single-line, bounded to 256 characters by an exported constant registered in the content inventory | Regression | Critical | High | AC-F5-5; F-5; NFR-6; DEC-4 |
 | TC-HDA-035 | Absent-required field name appears in both the harness failure and the dispatch detail | Regression | Critical | High | AC-F7-2; F-3, F-5, F-7; NFR-2, NFR-5; DEC-3, DEC-4 |
 | TC-HDA-100 | End-to-end real dispatch reaches classification with any token other than `dispatch.session.spawn-failed` | Happy Path | Critical | High | AC-F8-1; F-8, F-1; NFR-1 |
-| TC-HDA-101 | End-to-end proof is bounded and leaves this change's worktree git-clean and `HEAD`-stable | Regression | Critical | High | AC-F8-2; F-8; RSK-6 |
+| TC-HDA-101 | End-to-end proof is bounded and leaves this change's worktree at its pre-run `git status --porcelain` baseline with `HEAD` unchanged | Regression | Critical | High | AC-F8-2; F-8; RSK-6 |
 
 ### 5.2 Scenario Details
 
@@ -435,7 +444,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Preconditions**:
 
 - `resolveConfig()` with no sources resolves the shipped defaults; the harness branch currently declares the three model/work-path names (`packages/core/src/config/defaults.ts:58-62`).
-- The expected repaired set is the spec's proposed default: `PATH`, `HOME`, `TMPDIR` (optional), `DELIVERY_WORK_PATH` (spec Appendix B 480-490, DEC-1).
+- The expected repaired set is the spec's proposed default: `PATH`, `HOME`, `TMPDIR` (optional), `DELIVERY_WORK_PATH` (spec Appendix B 502-514, DEC-1).
 
 **Steps**:
 
@@ -455,7 +464,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Notes / Clarifications**:
 
 - Order is asserted for `PATH`, `HOME`, `DELIVERY_WORK_PATH` because the shipped literal is ordered; if the implementation chooses a different defensible order, set equality plus the exact required/optional partition is the binding claim. The plan prefers order so a review diff is legible.
-- Source anchors (current, pre-change): `packages/core/src/config/defaults.ts:58-62`; spec F-1 141, AC-F1-3 379, Appendix B 480-490.
+- Source anchors (current, pre-change): `packages/core/src/config/defaults.ts:58-62`; spec F-1 141, AC-F1-3 381, Appendix B 502-514.
 
 #### TC-HDA-006 - Release invariant: exactly one five-package minor changeset with a non-empty body (`TC-RELEASE-001`)
 
@@ -628,7 +637,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Notes / Clarifications**:
 
 - The pre-change descriptor is a test-only literal taken from the spec Appendix A, not a second product default.
-- Source anchors: `packages/core/src/config/defaults.ts:58-62`; spec Appendix A 466-476, F-2 142.
+- Source anchors: `packages/core/src/config/defaults.ts:58-62`; spec Appendix A 488-500, F-2 142.
 
 #### TC-HDA-014 - Absent required variable fails closed naming `field`, spawns no child, returns no partial environment
 
@@ -696,7 +705,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 
 - The pair TC-HDA-015/TC-HDA-016 is the required/optional × absent/present table for the one shipped optional entry.
 - The delivered non-vacuity meta-check `tests/checks/harness-mutants.test.ts:76-84, 102-111` mutates `packages/core/src/domain/harness-spawn-env.ts` by exact string replacement; the optional branch must preserve those anchors or the mutant becomes a no-op and the suite fails with "mutant … passed". It runs unchanged in §6.4.
-- Source anchors: `packages/core/src/domain/harness-spawn-env.ts:46-58`; spec F-3 143, AC-F3-2 385, AC-F7-5 403.
+- Source anchors: `packages/core/src/domain/harness-spawn-env.ts:46-58`; spec F-3 143, AC-F3-2 387, AC-F7-5 405.
 
 #### TC-HDA-016 - Present optional variable is forwarded with its value
 
@@ -728,7 +737,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 
 **Notes / Clarifications**:
 
-- Source anchors: `packages/core/src/domain/harness-spawn-env.ts:48`; spec F-3 143, AC-F3-3 386.
+- Source anchors: `packages/core/src/domain/harness-spawn-env.ts:48`; spec F-3 143, AC-F3-3 388.
 
 #### TC-HDA-017 - Record value wins over the parent; an undeclared record name is inert
 
@@ -761,7 +770,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Notes / Clarifications**:
 
 - The delivered expression is `input.record?.[entry.name] ?? input.parentEnvironment[entry.name]` (`packages/core/src/domain/harness-spawn-env.ts:48`).
-- Source anchors: `packages/core/src/domain/harness-spawn-env.ts:42-48`; spec F-4 144, AC-F4-2 390.
+- Source anchors: `packages/core/src/domain/harness-spawn-env.ts:42-48`; spec F-4 144, AC-F4-2 392.
 
 #### TC-HDA-018 - Unresolved credential fails closed and no optional marker bypasses it
 
@@ -828,7 +837,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Notes / Clarifications**:
 
 - This is the Flow 5 compatibility case (spec §6) and the AC-F2-3 negative.
-- Source anchors: `packages/core/src/config/harness.ts:23-25, 130-133`; spec F-2 142, AC-F2-3 383.
+- Source anchors: `packages/core/src/config/harness.ts:23-25, 130-133`; spec F-2 142, AC-F2-3 385.
 
 #### TC-HDA-020 - Existing `{ name: "X" }` configuration keeps required semantics with no migration
 
@@ -898,7 +907,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Notes / Clarifications**:
 
 - Step 4's distinction matters: a literal value is a security-sensitive rejection, not a generic invalid value.
-- Source anchors: `packages/core/src/config/harness.ts:110-134`; `packages/core/src/config/catalog.ts:276-284`; spec AC-F3-5 388.
+- Source anchors: `packages/core/src/config/harness.ts:110-134`; `packages/core/src/config/catalog.ts:276-284`; spec AC-F3-5 390.
 
 #### TC-HDA-022 - `config get harness.environment --show-origin` renders the new defaults and the optional marker with no secret value
 
@@ -934,7 +943,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Notes / Clarifications**:
 
 - AC-F6-3 names this invocation, so the plan no longer accepts an implementation-defined inspection spelling (OQ-T4 closed). The marker arrives as configuration data inside `value`; the origin arrives as the `originLabel` string, not the raw origin object.
-- Source anchors: `packages/cli/src/commands/config.ts:96-99, 102-155`; `packages/core/src/config/provenance.ts:20-24`; `packages/core/src/config/resolver.ts:343-368`; spec AC-F6-3 398, §8.3 243.
+- Source anchors: `packages/cli/src/commands/config.ts:96-99, 102-155`; `packages/core/src/config/provenance.ts:20-24`; `packages/core/src/config/resolver.ts:343-368`; spec AC-F6-3 400, §8.3 244.
 
 #### TC-HDA-023 - Production composition maps the marker and injects `DELIVERY_WORK_PATH` through the record
 
@@ -978,15 +987,16 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Related IDs**: F-5, F-6, AC-F5-1, DM-3, NFR-8, DEC-4
 **Test Type(s)**: Contract, Type, Static
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/dispatch-envelope-detail.test.ts`; `tests/types/dispatch-envelope-detail.type-test.ts`; `packages/core/src/contracts/dispatch.ts`; `packages/core/src/contracts/result.ts`
-**Tags**: @backend, @contract, @dispatch
+**Target Layer / Location**: `tests/structure/dispatch-envelope-detail.test.ts`; `tests/types/dispatch-envelope-detail.type-test.ts`; `packages/core/src/contracts/dispatch.ts`; `packages/core/src/contracts/result.ts`; `tests/fixtures/ports/v1-contract-inventory.json`; `tests/structure/port-contract-inventory.test.ts`
+**Tags**: @backend, @contract, @dispatch, @inventory
 
 **Preconditions**:
 
 - The delivered envelope `data.error` is `CommandResultError` (`packages/core/src/contracts/dispatch.ts:277-296`, error at 288).
 - The delivered `CommandResultError` fields are `code`, `category`, `retryable`, `consequence`, `remediationHint`, and optional `summary` (`packages/core/src/contracts/result.ts:36-43`); it must stay exactly these six.
-- Spec v1.2 DM-3 and Appendix C declare `DispatchEnvelopeError` in `packages/core/src/contracts/dispatch.ts` as `CommandResultError` plus `detail?: { readonly kind: "harness" | "config"; readonly code: string; readonly field?: string }`, and retype `DispatchEnvelopeData.error` from `CommandResultError` to `DispatchEnvelopeError`.
+- Spec v1.3 DM-3 and Appendix C declare `DispatchEnvelopeError` in `packages/core/src/contracts/dispatch.ts` as `CommandResultError` plus `detail?: { readonly kind: "harness" | "config"; readonly code: string; readonly field?: string }`, and retype `DispatchEnvelopeData.error` from `CommandResultError` to `DispatchEnvelopeError`.
 - Every envelope's top-level error is assembled from the error table in `packages/cli/src/index.ts:262-272`; widening `CommandResultError` would widen all of them.
+- `tests/structure/port-contract-inventory.test.ts` (`TC-PORT-001`) compares the live export surface of `packages/core/src/contracts/*` against `tests/fixtures/ports/v1-contract-inventory.json` in both directions, so the new export is an expected, deliberate fixture diff (GAP-T6).
 
 **Steps**:
 
@@ -998,15 +1008,17 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 6. Assert a successful dispatch envelope has no `error` and therefore no `detail`.
 7. Assert the top-level `CommandResult` success/failure envelope shape is unchanged: success carries `data`, failure carries `error`, both keep `schemaVersion`, `runId`, `exitCode`, `timing`.
 8. Assert the new type is exported through the same `@delivery-os/core/contracts` entrypoint as `CommandResultError` (the exports-parity gate stays green).
+9. **Deliberate inventory pin:** update `tests/fixtures/ports/v1-contract-inventory.json` so `modules["dispatch.ts"]` and `modules["index.ts"]` list `DispatchEnvelopeError`; run the delivered `TC-PORT-001` suite (`bun test tests/structure/port-contract-inventory.test.ts`) as the scenario's second command and assert it passes with no missing/unexpected export. Assert the fixture diff changes no other export name and that `tests/structure/port-contract-inventory.test.ts` itself is unmodified (it is the pin, not the thing being pinned).
 
 **Expected Outcome**:
 
-- The detail is additive on a dispatch-specific `DispatchEnvelopeError` only (the envelope surface); `CommandResultError` stays at six fields and every other envelope, plus the top-level result envelope, is unchanged in shape. The separately declared DM-4 human-text context is additive on `CommandDefinition.humanText` and is proven by TC-HDA-032.
+- The detail is additive on a dispatch-specific `DispatchEnvelopeError` only (the envelope surface); `CommandResultError` stays at six fields and every other envelope, plus the top-level result envelope, is unchanged in shape. The separately declared DM-4 human-text context is additive on `CommandDefinition.humanText` and is proven by TC-HDA-032. The bidirectional v1 contract inventory matches the widened surface via its deliberate fixture update.
 
 **Notes / Clarifications**:
 
 - The exact nesting (`data.error.detail.kind`, `.code`, `.field`) is fixed by spec DM-3 and Appendix C; tests must read the delivered contract once it exists (GAP-T2). Step 3 is the anti-widening assertion the spec calls out: a shared-type edit would silently widen every envelope.
-- Source anchors: `packages/core/src/contracts/dispatch.ts:277-296`; `packages/core/src/contracts/result.ts:36-43`; `packages/cli/src/index.ts:262-272`; spec DM-3 239, §8.5 261-271, Appendix C 516-540.
+- Step 9 is the delivered `TC-PORT-001` pin: an un-updated fixture fails with `dispatch.ts: unexpected export DispatchEnvelopeError` and `index.ts: unexpected export DispatchEnvelopeError`, so the fixture edit is reviewed as a deliberate surface change. The fixture is the expected surface; the test is not weakened.
+- Source anchors: `packages/core/src/contracts/dispatch.ts:277-296`; `packages/core/src/contracts/result.ts:36-43`; `packages/cli/src/index.ts:262-272`; `tests/structure/port-contract-inventory.test.ts:84-109, 134-136`; `tests/fixtures/ports/v1-contract-inventory.json` (`modules["dispatch.ts"]`, `modules["index.ts"]`); spec DM-3 239, §8.5 261-271, Appendix C 516-540.
 
 #### TC-HDA-030 - Pre-session failure always carries underlying `kind`/`code` on `data.error.detail` (with `field` only when carried) while identity stays `dispatch.session.spawn-failed`
 
@@ -1045,7 +1057,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Notes / Clarifications**:
 
 - The fixture extension is a test-support edit; it does not change product behaviour and is listed in §7.1. The attached object is the `DispatchEnvelopeError.detail` member, not a new envelope field.
-- The attachment rule is spec v1.2 F-5/Appendix C: every pre-session failure carries a `HarnessFailure`, `kind` and `code` are required, and `field` is optional. There is no reachable detail-less pre-session case; the type keeps `detail` optional only because other dispatch error rows (which are not pre-session spawn failures) do not carry it.
+- The attachment rule is spec v1.3 F-5/Appendix C: every pre-session failure carries a `HarnessFailure`, `kind` and `code` are required, and `field` is optional. There is no reachable detail-less pre-session case; the type keeps `detail` optional only because other dispatch error rows (which are not pre-session spawn failures) do not carry it.
 - Source anchors: `packages/core/src/app/dispatch.ts:466-485`; `packages/core/src/contracts/harness.ts:306-314`; `tests/fixtures/dispatch/harness.ts:158-162`; `tests/golden/dispatch-errors.test.ts:49-57`; spec AC-F5-1 393, DM-3 239, Appendix C 516-540.
 
 #### TC-HDA-031 - `--json` machine output carries the detail and survives redaction
@@ -1079,7 +1091,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 
 **Notes / Clarifications**:
 
-- Source anchors: `packages/cli/src/output/serialize.ts:41-49, 89-117`; `packages/cli/src/index.ts:413-435`; `packages/core/src/contracts/dispatch.ts` (`DispatchEnvelopeError`); spec AC-F5-2 392.
+- Source anchors: `packages/cli/src/output/serialize.ts:41-49, 89-117`; `packages/cli/src/index.ts:413-435`; `packages/core/src/contracts/dispatch.ts` (`DispatchEnvelopeError`); spec AC-F5-2 394.
 
 #### TC-HDA-032 - Verbose human output names the underlying code and field at the dispatch human-text seam; non-verbose text is exactly four keys
 
@@ -1119,9 +1131,9 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 
 **Notes / Clarifications**:
 
-- Spec v1.2 §2.1/§16 and Appendix D name the seam, so OQ-T3 is closed: the bounded verbose diagnostic is selected by the dispatch command's `humanText` (133-149) through the optional `HumanTextContext` third parameter (DM-4) and rendered in the dispatch text module, with `--verbose` as the parsed fact (317). DM-4 declares the additive published-type widening: existing two-parameter definitions and direct two-argument calls stay valid, and an omitted context means non-verbose. Step 10 asserts that compatibility under `pnpm typecheck`; the observable channel is asserted by steps 1–9.
+- Spec v1.3 §2.1/§16 and Appendix D name the seam, so OQ-T3 is closed: the bounded verbose diagnostic is selected by the dispatch command's `humanText` (133-149) through the optional `HumanTextContext` third parameter (DM-4) and rendered in the dispatch text module, with `--verbose` as the parsed fact (317). DM-4 declares the additive published-type widening: existing two-parameter definitions and direct two-argument calls stay valid, and an omitted context means non-verbose. Step 10 asserts that compatibility under `pnpm typecheck`; the observable channel is asserted by steps 1–9.
 - The four-key assertion is unchanged and load-bearing (NFR-7); M-11 proves a fifth key goes red, M-10 proves a removed verbose rendering goes red.
-- Source anchors: `packages/cli/src/commands/dispatch.ts:133-149`; `packages/cli/src/output/dispatch-text.ts:28-34`; `packages/cli/src/index.ts:51, 298-303, 317, 351-353, 413-435`; `packages/cli/src/output/serialize.ts:73, 89-115`; spec AC-F5-3 395, DM-4 240, NFR-7 282, §16 366-369, Appendix C 516-540.
+- Source anchors: `packages/cli/src/commands/dispatch.ts:133-149`; `packages/cli/src/output/dispatch-text.ts:28-34`; `packages/cli/src/index.ts:51, 298-303, 317, 351-353, 413-435`; `packages/cli/src/output/serialize.ts:73, 89-115`; spec AC-F5-3 395, DM-4 240, NFR-7 284, §16 366-369, Appendix C 516-540.
 
 #### TC-HDA-033 - Spawn-failed identity, token, outcome, exit, and last message unchanged; no new vocabulary
 
@@ -1158,7 +1170,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 
 - This is the bash-continuity contract: a fourth text key or a changed sentence would break consumers.
 - The golden update is deliberate: its `harness.spawn.refused` failure carries kind and code and no field, so the expected detail is `{ kind: "harness", code: "harness.spawn.refused" }`; the fixture edit and its consumer are named in §7.1/§7.2. A golden edited without the attachment rule is a review item.
-- Source anchors: `packages/core/src/app/dispatch.ts:185-200, 466-485`; `packages/core/src/contracts/error-table.ts` (`dispatch.session.spawn-failed` row); `tests/golden/dispatch-errors.test.ts:49-57`; `tests/fixtures/dispatch/golden/errors/spawn-failed.json`; spec AC-F5-4 394, NFR-4 279.
+- Source anchors: `packages/core/src/app/dispatch.ts:185-200, 466-485`; `packages/core/src/contracts/error-table.ts` (`dispatch.session.spawn-failed` row); `tests/golden/dispatch-errors.test.ts:49-57`; `tests/fixtures/dispatch/golden/errors/spawn-failed.json`; spec AC-F5-4 396, NFR-4 281.
 
 #### TC-HDA-034 - Detail hygiene: identifiers only, single-line, bounded to 256 characters
 
@@ -1168,31 +1180,31 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Related IDs**: F-5, AC-F5-5, NFR-6, DEC-4
 **Test Type(s)**: Unit, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/dispatch-harness-default-detail.test.ts`; `packages/core/src/contracts/dispatch.ts`
-**Tags**: @backend, @dispatch, @bounds, @security
+**Target Layer / Location**: `tests/behaviour/dispatch-harness-default-detail.test.ts`; `packages/core/src/contracts/dispatch.ts`; `tests/structure/content-inventory.test.ts`
+**Tags**: @backend, @dispatch, @bounds, @security, @inventory
 
 **Preconditions**:
 
 - A detail carrying `kind: "harness"`, `code: "harness.spawn.variable-missing"`, and `field: "HARNESS_MODEL"`, typed as `DispatchEnvelopeError["detail"]`.
-- The delivered bound constant (expected `256`) is introduced with the detail; until it exists the spec threshold is the authority (spec NFR-6 281, AC-F5-5 395).
+- The delivered bound constant (expected `DISPATCH_MAX_ERROR_DETAIL_CHARS`, value `256`, following the `DISPATCH_MAX_LAST_MESSAGE_CHARS` precedent at `packages/core/src/contracts/dispatch.ts:356`) is exported from `packages/core/src/contracts/dispatch.ts` and registered in the `core/src/contracts/dispatch.ts` executable allowance of `tests/structure/content-inventory.test.ts` (`EXECUTABLE_ALLOWANCES`, 466-509; enforcement 2145-2184). If the implementation chooses a different constant name, that name moves with the allowance entry and this TC.
 
 **Steps**:
 
 1. Serialize the detail with `JSON.stringify`; assert it carries the identifier members `kind`, `code`, and `field`, and that no environment value, credential material, prompt, or stream content appears. Any additional member must be an identifier, never a value.
 2. Assert the serialized detail contains no CR or LF (single line).
-3. Assert the serialized detail length is at most the delivered bound constant (expected 256); assert the bound is a named constant, not a magic number duplicated in the test.
+3. Assert the serialized detail length is at most the delivered exported bound constant (expected `256`); assert the bound is read from the delivered export, not duplicated as a magic number in the test. The scenario's second command, `bun test tests/structure/content-inventory.test.ts`, passes, i.e. the exported constant is registered in the `core/src/contracts/dispatch.ts` executable allowance.
 4. Assert an optional `field` that is absent is omitted, not serialized as `null` or an empty string.
 5. **Non-vacuity control:** construct a synthetic detail whose field is a 300-character identifier and assert the bound assertion fails; construct one whose field contains a newline and assert the single-line assertion fails; restore.
 6. Assert the real dispatch detail from TC-HDA-030 passes all of the above with the real `HARNESS_MODEL` field.
 
 **Expected Outcome**:
 
-- The detail is an identifiers-only, single-line, bounded diagnostic that cannot become an environment dump or a secret-exfiltration path.
+- The detail is an identifiers-only, single-line, bounded diagnostic that cannot become an environment dump or a secret-exfiltration path, and its exported bound is a registered contract export rather than an unregistered or duplicated literal.
 
 **Notes / Clarifications**:
 
-- The 256 threshold is spec-derived until the delivered constant lands; the test must then read the constant so the plan and product cannot drift.
-- Source anchors: spec NFR-6 281, AC-F5-5 395, Appendix C 494-505; `packages/core/src/contracts/dispatch.ts` (`DispatchEnvelopeError.detail`); `packages/core/src/app/dispatch.ts:179-182` (the existing single-line/bound helper pattern for `last_message`, not to be reused as the detail bound without a decision).
+- The 256 threshold is spec-derived until the delivered constant lands; after it lands the test must read the exported constant so the plan and product cannot drift. The constant is an executable export of `core/src/contracts/dispatch.ts`, so the delivered `TC-SCAFFOLD-006`/`TC-BRANDING-022` executable-allowance list must name it in the same change (GAP-T6); an unregistered export fails `bun test tests/structure/content-inventory.test.ts` with `undeclared executable export <NAME>`.
+- Source anchors: spec NFR-6 283, AC-F5-5 397, Appendix C 516-540; `packages/core/src/contracts/dispatch.ts` (`DispatchEnvelopeError.detail`, bound constant); `packages/core/src/app/dispatch.ts:179-182` (the existing single-line/bound helper pattern for `last_message`, not to be reused as the detail bound without a decision); `tests/structure/content-inventory.test.ts:466-509, 2145-2184`.
 
 #### TC-HDA-035 - Absent-required field name appears in both the harness failure and the dispatch detail
 
@@ -1228,7 +1240,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Notes / Clarifications**:
 
 - This is the AC-F7-2 regression case and the ticket's "declared-but-absent variable still fails closed, with the failing name visible in the error detail" bullet.
-- Source anchors: `packages/core/src/domain/harness-spawn-env.ts:49-56`; `packages/core/src/app/dispatch.ts:466-485`; spec AC-F7-2 400.
+- Source anchors: `packages/core/src/domain/harness-spawn-env.ts:49-56`; `packages/core/src/app/dispatch.ts:466-485`; spec AC-F7-2 402.
 
 #### TC-HDA-100 - End-to-end real dispatch reaches classification with any token other than `dispatch.session.spawn-failed`
 
@@ -1243,7 +1255,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 
 **Preconditions**:
 
-- The §6.3 preconditions pass: clean worktree, recorded `HEAD` and `opencode --version`, a non-empty `GITHUB_TOKEN` in the invoking shell, `gh auth status` green, a readable tracker probe, and no active `GH-277` lease in the live state root (a read-only precondition; if one exists, STOP and report).
+- The §6.3 preconditions pass: the pre-run `STATUS_BEFORE` baseline and `HEAD_BEFORE` are recorded (the baseline may contain P4's expected uncommitted artifacts), a recorded `opencode --version`, a non-empty `GITHUB_TOKEN` in the invoking shell, `gh auth status` green, a readable tracker probe, and no active `GH-277` lease in the live state root (a read-only precondition; if one exists, STOP and report).
 - A disposable clone exists outside this worktree with the real repository origin and no clone-local `harness.environment` declaration, and the probe runs under the probe-only brand `gh277-probe`, so the production state root is `$LIVE_HOME/.gh277-probe-state`, never the live `$HOME/.delivery-os-state`.
 
 **Steps**:
@@ -1262,14 +1274,14 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Notes / Clarifications**:
 
 - GAP-T1: this is the only AC that needs a live CLI. A blocked precondition is recorded and re-run; it is not a product failure.
-- Source anchors: spec AC-F8-1 404, F-8 148, §18 417-424; sibling procedure GH-275 §6.3.
+- Source anchors: spec AC-F8-1 406, F-8 148, §18 439-446; sibling procedure GH-275 §6.3.
 
-#### TC-HDA-101 - End-to-end proof is bounded and leaves this change's worktree git-clean and `HEAD`-stable
+#### TC-HDA-101 - End-to-end proof is bounded and leaves this change's worktree at its pre-run `git status --porcelain` baseline with `HEAD` unchanged
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-8, AC-F8-2, RSK-6
+**Related IDs**: F-8, AC-F8-2, RSK-6, spec §17.1 DoD-6
 **Test Type(s)**: E2E, Manual
 **Automation Level**: Manual
 **Target Layer / Location**: §6.3 procedure; evidence in §10
@@ -1278,27 +1290,28 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 **Preconditions**:
 
 - The probe runs in the disposable clone, not in this change's worktree, and its queue/state writes go to the probe-only brand root `$LIVE_HOME/.gh277-probe-state`, not the live `$HOME/.delivery-os-state`.
-- `HEAD_before` and `git status --porcelain` are recorded before the run; no active `GH-277` lease exists in the live state root (otherwise STOP and report, never release it).
+- `HEAD_BEFORE` and `STATUS_BEFORE` (`git status --porcelain`) are captured immediately before the probe, after this change's delivery artifacts exist but before the run. The baseline is allowed to be non-empty: P4's own uncommitted artifacts are expected baseline content — the untracked decision record `?? doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md`, the added changeset `?? .changeset/gh-277-harness-default-allowlist-minor.md`, and the pending `chg-GH-277-test-plan.md` edit (plus any other uncommitted delivery artifact present at that moment). No active `GH-277` lease exists in the live state root (otherwise STOP and report, never release it).
 
 **Steps**:
 
-1. Before the run, record `git -C "$REPO" rev-parse HEAD` and assert `git -C "$REPO" status --porcelain` prints nothing.
+1. Immediately before the probe, record `HEAD_BEFORE=$(git -C "$REPO" rev-parse HEAD)` and `STATUS_BEFORE=$(git -C "$REPO" status --porcelain)`; retain both in the evidence directory (`status-before.txt`). Do not require emptiness; require only that the baseline is understood and that the expected P4 artifacts (and any other pre-existing change artifact) are permitted baseline content.
 2. Execute §6.3 with the hard bounds: ≤60 s to observe the `opencode run --format json` child and ≤180 s total wall time, under `DELIVERY_OS_WORKING_NAME=gh277-probe` and the probe state root `$LIVE_HOME/.gh277-probe-state`.
 3. Kill only the dispatch's own child (`pgrep -P "$DISPATCH_PID"`), never the parent or any unrelated process.
-4. After the run, assert `git -C "$REPO" status --porcelain` still prints nothing and `HEAD` equals `HEAD_before`; if a concurrent commit moved `HEAD` (as GH-275 recorded), record the commit identities and assert the probe wrote nothing (the clone's own `.git` moved independently). Byte identity is not asserted: `pnpm build` intentionally rewrites gitignored `packages/*/dist` and `*.tsbuildinfo`, and the clone symlinks `$REPO/node_modules`, so only tracked and untracked-not-ignored paths are in scope.
+4. After the run, recompute `STATUS_AFTER=$(git -C "$REPO" status --porcelain)` and assert `STATUS_AFTER` equals `STATUS_BEFORE` string-for-string, not that it is empty; assert `HEAD` equals `HEAD_BEFORE`. If a concurrent commit moved `HEAD` (as GH-275 recorded), record the commit identities and assert the probe wrote nothing (the clone's own `.git` moved independently). Byte identity is not asserted: step 0's `pnpm build` intentionally rewrites gitignored `packages/*/dist` and `*.tsbuildinfo`, and the clone symlinks `$REPO/node_modules`, so only tracked and untracked-not-ignored paths are in scope.
 5. Assert the disposable clone was removed, its `node_modules` symlink with it, and this worktree's `node_modules` was untouched.
 6. Assert no dispatch child survives (`pgrep` after cleanup is empty for the probe's command line).
 7. Assert the attempt record was written to the isolated probe state root and copied to the retained evidence directory; assert the live `$HOME/.delivery-os-state` was not written and no live lease was released.
 
 **Expected Outcome**:
 
-- The proof is bounded and scoped: a nested lifecycle can only touch the disposable clone and the probe-brand state root (`$LIVE_HOME/.gh277-probe-state`); this change's worktree stays git-clean (`git status --porcelain` empty) and `HEAD`-stable, while ignored build outputs are intentionally rewritten and byte identity is not claimed.
+- The proof is bounded and scoped: a nested lifecycle can only touch the disposable clone and the probe-brand state root (`$LIVE_HOME/.gh277-probe-state`); this change's worktree's `git status --porcelain` output is identical to the pre-run baseline and `HEAD` is unchanged, while ignored build outputs are intentionally rewritten and byte identity is not claimed. This is the spec v1.3 DoD-6 property.
 
 **Notes / Clarifications**:
 
 - The worktree snapshot is asserted only in this manual procedure; the automated suites are read-only by construction and do not need a `git status` assertion.
+- The baseline comparison exists because P4's own artifacts are uncommitted during the probe; asserting absolute emptiness would force an unplanned mid-phase commit or a false FAIL. The expected baseline entries are named in the procedure and in §6.3 step 0, but the binding assertion is equality with whatever baseline was captured, not a hard-coded list.
 - The probe state root is the evidence source; the live state root is read only for the lease STOP precondition and is never mutated or released.
-- Source anchors: spec AC-F8-2 405, RSK-6 305; sibling procedure GH-275 §6.3/§10.
+- Source anchors: spec AC-F8-2 407, §17.1 DoD-6 430, RSK-6 307; sibling procedure GH-275 §6.3/§10.
 
 ## 6. Environments and Test Data
 
@@ -1321,14 +1334,15 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 - **Queue entry**: a scenario that goes through the production composition declares `GH-277` in the temp state root's queue (`queue add`) or injects the lease-claim port; otherwise the dispatch returns `queue.entry.unobserved` before any spawn or attempt record.
 - **Golden spawn-failure envelope**: `tests/fixtures/dispatch/golden/errors/spawn-failed.json` is updated deliberately to carry `data.error.detail = { kind: "harness", code: "harness.spawn.refused" }` with no `field`; `tests/golden/dispatch-errors.test.ts` keeps its byte-equality assertion unchanged.
 - **Synthetic identities**: fabricated refs (`GH-277`), attempt ids, repository keys, session ids (`ses_*`), and paths under a `mkdtemp` root. No real session id, prompt, credential, repository name, or personal data appears.
-- **The 256-character detail bound**: the test reads the delivered constant once it exists; until then the spec threshold (spec NFR-6 281, AC-F5-5 395) is the documented authority and the constant name is an implementation choice (GAP-T2). The detail member is `DispatchEnvelopeError["detail"]`.
+- **The 256-character detail bound**: the test reads the delivered exported constant once it exists; until then the spec threshold (spec NFR-6 283, AC-F5-5 397) is the documented authority. The expected name is `DISPATCH_MAX_ERROR_DETAIL_CHARS` (following `DISPATCH_MAX_LAST_MESSAGE_CHARS` at `packages/core/src/contracts/dispatch.ts:356`); whatever name is delivered must be registered in the `core/src/contracts/dispatch.ts` executable allowance of `tests/structure/content-inventory.test.ts` (GAP-T6). The detail member is `DispatchEnvelopeError["detail"]`.
+- **Contract-inventory fixture**: `tests/fixtures/ports/v1-contract-inventory.json` is a delivered pin, updated deliberately to add `DispatchEnvelopeError` under `modules["dispatch.ts"]` and `modules["index.ts"]`; `tests/structure/port-contract-inventory.test.ts` is not edited. The fixture diff is reviewed as a surface change.
 
 ### 6.2 Isolation and Cleanup
 
 - Every filesystem-touching suite creates its root with `mkdtempSync` under `join(ROOT, "tmp", "tmpdir")` (the repo-local temp root), not the system `/tmp`, and removes it in `finally`, including on failure. This is the same repair the config-artifact suite uses (`tests/checks/config-default-positions.test.ts:16`).
 - The synthetic child is always killed in `finally`; the suite waits only on child close/completion promises, never on a sleep; every case has a bounded test timeout so a broken kill fails rather than hangs.
 - No suite reads `process.env`, `$HOME`, the network, or a real credential. All environment facts are injected; the synthetic CLI's environment dump is the only view of a child environment and it is a `mkdtemp` file.
-- No suite writes the real worktree or the live state root. The end-to-end procedure is where the worktree git-clean/`HEAD` snapshot and the isolated probe state root are asserted (TC-HDA-101).
+- No suite writes the real worktree or the live state root. The end-to-end procedure is where the worktree status-baseline (`STATUS_BEFORE`/`STATUS_AFTER`) and `HEAD` snapshot plus the isolated probe state root are asserted (TC-HDA-101).
 - The real attempt record written by the E2E probe belongs to the isolated probe state root and is copied into the retained evidence directory; the live `$HOME/.delivery-os-state` is never written. Every other artifact is removed with the disposable clone.
 
 ### 6.3 End-to-end proof procedure (operator-run, AC-F8-1/AC-F8-2)
@@ -1336,8 +1350,9 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 Executed in the delivery (or verification) phase, not by any automated suite. **It must not run inside this change's worktree.** It uses a disposable clone so a nested lifecycle cannot touch this worktree (spec AC-F8-2, RSK-6). The probe runs under a probe-only brand (`DELIVERY_OS_WORKING_NAME=gh277-probe`): production derives `stateDirectory = homeDirectory/brand.stateDirectoryName` (`packages/cli/src/production.ts:232-233`), so the brand is the state-directory override and the probe writes `$LIVE_HOME/.gh277-probe-state`, never the live `$HOME/.delivery-os-state`; `DELIVERY_OS_STATE_DIR` is not on the production path and is unset. The live root is read once, only to prove no `GH-277` lease is active. The procedure shape follows the GH-275 sibling plan §6.3.
 
 ```bash
-# 0. Preconditions: this worktree is clean, the delivered build is current, the CLI
-#    is installed and healthy, and the dispatch process can authenticate to GitHub.
+# 0. Preconditions: the worktree status baseline is recorded, the delivered build
+#    is current, the CLI is installed and healthy, and the dispatch process can
+#    authenticate to GitHub.
 REPO=$PWD                                  # this change's worktree (never the probe cwd)
 E2E=/tmp/opencode/gh277-e2e                # disposable clone; outside the worktree
 EVIDENCE=/tmp/opencode/gh277-e2e-evidence  # retained evidence; outside worktree and live state
@@ -1349,7 +1364,15 @@ LOG=$E2E/dispatch.log
 TRACKER_REPO=juliusz-cwiakalski/agentic-delivery-os
 unset DELIVERY_OS_WORKING_NAME             # step 0b reads the live default brand root
 unset DELIVERY_OS_STATE_DIR                # no state-dir override; the brand selects the root
-git -C "$REPO" status --porcelain          # must print nothing
+mkdir -p "$EVIDENCE"
+# Baseline, not emptiness: P4's own artifacts are uncommitted while the probe runs.
+# Expected baseline entries (e.g.): the untracked decision record and changeset, the
+# pending test-plan edit. Equality with STATUS_BEFORE is the binding assertion.
+#   ?? doc/decisions/TDR-0017-additive-optional-harness-environment-marker.md
+#   ?? .changeset/gh-277-harness-default-allowlist-minor.md
+#   M  doc/changes/.../chg-GH-277-test-plan.md
+STATUS_BEFORE=$(git -C "$REPO" status --porcelain)
+printf '%s\n' "$STATUS_BEFORE" | tee "$EVIDENCE/status-before.txt"
 HEAD_BEFORE=$(git -C "$REPO" rev-parse HEAD)
 opencode --version | tee /tmp/opencode/gh277-cli-version.txt # record; no product pass/fail on the version
 ( cd "$REPO" && pnpm build )               # the code under test is this worktree's build
@@ -1364,7 +1387,6 @@ gh issue view 277 -R "$TRACKER_REPO" --json number >/dev/null \
 
 # 0b. HARD LIVE-STATE PRECONDITION. Read the live lease view only; never mutate or
 #     release it. If a GH-277 dispatch lease is active, STOP and report.
-mkdir -p "$EVIDENCE"
 LIVE_LEASES=""
 if [ -f "$LIVE_STATE/ledger.default.jsonl" ]; then
   LIVE_JSON=$( cd "$REPO" && bun packages/cli/bin/delivery-os.ts queue list --json ) \
@@ -1396,11 +1418,17 @@ esac
 [ "$PROBE_STATE" != "$LIVE_STATE" ] || { echo "STOP: probe state root equals the live root"; exit 1; }
 rm -rf "$PROBE_STATE"                      # fresh probe root; never the live root
 
-# 1b. ZERO-CONFIGURATION ASSERTION (the point of this change). No clone-local or
-#     probe-brand user config may declare harness.environment; the shipped defaults
-#     must supply it. The surface is the delivered inspection command (AC-F6-3).
+# 1b. ZERO-CONFIGURATION ASSERTION (the point of this change). No clone-local,
+#     project-local, or probe-brand user config may declare harness.environment;
+#     the shipped defaults must supply it. The surface is the delivered inspection
+#     command (AC-F6-3). Project-local files are
+#     <root>/<configurationDirectoryName>/config.local.yaml
+#     (packages/adapters/src/file/config-source.ts:178); the clone is fresh, but a
+#     committed or pre-seeded project-local file would invalidate the proof.
 PROBE_USER_CONFIG="${XDG_CONFIG_HOME:-$LIVE_HOME/.config}/.gh277-probe/config.yaml"
-for c in "$E2E/.delivery-os/config.yaml" "$E2E/.gh277-probe/config.yaml" "$PROBE_USER_CONFIG"; do
+for c in "$E2E/.delivery-os/config.yaml" "$E2E/.delivery-os/config.local.yaml" \
+         "$E2E/.gh277-probe/config.yaml" "$E2E/.gh277-probe/config.local.yaml" \
+         "$PROBE_USER_CONFIG"; do
   if [ -f "$c" ] && grep -q 'harness' "$c"; then
     echo "STOP: probe configuration declares harness; zero-config proof invalid"; exit 1
   fi
@@ -1498,20 +1526,29 @@ cp "$E2E/envelope-evidence.txt" "$E2E/attempt.tsv" "$E2E/leases.tsv" \
    "$E2E/harness-environment.json" "$E2E/first-event.txt" "$EVIDENCE/"
 cp "$LOG" "$EVIDENCE/dispatch.log"
 
-# 8. Isolation: this worktree stays git-clean and HEAD-stable. Byte identity is
-#    NOT asserted: step 0's `pnpm build` rewrites gitignored packages/*/dist and
+# 8. Isolation: this worktree's status equals the pre-run baseline and HEAD is
+#    stable. The baseline may be non-empty (P4's uncommitted artifacts); equality
+#    with STATUS_BEFORE is the assertion, not emptiness. Byte identity is NOT
+#    asserted: step 0's `pnpm build` rewrites gitignored packages/*/dist and
 #    *.tsbuildinfo, and the clone symlinks $REPO/node_modules.
-git -C "$REPO" status --porcelain            # must still print nothing
-git -C "$REPO" rev-parse HEAD                # must equal HEAD_BEFORE
+STATUS_AFTER=$(git -C "$REPO" status --porcelain)
+printf '%s\n' "$STATUS_AFTER" | tee "$EVIDENCE/status-after.txt"
+if [ "$STATUS_AFTER" != "$STATUS_BEFORE" ]; then
+  echo "FAIL: worktree status changed during the probe"
+  diff "$EVIDENCE/status-before.txt" "$EVIDENCE/status-after.txt" || true
+  false
+fi
+[ "$(git -C "$REPO" rev-parse HEAD)" = "$HEAD_BEFORE" ] \
+  || { echo "FAIL: HEAD moved during the probe"; false; }
 ```
 
-**Evidence-root declaration.** Every attempt, lease, and envelope fact recorded from this procedure in §10 comes from the isolated probe state root `$LIVE_HOME/.gh277-probe-state` (retained copies in `$EVIDENCE`), never from the live `$HOME/.delivery-os-state`. The live root was read once, at step 0b, for the lease precondition only.
+**Evidence-root declaration.** Every attempt, lease, and envelope fact recorded from this procedure in §10 comes from the isolated probe state root `$LIVE_HOME/.gh277-probe-state` (retained copies in `$EVIDENCE`), never from the live `$HOME/.delivery-os-state`. The worktree `status-before.txt`/`status-after.txt` snapshots are retained in `$EVIDENCE` as the DoD-6 baseline evidence. The live root was read once, at step 0b, for the lease precondition only.
 
 **Expected observable evidence.**
 
 - Step 0b passes: the live root has no active `GH-277` lease, and the read-only `live-leases.tsv` is empty. If it is non-empty, the run does not start.
 - Step 1a passes: `DELIVERY_OS_WORKING_NAME=gh277-probe`, `PROBE_STATE` is `$LIVE_HOME/.gh277-probe-state`, and it is not the live root; the probe root starts fresh.
-- Step 1b passes: the clone-local `.delivery-os` and `.gh277-probe` configs and the probe-brand user config do not declare `harness`, and `config get harness.environment --show-origin --json` reports exactly four `data.value` entries — required `PATH`, `HOME`, `DELIVERY_WORK_PATH`, optional `TMPDIR` — with `data.origin` starting `layer=defaults`. This is the zero-configuration proof and the AC-F6-3 inspection surface.
+- Step 1b passes: the clone-local `.delivery-os` and `.gh277-probe` configs (including their `config.local.yaml` project-local files) and the probe-brand user config do not declare `harness`, and `config get harness.environment --show-origin --json` reports exactly four `data.value` entries — required `PATH`, `HOME`, `DELIVERY_WORK_PATH`, optional `TMPDIR` — with `data.origin` starting `layer=defaults`. This is the zero-configuration proof and the AC-F6-3 inspection surface.
 - Step 1c records the parent facts; the run unsets both model variables and `TMPDIR`, so a pass proves neither is required and the optional entry tolerates absence.
 - Step 1d records a first event with a top-level `sessionID` and `first-event-ms` ≤60 000. A longer first event is a blocked precondition (CLI/provider slowness), not a product failure.
 - Step 3 declares `GH-277` in the probe state root; no live queue write occurs.
@@ -1519,14 +1556,14 @@ git -C "$REPO" rev-parse HEAD                # must equal HEAD_BEFORE
 - Step 7 prints a `data.result` in the delivered token set, a `data.lastMessage` that is not `spawn failed before a session existed`, and a `data.error.code` that is not `dispatch.session.spawn-failed` (it may be absent). When a pre-session failure occurs, `data.error.detail` is always present with `kind` and `code` and `field` only when carried; if it names a variable, that is OQ-2 evidence.
 - Step 7 prints the attempt record's `attemptId`, `recordedAt`, `token`, `outcome`, and `evidenceRefs` from the probe state root; the refs contain `attempt:ATTEMPT_ID`. The repository key is `github.com/juliusz-cwiakalski/agentic-delivery-os`.
 - Step 7a shows no active `GH-277` lease in the probe state root on `github.com/juliusz-cwiakalski/agentic-delivery-os`.
-- Step 8 shows this worktree's `git status --porcelain` empty and `HEAD` equal to `HEAD_BEFORE`; ignored build outputs are intentionally rewritten and are not part of the assertion.
+- Step 8 shows this worktree's `STATUS_AFTER` equal to `STATUS_BEFORE` (the pre-run baseline, including P4's expected uncommitted artifacts) and `HEAD` equal to `HEAD_BEFORE`; ignored build outputs are intentionally rewritten and are not part of the assertion.
 - The live root is unchanged: no probe queue or attempt write lands there, and no live lease is released.
 - Total wall time from step 4 to step 6 is ≤180 s.
 
 **Pass/fail rule.**
 
-- **PASS** = `data.result` in the delivered token set, `data.lastMessage` not the spawn-failed sentence, `data.error.code` not `dispatch.session.spawn-failed`, a non-empty `attemptId` read from the isolated probe state root, an `attempt:ATTEMPT_ID` ref, no active `GH-277` lease in the probe root, elapsed ≤180 s, this worktree git-clean with `HEAD` unchanged, and no write to the live root.
-- **FAIL** = the spawn-failed identity appears, no child within 60 s, elapsed >180 s, a missing attempt id/ref in the probe root, an active lease in the probe root, this worktree's status/`HEAD` changed, or any probe write reached the live root. A failure reopens delivery, not the E2E wording. If the failure detail names a new required boot variable, land that variable in the default set (required, or optional when legitimately absent) before the pull request is finalized (spec F-8, §18), then re-run.
+- **PASS** = `data.result` in the delivered token set, `data.lastMessage` not the spawn-failed sentence, `data.error.code` not `dispatch.session.spawn-failed`, a non-empty `attemptId` read from the isolated probe state root, an `attempt:ATTEMPT_ID` ref, no active `GH-277` lease in the probe root, elapsed ≤180 s, `STATUS_AFTER` equal to `STATUS_BEFORE` with `HEAD` unchanged, and no write to the live root.
+- **FAIL** = the spawn-failed identity appears, no child within 60 s, elapsed >180 s, a missing attempt id/ref in the probe root, an active lease in the probe root, `STATUS_AFTER` differing from `STATUS_BEFORE` or `HEAD` moving, or any probe write reached the live root. A failure reopens delivery, not the E2E wording. If the failure detail names a new required boot variable, land that variable in the default set (required, or optional when legitimately absent) before the pull request is finalized (spec F-8, §18), then re-run.
 - **STOP (blocked precondition, not a product-test failure)** = step 0a fails, step 0b finds an active live `GH-277` lease or cannot read the live lease view, step 1a resolves the probe root to the live root, step 1b does not show the expected zero-configuration default (a procedure/config error), or step 1d records a first event later than the 60 s bound. Record the blocked precondition, restore the environment, and re-run; do not write a TC-HDA-100/101 result and do not reopen delivery on it. Never release the live lease to clear a STOP.
 
 **Cleanup.**
@@ -1542,6 +1579,8 @@ These run as part of delivery evidence but are not AC-bearing scenarios, so they
 
 - `bun test tests/behaviour/dispatch-*` and `bun test tests/conformance/dispatch*` — prove the dispatch engine's other behaviours are unchanged.
 - `bun test tests/golden/dispatch-errors.test.ts` — prove the delivered golden spawn-failure envelope is byte-exact after the deliberate detail update (its failure is `harness.spawn.refused` with kind and code and no field).
+- `bun test tests/structure/port-contract-inventory.test.ts` — the bidirectional v1 contract-surface pin (`TC-PORT-001`); `tests/fixtures/ports/v1-contract-inventory.json` must list `DispatchEnvelopeError` under `dispatch.ts` and `index.ts`, or the run fails with `unexpected export DispatchEnvelopeError` (deliberate fixture update; GAP-T6).
+- `bun test tests/structure/content-inventory.test.ts` — the executable-allowance pin (`TC-SCAFFOLD-006`/`TC-BRANDING-022`); the exported 256-character detail bound must be registered in `EXECUTABLE_ALLOWANCES["core/src/contracts/dispatch.ts"]`, or the run fails with `undeclared executable export <NAME>` (deliberate allowance update; GAP-T6).
 - `bun test tests/behaviour/harness-* tests/structure tests/boundaries` — prove the delivered harness and structural invariants still hold.
 - `bun test tests/checks` — prove the repository checks, including the changeset invariant, config artifacts, and the `harness-spawn-env` mutation anchors, stay green.
 - `bun test tests/behaviour/queue-production-binding.test.ts` — note the degradation risk: `createProductionQueueHarness` composes the production stack with `{ HOME, HARNESS_MODEL, HARNESS_SMALL_MODEL }` and no `PATH` (`tests/fixtures/queue/production/harness.ts:194-199`), so after the repair `TC-BIND-007` fails pre-session on `harness.spawn.variable-missing: PATH`; its own `not.toBe("queue.entry.unobserved")` assertions still pass, so it can silently stop proving a spawn. The delivery plan must add a synthetic `PATH` to that fixture or restate the case as a queue-observation proof.
@@ -1593,6 +1632,9 @@ TMPDIR=$PWD/tmp/tmpdir pnpm check
 | `tests/behaviour/dispatch-harness-default-detail.test.ts` | add | TC-HDA-030, 031, 032, 034, 035 |
 | `tests/behaviour/dispatch-error-envelope.test.ts` | edit | TC-HDA-033 |
 | `tests/structure/dispatch-composition.test.ts` | edit | TC-HDA-023 |
+| `tests/fixtures/ports/v1-contract-inventory.json` | edit | Deliberate pin update: add `DispatchEnvelopeError` to `modules["dispatch.ts"]` and `modules["index.ts"]` so the bidirectional v1 contract surface matches the delivered contract (TC-HDA-029) |
+| `tests/structure/port-contract-inventory.test.ts` | run unchanged | Bidirectional `TC-PORT-001` surface comparison; fails with `unexpected export DispatchEnvelopeError` until the fixture is updated (TC-HDA-029) |
+| `tests/structure/content-inventory.test.ts` | edit | Register the exported 256-character detail bound in the `EXECUTABLE_ALLOWANCES["core/src/contracts/dispatch.ts"]` list; no new package source file, so `tests/structure/inventory.json` is unchanged (TC-HDA-034) |
 | `tests/structure/harness-neutrality.test.ts` | run unchanged | TC-HDA-004 |
 | `tests/structure/harness-imports.test.ts` | run unchanged | TC-HDA-004 |
 | `tests/checks/config-default-positions.test.ts` | run unchanged | TC-HDA-003 |
@@ -1611,7 +1653,7 @@ TMPDIR=$PWD/tmp/tmpdir pnpm check
 | `packages/core/src/config/harness.ts` | Accept `optional` as a boolean on a variable entry; reject non-boolean, marker+`credentialRef`, and unknown keys as `config.value.invalid`; keep `value` as `config.secret.forbidden`; carry the marker on `HarnessEnvironmentSetting` |
 | `packages/core/src/domain/harness-spawn-env.ts` | Treat `entry.optional === true` as "omit when absent"; keep the delivered required path and record precedence |
 | `packages/cli/src/production.ts` | Map the marker verbatim to the descriptor; keep the `DELIVERY_WORK_PATH` record injection and the bare `opencode` command |
-| `packages/core/src/contracts/dispatch.ts` | Declare `DispatchEnvelopeError` as the delivered `CommandResultError` plus `detail?: { kind: "harness" \| "config"; code: string; field?: string }`; retype `DispatchEnvelopeData.error` to it; keep `CommandResultError` (`result.ts`) and every other envelope unchanged |
+| `packages/core/src/contracts/dispatch.ts` | Declare `DispatchEnvelopeError` as the delivered `CommandResultError` plus `detail?: { kind: "harness" \| "config"; code: string; field?: string }`; retype `DispatchEnvelopeData.error` to it; export the bounded detail constant (expected `DISPATCH_MAX_ERROR_DETAIL_CHARS = 256`) and keep `CommandResultError` (`result.ts`) and every other envelope unchanged |
 | `packages/core/src/app/dispatch.ts` | Preserve the underlying `HarnessFailure` on the pre-session spawn path and attach it as `error.detail` where `errorOf` assembles the dispatch error |
 | `packages/cli/src/commands/dispatch.ts`, `packages/cli/src/output/dispatch-text.ts` | Select the bounded verbose diagnostic at the dispatch `humanText` seam (133-149) through the optional `HumanTextContext` context (DM-4) and render it in the dispatch text module; keep `renderDispatchText` at exactly four keys for non-verbose mode |
 | `packages/cli/src/index.ts`, `packages/cli/src/output/serialize.ts` | Export `HumanTextContext = { readonly verbose: boolean }` (DM-4), widen `CommandDefinition.humanText` with the optional third parameter, and pass `{ verbose }` at the single call site (351-353) while keeping every two-parameter definition and two-argument call valid; keep `diagnosticFor` non-verbose-gated and the single redacted `writeOutput` path unchanged |
@@ -1619,7 +1661,7 @@ TMPDIR=$PWD/tmp/tmpdir pnpm check
 
 ### 7.2 TC → File / Command Mapping
 
-Each row records the owning source anchor for any literal the scenario asserts. Fields that do not exist yet are anchored to spec v1.2 until the delivered contract lands (GAP-T2); spec line references in this table are for spec v1.2.
+Each row records the owning source anchor for any literal the scenario asserts. Fields that do not exist yet are anchored to spec v1.3 until the delivered contract lands (GAP-T2); spec line references in this table are for spec v1.3.
 
 | TC ID | File(s) to create or update | Execution command | Source anchors | Status |
 |---|---|---|---|---|
@@ -1627,12 +1669,12 @@ Each row records the owning source anchor for any literal the scenario asserts. 
 | TC-HDA-002 | `tests/behaviour/harness-config.test.ts` | `bun test tests/behaviour/harness-config.test.ts` | `config/catalog.ts:276-284`; `config/schema.ts:19-33`; `config/harness.ts:110-134` | Existing – Update |
 | TC-HDA-003 | `tests/checks/config-default-positions.test.ts` (unchanged), `scripts/checks/exports-parity.ts` (unchanged) | `bun test tests/checks/config-default-positions.test.ts`; `bun run scripts/checks/exports-parity.ts` | `scripts/checks/exports-parity.ts:23-24, 54-58, 117` | Existing – No Change (assertions already cover) |
 | TC-HDA-004 | `tests/structure/harness-neutrality.test.ts`, `tests/structure/harness-imports.test.ts` (unchanged) | `bun test tests/structure/harness-neutrality.test.ts tests/structure/harness-imports.test.ts`; `pnpm check:boundaries` | `domain/harness-spawn-env.ts:38-67`; `harness-imports.test.ts:26-40` | Existing – No Change |
-| TC-HDA-005 | `tests/behaviour/harness-config.test.ts`; `tests/fixtures/harness/config/default.resolved.json` | `bun test tests/behaviour/harness-config.test.ts` | `config/defaults.ts:58-62`; spec Appendix B 480-490 | Existing – Update |
+| TC-HDA-005 | `tests/behaviour/harness-config.test.ts`; `tests/fixtures/harness/config/default.resolved.json` | `bun test tests/behaviour/harness-config.test.ts` | `config/defaults.ts:58-62`; spec Appendix B 502-514 | Existing – Update |
 | TC-HDA-006 | `tests/checks/privacy-release.test.ts` (unchanged); `.changeset/gh-277-harness-default-allowlist-minor.md` | `bun test tests/checks/privacy-release.test.ts` | `tests/checks/privacy-release.test.ts:42-49, 70-86, 133-175` | Existing – No Change; changeset To Add |
 | TC-HDA-010 | `tests/behaviour/dispatch-harness-default-spawn.test.ts`; `tests/fixtures/harness/default-spawn.ts` | `bun test tests/behaviour/dispatch-harness-default-spawn.test.ts` | `cli/production.ts:423-447, 462-465`; `app/dispatch.ts:347-400` | To Implement |
 | TC-HDA-011 | `tests/behaviour/harness-default-path.test.ts`; `tests/fixtures/harness/default-spawn.ts` | `bun test tests/behaviour/harness-default-path.test.ts` | `cli/production.ts:458-465`; `adapters/src/harness/opencode.ts:63-88, 281-300`; `contracts/harness.ts:259-264, 326-336, 373-377, 411-412`; `domain/harness-spawn-env.ts:46-58` | To Implement |
 | TC-HDA-012 | `tests/behaviour/harness-spawn-env.test.ts`, `tests/behaviour/dispatch-harness-default-spawn.test.ts`; `tests/fixtures/harness/spawn-env.ts` | `bun test tests/behaviour/harness-spawn-env.test.ts tests/behaviour/dispatch-harness-default-spawn.test.ts` | `tests/fixtures/harness/spawn-env.ts:22-63`; `domain/harness-spawn-env.ts:44-66` | Existing – Update |
-| TC-HDA-013 | `tests/behaviour/harness-spawn-env.test.ts` | `bun test tests/behaviour/harness-spawn-env.test.ts` | `config/defaults.ts:58-62`; spec Appendix A 466-476 | Existing – Update |
+| TC-HDA-013 | `tests/behaviour/harness-spawn-env.test.ts` | `bun test tests/behaviour/harness-spawn-env.test.ts` | `config/defaults.ts:58-62`; spec Appendix A 488-500 | Existing – Update |
 | TC-HDA-014 | `tests/behaviour/harness-spawn-env.test.ts`, `tests/behaviour/harness-spawn-credential.test.ts` | `bun test tests/behaviour/harness-spawn-env.test.ts tests/behaviour/harness-spawn-credential.test.ts` | `domain/harness-spawn-env.ts:46-58`; `contracts/harness.ts:286-296, 306-314` | Existing – Update |
 | TC-HDA-015 | `tests/behaviour/harness-spawn-env.test.ts` | `bun test tests/behaviour/harness-spawn-env.test.ts` | `domain/harness-spawn-env.ts:46-58`; spec F-3 143 | Existing – Update |
 | TC-HDA-016 | `tests/behaviour/harness-spawn-env.test.ts` | same | `domain/harness-spawn-env.ts:48`; spec F-3 143 | Existing – Update |
@@ -1641,23 +1683,24 @@ Each row records the owning source anchor for any literal the scenario asserts. 
 | TC-HDA-019 | `tests/behaviour/harness-config.test.ts`, `tests/behaviour/harness-spawn-env.test.ts` | `bun test tests/behaviour/harness-config.test.ts tests/behaviour/harness-spawn-env.test.ts` | `config/harness.ts:23-25, 130-133` | Existing – Update |
 | TC-HDA-020 | `tests/behaviour/harness-config.test.ts`, `tests/behaviour/harness-spawn-env.test.ts` | same | `config/harness.ts:23-25, 130-133`; `domain/harness-spawn-env.ts:46-58` | Existing – Update |
 | TC-HDA-021 | `tests/behaviour/harness-config.test.ts`; the three config fixtures | `bun test tests/behaviour/harness-config.test.ts` | `config/harness.ts:110-134`; `config/catalog.ts:276-284` | Existing – Update |
-| TC-HDA-022 | `tests/behaviour/config-cli.test.ts`; `tests/fixtures/harness/config/optional-entry.yaml` | `bun test tests/behaviour/config-cli.test.ts` | `packages/cli/src/commands/config.ts:96-99, 102-155`; `config/provenance.ts:20-24`; spec AC-F6-3 398 | Existing – Update |
+| TC-HDA-022 | `tests/behaviour/config-cli.test.ts`; `tests/fixtures/harness/config/optional-entry.yaml` | `bun test tests/behaviour/config-cli.test.ts` | `packages/cli/src/commands/config.ts:96-99, 102-155`; `config/provenance.ts:20-24`; spec AC-F6-3 400 | Existing – Update |
 | TC-HDA-023 | `tests/structure/dispatch-composition.test.ts` | `bun test tests/structure/dispatch-composition.test.ts` | `cli/production.ts:423-447, 462-465`; `contracts/harness.ts:144-148` | Existing – Update |
-| TC-HDA-029 | `tests/structure/dispatch-envelope-detail.test.ts`, `tests/types/dispatch-envelope-detail.type-test.ts` | `bun test tests/structure/dispatch-envelope-detail.test.ts`; `pnpm typecheck` | `contracts/dispatch.ts:277-296`; `contracts/result.ts:36-43`; `cli/index.ts:262-272`; spec DM-3 239, §8.5 261-271, Appendix C 516-540 | To Implement |
+| TC-HDA-029 | `tests/structure/dispatch-envelope-detail.test.ts`, `tests/types/dispatch-envelope-detail.type-test.ts`; `tests/fixtures/ports/v1-contract-inventory.json` (edit); `tests/structure/port-contract-inventory.test.ts` (run unchanged) | `bun test tests/structure/dispatch-envelope-detail.test.ts tests/structure/port-contract-inventory.test.ts`; `pnpm typecheck` | `contracts/dispatch.ts:277-296`; `contracts/result.ts:36-43`; `cli/index.ts:262-272`; `tests/fixtures/ports/v1-contract-inventory.json` (`modules["dispatch.ts"]`, `modules["index.ts"]`); spec DM-3 239, §8.5 261-271, Appendix C 516-540 | To Implement |
 | TC-HDA-030 | `tests/behaviour/dispatch-harness-default-detail.test.ts`; `tests/fixtures/dispatch/harness.ts`; `tests/fixtures/dispatch/golden/errors/spawn-failed.json` (edit) | `bun test tests/behaviour/dispatch-harness-default-detail.test.ts`; `bun test tests/golden/dispatch-errors.test.ts` | `app/dispatch.ts:466-485`; `contracts/harness.ts:306-314`; `tests/fixtures/dispatch/harness.ts:158-162`; `tests/golden/dispatch-errors.test.ts:49-57` | To Implement |
 | TC-HDA-031 | `tests/behaviour/dispatch-harness-default-detail.test.ts` | same | `cli/output/serialize.ts:41-49, 89-117`; `app/dispatch.ts:466-485` | To Implement |
-| TC-HDA-032 | `tests/behaviour/dispatch-harness-default-detail.test.ts`; `tests/types/dispatch-human-text-context.type-test.ts` | `bun test tests/behaviour/dispatch-harness-default-detail.test.ts`; `pnpm typecheck` | `cli/commands/dispatch.ts:133-149`; `cli/output/dispatch-text.ts:28-34`; `cli/index.ts:51, 298-303, 317, 351-353`; `cli/output/serialize.ts:73, 89-115`; spec AC-F5-3 395, DM-4 240, NFR-7 282 | To Implement |
+| TC-HDA-032 | `tests/behaviour/dispatch-harness-default-detail.test.ts`; `tests/types/dispatch-human-text-context.type-test.ts` | `bun test tests/behaviour/dispatch-harness-default-detail.test.ts`; `pnpm typecheck` | `cli/commands/dispatch.ts:133-149`; `cli/output/dispatch-text.ts:28-34`; `cli/index.ts:51, 298-303, 317, 351-353`; `cli/output/serialize.ts:73, 89-115`; spec AC-F5-3 395, DM-4 240, NFR-7 284 | To Implement |
 | TC-HDA-033 | `tests/behaviour/dispatch-error-envelope.test.ts`; `tests/golden/dispatch-errors.test.ts` (unchanged); `tests/fixtures/dispatch/golden/errors/spawn-failed.json` (edit) | `bun test tests/behaviour/dispatch-error-envelope.test.ts tests/golden/dispatch-errors.test.ts` | `app/dispatch.ts:185-200, 466-485`; `contracts/error-table.ts` spawn-failed row; `tests/golden/dispatch-errors.test.ts:49-57` | Existing – Update |
-| TC-HDA-034 | `tests/behaviour/dispatch-harness-default-detail.test.ts` | `bun test tests/behaviour/dispatch-harness-default-detail.test.ts` | `contracts/dispatch.ts` (`DispatchEnvelopeError.detail`); spec NFR-6 281, AC-F5-5 395, Appendix C 494-505 | To Implement |
+| TC-HDA-034 | `tests/behaviour/dispatch-harness-default-detail.test.ts`; `tests/structure/content-inventory.test.ts` (edit) | `bun test tests/behaviour/dispatch-harness-default-detail.test.ts tests/structure/content-inventory.test.ts` | `contracts/dispatch.ts` (`DispatchEnvelopeError.detail`, exported bound constant); `tests/structure/content-inventory.test.ts:466-509, 2145-2184`; spec NFR-6 283, AC-F5-5 397, Appendix C 516-540 | To Implement |
 | TC-HDA-035 | `tests/behaviour/dispatch-harness-default-detail.test.ts`, `tests/behaviour/dispatch-harness-default-spawn.test.ts` | `bun test tests/behaviour/dispatch-harness-default-detail.test.ts` | `domain/harness-spawn-env.ts:49-56`; `app/dispatch.ts:466-485` | To Implement |
-| TC-HDA-100 | §6.3 procedure; no test file | Manual: §6.3 steps 0–7 under the isolated probe state root | spec AC-F8-1 404, F-8 148, §18 417-424 | Manual Only |
-| TC-HDA-101 | §6.3 procedure; no test file | Manual: §6.3 steps 0–8 + git-clean/HEAD snapshots + probe-root evidence | spec AC-F8-2 405, RSK-6 305 | Manual Only |
+| TC-HDA-100 | §6.3 procedure; no test file | Manual: §6.3 steps 0–7 under the isolated probe state root | spec AC-F8-1 406, F-8 148, §18 439-446 | Manual Only |
+| TC-HDA-101 | §6.3 procedure; no test file | Manual: §6.3 steps 0–8 + `STATUS_BEFORE`/`STATUS_AFTER` equality + `HEAD` snapshots + probe-root evidence | spec AC-F8-2 407, §17.1 DoD-6 430, RSK-6 307 | Manual Only |
 
 **Blast-radius notes.**
 
 - `tests/fixtures/dispatch/golden/errors/spawn-failed.json` is a delivered byte-pinned artifact, not a new fixture: its scenario failure is `{ kind: "harness", code: "harness.spawn.refused" }` with no `field`, so under the always-present attachment rule it gains `data.error.detail = { kind: "harness", code: "harness.spawn.refused" }` and nothing else. The golden must be regenerated from the delivered envelope (including key order, which byte equality observes), not hand-inserted; `tests/golden/dispatch-errors.test.ts` stays unchanged and must pass; editing the golden without reviewing that diff is a review item.
 - `tests/fixtures/queue/production/harness.ts` needs a synthetic `PATH` (or a restated `TC-BIND-007` scope) in the implementation plan; otherwise that delivered test still passes for the wrong reason after the default repair.
 - `tests/checks/harness-mutants.test.ts` must keep its string anchors on `harness-spawn-env.ts` (76-84, 102-111) through the optional branch; a moved anchor turns the mutant into a no-op.
+- The two contract inventories are deliberate pin updates, not regressions: `tests/fixtures/ports/v1-contract-inventory.json` gains exactly `DispatchEnvelopeError` under `dispatch.ts` and `index.ts` (bidirectional comparison), and `tests/structure/content-inventory.test.ts` gains the exported bound constant in the `core/src/contracts/dispatch.ts` allowance. `tests/structure/inventory.json` is unchanged because no package source file is added.
 
 **Sequencing notes.**
 
@@ -1682,7 +1725,7 @@ Each anti-recurrence claim has a named mutation that must turn a named test red.
 | M-6 | Deny-by-default / no ambient leakage | Spread the parent environment into the child (`{ ...parentEnvironment, ...built }`) | `bun test tests/behaviour/harness-spawn-env.test.ts tests/behaviour/dispatch-harness-default-spawn.test.ts` | The undeclared canary appears in the child; the canary serialization assertion fails | TC-HDA-012, TC-HDA-004 |
 | M-7 | Record value wins | Invert precedence to `parentEnvironment[name] ?? record?.[name]` | `bun test tests/behaviour/harness-spawn-env.test.ts` | The record value assertion fails (parent value returned) | TC-HDA-017 |
 | M-8 | Bare command resolves through `PATH` | Remove `PATH` from the child (or pass an absolute command path) | `bun test tests/behaviour/harness-default-path.test.ts` | The marker file is absent / spawn fails; the absolute-path assertion fails | TC-HDA-011, TC-HDA-010 |
-| M-9 | Underlying detail is carried on the dispatch-specific type | Do not attach `detail` on the pre-session branch (or attach only `code`, or omit `kind`), or move the detail onto the shared `CommandResultError` | `bun test tests/behaviour/dispatch-harness-default-detail.test.ts tests/structure/dispatch-envelope-detail.test.ts tests/golden/dispatch-errors.test.ts` | `data.error.detail` is absent or missing `kind`/`code`; the no-field case still requires kind and code; the golden byte-equality fails (TC-ERR-004); the anti-widening assertion fails on the shared error type | TC-HDA-029, TC-HDA-030, TC-HDA-031; delivered `TC-ERR-004` |
+| M-9 | Underlying detail is carried on the dispatch-specific type | Do not attach `detail` on the pre-session branch (or attach only `code`, or omit `kind`), move the detail onto the shared `CommandResultError`, or drop the `DispatchEnvelopeError` export without updating its inventory pins | `bun test tests/behaviour/dispatch-harness-default-detail.test.ts tests/structure/dispatch-envelope-detail.test.ts tests/golden/dispatch-errors.test.ts tests/structure/port-contract-inventory.test.ts` | `data.error.detail` is absent or missing `kind`/`code`; the no-field case still requires kind and code; the golden byte-equality fails (TC-ERR-004); the anti-widening assertion fails on the shared error type; the contract inventory reports a missing/unexpected export | TC-HDA-029, TC-HDA-030, TC-HDA-031; delivered `TC-ERR-004` |
 | M-10 | Verbose human output names the detail at the dispatch human-text seam | Remove the verbose selection at `packages/cli/src/commands/dispatch.ts:133-149` (keep only the non-verbose four-key text) | `bun test tests/behaviour/dispatch-harness-default-detail.test.ts` | The underlying code/field strings are absent from verbose stdout | TC-HDA-032 |
 | M-11 | Non-verbose text stays four keys | Add a fifth key (e.g. `detail=`) to `renderDispatchText` | same | The exactly-four-lines/keys assertion fails | TC-HDA-032 |
 | M-12 | Identity and last message unchanged | Change `lastMessage` to `spawn failed`, or add a new error-table/delivery-result token | `bun test tests/behaviour/dispatch-error-envelope.test.ts` | The exact-sentence assertion or the vocabulary-set assertion fails | TC-HDA-033 |
@@ -1712,7 +1755,9 @@ bun test tests/structure/harness-environment-marker.test.ts \
          tests/structure/dispatch-envelope-detail.test.ts \
          tests/structure/dispatch-composition.test.ts \
          tests/structure/harness-neutrality.test.ts \
-         tests/structure/harness-imports.test.ts
+         tests/structure/harness-imports.test.ts \
+         tests/structure/port-contract-inventory.test.ts \
+         tests/structure/content-inventory.test.ts
 bun test tests/behaviour/dispatch-error-envelope.test.ts
 bun test tests/golden/dispatch-errors.test.ts
 bun test tests/checks/config-default-positions.test.ts tests/checks/privacy-release.test.ts tests/checks/harness-mutants.test.ts
@@ -1737,16 +1782,17 @@ TMPDIR=$PWD/tmp/tmpdir pnpm check
 | R-T2 | PATH resolution is "proven" with an absolute command path, so the child never exercises the declared `PATH`. | TC-HDA-011 invokes the bare name and asserts no argument/command is absolute; the off-PATH control must fail; TC-HDA-010 reads the fake CLI's argv[0] basename. |
 | R-T3 | The fake CLI is too permissive and receives an ambient environment, hiding a leakage defect. | The synthetic CLI dumps its environment; TC-HDA-012 asserts the exact key set and the canary absence in the real child, not only in the builder result. |
 | R-T4 | The optional marker is proven only on a synthetic descriptor and never reaches configuration or composition. | TC-HDA-002 (catalog/schema), TC-HDA-021 (validation), TC-HDA-022 (inspection), TC-HDA-023 (composition) cover the full path. |
-| R-T5 | The dispatch detail assertion invents a field the contract does not carry, assumes a detail-less pre-session variant, or widens the shared error type. | TC-HDA-029 reads the delivered `DispatchEnvelopeError` and asserts `CommandResultError` stays at six fields while every other envelope keeps its six-field error; TC-HDA-030 asserts the always-present detail, the no-field `harness.spawn.refused` case, and the byte-exact golden; §3.5 anchors the named type to spec v1.2 DM-3/Appendix C until the contract lands (GAP-T2). |
+| R-T5 | The dispatch detail assertion invents a field the contract does not carry, assumes a detail-less pre-session variant, or widens the shared error type. | TC-HDA-029 reads the delivered `DispatchEnvelopeError` and asserts `CommandResultError` stays at six fields while every other envelope keeps its six-field error; TC-HDA-030 asserts the always-present detail, the no-field `harness.spawn.refused` case, and the byte-exact golden; §3.5 anchors the named type to spec v1.3 DM-3/Appendix C until the contract lands (GAP-T2). |
 | R-T6 | The four-key text contract is weakened to make verbose output easy, the verbose detail is smuggled onto the shared stderr diagnostic, or the DM-4 type widening breaks a two-parameter definition. | TC-HDA-032 asserts exactly four lines/keys without verbose, asserts the detail is verbose-only on the dispatch human-text channel, asserts stderr carries no dispatch detail, and runs `pnpm typecheck` over a two-parameter definition and a direct two-argument call; M-11 proves a fifth key goes red and M-10 the verbose seam. |
 | R-T7 | A redaction gap leaks a value through the new detail. | TC-HDA-031 registers a synthetic secret and asserts its absence from the serialized JSON; TC-HDA-034 asserts identifiers-only and no value. |
 | R-T8 | A mutation is applied and not reverted, or a mutant is committed. | Every mutation runs in a scratch copy or is reverted with `git checkout --`; §10 records "Restored: Green"; the final `pnpm check` runs on a clean tree. |
-| R-T9 | The end-to-end proof starts a nested lifecycle that mutates this worktree, writes the live state root, or runs for hours. | §6.3: disposable clone, probe-only brand state root (`DELIVERY_OS_WORKING_NAME=gh277-probe` → `$LIVE_HOME/.gh277-probe-state`), read-only live lease precondition with STOP, `pgrep -P` child scoping, ≤180 s bound, zero-config assertion, git-clean/`HEAD` snapshots (TC-HDA-101). |
+| R-T9 | The end-to-end proof starts a nested lifecycle that mutates this worktree, writes the live state root, or runs for hours. | §6.3: disposable clone, probe-only brand state root (`DELIVERY_OS_WORKING_NAME=gh277-probe` → `$LIVE_HOME/.gh277-probe-state`), read-only live lease precondition with STOP, `pgrep -P` child scoping, ≤180 s bound, zero-config assertion, and `STATUS_BEFORE`/`STATUS_AFTER` baseline equality with `HEAD` snapshots (TC-HDA-101). Expected uncommitted P4 artifacts are permitted baseline content, so the assertion is achievable mid-phase. |
 | R-T10 | The end-to-end proof fails for an unrelated reason (missing auth, unparseable origin, missing queue entry, active live lease) and is misread as a product regression. | §6.3 preconditions (token, `gh auth status`, tracker probe, origin, probe-root `queue add`, live-lease STOP) and an explicit STOP rule separate a blocked precondition from a product FAIL. |
 | R-T11 | The generated artifacts are regenerated blindly, hiding a real schema/defaults change. | TC-HDA-003 compares source hashes and reads the generated schema; generation is a reviewed step, never a test fix (§6.5). |
 | R-T12 | Changing the existing spawn-env fixture deletes the undeclared canary or the delivered assertions to make the new default pass. | TC-HDA-012 requires a genuine undeclared canary after `HOME` becomes declared; §7.2 marks the fixture edit as "Existing – Update" and review must reject a deleted assertion. |
 | R-T13 | The byte-pinned golden spawn-failure envelope is forgotten (delivered `TC-ERR-004` fails) or updated without applying the attachment rule (the envelope pin drifts). | §7.1/§7.2 name the golden and its consumer; TC-HDA-030 step 9 and TC-HDA-033 step 7 assert the byte-exact repaired shape with `harness.spawn.refused` and no `field`; M-9 includes the golden in its command. |
 | R-T14 | Existing fixtures silently degrade after the default repair: `TC-BIND-007` no longer reaches a spawn because its parent lacks `PATH`, and `tests/checks/harness-mutants.test.ts` string anchors could become no-ops. | §6.4 and §7.1 name both as run-unchanged regressions with their failure modes; the implementation plan must add a synthetic `PATH` or restate `TC-BIND-007`, and the optional branch must preserve the mutation anchors. |
+| R-T15 | The widened contract surface and the new exported bound drift from the two delivered inventory pins, and the failure surfaces only at the aggregate gate after every phase is "done". | §2, §6.4, §7.1, and §7.2 name `tests/structure/port-contract-inventory.test.ts` + `tests/fixtures/ports/v1-contract-inventory.json` (add `DispatchEnvelopeError` under `dispatch.ts` and `index.ts`) and `tests/structure/content-inventory.test.ts` (register the exported bound constant) as deliberate pin updates; TC-HDA-029/034 run both suites and M-9 includes the contract inventory. |
 
 ### 8.2 Assumptions
 
@@ -1758,9 +1804,10 @@ TMPDIR=$PWD/tmp/tmpdir pnpm check
 - `origin/main-tools` is fetched before the `TC-RELEASE-001` check so its merge base exists.
 - The production GitHub instance resolves the literal `GITHUB_TOKEN` environment variable (as GH-275 recorded), so the E2E procedure exports it explicitly.
 - The attempt ledger path is `$HOME/.delivery-os-state/ledger.default.jsonl` under the default working name, as GH-275 recorded; the E2E probe runs under the probe brand `gh277-probe`, so its ledger is `$HOME/.gh277-probe-state/ledger.default.jsonl` and the live path is read-only.
-- The dispatch detail is typed by spec v1.2 DM-3 as `DispatchEnvelopeError["detail"]`; it is always present on the pre-session path with required `kind` (`"harness" | "config"`) and `code`, and optional `field`; the 256-character bound is fixed by the spec and the implementation may choose the constant's name (GAP-T2).
-- The verbose diagnostic channel is fixed by spec v1.2: the dispatch command's `humanText` seam selects it through the optional `HumanTextContext` third parameter (DM-4) and the dispatch text module renders it; the shared stderr `diagnosticFor` stays non-verbose-gated (GAP-T4, GAP-T5, OQ-T3 closed).
+- The dispatch detail is typed by spec v1.3 DM-3 as `DispatchEnvelopeError["detail"]`; it is always present on the pre-session path with required `kind` (`"harness" | "config"`) and `code`, and optional `field`; the 256-character bound is an exported constant (expected `DISPATCH_MAX_ERROR_DETAIL_CHARS`) registered in the `core/src/contracts/dispatch.ts` executable allowance (GAP-T2, GAP-T6).
+- The verbose diagnostic channel is fixed by spec v1.3: the dispatch command's `humanText` seam selects it through the optional `HumanTextContext` third parameter (DM-4) and the dispatch text module renders it; the shared stderr `diagnosticFor` stays non-verbose-gated (GAP-T4, GAP-T5, OQ-T3 closed).
 - The configuration inspection surface is the delivered `config get harness.environment --show-origin`, returning the `originLabel` string (OQ-T4 closed).
+- The two contract inventories are treated as deliberate pins: the fixture is the expected v1 surface and the executable allowance is the expected export set, so a new export is a reviewed fixture/allowance diff, never a test loosening.
 
 ### 8.3 Open Questions
 
@@ -1768,11 +1815,11 @@ TMPDIR=$PWD/tmp/tmpdir pnpm check
 |----|----------|-----------|-------|--------------------------|
 | OQ-T1 | Does opencode require a boot variable beyond `PATH`, `HOME`, and optionally `TMPDIR` on the supported POSIX profile? | No | `@coder` / owner | Carried from spec OQ-2. The §6.3 real proof is the evidence source. If a new required variable appears, land it in the default set (required, or optional when legitimately absent) before the PR is finalized, and re-run TC-HDA-100. |
 | OQ-T2 | Does the synthetic CLI need its interpreter directory on the declared `PATH`, or can it use an absolute shebang? | No | `@coder` | Delivery-bound. Either is acceptable as long as the positive case invokes the bare name and the negative case removes the temp bin from `PATH`. The plan does not fix the script interpreter. |
-| OQ-T3 | Is the verbose human diagnostic emitted on the delivered diagnostic/error stream or in the human text? | No | `@spec-writer` (resolved) | **Resolved by spec v1.2 §2.1/§16 and Appendix D**: it is the dispatch human-text channel — selected at `packages/cli/src/commands/dispatch.ts:133-149` through the optional `HumanTextContext` third parameter (DM-4), rendered in `packages/cli/src/output/dispatch-text.ts`, with `--verbose` parsed at `packages/cli/src/index.ts:317` and passed at the human-text call site (351-353). The shared stderr `diagnosticFor` stays non-verbose-gated. TC-HDA-032 asserts stdout detail, the two-parameter compatibility clause under `pnpm typecheck`, no dispatch detail on stderr, and the four-key non-verbose text. |
-| OQ-T4 | Does the config inspection need the delivered `config` command or the source bin in the disposable clone? | No | `@spec-writer` (resolved) | **Resolved by spec v1.2 AC-F6-3/§8.3**: the surface is `config get harness.environment --show-origin` (`packages/cli/src/commands/config.ts:96-155`). TC-HDA-022 asserts the command, the four entries, the `TMPDIR` marker, and the `layer=defaults` origin; §6.3 step 1b runs the same command in the disposable clone via `bun packages/cli/bin/delivery-os.ts`. |
+| OQ-T3 | Is the verbose human diagnostic emitted on the delivered diagnostic/error stream or in the human text? | No | `@spec-writer` (resolved) | **Resolved by spec v1.3 §2.1/§16 and Appendix D**: it is the dispatch human-text channel — selected at `packages/cli/src/commands/dispatch.ts:133-149` through the optional `HumanTextContext` third parameter (DM-4), rendered in `packages/cli/src/output/dispatch-text.ts`, with `--verbose` parsed at `packages/cli/src/index.ts:317` and passed at the human-text call site (351-353). The shared stderr `diagnosticFor` stays non-verbose-gated. TC-HDA-032 asserts stdout detail, the two-parameter compatibility clause under `pnpm typecheck`, no dispatch detail on stderr, and the four-key non-verbose text. |
+| OQ-T4 | Does the config inspection need the delivered `config` command or the source bin in the disposable clone? | No | `@spec-writer` (resolved) | **Resolved by spec v1.3 AC-F6-3/§8.3**: the surface is `config get harness.environment --show-origin` (`packages/cli/src/commands/config.ts:96-155`). TC-HDA-022 asserts the command, the four entries, the `TMPDIR` marker, and the `layer=defaults` origin; §6.3 step 1b runs the same command in the disposable clone via `bun packages/cli/bin/delivery-os.ts` and checks the project-local `config.local.yaml` path too. |
 | OQ-T5 | Should the real proof pin the opencode version to the GH-275-verified 2.2.5? | No | `@pm` | No. The spec requires a healthy installed CLI; the procedure records the version and treats a version mismatch as context, not a product failure. |
 
-**Spec gaps discovered during test planning and DoR iteration 1 (resolved in spec v1.1/v1.2, reported not edited here).** The four gaps this plan raised against spec v1.0 are closed in v1.1 (governing TDR, verbose seam, dispatch error type, inspection surface). The test-planning DoR iteration-1 gaps are closed in v1.2: DM-4 declares the additive optional `HumanTextContext`; F-5/Appendix C state the always-present pre-session attachment rule (`kind` and `code` required, `field` only when carried); and §17.1 defines the Definition of Done. No gap remains open against the plan.
+**Spec gaps discovered during test planning and DoR iteration 1 (resolved in spec v1.1/v1.2, reported not edited here).** The four gaps this plan raised against spec v1.0 are closed in v1.1 (governing TDR, verbose seam, dispatch error type, inspection surface). The test-planning DoR iteration-1 gaps are closed in v1.2: DM-4 declares the additive optional `HumanTextContext`; F-5/Appendix C state the always-present pre-session attachment rule (`kind` and `code` required, `field` only when carried); and §17.1 defines the Definition of Done. DoR iteration 2 is closed in spec v1.3 (the precise DoD-6 baseline claim and the expanded current-truth handoff) and in this test plan v1.3 (the baseline-based E2E assertion, the two contract-inventory pins, the re-based spec anchors, and the project-local configuration guard). No gap remains open against the plan.
 
 - Spec `links.decisions` and the §13 "Governed by" row list `TDR-0017` alongside `TDR-0008`/`TDR-0016`.
 - Spec §16 names the verbose rendering seam the plan asserts: the dispatch command's human-text selection (`packages/cli/src/commands/dispatch.ts:133-149`) through the optional `HumanTextContext` (DM-4), with `--verbose` parsed at `packages/cli/src/index.ts:317`, passed at the call site (351-353), and the shared stderr `diagnosticFor` unchanged.
@@ -1788,6 +1835,7 @@ TMPDIR=$PWD/tmp/tmpdir pnpm check
 | 1.0 | 2026-11-09 | @test-plan-writer | Initial test plan for GH-277. 29 scenarios cover all 29 ACs (AC-F1-1..AC-F8-2), all nine NFRs, DEC-1..DEC-6, DM-1..DM-3, RSK-1..RSK-8, and TDR-0017 C-1..C-8: the viable zero-configuration default allowlist, the variable-only optional marker with fail-closed required absence and strict credentials, deny-by-default with a real-child canary, record-over-parent precedence, config/schema/artifact parity, the additive dispatch `data.error.detail` in JSON and verbose output with the four-key non-verbose contract and unchanged spawn-failed identity, detail hygiene bounds, the `TC-RELEASE-001` changeset invariant, and one bounded operator-run real dispatch in a disposable clone. Every asserted literal is anchored to an executed source read in §3.5 and §7.2; new detail fields are anchored to the spec until the contract lands (GAP-T2). The plan includes 20 named mutants (M-1..M-20) with red/green controls, the repo-local `TMPDIR=$PWD/tmp/tmpdir pnpm check` aggregate gate, the privacy-literal constraint, and a per-phase execution-evidence skeleton. |
 | 1.1 | 2026-11-09 | @test-plan-writer | Aligned with change spec v1.1 and TDR-0017; no TC id, AC mapping, or coverage row removed. OQ-T3 closed: TC-HDA-032 (and §1.2 GAP-T4, §1.4 row 13, §3.5, §4, §7.1–7.3, §8) now asserts the named verbose seam — `--verbose` parsed at `packages/cli/src/index.ts:317`, consumed by `writeOutput` (`serialize.ts:73, 97-113`), dispatch human text selected at `commands/dispatch.ts:133-149`, rendered in `output/dispatch-text.ts` — with the non-verbose exact-four-key assertion unchanged and no dispatch detail on the shared stderr `diagnosticFor`. OQ-T4 closed: TC-HDA-022 now uses `config get harness.environment --show-origin` (`commands/config.ts:96-155`, `originLabel` `layer=defaults …`) and §6.3 step 1a runs the same command. GAP-T2 anchored: TC-HDA-029 names `DispatchEnvelopeError` (the six-field `CommandResultError` plus optional `detail { kind: "harness" \| "config"; code; field? }`), adds the anti-widening assertion that `CommandResultError` itself is not widened and every other envelope keeps its six-field error, and TC-HDA-030/031/034 reference that named type. Spec line references re-anchored to v1.1; resolved spec gaps recorded in §8.3. |
 | 1.2 | 2026-11-09 | @test-plan-writer | DoR iteration-1 remediation; no TC id, AC mapping, or coverage row removed; 29 scenarios and 29 ACs remain. B-3: TC-HDA-030 step 8 replaces the unreachable detail-less case with the reachable `harness.spawn.refused` failure (`kind` and `code`, no `field`), asserting `field` is omitted while `kind`/`code` are present, and every detail assertion now follows spec v1.2 F-5/Appendix C (detail always present on the pre-session path; `kind`/`code` required; `field` optional). B-4: §6.3 runs under the probe-only brand `gh277-probe` with state root `$LIVE_HOME/.gh277-probe-state`, never touches the live root, never releases a live lease, STOPs if a live `GH-277` lease exists, and records evidence from the probe root. B-5: TC-HDA-101/§6.3 replace "byte-identical" with git-clean `git status --porcelain` plus unchanged `HEAD`, noting that `pnpm build` rewrites gitignored dist and the clone symlinks `node_modules`. Minors: queue-entry preconditions added to TC-HDA-010/035; TC-HDA-010's parent environment now includes the §6.1 canaries while keeping the exact child-key-set assertion; TC-HDA-011 steps use the delivered `HarnessSessionPort.spawn(input)` shape and assert the runner's `(file, args)` record; the golden `tests/fixtures/dispatch/golden/errors/spawn-failed.json` and its consumer are named in §7.1/§7.2/§7.3 with the `harness.spawn.refused` no-field detail; `tests/fixtures/queue/production/harness.ts`/`TC-BIND-007` and `tests/checks/harness-mutants.test.ts` anchors are recorded as regression risks; TC-HDA-032/DM-4 adds the `HumanTextContext` coverage with the two-parameter compatibility clause under `pnpm typecheck`. |
+| 1.3 | 2026-11-09 | @test-plan-writer | DoR iteration-2 remediation; aligned with change spec v1.3; no TC id, AC mapping, or coverage row removed; 29 scenarios and 29 ACs remain. E2E baseline (major): TC-HDA-101 and every §6.3 step now capture `STATUS_BEFORE` immediately before the probe and assert `STATUS_AFTER == STATUS_BEFORE` with `HEAD` unchanged, naming the expected uncommitted P4 artifacts (untracked `doc/decisions/TDR-0017-…md`, new `.changeset/gh-277-…md`, the pending test-plan edit) as permitted baseline content; absolute git-clean is no longer asserted and the wording matches spec v1.3 DoD-6. Contract inventories (major): `tests/structure/port-contract-inventory.test.ts` + `tests/fixtures/ports/v1-contract-inventory.json` (add `DispatchEnvelopeError` under `dispatch.ts` and `index.ts`) and `tests/structure/content-inventory.test.ts` (register the exported 256-character detail bound) are named in §2, §6.4, §7.1, §7.2, TC-HDA-029 step 9, TC-HDA-034 step 3, and M-9 as deliberate pin updates (GAP-T6, R-T15). Minors: stale spec line anchors re-based to spec v1.3 (NFR-4/NFR-6/NFR-7, the AC-F1-3/AC-F2-3/F3/F4/F5/F6/F7/F8 rows, Appendices A–C, §18, RSK-6); the project-local `<root>/<configurationDirectoryName>/config.local.yaml` path (`packages/adapters/src/file/config-source.ts:178`) added to the §6.3 zero-configuration guard; the §2/§8.3 current-truth handoff list expanded to the spec v1.3 files (`feature-result-contract.md`, `feature-cli-entrypoint.md`, and the `humanText` hook docs). |
 
 ## 10. Test Execution Log
 
@@ -1818,15 +1866,15 @@ Runtime: Bun 1.4.4 (repo pin), pnpm 10.18.3, the recorded `opencode` version fro
 | TC-HDA-021 | delivery | TBD | Pending | Marker validation matrix |
 | TC-HDA-022 | delivery | TBD | Pending | `config get harness.environment --show-origin` inspection |
 | TC-HDA-023 | delivery | TBD | Pending | Composition mapping and work-path injection |
-| TC-HDA-029 | delivery | TBD | Pending | `DispatchEnvelopeError` shape; `CommandResultError`/other envelopes not widened |
+| TC-HDA-029 | delivery | TBD | Pending | `DispatchEnvelopeError` shape; `CommandResultError`/other envelopes not widened; v1 contract-inventory fixture updated |
 | TC-HDA-030 | delivery | TBD | Pending | Always-present detail; no-field `harness.spawn.refused` case; golden byte-equality |
 | TC-HDA-031 | delivery | TBD | Pending | JSON detail survives redaction |
 | TC-HDA-032 | delivery | TBD | Pending | Verbose detail at the dispatch human-text seam; DM-4 two-parameter clause under `pnpm typecheck`; non-verbose four keys |
 | TC-HDA-033 | delivery | TBD | Pending | Identity/token/exit/last message unchanged |
-| TC-HDA-034 | delivery | TBD | Pending | Detail identifiers-only, single-line, ≤256 |
+| TC-HDA-034 | delivery | TBD | Pending | Detail identifiers-only, single-line, ≤256; exported bound registered in the content inventory |
 | TC-HDA-035 | delivery | TBD | Pending | Field in harness failure and dispatch detail |
 | TC-HDA-100 | delivery/verification | TBD | Pending | Manual §6.3 real dispatch |
-| TC-HDA-101 | delivery/verification | TBD | Pending | Manual §6.3 bounds, isolated probe root, git-clean/HEAD isolation |
+| TC-HDA-101 | delivery/verification | TBD | Pending | Manual §6.3 bounds, isolated probe root, `STATUS_BEFORE`/`STATUS_AFTER` equality, `HEAD` stable |
 
 **Mutation evidence (M-1..M-20).** Each mutation is applied in a scratch copy or in place with a recorded revert; no mutant is committed.
 
@@ -1840,7 +1888,7 @@ Runtime: Bun 1.4.4 (repo pin), pnpm 10.18.3, the recorded `opencode` version fro
 | M-6 | Parent environment spread into child | TC-HDA-012, TC-HDA-004 | Green |
 | M-7 | Record precedence inverted | TC-HDA-017 | Green |
 | M-8 | `PATH` removed / absolute command path | TC-HDA-011, TC-HDA-010 | Green |
-| M-9 | Detail not attached / shared type widened / golden not refreshed | TC-HDA-029, TC-HDA-030, TC-HDA-031; delivered `TC-ERR-004` | Green |
+| M-9 | Detail not attached / shared type widened / golden not refreshed / new export not pinned in the contract inventory | TC-HDA-029, TC-HDA-030, TC-HDA-031; delivered `TC-ERR-004` | Green |
 | M-10 | Verbose selection removed at the dispatch human-text seam | TC-HDA-032 | Green |
 | M-11 | Fifth text key added | TC-HDA-032 | Green |
 | M-12 | Last message or vocabulary changed | TC-HDA-033 | Green |
@@ -1864,5 +1912,5 @@ Runtime: Bun 1.4.4 (repo pin), pnpm 10.18.3, the recorded `opencode` version fro
 - Step 7 envelope: `data.result` TBD; `data.lastMessage` TBD; `data.error.code` TBD; `data.error.detail` TBD; `exit` TBD.
 - Step 7 attempt record (from the probe root): `attemptId` TBD; `token` TBD; `outcome` TBD; `evidenceRefs` TBD (must contain `attempt:ATTEMPT_ID`).
 - Step 7a lease (probe root): no active `GH-277` lease on `github.com/juliusz-cwiakalski/agentic-delivery-os`: TBD.
-- Step 8 isolation: this worktree's `git status --porcelain` TBD (must be empty); `HEAD` before/after TBD (must be equal); elapsed TBD ms (≤180 000); clone removed TBD; no surviving child TBD; live root written TBD (must be none).
+- Step 8 isolation: this worktree's `STATUS_BEFORE`/`STATUS_AFTER` TBD (must be identical, including any expected uncommitted P4 artifacts); `HEAD` before/after TBD (must be equal); elapsed TBD ms (≤180 000); clone removed TBD; no surviving child TBD; live root written TBD (must be none).
 - Cleanup: probe evidence retained in `/tmp/opencode/gh277-e2e-evidence`; disposable clone removed; probe-brand state/config roots (`$LIVE_HOME/.gh277-probe-state`, `$LIVE_HOME/.gh277-probe`) removed; live `$HOME/.delivery-os-state` untouched.
