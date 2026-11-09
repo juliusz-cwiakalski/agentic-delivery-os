@@ -175,6 +175,29 @@ export {
 } from "./retro-registry.js";
 export { createRetroSidecar, type RetroSidecar } from "./retro-sidecar.js";
 export { readSpendLedger } from "./spend-reads.js";
+export {
+  appendCoordinatorExhaustion,
+  appendCoordinatorFence,
+  appendCoordinatorIteration,
+  appendCoordinatorPayload,
+  appendCoordinatorRestart,
+  appendCoordinatorStuck,
+  appendCoordinatorWake,
+  coordinatorExhaustionKey,
+  coordinatorFenceKey,
+  coordinatorIterationKey,
+  coordinatorKeyFor,
+  coordinatorRestartKey,
+  coordinatorStuckKey,
+  coordinatorWakeKey,
+  type CoordinatorAppendOutcome,
+  type CoordinatorRecordsRead,
+  COORDINATOR_STATE_ERROR_IDENTITIES,
+  foldCoordinatorDecision,
+  foldCoordinatorStuck,
+  foldCoordinatorWake,
+  readCoordinatorRecords,
+} from "./coordinator.js";
 
 /** Options for opening a store: the driver kind and the injected edge. */
 export type StateStoreOptions = {

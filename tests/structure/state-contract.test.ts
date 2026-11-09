@@ -304,3 +304,46 @@ describe("TC-SPEND-008 additive state read surface", () => {
     }
   });
 });
+
+/**
+ * TC-COORD-083 (state half, GH-241): the coordinator records are additive inside
+ * `delivery.state.v1` — six kinds, coordinator-scoped keys, and no change to the
+ * delivered state contracts.
+ */
+describe("TC-COORD-083 coordinator records are additive inside the delivered schema", () => {
+  test("the delivered state contracts are unchanged and coordinator keys are scoped", () => {
+    expect(STATE_LEVELS).toEqual(["local", "project", "global"]);
+    expect(STATE_ARTIFACT_FIELD_TYPES).toEqual([
+      "string",
+      "number",
+      "boolean",
+      "object",
+      "array",
+      "null",
+    ]);
+    expect(STATE_BOUNDARY_VERDICTS).toEqual(["valid", "verified-empty", "torn", "unknown"]);
+    const stateContracts = readFileSync(
+      join(process.cwd(), "packages/core/src/contracts/state.ts"),
+      "utf8",
+    );
+    expect(stateContracts).toContain('STATE_SCHEMA_VERSION = "delivery.state.v1"');
+    expect(stateContracts).not.toContain("coordinator");
+  });
+
+  test("the six coordinator kinds are declared exactly once outside the state contracts", () => {
+    const coordinatorContracts = readFileSync(
+      join(process.cwd(), "packages/core/src/contracts/coordinator.ts"),
+      "utf8",
+    );
+    for (const kind of [
+      "coordinator.iteration",
+      "coordinator.restart",
+      "coordinator.stuck",
+      "coordinator.exhaustion",
+      "coordinator.wake",
+      "coordinator.fence",
+    ]) {
+      expect(coordinatorContracts.split(`"${kind}"`).length - 1, kind).toBe(1);
+    }
+  });
+});

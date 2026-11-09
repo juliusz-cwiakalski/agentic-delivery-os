@@ -176,6 +176,7 @@
     "src/state/blockers.ts",
     "src/state/closeout.ts",
     "src/state/commit-telemetry.ts",
+    "src/state/coordinator.ts",
     "src/state/daemon-lock.ts",
     "src/state/driver/runtime-edge.ts",
     "src/state/driver/strategy.ts",
