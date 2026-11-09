@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-09T02:09:21.950Z }
   quality_gates: { started: null, completed: 2026-11-09T02:27:13.870Z }
   dod_check: { started: null, completed: 2026-11-09T02:29:10.708Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-09T02:35:23.651Z }
 decisions: []
 open_questions: []
 blockers: []
@@ -509,5 +509,21 @@ notes:
       reports only the not-yet-recorded dod_check and pr_creation phases
       (partial, not_landed); it is re-run after pr_creation to confirm
       `finished` exit 0."
+    type: info
+    date: "2026-11-09"
+  - text: "Phase 11 pr_creation: PR #276
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/276 created
+      against main-tools from fix/GH-275/opencode-harness-contract (title
+      'fix(GH-275): opencode harness streaming spawn contract', head ed739f22,
+      body closes #275). The branch was pushed and the remote tip matches local
+      HEAD. Left open for human review; not merged, no auto-merge, no approval.
+      Review evidence reconciliation: the final review-iter-1.yaml records
+      F-1..F-6 (3 low + 3 info, 0 critical/high/medium); F-6 is a late-recorded
+      non-gating advisory that the streaming starter does not set timedOut on an
+      externally delivered SIGTERM (host-initiated bounds do), which matches the
+      recorded P6 E2E classification and changes no AC. The earlier narrative
+      counted the five findings present when the review was written; all six are
+      accepted and none requires remediation. The PR body follows the structured
+      YAML record. This completes the 11-phase delivery lifecycle."
     type: info
     date: "2026-11-09"
