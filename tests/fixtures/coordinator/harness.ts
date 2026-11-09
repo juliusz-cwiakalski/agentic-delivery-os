@@ -10,6 +10,15 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createCoordinatorCommandDefinition } from "../../../packages/cli/src/commands/coordinator.js";
+import {
+  type CoordinatorLoopExit,
+  type CoordinatorSessionFacts,
+  type CoordinatorSupervisor,
+  type CoordinatorSupervisorPorts,
+  createCoordinatorSupervisor,
+} from "../../../packages/cli/src/commands/coordinator-loop.js";
+import { runCli } from "../../../packages/cli/src/index.js";
 import type {
   BlockerAnswerRecord,
   BlockerQuestionRecord,
@@ -23,23 +32,12 @@ import type {
 import {
   appendBlockerAnswer,
   appendBlockerQuestion,
-  readBlockerLedger,
-} from "../../../packages/core/src/state/index";
-import {
-  readCoordinatorRecords,
   type CoordinatorRecordsRead,
+  readBlockerLedger,
+  readCoordinatorRecords,
 } from "../../../packages/core/src/state/index";
-import { createCoordinatorCommandDefinition } from "../../../packages/cli/src/commands/coordinator.js";
-import {
-  createCoordinatorSupervisor,
-  type CoordinatorLoopExit,
-  type CoordinatorSessionFacts,
-  type CoordinatorSupervisor,
-  type CoordinatorSupervisorPorts,
-} from "../../../packages/cli/src/commands/coordinator-loop.js";
-import { runCli } from "../../../packages/cli/src/index.js";
-import { createCycleDriver, type CycleDriverOptions } from "./cycle-driver.js";
 import { createTestEdge, makeIdentity, openStore } from "../state/harness";
+import { type CycleDriverOptions, createCycleDriver } from "./cycle-driver.js";
 import { COORDINATOR_ID } from "./states";
 
 export const TEST_BRAND: BrandIdentity = {
@@ -100,6 +98,8 @@ export type CoordinatorHarnessOptions = {
   readonly spawnFails?: boolean;
   /** Makes a `released` fence append fail (the loop's release-failure path). */
   readonly releaseFails?: boolean;
+  /** Makes a `released` fence append fail with the busy-fence identity. */
+  readonly releaseBusy?: boolean;
 };
 
 export type CoordinatorHarness = {
@@ -146,6 +146,8 @@ export type CoordinatorHarness = {
   appendAppOverride(fn: (() => unknown) | undefined): void;
   setSessionFacts(overrides: Partial<CoordinatorSessionFacts>): void;
   setProgress(progress: { newTurn: CoordinatorProgressState; observedAtMs: number | null }): void;
+  setWakeFails(value: boolean): void;
+  setPublishFails(value: boolean): void;
   seedQuestion(record: BlockerQuestionRecord): void;
   seedAnswer(record: BlockerAnswerRecord): void;
   appendRaw(request: { kind: string; recordKey: string; payload: Record<string, unknown> }): void;
@@ -248,6 +250,7 @@ export const createCoordinatorHarness = (
   const driver = createCycleDriver(options.cycle ?? { cycles: 1 });
 
   let publishFails = options.publishFails === true;
+  let wakeFails = options.wakeFails === true;
   let appendOverride: (() => unknown) | undefined;
 
   const guardedStore = {
@@ -278,7 +281,7 @@ export const createCoordinatorHarness = (
       counters.appends += 1;
       if (appendOverride !== undefined) return appendOverride() as never;
       if (
-        options.releaseFails === true &&
+        (options.releaseFails === true || options.releaseBusy === true) &&
         request.kind === "coordinator.fence" &&
         (request.payload as { action?: unknown }).action === "released"
       ) {
@@ -286,7 +289,7 @@ export const createCoordinatorHarness = (
           ok: false,
           error: {
             kind: "state",
-            code: "state.write.failed",
+            code: options.releaseBusy === true ? "state.lock.busy" : "state.write.failed",
             consequence: "not_landed",
             location: { path: root },
           },
@@ -367,7 +370,7 @@ export const createCoordinatorHarness = (
       },
       wake: () => {
         counters.wakes += 1;
-        return { ok: options.wakeFails !== true };
+        return { ok: wakeFails !== true };
       },
     },
     loop: {
@@ -499,6 +502,12 @@ export const createCoordinatorHarness = (
     setProgress: (progress) => {
       session = { ...session, progress };
     },
+    setWakeFails: (value) => {
+      wakeFails = value;
+    },
+    setPublishFails: (value) => {
+      publishFails = value;
+    },
     seedQuestion: (record) => {
       const appended = appendBlockerQuestion(store, { record, fenceToken: "seed-question" });
       if (!appended.ok) throw new Error(appended.error.code);
@@ -568,6 +577,19 @@ export const seedIteration = (
   harness: CoordinatorHarness,
   overrides: Partial<Record<string, unknown>> = {},
 ): void => {
+  // The digest fingerprint must match the post-append cursor, otherwise the
+  // next live cycle legitimately treats the mismatch as a digest change.
+  const raw = harness.store.readRecords();
+  const recordCount = raw.ok ? raw.value.records.length : 0;
+  const ledger = readBlockerLedger(harness.store);
+  const answered = new Set(
+    ledger.ok ? ledger.value.answers.map((answer) => answer.questionId) : [],
+  );
+  const openCoordinator = ledger.ok
+    ? ledger.value.questions.filter(
+        (question) => question.audience === "coordinator" && !answered.has(question.id),
+      ).length
+    : 0;
   harness.appendRaw({
     kind: "coordinator.iteration",
     recordKey: `coordinator.iterations:${COORDINATOR_ID}`,
@@ -580,7 +602,7 @@ export const seedIteration = (
       reason: "expectation",
       sessionId: "session-1",
       contextTokens: 10_000,
-      digestFingerprint: "cursor=1;open=0",
+      digestFingerprint: `cursor=${recordCount + 1};open=${openCoordinator}`,
       expectationWindowMs: 600_000,
       recordedAt: new Date(0).toISOString(),
       ...overrides,
@@ -664,4 +686,4 @@ export const errorCodeOf = (result: {
   return String((error as { code?: unknown }).code);
 };
 
-export { readBlockerLedger, HOLDER_FOR };
+export { HOLDER_FOR, readBlockerLedger };

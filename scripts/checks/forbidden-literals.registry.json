@@ -115,6 +115,7 @@
     "doc/planning/oss-tooling/milestones/m1/commands/closeout.md",
     "doc/planning/oss-tooling/milestones/m1/commands/commit.md",
     "doc/planning/oss-tooling/milestones/m1/commands/config.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/coordinator.md",
     "doc/planning/oss-tooling/milestones/m1/commands/daemon.md",
     "doc/planning/oss-tooling/milestones/m1/commands/db.md",
     "doc/planning/oss-tooling/milestones/m1/commands/dispatch.md",

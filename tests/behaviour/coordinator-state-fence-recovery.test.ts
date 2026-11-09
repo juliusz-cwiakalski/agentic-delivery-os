@@ -8,7 +8,6 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createTestEdge, makeIdentity, openStore } from "../fixtures/state/harness";
 import {
   appendCoordinatorFence,
   appendCoordinatorPayload,
@@ -16,6 +15,7 @@ import {
   readCoordinatorRecords,
 } from "../../packages/core/src/state/index";
 import { COORDINATOR_ID, fenceRecord, spyStore } from "../fixtures/coordinator/states";
+import { createTestEdge, makeIdentity, openStore } from "../fixtures/state/harness";
 
 const openPair = (label: string, staleFenceMs = 30_000) => {
   const root = mkdtempSync(join(tmpdir(), `gh241-${label}-`));

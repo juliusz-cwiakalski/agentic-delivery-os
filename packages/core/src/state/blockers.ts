@@ -19,12 +19,12 @@ import {
   BLOCKER_QUESTION_TYPES,
   BLOCKER_RESUME_MODES,
   BLOCKER_SESSION_REENTRY_BY_MODE,
-  CALLER_PRINCIPAL_KINDS,
-  CALLER_PRINCIPAL_MAX_ID_CHARS,
-  LOCAL_CALLER_PRINCIPAL,
   type BlockerAnswerRecord,
   type BlockerLaneResume,
   type BlockerQuestionRecord,
+  CALLER_PRINCIPAL_KINDS,
+  CALLER_PRINCIPAL_MAX_ID_CHARS,
+  LOCAL_CALLER_PRINCIPAL,
   type StateAppendOutcome,
   type StateArtifactBoundaryDeclaration,
   type StateJsonValue,
@@ -67,6 +67,7 @@ export const BLOCKERS_ARTIFACT_BOUNDARY: StateArtifactBoundaryDeclaration = {
         { name: "question", type: "string", required: true },
         { name: "options", type: "array", required: true },
         { name: "askedAt", type: "string", required: true },
+        { name: "historyRef", type: "string", required: false },
         { name: "callerPrincipal", type: "object", required: false },
       ],
       vocabularies: [
@@ -143,6 +144,7 @@ const QUESTION_KEYS = [
   "question",
   "options",
   "askedAt",
+  "historyRef",
   "callerPrincipal",
 ] as const;
 
@@ -178,6 +180,7 @@ const questionPayload = (record: BlockerQuestionRecord): StateJsonValue => ({
   question: record.question,
   options: [...record.options],
   askedAt: record.askedAt,
+  ...(record.historyRef === undefined ? {} : { historyRef: record.historyRef }),
   callerPrincipal: record.callerPrincipal ?? LOCAL_CALLER_PRINCIPAL,
 });
 
@@ -270,6 +273,9 @@ const questionFrom = (
   if (value.ref !== null && typeof value.ref !== "string")
     return fail("state.store.torn", location);
   if (!Array.isArray(value.options) || value.options.some((option) => typeof option !== "string")) {
+    return fail("state.store.torn", location);
+  }
+  if (value.historyRef !== undefined && !isNonEmptyString(value.historyRef)) {
     return fail("state.store.torn", location);
   }
   if (value.callerPrincipal !== undefined && !isPrincipal(value.callerPrincipal)) {

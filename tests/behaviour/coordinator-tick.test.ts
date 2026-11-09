@@ -26,7 +26,11 @@ describe("TC-COORD-012 tick runs one bounded cycle and starts no loop", () => {
     const read = harness.records();
     if (!read.ok) throw new Error("read failed");
     expect(read.fences.map((record) => record.action)).toEqual(["acquired", "released"]);
-    expect(read.iterations).toHaveLength(0);
+    // A live collection cycle records `join-live` (AC-F2-1/F-05) but no action
+    // record (no restart, stuck, wake, or exhaustion).
+    expect(read.iterations).toHaveLength(1);
+    expect(read.iterations[0]?.decision).toBe("join-live");
+    expect(read.iterations[0]?.reason).toBe("live-session");
     expect(read.restarts).toHaveLength(0);
     expect(read.stuck).toHaveLength(0);
     expect(read.wakes).toHaveLength(0);

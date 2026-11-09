@@ -49,6 +49,7 @@ describe("TC-COORD-012/013 coordinator goldens are deterministic", () => {
       wake: null,
       escalation: { state: "not-exhausted", questionId: null },
       fence: null,
+      live: null,
       degradation: [],
     });
   });

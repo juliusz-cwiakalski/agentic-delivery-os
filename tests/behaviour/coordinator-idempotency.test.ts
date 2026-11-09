@@ -21,7 +21,10 @@ describe("TC-COORD-087 a repeated tick is idempotent", () => {
       "acquired",
       "released",
     ]);
-    expect(read.iterations).toHaveLength(0);
+    // Two live collection cycles each record one `join-live` iteration; no
+    // action record is duplicated.
+    expect(read.iterations).toHaveLength(2);
+    expect(read.iterations.every((record) => record.decision === "join-live")).toBe(true);
     expect(read.restarts).toHaveLength(0);
     expect(read.stuck).toHaveLength(0);
     expect(read.wakes).toHaveLength(0);

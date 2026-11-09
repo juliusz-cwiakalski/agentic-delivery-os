@@ -5,11 +5,9 @@
 import { describe, expect, test } from "bun:test";
 import {
   appendCoordinatorRestart,
+  appendEconomicsRestartEvent,
   coordinatorRestartKey,
   readCoordinatorRecords,
-} from "../../packages/core/src/state/index";
-import {
-  appendEconomicsRestartEvent,
   readEconomicsRecords,
 } from "../../packages/core/src/state/index";
 import {

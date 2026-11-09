@@ -2,8 +2,8 @@
  * TC-COORD-075 — a new top question after an answered one wakes normally.
  */
 import { describe, expect, test } from "bun:test";
-import { createCoordinatorHarness, dataOf } from "../fixtures/coordinator/harness";
 import { answer, pickupQuestion, question } from "../fixtures/coordinator/blockers";
+import { createCoordinatorHarness, dataOf } from "../fixtures/coordinator/harness";
 
 describe("TC-COORD-075 the one-wake rule is per question", () => {
   test("an answered head is replaced by a new rank-1 question that wakes", async () => {

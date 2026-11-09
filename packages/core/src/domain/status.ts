@@ -26,6 +26,7 @@ import {
   STATUS_MAX_FINDINGS_PER_SECTION,
   STATUS_MAX_HUMAN_BYTES,
   STATUS_MAX_HUMAN_LINES,
+  STATUS_MAX_ITEMS_PER_SECTION,
   STATUS_MAX_OPEN_PULL_REQUESTS,
   STATUS_MAX_PARKED_CHANGES,
   STATUS_MAX_PIPELINE_RUNS,
@@ -79,11 +80,11 @@ import {
   type WorkItem,
 } from "#contracts";
 import { rankBlockerQuestions } from "./blockers.js";
+import { classifyPipelineRuns } from "./ci-result.js";
 import {
   isReservedEscalationQuestion,
   projectReservedSlotQuestions,
 } from "./coordinator-escalation.js";
-import { classifyPipelineRuns } from "./ci-result.js";
 import { evaluateOwnerGateSla } from "./owner-gate-sla.js";
 
 const DAY_MS = 86_400_000;
@@ -1680,6 +1681,7 @@ const typedQuestionsSection = (facts: StatusFacts): StatusSection => {
   const slot = projectReservedSlotQuestions(
     open.map((question, index) => ({ id: question.id, index })),
     reserved?.id ?? null,
+    { total: STATUS_MAX_ITEMS_PER_SECTION, others: STATUS_MAX_ITEMS_PER_SECTION - 1 },
   );
   const rendered = slot.rendered
     .map((entry) => open.find((question) => question.id === entry.id))

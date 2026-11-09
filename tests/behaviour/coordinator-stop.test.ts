@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  type CoordinatorHarnessOptions,
   createCoordinatorHarness,
   dataOf,
   errorCodeOf,
-  type CoordinatorHarnessOptions,
 } from "../fixtures/coordinator/harness";
 import { fenceRecord, T0 } from "../fixtures/coordinator/states";
 

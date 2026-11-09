@@ -497,6 +497,7 @@
       "COORDINATOR_TWO_SEGMENT_CODES",
       "COORDINATOR_V1_SUPERVISOR_MODE",
       "COORDINATOR_VERDICTS",
+      "COORDINATOR_WAKE_EFFECTS",
       "COORDINATOR_WAKE_KEY_PREFIX",
       "COORDINATOR_WAKE_OUTCOMES",
       "COORDINATOR_WAKE_PAYLOAD_SCHEMA",
@@ -530,6 +531,7 @@
       "CoordinatorLeaseHeldAction",
       "CoordinatorLeaseLivenessState",
       "CoordinatorLifecycleDecision",
+      "CoordinatorLiveFacts",
       "CoordinatorObservation",
       "CoordinatorPersistedVerdict",
       "CoordinatorProcessCapability",
@@ -552,6 +554,7 @@
       "CoordinatorSupervisorMode",
       "CoordinatorTickVerdict",
       "CoordinatorVerdict",
+      "CoordinatorWakeEffect",
       "CoordinatorWakeOutcome",
       "CoordinatorWakePersistedOutcome",
       "CoordinatorWakeRecord",
@@ -1363,6 +1366,7 @@
       "COORDINATOR_TWO_SEGMENT_CODES",
       "COORDINATOR_V1_SUPERVISOR_MODE",
       "COORDINATOR_VERDICTS",
+      "COORDINATOR_WAKE_EFFECTS",
       "COORDINATOR_WAKE_KEY_PREFIX",
       "COORDINATOR_WAKE_OUTCOMES",
       "COORDINATOR_WAKE_PAYLOAD_SCHEMA",
@@ -1608,6 +1612,7 @@
       "CoordinatorLeaseHeldAction",
       "CoordinatorLeaseLivenessState",
       "CoordinatorLifecycleDecision",
+      "CoordinatorLiveFacts",
       "CoordinatorObservation",
       "CoordinatorPersistedVerdict",
       "CoordinatorProcessCapability",
@@ -1630,6 +1635,7 @@
       "CoordinatorSupervisorMode",
       "CoordinatorTickVerdict",
       "CoordinatorVerdict",
+      "CoordinatorWakeEffect",
       "CoordinatorWakeOutcome",
       "CoordinatorWakePersistedOutcome",
       "CoordinatorWakeRecord",
@@ -4130,9 +4136,7 @@
     "WorkItemRelation",
     "WorkflowMap"
   ],
-  "credentialPort": [
-    "CredentialPort"
-  ],
+  "credentialPort": ["CredentialPort"],
   "envelope": [
     "DEGRADATION_REASONS",
     "DegradationReason",

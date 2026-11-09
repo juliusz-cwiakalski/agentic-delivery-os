@@ -10,6 +10,7 @@ import {
   coordinatorRestartKey,
   readCoordinatorRecords,
 } from "../../packages/core/src/state/index";
+import { createCoordinatorHarness, seedRestart } from "../fixtures/coordinator/harness";
 import {
   COORDINATOR_ID,
   EPOCH_ID,
@@ -56,6 +57,23 @@ describe("TC-COORD-053 the restart budget survives a crash", () => {
     if (replay.ok) expect(replay.appended).toBe(false);
     const read = readCoordinatorRecords(reopened, COORDINATOR_ID);
     if (read.ok) expect(read.restarts).toHaveLength(1);
+  });
+
+  test("a crash between the restart record and its effect consumes one ordinal (documented window)", async () => {
+    // F-14: the restart record is durable before the effect. If the process dies
+    // in that window, the next evaluation admits the next ordinal. This is the
+    // bounded, classified window documented in the current-truth spec; it never
+    // loses closed-out artifacts and never double-escalates.
+    const harness = createCoordinatorHarness({
+      label: "restart-crash-window",
+      session: { liveness: "absent", sessionId: "session-1" },
+    });
+    seedRestart(harness, { ordinal: 1 });
+    const result = await harness.run(["coordinator", "tick", "--json"]);
+    expect(result.code).toBe(0);
+    const read = harness.records();
+    if (!read.ok) throw new Error("read failed");
+    expect(read.restarts.map((record) => record.ordinal)).toEqual([1, 2]);
   });
 
   test("a duplicate ordinal in the store classifies torn rather than count 2", () => {

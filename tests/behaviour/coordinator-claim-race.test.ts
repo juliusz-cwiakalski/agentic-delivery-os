@@ -4,14 +4,14 @@
  * loser re-read and no append.
  */
 import { describe, expect, test } from "bun:test";
-import { openStore } from "../fixtures/state/harness";
-import { createCoordinatorHarness, errorCodeOf } from "../fixtures/coordinator/harness";
-import { fenceRecord, makeCoordinatorStore } from "../fixtures/coordinator/states";
 import {
   contentionController,
   openClaimHandles,
   serializationController,
 } from "../fixtures/coordinator/claim-race";
+import { createCoordinatorHarness, errorCodeOf } from "../fixtures/coordinator/harness";
+import { fenceRecord, makeCoordinatorStore } from "../fixtures/coordinator/states";
+import { openStore } from "../fixtures/state/harness";
 
 describe("TC-COORD-094 lock contention yields exactly one acquisition", () => {
   test("the loser sees a busy fence, re-reads nothing, and appends nothing", async () => {

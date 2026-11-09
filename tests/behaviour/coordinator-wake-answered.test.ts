@@ -4,8 +4,8 @@
  */
 import { describe, expect, test } from "bun:test";
 import { evaluateWake } from "../../packages/core/src/domain/index";
-import { createCoordinatorHarness, dataOf } from "../fixtures/coordinator/harness";
 import { pickupQuestion } from "../fixtures/coordinator/blockers";
+import { createCoordinatorHarness, dataOf } from "../fixtures/coordinator/harness";
 
 describe("TC-COORD-072 answered-before-wake is a tick result", () => {
   test("the domain evaluation reports answered-before-wake with no persistence", () => {
@@ -41,7 +41,8 @@ describe("TC-COORD-072 answered-before-wake is a tick result", () => {
       },
     });
     const data = dataOf(await harness.run(["coordinator", "tick", "--json"]));
-    expect(data.wake).toBeNull();
+    expect(data.wake?.outcome).toBe("no-pickup");
+    expect(data.wake?.questionId).toBeNull();
     const read = harness.records();
     if (read.ok) expect(read.wakes).toHaveLength(0);
   });

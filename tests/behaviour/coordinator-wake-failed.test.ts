@@ -3,8 +3,8 @@
  * without duplicate records.
  */
 import { describe, expect, test } from "bun:test";
-import { createCoordinatorHarness, errorCodeOf } from "../fixtures/coordinator/harness";
 import { pickupQuestion } from "../fixtures/coordinator/blockers";
+import { createCoordinatorHarness, errorCodeOf } from "../fixtures/coordinator/harness";
 
 describe("TC-COORD-074 a failed wake is classified and retried", () => {
   test("delivery-failed is exit 2 with no durable record and a released lease", async () => {
@@ -23,7 +23,7 @@ describe("TC-COORD-074 a failed wake is classified and retried", () => {
     expect(read.fences.map((record) => record.action)).toEqual(["acquired", "released"]);
   });
 
-  test("a later successful tick appends exactly one record", async () => {
+  test("a later successful tick on the same state appends exactly one record", async () => {
     const harness = createCoordinatorHarness({
       label: "wake-retry",
       questions: [pickupQuestion()],
@@ -31,15 +31,12 @@ describe("TC-COORD-074 a failed wake is classified and retried", () => {
       wakeFails: true,
     });
     expect((await harness.run(["coordinator", "tick", "--json"])).code).toBe(2);
-    // The retry is a different harness option set; simulate success by a new tick
-    // on a harness whose delivery succeeds (the undurable failure left no record).
-    const retry = createCoordinatorHarness({
-      label: "wake-retry-success",
-      questions: [pickupQuestion()],
-      session: { liveness: "alive" },
-    });
-    expect((await retry.run(["coordinator", "tick", "--json"])).code).toBe(0);
-    const read = retry.records();
+    const failedRead = harness.records();
+    if (!failedRead.ok) throw new Error("read failed");
+    expect(failedRead.wakes).toHaveLength(0);
+    harness.setWakeFails(false);
+    expect((await harness.run(["coordinator", "tick", "--json"])).code).toBe(0);
+    const read = harness.records();
     if (!read.ok) throw new Error("read failed");
     expect(read.wakes).toHaveLength(1);
   });

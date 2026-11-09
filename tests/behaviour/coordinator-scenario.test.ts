@@ -5,6 +5,8 @@
  * exhaustion escalation.
  */
 import { describe, expect, test } from "bun:test";
+import { readBlockerLedger } from "../../packages/core/src/state/index";
+import { pickupQuestion } from "../fixtures/coordinator/blockers";
 import {
   createCoordinatorHarness,
   dataOf,
@@ -12,8 +14,6 @@ import {
   seedIteration,
   seedRestart,
 } from "../fixtures/coordinator/harness";
-import { pickupQuestion } from "../fixtures/coordinator/blockers";
-import { readBlockerLedger } from "../../packages/core/src/state/index";
 
 describe("TC-COORD-091 SC-M1-25 end to end", () => {
   test("context pressure, stuck kill, wake, and escalation compose in one world", async () => {

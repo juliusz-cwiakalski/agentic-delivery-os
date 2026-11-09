@@ -3,8 +3,8 @@
  * no restart and escalates, and the value is observed at evaluation time.
  */
 import { describe, expect, test } from "bun:test";
-import { resolveConfig, resolveCoordinatorSettings } from "../../packages/core/src/index";
 import { evaluateCoordinatorRestartAdmission } from "../../packages/core/src/domain/index";
+import { resolveConfig, resolveCoordinatorSettings } from "../../packages/core/src/index";
 import { coordinatorSource } from "../fixtures/config/coordinator";
 import { EPOCH_ID, restartRecord } from "../fixtures/coordinator/states";
 

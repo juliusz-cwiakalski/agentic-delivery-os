@@ -10,8 +10,8 @@
 import {
   COORDINATOR_ESCALATION_STATES,
   COORDINATOR_OTHER_QUESTION_BOUND,
-  COORDINATOR_RESERVED_ESCALATION_PREDICATE,
   COORDINATOR_RENDERED_QUESTION_BOUND,
+  COORDINATOR_RESERVED_ESCALATION_PREDICATE,
   type CoordinatorEscalationState,
   type CoordinatorExhaustionOption,
 } from "#contracts";
@@ -58,19 +58,21 @@ export type CoordinatorQuestionSlice = {
 export const projectReservedSlotQuestions = (
   ranked: readonly CoordinatorQuestionSlice[],
   reservedId: string | null,
+  bounds: {
+    readonly total: number;
+    readonly others: number;
+  } = { total: COORDINATOR_RENDERED_QUESTION_BOUND, others: COORDINATOR_OTHER_QUESTION_BOUND },
 ): { readonly rendered: readonly CoordinatorQuestionSlice[]; readonly omitted: number } => {
   if (reservedId === null) {
-    const rendered = ranked.slice(0, COORDINATOR_RENDERED_QUESTION_BOUND);
+    const rendered = ranked.slice(0, bounds.total);
     return { rendered, omitted: ranked.length - rendered.length };
   }
   const reserved = ranked.find((question) => question.id === reservedId);
   if (reserved === undefined) {
-    const rendered = ranked.slice(0, COORDINATOR_RENDERED_QUESTION_BOUND);
+    const rendered = ranked.slice(0, bounds.total);
     return { rendered, omitted: ranked.length - rendered.length };
   }
-  const others = ranked
-    .filter((question) => question.id !== reservedId)
-    .slice(0, COORDINATOR_OTHER_QUESTION_BOUND);
+  const others = ranked.filter((question) => question.id !== reservedId).slice(0, bounds.others);
   const rendered = [reserved, ...others];
   return { rendered, omitted: ranked.length - rendered.length };
 };

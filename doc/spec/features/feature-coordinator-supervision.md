@@ -46,10 +46,15 @@ delivered daemon installer, and hosting a coordinator unit would require an
 additive explicit `command` vector in `SupervisorInstallRequest` /
 `renderSystemdUnit` (still hardcoded to `daemon start --foreground`).
 
-The family is composed through the injected `CoordinatorComposition` seam. The
-prompt-required production composition does not include it, so an executable
-invocation without that composition fails closed through the delivered
-containment path.
+The family is part of the prompt-required production composition. The shipped
+`coordinator` command reaches the handler, composed from the shared state store,
+the injected clock and id/fence factories, the resolved coordinator settings, the
+node process port (with the `/proc` start-time identity source and its documented
+non-Linux fallback), the recorded harness-session facts and declared effects, and
+the real foreground cycle driver. `coordinator start --foreground` reports the
+acquisition instance (`state=running` identity) in its `data`, and renders the
+terminal `stopped`/`released` receipt honestly when the loop has already
+released the lifetime lease.
 
 ### 1.1 Foreground loop and stop request
 
@@ -70,9 +75,12 @@ crash converges without duplicating work.
 `stop` is a request, not a remote release: against a held lease whose holder is
 alive it appends one `stop-requested` record carrying the holder's identity and
 reports `requested`; it never acquires another process's identity, releases
-another process's handle, or changes the lease anchor. A released or dead holder,
-or an unanswered probe past the 2 x `coordinator.collection-interval` bound,
-reports `not-running` and appends nothing; an undeclared alive capability is
+another process's handle, or changes the lease anchor. The live supervisor
+honours a request only when the record's `instanceId` matches its own instance,
+so a request appended after a racing takeover is ignored by the new holder rather
+than stopping it. A released or dead holder, or an unanswered probe past the 2 x
+`coordinator.collection-interval` bound, reports `not-running` and appends
+nothing; an undeclared alive capability is
 `coordinator.process.capability-gap` at exit 2.
 
 ## 2. Instance lease and the two fence rules
@@ -122,10 +130,11 @@ the next claim's liveness-first fold clears the dead lease.
 
 ## 3. Lifecycle decision
 
-Every lifecycle evaluation records at most one decision before its effect: a
-`start` records its decision (including `join-live`), and a collection cycle
-records one only when it resumes or spawns a session. A live session on a
-collection cycle is a quiet join that appends no new decision.
+Every lifecycle evaluation records one decision before its effect, including
+`join-live`. A live session on a collection cycle records `join-live` with reason
+`live-session` on every evaluation (AC-F2-1), but that record never becomes the
+active expectation: the expectation fold excludes collection joins, so a quiet
+live cycle appends no action record and does not refresh the stuck window.
 
 - `join-live` — the recorded session is alive; attach and observe; no ordinal.
 - `resume-context` — no live session, the prior session did not complete cleanly,
@@ -144,8 +153,16 @@ re-executed.
 
 ## 4. Artifact-evidence stuck detection
 
-An expectation is the latest recorded iteration. Three read-only classes decide
-the verdict:
+The active expectation is the latest recorded iteration that is not a
+collection-cycle `join-live` (a real lifecycle decision or an explicit
+`decision: none`, reason `expectation`, record). A live cycle records a fresh
+`decision: none` expectation when the state-sourced digest fingerprint has
+advanced past the active expectation (F-3), so the stuck window measures the new
+baseline. The expectation's `iterationId` and ledger position are carried
+directly, and its fingerprint uses the post-append cursor; a durable expectation
+is compared against the cursor observed at the start of the cycle, so the
+supervisor's own lease pair and join-live record are never mistaken for digest
+progress. Three read-only classes decide the verdict:
 
 1. `digest-consumed` — the state event-log position (the store's record count,
    carried as the `cursor` field) or the open coordinator-audience question count
@@ -172,7 +189,9 @@ never read.
 On a `stuck` verdict the supervisor appends `coordinator.stuck` with
 `phase=verdict`, `killOutcome=not-attempted` and a bounded key=value evidence
 corpus, then verifies the recorded `pid` plus `processStartTimeMs` through the
-delivered `DaemonProcessPort`'s optional `startTimeMs` capability, sends TERM,
+delivered `DaemonProcessPort`'s optional `startTimeMs` capability (the production
+node adapter reads `/proc/<pid>/stat` plus `btime` on Linux and returns the absent
+capability elsewhere), sends TERM,
 waits `coordinator.kill-grace`, sends `SIGKILL` only if the tree is still alive,
 and appends `phase=outcome` under the same `stuckId` (= the expectation's
 `iterationId`). A mismatch sends no signal and records `killFailureReason=
@@ -185,27 +204,41 @@ handle only: no name, pattern, or shell interpolation.
 The restart budget is per durable epoch in the `coordinator/<coordinatorId>`
 namespace, folded from contiguous ordinals starting at 1; a torn or gapped
 ordinal set is unevaluable, never count 0. The first epoch identity is `epoch-1`;
-`start --fresh-budget` opens the next `epoch-<n>` after the highest epoch seen. A
+`start --fresh-budget` opens the next `epoch-<n>` after the highest epoch seen.
+The epoch identity is persisted on the instance-lease carrier (the
+`budgetEpochId` field on `coordinator.fence`), and `currentBudgetEpoch` reads the
+latest non-null carrier before falling back to the latest restart or exhaustion.
+A fresh-budget reset is therefore durable: a later `status`, `tick`, or `start`
+observes the new epoch even when the start's decision consumes no ordinal. A
 below-bound restart appends one record with the next ordinal and proceeds; at or
 above the bound no restart record is appended and no replacement starts, the
-command returns `coordinator.restart-budget-exhausted` at exit 1, and the
-escalation path runs.
+command returns `coordinator.restart-budget-exhausted` at exit 1 with the durable
+history reference on the failure result, and the escalation path runs.
 The fresh epoch starts at count 0 while the old epoch and its escalation remain
 in history; it is a start-time option, so a live holder is refused
 `coordinator.already-running` first.
+
+The restart record lands before its effect. A crash between the two consumes one
+ordinal: the next evaluation admits the next contiguous ordinal. This is a
+bounded, classified crash window (documented and tested); it never loses
+closed-out phase, merge, or answer artifacts and never double-escalates. The
+restart record names the replaced session as `previousSessionId`; the recovering
+session identity is not known at record time and is recorded as `null`, so the
+pair is never the same fabricated value.
 
 ## 6. Exhaustion escalation and the reserved slot
 
 Exhaustion publishes exactly one owner-audience `decision-needed` question
 through the delivered blocker channel with `ref` `<coordinatorId>#<budgetEpochId>`,
-the restart count and bound, and the options `restart-fresh-budget` /
-`park-owner-review`; the terminal `coordinator.exhaustion` receipt records the
-restart count, the durable history reference, and the question id, and lands only
-after the question. A publish failure is
-`coordinator.escalation.publish-failed` at exit 2 with consequence `unknown`
-and status `exhausted-escalation-failed`. A repeated exhausted tick reuses the
-open question, never appends a second terminal receipt, and reports
-`exhausted-escalated` at exit 0.
+the restart count and bound, the durable history reference on the question
+itself, and the options `restart-fresh-budget` / `park-owner-review`; the terminal
+`coordinator.exhaustion` receipt records the restart count, the durable history
+reference, and the question id, and lands only after the question. A publish
+failure is `coordinator.escalation.publish-failed` at exit 2 with consequence
+`unknown` and status `exhausted-escalation-failed`. A repeated exhausted tick
+reuses the existing question even when it has been answered (the terminal receipt
+is the escalation identity), never appends a second question or terminal receipt,
+and reports `exhausted-escalated` at exit 0.
 
 The digest `typed-questions` section and the brief `blocker-questions` anchor
 keep one **reserved escalation slot**: an open owner-audience `decision-needed`
@@ -220,14 +253,18 @@ anchor, or question type.
 Each collection cycle performs one verified ledger read, applies the delivered
 `isCoordinatorPickup` predicate strictly (rank 1, open with an absent status
 counting as open, coordinator audience), and delivers one wake effect to the
-session within one `coordinator.collection-interval`. Only a successful wake
-appends one durable `coordinator.wake` record with outcome `woken`, the question
-id, its rank, the persisted `askedAt`, and the iteration identity. One wake is
-issued per question lifetime, keyed by coordinator identity, question id, and the
-persisted `askedAt`. `already-woken`, `answered-before-wake`, `delivery-failed`,
-and `no-pickup` are tick results that append nothing, so a retry cannot
-duplicate a record. A failed delivery is `coordinator.wake.delivery-failed` at
-exit 2.
+session within one `coordinator.collection-interval`. The effect is selected from
+the lifecycle decision — `live` for a live session, `resume` for a resumable
+non-live session, `spawn` otherwise — and is exposed on the explicit wake port and
+reported as `wake.effect` in the tick result. Only a successful wake appends one
+durable `coordinator.wake` record with outcome `woken`, the question id, its
+rank, the persisted `askedAt`, and the iteration identity. One wake is issued per
+question lifetime, keyed by coordinator identity, question id, and the persisted
+`askedAt`. `already-woken`, `answered-before-wake`, `delivery-failed`, and
+`no-pickup` are tick results that append nothing, so a retry cannot duplicate a
+record. A tick that does not pick up reports the current cycle's `no-pickup` with
+a null question; the last durable wake is reported by `status` only. A failed
+delivery is `coordinator.wake.delivery-failed` at exit 2.
 
 ## 8. Records, configuration, and the observation payload
 
@@ -244,7 +281,7 @@ sequence; `recordedAt` is descriptive only, except as the lease-age anchor in §
 | `coordinator.stuck` | `delivery.coordinator.stuck.v1` | `coordinator.stuck:<coordinatorId>` | One `verdict` phase, plus one `outcome` phase for a `stuck` verdict |
 | `coordinator.exhaustion` | `delivery.coordinator.exhaustion.v1` | `coordinator.exhaustion:<coordinatorId>` | The single terminal escalation receipt per epoch |
 | `coordinator.wake` | `delivery.coordinator.wake.v1` | `coordinator.wake:<coordinatorId>` | One durable successful wake per question lifetime |
-| `coordinator.fence` | `delivery.coordinator.fence.v1` | `coordinator.fence:<coordinatorId>` | One instance-lease action |
+| `coordinator.fence` | `delivery.coordinator.fence.v1` | `coordinator.fence:<coordinatorId>` | One instance-lease action; also carries the durable `budgetEpochId` |
 
 The `coordinator` configuration branch declares six integer keys with shipped
 defaults and domains; unknown keys fail `config.key.unknown` and a wrong type or
@@ -265,12 +302,16 @@ instance folded from the lease, regime descriptor, session facts, last decision,
 restart count/bound/epoch/history, the last **persisted** stuck verdict with
 non-null phase/reason/evidence, the tick-specific `tickVerdict` (null for
 `start`, `stop`, and `status`; nullable phase/reason/evidence when
-`progressing`), last wake, escalation state and question id, the last lease action
-with previous holder and fence age, and a bounded degradation list. Declared
-degradation entries are `supervisor-loop-stopped` on a completed `start`,
-`live-facts-unknown` on `status --live` when the probe returns no answer, and
-`state write fence busy` when the shared fence is held. Human output is
-deterministic, ANSI-free, and at most 32 lines; machine data is at most 64 KiB.
+`progressing`), last wake with the selected effect, escalation state and question
+id, the last lease action with previous holder and fence age, and a bounded
+degradation list. `status --live` adds the bounded positive live-facts set
+(`alive`, `startTimeVerified` against the recorded `processStartTimeMs`, and
+`leaseAgeMs`) when the process facts are available; otherwise `live` is `null`
+and the degradation list carries `live-facts-unknown`. Declared degradation
+entries are `supervisor-loop-stopped` on a completed `start`, `live-facts-unknown`
+on `status --live` when the probe returns no answer, and `state write fence busy`
+when the shared fence is held. Human output is deterministic, ANSI-free, and at
+most 32 lines; machine data is at most 64 KiB.
 
 The six error identities are the coordinator failure vocabulary; every non-zero
 exit projects from the error table.

@@ -3,8 +3,8 @@
  * closed-out work.
  */
 import { describe, expect, test } from "bun:test";
-import { createCoordinatorHarness, seedIteration } from "../fixtures/coordinator/harness";
 import { answer } from "../fixtures/coordinator/blockers";
+import { createCoordinatorHarness, seedIteration } from "../fixtures/coordinator/harness";
 
 const seedClosedOut = (harness: ReturnType<typeof createCoordinatorHarness>) => {
   harness.appendRaw({
@@ -52,6 +52,10 @@ describe("TC-COORD-024 a killed mid-iteration resumes without re-execution", () 
     const decision = read.iterations.find((record) => record.decision !== "none");
     expect(decision?.decision).toBe("resume-context");
     expect(read.restarts.map((record) => record.ordinal)).toEqual([1]);
+    // F-15: the recovering session is not yet known (null) and the replaced
+    // session is named, so the pair is meaningfully distinct.
+    expect(read.restarts[0]?.sessionId).toBeNull();
+    expect(read.restarts[0]?.previousSessionId).toBe("session-1");
   });
 
   test("a context-limited prior session respawns without re-executing closed work", async () => {

@@ -5,14 +5,14 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { STATUS_SECTION_ORDER, BRIEF_ANCHOR_GROUPS } from "../../packages/core/src/contracts/index";
+import { BRIEF_ANCHOR_GROUPS, STATUS_SECTION_ORDER } from "../../packages/core/src/contracts/index";
+import { briefRuntime, runBriefCli } from "../fixtures/brief/harness";
 import {
   capSizedFacts,
   reservedSlotFacts,
   runStatusCli,
   statusRuntime,
 } from "../fixtures/status/harness";
-import { briefRuntime, runBriefCli } from "../fixtures/brief/harness";
 
 const ROOT = process.cwd();
 

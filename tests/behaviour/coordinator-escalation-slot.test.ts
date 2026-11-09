@@ -8,9 +8,8 @@ import {
   isReservedEscalationQuestion,
   projectReservedSlotQuestions,
 } from "../../packages/core/src/domain/index";
-import { NEAR_MISS_ESCALATION_REFS, escalationRankedNinth } from "../fixtures/coordinator/blockers";
-import { reservedSlotFacts } from "../fixtures/status/harness";
-import { runStatusCli, statusRuntime } from "../fixtures/status/harness";
+import { escalationRankedNinth, NEAR_MISS_ESCALATION_REFS } from "../fixtures/coordinator/blockers";
+import { reservedSlotFacts, runStatusCli, statusRuntime } from "../fixtures/status/harness";
 
 const typedQuestions = (digest: Record<string, unknown>) => {
   const data = digest["data"] as {

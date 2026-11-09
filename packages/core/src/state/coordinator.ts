@@ -24,8 +24,8 @@ import {
   COORDINATOR_FENCE_RECORD_KIND,
   COORDINATOR_ITERATION_KEY_PREFIX,
   COORDINATOR_ITERATION_PAYLOAD_SCHEMA,
-  COORDINATOR_ITERATION_RECORD_KIND,
   COORDINATOR_ITERATION_REASONS,
+  COORDINATOR_ITERATION_RECORD_KIND,
   COORDINATOR_ITERATION_TRIGGERS,
   COORDINATOR_KILL_FAILURE_REASONS,
   COORDINATOR_KILL_OUTCOMES,
@@ -71,6 +71,10 @@ export const coordinatorWakeKey = (coordinatorId: string): string =>
 export const coordinatorFenceKey = (coordinatorId: string): string =>
   `${COORDINATOR_FENCE_KEY_PREFIX}${coordinatorId}`;
 
+const assertNever = (value: never): never => {
+  throw new Error(`unreachable coordinator record kind: ${String(value)}`);
+};
+
 /** The key a record kind is stored under; identity is the coordinator id. */
 export const coordinatorKeyFor = (
   kind:
@@ -95,6 +99,8 @@ export const coordinatorKeyFor = (
       return coordinatorWakeKey(coordinatorId);
     case COORDINATOR_FENCE_RECORD_KIND:
       return coordinatorFenceKey(coordinatorId);
+    default:
+      return assertNever(kind);
   }
 };
 
@@ -396,6 +402,8 @@ const fenceFrom = (
   } else if (value.previousHolder !== null) {
     return torn(location);
   }
+  const budgetEpochId = value.budgetEpochId ?? null;
+  if (budgetEpochId !== null && !isNonEmptyString(budgetEpochId)) return torn(location);
   if (!isNonEmptyString(value.recordedAt)) return torn(location);
   return {
     ok: true,
@@ -412,6 +420,7 @@ const fenceFrom = (
       externalUnit: value.externalUnit as CoordinatorFenceRecord["externalUnit"],
       previousHolder: value.previousHolder === null ? null : (value.previousHolder as string),
       fenceAgeMs: value.fenceAgeMs === null ? null : (value.fenceAgeMs as number),
+      budgetEpochId,
       recordedAt: value.recordedAt,
     },
   };

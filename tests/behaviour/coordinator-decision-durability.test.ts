@@ -3,8 +3,8 @@
  */
 import { describe, expect, test } from "bun:test";
 import { readCoordinatorRecords } from "../../packages/core/src/state/index";
-import { openStore } from "../fixtures/state/harness";
 import { createCoordinatorHarness } from "../fixtures/coordinator/harness";
+import { openStore } from "../fixtures/state/harness";
 
 describe("TC-COORD-025 the decision survives a reopened store", () => {
   test("a recorded decision and its ordinal are readable from a fresh handle", async () => {

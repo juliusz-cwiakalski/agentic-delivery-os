@@ -6,6 +6,7 @@ import { describe, expect, test } from "bun:test";
 import {
   createCoordinatorHarness,
   dataOf,
+  seedLease,
   seedStuckVerdict,
 } from "../fixtures/coordinator/harness";
 
@@ -73,6 +74,27 @@ describe("TC-COORD-013 status reports the full state and never mutates", () => {
     expect(result.code).toBe(0);
     const data = dataOf(result);
     expect(data.degradation).toContain("live-facts-unknown");
+  });
+
+  test("--live reports bounded positive facts when the process answers (F-10)", async () => {
+    const harness = createCoordinatorHarness({
+      label: "status-live-positive",
+      alive: { 4242: true },
+      startTimes: { 4242: 2_000 },
+    });
+    seedLease(harness, {
+      action: "acquired",
+      pid: 4242,
+      processStartTimeMs: 2_000,
+      recordedAt: harness.clock.nowIso(),
+    });
+    const data = dataOf(await harness.run(["coordinator", "status", "--live", "--json"]));
+    expect(data.live).toEqual({
+      alive: true,
+      startTimeVerified: true,
+      leaseAgeMs: 0,
+    });
+    expect(data.degradation).not.toContain("live-facts-unknown");
   });
 
   test("the human status block is deterministic, bounded, and ANSI-free", async () => {

@@ -4,10 +4,10 @@
  */
 import { describe, expect, test } from "bun:test";
 import { mapCoordinatorNewTurn } from "../../packages/adapters/src/harness/index";
-import { evaluateStuck } from "../../packages/core/src/domain/index";
 import type { HarnessLivenessReport } from "../../packages/core/src/contracts/index";
-import { createRecordingProcessPort } from "../fixtures/coordinator/process-port";
+import { evaluateStuck } from "../../packages/core/src/domain/index";
 import { PROGRESS_BOUND_MS, staleBaseline } from "../fixtures/coordinator/evidence";
+import { createRecordingProcessPort } from "../fixtures/coordinator/process-port";
 
 const reportFor = (tokenDelta: number | null, traffic: number | null): HarnessLivenessReport =>
   createRecordingProcessPort({ progress: { tokenDelta, traffic } }).livenessReport();

@@ -12,6 +12,7 @@ import {
   createEnvironmentCredentialPort,
   createProcessCredentialPort,
 } from "@delivery-os/adapters/credentials";
+import { createNodeProcessPort } from "@delivery-os/adapters/daemon";
 import {
   acquireFileConfig,
   ensureDispatchIdentityMarkerText,
@@ -41,6 +42,7 @@ import {
 import {
   assembleHarnessLiveness,
   buildHarnessSpawnEnvironment,
+  type CoordinatorSettings,
   claimQueueLease,
   classifyHarnessEvidence,
   classifyVerifyDocument,
@@ -56,10 +58,12 @@ import {
   normalizeDispatchRepositoryKey,
   normalizeRepositoryKey,
   normalizeRepositoryRemote,
+  PRODUCTION_DEFAULTS,
   readDaemonLanes,
   readQueueEntries,
   releaseQueueLease,
   resolveConfig,
+  resolveCoordinatorSettings,
   resolveDispatchIdentity,
   resolveHarnessSettings,
   resolveLaneSettings,
@@ -100,8 +104,10 @@ import {
   readEconomicsRecords,
   STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
+import type { CoordinatorSessionFacts } from "./commands/coordinator-loop.js";
 import {
   type ConfigProgramOptions,
+  type CoordinatorComposition,
   createCloseoutComposition,
   createConfigProgram,
   createDispatchCommandRuntime,
@@ -216,6 +222,13 @@ export type ProductionCompositionFacts = {
    * inject branch and history facts without touching a checkout.
    */
   readonly gitChildRunner?: GitChildRunner;
+  /** The supervisor's own process id (the bin supplies `process.pid`). */
+  readonly processId?: number;
+  /** The process signal subscription seam (the bin supplies the host process). */
+  readonly signalHost?: {
+    readonly once: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
+    readonly removeListener: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
+  };
 };
 
 /**
@@ -229,9 +242,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
   return (brand: BrandIdentity) => {
     const environment = facts.environment;
     const cwd = facts.cwd;
+    const ownProcessId = facts.processId ?? 0;
+    const signalHost = facts.signalHost;
     const homeDirectory = trimTrailingSeparators(facts.homeDirectory);
     const stateDirectory = `${homeDirectory}/${brand.stateDirectoryName}`;
     const changesDirectory = `${cwd}/doc/changes`;
+    // One git-root resolution for every configuration branch composition.
+    const gitRootForConfig = (): string | undefined => findGitRoot(cwd, nodeRepositoryIo());
     const notesFs = nodePmNotesFileSystemFacts();
     const localFs = nodeFileSystemFacts();
     const nowIso = (): string => new Date().toISOString();
@@ -983,7 +1000,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const resolveProductionHarnessSettings = ():
       | { readonly ok: true; readonly settings: HarnessSettings; readonly lane: LaneSettings }
       | { readonly ok: false; readonly code: string } => {
-      const gitRoot = findGitRoot(cwd, nodeRepositoryIo());
+      const gitRoot = gitRootForConfig();
       const acquired = acquireFileConfig({
         platform: runtimePlatform(),
         homeDirectory,
@@ -1056,6 +1073,145 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
     };
 
+    /**
+     * Resolve the typed `coordinator` configuration branch. The shipped
+     * defaults close the malformed-config case so the prompt-required command
+     * surface always composes; the coordinator still reads its own resolved
+     * values for every decision.
+     */
+    const defaultCoordinatorSettings = (): CoordinatorSettings => ({
+      stuckWindowMs: PRODUCTION_DEFAULTS.coordinator["stuck-window"],
+      killGraceMs: PRODUCTION_DEFAULTS.coordinator["kill-grace"],
+      restartBudget: PRODUCTION_DEFAULTS.coordinator["restart-budget"],
+      resumeContextLimit: PRODUCTION_DEFAULTS.coordinator["resume-context-limit"],
+      collectionIntervalMs: PRODUCTION_DEFAULTS.coordinator["collection-interval"],
+      progressBoundMs: PRODUCTION_DEFAULTS.coordinator["progress-bound"],
+    });
+
+    const resolveProductionCoordinatorSettings = (): CoordinatorSettings => {
+      const gitRoot = gitRootForConfig();
+      const acquired = acquireFileConfig({
+        platform: runtimePlatform(),
+        homeDirectory,
+        environment,
+        ...(gitRoot === undefined ? {} : { gitRoot }),
+        enableSystemConfig: true,
+        enableUserConfig: true,
+        enableProjectLocalConfig: true,
+        configurationDirectoryName: brand.configDirectoryName,
+        fs: localFs,
+      });
+      if (!acquired.ok) return defaultCoordinatorSettings();
+      const resolved = resolveConfig({ sources: acquired.sources });
+      if (!resolved.ok) return defaultCoordinatorSettings();
+      const settings = resolveCoordinatorSettings(resolved.value.values, resolved.value.origins);
+      return settings.ok ? settings.value : defaultCoordinatorSettings();
+    };
+
+    /**
+     * Compose the coordinator command family over the delivered adapters
+     * (GH-241 F-1/F-6/F-7/F-10): the shared state store, injected clock and id
+     * factories, the resolved coordinator settings, the node process port with
+     * its start-time identity capability, the recorded harness-session facts,
+     * the declared session effects, and the real cycle driver. The session
+     * facts come from the delivered daemon lane ledger; absent facts stay
+     * `unknown` rather than being fabricated.
+     */
+    const createProductionCoordinatorComposition = (): CoordinatorComposition => {
+      const settings = resolveProductionCoordinatorSettings();
+      const processPort = createNodeProcessPort();
+      const ownStartTimeMs = (): number | undefined => processPort.startTimeMs?.(ownProcessId);
+
+      const readCoordinatorSession = (): CoordinatorSessionFacts => {
+        const lanes = readDaemonLanes(store);
+        const lane = lanes.ok ? lanes.latest : undefined;
+        const pid = lane?.processId ?? null;
+        const observedStartTime = pid === null ? undefined : processPort.startTimeMs?.(pid);
+        const liveness: CoordinatorSessionFacts["liveness"] =
+          pid === null ? "unknown" : processPort.isAlive(pid) ? "alive" : "absent";
+        return {
+          sessionId: lane?.sessionId ?? null,
+          liveness,
+          contextTokens: null,
+          harnessKind: lane?.harnessKind ?? "opencode",
+          completedCleanly: lane?.state === "completed",
+          resumable: (lane?.sessionId ?? null) !== null,
+          resumeDeclared: false,
+          pid,
+          processStartTimeMs: observedStartTime ?? null,
+        };
+      };
+
+      const wait = (ms: number): Promise<void> =>
+        new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, ms);
+          const unref = (timer as { readonly unref?: () => void }).unref;
+          if (typeof unref === "function") unref.call(timer);
+        });
+
+      return {
+        store,
+        clock: { nowMs, nowIso },
+        newFenceToken,
+        newId: (prefix: string) => `${prefix}-${globalThis.crypto.randomUUID()}`,
+        coordinatorId: "coordinator-main",
+        stateDirectory,
+        settings,
+        processPort: {
+          port: processPort,
+          capabilities: {
+            alive: true,
+            killWithGrace: true,
+            startTimeIdentity: typeof processPort.startTimeMs === "function",
+          },
+          probe: ({ pid, processStartTimeMs }) => {
+            if (!processPort.isAlive(pid)) return false;
+            const observed = processPort.startTimeMs?.(pid);
+            if (observed === undefined) return null;
+            return observed === processStartTimeMs;
+          },
+          ownIdentity: () => {
+            const start = ownStartTimeMs();
+            return start === undefined ? null : { pid: ownProcessId, processStartTimeMs: start };
+          },
+          wait,
+          // Production has no composed sourced-progress adapter for the
+          // coordinator session; absence is the honest `unknown` class.
+          progress: () => ({ newTurn: "unknown" as const, observedAtMs: null }),
+        },
+        session: {
+          read: readCoordinatorSession,
+          apply: (effect) =>
+            effect === "attach"
+              ? { ok: true as const }
+              : { ok: false as const, code: "harness.capability.gap" },
+          wake: (effect) => ({ ok: effect === "live" }),
+        },
+        loop: {
+          run: async (onCycle) => {
+            let signalled = false;
+            const onSignal = (): void => {
+              signalled = true;
+            };
+            signalHost?.once("SIGINT", onSignal);
+            signalHost?.once("SIGTERM", onSignal);
+            try {
+              for (;;) {
+                if (signalled) return "signal";
+                const outcome = await onCycle();
+                if (outcome === "stop") return "stopped";
+                if (signalled) return "signal";
+                await wait(settings.collectionIntervalMs);
+              }
+            } finally {
+              signalHost?.removeListener("SIGINT", onSignal);
+              signalHost?.removeListener("SIGTERM", onSignal);
+            }
+          },
+        },
+      };
+    };
+
     const configured: ConfigProgramOptions = {
       workingName: facts.workingName,
       environment,
@@ -1106,6 +1262,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         newTraceId: () => globalThis.crypto.randomUUID(),
         newFenceToken,
       },
+      coordinator: createProductionCoordinatorComposition(),
     };
 
     const program = createConfigProgram(configured);

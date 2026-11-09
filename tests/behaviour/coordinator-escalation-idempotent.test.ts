@@ -3,8 +3,8 @@
  * question open.
  */
 import { describe, expect, test } from "bun:test";
-import { createCoordinatorHarness, dataOf, seedRestart } from "../fixtures/coordinator/harness";
 import { readBlockerLedger } from "../../packages/core/src/state/index";
+import { createCoordinatorHarness, dataOf, seedRestart } from "../fixtures/coordinator/harness";
 
 const exhausted = (label: string) => {
   const harness = createCoordinatorHarness({

@@ -172,6 +172,13 @@ export const COORDINATOR_WAKE_OUTCOMES = [
 ] as const;
 export type CoordinatorWakeOutcome = (typeof COORDINATOR_WAKE_OUTCOMES)[number];
 
+/**
+ * The wake effect selected from the lifecycle decision (GH-241 F-7, AC-F7-1):
+ * `live` attaches to the live session, `resume` resumes it, `spawn` starts one.
+ */
+export const COORDINATOR_WAKE_EFFECTS = ["live", "resume", "spawn"] as const;
+export type CoordinatorWakeEffect = (typeof COORDINATOR_WAKE_EFFECTS)[number];
+
 /** The four instance-lease actions (EVT-7). */
 export const COORDINATOR_FENCE_ACTIONS = [
   "acquired",
@@ -448,6 +455,12 @@ export type CoordinatorFenceRecord = {
   readonly externalUnit: CoordinatorExternalUnit;
   readonly previousHolder: string | null;
   readonly fenceAgeMs: number | null;
+  /**
+   * The durable budget epoch carrier (GH-241 F-5, AC-F5-5). The latest non-null
+   * value on the lease is the current epoch, so a `--fresh-budget` reset survives
+   * a later `status`, `tick`, or `start` even when the start consumes no ordinal.
+   */
+  readonly budgetEpochId: string | null;
   readonly recordedAt: string;
 };
 
@@ -507,10 +520,20 @@ export type CoordinatorTickVerdict = {
 /** The last-wake projection; `outcome` may be a durable or a tick-result value. */
 export type CoordinatorWakeView = {
   readonly outcome: CoordinatorWakeOutcome;
+  /** The wake effect selected from the lifecycle decision; null when none ran. */
+  readonly effect: CoordinatorWakeEffect | null;
   readonly questionId: string | null;
   readonly questionRank: number | null;
   readonly askedAt: string | null;
   readonly iterationId: string | null;
+};
+
+/** The bounded positive live-facts set reported by `status --live`. */
+export type CoordinatorLiveFacts = {
+  readonly alive: boolean;
+  /** Whether the recorded `processStartTimeMs` still matches the live process. */
+  readonly startTimeVerified: boolean;
+  readonly leaseAgeMs: number | null;
 };
 
 /** The restart-count and bound projection. */
@@ -567,6 +590,8 @@ export type CoordinatorObservation = {
   readonly wake: CoordinatorWakeView | null;
   readonly escalation: CoordinatorEscalationView;
   readonly fence: CoordinatorFenceView | null;
+  /** The bounded live facts, populated only by `status --live`. */
+  readonly live?: CoordinatorLiveFacts | null;
   readonly degradation: readonly string[];
 };
 

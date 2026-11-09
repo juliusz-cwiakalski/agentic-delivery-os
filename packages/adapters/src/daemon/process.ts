@@ -6,6 +6,7 @@
  * performs a liveness check. No shell evaluation.
  */
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import type {
   CoordinatorKillResult,
   CoordinatorProcessIdentity,
@@ -16,10 +17,46 @@ import type {
 export type NodeProcessPortOptions = {
   readonly spawnImpl?: typeof spawn;
   readonly killImpl?: (pid: number, signal?: NodeJS.Signals | 0) => boolean;
+  /** The platform start-time reader; defaults to `/proc` on Linux. */
+  readonly startTimeMsImpl?: (pid: number) => number | undefined;
+};
+
+/** The Linux userspace clock-tick constant used by `/proc/<pid>/stat`. */
+const LINUX_CLOCK_TICKS_PER_SECOND = 100;
+
+/**
+ * Read the process start time from the Linux `/proc` filesystem.
+ *
+ * `/proc/<pid>/stat` field 22 is the start time in clock ticks since boot; the
+ * commit epoch is `/proc/stat`'s `btime` plus that tick offset. The comm field
+ * may contain spaces and parentheses, so parsing resumes after the final `)`.
+ * Off Linux, or when either file is unreadable, the capability returns
+ * `undefined` and the kill path discloses `identity-mismatch` rather than
+ * signalling an unverified pid.
+ */
+const readLinuxProcessStartTimeMs = (pid: number): number | undefined => {
+  if (process.platform !== "linux") return undefined;
+  try {
+    const stat = readFileSync(`/proc/${String(pid)}/stat`, "utf8");
+    const close = stat.lastIndexOf(")");
+    if (close < 0) return undefined;
+    const fields = stat.slice(close + 2).split(" ");
+    const startTicks = Number(fields[19]);
+    if (!Number.isFinite(startTicks)) return undefined;
+    const procStat = readFileSync("/proc/stat", "utf8");
+    const bootLine = procStat.split("\n").find((line) => line.startsWith("btime "));
+    if (bootLine === undefined) return undefined;
+    const bootSeconds = Number(bootLine.slice("btime ".length).trim());
+    if (!Number.isFinite(bootSeconds)) return undefined;
+    return Math.round(bootSeconds * 1000 + (startTicks * 1000) / LINUX_CLOCK_TICKS_PER_SECOND);
+  } catch {
+    return undefined;
+  }
 };
 
 export const createNodeProcessPort = (options: NodeProcessPortOptions = {}): DaemonProcessPort => {
   const spawnImpl = options.spawnImpl ?? spawn;
+  const startTimeMsImpl = options.startTimeMsImpl ?? readLinuxProcessStartTimeMs;
   const killImpl =
     options.killImpl ??
     ((pid: number, signal?: NodeJS.Signals | 0): boolean => {
@@ -48,6 +85,7 @@ export const createNodeProcessPort = (options: NodeProcessPortOptions = {}): Dae
     signal: (pid, signal) =>
       killImpl(pid, signal) ? { ok: true } : { ok: false, detail: "signal-failed" },
     isAlive: (pid) => killImpl(pid, 0),
+    startTimeMs: (pid) => startTimeMsImpl(pid),
   };
 };
 

@@ -3,8 +3,8 @@
  * `already-woken`.
  */
 import { describe, expect, test } from "bun:test";
-import { createCoordinatorHarness, dataOf } from "../fixtures/coordinator/harness";
 import { pickupQuestion } from "../fixtures/coordinator/blockers";
+import { createCoordinatorHarness, dataOf } from "../fixtures/coordinator/harness";
 
 describe("TC-COORD-071 one wake per question lifetime", () => {
   test("a still-top already-woken question appends no second record", async () => {
@@ -51,7 +51,7 @@ describe("TC-COORD-071 one wake per question lifetime", () => {
     });
     const failed = await harness.run(["coordinator", "tick", "--json"]);
     expect(failed.code).toBe(2);
-    let read = harness.records();
+    const read = harness.records();
     if (!read.ok) throw new Error("read failed");
     expect(read.wakes).toHaveLength(0);
     expect(read.fences.filter((record) => record.action === "released")).toHaveLength(1);

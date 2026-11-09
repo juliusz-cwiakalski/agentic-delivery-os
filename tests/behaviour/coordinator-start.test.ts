@@ -4,7 +4,7 @@
  * bare start.
  */
 import { describe, expect, test } from "bun:test";
-import { dataOf, errorCodeOf, createCoordinatorHarness } from "../fixtures/coordinator/harness";
+import { createCoordinatorHarness, dataOf, errorCodeOf } from "../fixtures/coordinator/harness";
 import { fenceRecord } from "../fixtures/coordinator/states";
 
 const started = () =>
@@ -21,9 +21,12 @@ describe("TC-COORD-010 start claims the lease and records the instance", () => {
     const result = await harness.run(["coordinator", "start", "--foreground", "--json"]);
     expect(result.code).toBe(0);
     const data = dataOf(result);
-    // The zero-cycle supervisor has already released its lifetime lease, so the
-    // instance is reported from the durable acquisition record, not fabricated.
-    expect(data.instance).toBeNull();
+    // The start receipt reports the acquisition instance even though the
+    // zero-cycle supervisor has already released its lifetime lease (F-03).
+    expect(data.instance).not.toBeNull();
+    expect(data.instance?.instanceId).toBe("instance-0001");
+    expect(data.instance?.pid).toBe(9001);
+    expect(data.instance?.startedAt).toBeDefined();
     expect(data.fence?.action).toBe("released");
     const read = harness.records();
     if (!read.ok) throw new Error("read failed");
@@ -31,6 +34,17 @@ describe("TC-COORD-010 start claims the lease and records the instance", () => {
     expect(read.fences[0]?.pid).toBe(9001);
     expect(read.fences[0]?.supervisorMode).toBe("foreground");
     expect(read.fences[0]?.externalUnit).toBe("absent");
+  });
+
+  test("the human start receipt renders the terminal stopped/released result", async () => {
+    const harness = started();
+    const result = await harness.run(["coordinator", "start", "--foreground"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain("coordinator stopped");
+    expect(result.stdout).toContain("instance=instance-0001");
+    expect(result.stdout).toContain("pid=9001");
+    expect(result.stdout).toContain("released=true");
+    expect(result.stdout).not.toContain("instance=none");
   });
 
   test("the acquisition lands before any other record", async () => {

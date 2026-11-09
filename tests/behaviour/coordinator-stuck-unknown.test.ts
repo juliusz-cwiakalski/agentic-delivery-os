@@ -6,9 +6,9 @@ import { describe, expect, test } from "bun:test";
 import { evaluateStuck } from "../../packages/core/src/domain/index";
 import {
   EVIDENCE_MATRIX,
+  factsForCell,
   NOW_MS,
   STUCK_WINDOW_MS,
-  factsForCell,
   staleBaseline,
 } from "../fixtures/coordinator/evidence";
 

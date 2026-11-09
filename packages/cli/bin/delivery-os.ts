@@ -27,6 +27,8 @@ const invoke = async (): Promise<number> => {
       cwd,
       homeDirectory,
       workingName: configured,
+      processId: process.pid,
+      signalHost: process,
     }),
   });
 };

@@ -29,6 +29,11 @@ describe("TC-COORD-052 at the bound no replacement starts", () => {
     expect(read.restarts).toHaveLength(10);
     expect(read.exhaustion).toHaveLength(1);
     expect(read.exhaustion[0]?.historyRef).toBe("coordinator/coordinator-main");
+    // F-09: the failure result itself carries the history reference.
+    expect(result.json?.error).toMatchObject({ code: "coordinator.restart-budget-exhausted" });
+    expect((result.json?.error as { summary?: string } | undefined)?.summary).toContain(
+      "historyRef=coordinator/coordinator-main",
+    );
     expect(harness.counters.spawns).toBeGreaterThanOrEqual(0);
   });
 

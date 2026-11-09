@@ -3,14 +3,14 @@
  * receipt follows it.
  */
 import { describe, expect, test } from "bun:test";
+import { readBlockerLedger } from "../../packages/core/src/state/index";
+import { escalationQuestion } from "../fixtures/coordinator/blockers";
 import {
   createCoordinatorHarness,
   dataOf,
   errorCodeOf,
   seedRestart,
 } from "../fixtures/coordinator/harness";
-import { escalationQuestion } from "../fixtures/coordinator/blockers";
-import { readBlockerLedger } from "../../packages/core/src/state/index";
 
 const exhaustedHarness = (label: string) => {
   const harness = createCoordinatorHarness({
@@ -40,6 +40,11 @@ describe("TC-COORD-060 exhaustion publishes one owner question then a receipt", 
     );
     expect(escalation).toHaveLength(1);
     expect(escalation[0]?.options).toEqual(["restart-fresh-budget", "park-owner-review"]);
+    // EVT-6 v1.6: the published question itself carries the durable history
+    // reference, not only the exhaustion receipt (F-07).
+    expect(escalation[0]?.historyRef).toBe("coordinator/coordinator-main");
+    expect(escalation[0]?.id).toMatch(/^q-/);
+    expect(escalation[0]?.id).not.toMatch(/^q-q-/);
 
     const read = harness.records();
     if (!read.ok) throw new Error("read failed");

@@ -4,11 +4,14 @@
  * adapter appends no coordinator record and runs no budget check.
  */
 import { describe, expect, test } from "bun:test";
-import { killCoordinatorProcess } from "../../packages/adapters/src/daemon/index";
+import {
+  createNodeProcessPort,
+  killCoordinatorProcess,
+} from "../../packages/adapters/src/daemon/index";
 import { readCoordinatorRecords } from "../../packages/core/src/state/index";
+import { createCoordinatorHarness, seedIteration } from "../fixtures/coordinator/harness";
 import { createRecordingProcessPort } from "../fixtures/coordinator/process-port";
 import { COORDINATOR_ID, makeCoordinatorStore } from "../fixtures/coordinator/states";
-import { createCoordinatorHarness, seedIteration } from "../fixtures/coordinator/harness";
 
 const PID = 4242;
 const START = 1_700_000_000_000;
@@ -143,6 +146,22 @@ describe("TC-COORD-040 the supervisor composes the two-phase outcome and budget"
       .filter((record) => ["coordinator.stuck", "coordinator.restart"].includes(record.kind))
       .map((record) => record.kind);
     expect(kinds).toEqual(["coordinator.stuck", "coordinator.stuck", "coordinator.restart"]);
+  });
+
+  test("the production node process port implements the start-time identity source (F-06)", () => {
+    const port = createNodeProcessPort();
+    expect(typeof port.startTimeMs).toBe("function");
+    const observed = port.startTimeMs?.(process.pid);
+    if (process.platform === "linux") {
+      // `/proc/<pid>/stat` plus `btime` resolves a real epoch-millisecond start.
+      expect(typeof observed).toBe("number");
+      expect(Number.isInteger(observed ?? 0)).toBe(true);
+      expect(observed ?? 0).toBeGreaterThan(1_000_000_000_000);
+      expect(observed ?? 0).toBeLessThanOrEqual(Date.now());
+    } else {
+      // The documented non-Linux fallback is the absent capability.
+      expect(observed).toBeUndefined();
+    }
   });
 
   test("no quiet record exists beyond the lease pair and the action records", async () => {

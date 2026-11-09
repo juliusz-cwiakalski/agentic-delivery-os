@@ -14,6 +14,7 @@ import {
   type CoordinatorEscalationView,
   type CoordinatorFenceView,
   type CoordinatorInstance,
+  type CoordinatorLiveFacts,
   type CoordinatorObservation,
   type CoordinatorRestarts,
   type CoordinatorSession,
@@ -36,6 +37,7 @@ export type CoordinatorObservationFacts = {
   readonly wake: CoordinatorWakeView | null;
   readonly escalation: CoordinatorEscalationView;
   readonly fence: CoordinatorFenceView | null;
+  readonly live?: CoordinatorLiveFacts | null;
   readonly degradation: readonly string[];
 };
 
@@ -65,6 +67,7 @@ export const projectCoordinatorObservation = (
   wake: facts.wake,
   escalation: facts.escalation,
   fence: facts.fence,
+  live: facts.live ?? null,
   degradation: [...facts.degradation],
 });
 

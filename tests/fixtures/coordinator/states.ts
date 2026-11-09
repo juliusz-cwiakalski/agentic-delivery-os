@@ -128,6 +128,7 @@ export const fenceRecord = (
   externalUnit: "absent",
   previousHolder: null,
   fenceAgeMs: null,
+  budgetEpochId: null,
   recordedAt: T0,
   ...overrides,
 });

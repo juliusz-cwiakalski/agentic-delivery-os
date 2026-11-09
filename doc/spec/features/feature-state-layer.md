@@ -356,7 +356,7 @@ lease-age anchor.
 | `coordinator.stuck` | `delivery.coordinator.stuck.v1` | `coordinator.stuck:<coordinatorId>` | One `verdict` phase and, for `stuck`, one `outcome` phase | The persisted stuck and tick verdicts |
 | `coordinator.exhaustion` | `delivery.coordinator.exhaustion.v1` | `coordinator.exhaustion:<coordinatorId>` | The single terminal escalation receipt per epoch | The escalation state and question id |
 | `coordinator.wake` | `delivery.coordinator.wake.v1` | `coordinator.wake:<coordinatorId>` | One successful wake per question lifetime | One-wake-per-question dedupe and the last-wake view |
-| `coordinator.fence` | `delivery.coordinator.fence.v1` | `coordinator.fence:<coordinatorId>` | One instance-lease action | The instance-lease fold and the status instance view |
+| `coordinator.fence` | `delivery.coordinator.fence.v1` | `coordinator.fence:<coordinatorId>` | One instance-lease action carrying the durable `budgetEpochId` | The instance-lease fold, the status instance view, and the current budget epoch |
 
 Every append uses the non-claim per-append fence rule: acquire, one stale-lock
 recovery and retry on `state.lock.busy`, append, release. A still-busy fence is

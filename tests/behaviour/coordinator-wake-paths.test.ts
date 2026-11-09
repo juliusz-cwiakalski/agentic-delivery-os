@@ -3,8 +3,8 @@
  * question and iteration.
  */
 import { describe, expect, test } from "bun:test";
-import { createCoordinatorHarness, dataOf } from "../fixtures/coordinator/harness";
 import { pickupQuestion } from "../fixtures/coordinator/blockers";
+import { createCoordinatorHarness, dataOf } from "../fixtures/coordinator/harness";
 
 describe("TC-COORD-073 the wake records the question and iteration", () => {
   for (const liveness of ["alive", "absent"] as const) {
@@ -20,6 +20,8 @@ describe("TC-COORD-073 the wake records the question and iteration", () => {
       expect(data.wake?.outcome).toBe("woken");
       expect(data.wake?.questionId).toBe("q-pickup");
       expect(data.wake?.iterationId).not.toBeNull();
+      // The effect is selected from the lifecycle decision and reported (F-08).
+      expect(data.wake?.effect).toBe(liveness === "alive" ? "live" : "resume");
       expect(harness.counters.wakes).toBe(1);
       const read = harness.records();
       if (!read.ok) throw new Error("read failed");
@@ -27,6 +29,17 @@ describe("TC-COORD-073 the wake records the question and iteration", () => {
       expect(read.iterations.some((record) => record.trigger === "wake")).toBe(true);
     });
   }
+
+  test("a context-pressured session wakes with the spawn effect", async () => {
+    const harness = createCoordinatorHarness({
+      label: "wake-path-spawn",
+      questions: [pickupQuestion()],
+      session: { liveness: "absent", contextTokens: 100_000 },
+    });
+    const data = dataOf(await harness.run(["coordinator", "tick", "--json"]));
+    expect(data.wake?.outcome).toBe("woken");
+    expect(data.wake?.effect).toBe("spawn");
+  });
 
   test("the wake is one collection cycle after the question qualifies", async () => {
     const harness = createCoordinatorHarness({

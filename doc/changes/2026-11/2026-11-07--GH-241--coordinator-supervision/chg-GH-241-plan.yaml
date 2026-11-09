@@ -2,12 +2,16 @@
 # Canonical plan artifact: this YAML document is the only plan file for the
 # change. `plan validate` and `plan diff` read it directly.
 #
-# SOURCES (single source of truth; plan revision 1.5, 2026-11-09):
-#   - Spec:   ./chg-GH-241-spec.md (v1.5; F-1..F-10; 50 ACs; DEC-1..DEC-13;
-#             DM-1..DM-11; EVT-1..EVT-7; NFR-1..NFR-15; Appendix A..H)
+# SOURCES (single source of truth; plan revision 1.6, 2026-11-09):
+#   - Spec:   ./chg-GH-241-spec.md (v1.6; implementation-review-1 amendments
+#             F-02/F-5, F-07/F-6, F-08/F-7, F-10/F-9, F-11, and D-6;
+#             F-1..F-10; 50 ACs; DEC-1..DEC-13; DM-1..DM-11; EVT-1..EVT-7;
+#             NFR-1..NFR-15; Appendix A..H)
 #   - Tests:  ./chg-GH-241-test-plan.md (v1.5; 76 TCs TC-COORD-001..099;
 #             50/50 AC coverage; SC-M1-25 clause map in section 3.4; section 7
 #             is the file/command inventory this plan maps onto phases)
+#   - Review: ./review/review-iter-1.md (FAIL; 21 findings F-01..F-21;
+#             AC matrix 39 PASS / 8 PARTIAL / 3 FAIL)
 #   - DoR:    ./readiness-review/readiness-iter-3.md (RF3-01..RF3-05 and
 #             AF3-01..AF3-08; prior RF2-01..RF2-12 and RF-01..RF-12 with
 #             A1/A2/A3/A6 dispositions in readiness-iter-1.md and
@@ -21,9 +25,10 @@
 # REVISION NOTE (v1.5): aligns to spec v1.5 and test plan v1.5. BF4-01 re-pins
 # the Phase-1 error-table arithmetic to the live tree (36 two-segment codes ->
 # 38 after the two coordinator codes; 115 identities -> 121 after the six
-# coordinator rows). AF4-02 adds the two scoped, mapped Phase-8 gate files
-# (tests/structure/coordinator-imports.test.ts for TC-COORD-002 and
-# tests/checks/secret-read-boundary.test.ts for TC-COORD-084).
+# coordinator rows). AF4-02 adds the mapped Phase-8 gate test
+# tests/structure/coordinator-imports.test.ts for TC-COORD-002; TC-COORD-084's
+# unchanged tests/checks/secret-read-boundary.test.ts is executed at the
+# Phase-8 gate without a scope declaration (v1.6 F-18).
 # DoR iteration-3 remediation retained: AF3-07 (delivery_planning-owned) — the
 # Phase-6 gate now executes TC-COORD-024 and TC-COORD-025. RF3-05 / AC-F1-5: Phase 6
 # declares and scopes the foreground supervision loop (claim-free cycle body,
@@ -48,6 +53,29 @@
 # record's recordedAt, and unevaluable is exactly one phase=verdict record
 # with no phase=outcome. Adds TC-COORD-096 (serialized second claim) at the
 # Phase-6 gate. 76/76 TCs, 50/50 ACs.
+#
+# REVISION NOTE (v1.6): review-iter-1 remediation. Adds Phase 11 (review
+# remediation) with NO new TCs: it closes F-01..F-21 and re-runs the existing
+# Phase 1..10 gates. Phase 11 composes the coordinator family in the shipped
+# entrypoint (production.ts + prompt-required commands) and implements the
+# production process start-time identity (F-01, F-06); persists the budget
+# epoch so --fresh-budget survives a later status/tick/start (F-02); fixes the
+# start receipt/instance and the terminal rendering (F-03); reports the
+# per-cycle wake outcome (F-04); records join-live on collection evaluation
+# (F-05); carries the escalation history reference on the question and on the
+# failure (F-07, F-09); selects the wake effect from the lifecycle decision
+# (F-08); adds positive --live process facts (F-10); implements the
+# digest-change expectation (F-21); and closes the minor findings F-12..F-17
+# and F-20 plus the F-19 test-strengthening set. F-11 (iteration reason
+# vocabulary) is closed by the spec v1.6 Appendix B/EVT-1 amendment (already
+# present; the spec is not edited here); F-18 is closed by this revision's
+# scope declarations. F-18 fidelity:
+# the 13 changed paths that were outside every phase are added to the owning
+# phase (doc-sync docs and the forbidden-literals registry to Phase 10; the
+# core package barrel and supporting suites to Phases 1/2/3/4/6), and the
+# eight declared-but-unchanged files are removed except config/resolver.ts,
+# which Phase 11 now owns. Phase 11 is the final phase and carries the release
+# doneArtifacts. 76/76 TCs, 50/50 ACs unchanged.
 #
 # PINNED CONTRACTS BINDING ON EVERY PHASE (do not reshape at delivery):
 #   - Exactly two two-segment coordinator codes join RESERVED_TWO_SEGMENT_CODES
@@ -203,17 +231,22 @@
 #             TC-COORD-088, TC-COORD-091
 #   Phase 9:  (none; TC-092 is verified at the Phase-10 gate)
 #   Phase 10: TC-COORD-089, TC-COORD-090, TC-COORD-092
+#   Phase 11: (none; no new TCs — re-runs the Phase 1..10 gate set and the
+#             review-remediation verification; the 76/76 map is unchanged)
 #
 # DELIVERY MODEL: one commit per phase on feat/GH-241/coordinator-supervision;
-# each phase boundary leaves the declared narrow gate green. Extra phase data
-# (tasks, verification commands, exit criteria, AC/TC ids) is carried in YAML
-# comments so the parsed document stays schema-strict.
+# each phase boundary leaves the declared narrow gate green. Phase 11 is the
+# post-review remediation boundary: its gate must leave the affected
+# coordinator suites, the full error-table gate, and a real shipped
+# `coordinator status` green. Extra phase data (tasks, verification commands,
+# exit criteria, AC/TC ids) is carried in YAML comments so the parsed document
+# stays schema-strict.
 
 schemaVersion: delivery.plan.v1
 workItemRef: GH-241
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
   escalationTriggers:
     - "error-table-sync gate red after Phase 1 (exact two-code allowlist, set 36->38, table 115->121, or documented-row binding failed)"
     - "a status/brief golden diff outside the declared reserved escalation slot"
@@ -263,8 +296,11 @@ phases:
   #      generic widening; a near-miss remains rejected; the other four codes
   #      are three-segment.
   #  1.5 Add the six documented rows to
-  #      doc/spec/features/feature-result-contract.md (115 -> 121) and extend
-  #      tests/fixtures/result/code-corpora true/false positives.
+  #      doc/spec/features/feature-result-contract.md (115 -> 121); extend
+  #      tests/fixtures/result/code-corpora true/false positives; and add the
+  #      three consequence-unknown coordinator codes (session.kill-failed,
+  #      escalation.publish-failed, wake.delivery-failed) to
+  #      tests/fixtures/result/unknown-consequence-allowlist.json.
   #  1.6 Create tests/structure/coordinator-contract.test.ts and
   #      tests/types/coordinator.type-test.ts; extend
   #      tests/structure/error-table.test.ts and
@@ -308,8 +344,8 @@ phases:
         - tests/types/coordinator.type-test.ts
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
-        - tests/structure/port-contract-inventory.test.ts
         - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/fixtures/result/unknown-consequence-allowlist.json
         - doc/spec/features/feature-result-contract.md
         - doc/decisions/TDR-0017-coordinator-supervision-architecture.md
         - doc/decisions/TDR-0018-coordinator-artifact-evidence-and-brief-escalation.md
@@ -390,6 +426,7 @@ phases:
     scope:
       files:
         - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
         - tests/structure/coordinator-imports.test.ts
         - tests/structure/coordinator-no-cpu.test.ts
         - tests/behaviour/coordinator-stuck-fingerprint.test.ts
@@ -516,7 +553,7 @@ phases:
         - tests/behaviour/coordinator-restart-durability.test.ts
         - tests/behaviour/coordinator-state-fence-recovery.test.ts
         - tests/structure/state-contract.test.ts
-        - tests/fixtures/state/harness.ts
+        - tests/structure/state-scope.test.ts
         - tests/fixtures/coordinator/states.ts
         - tests/fixtures/coordinator/lifecycle.ts
         - tests/fixtures/coordinator/evidence.ts
@@ -538,8 +575,9 @@ phases:
   #      coordinator.restart-budget (10, integer >= 0),
   #      coordinator.resume-context-limit (100000 tokens, integer > 0),
   #      coordinator.collection-interval (30000 ms, integer > 0), and
-  #      coordinator.progress-bound (300000 ms, integer > 0) to the
-  #      catalog/defaults/schema with provenance.
+  #      coordinator.progress-bound (300000 ms, integer > 0) to the delivered
+  #      config catalog and defaults with provenance (no config/schema.ts or
+  #      config/resolver.ts change in this phase; the tree is unchanged there).
   #  4.2 Wire resolution into the lifecycle, stuck, admission, wake, and
   #      progress-veto decisions; no default or bound literal in decision code;
   #      no alias to lane.restart-budget, lane.liveness-interval, or
@@ -547,7 +585,7 @@ phases:
   #  4.3 Tests: coordinator-config (six keys; absent/explicit/unknown/invalid/
   #      boundary), coordinator-budget-config (0/1/10 and
   #      observed-at-evaluation), progress-bound boundary (1 ms and default),
-  #      config contract extension, fixture roots.
+  #      config-schema regression, config contract extension, fixture roots.
   #
   # Verification:
   #   bun test tests/behaviour/coordinator-config.test.ts tests/behaviour/coordinator-budget-config.test.ts tests/structure/config-contract.test.ts
@@ -564,10 +602,9 @@ phases:
       files:
         - packages/core/src/config/catalog.ts
         - packages/core/src/config/defaults.ts
-        - packages/core/src/config/schema.ts
-        - packages/core/src/config/resolver.ts
         - tests/behaviour/coordinator-config.test.ts
         - tests/behaviour/coordinator-budget-config.test.ts
+        - tests/behaviour/config-schema.test.ts
         - tests/structure/config-contract.test.ts
         - tests/fixtures/coordinator/lifecycle.ts
       folders:
@@ -656,8 +693,6 @@ phases:
         - tests/behaviour/coordinator-new-turn.test.ts
         - tests/structure/coordinator-kill-target.test.ts
         - tests/fixtures/coordinator/process-port.ts
-      folders:
-        - tests/boundaries
 
   # ---------------------------------------------------------------------------
   # Phase 6 — Coordinator CLI family, foreground loop, and edge composition
@@ -820,7 +855,6 @@ phases:
         - packages/cli/src/commands/coordinator-loop.ts
         - packages/cli/src/commands/index.ts
         - packages/cli/src/edge.ts
-        - packages/cli/src/index.ts
         - packages/cli/src/output/coordinator-text.ts
         - tests/behaviour/coordinator-grammar.test.ts
         - tests/behaviour/coordinator-envelope.test.ts
@@ -861,13 +895,13 @@ phases:
         - tests/behaviour/coordinator-wake-failed.test.ts
         - tests/behaviour/coordinator-wake-next.test.ts
         - tests/structure/coordinator-regime.test.ts
+        - tests/structure/cli-edge-seam.test.ts
         - tests/golden/coordinator.test.ts
         - tests/fixtures/coordinator/harness.ts
         - tests/fixtures/coordinator/blockers.ts
         - tests/fixtures/coordinator/claim-race.ts
         - tests/fixtures/coordinator/cycle-driver.ts
         - tests/fixtures/coordinator/process-port.ts
-        - tests/fixtures/state/harness.ts
 
   # ---------------------------------------------------------------------------
   # Phase 7 — Reserved owner-escalation slot and consumer docs
@@ -886,8 +920,11 @@ phases:
   #      order; the lowest-ranked is the one displaced and counted as omitted;
   #      preserve omitted/truncated counts, section ids, and evidence states;
   #      the rendered bound stays eight.
-  #  7.3 domain/brief.ts blocker-questions: mirror the same first-index
-  #      projection; no new anchor, section, surface, or question type.
+  #  7.3 Brief blocker-questions: the delivered brief consumes the same status
+  #      projection, so the reserved slot mirrors at the existing surface with
+  #      no domain/brief.ts or contracts/brief.ts change; no new anchor,
+  #      section, surface, or question type. coordinator-escalation-surface
+  #      proves the brief-side index-0 render.
   #  7.4 Regenerate the reserved-slot goldens only via the explicit scripts and
   #      diff field by field; a control golden without escalation is unchanged.
   #  7.5 Update doc/spec/features/feature-status-digest.md,
@@ -915,9 +952,7 @@ phases:
     scope:
       files:
         - packages/core/src/contracts/status.ts
-        - packages/core/src/contracts/brief.ts
         - packages/core/src/domain/status.ts
-        - packages/core/src/domain/brief.ts
         - tests/behaviour/coordinator-escalation-slot.test.ts
         - tests/behaviour/coordinator-escalation-surface.test.ts
         - tests/golden/status-digest.test.ts
@@ -931,9 +966,6 @@ phases:
     interactions:
       - kind: contract-file
         target: packages/core/src/contracts/status.ts
-        role: producer
-      - kind: contract-file
-        target: packages/core/src/contracts/brief.ts
         role: producer
 
   # ---------------------------------------------------------------------------
@@ -982,7 +1014,7 @@ phases:
   #
   # Exit: SC-M1-25 green end to end (TC-091); the TC-002 boundary/purity gate
   # executes coordinator-imports.test.ts and tests/boundaries; the TC-084
-  # privacy gate executes secret-read-boundary.test.ts beside
+  # privacy gate executes the unchanged secret-read-boundary.test.ts beside
   # coordinator-privacy.test.ts; every TC mapped to this phase (002, 084, 086,
   # 087, 088, 091) has its declared test file executed at this gate;
   # determinism/privacy/idempotency/performance/read-cost gates green; no
@@ -999,7 +1031,6 @@ phases:
         - tests/checks/coordinator-determinism.test.ts
         - tests/checks/coordinator-privacy.test.ts
         - tests/checks/coordinator-mutants.test.ts
-        - tests/checks/secret-read-boundary.test.ts
         - tests/behaviour/coordinator-performance.test.ts
         - tests/behaviour/coordinator-read-cost.test.ts
         - tests/fixtures/coordinator/harness.ts
@@ -1080,6 +1111,15 @@ phases:
   #       registry/man-page drift; update this plan's acknowledgement and the
   #       AC/TC status table; leave the spec and test plan unedited (their
   #       status is owned by their authors); report evidence to @pm.
+  #  10.6 Doc-sync support surfaces landed with the current-truth docs: register
+  #       feature-coordinator-supervision.md in
+  #       scripts/checks/forbidden-literals.registry.json as the doc lands; add
+  #       the TDR row to doc/decisions/00-index.md; reconcile
+  #       doc/overview/architecture-overview.md and doc/overview/glossary.md;
+  #       update doc/quality/test-specs/test-spec-state-layer.md and the
+  #       feature-cli-entrypoint.md, feature-config-layer.md, and
+  #       feature-state-layer.md pages. The release doneArtifacts are declared
+  #       on the final remediation phase (11).
   #
   # Verification:
   #   pnpm check
@@ -1106,10 +1146,18 @@ phases:
         - doc/spec/features/feature-blockers.md
         - doc/spec/features/feature-result-contract.md
         - doc/spec/features/feature-resident-daemon.md
+        - doc/spec/features/feature-cli-entrypoint.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/decisions/00-index.md
+        - doc/overview/architecture-overview.md
+        - doc/overview/glossary.md
+        - doc/quality/test-specs/test-spec-state-layer.md
         - doc/00-index.md
         - doc/planning/oss-tooling/cli-command-registry.md
         - doc/planning/oss-tooling/milestones/m1/contracts.md
         - doc/planning/oss-tooling/milestones/m1/man-page.md
+        - scripts/checks/forbidden-literals.registry.json
       folders:
         - doc/changes/2026-11/2026-11-07--GH-241--coordinator-supervision
         - tests/fixtures/coordinator
@@ -1125,6 +1173,154 @@ phases:
         - packages/adapters/src/harness/liveness*
         - packages/cli/src/commands/coordinator*
         - packages/cli/src/output/coordinator*
+    # Release doneArtifacts are declared on the final remediation phase (11);
+    # this gate keeps the spec-reconciliation obligations in scope.
+
+  # ---------------------------------------------------------------------------
+  # Phase 11 — Review remediation (review-iter-1 FAIL; F-01..F-21)
+  #
+  # Goal: close the 21 review findings that the shipped surface, the durable
+  # epoch, the start/terminal receipts, the per-cycle wake outcome, the
+  # escalation history reference, the wake effect, the --live facts, the
+  # digest-change expectation, and the minor/quality findings require. No new
+  # TCs: the existing 76/76 map and its Phase 1..10 gates are re-run.
+  #
+  # FINDING -> TASK MAP (review/review-iter-1.md; each finding closes here):
+  #  (a) shipped composition + production process identity:
+  #      F-01 — compose the coordinator family in packages/cli/src/production.ts
+  #             (store, clock, id/fence factories, resolved CoordinatorSettings,
+  #             process port, harness session facts/effects, cycle driver), wire
+  #             the affected edge seams, and register the family in
+  #             help/prompt-required-commands.ts so a real
+  #             `delivery-os coordinator status` reaches the handler instead of
+  #             fallback.invocation.
+  #      F-06 — implement startTimeMs(pid) in the production
+  #             packages/adapters/src/daemon/process.ts factory and pass the
+  #             capability through the composition so identity-verified
+  #             kill-with-grace is executable, not always a capability gap.
+  #  (b) durable budget epoch:
+  #      F-02 — persist the epoch identity (iteration/acquisition carrier or a
+  #             durable epoch marker in packages/core/src/state/coordinator.ts)
+  #             and make currentBudgetEpoch read it, so --fresh-budget survives
+  #             a later status/tick/start.
+  #  (c) start receipt/instance + terminal rendering:
+  #      F-03 — build data.instance from the acquisition record, stream a real
+  #             start receipt before the loop, and render stopped/released for
+  #             the terminal result in coordinator-text.ts.
+  #  (d) per-cycle wake outcome:
+  #      F-04 — report the current cycle's no-pickup (null question) in tick
+  #             data; reserve the last-durable-wake fallback for status.
+  #  (e) join-live recording on collection evaluation:
+  #      F-05 — record join-live on every live-session evaluation without
+  #             refreshing the active expectation (mark the collection join so
+  #             the expectation fold excludes it), satisfying AC-F2-1.
+  #  (f) escalation history reference on question and failure:
+  #      F-07 — carry the durable history reference in the bounded owner
+  #             question text/payload (not only on the exhaustion receipt).
+  #      F-09 — put the history reference on the returned
+  #             coordinator.restart-budget-exhausted failure summary.
+  #  (g) wake effect selection:
+  #      F-08 — choose the wake effect from the lifecycle decision (live attach,
+  #             resume, or spawn) as an explicit port contract and compose it in
+  #             production; AC-F7-1/F-7.
+  #  (h) --live positive facts:
+  #      F-10 — add a bounded positive live-facts field (alive/start-time/lease
+  #             verification) to status --live; keep the unknown/degraded
+  #             branch.
+  #  (i) digest-change expectation:
+  #      F-21 — create an expectation on an actionable digest change while live
+  #             (decision none), and reconcile the current-truth §4 note.
+  #  (j) minor fixes:
+  #      F-12 — treat an existing terminal exhaustion receipt as already
+  #             escalated; no second question after an answer.
+  #      F-13 — verify the stop-requested append under the state fence or honor
+  #             it only for the holder's own instanceId (race-safe stop).
+  #      F-14 — make the recovery effect idempotent under the restart identity
+  #             (re-apply the recorded effect before admitting a new ordinal).
+  #      F-15 — set restart sessionId to the recovering session and
+  #             previousSessionId to the replaced one.
+  #      F-16 — keep the status typed-questions cap in the status contract
+  #             (pass the bound as an argument), not COORDINATOR_*.
+  #      F-17 — carry the expectation iterationId/sequence on the cycle context
+  #             and compute the fingerprint from the post-append cursor.
+  #      F-09 — see (f); assert the history reference on the returned error.
+  #      F-20 — read the session once per cycle, import
+  #             COORDINATOR_RESTART_KEY_PREFIX, reuse appendFence, add the
+  #             coordinatorKeyFor assertNever default, fix the q-q question id
+  #             prefix, and run biome check --write on the touched files.
+  #  (k) test strengthening (F-19):
+  #      F-19 — stale publish fence (TC-062), same-state wake retry (TC-074),
+  #             append-level non-claim busy (TC-017), integrated join-live
+  #             (TC-020), fresh-budget durability, no-pickup after a prior wake,
+  #             answered-before-wake reachability, the state.lock.busy release
+  #             branch (TC-066-adjacent), and the non-null start instance; these
+  #             strengthen the existing TC proofs without adding TCs.
+  #  Cross-cutting: F-11 (iteration reason vocabulary) is closed by the spec
+  #  v1.6 Appendix B/EVT-1 amendment (already present; the spec is not edited
+  #  here); F-18 is closed by this revision's declared scopes (Phases 1..10 +
+  #  11) and needs no source change.
+  #
+  # Verification (re-run the affected suites and the shipped entrypoint):
+  #   bun test tests/behaviour/coordinator-*.test.ts tests/checks/coordinator-*.test.ts tests/structure/coordinator-*.test.ts tests/golden/coordinator.test.ts tests/types/coordinator.type-test.ts
+  #   bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   pnpm typecheck
+  #   pnpm lint
+  #   pnpm check:boundaries
+  #   bun packages/cli/bin/delivery-os.ts coordinator status   # must not return fallback.invocation
+  #   bun packages/cli/bin/delivery-os.ts plan validate GH-241
+  #   bun packages/cli/bin/delivery-os.ts lint plan GH-241
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   git diff --check
+  #
+  # Exit: F-01..F-21 dispositioned (F-11 routed to the spec owner; F-18 closed
+  # by scope); the shipped `coordinator status` reaches the handler; the full
+  # affected coordinator suite and the error-table gate are green; 76/76 TCs
+  # and 50/50 ACs remain unchanged.
+  # ---------------------------------------------------------------------------
+  - id: 11
+    title: "Review remediation — shipped composition, durable epoch, receipts, wake, evidence"
+    kind: delivery
+    summary: "fix(GH-241): close review-iter-1 findings F-01..F-21 (shipped composition, durable epoch, start/terminal receipts, wake outcome, escalation history, --live facts, digest-change expectation, minor fixes, test strengthening) and re-run the existing gates"
+    scope:
+      files:
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/help/prompt-required-commands.ts
+        - packages/adapters/src/daemon/process.ts
+        - packages/cli/src/commands/coordinator-loop.ts
+        - packages/cli/src/output/coordinator-text.ts
+        - packages/core/src/contracts/coordinator.ts
+        - packages/core/src/contracts/status.ts
+        - packages/core/src/domain/status.ts
+        - packages/core/src/state/coordinator.ts
+        - packages/core/src/config/catalog.ts
+        - packages/core/src/config/defaults.ts
+        - packages/core/src/config/resolver.ts
+        - doc/planning/oss-tooling/milestones/m1/commands/coordinator.md
+        - doc/spec/features/feature-coordinator-supervision.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-cli-entrypoint.md
+        - doc/spec/features/feature-status-digest.md
+        - doc/spec/features/feature-brief.md
+        - doc/spec/features/feature-blockers.md
+        - doc/00-index.md
+        - .changeset/gh-241-coordinator-supervision-minor.md
+      packages:
+        - packages/core/src/domain/coordinator-*.ts
+        - tests/behaviour/coordinator-*.test.ts
+        - tests/checks/coordinator-*.test.ts
+        - tests/structure/coordinator-*.test.ts
+        - tests/fixtures/coordinator/**
+        - tests/golden/**
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/coordinator.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/status.ts
+        role: producer
     doneArtifacts:
       mergeRequestUrl: "pull request for feat/GH-241/coordinator-supervision targeting main-tools"
       pipelineId: "CI pipeline for the GH-241 delivery branch"

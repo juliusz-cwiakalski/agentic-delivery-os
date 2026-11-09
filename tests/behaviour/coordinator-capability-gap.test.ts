@@ -4,18 +4,18 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  appendCoordinatorIteration,
+  readCoordinatorRecords,
+} from "../../packages/core/src/state/index";
+import {
   createCoordinatorHarness,
   errorCodeOf,
   seedIteration,
 } from "../fixtures/coordinator/harness";
 import {
-  appendCoordinatorIteration,
-  readCoordinatorRecords,
-} from "../../packages/core/src/state/index";
-import {
+  COORDINATOR_ID,
   iterationRecord,
   makeCoordinatorStore,
-  COORDINATOR_ID,
 } from "../fixtures/coordinator/states";
 
 describe("TC-COORD-044 the four capability owners stay distinct", () => {

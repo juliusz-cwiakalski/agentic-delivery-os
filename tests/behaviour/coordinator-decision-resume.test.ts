@@ -9,8 +9,8 @@ import {
   appendCoordinatorRestart,
   readCoordinatorRecords,
 } from "../../packages/core/src/state/index";
-import { createRecordingProcessPort } from "../fixtures/coordinator/process-port";
 import { LIFECYCLE_CASES } from "../fixtures/coordinator/lifecycle";
+import { createRecordingProcessPort } from "../fixtures/coordinator/process-port";
 import {
   COORDINATOR_ID,
   EPOCH_ID,
