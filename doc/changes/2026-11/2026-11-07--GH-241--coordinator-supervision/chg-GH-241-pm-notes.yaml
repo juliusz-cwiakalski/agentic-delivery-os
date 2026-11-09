@@ -5,7 +5,7 @@ phases:
   clarify_scope: { started: "2026-11-07T11:55:00Z", completed: "2026-11-09T03:22:03.900Z" }
   specification: { started: "2026-11-07T12:05:00Z", completed: "2026-11-09T04:39:26.131Z" }
   test_planning: { started: "2026-11-07T12:36:00Z", completed: "2026-11-09T04:39:27.875Z" }
-  delivery_planning: { started: "2026-11-07T13:16:00Z", completed: "2026-11-07T15:54:57Z" }
+  delivery_planning: { started: "2026-11-07T13:16:00Z", completed: "2026-11-09T04:39:29.621Z" }
   dor_check: { started: "2026-11-07T13:36:00Z", completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
