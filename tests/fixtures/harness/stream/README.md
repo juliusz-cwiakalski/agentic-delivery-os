@@ -8,11 +8,11 @@ present.
 
 The set is the single stream oracle for the adapter suites:
 
-| File | Shape |
-|---|---|
-| `opencode-v2.2.5.jsonl` | The clean three-line happy path: `step_start`, `text`, terminal `step_finish` with `part.reason === "stop"`. |
-| `opencode-v2.2.5-tool-error.jsonl` | A `tool_use` event with `part.type === "tool"` and `part.state.status === "error"`, followed by a terminal `step_finish` with `part.reason === "stop"`. |
-| `opencode-v2.2.5-stream-error.jsonl` | An `error` event `{type, timestamp, sessionID, error:{type, message}}` after an identified `step_start` line; no terminal `step_finish`. |
+| File                                 | Shape                                                                                                                                                   |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `opencode-v2.2.5.jsonl`              | The clean three-line happy path: `step_start`, `text`, terminal `step_finish` with `part.reason === "stop"`.                                            |
+| `opencode-v2.2.5-tool-error.jsonl`   | A `tool_use` event with `part.type === "tool"` and `part.state.status === "error"`, followed by a terminal `step_finish` with `part.reason === "stop"`. |
+| `opencode-v2.2.5-stream-error.jsonl` | An `error` event `{type, timestamp, sessionID, error:{type, message}}` after an identified `step_start` line; no terminal `step_finish`.                |
 
 ## Regeneration
 

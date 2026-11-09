@@ -1603,7 +1603,7 @@ Executed in the delivery (or verification) phase, not by any automated suite. It
 ```bash
 # 0. Preconditions: this worktree is clean; the delivered dist is current; the CLI is
 #    pinned; the dispatch process can authenticate to GitHub.
-REPO=/home/juliusz/git/cwiakalski-pub-gh/agentic-delivery-os-gh-275
+REPO=/path/to/agentic-delivery-os
 E2E=/tmp/opencode/gh275-e2e
 LOG=$E2E/dispatch.log
 TRACKER_REPO=juliusz-cwiakalski/agentic-delivery-os
@@ -2007,57 +2007,112 @@ pnpm check          # aggregate: lint, format, typecheck, tests, boundaries, inv
 
 ## 10. Test Execution Log
 
-Execution window: pending (delivery phase). Runtime: Bun 1.4.4 (repo pin), pnpm 10.18.3. Branch: `fix/GH-275/opencode-harness-contract`. The delivery fills in result and notes per row, and appends the §7.3 mutation evidence and the §6.3 end-to-end output below the table.
+Execution window: 2026-11-09. Branch: `fix/GH-275/opencode-harness-contract`.
+Runtime: Bun 1.4.4 (repo pin), pnpm 10.18.3, opencode v2.2.5.
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
-| TC-OCS-001 | — | Pending | |
-| TC-OCS-002 | — | Pending | |
-| TC-OCS-003 | — | Pending | |
-| TC-OCS-004 | — | Pending | |
-| TC-OCS-005 | — | Pending | |
-| TC-OCS-010 | — | Pending | |
-| TC-OCS-011 | — | Pending | |
-| TC-OCS-012 | — | Pending | |
-| TC-OCS-013 | — | Pending | |
-| TC-OCS-014 | — | Pending | |
-| TC-OCS-015 | — | Pending | |
-| TC-OCS-016 | — | Pending | |
-| TC-OCS-017 | — | Pending | |
-| TC-OCS-020 | — | Pending | |
-| TC-OCS-021 | — | Pending | |
-| TC-OCS-022 | — | Pending | |
-| TC-OCS-023 | — | Pending | |
-| TC-OCS-030 | — | Pending | |
-| TC-OCS-031 | — | Pending | |
-| TC-OCS-032 | — | Pending | |
-| TC-OCS-033 | — | Pending | |
-| TC-OCS-034 | — | Pending | |
-| TC-OCS-040 | — | Pending | |
-| TC-OCS-041 | — | Pending | |
-| TC-OCS-042 | — | Pending | |
-| TC-OCS-043 | — | Pending | |
-| TC-OCS-044 | — | Pending | |
-| TC-OCS-045 | — | Pending | |
-| TC-OCS-046 | — | Pending | |
-| TC-OCS-047 | — | Pending | |
-| TC-OCS-048 | — | Pending | |
-| TC-OCS-050 | — | Pending | |
-| TC-OCS-051 | — | Pending | |
-| TC-OCS-052 | — | Pending | |
-| TC-OCS-053 | — | Pending | |
-| TC-OCS-060 | — | Pending | |
-| TC-OCS-061 | — | Pending | |
-| TC-OCS-062 | — | Pending | |
-| TC-OCS-070 | — | Pending | |
-| TC-OCS-071 | — | Pending | |
-| TC-OCS-072 | — | Pending | |
-| TC-OCS-080 | — | Pending | |
-| TC-OCS-081 | — | Pending | |
-| TC-OCS-082 | — | Pending | |
-| TC-OCS-100 | — | Pending | Operator-run; record token, exit code, elapsed time, `lastMessage` |
-| TC-OCS-101 | — | Pending | Operator-run; record worktree `status`/`HEAD` before and after |
+| TC-OCS-001 | 2026-11-09 | Pass | `bun test tests/structure/harness-stream-contract.test.ts` (15 pass). |
+| TC-OCS-002 | 2026-11-09 | Pass | Port seven-key/runner four-field/failure-code assertions plus `pnpm typecheck`. |
+| TC-OCS-003 | 2026-11-09 | Pass | `tests/structure/harness-imports.test.ts` (6 pass); `pnpm check:boundaries` green. |
+| TC-OCS-004 | 2026-11-09 | Pass | dispatch.ts seam/import/literal scan and the single spawn-failed message. |
+| TC-OCS-005 | 2026-11-09 | Pass | Pinned three-file capture shape, provenance README, canary scan. |
+| TC-OCS-010 | 2026-11-09 | Pass | `harness-opencode-stream.test.ts`: top-level sessionID handle before completion. |
+| TC-OCS-011 | 2026-11-09 | Pass | Leading blank/malformed/no-id-object lines skipped; first identifier wins. |
+| TC-OCS-012 | 2026-11-09 | Pass | No identifier + exit 0 -> `harness.spawn.invalid-output`, no session record. |
+| TC-OCS-013 | 2026-11-09 | Pass | No identifier + exit 7 -> `harness.spawn.refused` status 7. |
+| TC-OCS-014 | 2026-11-09 | Pass | Bound expiry -> refused status 1, summary names acquisition timeout, one kill. |
+| TC-OCS-015 | 2026-11-09 | Pass | Handle first; exit 3 -> exitStatus 3, failureReported false, classifier failed. |
+| TC-OCS-016 | 2026-11-09 | Pass | Truncated stream -> handle intact, completionMarker false, premature end. |
+| TC-OCS-017 | 2026-11-09 | Pass | Fallback shapes accepted; sessionID wins; empty identifier skipped. |
+| TC-OCS-020 | 2026-11-09 | Pass | `flushUntil` gate: spawn settles, completion gated, 11 h virtual time, 0 kills. |
+| TC-OCS-021 | 2026-11-09 | Pass | collect pending before finish, resolves after; idempotent second collect. |
+| TC-OCS-022 | 2026-11-09 | Pass | Handle keys exactly identity/attribution; no token or payload inside. |
+| TC-OCS-023 | 2026-11-09 | Pass | `harness-stream-hygiene.test.ts`: 11 h with no session bound never kills. |
+| TC-OCS-030 | 2026-11-09 | Pass | `harness-opencode-resume-stream.test.ts`: matching id returns caller identity. |
+| TC-OCS-031 | 2026-11-09 | Pass | Resume no identifier -> `harness.session.unknown` status 4; bound case names timeout. |
+| TC-OCS-032 | 2026-11-09 | Pass | Mismatch refused, no id echoed, lane-A record still collects. |
+| TC-OCS-033 | 2026-11-09 | Pass | Post-handle exit 5 -> evidence exit, classifier failed, no refusal. |
+| TC-OCS-034 | 2026-11-09 | Pass | deliver shares resume acquisition; no spawn fallback. |
+| TC-OCS-040 | 2026-11-09 | Pass | Exit 0 + terminal stop -> completionMarker true, completed/finished. |
+| TC-OCS-041 | 2026-11-09 | Pass | No terminal event and non-stop reason -> premature end, no failure code. |
+| TC-OCS-042 | 2026-11-09 | Pass | Pinned tool_use error -> completed/partial; removing/flipping the line flips it. |
+| TC-OCS-043 | 2026-11-09 | Pass | Host timeout -> timed-out; non-zero exit -> failed. |
+| TC-OCS-044 | 2026-11-09 | Pass | Unknown and post-failure handles -> `harness.session.unknown`. |
+| TC-OCS-045 | 2026-11-09 | Pass | 17-case table; four distinct tokens finished/partial/failed/max-restarts. |
+| TC-OCS-046 | 2026-11-09 | Pass | Six legacy envelopes keep delivered evidence; envelope beats terminal stop. |
+| TC-OCS-047 | 2026-11-09 | Pass | Structural tool_use capture + adapter reads `state.status` only. |
+| TC-OCS-048 | 2026-11-09 | Pass | Exit-0 error event -> failed; removing it restores premature end. |
+| TC-OCS-050 | 2026-11-09 | Pass | Bound expiry kills once, refuses spawn/resume, no session record. |
+| TC-OCS-051 | 2026-11-09 | Pass | Every failure path kills once; successful acquisition not killed; kill idempotent. |
+| TC-OCS-052 | 2026-11-09 | Pass | `harness-host-stream.test.ts` (7 pass) over a real synthetic Bun child. |
+| TC-OCS-053 | 2026-11-09 | Pass | 60 s handle default, no session default, verbatim injected bounds, listing separate. |
+| TC-OCS-060 | 2026-11-09 | Pass | OpenCode gets starter + runner; Claude gets the one-shot runner only. |
+| TC-OCS-061 | 2026-11-09 | Pass | Multi-line JSONL acquisition; six envelopes + five JSONL counterparts. |
+| TC-OCS-062 | 2026-11-09 | Pass | Six-case floor id/token table and both-adapter parity pinned. |
+| TC-OCS-070 | 2026-11-09 | Pass | `pnpm typecheck` compiles the seam and the unchanged port/runner. |
+| TC-OCS-071 | 2026-11-09 | Pass | Adapter-suite command scan, host-only `process.execPath`, fixture timer scan, replay. |
+| TC-OCS-072 | 2026-11-09 | Pass | Renaming sessionID refuses; removing the first line still acquires; empty refuses. |
+| TC-OCS-080 | 2026-11-09 | Pass | Claude suite unchanged; no starter in the Claude source; shared classifier. |
+| TC-OCS-081 | 2026-11-09 | Pass | Listing invokes the runner once, starter zero; `TC-HARN-010` retained. |
+| TC-OCS-082 | 2026-11-09 | Pass | `dispatch-harness-acquisition.test.ts` (2 pass): collect pending across polls; spawn-failed identity preserved. |
+| TC-OCS-100 | 2026-11-09 | Pass | Operator-run §6.3: real dispatch reached classification with token `failed`. |
+| TC-OCS-101 | 2026-11-09 | Pass | Bounded (21.1 s), clone-scoped, this worktree's status/HEAD unchanged. |
 
-**Mutation evidence (M-1..M-19).** Pending: record mutation, command, observed failure, and the TC that went red. M-3's expected red is TC-OCS-020 on the spawn path (assertion, not hang) and TC-OCS-030/TC-OCS-032 when the resume path is mutated; TC-OCS-021 is M-4's oracle.
+**Mutation evidence (M-1..M-19).** Each mutation was applied in place, the named
+command was run, and the source was restored; no mutant was committed.
 
-**End-to-end evidence.** Pending: paste the §6.3 envelope fields (`result`, `lastMessage`, `error.code`, exit code, elapsed seconds), the attempt record's `evidenceRefs`, and the before/after worktree snapshots.
+| # | Mutation | Observed red | Restored |
+|---|---|---|---|
+| M-1 | Whole-document `JSON.parse` over completion stdout | TC-OCS-010/040 cannot acquire from the line stream (bounded test timeout) | Green |
+| M-2 | `sessionID` branch removed from identifier resolution | TC-OCS-017: expected `ses_top`, got `ses_nested`; TC-OCS-010 cannot acquire | Green |
+| M-3 | Await completion before returning the handle | TC-OCS-020: `spawnSettled` false after the bounded flush (assertion, not hang) | Green |
+| M-4 | `collect` returns immediate fabricated evidence | TC-OCS-021: `collectSettled` true before `finish` | Green |
+| M-5 | Default `sessionTimeoutMs = 300_000` | TC-OCS-023: kills 0 expected, got 1 after the virtual advance | Green |
+| M-6 | `completionMarker = status === 0` | TC-OCS-041: exit-0-without-terminal reports completion | Green |
+| M-7 | Resume accepts any identifier | TC-OCS-032: mismatch expected refusal, got `ok: true` | Green |
+| M-8 | Kill removed from the failed-acquisition path | TC-OCS-051: kills 1 expected, got 0 on no-identifier spawn | Green |
+| M-9 | `node:child_process` imported into the adapter | TC-OCS-003: allowlist equality and import scans name the adapter | Green |
+| M-10 | Timer added inside the adapter | TC-OCS-003: timer scan names `setTimeout` | Green |
+| M-11 | `kill` member added to `HarnessSessionPort` | Type suite: missing member + unused `@ts-expect-error` | Green |
+| M-12 | Extra required `HarnessSpawnRunnerResult` field | Type suite: missing `exitCode` in the host/fake result | Green |
+| M-13 | Starter token added to the Claude adapter | TC-OCS-080: Claude source must not contain the seam | Green |
+| M-14 | Spawn-failed `lastMessage` changed | TC-OCS-004 (source) and TC-OCS-082 (compiled dist) | Green |
+| M-15 | Conformance registration single-document only | TC-OCS-061 multi-line acquisition expected `ok: true`, got false | Green |
+| M-16 | OpenCode composition without the starter | TC-OCS-060: opencode branch must carry `starter: harnessSpawnStarter` | Green |
+| M-17 | Legacy-envelope branch deleted | Stream: TC-OCS-046; conformance: TC-OCS-061/062 and TC-HARN-004 | Green |
+| M-18 | `toolFailure` forced false | TC-OCS-042: toolFailure true expected, got false | Green |
+| M-19 | `failureReported` derived from the exit status | TC-OCS-048: exit-0 error event expected true, got false; non-zero case inverted | Green |
+
+**End-to-end evidence (§6.3, AC-F8-1/AC-F8-2).**
+
+- Preconditions: `opencode v2.2.5`; `gh auth status` green; `GITHUB_TOKEN`
+  exported from `gh auth token` (non-empty); `gh issue view 275 -R
+  juliusz-cwiakalski/agentic-delivery-os --json number` exited 0.
+- Step 1b: the disposable clone's project layer resolved
+  `lane.liveness-interval` to `3000` (verified through the delivered config
+  resolver; the prompt-required bin does not compose the `config` command).
+- Environment remediation recorded as a discovered procedure gap: the shipped
+  `harness.environment` defaults declare only `HARNESS_MODEL`,
+  `HARNESS_SMALL_MODEL`, and `DELIVERY_WORK_PATH`, so `opencode` was not
+  resolvable (observed status 127) and had no `HOME`. The clone-local operator
+  config additionally declared `PATH` and `HOME`; no product code changed.
+- Step 1c: first event in `5991 ms` (within the 60 s bound) with a top-level
+  `sessionID`.
+- Dispatch: the `opencode run --format json` child was observed after `1051 ms`
+  while dispatch was still running; only that child was `SIGTERM`-ed after 15 s.
+- Envelope: `data.result` = `failed` (a delivered token), `data.lastMessage` =
+  `the shared classifier reported failed` (not the spawn-failed sentence),
+  `data.error.code` absent (not `dispatch.session.spawn-failed`, not
+  `dispatch.state-unverified`), `exitCode` 1, elapsed `21068 ms` (<=180 s).
+- Attempt record: `attemptId`
+  `attempt-GH-275-1794187577071-54c656d9-cd5c-476e-9ee8-21ad3838e96e`,
+  `token` `failed`, `outcome` `failed`, `evidenceRefs`
+  `attempt:<attemptId>,liveness:unknown` (the `liveness:` ref is corroboration
+  only; the deterministic TC-OCS-020/021/082 suite is the non-blocking proof).
+- Lease proof: `queue list --json` reported no active `GH-275` lease held by
+  `dispatch` on `github.com/juliusz-cwiakalski/agentic-delivery-os`; the
+  completed run released it, so no force-release was needed.
+- Isolation: this worktree's `git status --porcelain` was empty and `HEAD` was
+  `794a70d8` before and after the run. The disposable clone was removed; the
+  appended attempt record is retained deliberately as production evidence.

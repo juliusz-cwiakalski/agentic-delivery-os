@@ -303,3 +303,25 @@ notes:
       No deviations; classification.ts was imported read-only and not edited."
     type: info
     date: "2026-11-09"
+  - text: "Plan phase P5 COMPLETE (bounds, kill hygiene, hermeticity, fixture
+      non-vacuity): commit 794a70d8. Added
+      tests/behaviour/harness-stream-hygiene.test.ts (16 pass) pinning: an 11 h
+      virtual session with no session bound is never killed and the injected
+      session bound is passed verbatim; handle-bound expiry kills once and
+      refuses spawn/resume with the acquisition-timeout summary; every failed or
+      abandoned acquisition kills once while a successful acquisition is not
+      killed and kill is idempotent; the 60 s handle default with no session
+      default and the separate listing timeout; adapter-suite command scanning,
+      host-only process.execPath, the fixture timer scan and replay stability;
+      and the fixture non-vacuity controls (renamed sessionID, removed first
+      line, all-empty stream, no echoed constants). Owns AC-F5-1/2/3 and
+      TC-OCS-023/050/051/053/071/072. Gates: pnpm typecheck exit 0;
+      pnpm check:boundaries exit 0; hygiene suite 16 pass / 0 fail. Mutation
+      evidence: M-5 (default sessionTimeoutMs 300_000) reddens TC-OCS-023
+      (kills 0 expected, got 1); M-8 (kill removed from the failed-acquisition
+      path) reddens TC-OCS-051 (kills 1 expected, got 0); both restored green.
+      Deviation: the fake-stream control object gained a kill() hook (P1 fixture,
+      tracked file) so TC-OCS-051 can exercise idempotent kill on one stream;
+      additive and semantics-preserving."
+    type: info
+    date: "2026-11-09"
