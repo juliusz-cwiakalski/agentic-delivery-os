@@ -1,0 +1,544 @@
+---
+change:
+  ref: GH-277
+  type: fix
+  status: Proposed
+  slug: harness-default-allowlist
+  title: "Make the default harness spawn allowlist able to start opencode without user configuration"
+  owners: [engineering]
+  service: delivery-os harness adapters
+  labels: [change, harness, bug, dispatch]
+  version_impact: minor
+  audience: internal
+  security_impact: medium
+  risk_level: medium
+  last_updated: 2026-11-09
+  dependencies:
+    internal: [harness adapter contract, deny-by-default spawn-environment builder, configuration layer, CLI production composition, dispatch engine, CLI dispatch output, harness and dispatch test fixtures]
+    external: [opencode CLI]
+links:
+  decisions: ["TDR-0008", "TDR-0016"]
+---
+
+# CHANGE SPECIFICATION
+
+> **PURPOSE**: Make a zero-configuration installation able to spawn the default opencode harness by shipping a viable deny-by-default spawn allowlist, by removing the two model variables that no environment sets, by distinguishing required from optional allowlist entries, and by surfacing the underlying harness failure identity when a spawn still fails.
+
+## 1. SUMMARY
+
+Replace the shipped `harness.environment` default from `HARNESS_MODEL`, `HARNESS_SMALL_MODEL`, and `DELIVERY_WORK_PATH` with a set that can actually start the default harness: `PATH` and `HOME` as required entries, `TMPDIR` as an optional entry, and the existing `DELIVERY_WORK_PATH` injection. Add an additive optional marker to a declared variable entry so an allowlisted variable that is legitimately absent (notably `TMPDIR` on Linux) is omitted instead of aborting the whole spawn, while an absent required entry still fails closed and names the variable.
+
+Remove `HARNESS_MODEL` and `HARNESS_SMALL_MODEL` from the default required set and do not fabricate a mapping from `OC_ADOS_MAIN_MODEL` or `OC_ADOS_SMALL_MODEL`: no repository code consumes the `HARNESS_*` names and opencode resolves its own models. Deny-by-default is unchanged: the child receives only declared entries, never ambient inheritance.
+
+When a spawn still fails, dispatch keeps the delivered `dispatch.session.spawn-failed` identity and last message but carries the underlying harness failure `kind`, `code`, and `field` in an additive detail on the dispatch error, visible in machine JSON and in verbose human output, so operators no longer need source to diagnose a spawn failure.
+
+## 2. CONTEXT
+
+### 2.1 Current State Snapshot
+
+The typed harness stack is delivered on the integration branch. Configuration resolves a typed `harness` branch, the production composition maps its allowlist onto an execution-environment descriptor, the deny-by-default builder constructs the child environment, the adapter spawns the configured harness, and dispatch records one attempt and classifies the result.
+
+The shipped defaults declare only three allowlist names:
+
+```
+harness.environment:
+  - HARNESS_MODEL
+  - HARNESS_SMALL_MODEL
+  - DELIVERY_WORK_PATH
+```
+
+The relevant delivered behaviour:
+
+| Component | Location | Observed behaviour |
+|---|---|---|
+| Shipped defaults | `packages/core/src/config/defaults.ts:45-63` | `harness.environment` declares `HARNESS_MODEL`, `HARNESS_SMALL_MODEL`, and `DELIVERY_WORK_PATH` only. `PATH` and `HOME` are never declared and therefore never reach the child. |
+| Deny-by-default builder | `packages/core/src/domain/harness-spawn-env.ts:38-67` | Builds exactly the declared set from the injected parent environment plus validated records; an absent declared variable returns `harness.spawn.variable-missing` with the variable in `field`, and no partial environment is returned. |
+| Harness environment contract | `packages/core/src/contracts/harness.ts:120-148` | `HarnessEnvironmentEntry` has a variable form (`kind`, `name`) and a credential form (`kind`, `name`, `reference`); there is no required/optional distinction. |
+| Configuration validation | `packages/core/src/config/harness.ts:110-145`, `packages/core/src/config/catalog.ts:276-318` | `harness.environment` entries accept `name` and optional `credentialRef`; a literal `value` is rejected as `config.secret.forbidden`; other keys are `config.value.invalid`. |
+| CLI composition | `packages/cli/src/production.ts:423-447` | Maps config settings onto descriptor entries and injects `DELIVERY_WORK_PATH` through the validated record. The harness command is the bare name `opencode`, resolved through PATH. |
+| Dispatch spawn path | `packages/core/src/app/dispatch.ts:466-485` | Any pre-session spawn or resume failure collapses to `dispatch.session.spawn-failed` with the fixed message `spawn failed before a session existed`; the underlying harness failure is discarded. |
+| Dispatch error assembly | `packages/core/src/app/dispatch.ts:185-200` | `errorOf` produces only `code`, `category`, `retryable`, `consequence`, `remediationHint`, and `summary`. |
+| Dispatch result contract | `packages/core/src/contracts/dispatch.ts:277-296`, `packages/core/src/contracts/result.ts:36-43` | `DispatchEnvelopeData.error` is a `CommandResultError`, which has no detail or field slot. |
+| Dispatch text output | `packages/cli/src/output/dispatch-text.ts:28-34` | Text mode emits exactly `result`, `pr_url`, `exit_code`, and `last_message`, in that order. |
+
+Measured evidence from the reporting environment:
+
+```
+HARNESS_MODEL=<unset>   HARNESS_SMALL_MODEL=<unset>
+OC_ADOS_MAIN_MODEL=deepseek/deepseek-flash
+OC_ADOS_SMALL_MODEL=deepseek/deepseek-flash
+command -v opencode -> /home/<user>/.nvm/versions/node/v24.11.1/bin/opencode
+```
+
+No repository production code consumes `HARNESS_MODEL` or `HARNESS_SMALL_MODEL`; the names appear only in defaults, fixtures, and tests. opencode resolves model selection from its own configuration, which requires `HOME` to locate.
+
+### 2.2 Pain Points / Gaps
+
+- The default configuration cannot spawn the default harness: environment construction fails on the first absent `HARNESS_MODEL` before any child process starts.
+- Even when those model variables are present, `PATH` is undeclared, so a bare `opencode` command cannot be resolved and executed by the child.
+- `HOME` is undeclared, so the child cannot locate the harness's own configuration and credential material.
+- The default required set contains names the real environment does not use, turning an unused capability into a hard pre-spawn failure.
+- Every declared entry is implicitly required, so a variable that is legitimately absent on a platform (`TMPDIR` on Linux) cannot be allowlisted without risking the same hard failure.
+- Dispatch collapses every harness failure into one fixed message and discards the underlying failure identity, so an operator cannot tell a missing variable from a credential failure, a refused spawn, or a missing binary without reading source.
+- The current fixtures pin the unviable default allowlist and the collapsed envelope, so the regression is not caught by the delivered suite.
+
+## 3. PROBLEM STATEMENT
+
+Because the shipped spawn allowlist omits `PATH` and `HOME` and requires two model variables that a real environment does not set, a default installation cannot spawn the default opencode harness, so every typed `dispatch` fails as `dispatch.session.spawn-failed` and the engine delivery path remains unusable without hand-written configuration.
+
+## 4. GOALS
+
+- **G-1**: Ship a default allowlist that can start the default harness on a realistic parent environment with zero user configuration: `PATH` and `HOME` required, `TMPDIR` optional, `DELIVERY_WORK_PATH` injected as today.
+- **G-2**: Stop requiring model variables under names the environment does not use, and do not invent an unused mapping from `OC_ADOS_MAIN_MODEL` or `OC_ADOS_SMALL_MODEL`.
+- **G-3**: Preserve deny-by-default and distinguish required from optional allowlist entries; an absent required entry still fails closed and names the variable, while an absent optional entry is omitted.
+- **G-4**: Surface the underlying harness failure kind, code, and field when dispatch records a pre-session spawn failure, in machine JSON and verbose human output, without changing the delivered dispatch identity, token, exit, or non-verbose text shape.
+- **G-5**: Prove the repair with regression tests and one bounded real dispatch, and prove that no undeclared ambient variable reaches the child.
+
+### 4.1 Success Metrics / KPIs
+
+| Metric | Target for this change |
+|---|---|
+| Zero-configuration default spawns that start the configured harness on a POSIX parent with `PATH` and `HOME` | 100% |
+| Shipped default required entries | Exactly `PATH`, `HOME`, `DELIVERY_WORK_PATH` |
+| Shipped default optional entries | Exactly `TMPDIR` |
+| Shipped default required model variables | 0 |
+| Undeclared parent variables present in the child environment | 0 |
+| Pre-session spawn failures whose underlying code and field are surfaced when present | 100% |
+| New failure codes, delivery-result tokens, classifier rows, or error-table rows | 0 |
+| Non-verbose dispatch text keys | Exactly 4 |
+| Real bounded dispatches on a healthy CLI that reach classification instead of `dispatch.session.spawn-failed` | 1 of 1 |
+| Release invariant compliance (`TC-RELEASE-001`) | Exactly 1 added changeset, five fixed-group packages at minor, non-empty body |
+
+### 4.2 Non-Goals
+
+- **NG-1**: Ambient inheritance or any fallback that copies all of `process.env` into the child.
+- **NG-2**: Engine-controlled model routing, a new model configuration branch, or an `OC_ADOS_*` to `HARNESS_*` mapping.
+- **NG-3**: A new harness kind, adapter behaviour, or change to the opencode invocation grammar.
+- **NG-4**: A new dispatch failure identity, delivery-result token, classifier rule, exit projection, or change to `dispatch.session.spawn-failed` category, retryability, consequence, or remediation hint.
+- **NG-5**: Credential resolution semantics, optional credentials, or accepting literal secret values in configuration.
+- **NG-6**: Windows-specific default environment variables (`USERPROFILE`, `APPDATA`, and equivalents); Windows parity is deferred.
+- **NG-7**: Changes to the bash delivery stack or making it depend on the typed CLI.
+- **NG-8**: A user-facing configuration key that lets a user inherit the entire parent environment.
+
+## 5. FUNCTIONAL CAPABILITIES
+
+| ID | Capability | Rationale |
+|---|---|---|
+| F-1 | Viable default spawn allowlist for the default harness | A default that cannot start the default harness is not a default. |
+| F-2 | Model-variable policy without an invented mapping | The real environment does not set the `HARNESS_*` names and no code consumes them. |
+| F-3 | Required versus optional allowlist entries | A legitimately absent entry such as `TMPDIR` must not abort the spawn. |
+| F-4 | Deny-by-default preserved and provable | The fix must not degrade into ambient inheritance. |
+| F-5 | Underlying harness failure identity in dispatch diagnostics | Operators must diagnose a spawn failure without reading source. |
+| F-6 | Configuration and contract compatibility | Existing valid configuration must keep its meaning and shape. |
+| F-7 | Regression coverage for the default spawn path | The unviable default and the collapsed envelope must not return silently. |
+| F-8 | End-to-end default-installation proof | The acceptance is a working spawn, not only a synthetic unit test. |
+
+### 5.1 Capability Details
+
+- **F-1**: The shipped `harness.environment` default declares `PATH`, `HOME`, `TMPDIR`, and `DELIVERY_WORK_PATH`. `PATH` and `HOME` are required and forwarded from the parent environment; `DELIVERY_WORK_PATH` remains required and is supplied by the composition record; `TMPDIR` is optional and forwarded only when present. The configured harness command remains a bare executable name (`opencode`), so PATH resolution must work without an absolute command path. The default declares no model variable.
+- **F-2**: `HARNESS_MODEL` and `HARNESS_SMALL_MODEL` are removed from the default required set. No mapping from `OC_ADOS_MAIN_MODEL` or `OC_ADOS_SMALL_MODEL` is added. A user may still declare either `HARNESS_*` name explicitly; doing so preserves the delivered required-entry semantics. Model routing remains owned by the harness's own configuration, and this change adds no engine-side model control.
+- **F-3**: A declared variable entry may carry an optional marker. An entry without the marker is required: an absent value fails closed with the existing `harness.spawn.variable-missing` identity and the variable in `field`, and no partial environment is returned. An entry with the marker is optional: an absent value omits the key and the build continues; a present value is forwarded. The optional marker applies only to variable entries; a credential entry stays required and an unresolvable reference still fails closed with the delivered `config.credential.missing` identity.
+- **F-4**: The child environment is still exactly the declared and present entries plus resolved credentials. An undeclared parent variable is absent. No ambient environment read is added in the runtime-neutral core or the builder. A declared record value still takes precedence over the injected parent value, and an undeclared record name still changes nothing.
+- **F-5**: When a spawn or resume fails before a session exists, dispatch keeps the delivered `dispatch.session.spawn-failed` identity, category, retryability, consequence, remediation hint, exit projection, token, outcome, and last message. It additionally carries an additive detail on the dispatch error containing the underlying harness failure `kind`, `code`, and `field` when present. The detail is present in machine JSON output and is named in verbose human output. Non-verbose text output remains exactly the four delivered keys. The detail contains identifiers only, never an environment value or secret.
+- **F-6**: The configuration branch keeps its existing shape and validation: a variable entry is still `name` plus optional `credentialRef`; the new optional marker is a boolean and is rejected when non-boolean or combined with a credential reference; a literal `value` remains `config.secret.forbidden`; unknown keys remain `config.value.invalid`. A configuration entry without the marker behaves exactly as today (required). The generated schema, defaults-position manifest, and source hashes are regenerated and parity-checked.
+- **F-7**: The suite pins the repaired default with a fake `opencode` executable placed on a controlled `PATH`: the spawn resolves the bare command, the child environment contains the expected declared entries, an attempt record is written, and the result token is not `dispatch.session.spawn-failed`. Additional cases cover an absent required variable naming the field, an absent optional variable succeeding, an undeclared parent canary staying absent, a present optional variable being forwarded, and explicit `HARNESS_MODEL` compatibility.
+- **F-8**: One real `dispatch <ref>` on the installed healthy opencode CLI with no user configuration declaration reaches classification with any result token other than `dispatch.session.spawn-failed`, and an attempt record exists. The proof is bounded so a nested lifecycle cannot mutate this change's worktree: a probe-scale prompt or a session ended after the handle is observed, executed outside the change worktree. If the real proof exposes another environment variable that opencode genuinely needs to boot, that variable joins the default set as required, or as optional when it is legitimately absent, before delivery closes.
+
+## 6. USER & SYSTEM FLOWS
+
+```
+Flow 1: zero-configuration spawn
+  operator runs `dispatch <ref>` on a fresh installation
+  -> config resolves the shipped defaults
+  -> descriptor declares PATH, HOME, TMPDIR (optional), DELIVERY_WORK_PATH
+  -> builder forwards parent PATH and HOME, omits absent TMPDIR, injects DELIVERY_WORK_PATH
+  -> host starts the bare `opencode` command, resolved through PATH
+  -> the child reads its own configuration and credentials through HOME
+  -> first JSONL line carries a sessionID -> handle acquired
+  -> attempt record written -> classification reaches a result token other than spawn-failed
+
+Flow 2: required entry absent
+  config declares a required variable (default PATH/HOME or an explicit entry)
+  -> builder finds it absent in parent and record
+  -> harness.spawn.variable-missing with the variable in `field`
+  -> dispatch records dispatch.session.spawn-failed
+  -> JSON detail names the underlying code, kind, and field; verbose human output names them
+  -> non-verbose text remains `result`, `pr_url`, `exit_code`, `last_message`
+
+Flow 3: optional entry absent or present
+  TMPDIR absent in parent -> key omitted -> spawn continues
+  TMPDIR present in parent -> key forwarded -> spawn continues
+
+Flow 4: undeclared ambient variable
+  parent contains an undeclared canary -> child environment does not contain it
+
+Flow 5: explicit model-variable override
+  user explicitly declares HARNESS_MODEL as a required entry
+  -> parent supplies it -> forwarded
+  -> parent lacks it -> fails closed naming HARNESS_MODEL, exactly as any required entry
+
+Flow 6: diagnostic inspection
+  machine consumer reads `data.error.code` and `data.error.detail`
+  human operator adds `--verbose` and sees the underlying code and field
+```
+
+## 7. SCOPE & BOUNDARIES
+
+### 7.1 In Scope
+
+- The shipped `harness.environment` default allowlist and its `config` origin.
+- The optional marker on a declared variable entry across the configuration and harness descriptor layers.
+- The deny-by-default builder's required/optional projection, including fail-closed behaviour and omission of absent optional entries.
+- The production composition mapping of the optional marker and the existing `DELIVERY_WORK_PATH` injection.
+- The dispatch error detail carrying the underlying harness failure identity.
+- Machine JSON and verbose human rendering of that detail, with the four-key non-verbose text contract preserved.
+- Regression tests, fixtures, and golden envelopes that pin the default allowlist and the spawn-failure envelope.
+- The release changeset required by `TC-RELEASE-001`.
+- Current-truth documentation updates flagged for the system-spec update phase.
+
+### 7.2 Out of Scope
+
+- [OUT] Inheriting all of `process.env`, an opt-in ambient passthrough, or any fallback that forwards undeclared variables.
+- [OUT] Mapping `OC_ADOS_MAIN_MODEL` or `OC_ADOS_SMALL_MODEL` to `HARNESS_MODEL` or `HARNESS_SMALL_MODEL`.
+- [OUT] Engine-controlled model selection or a new model configuration branch.
+- [OUT] A new harness kind, a new adapter operation, or a change to the opencode invocation grammar.
+- [OUT] A new dispatch error identity, delivery-result token, classifier rule, exit code, or change to the spawn-failed category, retryability, consequence, or remediation hint.
+- [OUT] Optional credential entries, literal secret values in configuration, or a change to credential resolution.
+- [OUT] User-facing configuration for ambient inheritance.
+- [OUT] Windows-specific default environment variables; Windows parity is deferred.
+- [OUT] Bash stack changes or a bash dependency on the typed CLI.
+- [OUT] Changes to the harness session port, the streaming starter, the one-shot runner, or the classifier.
+
+### 7.3 Deferred / Maybe-Later
+
+- Windows host-profile variables (`USERPROFILE`, `APPDATA`, and equivalents) in the default allowlist, if harness dispatch is claimed on Windows.
+- A configurable per-platform default allowlist or a platform-aware default provider.
+- Per-harness default allowlist overlays, if a second harness needs a materially different boot environment.
+- A richer nested failure chain for other dispatch failures beyond the pre-session spawn path.
+- Additional optional entries discovered by real operation, beyond `TMPDIR`.
+
+## 8. INTERFACES & INTEGRATION CONTRACTS
+
+### 8.1 REST / HTTP Endpoints
+
+N/A. This change introduces no HTTP surface and changes no existing HTTP contract.
+
+### 8.2 Events / Messages
+
+N/A. No internal event, message, state record, or capsule event is added or changed. The dispatch detail is a command-envelope field, not a product event.
+
+### 8.3 Data Model Impact
+
+| ID | Element | Description |
+|----|---------|-------------|
+| DM-1 | `harness.environment` configuration entry | Gains an optional boolean marker. An entry remains `name` plus optional `credentialRef`; the marker is valid only on a variable entry. Existing entries without the marker keep required semantics. |
+| DM-2 | Harness execution-environment descriptor variable entry | Gains the same additive optional marker. The marker is data only and introduces no behaviour in the contracts tier. Credential entries are unchanged. |
+| DM-3 | Dispatch envelope error detail | Adds an optional detail nested on the dispatch `data.error` carrying the underlying failure `kind`, `code`, and `field` when present. The delivered `CommandResultError` field set and the top-level envelope error remain unchanged. |
+
+No persisted model, state record, event-log shape, schema version, or migration is affected.
+
+### 8.4 External Integrations
+
+The external integration is the opencode child process environment. Its delivered contract is unchanged; the allowlist contents change:
+
+| Aspect | Contract used by this change |
+|---|---|
+| Command | Bare `opencode` (and its existing argument grammar), resolved through the child's `PATH`. |
+| Required environment | `PATH` (executable and subprocess resolution), `HOME` (harness configuration and credential location), `DELIVERY_WORK_PATH` (injected work directory). |
+| Optional environment | `TMPDIR` (forwarded when present, omitted when absent). |
+| Model variables | None required by default. No `OC_ADOS_*` mapping. opencode resolves its own model configuration. |
+| Undeclared variables | Absent. No ambient inheritance. |
+| Credentials | Unchanged: declared credential references resolve through the credential port at spawn time and fail closed when unresolved. |
+
+No external API, network endpoint, vendor SDK, or transport is added or changed.
+
+### 8.5 Backward Compatibility
+
+- A user configuration entry written as `{ name: "X" }` keeps required semantics. No migration or edit is required.
+- A user who explicitly declared `HARNESS_MODEL` or `HARNESS_SMALL_MODEL` keeps those entries and their required behaviour; only the shipped default stops declaring them.
+- A literal `value` in an allowlist entry remains `config.secret.forbidden`; an unknown key remains `config.value.invalid`.
+- Credential entries remain required and fail closed on an unresolved reference.
+- The `dispatch.session.spawn-failed` identity, category, retryability, consequence, remediation hint, token, outcome, exit projection, and last message are unchanged.
+- Non-verbose dispatch text remains exactly four keys in the delivered order. The new detail is additive on the dispatch error and appears only when an underlying failure identity exists.
+- No CLI grammar, help entry, unrelated output envelope, error-table row, delivery-result token, classifier rule, or persisted shape changes.
+- The default behaviour changes intentionally: a zero-configuration installation no longer requires the two model variables and now forwards `PATH` and `HOME`. This is the repair, not a compatibility break for any repository consumer.
+
+## 9. NON-FUNCTIONAL REQUIREMENTS (NFRs)
+
+| ID | Requirement | Threshold |
+|---|---|---|
+| NFR-1 | Zero-configuration default spawn success on a POSIX parent that has `PATH` and `HOME` | 100% of cases |
+| NFR-2 | Required-entry fail-closed behaviour | 100% of absent required entries fail with `harness.spawn.variable-missing`, name the variable in `field`, and attempt no child spawn |
+| NFR-3 | Deny-by-default leakage | 0 undeclared parent variables present in the child across the test matrix |
+| NFR-4 | Vocabulary and identity stability | 0 new failure codes, 0 new delivery-result tokens, 0 classifier changes, 0 error-table rows |
+| NFR-5 | Diagnostic completeness | 100% of pre-session harness failures that carry a field surface the underlying code and field in machine JSON; verbose human output names both |
+| NFR-6 | Diagnostic hygiene | Detail and verbose text contain identifiers only, no environment value or secret; detail is single-line and at most 256 characters |
+| NFR-7 | Non-verbose text stability | Exactly 4 keys and 4 lines: `result`, `pr_url`, `exit_code`, `last_message` |
+| NFR-8 | Compatibility | 0 required edits for existing valid configuration and 0 changes to the top-level `CommandResult` envelope shape |
+| NFR-9 | Gate health | `pnpm typecheck`, `pnpm test`, `pnpm check:boundaries`, configuration schema/default parity, and the secret-read boundary all pass |
+
+## 10. TELEMETRY & OBSERVABILITY REQUIREMENTS
+
+No new metric, log stream, trace, alert, or persisted telemetry record is required. Observable behaviour stays within the delivered surfaces:
+
+- The default spawn is observable as a returned handle, one attempt record, and a result token other than `dispatch.session.spawn-failed`.
+- A pre-session failure is observable as the delivered dispatch identity plus the additive underlying detail in machine JSON.
+- Verbose human output adds a bounded diagnostic naming the underlying code and field; non-verbose text is unchanged.
+- No environment value, credential material, prompt content, or stream content is logged or persisted by any new path.
+- The detail is a user-facing diagnostic, not a telemetry record; it adds no state record kind.
+
+## 11. RISKS & MITIGATIONS
+
+| ID | Risk | Impact | Probability | Mitigation | Residual Risk |
+|---|---|---|---|---|---|
+| RSK-1 | Declaring `PATH` and `HOME` widens the child environment beyond the previous default. | M | M | The entries are the minimum for command execution and harness configuration; deny-by-default and the no-ambient-inheritance rule are unchanged; tests prove undeclared variables stay absent; security review covers the widened set. | L |
+| RSK-2 | Removing `HARNESS_MODEL` and `HARNESS_SMALL_MODEL` breaks an undocumented consumer or a model-routing expectation. | M | L | Repository-wide search finds no production consumer; opencode resolves its own models; a user can explicitly re-declare either name; the default does not fabricate a mapping. | L |
+| RSK-3 | The optional marker weakens fail-closed semantics or accidentally makes a required variable optional. | M | M | Absence of the marker means required; the marker is variable-only; credential entries stay required; paired present/absent tests cover both classes. | L |
+| RSK-4 | The diagnostic detail leaks a value or breaks the four-key text contract. | M | L | Detail carries only `kind`, `code`, and `field` identifiers; it is bounded and single-line; the existing redaction path applies; the text contract has a dedicated assertion. | L |
+| RSK-5 | A fake CLI on PATH passes while a real opencode still fails because another variable is required to boot. | H | M | The required proof includes one bounded real dispatch; any newly discovered required variable joins the default set before delivery closes; the real proof is recorded in the plan and PR. | M |
+| RSK-6 | The real dispatch proof starts a nested lifecycle that mutates this change's worktree or runs for hours. | H | M | Bound the proof to a probe-scale prompt or end the session after the handle is observed; run it outside the change worktree. | L |
+| RSK-7 | The additive optional contract marker needs a decision record under the delivered additive adapter-contract rule, and that record is missing. | M | M | Raised as OQ-1; author the record or obtain an explicit owner waiver before delivery if the rule is held to apply. | M |
+| RSK-8 | The generated schema, defaults manifest, fixtures, or golden envelopes drift from the new default. | M | M | Regenerate schema and defaults-position artifacts; update the pinned default fixture and spawn-failure golden; parity checks run in the gate battery. | L |
+
+## 12. ASSUMPTIONS
+
+- The default-installation behaviour this change must repair is the POSIX host profile (Linux and macOS). Windows host-profile variables are deferred.
+- `PATH` is sufficient to resolve the bare `opencode` command and the harness's own subprocesses.
+- `HOME` is sufficient for opencode to locate its own configuration and credential material; the harness reads it from the child environment.
+- `TMPDIR` is legitimately absent on Linux and is therefore optional; no shipped default entry other than `TMPDIR` is optional.
+- `DELIVERY_WORK_PATH` continues to be injected by the production composition record and is required in the descriptor.
+- No repository production code consumes `HARNESS_MODEL` or `HARNESS_SMALL_MODEL`; opencode resolves model selection from its own configuration.
+- The parent environment is trusted; a `PATH` containing user-controlled directories is the operator's existing trust decision.
+- A fake CLI on a controlled `PATH` is a valid regression proxy for command resolution and environment construction; one bounded real dispatch is the end-to-end proof of the real harness.
+- The existing redaction chokepoint covers the new detail because it is part of the dispatch envelope.
+
+## 13. DEPENDENCIES
+
+| Direction | Item | Notes |
+|---|---|---|
+| Depends on | Harness execution-environment contract | The optional variable marker is added here; the session port, runner, and starter are unchanged. |
+| Depends on | Configuration layer (`harness` branch, schema, defaults) | The allowlist entry shape and shipped defaults change; validation keeps the secret-forbidden rule. |
+| Depends on | Deny-by-default spawn-environment builder | Required/optional projection and fail-closed naming live here. |
+| Depends on | CLI production composition | Maps the optional marker and keeps the `DELIVERY_WORK_PATH` record injection. |
+| Depends on | Dispatch engine and dispatch contract | Captures the underlying harness failure and adds the additive detail. |
+| Depends on | CLI dispatch output | Machine JSON already carries the envelope; verbose human output adds the bounded diagnostic. |
+| Depends on | `opencode` CLI | The real harness that must boot with the new default environment. |
+| Governed by | Additive adapter-contract rule (`TDR-0008`, `TDR-0016`) | The optional marker is a type-only additive contract field; OQ-1 asks whether a standalone record is required. |
+| Blocks | M1-S9 engine dispatch path on a default installation | No typed dispatch can start the default harness until this lands. |
+| Blocks | Any later harness work that needs a live opencode session | Those paths remain unexercised until a default spawn succeeds. |
+
+## 14. OPEN QUESTIONS
+
+| ID | Question | Context | Status |
+|---|---|---|---|
+| OQ-1 | Does the additive optional marker on the harness environment contract require a standalone decision record under the delivered additive adapter-contract rule, or is this change's decision log sufficient? | `TDR-0016` records that adapter-contract evolution is decision-record governed and that adding types to the harness contract is the class the rule covers; this change adds an optional field to `HarnessEnvironmentVariable`. The marker is type-only, additive, and reversible, which is the `ADR-0004`/`ADR-0006` precedent shape. | Decision needed: consult `@decision-advisor` before delivery; recommended resolution is a short TDR or an explicit owner waiver. |
+| OQ-2 | Does opencode require any environment variable beyond `PATH`, `HOME`, and optionally `TMPDIR` to boot on the supported POSIX profile? | The ticket names `TMPDIR` as the likely optional case, but the complete boot requirement is not established by source alone. The bounded real dispatch proof (F-8, AC-F8-1) is the evidence source; a discovered required variable must join the default set before delivery closes. | Open, evidence needed from the real dispatch proof; non-blocking for specification. |
+
+## 15. DECISION LOG
+
+| ID | Decision | Rationale | Date |
+|---|---|---|---|
+| DEC-1 | Replace the shipped default allowlist with `PATH` and `HOME` as required, `TMPDIR` as optional, and the existing required `DELIVERY_WORK_PATH` injection. | `PATH` is required to resolve the bare `opencode` command and its subprocesses; `HOME` is required for the harness's own configuration and credential lookup; `TMPDIR` is legitimately absent on Linux and must not abort a spawn; `DELIVERY_WORK_PATH` is already injected by the composition and must remain declared. A default that cannot start the default harness is not a default. | 2026-11-09 |
+| DEC-2 | Drop `HARNESS_MODEL` and `HARNESS_SMALL_MODEL` from the default required set. Do not map `OC_ADOS_MAIN_MODEL` or `OC_ADOS_SMALL_MODEL` to them. | No repository production code consumes the `HARNESS_*` names, and opencode resolves model selection from its own configuration. A mapping would add an unused, privileged declared input and would imply engine-controlled model routing that this change does not deliver. The `OC_ADOS_*` names remain ambient facts, not allowlist entries. A user may still declare either `HARNESS_*` name explicitly. | 2026-11-09 |
+| DEC-3 | Add an additive optional marker to a declared variable entry. An entry without the marker is required and fails closed when absent; an entry with the marker omits an absent key and forwards a present one. The marker is variable-only; credential entries remain required and fail closed when unresolved. | The ticket requires a legitimate absence not to kill the whole spawn. Making absence the default for every entry would weaken the deny-by-default discipline; keeping the marker explicit preserves required semantics for every existing entry and limits optionality to declarations that need it. Credentials stay strictly required so optionality never becomes a silent credential bypass. | 2026-11-09 |
+| DEC-4 | Carry the underlying harness failure as an additive detail on the dispatch `data.error`: `kind`, `code`, and `field` when present. Keep `dispatch.session.spawn-failed` as the identity, token, outcome, exit, retryability, consequence, remediation hint, and last message. Surface the detail in machine JSON and in verbose human output; keep non-verbose text exactly four keys. | The ticket requires the underlying kind, code, and field to be visible without source, while the delivered dispatch identity and bash-continuity text contract must stay stable. A nested additive detail preserves the error's identity and the four-key text contract; a new error identity or a changed last message would be a larger, consumer-visible break. | 2026-11-09 |
+| DEC-5 | `version_impact` is `minor` and the change ships exactly one changeset declaring `@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, and `@delivery-os/opencode` at `minor`, with a non-empty body, and modifies no pre-existing changeset. | Probed `TC-RELEASE-001` (`tests/checks/privacy-release.test.ts`): a branch that touches `packages/**` with zero added changesets fails because the test asserts the publishable diff is empty in that case; more than one added changeset fails `expect(added).toHaveLength(1)`; `validateChangeset` requires exactly the five fixed-group packages at `minor`, excludes `@delivery-os/testkit`, and requires a non-empty body. This change touches multiple packages, so the gate binds. The lockstep five-package `minor` convention is the repository release rule (precedent: `.changeset/gh-273-queue-repository-binding-minor.md`). | 2026-11-09 |
+| DEC-6 | Scope the default-environment repair to the POSIX host profile and defer Windows-specific variables. | The ticket's evidence and the M1-S9 pilot are POSIX; the harness stack nowhere claims Windows dispatch parity, and adding `USERPROFILE`/`APPDATA` without a Windows acceptance path would be an unverified default. Windows variables remain a documented deferred item and a revisit trigger if Windows harness dispatch is claimed. | 2026-11-09 |
+
+## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
+
+| Component | Impact |
+|---|---|
+| Configuration defaults (`packages/core/src/config/defaults.ts`) | Updated: default allowlist becomes `PATH`, `HOME`, `TMPDIR` (optional), `DELIVERY_WORK_PATH`. |
+| Configuration catalog and harness validation (`packages/core/src/config/catalog.ts`, `packages/core/src/config/harness.ts`) | Updated: optional boolean on a variable entry; literal values still secret-forbidden; unknown or invalid combinations still classified. |
+| Configuration schema and defaults manifest | Regenerated: new default list and optional field; parity checks must stay green. |
+| Harness environment contract (`packages/core/src/contracts/harness.ts`) | Updated: additive optional marker on a variable entry; session port, evidence, outcomes, failure codes, and credentials unchanged. |
+| Deny-by-default builder (`packages/core/src/domain/harness-spawn-env.ts`) | Updated: required/optional projection; required absence still fails closed with the field; optional absence is omitted. |
+| CLI production composition (`packages/cli/src/production.ts`) | Updated: map the optional marker; keep the `DELIVERY_WORK_PATH` record injection and the bare `opencode` command. |
+| Dispatch contract (`packages/core/src/contracts/dispatch.ts`) | Updated: additive optional detail on the dispatch error type; `CommandResultError` and the top-level envelope unchanged. |
+| Dispatch engine (`packages/core/src/app/dispatch.ts`) | Updated: preserve the underlying harness failure on the pre-session spawn path and attach the detail. |
+| CLI dispatch output (`packages/cli/src/commands/dispatch.ts`, `packages/cli/src/output/dispatch-text.ts`) | Updated: verbose human diagnostic for the detail; non-verbose four-key text unchanged. |
+| Harness and dispatch test fixtures/goldens | Updated/new: pinned default configuration, spawn-failure envelope, fake CLI on PATH, required/optional cases, ambient-leak canary. |
+| Release metadata (`.changeset/gh-277-harness-default-allowlist-minor.md`) | Added: exactly one changeset with the five fixed-group packages at `minor` and a non-empty body. |
+| Current-truth documentation | Updated in the system-spec update phase: configuration layer, harness adapters, dispatch engine, result contract, adapter ports. |
+
+## 17. ACCEPTANCE CRITERIA
+
+| ID | Criterion | Linked |
+|---|---|---|
+| AC-F1-1 | **Given** the shipped defaults and a parent environment with `PATH` and `HOME` set and without `HARNESS_MODEL` or `HARNESS_SMALL_MODEL`, **when** the defaults are composed and the configured harness is spawned with a fake `opencode` executable on `PATH`, **then** environment construction succeeds, an attempt record is written, and the result token is not `dispatch.session.spawn-failed`. | F-1, F-2, F-7 |
+| AC-F1-2 | **Given** the configured harness command is the bare name `opencode` with no absolute path, **when** the child is started with the declared `PATH`, **then** the executable is resolved through `PATH` and the spawn is attempted. | F-1 |
+| AC-F1-3 | **Given** the shipped defaults, **when** the allowlist is inspected, **then** the required entries are exactly `PATH`, `HOME`, and `DELIVERY_WORK_PATH`, the optional entry is exactly `TMPDIR`, and no model variable is declared. | F-1, F-2 |
+| AC-F1-4 | **Given** a parent variable that is not declared by the allowlist, **when** the child environment is built, **then** the variable is absent from the child. | F-1, F-4 |
+| AC-F2-1 | **Given** zero user configuration and an environment where `HARNESS_MODEL` and `HARNESS_SMALL_MODEL` are unset, **when** a spawn is composed, **then** no required-variable failure occurs. | F-2 |
+| AC-F2-2 | **Given** ambient `OC_ADOS_MAIN_MODEL` and `OC_ADOS_SMALL_MODEL` values, **when** the child environment is built from the defaults, **then** neither value is forwarded or mapped and no `HARNESS_*` name is synthesized. | F-2, F-4 |
+| AC-F2-3 | **Given** an explicit user configuration that declares `HARNESS_MODEL` as a required entry and a parent environment that lacks it, **when** the environment is built, **then** the spawn fails closed with `harness.spawn.variable-missing` naming `HARNESS_MODEL`, preserving the delivered required-entry semantics. | F-2, F-3, F-6 |
+| AC-F3-1 | **Given** a declared required variable absent from the parent and record, **when** the environment is built, **then** it fails with `harness.spawn.variable-missing`, the variable is carried in `field`, no child is spawned, and no partial environment is returned. | F-3, F-4 |
+| AC-F3-2 | **Given** a declared optional variable absent from the parent and record, **when** the environment is built, **then** the build succeeds and the key is absent from the child. | F-3 |
+| AC-F3-3 | **Given** a declared optional variable present in the parent or record, **when** the environment is built, **then** the key is forwarded with that value. | F-3 |
+| AC-F3-4 | **Given** a declared credential entry whose reference does not resolve, **when** the environment is built, **then** it fails closed with `config.credential.missing` and no optional marker can bypass the failure. | F-3, F-4 |
+| AC-F3-5 | **Given** a configuration entry whose optional marker is not a boolean, or a credential entry carrying the optional marker, **when** the harness branch is resolved, **then** the entry is classified `config.value.invalid`; a literal `value` remains `config.secret.forbidden`. | F-3, F-6 |
+| AC-F4-1 | **Given** the builder and composition sources, **when** the boundary, secret-read, and structure gates run, **then** no ambient environment read is introduced, the child environment is constructed from the descriptor, injected parent, record, and credential port only, and the single host child-process site is unchanged. | F-4, NFR-3, NFR-9 |
+| AC-F4-2 | **Given** a declared record value and a parent value for the same name, **when** the environment is built, **then** the record value wins; an undeclared record name changes nothing. | F-4 |
+| AC-F5-1 | **Given** a pre-session spawn failure whose underlying harness failure carries a code and a field, **when** dispatch records the failure, **then** `data.error.code` remains `dispatch.session.spawn-failed` and `data.error.detail` carries the underlying `kind`, `code`, and `field`. | F-5 |
+| AC-F5-2 | **Given** the same spawn failure with `--json`, **when** the envelope is rendered, **then** the underlying detail is present in machine output and survives the redaction path. | F-5, NFR-5 |
+| AC-F5-3 | **Given** the same spawn failure in verbose human mode, **when** the output is rendered, **then** the underlying code and field are named; without verbose, the text output remains exactly the four delivered keys. | F-5, NFR-7 |
+| AC-F5-4 | **Given** the spawn-failed identity across this change, **when** the result is inspected, **then** its category, retryability, consequence, remediation hint, token, outcome, exit projection, and last message are unchanged and no new failure code, token, classifier rule, or error-table row exists. | F-5, NFR-4 |
+| AC-F5-5 | **Given** a detail carrying a variable name but no value, **when** it is serialized or rendered, **then** it contains identifiers only, is single-line, and is bounded to 256 characters. | F-5, NFR-6 |
+| AC-F6-1 | **Given** an empty configuration, **when** the harness branch resolves, **then** the new default list resolves with `defaults` origins and the generated schema, defaults-position manifest, and source hashes pass their parity checks. | F-6, F-1 |
+| AC-F6-2 | **Given** an existing valid configuration entry written as `{ name: "X" }`, **when** it resolves, **then** it keeps required semantics and requires no migration. | F-6, F-3 |
+| AC-F6-3 | **Given** the configuration inspection surface, **when** it renders the harness branch, **then** the new defaults and the optional marker are visible as configuration data and no secret value is emitted. | F-6 |
+| AC-F7-1 | **Given** the regression suite, **when** it runs, **then** it contains a default-allowlist spawn with a fake CLI on `PATH` that asserts the attempt record and a result token other than `dispatch.session.spawn-failed`. | F-7, F-1 |
+| AC-F7-2 | **Given** the regression suite, **when** it runs, **then** it contains an absent-required-variable case that asserts the field name in the harness failure and in the dispatch detail. | F-7, F-3, F-5 |
+| AC-F7-3 | **Given** the regression suite, **when** it runs, **then** it contains an ambient-leak canary that asserts an undeclared parent variable is absent from the child. | F-7, F-4 |
+| AC-F7-4 | **Given** the regression suite, **when** it runs, **then** it contains machine JSON and verbose human assertions for the underlying code and field, and a non-verbose four-key text assertion. | F-7, F-5 |
+| AC-F7-5 | **Given** the regression suite, **when** it runs, **then** it contains paired optional-present and optional-absent cases for `TMPDIR`. | F-7, F-3 |
+| AC-F8-1 | **Given** the installed healthy opencode CLI and a real ticket, **when** one bounded `dispatch <ref>` runs with no user configuration declaration, **then** it reaches classification with any result token other than `dispatch.session.spawn-failed` and an attempt record exists. | F-8, F-1 |
+| AC-F8-2 | **Given** the end-to-end proof, **when** it executes, **then** it is bounded (probe-scale prompt or session ended after the handle is observed) and creates no nested lifecycle mutation in this change's worktree. | F-8, RSK-6 |
+
+**Ticket acceptance traceability**
+
+| Ticket acceptance bullet | Acceptance criteria |
+|---|---|
+| With zero user configuration, composing the defaults against a realistic parent environment and spawning the configured harness succeeds: an attempt record is written and a result token other than `dispatch.session.spawn-failed` is produced. | AC-F1-1, AC-F2-1, AC-F8-1 |
+| `PATH` resolution works (command found without an absolute path). | AC-F1-2 |
+| A declared-but-absent variable still fails closed, with the failing name visible in the error detail. | AC-F3-1, AC-F5-1, AC-F5-3 |
+| Regression tests: default-allowlist spawn with a fake CLI on PATH; absent-variable failure names the field; no ambient env leakage (an undeclared parent variable is absent from the child). | AC-F7-1, AC-F7-2, AC-F7-3 |
+| Verbose/JSON output surfaces the underlying harness failure code and field. | AC-F5-2, AC-F5-3, AC-F7-4 |
+
+## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
+
+- Deliver as one change on `fix/GH-277/harness-default-allowlist` with a single pull request to `main-tools`.
+- No migration, feature flag, staged rollout, or user configuration change is required. The repair takes effect when the new defaults, builder, composition, and dispatch detail ship.
+- Release obligation: add exactly one changeset, `.changeset/gh-277-harness-default-allowlist-minor.md`, declaring `@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`, `@delivery-os/mcp`, and `@delivery-os/opencode` at `minor`, with a non-empty body, and modify no pre-existing changeset. This satisfies the `TC-RELEASE-001` invariant probed above; the plan owns the file.
+- After merge, re-run one real dispatch on a default installation and record the observed result token.
+- Communicate the operational consequence: a zero-configuration installation now forwards `PATH` and `HOME`, no longer requires `HARNESS_MODEL` or `HARNESS_SMALL_MODEL`, and reports the underlying spawn failure identity in JSON and verbose output. Non-verbose text is unchanged for bash continuity.
+- If the bounded real proof discovers another required boot variable, land it in the same change before the pull request is finalized and record the evidence in the plan and PR.
+
+## 19. DATA MIGRATION / SEEDING (IF APPLICABLE)
+
+N/A. No stored data is migrated, seeded, rewritten, or invalidated. No schema version or persisted shape changes. The configuration defaults artifact is regenerated from source, not migrated.
+
+## 20. PRIVACY / COMPLIANCE REVIEW
+
+N/A. The change forwards two standard process variables (`PATH`, `HOME`) and one optional temporary-directory variable into a child process that the operator already controls. No personal-data field, new storage, new external recipient, or retention is added. The diagnostic detail carries variable names and closed failure codes only, never an environment value, credential material, prompt content, or stream content. Existing redaction and credential boundaries are unchanged.
+
+## 21. SECURITY REVIEW HIGHLIGHTS
+
+- Deny-by-default is preserved: the child receives only declared and present entries plus resolved credentials; no ambient inheritance is introduced.
+- The optional marker cannot make a credential entry optional, and a literal secret value remains `config.secret.forbidden`.
+- `PATH` and `HOME` are the minimum variables needed to execute the trusted harness and let it locate its own configuration; the parent environment is the operator's existing trust boundary.
+- The diagnostic detail carries identifiers (`kind`, `code`, `field`) only and is bounded; it cannot become an environment dump or a secret-exfiltration path.
+- The single host child-process site, the injected-environment-as-data rule, and the secret-read boundary are unchanged.
+- No new dependency, network call, file write, or ambient environment read is added.
+
+## 22. MAINTENANCE & OPERATIONS IMPACT
+
+- The default allowlist becomes a deliberate operational contract: adding a required entry can make a previously working installation fail closed, so a future default addition must be justified by a real boot requirement and covered by the regression matrix.
+- `TMPDIR` is the first optional entry; the optional marker is the supported way to add a platform-variable entry that may legitimately be absent.
+- The dispatch detail is an additive diagnostic surface; future nested failures can reuse the shape without changing the delivered dispatch identity.
+- The system-spec update phase must reconcile the configuration default table, the harness environment descriptor and spawn narrative, the dispatch spawn-failure envelope narrative, the result-contract data-bearing error field set, and the adapter-ports descriptor description.
+- The bounded real dispatch proof is the operational check that `HOME` is sufficient for the installed harness; a future harness that needs more must extend the default set deliberately.
+
+## 23. GLOSSARY
+
+| Term | Definition |
+|---|---|
+| Allowlist | The complete declared set of environment entries the child may receive. |
+| Ambient inheritance | Copying all of the parent process environment into the child without declaration; explicitly forbidden. |
+| Required entry | A declared variable that must be present in the parent or record; absence fails the spawn closed. |
+| Optional entry | A declared variable that is forwarded when present and omitted when absent; absence does not fail the spawn. |
+| Deny-by-default | The property that an undeclared parent variable is absent from the child. |
+| Underlying harness failure | The classified `HarnessFailure` (kind, code, field, optional reference/status) produced before dispatch collapses a pre-session failure. |
+| Pre-session spawn failure | A spawn or resume that fails before any session handle exists; dispatch records it as `dispatch.session.spawn-failed`. |
+| POSIX host profile | The Linux and macOS host execution profile targeted by the default allowlist in this change. |
+
+## 24. APPENDICES
+
+### A. Current default allowlist (problem)
+
+```
+harness.environment:
+  - HARNESS_MODEL          (required, unset in a real environment)
+  - HARNESS_SMALL_MODEL    (required, unset in a real environment)
+  - DELIVERY_WORK_PATH     (required, injected by composition)
+# PATH  -> undeclared
+# HOME  -> undeclared
+# TMPDIR -> undeclared
+```
+
+Failure path: the first absent `HARNESS_MODEL` returns `harness.spawn.variable-missing`; if it were present, the child would still lack `PATH` and `HOME`.
+
+### B. Proposed default allowlist
+
+```
+harness.environment:
+  - PATH                   (required)
+  - HOME                   (required)
+  - TMPDIR                 (optional)
+  - DELIVERY_WORK_PATH     (required, injected by composition)
+# HARNESS_MODEL and HARNESS_SMALL_MODEL: not declared
+# OC_ADOS_MAIN_MODEL and OC_ADOS_SMALL_MODEL: not mapped, not forwarded
+```
+
+An explicitly user-declared entry keeps its declared required or optional semantics.
+
+### C. Diagnostic detail shape
+
+```
+data.error.code            = dispatch.session.spawn-failed        (unchanged identity)
+data.error.detail.kind     = harness | config                     (when present)
+data.error.detail.code     = harness.spawn.variable-missing | config.credential.missing | ...
+data.error.detail.field    = <declared variable name>             (when present)
+data.lastMessage           = spawn failed before a session existed (unchanged)
+```
+
+The detail is additive. It contains no values and no secrets. Non-verbose text remains:
+
+```
+result=<token>
+pr_url=<url>
+exit_code=<digit>
+last_message=<bounded single line>
+```
+
+### D. Source evidence index
+
+| Fact | Evidence |
+|---|---|
+| Shipped default allowlist declares the two model variables and the work path only. | `packages/core/src/config/defaults.ts:45-63` |
+| The builder is deny-by-default and hard-fails on the first absent declared variable with the field. | `packages/core/src/domain/harness-spawn-env.ts:38-67` |
+| A variable entry has no required/optional distinction. | `packages/core/src/contracts/harness.ts:120-148` |
+| The configuration branch accepts `name`/`credentialRef`, rejects literal `value`, and rejects extra keys. | `packages/core/src/config/harness.ts:110-145`, `packages/core/src/config/catalog.ts:276-318` |
+| Production composition maps the allowlist and injects `DELIVERY_WORK_PATH`; the command is the bare name `opencode`. | `packages/cli/src/production.ts:423-447,462` |
+| Dispatch collapses a pre-session failure and discards the underlying failure. | `packages/core/src/app/dispatch.ts:466-485` |
+| The dispatch error has no detail or field slot. | `packages/core/src/contracts/dispatch.ts:277-296`, `packages/core/src/contracts/result.ts:36-43` |
+| Non-verbose text emits exactly four keys. | `packages/cli/src/output/dispatch-text.ts:28-34` |
+| The harness failure identity already exists in the error table. | `packages/core/src/contracts/error-table.ts:1001-1011` |
+| The release invariant requires one five-package minor changeset when `packages/**` changes. | `tests/checks/privacy-release.test.ts:1-100,133-170` |
+
+## 25. DOCUMENT HISTORY
+
+| Version | Date | Author | Changes |
+|---|---|---|---|
+| 1.0 | 2026-11-09 | `@spec-writer` | Initial specification for GH-277. |
+
+---
+
+## AUTHORING GUIDELINES
+
+This specification was authored from the GH-277 ticket, the PM's verified root-cause evidence, the delivered configuration layer, harness contract, spawn-environment builder, host runner, production composition, dispatch engine, dispatch output, and the current feature specs. It resolves the ticket's two design directions as DEC-1 through DEC-3, keeps the dispatch identity and closed vocabularies unchanged in DEC-4, records the probed release obligation in DEC-5, and records the POSIX scope boundary in DEC-6. Implementation sequencing, test file placement, fixture mechanics, and the bounded real-dispatch procedure belong to the plan and test plan.
+
+## VALIDATION CHECKLIST
+
+- [x] `change.ref` matches provided `workItemRef` (`GH-277`)
+- [x] `owners` has at least one entry
+- [x] `status` is "Proposed"
+- [x] All sections present in order (1-25 + guidelines + checklist)
+- [x] ID prefixes consistent and unique (F-, AC-, NFR-, RSK-, DEC-, DM-, OQ-)
+- [x] Acceptance criteria reference at least one F-/NFR- ID and use Given/When/Then
+- [x] NFRs include measurable values
+- [x] Risks include Impact & Probability
+- [x] No implementation tasks or step-by-step delivery instructions
+- [x] No content duplicated from linked docs
+- [x] Front matter validates per `front_matter_rules`
