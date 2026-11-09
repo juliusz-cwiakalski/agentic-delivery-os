@@ -2,7 +2,7 @@
 # Canonical plan artifact: this YAML document is the only plan file for the
 # change. `plan validate` and `plan diff` read it directly.
 #
-# SOURCES (single source of truth; plan revision 1.6, 2026-11-09):
+# SOURCES (single source of truth; plan revision 1.7, 2026-11-09):
 #   - Spec:   ./chg-GH-241-spec.md (v1.6; implementation-review-1 amendments
 #             F-02/F-5, F-07/F-6, F-08/F-7, F-10/F-9, F-11, and D-6;
 #             F-1..F-10; 50 ACs; DEC-1..DEC-13; DM-1..DM-11; EVT-1..EVT-7;
@@ -68,11 +68,12 @@
 # digest-change expectation (F-21); and closes the minor findings F-12..F-17
 # and F-20 plus the F-19 test-strengthening set. F-11 (iteration reason
 # vocabulary) is closed by the spec v1.6 Appendix B/EVT-1 amendment (already
-# present; the spec is not edited here); F-18 is closed by this revision's
-# scope declarations. F-18 fidelity (re-derived from the delivered diff, not
-# from intent): the 13 changed paths that were outside every phase are added to
-# the owning phase (doc-sync docs and the forbidden-literals registry to Phase
-# 10; the core package barrel and supporting suites to Phases 1/2/3/4/6), and
+# present; the spec is not edited here); F-18 is advanced by this revision's
+# scope declarations (the residual path is closed in v1.7 below). F-18 fidelity
+# (re-derived from the delivered diff, not from intent): the 13 changed paths
+# that were outside every phase are added to the owning phase (doc-sync docs and
+# the forbidden-literals registry to Phase 10; the core package barrel and
+# supporting suites to Phases 1/2/3/4/6), and
 # the scope-fidelity pass declares the remaining 7 changed companion paths on
 # this phase: the shipped entrypoint wiring and help surface
 # (packages/cli/bin/delivery-os.ts, packages/cli/src/help.ts), the blocker
@@ -84,6 +85,22 @@
 # specific file (packages/core/src/config/resolver.ts) is removed, so Phase
 # 11's declared files are exactly the files it changed. Phase 11 is the final
 # phase and carries the release doneArtifacts. 76/76 TCs, 50/50 ACs unchanged.
+#
+# REVISION NOTE (v1.7): review-iter-2 NF-02. The doc-sync page
+# doc/spec/features/feature-agents-and-commands.md (it adds coordinator and
+# dispatch to the prompt-required command set and GH-241/GH-239 to
+# related_changes) was the one changed path still outside every phase scope; it
+# is declared on Phase 10, the phase that owns current-truth doc reconciliation.
+# No other change: Phase 10 scope.files is the only scope edit, the TC -> phase
+# map stays 76/76, and the schema and pinned contracts below are untouched.
+# F-18 fidelity, re-derived from the delivered diff (not from intent prose) at
+# b8fa311a over `git diff --name-only origin/main-tools...HEAD`:
+#   changed paths                                    187
+#   uncovered (changed, outside every phase scope)     0
+#   unused (declared specific file, not in the diff)   0
+# All 154 declared specific files are present in the diff, so no entry is
+# dropped beyond the Phase-10 page added here; wildcard and folder entries are
+# not counted as specific files.
 #
 # PINNED CONTRACTS BINDING ON EVERY PHASE (do not reshape at delivery):
 #   - Exactly two two-segment coordinator codes join RESERVED_TWO_SEGMENT_CODES
@@ -1102,7 +1119,9 @@ phases:
   #       and daemon.lock in feature-resident-daemon.md — there is no dedicated
   #       process-port page under doc/spec, so that page is the port-contract
   #       home; re-check feature-result-contract.md, the Phase-7 docs, and the
-  #       Phase-9 registry/man-page output; update doc/00-index.md.
+  #       Phase-9 registry/man-page output; record the prompt-required command
+  #       set (coordinator, dispatch) and the GH-241/GH-239 related_changes rows
+  #       in feature-agents-and-commands.md; update doc/00-index.md.
   #  10.2 Non-regression: status/brief goldens differ only in the reserved-slot
   #       case; blockers ranking, economics records, lane records, and
   #       ceo-loop.sh byte-unchanged; no other command envelope/exit changes;
@@ -1157,6 +1176,7 @@ phases:
         - doc/spec/features/feature-cli-entrypoint.md
         - doc/spec/features/feature-config-layer.md
         - doc/spec/features/feature-state-layer.md
+        - doc/spec/features/feature-agents-and-commands.md
         - doc/decisions/00-index.md
         - doc/overview/architecture-overview.md
         - doc/overview/glossary.md
@@ -1267,10 +1287,15 @@ phases:
   #  Cross-cutting: F-11 (iteration reason vocabulary) is closed by the spec
   #  v1.6 Appendix B/EVT-1 amendment (already present; the spec is not edited
   #  here); F-18 is closed by this revision's declared scopes (Phases 1..10 +
-  #  11) and needs no extra source change. This phase also owns the companion
-  #  files the remediation actually touched beyond its original declaration: the
-  #  shipped entrypoint wiring (packages/cli/bin/delivery-os.ts), the help
-  #  surface (packages/cli/src/help.ts), the blocker historyRef contract/state
+  #  11) plus the v1.7 Phase-10 declaration of
+  #  doc/spec/features/feature-agents-and-commands.md, and needs no extra source
+  #  change. Fidelity re-derived at b8fa311a over
+  #  `git diff --name-only origin/main-tools...HEAD`: 187 changed paths, 0
+  #  uncovered, 0 declared-but-unchanged specific files. This phase also owns
+  #  the companion files the remediation actually touched beyond its original
+  #  declaration: the shipped entrypoint wiring
+  #  (packages/cli/bin/delivery-os.ts), the help surface
+  #  (packages/cli/src/help.ts), the blocker historyRef contract/state
   #  carrier (packages/core/src/contracts/blockers.ts,
   #  packages/core/src/state/blockers.ts) for F-07/F-09, and their suites and
   #  fixture (tests/behaviour/entrypoint-composition.test.ts,

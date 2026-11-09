@@ -27,6 +27,7 @@ import type {
   CoordinatorObservation,
   CoordinatorProcessPortCapabilities,
   CoordinatorProgressState,
+  CoordinatorWakeEffect,
   DaemonProcessPort,
 } from "../../../packages/core/src/contracts/index";
 import {
@@ -94,6 +95,11 @@ export type CoordinatorHarnessOptions = {
   readonly staleFenceMs?: number;
   /** Makes the session wake delivery fail (no durable record). */
   readonly wakeFails?: boolean;
+  /**
+   * Models a delivered session port whose successful resume/spawn is observed
+   * as a live session on the next read (the production handle behaviour).
+   */
+  readonly applyMakesAlive?: boolean;
   /** Makes the session spawn resume fail with the delivered harness identity. */
   readonly spawnFails?: boolean;
   /** Makes a `released` fence append fail (the loop's release-failure path). */
@@ -113,6 +119,8 @@ export type CoordinatorHarness = {
     resumeCalls: number;
     spawnCalls: number;
     wakeCalls: number;
+    /** Every effect actually handed to the wake port, in order. */
+    readonly wakeEffects: readonly CoordinatorWakeEffect[];
     apply(
       effect: "attach" | "resume" | "spawn",
     ): Promise<{ ok: true } | { ok: false; code: string }>;
@@ -129,6 +137,8 @@ export type CoordinatorHarness = {
   readonly counters: {
     readonly appends: number;
     readonly reads: number;
+    /** Reads performed outside a delivered post-append coverage read. */
+    readonly evaluationReads: number;
     readonly acquireFence: number;
     readonly recoverFence: number;
     readonly fenceStatus: number;
@@ -197,6 +207,7 @@ export const createCoordinatorHarness = (
   const counters = {
     appends: 0,
     reads: 0,
+    evaluationReads: 0,
     acquireFence: 0,
     recoverFence: 0,
     fenceStatus: 0,
@@ -254,6 +265,8 @@ export const createCoordinatorHarness = (
   let publishFails = options.publishFails === true;
   let wakeFails = options.wakeFails === true;
   let appendOverride: (() => unknown) | undefined;
+  const wakeEffects: CoordinatorWakeEffect[] = [];
+  const appendedHandles = new Set<Parameters<typeof store.append>[0]>();
 
   const guardedStore = {
     ...store,
@@ -262,6 +275,9 @@ export const createCoordinatorHarness = (
     },
     readRecords() {
       counters.reads += 1;
+      // A delivered append proves its own post-write coverage with a store
+      // read; that write-time invariant is not the tick's evaluation read.
+      if (appendedHandles.size === 0) counters.evaluationReads += 1;
       return store.readRecords();
     },
     acquireFence(token: string) {
@@ -275,6 +291,10 @@ export const createCoordinatorHarness = (
     fenceStatus() {
       counters.fenceStatus += 1;
       return store.fenceStatus();
+    },
+    releaseFence(handle: Parameters<typeof store.releaseFence>[0]) {
+      appendedHandles.delete(handle);
+      return store.releaseFence(handle);
     },
     append(
       handle: Parameters<typeof store.append>[0],
@@ -308,7 +328,9 @@ export const createCoordinatorHarness = (
           },
         } as never;
       }
-      return store.append(handle, request);
+      const result = store.append(handle, request);
+      if (result.ok) appendedHandles.add(handle);
+      return result;
     },
   } as typeof store;
 
@@ -361,17 +383,31 @@ export const createCoordinatorHarness = (
           counterJoin();
           return { ok: true as const };
         }
+        const becameAlive = options.applyMakesAlive === true;
         if (effect === "resume") {
           counters.resumes += 1;
+          if (becameAlive) {
+            session = {
+              ...session,
+              facts: { ...session.facts, liveness: "alive", sessionId: "session-1" },
+            };
+          }
           return { ok: true as const };
         }
         counters.spawns += 1;
+        if (becameAlive) {
+          session = {
+            ...session,
+            facts: { ...session.facts, liveness: "alive", sessionId: "session-1" },
+          };
+        }
         return options.spawnFails === true
           ? { ok: false as const, code: "harness.spawn.refused" }
           : { ok: true as const };
       },
-      wake: async () => {
+      wake: async (effect) => {
         counters.wakes += 1;
+        wakeEffects.push(effect);
         return { ok: wakeFails !== true };
       },
     },
@@ -465,6 +501,9 @@ export const createCoordinatorHarness = (
       resumeCalls: 0,
       spawnCalls: 0,
       wakeCalls: 0,
+      get wakeEffects() {
+        return wakeEffects;
+      },
       apply: (effect) => ports.session.apply(effect),
       set: (overrides) => {
         session = { ...session, ...overrides };

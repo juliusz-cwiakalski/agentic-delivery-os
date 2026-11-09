@@ -21,6 +21,20 @@ describe("TC-COORD-088 read cost and output bounds", () => {
     expect(harness.counters.reads - before).toBe(1);
   });
 
+  test("an exhaustion tick also performs exactly one verified state read", async () => {
+    const harness = createCoordinatorHarness({
+      label: "read-cost-exhaustion",
+      session: { liveness: "absent" },
+    });
+    for (let ordinal = 1; ordinal <= 10; ordinal += 1) seedRestart(harness, { ordinal });
+    const before = harness.counters.evaluationReads;
+    const result = await harness.run(["coordinator", "tick", "--json"]);
+    expect(result.code).toBe(1);
+    // The delivered blocker append proves its own post-write coverage; the
+    // coordinator's evaluation read for the tick is exactly one.
+    expect(harness.counters.evaluationReads - before).toBe(1);
+  });
+
   test("a status performs exactly one verified state read", async () => {
     const harness = createCoordinatorHarness({ label: "read-cost-status" });
     const before = harness.counters.reads;

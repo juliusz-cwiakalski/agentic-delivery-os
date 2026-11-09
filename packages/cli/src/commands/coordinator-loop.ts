@@ -631,7 +631,11 @@ export const createCoordinatorSupervisor = (
     reason: string,
     effect: "resume" | "spawn",
   ): Promise<
-    | { readonly ok: true; readonly read: OkRead }
+    | {
+        readonly ok: true;
+        readonly read: OkRead;
+        readonly appliedRecovery: "resume" | "spawn" | null;
+      }
     | { readonly ok: false; readonly failure: CoordinatorFailure }
   > => {
     const admission = evaluateCoordinatorRestartAdmission({
@@ -676,7 +680,7 @@ export const createCoordinatorSupervisor = (
       if (!applied.ok) return { ok: false, failure: failure("harness", applied.code) };
     }
     const nextRead = appended.appended ? { ...read, restarts: [...read.restarts, record] } : read;
-    return { ok: true, read: nextRead };
+    return { ok: true, read: nextRead, appliedRecovery: appended.appended ? effect : null };
   };
 
   /** Apply the lifecycle decision; a live session records `join-live`. */
@@ -686,7 +690,12 @@ export const createCoordinatorSupervisor = (
     epoch: string,
     trigger: CoordinatorIterationTrigger,
   ): Promise<
-    | { readonly ok: true; readonly read: OkRead; readonly session: CoordinatorSessionFacts }
+    | {
+        readonly ok: true;
+        readonly read: OkRead;
+        readonly session: CoordinatorSessionFacts;
+        readonly appliedRecovery: "resume" | "spawn" | null;
+      }
     | { readonly ok: false; readonly failure: CoordinatorFailure }
   > => {
     const session = ports.session.read();
@@ -712,7 +721,7 @@ export const createCoordinatorSupervisor = (
         contextTokens: session.contextTokens,
       });
       if (!recorded.ok) return recorded;
-      return { ok: true, read: recorded.read, session };
+      return { ok: true, read: recorded.read, session, appliedRecovery: null };
     }
     if (decision.consumesOrdinal === 1) {
       const recovered = await applyRecovery(
@@ -730,7 +739,9 @@ export const createCoordinatorSupervisor = (
           const alreadyReceipted = read.exhaustion.some((record) => record.budgetEpochId === epoch);
           const escalated = escalate(read, epoch, context);
           if (!escalated.ok) return { ok: false, failure: escalated.failure };
-          if (alreadyReceipted) return { ok: true, read: escalated.read, session };
+          if (alreadyReceipted) {
+            return { ok: true, read: escalated.read, session, appliedRecovery: null };
+          }
         }
         return recovered;
       }
@@ -742,7 +753,12 @@ export const createCoordinatorSupervisor = (
         contextTokens: session.contextTokens,
       });
       if (!recorded.ok) return recorded;
-      return { ok: true, read: recorded.read, session };
+      return {
+        ok: true,
+        read: recorded.read,
+        session,
+        appliedRecovery: recovered.appliedRecovery,
+      };
     }
     const recorded = appendIteration(read, context, {
       trigger,
@@ -754,7 +770,7 @@ export const createCoordinatorSupervisor = (
     if (!recorded.ok) return recorded;
     const effect = await ports.session.apply("spawn");
     if (!effect.ok) return { ok: false, failure: failure("harness", effect.code) };
-    return { ok: true, read: recorded.read, session };
+    return { ok: true, read: recorded.read, session, appliedRecovery: "spawn" };
   };
 
   /** Publish (or reuse) exactly one owner escalation question and its receipt. */
@@ -767,7 +783,10 @@ export const createCoordinatorSupervisor = (
     | { readonly ok: false; readonly failure: CoordinatorFailure } => {
     const ref = escalationRef(coordinatorId, epoch);
     const historyRef = `${COORDINATOR_RESTART_KEY_PREFIX}${coordinatorId}`;
-    const raw = readOnce();
+    // Reuse the cycle's single verified state read (NFR-4): the escalation
+    // receipt folds from the records already read for this tick, so an
+    // exhaustion tick performs no second store read.
+    const raw = context.raw;
     const ledger = blockersRead(raw);
     if (!ledger.ok) return { ok: false, failure: stateFailure(ledger.error.code) };
     const answered = new Set(ledger.value.answers.map((answer) => answer.questionId));
@@ -918,7 +937,12 @@ export const createCoordinatorSupervisor = (
         iterationId: null,
       };
       if (woken.outcome === "woken" && woken.question !== null) {
-        const effect = wakeEffectFor(session);
+        // The lifecycle effect already ran this cycle: a just-resumed or
+        // spawned session is live now, so the wake is a live observation, never
+        // a second resume/spawn (NF-04). Only when the lifecycle applied no
+        // recovery does the wake select its own effect from the session facts.
+        const effect =
+          lifecycle.appliedRecovery === null ? wakeEffectFor(session) : ("live" as const);
         const wake = await ports.session.wake(effect);
         if (!wake.ok) {
           return {

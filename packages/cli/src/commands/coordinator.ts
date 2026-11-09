@@ -6,8 +6,9 @@
  * streams and never choose an exit code; the envelope and the `{0,1,2}`
  * projection are the command surface's.
  */
-import { FALLBACK_INVOCATION_CODE } from "@delivery-os/core/contracts";
+
 import type { CoordinatorObservation } from "@delivery-os/core/contracts";
+import { FALLBACK_INVOCATION_CODE } from "@delivery-os/core/contracts";
 import type { CommandDefinition, CommandInvocation } from "../index.js";
 import { renderCoordinatorHuman, renderCoordinatorStopHuman } from "../output/coordinator-text.js";
 import type { CoordinatorResult, CoordinatorStopData } from "./coordinator-loop.js";
