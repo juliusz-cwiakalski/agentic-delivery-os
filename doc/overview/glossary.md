@@ -3,13 +3,13 @@ ados_distribution: internal
 id: GLOSSARY
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
-  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008", "TDR-0009", "TDR-0011", "TDR-0012"]
-  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-226", "GH-227", "GH-228", "GH-229", "GH-223", "GH-231", "GH-225", "GH-233", "GH-232", "GH-243", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-242"]
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008", "TDR-0009", "TDR-0011", "TDR-0012", "TDR-0016"]
+  related_changes: ["GH-170", "GH-171", "GH-172", "GH-173", "GH-174", "GH-177", "GH-179", "GH-181", "GH-184", "GH-188", "GH-182", "GH-187", "GH-175", "GH-176", "GH-180", "GH-189", "GH-183", "GH-178", "GH-222", "GH-221", "GH-226", "GH-227", "GH-228", "GH-229", "GH-223", "GH-231", "GH-225", "GH-233", "GH-232", "GH-243", "GH-234", "GH-235", "GH-236", "GH-230", "GH-237", "GH-240", "GH-238", "GH-242", "GH-275"]
 summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, provider-client-seed, provider-profile, session-lifecycle-economics, status-digest and attention-state, typed blocker channel, spend-read-side, closeout, change-capsule, judgment-residue, queue-readiness, queue-scheduling, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, merge/verify-deploy, entrypoint, prompt-conformance, resident-daemon, and harness-adapter terms used across the repository."
 ---
 
@@ -22,7 +22,7 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Term / acronym | Definition | Category | Related UL term |
 |---|---|---|---|
 | Primitive | A stable composable semantic contract, including typed data, from which commands and engines build behavior. Names, contracts and lifecycle inventory belong to the primitive catalogue. | Domain | [Catalogue](../planning/concepts/primitive-catalogue.md#what-a-primitive-is-and-is-not), [UL](ubiquitous-language.md#disambiguation-at-boundaries) |
-| Harness adapter | The delivered port surface for executing a delivery session on either shipped harness (opencode, Claude Code): closed capability declarations with explicit gaps, one shared classifier, a deny-by-default spawn environment, read-only telemetry extraction, and closeout capture. See [feature-harness-adapters.md](../spec/features/feature-harness-adapters.md). | Delivery | [Harness adapters](../spec/features/feature-harness-adapters.md) |
+| Harness adapter | The delivered port surface for executing a delivery session on either shipped harness (opencode, Claude Code): closed capability declarations with explicit gaps, one shared classifier, a deny-by-default spawn environment, streaming handle acquisition on the opencode JSONL stream with completion-scoped collection, read-only telemetry extraction, and closeout capture. See [feature-harness-adapters.md](../spec/features/feature-harness-adapters.md). | Delivery | [Harness adapters](../spec/features/feature-harness-adapters.md) |
 | Harness | The execution host for agent sessions. Typed cross-harness adapter parity is delivered; the dispatch engine is the first production consumer of the session port. | Execution | [Harness adapters](../spec/features/feature-harness-adapters.md) |
 | Model profile | A named model-per-tier assignment (seats, capability descriptors, typed `pacingClass`, provider set, per-agent overrides) declared in `provider.profiles` and selected by the pure profile engine. | Provider profiles | [feature-provider-profiles.md](../spec/features/feature-provider-profiles.md) |
 | Tier | A named responsibility group (working names lite, regular, powerful) grouping profiles a delivery selects from. | Provider profiles | [feature-provider-profiles.md](../spec/features/feature-provider-profiles.md) |

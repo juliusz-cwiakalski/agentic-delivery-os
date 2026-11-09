@@ -110,6 +110,21 @@ export const declaredBuildEnvironment = (
 export const classifier: HarnessClassifier = classifyHarnessEvidence;
 export const assembleLiveness = assembleHarnessLiveness;
 
+export type {
+  FakeStreamControl,
+  FakeStreamStarter,
+  StreamScript,
+  VirtualClock,
+} from "./stream";
+// The streaming-starter fixtures (GH-275) are re-exported beside the one-shot
+// runner fixtures so every adapter suite has one import site.
+export {
+  createFakeStreamStarter,
+  createVirtualClock,
+  flushUntil,
+  streamStarterFromRunner,
+} from "./stream";
+
 export const LIVENESS_FACTS: readonly HarnessLivenessSourcedReading[] = [
   {
     kind: "session-traffic",

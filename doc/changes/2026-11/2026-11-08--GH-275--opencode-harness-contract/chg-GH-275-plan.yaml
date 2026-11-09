@@ -1,0 +1,792 @@
+# GH-275 delivery plan — make the opencode harness adapter read the real JSONL
+# stream, return the session handle on the first identified line, and resolve
+# `collect` only when the (multi-hour) session completes.
+#
+# Revision 2 (2026-11-08): reopened `delivery_planning` after DoR iteration 1
+# (`readiness/readiness-iter-1.md`, verdict NOT_READY) and realigned to spec v1.2
+# and test plan v1.2. This revision resolves the three plan-owned findings and
+# carries the plan-side consequences of the artifact revision:
+#   - A-3 (phase scope ownership): exactly one owning phase per path. The
+#     opencode conformance registration `packages/testkit/src/conformance/harness.ts`
+#     is P2-only (P2 already constructs the port there and must give it a
+#     starter), and P4 only asserts it. The delivered legacy classification
+#     fixture `tests/fixtures/harness/scenarios/classification.ts` is named
+#     explicitly and owned by P4 as a read-only oracle: P4 asserts the six
+#     delivered envelopes and edits nothing, and the JSONL counterparts are
+#     derived inline in the conformance test (no fixture edit, floor stays six).
+#   - A-7 (optional-with-default composer fact): `ProductionCompositionFacts.
+#     harnessSpawnStarter` is optional and defaults to `createHostSpawnStarter()`
+#     inside the production composition, mirroring `harnessSpawnRunner`; the
+#     adapter's own `OpencodeHarnessOptions.starter` stays required and every one
+#     of its eight construction sites is inside P2's scope. The default and the
+#     migration rule are stated in P2.
+#   - A-8 (E2E state-root isolation): P6 records the appended attempt id/token and
+#     the GH-275 lease, proves the completed run released the lease, releases it
+#     when it did not, and states that the attempt record in the real state root
+#     is deliberate production evidence rather than cleanup noise.
+#   - Artifact alignment: F-4/DEC-5 legacy single-document evidence precedence
+#     with the retained six-case conformance floor and `TC-HARN-010` (B-1); the
+#     `tool_use`-with-`state.status === "error"` and `error`-event encodings (B-2);
+#     the corrected M-3 red set and new M-17..M-19 (B-3); three pinned JSONL
+#     capture files; the 46-TC map; and the E2E `lane.liveness-interval` mechanism
+#     with its required `liveness:` attempt ref.
+#
+# Revision 3 (2026-11-09): iteration-2 DoR remediation of the plan-owned findings
+# in `readiness/readiness-iter-2.md` (verdict NOT_READY; the spec and test-plan
+# findings are remediated in their own artifacts in parallel):
+#   - B-2 (P5): the timeout obligation is restated as a starter-options scope.
+#     The delivered listing path keeps `DEFAULT_TIMEOUT_MS = 300_000`
+#     (`packages/adapters/src/harness/opencode.ts:76`, passed to the one-shot
+#     runner for `listSessions` at `:127` and `:305`, unchanged by OQ-T3), so the
+#     assertion is that no `300_000`/`DEFAULT_TIMEOUT_MS` value reaches the
+#     spawn/resume starter options (`handleTimeoutMs`/`sessionTimeoutMs`) — not
+#     that the adapter source lacks the literal. The corrected TC-OCS-053 carries
+#     the same scope in the parallel test-plan revision.
+#   - A-5 (P2): `tests/fixtures/dispatch/golden/harness.ts` is removed from the P2
+#     starter-injection claim — it builds its harness through
+#     `createScriptedHarness` and constructs no opencode adapter, so there is no
+#     starter to inject. Starter injection is confined to
+#     `tests/structure/dispatch-composition.test.ts` and
+#     `tests/fixtures/queue/production/harness.ts`; the golden fixture's real
+#     change is P4's injectable `harnessPort` seam.
+#   - A-1 / TDR (P6): `doc/decisions/TDR-0016-harness-streaming-spawn-seam.md` is
+#     declared in P6's scope because the `commit` primitive can stage untracked
+#     files only inside a declared plan scope and the authored record is still
+#     untracked. No other `doc/**` path is added, and the rule that this phase
+#     edits nothing under `doc/spec/**` stands.
+#   - A-1 (E2E): P6 states that its end-to-end evidence augments test plan §6.3 and
+#     that the parallel test-plan revision carries the `attemptId` extraction and
+#     the lease-release proof; P6's own evidence obligations are unchanged.
+#   - Ownership is unchanged: 30/30 ACs and 46/46 TCs keep their single owning
+#     phase.
+#
+# Revision 4 (2026-11-09): iteration-3 DoR remediation of the four plan-owned
+# findings in `readiness/readiness-iter-3.md` (spec and test plan are v1.3):
+#   - N-1 (P2): the JSONL `failureReported` rule is the spec v1.3 explicit-fact
+#     rule — a JSONL `error` event or the legacy envelope's `result.failure ===
+#     true`/`result.status === "failed"` — and a non-zero process exit is carried
+#     by `exitStatus` only, classifying `failed` through the classifier's exit
+#     branch (`packages/core/src/domain/harness-classify.ts:50-52`). The removed
+#     "or the exit is non-zero" clause contradicted F-4/§8.4/DEC-5 and
+#     AC-F1-5/AC-F4-3/AC-F4-4 with TC-OCS-015/033/045/048.
+#   - N-2 (P4): the TC-OCS-061 obligation is the observable one — a multi-line
+#     JSONL `spawnStdout` acquires a handle before completion — and no longer
+#     asserts "never over the one-shot runner", which `HarnessConformanceIo`/
+#     `HarnessConformanceRegistration.build`
+#     (`packages/testkit/src/conformance/harness.ts:34-56`) cannot expose.
+#   - N-3 (P6): the `liveness:` evidence ref is corroboration only; the
+#     production adapter receives no `livenessFacts`
+#     (`packages/cli/src/production.ts:443-458`, `opencode.ts:257`), so the
+#     non-blocking discriminator is the deterministic suite (TC-OCS-020/021/082)
+#     and, at dispatch level, `collect` pending across at least one poll. The
+#     test plan's PASS rule keeps the ref as required corroboration.
+#   - N-5 (header/P6): the source block now names spec v1.3 and test plan v1.3,
+#     and `doc/decisions/00-index.md` joins P6's scope so the TDR-0016 index row
+#     authored by `@decision-advisor` lands in the same decision-capture commit.
+#   - Ownership is unchanged: 30/30 ACs and 46/46 TCs keep their single owning
+#     phase; no `doc/spec/**` path is added or edited.
+#
+# Sources (single source of truth):
+#   - Spec:      ./chg-GH-275-spec.md (v1.3; F-1..F-8, AC-F1-1..AC-F8-2 = 30 ACs,
+#                NFR-1..NFR-9, DEC-1..DEC-8, RSK-1..RSK-9, §6 flows 1–4,
+#                §8.4 external contract, §8.5 backward compatibility, Appendix
+#                B contract-type sketch, Appendix C failure mapping)
+#   - Test plan: ./chg-GH-275-test-plan.md (v1.3; 46 TC-OCS-* scenarios in §5.1
+#                and §5.2, §6.1 fixture set of three pinned captures, §6.3
+#                operator-run end-to-end procedure with steps 0a/1b/1c, §7.1
+#                files the delivery must add or edit, §7.2 TC → file/command
+#                mapping, §7.3 executable revert/mutation evidence M-1..M-19,
+#                §8.1 testing risks, §10 execution log)
+#   - Ticket:    GH-275.
+#
+# `tests` is delivery evidence for plan review; it is not a `delivery.plan.v1`
+# schema field. The schema-validated keys used here are schemaVersion,
+# workItemRef, tier, defaultLeases, defaultWeightClass, and phases (id, title,
+# kind, summary, scope, interactions, doneArtifacts, leases, weightClass,
+# leaseClass). Phase progress never lives here; it belongs in pm-notes `notes:`
+# entries.
+#
+# Ceremony: one ticket, one PR targeting main-tools, six delivery phases. P1
+# adds the additive seam, the three pinned stream fixtures and the host
+# implementation; P2 moves the spawn path (decode → acquire → collect with
+# source precedence) onto the seam, makes the adapter's seam option a required
+# constructor dependency, and binds an optional-with-default composer fact; P3
+# moves resume/deliver; P4 asserts composition, conformance and the preserved
+# adapters/dispatch regressions; P5 pins bounds, kill hygiene, hermeticity and
+# fixture non-vacuity; P6 runs the bounded real-CLI proof, adds the release
+# changeset and the authored TDR-0016 decision record, runs the aggregate gate
+# and declares the phase-7 spec handoff. Each
+# phase is independently green on its own slice: no phase needs a later phase to
+# compile or to assert. The suite is green after every phase because every
+# delivered suite whose construction site or assertion the phase invalidates is
+# migrated in that same phase (test plan §7.2 sequencing note 6: a moved
+# spawn/resume case lands its replacement in the same commit).
+#
+# AC ownership (every one of the 30 ACs has exactly one owning phase; cross-phase
+# confirmation is additive and never transfers ownership):
+#   P1  AC-F2-3, AC-F6-2, AC-F7-1, AC-F7-4
+#   P2  AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4, AC-F1-5, AC-F1-6, AC-F1-7,
+#       AC-F2-1, AC-F2-2, AC-F4-1, AC-F4-2, AC-F4-3, AC-F4-4, AC-F4-5,
+#       AC-F7-2, AC-F7-3
+#   P3  AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4
+#   P4  AC-F6-1
+#   P5  AC-F5-1, AC-F5-2, AC-F5-3
+#   P6  AC-F8-1, AC-F8-2
+# 4 + 16 + 4 + 1 + 3 + 2 = 30; no AC unmapped, no AC id invented.
+# Cross-phase confirmations that do not transfer ownership: P2 confirms AC-F5-1
+# with TC-OCS-014 (refusal identity) while P5 owns the kill half; P1 confirms
+# AC-F5-2 with TC-OCS-052 (real host kill/escalation/orphan) while P5 owns the
+# fake-starter kill matrix; P1 confirms AC-F7-1 with TC-OCS-005 (the captures
+# carry the dedicated encodings) and P2 with TC-OCS-017/042/047/048 while P1 owns
+# the fixture files; P4 confirms AC-F1-7 with TC-OCS-061 and TC-OCS-062 (the
+# retained floor) while P2 owns the precedence rule; P3 confirms AC-F7-3 with
+# TC-OCS-031/032 while P2 owns the mapping battery; P4 confirms AC-F8-1 with
+# TC-OCS-082 while P6 owns the real proof.
+#
+# TC ownership (each of the 46 TC-OCS-* cases names exactly one owning phase):
+#   P1  TC-OCS-001, 002, 003, 004, 005, 052, 070
+#   P2  TC-OCS-010, 011, 012, 013, 014, 015, 016, 017, 020, 021, 022, 040,
+#       041, 042, 043, 044, 045, 046, 047, 048
+#   P3  TC-OCS-030, 031, 032, 033, 034
+#   P4  TC-OCS-060, 061, 062, 080, 081, 082
+#   P5  TC-OCS-023, 050, 051, 053, 071, 072
+#   P6  TC-OCS-100, 101
+# 7 + 20 + 5 + 6 + 6 + 2 = 46; no TC unmapped, no TC id invented.
+#
+# Declared shared paths (sequential, never parallel — the `shared-paths`
+# run-in-sequence case, not a parallelizable split):
+#   - `packages/adapters/src/harness/opencode.ts` is one module implementing one
+#     port, so P2 (spawn/collect) and P3 (resume/deliver) edit it in sequence.
+#   - `tests/behaviour/harness-opencode-session.test.ts` loses its spawn
+#     describes in P2 and its resume describes in P3, each replaced in the same
+#     commit; P4 keeps and asserts the listing and `TC-HARN-010` describes.
+#   - `tests/structure/dispatch-composition.test.ts` gains the recording-starter
+#     injection in P2 (so the composed program keeps hermetic seams), records the
+#     resume invocation through the starter in P3, and gains the per-harness seam
+#     assertions in P4.
+#   - `tests/behaviour/harness-claude-session.test.ts` and
+#     `tests/fixtures/dispatch/golden/harness.ts` are carried in P2 and P4: P2's
+#     edit is the constructor/option migration surface, and P4 owns the
+#     assertions. The golden fixture builds its harness with
+#     `createScriptedHarness` and constructs no opencode adapter, so no starter is
+#     injected there; its real change is P4's injectable `harnessPort` seam.
+# Single-owner paths that the previous revision left ambiguous or claimed twice:
+#   - `packages/testkit/src/conformance/harness.ts` — P2 only. P2 derives the
+#     opencode registration's starter from the scenario `spawnStdout`, which is
+#     what keeps the delivered six-scenario suite green without editing it.
+#   - `tests/fixtures/harness/scenarios/classification.ts` — P4 only, and P4
+#     edits nothing: it is the read-only oracle for the retained six-case floor
+#     (TC-OCS-062); a rewrite is a failure, not an edit.
+#   - `tests/structure/harness-stream-contract.test.ts` — P1 only. P1 asserts the
+#     shape of all three pinned captures (including the two failure encodings);
+#     P2 asserts the adapter consumes them from the behaviour suite.
+# Every phase's slice is green on its own; the shared files are gates in a fixed
+# order, so no phase is ever executed concurrently with another.
+#
+# Source precedence and the seam options (spec F-4, F-6; DEC-1, DEC-5):
+#   - The adapter's `starter` option is required: it is what makes the
+#     completion-gated path unreachable. Every construction site is in P2's scope
+#     (`packages/cli/src/production.ts`,
+#     `packages/testkit/src/conformance/harness.ts`, and the delivered
+#     suites/fixtures that build the port).
+#   - The production composition *fact* is optional with a host default:
+#     `harnessSpawnStarter?: HarnessSpawnStarter` resolves to
+#     `facts.harnessSpawnStarter ?? createHostSpawnStarter()`, mirroring the
+#     delivered `harnessSpawnRunner ?? createHostSpawnRunner()` binding. Any
+#     composition fixture therefore keeps compiling when it omits the fact.
+#   - Migration rule: a fixture that can reach a harness spawn must inject a
+#     recording starter even though the fact is optional. P2 injects one in
+#     `tests/structure/dispatch-composition.test.ts` (three composer
+#     constructions) and in `tests/fixtures/queue/production/harness.ts`, whose
+#     queue-binding suite dispatches; type-compatibility alone is not hermeticity.
+#     Fixtures that never dispatch need no injection.
+#
+# Revert / mutation evidence (test plan §7.3 owns the procedure text, the red
+# assertion, and the red/green sets; this plan names the obligation and the TC):
+#   - whole-document `JSON.parse` of stdout  → M-1 → TC-OCS-010 red (P2)
+#   - missing top-level `sessionID`          → M-2 → TC-OCS-010, TC-OCS-017 red (P2)
+#   - completion-gated spawn                 → M-3 → TC-OCS-020 red (P2); the
+#     resume half reddens TC-OCS-030/TC-OCS-032 (P3). TC-OCS-021 is M-4's oracle,
+#     not M-3's: a completion-gated mutant fails the bounded `flushUntil`
+#     assertion instead of hanging.
+#   - in-flight evidence from `collect`      → M-4 → TC-OCS-021 red (P2)
+#   - completion marker from exit 0 alone    → M-6 → TC-OCS-041, TC-OCS-045 red (P2)
+#   - resume accepts any identifier          → M-7 → TC-OCS-032 red (P3)
+#   - whole-session 300 s default cap        → M-5 → TC-OCS-023, TC-OCS-053 red (P5)
+#   - kill removed from failure paths        → M-8 → TC-OCS-050, TC-OCS-051 red (P5)
+#   - second `node:child_process` site       → M-9 → TC-OCS-003 red (P1)
+#   - adapter-owned handle timer             → M-10 → TC-OCS-003 red (P1)
+#   - session port gains a member            → M-11 → TC-OCS-002, TC-OCS-070 red (P1)
+#   - one-shot runner result reshaped        → M-12 → TC-OCS-002, TC-OCS-080 red (P1/P4)
+#   - Claude adapter adopts the seam         → M-13 → TC-OCS-080 red (P4)
+#   - dispatch engine branches on the seam   → M-14 → TC-OCS-004, TC-OCS-082 red (P4)
+#   - conformance registration over runner   → M-15 → TC-OCS-061 red (P4)
+#   - Claude given the starter               → M-16 → TC-OCS-060 red (P4)
+#   - legacy evidence branch deleted         → M-17 → TC-OCS-046 red (P2);
+#     TC-OCS-061 and TC-OCS-062 red (P4)
+#   - `tool_use` error branch deleted        → M-18 → TC-OCS-042, TC-OCS-047 red (P2)
+#   - `error` event branch deleted           → M-19 → TC-OCS-048 red (P2)
+# Each mutation is applied to a scratch copy or in place and restored with
+# `git checkout -- <file>`; no mutant is committed. The red run, the restored
+# green run, and the named TC are recorded in pm-notes `notes:` at each phase
+# boundary and in test plan §10.
+#
+# Release obligation (TC-RELEASE-001, `tests/checks/privacy-release.test.ts`):
+# the branch touches `packages/**`, so exactly one changeset must be added —
+# `.changeset/gh-275-opencode-harness-contract-minor.md` — declaring exactly
+# `@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`,
+# `@delivery-os/mcp` and `@delivery-os/opencode` at `minor` with a non-empty body
+# (`@delivery-os/testkit` is excluded). A `patch` entry fails the gate, and no
+# pre-existing changeset may be modified or deleted. P6 owns the file.
+#
+# Environment facts: `bun test` is the test runner; `pnpm build` must be re-run
+# after source changes because `dist/` is git-ignored; the CLI is
+# `bun packages/cli/bin/delivery-os.ts ...`; `opencode v2.2.5` is installed; the
+# aggregate gate is `pnpm check`, and `pnpm typecheck`, `pnpm check:boundaries`,
+# `pnpm lint` and `pnpm format:check` are separate gates. Core stays
+# runtime-neutral (no `node:*`), `packages/adapters/src/host/index.ts` stays the
+# only harness child-process site (the 12-entry allowlist in
+# `tests/structure/harness-imports.test.ts` keeps exactly one harness entry), new
+# files carry no license headers, and change artifacts and tests need no
+# `ados_distribution` marker.
+#
+# Rollback: reverting the P2/P3 adapter and composition edits restores the
+# previous (broken) behaviour. No persisted state, schema version, configuration
+# key, error code, result token, or CLI grammar changes, so no data rollback and
+# no feature flag apply.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-275
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6]
+  escalationTriggers:
+    - new-harness-failure-code-or-delivery-result-token
+    - session-port-or-one-shot-runner-shape-changed
+    - second-harness-child-process-site
+    - whole-session-timeout-default-reintroduced
+    - dispatch-engine-edited
+    - claude-adapter-behaviour-changed
+    - new-user-facing-configuration-key
+    - legacy-single-document-evidence-source-removed
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Additive streaming seam, the three pinned v2.2.5 JSONL captures, host starter, and structure/type pinning"
+    kind: delivery
+    summary: >-
+      Add the additive `HarnessSpawnStarter` / `HarnessSpawnStream` /
+      `HarnessSpawnStreamOptions` types to the runtime-neutral contract tier
+      exactly as sketched in spec Appendix B (DEC-1), and re-export them from
+      `packages/core/src/contracts/index.ts`; `HarnessSpawnRunner`,
+      `HarnessSpawnRunnerResult`, `HarnessSessionHandle`, `HarnessSessionPort`,
+      `HarnessEvidence`, `HARNESS_OUTCOMES` and `HARNESS_FAILURE_CODES` stay
+      byte-identical. Implement `createHostSpawnStarter` in
+      `packages/adapters/src/host/index.ts` beside the unchanged
+      `createHostSpawnRunner`: it streams stdout as lines, exposes `acquired()`,
+      resolves `completion` on close or error and never rejects, honours
+      `handleTimeoutMs` (kill on expiry, `timedOut: true`), accepts an optional
+      `sessionTimeoutMs` where absent or 0 means unbounded, and exposes an
+      idempotent `kill` that sends SIGTERM and escalates to SIGKILL after a short
+      grace period (DEC-6). The host subpath stays the single child-process site
+      and the 16 MiB stdout bound plus the truncation marker are preserved
+      (NFR-4, NFR-6). Commit the real-shape capture set with provenance and a
+      regeneration instruction in `tests/fixtures/harness/stream/README.md`
+      (TC-OCS-005): `opencode-v2.2.5.jsonl` (the three-line happy path),
+      `opencode-v2.2.5-tool-error.jsonl` (a `tool_use` event with
+      `part.type === "tool"` and `part.state.status === "error"`, followed by a
+      terminal stop) and `opencode-v2.2.5-stream-error.jsonl` (an `error` event
+      with `{type, timestamp, sessionID, error:{type, message}}` after an
+      identified line). Add the fake starter with a virtual clock and a bounded
+      microtask-flush helper in `tests/fixtures/harness/stream.ts`, the
+      DEC-4/DEC-5/Appendix-C named case table in
+      `tests/fixtures/harness/scenarios/stream.ts` (including the
+      `legacy-precedence`, `legacy-completion-under-timeout`, `tool-error` and
+      `stream-error` cases as data only), a `streamStarterFromRunner` fixture
+      that models the one-shot runner as a degenerate single-line stream (so
+      later phases migrate delivered suites without weakening their assertions),
+      and the re-export in `tests/fixtures/harness/harness-io.ts`.
+      Add `tests/structure/harness-stream-contract.test.ts` (TC-OCS-001, 002,
+      004, 005) and assert there the shape of all three pinned captures — the
+      three-line happy path, the dedicated `tool_use` error part and the
+      dedicated `error` event — so AC-F7-1's encodings are pinned before any
+      adapter consumes them; extend `tests/structure/harness-imports.test.ts`
+      with the adapter confinement and no-timer scans whose allowlist
+      expectation stays the delivered twelve sites (TC-OCS-003), add
+      `tests/types/harness-stream.type-test.ts` (TC-OCS-070), and add
+      `tests/behaviour/harness-host-stream.test.ts` over a Bun-runtime synthetic
+      child — never `opencode` or `claude` — covering streaming, the acquisition
+      signal cancelling the handle timer, bound expiry, kill, SIGKILL escalation,
+      the ESRCH orphan probe and the truncation constant (TC-OCS-052).
+      `tests/structure/content-inventory.test.ts` gains `createHostSpawnStarter`
+      in the host executable allowance; no other scan is weakened. Gates:
+      `pnpm typecheck`, `pnpm check:boundaries`, the four named suites, and
+      `pnpm exec biome check` on the touched files. Mutation evidence recorded
+      here: M-9, M-10, M-11 (TC-OCS-003, TC-OCS-002, TC-OCS-070).
+    scope:
+      files:
+        - packages/adapters/src/host/index.ts
+        - packages/core/src/contracts/harness.ts
+        - packages/core/src/contracts/index.ts
+        - tests/behaviour/harness-host-stream.test.ts
+        - tests/fixtures/harness/harness-io.ts
+        - tests/fixtures/harness/scenarios/stream.ts
+        - tests/fixtures/harness/stream.ts
+        - tests/fixtures/harness/stream/README.md
+        - tests/fixtures/harness/stream/opencode-v2.2.5.jsonl
+        - tests/fixtures/harness/stream/opencode-v2.2.5-stream-error.jsonl
+        - tests/fixtures/harness/stream/opencode-v2.2.5-tool-error.jsonl
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/harness-imports.test.ts
+        - tests/structure/harness-stream-contract.test.ts
+        - tests/types/harness-stream.type-test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/harness.ts
+        role: producer
+    doneArtifacts:
+      trackerTransition: >-
+        GH-275 in progress; phase 1 owns AC-F2-3, AC-F6-2, AC-F7-1, AC-F7-4 and
+        TC-OCS-001, TC-OCS-002, TC-OCS-003, TC-OCS-004, TC-OCS-005, TC-OCS-052,
+        TC-OCS-070; it also owns the M-9, M-10 and M-11 mutation records.
+    weightClass: heavy
+  - id: 2
+    title: "Adapter spawn on the streaming seam: JSONL decoding, evidence source precedence, non-blocking handle, and the required adapter seam"
+    kind: delivery
+    summary: >-
+      Replace the whole-buffer `JSON.parse(result.stdout)` in
+      `packages/adapters/src/harness/opencode.ts` with a line-independent scan:
+      split on LF, strip a trailing CR, skip blank and whitespace-only lines,
+      parse each line independently, continue past non-JSON and non-object lines,
+      and accept the first line carrying an identifier with precedence
+      `sessionID` then `session.id`, `sessionId`, `id`; an empty-string identifier
+      is not an identifier and a single-line JSON document remains a valid
+      degenerate stream (DEC-4). On the first identified line build the handle
+      (`harnessKind: "opencode"`, `sessionId`, `treeRoot` equal to the session id,
+      `workItemRef` from the input), call `acquired()`, store a per-session
+      completion promise, and return immediately without awaiting process exit
+      (F-2). `collect` awaits that completion and derives evidence only at close,
+      under the spec DEC-5 source precedence: a parsed legacy single-document
+      envelope (a document carrying a `result` object and/or one of the accepted
+      identifier-only shapes) is authoritative — `completionMarker` from
+      `result.completion === "complete" || result.completed === true`,
+      `spawnRefused` from `result.refused === true`, `failureReported` from
+      `result.failure === true || result.status === "failed"`, `toolFailure` from
+      `result.toolFailure === true`; otherwise the JSONL rules apply —
+      `completionMarker` true only when the final decoded `step_finish` carries
+      `part.reason === "stop"` with exit 0 and no host timeout, `toolFailure`
+      true iff a `tool_use` part carries `part.state.status === "error"`, and
+      `failureReported` true iff an explicit failure fact is present — a JSONL
+      `error` event, or the legacy envelope's `result.failure === true` /
+      `result.status === "failed"` — while a non-zero process exit is carried by
+      `exitStatus` only and classifies `failed` through the classifier's exit
+      branch (`packages/core/src/domain/harness-classify.ts:50-52`); in both
+      cases the host `exitStatus` (close status) and `timedOut`
+      (host kill flag) merge on top, so a legacy completion fact under a host
+      timeout still classifies `timed-out` (spec F-4/§8.4/DEC-5, AC-F1-5,
+      AC-F4-3, AC-F4-4, TC-OCS-045/048). `spawnRefused` is therefore reachable
+      on an identified session only through the legacy envelope form; the
+      pre-session refusal path stays the no-identifier path of DEC-4. Acquisition
+      gets a `60_000` ms default handle bound, an optional `sessionTimeoutMs`
+      passed through as data, no default whole-session bound, no
+      `300_000`/`DEFAULT_TIMEOUT_MS` value in the spawn starter options (the
+      `listSessions` one-shot runner keeps the delivered `DEFAULT_TIMEOUT_MS`
+      default), and an idempotent `kill` on every failed acquisition (F-5).
+      Make `starter` a required member of `OpencodeHarnessOptions` and migrate
+      every opencode construction site in this commit.
+      `packages/cli/src/production.ts` gains an OPTIONAL
+      `harnessSpawnStarter` composition fact that resolves as
+      `facts.harnessSpawnStarter ?? createHostSpawnStarter()` (mirroring the
+      delivered `harnessSpawnRunner ?? createHostSpawnRunner()`) and keeps the
+      one-shot runner for listing;
+      `packages/testkit/src/conformance/harness.ts` derives the starter from the
+      scenario `spawnStdout`, which keeps the delivered six-scenario conformance
+      suite green unchanged; and the delivered suites that build the port
+      (`harness-spawn-env`, `harness-spawn-credential`, `harness-liveness`,
+      `harness-neutrality`, the Claude parity helper, the opencode session
+      helper, the dispatch composition helper) inject the fixture starter so
+      their existing assertions still hold. `tests/fixtures/dispatch/golden/harness.ts`
+      is not one of them: it builds its harness through `createScriptedHarness`
+      and constructs no opencode adapter, so no starter reaches it. Migration rule
+      for the optional fact: a fixture that can reach a harness spawn injects a
+      recording starter even though omission compiles — this phase injects one in
+      the three `tests/structure/dispatch-composition.test.ts` composer
+      constructions and in `tests/fixtures/queue/production/harness.ts`, whose
+      queue-binding suite dispatches, so no suite gains a real child process;
+      fixtures that never dispatch (queue add/binding reads) need no injection, and
+      the golden fixture's own change is P4's injectable `harnessPort` seam.
+      Resume/deliver keep
+      their delivered one-shot implementation in this phase and are migrated in
+      P3, which keeps this phase green. Add
+      `tests/behaviour/harness-opencode-stream.test.ts` (TC-OCS-010, 011, 012,
+      013, 014, 015, 016, 017, 020, 021, 022, 040, 041, 042, 043, 044, 045, 046,
+      047, 048) — including the legacy-envelope precedence table of AC-F1-7 and
+      TC-OCS-046 and the falsifiability controls of TC-OCS-047/048 (remove the
+      `tool_use` error line, flip `part.state.status`, remove the `error` line) —
+      and move the spawn describes out of
+      `tests/behaviour/harness-opencode-session.test.ts` in the same commit (test
+      plan §7.2 note 6). Gates: `bun test` on the stream suite, the migrated
+      delivered suites, the conformance suite and the composition suite,
+      `pnpm typecheck`, `pnpm check:boundaries`, `pnpm exec biome check`.
+      Mutation evidence recorded here: M-1, M-2, M-3, M-4, M-6, M-17, M-18, M-19.
+    scope:
+      files:
+        - packages/adapters/src/harness/opencode.ts
+        - packages/cli/src/production.ts
+        - packages/testkit/src/conformance/harness.ts
+        - tests/behaviour/harness-claude-session.test.ts
+        - tests/behaviour/harness-opencode-session.test.ts
+        - tests/behaviour/harness-opencode-stream.test.ts
+        - tests/behaviour/harness-spawn-credential.test.ts
+        - tests/behaviour/harness-spawn-env.test.ts
+        - tests/conformance/harness-liveness.test.ts
+        - tests/fixtures/dispatch/golden/harness.ts
+        - tests/fixtures/queue/production/harness.ts
+        - tests/structure/dispatch-composition.test.ts
+        - tests/structure/harness-neutrality.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/harness/opencode.ts
+        role: consumer
+    doneArtifacts:
+      trackerTransition: >-
+        GH-275 in progress; phase 2 owns AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4,
+        AC-F1-5, AC-F1-6, AC-F1-7, AC-F2-1, AC-F2-2, AC-F4-1, AC-F4-2, AC-F4-3,
+        AC-F4-4, AC-F4-5, AC-F7-2, AC-F7-3 and TC-OCS-010, TC-OCS-011,
+        TC-OCS-012, TC-OCS-013, TC-OCS-014, TC-OCS-015, TC-OCS-016, TC-OCS-017,
+        TC-OCS-020, TC-OCS-021, TC-OCS-022, TC-OCS-040, TC-OCS-041, TC-OCS-042,
+        TC-OCS-043, TC-OCS-044, TC-OCS-045, TC-OCS-046, TC-OCS-047, TC-OCS-048;
+        it also owns the M-1, M-2, M-3, M-4, M-6, M-17, M-18 and M-19 mutation
+        records.
+    weightClass: heavy
+  - id: 3
+    title: "Resume and deliver on the same acquisition, preserving the caller's handle identity"
+    kind: delivery
+    summary: >-
+      Move `resume` and `deliver` in `packages/adapters/src/harness/opencode.ts`
+      onto the already-injected streaming starter: start with the configured
+      resume args plus the caller's `sessionId`, deliver the steering prompt on
+      stdin as data, and return on the first identified line without waiting for
+      completion (F-3, DEC-2). The resumed stream identifier must equal
+      `input.handle.sessionId`; a mismatch and a no-identifier outcome both map to
+      the existing `harness.session.unknown` with the observed status, a summary
+      naming the acquisition timeout where the bound expired, and an idempotent
+      kill, creating no session record, so a resumed stream can never switch
+      lanes. The identity guard is defence-in-depth: `opencode run --session <id>`
+      continues or creates that id and stamps it onto every event, so a mismatch
+      is only reachable if the CLI contract changes (spec F-3, AC-F3-3), and the
+      measured assertion lives in the fake-starter suite, not in a production
+      claim. The returned handle keeps the caller's identity and the delivered
+      tree root. A session that acquires and later exits non-zero is post-handle
+      evidence: `collect` carries the exit and the shared classifier decides
+      `failed`, never an acquisition refusal. Resume no longer applies the
+      one-shot `DEFAULT_TIMEOUT_MS`; it passes the handle bound and the optional
+      session bound as data like spawn. Move the resume describes out of
+      `tests/behaviour/harness-opencode-session.test.ts` into the new
+      `tests/behaviour/harness-opencode-resume-stream.test.ts` in the same commit
+      (TC-OCS-030, TC-OCS-031, TC-OCS-032, TC-OCS-033, TC-OCS-034), using the
+      bounded `flushUntil` gate rather than awaiting an adapter-driven signal, and
+      update the resume scenario in
+      `tests/structure/dispatch-composition.test.ts` so the recorded invocation is
+      the starter's `run --format json --session <id>` with the prompt on stdin
+      rather than a one-shot runner call. The listing path is untouched and still
+      uses the one-shot runner. Gates: `bun test` on the resume suite, the
+      opencode session suite and the composition suite, `pnpm typecheck`,
+      `pnpm check:boundaries`, `pnpm exec biome check`. Mutation evidence recorded
+      here: M-7 (TC-OCS-032).
+    scope:
+      files:
+        - packages/adapters/src/harness/opencode.ts
+        - tests/behaviour/harness-opencode-resume-stream.test.ts
+        - tests/behaviour/harness-opencode-session.test.ts
+        - tests/structure/dispatch-composition.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/harness/opencode.ts
+        role: consumer
+    doneArtifacts:
+      trackerTransition: >-
+        GH-275 in progress; phase 3 owns AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4 and
+        TC-OCS-030, TC-OCS-031, TC-OCS-032, TC-OCS-033, TC-OCS-034; it also owns
+        the M-7 mutation record.
+    weightClass: standard
+  - id: 4
+    title: "Composition assertions, retained conformance floor, and the preserved Claude/listing/dispatch regression layer"
+    kind: delivery
+    summary: >-
+      Pin what the composition and the preserved contracts must keep doing, with
+      no product behaviour added and no re-declaration of what P2 delivered. P2
+      owns `packages/testkit/src/conformance/harness.ts` and the composition seam;
+      this phase only asserts both. Assert that the production composer gives the
+      opencode harness the streaming starter plus the one-shot runner used only
+      for `session list`, and gives Claude Code only the one-shot runner
+      (TC-OCS-060, AC-F6-1): extend
+      `tests/structure/dispatch-composition.test.ts` and
+      `tests/fixtures/dispatch/golden/harness.ts` (an injectable `harnessPort`
+      option defaulting to the delivered scripted port, so the existing dispatch
+      suites run unchanged) and assert one starter and one one-shot invocation
+      set per harness. Extend the conformance assertions in
+      `tests/conformance/harness-classification.test.ts` (TC-OCS-061): assert
+      the opencode registration's builder acquires from a MULTI-LINE JSONL
+      `spawnStdout` — two or more lines whose first line carries a top-level
+      `sessionID`, with a later terminal `step_finish` — resolving `ok: true`
+      with that id and deriving evidence in `collect`. That acquisition is the
+      only observable seam (`HarnessConformanceIo` /
+      `HarnessConformanceRegistration.build`,
+      `packages/testkit/src/conformance/harness.ts:34-56`, expose `spawnStdout`
+      plus injected deps and nothing else), so a single-document stream is
+      behaviourally indistinguishable between the one-shot runner and the
+      starter and "never over the one-shot runner" is NOT asserted (TC-OCS-061
+      step 1); the six delivered envelopes still produce their delivered
+      evidence and token on both adapters; and five real-shape JSONL counterparts — `completed`
+      (terminal stop), `tool-failure` (`tool_use` with `state.status === "error"`
+      plus terminal stop), `premature-end` (no terminal `step_finish`),
+      `harness-failure` (`error` event) and `timeout` (terminal stop plus host
+      `timedOut: true`) — classify identically to the single-document form.
+      `spawn-refusal` is legacy-only by design (F-4: `spawnRefused` on an
+      identified session exists only through the envelope), and its counterpart is
+      the pre-session no-identifier refusal asserted by TC-OCS-013. Pin the
+      retained floor in TC-OCS-062: `CLASSIFICATION_SCENARIOS` is exactly the six
+      delivered ids with the delivered expected evidence/token pairs, the six
+      cases and `TC-HARN-010` stay green through the new acquisition on both
+      adapters, and no divergence record appears.
+      `tests/fixtures/harness/scenarios/classification.ts` is the read-only
+      oracle for that floor: this phase asserts over it and edits nothing, and
+      the JSONL counterparts are derived inline in the conformance test, so no
+      sixth/seventh scenario is added.
+      `tests/structure/conformance-coverage.test.ts` runs unchanged. Keep
+      every Claude assertion and rewire only the opencode helper of the
+      cross-adapter parity test to the fake starter, then assert Claude never
+      receives a starter option and shares the classifier reference (TC-OCS-080).
+      Keep the listing describes in `tests/behaviour/harness-opencode-session.test.ts`
+      and assert listing still uses the one-shot runner once with its own args and
+      timeout, never the starter, while the retained `TC-HARN-010` describes stay
+      green (TC-OCS-081). Add
+      `tests/behaviour/dispatch-harness-acquisition.test.ts`: a healthy
+      acquisition is polled by the liveness watch while `collect` is pending and
+      reaches classification with a delivered token; the pre-session failure still
+      collapses to `dispatch.session.spawn-failed` with the exact
+      `spawn failed before a session existed` message; the call order is spawn →
+      collect (pending) → liveness → classification (TC-OCS-082, NFR-8).
+      `packages/core/src/app/dispatch.ts` is read-only in this phase and in the
+      whole change. Gates: the named suites including both conformance suites,
+      `pnpm typecheck`, `pnpm check:boundaries`, `pnpm exec biome check`. Mutation
+      evidence recorded here: M-12, M-13, M-14, M-15, M-16 and the conformance
+      half of M-17 (TC-OCS-061, TC-OCS-062).
+    scope:
+      files:
+        - tests/behaviour/dispatch-harness-acquisition.test.ts
+        - tests/behaviour/harness-claude-session.test.ts
+        - tests/behaviour/harness-opencode-session.test.ts
+        - tests/conformance/harness-classification.test.ts
+        - tests/fixtures/dispatch/golden/harness.ts
+        - tests/fixtures/harness/scenarios/classification.ts
+        - tests/structure/dispatch-composition.test.ts
+    interactions:
+      - kind: contract-file
+        target: tests/structure/dispatch-composition.test.ts
+        role: consumer
+    doneArtifacts:
+      trackerTransition: >-
+        GH-275 in progress; phase 4 owns AC-F6-1 and TC-OCS-060, TC-OCS-061,
+        TC-OCS-062, TC-OCS-080, TC-OCS-081, TC-OCS-082; it also owns the M-12,
+        M-13, M-14, M-15 and M-16 mutation records and the conformance half of
+        M-17.
+    weightClass: standard
+  - id: 5
+    title: "Bounds, kill hygiene, hermeticity and fixture non-vacuity"
+    kind: delivery
+    summary: >-
+      Add `tests/behaviour/harness-stream-hygiene.test.ts`, which pins the
+      remaining anti-recurrence claims against the adapter P2/P3 delivered; this
+      phase writes no product code, and a red assertion reopens P2 or P3 instead
+      of being edited away. Cases: a session advanced 11 h in virtual time with no
+      `sessionTimeoutMs` is never killed and `collect` eventually returns its
+      evidence, while an explicitly injected `sessionTimeoutMs` appears verbatim
+      in the recorded options and the adapter never passes the listing timeout to
+      the starter (TC-OCS-023); handle-bound expiry kills the child, sets
+      `timedOut`, refuses pre-session on spawn and `harness.session.unknown` on
+      resume, and leaves no session record (TC-OCS-050); every failed acquisition
+      and abandonment path kills exactly once, `kill` is safe to repeat and
+      resolves completion once, a successful acquisition is not killed before
+      completion, and the fake registry reports zero live streams at case end
+      (TC-OCS-051); the recorded spawn options carry `handleTimeoutMs: 60_000`, no
+      positive `sessionTimeoutMs` by default and verbatim injected bounds, and no
+      `300_000`/`DEFAULT_TIMEOUT_MS` value reaches the spawn or resume starter
+      options (`handleTimeoutMs`/`sessionTimeoutMs`); the assertion is scoped to
+      the recorded starter options and never to the adapter source, because the
+      delivered `listSessions` path keeps `DEFAULT_TIMEOUT_MS = 300_000`
+      (`packages/adapters/src/harness/opencode.ts:76`, used at `:127` and `:305`)
+      and still invokes the one-shot runner with its own timeout (TC-OCS-053,
+      aligned with the corrected test-plan rule that asserts the starter-options
+      scope rather than an absent adapter literal). Add the hermeticity and
+      determinism meta-check
+      (TC-OCS-071): scan the two adapter behaviour suites
+      (`harness-opencode-stream.test.ts`, `harness-opencode-resume-stream.test.ts`)
+      for real harness command literals and assert every command value comes from
+      the synthetic constants in `tests/fixtures/harness/harness-io.ts`; keep the
+      `node:child_process`, `Bun.spawn`, `Bun.$` and `execFile` ban on all harness
+      suites including the host suite, while `process.execPath` is asserted to
+      appear only in `harness-host-stream.test.ts` (TC-OCS-052's real synthetic
+      child); scan `tests/fixtures/harness/stream.ts` for `setTimeout`,
+      `setInterval`, `Date.now` and `performance.now` and assert none; assert
+      every wait is a promise gate or the bounded `flushUntil` helper, that a
+      post-acquisition line stream is fully drained (RSK-5), and that replaying
+      the same fake script twice yields byte-identical evidence and
+      classification. Add the fixture non-vacuity control (TC-OCS-072): renaming
+      `sessionID` to `session_id` refuses, removing the first line still acquires
+      from the second identifier, an all-empty stream refuses, and the handle id
+      never echoes a test constant. Gates:
+      `bun test tests/behaviour/harness-stream-hygiene.test.ts`, the full harness
+      suite set, `pnpm typecheck`, `pnpm check:boundaries`, `pnpm exec biome
+      check`. Mutation evidence recorded here: M-5, M-8.
+    scope:
+      files:
+        - tests/behaviour/harness-stream-hygiene.test.ts
+    doneArtifacts:
+      trackerTransition: >-
+        GH-275 in progress; phase 5 owns AC-F5-1, AC-F5-2, AC-F5-3 and
+        TC-OCS-023, TC-OCS-050, TC-OCS-051, TC-OCS-053, TC-OCS-071, TC-OCS-072;
+        it also owns the M-5 and M-8 mutation records.
+    weightClass: standard
+  - id: 6
+    title: "Bounded real-CLI end-to-end proof, release changeset, aggregate gate, and the phase-7 spec handoff"
+    kind: delivery
+    summary: >-
+      Execute the operator-run procedure in test plan §6.3 exactly, outside this
+      worktree, and record its evidence; add the release changeset; run the
+      aggregate gate; capture the authored decision record; and declare the
+      lifecycle-phase-7 reconciliation handoff.
+      This phase's end-to-end evidence augments test plan §6.3 rather than
+      replacing it: the parallel test-plan revision carries the operator-side
+      `attemptId` extraction in the step-7 record read and the post-run
+      lease-release proof (a `queue list --json` check plus `queue release GH-275
+      --holder dispatch` on failure), while this phase's own obligations are
+      unchanged — it records the appended attempt's `attemptId`, token and
+      `evidenceRefs`, proves the completed run released the GH-275 lease (forcing
+      the release and recording the result when it did not), and records the
+      unchanged `HEAD` and `git status --porcelain` of this worktree. Both
+      artifacts are reported together as the AC-F8-1 evidence set.
+      The §6.3 procedure starts from this worktree being clean
+      (`git -C "$REPO" status --porcelain` empty) with a recorded `HEAD_before`,
+      `opencode --version` reporting 2.2.5, and `( cd "$REPO" && pnpm build )` so
+      the probe runs the delivered build; it then enforces the hard credential
+      precondition — the production GitHub instance reads the literal
+      `GITHUB_TOKEN` environment variable, so export it, require
+      `gh auth status` to succeed and `gh issue view 275 -R
+      juliusz-cwiakalski/agentic-delivery-os --json number` to exit 0. It creates
+      a disposable clone at `/tmp/opencode/gh275-e2e` with
+      `git clone --no-hardlinks --single-branch --branch
+      fix/GH-275/opencode-harness-contract`, symlinks this worktree's
+      `node_modules`, sets the clone origin to
+      `https://github.com/juliusz-cwiakalski/agentic-delivery-os.git`, releases any
+      stale lease with `queue release GH-275 --holder dispatch` and declares
+      `queue add GH-275 --json`. Step 1b pins the liveness cadence inside the
+      disposable clone: `lane.liveness-interval` is read only from the layered
+      YAML config (no environment variable and no CLI flag exist for it, and
+      `dispatch` rejects `--config`), so the phase writes
+      `<clone>/.delivery-os/config.yaml` with `lane.liveness-interval: 3000` and
+      proves it with `config get lane.liveness-interval --json` returning
+      `3000`; the edit lives only in the clone and is removed with it. Step 1c
+      records a bounded first-event latency probe (a 70 s `timeout` around one
+      real `opencode run --format json` in the clone, asserting a top-level
+      `sessionID`). Step 4 runs
+      `exec bun packages/cli/bin/delivery-os.ts dispatch GH-275 --json` in the
+      background, step 5 polls
+      `pgrep -P <dispatch-pid> -f "opencode run --format json"` for up to 60 s to
+      observe the handle window and waits 15 s for the first identified line and
+      the 3 s liveness poll, and step 6 kills only that child with `kill -TERM`
+      and reads `.data.result`, `.data.lastMessage` and `.data.error.code` from the
+      captured log. The phase records: the result token (any of the eleven
+      delivered tokens passes), `lastMessage` (must not be
+      `spawn failed before a session existed`), `error.code` (must not be
+      `dispatch.session.spawn-failed` or `dispatch.state-unverified`), the exit
+      code, elapsed seconds from dispatch start to the kill (pass bound 180 s),
+      the step 1c first-event latency, at least one `liveness:` evidence ref in
+      the attempt record as CORROBORATION ONLY — the production opencode adapter
+      receives no `livenessFacts` (`packages/cli/src/production.ts:443-458`;
+      `packages/adapters/src/harness/opencode.ts:257`), so readings are
+      absent/unknown and a completion-gated build can record the same ref; the
+      real discriminator for non-blocking acquisition is the deterministic suite
+      (TC-OCS-020/021/082) plus, if asserted at dispatch level, `collect` staying
+      pending across at least one poll (TC-OCS-100 step 6, TC-OCS-101 step 5) —
+      and the before/after `git status --porcelain` and `git rev-parse HEAD` of
+      this worktree, which must be unchanged (AC-F8-1, AC-F8-2). State-root accounting
+      is part of the evidence, not cleanup: the probe appends a real
+      `dispatch.attempt` to `$HOME/.delivery-os-state/ledger.default.jsonl`
+      outside the clone, so the phase reads back that record's `attemptId`, token
+      and `evidenceRefs`, records the GH-275 lease id observed in
+      `queue list --json` after the handle window, and then proves the completed
+      run released it (no active lease for `GH-275` with holder `dispatch` on
+      `github.com/juliusz-cwiakalski/agentic-delivery-os`); if the lease is still
+      held it runs `queue release GH-275 --holder dispatch --json` and records the
+      release result. The appended attempt record is deliberate production
+      evidence retained on purpose (spec §18) and is never deleted as cleanup
+      noise; only the clone, its `node_modules` symlink and its clone-local
+      `.delivery-os/config.yaml` are removed. A failed step 0a, a step 1b value
+      other than 3000, or a step 1c first event later than the 60 s acquisition
+      bound is a blocked precondition (environment or CLI/provider latency), not a
+      product failure: record the exact blocked evidence, restore the
+      environment and re-run, and write no TC-OCS-100/TC-OCS-101 result. Only a
+      healthy step 1c followed by an acquisition-timeout refusal is a product
+      FAIL. AC-F8-1 may be marked satisfied only with real executed evidence,
+      never by inference. In the same phase add exactly one changeset,
+      `.changeset/gh-275-opencode-harness-contract-minor.md`, declaring
+      `@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`,
+      `@delivery-os/mcp` and `@delivery-os/opencode` at `minor` with a non-empty
+      body, modify or delete no pre-existing changeset, and satisfy
+      `TC-RELEASE-001` (`tests/checks/privacy-release.test.ts`, spec DEC-8 and
+      §18); a `patch` entry fails the gate. In the same release slice commit the
+      authored decision record
+      `doc/decisions/TDR-0016-harness-streaming-spawn-seam.md` — the record of the
+      additive `HarnessSpawnStarter` seam decision (B-3 resolution, spec DEC-1) —
+      unmodified, byte-for-byte as authored in specification, together with the
+      TDR-0016 row in `doc/decisions/00-index.md` authored by
+      `@decision-advisor`: the decision index row is part of the
+      decision-capture evidence and lands in this commit. Both paths are declared
+      in this phase's scope because the `commit` primitive can stage untracked
+      files only inside a declared plan scope and the record is still untracked.
+      They are the only `doc/**` paths this phase stages outside the change
+      folder.
+      Populate test plan §10 with the
+      execution result per TC, the §7.3 mutation records (M-1..M-19) and the §6.3
+      envelope output. Run the aggregate gate: `pnpm check` plus `pnpm typecheck`,
+      `pnpm check:boundaries` and `bun packages/cli/bin/delivery-os.ts plan
+      validate GH-275 --json`. Doc-spec reconciliation belongs to lifecycle phase
+      7 (`system_spec_update`, `@doc-syncer`), so this phase edits nothing under
+      `doc/spec/**` and only declares what phase 7 must verify:
+      `doc/spec/features/feature-harness-adapters.md` (the opencode adapter
+      paragraph and the host-runner narrative gain the streaming starter, JSONL
+      framing, top-level `sessionID`, handle-before-completion, the DEC-5 evidence
+      source precedence including the legacy envelope, completion-scoped
+      `collect`, the 60 s handle bound and the absent default session bound) and
+      `doc/spec/features/feature-dispatch-engine.md` (the spawn/timeout narrative
+      states that a healthy spawn returns before completion and that the
+      progress-based liveness watch is observable during the session), plus any
+      contract table that lists the harness spawn seam. The pull request is opened
+      at lifecycle phase 11 by `@pr-manager`.
+    scope:
+      files:
+        - .changeset/gh-275-opencode-harness-contract-minor.md
+        - doc/changes/2026-11/2026-11-08--GH-275--opencode-harness-contract/chg-GH-275-test-plan.md
+        - doc/decisions/00-index.md
+        - doc/decisions/TDR-0016-harness-streaming-spawn-seam.md
+    doneArtifacts:
+      mergeRequestUrl: "PR for fix/GH-275/opencode-harness-contract targeting main-tools, opened at lifecycle phase 11 by @pr-manager and recorded as a pm-notes notes entry; it is not a deliverable of this phase"
+      pipelineId: "pnpm check aggregate gate green: lint, format:check, typecheck, test, check:boundaries, prompt-conformance, help-guide-coverage, exports-parity"
+      trackerTransition: >-
+        GH-275 in review; phase 6 owns AC-F8-1, AC-F8-2 and TC-OCS-100, TC-OCS-101,
+        records the §6.3 evidence (result token, lastMessage, error.code, exit
+        code, elapsed seconds, step 1c first-event latency, at least one liveness:
+        ref as corroboration only, the appended attemptId/token and the GH-275
+        lease id with its
+        released-or-released-by-this-phase proof, unchanged HEAD and status in
+        this worktree) and the §10 execution log; it also commits the authored
+        decision record doc/decisions/TDR-0016-harness-streaming-spawn-seam.md
+        unchanged plus the TDR-0016 row in doc/decisions/00-index.md as the
+        decision-capture evidence for the additive
+        HarnessSpawnStarter seam (B-3 / spec DEC-1); and it declares the phase-7
+        doc-syncer handoff for doc/spec/features/feature-harness-adapters.md and
+        doc/spec/features/feature-dispatch-engine.md without editing them here.
+    weightClass: standard

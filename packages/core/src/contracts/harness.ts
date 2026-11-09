@@ -196,10 +196,13 @@ export type HarnessEvidence = {
   readonly warnings?: readonly HarnessEvidenceWarning[];
 };
 
+/** A short alias for the delivery-result token a classification carries. */
+type ResultToken = DeliveryResultToken;
+
 /** The shared classifier's output: the outcome and its delivery-result token. */
 export type HarnessClassification = {
   readonly outcome: HarnessOutcome;
-  readonly token: DeliveryResultToken;
+  readonly token: ResultToken;
   readonly derivationClass: DeliveryResultDerivationClass;
 };
 
@@ -331,6 +334,47 @@ export type HarnessSpawnRunner = (
     readonly stdin?: string;
   },
 ) => Promise<HarnessSpawnRunnerResult>;
+
+/**
+ * The streaming spawn starter's per-invocation options (GH-275 Appendix B).
+ *
+ * `handleTimeoutMs` bounds only the wait for the first identified session line;
+ * `sessionTimeoutMs` is an optional whole-session bound where absent or `0`
+ * means unbounded.
+ */
+export type HarnessSpawnStreamOptions = {
+  readonly cwd: string;
+  readonly env: Readonly<Record<string, string>>;
+  readonly stdin?: string;
+  readonly handleTimeoutMs: number;
+  readonly sessionTimeoutMs?: number;
+};
+
+/**
+ * One streaming child-process invocation (GH-275 Appendix B, DEC-1).
+ *
+ * `lines` yields stdout as newline-delimited strings; `completion` resolves on
+ * close or error and never rejects; `acquired` cancels the handle bound;
+ * `kill` is idempotent.
+ */
+export type HarnessSpawnStream = {
+  readonly lines: AsyncIterable<string>;
+  readonly completion: Promise<HarnessSpawnRunnerResult>;
+  readonly acquired: () => void;
+  readonly kill: () => void;
+};
+
+/**
+ * The injected streaming spawn seam (GH-275 DEC-1).
+ *
+ * Additive beside the unchanged one-shot {@link HarnessSpawnRunner}: it exposes
+ * the handle-acquisition signal the completion-gated runner cannot express.
+ */
+export type HarnessSpawnStarter = (
+  file: string,
+  args: readonly string[],
+  options: HarnessSpawnStreamOptions,
+) => HarnessSpawnStream;
 
 /**
  * The injected spawn-environment builder seam.

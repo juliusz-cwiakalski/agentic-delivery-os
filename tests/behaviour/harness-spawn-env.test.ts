@@ -102,8 +102,14 @@ describe("TC-HARN-012 deny-by-default spawn environment", () => {
 describe("TC-HARN-012 session-port observation (Phase 3 completing half)", () => {
   test("the observed runner environment is exactly the declared set end-to-end", async () => {
     const { createOpencodeSession } = await import("../../packages/adapters/src/harness/index");
-    const { createRecordingRunner, runnerResult, SPAWN_ARGS, HARNESS_COMMAND, TIMEOUT_MS } =
-      await import("../fixtures/harness/harness-io");
+    const {
+      createRecordingRunner,
+      runnerResult,
+      SPAWN_ARGS,
+      HARNESS_COMMAND,
+      streamStarterFromRunner,
+      TIMEOUT_MS,
+    } = await import("../fixtures/harness/harness-io");
     const credentials = createFakeCredentialPort();
     const recording = createRecordingRunner(() =>
       runnerResult(
@@ -113,17 +119,21 @@ describe("TC-HARN-012 session-port observation (Phase 3 completing half)", () =>
     const port = createOpencodeSession({
       command: HARNESS_COMMAND,
       runner: recording.runner,
+      starter: streamStarterFromRunner(recording.runner),
       buildEnvironment: (descriptor) =>
         buildHarnessSpawnEnvironment({
           descriptor,
           parentEnvironment: PARENT_ENVIRONMENT,
           credentials: credentials.port,
         }),
-      classify: (evidence) => ({
-        outcome: evidence.completionMarker ? "completed" : "premature-end",
-        token: evidence.completionMarker ? "finished" : "partial",
-        derivationClass: "verify",
-      }),
+      classify: (evidence) => {
+        const completionToken = evidence.completionMarker ? "finished" : "partial";
+        return {
+          outcome: evidence.completionMarker ? "completed" : "premature-end",
+          token: completionToken,
+          derivationClass: "verify",
+        };
+      },
       assembleLiveness: () => ({ readings: [] }),
       now: () => "2026-11-06T00:00:00Z",
       timeoutMs: TIMEOUT_MS,

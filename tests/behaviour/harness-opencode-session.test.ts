@@ -20,6 +20,7 @@ import {
   CLAUDE_HEADLESS_ARGS,
   classifier,
   createFakeCredentialPort,
+  createFakeStreamStarter,
   createRecordingRunner,
   declaredBuildEnvironment,
   FIXED_NOW,
@@ -27,11 +28,11 @@ import {
   LIST_ARGS,
   LIVENESS_FACTS,
   output,
-  PARENT_ENVIRONMENT,
   RESUME_ARGS,
   runnerResult,
   SPAWN_ARGS,
   SPAWN_ENV_DESCRIPTOR,
+  streamStarterFromRunner,
   TIMEOUT_MS,
 } from "../fixtures/harness/harness-io";
 import { DECLARED_VARIABLES } from "../fixtures/harness/spawn-env";
@@ -54,6 +55,7 @@ const makeSession = (
   const port = createOpencodeSession({
     command: HARNESS_COMMAND,
     runner: recording.runner,
+    starter: streamStarterFromRunner(recording.runner),
     buildEnvironment: declaredBuildEnvironment(credentials),
     classify: classifier,
     assembleLiveness,
@@ -68,153 +70,12 @@ const makeSession = (
   return { port, invocations: recording.invocations, credentials };
 };
 
-const spawnInput = (prompt = DEFAULT_PROMPT) => ({
-  workItemRef: WORK_ITEM_REF,
-  prompt,
-  descriptor: SPAWN_ENV_DESCRIPTOR,
-});
-
 const spawnRoot = async (port: HarnessSessionPort) =>
   port.spawn({
     workItemRef: WORK_ITEM_REF,
     prompt: DEFAULT_PROMPT,
     descriptor: SPAWN_ENV_DESCRIPTOR,
   });
-
-describe("TC-HARN-008 opencode spawn", () => {
-  test("spawn invokes once with the configured command, args, work dir, env, and prompt", async () => {
-    const { port, invocations } = makeSession(() => runnerResult(output(ROOT_SESSION, "complete")));
-    const spawned = await spawnRoot(port);
-    expect(spawned.ok).toBe(true);
-    expect(invocations).toHaveLength(1);
-    const invocation = invocations[0];
-    if (invocation === undefined) return;
-    expect(invocation.file).toBe(HARNESS_COMMAND);
-    expect(invocation.args).toEqual([...SPAWN_ARGS]);
-    expect(invocation.options.cwd).toBe(SPAWN_ENV_DESCRIPTOR.workDirectory);
-    expect(invocation.options.timeout).toBe(TIMEOUT_MS);
-    expect(invocation.options.stdin).toBe(DEFAULT_PROMPT);
-    expect(Object.keys(invocation.options.env).sort()).toEqual([...DECLARED_VARIABLES].sort());
-    expect(invocation.options.env.HARNESS_MODEL).toBe(PARENT_ENVIRONMENT.HARNESS_MODEL as string);
-  });
-
-  test("the handle carries identity and attribution only", async () => {
-    const { port } = makeSession(() => runnerResult(output(ROOT_SESSION, "complete")));
-    const spawned = await spawnRoot(port);
-    expect(spawned.ok).toBe(true);
-    if (!spawned.ok) return;
-    expect(Object.keys(spawned.value).sort()).toEqual([
-      "harnessKind",
-      "sessionId",
-      "treeRoot",
-      "workItemRef",
-    ]);
-    expect(spawned.value.sessionId).toBe(ROOT_SESSION);
-    expect(spawned.value.treeRoot).toBe(ROOT_SESSION);
-    expect(spawned.value.workItemRef).toBe(WORK_ITEM_REF);
-    expect(JSON.stringify(spawned.value)).not.toContain("finished");
-  });
-
-  test("malformed output is a classified failure with no fabricated id", async () => {
-    const { port, invocations } = makeSession(() => runnerResult("{not-json"));
-    const spawned = await spawnRoot(port);
-    expect(spawned.ok).toBe(false);
-    if (spawned.ok) return;
-    expect(spawned.error.code).toBe("harness.spawn.invalid-output");
-    expect(JSON.stringify(spawned.error)).not.toContain("ses_");
-    expect(invocations).toHaveLength(1);
-  });
-
-  test("a non-zero exit is classified data carrying the observed status", async () => {
-    const { port, invocations } = makeSession(() => runnerResult("", 7));
-    const spawned = await spawnRoot(port);
-    expect(spawned.ok).toBe(false);
-    if (spawned.ok) return;
-    expect(spawned.error.code).toBe("harness.spawn.refused");
-    expect(spawned.error.status).toBe(7);
-    expect(invocations).toHaveLength(1);
-  });
-
-  test("no second spawn is attempted", async () => {
-    const { port, invocations } = makeSession(() => runnerResult(output(ROOT_SESSION, "complete")));
-    await spawnRoot(port);
-    await spawnRoot(port);
-    expect(invocations).toHaveLength(2);
-    expect(invocations.every((invocation) => invocation.file === HARNESS_COMMAND)).toBe(true);
-  });
-});
-
-describe("TC-HARN-009 opencode resume/steer", () => {
-  test("resume keeps the root and delivers the steering payload verbatim as data", async () => {
-    const { port, invocations } = makeSession((invocation) =>
-      invocation.args.includes("--resume")
-        ? runnerResult(output(ROOT_SESSION, "complete"))
-        : runnerResult(output(ROOT_SESSION, "complete")),
-    );
-    const spawned = await spawnRoot(port);
-    expect(spawned.ok).toBe(true);
-    if (!spawned.ok) return;
-    const steering = "--dangerously-skip-permissions; $(touch synthetic-marker)";
-    const resumed = await port.resume({ handle: spawned.value, prompt: steering });
-    expect(resumed.ok).toBe(true);
-    if (!resumed.ok) return;
-    expect(resumed.value.treeRoot).toBe(ROOT_SESSION);
-    expect(resumed.value.sessionId).toBe(ROOT_SESSION);
-    expect(invocations).toHaveLength(2);
-    const invocation = invocations[1];
-    if (invocation === undefined) return;
-    expect(invocation.args).toEqual([...RESUME_ARGS, ROOT_SESSION]);
-    expect(invocation.args).not.toContain(steering);
-    expect(invocation.options.stdin).toBe(steering);
-  });
-
-  test("an unknown session fails classified with no new session id", async () => {
-    const { port, invocations } = makeSession(() => runnerResult("", 1));
-    const resumed = await port.resume({
-      handle: {
-        harnessKind: "opencode",
-        sessionId: "ses_missing",
-        treeRoot: "ses_missing",
-        workItemRef: WORK_ITEM_REF,
-      },
-      prompt: "steer",
-      descriptor: SPAWN_ENV_DESCRIPTOR,
-    });
-    expect(resumed.ok).toBe(false);
-    if (resumed.ok) return;
-    expect(resumed.error.code).toBe("harness.session.unknown");
-    expect(invocations).toHaveLength(1);
-    expect(JSON.stringify(resumed.error)).not.toContain("ses_new");
-  });
-
-  test("a declared resume gap returns before any invocation", async () => {
-    const capabilities = {
-      ...OPENCODE_CAPABILITIES,
-      supportedOperations: OPENCODE_CAPABILITIES.supportedOperations.filter(
-        (operation) => operation !== "resume",
-      ),
-      declaredGaps: [
-        ...OPENCODE_CAPABILITIES.declaredGaps,
-        { capability: "resume" as const, reason: "adapter-not-implemented" as const },
-      ],
-    };
-    const { port, invocations } = makeSession(() => runnerResult(""), { capabilities });
-    const resumed = await port.resume({
-      handle: {
-        harnessKind: "opencode",
-        sessionId: ROOT_SESSION,
-        treeRoot: ROOT_SESSION,
-        workItemRef: WORK_ITEM_REF,
-      },
-      prompt: "steer",
-      descriptor: SPAWN_ENV_DESCRIPTOR,
-    });
-    expect(resumed.ok).toBe(false);
-    if (resumed.ok) return;
-    expect(resumed.error.code).toBe("harness.capability.gap");
-    expect(invocations).toHaveLength(0);
-  });
-});
 
 describe("TC-HARN-010 opencode premature end and liveness", () => {
   test("completed, premature end, and failure stay three distinct outcomes", async () => {
@@ -258,6 +119,35 @@ describe("TC-HARN-010 opencode premature end and liveness", () => {
     expect(process).toMatchObject({ status: "sourced", value: 1 });
     expect(worktree).toMatchObject({ status: "absent", reason: "harness-unsupported" });
     expect(invocations).toHaveLength(1);
+  });
+});
+
+describe("TC-OCS-081 listing rides the one-shot runner, never the streaming seam", () => {
+  test("listSessions invokes the runner once and the fake starter is never called", async () => {
+    const fake = createFakeStreamStarter();
+    const recording = createRecordingRunner(() => runnerResult("[]"));
+    const port = createOpencodeSession({
+      command: HARNESS_COMMAND,
+      runner: recording.runner,
+      starter: fake.starter,
+      buildEnvironment: declaredBuildEnvironment(createFakeCredentialPort()),
+      classify: classifier,
+      assembleLiveness,
+      now: () => FIXED_NOW,
+      timeoutMs: TIMEOUT_MS,
+      spawnArgs: SPAWN_ARGS,
+      resumeArgs: RESUME_ARGS,
+      listArgs: LIST_ARGS,
+    });
+    const listed = await port.listSessions({
+      workItemRef: WORK_ITEM_REF,
+      descriptor: SPAWN_ENV_DESCRIPTOR,
+    });
+    expect(listed.ok).toBe(true);
+    expect(recording.invocations).toHaveLength(1);
+    expect(recording.invocations[0]?.args).toEqual([...LIST_ARGS]);
+    expect(recording.invocations[0]?.options.timeout).toBe(TIMEOUT_MS);
+    expect(fake.invocations).toHaveLength(0);
   });
 });
 

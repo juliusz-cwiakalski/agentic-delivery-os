@@ -3,13 +3,13 @@ ados_distribution: internal
 id: TOOLING-ARCHITECTURE-OVERVIEW
 status: Draft
 created: 2026-11-01
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
-  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010]
-  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237, GH-240, GH-238, GH-242]
+  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016]
+  related_changes: [GH-200, GH-229, GH-224, GH-231, GH-225, GH-233, GH-232, GH-243, GH-234, GH-230, GH-237, GH-240, GH-238, GH-242, GH-275]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -106,7 +106,7 @@ No typed daemon or background scheduler is established by `packages/`.
 | `adapters/src/session/` | OpenCode CLI-backed metadata reads, dry-run-first prune and guarded checkpoint through separate read/admin ports. |
 | `adapters/src/io/` | Internal metadata codec, content policy, privacy rules and transport types; not a public package export. |
 | `adapters/src/harness/` | The opencode and Claude Code delivery adapters, read-only telemetry extractors with a bounded Claude byte read and store-scoped orphan disclosure, harness-store session attribution, the review-deferral record, and the read-only SQLite session-store loader. |
-| `adapters/src/host/` | The harness seam's one child-process spawn site, a pinned entry in the exact repository-wide `node:child_process` allowlist: receives the constructed environment as data and reads no ambient environment. |
+| `adapters/src/host/` | The harness seam's single child-process module, a pinned entry in the exact repository-wide `node:child_process` allowlist, exposing the one-shot runner (listing and Claude Code) and the streaming spawn starter (opencode spawn, resume, deliver): both receive the constructed environment as data and read no ambient environment. |
 | `adapters/src/azure/`, `ci/`, `registry/` | Type-only placeholders; provider clients implement some CI reads without making `./ci` runnable. |
 | `mcp/src/` | Closed three-tool catalog, pure toolset seam and payload adapter, the in-package stdio JSON-RPC 2.0 protocol, the lifecycle exit owner, and the Node-hosted `./serve` composition root. The three read-only tools mirror the status, verify-change, and verify-gates engines. |
 | `opencode/src/index.ts` | Type-only entry exports; no typed native-tool plugin. |
@@ -229,15 +229,19 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   file-based and adds no state record kind or schema-version bump.
 - The [harness adapter seam](../spec/features/feature-harness-adapters.md) ships
   typed `HarnessInstance`/`HarnessSession` ports, the opencode and Claude Code
-  delivery adapters, the deny-by-default execution-environment descriptor, and
-  read-only telemetry extraction consumed by non-gating closeout capture. The
-  closeout composition constructs the capture from the resolved harness settings
-  and uses the same extractors to attribute sessions for the compaction
-  checkpoint; the Claude reader bounds the byte read before parsing and opencode
-  discloses out-of-port orphans as store-level warnings. The GH-233 review
-  F-8/F-11 items and F-9 are resolved; dispatch (GH-239) is the first production
-  consumer of host-runner sessions, so cross-harness dispatch parity is exercised
-  through the delivered session port.
+  delivery adapters, the additive streaming spawn starter beside the one-shot
+  runner, the deny-by-default execution-environment descriptor, and read-only
+  telemetry extraction consumed by non-gating closeout capture. The opencode
+  adapter acquires its session handle from the first identified line of the
+  `opencode run --format json` stream, keeps draining to process close, and
+  resolves `collect` there, so a long lifecycle is never completion-gated and
+  carries no fixed whole-session process cap. The closeout composition constructs
+  the capture from the resolved harness settings and uses the same extractors to
+  attribute sessions for the compaction checkpoint; the Claude reader bounds the
+  byte read before parsing and opencode discloses out-of-port orphans as
+  store-level warnings. The GH-233 review F-8/F-11 items and F-9 are resolved;
+  dispatch (GH-239) is the first production consumer of host-runner sessions, so
+  cross-harness dispatch parity is exercised through the delivered session port.
 - [Session lifecycle economics](../spec/features/feature-session-lifecycle-economics.md)
   ships the adapter-sourced liveness bridge, the prefill-safe corroboration rule,
   the classified `watchdog.liveness-stalled` identity, the single restart-budget

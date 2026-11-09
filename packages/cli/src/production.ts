@@ -30,7 +30,7 @@ import {
 } from "@delivery-os/adapters/git";
 import { createGitHubClient, type GithubClientOptions } from "@delivery-os/adapters/github";
 import { createClaudeSession, createOpencodeSession } from "@delivery-os/adapters/harness";
-import { createHostSpawnRunner } from "@delivery-os/adapters/host";
+import { createHostSpawnRunner, createHostSpawnStarter } from "@delivery-os/adapters/host";
 import {
   findGitRoot,
   nodeRepositoryIo,
@@ -84,6 +84,7 @@ import {
   type HarnessKind,
   type HarnessSessionPort,
   type HarnessSpawnRunner,
+  type HarnessSpawnStarter,
   LOCAL_CALLER_PRINCIPAL,
   type PipelineRun,
   STATUS_OWNER_ATTENTION_LABELS,
@@ -196,6 +197,11 @@ export type ProductionCompositionFacts = {
    */
   readonly harnessSpawnRunner?: HarnessSpawnRunner;
   /**
+   * The injected streaming spawn starter. Production uses the host starter; tests
+   * inject a recording starter so composition is proven without a harness process.
+   */
+  readonly harnessSpawnStarter?: HarnessSpawnStarter;
+  /**
    * The injected GitHub transport. Production uses native `fetch`; tests inject
    * a recording transport so the truth read is proven without network access.
    */
@@ -284,6 +290,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         ? { repository: repositoryKey, repositoryRoot: repositoryFacts.root }
         : undefined;
     const harnessSpawnRunner = facts.harnessSpawnRunner ?? createHostSpawnRunner();
+    const harnessSpawnStarter = facts.harnessSpawnStarter ?? createHostSpawnStarter();
     const clientTarget = target ?? { owner: "unresolved", name: "unresolved" };
     const client = createGitHubClient({
       instance,
@@ -451,6 +458,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       return kind === "opencode"
         ? createOpencodeSession({
             ...common,
+            starter: harnessSpawnStarter,
             command: "opencode",
             spawnArgs: ["run", "--format", "json"],
             resumeArgs: ["run", "--format", "json", "--session"],

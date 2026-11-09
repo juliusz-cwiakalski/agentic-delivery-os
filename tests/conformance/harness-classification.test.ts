@@ -149,3 +149,232 @@ describe("TC-HARN-004 identical classification", () => {
     expect(violations.join("\n")).toContain("claude-code: missing classification scenario timeout");
   });
 });
+
+/* ------------------- GH-275 streaming seam conformance -------------------- */
+
+const jsonlStepStart = (sessionID: string): string =>
+  JSON.stringify({ type: "step_start", timestamp: 1, sessionID, part: { type: "step-start" } });
+const jsonlStepFinish = (sessionID: string, reason: string): string =>
+  JSON.stringify({
+    type: "step_finish",
+    timestamp: 3,
+    sessionID,
+    part: { type: "step-finish", reason },
+  });
+const jsonlToolError = (sessionID: string): string =>
+  JSON.stringify({
+    type: "tool_use",
+    timestamp: 2,
+    sessionID,
+    part: {
+      type: "tool",
+      state: { status: "error", input: {}, error: "synthetic tool failure" },
+    },
+  });
+const jsonlErrorEvent = (sessionID: string): string =>
+  JSON.stringify({
+    type: "error",
+    timestamp: 2,
+    sessionID,
+    error: { type: "provider", message: "synthetic stream failure" },
+  });
+
+const runOpencodeIo = async (io: {
+  readonly spawnStdout: string;
+  readonly spawnStatus: number;
+  readonly spawnTimedOut: boolean;
+}): Promise<{
+  readonly evidence: import("../../packages/core/src/contracts/index").HarnessEvidence;
+  readonly classified: ReturnType<typeof classifier>;
+}> => {
+  const entry = registration("opencode");
+  const session = entry.build(io, deps(HARNESS_COMMAND, SPAWN_ARGS));
+  const spawned = await session.spawn({
+    workItemRef: "GH-275",
+    prompt: "scenario prompt",
+    descriptor: { kind: "host", workDirectory: "/synthetic/work", environment: [] },
+  });
+  expect(spawned.ok).toBe(true);
+  if (!spawned.ok) throw new Error("opencode stream spawn failed");
+  const collected = await session.collect({ handle: spawned.value });
+  expect(collected.ok).toBe(true);
+  if (!collected.ok) throw new Error("opencode stream collect failed");
+  return { evidence: collected.value, classified: session.classify(collected.value) };
+};
+
+describe("TC-OCS-061 the conformance registry builds opencode over the streaming seam", () => {
+  test("a multi-line JSONL spawnStdout acquires a handle and derives evidence", async () => {
+    const sessionId = "ses_conformance_stream";
+    const io = {
+      spawnStdout: [
+        jsonlStepStart(sessionId),
+        JSON.stringify({ type: "text", timestamp: 2, sessionID: sessionId, part: {} }),
+        jsonlStepFinish(sessionId, "stop"),
+      ].join("\n"),
+      spawnStatus: 0,
+      spawnTimedOut: false,
+    };
+    const entry = registration("opencode");
+    const session = entry.build(io, deps(HARNESS_COMMAND, SPAWN_ARGS));
+    const spawned = await session.spawn({
+      workItemRef: "GH-275",
+      prompt: "scenario prompt",
+      descriptor: { kind: "host", workDirectory: "/synthetic/work", environment: [] },
+    });
+    expect(spawned.ok).toBe(true);
+    if (!spawned.ok) return;
+    expect(spawned.value.sessionId).toBe(sessionId);
+    const collected = await session.collect({ handle: spawned.value });
+    expect(collected.ok).toBe(true);
+    if (collected.ok) expect(collected.value.completionMarker).toBe(true);
+  });
+
+  test("the six delivered envelopes keep their delivered evidence and token", async () => {
+    for (const scenario of CLASSIFICATION_SCENARIOS) {
+      const opencode = await runScenario("opencode", scenario);
+      expect(opencode.evidence.completionMarker, scenario.id).toBe(
+        scenario.expectedEvidence.completionMarker,
+      );
+      expect(opencode.evidence.spawnRefused, scenario.id).toBe(
+        scenario.expectedEvidence.spawnRefused,
+      );
+      expect(opencode.evidence.failureReported, scenario.id).toBe(
+        scenario.expectedEvidence.failureReported,
+      );
+      expect(opencode.evidence.toolFailure, scenario.id).toBe(
+        scenario.expectedEvidence.toolFailure,
+      );
+      expect(opencode.evidence.exitStatus, scenario.id).toBe(scenario.opencode.spawnStatus);
+      expect(opencode.evidence.timedOut, scenario.id).toBe(scenario.opencode.spawnTimedOut);
+      expect(opencode.classified.token, scenario.id).toBe(scenario.expectedToken);
+    }
+  });
+
+  test("the five JSONL counterparts classify identically to the legacy envelopes", async () => {
+    const sessionId = "ses_parity";
+    const counterparts: readonly {
+      readonly id: string;
+      readonly io: {
+        readonly spawnStdout: string;
+        readonly spawnStatus: number;
+        readonly spawnTimedOut: boolean;
+      };
+      readonly outcome: string;
+      readonly token: string;
+    }[] = [
+      {
+        id: "completed",
+        io: {
+          spawnStdout: [jsonlStepStart(sessionId), jsonlStepFinish(sessionId, "stop")].join("\n"),
+          spawnStatus: 0,
+          spawnTimedOut: false,
+        },
+        outcome: "completed",
+        token: "finished",
+      },
+      {
+        id: "tool-failure",
+        io: {
+          spawnStdout: [
+            jsonlStepStart(sessionId),
+            jsonlToolError(sessionId),
+            jsonlStepFinish(sessionId, "stop"),
+          ].join("\n"),
+          spawnStatus: 0,
+          spawnTimedOut: false,
+        },
+        outcome: "completed",
+        token: "partial",
+      },
+      {
+        id: "premature-end",
+        io: {
+          spawnStdout: jsonlStepStart(sessionId),
+          spawnStatus: 0,
+          spawnTimedOut: false,
+        },
+        outcome: "premature-end",
+        token: "partial",
+      },
+      {
+        id: "harness-failure",
+        io: {
+          spawnStdout: [jsonlStepStart(sessionId), jsonlErrorEvent(sessionId)].join("\n"),
+          spawnStatus: 0,
+          spawnTimedOut: false,
+        },
+        outcome: "failed",
+        token: "failed",
+      },
+      {
+        id: "timeout",
+        io: {
+          spawnStdout: [jsonlStepStart(sessionId), jsonlStepFinish(sessionId, "stop")].join("\n"),
+          spawnStatus: 0,
+          spawnTimedOut: true,
+        },
+        outcome: "timed-out",
+        token: "max-restarts",
+      },
+    ];
+    for (const counterpart of counterparts) {
+      const run = await runOpencodeIo(counterpart.io);
+      expect(run.classified.outcome, counterpart.id).toBe(counterpart.outcome);
+      expect(run.classified.token, counterpart.id).toBe(counterpart.token);
+    }
+    // spawn-refusal is legacy-only by design (F-4): its JSONL counterpart is the
+    // pre-session no-identifier refusal path, not an identified classification.
+    expect(CLASSIFICATION_SCENARIOS.map((scenario) => scenario.id)).toContain("spawn-refusal");
+  });
+
+  test("the Claude registration still builds over the one-shot runner", async () => {
+    const scenario = CLASSIFICATION_SCENARIOS[0];
+    if (scenario === undefined) return;
+    const claude = registration("claude-code").build(
+      scenario.claude,
+      deps(CLAUDE_COMMAND, CLAUDE_HEADLESS_ARGS),
+    );
+    const spawned = await claude.spawn({
+      workItemRef: "GH-275",
+      prompt: "scenario prompt",
+      descriptor: { kind: "host", workDirectory: "/synthetic/work", environment: [] },
+    });
+    expect(spawned.ok).toBe(true);
+    expect(harnessConformanceViolations(HARNESS_CONFORMANCE_REGISTRY)).toEqual([]);
+  });
+});
+
+describe("TC-OCS-062 the retained legacy classification floor", () => {
+  test("the six declared cases and their token pairs are unchanged", () => {
+    expect(CLASSIFICATION_SCENARIOS.map((scenario) => scenario.id)).toEqual([
+      "completed",
+      "tool-failure",
+      "premature-end",
+      "harness-failure",
+      "spawn-refusal",
+      "timeout",
+    ]);
+    expect(
+      Object.fromEntries(
+        CLASSIFICATION_SCENARIOS.map((scenario) => [scenario.id, scenario.expectedToken]),
+      ),
+    ).toEqual({
+      completed: "finished",
+      "tool-failure": "partial",
+      "premature-end": "partial",
+      "harness-failure": "failed",
+      "spawn-refusal": "noop-lane-permission",
+      timeout: "max-restarts",
+    });
+  });
+
+  test("all six cases classify identically through both adapters", async () => {
+    for (const scenario of CLASSIFICATION_SCENARIOS) {
+      const opencode = await runScenario("opencode", scenario);
+      const claude = await runScenario("claude-code", scenario);
+      expect(opencode.classified.outcome, scenario.id).toBe(claude.classified.outcome);
+      expect(opencode.classified.token, scenario.id).toBe(claude.classified.token);
+      expect(opencode.classified.token, scenario.id).toBe(scenario.expectedToken);
+    }
+  });
+});

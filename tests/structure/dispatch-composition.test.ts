@@ -49,6 +49,7 @@ import {
   type DispatchEnvelopeData,
   type HarnessSpawnRunner,
   type HarnessSpawnRunnerResult,
+  type HarnessSpawnStarter,
 } from "../../packages/core/src/contracts/index";
 import { serializeIdentityMarker } from "../../packages/core/src/domain/dispatch-identity";
 import {
@@ -62,6 +63,7 @@ import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-wind
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
 import { makeDivergence, REPOSITORY } from "../fixtures/dispatch/ledger";
+import { streamStarterFromRunner } from "../fixtures/harness/harness-io";
 
 const ROOT = process.cwd();
 
@@ -174,14 +176,35 @@ describe("the production composer builds a real harness session port", () => {
         options,
       ): Promise<HarnessSpawnRunnerResult> => {
         invocations.push({ command: `${file} ${_args.join(" ")}`, environment: options.env });
-        return {
-          stdout: JSON.stringify({
+        return { stdout: "", stderr: "", status: 0, timedOut: false };
+      };
+      const starterInvocations: Array<{
+        readonly command: string;
+        readonly environment: Readonly<Record<string, string>>;
+      }> = [];
+      const starter: HarnessSpawnStarter = (file, args, options) => {
+        starterInvocations.push({
+          command: `${file} ${args.join(" ")}`,
+          environment: options.env,
+        });
+        const lines = [
+          JSON.stringify({
             session: { id: "ses-production-1" },
             result: { completion: "complete" },
           }),
-          stderr: "",
-          status: 0,
-          timedOut: false,
+        ];
+        return {
+          lines: (async function* () {
+            for (const line of lines) yield line;
+          })(),
+          completion: Promise.resolve({
+            stdout: lines.join("\n"),
+            stderr: "",
+            status: 0,
+            timedOut: false,
+          }),
+          acquired: () => undefined,
+          kill: () => undefined,
         };
       };
 
@@ -196,6 +219,7 @@ describe("the production composer builds a real harness session port", () => {
         workingName: "delivery-os",
         repositoryFacts: { originUrl: GITHUB_ORIGIN },
         harnessSpawnRunner: runner,
+        harnessSpawnStarter: starter,
         // A failing credential port keeps the truth read hermetic: the provider
         // read is refused before any request leaves the process.
         credentials: {
@@ -228,13 +252,16 @@ describe("the production composer builds a real harness session port", () => {
         readonly error?: { readonly code?: string };
       };
 
-      expect(invocations).toHaveLength(1);
-      expect(invocations[0]?.command.startsWith("opencode ")).toBe(true);
-      expect(Object.keys(invocations[0]?.environment ?? {}).sort()).toEqual([
+      expect(starterInvocations).toHaveLength(1);
+      expect(starterInvocations[0]?.command.startsWith("opencode ")).toBe(true);
+      expect(Object.keys(starterInvocations[0]?.environment ?? {}).sort()).toEqual([
         "DELIVERY_WORK_PATH",
         "HARNESS_MODEL",
         "HARNESS_SMALL_MODEL",
       ]);
+      // Spawn/resume ride the streaming starter; the one-shot runner is retained
+      // for session listing and is not invoked by a dispatch.
+      expect(invocations).toHaveLength(0);
       expect(outcome.error).toBeUndefined();
       expect(outcome.data?.result).toBeDefined();
       expect(outcome.data?.result).not.toBe("harness.capability.gap");
@@ -426,6 +453,7 @@ const observeTruth = async (scenario: TruthScenario): Promise<TruthObservation> 
       workingName: "delivery-os",
       repositoryFacts: facts,
       harnessSpawnRunner: completedSessionRunner,
+      harnessSpawnStarter: streamStarterFromRunner(completedSessionRunner),
       credentials: credentialPort(scenario.credentialMissing === true),
       githubTransport: transport,
       gitChildRunner: gitRunner,
@@ -697,6 +725,7 @@ const createProductionHarness = (input: {
       ? { repositoryFacts: {} }
       : { repositoryFacts: { originUrl: input.originUrl } }),
     harnessSpawnRunner: runner,
+    harnessSpawnStarter: streamStarterFromRunner(runner),
     credentials:
       input.credentialMissing === false
         ? credentialPort(false)
@@ -1169,5 +1198,47 @@ describe("the production composer keeps the repository identity rename-invariant
     } finally {
       harness.dispose();
     }
+  });
+});
+
+describe("TC-OCS-060 each harness receives exactly its declared seams", () => {
+  test("opencode is built with the streaming starter; Claude is not", () => {
+    const source = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    expect(source).toContain("facts.harnessSpawnStarter ?? createHostSpawnStarter()");
+    const opencodeStart = source.indexOf("createOpencodeSession({");
+    const claudeStart = source.indexOf("createClaudeSession({");
+    expect(opencodeStart).toBeGreaterThan(0);
+    expect(claudeStart).toBeGreaterThan(opencodeStart);
+    const opencodeBranch = source.slice(opencodeStart, claudeStart);
+    expect(opencodeBranch).toContain("starter: harnessSpawnStarter");
+    const claudeBranch = source.slice(claudeStart, source.indexOf("});", claudeStart));
+    expect(claudeBranch).not.toContain("starter");
+    expect(claudeBranch).toContain("...common");
+  });
+
+  test("both harnesses classify through the one shared reference", async () => {
+    const { createClaudeSession, createOpencodeSession } = await import(
+      "../../packages/adapters/src/harness/index"
+    );
+    const { classifyHarnessEvidence } = await import("../../packages/core/src/domain/index");
+    const { streamStarterFromRunner } = await import("../fixtures/harness/harness-io");
+    const runner = async () => ({ stdout: "", stderr: "", status: 0, timedOut: false });
+    const common = {
+      command: "synthetic",
+      runner,
+      buildEnvironment: () => ({ ok: true as const, value: {} }),
+      classify: classifyHarnessEvidence,
+      assembleLiveness: () => ({ readings: [] }),
+      now: () => "2026-11-08T10:00:00.000Z",
+    };
+    const opencode = createOpencodeSession({
+      ...common,
+      starter: streamStarterFromRunner(runner),
+    });
+    const claude = createClaudeSession(common);
+    expect(opencode.classify).toBe(classifyHarnessEvidence);
+    expect(claude.classify).toBe(classifyHarnessEvidence);
+    expect(opencode.classify).toBe(claude.classify);
+    expect(Object.keys(claude)).not.toContain("starter");
   });
 });

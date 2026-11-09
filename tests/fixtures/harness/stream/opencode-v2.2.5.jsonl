@@ -1,0 +1,3 @@
+{"type":"step_start","timestamp":1762560000000,"sessionID":"ses_e430b0300ffe4f4f9d1c2b3a4d5e6f70","part":{"type":"step-start","id":"prt_1","messageID":"msg_1"}}
+{"type":"text","timestamp":1762560000120,"sessionID":"ses_e430b0300ffe4f4f9d1c2b3a4d5e6f70","part":{"type":"text","id":"prt_2","messageID":"msg_1","text":"ok"}}
+{"type":"step_finish","timestamp":1762560000200,"sessionID":"ses_e430b0300ffe4f4f9d1c2b3a4d5e6f70","part":{"type":"step-finish","id":"prt_3","messageID":"msg_1","reason":"stop"}}

@@ -120,4 +120,33 @@ describe("TC-HARN-014 spawn-path secret boundary", () => {
       }
     }
   });
+
+  test("the opencode adapter carries no timer, ambient read, or child-process import", () => {
+    const file = `${HARNESS_DIR}/opencode.ts`;
+    const text = readFileSync(join(ROOT, file), "utf8");
+    expect(text.length).toBeGreaterThan(0);
+    for (const token of [
+      "setTimeout",
+      "setInterval",
+      "setImmediate",
+      "queueMicrotask",
+      "Date.now",
+      "performance.now",
+      "process.",
+      "globalThis.",
+      "node:child_process",
+      "Bun.",
+    ]) {
+      expect(text, token).not.toContain(token);
+    }
+  });
+
+  test("the host subpath owns both the one-shot runner and the streaming starter", () => {
+    const host = readFileSync(join(ROOT, "packages/adapters/src/host/index.ts"), "utf8");
+    expect(host).toContain("export const createHostSpawnRunner");
+    expect(host).toContain("export const createHostSpawnStarter");
+    for (const file of listTypeScriptFiles(HARNESS_DIR)) {
+      expect(readFileSync(join(ROOT, file), "utf8"), file).not.toContain("child_process");
+    }
+  });
 });

@@ -113,6 +113,7 @@ describe("TC-HARN-005 adapters normalize only (Phase 3 completing half)", () => 
     );
     const { classifyHarnessEvidence } = await import("../../packages/core/src/domain/index");
     const { assembleHarnessLiveness } = await import("../../packages/core/src/domain/index");
+    const { streamStarterFromRunner } = await import("../fixtures/harness/harness-io");
     const common = {
       command: "synthetic",
       runner: async () => ({ stdout: "", stderr: "", status: 0, timedOut: false }),
@@ -121,7 +122,10 @@ describe("TC-HARN-005 adapters normalize only (Phase 3 completing half)", () => 
       assembleLiveness: assembleHarnessLiveness,
       now: () => "2026-11-06T00:00:00Z",
     };
-    const opencode = createOpencodeSession(common);
+    const opencode = createOpencodeSession({
+      ...common,
+      starter: streamStarterFromRunner(common.runner),
+    });
     const claude = createClaudeSession(common);
     expect(opencode.classify).toBe(classifyHarnessEvidence);
     expect(claude.classify).toBe(classifyHarnessEvidence);

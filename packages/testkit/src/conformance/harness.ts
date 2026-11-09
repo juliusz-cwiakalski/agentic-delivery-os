@@ -23,6 +23,7 @@ import {
   type HarnessLivenessAssembler,
   type HarnessLivenessSourcedReading,
   type HarnessSessionPort,
+  type HarnessSpawnStarter,
 } from "@delivery-os/core/contracts";
 
 /** The six-scenario classification floor (test-plan §4.2). */
@@ -88,8 +89,30 @@ const build = (
     ...(io.livenessFacts === undefined ? {} : { livenessFacts: io.livenessFacts }),
   };
   if (kind === "opencode") {
+    // The opencode registration acquires through the streaming seam, derived
+    // from the scenario's real stdout so the six delivered envelopes keep their
+    // delivered evidence and the JSONL counterparts can be exercised.
+    const starter: HarnessSpawnStarter = () => {
+      const lines = io.spawnStdout.split("\n").filter((line) => line.length > 0);
+      return {
+        lines: {
+          async *[Symbol.asyncIterator](): AsyncIterator<string> {
+            for (const line of lines) yield line;
+          },
+        },
+        completion: Promise.resolve({
+          stdout: io.spawnStdout,
+          stderr: "",
+          status: io.spawnStatus,
+          timedOut: io.spawnTimedOut,
+        }),
+        acquired: () => undefined,
+        kill: () => undefined,
+      };
+    };
     return createOpencodeSession({
       ...common,
+      starter,
       resumeArgs: deps.resumeArgs,
       listArgs: deps.listArgs,
     });

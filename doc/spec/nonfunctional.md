@@ -2,11 +2,11 @@
 id: SPEC-TOOLING-NONFUNCTIONAL
 status: Proposed
 created: 2026-11-01
-last_updated: 2026-11-08
+last_updated: 2026-11-09
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -229,8 +229,11 @@ composition entry; see [CLI Entrypoint and Self-Description](features/feature-cl
   adds no ambient-environment read and no secret-read allowlist entry;
   `harness.spawn.variable-missing` classifies a declared-but-absent variable and a
   credential-port failure keeps `config.credential.missing` unchanged. The host
-  runner is the harness seam's one child-process site and a pinned entry in the
-  exact repository-wide `node:child_process` allowlist.
+  module (`packages/adapters/src/host/index.ts`) carries the harness seam's
+  one-shot runner and streaming spawn starter and is a pinned entry in the exact
+  repository-wide `node:child_process` allowlist; the streaming starter keeps the
+  16 MiB stdout bound, applies a bounded handle-acquisition wait with no default
+  whole-session cap, and kills an abandoned child idempotently.
 - The [retro pipeline](features/feature-retro-pipeline.md) passes evidence,
   findings, reports, and export bundles through the same redaction chokepoint and
   keeps the sidecar chaining key out of records, output, configuration, and lane
@@ -250,7 +253,9 @@ composition entry; see [CLI Entrypoint and Self-Description](features/feature-cl
   `harness-spawn-credential.test.ts` pin the deny-by-default spawn environment and
   use-time credential resolution; `tests/structure/harness-imports.test.ts` pins
   the exact `node:child_process` site set and the non-allowlisted-path boundary
-  control.
+  control; `tests/behaviour/harness-stream-hygiene.test.ts` and
+  `harness-host-stream.test.ts` pin the handle bound, the absent default session
+  bound, the 16 MiB stream bound, and idempotent kill.
 - Bounded input: the YAML parser limits nodes/depth/aliases to 2048/64/100 and
   enforces its 1048576-byte source limit as true UTF-8 byte length at the YAML
   check site and both pm-notes parser check sites, fail-closed and with the
