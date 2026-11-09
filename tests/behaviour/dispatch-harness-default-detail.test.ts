@@ -232,6 +232,34 @@ describe("TC-HDA-034 detail hygiene: identifiers only, single line, bounded", ()
     expect(Object.hasOwn(absentField, "field")).toBe(false);
     expect(serialize(absentField)).not.toContain("null");
   });
+
+  test("the dispatch path clamps an over-bound field rather than only a hand-built object", async () => {
+    const overLongField = `HARNESS_${"X".repeat(300)}`;
+    const scenario = failingScenario({
+      kind: "harness",
+      code: "harness.spawn.variable-missing",
+      field: overLongField,
+      summary: "declared environment variable is absent",
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-277", "--json"]);
+      expect(run.envelope?.data?.error?.code).toBe("dispatch.session.spawn-failed");
+      const detail = run.envelope?.data?.error?.detail;
+      expect(detail).toBeDefined();
+      if (detail === undefined) return;
+      const text = JSON.stringify(detail);
+      expect(text.length).toBeLessThanOrEqual(DISPATCH_MAX_ERROR_DETAIL_CHARS);
+      expect(text).not.toContain("\n");
+      expect(text).not.toContain("\r");
+      expect(detail.code).toBe("harness.spawn.variable-missing");
+      expect(detail.field).toBeDefined();
+      if (detail.field === undefined) return;
+      expect(detail.field.length).toBeLessThan(overLongField.length);
+      expect(detail.field.startsWith("HARNESS_")).toBe(true);
+    } finally {
+      scenario.dispose();
+    }
+  });
 });
 
 describe("TC-HDA-035 the required-absence field reaches both layers", () => {

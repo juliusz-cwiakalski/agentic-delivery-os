@@ -539,6 +539,18 @@ describe("TC-HDA-021 optional-marker validation matrix", () => {
     }
   });
 
+  test("the optional-entry fixture resolves through resolveConfig with the marker intact", () => {
+    const resolved = resolveFixture("optional-entry.yaml");
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    const settings = resolveHarnessSettings(resolved.value.values, resolved.value.origins);
+    expect(settings.ok).toBe(true);
+    if (!settings.ok) return;
+    expect(settings.value.environment).toEqual([
+      { name: "SYNTHETIC_OPTIONAL_VARIABLE", optional: true },
+    ]);
+  });
+
   test("the credential-plus-marker fixture classifies through resolveConfig", () => {
     const resolved = resolveFixture("invalid-optional-credential.yaml");
     expect(resolved.ok).toBe(true);

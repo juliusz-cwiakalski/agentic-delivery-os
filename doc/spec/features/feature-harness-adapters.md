@@ -249,8 +249,8 @@ defaults.
 The shipped `harness.environment` default declares `PATH` and `HOME` as required
 entries, `TMPDIR` as an optional entry, and the composition-injected
 `DELIVERY_WORK_PATH` as a required entry. It declares no model variable: model
-selection is the harness's own configuration concern, and no `OC_ADOS_*` name is
-mapped, forwarded, or synthesized. An entry without the `optional` marker keeps
+selection is the harness's own configuration concern, and no ambient
+provider-model environment variable is mapped, forwarded, or synthesized. An entry without the `optional` marker keeps
 required semantics, so an absent required entry fails the spawn closed with
 `harness.spawn.variable-missing` naming the variable in `field`; an absent
 optional entry is omitted while a present one is forwarded. The marker is

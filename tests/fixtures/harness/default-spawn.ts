@@ -9,7 +9,6 @@
  * the pinned two-line JSONL before exiting 0.
  */
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { createOpencodeSession } from "@delivery-os/adapters/harness";
 import { createHostSpawnRunner, createHostSpawnStarter } from "@delivery-os/adapters/host";
@@ -51,6 +50,9 @@ export const CANARY_PARENT_WORK_PATH = "canary-parent-work-path-gh277";
 
 const RUNTIME_PATH = "/usr/bin:/bin";
 
+/** The repo-local temp root every filesystem-touching suite roots under (test plan §6.2). */
+const TEMP_ROOT = join(process.cwd(), "tmp", "tmpdir");
+
 /** The synthetic script: dump environment and argv, print the acquired JSONL. */
 const scriptSource = (paths: {
   readonly environmentDumpPath: string;
@@ -78,7 +80,8 @@ export type ControlledParentOptions = {
 
 /** Build one controlled parent environment and the synthetic executable. */
 export const createControlledParent = (options: ControlledParentOptions = {}): ControlledParent => {
-  const root = mkdtempSync(join(tmpdir(), "gh277-default-spawn-"));
+  mkdirSync(TEMP_ROOT, { recursive: true });
+  const root = mkdtempSync(join(TEMP_ROOT, "gh277-default-spawn-"));
   const binDirectory = join(root, "bin");
   const homeDirectory = join(root, "home");
   const workDirectory = join(root, "work");

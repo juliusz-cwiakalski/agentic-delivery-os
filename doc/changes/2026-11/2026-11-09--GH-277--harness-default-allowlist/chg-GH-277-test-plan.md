@@ -1196,6 +1196,7 @@ Every literal count, field name, or value a TC asserts is anchored to an execute
 4. Assert an optional `field` that is absent is omitted, not serialized as `null` or an empty string.
 5. **Non-vacuity control:** construct a synthetic detail whose field is a 300-character identifier and assert the bound assertion fails; construct one whose field contains a newline and assert the single-line assertion fails; restore.
 6. Assert the real dispatch detail from TC-HDA-030 passes all of the above with the real `HARNESS_MODEL` field.
+7. **Dispatch-path clamp:** feed a `HarnessFailure` whose `field` is a 300-character identifier through a real `dispatch` invocation and assert the emitted `data.error.detail` is single-line, at most the exported bound, and keeps the field's leading prefix, so `detailOf`'s truncation loop is exercised by the delivered path rather than only a hand-built object.
 
 **Expected Outcome**:
 

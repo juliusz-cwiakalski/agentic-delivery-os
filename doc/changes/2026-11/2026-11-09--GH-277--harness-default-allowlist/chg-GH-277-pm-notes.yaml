@@ -110,6 +110,18 @@ blockers:
       AC, TC or scope. Delivery authorized."
     type: info
     date: "2026-11-09"
+  - text: "Phase 8 review_fix iteration 1 = FAIL (code-review/review-iter-1.yaml,
+      review-iter-1.md). 1 high / 4 low / 0 critical/medium. F-1 (blocking): the
+      phase-7 doc edits introduced the forbidden brand literal ADOS_ in
+      doc/spec/features/feature-config-layer.md:259 and
+      feature-harness-adapters.md:227, making the forbidden-literal check and the
+      aggregate gate red after the recorded P4 green run. All ticket acceptance
+      bullets are functionally PASS; the remaining findings are same-pass cleanup
+      (unused fixture, temp root, untested clamp, missing P4 hash in evidence).
+      Remediation delegated to @coder (docs reword + cleanup + gate re-run +
+      one commit), then re-review."
+    type: blocker
+    date: "2026-11-09"
 notes:
   - text: "Retro: findings 1, 3 and 5 are the GH-275 recurrence — an artifact
       asserting a repository fact without probing the owning file (the humanText
@@ -222,7 +234,8 @@ notes:
     type: info
     date: "2026-11-09"
   - text: >-
-      Plan phase 4 complete (commit recorded in the delivery report): owns
+      Plan phase 4 complete (commit e7699431 — changeset, TDR-0017, and the
+      test-plan execution log): owns
       AC-F8-1, AC-F8-2 and TC-HDA-006, TC-HDA-100, TC-HDA-101. Ran the bounded
       operator proof in a disposable clone outside this worktree under the
       isolated probe brand gh277-probe and state root $HOME/.gh277-probe-state:
@@ -268,5 +281,31 @@ notes:
       red, and restored green: M-1 (3 failing tests), M-2 (6), M-3 (6), M-4 (1),
       M-5 (3), M-6 (5), M-7 (2), M-14 (15), M-15 (1), M-16 (2), M-17 (2), M-18
       (4), M-19 (12), M-19b (12). No mutant committed.
+    type: info
+    date: "2026-11-09"
+  - text: >-
+      Phase 8 review_fix iteration 1 remediation (remediation commit): F-1
+      reworded doc/spec/features/feature-config-layer.md and
+      feature-harness-adapters.md to say no ambient provider-model environment
+      variable is mapped, forwarded, or synthesized, so the current-truth docs
+      carry no forbidden brand literal. F-2 referenced
+      tests/fixtures/harness/config/optional-entry.yaml from the TC-HDA-021
+      matrix, so the fixture is live instead of dead. F-3 rooted
+      tests/fixtures/harness/default-spawn.ts under tmp/tmpdir per test plan
+      section 6.2, with the directory created before mkdtemp, so plain bun test
+      and the gated run behave identically. F-4 added a dispatch-path case that
+      feeds a 300-character field through a real dispatch invocation and pins
+      the emitted detail to the exported DISPATCH_MAX_ERROR_DETAIL_CHARS bound
+      with the field prefix intact, exercising detailOf's clamp rather than a
+      hand-built object; test plan TC-HDA-034 gained step 7 for it. F-5 named
+      commit e7699431 in the phase-4 evidence. Gates: forbidden-literals 5/5
+      scope classes and 0 violations; forbidden-literals.test.ts,
+      harness-config, dispatch-harness-default-detail and
+      dispatch-harness-default-spawn = 68 pass / 0 fail; pnpm typecheck;
+      pnpm check:boundaries. Aggregate TMPDIR=$PWD/tmp/tmpdir pnpm check:
+      6613 pass / 4 skip / 1 fail; the only failure is the HEAD-dependent
+      ci-baseline-parity test, which scans the committed tree and so still saw
+      the pre-fix doc literals, and a probe clone with this same fix committed
+      returns scan status 0. No product code changed.
     type: info
     date: "2026-11-09"
