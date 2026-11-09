@@ -417,3 +417,9 @@ notes:
       swept in; the commit hash is recorded in the follow-up note."
     type: info
     date: "2026-11-09"
+  - text: "P5/P6 verification evidence committed: 536bd7fe (docs(GH-275)) carrying
+      the verification note above and the test-plan §10 second recorded §6.3 run.
+      No product code, test assertion, changeset or decision record changed in
+      that commit; the delivery lifecycle state stays owned by @pm."
+    type: info
+    date: "2026-11-09"
