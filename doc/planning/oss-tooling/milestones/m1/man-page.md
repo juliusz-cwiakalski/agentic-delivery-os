@@ -105,6 +105,7 @@ stream.
 | `watchdog` (M1-S1) | `<binary> watchdog preflight\|teardown\|liveness <lane>` |
 | `doctor` (M1-S3) | `<binary> doctor [--json]` |
 | `daemon start` (M1-S18) | `<binary> daemon start [--foreground]\|stop\|status [--live]\|install\|uninstall` |
+| `coordinator` (M1-S23) | `<binary> coordinator start --foreground [--fresh-budget]\|stop\|status [--live]\|tick` |
 | `repos` | not delivered until M3-S6; bash utilities remain |
 
 ### Learn

@@ -280,6 +280,49 @@ exit-code projection; secret redaction; bounded output.
 - Scenarios: each failing check names its fix hint; doctor exits 1 with
   classified errors, never crashes.
 
+### `coordinator` (M1-S23, delivered GH-241)
+
+- Inputs: `coordinator start --foreground [--fresh-budget] | stop | status
+  [--live] | tick`. A bare `start` is `fallback.invocation` at exit 1 naming
+  that `--foreground` is required in v1 and that detached or OS-unit hosting is
+  the M1-S18 seam; coordinator `install`/`uninstall` is out of scope.
+- Single-instance ownership: an append-only **instance lease** carried by
+  `coordinator.fence` records (`acquired`, `released`, `stale-takeover`,
+  `stop-requested`), folded by ledger sequence into the instance identity.
+  Claiming is one fenced critical section: acquire the shared state write fence,
+  re-read the lease and probe `alive(handle)`, append one `acquired` or one
+  `stale-takeover`, release. Liveness is decided before age; a declared probe
+  that returns no answer falls back to 2 x `coordinator.collection-interval`,
+  and an undeclared alive capability is `coordinator.process.capability-gap` at
+  exit 2 with no lease record. Claim acquire and non-claim appends share one
+  one-shot stale-lock recovery and map a still-busy fence to
+  `coordinator.already-running` and `state.lock.busy` respectively.
+- Decisions and evidence: `join-live`, `resume-context`, and `spawn-fresh` are
+  recorded before the effect; the stuck verdict is artifact-evidence only
+  (digest fingerprint from the state event-log cursor plus open
+  coordinator-audience questions, a new turn from `token-delta` /
+  `session-traffic`, merge and answer records) with the `progress-bound`
+  prefill-safety corroborator; a stuck verdict is persisted as `phase=verdict`
+  before the identity-verified TERM/grace/SIGKILL sequence and `phase=outcome`
+  after it, under one `stuckId`.
+- Budget and escalation: the restart budget is per durable epoch in the
+  `coordinator/<coordinatorId>` namespace, distinct from `lane.restart-budget`
+  and `economics/<workItemRef>`; exhaustion publishes exactly one owner-audience
+  `decision-needed` question with `ref` `<coordinatorId>#<budgetEpochId>`, then a
+  terminal receipt, and thereafter reports `exhausted-escalated` idempotently.
+  The digest `typed-questions` section and the brief `blocker-questions` anchor
+  keep a reserved slot that renders that question first and displaces the
+  lowest-ranked question inside the eight-question bound.
+- Wake: the delivered `isCoordinatorPickup` predicate (rank 1, open with an
+  absent status counting as open, coordinator audience) wakes the next iteration
+  within one collection cycle; only a successful wake persists one record per
+  question lifetime (dedupe on coordinator id, question id, and `askedAt`).
+- Outputs: the bounded `delivery.coordinator.v1` data (instance, regime,
+  session, decision, restarts, last persisted stuck verdict, tick verdict, wake,
+  escalation, fence, degradation) and deterministic ANSI-free human text;
+  `tickVerdict` is null outside `tick`, and `status` never mutates state or
+  evaluates. Exit projection is `{0,1,2}` from the error table.
+
 ### `daemon` (M1-S18, delivered GH-238)
 
 - Inputs: `start [--foreground] | stop | status [--live] | install |
