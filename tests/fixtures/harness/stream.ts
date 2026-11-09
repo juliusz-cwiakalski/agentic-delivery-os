@@ -78,6 +78,7 @@ export type FakeStreamControl = {
   readonly endLines: () => void;
   readonly finish: (result?: Partial<HarnessSpawnRunnerResult>) => void;
   readonly expireHandleBound: () => void;
+  readonly kill: () => void;
   readonly kills: number;
   readonly acquiredCalls: number;
   readonly completionSettled: boolean;
@@ -228,6 +229,7 @@ const createFakeStream = (
     },
     finish,
     expireHandleBound,
+    kill,
     get kills() {
       return killCount;
     },

@@ -273,3 +273,33 @@ notes:
       green 8 pass. No deviations."
     type: info
     date: "2026-11-09"
+  - text: "Plan phase P4 COMPLETE (composition, retained conformance floor, and the
+      preserved Claude/listing/dispatch regression layer): commit 3f8c0078. The
+      production-composition test now injects a distinct recording starter and
+      asserts spawn/resume ride the starter while the one-shot runner records
+      zero spawns; new TC-OCS-060 assertions pin the opencode-only starter wiring
+      and the shared classifier reference. The conformance test asserts the
+      opencode registration acquires from a multi-line JSONL spawnStdout, the six
+      delivered envelopes keep their delivered evidence/token, five JSONL
+      counterparts classify identically (spawn-refusal stays legacy-only), and
+      the six-case floor id/token table is pinned. The Claude suite gained the
+      no-starter source assertion; the opencode session suite gained the listing
+      test where the runner is invoked once and the fake starter zero times.
+      New tests/behaviour/dispatch-harness-acquisition.test.ts runs the real
+      opencode adapter over the fake starter through the golden dispatch
+      composition (injectable harnessPort): collect stays pending across >=2
+      liveness polls, classification records one attempt with attempt:/liveness:
+      refs, call order is spawn -> collect -> liveness -> classify, and the
+      pre-session failure still collapses to dispatch.session.spawn-failed with
+      the exact message. Owns AC-F6-1 and TC-OCS-060/061/062/080/081/082. Gates:
+      pnpm typecheck exit 0; pnpm check:boundaries exit 0; focused battery 122
+      pass / 0 fail across 8 files. Mutations (restored green): M-12 extra
+      HarnessSpawnRunnerResult field reddens the type suite; M-13 starter token
+      in claude.ts reddens TC-OCS-080; M-14 lastMessage change reddens TC-OCS-004
+      (source) and TC-OCS-082 (compiled dist); M-15 one-document conformance
+      starter reddens TC-OCS-061 multi-line acquisition; M-16 opencode without
+      the starter reddens TC-OCS-060; M-17 conformance half (legacy branch
+      removed in the compiled adapter) reddens TC-OCS-061/062 and TC-HARN-004.
+      No deviations; classification.ts was imported read-only and not edited."
+    type: info
+    date: "2026-11-09"
