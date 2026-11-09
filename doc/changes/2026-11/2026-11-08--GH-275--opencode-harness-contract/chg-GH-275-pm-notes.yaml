@@ -527,3 +527,14 @@ notes:
       YAML record. This completes the 11-phase delivery lifecycle."
     type: info
     date: "2026-11-09"
+  - text: "PR correction recorded after the pr-manager reconciliation: PR #276 was
+      retitled to 'fix(GH-275): acquire opencode harness sessions from the real
+      JSONL stream before completion' and its body was replaced with the
+      evidence-backed description (problem/fix/behaviour, unchanged-surface list,
+      gate summary, both bounded E2E runs, TDR-0016, 'Closes #275'). The head
+      advanced from ed739f22 to 8421026 by one doc-only pm-notes commit (the
+      phase-11 entry); no product, test, or doc/spec path changed after the
+      reviewed head 89f263d9. PR remains open, non-draft, MERGEABLE, base
+      main-tools; not merged and no auto-merge."
+    type: info
+    date: "2026-11-09"
